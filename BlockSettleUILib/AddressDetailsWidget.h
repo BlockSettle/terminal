@@ -92,8 +92,16 @@ private:
    // data is consistent otherwise, which makes Armory happy. Don't worry about
    // about BinaryTXID. A simple endian flip in printed strings is all we need.
 
+   struct CcData
+   {
+      std::string security;
+      uint64_t lotSize{};
+      bool isGenesisAddr{};
+   };
+
    std::unique_ptr<Ui::AddressDetailsWidget> ui_; // The main widget object.
    bs::Address    currentAddr_;
+   std::string    currentAddrStr_;
    bool           balanceLoaded_ = false;
    std::atomic_uint64_t totalSpent_{};
    std::atomic_uint64_t totalReceived_{};
@@ -104,7 +112,7 @@ private:
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::sync::CCDataResolver> ccResolver_;
-   std::pair<std::string, uint64_t>    ccFound_;
+   CcData ccFound_;
    std::shared_ptr<AddressVerificator> addrVerify_;
    std::map<bs::Address, AddressVerificationState> authAddrStates_;
    std::unordered_set<std::string>     bsAuthAddrs_;

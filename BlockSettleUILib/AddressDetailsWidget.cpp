@@ -77,6 +77,7 @@ void AddressDetailsWidget::setQueryAddr(const bs::Address &inAddrVal)
    {
       std::lock_guard<std::mutex> lock(mutex_);
       currentAddr_ = inAddrVal;
+      currentAddrStr_ = currentAddr_.display();
    }
 
    // Armory can't directly take an address and return all the required data.
@@ -95,35 +96,42 @@ void AddressDetailsWidget::setQueryAddr(const bs::Address &inAddrVal)
 
 void AddressDetailsWidget::updateFields()
 {
-   if (!ccFound_.first.empty()) {
-      ui_->addressId->setText(tr("%1 [Private Market: %2]")
-         .arg(QString::fromStdString(currentAddr_.display()))
-         .arg(QString::fromStdString(ccFound_.first)));
+   if (!ccFound_.security.empty()) {
+      if (!ccFound_.isGenesisAddr) {
+         ui_->addressId->setText(tr("%1 [Private Market: %2]")
+            .arg(QString::fromStdString(currentAddrStr_))
+            .arg(QString::fromStdString(ccFound_.security)));
+      } else {
+         ui_->addressId->setText(tr("%1 [Private Market: Genesis Address %2]")
+            .arg(QString::fromStdString(currentAddrStr_))
+            .arg(QString::fromStdString(ccFound_.security)));
+      }
+
       if (balanceLoaded_) {
-         ui_->totalReceived->setText(QString::number(totalReceived_ / ccFound_.second));
-         ui_->totalSent->setText(QString::number(totalSpent_ / ccFound_.second));
-         ui_->balance->setText(QString::number((totalReceived_ - totalSpent_) / ccFound_.second));
+         ui_->totalReceived->setText(QString::number(totalReceived_ / ccFound_.lotSize));
+         ui_->totalSent->setText(QString::number(totalSpent_ / ccFound_.lotSize));
+         ui_->balance->setText(QString::number((totalReceived_ - totalSpent_) / ccFound_.lotSize));
 
          for (int i = 0; i < ui_->treeAddressTransactions->topLevelItemCount(); ++i) {
             int64_t amt = ui_->treeAddressTransactions->topLevelItem(i)->data(colOutputAmt, Qt::UserRole).toLongLong();
-            amt /= (int64_t)ccFound_.second;
+            amt /= (int64_t)ccFound_.lotSize;
             ui_->treeAddressTransactions->topLevelItem(i)->setData(colOutputAmt, Qt::DisplayRole
-               , tr("%1 %2").arg(QString::number(amt)).arg(QString::fromStdString(ccFound_.first)));
+               , tr("%1 %2").arg(QString::number(amt)).arg(QString::fromStdString(ccFound_.security)));
          }
       }
    }
    else {
       const auto authIt = authAddrStates_.find(currentAddr_);
-      if (bsAuthAddrs_.find(currentAddr_.display()) != bsAuthAddrs_.end()) {
+      if (bsAuthAddrs_.find(currentAddrStr_) != bsAuthAddrs_.end()) {
          ui_->addressId->setText(tr("%1 [Authentication: BlockSettle funding address]")
-            .arg(QString::fromStdString(currentAddr_.display())));
+            .arg(QString::fromStdString(currentAddrStr_)));
       }
       else if ((authIt != authAddrStates_.end()) && (authIt->second != AddressVerificationState::VerificationFailed)) {
-         ui_->addressId->setText(tr("%1 [Authentication: %2]").arg(QString::fromStdString(currentAddr_.display()))
+         ui_->addressId->setText(tr("%1 [Authentication: %2]").arg(QString::fromStdString(currentAddrStr_))
             .arg(QString::fromStdString(to_string(authIt->second))));
       }
       else {
-         ui_->addressId->setText(QString::fromStdString(currentAddr_.display()));
+         ui_->addressId->setText(QString::fromStdString(currentAddrStr_));
       }
       if (balanceLoaded_) {
          ui_->totalReceived->setText(UiUtils::displayAmount(totalReceived_.load()));
@@ -135,23 +143,36 @@ void AddressDetailsWidget::updateFields()
 
 void AddressDetailsWidget::searchForCC()
 {
-   if (!ccFound_.first.empty()) {
+   if (!ccFound_.security.empty()) {
       return;
    }
+
+   for (const auto &ccSecurity : ccResolver_->securities()) {
+      const auto &genesisAddr = ccResolver_->genesisAddrFor(ccSecurity);
+      if (currentAddr_ == genesisAddr) {
+         ccFound_.security = ccSecurity;
+         ccFound_.lotSize = ccResolver_->lotSizeFor(ccSecurity);
+         ccFound_.isGenesisAddr = true;
+         QMetaObject::invokeMethod(this, &AddressDetailsWidget::updateFields);
+         return;
+      }
+   }
+
    for (const auto &txPair : txMap_) {
       for (const auto &ccSecurity : ccResolver_->securities()) {
          const auto &genesisAddr = ccResolver_->genesisAddrFor(ccSecurity);
-
          auto checker = std::make_shared<bs::TxAddressChecker>(
             genesisAddr, armory_);
          const auto &cbHasInput = [this, ccSecurity, checker](bool found) {
-            if (!found || !ccFound_.first.empty()) {
+            if (!found || !ccFound_.security.empty()) {
                return;
             }
-            ccFound_ = { ccSecurity, ccResolver_->lotSizeFor(ccSecurity) };
+            ccFound_.security = ccSecurity;
+            ccFound_.lotSize = ccResolver_->lotSizeFor(ccSecurity);
+            ccFound_.isGenesisAddr = false;
             QMetaObject::invokeMethod(this, &AddressDetailsWidget::updateFields);
          };
-         if (!ccFound_.first.empty()) {
+         if (!ccFound_.security.empty()) {
             break;
          }
          const auto nbSatoshis = ccResolver_->lotSizeFor(ccSecurity);
@@ -446,8 +467,7 @@ void AddressDetailsWidget::clear()
    dummyWallets_.clear();
    txMap_.clear();
    txEntryHashSet_.clear();
-   ccFound_.first.clear();
-   ccFound_.second = 0;
+   ccFound_ = {};
    authAddrStates_.clear();
 
    ui_->addressId->clear();
