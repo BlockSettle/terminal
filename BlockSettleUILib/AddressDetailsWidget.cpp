@@ -140,8 +140,10 @@ void AddressDetailsWidget::searchForCC()
    }
    for (const auto &txPair : txMap_) {
       for (const auto &ccSecurity : ccResolver_->securities()) {
+         const auto &genesisAddr = ccResolver_->genesisAddrFor(ccSecurity);
+
          auto checker = std::make_shared<bs::TxAddressChecker>(
-            ccResolver_->genesisAddrFor(ccSecurity), armory_);
+            genesisAddr, armory_);
          const auto &cbHasInput = [this, ccSecurity, checker](bool found) {
             if (!found || !ccFound_.first.empty()) {
                return;
@@ -187,8 +189,8 @@ void AddressDetailsWidget::loadTransactions()
 
       auto tx = txMap_[curTXEntry.first];
       if (!tx.isInitialized()) {
-         logger_->warn("[{}] TX with hash {} is not found or not inited"
-            , __func__, curTXEntry.first.toHexStr(true));
+         SPDLOG_LOGGER_WARN(logger_, "TX with hash {} is not found or not inited"
+            , curTXEntry.first.toHexStr(true));
          continue;
       }
 
@@ -203,8 +205,8 @@ void AddressDetailsWidget::loadTransactions()
             totIn += prevOut.getValue();
          }
          else {
-            logger_->warn("[{}] prev TX with hash {} is not found or is not"
-               "initialized", __func__, op.getTxHash().toHexStr(true));
+            SPDLOG_LOGGER_WARN(logger_, "prev TX with hash {} is not found or is notinitialized"
+               , op.getTxHash().toHexStr(true));
          }
       }
       uint64_t fees = totIn - tx.getSumOfOutputs();
@@ -336,7 +338,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
          }
       }
       if (prevTxHashSet.empty()) {
-         logger_->warn("[AddressDetailsWidget::getTxData] failed to get previous TXs");
+         SPDLOG_LOGGER_WARN(logger_, "failed to get previous TXs");
          loadTransactions();
       }
       else {
@@ -354,8 +356,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
          *result = entries.get();
       }
       catch (const std::exception &e) {
-         logger_->error("[AddressDetailsWidget::getTxData] Return data error " \
-            "- {}", e.what());
+         SPDLOG_LOGGER_ERROR(logger_, "Return data error - {}", e.what());
          return;
       }
 
@@ -373,7 +374,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
             }
          }
          if (txHashSet.empty()) {
-            logger_->info("[AddressDetailsWidget::getTxData] address participates in no TXs");
+            SPDLOG_LOGGER_INFO(logger_, "address participates in no TXs");
             cbCollectTXs({}, nullptr);
          } else {
             armory_->getTXsByHash(txHashSet, cbCollectTXs);
@@ -389,8 +390,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
          }
       }
       catch (const std::exception &e) {
-         logger_->error("[AddressDetailsWidget::getTxData] Return data " \
-            "error (getPageCount) - {}", e.what());
+         SPDLOG_LOGGER_ERROR(logger_, "Return data error (getPageCount) - {}", e.what());
       }
    };
    delegate->getPageCount(cbPageCnt);
@@ -399,12 +399,10 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
 // Function that grabs the TX data for the address. Used in callback.
 void AddressDetailsWidget::refresh(const std::shared_ptr<bs::sync::PlainWallet> &wallet)
 {
-   logger_->debug("[{}] get refresh command for {}", __func__
-                  , wallet->walletId());
+   SPDLOG_LOGGER_DEBUG(logger_, "get refresh command for {}", wallet->walletId());
    if (wallet->getUsedAddressCount() != 1) {
-      logger_->debug("[{}] dummy wallet {} contains invalid amount of "
-                     "addresses ({})", __func__, wallet->walletId()
-                     , wallet->getUsedAddressCount());
+      SPDLOG_LOGGER_DEBUG(logger_, "dummy wallet {} contains invalid amount of addresses ({})"
+         , wallet->walletId(), wallet->getUsedAddressCount());
       return;
    }
 
@@ -414,9 +412,8 @@ void AddressDetailsWidget::refresh(const std::shared_ptr<bs::sync::PlainWallet> 
    };
    const auto addr = wallet->getUsedAddressList().at(0);
    if (!wallet->getLedgerDelegateForAddress(addr, cbLedgerDelegate)) {
-      logger_->debug("[AddressDetailsWidget::refresh (cbBalance)] Failed to "
-                     "get ledger delegate for wallet ID {} - address {}"
-                     , wallet->walletId(), addr.display());
+      SPDLOG_LOGGER_DEBUG(logger_, "failed to get ledger delegate for wallet ID {} - address {}"
+         , wallet->walletId(), addr.display());
    }
 }
 

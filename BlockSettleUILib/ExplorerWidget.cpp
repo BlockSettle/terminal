@@ -31,7 +31,6 @@ ExplorerWidget::ExplorerWidget(QWidget *parent) :
    TabWithShortcut(parent)
    , ui_(new Ui::ExplorerWidget())
    , expTimer_(new QTimer)
-   , searchHistoryPosition_(-1)
 {
    ui_->setupUi(this);
    ui_->searchBox->setReadOnly(true);
