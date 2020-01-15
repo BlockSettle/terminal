@@ -79,7 +79,7 @@ void ExplorerWidget::init(const std::shared_ptr<ArmoryConnection> &armory
    ui_->Address->init(armory, inLogger, ccFileMgr->getResolver());
 //   ui_->Block->init(armory, inLogger);
 
-   connect(authMgr_.get(), &AuthAddressManager::ConnectionComplete, [this] {
+   connect(authMgr_.get(), &AuthAddressManager::gotBsAddressList, [this] {
       ui_->Address->setBSAuthAddrs(authMgr_->GetBSAddresses());
    });
 
