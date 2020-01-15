@@ -820,7 +820,7 @@ function getAuthEidTransactionInfo(txInfo) {
         getAuthEidMessageLine("Return Amount", txInfo.changeAmount.toFixed(8)) +
         getAuthEidMessageLine("Transaction fee", txInfo.fee.toFixed(8)) +
         getAuthEidMessageLine("Transaction amount", txInfo.amount.toFixed(8)) +
-        getAuthEidMessageLine("Total spent", txInfo.total.toFixed(8));
+        getAuthEidMessageLine("Total spent", txInfo.total.toFixed(8), true);
 
     return result;
 }
@@ -829,6 +829,6 @@ function getAuthEidSettlementInfo(product, priceString, is_sell, quantity, total
     return JsHelper.getAuthEidMessageLine("Product", product) +
         JsHelper.getAuthEidMessageLine("Price", priceString) +
         JsHelper.getAuthEidMessageLine("Quantity", quantity) +
-        JsHelper.getAuthEidMessageLine("Deliver", is_sell ? quantity : totalValue) +
-        JsHelper.getAuthEidMessageLine("Receive", is_sell ? totalValue : quantity);
+        JsHelper.getAuthEidMessageLine("Deliver", (is_sell ? quantity : totalValue)) +
+        JsHelper.getAuthEidMessageLine("Receive", (is_sell ? totalValue : quantity), true);
 }
