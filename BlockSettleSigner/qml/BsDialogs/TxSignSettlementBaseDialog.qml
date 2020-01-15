@@ -108,7 +108,10 @@ CustomTitleDialogWindowWithExpander {
             return
         }
 
-        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SettlementTransaction, walletInfo, duration, timestamp)
+        let authEidMessage = JsHelper.getAuthEidSettlementInfo(product, priceString, is_sell,
+                                                               quantity, totalValue);
+        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SettlementTransaction, walletInfo,
+                                                      authEidMessage, duration, timestamp);
 
         authSign.succeeded.connect(function(encKey, password) {
             if (root) {

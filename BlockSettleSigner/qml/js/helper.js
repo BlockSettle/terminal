@@ -72,8 +72,9 @@ function hideWindow(w) {
     w.hide()
 }
 
-function requesteIdAuth (requestType, walletInfo, onSuccess) {
-    var authObject = qmlFactory.createAutheIDSignObject(requestType, walletInfo, authSign.defaultExpiration())
+function requesteIdAuth (requestType, walletInfo, authEidMessage, onSuccess) {
+        console.log("------------", 5)
+    var authObject = qmlFactory.createAutheIDSignObject(requestType, walletInfo, authEidMessage, authSign.defaultExpiration())
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
 
     authProgress.email = walletInfo.email()
@@ -119,8 +120,8 @@ function requesteIdAuth (requestType, walletInfo, onSuccess) {
     return authProgress
 }
 
-function removeEidDevice (index, walletInfo, onSuccess) {
-    var authObject = qmlFactory.createRemoveEidObject(index, walletInfo)
+function removeEidDevice (index, walletInfo, authEidMessage, onSuccess) {
+    var authObject = qmlFactory.createRemoveEidObject(index, walletInfo, authEidMessage)
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
 
     authProgress.email = walletInfo.email()
@@ -158,8 +159,8 @@ function removeEidDevice (index, walletInfo, onSuccess) {
 }
 
 
-function activateeIdAuth (email, walletInfo, onSuccess) {
-    var authObject = qmlFactory.createActivateEidObject(email, walletInfo)
+function activateeIdAuth (email, walletInfo, authEidMessage, onSuccess) {
+    var authObject = qmlFactory.createActivateEidObject(email, walletInfo, authEidMessage)
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
 
     authProgress.email = walletInfo.email()
@@ -794,4 +795,40 @@ function initJSDialogs() {
             }
         }
     })
+}
+
+function getAuthEidMessageLine(key, value, isLastLine) {
+    let result = key + ': ' + value;
+    if ((typeof(isLastLine) !== undefined) && !isLastLine)
+        result += '\n';
+
+    return result;
+}
+
+function getAuthEidWalletInfo(walletInfo) {
+    return getAuthEidMessageLine("Wallet Name", walletInfo.name)
+            + getAuthEidMessageLine("Wallet ID", walletInfo.walletId, true);
+}
+
+function getAuthEidTransactionInfo(txInfo) {
+    let result = "Output address(es):\n";
+    for (let i = 0; i < txInfo.allRecipients.length; ++i) {
+        result += txInfo.allRecipients[i] + '\n';
+    }
+    result +=
+        getAuthEidMessageLine("Input Amount", txInfo.inputAmount.toFixed(8)) +
+        getAuthEidMessageLine("Return Amount", txInfo.changeAmount.toFixed(8)) +
+        getAuthEidMessageLine("Transaction fee", txInfo.fee.toFixed(8)) +
+        getAuthEidMessageLine("Transaction amount", txInfo.amount.toFixed(8)) +
+        getAuthEidMessageLine("Total spent", txInfo.total.toFixed(8));
+
+    return result;
+}
+
+function getAuthEidSettlementInfo(product, priceString, is_sell, quantity, totalValue) {
+    return JsHelper.getAuthEidMessageLine("Product", product) +
+        JsHelper.getAuthEidMessageLine("Price", priceString) +
+        JsHelper.getAuthEidMessageLine("Quantity", quantity) +
+        JsHelper.getAuthEidMessageLine("Deliver", is_sell ? quantity : totalValue) +
+        JsHelper.getAuthEidMessageLine("Receive", is_sell ? totalValue : quantity);
 }
