@@ -1895,6 +1895,9 @@ TEST_F(TestWallet, ChangeControlPassword)
 {
    auto passMd = bs::wallet::PasswordMetaData{ bs::wallet::EncryptionType::Password, {} };
    auto passphrase = SecureBinaryData::fromString("password");
+   const auto walletName = "test";
+   const auto walletDescr = "";
+   std::string fileName;
 
    auto controlPassphraseEmpty = SecureBinaryData::fromString("");
    auto controlPassphrase1 = SecureBinaryData::fromString("controlPassword1");
@@ -1907,14 +1910,27 @@ TEST_F(TestWallet, ChangeControlPassword)
 
    const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("Sample test seed")
       , NetworkType::TestNet };
-   auto coreWallet = envPtr_->walletsMgr()->createWallet("primary", "test", seed, walletFolder_, pd1, true);
 
-   // Set control password
-   ASSERT_NO_THROW(coreWallet->changeControlPassword(controlPassphraseEmpty, controlPassphrase1));
-   ASSERT_THROW(coreWallet->changeControlPassword(controlPassphraseEmpty, controlPassphrase2), std::runtime_error);
 
-   // Change control password
-   ASSERT_NO_THROW(coreWallet->changeControlPassword(controlPassphrase1, controlPassphrase2));
-   ASSERT_THROW(coreWallet->changeControlPassword(controlPassphraseEmpty, controlPassphrase1), std::runtime_error);
-   ASSERT_THROW(coreWallet->changeControlPassword(controlPassphraseWrong, controlPassphrase1), std::runtime_error);
+   {
+      auto wallet = std::make_shared<bs::core::hd::Wallet>(
+         walletName, walletDescr, seed, pd1, walletFolder_, envPtr_->logger());
+
+      fileName = wallet->getFileName();
+
+      // Set control password
+      ASSERT_NO_THROW(wallet->changeControlPassword(controlPassphraseEmpty, controlPassphrase1));
+      ASSERT_THROW(wallet->changeControlPassword(controlPassphraseEmpty, controlPassphrase2), std::runtime_error);
+
+      // Change control password
+      ASSERT_NO_THROW(wallet->changeControlPassword(controlPassphrase1, controlPassphrase2));
+      ASSERT_THROW(wallet->changeControlPassword(controlPassphraseEmpty, controlPassphrase1), std::runtime_error);
+      ASSERT_THROW(wallet->changeControlPassword(controlPassphraseWrong, controlPassphrase1), std::runtime_error);
+   }
+
+   EXPECT_THROW(bs::core::hd::Wallet(fileName, NetworkType::TestNet, "", controlPassphraseEmpty, envPtr_->logger()), std::runtime_error);
+   EXPECT_THROW(bs::core::hd::Wallet(fileName, NetworkType::TestNet, "", controlPassphrase1, envPtr_->logger()), std::runtime_error);
+   EXPECT_THROW(bs::core::hd::Wallet(fileName, NetworkType::TestNet, "", controlPassphraseWrong, envPtr_->logger()), std::runtime_error);
+
+   EXPECT_NO_THROW(bs::core::hd::Wallet(fileName, NetworkType::TestNet, "", controlPassphrase2, envPtr_->logger()));
 }
