@@ -379,7 +379,7 @@ function checkEncryptionPassword(dlg) {
     var onControlPasswordFinished = function(prevDialog, password){
         if (qmlFactory.controlPasswordStatus() === ControlPasswordStatus.RequestedNew) {
             walletsProxy.sendControlPassword(password)
-            qmlFactory.setControlPasswordStatus(ControlPasswordStatus.Accepted);
+            qmlFactory.setInitMessageWasShown();
             prevDialog.setNextChainDialog(dlg)
             prepareDialog(dlg);
             dlg.open()
@@ -407,7 +407,8 @@ function checkEncryptionPassword(dlg) {
                                            password, onControlPasswordChanged);
     }
 
-    if (qmlFactory.controlPasswordStatus() !== ControlPasswordStatus.Accepted) {
+    if (qmlFactory.controlPasswordStatus() === ControlPasswordStatus.Rejected ||
+            (qmlFactory.controlPasswordStatus() === ControlPasswordStatus.RequestedNew && !qmlFactory.initMessageWasShown())) {
         var controlPasswordDialog = createControlPasswordDialog(onControlPasswordFinished,
                                         qmlFactory.controlPasswordStatus(), true, false)
         return controlPasswordDialog
@@ -448,6 +449,7 @@ function managePublicDataEncryption() {
     let onControlPasswordFinished = function(dialog, newPassword, oldPassword){
         if (previousState === ControlPasswordStatus.RequestedNew) {
             walletsProxy.sendControlPassword(newPassword);
+            qmlFactory.setInitMessageWasShown();
             if (newPassword !== "") {
                 let mbAccept = messageBox(BSMessageBox.Type.Success
                     , qsTr("Public Data Encryption"), qsTr("Set Public Data Encryption Password succeed"));
@@ -480,6 +482,9 @@ function managePublicDataEncryption() {
                     , qsTr("Public Data Encryption"), qsTr(successMessageBody));
                 mbSuccess.bsAccepted.connect(dialog.dialogsChainFinished)
                 dialog.setNextChainDialog(mbSuccess)
+                if (newPassword.textPassword.length === 0) {
+                    qmlFactory.setControlPasswordStatus(ControlPasswordStatus.RequestedNew);
+                }
             } else {
                 let mbFail= messageBox(BSMessageBox.Type.Critical
                     , qsTr("Public Data Encryption"), qsTr(errorMessageBody + "\n") + errorMsg);

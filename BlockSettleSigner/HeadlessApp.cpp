@@ -361,7 +361,12 @@ bs::error::ErrorCode HeadlessAppObj::changeControlPassword(const SecureBinaryDat
    }
 
    try {
-      walletsMgr_->changeControlPassword(controlPasswordOld, controlPasswordNew);
+      if (controlPasswordNew.isNull()) {
+         walletsMgr_->eraseControlPassword(controlPasswordOld);
+      }
+      else {
+         walletsMgr_->changeControlPassword(controlPasswordOld, controlPasswordNew);
+      }
    } catch (...) {
       return bs::error::ErrorCode::InvalidPassword;
    }

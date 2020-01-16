@@ -777,7 +777,8 @@ void WalletsProxy::changeControlPassword(bs::wallet::QPasswordData *oldPassword,
       }
    };
 
-   if (oldPassword && newPassword) {
-      adapter_->changeControlPassword(*oldPassword, *newPassword, cb);
+   if (oldPassword) {
+      const bs::wallet::QPasswordData &newPassDataRef = newPassword ? *newPassword : bs::wallet::QPasswordData();
+      adapter_->changeControlPassword(*oldPassword, newPassDataRef, cb);
    }
 }
