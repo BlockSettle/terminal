@@ -146,6 +146,9 @@ public:
    Q_INVOKABLE int controlPasswordStatus() const;
    Q_INVOKABLE void setControlPasswordStatus(int controlPasswordStatus);
 
+   Q_INVOKABLE bool initMessageWasShown() const;
+   Q_INVOKABLE void setInitMessageWasShown();
+
 signals:
    void closeEventReceived();
    void headlessPubKeyChanged();
@@ -162,6 +165,8 @@ private:
 
    QString headlessPubKey_;
    ControlPasswordStatus::Status controlPasswordStatus_;
+
+   bool isControlPassMessageShown = false;
 
 };
 

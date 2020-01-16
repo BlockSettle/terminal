@@ -203,6 +203,16 @@ int QmlFactory::controlPasswordStatus() const
 
 void QmlFactory::setControlPasswordStatus(int controlPasswordStatus)
 {
-   controlPasswordStatus_ = static_cast<ControlPasswordStatus::Status>(controlPasswordStatus);
+    controlPasswordStatus_ = static_cast<ControlPasswordStatus::Status>(controlPasswordStatus);
+}
+
+bool QmlFactory::initMessageWasShown() const
+{
+    return isControlPassMessageShown;
+}
+
+void QmlFactory::setInitMessageWasShown()
+{
+    isControlPassMessageShown = true;
 }
 
