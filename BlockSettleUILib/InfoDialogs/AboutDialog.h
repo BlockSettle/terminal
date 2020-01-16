@@ -36,6 +36,7 @@ private slots:
    void latestVerReceived(bool weAreUpToDate);
    void changeLogReceived(const QString &reqVer, const QStringList &changeLog);
    void viewChangleLog();
+   void failedToLoadVersion();
 
 private:
    void reset();

@@ -89,7 +89,7 @@ private:
 
    int getUIFilterSettings() const;
    void updateAddressFilters(int filterSettings);
-   void keepSelection();
+   bool applyPreviousSelection();
    bool filterBtcOnly() const;
 
 signals:

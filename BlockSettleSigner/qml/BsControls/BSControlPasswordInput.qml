@@ -144,11 +144,14 @@ With Public Data Encryption enabled you will be required to decrypt this materia
                 id: btnAccept
                 enabled: {
                     if (controlPasswordStatus === ControlPasswordStatus.RequestedNew)
-                        return newPasswordWithConfirm.acceptableInput
+                        return newPasswordWithConfirm.acceptableInput;
                     else if (controlPasswordStatus === ControlPasswordStatus.Rejected)
-                        return passwordInputDecrypt.text.length >= 6
+                        return passwordInputDecrypt.text.length >= 6;
                     else
-                        return newPasswordWithConfirm.acceptableInput && passwordInputDecrypt.text.length >= 6
+                        return (newPasswordWithConfirm.acceptableInput ||
+                                (newPasswordWithConfirm.tfPasswordInput.text.length === 0 &&
+                                 newPasswordWithConfirm.tfPasswordConfirm.text.length === 0))
+                                && passwordInputDecrypt.text.length >= 6;
                 }
 
                 primary: true

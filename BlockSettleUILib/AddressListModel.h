@@ -49,6 +49,8 @@ public:
       bool isMultiLineComment() const;
       QString getComment() const;
       QString getAddress() const;
+
+      bool operator==(const AddressRow& other);
    };
 
    enum Columns
@@ -107,7 +109,7 @@ private:
    ValidityFlag validityFlag_;
 
 private:
-   void updateWallet(const std::shared_ptr<bs::sync::Wallet> &);
+   void updateWallet(const std::shared_ptr<bs::sync::Wallet> &wallet, std::vector<AddressRow> &addresses);
    void updateWalletData();
    AddressRow createRow(const bs::Address &, const std::shared_ptr<bs::sync::Wallet> &) const;
    QVariant dataForRow(const AddressListModel::AddressRow &row, int column) const;

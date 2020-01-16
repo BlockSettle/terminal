@@ -248,7 +248,9 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    connect(ui_->treeViewAddresses, &QTreeView::customContextMenuRequested, this, &WalletsWidget::onAddressContextMenu);
    //connect(ui_->treeViewWallets, &QTreeView::customContextMenuRequested, this, &WalletsWidget::onWalletContextMenu);
 
-   addressModel_ = new AddressListModel(walletsManager_, this);
+   // No need to connect to wallet manager in AddressListModel explicitly in this case
+   // so just put nullptr pointer in function
+   addressModel_ = new AddressListModel(nullptr, this);
    addressSortFilterModel_ = new AddressSortFilterModel(this);
    addressSortFilterModel_->setSourceModel(addressModel_);
    addressSortFilterModel_->setSortRole(AddressListModel::SortRole);
@@ -419,19 +421,23 @@ void WalletsWidget::updateAddresses()
       prevSelectedWalletRow_ = ui_->treeViewWallets->selectionModel()->selectedIndexes().first().row();
    }
    
-   addressModel_->setWallets(selectedWallets, false, filterBtcOnly());
    prevSelectedWallets_ = selectedWallets;
 
-   keepSelection();
+   if (!applyPreviousSelection()) {
+      addressModel_->setWallets(selectedWallets, true, filterBtcOnly());
+   }
 }
 
-void WalletsWidget::keepSelection()
+bool WalletsWidget::applyPreviousSelection()
 {
    // keep wallet row selection (highlighting)
+   bool isWalletSelectionChanged = (prevSelectedWalletRow_ == -1);
    if (!ui_->treeViewWallets->selectionModel()->hasSelection() && prevSelectedWalletRow_ != -1) {
       auto index = ui_->treeViewWallets->model()->index(prevSelectedWalletRow_, 0);
-      if (index.isValid())
+      if (index.isValid()) {
+         isWalletSelectionChanged = true;
          ui_->treeViewWallets->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+      }
    }
    ui_->treeViewWallets->horizontalScrollBar()->setValue(walletsScrollPos_.x());
    ui_->treeViewWallets->verticalScrollBar()->setValue(walletsScrollPos_.y());
@@ -440,11 +446,14 @@ void WalletsWidget::keepSelection()
    // keep address row selection (highlighting)
    if (!ui_->treeViewAddresses->selectionModel()->hasSelection() && prevSelectedAddressRow_ != -1) {
       auto index = ui_->treeViewAddresses->model()->index(prevSelectedAddressRow_, 0);
-      if (index.isValid())
+      if (index.isValid()) {
          ui_->treeViewAddresses->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+      }
    }
    ui_->treeViewAddresses->horizontalScrollBar()->setValue(addressesScrollPos_.x());
    ui_->treeViewAddresses->verticalScrollBar()->setValue(addressesScrollPos_.y());
+
+   return isWalletSelectionChanged;
 }
 
 bool WalletsWidget::filterBtcOnly() const
