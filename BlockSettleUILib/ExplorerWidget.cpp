@@ -31,7 +31,6 @@ ExplorerWidget::ExplorerWidget(QWidget *parent) :
    TabWithShortcut(parent)
    , ui_(new Ui::ExplorerWidget())
    , expTimer_(new QTimer)
-   , searchHistoryPosition_(-1)
 {
    ui_->setupUi(this);
    ui_->searchBox->setReadOnly(true);
@@ -77,10 +76,10 @@ void ExplorerWidget::init(const std::shared_ptr<ArmoryConnection> &armory
    logger_ = inLogger;
    authMgr_ = authMgr;
    ui_->Transaction->init(armory, inLogger, walletsMgr, ccFileMgr->getResolver());
-   ui_->Address->init(armory, inLogger, ccFileMgr->getResolver());
+   ui_->Address->init(armory, inLogger, ccFileMgr->getResolver(), walletsMgr);
 //   ui_->Block->init(armory, inLogger);
 
-   connect(authMgr_.get(), &AuthAddressManager::ConnectionComplete, [this] {
+   connect(authMgr_.get(), &AuthAddressManager::gotBsAddressList, [this] {
       ui_->Address->setBSAuthAddrs(authMgr_->GetBSAddresses());
    });
 

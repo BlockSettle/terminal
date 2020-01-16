@@ -10,14 +10,22 @@
 */
 #include "AddressDetailsWidget.h"
 #include "ui_AddressDetailsWidget.h"
+
 #include <QDateTime>
-#include <QtConcurrent/QtConcurrentRun>
+
 #include "AddressVerificator.h"
 #include "CheckRecipSigner.h"
+#include "ColoredCoinLogic.h"
 #include "UiUtils.h"
 #include "Wallets/SyncPlainWallet.h"
 #include "Wallets/SyncWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+
+namespace {
+
+   const uint64_t kAuthAddrValue = 1000;
+
+}
 
 
 AddressDetailsWidget::AddressDetailsWidget(QWidget *parent)
@@ -43,11 +51,13 @@ AddressDetailsWidget::~AddressDetailsWidget() = default;
 // Initialize the widget and related widgets (block, address, Tx)
 void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<spdlog::logger> &inLogger
-   , const std::shared_ptr<bs::sync::CCDataResolver> &resolver)
+   , const std::shared_ptr<bs::sync::CCDataResolver> &resolver
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
 {
    armory_ = armory;
    logger_ = inLogger;
    ccResolver_ = resolver;
+   walletsMgr_ = walletsMgr;
 
    act_ = make_unique<AddrDetailsACT>(this);
    act_->init(armory_.get());
@@ -77,6 +87,7 @@ void AddressDetailsWidget::setQueryAddr(const bs::Address &inAddrVal)
    {
       std::lock_guard<std::mutex> lock(mutex_);
       currentAddr_ = inAddrVal;
+      currentAddrStr_ = currentAddr_.display();
    }
 
    // Armory can't directly take an address and return all the required data.
@@ -95,66 +106,87 @@ void AddressDetailsWidget::setQueryAddr(const bs::Address &inAddrVal)
 
 void AddressDetailsWidget::updateFields()
 {
-   if (!ccFound_.first.empty()) {
-      ui_->addressId->setText(tr("%1 [Private Market: %2]")
-         .arg(QString::fromStdString(currentAddr_.display()))
-         .arg(QString::fromStdString(ccFound_.first)));
-      if (balanceLoaded_) {
-         ui_->totalReceived->setText(QString::number(totalReceived_ / ccFound_.second));
-         ui_->totalSent->setText(QString::number(totalSpent_ / ccFound_.second));
-         ui_->balance->setText(QString::number((totalReceived_ - totalSpent_) / ccFound_.second));
-
-         for (int i = 0; i < ui_->treeAddressTransactions->topLevelItemCount(); ++i) {
-            int64_t amt = ui_->treeAddressTransactions->topLevelItem(i)->data(colOutputAmt, Qt::UserRole).toLongLong();
-            amt /= (int64_t)ccFound_.second;
-            ui_->treeAddressTransactions->topLevelItem(i)->setData(colOutputAmt, Qt::DisplayRole
-               , tr("%1 %2").arg(QString::number(amt)).arg(QString::fromStdString(ccFound_.first)));
-         }
+   if (!ccFound_.security.empty()) {
+      if (!ccFound_.isGenesisAddr) {
+         ui_->addressId->setText(tr("%1 [Private Market: %2]")
+            .arg(QString::fromStdString(currentAddrStr_))
+            .arg(QString::fromStdString(ccFound_.security)));
+      } else {
+         ui_->addressId->setText(tr("%1 [Private Market: Genesis Address %2]")
+            .arg(QString::fromStdString(currentAddrStr_))
+            .arg(QString::fromStdString(ccFound_.security)));
       }
+      return;
    }
-   else {
+
+   if (bsAuthAddrs_.find(currentAddrStr_) != bsAuthAddrs_.end()) {
+      ui_->addressId->setText(tr("%1 [Authentication: BlockSettle funding address]")
+         .arg(QString::fromStdString(currentAddrStr_)));
+      return;
+   }
+
+   if (isAuthAddr_) {
       const auto authIt = authAddrStates_.find(currentAddr_);
-      if (bsAuthAddrs_.find(currentAddr_.display()) != bsAuthAddrs_.end()) {
-         ui_->addressId->setText(tr("%1 [Authentication: BlockSettle funding address]")
-            .arg(QString::fromStdString(currentAddr_.display())));
-      }
-      else if ((authIt != authAddrStates_.end()) && (authIt->second != AddressVerificationState::VerificationFailed)) {
-         ui_->addressId->setText(tr("%1 [Authentication: %2]").arg(QString::fromStdString(currentAddr_.display()))
+      if ((authIt != authAddrStates_.end()) && (authIt->second != AddressVerificationState::VerificationFailed)) {
+         ui_->addressId->setText(tr("%1 [Authentication: %2]").arg(QString::fromStdString(currentAddrStr_))
             .arg(QString::fromStdString(to_string(authIt->second))));
       }
-      else {
-         ui_->addressId->setText(QString::fromStdString(currentAddr_.display()));
-      }
-      if (balanceLoaded_) {
-         ui_->totalReceived->setText(UiUtils::displayAmount(totalReceived_.load()));
-         ui_->totalSent->setText(UiUtils::displayAmount(totalSpent_.load()));
-         ui_->balance->setText(UiUtils::displayAmount(totalReceived_ - totalSpent_));
-      }
+      return;
    }
+
+   ui_->addressId->setText(QString::fromStdString(currentAddrStr_));
 }
 
 void AddressDetailsWidget::searchForCC()
 {
-   if (!ccFound_.first.empty()) {
-      return;
+   for (const auto &ccSecurity : ccResolver_->securities()) {
+      const auto &genesisAddr = ccResolver_->genesisAddrFor(ccSecurity);
+      if (currentAddr_ == genesisAddr) {
+         ccFound_.security = ccSecurity;
+         ccFound_.lotSize = ccResolver_->lotSizeFor(ccSecurity);
+         ccFound_.isGenesisAddr = true;
+         return;
+      }
    }
+
+   // If currentAddr_ was a valid CC address then it must been a valid CC outpoint at least once.
+   // Collect possible candidates here.
+   std::map<BinaryData, uint32_t> outPoints;
    for (const auto &txPair : txMap_) {
-      for (const auto &ccSecurity : ccResolver_->securities()) {
-         auto checker = std::make_shared<bs::TxAddressChecker>(
-            ccResolver_->genesisAddrFor(ccSecurity), armory_);
-         const auto &cbHasInput = [this, ccSecurity, checker](bool found) {
-            if (!found || !ccFound_.first.empty()) {
-               return;
+      const auto &tx = txPair.second;
+      if (!tx.isInitialized()) {
+         continue;
+      }
+
+      for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
+         const auto &txOut = tx.getTxOutCopy(int(i));
+         try {
+            const auto &addr = bs::Address::fromTxOut(txOut);
+            if (addr == currentAddr_) {
+               // Only first outputs could be CC
+               outPoints[tx.getThisHash()] = uint32_t(i);
+               break;
             }
-            ccFound_ = { ccSecurity, ccResolver_->lotSizeFor(ccSecurity) };
-            QMetaObject::invokeMethod(this, &AddressDetailsWidget::updateFields);
-         };
-         if (!ccFound_.first.empty()) {
-            break;
+         } catch (...) {
          }
-         const auto nbSatoshis = ccResolver_->lotSizeFor(ccSecurity);
-         if (((totalReceived_ % nbSatoshis) == 0) && ((totalSpent_ % nbSatoshis) == 0)) {
-            checker->containsInputAddress(txPair.second, cbHasInput, nbSatoshis);
+      }
+   }
+
+   for (const auto &ccSecurity : ccResolver_->securities()) {
+      const auto &tracker = walletsMgr_->tracker(ccSecurity);
+      if (!tracker) {
+         SPDLOG_LOGGER_WARN(logger_, "CC tracker {} is not found", ccSecurity);
+         continue;
+      }
+
+      for (const auto &outPoint : outPoints) {
+         const bool isValid = tracker->isTxHashValidHistory(outPoint.first, outPoint.second);
+         if (isValid) {
+            ccFound_.tracker = tracker;
+            ccFound_.security = ccSecurity;
+            ccFound_.lotSize = ccResolver_->lotSizeFor(ccSecurity);
+            ccFound_.isGenesisAddr = false;
+            return;
          }
       }
    }
@@ -178,8 +210,8 @@ void AddressDetailsWidget::loadTransactions()
 
    uint64_t totCount = 0;
 
-   QtConcurrent::run(this, &AddressDetailsWidget::searchForCC);
-   QtConcurrent::run(this, &AddressDetailsWidget::searchForAuth);
+   searchForCC();
+   const bool isCcAddress = !ccFound_.security.empty();
 
    // Go through each TXEntry object and calculate all required UI data.
    for (const auto &curTXEntry : txEntryHashSet_) {
@@ -187,8 +219,8 @@ void AddressDetailsWidget::loadTransactions()
 
       auto tx = txMap_[curTXEntry.first];
       if (!tx.isInitialized()) {
-         logger_->warn("[{}] TX with hash {} is not found or not inited"
-            , __func__, curTXEntry.first.toHexStr(true));
+         SPDLOG_LOGGER_WARN(logger_, "TX with hash {} is not found or not inited"
+            , curTXEntry.first.toHexStr(true));
          continue;
       }
 
@@ -203,8 +235,8 @@ void AddressDetailsWidget::loadTransactions()
             totIn += prevOut.getValue();
          }
          else {
-            logger_->warn("[{}] prev TX with hash {} is not found or is not"
-               "initialized", __func__, op.getTxHash().toHexStr(true));
+            SPDLOG_LOGGER_WARN(logger_, "prev TX with hash {} is not found or is notinitialized"
+               , op.getTxHash().toHexStr(true));
          }
       }
       uint64_t fees = totIn - tx.getSumOfOutputs();
@@ -218,38 +250,85 @@ void AddressDetailsWidget::loadTransactions()
       item->setData(colConfs, Qt::DisplayRole, armory_->getConfirmationsNumber(curTXEntry.second.blockNum));
       item->setText(colInputsNum, QString::number(tx.getNumTxIn()));
       item->setText(colOutputsNum, QString::number(tx.getNumTxOut()));
-      item->setText(colOutputAmt, UiUtils::displayAmount(curTXEntry.second.value));
-      item->setData(colOutputAmt, Qt::UserRole, (qlonglong)curTXEntry.second.value);
       item->setText(colFees, UiUtils::displayAmount(fees));
       item->setText(colFeePerByte, QString::number(std::nearbyint(feePerByte)));
       item->setText(colTxSize, QString::number(tx.getSize()));
 
+      // isTxHashValidHistory is not absolutly accurate to detect invalid CC transactions but should be good enough
+      const bool isCcTx = isCcAddress && (ccFound_.isGenesisAddr || (ccFound_.tracker && ccFound_.tracker->isTxHashValidHistory(curTXEntry.second.txHash)));
+
+      if (!isCcTx) {
+         item->setText(colOutputAmt, UiUtils::displayAmount(curTXEntry.second.value));
+      } else {
+         const auto ccAmount = curTXEntry.second.value / int64_t(ccFound_.lotSize);
+         item->setText(colOutputAmt, tr("%1 %2").arg(QString::number(ccAmount)).arg(QString::fromStdString(ccFound_.security)));
+      }
       item->setTextAlignment(colOutputAmt, Qt::AlignRight);
 
       QFont font = item->font(colOutputAmt);
       font.setBold(true);
       item->setFont(colOutputAmt, font);
 
-      // Check the total received or sent.
-      if (curTXEntry.second.value > 0) {
-         totalReceived_ += curTXEntry.second.value;
+      if (isCcAddress && !isCcTx) {
+         // Mark invalid CC transactions
+         item->setTextColor(colOutputAmt, Qt::red);
       }
-      else {
-         totalSpent_ -= curTXEntry.second.value; // Negative, so fake that out.
+
+      // Check the total received or sent.
+      // Account only valid TXs for CC address.
+      if (!isCcAddress) {
+         if (curTXEntry.second.value > 0) {
+            totalReceived_ += curTXEntry.second.value;
+         }
+         else {
+            totalSpent_ -= curTXEntry.second.value; // Negative, so fake that out.
+         }
+      } else if (isCcTx) {
+         if (curTXEntry.second.value > 0) {
+            totalReceived_ += curTXEntry.second.value / int64_t(ccFound_.lotSize);
+         }
+         else {
+            totalSpent_ -= curTXEntry.second.value / int64_t(ccFound_.lotSize);
+         }
       }
       totCount++;
 
+      // Detect if this is an auth address
+      if (curTXEntry.second.value == kAuthAddrValue) {
+         for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
+            const auto &txOut = tx.getTxOutCopy(static_cast<int>(i));
+            try {
+               const auto addr = bs::Address::fromTxOut(txOut);
+               if (bsAuthAddrs_.find(addr.display()) != bsAuthAddrs_.end()) {
+                  isAuthAddr_ = true;
+                  AddressDetailsWidget::searchForAuth();
+                  break;
+               }
+            } catch (const std::exception &e) {
+               SPDLOG_LOGGER_ERROR(logger_, "auth address detection failed: {}", e.what());
+            }
+         }
+      }
+
       setConfirmationColor(item);
-      // disabled as per Scott's request
-      //setOutputColor(item);
       tree->addTopLevelItem(item);
    }
 
-   balanceLoaded_ = true;
+   if (!isCcAddress) {
+      ui_->totalReceived->setText(UiUtils::displayAmount(totalReceived_));
+      ui_->totalSent->setText(UiUtils::displayAmount(totalSpent_));
+      ui_->balance->setText(UiUtils::displayAmount(totalReceived_ - totalSpent_));
+   } else {
+      ui_->totalReceived->setText(QString::number(totalReceived_));
+      ui_->totalSent->setText(QString::number(totalSpent_));
+      ui_->balance->setText(QString::number(totalReceived_ - totalSpent_));
+   }
+
    emit finished();
 
    // Set up the display for total rcv'd/spent.
    ui_->transactionCount->setText(QString::number(totCount));
+
    updateFields();
 
    tree->resizeColumns();
@@ -271,23 +350,6 @@ void AddressDetailsWidget::setConfirmationColor(QTreeWidgetItem *item)
       brush.setColor(Qt::darkGreen);
    }
    item->setForeground(colConfs, brush);
-}
-
-// This functions sets the output column color based on pos or neg value.
-void AddressDetailsWidget::setOutputColor(QTreeWidgetItem *item)
-{
-   auto output = item->text(colOutputAmt).toDouble();
-   QBrush brush;
-   if (output > 0) {
-      brush.setColor(Qt::darkGreen);
-   }
-   else if (output < 0) {
-      brush.setColor(Qt::red);
-   }
-   else {
-      brush.setColor(Qt::white);
-   }
-   item->setForeground(colOutputAmt, brush);
 }
 
 void AddressDetailsWidget::onTxClicked(QTreeWidgetItem *item, int column)
@@ -336,7 +398,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
          }
       }
       if (prevTxHashSet.empty()) {
-         logger_->warn("[AddressDetailsWidget::getTxData] failed to get previous TXs");
+         SPDLOG_LOGGER_WARN(logger_, "failed to get previous TXs");
          loadTransactions();
       }
       else {
@@ -354,8 +416,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
          *result = entries.get();
       }
       catch (const std::exception &e) {
-         logger_->error("[AddressDetailsWidget::getTxData] Return data error " \
-            "- {}", e.what());
+         SPDLOG_LOGGER_ERROR(logger_, "Return data error - {}", e.what());
          return;
       }
 
@@ -373,7 +434,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
             }
          }
          if (txHashSet.empty()) {
-            logger_->info("[AddressDetailsWidget::getTxData] address participates in no TXs");
+            SPDLOG_LOGGER_INFO(logger_, "address participates in no TXs");
             cbCollectTXs({}, nullptr);
          } else {
             armory_->getTXsByHash(txHashSet, cbCollectTXs);
@@ -389,8 +450,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
          }
       }
       catch (const std::exception &e) {
-         logger_->error("[AddressDetailsWidget::getTxData] Return data " \
-            "error (getPageCount) - {}", e.what());
+         SPDLOG_LOGGER_ERROR(logger_, "Return data error (getPageCount) - {}", e.what());
       }
    };
    delegate->getPageCount(cbPageCnt);
@@ -399,12 +459,10 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
 // Function that grabs the TX data for the address. Used in callback.
 void AddressDetailsWidget::refresh(const std::shared_ptr<bs::sync::PlainWallet> &wallet)
 {
-   logger_->debug("[{}] get refresh command for {}", __func__
-                  , wallet->walletId());
+   SPDLOG_LOGGER_DEBUG(logger_, "get refresh command for {}", wallet->walletId());
    if (wallet->getUsedAddressCount() != 1) {
-      logger_->debug("[{}] dummy wallet {} contains invalid amount of "
-                     "addresses ({})", __func__, wallet->walletId()
-                     , wallet->getUsedAddressCount());
+      SPDLOG_LOGGER_DEBUG(logger_, "dummy wallet {} contains invalid amount of addresses ({})"
+         , wallet->walletId(), wallet->getUsedAddressCount());
       return;
    }
 
@@ -414,9 +472,8 @@ void AddressDetailsWidget::refresh(const std::shared_ptr<bs::sync::PlainWallet> 
    };
    const auto addr = wallet->getUsedAddressList().at(0);
    if (!wallet->getLedgerDelegateForAddress(addr, cbLedgerDelegate)) {
-      logger_->debug("[AddressDetailsWidget::refresh (cbBalance)] Failed to "
-                     "get ledger delegate for wallet ID {} - address {}"
-                     , wallet->walletId(), addr.display());
+      SPDLOG_LOGGER_DEBUG(logger_, "failed to get ledger delegate for wallet ID {} - address {}"
+         , wallet->walletId(), addr.display());
    }
 }
 
@@ -443,14 +500,13 @@ void AddressDetailsWidget::clear()
    for (const auto &dummyWallet : dummyWallets_) {
       dummyWallet.second->unregisterWallet();
    }
-   balanceLoaded_ = false;
    totalReceived_ = 0;
    totalSpent_ = 0;
    dummyWallets_.clear();
    txMap_.clear();
    txEntryHashSet_.clear();
-   ccFound_.first.clear();
-   ccFound_.second = 0;
+   ccFound_ = {};
+   isAuthAddr_ = false;
    authAddrStates_.clear();
 
    ui_->addressId->clear();
