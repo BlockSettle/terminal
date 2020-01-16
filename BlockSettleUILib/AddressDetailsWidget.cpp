@@ -149,6 +149,8 @@ void AddressDetailsWidget::searchForCC()
       }
    }
 
+   // If currentAddr_ was a valid CC address then it must been a valid CC outpoint at least once.
+   // Collect possible candidates here.
    std::map<BinaryData, uint32_t> outPoints;
    for (const auto &txPair : txMap_) {
       const auto &tx = txPair.second;
@@ -161,7 +163,9 @@ void AddressDetailsWidget::searchForCC()
          try {
             const auto &addr = bs::Address::fromTxOut(txOut);
             if (addr == currentAddr_) {
+               // Only first outputs could be CC
                outPoints[tx.getThisHash()] = uint32_t(i);
+               break;
             }
          } catch (...) {
          }
