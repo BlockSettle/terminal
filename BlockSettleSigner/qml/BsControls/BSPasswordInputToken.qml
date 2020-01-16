@@ -24,6 +24,7 @@ BSPasswordInput {
 
     property WalletInfo walletInfo: WalletInfo{}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
+    authEidInfoToAdd: JsHelper.getAuthEidMessageLine("Product", passwordDialogData.Product)
 
     title: qsTr("CREATE SUB-WALLET")
     autheIDSignType: AutheIDClient.SubmitEquityToken

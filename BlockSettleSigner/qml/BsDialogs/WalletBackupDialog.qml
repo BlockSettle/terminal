@@ -273,7 +273,8 @@ CustomTitleDialogWindow {
                         }
                     }
                     else if (walletInfo.encType === QPasswordData.Auth) {
-                        JsHelper.requesteIdAuth(AutheIDClient.BackupWallet, walletInfo
+                        let authEidMessage = JsHelper.getAuthEidWalletInfo(walletInfo);
+                        JsHelper.requesteIdAuth(AutheIDClient.BackupWallet, walletInfo, authEidMessage
                             , function(passwordData){
                                 if (fullBackupMode) {
                                     walletsProxy.backupPrivateKey(walletInfo.walletId

@@ -371,7 +371,8 @@ CustomTitleDialogWindow {
                                     walletsProxy.removeEidDevice(walletInfo.walletId, oldPwEidData, index, onRemoveDeviceCb)
                                 }
 
-                                JsHelper.removeEidDevice(index, walletInfo, onEidSuccess)
+                                let authEidMessage = JsHelper.getAuthEidWalletInfo(walletInfo);
+                                JsHelper.removeEidDevice(index, walletInfo, authEidMessage, onEidSuccess)
                             }
                         }
                     }
@@ -405,6 +406,7 @@ CustomTitleDialogWindow {
                 }
                 enabled: acceptable
                 onClicked: {
+                    let authEidMessage = JsHelper.getAuthEidWalletInfo(walletInfo);
                     if (tabBar.currentIndex === 0) {
                         // change password
                         if (rbPassword.checked) {
@@ -417,6 +419,7 @@ CustomTitleDialogWindow {
                             // current auth is eID
                             JsHelper.requesteIdAuth(AutheIDClient.DeactivateWallet
                                 , walletInfo
+                                , authEidMessage
                                 , function(oldPwEidData) {
                                     if (rbPassword.checked) {
                                         // change to password
@@ -436,6 +439,7 @@ CustomTitleDialogWindow {
                                         // change to another eid account
                                         JsHelper.requesteIdAuth(AutheIDClient.ActivateWallet
                                             , walletInfo
+                                            , authEidMessage
                                             , function(newPwEidData){
                                                 walletsProxy.changePassword(walletInfo.walletId
                                                     , oldPwEidData
@@ -473,8 +477,10 @@ CustomTitleDialogWindow {
                             }
                             else {
                                 // new auth is eID
+                                let authEidMessage = JsHelper.getAuthEidWalletInfo(walletInfo);
                                 JsHelper.activateeIdAuth(textInputEmail.text
                                     , walletInfo
+                                    , authEidMessage
                                     , function(newPwEidData){
                                          walletsProxy.changePassword(walletInfo.walletId
                                              , oldPasswordData
@@ -507,11 +513,11 @@ CustomTitleDialogWindow {
                             }
 
                             // step #2. add new device
-                            JsHelper.requesteIdAuth(AutheIDClient.ActivateWalletNewDevice, walletInfo, eidNewPasswordCb)
+                            JsHelper.requesteIdAuth(AutheIDClient.ActivateWalletNewDevice, walletInfo, authEidMessage, eidNewPasswordCb)
                         }
 
                         // step #1. request old device
-                        JsHelper.requesteIdAuth(AutheIDClient.ActivateWalletOldDevice, walletInfo, eidOldPasswordCb)
+                        JsHelper.requesteIdAuth(AutheIDClient.ActivateWalletOldDevice, walletInfo, authEidMessage, eidOldPasswordCb)
                     }
                 }
             }

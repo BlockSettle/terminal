@@ -339,7 +339,8 @@ CustomTitleDialogWindow {
                     }
                     else {
                         // auth eID
-                        JsHelper.activateeIdAuth(textInputEmail.text, walletInfo, function(newPasswordData) {
+                        let authEidMessage = JsHelper.getAuthEidWalletInfo(walletInfo);
+                        JsHelper.activateeIdAuth(textInputEmail.text, walletInfo, authEidMessage, function(newPasswordData) {
                             walletsProxy.createWallet(cbPrimary.checked, seed, walletInfo, newPasswordData, createCallback)
                         })
                     }

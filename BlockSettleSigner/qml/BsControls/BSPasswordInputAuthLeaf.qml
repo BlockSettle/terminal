@@ -18,6 +18,7 @@ import com.blocksettle.WalletInfo 1.0
 
 import "../StyledControls"
 import "../BsStyles"
+import "../js/helper.js" as JsHelper
 
 BSPasswordInput {
     id: root
@@ -27,6 +28,8 @@ BSPasswordInput {
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
 
     title: passwordDialogData.Title
+
+    authEidInfoToAdd: JsHelper.getAuthEidMessageLine("Authentication Address", passwordDialogData.AuthAddress)
 
     // not used at the moment
     autheIDSignType: AutheIDClient.VerifyWalletKey

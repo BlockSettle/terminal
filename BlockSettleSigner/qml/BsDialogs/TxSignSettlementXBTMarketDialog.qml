@@ -52,15 +52,9 @@ TxSignSettlementBaseDialog {
         }
     }
 
-    Component.onCompleted: {
-        if (passwordDialogData.hasQuantity()) {
-            quantity = passwordDialogData.Quantity
-        }
-        if (passwordDialogData.hasTotalValue()) {
-            totalValue = passwordDialogData.TotalValue
-        }
-        priceString = price + " " + fxProduct + " / 1 XBT"
-    }
+    quantity: passwordDialogData.hasQuantity() ? passwordDialogData.Quantity : ""
+    totalValue:  passwordDialogData.hasTotalValue() ? passwordDialogData.TotalValue : ""
+    priceString: price + " " + fxProduct + " / 1 XBT"
 
     settlementDetailsItem: GridLayout {
         id: gridSettlementDetails

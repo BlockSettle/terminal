@@ -60,11 +60,9 @@ TxSignSettlementBaseDialog {
 
     validationTitle: qsTr("Genesis Address")
 
-    Component.onCompleted: {
-        quantity = getQuantity() + " " + product
-        totalValue = (getQuantity() * price).toFixed(8) + " XBT"
-        priceString = price + " XBT / 1 " + product
-    }
+    quantity: getQuantity() + " " + product
+    totalValue: (getQuantity() * price).toFixed(8) + " XBT"
+    priceString: price + " XBT / 1 " + product
 
     settlementDetailsItem: GridLayout {
         id: gridSettlementDetails
