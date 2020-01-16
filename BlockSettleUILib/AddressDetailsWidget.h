@@ -29,7 +29,9 @@ namespace bs {
    }
 }
 class AddressVerificator;
+class ColoredCoinTracker;
 class QTreeWidgetItem;
+
 
 class AddressDetailsWidget : public QWidget
 {
@@ -48,9 +50,9 @@ public:
    void clear();
 
    enum AddressTreeColumns {
-      colDate = 0,
-      colTxId = 1,
-      colConfs = 2,
+      colDate,
+      colTxId,
+      colConfs,
       colInputsNum,
       colOutputsNum,
       colOutputAmt,
@@ -70,7 +72,6 @@ private slots:
 
 private:
    void setConfirmationColor(QTreeWidgetItem *item);
-   void setOutputColor(QTreeWidgetItem *item);
    void getTxData(const std::shared_ptr<AsyncClient::LedgerDelegate> &);
    void refresh(const std::shared_ptr<bs::sync::PlainWallet> &);
    void loadTransactions();
@@ -96,17 +97,18 @@ private:
 
    struct CcData
    {
+      std::shared_ptr<ColoredCoinTracker> tracker;
       std::string security;
       uint64_t lotSize{};
+      uint64_t ccBalance{};
       bool isGenesisAddr{};
    };
 
    std::unique_ptr<Ui::AddressDetailsWidget> ui_; // The main widget object.
    bs::Address    currentAddr_;
    std::string    currentAddrStr_;
-   bool           balanceLoaded_ = false;
-   std::atomic_uint64_t totalSpent_{};
-   std::atomic_uint64_t totalReceived_{};
+   std::int64_t totalSpent_{};
+   std::int64_t totalReceived_{};
    std::unordered_map<std::string, std::shared_ptr<bs::sync::PlainWallet>> dummyWallets_;
    std::map<BinaryData, Tx> txMap_; // A wallet's Tx hash / Tx map.
    std::map<BinaryData, bs::TXEntry> txEntryHashSet_; // A wallet's Tx hash / Tx entry map.

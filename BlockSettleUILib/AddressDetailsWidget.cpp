@@ -116,26 +116,7 @@ void AddressDetailsWidget::updateFields()
             .arg(QString::fromStdString(currentAddrStr_))
             .arg(QString::fromStdString(ccFound_.security)));
       }
-
-      if (balanceLoaded_) {
-         ui_->totalReceived->setText(QString::number(totalReceived_ / ccFound_.lotSize));
-         ui_->totalSent->setText(QString::number(totalSpent_ / ccFound_.lotSize));
-         ui_->balance->setText(QString::number((totalReceived_ - totalSpent_) / ccFound_.lotSize));
-
-         for (int i = 0; i < ui_->treeAddressTransactions->topLevelItemCount(); ++i) {
-            int64_t amt = ui_->treeAddressTransactions->topLevelItem(i)->data(colOutputAmt, Qt::UserRole).toLongLong();
-            amt /= (int64_t)ccFound_.lotSize;
-            ui_->treeAddressTransactions->topLevelItem(i)->setData(colOutputAmt, Qt::DisplayRole
-               , tr("%1 %2").arg(QString::number(amt)).arg(QString::fromStdString(ccFound_.security)));
-         }
-      }
       return;
-   }
-
-   if (balanceLoaded_) {
-      ui_->totalReceived->setText(UiUtils::displayAmount(totalReceived_.load()));
-      ui_->totalSent->setText(UiUtils::displayAmount(totalSpent_.load()));
-      ui_->balance->setText(UiUtils::displayAmount(totalReceived_ - totalSpent_));
    }
 
    if (bsAuthAddrs_.find(currentAddrStr_) != bsAuthAddrs_.end()) {
@@ -197,6 +178,7 @@ void AddressDetailsWidget::searchForCC()
       for (const auto &outPoint : outPoints) {
          const bool isValid = tracker->isTxHashValidHistory(outPoint.first, outPoint.second);
          if (isValid) {
+            ccFound_.tracker = tracker;
             ccFound_.security = ccSecurity;
             ccFound_.lotSize = ccResolver_->lotSizeFor(ccSecurity);
             ccFound_.isGenesisAddr = false;
@@ -223,6 +205,9 @@ void AddressDetailsWidget::loadTransactions()
    tree->clear();
 
    uint64_t totCount = 0;
+
+   searchForCC();
+   const bool isCcAddress = !ccFound_.security.empty();
 
    // Go through each TXEntry object and calculate all required UI data.
    for (const auto &curTXEntry : txEntryHashSet_) {
@@ -261,24 +246,46 @@ void AddressDetailsWidget::loadTransactions()
       item->setData(colConfs, Qt::DisplayRole, armory_->getConfirmationsNumber(curTXEntry.second.blockNum));
       item->setText(colInputsNum, QString::number(tx.getNumTxIn()));
       item->setText(colOutputsNum, QString::number(tx.getNumTxOut()));
-      item->setText(colOutputAmt, UiUtils::displayAmount(curTXEntry.second.value));
-      item->setData(colOutputAmt, Qt::UserRole, (qlonglong)curTXEntry.second.value);
       item->setText(colFees, UiUtils::displayAmount(fees));
       item->setText(colFeePerByte, QString::number(std::nearbyint(feePerByte)));
       item->setText(colTxSize, QString::number(tx.getSize()));
 
+      // isTxHashValidHistory is not absolutly accurate to detect invalid CC transactions but should be good enough
+      const bool isCcTx = isCcAddress && (ccFound_.isGenesisAddr || (ccFound_.tracker && ccFound_.tracker->isTxHashValidHistory(curTXEntry.second.txHash)));
+
+      if (!isCcTx) {
+         item->setText(colOutputAmt, UiUtils::displayAmount(curTXEntry.second.value));
+      } else {
+         const auto ccAmount = curTXEntry.second.value / int64_t(ccFound_.lotSize);
+         item->setText(colOutputAmt, tr("%1 %2").arg(QString::number(ccAmount)).arg(QString::fromStdString(ccFound_.security)));
+      }
       item->setTextAlignment(colOutputAmt, Qt::AlignRight);
 
       QFont font = item->font(colOutputAmt);
       font.setBold(true);
       item->setFont(colOutputAmt, font);
 
-      // Check the total received or sent.
-      if (curTXEntry.second.value > 0) {
-         totalReceived_ += curTXEntry.second.value;
+      if (isCcAddress && !isCcTx) {
+         // Mark invalid CC transactions
+         item->setTextColor(colOutputAmt, Qt::red);
       }
-      else {
-         totalSpent_ -= curTXEntry.second.value; // Negative, so fake that out.
+
+      // Check the total received or sent.
+      // Account only valid TXs for CC address.
+      if (!isCcAddress) {
+         if (curTXEntry.second.value > 0) {
+            totalReceived_ += curTXEntry.second.value;
+         }
+         else {
+            totalSpent_ -= curTXEntry.second.value; // Negative, so fake that out.
+         }
+      } else if (isCcTx) {
+         if (curTXEntry.second.value > 0) {
+            totalReceived_ += curTXEntry.second.value / int64_t(ccFound_.lotSize);
+         }
+         else {
+            totalSpent_ -= curTXEntry.second.value / int64_t(ccFound_.lotSize);
+         }
       }
       totCount++;
 
@@ -300,18 +307,23 @@ void AddressDetailsWidget::loadTransactions()
       }
 
       setConfirmationColor(item);
-      // disabled as per Scott's request
-      //setOutputColor(item);
       tree->addTopLevelItem(item);
    }
 
-   balanceLoaded_ = true;
+   if (!isCcAddress) {
+      ui_->totalReceived->setText(UiUtils::displayAmount(totalReceived_));
+      ui_->totalSent->setText(UiUtils::displayAmount(totalSpent_));
+      ui_->balance->setText(UiUtils::displayAmount(totalReceived_ - totalSpent_));
+   } else {
+      ui_->totalReceived->setText(QString::number(totalReceived_));
+      ui_->totalSent->setText(QString::number(totalSpent_));
+      ui_->balance->setText(QString::number(totalReceived_ - totalSpent_));
+   }
+
    emit finished();
 
    // Set up the display for total rcv'd/spent.
    ui_->transactionCount->setText(QString::number(totCount));
-
-   searchForCC();
 
    updateFields();
 
@@ -334,23 +346,6 @@ void AddressDetailsWidget::setConfirmationColor(QTreeWidgetItem *item)
       brush.setColor(Qt::darkGreen);
    }
    item->setForeground(colConfs, brush);
-}
-
-// This functions sets the output column color based on pos or neg value.
-void AddressDetailsWidget::setOutputColor(QTreeWidgetItem *item)
-{
-   auto output = item->text(colOutputAmt).toDouble();
-   QBrush brush;
-   if (output > 0) {
-      brush.setColor(Qt::darkGreen);
-   }
-   else if (output < 0) {
-      brush.setColor(Qt::red);
-   }
-   else {
-      brush.setColor(Qt::white);
-   }
-   item->setForeground(colOutputAmt, brush);
 }
 
 void AddressDetailsWidget::onTxClicked(QTreeWidgetItem *item, int column)
@@ -501,7 +496,6 @@ void AddressDetailsWidget::clear()
    for (const auto &dummyWallet : dummyWallets_) {
       dummyWallet.second->unregisterWallet();
    }
-   balanceLoaded_ = false;
    totalReceived_ = 0;
    totalSpent_ = 0;
    dummyWallets_.clear();
