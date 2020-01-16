@@ -50,7 +50,7 @@ public:
       QString getComment() const;
       QString getAddress() const;
 
-      bool operator==(const AddressRow& other);
+      bool operator==(const AddressRow& other) const;
    };
 
    enum Columns

@@ -39,7 +39,7 @@ QString AddressListModel::AddressRow::getAddress() const
    return UiUtils::displayAddress(displayedAddress);
 }
 
-bool AddressListModel::AddressRow::operator==(const AddressRow& other)
+bool AddressListModel::AddressRow::operator==(const AddressRow& other) const
 {
    return  wallet.get() == other.wallet.get() &&
       address == other.address &&
