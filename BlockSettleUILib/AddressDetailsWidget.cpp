@@ -10,10 +10,12 @@
 */
 #include "AddressDetailsWidget.h"
 #include "ui_AddressDetailsWidget.h"
+
 #include <QDateTime>
-#include <QtConcurrent/QtConcurrentRun>
+
 #include "AddressVerificator.h"
 #include "CheckRecipSigner.h"
+#include "ColoredCoinLogic.h"
 #include "UiUtils.h"
 #include "Wallets/SyncPlainWallet.h"
 #include "Wallets/SyncWallet.h"
@@ -49,11 +51,13 @@ AddressDetailsWidget::~AddressDetailsWidget() = default;
 // Initialize the widget and related widgets (block, address, Tx)
 void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<spdlog::logger> &inLogger
-   , const std::shared_ptr<bs::sync::CCDataResolver> &resolver)
+   , const std::shared_ptr<bs::sync::CCDataResolver> &resolver
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
 {
    armory_ = armory;
    logger_ = inLogger;
    ccResolver_ = resolver;
+   walletsMgr_ = walletsMgr;
 
    act_ = make_unique<AddrDetailsACT>(this);
    act_->init(armory_.get());
@@ -154,41 +158,49 @@ void AddressDetailsWidget::updateFields()
 
 void AddressDetailsWidget::searchForCC()
 {
-   if (!ccFound_.security.empty()) {
-      return;
-   }
-
    for (const auto &ccSecurity : ccResolver_->securities()) {
       const auto &genesisAddr = ccResolver_->genesisAddrFor(ccSecurity);
       if (currentAddr_ == genesisAddr) {
          ccFound_.security = ccSecurity;
          ccFound_.lotSize = ccResolver_->lotSizeFor(ccSecurity);
          ccFound_.isGenesisAddr = true;
-         QMetaObject::invokeMethod(this, &AddressDetailsWidget::updateFields);
          return;
       }
    }
 
+   std::map<BinaryData, uint32_t> outPoints;
    for (const auto &txPair : txMap_) {
-      for (const auto &ccSecurity : ccResolver_->securities()) {
-         const auto &genesisAddr = ccResolver_->genesisAddrFor(ccSecurity);
-         auto checker = std::make_shared<bs::TxAddressChecker>(
-            genesisAddr, armory_);
-         const auto &cbHasInput = [this, ccSecurity, checker](bool found) {
-            if (!found || !ccFound_.security.empty()) {
-               return;
+      const auto &tx = txPair.second;
+      if (!tx.isInitialized()) {
+         continue;
+      }
+
+      for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
+         const auto &txOut = tx.getTxOutCopy(int(i));
+         try {
+            const auto &addr = bs::Address::fromTxOut(txOut);
+            if (addr == currentAddr_) {
+               outPoints[tx.getThisHash()] = uint32_t(i);
             }
+         } catch (...) {
+         }
+      }
+   }
+
+   for (const auto &ccSecurity : ccResolver_->securities()) {
+      const auto &tracker = walletsMgr_->tracker(ccSecurity);
+      if (!tracker) {
+         SPDLOG_LOGGER_WARN(logger_, "CC tracker {} is not found", ccSecurity);
+         continue;
+      }
+
+      for (const auto &outPoint : outPoints) {
+         const bool isValid = tracker->isTxHashValidHistory(outPoint.first, outPoint.second);
+         if (isValid) {
             ccFound_.security = ccSecurity;
             ccFound_.lotSize = ccResolver_->lotSizeFor(ccSecurity);
             ccFound_.isGenesisAddr = false;
-            QMetaObject::invokeMethod(this, &AddressDetailsWidget::updateFields);
-         };
-         if (!ccFound_.security.empty()) {
-            break;
-         }
-         const auto nbSatoshis = ccResolver_->lotSizeFor(ccSecurity);
-         if (((totalReceived_ % nbSatoshis) == 0) && ((totalSpent_ % nbSatoshis) == 0)) {
-            checker->containsInputAddress(txPair.second, cbHasInput, nbSatoshis);
+            return;
          }
       }
    }
@@ -211,8 +223,6 @@ void AddressDetailsWidget::loadTransactions()
    tree->clear();
 
    uint64_t totCount = 0;
-
-   QtConcurrent::run(this, &AddressDetailsWidget::searchForCC);
 
    // Go through each TXEntry object and calculate all required UI data.
    for (const auto &curTXEntry : txEntryHashSet_) {
@@ -280,7 +290,7 @@ void AddressDetailsWidget::loadTransactions()
                const auto addr = bs::Address::fromTxOut(txOut);
                if (bsAuthAddrs_.find(addr.display()) != bsAuthAddrs_.end()) {
                   isAuthAddr_ = true;
-                  QtConcurrent::run(this, &AddressDetailsWidget::searchForAuth);
+                  AddressDetailsWidget::searchForAuth();
                   break;
                }
             } catch (const std::exception &e) {
@@ -300,6 +310,9 @@ void AddressDetailsWidget::loadTransactions()
 
    // Set up the display for total rcv'd/spent.
    ui_->transactionCount->setText(QString::number(totCount));
+
+   searchForCC();
+
    updateFields();
 
    tree->resizeColumns();

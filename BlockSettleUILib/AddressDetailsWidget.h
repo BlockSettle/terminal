@@ -25,6 +25,7 @@ namespace bs {
    namespace sync {
       class CCDataResolver;
       class PlainWallet;
+      class WalletsManager;
    }
 }
 class AddressVerificator;
@@ -40,7 +41,8 @@ public:
 
    void init(const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<spdlog::logger> &inLogger
-      , const std::shared_ptr<bs::sync::CCDataResolver> &);
+      , const std::shared_ptr<bs::sync::CCDataResolver> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &);
    void setQueryAddr(const bs::Address& inAddrVal);
    void setBSAuthAddrs(const std::unordered_set<std::string> &bsAuthAddrs);
    void clear();
@@ -112,6 +114,7 @@ private:
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::sync::CCDataResolver> ccResolver_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    CcData ccFound_;
    std::shared_ptr<AddressVerificator> addrVerify_;
    std::map<bs::Address, AddressVerificationState> authAddrStates_;

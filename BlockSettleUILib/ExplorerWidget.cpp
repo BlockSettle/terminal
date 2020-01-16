@@ -76,7 +76,7 @@ void ExplorerWidget::init(const std::shared_ptr<ArmoryConnection> &armory
    logger_ = inLogger;
    authMgr_ = authMgr;
    ui_->Transaction->init(armory, inLogger, walletsMgr, ccFileMgr->getResolver());
-   ui_->Address->init(armory, inLogger, ccFileMgr->getResolver());
+   ui_->Address->init(armory, inLogger, ccFileMgr->getResolver(), walletsMgr);
 //   ui_->Block->init(armory, inLogger);
 
    connect(authMgr_.get(), &AuthAddressManager::gotBsAddressList, [this] {
