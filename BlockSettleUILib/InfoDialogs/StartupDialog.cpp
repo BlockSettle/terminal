@@ -30,8 +30,8 @@ namespace {
    const QString kDoneButton = QObject::tr("Continue");
 
    const QString kNetworkType = QObject::tr("ENVIRONMENT");
-   const QString kProductionConnectivity = QObject::tr("Production Environment");
-   const QString kTestConnectivity = QObject::tr("Test Environment");
+   const QString kProductionConnectivity = QObject::tr("Production Environment (Mainnet)");
+   const QString kTestConnectivity = QObject::tr("Test Environment (Testnet)");
 }
 
 StartupDialog::StartupDialog(bool showLicense, QWidget *parent) :
