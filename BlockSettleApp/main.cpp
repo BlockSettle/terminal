@@ -171,6 +171,8 @@ static int runChecked(QApplication *app, const std::shared_ptr<ApplicationSettin
 static int GuiApp(int &argc, char** argv)
 {
    Q_INIT_RESOURCE(armory);
+   Q_INIT_RESOURCE(tradinghelp);
+   Q_INIT_RESOURCE(wallethelp);
 
    QApplication::setAttribute(Qt::AA_DontShowIconsInMenus);
    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);

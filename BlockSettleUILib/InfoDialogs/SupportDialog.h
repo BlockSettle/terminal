@@ -31,6 +31,9 @@ public:
 
    void setTab(int index) { ui_->stackedWidget->setCurrentIndex(index); }
 
+private slots:
+   void onGuideLinkActivated(const QString &pdfFileName);
+
 private:
    std::unique_ptr<Ui::SupportDialog> ui_;
 };
