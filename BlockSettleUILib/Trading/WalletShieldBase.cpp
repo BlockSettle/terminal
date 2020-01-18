@@ -160,6 +160,7 @@ void WalletShieldBase::showShield(const QString& labelText,
    ui_->shieldHeaderText->setText(headerText);
 
    ui_->secondInfoBlock->hide();
+   ui_->thirdInfoBlock->hide();
 
    raiseInStack();
 }
@@ -169,13 +170,35 @@ void WalletShieldBase::showTwoBlockShield(const QString& headerText1, const QStr
 {
    ui_->shieldButton->setVisible(false);
 
-   ui_->shieldText->setText(labelText1);
    ui_->shieldHeaderText->setText(headerText1);
+   ui_->shieldText->setText(labelText1);
    ui_->shieldHeaderText->setVisible(true);
 
-   ui_->shieldTextSecond->setText(labelText2);
    ui_->shieldHeaderTextSecond->setText(headerText2);
+   ui_->shieldTextSecond->setText(labelText2);
    ui_->secondInfoBlock->setVisible(true);
+
+   ui_->thirdInfoBlock->hide();
+   raiseInStack();
+}
+
+void WalletShieldBase::showThreeBlockShield(const QString& headerText1, const QString& labelText1,
+   const QString& headerText2, const QString& labelText2,
+   const QString& headerText3, const QString& labelText3)
+{
+   ui_->shieldButton->setVisible(false);
+
+   ui_->shieldHeaderText->setText(headerText1);
+   ui_->shieldText->setText(labelText1);
+   ui_->shieldHeaderText->setVisible(true);
+
+   ui_->shieldHeaderTextSecond->setText(headerText2);
+   ui_->shieldTextSecond->setText(labelText2);
+   ui_->secondInfoBlock->setVisible(true);
+
+   ui_->shieldHeaderTextThird->setText(headerText3);
+   ui_->shieldTextThird->setText(labelText3);
+   ui_->thirdInfoBlock->setVisible(true);
 
    raiseInStack();
 }

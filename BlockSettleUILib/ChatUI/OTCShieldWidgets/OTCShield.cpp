@@ -24,12 +24,14 @@ namespace {
 
    const QString publicChatHeader = QObject::tr("Public chat");
    const QString privateChatHeader = QObject::tr("Private chat");
+   const QString otcSettlementHeader = QObject::tr("OTC settlement");
+
    const QString publicChatExplanation = QObject::tr("ChatID is a hash of the users email\n"
       "Public rooms are unencrypted\n"
       "(Trolls will be banned)\n");
-   const QString privateChatExplanation = QObject::tr("Communication is end-to-end encrypted with the users key-pair(s)\n"
-      "Trades can be negotiated in private chats\n"
-      "Price and volume will not be disclosed\n");
+   const QString privateChatExplanation = QObject::tr("Communication is end-to-end encrypted with the users key-pair(s)\n");
+   const QString otcSettlementExplanation = QObject::tr("Negotiate and settle XBT/EUR with your chat contacts\n"
+      "Prices and volumes are not disclosed on exchange\n");
 }
 
 OTCShield::OTCShield(QWidget* parent)
@@ -72,8 +74,9 @@ void OTCShield::showOtcSetupTransaction()
 
 void OTCShield::showChatExplanation()
 {
-   showTwoBlockShield(publicChatHeader, publicChatExplanation,
-      privateChatHeader, privateChatExplanation);
+   showThreeBlockShield(publicChatHeader, publicChatExplanation,
+      privateChatHeader, privateChatExplanation,
+      otcSettlementHeader, otcSettlementExplanation);
 }
 
 bool OTCShield::onRequestCheckWalletSettings()
