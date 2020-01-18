@@ -164,13 +164,6 @@ TEST(TestCommon, UtxoReservation)
    filtered = utxos;
    ur.filter(filtered);
    EXPECT_EQ(filtered.size(), nbUtxos);
-
-   bs::UtxoReservation::init(StaticLogger::loggerPtr);
-   const auto adapter = std::make_shared<bs::UtxoReservation::Adapter>();
-   ASSERT_NE(adapter, nullptr);
-   EXPECT_TRUE(bs::UtxoReservation::addAdapter(adapter));
-   EXPECT_TRUE(bs::UtxoReservation::delAdapter(adapter));
-   EXPECT_FALSE(bs::UtxoReservation::delAdapter(adapter));
 }
 
 TEST(TestCommon, EasyCoDec)
