@@ -408,7 +408,7 @@ void BSTerminalMainWindow::InitAuthManager()
    connect(authManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked, this, [](const QString &addr, const QString &state) {
       NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, state });
    });
-   connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, this, &BSTerminalMainWindow::onAddrStateChanged);
+   connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, this, &BSTerminalMainWindow::onAddrStateChanged, Qt::QueuedConnection);
    connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, this, [this](const QString &walletId) {
       if (authAddrDlg_ && walletId.isEmpty()) {
          openAuthManagerDialog();
@@ -1200,7 +1200,7 @@ void BSTerminalMainWindow::setupMenu()
 
 void BSTerminalMainWindow::openAuthManagerDialog()
 {
-   sessionAuthAddressDialogShown_ = true;
+   allowAuthAddressDialogShow_ = false;
    openAuthDlgVerify(QString());
 }
 
@@ -1365,7 +1365,6 @@ void BSTerminalMainWindow::onUserLoggedIn()
    addDeferredDialog(deferredDialog);
 
    setLoginButtonText(currentUserLogin_);
-   sessionAuthAddressDialogShown_ = false;
 }
 
 void BSTerminalMainWindow::onUserLoggedOut()
@@ -1386,7 +1385,7 @@ void BSTerminalMainWindow::onUserLoggedOut()
       authManager_->OnDisconnectedFromCeler();
    }
 
-   sessionAuthAddressDialogShown_ = true;
+   setLoginButtonText(loginButtonText_);
 }
 
 void BSTerminalMainWindow::onCelerConnected()
@@ -1833,6 +1832,7 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
                " supports the sub-wallets required to interact with the system. Each Terminal"
                " will only have one trading enabled wallet. Do you wish to upgrade your wallet?"), this);
          if (qry.exec() == QDialog::Accepted) {
+            allowAuthAddressDialogShow_ = true;
             walletsMgr_->PromoteHDWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {
                if (result == bs::error::ErrorCode::NoError) {
                   // If wallet was promoted to primary we could try to get chat keys now
