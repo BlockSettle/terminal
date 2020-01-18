@@ -219,6 +219,8 @@ private slots:
 
    void onInitWalletDialogWasShown();
 
+   void onAuthWalletChanged();
+
 protected:
    void closeEvent(QCloseEvent* event) override;
    void changeEvent(QEvent* e) override;
