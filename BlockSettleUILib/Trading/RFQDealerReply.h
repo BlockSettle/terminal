@@ -181,7 +181,7 @@ namespace bs {
          };
          std::unordered_map<std::string, MDInfo>  mdInfo_;
 
-         std::shared_ptr<SelectedTransactionInputs> selectedXbtInputs_;
+         std::vector<UTXO> selectedXbtInputs_;
          SubmitQuoteNotifCb submitQuoteNotifCb_;
          ResetCurrentReservationCb resetCurrentReservationCb_;
 

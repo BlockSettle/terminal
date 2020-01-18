@@ -323,16 +323,16 @@ void RFQTicketXBT::showCoinControl()
    ui_->toolButtonXBTInputsSend->setEnabled(false);
 
    bs::tradeutils::getSpendableTxOutList(wallets, [this](const std::map<UTXO, std::string> &utxos) {
-      QMetaObject::invokeMethod(this, [this, utxos] {
+      std::vector<UTXO> allUTXOs;
+      allUTXOs.reserve(utxos.size());
+      for (const auto &utxo : utxos) {
+         allUTXOs.push_back(utxo.first);
+      }
+
+      QMetaObject::invokeMethod(this, [this, utxos, allUTXOs = std::move(allUTXOs)] {
          ui_->toolButtonXBTInputsSend->setEnabled(true);
 
          const bool useAutoSel = selectedXbtInputs_.empty();
-
-         std::vector<UTXO> allUTXOs;
-         allUTXOs.reserve(utxos.size());
-         for (const auto &utxo : utxos) {
-            allUTXOs.push_back(utxo.first);
-         }
 
          auto inputs = std::make_shared<SelectedTransactionInputs>(allUTXOs);
          // Set this to false is needed otherwise current selection would be cleared
@@ -1054,7 +1054,6 @@ void RFQTicketXBT::productSelectionChanged()
    ui_->toolButtonXBTInputsSend->setEnabled(true);
 
    selectedXbtInputs_.clear();
-
 
    if (currentGroupType_ == ProductGroupType::FXGroupType) {
       ui_->lineEditAmount->setValidator(fxAmountValidator_);

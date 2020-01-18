@@ -235,6 +235,7 @@ private:
 
    SubmitRFQCb submitRFQCb_;
 
+   // Need to use UTXO/walletId map for CC
    std::map<UTXO, std::string> selectedXbtInputs_;
 };
 
