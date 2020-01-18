@@ -219,7 +219,7 @@ private slots:
 
    void onInitWalletDialogWasShown();
 
-   void onAuthWalletChanged();
+   void onAddrStateChanged();
 
 protected:
    void closeEvent(QCloseEvent* event) override;
@@ -256,6 +256,7 @@ private:
    QString           loginButtonText_;
 
    bool initialWalletCreateDialogShown_ = false;
+   bool sessionAuthAddressDialogShown_ = false;
    bool deferCCsync_ = false;
 
    bool wasWalletsRegistered_ = false;

@@ -191,15 +191,16 @@ void BSTerminalMainWindow::onInitWalletDialogWasShown()
    initialWalletCreateDialogShown_ = true;
 }
 
-void BSTerminalMainWindow::onAuthWalletChanged()
+void BSTerminalMainWindow::onAddrStateChanged()
 {
-   if (authManager_ && authManager_->HasAuthAddr()
+   if (!sessionAuthAddressDialogShown_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
       && authManager_->GetVerifiedAddressList().empty()) {
       BSMessageBox qry(BSMessageBox::question, tr("Submit Authentication Address"), tr("Submit Authentication Address?")
          , tr("In order to access XBT trading, you will need to submit an Authentication Address. Do you wish to do so now?"), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
+      sessionAuthAddressDialogShown_ = true;
    }
 }
 
@@ -405,10 +406,10 @@ void BSTerminalMainWindow::InitAuthManager()
    authManager_ = std::make_shared<AuthAddressManager>(logMgr_->logger(), armory_, cbApprovePuB_);
    authManager_->init(applicationSettings_, walletsMgr_, signContainer_);
 
-   connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, this, [](const QString &addr, const QString &state) {
+   connect(authManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked, this, [](const QString &addr, const QString &state) {
       NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, state });
    });
-   connect(authManager_.get(), &AuthAddressManager::AuthWalletChanged, this, &BSTerminalMainWindow::onAuthWalletChanged);
+   connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, this, &BSTerminalMainWindow::onAddrStateChanged);
    connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, this, [this](const QString &walletId) {
       if (authAddrDlg_ && walletId.isEmpty()) {
          openAuthManagerDialog();
@@ -1364,6 +1365,7 @@ void BSTerminalMainWindow::onUserLoggedIn()
    addDeferredDialog(deferredDialog);
 
    setLoginButtonText(currentUserLogin_);
+   sessionAuthAddressDialogShown_ = false;
 }
 
 void BSTerminalMainWindow::onUserLoggedOut()
@@ -1383,6 +1385,8 @@ void BSTerminalMainWindow::onUserLoggedOut()
    if (authManager_) {
       authManager_->OnDisconnectedFromCeler();
    }
+
+   sessionAuthAddressDialogShown_ = true;
 }
 
 void BSTerminalMainWindow::onCelerConnected()

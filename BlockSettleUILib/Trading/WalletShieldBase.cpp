@@ -94,7 +94,7 @@ bool WalletShieldBase::checkWalletSettings(WalletShieldBase::ProductType product
    if (productType == ProductType::SpotXBT) {
       if (walletsManager_->getAuthWallet()) {
          const bool isNoVerifiedAddresses = authMgr_->GetVerifiedAddressList().empty();
-         if (isNoVerifiedAddresses && authMgr_->IsAtLeastOneAwaitingVerification())
+         if (isNoVerifiedAddresses && authMgr_->isAtLeastOneAwaitingVerification())
          {
             showShieldAuthValidationProcess();
             setShieldButtonAction([this]() {
