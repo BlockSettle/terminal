@@ -347,6 +347,7 @@ void RFQReplyWidget::onConnectedToCeler()
    ui_->shieldPage->showShieldSelectTargetDealing();
    popShield();
    ui_->pageRFQReply->onCelerConnected();
+   ui_->treeViewOrders->onCelerConnected();
 }
 
 void RFQReplyWidget::onDisconnectedFromCeler()
@@ -354,6 +355,7 @@ void RFQReplyWidget::onDisconnectedFromCeler()
    ui_->shieldPage->showShieldLoginToResponseRequired();
    popShield();
    ui_->pageRFQReply->onCelerDisconnected();
+   ui_->treeViewOrders->onCelerDisconnected();
 }
 
 void RFQReplyWidget::onEnterKeyPressed(const QModelIndex &index)

@@ -177,7 +177,7 @@ private:
    std::shared_ptr<WalletSignerContainer>    signContainer_;
    std::shared_ptr<AutoSignQuoteProvider>    autoSignQuoteProvider_;
 
-   std::unique_ptr<OrderListModel>           orderListModel_;
+   std::shared_ptr<OrderListModel>           orderListModel_;
 
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
 
