@@ -380,9 +380,11 @@ void RFQReplyWidget::onSelected(const QString& productGroup, const bs::network::
    ui_->pageRFQReply->setQuoteReqNotification(request, indicBid, indicAsk);
 }
 
-void RFQReplyWidget::onTransactionError(const QString& error)
+void RFQReplyWidget::onTransactionError(bs::error::ErrorCode code, const QString& error)
 {
-   MessageBoxBroadcastError(error, this).exec();
+   if (bs::error::ErrorCode::TxCanceled != code) {
+      MessageBoxBroadcastError(error, this).exec();
+   }
 }
 
 void RFQReplyWidget::saveTxData(QString orderId, std::string txData)

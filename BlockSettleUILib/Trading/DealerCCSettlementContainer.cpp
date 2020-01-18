@@ -132,7 +132,7 @@ bool DealerCCSettlementContainer::startSigning(QDateTime timestamp)
       }
       else {
          SPDLOG_LOGGER_ERROR(logger_, "failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
-         emit error(tr("TX half signing failed: %1").arg(bs::error::ErrorCodeToString(result)));
+         emit error(result, tr("TX half signing failed: %1").arg(bs::error::ErrorCodeToString(result)));
          sendFailed();
       }
    };
@@ -203,7 +203,7 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
    genAddrVerified_ = addressVerified;
    if (!addressVerified) {
       logger_->warn("[DealerCCSettlementContainer::onGenAddressVerified] counterparty's TX is unverified");
-      emit error(tr("Failed to verify counterparty's transaction"));
+      emit error(bs::error::ErrorCode::InternalError, tr("Failed to verify counterparty's transaction"));
       ccWallet_ = nullptr;
       xbtWallet_ = nullptr;
    }
