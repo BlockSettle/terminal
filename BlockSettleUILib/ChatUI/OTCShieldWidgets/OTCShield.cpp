@@ -19,6 +19,7 @@ namespace {
    const QString shieldContactIsOffline = QObject::tr("Contact is offline");
    const QString shieldOtcAvailableOnlyForAcceptedContacts = QObject::tr("OTC available only for Accepted contacts");
    const QString shieldOtcSetupTransactionData = QObject::tr("Setup OTC transaction data");
+   const QString shieldOtcshowAvailableOnceAccepted = QObject::tr("OTC settlement available once contact request is accepted");
 
    const QString tradingKeyWord = QObject::tr("trading");
 
@@ -77,6 +78,11 @@ void OTCShield::showChatExplanation()
    showThreeBlockShield(publicChatHeader, publicChatExplanation,
       privateChatHeader, privateChatExplanation,
       otcSettlementHeader, otcSettlementExplanation);
+}
+
+void OTCShield::showShieldOtcAvailableOnceAccepted()
+{
+   showShield(shieldOtcshowAvailableOnceAccepted);
 }
 
 bool OTCShield::onRequestCheckWalletSettings()

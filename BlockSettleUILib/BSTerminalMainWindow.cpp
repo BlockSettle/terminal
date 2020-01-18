@@ -200,7 +200,6 @@ void BSTerminalMainWindow::onAddrStateChanged()
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
-      sessionAuthAddressDialogShown_ = true;
    }
 }
 
@@ -1201,6 +1200,7 @@ void BSTerminalMainWindow::setupMenu()
 
 void BSTerminalMainWindow::openAuthManagerDialog()
 {
+   sessionAuthAddressDialogShown_ = true;
    openAuthDlgVerify(QString());
 }
 
