@@ -39,7 +39,8 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const bs::Address &recvXbtAddrIfSet
    , const bs::Address &authAddr
    , const std::map<UTXO, std::string> &fixedXbtInputs
-   , bs::UtxoReservationToken utxoRes
+   , bs::UtxoReservationToken fixedXbtUtxoRes
+   , bs::UtxoReservationToken ccUtxoRes
    , RFQRequestWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
@@ -59,8 +60,9 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , xbtWallet_(xbtWallet)
    , authAddr_(authAddr)
    , fixedXbtInputs_(fixedXbtInputs)
+   , fixedXbtUtxoRes_(std::move(fixedXbtUtxoRes))
    , requestWidget_(parent)
-   , utxoRes_(std::move(utxoRes))
+   , ccUtxoRes_(std::move(ccUtxoRes))
 {
    ui_->setupUi(this);
 
@@ -154,7 +156,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
    try {
       xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
          , authAddressManager_, signContainer_, armory_, xbtWallet_, walletsManager_
-         , rfq_, quote_, authAddr_, fixedXbtInputs_, recvXbtAddrIfSet_);
+         , rfq_, quote_, authAddr_, fixedXbtInputs_, std::move(fixedXbtUtxoRes_), recvXbtAddrIfSet_);
 
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
          , this, &RFQDialog::onXBTSettlementAccepted);
@@ -192,7 +194,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
 {
    try {
       ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
-         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_, fixedXbtInputs_, std::move(utxoRes_));
+         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_, fixedXbtInputs_, std::move(ccUtxoRes_));
 
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::txSigned
          , this, &RFQDialog::onCCTxSigned);

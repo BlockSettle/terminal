@@ -108,9 +108,9 @@ void RFQTicketXBT::resetTicket()
    updatePanel();
 }
 
-std::map<UTXO, std::string> RFQTicketXBT::fixedXbtInputs() const
+RFQTicketXBT::FixedXbtInputs RFQTicketXBT::fixedXbtInputs()
 {
-   return selectedXbtInputs_;
+   return std::move(fixedXbtInputs_);
 }
 
 void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AuthAddressManager> &authAddressManager
@@ -317,27 +317,31 @@ void RFQTicketXBT::showCoinControl()
       SPDLOG_LOGGER_ERROR(logger_, "can't find XBT wallet");
       return;
    }
+   auto walletId = xbtWallet->walletId();
 
    const auto &leaves = xbtWallet->getGroup(xbtWallet->getXBTGroupType())->getLeaves();
    std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
    ui_->toolButtonXBTInputsSend->setEnabled(false);
 
-   bs::tradeutils::getSpendableTxOutList(wallets, [this](const std::map<UTXO, std::string> &utxos) {
+   // Need to release current reservation to be able select them back
+   fixedXbtInputs_.utxoRes.release();
+
+   bs::tradeutils::getSpendableTxOutList(wallets, [this, walletId](const std::map<UTXO, std::string> &utxos) {
       std::vector<UTXO> allUTXOs;
       allUTXOs.reserve(utxos.size());
       for (const auto &utxo : utxos) {
          allUTXOs.push_back(utxo.first);
       }
 
-      QMetaObject::invokeMethod(this, [this, utxos, allUTXOs = std::move(allUTXOs)] {
+      QMetaObject::invokeMethod(this, [this, utxos, walletId, allUTXOs = std::move(allUTXOs)] {
          ui_->toolButtonXBTInputsSend->setEnabled(true);
 
-         const bool useAutoSel = selectedXbtInputs_.empty();
+         const bool useAutoSel = fixedXbtInputs_.inputs.empty();
 
          auto inputs = std::make_shared<SelectedTransactionInputs>(allUTXOs);
          // Set this to false is needed otherwise current selection would be cleared
          inputs->SetUseAutoSel(useAutoSel);
-         for (const auto &utxo : selectedXbtInputs_) {
+         for (const auto &utxo : fixedXbtInputs_.inputs) {
             inputs->SetUTXOSelection(utxo.first.getTxHash(), utxo.first.getTxOutIndex());
          }
 
@@ -347,12 +351,17 @@ void RFQTicketXBT::showCoinControl()
             return;
          }
 
-         selectedXbtInputs_.clear();
+         fixedXbtInputs_.inputs.clear();
          auto selectedInputs = dialog.selectedInputs();
          for (const auto &selectedInput : selectedInputs) {
             const auto &walletId = utxos.at(selectedInput);
-            selectedXbtInputs_.emplace(selectedInput, walletId);
+            fixedXbtInputs_.inputs.emplace(selectedInput, walletId);
          }
+
+         fixedReserveId_ += 1;
+         auto reserveId = fmt::format("new_rfq_reserve_{}", fixedReserveId_);
+         fixedXbtInputs_.utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, selectedInputs, reserveId, walletId);
+
          updateBalances();
          updateSubmitButton();
       });
@@ -943,9 +952,8 @@ void RFQTicketXBT::onMaxClicked()
             });
          };
 
-         auto inputs = fixedXbtInputs();
-         if (!inputs.empty()) {
-            cb(inputs);
+         if (!fixedXbtInputs_.inputs.empty()) {
+            cb(fixedXbtInputs_.inputs);
          } else {
             auto leaves = xbtWallet->getGroup(xbtWallet->getXBTGroupType())->getLeaves();
             auto xbtWallets = std::vector<std::shared_ptr<bs::sync::Wallet>>(leaves.begin(), leaves.end());
@@ -1053,7 +1061,7 @@ void RFQTicketXBT::productSelectionChanged()
    ui_->toolButtonMax->setEnabled(true);
    ui_->toolButtonXBTInputsSend->setEnabled(true);
 
-   selectedXbtInputs_.clear();
+   fixedXbtInputs_ = {};
 
    if (currentGroupType_ == ProductGroupType::FXGroupType) {
       ui_->lineEditAmount->setValidator(fxAmountValidator_);
@@ -1125,7 +1133,7 @@ std::shared_ptr<bs::sync::hd::Wallet> RFQTicketXBT::getRecvXbtWallet() const
 
 bs::XBTAmount RFQTicketXBT::getXbtBalance() const
 {
-   const auto fixedInputs = fixedXbtInputs();
+   const auto &fixedInputs = fixedXbtInputs_.inputs;
    if (!fixedInputs.empty()) {
       uint64_t sum = 0;
       for (const auto &utxo : fixedInputs) {

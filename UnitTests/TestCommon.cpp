@@ -137,7 +137,7 @@ TEST(TestCommon, UtxoReservation)
    for (const auto i : { 1, 3, 5 }) {
       utxos1.push_back(utxos[i]);
    }
-   for (const auto i : { 2, 3, 7 }) {
+   for (const auto i : { 2, 4, 6 }) {
       utxos2.push_back(utxos[i]);
    }
    ASSERT_EQ(utxos.size(), nbUtxos);
@@ -145,24 +145,24 @@ TEST(TestCommon, UtxoReservation)
    ASSERT_EQ(utxos2.size(), 3);
 
    filtered = utxos;
-   bs::UtxoReservation ur;
-   ur.reserve("wallet", "id1", utxos1);
-   ur.reserve("wallet", "id2", utxos2);
-   EXPECT_FALSE(ur.filter("undef-wallet", filtered));
-   EXPECT_EQ(filtered.size(), nbUtxos);
+   bs::UtxoReservation ur(StaticLogger::loggerPtr);
+   ur.reserve("id1", utxos1);
+   ur.reserve("id2", utxos2);
+   ur.filter(filtered);
+   EXPECT_EQ(filtered.size(), nbUtxos - 6);
 
-   EXPECT_TRUE(ur.filter("wallet", filtered));
-   EXPECT_EQ(filtered.size(), nbUtxos - 5);
-   EXPECT_EQ(ur.unreserve("id3"), std::string());
+   ur.filter(filtered);
+   EXPECT_EQ(filtered.size(), nbUtxos - 6);
+   EXPECT_EQ(ur.unreserve("id3"), false);
 
-   EXPECT_EQ(ur.unreserve("id1"), "wallet");
+   EXPECT_EQ(ur.unreserve("id1"), true);
    filtered = utxos;
-   EXPECT_TRUE(ur.filter("wallet", filtered));
+   ur.filter(filtered);
    EXPECT_EQ(filtered.size(), nbUtxos - 3);
 
-   EXPECT_EQ(ur.unreserve("id2"), "wallet");
+   EXPECT_EQ(ur.unreserve("id2"), true);
    filtered = utxos;
-   EXPECT_FALSE(ur.filter("wallet", filtered));
+   ur.filter(filtered);
    EXPECT_EQ(filtered.size(), nbUtxos);
 
    bs::UtxoReservation::init(StaticLogger::loggerPtr);

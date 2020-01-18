@@ -98,7 +98,7 @@ private:
 
    bool checkConditions(const MarketSelectedInfo& productGroup);
    bool checkWalletSettings(bs::network::Asset::Type productType, const MarketSelectedInfo& productGroup);
-   void onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservationToken utxoRes);
+   void onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservationToken ccUtxoRes);
 
 public slots:
    void onCurrencySelected(const MarketSelectedInfo& selectedInfo);

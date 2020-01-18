@@ -41,6 +41,7 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , const bs::network::Quote &quote
    , const bs::Address &authAddr
    , const std::map<UTXO, std::string> &utxosPayinFixed
+   , bs::UtxoReservationToken utxoRes
    , const bs::Address &recvAddrIfSet)
    : bs::SettlementContainer()
    , logger_(logger)
@@ -56,6 +57,8 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , authAddr_(authAddr)
    , utxosPayinFixed_(utxosPayinFixed)
 {
+   utxoRes_ = std::move(utxoRes);
+
    assert(authAddr.isValid());
 
    qRegisterMetaType<AddressVerificationState>();
@@ -290,7 +293,6 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
       args.inputXbtWallets.push_back(leaf);
    }
    args.utxoReservation = bs::UtxoReservation::instance();
-   args.utxoReservationWalletId = xbtWallet_->walletId();
 
    auto payinCb = bs::tradeutils::PayinResultCb([this, handle = validityFlag_.handle()]
       (bs::tradeutils::PayinResult result)
@@ -323,7 +325,11 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
 
          unsignedPayinRequest_ = std::move(result.signRequest);
 
-         utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, unsignedPayinRequest_, id());
+         // Make new reservation only for automatic inputs.
+         // Manual inputs should be already reserved.
+         if (utxosPayinFixed_.empty()) {
+            utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, unsignedPayinRequest_, id());
+         }
 
          emit sendUnsignedPayinToPB(settlementIdHex_, bs::network::UnsignedPayinData{ unsignedPayinRequest_.serializeState(), std::move(result.preimageData)} );
       });

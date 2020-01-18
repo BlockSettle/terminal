@@ -259,7 +259,6 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
       args.inputXbtWallets.push_back(leaf);
    }
    args.utxoReservation = bs::UtxoReservation::instance();
-   args.utxoReservationWalletId = xbtWallet_->walletId();
 
    auto payinCb = bs::tradeutils::PayinResultCb([this, handle = validityFlag_.handle()]
       (bs::tradeutils::PayinResult result)
