@@ -182,6 +182,8 @@ namespace bs {
          std::unordered_map<std::string, MDInfo>  mdInfo_;
 
          std::vector<UTXO> selectedXbtInputs_;
+         bs::UtxoReservationToken selectedXbtRes_;
+
          SubmitQuoteNotifCb submitQuoteNotifCb_;
          ResetCurrentReservationCb resetCurrentReservationCb_;
 

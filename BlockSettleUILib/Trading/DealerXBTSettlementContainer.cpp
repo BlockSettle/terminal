@@ -38,7 +38,8 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const std::shared_ptr<AuthAddressManager> &authAddrMgr
    , const bs::Address &authAddr
    , const std::vector<UTXO> &utxosPayinFixed
-   , const bs::Address &recvAddr)
+   , const bs::Address &recvAddr
+   , bs::UtxoReservationToken utxoRes)
    : bs::SettlementContainer()
    , order_(order)
    , weSellXbt_((order.side == bs::network::Side::Buy) != (order.product == bs::network::XbtCurrency))
@@ -53,6 +54,8 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , recvAddr_(recvAddr)
    , authAddr_(authAddr)
 {
+   utxoRes_ = std::move(utxoRes);
+
    qRegisterMetaType<AddressVerificationState>();
 
    CurrencyPair cp(security());
@@ -277,7 +280,10 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
          settlAddr_ = result.settlementAddr;
 
          unsignedPayinRequest_ = std::move(result.signRequest);
-         utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, unsignedPayinRequest_, id());
+         // Reserve only automatic UTXO selection
+         if (utxosPayinFixed_.empty()) {
+            utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, unsignedPayinRequest_.inputs, id());
+         }
 
          emit sendUnsignedPayinToPB(settlementIdHex_
             , bs::network::UnsignedPayinData{unsignedPayinRequest_.serializeState(), std::move(result.preimageData)});

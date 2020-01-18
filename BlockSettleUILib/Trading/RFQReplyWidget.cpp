@@ -215,6 +215,7 @@ void RFQReplyWidget::onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyDat
          reply.xbtWallet = data->xbtWallet;
          reply.authAddr = data->authAddr;
          reply.utxosPayinFixed = data->fixedXbtInputs;
+         reply.utxoRes = std::move(data->utxoRes);
          break;
       }
 
@@ -302,12 +303,12 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             return;
          }
          try {
-            const auto &reply = it->second;
+            auto &reply = it->second;
             // Dealers can't select receiving address, use new
             const auto recvXbtAddr = bs::Address();
             const auto settlContainer = std::make_shared<DealerXBTSettlementContainer>(logger_, order
                , walletsManager_, reply.xbtWallet, quoteProvider_, signingContainer_, armory_, authAddressManager_
-               , reply.authAddr, reply.utxosPayinFixed, recvXbtAddr);
+               , reply.authAddr, reply.utxosPayinFixed, recvXbtAddr, std::move(reply.utxoRes));
 
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendUnsignedPayinToPB, this, &RFQReplyWidget::sendUnsignedPayinToPB);
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayinToPB, this, &RFQReplyWidget::sendSignedPayinToPB);

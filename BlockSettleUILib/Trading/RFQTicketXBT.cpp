@@ -358,9 +358,10 @@ void RFQTicketXBT::showCoinControl()
             fixedXbtInputs_.inputs.emplace(selectedInput, walletId);
          }
 
-         fixedReserveId_ += 1;
-         auto reserveId = fmt::format("new_rfq_reserve_{}", fixedReserveId_);
-         fixedXbtInputs_.utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, selectedInputs, reserveId, walletId);
+         if (!selectedInputs.empty()) {
+            auto reserveId = fmt::format("rfq_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
+            fixedXbtInputs_.utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, selectedInputs, reserveId);
+         }
 
          updateBalances();
          updateSubmitButton();
@@ -738,7 +739,7 @@ void RFQTicketXBT::submitButtonClicked()
                      try {
                         const auto txReq = ccWallet->createPartialTXRequest(spendVal, ccInputs, addr);
                         rfq->coinTxInput = txReq.serializeState().toHexStr();
-                        auto reservationToken = bs::UtxoReservationToken::makeNewReservation(logger_, txReq, rfq->requestId);
+                        auto reservationToken = bs::UtxoReservationToken::makeNewReservation(logger_, txReq.inputs, rfq->requestId);
                         submitRFQCb_(*rfq, std::move(reservationToken));
                      }
                      catch (const std::exception &e) {

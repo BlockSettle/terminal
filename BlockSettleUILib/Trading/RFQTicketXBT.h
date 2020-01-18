@@ -243,7 +243,6 @@ private:
    SubmitRFQCb submitRFQCb_;
 
    FixedXbtInputs fixedXbtInputs_;
-   int fixedReserveId_{};
 };
 
 #endif // __RFQ_TICKET_XBT_H__

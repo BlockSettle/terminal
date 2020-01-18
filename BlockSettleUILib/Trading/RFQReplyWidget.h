@@ -137,6 +137,7 @@ private:
       std::shared_ptr<bs::sync::hd::Wallet> xbtWallet;
       bs::Address authAddr;
       std::vector<UTXO> utxosPayinFixed;
+      bs::UtxoReservationToken utxoRes;
    };
 
    struct SentCCReply

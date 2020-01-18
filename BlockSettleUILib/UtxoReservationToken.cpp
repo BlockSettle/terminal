@@ -13,7 +13,6 @@
 #include <cassert>
 #include <spdlog/spdlog.h>
 
-#include "CoreWallet.h"
 #include "UtxoReservation.h"
 
 using namespace bs;
@@ -40,10 +39,9 @@ UtxoReservationToken &UtxoReservationToken::operator=(UtxoReservationToken &&oth
 }
 
 UtxoReservationToken UtxoReservationToken::makeNewReservation(const std::shared_ptr<spdlog::logger> &logger
-   , const std::vector<UTXO> &utxos, const std::string &reserveId, const std::string &walletId)
+   , const std::vector<UTXO> &utxos, const std::string &reserveId)
 {
    assert(!reserveId.empty());
-   assert(!walletId.empty());
    assert(UtxoReservation::instance());
 
    if (logger) {
@@ -51,7 +49,7 @@ UtxoReservationToken UtxoReservationToken::makeNewReservation(const std::shared_
       for (const auto &utxo : utxos) {
          sum += utxo.getValue();
       }
-      SPDLOG_LOGGER_DEBUG(logger, "make new UTXO reservation, walletId: {}, amount: {}, reserveId: {}", walletId, sum, reserveId);
+      SPDLOG_LOGGER_DEBUG(logger, "make new UTXO reservation, amount: {}, reserveId: {}", sum, reserveId);
    }
 
    UtxoReservationToken result;
@@ -59,11 +57,6 @@ UtxoReservationToken UtxoReservationToken::makeNewReservation(const std::shared_
    result.logger_ = logger;
    result.reserveId_ = reserveId;
    return result;
-}
-
-UtxoReservationToken UtxoReservationToken::makeNewReservation(const std::shared_ptr<spdlog::logger> &logger, const core::wallet::TXSignRequest &txReq, const std::string &reserveId)
-{
-   return makeNewReservation(logger, txReq.inputs, reserveId, txReq.walletIds.front());
 }
 
 void UtxoReservationToken::release()

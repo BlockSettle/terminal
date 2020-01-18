@@ -619,6 +619,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
 
       // Only XBT trades allow manual XBT inputs selection
       replyData->fixedXbtInputs = selectedXbtInputs(replyType);
+      replyData->utxoRes = std::move(selectedXbtRes_);
    }
 
    auto it = activeQuoteSubmits_.find(replyData->qn.quoteRequestId);
@@ -695,7 +696,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                            const auto txReq = walletsManager_->createPartialTXRequest(spendVal, inputs, changeAddress, feePerByte
                               , { recipient }, outSortOrder, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false);
                            replyData->qn.transactionData = txReq.serializeState().toHexStr();
-                           replyData->utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, txReq, replyData->qn.quoteRequestId);
+                           replyData->utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, txReq.inputs, replyData->qn.quoteRequestId);
                            submit();
                         } catch (const std::exception &e) {
                            SPDLOG_LOGGER_ERROR(logger_, "error creating own unsigned half: {}", e.what());
@@ -828,6 +829,9 @@ void RFQDealerReply::showCoinControl()
    std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
    ui_->toolButtonXBTInputsSend->setEnabled(false);
 
+   // Need to release current reservation to be able select them back
+   selectedXbtRes_.release();
+
    bs::tradeutils::getSpendableTxOutList(wallets, [this](const std::map<UTXO, std::string> &utxos) {
       std::vector<UTXO> allUTXOs;
       allUTXOs.reserve(utxos.size());
@@ -858,6 +862,11 @@ void RFQDealerReply::showCoinControl()
          auto selectedInputs = dialog.selectedInputs();
          for (const auto &selectedInput : selectedInputs) {
             selectedXbtInputs_.push_back(selectedInput);
+         }
+
+         if (!selectedXbtInputs_.empty()) {
+            auto reserveId = fmt::format("reply_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
+            selectedXbtRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, selectedInputs, reserveId);
          }
 
          updateSubmitButton();
