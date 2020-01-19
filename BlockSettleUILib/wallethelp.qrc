@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <file>resources/Getting_Started_With_Wallet.pdf</file>
+    </qresource>
+</RCC>

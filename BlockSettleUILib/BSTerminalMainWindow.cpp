@@ -191,6 +191,18 @@ void BSTerminalMainWindow::onInitWalletDialogWasShown()
    initialWalletCreateDialogShown_ = true;
 }
 
+void BSTerminalMainWindow::onAddrStateChanged()
+{
+   if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
+      && authManager_->GetVerifiedAddressList().empty()) {
+      BSMessageBox qry(BSMessageBox::question, tr("Submit Authentication Address"), tr("Submit Authentication Address?")
+         , tr("In order to access XBT trading, you will need to submit an Authentication Address. Do you wish to do so now?"), this);
+      if (qry.exec() == QDialog::Accepted) {
+         openAuthManagerDialog();
+      }
+   }
+}
+
 void BSTerminalMainWindow::LoadCCDefinitionsFromPuB()
 {
    if (!ccFileManager_) {
@@ -393,10 +405,11 @@ void BSTerminalMainWindow::InitAuthManager()
    authManager_ = std::make_shared<AuthAddressManager>(logMgr_->logger(), armory_, cbApprovePuB_);
    authManager_->init(applicationSettings_, walletsMgr_, signContainer_);
 
-   connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, [](const QString &addr, const QString &state) {
+   connect(authManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked, this, [](const QString &addr, const QString &state) {
       NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, state });
    });
-   connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, [this](const QString &walletId) {
+   connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, this, &BSTerminalMainWindow::onAddrStateChanged, Qt::QueuedConnection);
+   connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, this, [this](const QString &walletId) {
       if (authAddrDlg_ && walletId.isEmpty()) {
          openAuthManagerDialog();
       }
@@ -1187,6 +1200,7 @@ void BSTerminalMainWindow::setupMenu()
 
 void BSTerminalMainWindow::openAuthManagerDialog()
 {
+   allowAuthAddressDialogShow_ = false;
    openAuthDlgVerify(QString());
 }
 
@@ -1370,6 +1384,8 @@ void BSTerminalMainWindow::onUserLoggedOut()
    if (authManager_) {
       authManager_->OnDisconnectedFromCeler();
    }
+
+   setLoginButtonText(loginButtonText_);
 }
 
 void BSTerminalMainWindow::onCelerConnected()
@@ -1816,6 +1832,7 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
                " supports the sub-wallets required to interact with the system. Each Terminal"
                " will only have one trading enabled wallet. Do you wish to upgrade your wallet?"), this);
          if (qry.exec() == QDialog::Accepted) {
+            allowAuthAddressDialogShow_ = true;
             walletsMgr_->PromoteHDWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {
                if (result == bs::error::ErrorCode::NoError) {
                   // If wallet was promoted to primary we could try to get chat keys now

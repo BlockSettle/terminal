@@ -89,7 +89,7 @@ private:
    void acceptSpotXBT();
    void dealerVerifStateChanged(AddressVerificationState);
 
-   void cancelWithError(const QString& errorMessage);
+   void cancelWithError(const QString& errorMessage, bs::error::ErrorCode code);
 
    void initTradesArgs(bs::tradeutils::Args &args, const std::string &settlementId);
 

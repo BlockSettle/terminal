@@ -177,7 +177,7 @@ private:
    std::shared_ptr<WalletSignerContainer>    signContainer_;
    std::shared_ptr<AutoSignQuoteProvider>    autoSignQuoteProvider_;
 
-   std::unique_ptr<OrderListModel>           orderListModel_;
+   std::shared_ptr<OrderListModel>           orderListModel_;
 
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
 
@@ -219,6 +219,8 @@ private slots:
 
    void onInitWalletDialogWasShown();
 
+   void onAddrStateChanged();
+
 protected:
    void closeEvent(QCloseEvent* event) override;
    void changeEvent(QEvent* e) override;
@@ -254,6 +256,7 @@ private:
    QString           loginButtonText_;
 
    bool initialWalletCreateDialogShown_ = false;
+   bool allowAuthAddressDialogShow_ = false;
    bool deferCCsync_ = false;
 
    bool wasWalletsRegistered_ = false;
