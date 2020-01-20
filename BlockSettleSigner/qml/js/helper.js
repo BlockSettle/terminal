@@ -466,12 +466,12 @@ function managePublicDataEncryption() {
         let errorMessageBody;
         let updatedOldPassword;
         if (previousState === ControlPasswordStatus.Accepted) {
-            successMessageBody = qsTr("Change Public Data Encryption Password succeed");
-            errorMessageBody = qsTr("Change Public Data Encryption Password failed: ");
+            successMessageBody = qsTr("Password has successfully been changed");
+            errorMessageBody = qsTr("Password change failed: ");
             updatedOldPassword = oldPassword;
         } else if (previousState === ControlPasswordStatus.Rejected) {
-            successMessageBody = qsTr("Set Public Data Encryption Password succeed");
-            errorMessageBody = qsTr("Set Public Data Encryption Password failed: ");
+            successMessageBody = qsTr("Password has successfully been applied");
+            errorMessageBody = qsTr("Password setting failed: ");
             updatedOldPassword = newPassword;
         }
 

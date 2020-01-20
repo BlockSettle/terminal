@@ -88,7 +88,7 @@ private slots:
 private:
    bool startPayInSigning();
 
-   void failWithErrorText(const QString& error);
+   void failWithErrorText(const QString& error, bs::error::ErrorCode code);
 
    void initTradesArgs(bs::tradeutils::Args &args, const std::string &settlementId);
 

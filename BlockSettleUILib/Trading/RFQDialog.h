@@ -17,6 +17,7 @@
 
 #include "CommonTypes.h"
 #include "UtxoReservationToken.h"
+#include "BSErrorCode.h"
 
 namespace Ui {
    class RFQDialog;
@@ -96,7 +97,7 @@ private slots:
    void onCCTxSigned();
 
    void onXBTQuoteAccept(std::string reqId, std::string hexPayoutTx);
-   void logError(const QString& errorMessage);
+   void logError(bs::error::ErrorCode code, const QString &errorMessage);
 
 private:
    std::shared_ptr<bs::SettlementContainer> newCCcontainer();

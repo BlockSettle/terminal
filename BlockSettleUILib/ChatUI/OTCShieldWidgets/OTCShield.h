@@ -28,6 +28,7 @@ public:
    void showOtcAvailableOnlyForAcceptedContacts();
    void showOtcSetupTransaction();
    void showChatExplanation();
+   void showShieldOtcAvailableOnceAccepted();
 
 public slots:
    bool onRequestCheckWalletSettings();
