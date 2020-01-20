@@ -397,7 +397,7 @@ function checkEncryptionPassword(dlg) {
                 dlg.open()
             } else {
                 let mbFail= messageBox(BSMessageBox.Type.Critical
-                    , qsTr("Public Data Encryption"), qsTr("Apply Public Data Encryption Password failed: \n") + errorMsg);
+                    , qsTr("Public Data Encryption"), qsTr("Password update failed: \n") + errorMsg);
                 mbFail.bsAccepted.connect(prevDialog.dialogsChainFinished)
                 prevDialog.setNextChainDialog(mbFail)
             }
@@ -452,7 +452,7 @@ function managePublicDataEncryption() {
             qmlFactory.setInitMessageWasShown();
             if (newPassword !== "") {
                 let mbAccept = messageBox(BSMessageBox.Type.Success
-                    , qsTr("Public Data Encryption"), qsTr("Set Public Data Encryption Password succeed"));
+                    , qsTr("Public Data Encryption"), qsTr("Password has successfully been set"));
                 mbAccept.bsAccepted.connect(dialog.dialogsChainFinished);
                 dialog.setNextChainDialog(mbAccept)
             } else {
@@ -467,11 +467,11 @@ function managePublicDataEncryption() {
         let updatedOldPassword;
         if (previousState === ControlPasswordStatus.Accepted) {
             successMessageBody = qsTr("Password has successfully been changed");
-            errorMessageBody = qsTr("Password change failed: ");
+            errorMessageBody = qsTr("Password update failed: ");
             updatedOldPassword = oldPassword;
         } else if (previousState === ControlPasswordStatus.Rejected) {
-            successMessageBody = qsTr("Password has successfully been applied");
-            errorMessageBody = qsTr("Password setting failed: ");
+            successMessageBody = qsTr("Password has successfully been set");
+            errorMessageBody = qsTr("Password set failed: ");
             updatedOldPassword = newPassword;
         }
 
