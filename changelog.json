@@ -1,7 +1,26 @@
 {
-   "latest_version": "0.25.7",
-   "release_date": "10 Jan 2020",
+   "latest_version": "0.25.8",
+   "release_date": "20 Jan 2020",
    "changes": [
+      {
+         "version_string": "0.25.8",
+         "previous_version": "0.25.7",
+         "release_date": "20 Jan 2020",
+         "release_type": "dev",
+         "improvements": [
+            "Add new wallet create pdf and adjust position for app data on it",
+            "Allow empty control password",
+            "Update own price detection",
+            "Disable CC Caching"
+         ],
+         "bug_fixes": [
+            "Do not show auth addresses label when addresses is not set",
+            "Disable showing hint label in FX dialog",
+            "Fix UTXO selection"
+         ],
+         "revision": "33d6a0a4d",
+         "common_revision": "5f56b13e"
+      },
       {
          "version_string": "0.25.7",
          "previous_version": "0.25.6",
