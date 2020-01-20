@@ -155,10 +155,10 @@ void WalletBackupPdfWriter::draw(QPainter &p, qreal width, qreal height)
    p.setFont(bold);
 
    // Magic numbers is pixel positions of given controls on RPK_template.png
-   p.drawStaticText(QPointF(500 * relWidth, 1530 * relHeight), wId);
-   p.drawStaticText(QPointF(110 * relWidth, 1940 * relHeight), keyLine1);
-   p.drawStaticText(QPointF(110 * relWidth, 2100 * relHeight), keyLine2);
+   p.drawStaticText(QPointF(700 * relWidth, 2035 * relHeight), wId);
+   p.drawStaticText(QPointF(150 * relWidth, 2580 * relHeight), keyLine1);
+   p.drawStaticText(QPointF(150 * relWidth, 2790 * relHeight), keyLine2);
 
-   p.drawPixmap(QRectF(1224 * relWidth, 1611 * relHeight, 569 * relWidth, 569 * relHeight),
+   p.drawPixmap(QRectF(1640 * relWidth, 2155 * relHeight, 740 * relWidth, 740 * relHeight),
       qr_, qr_.rect());
 }
