@@ -112,12 +112,15 @@ void OTCWindowsAdapterBase::showXBTInputsClicked(QComboBox *walletsCombobox)
       if (!handle.isValid()) {
          return;
       }
-      allUTXOs_.clear();
-      allUTXOs_.reserve(utxos.size());
+
+      std::vector<UTXO> allUTXOs;
+      allUTXOs.reserve(utxos.size());
       for (const auto &utxo : utxos) {
-         allUTXOs_.push_back(utxo.first);
+         allUTXOs.push_back(utxo.first);
       }
-      QMetaObject::invokeMethod(this, &OTCWindowsAdapterBase::onShowXBTInputReady);
+      QMetaObject::invokeMethod(this, [this, allUTXOs = std::move(allUTXOs)] {
+         showXBTInputs(allUTXOs);
+      });
    };
 
    const auto &hdWallet = getCurrentHDWalletFromCombobox(walletsCombobox);
@@ -126,11 +129,11 @@ void OTCWindowsAdapterBase::showXBTInputsClicked(QComboBox *walletsCombobox)
    bs::tradeutils::getSpendableTxOutList(wallets, cb);
 }
 
-void OTCWindowsAdapterBase::onShowXBTInputReady()
+void OTCWindowsAdapterBase::showXBTInputs(const std::vector<UTXO> &allUTXOs)
 {
    const bool useAutoSel = selectedUTXO_.empty();
 
-   auto inputs = std::make_shared<SelectedTransactionInputs>(allUTXOs_);
+   auto inputs = std::make_shared<SelectedTransactionInputs>(allUTXOs);
 
    // Set this to false is needed otherwise current selection would be cleared
    inputs->SetUseAutoSel(useAutoSel);
@@ -146,6 +149,7 @@ void OTCWindowsAdapterBase::onShowXBTInputReady()
    if (rc == QDialog::Accepted) {
       selectedUTXO_ = dialog.selectedInputs();
    }
+
    emit xbtInputsProcessed();
 }
 

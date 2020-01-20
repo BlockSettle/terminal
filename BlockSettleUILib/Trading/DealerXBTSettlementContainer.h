@@ -54,7 +54,8 @@ public:
       , const std::shared_ptr<AuthAddressManager> &authAddrMgr
       , const bs::Address &authAddr
       , const std::vector<UTXO> &utxosPayinFixed
-      , const bs::Address &recvAddr);
+      , const bs::Address &recvAddr
+      , bs::UtxoReservationToken utxoRes);
    ~DealerXBTSettlementContainer() override;
 
    bool cancel() override;

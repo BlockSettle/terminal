@@ -75,7 +75,6 @@ protected slots:
    void onUpdateMD(bs::network::Asset::Type, const QString&, const bs::network::MDFields&);
    virtual void onMDUpdated();
    virtual void onUpdateBalances();
-   void onShowXBTInputReady();
    void onUpdateTimerData();
 
 protected:
@@ -118,7 +117,8 @@ protected:
    std::chrono::seconds timeoutSec_{};
 
 private:
-   std::vector<UTXO> allUTXOs_;
+   void showXBTInputs(const std::vector<UTXO> &allUTXOs);
+
    std::vector<UTXO> selectedUTXO_;
 
    QTimer timeoutTimer_;

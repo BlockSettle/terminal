@@ -15,7 +15,6 @@
 #include "CoinControlDialog.h"
 #include "OTCWindowsManager.h"
 #include "OtcTypes.h"
-#include "SelectedTransactionInputs.h"
 #include "TradesUtils.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"

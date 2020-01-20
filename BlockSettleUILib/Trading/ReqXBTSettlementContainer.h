@@ -50,6 +50,7 @@ public:
       , const bs::network::Quote &
       , const bs::Address &authAddr
       , const std::map<UTXO, std::string> &utxosPayinFixed
+      , bs::UtxoReservationToken utxoRes
       , const bs::Address &recvAddrIfSet);
    ~ReqXBTSettlementContainer() override;
 
