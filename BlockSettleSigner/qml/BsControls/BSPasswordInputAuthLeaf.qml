@@ -27,6 +27,8 @@ BSPasswordInput {
     property WalletInfo walletInfo: WalletInfo{}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
 
+    property bool isAuthAddressFilled: passwordDialogData.AuthAddress.length !== 0
+
     title: passwordDialogData.Title
 
     authEidInfoToAdd: JsHelper.getAuthEidMessageLine("Authentication Address", passwordDialogData.AuthAddress)
@@ -85,6 +87,7 @@ BSPasswordInput {
 
     CustomHeader {
         text: qsTr("Auth Leaf Details")
+        visible: isAuthAddressFilled
         Layout.fillWidth: true
         Layout.preferredHeight: 25
         Layout.topMargin: 5
@@ -94,6 +97,7 @@ BSPasswordInput {
 
     RowLayout {
         spacing: 5
+        visible: isAuthAddressFilled
         Layout.fillWidth: true
         Layout.leftMargin: 10
         Layout.rightMargin: 10
