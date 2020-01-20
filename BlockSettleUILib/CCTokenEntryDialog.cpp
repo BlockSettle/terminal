@@ -132,7 +132,7 @@ void CCTokenEntryDialog::accept()
       return;
    }
    const auto &cbAddr = [this](const bs::Address &address) {
-      if (ccFileMgr_->SubmitAddressToPuB(address, seed_, strToken_)) {
+      if (ccFileMgr_->SubmitAddressToPuB(address, seed_, ccProduct_)) {
          ui_->pushButtonOk->setEnabled(false);
       } else {
          onCCSubmitFailed(QString::fromStdString(address.display())
