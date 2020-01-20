@@ -29,7 +29,7 @@ protected:
       chat_->ui_->input_textEdit->setEnabled(false);
    }
    void applyRoomsFrameChange() override {
-      chat_->ui_->widgetOTCShield->showOtcAvailableOnlyForAcceptedContacts();
+      chat_->ui_->widgetOTCShield->showShieldOtcAvailableOnceAccepted();
    }
 };
 

@@ -118,7 +118,7 @@ private slots:
    void onDisconnectedFromCeler();
    void onEnterKeyPressed(const QModelIndex &index);
    void onSelected(const QString& productGroup, const bs::network::QuoteReqNotification& request, double indicBid, double indicAsk);
-   void onTransactionError(const QString& error);
+   void onTransactionError(bs::error::ErrorCode code, const QString& error);
 
 private:
    void onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data);

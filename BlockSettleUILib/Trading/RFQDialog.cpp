@@ -140,10 +140,13 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
    }
 }
 
-void RFQDialog::logError(const QString& errorMessage)
+void RFQDialog::logError(bs::error::ErrorCode code, const QString &errorMessage)
 {
    logger_->error("[RFQDialog::logError] {}", errorMessage.toStdString());
-   MessageBoxBroadcastError(errorMessage, this).exec();
+
+   if (bs::error::ErrorCode::TxCanceled != code) {
+      MessageBoxBroadcastError(errorMessage, this).exec();
+   }
 }
 
 std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
@@ -176,7 +179,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
          , requestWidget_, &RFQRequestWidget::sendSignedPayoutToPB);
    }
    catch (const std::exception &e) {
-      logError(tr("Failed to create XBT settlement container: %1")
+      logError(bs::error::ErrorCode::InternalError, tr("Failed to create XBT settlement container: %1")
          .arg(QString::fromLatin1(e.what())));
    }
 
@@ -206,7 +209,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
          , this, &RFQDialog::logError);
    }
    catch (const std::exception &e) {
-      logError(tr("Failed to create CC settlement container: %1")
+      logError(bs::error::ErrorCode::InternalError, tr("Failed to create CC settlement container: %1")
          .arg(QString::fromLatin1(e.what())));
    }
 

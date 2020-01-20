@@ -192,9 +192,9 @@ void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState
    signContainer_->updateDialogData(pd);
 }
 
-void ReqXBTSettlementContainer::cancelWithError(const QString& errorMessage)
+void ReqXBTSettlementContainer::cancelWithError(const QString& errorMessage, bs::error::ErrorCode code)
 {
-   emit error(errorMessage);
+   emit error(code, errorMessage);
    cancel();
 
    // Call failed to remove from RfqStorage and cleanup memory
@@ -210,7 +210,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
          logger_->warn("[ReqXBTSettlementContainer::onTXSigned] Pay-Out sign failure: {} ({})"
             , (int)errCode, errTxt);
-         cancelWithError(tr("Pay-Out signing failed: %1").arg(bs::error::ErrorCodeToString(errCode)));
+         cancelWithError(tr("Pay-Out signing failed: %1").arg(bs::error::ErrorCodeToString(errCode)), errCode);
          return;
       }
 
@@ -224,7 +224,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       auto verifyResult = bs::tradeutils::verifySignedPayout(verifyArgs);
       if (!verifyResult.success) {
          SPDLOG_LOGGER_ERROR(logger_, "payout verification failed: {}", verifyResult.errorMsg);
-         cancelWithError(tr("payin verification failed: %1").arg(bs::error::ErrorCodeToString(errCode)));
+         cancelWithError(tr("payin verification failed: %1").arg(bs::error::ErrorCodeToString(errCode)), errCode);
          return;
       }
 
@@ -248,7 +248,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
 
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
          SPDLOG_LOGGER_ERROR(logger_, "failed to create pay-in TX: {} ({})", static_cast<int>(errCode), errTxt);
-         cancelWithError(tr("Failed to create Pay-In TX: %1").arg(bs::error::ErrorCodeToString(errCode)));
+         cancelWithError(tr("Failed to create Pay-In TX: %1").arg(bs::error::ErrorCodeToString(errCode)), errCode);
          return;
       }
 
@@ -304,7 +304,7 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
 
          if (!result.success) {
             SPDLOG_LOGGER_ERROR(logger_, "payin sign request creation failed: {}", result.errorMsg);
-            cancelWithError(tr("payin failed"));
+            cancelWithError(tr("payin failed"), bs::error::ErrorCode::InternalError);
             return;
          }
 
@@ -366,7 +366,7 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
 
          if (!result.success) {
             SPDLOG_LOGGER_ERROR(logger_, "creating payout failed: {}", result.errorMsg);
-            cancelWithError(tr("payout failed"));
+            cancelWithError(tr("payout failed"), bs::error::ErrorCode::InternalError);
             return;
          }
 

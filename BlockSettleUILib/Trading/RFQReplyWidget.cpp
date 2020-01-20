@@ -348,6 +348,7 @@ void RFQReplyWidget::onConnectedToCeler()
    ui_->shieldPage->showShieldSelectTargetDealing();
    popShield();
    ui_->pageRFQReply->onCelerConnected();
+   ui_->treeViewOrders->onCelerConnected();
 }
 
 void RFQReplyWidget::onDisconnectedFromCeler()
@@ -355,6 +356,7 @@ void RFQReplyWidget::onDisconnectedFromCeler()
    ui_->shieldPage->showShieldLoginToResponseRequired();
    popShield();
    ui_->pageRFQReply->onCelerDisconnected();
+   ui_->treeViewOrders->onCelerDisconnected();
 }
 
 void RFQReplyWidget::onEnterKeyPressed(const QModelIndex &index)
@@ -381,9 +383,11 @@ void RFQReplyWidget::onSelected(const QString& productGroup, const bs::network::
    ui_->pageRFQReply->setQuoteReqNotification(request, indicBid, indicAsk);
 }
 
-void RFQReplyWidget::onTransactionError(const QString& error)
+void RFQReplyWidget::onTransactionError(bs::error::ErrorCode code, const QString& error)
 {
-   MessageBoxBroadcastError(error, this).exec();
+   if (bs::error::ErrorCode::TxCanceled != code) {
+      MessageBoxBroadcastError(error, this).exec();
+   }
 }
 
 void RFQReplyWidget::saveTxData(QString orderId, std::string txData)

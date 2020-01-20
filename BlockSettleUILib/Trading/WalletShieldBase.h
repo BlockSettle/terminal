@@ -51,8 +51,12 @@ protected:
    void showShield(const QString& labelText,
       const QString& ButtonText = QLatin1String(), const QString& headerText = QLatin1String());
 
-   void showTwoBlockShield(const QString& labelText1, const QString& headerText1,
-      const QString& labelText2, const QString& headerText2);
+   void showTwoBlockShield(const QString& headerText1, const QString& labelText1,
+      const QString& headerText2, const QString& labelText2);
+
+   void showThreeBlockShield(const QString& headerText1, const QString& labelText1,
+      const QString& headerText2, const QString& labelText2,
+      const QString& headerText3, const QString& labelText3);
 
    void raiseInStack();
 

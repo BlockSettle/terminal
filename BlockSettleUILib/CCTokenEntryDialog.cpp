@@ -132,7 +132,7 @@ void CCTokenEntryDialog::accept()
       return;
    }
    const auto &cbAddr = [this](const bs::Address &address) {
-      if (ccFileMgr_->SubmitAddressToPuB(address, seed_, strToken_)) {
+      if (ccFileMgr_->SubmitAddressToPuB(address, seed_, ccProduct_)) {
          ui_->pushButtonOk->setEnabled(false);
       } else {
          onCCSubmitFailed(QString::fromStdString(address.display())
@@ -153,8 +153,8 @@ void CCTokenEntryDialog::onCCAddrSubmitted(const QString)
 {
    QDialog::accept();
    BSMessageBox(BSMessageBox::success, tr("Submission Successful")
-      , tr("Equity token submitted")
-      , tr("Please allow up to 24h for the transaction to be broadcast.")).exec();
+      , tr("Equity Token Submitted")
+      , tr("BlockSettle will issue your equity tokens within 24h")).exec();
 }
 
 void CCTokenEntryDialog::onCCInitialSubmitted(const QString)
