@@ -23,6 +23,7 @@
 #include "PasswordDialogData.h"
 #include "UtxoReservationToken.h"
 #include "ValidityFlag.h"
+#include "BSErrorCode.h"
 
 namespace bs {
 
@@ -56,7 +57,7 @@ namespace bs {
 
       static constexpr unsigned int kWaitTimeoutInSec = 30;
    signals:
-      void error(QString);
+      void error(bs::error::ErrorCode, QString);
 
       void completed();
       void failed();

@@ -114,15 +114,16 @@ public:
    // Auth
    // used for signing
    Q_INVOKABLE AuthSignWalletObject *createAutheIDSignObject(AutheIDClient::RequestType requestType
-      , bs::hd::WalletInfo *walletInfo, int expiration = AutheIDClient::kDefaultExpiration, int timestamp = 0);
+      , bs::hd::WalletInfo *walletInfo, const QString &authEidMessage, int expiration = AutheIDClient::kDefaultExpiration, int timestamp = 0);
 
    // used for add new eID device
    Q_INVOKABLE AuthSignWalletObject *createActivateEidObject(const QString &userId
-      , bs::hd::WalletInfo *walletInfo);
+      , bs::hd::WalletInfo *walletInfo, const QString &authEidMessage);
 
    // used for remove eID device
    // index: is encKeys index which should be deleted
-   Q_INVOKABLE AuthSignWalletObject *createRemoveEidObject(int index, bs::hd::WalletInfo *walletInfo);
+   Q_INVOKABLE AuthSignWalletObject *createRemoveEidObject(int index, bs::hd::WalletInfo *walletInfo
+      , const QString &authEidMessage);
 
    QString headlessPubKey() const;
 
@@ -145,6 +146,9 @@ public:
    Q_INVOKABLE int controlPasswordStatus() const;
    Q_INVOKABLE void setControlPasswordStatus(int controlPasswordStatus);
 
+   Q_INVOKABLE bool initMessageWasShown() const;
+   Q_INVOKABLE void setInitMessageWasShown();
+
 signals:
    void closeEventReceived();
    void headlessPubKeyChanged();
@@ -161,6 +165,8 @@ private:
 
    QString headlessPubKey_;
    ControlPasswordStatus::Status controlPasswordStatus_;
+
+   bool isControlPassMessageShown = false;
 
 };
 

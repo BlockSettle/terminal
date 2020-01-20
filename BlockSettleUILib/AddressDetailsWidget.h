@@ -25,10 +25,13 @@ namespace bs {
    namespace sync {
       class CCDataResolver;
       class PlainWallet;
+      class WalletsManager;
    }
 }
 class AddressVerificator;
+class ColoredCoinTracker;
 class QTreeWidgetItem;
+
 
 class AddressDetailsWidget : public QWidget
 {
@@ -40,15 +43,16 @@ public:
 
    void init(const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<spdlog::logger> &inLogger
-      , const std::shared_ptr<bs::sync::CCDataResolver> &);
+      , const std::shared_ptr<bs::sync::CCDataResolver> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &);
    void setQueryAddr(const bs::Address& inAddrVal);
    void setBSAuthAddrs(const std::unordered_set<std::string> &bsAuthAddrs);
    void clear();
 
    enum AddressTreeColumns {
-      colDate = 0,
-      colTxId = 1,
-      colConfs = 2,
+      colDate,
+      colTxId,
+      colConfs,
       colInputsNum,
       colOutputsNum,
       colOutputAmt,
@@ -68,7 +72,6 @@ private slots:
 
 private:
    void setConfirmationColor(QTreeWidgetItem *item);
-   void setOutputColor(QTreeWidgetItem *item);
    void getTxData(const std::shared_ptr<AsyncClient::LedgerDelegate> &);
    void refresh(const std::shared_ptr<bs::sync::PlainWallet> &);
    void loadTransactions();
@@ -92,11 +95,20 @@ private:
    // data is consistent otherwise, which makes Armory happy. Don't worry about
    // about BinaryTXID. A simple endian flip in printed strings is all we need.
 
+   struct CcData
+   {
+      std::shared_ptr<ColoredCoinTracker> tracker;
+      std::string security;
+      uint64_t lotSize{};
+      uint64_t ccBalance{};
+      bool isGenesisAddr{};
+   };
+
    std::unique_ptr<Ui::AddressDetailsWidget> ui_; // The main widget object.
    bs::Address    currentAddr_;
-   bool           balanceLoaded_ = false;
-   std::atomic_uint64_t totalSpent_{};
-   std::atomic_uint64_t totalReceived_{};
+   std::string    currentAddrStr_;
+   std::int64_t totalSpent_{};
+   std::int64_t totalReceived_{};
    std::unordered_map<std::string, std::shared_ptr<bs::sync::PlainWallet>> dummyWallets_;
    std::map<BinaryData, Tx> txMap_; // A wallet's Tx hash / Tx map.
    std::map<BinaryData, bs::TXEntry> txEntryHashSet_; // A wallet's Tx hash / Tx entry map.
@@ -104,10 +116,12 @@ private:
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::sync::CCDataResolver> ccResolver_;
-   std::pair<std::string, uint64_t>    ccFound_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
+   CcData ccFound_;
    std::shared_ptr<AddressVerificator> addrVerify_;
    std::map<bs::Address, AddressVerificationState> authAddrStates_;
    std::unordered_set<std::string>     bsAuthAddrs_;
+   bool isAuthAddr_{false};
 
    std::mutex mutex_;
 

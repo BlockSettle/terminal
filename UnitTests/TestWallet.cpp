@@ -1849,3 +1849,88 @@ TEST_F(TestWallet, TxIdNestedSegwit)
       ASSERT_FALSE(true) << e.what();
    }
 }
+
+TEST_F(TestWallet, ChangePassword)
+{
+   auto passMd = bs::wallet::PasswordMetaData{ bs::wallet::EncryptionType::Password, {} };
+
+   auto passphraseOld = SecureBinaryData::fromString("passwordOld");
+   auto passphraseNew = SecureBinaryData::fromString("passwordNew");
+
+   const bs::wallet::PasswordData pdOld{ passphraseOld, passMd, {}, {} };
+   const bs::wallet::PasswordData pdNew{ passphraseNew, passMd, {}, {} };
+
+   ASSERT_NE(envPtr_->walletsMgr(), nullptr);
+
+   const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("Sample test seed")
+      , NetworkType::TestNet };
+   auto coreWallet = envPtr_->walletsMgr()->createWallet("primary", "test", seed, walletFolder_, pdOld, true);
+   envPtr_->walletsMgr()->reset();
+
+   {
+      const bs::core::WalletPasswordScoped lock(coreWallet, passphraseOld);
+      auto seedDecrypted = coreWallet->getDecryptedSeed();
+      ASSERT_EQ(seed.seed(), seedDecrypted.seed());
+   }
+
+   {
+      const bs::core::WalletPasswordScoped lock(coreWallet, passphraseOld);
+      bool result = coreWallet->changePassword(passMd, pdNew);
+      ASSERT_TRUE(result);
+   }
+
+   {
+      const bs::core::WalletPasswordScoped lock(coreWallet, passphraseNew);
+      auto seedDecrypted = coreWallet->getDecryptedSeed();
+      EXPECT_EQ(seed.seed(), seedDecrypted.seed());
+   }
+
+   {
+      const bs::core::WalletPasswordScoped lock(coreWallet, passphraseOld);
+      EXPECT_THROW(coreWallet->getDecryptedSeed(), std::exception);
+   }
+}
+
+TEST_F(TestWallet, ChangeControlPassword)
+{
+   auto passMd = bs::wallet::PasswordMetaData{ bs::wallet::EncryptionType::Password, {} };
+   auto passphrase = SecureBinaryData::fromString("password");
+   const auto walletName = "test";
+   const auto walletDescr = "";
+   std::string fileName;
+
+   auto controlPassphraseEmpty = SecureBinaryData::fromString("");
+   auto controlPassphrase1 = SecureBinaryData::fromString("controlPassword1");
+   auto controlPassphrase2 = SecureBinaryData::fromString("controlPassword2");
+   auto controlPassphraseWrong = SecureBinaryData::fromString("controlPassphraseWrong");
+
+   const bs::wallet::PasswordData pd1{ passphrase, passMd, {}, controlPassphraseEmpty };
+
+   ASSERT_NE(envPtr_->walletsMgr(), nullptr);
+
+   const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("Sample test seed")
+      , NetworkType::TestNet };
+
+
+   {
+      auto wallet = std::make_shared<bs::core::hd::Wallet>(
+         walletName, walletDescr, seed, pd1, walletFolder_, envPtr_->logger());
+
+      fileName = wallet->getFileName();
+
+      // Set control password
+      ASSERT_NO_THROW(wallet->changeControlPassword(controlPassphraseEmpty, controlPassphrase1));
+      ASSERT_THROW(wallet->changeControlPassword(controlPassphraseEmpty, controlPassphrase2), std::runtime_error);
+
+      // Change control password
+      ASSERT_NO_THROW(wallet->changeControlPassword(controlPassphrase1, controlPassphrase2));
+      ASSERT_THROW(wallet->changeControlPassword(controlPassphraseEmpty, controlPassphrase1), std::runtime_error);
+      ASSERT_THROW(wallet->changeControlPassword(controlPassphraseWrong, controlPassphrase1), std::runtime_error);
+   }
+
+   EXPECT_THROW(bs::core::hd::Wallet(fileName, NetworkType::TestNet, "", controlPassphraseEmpty, envPtr_->logger()), std::runtime_error);
+   EXPECT_THROW(bs::core::hd::Wallet(fileName, NetworkType::TestNet, "", controlPassphrase1, envPtr_->logger()), std::runtime_error);
+   EXPECT_THROW(bs::core::hd::Wallet(fileName, NetworkType::TestNet, "", controlPassphraseWrong, envPtr_->logger()), std::runtime_error);
+
+   EXPECT_NO_THROW(bs::core::hd::Wallet(fileName, NetworkType::TestNet, "", controlPassphrase2, envPtr_->logger()));
+}

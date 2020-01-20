@@ -18,6 +18,7 @@ import com.blocksettle.WalletInfo 1.0
 
 import "../StyledControls"
 import "../BsStyles"
+import "../js/helper.js" as JsHelper
 
 BSPasswordInput {
     id: root
@@ -28,6 +29,7 @@ BSPasswordInput {
 
     title: passwordDialogData.Title
     autheIDSignType: AutheIDClient.CreateSettlementLeaf
+    authEidInfoToAdd: JsHelper.getAuthEidMessageLine("Authentication Address", passwordDialogData.AuthAddress)
 
     CustomHeader {
         text: qsTr("Wallet Details")

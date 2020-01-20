@@ -39,7 +39,8 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const bs::Address &recvXbtAddrIfSet
    , const bs::Address &authAddr
    , const std::map<UTXO, std::string> &fixedXbtInputs
-   , bs::UtxoReservationToken utxoRes
+   , bs::UtxoReservationToken fixedXbtUtxoRes
+   , bs::UtxoReservationToken ccUtxoRes
    , RFQRequestWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
@@ -59,8 +60,9 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , xbtWallet_(xbtWallet)
    , authAddr_(authAddr)
    , fixedXbtInputs_(fixedXbtInputs)
+   , fixedXbtUtxoRes_(std::move(fixedXbtUtxoRes))
    , requestWidget_(parent)
-   , utxoRes_(std::move(utxoRes))
+   , ccUtxoRes_(std::move(ccUtxoRes))
 {
    ui_->setupUi(this);
 
@@ -138,10 +140,13 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
    }
 }
 
-void RFQDialog::logError(const QString& errorMessage)
+void RFQDialog::logError(bs::error::ErrorCode code, const QString &errorMessage)
 {
    logger_->error("[RFQDialog::logError] {}", errorMessage.toStdString());
-   MessageBoxBroadcastError(errorMessage, this).exec();
+
+   if (bs::error::ErrorCode::TxCanceled != code) {
+      MessageBoxBroadcastError(errorMessage, this).exec();
+   }
 }
 
 std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
@@ -154,7 +159,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
    try {
       xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
          , authAddressManager_, signContainer_, armory_, xbtWallet_, walletsManager_
-         , rfq_, quote_, authAddr_, fixedXbtInputs_, recvXbtAddrIfSet_);
+         , rfq_, quote_, authAddr_, fixedXbtInputs_, std::move(fixedXbtUtxoRes_), recvXbtAddrIfSet_);
 
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
          , this, &RFQDialog::onXBTSettlementAccepted);
@@ -174,7 +179,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
          , requestWidget_, &RFQRequestWidget::sendSignedPayoutToPB);
    }
    catch (const std::exception &e) {
-      logError(tr("Failed to create XBT settlement container: %1")
+      logError(bs::error::ErrorCode::InternalError, tr("Failed to create XBT settlement container: %1")
          .arg(QString::fromLatin1(e.what())));
    }
 
@@ -192,7 +197,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
 {
    try {
       ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
-         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_, fixedXbtInputs_, std::move(utxoRes_));
+         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_, fixedXbtInputs_, std::move(ccUtxoRes_));
 
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::txSigned
          , this, &RFQDialog::onCCTxSigned);
@@ -204,7 +209,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
          , this, &RFQDialog::logError);
    }
    catch (const std::exception &e) {
-      logError(tr("Failed to create CC settlement container: %1")
+      logError(bs::error::ErrorCode::InternalError, tr("Failed to create CC settlement container: %1")
          .arg(QString::fromLatin1(e.what())));
    }
 

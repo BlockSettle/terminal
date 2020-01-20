@@ -52,7 +52,9 @@ BSWalletHandlerDialog {
         btnConfirm.visible = false
         btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
 
-        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo, timeLeft)
+        let authEidMessage = JsHelper.getAuthEidTransactionInfo(txInfo);
+        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo,
+                                                      authEidMessage, timeLeft)
 
         authSign.succeeded.connect(function(encKey, password) {
             passwordData.encType = QPasswordData.Auth

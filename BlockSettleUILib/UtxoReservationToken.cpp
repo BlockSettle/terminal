@@ -13,7 +13,6 @@
 #include <cassert>
 #include <spdlog/spdlog.h>
 
-#include "CoreWallet.h"
 #include "UtxoReservation.h"
 
 using namespace bs;
@@ -40,10 +39,9 @@ UtxoReservationToken &UtxoReservationToken::operator=(UtxoReservationToken &&oth
 }
 
 UtxoReservationToken UtxoReservationToken::makeNewReservation(const std::shared_ptr<spdlog::logger> &logger
-   , const std::vector<UTXO> &utxos, const std::string &reserveId, const std::string &walletId)
+   , const std::vector<UTXO> &utxos, const std::string &reserveId)
 {
    assert(!reserveId.empty());
-   assert(!walletId.empty());
    assert(UtxoReservation::instance());
 
    if (logger) {
@@ -51,19 +49,14 @@ UtxoReservationToken UtxoReservationToken::makeNewReservation(const std::shared_
       for (const auto &utxo : utxos) {
          sum += utxo.getValue();
       }
-      SPDLOG_LOGGER_DEBUG(logger, "make new UTXO reservation, walletId: {}, amount: {}, reserveId: {}", walletId, sum, reserveId);
+      SPDLOG_LOGGER_DEBUG(logger, "make new UTXO reservation, amount: {}, reserveId: {}", sum, reserveId);
    }
 
    UtxoReservationToken result;
-   UtxoReservation::instance()->reserve(walletId, reserveId, utxos);
+   UtxoReservation::instance()->reserve(reserveId, utxos);
    result.logger_ = logger;
    result.reserveId_ = reserveId;
    return result;
-}
-
-UtxoReservationToken UtxoReservationToken::makeNewReservation(const std::shared_ptr<spdlog::logger> &logger, const core::wallet::TXSignRequest &txReq, const std::string &reserveId)
-{
-   return makeNewReservation(logger, txReq.inputs, reserveId, txReq.walletIds.front());
 }
 
 void UtxoReservationToken::release()
@@ -77,13 +70,9 @@ void UtxoReservationToken::release()
       return;
    }
 
-   std::string walletId = bs::UtxoReservation::instance()->unreserve(reserveId_);
-   if (logger_) {
-      if (!walletId.empty()) {
-         SPDLOG_LOGGER_DEBUG(logger_, "release UTXO reservation succeed, reserveId: '{}', walletId: '{}'", reserveId_, walletId);
-      } else {
-         SPDLOG_LOGGER_ERROR(logger_, "release UTXO reservation failed, reserveId: '{}'", reserveId_, walletId);
-      }
+   bool result = bs::UtxoReservation::instance()->unreserve(reserveId_);
+   if (!result && logger_) {
+      SPDLOG_LOGGER_ERROR(logger_, "release UTXO reservation failed, reserveId: '{}'", reserveId_);
    }
    reserveId_.clear();
 }

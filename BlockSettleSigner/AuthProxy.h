@@ -45,10 +45,10 @@ public:
 
    // used for wallet creation and signing
    void signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo
-      , int expiration = AutheIDClient::kDefaultExpiration, int timestamp = 0);
+      , const QString& authEidMessage, int expiration = AutheIDClient::kDefaultExpiration, int timestamp = 0);
 
    // used for device removing
-   void removeDevice(int index, bs::hd::WalletInfo *walletInfo);
+   void removeDevice(int index, bs::hd::WalletInfo *walletInfo, const QString& authEidMessage);
 
    Q_INVOKABLE void cancel();
 

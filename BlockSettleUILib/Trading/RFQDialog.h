@@ -17,6 +17,7 @@
 
 #include "CommonTypes.h"
 #include "UtxoReservationToken.h"
+#include "BSErrorCode.h"
 
 namespace Ui {
    class RFQDialog;
@@ -70,7 +71,8 @@ public:
       , const bs::Address &recvXbtAddrIfSet
       , const bs::Address &authAddr
       , const std::map<UTXO, std::string> &fixedXbtInputs
-      , bs::UtxoReservationToken utxoRes
+      , bs::UtxoReservationToken fixedXbtUtxoRes
+      , bs::UtxoReservationToken ccUtxoRes
       , RFQRequestWidget* parent = nullptr);
    ~RFQDialog() override;
 
@@ -96,7 +98,7 @@ private slots:
    void onCCTxSigned();
 
    void onXBTQuoteAccept(std::string reqId, std::string hexPayoutTx);
-   void logError(const QString& errorMessage);
+   void logError(bs::error::ErrorCode code, const QString &errorMessage);
 
 private:
    std::shared_ptr<bs::SettlementContainer> newCCcontainer();
@@ -128,6 +130,7 @@ private:
 
    const bs::Address authAddr_;
    const std::map<UTXO, std::string>   fixedXbtInputs_;
+   bs::UtxoReservationToken fixedXbtUtxoRes_;
 
    bool  cancelOnClose_ = true;
    bool isRejectStarted_ = false;
@@ -135,7 +138,7 @@ private:
    RFQRequestWidget *requestWidget_{};
 
    QString           ccOrderId_;
-   bs::UtxoReservationToken utxoRes_;
+   bs::UtxoReservationToken ccUtxoRes_;
 
 };
 

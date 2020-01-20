@@ -1,69 +1,25 @@
 {
-   "latest_version": "0.24.12",
-   "release_date": "14 Jan 2020",
+   "latest_version": "0.25.8",
+   "release_date": "20 Jan 2020",
    "changes": [
       {
-         "version_string": "0.24.12",
-         "previous_version": "0.24.11",
-         "release_date": "14 Jan 2020",
-         "release_type": "prod",
-         "improvements": [
-            "Always use internal addresses for trading",
-            "Remove unused QString::arg call",
-            "Avoid unisntalling before installing",
-            "Production Release Version 0.24.11",
-	    "Always use internal addresses for trading",
-         ],
-         "bug_fixes": [],
-         "revision": "d0331a59f",
-         "common_revision": "d0331a59f"
-      },
-      {
-         "version_string": "0.24.11",
-         "previous_version": "0.24.11",
-         "release_date": "10 Jan 2020",
-         "release_type": "prod",
-         "improvements": [
-            "",
-            ""
-         ],
-         "bug_fixes": [],
-         "revision": "5925c1111",
-         "common_revision": "5925c1111"
-      },
-      {
-         "version_string": "0.24.11",
+         "version_string": "0.25.8",
          "previous_version": "0.25.7",
-         "release_date": "10 Jan 2020",
-         "release_type": "prod",
+         "release_date": "20 Jan 2020",
+         "release_type": "dev",
          "improvements": [
-            "Merge branch 'bs_dev'",
-            "Prod release 0.24.10",
-            "Release 0.24.8",
-            "Release 0.27.3",
-            "Release 0.20.0",
-            "Release 0.19.1",
-            "Release 0.19.0",
-            "Release 0.17.1",
-            "Release 0.16.1",
-            "Merge branch 'bs_dev'",
-            "Release 0.15.15",
-            "Merge branch 'bs_dev'",
-            "Release 0.15.12",
-            "Merge branch 'bs_dev'",
-            "Release 0.15.10",
-            "Release 0.14.4",
-            "Merge branch 'bs_dev'",
-            "Merge branch 'bs_dev'",
-            "Release 0.13.6",
-            "Release bs0.13.3",
-            "Release bs0.13.2",
-            "bs0.12.12",
-            ""
+            "Add new wallet create pdf and adjust position for app data on it",
+            "Allow empty control password",
+            "Update own price detection",
+            "Disable CC Caching"
          ],
-         "bug_fixes": [],
-         "revision": "5925c1111",
-         "common_revision": "5925c1111"
+         "bug_fixes": [
+            "Do not show auth addresses label when addresses is not set",
+            "Disable showing hint label in FX dialog",
+            "Fix UTXO selection"
+         ],
+         "revision": "33d6a0a4d",
+         "common_revision": "5f56b13e"
       },
       {
          "version_string": "0.25.7",

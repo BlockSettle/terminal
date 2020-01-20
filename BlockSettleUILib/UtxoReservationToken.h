@@ -19,14 +19,6 @@ namespace spdlog {
    class logger;
 }
 
-namespace bs {
-   namespace core {
-      namespace wallet {
-         struct TXSignRequest;
-      }
-   }
-}
-
 struct UTXO;
 
 namespace bs {
@@ -53,13 +45,7 @@ namespace bs {
       // reserveId and walletId must be non-empty
       // logger could be nullptr
       static UtxoReservationToken makeNewReservation(const std::shared_ptr<spdlog::logger> &logger
-         , const std::vector<UTXO> &utxos
-         , const std::string &reserveId
-         , const std::string &walletId);
-
-      static UtxoReservationToken makeNewReservation(const std::shared_ptr<spdlog::logger> &logger
-         , const bs::core::wallet::TXSignRequest &txReq
-         , const std::string &reserveId);
+         , const std::vector<UTXO> &utxos, const std::string &reserveId);
 
       const std::string &reserveId() const { return reserveId_; }
 

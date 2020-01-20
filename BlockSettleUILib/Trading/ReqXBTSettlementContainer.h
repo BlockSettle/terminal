@@ -50,6 +50,7 @@ public:
       , const bs::network::Quote &
       , const bs::Address &authAddr
       , const std::map<UTXO, std::string> &utxosPayinFixed
+      , bs::UtxoReservationToken utxoRes
       , const bs::Address &recvAddrIfSet);
    ~ReqXBTSettlementContainer() override;
 
@@ -89,7 +90,7 @@ private:
    void acceptSpotXBT();
    void dealerVerifStateChanged(AddressVerificationState);
 
-   void cancelWithError(const QString& errorMessage);
+   void cancelWithError(const QString& errorMessage, bs::error::ErrorCode code);
 
    void initTradesArgs(bs::tradeutils::Args &args, const std::string &settlementId);
 

@@ -54,7 +54,8 @@ public:
       , const std::shared_ptr<AuthAddressManager> &authAddrMgr
       , const bs::Address &authAddr
       , const std::vector<UTXO> &utxosPayinFixed
-      , const bs::Address &recvAddr);
+      , const bs::Address &recvAddr
+      , bs::UtxoReservationToken utxoRes);
    ~DealerXBTSettlementContainer() override;
 
    bool cancel() override;
@@ -88,7 +89,7 @@ private slots:
 private:
    bool startPayInSigning();
 
-   void failWithErrorText(const QString& error);
+   void failWithErrorText(const QString& error, bs::error::ErrorCode code);
 
    void initTradesArgs(bs::tradeutils::Args &args, const std::string &settlementId);
 

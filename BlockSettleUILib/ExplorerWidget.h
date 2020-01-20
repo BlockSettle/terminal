@@ -74,7 +74,7 @@ private:
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<AuthAddressManager> authMgr_;
    std::vector<std::string>            searchHistory_;
-   int                                 searchHistoryPosition_;
+   int                                 searchHistoryPosition_{-1};
 };
 
 #endif // EXPLORERWIDGET_H

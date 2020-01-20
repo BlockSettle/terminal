@@ -222,6 +222,7 @@ void RFQRequestWidget::onConnectedToCeler()
 
    ui_->shieldPage->showShieldSelectTargetTrade();
    popShield();
+   ui_->treeViewOrders->onCelerConnected();
 }
 
 void RFQRequestWidget::onDisconnectedFromCeler()
@@ -232,9 +233,10 @@ void RFQRequestWidget::onDisconnectedFromCeler()
 
    ui_->shieldPage->showShieldLoginToSubmitRequired();
    popShield();
+   ui_->treeViewOrders->onCelerDisconnected();
 }
 
-void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservationToken utxoRes)
+void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservationToken ccUtxoRes)
 {
    auto authAddr = ui_->pageRFQTicket->selectedAuthAddress();
 
@@ -243,8 +245,8 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservat
 
    RFQDialog* dialog = new RFQDialog(logger_, rfq, quoteProvider_
       , authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_
-      , connectionManager_, rfqStorage_, xbtWallet, ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, fixedXbtInputs
-      , std::move(utxoRes), this);
+      , connectionManager_, rfqStorage_, xbtWallet, ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, fixedXbtInputs.inputs
+      , std::move(fixedXbtInputs.utxoRes), std::move(ccUtxoRes), this);
 
    connect(this, &RFQRequestWidget::unsignedPayinRequested, dialog, &RFQDialog::onUnsignedPayinRequested);
    connect(this, &RFQRequestWidget::signedPayoutRequested, dialog, &RFQDialog::onSignedPayoutRequested);

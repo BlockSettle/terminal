@@ -14,6 +14,7 @@ import QtQuick.Layouts 1.11
 
 import "../StyledControls"
 import "../BsStyles"
+import "../js/helper.js" as JsHelper
 
 import com.blocksettle.PasswordDialogData 1.0
 import com.blocksettle.AutheIDClient 1.0
@@ -39,6 +40,8 @@ BSWalletHandlerDialog {
     readonly property int duration: authSign.defaultExpiration()
     property real timeLeft: duration
 
+    property string authEidInfoToAdd: ""
+
     title: qsTr("Decrypt Wallet")
     width: 350
     rejectable: true
@@ -51,7 +54,8 @@ BSWalletHandlerDialog {
         btnAccept.visible = false
         btnReject.anchors.horizontalCenter = barFooter.horizontalCenter
 
-        authSign = qmlFactory.createAutheIDSignObject(autheIDSignType, walletInfo, timeLeft)
+        let authEidMessage = JsHelper.getAuthEidWalletInfo(walletInfo) + '\n' + authEidInfoToAdd;
+        authSign = qmlFactory.createAutheIDSignObject(autheIDSignType, walletInfo, authEidMessage, timeLeft)
 
         authSign.succeeded.connect(function(encKey, password) {
             passwordData.encType = QPasswordData.Auth

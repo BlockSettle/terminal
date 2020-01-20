@@ -41,6 +41,7 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , const bs::network::Quote &quote
    , const bs::Address &authAddr
    , const std::map<UTXO, std::string> &utxosPayinFixed
+   , bs::UtxoReservationToken utxoRes
    , const bs::Address &recvAddrIfSet)
    : bs::SettlementContainer()
    , logger_(logger)
@@ -56,6 +57,8 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , authAddr_(authAddr)
    , utxosPayinFixed_(utxosPayinFixed)
 {
+   utxoRes_ = std::move(utxoRes);
+
    assert(authAddr.isValid());
 
    qRegisterMetaType<AddressVerificationState>();
@@ -189,9 +192,9 @@ void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState
    signContainer_->updateDialogData(pd);
 }
 
-void ReqXBTSettlementContainer::cancelWithError(const QString& errorMessage)
+void ReqXBTSettlementContainer::cancelWithError(const QString& errorMessage, bs::error::ErrorCode code)
 {
-   emit error(errorMessage);
+   emit error(code, errorMessage);
    cancel();
 
    // Call failed to remove from RfqStorage and cleanup memory
@@ -207,7 +210,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
          logger_->warn("[ReqXBTSettlementContainer::onTXSigned] Pay-Out sign failure: {} ({})"
             , (int)errCode, errTxt);
-         cancelWithError(tr("Pay-Out signing failed: %1").arg(bs::error::ErrorCodeToString(errCode)));
+         cancelWithError(tr("Pay-Out signing failed: %1").arg(bs::error::ErrorCodeToString(errCode)), errCode);
          return;
       }
 
@@ -221,7 +224,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       auto verifyResult = bs::tradeutils::verifySignedPayout(verifyArgs);
       if (!verifyResult.success) {
          SPDLOG_LOGGER_ERROR(logger_, "payout verification failed: {}", verifyResult.errorMsg);
-         cancelWithError(tr("payin verification failed: %1").arg(bs::error::ErrorCodeToString(errCode)));
+         cancelWithError(tr("payin verification failed: %1").arg(bs::error::ErrorCodeToString(errCode)), errCode);
          return;
       }
 
@@ -245,7 +248,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
 
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
          SPDLOG_LOGGER_ERROR(logger_, "failed to create pay-in TX: {} ({})", static_cast<int>(errCode), errTxt);
-         cancelWithError(tr("Failed to create Pay-In TX: %1").arg(bs::error::ErrorCodeToString(errCode)));
+         cancelWithError(tr("Failed to create Pay-In TX: %1").arg(bs::error::ErrorCodeToString(errCode)), errCode);
          return;
       }
 
@@ -290,7 +293,6 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
       args.inputXbtWallets.push_back(leaf);
    }
    args.utxoReservation = bs::UtxoReservation::instance();
-   args.utxoReservationWalletId = xbtWallet_->walletId();
 
    auto payinCb = bs::tradeutils::PayinResultCb([this, handle = validityFlag_.handle()]
       (bs::tradeutils::PayinResult result)
@@ -302,7 +304,7 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
 
          if (!result.success) {
             SPDLOG_LOGGER_ERROR(logger_, "payin sign request creation failed: {}", result.errorMsg);
-            cancelWithError(tr("payin failed"));
+            cancelWithError(tr("payin failed"), bs::error::ErrorCode::InternalError);
             return;
          }
 
@@ -323,7 +325,11 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
 
          unsignedPayinRequest_ = std::move(result.signRequest);
 
-         utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, unsignedPayinRequest_, id());
+         // Make new reservation only for automatic inputs.
+         // Manual inputs should be already reserved.
+         if (utxosPayinFixed_.empty()) {
+            utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, unsignedPayinRequest_.inputs, id());
+         }
 
          emit sendUnsignedPayinToPB(settlementIdHex_, bs::network::UnsignedPayinData{ unsignedPayinRequest_.serializeState(), std::move(result.preimageData)} );
       });
@@ -360,7 +366,7 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
 
          if (!result.success) {
             SPDLOG_LOGGER_ERROR(logger_, "creating payout failed: {}", result.errorMsg);
-            cancelWithError(tr("payout failed"));
+            cancelWithError(tr("payout failed"), bs::error::ErrorCode::InternalError);
             return;
          }
 

@@ -65,7 +65,8 @@ void AuthSignWalletObject::connectToServer()
    });
 }
 
-void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo, int expiration, int timestamp)
+void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo,
+   const QString& authEidMessage, int expiration, int timestamp)
 {
    std::vector<std::string> knownDeviceIds;
    std::vector<std::string> userIds;
@@ -88,7 +89,7 @@ void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs
          throw std::runtime_error("Auth eID email not found when signing");
       }
       autheIDClient_->getDeviceKey(requestType, userIds[0]
-         , walletInfo->rootId().toStdString(), knownDeviceIds, expiration, timestamp);
+         , walletInfo->rootId().toStdString(), authEidMessage, knownDeviceIds, expiration, timestamp);
    }
    catch (const std::exception &e) {
       logger_->error("AuthEidClient failed to sign wallet: {}", e.what());
@@ -99,7 +100,7 @@ void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs
    }
 }
 
-void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInfo)
+void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInfo, const QString &authEidMessage)
 {
    // used only for removing existing devices
    // index is device index which should be removed
@@ -137,7 +138,7 @@ void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInf
       }
       // currently we supports only single account for whole wallet, thus email stored in userIds[0]
       autheIDClient_->getDeviceKey(AutheIDClient::DeactivateWalletDevice, userIds[0]
-         , walletInfo->rootId().toStdString(), knownDeviceIds);
+         , walletInfo->rootId().toStdString(), authEidMessage, knownDeviceIds);
    }
    catch (const std::exception &e) {
       logger_->error("AuthEidClient failed to sign wallet: {}", e.what());

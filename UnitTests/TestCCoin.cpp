@@ -1867,10 +1867,12 @@ TEST_F(TestCCoin, Case_1CC_2CC)
    whether the tx had valid CC at any point in time
    */
    for (const auto &utxo : utxosC1) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValidHistory(utxo.getTxHash()));
    }
    for (const auto &utxo : utxosC3) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValidHistory(utxo.getTxHash()));
    }
 
    const auto utxosC = GetUTXOsFor(ccsC.ccAddr_);

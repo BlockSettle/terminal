@@ -18,6 +18,7 @@ import com.blocksettle.WalletInfo 1.0
 
 import "../StyledControls"
 import "../BsStyles"
+import "../js/helper.js" as JsHelper
 
 BSPasswordInput {
     id: root
@@ -26,7 +27,11 @@ BSPasswordInput {
     property WalletInfo walletInfo: WalletInfo{}
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
 
+    property bool isAuthAddressFilled: passwordDialogData.AuthAddress.length !== 0
+
     title: passwordDialogData.Title
+
+    authEidInfoToAdd: JsHelper.getAuthEidMessageLine("Authentication Address", passwordDialogData.AuthAddress)
 
     // not used at the moment
     autheIDSignType: AutheIDClient.VerifyWalletKey
@@ -82,6 +87,7 @@ BSPasswordInput {
 
     CustomHeader {
         text: qsTr("Auth Leaf Details")
+        visible: isAuthAddressFilled
         Layout.fillWidth: true
         Layout.preferredHeight: 25
         Layout.topMargin: 5
@@ -91,6 +97,7 @@ BSPasswordInput {
 
     RowLayout {
         spacing: 5
+        visible: isAuthAddressFilled
         Layout.fillWidth: true
         Layout.leftMargin: 10
         Layout.rightMargin: 10

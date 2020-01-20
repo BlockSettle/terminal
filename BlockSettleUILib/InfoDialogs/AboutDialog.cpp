@@ -32,6 +32,7 @@ AboutDialog::AboutDialog(QString changeLogBaseUrl, QWidget* parent)
 
    connect(ui_->pushButtonCheckUpd, &QPushButton::clicked, this, &AboutDialog::onCheckForUpdates);
    connect(&verChecker_, &bs::VersionChecker::latestVersionLoaded, this, &AboutDialog::latestVerReceived);
+   connect(&verChecker_, &bs::VersionChecker::failedToLoadVersion, this, &AboutDialog::failedToLoadVersion);
    connect(ui_->pushButtonChangeLog, &QPushButton::clicked, this, &AboutDialog::viewChangleLog);
 }
 
@@ -66,6 +67,12 @@ void AboutDialog::latestVerReceived(bool weAreUpToDate)
       ui_->pushButtonChangeLog->show();
       NotificationCenter::notify(bs::ui::NotifyType::NewVersion, {latestVersion});
    }
+}
+
+void AboutDialog::failedToLoadVersion()
+{
+   ui_->pushButtonCheckUpd->setText(tr("Try Again"));
+   ui_->pushButtonCheckUpd->setEnabled(true);
 }
 
 void AboutDialog::changeLogReceived(const QString &reqVer, const QStringList &changeLog)

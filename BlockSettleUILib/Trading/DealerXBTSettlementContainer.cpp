@@ -38,7 +38,8 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const std::shared_ptr<AuthAddressManager> &authAddrMgr
    , const bs::Address &authAddr
    , const std::vector<UTXO> &utxosPayinFixed
-   , const bs::Address &recvAddr)
+   , const bs::Address &recvAddr
+   , bs::UtxoReservationToken utxoRes)
    : bs::SettlementContainer()
    , order_(order)
    , weSellXbt_((order.side == bs::network::Side::Buy) != (order.product == bs::network::XbtCurrency))
@@ -53,6 +54,8 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , recvAddr_(recvAddr)
    , authAddr_(authAddr)
 {
+   utxoRes_ = std::move(utxoRes);
+
    qRegisterMetaType<AddressVerificationState>();
 
    CurrencyPair cp(security());
@@ -189,7 +192,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
 
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
          SPDLOG_LOGGER_ERROR(logger_, "failed to sign pay-out: {} ({})", int(errCode), errMsg);
-         failWithErrorText(tr("Failed to sign pay-out"));
+         failWithErrorText(tr("Failed to sign pay-out"), errCode);
          return;
       }
 
@@ -201,7 +204,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
       auto verifyResult = bs::tradeutils::verifySignedPayout(verifyArgs);
       if (!verifyResult.success) {
          SPDLOG_LOGGER_ERROR(logger_, "payout verification failed: {}", verifyResult.errorMsg);
-         failWithErrorText(tr("Payin verification failed"));
+         failWithErrorText(tr("Payin verification failed"), errCode);
          return;
       }
 
@@ -223,7 +226,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
 
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
          SPDLOG_LOGGER_ERROR(logger_, "Failed to sign pay-in: {} ({})", (int)errCode, errMsg);
-         failWithErrorText(tr("Failed to sign Pay-in"));
+         failWithErrorText(tr("Failed to sign Pay-in"), errCode);
          return;
       }
 
@@ -259,7 +262,6 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
       args.inputXbtWallets.push_back(leaf);
    }
    args.utxoReservation = bs::UtxoReservation::instance();
-   args.utxoReservationWalletId = xbtWallet_->walletId();
 
    auto payinCb = bs::tradeutils::PayinResultCb([this, handle = validityFlag_.handle()]
       (bs::tradeutils::PayinResult result)
@@ -271,14 +273,17 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
 
          if (!result.success) {
             SPDLOG_LOGGER_ERROR(logger_, "creating payin request failed: {}", result.errorMsg);
-            failWithErrorText(tr("creating payin request failed"));
+            failWithErrorText(tr("creating payin request failed"), bs::error::ErrorCode::InternalError);
             return;
          }
 
          settlAddr_ = result.settlementAddr;
 
          unsignedPayinRequest_ = std::move(result.signRequest);
-         utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, unsignedPayinRequest_, id());
+         // Reserve only automatic UTXO selection
+         if (utxosPayinFixed_.empty()) {
+            utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, unsignedPayinRequest_.inputs, id());
+         }
 
          emit sendUnsignedPayinToPB(settlementIdHex_
             , bs::network::UnsignedPayinData{unsignedPayinRequest_.serializeState(), std::move(result.preimageData)});
@@ -321,7 +326,7 @@ void DealerXBTSettlementContainer::onSignedPayoutRequested(const std::string& se
 
          if (!result.success) {
             SPDLOG_LOGGER_ERROR(logger_, "creating payout failed: {}", result.errorMsg);
-            failWithErrorText(tr("creating payout failed"));
+            failWithErrorText(tr("creating payout failed"), bs::error::ErrorCode::InternalError);
             return;
          }
 
@@ -359,7 +364,7 @@ void DealerXBTSettlementContainer::onSignedPayinRequested(const std::string& set
 
    if (!unsignedPayinRequest_.isValid()) {
       SPDLOG_LOGGER_ERROR(logger_, "unsigned payin request is invalid: {}", settlementIdHex_);
-      failWithErrorText(tr("Failed to sign pay-in"));
+      failWithErrorText(tr("Failed to sign pay-in"), bs::error::ErrorCode::InternalError);
       return;
    }
 
@@ -369,11 +374,11 @@ void DealerXBTSettlementContainer::onSignedPayinRequested(const std::string& set
    payinSignId_ = signContainer_->signSettlementTXRequest(unsignedPayinRequest_, dlgData, SignContainer::TXSignMode::Full);
 }
 
-void DealerXBTSettlementContainer::failWithErrorText(const QString& errorMessage)
+void DealerXBTSettlementContainer::failWithErrorText(const QString &errorMessage, bs::error::ErrorCode code)
 {
    SettlementContainer::releaseUtxoRes();
 
-   emit error(errorMessage);
+   emit error(code, errorMessage);
    emit failed();
 }
 

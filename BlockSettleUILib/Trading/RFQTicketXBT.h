@@ -62,6 +62,13 @@ class RFQTicketXBT : public QWidget
 Q_OBJECT
 
 public:
+   struct FixedXbtInputs
+   {
+      // Need to use UTXO/walletId map for CC
+      std::map<UTXO, std::string> inputs;
+      bs::UtxoReservationToken utxoRes;
+   };
+
    RFQTicketXBT(QWidget* parent = nullptr);
    ~RFQTicketXBT() override;
 
@@ -75,7 +82,7 @@ public:
 
    void resetTicket();
 
-   std::map<UTXO, std::string> fixedXbtInputs() const;
+   FixedXbtInputs fixedXbtInputs();
 
    QPushButton* submitButton() const;
    QLineEdit* lineEditAmount() const;
@@ -88,7 +95,7 @@ public:
    // returns empty address if automatic selected
    bs::Address recvXbtAddressIfSet() const;
 
-   using SubmitRFQCb = std::function<void(const bs::network::RFQ& rfq, bs::UtxoReservationToken utxoRes)>;
+   using SubmitRFQCb = std::function<void(const bs::network::RFQ& rfq, bs::UtxoReservationToken ccUtxoRes)>;
    void setSubmitRFQ(SubmitRFQCb submitRFQCb);
 
    std::shared_ptr<bs::sync::hd::Wallet> xbtWallet() const;
@@ -235,7 +242,7 @@ private:
 
    SubmitRFQCb submitRFQCb_;
 
-   std::shared_ptr<SelectedTransactionInputs> selectedXbtInputs_;
+   FixedXbtInputs fixedXbtInputs_;
 };
 
 #endif // __RFQ_TICKET_XBT_H__
