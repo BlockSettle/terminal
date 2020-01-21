@@ -490,9 +490,9 @@ std::vector<UTXO> TestCCoin::GetCCUTXOsFor(std::shared_ptr<ColoredCoinTracker> c
    };
 
    std::set<BinaryData> addrSet = { addr.prefixed() };
-   ccPtr->getCCUtxoForAddresses(addrSet, withZc, utxoLbd);
-   auto&& result = fut.get();
-
+   auto outpointMap = ccPtr->getCCUtxoForAddresses(addrSet, withZc);
+   envPtr_->armoryConnection()->getOutputsForOutpoints(outpointMap, withZc, utxoLbd);
+   auto result = fut.get();
    if (sortedByValue)
       std::sort(result.begin(), result.end(), [](UTXO const & l, UTXO const & r) { return l.getValue() > r.getValue(); });
    return result;
