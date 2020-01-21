@@ -9,7 +9,7 @@
 
 import os
 
-excludedir = []
+excludedir = ['ArmoryDB', 'UnitTests', 'AuthAPI']
 
 def update_source(filename, oldcopyright, copyright):
    utfstr = chr(0xef)+chr(0xbb)+chr(0xbf)
@@ -30,16 +30,17 @@ def update_source(filename, oldcopyright, copyright):
          with open(filename, 'w') as modified: modified.write(fdata)
 
 def recursive_traversal(dir, oldcopyright, copyright):
-   global excludedir
    fns = os.listdir(dir)
    for fn in fns:
+      if (fn in excludedir):
+        continue;
+       
       fullfn = os.path.join(dir,fn)
-      if (fullfn in excludedir):
-         continue
+
       if (os.path.isdir(fullfn)):
          recursive_traversal(fullfn, oldcopyright, copyright)
       else:
-         if (fullfn.endswith(".hpp") or fullfn.endswith(".cpp") or fullfn.endswith(".h") or fullfn.endswith(".c")):
+         if (fullfn.endswith(".hpp") or fullfn.endswith(".cpp") or fullfn.endswith(".h") or fullfn.endswith(".c") or fullfn.endswith(".qml")):
             update_source(fullfn, "/*\n\n" + oldcopyright + "\n*/\n", "/*\n\n" + copyright + "\n*/\n")
 
 with open('oldlicense.txt', 'r') as oldfile: oldlicense = oldfile.read()
