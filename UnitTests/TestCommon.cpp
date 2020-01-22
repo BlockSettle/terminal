@@ -371,4 +371,6 @@ TEST(TestCommon, SelectUtxoForAmount)
    test({10, 15, 20}, 22, 2, 30);
    test({10, 15, 20}, 42, 3, 45);
    test({10, 15, 20}, 100, 3, 45);
+
+   test({1, 1, 1}, 3, 3, 3);
 }
