@@ -1,7 +1,20 @@
 {
-   "latest_version": "0.25.8",
-   "release_date": "20 Jan 2020",
+   "latest_version": "0.25.9",
+   "release_date": "22 Jan 2020",
    "changes": [
+      {
+         "version_string": "0.25.9",
+         "previous_version": "0.25.8",
+         "release_date": "22 Jan 2020",
+         "release_type": "dev",
+         "improvements": [
+            "Add new license file",
+            "Add keep alive to a TCP connections"
+         ],
+         "bug_fixes": [],
+         "revision": "a639a9f38",
+         "common_revision": "47ba2931"
+      },
       {
          "version_string": "0.25.8",
          "previous_version": "0.25.7",
