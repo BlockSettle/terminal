@@ -10,7 +10,7 @@
 #include "ZMQ_BIP15X_ServerConnection.h"
 
 int main(int argc, char** argv) {
-   auto loggerStdout = spdlog::stdout_color_mt("settings");
+   auto logger = spdlog::stdout_color_mt("stdout logger");
 
    bool help{};
    std::string logfile;
@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
       }
    }
    catch(const std::exception& e) {
-      std::cerr << e.what() << std::endl;
+      SPDLOG_LOGGER_CRITICAL(logger, "parsing args failed: {}", e.what());
       exit(EXIT_FAILURE);
    }
 
@@ -69,11 +69,10 @@ int main(int argc, char** argv) {
    }
 
    if (ownKeyPath.empty()) {
-      std::cerr << "Please set own key path" << std::endl;
+      SPDLOG_LOGGER_CRITICAL(logger, "please set own key path");
       exit(EXIT_FAILURE);
    }
 
-   auto logger = loggerStdout;
    if (!logfile.empty()) {
       auto consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
       consoleSink->set_level(spdlog::level::critical);
@@ -97,12 +96,12 @@ int main(int argc, char** argv) {
    startupBIP150CTX(4, publicRequester);
    NetworkConfig::selectNetwork(testnet ? NETWORK_MODE_TESTNET : NETWORK_MODE_MAINNET);
 
-
    auto ownKey = ZmqBIP15XServerConnection::getOwnPubKey(ownKeyPath, ownKeyName);
    if (ownKey.isNull()) {
-      std::cerr << "Can't read own key" << std::endl;
+      SPDLOG_LOGGER_CRITICAL(logger, "can't read own key");
       exit(EXIT_FAILURE);
    }
+   SPDLOG_LOGGER_INFO(logger, "own key: {}", ownKey.toHexStr());
 
    auto armory = std::make_shared<ArmoryConnection>(logger);
 
@@ -113,24 +112,29 @@ int main(int argc, char** argv) {
    }
 
    if (armory->state() != ArmoryState::Connected) {
-      std::cerr << "Connection to armory failed" << std::endl;
+      SPDLOG_LOGGER_CRITICAL(logger, "can't connect to armory, quit now");
       exit(EXIT_FAILURE);
    }
 
    bool result = armory->goOnline();
    if (!result) {
-      std::cerr << "starting armory connection failed" << std::endl;
+      SPDLOG_LOGGER_CRITICAL(logger, "ArmoryConnection::goOnline call failed");
       exit(EXIT_FAILURE);
    }
 
    auto server = std::make_unique<CcTrackerServer>(logger, armory);
    result = server->startServer(listenAddress, std::to_string(listenPort), std::make_shared<ZmqContext>(logger), ownKeyPath, ownKeyName);
    if (!result) {
-      std::cerr << "starting server failed" << std::endl;
+      SPDLOG_LOGGER_CRITICAL(logger, "starting server failed");
       exit(EXIT_FAILURE);
    }
 
    while (true) {
-      std::this_thread::sleep_for(std::chrono::minutes(1));
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+
+      if (armory->state() != ArmoryState::Ready && armory->state() != ArmoryState::Connected) {
+         SPDLOG_LOGGER_CRITICAL(logger, "connection to armory closed unexpectedly");
+         exit(EXIT_FAILURE);
+      }
    }
 }
