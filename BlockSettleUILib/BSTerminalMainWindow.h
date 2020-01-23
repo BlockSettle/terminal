@@ -148,6 +148,7 @@ private slots:
    void onCCLoaded();
 
    void onTabWidgetCurrentChanged(const int &index);
+   void onSyncWallets();
 
 private:
    std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
