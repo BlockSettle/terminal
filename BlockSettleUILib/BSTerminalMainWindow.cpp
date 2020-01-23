@@ -36,6 +36,7 @@
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
 #include "CelerAccountInfoDialog.h"
+#include "ColoredCoinServer.h"
 #include "ConnectionManager.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
@@ -118,11 +119,14 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
       , this, applicationSettings_);
    cbApproveProxy_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Proxy
       , this, applicationSettings_);
+   cbApproveCcServer_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::CcServer
+      , this, applicationSettings_);
 
    initConnections();
    initArmory();
+   initCcClient();
 
-   walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(logMgr_->logger(), applicationSettings_, armory_);
+   walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(logMgr_->logger(), applicationSettings_, armory_, trackerClient_);
 
    if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
       applicationSettings_->SetDefaultSettings(true);
@@ -146,6 +150,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    connectSigner();
    connectArmory();
+   connectCcClient();
 
    InitChartsView();
 
@@ -918,6 +923,14 @@ void BSTerminalMainWindow::initArmory()
    act_->init(armory_.get());
 }
 
+void BSTerminalMainWindow::initCcClient()
+{
+   bool isDefaultArmory = armoryServersProvider_->isDefault(armoryServersProvider_->indexOfCurrent());
+   if (isDefaultArmory) {
+      trackerClient_ = std::make_shared<CcTrackerClient>(logMgr_->logger());
+   }
+}
+
 void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const std::string &hash, const std::string &err)
 {
    NotificationCenter::notify(bs::ui::NotifyType::BroadcastError, { QString::fromStdString(hash)
@@ -948,6 +961,13 @@ void BSTerminalMainWindow::connectArmory()
       }
       return result;
    });
+}
+
+void BSTerminalMainWindow::connectCcClient()
+{
+   if (trackerClient_) {
+      trackerClient_->openConnection("127.0.0.1", "19003", cbApproveCcServer_);
+   }
 }
 
 void BSTerminalMainWindow::connectSigner()

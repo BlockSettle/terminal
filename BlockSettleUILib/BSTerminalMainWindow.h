@@ -54,6 +54,7 @@ class BSTerminalSplashScreen;
 class BaseCelerClient;
 class CCFileManager;
 class CCPortfolioModel;
+class CcTrackerClient;
 class ConnectionManager;
 class LoginWindow;
 class NetworkSettingsLoader;
@@ -91,7 +92,9 @@ private:
 
    void initConnections();
    void initArmory();
+   void initCcClient();
    void connectArmory();
+   void connectCcClient();
    void connectSigner();
    std::shared_ptr<WalletSignerContainer> createSigner();
    std::shared_ptr<WalletSignerContainer> createRemoteSigner(bool restoreHeadless = false);
@@ -163,6 +166,7 @@ private:
    std::shared_ptr<SignersProvider>       signersProvider_;
    std::shared_ptr<AuthAddressManager>    authManager_;
    std::shared_ptr<ArmoryObject>          armory_;
+   std::shared_ptr<CcTrackerClient>       trackerClient_;
 
    std::shared_ptr<StatusBarView>            statusBarView_;
    std::shared_ptr<QSystemTrayIcon>          sysTrayIcon_;
@@ -270,6 +274,7 @@ private:
    ZmqBipNewKeyCb   cbApprovePuB_ = nullptr;
    ZmqBipNewKeyCb   cbApproveChat_ = nullptr;
    ZmqBipNewKeyCb   cbApproveProxy_ = nullptr;
+   ZmqBipNewKeyCb   cbApproveCcServer_ = nullptr;
 
    std::queue<std::function<void(void)>> deferredDialogs_;
    bool deferredDialogRunning_ = false;
