@@ -966,7 +966,8 @@ void BSTerminalMainWindow::connectArmory()
 void BSTerminalMainWindow::connectCcClient()
 {
    if (trackerClient_) {
-      trackerClient_->openConnection("127.0.0.1", "19003", cbApproveCcServer_);
+      bool testnet = applicationSettings_->get<NetworkType>(ApplicationSettings::netType) == NetworkType::TestNet;
+      trackerClient_->openConnection("185.213.153.37", testnet ? "19003" : "9003", cbApproveCcServer_);
    }
 }
 

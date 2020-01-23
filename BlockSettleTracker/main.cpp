@@ -105,7 +105,17 @@ int main(int argc, char** argv) {
 
    auto armory = std::make_shared<ArmoryConnection>(logger);
 
-   armory->setupConnection(testnet ? NetworkType::TestNet : NetworkType::MainNet, armoryHost, std::to_string(armoryPort), ownKeyPath, armoryKeyParsed);
+   auto armoryKeyCb = [logger, armoryKey, armoryKeyParsed](const BinaryData &key, const std::string &name) -> bool {
+      SPDLOG_LOGGER_INFO(logger, "got new armory public key: {}", key.toHexStr());
+      bool validKey = armoryKey == "-" || armoryKeyParsed == key;
+      if (!validKey) {
+         SPDLOG_LOGGER_CRITICAL(logger, "please submit valid armory key");
+         exit(EXIT_FAILURE);
+      }
+      return validKey;
+   };
+
+   armory->setupConnection(testnet ? NetworkType::TestNet : NetworkType::MainNet, armoryHost, std::to_string(armoryPort), ownKeyPath, {}, {}, armoryKeyCb);
    auto now = std::chrono::steady_clock::now();
    while (std::chrono::steady_clock::now() - now < std::chrono::seconds(60) && armory->state() != ArmoryState::Connected) {
       std::this_thread::sleep_for(std::chrono::seconds(1));
