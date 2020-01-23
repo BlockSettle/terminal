@@ -373,9 +373,6 @@ void BSTerminalMainWindow::LoadWallets()
 {
    logMgr_->logger()->debug("Loading wallets");
 
-   wasWalletsRegistered_ = false;
-   walletsSynched_ = false;
-
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, this, [this] {
       ui_->widgetRFQ->setWalletsManager(walletsMgr_);
       ui_->widgetRFQReply->setWalletsManager(walletsMgr_);
@@ -398,11 +395,8 @@ void BSTerminalMainWindow::LoadWallets()
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
       , &BSTerminalMainWindow::updateControlEnabledState);
 
-   const auto &progressDelegate = [this](int cur, int total) {
-      logMgr_->logger()->debug("Loaded wallet {} of {}", cur, total);
-   };
    walletsMgr_->reset();
-   walletsMgr_->syncWallets(progressDelegate);
+   onSyncWallets();
 }
 
 void BSTerminalMainWindow::InitAuthManager()
@@ -546,6 +540,7 @@ bool BSTerminalMainWindow::InitSigningContainer()
    walletsMgr_->setSignContainer(signContainer_);
    connect(signContainer_.get(), &WalletSignerContainer::ready, this, &BSTerminalMainWindow::SignerReady, Qt::QueuedConnection);
    connect(signContainer_.get(), &WalletSignerContainer::needNewWalletPrompt, this, &BSTerminalMainWindow::onNeedNewWallet, Qt::QueuedConnection);
+   connect(signContainer_.get(), &WalletSignerContainer::walletsReadyToSync, this, &BSTerminalMainWindow::onSyncWallets, Qt::QueuedConnection);
 
    return true;
 }
@@ -1757,6 +1752,16 @@ void BSTerminalMainWindow::onTabWidgetCurrentChanged(const int &index)
    const int chatIndex = ui_->tabWidget->indexOf(ui_->widgetChat);
    const bool isChatTab = index == chatIndex;
    //ui_->widgetChat->updateChat(isChatTab);
+}
+
+void BSTerminalMainWindow::onSyncWallets()
+{
+   wasWalletsRegistered_ = false;
+   walletsSynched_ = false;
+   const auto &progressDelegate = [this](int cur, int total) {
+      logMgr_->logger()->debug("Loaded wallet {} of {}", cur, total);
+   };
+   walletsMgr_->syncWallets(progressDelegate);
 }
 
 void BSTerminalMainWindow::InitWidgets()
