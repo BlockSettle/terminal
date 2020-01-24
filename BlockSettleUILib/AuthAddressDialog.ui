@@ -6,9 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>701</width>
-    <height>231</height>
+    <width>500</width>
+    <height>255</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="windowTitle">
    <string>Authentication Addresses</string>
@@ -60,6 +66,9 @@
          <property name="spacing">
           <number>6</number>
          </property>
+         <property name="sizeConstraint">
+          <enum>QLayout::SetMinimumSize</enum>
+         </property>
          <property name="leftMargin">
           <number>0</number>
          </property>
@@ -73,7 +82,32 @@
           <number>0</number>
          </property>
          <item>
+          <widget class="QLabel" name="descriptionLabel">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Required to trade bitcoin, an Authentication Address verifies you as a Participant in our trading network. You may create one more than one Authentication Address.</string>
+           </property>
+           <property name="textFormat">
+            <enum>Qt::PlainText</enum>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QTreeView" name="treeViewAuthAdress">
+           <property name="minimumSize">
+            <size>
+             <width>476</width>
+             <height>60</height>
+            </size>
+           </property>
            <property name="alternatingRowColors">
             <bool>true</bool>
            </property>
@@ -89,6 +123,9 @@
           <widget class="QLabel" name="labelHint">
            <property name="text">
             <string/>
+           </property>
+           <property name="textFormat">
+            <enum>Qt::PlainText</enum>
            </property>
            <property name="wordWrap">
             <bool>true</bool>
@@ -186,31 +223,6 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButtonSubmit">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>110</width>
-          <height>35</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>Submit</string>
-        </property>
-        <property name="autoDefault">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QPushButton" name="pushButtonCreate">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -235,12 +247,41 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonSubmit">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>110</width>
+          <height>35</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Submit</string>
+        </property>
+        <property name="autoDefault">
+         <bool>false</bool>
+        </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
   </layout>
  </widget>
  <resources>
+  <include location="armory.qrc"/>
   <include location="armory.qrc"/>
  </resources>
  <connections/>
