@@ -20,7 +20,10 @@ AuthAddressViewModel::AuthAddressViewModel(const std::shared_ptr<AuthAddressMana
    , defaultAddr_(authManager->getDefault())
 {
    connect(authManager_.get(), &AuthAddressManager::AddressListUpdated, this, &AuthAddressViewModel::onAddressListUpdated, Qt::QueuedConnection);
+   connect(authManager_.get(), &AuthAddressManager::AuthWalletChanged, this, &AuthAddressViewModel::onAddressListUpdated, Qt::QueuedConnection);
 }
+
+AuthAddressViewModel::~AuthAddressViewModel() noexcept = default;
 
 int AuthAddressViewModel::columnCount(const QModelIndex&) const
 {
@@ -29,12 +32,16 @@ int AuthAddressViewModel::columnCount(const QModelIndex&) const
 
 int AuthAddressViewModel::rowCount(const QModelIndex&) const
 {
-   return authManager_->GetAddressCount();
+   return addresses_.size();
 }
 
 QVariant AuthAddressViewModel::data(const QModelIndex &index, int role) const
 {
-   const auto address = getAddress(index);
+   if (!index.isValid() || index.row() < 0 || index.row() >= addresses_.size()) {
+      return {};
+   }
+
+   const auto address = addresses_[index.row()];
 
    if (role == Qt::DisplayRole) {
       switch(static_cast<AuthAddressViewColumns>(index.column())) {
@@ -62,7 +69,7 @@ QVariant AuthAddressViewModel::data(const QModelIndex &index, int role) const
             return tr("Revoked by BS");
          }
       default:
-         return QVariant();
+         return {};
       }
    }
    else if (role == Qt::FontRole) {
@@ -73,7 +80,7 @@ QVariant AuthAddressViewModel::data(const QModelIndex &index, int role) const
       }
    }
 
-   return QVariant();
+   return {};
 }
 
 QVariant AuthAddressViewModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -102,35 +109,135 @@ QModelIndex AuthAddressViewModel::index(int row, int column, const QModelIndex&)
       return QModelIndex();
    }
 
-   return createIndex(row, column, row);
+   return createIndex(row, column);
 }
 
 QModelIndex AuthAddressViewModel::parent(const QModelIndex&) const
 {
-   return QModelIndex();
+   return {};
 }
 
 bs::Address AuthAddressViewModel::getAddress(const QModelIndex& index) const
 {
-   return authManager_->GetAddress(index.row());
+   if (!index.isValid() || index.row() < 0 || index.row() >= addresses_.size()) {
+      return {};
+   }
+
+   return addresses_[index.row()];
+}
+
+bool AuthAddressViewModel::isAddressNotSubmitted(int row) const
+{
+   if (row < 0 || row >= addresses_.size()) {
+      return false;
+   }
+
+   const auto address = addresses_[row];
+   return authManager_->GetState(address) == AddressVerificationState::NotSubmitted;
 }
 
 void AuthAddressViewModel::setDefaultAddr(const bs::Address &addr)
 {
    defaultAddr_ = addr;
-   onAddressListUpdated();
+   for (int i = 0; i < addresses_.size(); ++i) {
+      if (addresses_[i].prefixed() == defaultAddr_.prefixed()) {
+         emit dataChanged(index(i, 0), index(i, 0), { Qt::FontRole });
+         return;
+      }
+   }
 }
 
 void AuthAddressViewModel::onAddressListUpdated()
 {
+   // store selection
    const auto treeView = qobject_cast<QTreeView *>(QObject::parent());
-   QModelIndexList selRows;
-   if (treeView && treeView->selectionModel()) {
-      selRows = treeView->selectionModel()->selectedRows();
+   std::pair<int, std::string> selectedRowToName;
+   if (treeView && treeView->selectionModel() && treeView->selectionModel()->hasSelection()) {
+      selectedRowToName.first = treeView->selectionModel()->selectedRows()[0].row();
+      selectedRowToName.second = getAddress(index(selectedRowToName.first,
+         static_cast<int>(AuthAddressViewColumns::ColumnName))).display();
    }
+
+   // do actual update
    emit beginResetModel();
+   addresses_.clear();
+   const int total = authManager_->GetAddressCount();
+   addresses_.reserve(total);
+   for (int i = 0; i < total; ++i) {
+      addresses_.push_back(authManager_->GetAddress(i));
+   }   
    emit endResetModel();
-   if (!selRows.empty()) {
-      treeView->selectionModel()->select(selRows[0], QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+
+   // restore selection if needed
+   if (selectedRowToName.first < addresses_.size() 
+      && selectedRowToName.second == addresses_[selectedRowToName.first].display()) {
+      emit updateSelectionAfterReset(selectedRowToName.first);
    }
+}
+
+AuthAdressControlProxyModel::AuthAdressControlProxyModel(AuthAddressViewModel *sourceModel, QWidget *parent)
+   : QSortFilterProxyModel(parent)
+   , sourceModel_(sourceModel)
+{
+   setDynamicSortFilter(true);
+   setSourceModel(sourceModel_);
+}
+
+AuthAdressControlProxyModel::~AuthAdressControlProxyModel() = default;
+
+void AuthAdressControlProxyModel::setVisibleRowsCount(int rows)
+{
+   visibleRowsCount_ = rows;
+   invalidate();
+}
+
+void AuthAdressControlProxyModel::increaseVisibleRowsCountByOne()
+{
+   ++visibleRowsCount_;
+   invalidate();
+}
+
+int AuthAdressControlProxyModel::getVisibleRowsCount() const
+{
+   return visibleRowsCount_;
+}
+
+void AuthAdressControlProxyModel::setDefaultAddr(const bs::Address &addr)
+{
+   sourceModel_->setDefaultAddr(addr);
+}
+
+bs::Address AuthAdressControlProxyModel::getAddress(const QModelIndex& index) const
+{
+   if (!index.isValid()) {
+      return {};
+   }
+
+   const auto& sourceIndex = mapToSource(index);
+   return sourceModel_->getAddress(sourceIndex);
+}
+
+bool AuthAdressControlProxyModel::isEmpty() const
+{
+   return rowCount() == 0;
+}
+
+QModelIndex AuthAdressControlProxyModel::getFirstUnsubmitted() const
+{
+   if (isEmpty()) {
+      return {};
+   }
+
+   for (int i = 0; i < rowCount(); ++i) {
+      if (sourceModel_->isAddressNotSubmitted(i)) {
+         return index(i, 0);
+      }
+   }
+
+   return {};
+}
+
+bool AuthAdressControlProxyModel::filterAcceptsRow(int row, const QModelIndex&) const
+{
+   return visibleRowsCount_ > row;
 }

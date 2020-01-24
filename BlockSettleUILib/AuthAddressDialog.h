@@ -19,7 +19,7 @@
 #include <QPointer>
 
 class AssetManager;
-class AuthAddressViewModel;
+class AuthAdressControlProxyModel;
 class QItemSelection;
 
 namespace Ui {
@@ -69,16 +69,20 @@ private slots:
    void ConfirmAuthAddressSubmission();
 
    void onAuthVerifyTxSent();
+   void onUpdateSelection(int row);
+   void copySelectedToClipboard();
 
 protected:
    void showEvent(QShowEvent *) override;
    void showError(const QString &text, const QString &details = {});
    void showInfo(const QString &title, const QString &text);
+   bool eventFilter(QObject* sender, QEvent* event) override;
 
 private:
    bs::Address GetSelectedAddress() const;
    bool unsubmittedExist() const;
    void updateUnsubmittedState();
+   void saveAddressesNumber();
 
 private:
    std::unique_ptr<Ui::AuthAddressDialog> ui_;
@@ -86,7 +90,7 @@ private:
    std::shared_ptr<AuthAddressManager>    authAddressManager_;
    std::shared_ptr<AssetManager>          assetManager_;
    std::shared_ptr<ApplicationSettings>   settings_;
-   AuthAddressViewModel                *  model_;
+   QPointer<AuthAdressControlProxyModel>  model_;
    bs::Address                            defaultAddr_;
    QPointer<BsClient>                     bsClient_;
 

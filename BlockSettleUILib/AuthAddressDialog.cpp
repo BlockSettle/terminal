@@ -13,6 +13,10 @@
 
 #include <spdlog/spdlog.h>
 #include <QItemSelection>
+#include <QMouseEvent>
+#include <QMenu>
+#include <QClipboard>
+#include <QEvent>
 
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
@@ -35,13 +39,17 @@ AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logg
 {
    ui_->setupUi(this);
 
-   model_ = new AuthAddressViewModel(authAddressManager_, ui_->treeViewAuthAdress);
+   auto *originModel = new AuthAddressViewModel(authAddressManager_, ui_->treeViewAuthAdress);
+   model_ = new AuthAdressControlProxyModel(originModel, this);
+   model_->setVisibleRowsCount(settings_->get<int>(ApplicationSettings::numberOfAuthAddressVisible));
    ui_->treeViewAuthAdress->setModel(model_);
    ui_->treeViewAuthAdress->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+   ui_->treeViewAuthAdress->installEventFilter(this);
 
    connect(ui_->treeViewAuthAdress->selectionModel(), &QItemSelectionModel::selectionChanged
       , this, &AuthAddressDialog::adressSelected);
-   connect(model_, &AuthAddressViewModel::modelReset, this, &AuthAddressDialog::onModelReset);
+   connect(model_, &AuthAdressControlProxyModel::modelReset, this, &AuthAddressDialog::onModelReset);
+   connect(originModel, &AuthAddressViewModel::updateSelectionAfterReset, this, &AuthAddressDialog::onUpdateSelection);
 
 
    connect(authAddressManager_.get(), &AuthAddressManager::AddressListUpdated, this, &AuthAddressDialog::onAddressListUpdated, Qt::QueuedConnection);
@@ -58,6 +66,42 @@ AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logg
 
 AuthAddressDialog::~AuthAddressDialog() = default;
 
+bool AuthAddressDialog::eventFilter(QObject* sender, QEvent* event)
+{
+   if (sender == ui_->treeViewAuthAdress) {
+      if (QEvent::KeyPress == event->type()) {
+         QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+
+         if (keyEvent->matches(QKeySequence::Copy)) {
+            copySelectedToClipboard();
+            return true;
+         }
+      }
+      else if (QEvent::ContextMenu == event->type()) {
+         QContextMenuEvent* contextMenuEvent = static_cast<QContextMenuEvent*>(event);
+
+         QPoint pos = contextMenuEvent->pos();
+         pos.setY(pos.y() - ui_->treeViewAuthAdress->header()->height());
+         const auto index = ui_->treeViewAuthAdress->indexAt(pos);
+         if (index.isValid()) {
+            if (ui_->treeViewAuthAdress->selectionModel()->selectedIndexes()[0] != index) {
+               ui_->treeViewAuthAdress->selectionModel()->select(index,
+                  QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            }
+
+            QMenu menu;
+            menu.addAction(tr("&Copy Authentication Address"), [this]() {
+               copySelectedToClipboard();
+            });
+            menu.exec(contextMenuEvent->globalPos());
+            return true;
+         }
+      }
+   }
+
+   return QWidget::eventFilter(sender, event);
+}
+
 void AuthAddressDialog::showEvent(QShowEvent *evt)
 {
    if (defaultAddr_.isNull()) {
@@ -71,6 +115,17 @@ void AuthAddressDialog::showEvent(QShowEvent *evt)
    updateUnsubmittedState();
 
    ui_->treeViewAuthAdress->selectionModel()->clearSelection();
+
+   QModelIndex index = model_->getFirstUnsubmitted();
+   if (!index.isValid() && !model_->isEmpty()) {
+      // get first if none unsubmitted
+      index = model_->index(0, 0);
+   }
+
+   if (index.isValid()) {
+      ui_->treeViewAuthAdress->selectionModel()->select(
+         index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+   }
 
    ui_->labelHint->clear();
 
@@ -173,6 +228,24 @@ void AuthAddressDialog::onAuthVerifyTxSent()
    accept();
 }
 
+void AuthAddressDialog::onUpdateSelection(int row)
+{
+   ui_->treeViewAuthAdress->selectionModel()->select(
+      model_->index(row, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+}
+
+void AuthAddressDialog::copySelectedToClipboard()
+{
+   auto *selectionModel = ui_->treeViewAuthAdress->selectionModel();
+   if (!selectionModel->hasSelection()) {
+      return;
+   }
+
+   auto const address = model_->getAddress(selectionModel->selectedIndexes()[0]);
+   qApp->clipboard()->setText(QString::fromStdString(address.display()));
+}
+
+
 void AuthAddressDialog::onAddressStateChanged(const QString &addr, const QString &state)
 {
    if (state == QLatin1String("Verified")) {
@@ -250,10 +323,19 @@ bs::Address AuthAddressDialog::GetSelectedAddress() const
 
 void AuthAddressDialog::createAddress()
 {
+   if (authAddressManager_->GetAddressCount() > model_->getVisibleRowsCount()) {
+      // We already have address but they is no visible in view
+      model_->increaseVisibleRowsCountByOne();
+      saveAddressesNumber();
+      return;
+   }
+
    if (!authAddressManager_->CreateNewAuthAddress()) {
       showError(tr("Failed to create new address"), tr("Auth wallet error"));
    } else {
       ui_->pushButtonCreate->setEnabled(false);
+      model_->increaseVisibleRowsCountByOne();
+      saveAddressesNumber();
    }
 }
 
@@ -372,7 +454,20 @@ void AuthAddressDialog::setDefaultAddress()
 
 void AuthAddressDialog::onModelReset()
 {
-   ui_->pushButtonRevoke->setEnabled(false);
-   ui_->pushButtonSubmit->setEnabled(false);
-   ui_->pushButtonDefault->setEnabled(false);
+   ui_->pushButtonRevoke->setDisabled(true);
+   ui_->pushButtonSubmit->setDisabled(true);
+   ui_->pushButtonDefault->setDisabled(true);
+   ui_->pushButtonCreate->setDisabled(model_->isEmpty());
+   saveAddressesNumber();
+}
+
+void AuthAddressDialog::saveAddressesNumber()
+{
+   settings_->set(ApplicationSettings::numberOfAuthAddressVisible
+      , std::max(1, model_->rowCount()) );
+   settings_->SaveSettings();
+
+   if (model_->isEmpty()) {
+      model_->setVisibleRowsCount(1);
+   }
 }
