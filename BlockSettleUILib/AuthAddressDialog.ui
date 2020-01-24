@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>500</width>
-    <height>255</height>
+    <width>556</width>
+    <height>320</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -67,7 +67,7 @@
           <number>6</number>
          </property>
          <property name="sizeConstraint">
-          <enum>QLayout::SetMinimumSize</enum>
+          <enum>QLayout::SetDefaultConstraint</enum>
          </property>
          <property name="leftMargin">
           <number>0</number>
@@ -84,7 +84,7 @@
          <item>
           <widget class="QLabel" name="descriptionLabel">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -104,9 +104,12 @@
           <widget class="QTreeView" name="treeViewAuthAdress">
            <property name="minimumSize">
             <size>
-             <width>476</width>
-             <height>60</height>
+             <width>0</width>
+             <height>0</height>
             </size>
+           </property>
+           <property name="contextMenuPolicy">
+            <enum>Qt::NoContextMenu</enum>
            </property>
            <property name="alternatingRowColors">
             <bool>true</bool>

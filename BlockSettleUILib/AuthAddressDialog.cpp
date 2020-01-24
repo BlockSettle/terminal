@@ -13,6 +13,10 @@
 
 #include <spdlog/spdlog.h>
 #include <QItemSelection>
+#include <QMouseEvent>
+#include <QMenu>
+#include <QClipboard>
+#include <QEvent>
 
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
@@ -40,6 +44,7 @@ AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logg
    model_->setVisibleRowsCount(settings_->get<int>(ApplicationSettings::numberOfAuthAddressVisible));
    ui_->treeViewAuthAdress->setModel(model_);
    ui_->treeViewAuthAdress->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+   ui_->treeViewAuthAdress->installEventFilter(this);
 
    connect(ui_->treeViewAuthAdress->selectionModel(), &QItemSelectionModel::selectionChanged
       , this, &AuthAddressDialog::adressSelected);
@@ -60,6 +65,42 @@ AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logg
 }
 
 AuthAddressDialog::~AuthAddressDialog() = default;
+
+bool AuthAddressDialog::eventFilter(QObject* sender, QEvent* event)
+{
+   if (sender == ui_->treeViewAuthAdress) {
+      if (QEvent::KeyPress == event->type()) {
+         QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+
+         if (keyEvent->matches(QKeySequence::Copy)) {
+            copySelectedToClipboard();
+            return true;
+         }
+      }
+      else if (QEvent::ContextMenu == event->type()) {
+         QContextMenuEvent* contextMenuEvent = static_cast<QContextMenuEvent*>(event);
+
+         QPoint pos = contextMenuEvent->pos();
+         pos.setY(pos.y() - ui_->treeViewAuthAdress->header()->height());
+         const auto index = ui_->treeViewAuthAdress->indexAt(pos);
+         if (index.isValid()) {
+            if (ui_->treeViewAuthAdress->selectionModel()->selectedIndexes()[0] != index) {
+               ui_->treeViewAuthAdress->selectionModel()->select(index,
+                  QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            }
+
+            QMenu menu;
+            menu.addAction(tr("&Copy Authentication Address"), [this]() {
+               copySelectedToClipboard();
+            });
+            menu.exec(contextMenuEvent->globalPos());
+            return true;
+         }
+      }
+   }
+
+   return QWidget::eventFilter(sender, event);
+}
 
 void AuthAddressDialog::showEvent(QShowEvent *evt)
 {
@@ -192,6 +233,18 @@ void AuthAddressDialog::onUpdateSelection(int row)
    ui_->treeViewAuthAdress->selectionModel()->select(
       model_->index(row, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
+
+void AuthAddressDialog::copySelectedToClipboard()
+{
+   auto *selectionModel = ui_->treeViewAuthAdress->selectionModel();
+   if (!selectionModel->hasSelection()) {
+      return;
+   }
+
+   auto const address = model_->getAddress(selectionModel->selectedIndexes()[0]);
+   qApp->clipboard()->setText(QString::fromStdString(address.display()));
+}
+
 
 void AuthAddressDialog::onAddressStateChanged(const QString &addr, const QString &state)
 {

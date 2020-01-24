@@ -70,11 +70,13 @@ private slots:
 
    void onAuthVerifyTxSent();
    void onUpdateSelection(int row);
+   void copySelectedToClipboard();
 
 protected:
    void showEvent(QShowEvent *) override;
    void showError(const QString &text, const QString &details = {});
    void showInfo(const QString &title, const QString &text);
+   bool eventFilter(QObject* sender, QEvent* event) override;
 
 private:
    bs::Address GetSelectedAddress() const;

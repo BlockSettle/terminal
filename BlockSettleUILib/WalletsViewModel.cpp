@@ -72,7 +72,7 @@ public:
             case WalletsViewModel::WalletRegColumns::ColumnState:
                return getState();
             case WalletsViewModel::WalletRegColumns::ColumnNbAddresses:
-               return nbAddr_ ? QString::number(nbAddr_) : QString();
+               return nbAddr_ ? QString::number(std::max(static_cast<size_t>(5), nbAddr_)) : QString();
             default:
                return QVariant();
             }
@@ -92,7 +92,7 @@ public:
             case WalletsViewModel::WalletColumns::ColumnState:
                return getState();
             case WalletsViewModel::WalletColumns::ColumnNbAddresses:
-               return nbAddr_ ? QString::number(nbAddr_) : QString();
+               return nbAddr_ ? QString::number(std::max(static_cast<size_t>(5), nbAddr_)) : QString();
             case WalletsViewModel::WalletColumns::ColumnID:
                return QString::fromStdString(id());
             default:
