@@ -269,6 +269,11 @@ void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMana
    };
    updateAuthAddresses();
    connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, updateAuthAddresses);
+
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, [this] {
+      // This will update balance after receiving ZC
+      updatePanel();
+   });
 }
 
 void RFQTicketXBT::walletsLoaded()
