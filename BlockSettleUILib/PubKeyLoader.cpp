@@ -32,6 +32,9 @@ BinaryData PubKeyLoader::loadKey(const KeyType kt) const
    case KeyType::Proxy:
       keyString = appSettings_->get<std::string>(ApplicationSettings::proxyServerPubKey);
       break;
+   case KeyType::CcServer:
+      keyString = appSettings_->get<std::string>(ApplicationSettings::ccServerPubKey);
+      break;
    }
 
    if (!keyString.empty()) {
@@ -58,6 +61,9 @@ BinaryData PubKeyLoader::loadKeyFromResource(KeyType kt, ApplicationSettings::En
       break;
    case KeyType::Proxy:
       filename = QStringLiteral("proxy_");
+      break;
+   case KeyType::CcServer:
+      filename = QStringLiteral("cc_server_");
       break;
    }
    assert(!filename.isEmpty());
@@ -110,6 +116,9 @@ bool PubKeyLoader::saveKey(const KeyType kt, const BinaryData &key)
       break;
    case KeyType::Proxy:
       appSettings_->set(ApplicationSettings::proxyServerPubKey, QString::fromStdString(key.toHexStr()));
+      break;
+   case KeyType::CcServer:
+      appSettings_->set(ApplicationSettings::ccServerPubKey, QString::fromStdString(key.toHexStr()));
       break;
    }
    return true;
@@ -167,6 +176,7 @@ QString PubKeyLoader::serverName(const KeyType kt)
       case KeyType::PublicBridge:   return QObject::tr("PuB");
       case KeyType::Chat:           return QObject::tr("Chat Server");
       case KeyType::Proxy:          return QObject::tr("Proxy");
+      case KeyType::CcServer:       return QObject::tr("CC tracker server");
    }
    return {};
 }

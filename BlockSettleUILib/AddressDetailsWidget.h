@@ -29,7 +29,7 @@ namespace bs {
    }
 }
 class AddressVerificator;
-class ColoredCoinTracker;
+class ColoredCoinTrackerClient;
 class QTreeWidgetItem;
 
 
@@ -97,7 +97,7 @@ private:
 
    struct CcData
    {
-      std::shared_ptr<ColoredCoinTracker> tracker;
+      std::shared_ptr<ColoredCoinTrackerClient> tracker;
       std::string security;
       uint64_t lotSize{};
       uint64_t ccBalance{};

@@ -27,7 +27,7 @@ from build_scripts.websockets_settings    import WebsocketsSettings
 from build_scripts.libchacha20poly1305_settings import LibChaCha20Poly1305Settings
 from build_scripts.botan_settings         import BotanSettings
 
-def generate_project(build_mode, link_mode, build_production, hide_warnings, cmake_flags, build_tests):
+def generate_project(build_mode, link_mode, build_production, hide_warnings, cmake_flags, build_tests, build_tracker):
    project_settings = Settings(build_mode, link_mode)
 
    print('Build mode        : {} ( {} )'.format(project_settings.get_build_mode(), ('Production' if build_production else 'Development')))
@@ -117,6 +117,9 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
    if build_tests:
       command.append('-DBUILD_TESTS=1')
 
+   if build_tracker:
+      command.append('-DBUILD_TRACKER=1')
+
    if cmake_flags != None:
       for flag in cmake_flags.split():
          command.append(flag)
@@ -161,7 +164,10 @@ if __name__ == '__main__':
    input_parser.add_argument('--test',
                              help='Select to also build tests',
                              action='store_true')
+   input_parser.add_argument('--tracker',
+                             help='Select to also build tracker',
+                             action='store_true')
 
    args = input_parser.parse_args()
 
-   sys.exit(generate_project(args.build_mode, args.link_mode, args.build_production, args.hide_warnings, args.cmake_flags, args.test))
+   sys.exit(generate_project(args.build_mode, args.link_mode, args.build_production, args.hide_warnings, args.cmake_flags, args.test, args.tracker))

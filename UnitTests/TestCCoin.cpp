@@ -479,7 +479,7 @@ std::vector<UTXO> TestCCoin::GetUTXOsFor(const bs::Address & addr, bool sortedBy
    return fut.get();
 }
 
-std::vector<UTXO> TestCCoin::GetCCUTXOsFor(std::shared_ptr<ColoredCoinTracker> ccPtr,
+std::vector<UTXO> TestCCoin::GetCCUTXOsFor(std::shared_ptr<ColoredCoinTrackerClient> ccPtr,
    const bs::Address & addr, bool sortedByValue, bool withZc)
 {
    auto promPtr = std::make_shared<std::promise<std::vector<UTXO>>>();
@@ -490,9 +490,9 @@ std::vector<UTXO> TestCCoin::GetCCUTXOsFor(std::shared_ptr<ColoredCoinTracker> c
    };
 
    std::set<BinaryData> addrSet = { addr.prefixed() };
-   ccPtr->getCCUtxoForAddresses(addrSet, withZc, utxoLbd);
-   auto&& result = fut.get();
-
+   auto outpointMap = ccPtr->getCCUtxoForAddresses(addrSet, withZc);
+   envPtr_->armoryConnection()->getOutputsForOutpoints(outpointMap, withZc, utxoLbd);
+   auto result = fut.get();
    if (sortedByValue)
       std::sort(result.begin(), result.end(), [](UTXO const & l, UTXO const & r) { return l.getValue() > r.getValue(); });
    return result;
@@ -506,33 +506,28 @@ void TestCCoin::revoke(const bs::Address& addr)
 }
 
 ////
-std::shared_ptr<ColoredCoinTracker> TestCCoin::makeCct(void)
+std::shared_ptr<ColoredCoinTrackerClient_UT> TestCCoin::makeCct(void)
 {
-   auto cct = std::make_shared<ColoredCoinTracker>(ccLotSize_, envPtr_->armoryConnection());
+   auto ccSnapshots = std::make_unique<ColoredCoinTracker_UT>(ccLotSize_, envPtr_->armoryConnection());
+   auto cct = std::make_shared<ColoredCoinTrackerClient_UT>(std::move(ccSnapshots));
    cct->addOriginAddress(genesisAddr_);
-   
-   auto cctUt = (ColoredCoinTracker_UT*)cct.get();
-   cctUt->setACT(std::make_shared<ColoredCoinTestACT>(envPtr_->armoryConnection().get()));
-
+   cct->tracker()->setACT(std::make_shared<ColoredCoinTestACT>(envPtr_->armoryConnection().get()));
    return cct;
 }
 
-void TestCCoin::update(std::shared_ptr<ColoredCoinTracker> cct)
+void TestCCoin::update(std::shared_ptr<ColoredCoinTrackerClient_UT> cct)
 {
-   auto cctUt = (ColoredCoinTracker_UT*)cct.get();
-   cctUt->update_UT();
+   cct->tracker()->update_UT();
 }
 
-void TestCCoin::zcUpdate(std::shared_ptr<ColoredCoinTracker> cct)
+void TestCCoin::zcUpdate(std::shared_ptr<ColoredCoinTrackerClient_UT> cct)
 {
-   auto cctUt = (ColoredCoinTracker_UT*)cct.get();
-   cctUt->zcUpdate_UT();
+   cct->tracker()->zcUpdate_UT();
 }
 
-void TestCCoin::reorg(std::shared_ptr<ColoredCoinTracker> cct)
+void TestCCoin::reorg(std::shared_ptr<ColoredCoinTrackerClient_UT> cct)
 {
-   auto cctUt = (ColoredCoinTracker_UT*)cct.get();
-   cctUt->reorg_UT();
+   cct->tracker()->reorg_UT();
 }
 
 ////
@@ -2644,11 +2639,11 @@ TEST_F(TestCCoin, Case_1CC_2CC_WithACT)
    usersCount_ = 10;
    InitialFund();
 
-   auto cct = std::make_shared<ColoredCoinTracker>(ccLotSize_, envPtr_->armoryConnection());
+   auto ccSnapshots = std::make_unique<ColoredCoinTracker_UT>(ccLotSize_, envPtr_->armoryConnection());
+   auto cct = std::make_shared<ColoredCoinTrackerClient_UT>(std::move(ccSnapshots));
 
    auto actPtr = std::make_shared<ColoredCoinTestACT_WithNotif>(envPtr_->armoryConnection().get());
-   auto cctUT = (ColoredCoinTracker_UT*)cct.get();
-   cctUT->setACT(actPtr);
+   cct->tracker()->setACT(actPtr);
 
    cct->addOriginAddress(genesisAddr_);
    cct->goOnline();
@@ -2701,11 +2696,11 @@ TEST_F(TestCCoin, Reorg_WithACT)
    usersCount_ = 10;
    InitialFund();
 
-   ColoredCoinTracker cct(ccLotSize_, envPtr_->armoryConnection());
+   auto ccSnapshots = std::make_unique<ColoredCoinTracker_UT>(ccLotSize_, envPtr_->armoryConnection());
+   ColoredCoinTrackerClient_UT cct(std::move(ccSnapshots));
    
    auto actPtr = std::make_shared<ColoredCoinTestACT_WithNotif>(envPtr_->armoryConnection().get());
-   auto cctUT = (ColoredCoinTracker_UT*)&cct;
-   cctUT->setACT(actPtr);
+   cct.tracker()->setACT(actPtr);
 
    cct.addOriginAddress(genesisAddr_);
    cct.goOnline();
