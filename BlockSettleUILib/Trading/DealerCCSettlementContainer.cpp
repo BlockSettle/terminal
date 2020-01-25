@@ -36,7 +36,7 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , bs::UtxoReservationToken utxoRes)
-   : bs::SettlementContainer()
+   : bs::SettlementContainer(std::move(utxoRes))
    , logger_(logger)
    , order_(order)
    , lotSize_(lotSize)
@@ -50,8 +50,6 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , orderId_(QString::fromStdString(order.clOrderId))
    , signer_(armory)
 {
-   utxoRes_ = std::move(utxoRes);
-
    if (lotSize == 0) {
       throw std::logic_error("invalid lotSize");
    }

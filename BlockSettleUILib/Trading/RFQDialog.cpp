@@ -69,6 +69,9 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    ui_->pageRequestingQuote->SetAssetManager(assetMgr_);
    ui_->pageRequestingQuote->SetCelerClient(celerClient_);
 
+   // NOTE: RFQDialog could be destroyed before SettlementContainer work is done.
+   // Do not make connections that must live after RFQDialog closing.
+
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::cancelRFQ, this, &RFQDialog::reject);
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::requestTimedOut, this, &RFQDialog::close);
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteAccepted, this, &RFQDialog::onRFQResponseAccepted, Qt::QueuedConnection);
@@ -111,12 +114,6 @@ void RFQDialog::onOrderFailed(const std::string& quoteId, const std::string& rea
    if (rfq_.assetType == bs::network::Asset::SpotFX) {
       ui_->pageRequestingQuote->onOrderFailed(quoteId, reason);
    }
-   if (xbtSettlContainer_) {
-      xbtSettlContainer_->cancel();
-   }
-   if (ccSettlContainer_) {
-      ccSettlContainer_->cancel();
-   }
    close();
 }
 
@@ -136,6 +133,16 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
       if (curContainer_) {
          rfqStorage_->addSettlementContainer(curContainer_);
          curContainer_->activate();
+
+         // Do not capture `this` here!
+         auto failedCb = [qId = quote_.quoteId, curContainer = curContainer_.get()]
+            (const std::string& quoteId, const std::string& reason)
+         {
+            if (qId == quoteId) {
+               curContainer->cancel();
+            }
+         };
+         connect(quoteProvider_.get(), &QuoteProvider::orderFailed, curContainer_.get(), failedCb);
       }
    }
 }

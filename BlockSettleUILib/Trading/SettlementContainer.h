@@ -31,7 +31,7 @@ namespace bs {
    {
       Q_OBJECT
    public:
-      explicit SettlementContainer();
+      explicit SettlementContainer(bs::UtxoReservationToken utxoRes);
       ~SettlementContainer() override;
 
       virtual bool cancel() = 0;

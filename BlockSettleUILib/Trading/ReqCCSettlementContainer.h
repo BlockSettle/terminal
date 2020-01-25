@@ -117,8 +117,6 @@ private:
    bs::hd::WalletInfo walletInfo_;
    std::map<UTXO, std::string> manualXbtInputs_;
 
-   bs::UtxoReservationToken utxoRes_;
-
 };
 
 #endif // __REQ_CC_SETTLEMENT_CONTAINER_H__

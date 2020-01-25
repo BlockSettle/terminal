@@ -269,6 +269,11 @@ void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMana
    };
    updateAuthAddresses();
    connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, updateAuthAddresses);
+
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, [this] {
+      // This will update balance after receiving ZC
+      updatePanel();
+   });
 }
 
 void RFQTicketXBT::walletsLoaded()
@@ -730,6 +735,8 @@ void RFQTicketXBT::submitButtonClicked()
                      inputVal += input.getValue();
                   }
                   if (inputVal < spendVal) {
+                     // This should not normally happen!
+                     SPDLOG_LOGGER_ERROR(logger_, "insufficient input amount: {}, expected: {}, requestId: {}", inputVal, spendVal, rfq->requestId);
                      BSMessageBox(BSMessageBox::critical, tr("RFQ not sent")
                         , tr("Insufficient input amount")).exec();
                      return;
