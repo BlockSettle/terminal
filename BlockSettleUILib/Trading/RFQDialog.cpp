@@ -135,14 +135,14 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
          curContainer_->activate();
 
          // Do not capture `this` here!
-         auto faildCb = [qId = quote_.quoteId, curContainer = curContainer_.get()]
+         auto failedCb = [qId = quote_.quoteId, curContainer = curContainer_.get()]
             (const std::string& quoteId, const std::string& reason)
          {
             if (qId == quoteId) {
                curContainer->cancel();
             }
          };
-         connect(quoteProvider_.get(), &QuoteProvider::orderFailed, curContainer_.get(), faildCb);
+         connect(quoteProvider_.get(), &QuoteProvider::orderFailed, curContainer_.get(), failedCb);
       }
    }
 }
