@@ -735,6 +735,8 @@ void RFQTicketXBT::submitButtonClicked()
                      inputVal += input.getValue();
                   }
                   if (inputVal < spendVal) {
+                     // This should not normally happen!
+                     SPDLOG_LOGGER_ERROR(logger_, "insufficient input amount: {}, expected: {}, requestId: {}", inputVal, spendVal, rfq->requestId);
                      BSMessageBox(BSMessageBox::critical, tr("RFQ not sent")
                         , tr("Insufficient input amount")).exec();
                      return;
