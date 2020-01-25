@@ -20,8 +20,9 @@ namespace {
 
 } // namespace
 
-SettlementContainer::SettlementContainer()
+SettlementContainer::SettlementContainer(UtxoReservationToken utxoRes)
    : QObject(nullptr)
+   , utxoRes_(std::move(utxoRes))
 {}
 
 SettlementContainer::~SettlementContainer()

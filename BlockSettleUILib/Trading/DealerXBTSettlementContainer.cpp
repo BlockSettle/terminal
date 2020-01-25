@@ -40,7 +40,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const std::vector<UTXO> &utxosPayinFixed
    , const bs::Address &recvAddr
    , bs::UtxoReservationToken utxoRes)
-   : bs::SettlementContainer()
+   : bs::SettlementContainer(std::move(utxoRes))
    , order_(order)
    , weSellXbt_((order.side == bs::network::Side::Buy) != (order.product == bs::network::XbtCurrency))
    , amount_((order.product != bs::network::XbtCurrency) ? order.quantity / order.price : order.quantity)
@@ -54,8 +54,6 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , recvAddr_(recvAddr)
    , authAddr_(authAddr)
 {
-   utxoRes_ = std::move(utxoRes);
-
    qRegisterMetaType<AddressVerificationState>();
 
    CurrencyPair cp(security());

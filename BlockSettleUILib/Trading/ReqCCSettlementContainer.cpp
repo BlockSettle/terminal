@@ -33,7 +33,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::map<UTXO, std::string> &manualXbtInputs
    , bs::UtxoReservationToken utxoRes)
-   : bs::SettlementContainer()
+   : bs::SettlementContainer(std::move(utxoRes))
    , logger_(logger)
    , signingContainer_(container)
    , xbtWallet_(xbtWallet)
@@ -46,7 +46,6 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , signer_(armory)
    , lotSize_(assetMgr_->getCCLotSize(product()))
    , manualXbtInputs_(manualXbtInputs)
-   , utxoRes_(std::move(utxoRes))
 {
    if (!xbtWallet_) {
       throw std::logic_error("invalid hd wallet");
