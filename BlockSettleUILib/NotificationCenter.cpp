@@ -257,6 +257,18 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       icon = QSystemTrayIcon::Warning;
       break;
 
+   case bs::ui::NotifyType::BitcoinCoreOnline:
+      title = tr("Bitcoin Core");
+      text = tr("Connected to Bitcoin Core");
+      icon = QSystemTrayIcon::Information;
+      break;
+
+   case bs::ui::NotifyType::BitcoinCoreOffline:
+      title = tr("Bitcoin Core");
+      text = tr("Bitcoin Core is offline");
+      icon = QSystemTrayIcon::Critical;
+      break;
+
    case bs::ui::NotifyType::LogOut:
       // hide icons in all tabs on user logout
       for (int i=0; i<mainWinUi_->tabWidget->count(); i++) {
