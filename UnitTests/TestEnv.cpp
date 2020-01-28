@@ -215,10 +215,9 @@ ArmoryInstance::ArmoryInstance()
 
    theBDMt_->start(config_.initMode_);
 
+   WebSocketServer::initAuthPeers(lbdEmptyPassphrase);
    //start server
-   WebSocketServer::start(theBDMt_, BlockDataManagerConfig::getDataDir()
-      , lbdEmptyPassphrase
-      , BlockDataManagerConfig::ephemeralPeers_, true);
+   WebSocketServer::start(theBDMt_, true);
 }
 
 ////
