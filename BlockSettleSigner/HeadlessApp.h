@@ -14,7 +14,6 @@
 #include <atomic>
 #include <functional>
 #include <memory>
-#include <QObject>
 
 #include "SignerDefs.h"
 #include "BSErrorCode.h"
@@ -41,7 +40,7 @@ class HeadlessSettings;
 class ZmqBIP15XServerConnection;
 class DispatchQueue;
 
-class HeadlessAppObj : public QObject
+class HeadlessAppObj
 {
 public:
    HeadlessAppObj(const std::shared_ptr<spdlog::logger> &

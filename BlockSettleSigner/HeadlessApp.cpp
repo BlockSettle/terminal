@@ -400,48 +400,46 @@ void HeadlessAppObj::reloadWallets(bool notifyGUI, const std::function<void()> &
 {
    walletsMgr_->reset();
 
-   auto cbProgress = [this](int cur, int total) {
-      logger_->debug("Loaded wallet {} of {}", cur, total);
-   };
+   queue_->dispatch([notifyGUICopy = notifyGUI, cbCopy = std::move(cb), this]() {
+      auto cbProgress = [this](int cur, int total) {
+         logger_->debug("Loaded wallet {} of {}", cur, total);
+      };
 
-   auto cbResultHandler = [notifyGUICopy = notifyGUI, cbCopy = std::move(cb), this](bool result) {
+      if (cbCopy) {
+         cbCopy();
+      }
 
-      QMetaObject::invokeMethod(this, [notifyGUI = notifyGUICopy, cb = std::move(cbCopy), this, resultCopy = result]() {
-         if (cb) {
-            cb();
-         }
+      bool ok = walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir()
+         , controlPassword(), cbProgress);
 
-         if (resultCopy) {
-            logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
-            if (controlPassword().getSize() == 0) {
-               controlPasswordStatus_ = signer::ControlPasswordStatus::RequestedNew;
-            }
-            else {
-               controlPasswordStatus_ = signer::ControlPasswordStatus::Accepted;
-            }
+      if (ok) {
+         logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
+         if (controlPassword().getSize() == 0) {
+            controlPasswordStatus_ = signer::ControlPasswordStatus::RequestedNew;
          }
          else {
-            // wallets not loaded if control password wrong
-            // send message to gui to request it
-            logger_->warn("Control password required to decrypt wallets. Sending message to GUI");
-            controlPasswordStatus_ = signer::ControlPasswordStatus::Rejected;
+            controlPasswordStatus_ = signer::ControlPasswordStatus::Accepted;
          }
+      }
+      else {
+         // wallets not loaded if control password wrong
+         // send message to gui to request it
+         logger_->warn("Control password required to decrypt wallets. Sending message to GUI");
+         controlPasswordStatus_ = signer::ControlPasswordStatus::Rejected;
+      }
 
+      queue_->dispatch([this, notifyGUI = notifyGUICopy, okCopy = ok]() {
          if (notifyGUI) {
             guiListener_->sendControlPasswordStatusUpdate(controlPasswordStatus_);
          }
-         terminalListener_->setNoWallets(resultCopy && walletsMgr_->empty());
+         terminalListener_->setNoWallets(okCopy && walletsMgr_->empty());
 
          if (controlPasswordStatus_ != signer::Rejected) {
             guiListener_->onStarted();
             terminalListener_->syncWallet();
          }
       });
-
-   };
-
-   walletsMgr_->loadWalletsAsync(settings_->netType(), settings_->getWalletsDir(), std::move(cbResultHandler)
-      , controlPassword(), std::move(cbProgress));
+   });
 }
 
 void HeadlessAppObj::setLimits(bs::signer::Limits limits)
