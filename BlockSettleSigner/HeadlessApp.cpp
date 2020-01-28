@@ -103,8 +103,6 @@ void HeadlessAppObj::start()
    else {
       SPDLOG_LOGGER_INFO(logger_, "do not start listening for terminal connections (offline mode selected)");
    }
-
-   guiListener_->onStarted();
 }
 
 void HeadlessAppObj::stop()
@@ -328,12 +326,7 @@ void HeadlessAppObj::stopTerminalsProcessing()
 void HeadlessAppObj::applyNewControlPassword(const SecureBinaryData &controlPassword, bool notifyGui)
 {
    controlPassword_ = controlPassword;
-   auto prevControlPassStatus = controlPasswordStatus_;
    reloadWallets(notifyGui);
-   if (prevControlPassStatus != controlPasswordStatus_ && controlPasswordStatus_ == signer::Accepted) {
-      guiListener_->onStarted();
-      terminalListener_->syncWallet();
-   }
 }
 
 SecureBinaryData HeadlessAppObj::controlPassword() const
@@ -407,38 +400,46 @@ void HeadlessAppObj::reloadWallets(bool notifyGUI, const std::function<void()> &
 {
    walletsMgr_->reset();
 
-   const auto &cbProgress = [this](int cur, int total) {
-      logger_->debug("Loaded wallet {} of {}", cur, total);
-   };
+   queue_->dispatch([notifyGUICopy = notifyGUI, cbCopy = std::move(cb), this]() {
+      auto cbProgress = [this](int cur, int total) {
+         logger_->debug("Loaded wallet {} of {}", cur, total);
+      };
 
-   bool ok = walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir()
-      , controlPassword(), cbProgress);
-//   settings_->setWalletsDir(walletsDir);
+      if (cbCopy) {
+         cbCopy();
+      }
 
-   if (cb) {
-      cb();
-   }
+      bool ok = walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir()
+         , controlPassword(), cbProgress);
 
-   if (ok) {
-      logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
-      if (controlPassword().getSize() == 0) {
-         controlPasswordStatus_ = signer::ControlPasswordStatus::RequestedNew;
+      if (ok) {
+         logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
+         if (controlPassword().getSize() == 0) {
+            controlPasswordStatus_ = signer::ControlPasswordStatus::RequestedNew;
+         }
+         else {
+            controlPasswordStatus_ = signer::ControlPasswordStatus::Accepted;
+         }
       }
       else {
-         controlPasswordStatus_ = signer::ControlPasswordStatus::Accepted;
+         // wallets not loaded if control password wrong
+         // send message to gui to request it
+         logger_->warn("Control password required to decrypt wallets. Sending message to GUI");
+         controlPasswordStatus_ = signer::ControlPasswordStatus::Rejected;
       }
-   }
-   else {
-      // wallets not loaded if control password wrong
-      // send message to gui to request it
-      logger_->warn("Control password required to decrypt wallets. Sending message to GUI");
-      controlPasswordStatus_ = signer::ControlPasswordStatus::Rejected;
-   }
 
-   if (notifyGUI) {
-      guiListener_->sendControlPasswordStatusUpdate(controlPasswordStatus_);
-   }
-   terminalListener_->setNoWallets(ok && walletsMgr_->empty());
+      queue_->dispatch([this, notifyGUI = notifyGUICopy, okCopy = ok]() {
+         if (notifyGUI) {
+            guiListener_->sendControlPasswordStatusUpdate(controlPasswordStatus_);
+         }
+         terminalListener_->setNoWallets(okCopy && walletsMgr_->empty());
+
+         if (controlPasswordStatus_ != signer::Rejected) {
+            guiListener_->onStarted();
+            terminalListener_->syncWallet();
+         }
+      });
+   });
 }
 
 void HeadlessAppObj::setLimits(bs::signer::Limits limits)
