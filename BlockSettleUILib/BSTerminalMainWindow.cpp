@@ -399,6 +399,7 @@ void BSTerminalMainWindow::LoadWallets()
       , &BSTerminalMainWindow::updateControlEnabledState);
 
    walletsMgr_->reset();
+   onSyncWallets();
 }
 
 void BSTerminalMainWindow::InitAuthManager()
