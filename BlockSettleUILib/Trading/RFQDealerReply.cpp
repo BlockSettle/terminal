@@ -996,7 +996,7 @@ void RFQDealerReply::onAutoSignStateChanged()
 
 void bs::ui::RFQDealerReply::updateSpinboxes()
 {
-   auto setSpinboxValue = [&](CustomDoubleSpinBox* spinBox, double value) {
+   auto setSpinboxValue = [&](CustomDoubleSpinBox* spinBox, double value, double changeSign) {
       if (qFuzzyIsNull(value)) {
          spinBox->clear();
          return;
@@ -1009,15 +1009,16 @@ void bs::ui::RFQDealerReply::updateSpinboxes()
 
       auto bestQuotePrice = bestQPrices_.find(currentQRN_.quoteRequestId);
       if (bestQuotePrice != bestQPrices_.end()) {
-         spinBox->setValue(bestQuotePrice->second + spinBox->singleStep());
+         spinBox->setValue(bestQuotePrice->second + changeSign * spinBox->singleStep());
       }
       else {
          spinBox->setValue(value);
       }
    };
 
-   setSpinboxValue(ui_->spinBoxBidPx, indicBid_);
-   setSpinboxValue(ui_->spinBoxOfferPx, indicAsk_);
+   // The best quote response for buy orders should decrease price
+   setSpinboxValue(ui_->spinBoxBidPx, indicBid_, 1.0);
+   setSpinboxValue(ui_->spinBoxOfferPx, indicAsk_, -1.0);
 }
 
 void bs::ui::RFQDealerReply::updateBalanceLabel()
