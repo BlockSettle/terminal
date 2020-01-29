@@ -207,6 +207,7 @@ private slots:
 
    void onZCreceived(const std::vector<bs::TXEntry> &);
    void showZcNotification(const TxInfo &);
+   void onNodeStatus(NodeStatus, bool isSegWitEnabled, RpcStatus);
 
    void onLogin();
    void onLogout();
@@ -289,6 +290,7 @@ private:
       void onZCReceived(const std::vector<bs::TXEntry> &) override;
       void onStateChanged(ArmoryState) override;
       void onTxBroadcastError(const std::string &hash, const std::string &error) override;
+      void onNodeStatus(NodeStatus, bool isSegWitEnabled, RpcStatus) override;
 
    private:
       BSTerminalMainWindow *parent_;
@@ -306,6 +308,9 @@ private:
    SecureBinaryData chatTokenSign_;
    BinaryData chatPubKey_;
    SecureBinaryData chatPrivKey_;
+
+   // Default is online to not show online notification after terminal startup
+   bool isBitcoinCoreOnline_{true};
 
 };
 

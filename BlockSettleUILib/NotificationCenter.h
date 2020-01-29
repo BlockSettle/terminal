@@ -48,7 +48,9 @@ namespace bs {
          UpdateUnreadMessage,
          FriendRequest,
          OTCOrderError,
-         LogOut
+         LogOut,
+         BitcoinCoreOnline,
+         BitcoinCoreOffline,
       };
 
       using NotifyMessage = QList<QVariant>;
