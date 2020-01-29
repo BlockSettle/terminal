@@ -935,6 +935,13 @@ void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const std::string &has
       , QString::fromStdString(err) });
 }
 
+void BSTerminalMainWindow::MainWinACT::onNodeStatus(NodeStatus nodeStatus, bool isSegWitEnabled, RpcStatus rpcStatus)
+{
+   QMetaObject::invokeMethod(parent_, [parent = parent_, nodeStatus, isSegWitEnabled, rpcStatus] {
+      parent->onNodeStatus(nodeStatus, isSegWitEnabled, rpcStatus);
+   });
+}
+
 void BSTerminalMainWindow::MainWinACT::onZCReceived(const std::vector<bs::TXEntry> &zcs)
 {
    QMetaObject::invokeMethod(parent_, [this, zcs] { parent_->onZCreceived(zcs); });
@@ -1536,6 +1543,21 @@ void BSTerminalMainWindow::showZcNotification(const TxInfo &txInfo)
 
    const auto &title = tr("New blockchain transaction");
    NotificationCenter::notify(bs::ui::NotifyType::BlockchainTX, { title, lines.join(tr("\n")) });
+}
+
+void BSTerminalMainWindow::onNodeStatus(NodeStatus nodeStatus, bool isSegWitEnabled, RpcStatus rpcStatus)
+{
+   bool isBitcoinCoreOnline = (rpcStatus == RpcStatus_Online);
+   if (isBitcoinCoreOnline != isBitcoinCoreOnline_) {
+      isBitcoinCoreOnline_ = isBitcoinCoreOnline;
+      if (isBitcoinCoreOnline) {
+         SPDLOG_LOGGER_INFO(logMgr_->logger(), "ArmoryDB connected to Bitcoin Core RPC");
+         NotificationCenter::notify(bs::ui::NotifyType::BitcoinCoreOnline, {});
+      } else {
+         SPDLOG_LOGGER_ERROR(logMgr_->logger(), "ArmoryDB disconnected from Bitcoin Core RPC");
+         NotificationCenter::notify(bs::ui::NotifyType::BitcoinCoreOffline, {});
+      }
+   }
 }
 
 void BSTerminalMainWindow::showRunInBackgroundMessage()
