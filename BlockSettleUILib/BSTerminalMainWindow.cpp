@@ -1455,7 +1455,7 @@ void BSTerminalMainWindow::createAuthWallet(const std::function<void()> &cb)
                   // Primary wallet is one with auth wallet and so we could try to grab chat keys now
                   tryGetChatKeys();
                }
-               else {
+               else if (!walletsMgr_->hdWallets().empty()) {
                   BSMessageBox createAuthReq(BSMessageBox::question, tr("Authentication Wallet")
                      , tr("Create Authentication Wallet")
                      , tr("You don't have a sub-wallet in which to hold Authentication Addresses."
