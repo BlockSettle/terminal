@@ -133,7 +133,7 @@ bool AuthAddressViewModel::isAddressNotSubmitted(int row) const
    }
 
    const auto address = addresses_[row];
-   return authManager_->GetState(address) == AddressVerificationState::NotSubmitted;
+   return authManager_->GetState(address) == AddressVerificationState::NotSubmitted || authManager_->GetState(address) == AddressVerificationState::InProgress;
 }
 
 void AuthAddressViewModel::setDefaultAddr(const bs::Address &addr)
@@ -235,6 +235,32 @@ QModelIndex AuthAdressControlProxyModel::getFirstUnsubmitted() const
    }
 
    return {};
+}
+
+bool AuthAdressControlProxyModel::isUnsubmittedAddressVisible() const
+{
+   if (isEmpty()) {
+      return false;
+   }
+
+   for (int i = 0; i < visibleRowsCount_; ++i) {
+      if (sourceModel_->isAddressNotSubmitted(i)) {
+         return true;
+      }
+   }
+
+   return false;
+}
+
+void AuthAdressControlProxyModel::adjustVisibleCount()
+{
+   for (; visibleRowsCount_ < sourceModel_->rowCount(); ++visibleRowsCount_) {
+      if (sourceModel_->isAddressNotSubmitted(visibleRowsCount_)) {
+         break;
+      }
+   }
+
+   invalidate();
 }
 
 bool AuthAdressControlProxyModel::filterAcceptsRow(int row, const QModelIndex&) const

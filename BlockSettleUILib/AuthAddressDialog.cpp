@@ -51,8 +51,6 @@ AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logg
    connect(model_, &AuthAdressControlProxyModel::modelReset, this, &AuthAddressDialog::onModelReset);
    connect(originModel, &AuthAddressViewModel::updateSelectionAfterReset, this, &AuthAddressDialog::onUpdateSelection);
 
-
-   connect(authAddressManager_.get(), &AuthAddressManager::AddressListUpdated, this, &AuthAddressDialog::onAddressListUpdated, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked, this, &AuthAddressDialog::onAddressStateChanged, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Error, this, &AuthAddressDialog::onAuthMgrError, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Info, this, &AuthAddressDialog::onAuthMgrInfo, Qt::QueuedConnection);
@@ -128,9 +126,6 @@ void AuthAddressDialog::showEvent(QShowEvent *evt)
    }
 
    ui_->labelHint->clear();
-
-   ui_->pushButtonCreate->setEnabled(authAddressManager_->HaveAuthWallet());
-   //ui_->pushButtonCreate->setEnabled(!unsubmittedExist());
 
    resizeTreeViewColumns();
 
@@ -212,13 +207,6 @@ void AuthAddressDialog::setBsClient(BsClient *bsClient)
    bsClient_ = bsClient;
 }
 
-void AuthAddressDialog::onAddressListUpdated()
-{
-   updateUnsubmittedState();
-   // BST-2237 - allow to create addreses in line
-   //ui_->pushButtonCreate->setEnabled(!unsubmittedExist());
-}
-
 void AuthAddressDialog::onAuthVerifyTxSent()
 {
    BSMessageBox(BSMessageBox::info, tr("Authentication Address")
@@ -273,17 +261,12 @@ void AuthAddressDialog::resizeTreeViewColumns()
 
 void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QItemSelection &deselected)
 {
-   ui_->pushButtonCreate->setEnabled(true);
-   ui_->pushButtonCreate->setFlat(true);
-
    Q_UNUSED(deselected)
    if (!selected.indexes().isEmpty()) {
       const auto address = model_->getAddress(selected.indexes()[0]);
 
       switch (authAddressManager_->GetState(address)) {
          case AddressVerificationState::NotSubmitted:
-         case AddressVerificationState::VerificationFailed: // FIXME: temporarily
-         case AddressVerificationState::InProgress:         // FIXME: temporarily
             ui_->pushButtonRevoke->setEnabled(false);
             ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.isNull());
             ui_->pushButtonDefault->setEnabled(false);
@@ -291,6 +274,8 @@ void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QIt
          case AddressVerificationState::Submitted:
          case AddressVerificationState::Revoked:
          case AddressVerificationState::PendingVerification:
+         case AddressVerificationState::VerificationFailed:
+         case AddressVerificationState::InProgress:
             ui_->pushButtonRevoke->setEnabled(false);
             ui_->pushButtonSubmit->setEnabled(false);
             ui_->pushButtonDefault->setEnabled(false);
@@ -327,6 +312,7 @@ void AuthAddressDialog::createAddress()
       // We already have address but they is no visible in view
       model_->increaseVisibleRowsCountByOne();
       saveAddressesNumber();
+      onModelReset();
       return;
    }
 
@@ -454,17 +440,24 @@ void AuthAddressDialog::setDefaultAddress()
 
 void AuthAddressDialog::onModelReset()
 {
-   ui_->pushButtonRevoke->setDisabled(true);
-   ui_->pushButtonSubmit->setDisabled(true);
-   ui_->pushButtonDefault->setDisabled(true);
-   ui_->pushButtonCreate->setDisabled(model_->isEmpty());
+   ui_->pushButtonRevoke->setEnabled(false);
+   ui_->pushButtonSubmit->setEnabled(false);
+   ui_->pushButtonDefault->setEnabled(false);
+
+   model_->adjustVisibleCount();
+   ui_->pushButtonCreate->setEnabled(lastSubmittedAddress_.isNull() &&
+      model_ && !model_->isUnsubmittedAddressVisible());
    saveAddressesNumber();
 }
 
 void AuthAddressDialog::saveAddressesNumber()
 {
-   settings_->set(ApplicationSettings::numberOfAuthAddressVisible
-      , std::max(1, model_->rowCount()) );
+   const int newNumber = std::max(1, model_->rowCount());
+   if (newNumber == settings_->get<int>(ApplicationSettings::numberOfAuthAddressVisible)) {
+      return; // nothing to save
+   }
+
+   settings_->set(ApplicationSettings::numberOfAuthAddressVisible, newNumber);
    settings_->SaveSettings();
 
    if (model_->isEmpty()) {
