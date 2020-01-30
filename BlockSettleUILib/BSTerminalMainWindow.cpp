@@ -790,6 +790,14 @@ void BSTerminalMainWindow::MainWinACT::onStateChanged(ArmoryState state)
          parent_->CompleteDBConnection();
          parent_->CompleteUIOnlineView();
          parent_->walletsMgr_->goOnline();
+
+         parent_->armory_->getNodeStatus([this] (const std::shared_ptr<ClientClasses::NodeStatusStruct> &status){
+            QMetaObject::invokeMethod(parent_, [this, status] {
+               if (status) {
+                  parent_->onNodeStatus(status->status(), status->isSegWitEnabled(), status->rpcStatus());
+               }
+            });
+         });
       });
       break;
    case ArmoryState::Connected:
