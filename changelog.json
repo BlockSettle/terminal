@@ -1,7 +1,21 @@
 {
-   "latest_version": "0.25.9",
-   "release_date": "22 Jan 2020",
+   "latest_version": "0.25.10",
+   "release_date": "31 Jan 2020",
    "changes": [
+      {
+         "version_string": "0.25.10",
+         "previous_version": "0.25.9",
+         "release_date": "31 Jan 2020",
+         "release_type": "prod",
+         "improvements": [
+            "Node status check on startup"
+         ],
+         "bug_fixes": [
+            "Multiple minor bug fixes"
+         ],
+         "revision": "c11f67e86",
+         "common_revision": "76141931"
+      },
       {
          "version_string": "0.25.9",
          "previous_version": "0.25.8",
