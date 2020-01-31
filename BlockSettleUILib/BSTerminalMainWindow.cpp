@@ -36,6 +36,7 @@
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
 #include "CelerAccountInfoDialog.h"
+#include "ColoredCoinServer.h"
 #include "ConnectionManager.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
@@ -118,11 +119,14 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
       , this, applicationSettings_);
    cbApproveProxy_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Proxy
       , this, applicationSettings_);
+   cbApproveCcServer_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::CcServer
+      , this, applicationSettings_);
 
    initConnections();
    initArmory();
+   initCcClient();
 
-   walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(logMgr_->logger(), applicationSettings_, armory_);
+   walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(logMgr_->logger(), applicationSettings_, armory_, trackerClient_);
 
    if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
       applicationSettings_->SetDefaultSettings(true);
@@ -146,6 +150,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    connectSigner();
    connectArmory();
+   connectCcClient();
 
    InitChartsView();
 
@@ -244,6 +249,9 @@ bool BSTerminalMainWindow::event(QEvent *event)
 
 BSTerminalMainWindow::~BSTerminalMainWindow()
 {
+   // Check UTXO reservation state before any other destructors call!
+   bs::UtxoReservation::instance()->shutdownCheck();
+
    applicationSettings_->set(ApplicationSettings::GUI_main_geometry, geometry());
    applicationSettings_->set(ApplicationSettings::GUI_main_tab, ui_->tabWidget->currentIndex());
    applicationSettings_->SaveSettings();
@@ -368,9 +376,6 @@ void BSTerminalMainWindow::LoadWallets()
 {
    logMgr_->logger()->debug("Loading wallets");
 
-   wasWalletsRegistered_ = false;
-   walletsSynched_ = false;
-
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, this, [this] {
       ui_->widgetRFQ->setWalletsManager(walletsMgr_);
       ui_->widgetRFQReply->setWalletsManager(walletsMgr_);
@@ -393,11 +398,8 @@ void BSTerminalMainWindow::LoadWallets()
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
       , &BSTerminalMainWindow::updateControlEnabledState);
 
-   const auto &progressDelegate = [this](int cur, int total) {
-      logMgr_->logger()->debug("Loaded wallet {} of {}", cur, total);
-   };
    walletsMgr_->reset();
-   walletsMgr_->syncWallets(progressDelegate);
+   onSyncWallets();
 }
 
 void BSTerminalMainWindow::InitAuthManager()
@@ -541,6 +543,7 @@ bool BSTerminalMainWindow::InitSigningContainer()
    walletsMgr_->setSignContainer(signContainer_);
    connect(signContainer_.get(), &WalletSignerContainer::ready, this, &BSTerminalMainWindow::SignerReady, Qt::QueuedConnection);
    connect(signContainer_.get(), &WalletSignerContainer::needNewWalletPrompt, this, &BSTerminalMainWindow::onNeedNewWallet, Qt::QueuedConnection);
+   connect(signContainer_.get(), &WalletSignerContainer::walletsReadyToSync, this, &BSTerminalMainWindow::onSyncWallets, Qt::QueuedConnection);
 
    return true;
 }
@@ -787,6 +790,14 @@ void BSTerminalMainWindow::MainWinACT::onStateChanged(ArmoryState state)
          parent_->CompleteDBConnection();
          parent_->CompleteUIOnlineView();
          parent_->walletsMgr_->goOnline();
+
+         parent_->armory_->getNodeStatus([this] (const std::shared_ptr<ClientClasses::NodeStatusStruct> &status){
+            QMetaObject::invokeMethod(parent_, [this, status] {
+               if (status) {
+                  parent_->onNodeStatus(status->status(), status->isSegWitEnabled(), status->rpcStatus());
+               }
+            });
+         });
       });
       break;
    case ArmoryState::Connected:
@@ -918,10 +929,25 @@ void BSTerminalMainWindow::initArmory()
    act_->init(armory_.get());
 }
 
+void BSTerminalMainWindow::initCcClient()
+{
+   bool isDefaultArmory = armoryServersProvider_->isDefault(armoryServersProvider_->indexOfCurrent());
+   if (isDefaultArmory) {
+      trackerClient_ = std::make_shared<CcTrackerClient>(logMgr_->logger());
+   }
+}
+
 void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const std::string &hash, const std::string &err)
 {
    NotificationCenter::notify(bs::ui::NotifyType::BroadcastError, { QString::fromStdString(hash)
       , QString::fromStdString(err) });
+}
+
+void BSTerminalMainWindow::MainWinACT::onNodeStatus(NodeStatus nodeStatus, bool isSegWitEnabled, RpcStatus rpcStatus)
+{
+   QMetaObject::invokeMethod(parent_, [parent = parent_, nodeStatus, isSegWitEnabled, rpcStatus] {
+      parent->onNodeStatus(nodeStatus, isSegWitEnabled, rpcStatus);
+   });
 }
 
 void BSTerminalMainWindow::MainWinACT::onZCReceived(const std::vector<bs::TXEntry> &zcs)
@@ -948,6 +974,14 @@ void BSTerminalMainWindow::connectArmory()
       }
       return result;
    });
+}
+
+void BSTerminalMainWindow::connectCcClient()
+{
+   if (trackerClient_) {
+      bool testnet = applicationSettings_->get<NetworkType>(ApplicationSettings::netType) == NetworkType::TestNet;
+      trackerClient_->openConnection("185.213.153.37", testnet ? "19003" : "9003", cbApproveCcServer_);
+   }
 }
 
 void BSTerminalMainWindow::connectSigner()
@@ -1429,7 +1463,7 @@ void BSTerminalMainWindow::createAuthWallet(const std::function<void()> &cb)
                   // Primary wallet is one with auth wallet and so we could try to grab chat keys now
                   tryGetChatKeys();
                }
-               else {
+               else if (!walletsMgr_->hdWallets().empty()) {
                   BSMessageBox createAuthReq(BSMessageBox::question, tr("Authentication Wallet")
                      , tr("Create Authentication Wallet")
                      , tr("You don't have a sub-wallet in which to hold Authentication Addresses."
@@ -1517,6 +1551,21 @@ void BSTerminalMainWindow::showZcNotification(const TxInfo &txInfo)
 
    const auto &title = tr("New blockchain transaction");
    NotificationCenter::notify(bs::ui::NotifyType::BlockchainTX, { title, lines.join(tr("\n")) });
+}
+
+void BSTerminalMainWindow::onNodeStatus(NodeStatus nodeStatus, bool isSegWitEnabled, RpcStatus rpcStatus)
+{
+   bool isBitcoinCoreOnline = (rpcStatus == RpcStatus_Online);
+   if (isBitcoinCoreOnline != isBitcoinCoreOnline_) {
+      isBitcoinCoreOnline_ = isBitcoinCoreOnline;
+      if (isBitcoinCoreOnline) {
+         SPDLOG_LOGGER_INFO(logMgr_->logger(), "ArmoryDB connected to Bitcoin Core RPC");
+         NotificationCenter::notify(bs::ui::NotifyType::BitcoinCoreOnline, {});
+      } else {
+         SPDLOG_LOGGER_ERROR(logMgr_->logger(), "ArmoryDB disconnected from Bitcoin Core RPC");
+         NotificationCenter::notify(bs::ui::NotifyType::BitcoinCoreOffline, {});
+      }
+   }
 }
 
 void BSTerminalMainWindow::showRunInBackgroundMessage()
@@ -1736,6 +1785,16 @@ void BSTerminalMainWindow::onTabWidgetCurrentChanged(const int &index)
    const int chatIndex = ui_->tabWidget->indexOf(ui_->widgetChat);
    const bool isChatTab = index == chatIndex;
    //ui_->widgetChat->updateChat(isChatTab);
+}
+
+void BSTerminalMainWindow::onSyncWallets()
+{
+   wasWalletsRegistered_ = false;
+   walletsSynched_ = false;
+   const auto &progressDelegate = [this](int cur, int total) {
+      logMgr_->logger()->debug("Loaded wallet {} of {}", cur, total);
+   };
+   walletsMgr_->syncWallets(progressDelegate);
 }
 
 void BSTerminalMainWindow::InitWidgets()

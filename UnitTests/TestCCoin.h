@@ -105,12 +105,17 @@ public:
    }
 };
 
-class ColoredCoinTracker_UT : protected ColoredCoinTracker
+class ColoredCoinTracker_UT : public ColoredCoinTracker
 {
 private:
    void registerAddresses(std::set<BinaryData>&);
 
 public:
+   ColoredCoinTracker_UT(uint64_t coinsPerShare,
+                         std::shared_ptr<ArmoryConnection> connPtr)
+      : ColoredCoinTracker(coinsPerShare, connPtr)
+   {}
+
    void setACT(std::shared_ptr<ColoredCoinACT> actPtr)
    {
       actPtr_ = actPtr;
@@ -119,6 +124,19 @@ public:
    void update_UT(void);
    void zcUpdate_UT(void);
    void reorg_UT(void);
+};
+
+class ColoredCoinTrackerClient_UT : public ColoredCoinTrackerClient
+{
+public:
+   ColoredCoinTrackerClient_UT(std::unique_ptr<ColoredCoinTrackerInterface> ccSnapshots)
+      : ColoredCoinTrackerClient(std::move(ccSnapshots))
+   {}
+
+   ColoredCoinTracker_UT *tracker()
+   {
+      return dynamic_cast<ColoredCoinTracker_UT*>(ccSnapshots_.get());
+   }
 };
 
 class TestCCoin : public ::testing::Test
@@ -173,7 +191,7 @@ public:
    void UpdateAllBalances();
    void InitialFund(const std::vector<bs::Address> &recipients = {});
    std::vector<UTXO> GetUTXOsFor(const bs::Address & addr, bool sortedByValue = true);
-   std::vector<UTXO> GetCCUTXOsFor(std::shared_ptr<ColoredCoinTracker> ccPtr, 
+   std::vector<UTXO> GetCCUTXOsFor(std::shared_ptr<ColoredCoinTrackerClient> ccPtr,
       const bs::Address & addr, bool sortedByValue = true, bool withZc = false);
 
    BinaryData FundFromCoinbase(const std::vector<bs::Address> & addresses, const uint64_t & valuePerOne);
@@ -192,10 +210,10 @@ public:
    bool waitOnZc(const BinaryData& hash, const std::vector<bs::Address>&);
 
    ////
-   std::shared_ptr<ColoredCoinTracker> makeCct(void);
-   void update(std::shared_ptr<ColoredCoinTracker>);
-   void zcUpdate(std::shared_ptr<ColoredCoinTracker>);
-   void reorg(std::shared_ptr<ColoredCoinTracker>);
+   std::shared_ptr<ColoredCoinTrackerClient_UT> makeCct(void);
+   void update(std::shared_ptr<ColoredCoinTrackerClient_UT>);
+   void zcUpdate(std::shared_ptr<ColoredCoinTrackerClient_UT>);
+   void reorg(std::shared_ptr<ColoredCoinTrackerClient_UT>);
 };
 
 #endif // __TEST_CCOIN_H__

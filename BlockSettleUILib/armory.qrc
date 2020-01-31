@@ -207,6 +207,9 @@
         <file>resources/PublicKeys/pub_prod.key</file>
         <file>resources/PublicKeys/pub_uat.key</file>
         <file>resources/PublicKeys/pub_staging.key</file>
+        <file>resources/PublicKeys/cc_server_prod.key</file>
+        <file>resources/PublicKeys/cc_server_uat.key</file>
+        <file>resources/PublicKeys/cc_server_staging.key</file>
         <file>resources/PublicKeys/chat_prod.key</file>
         <file>resources/PublicKeys/chat_uat.key</file>
         <file>resources/PublicKeys/chat_staging.key</file>

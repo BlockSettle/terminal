@@ -32,6 +32,7 @@ public:
       PublicBridge = 1,
       Chat,
       Proxy,
+      CcServer,
    };
 
    BinaryData loadKey(const KeyType) const;

@@ -43,7 +43,7 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , const std::map<UTXO, std::string> &utxosPayinFixed
    , bs::UtxoReservationToken utxoRes
    , const bs::Address &recvAddrIfSet)
-   : bs::SettlementContainer()
+   : bs::SettlementContainer(std::move(utxoRes))
    , logger_(logger)
    , authAddrMgr_(authAddrMgr)
    , walletsMgr_(walletsMgr)
@@ -57,8 +57,6 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , authAddr_(authAddr)
    , utxosPayinFixed_(utxosPayinFixed)
 {
-   utxoRes_ = std::move(utxoRes);
-
    assert(authAddr.isValid());
 
    qRegisterMetaType<AddressVerificationState>();

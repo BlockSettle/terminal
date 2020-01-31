@@ -328,8 +328,12 @@ void HeadlessAppObj::stopTerminalsProcessing()
 void HeadlessAppObj::applyNewControlPassword(const SecureBinaryData &controlPassword, bool notifyGui)
 {
    controlPassword_ = controlPassword;
+   auto prevControlPassStatus = controlPasswordStatus_;
    reloadWallets(notifyGui);
-   guiListener_->walletsListUpdated();
+   if (prevControlPassStatus != controlPasswordStatus_ && controlPasswordStatus_ == signer::Accepted) {
+      guiListener_->onStarted();
+      terminalListener_->syncWallet();
+   }
 }
 
 SecureBinaryData HeadlessAppObj::controlPassword() const

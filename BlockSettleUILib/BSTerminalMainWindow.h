@@ -54,6 +54,7 @@ class BSTerminalSplashScreen;
 class BaseCelerClient;
 class CCFileManager;
 class CCPortfolioModel;
+class CcTrackerClient;
 class ConnectionManager;
 class LoginWindow;
 class NetworkSettingsLoader;
@@ -91,7 +92,9 @@ private:
 
    void initConnections();
    void initArmory();
+   void initCcClient();
    void connectArmory();
+   void connectCcClient();
    void connectSigner();
    std::shared_ptr<WalletSignerContainer> createSigner();
    std::shared_ptr<WalletSignerContainer> createRemoteSigner(bool restoreHeadless = false);
@@ -148,6 +151,7 @@ private slots:
    void onCCLoaded();
 
    void onTabWidgetCurrentChanged(const int &index);
+   void onSyncWallets();
 
 private:
    std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
@@ -163,6 +167,7 @@ private:
    std::shared_ptr<SignersProvider>       signersProvider_;
    std::shared_ptr<AuthAddressManager>    authManager_;
    std::shared_ptr<ArmoryObject>          armory_;
+   std::shared_ptr<CcTrackerClient>       trackerClient_;
 
    std::shared_ptr<StatusBarView>            statusBarView_;
    std::shared_ptr<QSystemTrayIcon>          sysTrayIcon_;
@@ -202,6 +207,7 @@ private slots:
 
    void onZCreceived(const std::vector<bs::TXEntry> &);
    void showZcNotification(const TxInfo &);
+   void onNodeStatus(NodeStatus, bool isSegWitEnabled, RpcStatus);
 
    void onLogin();
    void onLogout();
@@ -270,6 +276,7 @@ private:
    ZmqBipNewKeyCb   cbApprovePuB_ = nullptr;
    ZmqBipNewKeyCb   cbApproveChat_ = nullptr;
    ZmqBipNewKeyCb   cbApproveProxy_ = nullptr;
+   ZmqBipNewKeyCb   cbApproveCcServer_ = nullptr;
 
    std::queue<std::function<void(void)>> deferredDialogs_;
    bool deferredDialogRunning_ = false;
@@ -283,6 +290,7 @@ private:
       void onZCReceived(const std::vector<bs::TXEntry> &) override;
       void onStateChanged(ArmoryState) override;
       void onTxBroadcastError(const std::string &hash, const std::string &error) override;
+      void onNodeStatus(NodeStatus, bool isSegWitEnabled, RpcStatus) override;
 
    private:
       BSTerminalMainWindow *parent_;
@@ -300,6 +308,9 @@ private:
    SecureBinaryData chatTokenSign_;
    BinaryData chatPubKey_;
    SecureBinaryData chatPrivKey_;
+
+   // Default is online to not show online notification after terminal startup
+   bool isBitcoinCoreOnline_{true};
 
 };
 

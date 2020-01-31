@@ -262,12 +262,12 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
       if (order.assetType == bs::network::Asset::PrivateMarket) {
          const auto &quoteReqId = quoteProvider_->getQuoteReqId(order.quoteId);
          if (quoteReqId.empty()) {
-            logger_->error("[RFQReplyWidget::onOrder] quoteReqId is empty for {}", order.quoteId);
+            SPDLOG_LOGGER_ERROR(logger_, "quoteReqId is empty for {}", order.quoteId);
             return;
          }
          const auto itCCSR = sentCCReplies_.find(quoteReqId);
          if (itCCSR == sentCCReplies_.end()) {
-            logger_->error("[RFQReplyWidget::onOrder] missing previous CC reply for {}", quoteReqId);
+            SPDLOG_LOGGER_DEBUG(logger_, "missing previous CC reply for {}", quoteReqId);
             return;
          }
          auto &sr = itCCSR->second;
