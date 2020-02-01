@@ -559,11 +559,13 @@ bs::Address RFQTicketXBT::recvXbtAddressIfSet() const
 
 bool RFQTicketXBT::checkBalance(double qty) const
 {
-   if (getSelectedSide() == bs::network::Side::Buy) {
-      return true;
-   }
    const auto balance = getBalanceInfo();
-   return (qty <= balance.amount);
+   if (getSelectedSide() == bs::network::Side::Buy) {
+      return (balance.amount > 0);
+   }
+   else {
+      return (qty <= balance.amount);
+   }
 }
 
 void RFQTicketXBT::updateSubmitButton()
