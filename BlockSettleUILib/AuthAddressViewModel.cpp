@@ -159,6 +159,7 @@ void AuthAddressViewModel::onAddressListUpdated()
    }
 
    // do actual update
+   const int sizeBeforeReset = addresses_.size();
    emit beginResetModel();
    addresses_.clear();
    const int total = authManager_->GetAddressCount();
@@ -169,7 +170,8 @@ void AuthAddressViewModel::onAddressListUpdated()
    emit endResetModel();
 
    // restore selection if needed
-   if (selectedRowToName.first < addresses_.size() 
+   if (sizeBeforeReset >= addresses_.size()
+      && selectedRowToName.first < addresses_.size()
       && selectedRowToName.second == addresses_[selectedRowToName.first].display()) {
       emit updateSelectionAfterReset(selectedRowToName.first);
    }

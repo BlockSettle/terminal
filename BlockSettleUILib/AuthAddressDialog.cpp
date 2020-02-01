@@ -26,6 +26,7 @@
 #include "BSMessageBox.h"
 #include "UiUtils.h"
 
+
 AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
    , const std::shared_ptr<AssetManager> &assetMgr
@@ -98,6 +99,12 @@ bool AuthAddressDialog::eventFilter(QObject* sender, QEvent* event)
    }
 
    return QWidget::eventFilter(sender, event);
+}
+
+void AuthAddressDialog::updateCreateButton()
+{
+   ui_->pushButtonCreate->setEnabled(lastSubmittedAddress_.isNull() &&
+      model_ && !model_->isUnsubmittedAddressVisible());
 }
 
 void AuthAddressDialog::showEvent(QShowEvent *evt)
@@ -218,6 +225,10 @@ void AuthAddressDialog::onAuthVerifyTxSent()
 
 void AuthAddressDialog::onUpdateSelection(int row)
 {
+   if (row < 0 || row >= model_->rowCount()) {
+      return;
+   }
+
    ui_->treeViewAuthAdress->selectionModel()->select(
       model_->index(row, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
@@ -246,6 +257,7 @@ void AuthAddressDialog::onAddressStateChanged(const QString &addr, const QString
          , tr("Authentication Address revoked")
          , tr("Authentication Address %1 was revoked and could not be used for Spot XBT trading.").arg(addr)).exec();
    }
+   updateCreateButton();
 }
 
 void AuthAddressDialog::resizeTreeViewColumns()
@@ -259,11 +271,11 @@ void AuthAddressDialog::resizeTreeViewColumns()
    }
 }
 
-void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QItemSelection &deselected)
+void AuthAddressDialog::adressSelected()
 {
-   Q_UNUSED(deselected)
-   if (!selected.indexes().isEmpty()) {
-      const auto address = model_->getAddress(selected.indexes()[0]);
+   const auto selectionModel = ui_->treeViewAuthAdress->selectionModel();
+   if (selectionModel->hasSelection()) {
+      const auto address = model_->getAddress(selectionModel->selectedRows()[0]);
 
       switch (authAddressManager_->GetState(address)) {
          case AddressVerificationState::NotSubmitted:
@@ -294,6 +306,8 @@ void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QIt
       ui_->pushButtonSubmit->setEnabled(false);
       ui_->pushButtonDefault->setEnabled(false);
    }
+
+   updateCreateButton();
 }
 
 bs::Address AuthAddressDialog::GetSelectedAddress() const
@@ -440,21 +454,22 @@ void AuthAddressDialog::setDefaultAddress()
 
 void AuthAddressDialog::onModelReset()
 {
-   ui_->pushButtonRevoke->setEnabled(false);
-   ui_->pushButtonSubmit->setEnabled(false);
-   ui_->pushButtonDefault->setEnabled(false);
-
    model_->adjustVisibleCount();
-   ui_->pushButtonCreate->setEnabled(lastSubmittedAddress_.isNull() &&
-      model_ && !model_->isUnsubmittedAddressVisible());
+   updateCreateButton();
    saveAddressesNumber();
+   adressSelected();
 }
 
 void AuthAddressDialog::saveAddressesNumber()
 {
    const int newNumber = std::max(1, model_->rowCount());
-   if (newNumber == settings_->get<int>(ApplicationSettings::numberOfAuthAddressVisible)) {
+   const int oldNumber = settings_->get<int>(ApplicationSettings::numberOfAuthAddressVisible);
+   if (newNumber == oldNumber) {
       return; // nothing to save
+   }
+   else if (newNumber > oldNumber) {
+      // we have added address
+      emit onUpdateSelection(model_->rowCount() - 1);
    }
 
    settings_->set(ApplicationSettings::numberOfAuthAddressVisible, newNumber);

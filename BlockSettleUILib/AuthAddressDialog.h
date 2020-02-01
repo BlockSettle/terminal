@@ -50,7 +50,7 @@ signals:
 
 private slots:
    void resizeTreeViewColumns();
-   void adressSelected(const QItemSelection &selected, const QItemSelection &deselected);
+   void adressSelected();
 
    void createAddress();
    void revokeSelectedAddress();
@@ -76,6 +76,7 @@ protected:
    void showError(const QString &text, const QString &details = {});
    void showInfo(const QString &title, const QString &text);
    bool eventFilter(QObject* sender, QEvent* event) override;
+   void updateCreateButton();
 
 private:
    bs::Address GetSelectedAddress() const;
@@ -93,7 +94,7 @@ private:
    bs::Address                            defaultAddr_;
    QPointer<BsClient>                     bsClient_;
 
-   bs::Address                            lastSubmittedAddress_;
+   bs::Address                            lastSubmittedAddress_{};
 
    bool  unconfirmedExists_ = false;
 };
