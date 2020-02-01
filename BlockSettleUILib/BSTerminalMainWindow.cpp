@@ -1555,7 +1555,8 @@ void BSTerminalMainWindow::showZcNotification(const TxInfo &txInfo)
 
 void BSTerminalMainWindow::onNodeStatus(NodeStatus nodeStatus, bool isSegWitEnabled, RpcStatus rpcStatus)
 {
-   bool isBitcoinCoreOnline = (rpcStatus == RpcStatus_Online);
+   // Do not use rpcStatus for node status check, it works unreliable for some reasons
+   bool isBitcoinCoreOnline = (nodeStatus == NodeStatus_Online);
    if (isBitcoinCoreOnline != isBitcoinCoreOnline_) {
       isBitcoinCoreOnline_ = isBitcoinCoreOnline;
       if (isBitcoinCoreOnline) {
