@@ -16,7 +16,8 @@
 #include "ui_AuthAddressConfirmDialog.h"
 
 namespace {
-constexpr auto UiTimerInterval = std::chrono::milliseconds(250);
+   constexpr auto UiTimerInterval = std::chrono::milliseconds(250);
+   const QString kProccessAborted = QObject::tr("The process of submitting an authentication address has been aborted as no validation UTXOs can be found");
 }
 
 AuthAddressConfirmDialog::AuthAddressConfirmDialog(BsClient *bsClient, const bs::Address& address
@@ -101,8 +102,7 @@ void AuthAddressConfirmDialog::onError(const QString &errorText)
 void AuthAddressConfirmDialog::onAuthAddrSubmitError(const QString &address, const QString &error)
 {
    BSMessageBox(BSMessageBox::critical, tr("Submission Aborted")
-      , tr("The process of submitting an Authentication Address has been aborted."
-           "Any reserved balance will be returned.")
+      , kProccessAborted
       , error, this).exec();
 
    reject();
@@ -111,8 +111,7 @@ void AuthAddressConfirmDialog::onAuthAddrSubmitError(const QString &address, con
 void AuthAddressConfirmDialog::onAuthConfirmSubmitError(const QString &address, const QString &error)
 {
    BSMessageBox(BSMessageBox::critical, tr("Confirmation Aborted")
-      , tr("The process of submitting an Authentication Address has been aborted."
-           "Any reserved balance will be returned.")
+      , kProccessAborted
       , error, this).exec();
 
    reject();
@@ -135,8 +134,7 @@ void AuthAddressConfirmDialog::onSignFailed(AutheIDClient::ErrorType error)
 
    BSMessageBox(BSMessageBox::critical, tr("Signing request failed")
       , tr("Submission aborted")
-      , tr("The process of submitting an Authentication Address has been aborted. "
-           "Any reserved balance will be returned.")
+      , kProccessAborted
       , this).exec();
 
    CancelSubmission();
