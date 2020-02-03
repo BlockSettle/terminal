@@ -60,9 +60,8 @@ void AuthSignWalletObject::connectToServer()
    connect(autheIDClient_.get(), &AutheIDClient::failed, this, [this](AutheIDClient::ErrorType authError){
       emit failed(AutheIDClient::errorString(authError));
    });
-   connect(autheIDClient_.get(), &AutheIDClient::userCancelled, this, [this](){
-      emit userCancelled();
-   });
+   connect(autheIDClient_.get(), &AutheIDClient::userCancelled, this, &AuthSignWalletObject::userCancelled);
+   connect(autheIDClient_.get(), &AutheIDClient::canceledByTimeout, this, &AuthSignWalletObject::canceledByTimeout);
 }
 
 void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo,

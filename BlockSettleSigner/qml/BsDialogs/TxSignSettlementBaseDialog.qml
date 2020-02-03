@@ -121,15 +121,11 @@ CustomTitleDialogWindowWithExpander {
                 root.acceptAnimated()
             }
         });
-        authSign.failed.connect(function(errorText) {
-            if (root) {
-                showWalletError(errorText);
-            }
-        })
         authSign.userCancelled.connect(function() {
-            if (root) {
-                root.rejectAnimated()
-            }
+            if (root) rejectWithNoError();
+        })
+        authSign.canceledByTimeout.connect(function() {
+            if (root) rejectWithNoError();
         })
     }
 
@@ -441,8 +437,7 @@ CustomTitleDialogWindowWithExpander {
                         timeLeft -= 0.5
                         if (timeLeft <= 0) {
                             stop()
-                            // assume non signed tx is cancelled tx
-                            showWalletError(kOperationTimeExceeded);
+                            rejectWithNoError();
                         }
                     }
                     signal expired()
