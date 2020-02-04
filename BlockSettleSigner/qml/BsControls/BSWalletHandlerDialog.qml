@@ -19,19 +19,35 @@ CustomTitleDialogWindow {
     id: root
 
     property bool rejectedDialogWasShown: false
-    readonly property string kOperationTimeExceeded : qsTr("Operation time exceeded")
 
     function showWalletError(errorText) {
-        if (root.rejectedDialogWasShown) {
+        if (checkShownFlag()) {
             return;
         }
 
-        root.rejectedDialogWasShown = true;
         var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
             , qsTr("Wallet"), errorText
             , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
         mb.bsAccepted.connect(function() { root.rejectAnimated() })
         root.setNextChainDialog(mb);
+    }
+
+    function rejectWithNoError() {
+        if (checkShownFlag()) {
+            return;
+        }
+
+        root.rejectedDialogWasShown = true;
+        root.rejectAnimated();
+    }
+
+    function checkShownFlag() {
+        if (root.rejectedDialogWasShown) {
+            return true;
+        }
+
+        root.rejectedDialogWasShown = true;
+        return false;
     }
 }
 

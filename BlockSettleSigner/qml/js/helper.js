@@ -115,6 +115,11 @@ function requesteIdAuth (requestType, walletInfo, authEidMessage, onSuccess) {
         authProgress.rejectAnimated()
         authObject.destroy()
     })
+    authObject.canceledByTimeout.connect(function() {
+        console.log("QML requesteIdAuth: authObject.canceledByTimeout")
+        authProgress.rejectAnimated()
+        authObject.destroy()
+    })
 
     return authProgress
 }
