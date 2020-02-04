@@ -58,7 +58,8 @@ public:
       std::shared_ptr<MarketDataProvider> mdProvider,
       std::shared_ptr<AssetManager> assetManager,
       std::shared_ptr<spdlog::logger> logger,
-      UserScriptRunner *runner);
+      UserScriptRunner *runner,
+      QThread *handlerThread);
    ~UserScriptHandler() noexcept override;
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
