@@ -28,8 +28,10 @@ UserScriptHandler::UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvide
    std::shared_ptr<MarketDataProvider> mdProvider,
    std::shared_ptr<AssetManager> assetManager,
    std::shared_ptr<spdlog::logger> logger,
-   UserScriptRunner *runner)
-   : signingContainer_(signingContainer)
+   UserScriptRunner *runner,
+   QThread *handlerThread)
+   : QObject(handlerThread)
+   , signingContainer_(signingContainer)
    , mdProvider_(mdProvider)
    , assetManager_(assetManager)
    , logger_(logger)
@@ -310,7 +312,7 @@ UserScriptRunner::UserScriptRunner(std::shared_ptr<QuoteProvider> quoteProvider,
    : QObject(parent)
    , thread_(new QThread(this))
    , script_(new UserScriptHandler(quoteProvider, signingContainer,
-         mdProvider, assetManager, logger, this))
+         mdProvider, assetManager, logger, this, thread_))
 
    , logger_(logger)
 {
@@ -327,7 +329,6 @@ UserScriptRunner::UserScriptRunner(std::shared_ptr<QuoteProvider> quoteProvider,
 
 UserScriptRunner::~UserScriptRunner() noexcept
 {
-   script_->deleteLater();
    thread_->quit();
    thread_->wait();
 }
