@@ -44,7 +44,7 @@ CustomTitleDialogWindow {
     }
 
     function calcHeight(page) {
-        return page === 1 ? (fullScreenMode ? 800 : mainWindow.height * 0.98) : 260
+        return page === 1 ? (fullScreenMode ? 800 : mainWindow.height * 0.98) : 280
     }
 
     abortConfirmation: true
