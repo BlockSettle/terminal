@@ -30,8 +30,7 @@ UserScriptHandler::UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvide
    std::shared_ptr<spdlog::logger> logger,
    UserScriptRunner *runner,
    QThread *handlerThread)
-   : QObject(handlerThread)
-   , signingContainer_(signingContainer)
+   : signingContainer_(signingContainer)
    , mdProvider_(mdProvider)
    , assetManager_(assetManager)
    , logger_(logger)
@@ -46,6 +45,10 @@ UserScriptHandler::UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvide
       this, &UserScriptHandler::onQuoteReqCancelled, Qt::QueuedConnection);
    connect(quoteProvider.get(), &QuoteProvider::quoteRejected,
       this, &UserScriptHandler::onQuoteReqRejected, Qt::QueuedConnection);
+   connect(handlerThread, &QThread::finished, this, [this]() {
+      aqTimer_->stop();
+      deleteLater();
+   }, Qt::QueuedConnection);
 
    connect(runner, &UserScriptRunner::initAQ, this, &UserScriptHandler::initAQ,
       Qt::QueuedConnection);
