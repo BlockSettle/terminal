@@ -704,6 +704,24 @@ void QuoteRequestsModel::onQuoteNotifCancelled(const QString &reqId)
    }
 }
 
+void QuoteRequestsModel::onAllQuoteNotifCancelled(const QString &reqId)
+{
+   int row = -1;
+   RFQ *rfq = nullptr;
+
+   forSpecificId(reqId.toStdString(), [&](Group *group, int i) {
+      row = i;
+      rfq = group->rfqs_[static_cast<std::size_t>(i)].get();
+      rfq->bestQuotedPxString_.clear();
+   });
+
+   if (row >= 0 && rfq) {
+      static const QVector<int> roles({ Qt::DisplayRole });
+      const QModelIndex idx = createIndex(row, static_cast<int>(Column::BestPx), &rfq->idx_);
+      emit dataChanged(idx, idx, roles);
+   }
+}
+
 void QuoteRequestsModel::onQuoteReqCancelled(const QString &reqId, bool byUser)
 {
    if (!byUser) {
