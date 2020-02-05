@@ -43,10 +43,9 @@ private slots:
    void onAuthConfirmSubmitError(const QString &address, const QString &error);
    void onAuthAddrSubmitSuccess(const QString &address);
    void onAuthAddressSubmitCancelled(const QString &address);
-   void onSignFailed(AutheIDClient::ErrorType error);
 
 private:
-   void CancelSubmission();
+   void reject() override;
 
 private:
    std::unique_ptr<Ui::AuthAddressConfirmDialog> ui_;

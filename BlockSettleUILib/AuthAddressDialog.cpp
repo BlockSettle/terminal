@@ -371,7 +371,9 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
       warnFunds.setWindowTitle(tr("Insufficient Funds"));
       warnFunds.exec();
 
-      authAddressManager_->CancelSubmitForVerification(bsClient_.data(), lastSubmittedAddress_);
+      if (bsClient_) {
+         bsClient_->cancelActiveSign();
+      }
       lastSubmittedAddress_ = bs::Address{};
 
       return;
@@ -397,7 +399,9 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
    if (promptResult == QDialog::Accepted) {
       ConfirmAuthAddressSubmission();
    } else {
-      authAddressManager_->CancelSubmitForVerification(bsClient_.data(), lastSubmittedAddress_);
+      if (bsClient_) {
+         bsClient_->cancelActiveSign();
+      }
       lastSubmittedAddress_ = bs::Address{};
    }
 }
@@ -427,12 +431,15 @@ void AuthAddressDialog::submitSelectedAddress()
    }
 
    if (authAddressManager_->hasSettlementLeaf(lastSubmittedAddress_)) {
-      authAddressManager_->SubmitForVerification(lastSubmittedAddress_);
+      authAddressManager_->SubmitForVerification(bsClient_, lastSubmittedAddress_);
    }
    else {
-      authAddressManager_->createSettlementLeaf(lastSubmittedAddress_, [this] {
-         QMetaObject::invokeMethod(this, [this] {  // prevent crash if dialog was destroyed
-            authAddressManager_->SubmitForVerification(lastSubmittedAddress_);
+      authAddressManager_->createSettlementLeaf(lastSubmittedAddress_, [this, handle = validityFlag_.handle()] {
+         QMetaObject::invokeMethod(this, [this, handle] {
+            if (!handle.isValid()) {
+               return;
+            }
+            authAddressManager_->SubmitForVerification(bsClient_, lastSubmittedAddress_);
          });
       });
    }
