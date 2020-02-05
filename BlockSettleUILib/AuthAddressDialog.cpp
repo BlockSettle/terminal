@@ -381,6 +381,10 @@ void AuthAddressDialog::ConfirmAuthAddressSubmission()
       SPDLOG_LOGGER_ERROR(logger_, "bsClient_ in not set");
       return;
    }
+   if (lastSubmittedAddress_.isNull()) {
+      SPDLOG_LOGGER_ERROR(logger_, "invalid lastSubmittedAddress_");
+      return;
+   }
 
    AuthAddressConfirmDialog confirmDlg{bsClient_.data(), lastSubmittedAddress_, authAddressManager_, this};
 
