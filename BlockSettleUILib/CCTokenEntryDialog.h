@@ -44,6 +44,7 @@ public:
 
 protected:
    void accept() override;
+   void reject() override;
 
 private slots:
    void tokenChanged();

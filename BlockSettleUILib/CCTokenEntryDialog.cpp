@@ -132,7 +132,7 @@ void CCTokenEntryDialog::accept()
       return;
    }
    const auto &cbAddr = [this](const bs::Address &address) {
-      if (ccFileMgr_->SubmitAddressToPuB(address, seed_, ccProduct_)) {
+      if (ccFileMgr_->submitAddress(address, seed_, ccProduct_)) {
          ui_->pushButtonOk->setEnabled(false);
       } else {
          onCCSubmitFailed(QString::fromStdString(address.display())
@@ -149,7 +149,13 @@ void CCTokenEntryDialog::accept()
    ui_->labelProduct->setText(QString::fromStdString(ccProduct_));
 }
 
-void CCTokenEntryDialog::onCCAddrSubmitted(const QString)
+void CCTokenEntryDialog::reject()
+{
+   ccFileMgr_->cancelActiveSign();
+   QDialog::reject();
+}
+
+void CCTokenEntryDialog::onCCAddrSubmitted(const QString addr)
 {
    QDialog::accept();
    BSMessageBox(BSMessageBox::success, tr("Submission Successful")
@@ -157,7 +163,7 @@ void CCTokenEntryDialog::onCCAddrSubmitted(const QString)
       , tr("BlockSettle will issue your equity tokens within 24h")).exec();
 }
 
-void CCTokenEntryDialog::onCCInitialSubmitted(const QString)
+void CCTokenEntryDialog::onCCInitialSubmitted(const QString addr)
 {
    ui_->labelTokenHint->setText(tr("Request was sent"));
 }
@@ -186,5 +192,5 @@ void CCTokenEntryDialog::onCancel()
    setDisabled(true);
    timeLeft_ = 0;
    timer_.stop();
-   ccFileMgr_->cancelSubmitAddressToPub();
+   reject();
 }

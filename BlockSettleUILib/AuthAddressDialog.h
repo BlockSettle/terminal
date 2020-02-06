@@ -14,6 +14,7 @@
 #include "AuthAddressManager.h"
 #include "BinaryData.h"
 #include "BsClient.h"
+#include "ValidityFlag.h"
 #include <memory>
 #include <QDialog>
 #include <QPointer>
@@ -76,13 +77,15 @@ protected:
    void showError(const QString &text, const QString &details = {});
    void showInfo(const QString &title, const QString &text);
    bool eventFilter(QObject* sender, QEvent* event) override;
-   void updateCreateButton();
 
 private:
    bs::Address GetSelectedAddress() const;
    bool unsubmittedExist() const;
    void updateUnsubmittedState();
    void saveAddressesNumber();
+
+   void setLastSubmittedAddress(const bs::Address &address);
+   void updateEnabledStates();
 
 private:
    std::unique_ptr<Ui::AuthAddressDialog> ui_;
@@ -93,6 +96,7 @@ private:
    QPointer<AuthAdressControlProxyModel>  model_;
    bs::Address                            defaultAddr_;
    QPointer<BsClient>                     bsClient_;
+   ValidityFlag                           validityFlag_;
 
    bs::Address                            lastSubmittedAddress_{};
 
