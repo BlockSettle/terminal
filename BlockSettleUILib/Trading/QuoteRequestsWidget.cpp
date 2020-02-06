@@ -202,6 +202,13 @@ void QuoteRequestsWidget::onQuoteNotifCancelled(const QString &reqId)
    }
 }
 
+void QuoteRequestsWidget::onAllQuoteNotifCancelled(const QString &reqId)
+{
+   if (model_) {
+      model_->onAllQuoteNotifCancelled(reqId);
+   }
+}
+
 void QuoteRequestsWidget::onQuoteReqCancelled(const QString &reqId, bool byUser)
 {
    if (model_) {
