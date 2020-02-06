@@ -92,15 +92,17 @@ void UserScriptHandler::onQuoteReqNotification(const bs::network::QuoteReqNotifi
 
          const auto &mdIt = mdInfo_.find(qrn.security);
          if (mdIt != mdInfo_.end()) {
+            auto *reqReply = qobject_cast<BSQuoteReqReply *>(obj);
             if (mdIt->second.bidPrice > 0) {
-               qobject_cast<BSQuoteReqReply *>(obj)->setIndicBid(mdIt->second.bidPrice);
+               reqReply->setIndicBid(mdIt->second.bidPrice);
             }
             if (mdIt->second.askPrice > 0) {
-               qobject_cast<BSQuoteReqReply *>(obj)->setIndicAsk(mdIt->second.askPrice);
+               reqReply->setIndicAsk(mdIt->second.askPrice);
             }
             if (mdIt->second.lastPrice > 0) {
-               qobject_cast<BSQuoteReqReply *>(obj)->setLastPrice(mdIt->second.lastPrice);
+               reqReply->setLastPrice(mdIt->second.lastPrice);
             }
+            reqReply->start();
          }
       }
    }
@@ -233,25 +235,25 @@ void UserScriptHandler::onMDUpdate(bs::network::Asset::Type, const QString &secu
          continue;
       }
 
+      auto *reqReply = qobject_cast<BSQuoteReqReply *>(aqObj.second);
       if (bid > 0) {
-         qobject_cast<BSQuoteReqReply *>(aqObj.second)->setIndicBid(bid);
+         reqReply->setIndicBid(bid);
       }
       if (ask > 0) {
-         qobject_cast<BSQuoteReqReply *>(aqObj.second)->setIndicAsk(ask);
+         reqReply->setIndicAsk(ask);
       }
       if (last > 0) {
-         qobject_cast<BSQuoteReqReply *>(aqObj.second)->setLastPrice(last);
+         reqReply->setLastPrice(last);
       }
+      reqReply->start();
    }
 }
 
 void UserScriptHandler::onBestQuotePrice(const QString reqId, double price, bool own)
 {
-   if (!own) {
-      const auto itAQObj = aqObjs_.find(reqId.toStdString());
-      if (itAQObj != aqObjs_.end()) {
-         qobject_cast<BSQuoteReqReply *>(itAQObj->second)->setBestPrice(price);
-      }
+   const auto itAQObj = aqObjs_.find(reqId.toStdString());
+   if (itAQObj != aqObjs_.end()) {
+      qobject_cast<BSQuoteReqReply *>(itAQObj->second)->setBestPrice(price, own);
    }
 }
 
