@@ -184,6 +184,7 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    connect(quoteProvider_.get(), &QuoteProvider::quoteRejected, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onQuoteRejected);
 
    connect(quoteProvider_.get(), &QuoteProvider::quoteNotifCancelled, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onQuoteNotifCancelled);
+   connect(quoteProvider_.get(), &QuoteProvider::allQuoteNotifCancelled, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onAllQuoteNotifCancelled);
    connect(quoteProvider_.get(), &QuoteProvider::signTxRequested, this, &RFQReplyWidget::onSignTxRequested);
 
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
