@@ -222,6 +222,7 @@ private:
       IndexHelper idx_;
       bool quoted_;
       bool visible_;
+      bool withdrawn_ = false;
 
       RFQ()
          : idx_(nullptr, this, DataType::RFQ)
