@@ -261,6 +261,8 @@ public:
          }
       }
    }
+
+
    void setBestPrice(double prc, bool own) {
       isOwnBestPrice_ = own;
       if (bestPrice_ != prc) {
@@ -295,7 +297,6 @@ signals:
    void indicAskChanged();
    void lastPriceChanged();
    void bestPriceChanged();
-   void sendFailed(const QString &reason);
    void sendingQuoteReply(const QString &reqId, double price);
    void pullingQuoteReply(const QString &reqId);
    void started();
