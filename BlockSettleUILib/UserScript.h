@@ -212,7 +212,7 @@ class BSQuoteReqReply : public QObject
    Q_PROPERTY(QString security READ security)
    Q_PROPERTY(double indicBid READ indicBid NOTIFY indicBidChanged)
    Q_PROPERTY(double indicAsk READ indicAsk NOTIFY indicAskChanged)
-   Q_PROPERTY(double lastPirce READ lastPrice NOTIFY lastPriceChanged)
+   Q_PROPERTY(double lastPrice READ lastPrice NOTIFY lastPriceChanged)
    Q_PROPERTY(double bestPrice READ bestPrice NOTIFY bestPriceChanged)
    Q_PROPERTY(double isOwnBestPrice READ isOwnBestPrice)
 
