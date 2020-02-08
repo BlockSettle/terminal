@@ -783,10 +783,17 @@ void QuoteRequestsModel::onQuoteReqNotifReplied(const bs::network::QuoteNotifica
 {
    int row = -1;
    Group *g = nullptr;
+   bool withdrawn = false;
 
    forSpecificId(qn.quoteRequestId, [&](Group *group, int i) {
+      if (group->rfqs_[static_cast<std::size_t>(i)]->withdrawn_) {
+         withdrawn = true;
+         return;
+      }
+
       row = i;
       g = group;
+
       const auto assetType = group->rfqs_[static_cast<std::size_t>(i)]->assetType_;
       const double quotedPrice = (qn.side == bs::network::Side::Buy) ? qn.bidPx : qn.offerPx;
 
@@ -796,6 +803,10 @@ void QuoteRequestsModel::onQuoteReqNotifReplied(const bs::network::QuoteNotifica
       group->rfqs_[static_cast<std::size_t>(i)]->quotedPriceBrush_ =
          colorForQuotedPrice(quotedPrice, group->rfqs_[static_cast<std::size_t>(i)]->bestQuotedPx_);
    });
+
+   if (withdrawn) {
+      return; // nothing to do, rfq was withdrawn
+   }
 
    if (row >= 0 && g) {
       static const QVector<int> roles({static_cast<int>(Qt::DisplayRole),
@@ -1194,26 +1205,30 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
       itQRN->second.status = status;
 
       forSpecificId(reqId, [this, status, details](Group *grp, int index) {
+
+         auto *rfq = grp->rfqs_[static_cast<std::size_t>(index)].get();
+
          if (!details.isEmpty()) {
-            grp->rfqs_[static_cast<std::size_t>(index)]->status_.status_ = details;
+            rfq->status_.status_ = details;
          }
          else {
-            grp->rfqs_[static_cast<std::size_t>(index)]->status_.status_ =
+            rfq->status_.status_ =
                quoteReqStatusDesc(status);
          }
 
          bool emitUpdate = false;
 
          if (status == bs::network::QuoteReqNotification::Replied) {
+            assert(!rfq->withdrawn_);
 
-            if (!grp->rfqs_[static_cast<std::size_t>(index)]->quoted_) {
-               grp->rfqs_[static_cast<std::size_t>(index)]->quoted_ = true;
+            if (!rfq->quoted_) {
+               rfq->quoted_ = true;
                ++grp->quotedRfqsCount_;
                emitUpdate = true;
             }
 
-            if (grp->rfqs_[static_cast<std::size_t>(index)]->visible_) {
-               grp->rfqs_[static_cast<std::size_t>(index)]->visible_ = false;
+            if (rfq->visible_) {
+               rfq->visible_ = false;
                --grp->visibleCount_;
                showRfqsFromBack(grp);
                emitUpdate = true;
@@ -1223,15 +1238,16 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
          }
 
          if (status == bs::network::QuoteReqNotification::Withdrawn) {
-            if (grp->rfqs_[static_cast<std::size_t>(index)]->quoted_) {
-               grp->rfqs_[static_cast<std::size_t>(index)]->quoted_ = false;
+            if (rfq->quoted_) {
+               rfq->quoted_ = false;
                --grp->quotedRfqsCount_;
                emit invalidateFilterModel();
                emitUpdate = true;
             }
+            rfq->withdrawn_ = true;
          }
 
-         grp->rfqs_[static_cast<std::size_t>(index)]->stateBrush_ = bgColorForStatus(status);
+         rfq->stateBrush_ = bgColorForStatus(status);
 
          const bool showProgress = ((status == bs::network::QuoteReqNotification::Status::PendingAck)
             || (status == bs::network::QuoteReqNotification::Status::Replied));

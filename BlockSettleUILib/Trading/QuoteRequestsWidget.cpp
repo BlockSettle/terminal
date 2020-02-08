@@ -474,27 +474,28 @@ bool QuoteReqSortModel::filterAcceptsRow(int row, const QModelIndex &parent) con
 {
    const auto index = sourceModel()->index(row, 0, parent);
 
-   if (index.isValid() ) {
-      if(index.data(static_cast<int>(QuoteRequestsModel::Role::Type)).toInt() ==
-         static_cast<int>(QuoteRequestsModel::DataType::RFQ)) {
-            if (parent.data(static_cast<int>(QuoteRequestsModel::Role::LimitOfRfqs)).toInt() > 0) {
-               if (index.data(static_cast<int>(QuoteRequestsModel::Role::Visible)).toBool()) {
-                  return true;
-               } else if (index.data(static_cast<int>(QuoteRequestsModel::Role::Quoted)).toBool() &&
-                     showQuoted_) {
-                        return true;
-               } else {
-                  return false;
-               }
-            } else {
-               return true;
-            }
-      } else {
-         return true;
-      }
-   } else {
+   if (!index.isValid()) {
       return false;
    }
+
+   if (index.data(static_cast<int>(QuoteRequestsModel::Role::Type)).toInt() !=
+      static_cast<int>(QuoteRequestsModel::DataType::RFQ)) {
+      return true;
+   }
+
+   if (parent.data(static_cast<int>(QuoteRequestsModel::Role::LimitOfRfqs)).toInt() <= 0) {
+      return true;
+   }
+
+   if (index.data(static_cast<int>(QuoteRequestsModel::Role::Visible)).toBool()) {
+      return true;
+   }
+   else if (index.data(static_cast<int>(QuoteRequestsModel::Role::Quoted)).toBool() &&
+      showQuoted_) {
+      return true;
+   }
+
+   return false;
 }
 
 void QuoteReqSortModel::showQuoted(bool on)
