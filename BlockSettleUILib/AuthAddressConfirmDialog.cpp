@@ -17,7 +17,6 @@
 
 namespace {
    constexpr auto UiTimerInterval = std::chrono::milliseconds(250);
-   const QString kProccessAborted = QObject::tr("The process of submitting an authentication address has been aborted as no validation UTXOs can be found");
 }
 
 AuthAddressConfirmDialog::AuthAddressConfirmDialog(BsClient *bsClient, const bs::Address& address
@@ -102,8 +101,8 @@ void AuthAddressConfirmDialog::onError(const QString &errorText)
 void AuthAddressConfirmDialog::onAuthAddrSubmitError(const QString &address, const QString &error)
 {
    progressTimer_.stop();
-   BSMessageBox(BSMessageBox::critical, tr("Submission Aborted")
-      , kProccessAborted
+   BSMessageBox(BSMessageBox::critical, tr("Submission")
+      , tr("Submission failed")
       , error, this).exec();
    reject();
 }
@@ -111,8 +110,8 @@ void AuthAddressConfirmDialog::onAuthAddrSubmitError(const QString &address, con
 void AuthAddressConfirmDialog::onAuthConfirmSubmitError(const QString &address, const QString &error)
 {
    progressTimer_.stop();
-   BSMessageBox(BSMessageBox::critical, tr("Confirmation Aborted")
-      , kProccessAborted
+   BSMessageBox(BSMessageBox::critical, tr("Confirmation")
+      , tr("Confirmation failed")
       , error, this).exec();
    reject();
 }
