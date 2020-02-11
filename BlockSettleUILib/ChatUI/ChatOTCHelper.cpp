@@ -19,6 +19,7 @@
 #include "OtcUtils.h"
 #include "SignContainer.h"
 #include "chat.pb.h"
+#include "UtxoReservationManager.h"
 
 ChatOTCHelper::ChatOTCHelper(QObject* parent /*= nullptr*/)
    : QObject(parent)
@@ -30,13 +31,15 @@ void ChatOTCHelper::init(bs::network::otc::Env env
    , const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr
    , const std::shared_ptr<ArmoryConnection>& armory
    , const std::shared_ptr<SignContainer>& signContainer
-   , const std::shared_ptr<AuthAddressManager> &authAddressManager)
+   , const std::shared_ptr<AuthAddressManager> &authAddressManager
+   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager)
 {
    loggerPtr_ = loggerPtr;
 
    OtcClientParams params;
    params.env = env;
-   otcClient_ = new OtcClient(loggerPtr, walletsMgr, armory, signContainer, authAddressManager, std::move(params), this);
+   otcClient_ = new OtcClient(loggerPtr, walletsMgr, armory, signContainer, authAddressManager,
+      utxoReservationManager, std::move(params), this);
 }
 
 OtcClient* ChatOTCHelper::client() const

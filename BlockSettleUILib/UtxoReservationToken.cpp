@@ -35,14 +35,13 @@ UtxoReservationToken &UtxoReservationToken::operator=(UtxoReservationToken &&oth
    release();
    logger_ = other.logger_;
    reserveId_ = std::move(other.reserveId_);
-   utxoReservantionManager_ = std::move(other.utxoReservantionManager_);
+   onReleasedCb_ = std::move(other.onReleasedCb_);
    other.reserveId_.clear();
    return *this;
 }
 
 UtxoReservationToken UtxoReservationToken::makeNewReservation(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservantionManager
-   , const std::vector<UTXO> &utxos, const std::string &reserveId)
+   , const std::vector<UTXO> &utxos, const std::string &reserveId, std::function<void()>&& onReleasedCb)
 {
    assert(!reserveId.empty());
    assert(UtxoReservation::instance());
@@ -59,9 +58,7 @@ UtxoReservationToken UtxoReservationToken::makeNewReservation(const std::shared_
    UtxoReservation::instance()->reserve(reserveId, utxos);
    result.logger_ = logger;
    result.reserveId_ = reserveId;
-   result.utxoReservantionManager_ = utxoReservantionManager;
-
-   utxoReservantionManager->refreshAvailableUTXO();
+   result.onReleasedCb_ = std::move(onReleasedCb);
 
    return result;
 }
@@ -82,7 +79,7 @@ void UtxoReservationToken::release()
       SPDLOG_LOGGER_ERROR(logger_, "release UTXO reservation failed, reserveId: '{}'", reserveId_);
    }
    reserveId_.clear();
-   utxoReservantionManager_->refreshAvailableUTXO();
+   onReleasedCb_();
 }
 
 bool UtxoReservationToken::isValid() const

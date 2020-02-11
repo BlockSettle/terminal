@@ -37,8 +37,7 @@ UTXOReservantionManager::UTXOReservantionManager(const std::shared_ptr<bs::sync:
 }
 
 FixedXbtInputs UTXOReservantionManager::reserveBestUtxoSet(const std::string& walletId,
-   const std::shared_ptr<bs::network::RFQ>& rfq, BTCNumericTypes::balance_type offer,
-   const std::shared_ptr<UTXOReservantionManager>& reservationMgr)
+   const std::shared_ptr<bs::network::RFQ>& rfq, BTCNumericTypes::balance_type offer)
 {
    FixedXbtInputs fixedXbtInputs;
 
@@ -121,7 +120,7 @@ FixedXbtInputs UTXOReservantionManager::reserveBestUtxoSet(const std::string& wa
    availableUTXOs_.clear();
 
    auto reserveId = fmt::format("rfq_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
-   fixedXbtInputs.utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, reservationMgr, selectedUtxos, reserveId);
+   fixedXbtInputs.utxoRes = makeNewReservation(selectedUtxos, reserveId);
 
    return fixedXbtInputs;
 }
@@ -136,6 +135,21 @@ uint64_t bs::UTXOReservantionManager::getAvailableUtxoSum(const std::string& wal
       }
    }
    return sum;
+}
+
+bs::UtxoReservationToken UTXOReservantionManager::makeNewReservation(const std::vector<UTXO> &utxos, const std::string &reserveId)
+{
+   auto onReleaseCb = [mngr = QPointer<UTXOReservantionManager>(this)]() {
+      if (!mngr) {
+         return;
+      }
+
+      mngr->refreshAvailableUTXO();
+   };
+
+   auto reservation = bs::UtxoReservationToken::makeNewReservation(logger_, utxos, reserveId, onReleaseCb);
+   refreshAvailableUTXO();
+   return reservation;
 }
 
 void bs::UTXOReservantionManager::refreshAvailableUTXO()

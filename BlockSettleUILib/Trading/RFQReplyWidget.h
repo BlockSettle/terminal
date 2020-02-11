@@ -164,6 +164,7 @@ private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<AutoSignQuoteProvider>    autoSignQuoteProvider_;
+   std::shared_ptr<bs::UTXOReservantionManager> utxoReservantionManager_;
 
    std::unordered_map<std::string, SentXbtReply>   sentXbtReplies_;
    std::unordered_map<std::string, SentCCReply>    sentCCReplies_;

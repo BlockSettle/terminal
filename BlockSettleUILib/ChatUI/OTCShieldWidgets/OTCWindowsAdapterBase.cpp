@@ -19,6 +19,8 @@
 #include "CoinControlDialog.h"
 #include "SelectedTransactionInputs.h"
 #include "TradesUtils.h"
+#include "UtxoReservationManager.h"
+#include "XBTAmount.h"
 
 #include <QComboBox>
 #include <QLabel>
@@ -67,6 +69,11 @@ std::shared_ptr<AuthAddressManager> OTCWindowsAdapterBase::getAuthManager() cons
 std::shared_ptr<AssetManager> OTCWindowsAdapterBase::getAssetManager() const
 {
    return otcManager_->getAssetManager();
+}
+
+std::shared_ptr<bs::UTXOReservantionManager> OTCWindowsAdapterBase::getUtxoManager() const
+{
+   return otcManager_->getUtxoManager();
 }
 
 void OTCWindowsAdapterBase::setPeer(const bs::network::otc::Peer &)
@@ -198,9 +205,7 @@ BTCNumericTypes::balance_type OTCWindowsAdapterBase::getXBTSpendableBalanceFromC
 
    BTCNumericTypes::balance_type totalBalance{};
    if (selectedUTXO_.empty()) {
-      for (auto wallet : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
-         totalBalance += wallet->getSpendableBalance();
-      }
+      return getUtxoManager()->getAvailableUtxoSum(hdWallet->walletId()) / BTCNumericTypes::BalanceDivider;
    }
    else {
       for (const auto &utxo : selectedUTXO_) {

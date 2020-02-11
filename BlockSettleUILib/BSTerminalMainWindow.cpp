@@ -700,7 +700,7 @@ void BSTerminalMainWindow::tryInitChatView()
       const auto env = isProd ? bs::network::otc::Env::Prod : bs::network::otc::Env::Test;
 
       ui_->widgetChat->init(connectionManager_, env, chatClientServicePtr_,
-         logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_, mdProvider_, assetManager_);
+         logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_, mdProvider_, assetManager_, utxoReservationMgr_);
 
       connect(chatClientServicePtr_->getClientPartyModelPtr().get(), &Chat::ClientPartyModel::userPublicKeyChanged,
          this, [this](const Chat::UserPublicKeyInfoList& userPublicKeyInfoList) {

@@ -132,6 +132,7 @@ private:
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::shared_ptr<ConnectionManager>  connectionManager_;
+   std::shared_ptr<bs::UTXOReservantionManager> utxoReservationManager_;
 
    std::shared_ptr<RfqStorage> rfqStorage_;
 

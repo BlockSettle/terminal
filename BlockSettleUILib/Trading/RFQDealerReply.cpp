@@ -699,7 +699,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                            const auto txReq = walletsManager_->createPartialTXRequest(spendVal, inputs, changeAddress, feePerByte
                               , { recipient }, outSortOrder, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false);
                            replyData->qn.transactionData = txReq.serializeState().toHexStr();
-                           replyData->utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, utxoReservationManager_, txReq.inputs, replyData->qn.quoteRequestId);
+                           replyData->utxoRes = utxoReservationManager_->makeNewReservation(txReq.inputs, replyData->qn.quoteRequestId);
                            submit();
                         } catch (const std::exception &e) {
                            SPDLOG_LOGGER_ERROR(logger_, "error creating own unsigned half: {}", e.what());
@@ -869,7 +869,7 @@ void RFQDealerReply::showCoinControl()
 
          if (!selectedXbtInputs_.empty()) {
             auto reserveId = fmt::format("reply_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
-            selectedXbtRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, utxoReservationManager_, selectedInputs, reserveId);
+            selectedXbtRes_ = utxoReservationManager_->makeNewReservation(selectedInputs, reserveId);
          }
 
          updateSubmitButton();
@@ -1063,11 +1063,7 @@ bs::XBTAmount RFQDealerReply::getXbtBalance() const
       return {};
    }
 
-   double sum = 0;
-   for (const auto &leaf : xbtWallet->getGroup(bs::sync::hd::Wallet::getXBTGroupType())->getLeaves()) {
-      sum += leaf->getSpendableBalance();
-   }
-   return bs::XBTAmount(sum);
+   return bs::XBTAmount(utxoReservationManager_->getAvailableUtxoSum(xbtWallet->walletId()));
 }
 
 BTCNumericTypes::balance_type bs::ui::RFQDealerReply::getPrivateMarketCoinBalance() const

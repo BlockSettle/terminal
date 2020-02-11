@@ -373,7 +373,7 @@ void RFQTicketXBT::showCoinControl()
 
          if (!selectedInputs.empty()) {
             auto reserveId = fmt::format("rfq_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
-            fixedXbtInputs_.utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, utxoReservationManager_, selectedInputs, reserveId);
+            fixedXbtInputs_.utxoRes = utxoReservationManager_->makeNewReservation(selectedInputs, reserveId);
          }
 
          updateBalances();
@@ -778,7 +778,7 @@ void RFQTicketXBT::submitButtonClicked()
                      try {
                         const auto txReq = ccWallet->createPartialTXRequest(spendVal, ccInputs, addr);
                         rfq->coinTxInput = txReq.serializeState().toHexStr();
-                        auto reservationToken = bs::UtxoReservationToken::makeNewReservation(logger_, utxoReservationManager_, txReq.inputs, rfq->requestId);
+                        auto reservationToken = utxoReservationManager_->makeNewReservation(txReq.inputs, rfq->requestId);
                         submitRFQCb_(*rfq, std::move(reservationToken));
                      }
                      catch (const std::exception &e) {
@@ -1185,18 +1185,6 @@ bs::XBTAmount RFQTicketXBT::getXbtBalance() const
    }
 
    return bs::XBTAmount(utxoReservationManager_->getAvailableUtxoSum(getSendXbtWallet()->walletId()));
-
-   //// #UTXOManager: Delete this??
-   //auto xbtWallet = getSendXbtWallet();
-   //if (!xbtWallet) {
-   //   return {};
-   //}
-
-   //double sum = 0;
-   //for (const auto &leave : xbtWallet->getGroup(xbtWallet->getXBTGroupType())->getLeaves()) {
-   //   sum += leave->getSpendableBalance();
-   //}
-   //return bs::XBTAmount(sum);
 }
 
 QString RFQTicketXBT::getProductToSpend() const
@@ -1225,12 +1213,11 @@ void RFQTicketXBT::reserveBestUtxoSet(const std::shared_ptr<bs::network::RFQ>& r
    }
 
    if (!fixedXbtInputs_.inputs.empty()) {
-      return;
+      return; // already reserved by user
    }
 
-
-   fixedXbtInputs_ = utxoReservationManager_->reserveBestUtxoSet(getSendXbtWallet()->walletId(),
-      rfq, getOfferPrice(), utxoReservationManager_);
+   fixedXbtInputs_ = utxoReservationManager_->reserveBestUtxoSet(
+      getSendXbtWallet()->walletId(), rfq, getOfferPrice());
 }
 
 void RFQTicketXBT::onCreateWalletClicked()

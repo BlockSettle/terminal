@@ -13,6 +13,7 @@
 #include "AuthAddressManager.h"
 #include "MarketDataProvider.h"
 #include "AssetManager.h"
+#include "UtxoReservationManager.h"
 
 OTCWindowsManager::OTCWindowsManager(QObject* parent /*= nullptr*/)
 {
@@ -22,7 +23,8 @@ void OTCWindowsManager::init(const std::shared_ptr<bs::sync::WalletsManager>& wa
    , const std::shared_ptr<AuthAddressManager> &authManager
    , const std::shared_ptr<MarketDataProvider>& mdProvider
    , const std::shared_ptr<AssetManager>& assetManager
-   , const std::shared_ptr<ArmoryConnection> &armory)
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager)
 {
    // #new_logic : we shouldn't send aggregated signal for all events
 
@@ -49,6 +51,8 @@ void OTCWindowsManager::init(const std::shared_ptr<bs::sync::WalletsManager>& wa
    connect(assetManager_.get(), &AssetManager::securitiesChanged, this, &OTCWindowsManager::updateBalances);
 
    armory_ = armory;
+   utxoReservationManager_ = utxoReservationManager;
+   connect(utxoReservationManager_.get(), &bs::UTXOReservantionManager::availableUtxoChanged, this, &OTCWindowsManager::updateBalances);
 
    emit syncInterfaceRequired();
 }
@@ -71,5 +75,10 @@ std::shared_ptr<AssetManager> OTCWindowsManager::getAssetManager() const
 std::shared_ptr<ArmoryConnection> OTCWindowsManager::getArmory() const
 {
    return armory_;
+}
+
+std::shared_ptr<bs::UTXOReservantionManager> OTCWindowsManager::getUtxoManager() const
+{
+   return utxoReservationManager_;
 }
 

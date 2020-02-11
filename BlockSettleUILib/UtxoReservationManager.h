@@ -50,10 +50,11 @@ namespace bs {
       UTXOReservantionManager &operator=(UTXOReservantionManager &&) = delete;
 
       FixedXbtInputs reserveBestUtxoSet(const std::string& walletId,
-         const std::shared_ptr<bs::network::RFQ>& rfq, BTCNumericTypes::balance_type offer,
-         const std::shared_ptr<UTXOReservantionManager>& reservationMgr);
+         const std::shared_ptr<bs::network::RFQ>& rfq, BTCNumericTypes::balance_type offer);
       
       uint64_t getAvailableUtxoSum(const std::string& walletid) const;
+
+      UtxoReservationToken makeNewReservation(const std::vector<UTXO> &utxos, const std::string &reserveId);
    
    signals:
       void availableUtxoChanged(const std::string& walledId);

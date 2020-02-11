@@ -189,6 +189,7 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    signingContainer_ = container;
    armory_ = armory;
    connectionManager_ = connectionManager;
+   utxoReservationManager_ = utxoReservationManager;
 
    ui_->pageRFQTicket->init(logger, authAddressManager, assetManager,
       quoteProvider, container, armory, utxoReservationManager);
@@ -248,8 +249,8 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservat
 
    RFQDialog* dialog = new RFQDialog(logger_, rfq, quoteProvider_
       , authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_
-      , connectionManager_, rfqStorage_, xbtWallet, ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, fixedXbtInputs.inputs
-      , std::move(fixedXbtInputs.utxoRes), std::move(ccUtxoRes), this);
+      , connectionManager_, rfqStorage_, xbtWallet, ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, utxoReservationManager_
+      , fixedXbtInputs.inputs, std::move(fixedXbtInputs.utxoRes), std::move(ccUtxoRes), this);
 
    connect(this, &RFQRequestWidget::unsignedPayinRequested, dialog, &RFQDialog::onUnsignedPayinRequested);
    connect(this, &RFQRequestWidget::signedPayoutRequested, dialog, &RFQDialog::onSignedPayoutRequested);

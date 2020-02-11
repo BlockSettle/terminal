@@ -41,6 +41,7 @@
 #include "MarketDataProvider.h"
 #include "AssetManager.h"
 #include "ui_ChatWidget.h"
+#include "UtxoReservationManager.h"
 
 using namespace bs::network;
 
@@ -99,14 +100,15 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    , const std::shared_ptr<ArmoryConnection>& armory
    , const std::shared_ptr<SignContainer>& signContainer
    , const std::shared_ptr<MarketDataProvider>& mdProvider
-   , const std::shared_ptr<AssetManager>& assetManager)
+   , const std::shared_ptr<AssetManager>& assetManager
+   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager)
 {
    loggerPtr_ = loggerPtr;
 
    // OTC
    otcHelper_ = new ChatOTCHelper(this);
-   otcHelper_->init(env, loggerPtr, walletsMgr, armory, signContainer, authManager);
-   otcWindowsManager_->init(walletsMgr, authManager, mdProvider, assetManager, armory);
+   otcHelper_->init(env, loggerPtr, walletsMgr, armory, signContainer, authManager, utxoReservationManager);
+   otcWindowsManager_->init(walletsMgr, authManager, mdProvider, assetManager, armory, utxoReservationManager);
 
    chatClientServicePtr_ = chatClientServicePtr;
 
