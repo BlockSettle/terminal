@@ -33,6 +33,7 @@ namespace bs {
    namespace tradeutils {
       struct Args;
    }
+   class UTXOReservantionManager;
 }
 class ArmoryConnection;
 class AuthAddressManager;
@@ -55,6 +56,7 @@ public:
       , const bs::Address &authAddr
       , const std::vector<UTXO> &utxosPayinFixed
       , const bs::Address &recvAddr
+      , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
       , bs::UtxoReservationToken utxoRes);
    ~DealerXBTSettlementContainer() override;
 
@@ -106,6 +108,7 @@ private:
    std::shared_ptr<AddressVerificator>          addrVerificator_;
    std::shared_ptr<SignContainer>               signContainer_;
    std::shared_ptr<AuthAddressManager>          authAddrMgr_;
+   std::shared_ptr<bs::UTXOReservantionManager> utxoReservationManager_;
 
    AddressVerificationState                     requestorAddressState_ = AddressVerificationState::VerificationFailed;
    bs::Address settlAddr_;

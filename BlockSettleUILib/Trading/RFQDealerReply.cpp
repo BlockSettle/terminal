@@ -39,6 +39,7 @@
 #include "UserScriptRunner.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "UtxoReservationManager.h"
 
 namespace {
    const QString kNoBalanceAvailable = QLatin1String("-");
@@ -90,7 +91,8 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider)
+   , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider
+   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager)
 {
    logger_ = logger;
    assetManager_ = assetManager;
@@ -101,6 +103,7 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    armory_ = armory;
    connectionManager_ = connectionManager;
    autoSignQuoteProvider_ = autoSignQuoteProvider;
+   utxoReservationManager_ = utxoReservationManager;
 
    connect(autoSignQuoteProvider_->autoQuoter(), &UserScriptRunner::sendQuote, this, &RFQDealerReply::onAQReply, Qt::QueuedConnection);
    connect(autoSignQuoteProvider_->autoQuoter(), &UserScriptRunner::pullQuoteNotif, this, &RFQDealerReply::pullQuoteNotif, Qt::QueuedConnection);
@@ -696,7 +699,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                            const auto txReq = walletsManager_->createPartialTXRequest(spendVal, inputs, changeAddress, feePerByte
                               , { recipient }, outSortOrder, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false);
                            replyData->qn.transactionData = txReq.serializeState().toHexStr();
-                           replyData->utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, nullptr, txReq.inputs, replyData->qn.quoteRequestId);
+                           replyData->utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, utxoReservationManager_, txReq.inputs, replyData->qn.quoteRequestId);
                            submit();
                         } catch (const std::exception &e) {
                            SPDLOG_LOGGER_ERROR(logger_, "error creating own unsigned half: {}", e.what());
@@ -866,7 +869,7 @@ void RFQDealerReply::showCoinControl()
 
          if (!selectedXbtInputs_.empty()) {
             auto reserveId = fmt::format("reply_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
-            selectedXbtRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, nullptr, selectedInputs, reserveId);
+            selectedXbtRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, utxoReservationManager_, selectedInputs, reserveId);
          }
 
          updateSubmitButton();

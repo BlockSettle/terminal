@@ -29,6 +29,7 @@
 #include "SignContainer.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "UtxoReservationManager.h"
 
 #include "bs_proxy_terminal_pb.pb.h"
 
@@ -134,6 +135,7 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider
+   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
    , OrderListModel *orderListModel
 )
 {
@@ -154,7 +156,7 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    ui_->widgetQuoteRequests->init(logger_, quoteProvider_, assetManager, statsCollector_,
                                   appSettings, celerClient_);
    ui_->pageRFQReply->init(logger, authAddressManager, assetManager, quoteProvider_,
-                           appSettings, connectionManager, signingContainer_, armory_, autoSignQuoteProvider_);
+                           appSettings, connectionManager, signingContainer_, armory_, autoSignQuoteProvider_, utxoReservationManager);
 
    ui_->widgetAutoSignQuote->init(autoSignQuoteProvider_);
 

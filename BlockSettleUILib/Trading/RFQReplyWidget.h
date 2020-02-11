@@ -40,6 +40,7 @@ namespace bs {
    }
    class SettlementAddressEntry;
    class SecurityStatsCollector;
+   class UTXOReservantionManager;
 }
 class ApplicationSettings;
 class ArmoryConnection;
@@ -87,6 +88,7 @@ public:
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<ConnectionManager> &
       , const std::shared_ptr<AutoSignQuoteProvider> &
+      , const std::shared_ptr<bs::UTXOReservantionManager> &
       , OrderListModel *orderListModel);
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
