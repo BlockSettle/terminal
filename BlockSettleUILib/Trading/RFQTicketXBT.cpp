@@ -517,7 +517,7 @@ void RFQTicketXBT::onAuthAddrChanged(int index)
 void RFQTicketXBT::onUTXOReservationChanged(const std::string& walletId)
 {
    auto xbtWallet = getSendXbtWallet();
-   if (xbtWallet && walletId == getSendXbtWallet()->walletId()) {
+   if (xbtWallet && walletId == xbtWallet->walletId()) {
       updateBalances();
    }
 }

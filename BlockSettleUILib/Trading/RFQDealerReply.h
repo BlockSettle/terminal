@@ -138,6 +138,7 @@ namespace bs {
          void onHDLeafCreated(const std::string& ccName);
          void onCreateHDWalletError(const std::string& ccName, bs::error::ErrorCode result);
          void onAuthAddrChanged(int);
+         void onUTXOReservationChanged(const std::string& walletId);
 
       protected:
          bool eventFilter(QObject *watched, QEvent *evt) override;

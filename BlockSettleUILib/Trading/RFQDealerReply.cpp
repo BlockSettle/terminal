@@ -108,7 +108,10 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    connect(autoSignQuoteProvider_->autoQuoter(), &UserScriptRunner::sendQuote, this, &RFQDealerReply::onAQReply, Qt::QueuedConnection);
    connect(autoSignQuoteProvider_->autoQuoter(), &UserScriptRunner::pullQuoteNotif, this, &RFQDealerReply::pullQuoteNotif, Qt::QueuedConnection);
 
-   connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::autoSignStateChanged, this, &RFQDealerReply::onAutoSignStateChanged, Qt::QueuedConnection);
+   connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::autoSignStateChanged,
+      this, &RFQDealerReply::onAutoSignStateChanged, Qt::QueuedConnection);
+   connect(utxoReservationManager_.get(), &bs::UTXOReservantionManager::availableUtxoChanged,
+      this, &RFQDealerReply::onUTXOReservationChanged);
 }
 
 void RFQDealerReply::initUi()
@@ -995,6 +998,14 @@ void RFQDealerReply::onAutoSignStateChanged()
       ui_->comboBoxXbtWallet->setCurrentText(autoSignQuoteProvider_->getAutoSignWalletName());
    }
    ui_->comboBoxXbtWallet->setEnabled(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::AutoSignDisabled);
+}
+
+void bs::ui::RFQDealerReply::onUTXOReservationChanged(const std::string& walletId)
+{
+   auto xbtWallet = getSelectedXbtWallet(ReplyType::Manual);
+   if (xbtWallet && walletId == xbtWallet->walletId()) {
+      updateBalanceLabel();
+   }
 }
 
 void bs::ui::RFQDealerReply::updateSpinboxes()
