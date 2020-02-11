@@ -62,6 +62,9 @@ namespace bs {
 
    private slots:
       void refreshAvailableUTXO();
+      void onWalletsDeleted(const std::string& walledId);
+      void onWalletsAdded(const std::string& walledId);
+      void onWalletsBalanceChanged(const std::string& walledId);
 
    private:
       std::map<std::string, std::vector<UTXO>> availableUTXOs_;

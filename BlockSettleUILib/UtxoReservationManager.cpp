@@ -29,11 +29,11 @@ UTXOReservantionManager::UTXOReservantionManager(const std::shared_ptr<bs::sync:
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized,
       this, &UTXOReservantionManager::refreshAvailableUTXO);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletAdded,
-      this, &UTXOReservantionManager::refreshAvailableUTXO);
+      this, &UTXOReservantionManager::onWalletsAdded);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted,
-      this, &UTXOReservantionManager::refreshAvailableUTXO);
+      this, &UTXOReservantionManager::onWalletsDeleted);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated,
-      this, &UTXOReservantionManager::refreshAvailableUTXO);
+      this, &UTXOReservantionManager::onWalletsBalanceChanged);
 }
 
 FixedXbtInputs UTXOReservantionManager::reserveBestUtxoSet(const std::string& walletId,
@@ -158,38 +158,71 @@ bs::UtxoReservationToken UTXOReservantionManager::makeNewReservation(const std::
    };
 
    auto reservation = bs::UtxoReservationToken::makeNewReservation(logger_, utxos, reserveId, onReleaseCb);
+   // #ReservationMngr: could be optimized by updating only needed wallet  
    refreshAvailableUTXO();
    return reservation;
 }
 
 void bs::UTXOReservantionManager::refreshAvailableUTXO()
 {
-   if (!walletsManager_->isArmoryReady()) {
-      return;
-   }
-
    availableUTXOs_.clear();
-   
    for (auto &wallet : walletsManager_->hdWallets()) {
-      const auto &leaves = wallet->getGroup(wallet->getXBTGroupType())->getLeaves();
-      std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
-
-      bs::tradeutils::getSpendableTxOutList(wallets, [this, walletId = wallet->walletId()](const std::map<UTXO, std::string> &utxos) {
-         std::map<std::string, std::vector<UTXO>> allUTXOs;
-         for (const auto &utxo : utxos) {
-            allUTXOs[walletId].push_back(utxo.first);
-         }
-
-         QMetaObject::invokeMethod(this, [this, allUTXOs = std::move(allUTXOs), walletId]{
-            if (allUTXOs.empty()) {
-               return;
-            }
-
-            availableUTXOs_.insert(std::make_move_iterator(begin(allUTXOs)),
-               std::make_move_iterator(std::end(allUTXOs)));
-
-            emit availableUtxoChanged(walletId);
-         });
-      });
+      onWalletsAdded(wallet->walletId());
    }
+}
+
+void bs::UTXOReservantionManager::onWalletsDeleted(const std::string& walledId)
+{
+   availableUTXOs_.erase(walledId);
+}
+
+void bs::UTXOReservantionManager::onWalletsAdded(const std::string& walledId)
+{
+   auto hdWallet = walletsManager_->getHDWalletById(walledId);
+   bool isHdRoot = true;
+   if (!hdWallet) {
+      isHdRoot = false;
+      hdWallet = walletsManager_->getHDRootForLeaf(walledId);
+
+      if (!hdWallet) {
+         return;
+      }
+   }
+
+   const auto &leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
+   std::vector<bs::sync::WalletsManager::WalletPtr> wallets(leaves.begin(), leaves.end());
+
+   if (!isHdRoot) {
+      auto it = std::find_if(wallets.cbegin(), wallets.cend(), [&walledId](const auto& wallet) -> bool {
+         return wallet->walletId() == walledId;
+      });
+
+      if (it == wallets.end()) {
+         return;
+      }
+   }
+
+   bs::tradeutils::getSpendableTxOutList(wallets, [mgr = QPointer<bs::UTXOReservantionManager>(this),
+      walletId = hdWallet->walletId()](const std::map<UTXO, std::string> &utxos) {
+      if (!mgr) {
+         return; // manager thread die, nothing to do
+      }
+
+      std::vector<UTXO> walletUtxos;
+      for (const auto &utxo : utxos) {
+         walletUtxos.push_back(utxo.first);
+      }
+
+      QMetaObject::invokeMethod(mgr, [mgr, utxos = std::move(walletUtxos), id = walletId]{
+         mgr->availableUTXOs_[id] = std::move(utxos);
+
+         emit mgr->availableUtxoChanged(id);
+      });
+   });
+}
+
+void bs::UTXOReservantionManager::onWalletsBalanceChanged(const std::string& walledId)
+{
+   onWalletsDeleted(walledId);
+   onWalletsAdded(walledId);
 }
