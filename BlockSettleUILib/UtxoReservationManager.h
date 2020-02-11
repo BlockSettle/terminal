@@ -52,7 +52,8 @@ namespace bs {
       FixedXbtInputs reserveBestUtxoSet(const std::string& walletId,
          const std::shared_ptr<bs::network::RFQ>& rfq, BTCNumericTypes::balance_type offer);
       
-      uint64_t getAvailableUtxoSum(const std::string& walletid) const;
+      uint64_t getAvailableUtxoSum(const std::string& walletId) const;
+      std::vector<UTXO> getAvailableUTXOs(const std::string& walletId) const;
 
       UtxoReservationToken makeNewReservation(const std::vector<UTXO> &utxos, const std::string &reserveId);
    

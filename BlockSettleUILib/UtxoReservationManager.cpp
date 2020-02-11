@@ -128,13 +128,23 @@ FixedXbtInputs UTXOReservantionManager::reserveBestUtxoSet(const std::string& wa
 uint64_t bs::UTXOReservantionManager::getAvailableUtxoSum(const std::string& walletId) const
 {
    uint64_t sum = 0;
-   auto const& availableUtxos = availableUTXOs_.find(walletId);
+   auto const availableUtxos = availableUTXOs_.find(walletId);
    if (availableUtxos != availableUTXOs_.end()) {
       for (int i = 0; i < availableUtxos->second.size(); ++i) {
          sum += availableUtxos->second[i].getValue();
       }
    }
    return sum;
+}
+
+std::vector<UTXO> bs::UTXOReservantionManager::getAvailableUTXOs(const std::string& walletId) const
+{
+   std::vector<UTXO> UTXOs;
+   auto const availableUtxos = availableUTXOs_.find(walletId);
+   if (availableUtxos != availableUTXOs_.end()) {
+      UTXOs = availableUtxos->second;
+   }
+   return UTXOs;
 }
 
 bs::UtxoReservationToken UTXOReservantionManager::makeNewReservation(const std::vector<UTXO> &utxos, const std::string &reserveId)

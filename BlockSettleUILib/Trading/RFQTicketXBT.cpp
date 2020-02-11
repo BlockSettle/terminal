@@ -331,55 +331,42 @@ void RFQTicketXBT::showCoinControl()
       return;
    }
    auto walletId = xbtWallet->walletId();
-
-   const auto &leaves = xbtWallet->getGroup(xbtWallet->getXBTGroupType())->getLeaves();
-   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
    ui_->toolButtonXBTInputsSend->setEnabled(false);
 
    // Need to release current reservation to be able select them back
    fixedXbtInputs_.utxoRes.release();
 
-   bs::tradeutils::getSpendableTxOutList(wallets, [this, walletId](const std::map<UTXO, std::string> &utxos) {
-      std::vector<UTXO> allUTXOs;
-      allUTXOs.reserve(utxos.size());
-      for (const auto &utxo : utxos) {
-         allUTXOs.push_back(utxo.first);
-      }
+   auto utxos = utxoReservationManager_->getAvailableUTXOs(walletId);
 
-      QMetaObject::invokeMethod(this, [this, utxos, walletId, allUTXOs = std::move(allUTXOs)] {
-         ui_->toolButtonXBTInputsSend->setEnabled(true);
+   ui_->toolButtonXBTInputsSend->setEnabled(true);
+   const bool useAutoSel = fixedXbtInputs_.inputs.empty();
 
-         const bool useAutoSel = fixedXbtInputs_.inputs.empty();
+   auto inputs = std::make_shared<SelectedTransactionInputs>(utxos);
+   // Set this to false is needed otherwise current selection would be cleared
+   inputs->SetUseAutoSel(useAutoSel);
+   for (const auto &utxo : fixedXbtInputs_.inputs) {
+      inputs->SetUTXOSelection(utxo.first.getTxHash(), utxo.first.getTxOutIndex());
+   }
 
-         auto inputs = std::make_shared<SelectedTransactionInputs>(allUTXOs);
-         // Set this to false is needed otherwise current selection would be cleared
-         inputs->SetUseAutoSel(useAutoSel);
-         for (const auto &utxo : fixedXbtInputs_.inputs) {
-            inputs->SetUTXOSelection(utxo.first.getTxHash(), utxo.first.getTxOutIndex());
-         }
+   CoinControlDialog dialog(inputs, true, this);
+   int rc = dialog.exec();
+   if (rc != QDialog::Accepted) {
+      return;
+   }
 
-         CoinControlDialog dialog(inputs, true, this);
-         int rc = dialog.exec();
-         if (rc != QDialog::Accepted) {
-            return;
-         }
+   fixedXbtInputs_.inputs.clear();
+   auto selectedInputs = dialog.selectedInputs();
+   for (const auto &selectedInput : selectedInputs) {
+      fixedXbtInputs_.inputs.emplace(selectedInput, walletId);
+   }
 
-         fixedXbtInputs_.inputs.clear();
-         auto selectedInputs = dialog.selectedInputs();
-         for (const auto &selectedInput : selectedInputs) {
-            const auto &walletId = utxos.at(selectedInput);
-            fixedXbtInputs_.inputs.emplace(selectedInput, walletId);
-         }
+   if (!selectedInputs.empty()) {
+      auto reserveId = fmt::format("rfq_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
+      fixedXbtInputs_.utxoRes = utxoReservationManager_->makeNewReservation(selectedInputs, reserveId);
+   }
 
-         if (!selectedInputs.empty()) {
-            auto reserveId = fmt::format("rfq_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
-            fixedXbtInputs_.utxoRes = utxoReservationManager_->makeNewReservation(selectedInputs, reserveId);
-         }
-
-         updateBalances();
-         updateSubmitButton();
-      });
-   });
+   updateBalances();
+   updateSubmitButton();
 }
 
 void RFQTicketXBT::walletSelectedRecv(int index)
@@ -970,37 +957,32 @@ void RFQTicketXBT::onMaxClicked()
             return;
          }
 
-         auto cb = [this](const std::map<UTXO, std::string> &inputs) {
-            QMetaObject::invokeMethod(this, [this, inputs] {
-               std::vector<UTXO> utxos;
-               utxos.reserve(inputs.size());
-               for (const auto &input : inputs) {
-                  utxos.emplace_back(std::move(input.first));
-               }
-               auto feeCb = [this, utxos = std::move(utxos)](float fee) {
-                  QMetaObject::invokeMethod(this, [this, fee, utxos = std::move(utxos)] {
-                     float feePerByte = ArmoryConnection::toFeePerByte(fee);
-                     uint64_t total = 0;
-                     for (const auto &utxo : utxos) {
-                        total += utxo.getValue();
-                     }
-                     const uint64_t fee = bs::tradeutils::estimatePayinFeeWithoutChange(utxos, feePerByte);
-                     const double spendableQuantity = std::max(0.0, (total - fee) / BTCNumericTypes::BalanceDivider);
-                     ui_->lineEditAmount->setText(UiUtils::displayAmount(spendableQuantity));
-                     updateSubmitButton();
-                  });
-               };
-               armory_->estimateFee(bs::tradeutils::feeTargetBlockCount(), feeCb);
-            });
-         };
-
+         std::vector<UTXO> utxos;
          if (!fixedXbtInputs_.inputs.empty()) {
-            cb(fixedXbtInputs_.inputs);
-         } else {
-            auto leaves = xbtWallet->getGroup(xbtWallet->getXBTGroupType())->getLeaves();
-            auto xbtWallets = std::vector<std::shared_ptr<bs::sync::Wallet>>(leaves.begin(), leaves.end());
-            bs::tradeutils::getSpendableTxOutList(xbtWallets, cb);
+            utxos.reserve(fixedXbtInputs_.inputs.size());
+            for (const auto &utxoPair : fixedXbtInputs_.inputs) {
+               utxos.push_back(utxoPair.first);
+            }
          }
+         else {
+            utxos = utxoReservationManager_->getAvailableUTXOs(xbtWallet->walletId());
+         }
+
+         auto feeCb = [this, utxos = std::move(utxos)](float fee) {
+            QMetaObject::invokeMethod(this, [this, fee, utxos = std::move(utxos)]{
+               float feePerByte = ArmoryConnection::toFeePerByte(fee);
+               uint64_t total = 0;
+               for (const auto &utxo : utxos) {
+                  total += utxo.getValue();
+               }
+               const uint64_t fee = bs::tradeutils::estimatePayinFeeWithoutChange(utxos, feePerByte);
+               const double spendableQuantity = std::max(0.0, (total - fee) / BTCNumericTypes::BalanceDivider);
+               ui_->lineEditAmount->setText(UiUtils::displayAmount(spendableQuantity));
+               updateSubmitButton();
+               });
+         };
+         armory_->estimateFee(bs::tradeutils::feeTargetBlockCount(), feeCb);
+
          return;
       }
       case ProductGroupType::CCGroupType: {

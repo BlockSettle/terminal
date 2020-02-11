@@ -20,6 +20,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ui_OTCNegotiationRequestWidget.h"
+#include "UtxoReservationManager.h"
 
 #include <QComboBox>
 #include <QPushButton>
@@ -281,47 +282,25 @@ void OTCNegotiationRequestWidget::onMaxQuantityClicked()
       return;
    }
 
-   auto cb = [this, parentWidget = QPointer<OTCWindowsAdapterBase>(this)]
-      (const std::map<UTXO, std::string> &inputs)
-   {
-      QMetaObject::invokeMethod(qApp, [this, inputs, parentWidget] {
+   std::vector<UTXO> utxos = selectedUTXOs();
+   if (utxos.empty()) {
+      utxos = getUtxoManager()->getAvailableUTXOs(hdWallet->walletId());
+   }
+
+   auto feeCb = [this, parentWidget = QPointer<OTCWindowsAdapterBase>(this), utxos = std::move(utxos)](float fee) {
+      QMetaObject::invokeMethod(qApp, [this, parentWidget, fee, utxos = std::move(utxos)]{
          if (!parentWidget) {
             return;
          }
-         std::vector<UTXO> utxos;
-         utxos.reserve(inputs.size());
-         for (const auto &input : inputs) {
-            utxos.emplace_back(std::move(input.first));
+         float feePerByte = ArmoryConnection::toFeePerByte(fee);
+         uint64_t total = 0;
+         for (const auto &utxo : utxos) {
+            total += utxo.getValue();
          }
-         auto feeCb = [this, parentWidget, utxos = std::move(utxos)](float fee) {
-            QMetaObject::invokeMethod(qApp, [this, parentWidget, fee, utxos = std::move(utxos)] {
-               if (!parentWidget) {
-                  return;
-               }
-               float feePerByte = ArmoryConnection::toFeePerByte(fee);
-               uint64_t total = 0;
-               for (const auto &utxo : utxos) {
-                  total += utxo.getValue();
-               }
-               const uint64_t fee = bs::tradeutils::estimatePayinFeeWithoutChange(utxos, feePerByte);
-               const double spendableQuantity = std::max(0.0, (total - fee) / BTCNumericTypes::BalanceDivider);
-               ui_->quantitySpinBox->setValue(spendableQuantity);
-            });
-         };
-         otcManager_->getArmory()->estimateFee(bs::tradeutils::feeTargetBlockCount(), feeCb);
-      });
+         const uint64_t fee = bs::tradeutils::estimatePayinFeeWithoutChange(utxos, feePerByte);
+         const double spendableQuantity = std::max(0.0, (total - fee) / BTCNumericTypes::BalanceDivider);
+         ui_->quantitySpinBox->setValue(spendableQuantity);
+         });
    };
-
-   if (!selectedUTXOs().empty()) {
-      std::map<UTXO, std::string> inputs;
-      for (const auto &utxo : selectedUTXOs()) {
-         inputs[utxo] = {};
-      }
-      cb(inputs);
-      return;
-   }
-
-   const auto &leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
-   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
-   bs::tradeutils::getSpendableTxOutList(wallets, cb);
+   otcManager_->getArmory()->estimateFee(bs::tradeutils::feeTargetBlockCount(), feeCb);
 }

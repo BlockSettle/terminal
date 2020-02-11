@@ -837,47 +837,38 @@ void RFQDealerReply::showCoinControl()
 
    // Need to release current reservation to be able select them back
    selectedXbtRes_.release();
+   auto allUTXOs = utxoReservationManager_->getAvailableUTXOs(xbtWallet->walletId());
 
-   bs::tradeutils::getSpendableTxOutList(wallets, [this](const std::map<UTXO, std::string> &utxos) {
-      std::vector<UTXO> allUTXOs;
-      allUTXOs.reserve(utxos.size());
-      for (const auto &utxo : utxos) {
-         allUTXOs.push_back(utxo.first);
-      }
+   ui_->toolButtonXBTInputsSend->setEnabled(true);
 
-      QMetaObject::invokeMethod(this, [this, allUTXOs = std::move(allUTXOs)] {
-         ui_->toolButtonXBTInputsSend->setEnabled(true);
+   const bool useAutoSel = selectedXbtInputs_.empty();
 
-         const bool useAutoSel = selectedXbtInputs_.empty();
+   auto inputs = std::make_shared<SelectedTransactionInputs>(allUTXOs);
 
-         auto inputs = std::make_shared<SelectedTransactionInputs>(allUTXOs);
+   // Set this to false is needed otherwise current selection would be cleared
+   inputs->SetUseAutoSel(useAutoSel);
+   for (const auto &utxo : selectedXbtInputs_) {
+      inputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
+   }
 
-         // Set this to false is needed otherwise current selection would be cleared
-         inputs->SetUseAutoSel(useAutoSel);
-         for (const auto &utxo : selectedXbtInputs_) {
-            inputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
-         }
+   CoinControlDialog dialog(inputs, true, this);
+   int rc = dialog.exec();
+   if (rc != QDialog::Accepted) {
+      return;
+   }
 
-         CoinControlDialog dialog(inputs, true, this);
-         int rc = dialog.exec();
-         if (rc != QDialog::Accepted) {
-            return;
-         }
+   selectedXbtInputs_.clear();
+   auto selectedInputs = dialog.selectedInputs();
+   for (const auto &selectedInput : selectedInputs) {
+      selectedXbtInputs_.push_back(selectedInput);
+   }
 
-         selectedXbtInputs_.clear();
-         auto selectedInputs = dialog.selectedInputs();
-         for (const auto &selectedInput : selectedInputs) {
-            selectedXbtInputs_.push_back(selectedInput);
-         }
+   if (!selectedXbtInputs_.empty()) {
+      auto reserveId = fmt::format("reply_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
+      selectedXbtRes_ = utxoReservationManager_->makeNewReservation(selectedInputs, reserveId);
+   }
 
-         if (!selectedXbtInputs_.empty()) {
-            auto reserveId = fmt::format("reply_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
-            selectedXbtRes_ = utxoReservationManager_->makeNewReservation(selectedInputs, reserveId);
-         }
-
-         updateSubmitButton();
-      });
-   });
+   updateSubmitButton();
 }
 
 void RFQDealerReply::validateGUI()
