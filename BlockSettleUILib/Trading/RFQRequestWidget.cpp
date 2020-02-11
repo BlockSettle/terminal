@@ -26,6 +26,7 @@
 #include "RfqStorage.h"
 #include "SignContainer.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "UtxoReservationManager.h"
 
 #include "bs_proxy_terminal_pb.pb.h"
 
@@ -175,6 +176,7 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<ConnectionManager> &connectionManager
+   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
    , OrderListModel *orderListModel
 )
 {
@@ -188,7 +190,8 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    armory_ = armory;
    connectionManager_ = connectionManager;
 
-   ui_->pageRFQTicket->init(logger, authAddressManager, assetManager, quoteProvider, container, armory);
+   ui_->pageRFQTicket->init(logger, authAddressManager, assetManager,
+      quoteProvider, container, armory, utxoReservationManager);
 
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewOrders->setModel(orderListModel);

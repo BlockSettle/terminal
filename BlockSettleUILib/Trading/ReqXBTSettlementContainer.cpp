@@ -326,7 +326,7 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
          // Make new reservation only for automatic inputs.
          // Manual inputs should be already reserved.
          if (utxosPayinFixed_.empty()) {
-            utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, unsignedPayinRequest_.inputs, id());
+            utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, nullptr, unsignedPayinRequest_.inputs, id());
          }
 
          emit sendUnsignedPayinToPB(settlementIdHex_, bs::network::UnsignedPayinData{ unsignedPayinRequest_.serializeState(), std::move(result.preimageData)} );

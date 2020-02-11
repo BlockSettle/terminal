@@ -280,7 +280,7 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
          unsignedPayinRequest_ = std::move(result.signRequest);
          // Reserve only automatic UTXO selection
          if (utxosPayinFixed_.empty()) {
-            utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, unsignedPayinRequest_.inputs, id());
+            utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, nullptr, unsignedPayinRequest_.inputs, id());
          }
 
          emit sendUnsignedPayinToPB(settlementIdHex_

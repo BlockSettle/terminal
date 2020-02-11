@@ -696,7 +696,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                            const auto txReq = walletsManager_->createPartialTXRequest(spendVal, inputs, changeAddress, feePerByte
                               , { recipient }, outSortOrder, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false);
                            replyData->qn.transactionData = txReq.serializeState().toHexStr();
-                           replyData->utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, txReq.inputs, replyData->qn.quoteRequestId);
+                           replyData->utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, nullptr, txReq.inputs, replyData->qn.quoteRequestId);
                            submit();
                         } catch (const std::exception &e) {
                            SPDLOG_LOGGER_ERROR(logger_, "error creating own unsigned half: {}", e.what());
@@ -866,7 +866,7 @@ void RFQDealerReply::showCoinControl()
 
          if (!selectedXbtInputs_.empty()) {
             auto reserveId = fmt::format("reply_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
-            selectedXbtRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, selectedInputs, reserveId);
+            selectedXbtRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, nullptr, selectedInputs, reserveId);
          }
 
          updateSubmitButton();

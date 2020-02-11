@@ -245,7 +245,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                   ccTxData_.populateUTXOs = true;
 
                   logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
-                  utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, ccTxData_.inputs, id());
+                  utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, nullptr, ccTxData_.inputs, id());
 
                   AcceptQuote();
                }

@@ -30,6 +30,7 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
+   class UTXOReservantionManager;
 }
 
 namespace Blocksettle {
@@ -73,6 +74,7 @@ public:
          , const std::shared_ptr<SignContainer> &
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<ConnectionManager> &connectionManager
+         , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
          , OrderListModel *orderListModel);
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);

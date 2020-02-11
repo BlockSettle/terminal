@@ -14,6 +14,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <QObject>
 
 namespace spdlog {
    class logger;
@@ -23,6 +24,7 @@ struct UTXO;
 
 namespace bs {
 
+   class UTXOReservantionManager;
    class UtxoReservationToken
    {
    public:
@@ -44,7 +46,7 @@ namespace bs {
       // Make new reservation (uses global UtxoReservationToken instance).
       // reserveId and walletId must be non-empty
       // logger could be nullptr
-      static UtxoReservationToken makeNewReservation(const std::shared_ptr<spdlog::logger> &logger
+      static UtxoReservationToken makeNewReservation(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<UTXOReservantionManager> &utxoReservantionManager
          , const std::vector<UTXO> &utxos, const std::string &reserveId);
 
       const std::string &reserveId() const { return reserveId_; }
@@ -56,6 +58,7 @@ namespace bs {
    private:
       // could be nullptr
       std::shared_ptr<spdlog::logger> logger_;
+      std::shared_ptr<UTXOReservantionManager> utxoReservantionManager_;
       std::string reserveId_;
 
    };
