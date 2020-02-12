@@ -36,6 +36,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
+#include "UtxoReservationManager.h"
 
 #include <cstdlib>
 
@@ -120,7 +121,7 @@ bs::FixedXbtInputs RFQTicketXBT::fixedXbtInputs()
 void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AuthAddressManager> &authAddressManager
    , const std::shared_ptr<AssetManager>& assetManager, const std::shared_ptr<QuoteProvider> &quoteProvider
    , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager)
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager)
 {
    logger_ = logger;
    authAddressManager_ = authAddressManager;
@@ -132,7 +133,7 @@ void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger, const std
    if (signingContainer_) {
       connect(signingContainer_.get(), &SignContainer::ready, this, &RFQTicketXBT::onSignerReady);
    }
-   connect(utxoReservationManager_.get(), &bs::UTXOReservantionManager::availableUtxoChanged,
+   connect(utxoReservationManager_.get(), &bs::UTXOReservationManager::availableUtxoChanged,
       this, &RFQTicketXBT::onUTXOReservationChanged);
 
    updateSubmitButton();

@@ -27,27 +27,19 @@ namespace bs {
 
 namespace bs {
 
-   struct FixedXbtInputs
-   {
-      // Need to use UTXO/walletId map for CC
-      std::map<UTXO, std::string> inputs;
-      bs::UtxoReservationToken utxoRes;
-   };
-
-   class UTXOReservantionManager : public QObject
+   class UTXOReservationManager : public QObject
    {
       Q_OBJECT
-      friend class UtxoReservationToken;
    public:
-      UTXOReservantionManager(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager_,
+      UTXOReservationManager(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager_,
          const std::shared_ptr<spdlog::logger>& logger_, QObject* parent = nullptr);
-      ~UTXOReservantionManager() override = default;
+      ~UTXOReservationManager() override;
 
-      UTXOReservantionManager(const UTXOReservantionManager &) = delete;
-      UTXOReservantionManager &operator=(const UTXOReservantionManager &) = delete;
+      UTXOReservationManager(const UTXOReservationManager &) = delete;
+      UTXOReservationManager &operator=(const UTXOReservationManager &) = delete;
 
-      UTXOReservantionManager(UTXOReservantionManager &&) = delete;
-      UTXOReservantionManager &operator=(UTXOReservantionManager &&) = delete;
+      UTXOReservationManager(UTXOReservationManager &&) = delete;
+      UTXOReservationManager &operator=(UTXOReservationManager &&) = delete;
 
       FixedXbtInputs reserveBestUtxoSet(const std::string& walletId,
          const std::shared_ptr<bs::network::RFQ>& rfq, BTCNumericTypes::balance_type offer);
@@ -59,6 +51,7 @@ namespace bs {
    
    signals:
       void availableUtxoChanged(const std::string& walledId);
+      //void reserveBestUtxoSet();
 
    private slots:
       void refreshAvailableUTXO();

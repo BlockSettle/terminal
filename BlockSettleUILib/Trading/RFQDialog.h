@@ -34,7 +34,7 @@ namespace bs {
       class WalletsManager;
    }
    class SettlementContainer;
-   class UTXOReservantionManager;
+   class UTXOReservationManager;
 }
 class ApplicationSettings;
 class ArmoryConnection;
@@ -71,7 +71,7 @@ public:
       , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
       , const bs::Address &recvXbtAddrIfSet
       , const bs::Address &authAddr
-      , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
+      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
       , const std::map<UTXO, std::string> &fixedXbtInputs
       , bs::UtxoReservationToken fixedXbtUtxoRes
       , bs::UtxoReservationToken ccUtxoRes
@@ -125,7 +125,7 @@ private:
    std::shared_ptr<ConnectionManager>           connectionManager_;
    std::shared_ptr<RfqStorage>                  rfqStorage_;
    std::shared_ptr<bs::sync::hd::Wallet>        xbtWallet_;
-   std::shared_ptr<bs::UTXOReservantionManager> utxoReservationManager_;
+   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
 
    std::shared_ptr<bs::SettlementContainer>     curContainer_;
    std::shared_ptr<ReqCCSettlementContainer>    ccSettlContainer_;

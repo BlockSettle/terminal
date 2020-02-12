@@ -34,7 +34,7 @@ namespace Ui {
 }
 namespace bs {
    class LogManager;
-   class UTXOReservantionManager;
+   class UTXOReservationManager;
    namespace sync {
       class Wallet;
       class WalletsManager;
@@ -187,7 +187,7 @@ private:
    std::shared_ptr<OrderListModel>           orderListModel_;
 
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
-   std::shared_ptr<bs::UTXOReservantionManager> utxoReservationMgr_{};
+   std::shared_ptr<bs::UTXOReservationManager> utxoReservationMgr_{};
 
    QString currentUserLogin_;
 

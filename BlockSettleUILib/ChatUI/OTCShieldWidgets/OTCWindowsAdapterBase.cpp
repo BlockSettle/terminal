@@ -71,7 +71,7 @@ std::shared_ptr<AssetManager> OTCWindowsAdapterBase::getAssetManager() const
    return otcManager_->getAssetManager();
 }
 
-std::shared_ptr<bs::UTXOReservantionManager> OTCWindowsAdapterBase::getUtxoManager() const
+std::shared_ptr<bs::UTXOReservationManager> OTCWindowsAdapterBase::getUtxoManager() const
 {
    return otcManager_->getUtxoManager();
 }

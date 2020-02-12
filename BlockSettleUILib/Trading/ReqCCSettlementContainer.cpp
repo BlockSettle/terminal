@@ -33,7 +33,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , const bs::network::Quote &quote
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::map<UTXO, std::string> &manualXbtInputs
-   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , bs::UtxoReservationToken utxoRes)
    : bs::SettlementContainer(std::move(utxoRes))
    , logger_(logger)

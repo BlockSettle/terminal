@@ -209,7 +209,7 @@ OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<SignContainer> &signContainer
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
-   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , OtcClientParams params
    , QObject *parent)
    : QObject (parent)

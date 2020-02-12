@@ -135,7 +135,7 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider
-   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , OrderListModel *orderListModel
 )
 {
@@ -150,7 +150,7 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    appSettings_ = appSettings;
    connectionManager_ = connectionManager;
    autoSignQuoteProvider_ = autoSignQuoteProvider;
-   utxoReservantionManager_ = utxoReservationManager;
+   utxoReservationManager_ = utxoReservationManager;
 
    statsCollector_ = std::make_shared<bs::SecurityStatsCollector>(appSettings, ApplicationSettings::Filter_MD_QN_cnt);
 
@@ -312,7 +312,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             const auto recvXbtAddr = bs::Address();
             const auto settlContainer = std::make_shared<DealerXBTSettlementContainer>(logger_, order
                , walletsManager_, reply.xbtWallet, quoteProvider_, signingContainer_, armory_, authAddressManager_
-               , reply.authAddr, reply.utxosPayinFixed, recvXbtAddr, utxoReservantionManager_, std::move(reply.utxoRes));
+               , reply.authAddr, reply.utxosPayinFixed, recvXbtAddr, utxoReservationManager_, std::move(reply.utxoRes));
 
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendUnsignedPayinToPB, this, &RFQReplyWidget::sendUnsignedPayinToPB);
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayinToPB, this, &RFQReplyWidget::sendSignedPayinToPB);

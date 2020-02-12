@@ -63,6 +63,13 @@ namespace bs {
 
    };
 
+   struct FixedXbtInputs
+   {
+      // Need to use UTXO/walletId map for CC
+      std::map<UTXO, std::string> inputs;
+      UtxoReservationToken utxoRes;
+   };
+
 }  // namespace bs
 
 #endif // UTXO_RESERVATION_TOKEN_H

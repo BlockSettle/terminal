@@ -40,7 +40,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const bs::Address &authAddr
    , const std::vector<UTXO> &utxosPayinFixed
    , const bs::Address &recvAddr
-   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , bs::UtxoReservationToken utxoRes)
    : bs::SettlementContainer(std::move(utxoRes))
    , order_(order)

@@ -92,7 +92,7 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider
-   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager)
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager)
 {
    logger_ = logger;
    assetManager_ = assetManager;
@@ -110,7 +110,7 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
 
    connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::autoSignStateChanged,
       this, &RFQDealerReply::onAutoSignStateChanged, Qt::QueuedConnection);
-   connect(utxoReservationManager_.get(), &bs::UTXOReservantionManager::availableUtxoChanged,
+   connect(utxoReservationManager_.get(), &bs::UTXOReservationManager::availableUtxoChanged,
       this, &RFQDealerReply::onUTXOReservationChanged);
 }
 

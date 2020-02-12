@@ -941,7 +941,7 @@ void BSTerminalMainWindow::initCcClient()
 
 void BSTerminalMainWindow::initUtxoReservationManager()
 {
-   utxoReservationMgr_ = std::make_shared<bs::UTXOReservantionManager>(
+   utxoReservationMgr_ = std::make_shared<bs::UTXOReservationManager>(
       walletsMgr_, logMgr_->logger());
 }
 

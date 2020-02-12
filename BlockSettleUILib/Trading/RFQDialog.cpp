@@ -39,7 +39,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const bs::Address &recvXbtAddrIfSet
    , const bs::Address &authAddr
-   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , const std::map<UTXO, std::string> &fixedXbtInputs
    , bs::UtxoReservationToken fixedXbtUtxoRes
    , bs::UtxoReservationToken ccUtxoRes

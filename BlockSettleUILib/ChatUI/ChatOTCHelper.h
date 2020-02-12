@@ -35,7 +35,7 @@ namespace bs {
          struct QuoteResponse;
       }
    }
-   class UTXOReservantionManager;
+   class UTXOReservationManager;
 }
 
 namespace Blocksettle {
@@ -63,7 +63,7 @@ public:
       , const std::shared_ptr<ArmoryConnection>& armory
       , const std::shared_ptr<SignContainer>& signContainer
       , const std::shared_ptr<AuthAddressManager> &authAddressManager
-      , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager);
+      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager);
 
    OtcClient* client() const;
 
