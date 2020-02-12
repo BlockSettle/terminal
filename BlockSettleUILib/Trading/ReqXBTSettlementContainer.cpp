@@ -24,6 +24,7 @@
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "UtxoReservationManager.h"
 
 #include <sstream>
 
@@ -42,6 +43,7 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , const bs::Address &authAddr
    , const std::map<UTXO, std::string> &utxosPayinFixed
    , bs::UtxoReservationToken utxoRes
+   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
    , const bs::Address &recvAddrIfSet)
    : bs::SettlementContainer(std::move(utxoRes))
    , logger_(logger)
@@ -56,6 +58,7 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , weSellXbt_(!rfq.isXbtBuy())
    , authAddr_(authAddr)
    , utxosPayinFixed_(utxosPayinFixed)
+   , utxoReservationManager_(utxoReservationManager)
 {
    assert(authAddr.isValid());
 
@@ -326,7 +329,7 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
          // Make new reservation only for automatic inputs.
          // Manual inputs should be already reserved.
          if (utxosPayinFixed_.empty()) {
-            utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, unsignedPayinRequest_.inputs, id());
+            utxoRes_ = utxoReservationManager_->makeNewReservation(unsignedPayinRequest_.inputs, id());
          }
 
          emit sendUnsignedPayinToPB(settlementIdHex_, bs::network::UnsignedPayinData{ unsignedPayinRequest_.serializeState(), std::move(result.preimageData)} );

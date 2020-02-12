@@ -22,6 +22,7 @@
 #include "RfqStorage.h"
 #include "SignContainer.h"
 #include "UiUtils.h"
+#include "UtxoReservationManager.h"
 
 RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const bs::network::RFQ& rfq
@@ -38,6 +39,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const bs::Address &recvXbtAddrIfSet
    , const bs::Address &authAddr
+   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
    , const std::map<UTXO, std::string> &fixedXbtInputs
    , bs::UtxoReservationToken fixedXbtUtxoRes
    , bs::UtxoReservationToken ccUtxoRes
@@ -62,6 +64,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , fixedXbtInputs_(fixedXbtInputs)
    , fixedXbtUtxoRes_(std::move(fixedXbtUtxoRes))
    , requestWidget_(parent)
+   , utxoReservationManager_(utxoReservationManager)
    , ccUtxoRes_(std::move(ccUtxoRes))
 {
    ui_->setupUi(this);
@@ -166,7 +169,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
    try {
       xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
          , authAddressManager_, signContainer_, armory_, xbtWallet_, walletsManager_
-         , rfq_, quote_, authAddr_, fixedXbtInputs_, std::move(fixedXbtUtxoRes_), recvXbtAddrIfSet_);
+         , rfq_, quote_, authAddr_, fixedXbtInputs_, std::move(fixedXbtUtxoRes_), utxoReservationManager_, recvXbtAddrIfSet_);
 
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
          , this, &RFQDialog::onXBTSettlementAccepted);
@@ -204,7 +207,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
 {
    try {
       ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
-         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_, fixedXbtInputs_, std::move(ccUtxoRes_));
+         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_, fixedXbtInputs_, utxoReservationManager_, std::move(ccUtxoRes_));
 
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::txSigned
          , this, &RFQDialog::onCCTxSigned);

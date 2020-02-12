@@ -39,6 +39,7 @@
 #include "UserScriptRunner.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "UtxoReservationManager.h"
 
 namespace {
    const QString kNoBalanceAvailable = QLatin1String("-");
@@ -90,7 +91,8 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider)
+   , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider
+   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager)
 {
    logger_ = logger;
    assetManager_ = assetManager;
@@ -101,11 +103,15 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    armory_ = armory;
    connectionManager_ = connectionManager;
    autoSignQuoteProvider_ = autoSignQuoteProvider;
+   utxoReservationManager_ = utxoReservationManager;
 
    connect(autoSignQuoteProvider_->autoQuoter(), &UserScriptRunner::sendQuote, this, &RFQDealerReply::onAQReply, Qt::QueuedConnection);
    connect(autoSignQuoteProvider_->autoQuoter(), &UserScriptRunner::pullQuoteNotif, this, &RFQDealerReply::pullQuoteNotif, Qt::QueuedConnection);
 
-   connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::autoSignStateChanged, this, &RFQDealerReply::onAutoSignStateChanged, Qt::QueuedConnection);
+   connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::autoSignStateChanged,
+      this, &RFQDealerReply::onAutoSignStateChanged, Qt::QueuedConnection);
+   connect(utxoReservationManager_.get(), &bs::UTXOReservantionManager::availableUtxoChanged,
+      this, &RFQDealerReply::onUTXOReservationChanged);
 }
 
 void RFQDealerReply::initUi()
@@ -696,7 +702,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                            const auto txReq = walletsManager_->createPartialTXRequest(spendVal, inputs, changeAddress, feePerByte
                               , { recipient }, outSortOrder, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false);
                            replyData->qn.transactionData = txReq.serializeState().toHexStr();
-                           replyData->utxoRes = bs::UtxoReservationToken::makeNewReservation(logger_, txReq.inputs, replyData->qn.quoteRequestId);
+                           replyData->utxoRes = utxoReservationManager_->makeNewReservation(txReq.inputs, replyData->qn.quoteRequestId);
                            submit();
                         } catch (const std::exception &e) {
                            SPDLOG_LOGGER_ERROR(logger_, "error creating own unsigned half: {}", e.what());
@@ -831,47 +837,38 @@ void RFQDealerReply::showCoinControl()
 
    // Need to release current reservation to be able select them back
    selectedXbtRes_.release();
+   auto allUTXOs = utxoReservationManager_->getAvailableUTXOs(xbtWallet->walletId());
 
-   bs::tradeutils::getSpendableTxOutList(wallets, [this](const std::map<UTXO, std::string> &utxos) {
-      std::vector<UTXO> allUTXOs;
-      allUTXOs.reserve(utxos.size());
-      for (const auto &utxo : utxos) {
-         allUTXOs.push_back(utxo.first);
-      }
+   ui_->toolButtonXBTInputsSend->setEnabled(true);
 
-      QMetaObject::invokeMethod(this, [this, allUTXOs = std::move(allUTXOs)] {
-         ui_->toolButtonXBTInputsSend->setEnabled(true);
+   const bool useAutoSel = selectedXbtInputs_.empty();
 
-         const bool useAutoSel = selectedXbtInputs_.empty();
+   auto inputs = std::make_shared<SelectedTransactionInputs>(allUTXOs);
 
-         auto inputs = std::make_shared<SelectedTransactionInputs>(allUTXOs);
+   // Set this to false is needed otherwise current selection would be cleared
+   inputs->SetUseAutoSel(useAutoSel);
+   for (const auto &utxo : selectedXbtInputs_) {
+      inputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
+   }
 
-         // Set this to false is needed otherwise current selection would be cleared
-         inputs->SetUseAutoSel(useAutoSel);
-         for (const auto &utxo : selectedXbtInputs_) {
-            inputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
-         }
+   CoinControlDialog dialog(inputs, true, this);
+   int rc = dialog.exec();
+   if (rc != QDialog::Accepted) {
+      return;
+   }
 
-         CoinControlDialog dialog(inputs, true, this);
-         int rc = dialog.exec();
-         if (rc != QDialog::Accepted) {
-            return;
-         }
+   selectedXbtInputs_.clear();
+   auto selectedInputs = dialog.selectedInputs();
+   for (const auto &selectedInput : selectedInputs) {
+      selectedXbtInputs_.push_back(selectedInput);
+   }
 
-         selectedXbtInputs_.clear();
-         auto selectedInputs = dialog.selectedInputs();
-         for (const auto &selectedInput : selectedInputs) {
-            selectedXbtInputs_.push_back(selectedInput);
-         }
+   if (!selectedXbtInputs_.empty()) {
+      auto reserveId = fmt::format("reply_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
+      selectedXbtRes_ = utxoReservationManager_->makeNewReservation(selectedInputs, reserveId);
+   }
 
-         if (!selectedXbtInputs_.empty()) {
-            auto reserveId = fmt::format("reply_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
-            selectedXbtRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, selectedInputs, reserveId);
-         }
-
-         updateSubmitButton();
-      });
-   });
+   updateSubmitButton();
 }
 
 void RFQDealerReply::validateGUI()
@@ -994,6 +991,14 @@ void RFQDealerReply::onAutoSignStateChanged()
    ui_->comboBoxXbtWallet->setEnabled(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::AutoSignDisabled);
 }
 
+void bs::ui::RFQDealerReply::onUTXOReservationChanged(const std::string& walletId)
+{
+   auto xbtWallet = getSelectedXbtWallet(ReplyType::Manual);
+   if (xbtWallet && walletId == xbtWallet->walletId()) {
+      updateBalanceLabel();
+   }
+}
+
 void bs::ui::RFQDealerReply::updateSpinboxes()
 {
    auto setSpinboxValue = [&](CustomDoubleSpinBox* spinBox, double value, double changeSign) {
@@ -1060,11 +1065,7 @@ bs::XBTAmount RFQDealerReply::getXbtBalance() const
       return {};
    }
 
-   double sum = 0;
-   for (const auto &leaf : xbtWallet->getGroup(bs::sync::hd::Wallet::getXBTGroupType())->getLeaves()) {
-      sum += leaf->getSpendableBalance();
-   }
-   return bs::XBTAmount(sum);
+   return bs::XBTAmount(utxoReservationManager_->getAvailableUtxoSum(xbtWallet->walletId()));
 }
 
 BTCNumericTypes::balance_type bs::ui::RFQDealerReply::getPrivateMarketCoinBalance() const

@@ -209,6 +209,7 @@ OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<SignContainer> &signContainer
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
+   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
    , OtcClientParams params
    , QObject *parent)
    : QObject (parent)
@@ -217,6 +218,7 @@ OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
    , armory_(armory)
    , signContainer_(signContainer)
    , authAddressManager_(authAddressManager)
+   , utxoReservationManager_(utxoReservationManager)
    , params_(std::move(params))
 {
    connect(signContainer.get(), &SignContainer::TXSigned, this, &OtcClient::onTxSigned);

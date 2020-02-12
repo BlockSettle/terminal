@@ -67,6 +67,7 @@
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "UtxoReservationManager.h"
 
 #include "ui_BSTerminalMainWindow.h"
 
@@ -135,6 +136,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    InitAssets();
    InitSigningContainer();
    InitAuthManager();
+   initUtxoReservationManager();
 
    statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
       , signContainer_, ui_->statusbar);
@@ -698,7 +700,7 @@ void BSTerminalMainWindow::tryInitChatView()
       const auto env = isProd ? bs::network::otc::Env::Prod : bs::network::otc::Env::Test;
 
       ui_->widgetChat->init(connectionManager_, env, chatClientServicePtr_,
-         logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_, mdProvider_, assetManager_);
+         logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_, mdProvider_, assetManager_, utxoReservationMgr_);
 
       connect(chatClientServicePtr_->getClientPartyModelPtr().get(), &Chat::ClientPartyModel::userPublicKeyChanged,
          this, [this](const Chat::UserPublicKeyInfoList& userPublicKeyInfoList) {
@@ -935,6 +937,12 @@ void BSTerminalMainWindow::initCcClient()
    if (isDefaultArmory) {
       trackerClient_ = std::make_shared<CcTrackerClient>(logMgr_->logger());
    }
+}
+
+void BSTerminalMainWindow::initUtxoReservationManager()
+{
+   utxoReservationMgr_ = std::make_shared<bs::UTXOReservantionManager>(
+      walletsMgr_, logMgr_->logger());
 }
 
 void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const std::string &hash, const std::string &err)
@@ -1817,9 +1825,9 @@ void BSTerminalMainWindow::InitWidgets()
    auto dialogManager = std::make_shared<DialogManager>(this);
 
    ui_->widgetRFQ->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, assetManager_
-      , dialogManager, signContainer_, armory_, connectionManager_, orderListModel_.get());
+      , dialogManager, signContainer_, armory_, connectionManager_, utxoReservationMgr_, orderListModel_.get());
    ui_->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
-      , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_, autoSignQuoteProvider_, orderListModel_.get());
+      , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_, autoSignQuoteProvider_, utxoReservationMgr_, orderListModel_.get());
 
    connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
    connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);

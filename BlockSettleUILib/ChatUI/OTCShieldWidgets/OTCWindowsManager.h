@@ -26,9 +26,7 @@ class AuthAddressManager;
 class MarketDataProvider;
 
 namespace bs {
-   namespace network {
-
-   }
+   class UTXOReservantionManager;
 }
 
 class OTCWindowsManager : public QObject {
@@ -41,11 +39,13 @@ public:
       , const std::shared_ptr<AuthAddressManager> &authManager
       , const std::shared_ptr<MarketDataProvider>& mdProvider
       , const std::shared_ptr<AssetManager>& assetManager
-      , const std::shared_ptr<ArmoryConnection>& armory);
+      , const std::shared_ptr<ArmoryConnection>& armory
+      , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager);
    std::shared_ptr<bs::sync::WalletsManager> getWalletManager() const;
    std::shared_ptr<AuthAddressManager> getAuthManager() const;
    std::shared_ptr<AssetManager> getAssetManager() const;
    std::shared_ptr<ArmoryConnection> getArmory() const;
+   std::shared_ptr<bs::UTXOReservantionManager> getUtxoManager() const;
 
 signals:
    void syncInterfaceRequired();
@@ -58,6 +58,7 @@ protected:
    std::shared_ptr<MarketDataProvider> mdProvider_;
    std::shared_ptr<AssetManager> assetManager_;
    std::shared_ptr<ArmoryConnection> armory_;
+   std::shared_ptr<bs::UTXOReservantionManager> utxoReservationManager_;
 };
 
 #endif // __OTCWINDOWSADAPTERBASE_H__

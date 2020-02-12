@@ -20,6 +20,7 @@
 #include "BSErrorCodeStrings.h"
 #include "UiUtils.h"
 #include "XBTAmount.h"
+#include "UtxoReservationManager.h"
 
 using namespace bs::sync;
 
@@ -32,6 +33,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , const bs::network::Quote &quote
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::map<UTXO, std::string> &manualXbtInputs
+   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
    , bs::UtxoReservationToken utxoRes)
    : bs::SettlementContainer(std::move(utxoRes))
    , logger_(logger)
@@ -46,6 +48,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , signer_(armory)
    , lotSize_(assetMgr_->getCCLotSize(product()))
    , manualXbtInputs_(manualXbtInputs)
+   , utxoReservationManager_(utxoReservationManager)
 {
    if (!xbtWallet_) {
       throw std::logic_error("invalid hd wallet");
@@ -245,7 +248,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                   ccTxData_.populateUTXOs = true;
 
                   logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
-                  utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, ccTxData_.inputs, id());
+                  utxoRes_ = utxoReservationManager_->makeNewReservation(ccTxData_.inputs, id());
 
                   AcceptQuote();
                }

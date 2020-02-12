@@ -69,6 +69,7 @@ namespace bs {
          class SettlementLeaf;
       }
    }
+   class UTXOReservantionManager;
 }
 
 class ArmoryConnection;
@@ -92,6 +93,7 @@ public:
       , const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<SignContainer> &signContainer
       , const std::shared_ptr<AuthAddressManager> &authAddressManager
+      , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
       , OtcClientParams params
       , QObject *parent = nullptr);
    ~OtcClient() override;
@@ -193,6 +195,7 @@ private:
    std::shared_ptr<ArmoryConnection> armory_;
    std::shared_ptr<SignContainer> signContainer_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;
+   std::shared_ptr<bs::UTXOReservantionManager> utxoReservationManager_;
 
    std::string ownContactId_;
 
