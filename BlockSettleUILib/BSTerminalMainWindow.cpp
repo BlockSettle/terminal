@@ -942,7 +942,7 @@ void BSTerminalMainWindow::initCcClient()
 void BSTerminalMainWindow::initUtxoReservationManager()
 {
    utxoReservationMgr_ = std::make_shared<bs::UTXOReservationManager>(
-      walletsMgr_, logMgr_->logger());
+      walletsMgr_, armory_, logMgr_->logger());
 }
 
 void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const std::string &hash, const std::string &err)

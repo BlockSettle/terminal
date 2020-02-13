@@ -203,7 +203,7 @@ private:
    QString getProductToSpend() const;
    QString getProductToRecv() const;
 
-   void reserveBestUtxoSet(const std::shared_ptr<bs::network::RFQ>& rfq);
+   void reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network::RFQ>& rfq);
 
 private:
    std::unique_ptr<Ui::RFQTicketXBT> ui_;

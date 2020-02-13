@@ -24,6 +24,7 @@ namespace bs {
       class WalletsManager;
    }
 }
+class ArmoryObject;
 
 namespace bs {
 
@@ -31,8 +32,8 @@ namespace bs {
    {
       Q_OBJECT
    public:
-      UTXOReservationManager(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager_,
-         const std::shared_ptr<spdlog::logger>& logger_, QObject* parent = nullptr);
+      UTXOReservationManager(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager, const std::shared_ptr<ArmoryObject>& armory,
+         const std::shared_ptr<spdlog::logger>& logger, QObject* parent = nullptr);
       ~UTXOReservationManager() override;
 
       UTXOReservationManager(const UTXOReservationManager &) = delete;
@@ -41,17 +42,18 @@ namespace bs {
       UTXOReservationManager(UTXOReservationManager &&) = delete;
       UTXOReservationManager &operator=(UTXOReservationManager &&) = delete;
 
-      FixedXbtInputs reserveBestUtxoSet(const std::string& walletId,
-         const std::shared_ptr<bs::network::RFQ>& rfq, BTCNumericTypes::balance_type offer);
+      void UTXOReservationManager::reserveBestUtxoSet(const std::string& walletId, BTCNumericTypes::balance_type quantity,
+         std::function<void(FixedXbtInputs&&)>&& cb);
       
       uint64_t getAvailableUtxoSum(const std::string& walletId) const;
       std::vector<UTXO> getAvailableUTXOs(const std::string& walletId) const;
 
       UtxoReservationToken makeNewReservation(const std::vector<UTXO> &utxos, const std::string &reserveId);
+      void getBestUtxoSet(const std::string& walletId, BTCNumericTypes::balance_type quantity,
+         std::function<void(std::vector<UTXO>&&)>&& cb);
    
    signals:
       void availableUtxoChanged(const std::string& walledId);
-      //void reserveBestUtxoSet();
 
    private slots:
       void refreshAvailableUTXO();
@@ -62,8 +64,9 @@ namespace bs {
    private:
       std::map<std::string, std::vector<UTXO>> availableUTXOs_;
 
-      std::shared_ptr<spdlog::logger> logger_;
       std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
+      std::shared_ptr<ArmoryObject> armory_;
+      std::shared_ptr<spdlog::logger> logger_;
    };
 
 }  // namespace bs
