@@ -42,7 +42,7 @@ namespace bs {
       UTXOReservationManager(UTXOReservationManager &&) = delete;
       UTXOReservationManager &operator=(UTXOReservationManager &&) = delete;
 
-      void UTXOReservationManager::reserveBestUtxoSet(const std::string& walletId, BTCNumericTypes::balance_type quantity,
+      void reserveBestUtxoSet(const std::string& walletId, BTCNumericTypes::balance_type quantity,
          std::function<void(FixedXbtInputs&&)>&& cb);
       
       uint64_t getAvailableUtxoSum(const std::string& walletId) const;
