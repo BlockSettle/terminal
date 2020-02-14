@@ -28,7 +28,7 @@ namespace bs {
    namespace tradeutils {
       struct Args;
    }
-   class UTXOReservantionManager;
+   class UTXOReservationManager;
 }
 class AddressVerificator;
 class ArmoryConnection;
@@ -52,7 +52,7 @@ public:
       , const bs::Address &authAddr
       , const std::map<UTXO, std::string> &utxosPayinFixed
       , bs::UtxoReservationToken utxoRes
-      , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
+      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
       , const bs::Address &recvAddrIfSet);
    ~ReqXBTSettlementContainer() override;
 
@@ -102,7 +102,7 @@ private:
    std::shared_ptr<SignContainer>            signContainer_;
    std::shared_ptr<ArmoryConnection>         armory_;
    std::shared_ptr<bs::sync::hd::Wallet>     xbtWallet_;
-   std::shared_ptr<bs::UTXOReservantionManager> utxoReservationManager_;
+   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
 
    bs::network::RFQ           rfq_;
    bs::network::Quote         quote_;

@@ -92,7 +92,7 @@ public:
       UnitTestWalletACT::waitOnRefresh(regIDs);
 
       OtcClientParams params;
-      otc_ = std::make_shared<OtcClient>(env.logger(), syncWalletMgr_, env.armoryConnection(), signer_, nullptr, params);
+      otc_ = std::make_shared<OtcClient>(env.logger(), syncWalletMgr_, env.armoryConnection(), signer_, nullptr, nullptr, params);
       otc_->setOwnContactId(name);
    }
 

@@ -23,7 +23,6 @@
 #include "CommonTypes.h"
 #include "UtxoReservationToken.h"
 #include "XBTAmount.h"
-#include "UtxoReservationManager.h"
 
 QT_BEGIN_NAMESPACE
 class QPushButton;
@@ -45,6 +44,7 @@ namespace bs {
       class Wallet;
       class WalletsManager;
    }
+   class UTXOReservationManager;
 }
 class ArmoryConnection;
 class AssetManager;
@@ -72,7 +72,7 @@ public:
       , const std::shared_ptr<QuoteProvider> &quoteProvider
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::UTXOReservantionManager> &);
+      , const std::shared_ptr<bs::UTXOReservationManager> &);
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
    void resetTicket();
@@ -203,7 +203,7 @@ private:
    QString getProductToSpend() const;
    QString getProductToRecv() const;
 
-   void reserveBestUtxoSet(const std::shared_ptr<bs::network::RFQ>& rfq);
+   void reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network::RFQ>& rfq);
 
 private:
    std::unique_ptr<Ui::RFQTicketXBT> ui_;
@@ -215,7 +215,7 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
-   std::shared_ptr<bs::UTXOReservantionManager> utxoReservationManager_;
+   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
 
    bs::Address authAddr_;
    std::string authKey_;

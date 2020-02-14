@@ -40,7 +40,7 @@ namespace bs {
       class Wallet;
       class WalletsManager;
    }
-   class UTXOReservantionManager;
+   class UTXOReservationManager;
 }
 class ApplicationSettings;
 class ArmoryConnection;
@@ -96,7 +96,7 @@ namespace bs {
             , const std::shared_ptr<SignContainer> &
             , const std::shared_ptr<ArmoryConnection> &
             , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider
-            , const std::shared_ptr<bs::UTXOReservantionManager>& utxoReservationManager);
+            , const std::shared_ptr<bs::UTXOReservationManager>& utxoReservationManager);
 
          void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
@@ -155,7 +155,7 @@ namespace bs {
          std::shared_ptr<SignContainer>         signingContainer_;
          std::shared_ptr<ArmoryConnection>      armory_;
          std::shared_ptr<AutoSignQuoteProvider> autoSignQuoteProvider_;
-         std::shared_ptr<bs::UTXOReservantionManager> utxoReservationManager_;
+         std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
          std::string authKey_;
          bs::Address authAddr_;
 

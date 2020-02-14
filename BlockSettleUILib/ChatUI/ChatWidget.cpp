@@ -101,7 +101,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    , const std::shared_ptr<SignContainer>& signContainer
    , const std::shared_ptr<MarketDataProvider>& mdProvider
    , const std::shared_ptr<AssetManager>& assetManager
-   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager)
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager)
 {
    loggerPtr_ = loggerPtr;
 

@@ -30,7 +30,7 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
-   class UTXOReservantionManager;
+   class UTXOReservationManager;
 }
 
 namespace Blocksettle {
@@ -74,7 +74,7 @@ public:
          , const std::shared_ptr<SignContainer> &
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<ConnectionManager> &connectionManager
-         , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager
+         , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
          , OrderListModel *orderListModel);
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
@@ -132,7 +132,7 @@ private:
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::shared_ptr<ConnectionManager>  connectionManager_;
-   std::shared_ptr<bs::UTXOReservantionManager> utxoReservationManager_;
+   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
 
    std::shared_ptr<RfqStorage> rfqStorage_;
 

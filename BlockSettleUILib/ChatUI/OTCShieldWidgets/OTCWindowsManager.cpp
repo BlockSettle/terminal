@@ -24,7 +24,7 @@ void OTCWindowsManager::init(const std::shared_ptr<bs::sync::WalletsManager>& wa
    , const std::shared_ptr<MarketDataProvider>& mdProvider
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager)
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager)
 {
    // #new_logic : we shouldn't send aggregated signal for all events
 
@@ -52,7 +52,7 @@ void OTCWindowsManager::init(const std::shared_ptr<bs::sync::WalletsManager>& wa
 
    armory_ = armory;
    utxoReservationManager_ = utxoReservationManager;
-   connect(utxoReservationManager_.get(), &bs::UTXOReservantionManager::availableUtxoChanged, this, &OTCWindowsManager::updateBalances);
+   connect(utxoReservationManager_.get(), &bs::UTXOReservationManager::availableUtxoChanged, this, &OTCWindowsManager::updateBalances);
 
    emit syncInterfaceRequired();
 }
@@ -77,7 +77,7 @@ std::shared_ptr<ArmoryConnection> OTCWindowsManager::getArmory() const
    return armory_;
 }
 
-std::shared_ptr<bs::UTXOReservantionManager> OTCWindowsManager::getUtxoManager() const
+std::shared_ptr<bs::UTXOReservationManager> OTCWindowsManager::getUtxoManager() const
 {
    return utxoReservationManager_;
 }

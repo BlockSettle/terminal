@@ -36,6 +36,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
+#include "UtxoReservationManager.h"
 
 #include <cstdlib>
 
@@ -120,7 +121,7 @@ bs::FixedXbtInputs RFQTicketXBT::fixedXbtInputs()
 void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AuthAddressManager> &authAddressManager
    , const std::shared_ptr<AssetManager>& assetManager, const std::shared_ptr<QuoteProvider> &quoteProvider
    , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::UTXOReservantionManager> &utxoReservationManager)
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager)
 {
    logger_ = logger;
    authAddressManager_ = authAddressManager;
@@ -132,7 +133,7 @@ void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger, const std
    if (signingContainer_) {
       connect(signingContainer_.get(), &SignContainer::ready, this, &RFQTicketXBT::onSignerReady);
    }
-   connect(utxoReservationManager_.get(), &bs::UTXOReservantionManager::availableUtxoChanged,
+   connect(utxoReservationManager_.get(), &bs::UTXOReservationManager::availableUtxoChanged,
       this, &RFQTicketXBT::onUTXOReservationChanged);
 
    updateSubmitButton();
@@ -724,8 +725,7 @@ void RFQTicketXBT::submitButtonClicked()
          return;
       }
 
-      reserveBestUtxoSet(rfq);
-      submitRFQCb_(*rfq, std::move(fixedXbtInputs_.utxoRes));
+      reserveBestUtxoSetAndSubmit(rfq);
       return;
    }
    else if (rfq->assetType == bs::network::Asset::PrivateMarket) {
@@ -812,8 +812,8 @@ void RFQTicketXBT::submitButtonClicked()
       // Buy
       auto cbRecvAddr = [this, rfq](const bs::Address &recvAddr) {
          rfq->receiptAddress = recvAddr.display();
-         reserveBestUtxoSet(rfq);
-         submitRFQCb_(*rfq, std::move(fixedXbtInputs_.utxoRes));
+         reserveBestUtxoSetAndSubmit(rfq);
+         
       };
       // BST-2474: All addresses related to trading, not just change addresses, should use internal addresses.
       // This has no effect as CC wallets have only external addresses.
@@ -1187,7 +1187,7 @@ QString RFQTicketXBT::getProductToRecv() const
    }
 }
 
-void RFQTicketXBT::reserveBestUtxoSet(const std::shared_ptr<bs::network::RFQ>& rfq)
+void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network::RFQ>& rfq)
 {
    if ((rfq->side == bs::network::Side::Sell && rfq->product != bs::network::XbtCurrency) ||
       (rfq->side == bs::network::Side::Buy && rfq->product == bs::network::XbtCurrency)) {
@@ -1198,8 +1198,23 @@ void RFQTicketXBT::reserveBestUtxoSet(const std::shared_ptr<bs::network::RFQ>& r
       return; // already reserved by user
    }
 
-   fixedXbtInputs_ = utxoReservationManager_->reserveBestUtxoSet(
-      getSendXbtWallet()->walletId(), rfq, getOfferPrice());
+   auto quantity = rfq->quantity;
+   if (rfq->side == bs::network::Side::Buy) {
+      if (rfq->assetType == bs::network::Asset::PrivateMarket) {
+         quantity *= getOfferPrice();
+      }
+      else if (rfq->assetType == bs::network::Asset::SpotXBT) {
+         quantity /= getOfferPrice();
+      }
+   }
+
+   auto cbBestUtxoSet = [rfqTicket = QPointer<RFQTicketXBT>(this), rfq](bs::FixedXbtInputs&& fixedXbt) {
+      rfqTicket->fixedXbtInputs_ = std::move(fixedXbt);
+      rfqTicket->submitRFQCb_(*rfq, std::move(rfqTicket->fixedXbtInputs_.utxoRes));
+   };
+
+   utxoReservationManager_->reserveBestUtxoSet(
+      getSendXbtWallet()->walletId(), quantity, std::move(cbBestUtxoSet));
 }
 
 void RFQTicketXBT::onCreateWalletClicked()
