@@ -15,6 +15,7 @@
 #include "CommonTypes.h"
 #include "OtcTypes.h"
 #include "ValidityFlag.h"
+#include "UtxoReservationToken.h"
 
 #include <QWidget>
 #include <QTimer>
@@ -64,6 +65,10 @@ public:
    std::shared_ptr<bs::UTXOReservationManager> getUtxoManager() const;
 
    virtual void setPeer(const bs::network::otc::Peer &);
+   
+   bs::UtxoReservationToken releaseReservation();
+   void setReservation(bs::UtxoReservationToken&& reservation);
+
 signals:
    
    void xbtInputsProcessed();
@@ -118,10 +123,11 @@ protected:
    ValidityFlag validityFlag_;
    std::chrono::seconds timeoutSec_{};
 
+   std::vector<UTXO> selectedUTXO_;
+   bs::UtxoReservationToken reservation_;
+
 private:
    void showXBTInputs(const std::vector<UTXO> &allUTXOs);
-
-   std::vector<UTXO> selectedUTXO_;
 
    QTimer timeoutTimer_;
    TimeoutData currentTimeoutData_{};

@@ -49,6 +49,8 @@ namespace bs {
       std::vector<UTXO> getAvailableUTXOs(const std::string& walletId) const;
 
       UtxoReservationToken makeNewReservation(const std::vector<UTXO> &utxos, const std::string &reserveId);
+      UtxoReservationToken makeNewReservation(const std::vector<UTXO> &utxos);
+
       void getBestUtxoSet(const std::string& walletId, BTCNumericTypes::balance_type quantity,
          std::function<void(std::vector<UTXO>&&)>&& cb);
    

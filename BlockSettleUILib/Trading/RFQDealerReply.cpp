@@ -864,8 +864,7 @@ void RFQDealerReply::showCoinControl()
    }
 
    if (!selectedXbtInputs_.empty()) {
-      auto reserveId = fmt::format("reply_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
-      selectedXbtRes_ = utxoReservationManager_->makeNewReservation(selectedInputs, reserveId);
+      selectedXbtRes_ = utxoReservationManager_->makeNewReservation(selectedInputs);
    }
 
    updateSubmitButton();
@@ -993,6 +992,11 @@ void RFQDealerReply::onAutoSignStateChanged()
 
 void bs::ui::RFQDealerReply::onUTXOReservationChanged(const std::string& walletId)
 {
+   if (walletId.empty()) {
+      updateBalanceLabel();
+      return;
+   }
+
    auto xbtWallet = getSelectedXbtWallet(ReplyType::Manual);
    if (xbtWallet && walletId == xbtWallet->walletId()) {
       updateBalanceLabel();

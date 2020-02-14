@@ -31,6 +31,7 @@ protected:
    void applyRoomsFrameChange() override {
       chat_->ui_->widgetOTCShield->showShieldOtcAvailableOnceAccepted();
    }
+   void applyPostChanged() override {};
 };
 
 #endif // PRIVATEPARTYREQUESTEDOUTGOINGSTATE_H

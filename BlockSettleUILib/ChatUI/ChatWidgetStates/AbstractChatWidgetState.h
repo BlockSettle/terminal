@@ -49,12 +49,14 @@ public:
       applyUserFrameChange();
       applyChatFrameChange();
       applyRoomsFrameChange();
+      applyPostChanged();
    }
 
 protected:
    virtual void applyUserFrameChange() = 0;
    virtual void applyChatFrameChange() = 0;
    virtual void applyRoomsFrameChange() = 0;
+   virtual void applyPostChanged() = 0;
 
    // slots
 public:

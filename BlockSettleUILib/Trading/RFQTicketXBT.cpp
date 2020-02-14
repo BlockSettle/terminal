@@ -362,8 +362,7 @@ void RFQTicketXBT::showCoinControl()
    }
 
    if (!selectedInputs.empty()) {
-      auto reserveId = fmt::format("rfq_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
-      fixedXbtInputs_.utxoRes = utxoReservationManager_->makeNewReservation(selectedInputs, reserveId);
+      fixedXbtInputs_.utxoRes = utxoReservationManager_->makeNewReservation(selectedInputs);
    }
 
    updateBalances();
@@ -504,6 +503,11 @@ void RFQTicketXBT::onAuthAddrChanged(int index)
 
 void RFQTicketXBT::onUTXOReservationChanged(const std::string& walletId)
 {
+   if (walletId.empty()) {
+      updateBalances();
+      return;
+   }
+
    auto xbtWallet = getSendXbtWallet();
    if (xbtWallet && walletId == xbtWallet->walletId()) {
       updateBalances();
@@ -1164,6 +1168,10 @@ bs::XBTAmount RFQTicketXBT::getXbtBalance() const
          sum += utxo.first.getValue();
       }
       return bs::XBTAmount(sum);
+   }
+
+   if (!getSendXbtWallet()) {
+      return bs::XBTAmount(0.0);
    }
 
    return bs::XBTAmount(utxoReservationManager_->getAvailableUtxoSum(getSendXbtWallet()->walletId()));

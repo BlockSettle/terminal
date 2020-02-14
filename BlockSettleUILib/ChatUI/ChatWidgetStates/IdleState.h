@@ -39,6 +39,7 @@ protected:
       chat_->ui_->input_textEdit->setEnabled(false);
    }
    void applyRoomsFrameChange() override {}
+   void applyPostChanged() override {};
 };
 
 #endif // IDLESTATE_H

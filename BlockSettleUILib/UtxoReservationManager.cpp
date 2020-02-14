@@ -49,9 +49,7 @@ void UTXOReservationManager::reserveBestUtxoSet(const std::string& walletId, BTC
       for (auto utxo : utxos) {
          fixedXbtInputs.inputs.insert({ utxo, walletId });
       }
-
-      auto reserveId = fmt::format("rfq_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
-      fixedXbtInputs.utxoRes = mgr->makeNewReservation(utxos, reserveId);
+      fixedXbtInputs.utxoRes = mgr->makeNewReservation(utxos);
 
       cbFixedXBT(std::move(fixedXbtInputs));
    };
@@ -64,11 +62,9 @@ UTXOReservationManager::~UTXOReservationManager() = default;
 uint64_t bs::UTXOReservationManager::getAvailableUtxoSum(const std::string& walletId) const
 {
    uint64_t sum = 0;
-   auto const availableUtxos = availableUTXOs_.find(walletId);
-   if (availableUtxos != availableUTXOs_.end()) {
-      for (int i = 0; i < availableUtxos->second.size(); ++i) {
-         sum += availableUtxos->second[i].getValue();
-      }
+   std::vector<UTXO> availableUtxos = getAvailableUTXOs(walletId);
+   for (const auto utxo : availableUtxos) {
+      sum += utxo.getValue();
    }
    return sum;
 }
@@ -80,6 +76,7 @@ std::vector<UTXO> bs::UTXOReservationManager::getAvailableUTXOs(const std::strin
    if (availableUtxos != availableUTXOs_.end()) {
       UTXOs = availableUtxos->second;
    }
+   UtxoReservation::instance()->filter(UTXOs);
    return UTXOs;
 }
 
@@ -89,15 +86,21 @@ bs::UtxoReservationToken UTXOReservationManager::makeNewReservation(const std::v
       if (!mngr) {
          return;
       }
-
-      mngr->refreshAvailableUTXO();
+      mngr->availableUtxoChanged({});
    };
 
    auto reservation = bs::UtxoReservationToken::makeNewReservation(logger_, utxos, reserveId, onReleaseCb);
-   // #ReservationMngr: could be optimized by updating only needed wallet  
-   refreshAvailableUTXO();
+   // #ReservationMngr: could be optimized by updating only needed wallet
+   availableUtxoChanged({});
    return reservation;
 }
+
+bs::UtxoReservationToken bs::UTXOReservationManager::makeNewReservation(const std::vector<UTXO> &utxos)
+{
+   auto reserveId = fmt::format("rfq_reserve_{}", CryptoPRNG::generateRandom(8).toHexStr());
+   return makeNewReservation(utxos, reserveId);
+}
+
 
 void bs::UTXOReservationManager::refreshAvailableUTXO()
 {
@@ -163,7 +166,7 @@ void bs::UTXOReservationManager::onWalletsBalanceChanged(const std::string& wall
    onWalletsAdded(walledId);
 }
 
- void bs::UTXOReservationManager::getBestUtxoSet(const std::string& walletId,
+void bs::UTXOReservationManager::getBestUtxoSet(const std::string& walletId,
     BTCNumericTypes::balance_type quantity, std::function<void(std::vector<UTXO>&&)>&& cb)
 {
    auto &walletUtxos = availableUTXOs_[walletId];

@@ -47,7 +47,7 @@ OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
    connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onUpdateBalances);
    connect(ui_->pushButtonSell, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onSellClicked);
    connect(ui_->pushButtonSell, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onUpdateBalances);
-   connect(ui_->pushButtonAcceptRequest, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::requestCreated);
+   connect(ui_->pushButtonAcceptRequest, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onSubmited);
    connect(ui_->toolButtonXBTInputs, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onShowXBTInputsClicked);
    connect(this, &OTCWindowsAdapterBase::xbtInputsProcessed, this, &OTCNegotiationRequestWidget::onXbtInputsProcessed);
    connect(ui_->comboBoxXBTWallets, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &OTCNegotiationRequestWidget::onCurrentWalletChanged);
@@ -166,6 +166,37 @@ void OTCNegotiationRequestWidget::onUpdateBalances()
    onChanged();
 }
 
+void OTCNegotiationRequestWidget::onSubmited()
+{
+   if (ui_->pushButtonBuy->isChecked()) {
+      emit requestCreated();
+      return;
+   }
+
+   if (!selectedUTXO_.empty()) {
+      reservation_ = getUtxoManager()->makeNewReservation(selectedUTXOs());
+      emit requestCreated();
+      return;
+   }
+
+   const auto hdWallet = getCurrentHDWalletFromCombobox(ui_->comboBoxXBTWallets);
+   if (!hdWallet) {
+      return;
+   }
+
+   auto cbUtxoSet = [wdgt = QPointer<OTCNegotiationRequestWidget>(this)](std::vector<UTXO>&& utxos) {
+      if (!wdgt) {
+         return;
+      }
+
+      wdgt->setSelectedInputs(utxos);
+      wdgt->setReservation(wdgt->getUtxoManager()->makeNewReservation(utxos));
+      emit wdgt->requestCreated();
+   };
+
+   getUtxoManager()->getBestUtxoSet(hdWallet->walletId(), ui_->quantitySpinBox->value(), std::move(cbUtxoSet));
+}
+
 std::shared_ptr<bs::sync::hd::Wallet> OTCNegotiationRequestWidget::getCurrentHDWallet() const
 {
    return getCurrentHDWalletFromCombobox(ui_->comboBoxXBTWallets);
@@ -181,7 +212,7 @@ void OTCNegotiationRequestWidget::keyPressEvent(QKeyEvent* event)
    OTCWindowsAdapterBase::keyPressEvent(event);
    if ((event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return)
       && ui_->pushButtonAcceptRequest->isEnabled()) {
-      emit requestCreated();
+      onSubmited();
    }
 }
 

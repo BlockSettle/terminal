@@ -54,6 +54,8 @@ protected:
       chat_->ui_->widgetOTCShield->showLoginToAccessOTC();
    }
 
+   void applyPostChanged() override {};
+
    bool canReceiveMessage() const override { return false; }
    bool canResetReadMessage() const override { return false; }
    bool canResetPartyModel() const override { return false; }

@@ -19,6 +19,7 @@
 #include "BSErrorCode.h"
 #include "BinaryData.h"
 #include "OtcTypes.h"
+#include "UtxoReservationToken.h"
 
 namespace spdlog {
    class logger;
@@ -114,6 +115,8 @@ public:
    bool acceptOffer(bs::network::otc::Peer *peer, const bs::network::otc::Offer &offer);
    bool updateOffer(bs::network::otc::Peer *peer, const bs::network::otc::Offer &offer);
    bool pullOrReject(bs::network::otc::Peer *peer);
+   void setReservation(const bs::network::otc::Peer *peer, bs::UtxoReservationToken&& reserv);
+   bs::UtxoReservationToken releaseReservation(const bs::network::otc::Peer *peer);
 
    const bs::network::otc::Peers &requests() { return requests_; }
    const bs::network::otc::Peers &responses() { return responses_; }
@@ -222,6 +225,9 @@ private:
    bs::network::otc::Peers responses_;
 
    OtcClientParams params_;
+
+   // Utxo reservation
+   std::unordered_map<std::string, bs::UtxoReservationToken> reservedTokens_;
 };
 
 #endif

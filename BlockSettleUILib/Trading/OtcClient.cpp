@@ -477,6 +477,25 @@ bool OtcClient::pullOrReject(Peer *peer)
    }
 }
 
+void OtcClient::setReservation(const bs::network::otc::Peer *peer, bs::UtxoReservationToken&& reserv)
+{
+   reservedTokens_.erase(peer->contactId);
+   reservedTokens_.insert({ peer->contactId , std::move(reserv) });
+}
+
+bs::UtxoReservationToken OtcClient::releaseReservation(const bs::network::otc::Peer *peer)
+{
+   bs::UtxoReservationToken reservation;
+   auto token = reservedTokens_.find(peer->contactId);
+   if (token == reservedTokens_.end()) {
+      return reservation;
+   }
+
+   reservation = std::move(token->second);
+   reservedTokens_.erase(token);
+   return reservation;
+}
+
 bool OtcClient::acceptOffer(Peer *peer, const bs::network::otc::Offer &offer)
 {
    SPDLOG_LOGGER_DEBUG(logger_, "accept offer from {} (price: {}, amount: {})", peer->toString(), offer.price, offer.amount);
@@ -624,6 +643,7 @@ void OtcClient::contactDisconnected(const std::string &contactId)
    }
 
    contactMap_.erase(contactId);
+   reservedTokens_.erase(contactId);
 
    emit publicUpdated();
 }
@@ -1599,6 +1619,15 @@ void OtcClient::changePeerStateWithoutUpdate(Peer *peer, State state)
       , peer->toString(), toString(peer->state), toString(state));
    peer->state = state;
    peer->stateTimestamp = std::chrono::steady_clock::now();
+
+   switch (state)
+   {
+   case bs::network::otc::State::Idle:
+   case bs::network::otc::State::Blacklisted:
+      releaseReservation(peer);
+   default:
+      break;
+   }
 }
 
 void OtcClient::changePeerState(Peer *peer, bs::network::otc::State state)

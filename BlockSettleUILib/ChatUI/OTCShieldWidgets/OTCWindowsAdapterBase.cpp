@@ -80,6 +80,16 @@ void OTCWindowsAdapterBase::setPeer(const bs::network::otc::Peer &)
 {
 }
 
+bs::UtxoReservationToken OTCWindowsAdapterBase::releaseReservation()
+{
+   return std::move(reservation_);
+}
+
+void OTCWindowsAdapterBase::setReservation(bs::UtxoReservationToken&& reservation)
+{
+   reservation_ = std::move(reservation);
+}
+
 void OTCWindowsAdapterBase::onAboutToApply()
 {
 }
@@ -115,6 +125,7 @@ void OTCWindowsAdapterBase::onUpdateBalances()
 void OTCWindowsAdapterBase::showXBTInputsClicked(QComboBox *walletsCombobox)
 {
    const auto &hdWallet = getCurrentHDWalletFromCombobox(walletsCombobox);
+   reservation_.release();
    showXBTInputs(getUtxoManager()->getAvailableUTXOs(hdWallet->walletId()));
 }
 
