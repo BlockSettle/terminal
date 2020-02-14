@@ -44,7 +44,7 @@ struct CCoinSpender
 class ColoredCoinTestACT : public ColoredCoinACT
 {
 private:
-   BlockingQueue<std::vector<BinaryData>> refreshQueue_;
+   ArmoryThreading::BlockingQueue<std::vector<BinaryData>> refreshQueue_;
 
 public:
    ColoredCoinTestACT(ArmoryConnection *armory)
@@ -70,7 +70,7 @@ public:
 class ColoredCoinTestACT_WithNotif : public ColoredCoinACT
 {
 private:
-   BlockingQueue<std::shared_ptr<DBNotificationStruct>> updateQueue_;
+   ArmoryThreading::BlockingQueue<std::shared_ptr<DBNotificationStruct>> updateQueue_;
 
 public:
    ColoredCoinTestACT_WithNotif(ArmoryConnection *armory)
@@ -97,7 +97,7 @@ public:
             if (notifPtr->type_ == notif)
                return;
          }
-         catch (StopBlockingLoop&)
+         catch (ArmoryThreading::StopBlockingLoop&)
          {
             return;
          }
