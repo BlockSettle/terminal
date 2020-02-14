@@ -41,6 +41,7 @@ namespace bs {
          struct Peer;
       }
    }
+   class UTXOReservationManager;
 }
 
 struct TimeoutData
@@ -60,6 +61,7 @@ public:
    std::shared_ptr<bs::sync::WalletsManager> getWalletManager() const;
    std::shared_ptr<AuthAddressManager> getAuthManager() const;
    std::shared_ptr<AssetManager> getAssetManager() const;
+   std::shared_ptr<bs::UTXOReservationManager> getUtxoManager() const;
 
    virtual void setPeer(const bs::network::otc::Peer &);
 signals:

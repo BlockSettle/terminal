@@ -19,6 +19,7 @@
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "UtxoReservationManager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -39,6 +40,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const bs::Address &authAddr
    , const std::vector<UTXO> &utxosPayinFixed
    , const bs::Address &recvAddr
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , bs::UtxoReservationToken utxoRes)
    : bs::SettlementContainer(std::move(utxoRes))
    , order_(order)
@@ -53,6 +55,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , utxosPayinFixed_(utxosPayinFixed)
    , recvAddr_(recvAddr)
    , authAddr_(authAddr)
+   , utxoReservationManager_(utxoReservationManager)
 {
    qRegisterMetaType<AddressVerificationState>();
 
@@ -280,7 +283,7 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
          unsignedPayinRequest_ = std::move(result.signRequest);
          // Reserve only automatic UTXO selection
          if (utxosPayinFixed_.empty()) {
-            utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, unsignedPayinRequest_.inputs, id());
+            utxoRes_ = utxoReservationManager_->makeNewReservation(unsignedPayinRequest_.inputs, id());
          }
 
          emit sendUnsignedPayinToPB(settlementIdHex_

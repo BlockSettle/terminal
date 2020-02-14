@@ -40,6 +40,7 @@ namespace bs {
       class Wallet;
       class WalletsManager;
    }
+   class UTXOReservationManager;
 }
 class ApplicationSettings;
 class ArmoryConnection;
@@ -94,7 +95,8 @@ namespace bs {
             , const std::shared_ptr<ConnectionManager> &connectionManager
             , const std::shared_ptr<SignContainer> &
             , const std::shared_ptr<ArmoryConnection> &
-            , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider);
+            , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider
+            , const std::shared_ptr<bs::UTXOReservationManager>& utxoReservationManager);
 
          void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
@@ -136,6 +138,7 @@ namespace bs {
          void onHDLeafCreated(const std::string& ccName);
          void onCreateHDWalletError(const std::string& ccName, bs::error::ErrorCode result);
          void onAuthAddrChanged(int);
+         void onUTXOReservationChanged(const std::string& walletId);
 
       protected:
          bool eventFilter(QObject *watched, QEvent *evt) override;
@@ -152,6 +155,7 @@ namespace bs {
          std::shared_ptr<SignContainer>         signingContainer_;
          std::shared_ptr<ArmoryConnection>      armory_;
          std::shared_ptr<AutoSignQuoteProvider> autoSignQuoteProvider_;
+         std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
          std::string authKey_;
          bs::Address authAddr_;
 

@@ -44,6 +44,7 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
+   class UTXOReservationManager;
 }
 
 namespace Blocksettle {
@@ -72,6 +73,7 @@ public:
       , const std::shared_ptr<SignContainer> &signContainer
       , const std::shared_ptr<MarketDataProvider>& mdProvider
       , const std::shared_ptr<AssetManager>& assetManager
+      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    );
 
    bs::network::otc::Peer *currentPeer() const;

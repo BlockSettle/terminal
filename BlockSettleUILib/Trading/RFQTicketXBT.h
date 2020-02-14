@@ -44,6 +44,7 @@ namespace bs {
       class Wallet;
       class WalletsManager;
    }
+   class UTXOReservationManager;
 }
 class ArmoryConnection;
 class AssetManager;
@@ -62,13 +63,6 @@ class RFQTicketXBT : public QWidget
 Q_OBJECT
 
 public:
-   struct FixedXbtInputs
-   {
-      // Need to use UTXO/walletId map for CC
-      std::map<UTXO, std::string> inputs;
-      bs::UtxoReservationToken utxoRes;
-   };
-
    RFQTicketXBT(QWidget* parent = nullptr);
    ~RFQTicketXBT() override;
 
@@ -77,12 +71,13 @@ public:
       , const std::shared_ptr<AssetManager> &assetManager
       , const std::shared_ptr<QuoteProvider> &quoteProvider
       , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<ArmoryConnection> &);
+      , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<bs::UTXOReservationManager> &);
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
    void resetTicket();
 
-   FixedXbtInputs fixedXbtInputs();
+   bs::FixedXbtInputs fixedXbtInputs();
 
    QPushButton* submitButton() const;
    QLineEdit* lineEditAmount() const;
@@ -141,6 +136,8 @@ private slots:
 
    void onAuthAddrChanged(int);
 
+   void onUTXOReservationChanged(const std::string& walletId);
+
 protected:
    bool eventFilter(QObject *watched, QEvent *evt) override;
 
@@ -193,6 +190,7 @@ private:
    ProductGroupType getProductGroupType(const QString& productGroup);
 
    double getQuantity() const;
+   double getOfferPrice() const;
 
    void SetCurrentIndicativePrices(const QString& bidPrice, const QString& offerPrice);
    void updateIndicativePrice();
@@ -205,6 +203,8 @@ private:
    QString getProductToSpend() const;
    QString getProductToRecv() const;
 
+   void reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network::RFQ>& rfq);
+
 private:
    std::unique_ptr<Ui::RFQTicketXBT> ui_;
 
@@ -215,6 +215,7 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
+   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
 
    bs::Address authAddr_;
    std::string authKey_;
@@ -242,7 +243,7 @@ private:
 
    SubmitRFQCb submitRFQCb_;
 
-   FixedXbtInputs fixedXbtInputs_;
+   bs::FixedXbtInputs fixedXbtInputs_;
 };
 
 #endif // __RFQ_TICKET_XBT_H__

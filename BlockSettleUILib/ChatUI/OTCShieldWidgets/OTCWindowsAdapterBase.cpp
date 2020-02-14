@@ -19,6 +19,8 @@
 #include "CoinControlDialog.h"
 #include "SelectedTransactionInputs.h"
 #include "TradesUtils.h"
+#include "UtxoReservationManager.h"
+#include "XBTAmount.h"
 
 #include <QComboBox>
 #include <QLabel>
@@ -69,6 +71,11 @@ std::shared_ptr<AssetManager> OTCWindowsAdapterBase::getAssetManager() const
    return otcManager_->getAssetManager();
 }
 
+std::shared_ptr<bs::UTXOReservationManager> OTCWindowsAdapterBase::getUtxoManager() const
+{
+   return otcManager_->getUtxoManager();
+}
+
 void OTCWindowsAdapterBase::setPeer(const bs::network::otc::Peer &)
 {
 }
@@ -107,26 +114,8 @@ void OTCWindowsAdapterBase::onUpdateBalances()
 
 void OTCWindowsAdapterBase::showXBTInputsClicked(QComboBox *walletsCombobox)
 {
-   auto cb = [handle = validityFlag_.handle(), this](const std::map<UTXO, std::string> &utxos) mutable {
-      ValidityGuard guard(handle);
-      if (!handle.isValid()) {
-         return;
-      }
-
-      std::vector<UTXO> allUTXOs;
-      allUTXOs.reserve(utxos.size());
-      for (const auto &utxo : utxos) {
-         allUTXOs.push_back(utxo.first);
-      }
-      QMetaObject::invokeMethod(this, [this, allUTXOs = std::move(allUTXOs)] {
-         showXBTInputs(allUTXOs);
-      });
-   };
-
    const auto &hdWallet = getCurrentHDWalletFromCombobox(walletsCombobox);
-   const auto &leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
-   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
-   bs::tradeutils::getSpendableTxOutList(wallets, cb);
+   showXBTInputs(getUtxoManager()->getAvailableUTXOs(hdWallet->walletId()));
 }
 
 void OTCWindowsAdapterBase::showXBTInputs(const std::vector<UTXO> &allUTXOs)
@@ -198,9 +187,7 @@ BTCNumericTypes::balance_type OTCWindowsAdapterBase::getXBTSpendableBalanceFromC
 
    BTCNumericTypes::balance_type totalBalance{};
    if (selectedUTXO_.empty()) {
-      for (auto wallet : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
-         totalBalance += wallet->getSpendableBalance();
-      }
+      return getUtxoManager()->getAvailableUtxoSum(hdWallet->walletId()) / BTCNumericTypes::BalanceDivider;
    }
    else {
       for (const auto &utxo : selectedUTXO_) {
