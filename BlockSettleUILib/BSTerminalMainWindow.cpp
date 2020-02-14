@@ -937,10 +937,11 @@ void BSTerminalMainWindow::initCcClient()
    }
 }
 
-void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const std::string &hash, const std::string &err)
+void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const BinaryData &txHash, int errCode
+   , const std::string &err)
 {
-   NotificationCenter::notify(bs::ui::NotifyType::BroadcastError, { QString::fromStdString(hash)
-      , QString::fromStdString(err) });
+   NotificationCenter::notify(bs::ui::NotifyType::BroadcastError,
+      { QString::fromStdString(txHash.toHexStr(true)), QString::fromStdString(err) });
 }
 
 void BSTerminalMainWindow::MainWinACT::onNodeStatus(NodeStatus nodeStatus, bool isSegWitEnabled, RpcStatus rpcStatus)

@@ -43,7 +43,7 @@ private:
 
 private:
    std::atomic_bool  receivedNewBlock_{ false };
-   Queue<std::vector<bs::TXEntry>> zcQueue_;
+   ArmoryThreading::BlockingQueue<std::vector<bs::TXEntry>> zcQueue_;
 };
 
 #endif // __BLOCKCHAIN_MONITOR_H__
