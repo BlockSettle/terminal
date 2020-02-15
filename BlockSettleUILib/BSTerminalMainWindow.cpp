@@ -945,10 +945,11 @@ void BSTerminalMainWindow::initUtxoReservationManager()
       walletsMgr_, armory_, logMgr_->logger());
 }
 
-void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const std::string &hash, const std::string &err)
+void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const BinaryData &txHash, int errCode
+   , const std::string &errMsg)
 {
-   NotificationCenter::notify(bs::ui::NotifyType::BroadcastError, { QString::fromStdString(hash)
-      , QString::fromStdString(err) });
+   NotificationCenter::notify(bs::ui::NotifyType::BroadcastError,
+      { QString::fromStdString(txHash.toHexStr(true)), QString::fromStdString(errMsg) });
 }
 
 void BSTerminalMainWindow::MainWinACT::onNodeStatus(NodeStatus nodeStatus, bool isSegWitEnabled, RpcStatus rpcStatus)
