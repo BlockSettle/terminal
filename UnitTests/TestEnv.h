@@ -115,7 +115,7 @@ public:
 
 
 struct ACTqueue {
-   static BlockingQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
+   static ArmoryThreading::BlockingQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
 };
 
 class SingleUTWalletACT : public ArmoryCallbackTarget
@@ -247,7 +247,7 @@ public:
 
 struct UnitTestLocalACT : public bs::sync::WalletACT
 {
-   BlockingQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
+   ArmoryThreading::BlockingQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
 
 public:
    UnitTestLocalACT(ArmoryConnection *armory, bs::sync::Wallet *leaf) :

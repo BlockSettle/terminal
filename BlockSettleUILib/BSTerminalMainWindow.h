@@ -292,7 +292,8 @@ private:
       ~MainWinACT() override { cleanup(); }
       void onZCReceived(const std::vector<bs::TXEntry> &) override;
       void onStateChanged(ArmoryState) override;
-      void onTxBroadcastError(const std::string &hash, const std::string &error) override;
+      void onTxBroadcastError(const BinaryData &txHash, int errCode
+         , const std::string &errMsg) override;
       void onNodeStatus(NodeStatus, bool isSegWitEnabled, RpcStatus) override;
 
    private:

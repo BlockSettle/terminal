@@ -31,7 +31,7 @@ namespace bs {
 class TestValidationACT : public ValidationAddressACT
 {
 private:
-   BlockingQueue<std::shared_ptr<DBNotificationStruct>>
+   ArmoryThreading::BlockingQueue<std::shared_ptr<DBNotificationStruct>>
       notifTestQueue_;
 
    ValidationAddressManager* testVamPtr_ = nullptr;
