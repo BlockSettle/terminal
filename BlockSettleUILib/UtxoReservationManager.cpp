@@ -19,6 +19,7 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "TradesUtils.h"
 #include "ArmoryObject.h"
+#include "WalletUtils.h"
 
 using namespace bs;
 
@@ -170,62 +171,8 @@ void bs::UTXOReservationManager::onWalletsBalanceChanged(const std::string& wall
 void bs::UTXOReservationManager::getBestUtxoSet(const std::string& walletId,
    BTCNumericTypes::satoshi_type quantity, std::function<void(std::vector<UTXO>&&)>&& cb)
 {
-   auto &walletUtxos = availableUTXOs_[walletId];
-
-   std::vector<std::pair<BTCNumericTypes::satoshi_type, int>> utxoBalances;
-   utxoBalances.reserve(walletUtxos.size());
-   for (int i = 0; i < walletUtxos.size(); ++i) {
-      utxoBalances.push_back({ walletUtxos[i].getValue(), i });
-   }
-
-   std::sort(utxoBalances.begin(), utxoBalances.end(),
-      [](auto const &left, auto const &right) -> bool {
-      return left.first > right.first;
-   });
-
-   std::vector<int> bestSet;
-   BTCNumericTypes::satoshi_type sum = utxoBalances[0].first;
-   if (sum > quantity) {
-      int i = 1;
-      for (; i < utxoBalances.size(); ++i) {
-         if (utxoBalances[i].first < quantity) {
-            break;
-         }
-      }
-      bestSet.push_back(utxoBalances[--i].second);
-   }
-   else {
-      bestSet.push_back(utxoBalances[0].second);
-      for (int i = 1; i < utxoBalances.size(); ++i) {
-         if (sum + utxoBalances[i].first < quantity) {
-            sum += utxoBalances[i].first;
-            bestSet.push_back(utxoBalances[i].second);
-            continue;
-         }
-
-         // Let's try to find even less suitable utxo quantity
-         for (++i; i < utxoBalances.size(); ++i) {
-            if (sum + utxoBalances[i].first < quantity) {
-               break;
-            }
-         }
-
-         bestSet.push_back(utxoBalances[--i].second);
-         break;
-      }
-   }
-
-   std::vector<UTXO> selectedUtxos;
-   if (bestSet.size() == walletUtxos.size()) {
-      selectedUtxos = std::move(walletUtxos);
-      cb(std::move(selectedUtxos)); // No need to calculate fee - we are going to spend all utxo from wallet now 
-      return;
-   }
-   else {
-      for (auto index : bestSet) {
-         selectedUtxos.push_back(walletUtxos[index]);
-      }
-   }
+   auto walletUtxos = getAvailableUTXOs(walletId);
+   std::vector<UTXO> selectedUtxos = bs::selectUtxoForAmount(std::move(walletUtxos), quantity);
 
    // Here we calculating fee based on chosen utxos, if total price with fee will cover by all utxo sum - then we good and could continue
    // otherwise let's try to find better set of utxo again till the moment we will cover the difference or use all available utxos from wallet
