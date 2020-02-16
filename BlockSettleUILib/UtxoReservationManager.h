@@ -53,6 +53,8 @@ namespace bs {
 
       void getBestUtxoSet(const std::string& walletId, BTCNumericTypes::balance_type quantity,
          std::function<void(std::vector<UTXO>&&)>&& cb);
+
+      static FixedXbtInputs convertUtxoToFixedInput(const std::string& walletId, const std::vector<UTXO>& utxos);
    
    signals:
       void availableUtxoChanged(const std::string& walledId);

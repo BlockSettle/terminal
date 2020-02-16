@@ -45,10 +45,7 @@ void UTXOReservationManager::reserveBestUtxoSet(const std::string& walletId, BTC
          return;
       }
 
-      FixedXbtInputs fixedXbtInputs;
-      for (auto utxo : utxos) {
-         fixedXbtInputs.inputs.insert({ utxo, walletId });
-      }
+      FixedXbtInputs fixedXbtInputs = UTXOReservationManager::convertUtxoToFixedInput(walletId, utxos);
       fixedXbtInputs.utxoRes = mgr->makeNewReservation(utxos);
 
       cbFixedXBT(std::move(fixedXbtInputs));
@@ -71,13 +68,15 @@ uint64_t bs::UTXOReservationManager::getAvailableUtxoSum(const std::string& wall
 
 std::vector<UTXO> bs::UTXOReservationManager::getAvailableUTXOs(const std::string& walletId) const
 {
-   std::vector<UTXO> UTXOs;
+   std::vector<UTXO> utxos;
    auto const availableUtxos = availableUTXOs_.find(walletId);
-   if (availableUtxos != availableUTXOs_.end()) {
-      UTXOs = availableUtxos->second;
+   if (availableUtxos == availableUTXOs_.end()) {
+      return {};
    }
-   UtxoReservation::instance()->filter(UTXOs);
-   return UTXOs;
+
+   utxos = availableUtxos->second;
+   UtxoReservation::instance()->filter(utxos);
+   return utxos;
 }
 
 bs::UtxoReservationToken UTXOReservationManager::makeNewReservation(const std::vector<UTXO> &utxos, const std::string &reserveId)
@@ -157,7 +156,7 @@ void bs::UTXOReservationManager::onWalletsAdded(const std::string& walledId)
 
          emit mgr->availableUtxoChanged(id);
       });
-   });
+   }, false);
 }
 
 void bs::UTXOReservationManager::onWalletsBalanceChanged(const std::string& walledId)
@@ -252,4 +251,13 @@ void bs::UTXOReservationManager::getBestUtxoSet(const std::string& walletId,
       });
    };
    armory_->estimateFee(bs::tradeutils::feeTargetBlockCount(), feeCb);
+}
+
+bs::FixedXbtInputs UTXOReservationManager::convertUtxoToFixedInput(const std::string& walletId, const std::vector<UTXO>& utxos)
+{
+   FixedXbtInputs fixedXbtInputs;
+   for (auto utxo : utxos) {
+      fixedXbtInputs.inputs.insert({ utxo, walletId });
+   }
+   return fixedXbtInputs;
 }

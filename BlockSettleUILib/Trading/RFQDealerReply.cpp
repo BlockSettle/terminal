@@ -727,6 +727,8 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                // Try to reset current reservation if needed when user sends another quote
                resetCurrentReservationCb_(replyData);
 
+
+
                if (isSpendCC) {
                   const auto  inputsWrapCb = [inputsCb, ccWallet](const std::vector<UTXO> &utxos) {
                      std::map<UTXO, std::string> inputs;
@@ -736,10 +738,12 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                      inputsCb(inputs);
                   };
                   // For CC search for exact amount (preferable without change)
-                  ccWallet->getSpendableTxOutList(inputsWrapCb, spendVal);
+                  ccWallet->getSpendableTxOutList(inputsWrapCb, spendVal, true);
                } else {
                   // For XBT request all available inputs as we don't know fee yet (createPartialTXRequest will use correct inputs if fee rate is set)
-                  bs::tradeutils::getSpendableTxOutList(xbtWallets, inputsCb);
+                  auto utxos = utxoReservationManager_->getAvailableUTXOs(replyData->xbtWallet->walletId());
+                  auto fixedUtxo = UTXOReservationManager::convertUtxoToFixedInput(replyData->xbtWallet->walletId(), utxos);
+                  inputsCb(fixedUtxo.inputs);
                }
             };
 
