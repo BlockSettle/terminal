@@ -38,7 +38,8 @@ UTXOReservationManager::UTXOReservationManager(const std::shared_ptr<bs::sync::W
       this, &UTXOReservationManager::onWalletsBalanceChanged);
 }
 
-void UTXOReservationManager::reserveBestUtxoSet(const std::string& walletId, BTCNumericTypes::balance_type quantity, std::function<void(FixedXbtInputs&&)>&& cb)
+void UTXOReservationManager::reserveBestUtxoSet(const std::string& walletId, BTCNumericTypes::satoshi_type quantity,
+   std::function<void(FixedXbtInputs&&)>&& cb)
 {
    auto bestUtxoSetCb = [mgr = QPointer<bs::UTXOReservationManager>(this), walletId, cbFixedXBT = std::move(cb)](std::vector<UTXO>&& utxos) {
       if (!mgr) {
@@ -56,13 +57,14 @@ void UTXOReservationManager::reserveBestUtxoSet(const std::string& walletId, BTC
 
 UTXOReservationManager::~UTXOReservationManager() = default;
 
-uint64_t bs::UTXOReservationManager::getAvailableUtxoSum(const std::string& walletId) const
+BTCNumericTypes::satoshi_type bs::UTXOReservationManager::getAvailableUtxoSum(const std::string& walletId) const
 {
-   uint64_t sum = 0;
-   std::vector<UTXO> availableUtxos = getAvailableUTXOs(walletId);
-   for (const auto utxo : availableUtxos) {
+   BTCNumericTypes::satoshi_type sum = 0;
+   auto const availableUtxos = getAvailableUTXOs(walletId);
+   for (const auto &utxo : availableUtxos) {
       sum += utxo.getValue();
    }
+
    return sum;
 }
 
@@ -166,14 +168,14 @@ void bs::UTXOReservationManager::onWalletsBalanceChanged(const std::string& wall
 }
 
 void bs::UTXOReservationManager::getBestUtxoSet(const std::string& walletId,
-    BTCNumericTypes::balance_type quantity, std::function<void(std::vector<UTXO>&&)>&& cb)
+   BTCNumericTypes::satoshi_type quantity, std::function<void(std::vector<UTXO>&&)>&& cb)
 {
    auto &walletUtxos = availableUTXOs_[walletId];
 
-   std::vector<std::pair<BTCNumericTypes::balance_type, int>> utxoBalances;
+   std::vector<std::pair<BTCNumericTypes::satoshi_type, int>> utxoBalances;
    utxoBalances.reserve(walletUtxos.size());
    for (int i = 0; i < walletUtxos.size(); ++i) {
-      utxoBalances.push_back({ bs::XBTAmount(walletUtxos[i].getValue()).GetValueBitcoin(), i });
+      utxoBalances.push_back({ walletUtxos[i].getValue(), i });
    }
 
    std::sort(utxoBalances.begin(), utxoBalances.end(),
@@ -182,7 +184,7 @@ void bs::UTXOReservationManager::getBestUtxoSet(const std::string& walletId,
    });
 
    std::vector<int> bestSet;
-   BTCNumericTypes::balance_type sum = utxoBalances[0].first;
+   BTCNumericTypes::satoshi_type sum = utxoBalances[0].first;
    if (sum > quantity) {
       int i = 1;
       for (; i < utxoBalances.size(); ++i) {
@@ -234,14 +236,13 @@ void bs::UTXOReservationManager::getBestUtxoSet(const std::string& walletId,
 
       QMetaObject::invokeMethod(mgr, [mgr, quantity, walletId, fee, utxos = std::move(utxos), cb = std::move(cbCopy)] () mutable {
          float feePerByte = ArmoryConnection::toFeePerByte(fee);
-         BTCNumericTypes::balance_type total = 0;
+         BTCNumericTypes::satoshi_type total = 0;
          for (const auto &utxo : utxos) {
-            total += bs::XBTAmount(utxo.getValue()).GetValueBitcoin();
+            total += utxo.getValue();
          }
-         const auto fee = bs::XBTAmount(bs::tradeutils::estimatePayinFeeWithoutChange(
-            utxos, feePerByte)).GetValueBitcoin();
+         const auto fee = bs::tradeutils::estimatePayinFeeWithoutChange(utxos, feePerByte);
 
-         const auto spendableQuantity = quantity + fee;
+         const BTCNumericTypes::satoshi_type spendableQuantity = quantity + fee;
          if (spendableQuantity > total) {
             mgr->getBestUtxoSet(walletId, spendableQuantity, std::move(cb));
          }

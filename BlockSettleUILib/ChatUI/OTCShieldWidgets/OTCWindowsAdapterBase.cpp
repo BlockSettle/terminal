@@ -198,11 +198,11 @@ BTCNumericTypes::balance_type OTCWindowsAdapterBase::getXBTSpendableBalanceFromC
 
    BTCNumericTypes::balance_type totalBalance{};
    if (selectedUTXO_.empty()) {
-      return getUtxoManager()->getAvailableUtxoSum(hdWallet->walletId()) / BTCNumericTypes::BalanceDivider;
+      return bs::XBTAmount(getUtxoManager()->getAvailableUtxoSum(hdWallet->walletId())).GetValueBitcoin();
    }
    else {
       for (const auto &utxo : selectedUTXO_) {
-         totalBalance += static_cast<double>(utxo.getValue()) / BTCNumericTypes::BalanceDivider;
+         totalBalance += bs::XBTAmount(utxo.getValue()).GetValueBitcoin();
       }
    }
 

@@ -194,7 +194,8 @@ void OTCNegotiationRequestWidget::onSubmited()
       emit wdgt->requestCreated();
    };
 
-   getUtxoManager()->getBestUtxoSet(hdWallet->walletId(), ui_->quantitySpinBox->value(), std::move(cbUtxoSet));
+   getUtxoManager()->getBestUtxoSet(hdWallet->walletId(), bs::XBTAmount(ui_->quantitySpinBox->value()).GetValue()
+      , std::move(cbUtxoSet));
 }
 
 std::shared_ptr<bs::sync::hd::Wallet> OTCNegotiationRequestWidget::getCurrentHDWallet() const

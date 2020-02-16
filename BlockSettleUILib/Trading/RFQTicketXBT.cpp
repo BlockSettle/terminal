@@ -1206,13 +1206,13 @@ void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network
       return; // already reserved by user
    }
 
-   auto quantity = rfq->quantity;
+   auto quantity = bs::XBTAmount(rfq->quantity).GetValue();
    if (rfq->side == bs::network::Side::Buy) {
       if (rfq->assetType == bs::network::Asset::PrivateMarket) {
-         quantity *= getOfferPrice();
+         quantity *= bs::XBTAmount(getOfferPrice()).GetValue();
       }
       else if (rfq->assetType == bs::network::Asset::SpotXBT) {
-         quantity /= getOfferPrice();
+         quantity /= bs::XBTAmount(getOfferPrice()).GetValue();
       }
    }
 
