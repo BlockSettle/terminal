@@ -112,8 +112,11 @@ namespace bs {
          using ResetCurrentReservationCb = std::function<void(const std::shared_ptr<SubmitQuoteReplyData> &data)>;
          void setResetCurrentReservation(ResetCurrentReservationCb cb);
 
+         using GetLastUTXOReplyCb = std::function<const std::vector<UTXO>*(const std::string&)>;
+         void setGetLastSettlementReply(GetLastUTXOReplyCb cb);
+
       signals:
-         void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
+         void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
 
       public slots:
          void setQuoteReqNotification(const network::QuoteReqNotification &, double indicBid, double indicAsk);
@@ -190,6 +193,7 @@ namespace bs {
 
          SubmitQuoteNotifCb submitQuoteNotifCb_;
          ResetCurrentReservationCb resetCurrentReservationCb_;
+         GetLastUTXOReplyCb getLastUTXOReplyCb_;
 
       private:
          enum class ReplyType
@@ -232,9 +236,14 @@ namespace bs {
          std::shared_ptr<bs::sync::hd::Wallet> getSelectedXbtWallet(ReplyType replyType) const;
          bs::Address selectedAuthAddress(ReplyType replyType) const;
          std::vector<UTXO> selectedXbtInputs(ReplyType replyType) const;
+         void submit(double price, const std::shared_ptr<SubmitQuoteReplyData>& replyData);
+         void reserveBestUtxoSetAndSubmit(double quantity, double price,
+            const std::shared_ptr<SubmitQuoteReplyData>& replyData, ReplyType replyType);
+         void refreshSettlementDetails();
+
+
          std::set<std::string> activeQuoteSubmits_;
          std::map<std::string, std::map<std::string, std::array<bs::Address, static_cast<size_t>(AddressType::Max) + 1>>> addresses_;
-
       };
 
    }  //namespace ui

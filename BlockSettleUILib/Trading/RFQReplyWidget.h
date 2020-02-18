@@ -114,6 +114,11 @@ public slots:
 
 private slots:
    void onOrder(const bs::network::Order &o);
+   void onQuoteCancelled(const QString &reqId, bool userCancelled);
+   void onQuoteRejected(const QString &reqId, const QString &reason);
+   void onQuoteNotifCancelled(const QString &reqId);
+
+
    void saveTxData(QString orderId, std::string txData);
    void onSignTxRequested(QString orderId, QString reqId, QDateTime timestamp);
    void onConnectedToCeler();
@@ -122,13 +127,16 @@ private slots:
    void onSelected(const QString& productGroup, const bs::network::QuoteReqNotification& request, double indicBid, double indicAsk);
    void onTransactionError(bs::error::ErrorCode code, const QString& error);
 
-private:
    void onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data);
+   void onPulled(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
+
+private:
    void onResetCurrentReservation(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data);
    void showSettlementDialog(QDialog *dlg);
    bool checkConditions(const QString& productGroup, const bs::network::QuoteReqNotification& request);
    void popShield();
    void showEditableRFQPage();
+   void eraseReply(const QString &reqId);
 
 private:
    using transaction_data_ptr = std::shared_ptr<TransactionData>;
@@ -169,6 +177,7 @@ private:
    std::unordered_map<std::string, SentXbtReply>   sentXbtReplies_;
    std::unordered_map<std::string, SentCCReply>    sentCCReplies_;
    std::shared_ptr<bs::SecurityStatsCollector>     statsCollector_;
+   std::unordered_map<std::string, std::string>    sentReplyIdsToSettlementsIds_;
 };
 
 #endif // __RFQ_REPLY_WIDGET_H__

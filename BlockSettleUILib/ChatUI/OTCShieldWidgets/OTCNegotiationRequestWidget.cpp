@@ -174,7 +174,6 @@ void OTCNegotiationRequestWidget::onSubmited()
    }
 
    if (!selectedUTXO_.empty()) {
-      reservation_ = getUtxoManager()->makeNewReservation(selectedUTXOs());
       emit requestCreated();
       return;
    }

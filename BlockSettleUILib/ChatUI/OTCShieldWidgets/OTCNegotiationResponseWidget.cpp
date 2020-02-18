@@ -211,7 +211,6 @@ void OTCNegotiationResponseWidget::onAcceptOrUpdateClicked()
    }
 
    if (!selectedUTXO_.empty()) {
-      reservation_ = getUtxoManager()->makeNewReservation(selectedUTXO_);
       signal.invoke(this);
       return;
    }

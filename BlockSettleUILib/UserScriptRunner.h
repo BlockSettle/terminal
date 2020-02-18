@@ -49,7 +49,7 @@ class UserScriptHandler : public QObject
 signals:
    void aqScriptLoaded(const QString &fileName);
    void failedToLoad(const QString &fileName, const QString &error);
-   void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
+   void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
    void sendQuote(const bs::network::QuoteReqNotification &qrn, double price);
 
 public:
@@ -117,7 +117,7 @@ signals:
    void stateChanged(bool enabled);
    void aqScriptLoaded(const QString &fileName);
    void failedToLoad(const QString &fileName, const QString &error);
-   void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
+   void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
    void sendQuote(const bs::network::QuoteReqNotification &qrn, double price);
 
 public:

@@ -275,7 +275,7 @@ void UserScriptHandler::onAQPull(const QString &reqId)
       logger_->warn("[UserScriptHandler::onAQPull] QuoteReqNotification with id = {} not found", reqId.toStdString());
       return;
    }
-   emit pullQuoteNotif(QString::fromStdString(itQRN->second.quoteRequestId), QString::fromStdString(itQRN->second.sessionToken));
+   emit pullQuoteNotif(itQRN->second.settlementId, itQRN->second.quoteRequestId, itQRN->second.sessionToken);
 }
 
 void UserScriptHandler::aqTick()

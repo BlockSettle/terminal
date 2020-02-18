@@ -150,6 +150,10 @@ void OTCWindowsAdapterBase::showXBTInputs(const std::vector<UTXO> &allUTXOs)
       selectedUTXO_ = dialog.selectedInputs();
    }
 
+   if (!selectedUTXO_.empty()) {
+      reservation_ = getUtxoManager()->makeNewReservation(selectedUTXO_);
+   }
+
    emit xbtInputsProcessed();
 }
 
