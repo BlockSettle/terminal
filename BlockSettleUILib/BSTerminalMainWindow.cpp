@@ -1324,6 +1324,15 @@ void BSTerminalMainWindow::onLogin()
    ccFileManager_->setBsClient(bsClient_.get());
    authAddrDlg_->setBsClient(bsClient_.get());
 
+   // Check for null unitl proxy is updated on prod and test
+   if (!loginDialog.result()->ccAddressesSigned.isNull()) {
+      ccFileManager_->setCcAddressesSigned(loginDialog.result()->ccAddressesSigned);
+   }
+   // Check for null unitl proxy is updated on prod and test
+   if (!loginDialog.result()->authAddressesSigned.isNull()) {
+      authManager_->setAuthAddressesSigned(loginDialog.result()->authAddressesSigned);
+   }
+
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
 
    // connect to RFQ dialog
