@@ -46,6 +46,9 @@ namespace {
    const QString kReservedBalance = QLatin1String("Reserved input balance");
    const QString kAvailableBalance = QLatin1String("Available balance");
 
+   // We reserved another 20% to allow user trade within it
+   const double kReplyQuantityMultiplier = 1.2;
+
    constexpr auto kBuySortOrder = bs::core::wallet::OutputSortOrder{
       bs::core::wallet::OutputOrderType::Recipients,
       bs::core::wallet::OutputOrderType::PrevState,
@@ -1088,8 +1091,7 @@ void bs::ui::RFQDealerReply::reserveBestUtxoSetAndSubmit(double quantity, double
    else {
       xbtQuantity = XBTAmount(quantity).GetValue();
    }
-   // We reserve additionally 20%
-   xbtQuantity *= 1.2;
+   xbtQuantity *= kReplyQuantityMultiplier;
 
    auto cbBestUtxoSet = [rfqReply = QPointer<bs::ui::RFQDealerReply>(this),
       replyRFQ = std::move(replyRFQWrapper)](std::vector<UTXO>&& utxos) {
