@@ -230,7 +230,7 @@ void OTCNegotiationResponseWidget::onAcceptOrUpdateClicked()
       signal.invoke(wdgt);
    };
 
-   getUtxoManager()->getBestUtxoSet(hdWallet->walletId(), bs::XBTAmount(ui_->quantitySpinBox->value()).GetValue()
+   getUtxoManager()->getBestXbtUtxoSet(hdWallet->walletId(), bs::XBTAmount(ui_->quantitySpinBox->value()).GetValue()
       , std::move(cbUtxoSet));
 }
 

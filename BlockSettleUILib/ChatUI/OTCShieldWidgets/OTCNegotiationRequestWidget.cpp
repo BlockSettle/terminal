@@ -193,7 +193,7 @@ void OTCNegotiationRequestWidget::onSubmited()
       emit wdgt->requestCreated();
    };
 
-   getUtxoManager()->getBestUtxoSet(hdWallet->walletId(), bs::XBTAmount(ui_->quantitySpinBox->value()).GetValue()
+   getUtxoManager()->getBestXbtUtxoSet(hdWallet->walletId(), bs::XBTAmount(ui_->quantitySpinBox->value()).GetValue()
       , std::move(cbUtxoSet));
 }
 
@@ -315,7 +315,7 @@ void OTCNegotiationRequestWidget::onMaxQuantityClicked()
 
    std::vector<UTXO> utxos = selectedUTXOs();
    if (utxos.empty()) {
-      utxos = getUtxoManager()->getAvailableUTXOs(hdWallet->walletId());
+      utxos = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId());
    }
 
    auto feeCb = [this, parentWidget = QPointer<OTCWindowsAdapterBase>(this), utxos = std::move(utxos)](float fee) {

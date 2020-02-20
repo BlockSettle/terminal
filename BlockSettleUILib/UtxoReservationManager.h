@@ -22,6 +22,10 @@ namespace spdlog {
 namespace bs {
    namespace sync {
       class WalletsManager;
+      class Wallet;
+      namespace hd {
+         class Wallet;
+      }
    }
 }
 class ArmoryObject;
@@ -32,6 +36,10 @@ namespace bs {
    {
       Q_OBJECT
    public:
+      using HDWalletId = std::string;
+      using CCWalletId = std::string;
+      using CCProductName = std::string;
+
       UTXOReservationManager(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager, const std::shared_ptr<ArmoryObject>& armory,
          const std::shared_ptr<spdlog::logger>& logger, QObject* parent = nullptr);
       ~UTXOReservationManager() override;
@@ -42,20 +50,25 @@ namespace bs {
       UTXOReservationManager(UTXOReservationManager &&) = delete;
       UTXOReservationManager &operator=(UTXOReservationManager &&) = delete;
 
-      void reserveBestUtxoSet(const std::string& walletId, BTCNumericTypes::satoshi_type quantity,
-         std::function<void(FixedXbtInputs&&)>&& cb);
-      
-      BTCNumericTypes::satoshi_type getAvailableUtxoSum(const std::string& walletId) const;
-      std::vector<UTXO> getAvailableUTXOs(const std::string& walletId) const;
-
+      // Shared code for both CC and Xbt reservation
       UtxoReservationToken makeNewReservation(const std::vector<UTXO> &utxos, const std::string &reserveId);
       UtxoReservationToken makeNewReservation(const std::vector<UTXO> &utxos);
 
-      void getBestUtxoSet(const std::string& walletId, BTCNumericTypes::satoshi_type quantity,
+      // Xbt specific implementation
+      void reserveBestXbtUtxoSet(const HDWalletId& walletId, BTCNumericTypes::satoshi_type quantity,
+         std::function<void(FixedXbtInputs&&)>&& cb);
+      BTCNumericTypes::satoshi_type getAvailableXbtUtxoSum(const HDWalletId& walletId) const;
+      std::vector<UTXO> getAvailableXbtUTXOs(const HDWalletId& walletId) const;
+
+      void getBestXbtUtxoSet(const HDWalletId& walletId, BTCNumericTypes::satoshi_type quantity,
          std::function<void(std::vector<UTXO>&&)>&& cb);
 
-      static FixedXbtInputs convertUtxoToFixedInput(const std::string& walletId, const std::vector<UTXO>& utxos);
+      static FixedXbtInputs convertUtxoToFixedInput(const HDWalletId& walletId, const std::vector<UTXO>& utxos);
    
+      // CC specific implementation
+      BTCNumericTypes::balance_type getAvailableCCUtxoSum(const CCProductName& CCProduct) const;
+      std::vector<UTXO> bs::UTXOReservationManager::getAvailableCCUTXOs(const CCWalletId& walletId) const;
+
    signals:
       void availableUtxoChanged(const std::string& walledId);
 
@@ -66,7 +79,14 @@ namespace bs {
       void onWalletsBalanceChanged(const std::string& walledId);
 
    private:
-      std::map<std::string, std::vector<UTXO>> availableUTXOs_;
+      bool resetHdWallet(const std::string& hdWalledId);
+      void resetSpendableXbt(const std::shared_ptr<bs::sync::hd::Wallet>& hdWallet);
+      void resetSpendableCC(const std::shared_ptr<bs::sync::Wallet>& leaf);
+      void resetAllSpendableCC(const std::shared_ptr<bs::sync::hd::Wallet>& hdWallet);
+
+   private:
+      std::unordered_map<HDWalletId, std::vector<UTXO>> availableXbtUTXOs_;
+      std::unordered_map<CCWalletId, std::vector<UTXO>> availableCCUTXOs_;
 
       std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
       std::shared_ptr<ArmoryObject> armory_;

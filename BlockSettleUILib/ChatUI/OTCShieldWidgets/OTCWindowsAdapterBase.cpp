@@ -126,7 +126,7 @@ void OTCWindowsAdapterBase::showXBTInputsClicked(QComboBox *walletsCombobox)
 {
    const auto &hdWallet = getCurrentHDWalletFromCombobox(walletsCombobox);
    reservation_.release();
-   showXBTInputs(getUtxoManager()->getAvailableUTXOs(hdWallet->walletId()));
+   showXBTInputs(getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId()));
 }
 
 void OTCWindowsAdapterBase::showXBTInputs(const std::vector<UTXO> &allUTXOs)
@@ -202,7 +202,7 @@ BTCNumericTypes::balance_type OTCWindowsAdapterBase::getXBTSpendableBalanceFromC
 
    BTCNumericTypes::balance_type totalBalance{};
    if (selectedUTXO_.empty()) {
-      return bs::XBTAmount(getUtxoManager()->getAvailableUtxoSum(hdWallet->walletId())).GetValueBitcoin();
+      return bs::XBTAmount(getUtxoManager()->getAvailableXbtUtxoSum(hdWallet->walletId())).GetValueBitcoin();
    }
    else {
       for (const auto &utxo : selectedUTXO_) {
