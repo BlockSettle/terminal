@@ -401,6 +401,12 @@ void AbstractChatWidgetState::updateOtc()
       return;
    }
 
+   auto* otcWidget = qobject_cast<OTCWindowsAdapterBase*>(chat_->ui_->stackedWidgetOTC->currentWidget());
+   bs::UtxoReservationToken reservation; // let's carry on reservation between otc windows changed
+   if (otcWidget) {
+      reservation = otcWidget->releaseReservation();
+   }
+
    using bs::network::otc::State;
    OTCPages pageNumber = OTCPages::OTCShield;
    switch (peer->state) {
@@ -414,6 +420,7 @@ void AbstractChatWidgetState::updateOtc()
             chat_->ui_->widgetCreateOTCResponse->setRequest(peer->request);
             pageNumber = OTCPages::OTCCreateResponsePage;
          }
+         reservation.release();
          break;
       case State::QuoteSent:
          chat_->ui_->widgetPullOwnOTCRequest->setResponse(peer->response);
@@ -448,16 +455,18 @@ void AbstractChatWidgetState::updateOtc()
          return;
       case State::Blacklisted:
          chat_->ui_->widgetOTCShield->showContactIsOffline();
+         reservation.release();
          return;
       default:
          assert(false && " Did you forget to handle new otc::State state? ");
          break;
    }
 
-   auto* actionWidget = qobject_cast<OTCWindowsAdapterBase*>(chat_->ui_->stackedWidgetOTC->widget(static_cast<int>(pageNumber)));
-   if (actionWidget) {
-      actionWidget->setPeer(*peer);
-      actionWidget->onAboutToApply();
+   otcWidget = qobject_cast<OTCWindowsAdapterBase*>(chat_->ui_->stackedWidgetOTC->widget(static_cast<int>(pageNumber)));
+   if (otcWidget) {
+      otcWidget->setPeer(*peer);
+      otcWidget->setReservation(std::move(reservation));
+      otcWidget->onAboutToApply();
    }
 
    chat_->ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(pageNumber));

@@ -310,7 +310,7 @@ public:
       auto utxosPromise = std::promise<std::vector<UTXO>>();
       bool result = wallet->getSpendableTxOutList([&utxosPromise](const std::vector<UTXO> &utxos) {
          utxosPromise.set_value(utxos);
-      }, UINT64_MAX);
+      }, UINT64_MAX, true);
       ASSERT_TRUE(result);
       auto utxos = utxosPromise.get_future().get();
       ASSERT_FALSE(utxos.empty());

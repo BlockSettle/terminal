@@ -170,23 +170,32 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
       onReplied(data);
    });
 
+   ui_->pageRFQReply->setGetLastSettlementReply([this](const std::string& settlementId) -> const std::vector<UTXO>* {
+      auto lastReply = sentXbtReplies_.find(settlementId);
+      if (lastReply == sentXbtReplies_.end()) {
+         return nullptr;
+      }
+
+      return &(lastReply->second.utxosPayinFixed);
+   });
+
    ui_->pageRFQReply->setResetCurrentReservation([this](const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data) {
       onResetCurrentReservation(data);
    });
 
-   connect(ui_->pageRFQReply, &RFQDealerReply::pullQuoteNotif, quoteProvider_.get(), &QuoteProvider::CancelQuoteNotif);
+   connect(ui_->pageRFQReply, &RFQDealerReply::pullQuoteNotif, this, &RFQReplyWidget::onPulled);
 
    connect(mdProvider.get(), &MarketDataProvider::MDUpdate, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onSecurityMDUpdated);
    connect(mdProvider.get(), &MarketDataProvider::MDUpdate, ui_->pageRFQReply, &RFQDealerReply::onMDUpdate);
 
    connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, this, &RFQReplyWidget::onOrder);
-   connect(quoteProvider_.get(), &QuoteProvider::quoteCancelled, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onQuoteReqCancelled);
+   connect(quoteProvider_.get(), &QuoteProvider::quoteCancelled, this, &RFQReplyWidget::onQuoteCancelled);
    connect(quoteProvider_.get(), &QuoteProvider::bestQuotePrice, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onBestQuotePrice, Qt::QueuedConnection);
    connect(quoteProvider_.get(), &QuoteProvider::bestQuotePrice, ui_->pageRFQReply, &RFQDealerReply::onBestQuotePrice, Qt::QueuedConnection);
 
-   connect(quoteProvider_.get(), &QuoteProvider::quoteRejected, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onQuoteRejected);
+   connect(quoteProvider_.get(), &QuoteProvider::quoteRejected, this, &RFQReplyWidget::onQuoteRejected);
 
-   connect(quoteProvider_.get(), &QuoteProvider::quoteNotifCancelled, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onQuoteNotifCancelled);
+   connect(quoteProvider_.get(), &QuoteProvider::quoteNotifCancelled, this, &RFQReplyWidget::onQuoteNotifCancelled);
    connect(quoteProvider_.get(), &QuoteProvider::allQuoteNotifCancelled, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onAllQuoteNotifCancelled);
    connect(quoteProvider_.get(), &QuoteProvider::signTxRequested, this, &RFQReplyWidget::onSignTxRequested);
 
@@ -215,6 +224,10 @@ void RFQReplyWidget::onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyDat
    switch (data->qn.assetType) {
       case bs::network::Asset::SpotXBT: {
          assert(data->xbtWallet);
+         if (sentReplyIdsToSettlementsIds_.count(data->qn.quoteRequestId)) {
+            break; // already answered, nothing to do there
+         }
+         sentReplyIdsToSettlementsIds_[data->qn.quoteRequestId] = data->qn.settlementId;
          auto &reply = sentXbtReplies_[data->qn.settlementId];
          reply.xbtWallet = data->xbtWallet;
          reply.authAddr = data->authAddr;
@@ -237,6 +250,13 @@ void RFQReplyWidget::onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyDat
          break;
       }
    }
+}
+
+void RFQReplyWidget::onPulled(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken)
+{
+   sentXbtReplies_.erase(settlementId);
+   sentReplyIdsToSettlementsIds_.erase(reqId);
+   quoteProvider_->CancelQuoteNotif(QString::fromStdString(reqId), QString::fromStdString(reqSessToken));
 }
 
 void RFQReplyWidget::onResetCurrentReservation(const std::shared_ptr<SubmitQuoteReplyData> &data)
@@ -345,6 +365,24 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
       }
       sentXbtReplies_.erase(order.settlementId);
    }
+}
+
+void RFQReplyWidget::onQuoteCancelled(const QString &reqId, bool userCancelled)
+{
+   eraseReply(reqId);
+   ui_->widgetQuoteRequests->onQuoteReqCancelled(reqId, userCancelled);
+}
+
+void RFQReplyWidget::onQuoteRejected(const QString &reqId, const QString &reason)
+{
+   eraseReply(reqId);
+   ui_->widgetQuoteRequests->onQuoteRejected(reqId, reason);
+}
+
+void RFQReplyWidget::onQuoteNotifCancelled(const QString &reqId)
+{
+   eraseReply(reqId);
+   ui_->widgetQuoteRequests->onQuoteNotifCancelled(reqId);
 }
 
 void RFQReplyWidget::onConnectedToCeler()
@@ -500,6 +538,15 @@ void RFQReplyWidget::showEditableRFQPage()
    ui_->stackedWidget->setCurrentIndex(static_cast<int>(DealingPages::DealingPage));
 }
 
+
+void RFQReplyWidget::eraseReply(const QString &reqId)
+{
+   auto settlement = sentReplyIdsToSettlementsIds_.find(reqId.toStdString());
+   if (settlement != sentReplyIdsToSettlementsIds_.end()) {
+      sentXbtReplies_.erase(settlement->second);
+      sentReplyIdsToSettlementsIds_.erase(settlement);
+   }
+}
 
 void RFQReplyWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response)
 {

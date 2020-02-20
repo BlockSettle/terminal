@@ -53,6 +53,8 @@ public slots:
 protected slots:
    void onSyncInterface() override;
    void onUpdateBalances() override;
+   
+   void onSubmited();
 
 protected:
    std::shared_ptr<bs::sync::hd::Wallet> getCurrentHDWallet() const;

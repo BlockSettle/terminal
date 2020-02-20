@@ -50,6 +50,7 @@ protected:
    void applyRoomsFrameChange() override {
       chat_->ui_->widgetOTCShield->showOtcAvailableOnlyForAcceptedContacts();
    }
+   void applyPostChanged() override {};
 };
 
 #endif // PRIVATEPARTYREQUESTEDINCOMINGSTATE_H

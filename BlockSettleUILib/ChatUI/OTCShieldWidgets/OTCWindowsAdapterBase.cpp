@@ -80,6 +80,16 @@ void OTCWindowsAdapterBase::setPeer(const bs::network::otc::Peer &)
 {
 }
 
+bs::UtxoReservationToken OTCWindowsAdapterBase::releaseReservation()
+{
+   return std::move(reservation_);
+}
+
+void OTCWindowsAdapterBase::setReservation(bs::UtxoReservationToken&& reservation)
+{
+   reservation_ = std::move(reservation);
+}
+
 void OTCWindowsAdapterBase::onAboutToApply()
 {
 }
@@ -115,6 +125,7 @@ void OTCWindowsAdapterBase::onUpdateBalances()
 void OTCWindowsAdapterBase::showXBTInputsClicked(QComboBox *walletsCombobox)
 {
    const auto &hdWallet = getCurrentHDWalletFromCombobox(walletsCombobox);
+   reservation_.release();
    showXBTInputs(getUtxoManager()->getAvailableUTXOs(hdWallet->walletId()));
 }
 
@@ -137,6 +148,10 @@ void OTCWindowsAdapterBase::showXBTInputs(const std::vector<UTXO> &allUTXOs)
    int rc = dialog.exec();
    if (rc == QDialog::Accepted) {
       selectedUTXO_ = dialog.selectedInputs();
+   }
+
+   if (!selectedUTXO_.empty()) {
+      reservation_ = getUtxoManager()->makeNewReservation(selectedUTXO_);
    }
 
    emit xbtInputsProcessed();
@@ -187,11 +202,11 @@ BTCNumericTypes::balance_type OTCWindowsAdapterBase::getXBTSpendableBalanceFromC
 
    BTCNumericTypes::balance_type totalBalance{};
    if (selectedUTXO_.empty()) {
-      return getUtxoManager()->getAvailableUtxoSum(hdWallet->walletId()) / BTCNumericTypes::BalanceDivider;
+      return bs::XBTAmount(getUtxoManager()->getAvailableUtxoSum(hdWallet->walletId())).GetValueBitcoin();
    }
    else {
       for (const auto &utxo : selectedUTXO_) {
-         totalBalance += static_cast<double>(utxo.getValue()) / BTCNumericTypes::BalanceDivider;
+         totalBalance += bs::XBTAmount(utxo.getValue()).GetValueBitcoin();
       }
    }
 

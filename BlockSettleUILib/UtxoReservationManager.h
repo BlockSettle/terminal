@@ -42,15 +42,19 @@ namespace bs {
       UTXOReservationManager(UTXOReservationManager &&) = delete;
       UTXOReservationManager &operator=(UTXOReservationManager &&) = delete;
 
-      void reserveBestUtxoSet(const std::string& walletId, BTCNumericTypes::balance_type quantity,
+      void reserveBestUtxoSet(const std::string& walletId, BTCNumericTypes::satoshi_type quantity,
          std::function<void(FixedXbtInputs&&)>&& cb);
       
-      uint64_t getAvailableUtxoSum(const std::string& walletId) const;
+      BTCNumericTypes::satoshi_type getAvailableUtxoSum(const std::string& walletId) const;
       std::vector<UTXO> getAvailableUTXOs(const std::string& walletId) const;
 
       UtxoReservationToken makeNewReservation(const std::vector<UTXO> &utxos, const std::string &reserveId);
-      void getBestUtxoSet(const std::string& walletId, BTCNumericTypes::balance_type quantity,
+      UtxoReservationToken makeNewReservation(const std::vector<UTXO> &utxos);
+
+      void getBestUtxoSet(const std::string& walletId, BTCNumericTypes::satoshi_type quantity,
          std::function<void(std::vector<UTXO>&&)>&& cb);
+
+      static FixedXbtInputs convertUtxoToFixedInput(const std::string& walletId, const std::vector<UTXO>& utxos);
    
    signals:
       void availableUtxoChanged(const std::string& walledId);
