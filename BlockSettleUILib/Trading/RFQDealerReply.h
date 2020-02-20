@@ -115,6 +115,8 @@ namespace bs {
          using GetLastUTXOReplyCb = std::function<const std::vector<UTXO>*(const std::string&)>;
          void setGetLastSettlementReply(GetLastUTXOReplyCb cb);
 
+         void onParentAboutToHide();
+
       signals:
          void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
 

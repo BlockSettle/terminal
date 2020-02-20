@@ -616,6 +616,14 @@ void bs::ui::RFQDealerReply::setGetLastSettlementReply(GetLastUTXOReplyCb cb)
    getLastUTXOReplyCb_ = std::move(cb);
 }
 
+void bs::ui::RFQDealerReply::onParentAboutToHide()
+{
+   if (sentNotifs_.count(currentQRN_.quoteRequestId) == 0) {
+      selectedXbtInputs_.clear();
+   }
+   selectedXbtRes_.release();
+}
+
 void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, double price, ReplyType replyType)
 {
    if (qFuzzyIsNull(price)) {

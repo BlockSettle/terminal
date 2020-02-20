@@ -135,6 +135,11 @@ void OTCNegotiationResponseWidget::setPeer(const bs::network::otc::Peer &peer)
    setSelectedInputs(peer.offer.inputs);
 }
 
+void OTCNegotiationResponseWidget::onParentAboutToHide()
+{
+   clearSelectedInputs();
+}
+
 void OTCNegotiationResponseWidget::onSyncInterface()
 {
    int index = UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWallets, getWalletManager(), UiUtils::WoWallets::Enable);

@@ -138,6 +138,9 @@ private:
    void showEditableRFQPage();
    void eraseReply(const QString &reqId);
 
+protected:
+   void hideEvent(QHideEvent* event) override;
+
 private:
    using transaction_data_ptr = std::shared_ptr<TransactionData>;
    using settl_addr_ptr = std::shared_ptr<bs::SettlementAddressEntry>;

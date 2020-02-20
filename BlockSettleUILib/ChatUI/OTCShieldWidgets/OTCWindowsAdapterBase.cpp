@@ -90,14 +90,6 @@ void OTCWindowsAdapterBase::setReservation(bs::UtxoReservationToken&& reservatio
    reservation_ = std::move(reservation);
 }
 
-void OTCWindowsAdapterBase::onAboutToApply()
-{
-}
-
-void OTCWindowsAdapterBase::onChatRoomChanged()
-{
-}
-
 void OTCWindowsAdapterBase::onSyncInterface()
 {
 }
@@ -245,6 +237,7 @@ QString OTCWindowsAdapterBase::getSide(bs::network::otc::Side requestSide, bool 
 void OTCWindowsAdapterBase::clearSelectedInputs()
 {
    selectedUTXO_.clear();
+   reservation_ = {};
 }
 
 void OTCWindowsAdapterBase::setupTimer(TimeoutData&& timeoutData)

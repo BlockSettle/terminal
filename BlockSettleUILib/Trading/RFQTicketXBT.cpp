@@ -896,6 +896,11 @@ std::shared_ptr<bs::sync::hd::Wallet> RFQTicketXBT::xbtWallet() const
    return nullptr;
 }
 
+void RFQTicketXBT::onParentAboutToHide()
+{
+   fixedXbtInputs_ = {};
+}
+
 void RFQTicketXBT::enablePanel()
 {
    resetTicket();

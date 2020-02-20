@@ -78,6 +78,7 @@ ChatWidget::ChatWidget(QWidget* parent)
       if (widget) {
          widget->setChatOTCManager(otcWindowsManager_);
          connect(this, &ChatWidget::chatRoomChanged, widget, &OTCWindowsAdapterBase::onChatRoomChanged);
+         connect(this, &ChatWidget::onAboutToHide, widget, &OTCWindowsAdapterBase::onParentAboutToHide);
       }
    }
    connect(otcWindowsManager_.get(), &OTCWindowsManager::syncInterfaceRequired, this, &ChatWidget::onUpdateOTCShield);
@@ -326,6 +327,12 @@ void ChatWidget::showEvent(QShowEvent* e)
       bNeedRefresh_ = false;
       onActivatePartyId(QString::fromStdString(currentPartyId_));
    }
+}
+
+void ChatWidget::hideEvent(QHideEvent* event)
+{
+   emit onAboutToHide();
+   QWidget::hideEvent(event);
 }
 
 bool ChatWidget::eventFilter(QObject* sender, QEvent* event)

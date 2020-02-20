@@ -280,6 +280,11 @@ void OTCNegotiationRequestWidget::onChatRoomChanged()
    clearSelectedInputs();
 }
 
+void OTCNegotiationRequestWidget::onParentAboutToHide()
+{
+   clearSelectedInputs();
+}
+
 void OTCNegotiationRequestWidget::onCurrentWalletChanged()
 {
    UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, getCurrentHDWallet());

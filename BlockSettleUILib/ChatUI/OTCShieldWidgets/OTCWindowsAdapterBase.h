@@ -74,8 +74,9 @@ signals:
    void xbtInputsProcessed();
 
 public slots:
-   virtual void onAboutToApply();
-   virtual void onChatRoomChanged();
+   virtual void onAboutToApply() {}
+   virtual void onChatRoomChanged() {}
+   virtual void onParentAboutToHide() {}
 
 protected slots:
    virtual void onSyncInterface();
@@ -85,7 +86,6 @@ protected slots:
    void onUpdateTimerData();
 
 protected:
-
    // Shared function between children
    void showXBTInputsClicked(QComboBox *walletsCombobox);
    
