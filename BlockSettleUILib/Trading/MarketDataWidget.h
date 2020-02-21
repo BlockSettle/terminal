@@ -20,10 +20,11 @@ namespace Ui {
     class MarketDataWidget;
 };
 
-class MarketDataModel;
-class MDSortFilterProxyModel;
-class MarketDataProvider;
 class ApplicationSettings;
+class MarketDataModel;
+class MarketDataProvider;
+class MDCallbacksQt;
+class MDSortFilterProxyModel;
 class MDHeader;
 class TreeViewWithEnterKey;
 
@@ -47,7 +48,7 @@ public:
    ~MarketDataWidget() override;
 
    void init(const std::shared_ptr<ApplicationSettings> &appSettings, ApplicationSettings::Setting paramVis
-      , const std::shared_ptr<MarketDataProvider>& mdProvider);
+      , const std::shared_ptr<MarketDataProvider> &, const std::shared_ptr<MDCallbacksQt> &);
 
    TreeViewWithEnterKey* view() const;
 

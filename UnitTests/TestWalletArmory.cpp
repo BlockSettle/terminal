@@ -204,7 +204,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    };
 
    //async, has to wait
-   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
+   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
    ASSERT_TRUE(fut1.get());
 
    //mine 6 more blocks
@@ -382,7 +382,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       };
 
       //async, has to wait
-      syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
+      syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
       fut1.wait();
 
       //mine 6 more blocks
@@ -701,7 +701,7 @@ TEST_F(TestWalletWithArmory, Comments)
    {
       promPtr->set_value(inputs);
    };
-   EXPECT_TRUE(syncWallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true));
+   EXPECT_TRUE(syncWallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX));
    const auto inputs = fut.get();
    ASSERT_FALSE(inputs.empty());
    const auto recip = addr.getRecipient(bs::XBTAmount{ (uint64_t)12000 });
@@ -800,7 +800,7 @@ TEST_F(TestWalletWithArmory, ZCBalance)
       promPtr1->set_value(inputs);
    };
    //async, has to wait
-   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
+   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
    const auto inputs = fut1.get();
    ASSERT_GE(inputs.size(), 1);
 
@@ -941,7 +941,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
       promPtr1->set_value(inputs);
    };
    
-   syncLeaf->getSpendableTxOutList(cbTxOutList1, UINT64_MAX, true);
+   syncLeaf->getSpendableTxOutList(cbTxOutList1, UINT64_MAX);
    const auto inputs1 = fut1.get();
    ASSERT_FALSE(inputs1.empty());
 
@@ -986,7 +986,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
       promPtr3->set_value(inputs);
    };
 
-   syncLeaf->getSpendableTxOutList(cbTxOutList2, UINT64_MAX, true);
+   syncLeaf->getSpendableTxOutList(cbTxOutList2, UINT64_MAX);
    const auto inputs2 = fut3.get();
    ASSERT_FALSE(inputs2.empty());
 
@@ -1304,7 +1304,7 @@ TEST_F(TestWalletWithArmory, GlobalDelegateConf)
    };
 
    //async, has to wait
-   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
+   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
    ASSERT_TRUE(futTxOut.get());
 
    ledgerEntries = lbdGetLDEntries(globalLedger);

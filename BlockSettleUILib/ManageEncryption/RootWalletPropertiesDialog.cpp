@@ -233,9 +233,8 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::s
       });
    };
 
-   for (const auto &leaf : wallet->getLeaves()) 
-   {
-      leaf->getSpendableTxOutList(cbUTXOs, UINT64_MAX, true);
+   for (const auto &leaf : wallet->getLeaves()) {
+      leaf->getSpendableTxOutList(cbUTXOs, UINT64_MAX);
 
       auto addrCnt = leaf->getActiveAddressCount();
       ui_->labelAddressesActive->setText(QString::number(addrCnt));
@@ -261,7 +260,7 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::s
          QMetaObject::invokeMethod(this, [this, size = utxos.size()] {
             ui_->labelUTXOs->setText(QString::number(size));
          });
-      }, UINT64_MAX, true);
+      }, UINT64_MAX);
       
       auto addrCnt = wallet->getActiveAddressCount();
       QMetaObject::invokeMethod(this, [this, addrCnt] {

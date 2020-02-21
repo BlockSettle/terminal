@@ -42,7 +42,6 @@ namespace bs {
 }
 
 struct NetworkSettings;
-
 class AboutDialog;
 class ArmoryServersProvider;
 class AssetManager;
@@ -58,6 +57,7 @@ class CCPortfolioModel;
 class CcTrackerClient;
 class ConnectionManager;
 class LoginWindow;
+class MDCallbacksQt;
 class NetworkSettingsLoader;
 class OrderListModel;
 class QSystemTrayIcon;
@@ -178,6 +178,7 @@ private:
    std::shared_ptr<ConnectionManager>        connectionManager_;
    std::shared_ptr<CelerClientProxy>         celerConnection_;
    std::shared_ptr<BSMarketDataProvider>     mdProvider_;
+   std::shared_ptr<MDCallbacksQt>            mdCallbacks_;
    std::shared_ptr<AssetManager>             assetManager_;
    std::shared_ptr<CCFileManager>            ccFileManager_;
    std::shared_ptr<AuthAddressDialog>        authAddrDlg_;

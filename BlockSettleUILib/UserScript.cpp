@@ -14,20 +14,20 @@
 #include <QQmlContext>
 #include "AssetManager.h"
 #include "CurrencyPair.h"
-#include "MarketDataProvider.h"
+#include "MDCallbacksQt.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWalletsManager.h"
 
 #include <algorithm>
 
 
-UserScript::UserScript(const std::shared_ptr<spdlog::logger> logger,
-   std::shared_ptr<MarketDataProvider> mdProvider, QObject* parent)
+UserScript::UserScript(const std::shared_ptr<spdlog::logger> &logger,
+   const std::shared_ptr<MDCallbacksQt> &mdCallbacks, QObject* parent)
    : QObject(parent)
    , logger_(logger)
    , engine_(new QQmlEngine(this))
    , component_(nullptr)
-   , md_(new MarketData(mdProvider, this))
+   , md_(new MarketData(mdCallbacks, this))
    , const_(new Constants(this))
    , storage_(new DataStorage(this))
 {
@@ -83,10 +83,10 @@ void UserScript::setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> wal
 // MarketData
 //
 
-MarketData::MarketData(std::shared_ptr<MarketDataProvider> mdProvider, QObject *parent)
+MarketData::MarketData(const std::shared_ptr<MDCallbacksQt> &mdCallbacks, QObject *parent)
    : QObject(parent)
 {
-   connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &MarketData::onMDUpdated,
+   connect(mdCallbacks.get(), &MDCallbacksQt::MDUpdate, this, &MarketData::onMDUpdated,
       Qt::QueuedConnection);
 }
 
@@ -208,10 +208,11 @@ void Constants::setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> wall
 }
 
 
-AutoQuoter::AutoQuoter(const std::shared_ptr<spdlog::logger> logger, const QString &filename
+AutoQuoter::AutoQuoter(const std::shared_ptr<spdlog::logger> &logger
+   , const QString &filename
    , const std::shared_ptr<AssetManager> &assetManager
-   , std::shared_ptr<MarketDataProvider> mdProvider, QObject* parent)
-   : QObject(parent), script_(logger, mdProvider, this)
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks, QObject* parent)
+   : QObject(parent), script_(logger, mdCallbacks, this)
    , logger_(logger), assetManager_(assetManager)
 {
    qmlRegisterType<BSQuoteReqReply>("bs.terminal", 1, 0, "BSQuoteReqReply");

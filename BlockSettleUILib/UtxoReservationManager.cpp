@@ -159,7 +159,7 @@ void bs::UTXOReservationManager::onWalletsAdded(const std::string& walledId)
 
          emit mgr->availableUtxoChanged(id);
       });
-   }, false);
+   });
 }
 
 void bs::UTXOReservationManager::onWalletsBalanceChanged(const std::string& walledId)

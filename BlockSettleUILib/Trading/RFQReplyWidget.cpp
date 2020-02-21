@@ -20,7 +20,7 @@
 #include "DealerCCSettlementContainer.h"
 #include "DealerXBTSettlementContainer.h"
 #include "DialogManager.h"
-#include "MarketDataProvider.h"
+#include "MDCallbacksQt.h"
 #include "OrderListModel.h"
 #include "OrdersView.h"
 #include "QuoteProvider.h"
@@ -127,7 +127,7 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<BaseCelerClient>& celerClient
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
    , const std::shared_ptr<QuoteProvider>& quoteProvider
-   , const std::shared_ptr<MarketDataProvider>& mdProvider
+   , const std::shared_ptr<MDCallbacksQt>& mdCallbacks
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<DialogManager> &dialogManager
@@ -185,8 +185,8 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
 
    connect(ui_->pageRFQReply, &RFQDealerReply::pullQuoteNotif, this, &RFQReplyWidget::onPulled);
 
-   connect(mdProvider.get(), &MarketDataProvider::MDUpdate, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onSecurityMDUpdated);
-   connect(mdProvider.get(), &MarketDataProvider::MDUpdate, ui_->pageRFQReply, &RFQDealerReply::onMDUpdate);
+   connect(mdCallbacks.get(), &MDCallbacksQt::MDUpdate, ui_->widgetQuoteRequests, &QuoteRequestsWidget::onSecurityMDUpdated);
+   connect(mdCallbacks.get(), &MDCallbacksQt::MDUpdate, ui_->pageRFQReply, &RFQDealerReply::onMDUpdate);
 
    connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, this, &RFQReplyWidget::onOrder);
    connect(quoteProvider_.get(), &QuoteProvider::quoteCancelled, this, &RFQReplyWidget::onQuoteCancelled);

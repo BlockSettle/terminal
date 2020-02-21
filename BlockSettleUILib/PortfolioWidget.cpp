@@ -105,6 +105,7 @@ void PortfolioWidget::SetTransactionsModel(const std::shared_ptr<TransactionsVie
 
 void PortfolioWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<MarketDataProvider> &mdProvider
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
    , const std::shared_ptr<CCPortfolioModel> &model
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
@@ -117,7 +118,8 @@ void PortfolioWidget::init(const std::shared_ptr<ApplicationSettings> &appSettin
    logger_ = logger;
    appSettings_ = appSettings;
 
-   ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ_Portfolio, mdProvider);
+   ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ_Portfolio
+      , mdProvider, mdCallbacks);
    ui_->widgetCCProtfolio->SetPortfolioModel(model);
 }
 
