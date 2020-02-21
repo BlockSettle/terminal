@@ -37,6 +37,7 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
 #include "UtxoReservationManager.h"
+#include "UtxoReservation.h"
 
 #include <cstdlib>
 
@@ -354,8 +355,15 @@ void RFQTicketXBT::showCoinControl()
       return;
    }
 
-   fixedXbtInputs_.inputs.clear();
    auto selectedInputs = dialog.selectedInputs();
+   if (bs::UtxoReservation::instance()->containsReservedUTXO(selectedInputs)) {
+      BSMessageBox(BSMessageBox::critical, tr("UTXO reservation failed"),
+         tr("Some of selected UTXOs has been already reserved"), this).exec();
+      showCoinControl();
+      return;
+   }
+
+   fixedXbtInputs_.inputs.clear();
    for (const auto &selectedInput : selectedInputs) {
       fixedXbtInputs_.inputs.emplace(selectedInput, walletId);
    }

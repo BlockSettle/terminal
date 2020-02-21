@@ -21,6 +21,7 @@
 #include "TradesUtils.h"
 #include "UtxoReservationManager.h"
 #include "XBTAmount.h"
+#include "BSMessageBox.h"
 
 #include <QComboBox>
 #include <QLabel>
@@ -118,13 +119,14 @@ void OTCWindowsAdapterBase::showXBTInputsClicked(QComboBox *walletsCombobox)
 {
    const auto &hdWallet = getCurrentHDWalletFromCombobox(walletsCombobox);
    reservation_.release();
-   showXBTInputs(getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId()));
+   showXBTInputs(hdWallet->walletId());
 }
 
-void OTCWindowsAdapterBase::showXBTInputs(const std::vector<UTXO> &allUTXOs)
+void OTCWindowsAdapterBase::showXBTInputs(const std::string& walletId)
 {
    const bool useAutoSel = selectedUTXO_.empty();
 
+   std::vector<UTXO> allUTXOs = getUtxoManager()->getAvailableXbtUTXOs(walletId);
    auto inputs = std::make_shared<SelectedTransactionInputs>(allUTXOs);
 
    // Set this to false is needed otherwise current selection would be cleared
@@ -138,10 +140,18 @@ void OTCWindowsAdapterBase::showXBTInputs(const std::vector<UTXO> &allUTXOs)
 
    CoinControlDialog dialog(inputs, true, this);
    int rc = dialog.exec();
-   if (rc == QDialog::Accepted) {
-      selectedUTXO_ = dialog.selectedInputs();
+   if (rc != QDialog::Accepted) {
+      return;
    }
 
+   auto selectedInputs = dialog.selectedInputs();
+   if (bs::UtxoReservation::instance()->containsReservedUTXO(selectedInputs)) {
+      BSMessageBox(BSMessageBox::critical, tr("UTXO reservation failed"),
+         tr("Some of selected UTXOs has been already reserved"), this).exec();
+      showXBTInputs(walletId);
+      return;
+   }
+   selectedUTXO_ = std::move(selectedInputs);
    if (!selectedUTXO_.empty()) {
       reservation_ = getUtxoManager()->makeNewReservation(selectedUTXO_);
    }

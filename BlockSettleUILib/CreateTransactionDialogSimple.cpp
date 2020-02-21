@@ -188,15 +188,13 @@ void CreateTransactionDialogSimple::getChangeAddress(AddressCb cb) const
 void CreateTransactionDialogSimple::createTransaction()
 {
    if (!importedSignedTX_.isNull()) {
-      if (!importedSignedTX_.isNull()) {
-         if (BroadcastImportedTx()) {
-            accept();
-         }
-         else {
-            initUI();
-         }
-         return;
+      if (BroadcastImportedTx()) {
+         accept();
       }
+      else {
+         initUI();
+      }
+      return;
    }
 
    CreateTransaction([this, handle = validityFlag_.handle()](bool result) {

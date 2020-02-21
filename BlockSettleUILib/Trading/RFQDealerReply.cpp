@@ -882,8 +882,15 @@ void RFQDealerReply::showCoinControl()
       return;
    }
 
-   selectedXbtInputs_.clear();
    auto selectedInputs = dialog.selectedInputs();
+   if (bs::UtxoReservation::instance()->containsReservedUTXO(selectedInputs)) {
+      BSMessageBox(BSMessageBox::critical, tr("UTXO reservation failed"),
+         tr("Some of selected UTXOs has been already reserved"), this).exec();
+      showCoinControl();
+      return;
+   }
+
+   selectedXbtInputs_.clear();
    for (const auto &selectedInput : selectedInputs) {
       selectedXbtInputs_.push_back(selectedInput);
    }

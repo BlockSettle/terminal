@@ -127,7 +127,7 @@ protected:
    bs::UtxoReservationToken reservation_;
 
 private:
-   void showXBTInputs(const std::vector<UTXO> &allUTXOs);
+   void showXBTInputs(const std::string& walletId);
 
    QTimer timeoutTimer_;
    TimeoutData currentTimeoutData_{};
