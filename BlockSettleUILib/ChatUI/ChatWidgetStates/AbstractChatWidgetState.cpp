@@ -405,6 +405,9 @@ void AbstractChatWidgetState::updateOtc()
    bs::UtxoReservationToken reservation; // let's carry on reservation between otc windows changed
    if (otcWidget) {
       reservation = otcWidget->releaseReservation();
+      if (!reservation.isValid()) {
+         reservation = chat_->otcHelper_->client()->releaseReservation(peer);
+      }
    }
 
    using bs::network::otc::State;
@@ -440,6 +443,9 @@ void AbstractChatWidgetState::updateOtc()
       case State::SentPayinInfo:
       case State::WaitPayinInfo:
          chat_->ui_->widgetOTCShield->showOtcSetupTransaction();
+         if (reservation.isValid()) {
+            chat_->otcHelper_->client()->setReservation(peer, std::move(reservation));
+         }
          return;
       case State::WaitBuyerSign:
          chat_->ui_->widgetPullOwnOTCRequest->setPendingBuyerSign(peer->offer);
@@ -452,6 +458,9 @@ void AbstractChatWidgetState::updateOtc()
       case State::WaitVerification:
       case State::WaitSellerSign:
          chat_->ui_->widgetOTCShield->showOtcSetupTransaction();
+         if (reservation.isValid()) {
+            chat_->otcHelper_->client()->setReservation(peer, std::move(reservation));
+         }
          return;
       case State::Blacklisted:
          chat_->ui_->widgetOTCShield->showContactIsOffline();
