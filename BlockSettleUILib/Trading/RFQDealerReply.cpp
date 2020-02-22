@@ -750,7 +750,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                      inputsCb(inputs);
                   };
                   // For CC search for exact amount (preferable without change)
-                  ccWallet->getSpendableTxOutList(inputsWrapCb, spendVal);
+                  ccWallet->getSpendableTxOutList(inputsWrapCb, spendVal, true);
                } else {
                   // For XBT request all available inputs as we don't know fee yet (createPartialTXRequest will use correct inputs if fee rate is set)
                   auto utxos = utxoReservationManager_->getAvailableUTXOs(replyData->xbtWallet->walletId());

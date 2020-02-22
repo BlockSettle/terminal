@@ -204,7 +204,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    };
 
    //async, has to wait
-   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
+   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
    ASSERT_TRUE(fut1.get());
 
    //mine 6 more blocks
@@ -382,7 +382,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       };
 
       //async, has to wait
-      syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
+      syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
       fut1.wait();
 
       //mine 6 more blocks
@@ -701,7 +701,7 @@ TEST_F(TestWalletWithArmory, Comments)
    {
       promPtr->set_value(inputs);
    };
-   EXPECT_TRUE(syncWallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX));
+   EXPECT_TRUE(syncWallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true));
    const auto inputs = fut.get();
    ASSERT_FALSE(inputs.empty());
    const auto recip = addr.getRecipient(bs::XBTAmount{ (uint64_t)12000 });
@@ -800,7 +800,7 @@ TEST_F(TestWalletWithArmory, ZCBalance)
       promPtr1->set_value(inputs);
    };
    //async, has to wait
-   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
+   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
    const auto inputs = fut1.get();
    ASSERT_GE(inputs.size(), 1);
 
@@ -941,7 +941,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
       promPtr1->set_value(inputs);
    };
    
-   syncLeaf->getSpendableTxOutList(cbTxOutList1, UINT64_MAX);
+   syncLeaf->getSpendableTxOutList(cbTxOutList1, UINT64_MAX, true);
    const auto inputs1 = fut1.get();
    ASSERT_FALSE(inputs1.empty());
 
@@ -986,7 +986,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
       promPtr3->set_value(inputs);
    };
 
-   syncLeaf->getSpendableTxOutList(cbTxOutList2, UINT64_MAX);
+   syncLeaf->getSpendableTxOutList(cbTxOutList2, UINT64_MAX, true);
    const auto inputs2 = fut3.get();
    ASSERT_FALSE(inputs2.empty());
 
@@ -1304,13 +1304,13 @@ TEST_F(TestWalletWithArmory, GlobalDelegateConf)
    };
 
    //async, has to wait
-   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
+   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
    ASSERT_TRUE(futTxOut.get());
 
    ledgerEntries = lbdGetLDEntries(globalLedger);
    ASSERT_FALSE(ledgerEntries->empty());
    EXPECT_EQ(ledgerEntries->size(), 7);
-   EXPECT_EQ((*ledgerEntries)[0].getBlockNum(), UINT32_MAX);
+   EXPECT_EQ((*ledgerEntries)[0].getBlockNum(), UINT32_MAX, true);
 
    // Mine new block - conf count for entry[0] should increase
    armoryInstance->mineNewBlock(recipient.get(), 1);

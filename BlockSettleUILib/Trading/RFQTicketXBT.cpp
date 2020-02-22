@@ -786,7 +786,7 @@ void RFQTicketXBT::submitButtonClicked()
                   }
                });
             };
-            bool result = ccWallet->getSpendableTxOutList(ccInputsCb, spendVal);
+            bool result = ccWallet->getSpendableTxOutList(ccInputsCb, spendVal, true);
             if (!result) {
                SPDLOG_LOGGER_ERROR(logger_, "can't spendable TX list");
             }

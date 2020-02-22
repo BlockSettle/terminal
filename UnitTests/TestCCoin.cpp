@@ -299,7 +299,7 @@ BinaryData TestCCoin::SimpleSendMany(const bs::Address & fromAddress, const std:
          promPtr->set_value(txObj.getThisHash());
       };
 
-   wallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
+   wallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
    return fut.get();
 }
 
@@ -475,7 +475,7 @@ std::vector<UTXO> TestCCoin::GetUTXOsFor(const bs::Address & addr, bool sortedBy
    };
 
    auto const wallet = syncMgr_->getWalletByAddress(addr);
-   wallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
+   wallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
    return fut.get();
 }
 
@@ -2258,7 +2258,7 @@ TEST_F(TestCCoin, ZeroConfChain)
          promPtr->set_value(inputs);
       };
 
-      wallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
+      wallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
       auto utxos = fut.get();
 
       EXPECT_EQ(utxos.size(), 1);
@@ -2384,7 +2384,7 @@ TEST_F(TestCCoin, Reorg)
          promPtr->set_value(inputs);
       };
 
-      wallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
+      wallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
       auto utxos = fut.get();
 
       EXPECT_EQ(utxos.size(), 1);
@@ -2748,7 +2748,7 @@ TEST_F(TestCCoin, Reorg_WithACT)
          promPtr->set_value(inputs);
       };
 
-      wallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
+      wallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
       auto utxos = fut.get();
 
       EXPECT_EQ(utxos.size(), 1);
