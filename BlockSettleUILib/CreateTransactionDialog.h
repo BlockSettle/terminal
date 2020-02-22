@@ -27,6 +27,7 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
+   class UTXOReservationManager;
 }
 class ApplicationSettings;
 class ArmoryConnection;
@@ -51,6 +52,7 @@ Q_OBJECT
 public:
    CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
+      , const std::shared_ptr<bs::UTXOReservationManager> &
       , const std::shared_ptr<SignContainer> &
       , bool loadFeeSuggestions, const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
@@ -129,6 +131,7 @@ protected:
    std::shared_ptr<TransactionData> transactionData_;
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<ApplicationSettings> applicationSettings_;
+   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
 
    XbtAmountValidator * xbtValidator_ = nullptr;
 

@@ -39,13 +39,14 @@ static const float kDustFeePerByte = 3.0;
 
 CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
+      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
       , const std::shared_ptr<SignContainer> &container
       , bool loadFeeSuggestions
       , const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
       , const std::shared_ptr<TransactionData> &txData
       , QWidget* parent)
-   : CreateTransactionDialog(armory, walletManager, container, loadFeeSuggestions, logger, applicationSettings, parent)
+   : CreateTransactionDialog(armory, walletManager, utxoReservationManager, container, loadFeeSuggestions, logger, applicationSettings, parent)
  , ui_(new Ui::CreateTransactionDialogAdvanced)
 {
    transactionData_ = txData;
@@ -60,6 +61,7 @@ CreateTransactionDialogAdvanced::~CreateTransactionDialogAdvanced() = default;
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced::CreateForRBF(
         const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
+      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
       , const std::shared_ptr<SignContainer>& container
       , const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
@@ -67,7 +69,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
       , QWidget* parent)
 {
    auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
-      , walletManager, container, false, logger, applicationSettings, nullptr, parent);
+      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, parent);
 
    dlg->setWindowTitle(tr("Replace-By-Fee"));
 
@@ -83,6 +85,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced::CreateForCPFP(
         const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
+      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
       , const std::shared_ptr<SignContainer>& container
       , const std::shared_ptr<bs::sync::Wallet>& wallet
       , const std::shared_ptr<spdlog::logger>& logger
@@ -91,7 +94,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
       , QWidget* parent)
 {
    auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
-      , walletManager, container, false, logger, applicationSettings, nullptr, parent);
+      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, parent);
 
    dlg->setWindowTitle(tr("Child-Pays-For-Parent"));
    dlg->ui_->pushButtonImport->setEnabled(false);

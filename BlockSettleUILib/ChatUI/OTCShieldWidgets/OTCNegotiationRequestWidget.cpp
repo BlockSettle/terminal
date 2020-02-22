@@ -12,7 +12,6 @@
 
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
-#include "CoinControlDialog.h"
 #include "OTCWindowsManager.h"
 #include "OtcTypes.h"
 #include "TradesUtils.h"

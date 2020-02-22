@@ -670,7 +670,7 @@ void BSTerminalMainWindow::InitPortfolioView()
 {
    portfolioModel_ = std::make_shared<CCPortfolioModel>(walletsMgr_, assetManager_, this);
    ui_->widgetPortfolio->init(applicationSettings_, mdProvider_, portfolioModel_,
-                             signContainer_, armory_, logMgr_->logger("ui"),
+                             signContainer_, armory_, utxoReservationMgr_, logMgr_->logger("ui"),
                              walletsMgr_);
 }
 
@@ -775,7 +775,7 @@ void BSTerminalMainWindow::InitChartsView()
 void BSTerminalMainWindow::InitTransactionsView()
 {
    ui_->widgetExplorer->init(armory_, logMgr_->logger(), walletsMgr_, ccFileManager_, authManager_);
-   ui_->widgetTransactions->init(walletsMgr_, armory_, signContainer_,
+   ui_->widgetTransactions->init(walletsMgr_, armory_, utxoReservationMgr_, signContainer_,
                                 logMgr_->logger("ui"));
    ui_->widgetTransactions->setEnabled(true);
 
@@ -1140,7 +1140,7 @@ void BSTerminalMainWindow::onGenerateAddress()
 
 void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWalletId)
 {
-   CreateTransactionDialogAdvanced advancedDialog{armory_, walletsMgr_
+   CreateTransactionDialogAdvanced advancedDialog{armory_, walletsMgr_, utxoReservationMgr_
       , signContainer_, true, logMgr_->logger("ui"), applicationSettings_, nullptr, this};
 
    if (!selectedWalletId.empty()) {
@@ -1170,7 +1170,7 @@ void BSTerminalMainWindow::onSend()
       if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
          createAdvancedTxDialog(selectedWalletId);
       } else {
-         CreateTransactionDialogSimple dlg(armory_, walletsMgr_, signContainer_
+         CreateTransactionDialogSimple dlg(armory_, walletsMgr_, utxoReservationMgr_, signContainer_
             , logMgr_->logger("ui"), applicationSettings_, this);
 
          if (!selectedWalletId.empty()) {

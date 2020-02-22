@@ -28,6 +28,7 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
+   class UTXOReservationManager;
 }
 class ArmoryConnection;
 class SignContainer;
@@ -47,6 +48,7 @@ public:
 
    void init(const std::shared_ptr<bs::sync::WalletsManager> &
              , const std::shared_ptr<ArmoryConnection> &
+             , const std::shared_ptr<bs::UTXOReservationManager> &
              , const std::shared_ptr<SignContainer> &
              , const std::shared_ptr<spdlog::logger> &);
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel> &);
@@ -74,6 +76,7 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>         signContainer_;
    std::shared_ptr<ArmoryConnection>      armory_;
+   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    TransactionsSortFilterModel         *  sortFilterModel_;
    QMenu    contextMenu_;
