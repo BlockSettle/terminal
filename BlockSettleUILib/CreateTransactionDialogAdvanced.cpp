@@ -25,6 +25,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
+#include "UtxoReservationManager.h"
 
 #include <QEvent>
 #include <QKeyEvent>

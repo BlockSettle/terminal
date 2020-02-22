@@ -22,6 +22,7 @@
 #include "BSErrorCodeStrings.h"
 #include "CoreWallet.h"
 #include "ValidityFlag.h"
+#include "UtxoReservationToken.h"
 
 namespace bs {
    namespace sync {
@@ -132,6 +133,7 @@ protected:
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<ApplicationSettings> applicationSettings_;
    std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
+   bs::UtxoReservationToken utxoRes_;
 
    XbtAmountValidator * xbtValidator_ = nullptr;
 

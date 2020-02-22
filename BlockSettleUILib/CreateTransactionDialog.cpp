@@ -39,6 +39,7 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
 #include "UtxoReservationManager.h"
+#include "SelectedTransactionInputs.h"
 
 // Mirror of cached Armory wait times - NodeRPC::aggregateFeeEstimates()
 const std::map<unsigned int, QString> feeLevels = {
@@ -303,6 +304,12 @@ void CreateTransactionDialog::onTransactionUpdated()
 {
    const auto &summary = transactionData_->GetTransactionSummary();
 
+   // #UTXO_MANAGER: reserve all available UTXO for now
+   // till the moment dialog will be deleted
+   if (summary.availableBalance > .0) {
+      utxoRes_.release();
+      utxoRes_ = utxoReservationManager_->makeNewReservation(transactionData_->getSelectedInputs()->GetAllTransactions());
+   }
    labelBalance()->setText(UiUtils::displayAmount(summary.availableBalance));
    labelAmount()->setText(UiUtils::displayAmount(summary.selectedBalance));
    labelTxInputs()->setText(summary.isAutoSelected ? tr("Auto (%1)").arg(QString::number(summary.usedTransactions))
