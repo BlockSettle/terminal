@@ -233,8 +233,7 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::s
       });
    };
 
-   for (const auto &leaf : wallet->getLeaves()) 
-   {
+   for (const auto &leaf : wallet->getLeaves()) {
       leaf->getSpendableTxOutList(cbUTXOs, UINT64_MAX, true);
 
       auto addrCnt = leaf->getActiveAddressCount();

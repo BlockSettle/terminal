@@ -1310,7 +1310,7 @@ TEST_F(TestWalletWithArmory, GlobalDelegateConf)
    ledgerEntries = lbdGetLDEntries(globalLedger);
    ASSERT_FALSE(ledgerEntries->empty());
    EXPECT_EQ(ledgerEntries->size(), 7);
-   EXPECT_EQ((*ledgerEntries)[0].getBlockNum(), UINT32_MAX);
+   EXPECT_EQ((*ledgerEntries)[0].getBlockNum(), UINT32_MAX, true);
 
    // Mine new block - conf count for entry[0] should increase
    armoryInstance->mineNewBlock(recipient.get(), 1);

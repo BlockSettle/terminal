@@ -47,6 +47,7 @@
 #include "LoginWindow.h"
 #include "InfoDialogs/MDAgreementDialog.h"
 #include "MarketDataProvider.h"
+#include "MDCallbacksQt.h"
 #include "NetworkSettingsLoader.h"
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
@@ -369,9 +370,11 @@ void BSTerminalMainWindow::initConnections()
    connect(celerConnection_.get(), &BaseCelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
    connect(celerConnection_.get(), &BaseCelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
 
-   mdProvider_ = std::make_shared<BSMarketDataProvider>(connectionManager_, logMgr_->logger("message"));
-   connect(mdProvider_.get(), &MarketDataProvider::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
-   connect(mdProvider_.get(), &MarketDataProvider::WaitingForConnectionDetails, this, &BSTerminalMainWindow::onMDConnectionDetailsRequired);
+   mdCallbacks_ = std::make_shared<MDCallbacksQt>();
+   mdProvider_ = std::make_shared<BSMarketDataProvider>(connectionManager_
+      , logMgr_->logger("message"), mdCallbacks_.get());
+   connect(mdCallbacks_.get(), &MDCallbacksQt::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
+   connect(mdCallbacks_.get(), &MDCallbacksQt::WaitingForConnectionDetails, this, &BSTerminalMainWindow::onMDConnectionDetailsRequired);
 }
 
 void BSTerminalMainWindow::LoadWallets()
@@ -648,7 +651,8 @@ void BSTerminalMainWindow::InitAssets()
 {
    ccFileManager_ = std::make_shared<CCFileManager>(logMgr_->logger(), applicationSettings_
       , connectionManager_, cbApprovePuB_);
-   assetManager_ = std::make_shared<AssetManager>(logMgr_->logger(), walletsMgr_, mdProvider_, celerConnection_);
+   assetManager_ = std::make_shared<AssetManager>(logMgr_->logger(), walletsMgr_
+      , mdCallbacks_, celerConnection_);
    assetManager_->init();
 
    orderListModel_ = std::make_unique<OrderListModel>(assetManager_);
@@ -659,7 +663,7 @@ void BSTerminalMainWindow::InitAssets()
    connect(ccFileManager_.get(), &CCFileManager::LoadingFailed, this, &BSTerminalMainWindow::onCCInfoMissing);
    connect(ccFileManager_.get(), &CCFileManager::definitionsLoadedFromPub, this, &BSTerminalMainWindow::onCcDefinitionsLoadedFromPub);
 
-   connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
+   connect(mdCallbacks_.get(), &MDCallbacksQt::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
 
    if (ccFileManager_->hasLocalFile()) {
       ccFileManager_->LoadSavedCCDefinitions();
@@ -669,9 +673,8 @@ void BSTerminalMainWindow::InitAssets()
 void BSTerminalMainWindow::InitPortfolioView()
 {
    portfolioModel_ = std::make_shared<CCPortfolioModel>(walletsMgr_, assetManager_, this);
-   ui_->widgetPortfolio->init(applicationSettings_, mdProvider_, portfolioModel_,
-                             signContainer_, armory_, utxoReservationMgr_, logMgr_->logger("ui"),
-                             walletsMgr_);
+   ui_->widgetPortfolio->init(applicationSettings_, mdProvider_, mdCallbacks_
+      , portfolioModel_, signContainer_, armory_, utxoReservationMgr_, logMgr_->logger("ui"), walletsMgr_);
 }
 
 void BSTerminalMainWindow::InitWalletsView()
@@ -700,7 +703,7 @@ void BSTerminalMainWindow::tryInitChatView()
       const auto env = isProd ? bs::network::otc::Env::Prod : bs::network::otc::Env::Test;
 
       ui_->widgetChat->init(connectionManager_, env, chatClientServicePtr_,
-         logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_, mdProvider_, assetManager_, utxoReservationMgr_);
+         logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_, mdCallbacks_, assetManager_, utxoReservationMgr_);
 
       connect(chatClientServicePtr_->getClientPartyModelPtr().get(), &Chat::ClientPartyModel::userPublicKeyChanged,
          this, [this](const Chat::UserPublicKeyInfoList& userPublicKeyInfoList) {
@@ -768,7 +771,8 @@ void BSTerminalMainWindow::tryGetChatKeys()
 
 void BSTerminalMainWindow::InitChartsView()
 {
-   ui_->widgetChart->init(applicationSettings_, mdProvider_, connectionManager_, logMgr_->logger("ui"));
+   ui_->widgetChart->init(applicationSettings_, mdProvider_, mdCallbacks_
+      , connectionManager_, logMgr_->logger("ui"));
 }
 
 // Initialize widgets related to transactions.
@@ -1824,19 +1828,19 @@ void BSTerminalMainWindow::InitWidgets()
    InitWalletsView();
    InitPortfolioView();
 
-   ui_->widgetRFQ->initWidgets(mdProvider_, applicationSettings_);
+   ui_->widgetRFQ->initWidgets(mdProvider_, mdCallbacks_, applicationSettings_);
 
    auto quoteProvider = std::make_shared<QuoteProvider>(assetManager_, logMgr_->logger("message"));
    quoteProvider->ConnectToCelerClient(celerConnection_);
 
    autoSignQuoteProvider_ = std::make_shared<AutoSignQuoteProvider>(logMgr_->logger(), assetManager_, quoteProvider
-      , applicationSettings_, signContainer_, mdProvider_, celerConnection_);
+      , applicationSettings_, signContainer_, mdCallbacks_, celerConnection_);
 
    auto dialogManager = std::make_shared<DialogManager>(this);
 
    ui_->widgetRFQ->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, assetManager_
       , dialogManager, signContainer_, armory_, connectionManager_, utxoReservationMgr_, orderListModel_.get());
-   ui_->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
+   ui_->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdCallbacks_, assetManager_
       , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_, autoSignQuoteProvider_, utxoReservationMgr_, orderListModel_.get());
 
    connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);

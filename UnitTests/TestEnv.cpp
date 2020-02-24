@@ -15,6 +15,7 @@
 #include "ConnectionManager.h"
 #include "CoreWalletsManager.h"
 #include "MarketDataProvider.h"
+#include "MDCallbacksQt.h"
 #include "QuoteProvider.h"
 #include "SystemFileUtils.h"
 #include "UiUtils.h"
@@ -123,7 +124,8 @@ void TestEnv::requireAssets()
    assetMgr_ = std::make_shared<MockAssetManager>(logger_);
    assetMgr_->init();
 
-   mdProvider_ = std::make_shared<MarketDataProvider>(logger_);
+   mdCallbacks_ = std::make_shared<MDCallbacksQt>();
+   mdProvider_ = std::make_shared<MarketDataProvider>(logger_, mdCallbacks_.get());
    quoteProvider_ = std::make_shared<QuoteProvider>(assetMgr_, logger_);
 }
 
