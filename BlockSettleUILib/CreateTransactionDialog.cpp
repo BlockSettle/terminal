@@ -29,7 +29,6 @@
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "BSMessageBox.h"
-#include "CoinControlDialog.h"
 #include "OfflineSigner.h"
 #include "SignContainer.h"
 #include "TransactionData.h"
@@ -39,6 +38,8 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
+#include "UtxoReservationManager.h"
+#include "SelectedTransactionInputs.h"
 
 // Mirror of cached Armory wait times - NodeRPC::aggregateFeeEstimates()
 const std::map<unsigned int, QString> feeLevels = {
@@ -54,6 +55,7 @@ const size_t kTransactionWeightLimit = 400000;
 
 CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions
    , const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ApplicationSettings> &applicationSettings
@@ -61,6 +63,7 @@ CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryCon
    : QDialog(parent)
    , armory_(armory)
    , walletsManager_(walletManager)
+   , utxoReservationManager_(utxoReservationManager)
    , signContainer_(container)
    , logger_(logger)
    , applicationSettings_(applicationSettings)
@@ -301,6 +304,12 @@ void CreateTransactionDialog::onTransactionUpdated()
 {
    const auto &summary = transactionData_->GetTransactionSummary();
 
+   // #UTXO_MANAGER: reserve all available UTXO for now
+   // till the moment dialog will be deleted
+   if (summary.availableBalance > .0) {
+      utxoRes_.release();
+      utxoRes_ = utxoReservationManager_->makeNewReservation(transactionData_->getSelectedInputs()->GetAllTransactions());
+   }
    labelBalance()->setText(UiUtils::displayAmount(summary.availableBalance));
    labelAmount()->setText(UiUtils::displayAmount(summary.selectedBalance));
    labelTxInputs()->setText(summary.isAutoSelected ? tr("Auto (%1)").arg(QString::number(summary.usedTransactions))

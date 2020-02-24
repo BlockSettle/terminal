@@ -27,6 +27,7 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
+   class UTXOReservationManager;
 }
 
 class QAction;
@@ -56,6 +57,7 @@ public:
       , const std::shared_ptr<CCPortfolioModel> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
       , const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<bs::sync::WalletsManager> &);
 
@@ -86,6 +88,7 @@ private:
    std::shared_ptr<SignContainer>      signContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
+   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
 };
 
 #endif // __PORFOLIO_WIDGET_H__

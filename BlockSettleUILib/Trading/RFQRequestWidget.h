@@ -85,6 +85,9 @@ public:
 
    void setAuthorized(bool authorized);
 
+protected:
+   void hideEvent(QHideEvent* event) override;
+
 signals:
    void requestPrimaryWalletCreation();
 

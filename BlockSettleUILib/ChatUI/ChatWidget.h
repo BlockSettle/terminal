@@ -81,6 +81,7 @@ public:
 
 protected:
    void showEvent(QShowEvent* e) override;
+   void hideEvent(QHideEvent* event) override;
    bool eventFilter(QObject* sender, QEvent* event) override;
 
 public slots:
@@ -143,6 +144,7 @@ signals:
    void chatRoomChanged();
    void requestPrimaryWalletCreation();
    void emailHashRequested(const std::string &email);
+   void onAboutToHide();
 
 private:
    friend class AbstractChatWidgetState;

@@ -36,6 +36,7 @@ public:
    static std::shared_ptr<CreateTransactionDialogAdvanced>  CreateForRBF(
         const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
+      , const std::shared_ptr<bs::UTXOReservationManager> &
       , const std::shared_ptr<SignContainer>&
       , const std::shared_ptr<spdlog::logger>&
       , const std::shared_ptr<ApplicationSettings> &
@@ -45,6 +46,7 @@ public:
    static std::shared_ptr<CreateTransactionDialogAdvanced>  CreateForCPFP(
         const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager>&
+      , const std::shared_ptr<bs::UTXOReservationManager> &
       , const std::shared_ptr<SignContainer>&
       , const std::shared_ptr<bs::sync::Wallet>&
       , const std::shared_ptr<spdlog::logger>&
@@ -54,8 +56,9 @@ public:
 
 public:
    CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &, const std::shared_ptr<SignContainer> &
-      , bool loadFeeSuggestions, const std::shared_ptr<spdlog::logger>& logger
+      , const std::shared_ptr<bs::sync::WalletsManager> &, const std::shared_ptr<bs::UTXOReservationManager> &
+      , const std::shared_ptr<SignContainer> &, bool loadFeeSuggestions
+      , const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
       , const std::shared_ptr<TransactionData> &
       , QWidget* parent = nullptr);
