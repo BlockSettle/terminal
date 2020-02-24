@@ -65,7 +65,7 @@ namespace bs {
   
       // CC specific implementation
       BTCNumericTypes::balance_type getAvailableCCUtxoSum(const CCProductName& CCProduct) const;
-      std::vector<UTXO> bs::UTXOReservationManager::getAvailableCCUTXOs(const CCWalletId& walletId) const;
+      std::vector<UTXO> getAvailableCCUTXOs(const CCWalletId& walletId) const;
 
       // Static functions
       static FixedXbtInputs convertUtxoToFixedInput(const HDWalletId& walletId, const std::vector<UTXO>& utxos);
