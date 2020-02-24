@@ -11,7 +11,7 @@
 
 #include "UserScriptRunner.h"
 #include "SignContainer.h"
-#include "MarketDataProvider.h"
+#include "MDCallbacksQt.h"
 #include "UserScript.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -23,15 +23,14 @@
 // UserScriptHandler
 //
 
-UserScriptHandler::UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvider,
-   std::shared_ptr<SignContainer> signingContainer,
-   std::shared_ptr<MarketDataProvider> mdProvider,
-   std::shared_ptr<AssetManager> assetManager,
-   std::shared_ptr<spdlog::logger> logger,
-   UserScriptRunner *runner,
-   QThread *handlerThread)
+UserScriptHandler::UserScriptHandler(const std::shared_ptr<QuoteProvider> &quoteProvider
+   , const std::shared_ptr<SignContainer> &signingContainer
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
+   , const std::shared_ptr<AssetManager> &assetManager
+   , const std::shared_ptr<spdlog::logger> &logger
+   , UserScriptRunner *runner, QThread *handlerThread)
    : signingContainer_(signingContainer)
-   , mdProvider_(mdProvider)
+   , mdCallbacks_(mdCallbacks)
    , assetManager_(assetManager)
    , logger_(logger)
    , aqEnabled_(false)
@@ -54,7 +53,7 @@ UserScriptHandler::UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvide
       Qt::QueuedConnection);
    connect(runner, &UserScriptRunner::deinitAQ, this, &UserScriptHandler::deinitAQ,
       Qt::QueuedConnection);
-   connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &UserScriptHandler::onMDUpdate,
+   connect(mdCallbacks_.get(), &MDCallbacksQt::MDUpdate, this, &UserScriptHandler::onMDUpdate,
       Qt::QueuedConnection);
    connect(quoteProvider.get(), &QuoteProvider::bestQuotePrice,
       this, &UserScriptHandler::onBestQuotePrice, Qt::QueuedConnection);
@@ -149,7 +148,7 @@ void UserScriptHandler::initAQ(const QString &fileName)
 
    aqEnabled_ = false;
 
-   aq_ = new AutoQuoter(logger_, fileName, assetManager_, mdProvider_, this);
+   aq_ = new AutoQuoter(logger_, fileName, assetManager_, mdCallbacks_, this);
    if (walletsManager_) {
       aq_->setWalletsManager(walletsManager_);
    }
@@ -308,17 +307,16 @@ void UserScriptHandler::aqTick()
 // UserScriptRunner
 //
 
-UserScriptRunner::UserScriptRunner(std::shared_ptr<QuoteProvider> quoteProvider,
-   std::shared_ptr<SignContainer> signingContainer,
-   std::shared_ptr<MarketDataProvider> mdProvider,
-   std::shared_ptr<AssetManager> assetManager,
-   std::shared_ptr<spdlog::logger> logger,
-   QObject *parent)
+UserScriptRunner::UserScriptRunner(const std::shared_ptr<QuoteProvider> &quoteProvider
+   , const std::shared_ptr<SignContainer> &signingContainer
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
+   , const std::shared_ptr<AssetManager> &assetManager
+   , const std::shared_ptr<spdlog::logger> &logger
+   , QObject *parent)
    : QObject(parent)
    , thread_(new QThread(this))
    , script_(new UserScriptHandler(quoteProvider, signingContainer,
-         mdProvider, assetManager, logger, this, thread_))
-
+         mdCallbacks, assetManager, logger, this, thread_))
    , logger_(logger)
 {
    thread_->setObjectName(QStringLiteral("AQScriptRunner"));

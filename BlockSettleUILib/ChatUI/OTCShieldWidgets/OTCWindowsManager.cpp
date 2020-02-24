@@ -11,7 +11,7 @@
 #include "OTCWindowsManager.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "AuthAddressManager.h"
-#include "MarketDataProvider.h"
+#include "MDCallbacksQt.h"
 #include "AssetManager.h"
 #include "UtxoReservationManager.h"
 
@@ -21,7 +21,7 @@ OTCWindowsManager::OTCWindowsManager(QObject* parent /*= nullptr*/)
 
 void OTCWindowsManager::init(const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr
    , const std::shared_ptr<AuthAddressManager> &authManager
-   , const std::shared_ptr<MarketDataProvider>& mdProvider
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager)
@@ -43,8 +43,7 @@ void OTCWindowsManager::init(const std::shared_ptr<bs::sync::WalletsManager>& wa
    authManager_ = authManager;
    connect(authManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, &OTCWindowsManager::syncInterfaceRequired);
 
-   mdProvider_ = mdProvider;
-   connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, this, &OTCWindowsManager::updateMDDataRequired);
+   connect(mdCallbacks.get(), &MDCallbacksQt::MDUpdate, this, &OTCWindowsManager::updateMDDataRequired);
 
    assetManager_ = assetManager;
    connect(assetManager_.get(), &AssetManager::totalChanged, this, &OTCWindowsManager::updateBalances);
