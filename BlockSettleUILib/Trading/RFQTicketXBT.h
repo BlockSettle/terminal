@@ -95,6 +95,8 @@ public:
 
    std::shared_ptr<bs::sync::hd::Wallet> xbtWallet() const;
 
+   void onParentAboutToHide();
+
 public slots:
    void SetProductAndSide(const QString& productGroup, const QString& currencyPair
       , const QString& bidPrice, const QString& offerPrice, bs::network::Side::Type side);

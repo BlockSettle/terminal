@@ -548,6 +548,12 @@ void RFQReplyWidget::eraseReply(const QString &reqId)
    }
 }
 
+void RFQReplyWidget::hideEvent(QHideEvent* event)
+{
+   ui_->pageRFQReply->onParentAboutToHide();
+   QWidget::hideEvent(event);
+}
+
 void RFQReplyWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response)
 {
    switch (response.data_case()) {

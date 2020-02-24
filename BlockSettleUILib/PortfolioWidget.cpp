@@ -21,6 +21,7 @@
 #include "TransactionsViewModel.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncWallet.h"
+#include "UtxoReservationManager.h"
 
 
 class UnconfirmedTransactionFilter : public QSortFilterProxyModel
@@ -109,6 +110,7 @@ void PortfolioWidget::init(const std::shared_ptr<ApplicationSettings> &appSettin
    , const std::shared_ptr<CCPortfolioModel> &model
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
 {
@@ -117,6 +119,7 @@ void PortfolioWidget::init(const std::shared_ptr<ApplicationSettings> &appSettin
    walletsManager_ = walletsMgr;
    logger_ = logger;
    appSettings_ = appSettings;
+   utxoReservationManager_ = utxoReservationManager;
 
    ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ_Portfolio
       , mdProvider, mdCallbacks);
@@ -203,7 +206,7 @@ void PortfolioWidget::onCreateRBFDialog()
    const auto &cbDialog = [this](const TransactionPtr &txItem) {
       try {
          auto dlg = CreateTransactionDialogAdvanced::CreateForRBF(armory_
-            , walletsManager_, signContainer_, logger_, appSettings_, txItem->tx
+            , walletsManager_, utxoReservationManager_, signContainer_, logger_, appSettings_, txItem->tx
             , this);
          dlg->exec();
       }
@@ -239,7 +242,7 @@ void PortfolioWidget::onCreateCPFPDialog()
             }
          }
          auto dlg = CreateTransactionDialogAdvanced::CreateForCPFP(armory_
-            , walletsManager_, signContainer_, wallet, logger_, appSettings_
+            , walletsManager_, utxoReservationManager_, signContainer_, wallet, logger_, appSettings_
             , txItem->tx, this);
          dlg->exec();
       }

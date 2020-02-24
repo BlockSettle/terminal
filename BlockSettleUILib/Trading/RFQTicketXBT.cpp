@@ -37,6 +37,7 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
 #include "UtxoReservationManager.h"
+#include "UtxoReservation.h"
 
 #include <cstdlib>
 
@@ -234,8 +235,7 @@ RFQTicketXBT::BalanceInfoContainer RFQTicketXBT::getBalanceInfo() const
       balance.productType = ProductGroupType::XBTGroupType;
    } else {
       if (currentGroupType_ == ProductGroupType::CCGroupType) {
-         auto ccWallet = getCCWallet(getProduct().toStdString());
-         balance.amount = ccWallet ? ccWallet->getSpendableBalance() : 0;
+         balance.amount = utxoReservationManager_->getAvailableCCUtxoSum(getProduct().toStdString());
          balance.product = productToSpend;
          balance.productType = ProductGroupType::CCGroupType;
       } else {
@@ -337,7 +337,7 @@ void RFQTicketXBT::showCoinControl()
    // Need to release current reservation to be able select them back
    fixedXbtInputs_.utxoRes.release();
 
-   auto utxos = utxoReservationManager_->getAvailableUTXOs(walletId);
+   auto utxos = utxoReservationManager_->getAvailableXbtUTXOs(walletId);
 
    ui_->toolButtonXBTInputsSend->setEnabled(true);
    const bool useAutoSel = fixedXbtInputs_.inputs.empty();
@@ -355,8 +355,15 @@ void RFQTicketXBT::showCoinControl()
       return;
    }
 
-   fixedXbtInputs_.inputs.clear();
    auto selectedInputs = dialog.selectedInputs();
+   if (bs::UtxoReservation::instance()->containsReservedUTXO(selectedInputs)) {
+      BSMessageBox(BSMessageBox::critical, tr("UTXO reservation failed"),
+         tr("Some of selected UTXOs has been already reserved"), this).exec();
+      showCoinControl();
+      return;
+   }
+
+   fixedXbtInputs_.inputs.clear();
    for (const auto &selectedInput : selectedInputs) {
       fixedXbtInputs_.inputs.emplace(selectedInput, walletId);
    }
@@ -509,7 +516,7 @@ void RFQTicketXBT::onUTXOReservationChanged(const std::string& walletId)
    }
 
    auto xbtWallet = getSendXbtWallet();
-   if (xbtWallet && walletId == xbtWallet->walletId()) {
+   if (xbtWallet && (walletId == xbtWallet->walletId() || xbtWallet->getLeaf(walletId))) {
       updateBalances();
    }
 }
@@ -897,6 +904,11 @@ std::shared_ptr<bs::sync::hd::Wallet> RFQTicketXBT::xbtWallet() const
    return nullptr;
 }
 
+void RFQTicketXBT::onParentAboutToHide()
+{
+   fixedXbtInputs_ = {};
+}
+
 void RFQTicketXBT::enablePanel()
 {
    resetTicket();
@@ -968,7 +980,7 @@ void RFQTicketXBT::onMaxClicked()
             }
          }
          else {
-            utxos = utxoReservationManager_->getAvailableUTXOs(xbtWallet->walletId());
+            utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId());
          }
 
          auto feeCb = [this, utxos = std::move(utxos)](float fee) {
@@ -1173,7 +1185,7 @@ bs::XBTAmount RFQTicketXBT::getXbtBalance() const
       return bs::XBTAmount(0.0);
    }
 
-   return bs::XBTAmount(utxoReservationManager_->getAvailableUtxoSum(getSendXbtWallet()->walletId()));
+   return bs::XBTAmount(utxoReservationManager_->getAvailableXbtUtxoSum(getSendXbtWallet()->walletId()));
 }
 
 QString RFQTicketXBT::getProductToSpend() const
@@ -1233,7 +1245,7 @@ void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network
       submitRFQCb();
    };
 
-   utxoReservationManager_->reserveBestUtxoSet(
+   utxoReservationManager_->reserveBestXbtUtxoSet(
       getSendXbtWallet()->walletId(), quantity, std::move(cbBestUtxoSet));
 }
 

@@ -24,6 +24,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "UiUtils.h"
+#include "UtxoReservationManager.h"
 
 static const QString c_allWalletsId = QLatin1String("all");
 
@@ -286,12 +287,14 @@ TransactionsWidget::~TransactionsWidget() = default;
 
 void TransactionsWidget::init(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
                               , const std::shared_ptr<ArmoryConnection> &armory
+                              , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
                               , const std::shared_ptr<SignContainer> &signContainer
                               , const std::shared_ptr<spdlog::logger> &logger)
 
 {
    walletsManager_ = walletsMgr;
    armory_ = armory;
+   utxoReservationManager_ = utxoReservationManager;
    signContainer_ = signContainer;
    logger_ = logger;
 
@@ -534,7 +537,7 @@ void TransactionsWidget::onCreateRBFDialog()
    const auto &cbDialog = [this](const TransactionPtr &txItem) {
       try {
          auto dlg = CreateTransactionDialogAdvanced::CreateForRBF(armory_
-            , walletsManager_, signContainer_, logger_, appSettings_, txItem->tx
+            , walletsManager_, utxoReservationManager_, signContainer_, logger_, appSettings_, txItem->tx
             , this);
          dlg->exec();
       }
@@ -570,7 +573,7 @@ void TransactionsWidget::onCreateCPFPDialog()
             }
          }
          auto dlg = CreateTransactionDialogAdvanced::CreateForCPFP(armory_
-            , walletsManager_, signContainer_, wallet
+            , walletsManager_, utxoReservationManager_, signContainer_, wallet
             , logger_, appSettings_, txItem->tx, this);
          dlg->exec();
       }

@@ -145,6 +145,12 @@ void RFQRequestWidget::setAuthorized(bool authorized)
    ui_->widgetMarketData->setAuthorized(authorized);
 }
 
+void RFQRequestWidget::hideEvent(QHideEvent* event)
+{
+   ui_->pageRFQTicket->onParentAboutToHide();
+   QWidget::hideEvent(event);
+}
+
 void RFQRequestWidget::showEditableRFQPage()
 {
    ui_->stackedWidgetRFQ->setEnabled(true);

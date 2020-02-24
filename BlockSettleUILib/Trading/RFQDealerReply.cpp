@@ -616,6 +616,14 @@ void bs::ui::RFQDealerReply::setGetLastSettlementReply(GetLastUTXOReplyCb cb)
    getLastUTXOReplyCb_ = std::move(cb);
 }
 
+void bs::ui::RFQDealerReply::onParentAboutToHide()
+{
+   if (sentNotifs_.count(currentQRN_.quoteRequestId) == 0) {
+      selectedXbtInputs_.clear();
+   }
+   selectedXbtRes_.release();
+}
+
 void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, double price, ReplyType replyType)
 {
    if (qFuzzyIsNull(price)) {
@@ -753,7 +761,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                   ccWallet->getSpendableTxOutList(inputsWrapCb, spendVal, true);
                } else {
                   // For XBT request all available inputs as we don't know fee yet (createPartialTXRequest will use correct inputs if fee rate is set)
-                  auto utxos = utxoReservationManager_->getAvailableUTXOs(replyData->xbtWallet->walletId());
+                  auto utxos = utxoReservationManager_->getAvailableXbtUTXOs(replyData->xbtWallet->walletId());
                   auto fixedUtxo = UTXOReservationManager::convertUtxoToFixedInput(replyData->xbtWallet->walletId(), utxos);
                   inputsCb(fixedUtxo.inputs);
                }
@@ -854,7 +862,7 @@ void RFQDealerReply::showCoinControl()
 
    // Need to release current reservation to be able select them back
    selectedXbtRes_.release();
-   auto allUTXOs = utxoReservationManager_->getAvailableUTXOs(xbtWallet->walletId());
+   auto allUTXOs = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId());
 
    ui_->toolButtonXBTInputsSend->setEnabled(true);
 
@@ -874,8 +882,15 @@ void RFQDealerReply::showCoinControl()
       return;
    }
 
-   selectedXbtInputs_.clear();
    auto selectedInputs = dialog.selectedInputs();
+   if (bs::UtxoReservation::instance()->containsReservedUTXO(selectedInputs)) {
+      BSMessageBox(BSMessageBox::critical, tr("UTXO reservation failed"),
+         tr("Some of selected UTXOs has been already reserved"), this).exec();
+      showCoinControl();
+      return;
+   }
+
+   selectedXbtInputs_.clear();
    for (const auto &selectedInput : selectedInputs) {
       selectedXbtInputs_.push_back(selectedInput);
    }
@@ -1015,7 +1030,7 @@ void bs::ui::RFQDealerReply::onUTXOReservationChanged(const std::string& walletI
    }
 
    auto xbtWallet = getSelectedXbtWallet(ReplyType::Manual);
-   if (xbtWallet && walletId == xbtWallet->walletId()) {
+   if (xbtWallet && (walletId == xbtWallet->walletId() || xbtWallet->getLeaf(walletId))) {
       updateBalanceLabel();
    }
 }
@@ -1102,7 +1117,7 @@ void bs::ui::RFQDealerReply::reserveBestUtxoSetAndSubmit(double quantity, double
       replyRFQ(std::move(utxos));
    };
 
-   utxoReservationManager_->getBestUtxoSet(replyData->xbtWallet->walletId(),
+   utxoReservationManager_->getBestXbtUtxoSet(replyData->xbtWallet->walletId(),
       xbtQuantity, cbBestUtxoSet);
 }
 
@@ -1183,7 +1198,7 @@ bs::XBTAmount RFQDealerReply::getXbtBalance() const
       return {};
    }
 
-   return bs::XBTAmount(utxoReservationManager_->getAvailableUtxoSum(xbtWallet->walletId()));
+   return bs::XBTAmount(utxoReservationManager_->getAvailableXbtUtxoSum(xbtWallet->walletId()));
 }
 
 BTCNumericTypes::balance_type bs::ui::RFQDealerReply::getPrivateMarketCoinBalance() const
