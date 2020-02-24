@@ -13,6 +13,7 @@
 #include "ui_MarketDataWidget.h"
 #include "MarketDataProvider.h"
 #include "MarketDataModel.h"
+#include "MDCallbacksQt.h"
 #include "TreeViewWithEnterKey.h"
 
 constexpr int EMPTY_COLUMN_WIDTH = 0;
@@ -39,7 +40,8 @@ MarketDataWidget::~MarketDataWidget()
 {}
 
 void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings, ApplicationSettings::Setting param
-   , const std::shared_ptr<MarketDataProvider>& mdProvider)
+   , const std::shared_ptr<MarketDataProvider> &mdProvider
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks)
 {
    mdProvider_ = mdProvider;
 
@@ -84,16 +86,16 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
    connect(ui_->treeViewMarketData, &TreeViewWithEnterKey::enterKeyPressed,
            this, &MarketDataWidget::onEnterKeyPressed);
 
-   connect(mdProvider.get(), &MarketDataProvider::MDUpdate, marketDataModel_, &MarketDataModel::onMDUpdated);
-   connect(mdProvider.get(), &MarketDataProvider::MDReqRejected, this, &MarketDataWidget::onMDRejected);
+   connect(mdCallbacks.get(), &MDCallbacksQt::MDUpdate, marketDataModel_, &MarketDataModel::onMDUpdated);
+   connect(mdCallbacks.get(), &MDCallbacksQt::MDReqRejected, this, &MarketDataWidget::onMDRejected);
 
    connect(ui_->pushButtonMDConnection, &QPushButton::clicked, this, &MarketDataWidget::ChangeMDSubscriptionState);
 
-   connect(mdProvider.get(), &MarketDataProvider::WaitingForConnectionDetails, this, &MarketDataWidget::onLoadingNetworkSettings);
-   connect(mdProvider.get(), &MarketDataProvider::StartConnecting, this, &MarketDataWidget::OnMDConnecting);
-   connect(mdProvider.get(), &MarketDataProvider::Connected, this, &MarketDataWidget::OnMDConnected);
-   connect(mdProvider.get(), &MarketDataProvider::Disconnecting, this, &MarketDataWidget::OnMDDisconnecting);
-   connect(mdProvider.get(), &MarketDataProvider::Disconnected, this, &MarketDataWidget::OnMDDisconnected);
+   connect(mdCallbacks.get(), &MDCallbacksQt::WaitingForConnectionDetails, this, &MarketDataWidget::onLoadingNetworkSettings);
+   connect(mdCallbacks.get(), &MDCallbacksQt::StartConnecting, this, &MarketDataWidget::OnMDConnecting);
+   connect(mdCallbacks.get(), &MDCallbacksQt::Connected, this, &MarketDataWidget::OnMDConnected);
+   connect(mdCallbacks.get(), &MDCallbacksQt::Disconnecting, this, &MarketDataWidget::OnMDDisconnecting);
+   connect(mdCallbacks.get(), &MDCallbacksQt::Disconnected, this, &MarketDataWidget::OnMDDisconnected);
 
    ui_->pushButtonMDConnection->setText(tr("Subscribe"));
 }

@@ -27,7 +27,7 @@ namespace bs {
 }
 class QQmlComponent;
 class AssetManager;
-class MarketDataProvider;
+class MDCallbacksQt;
 
 
 //
@@ -40,7 +40,7 @@ class MarketData : public QObject
    Q_OBJECT
 
 public:
-   MarketData(std::shared_ptr<MarketDataProvider> mdProvider, QObject *parent);
+   MarketData(const std::shared_ptr<MDCallbacksQt> &, QObject *parent);
    ~MarketData() noexcept override = default;
 
    Q_INVOKABLE double bid(const QString &sec) const;
@@ -115,8 +115,8 @@ class UserScript : public QObject
 Q_OBJECT
 
 public:
-   UserScript(const std::shared_ptr<spdlog::logger> logger,
-      std::shared_ptr<MarketDataProvider> mdProvider,
+   UserScript(const std::shared_ptr<spdlog::logger> &,
+      const std::shared_ptr<MDCallbacksQt> &,
       QObject* parent = nullptr);
    ~UserScript() override;
 
@@ -144,10 +144,11 @@ class AutoQuoter : public QObject
 Q_OBJECT
 
 public:
-   AutoQuoter(const std::shared_ptr<spdlog::logger> logger, const QString &filename,
-      const std::shared_ptr<AssetManager> &assetManager,
-      std::shared_ptr<MarketDataProvider> mdProvider,
-      QObject* parent = nullptr);
+   AutoQuoter(const std::shared_ptr<spdlog::logger> &
+      , const QString &filename
+      , const std::shared_ptr<AssetManager> &
+      , const std::shared_ptr<MDCallbacksQt> &
+      , QObject* parent = nullptr);
    ~AutoQuoter() override = default;
 
    QObject *instantiate(const bs::network::QuoteReqNotification &qrn);

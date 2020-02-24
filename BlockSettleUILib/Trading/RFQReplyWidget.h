@@ -49,7 +49,7 @@ class AuthAddressManager;
 class BaseCelerClient;
 class ConnectionManager;
 class DialogManager;
-class MarketDataProvider;
+class MDCallbacksQt;
 class OrderListModel;
 class QuoteProvider;
 class SignContainer;
@@ -80,7 +80,7 @@ public:
       , const std::shared_ptr<BaseCelerClient> &
       , const std::shared_ptr<AuthAddressManager> &
       , const std::shared_ptr<QuoteProvider> &
-      , const std::shared_ptr<MarketDataProvider> &
+      , const std::shared_ptr<MDCallbacksQt> &
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<DialogManager> &

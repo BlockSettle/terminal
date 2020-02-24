@@ -20,6 +20,7 @@
 #include "EasyCoDec.h"
 #include "InprocSigner.h"
 #include "MarketDataProvider.h"
+#include "MDCallbacksQt.h"
 #include "TestEnv.h"
 #include "WalletUtils.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -92,19 +93,19 @@ TEST(TestCommon, AssetManager)
    syncMgr->setSignContainer(inprocSigner);
    syncMgr->syncWallets();
 
-   auto mdProvider = env.mdProvider();
-   AssetManager assetMgr(StaticLogger::loggerPtr, syncMgr, mdProvider, env.celerConnection());
-   assetMgr.connect(mdProvider.get(), &MarketDataProvider::MDSecurityReceived, &assetMgr, &AssetManager::onMDSecurityReceived);
-   assetMgr.connect(mdProvider.get(), &MarketDataProvider::MDSecuritiesReceived, &assetMgr, &AssetManager::onMDSecuritiesReceived);
+   const auto &mdCallbacks = env.mdCallbacks();
+   AssetManager assetMgr(StaticLogger::loggerPtr, syncMgr, mdCallbacks, env.celerConnection());
+   assetMgr.connect(mdCallbacks.get(), &MDCallbacksQt::MDSecurityReceived, &assetMgr, &AssetManager::onMDSecurityReceived);
+   assetMgr.connect(mdCallbacks.get(), &MDCallbacksQt::MDSecuritiesReceived, &assetMgr, &AssetManager::onMDSecuritiesReceived);
 
    const bs::network::SecurityDef secDef[2] = {
       { bs::network::Asset::SpotFX},
       { bs::network::Asset::SpotXBT}
    };
-   emit mdProvider->MDSecurityReceived("EUR/USD", secDef[0]);
-   emit mdProvider->MDSecurityReceived("GBP/SEK", secDef[0]);
-   emit mdProvider->MDSecurityReceived("XBT/USD", secDef[1]);
-   emit mdProvider->MDSecuritiesReceived();
+   emit mdCallbacks->MDSecurityReceived("EUR/USD", secDef[0]);
+   emit mdCallbacks->MDSecurityReceived("GBP/SEK", secDef[0]);
+   emit mdCallbacks->MDSecurityReceived("XBT/USD", secDef[1]);
+   emit mdCallbacks->MDSecuritiesReceived();
    QApplication::processEvents();
    assetMgr.onAccountBalanceLoaded("EUR", 1234.5);
    assetMgr.onAccountBalanceLoaded("USD", 2345.67);

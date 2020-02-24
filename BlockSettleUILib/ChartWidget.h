@@ -28,6 +28,7 @@ QT_END_NAMESPACE
 
 class ApplicationSettings;
 class MarketDataProvider;
+class MDCallbacksQt;
 class ConnectionManager;
 namespace spdlog { class logger; }
 class MdhsClient;
@@ -54,9 +55,10 @@ public:
     ~ChartWidget() override;
     void SendEoDRequest();
     void init(const std::shared_ptr<ApplicationSettings>&
-              , const std::shared_ptr<MarketDataProvider>&
-              , const std::shared_ptr<ConnectionManager>&
-              , const std::shared_ptr<spdlog::logger>&);
+       , const std::shared_ptr<MarketDataProvider>&
+       , const std::shared_ptr<MDCallbacksQt> &
+       , const std::shared_ptr<ConnectionManager>&
+       , const std::shared_ptr<spdlog::logger>&);
 
     void setAuthorized(bool authorized);
     void disconnect();
