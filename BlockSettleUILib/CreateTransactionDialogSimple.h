@@ -62,6 +62,7 @@ protected:
 
 protected slots:
    void onMaxPressed() override;
+   void onTransactionUpdated() override;
 
 private slots:
    void showAdvanced();

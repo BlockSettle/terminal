@@ -46,8 +46,10 @@ CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shar
       , const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
       , const std::shared_ptr<TransactionData> &txData
+      , bs::UtxoReservationToken utxoReservation
       , QWidget* parent)
-   : CreateTransactionDialog(armory, walletManager, utxoReservationManager, container, loadFeeSuggestions, logger, applicationSettings, parent)
+   : CreateTransactionDialog(armory, walletManager, utxoReservationManager, container, loadFeeSuggestions,
+      logger, applicationSettings, std::move(utxoReservation), parent)
  , ui_(new Ui::CreateTransactionDialogAdvanced)
 {
    transactionData_ = txData;
@@ -70,7 +72,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
       , QWidget* parent)
 {
    auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
-      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, parent);
+      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, bs::UtxoReservationToken(), parent);
 
    dlg->setWindowTitle(tr("Replace-By-Fee"));
 
@@ -95,7 +97,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
       , QWidget* parent)
 {
    auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
-      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, parent);
+      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, bs::UtxoReservationToken(), parent);
 
    dlg->setWindowTitle(tr("Child-Pays-For-Parent"));
    dlg->ui_->pushButtonImport->setEnabled(false);

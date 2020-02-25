@@ -59,6 +59,7 @@ CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryCon
    , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions
    , const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ApplicationSettings> &applicationSettings
+   , bs::UtxoReservationToken utxoReservation
    , QWidget* parent)
    : QDialog(parent)
    , armory_(armory)
@@ -68,6 +69,7 @@ CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryCon
    , logger_(logger)
    , applicationSettings_(applicationSettings)
    , loadFeeSuggestions_(loadFeeSuggestions)
+   , utxoRes_(std::move(utxoReservation))
 {
    qRegisterMetaType<std::map<unsigned int, float>>();
 }

@@ -141,6 +141,7 @@ void OTCWindowsAdapterBase::showXBTInputs(const std::string& walletId)
    CoinControlDialog dialog(inputs, true, this);
    int rc = dialog.exec();
    if (rc != QDialog::Accepted) {
+      emit xbtInputsProcessed();
       return;
    }
 

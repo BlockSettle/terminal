@@ -61,6 +61,7 @@ public:
       , const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
       , const std::shared_ptr<TransactionData> &
+      , bs::UtxoReservationToken utxoReservation
       , QWidget* parent = nullptr);
    ~CreateTransactionDialogAdvanced() override;
 

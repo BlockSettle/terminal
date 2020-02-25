@@ -1145,7 +1145,7 @@ void BSTerminalMainWindow::onGenerateAddress()
 void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWalletId)
 {
    CreateTransactionDialogAdvanced advancedDialog{armory_, walletsMgr_, utxoReservationMgr_
-      , signContainer_, true, logMgr_->logger("ui"), applicationSettings_, nullptr, this};
+      , signContainer_, true, logMgr_->logger("ui"), applicationSettings_, nullptr, {}, this };
 
    if (!selectedWalletId.empty()) {
       advancedDialog.SelectWallet(selectedWalletId);
