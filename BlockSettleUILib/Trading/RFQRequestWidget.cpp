@@ -145,6 +145,12 @@ void RFQRequestWidget::setAuthorized(bool authorized)
    ui_->widgetMarketData->setAuthorized(authorized);
 }
 
+void RFQRequestWidget::hideEvent(QHideEvent* event)
+{
+   ui_->pageRFQTicket->onParentAboutToHide();
+   QWidget::hideEvent(event);
+}
+
 void RFQRequestWidget::showEditableRFQPage()
 {
    ui_->stackedWidgetRFQ->setEnabled(true);
@@ -161,10 +167,12 @@ void RFQRequestWidget::popShield()
 }
 
 void RFQRequestWidget::initWidgets(const std::shared_ptr<MarketDataProvider>& mdProvider
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
    , const std::shared_ptr<ApplicationSettings> &appSettings)
 {
    appSettings_ = appSettings;
-   ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ, mdProvider);
+   ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ
+      , mdProvider, mdCallbacks);
 }
 
 void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger

@@ -30,7 +30,7 @@ UTXOReservationManager::UTXOReservationManager(const std::shared_ptr<bs::sync::W
    , logger_(logger)
 {
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized,
-      this, &UTXOReservationManager::refreshAvailableUTXO);
+      this, &UTXOReservationManager::refreshAvailableUTXO, Qt::QueuedConnection);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletAdded,
       this, &UTXOReservationManager::onWalletsAdded);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted,
@@ -39,48 +39,7 @@ UTXOReservationManager::UTXOReservationManager(const std::shared_ptr<bs::sync::W
       this, &UTXOReservationManager::onWalletsBalanceChanged);
 }
 
-void UTXOReservationManager::reserveBestUtxoSet(const std::string& walletId, BTCNumericTypes::satoshi_type quantity,
-   std::function<void(FixedXbtInputs&&)>&& cb)
-{
-   auto bestUtxoSetCb = [mgr = QPointer<bs::UTXOReservationManager>(this), walletId, cbFixedXBT = std::move(cb)](std::vector<UTXO>&& utxos) {
-      if (!mgr) {
-         return;
-      }
-
-      FixedXbtInputs fixedXbtInputs = UTXOReservationManager::convertUtxoToFixedInput(walletId, utxos);
-      fixedXbtInputs.utxoRes = mgr->makeNewReservation(utxos);
-
-      cbFixedXBT(std::move(fixedXbtInputs));
-   };
-
-   getBestUtxoSet(walletId, quantity, bestUtxoSetCb);
-}
-
 UTXOReservationManager::~UTXOReservationManager() = default;
-
-BTCNumericTypes::satoshi_type bs::UTXOReservationManager::getAvailableUtxoSum(const std::string& walletId) const
-{
-   BTCNumericTypes::satoshi_type sum = 0;
-   auto const availableUtxos = getAvailableUTXOs(walletId);
-   for (const auto &utxo : availableUtxos) {
-      sum += utxo.getValue();
-   }
-
-   return sum;
-}
-
-std::vector<UTXO> bs::UTXOReservationManager::getAvailableUTXOs(const std::string& walletId) const
-{
-   std::vector<UTXO> utxos;
-   auto const availableUtxos = availableUTXOs_.find(walletId);
-   if (availableUtxos == availableUTXOs_.end()) {
-      return {};
-   }
-
-   utxos = availableUtxos->second;
-   UtxoReservation::instance()->filter(utxos);
-   return utxos;
-}
 
 bs::UtxoReservationToken UTXOReservationManager::makeNewReservation(const std::vector<UTXO> &utxos, const std::string &reserveId)
 {
@@ -103,45 +62,190 @@ bs::UtxoReservationToken bs::UTXOReservationManager::makeNewReservation(const st
    return makeNewReservation(utxos, reserveId);
 }
 
+void UTXOReservationManager::reserveBestXbtUtxoSet(const HDWalletId& walletId, BTCNumericTypes::satoshi_type quantity,
+   std::function<void(FixedXbtInputs&&)>&& cb)
+{
+   auto bestUtxoSetCb = [mgr = QPointer<bs::UTXOReservationManager>(this), walletId, cbFixedXBT = std::move(cb)](std::vector<UTXO>&& utxos) {
+      if (!mgr) {
+         return;
+      }
+
+      FixedXbtInputs fixedXbtInputs = UTXOReservationManager::convertUtxoToFixedInput(walletId, utxos);
+      fixedXbtInputs.utxoRes = mgr->makeNewReservation(utxos);
+
+      cbFixedXBT(std::move(fixedXbtInputs));
+   };
+
+   getBestXbtUtxoSet(walletId, quantity, bestUtxoSetCb);
+}
+
+BTCNumericTypes::satoshi_type bs::UTXOReservationManager::getAvailableXbtUtxoSum(const HDWalletId& walletId) const
+{
+   BTCNumericTypes::satoshi_type sum = 0;
+   auto const availableUtxos = getAvailableXbtUTXOs(walletId);
+   for (const auto &utxo : availableUtxos) {
+      sum += utxo.getValue();
+   }
+
+   return sum;
+}
+
+std::vector<UTXO> bs::UTXOReservationManager::getAvailableXbtUTXOs(const HDWalletId& walletId) const
+{
+   std::vector<UTXO> utxos;
+   auto const availableUtxos = availableXbtUTXOs_.find(walletId);
+   if (availableUtxos == availableXbtUTXOs_.end()) {
+      return {};
+   }
+
+   utxos = availableUtxos->second;
+   UtxoReservation::instance()->filter(utxos);
+   return utxos;
+}
+
+void bs::UTXOReservationManager::getBestXbtUtxoSet(const HDWalletId& walletId,
+   BTCNumericTypes::satoshi_type quantity, std::function<void(std::vector<UTXO>&&)>&& cb)
+{
+   auto walletUtxos = getAvailableXbtUTXOs(walletId);
+   std::vector<UTXO> selectedUtxos = bs::selectUtxoForAmount(std::move(walletUtxos), quantity);
+
+   // Here we calculating fee based on chosen utxos, if total price with fee will cover by all utxo sum - then we good and could continue
+   // otherwise let's try to find better set of utxo again till the moment we will cover the difference or use all available utxos from wallet
+   auto feeCb = [mgr = QPointer<bs::UTXOReservationManager>(this), quantity, walletId, utxos = std::move(selectedUtxos), cbCopy = std::move(cb)](float fee) mutable {
+      if (!mgr) {
+         return; // main thread die, nothing to do
+      }
+
+      QMetaObject::invokeMethod(mgr, [mgr, quantity, walletId, fee, utxos = std::move(utxos), cb = std::move(cbCopy)]() mutable {
+         float feePerByte = ArmoryConnection::toFeePerByte(fee);
+         BTCNumericTypes::satoshi_type total = 0;
+         for (const auto &utxo : utxos) {
+            total += utxo.getValue();
+         }
+         const auto fee = bs::tradeutils::estimatePayinFeeWithoutChange(utxos, feePerByte);
+
+         const BTCNumericTypes::satoshi_type spendableQuantity = quantity + fee;
+         if (spendableQuantity > total) {
+            mgr->getBestXbtUtxoSet(walletId, spendableQuantity, std::move(cb));
+         }
+         else {
+            cb(std::move(utxos));
+         }
+      });
+   };
+   armory_->estimateFee(bs::tradeutils::feeTargetBlockCount(), feeCb);
+}
+
+BTCNumericTypes::balance_type bs::UTXOReservationManager::getAvailableCCUtxoSum(const CCProductName& CCProduct) const
+{
+   const auto& ccWallet = walletsManager_->getCCWallet(CCProduct);
+   assert(ccWallet);
+   
+   BTCNumericTypes::satoshi_type sum = 0;
+   auto const availableUtxos = getAvailableCCUTXOs(ccWallet->walletId());
+   for (const auto &utxo : availableUtxos) {
+      sum += utxo.getValue();
+   }
+
+   return ccWallet->getTxBalance(sum);
+}
+
+std::vector<UTXO> bs::UTXOReservationManager::getAvailableCCUTXOs(const CCWalletId& walletId) const
+{
+   std::vector<UTXO> utxos;
+   auto const availableUtxos = availableCCUTXOs_.find(walletId);
+   if (availableUtxos == availableCCUTXOs_.end()) {
+      return {};
+   }
+
+   utxos = availableUtxos->second;
+   UtxoReservation::instance()->filter(utxos);
+   return utxos;
+}
+
+bs::FixedXbtInputs UTXOReservationManager::convertUtxoToFixedInput(const HDWalletId& walletId, const std::vector<UTXO>& utxos)
+{
+   FixedXbtInputs fixedXbtInputs;
+   for (auto utxo : utxos) {
+      fixedXbtInputs.inputs.insert({ utxo, walletId });
+   }
+   return fixedXbtInputs;
+}
 
 void bs::UTXOReservationManager::refreshAvailableUTXO()
 {
-   availableUTXOs_.clear();
+   availableXbtUTXOs_.clear();
    for (auto &wallet : walletsManager_->hdWallets()) {
-      onWalletsAdded(wallet->walletId());
+      resetHdWallet(wallet->walletId());
    }
 }
 
 void bs::UTXOReservationManager::onWalletsDeleted(const std::string& walledId)
 {
-   availableUTXOs_.erase(walledId);
+   availableXbtUTXOs_.erase(walledId);
+   availableCCUTXOs_.erase(walledId);
+   if (!walletsManager_->hasPrimaryWallet()) {
+      availableCCUTXOs_.clear();
+   }
 }
 
 void bs::UTXOReservationManager::onWalletsAdded(const std::string& walledId)
 {
-   auto hdWallet = walletsManager_->getHDWalletById(walledId);
-   bool isHdRoot = true;
-   if (!hdWallet) {
-      isHdRoot = false;
-      hdWallet = walletsManager_->getHDRootForLeaf(walledId);
-
-      if (!hdWallet) {
-         return;
-      }
+   if (resetHdWallet(walledId)) {
+      return;
    }
 
+   const auto wallet = walletsManager_->getWalletById(walledId);
+   if (!wallet) {
+      return;
+   }
+
+
+   switch (wallet->type())
+   {
+   case bs::core::wallet::Type::ColorCoin:
+      resetSpendableCC(wallet);
+      break;
+   case bs::core::wallet::Type::Bitcoin:
+   {
+      auto hdWallet = walletsManager_->getHDRootForLeaf(walledId);
+      if (hdWallet) {
+         resetSpendableXbt(hdWallet);
+      }
+   }
+      break;
+   default:
+      break;
+   }
+}
+
+void bs::UTXOReservationManager::onWalletsBalanceChanged(const std::string& walledId)
+{
+   onWalletsDeleted(walledId);
+   onWalletsAdded(walledId);
+}
+
+bool bs::UTXOReservationManager::resetHdWallet(const std::string& hdWalledId)
+{
+   auto hdWallet = walletsManager_->getHDWalletById(hdWalledId);
+   if (!hdWallet) {
+      return false;
+   }
+
+   resetSpendableXbt(hdWallet);
+
+   if (hdWallet->isPrimary()) {
+      resetAllSpendableCC(hdWallet);
+   }
+
+   return true;
+}
+
+void bs::UTXOReservationManager::resetSpendableXbt(const std::shared_ptr<bs::sync::hd::Wallet>& hdWallet)
+{
+   assert(hdWallet);
    const auto &leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
    std::vector<bs::sync::WalletsManager::WalletPtr> wallets(leaves.begin(), leaves.end());
-
-   if (!isHdRoot) {
-      auto it = std::find_if(wallets.cbegin(), wallets.cend(), [&walledId](const auto& wallet) -> bool {
-         return wallet->walletId() == walledId;
-      });
-
-      if (it == wallets.end()) {
-         return;
-      }
-   }
 
    bs::tradeutils::getSpendableTxOutList(wallets, [mgr = QPointer<bs::UTXOReservationManager>(this),
       walletId = hdWallet->walletId()](const std::map<UTXO, std::string> &utxos) {
@@ -155,57 +259,47 @@ void bs::UTXOReservationManager::onWalletsAdded(const std::string& walledId)
       }
 
       QMetaObject::invokeMethod(mgr, [mgr, utxos = std::move(walletUtxos), id = walletId]{
-         mgr->availableUTXOs_[id] = std::move(utxos);
+         mgr->availableXbtUTXOs_[id] = std::move(utxos);
+
+         emit mgr->availableUtxoChanged(id);
+         });
+   }, false);
+}
+
+void bs::UTXOReservationManager::resetSpendableCC(const std::shared_ptr<bs::sync::Wallet>& leaf)
+{
+   assert(leaf && leaf->type() == bs::core::wallet::Type::ColorCoin);
+   if (!leaf->isBalanceAvailable()) {
+      return;
+   }
+
+   bs::tradeutils::getSpendableTxOutList({ leaf }, [mgr = QPointer<bs::UTXOReservationManager>(this),
+      walletId = leaf->walletId()](const std::map<UTXO, std::string> &utxos) {
+      if (!mgr) {
+         return; // manager thread die, nothing to do
+      }
+
+      std::vector<UTXO> walletUtxos;
+      for (const auto &utxo : utxos) {
+         walletUtxos.push_back(utxo.first);
+      }
+
+      QMetaObject::invokeMethod(mgr, [mgr, utxos = std::move(walletUtxos), id = walletId]{
+         mgr->availableCCUTXOs_[id] = std::move(utxos);
 
          emit mgr->availableUtxoChanged(id);
       });
    }, false);
 }
 
-void bs::UTXOReservationManager::onWalletsBalanceChanged(const std::string& walledId)
+void bs::UTXOReservationManager::resetAllSpendableCC(const std::shared_ptr<bs::sync::hd::Wallet>& hdWallet)
 {
-   onWalletsDeleted(walledId);
-   onWalletsAdded(walledId);
-}
-
-void bs::UTXOReservationManager::getBestUtxoSet(const std::string& walletId,
-   BTCNumericTypes::satoshi_type quantity, std::function<void(std::vector<UTXO>&&)>&& cb)
-{
-   auto walletUtxos = getAvailableUTXOs(walletId);
-   std::vector<UTXO> selectedUtxos = bs::selectUtxoForAmount(std::move(walletUtxos), quantity);
-
-   // Here we calculating fee based on chosen utxos, if total price with fee will cover by all utxo sum - then we good and could continue
-   // otherwise let's try to find better set of utxo again till the moment we will cover the difference or use all available utxos from wallet
-   auto feeCb = [mgr = QPointer<bs::UTXOReservationManager>(this), quantity, walletId, utxos = std::move(selectedUtxos), cbCopy = std::move(cb)](float fee) mutable {
-      if (!mgr) {
-         return; // main thread die, nothing to do
-      }
-
-      QMetaObject::invokeMethod(mgr, [mgr, quantity, walletId, fee, utxos = std::move(utxos), cb = std::move(cbCopy)] () mutable {
-         float feePerByte = ArmoryConnection::toFeePerByte(fee);
-         BTCNumericTypes::satoshi_type total = 0;
-         for (const auto &utxo : utxos) {
-            total += utxo.getValue();
-         }
-         const auto fee = bs::tradeutils::estimatePayinFeeWithoutChange(utxos, feePerByte);
-
-         const BTCNumericTypes::satoshi_type spendableQuantity = quantity + fee;
-         if (spendableQuantity > total) {
-            mgr->getBestUtxoSet(walletId, spendableQuantity, std::move(cb));
-         }
-         else {
-            cb(std::move(utxos));
-         }
-      });
-   };
-   armory_->estimateFee(bs::tradeutils::feeTargetBlockCount(), feeCb);
-}
-
-bs::FixedXbtInputs UTXOReservationManager::convertUtxoToFixedInput(const std::string& walletId, const std::vector<UTXO>& utxos)
-{
-   FixedXbtInputs fixedXbtInputs;
-   for (auto utxo : utxos) {
-      fixedXbtInputs.inputs.insert({ utxo, walletId });
+   auto ccGroup = hdWallet->getGroup(bs::hd::CoinType::BlockSettle_CC);
+   if (!ccGroup) {
+      return;
    }
-   return fixedXbtInputs;
+
+   for (const auto &leaf : ccGroup->getLeaves()) {
+      resetSpendableCC(leaf);
+   }
 }

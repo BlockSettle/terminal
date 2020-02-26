@@ -260,7 +260,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
             xbtLeaves_.front()->getNewChangeAddress(changeAddrCb);
          };
          if (manualXbtInputs_.empty()) {
-            auto utxos = utxoReservationManager_->getAvailableUTXOs(xbtWallet_->walletId());
+            auto utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId());
             auto fixedUtxo = bs::UTXOReservationManager::convertUtxoToFixedInput(xbtWallet_->walletId(), utxos);
             inputsCb(fixedUtxo.inputs);
          } else {

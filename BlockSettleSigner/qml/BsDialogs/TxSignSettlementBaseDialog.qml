@@ -35,6 +35,7 @@ CustomTitleDialogWindowWithExpander {
 
     // signingAllowed set in cc or xbt dialog
     property bool signingAllowed: false
+    property bool signingIsNotSet: true
 
     // expanding
     property bool isExpanded: false
@@ -154,6 +155,7 @@ CustomTitleDialogWindowWithExpander {
         if (signingAllowed) {
             initAuth()
         }
+         signingIsNotSet = false
     }
 
     cContentItem: ColumnLayout {
@@ -305,8 +307,19 @@ CustomTitleDialogWindowWithExpander {
                     text: validationTitle
                 }
                 CustomLabelValue {
-                    text: signingAllowed ? qsTr("Valid") : qsTr("Not Valid")
-                    color: signingAllowed ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
+                    text: if (signingIsNotSet)
+                              qsTr("Pending")
+                          else if (signingAllowed)
+                              qsTr("Valid")
+                          else
+                              qsTr("Not Valid")
+
+                    color: if (signingIsNotSet)
+                               BSStyle.inputsPendingColor
+                           else if (signingAllowed)
+                               BSStyle.inputsValidColor
+                           else
+                               BSStyle.inputsInvalidColor
                     Layout.alignment: Qt.AlignRight
                 }
             }

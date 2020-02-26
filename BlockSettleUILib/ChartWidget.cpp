@@ -13,6 +13,7 @@
 #include "ui_ChartWidget.h"
 #include "Colors.h"
 #include "MarketDataProvider.h"
+#include "MDCallbacksQt.h"
 #include "MdhsClient.h"
 #include "market_data_history.pb.h"
 #include "trade_history.pb.h"
@@ -105,9 +106,10 @@ ChartWidget::ChartWidget(QWidget* pParent)
 }
 
 void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
-                       , const std::shared_ptr<MarketDataProvider>& mdProvider
-                       , const std::shared_ptr<ConnectionManager>& connectionManager
-                       , const std::shared_ptr<spdlog::logger>& logger)
+   , const std::shared_ptr<MarketDataProvider>& mdProvider
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
+   , const std::shared_ptr<ConnectionManager>& connectionManager
+   , const std::shared_ptr<spdlog::logger>& logger)
 {
    appSettings_ = appSettings;
    mdProvider_ = mdProvider;
@@ -118,15 +120,15 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
 
    connect(ui_->pushButtonMDConnection, &QPushButton::clicked, this, &ChartWidget::ChangeMDSubscriptionState);
 
-   connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &ChartWidget::OnMdUpdated);
-   connect(mdProvider.get(), &MarketDataProvider::OnNewFXTrade, this, &ChartWidget::OnNewXBTorFXTrade);
-   connect(mdProvider.get(), &MarketDataProvider::OnNewPMTrade, this, &ChartWidget::OnNewPMTrade);
-   connect(mdProvider.get(), &MarketDataProvider::OnNewXBTTrade, this, &ChartWidget::OnNewXBTorFXTrade);
-   connect(mdProvider.get(), &MarketDataProvider::WaitingForConnectionDetails, this, &ChartWidget::OnLoadingNetworkSettings);
-   connect(mdProvider.get(), &MarketDataProvider::StartConnecting, this, &ChartWidget::OnMDConnecting);
-   connect(mdProvider.get(), &MarketDataProvider::Connected, this, &ChartWidget::OnMDConnected);
-   connect(mdProvider.get(), &MarketDataProvider::Disconnecting, this, &ChartWidget::OnMDDisconnecting);
-   connect(mdProvider.get(), &MarketDataProvider::Disconnected, this, &ChartWidget::OnMDDisconnected);
+   connect(mdCallbacks.get(), &MDCallbacksQt::MDUpdate, this, &ChartWidget::OnMdUpdated);
+   connect(mdCallbacks.get(), &MDCallbacksQt::OnNewFXTrade, this, &ChartWidget::OnNewXBTorFXTrade);
+   connect(mdCallbacks.get(), &MDCallbacksQt::OnNewPMTrade, this, &ChartWidget::OnNewPMTrade);
+   connect(mdCallbacks.get(), &MDCallbacksQt::OnNewXBTTrade, this, &ChartWidget::OnNewXBTorFXTrade);
+   connect(mdCallbacks.get(), &MDCallbacksQt::WaitingForConnectionDetails, this, &ChartWidget::OnLoadingNetworkSettings);
+   connect(mdCallbacks.get(), &MDCallbacksQt::StartConnecting, this, &ChartWidget::OnMDConnecting);
+   connect(mdCallbacks.get(), &MDCallbacksQt::Connected, this, &ChartWidget::OnMDConnected);
+   connect(mdCallbacks.get(), &MDCallbacksQt::Disconnecting, this, &ChartWidget::OnMDDisconnecting);
+   connect(mdCallbacks.get(), &MDCallbacksQt::Disconnected, this, &ChartWidget::OnMDDisconnected);
 
    // initialize charts
    InitializeCustomPlot();

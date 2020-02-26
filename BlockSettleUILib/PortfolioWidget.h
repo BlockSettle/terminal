@@ -27,6 +27,7 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
+   class UTXOReservationManager;
 }
 
 class QAction;
@@ -35,6 +36,7 @@ class ApplicationSettings;
 class ArmoryConnection;
 class CCPortfolioModel;
 class MarketDataProvider;
+class MDCallbacksQt;
 class SignContainer;
 class TransactionsViewModel;
 class UnconfirmedTransactionFilter;
@@ -50,12 +52,14 @@ public:
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel>& model);
 
    void init(const std::shared_ptr<ApplicationSettings> &
-             , const std::shared_ptr<MarketDataProvider> &
-             , const std::shared_ptr<CCPortfolioModel> &
-             , const std::shared_ptr<SignContainer> &
-             , const std::shared_ptr<ArmoryConnection> &
-             , const std::shared_ptr<spdlog::logger> &
-             , const std::shared_ptr<bs::sync::WalletsManager> &);
+      , const std::shared_ptr<MarketDataProvider> &
+      , const std::shared_ptr<MDCallbacksQt> &
+      , const std::shared_ptr<CCPortfolioModel> &
+      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
+      , const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &);
 
    void shortcutActivated(ShortcutType s) override;
 
@@ -84,6 +88,7 @@ private:
    std::shared_ptr<SignContainer>      signContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
+   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
 };
 
 #endif // __PORFOLIO_WIDGET_H__

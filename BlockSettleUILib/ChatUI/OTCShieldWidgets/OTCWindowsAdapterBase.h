@@ -74,8 +74,9 @@ signals:
    void xbtInputsProcessed();
 
 public slots:
-   virtual void onAboutToApply();
-   virtual void onChatRoomChanged();
+   virtual void onAboutToApply() {}
+   virtual void onChatRoomChanged() {}
+   virtual void onParentAboutToHide() {}
 
 protected slots:
    virtual void onSyncInterface();
@@ -85,7 +86,6 @@ protected slots:
    void onUpdateTimerData();
 
 protected:
-
    // Shared function between children
    void showXBTInputsClicked(QComboBox *walletsCombobox);
    
@@ -127,7 +127,7 @@ protected:
    bs::UtxoReservationToken reservation_;
 
 private:
-   void showXBTInputs(const std::vector<UTXO> &allUTXOs);
+   void showXBTInputs(const std::string& walletId);
 
    QTimer timeoutTimer_;
    TimeoutData currentTimeoutData_{};

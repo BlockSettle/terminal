@@ -38,7 +38,7 @@
 #include "OTCRequestViewModel.h"
 #include "OTCShieldWidgets/OTCWindowsManager.h"
 #include "AuthAddressManager.h"
-#include "MarketDataProvider.h"
+#include "MDCallbacksQt.h"
 #include "AssetManager.h"
 #include "ui_ChatWidget.h"
 #include "UtxoReservationManager.h"
@@ -78,6 +78,7 @@ ChatWidget::ChatWidget(QWidget* parent)
       if (widget) {
          widget->setChatOTCManager(otcWindowsManager_);
          connect(this, &ChatWidget::chatRoomChanged, widget, &OTCWindowsAdapterBase::onChatRoomChanged);
+         connect(this, &ChatWidget::onAboutToHide, widget, &OTCWindowsAdapterBase::onParentAboutToHide);
       }
    }
    connect(otcWindowsManager_.get(), &OTCWindowsManager::syncInterfaceRequired, this, &ChatWidget::onUpdateOTCShield);
@@ -99,7 +100,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    , const std::shared_ptr<AuthAddressManager> &authManager
    , const std::shared_ptr<ArmoryConnection>& armory
    , const std::shared_ptr<SignContainer>& signContainer
-   , const std::shared_ptr<MarketDataProvider>& mdProvider
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager)
 {
@@ -108,7 +109,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    // OTC
    otcHelper_ = new ChatOTCHelper(this);
    otcHelper_->init(env, loggerPtr, walletsMgr, armory, signContainer, authManager, utxoReservationManager);
-   otcWindowsManager_->init(walletsMgr, authManager, mdProvider, assetManager, armory, utxoReservationManager);
+   otcWindowsManager_->init(walletsMgr, authManager, mdCallbacks, assetManager
+      , armory, utxoReservationManager);
 
    chatClientServicePtr_ = chatClientServicePtr;
 
@@ -326,6 +328,12 @@ void ChatWidget::showEvent(QShowEvent* e)
       bNeedRefresh_ = false;
       onActivatePartyId(QString::fromStdString(currentPartyId_));
    }
+}
+
+void ChatWidget::hideEvent(QHideEvent* event)
+{
+   emit onAboutToHide();
+   QWidget::hideEvent(event);
 }
 
 bool ChatWidget::eventFilter(QObject* sender, QEvent* event)

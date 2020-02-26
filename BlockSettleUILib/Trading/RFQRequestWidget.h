@@ -49,6 +49,7 @@ class BaseCelerClient;
 class ConnectionManager;
 class DialogManager;
 class MarketDataProvider;
+class MDCallbacksQt;
 class OrderListModel;
 class QuoteProvider;
 class RfqStorage;
@@ -62,8 +63,9 @@ public:
    RFQRequestWidget(QWidget* parent = nullptr);
    ~RFQRequestWidget() override;
 
-   void initWidgets(const std::shared_ptr<MarketDataProvider>& mdProvider
-      , const std::shared_ptr<ApplicationSettings> &appSettings);
+   void initWidgets(const std::shared_ptr<MarketDataProvider> &
+      , const std::shared_ptr<MDCallbacksQt> &
+      , const std::shared_ptr<ApplicationSettings> &);
 
    void init(std::shared_ptr<spdlog::logger> logger
          , const std::shared_ptr<BaseCelerClient>& celerClient
@@ -82,6 +84,9 @@ public:
    void shortcutActivated(ShortcutType s) override;
 
    void setAuthorized(bool authorized);
+
+protected:
+   void hideEvent(QHideEvent* event) override;
 
 signals:
    void requestPrimaryWalletCreation();
