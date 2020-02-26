@@ -294,11 +294,12 @@ void bs::UTXOReservationManager::resetSpendableCC(const std::shared_ptr<bs::sync
 
 void bs::UTXOReservationManager::resetAllSpendableCC(const std::shared_ptr<bs::sync::hd::Wallet>& hdWallet)
 {
-   if (!hdWallet->getGroup(bs::hd::CoinType::BlockSettle_CC)) {
+   auto ccGroup = hdWallet->getGroup(bs::hd::CoinType::BlockSettle_CC);
+   if (!ccGroup) {
       return;
    }
 
-   for (const auto &leaf : hdWallet->getGroup(bs::hd::CoinType::BlockSettle_CC)->getLeaves()) {
+   for (const auto &leaf : ccGroup->getLeaves()) {
       resetSpendableCC(leaf);
    }
 }
