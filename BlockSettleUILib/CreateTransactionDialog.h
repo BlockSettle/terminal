@@ -57,6 +57,7 @@ public:
       , const std::shared_ptr<SignContainer> &
       , bool loadFeeSuggestions, const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
+      , bs::UtxoReservationToken utxoReservation
       , QWidget* parent);
    ~CreateTransactionDialog() noexcept override;
 

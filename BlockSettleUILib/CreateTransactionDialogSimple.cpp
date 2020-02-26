@@ -30,7 +30,7 @@ CreateTransactionDialogSimple::CreateTransactionDialogSimple(const std::shared_p
    , const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ApplicationSettings> &applicationSettings
    , QWidget* parent)
-   : CreateTransactionDialog(armory, walletManager, utxoReservationManager, container, true, logger, applicationSettings, parent)
+   : CreateTransactionDialog(armory, walletManager, utxoReservationManager, container, true, logger, applicationSettings, {}, parent)
    , ui_(new Ui::CreateTransactionDialogSimple)
 {
    ui_->setupUi(this);
@@ -169,6 +169,13 @@ void CreateTransactionDialogSimple::onMaxPressed()
    transactionData_->UpdateRecipientAmount(recipientId_, UiUtils::parseAmountBtc(ui_->lineEditAmount->text()), true);
 }
 
+void CreateTransactionDialogSimple::onTransactionUpdated()
+{
+   if (!advancedDialogRequested_) {
+      CreateTransactionDialog::onTransactionUpdated();
+   }
+}
+
 void CreateTransactionDialogSimple::showAdvanced()
 {
    advancedDialogRequested_ = true;
@@ -216,7 +223,7 @@ bool CreateTransactionDialogSimple::userRequestedAdvancedDialog() const
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogSimple::CreateAdvancedDialog()
 {
    auto advancedDialog = std::make_shared<CreateTransactionDialogAdvanced>(armory_, walletsManager_
-      , utxoReservationManager_, signContainer_, true, logger_, applicationSettings_, transactionData_, parentWidget());
+      , utxoReservationManager_, signContainer_, true, logger_, applicationSettings_, transactionData_, std::move(utxoRes_), parentWidget());
 
    if (!offlineTransactions_.empty()) {
       advancedDialog->SetImportedTransactions(offlineTransactions_);
