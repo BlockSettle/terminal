@@ -403,7 +403,6 @@ void BSTerminalMainWindow::LoadWallets()
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
       , &BSTerminalMainWindow::updateControlEnabledState);
 
-   walletsMgr_->reset();
    onSyncWallets();
 }
 
@@ -1812,11 +1811,17 @@ void BSTerminalMainWindow::onTabWidgetCurrentChanged(const int &index)
 
 void BSTerminalMainWindow::onSyncWallets()
 {
+   if (walletsMgr_->isSynchronising()) {
+      return;
+   }
+
    wasWalletsRegistered_ = false;
    walletsSynched_ = false;
    const auto &progressDelegate = [this](int cur, int total) {
       logMgr_->logger()->debug("Loaded wallet {} of {}", cur, total);
    };
+
+   walletsMgr_->reset();
    walletsMgr_->syncWallets(progressDelegate);
 }
 
