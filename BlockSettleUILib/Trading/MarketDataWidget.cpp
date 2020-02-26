@@ -82,9 +82,8 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
    connect(mdSortFilterModel_, &QAbstractItemModel::rowsInserted, this, &MarketDataWidget::resizeAndExpand);
    connect(marketDataModel_, &MarketDataModel::needResize, this, &MarketDataWidget::resizeAndExpand);
 
-   connect(ui_->treeViewMarketData, &QTreeView::clicked, this, &MarketDataWidget::onRowClicked);
-   connect(ui_->treeViewMarketData, &TreeViewWithEnterKey::enterKeyPressed,
-           this, &MarketDataWidget::onEnterKeyPressed);
+   connect(ui_->treeViewMarketData, &QTreeView::clicked, this, &MarketDataWidget::clicked);
+   connect(ui_->treeViewMarketData->selectionModel(), &QItemSelectionModel::currentChanged, this, &MarketDataWidget::onSelectionChanged);
 
    connect(mdCallbacks.get(), &MDCallbacksQt::MDUpdate, marketDataModel_, &MarketDataModel::onMDUpdated);
    connect(mdCallbacks.get(), &MDCallbacksQt::MDReqRejected, this, &MarketDataWidget::onMDRejected);
@@ -222,12 +221,12 @@ void MarketDataWidget::onRowClicked(const QModelIndex& index)
    }
 }
 
-void MarketDataWidget::onEnterKeyPressed(const QModelIndex &index)
+void MarketDataWidget::onSelectionChanged(const QModelIndex &current, const QModelIndex &)
 {
-   auto pairIndex = mdSortFilterModel_->index(index.row(),
-      static_cast<int>(MarketDataModel::MarketDataColumns::Product), index.parent());
+   auto sourceIndex = mdSortFilterModel_->index(current.row(),
+      current.column(), current.parent());
 
-   onRowClicked(pairIndex);
+   onRowClicked(sourceIndex);
 }
 
 void MarketDataWidget::resizeAndExpand()
