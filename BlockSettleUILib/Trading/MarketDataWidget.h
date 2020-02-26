@@ -13,6 +13,7 @@
 
 #include <memory>
 #include <QWidget>
+#include <QItemSelection>
 #include "ApplicationSettings.h"
 
 
@@ -60,13 +61,14 @@ signals:
    void AskClicked(const MarketSelectedInfo& selectedInfo);
    void BidClicked(const MarketSelectedInfo& selectedInfo);
    void MDHeaderClicked();
+   void clicked();
 
 private slots:
    void resizeAndExpand();
    void onHeaderStateChanged(bool state);
    void onRowClicked(const QModelIndex& index);
+   void onSelectionChanged(const QModelIndex &, const QModelIndex &);
    void onMDRejected(const std::string &security, const std::string &reason);
-   void onEnterKeyPressed(const QModelIndex &index);
 
    void onLoadingNetworkSettings();
 

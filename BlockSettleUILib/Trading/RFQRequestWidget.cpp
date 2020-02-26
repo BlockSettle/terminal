@@ -57,6 +57,7 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
 
    ui_->shieldPage->showShieldLoginToSubmitRequired();
 
+   ui_->pageRFQTicket->lineEditAmount()->installEventFilter(this);
    popShield();
 }
 
@@ -151,6 +152,20 @@ void RFQRequestWidget::hideEvent(QHideEvent* event)
    QWidget::hideEvent(event);
 }
 
+bool RFQRequestWidget::eventFilter(QObject* sender, QEvent* event)
+{
+   if (QEvent::KeyPress == event->type() && ui_->pageRFQTicket->lineEditAmount() == sender) {
+      QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+      if (Qt::Key_Up == keyEvent->key() || Qt::Key_Down == keyEvent->key()) {
+         QKeyEvent *pEvent = new QKeyEvent(QEvent::KeyPress, keyEvent->key(), keyEvent->modifiers());
+         QCoreApplication::postEvent(ui_->widgetMarketData->view(), pEvent);
+         return true;
+      }
+   }
+
+   return false;
+}
+
 void RFQRequestWidget::showEditableRFQPage()
 {
    ui_->stackedWidgetRFQ->setEnabled(true);
@@ -164,6 +179,7 @@ void RFQRequestWidget::popShield()
 
    ui_->stackedWidgetRFQ->setCurrentIndex(static_cast<int>(RFQPages::ShieldPage));
    ui_->pageRFQTicket->disablePanel();
+   ui_->widgetMarketData->view()->setFocus();
 }
 
 void RFQRequestWidget::initWidgets(const std::shared_ptr<MarketDataProvider>& mdProvider
@@ -231,6 +247,8 @@ void RFQRequestWidget::onConnectedToCeler()
                                           this, &RFQRequestWidget::onAskClicked));
    marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::MDHeaderClicked,
                                           this, &RFQRequestWidget::onDisableSelectedInfo));
+   marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::clicked,
+                                          this, &RFQRequestWidget::onRefreshFocus));
 
    ui_->shieldPage->showShieldSelectTargetTrade();
    popShield();
@@ -377,6 +395,13 @@ void RFQRequestWidget::onDisableSelectedInfo()
 {
    ui_->shieldPage->showShieldSelectTargetTrade();
    popShield();
+}
+
+void RFQRequestWidget::onRefreshFocus()
+{
+   if (ui_->stackedWidgetRFQ->currentIndex() == static_cast<int>(RFQPages::EditableRFQPage)) {
+      ui_->pageRFQTicket->lineEditAmount()->setFocus();
+   }
 }
 
 void RFQRequestWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response)

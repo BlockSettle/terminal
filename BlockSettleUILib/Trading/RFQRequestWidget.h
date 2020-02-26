@@ -87,6 +87,7 @@ public:
 
 protected:
    void hideEvent(QHideEvent* event) override;
+   bool eventFilter(QObject* sender, QEvent* event) override;
 
 signals:
    void requestPrimaryWalletCreation();
@@ -112,6 +113,7 @@ public slots:
    void onBidClicked(const MarketSelectedInfo& selectedInfo);
    void onAskClicked(const MarketSelectedInfo& selectedInfo);
    void onDisableSelectedInfo();
+   void onRefreshFocus();
 
    void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
 
