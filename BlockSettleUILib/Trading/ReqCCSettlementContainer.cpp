@@ -261,7 +261,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
          };
          if (manualXbtInputs_.empty()) {
             auto utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId());
-            auto fixedUtxo = bs::UTXOReservationManager::convertUtxoToFixedInput(xbtWallet_->walletId(), utxos);
+            auto fixedUtxo = utxoReservationManager_->convertUtxoToPartialFixedInput(xbtWallet_->walletId(), utxos);
             inputsCb(fixedUtxo.inputs);
          } else {
             inputsCb(manualXbtInputs_, true);

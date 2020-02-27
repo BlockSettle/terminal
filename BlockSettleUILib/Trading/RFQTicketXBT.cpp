@@ -1245,8 +1245,10 @@ void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network
       submitRFQCb();
    };
 
+   const bool partial = rfq->assetType == bs::network::Asset::PrivateMarket;
    utxoReservationManager_->reserveBestXbtUtxoSet(
-      getSendXbtWallet()->walletId(), quantity, std::move(cbBestUtxoSet));
+      getSendXbtWallet()->walletId(), quantity,
+      partial, std::move(cbBestUtxoSet));
 }
 
 void RFQTicketXBT::onCreateWalletClicked()

@@ -55,7 +55,7 @@ namespace bs {
       UtxoReservationToken makeNewReservation(const std::vector<UTXO> &utxos);
 
       // Xbt specific implementation
-      void reserveBestXbtUtxoSet(const HDWalletId& walletId, BTCNumericTypes::satoshi_type quantity,
+      void reserveBestXbtUtxoSet(const HDWalletId& walletId, BTCNumericTypes::satoshi_type quantity, bool partial,
          std::function<void(FixedXbtInputs&&)>&& cb);
       BTCNumericTypes::satoshi_type getAvailableXbtUtxoSum(const HDWalletId& walletId) const;
       std::vector<UTXO> getAvailableXbtUTXOs(const HDWalletId& walletId) const;
@@ -67,8 +67,9 @@ namespace bs {
       BTCNumericTypes::balance_type getAvailableCCUtxoSum(const CCProductName& CCProduct) const;
       std::vector<UTXO> getAvailableCCUTXOs(const CCWalletId& walletId) const;
 
-      // Static functions
-      static FixedXbtInputs convertUtxoToFixedInput(const HDWalletId& walletId, const std::vector<UTXO>& utxos);
+      // Mutual functions
+      FixedXbtInputs convertUtxoToFixedInput(const HDWalletId& walletId, const std::vector<UTXO>& utxos);
+      FixedXbtInputs convertUtxoToPartialFixedInput(const HDWalletId& walletId, const std::vector<UTXO>& utxos);
 
    signals:
       void availableUtxoChanged(const std::string& walledId);
@@ -86,7 +87,12 @@ namespace bs {
       void resetAllSpendableCC(const std::shared_ptr<bs::sync::hd::Wallet>& hdWallet);
 
    private:
-      std::unordered_map<HDWalletId, std::vector<UTXO>> availableXbtUTXOs_;
+      struct XBTUtxoContainer {
+         std::vector<UTXO> availableUtxo_;
+         std::map<UTXO, std::string> utxosLookup_;
+      };
+
+      std::unordered_map<HDWalletId, XBTUtxoContainer> availableXbtUTXOs_;
       std::unordered_map<CCWalletId, std::vector<UTXO>> availableCCUTXOs_;
 
       std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
