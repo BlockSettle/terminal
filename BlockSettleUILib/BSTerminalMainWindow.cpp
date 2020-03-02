@@ -208,6 +208,7 @@ void BSTerminalMainWindow::onAddrStateChanged()
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
+      allowAuthAddressDialogShow_ = false;
    }
 }
 
@@ -222,6 +223,13 @@ void BSTerminalMainWindow::LoadCCDefinitionsFromPuB()
       if (ccGroup && (ccGroup->getNumLeaves() > 0)) {
          ccFileManager_->LoadCCDefinitionsFromPub();
       }
+   }
+   else {
+      createWallet(true, [this] { 
+         if (walletsMgr_->getPrimaryWallet()) {
+            LoadCCDefinitionsFromPuB();
+         }
+      });
    }
 }
 
@@ -418,6 +426,11 @@ void BSTerminalMainWindow::InitAuthManager()
    connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, this, [this](const QString &walletId) {
       if (authAddrDlg_ && walletId.isEmpty()) {
          openAuthManagerDialog();
+      }
+   });
+   connect(authManager_.get(), &AuthAddressManager::ConnectionComplete, this, [this]() {
+      if (!authManager_->HaveAuthWallet()) {
+         createAuthWallet(nullptr);
       }
    });
 }
