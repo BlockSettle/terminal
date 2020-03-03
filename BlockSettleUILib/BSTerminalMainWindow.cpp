@@ -224,7 +224,7 @@ void BSTerminalMainWindow::LoadCCDefinitionsFromPuB()
          ccFileManager_->LoadCCDefinitionsFromPub();
       }
    }
-   else {
+   else if (!walletsMgr_->isSynchronising()) {
       createWallet(true, [this] { 
          if (walletsMgr_->getPrimaryWallet()) {
             LoadCCDefinitionsFromPuB();

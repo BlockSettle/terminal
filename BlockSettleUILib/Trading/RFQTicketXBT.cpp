@@ -1232,7 +1232,7 @@ void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network
          quantity *= bs::XBTAmount(getOfferPrice()).GetValue();
       }
       else if (rfq->assetType == bs::network::Asset::SpotXBT) {
-         quantity /= bs::XBTAmount(getOfferPrice()).GetValue();
+         quantity /= getOfferPrice();
       }
    }
 
