@@ -970,6 +970,39 @@ void RFQDealerReply::onBestQuotePrice(const QString reqId, double price, bool ow
 
 void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, double price)
 {
+   // Check assets first
+   bool ok = true;
+   if (qrn.assetType == bs::network::Asset::Type::SpotXBT) {
+      if (qrn.side == bs::network::Side::Sell && qrn.product == bs::network::XbtCurrency) {
+         CurrencyPair currencyPair(qrn.security);
+         ok = assetManager_->checkBalance(currencyPair.ContraCurrency(qrn.product), qrn.quantity * price);
+      }
+      else if (qrn.side == bs::network::Side::Buy && qrn.product != bs::network::XbtCurrency) {
+         ok = assetManager_->checkBalance(qrn.product, qrn.quantity);
+      }
+   }
+   else if (qrn.assetType == bs::network::Asset::Type::SpotFX) {
+      if (qrn.side == bs::network::Side::Sell) {
+         auto quantity = qrn.quantity;
+         CurrencyPair currencyPair(qrn.security);
+         const auto contrCurrency = currencyPair.ContraCurrency(qrn.product);
+         if (currencyPair.NumCurrency() == contrCurrency) {
+            quantity /= price;
+         }
+         else {
+            quantity *= price;
+         }
+         ok = assetManager_->checkBalance(currencyPair.ContraCurrency(qrn.product), quantity);
+      }
+      else {
+         ok = assetManager_->checkBalance(qrn.product, qrn.quantity);
+      }
+   }
+
+   if (!ok) {
+      return;
+   }
+
    submitReply(qrn, price, ReplyType::Script);
 }
 
