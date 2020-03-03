@@ -471,9 +471,7 @@ CustomTitleDialogWindowWithExpander {
                 }
 
                 CustomLabelValue {
-                    text: if (signingIsNotSet)
-                              return "";
-                          else if (signingAllowed)
+                    text: if (signingAllowed || signingIsNotSet)
                               return qsTr("%1 seconds left").arg(Math.max(0, timeLeft.toFixed(0)));
                           else
                               return errorMessage;
