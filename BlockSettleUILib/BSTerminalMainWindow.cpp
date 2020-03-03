@@ -202,12 +202,16 @@ void BSTerminalMainWindow::onInitWalletDialogWasShown()
 void BSTerminalMainWindow::onAddrStateChanged()
 {
    if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
-      && authManager_->GetVerifiedAddressList().empty()) {
+      && !authManager_->isAtLeastOneAwaitingVerification()) {
       BSMessageBox qry(BSMessageBox::question, tr("Submit Authentication Address"), tr("Submit Authentication Address?")
          , tr("In order to access XBT trading, you will need to submit an Authentication Address. Do you wish to do so now?"), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
+      allowAuthAddressDialogShow_ = false;
+   }
+
+   if (authManager_->isAtLeastOneAwaitingVerification()) {
       allowAuthAddressDialogShow_ = false;
    }
 }
@@ -429,7 +433,8 @@ void BSTerminalMainWindow::InitAuthManager()
       }
    });
    connect(authManager_.get(), &AuthAddressManager::ConnectionComplete, this, [this]() {
-      if (!authManager_->HaveAuthWallet()) {
+      if (!authManager_->HaveAuthWallet() && !createAuthWalletDialogShown_) {
+         createAuthWalletDialogShown_ = true;
          createAuthWallet(nullptr);
       }
    });
