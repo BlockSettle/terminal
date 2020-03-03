@@ -130,6 +130,15 @@ CustomTitleDialogWindowWithExpander {
         })
     }
 
+    function getValidationColor(condition) {
+       if (signingIsNotSet)
+           return BSStyle.inputsPendingColor;
+       else if (condition)
+           return BSStyle.inputsValidColor;
+       else
+           return BSStyle.inputsInvalidColor;
+    }
+
     Component.onCompleted: {
         isExpanded = signerSettings.defaultSettlDialogExpandedState
     }
@@ -314,12 +323,7 @@ CustomTitleDialogWindowWithExpander {
                           else
                               qsTr("Not Valid")
 
-                    color: if (signingIsNotSet)
-                               BSStyle.inputsPendingColor
-                           else if (signingAllowed)
-                               BSStyle.inputsValidColor
-                           else
-                               BSStyle.inputsInvalidColor
+                    color: getValidationColor(signingAllowed)
                     Layout.alignment: Qt.AlignRight
                 }
             }

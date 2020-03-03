@@ -135,7 +135,7 @@ TxSignSettlementBaseDialog {
                         horizontalAlignment: Text.AlignRight
                         verticalAlignment: Text.AlignTop
                         font: fixedFont
-                        color: passwordDialogData.DeliveryUTXOVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
+                        color: getValidationColor(signingAllowed)
                     }
                 }
             }
