@@ -467,7 +467,12 @@ CustomTitleDialogWindowWithExpander {
                 }
 
                 CustomLabelValue {
-                    text: signingAllowed ? qsTr("%1 seconds left").arg(Math.max(0, timeLeft.toFixed(0))) : errorMessage
+                    text: if (signingIsNotSet)
+                              return "";
+                          else if (signingAllowed)
+                              return qsTr("%1 seconds left").arg(Math.max(0, timeLeft.toFixed(0)));
+                          else
+                              return errorMessage;
                     Layout.fillWidth: true
                 }
             }
