@@ -120,7 +120,7 @@ TxSignSettlementBaseDialog {
             visible: passwordDialogData.hasRequesterAuthAddress() && passwordDialogData.IsDealer
             text: passwordDialogData.RequesterAuthAddress
             Layout.alignment: Qt.AlignRight
-            color: passwordDialogData.RequesterAuthAddressVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
+            color: getValidationColor(passwordDialogData.RequesterAuthAddressVerified)
         }
 
         // Responder Authentication Address = dealer
@@ -133,7 +133,7 @@ TxSignSettlementBaseDialog {
             visible: passwordDialogData.hasResponderAuthAddress() && !passwordDialogData.IsDealer
             text: passwordDialogData.ResponderAuthAddress
             Layout.alignment: Qt.AlignRight
-            color: passwordDialogData.ResponderAuthAddressVerified ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
+            color: getValidationColor(passwordDialogData.ResponderAuthAddressVerified)
         }
     }
 

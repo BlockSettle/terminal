@@ -266,7 +266,7 @@ private:
    QString           loginButtonText_;
 
    bool initialWalletCreateDialogShown_ = false;
-   bool allowAuthAddressDialogShow_ = false;
+   bool allowAuthAddressDialogShow_ = true;
    bool deferCCsync_ = false;
 
    bool wasWalletsRegistered_ = false;
