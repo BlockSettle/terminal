@@ -1703,19 +1703,17 @@ void OtcClient::verifyAuthAddresses(OtcClientDeal *deal)
             return;
          }
 
+         bs::sync::PasswordDialogData dialogData;
+         dialogData.setValue(PasswordDialogData::SettlementId, settlementId);
          if (address == requesterAuthAddr) {
-            bs::sync::PasswordDialogData dialogData;
             dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, true);
-            dialogData.setValue(PasswordDialogData::SettlementId, settlementId);
-            signContainer_->updateDialogData(dialogData);
          } else if (address == responderAuthAddr) {
-            bs::sync::PasswordDialogData dialogData;
             dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
-            dialogData.setValue(PasswordDialogData::SettlementId, settlementId);
-            signContainer_->updateDialogData(dialogData);
          } else {
             SPDLOG_LOGGER_ERROR(logger, "unexpected auth address");
+            return;
          }
+         signContainer_->updateDialogData(dialogData);
       });
    };
 
