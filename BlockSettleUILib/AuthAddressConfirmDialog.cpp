@@ -13,6 +13,7 @@
 #include "AuthAddressConfirmDialog.h"
 #include "BsClient.h"
 #include "BSMessageBox.h"
+#include "ApplicationSettings.h"
 #include "ui_AuthAddressConfirmDialog.h"
 
 namespace {
@@ -20,12 +21,13 @@ namespace {
 }
 
 AuthAddressConfirmDialog::AuthAddressConfirmDialog(BsClient *bsClient, const bs::Address& address
-   , const std::shared_ptr<AuthAddressManager>& authManager, QWidget* parent)
+   , const std::shared_ptr<AuthAddressManager>& authManager, const std::shared_ptr<ApplicationSettings> &settings, QWidget* parent)
   : QDialog(parent)
   , ui_{new Ui::AuthAddressConfirmDialog()}
   , address_{address}
   , authManager_{authManager}
   , bsClient_{bsClient}
+   , settings_(settings)
 {
    ui_->setupUi(this);
 
@@ -119,9 +121,16 @@ void AuthAddressConfirmDialog::onAuthConfirmSubmitError(const QString &address, 
 void AuthAddressConfirmDialog::onAuthAddrSubmitSuccess(const QString &address)
 {
    progressTimer_.stop();
+
+   const bool isProd = settings_->get<int>(ApplicationSettings::envConfiguration) ==
+      static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
+
+   const auto body = isProd ? tr("A validation transaction will be sent within the next 24 hours.")
+      : tr("A validation transaction will be sent within the next 15 minutes.");
+
    BSMessageBox(BSMessageBox::success, tr("Submission Successful")
-      , tr("Your Authentication Address has now been submitted.")
-      , tr("Please allow BlockSettle 24 hours to fund your Authentication Address.")
+      , tr("Authentication Address submitted.")
+      , body
       , this).exec();
    accept();
 }

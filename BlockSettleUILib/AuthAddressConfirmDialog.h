@@ -21,6 +21,7 @@
 #include <chrono>
 
 class BsClient;
+class ApplicationSettings;
 namespace Ui {
     class AuthAddressConfirmDialog;
 };
@@ -30,8 +31,11 @@ class AuthAddressConfirmDialog : public QDialog
 Q_OBJECT
 
 public:
-   AuthAddressConfirmDialog(BsClient *bsClient, const bs::Address& address, const std::shared_ptr<AuthAddressManager>& authManager
-      ,QWidget* parent = nullptr);
+   AuthAddressConfirmDialog(BsClient *bsClient,
+      const bs::Address& address,
+      const std::shared_ptr<AuthAddressManager>& authManager,
+      const std::shared_ptr<ApplicationSettings> &settings,
+      QWidget* parent = nullptr);
    ~AuthAddressConfirmDialog() override;
 
 private slots:
@@ -52,6 +56,7 @@ private:
 
    bs::Address                         address_;
    std::shared_ptr<AuthAddressManager> authManager_;
+   std::shared_ptr<ApplicationSettings>   settings_;
 
    QTimer                                 progressTimer_;
    std::chrono::steady_clock::time_point  startTime_;
