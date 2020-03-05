@@ -386,7 +386,7 @@ void AuthAddressDialog::ConfirmAuthAddressSubmission()
       return;
    }
 
-   AuthAddressConfirmDialog confirmDlg{bsClient_.data(), lastSubmittedAddress_, authAddressManager_, this};
+   AuthAddressConfirmDialog confirmDlg{bsClient_.data(), lastSubmittedAddress_, authAddressManager_, settings_, this};
 
    confirmDlg.exec();
 
