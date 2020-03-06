@@ -1215,6 +1215,12 @@ void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network
       rfqTicket->submitRFQCb_(*rfq, std::move(rfqTicket->fixedXbtInputs_.utxoRes));
    };
 
+   if (rfq->assetType == bs::network::Asset::PrivateMarket
+       && rfq->side == bs::network::Side::Buy) {
+      submitRFQWrapper();
+      return; // Nothing to reserve
+   }
+
    if ((rfq->side == bs::network::Side::Sell && rfq->product != bs::network::XbtCurrency) ||
       (rfq->side == bs::network::Side::Buy && rfq->product == bs::network::XbtCurrency)) {
       submitRFQWrapper();
