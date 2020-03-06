@@ -129,7 +129,7 @@ void AuthAddressConfirmDialog::onAuthAddrSubmitSuccess(const QString &address)
       : tr("A validation transaction will be sent within the next 15 minutes.");
 
    BSMessageBox(BSMessageBox::success, tr("Submission Successful")
-      , tr("Authentication Address submitted.")
+      , tr("Authentication Address submitted")
       , body
       , this).exec();
    accept();
