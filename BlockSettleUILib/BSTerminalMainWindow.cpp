@@ -1308,7 +1308,7 @@ void BSTerminalMainWindow::openCCTokenDialog()
 {
    const auto lbdCCTokenDlg = [this] {
       QMetaObject::invokeMethod(this, [this] {
-         CCTokenEntryDialog(walletsMgr_, ccFileManager_, this).exec();
+         CCTokenEntryDialog(walletsMgr_, ccFileManager_, applicationSettings_, this).exec();
       });
    };
    // Do not use deferredDialogs_ here as it will deadblock PuB public key processing
