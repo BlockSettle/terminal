@@ -433,7 +433,7 @@ void BSTerminalMainWindow::InitAuthManager()
       }
    });
    connect(authManager_.get(), &AuthAddressManager::ConnectionComplete, this, [this]() {
-      if (!authManager_->HaveAuthWallet() && !createAuthWalletDialogShown_) {
+      if (!authManager_->HaveAuthWallet() && !createAuthWalletDialogShown_ && !promoteToPrimaryShown_) {
          createAuthWalletDialogShown_ = true;
          createAuthWallet(nullptr);
       }
@@ -1038,6 +1038,7 @@ bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
          }
          return true;
       }
+      promoteToPrimaryShown_ = true;
       BSMessageBox qry(BSMessageBox::question, tr("Promote to primary wallet"), tr("Promote to primary wallet?")
          , tr("To trade through BlockSettle, you are required to have a wallet which"
             " supports the sub-wallets required to interact with the system. Each Terminal"
@@ -1434,6 +1435,7 @@ void BSTerminalMainWindow::onUserLoggedIn()
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
    const auto &deferredDialog = [this, userId] {
       walletsMgr_->setUserId(userId);
+      promoteToPrimaryIfNeeded();
    };
    addDeferredDialog(deferredDialog);
 
@@ -1932,6 +1934,7 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
 
    auto promoteToPrimary = [this](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
       addDeferredDialog([this, wallet] {
+         promoteToPrimaryShown_ = true;
          BSMessageBox qry(BSMessageBox::question, tr("Upgrade wallet to enable trading"), tr("Upgrade wallet to enable trading?")
             , tr("To trade through BlockSettle, you are required to have a wallet which"
                " supports the sub-wallets required to interact with the system. Each Terminal"
@@ -1942,6 +1945,7 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
                if (result == bs::error::ErrorCode::NoError) {
                   // If wallet was promoted to primary we could try to get chat keys now
                   tryGetChatKeys();
+                  walletsMgr_->setUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
                }
             });
          }
