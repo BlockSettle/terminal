@@ -762,7 +762,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                } else {
                   // For XBT request all available inputs as we don't know fee yet (createPartialTXRequest will use correct inputs if fee rate is set)
                   auto utxos = utxoReservationManager_->getAvailableXbtUTXOs(replyData->xbtWallet->walletId());
-                  auto fixedUtxo = UTXOReservationManager::convertUtxoToFixedInput(replyData->xbtWallet->walletId(), utxos);
+                  auto fixedUtxo = utxoReservationManager_->convertUtxoToPartialFixedInput(replyData->xbtWallet->walletId(), utxos);
                   inputsCb(fixedUtxo.inputs);
                }
             };
