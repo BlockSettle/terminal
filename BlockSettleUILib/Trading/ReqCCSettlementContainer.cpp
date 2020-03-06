@@ -175,7 +175,10 @@ void ReqCCSettlementContainer::activate()
    else if (side() == bs::network::Side::Buy) {
       //Waiting for genesis address verification to complete...
 
-      const auto &cbHasInput = [this](bool has) {
+      const auto &cbHasInput = [this, handle = validityFlag_.handle()](bool has) {
+         if (!handle.isValid()) {
+            return;
+         }
          userKeyOk_ = has;
          emit genAddressVerified(has, has ? QString{} : tr("GA check failed"));
       };
