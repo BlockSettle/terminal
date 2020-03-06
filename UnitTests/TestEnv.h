@@ -402,11 +402,11 @@ public:
       return 1.0f;
    }
 
-   bool pushZC(const BinaryData& rawTx) const override
+   bool pushZC(const BinaryData &rawTx) const
    {
-      if (armoryInstance_ == nullptr)
+      if (armoryInstance_ == nullptr) {
          return false;
-
+      }
       armoryInstance_->pushZC(rawTx);
       return true;
    }

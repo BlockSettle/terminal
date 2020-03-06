@@ -25,6 +25,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "BSErrorCodeStrings.h"
+#include "ApplicationSettings.h"
 
 namespace {
    const auto kAutheIdTimeout = int(BsClient::autheidCcAddressTimeout() / std::chrono::seconds(1));
@@ -32,11 +33,13 @@ namespace {
 
 CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
       , const std::shared_ptr<CCFileManager> &ccFileMgr
+      , const std::shared_ptr<ApplicationSettings> &settings
       , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::CCTokenEntryDialog())
    , ccFileMgr_(ccFileMgr)
    , walletsMgr_(walletsMgr)
+   , settings_(settings)
 {
    ui_->setupUi(this);
 
@@ -158,9 +161,16 @@ void CCTokenEntryDialog::reject()
 void CCTokenEntryDialog::onCCAddrSubmitted(const QString addr)
 {
    QDialog::accept();
+
+   const bool isProd = settings_->get<int>(ApplicationSettings::envConfiguration) ==
+      static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
+
+   const auto body = isProd ? tr("BlockSettle will issue your tokens within the next 24 hours.")
+      : tr("BlockSettle will issue your tokens within the next 15 minutes.");
+
    BSMessageBox(BSMessageBox::success, tr("Submission Successful")
       , tr("Equity Token Submitted")
-      , tr("BlockSettle will issue your equity tokens within 24h")).exec();
+      , body).exec();
 }
 
 void CCTokenEntryDialog::onCCInitialSubmitted(const QString addr)

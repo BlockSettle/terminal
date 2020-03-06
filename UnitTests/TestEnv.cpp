@@ -206,8 +206,9 @@ ArmoryInstance::ArmoryInstance()
    //init bdm
    nodePtr_ =
       std::make_shared<NodeUnitTest>(*(unsigned int*)magicBytes.getPtr(), false);
-   config_.bitcoinNodes_ = { nodePtr_, std::make_shared<NodeUnitTest>(0, true) };
-   config_.rpcNode_ = std::make_shared<NodeRPC_UnitTest>(nodePtr_);
+   const auto watchNode = std::make_shared<NodeUnitTest>(0, true);
+   config_.bitcoinNodes_ = { nodePtr_, watchNode };
+   config_.rpcNode_ = std::make_shared<NodeRPC_UnitTest>(nodePtr_, watchNode);
 
    theBDMt_ = new BlockDataManagerThread(config_);
    iface_ = theBDMt_->bdm()->getIFace();
