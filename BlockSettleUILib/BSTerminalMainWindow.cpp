@@ -1946,9 +1946,6 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
                   // If wallet was promoted to primary we could try to get chat keys now
                   tryGetChatKeys();
                   walletsMgr_->setUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
-                  if (armory_ && armory_->state() == ArmoryState::Ready) {
-                     walletsMgr_->goOnline();
-                  }
                }
             });
          }
