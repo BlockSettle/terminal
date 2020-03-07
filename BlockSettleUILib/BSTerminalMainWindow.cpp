@@ -216,27 +216,6 @@ void BSTerminalMainWindow::onAddrStateChanged()
    }
 }
 
-void BSTerminalMainWindow::LoadCCDefinitionsFromPuB()
-{
-   if (!ccFileManager_) {
-      return;
-   }
-   const auto &priWallet = walletsMgr_->getPrimaryWallet();
-   if (priWallet) {
-      const auto &ccGroup = priWallet->getGroup(bs::hd::BlockSettle_CC);
-      if (ccGroup && (ccGroup->getNumLeaves() > 0)) {
-         ccFileManager_->LoadCCDefinitionsFromPub();
-      }
-   }
-   else if (!walletsMgr_->isSynchronising()) {
-      createWallet(true, [this] { 
-         if (walletsMgr_->getPrimaryWallet()) {
-            LoadCCDefinitionsFromPuB();
-         }
-      });
-   }
-}
-
 void BSTerminalMainWindow::setWidgetsAuthorized(bool authorized)
 {
    // Update authorized state for some widgets
@@ -420,7 +399,7 @@ void BSTerminalMainWindow::LoadWallets()
 
 void BSTerminalMainWindow::InitAuthManager()
 {
-   authManager_ = std::make_shared<AuthAddressManager>(logMgr_->logger(), armory_, cbApprovePuB_);
+   authManager_ = std::make_shared<AuthAddressManager>(logMgr_->logger(), armory_);
    authManager_->init(applicationSettings_, walletsMgr_, signContainer_);
 
    connect(authManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked, this, [](const QString &addr, const QString &state) {
@@ -666,8 +645,7 @@ bool BSTerminalMainWindow::showStartupDialog()
 
 void BSTerminalMainWindow::InitAssets()
 {
-   ccFileManager_ = std::make_shared<CCFileManager>(logMgr_->logger(), applicationSettings_
-      , connectionManager_, cbApprovePuB_);
+   ccFileManager_ = std::make_shared<CCFileManager>(logMgr_->logger(), applicationSettings_);
    assetManager_ = std::make_shared<AssetManager>(logMgr_->logger(), walletsMgr_
       , mdCallbacks_, celerConnection_);
    assetManager_->init();
@@ -1346,14 +1324,8 @@ void BSTerminalMainWindow::onLogin()
    ccFileManager_->setBsClient(bsClient_.get());
    authAddrDlg_->setBsClient(bsClient_.get());
 
-   // Check for null until proxy is updated on prod and test
-   if (!loginDialog.result()->ccAddressesSigned.isNull()) {
-      ccFileManager_->setCcAddressesSigned(loginDialog.result()->ccAddressesSigned);
-   }
-   // Check for null until proxy is updated on prod and test
-   if (!loginDialog.result()->authAddressesSigned.isNull()) {
-      authManager_->setAuthAddressesSigned(loginDialog.result()->authAddressesSigned);
-   }
+   ccFileManager_->setCcAddressesSigned(loginDialog.result()->ccAddressesSigned);
+   authManager_->setAuthAddressesSigned(loginDialog.result()->authAddressesSigned);
 
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
 
@@ -1374,7 +1346,7 @@ void BSTerminalMainWindow::onLogin()
 
    connect(bsClient_.get(), &BsClient::processPbMessage, orderListModel_.get(), &OrderListModel::onMessageFromPB);
 
-   authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
+   authManager_->setCelerClient(celerConnection_);
 
    setLoginButtonText(currentUserLogin_);
    setWidgetsAuthorized(true);
@@ -1389,8 +1361,6 @@ void BSTerminalMainWindow::onLogin()
 
    // Market data, charts and chat should be available for all Auth eID logins
    mdProvider_->SubscribeToMD();
-
-   LoadCCDefinitionsFromPuB();
 
    connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetChat, &ChatWidget::onProcessOtcPbMessage);
    connect(ui_->widgetChat, &ChatWidget::sendOtcPbMessage, bsClient_.get(), &BsClient::sendPbMessage);
@@ -1429,7 +1399,6 @@ void BSTerminalMainWindow::onUserLoggedIn()
    ui_->actionWithdrawalRequest->setEnabled(true);
    ui_->actionLinkAdditionalBankAccount->setEnabled(true);
 
-   ccFileManager_->LoadCCDefinitionsFromPub();
    ccFileManager_->ConnectToCelerClient(celerConnection_);
 
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
