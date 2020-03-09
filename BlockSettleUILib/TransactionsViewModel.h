@@ -75,7 +75,7 @@ struct TransactionsViewItem
 
 private:
    bool     txHashesReceived{ false };
-   std::map<BinaryData, Tx>   txIns;
+   AsyncClient::TxBatchResult txIns;
 };
 typedef std::vector<TransactionsViewItem>    TransactionItems;
 

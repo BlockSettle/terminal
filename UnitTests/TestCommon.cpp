@@ -70,7 +70,7 @@ TEST(TestCommon, CacheFile)
    auto txCF = new TxCacheFile(filename);
    ASSERT_NE(txCF, nullptr);
    const auto tx = txCF->get(BinaryData::fromString("non-existent key"));
-   EXPECT_FALSE(tx.isInitialized());
+   EXPECT_EQ(tx, nullptr);
 
    delete txCF;
    QFile txCFile(QString::fromLatin1(filename));

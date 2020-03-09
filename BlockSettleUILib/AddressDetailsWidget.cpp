@@ -154,17 +154,17 @@ void AddressDetailsWidget::searchForCC()
    std::map<BinaryData, uint32_t> outPoints;
    for (const auto &txPair : txMap_) {
       const auto &tx = txPair.second;
-      if (!tx.isInitialized()) {
+      if (!tx || !tx->isInitialized()) {
          continue;
       }
 
-      for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
-         const auto &txOut = tx.getTxOutCopy(int(i));
+      for (size_t i = 0; i < tx->getNumTxOut(); ++i) {
+         const auto &txOut = tx->getTxOutCopy(int(i));
          try {
             const auto &addr = bs::Address::fromTxOut(txOut);
             if (addr == currentAddr_) {
                // Only first outputs could be CC
-               outPoints[tx.getThisHash()] = uint32_t(i);
+               outPoints[tx->getThisHash()] = uint32_t(i);
                break;
             }
          } catch (...) {
@@ -218,7 +218,7 @@ void AddressDetailsWidget::loadTransactions()
       QTreeWidgetItem *item = new QTreeWidgetItem(tree);
 
       auto tx = txMap_[curTXEntry.first];
-      if (!tx.isInitialized()) {
+      if (!tx || !tx->isInitialized()) {
          SPDLOG_LOGGER_WARN(logger_, "TX with hash {} is not found or not inited"
             , curTXEntry.first.toHexStr(true));
          continue;
@@ -226,12 +226,12 @@ void AddressDetailsWidget::loadTransactions()
 
       // Get fees & fee/byte by looping through the prev Tx set and calculating.
       uint64_t totIn = 0;
-      for (size_t r = 0; r < tx.getNumTxIn(); ++r) {
-         TxIn in = tx.getTxInCopy(r);
+      for (size_t r = 0; r < tx->getNumTxIn(); ++r) {
+         TxIn in = tx->getTxInCopy(r);
          OutPoint op = in.getOutPoint();
          const auto &prevTx = txMap_[op.getTxHash()];
-         if (prevTx.isInitialized()) {
-            TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
+         if (prevTx->isInitialized()) {
+            TxOut prevOut = prevTx->getTxOutCopy(op.getTxOutIndex());
             totIn += prevOut.getValue();
          }
          else {
@@ -239,8 +239,8 @@ void AddressDetailsWidget::loadTransactions()
                , op.getTxHash().toHexStr(true));
          }
       }
-      uint64_t fees = totIn - tx.getSumOfOutputs();
-      double feePerByte = (double)fees / (double)tx.getTxWeight();
+      uint64_t fees = totIn - tx->getSumOfOutputs();
+      double feePerByte = (double)fees / (double)tx->getTxWeight();
 
       // Populate the transaction entries.
       item->setText(colDate,
@@ -248,11 +248,11 @@ void AddressDetailsWidget::loadTransactions()
       item->setText(colTxId, // Flip Armory's TXID byte order: internal -> RPC
                     QString::fromStdString(curTXEntry.first.toHexStr(true)));
       item->setData(colConfs, Qt::DisplayRole, armory_->getConfirmationsNumber(curTXEntry.second.blockNum));
-      item->setText(colInputsNum, QString::number(tx.getNumTxIn()));
-      item->setText(colOutputsNum, QString::number(tx.getNumTxOut()));
+      item->setText(colInputsNum, QString::number(tx->getNumTxIn()));
+      item->setText(colOutputsNum, QString::number(tx->getNumTxOut()));
       item->setText(colFees, UiUtils::displayAmount(fees));
       item->setText(colFeePerByte, QString::number(std::nearbyint(feePerByte)));
-      item->setText(colTxSize, QString::number(tx.getSize()));
+      item->setText(colTxSize, QString::number(tx->getSize()));
 
       // isTxHashValidHistory is not absolutly accurate to detect invalid CC transactions but should be good enough
       const bool isCcTx = isCcAddress && (ccFound_.isGenesisAddr || (ccFound_.tracker && ccFound_.tracker->isTxHashValidHistory(curTXEntry.second.txHash)));
@@ -295,8 +295,8 @@ void AddressDetailsWidget::loadTransactions()
 
       // Detect if this is an auth address
       if (curTXEntry.second.value == kAuthAddrValue) {
-         for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
-            const auto &txOut = tx.getTxOutCopy(static_cast<int>(i));
+         for (size_t i = 0; i < tx->getNumTxOut(); ++i) {
+            const auto &txOut = tx->getTxOutCopy(static_cast<int>(i));
             try {
                const auto addr = bs::Address::fromTxOut(txOut);
                if (bsAuthAddrs_.find(addr.display()) != bsAuthAddrs_.end()) {
@@ -367,11 +367,10 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
 {
    // The callback that handles previous Tx objects attached to the TxIn objects
    // and processes them. Once done, the UI can be changed.
-   const auto &cbCollectPrevTXs = [this](const std::vector<Tx> &prevTxs, std::exception_ptr)
+   const auto &cbCollectPrevTXs = [this]
+      (const AsyncClient::TxBatchResult &prevTxs, std::exception_ptr)
    {
-      for (const auto &prevTx : prevTxs) {
-         txMap_[prevTx.getThisHash()] = prevTx;
-      }
+      txMap_.insert(prevTxs.cbegin(), prevTxs.cend());
       // We're finally ready to display all the transactions.
       loadTransactions();
    };
@@ -379,17 +378,19 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
    // Callback used to process Tx objects obtained from Armory. Used primarily
    // to obtain Tx entries for the TxIn objects we're checking.
    const auto &cbCollectTXs = [this, cbCollectPrevTXs]
-      (const std::vector<Tx> &txs, std::exception_ptr)
+      (const AsyncClient::TxBatchResult &txs, std::exception_ptr)
    {
       std::set<BinaryData> prevTxHashSet; // Prev Tx hashes for an addr (fee calc).
       for (const auto &tx : txs) {
-         const auto &prevTxHash = tx.getThisHash();
-         txMap_[prevTxHash] = tx;
+         if (!tx.second) {
+            continue;
+         }
+         txMap_[tx.first] = tx.second;
 
          // While here, we need to get the prev Tx with the UTXO being spent.
          // This is done so that we can calculate fees later.
-         for (size_t i = 0; i < tx.getNumTxIn(); i++) {
-            TxIn in = tx.getTxInCopy(i);
+         for (size_t i = 0; i < tx.second->getNumTxIn(); i++) {
+            TxIn in = tx.second->getTxInCopy(i);
             OutPoint op = in.getOutPoint();
             const auto &itTX = txMap_.find(op.getTxHash());
             if (itTX == txMap_.end()) {
