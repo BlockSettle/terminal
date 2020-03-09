@@ -164,7 +164,7 @@ void DealerCCSettlementContainer::activate()
             amountValid_ = true; //valInput == (value + valReturn);
          }
          else if ((order_.side == bs::network::Side::Sell) &&
-         (value == static_cast<uint64_t>(order_.quantity * order_.price * BTCNumericTypes::BalanceDivider))) {
+            (value == static_cast<uint64_t>(std::llround(order_.quantity * order_.price * BTCNumericTypes::BalanceDivider)))) {
             amountValid_ = true; //valInput > (value + valReturn);
          }
       });
