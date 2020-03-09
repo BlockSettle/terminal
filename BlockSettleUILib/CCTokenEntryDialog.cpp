@@ -51,8 +51,6 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<bs::sync::WalletsMa
    connect(ccFileMgr_.get(), &CCFileManager::CCInitialSubmitted, this, &CCTokenEntryDialog::onCCInitialSubmitted, Qt::QueuedConnection);
    connect(ccFileMgr_.get(), &CCFileManager::CCSubmitFailed, this, &CCTokenEntryDialog::onCCSubmitFailed, Qt::QueuedConnection);
 
-   ccFileMgr_->LoadCCDefinitionsFromPub();
-
    updateOkState();
 
    ui_->progressBar->setMaximum(kAutheIdTimeout * 10);
