@@ -1001,16 +1001,13 @@ void TransactionsViewItem::initialize(const TransactionPtr &item, ArmoryConnecti
    };
 
    const auto cbTXs = [item, cbInit, userCB]
-      (const std::vector<Tx> &txs, std::exception_ptr exPtr)
+      (const AsyncClient::TxBatchResult &txs, std::exception_ptr exPtr)
    {
       if (exPtr != nullptr) {
          userCB(nullptr);
          return;
       }
-      for (const auto &tx : txs) {
-         const auto &txHash = tx.getThisHash();
-         item->txIns[txHash] = tx;
-      }
+      item->txIns.insert(txs.cbegin(), txs.cend());
       item->txHashesReceived = true;
       cbInit();
    };
@@ -1183,15 +1180,14 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
          TxIn in = tx.getTxInCopy(i);
          OutPoint op = in.getOutPoint();
          const auto &prevTx = txIns[op.getTxHash()];
-         if (prevTx.isInitialized()) {
-            TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
-            const auto addr = bs::Address::fromTxOut(prevTx.getTxOutCopy(op.getTxOutIndex()));
+         if (prevTx && prevTx->isInitialized()) {
+            TxOut prevOut = prevTx->getTxOutCopy(op.getTxOutIndex());
+            const auto addr = bs::Address::fromTxOut(prevTx->getTxOutCopy(op.getTxOutIndex()));
             const auto addrWallet = walletsManager->getWalletByAddress(addr);
 
             if (txEntry.isChainedZC && !hasSpecialAddr) {
                hasSpecialAddr = isSpecialWallet(walletsManager->getWalletByAddress(addr));
             }
-
             for (const auto &wallet : wallets) {
                if (addrWallet == wallet) {
                   totalVal -= prevOut.getValue();
@@ -1202,7 +1198,6 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
                   break;
                }
             }
-
             if (filterAddress.isValid() && filterAddress == addr) {
                addressVal -= prevOut.getValue();
             }

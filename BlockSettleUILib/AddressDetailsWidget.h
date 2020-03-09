@@ -110,7 +110,7 @@ private:
    std::int64_t totalSpent_{};
    std::int64_t totalReceived_{};
    std::unordered_map<std::string, std::shared_ptr<bs::sync::PlainWallet>> dummyWallets_;
-   std::map<BinaryData, Tx> txMap_; // A wallet's Tx hash / Tx map.
+   AsyncClient::TxBatchResult txMap_; // A wallet's Tx hash / Tx map.
    std::map<BinaryData, bs::TXEntry> txEntryHashSet_; // A wallet's Tx hash / Tx entry map.
 
    std::shared_ptr<ArmoryConnection>   armory_;

@@ -126,7 +126,7 @@ private:
    Tx curTx_; // The Tx being analyzed in the widget.
 
    // Data captured from Armory callbacks.
-   std::map<TxHash, Tx> prevTxMap_; // Prev Tx hash / Prev Tx map.
+   AsyncClient::TxBatchResult prevTxMap_; // Prev Tx hash / Prev Tx map.
 
    class TxDetailsACT : public ArmoryCallbackTarget
    {

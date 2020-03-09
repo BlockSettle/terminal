@@ -75,7 +75,7 @@ TEST(TestArmory, CrashOnEmptyAddress)
 
       auto read_payload = std::make_shared<Socket_ReadPayload>();
       read_payload->callbackReturn_ =
-         make_unique<CallbackReturn_AddrOutpoints>(callback);
+         make_unique<AsyncClient::CallbackReturn_AddrOutpoints>(callback);
       bdv->getSocketObject()->pushPayload(move(payload), read_payload);
    };
    const auto promPtrOPRaw = std::make_shared<std::promise<bool>>();
@@ -110,9 +110,11 @@ TEST(TestArmory, CrashOnNonExistentHashInTxBatch)
 
    const auto promPtr = std::make_shared<std::promise<bool>>();
    auto fut = promPtr->get_future();
-   const auto cbTXs = [promPtr](const std::vector<Tx> &txs, std::exception_ptr)
+   const auto cbTXs = [promPtr, nonExHash]
+      (const AsyncClient::TxBatchResult &txs, std::exception_ptr)
    {
-      promPtr->set_value(txs.empty());
+      const auto &it = txs.find(nonExHash);
+      promPtr->set_value((it != txs.end()) && (it->second == nullptr));
    };
    armoryConn->getTXsByHash({ nonExHash }, cbTXs);
    EXPECT_TRUE(fut.get());
