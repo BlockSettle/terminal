@@ -26,6 +26,7 @@
 #include "RfqStorage.h"
 #include "SignContainer.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "UtxoReservationManager.h"
 
 #include "bs_proxy_terminal_pb.pb.h"
 
@@ -56,6 +57,7 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
 
    ui_->shieldPage->showShieldLoginToSubmitRequired();
 
+   ui_->pageRFQTicket->lineEditAmount()->installEventFilter(this);
    popShield();
 }
 
@@ -144,6 +146,26 @@ void RFQRequestWidget::setAuthorized(bool authorized)
    ui_->widgetMarketData->setAuthorized(authorized);
 }
 
+void RFQRequestWidget::hideEvent(QHideEvent* event)
+{
+   ui_->pageRFQTicket->onParentAboutToHide();
+   QWidget::hideEvent(event);
+}
+
+bool RFQRequestWidget::eventFilter(QObject* sender, QEvent* event)
+{
+   if (QEvent::KeyPress == event->type() && ui_->pageRFQTicket->lineEditAmount() == sender) {
+      QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+      if (Qt::Key_Up == keyEvent->key() || Qt::Key_Down == keyEvent->key()) {
+         QKeyEvent *pEvent = new QKeyEvent(QEvent::KeyPress, keyEvent->key(), keyEvent->modifiers());
+         QCoreApplication::postEvent(ui_->widgetMarketData->view(), pEvent);
+         return true;
+      }
+   }
+
+   return false;
+}
+
 void RFQRequestWidget::showEditableRFQPage()
 {
    ui_->stackedWidgetRFQ->setEnabled(true);
@@ -157,13 +179,16 @@ void RFQRequestWidget::popShield()
 
    ui_->stackedWidgetRFQ->setCurrentIndex(static_cast<int>(RFQPages::ShieldPage));
    ui_->pageRFQTicket->disablePanel();
+   ui_->widgetMarketData->view()->setFocus();
 }
 
 void RFQRequestWidget::initWidgets(const std::shared_ptr<MarketDataProvider>& mdProvider
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
    , const std::shared_ptr<ApplicationSettings> &appSettings)
 {
    appSettings_ = appSettings;
-   ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ, mdProvider);
+   ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ
+      , mdProvider, mdCallbacks);
 }
 
 void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
@@ -175,6 +200,7 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<ConnectionManager> &connectionManager
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , OrderListModel *orderListModel
 )
 {
@@ -187,8 +213,10 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    signingContainer_ = container;
    armory_ = armory;
    connectionManager_ = connectionManager;
+   utxoReservationManager_ = utxoReservationManager;
 
-   ui_->pageRFQTicket->init(logger, authAddressManager, assetManager, quoteProvider, container, armory);
+   ui_->pageRFQTicket->init(logger, authAddressManager, assetManager,
+      quoteProvider, container, armory, utxoReservationManager);
 
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewOrders->setModel(orderListModel);
@@ -219,6 +247,8 @@ void RFQRequestWidget::onConnectedToCeler()
                                           this, &RFQRequestWidget::onAskClicked));
    marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::MDHeaderClicked,
                                           this, &RFQRequestWidget::onDisableSelectedInfo));
+   marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::clicked,
+                                          this, &RFQRequestWidget::onRefreshFocus));
 
    ui_->shieldPage->showShieldSelectTargetTrade();
    popShield();
@@ -245,8 +275,8 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservat
 
    RFQDialog* dialog = new RFQDialog(logger_, rfq, quoteProvider_
       , authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_
-      , connectionManager_, rfqStorage_, xbtWallet, ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, fixedXbtInputs.inputs
-      , std::move(fixedXbtInputs.utxoRes), std::move(ccUtxoRes), this);
+      , connectionManager_, rfqStorage_, xbtWallet, ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, utxoReservationManager_
+      , fixedXbtInputs.inputs, std::move(fixedXbtInputs.utxoRes), std::move(ccUtxoRes), this);
 
    connect(this, &RFQRequestWidget::unsignedPayinRequested, dialog, &RFQDialog::onUnsignedPayinRequested);
    connect(this, &RFQRequestWidget::signedPayoutRequested, dialog, &RFQDialog::onSignedPayoutRequested);
@@ -365,6 +395,13 @@ void RFQRequestWidget::onDisableSelectedInfo()
 {
    ui_->shieldPage->showShieldSelectTargetTrade();
    popShield();
+}
+
+void RFQRequestWidget::onRefreshFocus()
+{
+   if (ui_->stackedWidgetRFQ->currentIndex() == static_cast<int>(RFQPages::EditableRFQPage)) {
+      ui_->pageRFQTicket->lineEditAmount()->setFocus();
+   }
 }
 
 void RFQRequestWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response)

@@ -62,7 +62,7 @@ private slots:
 
 private:
    void onStateChanged(ArmoryState) override;
-   void onError(const std::string &, const std::string &) override;
+   void onError(int errCode, const std::string &) override;
    void onLoadProgress(BDMPhase, float, unsigned int, unsigned int) override;
    void onPrepareConnection(NetworkType, const std::string &host
       , const std::string &port) override;

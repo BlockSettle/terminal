@@ -19,6 +19,9 @@
 #include "CoinControlDialog.h"
 #include "SelectedTransactionInputs.h"
 #include "TradesUtils.h"
+#include "UtxoReservationManager.h"
+#include "XBTAmount.h"
+#include "BSMessageBox.h"
 
 #include <QComboBox>
 #include <QLabel>
@@ -69,16 +72,23 @@ std::shared_ptr<AssetManager> OTCWindowsAdapterBase::getAssetManager() const
    return otcManager_->getAssetManager();
 }
 
+std::shared_ptr<bs::UTXOReservationManager> OTCWindowsAdapterBase::getUtxoManager() const
+{
+   return otcManager_->getUtxoManager();
+}
+
 void OTCWindowsAdapterBase::setPeer(const bs::network::otc::Peer &)
 {
 }
 
-void OTCWindowsAdapterBase::onAboutToApply()
+bs::UtxoReservationToken OTCWindowsAdapterBase::releaseReservation()
 {
+   return std::move(reservation_);
 }
 
-void OTCWindowsAdapterBase::onChatRoomChanged()
+void OTCWindowsAdapterBase::setReservation(bs::UtxoReservationToken&& reservation)
 {
+   reservation_ = std::move(reservation);
 }
 
 void OTCWindowsAdapterBase::onSyncInterface()
@@ -107,32 +117,16 @@ void OTCWindowsAdapterBase::onUpdateBalances()
 
 void OTCWindowsAdapterBase::showXBTInputsClicked(QComboBox *walletsCombobox)
 {
-   auto cb = [handle = validityFlag_.handle(), this](const std::map<UTXO, std::string> &utxos) mutable {
-      ValidityGuard guard(handle);
-      if (!handle.isValid()) {
-         return;
-      }
-
-      std::vector<UTXO> allUTXOs;
-      allUTXOs.reserve(utxos.size());
-      for (const auto &utxo : utxos) {
-         allUTXOs.push_back(utxo.first);
-      }
-      QMetaObject::invokeMethod(this, [this, allUTXOs = std::move(allUTXOs)] {
-         showXBTInputs(allUTXOs);
-      });
-   };
-
    const auto &hdWallet = getCurrentHDWalletFromCombobox(walletsCombobox);
-   const auto &leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
-   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
-   bs::tradeutils::getSpendableTxOutList(wallets, cb);
+   reservation_.release();
+   showXBTInputs(hdWallet->walletId());
 }
 
-void OTCWindowsAdapterBase::showXBTInputs(const std::vector<UTXO> &allUTXOs)
+void OTCWindowsAdapterBase::showXBTInputs(const std::string& walletId)
 {
    const bool useAutoSel = selectedUTXO_.empty();
 
+   std::vector<UTXO> allUTXOs = getUtxoManager()->getAvailableXbtUTXOs(walletId);
    auto inputs = std::make_shared<SelectedTransactionInputs>(allUTXOs);
 
    // Set this to false is needed otherwise current selection would be cleared
@@ -146,8 +140,21 @@ void OTCWindowsAdapterBase::showXBTInputs(const std::vector<UTXO> &allUTXOs)
 
    CoinControlDialog dialog(inputs, true, this);
    int rc = dialog.exec();
-   if (rc == QDialog::Accepted) {
-      selectedUTXO_ = dialog.selectedInputs();
+   if (rc != QDialog::Accepted) {
+      emit xbtInputsProcessed();
+      return;
+   }
+
+   auto selectedInputs = dialog.selectedInputs();
+   if (bs::UtxoReservation::instance()->containsReservedUTXO(selectedInputs)) {
+      BSMessageBox(BSMessageBox::critical, tr("UTXO reservation failed"),
+         tr("Some of selected UTXOs has been already reserved"), this).exec();
+      showXBTInputs(walletId);
+      return;
+   }
+   selectedUTXO_ = std::move(selectedInputs);
+   if (!selectedUTXO_.empty()) {
+      reservation_ = getUtxoManager()->makeNewReservation(selectedUTXO_);
    }
 
    emit xbtInputsProcessed();
@@ -198,13 +205,11 @@ BTCNumericTypes::balance_type OTCWindowsAdapterBase::getXBTSpendableBalanceFromC
 
    BTCNumericTypes::balance_type totalBalance{};
    if (selectedUTXO_.empty()) {
-      for (auto wallet : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
-         totalBalance += wallet->getSpendableBalance();
-      }
+      return bs::XBTAmount(getUtxoManager()->getAvailableXbtUtxoSum(hdWallet->walletId())).GetValueBitcoin();
    }
    else {
       for (const auto &utxo : selectedUTXO_) {
-         totalBalance += static_cast<double>(utxo.getValue()) / BTCNumericTypes::BalanceDivider;
+         totalBalance += bs::XBTAmount(utxo.getValue()).GetValueBitcoin();
       }
    }
 
@@ -243,6 +248,7 @@ QString OTCWindowsAdapterBase::getSide(bs::network::otc::Side requestSide, bool 
 void OTCWindowsAdapterBase::clearSelectedInputs()
 {
    selectedUTXO_.clear();
+   reservation_ = {};
 }
 
 void OTCWindowsAdapterBase::setupTimer(TimeoutData&& timeoutData)

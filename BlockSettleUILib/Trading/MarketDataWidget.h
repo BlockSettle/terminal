@@ -13,6 +13,7 @@
 
 #include <memory>
 #include <QWidget>
+#include <QItemSelection>
 #include "ApplicationSettings.h"
 
 
@@ -20,10 +21,11 @@ namespace Ui {
     class MarketDataWidget;
 };
 
-class MarketDataModel;
-class MDSortFilterProxyModel;
-class MarketDataProvider;
 class ApplicationSettings;
+class MarketDataModel;
+class MarketDataProvider;
+class MDCallbacksQt;
+class MDSortFilterProxyModel;
 class MDHeader;
 class TreeViewWithEnterKey;
 
@@ -47,7 +49,7 @@ public:
    ~MarketDataWidget() override;
 
    void init(const std::shared_ptr<ApplicationSettings> &appSettings, ApplicationSettings::Setting paramVis
-      , const std::shared_ptr<MarketDataProvider>& mdProvider);
+      , const std::shared_ptr<MarketDataProvider> &, const std::shared_ptr<MDCallbacksQt> &);
 
    TreeViewWithEnterKey* view() const;
 
@@ -59,13 +61,14 @@ signals:
    void AskClicked(const MarketSelectedInfo& selectedInfo);
    void BidClicked(const MarketSelectedInfo& selectedInfo);
    void MDHeaderClicked();
+   void clicked();
 
 private slots:
    void resizeAndExpand();
    void onHeaderStateChanged(bool state);
    void onRowClicked(const QModelIndex& index);
+   void onSelectionChanged(const QModelIndex &, const QModelIndex &);
    void onMDRejected(const std::string &security, const std::string &reason);
-   void onEnterKeyPressed(const QModelIndex &index);
 
    void onLoadingNetworkSettings();
 

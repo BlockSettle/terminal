@@ -26,6 +26,7 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
+   class UTXOReservationManager;
 }
 class ArmoryConnection;
 class AssetManager;
@@ -45,6 +46,7 @@ public:
       , const bs::network::Quote &
       , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
       , const std::map<UTXO, std::string> &manualXbtInputs
+      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
       , bs::UtxoReservationToken utxoRes);
    ~ReqCCSettlementContainer() override;
 
@@ -98,6 +100,7 @@ private:
    std::shared_ptr<bs::sync::Wallet>         ccWallet_;
    std::shared_ptr<AssetManager>             assetMgr_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
+   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
    bs::network::RFQ           rfq_;
    bs::network::Quote         quote_;
    const bs::Address          genAddress_;

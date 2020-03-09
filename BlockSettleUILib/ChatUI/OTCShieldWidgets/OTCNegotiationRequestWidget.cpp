@@ -12,7 +12,6 @@
 
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
-#include "CoinControlDialog.h"
 #include "OTCWindowsManager.h"
 #include "OtcTypes.h"
 #include "TradesUtils.h"
@@ -20,6 +19,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ui_OTCNegotiationRequestWidget.h"
+#include "UtxoReservationManager.h"
 
 #include <QComboBox>
 #include <QPushButton>
@@ -46,7 +46,7 @@ OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
    connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onUpdateBalances);
    connect(ui_->pushButtonSell, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onSellClicked);
    connect(ui_->pushButtonSell, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onUpdateBalances);
-   connect(ui_->pushButtonAcceptRequest, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::requestCreated);
+   connect(ui_->pushButtonAcceptRequest, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onSubmited);
    connect(ui_->toolButtonXBTInputs, &QPushButton::clicked, this, &OTCNegotiationRequestWidget::onShowXBTInputsClicked);
    connect(this, &OTCWindowsAdapterBase::xbtInputsProcessed, this, &OTCNegotiationRequestWidget::onXbtInputsProcessed);
    connect(ui_->comboBoxXBTWallets, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &OTCNegotiationRequestWidget::onCurrentWalletChanged);
@@ -165,6 +165,37 @@ void OTCNegotiationRequestWidget::onUpdateBalances()
    onChanged();
 }
 
+void OTCNegotiationRequestWidget::onSubmited()
+{
+   if (ui_->pushButtonBuy->isChecked()) {
+      emit requestCreated();
+      return;
+   }
+
+   if (!selectedUTXO_.empty()) {
+      emit requestCreated();
+      return;
+   }
+
+   const auto hdWallet = getCurrentHDWalletFromCombobox(ui_->comboBoxXBTWallets);
+   if (!hdWallet) {
+      return;
+   }
+
+   auto cbUtxoSet = [wdgt = QPointer<OTCNegotiationRequestWidget>(this)](std::vector<UTXO>&& utxos) {
+      if (!wdgt) {
+         return;
+      }
+
+      wdgt->setSelectedInputs(utxos);
+      wdgt->setReservation(wdgt->getUtxoManager()->makeNewReservation(utxos));
+      emit wdgt->requestCreated();
+   };
+
+   getUtxoManager()->getBestXbtUtxoSet(hdWallet->walletId(), bs::XBTAmount(ui_->quantitySpinBox->value()).GetValue()
+      , std::move(cbUtxoSet));
+}
+
 std::shared_ptr<bs::sync::hd::Wallet> OTCNegotiationRequestWidget::getCurrentHDWallet() const
 {
    return getCurrentHDWalletFromCombobox(ui_->comboBoxXBTWallets);
@@ -180,7 +211,7 @@ void OTCNegotiationRequestWidget::keyPressEvent(QKeyEvent* event)
    OTCWindowsAdapterBase::keyPressEvent(event);
    if ((event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return)
       && ui_->pushButtonAcceptRequest->isEnabled()) {
-      emit requestCreated();
+      onSubmited();
    }
 }
 
@@ -248,6 +279,11 @@ void OTCNegotiationRequestWidget::onChatRoomChanged()
    clearSelectedInputs();
 }
 
+void OTCNegotiationRequestWidget::onParentAboutToHide()
+{
+   clearSelectedInputs();
+}
+
 void OTCNegotiationRequestWidget::onCurrentWalletChanged()
 {
    UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, getCurrentHDWallet());
@@ -281,47 +317,25 @@ void OTCNegotiationRequestWidget::onMaxQuantityClicked()
       return;
    }
 
-   auto cb = [this, parentWidget = QPointer<OTCWindowsAdapterBase>(this)]
-      (const std::map<UTXO, std::string> &inputs)
-   {
-      QMetaObject::invokeMethod(qApp, [this, inputs, parentWidget] {
+   std::vector<UTXO> utxos = selectedUTXOs();
+   if (utxos.empty()) {
+      utxos = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId());
+   }
+
+   auto feeCb = [this, parentWidget = QPointer<OTCWindowsAdapterBase>(this), utxos = std::move(utxos)](float fee) {
+      QMetaObject::invokeMethod(qApp, [this, parentWidget, fee, utxos = std::move(utxos)]{
          if (!parentWidget) {
             return;
          }
-         std::vector<UTXO> utxos;
-         utxos.reserve(inputs.size());
-         for (const auto &input : inputs) {
-            utxos.emplace_back(std::move(input.first));
+         float feePerByte = ArmoryConnection::toFeePerByte(fee);
+         uint64_t total = 0;
+         for (const auto &utxo : utxos) {
+            total += utxo.getValue();
          }
-         auto feeCb = [this, parentWidget, utxos = std::move(utxos)](float fee) {
-            QMetaObject::invokeMethod(qApp, [this, parentWidget, fee, utxos = std::move(utxos)] {
-               if (!parentWidget) {
-                  return;
-               }
-               float feePerByte = ArmoryConnection::toFeePerByte(fee);
-               uint64_t total = 0;
-               for (const auto &utxo : utxos) {
-                  total += utxo.getValue();
-               }
-               const uint64_t fee = bs::tradeutils::estimatePayinFeeWithoutChange(utxos, feePerByte);
-               const double spendableQuantity = std::max(0.0, (total - fee) / BTCNumericTypes::BalanceDivider);
-               ui_->quantitySpinBox->setValue(spendableQuantity);
-            });
-         };
-         otcManager_->getArmory()->estimateFee(bs::tradeutils::feeTargetBlockCount(), feeCb);
-      });
+         const uint64_t fee = bs::tradeutils::estimatePayinFeeWithoutChange(utxos, feePerByte);
+         const double spendableQuantity = std::max(0.0, (total - fee) / BTCNumericTypes::BalanceDivider);
+         ui_->quantitySpinBox->setValue(spendableQuantity);
+         });
    };
-
-   if (!selectedUTXOs().empty()) {
-      std::map<UTXO, std::string> inputs;
-      for (const auto &utxo : selectedUTXOs()) {
-         inputs[utxo] = {};
-      }
-      cb(inputs);
-      return;
-   }
-
-   const auto &leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
-   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets(leaves.begin(), leaves.end());
-   bs::tradeutils::getSpendableTxOutList(wallets, cb);
+   otcManager_->getArmory()->estimateFee(bs::tradeutils::feeTargetBlockCount(), feeCb);
 }

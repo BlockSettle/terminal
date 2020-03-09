@@ -20,6 +20,7 @@
 #include "BSErrorCodeStrings.h"
 #include "UiUtils.h"
 #include "XBTAmount.h"
+#include "UtxoReservationManager.h"
 
 using namespace bs::sync;
 
@@ -32,6 +33,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , const bs::network::Quote &quote
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::map<UTXO, std::string> &manualXbtInputs
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , bs::UtxoReservationToken utxoRes)
    : bs::SettlementContainer(std::move(utxoRes))
    , logger_(logger)
@@ -46,6 +48,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , signer_(armory)
    , lotSize_(assetMgr_->getCCLotSize(product()))
    , manualXbtInputs_(manualXbtInputs)
+   , utxoReservationManager_(utxoReservationManager)
 {
    if (!xbtWallet_) {
       throw std::logic_error("invalid hd wallet");
@@ -172,7 +175,10 @@ void ReqCCSettlementContainer::activate()
    else if (side() == bs::network::Side::Buy) {
       //Waiting for genesis address verification to complete...
 
-      const auto &cbHasInput = [this](bool has) {
+      const auto &cbHasInput = [this, handle = validityFlag_.handle()](bool has) {
+         if (!handle.isValid()) {
+            return;
+         }
          userKeyOk_ = has;
          emit genAddressVerified(has, has ? QString{} : tr("GA check failed"));
       };
@@ -245,7 +251,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                   ccTxData_.populateUTXOs = true;
 
                   logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
-                  utxoRes_ = bs::UtxoReservationToken::makeNewReservation(logger_, ccTxData_.inputs, id());
+                  utxoRes_ = utxoReservationManager_->makeNewReservation(ccTxData_.inputs, id());
 
                   AcceptQuote();
                }
@@ -257,7 +263,9 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
             xbtLeaves_.front()->getNewChangeAddress(changeAddrCb);
          };
          if (manualXbtInputs_.empty()) {
-            bs::tradeutils::getSpendableTxOutList(xbtLeaves_, inputsCb);
+            auto utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId());
+            auto fixedUtxo = utxoReservationManager_->convertUtxoToPartialFixedInput(xbtWallet_->walletId(), utxos);
+            inputsCb(fixedUtxo.inputs);
          } else {
             inputsCb(manualXbtInputs_, true);
          }

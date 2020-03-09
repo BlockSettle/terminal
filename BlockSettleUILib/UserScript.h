@@ -27,7 +27,7 @@ namespace bs {
 }
 class QQmlComponent;
 class AssetManager;
-class MarketDataProvider;
+class MDCallbacksQt;
 
 
 //
@@ -40,7 +40,7 @@ class MarketData : public QObject
    Q_OBJECT
 
 public:
-   MarketData(std::shared_ptr<MarketDataProvider> mdProvider, QObject *parent);
+   MarketData(const std::shared_ptr<MDCallbacksQt> &, QObject *parent);
    ~MarketData() noexcept override = default;
 
    Q_INVOKABLE double bid(const QString &sec) const;
@@ -115,8 +115,8 @@ class UserScript : public QObject
 Q_OBJECT
 
 public:
-   UserScript(const std::shared_ptr<spdlog::logger> logger,
-      std::shared_ptr<MarketDataProvider> mdProvider,
+   UserScript(const std::shared_ptr<spdlog::logger> &,
+      const std::shared_ptr<MDCallbacksQt> &,
       QObject* parent = nullptr);
    ~UserScript() override;
 
@@ -144,10 +144,11 @@ class AutoQuoter : public QObject
 Q_OBJECT
 
 public:
-   AutoQuoter(const std::shared_ptr<spdlog::logger> logger, const QString &filename,
-      const std::shared_ptr<AssetManager> &assetManager,
-      std::shared_ptr<MarketDataProvider> mdProvider,
-      QObject* parent = nullptr);
+   AutoQuoter(const std::shared_ptr<spdlog::logger> &
+      , const QString &filename
+      , const std::shared_ptr<AssetManager> &
+      , const std::shared_ptr<MDCallbacksQt> &
+      , QObject* parent = nullptr);
    ~AutoQuoter() override = default;
 
    QObject *instantiate(const bs::network::QuoteReqNotification &qrn);
@@ -212,8 +213,9 @@ class BSQuoteReqReply : public QObject
    Q_PROPERTY(QString security READ security)
    Q_PROPERTY(double indicBid READ indicBid NOTIFY indicBidChanged)
    Q_PROPERTY(double indicAsk READ indicAsk NOTIFY indicAskChanged)
-   Q_PROPERTY(double lastPirce READ lastPrice NOTIFY lastPriceChanged)
+   Q_PROPERTY(double lastPrice READ lastPrice NOTIFY lastPriceChanged)
    Q_PROPERTY(double bestPrice READ bestPrice NOTIFY bestPriceChanged)
+   Q_PROPERTY(double isOwnBestPrice READ isOwnBestPrice)
 
 public:
    explicit BSQuoteReqReply(QObject *parent = nullptr) : QObject(parent) {}   //TODO: add dedicated AQ bs::Wallet
@@ -236,22 +238,34 @@ public:
    void setIndicBid(double prc) {
       if (indicBid_ != prc) {
          indicBid_ = prc;
-         emit indicBidChanged();
+
+         if (started_) {
+            emit indicBidChanged();
+         }
       }
    }
    void setIndicAsk(double prc) {
       if (indicAsk_ != prc) {
          indicAsk_ = prc;
-         emit indicAskChanged();
+
+         if (started_) {
+            emit indicAskChanged();
+         }
       }
    }
    void setLastPrice(double prc) {
       if (lastPrice_ != prc) {
          lastPrice_ = prc;
-         emit lastPriceChanged();
+
+         if (started_) {
+            emit lastPriceChanged();
+         }
       }
    }
-   void setBestPrice(double prc) {
+
+
+   void setBestPrice(double prc, bool own) {
+      isOwnBestPrice_ = own;
       if (bestPrice_ != prc) {
          bestPrice_ = prc;
          emit bestPriceChanged();
@@ -261,6 +275,7 @@ public:
    double indicAsk() const { return indicAsk_; }
    double lastPrice() const { return lastPrice_; }
    double bestPrice() const { return bestPrice_; }
+   bool   isOwnBestPrice() const { return isOwnBestPrice_; }
 
    void init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AssetManager> &assetManager);
 
@@ -269,7 +284,13 @@ public:
    Q_INVOKABLE bool pullQuoteReply();
    Q_INVOKABLE QString product();
    Q_INVOKABLE double accountBalance(const QString &product);
-   void start() { emit started(); }
+
+   void start() {
+      if (!started_ && indicBid_ > .0 && indicAsk_ > .0 && lastPrice_ > .0) {
+         started_ = true;
+         emit started();
+      }
+   }
 
 signals:
    void expirationInSecChanged();
@@ -277,7 +298,6 @@ signals:
    void indicAskChanged();
    void lastPriceChanged();
    void bestPriceChanged();
-   void sendFailed(const QString &reason);
    void sendingQuoteReply(const QString &reqId, double price);
    void pullingQuoteReply(const QString &reqId);
    void started();
@@ -286,9 +306,12 @@ private:
    BSQuoteRequest *quoteReq_;
    double   expirationInSec_;
    QString  security_;
-   double   indicBid_, indicAsk_;
+   double   indicBid_ = 0;
+   double   indicAsk_ = 0;
    double   lastPrice_ = 0;
    double   bestPrice_ = 0;
+   bool     isOwnBestPrice_ = false;
+   bool     started_ = false;
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<AssetManager> assetManager_;
 };

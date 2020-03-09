@@ -25,6 +25,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "BSErrorCodeStrings.h"
+#include "ApplicationSettings.h"
 
 namespace {
    const auto kAutheIdTimeout = int(BsClient::autheidCcAddressTimeout() / std::chrono::seconds(1));
@@ -32,11 +33,13 @@ namespace {
 
 CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
       , const std::shared_ptr<CCFileManager> &ccFileMgr
+      , const std::shared_ptr<ApplicationSettings> &settings
       , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::CCTokenEntryDialog())
    , ccFileMgr_(ccFileMgr)
    , walletsMgr_(walletsMgr)
+   , settings_(settings)
 {
    ui_->setupUi(this);
 
@@ -47,8 +50,6 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<bs::sync::WalletsMa
    connect(ccFileMgr_.get(), &CCFileManager::CCAddressSubmitted, this, &CCTokenEntryDialog::onCCAddrSubmitted, Qt::QueuedConnection);
    connect(ccFileMgr_.get(), &CCFileManager::CCInitialSubmitted, this, &CCTokenEntryDialog::onCCInitialSubmitted, Qt::QueuedConnection);
    connect(ccFileMgr_.get(), &CCFileManager::CCSubmitFailed, this, &CCTokenEntryDialog::onCCSubmitFailed, Qt::QueuedConnection);
-
-   ccFileMgr_->LoadCCDefinitionsFromPub();
 
    updateOkState();
 
@@ -132,7 +133,7 @@ void CCTokenEntryDialog::accept()
       return;
    }
    const auto &cbAddr = [this](const bs::Address &address) {
-      if (ccFileMgr_->SubmitAddressToPuB(address, seed_, ccProduct_)) {
+      if (ccFileMgr_->submitAddress(address, seed_, ccProduct_)) {
          ui_->pushButtonOk->setEnabled(false);
       } else {
          onCCSubmitFailed(QString::fromStdString(address.display())
@@ -149,15 +150,28 @@ void CCTokenEntryDialog::accept()
    ui_->labelProduct->setText(QString::fromStdString(ccProduct_));
 }
 
-void CCTokenEntryDialog::onCCAddrSubmitted(const QString)
+void CCTokenEntryDialog::reject()
 {
-   QDialog::accept();
-   BSMessageBox(BSMessageBox::success, tr("Submission Successful")
-      , tr("Equity Token Submitted")
-      , tr("BlockSettle will issue your equity tokens within 24h")).exec();
+   ccFileMgr_->cancelActiveSign();
+   QDialog::reject();
 }
 
-void CCTokenEntryDialog::onCCInitialSubmitted(const QString)
+void CCTokenEntryDialog::onCCAddrSubmitted(const QString addr)
+{
+   QDialog::accept();
+
+   const bool isProd = settings_->get<int>(ApplicationSettings::envConfiguration) ==
+      static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
+
+   const auto body = isProd ? tr("BlockSettle will issue your tokens within the next 24 hours.")
+      : tr("BlockSettle will issue your tokens within the next 15 minutes.");
+
+   BSMessageBox(BSMessageBox::success, tr("Submission Successful")
+      , tr("Equity Token Submitted")
+      , body).exec();
+}
+
+void CCTokenEntryDialog::onCCInitialSubmitted(const QString addr)
 {
    ui_->labelTokenHint->setText(tr("Request was sent"));
 }
@@ -186,5 +200,5 @@ void CCTokenEntryDialog::onCancel()
    setDisabled(true);
    timeLeft_ = 0;
    timer_.stop();
-   ccFileMgr_->cancelSubmitAddressToPub();
+   reject();
 }

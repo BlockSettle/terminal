@@ -92,7 +92,7 @@ public:
       UnitTestWalletACT::waitOnRefresh(regIDs);
 
       OtcClientParams params;
-      otc_ = std::make_shared<OtcClient>(env.logger(), syncWalletMgr_, env.armoryConnection(), signer_, nullptr, params);
+      otc_ = std::make_shared<OtcClient>(env.logger(), syncWalletMgr_, env.armoryConnection(), signer_, nullptr, nullptr, params);
       otc_->setOwnContactId(name);
    }
 
@@ -310,7 +310,7 @@ public:
       auto utxosPromise = std::promise<std::vector<UTXO>>();
       bool result = wallet->getSpendableTxOutList([&utxosPromise](const std::vector<UTXO> &utxos) {
          utxosPromise.set_value(utxos);
-      }, UINT64_MAX);
+      }, UINT64_MAX, true);
       ASSERT_TRUE(result);
       auto utxos = utxosPromise.get_future().get();
       ASSERT_FALSE(utxos.empty());

@@ -39,6 +39,7 @@ class BlockchainMonitor;
 class CelerClient;
 class ConnectionManager;
 class MarketDataProvider;
+class MDCallbacksQt;
 class QuoteProvider;
 
 class ResolverOneAddress : public ResolverFeed
@@ -115,7 +116,7 @@ public:
 
 
 struct ACTqueue {
-   static BlockingQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
+   static ArmoryThreading::BlockingQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
 };
 
 class SingleUTWalletACT : public ArmoryCallbackTarget
@@ -247,7 +248,7 @@ public:
 
 struct UnitTestLocalACT : public bs::sync::WalletACT
 {
-   BlockingQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
+   ArmoryThreading::BlockingQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
 
 public:
    UnitTestLocalACT(ArmoryConnection *armory, bs::sync::Wallet *leaf) :
@@ -401,11 +402,11 @@ public:
       return 1.0f;
    }
 
-   bool pushZC(const BinaryData& rawTx) const override
+   bool pushZC(const BinaryData &rawTx) const
    {
-      if (armoryInstance_ == nullptr)
+      if (armoryInstance_ == nullptr) {
          return false;
-
+      }
       armoryInstance_->pushZC(rawTx);
       return true;
    }
@@ -440,6 +441,7 @@ public:
    std::shared_ptr<spdlog::logger> logger() { return logger_; }
    std::shared_ptr<bs::core::WalletsManager> walletsMgr() { return walletsMgr_; }
    std::shared_ptr<MarketDataProvider> mdProvider() { return mdProvider_; }
+   std::shared_ptr<MDCallbacksQt> mdCallbacks() { return mdCallbacks_; }
    std::shared_ptr<QuoteProvider> quoteProvider() { return quoteProvider_; }
 
    void requireArmory();
@@ -453,6 +455,7 @@ private:
    std::shared_ptr<BlockchainMonitor>    blockMonitor_;
    std::shared_ptr<BaseCelerClient>      celerConn_;
    std::shared_ptr<ConnectionManager>    connMgr_;
+   std::shared_ptr<MDCallbacksQt>        mdCallbacks_;
    std::shared_ptr<MarketDataProvider>   mdProvider_;
    std::shared_ptr<QuoteProvider>        quoteProvider_;
    std::shared_ptr<bs::core::WalletsManager>       walletsMgr_;

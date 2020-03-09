@@ -16,6 +16,8 @@
 #include "AuthAddressManager.h"
 #include "OtcClient.h"
 #include "AssetManager.h"
+#include "UtxoReservationManager.h"
+#include "Wallets/SyncHDWallet.h"
 #include "ui_OTCNegotiationResponseWidget.h"
 
 #include <QComboBox>
@@ -133,6 +135,11 @@ void OTCNegotiationResponseWidget::setPeer(const bs::network::otc::Peer &peer)
    setSelectedInputs(peer.offer.inputs);
 }
 
+void OTCNegotiationResponseWidget::onParentAboutToHide()
+{
+   clearSelectedInputs();
+}
+
 void OTCNegotiationResponseWidget::onSyncInterface()
 {
    int index = UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWallets, getWalletManager(), UiUtils::WoWallets::Enable);
@@ -198,12 +205,38 @@ void OTCNegotiationResponseWidget::onChanged()
 
 void OTCNegotiationResponseWidget::onAcceptOrUpdateClicked()
 {
-   if (receivedOffer_ == offer()) {
-      emit responseAccepted();
+   QMetaMethod signal = (receivedOffer_ == offer())
+      ? QMetaMethod::fromSignal(&OTCNegotiationResponseWidget::responseAccepted)
+      : QMetaMethod::fromSignal(&OTCNegotiationResponseWidget::responseUpdated);
+
+
+   if (receivedOffer_.ourSide == bs::network::otc::Side::Buy) {
+      signal.invoke(this);
+      return;
    }
-   else {
-      emit responseUpdated();
+
+   if (!selectedUTXO_.empty()) {
+      signal.invoke(this);
+      return;
    }
+
+   const auto hdWallet = getCurrentHDWalletFromCombobox(ui_->comboBoxXBTWallets);
+   if (!hdWallet) {
+      return;
+   }
+
+   auto cbUtxoSet = [wdgt = QPointer<OTCNegotiationResponseWidget>(this), signal](std::vector<UTXO>&& utxos) {
+      if (!wdgt) {
+         return;
+      }
+
+      wdgt->setSelectedInputs(utxos);
+      wdgt->setReservation(wdgt->getUtxoManager()->makeNewReservation(utxos));
+      signal.invoke(wdgt);
+   };
+
+   getUtxoManager()->getBestXbtUtxoSet(hdWallet->walletId(), bs::XBTAmount(ui_->quantitySpinBox->value()).GetValue()
+      , std::move(cbUtxoSet));
 }
 
 void OTCNegotiationResponseWidget::onShowXBTInputsClicked()

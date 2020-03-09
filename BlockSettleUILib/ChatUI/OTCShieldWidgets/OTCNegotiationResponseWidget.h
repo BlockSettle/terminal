@@ -41,6 +41,9 @@ signals:
    void responseUpdated();
    void responseRejected();
 
+public slots:
+   void onParentAboutToHide() override;
+
 protected slots:
    void onSyncInterface() override;
    void onUpdateBalances() override;

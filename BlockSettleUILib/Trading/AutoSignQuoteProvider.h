@@ -22,7 +22,7 @@ class SignContainer;
 class UserScriptRunner;
 class AssetManager;
 class QuoteProvider;
-class MarketDataProvider;
+class MDCallbacksQt;
 
 namespace bs {
    namespace sync {
@@ -45,7 +45,7 @@ public:
       , const std::shared_ptr<QuoteProvider>&
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<MarketDataProvider> &
+      , const std::shared_ptr<MDCallbacksQt> &
       , const std::shared_ptr<BaseCelerClient> &
       , QObject *parent = nullptr);
 

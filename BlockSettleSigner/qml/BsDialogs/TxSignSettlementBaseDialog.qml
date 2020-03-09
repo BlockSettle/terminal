@@ -35,6 +35,7 @@ CustomTitleDialogWindowWithExpander {
 
     // signingAllowed set in cc or xbt dialog
     property bool signingAllowed: false
+    property bool signingIsNotSet: true
 
     // expanding
     property bool isExpanded: false
@@ -121,16 +122,21 @@ CustomTitleDialogWindowWithExpander {
                 root.acceptAnimated()
             }
         });
-        authSign.failed.connect(function(errorText) {
-            if (root) {
-                showWalletError(errorText);
-            }
-        })
         authSign.userCancelled.connect(function() {
-            if (root) {
-                root.rejectAnimated()
-            }
+            if (root) rejectWithNoError();
         })
+        authSign.canceledByTimeout.connect(function() {
+            if (root) rejectWithNoError();
+        })
+    }
+
+    function getValidationColor(condition) {
+       if (signingIsNotSet)
+           return BSStyle.inputsPendingColor;
+       else if (condition)
+           return BSStyle.inputsValidColor;
+       else
+           return BSStyle.inputsInvalidColor;
     }
 
     Component.onCompleted: {
@@ -158,6 +164,7 @@ CustomTitleDialogWindowWithExpander {
         if (signingAllowed) {
             initAuth()
         }
+         signingIsNotSet = false
     }
 
     cContentItem: ColumnLayout {
@@ -309,8 +316,14 @@ CustomTitleDialogWindowWithExpander {
                     text: validationTitle
                 }
                 CustomLabelValue {
-                    text: signingAllowed ? qsTr("Valid") : qsTr("Not Valid")
-                    color: signingAllowed ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
+                    text: if (signingIsNotSet)
+                              qsTr("Pending")
+                          else if (signingAllowed)
+                              qsTr("Valid")
+                          else
+                              qsTr("Not Valid")
+
+                    color: getValidationColor(signingAllowed)
                     Layout.alignment: Qt.AlignRight
                 }
             }
@@ -441,8 +454,7 @@ CustomTitleDialogWindowWithExpander {
                         timeLeft -= 0.5
                         if (timeLeft <= 0) {
                             stop()
-                            // assume non signed tx is cancelled tx
-                            showWalletError(kOperationTimeExceeded);
+                            rejectWithNoError();
                         }
                     }
                     signal expired()
@@ -459,7 +471,10 @@ CustomTitleDialogWindowWithExpander {
                 }
 
                 CustomLabelValue {
-                    text: signingAllowed ? qsTr("%1 seconds left").arg(Math.max(0, timeLeft.toFixed(0))) : errorMessage
+                    text: if (signingAllowed || signingIsNotSet)
+                              return qsTr("%1 seconds left").arg(Math.max(0, timeLeft.toFixed(0)));
+                          else
+                              return errorMessage;
                     Layout.fillWidth: true
                 }
             }

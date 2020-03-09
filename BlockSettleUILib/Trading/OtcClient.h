@@ -19,6 +19,7 @@
 #include "BSErrorCode.h"
 #include "BinaryData.h"
 #include "OtcTypes.h"
+#include "UtxoReservationToken.h"
 
 namespace spdlog {
    class logger;
@@ -69,6 +70,7 @@ namespace bs {
          class SettlementLeaf;
       }
    }
+   class UTXOReservationManager;
 }
 
 class ArmoryConnection;
@@ -92,6 +94,7 @@ public:
       , const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<SignContainer> &signContainer
       , const std::shared_ptr<AuthAddressManager> &authAddressManager
+      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
       , OtcClientParams params
       , QObject *parent = nullptr);
    ~OtcClient() override;
@@ -112,6 +115,8 @@ public:
    bool acceptOffer(bs::network::otc::Peer *peer, const bs::network::otc::Offer &offer);
    bool updateOffer(bs::network::otc::Peer *peer, const bs::network::otc::Offer &offer);
    bool pullOrReject(bs::network::otc::Peer *peer);
+   void setReservation(const bs::network::otc::Peer *peer, bs::UtxoReservationToken&& reserv);
+   bs::UtxoReservationToken releaseReservation(const bs::network::otc::Peer *peer);
 
    const bs::network::otc::Peers &requests() { return requests_; }
    const bs::network::otc::Peers &responses() { return responses_; }
@@ -193,6 +198,7 @@ private:
    std::shared_ptr<ArmoryConnection> armory_;
    std::shared_ptr<SignContainer> signContainer_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;
+   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
 
    std::string ownContactId_;
 
@@ -219,6 +225,9 @@ private:
    bs::network::otc::Peers responses_;
 
    OtcClientParams params_;
+
+   // Utxo reservation
+   std::unordered_map<std::string, bs::UtxoReservationToken> reservedTokens_;
 };
 
 #endif

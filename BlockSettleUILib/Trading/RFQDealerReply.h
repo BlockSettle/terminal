@@ -40,6 +40,7 @@ namespace bs {
       class Wallet;
       class WalletsManager;
    }
+   class UTXOReservationManager;
 }
 class ApplicationSettings;
 class ArmoryConnection;
@@ -94,7 +95,8 @@ namespace bs {
             , const std::shared_ptr<ConnectionManager> &connectionManager
             , const std::shared_ptr<SignContainer> &
             , const std::shared_ptr<ArmoryConnection> &
-            , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider);
+            , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider
+            , const std::shared_ptr<bs::UTXOReservationManager>& utxoReservationManager);
 
          void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
@@ -110,8 +112,13 @@ namespace bs {
          using ResetCurrentReservationCb = std::function<void(const std::shared_ptr<SubmitQuoteReplyData> &data)>;
          void setResetCurrentReservation(ResetCurrentReservationCb cb);
 
+         using GetLastUTXOReplyCb = std::function<const std::vector<UTXO>*(const std::string&)>;
+         void setGetLastSettlementReply(GetLastUTXOReplyCb cb);
+
+         void onParentAboutToHide();
+
       signals:
-         void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
+         void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
 
       public slots:
          void setQuoteReqNotification(const network::QuoteReqNotification &, double indicBid, double indicAsk);
@@ -136,6 +143,7 @@ namespace bs {
          void onHDLeafCreated(const std::string& ccName);
          void onCreateHDWalletError(const std::string& ccName, bs::error::ErrorCode result);
          void onAuthAddrChanged(int);
+         void onUTXOReservationChanged(const std::string& walletId);
 
       protected:
          bool eventFilter(QObject *watched, QEvent *evt) override;
@@ -152,6 +160,7 @@ namespace bs {
          std::shared_ptr<SignContainer>         signingContainer_;
          std::shared_ptr<ArmoryConnection>      armory_;
          std::shared_ptr<AutoSignQuoteProvider> autoSignQuoteProvider_;
+         std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
          std::string authKey_;
          bs::Address authAddr_;
 
@@ -186,6 +195,7 @@ namespace bs {
 
          SubmitQuoteNotifCb submitQuoteNotifCb_;
          ResetCurrentReservationCb resetCurrentReservationCb_;
+         GetLastUTXOReplyCb getLastUTXOReplyCb_;
 
       private:
          enum class ReplyType
@@ -228,9 +238,14 @@ namespace bs {
          std::shared_ptr<bs::sync::hd::Wallet> getSelectedXbtWallet(ReplyType replyType) const;
          bs::Address selectedAuthAddress(ReplyType replyType) const;
          std::vector<UTXO> selectedXbtInputs(ReplyType replyType) const;
+         void submit(double price, const std::shared_ptr<SubmitQuoteReplyData>& replyData);
+         void reserveBestUtxoSetAndSubmit(double quantity, double price,
+            const std::shared_ptr<SubmitQuoteReplyData>& replyData, ReplyType replyType);
+         void refreshSettlementDetails();
+
+
          std::set<std::string> activeQuoteSubmits_;
          std::map<std::string, std::map<std::string, std::array<bs::Address, static_cast<size_t>(AddressType::Max) + 1>>> addresses_;
-
       };
 
    }  //namespace ui

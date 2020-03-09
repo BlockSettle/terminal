@@ -34,6 +34,7 @@ namespace Ui {
 }
 namespace bs {
    class LogManager;
+   class UTXOReservationManager;
    namespace sync {
       class Wallet;
       class WalletsManager;
@@ -41,7 +42,6 @@ namespace bs {
 }
 
 struct NetworkSettings;
-
 class AboutDialog;
 class ArmoryServersProvider;
 class AssetManager;
@@ -57,6 +57,7 @@ class CCPortfolioModel;
 class CcTrackerClient;
 class ConnectionManager;
 class LoginWindow;
+class MDCallbacksQt;
 class NetworkSettingsLoader;
 class OrderListModel;
 class QSystemTrayIcon;
@@ -93,6 +94,7 @@ private:
    void initConnections();
    void initArmory();
    void initCcClient();
+   void initUtxoReservationManager();
    void connectArmory();
    void connectCcClient();
    void connectSigner();
@@ -121,7 +123,6 @@ private:
    void saveUserAcceptedMDLicense();
 
    bool showStartupDialog();
-   void LoadCCDefinitionsFromPuB();
    void setWidgetsAuthorized(bool authorized);
 
 signals:
@@ -176,6 +177,7 @@ private:
    std::shared_ptr<ConnectionManager>        connectionManager_;
    std::shared_ptr<CelerClientProxy>         celerConnection_;
    std::shared_ptr<BSMarketDataProvider>     mdProvider_;
+   std::shared_ptr<MDCallbacksQt>            mdCallbacks_;
    std::shared_ptr<AssetManager>             assetManager_;
    std::shared_ptr<CCFileManager>            ccFileManager_;
    std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
@@ -185,6 +187,7 @@ private:
    std::shared_ptr<OrderListModel>           orderListModel_;
 
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
+   std::shared_ptr<bs::UTXOReservationManager> utxoReservationMgr_{};
 
    QString currentUserLogin_;
 
@@ -262,7 +265,9 @@ private:
    QString           loginButtonText_;
 
    bool initialWalletCreateDialogShown_ = false;
-   bool allowAuthAddressDialogShow_ = false;
+   bool allowAuthAddressDialogShow_ = true;
+   bool createAuthWalletDialogShown_ = false;
+   bool promoteToPrimaryShown_ = false;
    bool deferCCsync_ = false;
 
    bool wasWalletsRegistered_ = false;
@@ -289,7 +294,8 @@ private:
       ~MainWinACT() override { cleanup(); }
       void onZCReceived(const std::vector<bs::TXEntry> &) override;
       void onStateChanged(ArmoryState) override;
-      void onTxBroadcastError(const std::string &hash, const std::string &error) override;
+      void onTxBroadcastError(const BinaryData &txHash, int errCode
+         , const std::string &errMsg) override;
       void onNodeStatus(NodeStatus, bool isSegWitEnabled, RpcStatus) override;
 
    private:

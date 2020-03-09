@@ -13,6 +13,7 @@
 #include "ui_MarketDataWidget.h"
 #include "MarketDataProvider.h"
 #include "MarketDataModel.h"
+#include "MDCallbacksQt.h"
 #include "TreeViewWithEnterKey.h"
 
 constexpr int EMPTY_COLUMN_WIDTH = 0;
@@ -39,7 +40,8 @@ MarketDataWidget::~MarketDataWidget()
 {}
 
 void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings, ApplicationSettings::Setting param
-   , const std::shared_ptr<MarketDataProvider>& mdProvider)
+   , const std::shared_ptr<MarketDataProvider> &mdProvider
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks)
 {
    mdProvider_ = mdProvider;
 
@@ -80,20 +82,19 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
    connect(mdSortFilterModel_, &QAbstractItemModel::rowsInserted, this, &MarketDataWidget::resizeAndExpand);
    connect(marketDataModel_, &MarketDataModel::needResize, this, &MarketDataWidget::resizeAndExpand);
 
-   connect(ui_->treeViewMarketData, &QTreeView::clicked, this, &MarketDataWidget::onRowClicked);
-   connect(ui_->treeViewMarketData, &TreeViewWithEnterKey::enterKeyPressed,
-           this, &MarketDataWidget::onEnterKeyPressed);
+   connect(ui_->treeViewMarketData, &QTreeView::clicked, this, &MarketDataWidget::clicked);
+   connect(ui_->treeViewMarketData->selectionModel(), &QItemSelectionModel::currentChanged, this, &MarketDataWidget::onSelectionChanged);
 
-   connect(mdProvider.get(), &MarketDataProvider::MDUpdate, marketDataModel_, &MarketDataModel::onMDUpdated);
-   connect(mdProvider.get(), &MarketDataProvider::MDReqRejected, this, &MarketDataWidget::onMDRejected);
+   connect(mdCallbacks.get(), &MDCallbacksQt::MDUpdate, marketDataModel_, &MarketDataModel::onMDUpdated);
+   connect(mdCallbacks.get(), &MDCallbacksQt::MDReqRejected, this, &MarketDataWidget::onMDRejected);
 
    connect(ui_->pushButtonMDConnection, &QPushButton::clicked, this, &MarketDataWidget::ChangeMDSubscriptionState);
 
-   connect(mdProvider.get(), &MarketDataProvider::WaitingForConnectionDetails, this, &MarketDataWidget::onLoadingNetworkSettings);
-   connect(mdProvider.get(), &MarketDataProvider::StartConnecting, this, &MarketDataWidget::OnMDConnecting);
-   connect(mdProvider.get(), &MarketDataProvider::Connected, this, &MarketDataWidget::OnMDConnected);
-   connect(mdProvider.get(), &MarketDataProvider::Disconnecting, this, &MarketDataWidget::OnMDDisconnecting);
-   connect(mdProvider.get(), &MarketDataProvider::Disconnected, this, &MarketDataWidget::OnMDDisconnected);
+   connect(mdCallbacks.get(), &MDCallbacksQt::WaitingForConnectionDetails, this, &MarketDataWidget::onLoadingNetworkSettings);
+   connect(mdCallbacks.get(), &MDCallbacksQt::StartConnecting, this, &MarketDataWidget::OnMDConnecting);
+   connect(mdCallbacks.get(), &MDCallbacksQt::Connected, this, &MarketDataWidget::OnMDConnected);
+   connect(mdCallbacks.get(), &MDCallbacksQt::Disconnecting, this, &MarketDataWidget::OnMDDisconnecting);
+   connect(mdCallbacks.get(), &MDCallbacksQt::Disconnected, this, &MarketDataWidget::OnMDDisconnected);
 
    ui_->pushButtonMDConnection->setText(tr("Subscribe"));
 }
@@ -220,12 +221,12 @@ void MarketDataWidget::onRowClicked(const QModelIndex& index)
    }
 }
 
-void MarketDataWidget::onEnterKeyPressed(const QModelIndex &index)
+void MarketDataWidget::onSelectionChanged(const QModelIndex &current, const QModelIndex &)
 {
-   auto pairIndex = mdSortFilterModel_->index(index.row(),
-      static_cast<int>(MarketDataModel::MarketDataColumns::Product), index.parent());
+   auto sourceIndex = mdSortFilterModel_->index(current.row(),
+      current.column(), current.parent());
 
-   onRowClicked(pairIndex);
+   onRowClicked(sourceIndex);
 }
 
 void MarketDataWidget::resizeAndExpand()

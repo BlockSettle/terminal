@@ -23,12 +23,10 @@ namespace bs {
 class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
-class MarketDataProvider;
+class MDCallbacksQt;
 
 namespace bs {
-   namespace network {
-
-   }
+   class UTXOReservationManager;
 }
 
 class OTCWindowsManager : public QObject {
@@ -37,15 +35,17 @@ public:
    OTCWindowsManager(QObject* parent = nullptr);
    ~OTCWindowsManager() override = default;
 
-   void init(const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr
-      , const std::shared_ptr<AuthAddressManager> &authManager
-      , const std::shared_ptr<MarketDataProvider>& mdProvider
-      , const std::shared_ptr<AssetManager>& assetManager
-      , const std::shared_ptr<ArmoryConnection>& armory);
+   void init(const std::shared_ptr<bs::sync::WalletsManager> &
+      , const std::shared_ptr<AuthAddressManager> &
+      , const std::shared_ptr<MDCallbacksQt> &
+      , const std::shared_ptr<AssetManager> &
+      , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<bs::UTXOReservationManager> &);
    std::shared_ptr<bs::sync::WalletsManager> getWalletManager() const;
    std::shared_ptr<AuthAddressManager> getAuthManager() const;
    std::shared_ptr<AssetManager> getAssetManager() const;
    std::shared_ptr<ArmoryConnection> getArmory() const;
+   std::shared_ptr<bs::UTXOReservationManager> getUtxoManager() const;
 
 signals:
    void syncInterfaceRequired();
@@ -55,9 +55,9 @@ signals:
 protected:
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<AuthAddressManager> authManager_;
-   std::shared_ptr<MarketDataProvider> mdProvider_;
    std::shared_ptr<AssetManager> assetManager_;
    std::shared_ptr<ArmoryConnection> armory_;
+   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
 };
 
 #endif // __OTCWINDOWSADAPTERBASE_H__

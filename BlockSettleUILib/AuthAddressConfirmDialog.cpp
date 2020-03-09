@@ -13,19 +13,21 @@
 #include "AuthAddressConfirmDialog.h"
 #include "BsClient.h"
 #include "BSMessageBox.h"
+#include "ApplicationSettings.h"
 #include "ui_AuthAddressConfirmDialog.h"
 
 namespace {
-constexpr auto UiTimerInterval = std::chrono::milliseconds(250);
+   constexpr auto UiTimerInterval = std::chrono::milliseconds(250);
 }
 
 AuthAddressConfirmDialog::AuthAddressConfirmDialog(BsClient *bsClient, const bs::Address& address
-   , const std::shared_ptr<AuthAddressManager>& authManager, QWidget* parent)
+   , const std::shared_ptr<AuthAddressManager>& authManager, const std::shared_ptr<ApplicationSettings> &settings, QWidget* parent)
   : QDialog(parent)
   , ui_{new Ui::AuthAddressConfirmDialog()}
   , address_{address}
   , authManager_{authManager}
   , bsClient_{bsClient}
+   , settings_(settings)
 {
    ui_->setupUi(this);
 
@@ -51,7 +53,6 @@ AuthAddressConfirmDialog::AuthAddressConfirmDialog(BsClient *bsClient, const bs:
    connect(authManager_.get(), &AuthAddressManager::AuthConfirmSubmitError, this, &AuthAddressConfirmDialog::onAuthConfirmSubmitError, Qt::QueuedConnection);
    connect(authManager_.get(), &AuthAddressManager::AuthAddrSubmitSuccess, this, &AuthAddressConfirmDialog::onAuthAddrSubmitSuccess, Qt::QueuedConnection);
    connect(authManager_.get(), &AuthAddressManager::AuthAddressSubmitCancelled, this, &AuthAddressConfirmDialog::onAuthAddressSubmitCancelled, Qt::QueuedConnection);
-   connect(authManager_.get(), &AuthAddressManager::signFailed, this, &AuthAddressConfirmDialog::onSignFailed, Qt::QueuedConnection);
 
    // send confirm request
    startTime_ = std::chrono::steady_clock::now();
@@ -63,26 +64,27 @@ AuthAddressConfirmDialog::~AuthAddressConfirmDialog() = default;
 
 void AuthAddressConfirmDialog::onUiTimerTick()
 {
+   // Do not check timeout here, BsClient will detect it itself
+
    const auto timeLeft = BsClient::autheidAuthAddressTimeout() - (std::chrono::steady_clock::now() - startTime_);
-   if (timeLeft.count() < 0) {
-      CancelSubmission();
-   } else {
-      const int countMs = int(std::chrono::duration_cast<std::chrono::milliseconds>(timeLeft).count());
-      ui_->progressBarTimeout->setValue(countMs);
-      ui_->labelTimeLeft->setText(tr("%1 seconds left").arg(int(countMs / 1000.0)));
-   }
+
+   const int countMs = std::max(0, int(std::chrono::duration_cast<std::chrono::milliseconds>(timeLeft).count()));
+   ui_->progressBarTimeout->setValue(countMs);
+   ui_->labelTimeLeft->setText(tr("%1 seconds left").arg(countMs / 1000));
 }
 
 void AuthAddressConfirmDialog::onCancelPressed()
 {
-   CancelSubmission();
+   reject();
 }
 
-void AuthAddressConfirmDialog::CancelSubmission()
+void AuthAddressConfirmDialog::reject()
 {
    progressTimer_.stop();
-
-   authManager_->CancelSubmitForVerification(bsClient_.data(), address_);
+   if (bsClient_) {
+      bsClient_->cancelActiveSign();
+   }
+   QDialog::reject();
 }
 
 void AuthAddressConfirmDialog::onAuthAddressSubmitCancelled(const QString &address)
@@ -100,44 +102,35 @@ void AuthAddressConfirmDialog::onError(const QString &errorText)
 
 void AuthAddressConfirmDialog::onAuthAddrSubmitError(const QString &address, const QString &error)
 {
-   BSMessageBox(BSMessageBox::critical, tr("Submission Aborted")
-      , tr("The process of submitting an Authentication Address has been aborted."
-           "Any reserved balance will be returned.")
+   progressTimer_.stop();
+   BSMessageBox(BSMessageBox::critical, tr("Submission")
+      , tr("Submission failed")
       , error, this).exec();
-
    reject();
 }
 
 void AuthAddressConfirmDialog::onAuthConfirmSubmitError(const QString &address, const QString &error)
 {
-   BSMessageBox(BSMessageBox::critical, tr("Confirmation Aborted")
-      , tr("The process of submitting an Authentication Address has been aborted."
-           "Any reserved balance will be returned.")
+   progressTimer_.stop();
+   BSMessageBox(BSMessageBox::critical, tr("Confirmation")
+      , tr("Confirmation failed")
       , error, this).exec();
-
    reject();
 }
 
 void AuthAddressConfirmDialog::onAuthAddrSubmitSuccess(const QString &address)
 {
-   BSMessageBox(BSMessageBox::success, tr("Submission Successful")
-      , tr("Your Authentication Address has now been submitted.")
-      , tr("Please allow BlockSettle 24 hours to fund your Authentication Address.")
-      , this).exec();
-
-   accept();
-}
-
-void AuthAddressConfirmDialog::onSignFailed(AutheIDClient::ErrorType error)
-{
-   // explicitly stop timer before cancel on submission, user need time to read MessageBox text
    progressTimer_.stop();
 
-   BSMessageBox(BSMessageBox::critical, tr("Signing request failed")
-      , tr("Submission aborted")
-      , tr("The process of submitting an Authentication Address has been aborted. "
-           "Any reserved balance will be returned.")
-      , this).exec();
+   const bool isProd = settings_->get<int>(ApplicationSettings::envConfiguration) ==
+      static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
 
-   CancelSubmission();
+   const auto body = isProd ? tr("A validation transaction will be sent within the next 24 hours.")
+      : tr("A validation transaction will be sent within the next 15 minutes.");
+
+   BSMessageBox(BSMessageBox::success, tr("Submission Successful")
+      , tr("Authentication Address submitted")
+      , body
+      , this).exec();
+   accept();
 }

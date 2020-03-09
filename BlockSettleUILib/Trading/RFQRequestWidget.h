@@ -30,6 +30,7 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
+   class UTXOReservationManager;
 }
 
 namespace Blocksettle {
@@ -48,6 +49,7 @@ class BaseCelerClient;
 class ConnectionManager;
 class DialogManager;
 class MarketDataProvider;
+class MDCallbacksQt;
 class OrderListModel;
 class QuoteProvider;
 class RfqStorage;
@@ -61,8 +63,9 @@ public:
    RFQRequestWidget(QWidget* parent = nullptr);
    ~RFQRequestWidget() override;
 
-   void initWidgets(const std::shared_ptr<MarketDataProvider>& mdProvider
-      , const std::shared_ptr<ApplicationSettings> &appSettings);
+   void initWidgets(const std::shared_ptr<MarketDataProvider> &
+      , const std::shared_ptr<MDCallbacksQt> &
+      , const std::shared_ptr<ApplicationSettings> &);
 
    void init(std::shared_ptr<spdlog::logger> logger
          , const std::shared_ptr<BaseCelerClient>& celerClient
@@ -73,6 +76,7 @@ public:
          , const std::shared_ptr<SignContainer> &
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<ConnectionManager> &connectionManager
+         , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
          , OrderListModel *orderListModel);
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
@@ -80,6 +84,10 @@ public:
    void shortcutActivated(ShortcutType s) override;
 
    void setAuthorized(bool authorized);
+
+protected:
+   void hideEvent(QHideEvent* event) override;
+   bool eventFilter(QObject* sender, QEvent* event) override;
 
 signals:
    void requestPrimaryWalletCreation();
@@ -105,6 +113,7 @@ public slots:
    void onBidClicked(const MarketSelectedInfo& selectedInfo);
    void onAskClicked(const MarketSelectedInfo& selectedInfo);
    void onDisableSelectedInfo();
+   void onRefreshFocus();
 
    void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
 
@@ -130,6 +139,7 @@ private:
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::shared_ptr<ConnectionManager>  connectionManager_;
+   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
 
    std::shared_ptr<RfqStorage> rfqStorage_;
 

@@ -15,6 +15,7 @@
 #include "ConnectionManager.h"
 #include "CoreWalletsManager.h"
 #include "MarketDataProvider.h"
+#include "MDCallbacksQt.h"
 #include "QuoteProvider.h"
 #include "SystemFileUtils.h"
 #include "UiUtils.h"
@@ -29,7 +30,7 @@ e64206261696c6f757420666f722062616e6b73ffffffff0100f2052a01000000434104678afdb0f
 112de5c384df7ba0b8d578a4c702b6bf11d5fac00000000");
 
 std::shared_ptr<spdlog::logger> StaticLogger::loggerPtr = nullptr;
-BlockingQueue<std::shared_ptr<DBNotificationStruct>> /*UnitTestWalletACT::*/ACTqueue::notifQueue_;
+ArmoryThreading::BlockingQueue<std::shared_ptr<DBNotificationStruct>> ACTqueue::notifQueue_;
 
 TestEnv::TestEnv(const std::shared_ptr<spdlog::logger> &logger)
 {
@@ -123,7 +124,8 @@ void TestEnv::requireAssets()
    assetMgr_ = std::make_shared<MockAssetManager>(logger_);
    assetMgr_->init();
 
-   mdProvider_ = std::make_shared<MarketDataProvider>(logger_);
+   mdCallbacks_ = std::make_shared<MDCallbacksQt>();
+   mdProvider_ = std::make_shared<MarketDataProvider>(logger_, mdCallbacks_.get());
    quoteProvider_ = std::make_shared<QuoteProvider>(assetMgr_, logger_);
 }
 
@@ -203,13 +205,15 @@ ArmoryInstance::ArmoryInstance()
 
    //init bdm
    nodePtr_ =
-      std::make_shared<NodeUnitTest>(*(unsigned int*)magicBytes.getPtr());
-   config_.nodePtr_ = std::dynamic_pointer_cast<BitcoinP2P>(nodePtr_);
+      std::make_shared<NodeUnitTest>(*(unsigned int*)magicBytes.getPtr(), false);
+   const auto watchNode = std::make_shared<NodeUnitTest>(0, true);
+   config_.bitcoinNodes_ = { nodePtr_, watchNode };
+   config_.rpcNode_ = std::make_shared<NodeRPC_UnitTest>(nodePtr_, watchNode);
 
    theBDMt_ = new BlockDataManagerThread(config_);
    iface_ = theBDMt_->bdm()->getIFace();
 
-   auto nodePtr = std::dynamic_pointer_cast<NodeUnitTest>(config_.nodePtr_);
+   auto nodePtr = std::dynamic_pointer_cast<NodeUnitTest>(nodePtr_);
    nodePtr->setBlockchain(theBDMt_->bdm()->blockchain());
    nodePtr->setBlockFiles(theBDMt_->bdm()->blockFiles());
 

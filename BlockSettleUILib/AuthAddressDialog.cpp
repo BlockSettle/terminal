@@ -26,6 +26,7 @@
 #include "BSMessageBox.h"
 #include "UiUtils.h"
 
+
 AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
    , const std::shared_ptr<AssetManager> &assetMgr
@@ -55,6 +56,15 @@ AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logg
    connect(authAddressManager_.get(), &AuthAddressManager::Error, this, &AuthAddressDialog::onAuthMgrError, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Info, this, &AuthAddressDialog::onAuthMgrInfo, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::AuthAddressConfirmationRequired, this, &AuthAddressDialog::onAuthAddressConfirmationRequired, Qt::QueuedConnection);
+
+   auto resetLastSubmittedAddress = [this] {
+      setLastSubmittedAddress({});
+   };
+   connect(authAddressManager_.get(), &AuthAddressManager::Error, this, resetLastSubmittedAddress, Qt::QueuedConnection);
+   connect(authAddressManager_.get(), &AuthAddressManager::AuthAddressSubmitCancelled, this, resetLastSubmittedAddress, Qt::QueuedConnection);
+   connect(authAddressManager_.get(), &AuthAddressManager::AuthAddrSubmitSuccess, this, resetLastSubmittedAddress, Qt::QueuedConnection);
+   connect(authAddressManager_.get(), &AuthAddressManager::AuthConfirmSubmitError, this, resetLastSubmittedAddress, Qt::QueuedConnection);
+   connect(authAddressManager_.get(), &AuthAddressManager::AuthAddrSubmitError, this, resetLastSubmittedAddress, Qt::QueuedConnection);
 
    connect(ui_->pushButtonCreate, &QPushButton::clicked, this, &AuthAddressDialog::createAddress);
    connect(ui_->pushButtonRevoke, &QPushButton::clicked, this, &AuthAddressDialog::revokeSelectedAddress);
@@ -218,6 +228,10 @@ void AuthAddressDialog::onAuthVerifyTxSent()
 
 void AuthAddressDialog::onUpdateSelection(int row)
 {
+   if (row < 0 || row >= model_->rowCount()) {
+      return;
+   }
+
    ui_->treeViewAuthAdress->selectionModel()->select(
       model_->index(row, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
@@ -246,6 +260,7 @@ void AuthAddressDialog::onAddressStateChanged(const QString &addr, const QString
          , tr("Authentication Address revoked")
          , tr("Authentication Address %1 was revoked and could not be used for Spot XBT trading.").arg(addr)).exec();
    }
+   updateEnabledStates();
 }
 
 void AuthAddressDialog::resizeTreeViewColumns()
@@ -259,41 +274,9 @@ void AuthAddressDialog::resizeTreeViewColumns()
    }
 }
 
-void AuthAddressDialog::adressSelected(const QItemSelection &selected, const QItemSelection &deselected)
+void AuthAddressDialog::adressSelected()
 {
-   Q_UNUSED(deselected)
-   if (!selected.indexes().isEmpty()) {
-      const auto address = model_->getAddress(selected.indexes()[0]);
-
-      switch (authAddressManager_->GetState(address)) {
-         case AddressVerificationState::NotSubmitted:
-            ui_->pushButtonRevoke->setEnabled(false);
-            ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.isNull());
-            ui_->pushButtonDefault->setEnabled(false);
-            break;
-         case AddressVerificationState::Submitted:
-         case AddressVerificationState::Revoked:
-         case AddressVerificationState::PendingVerification:
-         case AddressVerificationState::VerificationFailed:
-         case AddressVerificationState::InProgress:
-            ui_->pushButtonRevoke->setEnabled(false);
-            ui_->pushButtonSubmit->setEnabled(false);
-            ui_->pushButtonDefault->setEnabled(false);
-            break;
-         case AddressVerificationState::Verified:
-            ui_->pushButtonRevoke->setEnabled(authAddressManager_->readyError() == AuthAddressManager::ReadyError::NoError);
-            ui_->pushButtonSubmit->setEnabled(false);
-            ui_->pushButtonDefault->setEnabled(address != defaultAddr_);
-            break;
-         default:
-            break;
-      }
-   }
-   else {
-      ui_->pushButtonRevoke->setEnabled(false);
-      ui_->pushButtonSubmit->setEnabled(false);
-      ui_->pushButtonDefault->setEnabled(false);
-   }
+   updateEnabledStates();
 }
 
 bs::Address AuthAddressDialog::GetSelectedAddress() const
@@ -357,8 +340,10 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
       warnFunds.setWindowTitle(tr("Insufficient Funds"));
       warnFunds.exec();
 
-      authAddressManager_->CancelSubmitForVerification(bsClient_.data(), lastSubmittedAddress_);
-      lastSubmittedAddress_ = bs::Address{};
+      if (bsClient_) {
+         bsClient_->cancelActiveSign();
+      }
+      setLastSubmittedAddress({});
 
       return;
    }
@@ -383,8 +368,10 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
    if (promptResult == QDialog::Accepted) {
       ConfirmAuthAddressSubmission();
    } else {
-      authAddressManager_->CancelSubmitForVerification(bsClient_.data(), lastSubmittedAddress_);
-      lastSubmittedAddress_ = bs::Address{};
+      if (bsClient_) {
+         bsClient_->cancelActiveSign();
+      }
+      setLastSubmittedAddress({});
    }
 }
 
@@ -394,12 +381,16 @@ void AuthAddressDialog::ConfirmAuthAddressSubmission()
       SPDLOG_LOGGER_ERROR(logger_, "bsClient_ in not set");
       return;
    }
+   if (lastSubmittedAddress_.isNull()) {
+      SPDLOG_LOGGER_ERROR(logger_, "invalid lastSubmittedAddress_");
+      return;
+   }
 
-   AuthAddressConfirmDialog confirmDlg{bsClient_.data(), lastSubmittedAddress_, authAddressManager_, this};
+   AuthAddressConfirmDialog confirmDlg{bsClient_.data(), lastSubmittedAddress_, authAddressManager_, settings_, this};
 
    confirmDlg.exec();
 
-   lastSubmittedAddress_ = bs::Address{};
+   setLastSubmittedAddress({});
 }
 
 void AuthAddressDialog::submitSelectedAddress()
@@ -407,18 +398,21 @@ void AuthAddressDialog::submitSelectedAddress()
    ui_->pushButtonSubmit->setEnabled(false);
    ui_->labelHint->clear();
 
-   lastSubmittedAddress_ = GetSelectedAddress();
+   setLastSubmittedAddress(GetSelectedAddress());
    if (lastSubmittedAddress_.isNull()) {
       return;
    }
 
    if (authAddressManager_->hasSettlementLeaf(lastSubmittedAddress_)) {
-      authAddressManager_->SubmitForVerification(lastSubmittedAddress_);
+      authAddressManager_->SubmitForVerification(bsClient_, lastSubmittedAddress_);
    }
    else {
-      authAddressManager_->createSettlementLeaf(lastSubmittedAddress_, [this] {
-         QMetaObject::invokeMethod(this, [this] {  // prevent crash if dialog was destroyed
-            authAddressManager_->SubmitForVerification(lastSubmittedAddress_);
+      authAddressManager_->createSettlementLeaf(lastSubmittedAddress_, [this, handle = validityFlag_.handle()] {
+         QMetaObject::invokeMethod(this, [this, handle] {
+            if (!handle.isValid()) {
+               return;
+            }
+            authAddressManager_->SubmitForVerification(bsClient_, lastSubmittedAddress_);
          });
       });
    }
@@ -440,21 +434,22 @@ void AuthAddressDialog::setDefaultAddress()
 
 void AuthAddressDialog::onModelReset()
 {
-   ui_->pushButtonRevoke->setEnabled(false);
-   ui_->pushButtonSubmit->setEnabled(false);
-   ui_->pushButtonDefault->setEnabled(false);
-
    model_->adjustVisibleCount();
-   ui_->pushButtonCreate->setEnabled(lastSubmittedAddress_.isNull() &&
-      model_ && !model_->isUnsubmittedAddressVisible());
+   updateEnabledStates();
    saveAddressesNumber();
+   adressSelected();
 }
 
 void AuthAddressDialog::saveAddressesNumber()
 {
    const int newNumber = std::max(1, model_->rowCount());
-   if (newNumber == settings_->get<int>(ApplicationSettings::numberOfAuthAddressVisible)) {
+   const int oldNumber = settings_->get<int>(ApplicationSettings::numberOfAuthAddressVisible);
+   if (newNumber == oldNumber) {
       return; // nothing to save
+   }
+   else if (newNumber > oldNumber) {
+      // we have added address
+      emit onUpdateSelection(model_->rowCount() - 1);
    }
 
    settings_->set(ApplicationSettings::numberOfAuthAddressVisible, newNumber);
@@ -463,4 +458,52 @@ void AuthAddressDialog::saveAddressesNumber()
    if (model_->isEmpty()) {
       model_->setVisibleRowsCount(1);
    }
+}
+
+void AuthAddressDialog::setLastSubmittedAddress(const bs::Address &address)
+{
+   if (lastSubmittedAddress_ != address) {
+      lastSubmittedAddress_ = address;
+      updateEnabledStates();
+   }
+}
+
+void AuthAddressDialog::updateEnabledStates()
+{
+   const auto selectionModel = ui_->treeViewAuthAdress->selectionModel();
+   if (selectionModel->hasSelection()) {
+      const auto address = model_->getAddress(selectionModel->selectedRows()[0]);
+
+      switch (authAddressManager_->GetState(address)) {
+         case AddressVerificationState::NotSubmitted:
+            ui_->pushButtonRevoke->setEnabled(false);
+            ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.isNull());
+            ui_->pushButtonDefault->setEnabled(false);
+            break;
+         case AddressVerificationState::Submitted:
+         case AddressVerificationState::Revoked:
+         case AddressVerificationState::PendingVerification:
+         case AddressVerificationState::VerificationFailed:
+         case AddressVerificationState::InProgress:
+            ui_->pushButtonRevoke->setEnabled(false);
+            ui_->pushButtonSubmit->setEnabled(false);
+            ui_->pushButtonDefault->setEnabled(false);
+            break;
+         case AddressVerificationState::Verified:
+            ui_->pushButtonRevoke->setEnabled(authAddressManager_->readyError() == AuthAddressManager::ReadyError::NoError);
+            ui_->pushButtonSubmit->setEnabled(false);
+            ui_->pushButtonDefault->setEnabled(address != defaultAddr_);
+            break;
+         default:
+            break;
+      }
+   }
+   else {
+      ui_->pushButtonRevoke->setEnabled(false);
+      ui_->pushButtonSubmit->setEnabled(false);
+      ui_->pushButtonDefault->setEnabled(false);
+   }
+
+   ui_->pushButtonCreate->setEnabled(lastSubmittedAddress_.isNull() &&
+      model_ && !model_->isUnsubmittedAddressVisible());
 }

@@ -11,7 +11,7 @@
 
 #include "UserScriptRunner.h"
 #include "SignContainer.h"
-#include "MarketDataProvider.h"
+#include "MDCallbacksQt.h"
 #include "UserScript.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -23,14 +23,14 @@
 // UserScriptHandler
 //
 
-UserScriptHandler::UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvider,
-   std::shared_ptr<SignContainer> signingContainer,
-   std::shared_ptr<MarketDataProvider> mdProvider,
-   std::shared_ptr<AssetManager> assetManager,
-   std::shared_ptr<spdlog::logger> logger,
-   UserScriptRunner *runner)
+UserScriptHandler::UserScriptHandler(const std::shared_ptr<QuoteProvider> &quoteProvider
+   , const std::shared_ptr<SignContainer> &signingContainer
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
+   , const std::shared_ptr<AssetManager> &assetManager
+   , const std::shared_ptr<spdlog::logger> &logger
+   , UserScriptRunner *runner, QThread *handlerThread)
    : signingContainer_(signingContainer)
-   , mdProvider_(mdProvider)
+   , mdCallbacks_(mdCallbacks)
    , assetManager_(assetManager)
    , logger_(logger)
    , aqEnabled_(false)
@@ -44,12 +44,16 @@ UserScriptHandler::UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvide
       this, &UserScriptHandler::onQuoteReqCancelled, Qt::QueuedConnection);
    connect(quoteProvider.get(), &QuoteProvider::quoteRejected,
       this, &UserScriptHandler::onQuoteReqRejected, Qt::QueuedConnection);
+   connect(handlerThread, &QThread::finished, this, [this]() {
+      aqTimer_->stop();
+      deleteLater();
+   }, Qt::QueuedConnection);
 
    connect(runner, &UserScriptRunner::initAQ, this, &UserScriptHandler::initAQ,
       Qt::QueuedConnection);
    connect(runner, &UserScriptRunner::deinitAQ, this, &UserScriptHandler::deinitAQ,
       Qt::QueuedConnection);
-   connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &UserScriptHandler::onMDUpdate,
+   connect(mdCallbacks_.get(), &MDCallbacksQt::MDUpdate, this, &UserScriptHandler::onMDUpdate,
       Qt::QueuedConnection);
    connect(quoteProvider.get(), &QuoteProvider::bestQuotePrice,
       this, &UserScriptHandler::onBestQuotePrice, Qt::QueuedConnection);
@@ -87,15 +91,17 @@ void UserScriptHandler::onQuoteReqNotification(const bs::network::QuoteReqNotifi
 
          const auto &mdIt = mdInfo_.find(qrn.security);
          if (mdIt != mdInfo_.end()) {
+            auto *reqReply = qobject_cast<BSQuoteReqReply *>(obj);
             if (mdIt->second.bidPrice > 0) {
-               qobject_cast<BSQuoteReqReply *>(obj)->setIndicBid(mdIt->second.bidPrice);
+               reqReply->setIndicBid(mdIt->second.bidPrice);
             }
             if (mdIt->second.askPrice > 0) {
-               qobject_cast<BSQuoteReqReply *>(obj)->setIndicAsk(mdIt->second.askPrice);
+               reqReply->setIndicAsk(mdIt->second.askPrice);
             }
             if (mdIt->second.lastPrice > 0) {
-               qobject_cast<BSQuoteReqReply *>(obj)->setLastPrice(mdIt->second.lastPrice);
+               reqReply->setLastPrice(mdIt->second.lastPrice);
             }
+            reqReply->start();
          }
       }
    }
@@ -142,7 +148,7 @@ void UserScriptHandler::initAQ(const QString &fileName)
 
    aqEnabled_ = false;
 
-   aq_ = new AutoQuoter(logger_, fileName, assetManager_, mdProvider_, this);
+   aq_ = new AutoQuoter(logger_, fileName, assetManager_, mdCallbacks_, this);
    if (walletsManager_) {
       aq_->setWalletsManager(walletsManager_);
    }
@@ -228,25 +234,25 @@ void UserScriptHandler::onMDUpdate(bs::network::Asset::Type, const QString &secu
          continue;
       }
 
+      auto *reqReply = qobject_cast<BSQuoteReqReply *>(aqObj.second);
       if (bid > 0) {
-         qobject_cast<BSQuoteReqReply *>(aqObj.second)->setIndicBid(bid);
+         reqReply->setIndicBid(bid);
       }
       if (ask > 0) {
-         qobject_cast<BSQuoteReqReply *>(aqObj.second)->setIndicAsk(ask);
+         reqReply->setIndicAsk(ask);
       }
       if (last > 0) {
-         qobject_cast<BSQuoteReqReply *>(aqObj.second)->setLastPrice(last);
+         reqReply->setLastPrice(last);
       }
+      reqReply->start();
    }
 }
 
 void UserScriptHandler::onBestQuotePrice(const QString reqId, double price, bool own)
 {
-   if (!own) {
-      const auto itAQObj = aqObjs_.find(reqId.toStdString());
-      if (itAQObj != aqObjs_.end()) {
-         qobject_cast<BSQuoteReqReply *>(itAQObj->second)->setBestPrice(price);
-      }
+   const auto itAQObj = aqObjs_.find(reqId.toStdString());
+   if (itAQObj != aqObjs_.end()) {
+      qobject_cast<BSQuoteReqReply *>(itAQObj->second)->setBestPrice(price, own);
    }
 }
 
@@ -268,7 +274,7 @@ void UserScriptHandler::onAQPull(const QString &reqId)
       logger_->warn("[UserScriptHandler::onAQPull] QuoteReqNotification with id = {} not found", reqId.toStdString());
       return;
    }
-   emit pullQuoteNotif(QString::fromStdString(itQRN->second.quoteRequestId), QString::fromStdString(itQRN->second.sessionToken));
+   emit pullQuoteNotif(itQRN->second.settlementId, itQRN->second.quoteRequestId, itQRN->second.sessionToken);
 }
 
 void UserScriptHandler::aqTick()
@@ -301,17 +307,16 @@ void UserScriptHandler::aqTick()
 // UserScriptRunner
 //
 
-UserScriptRunner::UserScriptRunner(std::shared_ptr<QuoteProvider> quoteProvider,
-   std::shared_ptr<SignContainer> signingContainer,
-   std::shared_ptr<MarketDataProvider> mdProvider,
-   std::shared_ptr<AssetManager> assetManager,
-   std::shared_ptr<spdlog::logger> logger,
-   QObject *parent)
+UserScriptRunner::UserScriptRunner(const std::shared_ptr<QuoteProvider> &quoteProvider
+   , const std::shared_ptr<SignContainer> &signingContainer
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
+   , const std::shared_ptr<AssetManager> &assetManager
+   , const std::shared_ptr<spdlog::logger> &logger
+   , QObject *parent)
    : QObject(parent)
    , thread_(new QThread(this))
    , script_(new UserScriptHandler(quoteProvider, signingContainer,
-         mdProvider, assetManager, logger, this))
-
+         mdCallbacks, assetManager, logger, this, thread_))
    , logger_(logger)
 {
    thread_->setObjectName(QStringLiteral("AQScriptRunner"));
@@ -327,7 +332,6 @@ UserScriptRunner::UserScriptRunner(std::shared_ptr<QuoteProvider> quoteProvider,
 
 UserScriptRunner::~UserScriptRunner() noexcept
 {
-   script_->deleteLater();
    thread_->quit();
    thread_->wait();
 }

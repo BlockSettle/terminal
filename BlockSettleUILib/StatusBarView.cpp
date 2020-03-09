@@ -128,10 +128,10 @@ void StatusBarView::onStateChanged(ArmoryState state)
    QMetaObject::invokeMethod(this, [this, state] { onArmoryStateChanged(state); });
 }
 
-void StatusBarView::onError(const std::string &msg, const std::string &)
+void StatusBarView::onError(int, const std::string &errMsg)
 {
-   QMetaObject::invokeMethod(this, [this, msg] {
-      onArmoryError(QString::fromStdString(msg));
+   QMetaObject::invokeMethod(this, [this, errMsg] {
+      onArmoryError(QString::fromStdString(errMsg));
    });
 }
 

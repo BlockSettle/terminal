@@ -73,19 +73,24 @@ struct OtcClientDeal
    otc::Peer *peer{};
    ValidityHandle peerHandle;
 
-   bs::Address authAddress(bool isSeller) const
+   bs::Address cpAuthAddress() const
+   {
+      return bs::Address::fromPubKey(cpPubKey, AddressEntryType_P2WPKH);
+   }
+
+   bs::Address authAddress(bool forSeller) const
    {
       const bool weSell = (side == bs::network::otc::Side::Sell);
-      if (isSeller == weSell) {
+      if (forSeller == weSell) {
          return ourAuthAddress;
       } else {
-         return bs::Address::fromPubKey(cpPubKey, AddressEntryType_P2WPKH);
+         return cpAuthAddress();
       }
    }
 
    bool isRequestor() const { return side == bs::network::otc::Side::Sell; }
-   bs::Address requestorAuthAddress() const { return authAddress(isRequestor()); }
-   bs::Address responderAuthAddress() const { return authAddress(!isRequestor()); }
+   bs::Address requestorAuthAddress() const { return authAddress(true); }
+   bs::Address responderAuthAddress() const { return authAddress(false); }
 
    static OtcClientDeal error(const std::string &msg)
    {
@@ -139,9 +144,9 @@ namespace {
       dialogData.setValue(PasswordDialogData::SettlementAddress, deal.settlementAddr.display());
       dialogData.setValue(PasswordDialogData::SettlementId, deal.settlementId);
 
+      dialogData.setValue(PasswordDialogData::IsDealer, !deal.isRequestor());
       dialogData.setValue(PasswordDialogData::RequesterAuthAddress, deal.requestorAuthAddress().display());
       dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, deal.isRequestor());
-
       dialogData.setValue(PasswordDialogData::ResponderAuthAddress, deal.responderAuthAddress().display());
       dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, !deal.isRequestor());
 
@@ -209,6 +214,7 @@ OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<SignContainer> &signContainer
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , OtcClientParams params
    , QObject *parent)
    : QObject (parent)
@@ -217,6 +223,7 @@ OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
    , armory_(armory)
    , signContainer_(signContainer)
    , authAddressManager_(authAddressManager)
+   , utxoReservationManager_(utxoReservationManager)
    , params_(std::move(params))
 {
    connect(signContainer.get(), &SignContainer::TXSigned, this, &OtcClient::onTxSigned);
@@ -475,6 +482,25 @@ bool OtcClient::pullOrReject(Peer *peer)
    }
 }
 
+void OtcClient::setReservation(const bs::network::otc::Peer *peer, bs::UtxoReservationToken&& reserv)
+{
+   reservedTokens_.erase(peer->contactId);
+   reservedTokens_.insert({ peer->contactId , std::move(reserv) });
+}
+
+bs::UtxoReservationToken OtcClient::releaseReservation(const bs::network::otc::Peer *peer)
+{
+   bs::UtxoReservationToken reservation;
+   auto token = reservedTokens_.find(peer->contactId);
+   if (token == reservedTokens_.end()) {
+      return reservation;
+   }
+
+   reservation = std::move(token->second);
+   reservedTokens_.erase(token);
+   return reservation;
+}
+
 bool OtcClient::acceptOffer(Peer *peer, const bs::network::otc::Offer &offer)
 {
    SPDLOG_LOGGER_DEBUG(logger_, "accept offer from {} (price: {}, amount: {})", peer->toString(), offer.price, offer.amount);
@@ -622,6 +648,7 @@ void OtcClient::contactDisconnected(const std::string &contactId)
    }
 
    contactMap_.erase(contactId);
+   reservedTokens_.erase(contactId);
 
    emit publicUpdated();
 }
@@ -1597,6 +1624,15 @@ void OtcClient::changePeerStateWithoutUpdate(Peer *peer, State state)
       , peer->toString(), toString(peer->state), toString(state));
    peer->state = state;
    peer->stateTimestamp = std::chrono::steady_clock::now();
+
+   switch (state)
+   {
+   case bs::network::otc::State::Idle:
+   case bs::network::otc::State::Blacklisted:
+      releaseReservation(peer);
+   default:
+      break;
+   }
 }
 
 void OtcClient::changePeerState(Peer *peer, bs::network::otc::State state)
@@ -1652,10 +1688,11 @@ void OtcClient::verifyAuthAddresses(OtcClientDeal *deal)
       return;
    }
 
-   auto verificatorCb = [this, logger = logger_, handle = deal->peerHandle, isRequester = deal->isRequestor(), settlementId = deal->settlementId]
+   auto verificatorCb = [this, logger = logger_, handle = deal->peerHandle, settlementId = deal->settlementId
+         , requesterAuthAddr = deal->requestorAuthAddress(), responderAuthAddr = deal->responderAuthAddress()]
          (const bs::Address &address, AddressVerificationState state)
    {
-      QMetaObject::invokeMethod(qApp, [this, logger, handle, state, address, isRequester, settlementId] {
+      QMetaObject::invokeMethod(qApp, [this, logger, handle, state, address, settlementId, requesterAuthAddr, responderAuthAddr] {
          if (!handle.isValid()) {
             SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
             return;
@@ -1667,8 +1704,15 @@ void OtcClient::verifyAuthAddresses(OtcClientDeal *deal)
          }
 
          bs::sync::PasswordDialogData dialogData;
-         dialogData.setValue(isRequester ? PasswordDialogData::ResponderAuthAddressVerified : PasswordDialogData::RequesterAuthAddressVerified, true);
          dialogData.setValue(PasswordDialogData::SettlementId, settlementId);
+         if (address == requesterAuthAddr) {
+            dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, true);
+         } else if (address == responderAuthAddr) {
+            dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
+         } else {
+            SPDLOG_LOGGER_ERROR(logger, "unexpected auth address");
+            return;
+         }
          signContainer_->updateDialogData(dialogData);
       });
    };
@@ -1676,8 +1720,7 @@ void OtcClient::verifyAuthAddresses(OtcClientDeal *deal)
    deal->addressVerificator = std::make_unique<AddressVerificator>(logger_, armory_, verificatorCb);
 
    deal->addressVerificator->SetBSAddressList(authAddressManager_->GetBSAddresses());
-   // Verify only peer's auth address
-   deal->addressVerificator->addAddress(deal->isRequestor() ? deal->responderAuthAddress() : deal->requestorAuthAddress());
+   deal->addressVerificator->addAddress(deal->cpAuthAddress());
    deal->addressVerificator->startAddressVerification();
 }
 

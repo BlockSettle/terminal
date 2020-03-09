@@ -67,7 +67,10 @@ BSWalletHandlerDialog {
             showWalletError(errorText);
         })
         authSign.userCancelled.connect(function() {
-            rejectAnimated();
+            rejectWithNoError();
+        })
+        authSign.canceledByTimeout.connect(function() {
+            rejectWithNoError();
         })
     }
 
@@ -160,7 +163,7 @@ BSWalletHandlerDialog {
                         timeLeft -= 0.5
                         if (timeLeft <= 0) {
                             stop()
-                            showWalletError(kOperationTimeExceeded);
+                            rejectWithNoError();
                         }
                     }
                     signal expired()

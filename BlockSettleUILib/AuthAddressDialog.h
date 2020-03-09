@@ -14,6 +14,7 @@
 #include "AuthAddressManager.h"
 #include "BinaryData.h"
 #include "BsClient.h"
+#include "ValidityFlag.h"
 #include <memory>
 #include <QDialog>
 #include <QPointer>
@@ -50,7 +51,7 @@ signals:
 
 private slots:
    void resizeTreeViewColumns();
-   void adressSelected(const QItemSelection &selected, const QItemSelection &deselected);
+   void adressSelected();
 
    void createAddress();
    void revokeSelectedAddress();
@@ -83,6 +84,9 @@ private:
    void updateUnsubmittedState();
    void saveAddressesNumber();
 
+   void setLastSubmittedAddress(const bs::Address &address);
+   void updateEnabledStates();
+
 private:
    std::unique_ptr<Ui::AuthAddressDialog> ui_;
    std::shared_ptr<spdlog::logger> logger_;
@@ -92,8 +96,9 @@ private:
    QPointer<AuthAdressControlProxyModel>  model_;
    bs::Address                            defaultAddr_;
    QPointer<BsClient>                     bsClient_;
+   ValidityFlag                           validityFlag_;
 
-   bs::Address                            lastSubmittedAddress_;
+   bs::Address                            lastSubmittedAddress_{};
 
    bool  unconfirmedExists_ = false;
 };

@@ -32,18 +32,23 @@ namespace bs {
    }
 }
 class CCFileManager;
+class ApplicationSettings;
 
 class CCTokenEntryDialog : public QDialog
 {
 Q_OBJECT
 
 public:
-   CCTokenEntryDialog(const std::shared_ptr<bs::sync::WalletsManager> &, const std::shared_ptr<CCFileManager> &
-      , QWidget *parent);
+   CCTokenEntryDialog(
+      const std::shared_ptr<bs::sync::WalletsManager> &,
+      const std::shared_ptr<CCFileManager> &,
+      const std::shared_ptr<ApplicationSettings> &,
+      QWidget *parent);
    ~CCTokenEntryDialog() override;
 
 protected:
    void accept() override;
+   void reject() override;
 
 private slots:
    void tokenChanged();
@@ -60,6 +65,7 @@ private:
    std::shared_ptr<CCFileManager>            ccFileMgr_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<bs::sync::Wallet>         ccWallet_;
+   std::shared_ptr<ApplicationSettings>      settings_;
 
    std::string    ccProduct_;
    std::string    strToken_;

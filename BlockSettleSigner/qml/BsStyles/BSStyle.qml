@@ -33,6 +33,7 @@ QtObject {
     readonly property color inputsFontColor: "white"
     readonly property color inputsInvalidColor: "red"
     readonly property color inputsValidColor: "green"
+    readonly property color inputsPendingColor: "#f6a724"
 
     readonly property color buttonsMainColor: "transparent"
     readonly property color buttonsPressedColor: "#55000000"

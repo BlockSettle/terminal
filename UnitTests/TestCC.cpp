@@ -186,7 +186,7 @@ void TestCC::SetUp()
          throw e;
       }
    };
-   xbtWallet_->getSpendableTxOutList(cbInputs, UINT64_MAX);
+   xbtWallet_->getSpendableTxOutList(cbInputs, UINT64_MAX, true);
    ASSERT_TRUE(futFund.get());
 
    auto promPtr = std::make_shared<std::promise<bool>>();
@@ -223,7 +223,7 @@ TEST_F(TestCC, DISABLED_Initial_balance)
    auto promPtr = std::make_shared<std::promise<bool>>();
    auto fut = promPtr->get_future();
    EXPECT_TRUE(ccWallet_->getSpendableTxOutList(
-      [promPtr](std::vector<UTXO>) { promPtr->set_value(true); }, UINT64_MAX));
+      [promPtr](std::vector<UTXO>) { promPtr->set_value(true); }, UINT64_MAX, true));
   
     auto balances = ccWallet_->getAddrBalance(ccWallet_->getUsedAddressList()[0]);
    EXPECT_EQ(balances[0], ccFundingAmount_);
@@ -337,9 +337,9 @@ TEST_F(TestCC, DISABLED_TX_buy)
 
          fut.wait();
       };
-      xbtWallet_->getSpendableTxOutList(cbTxOutList2, UINT64_MAX);
+      xbtWallet_->getSpendableTxOutList(cbTxOutList2, UINT64_MAX, true);
    };
-   ccWallet_->getSpendableTxOutList(cbTxOutList1, UINT64_MAX);
+   ccWallet_->getSpendableTxOutList(cbTxOutList1, UINT64_MAX, true);
 
    auto zcVec = envPtr_->blockMonitor()->waitForZCs(3);
 
@@ -459,9 +459,9 @@ TEST_F(TestCC, DISABLED_TX_sell)
          txHash = txObj.getThisHash();
          envPtr_->armoryInstance()->pushZC(tx);
       };
-      xbtWallet_->getSpendableTxOutList(cbTxOutList2, UINT64_MAX);
+      xbtWallet_->getSpendableTxOutList(cbTxOutList2, UINT64_MAX, true);
    };
-   ccWallet_->getSpendableTxOutList(cbTxOutList1, UINT64_MAX);
+   ccWallet_->getSpendableTxOutList(cbTxOutList1, UINT64_MAX, true);
 
    auto zcVec = envPtr_->blockMonitor()->waitForZCs(3);
    ASSERT_EQ(zcVec.size(), 3);

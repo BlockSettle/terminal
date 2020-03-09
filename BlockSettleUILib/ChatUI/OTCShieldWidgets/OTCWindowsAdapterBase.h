@@ -15,6 +15,7 @@
 #include "CommonTypes.h"
 #include "OtcTypes.h"
 #include "ValidityFlag.h"
+#include "UtxoReservationToken.h"
 
 #include <QWidget>
 #include <QTimer>
@@ -41,6 +42,7 @@ namespace bs {
          struct Peer;
       }
    }
+   class UTXOReservationManager;
 }
 
 struct TimeoutData
@@ -60,15 +62,21 @@ public:
    std::shared_ptr<bs::sync::WalletsManager> getWalletManager() const;
    std::shared_ptr<AuthAddressManager> getAuthManager() const;
    std::shared_ptr<AssetManager> getAssetManager() const;
+   std::shared_ptr<bs::UTXOReservationManager> getUtxoManager() const;
 
    virtual void setPeer(const bs::network::otc::Peer &);
+   
+   bs::UtxoReservationToken releaseReservation();
+   void setReservation(bs::UtxoReservationToken&& reservation);
+
 signals:
    
    void xbtInputsProcessed();
 
 public slots:
-   virtual void onAboutToApply();
-   virtual void onChatRoomChanged();
+   virtual void onAboutToApply() {}
+   virtual void onChatRoomChanged() {}
+   virtual void onParentAboutToHide() {}
 
 protected slots:
    virtual void onSyncInterface();
@@ -78,7 +86,6 @@ protected slots:
    void onUpdateTimerData();
 
 protected:
-
    // Shared function between children
    void showXBTInputsClicked(QComboBox *walletsCombobox);
    
@@ -116,10 +123,11 @@ protected:
    ValidityFlag validityFlag_;
    std::chrono::seconds timeoutSec_{};
 
-private:
-   void showXBTInputs(const std::vector<UTXO> &allUTXOs);
-
    std::vector<UTXO> selectedUTXO_;
+   bs::UtxoReservationToken reservation_;
+
+private:
+   void showXBTInputs(const std::string& walletId);
 
    QTimer timeoutTimer_;
    TimeoutData currentTimeoutData_{};

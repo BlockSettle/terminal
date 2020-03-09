@@ -61,7 +61,7 @@ signals:
    void succeeded(const QString &encKey, const SecureBinaryData &password) const;
    void failed(const QString &text) const;
    void userCancelled() const;
-
+   void canceledByTimeout() const;
 
 public:
    QString status() const { return status_; }

@@ -13,12 +13,23 @@
 
 #include "AbstractChatWidgetState.h"
 #include "ChatUI/ChatWidget.h"
+#include "OtcClient.h"
 
 class PrivatePartyInitState : public AbstractChatWidgetState {
 public:
    explicit PrivatePartyInitState(ChatWidget* chat) : AbstractChatWidgetState(chat) {}
    ~PrivatePartyInitState() override {
       saveDraftMessage();
+
+      // leave per, so let's send ownership over reservation to otc client if any
+      auto* otcWidget = qobject_cast<OTCWindowsAdapterBase*>(chat_->ui_->stackedWidgetOTC->currentWidget());
+      if (otcWidget) {
+         auto reservation = otcWidget->releaseReservation();
+         const bs::network::otc::Peer* peer = chat_->currentPeer();
+         if (reservation.isValid() && peer) {
+            chat_->otcHelper_->client()->setReservation(peer, std::move(reservation));
+         }
+      }
    };
 protected:
    void applyUserFrameChange() override {}
@@ -98,6 +109,14 @@ protected:
 
       updateOtc();
    }
+   void applyPostChanged() override {
+      // enter peer chat window, let's take ownership on reservation
+      auto* otcWidget = qobject_cast<OTCWindowsAdapterBase*>(chat_->ui_->stackedWidgetOTC->currentWidget());
+      const bs::network::otc::Peer* peer = chat_->currentPeer();
+      if (otcWidget && peer) {
+         otcWidget->setReservation(chat_->otcHelper_->client()->releaseReservation(peer));
+      }
+   };
 
    bool canSendMessage() const override { return true; }
    bool canPerformOTCOperations() const override { return true; }

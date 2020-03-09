@@ -1,19 +1,103 @@
-[![Build Status](https://travis-ci.com/BlockSettle/terminal.svg?token=xR23srD2shnSBpysR3xE&branch=bs_dev)](https://travis-ci.com/BlockSettle/terminal)
+# Introduction
 
-# Supported runtime platforms
+The BlockSettle Terminal is an open source  Bitcoin wallet application which integrates private
+key management with the ability to submit orders and execute
+settlements in real-time. Terminal client implements a client-server architecture where
+the user manages keys locally and have the choice of connecting
+to a hosted headless ArmoryDB server.
+
+## Features.
+
+* Supports a built-in block explorer
+* Support for Bech32 Address.(Bech32 is a new bitcoin address format specified by BIP 0173) 
+* real time access to trading and real time XBT Market data service.
+* Flexible security model for key management and safety.
+* Free digital identity support using Auth eID.
+  
+## Concepts.
+This section explains the concept needed to understand the operation of BlockSettle Terminal. And does not give in depth explanation of Bitcoins or Blockchain technology. If you run into any issues with the terminal client or you wish to get support on a certain functionality of the application or services, please login into to your BlockSettle client portal and submit a support ticket.
+
+### Connecting to a Bitcoin Network.
+The BlockSettle terminal performs  operations and transactions that are relevant to a Blockchain Wallet. To facilitate this, it connects to an infrastructure comprised of ArmoryDB server which is connected to a Bitcoin network. This software architecture design enable seamless management and safety of your Bitcoin wallet.
+
+### Wallet Security and structure
+The basic security model around Bitcoin is built on private and public
+cryptographic keys. Private Keys are used to sign transactions. Public Keys are used
+to receive balances.
+
+When running BlockSettle Terminal for the first time you must make sure the private keys are safely backed up, but there are security implications of having one’s private keys
+available on a machine connected to the internet. To mitigate these
+risks, all BlockSettle wallets are “Watching-Only” and supported by an
+encrypted signing container which can be located locally, remotely, or
+offline. Users are therefore themselves able to determine the security
+model around their private keys.
+
+### XBT vs BTC.
+"BTC" has been the generally accepted abbreviation for Bitcoin stemming from the early days of Bitcoin, but it was by public use and was not defined by any standard governing body.
+"XBT" is a new abbreviation for Bitcoin that is starting to come into use after it was internationally standardized by International Standards Organization (ISO) that maintains a list of internationally recognized currencies.
+
+## BlockSettle Terminal for Users.
+This section is for those who are interested in running Terminal application for daily use as a wallet for non-custodial trading and settlement in Bitcoin. To get started users can easily connect to the BlockSettle.com hosted ArmoryDB Server, which supports Bitcoin "testnet" and "mainnet" supernodes. If you whish to connect to your own Armorydb Server, please refer to "BlockSettle Terminal for Hosting providers" section to create your own hosted node.
+
+### Installing and running on Windows
+The BlockSettle terminal is available for download for Microsoft Windows 7 and Above, which meets the following minimum system requirements. To get started visit our [Download](http://blocksettle.com/downloads/terminal) Page, and download the windows or macOS binary file that matches your operating system.
+
+### Operating System Requirements.
+- Linux - [Ubuntu](https://www.ubuntu.com/) (16.04 LTS/18.04 LTS/18.10/19.04)
+- [macOS](https://www.apple.com/macos/) (10.12 or higher)
+- [Windows](https://www.microsoft.com/en-us/windows) (Windows 7 or higher)
+
+### Hardware Requirements.
+* Dual Core CPU
+* 1GB RAM
+* 1GB Free disk space.
+* A working internet connection.
+
+After downloading bs-terminal_installer.exe, which should help you install the application on your system, and a shortcut should be available from the Windows start menu, after the installation completes.
+
+### Installing and running on macOS
+BlockSettle Terminal for macOS only supports macOS 10.12 and above, so make sure your system is running an up to date version of macOS, which meets this requirement. 
+
+After you mount and run the download .dmg file, you can simply drag and drop the Terminal App to your macOS application folder and run the terminal application, like any other macOS app.
+
+### Installing and Running on Linux.
+
+For Linux, we maintain Ubuntu binary packages via launchpad.net which works on version 17.04 and above. Assuming you have set up snap package management on your system, you can execute the following setup of commands to easily install the application.
+
+### Ubuntu 
+To install the binary release on Ubuntu, 
+```bash
+sudo add-apt-repository ppa:blocksettle/bsterminal
+sudo apt-get update
+
+sudo apt-get install bsterminal
+```
+For more information and other available packages please visit our Launchpad page [launchpad.net/BlockSettle] (https://launchpad.net/~blocksettle/+archive/ubuntu/bsterminal )
+
+## Become a Participant
+The BlockSettle Terminal is a free-to-use and open source bitcoin wallet. Users who in addition wish to trade may register to become Participants.
+
+Please visit [http://blocksettle.com/#registration](http://blocksettle.com/#registration) You will have to Download "Auth eID" app on your phone. Verify your identity in the App by uploading your passport and a recent address proof such as a utility bill or bank statement.
+
+To create a BlockSettle account, enter the email address used in Auth eID and sign the registration within the app. Now you can login to the BlockSettle Terminal and start trading in our Private Market.
+
+For access to trade our FX and XBT products please upgrade your account to Trading Participant within the Client Portal. Should you wish to provide responsive quotes in the XBT market, you can also apply for XBT dealing status.
+
+## Developer Guide
+### Supported runtime platforms
 - Linux - [Ubuntu](https://www.ubuntu.com/) (16.04 LTS/18.04 LTS/18.10/19.04)
 - [macOS](https://www.apple.com/macos/) (10.12 or higher)
 - [Windows](https://www.microsoft.com/en-us/windows) (Windows 7 or higher)
 
 **All OS versions must be 64-bit.**
 
-# Supported compilers
+### Supported compilers
 - Linux: [GCC](https://gcc.gnu.org/)
 - macOS: [Clang](https://clang.llvm.org/) (Command Line Tools for Xcode)
 - Windows: [Visual Studio 2017](https://visualstudio.microsoft.com/) (Community Edition or higher)
 
-# Platform-specific prerequisites
-## Windows
+## Platform-specific prerequisites
+### Windows
  1. Download and install the Community version of [Visual Studio 2017](https://visualstudio.microsoft.com/downloads/), which is the minimum supported compiler. When prompted during installation, you need to download the C and C++ build tools, the Windows 8.1 SDK (`mpir` requirement), and the Windows Universal CRT SDK (`mpir` requirement).
 
  2. Install the following binaries.
@@ -38,7 +122,7 @@
 		sudo apt install python-pip cmake libmysqlclient-dev autoconf libtool yasm nasm g++
 		sudo apt build-dep qt5-default
 
-## MacOS
+### MacOS
  1. Get an Apple developer account (free), log in, and download the latest version of `Command Line Tools for Xcode`. As an alternative, install the latest version of [Xcode](https://itunes.apple.com/us/app/xcode/id497799835) and download `Command Line Tools` via Xcode. Either choice will be updated via the App Store.
 
  2. Install and update [Homebrew](https://brew.sh). Warnings can probably be ignored, although environment differences and changes Apple makes to the OS between major releases make it impossible to provide definitive guidance.
@@ -64,7 +148,7 @@
 
 		sudo ln -s /usr/local/bin/glibtoolize /usr/local/bin/libtoolize
 
-# Build instructions for all platforms
+### Build instructions for all platforms
  1. Use `pip` to install the `wget` and `requests` Python packages. Note that, on Linux and macOS, the `pip` binary might actually need to be the `pip3` binary if Python 2.7 and 3.x are both on the system.
 
 		pip install wget requests pathlib
@@ -131,3 +215,4 @@ The mpir library may fail to build on certain CPUs (e.g., Intel's 7xxx series). 
 
      cpuid.1.edx = "10111111111010111111101111111011"
      cpuid.1.eax = "00000000000000110100011010101001"
+

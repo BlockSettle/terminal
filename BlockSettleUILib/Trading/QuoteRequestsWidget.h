@@ -141,6 +141,7 @@ public slots:
    void onQuoteReqNotifReplied(const bs::network::QuoteNotification &);
    void onQuoteReqNotifSelected(const QModelIndex& index);
    void onQuoteNotifCancelled(const QString &reqId);
+   void onAllQuoteNotifCancelled(const QString &reqId);
    void onQuoteReqCancelled(const QString &reqId, bool byUser);
    void onQuoteRejected(const QString &reqId, const QString &reason);
    void onSecurityMDUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);

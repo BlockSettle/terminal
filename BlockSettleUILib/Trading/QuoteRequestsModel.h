@@ -124,6 +124,7 @@ public:
 public:
    void onQuoteReqNotifReplied(const bs::network::QuoteNotification &qn);
    void onQuoteNotifCancelled(const QString &reqId);
+   void onAllQuoteNotifCancelled(const QString &reqId);
    void onQuoteReqCancelled(const QString &reqId, bool byUser);
    void onQuoteRejected(const QString &reqId, const QString &reason);
    void onSecurityMDUpdated(const QString &security, const bs::network::MDFields &);
@@ -221,6 +222,7 @@ private:
       IndexHelper idx_;
       bool quoted_;
       bool visible_;
+      bool withdrawn_ = false;
 
       RFQ()
          : idx_(nullptr, this, DataType::RFQ)

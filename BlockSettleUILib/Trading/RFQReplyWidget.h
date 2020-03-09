@@ -40,6 +40,7 @@ namespace bs {
    }
    class SettlementAddressEntry;
    class SecurityStatsCollector;
+   class UTXOReservationManager;
 }
 class ApplicationSettings;
 class ArmoryConnection;
@@ -48,7 +49,7 @@ class AuthAddressManager;
 class BaseCelerClient;
 class ConnectionManager;
 class DialogManager;
-class MarketDataProvider;
+class MDCallbacksQt;
 class OrderListModel;
 class QuoteProvider;
 class SignContainer;
@@ -79,7 +80,7 @@ public:
       , const std::shared_ptr<BaseCelerClient> &
       , const std::shared_ptr<AuthAddressManager> &
       , const std::shared_ptr<QuoteProvider> &
-      , const std::shared_ptr<MarketDataProvider> &
+      , const std::shared_ptr<MDCallbacksQt> &
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<DialogManager> &
@@ -87,6 +88,7 @@ public:
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<ConnectionManager> &
       , const std::shared_ptr<AutoSignQuoteProvider> &
+      , const std::shared_ptr<bs::UTXOReservationManager> &
       , OrderListModel *orderListModel);
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
@@ -112,6 +114,11 @@ public slots:
 
 private slots:
    void onOrder(const bs::network::Order &o);
+   void onQuoteCancelled(const QString &reqId, bool userCancelled);
+   void onQuoteRejected(const QString &reqId, const QString &reason);
+   void onQuoteNotifCancelled(const QString &reqId);
+
+
    void saveTxData(QString orderId, std::string txData);
    void onSignTxRequested(QString orderId, QString reqId, QDateTime timestamp);
    void onConnectedToCeler();
@@ -120,13 +127,19 @@ private slots:
    void onSelected(const QString& productGroup, const bs::network::QuoteReqNotification& request, double indicBid, double indicAsk);
    void onTransactionError(bs::error::ErrorCode code, const QString& error);
 
-private:
    void onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data);
+   void onPulled(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
+
+private:
    void onResetCurrentReservation(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data);
    void showSettlementDialog(QDialog *dlg);
    bool checkConditions(const QString& productGroup, const bs::network::QuoteReqNotification& request);
    void popShield();
    void showEditableRFQPage();
+   void eraseReply(const QString &reqId);
+
+protected:
+   void hideEvent(QHideEvent* event) override;
 
 private:
    using transaction_data_ptr = std::shared_ptr<TransactionData>;
@@ -162,10 +175,12 @@ private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<AutoSignQuoteProvider>    autoSignQuoteProvider_;
+   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
 
    std::unordered_map<std::string, SentXbtReply>   sentXbtReplies_;
    std::unordered_map<std::string, SentCCReply>    sentCCReplies_;
    std::shared_ptr<bs::SecurityStatsCollector>     statsCollector_;
+   std::unordered_map<std::string, std::string>    sentReplyIdsToSettlementsIds_;
 };
 
 #endif // __RFQ_REPLY_WIDGET_H__

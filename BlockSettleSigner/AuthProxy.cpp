@@ -58,11 +58,13 @@ void AuthSignWalletObject::connectToServer()
       emit succeeded(QString::fromStdString(encKey), password);
    });
    connect(autheIDClient_.get(), &AutheIDClient::failed, this, [this](AutheIDClient::ErrorType authError){
+      if (authError == AutheIDClient::Timeout) {
+         emit canceledByTimeout();
+         return;
+      }
       emit failed(AutheIDClient::errorString(authError));
    });
-   connect(autheIDClient_.get(), &AutheIDClient::userCancelled, this, [this](){
-      emit userCancelled();
-   });
+   connect(autheIDClient_.get(), &AutheIDClient::userCancelled, this, &AuthSignWalletObject::userCancelled);
 }
 
 void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo,

@@ -345,7 +345,7 @@ TEST_F(TestSettlement, SpotXBT_buy)
          promUtxo2->set_value(inputs.front());
       }
    };
-   ASSERT_TRUE(syncLeaf2->getSpendableTxOutList(cbTxOutList2, UINT64_MAX));
+   ASSERT_TRUE(syncLeaf2->getSpendableTxOutList(cbTxOutList2, UINT64_MAX, true));
    const auto input2 = futUtxo2.get();
    ASSERT_TRUE(input2.isInitialized());
 

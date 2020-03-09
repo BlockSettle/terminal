@@ -27,14 +27,14 @@ QT_BEGIN_NAMESPACE
 class QThread;
 QT_END_NAMESPACE
 
-class UserScriptRunner;
-
 namespace bs {
    namespace sync {
       class WalletsManager;
    }
 }
+class MDCallbacksQt;
 class SignContainer;
+class UserScriptRunner;
 
 
 //
@@ -49,16 +49,16 @@ class UserScriptHandler : public QObject
 signals:
    void aqScriptLoaded(const QString &fileName);
    void failedToLoad(const QString &fileName, const QString &error);
-   void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
+   void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
    void sendQuote(const bs::network::QuoteReqNotification &qrn, double price);
 
 public:
-   explicit UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvider,
-      std::shared_ptr<SignContainer> signingContainer,
-      std::shared_ptr<MarketDataProvider> mdProvider,
-      std::shared_ptr<AssetManager> assetManager,
-      std::shared_ptr<spdlog::logger> logger,
-      UserScriptRunner *runner);
+   explicit UserScriptHandler(const std::shared_ptr<QuoteProvider> &
+      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<MDCallbacksQt> &
+      , const std::shared_ptr<AssetManager> &
+      , const std::shared_ptr<spdlog::logger> &
+      , UserScriptRunner *runner, QThread *handlerThread);
    ~UserScriptHandler() noexcept override;
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
@@ -81,7 +81,7 @@ private:
    AutoQuoter *aq_ = nullptr;
    std::shared_ptr<SignContainer>            signingContainer_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<MarketDataProvider>       mdProvider_;
+   std::shared_ptr<MDCallbacksQt>            mdCallbacks_;
    std::shared_ptr<AssetManager> assetManager_;
    std::shared_ptr<spdlog::logger> logger_;
 
@@ -116,15 +116,15 @@ signals:
    void stateChanged(bool enabled);
    void aqScriptLoaded(const QString &fileName);
    void failedToLoad(const QString &fileName, const QString &error);
-   void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
+   void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
    void sendQuote(const bs::network::QuoteReqNotification &qrn, double price);
 
 public:
-   UserScriptRunner(std::shared_ptr<QuoteProvider> quoteProvider,
-      std::shared_ptr<SignContainer> signingContainer,
-      std::shared_ptr<MarketDataProvider> mdProvider,
-      std::shared_ptr<AssetManager> assetManager,
-      std::shared_ptr<spdlog::logger> logger,
+   UserScriptRunner(const std::shared_ptr<QuoteProvider> &,
+      const std::shared_ptr<SignContainer> &,
+      const std::shared_ptr<MDCallbacksQt> &,
+      const std::shared_ptr<AssetManager> &,
+      const std::shared_ptr<spdlog::logger> &,
       QObject *parent);
    ~UserScriptRunner() noexcept override;
 

@@ -24,14 +24,13 @@ class QItemSelection;
 
 class AuthAddressManager;
 class ArmoryConnection;
-class ChatPartiesTreeModel;
-class OTCRequestViewModel;
-class SignContainer;
-class WalletsM;
-class ChatOTCHelper;
-class OTCWindowsManager;
-class MarketDataProvider;
 class AssetManager;
+class ChatPartiesTreeModel;
+class ChatOTCHelper;
+class MDCallbacksQt;
+class OTCRequestViewModel;
+class OTCWindowsManager;
+class SignContainer;
 
 namespace Ui {
    class ChatWidget;
@@ -44,6 +43,7 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
+   class UTXOReservationManager;
 }
 
 namespace Blocksettle {
@@ -64,14 +64,15 @@ public:
 
    void init(const std::shared_ptr<ConnectionManager>& connectionManager
       , bs::network::otc::Env env
-      , const Chat::ChatClientServicePtr& chatClientServicePtr
-      , const std::shared_ptr<spdlog::logger>& loggerPtr
-      , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-      , const std::shared_ptr<AuthAddressManager> &authManager
-      , const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<SignContainer> &signContainer
-      , const std::shared_ptr<MarketDataProvider>& mdProvider
-      , const std::shared_ptr<AssetManager>& assetManager
+      , const Chat::ChatClientServicePtr &
+      , const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &
+      , const std::shared_ptr<AuthAddressManager> &
+      , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<MDCallbacksQt> &
+      , const std::shared_ptr<AssetManager> &
+      , const std::shared_ptr<bs::UTXOReservationManager> &
    );
 
    bs::network::otc::Peer *currentPeer() const;
@@ -80,6 +81,7 @@ public:
 
 protected:
    void showEvent(QShowEvent* e) override;
+   void hideEvent(QHideEvent* event) override;
    bool eventFilter(QObject* sender, QEvent* event) override;
 
 public slots:
@@ -142,6 +144,7 @@ signals:
    void chatRoomChanged();
    void requestPrimaryWalletCreation();
    void emailHashRequested(const std::string &email);
+   void onAboutToHide();
 
 private:
    friend class AbstractChatWidgetState;
