@@ -120,23 +120,26 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
    allowAutoSelInputs_ = false;
 
    const auto &cbTXs = [this, tx, txOutIndices]
-      (const std::vector<Tx> &txs, std::exception_ptr)
+      (const AsyncClient::TxBatchResult &result, std::exception_ptr)
    {  //TODO: handle eptr!=null somehow
       auto selInputs = transactionData_->getSelectedInputs();
       selInputs->SetUseAutoSel(false);
       int64_t origFee = 0;
       unsigned int cntOutputs = 0;
-      for (const auto &prevTx : txs) {
+      for (const auto &item : result) {
+         if (!item.second || !item.second->isInitialized()) {
+            SPDLOG_LOGGER_ERROR(logger_, "uninitialized TX received - skipping, tx hash: {}", item.first.toHexStr(true));
+            continue;
+         }
+         const auto &prevTx = *item.second;
          const auto &txHash = prevTx.getThisHash();
          const auto &itTxOut = txOutIndices.find(txHash);
          if (itTxOut == txOutIndices.end()) {
             continue;
          }
          for (const auto &txOutIdx : itTxOut->second) {
-            if (prevTx.isInitialized()) {
-               TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
-               origFee += prevOut.getValue();
-            }
+            TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
+            origFee += prevOut.getValue();
          }
       }
 
@@ -208,41 +211,44 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
    }
 
    const auto &cbTXs = [this, tx, txOutIndices]
-      (const std::vector<Tx> &txs, std::exception_ptr)
+      (const AsyncClient::TxBatchResult &result, std::exception_ptr)
    {  // TODO: handle eptr!=null somehow
       int64_t totalVal = 0;
       std::shared_ptr<bs::sync::hd::Group> inputsGroup;
       std::set<std::shared_ptr<bs::sync::Wallet>> inputWallets;
       std::vector<std::pair<BinaryData, unsigned int>> utxoSelected;
-      for (const auto &prevTx : txs) {
+      for (const auto &item : result) {
+         if (!item.second || !item.second->isInitialized()) {
+            SPDLOG_LOGGER_ERROR(logger_, "uninitialized TX received - skipping, tx hash: {}", item.first.toHexStr(true));
+            continue;
+         }
+         const auto &prevTx = *item.second;
          const auto &txHash = prevTx.getThisHash();
          const auto &itTxOut = txOutIndices.find(txHash);
          if (itTxOut == txOutIndices.end()) {
             continue;
          }
          for (const auto &txOutIdx : itTxOut->second) {
-            if (prevTx.isInitialized()) {
-               const TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
-               totalVal += prevOut.getValue();
+            const TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
+            totalVal += prevOut.getValue();
 
-               const auto addr = bs::Address::fromTxOut(prevOut);
-               const auto wallet = walletsManager_->getWalletByAddress(addr);
-               if (wallet) {
-                  const auto group = walletsManager_->getGroupByWalletId(wallet->walletId());
-                  if (!inputsGroup) {
-                     inputsGroup = group;
-                  }
-                  else {
-                     if (inputsGroup != group) {
-                        if (logger_) {
-                           logger_->debug("[setRBFinputs] inputs group mismatch for {}", addr.display());
-                        }
-                        continue;
-                     }
-                  }
-                  inputWallets.insert(wallet);
-                  utxoSelected.push_back({ txHash, txOutIdx });
+            const auto addr = bs::Address::fromTxOut(prevOut);
+            const auto wallet = walletsManager_->getWalletByAddress(addr);
+            if (wallet) {
+               const auto group = walletsManager_->getGroupByWalletId(wallet->walletId());
+               if (!inputsGroup) {
+                  inputsGroup = group;
                }
+               else {
+                  if (inputsGroup != group) {
+                     if (logger_) {
+                        logger_->debug("[setRBFinputs] inputs group mismatch for {}", addr.display());
+                     }
+                     continue;
+                  }
+               }
+               inputWallets.insert(wallet);
+               utxoSelected.push_back({ txHash, txOutIdx });
             }
          }
       }
@@ -1084,7 +1090,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
             }
 
             const auto &cbTXs = [thisPtr, tx, utxoHashes, txOutIndices]
-               (const std::vector<Tx> &txs, std::exception_ptr exPtr)
+               (const AsyncClient::TxBatchResult &result, std::exception_ptr exPtr)
             {
                if (!thisPtr || exPtr) {
                   return;
@@ -1093,7 +1099,12 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                std::shared_ptr<bs::sync::Wallet> wallet;
                int64_t totalVal = 0;
 
-               for (const auto &prevTx : txs) {
+               for (const auto &item : result) {
+                  if (!item.second || !item.second->isInitialized()) {
+                     SPDLOG_LOGGER_ERROR(thisPtr->logger_, "uninitialized TX received - skipping, tx hash: {}", item.first.toHexStr(true));
+                     continue;
+                  }
+                  const auto &prevTx = *item.second;
                   const auto &itTxOut = txOutIndices.find(prevTx.getThisHash());
                   if (itTxOut == txOutIndices.end()) {
                      continue;
