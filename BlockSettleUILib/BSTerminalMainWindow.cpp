@@ -1843,7 +1843,7 @@ void BSTerminalMainWindow::InitWidgets()
    connect(ui_->tabWidget, &QTabWidget::tabBarClicked, this,
       [requestRFQ = QPointer<RFQRequestWidget>(ui_->widgetRFQ), replyRFQ = QPointer<RFQReplyWidget>(ui_->widgetRFQReply),
          tabWidget = QPointer<QTabWidget>(ui_->tabWidget)](int index) {
-      
+
       if (!tabWidget) {
          return;
       }
@@ -1904,10 +1904,8 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
    auto promoteToPrimary = [this](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
       addDeferredDialog([this, wallet] {
          promoteToPrimaryShown_ = true;
-         BSMessageBox qry(BSMessageBox::question, tr("Upgrade wallet to enable trading"), tr("Upgrade wallet to enable trading?")
-            , tr("To trade through BlockSettle, you are required to have a wallet which"
-               " supports the sub-wallets required to interact with the system. Each Terminal"
-               " will only have one trading enabled wallet. Do you wish to upgrade your wallet?"), this);
+         BSMessageBox qry(BSMessageBox::question, tr("Upgrade Wallet"), tr("Enable Trading?")
+            , tr("BlockSettle requires you to hold sub-wallets able to interact with our trading system. Do you wish to create them now?"), this);
          if (qry.exec() == QDialog::Accepted) {
             allowAuthAddressDialogShow_ = true;
             walletsMgr_->PromoteHDWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {
