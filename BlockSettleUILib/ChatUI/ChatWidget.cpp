@@ -168,7 +168,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::clientPartyStatusChanged, this, &ChatWidget::onClientPartyStatusChanged, Qt::QueuedConnection);
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onMessageStateChanged, Qt::QueuedConnection);
 
-   // Connect all signal that influence on widget appearance 
+   // Connect all signal that influence on widget appearance
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageArrived, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::clientPartyStatusChanged, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
    connect(clientPartyModelPtr.get(), &Chat::ClientPartyModel::messageStateChanged, this, &ChatWidget::onRegisterNewChangingRefresh, Qt::QueuedConnection);
@@ -190,7 +190,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(otcHelper_->client(), &OtcClient::publicUpdated, this, &ChatWidget::onOtcPublicUpdated);
    connect(otcHelper_->client(), &OtcClient::publicUpdated, otcRequestViewModel_, &OTCRequestViewModel::onRequestsUpdated);
    connect(otcHelper_->client(), &OtcClient::peerError, this, &ChatWidget::onOTCPeerError);
-   
+
 
    connect(ui_->widgetNegotiateRequest, &OTCNegotiationRequestWidget::requestCreated, this, &ChatWidget::onOtcRequestSubmit);
    connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::currentRequestPulled, this, &ChatWidget::onOtcPullOrRejectCurrent);
@@ -395,7 +395,7 @@ void ChatWidget::onSendOtcMessage(const std::string& contactId, const BinaryData
    else {
       clientPartyPtr = chatClientServicePtr_->getClientPartyModelPtr()->getOtcPartyForUsers(ownUserId_, contactId);
    }
-    
+
    if (!clientPartyPtr) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "can't find valid private party to send OTC message");
       return;
@@ -636,6 +636,10 @@ void ChatWidget::onConfirmContactNewKeyData(const Chat::UserPublicKeyInfoList& u
 
    for (const auto& userPkPtr : userPublicKeyInfoList)
    {
+      if (userPkPtr->newPublicKey() == userPkPtr->oldPublicKey()) {
+         continue;
+      }
+
       if (bForceUpdateAllUsers)
       {
          acceptList.push_back(userPkPtr);
