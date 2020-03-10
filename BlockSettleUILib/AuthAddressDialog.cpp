@@ -353,7 +353,7 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
    const auto &qryText = tr("New Authentication Address");
    if (validationAmount > 0) {
       promptResult = BSMessageBox(BSMessageBox::question, qryTitle, qryText
-         , tr("Are you sure you wish to submit a new authentication address? Setting up a new Authentication Address"
+         , tr("Setting up a new Authentication Address"
             " costs %1 %2").arg(QLatin1String("EUR")).arg(UiUtils::displayCurrencyAmount(validationAmount))
          , tr("BlockSettle will not deduct an amount higher than the Fee Schedule maximum regardless of the"
             " stated cost. Please confirm BlockSettle can debit the Authentication Address fee from your account."), this).exec();
