@@ -388,9 +388,13 @@ void AuthAddressDialog::ConfirmAuthAddressSubmission()
 
    AuthAddressConfirmDialog confirmDlg{bsClient_.data(), lastSubmittedAddress_, authAddressManager_, settings_, this};
 
-   confirmDlg.exec();
+   auto result = confirmDlg.exec();
 
    setLastSubmittedAddress({});
+
+   if (result == QDialog::Accepted) {
+      accept();
+   }
 }
 
 void AuthAddressDialog::submitSelectedAddress()
