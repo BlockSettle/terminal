@@ -28,7 +28,7 @@ CustomTitleDialogWindow {
     property bool usedInChain: false
     property bool initDialog: false
 
-    property string decryptHeaderText: qsTr("Enter Control Password")
+    property string decryptHeaderText: qsTr("Set Password")
 
     title: controlPasswordStatus === ControlPasswordStatus.RequestedNew
                ? qsTr("PUBLIC DATA ENCRYPTION")
@@ -64,9 +64,8 @@ CustomTitleDialogWindow {
             CustomLabel{
                 id: labelDetails_
                 visible: controlPasswordStatus === ControlPasswordStatus.RequestedNew
-                text: qsTr("Your wallet files contain metadata such as your public keys (addresses), chatID and chat history. \
-With Public Data Encryption enabled you will be required to decrypt this material on each Terminal launch. \
-<br><br>THIS PASSWORD WILL BE USED FOR ALL WALLETS")
+                text: qsTr("Enable Public Data Encryption to encrypt metadata such as your public keys (addresses), ChatID, and chat history. The PDE password will be required at each launch. \
+<br><br>THIS PASSWORD COVERS ALL WALLETS")
                 padding: 5
                 textFormat: Text.RichText
                 Layout.preferredWidth: root.width - 20
@@ -122,7 +121,7 @@ With Public Data Encryption enabled you will be required to decrypt this materia
                 id: newPasswordWithConfirm
                 visible: controlPasswordStatus !== ControlPasswordStatus.Rejected
                 columnSpacing: 10
-                passwordLabelTxt: qsTr("Control Password")
+                passwordLabelTxt: qsTr("Enter Password")
                 confirmLabelTxt: qsTr("Confirm Password")
                 onConfirmInputEnterPressed: {
                     if (btnAccept.enabled) btnAccept.onClicked()
