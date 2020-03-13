@@ -23,6 +23,7 @@ import com.blocksettle.QPasswordData 1.0
 import "../BsControls"
 import "../StyledControls"
 import "../js/helper.js" as JsHelper
+import "../BsStyles"
 
 CustomTitleDialogWindow {
     id: root
@@ -162,6 +163,14 @@ CustomTitleDialogWindow {
                                 id: rbFileBackup
                                 text: qsTr("Digital Backup")
                             }
+                            CustomRadioButton {
+                                id: rbHardwareWallet
+                                text: qsTr("Hardware wallet")
+                                onCheckedChanged: {
+                                    if (checked)
+                                        hsmDeviceManager.scanDevices()
+                                }
+                            }
                         }
 
                         CustomHeader {
@@ -176,6 +185,15 @@ CustomTitleDialogWindow {
                         CustomHeader {
                             text: qsTr("File Location")
                             visible: rbFileBackup.checked
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 25
+                            Layout.topMargin: 5
+                            Layout.leftMargin: 10
+                            Layout.rightMargin: 10
+                        }
+                        CustomHeader {
+                            text: qsTr("Hardware Device")
+                            visible: rbHardwareWallet.checked
                             Layout.fillWidth: true
                             Layout.preferredHeight: 25
                             Layout.topMargin: 5
@@ -207,7 +225,7 @@ CustomTitleDialogWindow {
                         Layout.leftMargin: 10
                         Layout.rightMargin: 10
                         Layout.bottomMargin: 10
-                        visible: !rbPaperBackup.checked
+                        visible: rbFileBackup.checked
 
                         CustomLabel {
                             Layout.fillWidth: true
@@ -251,6 +269,132 @@ CustomTitleDialogWindow {
                                     }
                                     else {
                                         digitalBackupAcceptable = true
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // HARDWARE DEVICES
+                    ListView {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        model: hsmDeviceManager.devices
+                        delegate: Item {
+                            width: parent.width
+                            height: 15
+                            Text {
+                                anchors.fill: parent
+                                text: display
+                                leftPadding: 20
+                                color: "white"
+                                font.pixelSize: 12
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onDoubleClicked: hsmDeviceManager.requestPublicKey(index)
+
+                                Connections {
+                                    target: hsmDeviceManager
+                                    onPublicKeyReady: {
+                                        console.log("Public key ready")
+                                    }
+                                    onRequestPinMatrix: {
+                                        let obj = comp.createObject(mainWindow, {parent : mainWindow, deviceIndex: index});
+                                        obj.open();
+                                    }
+                                }
+
+                                Component {
+                                    id: comp
+                                    CustomDialog {
+                                        width: 300
+                                        height: 370
+                                        property int deviceIndex: -1
+
+                                        cContentItem: ColumnLayout {
+                                            spacing: 5
+
+                                            GridLayout {
+
+                                                rows: 3
+                                                columns: 3
+
+                                                Layout.fillWidth: true
+                                                Layout.fillHeight: true
+                                                Layout.margins: 10
+
+
+                                                Repeater {
+                                                    model: [7, 8, 9, 4, 5, 6, 1, 2, 3]
+                                                    delegate: Rectangle {
+                                                        color: "transparent"
+                                                        border.width: 1
+                                                        border.color: BSStyle.inputsBorderColor
+
+                                                        Layout.fillHeight: true
+                                                        Layout.fillWidth: true
+
+
+                                                        Text {
+                                                            anchors.fill: parent
+                                                            text: "?"
+                                                            color: BSStyle.inputsBorderColor
+                                                            font.pixelSize: 15
+                                                            horizontalAlignment: Text.AlignHCenter
+                                                            verticalAlignment: Text.AlignVCenter
+                                                        }
+
+                                                        MouseArea {
+                                                            anchors.fill: parent
+                                                            onClicked: {
+                                                                pinInputField.text += modelData;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            CustomPasswordTextInput {
+                                                id: pinInputField
+                                                Layout.fillWidth: true
+                                                Layout.preferredHeight: 50
+                                                Layout.leftMargin: 10
+                                                Layout.rightMargin: 10
+
+                                                text: ""
+                                            }
+                                        }
+
+                                        cFooterItem: RowLayout {
+                                            CustomButtonBar {
+                                                Layout.fillWidth: true
+
+                                                CustomButton {
+                                                    anchors.left: parent.left
+                                                    anchors.bottom: parent.bottom
+                                                    text: qsTr("Cancel")
+                                                    onClicked: {
+                                                        hsmDeviceManager.cancel(deviceIndex)
+                                                        close();
+                                                    }
+                                                }
+
+                                                CustomButton {
+                                                    id: btnAccept
+                                                    primary: true
+                                                    anchors.right: parent.right
+                                                    anchors.bottom: parent.bottom
+                                                    text: qsTr("Accept")
+                                                    onClicked: {
+                                                        hsmDeviceManager.setMatrixPin(deviceIndex, pinInputField.text)
+                                                        close();
+                                                    }
+                                                }
+
+                                            }
+                                        }
                                     }
                                 }
                             }

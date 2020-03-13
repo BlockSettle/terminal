@@ -32,6 +32,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "WalletsProxy.h"
+#include "hsmdevicemanager.h"
 
 #include <functional>
 
@@ -88,6 +89,8 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    qmlFactory_ = std::make_shared<QmlFactory>(settings, connectionManager, logger_);
    adapter_->setQmlFactory(qmlFactory_);
 
+   hsmDeviceManager_ = new HSMDeviceManager(connectionManager, this);
+
    qmlFactory_->setHeadlessPubKey(adapter_->headlessPubKey());
    connect(adapter_, &SignerAdapter::headlessPubKeyChanged, qmlFactory_.get(), &QmlFactory::setHeadlessPubKey);
 
@@ -143,6 +146,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    ctxt_->setContextProperty(QStringLiteral("signerSettings"), settings_.get());
    ctxt_->setContextProperty(QStringLiteral("qmlFactory"), qmlFactory_.get());
    ctxt_->setContextProperty(QStringLiteral("walletsProxy"), walletsProxy_.get());
+   ctxt_->setContextProperty(QStringLiteral("hsmDeviceManager"), hsmDeviceManager_);
 }
 
 void QMLAppObj::onReady()
