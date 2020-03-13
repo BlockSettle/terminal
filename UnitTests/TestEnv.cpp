@@ -216,6 +216,7 @@ ArmoryInstance::ArmoryInstance()
    auto nodePtr = std::dynamic_pointer_cast<NodeUnitTest>(nodePtr_);
    nodePtr->setBlockchain(theBDMt_->bdm()->blockchain());
    nodePtr->setBlockFiles(theBDMt_->bdm()->blockFiles());
+   nodePtr_->setIface(iface_);
 
    theBDMt_->start(config_.initMode_);
 
