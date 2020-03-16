@@ -11,7 +11,7 @@
 #ifndef HSMDEVICESCANNER_H
 #define HSMDEVICESCANNER_H
 
-#include "trezorStructure.h"
+#include "trezor/trezorStructure.h"
 #include <QObject>
 #include <QVector>
 #include <QStringListModel>

@@ -9,8 +9,8 @@
 
 */
 #include "hsmdevicemanager.h"
-#include "trezorClient.h"
-#include "trezorDevice.h"
+#include "trezor/trezorClient.h"
+#include "trezor/trezorDevice.h"
 #include "ConnectionManager.h"
 
 HSMDeviceManager::HSMDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager, QObject* parent /*= nullptr*/)

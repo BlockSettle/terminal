@@ -26,6 +26,8 @@ from build_scripts.openssl_settings       import OpenSslSettings
 from build_scripts.websockets_settings    import WebsocketsSettings
 from build_scripts.libchacha20poly1305_settings import LibChaCha20Poly1305Settings
 from build_scripts.botan_settings         import BotanSettings
+from build_scripts.hidapi_settings        import HidapiSettings
+from build_scripts.trezor_common_settings import TrezorCommonSettings
 
 def generate_project(build_mode, link_mode, build_production, hide_warnings, cmake_flags, build_tests, build_tracker):
    project_settings = Settings(build_mode, link_mode)
@@ -52,7 +54,9 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
       LibChaCha20Poly1305Settings(project_settings),        # static
       WebsocketsSettings(project_settings),
       BotanSettings(project_settings),
-      QtSettings(project_settings)
+      QtSettings(project_settings),
+      HidapiSettings(project_settings),
+      TrezorCommonSettings(project_settings)
    ]
 
    if build_tests:
