@@ -41,6 +41,8 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , queue_(queue)
    , controlPasswordStatus_(Blocksettle::Communication::signer::ControlPasswordStatus::RequestedNew)
 {
+   signerPubKey_ = ZmqBIP15XServerConnection::getOwnPubKey(getOwnKeyFileDir(), getOwnKeyFileName());
+
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
 
    // Only the SignerListener's cookie will be trusted. Supply an empty set of
@@ -386,11 +388,7 @@ ZmqBIP15XServerConnection *HeadlessAppObj::connection() const
 
 BinaryData HeadlessAppObj::signerPubKey() const
 {
-   if (terminalConnection_) {
-      return terminalConnection_->getOwnPubKey();
-   }
-
-   return ZmqBIP15XServerConnection::getOwnPubKey(getOwnKeyFileDir(), getOwnKeyFileName());
+   return signerPubKey_;
 }
 
 std::string HeadlessAppObj::getOwnKeyFileDir()
