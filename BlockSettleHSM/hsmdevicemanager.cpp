@@ -20,6 +20,8 @@ HSMDeviceManager::HSMDeviceManager(const std::shared_ptr<ConnectionManager>& con
    model_ = new QStringListModel(this);
 }
 
+HSMDeviceManager::~HSMDeviceManager() = default;
+
 void HSMDeviceManager::scanDevices()
 {
    trezorClient_->initConnection([this]() {

@@ -12,6 +12,8 @@
 #define HSMDEVICESCANNER_H
 
 #include "trezor/trezorStructure.h"
+#include <memory>
+
 #include <QObject>
 #include <QVector>
 #include <QStringListModel>
@@ -25,7 +27,7 @@ class HSMDeviceManager : public QObject
    Q_PROPERTY(QStringListModel* devices READ devices NOTIFY devicesChanged)
 public:
    HSMDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager, QObject* parent = nullptr);
-    ~HSMDeviceManager() override = default;
+    ~HSMDeviceManager() override;
 
    // Property
    QStringListModel* devices();
@@ -41,7 +43,7 @@ signals:
    void requestPinMatrix();
 
 public:
-   std::unique_ptr<TrezorClient> trezorClient_{};
+   std::unique_ptr<TrezorClient> trezorClient_;
    QVector<DeviceKey> devices_;
    QStringListModel* model_;
 };

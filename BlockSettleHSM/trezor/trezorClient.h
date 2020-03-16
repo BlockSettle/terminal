@@ -12,6 +12,7 @@
 #define TREZORCLIENT_H
 
 #include "trezorStructure.h"
+#include <memory>
 
 #include <QObject>
 #include <QPointer>
