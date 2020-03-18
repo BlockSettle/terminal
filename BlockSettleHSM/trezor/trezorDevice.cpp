@@ -78,8 +78,6 @@ TrezorDevice::TrezorDevice(const std::shared_ptr<ConnectionManager>& connectionM
 
 TrezorDevice::~TrezorDevice()
 {
-   int i = 0;
-   ++i;
 }
 
 DeviceKey TrezorDevice::deviceKey() const
@@ -108,7 +106,12 @@ void TrezorDevice::getPublicKey(AsyncCallBack&& cb)
 {
    connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving public key from device " + features_.label());
    bitcoin::GetPublicKey message;
-   message.add_address_n('m');
+   // m'/
+   message.add_address_n(static_cast<uint32_t>(0x8000002c));
+   message.add_address_n(static_cast<uint32_t>(0x80000000));
+   message.add_address_n(static_cast<uint32_t>(0x80000000));
+   message.add_address_n(static_cast<uint32_t>(0));
+   message.add_address_n(static_cast<uint32_t>(0));
 
    if (cb) {
       awaitingCallback_[MessageType_PublicKey] = std::move(cb);
