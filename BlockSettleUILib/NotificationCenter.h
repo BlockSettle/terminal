@@ -51,6 +51,8 @@ namespace bs {
          LogOut,
          BitcoinCoreOnline,
          BitcoinCoreOffline,
+         AccountDisabled,
+         AccountEnabled,
       };
 
       using NotifyMessage = QList<QVariant>;
