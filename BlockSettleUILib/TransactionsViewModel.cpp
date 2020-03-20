@@ -801,21 +801,19 @@ void TransactionsViewModel::onItemConfirmed(const TransactionPtr item)
 
 void TransactionsViewModel::onRefreshTxValidity()
 {
-   bool changed = false;
-   rootNode_->forEach([&changed](const TransactionPtr &item) {
+   for (int i = 0; i < rootNode_->children().size(); ++i) {
+      const auto item = rootNode_->children()[i]->item();
       // This fixes race with CC tracker (when it updates after adding new TX).
       // So there is no need to check already valid TXs.
-      if (!item->isValid) {
-         const auto validWallet = item->wallets.empty() ? nullptr : item->wallets[0];
-         item->isValid = validWallet ? validWallet->isTxValid(item->txEntry.txHash) : false;
-         if (item->isValid) {
-            changed = true;
-         }
+      if (!item || item->isValid) {
+         continue;
       }
-   });
-   if (changed) {
-      beginResetModel();
-      endResetModel();
+      const auto validWallet = item->wallets.empty() ? nullptr : item->wallets[0];
+      item->isValid = validWallet ? validWallet->isTxValid(item->txEntry.txHash) : false;
+      if (item->isValid) {
+         emit dataChanged(index(i, static_cast<int>(Columns::first))
+         , index(i, static_cast<int>(Columns::last)));
+      }
    }
 }
 
