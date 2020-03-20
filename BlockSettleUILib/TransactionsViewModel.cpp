@@ -285,6 +285,7 @@ void TransactionsViewModel::init()
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &TransactionsViewModel::onWalletDeleted, Qt::QueuedConnection);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &TransactionsViewModel::onRefreshTxValidity, Qt::QueuedConnection);
 }
 
 TransactionsViewModel::~TransactionsViewModel() noexcept
@@ -795,6 +796,23 @@ void TransactionsViewModel::onItemConfirmed(const TransactionPtr item)
          node->clear();
          endRemoveRows();
       }
+   }
+}
+
+void TransactionsViewModel::onRefreshTxValidity()
+{
+   bool changed = false;
+   rootNode_->forEach([&changed](const TransactionPtr &item) {
+      const auto validWallet = item->wallets.empty() ? nullptr : item->wallets[0];
+      bool isValid = validWallet ? validWallet->isTxValid(item->txEntry.txHash) : false;
+      if (item->isValid != isValid) {
+         item->isValid = isValid;
+         changed = true;
+      }
+   });
+   if (changed) {
+      beginResetModel();
+      endResetModel();
    }
 }
 
