@@ -276,6 +276,21 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       }
       return;
 
+   case bs::ui::NotifyType::AccountDisabled:
+      title = tr("Account Unavailable");
+      text = tr("Your account is temporarily unavailable. We are working on having this solved as soon as possible. "
+                "We apologise for the inconvenience, but we hope you bear with us as we endeavour to resolve the issue. "
+                "If you have any questions, don't hesitate to contact our Support team through the Client Portal.");
+      icon = QSystemTrayIcon::Critical;
+      break;
+
+   case bs::ui::NotifyType::AccountEnabled:
+      title = tr("Account Activated");
+      text = tr("Your account has now been activated again. We thank you for your patience and apologise for any inconvenience. "
+                "If you have any questions, don't hesitate to contact our Support team through the Client Portal.");
+      icon = QSystemTrayIcon::Information;
+      break;
+
    default: return;
    }
 

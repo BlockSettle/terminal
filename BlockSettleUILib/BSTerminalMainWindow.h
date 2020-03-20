@@ -238,6 +238,8 @@ private:
    void onUserLoggedIn();
    void onUserLoggedOut();
 
+   void onAccountTypeChanged(bs::network::UserType userType, bool enabled);
+
    void setLoginButtonText(const QString& text);
 
    void setupShortcuts();
@@ -317,6 +319,8 @@ private:
 
    // Default is online to not show online notification after terminal startup
    bool isBitcoinCoreOnline_{true};
+
+   bool accountEnabled_{true};
 
 };
 
