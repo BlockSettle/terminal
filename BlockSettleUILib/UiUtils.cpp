@@ -119,7 +119,15 @@ namespace UiUtils {
          return CommonUiUtilsText::tr("Loading...");
       }
       return UnifyValueString(QLocale().toString(amountToBtc(value), 'f', GetAmountPrecisionXBT()));
-   }
+}
+
+double actualXbtPrice(bs::XBTAmount amount, double price)
+{
+   int64_t ccAmountInCents = std::llround(amount.GetValueBitcoin() * price * 100);
+   double ccAmount = ccAmountInCents / 100.;
+   return  ccAmount / amount.GetValueBitcoin();
+}
+
 }
 
 int UiUtils::fillWalletsComboBox(QComboBox* comboBox
