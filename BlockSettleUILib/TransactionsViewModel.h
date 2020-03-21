@@ -205,7 +205,7 @@ public:
 //      MissedBlocks,
       Comment,
       TxHash,
-      last
+      last = TxHash
    };
 
    enum Role {
