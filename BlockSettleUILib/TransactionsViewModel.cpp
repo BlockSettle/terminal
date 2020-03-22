@@ -330,7 +330,7 @@ void TransactionsViewModel::loadAllWallets(bool onNewBlock)
 
 int TransactionsViewModel::columnCount(const QModelIndex &) const
 {
-   return static_cast<int>(Columns::last);
+   return static_cast<int>(Columns::last) + 1;
 }
 
 TXNode *TransactionsViewModel::getNode(const QModelIndex &index) const
