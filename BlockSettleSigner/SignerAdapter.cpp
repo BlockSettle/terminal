@@ -195,6 +195,18 @@ void SignerAdapter::importWoWallet(const std::string &filename, const BinaryData
    listener_->setWatchOnlyCb(reqId, cb);
 }
 
+void SignerAdapter::importHSMWallet(const std::string &xpub, const std::string &label,
+   const std::string &vendor, const CreateWoCb &cb)
+{
+   signer::ImportHSMWalletRequest request;
+   request.set_xpub(xpub);
+   request.set_label(label);
+   request.set_vendor(vendor);
+
+   const auto reqId = listener_->send(signer::ImportHSMWalletType, request.SerializeAsString());
+   listener_->setWatchOnlyCb(reqId, cb);
+}
+
 void SignerAdapter::exportWoWallet(const std::string &rootWalletId, const SignerAdapter::ExportWoCb &cb)
 {
    signer::ExportWoWalletRequest request;

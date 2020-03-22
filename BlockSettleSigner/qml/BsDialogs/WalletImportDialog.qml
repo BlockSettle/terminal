@@ -19,6 +19,7 @@ import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.QPasswordData 1.0
+import com.blocksettle.HSMDeviceManager 1.0
 
 import "../BsControls"
 import "../StyledControls"
@@ -39,9 +40,15 @@ CustomTitleDialogWindow {
     property WalletInfo walletInfo: WalletInfo{}
     property var passwordData: QPasswordData{}
     property bool isWO: (tabBar.currentIndex === 1)
+    property bool isHSM: rbHardwareWallet.checked
 
-    property bool acceptable: isWO ? digitalWoBackupAcceptable : ((curPage === 1 && walletSelected) ||
-                              (curPage === 2 && importAcceptable))
+    property bool acceptable: if (isWO)
+                                  digitalWoBackupAcceptable
+                              else if (isHSM)
+                                  hsmXbup !== ""
+                              else
+                                  ((curPage === 1 && walletSelected) ||
+                                   (curPage === 2 && importAcceptable))
 
     property bool digitalBackupAcceptable: false
     property bool digitalWoBackupAcceptable: false
@@ -52,6 +59,10 @@ CustomTitleDialogWindow {
     property int inputLabelsWidth: 110
     property int curPage: WalletImportDialog.Page.Select
     property bool authNoticeShown: false
+
+    property string hsmXbup: ""
+    property string hsmLabel: ""
+    property string hsmVendor: ""
 
     title: qsTr("Import Wallet")
     width: 410
@@ -298,7 +309,9 @@ CustomTitleDialogWindow {
                                 Connections {
                                     target: hsmDeviceManager
                                     onPublicKeyReady: {
-                                        console.log("Public key ready")
+                                        hsmXbup = xpub;
+                                        hsmLabel = label;
+                                        hsmVendor = vendor;
                                     }
                                     onRequestPinMatrix: {
                                         let obj = comp.createObject(mainWindow, {parent : mainWindow, deviceIndex: index});
@@ -713,20 +726,24 @@ CustomTitleDialogWindow {
                 enabled: acceptable
 
                 onClicked: {
-                    if (isWO) {
-                        var importCallback = function(success, msg) {
-                            if (success) {
-                                var walletInfo = qmlFactory.createWalletInfo(msg)
-                                var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImportWo, true, walletInfo)
-                                mb.bsAccepted.connect(acceptAnimated)
-                            }
-                            else {
-                                JsHelper.messageBox(BSMessageBox.Type.Critical
-                                    , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
-                            }
+                    var importCallback = function(success, msg) {
+                        if (success) {
+                            var walletInfo = qmlFactory.createWalletInfo(msg)
+                            var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImportWo, true, walletInfo)
+                            mb.bsAccepted.connect(acceptAnimated)
                         }
+                        else {
+                            JsHelper.messageBox(BSMessageBox.Type.Critical
+                                , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
+                        }
+                    }
 
+                    if (isWO) {
                         walletsProxy.importWoWallet(lblWoDBFile.text, importCallback)
+                        return
+                    }
+                    else if (isHSM) {
+                        walletsProxy.importHSMWallet(root.hsmXbup, root.hsmLabel, root.hsmVendor,importCallback)
                         return
                     }
 

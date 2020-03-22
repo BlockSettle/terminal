@@ -61,8 +61,8 @@ signals:
 private:
    std::shared_ptr<ConnectionManager> connectionManager_;
 
-   //const QByteArray trezorEndPoint_ = "http://10.211.55.2:21325";
-   const QByteArray trezorEndPoint_ = "http://127.0.0.1:21325";
+   const QByteArray trezorEndPoint_ = "http://10.211.55.2:21325";
+   //const QByteArray trezorEndPoint_ = "http://127.0.0.1:21325";
    const QByteArray blocksettleOrigin = "https://blocksettle.trezor.io";
    DeviceData deviceData_;
    State state_ = State::None;

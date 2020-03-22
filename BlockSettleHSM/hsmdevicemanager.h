@@ -39,7 +39,7 @@ public:
 
 signals:
    void devicesChanged();
-   void publicKeyReady();
+   void publicKeyReady(QString xpub, QString label, QString vendor);
    void requestPinMatrix();
 
 public:

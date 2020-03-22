@@ -224,6 +224,8 @@ void QMLAppObj::registerQtTypes()
       "AutheIDClient", QStringLiteral("Cannot create a AutheIDClient instance"));
    qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
       "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
+   qmlRegisterUncreatableType<HSMDeviceManager>("com.blocksettle.HSMDeviceManager", 1, 0,
+      "HSMDeviceManager", QStringLiteral("Cannot create a HSMDeviceManager instance"));
 
    qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
    qmlRegisterType<bs::wallet::TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");

@@ -27,6 +27,8 @@ class ConnectionManager;
 class QNetworkRequest;
 class TrezorClient;
 
+using namespace hw::trezor::messages;
+
 class TrezorDevice : public QObject
 {
    Q_OBJECT
@@ -38,7 +40,7 @@ public:
    DeviceKey deviceKey() const;
 
    void init(AsyncCallBack&& cb = nullptr);
-   void getPublicKey(AsyncCallBack&& cb = nullptr);
+   void getPublicKey(AsyncCallBackCall&& cb = nullptr);
    void setMatrixPin(const std::string& pin);
    void cancel();
 
@@ -53,13 +55,23 @@ private:
    void handleMessage(const MessageData& data);
    bool parseResponse(google::protobuf::Message &msg, const MessageData& data);
 
+
+   // callbacks
+   void resetCallbacks();
+
+   void setCallbackNoData(MessageType type, AsyncCallBack&& cb);
+   void callbackNoData(MessageType type);
+
+   void setDataCallback(MessageType type, AsyncCallBackCall&& cb);
+   void dataCallback(MessageType type, QByteArray&& response);
+
 private:
    std::shared_ptr<ConnectionManager> connectionManager_{};
    QPointer<TrezorClient> client_{};
    hw::trezor::messages::management::Features features_{};
 
-   std::unordered_map<int, AsyncCallBack> awaitingCallback_;
-
+   std::unordered_map<int, AsyncCallBack> awaitingCallbackNoData_;
+   std::unordered_map<int, AsyncCallBackCall> awaitingCallbackData_;
 };
 
 #endif // TREZORDEVICE_H

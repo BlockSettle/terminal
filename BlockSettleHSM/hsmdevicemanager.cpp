@@ -38,8 +38,12 @@ void HSMDeviceManager::requestPublicKey(int deviceIndex)
       return;
    }
 
-   device->getPublicKey([this]() {
-      emit publicKeyReady();
+   device->getPublicKey([this, device](QByteArray&& xpub) {
+      if (!device) {
+         return;
+      }
+      const auto key = device->deviceKey();
+      emit publicKeyReady(QString::fromStdString(xpub.toStdString()), key.deviceLabel_, key.vendor_);
    });
 
    connect(device, &TrezorDevice::requestPinMatrix,

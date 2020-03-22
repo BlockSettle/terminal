@@ -18,8 +18,6 @@
 // Protobuf
 #include <google/protobuf/util/json_util.h>
 
-using namespace hw::trezor::messages;
-
 namespace {
 
    // Trezor package rule (source - https://github.com/trezor/trezord-go)
@@ -96,25 +94,24 @@ void TrezorDevice::init(AsyncCallBack&& cb)
    message.set_session_id(client_->getSessionId());
 
    if (cb) {
-      awaitingCallback_[MessageType_Features] = std::move(cb);
+      setCallbackNoData(MessageType_Features, std::move(cb));
    }
 
    makeCall(message);
 }
 
-void TrezorDevice::getPublicKey(AsyncCallBack&& cb)
+void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
 {
    connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving public key from device " + features_.label());
    bitcoin::GetPublicKey message;
-   // m'/
-   message.add_address_n(static_cast<uint32_t>(0x8000002c));
+   // #TREZOR_INTEGRATION: shouldn't be hardcoded m/ 49'/ 1' / 0'
+   message.add_address_n(static_cast<uint32_t>(0x80000031));
+   message.add_address_n(static_cast<uint32_t>(0x80000001));
    message.add_address_n(static_cast<uint32_t>(0x80000000));
-   message.add_address_n(static_cast<uint32_t>(0x80000000));
-   message.add_address_n(static_cast<uint32_t>(0));
-   message.add_address_n(static_cast<uint32_t>(0));
+   message.set_coin_name("Testnet");
 
    if (cb) {
-      awaitingCallback_[MessageType_PublicKey] = std::move(cb);
+      setDataCallback(MessageType_PublicKey, std::move(cb));
    }
 
    makeCall(message);
@@ -145,7 +142,7 @@ void TrezorDevice::makeCall(const google::protobuf::Message &msg)
 
 void TrezorDevice::handleMessage(const MessageData& data)
 {
-   switch (data.msg_type_) {
+   switch (static_cast<MessageType>(data.msg_type_)) {
    case MessageType_Success:
       {
          common::Success success;
@@ -156,14 +153,14 @@ void TrezorDevice::handleMessage(const MessageData& data)
       {
          common::Failure failure;
          parseResponse(failure, data);
-         awaitingCallback_.clear();
+         resetCallbacks();
       }
       break;
    case MessageType_Features:
       {
          if (parseResponse(features_, data)) {
-            connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage Features "
-               + getJSONReadableMessage(features_));
+            connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage Features ");
+            // + getJSONReadableMessage(features_)); 
          }
       }
    break;
@@ -185,9 +182,10 @@ void TrezorDevice::handleMessage(const MessageData& data)
       {
          bitcoin::PublicKey publicKey;
          if (parseResponse(publicKey, data)) {
-            connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage PublicKey "
-               + getJSONReadableMessage(publicKey));
+            connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage PublicKey" //);
+             + getJSONReadableMessage(publicKey));
          }
+         dataCallback(MessageType_PublicKey, QByteArray::fromStdString(publicKey.xpub()));
       }
       break;
    case MessageType_Address:
@@ -203,11 +201,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
       break;
    }
 
-   auto iAwaiting = awaitingCallback_.find(data.msg_type_);
-   if (iAwaiting != awaitingCallback_.end()) {
-      iAwaiting->second();
-      awaitingCallback_.erase(iAwaiting);
-   }
+   callbackNoData(static_cast<MessageType>(data.msg_type_));
 }
 
 bool TrezorDevice::parseResponse(google::protobuf::Message &msg, const MessageData& data)
@@ -223,4 +217,38 @@ bool TrezorDevice::parseResponse(google::protobuf::Message &msg, const MessageDa
    }
 
    return ok;
+}
+
+void TrezorDevice::resetCallbacks()
+{
+   awaitingCallbackNoData_.clear();
+   awaitingCallbackData_.clear();
+}
+
+void TrezorDevice::setCallbackNoData(MessageType type, AsyncCallBack&& cb)
+{
+   awaitingCallbackNoData_[type] = std::move(cb);
+}
+
+void TrezorDevice::callbackNoData(MessageType type)
+{
+   auto iAwaiting = awaitingCallbackNoData_.find(type);
+   if (iAwaiting != awaitingCallbackNoData_.end()) {
+      iAwaiting->second();
+      awaitingCallbackNoData_.erase(iAwaiting);
+   }
+}
+
+void TrezorDevice::setDataCallback(MessageType type, AsyncCallBackCall&& cb)
+{
+   awaitingCallbackData_[type] = std::move(cb);
+}
+
+void TrezorDevice::dataCallback(MessageType type, QByteArray&& response)
+{
+   auto iAwaiting = awaitingCallbackData_.find(type);
+   if (iAwaiting != awaitingCallbackData_.end()) {
+      iAwaiting->second(std::move(response));
+      awaitingCallbackData_.erase(iAwaiting);
+   }
 }

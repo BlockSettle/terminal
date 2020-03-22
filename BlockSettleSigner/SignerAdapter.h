@@ -72,6 +72,8 @@ public:
 
    using CreateWoCb = std::function<void(const bs::sync::WatchingOnlyWallet &)>;
    void importWoWallet(const std::string &filename, const BinaryData &content, const CreateWoCb &cb);
+   void importHSMWallet(const std::string &xpub, const std::string &label,
+      const std::string &vendor, const CreateWoCb &cb);
 
    using ExportWoCb = std::function<void(const BinaryData &content)>;
    void exportWoWallet(const std::string &rootWalletId, const ExportWoCb &cb);
