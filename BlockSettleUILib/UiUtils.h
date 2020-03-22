@@ -148,6 +148,7 @@ namespace UiUtils
 
    extern const QLatin1String XbtCurrency;
 
+   double actualXbtPrice(bs::XBTAmount amount, double price);
 
    //
    // WalletDescriptionValidator
