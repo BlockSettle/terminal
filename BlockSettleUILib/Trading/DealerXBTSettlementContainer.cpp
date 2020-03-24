@@ -71,7 +71,11 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       throw std::invalid_argument("failed to get submitted QN for " + order.quoteId);
    }
 
-   comment_ = std::string(bs::network::Side::toString(order.side)) + " " + order.security + " @ " + std::to_string(order.price);
+   // BST-2545: Use price as it see Genoa (and it computes it as ROUNDED_CCY / XBT)
+   const auto actualXbtPrice = UiUtils::actualXbtPrice(bs::XBTAmount(amount_), price());
+
+   comment_ = fmt::format("{} {} @ {}", bs::network::Side::toString(order.side)
+      , order.security, UiUtils::displayPriceXBT(actualXbtPrice).toStdString());
    authKey_ = BinaryData::CreateFromHex(qn.authKey);
    reqAuthKey_ = BinaryData::CreateFromHex(qn.reqAuthKey);
    if (authKey_.isNull() || reqAuthKey_.isNull()) {

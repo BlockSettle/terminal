@@ -285,6 +285,7 @@ void TransactionsViewModel::init()
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &TransactionsViewModel::onWalletDeleted, Qt::QueuedConnection);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &TransactionsViewModel::onRefreshTxValidity, Qt::QueuedConnection);
 }
 
 TransactionsViewModel::~TransactionsViewModel() noexcept
@@ -329,7 +330,7 @@ void TransactionsViewModel::loadAllWallets(bool onNewBlock)
 
 int TransactionsViewModel::columnCount(const QModelIndex &) const
 {
-   return static_cast<int>(Columns::last);
+   return static_cast<int>(Columns::last) + 1;
 }
 
 TXNode *TransactionsViewModel::getNode(const QModelIndex &index) const
@@ -794,6 +795,24 @@ void TransactionsViewModel::onItemConfirmed(const TransactionPtr item)
          beginRemoveRows(index(node->row(), 0), 0, node->nbChildren() - 1);
          node->clear();
          endRemoveRows();
+      }
+   }
+}
+
+void TransactionsViewModel::onRefreshTxValidity()
+{
+   for (int i = 0; i < rootNode_->children().size(); ++i) {
+      const auto item = rootNode_->children()[i]->item();
+      // This fixes race with CC tracker (when it updates after adding new TX).
+      // So there is no need to check already valid TXs.
+      if (!item || item->isValid) {
+         continue;
+      }
+      const auto validWallet = item->wallets.empty() ? nullptr : item->wallets[0];
+      item->isValid = validWallet ? validWallet->isTxValid(item->txEntry.txHash) : false;
+      if (item->isValid) {
+         emit dataChanged(index(i, static_cast<int>(Columns::first))
+         , index(i, static_cast<int>(Columns::last)));
       }
    }
 }

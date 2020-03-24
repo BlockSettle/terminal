@@ -1314,8 +1314,6 @@ void BSTerminalMainWindow::onLogin()
 
    networkSettingsReceived(loginDialog.networkSettings());
 
-   ui_->widgetChat->setUserType(loginDialog.result()->userType);
-
    chatTokenData_ = loginDialog.result()->chatTokenData;
    chatTokenSign_ = loginDialog.result()->chatTokenSign;
    tryLoginIntoChat();
@@ -1364,6 +1362,16 @@ void BSTerminalMainWindow::onLogin()
 
    connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetChat, &ChatWidget::onProcessOtcPbMessage);
    connect(ui_->widgetChat, &ChatWidget::sendOtcPbMessage, bsClient_.get(), &BsClient::sendPbMessage);
+
+   connect(bsClient_.get(), &BsClient::ccGenAddrUpdated, this, [this](const BinaryData &ccGenAddrData) {
+      ccFileManager_->setCcAddressesSigned(ccGenAddrData);
+   });
+
+   accountEnabled_ = true;
+   onAccountTypeChanged(loginDialog.result()->userType, loginDialog.result()->enabled);
+   connect(bsClient_.get(), &BsClient::accountStateChanged, this, [this](bs::network::UserType userType, bool enabled) {
+      onAccountTypeChanged(userType, enabled);
+   });
 }
 
 void BSTerminalMainWindow::onLogout()
@@ -1430,6 +1438,16 @@ void BSTerminalMainWindow::onUserLoggedOut()
    }
 
    setLoginButtonText(loginButtonText_);
+}
+
+void BSTerminalMainWindow::onAccountTypeChanged(bs::network::UserType userType, bool enabled)
+{
+   if (enabled != accountEnabled_) {
+      accountEnabled_ = enabled;
+      NotificationCenter::notify(enabled ? bs::ui::NotifyType::AccountEnabled : bs::ui::NotifyType::AccountDisabled, {});
+   }
+
+   ui_->widgetChat->setUserType(enabled ? userType : bs::network::UserType::Chat);
 }
 
 void BSTerminalMainWindow::onCelerConnected()

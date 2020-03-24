@@ -73,8 +73,11 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    fxProd_ = cp.ContraCurrency(bs::network::XbtCurrency);
    amount_ = isFxProd ? quantity() / price() : quantity();
 
-   comment_ = std::string(bs::network::Side::toString(bs::network::Side::invert(quote_.side))) + " "
-      + quote_.security + " @ " + std::to_string(price());
+   // BST-2545: Use price as it see Genoa (and it computes it as ROUNDED_CCY / XBT)
+   const auto actualXbtPrice = UiUtils::actualXbtPrice(bs::XBTAmount(amount_), price());
+
+   comment_ = fmt::format("{} {} @ {}", bs::network::Side::toString(bs::network::Side::invert(quote_.side))
+      , quote_.security, UiUtils::displayPriceXBT(actualXbtPrice).toStdString());
 }
 
 ReqXBTSettlementContainer::~ReqXBTSettlementContainer() = default;
