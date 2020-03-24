@@ -18,17 +18,20 @@
 // Protobuf
 #include <google/protobuf/util/json_util.h>
 
-namespace {
+using namespace hw::trezor::messages;
 
+namespace {
    // Trezor package rule (source - https://github.com/trezor/trezord-go)
-   int getMessageType(const google::protobuf::Message &msg) {
+   int getMessageType(const google::protobuf::Message &msg)
+   {
       const std::string typeName = "MessageType_" + msg.GetDescriptor()->name();
       return hw::trezor::messages::MessageType_descriptor()
          ->FindValueByName(typeName)
          ->number();
    }
 
-   QByteArray pack_message(const google::protobuf::Message &msg) {
+   QByteArray packMessage(const google::protobuf::Message &msg)
+   {
       auto msg_type = getMessageType(msg);
       std::string serialized_msg = msg.SerializeAsString();
       int length = static_cast<int>(serialized_msg.size());
@@ -45,8 +48,8 @@ namespace {
       return packed;
    }
 
-   MessageData unpackMessage(const QByteArray& response) {
-
+   MessageData unpackMessage(const QByteArray& response)
+   {
       QDataStream stream(response);
       MessageData ret;
 
@@ -57,7 +60,8 @@ namespace {
       return ret;
    }
 
-   std::string getJSONReadableMessage(const google::protobuf::Message &msg) {
+   std::string getJSONReadableMessage(const google::protobuf::Message &msg)
+   {
       std::string output;
       google::protobuf::util::JsonPrintOptions options;
       options.add_whitespace = true;
@@ -67,7 +71,8 @@ namespace {
    }
 }
 
-TrezorDevice::TrezorDevice(const std::shared_ptr<ConnectionManager>& connectionManager, QPointer<TrezorClient> client, QObject* parent /*= nullptr*/)
+TrezorDevice::TrezorDevice(const std::shared_ptr<ConnectionManager> &connectionManager
+   , const QPointer<TrezorClient> &client, QObject* parent)
    : QObject(parent)
    , connectionManager_(connectionManager)
    , client_(std::move(client))
@@ -134,7 +139,7 @@ void TrezorDevice::cancel()
 
 void TrezorDevice::makeCall(const google::protobuf::Message &msg)
 {
-   client_->call(pack_message(msg), [this](QByteArray&& answer) {
+   client_->call(packMessage(msg), [this](QByteArray&& answer) {
       MessageData data = unpackMessage(answer);
       handleMessage(data);
    });

@@ -8,8 +8,8 @@
 **********************************************************************************
 
 */
-#ifndef TREZORSTRUCTURES_H
-#define TREZORSTRUCTURES_H
+#ifndef TREZORSTRUCTURE_H
+#define TREZORSTRUCTURE_H
 
 #include <functional>
 #include <QByteArray>
@@ -18,7 +18,8 @@
 using AsyncCallBack = std::function<void()>;
 using AsyncCallBackCall = std::function<void(QByteArray&&)>;
 
-struct DeviceData {
+struct DeviceData
+{
    QByteArray path_ = {};
    QByteArray vendor_ = {};
    QByteArray product_ = {};
@@ -35,7 +36,8 @@ enum class State {
    Released
 };
 
-struct DeviceKey{
+struct DeviceKey
+{
    QString deviceLabel_;
    QString deviceId_;
    QString vendor_;
@@ -48,6 +50,4 @@ struct MessageData
    std::string message_;
 };
 
-
-
-#endif // TREZORSTRUCTURES_H
+#endif // TREZORSTRUCTURE_H
