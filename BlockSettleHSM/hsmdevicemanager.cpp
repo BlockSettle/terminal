@@ -13,10 +13,11 @@
 #include "trezor/trezorDevice.h"
 #include "ConnectionManager.h"
 
-HSMDeviceManager::HSMDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager, QObject* parent /*= nullptr*/)
+HSMDeviceManager::HSMDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager, bool testNet, QObject* parent /*= nullptr*/)
    : QObject(parent)
+   , testNet_(testNet)
 {
-   trezorClient_ = std::make_unique<TrezorClient>(connectionManager, this);
+   trezorClient_ = std::make_unique<TrezorClient>(connectionManager, testNet, this);
    model_ = new QStringListModel(this);
 }
 

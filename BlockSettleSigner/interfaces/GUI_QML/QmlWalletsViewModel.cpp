@@ -342,6 +342,7 @@ QVariant QmlWalletsViewModel::data(const QModelIndex &index, int role) const
             switch (hdWallet->encryptionTypes()[0]) {
             case bs::wallet::EncryptionType::Password:   return tr("Password");
             case bs::wallet::EncryptionType::Auth:   return tr("Auth eID");
+            case bs::wallet::EncryptionType::HSM:   return tr("Hardware Security Module");
             default:    return tr("No");
             }
          }

@@ -28,7 +28,7 @@ class TrezorClient : public QObject
 
 public:
 
-   TrezorClient(const std::shared_ptr<ConnectionManager>& connectionManager_, QObject* parent = nullptr);
+   TrezorClient(const std::shared_ptr<ConnectionManager>& connectionManager_, bool testNet, QObject* parent = nullptr);
    ~TrezorClient() override = default;
 
    QByteArray getSessionId();
@@ -66,6 +66,7 @@ private:
    const QByteArray blocksettleOrigin = "https://blocksettle.trezor.io";
    DeviceData deviceData_;
    State state_ = State::None;
+   bool testNet_{};
 
    // There should really be a bunch of devices
    QPointer<TrezorDevice> trezorDevice_{};

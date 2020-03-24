@@ -23,8 +23,10 @@ import com.blocksettle.HSMDeviceManager 1.0
 
 import "../BsControls"
 import "../StyledControls"
-import "../js/helper.js" as JsHelper
 import "../BsStyles"
+import "../BsHsm"
+import "../js/helper.js" as JsHelper
+
 
 CustomTitleDialogWindow {
     id: root
@@ -313,102 +315,7 @@ CustomTitleDialogWindow {
                                         hsmLabel = label;
                                         hsmVendor = vendor;
                                     }
-                                    onRequestPinMatrix: {
-                                        let obj = comp.createObject(mainWindow, {parent : mainWindow, deviceIndex: index});
-                                        obj.open();
-                                    }
-                                }
-
-                                Component {
-                                    id: comp
-                                    CustomDialog {
-                                        width: 300
-                                        height: 370
-                                        property int deviceIndex: -1
-
-                                        cContentItem: ColumnLayout {
-                                            spacing: 5
-
-                                            GridLayout {
-
-                                                rows: 3
-                                                columns: 3
-
-                                                Layout.fillWidth: true
-                                                Layout.fillHeight: true
-                                                Layout.margins: 10
-
-
-                                                Repeater {
-                                                    model: [7, 8, 9, 4, 5, 6, 1, 2, 3]
-                                                    delegate: Rectangle {
-                                                        color: "transparent"
-                                                        border.width: 1
-                                                        border.color: BSStyle.inputsBorderColor
-
-                                                        Layout.fillHeight: true
-                                                        Layout.fillWidth: true
-
-
-                                                        Text {
-                                                            anchors.fill: parent
-                                                            text: "?"
-                                                            color: BSStyle.inputsBorderColor
-                                                            font.pixelSize: 15
-                                                            horizontalAlignment: Text.AlignHCenter
-                                                            verticalAlignment: Text.AlignVCenter
-                                                        }
-
-                                                        MouseArea {
-                                                            anchors.fill: parent
-                                                            onClicked: {
-                                                                pinInputField.text += modelData;
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-
-                                            CustomPasswordTextInput {
-                                                id: pinInputField
-                                                Layout.fillWidth: true
-                                                Layout.preferredHeight: 50
-                                                Layout.leftMargin: 10
-                                                Layout.rightMargin: 10
-
-                                                text: ""
-                                            }
-                                        }
-
-                                        cFooterItem: RowLayout {
-                                            CustomButtonBar {
-                                                Layout.fillWidth: true
-
-                                                CustomButton {
-                                                    anchors.left: parent.left
-                                                    anchors.bottom: parent.bottom
-                                                    text: qsTr("Cancel")
-                                                    onClicked: {
-                                                        hsmDeviceManager.cancel(deviceIndex)
-                                                        close();
-                                                    }
-                                                }
-
-                                                CustomButton {
-                                                    id: btnAccept
-                                                    primary: true
-                                                    anchors.right: parent.right
-                                                    anchors.bottom: parent.bottom
-                                                    text: qsTr("Accept")
-                                                    onClicked: {
-                                                        hsmDeviceManager.setMatrixPin(deviceIndex, pinInputField.text)
-                                                        close();
-                                                    }
-                                                }
-
-                                            }
-                                        }
-                                    }
+                                    onRequestPinMatrix: JsHelper.showPinMatrix(index);
                                 }
                             }
                         }

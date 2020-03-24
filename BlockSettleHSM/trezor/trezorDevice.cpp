@@ -65,12 +65,16 @@ namespace {
 
       return output;
    }
+
+   // m / 49' / 0' / 0'
+   const uint32_t nestedDerKey[] = { 0x80000031 , 0x80000001 , 0x80000000 };
 }
 
-TrezorDevice::TrezorDevice(const std::shared_ptr<ConnectionManager>& connectionManager, QPointer<TrezorClient> client, QObject* parent /*= nullptr*/)
+TrezorDevice::TrezorDevice(const std::shared_ptr<ConnectionManager>& connectionManager, bool testNet, QPointer<TrezorClient> client, QObject* parent /*= nullptr*/)
    : QObject(parent)
    , connectionManager_(connectionManager)
    , client_(std::move(client))
+   , testNet_(testNet)
 {
 }
 
@@ -104,11 +108,12 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
 {
    connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving public key from device " + features_.label());
    bitcoin::GetPublicKey message;
-   // #TREZOR_INTEGRATION: shouldn't be hardcoded m/ 49'/ 1' / 0'
-   message.add_address_n(static_cast<uint32_t>(0x80000031));
-   message.add_address_n(static_cast<uint32_t>(0x80000001));
-   message.add_address_n(static_cast<uint32_t>(0x80000000));
-   message.set_coin_name("Testnet");
+   for (const uint32_t add : nestedDerKey) {
+      message.add_address_n(add);
+   }
+   if (testNet_) {
+      message.set_coin_name("Testnet");
+   }
 
    if (cb) {
       setDataCallback(MessageType_PublicKey, std::move(cb));

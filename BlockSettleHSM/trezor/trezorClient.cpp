@@ -19,9 +19,10 @@
 #include <QJsonArray>
 #include <QVariant>
 
-TrezorClient::TrezorClient(const std::shared_ptr<ConnectionManager>& connectionManager, QObject* parent /*= nullptr*/)
+TrezorClient::TrezorClient(const std::shared_ptr<ConnectionManager>& connectionManager, bool testNet, QObject* parent /*= nullptr*/)
    : QObject(parent)
    , connectionManager_(connectionManager)
+   , testNet_(testNet)
 {
 }
 
@@ -232,7 +233,7 @@ void TrezorClient::acquireDevice(AsyncCallBack&& cb)
       state_ = State::Acquired;
       emit deviceReady();
 
-      trezorDevice_ = { new TrezorDevice(connectionManager_, this, this) };
+      trezorDevice_ = { new TrezorDevice(connectionManager_, testNet_, { this }, this) };
       trezorDevice_->init(std::move(cbCopy));
 
       reply->deleteLater();
