@@ -166,8 +166,8 @@ private slots:
    void onWalletDeleted(std::string walletId);
    void onNewItems(const std::vector<TXNode *> &);
    void onDelRows(std::vector<int> rows);
-
    void onItemConfirmed(const TransactionPtr);
+   void onRefreshTxValidity();
 
 private:
    void onNewBlock(unsigned int height, unsigned int branchHgt) override;
@@ -205,7 +205,7 @@ public:
 //      MissedBlocks,
       Comment,
       TxHash,
-      last
+      last = TxHash
    };
 
    enum Role {

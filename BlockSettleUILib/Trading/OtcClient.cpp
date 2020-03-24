@@ -1730,8 +1730,9 @@ void OtcClient::setComments(OtcClientDeal *deal)
    auto group = hdWallet ? hdWallet->getGroup(hdWallet->getXBTGroupType()) : nullptr;
    auto leaves = group ? group->getAllLeaves() : std::vector<std::shared_ptr<bs::sync::Wallet>>();
    for (const auto & leaf : leaves) {
+      const double price = bs::network::otc::fromCents(deal->price);
       auto comment = fmt::format("{} XBT/EUR @ {} (OTC)"
-         , bs::network::otc::toString(deal->side), UiUtils::displayPriceFX(bs::network::otc::fromCents(deal->price)).toStdString());
+         , bs::network::otc::toString(deal->side), UiUtils::displayPriceXBT(price).toStdString());
       leaf->setTransactionComment(deal->signedTx, comment);
    }
 }
