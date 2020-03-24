@@ -19,10 +19,12 @@ import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.QSeed 1.0
 import com.blocksettle.QPasswordData 1.0
+import com.blocksettle.HSMDeviceManager 1.0
 
 import "../StyledControls"
 import "../BsControls"
 import "../BsStyles"
+import "../BsHsm"
 import "../js/helper.js" as JsHelper
 
 BSWalletHandlerDialog {
@@ -45,32 +47,49 @@ BSWalletHandlerDialog {
     width: 500
 
     function init() {
-        if (walletInfo.encType !== QPasswordData.Auth) {
-            return
+        if (walletInfo.encType === QPasswordData.Auth) {
+            btnConfirm.visible = false
+            btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
+
+            let authEidMessage = JsHelper.getAuthEidTransactionInfo(txInfo);
+            authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo,
+                                                          authEidMessage, timeLeft)
+
+            authSign.succeeded.connect(function(encKey, password) {
+                passwordData.encType = QPasswordData.Auth
+                passwordData.encKey = encKey
+                passwordData.binaryPassword = password
+                acceptAnimated()
+            });
+            authSign.failed.connect(function(errorText) {
+                showWalletError(errorText);
+            })
+            authSign.userCancelled.connect(function() {
+                rejectWithNoError();
+            })
+            authSign.canceledByTimeout.connect(function() {
+                rejectWithNoError();
+            })
         }
+        else if (walletInfo.encType === QPasswordData.HSM) {
+            hsmDeviceManager.prepareTrezorForSign(walletInfo.desc)
+        }
+    }
 
-        btnConfirm.visible = false
-        btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
+    onAboutToHide: {
+        hsmDeviceManager.releaseDevices();
+    }
 
-        let authEidMessage = JsHelper.getAuthEidTransactionInfo(txInfo);
-        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo,
-                                                      authEidMessage, timeLeft)
-
-        authSign.succeeded.connect(function(encKey, password) {
-            passwordData.encType = QPasswordData.Auth
-            passwordData.encKey = encKey
-            passwordData.binaryPassword = password
-            acceptAnimated()
-        });
-        authSign.failed.connect(function(errorText) {
-            showWalletError(errorText);
-        })
-        authSign.userCancelled.connect(function() {
-            rejectWithNoError();
-        })
-        authSign.canceledByTimeout.connect(function() {
-            rejectWithNoError();
-        })
+    Connections {
+        target: hsmDeviceManager
+        onRequestPinMatrix: JsHelper.showPinMatrix(0);
+        onDeviceReady: {
+            hsmDeviceManager.signTX(txInfo.inputsXBT.length, txInfo.allRecipients.length);
+        }
+        onDeviceNotFound: {
+            JsHelper.messageBox(BSMessageBox.Type.Critical
+                , qsTr("Failed to find HSM device"), qsTr("Cannot find device paored with this wallet, device label is :\n") + walletInfo.name)
+        }
     }
 
     Connections {
@@ -280,6 +299,44 @@ BSWalletHandlerDialog {
 
             CustomLabel {
                 visible: walletInfo.encType === QPasswordData.Auth
+                Layout.alignment: Qt.AlignRight
+                text: walletInfo.email()
+            }
+        }
+
+        RowLayout {
+            spacing: 25
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+
+            CustomLabel {
+                visible: walletInfo.encType === QPasswordData.Auth
+                Layout.fillWidth: true
+                text: qsTr("Auth eID")
+            }
+
+            CustomLabel {
+                visible: walletInfo.encType === QPasswordData.Auth
+                Layout.alignment: Qt.AlignRight
+                text: walletInfo.email()
+            }
+        }
+
+        RowLayout {
+            spacing: 25
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+
+            CustomLabel {
+                visible: walletInfo.encType === QPasswordData.HSM
+                Layout.fillWidth: true
+                text: qsTr("Hardware Security Module")
+            }
+
+            CustomLabel {
+                visible: walletInfo.encType === QPasswordData.HSM
                 Layout.alignment: Qt.AlignRight
                 text: walletInfo.email()
             }

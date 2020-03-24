@@ -37,10 +37,18 @@ public:
    Q_INVOKABLE void setMatrixPin(int deviceIndex, QString pin);
    Q_INVOKABLE void cancel(int deviceIndex);
 
+   Q_INVOKABLE void prepareTrezorForSign(QString deviceId);
+   Q_INVOKABLE void signTX(int outputs_count, int inputs_count);
+
+   Q_INVOKABLE void releaseDevices();
+
 signals:
    void devicesChanged();
    void publicKeyReady(QString xpub, QString label, QString vendor);
    void requestPinMatrix();
+
+   void deviceNotFound(QString deviceId);
+   void deviceReady(QString deviceId);
 
 public:
    std::unique_ptr<TrezorClient> trezorClient_;

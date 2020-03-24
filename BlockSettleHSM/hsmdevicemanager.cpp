@@ -44,7 +44,8 @@ void HSMDeviceManager::requestPublicKey(int deviceIndex)
          return;
       }
       const auto key = device->deviceKey();
-      emit publicKeyReady(QString::fromStdString(xpub.toStdString()), key.deviceLabel_, key.vendor_);
+      emit publicKeyReady(QString::fromStdString(xpub.toStdString()), key.deviceLabel_, key.deviceId_);
+      releaseDevices();
    });
 
    connect(device, &TrezorDevice::requestPinMatrix,
@@ -69,6 +70,47 @@ void HSMDeviceManager::cancel(int deviceIndex)
    }
 
    device->cancel();
+}
+
+void HSMDeviceManager::prepareTrezorForSign(QString deviceId)
+{
+   trezorClient_->initConnection([this, deviceId]() {
+      devices_.clear();
+
+      for (auto key : trezorClient_->deviceKeys()) {
+         if (key.deviceId_ == deviceId) {
+            devices_.append(key);
+         }
+      }
+
+      if (devices_.empty()) {
+         emit deviceNotFound(deviceId);
+      }
+      else {
+         emit deviceReady(deviceId);
+      }
+   });
+}
+
+void HSMDeviceManager::signTX(int outputs_count, int inputs_count)
+{
+   auto device = trezorClient_->getTrezorDevice(devices_[0].deviceId_);
+   if (!device) {
+      return;
+   }
+
+   device->signTX(outputs_count, inputs_count, [this](QByteArray&& resp) {
+      Q_UNUSED(resp);
+      releaseDevices();
+   });
+
+   connect(device, &TrezorDevice::requestPinMatrix,
+      this, &HSMDeviceManager::requestPinMatrix, Qt::UniqueConnection);
+}
+
+void HSMDeviceManager::releaseDevices()
+{
+   trezorClient_->releaseConnection();
 }
 
 QStringListModel* HSMDeviceManager::devices()

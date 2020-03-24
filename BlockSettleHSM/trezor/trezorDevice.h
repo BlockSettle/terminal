@@ -44,6 +44,8 @@ public:
    void setMatrixPin(const std::string& pin);
    void cancel();
 
+   void signTX(int outputCount, int inputCount, AsyncCallBackCall&& cb = nullptr);
+
 signals:
    void publicKeyReady();
    void requestPinMatrix();

@@ -68,6 +68,7 @@ namespace {
 
    // m / 49' / 0' / 0'
    const uint32_t nestedDerKey[] = { 0x80000031 , 0x80000001 , 0x80000000 };
+   const std::string tesNetCoin = "Testnet";
 }
 
 TrezorDevice::TrezorDevice(const std::shared_ptr<ConnectionManager>& connectionManager, bool testNet, QPointer<TrezorClient> client, QObject* parent /*= nullptr*/)
@@ -112,7 +113,7 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
       message.add_address_n(add);
    }
    if (testNet_) {
-      message.set_coin_name("Testnet");
+      message.set_coin_name(tesNetCoin);
    }
 
    if (cb) {
@@ -134,6 +135,23 @@ void TrezorDevice::cancel()
 {
    connectionManager_->GetLogger()->debug("[TrezorDevice] cancel previous operation");
    management::Cancel message;
+   makeCall(message);
+}
+
+void TrezorDevice::signTX(int outputCount, int inputCount, AsyncCallBackCall&& cb /*= nullptr*/)
+{
+   connectionManager_->GetLogger()->debug("[TrezorDevice] signTX - specify init data to " + features_.label());
+   bitcoin::SignTx message;
+   message.set_outputs_count(outputCount);
+   message.set_inputs_count(inputCount);
+   if (testNet_) {
+      message.set_coin_name(tesNetCoin);
+   }
+
+   if (cb) {
+      setDataCallback(MessageType_TxRequest, std::move(cb));
+   }
+
    makeCall(message);
 }
 
@@ -197,6 +215,15 @@ void TrezorDevice::handleMessage(const MessageData& data)
       {
          bitcoin::Address address;
          parseResponse(address, data);
+      }
+      break;
+   case MessageType_TxRequest:
+      {
+         bitcoin::TxRequest txRequest;
+         if (parseResponse(txRequest, data)) {
+            connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage TxRequest" //);
+               + getJSONReadableMessage(txRequest));
+         }
       }
       break;
    default:
