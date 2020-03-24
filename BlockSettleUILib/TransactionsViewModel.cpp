@@ -541,7 +541,9 @@ void TransactionsViewModel::onZCInvalidated(const std::set<BinaryData> &ids)
       }
    }
    if (!delRows.empty()) {
-      onDelRows(delRows);
+      QMetaObject::invokeMethod(this, [this, delRows] {
+         onDelRows(delRows);
+      });
    }
 
 #ifdef TX_MODEL_NESTED_NODES
