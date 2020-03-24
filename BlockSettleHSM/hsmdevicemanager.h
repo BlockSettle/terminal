@@ -38,7 +38,7 @@ public:
    Q_INVOKABLE void cancel(int deviceIndex);
 
    Q_INVOKABLE void prepareTrezorForSign(QString deviceId);
-   Q_INVOKABLE void signTX(int outputs_count, int inputs_count);
+   Q_INVOKABLE void signTX(QVariant reqTX);
 
    Q_INVOKABLE void releaseDevices();
 

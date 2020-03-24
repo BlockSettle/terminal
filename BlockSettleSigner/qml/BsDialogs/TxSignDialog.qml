@@ -84,7 +84,7 @@ BSWalletHandlerDialog {
         target: hsmDeviceManager
         onRequestPinMatrix: JsHelper.showPinMatrix(0);
         onDeviceReady: {
-            hsmDeviceManager.signTX(txInfo.inputsXBT.length, txInfo.allRecipients.length);
+            hsmDeviceManager.signTX(passwordDialogData.TxRequest);
         }
         onDeviceNotFound: {
             JsHelper.messageBox(BSMessageBox.Type.Critical

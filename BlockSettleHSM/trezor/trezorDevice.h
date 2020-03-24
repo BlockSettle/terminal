@@ -15,6 +15,7 @@
 #include <QObject>
 #include <QNetworkReply>
 #include <QPointer>
+#include "CoreWallet.h"
 
 // Trezor interface (source - https://github.com/trezor/trezor-common/tree/master/protob)
 #include "trezor/generated_proto/messages-management.pb.h"
@@ -43,7 +44,7 @@ public:
    void setMatrixPin(const std::string& pin);
    void cancel();
 
-   void signTX(int outputCount, int inputCount, AsyncCallBackCall&& cb = nullptr);
+   void signTX(const QVariant& reqTX, AsyncCallBackCall&& cb = nullptr);
 
 signals:
    void publicKeyReady();
@@ -70,6 +71,7 @@ private:
    QPointer<TrezorClient> client_{};
    hw::trezor::messages::management::Features features_{};
    bool testNet_{};
+   bs::core::wallet::TXSignRequest txSignReq_;
 
    std::unordered_map<int, AsyncCallBack> awaitingCallbackNoData_;
    std::unordered_map<int, AsyncCallBackCall> awaitingCallbackData_;

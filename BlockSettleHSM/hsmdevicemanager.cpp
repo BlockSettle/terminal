@@ -92,14 +92,14 @@ void HSMDeviceManager::prepareTrezorForSign(QString deviceId)
    });
 }
 
-void HSMDeviceManager::signTX(int outputs_count, int inputs_count)
+void HSMDeviceManager::signTX(QVariant reqTX)
 {
    auto device = trezorClient_->getTrezorDevice(devices_[0].deviceId_);
    if (!device) {
       return;
    }
 
-   device->signTX(outputs_count, inputs_count, [this](QByteArray&& resp) {
+   device->signTX(reqTX, [this](QByteArray&& resp) {
       Q_UNUSED(resp);
       releaseDevices();
    });

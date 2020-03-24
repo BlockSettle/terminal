@@ -11,6 +11,9 @@
 #include "trezorDevice.h"
 #include "trezorClient.h"
 #include "ConnectionManager.h"
+#include "headless.pb.h"
+#include "ProtobufHeadlessUtils.h"
+#include "CoreWallet.h"
 
 #include <QDataStream>
 
@@ -143,12 +146,22 @@ void TrezorDevice::cancel()
    makeCall(message);
 }
 
-void TrezorDevice::signTX(int outputCount, int inputCount, AsyncCallBackCall&& cb /*= nullptr*/)
+void TrezorDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= nullptr*/)
 {
+   Blocksettle::Communication::headless::SignTxRequest request;
+   bool res = request.ParseFromString(reqTX.toByteArray().toStdString());
+   if (!res) {
+      connectionManager_->GetLogger()->debug("[TrezorDevice] signTX - failed to parse transaction request ");
+      return;
+   }
+
+   txSignReq_ = bs::signer::pbTxRequestToCore(request);
+
+
    connectionManager_->GetLogger()->debug("[TrezorDevice] signTX - specify init data to " + features_.label());
    bitcoin::SignTx message;
-   message.set_outputs_count(outputCount);
-   message.set_inputs_count(inputCount);
+   message.set_outputs_count(txSignReq_.inputs.size());
+   message.set_inputs_count(txSignReq_.recipients.size());
    if (testNet_) {
       message.set_coin_name(tesNetCoin);
    }
