@@ -703,7 +703,7 @@ void WalletsProxy::importWoWallet(const QString &walletPath, const QJSValue &jsC
    adapter_->importWoWallet(fi.fileName().toStdString(), content, cb);
 }
 
-Q_INVOKABLE void WalletsProxy::importHSMWallet(const QString &xpub, const QString &label,
+void WalletsProxy::importHSMWallet(const QString &xpub, const QString &label,
    const QString &vendor, const QJSValue &jsCallback)
 {
    auto cb = [this, jsCallback](const bs::sync::WatchingOnlyWallet &wo) {

@@ -27,14 +27,13 @@ class ConnectionManager;
 class QNetworkRequest;
 class TrezorClient;
 
-using namespace hw::trezor::messages;
-
 class TrezorDevice : public QObject
 {
    Q_OBJECT
 
 public:
-   TrezorDevice(const std::shared_ptr<ConnectionManager>& connectionManager_, bool testNet, QPointer<TrezorClient> client, QObject* parent = nullptr);
+   TrezorDevice(const std::shared_ptr<ConnectionManager> &, bool testNet
+      , const QPointer<TrezorClient> &, QObject* parent = nullptr);
    ~TrezorDevice() override;
 
    DeviceKey deviceKey() const;
@@ -57,15 +56,14 @@ private:
    void handleMessage(const MessageData& data);
    bool parseResponse(google::protobuf::Message &msg, const MessageData& data);
 
-
    // callbacks
    void resetCallbacks();
 
-   void setCallbackNoData(MessageType type, AsyncCallBack&& cb);
-   void callbackNoData(MessageType type);
+   void setCallbackNoData(hw::trezor::messages::MessageType, AsyncCallBack&& cb);
+   void callbackNoData(hw::trezor::messages::MessageType);
 
-   void setDataCallback(MessageType type, AsyncCallBackCall&& cb);
-   void dataCallback(MessageType type, QByteArray&& response);
+   void setDataCallback(hw::trezor::messages::MessageType, AsyncCallBackCall&& cb);
+   void dataCallback(hw::trezor::messages::MessageType, QByteArray&& response);
 
 private:
    std::shared_ptr<ConnectionManager> connectionManager_{};
