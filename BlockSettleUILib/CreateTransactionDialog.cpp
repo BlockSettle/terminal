@@ -527,7 +527,7 @@ bool CreateTransactionDialog::createTransactionImpl(const bs::Address &changeAdd
       }
 
 
-      if (hdWallet->isOffline()) {
+      if (hdWallet->isOffline() && !hdWallet->isHsm()) {
          QString offlineFilePath;
          QString signerOfflineDir = applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
 

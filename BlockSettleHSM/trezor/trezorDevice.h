@@ -32,7 +32,7 @@ class TrezorDevice : public QObject
    Q_OBJECT
 
 public:
-   TrezorDevice(const std::shared_ptr<ConnectionManager> &
+   TrezorDevice(const std::shared_ptr<ConnectionManager> &, bool testNet
       , const QPointer<TrezorClient> &, QObject* parent = nullptr);
    ~TrezorDevice() override;
 
@@ -57,16 +57,17 @@ private:
    // callbacks
    void resetCallbacks();
 
-   void setCallbackNoData(MessageType type, AsyncCallBack&& cb);
-   void callbackNoData(MessageType type);
+   void setCallbackNoData(hw::trezor::messages::MessageType, AsyncCallBack&& cb);
+   void callbackNoData(hw::trezor::messages::MessageType);
 
-   void setDataCallback(MessageType type, AsyncCallBackCall&& cb);
-   void dataCallback(MessageType type, QByteArray&& response);
+   void setDataCallback(hw::trezor::messages::MessageType, AsyncCallBackCall&& cb);
+   void dataCallback(hw::trezor::messages::MessageType, QByteArray&& response);
 
 private:
    std::shared_ptr<ConnectionManager> connectionManager_{};
    QPointer<TrezorClient> client_{};
    hw::trezor::messages::management::Features features_{};
+   bool testNet_{};
 
    std::unordered_map<int, AsyncCallBack> awaitingCallbackNoData_;
    std::unordered_map<int, AsyncCallBackCall> awaitingCallbackData_;

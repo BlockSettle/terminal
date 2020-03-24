@@ -76,5 +76,6 @@
         <file>qml/StyledControls/CustomTitleDialogWindowWithExpander.qml</file>
         <file>qml/BsControls/BSControlPasswordInput.qml</file>
         <file>qml/BsControls/BSWalletHandlerDialog.qml</file>
+        <file>qml/BsHsm/PinMatrixDialog.qml</file>
     </qresource>
 </RCC>

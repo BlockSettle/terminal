@@ -847,3 +847,12 @@ function getAuthEidSettlementInfo(product, priceString, is_sell, quantity, total
         JsHelper.getAuthEidMessageLine("Deliver", (is_sell ? quantity : totalValue)) +
         JsHelper.getAuthEidMessageLine("Receive", (is_sell ? totalValue : quantity), true);
 }
+
+function showPinMatrix(deviceIndex) {
+    let pinMatrix = Qt.createComponent("../BsHsm/PinMatrixDialog.qml").createObject(mainWindow);
+
+    pinMatrix.deviceIndex = deviceIndex;
+    pinMatrix.open();
+
+    return pinMatrix;
+}

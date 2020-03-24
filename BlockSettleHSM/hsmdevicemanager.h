@@ -26,7 +26,7 @@ class HSMDeviceManager : public QObject
    Q_OBJECT
    Q_PROPERTY(QStringListModel* devices READ devices NOTIFY devicesChanged)
 public:
-   HSMDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager, QObject* parent = nullptr);
+   HSMDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager, bool testNet, QObject* parent = nullptr);
     ~HSMDeviceManager() override;
 
    // Property
@@ -46,6 +46,7 @@ public:
    std::unique_ptr<TrezorClient> trezorClient_;
    QVector<DeviceKey> devices_;
    QStringListModel* model_;
+   bool testNet_{};
 };
 
 #endif // HSMDEVICESCANNER_H

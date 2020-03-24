@@ -89,7 +89,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    qmlFactory_ = std::make_shared<QmlFactory>(settings, connectionManager, logger_);
    adapter_->setQmlFactory(qmlFactory_);
 
-   hsmDeviceManager_ = new HSMDeviceManager(connectionManager, this);
+   hsmDeviceManager_ = new HSMDeviceManager(connectionManager, params->testNet(), this);
 
    qmlFactory_->setHeadlessPubKey(adapter_->headlessPubKey());
    connect(adapter_, &SignerAdapter::headlessPubKeyChanged, qmlFactory_.get(), &QmlFactory::setHeadlessPubKey);

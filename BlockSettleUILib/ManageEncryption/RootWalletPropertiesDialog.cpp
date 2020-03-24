@@ -152,6 +152,9 @@ static inline QString encTypeToString(bs::wallet::EncryptionType enc)
 
       case bs::wallet::EncryptionType::Auth :
          return QObject::tr("Auth eID");
+
+      case bs::wallet::EncryptionType::HSM :
+         return QObject::tr("Hardware Security Module");
    };
 
    //no default entry in switch statment nor default return value
