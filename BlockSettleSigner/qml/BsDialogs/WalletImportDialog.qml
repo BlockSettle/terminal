@@ -20,6 +20,7 @@ import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.QPasswordData 1.0
 import com.blocksettle.HSMDeviceManager 1.0
+import com.blocksettle.HSMWalletWrapper 1.0
 
 import "../BsControls"
 import "../StyledControls"
@@ -62,10 +63,7 @@ CustomTitleDialogWindow {
     property int curPage: WalletImportDialog.Page.Select
     property bool authNoticeShown: false
 
-    property string hsmXbupNested: ""
-    property string hsmXbupNative: ""
-    property string hsmLabel: ""
-    property string hsmVendor: ""
+    property var hsmWalletInfo
     property bool hsmDataFilled: false
 
     title: qsTr("Import Wallet")
@@ -313,10 +311,7 @@ CustomTitleDialogWindow {
                                 Connections {
                                     target: hsmDeviceManager
                                     onPublicKeyReady: {
-                                        hsmXbupNested = xpubNested;
-                                        hsmXbupNative = xpubNative;
-                                        hsmLabel = label;
-                                        hsmVendor = vendor;
+                                        hsmWalletInfo = walletInfo;
                                         hsmDataFilled = true;
                                     }
                                     onRequestPinMatrix: JsHelper.showPinMatrix(index);
@@ -654,8 +649,7 @@ CustomTitleDialogWindow {
                         return
                     }
                     else if (isHSM) {
-                        walletsProxy.importHSMWallet(root.hsmXbupNested, root.hsmXbupNative,
-                                                     root.hsmLabel, root.hsmVendor,importCallback)
+                        walletsProxy.importHSMWallet(root.hsmWalletInfo, importCallback)
                         return
                     }
 

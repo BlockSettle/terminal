@@ -41,6 +41,7 @@ public:
    QByteArray getSessionId();
 
    void initConnection(AsyncCallBack&& cb = nullptr);
+   void initConnection(const QString& walletId, AsyncCallBackCall&& cb = nullptr);
    void releaseConnection(AsyncCallBack&& cb = nullptr);
 
    void call(QByteArray&& input, AsyncCallBackCall&& cb);

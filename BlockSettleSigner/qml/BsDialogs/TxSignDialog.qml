@@ -80,7 +80,7 @@ BSWalletHandlerDialog {
             })
         }
         else if (walletInfo.encType === QPasswordData.HSM) {
-            hsmDeviceManager.prepareTrezorForSign(walletInfo.desc)
+            hsmDeviceManager.prepareTrezorForSign(walletInfo.walletId)
         }
     }
 

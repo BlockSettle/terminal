@@ -867,9 +867,17 @@ bool SignerAdapterListener::onImportHSMWallet(const std::string &data, bs::signe
       return false;
    }
 
+   bs::core::wallet::HSMWalletInfo info{
+      request.vendor(),
+      request.label(),
+      request.deviceid(),
+      request.xpubroot(),
+      request.xpubnestedsegwit(),
+      request.xpubnativesegwit()
+   };
+
    const auto woWallet = walletsMgr_->createHSMWallet(settings_->netType()
-      , request.xpubnested(), request.xpubnative(), request.label()
-      , request.vendor(), settings_->getWalletsDir(), app_->controlPassword());
+      , info, settings_->getWalletsDir(), app_->controlPassword());
    if (!woWallet) {
       return false;
    }

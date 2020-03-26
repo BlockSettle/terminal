@@ -16,7 +16,6 @@
 #include "CoreWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"
-#include "botan/base64.h"
 
 #include <QDataStream>
 
@@ -147,21 +146,27 @@ void TrezorDevice::init(AsyncCallBack&& cb)
 
 void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
 {
-   awaitingXpubs_ = {};
-   connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving nested segwit public key from device "
-      + features_.label());
-   bitcoin::GetPublicKey message;
-   for (const uint32_t add : getDerivationPath(testNet_, true)) {
-      message.add_address_n(add);
-   }
-   if (testNet_) {
-      message.set_coin_name(tesNetCoin);
-   }
+   awaitingWalletInfo_ = {};
 
-   // We cannot get two public key fro nested and for native segwit in one transaction
-   // so we get those data in two step, first we got nested and after native
-   AsyncCallBackCall cbNested = [this, originCb = std::move(cb)](QVariant &&data) mutable {
-      awaitingXpubs_.nestedXPub = data.toByteArray().toStdString();
+   // We cannot get all data from one call so we make three calls:
+   // fetching first address for "m/0'" as wallet id
+   // fetching first address for "m/49'" as nested segwit xpub
+   // fetching first address for "m/84'" as native segwit xpub
+
+   AsyncCallBackCall cbFinal = [this, originCb = std::move(cb)](QVariant &&data) mutable {
+      awaitingWalletInfo_.info_.xpubNativeSegwit_ = data.toByteArray().toStdString();
+      
+      // General data
+      awaitingWalletInfo_.info_.label_ = features_.label();
+      awaitingWalletInfo_.info_.deviceId_ = features_.device_id();
+      awaitingWalletInfo_.info_.vendor_ = features_.vendor();
+
+      originCb(QVariant::fromValue<>(awaitingWalletInfo_));
+   };
+
+   // Fetching native segwit
+   AsyncCallBackCall cbNative = [this, originCbFinal = std::move(cbFinal)](QVariant &&data) mutable {
+      awaitingWalletInfo_.info_.xpubNestedSegwit_ = data.toByteArray().toStdString();
 
       connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving native segwit public key from device "
          + features_.label());
@@ -173,16 +178,36 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
          message.set_coin_name(tesNetCoin);
       }
 
-      AsyncCallBackCall cbNative = [this, originCbCopy = std::move(originCb)](QVariant &&data) mutable {
-         awaitingXpubs_.nativeXpub = data.toByteArray().toStdString();
-         assert(originCbCopy);
-         originCbCopy(QVariant::fromValue<>(awaitingXpubs_));
-      };
-
-      // Fetching native segwit
-      setDataCallback(MessageType_PublicKey, std::move(cbNative));
+      setDataCallback(MessageType_PublicKey, std::move(originCbFinal));
       makeCall(message);
    };
+
+   // Fetching nested segwit
+   AsyncCallBackCall cbNested = [this, originCbNative = std::move(cbNative)](QVariant &&data) mutable {
+      awaitingWalletInfo_.info_.xpubRoot_ = data.toByteArray().toStdString();
+
+      connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving nested segwit public key from device "
+         + features_.label());
+      bitcoin::GetPublicKey message;
+      for (const uint32_t add : getDerivationPath(testNet_, true)) {
+         message.add_address_n(add);
+      }
+      if (testNet_) {
+         message.set_coin_name(tesNetCoin);
+      }
+
+      setDataCallback(MessageType_PublicKey, std::move(originCbNative));
+      makeCall(message);
+   };
+
+   // Fetching walletId
+   connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving root public key from device "
+      + features_.label());
+   bitcoin::GetPublicKey message;
+   message.add_address_n(0x80000000);
+   if (testNet_) {
+      message.set_coin_name(tesNetCoin);
+   }
 
    // Fetching nested segwit
    setDataCallback(MessageType_PublicKey, std::move(cbNested));
@@ -344,7 +369,7 @@ void TrezorDevice::resetCaches()
    awaitingCallbackData_.clear();
    currentTxSignReq_.reset(nullptr);
    awaitingTransaction_ = {};
-   awaitingXpubs_ = {};
+   awaitingWalletInfo_ = {};
 }
 
 void TrezorDevice::setCallbackNoData(MessageType type, AsyncCallBack&& cb)
@@ -402,12 +427,16 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       assert(index >= 0 && index < currentTxSignReq_->inputs.size());
       auto utxo = currentTxSignReq_->inputs[index];
 
-      for (const uint32_t add : getDerivationPath(testNet_, true)) {
-         input->add_address_n(add);
-      }
+
       
       auto wallet = walletManager_->getWalletById(currentTxSignReq_->walletIds[0]);
       auto address = bs::Address::fromUTXO(utxo);
+
+      bool isNestedSegwit = (address.getType() == static_cast<AddressEntryType>(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+      for (const uint32_t add : getDerivationPath(testNet_, isNestedSegwit)) {
+         input->add_address_n(add);
+      }
+
       const auto addrIndex = wallet->getAddressIndex(address);
       const auto path = bs::hd::Path::fromString(addrIndex);
       for (int i = 0; i < path.length(); ++i) {

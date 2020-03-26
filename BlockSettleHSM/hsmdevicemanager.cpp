@@ -41,16 +41,8 @@ void HSMDeviceManager::requestPublicKey(int deviceIndex)
       return;
    }
 
-   device->getPublicKey([this, device](QVariant&& data) {
-      if (!device) {
-         return;
-      }
-
-      assert(data.canConvert<HSMXpub>());
-      auto xpubs = data.value<HSMXpub>();
-      const auto key = device->deviceKey();
-      emit publicKeyReady(QString::fromStdString(xpubs.nestedXPub),
-         QString::fromStdString(xpubs.nativeXpub), key.deviceLabel_, key.deviceId_);
+   device->getPublicKey([this](QVariant&& data) {
+      emit publicKeyReady(data);
       releaseDevices();
    });
 
@@ -78,22 +70,24 @@ void HSMDeviceManager::cancel(int deviceIndex)
    device->cancel();
 }
 
-void HSMDeviceManager::prepareTrezorForSign(QString deviceId)
+void HSMDeviceManager::prepareTrezorForSign(QString walleiId)
 {
-   trezorClient_->initConnection([this, deviceId]() {
+   trezorClient_->initConnection(walleiId, [this](QVariant&& deviceId) {
       devices_.clear();
 
+      auto id = deviceId.toString();
+
       for (auto key : trezorClient_->deviceKeys()) {
-         if (key.deviceId_ == deviceId) {
+         if (key.deviceId_ == id) {
             devices_.append(key);
          }
       }
 
       if (devices_.empty()) {
-         emit deviceNotFound(deviceId);
+         emit deviceNotFound(id);
       }
       else {
-         emit deviceReady(deviceId);
+         emit deviceReady(id);
       }
    });
 }

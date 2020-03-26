@@ -15,6 +15,8 @@
 #include <functional>
 #include <QString>
 #include <string>
+#include <QObject>
+#include "CoreWallet.h"
 
 using AsyncCallBack = std::function<void()>;
 using AsyncCallBackCall = std::function<void(QVariant&&)>;
@@ -51,11 +53,12 @@ struct MessageData
    std::string message_;
 };
 
-struct HSMXpub {
-   std::string nestedXPub;
-   std::string nativeXpub;
+class HSMWalletWrapper {
+   Q_GADGET
+public:
+   bs::core::wallet::HSMWalletInfo info_;
 };
-Q_DECLARE_METATYPE(HSMXpub)
+Q_DECLARE_METATYPE(HSMWalletWrapper)
 
 struct HSMSignedTx {
    std::string signedTx;

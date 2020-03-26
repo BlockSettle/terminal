@@ -90,7 +90,7 @@ private:
    bool testNet_{};
    std::unique_ptr<bs::core::wallet::TXSignRequest> currentTxSignReq_;
    HSMSignedTx awaitingTransaction_;
-   HSMXpub awaitingXpubs_;
+   HSMWalletWrapper awaitingWalletInfo_;
 
    std::unordered_map<int, AsyncCallBack> awaitingCallbackNoData_;
    std::unordered_map<int, AsyncCallBackCall> awaitingCallbackData_;

@@ -11,6 +11,8 @@
 #include "trezorClient.h"
 #include "ConnectionManager.h"
 #include "trezorDevice.h"
+#include "Wallets/SyncWalletsManager.h"
+#include "Wallets/SyncHDWallet.h"
 
 #include <QNetworkRequest>
 #include <QPointer>
@@ -67,6 +69,20 @@ void TrezorClient::initConnection(AsyncCallBack&& cb)
 
    connectionManager_->GetLogger()->info("[TrezorClient] Initialize connection");
    postToTrezor("/", std::move(initCallBack));
+}
+
+void TrezorClient::initConnection(const QString& walletId, AsyncCallBackCall&& cb /*= nullptr*/)
+{
+   auto hdWallet = walletManager_->getHDWalletById(walletId.toStdString());
+   assert(hdWallet->isHsm());
+   auto encKeys = hdWallet->encryptionKeys();
+   auto deviceId = encKeys[0].toBinStr();
+
+   AsyncCallBack cbWrapper = [deviceId, originCb = std::move(cb)]() {
+      originCb({ QString::fromStdString(deviceId) });
+   };
+
+   initConnection(std::move(cbWrapper));
 }
 
 void TrezorClient::releaseConnection(AsyncCallBack&& cb)
