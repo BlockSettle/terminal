@@ -444,7 +444,7 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       }
       input->set_prev_hash(utxo.getTxHash().copySwapEndian().toBinStr());
       input->set_prev_index(utxo.getTxOutIndex());
-      input->set_script_type(bitcoin::SPENDP2SHWITNESS);
+      input->set_script_type(isNestedSegwit ? bitcoin::SPENDP2SHWITNESS : bitcoin::SPENDWITNESS);
       input->set_amount(utxo.getValue());
 
       txAck.set_allocated_tx(type);
