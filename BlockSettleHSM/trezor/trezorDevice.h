@@ -76,7 +76,7 @@ private:
    void callbackNoData(hw::trezor::messages::MessageType);
 
    void setDataCallback(hw::trezor::messages::MessageType, AsyncCallBackCall&& cb);
-   void dataCallback(hw::trezor::messages::MessageType, QByteArray&& response);
+   void dataCallback(hw::trezor::messages::MessageType, QVariant&& response);
 
    void handleTxRequest(const MessageData& data);
    void sendTxMessage(const QString& status);
@@ -89,7 +89,8 @@ private:
    hw::trezor::messages::management::Features features_{};
    bool testNet_{};
    std::unique_ptr<bs::core::wallet::TXSignRequest> currentTxSignReq_;
-   std::string signedTransaction_;
+   HSMSignedTx awaitingTransaction_;
+   HSMXpub awaitingXpubs_;
 
    std::unordered_map<int, AsyncCallBack> awaitingCallbackNoData_;
    std::unordered_map<int, AsyncCallBackCall> awaitingCallbackData_;

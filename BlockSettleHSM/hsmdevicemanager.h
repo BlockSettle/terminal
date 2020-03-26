@@ -52,7 +52,7 @@ public:
 
 signals:
    void devicesChanged();
-   void publicKeyReady(QString xpub, QString label, QString vendor);
+   void publicKeyReady(QString xpubNested, QString xpubNative, QString label, QString vendor);
    void requestPinMatrix();
 
    void deviceNotFound(QString deviceId);

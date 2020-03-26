@@ -41,12 +41,16 @@ void HSMDeviceManager::requestPublicKey(int deviceIndex)
       return;
    }
 
-   device->getPublicKey([this, device](QByteArray&& xpub) {
+   device->getPublicKey([this, device](QVariant&& data) {
       if (!device) {
          return;
       }
+
+      assert(data.canConvert<HSMXpub>());
+      auto xpubs = data.value<HSMXpub>();
       const auto key = device->deviceKey();
-      emit publicKeyReady(QString::fromStdString(xpub.toStdString()), key.deviceLabel_, key.deviceId_);
+      emit publicKeyReady(QString::fromStdString(xpubs.nestedXPub),
+         QString::fromStdString(xpubs.nativeXpub), key.deviceLabel_, key.deviceId_);
       releaseDevices();
    });
 
@@ -101,10 +105,10 @@ void HSMDeviceManager::signTX(QVariant reqTX)
       return;
    }
 
-   device->signTX(reqTX, [this](QByteArray&& resp) {
-      BinaryData data  = BinaryData::fromString(resp.toStdString());
-      auto hexw = data.toHexStr(true);
-      txSigned({ data });
+   device->signTX(reqTX, [this](QVariant&& data) {
+      assert(data.canConvert<HSMSignedTx>());
+      auto tx = data.value<HSMSignedTx>();
+      txSigned({ BinaryData::fromString(tx.signedTx) });
       releaseDevices();
    });
 

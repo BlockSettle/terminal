@@ -47,7 +47,7 @@ CustomTitleDialogWindow {
     property bool acceptable: if (isWO)
                                   digitalWoBackupAcceptable
                               else if (isHSM)
-                                  hsmXbup !== ""
+                                  hsmDataFilled
                               else
                                   ((curPage === 1 && walletSelected) ||
                                    (curPage === 2 && importAcceptable))
@@ -62,9 +62,11 @@ CustomTitleDialogWindow {
     property int curPage: WalletImportDialog.Page.Select
     property bool authNoticeShown: false
 
-    property string hsmXbup: ""
+    property string hsmXbupNested: ""
+    property string hsmXbupNative: ""
     property string hsmLabel: ""
     property string hsmVendor: ""
+    property bool hsmDataFilled: false
 
     title: qsTr("Import Wallet")
     width: 410
@@ -311,9 +313,11 @@ CustomTitleDialogWindow {
                                 Connections {
                                     target: hsmDeviceManager
                                     onPublicKeyReady: {
-                                        hsmXbup = xpub;
+                                        hsmXbupNested = xpubNested;
+                                        hsmXbupNative = xpubNative;
                                         hsmLabel = label;
                                         hsmVendor = vendor;
+                                        hsmDataFilled = true;
                                     }
                                     onRequestPinMatrix: JsHelper.showPinMatrix(index);
                                 }
@@ -650,7 +654,8 @@ CustomTitleDialogWindow {
                         return
                     }
                     else if (isHSM) {
-                        walletsProxy.importHSMWallet(root.hsmXbup, root.hsmLabel, root.hsmVendor,importCallback)
+                        walletsProxy.importHSMWallet(root.hsmXbupNested, root.hsmXbupNative,
+                                                     root.hsmLabel, root.hsmVendor,importCallback)
                         return
                     }
 

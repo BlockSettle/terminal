@@ -195,13 +195,14 @@ void SignerAdapter::importWoWallet(const std::string &filename, const BinaryData
    listener_->setWatchOnlyCb(reqId, cb);
 }
 
-void SignerAdapter::importHSMWallet(const std::string &xpub, const std::string &label,
+void SignerAdapter::importHSMWallet(const std::string &xpubNested, const std::string &xpubNative, const std::string &label,
    const std::string &vendor, const CreateWoCb &cb)
 {
    signer::ImportHSMWalletRequest request;
-   request.set_xpub(xpub);
    request.set_label(label);
    request.set_vendor(vendor);
+   request.set_xpubnested(xpubNested);
+   request.set_xpubnative(xpubNative);
 
    const auto reqId = listener_->send(signer::ImportHSMWalletType, request.SerializeAsString());
    listener_->setWatchOnlyCb(reqId, cb);

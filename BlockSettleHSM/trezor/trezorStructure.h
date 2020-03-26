@@ -11,12 +11,13 @@
 #ifndef TREZORSTRUCTURE_H
 #define TREZORSTRUCTURE_H
 
+#include <QMetaType>
 #include <functional>
-#include <QByteArray>
 #include <QString>
+#include <string>
 
 using AsyncCallBack = std::function<void()>;
-using AsyncCallBackCall = std::function<void(QByteArray&&)>;
+using AsyncCallBackCall = std::function<void(QVariant&&)>;
 
 struct DeviceData
 {
@@ -49,5 +50,16 @@ struct MessageData
    int length_ = -1;
    std::string message_;
 };
+
+struct HSMXpub {
+   std::string nestedXPub;
+   std::string nativeXpub;
+};
+Q_DECLARE_METATYPE(HSMXpub)
+
+struct HSMSignedTx {
+   std::string signedTx;
+};
+Q_DECLARE_METATYPE(HSMSignedTx)
 
 #endif // TREZORSTRUCTURE_H

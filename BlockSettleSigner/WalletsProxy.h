@@ -72,7 +72,8 @@ public:
 
    Q_INVOKABLE QString getWoWalletFile(const QString &walletId) const;
    Q_INVOKABLE void importWoWallet(const QString &pathName, const QJSValue &jsCallback);
-   Q_INVOKABLE void importHSMWallet(const QString &xpub, const QString &label, const QString &vendor, const QJSValue &jsCallback);
+   Q_INVOKABLE void importHSMWallet(const QString &xpubNested, const QString &xpubNative,
+      const QString &label, const QString &vendor, const QJSValue &jsCallback);
 
    Q_INVOKABLE void exportWatchingOnly(const QString &walletId
       , const QString &filePath, bs::wallet::QPasswordData *passwordData
