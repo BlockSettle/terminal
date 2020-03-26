@@ -12,12 +12,14 @@
 #include "trezor/trezorClient.h"
 #include "trezor/trezorDevice.h"
 #include "ConnectionManager.h"
+#include "WalletManager.h"
 
-HSMDeviceManager::HSMDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager, bool testNet, QObject* parent /*= nullptr*/)
+HSMDeviceManager::HSMDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager, std::shared_ptr<bs::sync::WalletsManager> walletManager,
+   bool testNet, QObject* parent /*= nullptr*/)
    : QObject(parent)
    , testNet_(testNet)
 {
-   trezorClient_ = std::make_unique<TrezorClient>(connectionManager, testNet, this);
+   trezorClient_ = std::make_unique<TrezorClient>(connectionManager, walletManager, testNet, this);
    model_ = new QStringListModel(this);
 }
 
@@ -100,16 +102,27 @@ void HSMDeviceManager::signTX(QVariant reqTX)
    }
 
    device->signTX(reqTX, [this](QByteArray&& resp) {
-      Q_UNUSED(resp);
+      BinaryData data  = BinaryData::fromString(resp.toStdString());
+      auto hexw = data.toHexStr(true);
+      txSigned({ data });
       releaseDevices();
    });
 
    connect(device, &TrezorDevice::requestPinMatrix,
       this, &HSMDeviceManager::requestPinMatrix, Qt::UniqueConnection);
+   connect(device, &TrezorDevice::deviceTxStatusChanged,
+      this, &HSMDeviceManager::deviceTxStatusChanged, Qt::UniqueConnection);
 }
 
 void HSMDeviceManager::releaseDevices()
 {
+   for (auto key : devices_) {
+      auto device = trezorClient_->getTrezorDevice(key.deviceId_);
+      if (device) {
+         device->cancel();
+      }
+   }
+
    trezorClient_->releaseConnection();
 }
 

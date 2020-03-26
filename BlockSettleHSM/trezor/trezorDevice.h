@@ -15,7 +15,7 @@
 #include <QObject>
 #include <QNetworkReply>
 #include <QPointer>
-#include "CoreWallet.h"
+
 
 // Trezor interface (source - https://github.com/trezor/trezor-common/tree/master/protob)
 #include "trezor/generated_proto/messages-management.pb.h"
@@ -28,12 +28,23 @@ class ConnectionManager;
 class QNetworkRequest;
 class TrezorClient;
 
+namespace bs {
+   namespace core {
+      namespace wallet {
+         struct TXSignRequest;
+      }
+   }
+   namespace sync {
+      class WalletsManager;
+   }
+}
+
 class TrezorDevice : public QObject
 {
    Q_OBJECT
 
 public:
-   TrezorDevice(const std::shared_ptr<ConnectionManager> &, bool testNet
+   TrezorDevice(const std::shared_ptr<ConnectionManager> &, std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet
       , const QPointer<TrezorClient> &, QObject* parent = nullptr);
    ~TrezorDevice() override;
 
@@ -50,6 +61,7 @@ signals:
    void publicKeyReady();
    void requestPinMatrix();
    void requestHSMPass();
+   void deviceTxStatusChanged(QString status);
 
 private:
    void makeCall(const google::protobuf::Message &msg);
@@ -58,7 +70,7 @@ private:
    bool parseResponse(google::protobuf::Message &msg, const MessageData& data);
 
    // callbacks
-   void resetCallbacks();
+   void resetCaches();
 
    void setCallbackNoData(hw::trezor::messages::MessageType, AsyncCallBack&& cb);
    void callbackNoData(hw::trezor::messages::MessageType);
@@ -66,12 +78,18 @@ private:
    void setDataCallback(hw::trezor::messages::MessageType, AsyncCallBackCall&& cb);
    void dataCallback(hw::trezor::messages::MessageType, QByteArray&& response);
 
+   void handleTxRequest(const MessageData& data);
+   void sendTxMessage(const QString& status);
+
 private:
    std::shared_ptr<ConnectionManager> connectionManager_{};
+   std::shared_ptr<bs::sync::WalletsManager> walletManager_{};
+
    QPointer<TrezorClient> client_{};
    hw::trezor::messages::management::Features features_{};
    bool testNet_{};
-   bs::core::wallet::TXSignRequest txSignReq_;
+   std::unique_ptr<bs::core::wallet::TXSignRequest> currentTxSignReq_;
+   std::string signedTransaction_;
 
    std::unordered_map<int, AsyncCallBack> awaitingCallbackNoData_;
    std::unordered_map<int, AsyncCallBackCall> awaitingCallbackData_;

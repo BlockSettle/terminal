@@ -1,4 +1,4 @@
-/*
+﻿/*
 
 ***********************************************************************************
 * Copyright (C) 2016 - , BlockSettle AB
@@ -14,6 +14,9 @@
 #include "headless.pb.h"
 #include "ProtobufHeadlessUtils.h"
 #include "CoreWallet.h"
+#include "Wallets/SyncWalletsManager.h"
+#include "Wallets/SyncHDWallet.h"
+#include "botan/base64.h"
 
 #include <QDataStream>
 
@@ -75,13 +78,26 @@ namespace {
 
    // m / 49' / 0' / 0'
    const uint32_t nestedDerKey[] = { 0x80000031 , 0x80000001 , 0x80000000 };
+   // m / 84' / 0' / 0'
+   const uint32_t nativeDerKey[] = { 0x80000054 , 0x80000001 , 0x80000000 };
+
    const std::string tesNetCoin = "Testnet";
+
+
+   // Messages to show in UI
+   const QString requestPin = QObject::tr("Please enter the pin from device");
+   const QString pressButton = QObject::tr("Please press button on Trezor device");
+   const QString transaction = QObject::tr("Setup transaction...");
+   const QString transactionFinished = QObject::tr("Transaction signing finished with success");
+   const QString canceledByUser = QObject::tr("Canceled by user");
+
 }
 
-TrezorDevice::TrezorDevice(const std::shared_ptr<ConnectionManager> &connectionManager
+TrezorDevice::TrezorDevice(const std::shared_ptr<ConnectionManager> &connectionManager, std::shared_ptr<bs::sync::WalletsManager> walletManager
    , bool testNet, const QPointer<TrezorClient> &client, QObject* parent)
    : QObject(parent)
    , connectionManager_(connectionManager)
+   , walletManager_(walletManager)
    , client_(std::move(client))
    , testNet_(testNet)
 {
@@ -144,6 +160,7 @@ void TrezorDevice::cancel()
    connectionManager_->GetLogger()->debug("[TrezorDevice] cancel previous operation");
    management::Cancel message;
    makeCall(message);
+   sendTxMessage(canceledByUser);
 }
 
 void TrezorDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= nullptr*/)
@@ -155,13 +172,14 @@ void TrezorDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
       return;
    }
 
-   txSignReq_ = bs::signer::pbTxRequestToCore(request);
+   currentTxSignReq_.reset(new bs::core::wallet::TXSignRequest(bs::signer::pbTxRequestToCore(request)));
+   connectionManager_->GetLogger()->debug("[TrezorDevice] SignTX - specify init data to " + features_.label());
 
+   const int change = static_cast<bool>(currentTxSignReq_->change.value) ? 1 : 0;
 
-   connectionManager_->GetLogger()->debug("[TrezorDevice] signTX - specify init data to " + features_.label());
    bitcoin::SignTx message;
-   message.set_outputs_count(txSignReq_.inputs.size());
-   message.set_inputs_count(txSignReq_.recipients.size());
+   message.set_inputs_count(currentTxSignReq_->inputs.size());
+   message.set_outputs_count(currentTxSignReq_->recipients.size() + change);
    if (testNet_) {
       message.set_coin_name(tesNetCoin);
    }
@@ -170,6 +188,7 @@ void TrezorDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
       setDataCallback(MessageType_TxRequest, std::move(cb));
    }
 
+   signedTransaction_ = {};
    makeCall(message);
 }
 
@@ -193,8 +212,12 @@ void TrezorDevice::handleMessage(const MessageData& data)
    case MessageType_Failure:
       {
          common::Failure failure;
-         parseResponse(failure, data);
-         resetCallbacks();
+         if (parseResponse(failure, data)) {
+            connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage last message failure "
+             + getJSONReadableMessage(failure));
+         }
+         sendTxMessage(QString::fromStdString(failure.message()));
+         resetCaches();
       }
       break;
    case MessageType_Features:
@@ -208,7 +231,13 @@ void TrezorDevice::handleMessage(const MessageData& data)
    case MessageType_ButtonRequest:
       {
          common::ButtonRequest request;
-         parseResponse(request, data);
+         if (parseResponse(request, data)) {
+            connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage ButtonRequest "
+             + getJSONReadableMessage(request));
+         }
+         common::ButtonAck response;
+         makeCall(response);
+         sendTxMessage(pressButton);
       }
       break;
    case MessageType_PinMatrixRequest:
@@ -216,6 +245,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
          common::PinMatrixRequest request;
          if (parseResponse(request, data)) {
             emit requestPinMatrix();
+            sendTxMessage(requestPin);
          }
       }
       break;
@@ -237,11 +267,8 @@ void TrezorDevice::handleMessage(const MessageData& data)
       break;
    case MessageType_TxRequest:
       {
-         bitcoin::TxRequest txRequest;
-         if (parseResponse(txRequest, data)) {
-            connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage TxRequest" //);
-               + getJSONReadableMessage(txRequest));
-         }
+         handleTxRequest(data);
+         sendTxMessage(transaction);
       }
       break;
    default:
@@ -269,10 +296,12 @@ bool TrezorDevice::parseResponse(google::protobuf::Message &msg, const MessageDa
    return ok;
 }
 
-void TrezorDevice::resetCallbacks()
+void TrezorDevice::resetCaches()
 {
    awaitingCallbackNoData_.clear();
    awaitingCallbackData_.clear();
+   currentTxSignReq_.reset(nullptr);
+   signedTransaction_.erase();
 }
 
 void TrezorDevice::setCallbackNoData(MessageType type, AsyncCallBack&& cb)
@@ -301,4 +330,117 @@ void TrezorDevice::dataCallback(MessageType type, QByteArray&& response)
       iAwaiting->second(std::move(response));
       awaitingCallbackData_.erase(iAwaiting);
    }
+}
+
+void TrezorDevice::handleTxRequest(const MessageData& data)
+{
+   assert(currentTxSignReq_);
+   bitcoin::TxRequest txRequest;
+   if (parseResponse(txRequest, data)) {
+      connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage TxRequest "
+         + getJSONReadableMessage(txRequest));
+   }
+
+   if (txRequest.has_serialized() && txRequest.serialized().has_serialized_tx()) {
+      signedTransaction_ += txRequest.serialized().serialized_tx();
+   }
+
+   bitcoin::TxAck txAck;
+   switch (txRequest.request_type())
+   {
+   case bitcoin::TxRequest_RequestType_TXINPUT:
+   {
+      auto *type = new bitcoin::TxAck_TransactionType();
+      bitcoin::TxAck_TransactionType_TxInputType *input = type->add_inputs();
+
+      const int index = txRequest.details().request_index();
+      assert(index >= 0 && index < currentTxSignReq_->inputs.size());
+      auto utxo = currentTxSignReq_->inputs[index];
+
+      for (const uint32_t add : nestedDerKey) {
+         input->add_address_n(add);
+      }
+      
+      auto wallet = walletManager_->getWalletById(currentTxSignReq_->walletIds[0]);
+      auto address = bs::Address::fromUTXO(utxo);
+      const auto addrIndex = wallet->getAddressIndex(address);
+      const auto path = bs::hd::Path::fromString(addrIndex);
+      for (int i = 0; i < path.length(); ++i) {
+         input->add_address_n(path.get(i));
+      }
+      input->set_prev_hash(utxo.getTxHash().copySwapEndian().toBinStr());
+      input->set_prev_index(utxo.getTxOutIndex());
+      input->set_script_type(bitcoin::SPENDP2SHWITNESS);
+      input->set_amount(utxo.getValue());
+
+      txAck.set_allocated_tx(type);
+
+      connectionManager_->GetLogger()->debug("[TrezorDevice] handleTxRequest TXINPUT"
+          + getJSONReadableMessage(txAck));
+
+      makeCall(txAck);
+   }
+   break;
+   case bitcoin::TxRequest_RequestType_TXOUTPUT:
+   {
+      auto *type = new bitcoin::TxAck_TransactionType();
+      bitcoin::TxAck_TransactionType_TxOutputType *output = type->add_outputs();
+
+      const int index = txRequest.details().request_index();
+
+      if (currentTxSignReq_->recipients.size() > index) { // general output
+         auto &bsOutput = currentTxSignReq_->recipients[index];
+
+         auto address = bs::Address::fromRecipient(bsOutput);
+         output->set_address(address.display());
+         output->set_amount(bsOutput->getValue());
+      }
+      else if (currentTxSignReq_->recipients.size() == index && currentTxSignReq_->change.value > 0) { // one last for change
+         auto &change = currentTxSignReq_->change;
+
+         for (const uint32_t add : nestedDerKey) {
+            output->add_address_n(add);
+         }
+
+         auto wallet = walletManager_->getWalletById(currentTxSignReq_->walletIds[0]);
+         const auto addrIndex = wallet->getAddressIndex(change.address);
+         const auto path = bs::hd::Path::fromString(addrIndex);
+         for (int i = 0; i < path.length(); ++i) {
+            output->add_address_n(path.get(i));
+         }
+
+         output->set_amount(change.value);
+      }
+      else {
+         // Shouldn't be here
+         assert(false);
+      }
+
+      output->set_script_type(bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOADDRESS);
+      txAck.set_allocated_tx(type);
+      connectionManager_->GetLogger()->debug("[TrezorDevice] handleTxRequest TXOUTPUT"
+         + getJSONReadableMessage(txAck));
+
+      makeCall(txAck);
+   }
+   break;
+   case bitcoin::TxRequest_RequestType_TXFINISHED:
+   {
+      dataCallback(MessageType_TxRequest, QByteArray::fromRawData(signedTransaction_.c_str(), signedTransaction_.size()));
+      sendTxMessage(transactionFinished);
+      resetCaches();
+   }
+   break;
+   default:
+      break;
+   }
+}
+
+void TrezorDevice::sendTxMessage(const QString& status)
+{
+   if (!currentTxSignReq_) {
+      return;
+   }
+
+   emit deviceTxStatusChanged(status);
 }

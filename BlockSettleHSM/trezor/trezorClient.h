@@ -22,13 +22,20 @@ class ConnectionManager;
 class QNetworkRequest;
 class TrezorDevice;
 
+namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
+}
+
 class TrezorClient : public QObject
 {
    Q_OBJECT
 
 public:
 
-   TrezorClient(const std::shared_ptr<ConnectionManager>& connectionManager_, bool testNet, QObject* parent = nullptr);
+   TrezorClient(const std::shared_ptr<ConnectionManager>& connectionManager_,
+      std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet, QObject* parent = nullptr);
    ~TrezorClient() override = default;
 
    QByteArray getSessionId();
@@ -60,6 +67,7 @@ signals:
 
 private:
    std::shared_ptr<ConnectionManager> connectionManager_;
+   std::shared_ptr<bs::sync::WalletsManager> walletManager_;
 
    const QByteArray trezorEndPoint_ = "http://10.211.55.2:21325";
    //const QByteArray trezorEndPoint_ = "http://127.0.0.1:21325";

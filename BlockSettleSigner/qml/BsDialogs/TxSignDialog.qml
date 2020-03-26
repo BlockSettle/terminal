@@ -34,12 +34,20 @@ BSWalletHandlerDialog {
     property QPasswordData passwordData: QPasswordData {}
     property AuthSignWalletObject authSign: AuthSignWalletObject {}
 
-    property bool acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
+    property bool acceptable: if (walletInfo.encType === QPasswordData.Password)
+                                  tfPassword.text.length
+                              else if (walletInfo.encType === QPasswordData.HSM)
+                                  passwordData.encType === QPasswordData.HSM
+                              else
+                                  true
+
     property int addressRowHeight: 24
     property int recipientsAddrHeight: txInfo.allRecipients.length < 4 ? txInfo.allRecipients.length * addressRowHeight : addressRowHeight * 3
 
     readonly property int duration: authSign.defaultExpiration()
     property real timeLeft: duration
+
+    property string hsmDeviceStatus: "Searching device"
 
     id: root
     title: qsTr("Sign Transaction")
@@ -83,12 +91,12 @@ BSWalletHandlerDialog {
     Connections {
         target: hsmDeviceManager
         onRequestPinMatrix: JsHelper.showPinMatrix(0);
-        onDeviceReady: {
-            hsmDeviceManager.signTX(passwordDialogData.TxRequest);
-        }
-        onDeviceNotFound: {
-            JsHelper.messageBox(BSMessageBox.Type.Critical
-                , qsTr("Failed to find HSM device"), qsTr("Cannot find device paored with this wallet, device label is :\n") + walletInfo.name)
+        onDeviceReady: hsmDeviceManager.signTX(passwordDialogData.TxRequest);
+        onDeviceNotFound: hsmDeviceStatus = qsTr("Cannot find device paired with this wallet, device label is :\n") + walletInfo.name;
+        onDeviceTxStatusChanged: hsmDeviceStatus = status;
+        onTxSigned: {
+            passwordData.binaryPassword = signData
+            passwordData.encType = QPasswordData.HSM
         }
     }
 
@@ -338,7 +346,7 @@ BSWalletHandlerDialog {
             CustomLabel {
                 visible: walletInfo.encType === QPasswordData.HSM
                 Layout.alignment: Qt.AlignRight
-                text: walletInfo.email()
+                text: hsmDeviceStatus
             }
         }
 
@@ -398,13 +406,15 @@ BSWalletHandlerDialog {
             CustomButton {
                 id: btnConfirm
                 primary: true
-                text: walletInfo.encType === QPasswordData.Password ? qsTr("CONFIRM") : qsTr("Continue")
+                text: walletInfo.encType !== QPasswordData.Auth ? qsTr("CONFIRM") : qsTr("Continue")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                enabled: tfPassword.text.length || acceptable
+                enabled: acceptable
                 onClicked: {
-                    passwordData.textPassword = tfPassword.text
-                    passwordData.encType = QPasswordData.Password
+                    if (walletInfo.encType === QPasswordData.Password) {
+                        passwordData.textPassword = tfPassword.text
+                        passwordData.encType = QPasswordData.Password
+                    }
                     acceptAnimated()
                 }
             }

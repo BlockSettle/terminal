@@ -12,6 +12,7 @@
 #define HSMDEVICESCANNER_H
 
 #include "trezor/trezorStructure.h"
+#include "SecureBinaryData.h"
 #include <memory>
 
 #include <QObject>
@@ -20,13 +21,20 @@
 
 class TrezorClient;
 class ConnectionManager;
+namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
+}
+
 
 class HSMDeviceManager : public QObject
 {
    Q_OBJECT
    Q_PROPERTY(QStringListModel* devices READ devices NOTIFY devicesChanged)
 public:
-   HSMDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager, bool testNet, QObject* parent = nullptr);
+   HSMDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager,
+      std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet, QObject* parent = nullptr);
     ~HSMDeviceManager() override;
 
    // Property
@@ -49,6 +57,9 @@ signals:
 
    void deviceNotFound(QString deviceId);
    void deviceReady(QString deviceId);
+   void deviceTxStatusChanged(QString status);
+
+   void txSigned(SecureBinaryData signData);
 
 public:
    std::unique_ptr<TrezorClient> trezorClient_;
