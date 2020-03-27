@@ -17,7 +17,7 @@
 
 #include "BSErrorCode.h"
 #include "SignerDefs.h"
-#include "Trezor/trezorStructure.h"
+#include "trezor/trezorStructure.h"
 
 namespace spdlog {
    class logger;
