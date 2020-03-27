@@ -106,7 +106,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
    ui_->manageEncryptionButton->setEnabled(false);
 
    if (signingContainer_) {
-      if (signingContainer_->isOffline()) {
+      if (signingContainer_->isOffline() || walletInfo_.isHSM()) {
          ui_->backupButton->setEnabled(false);
          ui_->manageEncryptionButton->setEnabled(false);
       }
@@ -173,7 +173,7 @@ void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, const bs::hd::W
    // but wallet name is from bs::hd::Wallet
    walletInfo_.setName(QString::fromStdString(wallet_->name()));
 
-   ui_->manageEncryptionButton->setEnabled(true);
+   ui_->manageEncryptionButton->setEnabled(!walletInfo.isHSM());
 
    if (walletInfo_.isHSM()) {
       ui_->labelEncRank->setText(tr("HSM"));
