@@ -1947,9 +1947,11 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
       promoteToPrimary(primaryWallet);
       return;
    }
-   auto hdWallets = walletsMgr_->hdWallets();
-   if (!hdWallets.empty()) {
-      promoteToPrimary(hdWallets.front());
+   for (const auto &hdWallet : walletsMgr_->hdWallets()) {
+      if (!hdWallet->isOffline() && !hdWallet->isHsm()) {
+         promoteToPrimary(hdWallet);
+         break;
+      }
    }
 }
 
