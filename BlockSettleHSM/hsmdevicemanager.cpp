@@ -42,7 +42,6 @@ void HSMDeviceManager::requestPublicKey(int deviceIndex)
 
    device->getPublicKey([this](QVariant&& data) {
       emit publicKeyReady(data);
-      releaseDevices();
    });
 
    connect(device, &TrezorDevice::requestPinMatrix,
@@ -120,11 +119,14 @@ void HSMDeviceManager::releaseDevices()
    for (int i = 0; i < model_->rowCount(); ++i) {
       auto device = trezorClient_->getTrezorDevice(model_->getDevice(i).deviceId_);
       if (device) {
-         device->cancel();
+         device->init([this]() {
+            trezorClient_->releaseConnection();
+         });
+         break;
       }
    }
 
-   trezorClient_->releaseConnection();
+   model_->resetModel({});
 }
 
 HSMDeviceModel* HSMDeviceManager::devices()

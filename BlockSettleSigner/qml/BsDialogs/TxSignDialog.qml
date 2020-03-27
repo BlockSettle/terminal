@@ -97,6 +97,7 @@ BSWalletHandlerDialog {
         onTxSigned: {
             passwordData.binaryPassword = signData
             passwordData.encType = QPasswordData.HSM
+            acceptAnimated();
         }
     }
 
@@ -298,15 +299,15 @@ BSWalletHandlerDialog {
             Layout.fillWidth: true
             Layout.leftMargin: 10
             Layout.rightMargin: 10
+            visible: walletInfo.encType === QPasswordData.Auth
 
             CustomLabel {
-                visible: walletInfo.encType === QPasswordData.Auth
+
                 Layout.fillWidth: true
                 text: qsTr("Auth eID")
             }
 
             CustomLabel {
-                visible: walletInfo.encType === QPasswordData.Auth
                 Layout.alignment: Qt.AlignRight
                 text: walletInfo.email()
             }
@@ -317,34 +318,14 @@ BSWalletHandlerDialog {
             Layout.fillWidth: true
             Layout.leftMargin: 10
             Layout.rightMargin: 10
+            visible: walletInfo.encType === QPasswordData.HSM
 
             CustomLabel {
-                visible: walletInfo.encType === QPasswordData.Auth
-                Layout.fillWidth: true
-                text: qsTr("Auth eID")
-            }
-
-            CustomLabel {
-                visible: walletInfo.encType === QPasswordData.Auth
-                Layout.alignment: Qt.AlignRight
-                text: walletInfo.email()
-            }
-        }
-
-        RowLayout {
-            spacing: 25
-            Layout.fillWidth: true
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
-
-            CustomLabel {
-                visible: walletInfo.encType === QPasswordData.HSM
                 Layout.fillWidth: true
                 text: qsTr("Hardware Security Module")
             }
 
             CustomLabel {
-                visible: walletInfo.encType === QPasswordData.HSM
                 Layout.alignment: Qt.AlignRight
                 text: hsmDeviceStatus
             }
@@ -406,16 +387,15 @@ BSWalletHandlerDialog {
             CustomButton {
                 id: btnConfirm
                 primary: true
+                visible: walletInfo.encType !== QPasswordData.HSM
                 text: walletInfo.encType !== QPasswordData.Auth ? qsTr("CONFIRM") : qsTr("Continue")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 enabled: acceptable
                 onClicked: {
-                    if (walletInfo.encType === QPasswordData.Password) {
-                        passwordData.textPassword = tfPassword.text
-                        passwordData.encType = QPasswordData.Password
-                    }
-                    acceptAnimated()
+                    passwordData.textPassword = tfPassword.text
+                    passwordData.encType = QPasswordData.Password
+                    acceptAnimated();
                 }
             }
         }

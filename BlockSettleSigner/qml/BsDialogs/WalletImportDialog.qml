@@ -94,6 +94,10 @@ CustomTitleDialogWindow {
         }
     }
 
+    onAboutToHide: {
+        hsmDeviceManager.releaseDevices();
+    }
+
     onEnterPressed: {
         if (btnAccept.enabled) btnAccept.onClicked()
     }

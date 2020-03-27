@@ -143,7 +143,9 @@ void CreateTransactionDialog::updateCreateButtonText()
       return;
    }
    const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
-   if (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId)) {
+
+   auto walletPtr = walletsManager_->getHDWalletById(walletId);
+   if (!walletPtr->isHsm() && (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId))) {
       pushButtonCreate()->setText(tr("Export"));
    } else {
       selectedWalletChanged(-1);
@@ -289,8 +291,8 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
       logger_->error("[{}] wallet with id {} not found", __func__, walletId);
       return;
    }
-   if (signContainer_->isWalletOffline(rootWallet->walletId())
-      || !rootWallet || signContainer_->isWalletOffline(rootWallet->walletId())) {
+   if (!rootWallet->isHsm() && (signContainer_->isWalletOffline(rootWallet->walletId())
+      || !rootWallet || signContainer_->isWalletOffline(rootWallet->walletId()))) {
       pushButtonCreate()->setText(tr("Export"));
    } else {
       pushButtonCreate()->setText(tr("Broadcast"));

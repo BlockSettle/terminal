@@ -95,14 +95,14 @@ void TrezorClient::releaseConnection(AsyncCallBack&& cb)
 
       if (!reply || reply->error() != QNetworkReply::NoError) {
          connectionManager_->GetLogger()->error(
-            "[TrezorClient] initConnection - Network error : " + reply->errorString().toUtf8());
+            "[TrezorClient] releaseConnection - Network error : " + reply->errorString().toUtf8());
          return;
       }
 
       deviceData_ = {};
       trezorDevice_ = {};
       connectionManager_->GetLogger()->info(
-         "[TrezorClient] initConnection - Connection successfully released");
+         "[TrezorClient] releaseConnection - Connection successfully released");
 
       state_ = State::Released;
       emit deviceReleased();
