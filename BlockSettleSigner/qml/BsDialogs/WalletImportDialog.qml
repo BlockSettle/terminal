@@ -694,12 +694,15 @@ CustomTitleDialogWindow {
 
                     var importCallback = function(success, id, name, desc) {
                         if (success) {
-                            var walletInfo = qmlFactory.createWalletInfo();
+                            let walletInfo = qmlFactory.createWalletInfo();
                             walletInfo.walletId = id;
                             walletInfo.name = name;
                             walletInfo.desc = desc;
 
-                            var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImportWo, true, walletInfo)
+                            let type = isHSM ? BSResultBox.ResultType.HSMWallet
+                                             : BSResultBox.ResultType.WalletImportWo;
+
+                            var mb = JsHelper.resultBox(type, true, walletInfo)
                             mb.bsAccepted.connect(acceptAnimated)
                         }
                         else {

@@ -180,6 +180,7 @@ protected:
       switch (state_) {
       case State::Connected:     return QObject::tr("Full");
       case State::Offline:       return QObject::tr("Watching-Only");
+      case State::HSM:       return QObject::tr("HSM");
       default:    return {};
       }
    }
@@ -585,7 +586,13 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
 
       hdNode->addGroups(filteredGroups);
       if (signContainer_) {
-         if (signContainer_->isOffline() || signContainer_->isWalletOffline(hdWallet->walletId())) {
+         if (signContainer_->isOffline()) {
+            hdNode->setState(WalletNode::State::Offline);
+         }
+         else if (hdWallet->isHsm()) {
+            hdNode->setState(WalletNode::State::HSM);
+         }
+         else if (signContainer_->isWalletOffline(hdWallet->walletId())) {
             hdNode->setState(WalletNode::State::Offline);
          }
          else {

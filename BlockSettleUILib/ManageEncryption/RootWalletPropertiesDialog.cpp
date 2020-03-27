@@ -175,7 +175,9 @@ void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, const bs::hd::W
 
    ui_->manageEncryptionButton->setEnabled(true);
 
-   if (walletsManager_->isWatchingOnly(walletInfo_.rootId().toStdString())) {
+   if (walletInfo_.isHSM()) {
+      ui_->labelEncRank->setText(tr("HSM"));
+   } else if (walletsManager_->isWatchingOnly(walletInfo_.rootId().toStdString())) {
       ui_->labelEncRank->setText(tr("Watching-Only"));
    } else {
       if (walletInfo.keyRank().m == 1 && walletInfo.keyRank().n == 1) {

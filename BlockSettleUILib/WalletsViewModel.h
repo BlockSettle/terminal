@@ -50,7 +50,8 @@ public:
    enum class State {
       Undefined,
       Connected,
-      Offline
+      Offline,
+      HSM
    };
 
    WalletNode(WalletsViewModel *vm, Type type, int row = 0, WalletNode *parent = nullptr)
