@@ -708,7 +708,6 @@ void WalletsProxy::importHSMWallet(HSMWalletWrapper walletInfo, const QJSValue &
    auto cb = [this, jsCallback](const bs::sync::WatchingOnlyWallet &wo) {
       QMetaObject::invokeMethod(this, [this, wo, jsCallback] {
          logger_->debug("imported WO wallet with id {}", wo.id);
-         walletsMgr_->adoptNewWallet(getWoSyncWallet(wo));
          QJSValueList args;
          args << QJSValue(wo.id.empty() ? false : true)
             << QString::fromStdString(wo.id.empty() ? wo.description : wo.id);
