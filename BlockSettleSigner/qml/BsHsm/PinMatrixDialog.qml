@@ -74,6 +74,7 @@ CustomDialog {
             Layout.preferredHeight: 30
             Layout.leftMargin: 5
             Layout.rightMargin: 5
+            allowShowPass: false
 
             text: ""
         }

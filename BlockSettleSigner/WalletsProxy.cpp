@@ -678,7 +678,9 @@ void WalletsProxy::importWoWallet(const QString &walletPath, const QJSValue &jsC
          walletsMgr_->adoptNewWallet(getWoSyncWallet(wo));
          QJSValueList args;
          args << QJSValue(wo.id.empty() ? false : true)
-            << QString::fromStdString(wo.id.empty() ? wo.description : wo.id);
+            << QString::fromStdString(wo.id)
+            << QString::fromStdString(wo.name)
+            << QString::fromStdString(wo.description);
          invokeJsCallBack(jsCallback, args);
       });
    };
@@ -710,7 +712,9 @@ void WalletsProxy::importHSMWallet(HSMWalletWrapper walletInfo, const QJSValue &
          logger_->debug("imported WO wallet with id {}", wo.id);
          QJSValueList args;
          args << QJSValue(wo.id.empty() ? false : true)
-            << QString::fromStdString(wo.id.empty() ? wo.description : wo.id);
+            << QString::fromStdString(wo.id)
+            << QString::fromStdString(wo.name)
+            << QString::fromStdString(wo.description);
          invokeJsCallBack(jsCallback, args);
       });
    };

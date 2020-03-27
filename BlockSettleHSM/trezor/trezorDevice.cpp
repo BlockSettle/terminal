@@ -128,6 +128,7 @@ DeviceKey TrezorDevice::deviceKey() const
       QString::fromStdString(features_.label())
       , QString::fromStdString(features_.device_id())
       , QString::fromStdString(features_.vendor())
+      , {}
    };
 }
 

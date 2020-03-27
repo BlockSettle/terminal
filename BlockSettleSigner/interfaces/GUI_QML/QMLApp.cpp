@@ -33,6 +33,7 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "WalletsProxy.h"
 #include "hsmdevicemanager.h"
+#include "hsmdevicemodel.h"
 
 #include <functional>
 
@@ -225,8 +226,6 @@ void QMLAppObj::registerQtTypes()
       "AutheIDClient", QStringLiteral("Cannot create a AutheIDClient instance"));
    qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
       "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
-   qmlRegisterUncreatableType<HSMWalletWrapper>("com.blocksettle.HSMWalletWrapper", 1, 0,
-      "HSMWalletWrapper", QStringLiteral("Cannot create a HSMWalletWrapper instance"));
    qmlRegisterUncreatableType<HSMDeviceManager>("com.blocksettle.HSMDeviceManager", 1, 0,
       "HSMDeviceManager", QStringLiteral("Cannot create a HSMDeviceManager instance"));
 
@@ -241,6 +240,7 @@ void QMLAppObj::registerQtTypes()
    qmlRegisterType<bs::wallet::QSeed>("com.blocksettle.QSeed", 1, 0, "QSeed");
    qmlRegisterType<bs::wallet::QPasswordData>("com.blocksettle.QPasswordData", 1, 0, "QPasswordData");
    qmlRegisterType<ControlPasswordStatus>("com.blocksettle.ControlPasswordStatus", 1, 0, "ControlPasswordStatus");
+   qmlRegisterType<HSMDeviceModel>("com.blocksettle.HSMDeviceModel", 1, 0, "HSMDeviceModel");
 
    // Exposing metadata to js files
    QJSValue scriptControlEnum = ctxt_->engine()->newQMetaObject(&ControlPasswordStatus::staticMetaObject);

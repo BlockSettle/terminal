@@ -20,7 +20,7 @@ import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.QPasswordData 1.0
 import com.blocksettle.HSMDeviceManager 1.0
-import com.blocksettle.HSMWalletWrapper 1.0
+import com.blocksettle.HSMDeviceModel 1.0
 
 import "../BsControls"
 import "../StyledControls"
@@ -48,7 +48,7 @@ CustomTitleDialogWindow {
     property bool acceptable: if (isWO)
                                   digitalWoBackupAcceptable
                               else if (isHSM)
-                                  hsmDataFilled
+                                  (hsmDeviceSelected || hsmDataFilled) && !hsmPairing
                               else
                                   ((curPage === 1 && walletSelected) ||
                                    (curPage === 2 && importAcceptable))
@@ -65,6 +65,19 @@ CustomTitleDialogWindow {
 
     property var hsmWalletInfo
     property bool hsmDataFilled: false
+    property bool hsmDeviceSelected: hsmDevicesList.deviceIndex !== -1
+    property bool hsmPairing: false
+
+    Connections {
+        target: hsmDeviceManager
+        onPublicKeyReady: {
+            hsmWalletInfo = walletInfo;
+            hsmDataFilled = true;
+            hsmDevicesList.deviceIndex = -1;
+            hsmPairing = false;
+        }
+        onRequestPinMatrix: JsHelper.showPinMatrix(hsmDevicesList.deviceIndex);
+    }
 
     title: qsTr("Import Wallet")
     width: 410
@@ -146,6 +159,7 @@ CustomTitleDialogWindow {
                 ColumnLayout {
                     id: selectLayout
                     visible: curPage === WalletImportDialog.Page.Select
+                    Layout.fillWidth: true
 
                     CustomHeader {
                         id: headerText
@@ -290,31 +304,71 @@ CustomTitleDialogWindow {
 
                     // HARDWARE DEVICES
                     ListView {
+                        id: hsmDevicesList
+                        visible: rbHardwareWallet.checked
                         Layout.fillWidth: true
                         Layout.fillHeight: true
+
                         model: hsmDeviceManager.devices
-                        delegate: Item {
+
+                        property int deviceIndex: -1
+
+                        highlight: Rectangle {
+                            color: BSStyle.comboBoxItemBgHighlightedColor
+                            anchors.leftMargin: 5
+                            anchors.rightMargin: 5
+                        }
+
+                        delegate: Rectangle {
                             width: parent.width
-                            height: 15
-                            Text {
+                            height: 20
+
+                            color: index % 2 === 0 ? "transparent" : "#8027363b"
+                            property color textColor: hsmDevicesList.currentIndex === index ? "white" :
+                                                        enabled ? BSStyle.labelsTextColor : BSStyle.disabledColor
+
+                            RowLayout {
                                 anchors.fill: parent
-                                text: display
-                                leftPadding: 20
-                                color: "white"
-                                font.pixelSize: 12
+                                Text {
+                                    width: parent.width * 3 / 4
+                                    height: parent.height
+
+                                    leftPadding: 10
+                                    text: model.label + "(" + model.vendor + ")"
+                                    enabled: model.pairedWallet.length === 0
+                                    color: textColor
+                                    font.pixelSize: 12
+                                    horizontalAlignment: Text.AlignLeft
+                                    verticalAlignment: Text.AlignVCenter
+                                    elide: Text.ElideRight
+                                }
+
+                                Text {
+                                    width: parent.width  * 1 / 4
+                                    height: parent.height
+
+                                    text: model.pairedWallet.length ? "Paired(" + model.pairedWallet + ")" :
+                                                                      hsmDataFilled ? "Paired" : "New Device"
+                                    enabled: model.pairedWallet.length === 0
+                                    color: textColor
+                                    font.pixelSize: 12
+                                    horizontalAlignment: Text.AlignRight
+                                    verticalAlignment: Text.AlignVCenter
+                                    elide: Text.ElideRight
+                                }
                             }
 
                             MouseArea {
                                 anchors.fill: parent
-                                onDoubleClicked: hsmDeviceManager.requestPublicKey(index)
-
-                                Connections {
-                                    target: hsmDeviceManager
-                                    onPublicKeyReady: {
-                                        hsmWalletInfo = walletInfo;
-                                        hsmDataFilled = true;
+                                enabled: model.pairedWallet.length === 0
+                                onClicked: {
+                                    if (hsmDevicesList.currentIndex === index) {
+                                        return;
                                     }
-                                    onRequestPinMatrix: JsHelper.showPinMatrix(index);
+
+                                    hsmDevicesList.currentIndex = index;
+                                    hsmDevicesList.deviceIndex = model.pairedWallet.length === 0 ? index : -1
+                                    hsmDataFilled = false;
                                 }
                             }
                         }
@@ -628,13 +682,23 @@ CustomTitleDialogWindow {
                 primary: true
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                text: qsTr("Import")
+                text: (isHSM && hsmDeviceSelected) ? qsTr("Pair") : qsTr("Import")
                 enabled: acceptable
 
                 onClicked: {
-                    var importCallback = function(success, msg) {
+                    if (isHSM && hsmDeviceSelected) {
+                        hsmDeviceManager.requestPublicKey(hsmDevicesList.deviceIndex);
+                        hsmPairing = true;
+                        return;
+                    }
+
+                    var importCallback = function(success, id, name, desc) {
                         if (success) {
-                            var walletInfo = qmlFactory.createWalletInfo(msg)
+                            var walletInfo = qmlFactory.createWalletInfo();
+                            walletInfo.walletId = id;
+                            walletInfo.name = name;
+                            walletInfo.desc = desc;
+
                             var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImportWo, true, walletInfo)
                             mb.bsAccepted.connect(acceptAnimated)
                         }

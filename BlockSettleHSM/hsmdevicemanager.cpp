@@ -20,7 +20,7 @@ HSMDeviceManager::HSMDeviceManager(const std::shared_ptr<ConnectionManager>& con
    , testNet_(testNet)
 {
    trezorClient_ = std::make_unique<TrezorClient>(connectionManager, walletManager, testNet, this);
-   model_ = new QStringListModel(this);
+   model_ = new HSMDeviceModel(this);
 }
 
 HSMDeviceManager::~HSMDeviceManager() = default;
@@ -28,15 +28,14 @@ HSMDeviceManager::~HSMDeviceManager() = default;
 void HSMDeviceManager::scanDevices()
 {
    trezorClient_->initConnection([this]() {
-      devices_.clear();
-      devices_.append(trezorClient_->deviceKeys());
+      model_->resetModel(trezorClient_->deviceKeys());
       emit devicesChanged();
    });
 }
 
 void HSMDeviceManager::requestPublicKey(int deviceIndex)
 {
-   auto device = trezorClient_->getTrezorDevice(devices_[deviceIndex].deviceId_);
+   auto device = trezorClient_->getTrezorDevice(model_->getDevice(deviceIndex).deviceId_);
    if (!device) {
       return;
    }
@@ -52,7 +51,7 @@ void HSMDeviceManager::requestPublicKey(int deviceIndex)
 
 void HSMDeviceManager::setMatrixPin(int deviceIndex, QString pin)
 {
-   auto device = trezorClient_->getTrezorDevice(devices_[deviceIndex].deviceId_);
+   auto device = trezorClient_->getTrezorDevice(model_->getDevice(deviceIndex).deviceId_);
    if (!device) {
       return;
    }
@@ -62,7 +61,7 @@ void HSMDeviceManager::setMatrixPin(int deviceIndex, QString pin)
 
 void HSMDeviceManager::cancel(int deviceIndex)
 {
-   auto device = trezorClient_->getTrezorDevice(devices_[deviceIndex].deviceId_);
+   auto device = trezorClient_->getTrezorDevice(model_->getDevice(deviceIndex).deviceId_);
    if (!device) {
       return;
    }
@@ -73,20 +72,24 @@ void HSMDeviceManager::cancel(int deviceIndex)
 void HSMDeviceManager::prepareTrezorForSign(QString walleiId)
 {
    trezorClient_->initConnection(walleiId, [this](QVariant&& deviceId) {
-      devices_.clear();
+      DeviceKey deviceKey;
 
-      auto id = deviceId.toString();
+      const auto id = deviceId.toString();
 
+      bool found = false;
       for (auto key : trezorClient_->deviceKeys()) {
          if (key.deviceId_ == id) {
-            devices_.append(key);
+            found = true;
+            deviceKey = key;
+            break;
          }
       }
 
-      if (devices_.empty()) {
+      if (!found) {
          emit deviceNotFound(id);
       }
       else {
+         model_->resetModel({ std::move(deviceKey) });
          emit deviceReady(id);
       }
    });
@@ -94,7 +97,7 @@ void HSMDeviceManager::prepareTrezorForSign(QString walleiId)
 
 void HSMDeviceManager::signTX(QVariant reqTX)
 {
-   auto device = trezorClient_->getTrezorDevice(devices_[0].deviceId_);
+   auto device = trezorClient_->getTrezorDevice(model_->getDevice(0).deviceId_);
    if (!device) {
       return;
    }
@@ -114,8 +117,8 @@ void HSMDeviceManager::signTX(QVariant reqTX)
 
 void HSMDeviceManager::releaseDevices()
 {
-   for (auto key : devices_) {
-      auto device = trezorClient_->getTrezorDevice(key.deviceId_);
+   for (int i = 0; i < model_->rowCount(); ++i) {
+      auto device = trezorClient_->getTrezorDevice(model_->getDevice(i).deviceId_);
       if (device) {
          device->cancel();
       }
@@ -124,13 +127,7 @@ void HSMDeviceManager::releaseDevices()
    trezorClient_->releaseConnection();
 }
 
-QStringListModel* HSMDeviceManager::devices()
+HSMDeviceModel* HSMDeviceManager::devices()
 {
-   QStringList labels;
-   for (const auto& device : devices_)
-      labels << device.deviceLabel_;
-
-   model_->setStringList(labels);
-
    return model_;
 }

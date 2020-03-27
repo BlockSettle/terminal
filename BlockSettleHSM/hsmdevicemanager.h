@@ -12,6 +12,7 @@
 #define HSMDEVICESCANNER_H
 
 #include "trezor/trezorStructure.h"
+#include "hsmdevicemodel.h"
 #include "SecureBinaryData.h"
 #include <memory>
 
@@ -31,14 +32,14 @@ namespace bs {
 class HSMDeviceManager : public QObject
 {
    Q_OBJECT
-   Q_PROPERTY(QStringListModel* devices READ devices NOTIFY devicesChanged)
+   Q_PROPERTY(HSMDeviceModel* devices READ devices NOTIFY devicesChanged)
 public:
    HSMDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager,
       std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet, QObject* parent = nullptr);
     ~HSMDeviceManager() override;
 
    // Property
-   QStringListModel* devices();
+   HSMDeviceModel* devices();
 
    Q_INVOKABLE void scanDevices();
    Q_INVOKABLE void requestPublicKey(int deviceIndex);
@@ -63,8 +64,8 @@ signals:
 
 public:
    std::unique_ptr<TrezorClient> trezorClient_;
-   QVector<DeviceKey> devices_;
-   QStringListModel* model_;
+
+   HSMDeviceModel* model_;
    bool testNet_{};
 };
 

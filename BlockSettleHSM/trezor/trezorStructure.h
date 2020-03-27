@@ -44,6 +44,7 @@ struct DeviceKey
    QString deviceLabel_;
    QString deviceId_;
    QString vendor_;
+   QString walletId_;
 };
 
 struct MessageData
@@ -57,6 +58,12 @@ class HSMWalletWrapper {
    Q_GADGET
 public:
    bs::core::wallet::HSMWalletInfo info_;
+   Q_INVOKABLE QString walletName() {
+      return QString::fromStdString(info_.label_);
+   }
+   Q_INVOKABLE QString walletDesc() {
+      return QString::fromStdString(info_.vendor_);
+   }
 };
 Q_DECLARE_METATYPE(HSMWalletWrapper)
 
