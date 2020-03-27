@@ -134,7 +134,12 @@ namespace bs {
             logger_->info("signer ended execution");
          }
 
-         void start() { appObj_.start(); }
+         void start()
+         {
+            queue_->dispatch([this] {
+               appObj_.start();
+            });
+         }
 
       private:
          std::shared_ptr<spdlog::logger>  logger_;

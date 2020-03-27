@@ -135,7 +135,7 @@ public:
 
 protected:
    std::string desc_;
-   BTCNumericTypes::balance_type balTotal_, balUnconf_, balSpend_;
+   std::atomic<BTCNumericTypes::balance_type> balTotal_, balUnconf_, balSpend_;
    size_t      nbAddr_;
    std::shared_ptr<bs::sync::hd::Wallet>           hdWallet_;
    std::vector<std::shared_ptr<bs::sync::Wallet>>  wallets_;
@@ -146,13 +146,13 @@ protected:
          return;
       }
       if (node->getBalanceTotal() > 0) {
-         balTotal_ += node->getBalanceTotal();
+         balTotal_.store(balTotal_.load() + node->getBalanceTotal());
       }
       if (node->getBalanceUnconf() > 0) {
-         balUnconf_ += node->getBalanceUnconf();
+         balUnconf_.store(balUnconf_.load() + node->getBalanceUnconf());
       }
       if (node->getBalanceSpend() > 0) {
-         balSpend_ += node->getBalanceSpend();
+         balSpend_.store(balSpend_.load() + node->getBalanceSpend());
       }
       if (type() != Type::GroupCC) {
          nbAddr_ += node->getNbUsedAddresses();
