@@ -432,7 +432,7 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       auto wallet = walletManager_->getWalletById(currentTxSignReq_->walletIds[0]);
       auto address = bs::Address::fromUTXO(utxo);
 
-      bool isNestedSegwit = (address.getType() == static_cast<AddressEntryType>(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+      bool isNestedSegwit = (address.getType() == AddressEntryType_P2SH);
       for (const uint32_t add : getDerivationPath(testNet_, isNestedSegwit)) {
          input->add_address_n(add);
       }
