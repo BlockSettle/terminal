@@ -46,8 +46,7 @@ namespace {
 
       stream.writeRawData(QByteArray::number(msg_type, 16).rightJustified(4, '0'), 4);
       stream.writeRawData(QByteArray::number(length, 16).rightJustified(8, '0'), 8);
-      stream.writeRawData(QByteArray::fromRawData(
-         serialized_msg.c_str(), serialized_msg.size() * sizeof(uint32_t)).toHex()
+      stream.writeRawData(QByteArray::fromStdString(serialized_msg).toHex()
          , 2 * static_cast<int>(serialized_msg.size()));
 
       return packed;
