@@ -11,7 +11,7 @@
 #ifndef HSMDEVICEMODEL_H
 #define HSMDEVICEMODEL_H
 
-#include <QAbstractItemModel.h>
+#include <QAbstractItemModel>
 #include "trezor/trezorStructure.h"
 
 enum HSMDeviceRoles {
