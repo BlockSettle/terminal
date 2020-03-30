@@ -612,8 +612,12 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
    if (selectedWalletId.empty()) {
       selectedWalletId = defaultWalletId_;
    }
-   const auto node = rootNode_->findByWalletId(selectedWalletId);
+   auto node = rootNode_->findByWalletId(selectedWalletId);
    if (node != nullptr) {
+      selection.push_back(createIndex(node->row(), 0, static_cast<void*>(node)));
+   }
+   else if(rootNode_->hasChildren()) {
+      node = rootNode_->child(0);
       selection.push_back(createIndex(node->row(), 0, static_cast<void*>(node)));
    }
    

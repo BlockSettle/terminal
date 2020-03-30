@@ -29,7 +29,7 @@ CustomTitleDialogWindow {
     property WalletInfo walletInfo: WalletInfo{}
     property bool   isRootWallet: (walletInfo.rootId == walletInfo.walletId)
     property string rootName
-    property bool   backup: chkBackup.checked
+    property bool   backup: chkBackup.checked && !walletInfo.isHSM
 
     width: 400
     //height: 250
@@ -73,7 +73,7 @@ CustomTitleDialogWindow {
                     text: qsTr("I understand all the risks of wallet deletion")
                 }
                 CustomCheckBox {
-                    visible: isRootWallet
+                    visible: isRootWallet && !walletInfo.isHSM
                     id: chkBackup
                     text: qsTr("Backup Wallet")
                     checked: isRootWallet

@@ -376,7 +376,7 @@ BSWalletHandlerDialog {
             CustomButton {
                 id: btnCancel
                 text: qsTr("Cancel")
-                anchors.left: parent.left
+                anchors.left: walletInfo.encType !== QPasswordData.HSM ? parent.right : parent.left
                 anchors.bottom: parent.bottom
                 onClicked: {
                     rejectAnimated()
