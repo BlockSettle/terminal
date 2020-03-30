@@ -428,9 +428,6 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       assert(index >= 0 && index < currentTxSignReq_->inputs.size());
       auto utxo = currentTxSignReq_->inputs[index];
 
-
-      
-      auto wallet = walletManager_->getWalletById(currentTxSignReq_->walletIds[0]);
       auto address = bs::Address::fromUTXO(utxo);
 
       bool isNestedSegwit = (address.getType() == AddressEntryType_P2SH);
@@ -438,7 +435,15 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
          input->add_address_n(add);
       }
 
-      const auto addrIndex = wallet->getAddressIndex(address);
+      std::string addrIndex;
+      for (const auto &walletId : currentTxSignReq_->walletIds) {
+         auto wallet = walletManager_->getWalletById(walletId);
+         addrIndex = wallet->getAddressIndex(address);
+         if (!addrIndex.empty()) {
+            break;
+         }
+      }
+
       const auto path = bs::hd::Path::fromString(addrIndex);
       for (int i = 0; i < path.length(); ++i) {
          input->add_address_n(path.get(i));
