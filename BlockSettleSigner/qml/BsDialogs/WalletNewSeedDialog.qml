@@ -148,7 +148,7 @@ Always keep it safe, anyone with this backup may take control of your wallet.")
             Layout.fillWidth: true
 
             CustomLabel {
-                text: qsTr("To make sure that you saved a backup, please enter your Root Private Key to proceed.")
+                text: qsTr("To make sure you have properly saved your Root Private key, please retype it here.")
                 id: labelVerify
                 horizontalAlignment: Qt.AlignLeft
                 Layout.maximumWidth: 470
