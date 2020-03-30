@@ -88,6 +88,7 @@ void TrezorClient::initConnection(const QString& walletId, AsyncCallBackCall&& c
 void TrezorClient::releaseConnection(AsyncCallBack&& cb)
 {
    if (deviceData_.sessionId_.isEmpty()) {
+      cb();
       return;
    }
 
@@ -150,6 +151,10 @@ void TrezorClient::call(QByteArray&& input, AsyncCallBackCall&& cb)
 QVector<DeviceKey> TrezorClient::deviceKeys() const
 {
    auto deviceToWalletId = walletManager_->getHSMDeviceIdToWallet();
+   if (!trezorDevice_) {
+      return {};
+   }
+
    auto key = trezorDevice_->deviceKey();
    auto deviceWalletPair = deviceToWalletId.find(key.deviceId_.toStdString());
    if (deviceWalletPair != deviceToWalletId.end()) {
@@ -195,6 +200,7 @@ void TrezorClient::enumDevices(AsyncCallBack&& cb)
       if (deviceCount == 0) {
          connectionManager_->GetLogger()->info(
             "[TrezorClient] enumDevices - No trezor device available");
+         cbCopy();
          return;
       }
 

@@ -20,7 +20,6 @@ import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.QPasswordData 1.0
 import com.blocksettle.HSMDeviceManager 1.0
-import com.blocksettle.HSMDeviceModel 1.0
 
 import "../BsControls"
 import "../StyledControls"
@@ -48,7 +47,7 @@ CustomTitleDialogWindow {
     property bool acceptable: if (isWO)
                                   digitalWoBackupAcceptable
                               else if (isHSM)
-                                  (hsmDeviceSelected || hsmDataFilled) && !hsmPairing
+                                  (!hsmDeviceList.isScanning && !hsmDeviceList.isImporting && (hsmDeviceList.readyForImport || hsmDeviceList.isNoDevice))
                               else
                                   ((curPage === 1 && walletSelected) ||
                                    (curPage === 2 && importAcceptable))
@@ -62,22 +61,6 @@ CustomTitleDialogWindow {
     property int inputLabelsWidth: 110
     property int curPage: WalletImportDialog.Page.Select
     property bool authNoticeShown: false
-
-    property var hsmWalletInfo
-    property bool hsmDataFilled: false
-    property bool hsmDeviceSelected: hsmDevicesList.deviceIndex !== -1
-    property bool hsmPairing: false
-
-    Connections {
-        target: hsmDeviceManager
-        onPublicKeyReady: {
-            hsmWalletInfo = walletInfo;
-            hsmDataFilled = true;
-            hsmDevicesList.deviceIndex = -1;
-            hsmPairing = false;
-        }
-        onRequestPinMatrix: JsHelper.showPinMatrix(hsmDevicesList.deviceIndex);
-    }
 
     title: qsTr("Import Wallet")
     width: 410
@@ -94,9 +77,8 @@ CustomTitleDialogWindow {
         }
     }
 
-    onAboutToHide: {
-        hsmDeviceManager.releaseDevices();
-    }
+    onAboutToShow: hsmDeviceList.init()
+    onAboutToHide: hsmDeviceList.release();
 
     onEnterPressed: {
         if (btnAccept.enabled) btnAccept.onClicked()
@@ -197,10 +179,6 @@ CustomTitleDialogWindow {
                             CustomRadioButton {
                                 id: rbHardwareWallet
                                 text: qsTr("Hardware wallet")
-                                onCheckedChanged: {
-                                    if (checked)
-                                        hsmDeviceManager.scanDevices()
-                                }
                             }
                         }
 
@@ -307,74 +285,20 @@ CustomTitleDialogWindow {
                     }
 
                     // HARDWARE DEVICES
-                    ListView {
-                        id: hsmDevicesList
-                        visible: rbHardwareWallet.checked
+                    HsmAvailableDevices {
+                        id: hsmDeviceList
+
                         Layout.fillWidth: true
                         Layout.fillHeight: true
+                        visible: rbHardwareWallet.checked
 
-                        model: hsmDeviceManager.devices
-
-                        property int deviceIndex: -1
-
-                        highlight: Rectangle {
-                            color: BSStyle.comboBoxItemBgHighlightedColor
-                            anchors.leftMargin: 5
-                            anchors.rightMargin: 5
+                        onPubKeyReady: {
+                            importWoWallet();
                         }
 
-                        delegate: Rectangle {
-                            width: parent.width
-                            height: 20
-
-                            color: index % 2 === 0 ? "transparent" : "#8027363b"
-                            property color textColor: hsmDevicesList.currentIndex === index ? "white" :
-                                                        enabled ? BSStyle.labelsTextColor : BSStyle.disabledColor
-
-                            RowLayout {
-                                anchors.fill: parent
-                                Text {
-                                    width: parent.width * 3 / 4
-                                    height: parent.height
-
-                                    leftPadding: 10
-                                    text: model.label + "(" + model.vendor + ")"
-                                    enabled: model.pairedWallet.length === 0
-                                    color: textColor
-                                    font.pixelSize: 12
-                                    horizontalAlignment: Text.AlignLeft
-                                    verticalAlignment: Text.AlignVCenter
-                                    elide: Text.ElideRight
-                                }
-
-                                Text {
-                                    width: parent.width  * 1 / 4
-                                    height: parent.height
-
-                                    text: model.pairedWallet.length ? "Paired(" + model.pairedWallet + ")" :
-                                                                      hsmDataFilled ? "Paired" : "New Device"
-                                    enabled: model.pairedWallet.length === 0
-                                    color: textColor
-                                    font.pixelSize: 12
-                                    horizontalAlignment: Text.AlignRight
-                                    verticalAlignment: Text.AlignVCenter
-                                    elide: Text.ElideRight
-                                }
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                enabled: model.pairedWallet.length === 0
-                                onClicked: {
-                                    if (hsmDevicesList.currentIndex === index) {
-                                        return;
-                                    }
-
-                                    hsmDevicesList.currentIndex = index;
-                                    hsmDevicesList.deviceIndex = model.pairedWallet.length === 0 ? index : -1
-                                    hsmDataFilled = false;
-                                }
-                            }
+                        onFailed: {
+                            JsHelper.messageBox(BSMessageBox.Type.Critical
+                                , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
                         }
                     }
                 }
@@ -686,42 +610,23 @@ CustomTitleDialogWindow {
                 primary: true
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                text: (isHSM && hsmDeviceSelected) ? qsTr("Pair") : qsTr("Import")
+                text: (isHSM && hsmDeviceList.isNoDevice) ? qsTr("Rescan") : qsTr("Import")
                 enabled: acceptable
 
                 onClicked: {
-                    if (isHSM && hsmDeviceSelected) {
-                        hsmDeviceManager.requestPublicKey(hsmDevicesList.deviceIndex);
-                        hsmPairing = true;
+                    if (isHSM ) {
+                        if (hsmDeviceList.readyForImport) {
+                            hsmDeviceList.importXpub();
+                        } else if (hsmDeviceList.isNoDevice) {
+                            hsmDeviceList.rescan();
+                        }
+
                         return;
                     }
 
-                    var importCallback = function(success, id, name, desc) {
-                        if (success) {
-                            let walletInfo = qmlFactory.createWalletInfo();
-                            walletInfo.walletId = id;
-                            walletInfo.name = name;
-                            walletInfo.desc = desc;
-
-                            let type = isHSM ? BSResultBox.ResultType.HSMWallet
-                                             : BSResultBox.ResultType.WalletImportWo;
-
-                            var mb = JsHelper.resultBox(type, true, walletInfo)
-                            mb.bsAccepted.connect(acceptAnimated)
-                        }
-                        else {
-                            JsHelper.messageBox(BSMessageBox.Type.Critical
-                                , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
-                        }
-                    }
-
                     if (isWO) {
-                        walletsProxy.importWoWallet(lblWoDBFile.text, importCallback)
-                        return
-                    }
-                    else if (isHSM) {
-                        walletsProxy.importHSMWallet(root.hsmWalletInfo, importCallback)
-                        return
+                        importWoWallet();
+                        return;
                     }
 
                     if (curPage === 1) {
@@ -785,5 +690,33 @@ CustomTitleDialogWindow {
     function applyDialogClosing() {
         JsHelper.openAbortBox(root, abortBoxType);
         return false;
+    }
+
+    function importWoWallet() {
+        var importCallback = function(success, id, name, desc) {
+            if (success) {
+                let walletInfo = qmlFactory.createWalletInfo();
+                walletInfo.walletId = id;
+                walletInfo.name = name;
+                walletInfo.desc = desc;
+
+                let type = isHSM ? BSResultBox.ResultType.HSMWallet
+                                 : BSResultBox.ResultType.WalletImportWo;
+
+                var mb = JsHelper.resultBox(type, true, walletInfo)
+                mb.bsAccepted.connect(acceptAnimated)
+            }
+            else {
+                JsHelper.messageBox(BSMessageBox.Type.Critical
+                    , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
+            }
+        }
+
+        if (isWO) {
+            walletsProxy.importWoWallet(lblWoDBFile.text, importCallback)
+        }
+        else if (isHSM) {
+            walletsProxy.importHSMWallet(hsmDeviceList.hsmWalletInfo, importCallback)
+        }
     }
 }

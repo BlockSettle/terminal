@@ -27,9 +27,17 @@ HSMDeviceManager::~HSMDeviceManager() = default;
 
 void HSMDeviceManager::scanDevices()
 {
-   trezorClient_->initConnection([this]() {
-      model_->resetModel(trezorClient_->deviceKeys());
-      emit devicesChanged();
+   if (isScanning_) {
+      return;
+   }
+
+   setScanningFlag(true);
+   releaseConnection([this] {
+      trezorClient_->initConnection([this]() {
+         setScanningFlag(false);
+         model_->resetModel(trezorClient_->deviceKeys());
+         emit devicesChanged();
+      });
    });
 }
 
@@ -46,6 +54,8 @@ void HSMDeviceManager::requestPublicKey(int deviceIndex)
 
    connect(device, &TrezorDevice::requestPinMatrix,
       this, &HSMDeviceManager::requestPinMatrix, Qt::UniqueConnection);
+   connect(device, &TrezorDevice::operationFailed,
+      this, &HSMDeviceManager::operationFailed, Qt::UniqueConnection);
 }
 
 void HSMDeviceManager::setMatrixPin(int deviceIndex, QString pin)
@@ -116,20 +126,41 @@ void HSMDeviceManager::signTX(QVariant reqTX)
 
 void HSMDeviceManager::releaseDevices()
 {
+   releaseConnection();
+}
+
+void HSMDeviceManager::releaseConnection(AsyncCallBack&& cb/*= nullptr*/)
+{
    for (int i = 0; i < model_->rowCount(); ++i) {
       auto device = trezorClient_->getTrezorDevice(model_->getDevice(i).deviceId_);
       if (device) {
-         device->init([this]() {
-            trezorClient_->releaseConnection();
+         device->init([this, cbCopy = std::move(cb)]() mutable {
+            trezorClient_->releaseConnection(std::move(cbCopy));
          });
-         break;
+         model_->resetModel({});
+         return;
       }
    }
 
-   model_->resetModel({});
+   cb();
+}
+
+void HSMDeviceManager::setScanningFlag(bool isScanning)
+{
+   if (isScanning_ == isScanning) {
+      return;
+   }
+
+   isScanning_ = isScanning;
+   emit isScanningChanged();
 }
 
 HSMDeviceModel* HSMDeviceManager::devices()
 {
    return model_;
+}
+
+bool HSMDeviceManager::isScanning() const
+{
+   return isScanning_;
 }

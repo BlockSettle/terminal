@@ -302,7 +302,6 @@ BSWalletHandlerDialog {
             visible: walletInfo.encType === QPasswordData.Auth
 
             CustomLabel {
-
                 Layout.fillWidth: true
                 text: qsTr("Auth eID")
             }

@@ -33,14 +33,17 @@ class HSMDeviceManager : public QObject
 {
    Q_OBJECT
    Q_PROPERTY(HSMDeviceModel* devices READ devices NOTIFY devicesChanged)
+   Q_PROPERTY(bool isScanning READ isScanning NOTIFY isScanningChanged)
 public:
    HSMDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager,
       std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet, QObject* parent = nullptr);
     ~HSMDeviceManager() override;
 
-   // Property
+   /// Property
    HSMDeviceModel* devices();
+   bool isScanning() const;
 
+   ///
    Q_INVOKABLE void scanDevices();
    Q_INVOKABLE void requestPublicKey(int deviceIndex);
    Q_INVOKABLE void setMatrixPin(int deviceIndex, QString pin);
@@ -61,12 +64,19 @@ signals:
    void deviceTxStatusChanged(QString status);
 
    void txSigned(SecureBinaryData signData);
+   void isScanningChanged();
+   void operationFailed();
+
+private:
+   void setScanningFlag(bool isScanning);
+   void releaseConnection(AsyncCallBack&& cb = nullptr);
 
 public:
    std::unique_ptr<TrezorClient> trezorClient_;
 
    HSMDeviceModel* model_;
    bool testNet_{};
+   bool isScanning_{};
 };
 
 #endif // HSMDEVICESCANNER_H

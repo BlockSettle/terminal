@@ -62,6 +62,7 @@ signals:
    void requestPinMatrix();
    void requestHSMPass();
    void deviceTxStatusChanged(QString status);
+   void operationFailed();
 
 private:
    void makeCall(const google::protobuf::Message &msg);

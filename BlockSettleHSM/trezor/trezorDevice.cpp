@@ -286,6 +286,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
          }
          sendTxMessage(QString::fromStdString(failure.message()));
          resetCaches();
+         emit operationFailed();
       }
       break;
    case MessageType_Features:
