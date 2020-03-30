@@ -142,7 +142,9 @@ void HSMDeviceManager::releaseConnection(AsyncCallBack&& cb/*= nullptr*/)
       }
    }
 
-   cb();
+   if (cb) {
+      cb();
+   }
 }
 
 void HSMDeviceManager::setScanningFlag(bool isScanning)

@@ -88,7 +88,9 @@ void TrezorClient::initConnection(const QString& walletId, AsyncCallBackCall&& c
 void TrezorClient::releaseConnection(AsyncCallBack&& cb)
 {
    if (deviceData_.sessionId_.isEmpty()) {
-      cb();
+      if (cb) {
+         cb();
+      }
       return;
    }
 
