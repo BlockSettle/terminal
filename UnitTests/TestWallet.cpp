@@ -172,11 +172,6 @@ TEST_F(TestWallet, BIP44_primary)
    auto syncXbtLeaf = syncMgr->getWalletById(leafXbt->walletId());
    EXPECT_EQ(syncXbtLeaf->name(), "primary/XBT [TESTNET]/0'");
 
-   QComboBox cbox;
-   UiUtils::fillWalletsComboBox(&cbox, syncMgr, UiUtils::WoWallets::Disable);
-   EXPECT_EQ(cbox.count(), 2);
-//   EXPECT_EQ(cbox.currentText().toStdString(), syncXbtLeaf->name());
-
    EXPECT_TRUE(envPtr_->walletsMgr()->deleteWalletFile(wallet));
    EXPECT_EQ(envPtr_->walletsMgr()->getPrimaryWallet(), nullptr);
 }

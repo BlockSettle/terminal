@@ -20,6 +20,7 @@ import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.QSeed 1.0
 import com.blocksettle.QPasswordData 1.0
+import com.blocksettle.HSMDeviceManager 1.0
 
 import "../StyledControls"
 import "../BsControls"
@@ -92,6 +93,9 @@ CustomTitleDialogWindowWithExpander {
             btnConfirm.visible = false
             btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
         }
+        else if (walletInfo.encType === QPasswordData.HSM) {
+            hsmDeviceManager.prepareTrezorForSign(walletInfo.walletId)
+        }
 
         if (signingAllowed) {
             initAuth()
@@ -151,6 +155,23 @@ CustomTitleDialogWindowWithExpander {
             if (txId === passwordDialogData.SettlementId) {
                 rejectAnimated()
             }
+        }
+    }
+
+    onAboutToHide: {
+        hsmDeviceManager.releaseDevices();
+    }
+
+    Connections {
+        target: hsmDeviceManager
+        onRequestPinMatrix: JsHelper.showPinMatrix(0);
+        onDeviceReady: hsmDeviceManager.signTX(passwordDialogData.TxRequest);
+        onDeviceNotFound: hsmDeviceStatus = qsTr("Cannot find device paired with this wallet, device label is :\n") + walletInfo.name;
+        onDeviceTxStatusChanged: hsmDeviceStatus = status;
+        onTxSigned: {
+            passwordData.binaryPassword = signData
+            passwordData.encType = QPasswordData.HSM
+            acceptAnimated();
         }
     }
 
