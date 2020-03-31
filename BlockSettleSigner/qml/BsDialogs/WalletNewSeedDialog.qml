@@ -31,7 +31,7 @@ CustomTitleDialogWindow {
 
     property QSeed seed
 
-    title: curPage === 1 ? qsTr("Save your Root Private Key") : qsTr("Confirm Seed")
+    title: curPage === 1 ? qsTr("Save your Root Private Key") : qsTr("Confirm your Root Private Key")
 
     property bool fullScreenMode: true
     fixedHeight: true
@@ -148,8 +148,7 @@ Always keep it safe, anyone with this backup may take control of your wallet.")
             Layout.fillWidth: true
 
             CustomLabel {
-                text: qsTr("Your seed is important! If you lose your seed, your bitcoin assets will be permanently lost. \
-                            \n\nTo make sure that you have properly saved your seed, please retype it here.")
+                text: qsTr("To make sure you have properly saved your Root Private key, please retype it here.")
                 id: labelVerify
                 horizontalAlignment: Qt.AlignLeft
                 Layout.maximumWidth: 470

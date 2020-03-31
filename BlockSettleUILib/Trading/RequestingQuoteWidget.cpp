@@ -259,7 +259,7 @@ void RequestingQuoteWidget::onAccept()
    requestTimer_.stop();
    ui_->progressBar->hide();
    ui_->pushButtonAccept->setEnabled(false);
-   if (bs::network::Asset::SpotFX != rfq_.assetType) {
+   if (bs::network::Asset::SpotXBT == rfq_.assetType) {
       ui_->labelHint->setText(tr("Awaiting Settlement Pay-Out Execution"));
       ui_->labelHint->show();
    }
