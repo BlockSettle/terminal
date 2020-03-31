@@ -301,9 +301,11 @@ void RFQTicketXBT::walletsLoaded()
       ui_->comboBoxXBTWalletsRecv->setEnabled(true);
       ui_->comboBoxXBTWalletsSend->setEnabled(true);
 
-      // Only full wallets could be used to send, recv could be also done with WO
-      UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWalletsRecv, walletsManager_, UiUtils::WoWallets::Enable);
-      UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWalletsSend, walletsManager_, UiUtils::WoWallets::Disable);
+      UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWalletsRecv, walletsManager_, UiUtils::WalletsTypes::All);
+      // CC does not support to send from HSM wallets
+      int sendWalletTypes = (currentGroupType_ == ProductGroupType::CCGroupType) ?
+               UiUtils::WalletsTypes::Full : (UiUtils::WalletsTypes::Full | UiUtils::WalletsTypes::Hsm);
+      UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWalletsSend, walletsManager_, sendWalletTypes);
    }
 
    productSelectionChanged();
@@ -408,6 +410,8 @@ void RFQTicketXBT::SetProductGroup(const QString& productGroup)
    } else {
       ui_->labelProductGroup->setText(tr("XXX"));
    }
+
+   walletsLoaded();
 }
 
 void RFQTicketXBT::SetCurrencyPair(const QString& currencyPair)
