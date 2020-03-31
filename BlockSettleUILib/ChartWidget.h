@@ -197,6 +197,8 @@ private:
 
    quint64 firstTimestampInDb_{ 0 };
    bool authorized_{ false };
+
+   std::set<std::string>   pmProducts_;
 };
 
 #endif // CHARTWIDGET_H
