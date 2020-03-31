@@ -429,11 +429,7 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       auto utxo = currentTxSignReq_->inputs[index];
 
       auto address = bs::Address::fromUTXO(utxo);
-
       bool isNestedSegwit = (address.getType() == AddressEntryType_P2SH);
-      for (const uint32_t add : getDerivationPath(testNet_, isNestedSegwit)) {
-         input->add_address_n(add);
-      }
 
       std::string addrIndex;
       for (const auto &walletId : currentTxSignReq_->walletIds) {
@@ -443,11 +439,18 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
             break;
          }
       }
+      if (addrIndex.empty()) {
+         throw std::logic_error(fmt::format("can't find input address index for '{}'", address.display()));
+      }
 
+      for (const uint32_t add : getDerivationPath(testNet_, isNestedSegwit)) {
+         input->add_address_n(add);
+      }
       const auto path = bs::hd::Path::fromString(addrIndex);
       for (int i = 0; i < path.length(); ++i) {
          input->add_address_n(path.get(i));
       }
+
       input->set_prev_hash(utxo.getTxHash().copySwapEndian().toBinStr());
       input->set_prev_index(utxo.getTxOutIndex());
       input->set_script_type(isNestedSegwit ? bitcoin::SPENDP2SHWITNESS : bitcoin::SPENDWITNESS);
@@ -474,18 +477,33 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
          auto address = bs::Address::fromRecipient(bsOutput);
          output->set_address(address.display());
          output->set_amount(bsOutput->getValue());
+         output->set_script_type(bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOADDRESS);
       }
       else if (currentTxSignReq_->recipients.size() == index && currentTxSignReq_->change.value > 0) { // one last for change
-         auto &change = currentTxSignReq_->change;
-         output->set_address(change.address.display());
+         const auto &change = currentTxSignReq_->change;
          output->set_amount(change.value);
+
+         bool isNestedSegwit = (change.address.getType() == AddressEntryType_P2SH);
+
+         if (change.index.empty()) {
+            throw std::logic_error(fmt::format("can't find change address index for '{}'", change.address.display()));
+         }
+         for (const uint32_t add : getDerivationPath(testNet_, isNestedSegwit)) {
+            output->add_address_n(add);
+         }
+         const auto path = bs::hd::Path::fromString(change.index);
+         for (int i = 0; i < path.length(); ++i) {
+            output->add_address_n(path.get(i));
+         }
+
+         output->set_script_type(isNestedSegwit ? bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOP2SHWITNESS
+                                                : bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOWITNESS);
       }
       else {
          // Shouldn't be here
          assert(false);
       }
 
-      output->set_script_type(bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOADDRESS);
       txAck.set_allocated_tx(type);
       connectionManager_->GetLogger()->debug("[TrezorDevice] handleTxRequest TXOUTPUT"
          + getJSONReadableMessage(txAck));
