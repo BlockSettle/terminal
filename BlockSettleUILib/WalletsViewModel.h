@@ -49,7 +49,8 @@ public:
    };
    enum class State {
       Undefined,
-      Connected,
+      Primary,
+      Full,
       Offline,
       HSM
    };
