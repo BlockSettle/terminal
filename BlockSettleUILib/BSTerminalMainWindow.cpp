@@ -1305,6 +1305,32 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::onLogin()
 {
+   if (!gotChatKeys_) {
+      if (!signContainer_ || !signContainer_->isReady()) {
+         BSMessageBox signerMsg(BSMessageBox::warning
+            , tr("Login Failed")
+            , tr("Login Failed")
+            , tr("Signer connection lost. Please reconnect and try to login again.")
+            , this);
+         signerMsg.exec();
+         return;
+      }
+
+      BSMessageBox createWallet(BSMessageBox::warning
+         , tr("Login Failed")
+         , tr("Login Failed")
+         , tr("To make use of BlockSettle’s offering, you are required to have a Primary Wallet which can generate your chat key, "
+              "authentication address, and coloured coin paths. Please create a wallet and try to login again.")
+         , this);
+      createWallet.setConfirmButtonText(tr("Create Wallet"));
+      createWallet.setCancelVisible(true);
+      auto result = createWallet.exec();
+      if (result == QDialog::Accepted) {
+         onCreatePrimaryWalletRequest();
+      }
+      return;
+   }
+
    LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, &cbApprovePuB_, &cbApproveProxy_, this);
 
    int rc = loginDialog.exec();
