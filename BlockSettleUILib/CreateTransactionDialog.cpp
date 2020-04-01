@@ -308,12 +308,15 @@ void CreateTransactionDialog::onTransactionUpdated()
 {
    const auto &summary = transactionData_->GetTransactionSummary();
 
-   // #UTXO_MANAGER: reserve all available UTXO for now
-   // till the moment dialog will be deleted
+   // #UTXO_MANAGER: reserve all available UTXO for now till the moment dialog will be deleted.
+   // Used to prevent UTXO conflicts with AQ script.
+   // FIXME: Disabled as it caused problems when advanced dialog selected (available balance becomes 0 and list of available UTXOs is empty until different wallet selected).
+#if 0
    if (summary.availableBalance > .0) {
       utxoRes_.release();
       utxoRes_ = utxoReservationManager_->makeNewReservation(transactionData_->getSelectedInputs()->GetAllTransactions());
    }
+#endif
    labelBalance()->setText(UiUtils::displayAmount(summary.availableBalance));
    labelAmount()->setText(UiUtils::displayAmount(summary.selectedBalance));
    labelTxInputs()->setText(summary.isAutoSelected ? tr("Auto (%1)").arg(QString::number(summary.usedTransactions))
