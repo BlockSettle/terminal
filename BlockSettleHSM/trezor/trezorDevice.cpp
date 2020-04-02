@@ -74,28 +74,6 @@ namespace {
       return output;
    }
 
-   std::vector<uint32_t> getDerivationPath(bool testNet, bool isNestedSegwit)
-   {
-      std::vector<uint32_t> path;
-      if (isNestedSegwit) {
-         path.push_back(0x80000031);
-      }
-      else {
-         path.push_back(0x80000054);
-      }
-
-      if (testNet) {
-         path.push_back(0x80000001);
-      }
-      else {
-         path.push_back(0x80000000);
-      }
-
-      path.push_back(0x80000000);
-
-      return path;
-   }
-
    const std::string tesNetCoin = "Testnet";
    // Messages to show in UI
    const QString requestPin = QObject::tr("Please enter the pin from device");

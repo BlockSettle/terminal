@@ -66,5 +66,5 @@ struct HSMSignedTx {
 };
 Q_DECLARE_METATYPE(HSMSignedTx)
 
-
+std::vector<uint32_t> getDerivationPath(bool testNet, bool isNestedSegwit);
 #endif // HSMCOMMONSTRUCTURE_H
