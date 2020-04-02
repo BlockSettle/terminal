@@ -55,13 +55,13 @@ public:
 
          auto nativeLeaf = xbtGroup->createLeaf(AddressEntryType_P2WPKH, 0);
          nativeAddr_ = nativeLeaf->getNewExtAddress();
-         ASSERT_FALSE(nativeAddr_.isNull());
+         ASSERT_FALSE(nativeAddr_.empty());
          ASSERT_EQ(nativeAddr_.getType(), AddressEntryType_P2WPKH);
 
          auto nestedLeaf = xbtGroup->createLeaf(static_cast<AddressEntryType>(AddressEntryType_P2SH | AddressEntryType_P2WPKH), 0);
          ASSERT_TRUE(nestedLeaf);
          nestedAddr_ = nestedLeaf->getNewExtAddress();
-         ASSERT_FALSE(nestedAddr_.isNull());
+         ASSERT_FALSE(nestedAddr_.empty());
          ASSERT_EQ(nestedAddr_.getType(), AddressEntryType_P2SH);
       }
 
@@ -167,7 +167,7 @@ public:
                      auto entry = wallet->getAddressEntryForAddr(peer1_.nestedAddr_.prefixed());
                      ASSERT_TRUE(entry);
                      auto preimage = entry->getPreimage();
-                     ASSERT_FALSE(preimage.isNull());
+                     ASSERT_FALSE(preimage.empty());
                      preimageData.emplace(peer1_.nestedAddr_.display(), preimage);
                   }
 

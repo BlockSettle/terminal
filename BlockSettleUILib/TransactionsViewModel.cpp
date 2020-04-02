@@ -560,7 +560,7 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
    if (!child->initialized || !parent->initialized) {
       return false;
    }
-   if (!parent->parentId.isNull() && !child->groupId.isNull()) {
+   if (!parent->parentId.empty() && !child->groupId.empty()) {
       if (child->groupId == parent->parentId) {
          return true;
       }
@@ -1059,7 +1059,7 @@ void TransactionsViewItem::initialize(const TransactionPtr &item, ArmoryConnecti
                break;
             default: break;
             }
-            if (!item->parentId.isNull()) {
+            if (!item->parentId.empty()) {
                break;
             }
          }
@@ -1076,7 +1076,7 @@ void TransactionsViewItem::initialize(const TransactionPtr &item, ArmoryConnecti
                break;
             default: break;
             }
-            if (!item->groupId.isNull()) {
+            if (!item->groupId.empty()) {
                break;
             }
          }

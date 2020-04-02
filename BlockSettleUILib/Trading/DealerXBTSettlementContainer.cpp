@@ -78,7 +78,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       , order.security, UiUtils::displayPriceXBT(actualXbtPrice).toStdString());
    authKey_ = BinaryData::CreateFromHex(qn.authKey);
    reqAuthKey_ = BinaryData::CreateFromHex(qn.reqAuthKey);
-   if (authKey_.isNull() || reqAuthKey_.isNull()) {
+   if (authKey_.empty() || reqAuthKey_.empty()) {
       throw std::runtime_error("missing auth key");
    }
 
@@ -195,7 +195,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
    if (payoutSignId_ && (payoutSignId_ == id)) {
       payoutSignId_ = 0;
 
-      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
+      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.empty()) {
          SPDLOG_LOGGER_ERROR(logger_, "failed to sign pay-out: {} ({})", int(errCode), errMsg);
          failWithErrorText(tr("Failed to sign pay-out"), errCode);
          return;
@@ -229,7 +229,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
    if ((payinSignId_ != 0) && (payinSignId_ == id)) {
       payinSignId_ = 0;
 
-      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
+      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.empty()) {
          SPDLOG_LOGGER_ERROR(logger_, "Failed to sign pay-in: {} ({})", (int)errCode, errMsg);
          failWithErrorText(tr("Failed to sign Pay-in"), errCode);
          return;

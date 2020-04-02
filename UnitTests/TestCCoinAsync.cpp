@@ -286,7 +286,7 @@ BinaryData TestCCoinAsync::SimpleSendMany(const bs::Address & fromAddress, const
          {
             const bs::core::WalletPasswordScoped lock(lockWallet, passphrase_);
             txSigned = signWallet->signTXRequest(txReq, true);
-            if (txSigned.isNull())
+            if (txSigned.empty())
                throw std::runtime_error("Can't sign tx");
          }
 
@@ -364,7 +364,7 @@ Tx TestCCoinAsync::CreateCJtx(
    EXPECT_TRUE(cjSigner.isValid());
    EXPECT_TRUE(cjSigner.verify());
    auto signedTx = cjSigner.serialize();
-   EXPECT_FALSE(signedTx.isNull());
+   EXPECT_FALSE(signedTx.empty());
 
    Tx tx(signedTx);
    EXPECT_TRUE(tx.isInitialized());

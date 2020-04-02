@@ -175,7 +175,7 @@ void SignerAdapter::createWallet(const std::string &name, const std::string &des
       wallet->set_primary(true);
    }
    if (!seed.empty()) {
-      if (!seed.seed().isNull()) {
+      if (!seed.seed().empty()) {
          wallet->set_seed(seed.seed().toBinStr());
       }
       else if (seed.hasPrivateKey()) {
