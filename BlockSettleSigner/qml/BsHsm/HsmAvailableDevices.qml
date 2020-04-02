@@ -124,7 +124,7 @@ Item {
             RowLayout {
                 anchors.fill: parent
                 Text {
-                    width: parent.width * 3 / 4
+                    Layout.fillWidth: true
                     height: parent.height
 
                     leftPadding: 10
@@ -138,9 +138,10 @@ Item {
                 }
 
                 Text {
-                    width: parent.width  * 1 / 4
+                    Layout.fillWidth: true
                     height: parent.height
 
+                    rightPadding: 10
                     text: model.pairedWallet.length ? "Imported(" + model.pairedWallet + ")" : "New Device"
                     enabled: model.pairedWallet.length === 0
                     color: textColor

@@ -37,6 +37,8 @@ QVariant HSMDeviceModel::data(const QModelIndex& index, int role /*= Qt::Display
       return devices_[row].vendor_;
    case HSMDeviceRoles::PairedWallet:
          return devices_[row].walletId_;
+   case HSMDeviceRoles::Status:
+      return devices_[row].status_;
    default:
       break;
    }
@@ -94,6 +96,8 @@ QHash<int, QByteArray> HSMDeviceModel::roleNames() const
       { HSMDeviceRoles::DeviceId , "deviceId" },
       { HSMDeviceRoles::Label , "label" },
       { HSMDeviceRoles::Vendor , "vendor" },
-      { HSMDeviceRoles::PairedWallet , "pairedWallet" }
+      { HSMDeviceRoles::PairedWallet , "pairedWallet" },
+      { HSMDeviceRoles::PairedWallet , "pairedWallet" },
+      { HSMDeviceRoles::Status , "status"}
    };
 }

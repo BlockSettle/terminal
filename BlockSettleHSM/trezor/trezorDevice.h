@@ -12,6 +12,7 @@
 #define TREZORDEVICE_H
 
 #include "trezorStructure.h"
+#include "hsmdeviceabstract.h"
 #include <QObject>
 #include <QNetworkReply>
 #include <QPointer>
@@ -39,7 +40,7 @@ namespace bs {
    }
 }
 
-class TrezorDevice : public QObject
+class TrezorDevice : public HSMDeviceAbstract
 {
    Q_OBJECT
 
@@ -48,21 +49,21 @@ public:
       , const QPointer<TrezorClient> &, QObject* parent = nullptr);
    ~TrezorDevice() override;
 
-   DeviceKey deviceKey() const;
+   DeviceKey key() const override;
+   DeviceType type() const override;
 
-   void init(AsyncCallBack&& cb = nullptr);
-   void getPublicKey(AsyncCallBackCall&& cb = nullptr);
-   void setMatrixPin(const std::string& pin);
-   void cancel();
 
-   void signTX(const QVariant& reqTX, AsyncCallBackCall&& cb = nullptr);
+   // lifecycle
+   void init(AsyncCallBack&& cb = nullptr) override;
+   void cancel() override;
 
-signals:
-   void publicKeyReady();
-   void requestPinMatrix();
-   void requestHSMPass();
-   void deviceTxStatusChanged(QString status);
-   void operationFailed();
+   // operation
+   void getPublicKey(AsyncCallBackCall&& cb = nullptr) override;
+   void signTX(const QVariant& reqTX, AsyncCallBackCall&& cb = nullptr) override;
+
+   // Management
+   void setMatrixPin(const std::string& pin) override;
+   void setPassword(const std::string& password) override;
 
 private:
    void makeCall(const google::protobuf::Message &msg);

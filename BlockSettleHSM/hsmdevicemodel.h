@@ -12,13 +12,14 @@
 #define HSMDEVICEMODEL_H
 
 #include <QAbstractItemModel>
-#include "trezor/trezorStructure.h"
+#include "hsmcommonstructure.h"
 
 enum HSMDeviceRoles {
    DeviceId = Qt::UserRole + 1,
    Label,
    Vendor,
-   PairedWallet
+   PairedWallet,
+   Status
 };
 
 class HSMDeviceModel : public QAbstractItemModel 

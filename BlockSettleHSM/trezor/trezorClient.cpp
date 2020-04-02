@@ -157,7 +157,7 @@ QVector<DeviceKey> TrezorClient::deviceKeys() const
       return {};
    }
 
-   auto key = trezorDevice_->deviceKey();
+   auto key = trezorDevice_->key();
    auto deviceWalletPair = deviceToWalletId.find(key.deviceId_.toStdString());
    if (deviceWalletPair != deviceToWalletId.end()) {
       key.walletId_ = QString::fromStdString(deviceWalletPair->second);
@@ -173,7 +173,7 @@ QPointer<TrezorDevice> TrezorClient::getTrezorDevice(const QString& deviceId)
       return nullptr;
    }
 
-   assert(trezorDevice_->deviceKey().deviceId_ == deviceId);
+   assert(trezorDevice_->key().deviceId_ == deviceId);
    return trezorDevice_;
 }
 

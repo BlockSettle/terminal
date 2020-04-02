@@ -5,11 +5,15 @@ SET(BLOCKSETTLE_HSM_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 FILE(GLOB SOURCES
    *.cpp
    trezor/*.cpp
+   ledger/*.cpp
+   ledger/hidapi/*.c
 )
 
 FILE(GLOB HEADERS
    *.h
    trezor/*.h
+   ledger/*.h
+   ledger/hidapi/*.h
 )
 
 INCLUDE_DIRECTORIES( ${WALLET_LIB_INCLUDE_DIR} )

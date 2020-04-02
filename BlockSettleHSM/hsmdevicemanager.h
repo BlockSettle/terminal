@@ -11,7 +11,7 @@
 #ifndef HSMDEVICESCANNER_H
 #define HSMDEVICESCANNER_H
 
-#include "trezor/trezorStructure.h"
+#include "hsmcommonstructure.h"
 #include "hsmdevicemodel.h"
 #include "SecureBinaryData.h"
 #include <memory>
@@ -20,7 +20,9 @@
 #include <QVector>
 #include <QStringListModel>
 
+class HSMDeviceAbstract;
 class TrezorClient;
+class LedgerClient;
 class ConnectionManager;
 namespace bs {
    namespace sync {
@@ -71,8 +73,11 @@ private:
    void setScanningFlag(bool isScanning);
    void releaseConnection(AsyncCallBack&& cb = nullptr);
 
+   QPointer<HSMDeviceAbstract> getDevice(DeviceKey key);
+
 public:
    std::unique_ptr<TrezorClient> trezorClient_;
+   std::unique_ptr<LedgerClient> ledgerClient_;
 
    HSMDeviceModel* model_;
    bool testNet_{};

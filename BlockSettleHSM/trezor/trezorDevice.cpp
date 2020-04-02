@@ -92,10 +92,9 @@ namespace {
       }
 
       path.push_back(0x80000000);
-      
+
       return path;
    }
-
 
    const std::string tesNetCoin = "Testnet";
    // Messages to show in UI
@@ -109,7 +108,7 @@ namespace {
 
 TrezorDevice::TrezorDevice(const std::shared_ptr<ConnectionManager> &connectionManager, std::shared_ptr<bs::sync::WalletsManager> walletManager
    , bool testNet, const QPointer<TrezorClient> &client, QObject* parent)
-   : QObject(parent)
+   : HSMDeviceAbstract(parent)
    , connectionManager_(connectionManager)
    , walletManager_(walletManager)
    , client_(std::move(client))
@@ -121,14 +120,21 @@ TrezorDevice::~TrezorDevice()
 {
 }
 
-DeviceKey TrezorDevice::deviceKey() const
+DeviceKey TrezorDevice::key() const
 {
    return {
       QString::fromStdString(features_.label())
       , QString::fromStdString(features_.device_id())
       , QString::fromStdString(features_.vendor())
       , {}
+      , {}
+      , type()
    };
+}
+
+DeviceType TrezorDevice::type() const
+{
+   return DeviceType::HWTrezor;
 }
 
 void TrezorDevice::init(AsyncCallBack&& cb)
@@ -220,6 +226,11 @@ void TrezorDevice::setMatrixPin(const std::string& pin)
    common::PinMatrixAck message;
    message.set_pin(pin);
    makeCall(message);
+}
+
+void TrezorDevice::setPassword(const std::string& password)
+{
+   // #TREZOR_INTEGRATION: DO NOT FORGET PASSWORD CASE
 }
 
 void TrezorDevice::cancel()
