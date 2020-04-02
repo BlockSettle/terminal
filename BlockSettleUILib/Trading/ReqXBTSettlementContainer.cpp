@@ -430,4 +430,5 @@ void ReqXBTSettlementContainer::initTradesArgs(bs::tradeutils::Args &args, const
    args.walletsMgr = walletsMgr_;
    args.armory = armory_;
    args.signContainer = signContainer_;
+   args.feeRatePb_ = utxoReservationManager_->feeRatePb();
 }

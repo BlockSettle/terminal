@@ -705,7 +705,8 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
             replyData->qn.receiptAddress = addr.display();
             replyData->qn.reqAuthKey = qrn.requestorRecvAddress;
 
-            const auto &cbFee = [this, qrn, spendVal, spendWallet, isSpendCC, replyData, ccWallet, xbtWallets, price](float feePerByte) {
+            const auto &cbFee = [this, qrn, spendVal, spendWallet, isSpendCC, replyData, ccWallet, xbtWallets, price](float feePerByteArmory) {
+               auto feePerByte = std::max(feePerByteArmory, utxoReservationManager_->feeRatePb());
                auto inputsCb = [this, qrn, feePerByte, replyData, spendVal, spendWallet, isSpendCC, price]
                   (const std::map<UTXO, std::string> &inputs)
                {
@@ -1151,7 +1152,7 @@ void bs::ui::RFQDealerReply::reserveBestUtxoSetAndSubmit(double quantity, double
    };
 
    utxoReservationManager_->getBestXbtUtxoSet(replyData->xbtWallet->walletId(),
-      xbtQuantity, cbBestUtxoSet);
+      xbtQuantity, cbBestUtxoSet, true);
 }
 
 void bs::ui::RFQDealerReply::refreshSettlementDetails()

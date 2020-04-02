@@ -396,4 +396,5 @@ void DealerXBTSettlementContainer::initTradesArgs(bs::tradeutils::Args &args, co
    args.walletsMgr = walletsMgr_;
    args.armory = armory_;
    args.signContainer = signContainer_;
+   args.feeRatePb_ = utxoReservationManager_->feeRatePb();
 }

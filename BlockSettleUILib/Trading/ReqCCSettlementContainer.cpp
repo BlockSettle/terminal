@@ -228,7 +228,8 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
       AcceptQuote();
    }
    else {
-      const auto &cbFee = [this](float feePerByte) {
+      const auto &cbFee = [this](float feePerByteArmory) {
+         auto feePerByte = std::max(feePerByteArmory, utxoReservationManager_->feeRatePb());
          const uint64_t spendVal = bs::XBTAmount(amount()).GetValue();
          auto inputsCb = [this, feePerByte, spendVal](const std::map<UTXO, std::string> &xbtInputs, bool useAllInputs = false) {
             auto changeAddrCb = [this, feePerByte, xbtInputs, spendVal, useAllInputs](const bs::Address &changeAddr) {
