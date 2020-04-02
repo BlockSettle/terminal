@@ -173,7 +173,7 @@ void ChatOTCHelper::onMessageArrived(const Chat::MessagePtrList& messagePtr)
    for (const auto &msg : messagePtr) {
       if (msg->partyId() == Chat::OtcRoomName) {
          auto data = OtcUtils::deserializePublicMessage(msg->messageText());
-         if (!data.isNull()) {
+         if (!data.empty()) {
             otcClient_->processPublicMessage(msg->timestamp(), msg->senderHash(), data);
          }
       } else if (msg->partyMessageState() == Chat::SENT && msg->senderHash() != otcClient_->ownContactId()) {
@@ -183,7 +183,7 @@ void ChatOTCHelper::onMessageArrived(const Chat::MessagePtrList& messagePtr)
          }
 
          auto data = OtcUtils::deserializeMessage(msg->messageText());
-         if (!data.isNull()) {
+         if (!data.empty()) {
             otcClient_->processContactMessage(msg->senderHash(), data);
          }
       }

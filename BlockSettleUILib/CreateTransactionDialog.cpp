@@ -376,7 +376,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
          throw std::runtime_error(bs::error::ErrorCodeToString(result).toStdString());
       }
 
-      if (signedTX.isNull()) {
+      if (signedTX.empty()) {
          throw std::runtime_error("Empty signed TX data received");
       }
       const Tx tx(signedTX);
@@ -434,7 +434,7 @@ void CreateTransactionDialog::stopBroadcasting()
 
 bool CreateTransactionDialog::BroadcastImportedTx()
 {
-   if (importedSignedTX_.isNull()) {
+   if (importedSignedTX_.empty()) {
       return false;
    }
    startBroadcasting();

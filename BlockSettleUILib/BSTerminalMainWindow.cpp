@@ -733,7 +733,7 @@ void BSTerminalMainWindow::tryInitChatView()
 
 void BSTerminalMainWindow::tryLoginIntoChat()
 {
-   if (chatInitState_ != ChatInitState::Done || chatTokenData_.isNull() || chatTokenSign_.isNull()) {
+   if (chatInitState_ != ChatInitState::Done || chatTokenData_.empty() || chatTokenSign_.empty()) {
       return;
    }
 
@@ -753,7 +753,7 @@ void BSTerminalMainWindow::tryGetChatKeys()
       return;
    }
    signContainer_->getChatNode(primaryWallet->walletId(), [this](const BIP32_Node &node) {
-      if (node.getPublicKey().isNull() || node.getPrivateKey().isNull()) {
+      if (node.getPublicKey().empty() || node.getPrivateKey().empty()) {
          SPDLOG_LOGGER_ERROR(logMgr_->logger(), "chat keys is empty");
          return;
       }

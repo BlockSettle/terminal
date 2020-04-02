@@ -1719,7 +1719,7 @@ TEST_F(TestWallet, MultipleKeys)
    {
       bs::core::WalletPasswordScoped lock(wallet, pd1.password);
       privKey = wallet->getDecryptedRootXpriv();
-      ASSERT_FALSE(privKey.isNull());
+      ASSERT_FALSE(privKey.empty());
       wallet->addPassword(pd2);
    }
    {
@@ -1771,7 +1771,7 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    ASSERT_NE(coreLeaf, nullptr);
 
    const auto address = coreLeaf->getNewExtAddress();
-   ASSERT_FALSE(address.isNull());
+   ASSERT_FALSE(address.empty());
 
    envPtr_->requireArmory();
    ASSERT_NE(envPtr_->armoryConnection(), nullptr);

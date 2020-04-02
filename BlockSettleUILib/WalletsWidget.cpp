@@ -506,7 +506,7 @@ void WalletsWidget::onWalletsSynchronized()
          i++;
       }
    }
-   else if (!walletsManager_->hdWallets().size() > 0){
+   else if (!walletsManager_->hdWallets().empty()){
       ui_->treeViewWallets->selectionModel()->select(walletsModel_->index(0, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
    }
 }
@@ -639,7 +639,7 @@ void WalletsWidget::onCopyAddress()
 
 void WalletsWidget::onEditAddrComment()
 {
-   if (!curWallet_ || curAddress_.isNull()) {
+   if (!curWallet_ || curAddress_.empty()) {
       return;
    }
    bool isOk = false;

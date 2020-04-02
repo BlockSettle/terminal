@@ -251,7 +251,7 @@ void TestAuth::TearDown()
 ///////////////////////////////////////////////////////////////////////////////
 TEST_F(TestAuth, ValidationAddressManager)
 {
-   ASSERT_FALSE(validationAddr_.isNull());
+   ASSERT_FALSE(validationAddr_.empty());
 
    //setup the address watcher
    ValidationAddressManager maw(envPtr_->armoryConnection());
@@ -360,7 +360,7 @@ TEST_F(TestAuth, ValidateUserAddress)
    xbtWallet_ = syncMgr_->getDefaultWallet();
 
    ASSERT_NE(authWallet_, nullptr);
-   ASSERT_FALSE(validationAddr_.isNull());
+   ASSERT_FALSE(validationAddr_.empty());
 
    //setup the address watcher
    ValidationAddressManager vam(envPtr_->armoryConnection());
@@ -431,7 +431,7 @@ TEST_F(TestAuth, BadUserAddress)
    const auto regIDs = syncMgr_->registerWallets();
    UnitTestWalletACT::waitOnRefresh(regIDs);
 
-   ASSERT_FALSE(validationAddr_.isNull());
+   ASSERT_FALSE(validationAddr_.empty());
 
    //setup the address watcher
    ValidationAddressManager maw(envPtr_->armoryConnection());
@@ -536,7 +536,7 @@ TEST_F(TestAuth, BadUserAddress)
 ///////////////////////////////////////////////////////////////////////////////
 TEST_F(TestAuth, Revoke)
 {
-   ASSERT_FALSE(validationAddr_.isNull());
+   ASSERT_FALSE(validationAddr_.empty());
 
    //we need a second validation auth address for this test
    SecureBinaryData privKey2 =
@@ -825,7 +825,7 @@ TEST_F(TestAuth, Revoke)
 ///////////////////////////////////////////////////////////////////////////////
 TEST_F(TestAuth, Concurrency)
 {
-   ASSERT_FALSE(validationAddr_.isNull());
+   ASSERT_FALSE(validationAddr_.empty());
 
    //we need a second validation auth address for this test
    SecureBinaryData privKey2 =
@@ -1040,7 +1040,7 @@ TEST_F(TestAuth, Concurrency_WithACT)
    ValidationAdressManager event thread will be handling it.
    */
 
-   ASSERT_FALSE(validationAddr_.isNull());
+   ASSERT_FALSE(validationAddr_.empty());
 
    //we need a second validation auth address for this test
    SecureBinaryData privKey2 =

@@ -214,7 +214,7 @@ TEST_F(TestCC, DISABLED_Initial_balance)
 {
    ASSERT_NE(envPtr_->walletsMgr()->getPrimaryWallet(), nullptr);
    ASSERT_NE(ccWallet_, nullptr);
-   ASSERT_FALSE(genesisAddr_.isNull());
+   ASSERT_FALSE(genesisAddr_.empty());
    EXPECT_EQ(ccWallet_->type(), bs::core::wallet::Type::ColorCoin);
    EXPECT_GE(ccWallet_->getUsedAddressCount(), 1);
    EXPECT_EQ(ccWallet_->getTotalBalance(), ccFundingAmount_);
@@ -311,7 +311,7 @@ TEST_F(TestCC, DISABLED_TX_buy)
                std::dynamic_pointer_cast<bs::core::hd::Leaf>(ccSignWallet_);
             const bs::core::WalletPasswordScoped lock(priWallet, passphrase_);
             signed1 = ccSignWallet_->signPartialTXRequest(txReq3);
-            ASSERT_FALSE(signed1.isNull());
+            ASSERT_FALSE(signed1.empty());
          }
 
          BinaryData signed2;
@@ -320,7 +320,7 @@ TEST_F(TestCC, DISABLED_TX_buy)
                std::dynamic_pointer_cast<bs::core::hd::Leaf>(xbtSignWallet_);
             const bs::core::WalletPasswordScoped lock(priWallet, passphrase_);
             signed2 = xbtSignWallet_->signPartialTXRequest(txReq2);
-            ASSERT_FALSE(signed2.isNull());
+            ASSERT_FALSE(signed2.empty());
          }
 
          Signer signer;                         // merge halves
@@ -329,7 +329,7 @@ TEST_F(TestCC, DISABLED_TX_buy)
          ASSERT_TRUE(signer.isValid());
          ASSERT_TRUE(signer.verify());
          auto tx = signer.serialize();
-         ASSERT_FALSE(tx.isNull());
+         ASSERT_FALSE(tx.empty());
 
          Tx txObj(tx);
          txHash = txObj.getThisHash();
@@ -433,7 +433,7 @@ TEST_F(TestCC, DISABLED_TX_sell)
                std::dynamic_pointer_cast<bs::core::hd::Leaf>(ccSignWallet_);
             const bs::core::WalletPasswordScoped lock(priWallet, passphrase_);
             signed1 = ccSignWallet_->signPartialTXRequest(txReq3);
-            ASSERT_FALSE(signed1.isNull());
+            ASSERT_FALSE(signed1.empty());
          }
 
          // use full requester's half on dealer side
@@ -444,7 +444,7 @@ TEST_F(TestCC, DISABLED_TX_sell)
                std::dynamic_pointer_cast<bs::core::hd::Leaf>(xbtSignWallet_);
             const bs::core::WalletPasswordScoped lock(priWallet, passphrase_);
             signed2 = xbtSignWallet_->signPartialTXRequest(txReq2);
-            ASSERT_FALSE(signed2.isNull());
+            ASSERT_FALSE(signed2.empty());
          }
 
          Signer signer;                         // merge halves
@@ -453,7 +453,7 @@ TEST_F(TestCC, DISABLED_TX_sell)
          ASSERT_TRUE(signer.isValid());
          ASSERT_TRUE(signer.verify());
          auto tx = signer.serialize();
-         ASSERT_FALSE(tx.isNull());
+         ASSERT_FALSE(tx.empty());
 
          Tx txObj(tx);
          txHash = txObj.getThisHash();
@@ -533,9 +533,9 @@ TEST_F(TestCC, sell_after_buy)
    txReq3.populateUTXOs = true;
    txReq3.inputs = txReq1.inputs;
    const auto signed1 = ccWallet_->SignPartialTXRequest(txReq3);
-   ASSERT_FALSE(signed1.isNull());
+   ASSERT_FALSE(signed1.empty());
    const auto signed2 = xbtWallet_->SignPartialTXRequest(txReq2);
-   ASSERT_FALSE(signed2.isNull());
+   ASSERT_FALSE(signed2.empty());
 
    Signer signer;                         // merge halves
    signer.deserializeState(signed1);
@@ -543,7 +543,7 @@ TEST_F(TestCC, sell_after_buy)
    ASSERT_TRUE(signer.isValid());
    ASSERT_TRUE(signer.verify());
    auto tx = signer.serialize();
-   ASSERT_FALSE(tx.isNull());
+   ASSERT_FALSE(tx.empty());
    ASSERT_TRUE(TestEnv::regtestControl()->SendTx(QString::fromStdString(tx.toHexStr())));
    auto curHeight = TestEnv::armory()->topBlock();
    TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
@@ -581,14 +581,14 @@ TEST_F(TestCC, sell_after_buy)
    txReqSell.populateUTXOs = true;
    txReqSell.prevStates = { txReqSell2.serializeState() };
    const auto signed3 = reqCCwallet->SignPartialTXRequest(txReqSell);
-   ASSERT_FALSE(signed3.isNull());
+   ASSERT_FALSE(signed3.empty());
 
    // use full requester's half on dealer side
    txReqSell2.inputs = inputsSellXbt;
    txReqSell2.populateUTXOs = true;
    txReqSell2.prevStates = { txReqSell.serializeState() };
    const auto signed4 = xbtWallet_->SignPartialTXRequest(txReqSell2);
-   ASSERT_FALSE(signed4.isNull());
+   ASSERT_FALSE(signed4.empty());
 
    Signer signerSell;
    signerSell.deserializeState(signed3);
@@ -596,7 +596,7 @@ TEST_F(TestCC, sell_after_buy)
    ASSERT_TRUE(signerSell.isValid());
    ASSERT_TRUE(signerSell.verify());
    auto txSell = signerSell.serialize();
-   ASSERT_FALSE(txSell.isNull());
+   ASSERT_FALSE(txSell.empty());
    ASSERT_TRUE(TestEnv::regtestControl()->SendTx(QString::fromStdString(txSell.toHexStr())));
    EXPECT_TRUE(TestEnv::blockMonitor()->waitForZC());
    ccWallet_->UpdateBalanceFromDB();

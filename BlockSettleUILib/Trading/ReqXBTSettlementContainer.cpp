@@ -211,7 +211,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
    if ((payoutSignId_ != 0) && (payoutSignId_ == id)) {
       payoutSignId_ = 0;
 
-      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
+      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.empty()) {
          logger_->warn("[ReqXBTSettlementContainer::onTXSigned] Pay-Out sign failure: {} ({})"
             , (int)errCode, errTxt);
          cancelWithError(tr("Pay-Out signing failed: %1").arg(bs::error::ErrorCodeToString(errCode)), errCode);
@@ -250,7 +250,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
    if ((payinSignId_ != 0) && (payinSignId_ == id)) {
       payinSignId_ = 0;
 
-      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
+      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.empty()) {
          SPDLOG_LOGGER_ERROR(logger_, "failed to create pay-in TX: {} ({})", static_cast<int>(errCode), errTxt);
          cancelWithError(tr("Failed to create Pay-In TX: %1").arg(bs::error::ErrorCodeToString(errCode)), errCode);
          return;

@@ -286,7 +286,7 @@ BinaryData TestCCoin::SimpleSendMany(const bs::Address & fromAddress, const std:
          {
             const bs::core::WalletPasswordScoped lock(lockWallet, passphrase_);
             txSigned = signWallet->signTXRequest(txReq, true);
-            if (txSigned.isNull())
+            if (txSigned.empty())
                throw std::runtime_error("Can't sign tx");
          }
 
@@ -352,7 +352,7 @@ Tx TestCCoin::CreateCJtx(
 
    //CC recipients
    cjSigner.addRecipient(structB.ccAddr_.getRecipient(bs::XBTAmount{ structB.ccValue_ }));
-   const bs::Address ccChange = structA.ccChange.isNull() ? structA.ccAddr_ : structA.ccChange;
+   const bs::Address ccChange = structA.ccChange.empty() ? structA.ccAddr_ : structA.ccChange;
   
    if (ccValue < structB.ccValue_)
       throw std::runtime_error("invalid spend amount");
@@ -385,7 +385,7 @@ Tx TestCCoin::CreateCJtx(
    EXPECT_TRUE(cjSigner.isValid());
    EXPECT_TRUE(cjSigner.verify());
    auto signedTx = cjSigner.serialize();
-   EXPECT_FALSE(signedTx.isNull());
+   EXPECT_FALSE(signedTx.empty());
 
    Tx tx(signedTx);
    EXPECT_TRUE(tx.isInitialized());
@@ -395,10 +395,10 @@ Tx TestCCoin::CreateCJtx(
    addresses.push_back(structA.xbtAddr_);
    addresses.push_back(structB.ccAddr_);
    addresses.push_back(structB.xbtAddr_);
-   if (!structA.ccChange.isNull()) {
+   if (!structA.ccChange.empty()) {
       addresses.push_back(structA.ccChange);
    }
-   if (!structB.ccChange.isNull()) {
+   if (!structB.ccChange.empty()) {
       addresses.push_back(structB.ccChange);
    }
 
