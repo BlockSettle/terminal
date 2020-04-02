@@ -58,6 +58,11 @@ public:
    Q_INVOKABLE QString walletDesc() {
       return QString::fromStdString(info_.vendor_);
    }
+   bool isValid() {
+      return !info_.xpubRoot_.empty() &&
+         !info_.xpubNestedSegwit_.empty() &&
+         !info_.xpubNativeSegwit_.empty();
+   }
 };
 Q_DECLARE_METATYPE(HSMWalletWrapper)
 

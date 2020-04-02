@@ -15,7 +15,6 @@
 
 #include "QByteArray"
 #include "QDataStream"
-#include "QDebug"
 
 namespace {
    int sendApdu(hid_device* dongle, const QByteArray& command) {
@@ -153,6 +152,16 @@ void LedgerDevice::cancel()
 
 void LedgerDevice::getPublicKey(AsyncCallBackCall&& cb /*= nullptr*/)
 {
+   processGetPublicKey(std::move(cb));
+   releaseDevice();
+}
+
+void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= nullptr*/)
+{
+}
+
+void LedgerDevice::processGetPublicKey(AsyncCallBackCall&& cb /*= nullptr*/)
+{
    if (hid_init() < 0) {
       logger_->info(
          "[LedgerClient] getPublicKey - Cannot init hid.");
@@ -178,30 +187,59 @@ void LedgerDevice::getPublicKey(AsyncCallBackCall&& cb /*= nullptr*/)
    walletInfo.info_.label_ = deviceKey.deviceLabel_.toStdString();
    walletInfo.info_.deviceId_ = deviceKey.deviceId_.toStdString();
 
-   auto pubKey = retrievePublicKey({ 0x80000000 });
-   walletInfo.info_.xpubRoot_ = pubKey.getBase58().toBinStr();
+   auto pubKey = retrievePublicKeyFromPath({ 0x80000000 });
+   try {
+      walletInfo.info_.xpubRoot_ = pubKey.getBase58().toBinStr();
+   }
+   catch (...) {
+      logger_->info(
+         "[LedgerClient] getPublicKey - Cannot retrieve root xpub key.");
+      emit operationFailed();
+      return;
+   }
 
-   pubKey = retrievePublicKey(getDerivationPath(testNet_, true));
-   walletInfo.info_.xpubNestedSegwit_ = pubKey.getBase58().toBinStr();
+   pubKey = retrievePublicKeyFromPath(getDerivationPath(testNet_, true));
+   try {
+      walletInfo.info_.xpubNestedSegwit_ = pubKey.getBase58().toBinStr();
+   }
+   catch (...) {
+      logger_->info(
+         "[LedgerClient] getPublicKey - Cannot retrieve nested segwit xpub key.");
+      emit operationFailed();
+      return;
+   }
 
-   pubKey = retrievePublicKey(getDerivationPath(testNet_, false));
-   walletInfo.info_.xpubNativeSegwit_ = pubKey.getBase58().toBinStr();
+   pubKey = retrievePublicKeyFromPath(getDerivationPath(testNet_, false));
+   try {
+      walletInfo.info_.xpubNativeSegwit_ = pubKey.getBase58().toBinStr();
+   }
+   catch (...) {
+      logger_->info(
+         "[LedgerClient] getPublicKey - Cannot retrieve native segwit xpub key.");
+      emit operationFailed();
+      return;
+   }
 
-   hid_close(dongle_);
-   hid_exit();
-   dongle_ = nullptr;
+   if (!walletInfo.isValid()) {
+      logger_->info(
+         "[LedgerClient] getPublicKey - Wallet info is not correct.");
+      emit operationFailed();
+      return;
+   }
+   else {
+      logger_->info(
+         "[LedgerClient] getPublicKey - Operation succeeded.\nRoot xpub : "
+         + walletInfo.info_.xpubRoot_ + " \nNested xpub: "
+         + walletInfo.info_.xpubNestedSegwit_ + " \nNativeSegwit: "
+         + walletInfo.info_.xpubNativeSegwit_);
+   }
 
    if (cb) {
       cb(QVariant::fromValue<>(walletInfo));
    }
 }
 
-void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= nullptr*/)
-{
-}
-
-
-BIP32_Node LedgerDevice::retrievePublicKey(std::vector<uint32_t>&& derivationPath)
+BIP32_Node LedgerDevice::retrievePublicKeyFromPath(std::vector<uint32_t>&& derivationPath)
 {
    // Parent
    std::unique_ptr<BIP32_Node> parent = nullptr;
@@ -234,7 +272,6 @@ BIP32_Node LedgerDevice::getPublicKeyApdu(std::vector<uint32_t>&& derivationPath
 
    QByteArray response;
    auto res = receiveApduResult(dongle_, response);
-   qDebug() << response.toHex();
    if (res != Ledger::SW_OK) {
       logger_->info(
          "[LedgerClient] getPublicKeyApdu - Cannot read from device.");
@@ -251,7 +288,7 @@ BIP32_Node LedgerDevice::getPublicKeyApdu(std::vector<uint32_t>&& derivationPath
    uint32_t fingerprint = 0;
    if (parent) {
       auto pubkey_hash = BtcUtils::getHash160(parent->getPublicKey());
-      uint32_t fingerprint = static_cast<uint32_t>(
+      fingerprint = static_cast<uint32_t>(
          static_cast<uint32_t>(pubkey_hash[0] << 24) | static_cast<uint32_t>(pubkey_hash[1] << 16)
          | static_cast<uint32_t>(pubkey_hash[2] << 8) | static_cast<uint32_t>(pubkey_hash[3])
          );
@@ -262,4 +299,13 @@ BIP32_Node LedgerDevice::getPublicKeyApdu(std::vector<uint32_t>&& derivationPath
       fingerprint, pubKeyAsset.getCompressedKey(), chainCode);
 
    return pubNode;
+}
+
+void LedgerDevice::releaseDevice()
+{
+   if (dongle_) {
+      hid_close(dongle_);
+      hid_exit();
+      dongle_ = nullptr;
+   }
 }

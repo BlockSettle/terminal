@@ -40,9 +40,11 @@ public:
 
 protected:
 
-   BIP32_Node retrievePublicKey(std::vector<uint32_t>&& derivationPath);
+   void processGetPublicKey(AsyncCallBackCall&& cb = nullptr);
+   BIP32_Node retrievePublicKeyFromPath(std::vector<uint32_t>&& derivationPath);
    BIP32_Node getPublicKeyApdu(std::vector<uint32_t>&& derivationPath, const std::unique_ptr<BIP32_Node>& parent = nullptr);
 
+   void releaseDevice();
 private:
    HidDeviceInfo hidDeviceInfo_;
    bool testNet_{};
