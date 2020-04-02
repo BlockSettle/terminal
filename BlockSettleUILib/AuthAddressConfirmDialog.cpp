@@ -122,8 +122,7 @@ void AuthAddressConfirmDialog::onAuthAddrSubmitSuccess(const QString &address)
 {
    progressTimer_.stop();
 
-   const bool isProd = settings_->get<int>(ApplicationSettings::envConfiguration) ==
-      static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
+   const bool isProd = settings_->getNetType() == NetworkType::MainNet;
 
    const auto body = isProd ? tr("A validation transaction will be sent within the next 24 hours.")
       : tr("A validation transaction will be sent within the next 15 minutes.");

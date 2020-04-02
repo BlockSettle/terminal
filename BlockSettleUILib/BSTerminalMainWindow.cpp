@@ -693,8 +693,7 @@ void BSTerminalMainWindow::tryInitChatView()
    chatClientServicePtr_ = std::make_shared<Chat::ChatClientService>();
 
    connect(chatClientServicePtr_.get(), &Chat::ChatClientService::initDone, this, [this]() {
-      const bool isProd = applicationSettings_->get<int>(ApplicationSettings::envConfiguration) ==
-         static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
+      const bool isProd = applicationSettings_->getNetType() == NetworkType::MainNet;
       const auto env = isProd ? bs::network::otc::Env::Prod : bs::network::otc::Env::Test;
 
       ui_->widgetChat->init(connectionManager_, env, chatClientServicePtr_,
@@ -1235,8 +1234,8 @@ void BSTerminalMainWindow::setupMenu()
    ui_->menubar->setCornerWidget(ui_->loginGroupWidget);
 #endif
 
-   auto EnvType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
-   if (EnvType == ApplicationSettings::EnvConfiguration::Production) {
+   const bool isProd = applicationSettings_->getNetType() == NetworkType::MainNet;
+   if (isProd) {
       ui_->testEnvSettings->hide();
    }
 }

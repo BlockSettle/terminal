@@ -160,8 +160,7 @@ void CCTokenEntryDialog::onCCAddrSubmitted(const QString addr)
 {
    QDialog::accept();
 
-   const bool isProd = settings_->get<int>(ApplicationSettings::envConfiguration) ==
-      static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
+   const bool isProd = settings_->getNetType() == NetworkType::MainNet;
 
    const auto body = isProd ? tr("BlockSettle will issue your tokens within the next 24 hours.")
       : tr("BlockSettle will issue your tokens within the next 15 minutes.");

@@ -42,7 +42,7 @@ public:
       , QWidget *bsMainWindow, const std::shared_ptr<ApplicationSettings> &);
 
 private:
-   static BinaryData loadKeyFromResource(KeyType, ApplicationSettings::EnvConfiguration);
+   static BinaryData loadKeyFromResource(KeyType, ApplicationSettings::EnvConfiguration, NetworkType type);
    static QString serverName(const KeyType);
 
 private:

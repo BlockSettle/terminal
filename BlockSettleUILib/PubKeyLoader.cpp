@@ -45,11 +45,10 @@ BinaryData PubKeyLoader::loadKey(const KeyType kt) const
          return {};
       }
    }
-   return loadKeyFromResource(kt, ApplicationSettings::EnvConfiguration(
-      appSettings_->get<int>(ApplicationSettings::envConfiguration)));
+   return loadKeyFromResource(kt, appSettings_->getEnvConf(), appSettings_->getNetType());
 }
 
-BinaryData PubKeyLoader::loadKeyFromResource(KeyType kt, ApplicationSettings::EnvConfiguration ec)
+BinaryData PubKeyLoader::loadKeyFromResource(KeyType kt, ApplicationSettings::EnvConfiguration ec, NetworkType type)
 {
    QString filename;
    switch (kt) {
@@ -69,11 +68,12 @@ BinaryData PubKeyLoader::loadKeyFromResource(KeyType kt, ApplicationSettings::En
    assert(!filename.isEmpty());
 
    switch (ec) {
-   case ApplicationSettings::EnvConfiguration::Production:
-      filename += QStringLiteral("prod");
-      break;
-   case ApplicationSettings::EnvConfiguration::Test:
-      filename += QStringLiteral("uat");
+   case ApplicationSettings::EnvConfiguration::ProductionAndUat:
+      if (type == NetworkType::MainNet) {
+         filename += QStringLiteral("prod");
+      } else {
+         filename += QStringLiteral("uat");
+      }
       break;
 #ifndef PRODUCTION_BUILD
    case ApplicationSettings::EnvConfiguration::Staging:

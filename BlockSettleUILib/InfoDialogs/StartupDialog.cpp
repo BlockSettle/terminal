@@ -97,9 +97,6 @@ void StartupDialog::applySelectedConnectivity(std::shared_ptr<ArmoryServersProvi
    assert(selectedIndex != servers.size());
    armoryServersProvider->setupServer(selectedIndex);
 
-   ApplicationSettings::EnvConfiguration envConfig = (network == NetworkType::TestNet) ?
-      ApplicationSettings::EnvConfiguration::Test : ApplicationSettings::EnvConfiguration::Production;
-   appSettings_->set(ApplicationSettings::envConfiguration, static_cast<int>(envConfig));
    appSettings_->set(ApplicationSettings::initialized, true);
 }
 

@@ -125,6 +125,8 @@ private:
    bool showStartupDialog();
    void setWidgetsAuthorized(bool authorized);
 
+   void promptCreateAccountIfNeeded();
+
 signals:
    void armoryServerPromptResultReady();
 

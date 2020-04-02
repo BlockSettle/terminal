@@ -43,10 +43,11 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
 {
    ui_->setupUi(this);
 
-   QMetaEnum metaEnumEnvConfiguration = QMetaEnum::fromType<ApplicationSettings::EnvConfiguration>();
-   for (int i = 0; i < metaEnumEnvConfiguration.keyCount(); ++i) {
-      ui_->comboBoxEnvironment->addItem(tr(metaEnumEnvConfiguration.valueToKey(i)));
-   }
+   ui_->comboBoxEnvironment->addItem(tr("Production/UAT"), static_cast<int>(ApplicationSettings::EnvConfiguration::ProductionAndUat));
+#ifndef PRODUCTION_BUILD
+   ui_->comboBoxEnvironment->addItem(tr("Staging"), static_cast<int>(ApplicationSettings::EnvConfiguration::Staging));
+   ui_->comboBoxEnvironment->addItem(tr("Custom"), static_cast<int>(ApplicationSettings::EnvConfiguration::Custom));
+#endif
    ui_->comboBoxEnvironment->setCurrentIndex(-1);
 
    connect(ui_->pushButtonManageArmory, &QPushButton::clicked, this, [this](){
@@ -150,7 +151,12 @@ void NetworkSettingsPage::displayArmorySettings()
 void NetworkSettingsPage::displayEnvironmentSettings()
 {
    auto env = appSettings_->get<int>(ApplicationSettings::envConfiguration);
-   ui_->comboBoxEnvironment->setCurrentIndex(env);
+   for (int i = 0; i < ui_->comboBoxEnvironment->count(); ++i) {
+      if (ui_->comboBoxEnvironment->itemData(i).toInt() == env) {
+         ui_->comboBoxEnvironment->setCurrentIndex(i);
+         break;
+      }
+   }
    ui_->lineEditCustomPubBridgeHost->setText(appSettings_->get<QString>(ApplicationSettings::customPubBridgeHost));
    ui_->spinBoxCustomPubBridgePort->setValue(appSettings_->get<int>(ApplicationSettings::customPubBridgePort));
    onEnvSelected(env);
@@ -182,7 +188,7 @@ void NetworkSettingsPage::apply()
 {
    armoryServersProvider_->setupServer(ui_->comboBoxArmoryServer->currentIndex());
 
-   appSettings_->set(ApplicationSettings::envConfiguration, ui_->comboBoxEnvironment->currentIndex());
+   appSettings_->set(ApplicationSettings::envConfiguration, ui_->comboBoxEnvironment->currentData().toInt());
    appSettings_->set(ApplicationSettings::customPubBridgeHost, ui_->lineEditCustomPubBridgeHost->text());
    appSettings_->set(ApplicationSettings::customPubBridgePort, ui_->spinBoxCustomPubBridgePort->value());
 
@@ -208,10 +214,9 @@ void NetworkSettingsPage::onEnvSelected(int index)
       return;
    }
 
-   if (env == ApplicationSettings::EnvConfiguration::Production) {
-      ui_->comboBoxArmoryServer->setCurrentIndex(armoryServersProvider_->getIndexOfMainNetServer());
-   }
-   else {
+#ifndef PRODUCTION_BUILD
+   if (env == ApplicationSettings::EnvConfiguration::Staging) {
       ui_->comboBoxArmoryServer->setCurrentIndex(armoryServersProvider_->getIndexOfTestNetServer());
    }
+#endif
 }
