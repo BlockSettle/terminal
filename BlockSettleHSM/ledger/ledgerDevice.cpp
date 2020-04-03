@@ -294,7 +294,8 @@ BIP32_Node LedgerDevice::getPublicKeyApdu(std::vector<uint32_t>&& derivationPath
    LedgerPublicKey pubKey;
    pubKey.parseFromResponse(response);
 
-   Asset_PublicKey pubKeyAsset(SecureBinaryData::fromString(pubKey.pubKey_.toStdString()));
+   auto data = SecureBinaryData::fromString(pubKey.pubKey_.toStdString());
+   Asset_PublicKey pubKeyAsset(data);
    SecureBinaryData chainCode = SecureBinaryData::fromString(pubKey.chainCode_.toStdString());
 
    uint32_t fingerprint = 0;

@@ -187,10 +187,10 @@ QPointer<HSMDeviceAbstract> HSMDeviceManager::getDevice(DeviceKey key)
    switch (key.type_)
    {
    case DeviceType::HWTrezor:
-      return trezorClient_->getTrezorDevice(key.deviceId_);
+      return static_cast<QPointer<HSMDeviceAbstract>>(trezorClient_->getTrezorDevice(key.deviceId_));
       break;
    case DeviceType::HWLedger:
-      return ledgerClient_->getDevice(key.deviceId_);
+      return static_cast<QPointer<HSMDeviceAbstract>>(ledgerClient_->getDevice(key.deviceId_));
       break;
    default:
       // Add new device type
