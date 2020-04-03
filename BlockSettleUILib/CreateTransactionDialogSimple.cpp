@@ -195,7 +195,7 @@ void CreateTransactionDialogSimple::getChangeAddress(AddressCb cb) const
 
 void CreateTransactionDialogSimple::createTransaction()
 {
-   if (!importedSignedTX_.isNull()) {
+   if (!importedSignedTX_.empty()) {
       if (BroadcastImportedTx()) {
          accept();
       }

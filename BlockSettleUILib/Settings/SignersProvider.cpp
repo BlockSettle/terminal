@@ -274,7 +274,7 @@ std::string SignersProvider::remoteSignerKeysFile() const
 
 BinaryData SignersProvider::remoteSignerOwnKey() const
 {
-   if (remoteSignerOwnKey_.isNull()) {
+   if (remoteSignerOwnKey_.empty()) {
       remoteSignerOwnKey_ = ZmqBIP15XDataConnection::getOwnPubKey(remoteSignerKeysDir(), remoteSignerKeysFile());
    }
    return remoteSignerOwnKey_;

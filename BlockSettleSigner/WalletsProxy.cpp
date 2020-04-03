@@ -221,7 +221,7 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
       SPDLOG_LOGGER_DEBUG(logger_, "copy WO from WO wallet to '{}'", filePath.toStdString());
 
       adapter_->exportWoWallet(walletId.toStdString(), [walletId, successCallback, failCallback, filePath](const BinaryData &content) {
-         if (content.isNull()) {
+         if (content.empty()) {
             failCallback("can't read WO file");
             return;
          }
@@ -357,7 +357,7 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
       (const SecureBinaryData &privKey, const SecureBinaryData &chainCode) {
       QString fn = fileName;
 
-      if (privKey.isNull()) {
+      if (privKey.empty()) {
          logger_->error("[WalletsProxy] error decrypting private key");
          const auto errText = tr("Failed to decrypt private key for wallet %1").arg(walletId);
          QMetaObject::invokeMethod(this, [this, jsCallback, errText] {

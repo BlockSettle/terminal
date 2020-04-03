@@ -104,6 +104,10 @@ using PriceMap = std::map<MarketDataModel::MarketDataColumns, PriceItem>;
 
 static QString getVolumeString(double value, bs::network::Asset::Type at)
 {
+   if (qFuzzyIsNull(value)) {
+      return QString{};
+   }
+
    switch(at) {
    case bs::network::Asset::SpotFX:
       return UiUtils::displayCurrencyAmount(value);

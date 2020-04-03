@@ -249,7 +249,7 @@ void HeadlessAppObj::startTerminalsProcessing()
             try {
                inKey = READHEX(hexValue);
 
-               if (inKey.isNull()) {
+               if (inKey.empty()) {
                   throw std::runtime_error(fmt::format("trusted client list key entry {} has no key", i));
                }
 
@@ -367,7 +367,7 @@ bs::error::ErrorCode HeadlessAppObj::changeControlPassword(const SecureBinaryDat
    }
 
    try {
-      if (controlPasswordNew.isNull()) {
+      if (controlPasswordNew.empty()) {
          walletsMgr_->eraseControlPassword(controlPasswordOld);
       }
       else {
@@ -512,7 +512,7 @@ void HeadlessAppObj::updateSettings(const Blocksettle::Communication::signer::Se
          try {
             std::string name = line.substr(0, colonIndex);
             const SecureBinaryData inKey = READHEX(line.substr(colonIndex + 1));
-            if (inKey.isNull()) {
+            if (inKey.empty()) {
                throw std::invalid_argument("no or malformed key data");
             }
 

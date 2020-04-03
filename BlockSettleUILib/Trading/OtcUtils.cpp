@@ -74,7 +74,7 @@ BinaryData OtcUtils::deserializePublicMessage(const std::string &data)
 QString OtcUtils::toReadableString(const QString &text)
 {
    auto msgData = OtcUtils::deserializeMessage(text.toStdString());
-   if (msgData.isNull()) {
+   if (msgData.empty()) {
       return {};
    }
 

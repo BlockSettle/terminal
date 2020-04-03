@@ -494,7 +494,7 @@ void RFQTicketXBT::onAuthAddrChanged(int index)
 {
    authAddr_ = authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(index));
    authKey_.clear();
-   if (authAddr_.isNull()) {
+   if (authAddr_.empty()) {
       return;
    }
    const auto settlLeaf = authAddressManager_->getSettlementLeaf(authAddr_);

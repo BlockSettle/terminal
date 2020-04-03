@@ -334,7 +334,7 @@ void RFQDealerReply::getAddress(const std::string &quoteRequestId, const std::sh
    }
 
    auto address = addresses_[quoteRequestId][wallet->walletId()].at(static_cast<size_t>(type));
-   if (!address.isNull()) {
+   if (!address.empty()) {
       cb(address);
       return;
    }
@@ -404,7 +404,7 @@ void RFQDealerReply::onAuthAddrChanged(int index)
    authAddr_ = authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(index));
    authKey_.clear();
 
-   if (authAddr_.isNull()) {
+   if (authAddr_.empty()) {
       return;
    }
    const auto settlLeaf = authAddressManager_->getSettlementLeaf(authAddr_);

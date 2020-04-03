@@ -53,7 +53,7 @@ NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::sync::Wallet> &wall
    };
    wallet_->getNewExtAddress(cbAddr);
 
-   if (address_.isNull()) {
+   if (address_.empty()) {
       copyButton->setEnabled(false);
       closeButton->setEnabled(false);
    }

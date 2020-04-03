@@ -85,7 +85,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    infoReqId_ = signingContainer_->GetInfo(walletInfo_.rootId().toStdString());
 
    dealerTx_ = BinaryData::CreateFromHex(quote_.dealerTransaction);
-   if (dealerTx_.isNull()) {
+   if (dealerTx_.empty()) {
       throw std::invalid_argument("missing dealer's transaction");
    }
 }
@@ -169,7 +169,7 @@ void ReqCCSettlementContainer::activate()
 
    emit paymentVerified(foundRecipAddr && amountValid, QString{});
 
-   if (genAddress_.isNull()) {
+   if (genAddress_.empty()) {
       emit genAddressVerified(false, tr("GA is null"));
    }
    else if (side() == bs::network::Side::Buy) {
