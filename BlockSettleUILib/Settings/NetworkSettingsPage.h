@@ -40,7 +40,8 @@ signals:
    void armoryServerChanged();
 
 private slots:
-   void onEnvSelected(int);
+   void onEnvSelected(int index);
+   void onArmorySelected(int index);
    void displayArmorySettings();
    void displayEnvironmentSettings();
 
