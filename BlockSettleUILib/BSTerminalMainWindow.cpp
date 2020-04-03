@@ -1309,7 +1309,7 @@ void BSTerminalMainWindow::onLogin()
 
 void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings)
 {
-   if (networkSettings.status == Blocksettle::Communication::GetNetworkSettingsResponse_Status_LIVE_TRADING_COMING_SOON || true) {
+   if (networkSettings.status == Blocksettle::Communication::GetNetworkSettingsResponse_Status_LIVE_TRADING_COMING_SOON) {
       BSMessageBox mbox(BSMessageBox::question, tr("Login to BlockSettle"), tr("Live trading is coming soon...")
                    , tr("In the meantime, please get comfortable with our model on our testnet environment."
                         "Would you like to switch to testnet and re-launch the Terminal now?"), this);
@@ -1979,7 +1979,9 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
 
 void BSTerminalMainWindow::switchToUatEnv()
 {
-
+   applicationSettings_->set(ApplicationSettings::envConfiguration
+      , static_cast<int>(ApplicationSettings::EnvConfiguration::Test));
+   armoryServersProvider_->setupServer(armoryServersProvider_->getIndexOfTestNetServer());
 }
 
 void BSTerminalMainWindow::restartTerminal()
