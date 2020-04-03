@@ -71,15 +71,10 @@ void TrezorClient::initConnection(AsyncCallBack&& cb)
    postToTrezor("/", std::move(initCallBack));
 }
 
-void TrezorClient::initConnection(const QString& walletId, AsyncCallBackCall&& cb /*= nullptr*/)
+void TrezorClient::initConnection(QString&& deviceId, AsyncCallBackCall&& cb /*= nullptr*/)
 {
-   auto hdWallet = walletManager_->getHDWalletById(walletId.toStdString());
-   assert(hdWallet->isHsm());
-   auto encKeys = hdWallet->encryptionKeys();
-   auto deviceId = encKeys[0].toBinStr();
-
-   AsyncCallBack cbWrapper = [deviceId, originCb = std::move(cb)]() {
-      originCb({ QString::fromStdString(deviceId) });
+   AsyncCallBack cbWrapper = [copyDeviceId = std::move(deviceId), originCb = std::move(cb)]() {
+      originCb({ copyDeviceId });
    };
 
    initConnection(std::move(cbWrapper));

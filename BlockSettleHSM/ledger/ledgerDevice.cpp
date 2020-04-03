@@ -12,6 +12,10 @@
 #include "ledger/ledgerDevice.h"
 #include "ledger/ledgerClient.h"
 #include "Assets.h"
+#include "ProtobufHeadlessUtils.h"
+#include "CoreWallet.h"
+#include "Wallets/SyncWalletsManager.h"
+#include "Wallets/SyncHDWallet.h"
 
 #include "QByteArray"
 #include "QDataStream"
@@ -124,7 +128,7 @@ DeviceKey LedgerDevice::key() const
 {
    return {
       hidDeviceInfo_.productString_,
-      hidDeviceInfo_.serialNumber_,
+      hidDeviceInfo_.manufacturerString_,
       hidDeviceInfo_.manufacturerString_,
       {},
       {},
@@ -158,6 +162,14 @@ void LedgerDevice::getPublicKey(AsyncCallBackCall&& cb /*= nullptr*/)
 
 void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= nullptr*/)
 {
+   Blocksettle::Communication::headless::SignTxRequest request;
+   bool res = request.ParseFromString(reqTX.toByteArray().toStdString());
+   if (!res) {
+      logger_->debug("[LedgerDevice] signTX - failed to parse transaction request ");
+      return;
+   }
+
+   bs::core::wallet::TXSignRequest coreReq = bs::signer::pbTxRequestToCore(request);
 }
 
 void LedgerDevice::processGetPublicKey(AsyncCallBackCall&& cb /*= nullptr*/)

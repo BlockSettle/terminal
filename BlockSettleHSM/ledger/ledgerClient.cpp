@@ -68,7 +68,7 @@ QPointer<LedgerDevice> LedgerClient::getDevice(const QString& deviceId)
    return nullptr;
 }
 
-void LedgerClient::scanDevicesNonBlocking()
+void LedgerClient::scanDevices()
 {
    availableDevices_.clear();
 

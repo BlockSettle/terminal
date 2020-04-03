@@ -27,7 +27,7 @@ public:
    LedgerClient(std::shared_ptr<spdlog::logger> logger, bool testNet, QObject *parent = nullptr);
    ~LedgerClient() override = default;
 
-   void scanDevicesNonBlocking();
+   void scanDevices();
 
    QVector<DeviceKey> deviceKeys() const;
 

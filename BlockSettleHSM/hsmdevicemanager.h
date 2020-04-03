@@ -51,7 +51,7 @@ public:
    Q_INVOKABLE void setMatrixPin(int deviceIndex, QString pin);
    Q_INVOKABLE void cancel(int deviceIndex);
 
-   Q_INVOKABLE void prepareTrezorForSign(QString deviceId);
+   Q_INVOKABLE void prepareHWDeviceForSign(QString deviceId);
    Q_INVOKABLE void signTX(QVariant reqTX);
 
    Q_INVOKABLE void releaseDevices();
@@ -78,6 +78,7 @@ private:
 public:
    std::unique_ptr<TrezorClient> trezorClient_;
    std::unique_ptr<LedgerClient> ledgerClient_;
+   std::shared_ptr<bs::sync::WalletsManager> walletManager_;
 
    HSMDeviceModel* model_;
    bool testNet_{};

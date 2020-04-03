@@ -15,12 +15,15 @@
 #include "ledger/ledgerDevice.h"
 #include "ConnectionManager.h"
 #include "WalletManager.h"
+#include "Wallets/SyncWalletsManager.h"
+#include "Wallets/SyncHDWallet.h"
 
 HSMDeviceManager::HSMDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager, std::shared_ptr<bs::sync::WalletsManager> walletManager,
    bool testNet, QObject* parent /*= nullptr*/)
    : QObject(parent)
    , testNet_(testNet)
 {
+   walletManager_ = walletManager;
    trezorClient_ = std::make_unique<TrezorClient>(connectionManager, walletManager, testNet, this);
    ledgerClient_ = std::make_unique<LedgerClient>(connectionManager->GetLogger(), testNet);
 
@@ -37,7 +40,7 @@ void HSMDeviceManager::scanDevices()
 
    setScanningFlag(true);
 
-   ledgerClient_->scanDevicesNonBlocking();
+   ledgerClient_->scanDevices();
    releaseConnection([this] {
       trezorClient_->initConnection([this]() {
          setScanningFlag(false);
@@ -86,30 +89,54 @@ void HSMDeviceManager::cancel(int deviceIndex)
    device->cancel();
 }
 
-void HSMDeviceManager::prepareTrezorForSign(QString walleiId)
+void HSMDeviceManager::prepareHWDeviceForSign(QString walleiId)
 {
-   trezorClient_->initConnection(walleiId, [this](QVariant&& deviceId) {
-      DeviceKey deviceKey;
+   auto hdWallet = walletManager_->getHDWalletById(walleiId.toStdString());
+   assert(hdWallet->isHsm());
+   auto encKeys = hdWallet->encryptionKeys();
+   auto deviceId = encKeys[0].toBinStr();
 
-      const auto id = deviceId.toString();
+   // #TREZOR_INTEGRATION:  bad way to distinguish device type
+   // we need better here
+   if (deviceId == "Ledger") {
+      ledgerClient_->scanDevices();
+      auto devices = ledgerClient_->deviceKeys();
 
-      bool found = false;
-      for (auto key : trezorClient_->deviceKeys()) {
-         if (key.deviceId_ == id) {
-            found = true;
-            deviceKey = key;
-            break;
-         }
-      }
-
-      if (!found) {
-         emit deviceNotFound(id);
+      if (devices.empty()) {
+         emit deviceNotFound(QString::fromStdString(deviceId));
       }
       else {
-         model_->resetModel({ std::move(deviceKey) });
-         emit deviceReady(id);
+         devices[0].walletId_ = walleiId;
+         model_->resetModel({ std::move(devices[0]) });
+         emit deviceReady(QString::fromStdString(deviceId));
       }
-   });
+   }
+   else {
+      trezorClient_->initConnection(QString::fromStdString(deviceId), [this](QVariant&& deviceId) {
+         DeviceKey deviceKey;
+
+         const auto id = deviceId.toString();
+
+         bool found = false;
+         for (auto key : trezorClient_->deviceKeys()) {
+            if (key.deviceId_ == id) {
+               found = true;
+               deviceKey = key;
+               break;
+            }
+         }
+
+         if (!found) {
+            emit deviceNotFound(id);
+         }
+         else {
+            model_->resetModel({ std::move(deviceKey) });
+            emit deviceReady(id);
+         }
+      });
+   }
+
+
 }
 
 void HSMDeviceManager::signTX(QVariant reqTX)
