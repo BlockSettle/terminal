@@ -1229,7 +1229,6 @@ void BSTerminalMainWindow::setupMenu()
    connect(ui_->actionVersion, &QAction::triggered, aboutDlgCb(3));
    connect(ui_->actionGuides, &QAction::triggered, supportDlgCb(0));
    connect(ui_->actionContact, &QAction::triggered, supportDlgCb(1));
-   connect(ui_->testEnvSettings, &QPushButton::clicked, this, [=]() { openConfigDialog(true/* start in network settings*/); });
 
    onUserLoggedOut();
 
@@ -1238,10 +1237,16 @@ void BSTerminalMainWindow::setupMenu()
    ui_->menubar->setCornerWidget(ui_->loginGroupWidget);
 #endif
 
-   auto EnvType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
-   if (EnvType == ApplicationSettings::EnvConfiguration::Production) {
-      ui_->testEnvSettings->hide();
-   }
+   auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
+   bool isProd = envType == ApplicationSettings::EnvConfiguration::Production;
+   ui_->prodEnvSettings->setEnabled(!isProd);
+   ui_->testEnvSettings->setEnabled(isProd);
+   connect(ui_->prodEnvSettings, &QPushButton::clicked, this, [this] {
+      promptSwitchEnv(true);
+   });
+   connect(ui_->testEnvSettings, &QPushButton::clicked, this, [this] {
+      promptSwitchEnv(false);
+   });
 }
 
 void BSTerminalMainWindow::openAuthManagerDialog()
@@ -1317,7 +1322,7 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
       mbox.setConfirmButtonText(tr("Yes"));
       int rc = mbox.exec();
       if (rc == QDialog::Accepted) {
-         switchToUatEnv();
+         switchToTestEnv();
          restartTerminal();
       }
       return;
@@ -1977,11 +1982,36 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
    }
 }
 
-void BSTerminalMainWindow::switchToUatEnv()
+void BSTerminalMainWindow::promptSwitchEnv(bool prod)
+{
+   BSMessageBox mbox(BSMessageBox::question
+      , tr("Environment selection")
+      , tr("Switch Environment")
+      , tr("Do you wish to switch environment and restart Terminal now?"), this);
+   mbox.setConfirmButtonText(tr("Yes"));
+   int rc = mbox.exec();
+   if (rc == QDialog::Accepted) {
+      if (prod) {
+         switchToProdEnv();
+      } else {
+         switchToTestEnv();
+      }
+      restartTerminal();
+   }
+}
+
+void BSTerminalMainWindow::switchToTestEnv()
 {
    applicationSettings_->set(ApplicationSettings::envConfiguration
       , static_cast<int>(ApplicationSettings::EnvConfiguration::Test));
    armoryServersProvider_->setupServer(armoryServersProvider_->getIndexOfTestNetServer());
+}
+
+void BSTerminalMainWindow::switchToProdEnv()
+{
+   applicationSettings_->set(ApplicationSettings::envConfiguration
+      , static_cast<int>(ApplicationSettings::EnvConfiguration::Production));
+   armoryServersProvider_->setupServer(armoryServersProvider_->getIndexOfMainNetServer());
 }
 
 void BSTerminalMainWindow::restartTerminal()

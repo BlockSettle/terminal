@@ -266,7 +266,9 @@ private:
 
    void promoteToPrimaryIfNeeded();
 
-   void switchToUatEnv();
+   void promptSwitchEnv(bool prod);
+   void switchToTestEnv();
+   void switchToProdEnv();
 
    void restartTerminal();
 
