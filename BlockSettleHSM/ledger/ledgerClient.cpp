@@ -16,7 +16,7 @@
 
 #include "ledger/ledgerClient.h"
 #include "ledger/ledgerDevice.h"
-#include "ledger/Hidapi/hidapi.h"
+#include "ledger/hidapi/hidapi.h"
 #include <spdlog/logger.h>
 
 #include <QString>
