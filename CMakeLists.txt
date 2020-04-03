@@ -263,6 +263,19 @@ IF( NOT BOTAN_LIB)
    MESSAGE( FATAL_ERROR "Could not find botan lib in ${BOTAN_LIB_DIR}")
 ENDIF()
 
+##setup libusb
+if (UNIX)
+    SET(LIBUSB_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/libusb)
+    SET(LIBUSB_LIB_DIR ${LIBUSB_PACKAGE_ROOT}/lib)
+    SET(LIBUSB_INCLUDE_DIR ${LIBUSB_PACKAGE_ROOT}/include)
+
+    SET(LIBUSB_LIB_NAME libusb-1.0.a)
+    FIND_LIBRARY( LIBUSB_LIB NAMES ${LIBUSB_LIB_NAME} PATHS ${LIBUSB_LIB_DIR} NO_DEFAULT_PATH )
+    IF( NOT LIBUSB_LIB)
+       MESSAGE( FATAL_ERROR "Could not find libusb lib in ${LIBUSB_LIB_DIR}")
+    ENDIF()
+endif (UNIX)
+
 
 # setup libwebsockets
 SET(WS_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/libwebsockets)
@@ -738,6 +751,7 @@ ELSE(WIN32)
             double-conversion
             dl
             cups
+            udev
             ${CMAKE_THREAD_LIBS_INIT} )
 
          add_definitions(-DUSE_QXcbIntegrationPlugin)
