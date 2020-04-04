@@ -41,7 +41,7 @@ BSMessageBox {
         , "Auth eID encryption successful"
         , "Device successfully added"
         , "Device successfully removed"
-        , "HSM Wallet successfully imported"
+        , "Hardware Wallet successfully imported"
     ]
 
     property variant textsFail: [
