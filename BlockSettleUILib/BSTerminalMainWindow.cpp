@@ -38,14 +38,15 @@
 #include "CelerAccountInfoDialog.h"
 #include "ColoredCoinServer.h"
 #include "ConnectionManager.h"
+#include "CreateAccountPrompt.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
 #include "DialogManager.h"
 #include "FutureValue.h"
 #include "HeadlessContainer.h"
 #include "ImportKeyBox.h"
-#include "LoginWindow.h"
 #include "InfoDialogs/MDAgreementDialog.h"
+#include "LoginWindow.h"
 #include "MarketDataProvider.h"
 #include "MDCallbacksQt.h"
 #include "NetworkSettingsLoader.h"
@@ -764,6 +765,7 @@ void BSTerminalMainWindow::tryGetChatKeys()
       chatPrivKey_ = node.getPrivateKey();
       gotChatKeys_ = true;
       tryInitChatView();
+      promptToCreateAccountIfNeeded();
    });
 }
 
@@ -1979,6 +1981,30 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
    auto hdWallets = walletsMgr_->hdWallets();
    if (!hdWallets.empty()) {
       promoteToPrimary(hdWallets.front());
+   }
+}
+
+void BSTerminalMainWindow::promptToCreateAccountIfNeeded()
+{
+   auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
+   bool hideCreateAccountTestnet = applicationSettings_->get<bool>(ApplicationSettings::HideCreateAccountPromptTestnet);
+   if (envType != ApplicationSettings::EnvConfiguration::Test || hideCreateAccountTestnet) {
+      return;
+   }
+   applicationSettings_->set(ApplicationSettings::HideCreateAccountPromptTestnet, true);
+
+   CreateAccountPrompt dlg(this);
+   int rc = dlg.exec();
+
+   switch (rc) {
+      case CreateAccountPrompt::Login:
+         onLogin();
+         break;
+      case CreateAccountPrompt::CreateAccount:
+         QDesktopServices::openUrl(QUrl(QStringLiteral("https://test.blocksettle.com/#login")));
+         break;
+      case CreateAccountPrompt::Cancel:
+         break;
    }
 }
 

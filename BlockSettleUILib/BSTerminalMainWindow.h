@@ -266,6 +266,8 @@ private:
 
    void promoteToPrimaryIfNeeded();
 
+   void promptToCreateAccountIfNeeded();
+
    void promptSwitchEnv(bool prod);
    void switchToTestEnv();
    void switchToProdEnv();

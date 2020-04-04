@@ -1610,3 +1610,10 @@ QPushButton#prodEnvSettings {
 QPushButton:disabled#prodEnvSettings, QPushButton:disabled#testEnvSettings {
   background-color: #ffffff;
 }
+
+QLabel#labelHeading {
+  font-weight: bold;
+}
+QLabel#labelCreateAccount {
+  color: #000000;
+}
