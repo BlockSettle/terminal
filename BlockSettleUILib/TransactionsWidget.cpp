@@ -19,6 +19,7 @@
 #include "ApplicationSettings.h"
 #include "BSMessageBox.h"
 #include "CreateTransactionDialogAdvanced.h"
+#include "TradesUtils.h"
 #include "TransactionsViewModel.h"
 #include "TransactionDetailDialog.h"
 #include "Wallets/SyncHDWallet.h"
@@ -210,6 +211,9 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
    actionCPFP_ = new QAction(tr("Child-Pays-For-Parent (CPFP)"), this);
    connect(actionCPFP_, &QAction::triggered, this, &TransactionsWidget::onCreateCPFPDialog);
 
+   actionRevoke_ = new QAction(tr("Revoke"), this);
+   connect(actionRevoke_, &QAction::triggered, this, &TransactionsWidget::onRevokeSettlement);
+
    connect(ui_->treeViewTransactions, &QAbstractItemView::customContextMenuRequested, [=](const QPoint& p) {
       auto index = sortFilterModel_->mapToSource(ui_->treeViewTransactions->indexAt(p));
       auto addressIndex = transactionsModel_->index(index.row(), static_cast<int>(TransactionsViewModel::Columns::Address));
@@ -235,6 +239,14 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
             }
             else {
                actionCPFP_->setData(-1);
+            }
+
+            if (txNode->item()->isPayin()) {
+               contextMenu_.addAction(actionRevoke_);
+               actionRevoke_->setData(sourceIndex);
+            }
+            else {
+               actionRevoke_->setData(-1);
             }
 
             // save transaction id and add context menu for copying it to clipboard
@@ -587,6 +599,36 @@ void TransactionsWidget::onCreateCPFPDialog()
       cbDialog(txItem);
    }
    else {
+      TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
+   }
+}
+
+void TransactionsWidget::onRevokeSettlement()
+{
+   auto txItem = transactionsModel_->getItem(actionCPFP_->data().toModelIndex());
+   if (!txItem) {
+      SPDLOG_LOGGER_ERROR(logger_, "item not found");
+      return;
+   }
+   const auto &cbDialog = [this](const TransactionPtr &txItem) {
+      const auto &xbtWallet = walletsManager_->getDefaultWallet();
+      bs::tradeutils::PayoutArgs args;
+      args.amount = bs::XBTAmount{static_cast<BTCNumericTypes::satoshi_type>(txItem->txEntry.value) };
+//      args.settlementId = BinaryData::CreateFromHex(settlementId);
+//      args.ourAuthAddress = authAddr_;
+//      args.cpAuthPubKey = dealerAuthKey_;
+      args.walletsMgr = walletsManager_;
+      args.armory = armory_;
+      args.signContainer = signContainer_;
+      args.payinTxId = txItem->txEntry.txHash;
+      args.recvAddr = xbtWallet->getExtAddressList()[std::rand() % xbtWallet->getExtAddressCount()];
+      args.outputXbtWallet = xbtWallet;
+
+   };
+
+   if (txItem->initialized) {
+      cbDialog(txItem);
+   } else {
       TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
    }
 }

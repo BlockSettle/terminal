@@ -67,6 +67,7 @@ private slots:
    void onCreateCPFPDialog();
    void onProgressInited(int start, int end);
    void onProgressUpdated(int value);
+   void onRevokeSettlement();
 
 private:
    std::unique_ptr<Ui::TransactionsWidget> ui_;
@@ -84,6 +85,7 @@ private:
    QAction  *actionCopyTx_ = nullptr;
    QAction  *actionRBF_ = nullptr;
    QAction  *actionCPFP_ = nullptr;
+   QAction  *actionRevoke_ = nullptr;
    QString  curAddress_;
    QString  curTx_;
 };

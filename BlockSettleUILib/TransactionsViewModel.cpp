@@ -1277,3 +1277,9 @@ bool TransactionsViewItem::isCPFPeligible() const
       && (direction == bs::sync::Transaction::Direction::Internal
          || direction == bs::sync::Transaction::Direction::Received));
 }
+
+bool TransactionsViewItem::isPayin() const
+{
+   return (!wallets.empty() && wallets[0]->type() == bs::core::wallet::Type::Settlement)
+      && (direction == bs::sync::Transaction::Direction::Sent);
+}
