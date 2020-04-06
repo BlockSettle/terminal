@@ -134,9 +134,10 @@ QScreen *getDisplay(QPoint position)
    return QGuiApplication::primaryScreen();
 }
 
-static int runUnchecked(QApplication *app, const std::shared_ptr<ApplicationSettings> &settings, BSTerminalSplashScreen &splashScreen)
+static int runUnchecked(QApplication *app, const std::shared_ptr<ApplicationSettings> &settings
+   , BSTerminalSplashScreen &splashScreen, QLockFile &lockFile)
 {
-   BSTerminalMainWindow mainWindow(settings, splashScreen);
+   BSTerminalMainWindow mainWindow(settings, splashScreen, lockFile);
 
 #if defined (Q_OS_MAC)
    MacOsApp *macApp = (MacOsApp*)(app);
@@ -155,10 +156,11 @@ static int runUnchecked(QApplication *app, const std::shared_ptr<ApplicationSett
    return app->exec();
 }
 
-static int runChecked(QApplication *app, const std::shared_ptr<ApplicationSettings> &settings, BSTerminalSplashScreen &splashScreen)
+static int runChecked(QApplication *app, const std::shared_ptr<ApplicationSettings> &settings
+   , BSTerminalSplashScreen &splashScreen, QLockFile &lockFile)
 {
    try {
-      return runUnchecked(app, settings, splashScreen);
+      return runUnchecked(app, settings, splashScreen, lockFile);
    }
    catch (const std::exception &e) {
       std::cerr << "Failed to start BlockSettle Terminal: " << e.what() << std::endl;
@@ -270,9 +272,9 @@ static int GuiApp(int &argc, char** argv)
    app.processEvents();
 
 #ifdef NDEBUG
-   return runChecked(&app, settings, splashScreen);
+   return runChecked(&app, settings, splashScreen, lockFile);
 #else
-   return runUnchecked(&app, settings, splashScreen);
+   return runUnchecked(&app, settings, splashScreen, lockFile);
 #endif
 }
 
