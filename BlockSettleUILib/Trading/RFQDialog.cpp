@@ -187,8 +187,9 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
          , requestWidget_, &RFQRequestWidget::sendSignedPayinToPB);
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendSignedPayoutToPB
          , requestWidget_, &RFQRequestWidget::sendSignedPayoutToPB);
+
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::cancelTrade
-         , requestWidget_, &RFQRequestWidget::cancelTrade);
+         , requestWidget_, &RFQRequestWidget::cancelXBTTrade);
    }
    catch (const std::exception &e) {
       logError(bs::error::ErrorCode::InternalError, tr("Failed to create XBT settlement container: %1")
@@ -219,6 +220,18 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
          , this, &QDialog::close);
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::error
          , this, &RFQDialog::logError);
+
+      connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::cancelTrade
+         , requestWidget_, &RFQRequestWidget::cancelCCTrade);
+
+      auto orderUpdatedCb = [qId = quote_.quoteId, ccContainer = ccSettlContainer_]
+         (const bs::network::Order& order)
+      {
+         if (order.status == bs::network::Order::Pending && order.quoteId == qId) {
+            ccContainer->setClOrdId(order.clOrderId);
+         }
+      };
+      connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, ccSettlContainer_.get(), orderUpdatedCb);
    }
    catch (const std::exception &e) {
       logError(bs::error::ErrorCode::InternalError, tr("Failed to create CC settlement container: %1")

@@ -90,11 +90,14 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
 
 bool DealerXBTSettlementContainer::cancel()
 {
+   if (payinSignId_ != 0 || payoutSignId_ != 0) {
+      signContainer_->CancelSignTx(settlementId_);
+   }
+
    releaseUtxoRes();
 
    SPDLOG_LOGGER_DEBUG(logger_, "cancel on a trade : {}", settlementIdHex_);
 
-   emit cancelTrade(settlementIdHex_);
    emit completed();
 
    return true;
@@ -200,7 +203,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
       payoutSignId_ = 0;
 
       if (errCode == bs::error::ErrorCode::TxCanceled) {
-         cancel();
+         emit cancelTrade(settlementIdHex_);
          return;
       }
 
@@ -239,7 +242,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
       payinSignId_ = 0;
 
       if (errCode == bs::error::ErrorCode::TxCanceled) {
-         cancel();
+         emit cancelTrade(settlementIdHex_);
          return;
       }
 

@@ -134,6 +134,8 @@ private:
    bs::core::wallet::TXSignRequest        unsignedPayinRequest_;
    BinaryData                    usedPayinHash_;
    std::map<UTXO, std::string>   utxosPayinFixed_;
+
+   bool tradeCancelled_ = false;
 };
 
 #endif // __REQ_XBT_SETTLEMENT_CONTAINER_H__
