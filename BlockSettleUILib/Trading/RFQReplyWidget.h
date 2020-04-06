@@ -103,6 +103,8 @@ signals:
    void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
    void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 
+   void cancelTrade(const std::string& settlementId);
+
    void unsignedPayinRequested(const std::string& settlementId);
    void signedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp);
    void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp);

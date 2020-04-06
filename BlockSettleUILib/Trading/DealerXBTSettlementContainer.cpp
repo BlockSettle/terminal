@@ -135,11 +135,11 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
    dialogData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
    dialogData.setValue(PasswordDialogData::SettlementAddress, settlAddr_.display());
 
-   dialogData.setValue(PasswordDialogData::RequesterAuthAddress, 
+   dialogData.setValue(PasswordDialogData::RequesterAuthAddress,
       bs::Address::fromPubKey(reqAuthKey_, AddressEntryType_P2WPKH).display());
    dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, requestorAddressState_ == AddressVerificationState::Verified);
 
-   dialogData.setValue(PasswordDialogData::ResponderAuthAddress, 
+   dialogData.setValue(PasswordDialogData::ResponderAuthAddress,
       bs::Address::fromPubKey(authKey_, AddressEntryType_P2WPKH).display());
    dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
 
@@ -195,6 +195,13 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
    if (payoutSignId_ && (payoutSignId_ == id)) {
       payoutSignId_ = 0;
 
+      if (errCode == bs::error::ErrorCode::TxCanceled) {
+         SPDLOG_LOGGER_DEBUG(logger_, "cancel on a trade : {}", settlementIdHex_);
+         emit cancelTrade(settlementIdHex_);
+         emit completed();
+         return;
+      }
+
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.empty()) {
          SPDLOG_LOGGER_ERROR(logger_, "failed to sign pay-out: {} ({})", int(errCode), errMsg);
          failWithErrorText(tr("Failed to sign pay-out"), errCode);
@@ -228,6 +235,13 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
 
    if ((payinSignId_ != 0) && (payinSignId_ == id)) {
       payinSignId_ = 0;
+
+      if (errCode == bs::error::ErrorCode::TxCanceled) {
+         SPDLOG_LOGGER_DEBUG(logger_, "cancel on a trade : {}", settlementIdHex_);
+         emit cancelTrade(settlementIdHex_);
+         emit completed();
+         return;
+      }
 
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.empty()) {
          SPDLOG_LOGGER_ERROR(logger_, "Failed to sign pay-in: {} ({})", (int)errCode, errMsg);

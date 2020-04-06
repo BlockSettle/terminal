@@ -187,6 +187,8 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
          , requestWidget_, &RFQRequestWidget::sendSignedPayinToPB);
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendSignedPayoutToPB
          , requestWidget_, &RFQRequestWidget::sendSignedPayoutToPB);
+      connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::cancelTrade
+         , requestWidget_, &RFQRequestWidget::cancelTrade);
    }
    catch (const std::exception &e) {
       logError(bs::error::ErrorCode::InternalError, tr("Failed to create XBT settlement container: %1")
