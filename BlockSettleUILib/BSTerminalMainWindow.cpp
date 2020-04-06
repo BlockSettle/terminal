@@ -38,14 +38,15 @@
 #include "CelerAccountInfoDialog.h"
 #include "ColoredCoinServer.h"
 #include "ConnectionManager.h"
+#include "CreateAccountPrompt.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
 #include "DialogManager.h"
 #include "FutureValue.h"
 #include "HeadlessContainer.h"
 #include "ImportKeyBox.h"
-#include "LoginWindow.h"
 #include "InfoDialogs/MDAgreementDialog.h"
+#include "LoginWindow.h"
 #include "MarketDataProvider.h"
 #include "MDCallbacksQt.h"
 #include "NetworkSettingsLoader.h"
@@ -73,10 +74,11 @@
 #include "ui_BSTerminalMainWindow.h"
 
 BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings
-   , BSTerminalSplashScreen& splashScreen, QWidget* parent)
+   , BSTerminalSplashScreen& splashScreen, QLockFile &lockFile, QWidget* parent)
    : QMainWindow(parent)
    , ui_(new Ui::BSTerminalMainWindow())
    , applicationSettings_(settings)
+   , lockFile_(lockFile)
 {
    UiUtils::SetupLocale();
 
@@ -169,13 +171,13 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    InitWidgets();
 }
 
-void BSTerminalMainWindow::onMDConnectionDetailsRequired()
+void BSTerminalMainWindow::onNetworkSettingsRequired(NetworkSettingsClient client)
 {
    networkSettingsLoader_ = std::make_unique<NetworkSettingsLoader>(logMgr_->logger()
       , applicationSettings_->pubBridgeHost(), applicationSettings_->pubBridgePort(), cbApprovePuB_);
 
-   connect(networkSettingsLoader_.get(), &NetworkSettingsLoader::succeed, this, [this] {
-      networkSettingsReceived(networkSettingsLoader_->settings());
+   connect(networkSettingsLoader_.get(), &NetworkSettingsLoader::succeed, this, [this, client] {
+      networkSettingsReceived(networkSettingsLoader_->settings(), client);
       networkSettingsLoader_.reset();
    });
 
@@ -365,7 +367,9 @@ void BSTerminalMainWindow::initConnections()
    mdProvider_ = std::make_shared<BSMarketDataProvider>(connectionManager_
       , logMgr_->logger("message"), mdCallbacks_.get());
    connect(mdCallbacks_.get(), &MDCallbacksQt::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
-   connect(mdCallbacks_.get(), &MDCallbacksQt::WaitingForConnectionDetails, this, &BSTerminalMainWindow::onMDConnectionDetailsRequired);
+   connect(mdCallbacks_.get(), &MDCallbacksQt::WaitingForConnectionDetails, this, [this] {
+      onNetworkSettingsRequired(NetworkSettingsClient::MarketData);
+   });
 }
 
 void BSTerminalMainWindow::LoadWallets()
@@ -685,7 +689,7 @@ void BSTerminalMainWindow::tryInitChatView()
    // First we need to create and initialize chatClientServicePtr_ (which lives in background thread and so is async).
    // For this it needs to know chat server address where to connect and chat keys used for chat messages encryption.
    // Only after that we could init ui_->widgetChat and try to login after that.
-   if (chatInitState_ != ChatInitState::NoStarted || !networkSettingsReceived_ || !gotChatKeys_) {
+   if (chatInitState_ != ChatInitState::NoStarted || !gotChatKeys_) {
       return;
    }
    chatInitState_ = ChatInitState::InProgress;
@@ -761,6 +765,7 @@ void BSTerminalMainWindow::tryGetChatKeys()
       chatPrivKey_ = node.getPrivateKey();
       gotChatKeys_ = true;
       tryInitChatView();
+      promptToCreateAccountIfNeeded();
    });
 }
 
@@ -1226,7 +1231,6 @@ void BSTerminalMainWindow::setupMenu()
    connect(ui_->actionVersion, &QAction::triggered, aboutDlgCb(3));
    connect(ui_->actionGuides, &QAction::triggered, supportDlgCb(0));
    connect(ui_->actionContact, &QAction::triggered, supportDlgCb(1));
-   connect(ui_->testEnvSettings, &QPushButton::clicked, this, [=]() { openConfigDialog(true/* start in network settings*/); });
 
    onUserLoggedOut();
 
@@ -1235,10 +1239,16 @@ void BSTerminalMainWindow::setupMenu()
    ui_->menubar->setCornerWidget(ui_->loginGroupWidget);
 #endif
 
-   auto EnvType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
-   if (EnvType == ApplicationSettings::EnvConfiguration::Production) {
-      ui_->testEnvSettings->hide();
-   }
+   auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
+   bool isProd = envType == ApplicationSettings::EnvConfiguration::Production;
+   ui_->prodEnvSettings->setEnabled(!isProd);
+   ui_->testEnvSettings->setEnabled(isProd);
+   connect(ui_->prodEnvSettings, &QPushButton::clicked, this, [this] {
+      promptSwitchEnv(true);
+   });
+   connect(ui_->testEnvSettings, &QPushButton::clicked, this, [this] {
+      promptSwitchEnv(false);
+   });
 }
 
 void BSTerminalMainWindow::openAuthManagerDialog()
@@ -1301,6 +1311,25 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::onLogin()
 {
+   onNetworkSettingsRequired(NetworkSettingsClient::Login);
+}
+
+void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings)
+{
+   if (networkSettings.status == Blocksettle::Communication::GetNetworkSettingsResponse_Status_LIVE_TRADING_COMING_SOON) {
+      BSMessageBox mbox(BSMessageBox::question, tr("Login to BlockSettle"), tr("Live trading is coming soon...")
+                   , tr("In the meantime, please get comfortable with our model on our testnet environment."
+                        "Would you like to switch to testnet and re-launch the Terminal now?"), this);
+      mbox.setCancelButtonText(tr("Cancel"));
+      mbox.setConfirmButtonText(tr("Yes"));
+      int rc = mbox.exec();
+      if (rc == QDialog::Accepted) {
+         switchToTestEnv();
+         restartTerminal();
+      }
+      return;
+   }
+
    LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, &cbApprovePuB_, &cbApproveProxy_, this);
 
    int rc = loginDialog.exec();
@@ -1312,7 +1341,7 @@ void BSTerminalMainWindow::onLogin()
 
    currentUserLogin_ = loginDialog.email();
 
-   networkSettingsReceived(loginDialog.networkSettings());
+   networkSettingsReceived(loginDialog.networkSettings(), NetworkSettingsClient::MarketData);
 
    chatTokenData_ = loginDialog.result()->chatTokenData;
    chatTokenSign_ = loginDialog.result()->chatTokenSign;
@@ -1877,8 +1906,13 @@ void BSTerminalMainWindow::InitWidgets()
    });
 }
 
-void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settings)
+void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settings, NetworkSettingsClient client)
 {
+   if (client == NetworkSettingsClient::Login) {
+      onLoginProceed(settings);
+      return;
+   }
+
    if (!settings.marketData.host.empty()) {
       applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(settings.marketData.host));
       applicationSettings_->set(ApplicationSettings::mdServerPort, settings.marketData.port);
@@ -1907,9 +1941,6 @@ void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settin
 
    mdProvider_->SetConnectionSettings(applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
       , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort));
-
-   networkSettingsReceived_ = true;
-   tryInitChatView();
 }
 
 void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
@@ -1951,6 +1982,69 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
    if (!hdWallets.empty()) {
       promoteToPrimary(hdWallets.front());
    }
+}
+
+void BSTerminalMainWindow::promptToCreateAccountIfNeeded()
+{
+   auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
+   bool hideCreateAccountTestnet = applicationSettings_->get<bool>(ApplicationSettings::HideCreateAccountPromptTestnet);
+   if (envType != ApplicationSettings::EnvConfiguration::Test || hideCreateAccountTestnet) {
+      return;
+   }
+   applicationSettings_->set(ApplicationSettings::HideCreateAccountPromptTestnet, true);
+
+   CreateAccountPrompt dlg(this);
+   int rc = dlg.exec();
+
+   switch (rc) {
+      case CreateAccountPrompt::Login:
+         onLogin();
+         break;
+      case CreateAccountPrompt::CreateAccount:
+         QDesktopServices::openUrl(QUrl(QStringLiteral("https://test.blocksettle.com/#login")));
+         break;
+      case CreateAccountPrompt::Cancel:
+         break;
+   }
+}
+
+void BSTerminalMainWindow::promptSwitchEnv(bool prod)
+{
+   BSMessageBox mbox(BSMessageBox::question
+      , tr("Environment selection")
+      , tr("Switch Environment")
+      , tr("Do you wish to switch environment and restart Terminal now?"), this);
+   mbox.setConfirmButtonText(tr("Yes"));
+   int rc = mbox.exec();
+   if (rc == QDialog::Accepted) {
+      if (prod) {
+         switchToProdEnv();
+      } else {
+         switchToTestEnv();
+      }
+      restartTerminal();
+   }
+}
+
+void BSTerminalMainWindow::switchToTestEnv()
+{
+   applicationSettings_->set(ApplicationSettings::envConfiguration
+      , static_cast<int>(ApplicationSettings::EnvConfiguration::Test));
+   armoryServersProvider_->setupServer(armoryServersProvider_->getIndexOfTestNetServer());
+}
+
+void BSTerminalMainWindow::switchToProdEnv()
+{
+   applicationSettings_->set(ApplicationSettings::envConfiguration
+      , static_cast<int>(ApplicationSettings::EnvConfiguration::Production));
+   armoryServersProvider_->setupServer(armoryServersProvider_->getIndexOfMainNetServer());
+}
+
+void BSTerminalMainWindow::restartTerminal()
+{
+   lockFile_.unlock();
+   QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
+   qApp->quit();
 }
 
 void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &deferredDialog)
