@@ -1599,16 +1599,15 @@ ChatSearchListViewItemStyle {
     background-color: #1c2835;
 }
 
-QPushButton#testEnvSettings {
-  background-color: #22c064;
-  color: #000000;
-}
-QPushButton#prodEnvSettings {
-  background-color: #f7a600;
-  color: #000000;
-}
-QPushButton:disabled#prodEnvSettings, QPushButton:disabled#testEnvSettings {
+QPushButton#testEnvSettings, QPushButton#prodEnvSettings {
   background-color: #ffffff;
+  color: #000000;
+}
+QPushButton:disabled#prodEnvSettings {
+  background-color: #22c064;
+}
+QPushButton:disabled#testEnvSettings {
+  background-color: #f7a600;
 }
 
 QLabel#labelHeading {
