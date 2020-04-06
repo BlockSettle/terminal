@@ -328,6 +328,7 @@ private:
    Chat::ChatClientServicePtr chatClientServicePtr_;
 
    ChatInitState chatInitState_{ChatInitState::NoStarted};
+   bool networkSettingsReceived_{false};
    bool gotChatKeys_{false};
    BinaryData chatTokenData_;
    SecureBinaryData chatTokenSign_;
