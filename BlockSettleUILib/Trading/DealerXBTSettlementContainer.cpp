@@ -92,6 +92,11 @@ bool DealerXBTSettlementContainer::cancel()
 {
    releaseUtxoRes();
 
+   SPDLOG_LOGGER_DEBUG(logger_, "cancel on a trade : {}", settlementIdHex_);
+
+   emit cancelTrade(settlementIdHex_);
+   emit completed();
+
    return true;
 }
 
@@ -121,8 +126,7 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
 
       dialogData.setValue(PasswordDialogData::TotalValue, tr("%1 XBT")
                     .arg(UiUtils::displayAmount(quantity() / price())));
-   }
-   else {
+   } else {
       dialogData.setValue(PasswordDialogData::Quantity, tr("%1 XBT")
                     .arg(UiUtils::displayAmount(amount())));
 
@@ -196,9 +200,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
       payoutSignId_ = 0;
 
       if (errCode == bs::error::ErrorCode::TxCanceled) {
-         SPDLOG_LOGGER_DEBUG(logger_, "cancel on a trade : {}", settlementIdHex_);
-         emit cancelTrade(settlementIdHex_);
-         emit completed();
+         cancel();
          return;
       }
 
@@ -237,9 +239,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
       payinSignId_ = 0;
 
       if (errCode == bs::error::ErrorCode::TxCanceled) {
-         SPDLOG_LOGGER_DEBUG(logger_, "cancel on a trade : {}", settlementIdHex_);
-         emit cancelTrade(settlementIdHex_);
-         emit completed();
+         cancel();
          return;
       }
 

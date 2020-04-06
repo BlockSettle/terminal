@@ -345,6 +345,13 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             connect(this, &RFQReplyWidget::signedPayoutRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayoutRequested);
             connect(this, &RFQReplyWidget::signedPayinRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayinRequested);
 
+            connect(quoteProvider_.get(), &QuoteProvider::orderFailed, this
+                    , [settlContainer, quoteId = order.quoteId](const std::string& failedQuoteId, const std::string& reason){
+               if (quoteId == failedQuoteId) {
+                  settlContainer->cancel();
+               }
+            });
+
             // Add before calling activate as this will hook some events
             ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
 
