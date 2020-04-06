@@ -689,7 +689,7 @@ void BSTerminalMainWindow::tryInitChatView()
    // First we need to create and initialize chatClientServicePtr_ (which lives in background thread and so is async).
    // For this it needs to know chat server address where to connect and chat keys used for chat messages encryption.
    // Only after that we could init ui_->widgetChat and try to login after that.
-   if (chatInitState_ != ChatInitState::NoStarted || !gotChatKeys_) {
+   if (chatInitState_ != ChatInitState::NoStarted || !networkSettingsReceived_ || !gotChatKeys_) {
       return;
    }
    chatInitState_ = ChatInitState::InProgress;
@@ -1941,6 +1941,9 @@ void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settin
 
    mdProvider_->SetConnectionSettings(applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
       , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort));
+
+   networkSettingsReceived_ = true;
+   tryInitChatView();
 }
 
 void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
