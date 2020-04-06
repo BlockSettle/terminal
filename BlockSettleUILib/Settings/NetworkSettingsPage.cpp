@@ -126,8 +126,11 @@ void NetworkSettingsPage::displayArmorySettings()
    // set index of selected server
    ArmoryServer selectedServer = armoryServersProvider_->getArmorySettings();
    int selectedServerIndex = armoryServersProvider_->indexOfCurrent();
-   ui_->comboBoxArmoryServer->setCurrentIndex(selectedServerIndex);
 
+   // Prevent NetworkSettingsPage::onArmorySelected call
+   auto oldBlock = ui_->comboBoxArmoryServer->blockSignals(true);
+   ui_->comboBoxArmoryServer->setCurrentIndex(selectedServerIndex);
+   ui_->comboBoxArmoryServer->blockSignals(oldBlock);
 
    // display info of connected server
    ArmorySettings connectedServerSettings = armoryServersProvider_->connectedArmorySettings();
