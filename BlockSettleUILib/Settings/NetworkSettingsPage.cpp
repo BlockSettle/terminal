@@ -108,6 +108,7 @@ void NetworkSettingsPage::initSettings()
 
    connect(armoryServersProvider_.get(), &ArmoryServersProvider::dataChanged, this, &NetworkSettingsPage::displayArmorySettings);
    connect(ui_->comboBoxEnvironment, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &NetworkSettingsPage::onEnvSelected);
+   connect(ui_->comboBoxArmoryServer, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &NetworkSettingsPage::onArmorySelected);
 }
 
 NetworkSettingsPage::~NetworkSettingsPage() = default;
@@ -213,5 +214,19 @@ void NetworkSettingsPage::onEnvSelected(int index)
    }
    else {
       ui_->comboBoxArmoryServer->setCurrentIndex(armoryServersProvider_->getIndexOfTestNetServer());
+   }
+}
+
+void NetworkSettingsPage::onArmorySelected(int index)
+{
+   auto servers = armoryServersProvider_->servers();
+   if (index < 0 || index >= servers.count()) {
+      return;
+   }
+   auto server = servers[index];
+   if (server.netType == NetworkType::MainNet) {
+      ui_->comboBoxEnvironment->setCurrentIndex(static_cast<int>(ApplicationSettings::EnvConfiguration::Production));
+   } else {
+      ui_->comboBoxEnvironment->setCurrentIndex(static_cast<int>(ApplicationSettings::EnvConfiguration::Test));
    }
 }
