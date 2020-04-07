@@ -1598,3 +1598,21 @@ ChatSearchListViewItemStyle {
 *[contact_editor=true] {
     background-color: #1c2835;
 }
+
+QPushButton#testEnvSettings, QPushButton#prodEnvSettings {
+  background-color: #ffffff;
+  color: #000000;
+}
+QPushButton:disabled#prodEnvSettings {
+  background-color: #22c064;
+}
+QPushButton:disabled#testEnvSettings {
+  background-color: #f7a600;
+}
+
+QLabel#labelHeading {
+  font-weight: bold;
+}
+QLabel#labelCreateAccount {
+  color: #000000;
+}

@@ -90,9 +90,13 @@ void ReqXBTSettlementContainer::acceptSpotXBT()
 bool ReqXBTSettlementContainer::cancel()
 {
    deactivate();
-   emit settlementCancelled();
+
+   if (payinSignId_ != 0 || payoutSignId_ != 0) {
+      signContainer_->CancelSignTx(settlementId_);
+   }
 
    SettlementContainer::releaseUtxoRes();
+   emit settlementCancelled();
 
    return true;
 }
@@ -168,7 +172,7 @@ bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData(QDa
    }
 
    // settlement details
-   dialogData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
+   dialogData.setValue(PasswordDialogData::SettlementId, settlementIdHex_);
    dialogData.setValue(PasswordDialogData::SettlementAddress, settlAddr_.display());
 
    dialogData.setValue(PasswordDialogData::RequesterAuthAddress, authAddr_.display());
@@ -189,7 +193,7 @@ void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState
 {
    dealerVerifState_ = state;
    bs::sync::PasswordDialogData pd;
-   pd.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
+   pd.setValue(PasswordDialogData::SettlementId, settlementIdHex_);
    pd.setValue(PasswordDialogData::ResponderAuthAddress, dealerAuthAddress_.display());
    pd.setValue(PasswordDialogData::ResponderAuthAddressVerified, state == AddressVerificationState::Verified);
    pd.setValue(PasswordDialogData::SigningAllowed, state == AddressVerificationState::Verified);
@@ -210,6 +214,13 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
 {
    if ((payoutSignId_ != 0) && (payoutSignId_ == id)) {
       payoutSignId_ = 0;
+
+      if (errCode == bs::error::ErrorCode::TxCanceled) {
+         SPDLOG_LOGGER_DEBUG(logger_, "cancel on a trade : {}", settlementIdHex_);
+         deactivate();
+         emit cancelTrade(settlementIdHex_);
+         return;
+      }
 
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.empty()) {
          logger_->warn("[ReqXBTSettlementContainer::onTXSigned] Pay-Out sign failure: {} ({})"
@@ -249,6 +260,13 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
 
    if ((payinSignId_ != 0) && (payinSignId_ == id)) {
       payinSignId_ = 0;
+
+      if (errCode == bs::error::ErrorCode::TxCanceled) {
+         SPDLOG_LOGGER_DEBUG(logger_, "cancel on a trade : {}", settlementIdHex_);
+         deactivate();
+         emit cancelTrade(settlementIdHex_);
+         return;
+      }
 
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.empty()) {
          SPDLOG_LOGGER_ERROR(logger_, "failed to create pay-in TX: {} ({})", static_cast<int>(errCode), errTxt);
@@ -378,7 +396,7 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
 
          bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(result.signRequest, timestamp);
          dlgData.setValue(PasswordDialogData::Market, "XBT");
-         dlgData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
+         dlgData.setValue(PasswordDialogData::SettlementId, settlementIdHex_);
          dlgData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
          dlgData.setValue(PasswordDialogData::SigningAllowed, true);
 

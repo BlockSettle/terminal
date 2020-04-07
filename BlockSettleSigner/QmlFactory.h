@@ -164,7 +164,7 @@ private:
    std::shared_ptr<spdlog::logger> logger_;
 
    QString headlessPubKey_;
-   ControlPasswordStatus::Status controlPasswordStatus_;
+   ControlPasswordStatus::Status controlPasswordStatus_{};
 
    bool isControlPassMessageShown = false;
 

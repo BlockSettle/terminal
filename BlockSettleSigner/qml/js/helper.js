@@ -380,7 +380,16 @@ function prepareFullModeDialog(dialog) {
     })
 }
 
+// BST-2566: Skip prompting of Wallet encryption every time we a Create Wallet, only keep it as option in Setting
+let publicEncryptionDisabledByDefault = true
+
 function checkEncryptionPassword(dlg) {
+    if (publicEncryptionDisabledByDefault) {
+        prepareDialog(dlg);
+        dlg.open();
+        return dlg;
+    }
+
     var onControlPasswordFinished = function(prevDialog, password){
         if (qmlFactory.controlPasswordStatus() === ControlPasswordStatus.RequestedNew) {
             walletsProxy.sendControlPassword(password)

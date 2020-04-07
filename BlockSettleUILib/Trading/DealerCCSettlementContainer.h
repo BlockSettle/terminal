@@ -74,6 +74,8 @@ signals:
    void signTxRequest(const QString &orderId, std::string txData);
    void genAddressVerified(bool result);
 
+   void cancelTrade(const std::string& clOrdId);
+
 private slots:
    void onGenAddressVerified(bool result);
 
@@ -97,7 +99,6 @@ private:
    bool              amountValid_ = false;
    bool              genAddrVerified_ = true;
    unsigned int      signId_ = 0;
-   bool              cancelled_ = false;
    bs::CheckRecipSigner signer_;
    bs::core::wallet::TXSignRequest txReq_;
    bool isGetAddressValid_ = false;
