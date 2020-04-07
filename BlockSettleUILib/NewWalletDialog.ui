@@ -208,7 +208,7 @@
       <item>
        <widget class="QPushButton" name="pushButtonImport">
         <property name="text">
-         <string>Import Existing / HSM</string>
+         <string>Import Existing / HW</string>
         </property>
         <property name="autoDefault">
          <bool>false</bool>
