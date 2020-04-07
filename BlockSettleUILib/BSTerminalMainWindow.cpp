@@ -2016,7 +2016,8 @@ void BSTerminalMainWindow::promptSwitchEnv(bool prod)
    BSMessageBox mbox(BSMessageBox::question
       , tr("Environment selection")
       , tr("Switch Environment")
-      , tr("Do you wish to switch environment and restart Terminal now?"), this);
+      , tr("Do you wish to switch to %1 environment and restart Terminal now?").arg(prod ? tr("Production") : tr("Test"))
+      , this);
    mbox.setConfirmButtonText(tr("Yes"));
    int rc = mbox.exec();
    if (rc == QDialog::Accepted) {
