@@ -297,6 +297,8 @@ bool ReqCCSettlementContainer::startSigning(QDateTime timestamp)
          return;
       }
 
+      ccSignId_ = 0;
+
       if (result == bs::error::ErrorCode::NoError) {
          ccTxSigned_ = signedTX.toHexStr();
 
@@ -312,7 +314,8 @@ bool ReqCCSettlementContainer::startSigning(QDateTime timestamp)
 #endif
       }
       else if (result == bs::error::ErrorCode::TxCanceled) {
-         emit settlementCancelled();
+         SettlementContainer::releaseUtxoRes();
+         emit cancelTrade(clOrdId_);
       }
       else {
          logger->error("[CCSettlementTransactionWidget::onTXSigned] CC TX sign failure: {}", bs::error::ErrorCodeToString(result).toStdString());
@@ -362,10 +365,12 @@ void ReqCCSettlementContainer::onGenAddressVerified(bool addressVerified, const 
 bool ReqCCSettlementContainer::cancel()
 {
    deactivate();
-   emit settlementCancelled();
-   signingContainer_->CancelSignTx(BinaryData::fromString(id()));
+   if (ccSignId_ != 0) {
+      signingContainer_->CancelSignTx(BinaryData::fromString(id()));
+   }
 
    SettlementContainer::releaseUtxoRes();
+   emit settlementCancelled();
 
    return true;
 }
@@ -375,4 +380,9 @@ std::string ReqCCSettlementContainer::txData() const
    const auto &data = ccTxData_.serializeState().toHexStr();
    logger_->debug("[ReqCCSettlementContainer::txData] {}", data);
    return data;
+}
+
+void ReqCCSettlementContainer::setClOrdId(const std::string& clientOrderId)
+{
+   clOrdId_ = clientOrderId;
 }
