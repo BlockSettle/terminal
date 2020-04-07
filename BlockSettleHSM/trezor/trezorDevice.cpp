@@ -444,6 +444,9 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       input->set_prev_index(utxo.getTxOutIndex());
       input->set_script_type(isNestedSegwit ? bitcoin::SPENDP2SHWITNESS : bitcoin::SPENDWITNESS);
       input->set_amount(utxo.getValue());
+      if (currentTxSignReq_->RBF) {
+         input->set_sequence(UINT32_MAX - 2);
+      }
 
       txAck.set_allocated_tx(type);
 
