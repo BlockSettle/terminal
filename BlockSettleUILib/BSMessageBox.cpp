@@ -141,8 +141,6 @@ void BSMessageBox::setType(Type type) {
       ui_->labelTitle->setProperty("statusImportantLabel", true);
       ui_->labelIcon->setPixmap(QPixmap(QString::fromUtf8("://resources/notification_critical.png")));
       break;
-   default:
-      break;
    }
 }
 
