@@ -613,6 +613,8 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
    if (treeView != nullptr) {
       for (int i = 0; i < rowCount(); i++) {
          treeView->expand(index(i, 0));
+         // Expand XBT leaves
+         treeView->expand(index(0, 0, index(i, 0)));
       }
 
       if (!selection.empty()) {
