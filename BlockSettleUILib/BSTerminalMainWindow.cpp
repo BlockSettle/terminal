@@ -189,11 +189,6 @@ void BSTerminalMainWindow::onNetworkSettingsRequired(NetworkSettingsClient clien
    networkSettingsLoader_->loadSettings();
 }
 
-void BSTerminalMainWindow::onBsConnectionDisconnected()
-{
-   orderListModel_->onDisconnected();
-}
-
 void BSTerminalMainWindow::onBsConnectionFailed()
 {
    SPDLOG_LOGGER_ERROR(logMgr_->logger(), "BsClient disconnected unexpectedly");
@@ -1359,7 +1354,7 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    ccFileManager_->setCcAddressesSigned(loginDialog.result()->ccAddressesSigned);
    authManager_->setAuthAddressesSigned(loginDialog.result()->authAddressesSigned);
 
-   connect(bsClient_.get(), &BsClient::disconnected, this, &BSTerminalMainWindow::onBsConnectionDisconnected);
+   connect(bsClient_.get(), &BsClient::disconnected, orderListModel_.get(), &OrderListModel::onDisconnected);
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
 
    // connect to RFQ dialog
