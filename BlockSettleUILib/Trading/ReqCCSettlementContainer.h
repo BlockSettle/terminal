@@ -71,15 +71,19 @@ public:
 
    bool startSigning(QDateTime timestamp);
 
-signals:
-   void settlementCancelled();
+   void setClOrdId(const std::string& clientOrderId);
 
+signals:
    void sendOrder();
+
+   void settlementCancelled();
 
    void txSigned();
    void genAddressVerified(bool result, QString error);
    void paymentVerified(bool result, QString error);
    void walletInfoReceived();
+
+   void cancelTrade(const std::string& orderId);
 
 private slots:
    void onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo& walletInfo);
@@ -120,6 +124,7 @@ private:
    bs::hd::WalletInfo walletInfo_;
    std::map<UTXO, std::string> manualXbtInputs_;
 
+   std::string clOrdId_;
 };
 
 #endif // __REQ_CC_SETTLEMENT_CONTAINER_H__

@@ -118,7 +118,7 @@
         <widget class="QWidget" name="loginGroupWidget" native="true">
          <layout class="QHBoxLayout" name="loginLyt">
           <property name="spacing">
-           <number>10</number>
+           <number>0</number>
           </property>
           <property name="leftMargin">
            <number>0</number>
@@ -169,6 +169,22 @@
              <bool>false</bool>
             </property>
            </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_3">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Fixed</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>10</width>
+              <height>0</height>
+             </size>
+            </property>
+           </spacer>
           </item>
           <item>
            <widget class="QPushButton" name="pushButtonUser">

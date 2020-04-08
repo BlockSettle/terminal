@@ -117,6 +117,8 @@ bool DealerCCSettlementContainer::startSigning(QDateTime timestamp)
          return;
       }
 
+      signId_ = 0;
+
       if (result == bs::error::ErrorCode::NoError) {
          emit signTxRequest(orderId_, signedTX.toHexStr());
          emit completed();
@@ -124,9 +126,7 @@ bool DealerCCSettlementContainer::startSigning(QDateTime timestamp)
          //wallet_->setTransactionComment(signedTX, txComment());
       }
       else if (result == bs::error::ErrorCode::TxCanceled) {
-         // FIXME
-         // Not clear what's wrong here, and what should be fixed
-         sendFailed();
+         emit cancelTrade(orderId_.toStdString());
       }
       else {
          SPDLOG_LOGGER_ERROR(logger_, "failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
@@ -152,7 +152,8 @@ bool DealerCCSettlementContainer::startSigning(QDateTime timestamp)
 
    //Waiting for TX half signing...
    SPDLOG_LOGGER_DEBUG(logger_, "signing with {} inputs", txReq_.inputs.size());
-   return (signingContainer_->signSettlementPartialTXRequest(txReq_, toPasswordDialogData(timestamp), cbTx) > 0);
+   signId_ = signingContainer_->signSettlementPartialTXRequest(txReq_, toPasswordDialogData(timestamp), cbTx);
+   return ( signId_ > 0);
 }
 
 void DealerCCSettlementContainer::activate()
@@ -219,10 +220,13 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
 
 bool DealerCCSettlementContainer::cancel()
 {
-   signingContainer_->CancelSignTx(BinaryData::fromString(id()));
-   cancelled_ = true;
+   if (signId_ == 0) {
+      signingContainer_->CancelSignTx(BinaryData::fromString(id()));
+   }
 
    SettlementContainer::releaseUtxoRes();
+
+   emit completed();
 
    return true;
 }

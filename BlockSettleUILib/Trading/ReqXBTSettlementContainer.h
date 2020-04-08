@@ -84,6 +84,8 @@ signals:
    void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
    void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 
+   void cancelTrade(const std::string& settlementId);
+
 private slots:
    void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode, std::string error);
    void onTimerExpired();
@@ -132,6 +134,8 @@ private:
    bs::core::wallet::TXSignRequest        unsignedPayinRequest_;
    BinaryData                    usedPayinHash_;
    std::map<UTXO, std::string>   utxosPayinFixed_;
+
+   bool tradeCancelled_ = false;
 };
 
 #endif // __REQ_XBT_SETTLEMENT_CONTAINER_H__
