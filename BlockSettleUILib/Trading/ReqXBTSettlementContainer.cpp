@@ -356,6 +356,9 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
          }
 
          emit sendUnsignedPayinToPB(settlementIdHex_, bs::network::UnsignedPayinData{ unsignedPayinRequest_.serializeState(), std::move(result.preimageData)} );
+
+         const auto &authLeaf = walletsMgr_->getAuthWallet();
+         signContainer_->setSettlCP(authLeaf->walletId(), result.payinHash, settlementId_, dealerAuthKey_);
       });
    });
 
@@ -411,8 +414,6 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
    });
    bs::tradeutils::createPayout(std::move(args), std::move(payoutCb));
 
-   const auto &authLeaf = walletsMgr_->getAuthWallet();
-   signContainer_->setSettlCP(authLeaf->walletId(), payinHash, settlementId_, dealerAuthKey_);
 }
 
 void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp)

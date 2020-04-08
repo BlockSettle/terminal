@@ -1280,6 +1280,11 @@ bool TransactionsViewItem::isCPFPeligible() const
 
 bool TransactionsViewItem::isPayin() const
 {
-   return (!wallets.empty() && wallets[0]->type() == bs::core::wallet::Type::Settlement)
-      && (direction == bs::sync::Transaction::Direction::Sent);
+   bool hasSettlOut = false;
+   for (int i = 0; i < tx.getNumTxOut(); ++i) {
+      const auto &txOut = tx.getTxOutCopy(i);
+      const auto &addr = bs::Address::fromTxOut(txOut);
+      hasSettlOut |= addr.getType() == AddressEntryType_P2WSH;
+   }
+   return hasSettlOut && (direction == bs::sync::Transaction::Direction::Sent);
 }

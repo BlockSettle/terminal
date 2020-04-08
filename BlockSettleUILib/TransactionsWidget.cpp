@@ -608,14 +608,13 @@ void TransactionsWidget::onCreateCPFPDialog()
 
 void TransactionsWidget::onRevokeSettlement()
 {
-   auto txItem = transactionsModel_->getItem(actionCPFP_->data().toModelIndex());
+   auto txItem = transactionsModel_->getItem(actionRevoke_->data().toModelIndex());
    if (!txItem) {
       SPDLOG_LOGGER_ERROR(logger_, "item not found");
       return;
    }
    auto args = std::make_shared<bs::tradeutils::PayoutArgs>();
 
-   auto payinHash = std::make_shared<BinaryData>();
    auto payoutCb = bs::tradeutils::PayoutResultCb([this, args, txItem]
       (bs::tradeutils::PayoutResult result)
    {
@@ -629,12 +628,13 @@ void TransactionsWidget::onRevokeSettlement()
             return;
          }
 
+         constexpr int kRevokeTimeout = 60;
          const auto &settlementIdHex = args->settlementId.toHexStr();
          bs::sync::PasswordDialogData dlgData;
          dlgData.setValue(PasswordDialogData::SettlementId, QString::fromStdString(settlementIdHex));
          dlgData.setValue(PasswordDialogData::Title, tr("Settlement Revoke"));
-//         dlgData.setValue(PasswordDialogData::DurationLeft, static_cast<int>(kWaitTimeoutInSec * 1000));
-//         dlgData.setValue(PasswordDialogData::DurationTotal, static_cast<int>(kWaitTimeoutInSec * 1000));
+         dlgData.setValue(PasswordDialogData::DurationLeft, kRevokeTimeout * 1000);
+         dlgData.setValue(PasswordDialogData::DurationTotal, kRevokeTimeout * 1000);
          dlgData.setValue(PasswordDialogData::SettlementPayOutVisible, true);
 
          // Set timestamp that will be used by auth eid server to update timers.
@@ -642,17 +642,21 @@ void TransactionsWidget::onRevokeSettlement()
 
          dlgData.setValue(PasswordDialogData::ProductGroup, tr(bs::network::Asset::toString(bs::network::Asset::SpotXBT)));
          dlgData.setValue(PasswordDialogData::Security, txItem->comment);
-//         dlgData.setValue(PasswordDialogData::Product, product());
+         dlgData.setValue(PasswordDialogData::Product, "XXX");
+         dlgData.setValue(PasswordDialogData::Side, tr("Revoke"));
+         dlgData.setValue(PasswordDialogData::Price, tr("N/A"));
 
          dlgData.setValue(PasswordDialogData::Market, "XBT");
          dlgData.setValue(PasswordDialogData::SettlementId, settlementIdHex);
-//         dlgData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
+         dlgData.setValue(PasswordDialogData::RequesterAuthAddressVerified, true);
+         dlgData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
          dlgData.setValue(PasswordDialogData::SigningAllowed, true);
 
-         const auto amount = txItem->amount;
-         SPDLOG_LOGGER_DEBUG(logger_, "pay-out fee={}, qty={} ({}), payin hash={}"
-            , result.signRequest.fee, amount, amount * BTCNumericTypes::BalanceDivider
-            , args->payinTxId.toHexStr(true));
+         const auto amount = args->amount.GetValueBitcoin();
+         SPDLOG_LOGGER_DEBUG(logger_, "revoke fee={}, qty={} ({}), recv addr: {}"
+            ", settl addr: {}", result.signRequest.fee, amount
+            , amount * BTCNumericTypes::BalanceDivider, args->recvAddr.display()
+            , result.settlementAddr.display());
 
          const auto reqId = signContainer_->signSettlementPayoutTXRequest(result.signRequest
             , { args->settlementId, args->cpAuthPubKey, false}, dlgData);
@@ -678,7 +682,7 @@ void TransactionsWidget::onRevokeSettlement()
          return;
       }
       args->ourAuthAddress = ownAuthAddr;
-      bs::tradeutils::createPayout(*args, payoutCb);
+      bs::tradeutils::createPayout(*args, payoutCb, false);
    };
    const auto &cbSettlCP = [this, args, cbSettlAuth]
       (const BinaryData &settlementId, const BinaryData &dealerAuthKey)
@@ -689,14 +693,22 @@ void TransactionsWidget::onRevokeSettlement()
       }
       args->settlementId = settlementId;
       args->cpAuthPubKey = dealerAuthKey;
-      signContainer_->getSettlAuthAddr(walletsManager_->getAuthWallet()->walletId()
+      signContainer_->getSettlAuthAddr(walletsManager_->getPrimaryWallet()->walletId()
          , settlementId, cbSettlAuth);
    };
    const auto &cbDialog = [this, args, cbSettlCP]
       (const TransactionPtr &txItem)
    {
+      for (int i = 0; i < txItem->tx.getNumTxOut(); ++i) {
+         const auto &txOut = txItem->tx.getTxOutCopy(i);
+         const auto &addr = bs::Address::fromTxOut(txOut);
+         if (addr.getType() == AddressEntryType_P2WSH) {
+            args->amount = bs::XBTAmount{ txOut.getValue() };
+            break;
+         }
+      }
+
       const auto &xbtWallet = walletsManager_->getDefaultWallet();
-      args->amount = bs::XBTAmount{static_cast<BTCNumericTypes::satoshi_type>(txItem->txEntry.value) };
       args->walletsMgr = walletsManager_;
       args->armory = armory_;
       args->signContainer = signContainer_;
@@ -704,7 +716,7 @@ void TransactionsWidget::onRevokeSettlement()
       args->recvAddr = xbtWallet->getExtAddressList()[std::rand() % xbtWallet->getExtAddressCount()];
       args->outputXbtWallet = xbtWallet;
 
-      signContainer_->getSettlCP(walletsManager_->getAuthWallet()->walletId()
+      signContainer_->getSettlCP(walletsManager_->getPrimaryWallet()->walletId()
          , args->payinTxId, cbSettlCP);
    };
 

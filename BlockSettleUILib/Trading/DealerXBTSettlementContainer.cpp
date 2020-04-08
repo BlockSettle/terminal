@@ -312,6 +312,9 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
 
          emit sendUnsignedPayinToPB(settlementIdHex_
             , bs::network::UnsignedPayinData{unsignedPayinRequest_.serializeState(), std::move(result.preimageData)});
+
+         const auto &authLeaf = walletsMgr_->getAuthWallet();
+         signContainer_->setSettlCP(authLeaf->walletId(), result.payinHash, settlementId_, reqAuthKey_);
       });
    });
 
