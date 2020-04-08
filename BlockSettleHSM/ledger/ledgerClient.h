@@ -19,12 +19,17 @@ class LedgerDevice;
 namespace spdlog {
    class logger;
 }
+namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
+}
 
 class LedgerClient : public QObject
 {
    Q_OBJECT
 public:
-   LedgerClient(std::shared_ptr<spdlog::logger> logger, bool testNet, QObject *parent = nullptr);
+   LedgerClient(std::shared_ptr<spdlog::logger> logger, std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet, QObject *parent = nullptr);
    ~LedgerClient() override = default;
 
    void scanDevices();
@@ -37,6 +42,7 @@ private:
    QVector<QPointer<LedgerDevice>> availableDevices_;
    bool testNet_;
    std::shared_ptr<spdlog::logger> logger_;
+   std::shared_ptr<bs::sync::WalletsManager> walletManager_;
 };
 
 #endif // LEDGERCLIENT_H

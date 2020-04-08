@@ -18,6 +18,7 @@
 #include "ledger/ledgerDevice.h"
 #include "ledger/hidapi/hidapi.h"
 #include <spdlog/logger.h>
+#include "Wallets/SyncWalletsManager.h"
 
 #include <QString>
 #include <QByteArray>
@@ -40,10 +41,11 @@ namespace {
    }
 }
 
-LedgerClient::LedgerClient(std::shared_ptr<spdlog::logger> logger, bool testNet, QObject *parent /*= nullptr*/)
+LedgerClient::LedgerClient(std::shared_ptr<spdlog::logger> logger, std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet, QObject *parent /*= nullptr*/)
    : QObject(parent)
    , logger_(logger)
    , testNet_(testNet)
+   , walletManager_(walletManager)
 {
 }
 
@@ -78,7 +80,7 @@ void LedgerClient::scanDevices()
          (info->interface_number == Ledger::HID_INTERFACE_NUMBER
             || info->usage_page == Ledger::HID_USAGE_PAGE)) {
 
-         auto device = new LedgerDevice{ fromHidOriginal(info), testNet_, logger_, this };
+         auto device = new LedgerDevice{ fromHidOriginal(info), testNet_, walletManager_, logger_, this };
          availableDevices_.push_back({ device });
       }
    }

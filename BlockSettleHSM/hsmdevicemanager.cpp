@@ -25,7 +25,7 @@ HSMDeviceManager::HSMDeviceManager(const std::shared_ptr<ConnectionManager>& con
 {
    walletManager_ = walletManager;
    trezorClient_ = std::make_unique<TrezorClient>(connectionManager, walletManager, testNet, this);
-   ledgerClient_ = std::make_unique<LedgerClient>(connectionManager->GetLogger(), testNet);
+   ledgerClient_ = std::make_unique<LedgerClient>(connectionManager->GetLogger(), walletManager, testNet);
 
    model_ = new HSMDeviceModel(this);
 }

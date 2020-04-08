@@ -18,14 +18,20 @@
 namespace spdlog {
    class logger;
 }
+namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
+}
 
 class LedgerDevice : public HSMDeviceAbstract
 {
    Q_OBJECT
 
 public:
-   LedgerDevice(HidDeviceInfo&& hidDeviceInfo, bool testNet, std::shared_ptr<spdlog::logger> logger, QObject* parent = nullptr);
-   ~LedgerDevice() override = default;
+   LedgerDevice(HidDeviceInfo&& hidDeviceInfo, bool testNet,
+      std::shared_ptr<bs::sync::WalletsManager> walletManager, std::shared_ptr<spdlog::logger> logger, QObject* parent = nullptr);
+   ~LedgerDevice() override;
 
    DeviceKey key() const override;
    DeviceType type() const override;
@@ -44,11 +50,18 @@ protected:
    BIP32_Node retrievePublicKeyFromPath(std::vector<uint32_t>&& derivationPath);
    BIP32_Node getPublicKeyApdu(std::vector<uint32_t>&& derivationPath, const std::unique_ptr<BIP32_Node>& parent = nullptr);
 
+   bool initDevice();
    void releaseDevice();
+
+   bool exchangeData(const QByteArray& input, QByteArray& output, std::string&& logHeader);
+   bool writeData(const QByteArray& input, std::string&& logHeader);
+   bool readData(QByteArray& output, std::string&& logHeader);
+
 private:
    HidDeviceInfo hidDeviceInfo_;
    bool testNet_{};
    std::shared_ptr<spdlog::logger> logger_;
+   std::shared_ptr<bs::sync::WalletsManager> walletManager_;
 
    hid_device* dongle_ = nullptr;
 };

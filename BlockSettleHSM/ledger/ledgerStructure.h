@@ -73,11 +73,24 @@ namespace Ledger {
    const uint16_t CHANNEL = 0x0101;
    const uint8_t  TAG_APDU = 0x05;
    const uint8_t  TAG_PING = 0x02;
+
+   // Tx
+   const uint8_t PREVOUT_SIZE = 36;
+   const std::vector<uint8_t> DEFAULT_VERSION = { 0x01, 0x00, 0x00, 0x00 };
+   const std::vector<uint8_t> DEFAULT_SEQUENCE = { 0xff, 0xff, 0xff, 0xff };
+   const uint8_t OUT_CHUNK_SIZE = 255;
 }
 
 template <typename T,
    typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
-   void writeUintBE(QByteArray& out, T value) {
+void writeUintBE(QByteArray& out, T value) {
+   if (sizeof(T) >= 8) {
+      out.append(static_cast<char>((value >> 56) & 0xff));
+      out.append(static_cast<char>((value >> 48) & 0xff));
+      out.append(static_cast<char>((value >> 40) & 0xff));
+      out.append(static_cast<char>((value >> 32) & 0xff));
+   }
+
    if (sizeof(T) >= 4) {
       out.append(static_cast<char>((value >> 24) & 0xff));
       out.append(static_cast<char>((value >> 16) & 0xff));
@@ -89,6 +102,30 @@ template <typename T,
 
    out.append(static_cast<char>((value) & 0xff));
 }
+
+template <typename T,
+   typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
+void writeUintLE(QByteArray& out, T value) {
+   out.append(static_cast<char>((value) & 0xff));
+
+   if (sizeof(T) >= 2) {
+      out.append(static_cast<char>((value >> 8) & 0xff));
+   }
+
+   if (sizeof(T) >= 4) {
+      out.append(static_cast<char>((value >> 16) & 0xff));
+      out.append(static_cast<char>((value >> 24) & 0xff));
+   }
+
+   if (sizeof(T) >= 8) {
+      out.append(static_cast<char>((value >> 32) & 0xff));
+      out.append(static_cast<char>((value >> 40) & 0xff));
+      out.append(static_cast<char>((value >> 48) & 0xff));
+      out.append(static_cast<char>((value >> 56) & 0xff));
+   }
+}
+
+void writeVarInt(QByteArray &output, size_t size);
 
 struct HidDeviceInfo {
    QString path_;
