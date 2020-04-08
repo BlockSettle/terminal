@@ -303,7 +303,8 @@ QModelIndex OrderListModel::parent(const QModelIndex &index) const
 int OrderListModel::rowCount(const QModelIndex &parent) const
 {
    if (!parent.isValid()) {
-      return 2;
+      // Do not show Settled and UnSettled root items if not connected
+      return connected_ ? 2 : 0;
    }
 
    auto idx = static_cast<IndexHelper*>(parent.internalPointer());
@@ -347,6 +348,8 @@ QVariant OrderListModel::headerData(int section, Qt::Orientation orientation, in
 
 void OrderListModel::onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response)
 {
+   connected_ = true;
+
    switch (response.data_case()) {
       case Blocksettle::Communication::ProxyTerminalPb::Response::kUpdateOrders:
          processUpdateOrders(response.update_orders());
@@ -354,6 +357,13 @@ void OrderListModel::onMessageFromPB(const Blocksettle::Communication::ProxyTerm
       default:
          break;
    }
+}
+
+void OrderListModel::onDisconnected()
+{
+   connected_ = false;
+
+   reset();
 }
 
 void OrderListModel::setOrderStatus(Group *group, int index, const bs::network::Order& order,

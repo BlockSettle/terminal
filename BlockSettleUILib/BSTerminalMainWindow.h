@@ -234,6 +234,7 @@ private slots:
 
    void onNetworkSettingsRequired(NetworkSettingsClient client);
 
+   void onBsConnectionDisconnected();
    void onBsConnectionFailed();
 
    void onInitWalletDialogWasShown();
