@@ -14,12 +14,12 @@
 #include "CheckRecipSigner.h"
 #include "CurrencyPair.h"
 #include "QuoteProvider.h"
-#include "SignContainer.h"
 #include "TradesUtils.h"
 #include "UiUtils.h"
+#include "UtxoReservationManager.h"
+#include "WalletSignerContainer.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "UtxoReservationManager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -34,7 +34,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::shared_ptr<QuoteProvider> &quoteProvider
-   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<WalletSignerContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<AuthAddressManager> &authAddrMgr
    , const bs::Address &authAddr
@@ -189,6 +189,9 @@ void DealerXBTSettlementContainer::activate()
    const auto reqAuthAddrSW = bs::Address::fromPubKey(reqAuthKey_, AddressEntryType_P2WPKH);
    addrVerificator_->addAddress(reqAuthAddrSW);
    addrVerificator_->startAddressVerification();
+
+   const auto &authLeaf = walletsMgr_->getAuthWallet();
+   signContainer_->setSettlAuthAddr(authLeaf->walletId(), settlementId_, authAddr_);
 }
 
 void DealerXBTSettlementContainer::deactivate()
@@ -202,7 +205,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
    if (payoutSignId_ && (payoutSignId_ == id)) {
       payoutSignId_ = 0;
 
-      if (errCode == bs::error::ErrorCode::TxCanceled) {
+      if (errCode == bs::error::ErrorCode::TxCancelled) {
          emit cancelTrade(settlementIdHex_);
          return;
       }
@@ -241,7 +244,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
    if ((payinSignId_ != 0) && (payinSignId_ == id)) {
       payinSignId_ = 0;
 
-      if (errCode == bs::error::ErrorCode::TxCanceled) {
+      if (errCode == bs::error::ErrorCode::TxCancelled) {
          emit cancelTrade(settlementIdHex_);
          return;
       }
@@ -365,6 +368,9 @@ void DealerXBTSettlementContainer::onSignedPayoutRequested(const std::string& se
       });
    });
    bs::tradeutils::createPayout(std::move(args), std::move(payoutCb));
+
+   const auto &authLeaf = walletsMgr_->getAuthWallet();
+   signContainer_->setSettlCP(authLeaf->walletId(), payinHash, settlementId_, reqAuthKey_);
 }
 
 void DealerXBTSettlementContainer::onSignedPayinRequested(const std::string& settlementId

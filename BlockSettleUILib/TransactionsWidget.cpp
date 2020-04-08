@@ -19,6 +19,7 @@
 #include "ApplicationSettings.h"
 #include "BSMessageBox.h"
 #include "CreateTransactionDialogAdvanced.h"
+#include "PasswordDialogDataWrapper.h"
 #include "TradesUtils.h"
 #include "TransactionsViewModel.h"
 #include "TransactionDetailDialog.h"
@@ -28,6 +29,7 @@
 #include "UtxoReservationManager.h"
 
 static const QString c_allWalletsId = QLatin1String("all");
+using namespace bs::sync;
 
 
 class TransactionsSortFilterModel : public QSortFilterProxyModel
@@ -300,7 +302,7 @@ TransactionsWidget::~TransactionsWidget() = default;
 void TransactionsWidget::init(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
                               , const std::shared_ptr<ArmoryConnection> &armory
                               , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-                              , const std::shared_ptr<SignContainer> &signContainer
+                              , const std::shared_ptr<WalletSignerContainer> &signContainer
                               , const std::shared_ptr<spdlog::logger> &logger)
 
 {
@@ -312,6 +314,7 @@ void TransactionsWidget::init(const std::shared_ptr<bs::sync::WalletsManager> &w
 
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &TransactionsWidget::walletsChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, [this](std::string) { walletsChanged(); });
+   connect(signContainer_.get(), &SignContainer::TXSigned, this, &TransactionsWidget::onTXSigned);
 }
 
 void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<TransactionsViewModel>& model)
@@ -610,25 +613,134 @@ void TransactionsWidget::onRevokeSettlement()
       SPDLOG_LOGGER_ERROR(logger_, "item not found");
       return;
    }
-   const auto &cbDialog = [this](const TransactionPtr &txItem) {
-      const auto &xbtWallet = walletsManager_->getDefaultWallet();
-      bs::tradeutils::PayoutArgs args;
-      args.amount = bs::XBTAmount{static_cast<BTCNumericTypes::satoshi_type>(txItem->txEntry.value) };
-//      args.settlementId = BinaryData::CreateFromHex(settlementId);
-//      args.ourAuthAddress = authAddr_;
-//      args.cpAuthPubKey = dealerAuthKey_;
-      args.walletsMgr = walletsManager_;
-      args.armory = armory_;
-      args.signContainer = signContainer_;
-      args.payinTxId = txItem->txEntry.txHash;
-      args.recvAddr = xbtWallet->getExtAddressList()[std::rand() % xbtWallet->getExtAddressCount()];
-      args.outputXbtWallet = xbtWallet;
+   auto args = std::make_shared<bs::tradeutils::PayoutArgs>();
 
+   auto payinHash = std::make_shared<BinaryData>();
+   auto payoutCb = bs::tradeutils::PayoutResultCb([this, args, txItem]
+      (bs::tradeutils::PayoutResult result)
+   {
+      const auto &timestamp = QDateTime::currentDateTimeUtc();
+      QMetaObject::invokeMethod(qApp, [this, args, txItem, timestamp, result]{
+         if (!result.success) {
+            SPDLOG_LOGGER_ERROR(logger_, "creating payout failed: {}", result.errorMsg);
+            BSMessageBox(BSMessageBox::critical, tr("Revoke Transaction")
+               , tr("Revoke failed")
+               , tr("failed to create pay-out TX"), this).exec();
+            return;
+         }
+
+         const auto &settlementIdHex = args->settlementId.toHexStr();
+         bs::sync::PasswordDialogData dlgData;
+         dlgData.setValue(PasswordDialogData::SettlementId, QString::fromStdString(settlementIdHex));
+         dlgData.setValue(PasswordDialogData::Title, tr("Settlement Revoke"));
+//         dlgData.setValue(PasswordDialogData::DurationLeft, static_cast<int>(kWaitTimeoutInSec * 1000));
+//         dlgData.setValue(PasswordDialogData::DurationTotal, static_cast<int>(kWaitTimeoutInSec * 1000));
+         dlgData.setValue(PasswordDialogData::SettlementPayOutVisible, true);
+
+         // Set timestamp that will be used by auth eid server to update timers.
+         dlgData.setValue(PasswordDialogData::DurationTimestamp, static_cast<int>(timestamp.toSecsSinceEpoch()));
+
+         dlgData.setValue(PasswordDialogData::ProductGroup, tr(bs::network::Asset::toString(bs::network::Asset::SpotXBT)));
+         dlgData.setValue(PasswordDialogData::Security, txItem->comment);
+//         dlgData.setValue(PasswordDialogData::Product, product());
+
+         dlgData.setValue(PasswordDialogData::Market, "XBT");
+         dlgData.setValue(PasswordDialogData::SettlementId, settlementIdHex);
+//         dlgData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
+         dlgData.setValue(PasswordDialogData::SigningAllowed, true);
+
+         const auto amount = txItem->amount;
+         SPDLOG_LOGGER_DEBUG(logger_, "pay-out fee={}, qty={} ({}), payin hash={}"
+            , result.signRequest.fee, amount, amount * BTCNumericTypes::BalanceDivider
+            , args->payinTxId.toHexStr(true));
+
+         const auto reqId = signContainer_->signSettlementPayoutTXRequest(result.signRequest
+            , { args->settlementId, args->cpAuthPubKey, false}, dlgData);
+         if (reqId) {
+            revokeIds_.insert(reqId);
+         }
+         else {
+            BSMessageBox(BSMessageBox::critical, tr("Revoke Transaction")
+               , tr("Revoke failed")
+               , tr("failed to send TX request to signer"), this).exec();
+         }
+      });
+   });
+
+   const auto &cbSettlAuth = [this, args, payoutCb](const bs::Address &ownAuthAddr)
+   {
+      if (ownAuthAddr.empty()) {
+         QMetaObject::invokeMethod(this, [this] {
+            BSMessageBox(BSMessageBox::critical, tr("Revoke Transaction")
+               , tr("Failed to create revoke transaction")
+               , tr("auth wallet doesn't contain settlement metadata"), this).exec();
+         });
+         return;
+      }
+      args->ourAuthAddress = ownAuthAddr;
+      bs::tradeutils::createPayout(*args, payoutCb);
+   };
+   const auto &cbSettlCP = [this, args, cbSettlAuth]
+      (const BinaryData &settlementId, const BinaryData &dealerAuthKey)
+   {
+      if (settlementId.empty() || dealerAuthKey.empty()) {
+         cbSettlAuth({});
+         return;
+      }
+      args->settlementId = settlementId;
+      args->cpAuthPubKey = dealerAuthKey;
+      signContainer_->getSettlAuthAddr(walletsManager_->getAuthWallet()->walletId()
+         , settlementId, cbSettlAuth);
+   };
+   const auto &cbDialog = [this, args, cbSettlCP]
+      (const TransactionPtr &txItem)
+   {
+      const auto &xbtWallet = walletsManager_->getDefaultWallet();
+      args->amount = bs::XBTAmount{static_cast<BTCNumericTypes::satoshi_type>(txItem->txEntry.value) };
+      args->walletsMgr = walletsManager_;
+      args->armory = armory_;
+      args->signContainer = signContainer_;
+      args->payinTxId = txItem->txEntry.txHash;
+      args->recvAddr = xbtWallet->getExtAddressList()[std::rand() % xbtWallet->getExtAddressCount()];
+      args->outputXbtWallet = xbtWallet;
+
+      signContainer_->getSettlCP(walletsManager_->getAuthWallet()->walletId()
+         , args->payinTxId, cbSettlCP);
    };
 
    if (txItem->initialized) {
       cbDialog(txItem);
    } else {
       TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
+   }
+}
+
+void TransactionsWidget::onTXSigned(unsigned int id, BinaryData signedTX
+   , bs::error::ErrorCode errCode, std::string errTxt)
+{
+   if (revokeIds_.find(id) != revokeIds_.end()) {
+      revokeIds_.erase(id);
+      if (errCode == bs::error::ErrorCode::TxCancelled) {
+         SPDLOG_LOGGER_INFO(logger_, "revoke {} cancelled", id);
+         return;
+      }
+
+      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.empty()) {
+         logger_->warn("[TransactionsWidget::onTXSigned] revoke sign failure: {} ({})"
+            , (int)errCode, errTxt);
+         QMetaObject::invokeMethod(this, [this, errTxt] {
+            BSMessageBox(BSMessageBox::critical, tr("Revoke Transaction")
+               , tr("Failed to sign revoke transaction")
+               , QString::fromStdString(errTxt), this).exec();
+         });
+         return;
+      }
+      SPDLOG_LOGGER_DEBUG(logger_, "signed revoke: {}", signedTX.toHexStr());
+
+      if (!armory_->pushZC(signedTX)) {
+         BSMessageBox(BSMessageBox::critical, tr("Revoke Transaction")
+            , tr("Failed to send revoke transaction")
+            , tr("armory connection unavailable"), this).exec();
+      }
    }
 }

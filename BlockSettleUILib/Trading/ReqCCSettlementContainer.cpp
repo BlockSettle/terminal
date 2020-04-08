@@ -313,7 +313,7 @@ bool ReqCCSettlementContainer::startSigning(QDateTime timestamp)
          ccWallet_->setTransactionComment(signedTX, txComment());
 #endif
       }
-      else if (result == bs::error::ErrorCode::TxCanceled) {
+      else if (result == bs::error::ErrorCode::TxCancelled) {
          SettlementContainer::releaseUtxoRes();
          emit cancelTrade(clOrdId_);
       }

@@ -363,7 +363,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
    pendingTXSignId_ = 0;
    QString detailedText;
 
-   if (result == bs::error::ErrorCode::TxCanceled) {
+   if (result == bs::error::ErrorCode::TxCancelled) {
       stopBroadcasting();
       return;
    }

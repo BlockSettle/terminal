@@ -125,7 +125,7 @@ bool DealerCCSettlementContainer::startSigning(QDateTime timestamp)
          // FIXME: Does not work as expected as signedTX txid is different from combined txid
          //wallet_->setTransactionComment(signedTX, txComment());
       }
-      else if (result == bs::error::ErrorCode::TxCanceled) {
+      else if (result == bs::error::ErrorCode::TxCancelled) {
          emit cancelTrade(orderId_.toStdString());
       }
       else {

@@ -53,7 +53,7 @@ class MDCallbacksQt;
 class OrderListModel;
 class QuoteProvider;
 class RfqStorage;
-class SignContainer;
+class WalletSignerContainer;
 
 class RFQRequestWidget : public TabWithShortcut
 {
@@ -73,7 +73,7 @@ public:
          , std::shared_ptr<QuoteProvider> quoteProvider
          , const std::shared_ptr<AssetManager>& assetManager
          , const std::shared_ptr<DialogManager> &dialogManager
-         , const std::shared_ptr<SignContainer> &
+         , const std::shared_ptr<WalletSignerContainer> &
          , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<ConnectionManager> &connectionManager
          , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
@@ -138,7 +138,7 @@ private:
    std::shared_ptr<DialogManager>      dialogManager_;
 
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<SignContainer>      signingContainer_;
+   std::shared_ptr<WalletSignerContainer>    signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::shared_ptr<ConnectionManager>  connectionManager_;

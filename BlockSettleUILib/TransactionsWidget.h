@@ -11,11 +11,12 @@
 #ifndef __TRANSACTIONS_WIDGET_UI_H__
 #define __TRANSACTIONS_WIDGET_UI_H__
 
+#include <memory>
+#include <set>
 #include <QMenu>
 #include <QWidget>
-
-#include <memory>
-
+#include "BinaryData.h"
+#include "BSErrorCode.h"
 #include "TabWithShortcut.h"
 
 namespace spdlog {
@@ -30,12 +31,12 @@ namespace bs {
    }
    class UTXOReservationManager;
 }
+class ApplicationSettings;
 class ArmoryConnection;
-class SignContainer;
 class TransactionsProxy;
 class TransactionsViewModel;
 class TransactionsSortFilterModel;
-class ApplicationSettings;
+class WalletSignerContainer;
 
 
 class TransactionsWidget : public TabWithShortcut
@@ -49,7 +50,7 @@ public:
    void init(const std::shared_ptr<bs::sync::WalletsManager> &
              , const std::shared_ptr<ArmoryConnection> &
              , const std::shared_ptr<bs::UTXOReservationManager> &
-             , const std::shared_ptr<SignContainer> &
+             , const std::shared_ptr<WalletSignerContainer> &
              , const std::shared_ptr<spdlog::logger> &);
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel> &);
    void setAppSettings(std::shared_ptr<ApplicationSettings> appSettings);
@@ -68,6 +69,7 @@ private slots:
    void onProgressInited(int start, int end);
    void onProgressUpdated(int value);
    void onRevokeSettlement();
+   void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode, std::string error);
 
 private:
    std::unique_ptr<Ui::TransactionsWidget> ui_;
@@ -75,7 +77,7 @@ private:
 
    std::shared_ptr<TransactionsViewModel> transactionsModel_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<SignContainer>         signContainer_;
+   std::shared_ptr<WalletSignerContainer> signContainer_;
    std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
@@ -88,6 +90,7 @@ private:
    QAction  *actionRevoke_ = nullptr;
    QString  curAddress_;
    QString  curTx_;
+   std::set<unsigned int>  revokeIds_;
 };
 
 

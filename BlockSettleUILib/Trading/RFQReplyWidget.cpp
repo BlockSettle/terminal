@@ -26,7 +26,7 @@
 #include "QuoteProvider.h"
 #include "RFQBlotterTreeView.h"
 #include "SelectedTransactionInputs.h"
-#include "SignContainer.h"
+#include "WalletSignerContainer.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "UtxoReservationManager.h"
@@ -131,7 +131,7 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<DialogManager> &dialogManager
-   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<WalletSignerContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider
@@ -437,7 +437,7 @@ void RFQReplyWidget::onSelected(const QString& productGroup, const bs::network::
 
 void RFQReplyWidget::onTransactionError(bs::error::ErrorCode code, const QString& error)
 {
-   if (bs::error::ErrorCode::TxCanceled != code) {
+   if (bs::error::ErrorCode::TxCancelled != code) {
       MessageBoxBroadcastError(error, this).exec();
    }
 }

@@ -24,7 +24,7 @@
 #include "QuoteProvider.h"
 #include "RFQDialog.h"
 #include "RfqStorage.h"
-#include "SignContainer.h"
+#include "WalletSignerContainer.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "UtxoReservationManager.h"
 
@@ -197,7 +197,7 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    , std::shared_ptr<QuoteProvider> quoteProvider
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<DialogManager> &dialogManager
-   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<WalletSignerContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager

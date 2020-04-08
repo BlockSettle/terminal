@@ -139,7 +139,7 @@ public:
    bool eventFilter(QObject *object, QEvent *event) override;
 
    Q_INVOKABLE int errorCodeNoError()    {return static_cast<int>(bs::error::ErrorCode::NoError); }
-   Q_INVOKABLE int errorCodeTxCanceled() {return static_cast<int>(bs::error::ErrorCode::TxCanceled); }
+   Q_INVOKABLE int errorCodeTxCanceled() {return static_cast<int>(bs::error::ErrorCode::TxCancelled); }
 
    Q_INVOKABLE bool isDebugBuild();
 
