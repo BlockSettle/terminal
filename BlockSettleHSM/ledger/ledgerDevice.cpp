@@ -226,13 +226,13 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
    for (auto &utxo: coreReq.inputs) {
       QByteArray inputPayload;
       inputPayload.append(static_cast<char>(0x02));
-      inputPayload.append(QByteArray::fromStdString(utxo.getTxHash().toBinStr(true)));
+      inputPayload.append(QByteArray::fromStdString(utxo.getTxHash().toBinStr()));
       writeUintLE(inputPayload, utxo.getTxOutIndex());
       writeUintLE(inputPayload, utxo.getValue());
       script = QByteArray::fromStdString(utxo.getScript().toBinStr());
       writeVarInt(inputPayload, static_cast<uint32_t>(script.size())); // script ????
       inputPayload.append(script);
-      writeUintLE(inputPayload, std::numeric_limits<uint32_t>::max() - 2);
+      writeUintLE(inputPayload, std::numeric_limits<uint32_t>::max());
 
       auto command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x02, std::move(inputPayload));
       inputCommands.push_back(std::move(command));
@@ -305,13 +305,13 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
    for (auto &utxo : coreReq.inputs) {
       QByteArray inputPayload;
       inputPayload.append(static_cast<char>(0x02));
-      inputPayload.append(QByteArray::fromStdString(utxo.getTxHash().toBinStr(true)));
+      inputPayload.append(QByteArray::fromStdString(utxo.getTxHash().toBinStr()));
       writeUintLE(inputPayload, utxo.getTxOutIndex());
       writeUintLE(inputPayload, utxo.getValue());
       script = QByteArray::fromStdString(utxo.getScript().toBinStr());
       writeVarInt(inputPayload, static_cast<uint32_t>(script.size())); // script ????
       inputPayload.append(script);
-      writeUintLE(inputPayload, std::numeric_limits<uint32_t>::max() - 2);
+      writeUintLE(inputPayload, std::numeric_limits<uint32_t>::max());
 
       auto command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x02, std::move(inputPayload));
       inputCommands2.push_back(std::move(command));
