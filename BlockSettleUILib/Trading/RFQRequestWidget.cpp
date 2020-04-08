@@ -252,7 +252,6 @@ void RFQRequestWidget::onConnectedToCeler()
 
    ui_->shieldPage->showShieldSelectTargetTrade();
    popShield();
-   ui_->treeViewOrders->onCelerConnected();
 }
 
 void RFQRequestWidget::onDisconnectedFromCeler()
@@ -263,7 +262,6 @@ void RFQRequestWidget::onDisconnectedFromCeler()
 
    ui_->shieldPage->showShieldLoginToSubmitRequired();
    popShield();
-   ui_->treeViewOrders->onCelerDisconnected();
 }
 
 void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservationToken ccUtxoRes)

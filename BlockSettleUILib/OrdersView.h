@@ -37,10 +37,6 @@ protected:
    void drawRow(QPainter *painter, const QStyleOptionViewItem &option,
       const QModelIndex &index) const override;
 
-public slots:
-   void onCelerConnected();
-   void onCelerDisconnected();
-
 private slots:
    void onSelectRow(const QPersistentModelIndex &row);
    void onRowsInserted(const QModelIndex &parent, int, int);
@@ -54,7 +50,6 @@ private:
    QStringList collapsed_;
    OrderListModel *model_;
    std::map<QPersistentModelIndex, bool> hasNewItems_;
-   bool isCelerConnected = false;
 }; // class OrdersView
 
 #endif // ORDERSVIEW_H_INCLUDED

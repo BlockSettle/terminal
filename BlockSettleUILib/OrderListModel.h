@@ -63,6 +63,7 @@ public:
                        int role = Qt::DisplayRole) const override;
 public slots:
    void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
+   void onDisconnected();
 
 signals:
    void newOrder(const QPersistentModelIndex &index);
@@ -192,6 +193,8 @@ private:
 
    std::vector<std::pair<int64_t, int>> sortedPeviousOrderStatuses_{};
    QDateTime latestChangedTimestamp_;
+
+   bool connected_{};
 };
 
 #endif // ORDERLISTMODEL_H
