@@ -1149,7 +1149,7 @@ void BSTerminalMainWindow::onGenerateAddress()
    }
 
    NewAddressDialog* newAddressDialog = new NewAddressDialog(
-      selectWalletDialog->getSelectedWallet(), signContainer_, this);
+      selectWalletDialog->getSelectedWallet(), this);
    newAddressDialog->show();
 }
 

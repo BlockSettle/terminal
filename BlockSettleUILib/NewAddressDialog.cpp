@@ -12,13 +12,12 @@
 #include "NewAddressDialog.h"
 #include <QClipboard>
 #include <QDialogButtonBox>
-#include "SignContainer.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWallet.h"
 
 
 NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::sync::Wallet> &wallet
-   , const std::shared_ptr<SignContainer> &container, QWidget* parent)
+   , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::NewAddressDialog())
    , wallet_(wallet)
