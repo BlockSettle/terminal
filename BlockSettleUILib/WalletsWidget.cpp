@@ -413,9 +413,6 @@ void WalletsWidget::onShowContextMenu(QMenu *menu, QPoint where)
 void WalletsWidget::updateAddresses()
 {
    const auto &selectedWallets = getSelectedWallets();
-   if (selectedWallets == prevSelectedWallets_) {
-      return;
-   }
 
    if (ui_->treeViewWallets->selectionModel()->hasSelection()) {
       prevSelectedWalletRow_ = ui_->treeViewWallets->selectionModel()->selectedIndexes().first().row();

@@ -18,6 +18,7 @@
 #include "BinaryData.h"
 #include "BSErrorCode.h"
 #include "EncryptionUtils.h"
+#include "ValidityFlag.h"
 
 namespace Ui {
     class CCTokenEntryDialog;
@@ -73,6 +74,8 @@ private:
 
    QTimer      timer_;
    double      timeLeft_{};
+
+   ValidityFlag validityFlag_;
 };
 
 #endif // __CC_TOKEN_ENTRY_DIALOG_H__

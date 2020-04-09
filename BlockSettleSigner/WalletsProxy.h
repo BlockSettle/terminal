@@ -17,6 +17,7 @@
 
 #include "BSErrorCode.h"
 #include "SignerDefs.h"
+#include "hwcommonstructure.h"
 
 namespace spdlog {
    class logger;
@@ -72,6 +73,7 @@ public:
 
    Q_INVOKABLE QString getWoWalletFile(const QString &walletId) const;
    Q_INVOKABLE void importWoWallet(const QString &pathName, const QJSValue &jsCallback);
+   Q_INVOKABLE void importHwWallet(HwWalletWrapper walletInfo, const QJSValue &jsCallback);
 
    Q_INVOKABLE void exportWatchingOnly(const QString &walletId
       , const QString &filePath, bs::wallet::QPasswordData *passwordData

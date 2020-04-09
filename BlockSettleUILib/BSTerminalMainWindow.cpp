@@ -395,6 +395,10 @@ void BSTerminalMainWindow::LoadWallets()
    // Enable/disable send action when first wallet created/last wallet removed
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletChanged, this
       , &BSTerminalMainWindow::updateControlEnabledState);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletDeleted, this
+      , &BSTerminalMainWindow::updateControlEnabledState);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletAdded, this
+      , &BSTerminalMainWindow::updateControlEnabledState);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
       , &BSTerminalMainWindow::updateControlEnabledState);
 
@@ -1012,35 +1016,41 @@ void BSTerminalMainWindow::connectSigner()
 bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()> &cb
    , bool reportSuccess)
 {
-   const auto &hdWallets = walletsMgr_->hdWallets();
-   if (primary && !hdWallets.empty()) {
-      auto wallet = hdWallets[0];
-      if (wallet->isPrimary()) {
+   if (primary) {
+      auto primaryWallet = walletsMgr_->getPrimaryWallet();
+      if (primaryWallet) {
          if (cb) {
             cb();
          }
          return true;
       }
-      promoteToPrimaryShown_ = true;
-      BSMessageBox qry(BSMessageBox::question, tr("Promote to primary wallet"), tr("Promote to primary wallet?")
-         , tr("To trade through BlockSettle, you are required to have a wallet which"
-            " supports the sub-wallets required to interact with the system. Each Terminal"
-            " may only have one Primary Wallet. Do you wish to promote '%1'?")
-         .arg(QString::fromStdString(wallet->name())), this);
-      if (qry.exec() == QDialog::Accepted) {
-         walletsMgr_->PromoteHDWallet(wallet->walletId(), [this, cb](bs::error::ErrorCode result) {
-            if (result == bs::error::ErrorCode::NoError) {
-               if (cb) {
-                  cb();
-               }
-               // If wallet was promoted to primary we could try to get chat keys now
-               tryGetChatKeys();
-            }
-         });
-         return true;
-      }
 
-      return false;
+      const auto &hdWallets = walletsMgr_->hdWallets();
+      const auto fullWalletIt = std::find_if(hdWallets.begin(), hdWallets.end(), [](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
+         return !wallet->isHardwareWallet() && !wallet->isOffline();
+      });
+      if (fullWalletIt != hdWallets.end()) {
+         auto wallet = *fullWalletIt;
+         promoteToPrimaryShown_ = true;
+         BSMessageBox qry(BSMessageBox::question, tr("Promote to primary wallet"), tr("Promote to primary wallet?")
+            , tr("To trade through BlockSettle, you are required to have a wallet which"
+               " supports the sub-wallets required to interact with the system. Each Terminal"
+               " may only have one Primary Wallet. Do you wish to promote '%1'?")
+            .arg(QString::fromStdString(wallet->name())), this);
+         if (qry.exec() == QDialog::Accepted) {
+            walletsMgr_->PromoteHDWallet(wallet->walletId(), [this, cb](bs::error::ErrorCode result) {
+               if (result == bs::error::ErrorCode::NoError) {
+                  if (cb) {
+                     cb();
+                  }
+                  // If wallet was promoted to primary we could try to get chat keys now
+                  tryGetChatKeys();
+               }
+            });
+            return true;
+         }
+         return false;
+      }
    }
 
    if (!signContainer_->isOffline()) {
@@ -1326,6 +1336,32 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
       if (rc == QDialog::Accepted) {
          switchToTestEnv();
          restartTerminal();
+      }
+      return;
+   }
+
+   if (!gotChatKeys_) {
+      if (!signContainer_ || !signContainer_->isReady()) {
+         BSMessageBox signerMsg(BSMessageBox::warning
+            , tr("Login Failed")
+            , tr("Login Failed")
+            , tr("Signer connection lost. Please reconnect and try to login again.")
+            , this);
+         signerMsg.exec();
+         return;
+      }
+
+      BSMessageBox createWallet(BSMessageBox::warning
+         , tr("Login Failed")
+         , tr("Login Failed")
+         , tr("To make use of BlockSettle’s offering, you are required to have a Primary Wallet which can generate your chat key, "
+              "authentication address, and coloured coin paths. Please create a wallet and try to login again.")
+         , this);
+      createWallet.setConfirmButtonText(tr("Create Wallet"));
+      createWallet.setCancelVisible(true);
+      auto result = createWallet.exec();
+      if (result == QDialog::Accepted) {
+         onCreatePrimaryWalletRequest();
       }
       return;
    }
@@ -1988,9 +2024,11 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
       promoteToPrimary(primaryWallet);
       return;
    }
-   auto hdWallets = walletsMgr_->hdWallets();
-   if (!hdWallets.empty()) {
-      promoteToPrimary(hdWallets.front());
+   for (const auto &hdWallet : walletsMgr_->hdWallets()) {
+      if (!hdWallet->isOffline() && !hdWallet->isHardwareWallet()) {
+         promoteToPrimary(hdWallet);
+         break;
+      }
    }
 }
 

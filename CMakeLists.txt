@@ -263,6 +263,19 @@ IF( NOT BOTAN_LIB)
    MESSAGE( FATAL_ERROR "Could not find botan lib in ${BOTAN_LIB_DIR}")
 ENDIF()
 
+##setup libusb
+if (UNIX)
+    SET(LIBUSB_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/libusb)
+    SET(LIBUSB_LIB_DIR ${LIBUSB_PACKAGE_ROOT}/lib)
+    SET(LIBUSB_INCLUDE_DIR ${LIBUSB_PACKAGE_ROOT}/include)
+
+    SET(LIBUSB_LIB_NAME libusb-1.0.a)
+    FIND_LIBRARY( LIBUSB_LIB NAMES ${LIBUSB_LIB_NAME} PATHS ${LIBUSB_LIB_DIR} NO_DEFAULT_PATH )
+    IF( NOT LIBUSB_LIB)
+       MESSAGE( FATAL_ERROR "Could not find libusb lib in ${LIBUSB_LIB_DIR}")
+    ENDIF()
+endif (UNIX)
+
 
 # setup libwebsockets
 SET(WS_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/libwebsockets)
@@ -403,6 +416,7 @@ SET( CELER_PROTO_LIB_NAME              CelerProtoLib )
 SET( BLOCKSETTLE_APP_NAME              blocksettle )
 SET( SIGNER_APP_NAME                   blocksettle_signer )
 SET( BLOCKSETTLE_UI_LIBRARY_NAME       bsuilib )
+SET( BLOCKSETTLE_HW_LIBRARY_NAME       HWIntegrations )
 SET( CRYPTO_LIB_NAME                   ArmoryCryptoLib )
 SET( CPP_WALLET_LIB_NAME               ArmoryWalletLib )
 SET( BS_NETWORK_LIB_NAME               BSNetwork )
@@ -416,6 +430,7 @@ SET( WALLET_LIB_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/common/WalletsLib )
 SET( BS_NETWORK_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/common/BlocksettleNetworkingLib )
 SET( COMMON_UI_LIB_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/CommonUI )
 SET( COMMON_LIB_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/common/CommonLib )
+SET( BS_HW_LIB_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/BlockSettleHW )
 
 SET(MDB_DIR ${CRYPTO_LIB_DIR}/lmdb/libraries/liblmdb)
 
@@ -735,6 +750,7 @@ ELSE(WIN32)
             double-conversion
             dl
             cups
+            udev
             ${CMAKE_THREAD_LIBS_INIT} )
 
          add_definitions(-DUSE_QXcbIntegrationPlugin)
@@ -849,6 +865,7 @@ ADD_SUBDIRECTORY(common/WalletsLib)
 ADD_SUBDIRECTORY(common/cppForSwig)
 ADD_SUBDIRECTORY(common/CommonLib)
 ADD_SUBDIRECTORY(CommonUI)
+ADD_SUBDIRECTORY(BlockSettleHW)
 
 ADD_SUBDIRECTORY(BlockSettleApp)
 ADD_SUBDIRECTORY(BlockSettleSigner)

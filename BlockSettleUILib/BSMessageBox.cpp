@@ -169,11 +169,3 @@ MessageBoxExpTimeout::MessageBoxExpTimeout(QWidget *parent)
       tr("Explorer Timeout"), tr("Armory has timed out. Cannot resolve query.")
       , parent) {
 }
-
-MessageBoxWalletCreateAbort::MessageBoxWalletCreateAbort(QWidget *parent)
-   : BSMessageBox(BSMessageBox::question, tr("Warning"), tr("Abort Wallet Creation?")
-      , tr("The Wallet will not be created if you don't complete the procedure.\n\n"
-         "Are you sure you want to abort the Wallet Creation process?"), parent) {
-   setConfirmButtonText(QObject::tr("Abort"));
-   setCancelButtonText(QObject::tr("Back"));
-}

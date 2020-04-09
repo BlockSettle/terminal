@@ -208,7 +208,7 @@
       <item>
        <widget class="QPushButton" name="pushButtonImport">
         <property name="text">
-         <string>Import Existing</string>
+         <string>Import Existing / HW</string>
         </property>
         <property name="autoDefault">
          <bool>false</bool>
@@ -231,6 +231,7 @@
   </layout>
  </widget>
  <resources>
+  <include location="armory.qrc"/>
   <include location="armory.qrc"/>
  </resources>
  <connections/>

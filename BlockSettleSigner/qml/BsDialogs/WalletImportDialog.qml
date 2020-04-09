@@ -19,10 +19,14 @@ import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.QPasswordData 1.0
+import com.blocksettle.HwDeviceManager 1.0
 
 import "../BsControls"
 import "../StyledControls"
+import "../BsStyles"
+import "../BsHw"
 import "../js/helper.js" as JsHelper
+
 
 CustomTitleDialogWindow {
     id: root
@@ -38,9 +42,15 @@ CustomTitleDialogWindow {
     property WalletInfo walletInfo: WalletInfo{}
     property var passwordData: QPasswordData{}
     property bool isWO: (tabBar.currentIndex === 1)
+    property bool isHw: rbHardwareWallet.checked
 
-    property bool acceptable: isWO ? digitalWoBackupAcceptable : ((curPage === 1 && walletSelected) ||
-                              (curPage === 2 && importAcceptable))
+    property bool acceptable: if (isWO)
+                                  digitalWoBackupAcceptable
+                              else if (isHw)
+                                  (!hwDeviceList.isScanning && !hwDeviceList.isImporting && (hwDeviceList.readyForImport || hwDeviceList.isNoDevice))
+                              else
+                                  ((curPage === 1 && walletSelected) ||
+                                   (curPage === 2 && importAcceptable))
 
     property bool digitalBackupAcceptable: false
     property bool digitalWoBackupAcceptable: false
@@ -66,6 +76,9 @@ CustomTitleDialogWindow {
             tfName.text = walletsProxy.generateNextWalletName();
         }
     }
+
+    onAboutToShow: hwDeviceList.init()
+    onAboutToHide: hwDeviceList.release();
 
     onEnterPressed: {
         if (btnAccept.enabled) btnAccept.onClicked()
@@ -132,6 +145,7 @@ CustomTitleDialogWindow {
                 ColumnLayout {
                     id: selectLayout
                     visible: curPage === WalletImportDialog.Page.Select
+                    Layout.fillWidth: true
 
                     CustomHeader {
                         id: headerText
@@ -156,11 +170,15 @@ CustomTitleDialogWindow {
                                 id: rbPaperBackup
                                 Layout.leftMargin: rootKeyInput.inputLabelsWidth
                                 text: qsTr("Paper Backup")
-                                checked: true
                             }
                             CustomRadioButton {
                                 id: rbFileBackup
                                 text: qsTr("Digital Backup")
+                            }
+                            CustomRadioButton {
+                                id: rbHardwareWallet
+                                text: qsTr("Hardware wallet")
+                                checked: true
                             }
                         }
 
@@ -176,6 +194,15 @@ CustomTitleDialogWindow {
                         CustomHeader {
                             text: qsTr("File Location")
                             visible: rbFileBackup.checked
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 25
+                            Layout.topMargin: 5
+                            Layout.leftMargin: 10
+                            Layout.rightMargin: 10
+                        }
+                        CustomHeader {
+                            text: qsTr("Hardware Device")
+                            visible: rbHardwareWallet.checked
                             Layout.fillWidth: true
                             Layout.preferredHeight: 25
                             Layout.topMargin: 5
@@ -207,7 +234,7 @@ CustomTitleDialogWindow {
                         Layout.leftMargin: 10
                         Layout.rightMargin: 10
                         Layout.bottomMargin: 10
-                        visible: !rbPaperBackup.checked
+                        visible: rbFileBackup.checked
 
                         CustomLabel {
                             Layout.fillWidth: true
@@ -254,6 +281,24 @@ CustomTitleDialogWindow {
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    // HARDWARE DEVICES
+                    HwAvailableDevices {
+                        id: hwDeviceList
+
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        visible: rbHardwareWallet.checked
+
+                        onPubKeyReady: {
+                            importWoWallet();
+                        }
+
+                        onFailed: {
+                            JsHelper.messageBox(BSMessageBox.Type.Critical
+                                , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
                         }
                     }
                 }
@@ -565,25 +610,23 @@ CustomTitleDialogWindow {
                 primary: true
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                text: qsTr("Import")
+                text: (isHw && hwDeviceList.isNoDevice) ? qsTr("Rescan") : qsTr("Import")
                 enabled: acceptable
 
                 onClicked: {
-                    if (isWO) {
-                        var importCallback = function(success, msg) {
-                            if (success) {
-                                var walletInfo = qmlFactory.createWalletInfo(msg)
-                                var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImportWo, true, walletInfo)
-                                mb.bsAccepted.connect(acceptAnimated)
-                            }
-                            else {
-                                JsHelper.messageBox(BSMessageBox.Type.Critical
-                                    , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
-                            }
+                    if (isHw ) {
+                        if (hwDeviceList.readyForImport) {
+                            hwDeviceList.importXpub();
+                        } else if (hwDeviceList.isNoDevice) {
+                            hwDeviceList.rescan();
                         }
 
-                        walletsProxy.importWoWallet(lblWoDBFile.text, importCallback)
-                        return
+                        return;
+                    }
+
+                    if (isWO) {
+                        importWoWallet();
+                        return;
                     }
 
                     if (curPage === 1) {
@@ -647,5 +690,33 @@ CustomTitleDialogWindow {
     function applyDialogClosing() {
         JsHelper.openAbortBox(root, abortBoxType);
         return false;
+    }
+
+    function importWoWallet() {
+        var importCallback = function(success, id, name, desc) {
+            if (success) {
+                let walletInfo = qmlFactory.createWalletInfo();
+                walletInfo.walletId = id;
+                walletInfo.name = name;
+                walletInfo.desc = desc;
+
+                let type = isHw ? BSResultBox.ResultType.HwWallet
+                                 : BSResultBox.ResultType.WalletImportWo;
+
+                var mb = JsHelper.resultBox(type, true, walletInfo)
+                mb.bsAccepted.connect(acceptAnimated)
+            }
+            else {
+                JsHelper.messageBox(BSMessageBox.Type.Critical
+                    , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
+            }
+        }
+
+        if (isWO) {
+            walletsProxy.importWoWallet(lblWoDBFile.text, importCallback)
+        }
+        else if (isHw) {
+            walletsProxy.importHwWallet(hwDeviceList.hwWalletInfo, importCallback)
+        }
     }
 }

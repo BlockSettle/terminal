@@ -178,10 +178,13 @@ protected:
 
    QString getState() const {
       switch (state_) {
-      case State::Connected:     return QObject::tr("Full");
-      case State::Offline:       return QObject::tr("Watching-Only");
-      default:    return {};
+      case State::Primary:    return QObject::tr("Primary");
+      case State::Full:       return QObject::tr("Full");
+      case State::Offline:    return QObject::tr("Watching-Only");
+      case State::Hardware:        return QObject::tr("Hardware");
+      case State::Undefined:  return {};
       }
+      return {};
    }
 
    static WalletNode::Type getNodeType(bs::core::wallet::Type grpType) {
@@ -497,7 +500,7 @@ void WalletsViewModel::onWalletInfo(unsigned int id, bs::hd::WalletInfo)
    }
    const auto walletId = hdInfoReqIds_[id];
    hdInfoReqIds_.erase(id);
-   const auto state = WalletNode::State::Connected;
+   const auto state = WalletNode::State::Full;
    signerStates_[walletId] = state;
    for (int i = 0; i < rootNode_->nbChildren(); i++) {
       auto hdNode = rootNode_->child(i);
@@ -585,11 +588,19 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
 
       hdNode->addGroups(filteredGroups);
       if (signContainer_) {
-         if (signContainer_->isOffline() || signContainer_->isWalletOffline(hdWallet->walletId())) {
+         if (signContainer_->isOffline()) {
             hdNode->setState(WalletNode::State::Offline);
          }
-         else {
-            hdNode->setState(WalletNode::State::Connected);
+         else if (hdWallet->isHardwareWallet()) {
+            hdNode->setState(WalletNode::State::Hardware);
+         }
+         else if (signContainer_->isWalletOffline(hdWallet->walletId())) {
+            hdNode->setState(WalletNode::State::Offline);
+         }
+         else if (hdWallet->isPrimary()) {
+            hdNode->setState(WalletNode::State::Primary);
+         } else {
+            hdNode->setState(WalletNode::State::Full);
          }
       }
    }
@@ -605,8 +616,12 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
    if (selectedWalletId.empty()) {
       selectedWalletId = defaultWalletId_;
    }
-   const auto node = rootNode_->findByWalletId(selectedWalletId);
+   auto node = rootNode_->findByWalletId(selectedWalletId);
    if (node != nullptr) {
+      selection.push_back(createIndex(node->row(), 0, static_cast<void*>(node)));
+   }
+   else if(rootNode_->hasChildren()) {
+      node = rootNode_->child(0);
       selection.push_back(createIndex(node->row(), 0, static_cast<void*>(node)));
    }
    

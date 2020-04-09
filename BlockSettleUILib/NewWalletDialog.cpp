@@ -25,8 +25,20 @@ NewWalletDialog::NewWalletDialog(bool noWalletsFound, const std::shared_ptr<Appl
 {
    ui_->setupUi(this);
 
+   auto netType = appSettings->get<NetworkType>(ApplicationSettings::netType);
+
    if (noWalletsFound) {
-      ui_->labelPurpose->setText(tr("THE TERMINAL CAN'T FIND ANY EXISTING WALLETS"));
+      if (netType == NetworkType::TestNet) {
+         ui_->labelPurpose->setText(tr("THE TERMINAL CAN'T FIND ANY EXISTING TESTNET WALLETS"));
+      } else {
+         ui_->labelPurpose->setText(tr("THE TERMINAL CAN'T FIND ANY EXISTING WALLETS"));
+      }
+   } else {
+      if (netType == NetworkType::TestNet) {
+         ui_->labelPurpose->setText(tr("ADD NEW TESTNET WALLET"));
+      } else {
+         ui_->labelPurpose->setText(tr("ADD NEW WALLET"));
+      }
    }
 
    const auto messageText =

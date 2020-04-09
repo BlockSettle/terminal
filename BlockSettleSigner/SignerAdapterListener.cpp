@@ -227,6 +227,9 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
    case signer::ImportWoWalletType:
       rc = onImportWoWallet(packet.data(), packet.id());
       break;
+   case signer::ImportHwWalletType:
+      rc = onImportHwWallet(packet.data(), packet.id());
+      break;
    case signer::ExportWoWalletType:
       rc = onExportWoWallet(packet.data(), packet.id());
       break;
@@ -855,6 +858,31 @@ bool SignerAdapterListener::onImportWoWallet(const std::string &data, bs::signer
    }
    walletsListUpdated();
    return sendWoWallet(woWallet, signer::ImportWoWalletType, reqId);
+}
+
+bool SignerAdapterListener::onImportHwWallet(const std::string &data, bs::signer::RequestId reqId)
+{
+   signer::ImportHwWalletRequest request;
+   if (!request.ParseFromString(data)) {
+      return false;
+   }
+
+   bs::core::wallet::HwWalletInfo info{
+      request.vendor(),
+      request.label(),
+      request.deviceid(),
+      request.xpubroot(),
+      request.xpubnestedsegwit(),
+      request.xpubnativesegwit()
+   };
+
+   const auto woWallet = walletsMgr_->createHwWallet(settings_->netType()
+      , info, settings_->getWalletsDir(), app_->controlPassword());
+   if (!woWallet) {
+      return false;
+   }
+   walletsListUpdated();
+   return sendWoWallet(woWallet, signer::ImportHwWalletType, reqId);
 }
 
 bool SignerAdapterListener::onExportWoWallet(const std::string &data, bs::signer::RequestId reqId)

@@ -195,6 +195,20 @@ void SignerAdapter::importWoWallet(const std::string &filename, const BinaryData
    listener_->setWatchOnlyCb(reqId, cb);
 }
 
+void SignerAdapter::importHwWallet(const bs::core::wallet::HwWalletInfo &walletInfo, const CreateWoCb &cb)
+{
+   signer::ImportHwWalletRequest request;
+   request.set_label(walletInfo.label_);
+   request.set_vendor(walletInfo.vendor_);
+   request.set_deviceid(walletInfo.deviceId_);
+   request.set_xpubroot(walletInfo.xpubRoot_);
+   request.set_xpubnestedsegwit(walletInfo.xpubNestedSegwit_);
+   request.set_xpubnativesegwit(walletInfo.xpubNativeSegwit_);
+
+   const auto reqId = listener_->send(signer::ImportHwWalletType, request.SerializeAsString());
+   listener_->setWatchOnlyCb(reqId, cb);
+}
+
 void SignerAdapter::exportWoWallet(const std::string &rootWalletId, const SignerAdapter::ExportWoCb &cb)
 {
    signer::ExportWoWalletRequest request;
