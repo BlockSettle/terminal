@@ -1328,8 +1328,7 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
 {
    if (networkSettings.status == Blocksettle::Communication::GetNetworkSettingsResponse_Status_LIVE_TRADING_COMING_SOON) {
       BSMessageBox mbox(BSMessageBox::question, tr("Login to BlockSettle"), tr("Live trading is coming soon...")
-                   , tr("In the meantime, please get comfortable with our model on our testnet environment."
-                        "Would you like to switch to testnet and re-launch the Terminal now?"), this);
+                   , tr("In the meantime, experience p2p trading in the testnet environment. Try out now?"), this);
       mbox.setCancelButtonText(tr("Cancel"));
       mbox.setConfirmButtonText(tr("Yes"));
       int rc = mbox.exec();
