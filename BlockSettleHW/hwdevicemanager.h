@@ -22,6 +22,7 @@
 
 class HwDeviceAbstract;
 class TrezorClient;
+class LedgerClient;
 class ConnectionManager;
 namespace bs {
    namespace sync {
@@ -76,6 +77,7 @@ private:
 
 public:
    std::unique_ptr<TrezorClient> trezorClient_;
+   std::unique_ptr<LedgerClient> ledgerClient_;
    std::shared_ptr<bs::sync::WalletsManager> walletManager_;
 
    HwDeviceModel* model_;
