@@ -8,14 +8,14 @@
 **********************************************************************************
 
 */
-#include "hsmdevicemodel.h"
+#include "hwdevicemodel.h"
 
-HSMDeviceModel::HSMDeviceModel(QObject *parent /*= nullptr*/)
+HwDeviceModel::HwDeviceModel(QObject *parent /*= nullptr*/)
    : QAbstractItemModel(parent)
 {
 }
 
-QVariant HSMDeviceModel::data(const QModelIndex& index, int role /*= Qt::DisplayRole*/) const
+QVariant HwDeviceModel::data(const QModelIndex& index, int role /*= Qt::DisplayRole*/) const
 {
    if (!index.isValid()) {
       return {};
@@ -27,17 +27,17 @@ QVariant HSMDeviceModel::data(const QModelIndex& index, int role /*= Qt::Display
       return {};
    }
 
-   switch (static_cast<HSMDeviceRoles>(role))
+   switch (static_cast<HwDeviceRoles>(role))
    {
-   case HSMDeviceRoles::DeviceId:
+   case HwDeviceRoles::DeviceId:
       return devices_[row].deviceId_;
-   case HSMDeviceRoles::Label:
+   case HwDeviceRoles::Label:
       return devices_[row].deviceLabel_;
-   case HSMDeviceRoles::Vendor:
+   case HwDeviceRoles::Vendor:
       return devices_[row].vendor_;
-   case HSMDeviceRoles::PairedWallet:
+   case HwDeviceRoles::PairedWallet:
          return devices_[row].walletId_;
-   case HSMDeviceRoles::Status:
+   case HwDeviceRoles::Status:
       return devices_[row].status_;
    default:
       break;
@@ -46,7 +46,7 @@ QVariant HSMDeviceModel::data(const QModelIndex& index, int role /*= Qt::Display
    return {};
 }
 
-QModelIndex HSMDeviceModel::index(int row, int column, const QModelIndex& parent /*= QModelIndex()*/) const
+QModelIndex HwDeviceModel::index(int row, int column, const QModelIndex& parent /*= QModelIndex()*/) const
 {
    if (parent.isValid() && column != 0) {
       return {};
@@ -59,29 +59,29 @@ QModelIndex HSMDeviceModel::index(int row, int column, const QModelIndex& parent
    return createIndex(row, column);
 }
 
-QModelIndex HSMDeviceModel::parent(const QModelIndex& index) const
+QModelIndex HwDeviceModel::parent(const QModelIndex& index) const
 {
    return {};
 }
 
-int HSMDeviceModel::rowCount(const QModelIndex& parent /*= QModelIndex()*/) const
+int HwDeviceModel::rowCount(const QModelIndex& parent /*= QModelIndex()*/) const
 {
    return devices_.size();
 }
 
-int HSMDeviceModel::columnCount(const QModelIndex& parent /*= QModelIndex()*/) const
+int HwDeviceModel::columnCount(const QModelIndex& parent /*= QModelIndex()*/) const
 {
    return 1;
 }
 
-void HSMDeviceModel::resetModel(QVector<DeviceKey>&& deviceKeys)
+void HwDeviceModel::resetModel(QVector<DeviceKey>&& deviceKeys)
 {
    beginResetModel();
    devices_ = std::move(deviceKeys);
    endResetModel();
 }
 
-DeviceKey HSMDeviceModel::getDevice(int index)
+DeviceKey HwDeviceModel::getDevice(int index)
 {
    if (index < 0 || index > devices_.size()) {
       return {};
@@ -90,14 +90,14 @@ DeviceKey HSMDeviceModel::getDevice(int index)
    return devices_[index];
 }
 
-QHash<int, QByteArray> HSMDeviceModel::roleNames() const
+QHash<int, QByteArray> HwDeviceModel::roleNames() const
 {
    return {
-      { HSMDeviceRoles::DeviceId , "deviceId" },
-      { HSMDeviceRoles::Label , "label" },
-      { HSMDeviceRoles::Vendor , "vendor" },
-      { HSMDeviceRoles::PairedWallet , "pairedWallet" },
-      { HSMDeviceRoles::PairedWallet , "pairedWallet" },
-      { HSMDeviceRoles::Status , "status"}
+      { HwDeviceRoles::DeviceId , "deviceId" },
+      { HwDeviceRoles::Label , "label" },
+      { HwDeviceRoles::Vendor , "vendor" },
+      { HwDeviceRoles::PairedWallet , "pairedWallet" },
+      { HwDeviceRoles::PairedWallet , "pairedWallet" },
+      { HwDeviceRoles::Status , "status"}
    };
 }

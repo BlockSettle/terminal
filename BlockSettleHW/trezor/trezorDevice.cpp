@@ -86,7 +86,7 @@ namespace {
 
 TrezorDevice::TrezorDevice(const std::shared_ptr<ConnectionManager> &connectionManager, std::shared_ptr<bs::sync::WalletsManager> walletManager
    , bool testNet, const QPointer<TrezorClient> &client, QObject* parent)
-   : HSMDeviceAbstract(parent)
+   : HwDeviceAbstract(parent)
    , connectionManager_(connectionManager)
    , walletManager_(walletManager)
    , client_(std::move(client))

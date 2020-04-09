@@ -11,7 +11,7 @@
 #ifndef LEDGERSTRUCTURE_H
 #define LEDGERSTRUCTURE_H
 
-#include "hsmcommonstructure.h"
+#include "hwcommonstructure.h"
 #include "QDataStream"
 
 namespace Ledger {

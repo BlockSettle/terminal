@@ -12,7 +12,7 @@
 #define LEDGERDEVICE_H
 
 #include "ledger/ledgerStructure.h"
-#include "hsmdeviceabstract.h"
+#include "hwdeviceabstract.h"
 #include "ledger/hidapi/hidapi.h"
 
 namespace spdlog {
@@ -24,7 +24,7 @@ namespace bs {
    }
 }
 
-class LedgerDevice : public HSMDeviceAbstract
+class LedgerDevice : public HwDeviceAbstract
 {
    Q_OBJECT
 

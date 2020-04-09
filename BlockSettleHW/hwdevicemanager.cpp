@@ -8,7 +8,7 @@
 **********************************************************************************
 
 */
-#include "hsmdevicemanager.h"
+#include "hwdevicemanager.h"
 #include "trezor/trezorClient.h"
 #include "trezor/trezorDevice.h"
 #include "ledger/ledgerClient.h"
@@ -18,7 +18,7 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"
 
-HSMDeviceManager::HSMDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager, std::shared_ptr<bs::sync::WalletsManager> walletManager,
+HwDeviceManager::HwDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager, std::shared_ptr<bs::sync::WalletsManager> walletManager,
    bool testNet, QObject* parent /*= nullptr*/)
    : QObject(parent)
    , testNet_(testNet)
@@ -27,12 +27,12 @@ HSMDeviceManager::HSMDeviceManager(const std::shared_ptr<ConnectionManager>& con
    trezorClient_ = std::make_unique<TrezorClient>(connectionManager, walletManager, testNet, this);
    ledgerClient_ = std::make_unique<LedgerClient>(connectionManager->GetLogger(), walletManager, testNet);
 
-   model_ = new HSMDeviceModel(this);
+   model_ = new HwDeviceModel(this);
 }
 
-HSMDeviceManager::~HSMDeviceManager() = default;
+HwDeviceManager::~HwDeviceManager() = default;
 
-void HSMDeviceManager::scanDevices()
+void HwDeviceManager::scanDevices()
 {
    if (isScanning_) {
       return;
@@ -52,7 +52,7 @@ void HSMDeviceManager::scanDevices()
    });
 }
 
-void HSMDeviceManager::requestPublicKey(int deviceIndex)
+void HwDeviceManager::requestPublicKey(int deviceIndex)
 {
    auto device = getDevice(model_->getDevice(deviceIndex));
    if (!device) {
@@ -64,12 +64,12 @@ void HSMDeviceManager::requestPublicKey(int deviceIndex)
    });
 
    connect(device, &TrezorDevice::requestPinMatrix,
-      this, &HSMDeviceManager::requestPinMatrix, Qt::UniqueConnection);
+      this, &HwDeviceManager::requestPinMatrix, Qt::UniqueConnection);
    connect(device, &TrezorDevice::operationFailed,
-      this, &HSMDeviceManager::operationFailed, Qt::UniqueConnection);
+      this, &HwDeviceManager::operationFailed, Qt::UniqueConnection);
 }
 
-void HSMDeviceManager::setMatrixPin(int deviceIndex, QString pin)
+void HwDeviceManager::setMatrixPin(int deviceIndex, QString pin)
 {
    auto device = getDevice(model_->getDevice(deviceIndex));
    if (!device) {
@@ -79,7 +79,7 @@ void HSMDeviceManager::setMatrixPin(int deviceIndex, QString pin)
    device->setMatrixPin(pin.toStdString());
 }
 
-void HSMDeviceManager::cancel(int deviceIndex)
+void HwDeviceManager::cancel(int deviceIndex)
 {
    auto device = getDevice(model_->getDevice(deviceIndex));
    if (!device) {
@@ -89,10 +89,10 @@ void HSMDeviceManager::cancel(int deviceIndex)
    device->cancel();
 }
 
-void HSMDeviceManager::prepareHWDeviceForSign(QString walleiId)
+void HwDeviceManager::prepareHwDeviceForSign(QString walleiId)
 {
    auto hdWallet = walletManager_->getHDWalletById(walleiId.toStdString());
-   assert(hdWallet->isHsm());
+   assert(hdWallet->isHardwareWallet());
    auto encKeys = hdWallet->encryptionKeys();
    auto deviceId = encKeys[0].toBinStr();
 
@@ -139,7 +139,7 @@ void HSMDeviceManager::prepareHWDeviceForSign(QString walleiId)
 
 }
 
-void HSMDeviceManager::signTX(QVariant reqTX)
+void HwDeviceManager::signTX(QVariant reqTX)
 {
    auto device = getDevice(model_->getDevice(0));
    if (!device) {
@@ -147,24 +147,24 @@ void HSMDeviceManager::signTX(QVariant reqTX)
    }
 
    device->signTX(reqTX, [this](QVariant&& data) {
-      assert(data.canConvert<HSMSignedTx>());
-      auto tx = data.value<HSMSignedTx>();
+      assert(data.canConvert<HWSignedTx>());
+      auto tx = data.value<HWSignedTx>();
       txSigned({ BinaryData::fromString(tx.signedTx) });
       releaseDevices();
    });
 
    connect(device, &TrezorDevice::requestPinMatrix,
-      this, &HSMDeviceManager::requestPinMatrix, Qt::UniqueConnection);
+      this, &HwDeviceManager::requestPinMatrix, Qt::UniqueConnection);
    connect(device, &TrezorDevice::deviceTxStatusChanged,
-      this, &HSMDeviceManager::deviceTxStatusChanged, Qt::UniqueConnection);
+      this, &HwDeviceManager::deviceTxStatusChanged, Qt::UniqueConnection);
 }
 
-void HSMDeviceManager::releaseDevices()
+void HwDeviceManager::releaseDevices()
 {
    releaseConnection();
 }
 
-void HSMDeviceManager::releaseConnection(AsyncCallBack&& cb/*= nullptr*/)
+void HwDeviceManager::releaseConnection(AsyncCallBack&& cb/*= nullptr*/)
 {
    for (int i = 0; i < model_->rowCount(); ++i) {
       auto device = getDevice(model_->getDevice(i));
@@ -182,15 +182,15 @@ void HSMDeviceManager::releaseConnection(AsyncCallBack&& cb/*= nullptr*/)
    }
 }
 
-QPointer<HSMDeviceAbstract> HSMDeviceManager::getDevice(DeviceKey key)
+QPointer<HwDeviceAbstract> HwDeviceManager::getDevice(DeviceKey key)
 {
    switch (key.type_)
    {
    case DeviceType::HWTrezor:
-      return static_cast<QPointer<HSMDeviceAbstract>>(trezorClient_->getTrezorDevice(key.deviceId_));
+      return static_cast<QPointer<HwDeviceAbstract>>(trezorClient_->getTrezorDevice(key.deviceId_));
       break;
    case DeviceType::HWLedger:
-      return static_cast<QPointer<HSMDeviceAbstract>>(ledgerClient_->getDevice(key.deviceId_));
+      return static_cast<QPointer<HwDeviceAbstract>>(ledgerClient_->getDevice(key.deviceId_));
       break;
    default:
       // Add new device type
@@ -201,7 +201,7 @@ QPointer<HSMDeviceAbstract> HSMDeviceManager::getDevice(DeviceKey key)
    return nullptr;
 }
 
-void HSMDeviceManager::setScanningFlag(bool isScanning)
+void HwDeviceManager::setScanningFlag(bool isScanning)
 {
    if (isScanning_ == isScanning) {
       return;
@@ -211,12 +211,12 @@ void HSMDeviceManager::setScanningFlag(bool isScanning)
    emit isScanningChanged();
 }
 
-HSMDeviceModel* HSMDeviceManager::devices()
+HwDeviceModel* HwDeviceManager::devices()
 {
    return model_;
 }
 
-bool HSMDeviceManager::isScanning() const
+bool HwDeviceManager::isScanning() const
 {
    return isScanning_;
 }

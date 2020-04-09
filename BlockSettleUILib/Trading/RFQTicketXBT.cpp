@@ -302,9 +302,9 @@ void RFQTicketXBT::walletsLoaded()
       ui_->comboBoxXBTWalletsSend->setEnabled(true);
 
       UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWalletsRecv, walletsManager_, UiUtils::WalletsTypes::All);
-      // CC does not support to send from HSM wallets
+      // CC does not support to send from Harware wallets
       int sendWalletTypes = (currentGroupType_ == ProductGroupType::CCGroupType) ?
-               UiUtils::WalletsTypes::Full : (UiUtils::WalletsTypes::Full | UiUtils::WalletsTypes::Hsm);
+               UiUtils::WalletsTypes::Full : (UiUtils::WalletsTypes::Full | UiUtils::WalletsTypes::Hardware);
       UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWalletsSend, walletsManager_, sendWalletTypes);
    }
 

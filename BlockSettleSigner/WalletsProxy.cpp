@@ -705,7 +705,7 @@ void WalletsProxy::importWoWallet(const QString &walletPath, const QJSValue &jsC
    adapter_->importWoWallet(fi.fileName().toStdString(), content, cb);
 }
 
-void WalletsProxy::importHSMWallet(HSMWalletWrapper walletInfo, const QJSValue &jsCallback)
+void WalletsProxy::importHwWallet(HwWalletWrapper walletInfo, const QJSValue &jsCallback)
 {
    auto cb = [this, jsCallback](const bs::sync::WatchingOnlyWallet &wo) {
       QMetaObject::invokeMethod(this, [this, wo, jsCallback] {
@@ -719,7 +719,7 @@ void WalletsProxy::importHSMWallet(HSMWalletWrapper walletInfo, const QJSValue &
       });
    };
 
-   adapter_->importHSMWallet(walletInfo.info_, cb);
+   adapter_->importHwWallet(walletInfo.info_, cb);
 }
 
 QStringList WalletsProxy::walletNames() const

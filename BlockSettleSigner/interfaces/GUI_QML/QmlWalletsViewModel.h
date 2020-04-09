@@ -48,8 +48,8 @@ public:
       Leaf
    };
 
-   QmlWalletNode(QmlWalletsViewModel *vm, Type type, bool isWO=false, bool isHsm=false, int row = 0, QmlWalletNode *parent = nullptr)
-      : viewModel_(vm), parent_(parent), row_(row), type_(type), isWO_(isWO), isHsm_(isHsm){}
+   QmlWalletNode(QmlWalletsViewModel *vm, Type type, bool isWO=false, bool isHw=false, int row = 0, QmlWalletNode *parent = nullptr)
+      : viewModel_(vm), parent_(parent), row_(row), type_(type), isWO_(isWO), isHw_(isHw){}
    virtual ~QmlWalletNode() { clear(); }
 
    virtual std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const { return {}; }
@@ -67,7 +67,7 @@ public:
    const std::string &name() const { return name_; }
    Type type() const { return type_; }
    bool isWO() const { return isWO_; }
-   bool isHsm() const { return isHsm_; }
+   bool isHw() const { return isHw_; }
 
    QmlWalletNode *findByWalletId(const std::string &walletId);
 
@@ -79,7 +79,7 @@ protected:
    Type                 type_ = Type::Unknown;
    QList<QmlWalletNode *> children_;
    const bool           isWO_;
-   const bool           isHsm_;
+   const bool           isHw_;
 };
 
 

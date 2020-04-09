@@ -52,7 +52,7 @@ public:
       Primary,
       Full,
       Offline,
-      HSM
+      Hardware
    };
 
    WalletNode(WalletsViewModel *vm, Type type, int row = 0, WalletNode *parent = nullptr)

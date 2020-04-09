@@ -9,7 +9,7 @@
 
 */
 
-#include "hsmcommonstructure.h"
+#include "hwcommonstructure.h"
 
 std::vector<uint32_t> getDerivationPath(bool testNet, bool isNestedSegwit)
 {

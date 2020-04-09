@@ -227,8 +227,8 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
    case signer::ImportWoWalletType:
       rc = onImportWoWallet(packet.data(), packet.id());
       break;
-   case signer::ImportHSMWalletType:
-      rc = onImportHSMWallet(packet.data(), packet.id());
+   case signer::ImportHwWalletType:
+      rc = onImportHwWallet(packet.data(), packet.id());
       break;
    case signer::ExportWoWalletType:
       rc = onExportWoWallet(packet.data(), packet.id());
@@ -860,14 +860,14 @@ bool SignerAdapterListener::onImportWoWallet(const std::string &data, bs::signer
    return sendWoWallet(woWallet, signer::ImportWoWalletType, reqId);
 }
 
-bool SignerAdapterListener::onImportHSMWallet(const std::string &data, bs::signer::RequestId reqId)
+bool SignerAdapterListener::onImportHwWallet(const std::string &data, bs::signer::RequestId reqId)
 {
-   signer::ImportHSMWalletRequest request;
+   signer::ImportHwWalletRequest request;
    if (!request.ParseFromString(data)) {
       return false;
    }
 
-   bs::core::wallet::HSMWalletInfo info{
+   bs::core::wallet::HwWalletInfo info{
       request.vendor(),
       request.label(),
       request.deviceid(),
@@ -876,13 +876,13 @@ bool SignerAdapterListener::onImportHSMWallet(const std::string &data, bs::signe
       request.xpubnativesegwit()
    };
 
-   const auto woWallet = walletsMgr_->createHSMWallet(settings_->netType()
+   const auto woWallet = walletsMgr_->createHwWallet(settings_->netType()
       , info, settings_->getWalletsDir(), app_->controlPassword());
    if (!woWallet) {
       return false;
    }
    walletsListUpdated();
-   return sendWoWallet(woWallet, signer::ImportHSMWalletType, reqId);
+   return sendWoWallet(woWallet, signer::ImportHwWalletType, reqId);
 }
 
 bool SignerAdapterListener::onExportWoWallet(const std::string &data, bs::signer::RequestId reqId)

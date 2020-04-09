@@ -46,8 +46,8 @@ class QmlWalletRootNode : public QmlWalletNode
 {
 public:
    QmlWalletRootNode(QmlWalletsViewModel *vm, const std::string &name, const std::string &desc
-      , QmlWalletNode::Type type, bool isWO, bool isHsm , int row, QmlWalletNode *parent)
-      : QmlWalletNode(vm, type, isWO, isHsm, row, parent), desc_(desc)
+      , QmlWalletNode::Type type, bool isWO, bool isHw , int row, QmlWalletNode *parent)
+      : QmlWalletNode(vm, type, isWO, isHw, row, parent), desc_(desc)
    {
       name_ = name;
    }
@@ -62,7 +62,7 @@ public:
          case QmlWalletsViewModel::WalletColumns::ColumnID:
             return QString::fromStdString(id());
          case QmlWalletsViewModel::WalletColumns::ColumnType:
-            return isHsm() ? QObject::tr("HSM")
+            return isHw() ? QObject::tr("HW")
                : ( isWO() ? QObject::tr("Watching-Only")
                : QObject::tr("Full") );
          default:
@@ -121,9 +121,9 @@ protected:
 class QmlWalletLeafNode : public QmlWalletRootNode
 {
 public:
-   QmlWalletLeafNode(QmlWalletsViewModel *vm, const std::shared_ptr<bs::sync::Wallet> &wallet, bool isWO, bool isHsm
+   QmlWalletLeafNode(QmlWalletsViewModel *vm, const std::shared_ptr<bs::sync::Wallet> &wallet, bool isWO, bool isHw
       , int row, QmlWalletNode *parent)
-      : QmlWalletRootNode(vm, wallet->shortName(), wallet->description(), Type::Leaf, isWO, isHsm ,row, parent)
+      : QmlWalletRootNode(vm, wallet->shortName(), wallet->description(), Type::Leaf, isWO, isHw ,row, parent)
       , wallet_(wallet)
    { }
 
@@ -145,14 +145,14 @@ class QmlWalletGroupNode : public QmlWalletRootNode
 {
 public:
    QmlWalletGroupNode(QmlWalletsViewModel *vm, const std::string &name, const std::string &desc
-      , QmlWalletNode::Type type, bool isWO, bool isHsm, int row, QmlWalletNode *parent)
-      : QmlWalletRootNode(vm, name, desc, type, isWO, isHsm, row, parent) {}
+      , QmlWalletNode::Type type, bool isWO, bool isHw, int row, QmlWalletNode *parent)
+      : QmlWalletRootNode(vm, name, desc, type, isWO, isHw, row, parent) {}
 
    std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const override { return wallets_; }
 
    void addLeaves(const std::vector<std::shared_ptr<bs::sync::Wallet>> &leaves) {
       for (const auto &leaf : leaves) {
-         const auto leafNode = new QmlWalletLeafNode(viewModel_, leaf, isWO_, isHsm_, nbChildren(), this);
+         const auto leafNode = new QmlWalletLeafNode(viewModel_, leaf, isWO_, isHw_, nbChildren(), this);
          add(leafNode);
          wallets_.push_back(leaf);
       }
@@ -163,7 +163,7 @@ void QmlWalletRootNode::addGroups(const std::vector<std::shared_ptr<bs::sync::hd
 {
    for (const auto &group : groups) {
       const auto groupNode = new QmlWalletGroupNode(viewModel_, group->name(), {}
-         , getNodeType(group->type()), isWO_, isHsm_, nbChildren(), this);
+         , getNodeType(group->type()), isWO_, isHw_, nbChildren(), this);
       add(groupNode);
       groupNode->addLeaves(group->getAllLeaves());
    }
@@ -299,9 +299,9 @@ void QmlWalletsViewModel::loadWallets(const std::string &)
       }
       const auto walletType = getHDWalletType(hdWallet, walletsManager_);
       const bool isWO = walletsManager_->isWatchingOnly(hdWallet->walletId());
-      const bool isHSM = hdWallet->isHsm();
+      const bool isHw = hdWallet->isHardwareWallet();
       const auto hdNode = new QmlWalletRootNode(this, hdWallet->name(), hdWallet->description()
-         , walletType, isWO, isHSM, rootNode_->nbChildren(), rootNode_.get());
+         , walletType, isWO, isHw, rootNode_->nbChildren(), rootNode_.get());
       hdNode->setHdWallet(hdWallet);
       rootNode_->add(hdNode);
       hdNode->addGroups(hdWallet->getGroups());
@@ -345,7 +345,7 @@ QVariant QmlWalletsViewModel::data(const QModelIndex &index, int role) const
             switch (hdWallet->encryptionTypes()[0]) {
             case bs::wallet::EncryptionType::Password:   return tr("Password");
             case bs::wallet::EncryptionType::Auth:   return tr("Auth eID");
-            case bs::wallet::EncryptionType::HSM:   return tr("Hardware Security Module");
+            case bs::wallet::EncryptionType::Hardware:   return tr("Hardware Security Module");
             default:    return tr("No");
             }
          }

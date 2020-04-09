@@ -11,7 +11,7 @@
 #ifndef TREZORSTRUCTURE_H
 #define TREZORSTRUCTURE_H
 
-#include "hsmcommonstructure.h"
+#include "hwcommonstructure.h"
 
 enum class State {
    None = 0,

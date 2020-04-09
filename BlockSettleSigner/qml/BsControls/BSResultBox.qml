@@ -52,7 +52,7 @@ BSMessageBox {
         , "Failed to set Auth eID encryption!"
         , "Failed to add new device!"
         , "Failed to remove device!"
-        , "Failed to import HSM Wallet!"
+        , "Failed to import Hardware Wallet!"
     ]
 
     property variant colors: [BSStyle.dialogTitleWhiteColor, BSStyle.dialogTitleGreenColor, BSStyle.dialogTitleOrangeColor, BSStyle.dialogTitleOrangeColor,  BSStyle.dialogTitleRedColor]
@@ -66,7 +66,7 @@ BSMessageBox {
         EncryptionChangeToAuth = 4,
         AddDevice = 5,
         RemoveDevice = 6,
-        HSMWallet = 7
+        HwWallet = 7
     }
 
     title: titles[resultType]

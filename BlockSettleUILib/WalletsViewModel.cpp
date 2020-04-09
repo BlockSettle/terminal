@@ -181,7 +181,7 @@ protected:
       case State::Primary:    return QObject::tr("Primary");
       case State::Full:       return QObject::tr("Full");
       case State::Offline:    return QObject::tr("Watching-Only");
-      case State::HSM:        return QObject::tr("HSM");
+      case State::Hardware:        return QObject::tr("Hardware");
       case State::Undefined:  return {};
       }
       return {};
@@ -591,8 +591,8 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
          if (signContainer_->isOffline()) {
             hdNode->setState(WalletNode::State::Offline);
          }
-         else if (hdWallet->isHsm()) {
-            hdNode->setState(WalletNode::State::HSM);
+         else if (hdWallet->isHardwareWallet()) {
+            hdNode->setState(WalletNode::State::Hardware);
          }
          else if (signContainer_->isWalletOffline(hdWallet->walletId())) {
             hdNode->setState(WalletNode::State::Offline);

@@ -147,7 +147,7 @@ void TrezorClient::call(QByteArray&& input, AsyncCallBackCall&& cb)
 
 QVector<DeviceKey> TrezorClient::deviceKeys() const
 {
-   auto deviceToWalletId = walletManager_->getHSMDeviceIdToWallet();
+   auto deviceToWalletId = walletManager_->getHwDeviceIdToWallet();
    if (!trezorDevice_) {
       return {};
    }

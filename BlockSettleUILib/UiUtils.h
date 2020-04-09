@@ -118,10 +118,10 @@ namespace UiUtils
    enum WalletsTypes : int
    {
       Full = 0x1,
-      Hsm = 0x2,
+      Hardware = 0x2,
       WatchOnly = 0x4,
 
-      All = Full | Hsm | WatchOnly,
+      All = Full | Hardware | WatchOnly,
    };
    int fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
       , int walletTypes);

@@ -13,7 +13,7 @@ import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.2
 import Qt.labs.platform 1.1
 
-import com.blocksettle.HSMDeviceManager 1.0
+import com.blocksettle.HwDeviceManager 1.0
 
 import "../BsControls"
 import "../StyledControls"
@@ -23,25 +23,25 @@ import "../BsStyles"
 Item {
     id: root
 
-    property var hsmWalletInfo
-    property bool readyForImport: hsmList.deviceIndex !== -1
-    property bool isNoDevice: hsmDeviceManager.devices.rowCount() === 0
-    property bool isScanning: hsmDeviceManager.isScanning
+    property var hwWalletInfo
+    property bool readyForImport: hwList.deviceIndex !== -1
+    property bool isNoDevice: hwDeviceManager.devices.rowCount() === 0
+    property bool isScanning: hwDeviceManager.isScanning
     property bool isImporting: false
 
     signal pubKeyReady();
     signal failed();
 
     Connections {
-        target: hsmDeviceManager
+        target: hwDeviceManager
         onPublicKeyReady: {
-            hsmWalletInfo = walletInfo;
+            hwWalletInfo = walletInfo;
             isImporting = false;
             root.pubKeyReady()
         }
-        onRequestPinMatrix: JsHelper.showPinMatrix(hsmList.deviceIndex);
+        onRequestPinMatrix: JsHelper.showPinMatrix(hwList.deviceIndex);
         onOperationFailed: {
-            hsmWalletInfo = {};
+            hwWalletInfo = {};
             isImporting = false;
             root.failed();
         }
@@ -52,20 +52,20 @@ Item {
     }
 
     function release() {
-        hsmDeviceManager.releaseDevices();
+        hwDeviceManager.releaseDevices();
     }
 
     function importXpub() {
-        hsmDeviceManager.requestPublicKey(hsmList.deviceIndex);
+        hwDeviceManager.requestPublicKey(hwList.deviceIndex);
         isImporting = true;
     }
 
     function rescan() {
-        hsmDeviceManager.scanDevices();
+        hwDeviceManager.scanDevices();
     }
 
     Item {
-        id: hsmNoDevice
+        id: hwNoDevice
 
         anchors.fill: parent
         visible: root.isNoDevice
@@ -97,11 +97,11 @@ Item {
     }
 
     ListView {
-        id: hsmList
+        id: hwList
         visible: !isNoDevice
         anchors.fill: parent
 
-        model: hsmDeviceManager.devices
+        model: hwDeviceManager.devices
 
         property int deviceIndex: -1
 
@@ -118,7 +118,7 @@ Item {
             height: 20
 
             color: index % 2 === 0 ? "transparent" : "#8027363b"
-            property color textColor: hsmList.currentIndex === index ? "white" :
+            property color textColor: hwList.currentIndex === index ? "white" :
                                         enabled ? BSStyle.labelsTextColor : BSStyle.disabledColor
 
             RowLayout {
@@ -156,29 +156,29 @@ Item {
                 anchors.fill: parent
                 enabled: model.pairedWallet.length === 0
                 onClicked: {
-                    if (hsmList.currentIndex === index) {
+                    if (hwList.currentIndex === index) {
                         return;
                     }
 
-                    hsmList.currentIndex = index
+                    hwList.currentIndex = index
                 }
             }
 
             Connections {
-                target: hsmList
+                target: hwList
                 onCurrentIndexChanged: {
-                    if (hsmList.currentIndex === index) {
-                        hsmList.deviceIndex = model.pairedWallet.length === 0 ? index : -1
-                        root.readyForImport = (hsmList.deviceIndex !== -1);
-                        console.log("Current index changed2", hsmList.currentIndex)
+                    if (hwList.currentIndex === index) {
+                        hwList.deviceIndex = model.pairedWallet.length === 0 ? index : -1
+                        root.readyForImport = (hwList.deviceIndex !== -1);
+                        console.log("Current index changed2", hwList.currentIndex)
                     }
                 }
             }
         }
 
         onCountChanged: {
-            if (count !== 0 && hsmList.currentIndex === -1)
-                hsmList.currentIndex = 0;
+            if (count !== 0 && hwList.currentIndex === -1)
+                hwList.currentIndex = 0;
         }
 
     }

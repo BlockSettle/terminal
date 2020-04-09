@@ -8,13 +8,13 @@
 **********************************************************************************
 
 */
-#ifndef HSMDEVICEMODEL_H
-#define HSMDEVICEMODEL_H
+#ifndef HWDEVICEMODEL_H
+#define HWDEVICEMODEL_H
 
 #include <QAbstractItemModel>
-#include "hsmcommonstructure.h"
+#include "hwcommonstructure.h"
 
-enum HSMDeviceRoles {
+enum HwDeviceRoles {
    DeviceId = Qt::UserRole + 1,
    Label,
    Vendor,
@@ -22,12 +22,12 @@ enum HSMDeviceRoles {
    Status
 };
 
-class HSMDeviceModel : public QAbstractItemModel 
+class HwDeviceModel : public QAbstractItemModel 
 {
    Q_OBJECT
 public:
-   HSMDeviceModel(QObject *parent = nullptr);
-   ~HSMDeviceModel() override = default;
+   HwDeviceModel(QObject *parent = nullptr);
+   ~HwDeviceModel() override = default;
 
    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
    QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
@@ -44,6 +44,6 @@ private:
    QVector<DeviceKey> devices_;
 };
 
-//Q_DECLARE_METATYPE(HSMDeviceModel*)
+Q_DECLARE_METATYPE(HwDeviceModel*)
 
-#endif // HSMDEVICEMODEL_H
+#endif // HWDEVICEMODEL_H

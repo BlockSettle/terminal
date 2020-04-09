@@ -12,7 +12,7 @@
 #define TREZORDEVICE_H
 
 #include "trezorStructure.h"
-#include "hsmdeviceabstract.h"
+#include "hwdeviceabstract.h"
 #include <QObject>
 #include <QNetworkReply>
 #include <QPointer>
@@ -40,7 +40,7 @@ namespace bs {
    }
 }
 
-class TrezorDevice : public HSMDeviceAbstract
+class TrezorDevice : public HwDeviceAbstract
 {
    Q_OBJECT
 
@@ -91,8 +91,8 @@ private:
    hw::trezor::messages::management::Features features_{};
    bool testNet_{};
    std::unique_ptr<bs::core::wallet::TXSignRequest> currentTxSignReq_;
-   HSMSignedTx awaitingTransaction_;
-   HSMWalletWrapper awaitingWalletInfo_;
+   HWSignedTx awaitingTransaction_;
+   HwWalletWrapper awaitingWalletInfo_;
 
    std::unordered_map<int, AsyncCallBack> awaitingCallbackNoData_;
    std::unordered_map<int, AsyncCallBackCall> awaitingCallbackData_;

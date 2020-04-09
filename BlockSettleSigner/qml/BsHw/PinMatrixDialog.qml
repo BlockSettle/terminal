@@ -13,7 +13,7 @@ import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.2
 import Qt.labs.platform 1.1
 
-import com.blocksettle.HSMDeviceManager 1.0
+import com.blocksettle.HwDeviceManager 1.0
 
 import "../BsControls"
 import "../StyledControls"
@@ -89,7 +89,7 @@ CustomDialog {
                 anchors.bottom: parent.bottom
                 text: qsTr("Cancel")
                 onClicked: {
-                    hsmDeviceManager.cancel(deviceIndex)
+                    hwDeviceManager.cancel(deviceIndex)
                     close();
                 }
             }
@@ -101,7 +101,7 @@ CustomDialog {
                 anchors.bottom: parent.bottom
                 text: qsTr("Accept")
                 onClicked: {
-                    hsmDeviceManager.setMatrixPin(deviceIndex, pinInputField.text)
+                    hwDeviceManager.setMatrixPin(deviceIndex, pinInputField.text)
                     close();
                 }
             }

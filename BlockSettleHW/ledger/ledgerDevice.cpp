@@ -126,7 +126,7 @@ namespace {
 
 LedgerDevice::LedgerDevice(HidDeviceInfo&& hidDeviceInfo, bool testNet,
    std::shared_ptr<bs::sync::WalletsManager> walletManager, std::shared_ptr<spdlog::logger> logger, QObject* parent /*= nullptr*/)
-   : HSMDeviceAbstract(parent)
+   : HwDeviceAbstract(parent)
    , hidDeviceInfo_(std::move(hidDeviceInfo))
    , logger_(logger)
    , testNet_(testNet)
@@ -226,7 +226,7 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
    for (auto &utxo: coreReq.inputs) {
       QByteArray inputPayload;
       inputPayload.append(static_cast<char>(0x02));
-      inputPayload.append(QByteArray::fromStdString(utxo.getTxHash().toBinStr()));
+      inputPayload.append(QByteArray::fromStdString(utxo.getTxHash().toBinStr(true)));
       writeUintLE(inputPayload, utxo.getTxOutIndex());
       writeUintLE(inputPayload, utxo.getValue());
       script = QByteArray::fromStdString(utxo.getScript().toBinStr());
@@ -305,7 +305,7 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
    for (auto &utxo : coreReq.inputs) {
       QByteArray inputPayload;
       inputPayload.append(static_cast<char>(0x02));
-      inputPayload.append(QByteArray::fromStdString(utxo.getTxHash().toBinStr()));
+      inputPayload.append(QByteArray::fromStdString(utxo.getTxHash().toBinStr(true)));
       writeUintLE(inputPayload, utxo.getTxOutIndex());
       writeUintLE(inputPayload, utxo.getValue());
       script = QByteArray::fromStdString(utxo.getScript().toBinStr());
@@ -403,7 +403,7 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
 
    //
    if (cb) {
-      HSMSignedTx signedTx{ finalStructure.toStdString() };
+      HWSignedTx signedTx{ finalStructure.toStdString() };
       cb(QVariant::fromValue(signedTx));
    }
 
@@ -420,7 +420,7 @@ void LedgerDevice::processGetPublicKey(AsyncCallBackCall&& cb /*= nullptr*/)
    }
 
    auto deviceKey = key();
-   HSMWalletWrapper walletInfo;
+   HwWalletWrapper walletInfo;
    walletInfo.info_.vendor_ = deviceKey.vendor_.toStdString();
    walletInfo.info_.label_ = deviceKey.deviceLabel_.toStdString();
    walletInfo.info_.deviceId_ = deviceKey.deviceId_.toStdString();

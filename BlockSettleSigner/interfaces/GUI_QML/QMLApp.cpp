@@ -32,8 +32,8 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "WalletsProxy.h"
-#include "hsmdevicemanager.h"
-#include "hsmdevicemodel.h"
+#include "hwdevicemanager.h"
+#include "hwdevicemodel.h"
 
 #include <functional>
 
@@ -90,7 +90,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    qmlFactory_ = std::make_shared<QmlFactory>(settings, connectionManager, logger_);
    adapter_->setQmlFactory(qmlFactory_);
 
-   hsmDeviceManager_ = new HSMDeviceManager(connectionManager,
+   hwDeviceManager_ = new HwDeviceManager(connectionManager,
       adapter_->getWalletsManager(), params->testNet(), this);
 
    qmlFactory_->setHeadlessPubKey(adapter_->headlessPubKey());
@@ -148,7 +148,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    ctxt_->setContextProperty(QStringLiteral("signerSettings"), settings_.get());
    ctxt_->setContextProperty(QStringLiteral("qmlFactory"), qmlFactory_.get());
    ctxt_->setContextProperty(QStringLiteral("walletsProxy"), walletsProxy_.get());
-   ctxt_->setContextProperty(QStringLiteral("hsmDeviceManager"), hsmDeviceManager_);
+   ctxt_->setContextProperty(QStringLiteral("hwDeviceManager"), hwDeviceManager_);
 }
 
 void QMLAppObj::onReady()
@@ -226,8 +226,8 @@ void QMLAppObj::registerQtTypes()
       "AutheIDClient", QStringLiteral("Cannot create a AutheIDClient instance"));
    qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
       "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
-   qmlRegisterUncreatableType<HSMDeviceManager>("com.blocksettle.HSMDeviceManager", 1, 0,
-      "HSMDeviceManager", QStringLiteral("Cannot create a HSMDeviceManager instance"));
+   qmlRegisterUncreatableType<HwDeviceManager>("com.blocksettle.HwDeviceManager", 1, 0,
+      "HwDeviceManager", QStringLiteral("Cannot create a HwDeviceManager instance"));
 
    qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
    qmlRegisterType<bs::wallet::TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
@@ -240,7 +240,7 @@ void QMLAppObj::registerQtTypes()
    qmlRegisterType<bs::wallet::QSeed>("com.blocksettle.QSeed", 1, 0, "QSeed");
    qmlRegisterType<bs::wallet::QPasswordData>("com.blocksettle.QPasswordData", 1, 0, "QPasswordData");
    qmlRegisterType<ControlPasswordStatus>("com.blocksettle.ControlPasswordStatus", 1, 0, "ControlPasswordStatus");
-   qmlRegisterType<HSMDeviceModel>("com.blocksettle.HSMDeviceModel", 1, 0, "HSMDeviceModel");
+   qmlRegisterType<HwDeviceModel>("com.blocksettle.HwDeviceModel", 1, 0, "HwDeviceModel");
 
    // Exposing metadata to js files
    QJSValue scriptControlEnum = ctxt_->engine()->newQMetaObject(&ControlPasswordStatus::staticMetaObject);

@@ -1027,7 +1027,7 @@ bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
 
       const auto &hdWallets = walletsMgr_->hdWallets();
       const auto fullWalletIt = std::find_if(hdWallets.begin(), hdWallets.end(), [](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
-         return !wallet->isHsm() && !wallet->isOffline();
+         return !wallet->isHardwareWallet() && !wallet->isOffline();
       });
       if (fullWalletIt != hdWallets.end()) {
          auto wallet = *fullWalletIt;
@@ -2025,7 +2025,7 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
       return;
    }
    for (const auto &hdWallet : walletsMgr_->hdWallets()) {
-      if (!hdWallet->isOffline() && !hdWallet->isHsm()) {
+      if (!hdWallet->isOffline() && !hdWallet->isHardwareWallet()) {
          promoteToPrimary(hdWallet);
          break;
       }

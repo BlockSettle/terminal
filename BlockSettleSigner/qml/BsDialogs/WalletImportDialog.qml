@@ -19,12 +19,12 @@ import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.QPasswordData 1.0
-import com.blocksettle.HSMDeviceManager 1.0
+import com.blocksettle.HwDeviceManager 1.0
 
 import "../BsControls"
 import "../StyledControls"
 import "../BsStyles"
-import "../BsHsm"
+import "../BsHw"
 import "../js/helper.js" as JsHelper
 
 
@@ -42,12 +42,12 @@ CustomTitleDialogWindow {
     property WalletInfo walletInfo: WalletInfo{}
     property var passwordData: QPasswordData{}
     property bool isWO: (tabBar.currentIndex === 1)
-    property bool isHSM: rbHardwareWallet.checked
+    property bool isHw: rbHardwareWallet.checked
 
     property bool acceptable: if (isWO)
                                   digitalWoBackupAcceptable
-                              else if (isHSM)
-                                  (!hsmDeviceList.isScanning && !hsmDeviceList.isImporting && (hsmDeviceList.readyForImport || hsmDeviceList.isNoDevice))
+                              else if (isHw)
+                                  (!hwDeviceList.isScanning && !hwDeviceList.isImporting && (hwDeviceList.readyForImport || hwDeviceList.isNoDevice))
                               else
                                   ((curPage === 1 && walletSelected) ||
                                    (curPage === 2 && importAcceptable))
@@ -77,8 +77,8 @@ CustomTitleDialogWindow {
         }
     }
 
-    onAboutToShow: hsmDeviceList.init()
-    onAboutToHide: hsmDeviceList.release();
+    onAboutToShow: hwDeviceList.init()
+    onAboutToHide: hwDeviceList.release();
 
     onEnterPressed: {
         if (btnAccept.enabled) btnAccept.onClicked()
@@ -285,8 +285,8 @@ CustomTitleDialogWindow {
                     }
 
                     // HARDWARE DEVICES
-                    HsmAvailableDevices {
-                        id: hsmDeviceList
+                    HwAvailableDevices {
+                        id: hwDeviceList
 
                         Layout.fillWidth: true
                         Layout.fillHeight: true
@@ -610,15 +610,15 @@ CustomTitleDialogWindow {
                 primary: true
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                text: (isHSM && hsmDeviceList.isNoDevice) ? qsTr("Rescan") : qsTr("Import")
+                text: (isHw && hwDeviceList.isNoDevice) ? qsTr("Rescan") : qsTr("Import")
                 enabled: acceptable
 
                 onClicked: {
-                    if (isHSM ) {
-                        if (hsmDeviceList.readyForImport) {
-                            hsmDeviceList.importXpub();
-                        } else if (hsmDeviceList.isNoDevice) {
-                            hsmDeviceList.rescan();
+                    if (isHw ) {
+                        if (hwDeviceList.readyForImport) {
+                            hwDeviceList.importXpub();
+                        } else if (hwDeviceList.isNoDevice) {
+                            hwDeviceList.rescan();
                         }
 
                         return;
@@ -700,7 +700,7 @@ CustomTitleDialogWindow {
                 walletInfo.name = name;
                 walletInfo.desc = desc;
 
-                let type = isHSM ? BSResultBox.ResultType.HSMWallet
+                let type = isHw ? BSResultBox.ResultType.HwWallet
                                  : BSResultBox.ResultType.WalletImportWo;
 
                 var mb = JsHelper.resultBox(type, true, walletInfo)
@@ -715,8 +715,8 @@ CustomTitleDialogWindow {
         if (isWO) {
             walletsProxy.importWoWallet(lblWoDBFile.text, importCallback)
         }
-        else if (isHSM) {
-            walletsProxy.importHSMWallet(hsmDeviceList.hsmWalletInfo, importCallback)
+        else if (isHw) {
+            walletsProxy.importHwWallet(hwDeviceList.hwWalletInfo, importCallback)
         }
     }
 }

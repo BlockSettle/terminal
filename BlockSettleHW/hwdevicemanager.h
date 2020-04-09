@@ -8,11 +8,11 @@
 **********************************************************************************
 
 */
-#ifndef HSMDEVICESCANNER_H
-#define HSMDEVICESCANNER_H
+#ifndef HWDEVICESCANNER_H
+#define HWDEVICESCANNER_H
 
-#include "hsmcommonstructure.h"
-#include "hsmdevicemodel.h"
+#include "hwcommonstructure.h"
+#include "hwdevicemodel.h"
 #include "SecureBinaryData.h"
 #include <memory>
 
@@ -20,7 +20,7 @@
 #include <QVector>
 #include <QStringListModel>
 
-class HSMDeviceAbstract;
+class HwDeviceAbstract;
 class TrezorClient;
 class LedgerClient;
 class ConnectionManager;
@@ -31,18 +31,18 @@ namespace bs {
 }
 
 
-class HSMDeviceManager : public QObject
+class HwDeviceManager : public QObject
 {
    Q_OBJECT
-   Q_PROPERTY(HSMDeviceModel* devices READ devices NOTIFY devicesChanged)
+   Q_PROPERTY(HwDeviceModel* devices READ devices NOTIFY devicesChanged)
    Q_PROPERTY(bool isScanning READ isScanning NOTIFY isScanningChanged)
 public:
-   HSMDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager,
+   HwDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager,
       std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet, QObject* parent = nullptr);
-    ~HSMDeviceManager() override;
+    ~HwDeviceManager() override;
 
    /// Property
-   HSMDeviceModel* devices();
+   HwDeviceModel* devices();
    bool isScanning() const;
 
    ///
@@ -51,7 +51,7 @@ public:
    Q_INVOKABLE void setMatrixPin(int deviceIndex, QString pin);
    Q_INVOKABLE void cancel(int deviceIndex);
 
-   Q_INVOKABLE void prepareHWDeviceForSign(QString deviceId);
+   Q_INVOKABLE void prepareHwDeviceForSign(QString deviceId);
    Q_INVOKABLE void signTX(QVariant reqTX);
 
    Q_INVOKABLE void releaseDevices();
@@ -73,16 +73,16 @@ private:
    void setScanningFlag(bool isScanning);
    void releaseConnection(AsyncCallBack&& cb = nullptr);
 
-   QPointer<HSMDeviceAbstract> getDevice(DeviceKey key);
+   QPointer<HwDeviceAbstract> getDevice(DeviceKey key);
 
 public:
    std::unique_ptr<TrezorClient> trezorClient_;
    std::unique_ptr<LedgerClient> ledgerClient_;
    std::shared_ptr<bs::sync::WalletsManager> walletManager_;
 
-   HSMDeviceModel* model_;
+   HwDeviceModel* model_;
    bool testNet_{};
    bool isScanning_{};
 };
 
-#endif // HSMDEVICESCANNER_H
+#endif // HWDEVICESCANNER_H

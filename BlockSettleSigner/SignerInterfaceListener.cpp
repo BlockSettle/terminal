@@ -136,7 +136,7 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::ImportWoWalletType:
       onCreateWO(packet.data(), packet.id());
       break;
-   case signer::ImportHSMWalletType:
+   case signer::ImportHwWalletType:
       onCreateWO(packet.data(), packet.id());
       break;
    case signer::ExportWoWalletType:

@@ -8,22 +8,22 @@
 **********************************************************************************
 
 */
-#ifndef HSMDEVICEABSTRACT_H
-#define HSMDEVICEABSTRACT_H
+#ifndef HWDEVICEABSTRACT_H
+#define HWDEVICEABSTRACT_H
 
-#include "hsmcommonstructure.h"
+#include "hwcommonstructure.h"
 #include <QObject>
 #include <QNetworkReply>
 #include <QPointer>
 
-class HSMDeviceAbstract : public QObject
+class HwDeviceAbstract : public QObject
 {
    Q_OBJECT
 
 public:
-   HSMDeviceAbstract(QObject* parent = nullptr)
+   HwDeviceAbstract(QObject* parent = nullptr)
       : QObject(parent) {}
-   ~HSMDeviceAbstract() override = default;
+   ~HwDeviceAbstract() override = default;
 
    virtual DeviceKey key() const = 0;
    virtual DeviceType type() const = 0;
@@ -48,7 +48,7 @@ signals:
 
    // Management
    void requestPinMatrix();
-   void requestHSMPass();
+   void requestHWPass();
 };
 
-#endif // HSMDEVICEABSTRACT_H
+#endif // HWDEVICEABSTRACT_H

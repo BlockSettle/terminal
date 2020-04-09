@@ -145,7 +145,7 @@ void CreateTransactionDialog::updateCreateButtonText()
    const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
 
    auto walletPtr = walletsManager_->getHDWalletById(walletId);
-   if (!walletPtr->isHsm() && (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId))) {
+   if (!walletPtr->isHardwareWallet() && (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId))) {
       pushButtonCreate()->setText(tr("Export"));
    } else {
       selectedWalletChanged(-1);
@@ -291,7 +291,7 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
       logger_->error("[{}] wallet with id {} not found", __func__, walletId);
       return;
    }
-   if (!rootWallet->isHsm() && (signContainer_->isWalletOffline(rootWallet->walletId())
+   if (!rootWallet->isHardwareWallet() && (signContainer_->isWalletOffline(rootWallet->walletId())
       || !rootWallet || signContainer_->isWalletOffline(rootWallet->walletId()))) {
       pushButtonCreate()->setText(tr("Export"));
    } else {
@@ -532,7 +532,7 @@ bool CreateTransactionDialog::createTransactionImpl(const bs::Address &changeAdd
       }
 
 
-      if (hdWallet->isOffline() && !hdWallet->isHsm()) {
+      if (hdWallet->isOffline() && !hdWallet->isHardwareWallet()) {
          QString offlineFilePath;
          QString signerOfflineDir = applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
 

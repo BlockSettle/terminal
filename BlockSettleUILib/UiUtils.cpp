@@ -167,9 +167,9 @@ int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs
       }
 
       bool addWallet = false;
-      // HSM wallets marked as offline too, make sure to check that first
-      if (hdWallet->isHsm()) {
-         addWallet = walletTypes & WalletsTypes::Hsm;
+      // HW wallets marked as offline too, make sure to check that first
+      if (hdWallet->isHardwareWallet()) {
+         addWallet = walletTypes & WalletsTypes::Hardware;
       } else if (hdWallet->isOffline()) {
          addWallet = walletTypes & WalletsTypes::WatchOnly;
       } else {

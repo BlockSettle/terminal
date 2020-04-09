@@ -8,8 +8,8 @@
 **********************************************************************************
 
 */
-#ifndef HSMCOMMONSTRUCTURE_H
-#define HSMCOMMONSTRUCTURE_H
+#ifndef HWCOMMONSTRUCTURE_H
+#define HWCOMMONSTRUCTURE_H
 
 #include <QMetaType>
 #include <functional>
@@ -48,10 +48,10 @@ struct DeviceKey
    DeviceType type_ = DeviceType::None;
 };
 
-class HSMWalletWrapper {
+class HwWalletWrapper {
    Q_GADGET
 public:
-   bs::core::wallet::HSMWalletInfo info_;
+   bs::core::wallet::HwWalletInfo info_;
    Q_INVOKABLE QString walletName() {
       return QString::fromStdString(info_.label_);
    }
@@ -64,12 +64,12 @@ public:
          !info_.xpubNativeSegwit_.empty();
    }
 };
-Q_DECLARE_METATYPE(HSMWalletWrapper)
+Q_DECLARE_METATYPE(HwWalletWrapper)
 
-struct HSMSignedTx {
+struct HWSignedTx {
    std::string signedTx;
 };
-Q_DECLARE_METATYPE(HSMSignedTx)
+Q_DECLARE_METATYPE(HWSignedTx)
 
 std::vector<uint32_t> getDerivationPath(bool testNet, bool isNestedSegwit);
-#endif // HSMCOMMONSTRUCTURE_H
+#endif // HWCOMMONSTRUCTURE_H
