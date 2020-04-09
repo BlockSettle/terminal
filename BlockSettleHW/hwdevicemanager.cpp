@@ -157,12 +157,12 @@ void HwDeviceManager::releaseConnection(AsyncCallBack&& cb/*= nullptr*/)
    }
 }
 
-QPointer<HwDeviceAbstract> HwDeviceManager::getDevice(DeviceKey key)
+QPointer<HwDeviceInterface> HwDeviceManager::getDevice(DeviceKey key)
 {
    switch (key.type_)
    {
    case DeviceType::HWTrezor:
-      return static_cast<QPointer<HwDeviceAbstract>>(trezorClient_->getTrezorDevice(key.deviceId_));
+      return static_cast<QPointer<HwDeviceInterface>>(trezorClient_->getTrezorDevice(key.deviceId_));
       break;
    case DeviceType::HWLedger:
       break;

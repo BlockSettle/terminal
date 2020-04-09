@@ -16,14 +16,14 @@
 #include <QNetworkReply>
 #include <QPointer>
 
-class HwDeviceAbstract : public QObject
+class HwDeviceInterface : public QObject
 {
    Q_OBJECT
 
 public:
-   HwDeviceAbstract(QObject* parent = nullptr)
+   HwDeviceInterface(QObject* parent = nullptr)
       : QObject(parent) {}
-   ~HwDeviceAbstract() override = default;
+   ~HwDeviceInterface() override = default;
 
    virtual DeviceKey key() const = 0;
    virtual DeviceType type() const = 0;

@@ -10,25 +10,26 @@
 */
 
 #include "hwcommonstructure.h"
+using namespace bs::hd;
 
-std::vector<uint32_t> getDerivationPath(bool testNet, bool isNestedSegwit)
+Path getDerivationPath(bool testNet, bool isNestedSegwit)
 {
-   std::vector<uint32_t> path;
+   Path path;
    if (isNestedSegwit) {
-      path.push_back(0x80000031);
+      path.append(Purpose::Nested);
    }
    else {
-      path.push_back(0x80000054);
+      path.append(Purpose::Native);
    }
 
    if (testNet) {
-      path.push_back(0x80000001);
+      path.append(hardFlag | 1);
    }
    else {
-      path.push_back(0x80000000);
+      path.append(hardFlag);
    }
 
-   path.push_back(0x80000000);
+   path.append(hardFlag);
 
    return path;
 }

@@ -422,7 +422,6 @@ SET( CPP_WALLET_LIB_NAME               ArmoryWalletLib )
 SET( BS_NETWORK_LIB_NAME               BSNetwork )
 SET( COMMON_LIB_NAME                   CommonLib )
 SET( COMMON_UI_LIB_NAME                CommonUI )
-SET( COMMON_UI_LIB_NAME                CommonUI )
 
 SET( BLOCKSETTLE_UI_INCLUDE_DIR ${TERMINAL_GUI_ROOT}/BlockSettleUILib)
 SET( CRYPTO_LIB_DIR ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig )

@@ -17,6 +17,7 @@
 #include <string>
 #include <QObject>
 #include "CoreWallet.h"
+#include "HDPath.h"
 
 using AsyncCallBack = std::function<void()>;
 using AsyncCallBackCall = std::function<void(QVariant&&)>;
@@ -71,5 +72,5 @@ struct HWSignedTx {
 };
 Q_DECLARE_METATYPE(HWSignedTx)
 
-std::vector<uint32_t> getDerivationPath(bool testNet, bool isNestedSegwit);
+bs::hd::Path getDerivationPath(bool testNet, bool isNestedSegwit);
 #endif // HWCOMMONSTRUCTURE_H

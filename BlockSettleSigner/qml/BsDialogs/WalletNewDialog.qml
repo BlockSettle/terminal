@@ -60,7 +60,7 @@ CustomTitleDialogWindow {
 
             CustomButton {
                 id: importButon
-                text: qsTr("Import Wallet / HW")
+                text: qsTr("Import Wallet / Device")
                 anchors.right: createButon.left
                 anchors.bottom: parent.bottom
                 onClicked: {
