@@ -19,7 +19,7 @@
 #include "CheckRecipSigner.h"
 #include "CurrencyPair.h"
 #include "QuoteProvider.h"
-#include "SignContainer.h"
+#include "WalletSignerContainer.h"
 #include "TradesUtils.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
@@ -34,7 +34,7 @@ Q_DECLARE_METATYPE(AddressVerificationState)
 
 ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AuthAddressManager> &authAddrMgr
-   , const std::shared_ptr<SignContainer> &signContainer
+   , const std::shared_ptr<WalletSignerContainer> &signContainer
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
@@ -131,6 +131,9 @@ void ReqXBTSettlementContainer::activate()
    dealerAuthKey_ = BinaryData::CreateFromHex(quote_.dealerAuthPublicKey);
 
    acceptSpotXBT();
+
+   const auto &authLeaf = walletsMgr_->getAuthWallet();
+   signContainer_->setSettlAuthAddr(authLeaf->walletId(), settlementId_, authAddr_);
 }
 
 void ReqXBTSettlementContainer::deactivate()
@@ -215,7 +218,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
    if ((payoutSignId_ != 0) && (payoutSignId_ == id)) {
       payoutSignId_ = 0;
 
-      if (errCode == bs::error::ErrorCode::TxCanceled) {
+      if (errCode == bs::error::ErrorCode::TxCancelled) {
          SPDLOG_LOGGER_DEBUG(logger_, "cancel on a trade : {}", settlementIdHex_);
          deactivate();
          emit cancelTrade(settlementIdHex_);
@@ -261,7 +264,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
    if ((payinSignId_ != 0) && (payinSignId_ == id)) {
       payinSignId_ = 0;
 
-      if (errCode == bs::error::ErrorCode::TxCanceled) {
+      if (errCode == bs::error::ErrorCode::TxCancelled) {
          SPDLOG_LOGGER_DEBUG(logger_, "cancel on a trade : {}", settlementIdHex_);
          deactivate();
          emit cancelTrade(settlementIdHex_);
@@ -279,7 +282,6 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       for (const auto &leaf : xbtWallet_->getGroup(xbtWallet_->getXBTGroupType())->getLeaves()) {
          leaf->setTransactionComment(signedTX, comment_);
       }
-//    walletsMgr_->getSettlementWallet()->setTransactionComment(signedTX, comment_);  //TODO: later
 
       // OK. if payin created - settletlement accepted for this RFQ
       deactivate();
@@ -354,6 +356,9 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
          }
 
          emit sendUnsignedPayinToPB(settlementIdHex_, bs::network::UnsignedPayinData{ unsignedPayinRequest_.serializeState(), std::move(result.preimageData)} );
+
+         const auto &authLeaf = walletsMgr_->getAuthWallet();
+         signContainer_->setSettlCP(authLeaf->walletId(), result.payinHash, settlementId_, dealerAuthKey_);
       });
    });
 
@@ -408,6 +413,7 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
       });
    });
    bs::tradeutils::createPayout(std::move(args), std::move(payoutCb));
+
 }
 
 void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp)

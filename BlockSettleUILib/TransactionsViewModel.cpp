@@ -1277,3 +1277,14 @@ bool TransactionsViewItem::isCPFPeligible() const
       && (direction == bs::sync::Transaction::Direction::Internal
          || direction == bs::sync::Transaction::Direction::Received));
 }
+
+bool TransactionsViewItem::isPayin() const
+{
+   bool hasSettlOut = false;
+   for (int i = 0; i < tx.getNumTxOut(); ++i) {
+      const auto &txOut = tx.getTxOutCopy(i);
+      const auto &addr = bs::Address::fromTxOut(txOut);
+      hasSettlOut |= addr.getType() == AddressEntryType_P2WSH;
+   }
+   return hasSettlOut && (direction == bs::sync::Transaction::Direction::Sent);
+}

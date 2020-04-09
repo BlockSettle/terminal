@@ -485,7 +485,7 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
                ([this, fileName, jsCallback, requestCbs, walletId, reqs](int result, const QString &, bs::wallet::QPasswordData *passwordData){
 
             auto errorCode = static_cast<bs::error::ErrorCode>(result);
-            if (errorCode == bs::error::ErrorCode::TxCanceled) {
+            if (errorCode == bs::error::ErrorCode::TxCancelled) {
                return;
             }
             else {
