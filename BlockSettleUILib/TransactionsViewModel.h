@@ -70,6 +70,7 @@ struct TransactionsViewItem
 
    bool isRBFeligible() const;
    bool isCPFPeligible() const;
+   bool isPayin() const;
 
    bs::Address filterAddress;
 

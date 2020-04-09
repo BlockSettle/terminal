@@ -88,19 +88,37 @@ TEST_F(TestWallet, BIP84_derivation)
    BIP32_Node node;
    node.initFromSeed(seed.seed());
    std::vector<unsigned> derPath = {
-      0x80000054, //84' 
+      0x80000054, //84'
       0x80000001, //1'
       0x80000000, //0'
       0, 8
    };
 
-   for (auto& derInt : derPath)
+   for (const auto &derInt : derPath) {
       node.derivePrivate(derInt);
-
+   }
    auto pathstr = leafXbt->name();
    auto addrObj = leafXbt->getAddressByIndex(8, true);
-   auto pubkeyHash = BtcUtils::getHash160(node.getPublicKey());
+   const auto pubKey = node.getPublicKey();
+   auto pubkeyHash = BtcUtils::getHash160(pubKey);
    EXPECT_EQ(addrObj.unprefixed(), pubkeyHash);
+
+   node.initFromSeed(seed.seed());
+   derPath = {
+      0x80000054, //84'
+      0x80000001, //1'
+      0x80000000  //0'
+   };
+   for (const auto &derInt : derPath) {
+      node.derivePrivate(derInt);
+   }
+
+   BIP32_Node pubNode;
+   pubNode.initFromPublicKey(derPath.size(), derPath.back(), node.getFingerPrint()
+      , node.getPublicKey(), node.getChaincode());
+   pubNode.derivePublic(0);
+   pubNode.derivePublic(8);
+   EXPECT_EQ(pubKey.toHexStr(), pubNode.getPublicKey().toHexStr());
 
    ASSERT_TRUE(wallet->eraseFile());
 }

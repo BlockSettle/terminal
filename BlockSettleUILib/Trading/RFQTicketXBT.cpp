@@ -497,7 +497,7 @@ void RFQTicketXBT::onAuthAddrChanged(int index)
    if (authAddr_.empty()) {
       return;
    }
-   const auto settlLeaf = authAddressManager_->getSettlementLeaf(authAddr_);
+   const auto settlLeaf = walletsManager_->getSettlementLeaf(authAddr_);
 
    const auto &cbPubKey = [this](const SecureBinaryData &pubKey) {
       authKey_ = pubKey.toHexStr();

@@ -88,11 +88,8 @@ void CCTokenEntryDialog::tokenChanged()
 
          MessageBoxCCWalletQuestion qry(QString::fromStdString(ccProduct_), this);
          if (qry.exec() == QDialog::Accepted) {
-            const auto createCCLeafCb = [this, handle = validityFlag_.handle()](bs::error::ErrorCode result){
-               if (!handle.isValid()) {
-                  return;
-               }
-               if (result == bs::error::ErrorCode::TxCanceled) {
+            const auto createCCLeafCb = [this](bs::error::ErrorCode result){
+               if (result == bs::error::ErrorCode::TxCancelled) {
                   reject();
                }
                else if (result == bs::error::ErrorCode::NoError) {
