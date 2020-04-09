@@ -230,11 +230,17 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
       writeUintLE(inputPayload, utxo.getTxOutIndex());
       writeUintLE(inputPayload, utxo.getValue());
       script = QByteArray::fromStdString(utxo.getScript().toBinStr());
-      writeVarInt(inputPayload, static_cast<uint32_t>(script.size())); // script ????
-      inputPayload.append(script);
-      writeUintLE(inputPayload, std::numeric_limits<uint32_t>::max());
+      writeVarInt(inputPayload, static_cast<uint32_t>(0)); // script ????
+      //inputPayload.append(script);
 
       auto command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x02, std::move(inputPayload));
+      inputCommands.push_back(std::move(command));
+
+      inputPayload.clear();
+      writeUintBE(inputPayload, std::numeric_limits<uint32_t>::max() - 2);
+
+      command.clear();
+      command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x02, std::move(inputPayload));
       inputCommands.push_back(std::move(command));
    }
 
@@ -262,7 +268,7 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
 
    QVector<QByteArray> outputCommands;
    for (int proccessed = 0; proccessed < outputFullPayload.size(); proccessed += Ledger::OUT_CHUNK_SIZE) {
-      uint8_t p1 = (proccessed + Ledger::OUT_CHUNK_SIZE > outputFullPayload.size()) ? 0x00 : 0x80;
+      uint8_t p1 = (proccessed + Ledger::OUT_CHUNK_SIZE > outputFullPayload.size()) ? 0x80 : 0x00;
 
       auto chunk = outputFullPayload.mid(proccessed, Ledger::OUT_CHUNK_SIZE);
       auto outputCommand = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_FINALIZE_FULL,
@@ -310,10 +316,16 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
       writeUintLE(inputPayload, utxo.getValue());
       script = QByteArray::fromStdString(utxo.getScript().toBinStr());
       writeVarInt(inputPayload, static_cast<uint32_t>(script.size())); // script ????
-      inputPayload.append(script);
-      writeUintLE(inputPayload, std::numeric_limits<uint32_t>::max());
 
-      auto command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x02, std::move(inputPayload));
+      auto command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x80, std::move(inputPayload));
+      inputCommands2.push_back(std::move(command));
+
+      inputPayload.clear();
+      inputPayload.append(script);
+      writeUintBE(inputPayload, std::numeric_limits<uint32_t>::max() - 2);
+
+      command.clear();
+      command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x80, std::move(inputPayload));
       inputCommands2.push_back(std::move(command));
    }
 

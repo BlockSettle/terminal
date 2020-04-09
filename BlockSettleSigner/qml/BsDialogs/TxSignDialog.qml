@@ -36,8 +36,8 @@ BSWalletHandlerDialog {
 
     property bool acceptable: if (walletInfo.encType === QPasswordData.Password)
                                   tfPassword.text.length
-                              else if (walletInfo.encType === QPasswordData.Hw)
-                                  passwordData.encType === QPasswordData.Hw
+                              else if (walletInfo.encType === QPasswordData.Hardware)
+                                  passwordData.encType === QPasswordData.Hardware
                               else
                                   true
 
@@ -79,8 +79,8 @@ BSWalletHandlerDialog {
                 rejectWithNoError();
             })
         }
-        else if (walletInfo.encType === QPasswordData.Hw) {
-            hwDeviceManager.prepareHWDeviceForSign(walletInfo.walletId)
+        else if (walletInfo.encType === QPasswordData.Hardware) {
+            hwDeviceManager.prepareHwDeviceForSign(walletInfo.walletId)
         }
     }
 
@@ -96,7 +96,7 @@ BSWalletHandlerDialog {
         onDeviceTxStatusChanged: hwDeviceStatus = status;
         onTxSigned: {
             passwordData.binaryPassword = signData
-            passwordData.encType = QPasswordData.Hw
+            passwordData.encType = QPasswordData.Hardware
             acceptAnimated();
         }
     }
@@ -317,7 +317,7 @@ BSWalletHandlerDialog {
             Layout.fillWidth: true
             Layout.leftMargin: 10
             Layout.rightMargin: 10
-            visible: walletInfo.encType === QPasswordData.Hw
+            visible: walletInfo.encType === QPasswordData.Hardware
 
             CustomLabel {
                 Layout.fillWidth: true
@@ -376,7 +376,7 @@ BSWalletHandlerDialog {
             CustomButton {
                 id: btnCancel
                 text: qsTr("Cancel")
-                anchors.left: walletInfo.encType !== QPasswordData.Hw ? parent.right : parent.left
+                anchors.left: walletInfo.encType !== QPasswordData.Hardware ? parent.right : parent.left
                 anchors.bottom: parent.bottom
                 onClicked: {
                     rejectAnimated()
@@ -386,7 +386,7 @@ BSWalletHandlerDialog {
             CustomButton {
                 id: btnConfirm
                 primary: true
-                visible: walletInfo.encType !== QPasswordData.Hw
+                visible: walletInfo.encType !== QPasswordData.Hardware
                 text: walletInfo.encType !== QPasswordData.Auth ? qsTr("CONFIRM") : qsTr("Continue")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom

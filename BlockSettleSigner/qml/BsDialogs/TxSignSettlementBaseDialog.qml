@@ -93,8 +93,8 @@ CustomTitleDialogWindowWithExpander {
             btnConfirm.visible = false
             btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
         }
-        else if (walletInfo.encType === QPasswordData.Hw) {
-            hwDeviceManager.prepareHWDeviceForSign(walletInfo.walletId)
+        else if (walletInfo.encType === QPasswordData.Hardware) {
+            hwDeviceManager.prepareHwDeviceForSign(walletInfo.walletId)
         }
 
         if (signingAllowed) {
@@ -170,7 +170,7 @@ CustomTitleDialogWindowWithExpander {
         onDeviceTxStatusChanged: hwDeviceStatus = status;
         onTxSigned: {
             passwordData.binaryPassword = signData
-            passwordData.encType = QPasswordData.Hw
+            passwordData.encType = QPasswordData.Hardware
             acceptAnimated();
         }
     }
