@@ -342,6 +342,8 @@ private:
 
    QLockFile &lockFile_;
 
+   bs::network::UserType userType_{};
+
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

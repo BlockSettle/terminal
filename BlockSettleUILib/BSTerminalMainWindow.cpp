@@ -203,8 +203,11 @@ void BSTerminalMainWindow::onInitWalletDialogWasShown()
 
 void BSTerminalMainWindow::onAddrStateChanged()
 {
+   bool canSubmitAuthAddr = (userType_ == bs::network::UserType::Trading)
+         || (userType_ == bs::network::UserType::Dealing);
+
    if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
-      && !authManager_->isAtLeastOneAwaitingVerification()) {
+      && !authManager_->isAtLeastOneAwaitingVerification() && canSubmitAuthAddr) {
       BSMessageBox qry(BSMessageBox::question, tr("Submit Authentication Address"), tr("Submit Authentication Address?")
          , tr("In order to access XBT trading, you will need to submit an Authentication Address. Do you wish to do so now?"), this);
       if (qry.exec() == QDialog::Accepted) {
@@ -1515,6 +1518,8 @@ void BSTerminalMainWindow::onUserLoggedOut()
 
 void BSTerminalMainWindow::onAccountTypeChanged(bs::network::UserType userType, bool enabled)
 {
+   userType_ = userType;
+
    if (enabled != accountEnabled_) {
       accountEnabled_ = enabled;
       NotificationCenter::notify(enabled ? bs::ui::NotifyType::AccountEnabled : bs::ui::NotifyType::AccountDisabled, {});
