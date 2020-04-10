@@ -246,7 +246,9 @@ bool BSTerminalMainWindow::event(QEvent *event)
 BSTerminalMainWindow::~BSTerminalMainWindow()
 {
    // Check UTXO reservation state before any other destructors call!
-   bs::UtxoReservation::instance()->shutdownCheck();
+   if (bs::UtxoReservation::instance()) {
+      bs::UtxoReservation::instance()->shutdownCheck();
+   }
 
    applicationSettings_->set(ApplicationSettings::GUI_main_geometry, geometry());
    applicationSettings_->set(ApplicationSettings::GUI_main_tab, ui_->tabWidget->currentIndex());
