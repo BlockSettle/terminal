@@ -22,8 +22,6 @@
 #include <spdlog/spdlog.h>
 #include <thread>
 
-#include "InfoDialogs/AboutDialog.h"
-#include "InfoDialogs/SupportDialog.h"
 #include "ArmoryServersProvider.h"
 #include "AssetManager.h"
 #include "AuthAddressDialog.h"
@@ -39,16 +37,20 @@
 #include "ColoredCoinServer.h"
 #include "ConnectionManager.h"
 #include "CreateAccountPrompt.h"
+#include "CreatePrimaryWalletPrompt.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
 #include "DialogManager.h"
 #include "FutureValue.h"
 #include "HeadlessContainer.h"
 #include "ImportKeyBox.h"
+#include "InfoDialogs/AboutDialog.h"
 #include "InfoDialogs/MDAgreementDialog.h"
+#include "InfoDialogs/StartupDialog.h"
+#include "InfoDialogs/SupportDialog.h"
 #include "LoginWindow.h"
-#include "MarketDataProvider.h"
 #include "MDCallbacksQt.h"
+#include "MarketDataProvider.h"
 #include "NetworkSettingsLoader.h"
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
@@ -60,16 +62,15 @@
 #include "SelectWalletDialog.h"
 #include "Settings/ConfigDialog.h"
 #include "SignersProvider.h"
-#include "InfoDialogs/StartupDialog.h"
 #include "StatusBarView.h"
 #include "SystemFileUtils.h"
 #include "TabWithShortcut.h"
 #include "TransactionsViewModel.h"
 #include "TransactionsWidget.h"
 #include "UiUtils.h"
+#include "UtxoReservationManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "UtxoReservationManager.h"
 
 #include "ui_BSTerminalMainWindow.h"
 
@@ -1354,20 +1355,6 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
          signerMsg.exec();
          return;
       }
-
-      BSMessageBox createWallet(BSMessageBox::warning
-         , tr("Login Failed")
-         , tr("Login Failed")
-         , tr("To make use of BlockSettle’s offering, you are required to have a Primary Wallet which can generate your chat key, "
-              "authentication address, and coloured coin paths. Please create a wallet and try to login again.")
-         , this);
-      createWallet.setConfirmButtonText(tr("Create Wallet"));
-      createWallet.setCancelVisible(true);
-      auto result = createWallet.exec();
-      if (result == QDialog::Accepted) {
-         onCreatePrimaryWalletRequest();
-      }
-      return;
    }
 
    LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, &cbApprovePuB_, &cbApproveProxy_, this);
@@ -1448,6 +1435,18 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    connect(bsClient_.get(), &BsClient::accountStateChanged, this, [this](bs::network::UserType userType, bool enabled) {
       onAccountTypeChanged(userType, enabled);
    });
+
+   if (!gotChatKeys_) {
+      addDeferredDialog([this] {
+         CreatePrimaryWalletPrompt dlg;
+         int rc = dlg.exec();
+         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
+            ui_->widgetWallets->CreateNewWallet();
+         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
+            ui_->widgetWallets->ImportNewWallet();
+         }
+      });
+   }
 }
 
 void BSTerminalMainWindow::onLogout()
