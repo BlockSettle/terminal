@@ -223,5 +223,8 @@
         <file>resources/getstarted-trading.png</file>
         <file>resources/getstarted-wallet@2x.png</file>
         <file>resources/getstarted-wallet.png</file>
+        <file>resources/create_account.png</file>
+        <file>resources/create_account@1.5x.png</file>
+        <file>resources/create_account@2x.png</file>
     </qresource>
 </RCC>
