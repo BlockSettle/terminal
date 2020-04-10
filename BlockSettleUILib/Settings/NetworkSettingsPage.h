@@ -41,7 +41,7 @@ signals:
 
 private slots:
    void onEnvSelected(int index);
-   void onArmorySelected(int index);
+   void onArmorySelected(int armoryIndex);
    void displayArmorySettings();
    void displayEnvironmentSettings();
 
