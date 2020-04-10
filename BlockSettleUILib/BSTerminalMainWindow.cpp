@@ -100,11 +100,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
       return;
    }
 
-   auto geom = settings->get<QRect>(ApplicationSettings::GUI_main_geometry);
-   if (!geom.isEmpty()) {
-      setGeometry(geom);
-   }
-
    connect(ui_->actionQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
 
    logMgr_ = std::make_shared<bs::LogManager>();
@@ -234,6 +229,17 @@ void BSTerminalMainWindow::postSplashscreenActions()
 {
    if (applicationSettings_->get<bool>(ApplicationSettings::SubscribeToMDOnStart)) {
       mdProvider_->SubscribeToMD();
+   }
+}
+
+void BSTerminalMainWindow::loadPositionAndShow()
+{
+   auto geom = applicationSettings_->get<QRect>(ApplicationSettings::GUI_main_geometry);
+   if (!geom.isEmpty()) {
+      setGeometry(geom);
+      show();
+   } else {
+      showMaximized();
    }
 }
 

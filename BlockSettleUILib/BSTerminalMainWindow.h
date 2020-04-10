@@ -80,6 +80,7 @@ public:
    ~BSTerminalMainWindow() override;
 
    void postSplashscreenActions();
+   void loadPositionAndShow();
 
    bool event(QEvent *event) override;
    void addDeferredDialog(const std::function<void(void)> &deferredDialog);
