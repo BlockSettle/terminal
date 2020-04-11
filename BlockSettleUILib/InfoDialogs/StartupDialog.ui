@@ -116,13 +116,11 @@
           <item>
            <widget class="QLabel" name="bodyLabel">
             <property name="text">
-             <string>Please select which environment you wish to connect. 
+             <string>Production environment concerns trading and settlement in real cash currencies and bitcoins. 
 
-BlockSettle's Production environment concerns trading and settlement in real cash currencies and bitcoins. 
+Test environment concerns trading in “play” money and testnet bitcoins. 
 
-BlockSettles's Test environment concerns trading in &quot;play&quot; money and testnet bitcoins. 
-
-Our default configuration will connect you to our supernode cluster (Production = Mainnet, Test = Testnet). Should you wish to connect to your own supernode, please configure this under network settings. </string>
+Our default configuration will connect you to our supernode clusted. Should you wish to connect to your own supernode, please configure this under network settings.</string>
             </property>
             <property name="wordWrap">
              <bool>true</bool>
