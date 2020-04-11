@@ -120,7 +120,7 @@
 
 Test environment concerns trading in “play” money and testnet bitcoins. 
 
-Our default configuration will connect you to our supernode clusted. Should you wish to connect to your own supernode, please configure this under network settings.</string>
+Our default configuration will connect you to our supernode cluster. Should you wish to connect to your own supernode, please configure this under network settings.</string>
             </property>
             <property name="wordWrap">
              <bool>true</bool>
