@@ -528,30 +528,40 @@ void WalletsWidget::onNewWallet()
    if (!signingContainer_->isOffline()) {
       NewWalletDialog newWalletDialog(false, appSettings_, this);
       emit newWalletCreationRequest();
-      if (newWalletDialog.exec() != QDialog::Accepted ) {
-         return;
-      }
 
-      if (newWalletDialog.isCreate()) {
-         CreateNewWallet();
-      } else if (newWalletDialog.isImport()) {
-         ImportNewWallet();
+      int rc = newWalletDialog.exec();
+
+      switch (rc) {
+         case NewWalletDialog::CreateNew:
+            CreateNewWallet();
+            break;
+         case NewWalletDialog::ImportExisting:
+            ImportNewWallet();
+            break;
+         case NewWalletDialog::ImportHw:
+            ImportHwWallet();
+            break;
+         case NewWalletDialog::Cancel:
+            break;
       }
    } else {
       ImportNewWallet();
    }
 }
 
-bool WalletsWidget::CreateNewWallet(bool report)
+void WalletsWidget::CreateNewWallet()
 {
-   int createReqId_ = signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::CreateWallet);
-   return true;
+   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::CreateWallet);
 }
 
-bool WalletsWidget::ImportNewWallet(bool report)
+void WalletsWidget::ImportNewWallet()
 {
-   int createReqId_ = signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ImportWallet);
-   return true;
+   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ImportWallet);
+}
+
+void WalletsWidget::ImportHwWallet()
+{
+   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ImportHwWallet);
 }
 
 void WalletsWidget::shortcutActivated(ShortcutType s)

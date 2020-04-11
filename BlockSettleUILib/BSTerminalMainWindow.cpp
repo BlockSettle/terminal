@@ -22,8 +22,6 @@
 #include <spdlog/spdlog.h>
 #include <thread>
 
-#include "InfoDialogs/AboutDialog.h"
-#include "InfoDialogs/SupportDialog.h"
 #include "ArmoryServersProvider.h"
 #include "AssetManager.h"
 #include "AuthAddressDialog.h"
@@ -39,16 +37,20 @@
 #include "ColoredCoinServer.h"
 #include "ConnectionManager.h"
 #include "CreateAccountPrompt.h"
+#include "CreatePrimaryWalletPrompt.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
 #include "DialogManager.h"
 #include "FutureValue.h"
 #include "HeadlessContainer.h"
 #include "ImportKeyBox.h"
+#include "InfoDialogs/AboutDialog.h"
 #include "InfoDialogs/MDAgreementDialog.h"
+#include "InfoDialogs/StartupDialog.h"
+#include "InfoDialogs/SupportDialog.h"
 #include "LoginWindow.h"
-#include "MarketDataProvider.h"
 #include "MDCallbacksQt.h"
+#include "MarketDataProvider.h"
 #include "NetworkSettingsLoader.h"
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
@@ -60,16 +62,15 @@
 #include "SelectWalletDialog.h"
 #include "Settings/ConfigDialog.h"
 #include "SignersProvider.h"
-#include "InfoDialogs/StartupDialog.h"
 #include "StatusBarView.h"
 #include "SystemFileUtils.h"
 #include "TabWithShortcut.h"
 #include "TransactionsViewModel.h"
 #include "TransactionsWidget.h"
 #include "UiUtils.h"
+#include "UtxoReservationManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "UtxoReservationManager.h"
 
 #include "ui_BSTerminalMainWindow.h"
 
@@ -97,11 +98,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
          qApp->exit(EXIT_FAILURE);
       }, Qt::QueuedConnection);
       return;
-   }
-
-   auto geom = settings->get<QRect>(ApplicationSettings::GUI_main_geometry);
-   if (!geom.isEmpty()) {
-      setGeometry(geom);
    }
 
    connect(ui_->actionQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
@@ -203,8 +199,11 @@ void BSTerminalMainWindow::onInitWalletDialogWasShown()
 
 void BSTerminalMainWindow::onAddrStateChanged()
 {
+   bool canSubmitAuthAddr = (userType_ == bs::network::UserType::Trading)
+         || (userType_ == bs::network::UserType::Dealing);
+
    if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
-      && !authManager_->isAtLeastOneAwaitingVerification()) {
+      && !authManager_->isAtLeastOneAwaitingVerification() && canSubmitAuthAddr) {
       BSMessageBox qry(BSMessageBox::question, tr("Submit Authentication Address"), tr("Submit Authentication Address?")
          , tr("In order to access XBT trading, you will need to submit an Authentication Address. Do you wish to do so now?"), this);
       if (qry.exec() == QDialog::Accepted) {
@@ -233,6 +232,17 @@ void BSTerminalMainWindow::postSplashscreenActions()
    }
 }
 
+void BSTerminalMainWindow::loadPositionAndShow()
+{
+   auto geom = applicationSettings_->get<QRect>(ApplicationSettings::GUI_main_geometry);
+   if (!geom.isEmpty()) {
+      setGeometry(geom);
+      show();
+   } else {
+      showMaximized();
+   }
+}
+
 bool BSTerminalMainWindow::event(QEvent *event)
 {
    if (event->type() == QEvent::WindowActivate) {
@@ -246,7 +256,9 @@ bool BSTerminalMainWindow::event(QEvent *event)
 BSTerminalMainWindow::~BSTerminalMainWindow()
 {
    // Check UTXO reservation state before any other destructors call!
-   bs::UtxoReservation::instance()->shutdownCheck();
+   if (bs::UtxoReservation::instance()) {
+      bs::UtxoReservation::instance()->shutdownCheck();
+   }
 
    applicationSettings_->set(ApplicationSettings::GUI_main_geometry, geometry());
    applicationSettings_->set(ApplicationSettings::GUI_main_tab, ui_->tabWidget->currentIndex());
@@ -1013,8 +1025,7 @@ void BSTerminalMainWindow::connectSigner()
    }
 }
 
-bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()> &cb
-   , bool reportSuccess)
+bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()> &cb)
 {
    if (primary) {
       auto primaryWallet = walletsMgr_->getPrimaryWallet();
@@ -1056,22 +1067,30 @@ bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
    if (!signContainer_->isOffline()) {
       NewWalletDialog newWalletDialog(true, applicationSettings_, this);
       onInitWalletDialogWasShown();
-      if (newWalletDialog.exec() != QDialog::Accepted) {
-         return false;
+
+      int rc = newWalletDialog.exec();
+
+      switch (rc) {
+         case NewWalletDialog::CreateNew:
+            ui_->widgetWallets->CreateNewWallet();
+            break;
+         case NewWalletDialog::ImportExisting:
+            ui_->widgetWallets->ImportNewWallet();
+            break;
+         case NewWalletDialog::ImportHw:
+            ui_->widgetWallets->ImportHwWallet();
+            break;
+         case NewWalletDialog::Cancel:
+            return false;
       }
 
-      if (newWalletDialog.isCreate()) {
-         if (ui_->widgetWallets->CreateNewWallet(reportSuccess) && cb) {
-            cb();
-         }
+      if (cb) {
+         cb();
       }
-      else if (newWalletDialog.isImport()) {
-         if (ui_->widgetWallets->ImportNewWallet(reportSuccess) && cb) {
-            cb();
-         }
-      }
+      return true;
    } else {
-      if (ui_->widgetWallets->ImportNewWallet(reportSuccess) && cb) {
+      ui_->widgetWallets->ImportNewWallet();
+      if (cb) {
          cb();
       }
    }
@@ -1315,7 +1334,7 @@ void BSTerminalMainWindow::openCCTokenDialog()
       lbdCCTokenDlg();
    }
    else {
-      createWallet(true, lbdCCTokenDlg, false);
+      createWallet(true, lbdCCTokenDlg);
    }
 }
 
@@ -1349,20 +1368,6 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
          signerMsg.exec();
          return;
       }
-
-      BSMessageBox createWallet(BSMessageBox::warning
-         , tr("Login Failed")
-         , tr("Login Failed")
-         , tr("To make use of BlockSettle’s offering, you are required to have a Primary Wallet which can generate your chat key, "
-              "authentication address, and coloured coin paths. Please create a wallet and try to login again.")
-         , this);
-      createWallet.setConfirmButtonText(tr("Create Wallet"));
-      createWallet.setCancelVisible(true);
-      auto result = createWallet.exec();
-      if (result == QDialog::Accepted) {
-         onCreatePrimaryWalletRequest();
-      }
-      return;
    }
 
    LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, &cbApprovePuB_, &cbApproveProxy_, this);
@@ -1443,6 +1448,18 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    connect(bsClient_.get(), &BsClient::accountStateChanged, this, [this](bs::network::UserType userType, bool enabled) {
       onAccountTypeChanged(userType, enabled);
    });
+
+   if (!gotChatKeys_) {
+      addDeferredDialog([this] {
+         CreatePrimaryWalletPrompt dlg;
+         int rc = dlg.exec();
+         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
+            ui_->widgetWallets->CreateNewWallet();
+         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
+            ui_->widgetWallets->ImportNewWallet();
+         }
+      });
+   }
 }
 
 void BSTerminalMainWindow::onLogout()
@@ -1513,6 +1530,8 @@ void BSTerminalMainWindow::onUserLoggedOut()
 
 void BSTerminalMainWindow::onAccountTypeChanged(bs::network::UserType userType, bool enabled)
 {
+   userType_ = userType;
+
    if (enabled != accountEnabled_) {
       accountEnabled_ = enabled;
       NotificationCenter::notify(enabled ? bs::ui::NotifyType::AccountEnabled : bs::ui::NotifyType::AccountDisabled, {});

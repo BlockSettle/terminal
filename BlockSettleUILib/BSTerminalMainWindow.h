@@ -80,6 +80,7 @@ public:
    ~BSTerminalMainWindow() override;
 
    void postSplashscreenActions();
+   void loadPositionAndShow();
 
    bool event(QEvent *event) override;
    void addDeferredDialog(const std::function<void(void)> &deferredDialog);
@@ -142,7 +143,7 @@ private slots:
    void CompleteUIOnlineView();
    void CompleteDBConnection();
 
-   bool createWallet(bool primary, const std::function<void()> & = nullptr, bool reportSuccess = true);
+   bool createWallet(bool primary, const std::function<void()> & = nullptr);
    void onCreatePrimaryWalletRequest();
 
    void acceptMDAgreement();
@@ -341,6 +342,8 @@ private:
    bool accountEnabled_{true};
 
    QLockFile &lockFile_;
+
+   bs::network::UserType userType_{};
 
 };
 

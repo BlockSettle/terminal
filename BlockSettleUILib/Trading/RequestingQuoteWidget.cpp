@@ -263,6 +263,7 @@ void RequestingQuoteWidget::onAccept()
       ui_->labelHint->setText(tr("Awaiting Settlement Pay-Out Execution"));
       ui_->labelHint->show();
    }
+   ui_->labelTimeLeft->clear();
 
    emit quoteAccepted(QString::fromStdString(rfq_.requestId), quote_);
 }

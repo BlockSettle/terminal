@@ -457,6 +457,11 @@ function importWalletDialog(data) {
     return checkEncryptionPassword(dlgImp);
 }
 
+function importHwWalletDialog(data) {
+    let dlgImp = Qt.createComponent("../BsDialogs/WalletImportHwDialog.qml").createObject(mainWindow)
+    return checkEncryptionPassword(dlgImp);
+}
+
 function managePublicDataEncryption() {
     const previousState = qmlFactory.controlPasswordStatus();
 

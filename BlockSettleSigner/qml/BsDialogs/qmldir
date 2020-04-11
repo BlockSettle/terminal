@@ -5,6 +5,7 @@ WalletManageEncryptionDialog   1.0 WalletManageEncryptionDialog.qml
 WalletCreateDialog             1.0 WalletCreateDialog.qml
 WalletDeleteDialog             1.0 WalletDeleteDialog.qml
 WalletImportDialog             1.0 WalletImportDialog.qml
+WalletHwImportDialog           1.0 WalletHwImportDialog.qml
 WalletNewDialog                1.0 WalletNewDialog.qml
 WalletNewSeedDialog            1.0 WalletNewSeedDialog.qml
 TxSignDialog                   1.0 TxSignDialog.qml
