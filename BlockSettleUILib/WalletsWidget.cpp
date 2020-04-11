@@ -542,16 +542,19 @@ void WalletsWidget::onNewWallet()
    }
 }
 
-bool WalletsWidget::CreateNewWallet(bool report)
+void WalletsWidget::CreateNewWallet()
 {
-   int createReqId_ = signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::CreateWallet);
-   return true;
+   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::CreateWallet);
 }
 
-bool WalletsWidget::ImportNewWallet(bool report)
+void WalletsWidget::ImportNewWallet()
 {
-   int createReqId_ = signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ImportWallet);
-   return true;
+   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ImportWallet);
+}
+
+void WalletsWidget::ImportHwWallet()
+{
+   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ImportHwWallet);
 }
 
 void WalletsWidget::shortcutActivated(ShortcutType s)

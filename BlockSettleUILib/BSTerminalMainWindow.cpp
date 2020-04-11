@@ -1025,8 +1025,7 @@ void BSTerminalMainWindow::connectSigner()
    }
 }
 
-bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()> &cb
-   , bool reportSuccess)
+bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()> &cb)
 {
    if (primary) {
       auto primaryWallet = walletsMgr_->getPrimaryWallet();
@@ -1073,17 +1072,20 @@ bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
       }
 
       if (newWalletDialog.isCreate()) {
-         if (ui_->widgetWallets->CreateNewWallet(reportSuccess) && cb) {
+         ui_->widgetWallets->CreateNewWallet();
+         if (cb) {
             cb();
          }
       }
       else if (newWalletDialog.isImport()) {
-         if (ui_->widgetWallets->ImportNewWallet(reportSuccess) && cb) {
+         ui_->widgetWallets->ImportNewWallet();
+         if (cb) {
             cb();
          }
       }
    } else {
-      if (ui_->widgetWallets->ImportNewWallet(reportSuccess) && cb) {
+      ui_->widgetWallets->ImportNewWallet();
+      if (cb) {
          cb();
       }
    }
@@ -1327,7 +1329,7 @@ void BSTerminalMainWindow::openCCTokenDialog()
       lbdCCTokenDlg();
    }
    else {
-      createWallet(true, lbdCCTokenDlg, false);
+      createWallet(true, lbdCCTokenDlg);
    }
 }
 

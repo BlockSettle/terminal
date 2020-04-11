@@ -19,7 +19,6 @@ import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.QPasswordData 1.0
-import com.blocksettle.HwDeviceManager 1.0
 
 import "../BsControls"
 import "../StyledControls"
@@ -42,12 +41,9 @@ CustomTitleDialogWindow {
     property WalletInfo walletInfo: WalletInfo{}
     property var passwordData: QPasswordData{}
     property bool isWO: (tabBar.currentIndex === 1)
-    property bool isHw: rbHardwareWallet.checked
 
     property bool acceptable: if (isWO)
                                   digitalWoBackupAcceptable
-                              else if (isHw)
-                                  (!hwDeviceList.isScanning && !hwDeviceList.isImporting && (hwDeviceList.readyForImport || hwDeviceList.isNoDevice))
                               else
                                   ((curPage === 1 && walletSelected) ||
                                    (curPage === 2 && importAcceptable))
@@ -175,11 +171,6 @@ CustomTitleDialogWindow {
                                 id: rbFileBackup
                                 text: qsTr("Digital Backup")
                             }
-                            CustomRadioButton {
-                                id: rbHardwareWallet
-                                text: qsTr("Hardware wallet")
-                                checked: true
-                            }
                         }
 
                         CustomHeader {
@@ -194,15 +185,6 @@ CustomTitleDialogWindow {
                         CustomHeader {
                             text: qsTr("File Location")
                             visible: rbFileBackup.checked
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 25
-                            Layout.topMargin: 5
-                            Layout.leftMargin: 10
-                            Layout.rightMargin: 10
-                        }
-                        CustomHeader {
-                            text: qsTr("Hardware Device")
-                            visible: rbHardwareWallet.checked
                             Layout.fillWidth: true
                             Layout.preferredHeight: 25
                             Layout.topMargin: 5
@@ -281,24 +263,6 @@ CustomTitleDialogWindow {
                                     }
                                 }
                             }
-                        }
-                    }
-
-                    // HARDWARE DEVICES
-                    HwAvailableDevices {
-                        id: hwDeviceList
-
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        visible: rbHardwareWallet.checked
-
-                        onPubKeyReady: {
-                            importWoWallet();
-                        }
-
-                        onFailed: {
-                            JsHelper.messageBox(BSMessageBox.Type.Critical
-                                , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
                         }
                     }
                 }
@@ -610,20 +574,10 @@ CustomTitleDialogWindow {
                 primary: true
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                text: (isHw && hwDeviceList.isNoDevice) ? qsTr("Rescan") : qsTr("Import")
+                text: qsTr("Import")
                 enabled: acceptable
 
                 onClicked: {
-                    if (isHw ) {
-                        if (hwDeviceList.readyForImport) {
-                            hwDeviceList.importXpub();
-                        } else if (hwDeviceList.isNoDevice) {
-                            hwDeviceList.rescan();
-                        }
-
-                        return;
-                    }
-
                     if (isWO) {
                         importWoWallet();
                         return;
@@ -700,8 +654,7 @@ CustomTitleDialogWindow {
                 walletInfo.name = name;
                 walletInfo.desc = desc;
 
-                let type = isHw ? BSResultBox.ResultType.HwWallet
-                                 : BSResultBox.ResultType.WalletImportWo;
+                let type = BSResultBox.ResultType.WalletImportWo;
 
                 var mb = JsHelper.resultBox(type, true, walletInfo)
                 mb.bsAccepted.connect(acceptAnimated)
@@ -714,9 +667,6 @@ CustomTitleDialogWindow {
 
         if (isWO) {
             walletsProxy.importWoWallet(lblWoDBFile.text, importCallback)
-        }
-        else if (isHw) {
-            walletsProxy.importHwWallet(hwDeviceList.hwWalletInfo, importCallback)
         }
     }
 }

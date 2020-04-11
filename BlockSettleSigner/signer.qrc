@@ -54,6 +54,7 @@
         <file>qml/BsDialogs/WalletCreateDialog.qml</file>
         <file>qml/BsDialogs/WalletDeleteDialog.qml</file>
         <file>qml/BsDialogs/WalletImportDialog.qml</file>
+        <file>qml/BsDialogs/WalletImportHwDialog.qml</file>
         <file>qml/BsDialogs/WalletNewDialog.qml</file>
         <file>qml/BsDialogs/WalletNewSeedDialog.qml</file>
         <file>qml/StyledControls/CustomPasswordTextInput.qml</file>
