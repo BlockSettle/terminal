@@ -59,8 +59,9 @@ CustomTitleDialogWindow {
     property bool authNoticeShown: false
 
     title: qsTr("Import Wallet")
+    // Use same size as BSEidNoticeBox if possible (to prevent size jumps)
     width: 410
-    height: 540
+    height: 550
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletImport
 

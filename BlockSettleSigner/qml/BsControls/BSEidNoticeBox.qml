@@ -28,7 +28,7 @@ you can download Auth eID on your mobile device and encrypt your wallet with a d
     acceptable: true
     cancelButtonVisible: false
     width: 410
-    height: 540
+    height: 550
 
     messageDialogContentItem: ColumnLayout {
         Layout.leftMargin: 72
