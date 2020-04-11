@@ -137,7 +137,7 @@
          <enum>Qt::NoContextMenu</enum>
         </property>
         <property name="text">
-         <string>For guidance, please consult our Guides</string>
+         <string>Have a look at our getting started guides</string>
         </property>
         <property name="textFormat">
          <enum>Qt::RichText</enum>
@@ -206,9 +206,9 @@
        <number>10</number>
       </property>
       <item>
-       <widget class="QPushButton" name="pushButtonImport">
+       <widget class="QPushButton" name="pushButtonHw">
         <property name="text">
-         <string>Import Existing / HW</string>
+         <string>Import Hardware</string>
         </property>
         <property name="autoDefault">
          <bool>false</bool>
@@ -216,9 +216,16 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="pushButtonImport">
+        <property name="text">
+         <string>Import Existing</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="pushButtonCreate">
         <property name="text">
-         <string>Create Wallet</string>
+         <string>Create New</string>
         </property>
         <property name="autoDefault">
          <bool>false</bool>

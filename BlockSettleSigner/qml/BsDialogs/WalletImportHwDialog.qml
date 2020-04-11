@@ -33,7 +33,8 @@ CustomTitleDialogWindow {
     property int inputLabelsWidth: 110
 
     title: qsTr("Import Wallet")
-    width: 410
+    width: 600
+    height: 250
     abortBoxType: BSAbortBox.AbortType.WalletImport
 
     onAboutToShow: hwDeviceList.init()
@@ -43,49 +44,71 @@ CustomTitleDialogWindow {
         if (btnAccept.enabled) btnAccept.onClicked()
     }
 
-    onWalletInfoChanged: {
-        tfDesc.text = walletInfo.desc
-    }
-
     cContentItem: ColumnLayout {
         id: mainLayout
         spacing: 10
 
+        CustomHeader {
+            id: headerText
+            text: qsTr("Hardware Device")
+            Layout.fillWidth: true
+            Layout.preferredHeight: 25
+            Layout.topMargin: 5
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+        }
+
         StackLayout {
-            id: stackView
-            currentIndex: 0
+            currentIndex: hwDeviceList.isNoDevice ? 1 : 0
             Layout.fillWidth: true
 
             ColumnLayout {
                 id: fullImportTab
-                spacing: 5
-                Layout.topMargin: 15
-                Layout.leftMargin: 10
-                Layout.rightMargin: 10
-                Layout.fillWidth: true
 
-                ColumnLayout {
-                    id: selectLayout
+                RowLayout {
+                    Layout.topMargin: 0
+                    Layout.leftMargin: 10
+                    Layout.rightMargin: 10
                     Layout.fillWidth: true
 
-                    // HARDWARE DEVICES
-                    HwAvailableDevices {
-                        id: hwDeviceList
-
+                    ColumnLayout {
+                        id: selectLayout
                         Layout.fillWidth: true
-                        Layout.fillHeight: true
 
-                        onPubKeyReady: {
-                            importWoWallet();
-                        }
+                        // HARDWARE DEVICES
+                        HwAvailableDevices {
+                            id: hwDeviceList
 
-                        onFailed: {
-                            JsHelper.messageBox(BSMessageBox.Type.Critical
-                                , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+
+                            onPubKeyReady: {
+                                importWoWallet();
+                            }
+
+                            onFailed: {
+                                JsHelper.messageBox(BSMessageBox.Type.Critical
+                                    , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
+                            }
                         }
                     }
                 }
             }
+
+            ColumnLayout {
+                id: noDevicesAvailable
+
+                RowLayout {
+                    Layout.leftMargin: 10
+                    Layout.rightMargin: 10
+
+                    CustomLabel {
+                        Layout.fillWidth: true
+                        text: qsTr("No hardware device was detected.\nPlease ensure your device is properly connected and press the \"Rescan\" button.")
+                    }
+                }
+            }
+
         }
     }
 

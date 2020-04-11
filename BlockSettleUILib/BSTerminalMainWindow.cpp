@@ -1067,22 +1067,27 @@ bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
    if (!signContainer_->isOffline()) {
       NewWalletDialog newWalletDialog(true, applicationSettings_, this);
       onInitWalletDialogWasShown();
-      if (newWalletDialog.exec() != QDialog::Accepted) {
-         return false;
+
+      int rc = newWalletDialog.exec();
+
+      switch (rc) {
+         case NewWalletDialog::CreateNew:
+            ui_->widgetWallets->CreateNewWallet();
+            break;
+         case NewWalletDialog::ImportExisting:
+            ui_->widgetWallets->ImportNewWallet();
+            break;
+         case NewWalletDialog::ImportHw:
+            ui_->widgetWallets->ImportHwWallet();
+            break;
+         case NewWalletDialog::Cancel:
+            return false;
       }
 
-      if (newWalletDialog.isCreate()) {
-         ui_->widgetWallets->CreateNewWallet();
-         if (cb) {
-            cb();
-         }
+      if (cb) {
+         cb();
       }
-      else if (newWalletDialog.isImport()) {
-         ui_->widgetWallets->ImportNewWallet();
-         if (cb) {
-            cb();
-         }
-      }
+      return true;
    } else {
       ui_->widgetWallets->ImportNewWallet();
       if (cb) {
