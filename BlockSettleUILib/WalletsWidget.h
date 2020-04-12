@@ -73,8 +73,9 @@ public:
    std::vector<std::shared_ptr<bs::sync::Wallet>> getFirstWallets() const;
    std::shared_ptr<bs::sync::hd::Wallet> getSelectedHdWallet() const;
 
-   bool CreateNewWallet(bool report = true);
-   bool ImportNewWallet(bool report = true);
+   void CreateNewWallet();
+   void ImportNewWallet();
+   void ImportHwWallet();
 
    void shortcutActivated(ShortcutType s) override;
 

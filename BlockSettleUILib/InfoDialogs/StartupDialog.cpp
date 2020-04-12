@@ -43,7 +43,6 @@ StartupDialog::StartupDialog(bool showLicense, QWidget *parent) :
 
    connect(ui_->pushButtonBack, &QPushButton::clicked, this, &StartupDialog::onBack);
    connect(ui_->pushButtonNext, &QPushButton::clicked, this, &StartupDialog::onNext);
-   connect(ui_->envConnectivityListView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &StartupDialog::onConnectivitySelectionChanged);
    ui_->stackedWidget->setCurrentIndex(showLicense_ ? Pages::LicenseAgreement : Pages::Settings);
 
    QFile file;
@@ -189,4 +188,6 @@ void StartupDialog::setupConnectivityList()
    model->setHorizontalHeaderItem(0, new QStandardItem(kNetworkType));
    connectivity->setModel(model);
    connectivity->selectRow(0);
+
+   connect(ui_->envConnectivityListView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &StartupDialog::onConnectivitySelectionChanged);
 }

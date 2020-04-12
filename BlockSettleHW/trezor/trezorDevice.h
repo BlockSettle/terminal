@@ -12,7 +12,7 @@
 #define TREZORDEVICE_H
 
 #include "trezorStructure.h"
-#include "hwdeviceabstract.h"
+#include "hwdeviceinterface.h"
 #include <QObject>
 #include <QNetworkReply>
 #include <QPointer>
@@ -40,7 +40,7 @@ namespace bs {
    }
 }
 
-class TrezorDevice : public HwDeviceAbstract
+class TrezorDevice : public HwDeviceInterface
 {
    Q_OBJECT
 

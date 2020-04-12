@@ -81,9 +81,10 @@ Item {
                                 if (dlgNew.type === WalletNewDialog.WalletType.NewWallet) {
                                     var dlgNewSeed = JsHelper.createNewWalletDialog()
                                     dlgNewSeed.fullScreenMode = false
-                                }
-                                else {
+                                } if (dlgNew.type === WalletNewDialog.WalletType.ImportWallet) {
                                     JsHelper.importWalletDialog()
+                                } if (dlgNew.type === WalletNewDialog.WalletType.ImportHwWallet) {
+                                    JsHelper.importHwWalletDialog()
                                 }
                             })
                             dlgNew.open()

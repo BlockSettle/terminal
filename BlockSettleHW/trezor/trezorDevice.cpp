@@ -86,7 +86,7 @@ namespace {
 
 TrezorDevice::TrezorDevice(const std::shared_ptr<ConnectionManager> &connectionManager, std::shared_ptr<bs::sync::WalletsManager> walletManager
    , bool testNet, const QPointer<TrezorClient> &client, QObject* parent)
-   : HwDeviceAbstract(parent)
+   : HwDeviceInterface(parent)
    , connectionManager_(connectionManager)
    , walletManager_(walletManager)
    , client_(std::move(client))
@@ -155,8 +155,9 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
       connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving native segwit public key from device "
          + features_.label());
       bitcoin::GetPublicKey message;
-      for (const uint32_t add : getDerivationPath(testNet_, false)) {
-         message.add_address_n(add);
+      auto Path = getDerivationPath(testNet_, false);
+      for (size_t i = 0; i < Path.length(); ++i) {
+         message.add_address_n(Path.get(i));
       }
       if (testNet_) {
          message.set_coin_name(tesNetCoin);
@@ -173,8 +174,9 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
       connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving nested segwit public key from device "
          + features_.label());
       bitcoin::GetPublicKey message;
-      for (const uint32_t add : getDerivationPath(testNet_, true)) {
-         message.add_address_n(add);
+      auto Path = getDerivationPath(testNet_, true);
+      for (size_t i = 0; i < Path.length(); ++i) {
+         message.add_address_n(Path.get(i));
       }
       if (testNet_) {
          message.set_coin_name(tesNetCoin);
@@ -432,9 +434,11 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
          throw std::logic_error(fmt::format("can't find input address index for '{}'", address.display()));
       }
 
-      for (const uint32_t add : getDerivationPath(testNet_, isNestedSegwit)) {
-         input->add_address_n(add);
+      auto Path = getDerivationPath(testNet_, isNestedSegwit);
+      for (size_t i = 0; i < Path.length(); ++i) {
+         input->add_address_n(Path.get(i));
       }
+
       const auto path = bs::hd::Path::fromString(addrIndex);
       for (int i = 0; i < path.length(); ++i) {
          input->add_address_n(path.get(i));
@@ -480,8 +484,9 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
          if (change.index.empty()) {
             throw std::logic_error(fmt::format("can't find change address index for '{}'", change.address.display()));
          }
-         for (const uint32_t add : getDerivationPath(testNet_, isNestedSegwit)) {
-            output->add_address_n(add);
+         auto Path = getDerivationPath(testNet_, isNestedSegwit);
+         for (size_t i = 0; i < Path.length(); ++i) {
+            output->add_address_n(Path.get(i));
          }
          const auto path = bs::hd::Path::fromString(change.index);
          for (int i = 0; i < path.length(); ++i) {

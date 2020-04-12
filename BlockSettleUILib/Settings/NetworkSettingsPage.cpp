@@ -75,6 +75,8 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
 
       d->exec();
       emit armoryServerChanged();
+      // Switch env if needed
+      onArmorySelected(ui_->comboBoxArmoryServer->currentIndex());
    });
 
    connect(ui_->pushButtonArmoryServerKeyCopy, &QPushButton::clicked, this, [this](){
@@ -195,9 +197,9 @@ void NetworkSettingsPage::apply()
    }
 }
 
-void NetworkSettingsPage::onEnvSelected(int index)
+void NetworkSettingsPage::onEnvSelected(int envIndex)
 {
-   auto env = ApplicationSettings::EnvConfiguration(index);
+   auto env = ApplicationSettings::EnvConfiguration(envIndex);
 #ifndef PRODUCTION_BUILD
    const bool isCustom = (env == ApplicationSettings::EnvConfiguration::Custom);
 #else
@@ -212,24 +214,37 @@ void NetworkSettingsPage::onEnvSelected(int index)
       return;
    }
 
-   if (env == ApplicationSettings::EnvConfiguration::Production) {
-      ui_->comboBoxArmoryServer->setCurrentIndex(armoryServersProvider_->getIndexOfMainNetServer());
+   auto armoryServers = armoryServersProvider_->servers();
+   auto armoryIndex = ui_->comboBoxArmoryServer->currentIndex();
+   if (armoryIndex < 0 || armoryIndex >= armoryServers.count()) {
+      return;
    }
-   else {
-      ui_->comboBoxArmoryServer->setCurrentIndex(armoryServersProvider_->getIndexOfTestNetServer());
+   auto armoryServer = armoryServers[armoryIndex];
+
+   if ((armoryServer.netType == NetworkType::MainNet) != (env == ApplicationSettings::EnvConfiguration::Production)) {
+      if (env == ApplicationSettings::EnvConfiguration::Production) {
+         ui_->comboBoxArmoryServer->setCurrentIndex(armoryServersProvider_->getIndexOfMainNetServer());
+      }
+      else {
+         ui_->comboBoxArmoryServer->setCurrentIndex(armoryServersProvider_->getIndexOfTestNetServer());
+      }
    }
 }
 
-void NetworkSettingsPage::onArmorySelected(int index)
+void NetworkSettingsPage::onArmorySelected(int armoryIndex)
 {
-   auto servers = armoryServersProvider_->servers();
-   if (index < 0 || index >= servers.count()) {
+   auto armoryServers = armoryServersProvider_->servers();
+   if (armoryIndex < 0 || armoryIndex >= armoryServers.count()) {
       return;
    }
-   auto server = servers[index];
-   if (server.netType == NetworkType::MainNet) {
-      ui_->comboBoxEnvironment->setCurrentIndex(static_cast<int>(ApplicationSettings::EnvConfiguration::Production));
-   } else {
-      ui_->comboBoxEnvironment->setCurrentIndex(static_cast<int>(ApplicationSettings::EnvConfiguration::Test));
+   auto armoryServer = armoryServers[armoryIndex];
+   auto envSelected = static_cast<ApplicationSettings::EnvConfiguration>(ui_->comboBoxEnvironment->currentIndex());
+
+   if ((armoryServer.netType == NetworkType::MainNet) != (envSelected == ApplicationSettings::EnvConfiguration::Production)) {
+      if (armoryServer.netType == NetworkType::MainNet) {
+         ui_->comboBoxEnvironment->setCurrentIndex(static_cast<int>(ApplicationSettings::EnvConfiguration::Production));
+      } else {
+         ui_->comboBoxEnvironment->setCurrentIndex(static_cast<int>(ApplicationSettings::EnvConfiguration::Test));
+      }
    }
 }

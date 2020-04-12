@@ -20,7 +20,7 @@
 #include <QVector>
 #include <QStringListModel>
 
-class HwDeviceAbstract;
+class HwDeviceInterface;
 class TrezorClient;
 class LedgerClient;
 class ConnectionManager;
@@ -73,7 +73,7 @@ private:
    void setScanningFlag(bool isScanning);
    void releaseConnection(AsyncCallBack&& cb = nullptr);
 
-   QPointer<HwDeviceAbstract> getDevice(DeviceKey key);
+   QPointer<HwDeviceInterface> getDevice(DeviceKey key);
 
 public:
    std::unique_ptr<TrezorClient> trezorClient_;

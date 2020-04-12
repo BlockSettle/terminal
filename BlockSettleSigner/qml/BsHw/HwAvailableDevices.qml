@@ -76,7 +76,7 @@ Item {
                        + 'To trigger a rescan, press "Rescan" button.\n\n'
                        + 'If you device is not detected:\n'
                        + ' • On Windows, go to "Settings" -> "Devices" -> "Connected devices" and click "Remote device".Then plug in your device again.\n'
-                       + ' • On linux/OSX you might have to add a new permission to your udev rules.'
+                       + ' • On Linux you might have to add a new permission to your udev rules.'
                        );
 
             anchors {

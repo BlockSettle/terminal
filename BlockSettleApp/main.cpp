@@ -146,7 +146,7 @@ static int runUnchecked(QApplication *app, const std::shared_ptr<ApplicationSett
 #endif
 
    if (!settings->get<bool>(ApplicationSettings::launchToTray)) {
-      mainWindow.show();
+      mainWindow.loadPositionAndShow();
    }
 
    mainWindow.postSplashscreenActions();
