@@ -192,6 +192,51 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
 
    bs::core::wallet::TXSignRequest coreReq = bs::signer::pbTxRequestToCore(request);
 
+
+   //Only for one transaction now
+   qDebug() << "[LedgerClient] -- Start INS_HASH_SIGN section--";
+   auto address = bs::Address::fromUTXO(coreReq.inputs[0]);
+   bool isNestedSegwit = (address.getType() == AddressEntryType_P2SH);
+
+   std::string addrIndex;
+   bs::sync::WalletsManager::WalletPtr hswWallet = nullptr;
+   for (const auto &walletId : coreReq.walletIds) {
+      auto wallet = walletManager_->getWalletById(walletId);
+      addrIndex = wallet->getAddressIndex(address);
+      if (!addrIndex.empty()) {
+         hswWallet = wallet;
+         break;
+      }
+   }
+
+   QByteArray derivationPath;
+   std::vector<uint32_t> pathDer;
+   for (const uint32_t add : getDerivationPath(testNet_, isNestedSegwit)) {
+      writeUintBE(derivationPath, add);
+      pathDer.push_back(add);
+   }
+
+   auto pubKeyAddress = retrievePublicKeyFromPath(getDerivationPath(testNet_, false));
+   const auto path = bs::hd::Path::fromString(addrIndex);
+   for (int i = 0; i < path.length(); ++i) {
+      writeUintBE(derivationPath, path.get(i));
+      pubKeyAddress.derivePublic(path.get(i));
+      pathDer.push_back(path.get(i));
+   }
+
+   auto pubKeyAddress2 = retrievePublicKeyFromPath(std::move(pathDer));
+
+   qDebug() << "Our :    " << QString::fromStdString(pubKeyAddress.getPublicKey().toHexStr());
+   qDebug() << "Device : " << QString::fromStdString(pubKeyAddress2.getPublicKey().toHexStr());
+
+   auto pubKey = pubKeyAddress2.getPublicKey();
+   auto pubkeyHash = BtcUtils::getHash160(pubKey);
+   BtcUtils::getP2WPKHWitnessScript(pubkeyHash);
+
+   qDebug() << "PubKey : " << QString::fromStdString(BtcUtils::getP2WPKHWitnessScript(pubkeyHash).toHexStr());
+
+
+
    // Do not delete this comment!
    // Flow :
    // - we send init payload - INS_HASH_INPUT_START
@@ -226,21 +271,20 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
    for (auto &utxo: coreReq.inputs) {
       QByteArray inputPayload;
       inputPayload.append(static_cast<char>(0x02));
-      inputPayload.append(QByteArray::fromStdString(utxo.getTxHash().toBinStr(true)));
-      writeUintLE(inputPayload, utxo.getTxOutIndex());
-      writeUintLE(inputPayload, utxo.getValue());
-      script = QByteArray::fromStdString(utxo.getScript().toBinStr());
-      writeVarInt(inputPayload, static_cast<uint32_t>(0)); // script ????
-      //inputPayload.append(script);
 
-      auto command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x02, std::move(inputPayload));
+      inputPayload.append(QByteArray::fromStdString(utxo.getTxHash().toBinStr()));
+      writeUintLE(inputPayload, static_cast<uint32_t>(0));
+      writeUintLE(inputPayload, utxo.getValue());
+      writeVarInt(inputPayload, static_cast<uint32_t>(0));
+
+      auto command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x00, std::move(inputPayload));
       inputCommands.push_back(std::move(command));
 
       inputPayload.clear();
-      writeUintBE(inputPayload, std::numeric_limits<uint32_t>::max() - 2);
+      writeUintLE(inputPayload, std::numeric_limits<uint32_t>::max() - 2);
 
       command.clear();
-      command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x02, std::move(inputPayload));
+      command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x00, std::move(inputPayload));
       inputCommands.push_back(std::move(command));
    }
 
@@ -311,18 +355,28 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
    for (auto &utxo : coreReq.inputs) {
       QByteArray inputPayload;
       inputPayload.append(static_cast<char>(0x02));
-      inputPayload.append(QByteArray::fromStdString(utxo.getTxHash().toBinStr(true)));
-      writeUintLE(inputPayload, utxo.getTxOutIndex());
-      writeUintLE(inputPayload, utxo.getValue());
-      script = QByteArray::fromStdString(utxo.getScript().toBinStr());
-      writeVarInt(inputPayload, static_cast<uint32_t>(script.size())); // script ????
 
-      auto command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x80, std::move(inputPayload));
+      inputPayload.append(QByteArray::fromStdString(utxo.getTxHash().toBinStr()));
+      writeUintLE(inputPayload, static_cast<uint32_t>(0));
+      writeUintLE(inputPayload, utxo.getValue());
+
+      auto addr = bs::Address::fromUTXO(utxo);
+      //auto scriptP = utxo.getScript();
+      auto scriptP = BinaryData::CreateFromHex("0014b9fd441cbaa2a69f61ccee49e3ea0f0224113547");
+
+      qDebug() << QString::fromStdString(scriptP.toHexStr());
+      auto spendScript = BtcUtils::getP2WPKHWitnessScript(scriptP.getSliceRef(2, 20));
+      qDebug() << QString::fromStdString(spendScript.toHexStr());
+      script = QByteArray::fromStdString(spendScript.toBinStr());
+
+      writeVarInt(inputPayload, static_cast<uint32_t>(script.size()));
+
+      auto command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x00, std::move(inputPayload));
       inputCommands2.push_back(std::move(command));
 
       inputPayload.clear();
       inputPayload.append(script);
-      writeUintBE(inputPayload, std::numeric_limits<uint32_t>::max() - 2);
+      writeUintLE(inputPayload, std::numeric_limits<uint32_t>::max() - 2);
 
       command.clear();
       command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x80, std::move(inputPayload));
@@ -336,43 +390,6 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
          return;
       }
    }
-
-   //Only for one transaction now
-   qDebug() << "[LedgerClient] -- Start INS_HASH_SIGN section--";
-   auto address = bs::Address::fromUTXO(coreReq.inputs[0]);
-   bool isNestedSegwit = (address.getType() == AddressEntryType_P2SH);
-
-   std::string addrIndex;
-   bs::sync::WalletsManager::WalletPtr hswWallet = nullptr;
-   for (const auto &walletId : coreReq.walletIds) {
-      auto wallet = walletManager_->getWalletById(walletId);
-      addrIndex = wallet->getAddressIndex(address);
-      if (!addrIndex.empty()) {
-         hswWallet = wallet;
-         break;
-      }
-   }
-
-   QByteArray derivationPath;
-   std::vector<uint32_t> pathDer;
-   for (const uint32_t add : getDerivationPath(testNet_, isNestedSegwit)) {
-      writeUintBE(derivationPath, add);
-      pathDer.push_back(add);
-   }
-
-   auto pubKeyAddress = retrievePublicKeyFromPath(getDerivationPath(testNet_, false));
-   const auto path = bs::hd::Path::fromString(addrIndex);
-   for (int i = 0; i < path.length(); ++i) {
-      writeUintBE(derivationPath, path.get(i));
-      pubKeyAddress.derivePublic(path.get(i));
-      pathDer.push_back(path.get(i));
-   }
-
-   auto pubKeyAddress2 = retrievePublicKeyFromPath(std::move(pathDer));
-
-   qDebug() << "Our :    " << QString::fromStdString(pubKeyAddress.getPublicKey().toHexStr());
-   qDebug() << "Device : " << QString::fromStdString(pubKeyAddress2.getPublicKey().toHexStr());
-   
    
    /////
 
@@ -380,7 +397,8 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
    inputSigPayload.append(static_cast<char>(0x05));
    inputSigPayload.append(derivationPath);
    inputSigPayload.append(static_cast<char>(0x00));
-   writeUintBE(inputSigPayload, static_cast<uint32_t>(0x00));
+   writeUintBE(inputSigPayload, static_cast<uint32_t>(1697281));
+   //writeUintBE(inputSigPayload, static_cast<uint32_t>(0));
    inputSigPayload.append(static_cast<char>(0x01));
 
    auto command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_SIGN, 0x00, 0x00, std::move(inputSigPayload));
@@ -397,13 +415,14 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
    ///////////// 
    // Composing and send data back
 
-   auto data = pubKeyAddress.getPublicKey();
+   auto data = pubKeyAddress2.getPublicKey();
    Asset_PublicKey pubKeyAsset(data);
    auto compressedKey = pubKeyAsset.getCompressedKey();
 
    qDebug() << "Second part size " << compressedKey.getSize() << " " << QString::fromStdString(compressedKey.toHexStr());
 
    QByteArray finalStructure;
+
    finalStructure.append(static_cast<char>(inputSigFinal.size()));
    finalStructure.append(inputSigFinal);
    finalStructure.append(static_cast<char>(compressedKey.getSize()));

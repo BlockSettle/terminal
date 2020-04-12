@@ -22,6 +22,11 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
+   namespace core {
+      namespace wallet {
+         struct TXSignRequest;
+      }
+   }
 }
 
 class LedgerDevice : public HwDeviceAbstract
@@ -45,17 +50,22 @@ public:
    void signTX(const QVariant& reqTX, AsyncCallBackCall&& cb = nullptr) override;
 
 protected:
+   // Device management
+   bool initDevice();
+   void releaseDevice();
 
+   // APDU commands processing
+   bool exchangeData(const QByteArray& input, QByteArray& output, std::string&& logHeader);
+   bool writeData(const QByteArray& input, std::string&& logHeader);
+   bool readData(QByteArray& output, std::string&& logHeader);
+
+   // Get public key processing
    void processGetPublicKey(AsyncCallBackCall&& cb = nullptr);
    BIP32_Node retrievePublicKeyFromPath(std::vector<uint32_t>&& derivationPath);
    BIP32_Node getPublicKeyApdu(std::vector<uint32_t>&& derivationPath, const std::unique_ptr<BIP32_Node>& parent = nullptr);
 
-   bool initDevice();
-   void releaseDevice();
-
-   bool exchangeData(const QByteArray& input, QByteArray& output, std::string&& logHeader);
-   bool writeData(const QByteArray& input, std::string&& logHeader);
-   bool readData(QByteArray& output, std::string&& logHeader);
+   // Sign transaction processing
+   //std::vector<BIP32_Node> pubKeyPerUtxo(bs::core::wallet::TXSignRequest& coreReq);
 
 private:
    HidDeviceInfo hidDeviceInfo_;
