@@ -130,7 +130,6 @@ bool AutoSignQuoteProvider::aqLoaded() const
 
 void AutoSignQuoteProvider::onAutoSignStateChanged(bs::error::ErrorCode result, const std::string &walletId)
 {
-   logger_->debug("[{}] new state: {}", __func__, (int)result);
    autoSignState_ = result;
    autoSignWalletId_ = QString::fromStdString(walletId);
    emit autoSignStateChanged();
