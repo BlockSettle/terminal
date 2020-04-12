@@ -397,7 +397,8 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
       }
    }
    catch (const std::exception &e) {
-      MessageBoxBroadcastError(tr("Invalid signed transaction: %1").arg(QLatin1String(e.what())), this).exec();
+      MessageBoxBroadcastError(tr("Invalid signed transaction: %1").arg(QLatin1String(e.what()))
+         , result, this).exec();
       stopBroadcasting();
       return;
    }
@@ -418,7 +419,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
       detailedText = bs::error::ErrorCodeToString(result);
    }
 
-   MessageBoxBroadcastError(detailedText, this).exec();
+   MessageBoxBroadcastError(detailedText, result, this).exec();
 
    stopBroadcasting();
 }

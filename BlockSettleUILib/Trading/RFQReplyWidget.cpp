@@ -436,7 +436,7 @@ void RFQReplyWidget::onSelected(const QString& productGroup, const bs::network::
 void RFQReplyWidget::onTransactionError(bs::error::ErrorCode code, const QString& error)
 {
    if (bs::error::ErrorCode::TxCancelled != code) {
-      MessageBoxBroadcastError(error, this).exec();
+      MessageBoxBroadcastError(error, code, this).exec();
    }
 }
 

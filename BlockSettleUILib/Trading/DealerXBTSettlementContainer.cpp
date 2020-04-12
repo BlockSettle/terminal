@@ -251,7 +251,13 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
 
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.empty()) {
          SPDLOG_LOGGER_ERROR(logger_, "Failed to sign pay-in: {} ({})", (int)errCode, errMsg);
-         failWithErrorText(tr("Failed to sign Pay-in"), errCode);
+         if (errCode == bs::error::ErrorCode::TxSpendLimitExceed) {
+            failWithErrorText(tr("Auto-signing (and auto-quoting) have been disabled"
+               " as your limit has been hit or elapsed"), errCode);
+         }
+         else {
+            failWithErrorText(tr("Failed to sign Pay-in"), errCode);
+         }
          return;
       }
 
@@ -395,7 +401,7 @@ void DealerXBTSettlementContainer::onSignedPayinRequested(const std::string& set
 
    if (!unsignedPayinRequest_.isValid()) {
       SPDLOG_LOGGER_ERROR(logger_, "unsigned payin request is invalid: {}", settlementIdHex_);
-      failWithErrorText(tr("Failed to sign pay-in"), bs::error::ErrorCode::InternalError);
+      failWithErrorText(tr("Invalid unsigned pay-in"), bs::error::ErrorCode::InternalError);
       return;
    }
 

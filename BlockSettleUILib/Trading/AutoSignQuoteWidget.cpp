@@ -41,6 +41,8 @@ void AutoSignQuoteWidget::init(const std::shared_ptr<AutoSignQuoteProvider> &aut
    aqFillHistory();
    onAutoSignQuoteAvailChanged();
 
+   ui_->checkBoxAutoSign->setChecked(false);
+
    connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::autoSignQuoteAvailabilityChanged, this, &AutoSignQuoteWidget::onAutoSignQuoteAvailChanged);
    connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::autoSignStateChanged, this, &AutoSignQuoteWidget::onAutoSignStateChanged);
 
@@ -99,7 +101,6 @@ void AutoSignQuoteWidget::onAutoSignQuoteAvailChanged()
 {
    ui_->groupBoxAutoSign->setEnabled(autoSignQuoteProvider_->autoSignQuoteAvailable());
 
-   ui_->checkBoxAutoSign->setChecked(false);
    ui_->checkBoxAQ->setChecked(false);
 
    ui_->labelAutoSignWalletName->setText(autoSignQuoteProvider_->getAutoSignWalletName());
