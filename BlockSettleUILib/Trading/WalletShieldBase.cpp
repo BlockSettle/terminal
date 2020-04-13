@@ -11,7 +11,9 @@
 #include "WalletShieldBase.h"
 
 #include <QStackedWidget>
+
 #include "AuthAddressManager.h"
+#include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
 #include "ui_WalletShieldPage.h"
@@ -73,8 +75,18 @@ void WalletShieldBase::setTabType(QString&& tabType)
 
 bool WalletShieldBase::checkWalletSettings(WalletShieldBase::ProductType productType, const QString& product)
 {
-   // No wallet at all
-   if (!walletsManager_ || walletsManager_->walletsCount() == 0) {
+   // No primary wallet
+   bool hasFullWallet = false;
+   if (walletsManager_) {
+      for (const auto &wallet : walletsManager_->hdWallets()) {
+         if (wallet->isFullWallet()) {
+            hasFullWallet = true;
+            break;
+         }
+      }
+   }
+
+   if (!walletsManager_ || (!walletsManager_->hasPrimaryWallet() && !hasFullWallet)) {
       showShieldCreateWallet();
       setShieldButtonAction([this]() {
          emit requestPrimaryWalletCreation();
@@ -82,8 +94,8 @@ bool WalletShieldBase::checkWalletSettings(WalletShieldBase::ProductType product
       return true;
    }
 
-   // No primary wallet
    if (!walletsManager_->hasPrimaryWallet()) {
+      assert(hasFullWallet);
       showShieldPromoteToPrimaryWallet();
       setShieldButtonAction([this]() {
          emit requestPrimaryWalletCreation();

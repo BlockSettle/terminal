@@ -72,7 +72,7 @@ public:
             case WalletsViewModel::WalletRegColumns::ColumnState:
                return getState();
             case WalletsViewModel::WalletRegColumns::ColumnNbAddresses:
-               return nbAddr_ ? QString::number(std::max(static_cast<size_t>(5), nbAddr_)) : QString();
+               return nbAddr_ ? QString::number(nbAddr_) : QString();
             default:
                return QVariant();
             }
@@ -92,7 +92,7 @@ public:
             case WalletsViewModel::WalletColumns::ColumnState:
                return getState();
             case WalletsViewModel::WalletColumns::ColumnNbAddresses:
-               return nbAddr_ ? QString::number(std::max(static_cast<size_t>(5), nbAddr_)) : QString();
+               return nbAddr_ ? QString::number(nbAddr_) : QString();
             case WalletsViewModel::WalletColumns::ColumnID:
                return QString::fromStdString(id());
             default:
@@ -135,7 +135,7 @@ public:
 
 protected:
    std::string desc_;
-   BTCNumericTypes::balance_type balTotal_, balUnconf_, balSpend_;
+   std::atomic<BTCNumericTypes::balance_type> balTotal_, balUnconf_, balSpend_;
    size_t      nbAddr_;
    std::shared_ptr<bs::sync::hd::Wallet>           hdWallet_;
    std::vector<std::shared_ptr<bs::sync::Wallet>>  wallets_;
@@ -146,13 +146,13 @@ protected:
          return;
       }
       if (node->getBalanceTotal() > 0) {
-         balTotal_ += node->getBalanceTotal();
+         balTotal_.store(balTotal_.load() + node->getBalanceTotal());
       }
       if (node->getBalanceUnconf() > 0) {
-         balUnconf_ += node->getBalanceUnconf();
+         balUnconf_.store(balUnconf_.load() + node->getBalanceUnconf());
       }
       if (node->getBalanceSpend() > 0) {
-         balSpend_ += node->getBalanceSpend();
+         balSpend_.store(balSpend_.load() + node->getBalanceSpend());
       }
       if (type() != Type::GroupCC) {
          nbAddr_ += node->getNbUsedAddresses();
@@ -178,10 +178,13 @@ protected:
 
    QString getState() const {
       switch (state_) {
-      case State::Connected:     return QObject::tr("Full");
-      case State::Offline:       return QObject::tr("Watching-Only");
-      default:    return {};
+      case State::Primary:    return QObject::tr("Primary");
+      case State::Full:       return QObject::tr("Full");
+      case State::Offline:    return QObject::tr("Watching-Only");
+      case State::Hardware:        return QObject::tr("Hardware");
+      case State::Undefined:  return {};
       }
+      return {};
    }
 
    static WalletNode::Type getNodeType(bs::core::wallet::Type grpType) {
@@ -497,7 +500,7 @@ void WalletsViewModel::onWalletInfo(unsigned int id, bs::hd::WalletInfo)
    }
    const auto walletId = hdInfoReqIds_[id];
    hdInfoReqIds_.erase(id);
-   const auto state = WalletNode::State::Connected;
+   const auto state = WalletNode::State::Full;
    signerStates_[walletId] = state;
    for (int i = 0; i < rootNode_->nbChildren(); i++) {
       auto hdNode = rootNode_->child(i);
@@ -585,11 +588,19 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
 
       hdNode->addGroups(filteredGroups);
       if (signContainer_) {
-         if (signContainer_->isOffline() || signContainer_->isWalletOffline(hdWallet->walletId())) {
+         if (signContainer_->isOffline()) {
             hdNode->setState(WalletNode::State::Offline);
          }
-         else {
-            hdNode->setState(WalletNode::State::Connected);
+         else if (hdWallet->isHardwareWallet()) {
+            hdNode->setState(WalletNode::State::Hardware);
+         }
+         else if (signContainer_->isWalletOffline(hdWallet->walletId())) {
+            hdNode->setState(WalletNode::State::Offline);
+         }
+         else if (hdWallet->isPrimary()) {
+            hdNode->setState(WalletNode::State::Primary);
+         } else {
+            hdNode->setState(WalletNode::State::Full);
          }
       }
    }
@@ -605,14 +616,20 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
    if (selectedWalletId.empty()) {
       selectedWalletId = defaultWalletId_;
    }
-   const auto node = rootNode_->findByWalletId(selectedWalletId);
+   auto node = rootNode_->findByWalletId(selectedWalletId);
    if (node != nullptr) {
+      selection.push_back(createIndex(node->row(), 0, static_cast<void*>(node)));
+   }
+   else if(rootNode_->hasChildren()) {
+      node = rootNode_->child(0);
       selection.push_back(createIndex(node->row(), 0, static_cast<void*>(node)));
    }
    
    if (treeView != nullptr) {
       for (int i = 0; i < rowCount(); i++) {
          treeView->expand(index(i, 0));
+         // Expand XBT leaves
+         treeView->expand(index(0, 0, index(i, 0)));
       }
 
       if (!selection.empty()) {

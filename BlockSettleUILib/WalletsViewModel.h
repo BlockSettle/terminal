@@ -49,8 +49,10 @@ public:
    };
    enum class State {
       Undefined,
-      Connected,
-      Offline
+      Primary,
+      Full,
+      Offline,
+      Hardware
    };
 
    WalletNode(WalletsViewModel *vm, Type type, int row = 0, WalletNode *parent = nullptr)

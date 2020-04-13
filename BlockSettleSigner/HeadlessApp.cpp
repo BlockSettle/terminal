@@ -41,6 +41,8 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , queue_(queue)
    , controlPasswordStatus_(Blocksettle::Communication::signer::ControlPasswordStatus::RequestedNew)
 {
+   signerPubKey_ = ZmqBIP15XServerConnection::getOwnPubKey(getOwnKeyFileDir(), getOwnKeyFileName());
+
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
 
    // Only the SignerListener's cookie will be trusted. Supply an empty set of
@@ -247,7 +249,7 @@ void HeadlessAppObj::startTerminalsProcessing()
             try {
                inKey = READHEX(hexValue);
 
-               if (inKey.isNull()) {
+               if (inKey.empty()) {
                   throw std::runtime_error(fmt::format("trusted client list key entry {} has no key", i));
                }
 
@@ -365,7 +367,7 @@ bs::error::ErrorCode HeadlessAppObj::changeControlPassword(const SecureBinaryDat
    }
 
    try {
-      if (controlPasswordNew.isNull()) {
+      if (controlPasswordNew.empty()) {
          walletsMgr_->eraseControlPassword(controlPasswordOld);
       }
       else {
@@ -386,11 +388,7 @@ ZmqBIP15XServerConnection *HeadlessAppObj::connection() const
 
 BinaryData HeadlessAppObj::signerPubKey() const
 {
-   if (terminalConnection_) {
-      return terminalConnection_->getOwnPubKey();
-   }
-
-   return ZmqBIP15XServerConnection::getOwnPubKey(getOwnKeyFileDir(), getOwnKeyFileName());
+   return signerPubKey_;
 }
 
 std::string HeadlessAppObj::getOwnKeyFileDir()
@@ -514,7 +512,7 @@ void HeadlessAppObj::updateSettings(const Blocksettle::Communication::signer::Se
          try {
             std::string name = line.substr(0, colonIndex);
             const SecureBinaryData inKey = READHEX(line.substr(colonIndex + 1));
-            if (inKey.isNull()) {
+            if (inKey.empty()) {
                throw std::invalid_argument("no or malformed key data");
             }
 

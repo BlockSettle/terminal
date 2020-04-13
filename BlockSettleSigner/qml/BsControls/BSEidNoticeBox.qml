@@ -27,7 +27,8 @@ you can download Auth eID on your mobile device and encrypt your wallet with a d
 
     acceptable: true
     cancelButtonVisible: false
-    width: 400
+    width: 410
+    height: 550
 
     messageDialogContentItem: ColumnLayout {
         Layout.leftMargin: 72
@@ -42,7 +43,6 @@ you can download Auth eID on your mobile device and encrypt your wallet with a d
         CustomLabel {
             id: warnText
             Layout.preferredWidth: root.width - 80
-            font.italic: true
 
             text: qsTr("Auth eID is not your wallet backup. \
 If you lose or damage your mobile device, or forget your selected pin, \

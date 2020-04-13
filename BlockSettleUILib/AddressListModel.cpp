@@ -98,7 +98,7 @@ AddressListModel::AddressRow AddressListModel::createRow(const bs::Address &addr
    if (wallet->type() == bs::core::wallet::Type::Authentication) {
       row.comment = tr("Authentication PubKey");
       const BinaryData rootId;
-      row.displayedAddress = rootId.isNull() ? tr("empty") : QString::fromStdString(BtcUtils::base58_encode(rootId));
+      row.displayedAddress = rootId.empty() ? tr("empty") : QString::fromStdString(BtcUtils::base58_encode(rootId));
       row.isExternal = true;
    }
    else {

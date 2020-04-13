@@ -413,9 +413,6 @@ void WalletsWidget::onShowContextMenu(QMenu *menu, QPoint where)
 void WalletsWidget::updateAddresses()
 {
    const auto &selectedWallets = getSelectedWallets();
-   if (selectedWallets == prevSelectedWallets_) {
-      return;
-   }
 
    if (ui_->treeViewWallets->selectionModel()->hasSelection()) {
       prevSelectedWalletRow_ = ui_->treeViewWallets->selectionModel()->selectedIndexes().first().row();
@@ -506,7 +503,7 @@ void WalletsWidget::onWalletsSynchronized()
          i++;
       }
    }
-   else if (!walletsManager_->hdWallets().size() > 0){
+   else if (!walletsManager_->hdWallets().empty()){
       ui_->treeViewWallets->selectionModel()->select(walletsModel_->index(0, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
    }
 }
@@ -531,30 +528,40 @@ void WalletsWidget::onNewWallet()
    if (!signingContainer_->isOffline()) {
       NewWalletDialog newWalletDialog(false, appSettings_, this);
       emit newWalletCreationRequest();
-      if (newWalletDialog.exec() != QDialog::Accepted ) {
-         return;
-      }
 
-      if (newWalletDialog.isCreate()) {
-         CreateNewWallet();
-      } else if (newWalletDialog.isImport()) {
-         ImportNewWallet();
+      int rc = newWalletDialog.exec();
+
+      switch (rc) {
+         case NewWalletDialog::CreateNew:
+            CreateNewWallet();
+            break;
+         case NewWalletDialog::ImportExisting:
+            ImportNewWallet();
+            break;
+         case NewWalletDialog::ImportHw:
+            ImportHwWallet();
+            break;
+         case NewWalletDialog::Cancel:
+            break;
       }
    } else {
       ImportNewWallet();
    }
 }
 
-bool WalletsWidget::CreateNewWallet(bool report)
+void WalletsWidget::CreateNewWallet()
 {
-   int createReqId_ = signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::CreateWallet);
-   return true;
+   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::CreateWallet);
 }
 
-bool WalletsWidget::ImportNewWallet(bool report)
+void WalletsWidget::ImportNewWallet()
 {
-   int createReqId_ = signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ImportWallet);
-   return true;
+   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ImportWallet);
+}
+
+void WalletsWidget::ImportHwWallet()
+{
+   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ImportHwWallet);
 }
 
 void WalletsWidget::shortcutActivated(ShortcutType s)
@@ -639,7 +646,7 @@ void WalletsWidget::onCopyAddress()
 
 void WalletsWidget::onEditAddrComment()
 {
-   if (!curWallet_ || curAddress_.isNull()) {
+   if (!curWallet_ || curAddress_.empty()) {
       return;
    }
    bool isOk = false;

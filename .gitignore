@@ -125,3 +125,4 @@ CMakeLists.txt.user
 build_terminal/
 generated_proto/
 terminal.*/
+BlockSettleHW/ledger/hidapi/*

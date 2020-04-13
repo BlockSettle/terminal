@@ -87,14 +87,14 @@ a {
 
 *[infoMessage="true"] {
   color: #f7b03a; }
-  
+
 *[whiteText="true"] {
   color: #ffffff; }
 
 *[largeText="true"] {
   font-size: 20px; }
 
-  
+
 *[statusBox="true"] {
   border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 20px;
@@ -198,13 +198,13 @@ QFrame#loginLogo {
   background-image: url(":resources/login-logo.png");
   background-position: center right;
   background-repeat: no-repeat; }
-  
+
 QFrame#messagesHeaderFrame {
   background-color: #18202b;}
 
 QWidget#chatTopSeparatorWidget {
   background-color: #3f4c50;}
-  
+
 QToolBar {
   spacing: 5px;
   border: none; }
@@ -418,7 +418,7 @@ QTabWidget[onWindows="true"]::right-corner {
 
 QTabWidget[onLinux="true"]::right-corner {
   bottom: 1px; }
-    
+
 QTabWidget::pane {
   /* The tab widget frame */
   border-top: 0 solid #C2C7CB;
@@ -453,14 +453,14 @@ QTabBar::tab:first {
 
 QTabBar::tab:last {
   border-right: 1 solid #C4C4C3; }
-  
+
 /* make use of negative margins for overlapping tabs */
 QTabBar::tab:!selected {
   margin-top: 2px;}
-  
+
 QTabBar::tab:selected {
   color: #247dac; }
-  
+
 QTabBar::tab:only-one {
   margin: 0;
   /* if there is only one tab, we don't want overlapping margins */ }
@@ -898,7 +898,7 @@ QPushButton#signWithEidButton:hover {
   background-color: #3080aa; }
 QPushButton#signWithEidButton:pressed {
   background-color: #4090ba; }
-  
+
 QPushButton#pushButtonChangeLog {
   padding-top: 0px;}
 
@@ -1468,22 +1468,22 @@ ToggleSwitch::groove:horizontal {
     background: transparent;
     margin: 0;
     height: 16px; }
-    
+
 ToggleSwitch::groove:horizontal[enabled=false] {
     border: 1px solid #535b63; }
 
 ToggleSwitch::handle:horizontal {
     background: #81888f;
-    border: 1px solid #81888f;       
+    border: 1px solid #81888f;
     width: 16px;
     margin: -1px -1px -1px -1px;
     border-radius: 8px; }
-  
+
 ToggleSwitch::handle:horizontal[enabled=false] {
     background: #535b63;
-    border: 1px solid #535b63;       
+    border: 1px solid #535b63;
 }
- 
+
  ToggleSwitch::handle:horizontal[toggleOn=true][enabled=true] {
     background: #247dac;
     border: 1px solid #247dac; }
@@ -1502,10 +1502,10 @@ QLineEdit#chatSearchLineEdit {
     border: 1px solid #81888f;
     border-radius: 10px;
     height: 18px;
-    max-height: 18px; 
+    max-height: 18px;
     selection-background-color: #3a8ab4;
     selection-color: #e7e8e9; }
-  
+
 QLineEdit#chatSearchLineEdit:focus {
     border: 1px solid #247dac; }
 QLineEdit#chatSearchLineEdit:disabled {
@@ -1513,10 +1513,10 @@ QLineEdit#chatSearchLineEdit:disabled {
 
 QFrame#usersFrame, #roomsFrame {
     background-color: #1c2835; }
-    
+
 QFrame#chatSearchPopupFrame, QFrame#chatFoundUserList {
     background-color: #1c2835; }
-    
+
 QLabel#chatSearchPopupLabel,
 ChatSearchListVew#searchResultTreeView,
 QLabel#notFoundLabel {
@@ -1525,7 +1525,7 @@ QLabel#notFoundLabel {
     font-size: 11px;
     padding: 2 2 2 20;
     border: 1px solid #81888f; }
-    
+
 QSpacerItem#chatUsersVerticalSpacer {
     background-color: #1c2835;
     min-height: 30px;
@@ -1554,7 +1554,7 @@ ChatSearchListVew#searchResultTreeView:item {
 /*    selection-background-color: #3a8ab4;*/
     selection-background-color: transparent;
     border: 1px solid transparent;}
-    
+
 QTreeView#treeViewUsers:item:selected {
 /*    background-color: #3a8ab4;*/
     background-color: transparent;
@@ -1562,7 +1562,7 @@ QTreeView#treeViewUsers:item:selected {
 
 ChatSearchListVew#searchResultTreeView:item:selected {
     background-color: #3a8ab4; }
-    
+
 ChatUserListTreeViewStyle {
     qproperty-color_room: #00c8f8;
     qproperty-color_user_online: #00c8f8;
@@ -1597,4 +1597,30 @@ ChatSearchListViewItemStyle {
 
 *[contact_editor=true] {
     background-color: #1c2835;
+}
+
+QPushButton#testEnvSettings, QPushButton#prodEnvSettings {
+  background-color: #ffffff;
+  color: #000000;
+}
+QPushButton:disabled#prodEnvSettings {
+  background-color: #22c064;
+}
+QPushButton:disabled#testEnvSettings {
+  background-color: #f7a600;
+}
+
+QLabel#labelHeading {
+  font-weight: bold;
+}
+QLabel#labelCreateAccount {
+  color: #000000;
+}
+
+QDialog#LoginWindow {
+  background-color: #0a1a2a;
+  border-width: 0px;
+}
+QDialog#LoginWindow QWidget#widgetSignup {
+  background-color: #13293f;
 }

@@ -26,7 +26,7 @@
 #include "QuoteProvider.h"
 #include "RFQBlotterTreeView.h"
 #include "SelectedTransactionInputs.h"
-#include "SignContainer.h"
+#include "WalletSignerContainer.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "UtxoReservationManager.h"
@@ -131,7 +131,7 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<DialogManager> &dialogManager
-   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<WalletSignerContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider
@@ -301,6 +301,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                , sr.recipientAddress, sr.xbtWallet, signingContainer_, armory_, walletsManager_, std::move(sr.utxoRes));
             connect(settlContainer.get(), &DealerCCSettlementContainer::signTxRequest, this, &RFQReplyWidget::saveTxData);
             connect(settlContainer.get(), &DealerCCSettlementContainer::error, this, &RFQReplyWidget::onTransactionError);
+            connect(settlContainer.get(), &DealerCCSettlementContainer::cancelTrade, this, &RFQReplyWidget::cancelCCTrade);
 
             connect(quoteProvider_.get(), &QuoteProvider::orderFailed, this
                     , [settlContainer, quoteId = order.quoteId](const std::string& failedQuoteId, const std::string& reason){
@@ -337,11 +338,20 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendUnsignedPayinToPB, this, &RFQReplyWidget::sendUnsignedPayinToPB);
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayinToPB, this, &RFQReplyWidget::sendSignedPayinToPB);
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayoutToPB, this, &RFQReplyWidget::sendSignedPayoutToPB);
+            connect(settlContainer.get(), &DealerXBTSettlementContainer::cancelTrade, this, &RFQReplyWidget::cancelXBTTrade);
+
             connect(settlContainer.get(), &DealerXBTSettlementContainer::error, this, &RFQReplyWidget::onTransactionError);
 
             connect(this, &RFQReplyWidget::unsignedPayinRequested, settlContainer.get(), &DealerXBTSettlementContainer::onUnsignedPayinRequested);
             connect(this, &RFQReplyWidget::signedPayoutRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayoutRequested);
             connect(this, &RFQReplyWidget::signedPayinRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayinRequested);
+
+            connect(quoteProvider_.get(), &QuoteProvider::orderFailed, this
+                    , [settlContainer, quoteId = order.quoteId](const std::string& failedQuoteId, const std::string& reason){
+               if (quoteId == failedQuoteId) {
+                  settlContainer->cancel();
+               }
+            });
 
             // Add before calling activate as this will hook some events
             ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
@@ -390,7 +400,6 @@ void RFQReplyWidget::onConnectedToCeler()
    ui_->shieldPage->showShieldSelectTargetDealing();
    popShield();
    ui_->pageRFQReply->onCelerConnected();
-   ui_->treeViewOrders->onCelerConnected();
 }
 
 void RFQReplyWidget::onDisconnectedFromCeler()
@@ -398,7 +407,6 @@ void RFQReplyWidget::onDisconnectedFromCeler()
    ui_->shieldPage->showShieldLoginToResponseRequired();
    popShield();
    ui_->pageRFQReply->onCelerDisconnected();
-   ui_->treeViewOrders->onCelerDisconnected();
 }
 
 void RFQReplyWidget::onEnterKeyPressed(const QModelIndex &index)
@@ -427,7 +435,7 @@ void RFQReplyWidget::onSelected(const QString& productGroup, const bs::network::
 
 void RFQReplyWidget::onTransactionError(bs::error::ErrorCode code, const QString& error)
 {
-   if (bs::error::ErrorCode::TxCanceled != code) {
+   if (bs::error::ErrorCode::TxCancelled != code) {
       MessageBoxBroadcastError(error, this).exec();
    }
 }

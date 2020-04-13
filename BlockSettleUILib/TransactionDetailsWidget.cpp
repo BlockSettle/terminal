@@ -127,12 +127,9 @@ void TransactionDetailsWidget::processTxData(Tx tx)
    // Get each Tx object associated with the Tx's TxIn object. Needed to calc
    // the fees.
    const auto &cbProcessTX = [this]
-      (const std::vector<Tx> &prevTxs, std::exception_ptr)
+      (const AsyncClient::TxBatchResult &prevTxs, std::exception_ptr)
    {
-      for (const auto &prevTx : prevTxs) {
-         prevTxMap_[prevTx.getThisHash()] = prevTx;
-      }
-
+      prevTxMap_.insert(prevTxs.cbegin(), prevTxs.cend());
       // We're ready to display all the transaction-related data in the UI.
       setTxGUIValues();
    };
@@ -194,8 +191,8 @@ void TransactionDetailsWidget::setTxGUIValues()
       TxIn in = curTx_.getTxInCopy(r);
       OutPoint op = in.getOutPoint();
       const auto &prevTx = prevTxMap_[op.getTxHash()];
-      if (prevTx.isInitialized()) {
-         TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
+      if (prevTx && prevTx->isInitialized()) {
+         TxOut prevOut = prevTx->getTxOutCopy(op.getTxOutIndex());
          totIn += prevOut.getValue();
       }
    }
@@ -290,7 +287,7 @@ void TransactionDetailsWidget::updateCCInputs()
    for (size_t i = 0; i < curTx_.getNumTxIn(); ++i) {
       const OutPoint op = curTx_.getTxInCopy(i).getOutPoint();
       const auto &prevTx = prevTxMap_[op.getTxHash()];
-      checkTxForCC(prevTx, ui_->treeInput);
+      checkTxForCC(*prevTx, ui_->treeInput);
    }
 }
 
@@ -313,8 +310,8 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
       const OutPoint op = in.getOutPoint();
       const TxHash intPrevTXID(op.getTxHash());
       const auto &prevTx = prevTxMap_[intPrevTXID];
-      if (prevTx.isInitialized()) {
-         prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
+      if (prevTx && prevTx->isInitialized()) {
+         prevOut = prevTx->getTxOutCopy(op.getTxOutIndex());
       }
       auto txType = prevOut.getScriptType();
       const auto outAddr = bs::Address::fromTxOut(prevOut);
@@ -333,7 +330,7 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
       }
 
       // create a top level item using type, address, amount, wallet values
-      addItem(tree, addrStr, prevOut.getValue(), walletName, prevTx.getThisHash()
+      addItem(tree, addrStr, prevOut.getValue(), walletName, intPrevTXID
          , (hashCounts[intPrevTXID] > 1) ? op.getTxOutIndex() : -1);
    }
    tree->resizeColumns();

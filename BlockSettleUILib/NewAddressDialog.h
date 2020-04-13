@@ -23,7 +23,6 @@ namespace bs {
       class Wallet;
    }
 }
-class SignContainer;
 
 
 class NewAddressDialog : public QDialog
@@ -32,7 +31,7 @@ Q_OBJECT
 
 public:
    NewAddressDialog(const std::shared_ptr<bs::sync::Wallet>& wallet
-      , const std::shared_ptr<SignContainer> &, QWidget* parent = nullptr);
+      , QWidget* parent = nullptr);
    ~NewAddressDialog() override;
 
 protected:

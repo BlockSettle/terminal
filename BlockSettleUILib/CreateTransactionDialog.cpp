@@ -143,7 +143,9 @@ void CreateTransactionDialog::updateCreateButtonText()
       return;
    }
    const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
-   if (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId)) {
+
+   auto walletPtr = walletsManager_->getHDWalletById(walletId);
+   if (!walletPtr->isHardwareWallet() && (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId))) {
       pushButtonCreate()->setText(tr("Export"));
    } else {
       selectedWalletChanged(-1);
@@ -204,7 +206,7 @@ int CreateTransactionDialog::SelectWallet(const std::string& walletId)
 
 void CreateTransactionDialog::populateWalletsList()
 {
-   int index = UiUtils::fillHDWalletsComboBox(comboBoxWallets(), walletsManager_, UiUtils::WoWallets::Enable);
+   int index = UiUtils::fillHDWalletsComboBox(comboBoxWallets(), walletsManager_, UiUtils::WalletsTypes::All);
    selectedWalletChanged(index);
 }
 
@@ -289,8 +291,8 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
       logger_->error("[{}] wallet with id {} not found", __func__, walletId);
       return;
    }
-   if (signContainer_->isWalletOffline(rootWallet->walletId())
-      || !rootWallet || signContainer_->isWalletOffline(rootWallet->walletId())) {
+   if (!rootWallet->isHardwareWallet() && (signContainer_->isWalletOffline(rootWallet->walletId())
+      || !rootWallet || signContainer_->isWalletOffline(rootWallet->walletId()))) {
       pushButtonCreate()->setText(tr("Export"));
    } else {
       pushButtonCreate()->setText(tr("Broadcast"));
@@ -306,12 +308,15 @@ void CreateTransactionDialog::onTransactionUpdated()
 {
    const auto &summary = transactionData_->GetTransactionSummary();
 
-   // #UTXO_MANAGER: reserve all available UTXO for now
-   // till the moment dialog will be deleted
+   // #UTXO_MANAGER: reserve all available UTXO for now till the moment dialog will be deleted.
+   // Used to prevent UTXO conflicts with AQ script.
+   // FIXME: Disabled as it caused problems when advanced dialog selected (available balance becomes 0 and list of available UTXOs is empty until different wallet selected).
+#if 0
    if (summary.availableBalance > .0) {
       utxoRes_.release();
       utxoRes_ = utxoReservationManager_->makeNewReservation(transactionData_->getSelectedInputs()->GetAllTransactions());
    }
+#endif
    labelBalance()->setText(UiUtils::displayAmount(summary.availableBalance));
    labelAmount()->setText(UiUtils::displayAmount(summary.selectedBalance));
    labelTxInputs()->setText(summary.isAutoSelected ? tr("Auto (%1)").arg(QString::number(summary.usedTransactions))
@@ -363,7 +368,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
    pendingTXSignId_ = 0;
    QString detailedText;
 
-   if (result == bs::error::ErrorCode::TxCanceled) {
+   if (result == bs::error::ErrorCode::TxCancelled) {
       stopBroadcasting();
       return;
    }
@@ -376,7 +381,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
          throw std::runtime_error(bs::error::ErrorCodeToString(result).toStdString());
       }
 
-      if (signedTX.isNull()) {
+      if (signedTX.empty()) {
          throw std::runtime_error("Empty signed TX data received");
       }
       const Tx tx(signedTX);
@@ -434,7 +439,7 @@ void CreateTransactionDialog::stopBroadcasting()
 
 bool CreateTransactionDialog::BroadcastImportedTx()
 {
-   if (importedSignedTX_.isNull()) {
+   if (importedSignedTX_.empty()) {
       return false;
    }
    startBroadcasting();
@@ -527,7 +532,7 @@ bool CreateTransactionDialog::createTransactionImpl(const bs::Address &changeAdd
       }
 
 
-      if (hdWallet->isOffline()) {
+      if (hdWallet->isOffline() && !hdWallet->isHardwareWallet()) {
          QString offlineFilePath;
          QString signerOfflineDir = applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
 

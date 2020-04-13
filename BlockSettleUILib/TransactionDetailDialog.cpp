@@ -73,7 +73,7 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
          }
 
          auto cbTXs = [this, item, txOutIndices, handle]
-            (const std::vector<Tx> &txs, std::exception_ptr exPtr) mutable
+            (const AsyncClient::TxBatchResult &txs, std::exception_ptr exPtr) mutable
          {
             ValidityGuard guard(handle);
             if (!handle.isValid()) {
@@ -120,15 +120,15 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
 
             const bool isInternalTx = item->direction == bs::sync::Transaction::Internal;
             for (const auto &prevTx : txs) {
-               if (!prevTx.isInitialized()) {
+               if (!prevTx.second || !prevTx.second->isInitialized()) {
                   continue;
                }
-               const auto &itTxOut = txOutIndices.find(prevTx.getThisHash());
+               const auto &itTxOut = txOutIndices.find(prevTx.first);
                if (itTxOut == txOutIndices.end()) {
                   continue;
                }
                for (const auto &txOutIdx : itTxOut->second) {
-                  TxOut prevOut = prevTx.getTxOutCopy(txOutIdx);
+                  TxOut prevOut = prevTx.second->getTxOutCopy(txOutIdx);
                   value += prevOut.getValue();
                   const bool isOutput = false;
                   const auto addr = bs::Address::fromTxOut(prevOut);
@@ -139,7 +139,7 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
                         ccLeaf_ = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(addressWallet);
                      }
                   }
-                  addAddress(prevOut, isOutput, isInternalTx, prevTx.getThisHash(), {});
+                  addAddress(prevOut, isOutput, isInternalTx, prevTx.first, {});
                }
             }
 

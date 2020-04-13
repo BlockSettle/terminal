@@ -80,10 +80,6 @@ protected:
          }
       }
       else if (clientPartyPtr->isGlobal()) {
-#ifndef QT_NO_DEBUG
-         assert(clientPartyPtr->displayName() == Chat::GlobalRoomName ||
-            clientPartyPtr->displayName() == Chat::SupportRoomName);
-#endif
          chat_->ui_->widgetOTCShield->showChatExplanation();
          return;
       }

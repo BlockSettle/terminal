@@ -14,6 +14,8 @@ import "../BsStyles"
 
 
 TextField {
+    property bool allowShowPass: true
+
     horizontalAlignment: Text.AlignHLeft
     font.pixelSize: 11
     color: BSStyle.inputsFontColor
@@ -29,6 +31,7 @@ TextField {
 
         Button {
             id: button
+            visible: allowShowPass
             contentItem: Rectangle {
                 color: "transparent"
                 Image {

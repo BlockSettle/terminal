@@ -46,7 +46,7 @@ TEST(TestCommon, Address)
 {
    const std::string b58Addr = "2NBoXxTwt1ruSkuCv5iJaSmZUccHNB2yPjB";
    const auto addr = bs::Address::fromAddressString(b58Addr);
-   ASSERT_FALSE(addr.isNull());
+   ASSERT_FALSE(addr.empty());
    EXPECT_EQ(addr.getSize(), 21);
    EXPECT_TRUE(addr.isValid());
    EXPECT_EQ(addr.display(), b58Addr);
@@ -70,7 +70,7 @@ TEST(TestCommon, CacheFile)
    auto txCF = new TxCacheFile(filename);
    ASSERT_NE(txCF, nullptr);
    const auto tx = txCF->get(BinaryData::fromString("non-existent key"));
-   EXPECT_FALSE(tx.isInitialized());
+   EXPECT_EQ(tx, nullptr);
 
    delete txCF;
    QFile txCFile(QString::fromLatin1(filename));

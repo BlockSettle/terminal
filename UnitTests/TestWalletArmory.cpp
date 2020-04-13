@@ -185,13 +185,13 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
       {
          const bs::core::WalletPasswordScoped lock(walletPtr_, SecureBinaryData::fromString("wrongPass"));
          EXPECT_THROW(txWrongSigned = leaf->signTXRequest(txReq), std::exception);
-         EXPECT_TRUE(txWrongSigned.isNull());
+         EXPECT_TRUE(txWrongSigned.empty());
       }
       BinaryData txSigned;
       {
          const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
          txSigned = leaf->signTXRequest(txReq);
-         ASSERT_FALSE(txSigned.isNull());
+         ASSERT_FALSE(txSigned.empty());
       }
       EXPECT_NE(txWrongSigned, txSigned);
 
@@ -365,7 +365,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
          {
             const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
             txSigned = leaf->signTXRequest(txReq);
-            ASSERT_FALSE(txSigned.isNull());
+            ASSERT_FALSE(txSigned.empty());
          }
 
          Tx txObj(txSigned);
@@ -659,10 +659,10 @@ TEST_F(TestWalletWithArmory, Comments)
    const std::string txComment("Test TX comment");
 
    auto addr = leafPtr_->getNewExtAddress();
-   ASSERT_FALSE(addr.isNull());
+   ASSERT_FALSE(addr.empty());
 
    auto changeAddr = leafPtr_->getNewChangeAddress();
-   ASSERT_FALSE(changeAddr.isNull());
+   ASSERT_FALSE(changeAddr.empty());
 
    auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
    inprocSigner->Start();
@@ -714,7 +714,7 @@ TEST_F(TestWalletWithArmory, Comments)
       txData = leafPtr_->signTXRequest(txReq);
    }
 
-   ASSERT_FALSE(txData.isNull());
+   ASSERT_FALSE(txData.empty());
    EXPECT_TRUE(syncWallet->setTransactionComment(txData, txComment));
    Tx tx(txData);
    EXPECT_TRUE(tx.isInitialized());
@@ -816,7 +816,7 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    {
       const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
       txSigned = leafPtr_->signTXRequest(txReq);
-      ASSERT_FALSE(txSigned.isNull());
+      ASSERT_FALSE(txSigned.empty());
    }
 
    Tx txObj(txSigned);
@@ -954,7 +954,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    {
       const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
       txSigned1 = leafPtr_->signTXRequest(txReq1);
-      ASSERT_FALSE(txSigned1.isNull());
+      ASSERT_FALSE(txSigned1.empty());
    }
 
    envPtr_->armoryInstance()->pushZC(txSigned1);
@@ -1000,7 +1000,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    {
       const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
       txSigned2 = leafPtr_->signTXRequest(txReq2);
-      ASSERT_FALSE(txSigned2.isNull());
+      ASSERT_FALSE(txSigned2.empty());
    }
 
    envPtr_->armoryInstance()->pushZC(txSigned2);
@@ -1292,7 +1292,7 @@ TEST_F(TestWalletWithArmory, GlobalDelegateConf)
       {
          const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
          txSigned = leaf->signTXRequest(txReq);
-         ASSERT_FALSE(txSigned.isNull());
+         ASSERT_FALSE(txSigned.empty());
       }
 
       UnitTestWalletACT::clear();
@@ -1337,7 +1337,7 @@ TEST_F(TestWalletWithArmory, GlobalDelegateConf)
 TEST_F(TestWalletWithArmory, CallbackReturnTxCrash)
 {
    auto addr = leafPtr_->getNewExtAddress();
-   ASSERT_FALSE(addr.isNull());
+   ASSERT_FALSE(addr.empty());
 
    auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
    inprocSigner->Start();

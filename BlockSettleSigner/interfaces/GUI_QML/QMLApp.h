@@ -44,6 +44,7 @@ class QSystemTrayIcon;
 class SignerAdapter;
 class SignerSettings;
 class WalletsProxy;
+class HwDeviceManager;
 
 class QMLAppObj : public QObject
 {
@@ -93,6 +94,7 @@ private:
    std::shared_ptr<QMLStatusUpdater>            statusUpdater_;
    std::shared_ptr<WalletsProxy>                walletsProxy_;
    std::shared_ptr<QmlFactory>                  qmlFactory_;
+   HwDeviceManager* hwDeviceManager_{};
    QObject  *  rootObj_ = nullptr;
    QmlWalletsViewModel  *  walletsModel_ = nullptr;
    // Tray icon will not be started with light UI signer

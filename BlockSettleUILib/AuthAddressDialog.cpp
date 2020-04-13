@@ -112,9 +112,9 @@ bool AuthAddressDialog::eventFilter(QObject* sender, QEvent* event)
 
 void AuthAddressDialog::showEvent(QShowEvent *evt)
 {
-   if (defaultAddr_.isNull()) {
+   if (defaultAddr_.empty()) {
       defaultAddr_ = authAddressManager_->getDefault();
-      if (defaultAddr_.isNull() && authAddressManager_->GetAddressCount()) {
+      if (defaultAddr_.empty() && authAddressManager_->GetAddressCount()) {
          defaultAddr_ = authAddressManager_->GetAddress(0);
       }
       model_->setDefaultAddr(defaultAddr_);
@@ -311,7 +311,7 @@ void AuthAddressDialog::createAddress()
 void AuthAddressDialog::revokeSelectedAddress()
 {
    auto selectedAddress = GetSelectedAddress();
-   if (selectedAddress.isNull()) {
+   if (selectedAddress.empty()) {
       return;
    }
 
@@ -353,10 +353,9 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
    const auto &qryText = tr("New Authentication Address");
    if (validationAmount > 0) {
       promptResult = BSMessageBox(BSMessageBox::question, qryTitle, qryText
-         , tr("Are you sure you wish to submit a new authentication address? Setting up a new Authentication Address"
-            " costs %1 %2").arg(QLatin1String("EUR")).arg(UiUtils::displayCurrencyAmount(validationAmount))
-         , tr("BlockSettle will not deduct an amount higher than the Fee Schedule maximum regardless of the"
-            " stated cost. Please confirm BlockSettle can debit the Authentication Address fee from your account."), this).exec();
+         , tr("Setting up a new Authentication Address costs %1 %2")
+            .arg(QLatin1String("EUR")).arg(UiUtils::displayCurrencyAmount(validationAmount))
+         , this).exec();
    }
    else {
       promptResult = BSMessageBox(BSMessageBox::question, qryTitle, qryText
@@ -381,16 +380,20 @@ void AuthAddressDialog::ConfirmAuthAddressSubmission()
       SPDLOG_LOGGER_ERROR(logger_, "bsClient_ in not set");
       return;
    }
-   if (lastSubmittedAddress_.isNull()) {
+   if (lastSubmittedAddress_.empty()) {
       SPDLOG_LOGGER_ERROR(logger_, "invalid lastSubmittedAddress_");
       return;
    }
 
    AuthAddressConfirmDialog confirmDlg{bsClient_.data(), lastSubmittedAddress_, authAddressManager_, settings_, this};
 
-   confirmDlg.exec();
+   auto result = confirmDlg.exec();
 
    setLastSubmittedAddress({});
+
+   if (result == QDialog::Accepted) {
+      accept();
+   }
 }
 
 void AuthAddressDialog::submitSelectedAddress()
@@ -399,7 +402,7 @@ void AuthAddressDialog::submitSelectedAddress()
    ui_->labelHint->clear();
 
    setLastSubmittedAddress(GetSelectedAddress());
-   if (lastSubmittedAddress_.isNull()) {
+   if (lastSubmittedAddress_.empty()) {
       return;
    }
 
@@ -421,7 +424,7 @@ void AuthAddressDialog::submitSelectedAddress()
 void AuthAddressDialog::setDefaultAddress()
 {
    auto selectedAddress = GetSelectedAddress();
-   if (!selectedAddress.isNull()) {
+   if (!selectedAddress.empty()) {
       defaultAddr_ = selectedAddress;
       settings_->set(ApplicationSettings::defaultAuthAddr
          , QString::fromStdString(defaultAddr_.display()));
@@ -477,7 +480,7 @@ void AuthAddressDialog::updateEnabledStates()
       switch (authAddressManager_->GetState(address)) {
          case AddressVerificationState::NotSubmitted:
             ui_->pushButtonRevoke->setEnabled(false);
-            ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.isNull());
+            ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.empty());
             ui_->pushButtonDefault->setEnabled(false);
             break;
          case AddressVerificationState::Submitted:
@@ -504,6 +507,6 @@ void AuthAddressDialog::updateEnabledStates()
       ui_->pushButtonDefault->setEnabled(false);
    }
 
-   ui_->pushButtonCreate->setEnabled(lastSubmittedAddress_.isNull() &&
+   ui_->pushButtonCreate->setEnabled(lastSubmittedAddress_.empty() &&
       model_ && !model_->isUnsubmittedAddressVisible());
 }

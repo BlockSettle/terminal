@@ -41,6 +41,8 @@ namespace bs {
    }
 }
 
+class QLockFile;
+
 struct NetworkSettings;
 class AboutDialog;
 class ArmoryServersProvider;
@@ -74,10 +76,11 @@ Q_OBJECT
 
 public:
    BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings
-      , BSTerminalSplashScreen& splashScreen, QWidget* parent = nullptr);
+      , BSTerminalSplashScreen& splashScreen, QLockFile &lockFile, QWidget* parent = nullptr);
    ~BSTerminalMainWindow() override;
 
    void postSplashscreenActions();
+   void loadPositionAndShow();
 
    bool event(QEvent *event) override;
    void addDeferredDialog(const std::function<void(void)> &deferredDialog);
@@ -140,7 +143,7 @@ private slots:
    void CompleteUIOnlineView();
    void CompleteDBConnection();
 
-   bool createWallet(bool primary, const std::function<void()> & = nullptr, bool reportSuccess = true);
+   bool createWallet(bool primary, const std::function<void()> & = nullptr);
    void onCreatePrimaryWalletRequest();
 
    void acceptMDAgreement();
@@ -198,7 +201,14 @@ public slots:
 private:
    struct TxInfo;
 
+   enum NetworkSettingsClient
+   {
+      Login,
+      MarketData,
+   };
+
 private slots:
+
    void onSend();
    void onGenerateAddress();
 
@@ -213,6 +223,7 @@ private slots:
    void onNodeStatus(NodeStatus, bool isSegWitEnabled, RpcStatus);
 
    void onLogin();
+   void onLoginProceed(const NetworkSettings &networkSettings);
    void onLogout();
 
    void onCelerConnected();
@@ -222,7 +233,7 @@ private slots:
    void onCCInfoMissing();
    void onCcDefinitionsLoadedFromPub();
 
-   void onMDConnectionDetailsRequired();
+   void onNetworkSettingsRequired(NetworkSettingsClient client);
 
    void onBsConnectionFailed();
 
@@ -238,6 +249,8 @@ private:
    void onUserLoggedIn();
    void onUserLoggedOut();
 
+   void onAccountTypeChanged(bs::network::UserType userType, bool enabled);
+
    void setLoginButtonText(const QString& text);
 
    void setupShortcuts();
@@ -250,9 +263,17 @@ private:
 
    void InitWidgets();
 
-   void networkSettingsReceived(const NetworkSettings &settings);
+   void networkSettingsReceived(const NetworkSettings &settings, NetworkSettingsClient client);
 
    void promoteToPrimaryIfNeeded();
+
+   void promptToCreateAccountIfNeeded();
+
+   void promptSwitchEnv(bool prod);
+   void switchToTestEnv();
+   void switchToProdEnv();
+
+   void restartTerminal();
 
 private:
    enum class ChatInitState
@@ -317,6 +338,12 @@ private:
 
    // Default is online to not show online notification after terminal startup
    bool isBitcoinCoreOnline_{true};
+
+   bool accountEnabled_{true};
+
+   QLockFile &lockFile_;
+
+   bs::network::UserType userType_{};
 
 };
 

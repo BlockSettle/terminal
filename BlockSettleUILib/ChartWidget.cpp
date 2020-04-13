@@ -95,7 +95,6 @@ ChartWidget::ChartWidget(QWidget* pParent)
    connect(&dateRange_, qOverload<int>(&QButtonGroup::buttonClicked),
            this, &ChartWidget::OnDateRangeChanged);
 
-
    cboModel_ = new QStandardItemModel(this);
    ui_->cboInstruments->setItemDelegate(new ComboBoxDelegate);
    ui_->cboInstruments->setModel(cboModel_);
@@ -119,6 +118,9 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
    connect(mdhsClient_.get(), &MdhsClient::DataReceived, this, &ChartWidget::OnDataReceived);
 
    connect(ui_->pushButtonMDConnection, &QPushButton::clicked, this, &ChartWidget::ChangeMDSubscriptionState);
+
+   connect(ui_->cboInstruments, &QComboBox::currentTextChanged, this, &ChartWidget::OnInstrumentChanged);
+   ui_->cboInstruments->setEnabled(false);
 
    connect(mdCallbacks.get(), &MDCallbacksQt::MDUpdate, this, &ChartWidget::OnMdUpdated);
    connect(mdCallbacks.get(), &MDCallbacksQt::OnNewFXTrade, this, &ChartWidget::OnNewXBTorFXTrade);
@@ -182,6 +184,7 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString&
    {
       isProductListInitialized_ = false;
       cboModel_->clear();
+      ui_->cboInstruments->setEnabled(false);
       return;
    }
    if (!isProductListInitialized_) {
@@ -189,10 +192,29 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString&
       MarketDataHistoryRequest request;
       request.set_request_type(MarketDataHistoryMessageType::ProductsListType);
       mdhsClient_->SendRequest(request);
+      return;
+   }
+
+   if (assetType == bs::network::Asset::Type::PrivateMarket) {
+      const std::string& productName = security.toStdString();
+
+      if (pmProducts_.find(productName) == pmProducts_.end()) {
+         pmProducts_.emplace(productName);
+         QTimer::singleShot(5000, [this]()
+            {
+               MarketDataHistoryRequest request;
+               request.set_request_type(MarketDataHistoryMessageType::ProductsListType);
+               mdhsClient_->SendRequest(request);
+            });
+      }
    }
 
    for (const auto& field : mdFields) {
       if (field.type == bs::network::MDField::MDTimestamp) {
+         if (currentTimestamp_ >= field.value) {
+            break;
+         }
+
          currentTimestamp_ = field.value;
          CheckToAddNewCandle(currentTimestamp_);
          auto date = QDateTime::fromMSecsSinceEpoch(currentTimestamp_, Qt::TimeSpec::UTC).time();
@@ -214,6 +236,8 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString&
             eodUpdated_ = false;
             eodRequestSent_ = false;
          }
+
+         break;
       }
    }
 }
@@ -288,10 +312,17 @@ void ChartWidget::ProcessProductsListResponse(const std::string& data)
       logger_->error("can't parse response from mdhs: {}", data);
       return;
    }
+
+   cboModel_->clear();
+
    std::map<TradeHistoryTradeType, std::vector<std::string>, std::greater<>> tempMap;
    for (const auto& product : response.products()) {
       tempMap[product.type()].push_back(product.product());
       productTypesMapper[product.product()] = product.type();
+
+      if (product.type() == TradeHistoryTradeType::PMTradeType) {
+         pmProducts_.emplace(product.product());
+      }
    }
    for (const auto& mapElement : tempMap) {
       AddParentItem(cboModel_, ProductTypeToString(mapElement.first));
@@ -300,8 +331,6 @@ void ChartWidget::ProcessProductsListResponse(const std::string& data)
       }
    }
 
-   connect(ui_->cboInstruments, &QComboBox::currentTextChanged,
-           this, &ChartWidget::OnInstrumentChanged);
    auto savedProduct = appSettings_->get(ApplicationSettings::ChartProduct).toString();
    bool found = false;
    for (int i = 0; i < ui_->cboInstruments->count(); i++) {
@@ -316,6 +345,8 @@ void ChartWidget::ProcessProductsListResponse(const std::string& data)
    }
 
    zoomDiff_ = 0.0;
+
+   ui_->cboInstruments->setEnabled(true);
 }
 
 void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)

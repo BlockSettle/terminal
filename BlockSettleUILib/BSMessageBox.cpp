@@ -141,8 +141,6 @@ void BSMessageBox::setType(Type type) {
       ui_->labelTitle->setProperty("statusImportantLabel", true);
       ui_->labelIcon->setPixmap(QPixmap(QString::fromUtf8("://resources/notification_critical.png")));
       break;
-   default:
-      break;
    }
 }
 
@@ -170,12 +168,4 @@ MessageBoxExpTimeout::MessageBoxExpTimeout(QWidget *parent)
    : BSMessageBox(BSMessageBox::warning, tr("Explorer Timeout"),
       tr("Explorer Timeout"), tr("Armory has timed out. Cannot resolve query.")
       , parent) {
-}
-
-MessageBoxWalletCreateAbort::MessageBoxWalletCreateAbort(QWidget *parent)
-   : BSMessageBox(BSMessageBox::question, tr("Warning"), tr("Abort Wallet Creation?")
-      , tr("The Wallet will not be created if you don't complete the procedure.\n\n"
-         "Are you sure you want to abort the Wallet Creation process?"), parent) {
-   setConfirmButtonText(QObject::tr("Abort"));
-   setCancelButtonText(QObject::tr("Back"));
 }

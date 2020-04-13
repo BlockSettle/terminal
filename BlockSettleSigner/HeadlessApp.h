@@ -96,6 +96,7 @@ private:
 
    SecureBinaryData controlPassword_;
    Blocksettle::Communication::signer::ControlPasswordStatus controlPasswordStatus_;
+   BinaryData signerPubKey_;
 
 };
 

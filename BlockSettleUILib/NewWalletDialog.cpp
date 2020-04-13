@@ -25,25 +25,38 @@ NewWalletDialog::NewWalletDialog(bool noWalletsFound, const std::shared_ptr<Appl
 {
    ui_->setupUi(this);
 
+   auto netType = appSettings->get<NetworkType>(ApplicationSettings::netType);
+
    if (noWalletsFound) {
-      ui_->labelPurpose->setText(tr("THE TERMINAL CAN'T FIND ANY EXISTING WALLETS"));
+      if (netType == NetworkType::TestNet) {
+         ui_->labelPurpose->setText(tr("THE TERMINAL CAN'T FIND ANY EXISTING TESTNET WALLETS"));
+      } else {
+         ui_->labelPurpose->setText(tr("THE TERMINAL CAN'T FIND ANY EXISTING WALLETS"));
+      }
+   } else {
+      if (netType == NetworkType::TestNet) {
+         ui_->labelPurpose->setText(tr("ADD NEW TESTNET WALLET"));
+      } else {
+         ui_->labelPurpose->setText(tr("ADD NEW WALLET"));
+      }
    }
 
    const auto messageText =
-         tr("For guidance, please consult our ")
+         tr("Have a look at our getting started ")
          + QStringLiteral("<a href=\"%1\">").arg(kSupportDialogLink)
-         + QStringLiteral("<span style=\"text-decoration: underline; color: %1;\">Guides</span></a>")
+         + QStringLiteral("<span style=\"text-decoration: underline; color: %1;\">guides</span></a>")
          .arg(BSMessageBox::kUrlColor);
 
    ui_->labelMessage->setText(messageText);
 
    connect(ui_->pushButtonCreate, &QPushButton::clicked, this, [this] {
-      isCreate_ = true;
-      accept();
+      done(CreateNew);
    });
    connect(ui_->pushButtonImport, &QPushButton::clicked, this, [this] {
-      isImport_ = true;
-      accept();
+      done(ImportExisting);
+   });
+   connect(ui_->pushButtonHw, &QPushButton::clicked, this, [this] {
+      done(ImportHw);
    });
 
    connect(ui_->labelMessage, &QLabel::linkActivated, this, [this](const QString & link) {

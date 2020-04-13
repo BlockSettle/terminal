@@ -19,7 +19,7 @@
 #include "CheckRecipSigner.h"
 #include "CurrencyPair.h"
 #include "QuoteProvider.h"
-#include "SignContainer.h"
+#include "WalletSignerContainer.h"
 #include "TradesUtils.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
@@ -34,7 +34,7 @@ Q_DECLARE_METATYPE(AddressVerificationState)
 
 ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AuthAddressManager> &authAddrMgr
-   , const std::shared_ptr<SignContainer> &signContainer
+   , const std::shared_ptr<WalletSignerContainer> &signContainer
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
@@ -73,8 +73,11 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    fxProd_ = cp.ContraCurrency(bs::network::XbtCurrency);
    amount_ = isFxProd ? quantity() / price() : quantity();
 
-   comment_ = std::string(bs::network::Side::toString(bs::network::Side::invert(quote_.side))) + " "
-      + quote_.security + " @ " + std::to_string(price());
+   // BST-2545: Use price as it see Genoa (and it computes it as ROUNDED_CCY / XBT)
+   const auto actualXbtPrice = UiUtils::actualXbtPrice(bs::XBTAmount(amount_), price());
+
+   comment_ = fmt::format("{} {} @ {}", bs::network::Side::toString(bs::network::Side::invert(quote_.side))
+      , quote_.security, UiUtils::displayPriceXBT(actualXbtPrice).toStdString());
 }
 
 ReqXBTSettlementContainer::~ReqXBTSettlementContainer() = default;
@@ -87,9 +90,13 @@ void ReqXBTSettlementContainer::acceptSpotXBT()
 bool ReqXBTSettlementContainer::cancel()
 {
    deactivate();
-   emit settlementCancelled();
+
+   if (payinSignId_ != 0 || payoutSignId_ != 0) {
+      signContainer_->CancelSignTx(settlementId_);
+   }
 
    SettlementContainer::releaseUtxoRes();
+   emit settlementCancelled();
 
    return true;
 }
@@ -124,6 +131,9 @@ void ReqXBTSettlementContainer::activate()
    dealerAuthKey_ = BinaryData::CreateFromHex(quote_.dealerAuthPublicKey);
 
    acceptSpotXBT();
+
+   const auto &authLeaf = walletsMgr_->getAuthWallet();
+   signContainer_->setSettlAuthAddr(authLeaf->walletId(), settlementId_, authAddr_);
 }
 
 void ReqXBTSettlementContainer::deactivate()
@@ -165,7 +175,7 @@ bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData(QDa
    }
 
    // settlement details
-   dialogData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
+   dialogData.setValue(PasswordDialogData::SettlementId, settlementIdHex_);
    dialogData.setValue(PasswordDialogData::SettlementAddress, settlAddr_.display());
 
    dialogData.setValue(PasswordDialogData::RequesterAuthAddress, authAddr_.display());
@@ -186,7 +196,7 @@ void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState
 {
    dealerVerifState_ = state;
    bs::sync::PasswordDialogData pd;
-   pd.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
+   pd.setValue(PasswordDialogData::SettlementId, settlementIdHex_);
    pd.setValue(PasswordDialogData::ResponderAuthAddress, dealerAuthAddress_.display());
    pd.setValue(PasswordDialogData::ResponderAuthAddressVerified, state == AddressVerificationState::Verified);
    pd.setValue(PasswordDialogData::SigningAllowed, state == AddressVerificationState::Verified);
@@ -208,7 +218,14 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
    if ((payoutSignId_ != 0) && (payoutSignId_ == id)) {
       payoutSignId_ = 0;
 
-      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
+      if (errCode == bs::error::ErrorCode::TxCancelled) {
+         SPDLOG_LOGGER_DEBUG(logger_, "cancel on a trade : {}", settlementIdHex_);
+         deactivate();
+         emit cancelTrade(settlementIdHex_);
+         return;
+      }
+
+      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.empty()) {
          logger_->warn("[ReqXBTSettlementContainer::onTXSigned] Pay-Out sign failure: {} ({})"
             , (int)errCode, errTxt);
          cancelWithError(tr("Pay-Out signing failed: %1").arg(bs::error::ErrorCodeToString(errCode)), errCode);
@@ -247,7 +264,14 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
    if ((payinSignId_ != 0) && (payinSignId_ == id)) {
       payinSignId_ = 0;
 
-      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
+      if (errCode == bs::error::ErrorCode::TxCancelled) {
+         SPDLOG_LOGGER_DEBUG(logger_, "cancel on a trade : {}", settlementIdHex_);
+         deactivate();
+         emit cancelTrade(settlementIdHex_);
+         return;
+      }
+
+      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.empty()) {
          SPDLOG_LOGGER_ERROR(logger_, "failed to create pay-in TX: {} ({})", static_cast<int>(errCode), errTxt);
          cancelWithError(tr("Failed to create Pay-In TX: %1").arg(bs::error::ErrorCodeToString(errCode)), errCode);
          return;
@@ -258,7 +282,6 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       for (const auto &leaf : xbtWallet_->getGroup(xbtWallet_->getXBTGroupType())->getLeaves()) {
          leaf->setTransactionComment(signedTX, comment_);
       }
-//    walletsMgr_->getSettlementWallet()->setTransactionComment(signedTX, comment_);  //TODO: later
 
       // OK. if payin created - settletlement accepted for this RFQ
       deactivate();
@@ -333,6 +356,9 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
          }
 
          emit sendUnsignedPayinToPB(settlementIdHex_, bs::network::UnsignedPayinData{ unsignedPayinRequest_.serializeState(), std::move(result.preimageData)} );
+
+         const auto &authLeaf = walletsMgr_->getAuthWallet();
+         signContainer_->setSettlCP(authLeaf->walletId(), result.payinHash, settlementId_, dealerAuthKey_);
       });
    });
 
@@ -375,7 +401,7 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
 
          bs::sync::PasswordDialogData dlgData = toPayOutTxDetailsPasswordDialogData(result.signRequest, timestamp);
          dlgData.setValue(PasswordDialogData::Market, "XBT");
-         dlgData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
+         dlgData.setValue(PasswordDialogData::SettlementId, settlementIdHex_);
          dlgData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
          dlgData.setValue(PasswordDialogData::SigningAllowed, true);
 
@@ -387,6 +413,7 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
       });
    });
    bs::tradeutils::createPayout(std::move(args), std::move(payoutCb));
+
 }
 
 void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp)

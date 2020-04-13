@@ -285,6 +285,7 @@ void TransactionsViewModel::init()
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &TransactionsViewModel::onWalletDeleted, Qt::QueuedConnection);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &TransactionsViewModel::onRefreshTxValidity, Qt::QueuedConnection);
 }
 
 TransactionsViewModel::~TransactionsViewModel() noexcept
@@ -329,7 +330,7 @@ void TransactionsViewModel::loadAllWallets(bool onNewBlock)
 
 int TransactionsViewModel::columnCount(const QModelIndex &) const
 {
-   return static_cast<int>(Columns::last);
+   return static_cast<int>(Columns::last) + 1;
 }
 
 TXNode *TransactionsViewModel::getNode(const QModelIndex &index) const
@@ -540,7 +541,9 @@ void TransactionsViewModel::onZCInvalidated(const std::set<BinaryData> &ids)
       }
    }
    if (!delRows.empty()) {
-      onDelRows(delRows);
+      QMetaObject::invokeMethod(this, [this, delRows] {
+         onDelRows(delRows);
+      });
    }
 
 #ifdef TX_MODEL_NESTED_NODES
@@ -557,7 +560,7 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
    if (!child->initialized || !parent->initialized) {
       return false;
    }
-   if (!parent->parentId.isNull() && !child->groupId.isNull()) {
+   if (!parent->parentId.empty() && !child->groupId.empty()) {
       if (child->groupId == parent->parentId) {
          return true;
       }
@@ -798,6 +801,24 @@ void TransactionsViewModel::onItemConfirmed(const TransactionPtr item)
    }
 }
 
+void TransactionsViewModel::onRefreshTxValidity()
+{
+   for (int i = 0; i < rootNode_->children().size(); ++i) {
+      const auto item = rootNode_->children()[i]->item();
+      // This fixes race with CC tracker (when it updates after adding new TX).
+      // So there is no need to check already valid TXs.
+      if (!item || item->isValid) {
+         continue;
+      }
+      const auto validWallet = item->wallets.empty() ? nullptr : item->wallets[0];
+      item->isValid = validWallet ? validWallet->isTxValid(item->txEntry.txHash) : false;
+      if (item->isValid) {
+         emit dataChanged(index(i, static_cast<int>(Columns::first))
+         , index(i, static_cast<int>(Columns::last)));
+      }
+   }
+}
+
 void TransactionsViewModel::loadLedgerEntries(bool onNewBlock)
 {
    if (!initialLoadCompleted_ || !ledgerDelegate_) {
@@ -1001,16 +1022,13 @@ void TransactionsViewItem::initialize(const TransactionPtr &item, ArmoryConnecti
    };
 
    const auto cbTXs = [item, cbInit, userCB]
-      (const std::vector<Tx> &txs, std::exception_ptr exPtr)
+      (const AsyncClient::TxBatchResult &txs, std::exception_ptr exPtr)
    {
       if (exPtr != nullptr) {
          userCB(nullptr);
          return;
       }
-      for (const auto &tx : txs) {
-         const auto &txHash = tx.getThisHash();
-         item->txIns[txHash] = tx;
-      }
+      item->txIns.insert(txs.cbegin(), txs.cend());
       item->txHashesReceived = true;
       cbInit();
    };
@@ -1041,7 +1059,7 @@ void TransactionsViewItem::initialize(const TransactionPtr &item, ArmoryConnecti
                break;
             default: break;
             }
-            if (!item->parentId.isNull()) {
+            if (!item->parentId.empty()) {
                break;
             }
          }
@@ -1058,7 +1076,7 @@ void TransactionsViewItem::initialize(const TransactionPtr &item, ArmoryConnecti
                break;
             default: break;
             }
-            if (!item->groupId.isNull()) {
+            if (!item->groupId.empty()) {
                break;
             }
          }
@@ -1183,15 +1201,14 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
          TxIn in = tx.getTxInCopy(i);
          OutPoint op = in.getOutPoint();
          const auto &prevTx = txIns[op.getTxHash()];
-         if (prevTx.isInitialized()) {
-            TxOut prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
-            const auto addr = bs::Address::fromTxOut(prevTx.getTxOutCopy(op.getTxOutIndex()));
+         if (prevTx && prevTx->isInitialized()) {
+            TxOut prevOut = prevTx->getTxOutCopy(op.getTxOutIndex());
+            const auto addr = bs::Address::fromTxOut(prevTx->getTxOutCopy(op.getTxOutIndex()));
             const auto addrWallet = walletsManager->getWalletByAddress(addr);
 
             if (txEntry.isChainedZC && !hasSpecialAddr) {
                hasSpecialAddr = isSpecialWallet(walletsManager->getWalletByAddress(addr));
             }
-
             for (const auto &wallet : wallets) {
                if (addrWallet == wallet) {
                   totalVal -= prevOut.getValue();
@@ -1202,7 +1219,6 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
                   break;
                }
             }
-
             if (filterAddress.isValid() && filterAddress == addr) {
                addressVal -= prevOut.getValue();
             }
@@ -1260,4 +1276,15 @@ bool TransactionsViewItem::isCPFPeligible() const
    return ((confirmations == 0) && (!wallets.empty() && wallets[0]->type() != bs::core::wallet::Type::Settlement)
       && (direction == bs::sync::Transaction::Direction::Internal
          || direction == bs::sync::Transaction::Direction::Received));
+}
+
+bool TransactionsViewItem::isPayin() const
+{
+   bool hasSettlOut = false;
+   for (int i = 0; i < tx.getNumTxOut(); ++i) {
+      const auto &txOut = tx.getTxOutCopy(i);
+      const auto &addr = bs::Address::fromTxOut(txOut);
+      hasSettlOut |= addr.getType() == AddressEntryType_P2WSH;
+   }
+   return hasSettlOut && (direction == bs::sync::Transaction::Direction::Sent);
 }

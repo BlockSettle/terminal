@@ -380,7 +380,16 @@ function prepareFullModeDialog(dialog) {
     })
 }
 
+// BST-2566: Skip prompting of Wallet encryption every time we a Create Wallet, only keep it as option in Setting
+let publicEncryptionDisabledByDefault = true
+
 function checkEncryptionPassword(dlg) {
+    if (publicEncryptionDisabledByDefault) {
+        prepareDialog(dlg);
+        dlg.open();
+        return dlg;
+    }
+
     var onControlPasswordFinished = function(prevDialog, password){
         if (qmlFactory.controlPasswordStatus() === ControlPasswordStatus.RequestedNew) {
             walletsProxy.sendControlPassword(password)
@@ -445,6 +454,11 @@ function createNewWalletDialog(data) {
 
 function importWalletDialog(data) {
     let dlgImp = Qt.createComponent("../BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
+    return checkEncryptionPassword(dlgImp);
+}
+
+function importHwWalletDialog(data) {
+    let dlgImp = Qt.createComponent("../BsDialogs/WalletImportHwDialog.qml").createObject(mainWindow)
     return checkEncryptionPassword(dlgImp);
 }
 
@@ -846,4 +860,13 @@ function getAuthEidSettlementInfo(product, priceString, is_sell, quantity, total
         JsHelper.getAuthEidMessageLine("Quantity", quantity) +
         JsHelper.getAuthEidMessageLine("Deliver", (is_sell ? quantity : totalValue)) +
         JsHelper.getAuthEidMessageLine("Receive", (is_sell ? totalValue : quantity), true);
+}
+
+function showPinMatrix(deviceIndex) {
+    let pinMatrix = Qt.createComponent("../BsHw/PinMatrixDialog.qml").createObject(mainWindow);
+
+    pinMatrix.deviceIndex = deviceIndex;
+    pinMatrix.open();
+
+    return pinMatrix;
 }

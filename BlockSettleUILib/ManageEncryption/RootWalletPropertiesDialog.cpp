@@ -106,7 +106,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
    ui_->manageEncryptionButton->setEnabled(false);
 
    if (signingContainer_) {
-      if (signingContainer_->isOffline()) {
+      if (signingContainer_->isOffline() || walletInfo_.isHardwareWallet()) {
          ui_->backupButton->setEnabled(false);
          ui_->manageEncryptionButton->setEnabled(false);
       }
@@ -152,6 +152,9 @@ static inline QString encTypeToString(bs::wallet::EncryptionType enc)
 
       case bs::wallet::EncryptionType::Auth :
          return QObject::tr("Auth eID");
+
+      case bs::wallet::EncryptionType::Hardware :
+         return QObject::tr("Hardware Security Module");
    };
 
    //no default entry in switch statment nor default return value
@@ -170,9 +173,11 @@ void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, const bs::hd::W
    // but wallet name is from bs::hd::Wallet
    walletInfo_.setName(QString::fromStdString(wallet_->name()));
 
-   ui_->manageEncryptionButton->setEnabled(true);
+   ui_->manageEncryptionButton->setEnabled(!walletInfo.isHardwareWallet());
 
-   if (walletsManager_->isWatchingOnly(walletInfo_.rootId().toStdString())) {
+   if (walletInfo_.isHardwareWallet()) {
+      ui_->labelEncRank->setText(tr("HW"));
+   } else if (walletsManager_->isWatchingOnly(walletInfo_.rootId().toStdString())) {
       ui_->labelEncRank->setText(tr("Watching-Only"));
    } else {
       if (walletInfo.keyRank().m == 1 && walletInfo.keyRank().n == 1) {
