@@ -237,10 +237,8 @@ void BSTerminalMainWindow::loadPositionAndShow()
    auto geom = applicationSettings_->get<QRect>(ApplicationSettings::GUI_main_geometry);
    if (!geom.isEmpty()) {
       setGeometry(geom);
-      show();
-   } else {
-      showMaximized();
    }
+   show();
 }
 
 bool BSTerminalMainWindow::event(QEvent *event)
