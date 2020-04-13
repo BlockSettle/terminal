@@ -20,6 +20,8 @@
 #include "QByteArray"
 #include "QDataStream"
 
+#include <QDebug>
+
 namespace {
    int sendApdu(hid_device* dongle, const QByteArray& command) {
       qDebug() << "Before send : " << command.toHex();
@@ -126,7 +128,7 @@ namespace {
 
 LedgerDevice::LedgerDevice(HidDeviceInfo&& hidDeviceInfo, bool testNet,
    std::shared_ptr<bs::sync::WalletsManager> walletManager, std::shared_ptr<spdlog::logger> logger, QObject* parent /*= nullptr*/)
-   : HwDeviceAbstract(parent)
+   : HwDeviceInterface(parent)
    , hidDeviceInfo_(std::move(hidDeviceInfo))
    , logger_(logger)
    , testNet_(testNet)
@@ -196,7 +198,7 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
    //Only for one transaction now
    qDebug() << "[LedgerClient] -- Start INS_HASH_SIGN section--";
    auto address = bs::Address::fromUTXO(coreReq.inputs[0]);
-   bool isNestedSegwit = (address.getType() == AddressEntryType_P2SH);
+   auto purp = bs::hd::purpose(address.getType());
 
    std::string addrIndex;
    bs::sync::WalletsManager::WalletPtr hswWallet = nullptr;
@@ -204,38 +206,20 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
       auto wallet = walletManager_->getWalletById(walletId);
       addrIndex = wallet->getAddressIndex(address);
       if (!addrIndex.empty()) {
-         hswWallet = wallet;
          break;
       }
    }
 
    QByteArray derivationPath;
-   std::vector<uint32_t> pathDer;
-   for (const uint32_t add : getDerivationPath(testNet_, isNestedSegwit)) {
-      writeUintBE(derivationPath, add);
-      pathDer.push_back(add);
+   auto derPath = getDerivationPath(testNet_, purp);
+   derPath.append(bs::hd::Path::fromString(addrIndex));
+   for (auto el : derPath) {
+      writeUintBE(derivationPath, el);
    }
 
-   auto pubKeyAddress = retrievePublicKeyFromPath(getDerivationPath(testNet_, false));
-   const auto path = bs::hd::Path::fromString(addrIndex);
-   for (int i = 0; i < path.length(); ++i) {
-      writeUintBE(derivationPath, path.get(i));
-      pubKeyAddress.derivePublic(path.get(i));
-      pathDer.push_back(path.get(i));
-   }
+   auto pubKeyAddress = retrievePublicKeyFromPath(std::move(derPath));
 
-   auto pubKeyAddress2 = retrievePublicKeyFromPath(std::move(pathDer));
-
-   qDebug() << "Our :    " << QString::fromStdString(pubKeyAddress.getPublicKey().toHexStr());
-   qDebug() << "Device : " << QString::fromStdString(pubKeyAddress2.getPublicKey().toHexStr());
-
-   auto pubKey = pubKeyAddress2.getPublicKey();
-   auto pubkeyHash = BtcUtils::getHash160(pubKey);
-   BtcUtils::getP2WPKHWitnessScript(pubkeyHash);
-
-   qDebug() << "PubKey : " << QString::fromStdString(BtcUtils::getP2WPKHWitnessScript(pubkeyHash).toHexStr());
-
-
+   qDebug() << "Device : " << QString::fromStdString(pubKeyAddress.getPublicKey().toHexStr());
 
    // Do not delete this comment!
    // Flow :
@@ -361,13 +345,9 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
       writeUintLE(inputPayload, utxo.getValue());
 
       auto addr = bs::Address::fromUTXO(utxo);
-      //auto scriptP = utxo.getScript();
-      auto scriptP = BinaryData::CreateFromHex("0014b9fd441cbaa2a69f61ccee49e3ea0f0224113547");
+      auto scriptHash = BtcUtils::getHash160(pubKeyAddress.getPublicKey());
 
-      qDebug() << QString::fromStdString(scriptP.toHexStr());
-      auto spendScript = BtcUtils::getP2WPKHWitnessScript(scriptP.getSliceRef(2, 20));
-      qDebug() << QString::fromStdString(spendScript.toHexStr());
-      script = QByteArray::fromStdString(spendScript.toBinStr());
+      script = QByteArray::fromStdString(BtcUtils::getP2WPKHWitnessScript(scriptHash).toBinStr());
 
       writeVarInt(inputPayload, static_cast<uint32_t>(script.size()));
 
@@ -397,7 +377,7 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
    inputSigPayload.append(static_cast<char>(0x05));
    inputSigPayload.append(derivationPath);
    inputSigPayload.append(static_cast<char>(0x00));
-   writeUintBE(inputSigPayload, static_cast<uint32_t>(1697281));
+   writeUintBE(inputSigPayload, static_cast<uint32_t>(1697323));
    //writeUintBE(inputSigPayload, static_cast<uint32_t>(0));
    inputSigPayload.append(static_cast<char>(0x01));
 
@@ -415,7 +395,7 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
    ///////////// 
    // Composing and send data back
 
-   auto data = pubKeyAddress2.getPublicKey();
+   auto data = pubKeyAddress.getPublicKey();
    Asset_PublicKey pubKeyAsset(data);
    auto compressedKey = pubKeyAsset.getCompressedKey();
 
@@ -456,7 +436,7 @@ void LedgerDevice::processGetPublicKey(AsyncCallBackCall&& cb /*= nullptr*/)
    walletInfo.info_.label_ = deviceKey.deviceLabel_.toStdString();
    walletInfo.info_.deviceId_ = deviceKey.deviceId_.toStdString();
 
-   auto pubKey = retrievePublicKeyFromPath({ 0x80000000 });
+   auto pubKey = retrievePublicKeyFromPath({ { bs::hd::hardFlag } });
    try {
       walletInfo.info_.xpubRoot_ = pubKey.getBase58().toBinStr();
    }
@@ -467,7 +447,7 @@ void LedgerDevice::processGetPublicKey(AsyncCallBackCall&& cb /*= nullptr*/)
       return;
    }
 
-   pubKey = retrievePublicKeyFromPath(getDerivationPath(testNet_, true));
+   pubKey = retrievePublicKeyFromPath(getDerivationPath(testNet_, bs::hd::Nested));
    try {
       walletInfo.info_.xpubNestedSegwit_ = pubKey.getBase58().toBinStr();
    }
@@ -478,7 +458,7 @@ void LedgerDevice::processGetPublicKey(AsyncCallBackCall&& cb /*= nullptr*/)
       return;
    }
 
-   pubKey = retrievePublicKeyFromPath(getDerivationPath(testNet_, false));
+   pubKey = retrievePublicKeyFromPath(getDerivationPath(testNet_, bs::hd::Native));
    try {
       walletInfo.info_.xpubNativeSegwit_ = pubKey.getBase58().toBinStr();
    }
@@ -508,22 +488,23 @@ void LedgerDevice::processGetPublicKey(AsyncCallBackCall&& cb /*= nullptr*/)
    }
 }
 
-BIP32_Node LedgerDevice::retrievePublicKeyFromPath(std::vector<uint32_t>&& derivationPath)
+BIP32_Node LedgerDevice::retrievePublicKeyFromPath(bs::hd::Path&& derivationPath)
 {
    // Parent
    std::unique_ptr<BIP32_Node> parent = nullptr;
-   if (derivationPath.size() > 1) {
-      std::vector<uint32_t> parentPath(derivationPath.begin(), derivationPath.end() - 1);
+   if (derivationPath.length() > 1) {
+      auto parentPath = derivationPath;
+      parentPath.pop();
       parent.reset(new BIP32_Node(getPublicKeyApdu(std::move(parentPath))));
    }
 
    return getPublicKeyApdu(std::move(derivationPath), parent);
 }
 
-BIP32_Node LedgerDevice::getPublicKeyApdu(std::vector<uint32_t>&& derivationPath, const std::unique_ptr<BIP32_Node>& parent)
+BIP32_Node LedgerDevice::getPublicKeyApdu(bs::hd::Path&& derivationPath, const std::unique_ptr<BIP32_Node>& parent)
 {
    QByteArray payload;
-   payload.append(derivationPath.size());
+   payload.append(derivationPath.length());
    for (auto key : derivationPath) {
       writeUintBE(payload, key);
    }
@@ -555,7 +536,7 @@ BIP32_Node LedgerDevice::getPublicKeyApdu(std::vector<uint32_t>&& derivationPath
    }
 
    BIP32_Node pubNode;
-   pubNode.initFromPublicKey(derivationPath.size(), derivationPath.back(),
+   pubNode.initFromPublicKey(derivationPath.length(), derivationPath.get(-1),
       fingerprint, pubKeyAsset.getCompressedKey(), chainCode);
 
    return pubNode;

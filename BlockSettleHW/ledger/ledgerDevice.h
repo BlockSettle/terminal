@@ -12,7 +12,7 @@
 #define LEDGERDEVICE_H
 
 #include "ledger/ledgerStructure.h"
-#include "hwdeviceabstract.h"
+#include "hwdeviceinterface.h"
 #include "ledger/hidapi/hidapi.h"
 
 namespace spdlog {
@@ -29,7 +29,7 @@ namespace bs {
    }
 }
 
-class LedgerDevice : public HwDeviceAbstract
+class LedgerDevice : public HwDeviceInterface
 {
    Q_OBJECT
 
@@ -61,8 +61,8 @@ protected:
 
    // Get public key processing
    void processGetPublicKey(AsyncCallBackCall&& cb = nullptr);
-   BIP32_Node retrievePublicKeyFromPath(std::vector<uint32_t>&& derivationPath);
-   BIP32_Node getPublicKeyApdu(std::vector<uint32_t>&& derivationPath, const std::unique_ptr<BIP32_Node>& parent = nullptr);
+   BIP32_Node retrievePublicKeyFromPath(bs::hd::Path&& derivationPath);
+   BIP32_Node getPublicKeyApdu(bs::hd::Path&& derivationPath, const std::unique_ptr<BIP32_Node>& parent = nullptr);
 
    // Sign transaction processing
    //std::vector<BIP32_Node> pubKeyPerUtxo(bs::core::wallet::TXSignRequest& coreReq);

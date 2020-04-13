@@ -155,10 +155,10 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
       connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving native segwit public key from device "
          + features_.label());
       bitcoin::GetPublicKey message;
-      auto Path = getDerivationPath(testNet_, false);
-      for (size_t i = 0; i < Path.length(); ++i) {
-         message.add_address_n(Path.get(i));
+      for (const uint32_t add : getDerivationPath(testNet_, bs::hd::Purpose::Native)) {
+         message.add_address_n(add);
       }
+
       if (testNet_) {
          message.set_coin_name(tesNetCoin);
       }
@@ -174,10 +174,10 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
       connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving nested segwit public key from device "
          + features_.label());
       bitcoin::GetPublicKey message;
-      auto Path = getDerivationPath(testNet_, true);
-      for (size_t i = 0; i < Path.length(); ++i) {
-         message.add_address_n(Path.get(i));
+      for (const uint32_t add : getDerivationPath(testNet_, bs::hd::Purpose::Nested)) {
+         message.add_address_n(add);
       }
+
       if (testNet_) {
          message.set_coin_name(tesNetCoin);
       }
@@ -190,7 +190,7 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
    connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving root public key from device "
       + features_.label());
    bitcoin::GetPublicKey message;
-   message.add_address_n(0x80000000);
+   message.add_address_n(bs::hd::hardFlag);
    if (testNet_) {
       message.set_coin_name(tesNetCoin);
    }
@@ -420,7 +420,8 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       auto utxo = currentTxSignReq_->inputs[index];
 
       auto address = bs::Address::fromUTXO(utxo);
-      bool isNestedSegwit = (address.getType() == AddressEntryType_P2SH);
+      const bool isNestedSegwit = (address.getType() == AddressEntryType_P2SH);
+      const auto purp = bs::hd::purpose(address.getType());
 
       std::string addrIndex;
       for (const auto &walletId : currentTxSignReq_->walletIds) {
@@ -434,14 +435,10 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
          throw std::logic_error(fmt::format("can't find input address index for '{}'", address.display()));
       }
 
-      auto Path = getDerivationPath(testNet_, isNestedSegwit);
-      for (size_t i = 0; i < Path.length(); ++i) {
-         input->add_address_n(Path.get(i));
-      }
-
-      const auto path = bs::hd::Path::fromString(addrIndex);
-      for (int i = 0; i < path.length(); ++i) {
-         input->add_address_n(path.get(i));
+      auto path = getDerivationPath(testNet_, purp);
+      path.append(bs::hd::Path::fromString(addrIndex));
+      for (const uint32_t add : path) {
+         input->add_address_n(add);
       }
 
       input->set_prev_hash(utxo.getTxHash().copySwapEndian().toBinStr());
@@ -479,18 +476,17 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
          const auto &change = currentTxSignReq_->change;
          output->set_amount(change.value);
 
-         bool isNestedSegwit = (change.address.getType() == AddressEntryType_P2SH);
+         const bool isNestedSegwit = (change.address.getType() == AddressEntryType_P2SH);
+         const auto purp = bs::hd::purpose(change.address.getType());
 
          if (change.index.empty()) {
             throw std::logic_error(fmt::format("can't find change address index for '{}'", change.address.display()));
          }
-         auto Path = getDerivationPath(testNet_, isNestedSegwit);
-         for (size_t i = 0; i < Path.length(); ++i) {
-            output->add_address_n(Path.get(i));
-         }
-         const auto path = bs::hd::Path::fromString(change.index);
-         for (int i = 0; i < path.length(); ++i) {
-            output->add_address_n(path.get(i));
+
+         auto path = getDerivationPath(testNet_, purp);
+         path.append(bs::hd::Path::fromString(change.index));
+         for (const uint32_t add : path) {
+            output->add_address_n(add);
          }
 
          output->set_script_type(isNestedSegwit ? bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOP2SHWITNESS

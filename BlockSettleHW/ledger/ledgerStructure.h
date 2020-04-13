@@ -76,7 +76,7 @@ namespace Ledger {
 
    // Tx
    const uint8_t PREVOUT_SIZE = 36;
-   const std::vector<uint8_t> DEFAULT_VERSION = { 0x02, 0x00, 0x00, 0x00 };
+   const std::vector<uint8_t> DEFAULT_VERSION = { 0x01, 0x00, 0x00, 0x00 };
    const std::vector<uint8_t> DEFAULT_SEQUENCE = { 0xff, 0xff, 0xff, 0xff };
    const uint8_t OUT_CHUNK_SIZE = 255;
 }
