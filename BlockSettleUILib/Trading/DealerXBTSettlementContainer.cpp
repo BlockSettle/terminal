@@ -252,6 +252,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
       if ((errCode != bs::error::ErrorCode::NoError) || signedTX.empty()) {
          SPDLOG_LOGGER_ERROR(logger_, "Failed to sign pay-in: {} ({})", (int)errCode, errMsg);
          if (errCode == bs::error::ErrorCode::TxSpendLimitExceed) {
+            emit cancelTrade(settlementIdHex_);
             failWithErrorText(tr("Auto-signing (and auto-quoting) have been disabled"
                " as your limit has been hit or elapsed"), errCode);
          }
