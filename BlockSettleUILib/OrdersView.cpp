@@ -39,10 +39,6 @@ void OrdersView::initWithModel(OrderListModel *model)
 void OrdersView::drawRow(QPainter *painter, const QStyleOptionViewItem &option,
    const QModelIndex &index) const
 {
-   if (!isCelerConnected) {
-      return;
-   }
-
    QTreeView::drawRow(painter, option, index);
 
    if (!isExpanded(index)) {
@@ -111,19 +107,6 @@ void OrdersView::onExpanded(const QModelIndex &index)
 
       setHasNewItemFlag(index, false);
    }
-}
-
-void OrdersView::onCelerConnected()
-{
-   isCelerConnected = true;
-   reset();
-   expandAll();
-}
-
-void OrdersView::onCelerDisconnected()
-{
-   isCelerConnected = false;
-   reset();
 }
 
 void OrdersView::setHasNewItemFlag(const QModelIndex &index, bool value)

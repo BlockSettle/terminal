@@ -1644,7 +1644,7 @@ void OtcClient::changePeerState(Peer *peer, bs::network::otc::State state)
 
 void OtcClient::resetPeerStateToIdle(Peer *peer)
 {
-   if (!peer->activeSettlementId.isNull()) {
+   if (!peer->activeSettlementId.empty()) {
       signContainer_->CancelSignTx(peer->activeSettlementId);
       peer->activeSettlementId.clear();
    }

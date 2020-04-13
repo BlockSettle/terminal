@@ -73,7 +73,7 @@ void SelectAddressDialog::onSelectionChanged()
       selectedAddr_ = bs::Address();
    }
 
-   ui_->pushButtonSelect->setEnabled(!selectedAddr_.isNull());
+   ui_->pushButtonSelect->setEnabled(!selectedAddr_.empty());
 }
 
 bs::Address SelectAddressDialog::getSelectedAddress() const
@@ -84,7 +84,7 @@ bs::Address SelectAddressDialog::getSelectedAddress() const
 void SelectAddressDialog::onDoubleClicked(const QModelIndex& index)
 {
    selectedAddr_ = getAddress(index);
-   if (!selectedAddr_.isNull()) {
+   if (selectedAddr_.isValid()) {
       accept();
    }
 }

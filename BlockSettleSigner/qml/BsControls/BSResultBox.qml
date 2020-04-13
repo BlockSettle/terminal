@@ -30,6 +30,7 @@ BSMessageBox {
         , "Wallet encryption"
         , "Wallet encryption"
         , "Wallet encryption"
+        , "Wallet"
     ]
 
     property variant textsSuccess: [
@@ -40,6 +41,7 @@ BSMessageBox {
         , "Auth eID encryption successful"
         , "Device successfully added"
         , "Device successfully removed"
+        , "Hardware Wallet successfully imported"
     ]
 
     property variant textsFail: [
@@ -50,6 +52,7 @@ BSMessageBox {
         , "Failed to set Auth eID encryption!"
         , "Failed to add new device!"
         , "Failed to remove device!"
+        , "Failed to import Hardware Wallet!"
     ]
 
     property variant colors: [BSStyle.dialogTitleWhiteColor, BSStyle.dialogTitleGreenColor, BSStyle.dialogTitleOrangeColor, BSStyle.dialogTitleOrangeColor,  BSStyle.dialogTitleRedColor]
@@ -62,7 +65,8 @@ BSMessageBox {
         EncryptionChangeToPassword = 3,
         EncryptionChangeToAuth = 4,
         AddDevice = 5,
-        RemoveDevice = 6
+        RemoveDevice = 6,
+        HwWallet = 7
     }
 
     title: titles[resultType]

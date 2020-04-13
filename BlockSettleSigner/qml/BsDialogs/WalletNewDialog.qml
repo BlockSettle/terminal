@@ -25,7 +25,8 @@ CustomTitleDialogWindow {
 
     enum WalletType {
         NewWallet = 1,
-        ImportWallet = 2
+        ImportWallet = 2,
+        ImportHwWallet = 3
     }
 
     cContentItem: RowLayout {
@@ -61,10 +62,21 @@ CustomTitleDialogWindow {
             CustomButton {
                 id: importButon
                 text: qsTr("Import Wallet")
-                anchors.right: createButon.left
+                anchors.right: importHwButon.left
                 anchors.bottom: parent.bottom
                 onClicked: {
                     type = WalletNewDialog.WalletType.ImportWallet
+                    acceptAnimated()
+                }
+            }
+
+            CustomButton {
+                id: importHwButon
+                text: qsTr("Import Device")
+                anchors.right: createButon.left
+                anchors.bottom: parent.bottom
+                onClicked: {
+                    type = WalletNewDialog.WalletType.ImportHwWallet
                     acceptAnimated()
                 }
             }

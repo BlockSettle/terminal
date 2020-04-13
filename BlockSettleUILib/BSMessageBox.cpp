@@ -19,15 +19,15 @@ QString BSMessageBox::kUrlColor = QLatin1String("#ffffff");
 // Basic constructor, sets message box type, title and text
 BSMessageBox::BSMessageBox(Type mbType, const QString& title
    , const QString& text, QWidget* parent)
-   : BSMessageBox(mbType, title, text, QString(), QString(), parent) {
-}
+   : BSMessageBox(mbType, title, text, QString(), QString(), parent)
+{}
 
 // This constructor sets message box type, title, text and description.
 BSMessageBox::BSMessageBox(Type mbType
    , const QString& title, const QString& text
    , const QString& description, QWidget* parent)
-   : BSMessageBox(mbType, title, text, description, QString(), parent) {
-}
+   : BSMessageBox(mbType, title, text, description, QString(), parent)
+{}
 
 // Constructor parameters:
 // mbType - specifies the message box type: info, success, question, warning, critical
@@ -40,7 +40,8 @@ BSMessageBox::BSMessageBox(Type mbType, const QString& title
    , const QString& text, const QString& description
    , const QString& details, QWidget* parent)
    : QDialog(parent)
-   , ui_(new Ui::BSMessageBox) {
+   , ui_(new Ui::BSMessageBox)
+{
    ui_->setupUi(this);
    setWindowTitle(title);
    ui_->labelTitle->setText(text);
@@ -68,13 +69,18 @@ BSMessageBox::BSMessageBox(Type mbType, const QString& title
 
 BSMessageBox::~BSMessageBox() = default;
 
-void BSMessageBox::showEvent( QShowEvent* )
+void BSMessageBox::showEvent(QShowEvent *)
 {
    if (parentWidget()) {
       QRect parentRect(parentWidget()->mapToGlobal(QPoint(0, 0)), parentWidget()->size());
       QRect windowGeometry = geometry();
       windowGeometry.moveCenter(parentRect.center());
    }
+}
+
+void BSMessageBox::setText(const QString &text)
+{
+   ui_->labelTitle->setText(text);
 }
 
 void BSMessageBox::setOkVisible(bool visible)
@@ -87,7 +93,8 @@ void BSMessageBox::setCancelVisible(bool visible)
    ui_->pushButtonCancel->setVisible(visible);
 }
 
-void BSMessageBox::onDetailsPressed() {
+void BSMessageBox::onDetailsPressed()
+{
    if (detailsVisible()) {
       ui_->pushButtonShowDetails->setText(tr("Show Details"));
       hideDetails();
@@ -97,16 +104,19 @@ void BSMessageBox::onDetailsPressed() {
    }
 }
 
-bool BSMessageBox::detailsVisible() const {
+bool BSMessageBox::detailsVisible() const
+{
    return ui_->verticalWidgetDetails->isVisible();
 }
 
-void BSMessageBox::hideDetails() {
+void BSMessageBox::hideDetails()
+{
    ui_->verticalWidgetDetails->hide();
    adjustSize();
 }
 
-void BSMessageBox::showDetails() {
+void BSMessageBox::showDetails()
+{
    ui_->verticalWidgetDetails->show();
    adjustSize();
 }
@@ -115,7 +125,8 @@ void BSMessageBox::setLabelTextFormat(Qt::TextFormat tf) {
    ui_->labelText->setTextFormat(tf);
 }
 
-void BSMessageBox::setType(Type type) {
+void BSMessageBox::setType(Type type)
+{
    ui_->labelTitle->setProperty("h1", true);
    ui_->labelText->setProperty("h6", true);
    ui_->pushButtonCancel->hide();
@@ -141,41 +152,41 @@ void BSMessageBox::setType(Type type) {
       ui_->labelTitle->setProperty("statusImportantLabel", true);
       ui_->labelIcon->setPixmap(QPixmap(QString::fromUtf8("://resources/notification_critical.png")));
       break;
-   default:
-      break;
    }
 }
 
-void BSMessageBox::setConfirmButtonText(const QString &text) {
+void BSMessageBox::setConfirmButtonText(const QString &text)
+{
    ui_->pushButtonOk->setText(text);
 }
 
-void BSMessageBox::setCancelButtonText(const QString &text) {
+void BSMessageBox::setCancelButtonText(const QString &text)
+{
    ui_->pushButtonCancel->setText(text);
 }
 
 MessageBoxCCWalletQuestion::MessageBoxCCWalletQuestion(const QString &ccProduct, QWidget *parent)
    : BSMessageBox(BSMessageBox::question, tr("Private Market Wallet"), tr("Create %1 Wallet").arg(ccProduct)
       , tr("Your wallet does not have a branch in which to hold %1 tokens, would you like to create it?")
-      .arg(ccProduct), parent) {
-}
+      .arg(ccProduct), parent)
+{}
 
-MessageBoxBroadcastError::MessageBoxBroadcastError(const QString &details, QWidget *parent)
+MessageBoxBroadcastError::MessageBoxBroadcastError(const QString &details
+   , bs::error::ErrorCode errCode, QWidget *parent)
    : BSMessageBox(BSMessageBox::critical, tr("Failed to sign"),
       tr("Transaction signing failure"), details
-      , parent) {
+      , parent)
+{
+   switch (errCode) {
+   case bs::error::ErrorCode::TxSpendLimitExceed:
+      setText(tr("Signing limit"));
+      break;
+   default: break;
+   }
 }
 
 MessageBoxExpTimeout::MessageBoxExpTimeout(QWidget *parent)
    : BSMessageBox(BSMessageBox::warning, tr("Explorer Timeout"),
       tr("Explorer Timeout"), tr("Armory has timed out. Cannot resolve query.")
-      , parent) {
-}
-
-MessageBoxWalletCreateAbort::MessageBoxWalletCreateAbort(QWidget *parent)
-   : BSMessageBox(BSMessageBox::question, tr("Warning"), tr("Abort Wallet Creation?")
-      , tr("The Wallet will not be created if you don't complete the procedure.\n\n"
-         "Are you sure you want to abort the Wallet Creation process?"), parent) {
-   setConfirmButtonText(QObject::tr("Abort"));
-   setCancelButtonText(QObject::tr("Back"));
-}
+      , parent)
+{}

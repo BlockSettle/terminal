@@ -99,6 +99,13 @@ public:
    void getAddressPreimage(const std::map<std::string, std::vector<bs::Address>> &
       , const std::function<void(const std::map<bs::Address, BinaryData> &)> &) override {}
    void getChatNode(const std::string &walletID, const std::function<void(const BIP32_Node &)> &) override {}
+   void setSettlAuthAddr(const std::string &walletId, const BinaryData &, const bs::Address &addr) override {}
+   void getSettlAuthAddr(const std::string &walletId, const BinaryData &
+      , const std::function<void(const bs::Address &)> &) override {}
+   void setSettlCP(const std::string &walletId, const BinaryData &payinHash, const BinaryData &settlId
+      , const BinaryData &cpPubKey) override {}
+   void getSettlCP(const std::string &walletId, const BinaryData &payinHash
+      , const std::function<void(const BinaryData &, const BinaryData &)> &) override {}
 
    bool isWalletOffline(const std::string &id) const override { return (woWallets_.find(id) != woWallets_.end()); }
 

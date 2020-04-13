@@ -130,52 +130,6 @@ double actualXbtPrice(bs::XBTAmount amount, double price)
 
 }
 
-int UiUtils::fillWalletsComboBox(QComboBox* comboBox
-   , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager, WoWallets woWallets)
-{
-   auto addHdWallet = [comboBox, woWallets](const std::shared_ptr<bs::sync::hd::Wallet> &hdWallet) {
-      if (woWallets == WoWallets::Disable && hdWallet->isOffline()) {
-         return;
-      }
-
-      for (const auto &group : hdWallet->getGroups()) {
-         if (group->type() != bs::core::wallet::Type::Bitcoin) {
-            continue;
-         }
-
-         const auto prefix = QString::fromStdString(hdWallet->name())
-            + QLatin1String("/") + QString::fromStdString(group->name()) + QLatin1String("/");
-
-         for (const auto &leaf : group->getLeaves()) {
-            const int index = comboBox->count();
-            comboBox->addItem(prefix + QString::fromStdString(leaf->shortName()));
-            comboBox->setItemData(index, QString::fromStdString(leaf->walletId()), UiUtils::WalletIdRole);
-            comboBox->setItemData(index, leaf->getSpendableBalance(), UiUtils::WalletBalanceRole);
-         }
-      }
-   };
-
-   auto b = comboBox->blockSignals(true);
-   comboBox->clear();
-   auto primaryWallet = walletsManager->getPrimaryWallet();
-   if (primaryWallet) {
-      // Let's add primary HD wallet first if exists
-      addHdWallet(primaryWallet);
-   }
-   for (const auto &hdWallet: walletsManager->hdWallets()) {
-      if (hdWallet != primaryWallet) {
-         addHdWallet(hdWallet);
-      }
-   }
-   comboBox->blockSignals(b);
-
-   if (comboBox->count() == 0) {
-      return -1;
-   }
-   comboBox->setCurrentIndex(0);
-   return 0;
-}
-
 int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId)
 {
    int walletIndex = -1;
@@ -197,7 +151,7 @@ int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& wall
 }
 
 int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , WoWallets woWallets)
+   , int walletTypes)
 {
    if ((walletsManager == nullptr) || walletsManager->hdWallets().empty()) {
       return -1;
@@ -211,7 +165,18 @@ int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs
       if (hdWallet == priWallet) {
          selected = i;
       }
-      if (woWallets == WoWallets::Enable || !hdWallet->isOffline()) {
+
+      bool addWallet = false;
+      // HW wallets marked as offline too, make sure to check that first
+      if (hdWallet->isHardwareWallet()) {
+         addWallet = walletTypes & WalletsTypes::Hardware;
+      } else if (hdWallet->isOffline()) {
+         addWallet = walletTypes & WalletsTypes::WatchOnly;
+      } else {
+         addWallet = walletTypes & WalletsTypes::Full;
+      }
+
+      if (addWallet) {
          comboBox->addItem(QString::fromStdString(hdWallet->name()));
          comboBox->setItemData(i, QString::fromStdString(hdWallet->walletId()), UiUtils::WalletIdRole);
          i++;

@@ -85,7 +85,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    infoReqId_ = signingContainer_->GetInfo(walletInfo_.rootId().toStdString());
 
    dealerTx_ = BinaryData::CreateFromHex(quote_.dealerTransaction);
-   if (dealerTx_.isNull()) {
+   if (dealerTx_.empty()) {
       throw std::invalid_argument("missing dealer's transaction");
    }
 }
@@ -169,7 +169,7 @@ void ReqCCSettlementContainer::activate()
 
    emit paymentVerified(foundRecipAddr && amountValid, QString{});
 
-   if (genAddress_.isNull()) {
+   if (genAddress_.empty()) {
       emit genAddressVerified(false, tr("GA is null"));
    }
    else if (side() == bs::network::Side::Buy) {
@@ -298,6 +298,8 @@ bool ReqCCSettlementContainer::startSigning(QDateTime timestamp)
          return;
       }
 
+      ccSignId_ = 0;
+
       if (result == bs::error::ErrorCode::NoError) {
          ccTxSigned_ = signedTX.toHexStr();
 
@@ -312,8 +314,9 @@ bool ReqCCSettlementContainer::startSigning(QDateTime timestamp)
          ccWallet_->setTransactionComment(signedTX, txComment());
 #endif
       }
-      else if (result == bs::error::ErrorCode::TxCanceled) {
-         emit settlementCancelled();
+      else if (result == bs::error::ErrorCode::TxCancelled) {
+         SettlementContainer::releaseUtxoRes();
+         emit cancelTrade(clOrdId_);
       }
       else {
          logger->error("[CCSettlementTransactionWidget::onTXSigned] CC TX sign failure: {}", bs::error::ErrorCodeToString(result).toStdString());
@@ -363,10 +366,12 @@ void ReqCCSettlementContainer::onGenAddressVerified(bool addressVerified, const 
 bool ReqCCSettlementContainer::cancel()
 {
    deactivate();
-   emit settlementCancelled();
-   signingContainer_->CancelSignTx(BinaryData::fromString(id()));
+   if (ccSignId_ != 0) {
+      signingContainer_->CancelSignTx(BinaryData::fromString(id()));
+   }
 
    SettlementContainer::releaseUtxoRes();
+   emit settlementCancelled();
 
    return true;
 }
@@ -376,4 +381,9 @@ std::string ReqCCSettlementContainer::txData() const
    const auto &data = ccTxData_.serializeState().toHexStr();
    logger_->debug("[ReqCCSettlementContainer::txData] {}", data);
    return data;
+}
+
+void ReqCCSettlementContainer::setClOrdId(const std::string& clientOrderId)
+{
+   clOrdId_ = clientOrderId;
 }

@@ -61,7 +61,7 @@ public:
    std::string walletFolder_;
 };
 
-TEST_F(TestWallet, BIP44_derivation)
+TEST_F(TestWallet, BIP84_derivation)
 {
    const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("test seed"), NetworkType::TestNet };
    const auto passphrase = SecureBinaryData::fromString("passphrase");
@@ -88,24 +88,42 @@ TEST_F(TestWallet, BIP44_derivation)
    BIP32_Node node;
    node.initFromSeed(seed.seed());
    std::vector<unsigned> derPath = {
-      0x8000002c, //44' 
+      0x80000054, //84'
       0x80000001, //1'
       0x80000000, //0'
       0, 8
    };
 
-   for (auto& derInt : derPath)
+   for (const auto &derInt : derPath) {
       node.derivePrivate(derInt);
-
+   }
    auto pathstr = leafXbt->name();
    auto addrObj = leafXbt->getAddressByIndex(8, true);
-   auto pubkeyHash = BtcUtils::getHash160(node.getPublicKey());
+   const auto pubKey = node.getPublicKey();
+   auto pubkeyHash = BtcUtils::getHash160(pubKey);
    EXPECT_EQ(addrObj.unprefixed(), pubkeyHash);
+
+   node.initFromSeed(seed.seed());
+   derPath = {
+      0x80000054, //84'
+      0x80000001, //1'
+      0x80000000  //0'
+   };
+   for (const auto &derInt : derPath) {
+      node.derivePrivate(derInt);
+   }
+
+   BIP32_Node pubNode;
+   pubNode.initFromPublicKey(derPath.size(), derPath.back(), node.getFingerPrint()
+      , node.getPublicKey(), node.getChaincode());
+   pubNode.derivePublic(0);
+   pubNode.derivePublic(8);
+   EXPECT_EQ(pubKey.toHexStr(), pubNode.getPublicKey().toHexStr());
 
    ASSERT_TRUE(wallet->eraseFile());
 }
 
-TEST_F(TestWallet, BIP44_primary)
+TEST_F(TestWallet, BIP84_primary)
 {
    auto passphrase = SecureBinaryData::fromString("passphrase");
    auto wrongPass = SecureBinaryData::fromString("wrongPass");
@@ -134,8 +152,8 @@ TEST_F(TestWallet, BIP44_primary)
    const auto leafXbt = grpXbt->getLeafByPath(xbtPath);
    EXPECT_NE(leafXbt, nullptr);
    EXPECT_EQ(leafXbt->shortName(), "0'");
-   EXPECT_EQ(leafXbt->name(), "44'/1'/0'");
-   EXPECT_EQ(leafXbt->getRootId().toHexStr(), "64134dca");
+   EXPECT_EQ(leafXbt->name(), "84'/1'/0'");
+   EXPECT_EQ(leafXbt->getRootId().toHexStr(), "efddafc2");
 
    EXPECT_THROW(grpXbt->createLeaf(AddressEntryType_Default, 0), std::exception);
 
@@ -151,14 +169,14 @@ TEST_F(TestWallet, BIP44_primary)
       ASSERT_NE(leaf1, nullptr);
       EXPECT_EQ(grpXbt->getNumLeaves(), 3);
       EXPECT_EQ(leaf1->shortName(), "1'");
-      EXPECT_EQ(leaf1->name(), "44'/1'/1'");
+      EXPECT_EQ(leaf1->name(), "84'/1'/1'");
       //EXPECT_EQ(leaf1->description(), "test");
       EXPECT_TRUE(envPtr_->walletsMgr()->deleteWalletFile(leaf1));
       EXPECT_EQ(grpXbt->getNumLeaves(), 2);
 
       const auto grpCC = wallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
       const auto leafCC = grpCC->createLeaf(AddressEntryType_P2WPKH, 7568, 10);
-      EXPECT_EQ(leafCC->name(), "44'/16979'/7568'"); //16979 == 0x4253
+      EXPECT_EQ(leafCC->name(), "84'/16979'/7568'"); //16979 == 0x4253
    }
 
    auto inprocSigner = std::make_shared<InprocSigner>(
@@ -172,16 +190,11 @@ TEST_F(TestWallet, BIP44_primary)
    auto syncXbtLeaf = syncMgr->getWalletById(leafXbt->walletId());
    EXPECT_EQ(syncXbtLeaf->name(), "primary/XBT [TESTNET]/0'");
 
-   QComboBox cbox;
-   UiUtils::fillWalletsComboBox(&cbox, syncMgr, UiUtils::WoWallets::Disable);
-   EXPECT_EQ(cbox.count(), 2);
-//   EXPECT_EQ(cbox.currentText().toStdString(), syncXbtLeaf->name());
-
    EXPECT_TRUE(envPtr_->walletsMgr()->deleteWalletFile(wallet));
    EXPECT_EQ(envPtr_->walletsMgr()->getPrimaryWallet(), nullptr);
 }
 
-TEST_F(TestWallet, BIP44_address)
+TEST_F(TestWallet, BIP84_address)
 {
    const auto passphrase = SecureBinaryData::fromString("passphrase");
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
@@ -199,17 +212,17 @@ TEST_F(TestWallet, BIP44_address)
    EXPECT_EQ(leaf->getUsedAddressCount(), 0);
 
    const auto addr = leaf->getNewExtAddress();
-   EXPECT_EQ(addr.display(), "tb1qyss0ws75vn3fdqpvgeht6jwj3vas6s46dpv46g");
+   EXPECT_EQ(addr.display(), "tb1qgg97gkcelz6skrykaq3l4jszdd959atdnhtfj8");
    EXPECT_EQ(leaf->getUsedAddressCount(), 1);
 
    const auto chgAddr = leaf->getNewChangeAddress();
-   EXPECT_EQ(chgAddr.display(), "tb1q7p4fdj9prly96qg3aq97v627q6cstwlze2jh3g");
+   EXPECT_EQ(chgAddr.display(), "tb1qrky2j35vncfg4q4gfexqn8824xgyd0njfcgg2y");
    EXPECT_EQ(leaf->getUsedAddressCount(), 2);
 
    EXPECT_TRUE(wallet->eraseFile());
 }
 
-TEST_F(TestWallet, BIP44_WatchingOnly)
+TEST_F(TestWallet, BIP84_WatchingOnly)
 {
    const auto passphrase = SecureBinaryData::fromString("passphrase");
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
@@ -363,7 +376,7 @@ TEST_F(TestWallet, CreateDestroyLoad)
 
       //reproduce the keys as bip32 nodes
       std::vector<unsigned> derPathNative = {
-         0x8000002c, //44'
+         0x80000054, //84'
          0x80000001, //1'
          0x80000000  //0'
       };
@@ -556,7 +569,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
    base_node.initFromSeed(SecureBinaryData::fromString("test seed"));
 
    std::vector<unsigned> derPath = {
-      0x8000002c, //44' 
+      0x80000054, //84' 
       0x80000001, //1'
       0x80000000  //0'
    };
@@ -865,7 +878,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
 
       //reproduce the keys as bip32 nodes
       std::vector<unsigned> derPath = {
-         0x8000002c, //44' 
+         0x80000054, //84' 
          0xc1757468, //Auth' in hexits
          0x800000b1 
       };
@@ -1292,7 +1305,7 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
    base_node.initFromSeed(SecureBinaryData::fromString("test seed"));
 
    std::vector<unsigned> derPath = {
-      0x8000002c, //44' 
+      0x80000054, //84' 
       0x80000001, //1'
       0x80000000  //0'
    };
@@ -1719,7 +1732,7 @@ TEST_F(TestWallet, MultipleKeys)
    {
       bs::core::WalletPasswordScoped lock(wallet, pd1.password);
       privKey = wallet->getDecryptedRootXpriv();
-      ASSERT_FALSE(privKey.isNull());
+      ASSERT_FALSE(privKey.empty());
       wallet->addPassword(pd2);
    }
    {
@@ -1771,7 +1784,7 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    ASSERT_NE(coreLeaf, nullptr);
 
    const auto address = coreLeaf->getNewExtAddress();
-   ASSERT_FALSE(address.isNull());
+   ASSERT_FALSE(address.empty());
 
    envPtr_->requireArmory();
    ASSERT_NE(envPtr_->armoryConnection(), nullptr);

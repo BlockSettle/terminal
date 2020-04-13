@@ -29,13 +29,17 @@ public:
    NewWalletDialog(bool noWalletsFound, const std::shared_ptr<ApplicationSettings>& appSettings, QWidget *parent = nullptr);
    ~NewWalletDialog() override;
 
-   bool isCreate() const { return isCreate_; }
-   bool isImport() const { return isImport_; }
+   enum Result
+   {
+      Cancel = QDialog::Rejected,
+      CreateNew = QDialog::Accepted,
+      ImportExisting,
+      ImportHw,
+   };
 
 private:
    std::unique_ptr<Ui::NewWalletDialog> ui_;
-   bool  isCreate_ = false;
-   bool  isImport_ = false;
+
 };
 
 #endif // __NEW_WALLET_DIALOG_H__

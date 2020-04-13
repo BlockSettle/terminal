@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
    NetworkConfig::selectNetwork(testnet ? NETWORK_MODE_TESTNET : NETWORK_MODE_MAINNET);
 
    auto ownKey = ZmqBIP15XServerConnection::getOwnPubKey(ownKeyPath, ownKeyName);
-   if (ownKey.isNull()) {
+   if (ownKey.empty()) {
       SPDLOG_LOGGER_CRITICAL(logger, "can't read own key");
       exit(EXIT_FAILURE);
    }

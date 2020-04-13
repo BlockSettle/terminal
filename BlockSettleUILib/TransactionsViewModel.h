@@ -61,7 +61,7 @@ struct TransactionsViewItem
    BinaryData  parentId;   // universal grouping support
    BinaryData  groupId;
 
-   bool isSet() const { return (!txEntry.txHash.isNull() && !walletID.isEmpty()); }
+   bool isSet() const { return (!txEntry.txHash.empty() && !walletID.isEmpty()); }
    static void initialize(const TransactionPtr &item, ArmoryConnection *
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , std::function<void(const TransactionPtr &)>);
@@ -70,6 +70,7 @@ struct TransactionsViewItem
 
    bool isRBFeligible() const;
    bool isCPFPeligible() const;
+   bool isPayin() const;
 
    bs::Address filterAddress;
 

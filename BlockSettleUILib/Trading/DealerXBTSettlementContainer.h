@@ -38,7 +38,7 @@ namespace bs {
 class ArmoryConnection;
 class AuthAddressManager;
 class QuoteProvider;
-class SignContainer;
+class WalletSignerContainer;
 
 
 class DealerXBTSettlementContainer : public bs::SettlementContainer
@@ -50,7 +50,7 @@ public:
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
       , const std::shared_ptr<QuoteProvider> &
-      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<WalletSignerContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<AuthAddressManager> &authAddrMgr
       , const bs::Address &authAddr
@@ -85,6 +85,8 @@ signals:
    void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
    void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 
+   void cancelTrade(const std::string& settlementId);
+
 private slots:
    void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode, std::string errMsg);
 
@@ -106,9 +108,9 @@ private:
    std::shared_ptr<bs::sync::WalletsManager>    walletsMgr_;
    std::shared_ptr<bs::sync::hd::Wallet>        xbtWallet_;
    std::shared_ptr<AddressVerificator>          addrVerificator_;
-   std::shared_ptr<SignContainer>               signContainer_;
+   std::shared_ptr<WalletSignerContainer>       signContainer_;
    std::shared_ptr<AuthAddressManager>          authAddrMgr_;
-   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
+   std::shared_ptr<bs::UTXOReservationManager>  utxoReservationManager_;
 
    AddressVerificationState                     requestorAddressState_ = AddressVerificationState::VerificationFailed;
    bs::Address settlAddr_;

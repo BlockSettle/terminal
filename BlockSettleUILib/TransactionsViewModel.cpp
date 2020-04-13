@@ -560,7 +560,7 @@ static bool isChildOf(TransactionPtr child, TransactionPtr parent)
    if (!child->initialized || !parent->initialized) {
       return false;
    }
-   if (!parent->parentId.isNull() && !child->groupId.isNull()) {
+   if (!parent->parentId.empty() && !child->groupId.empty()) {
       if (child->groupId == parent->parentId) {
          return true;
       }
@@ -1059,7 +1059,7 @@ void TransactionsViewItem::initialize(const TransactionPtr &item, ArmoryConnecti
                break;
             default: break;
             }
-            if (!item->parentId.isNull()) {
+            if (!item->parentId.empty()) {
                break;
             }
          }
@@ -1076,7 +1076,7 @@ void TransactionsViewItem::initialize(const TransactionPtr &item, ArmoryConnecti
                break;
             default: break;
             }
-            if (!item->groupId.isNull()) {
+            if (!item->groupId.empty()) {
                break;
             }
          }
@@ -1276,4 +1276,15 @@ bool TransactionsViewItem::isCPFPeligible() const
    return ((confirmations == 0) && (!wallets.empty() && wallets[0]->type() != bs::core::wallet::Type::Settlement)
       && (direction == bs::sync::Transaction::Direction::Internal
          || direction == bs::sync::Transaction::Direction::Received));
+}
+
+bool TransactionsViewItem::isPayin() const
+{
+   bool hasSettlOut = false;
+   for (int i = 0; i < tx.getNumTxOut(); ++i) {
+      const auto &txOut = tx.getTxOutCopy(i);
+      const auto &addr = bs::Address::fromTxOut(txOut);
+      hasSettlOut |= addr.getType() == AddressEntryType_P2WSH;
+   }
+   return hasSettlOut && (direction == bs::sync::Transaction::Direction::Sent);
 }

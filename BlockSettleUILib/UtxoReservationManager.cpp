@@ -150,7 +150,9 @@ void bs::UTXOReservationManager::getBestXbtUtxoSet(const HDWalletId& walletId,
 BTCNumericTypes::balance_type bs::UTXOReservationManager::getAvailableCCUtxoSum(const CCProductName& CCProduct) const
 {
    const auto& ccWallet = walletsManager_->getCCWallet(CCProduct);
-   assert(ccWallet);
+   if (!ccWallet) {
+      return {};
+   }
    
    BTCNumericTypes::satoshi_type sum = 0;
    auto const availableUtxos = getAvailableCCUTXOs(ccWallet->walletId());

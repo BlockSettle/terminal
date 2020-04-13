@@ -19,10 +19,12 @@ import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.QSeed 1.0
 import com.blocksettle.QPasswordData 1.0
+import com.blocksettle.HwDeviceManager 1.0
 
 import "../StyledControls"
 import "../BsControls"
 import "../BsStyles"
+import "../BsHw"
 import "../js/helper.js" as JsHelper
 
 BSWalletHandlerDialog {
@@ -32,12 +34,20 @@ BSWalletHandlerDialog {
     property QPasswordData passwordData: QPasswordData {}
     property AuthSignWalletObject authSign: AuthSignWalletObject {}
 
-    property bool acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
+    property bool acceptable: if (walletInfo.encType === QPasswordData.Password)
+                                  tfPassword.text.length
+                              else if (walletInfo.encType === QPasswordData.Hardware)
+                                  passwordData.encType === QPasswordData.Hardware
+                              else
+                                  true
+
     property int addressRowHeight: 24
     property int recipientsAddrHeight: txInfo.allRecipients.length < 4 ? txInfo.allRecipients.length * addressRowHeight : addressRowHeight * 3
 
     readonly property int duration: authSign.defaultExpiration()
     property real timeLeft: duration
+
+    property string hwDeviceStatus: "Searching device"
 
     id: root
     title: qsTr("Sign Transaction")
@@ -45,32 +55,50 @@ BSWalletHandlerDialog {
     width: 500
 
     function init() {
-        if (walletInfo.encType !== QPasswordData.Auth) {
-            return
+        if (walletInfo.encType === QPasswordData.Auth) {
+            btnConfirm.visible = false
+            btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
+
+            let authEidMessage = JsHelper.getAuthEidTransactionInfo(txInfo);
+            authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo,
+                                                          authEidMessage, timeLeft)
+
+            authSign.succeeded.connect(function(encKey, password) {
+                passwordData.encType = QPasswordData.Auth
+                passwordData.encKey = encKey
+                passwordData.binaryPassword = password
+                acceptAnimated()
+            });
+            authSign.failed.connect(function(errorText) {
+                showWalletError(errorText);
+            })
+            authSign.userCancelled.connect(function() {
+                rejectWithNoError();
+            })
+            authSign.canceledByTimeout.connect(function() {
+                rejectWithNoError();
+            })
         }
+        else if (walletInfo.encType === QPasswordData.Hardware) {
+            hwDeviceManager.prepareHwDeviceForSign(walletInfo.walletId)
+        }
+    }
 
-        btnConfirm.visible = false
-        btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
+    onAboutToHide: {
+        hwDeviceManager.releaseDevices();
+    }
 
-        let authEidMessage = JsHelper.getAuthEidTransactionInfo(txInfo);
-        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo,
-                                                      authEidMessage, timeLeft)
-
-        authSign.succeeded.connect(function(encKey, password) {
-            passwordData.encType = QPasswordData.Auth
-            passwordData.encKey = encKey
-            passwordData.binaryPassword = password
-            acceptAnimated()
-        });
-        authSign.failed.connect(function(errorText) {
-            showWalletError(errorText);
-        })
-        authSign.userCancelled.connect(function() {
-            rejectWithNoError();
-        })
-        authSign.canceledByTimeout.connect(function() {
-            rejectWithNoError();
-        })
+    Connections {
+        target: hwDeviceManager
+        onRequestPinMatrix: JsHelper.showPinMatrix(0);
+        onDeviceReady: hwDeviceManager.signTX(passwordDialogData.TxRequest);
+        onDeviceNotFound: hwDeviceStatus = qsTr("Cannot find device paired with this wallet, device label is :\n") + walletInfo.name;
+        onDeviceTxStatusChanged: hwDeviceStatus = status;
+        onTxSigned: {
+            passwordData.binaryPassword = signData
+            passwordData.encType = QPasswordData.Hardware
+            acceptAnimated();
+        }
     }
 
     Connections {
@@ -271,17 +299,34 @@ BSWalletHandlerDialog {
             Layout.fillWidth: true
             Layout.leftMargin: 10
             Layout.rightMargin: 10
+            visible: walletInfo.encType === QPasswordData.Auth
 
             CustomLabel {
-                visible: walletInfo.encType === QPasswordData.Auth
                 Layout.fillWidth: true
                 text: qsTr("Auth eID")
             }
 
             CustomLabel {
-                visible: walletInfo.encType === QPasswordData.Auth
                 Layout.alignment: Qt.AlignRight
                 text: walletInfo.email()
+            }
+        }
+
+        RowLayout {
+            spacing: 25
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+            visible: walletInfo.encType === QPasswordData.Hardware
+
+            CustomLabel {
+                Layout.fillWidth: true
+                text: qsTr("Hardware Security Module")
+            }
+
+            CustomLabel {
+                Layout.alignment: Qt.AlignRight
+                text: hwDeviceStatus
             }
         }
 
@@ -331,7 +376,7 @@ BSWalletHandlerDialog {
             CustomButton {
                 id: btnCancel
                 text: qsTr("Cancel")
-                anchors.left: parent.left
+                anchors.left: walletInfo.encType !== QPasswordData.Hardware ? parent.right : parent.left
                 anchors.bottom: parent.bottom
                 onClicked: {
                     rejectAnimated()
@@ -341,14 +386,15 @@ BSWalletHandlerDialog {
             CustomButton {
                 id: btnConfirm
                 primary: true
-                text: walletInfo.encType === QPasswordData.Password ? qsTr("CONFIRM") : qsTr("Continue")
+                visible: walletInfo.encType !== QPasswordData.Hardware
+                text: walletInfo.encType !== QPasswordData.Auth ? qsTr("CONFIRM") : qsTr("Continue")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                enabled: tfPassword.text.length || acceptable
+                enabled: acceptable
                 onClicked: {
                     passwordData.textPassword = tfPassword.text
                     passwordData.encType = QPasswordData.Password
-                    acceptAnimated()
+                    acceptAnimated();
                 }
             }
         }

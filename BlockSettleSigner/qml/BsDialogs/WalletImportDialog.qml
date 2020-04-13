@@ -22,7 +22,10 @@ import com.blocksettle.QPasswordData 1.0
 
 import "../BsControls"
 import "../StyledControls"
+import "../BsStyles"
+import "../BsHw"
 import "../js/helper.js" as JsHelper
+
 
 CustomTitleDialogWindow {
     id: root
@@ -39,8 +42,11 @@ CustomTitleDialogWindow {
     property var passwordData: QPasswordData{}
     property bool isWO: (tabBar.currentIndex === 1)
 
-    property bool acceptable: isWO ? digitalWoBackupAcceptable : ((curPage === 1 && walletSelected) ||
-                              (curPage === 2 && importAcceptable))
+    property bool acceptable: if (isWO)
+                                  digitalWoBackupAcceptable
+                              else
+                                  ((curPage === 1 && walletSelected) ||
+                                   (curPage === 2 && importAcceptable))
 
     property bool digitalBackupAcceptable: false
     property bool digitalWoBackupAcceptable: false
@@ -53,7 +59,9 @@ CustomTitleDialogWindow {
     property bool authNoticeShown: false
 
     title: qsTr("Import Wallet")
+    // Use same size as BSEidNoticeBox if possible (to prevent size jumps)
     width: 410
+    height: 550
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletImport
 
@@ -66,6 +74,9 @@ CustomTitleDialogWindow {
             tfName.text = walletsProxy.generateNextWalletName();
         }
     }
+
+    onAboutToShow: hwDeviceList.init()
+    onAboutToHide: hwDeviceList.release();
 
     onEnterPressed: {
         if (btnAccept.enabled) btnAccept.onClicked()
@@ -132,6 +143,7 @@ CustomTitleDialogWindow {
                 ColumnLayout {
                     id: selectLayout
                     visible: curPage === WalletImportDialog.Page.Select
+                    Layout.fillWidth: true
 
                     CustomHeader {
                         id: headerText
@@ -156,7 +168,6 @@ CustomTitleDialogWindow {
                                 id: rbPaperBackup
                                 Layout.leftMargin: rootKeyInput.inputLabelsWidth
                                 text: qsTr("Paper Backup")
-                                checked: true
                             }
                             CustomRadioButton {
                                 id: rbFileBackup
@@ -207,7 +218,7 @@ CustomTitleDialogWindow {
                         Layout.leftMargin: 10
                         Layout.rightMargin: 10
                         Layout.bottomMargin: 10
-                        visible: !rbPaperBackup.checked
+                        visible: rbFileBackup.checked
 
                         CustomLabel {
                             Layout.fillWidth: true
@@ -570,20 +581,8 @@ CustomTitleDialogWindow {
 
                 onClicked: {
                     if (isWO) {
-                        var importCallback = function(success, msg) {
-                            if (success) {
-                                var walletInfo = qmlFactory.createWalletInfo(msg)
-                                var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImportWo, true, walletInfo)
-                                mb.bsAccepted.connect(acceptAnimated)
-                            }
-                            else {
-                                JsHelper.messageBox(BSMessageBox.Type.Critical
-                                    , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
-                            }
-                        }
-
-                        walletsProxy.importWoWallet(lblWoDBFile.text, importCallback)
-                        return
+                        importWoWallet();
+                        return;
                     }
 
                     if (curPage === 1) {
@@ -647,5 +646,29 @@ CustomTitleDialogWindow {
     function applyDialogClosing() {
         JsHelper.openAbortBox(root, abortBoxType);
         return false;
+    }
+
+    function importWoWallet() {
+        var importCallback = function(success, id, name, desc) {
+            if (success) {
+                let walletInfo = qmlFactory.createWalletInfo();
+                walletInfo.walletId = id;
+                walletInfo.name = name;
+                walletInfo.desc = desc;
+
+                let type = BSResultBox.ResultType.WalletImportWo;
+
+                var mb = JsHelper.resultBox(type, true, walletInfo)
+                mb.bsAccepted.connect(acceptAnimated)
+            }
+            else {
+                JsHelper.messageBox(BSMessageBox.Type.Critical
+                    , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
+            }
+        }
+
+        if (isWO) {
+            walletsProxy.importWoWallet(lblWoDBFile.text, importCallback)
+        }
     }
 }

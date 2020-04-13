@@ -52,7 +52,7 @@ class DialogManager;
 class MDCallbacksQt;
 class OrderListModel;
 class QuoteProvider;
-class SignContainer;
+class WalletSignerContainer;
 
 namespace Blocksettle {
    namespace Communication {
@@ -84,7 +84,7 @@ public:
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<DialogManager> &
-      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<WalletSignerContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<ConnectionManager> &
       , const std::shared_ptr<AutoSignQuoteProvider> &
@@ -103,6 +103,9 @@ signals:
    void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
    void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 
+   void cancelXBTTrade(const std::string& settlementId);
+   void cancelCCTrade(const std::string& clientOrderId);
+
    void unsignedPayinRequested(const std::string& settlementId);
    void signedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp);
    void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp);
@@ -117,7 +120,6 @@ private slots:
    void onQuoteCancelled(const QString &reqId, bool userCancelled);
    void onQuoteRejected(const QString &reqId, const QString &reason);
    void onQuoteNotifCancelled(const QString &reqId);
-
 
    void saveTxData(QString orderId, std::string txData);
    void onSignTxRequested(QString orderId, QString reqId, QDateTime timestamp);
@@ -170,7 +172,7 @@ private:
    std::shared_ptr<AssetManager>          assetManager_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<DialogManager>         dialogManager_;
-   std::shared_ptr<SignContainer>         signingContainer_;
+   std::shared_ptr<WalletSignerContainer> signingContainer_;
    std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>     connectionManager_;

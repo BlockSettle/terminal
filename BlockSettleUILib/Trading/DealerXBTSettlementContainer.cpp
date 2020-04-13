@@ -14,12 +14,12 @@
 #include "CheckRecipSigner.h"
 #include "CurrencyPair.h"
 #include "QuoteProvider.h"
-#include "SignContainer.h"
 #include "TradesUtils.h"
 #include "UiUtils.h"
+#include "UtxoReservationManager.h"
+#include "WalletSignerContainer.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "UtxoReservationManager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -34,7 +34,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::shared_ptr<QuoteProvider> &quoteProvider
-   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<WalletSignerContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<AuthAddressManager> &authAddrMgr
    , const bs::Address &authAddr
@@ -78,7 +78,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       , order.security, UiUtils::displayPriceXBT(actualXbtPrice).toStdString());
    authKey_ = BinaryData::CreateFromHex(qn.authKey);
    reqAuthKey_ = BinaryData::CreateFromHex(qn.reqAuthKey);
-   if (authKey_.isNull() || reqAuthKey_.isNull()) {
+   if (authKey_.empty() || reqAuthKey_.empty()) {
       throw std::runtime_error("missing auth key");
    }
 
@@ -90,7 +90,15 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
 
 bool DealerXBTSettlementContainer::cancel()
 {
+   if (payinSignId_ != 0 || payoutSignId_ != 0) {
+      signContainer_->CancelSignTx(settlementId_);
+   }
+
    releaseUtxoRes();
+
+   SPDLOG_LOGGER_DEBUG(logger_, "cancel on a trade : {}", settlementIdHex_);
+
+   emit completed();
 
    return true;
 }
@@ -121,8 +129,7 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
 
       dialogData.setValue(PasswordDialogData::TotalValue, tr("%1 XBT")
                     .arg(UiUtils::displayAmount(quantity() / price())));
-   }
-   else {
+   } else {
       dialogData.setValue(PasswordDialogData::Quantity, tr("%1 XBT")
                     .arg(UiUtils::displayAmount(amount())));
 
@@ -135,11 +142,11 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
    dialogData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
    dialogData.setValue(PasswordDialogData::SettlementAddress, settlAddr_.display());
 
-   dialogData.setValue(PasswordDialogData::RequesterAuthAddress, 
+   dialogData.setValue(PasswordDialogData::RequesterAuthAddress,
       bs::Address::fromPubKey(reqAuthKey_, AddressEntryType_P2WPKH).display());
    dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, requestorAddressState_ == AddressVerificationState::Verified);
 
-   dialogData.setValue(PasswordDialogData::ResponderAuthAddress, 
+   dialogData.setValue(PasswordDialogData::ResponderAuthAddress,
       bs::Address::fromPubKey(authKey_, AddressEntryType_P2WPKH).display());
    dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
 
@@ -182,6 +189,9 @@ void DealerXBTSettlementContainer::activate()
    const auto reqAuthAddrSW = bs::Address::fromPubKey(reqAuthKey_, AddressEntryType_P2WPKH);
    addrVerificator_->addAddress(reqAuthAddrSW);
    addrVerificator_->startAddressVerification();
+
+   const auto &authLeaf = walletsMgr_->getAuthWallet();
+   signContainer_->setSettlAuthAddr(authLeaf->walletId(), settlementId_, authAddr_);
 }
 
 void DealerXBTSettlementContainer::deactivate()
@@ -195,7 +205,12 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
    if (payoutSignId_ && (payoutSignId_ == id)) {
       payoutSignId_ = 0;
 
-      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
+      if (errCode == bs::error::ErrorCode::TxCancelled) {
+         emit cancelTrade(settlementIdHex_);
+         return;
+      }
+
+      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.empty()) {
          SPDLOG_LOGGER_ERROR(logger_, "failed to sign pay-out: {} ({})", int(errCode), errMsg);
          failWithErrorText(tr("Failed to sign pay-out"), errCode);
          return;
@@ -229,9 +244,21 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
    if ((payinSignId_ != 0) && (payinSignId_ == id)) {
       payinSignId_ = 0;
 
-      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.isNull()) {
+      if (errCode == bs::error::ErrorCode::TxCancelled) {
+         emit cancelTrade(settlementIdHex_);
+         return;
+      }
+
+      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.empty()) {
          SPDLOG_LOGGER_ERROR(logger_, "Failed to sign pay-in: {} ({})", (int)errCode, errMsg);
-         failWithErrorText(tr("Failed to sign Pay-in"), errCode);
+         if (errCode == bs::error::ErrorCode::TxSpendLimitExceed) {
+            emit cancelTrade(settlementIdHex_);
+            failWithErrorText(tr("Auto-signing (and auto-quoting) have been disabled"
+               " as your limit has been hit or elapsed"), errCode);
+         }
+         else {
+            failWithErrorText(tr("Failed to sign Pay-in"), errCode);
+         }
          return;
       }
 
@@ -292,6 +319,9 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
 
          emit sendUnsignedPayinToPB(settlementIdHex_
             , bs::network::UnsignedPayinData{unsignedPayinRequest_.serializeState(), std::move(result.preimageData)});
+
+         const auto &authLeaf = walletsMgr_->getAuthWallet();
+         signContainer_->setSettlCP(authLeaf->walletId(), result.payinHash, settlementId_, reqAuthKey_);
       });
    });
 
@@ -348,6 +378,9 @@ void DealerXBTSettlementContainer::onSignedPayoutRequested(const std::string& se
       });
    });
    bs::tradeutils::createPayout(std::move(args), std::move(payoutCb));
+
+   const auto &authLeaf = walletsMgr_->getAuthWallet();
+   signContainer_->setSettlCP(authLeaf->walletId(), payinHash, settlementId_, reqAuthKey_);
 }
 
 void DealerXBTSettlementContainer::onSignedPayinRequested(const std::string& settlementId
@@ -369,7 +402,7 @@ void DealerXBTSettlementContainer::onSignedPayinRequested(const std::string& set
 
    if (!unsignedPayinRequest_.isValid()) {
       SPDLOG_LOGGER_ERROR(logger_, "unsigned payin request is invalid: {}", settlementIdHex_);
-      failWithErrorText(tr("Failed to sign pay-in"), bs::error::ErrorCode::InternalError);
+      failWithErrorText(tr("Invalid unsigned pay-in"), bs::error::ErrorCode::InternalError);
       return;
    }
 

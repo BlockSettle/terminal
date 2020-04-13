@@ -14,6 +14,7 @@
 #include <QDialog>
 #include <QVariant>
 #include <memory>
+#include "BSErrorCode.h"
 
 namespace Ui
 {
@@ -61,6 +62,9 @@ public:
 protected slots:
    void onDetailsPressed();
 
+protected:
+   void setText(const QString &);
+
 private:
    bool detailsVisible() const;
    void hideDetails();
@@ -78,17 +82,13 @@ public:
 
 class MessageBoxBroadcastError : public BSMessageBox {
 public:
-   MessageBoxBroadcastError(const QString &details, QWidget *parent = nullptr);
+   MessageBoxBroadcastError(const QString &details
+      , bs::error::ErrorCode errCode, QWidget *parent = nullptr);
 };
 
 class MessageBoxExpTimeout : public BSMessageBox {
 public:
    MessageBoxExpTimeout(QWidget *parent = nullptr);
-};
-
-class MessageBoxWalletCreateAbort : public BSMessageBox {
-public:
-   MessageBoxWalletCreateAbort(QWidget *parent = nullptr);
 };
 
 #endif // __MESSAGE_BOX_H__

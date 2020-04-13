@@ -334,7 +334,7 @@ void RFQDealerReply::getAddress(const std::string &quoteRequestId, const std::sh
    }
 
    auto address = addresses_[quoteRequestId][wallet->walletId()].at(static_cast<size_t>(type));
-   if (!address.isNull()) {
+   if (!address.empty()) {
       cb(address);
       return;
    }
@@ -387,9 +387,9 @@ void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &
          }
       }
 
-      updateWalletsList((qrn.side == bs::network::Side::Sell) ? UiUtils::WoWallets::Disable : UiUtils::WoWallets::Enable);
+      updateWalletsList((qrn.side == bs::network::Side::Sell) ? UiUtils::WalletsTypes::Full : UiUtils::WalletsTypes::All);
    } else if (qrn.assetType == bs::network::Asset::SpotXBT) {
-      updateWalletsList((qrn.side == bs::network::Side::Sell) ? UiUtils::WoWallets::Disable : UiUtils::WoWallets::Enable);
+      updateWalletsList((qrn.side == bs::network::Side::Sell) ? (UiUtils::WalletsTypes::Full | UiUtils::WalletsTypes::Hardware) : UiUtils::WalletsTypes::All);
    }
 }
 
@@ -404,10 +404,10 @@ void RFQDealerReply::onAuthAddrChanged(int index)
    authAddr_ = authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(index));
    authKey_.clear();
 
-   if (authAddr_.isNull()) {
+   if (authAddr_.empty()) {
       return;
    }
-   const auto settlLeaf = authAddressManager_->getSettlementLeaf(authAddr_);
+   const auto settlLeaf = walletsManager_->getSettlementLeaf(authAddr_);
 
    const auto &cbPubKey = [this](const SecureBinaryData &pubKey) {
       authKey_ = pubKey.toHexStr();
@@ -785,7 +785,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
    }
 }
 
-void RFQDealerReply::updateWalletsList(UiUtils::WoWallets walletsFlags)
+void RFQDealerReply::updateWalletsList(int walletsFlags)
 {
    auto oldWalletId = ui_->comboBoxXbtWallet->currentData(UiUtils::WalletIdRole).toString().toStdString();
    int defaultIndex = UiUtils::fillHDWalletsComboBox(ui_->comboBoxXbtWallet, walletsManager_, walletsFlags);

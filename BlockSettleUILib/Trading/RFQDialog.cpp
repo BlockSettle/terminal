@@ -20,9 +20,10 @@
 #include "ReqCCSettlementContainer.h"
 #include "ReqXBTSettlementContainer.h"
 #include "RfqStorage.h"
-#include "SignContainer.h"
 #include "UiUtils.h"
 #include "UtxoReservationManager.h"
+#include "WalletSignerContainer.h"
+
 
 RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const bs::network::RFQ& rfq
@@ -30,7 +31,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AuthAddressManager>& authAddressManager
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , const std::shared_ptr<SignContainer> &signContainer
+   , const std::shared_ptr<WalletSignerContainer> &signContainer
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<BaseCelerClient> &celerClient
    , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -154,8 +155,8 @@ void RFQDialog::logError(bs::error::ErrorCode code, const QString &errorMessage)
 {
    logger_->error("[RFQDialog::logError] {}", errorMessage.toStdString());
 
-   if (bs::error::ErrorCode::TxCanceled != code) {
-      MessageBoxBroadcastError(errorMessage, this).exec();
+   if (bs::error::ErrorCode::TxCancelled != code) {
+      MessageBoxBroadcastError(errorMessage, code, this).exec();
    }
 }
 
@@ -187,6 +188,9 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
          , requestWidget_, &RFQRequestWidget::sendSignedPayinToPB);
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::sendSignedPayoutToPB
          , requestWidget_, &RFQRequestWidget::sendSignedPayoutToPB);
+
+      connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::cancelTrade
+         , requestWidget_, &RFQRequestWidget::cancelXBTTrade);
    }
    catch (const std::exception &e) {
       logError(bs::error::ErrorCode::InternalError, tr("Failed to create XBT settlement container: %1")
@@ -217,6 +221,18 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
          , this, &QDialog::close);
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::error
          , this, &RFQDialog::logError);
+
+      connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::cancelTrade
+         , requestWidget_, &RFQRequestWidget::cancelCCTrade);
+
+      auto orderUpdatedCb = [qId = quote_.quoteId, ccContainer = ccSettlContainer_]
+         (const bs::network::Order& order)
+      {
+         if (order.status == bs::network::Order::Pending && order.quoteId == qId) {
+            ccContainer->setClOrdId(order.clOrderId);
+         }
+      };
+      connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, ccSettlContainer_.get(), orderUpdatedCb);
    }
    catch (const std::exception &e) {
       logError(bs::error::ErrorCode::InternalError, tr("Failed to create CC settlement container: %1")

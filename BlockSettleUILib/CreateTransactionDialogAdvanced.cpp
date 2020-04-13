@@ -1008,7 +1008,7 @@ void CreateTransactionDialogAdvanced::getChangeAddress(AddressCb cb) const
 
 void CreateTransactionDialogAdvanced::onCreatePressed()
 {
-   if (!importedSignedTX_.isNull()) {
+   if (!importedSignedTX_.empty()) {
       if (showUnknownWalletWarning_) {
          int rc = BSMessageBox(BSMessageBox::question, tr("Unknown Wallet")
             , tr("Broadcasted transaction will be available in the explorer only.\nProceed?")).exec();
@@ -1039,7 +1039,7 @@ void CreateTransactionDialogAdvanced::onCreatePressed()
 
 bool CreateTransactionDialogAdvanced::HaveSignedImportedTransaction() const
 {
-   return !importedSignedTX_.isNull();
+   return !importedSignedTX_.empty();
 }
 
 void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<bs::core::wallet::TXSignRequest>& transactions)

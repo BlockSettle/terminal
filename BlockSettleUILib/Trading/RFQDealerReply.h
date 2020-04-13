@@ -60,7 +60,7 @@ class QPushButton;
 QT_END_NAMESPACE
 
 namespace UiUtils {
-   enum class WoWallets : int;
+   enum WalletsTypes : int;
 }
 
 namespace bs {
@@ -233,7 +233,7 @@ namespace bs {
          void updateUiWalletFor(const bs::network::QuoteReqNotification &qrn);
          // xbtWallet - what XBT wallet to use for XBT/CC trades (selected from UI for manual trades, default wallet for AQ trades), empty for FX trades
          void submitReply(const network::QuoteReqNotification &qrn, double price, ReplyType replyType);
-         void updateWalletsList(UiUtils::WoWallets walletsFlags);
+         void updateWalletsList(int walletsFlags);
          bool isXbtSpend() const;
          std::shared_ptr<bs::sync::hd::Wallet> getSelectedXbtWallet(ReplyType replyType) const;
          bs::Address selectedAuthAddress(ReplyType replyType) const;

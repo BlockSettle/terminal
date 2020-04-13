@@ -24,7 +24,7 @@
 #include "QuoteProvider.h"
 #include "RFQDialog.h"
 #include "RfqStorage.h"
-#include "SignContainer.h"
+#include "WalletSignerContainer.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "UtxoReservationManager.h"
 
@@ -197,7 +197,7 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    , std::shared_ptr<QuoteProvider> quoteProvider
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<DialogManager> &dialogManager
-   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<WalletSignerContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
@@ -252,7 +252,6 @@ void RFQRequestWidget::onConnectedToCeler()
 
    ui_->shieldPage->showShieldSelectTargetTrade();
    popShield();
-   ui_->treeViewOrders->onCelerConnected();
 }
 
 void RFQRequestWidget::onDisconnectedFromCeler()
@@ -263,7 +262,6 @@ void RFQRequestWidget::onDisconnectedFromCeler()
 
    ui_->shieldPage->showShieldLoginToSubmitRequired();
    popShield();
-   ui_->treeViewOrders->onCelerDisconnected();
 }
 
 void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservationToken ccUtxoRes)

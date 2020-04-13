@@ -142,7 +142,7 @@ void OTCNegotiationResponseWidget::onParentAboutToHide()
 
 void OTCNegotiationResponseWidget::onSyncInterface()
 {
-   int index = UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWallets, getWalletManager(), UiUtils::WoWallets::Enable);
+   int index = UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWallets, getWalletManager(), UiUtils::WalletsTypes::All);
    ui_->comboBoxXBTWallets->setCurrentIndex(index);
    onCurrentWalletChanged();
 
