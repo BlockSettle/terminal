@@ -1420,6 +1420,11 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
 
    connect(bsClient_.get(), &BsClient::processPbMessage, orderListModel_.get(), &OrderListModel::onMessageFromPB);
 
+   utxoReservationMgr_->setFeeRatePb(loginDialog.result()->feeRatePb);
+   connect(bsClient_.get(), &BsClient::feeRateReceived, this, [this] (float feeRate) {
+      utxoReservationMgr_->setFeeRatePb(feeRate);
+   });
+
    authManager_->setCelerClient(celerConnection_);
 
    setLoginButtonText(currentUserLogin_);

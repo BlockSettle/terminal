@@ -11,6 +11,7 @@
 #ifndef UTXO_RESERVATION_MANAGER_H
 #define UTXO_RESERVATION_MANAGER_H
 
+#include <atomic>
 #include <QObject>
 #include "CommonTypes.h"
 #include "UtxoReservationToken.h"
@@ -56,12 +57,12 @@ namespace bs {
 
       // Xbt specific implementation
       void reserveBestXbtUtxoSet(const HDWalletId& walletId, BTCNumericTypes::satoshi_type quantity, bool partial,
-         std::function<void(FixedXbtInputs&&)>&& cb);
+         std::function<void(FixedXbtInputs&&)>&& cb, bool checkPbFeeFloor);
       BTCNumericTypes::satoshi_type getAvailableXbtUtxoSum(const HDWalletId& walletId) const;
       std::vector<UTXO> getAvailableXbtUTXOs(const HDWalletId& walletId) const;
 
       void getBestXbtUtxoSet(const HDWalletId& walletId, BTCNumericTypes::satoshi_type quantity,
-         std::function<void(std::vector<UTXO>&&)>&& cb);
+         std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor);
   
       // CC specific implementation
       BTCNumericTypes::balance_type getAvailableCCUtxoSum(const CCProductName& CCProduct) const;
@@ -70,6 +71,9 @@ namespace bs {
       // Mutual functions
       FixedXbtInputs convertUtxoToFixedInput(const HDWalletId& walletId, const std::vector<UTXO>& utxos);
       FixedXbtInputs convertUtxoToPartialFixedInput(const HDWalletId& walletId, const std::vector<UTXO>& utxos);
+
+      void setFeeRatePb(float feeRate);
+      float feeRatePb() const;
 
    signals:
       void availableUtxoChanged(const std::string& walledId);
@@ -98,6 +102,8 @@ namespace bs {
       std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
       std::shared_ptr<ArmoryObject> armory_;
       std::shared_ptr<spdlog::logger> logger_;
+
+      std::atomic<float> feeRatePb_{};
    };
 
 }  // namespace bs

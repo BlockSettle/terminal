@@ -989,7 +989,8 @@ void RFQTicketXBT::onMaxClicked()
 
          auto feeCb = [this, utxos = std::move(utxos)](float fee) {
             QMetaObject::invokeMethod(this, [this, fee, utxos = std::move(utxos)]{
-               float feePerByte = ArmoryConnection::toFeePerByte(fee);
+               float feePerByteArmory = ArmoryConnection::toFeePerByte(fee);
+               auto feePerByte = std::max(feePerByteArmory, utxoReservationManager_->feeRatePb());
                uint64_t total = 0;
                for (const auto &utxo : utxos) {
                   total += utxo.getValue();
@@ -1258,7 +1259,7 @@ void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network
    const bool partial = rfq->assetType == bs::network::Asset::PrivateMarket;
    utxoReservationManager_->reserveBestXbtUtxoSet(
       getSendXbtWallet()->walletId(), quantity,
-      partial, std::move(cbBestUtxoSet));
+      partial, std::move(cbBestUtxoSet), true);
 }
 
 void RFQTicketXBT::onCreateWalletClicked()
