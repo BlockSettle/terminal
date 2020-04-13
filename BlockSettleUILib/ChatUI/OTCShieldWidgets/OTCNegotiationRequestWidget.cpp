@@ -193,7 +193,7 @@ void OTCNegotiationRequestWidget::onSubmited()
    };
 
    getUtxoManager()->getBestXbtUtxoSet(hdWallet->walletId(), bs::XBTAmount(ui_->quantitySpinBox->value()).GetValue()
-      , std::move(cbUtxoSet));
+      , std::move(cbUtxoSet), true);
 }
 
 std::shared_ptr<bs::sync::hd::Wallet> OTCNegotiationRequestWidget::getCurrentHDWallet() const
@@ -327,7 +327,8 @@ void OTCNegotiationRequestWidget::onMaxQuantityClicked()
          if (!parentWidget) {
             return;
          }
-         float feePerByte = ArmoryConnection::toFeePerByte(fee);
+         float feePerByteArmory = ArmoryConnection::toFeePerByte(fee);
+         auto feePerByte = std::max(feePerByteArmory, getUtxoManager()->feeRatePb());
          uint64_t total = 0;
          for (const auto &utxo : utxos) {
             total += utxo.getValue();
