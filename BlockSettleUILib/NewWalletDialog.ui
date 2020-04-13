@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>380</width>
+    <width>430</width>
     <height>203</height>
    </rect>
   </property>
@@ -207,6 +207,12 @@
       </property>
       <item>
        <widget class="QPushButton" name="pushButtonHw">
+        <property name="minimumSize">
+         <size>
+          <width>130</width>
+          <height>0</height>
+         </size>
+        </property>
         <property name="text">
          <string>Import Hardware</string>
         </property>
@@ -217,6 +223,12 @@
       </item>
       <item>
        <widget class="QPushButton" name="pushButtonImport">
+        <property name="minimumSize">
+         <size>
+          <width>130</width>
+          <height>0</height>
+         </size>
+        </property>
         <property name="text">
          <string>Import Existing</string>
         </property>
@@ -224,6 +236,12 @@
       </item>
       <item>
        <widget class="QPushButton" name="pushButtonCreate">
+        <property name="minimumSize">
+         <size>
+          <width>130</width>
+          <height>0</height>
+         </size>
+        </property>
         <property name="text">
          <string>Create New</string>
         </property>
