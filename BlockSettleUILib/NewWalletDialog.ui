@@ -64,9 +64,15 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>401</width>
+        <width>2000</width>
         <height>71</height>
        </rect>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>2000</width>
+        <height>0</height>
+       </size>
       </property>
       <property name="text">
        <string>ADD NEW WALLET</string>
