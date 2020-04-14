@@ -1773,5 +1773,8 @@ void OtcClient::initTradesArgs(bs::tradeutils::Args &args, Peer *peer, const std
    args.cpAuthPubKey = peer->authPubKey;
    args.armory = armory_;
    args.signContainer = signContainer_;
-   args.feeRatePb_ = utxoReservationManager_->feeRatePb();
+   // utxoReservationManager_ is null in unit tests
+   if (utxoReservationManager_) {
+      args.feeRatePb_ = utxoReservationManager_->feeRatePb();
+   }
 }
