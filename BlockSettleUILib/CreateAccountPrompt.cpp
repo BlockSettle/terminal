@@ -18,11 +18,11 @@ CreateAccountPrompt::CreateAccountPrompt(QWidget *parent) :
 {
    ui_->setupUi(this);
 
-   connect(ui_->labelCreateAccount, &QLabel::linkActivated, this, [this] {
+   connect(ui_->pushButtonCreateAccount, &QPushButton::clicked, this, [this] {
       done(CreateAccount);
    });
 
-   connect(ui_->labelLogin, &QLabel::linkActivated, this, [this] {
+   connect(ui_->pushButtonLogin, &QPushButton::clicked, this, [this] {
       done(Login);
    });
 
