@@ -237,10 +237,8 @@ void BSTerminalMainWindow::loadPositionAndShow()
    auto geom = applicationSettings_->get<QRect>(ApplicationSettings::GUI_main_geometry);
    if (!geom.isEmpty()) {
       setGeometry(geom);
-      show();
-   } else {
-      showMaximized();
    }
+   show();
 }
 
 bool BSTerminalMainWindow::event(QEvent *event)
@@ -1347,7 +1345,7 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
 {
    if (networkSettings.status == Blocksettle::Communication::GetNetworkSettingsResponse_Status_LIVE_TRADING_COMING_SOON) {
       BSMessageBox mbox(BSMessageBox::question, tr("Login to BlockSettle"), tr("Live trading is coming soon...")
-                   , tr("In the meantime, experience p2p trading in the testnet environment. Try out now?"), this);
+                   , tr("In the meantime, you can try p2p trading in our testnet environment. Would you like to do so now?"), this);
       mbox.setCancelButtonText(tr("Cancel"));
       mbox.setConfirmButtonText(tr("Yes"));
       int rc = mbox.exec();
@@ -1419,6 +1417,11 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    connect(bsClient_.get(), &BsClient::emailHashReceived, ui_->widgetChat, &ChatWidget::onEmailHashReceived);
 
    connect(bsClient_.get(), &BsClient::processPbMessage, orderListModel_.get(), &OrderListModel::onMessageFromPB);
+
+   utxoReservationMgr_->setFeeRatePb(loginDialog.result()->feeRatePb);
+   connect(bsClient_.get(), &BsClient::feeRateReceived, this, [this] (float feeRate) {
+      utxoReservationMgr_->setFeeRatePb(feeRate);
+   });
 
    authManager_->setCelerClient(celerConnection_);
 
