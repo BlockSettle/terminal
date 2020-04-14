@@ -1652,6 +1652,9 @@ void OtcClient::resetPeerStateToIdle(Peer *peer)
 
    changePeerStateWithoutUpdate(peer, State::Idle);
    auto request = std::move(peer->request);
+   if (!peer->settlementId.empty()) {
+      deals_.erase(peer->settlementId);
+   }
    *peer = Peer(peer->contactId, peer->type);
    peer->request = std::move(request);
    emit peerUpdated(peer);
