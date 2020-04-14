@@ -45,8 +45,10 @@ LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
    ui_->loginVersionLabel->setText(version);
    resize(minimumSize());
 
+   const bool isProd = settings_->get<int>(ApplicationSettings::envConfiguration) ==
+      static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
    const auto accountLink = ui_->labelGetAccount->text().replace(QLatin1String("{GetAccountLink}")
-      , settings->get<QString>(ApplicationSettings::GetAccount_Url));
+      , settings->get<QString>(isProd ? ApplicationSettings::GetAccount_UrlProd : ApplicationSettings::GetAccount_UrlTest));
    ui_->labelGetAccount->setText(accountLink);
 
    connect(ui_->lineEditUsername, &QLineEdit::textChanged, this, &LoginWindow::onTextChanged);
