@@ -1,7 +1,20 @@
 {
-   "latest_version": "0.26.1",
-   "release_date": "13 Apr 2020",
+   "latest_version": "0.26.2",
+   "release_date": "14 Apr 2020",
    "changes": [
+      {
+         "version_string": "0.26.2",
+         "previous_version": "0.26.1",
+         "release_date": "14 Apr 2020",
+         "release_type": "prod",
+         "improvements": [
+         ],
+         "bug_fixes": [
+            "Spend limit fixes"
+         ],
+         "revision": "ce0c61bd9",
+         "common_revision": "1cae7fc0"
+      },
       {
          "version_string": "0.26.1",
          "previous_version": "0.26.0",

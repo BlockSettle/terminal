@@ -205,6 +205,7 @@ void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState
 
 void ReqXBTSettlementContainer::cancelWithError(const QString& errorMessage, bs::error::ErrorCode code)
 {
+   emit cancelTrade(settlementIdHex_);
    emit error(code, errorMessage);
    cancel();
 
@@ -454,4 +455,5 @@ void ReqXBTSettlementContainer::initTradesArgs(bs::tradeutils::Args &args, const
    args.walletsMgr = walletsMgr_;
    args.armory = armory_;
    args.signContainer = signContainer_;
+   args.feeRatePb_ = utxoReservationManager_->feeRatePb();
 }

@@ -21,8 +21,8 @@ import "../js/helper.js" as JsHelper
 import "../BsStyles"
 
 CustomDialog {
-    width: 300
-    height: 300
+    width: 250
+    height: 250
     property int deviceIndex: -1
 
     cContentItem: ColumnLayout {

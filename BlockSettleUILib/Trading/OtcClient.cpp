@@ -25,6 +25,7 @@
 #include "ProtobufUtils.h"
 #include "TradesUtils.h"
 #include "UiUtils.h"
+#include "UtxoReservationManager.h"
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -1772,4 +1773,5 @@ void OtcClient::initTradesArgs(bs::tradeutils::Args &args, Peer *peer, const std
    args.cpAuthPubKey = peer->authPubKey;
    args.armory = armory_;
    args.signContainer = signContainer_;
+   args.feeRatePb_ = utxoReservationManager_->feeRatePb();
 }

@@ -156,7 +156,7 @@ void RFQDialog::logError(bs::error::ErrorCode code, const QString &errorMessage)
    logger_->error("[RFQDialog::logError] {}", errorMessage.toStdString());
 
    if (bs::error::ErrorCode::TxCancelled != code) {
-      MessageBoxBroadcastError(errorMessage, this).exec();
+      MessageBoxBroadcastError(errorMessage, code, this).exec();
    }
 }
 
