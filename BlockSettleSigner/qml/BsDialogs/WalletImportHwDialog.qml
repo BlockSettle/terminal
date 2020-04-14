@@ -33,7 +33,7 @@ CustomTitleDialogWindow {
     property int inputLabelsWidth: 110
 
     title: qsTr("Import Wallet")
-    width: 600
+    width: 480
     height: 250
     abortBoxType: BSAbortBox.AbortType.WalletImport
 
