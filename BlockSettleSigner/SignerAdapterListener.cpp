@@ -873,7 +873,8 @@ bool SignerAdapterListener::onImportHwWallet(const std::string &data, bs::signer
       request.deviceid(),
       request.xpubroot(),
       request.xpubnestedsegwit(),
-      request.xpubnativesegwit()
+      request.xpubnativesegwit(),
+      request.xpublegacy()
    };
 
    const auto woWallet = walletsMgr_->createHwWallet(settings_->netType()

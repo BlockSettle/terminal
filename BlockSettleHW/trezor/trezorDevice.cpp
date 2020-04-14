@@ -132,10 +132,11 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
 {
    awaitingWalletInfo_ = {};
 
-   // We cannot get all data from one call so we make three calls:
+   // We cannot get all data from one call so we make four calls:
    // fetching first address for "m/0'" as wallet id
    // fetching first address for "m/49'" as nested segwit xpub
    // fetching first address for "m/84'" as native segwit xpub
+   // fetching first address for "m/44'" as legacy xpub
 
    AsyncCallBackCall cbFinal = [this, originCb = std::move(cb)](QVariant &&data) mutable {
       awaitingWalletInfo_.info_.xpubNativeSegwit_ = data.toByteArray().toStdString();
@@ -148,8 +149,27 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
       originCb(QVariant::fromValue<>(awaitingWalletInfo_));
    };
 
+   // Fetching legacy
+   AsyncCallBackCall cbLegacy = [this, originCbFinal = std::move(cbFinal)](QVariant &&data) mutable {
+      awaitingWalletInfo_.info_.xpubLegacy_ = data.toByteArray().toStdString();
+
+      connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving legacy public key from device "
+         + features_.label());
+      bitcoin::GetPublicKey message;
+      for (const uint32_t add : getDerivationPath(testNet_, bs::hd::Purpose::NonSegWit)) {
+         message.add_address_n(add);
+      }
+
+      if (testNet_) {
+         message.set_coin_name(tesNetCoin);
+      }
+
+      setDataCallback(MessageType_PublicKey, std::move(originCbFinal));
+      makeCall(message);
+   };
+
    // Fetching native segwit
-   AsyncCallBackCall cbNative = [this, originCbFinal = std::move(cbFinal)](QVariant &&data) mutable {
+   AsyncCallBackCall cbNative = [this, originCbLegacy = std::move(cbLegacy)](QVariant &&data) mutable {
       awaitingWalletInfo_.info_.xpubNestedSegwit_ = data.toByteArray().toStdString();
 
       connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving native segwit public key from device "
@@ -163,7 +183,7 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
          message.set_coin_name(tesNetCoin);
       }
 
-      setDataCallback(MessageType_PublicKey, std::move(originCbFinal));
+      setDataCallback(MessageType_PublicKey, std::move(originCbLegacy));
       makeCall(message);
    };
 

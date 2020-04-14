@@ -41,15 +41,21 @@ void HwDeviceManager::scanDevices()
    setScanningFlag(true);
 
    ledgerClient_->scanDevices();
-   releaseConnection([this] {
-      trezorClient_->initConnection([this]() {
-         setScanningFlag(false);
-         auto allDevices = ledgerClient_->deviceKeys();
-         allDevices.append(trezorClient_->deviceKeys());
-         model_->resetModel(std::move(allDevices));
-         emit devicesChanged();
-      });
-   });
+   auto allDevices = ledgerClient_->deviceKeys();
+   model_->resetModel(std::move(allDevices));
+   setScanningFlag(false);
+   emit devicesChanged();
+
+
+   //releaseConnection([this] {
+   //   trezorClient_->initConnection([this]() {
+   //      setScanningFlag(false);
+   //      auto allDevices = ledgerClient_->deviceKeys();
+   //      allDevices.append(trezorClient_->deviceKeys());
+   //      model_->resetModel(std::move(allDevices));
+   //      emit devicesChanged();
+   //   });
+   //});
 }
 
 void HwDeviceManager::requestPublicKey(int deviceIndex)
@@ -190,7 +196,7 @@ QPointer<HwDeviceInterface> HwDeviceManager::getDevice(DeviceKey key)
       return static_cast<QPointer<HwDeviceInterface>>(trezorClient_->getTrezorDevice(key.deviceId_));
       break;
    case DeviceType::HWLedger:
-      return static_cast<QPointer<HwDeviceAbstract>>(ledgerClient_->getDevice(key.deviceId_));
+      return static_cast<QPointer<HwDeviceInterface>>(ledgerClient_->getDevice(key.deviceId_));
       break;
    default:
       // Add new device type
