@@ -1628,11 +1628,12 @@ void OtcClient::changePeerStateWithoutUpdate(Peer *peer, State state)
 
    switch (state)
    {
-   case bs::network::otc::State::Idle:
-   case bs::network::otc::State::Blacklisted:
-      releaseReservation(peer);
-   default:
-      break;
+      case bs::network::otc::State::Idle:
+      case bs::network::otc::State::Blacklisted:
+         releaseReservation(peer);
+         break;
+      default:
+         break;
    }
 }
 
