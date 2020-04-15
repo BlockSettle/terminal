@@ -862,11 +862,20 @@ function getAuthEidSettlementInfo(product, priceString, is_sell, quantity, total
         JsHelper.getAuthEidMessageLine("Receive", (is_sell ? totalValue : quantity), true);
 }
 
-function showPinMatrix(deviceIndex) {
+function showHwPinMatrix(deviceIndex) {
     let pinMatrix = Qt.createComponent("../BsHw/PinMatrixDialog.qml").createObject(mainWindow);
 
     pinMatrix.deviceIndex = deviceIndex;
     pinMatrix.open();
 
     return pinMatrix;
+}
+
+function showHwPassphrase(deviceIndex) {
+    let passphrase = Qt.createComponent("../BsHw/PassphraseDialog.qml").createObject(mainWindow);
+
+    passphrase.deviceIndex = deviceIndex;
+    passphrase.open();
+
+    return passphrase;
 }
