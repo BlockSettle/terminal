@@ -14,7 +14,7 @@
 
 #include <BTCNumericTypes.h>
 #include <TxClasses.h>
-#include "Wallets/SyncHDLeaf.h"
+#include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "UiUtils.h"
 
@@ -134,7 +134,26 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
                   const auto addr = bs::Address::fromTxOut(prevOut);
                   const auto addressWallet = walletsManager_->getWalletByAddress(addr);
                   if (addressWallet) {
-                     inputWallets.insert(addressWallet);
+                     const auto &rootWallet = walletsManager_->getHDRootForLeaf(addressWallet->walletId());
+                     if (rootWallet) {
+                        const auto &xbtLeaves = rootWallet->getGroup(rootWallet->getXBTGroupType())->getLeaves();
+                        bool isXbtLeaf = false;
+                        for (const auto &leaf : xbtLeaves) {
+                           if (*leaf == *addressWallet) {
+                              isXbtLeaf = true;
+                              break;
+                           }
+                        }
+                        if (isXbtLeaf) {
+                           inputWallets.insert(xbtLeaves.cbegin(), xbtLeaves.cend());
+                        }
+                        else {
+                           inputWallets.insert(addressWallet);
+                        }
+                     }
+                     else {
+                        inputWallets.insert(addressWallet);
+                     }
                      if (!ccLeaf_ && (addressWallet->type() == bs::core::wallet::Type::ColorCoin)) {
                         ccLeaf_ = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(addressWallet);
                      }

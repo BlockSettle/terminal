@@ -748,8 +748,6 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                // Try to reset current reservation if needed when user sends another quote
                resetCurrentReservationCb_(replyData);
 
-
-
                if (isSpendCC) {
                   const auto  inputsWrapCb = [inputsCb, ccWallet](const std::vector<UTXO> &utxos) {
                      std::map<UTXO, std::string> inputs;
