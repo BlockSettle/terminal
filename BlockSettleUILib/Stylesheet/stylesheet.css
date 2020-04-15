@@ -1600,14 +1600,17 @@ ChatSearchListViewItemStyle {
 }
 
 QPushButton#testEnvSettings, QPushButton#prodEnvSettings {
-  background-color: #ffffff;
-  color: #000000;
+  background-color: #1c2835;
+  color: #81888f;
+  text-transform: lowercase;
 }
-QPushButton:disabled#prodEnvSettings {
-  background-color: #22c064;
+QPushButton:disabled#prodEnvSettings, QPushButton:disabled#testEnvSettings {
+  background-color: #247cac ;
+  color: #ffffff;
+  text-transform: lowercase;
 }
-QPushButton:disabled#testEnvSettings {
-  background-color: #f7a600;
+QPushButton:hover#testEnvSettings, QPushButton:hover#prodEnvSettings {
+  color: #ffffff;
 }
 
 QLabel#labelHeading {
