@@ -47,7 +47,6 @@ class WalletsProxy : public QObject
    Q_PROPERTY(bool primaryWalletExists READ primaryWalletExists NOTIFY walletsChanged)
    Q_PROPERTY(bool loaded READ walletsLoaded NOTIFY walletsChanged)
    Q_PROPERTY(QStringList walletNames READ walletNames NOTIFY walletsChanged)
-   Q_PROPERTY(QStringList priWalletNames READ priWalletNames NOTIFY walletsChanged)
    Q_PROPERTY(QString defaultBackupLocation READ defaultBackupLocation NOTIFY walletsChanged)
    Q_PROPERTY(bool hasCCInfo READ hasCCInfo NOTIFY ccInfoChanged)
 
@@ -91,7 +90,6 @@ public:
 
    Q_INVOKABLE int indexOfWalletId(const QString &walletId) const;
    Q_INVOKABLE QString walletIdForIndex(int) const;
-   Q_INVOKABLE QString walletIdForName(const QString &name) const;
 
    Q_INVOKABLE bool walletNameExists(const QString& name) const;
    Q_INVOKABLE QString generateNextWalletName() const;
@@ -118,7 +116,6 @@ private:
    bool primaryWalletExists() const;
    std::shared_ptr<bs::sync::hd::Wallet> getRootForId(const QString &walletId) const;
    QStringList walletNames() const;
-   QStringList priWalletNames() const;
    Q_INVOKABLE QJSValue invokeJsCallBack(QJSValue jsCallback, QJSValueList args);
    std::shared_ptr<bs::sync::hd::Wallet> getWoSyncWallet(const bs::sync::WatchingOnlyWallet &) const;
    bool hasCCInfo() const { return hasCCInfo_; }
