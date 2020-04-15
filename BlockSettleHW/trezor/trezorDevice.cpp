@@ -139,20 +139,14 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
    // fetching first address for "m/84'" as native segwit xpub
    // fetching first address for "m/44'" as legacy xpub
 
-   AsyncCallBackCall cbFinal = [this, originCb = std::move(cb)](QVariant &&data) mutable {
-      awaitingWalletInfo_.info_.xpubNativeSegwit_ = data.toByteArray().toStdString();
+   AsyncCallBackCall cbLegacy = [this, cb = std::move(cb)](QVariant &&data) mutable {
+      awaitingWalletInfo_.info_.xpubLegacy_ = data.toByteArray().toStdString();
       
-      // General data
-      awaitingWalletInfo_.info_.label_ = features_.label();
-      awaitingWalletInfo_.info_.deviceId_ = features_.device_id();
-      awaitingWalletInfo_.info_.vendor_ = features_.vendor();
-
-      originCb(QVariant::fromValue<>(awaitingWalletInfo_));
+      cb(QVariant::fromValue<>(awaitingWalletInfo_));
    };
 
-   // Fetching legacy
-   AsyncCallBackCall cbLegacy = [this, originCbFinal = std::move(cbFinal)](QVariant &&data) mutable {
-      awaitingWalletInfo_.info_.xpubLegacy_ = data.toByteArray().toStdString();
+   AsyncCallBackCall cbNested = [this, cbLegacy = std::move(cbLegacy)](QVariant &&data) mutable {
+      awaitingWalletInfo_.info_.xpubNestedSegwit_ = data.toByteArray().toStdString();
 
       connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving legacy public key from device "
          + features_.label());
@@ -160,37 +154,16 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
       for (const uint32_t add : getDerivationPath(testNet_, bs::hd::Purpose::NonSegWit)) {
          message.add_address_n(add);
       }
-
       if (testNet_) {
          message.set_coin_name(tesNetCoin);
       }
 
-      setDataCallback(MessageType_PublicKey, std::move(originCbFinal));
+      setDataCallback(MessageType_PublicKey, std::move(cbLegacy));
       makeCall(message);
    };
 
-   // Fetching native segwit
-   AsyncCallBackCall cbNative = [this, originCbLegacy = std::move(cbLegacy)](QVariant &&data) mutable {
-      awaitingWalletInfo_.info_.xpubNestedSegwit_ = data.toByteArray().toStdString();
-
-      connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving native segwit public key from device "
-         + features_.label());
-      bitcoin::GetPublicKey message;
-      for (const uint32_t add : getDerivationPath(testNet_, bs::hd::Purpose::Native)) {
-         message.add_address_n(add);
-      }
-
-      if (testNet_) {
-         message.set_coin_name(tesNetCoin);
-      }
-
-      setDataCallback(MessageType_PublicKey, std::move(originCbLegacy));
-      makeCall(message);
-   };
-
-   // Fetching nested segwit
-   AsyncCallBackCall cbNested = [this, originCbNative = std::move(cbNative)](QVariant &&data) mutable {
-      awaitingWalletInfo_.info_.xpubRoot_ = data.toByteArray().toStdString();
+   AsyncCallBackCall cbNative = [this, cbNested = std::move(cbNested)](QVariant &&data) mutable {
+      awaitingWalletInfo_.info_.xpubNativeSegwit_ = data.toByteArray().toStdString();
 
       connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving nested segwit public key from device "
          + features_.label());
@@ -203,7 +176,30 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
          message.set_coin_name(tesNetCoin);
       }
 
-      setDataCallback(MessageType_PublicKey, std::move(originCbNative));
+      setDataCallback(MessageType_PublicKey, std::move(cbNested));
+      makeCall(message);
+   };
+
+   AsyncCallBackCall cbRoot = [this, cbNative = std::move(cbNative)](QVariant &&data) mutable {
+      awaitingWalletInfo_.info_.xpubRoot_ = data.toByteArray().toStdString();
+
+      // General data
+      awaitingWalletInfo_.info_.label_ = features_.label();
+      awaitingWalletInfo_.info_.deviceId_ = features_.device_id();
+      awaitingWalletInfo_.info_.vendor_ = features_.vendor();
+
+      connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving native segwit public key from device "
+         + features_.label());
+      bitcoin::GetPublicKey message;
+      for (const uint32_t add : getDerivationPath(testNet_, bs::hd::Purpose::Native)) {
+         message.add_address_n(add);
+      }
+
+      if (testNet_) {
+         message.set_coin_name(tesNetCoin);
+      }
+
+      setDataCallback(MessageType_PublicKey, std::move(cbNative));
       makeCall(message);
    };
 
@@ -217,7 +213,7 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
    }
 
    // Fetching nested segwit
-   setDataCallback(MessageType_PublicKey, std::move(cbNested));
+   setDataCallback(MessageType_PublicKey, std::move(cbRoot));
    makeCall(message);
 }
 
