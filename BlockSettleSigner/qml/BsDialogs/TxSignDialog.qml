@@ -102,7 +102,7 @@ BSWalletHandlerDialog {
             passwordData.encType = QPasswordData.Hardware
             acceptAnimated();
         }
-        onCanceledOnDevice: rejectAnimated()
+        onCancelledOnDevice: rejectAnimated()
     }
 
     Timer {

@@ -50,7 +50,7 @@ signals:
    // Management
    void requestPinMatrix();
    void requestHWPass();
-   void canceledOnDevice();
+   void cancelledOnDevice();
 };
 
 #endif // HWDEVICEABSTRACT_H

@@ -81,7 +81,7 @@ namespace {
    const QString pressButton = QObject::tr("Confirm transaction output(s) on your device");
    const QString transaction = QObject::tr("Setup transaction...");
    const QString transactionFinished = QObject::tr("Transaction signing finished with success");
-   const QString canceledByUser = QObject::tr("Canceled by user");
+   const QString cancelledByUser = QObject::tr("Cancelled by user");
 
 }
 
@@ -222,7 +222,7 @@ void TrezorDevice::cancel()
    connectionManager_->GetLogger()->debug("[TrezorDevice] cancel previous operation");
    management::Cancel message;
    makeCall(message);
-   sendTxMessage(canceledByUser);
+   sendTxMessage(cancelledByUser);
 }
 
 void TrezorDevice::clearSession(AsyncCallBack&& cb)
@@ -295,7 +295,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
          resetCaches();
          emit operationFailed(QString::fromStdString(failure.message()));
          if (failure.code() == common::Failure_FailureType_Failure_ActionCancelled) {
-            emit canceledOnDevice();
+            emit cancelledOnDevice();
          }
       }
       break;

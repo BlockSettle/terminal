@@ -146,8 +146,8 @@ void HwDeviceManager::signTX(QVariant reqTX)
       this, &HwDeviceManager::requestHWPass, Qt::UniqueConnection);
    connect(device, &TrezorDevice::deviceTxStatusChanged,
       this, &HwDeviceManager::deviceTxStatusChanged, Qt::UniqueConnection);
-   connect(device, &TrezorDevice::canceledOnDevice,
-      this, &HwDeviceManager::canceledOnDevice, Qt::UniqueConnection);
+   connect(device, &TrezorDevice::cancelledOnDevice,
+      this, &HwDeviceManager::cancelledOnDevice, Qt::UniqueConnection);
 }
 
 void HwDeviceManager::releaseDevices()
