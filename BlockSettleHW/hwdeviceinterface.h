@@ -31,6 +31,7 @@ public:
    // lifecycle
    virtual void init(AsyncCallBack&& cb = nullptr) = 0;
    virtual void cancel() = 0;
+   virtual void clearSession(AsyncCallBack&& cb = nullptr) = 0;
 
    // operation
    virtual void getPublicKey(AsyncCallBackCall&& cb = nullptr) = 0;
@@ -49,6 +50,7 @@ signals:
    // Management
    void requestPinMatrix();
    void requestHWPass();
+   void canceledOnDevice();
 };
 
 #endif // HWDEVICEABSTRACT_H

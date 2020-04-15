@@ -64,6 +64,7 @@ Item {
         hwDeviceManager.scanDevices();
     }
 
+
     ListView {
         id: hwList
         visible: !isNoDevice

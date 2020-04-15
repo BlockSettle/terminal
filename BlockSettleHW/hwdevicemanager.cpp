@@ -146,6 +146,8 @@ void HwDeviceManager::signTX(QVariant reqTX)
       this, &HwDeviceManager::requestHWPass, Qt::UniqueConnection);
    connect(device, &TrezorDevice::deviceTxStatusChanged,
       this, &HwDeviceManager::deviceTxStatusChanged, Qt::UniqueConnection);
+   connect(device, &TrezorDevice::canceledOnDevice,
+      this, &HwDeviceManager::canceledOnDevice, Qt::UniqueConnection);
 }
 
 void HwDeviceManager::releaseDevices()
@@ -158,8 +160,12 @@ void HwDeviceManager::releaseConnection(AsyncCallBack&& cb/*= nullptr*/)
    for (int i = 0; i < model_->rowCount(); ++i) {
       auto device = getDevice(model_->getDevice(i));
       if (device) {
-         device->init([this, cbCopy = std::move(cb)]() mutable {
-            trezorClient_->releaseConnection(std::move(cbCopy));
+         trezorClient_->initConnection([this, cbCopy = std::move(cb)] {
+            trezorClient_->releaseConnection([this, cb = std::move(cbCopy)]() {
+               if (cb) {
+                  cb();
+               }
+            });
          });
          model_->resetModel({});
          return;

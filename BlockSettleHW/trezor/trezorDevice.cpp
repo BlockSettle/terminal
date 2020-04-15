@@ -225,6 +225,19 @@ void TrezorDevice::cancel()
    sendTxMessage(canceledByUser);
 }
 
+void TrezorDevice::clearSession(AsyncCallBack&& cb)
+{
+   connectionManager_->GetLogger()->debug("[TrezorDevice] cancel previous operation");
+   management::ClearSession message;
+
+   if (cb) {
+      setCallbackNoData(MessageType_Success, std::move(cb));
+   }
+
+   makeCall(message);
+}
+
+
 void TrezorDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= nullptr*/)
 {
    Blocksettle::Communication::headless::SignTxRequest request;
@@ -281,6 +294,9 @@ void TrezorDevice::handleMessage(const MessageData& data)
          sendTxMessage(QString::fromStdString(failure.message()));
          resetCaches();
          emit operationFailed(QString::fromStdString(failure.message()));
+         if (failure.code() == common::Failure_FailureType_Failure_ActionCancelled) {
+            emit canceledOnDevice();
+         }
       }
       break;
    case MessageType_Features:

@@ -92,12 +92,25 @@ BSWalletHandlerDialog {
         target: hwDeviceManager
         onRequestPinMatrix: JsHelper.showHwPinMatrix(0);
         onDeviceReady: hwDeviceManager.signTX(passwordDialogData.TxRequest);
-        onDeviceNotFound: hwDeviceStatus = qsTr("Cannot find device paired with this wallet, device label is :\n") + walletInfo.name;
+        onDeviceNotFound: {
+            hwDeviceStatus = "Searching device"
+            delayScanDevice.start();
+        }
         onDeviceTxStatusChanged: hwDeviceStatus = status;
         onTxSigned: {
             passwordData.binaryPassword = signData
             passwordData.encType = QPasswordData.Hardware
             acceptAnimated();
+        }
+        onCanceledOnDevice: rejectAnimated()
+    }
+
+    Timer {
+        id: delayScanDevice
+        interval: 2000
+        repeat: false
+        onTriggered: {
+            hwDeviceManager.prepareHwDeviceForSign(walletInfo.walletId)
         }
     }
 
@@ -376,7 +389,8 @@ BSWalletHandlerDialog {
             CustomButton {
                 id: btnCancel
                 text: qsTr("Cancel")
-                anchors.left: walletInfo.encType !== QPasswordData.Hardware ? parent.right : parent.left
+                anchors.left: walletInfo.encType !== QPasswordData.Hardware ? parent.left : undefined
+                anchors.right: walletInfo.encType === QPasswordData.Hardware ? parent.right : undefined
                 anchors.bottom: parent.bottom
                 onClicked: {
                     rejectAnimated()

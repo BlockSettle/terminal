@@ -69,6 +69,7 @@ signals:
    void txSigned(SecureBinaryData signData);
    void isScanningChanged();
    void operationFailed(QString reason);
+   void canceledOnDevice();
 
 private:
    void setScanningFlag(bool isScanning);
