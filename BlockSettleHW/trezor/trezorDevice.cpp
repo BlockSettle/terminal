@@ -76,11 +76,12 @@ namespace {
 
    const std::string tesNetCoin = "Testnet";
    // Messages to show in UI
+   const QString requestPassphrase= QObject::tr("Please enter the trezor passphrase");
    const QString requestPin = QObject::tr("Please enter the pin from device");
    const QString pressButton = QObject::tr("Confirm transaction output(s) on your device");
    const QString transaction = QObject::tr("Setup transaction...");
    const QString transactionFinished = QObject::tr("Transaction signing finished with success");
-   const QString canceledByUser = QObject::tr("Canceled by user");
+   const QString cancelledByUser = QObject::tr("Cancelled by user");
 
 }
 
@@ -210,7 +211,10 @@ void TrezorDevice::setMatrixPin(const std::string& pin)
 
 void TrezorDevice::setPassword(const std::string& password)
 {
-   // #TREZOR_INTEGRATION: DO NOT FORGET PASSWORD CASE
+   connectionManager_->GetLogger()->debug("[TrezorDevice] setPassword - send passphrase response");
+   common::PassphraseAck message;
+   message.set_passphrase(password);
+   makeCall(message);
 }
 
 void TrezorDevice::cancel()
@@ -218,8 +222,21 @@ void TrezorDevice::cancel()
    connectionManager_->GetLogger()->debug("[TrezorDevice] cancel previous operation");
    management::Cancel message;
    makeCall(message);
-   sendTxMessage(canceledByUser);
+   sendTxMessage(cancelledByUser);
 }
+
+void TrezorDevice::clearSession(AsyncCallBack&& cb)
+{
+   connectionManager_->GetLogger()->debug("[TrezorDevice] cancel previous operation");
+   management::ClearSession message;
+
+   if (cb) {
+      setCallbackNoData(MessageType_Success, std::move(cb));
+   }
+
+   makeCall(message);
+}
+
 
 void TrezorDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= nullptr*/)
 {
@@ -276,7 +293,10 @@ void TrezorDevice::handleMessage(const MessageData& data)
          }
          sendTxMessage(QString::fromStdString(failure.message()));
          resetCaches();
-         emit operationFailed();
+         emit operationFailed(QString::fromStdString(failure.message()));
+         if (failure.code() == common::Failure_FailureType_Failure_ActionCancelled) {
+            emit cancelledOnDevice();
+         }
       }
       break;
    case MessageType_Features:
@@ -305,6 +325,15 @@ void TrezorDevice::handleMessage(const MessageData& data)
          if (parseResponse(request, data)) {
             emit requestPinMatrix();
             sendTxMessage(requestPin);
+         }
+      }
+      break;
+   case MessageType_PassphraseRequest:
+      {
+         common::PassphraseRequest request;
+         if (parseResponse(request, data)) {
+            emit requestHWPass();
+            sendTxMessage(requestPassphrase);
          }
       }
       break;

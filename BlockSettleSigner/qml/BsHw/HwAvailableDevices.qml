@@ -30,20 +30,20 @@ Item {
     property bool isImporting: false
 
     signal pubKeyReady();
-    signal failed();
+    signal failed(string reason);
 
     Connections {
         target: hwDeviceManager
         onPublicKeyReady: {
             hwWalletInfo = walletInfo;
-            isImporting = false;
             root.pubKeyReady()
         }
-        onRequestPinMatrix: JsHelper.showPinMatrix(hwList.deviceIndex);
+        onRequestPinMatrix: JsHelper.showHwPinMatrix(hwList.deviceIndex);
+        onRequestHWPass: JsHelper.showHwPassphrase(hwList.deviceIndex);
         onOperationFailed: {
             hwWalletInfo = {};
             isImporting = false;
-            root.failed();
+            root.failed(reason);
         }
     }
 
@@ -64,37 +64,6 @@ Item {
         hwDeviceManager.scanDevices();
     }
 
-    Item {
-        id: hwNoDevice
-
-        anchors.fill: parent
-        visible: root.isNoDevice
-
-        Text {
-            id: noDeviceText
-            text: qsTr('No hardware device detected.\n'
-                       + 'To trigger a rescan, press "Rescan" button.\n\n'
-                       + 'If you device is not detected:\n'
-                       + ' • On Windows, go to "Settings" -> "Devices" -> "Connected devices" and click "Remote device".Then plug in your device again.\n'
-                       + ' • On Linux you might have to add a new permission to your udev rules.'
-                       );
-
-            anchors {
-                top: parent.top
-                left: parent.left
-                right: parent.right
-            }
-
-            leftPadding: 5
-            color: BSStyle.labelsTextColor
-            font.pixelSize: 11
-            horizontalAlignment: Text.AlignLeft
-            verticalAlignment: Text.AlignTop
-            elide: Text.ElideRight
-            wrapMode: Text.Wrap
-        }
-
-    }
 
     ListView {
         id: hwList
