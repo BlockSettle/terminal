@@ -77,16 +77,14 @@ public:
       owner_->sendData(signer::CancelTxSignType, evt.SerializeAsString());
    }
 
-   void autoSignActivated(bool active, const std::string &walletId)
+   void updateDialogData(const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData) override
    {
-      signer::AutoSignActResponse evt;
-      evt.set_rootwalletid(walletId);
-      evt.set_errorcode(static_cast<uint32_t>(active ? bs::error::ErrorCode::NoError
-         : bs::error::ErrorCode::AutoSignDisabled));
-      owner_->sendData(signer::AutoSignActType, evt.SerializeAsString());
+      headless::UpdateDialogDataRequest request;
+      *request.mutable_passworddialogdata() = dialogData;
+      owner_->sendData(signer::UpdateDialogDataType, request.SerializeAsString());
    }
 
-   void xbtSpent(uint64_t value, bool autoSign) override
+   void xbtSpent(int64_t value, bool autoSign) override
    {
       signer::XbtSpentEvent evt;
       evt.set_value(value);
@@ -110,7 +108,7 @@ public:
       owner_->sendData(signer::TerminalEventType, evt.SerializeAsString());
    }
 
-   void decryptWalletRequest(signer::PasswordDialogType dialogType
+   void decryptWalletRequest(Blocksettle::Communication::signer::PasswordDialogType dialogType
       , const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
       , const bs::core::wallet::TXSignRequest &txReq = {}) override
    {
@@ -120,13 +118,6 @@ public:
       *(request.mutable_passworddialogdata()) = dialogData;
 
       owner_->sendData(signer::DecryptWalletRequestType, request.SerializeAsString());
-   }
-
-   void updateDialogData(const Internal::PasswordDialogDataWrapper &dialogData) override
-   {
-      headless::UpdateDialogDataRequest request;
-      *request.mutable_passworddialogdata() = dialogData;
-      owner_->sendData(signer::UpdateDialogDataType, request.SerializeAsString());
    }
 
    void walletChanged(const std::string &walletId) override

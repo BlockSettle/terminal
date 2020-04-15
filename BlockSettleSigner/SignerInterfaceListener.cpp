@@ -359,26 +359,27 @@ void SignerInterfaceListener::onAutoSignActivated(const std::string &data, bs::s
 {
    signer::AutoSignActResponse response;
    if (!response.ParseFromString(data)) {
-      logger_->error("[SignerInterfaceListener::onAutoSignActivated] failed to parse");
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+
+   const auto &itCb = cbAutoSignReqs_.find(reqId);
+   if (itCb == cbAutoSignReqs_.end()) {
+      logger_->error("[SignerInterfaceListener::{}] failed to find callback for id {}"
+         , __func__, reqId);
       return;
    }
 
    bs::error::ErrorCode result = static_cast<bs::error::ErrorCode>(response.errorcode());
    if (result == bs::error::ErrorCode::NoError) {
-      logger_->debug("[SignerInterfaceListener::onAutoSignActivated] {} ON"
-         , response.rootwalletid());
       emit parent_->autoSignActivated(response.rootwalletid());
-   } else if (result == bs::error::ErrorCode::AutoSignDisabled) {
-      logger_->debug("[SignerInterfaceListener::onAutoSignActivated] {} OFF"
-         , response.rootwalletid());
+   }
+   else if (result == bs::error::ErrorCode::AutoSignDisabled) {
       emit parent_->autoSignDeactivated(response.rootwalletid());
    }
 
-   const auto &itCb = cbAutoSignReqs_.find(reqId);
-   if (itCb != cbAutoSignReqs_.end()) {
-      itCb->second(result);
-      cbAutoSignReqs_.erase(itCb);
-   }
+   itCb->second(result);
+   cbAutoSignReqs_.erase(itCb);
 }
 
 void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, bs::signer::RequestId reqId)
