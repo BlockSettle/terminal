@@ -39,6 +39,7 @@ void HwDeviceManager::scanDevices()
    }
 
    setScanningFlag(true);
+   ledgerClient_->scanDevices();
    releaseConnection([this] {
       trezorClient_->initConnection([this]() {
          setScanningFlag(false);

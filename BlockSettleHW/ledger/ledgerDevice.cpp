@@ -461,7 +461,6 @@ void LedgerCommandThread::processTXSigning(/*const QVariant& reqTX*/)
 
    logger_->debug("[LedgerCommandThread] signTX - Start Input section");
    QVector<QByteArray> inputCommands;
-   QByteArray script;
    for (auto &utxo: coreReq_->inputs) {
       QByteArray inputPayload;
       inputPayload.append(Ledger::SEGWIT_TYPE);
@@ -497,25 +496,27 @@ void LedgerCommandThread::processTXSigning(/*const QVariant& reqTX*/)
 
    // -- End input section --
 
+   const bool hasChangeOutput = (changePath_.length() != 0);
+
    //// -- Start change section -- 
-   //logger_->debug("[LedgerCommandThread] signTX - Start Change section");
+   logger_->debug("[LedgerCommandThread] signTX - Start Change section");
 
-   //if (changePath_.length() != 0) {
-   //   QByteArray changeInputPayload;
-   //   changeInputPayload.append(static_cast<char>(changePath_.length()));
-   //   for (auto el : changePath_) {
-   //      writeUintBE(changeInputPayload, el);
-   //   }
+   if (hasChangeOutput) {
+      QByteArray changeInputPayload;
+      changeInputPayload.append(static_cast<char>(changePath_.length()));
+      for (auto el : changePath_) {
+         writeUintBE(changeInputPayload, el);
+      }
 
-   //   auto changeCommand = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_FINALIZE_FULL, 0xFF, 0x00, std::move(changeInputPayload));
+      auto changeCommand = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_FINALIZE_FULL, 0xFF, 0x00, std::move(changeInputPayload));
 
-   //   QByteArray responseInput;
-   //   if (!exchangeData(changeCommand, responseInput, "[LedgerCommandThread] signTX - change command")) {
-   //      releaseDevice();
-   //      emit error();
-   //      return;
-   //   }
-   //}
+      QByteArray responseInput;
+      if (!exchangeData(changeCommand, responseInput, "[LedgerCommandThread] signTX - change command")) {
+         releaseDevice();
+         emit error();
+         return;
+      }
+   }
 
    //// -- End Change section --
 
@@ -523,9 +524,21 @@ void LedgerCommandThread::processTXSigning(/*const QVariant& reqTX*/)
    logger_->debug("[LedgerCommandThread] signTX - Start Output section");
 
    QByteArray outputFullPayload;
-   writeVarInt(outputFullPayload, coreReq_->recipients.size());
+
+   size_t totalOutput = coreReq_->recipients.size();
+   if (hasChangeOutput) {
+      ++totalOutput;
+   }
+
+   writeVarInt(outputFullPayload, totalOutput);
    for (auto &recipient : coreReq_->recipients) {
       outputFullPayload.push_back(QByteArray::fromStdString(recipient->getSerializedScript().toBinStr()));
+   }
+
+   if (hasChangeOutput) {
+      bs::XBTAmount amount(coreReq_->change.value);
+      auto changeScript = coreReq_->change.address.getRecipient(amount)->getSerializedScript();
+      outputFullPayload.push_back(QByteArray::fromStdString(changeScript.toBinStr()));
    }
 
    QVector<QByteArray> outputCommands;
@@ -569,8 +582,19 @@ void LedgerCommandThread::processTXSigning(/*const QVariant& reqTX*/)
       writeUintLE(inputPayload, static_cast<uint32_t>(0));
       writeUintLE(inputPayload, utxo.getValue());
 
-      auto scriptHash = BtcUtils::getHash160(inputNodes[i].getPublicKey());
-      script = QByteArray::fromStdString(BtcUtils::getP2WPKHWitnessScript(scriptHash).toBinStr());
+
+      QByteArray script;
+      auto address = bs::Address::fromUTXO(utxo);
+      const bool isNestedSegwit = (address.getType() == AddressEntryType_P2SH);
+
+      if (address.getType() == AddressEntryType_P2SH) {
+         auto scriptHash = BtcUtils::getHash160(inputNodes[i].getPublicKey());
+         script = QByteArray::fromStdString(BtcUtils::getP2WPKHWitnessScript(scriptHash).toBinStr());
+      }
+      else {
+         auto scriptHash = BtcUtils::getP2WPKHWitnessScript(utxo.getScript().getSliceRef(2, 20));
+         script = QByteArray::fromStdString(scriptHash.toBinStr());
+      }
 
       writeVarInt(inputPayload, static_cast<uint32_t>(script.size()));
 
