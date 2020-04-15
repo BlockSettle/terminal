@@ -41,7 +41,7 @@ void AutoSignQuoteWidget::init(const std::shared_ptr<AutoSignQuoteProvider> &aut
    aqFillHistory();
    onAutoSignQuoteAvailChanged();
 
-   ui_->checkBoxAutoSign->setChecked(false);
+   ui_->checkBoxAutoSign->setChecked(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError);
 
    connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::autoSignQuoteAvailabilityChanged, this, &AutoSignQuoteWidget::onAutoSignQuoteAvailChanged);
    connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::autoSignStateChanged, this, &AutoSignQuoteWidget::onAutoSignStateChanged);
