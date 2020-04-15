@@ -50,12 +50,12 @@ public:
    QPointer<TrezorDevice> getTrezorDevice(const QString& deviceId);
 
 private:
-   void postToTrezor(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb);
+   void postToTrezor(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb, bool timeout = false);
    void postToTrezorInput(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb, QByteArray&& input);
 
    void enumDevices(AsyncCallBack&& cb = nullptr);
    void acquireDevice(AsyncCallBack&& cb = nullptr);
-   void post(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb, QByteArray&& input);
+   void post(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb, QByteArray&& input, bool timeout = false);
 
 signals:
    void initialized();

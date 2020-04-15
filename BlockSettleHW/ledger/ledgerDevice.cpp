@@ -179,7 +179,7 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
    Blocksettle::Communication::headless::SignTxRequest request;
    if (!request.ParseFromString(reqTX.toByteArray().toStdString())) {
       logger_->debug("[LedgerDevice] signTX - failed to parse transaction request ");
-      emit operationFailed();
+      emit operationFailed({});
       return;
    }
 
@@ -231,7 +231,7 @@ LedgerCommandThread *LedgerDevice::blankCommand(AsyncCallBackCall&& cb /*= nullp
    });
    connect(newCommandThread, &LedgerCommandThread::error, this, [caller = QPointer<LedgerDevice>(this)]() {
       if (caller) {
-         caller->operationFailed();
+         caller->operationFailed({});
       }
    });
    connect(newCommandThread, &LedgerCommandThread::finished, newCommandThread, &QObject::deleteLater);

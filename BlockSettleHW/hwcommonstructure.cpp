@@ -18,7 +18,5 @@ Path getDerivationPath(bool testNet, Purpose element)
    path.append(hardFlag | element);
    path.append(testNet ? CoinType::Bitcoin_test : CoinType::Bitcoin_main);
    path.append(hardFlag);
-
    return path;
 }
-

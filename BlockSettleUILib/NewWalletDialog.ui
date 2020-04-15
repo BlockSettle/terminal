@@ -10,6 +10,18 @@
     <height>203</height>
    </rect>
   </property>
+  <property name="minimumSize">
+   <size>
+    <width>430</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>430</width>
+    <height>16777215</height>
+   </size>
+  </property>
   <property name="windowTitle">
    <string>Create New Wallet</string>
   </property>
@@ -64,9 +76,21 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>401</width>
+        <width>430</width>
         <height>71</height>
        </rect>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>430</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>430</width>
+        <height>16777215</height>
+       </size>
       </property>
       <property name="text">
        <string>ADD NEW WALLET</string>

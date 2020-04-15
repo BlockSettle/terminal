@@ -2984,6 +2984,13 @@ TEST_F(TestCCoin, Reorg_WithACT)
    }
 }
 
+TEST_F(TestCCoin, processZC_whileMined)
+{
+   // This is just a placeholder for the test that should do the following:
+   // While obtaining ZCs in processZcBatch, one of the transactions got mined
+   ASSERT_TRUE(false);
+}
+
 //TODO:
 //blackhole cc
 //over assign cc

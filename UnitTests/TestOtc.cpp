@@ -222,7 +222,7 @@ public:
                   const auto &data = verifySeller_.getValue();
 
                   auto result = bs::TradesVerification::verifySignedPayin(BinaryData::fromString(request.process_tx().signed_tx())
-                     , BinaryData::fromString(data.payin_tx_hash()), env_->armoryConnection()->testFeePerByte(), totalFee_);
+                     , BinaryData::fromString(data.payin_tx_hash()));
                   ASSERT_TRUE(result->success);
 
                   sendStateUpdate(ProxyTerminalPb::OTC_STATE_SUCCEED);

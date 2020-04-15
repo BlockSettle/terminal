@@ -79,5 +79,6 @@
         <file>qml/BsControls/BSWalletHandlerDialog.qml</file>
         <file>qml/BsHw/PinMatrixDialog.qml</file>
         <file>qml/BsHw/HwAvailableDevices.qml</file>
+        <file>qml/BsHw/PassphraseDialog.qml</file>
     </qresource>
 </RCC>

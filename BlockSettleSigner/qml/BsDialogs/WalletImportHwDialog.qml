@@ -15,6 +15,7 @@ import Qt.labs.platform 1.1
 
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.HwDeviceManager 1.0
+import QtQuick.Controls 1.4
 
 import "../BsControls"
 import "../StyledControls"
@@ -33,7 +34,7 @@ CustomTitleDialogWindow {
     property int inputLabelsWidth: 110
 
     title: qsTr("Import Wallet")
-    width: 600
+    width: 480
     height: 250
     abortBoxType: BSAbortBox.AbortType.WalletImport
 
@@ -42,6 +43,21 @@ CustomTitleDialogWindow {
 
     onEnterPressed: {
         if (btnAccept.enabled) btnAccept.onClicked()
+    }
+
+    BusyIndicator {
+        id: spinner
+
+        Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
+        running: hwDeviceList.isImporting || hwDeviceList.isScanning || scanUpdateDelay.running
+        height: 20
+        width: 20
+    }
+
+    Timer {
+        id: scanUpdateDelay
+        interval: 2000
+        repeat: false
     }
 
     cContentItem: ColumnLayout {
@@ -88,7 +104,7 @@ CustomTitleDialogWindow {
 
                             onFailed: {
                                 JsHelper.messageBox(BSMessageBox.Type.Critical
-                                    , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
+                                    , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + reason)
                             }
                         }
                     }
@@ -137,6 +153,7 @@ CustomTitleDialogWindow {
                     if (hwDeviceList.readyForImport) {
                         hwDeviceList.importXpub();
                     } else if (hwDeviceList.isNoDevice) {
+                        scanUpdateDelay.start();
                         hwDeviceList.rescan();
                     }
 

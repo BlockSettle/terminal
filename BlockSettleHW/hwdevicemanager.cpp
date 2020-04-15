@@ -71,6 +71,8 @@ void HwDeviceManager::requestPublicKey(int deviceIndex)
 
    connect(device, &TrezorDevice::requestPinMatrix,
       this, &HwDeviceManager::requestPinMatrix, Qt::UniqueConnection);
+   connect(device, &TrezorDevice::requestHWPass,
+      this, &HwDeviceManager::requestHWPass, Qt::UniqueConnection);
    connect(device, &TrezorDevice::operationFailed,
       this, &HwDeviceManager::operationFailed, Qt::UniqueConnection);
 }
@@ -83,6 +85,16 @@ void HwDeviceManager::setMatrixPin(int deviceIndex, QString pin)
    }
 
    device->setMatrixPin(pin.toStdString());
+}
+
+void HwDeviceManager::setPassphrase(int deviceIndex, QString passphrase)
+{
+   auto device = getDevice(model_->getDevice(deviceIndex));
+   if (!device) {
+      return;
+   }
+
+   device->setPassword(passphrase.toStdString());
 }
 
 void HwDeviceManager::cancel(int deviceIndex)
@@ -161,8 +173,12 @@ void HwDeviceManager::signTX(QVariant reqTX)
 
    connect(device, &TrezorDevice::requestPinMatrix,
       this, &HwDeviceManager::requestPinMatrix, Qt::UniqueConnection);
+   connect(device, &TrezorDevice::requestHWPass,
+      this, &HwDeviceManager::requestHWPass, Qt::UniqueConnection);
    connect(device, &TrezorDevice::deviceTxStatusChanged,
       this, &HwDeviceManager::deviceTxStatusChanged, Qt::UniqueConnection);
+   connect(device, &TrezorDevice::cancelledOnDevice,
+      this, &HwDeviceManager::cancelledOnDevice, Qt::UniqueConnection);
 }
 
 void HwDeviceManager::releaseDevices()
@@ -175,8 +191,12 @@ void HwDeviceManager::releaseConnection(AsyncCallBack&& cb/*= nullptr*/)
    for (int i = 0; i < model_->rowCount(); ++i) {
       auto device = getDevice(model_->getDevice(i));
       if (device) {
-         device->init([this, cbCopy = std::move(cb)]() mutable {
-            trezorClient_->releaseConnection(std::move(cbCopy));
+         trezorClient_->initConnection([this, cbCopy = std::move(cb)] {
+            trezorClient_->releaseConnection([this, cb = std::move(cbCopy)]() {
+               if (cb) {
+                  cb();
+               }
+            });
          });
          model_->resetModel({});
          return;

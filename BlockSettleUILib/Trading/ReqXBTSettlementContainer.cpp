@@ -205,6 +205,7 @@ void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState
 
 void ReqXBTSettlementContainer::cancelWithError(const QString& errorMessage, bs::error::ErrorCode code)
 {
+   emit cancelTrade(settlementIdHex_);
    emit error(code, errorMessage);
    cancel();
 

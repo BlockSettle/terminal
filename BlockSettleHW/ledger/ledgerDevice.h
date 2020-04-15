@@ -47,6 +47,7 @@ public:
    // lifecycle
    void init(AsyncCallBack&& cb = nullptr) override;
    void cancel() override;
+   void clearSession(AsyncCallBack&& cb = nullptr) {}
 
    // operation
    void getPublicKey(AsyncCallBackCall&& cb = nullptr) override;
