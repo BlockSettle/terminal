@@ -68,18 +68,18 @@ Item {
                     Layout.preferredWidth: 150
                     height: 25
                     enabled: !signerStatus.autoSignActive && !signerStatus.offline
-                    model: walletsProxy.walletNames
+                    model: walletsProxy.priWalletNames
                     onActivated: {
-                        let walletId = walletsProxy.walletIdForIndex(currentIndex)
+                        let walletId = walletsProxy.walletIdForName(currentText)
                         signerSettings.autoSignWallet = walletId
-                        autoSignAllowed = !walletsProxy.isWatchingOnlyWallet(walletsProxy.walletIdForIndex(currentIndex))
+                        autoSignAllowed = !walletsProxy.isWatchingOnlyWallet(walletId)
                     }
 
                     Connections {
                         target: walletsProxy
                         onWalletsChanged: {
-                            cbWallets.currentIndex = walletsProxy.indexOfWalletId(signerSettings.autoSignWallet)
-                            autoSignAllowed = !walletsProxy.isWatchingOnlyWallet(walletsProxy.walletIdForIndex(cbWallets.currentIndex))
+//                            cbWallets.currentIndex = walletsProxy.indexOfWalletId(signerSettings.autoSignWallet)
+                            autoSignAllowed = !walletsProxy.isWatchingOnlyWallet(signerSettings.autoSignWallet)
                         }
                     }
                 }
@@ -110,7 +110,7 @@ Item {
                         checked = !newState
 
                         if (signerSettings.autoSignWallet.length === 0) {
-                            let walletId = walletsProxy.walletIdForIndex(cbWallets.currentIndex)
+                            let walletId = walletsProxy.walletIdForName(cbWallets.currentText)
                             signerSettings.autoSignWallet = walletId
                         }
 
