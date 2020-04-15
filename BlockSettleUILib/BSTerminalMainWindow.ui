@@ -53,7 +53,7 @@
       <property name="minimumSize">
        <size>
         <width>0</width>
-        <height>25</height>
+        <height>28</height>
        </size>
       </property>
       <property name="sizeIncrement">
@@ -141,13 +141,16 @@
              </size>
             </property>
             <property name="text">
-             <string>TEST</string>
+             <string>test environment</string>
             </property>
             <property name="flat">
              <bool>true</bool>
             </property>
             <property name="usernameButton" stdset="0">
              <bool>false</bool>
+            </property>
+            <property name="left_button" stdset="0">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -160,13 +163,16 @@
              </size>
             </property>
             <property name="text">
-             <string>PROD</string>
+             <string>live environment</string>
             </property>
             <property name="flat">
              <bool>true</bool>
             </property>
             <property name="usernameButton" stdset="0">
              <bool>false</bool>
+            </property>
+            <property name="right_button" stdset="0">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -284,7 +290,7 @@
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>19</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

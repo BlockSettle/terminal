@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>457</width>
-    <height>149</height>
+    <width>460</width>
+    <height>150</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -158,6 +158,9 @@ In order to trade you must set up a BlockSettle Primary Wallet.</string>
            <property name="wordWrap">
             <bool>true</bool>
            </property>
+           <property name="statusWarningLabel" stdset="0">
+            <bool>true</bool>
+           </property>
           </widget>
          </item>
         </layout>
@@ -213,7 +216,7 @@ In order to trade you must set up a BlockSettle Primary Wallet.</string>
         </property>
         <property name="minimumSize">
          <size>
-          <width>100</width>
+          <width>120</width>
           <height>0</height>
          </size>
         </property>
@@ -248,7 +251,7 @@ In order to trade you must set up a BlockSettle Primary Wallet.</string>
         </property>
         <property name="minimumSize">
          <size>
-          <width>100</width>
+          <width>120</width>
           <height>0</height>
          </size>
         </property>
@@ -273,7 +276,7 @@ In order to trade you must set up a BlockSettle Primary Wallet.</string>
         </property>
         <property name="minimumSize">
          <size>
-          <width>100</width>
+          <width>120</width>
           <height>0</height>
          </size>
         </property>
