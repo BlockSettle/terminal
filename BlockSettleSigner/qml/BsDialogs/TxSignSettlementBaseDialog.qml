@@ -164,7 +164,7 @@ CustomTitleDialogWindowWithExpander {
 
     Connections {
         target: hwDeviceManager
-        onRequestPinMatrix: JsHelper.showPinMatrix(0);
+        onRequestPinMatrix: JsHelper.showHwPinMatrix(0);
         onDeviceReady: hwDeviceManager.signTX(passwordDialogData.TxRequest);
         onDeviceNotFound: hwDeviceStatus = qsTr("Cannot find device paired with this wallet, device label is :\n") + walletInfo.name;
         onDeviceTxStatusChanged: hwDeviceStatus = status;

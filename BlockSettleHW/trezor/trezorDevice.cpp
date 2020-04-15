@@ -76,6 +76,7 @@ namespace {
 
    const std::string tesNetCoin = "Testnet";
    // Messages to show in UI
+   const QString requestPassphrase= QObject::tr("Please enter the trezor passphrase");
    const QString requestPin = QObject::tr("Please enter the pin from device");
    const QString pressButton = QObject::tr("Confirm transaction output(s) on your device");
    const QString transaction = QObject::tr("Setup transaction...");
@@ -210,7 +211,10 @@ void TrezorDevice::setMatrixPin(const std::string& pin)
 
 void TrezorDevice::setPassword(const std::string& password)
 {
-   // #TREZOR_INTEGRATION: DO NOT FORGET PASSWORD CASE
+   connectionManager_->GetLogger()->debug("[TrezorDevice] setPassword - send passphrase response");
+   common::PassphraseAck message;
+   message.set_passphrase(password);
+   makeCall(message);
 }
 
 void TrezorDevice::cancel()
@@ -276,7 +280,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
          }
          sendTxMessage(QString::fromStdString(failure.message()));
          resetCaches();
-         emit operationFailed();
+         emit operationFailed(QString::fromStdString(failure.message()));
       }
       break;
    case MessageType_Features:
@@ -305,6 +309,15 @@ void TrezorDevice::handleMessage(const MessageData& data)
          if (parseResponse(request, data)) {
             emit requestPinMatrix();
             sendTxMessage(requestPin);
+         }
+      }
+      break;
+   case MessageType_PassphraseRequest:
+      {
+         common::PassphraseRequest request;
+         if (parseResponse(request, data)) {
+            emit requestHWPass();
+            sendTxMessage(requestPassphrase);
          }
       }
       break;
