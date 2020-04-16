@@ -167,7 +167,7 @@ CustomTitleDialogWindowWithExpander {
         onRequestPinMatrix: JsHelper.showHwPinMatrix(0);
         onDeviceReady: hwDeviceManager.signTX(passwordDialogData.TxRequest);
         onDeviceNotFound: {
-            hwDeviceStatus = "Searching device"
+            hwDeviceStatus = qsTr("Searching for device")
             delayScanDevice.start();
         }
         onDeviceTxStatusChanged: hwDeviceStatus = status;

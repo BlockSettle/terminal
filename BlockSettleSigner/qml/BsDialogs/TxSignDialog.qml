@@ -47,7 +47,7 @@ BSWalletHandlerDialog {
     readonly property int duration: authSign.defaultExpiration()
     property real timeLeft: duration
 
-    property string hwDeviceStatus: "Searching device"
+    property string hwDeviceStatus: qsTr("Searching for device")
 
     id: root
     title: qsTr("Sign Transaction")
