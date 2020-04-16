@@ -711,20 +711,17 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                   (const std::map<UTXO, std::string> &inputs)
                {
                   QMetaObject::invokeMethod(this, [this, feePerByte, qrn, replyData, spendVal, spendWallet, isSpendCC, inputs, price] {
-                     const auto &cbChangeAddr = [this, feePerByte, qrn, replyData, spendVal, spendWallet, inputs, price, isSpendCC]
+                     const auto &cbChangeAddr = [this, feePerByte, qrn, replyData, spendVal, spendWallet, inputs, price]
                         (const bs::Address &changeAddress)
                      {
                         try {
                            const auto recipient = bs::Address::fromAddressString(qrn.requestorRecvAddress).getRecipient(bs::XBTAmount{ spendVal });
 
-                           const auto outSortOrder = isSpendCC ? kBuySortOrder : kSellSortOrder;
-                           const auto txReq = walletsManager_->createPartialTXRequest(spendVal, inputs, changeAddress
-                              , isSpendCC ? 0 : feePerByte, { recipient }, outSortOrder
-                              , BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false);
-                           logger_->debug("[RFQDealerReply::submitReply] {} input[s], fpb={}, recip={}, "
-                              "change amount={}, prevPart={}", inputs.size(), feePerByte
-                              , bs::Address::fromAddressString(qrn.requestorRecvAddress).display()
-                              , txReq.change.value, qrn.requestorAuthPublicKey);
+                           logger_->debug("[cbFee] {} input[s], fpb={}, recip={}, prevPart={}", inputs.size(), feePerByte
+                              , bs::Address::fromAddressString(qrn.requestorRecvAddress).display(), qrn.requestorAuthPublicKey);
+                           const auto outSortOrder = (qrn.side == bs::network::Side::Buy) ? kBuySortOrder : kSellSortOrder;
+                           const auto txReq = walletsManager_->createPartialTXRequest(spendVal, inputs, changeAddress, feePerByte
+                              , { recipient }, outSortOrder, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false);
                            replyData->qn.transactionData = txReq.serializeState().toHexStr();
                            replyData->utxoRes = utxoReservationManager_->makeNewReservation(txReq.inputs, replyData->qn.quoteRequestId);
                            submit(price, replyData);
