@@ -153,12 +153,15 @@ In order to trade you must set up a BlockSettle Primary Wallet.</string>
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Create a BlockSettle wallet</string>
+            <string>Create a BlockSettle wallet?</string>
            </property>
            <property name="wordWrap">
             <bool>true</bool>
            </property>
            <property name="statusWarningLabel" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="h1" stdset="0">
             <bool>true</bool>
            </property>
           </widget>
