@@ -1926,9 +1926,8 @@ void BSTerminalMainWindow::onSyncWallets()
    walletsMgr_->syncWallets(progressDelegate);
 }
 
-void BSTerminalMainWindow::onSignerVisibleChanged(bool visible)
+void BSTerminalMainWindow::onSignerVisibleChanged()
 {
-   signerVisible_ = visible;
    processDeferredDialogs();
 }
 
@@ -2131,7 +2130,7 @@ void BSTerminalMainWindow::processDeferredDialogs()
    if(deferredDialogRunning_) {
       return;
    }
-   if (signContainer_ && signContainer_->isLocal() && signerVisible_) {
+   if (signContainer_ && signContainer_->isLocal() && signContainer_->isWindowVisible()) {
       return;
    }
 

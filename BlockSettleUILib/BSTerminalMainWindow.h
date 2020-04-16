@@ -156,7 +156,7 @@ private slots:
 
    void onTabWidgetCurrentChanged(const int &index);
    void onSyncWallets();
-   void onSignerVisibleChanged(bool visible);
+   void onSignerVisibleChanged();
 
 private:
    std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
@@ -308,7 +308,6 @@ private:
 
    std::queue<std::function<void(void)>> deferredDialogs_;
    bool deferredDialogRunning_ = false;
-   bool signerVisible_ = false;
 
    class MainWinACT : public ArmoryCallbackTarget
    {
