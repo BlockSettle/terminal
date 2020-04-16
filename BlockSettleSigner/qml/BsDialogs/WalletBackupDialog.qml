@@ -33,11 +33,12 @@ CustomTitleDialogWindow {
     property string targetFile: qmlAppObj.getUrlPath(StandardPaths.writableLocation(StandardPaths.DocumentsLocation) + "/" + backupFileName)
 
     property string backupFileExt: "." + (isPrintable ? "pdf" : "wdb")
+    property string netTypeStr: signerSettings.testNet ? "testnet" : "mainnet";
 
     // suggested new file names
     property string backupFileName: fullBackupMode
-                                    ? "BlockSettle_" + walletInfo.walletId + backupFileExt
-                                    : "BlockSettle_" + walletInfo.walletId + "_WatchingOnly.lmdb"
+                                    ? "BlockSettle_" + netTypeStr + "_" + walletInfo.walletId + backupFileExt
+                                    : "BlockSettle_" + netTypeStr + "_" + walletInfo.walletId + "_WatchingOnly.lmdb"
 
     property bool   isPrintable: false
     property bool   acceptable: (walletInfo.encType === QPasswordData.Unencrypted)
