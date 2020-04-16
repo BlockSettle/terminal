@@ -115,6 +115,7 @@ public:
    void sendControlPassword(const bs::wallet::QPasswordData &password);
    void changeControlPassword(const bs::wallet::QPasswordData &oldPassword, const bs::wallet::QPasswordData &newPassword
       , const std::function<void(bs::error::ErrorCode errorCode)> &cb);
+   void sendWindowStatus(bool visible);
 
 signals:
    void ready() const;

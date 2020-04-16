@@ -251,6 +251,9 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
    case signer::ChangeControlPasswordType:
       rc = onChangeControlPassword(packet.data(), packet.id());
       break;
+   case signer::WindowStatusType:
+      rc = onWindowsStatus(packet.data(), packet.id());
+      break;
    default:
       logger_->warn("[SignerAdapterListener::{}] unprocessed packet type {}", __func__, packet.type());
       break;
@@ -637,6 +640,17 @@ bool SignerAdapterListener::onChangeControlPassword(const std::string &data, bs:
    response.set_errorcode(static_cast<uint32_t>(result));
    sendData(signer::ChangeControlPasswordType, response.SerializeAsString(), reqId);
 
+   return true;
+}
+
+bool SignerAdapterListener::onWindowsStatus(const std::string &data, bs::signer::RequestId)
+{
+   headless::WindowStatus msg;
+   if (!msg.ParseFromString(data)) {
+      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
+      return false;
+   }
+   app_->windowVisibilityChanged(msg.visible());
    return true;
 }
 
