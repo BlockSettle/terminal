@@ -240,10 +240,11 @@ Item {
                         Layout.preferredHeight: 25
                     }
                     CustomLabelValue {
-                        text: (signerStatus.offline ? qsTr("0.00000000 of Unlimited") :
+                        text: signerStatus.autoSignActive ?
                             qsTr("%1 of %2").arg(signerStatus.autoSignSpent.toFixed(8))
                                 .arg(signerStatus.autoSignUnlimited ? qsTr("Unlimited") :
-                                    signerStatus.autoSignLimit.toFixed(8)))
+                                    signerStatus.autoSignLimit.toFixed(8))
+                            : qsTr("Inactive")
                         Layout.alignment: Qt.AlignRight
                         wrapMode: Text.NoWrap
                     }

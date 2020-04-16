@@ -75,7 +75,6 @@ public:
    bool manualSignUnlimited() const;
    int limitAutoSignTime() const;
    QString limitAutoSignTimeStr() const;
-   int limitManualPwKeep() const;
    QString limitManualPwKeepStr() const;
    bs::signer::Limits limits() const;
    bool hideEidInfoBox() const;

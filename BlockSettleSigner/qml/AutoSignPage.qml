@@ -25,6 +25,8 @@ import "js/helper.js" as JsHelper
 Item {
     id: root
     property bool autoSignAllowed: false
+    property string unlimText: qsTr("Unlimited")
+
 
     Connections {
         target: signerStatus
@@ -147,17 +149,26 @@ Item {
                     height: 25
                     enabled: !signerStatus.autoSignActive && !signerStatus.offline
                     editable: true
-                    model: [ "Unlimited", "0.1", "0.5", "1", "2", "5"]
+                    model: [ unlimText, "0.1", "0.5", "1", "2", "5"]
                     maximumLength: 9
 
-                    // FIXME: uncomment when limits will be fixed
-                    // displayText: signerSettings.autoSignUnlimited ? qsTr("Unlimited") : signerSettings.limitAutoSignXbt
-                    onCurrentTextChanged: {
-                        if (currentText !== qsTr("Unlimited")) {
-                            signerSettings.limitAutoSignXbt = currentText
+                    onCurrentIndexChanged: {
+                        limitAutoSignXbt.displayText = undefined
+                        if (currentIndex === 0) {
+                            signerSettings.limitAutoSignXbt = 0
+                        }
+                        else if (currentIndex < 0) {
+                            limitAutoSignXbt.displayText = signerSettings.limitAutoSignXbt
                         }
                         else {
-                            signerSettings.limitAutoSignXbt = 0
+                            let value = parseFloat(model[currentIndex])
+                            signerSettings.limitAutoSignXbt = value
+                        }
+                    }
+                    onAccepted: {
+                        let value = parseFloat(editText)
+                        if ((value > 0.0) && (value <= 1000)) {
+                            signerSettings.limitAutoSignXbt = editText
                         }
                     }
                     validator: RegExpValidator {
@@ -178,13 +189,11 @@ Item {
                     height: 25
                     enabled: !signerStatus.autoSignActive && !signerStatus.offline
                     editable: true
-                    model: [ "Unlimited", "30m", "1h", "6h", "12h", "24h"]
+                    model: [ unlimText, "30m", "1h", "6h", "12h", "24h"]
                     maximumLength: 9
 
-                    // FIXME: uncomment when limits will be fixed
-                    // displayText: signerSettings.limitAutoSignTime ? signerSettings.limitAutoSignTime : qsTr("Unlimited")
                     onCurrentTextChanged: {
-                        if (currentText !== qsTr("Unlimited")) {
+                        if (currentText !== unlimText) {
                             signerSettings.limitAutoSignTime = text
                         }
                         else {
