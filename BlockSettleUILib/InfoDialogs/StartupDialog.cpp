@@ -19,7 +19,7 @@
 #include "ArmoryServersProvider.h"
 
 namespace {
-   const char *kLicenseFilePath = "://resources/license.txt";
+   const char *kLicenseFilePath = "://resources/license.html";
    const QString kLicenseAgreementTitle = QObject::tr("License Agreement");
    const QString kEnvConnectivityTitle = QObject::tr("BlockSettle Environment");
 
@@ -51,7 +51,7 @@ StartupDialog::StartupDialog(bool showLicense, QWidget *parent) :
 
    QString licenseText = QString::fromUtf8(file.readAll());
 
-   ui_->textBrowserLicense->setPlainText(licenseText);
+   ui_->textBrowserLicense->setHtml(licenseText);
    setupConnectivityList();
    updateStatus();
 }
