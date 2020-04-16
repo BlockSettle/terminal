@@ -282,11 +282,12 @@ bool bs::UTXOReservationManager::resetHdWallet(const std::string& hdWalledId)
 void bs::UTXOReservationManager::resetSpendableXbt(const std::shared_ptr<bs::sync::hd::Wallet>& hdWallet)
 {
    assert(hdWallet);
-   const auto &leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
+   auto leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
    std::vector<bs::sync::WalletsManager::WalletPtr> wallets(leaves.begin(), leaves.end());
 
-   bs::tradeutils::getSpendableTxOutList(wallets, [mgr = QPointer<bs::UTXOReservationManager>(this),
-      walletId = hdWallet->walletId()](const std::map<UTXO, std::string> &utxos) {
+   bs::tradeutils::getSpendableTxOutList(wallets, [mgr = QPointer<bs::UTXOReservationManager>(this)
+      , walletId = hdWallet->walletId(), leaves]
+         (const std::map<UTXO, std::string> &utxos) {
       if (!mgr) {
          return; // manager thread die, nothing to do
       }
@@ -296,10 +297,8 @@ void bs::UTXOReservationManager::resetSpendableXbt(const std::shared_ptr<bs::syn
       for (const auto &utxo : utxos) {
          utxosContainer.availableUtxo_.push_back(utxo.first);
       }
-
       QMetaObject::invokeMethod(mgr, [mgr, container = std::move(utxosContainer), id = walletId]{
          mgr->availableXbtUTXOs_[id] = std::move(container);
-
          emit mgr->availableUtxoChanged(id);
          });
    }, false);
