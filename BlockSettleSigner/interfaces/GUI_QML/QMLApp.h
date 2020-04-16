@@ -85,7 +85,7 @@ private:
    void settingsConnections();
    void registerQtTypes();
 
-   SignerAdapter  *  adapter_;
+   SignerAdapter  *  adapter_{};
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<SignerSettings>  settings_;
    QSplashScreen              *     splashScreen_ = nullptr;

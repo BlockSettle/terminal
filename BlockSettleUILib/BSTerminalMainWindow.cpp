@@ -563,6 +563,7 @@ bool BSTerminalMainWindow::InitSigningContainer()
    connect(signContainer_.get(), &WalletSignerContainer::ready, this, &BSTerminalMainWindow::SignerReady, Qt::QueuedConnection);
    connect(signContainer_.get(), &WalletSignerContainer::needNewWalletPrompt, this, &BSTerminalMainWindow::onNeedNewWallet, Qt::QueuedConnection);
    connect(signContainer_.get(), &WalletSignerContainer::walletsReadyToSync, this, &BSTerminalMainWindow::onSyncWallets, Qt::QueuedConnection);
+   connect(signContainer_.get(), &WalletSignerContainer::windowVisibilityChanged, this, &BSTerminalMainWindow::onSignerVisibleChanged, Qt::QueuedConnection);
 
    return true;
 }
@@ -1925,6 +1926,11 @@ void BSTerminalMainWindow::onSyncWallets()
    walletsMgr_->syncWallets(progressDelegate);
 }
 
+void BSTerminalMainWindow::onSignerVisibleChanged()
+{
+   processDeferredDialogs();
+}
+
 void BSTerminalMainWindow::InitWidgets()
 {
    authAddrDlg_ = std::make_shared<AuthAddressDialog>(logMgr_->logger(), authManager_
@@ -2055,26 +2061,28 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
 
 void BSTerminalMainWindow::promptToCreateAccountIfNeeded()
 {
-   auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
-   bool hideCreateAccountTestnet = applicationSettings_->get<bool>(ApplicationSettings::HideCreateAccountPromptTestnet);
-   if (envType != ApplicationSettings::EnvConfiguration::Test || hideCreateAccountTestnet) {
-      return;
-   }
-   applicationSettings_->set(ApplicationSettings::HideCreateAccountPromptTestnet, true);
+   addDeferredDialog([this] {
+      auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
+      bool hideCreateAccountTestnet = applicationSettings_->get<bool>(ApplicationSettings::HideCreateAccountPromptTestnet);
+      if (envType != ApplicationSettings::EnvConfiguration::Test || hideCreateAccountTestnet) {
+         return;
+      }
+      applicationSettings_->set(ApplicationSettings::HideCreateAccountPromptTestnet, true);
 
-   CreateAccountPrompt dlg(this);
-   int rc = dlg.exec();
+      CreateAccountPrompt dlg(this);
+      int rc = dlg.exec();
 
-   switch (rc) {
-      case CreateAccountPrompt::Login:
-         onLogin();
-         break;
-      case CreateAccountPrompt::CreateAccount:
-         QDesktopServices::openUrl(QUrl(QStringLiteral("https://test.blocksettle.com/#login")));
-         break;
-      case CreateAccountPrompt::Cancel:
-         break;
-   }
+      switch (rc) {
+         case CreateAccountPrompt::Login:
+            onLogin();
+            break;
+         case CreateAccountPrompt::CreateAccount:
+            QDesktopServices::openUrl(QUrl(QStringLiteral("https://test.blocksettle.com/#login")));
+            break;
+         case CreateAccountPrompt::Cancel:
+            break;
+      }
+   });
 }
 
 void BSTerminalMainWindow::promptSwitchEnv(bool prod)
@@ -2117,6 +2125,23 @@ void BSTerminalMainWindow::restartTerminal()
    qApp->quit();
 }
 
+void BSTerminalMainWindow::processDeferredDialogs()
+{
+   if(deferredDialogRunning_) {
+      return;
+   }
+   if (signContainer_ && signContainer_->isLocal() && signContainer_->isWindowVisible()) {
+      return;
+   }
+
+   deferredDialogRunning_ = true;
+   while (!deferredDialogs_.empty()) {
+      deferredDialogs_.front()(); // run stored lambda
+      deferredDialogs_.pop();
+   }
+   deferredDialogRunning_ = false;
+}
+
 void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &deferredDialog)
 {
    // multi thread scope, it's safe to call this function from different threads
@@ -2124,14 +2149,6 @@ void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &de
       // single thread scope (main thread), it's safe to push to deferredDialogs_
       // and check deferredDialogRunning_ variable
       deferredDialogs_.push(deferredDialog);
-      if(!deferredDialogRunning_) {
-         deferredDialogRunning_ = true;
-         while (!deferredDialogs_.empty()) {
-            deferredDialogs_.front()(); // run stored lambda
-            deferredDialogs_.pop();
-         }
-         deferredDialogRunning_ = false;
-      }
-
+      processDeferredDialogs();
    }, Qt::QueuedConnection);
 }

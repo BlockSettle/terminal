@@ -266,6 +266,10 @@ void QMLAppObj::SetRootObject(QObject *obj)
          QMetaObject::invokeMethod(walletsView, "expandAll");
       }
    });
+   auto window = qobject_cast<QQuickWindow*>(rootObj_);
+   connect(window, &QWindow::visibleChanged, this, [this](bool visible) {
+      adapter_->sendWindowStatus(visible);
+   });
 }
 
 void QMLAppObj::raiseQmlWindow()
