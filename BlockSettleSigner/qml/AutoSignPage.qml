@@ -168,7 +168,11 @@ Item {
                     onAccepted: {
                         let value = parseFloat(editText)
                         if ((value > 0.0) && (value <= 1000)) {
-                            signerSettings.limitAutoSignXbt = editText
+                            signerSettings.limitAutoSignXbt = value
+                        }
+                        else {
+                            signerSettings.limitAutoSignXbt = 1.0
+                            editText = 1.0
                         }
                     }
                     validator: RegExpValidator {
