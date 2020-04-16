@@ -9,9 +9,12 @@
 
 */
 #include "ui_NewAddressDialog.h"
-#include "NewAddressDialog.h"
+
 #include <QClipboard>
 #include <QDialogButtonBox>
+#include <QToolTip>
+
+#include "NewAddressDialog.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWallet.h"
 
@@ -73,7 +76,9 @@ void NewAddressDialog::displayAddress()
 
 void NewAddressDialog::copyToClipboard()
 {
-   QApplication::clipboard()->setText(QString::fromStdString(address_.display()));
+   auto addr = QString::fromStdString(address_.display());
+   QApplication::clipboard()->setText(addr);
+   QToolTip::showText(ui_->lineEditNewAddress->mapToGlobal(QPoint(0, 3)), tr("Copied '%1' to clipboard.").arg(addr), this);
 }
 
 void NewAddressDialog::onClose()
