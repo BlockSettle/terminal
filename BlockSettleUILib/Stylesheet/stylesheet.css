@@ -281,14 +281,27 @@ QMenu::item:first {
 }
 
 *[usernameButton="true"] {
+  margin-right: 3px;
+  margin-top: 3px;
+  text-align: center;
+  background-color: #247dac;
+  text-transform: none;
+  padding: 0 15px 0 15px;
+  color: #ffffff;
+  height: 20px;
+  text-decoration: underline;}
+  *[usernameButton="true"]:hover {
+    color: #ffffff; }
+
+*[usernameButtonLoggedIn="true"] {
   border: none;
-  text-align: right;
+  text-align: center;
   background-color: transparent;
   text-transform: none;
-  padding: 0 5px 0 0;
+  padding: 0 5px 0 5px;
   color: #247dac;
-  height: 25px; }
-  *[usernameButton="true"]:hover {
+  height: 20px; }
+  *[usernameButtonLoggedIn="true"]:hover {
     background-color: transparent;
     border: none;
     color: #ffffff; }
@@ -1600,18 +1613,38 @@ ChatSearchListViewItemStyle {
 }
 
 QPushButton#testEnvSettings, QPushButton#prodEnvSettings {
+  margin-top: 2px;
   background-color: #1c2835;
-  color: #81888f;
-  text-transform: lowercase;
-}
-QPushButton:disabled#prodEnvSettings, QPushButton:disabled#testEnvSettings {
-  background-color: #247cac ;
   color: #ffffff;
-  text-transform: lowercase;
+  border: 1px solid #81888f;
+  height: 22px;
+  text-transform: none;
 }
-QPushButton:hover#testEnvSettings, QPushButton:hover#prodEnvSettings {
+
+QPushButton:disabled#testEnvSettings, QPushButton:hover#testEnvSettings {
+  background-color: #22c064 ;
+  color: #000000;
+}
+
+QPushButton:disabled#prodEnvSettings, QPushButton:hover#prodEnvSettings {
+  background-color: #fe9727 ;
   color: #ffffff;
 }
+
+QPushButton#testEnvSettings {
+  border-width: 1px 0px 1px 1px;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 0px;
+  border-bottom-right-radius: 0px;
+  border-bottom-left-radius: 4px; }
+
+QPushButton#prodEnvSettings {
+  border-width: 1px 1px 1px 0px;
+  border-top-left-radius: 0px;
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+  border-bottom-left-radius: 0px; }
+
 
 QLabel#labelHeading {
   font-weight: bold;
