@@ -101,7 +101,7 @@ void TransactionDetailsWidget::populateTransactionWidget(const TxHash &rpcTXID
    };
 
    if (firstPass || !curTx_.isInitialized() || (curTx_.getThisHash() != rpcTXID)) {
-      if (!armoryPtr_->getTxByHash(rpcTXID, cbTX)) {
+      if (!armoryPtr_->getTxByHash(rpcTXID, cbTX, false)) {
          if (logger_) {
             logger_->error("[{}] - Failed to get TXID {}.", __func__, txidStr);
          }
@@ -152,7 +152,7 @@ void TransactionDetailsWidget::processTxData(Tx tx)
       setTxGUIValues();
    }
    else {
-      armoryPtr_->getTXsByHash(prevTxHashSet, cbProcessTX);
+      armoryPtr_->getTXsByHash(prevTxHashSet, cbProcessTX, false);
    }
 }
 
