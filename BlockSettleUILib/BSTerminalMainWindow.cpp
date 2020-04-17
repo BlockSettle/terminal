@@ -74,6 +74,8 @@
 
 #include "ui_BSTerminalMainWindow.h"
 
+const auto kTestAccountLink = QStringLiteral("https://test.blocksettle.com/#login");
+
 BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings
    , BSTerminalSplashScreen& splashScreen, QLockFile &lockFile, QWidget* parent)
    : QMainWindow(parent)
@@ -1374,7 +1376,23 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    int rc = loginDialog.exec();
 
    if (rc != QDialog::Accepted && !loginDialog.result()) {
-      setWidgetsAuthorized(false);
+      return;
+   }
+
+   bool isRegistered = (loginDialog.result()->userType == bs::network::UserType::Market
+      || loginDialog.result()->userType == bs::network::UserType::Trading
+      || loginDialog.result()->userType == bs::network::UserType::Dealing);
+   auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
+   if (!isRegistered && envType == ApplicationSettings::EnvConfiguration::Test) {
+      BSMessageBox dlg(BSMessageBox::info, tr("Login failed")
+         , tr("Create BlockSettle Test Account")
+         , tr("<p>Login requires a test account - create one in minutes on out webpage.</p>"
+              "<p>Once you have registered, return to login in the Terminal.</p>"
+              "<a href=\"%1\"><span style=\"text-decoration: underline;color:%2;\">Create Test Account Now</span></a>")
+         .arg(kTestAccountLink).arg(BSMessageBox::kUrlColor), this);
+      dlg.setOkVisible(false);
+      dlg.setCancelVisible(true);
+      dlg.exec();
       return;
    }
 
@@ -2077,7 +2095,7 @@ void BSTerminalMainWindow::promptToCreateAccountIfNeeded()
             onLogin();
             break;
          case CreateAccountPrompt::CreateAccount:
-            QDesktopServices::openUrl(QUrl(QStringLiteral("https://test.blocksettle.com/#login")));
+            QDesktopServices::openUrl(QUrl(kTestAccountLink));
             break;
          case CreateAccountPrompt::Cancel:
             break;
