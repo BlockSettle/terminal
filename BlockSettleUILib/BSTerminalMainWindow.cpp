@@ -74,8 +74,6 @@
 
 #include "ui_BSTerminalMainWindow.h"
 
-const auto kTestAccountLink = QStringLiteral("https://test.blocksettle.com/#login");
-
 BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings
    , BSTerminalSplashScreen& splashScreen, QLockFile &lockFile, QWidget* parent)
    : QMainWindow(parent)
@@ -1384,12 +1382,13 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
       || loginDialog.result()->userType == bs::network::UserType::Dealing);
    auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
    if (!isRegistered && envType == ApplicationSettings::EnvConfiguration::Test) {
+      auto createTestAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlTest);
       BSMessageBox dlg(BSMessageBox::info, tr("Login failed")
          , tr("Create BlockSettle Test Account")
          , tr("<p>Login requires a test account - create one in minutes on out webpage.</p>"
               "<p>Once you have registered, return to login in the Terminal.</p>"
               "<a href=\"%1\"><span style=\"text-decoration: underline;color:%2;\">Create Test Account Now</span></a>")
-         .arg(kTestAccountLink).arg(BSMessageBox::kUrlColor), this);
+         .arg(createTestAccountUrl).arg(BSMessageBox::kUrlColor), this);
       dlg.setOkVisible(false);
       dlg.setCancelVisible(true);
       dlg.exec();
@@ -2094,9 +2093,11 @@ void BSTerminalMainWindow::promptToCreateAccountIfNeeded()
          case CreateAccountPrompt::Login:
             onLogin();
             break;
-         case CreateAccountPrompt::CreateAccount:
-            QDesktopServices::openUrl(QUrl(kTestAccountLink));
+         case CreateAccountPrompt::CreateAccount: {
+            auto createTestAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlTest);
+            QDesktopServices::openUrl(QUrl(createTestAccountUrl));
             break;
+         }
          case CreateAccountPrompt::Cancel:
             break;
       }
