@@ -1754,7 +1754,13 @@ void BSTerminalMainWindow::changeEvent(QEvent* e)
 
 void BSTerminalMainWindow::setLoginButtonText(const QString& text)
 {
-   ui_->pushButtonUser->setText(text);
+   auto *button = ui_->pushButtonUser;
+   button->setText(text);
+   button->setProperty("usernameButton", QVariant(text == loginButtonText_));
+   button->setProperty("usernameButtonLoggedIn", QVariant(text != loginButtonText_));
+   button->style()->unpolish(button);
+   button->style()->polish(button);
+   button->update();
 
 #ifndef Q_OS_MAC
    ui_->menubar->adjustSize();
