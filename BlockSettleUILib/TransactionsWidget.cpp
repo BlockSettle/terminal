@@ -480,12 +480,6 @@ void TransactionsWidget::walletsChanged()
          ui_->walletBox->setItemData(groupIndex, groupLeafIds, UiUtils::WalletIdRole);
       }
    }
-   const auto settlWallet = nullptr;
-   if (settlWallet) {   //TODO: add wallet address display if decided
-      ui_->walletBox->addItem(QLatin1String("Settlement"));
-/*      ui_->walletBox->setItemData(index++, QStringList() << QString::fromStdString(settlWallet->walletId())
-         , UiUtils::WalletIdRole);*/
-   }
 
    ui_->typeFilterComboBox->setCurrentIndex(direction);
 
