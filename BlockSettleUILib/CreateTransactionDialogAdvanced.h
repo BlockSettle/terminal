@@ -109,6 +109,7 @@ protected slots:
    void onAddOutput();
    void onCreatePressed();
    void onImportPressed();
+   void onMaxPressed() override;
 
    void feeSelectionChanged(int currentIndex) override;
 
@@ -126,6 +127,8 @@ private slots:
 private:
    void clear() override;
    void initUI();
+
+   void updateOutputButtonTitle();
 
    void setRBFinputs(const Tx &);
    void setCPFPinputs(const Tx &, const std::shared_ptr<bs::sync::Wallet> &);
@@ -169,6 +172,7 @@ private:
    double      currentValue_ = 0;
    bool     isRBF_ = false;
    bool     allowAutoSelInputs_ = true;
+   int      outputRow_{ -1 };
 
    UsedInputsModel         *  usedInputsModel_ = nullptr;
    TransactionOutputsModel *  outputsModel_ = nullptr;

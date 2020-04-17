@@ -592,8 +592,17 @@ void CreateTransactionDialogAdvanced::onOutputsClicked(const QModelIndex &index)
    }
 
    if (outputsModel_->isRemoveColumn(index.column())) {
-      auto outputId = outputsModel_->GetOutputId(index.row());
+      const auto &outputId = outputsModel_->GetOutputId(index.row());
       RemoveOutputByRow(outputsModel_->GetRowById(outputId));
+   }
+   else {
+      outputRow_ = index.row();
+      const auto &outputId = outputsModel_->GetOutputId(outputRow_);
+
+      currentAddress_ = transactionData_->GetRecipientAddress(outputId);
+      ui_->lineEditAddress->setText(QString::fromStdString(currentAddress_.display()));
+      ui_->lineEditAmount->setText(UiUtils::displayAmount(transactionData_->GetRecipientAmount(outputId)));
+      updateOutputButtonTitle();
    }
 }
 
@@ -697,11 +706,18 @@ void CreateTransactionDialogAdvanced::preSetValue(const double value)
 void CreateTransactionDialogAdvanced::onAddressTextChanged(const QString& addressString)
 {
    try {
-      currentAddress_ = bs::Address::fromAddressString(addressString.trimmed().toStdString());
-      if (currentAddress_.format() == bs::Address::Format::Hex) {
-         currentAddress_.clear();   // P2WSH unprefixed address can resemble TX hash,
-      }                             // so we disable hex format completely
+      const auto &addr = bs::Address::fromAddressString(addressString.trimmed().toStdString());
+      if (addr != currentAddress_) {
+         outputRow_ = -1;
+         if (addr.format() == bs::Address::Format::Hex) {
+            currentAddress_.clear();   // P2WSH unprefixed address can resemble TX hash,
+         }                             // so we disable hex format completely
+         else {
+            currentAddress_ = addr;
+         }
+      }
    } catch (...) {
+      outputRow_ = -1;
       currentAddress_.clear();
    }
    UiUtils::setWrongState(ui_->lineEditAddress, !currentAddress_.isValid());
@@ -747,21 +763,36 @@ void CreateTransactionDialogAdvanced::onSelectInputs()
 
 void CreateTransactionDialogAdvanced::onAddOutput()
 {
-   const auto address = bs::Address::fromAddressString(ui_->lineEditAddress->text().trimmed().toStdString());
-   const double maxValue = transactionData_->CalculateMaxAmount(address);
-   bool maxAmount = std::abs(maxValue
-      - transactionData_->GetTotalRecipientsAmount() - currentValue_) <= 0.00000001;
+   if (outputRow_ >= 0) {
+      const auto &outputId = outputsModel_->GetOutputId(outputRow_);
+      UpdateRecipientAmount(outputId, currentValue_, false);
+   }
+   else {
+      currentAddress_ = bs::Address::fromAddressString(ui_->lineEditAddress->text().trimmed().toStdString());
+      const double maxValue = transactionData_->CalculateMaxAmount(currentAddress_);
+      bool maxAmount = std::abs(maxValue
+         - transactionData_->GetTotalRecipientsAmount() - currentValue_) <= 0.00000001;
 
-   AddRecipient(address, currentValue_, maxAmount);
+      AddRecipient(currentAddress_, currentValue_, maxAmount);
 
-   maxAmount |= FixRecipientsAmount();
+      maxAmount |= FixRecipientsAmount();
 
-   // clear edits
-   ui_->lineEditAddress->clear();
-   ui_->lineEditAmount->clear();
-   ui_->pushButtonAddOutput->setEnabled(false);
-   if (maxAmount) {
-      enableFeeChanging(false);
+      if (maxAmount) {
+         enableFeeChanging(false);
+      }
+      outputRow_ = outputsModel_->rowCount({}) - 1;
+      ui_->lineEditAmount->setFocus();
+   }
+   validateAddOutputButton();
+}
+
+void CreateTransactionDialogAdvanced::updateOutputButtonTitle()
+{
+   if (outputRow_ >= 0) {
+      ui_->pushButtonAddOutput->setText(tr("Update output"));
+   }
+   else {
+      ui_->pushButtonAddOutput->setText(tr("Include output"));
    }
 }
 
@@ -790,6 +821,19 @@ void CreateTransactionDialogAdvanced::AddRecipients(const std::vector<std::tuple
    QMetaObject::invokeMethod(outputsModel_, [this, modelRecips] { outputsModel_->AddRecipients(modelRecips); });
 }
 
+void CreateTransactionDialogAdvanced::onMaxPressed()
+{
+   CreateTransactionDialog::onMaxPressed();
+
+   if (outputRow_ >= 0) {
+      const auto maxValue = transactionData_->CalculateMaxAmount({});
+      if (maxValue > 0) {
+         const auto &outputId = outputsModel_->GetOutputId(outputRow_);
+         const auto prevValue = transactionData_->GetRecipientAmount(outputId);
+         lineEditAmount()->setText(UiUtils::displayAmount(maxValue + prevValue));
+      }
+   }
+}
 
 // Attempts to remove the change if it's small enough and adds its amount to fees
 bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
@@ -854,7 +898,15 @@ bool CreateTransactionDialogAdvanced::isCurrentAmountValid() const
    if (qFuzzyIsNull(currentValue_)) {
       return false;
    }
-   const double maxAmount = transactionData_->CalculateMaxAmount(currentAddress_);
+   double maxAmount = 0;
+   if (outputRow_ >= 0) {
+      const auto &outputId = outputsModel_->GetOutputId(outputRow_);
+      const auto prevValue = transactionData_->GetRecipientAmount(outputId);
+      maxAmount = transactionData_->CalculateMaxAmount({}) + prevValue;
+   }
+   else {
+      maxAmount = transactionData_->CalculateMaxAmount(currentAddress_);
+   }
    if ((maxAmount - currentValue_) < -0.00000001) {  // 1 satoshi difference is allowed due to rounding error
       UiUtils::setWrongState(ui_->lineEditAmount, true);
       return false;
@@ -865,8 +917,20 @@ bool CreateTransactionDialogAdvanced::isCurrentAmountValid() const
 
 void CreateTransactionDialogAdvanced::validateAddOutputButton()
 {
+   updateOutputButtonTitle();
    ui_->pushButtonMax->setEnabled(currentAddress_.isValid());
-   ui_->pushButtonAddOutput->setEnabled(currentAddress_.isValid() && isCurrentAmountValid());
+
+   bool hasAmountChanged = true;
+   if (outputRow_ >= 0) {
+      const auto &outputId = outputsModel_->GetOutputId(outputRow_);
+      const auto prevValue = transactionData_->GetRecipientAmount(outputId);
+      if (qFuzzyCompare(prevValue, currentValue_)) {
+         hasAmountChanged = false;
+      }
+   }
+
+   ui_->pushButtonAddOutput->setEnabled(currentAddress_.isValid()
+      && hasAmountChanged && isCurrentAmountValid());
 }
 
 void CreateTransactionDialogAdvanced::validateCreateButton()
