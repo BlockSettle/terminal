@@ -592,7 +592,8 @@ QScrollBar {
   background: #0f1f24; }
   QScrollBar::handle {
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 5px; }
+    border-radius: 5px;
+    min-height: 20px;}
     QScrollBar::handle:hover {
       background: rgba(255, 255, 255, 0.3); }
   QScrollBar::add-line, QScrollBar::sub-line {
