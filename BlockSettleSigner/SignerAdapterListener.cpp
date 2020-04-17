@@ -77,7 +77,7 @@ public:
       owner_->sendData(signer::CancelTxSignType, evt.SerializeAsString());
    }
 
-   void autoSignActivated(bool active, const std::string &walletId)
+   void autoSignActivated(bool active, const std::string &walletId) override
    {
       signer::AutoSignActResponse evt;
       evt.set_rootwalletid(walletId);
