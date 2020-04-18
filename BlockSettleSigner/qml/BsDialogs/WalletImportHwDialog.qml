@@ -119,7 +119,7 @@ CustomTitleDialogWindow {
                             Layout.fillWidth: true
                             text: qsTr(
                              "No hardware device detected.\n" +
-                             "If your device cannot be detected, please consider the following steps before consulting your hardware wallet manufacturer:\n" +
+                             "If your device cannot be detected, please consider the following steps before consulting your hardware wallet manufacturer:\n\n" +
                              "• If you are a Linux user, your device must be added to udev rule to make possible to communicate with it. Please make sure device is detected correctly on system.\n" +
                              "• If you are a Trezor user, ensure you have the Trezor Bridge installed (if not install and press \"Rescan\")\n" +
                              "• If you are a Ledger user, ensure your PIN has been entered and that your device displays \"Application is Ready\"")
