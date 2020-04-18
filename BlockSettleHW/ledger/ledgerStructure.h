@@ -76,7 +76,7 @@ namespace Ledger {
 
    // Tx
    const uint8_t PREVOUT_SIZE = 36;
-   const uint32_t DEFAULT_VERSION = 0x02000000;
+   const uint32_t DEFAULT_VERSION = 1;
    const uint32_t DEFAULT_SEQUENCE = 0xffffffff;
    const uint8_t OUT_CHUNK_SIZE = 255;
    const uint8_t SEGWIT_TYPE = 0x02;

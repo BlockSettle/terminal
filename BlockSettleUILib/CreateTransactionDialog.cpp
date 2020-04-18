@@ -532,6 +532,10 @@ bool CreateTransactionDialog::createTransactionImpl(const bs::Address &changeAdd
          // do we need some checks here?
       }
 
+      //grab supporting transactions for the utxo map
+      if (!txReq_.populateSupportingTx(armory_)) {
+         throw std::runtime_error("failed to populate supporting transactions");
+      }
 
       if (hdWallet->isOffline() && !hdWallet->isHardwareWallet()) {
          QString offlineFilePath;

@@ -40,15 +40,10 @@ void HwDeviceManager::scanDevices()
 
    setScanningFlag(true);
    ledgerClient_->scanDevices();
-   releaseConnection([this] {
-      trezorClient_->initConnection([this]() {
-         setScanningFlag(false);
-         auto allDevices = ledgerClient_->deviceKeys();
-         allDevices.append(trezorClient_->deviceKeys());
-         model_->resetModel(std::move(allDevices));
-         emit devicesChanged();
-      });
-   });
+   setScanningFlag(false);
+   auto allDevices = ledgerClient_->deviceKeys();
+   model_->resetModel(std::move(allDevices));
+   emit devicesChanged();
 }
 
 void HwDeviceManager::requestPublicKey(int deviceIndex)

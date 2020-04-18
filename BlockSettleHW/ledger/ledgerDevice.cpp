@@ -34,7 +34,7 @@ namespace {
 
       writeUintBE(current, static_cast<uint16_t>(command.size()));
 
-      
+
       current.append(command.mid(0, Ledger::FIRST_BLOCK_SIZE));
       chunks.push_back(std::move(current));
 
@@ -217,7 +217,8 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
    }
 
    auto *commandThread = blankCommand(std::move(cb));
-   commandThread->prepareSignTx(key(), std::move(coreReq), std::move(inputPathes), std::move(changePath));
+   commandThread->prepareSignTx(
+      key(), std::move(coreReq), std::move(inputPathes), std::move(changePath));
    commandThread->start();
 }
 
@@ -261,7 +262,7 @@ void LedgerCommandThread::run()
       processGetPublicKey();
       break;
    case HardwareCommand::SignTX:
-      processTXSigning();
+      processTXSigning_Trusted_Native();
       break;
    case HardwareCommand::None:
    default:
@@ -277,8 +278,10 @@ void LedgerCommandThread::prepareGetPublicKey(const DeviceKey &deviceKey)
    deviceKey_ = deviceKey;
 }
 
-void LedgerCommandThread::prepareSignTx(const DeviceKey &deviceKey, bs::core::wallet::TXSignRequest&& coreReq
-   , std::vector<bs::hd::Path>&& paths, bs::hd::Path&& changePath)
+void LedgerCommandThread::prepareSignTx(
+   const DeviceKey &deviceKey, 
+   bs::core::wallet::TXSignRequest&& coreReq,
+   std::vector<bs::hd::Path>&& paths, bs::hd::Path&& changePath)
 {
    threadPurpose_ = HardwareCommand::SignTX;
    deviceKey_ = deviceKey;
@@ -419,7 +422,7 @@ BIP32_Node LedgerCommandThread::getPublicKeyApdu(bs::hd::Path&& derivationPath, 
 
 void LedgerCommandThread::processTXSigning(/*const QVariant& reqTX*/)
 {
-   
+
    if (!initDevice()) {
       logger_->info(
          "[LedgerCommandThread] signTX - Cannot open device.");
@@ -498,7 +501,7 @@ void LedgerCommandThread::processTXSigning(/*const QVariant& reqTX*/)
 
    const bool hasChangeOutput = (changePath_.length() != 0);
 
-   //// -- Start change section -- 
+   //// -- Start change section --
    logger_->debug("[LedgerCommandThread] signTX - Start Change section");
 
    if (hasChangeOutput) {
@@ -669,6 +672,508 @@ void LedgerCommandThread::processTXSigning(/*const QVariant& reqTX*/)
    emit resultReady(QVariant::fromValue(wrapper));
 }
 
+QByteArray LedgerCommandThread::getTrustedInput(const UTXO& utxo)
+{
+   //find the supporting tx
+   auto txIter = coreReq_->supportingTxMap_.find(utxo.getTxHash());
+   if (txIter == coreReq_->supportingTxMap_.end())
+      throw std::runtime_error("missing supporting tx");
+
+   const auto& rawTx = txIter->second;
+   Tx tx(rawTx);
+   QVector<QByteArray> inputCommands;
+
+   {
+      //trusted input request header
+      QByteArray txPayload;
+      writeUintBE(txPayload, utxo.getTxOutIndex()); //outpoint index
+         
+      writeUintLE(txPayload, tx.getVersion()); //supporting tx version
+      writeVarInt(txPayload, tx.getNumTxIn()); //supporting tx input count
+      auto command = getApduCommand(
+         Ledger::CLA, Ledger::INS_GET_TRUSTED_INPUT, 0x00, 0x00, std::move(txPayload));
+      inputCommands.push_back(std::move(command));
+   }
+
+   //supporting tx inputs
+   for (unsigned i=0; i<tx.getNumTxIn(); i++) {
+      auto txIn = tx.getTxInCopy(i);
+      auto outpoint = txIn.getOutPoint();
+      auto outpointRaw = outpoint.serialize();
+      auto scriptSig = txIn.getScriptRef();
+
+      //36 bytes of outpoint
+      QByteArray txInPayload;
+      txInPayload.push_back(QByteArray::fromRawData(
+         outpointRaw.getCharPtr(), outpointRaw.getSize()));
+
+      //txin scriptSig size as varint
+      writeVarInt(txInPayload, scriptSig.getSize());
+         
+      auto commandInput = getApduCommand(
+         Ledger::CLA, Ledger::INS_GET_TRUSTED_INPUT, 0x80, 0x00, std::move(txInPayload));
+      inputCommands.push_back(std::move(commandInput));
+
+      //txin scriptSig, assuming it's less than 251 bytes for the sake of simplicity
+      QByteArray txInScriptSig;
+      txInScriptSig.push_back(QByteArray::fromRawData(
+         scriptSig.toCharPtr(), scriptSig.getSize()));
+      writeUintLE(txInScriptSig, txIn.getSequence()); //sequence
+
+      auto commandScriptSig = getApduCommand(
+         Ledger::CLA, Ledger::INS_GET_TRUSTED_INPUT, 0x80, 0x00, std::move(txInScriptSig));
+      inputCommands.push_back(std::move(commandScriptSig));
+   }
+
+   {
+      //number of outputs
+      QByteArray txPayload;
+      writeVarInt(txPayload, tx.getNumTxOut()); //supporting tx input count
+      auto command = getApduCommand(
+         Ledger::CLA, Ledger::INS_GET_TRUSTED_INPUT, 0x80, 0x00, std::move(txPayload));
+      inputCommands.push_back(std::move(command));
+   }
+
+   //supporting tx outputs
+   for (unsigned i=0; i<tx.getNumTxOut(); i++) {
+      auto txout = tx.getTxOutCopy(i);
+      auto script = txout.getScriptRef();
+
+      QByteArray txOutput;
+      writeUintLE(txOutput, txout.getValue()); //txout value
+      writeVarInt(txOutput, script.getSize()); //txout script len
+
+      auto commandTxOut = getApduCommand(
+         Ledger::CLA, Ledger::INS_GET_TRUSTED_INPUT, 0x80, 0x00, std::move(txOutput));
+      inputCommands.push_back(std::move(commandTxOut));
+
+      //again, assuming the txout script is shorter than 255 bytes
+      QByteArray txOutScript;
+      txOutScript.push_back(QByteArray::fromRawData(
+         script.toCharPtr(), script.getSize()));
+
+      auto commandScript= getApduCommand(
+         Ledger::CLA, Ledger::INS_GET_TRUSTED_INPUT, 0x80, 0x00, std::move(txOutScript));
+      inputCommands.push_back(std::move(commandScript));
+   }
+
+   for (auto &inputCommand : inputCommands) {
+      QByteArray responseInput;
+      if (!exchangeData(inputCommand, responseInput, "[LedgerCommandThread] signTX - getting trusted input")) {
+         releaseDevice();
+         throw std::runtime_error("failed to get trusted input");
+      }
+   }
+
+   //locktime
+   QByteArray locktime;
+   writeUintLE(locktime, tx.getLockTime());
+   auto command = getApduCommand(
+      Ledger::CLA, Ledger::INS_GET_TRUSTED_INPUT, 0x80, 0x00, std::move(locktime));
+
+   QByteArray trustedInput;
+   if (!exchangeData(command, trustedInput, "[LedgerCommandThread] signTX - getting trusted input")) {
+      releaseDevice();
+      throw std::runtime_error("failed to get trusted input");
+   }
+
+   return trustedInput;
+}
+
+QByteArray LedgerCommandThread::getTrustedInput_SegWit(const UTXO& utxo)
+{
+   QByteArray trustedInput;
+   trustedInput.push_back(QByteArray::fromStdString(utxo.getTxHash().toBinStr()));
+   writeUintLE(trustedInput, utxo.getTxOutIndex());
+   writeUintLE(trustedInput, utxo.getValue());
+
+   return trustedInput;
+}
+
+void LedgerCommandThread::startUntrustedTransaction(
+   const std::vector<QByteArray> trustedInputs, 
+   const QByteArray& redeemScript, 
+   unsigned txOutIndex, bool isNew, bool isSW)
+{
+   {
+      //setup untrusted transaction
+      logger_->debug("[LedgerCommandThread] signTX - Start Input section");
+      QByteArray initPayload;
+      writeUintLE(initPayload, Ledger::DEFAULT_VERSION);
+      writeVarInt(initPayload, trustedInputs.size());
+
+      auto p2 = isNew ? 0x00 : 0x80;
+      if (isSW)
+         p2 = isNew ? 0x02 : 0x80;
+      auto initCommand = getApduCommand(
+         Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x00, p2, std::move(initPayload));
+
+      QByteArray responseInit;
+      if (!exchangeData(initCommand, responseInit, "[LedgerCommandThread] signTX - InitPayload")) {
+         releaseDevice();
+         throw std::runtime_error("failed to init untrusted tx");
+      }
+   }
+
+   //pass each input
+   QVector<QByteArray> inputCommands;
+   for (unsigned i=0; i<trustedInputs.size(); i++) {
+      const auto& trustedInput = trustedInputs[i];
+
+      QByteArray inputPayload;
+
+      /*assuming the entire payload will be less than 256 bytes*/
+
+      //trusted input
+      if (!isSW) {
+         inputPayload.push_back(0x01); //trusted input flag
+         inputPayload.push_back(uint8_t(trustedInput.size())); 
+         inputPayload.push_back(trustedInput);
+      }
+      else {
+         inputPayload.push_back(0x02); //sw input flag
+         inputPayload.push_back(trustedInput); //no size prefix
+      }
+
+      //utxo script
+      if (i != txOutIndex) {
+         writeVarInt(inputPayload, 0);
+      }
+      else {
+         writeVarInt(inputPayload, redeemScript.size()); 
+         inputPayload.push_back(redeemScript);
+      }
+
+      //sequence
+      uint32_t defSeq = Ledger::DEFAULT_SEQUENCE;
+      writeUintLE(inputPayload, defSeq);
+      
+      auto command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x00, std::move(inputPayload));
+      inputCommands.push_back(std::move(command));
+   }
+
+   for (auto &inputCommand : inputCommands) {
+      QByteArray responseInput;
+      if (!exchangeData(inputCommand, responseInput, "[LedgerCommandThread] signTX - inputPayload")) {
+         releaseDevice();
+         throw std::runtime_error("failed to create untrusted tx");
+      }
+   }
+}
+
+void LedgerCommandThread::finalizeInputFull()
+{
+   QByteArray outputFullPayload;
+
+   size_t totalOutput = coreReq_->recipients.size();
+
+   writeVarInt(outputFullPayload, totalOutput);
+   for (auto &recipient : coreReq_->recipients) {
+      outputFullPayload.push_back(QByteArray::fromStdString(recipient->getSerializedScript().toBinStr()));
+   }
+   
+   QVector<QByteArray> outputCommands;
+   for (int proccessed = 0; proccessed < outputFullPayload.size(); proccessed += Ledger::OUT_CHUNK_SIZE) {
+      uint8_t p1 = (proccessed + Ledger::OUT_CHUNK_SIZE > outputFullPayload.size()) ? 0x80 : 0x00;
+
+      auto chunk = outputFullPayload.mid(proccessed, Ledger::OUT_CHUNK_SIZE);
+      auto outputCommand = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_FINALIZE_FULL,
+         p1, 0x00, std::move(chunk));
+      outputCommands.push_back(std::move(outputCommand));
+   }
+
+   for (auto &outputCommand : outputCommands) {
+      QByteArray responseOutput;
+      if (!exchangeData(outputCommand, responseOutput, "[LedgerCommandThread] signTX - outputPayload")) {
+         releaseDevice();
+         throw std::runtime_error("failed to upload recipients");
+      }
+   }
+}
+
+void LedgerCommandThread::processTXSigning_Trusted_Legacy()
+{
+
+   if (!initDevice()) {
+      logger_->info(
+         "[LedgerCommandThread] signTX - Cannot open device.");
+      emit error();
+      return;
+   }
+
+   if (!coreReq_) {
+      logger_->debug("[LedgerCommandThread] signTX - the core request is no valid");
+      emit error();
+      return;
+   }
+
+   // -- Start Init section --
+   QVector<QByteArray> inputCommands;
+   std::vector<QByteArray> trustedInputs;
+
+   //upload supporting tx to ledger, get trusted input back for our outpoints
+   for (auto& utxo : coreReq_->inputs) {
+      auto trustedInput = getTrustedInput(utxo);
+      trustedInputs.push_back(trustedInput);
+   }
+
+   // -- End Init section --
+
+   // -- Start input upload section --
+
+   //upload the redeem script for each outpoint
+   for (auto& utxo : coreReq_->inputs)
+   {
+      auto redeemScript = utxo.getScript();
+      auto redeemScriptQ = QByteArray::fromRawData(
+         redeemScript.getCharPtr(), redeemScript.getSize());
+
+      //pass true as this is a newly presented redeem script
+      startUntrustedTransaction(
+         trustedInputs, redeemScriptQ, utxo.getTxOutIndex(), true, false);
+   }
+   
+   // -- End input section --
+
+   // -- Start output section --
+
+   //upload our recipients as serialized outputs
+   logger_->debug("[LedgerCommandThread] signTX - Start Output section");
+   finalizeInputFull();
+
+   // -- End output section --
+
+   // At this point user verified all outputs and we can start signing inputs
+
+   QVector<QByteArray> inputSignCommands;
+   for (int i = 0; i < coreReq_->inputs.size(); ++i) {
+      auto &path = inputPaths_[i];
+      QByteArray signPayload;
+      signPayload.append(static_cast<char>(path.length()));
+
+      QByteArray derivationPath;
+      for (auto el : path) {
+         writeUintBE(derivationPath, el);
+      }
+
+      signPayload.append(derivationPath);
+      signPayload.append(static_cast<char>(0x00));
+      writeUintBE(signPayload, static_cast<uint32_t>(0));
+      signPayload.append(static_cast<char>(0x01));
+
+      auto commandSign = getApduCommand(Ledger::CLA, Ledger::INS_HASH_SIGN, 0x00, 0x00, std::move(signPayload));
+      inputSignCommands.push_back(std::move(commandSign));
+   }
+
+   QByteArray responseSigned;
+   for (auto &inputCommandSign : inputSignCommands) {
+      QByteArray responseInputSign;
+      if (!exchangeData(inputCommandSign, responseInputSign, "[LedgerCommandThread] signTX - Sign Payload")) {
+         releaseDevice();
+         emit error();
+         return;
+      }
+      if (inputCommandSign[1] == static_cast<char>(Ledger::INS_HASH_SIGN)) {
+         responseSigned = responseInputSign;
+      }
+   }
+
+   /////////////
+   // Composing and send data back
+   std::vector<BIP32_Node> inputNodes;
+   for (auto const &path : inputPaths_) {
+      auto pubKeyNode = retrievePublicKeyFromPath(std::move(bs::hd::Path(path)));
+      inputNodes.push_back(pubKeyNode);
+   }
+
+   {
+      BinaryWriter bw;
+      bw.put_uint32_t(1); //version
+      bw.put_var_int(1); //txin count
+      
+      //inputs
+      auto utxo = coreReq_->inputs[0];
+      
+      //outpoint
+      bw.put_BinaryData(utxo.getTxHash());
+      bw.put_uint32_t(utxo.getTxOutIndex());
+      
+      //create sigscript
+      BinaryWriter bwSigScript;
+      BinaryData bdScript((const uint8_t*)responseSigned.data(), responseSigned.size());
+      bdScript.getPtr()[0] = 0x30;
+      bwSigScript.put_var_int(responseSigned.size()); //sig size
+      bwSigScript.put_BinaryData(bdScript); //sig 
+
+      //compressed pubkey
+      auto pubKey = inputNodes[0].getPublicKey();
+      auto compressedKey = CryptoECDSA().CompressPoint(pubKey);
+      bwSigScript.put_uint8_t(33); //pubkey size
+      bwSigScript.put_BinaryDataRef(compressedKey); //pubkey
+
+      //put sigscript
+      bw.put_var_int(bwSigScript.getSize());
+      bw.put_BinaryData(bwSigScript.getData());
+
+      //sequence
+      bw.put_uint32_t(0xffffffff);
+
+      //txouts
+      bw.put_var_int(1); //count
+
+      bw.put_BinaryData(coreReq_->recipients[0]->getSerializedScript());
+      bw.put_uint32_t(0);
+
+      std::cout << bw.getData().toHexStr() << std::endl;
+   }
+}
+
+void LedgerCommandThread::processTXSigning_Trusted_Native()
+{
+   if (!initDevice()) {
+      logger_->info(
+         "[LedgerCommandThread] signTX - Cannot open device.");
+      emit error();
+      return;
+   }
+
+   if (!coreReq_) {
+      logger_->debug("[LedgerCommandThread] signTX - the core request is no valid");
+      emit error();
+      return;
+   }
+
+   // -- Start Init section --
+   QVector<QByteArray> inputCommands;
+   std::vector<QByteArray> trustedInputs;
+
+   //upload supporting tx to ledger, get trusted input back for our outpoints
+   for (auto& utxo : coreReq_->inputs) {
+      auto trustedInput = getTrustedInput_SegWit(utxo);
+      trustedInputs.push_back(trustedInput);
+   }
+
+   // -- End Init section --
+
+   // -- Start input upload section --
+
+   //setup inputs with explicitly empty redeem script
+   {
+      startUntrustedTransaction(trustedInputs, QByteArray(), UINT32_MAX, true, true);
+   }
+
+   // -- End input section --
+
+   // -- Start output section --
+
+   //upload our recipients as serialized outputs
+   logger_->debug("[LedgerCommandThread] signTX - Start Output section");
+   finalizeInputFull();
+
+   // -- End output section --
+
+   // At this point user verified all outputs and we can start signing inputs
+
+   QVector<QByteArray> inputSignCommands;
+   for (int i = 0; i < coreReq_->inputs.size(); ++i) {
+
+      auto& utxo = coreReq_->inputs[i];
+      auto redeemScript = utxo.getScript();
+      auto redeemScriptWitness = 
+         BtcUtils::getP2WPKHWitnessScript(redeemScript.getSliceRef(2, 20));
+      auto redeemScriptQ = QByteArray::fromRawData(
+         redeemScriptWitness.getCharPtr(), redeemScriptWitness.getSize());
+
+      startUntrustedTransaction({trustedInputs[i]}, redeemScriptQ, i, false, true);
+
+      auto &path = inputPaths_[i];
+      QByteArray signPayload;
+      signPayload.append(static_cast<char>(path.length()));
+
+      QByteArray derivationPath;
+      for (auto el : path) {
+         writeUintBE(derivationPath, el);
+      }
+
+      signPayload.append(derivationPath);
+      signPayload.append(static_cast<char>(0x00));
+      writeUintBE(signPayload, static_cast<uint32_t>(0));
+      signPayload.append(static_cast<char>(0x01));
+
+      auto commandSign = getApduCommand(Ledger::CLA, Ledger::INS_HASH_SIGN, 0x00, 0x00, std::move(signPayload));
+      inputSignCommands.push_back(std::move(commandSign));
+   }
+
+   QByteArray responseSigned;
+   for (auto &inputCommandSign : inputSignCommands) {
+      QByteArray responseInputSign;
+      if (!exchangeData(inputCommandSign, responseInputSign, "[LedgerCommandThread] signTX - Sign Payload")) {
+         releaseDevice();
+         emit error();
+         return;
+      }
+      if (inputCommandSign[1] == static_cast<char>(Ledger::INS_HASH_SIGN)) {
+         responseSigned = responseInputSign;
+      }
+   }
+
+   /////////////
+   // Composing and send data back
+   std::vector<BIP32_Node> inputNodes;
+   for (auto const &path : inputPaths_) {
+      auto pubKeyNode = retrievePublicKeyFromPath(std::move(bs::hd::Path(path)));
+      inputNodes.push_back(pubKeyNode);
+   }
+
+   {
+      BinaryWriter bw;
+      bw.put_uint32_t(1); //version
+      bw.put_uint8_t(0); //flag
+      bw.put_uint8_t(1); //marker
+
+      bw.put_var_int(1); //txin count
+      
+      //inputs
+      auto utxo = coreReq_->inputs[0];
+      
+      //outpoint
+      bw.put_BinaryData(utxo.getTxHash());
+      bw.put_uint32_t(utxo.getTxOutIndex());
+
+      //empty sigscript
+      bw.put_uint8_t(0);
+      
+      //sequence
+      bw.put_uint32_t(0xffffffff);
+
+      //txouts
+      bw.put_var_int(1); //count
+
+      //script
+      bw.put_BinaryData(coreReq_->recipients[0]->getSerializedScript());
+
+      //witness data
+      bw.put_var_int(2); //witness data stack size
+
+      //sig script
+      BinaryData bdScript((const uint8_t*)responseSigned.data(), responseSigned.size());
+      bdScript.getPtr()[0] = 0x30;      
+      bw.put_var_int(bdScript.getSize());
+      bw.put_BinaryDataRef(bdScript);
+
+      //compressed pubkey
+      auto pubKey = inputNodes[0].getPublicKey();
+      auto compressedKey = CryptoECDSA().CompressPoint(pubKey);
+      bw.put_uint8_t(33); //pubkey size
+      bw.put_BinaryDataRef(compressedKey); //pubkey
+
+      //locktime
+      bw.put_uint32_t(0);
+
+      std::cout << bw.getData().toHexStr() << std::endl;
+   }
+}
+
 bool LedgerCommandThread::initDevice()
 {
    if (hid_init() < 0) {
@@ -722,7 +1227,7 @@ bool LedgerCommandThread::writeData(const QByteArray& input, std::string&& logHe
 
 bool LedgerCommandThread::readData(QByteArray& output, std::string&& logHeader)
 {
-   
+
    auto res = receiveApduResult(dongle_, output);
    if (res != Ledger::SW_OK) {
       logger_->debug(

@@ -14,6 +14,7 @@
 #include "ledger/ledgerStructure.h"
 #include "hwdeviceinterface.h"
 #include "ledger/hidapi/hidapi.h"
+#include "BinaryData.h"
 
 #include <QThread>
 
@@ -76,8 +77,10 @@ public:
    void run() override;
 
    void prepareGetPublicKey(const DeviceKey &deviceKey);
-   void prepareSignTx(const DeviceKey &deviceKey, bs::core::wallet::TXSignRequest&& coreReq
-      , std::vector<bs::hd::Path>&& paths, bs::hd::Path&& changePath);
+   void prepareSignTx(
+      const DeviceKey &deviceKey, 
+      bs::core::wallet::TXSignRequest&& coreReq,
+      std::vector<bs::hd::Path>&& paths, bs::hd::Path&& changePath);
 
 signals:
    void resultReady(QVariant const &result);
@@ -100,6 +103,16 @@ protected:
 
    // Sign tx processing
    void processTXSigning();
+   
+   QByteArray getTrustedInput(const UTXO&);
+   QByteArray getTrustedInput_SegWit(const UTXO&);
+
+   void startUntrustedTransaction(
+      const std::vector<QByteArray>, const QByteArray&, 
+      unsigned, bool, bool);
+   void finalizeInputFull(void);
+   void processTXSigning_Trusted_Legacy(void);
+   void processTXSigning_Trusted_Native(void);
 
 private:
    HidDeviceInfo hidDeviceInfo_;
