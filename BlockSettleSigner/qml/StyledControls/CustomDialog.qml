@@ -13,6 +13,7 @@ import QtQuick.Controls 2.3
 import QtQuick.Layouts 1.0
 import QtQuick.Window 2.1
 import com.blocksettle.QmlFactory 1.0
+import QtQuick.Controls 1.4 as FirstControl
 
 import "../BsStyles"
 import "../BsControls"
@@ -34,6 +35,7 @@ CustomDialogWindow {
     property alias customContentContainer: customContentContainer
     property alias customFooterContainer: customFooterContainer
     property alias customHeaderContainer: customHeaderContainer
+    property alias runSpinner: busyIndicator.running
 
 //    onCContentHeightChanged: {
 //        console.log("onCContentHeightChanged " + root + " " + cContentHeight)
@@ -264,6 +266,15 @@ CustomDialogWindow {
                 Layout.margins: 0
                 clip: true
             }
+        }
+
+        FirstControl.BusyIndicator {
+            id: busyIndicator
+            anchors.centerIn: parent
+            running: false
+
+            height: 50
+            width: 50
         }
     }
 
