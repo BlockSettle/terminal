@@ -240,6 +240,14 @@ void BSTerminalMainWindow::loadPositionAndShow()
    if (!geom.isEmpty()) {
       setGeometry(geom);
    }
+
+   if (QApplication::desktop()->screenNumber(this) == -1) {
+      auto currentScreenRect = QApplication::desktop()->screenGeometry(QCursor::pos());
+      auto rect = geometry();
+      rect.moveCenter(currentScreenRect.center());
+      setGeometry(rect);
+   }
+
    show();
 }
 
