@@ -244,6 +244,9 @@ void BSTerminalMainWindow::loadPositionAndShow()
    if (QApplication::desktop()->screenNumber(this) == -1) {
       auto currentScreenRect = QApplication::desktop()->screenGeometry(QCursor::pos());
       auto rect = geometry();
+      // Do not delete 0.9 multiplier, since in some system window size is applying without system native toolbar
+      rect.setWidth(std::min(rect.width(), static_cast<int>(currentScreenRect.width() * 0.9)));
+      rect.setHeight(std::min(rect.height(), static_cast<int>(currentScreenRect.height() * 0.9)));
       rect.moveCenter(currentScreenRect.center());
       setGeometry(rect);
    }
