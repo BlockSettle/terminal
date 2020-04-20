@@ -20,3 +20,18 @@ Path getDerivationPath(bool testNet, Purpose element)
    path.append(hardFlag);
    return path;
 }
+
+bool isNestedSegwit(const bs::hd::Path& path)
+{
+   return path.get(0) == (bs::hd::Purpose::Nested | bs::hd::hardFlag);
+}
+
+bool isNativeSegwit(const bs::hd::Path& path)
+{
+   return path.get(0) == (bs::hd::Purpose::Native | bs::hd::hardFlag);
+}
+
+bool isNonSegwit(const bs::hd::Path& path)
+{
+   return path.get(0) == (bs::hd::Purpose::NonSegWit | bs::hd::hardFlag);
+}

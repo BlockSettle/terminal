@@ -56,8 +56,13 @@ namespace Ledger {
    const uint8_t INS_ADM_FIRMWARE_UPDATE = 0x42;
 
    // APDU return data
-   const uint16_t SW_OK = 0x9000;
-   const uint16_t SW_UNKNOWN = 0x6D00;
+   const int32_t SW_OK = 0x9000;
+   const int32_t SW_UNKNOWN = 0x6D00;
+   const int32_t SW_NO_ENVIRONMENT = 0x6DFF;
+   const int32_t SW_CANCELED_BY_USER = 0x6985;
+   const int32_t NO_DEVICE = -1;
+   const int32_t NO_INPUTDATA = -2;
+   const int32_t INTERNAL_ERROR = -3;
 
    // General
    const size_t OFFSET_CDATA = 4;
@@ -139,6 +144,12 @@ struct HidDeviceInfo {
    uint16_t usagePage_;
    uint16_t usage_;
    int interfaceNumber_;
+};
+
+struct SegwitInputData {
+   std::unordered_map<int, BinaryData> preimages_;
+   std::unordered_map<int, BinaryData> redeemScripts_;
+   std::vector<BIP32_Node> inputNodes_;
 };
 
 struct LedgerPublicKey

@@ -84,7 +84,7 @@ public:
 
 signals:
    void resultReady(QVariant const &result);
-   void error();
+   void error(uint16_t erroCode);
 
 protected:
    // Device management
@@ -101,19 +101,26 @@ protected:
    BIP32_Node retrievePublicKeyFromPath(bs::hd::Path&& derivationPath);
    BIP32_Node getPublicKeyApdu(bs::hd::Path&& derivationPath, const std::unique_ptr<BIP32_Node>& parent = nullptr);
 
-   // Sign tx processing
-   void processTXSigning();
-   
+   // Sign tx processing  
    QByteArray getTrustedInput(const UTXO&);
-   QByteArray getTrustedInput_SegWit(const UTXO&);
+   QByteArray getTrustedInputSegWit(const UTXO&);
 
    void startUntrustedTransaction(
       const std::vector<QByteArray>, const QByteArray&, 
-      unsigned, bool, bool);
-   void finalizeInputFull(void);
-   void processTXSigning_Trusted_Legacy(void);
-   void processTXSigning_Trusted_Native(void);
-   void processTXSigning_Trusted_NestedSW(void);
+      unsigned, bool, bool, bool);
+   void finalizeInputFull();
+   void processTXLegacy();
+   void processTXSegwit();
+
+   // Getter
+   SegwitInputData getSegwitData();
+
+   // Tx result
+   void sendTxSigningResult(const QVector<QByteArray>& responseSigned, const std::vector<BIP32_Node>& inputNodes);
+
+
+private:
+   void debugPrintLegacyResult(const QByteArray& responseSigned, const BIP32_Node& node);
 
 private:
    HidDeviceInfo hidDeviceInfo_;
@@ -133,6 +140,7 @@ private:
    std::unique_ptr<bs::core::wallet::TXSignRequest> coreReq_{};
    std::vector<bs::hd::Path> inputPaths_;
    bs::hd::Path changePath_;
+   uint32_t lastError_ = 0x9000;
 };
 
 #endif // LEDGERDEVICE_H
