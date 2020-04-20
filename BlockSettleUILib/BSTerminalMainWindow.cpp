@@ -420,8 +420,10 @@ void BSTerminalMainWindow::LoadWallets()
       , &BSTerminalMainWindow::updateControlEnabledState);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletDeleted, this
       , &BSTerminalMainWindow::updateControlEnabledState);
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletAdded, this
-      , &BSTerminalMainWindow::updateControlEnabledState);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletAdded, this, [this] {
+      updateControlEnabledState();
+      promptToCreateTestAccountIfNeeded();
+   });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
       , &BSTerminalMainWindow::updateControlEnabledState);
 
@@ -793,7 +795,6 @@ void BSTerminalMainWindow::tryGetChatKeys()
       chatPrivKey_ = node.getPrivateKey();
       gotChatKeys_ = true;
       tryInitChatView();
-      promptToCreateAccountIfNeeded();
    });
 }
 
@@ -1352,6 +1353,19 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::onLogin()
 {
+   if (!gotChatKeys_) {
+      addDeferredDialog([this] {
+         CreatePrimaryWalletPrompt dlg;
+         int rc = dlg.exec();
+         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
+            ui_->widgetWallets->CreateNewWallet();
+         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
+            ui_->widgetWallets->ImportNewWallet();
+         }
+      });
+      return;
+   }
+
    onNetworkSettingsRequired(NetworkSettingsClient::Login);
 }
 
@@ -1482,18 +1496,6 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    connect(bsClient_.get(), &BsClient::accountStateChanged, this, [this](bs::network::UserType userType, bool enabled) {
       onAccountTypeChanged(userType, enabled);
    });
-
-   if (!gotChatKeys_) {
-      addDeferredDialog([this] {
-         CreatePrimaryWalletPrompt dlg;
-         int rc = dlg.exec();
-         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
-            ui_->widgetWallets->CreateNewWallet();
-         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
-            ui_->widgetWallets->ImportNewWallet();
-         }
-      });
-   }
 }
 
 void BSTerminalMainWindow::onLogout()
@@ -2095,7 +2097,7 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
    }
 }
 
-void BSTerminalMainWindow::promptToCreateAccountIfNeeded()
+void BSTerminalMainWindow::promptToCreateTestAccountIfNeeded()
 {
    addDeferredDialog([this] {
       auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
