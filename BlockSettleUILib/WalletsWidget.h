@@ -142,8 +142,8 @@ private:
    unsigned int   revokeReqId_ = 0;
    QString username_;
    std::vector<std::shared_ptr<bs::sync::Wallet>>  prevSelectedWallets_;
-   int prevSelectedWalletRow_;
-   int prevSelectedAddressRow_;
+   int prevSelectedWalletRow_{-1};
+   int prevSelectedAddressRow_{-1};
    QPoint walletsScrollPos_;
    QPoint addressesScrollPos_;
 };
