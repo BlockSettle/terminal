@@ -113,6 +113,7 @@ protected:
    void finalizeInputFull(void);
    void processTXSigning_Trusted_Legacy(void);
    void processTXSigning_Trusted_Native(void);
+   void processTXSigning_Trusted_NestedSW(void);
 
 private:
    HidDeviceInfo hidDeviceInfo_;
