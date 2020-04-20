@@ -230,6 +230,22 @@
        <number>10</number>
       </property>
       <item>
+       <widget class="QPushButton" name="pushButtonCreate">
+        <property name="minimumSize">
+         <size>
+          <width>130</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Create New</string>
+        </property>
+        <property name="autoDefault">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="pushButtonHw">
         <property name="minimumSize">
          <size>
@@ -255,22 +271,6 @@
         </property>
         <property name="text">
          <string>Import Existing</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="pushButtonCreate">
-        <property name="minimumSize">
-         <size>
-          <width>130</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>Create New</string>
-        </property>
-        <property name="autoDefault">
-         <bool>false</bool>
         </property>
        </widget>
       </item>
