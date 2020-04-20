@@ -163,7 +163,7 @@ function removeEidDevice (index, walletInfo, authEidMessage, onSuccess) {
 }
 
 
-function activateeIdAuth (email, walletInfo, authEidMessage, onSuccess) {
+function activateeIdAuth (email, walletInfo, authEidMessage, onSuccess, onFailure) {
     var authObject = qmlFactory.createActivateEidObject(email, walletInfo, authEidMessage)
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
 
@@ -175,6 +175,9 @@ function activateeIdAuth (email, walletInfo, authEidMessage, onSuccess) {
     authProgress.open()
     authProgress.bsRejected.connect(function() {
         if (authObject !== undefined) authObject.destroy()
+        if (onFailure) {
+            onFailure()
+        }
     })
 
     authObject.succeeded.connect(function(encKey_, password_) {
@@ -198,6 +201,9 @@ function activateeIdAuth (email, walletInfo, authEidMessage, onSuccess) {
 
         authProgress.rejectAnimated()
         authObject.destroy()
+        if (onFailure) {
+            onFailure()
+        }
     })
 }
 

@@ -105,7 +105,8 @@ void QmlPdfBackup::componentComplete()
 void QmlPdfBackup::save()
 {
    QDir documentsDir(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation));
-   QString filePath = documentsDir.filePath(QString::fromLatin1("BlockSettle_%1.pdf").arg(seed_->walletId()));
+   QString netType = (seed_->networkType() == bs::wallet::QSeed::MainNet) ? QStringLiteral("mainnet") : QStringLiteral("testnet");
+   QString filePath = documentsDir.filePath(QStringLiteral("BlockSettle_%1_%2.pdf").arg(netType).arg(seed_->walletId()));
 
    QFileDialog dlg;
    dlg.setFileMode(QFileDialog::AnyFile);
