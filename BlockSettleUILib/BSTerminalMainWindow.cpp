@@ -206,12 +206,12 @@ void BSTerminalMainWindow::onAddrStateChanged()
 
    if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
       && !authManager_->isAtLeastOneAwaitingVerification() && canSubmitAuthAddr) {
+      allowAuthAddressDialogShow_ = false;
       BSMessageBox qry(BSMessageBox::question, tr("Submit Authentication Address"), tr("Submit Authentication Address?")
          , tr("In order to access XBT trading, you will need to submit an Authentication Address. Do you wish to do so now?"), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
-      allowAuthAddressDialogShow_ = false;
    }
 
    if (authManager_->isAtLeastOneAwaitingVerification()) {
