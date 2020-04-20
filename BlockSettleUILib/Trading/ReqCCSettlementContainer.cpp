@@ -252,6 +252,8 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                   ccTxData_.populateUTXOs = true;
 
                   logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
+                  // Must release old reservation first (we reserve excessive XBT inputs in advance for CC buy requests)!
+                  utxoRes_.release();
                   utxoRes_ = utxoReservationManager_->makeNewReservation(ccTxData_.inputs, id());
 
                   AcceptQuote();
