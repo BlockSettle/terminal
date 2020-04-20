@@ -283,7 +283,14 @@ void bs::UTXOReservationManager::resetSpendableXbt(const std::shared_ptr<bs::syn
 {
    assert(hdWallet);
    auto leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
-   std::vector<bs::sync::WalletsManager::WalletPtr> wallets(leaves.begin(), leaves.end());
+   std::vector<bs::sync::WalletsManager::WalletPtr> wallets;
+   for (const auto &leaf : leaves) {
+      auto purpose = leaf->purpose();
+      // Filter non-segwit leaves (for HW wallets)
+      if (purpose == bs::hd::Purpose::Native || purpose == bs::hd::Purpose::Nested) {
+         wallets.push_back(leaf);
+      }
+   }
 
    bs::tradeutils::getSpendableTxOutList(wallets, [mgr = QPointer<bs::UTXOReservationManager>(this)
       , walletId = hdWallet->walletId(), leaves]
