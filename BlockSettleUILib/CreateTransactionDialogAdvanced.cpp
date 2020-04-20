@@ -770,6 +770,11 @@ void CreateTransactionDialogAdvanced::onAddOutput()
    if (outputRow_ >= 0) {
       const auto &outputId = outputsModel_->GetOutputId(outputRow_);
       UpdateRecipientAmount(outputId, currentValue_, false);
+
+      outputRow_ = -1;
+      ui_->lineEditAddress->clear();
+      ui_->lineEditAmount->clear();
+      ui_->lineEditAddress->setFocus();
    }
    else {
       currentAddress_ = bs::Address::fromAddressString(ui_->lineEditAddress->text().trimmed().toStdString());
