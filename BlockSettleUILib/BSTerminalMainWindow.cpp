@@ -1222,8 +1222,6 @@ void BSTerminalMainWindow::onSend()
       }
 
       auto nextDialog = dlg->SwithcMode();
-
-      nextDialog->SelectWallet(dlg->GetSelectedWalletId());
       dlg = nextDialog;
    }
 }

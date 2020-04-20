@@ -37,6 +37,9 @@ public:
    bool switchModeRequested() const override;
    std::shared_ptr<CreateTransactionDialog> SwithcMode() override;
 
+   void preSetAddress(const QString& address);
+   void preSetValue(const double value);
+
 protected:
    QComboBox * comboBoxWallets() const override;
    QComboBox *comboBoxFeeSuggestions() const override;

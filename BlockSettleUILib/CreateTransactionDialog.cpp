@@ -644,8 +644,3 @@ void CreateTransactionDialog::showError(const QString &text, const QString &deta
    BSMessageBox errorMessage(BSMessageBox::critical, text, detailedText, this);
    errorMessage.exec();
 }
-
-std::string CreateTransactionDialog::GetSelectedWalletId() const
-{
-   return UiUtils::getSelectedWalletId(comboBoxWallets());
-}

@@ -1512,5 +1512,30 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::Swithc
       , walletsManager_, utxoReservationManager_, signContainer_
       , logger_, applicationSettings_, parentWidget());
 
+   simpleDialog->SelectWallet(UiUtils::getSelectedWalletId(ui_->comboBoxWallets));
+
+   const auto recipientIdList = transactionData_->allRecipientIds();
+
+   if (recipientIdList.size() <= 1) {
+      if (recipientIdList.empty()) {
+         // try to add details from UI
+         auto address = ui_->lineEditAddress->text().trimmed();
+         if (!address.isEmpty()) {
+            simpleDialog->preSetAddress(address);
+         }
+
+         auto valueText = ui_->lineEditAmount->text();
+         if (!valueText.isEmpty()) {
+            double value = UiUtils::parseAmountBtc(valueText);
+            simpleDialog->preSetValue(value);
+         }
+      }
+      else {
+         // set details from first recipient
+         simpleDialog->preSetAddress(QString::fromStdString(transactionData_->GetRecipientAddress(recipientIdList[0]).display()));
+         simpleDialog->preSetValue(transactionData_->GetRecipientAmount(recipientIdList[0]));
+      }
+   }
+
    return simpleDialog;
 }

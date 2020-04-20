@@ -266,3 +266,14 @@ QLabel* CreateTransactionDialogSimple::labelTxOutputs() const
 {
    return ui_->labelTXOutputs;
 }
+
+void CreateTransactionDialogSimple::preSetAddress(const QString& address)
+{
+   ui_->lineEditAddress->setText(address);
+   onAddressTextChanged(address);
+}
+
+void CreateTransactionDialogSimple::preSetValue(const double value)
+{
+   ui_->lineEditAmount->setText(UiUtils::displayAmount(value));
+}
