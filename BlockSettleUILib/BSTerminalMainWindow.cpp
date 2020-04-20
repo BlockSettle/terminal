@@ -206,12 +206,12 @@ void BSTerminalMainWindow::onAddrStateChanged()
 
    if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
       && !authManager_->isAtLeastOneAwaitingVerification() && canSubmitAuthAddr) {
+      allowAuthAddressDialogShow_ = false;
       BSMessageBox qry(BSMessageBox::question, tr("Submit Authentication Address"), tr("Submit Authentication Address?")
          , tr("In order to access XBT trading, you will need to submit an Authentication Address. Do you wish to do so now?"), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
-      allowAuthAddressDialogShow_ = false;
    }
 
    if (authManager_->isAtLeastOneAwaitingVerification()) {
@@ -420,8 +420,10 @@ void BSTerminalMainWindow::LoadWallets()
       , &BSTerminalMainWindow::updateControlEnabledState);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletDeleted, this
       , &BSTerminalMainWindow::updateControlEnabledState);
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletAdded, this
-      , &BSTerminalMainWindow::updateControlEnabledState);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletAdded, this, [this] {
+      updateControlEnabledState();
+      promptToCreateTestAccountIfNeeded();
+   });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
       , &BSTerminalMainWindow::updateControlEnabledState);
 
@@ -793,7 +795,6 @@ void BSTerminalMainWindow::tryGetChatKeys()
       chatPrivKey_ = node.getPrivateKey();
       gotChatKeys_ = true;
       tryInitChatView();
-      promptToCreateAccountIfNeeded();
    });
 }
 
@@ -1352,6 +1353,19 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::onLogin()
 {
+   if (!gotChatKeys_) {
+      addDeferredDialog([this] {
+         CreatePrimaryWalletPrompt dlg;
+         int rc = dlg.exec();
+         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
+            ui_->widgetWallets->CreateNewWallet();
+         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
+            ui_->widgetWallets->ImportNewWallet();
+         }
+      });
+      return;
+   }
+
    onNetworkSettingsRequired(NetworkSettingsClient::Login);
 }
 
@@ -1396,9 +1410,9 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
    if (!isRegistered && envType == ApplicationSettings::EnvConfiguration::Test) {
       auto createTestAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlTest);
-      BSMessageBox dlg(BSMessageBox::info, tr("Login failed")
-         , tr("Create BlockSettle Test Account")
-         , tr("<p>Login requires a test account - create one in minutes on out webpage.</p>"
+      BSMessageBox dlg(BSMessageBox::info, tr("Create Test Account")
+         , tr("Create a BlockSettle test account")
+         , tr("<p>Login requires a test account - create one in minutes on test.blocksettle.com</p>"
               "<p>Once you have registered, return to login in the Terminal.</p>"
               "<a href=\"%1\"><span style=\"text-decoration: underline;color:%2;\">Create Test Account Now</span></a>")
          .arg(createTestAccountUrl).arg(BSMessageBox::kUrlColor), this);
@@ -1482,18 +1496,6 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    connect(bsClient_.get(), &BsClient::accountStateChanged, this, [this](bs::network::UserType userType, bool enabled) {
       onAccountTypeChanged(userType, enabled);
    });
-
-   if (!gotChatKeys_) {
-      addDeferredDialog([this] {
-         CreatePrimaryWalletPrompt dlg;
-         int rc = dlg.exec();
-         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
-            ui_->widgetWallets->CreateNewWallet();
-         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
-            ui_->widgetWallets->ImportNewWallet();
-         }
-      });
-   }
 }
 
 void BSTerminalMainWindow::onLogout()
@@ -2095,7 +2097,7 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
    }
 }
 
-void BSTerminalMainWindow::promptToCreateAccountIfNeeded()
+void BSTerminalMainWindow::promptToCreateTestAccountIfNeeded()
 {
    addDeferredDialog([this] {
       auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
@@ -2104,6 +2106,10 @@ void BSTerminalMainWindow::promptToCreateAccountIfNeeded()
          return;
       }
       applicationSettings_->set(ApplicationSettings::HideCreateAccountPromptTestnet, true);
+      if (bs::network::isTradingEnabled(userType_)) {
+         // Do not prompt if user is already logged in
+         return;
+      }
 
       CreateAccountPrompt dlg(this);
       int rc = dlg.exec();

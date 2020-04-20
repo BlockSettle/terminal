@@ -175,7 +175,7 @@ private:
    double lastLow_;
    double lastClose_;
    double currentTimestamp_;
-   quint64 newestCandleTimestamp_;
+   quint64 newestCandleTimestamp_{};
 
    bool autoScaling_{ true };
 
