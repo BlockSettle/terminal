@@ -43,6 +43,11 @@ void TrezorClient::initConnection(AsyncCallBack&& cb)
       if (!reply || reply->error() != QNetworkReply::NoError) {
          connectionManager_->GetLogger()->error(
             "[TrezorClient] initConnection - Network error : " + reply->errorString().toUtf8());
+
+         if (cbCopy) {
+            cbCopy();
+         }
+
          return;
       }
 

@@ -77,6 +77,7 @@ void QMLStatusUpdater::onAutoSignDeactivated(const std::string &walletId)
    emit autoSignActiveChanged();
    asTimer_.stop();
    autoSignTimeSpent_.invalidate();
+   autoSignSpent_ = 0;
    emit autoSignTimeSpentChanged();
 }
 
