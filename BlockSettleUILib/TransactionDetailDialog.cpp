@@ -205,7 +205,7 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
             cbTXs({}, nullptr);
          }
          else {
-            armory->getTXsByHash(txHashSet, cbTXs);
+            armory->getTXsByHash(txHashSet, cbTXs, true);
          }
       }
 

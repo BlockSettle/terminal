@@ -403,7 +403,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
          loadTransactions();
       }
       else {
-         armory_->getTXsByHash(prevTxHashSet, cbCollectPrevTXs);
+         armory_->getTXsByHash(prevTxHashSet, cbCollectPrevTXs, true);
       }
    };
 
@@ -438,7 +438,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
             SPDLOG_LOGGER_INFO(logger_, "address participates in no TXs");
             cbCollectTXs({}, nullptr);
          } else {
-            armory_->getTXsByHash(txHashSet, cbCollectTXs);
+            armory_->getTXsByHash(txHashSet, cbCollectTXs, true);
          }
       });
    };

@@ -1688,7 +1688,7 @@ void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> &entries)
          walletsMgr_->getTransactionDirection(tx, wallet->walletId(), cbDir);
          walletsMgr_->getTransactionMainAddress(tx, wallet->walletId(), (entry.value > 0), cbMainAddr);
       };
-      armory_->getTxByHash(entry.txHash, cbTx);
+      armory_->getTxByHash(entry.txHash, cbTx, true);
    }
 }
 
