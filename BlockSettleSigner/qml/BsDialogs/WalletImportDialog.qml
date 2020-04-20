@@ -73,9 +73,6 @@ CustomTitleDialogWindow {
         }
     }
 
-    onAboutToShow: hwDeviceList.init()
-    onAboutToHide: hwDeviceList.release();
-
     onEnterPressed: {
         if (btnAccept.enabled) btnAccept.onClicked()
     }
