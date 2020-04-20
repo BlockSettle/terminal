@@ -780,8 +780,10 @@ void CreateTransactionDialogAdvanced::onAddOutput()
       if (maxAmount) {
          enableFeeChanging(false);
       }
-      outputRow_ = outputsModel_->rowCount({}) - 1;
-      ui_->lineEditAmount->setFocus();
+      outputRow_ = -1;
+      ui_->lineEditAddress->clear();
+      ui_->lineEditAmount->clear();
+      ui_->lineEditAddress->setFocus();
    }
    validateAddOutputButton();
 }
