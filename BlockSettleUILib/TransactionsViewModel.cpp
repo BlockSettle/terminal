@@ -1117,7 +1117,7 @@ void TransactionsViewItem::initialize(const TransactionPtr &item, ArmoryConnecti
             item->txHashesReceived = true;
          }
          else {
-            if (!armory->getTXsByHash(txHashSet, cbTXs)) {
+            if (!armory->getTXsByHash(txHashSet, cbTXs, true)) {
                userCB(nullptr);
             }
          }
@@ -1144,7 +1144,7 @@ void TransactionsViewItem::initialize(const TransactionPtr &item, ArmoryConnecti
       if (item->tx.isInitialized()) {
          cbTX(item->tx);
       } else {
-         if (!armory->getTxByHash(item->txEntry.txHash, cbTX)) {
+         if (!armory->getTxByHash(item->txEntry.txHash, cbTX, true)) {
             userCB(nullptr);
          }
       }

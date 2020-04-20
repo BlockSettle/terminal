@@ -116,6 +116,6 @@ TEST(TestArmory, CrashOnNonExistentHashInTxBatch)
       const auto &it = txs.find(nonExHash);
       promPtr->set_value((it != txs.end()) && (it->second == nullptr));
    };
-   armoryConn->getTXsByHash({ nonExHash }, cbTXs);
+   armoryConn->getTXsByHash({ nonExHash }, cbTXs, true);
    EXPECT_TRUE(fut.get());
 }

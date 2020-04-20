@@ -193,7 +193,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
    };
 
    SetFixedWallet(wallet->walletId(), [this, txHashSet, cbTXs] {
-      armory_->getTXsByHash(txHashSet, cbTXs);
+      armory_->getTXsByHash(txHashSet, cbTXs, true);
    });
 }
 
@@ -394,7 +394,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
       }
    };
 
-   armory_->getTXsByHash(txHashSet, cbTXs);
+   armory_->getTXsByHash(txHashSet, cbTXs, true);
 }
 
 void CreateTransactionDialogAdvanced::initUI()
@@ -780,8 +780,10 @@ void CreateTransactionDialogAdvanced::onAddOutput()
       if (maxAmount) {
          enableFeeChanging(false);
       }
-      outputRow_ = outputsModel_->rowCount({}) - 1;
-      ui_->lineEditAmount->setFocus();
+      outputRow_ = -1;
+      ui_->lineEditAddress->clear();
+      ui_->lineEditAmount->clear();
+      ui_->lineEditAddress->setFocus();
    }
    validateAddOutputButton();
 }
@@ -1223,7 +1225,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                }
                thisPtr->SetPredefinedFee(totalVal);
             };
-            armory_->getTXsByHash(txHashSet, cbTXs);
+            armory_->getTXsByHash(txHashSet, cbTXs, true);
          }
       }
    } else { // unsigned TX
