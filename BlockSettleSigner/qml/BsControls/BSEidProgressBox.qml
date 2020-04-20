@@ -33,7 +33,6 @@ CustomTitleDialogWindow {
     }
 
     width: 350
-    height: 210 + headerPanelHeight
 
     title: qsTr("Sign with Auth eID")
 

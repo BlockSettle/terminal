@@ -165,12 +165,12 @@ double SignerSettings::limitAutoSignXbt() const
 
 bool SignerSettings::autoSignUnlimited() const
 {
-   return (limitAutoSignXbt() == 0.0);
+   return (d_->limit_auto_sign_xbt() == UINT64_MAX);
 }
 
 bool SignerSettings::manualSignUnlimited() const
 {
-   return (limitAutoSignXbt() == 0.0);
+   return (d_->limit_manual_xbt() == UINT64_MAX);
 }
 
 int SignerSettings::limitAutoSignTime() const

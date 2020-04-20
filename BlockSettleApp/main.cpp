@@ -268,7 +268,6 @@ static int GuiApp(int &argc, char** argv)
    splashGeometry.moveCenter(currentDisplay->geometry().center());
    splashScreen.setGeometry(splashGeometry);
 
-   splashScreen.show();
    app.processEvents();
 
 #ifdef NDEBUG

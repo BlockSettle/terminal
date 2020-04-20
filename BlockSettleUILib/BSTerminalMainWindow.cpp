@@ -100,6 +100,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
       return;
    }
 
+   splashScreen.show();
+
    connect(ui_->actionQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
 
    logMgr_ = std::make_shared<bs::LogManager>();
@@ -238,6 +240,17 @@ void BSTerminalMainWindow::loadPositionAndShow()
    if (!geom.isEmpty()) {
       setGeometry(geom);
    }
+
+   if (QApplication::desktop()->screenNumber(this) == -1) {
+      auto currentScreenRect = QApplication::desktop()->screenGeometry(QCursor::pos());
+      auto rect = geometry();
+      // Do not delete 0.9 multiplier, since in some system window size is applying without system native toolbar
+      rect.setWidth(std::min(rect.width(), static_cast<int>(currentScreenRect.width() * 0.9)));
+      rect.setHeight(std::min(rect.height(), static_cast<int>(currentScreenRect.height() * 0.9)));
+      rect.moveCenter(currentScreenRect.center());
+      setGeometry(rect);
+   }
+
    show();
 }
 
@@ -563,6 +576,7 @@ bool BSTerminalMainWindow::InitSigningContainer()
    connect(signContainer_.get(), &WalletSignerContainer::ready, this, &BSTerminalMainWindow::SignerReady, Qt::QueuedConnection);
    connect(signContainer_.get(), &WalletSignerContainer::needNewWalletPrompt, this, &BSTerminalMainWindow::onNeedNewWallet, Qt::QueuedConnection);
    connect(signContainer_.get(), &WalletSignerContainer::walletsReadyToSync, this, &BSTerminalMainWindow::onSyncWallets, Qt::QueuedConnection);
+   connect(signContainer_.get(), &WalletSignerContainer::windowVisibilityChanged, this, &BSTerminalMainWindow::onSignerVisibleChanged, Qt::QueuedConnection);
 
    return true;
 }
@@ -1373,7 +1387,24 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    int rc = loginDialog.exec();
 
    if (rc != QDialog::Accepted && !loginDialog.result()) {
-      setWidgetsAuthorized(false);
+      return;
+   }
+
+   bool isRegistered = (loginDialog.result()->userType == bs::network::UserType::Market
+      || loginDialog.result()->userType == bs::network::UserType::Trading
+      || loginDialog.result()->userType == bs::network::UserType::Dealing);
+   auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
+   if (!isRegistered && envType == ApplicationSettings::EnvConfiguration::Test) {
+      auto createTestAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlTest);
+      BSMessageBox dlg(BSMessageBox::info, tr("Login failed")
+         , tr("Create BlockSettle Test Account")
+         , tr("<p>Login requires a test account - create one in minutes on out webpage.</p>"
+              "<p>Once you have registered, return to login in the Terminal.</p>"
+              "<a href=\"%1\"><span style=\"text-decoration: underline;color:%2;\">Create Test Account Now</span></a>")
+         .arg(createTestAccountUrl).arg(BSMessageBox::kUrlColor), this);
+      dlg.setOkVisible(false);
+      dlg.setCancelVisible(true);
+      dlg.exec();
       return;
    }
 
@@ -1736,7 +1767,13 @@ void BSTerminalMainWindow::changeEvent(QEvent* e)
 
 void BSTerminalMainWindow::setLoginButtonText(const QString& text)
 {
-   ui_->pushButtonUser->setText(text);
+   auto *button = ui_->pushButtonUser;
+   button->setText(text);
+   button->setProperty("usernameButton", QVariant(text == loginButtonText_));
+   button->setProperty("usernameButtonLoggedIn", QVariant(text != loginButtonText_));
+   button->style()->unpolish(button);
+   button->style()->polish(button);
+   button->update();
 
 #ifndef Q_OS_MAC
    ui_->menubar->adjustSize();
@@ -1925,6 +1962,11 @@ void BSTerminalMainWindow::onSyncWallets()
    walletsMgr_->syncWallets(progressDelegate);
 }
 
+void BSTerminalMainWindow::onSignerVisibleChanged()
+{
+   processDeferredDialogs();
+}
+
 void BSTerminalMainWindow::InitWidgets()
 {
    authAddrDlg_ = std::make_shared<AuthAddressDialog>(logMgr_->logger(), authManager_
@@ -2055,26 +2097,30 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
 
 void BSTerminalMainWindow::promptToCreateAccountIfNeeded()
 {
-   auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
-   bool hideCreateAccountTestnet = applicationSettings_->get<bool>(ApplicationSettings::HideCreateAccountPromptTestnet);
-   if (envType != ApplicationSettings::EnvConfiguration::Test || hideCreateAccountTestnet) {
-      return;
-   }
-   applicationSettings_->set(ApplicationSettings::HideCreateAccountPromptTestnet, true);
+   addDeferredDialog([this] {
+      auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
+      bool hideCreateAccountTestnet = applicationSettings_->get<bool>(ApplicationSettings::HideCreateAccountPromptTestnet);
+      if (envType != ApplicationSettings::EnvConfiguration::Test || hideCreateAccountTestnet) {
+         return;
+      }
+      applicationSettings_->set(ApplicationSettings::HideCreateAccountPromptTestnet, true);
 
-   CreateAccountPrompt dlg(this);
-   int rc = dlg.exec();
+      CreateAccountPrompt dlg(this);
+      int rc = dlg.exec();
 
-   switch (rc) {
-      case CreateAccountPrompt::Login:
-         onLogin();
-         break;
-      case CreateAccountPrompt::CreateAccount:
-         QDesktopServices::openUrl(QUrl(QStringLiteral("https://test.blocksettle.com/#login")));
-         break;
-      case CreateAccountPrompt::Cancel:
-         break;
-   }
+      switch (rc) {
+         case CreateAccountPrompt::Login:
+            onLogin();
+            break;
+         case CreateAccountPrompt::CreateAccount: {
+            auto createTestAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlTest);
+            QDesktopServices::openUrl(QUrl(createTestAccountUrl));
+            break;
+         }
+         case CreateAccountPrompt::Cancel:
+            break;
+      }
+   });
 }
 
 void BSTerminalMainWindow::promptSwitchEnv(bool prod)
@@ -2082,7 +2128,7 @@ void BSTerminalMainWindow::promptSwitchEnv(bool prod)
    BSMessageBox mbox(BSMessageBox::question
       , tr("Environment selection")
       , tr("Switch Environment")
-      , tr("Do you wish to switch to %1 environment and restart Terminal now?").arg(prod ? tr("Production") : tr("Test"))
+      , tr("Do you wish to change to the %1 environment now?").arg(prod ? tr("Production") : tr("Test"))
       , this);
    mbox.setConfirmButtonText(tr("Yes"));
    int rc = mbox.exec();
@@ -2117,6 +2163,23 @@ void BSTerminalMainWindow::restartTerminal()
    qApp->quit();
 }
 
+void BSTerminalMainWindow::processDeferredDialogs()
+{
+   if(deferredDialogRunning_) {
+      return;
+   }
+   if (signContainer_ && signContainer_->isLocal() && signContainer_->isWindowVisible()) {
+      return;
+   }
+
+   deferredDialogRunning_ = true;
+   while (!deferredDialogs_.empty()) {
+      deferredDialogs_.front()(); // run stored lambda
+      deferredDialogs_.pop();
+   }
+   deferredDialogRunning_ = false;
+}
+
 void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &deferredDialog)
 {
    // multi thread scope, it's safe to call this function from different threads
@@ -2124,14 +2187,6 @@ void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &de
       // single thread scope (main thread), it's safe to push to deferredDialogs_
       // and check deferredDialogRunning_ variable
       deferredDialogs_.push(deferredDialog);
-      if(!deferredDialogRunning_) {
-         deferredDialogRunning_ = true;
-         while (!deferredDialogs_.empty()) {
-            deferredDialogs_.front()(); // run stored lambda
-            deferredDialogs_.pop();
-         }
-         deferredDialogRunning_ = false;
-      }
-
+      processDeferredDialogs();
    }, Qt::QueuedConnection);
 }

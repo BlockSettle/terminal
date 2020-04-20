@@ -25,6 +25,8 @@ import "js/helper.js" as JsHelper
 Item {
     id: root
     property bool autoSignAllowed: false
+    property string unlimText: qsTr("Unlimited")
+
 
     Connections {
         target: signerStatus
@@ -68,18 +70,18 @@ Item {
                     Layout.preferredWidth: 150
                     height: 25
                     enabled: !signerStatus.autoSignActive && !signerStatus.offline
-                    model: walletsProxy.walletNames
+                    model: walletsProxy.priWalletNames
                     onActivated: {
-                        let walletId = walletsProxy.walletIdForIndex(currentIndex)
+                        let walletId = walletsProxy.walletIdForName(currentText)
                         signerSettings.autoSignWallet = walletId
-                        autoSignAllowed = !walletsProxy.isWatchingOnlyWallet(walletsProxy.walletIdForIndex(currentIndex))
+                        autoSignAllowed = !walletsProxy.isWatchingOnlyWallet(walletId)
                     }
 
                     Connections {
                         target: walletsProxy
                         onWalletsChanged: {
-                            cbWallets.currentIndex = walletsProxy.indexOfWalletId(signerSettings.autoSignWallet)
-                            autoSignAllowed = !walletsProxy.isWatchingOnlyWallet(walletsProxy.walletIdForIndex(cbWallets.currentIndex))
+//                            cbWallets.currentIndex = walletsProxy.indexOfWalletId(signerSettings.autoSignWallet)
+                            autoSignAllowed = !walletsProxy.isWatchingOnlyWallet(signerSettings.autoSignWallet)
                         }
                     }
                 }
@@ -110,7 +112,7 @@ Item {
                         checked = !newState
 
                         if (signerSettings.autoSignWallet.length === 0) {
-                            let walletId = walletsProxy.walletIdForIndex(cbWallets.currentIndex)
+                            let walletId = walletsProxy.walletIdForName(cbWallets.currentText)
                             signerSettings.autoSignWallet = walletId
                         }
 
@@ -147,17 +149,30 @@ Item {
                     height: 25
                     enabled: !signerStatus.autoSignActive && !signerStatus.offline
                     editable: true
-                    model: [ "Unlimited", "0.1", "0.5", "1", "2", "5"]
+                    model: [ unlimText, "0.1", "0.5", "1", "2", "5"]
                     maximumLength: 9
 
-                    // FIXME: uncomment when limits will be fixed
-                    // displayText: signerSettings.autoSignUnlimited ? qsTr("Unlimited") : signerSettings.limitAutoSignXbt
-                    onCurrentTextChanged: {
-                        if (currentText !== qsTr("Unlimited")) {
-                            signerSettings.limitAutoSignXbt = currentText
+                    onCurrentIndexChanged: {
+                        limitAutoSignXbt.displayText = undefined
+                        if (currentIndex === 0) {
+                            signerSettings.limitAutoSignXbt = 0
+                        }
+                        else if (currentIndex < 0) {
+                            limitAutoSignXbt.displayText = signerSettings.limitAutoSignXbt
                         }
                         else {
-                            signerSettings.limitAutoSignXbt = 0
+                            let value = parseFloat(model[currentIndex])
+                            signerSettings.limitAutoSignXbt = value
+                        }
+                    }
+                    onAccepted: {
+                        let value = parseFloat(editText)
+                        if ((value > 0.0) && (value <= 1000)) {
+                            signerSettings.limitAutoSignXbt = value
+                        }
+                        else {
+                            signerSettings.limitAutoSignXbt = 1.0
+                            editText = 1.0
                         }
                     }
                     validator: RegExpValidator {
@@ -178,13 +193,11 @@ Item {
                     height: 25
                     enabled: !signerStatus.autoSignActive && !signerStatus.offline
                     editable: true
-                    model: [ "Unlimited", "30m", "1h", "6h", "12h", "24h"]
+                    model: [ unlimText, "30m", "1h", "6h", "12h", "24h"]
                     maximumLength: 9
 
-                    // FIXME: uncomment when limits will be fixed
-                    // displayText: signerSettings.limitAutoSignTime ? signerSettings.limitAutoSignTime : qsTr("Unlimited")
                     onCurrentTextChanged: {
-                        if (currentText !== qsTr("Unlimited")) {
+                        if (currentText !== unlimText) {
                             signerSettings.limitAutoSignTime = text
                         }
                         else {

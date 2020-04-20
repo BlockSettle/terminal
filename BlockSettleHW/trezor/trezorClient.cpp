@@ -265,7 +265,7 @@ void TrezorClient::acquireDevice(AsyncCallBack&& cb)
       state_ = State::Acquired;
       emit deviceReady();
 
-      trezorDevice_ = { new TrezorDevice(connectionManager_, walletManager_, testNet_, { this }, this) };
+      trezorDevice_ = new TrezorDevice(connectionManager_, walletManager_, testNet_, { this }, this) ;
       trezorDevice_->init(std::move(cbCopy));
 
       reply->deleteLater();

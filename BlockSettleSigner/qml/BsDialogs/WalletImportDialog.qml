@@ -59,9 +59,7 @@ CustomTitleDialogWindow {
     property bool authNoticeShown: false
 
     title: qsTr("Import Wallet")
-    // Use same size as BSEidNoticeBox if possible (to prevent size jumps)
     width: 410
-    height: 550
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletImport
 
@@ -74,9 +72,6 @@ CustomTitleDialogWindow {
             tfName.text = walletsProxy.generateNextWalletName();
         }
     }
-
-    onAboutToShow: hwDeviceList.init()
-    onAboutToHide: hwDeviceList.release();
 
     onEnterPressed: {
         if (btnAccept.enabled) btnAccept.onClicked()
@@ -437,11 +432,6 @@ CustomTitleDialogWindow {
                                     // show notice dialog
                                     if (!signerSettings.hideEidInfoBox) {
                                         var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
-                                        sizeChanged(noticeEidDialog.width, noticeEidDialog.height)
-
-                                        noticeEidDialog.closed.connect(function(){
-                                            sizeChanged(root.width, root.height)
-                                        })
                                         noticeEidDialog.open()
                                     }
                                 }

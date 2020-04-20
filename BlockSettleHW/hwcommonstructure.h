@@ -72,5 +72,5 @@ struct HWSignedTx {
 };
 Q_DECLARE_METATYPE(HWSignedTx)
 
-bs::hd::Path getDerivationPath(bool testNet, bs::hd::Purpose isNestedSegwit);
+bs::hd::Path getDerivationPath(bool testNet, bs::hd::Purpose element);
 #endif // HWCOMMONSTRUCTURE_H

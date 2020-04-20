@@ -77,14 +77,16 @@ public:
       owner_->sendData(signer::CancelTxSignType, evt.SerializeAsString());
    }
 
-   void updateDialogData(const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData) override
+   void autoSignActivated(bool active, const std::string &walletId) override
    {
-      headless::UpdateDialogDataRequest request;
-      *request.mutable_passworddialogdata() = dialogData;
-      owner_->sendData(signer::UpdateDialogDataType, request.SerializeAsString());
+      signer::AutoSignActResponse evt;
+      evt.set_rootwalletid(walletId);
+      evt.set_errorcode(static_cast<uint32_t>(active ? bs::error::ErrorCode::NoError
+         : bs::error::ErrorCode::AutoSignDisabled));
+      owner_->sendData(signer::AutoSignActType, evt.SerializeAsString());
    }
 
-   void xbtSpent(int64_t value, bool autoSign) override
+   void xbtSpent(uint64_t value, bool autoSign) override
    {
       signer::XbtSpentEvent evt;
       evt.set_value(value);
@@ -108,7 +110,7 @@ public:
       owner_->sendData(signer::TerminalEventType, evt.SerializeAsString());
    }
 
-   void decryptWalletRequest(Blocksettle::Communication::signer::PasswordDialogType dialogType
+   void decryptWalletRequest(signer::PasswordDialogType dialogType
       , const Blocksettle::Communication::Internal::PasswordDialogDataWrapper &dialogData
       , const bs::core::wallet::TXSignRequest &txReq = {}) override
    {
@@ -118,6 +120,13 @@ public:
       *(request.mutable_passworddialogdata()) = dialogData;
 
       owner_->sendData(signer::DecryptWalletRequestType, request.SerializeAsString());
+   }
+
+   void updateDialogData(const Internal::PasswordDialogDataWrapper &dialogData) override
+   {
+      headless::UpdateDialogDataRequest request;
+      *request.mutable_passworddialogdata() = dialogData;
+      owner_->sendData(signer::UpdateDialogDataType, request.SerializeAsString());
    }
 
    void walletChanged(const std::string &walletId) override
@@ -241,6 +250,9 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
       break;
    case signer::ChangeControlPasswordType:
       rc = onChangeControlPassword(packet.data(), packet.id());
+      break;
+   case signer::WindowStatusType:
+      rc = onWindowsStatus(packet.data(), packet.id());
       break;
    default:
       logger_->warn("[SignerAdapterListener::{}] unprocessed packet type {}", __func__, packet.type());
@@ -628,6 +640,17 @@ bool SignerAdapterListener::onChangeControlPassword(const std::string &data, bs:
    response.set_errorcode(static_cast<uint32_t>(result));
    sendData(signer::ChangeControlPasswordType, response.SerializeAsString(), reqId);
 
+   return true;
+}
+
+bool SignerAdapterListener::onWindowsStatus(const std::string &data, bs::signer::RequestId)
+{
+   headless::WindowStatus msg;
+   if (!msg.ParseFromString(data)) {
+      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
+      return false;
+   }
+   app_->windowVisibilityChanged(msg.visible());
    return true;
 }
 

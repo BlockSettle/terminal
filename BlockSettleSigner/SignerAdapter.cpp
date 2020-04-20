@@ -321,3 +321,10 @@ void SignerAdapter::changeControlPassword(const bs::wallet::QPasswordData &oldPa
 
    listener_->setChangeControlPwCb(reqId, cb);
 }
+
+void SignerAdapter::sendWindowStatus(bool visible)
+{
+   headless::WindowStatus msg;
+   msg.set_visible(visible);
+   listener_->send(signer::WindowStatusType, msg.SerializeAsString());
+}

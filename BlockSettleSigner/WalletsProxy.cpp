@@ -735,6 +735,21 @@ QStringList WalletsProxy::walletNames() const
    return result;
 }
 
+QStringList WalletsProxy::priWalletNames() const
+{
+   if (!walletsMgr_) {
+      return {};
+   }
+
+   QStringList result;
+   for (const auto &wallet : walletsMgr_->hdWallets()) {
+      if (wallet->isPrimary()) {
+         result.push_back(QString::fromStdString(wallet->name()));
+      }
+   }
+   return result;
+}
+
 QJSValue WalletsProxy::invokeJsCallBack(QJSValue jsCallback, QJSValueList args)
 {
    if (jsCallback.isCallable()) {
@@ -750,7 +765,6 @@ int WalletsProxy::indexOfWalletId(const QString &walletId) const
    if (!walletsMgr_) {
       return 0;
    }
-
    size_t i = 0;
    for (const auto &wallet : walletsMgr_->hdWallets()) {
       if (wallet->walletId() == walletId.toStdString()) {
@@ -766,12 +780,24 @@ QString WalletsProxy::walletIdForIndex(int index) const
    if (!walletsMgr_) {
       return {};
    }
-
    const auto &hdWallets = walletsMgr_->hdWallets();
    if ((index < 0) || (index >= hdWallets.size())) {
       return {};
    }
    return QString::fromStdString(hdWallets[index]->walletId());
+}
+
+QString WalletsProxy::walletIdForName(const QString &name) const
+{
+   if (!walletsMgr_) {
+      return {};
+   }
+   for (const auto &wallet : walletsMgr_->hdWallets()) {
+      if (wallet->name() == name.toStdString()) {
+         return QString::fromStdString(wallet->walletId());
+      }
+   }
+   return {};
 }
 
 void WalletsProxy::sendControlPassword(bs::wallet::QPasswordData *password)

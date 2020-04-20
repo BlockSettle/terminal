@@ -135,8 +135,8 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
 
    // We cannot get all data from one call so we make four calls:
    // fetching first address for "m/0'" as wallet id
-   // fetching first address for "m/49'" as nested segwit xpub
    // fetching first address for "m/84'" as native segwit xpub
+   // fetching first address for "m/49'" as nested segwit xpub
    // fetching first address for "m/44'" as legacy xpub
 
    AsyncCallBackCall cbLegacy = [this, cb = std::move(cb)](QVariant &&data) mutable {

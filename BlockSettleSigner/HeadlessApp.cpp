@@ -460,6 +460,13 @@ void HeadlessAppObj::passwordReceived(const std::string &walletId, ErrorCode res
    }
 }
 
+void HeadlessAppObj::windowVisibilityChanged(bool visible)
+{
+   if (terminalListener_ && settings_->runMode() == bs::signer::RunMode::litegui) {
+      terminalListener_->windowVisibilityChanged(visible);
+   }
+}
+
 void HeadlessAppObj::close()
 {
    queue_->quit();

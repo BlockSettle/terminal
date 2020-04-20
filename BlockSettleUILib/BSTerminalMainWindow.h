@@ -156,6 +156,7 @@ private slots:
 
    void onTabWidgetCurrentChanged(const int &index);
    void onSyncWallets();
+   void onSignerVisibleChanged();
 
 private:
    std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
@@ -274,6 +275,7 @@ private:
    void switchToProdEnv();
 
    void restartTerminal();
+   void processDeferredDialogs();
 
 private:
    enum class ChatInitState
