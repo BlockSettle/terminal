@@ -43,6 +43,11 @@ void TrezorClient::initConnection(AsyncCallBack&& cb)
       if (!reply || reply->error() != QNetworkReply::NoError) {
          connectionManager_->GetLogger()->error(
             "[TrezorClient] initConnection - Network error : " + reply->errorString().toUtf8());
+
+         if (cbCopy) {
+            cbCopy();
+         }
+
          return;
       }
 
@@ -262,7 +267,7 @@ void TrezorClient::acquireDevice(AsyncCallBack&& cb)
       state_ = State::Acquired;
       emit deviceReady();
 
-      trezorDevice_ = { new TrezorDevice(connectionManager_, walletManager_, testNet_, { this }, this) };
+      trezorDevice_ = new TrezorDevice(connectionManager_, walletManager_, testNet_, { this }, this) ;
       trezorDevice_->init(std::move(cbCopy));
 
       reply->deleteLater();

@@ -100,6 +100,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
       return;
    }
 
+   splashScreen.show();
+
    connect(ui_->actionQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
 
    logMgr_ = std::make_shared<bs::LogManager>();
@@ -238,6 +240,17 @@ void BSTerminalMainWindow::loadPositionAndShow()
    if (!geom.isEmpty()) {
       setGeometry(geom);
    }
+
+   if (QApplication::desktop()->screenNumber(this) == -1) {
+      auto currentScreenRect = QApplication::desktop()->screenGeometry(QCursor::pos());
+      auto rect = geometry();
+      // Do not delete 0.9 multiplier, since in some system window size is applying without system native toolbar
+      rect.setWidth(std::min(rect.width(), static_cast<int>(currentScreenRect.width() * 0.9)));
+      rect.setHeight(std::min(rect.height(), static_cast<int>(currentScreenRect.height() * 0.9)));
+      rect.moveCenter(currentScreenRect.center());
+      setGeometry(rect);
+   }
+
    show();
 }
 
@@ -1754,7 +1767,13 @@ void BSTerminalMainWindow::changeEvent(QEvent* e)
 
 void BSTerminalMainWindow::setLoginButtonText(const QString& text)
 {
-   ui_->pushButtonUser->setText(text);
+   auto *button = ui_->pushButtonUser;
+   button->setText(text);
+   button->setProperty("usernameButton", QVariant(text == loginButtonText_));
+   button->setProperty("usernameButtonLoggedIn", QVariant(text != loginButtonText_));
+   button->style()->unpolish(button);
+   button->style()->polish(button);
+   button->update();
 
 #ifndef Q_OS_MAC
    ui_->menubar->adjustSize();

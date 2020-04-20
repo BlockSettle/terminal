@@ -15,7 +15,6 @@ import Qt.labs.platform 1.1
 
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.HwDeviceManager 1.0
-import QtQuick.Controls 1.4
 
 import "../BsControls"
 import "../StyledControls"
@@ -29,13 +28,14 @@ CustomTitleDialogWindow {
 
     property WalletInfo walletInfo: WalletInfo{}
 
-    property bool acceptable: !hwDeviceList.isScanning && !hwDeviceList.isImporting && (hwDeviceList.readyForImport || hwDeviceList.isNoDevice)
+    property bool acceptable: !hwDeviceList.isScanning && !hwDeviceList.isImporting &&
+                              (hwDeviceList.readyForImport || hwDeviceList.isNoDevice) && !scanUpdateDelay.running
 
     property int inputLabelsWidth: 110
 
     title: qsTr("Import Wallet")
     width: 480
-    height: 250
+    height: 260
     abortBoxType: BSAbortBox.AbortType.WalletImport
 
     onAboutToShow: hwDeviceList.init()
@@ -45,86 +45,89 @@ CustomTitleDialogWindow {
         if (btnAccept.enabled) btnAccept.onClicked()
     }
 
-    BusyIndicator {
-        id: spinner
-
-        Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
-        running: hwDeviceList.isImporting || hwDeviceList.isScanning || scanUpdateDelay.running
-        height: 20
-        width: 20
-    }
-
     Timer {
         id: scanUpdateDelay
         interval: 2000
         repeat: false
     }
 
-    cContentItem: ColumnLayout {
-        id: mainLayout
-        spacing: 10
+    runSpinner: hwDeviceList.isImporting || hwDeviceList.isScanning || scanUpdateDelay.running
 
-        CustomHeader {
-            id: headerText
-            text: qsTr("Hardware Device")
-            Layout.fillWidth: true
-            Layout.preferredHeight: 25
-            Layout.topMargin: 5
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
-        }
+    cContentItem: Item {
+        width: parent.width
 
-        StackLayout {
-            currentIndex: hwDeviceList.isNoDevice ? 1 : 0
-            Layout.fillWidth: true
+        ColumnLayout {
+            id: mainLayout
+            spacing: 5
+            anchors.fill: parent
 
-            ColumnLayout {
-                id: fullImportTab
+            CustomHeader {
+                id: headerText
+                text: qsTr("Hardware Device")
+                Layout.fillWidth: true
+                Layout.preferredHeight: 25
+                Layout.topMargin: 5
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+            }
 
-                RowLayout {
-                    Layout.topMargin: 0
-                    Layout.leftMargin: 10
-                    Layout.rightMargin: 10
-                    Layout.fillWidth: true
+            StackLayout {
+                currentIndex: hwDeviceList.isNoDevice ? 1 : 0
+                Layout.fillWidth: true
 
-                    ColumnLayout {
-                        id: selectLayout
+                ColumnLayout {
+                    id: fullImportTab
+
+                    RowLayout {
+                        Layout.topMargin: 0
+                        Layout.leftMargin: 10
+                        Layout.rightMargin: 10
                         Layout.fillWidth: true
 
-                        // HARDWARE DEVICES
-                        HwAvailableDevices {
-                            id: hwDeviceList
-
+                        ColumnLayout {
+                            id: selectLayout
                             Layout.fillWidth: true
-                            Layout.fillHeight: true
 
-                            onPubKeyReady: {
-                                importWoWallet();
-                            }
+                            // HARDWARE DEVICES
+                            HwAvailableDevices {
+                                id: hwDeviceList
 
-                            onFailed: {
-                                JsHelper.messageBox(BSMessageBox.Type.Critical
-                                    , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + reason)
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+
+                                onPubKeyReady: {
+                                    importWoWallet();
+                                }
+
+                                onFailed: {
+                                    JsHelper.messageBox(BSMessageBox.Type.Critical
+                                        , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + reason)
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            ColumnLayout {
-                id: noDevicesAvailable
+                ColumnLayout {
+                    id: noDevicesAvailable
 
-                RowLayout {
-                    Layout.leftMargin: 10
-                    Layout.rightMargin: 10
+                    RowLayout {
+                        Layout.leftMargin: 10
+                        Layout.rightMargin: 10
 
-                    CustomLabel {
-                        Layout.fillWidth: true
-                        text: qsTr("No hardware device was detected.\nPlease ensure your device is properly connected and press the \"Rescan\" button.")
+                        CustomLabel {
+                            Layout.fillWidth: true
+                            text: qsTr(
+                             "No hardware device detected.\n" +
+                             "If your device cannot be detected, please consider the following steps before consulting your hardware wallet manufacturer:\n\n" +
+                             "• If you are a Linux user, your device must be added to udev rule to make possible to communicate with it. Please make sure device is detected correctly on system.\n" +
+                             "• If you are a Trezor user, ensure you have the Trezor Bridge installed (if not install and press \"Rescan\")\n" +
+                             "• If you are a Ledger user, ensure your PIN has been entered and that your device displays \"Application is Ready\"")
+                        }
                     }
                 }
-            }
 
+            }
         }
     }
 
