@@ -2104,6 +2104,10 @@ void BSTerminalMainWindow::promptToCreateAccountIfNeeded()
          return;
       }
       applicationSettings_->set(ApplicationSettings::HideCreateAccountPromptTestnet, true);
+      if (bs::network::isTradingEnabled(userType_)) {
+         // Do not prompt if user is already logged in
+         return;
+      }
 
       CreateAccountPrompt dlg(this);
       int rc = dlg.exec();
