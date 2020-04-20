@@ -15,6 +15,7 @@
 #include "ArmoryConnection.h"
 #include "BSMessageBox.h"
 #include "CoinControlDialog.h"
+#include "CreateTransactionDialogSimple.h"
 #include "SelectAddressDialog.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
@@ -22,15 +23,15 @@
 #include "TransactionOutputsModel.h"
 #include "UiUtils.h"
 #include "UsedInputsModel.h"
+#include "UtxoReservationManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
-#include "UtxoReservationManager.h"
 
 #include <QEvent>
-#include <QKeyEvent>
 #include <QFile>
 #include <QFileDialog>
+#include <QKeyEvent>
 #include <QPushButton>
 
 #include <stdexcept>
@@ -79,6 +80,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
    dlg->ui_->checkBoxRBF->setChecked(true);
    dlg->ui_->checkBoxRBF->setEnabled(false);
    dlg->ui_->pushButtonImport->setEnabled(false);
+   dlg->ui_->pushButtonShowSimple->setEnabled(false);
 
    dlg->setRBFinputs(tx);
    dlg->isRBF_ = true;
@@ -101,6 +103,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
 
    dlg->setWindowTitle(tr("Child-Pays-For-Parent"));
    dlg->ui_->pushButtonImport->setEnabled(false);
+   dlg->ui_->pushButtonShowSimple->setEnabled(false);
 
    dlg->setCPFPinputs(tx, wallet);
    dlg->isCPFP_ = true;
@@ -442,6 +445,7 @@ void CreateTransactionDialogAdvanced::initUI()
    connect(ui_->pushButtonCreate, &QPushButton::clicked, this, &CreateTransactionDialogAdvanced::onCreatePressed);
    connect(ui_->pushButtonImport, &QPushButton::clicked, this, &CreateTransactionDialogAdvanced::onImportPressed);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &CreateTransactionDialogAdvanced::reject);
+   connect(ui_->pushButtonShowSimple, &QPushButton::clicked, this, &CreateTransactionDialogAdvanced::onSimpleDialogRequested);
 
    ui_->radioButtonNewAddrNative->setChecked(true);
 
@@ -1115,6 +1119,8 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
    ui_->pushButtonCreate->setEnabled(false);
    ui_->pushButtonCreate->setText(tr("Broadcast"));
 
+   ui_->pushButtonShowSimple->setEnabled(false);
+
    const auto &tx = transactions[0];
    if (!tx.prevStates.empty()) {    // signed TX
       ui_->textEditComment->insertPlainText(QString::fromStdString(tx.comment));
@@ -1487,4 +1493,24 @@ QLabel* CreateTransactionDialogAdvanced::labelTXAmount() const
 QLabel* CreateTransactionDialogAdvanced::labelTxOutputs() const
 {
    return ui_->labelTXOutputs;
+}
+
+void CreateTransactionDialogAdvanced::onSimpleDialogRequested()
+{
+   simpleDialogRequested_ = true;
+   accept();
+}
+
+bool CreateTransactionDialogAdvanced::switchModeRequested() const
+{
+   return simpleDialogRequested_;
+}
+
+std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::SwithcMode()
+{
+   auto simpleDialog = std::make_shared<CreateTransactionDialogSimple>(armory_
+      , walletsManager_, utxoReservationManager_, signContainer_
+      , logger_, applicationSettings_, parentWidget());
+
+   return simpleDialog;
 }

@@ -56,8 +56,10 @@ public:
 
 public:
    CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &, const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer> &, bool loadFeeSuggestions
+      , const std::shared_ptr<bs::sync::WalletsManager> &
+      , const std::shared_ptr<bs::UTXOReservationManager> &
+      , const std::shared_ptr<SignContainer> &
+      , bool loadFeeSuggestions
       , const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
       , const std::shared_ptr<TransactionData> &
@@ -69,6 +71,9 @@ public:
    void preSetValue(const double value);
 
    void SetImportedTransactions(const std::vector<bs::core::wallet::TXSignRequest>& transactions);
+
+   bool switchModeRequested() const override;
+   std::shared_ptr<CreateTransactionDialog> SwithcMode() override;
 
 protected:
    bool eventFilter(QObject *watched, QEvent *) override;
@@ -123,6 +128,7 @@ private slots:
    void updateManualFeeControls();
    void setTxFees();
    void onOutputsClicked(const QModelIndex &index);
+   void onSimpleDialogRequested();
 
 private:
    void clear() override;
@@ -187,6 +193,7 @@ private:
    bool        feeChangeDisabled_ = false;
 
    bool        showUnknownWalletWarning_ = false;
+   bool        simpleDialogRequested_ = false;
 };
 
 #endif // __CREATE_TRANSACTION_DIALOG_ADVANCED_H__

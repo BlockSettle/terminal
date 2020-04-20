@@ -215,12 +215,12 @@ void CreateTransactionDialogSimple::createTransaction()
    });
 }
 
-bool CreateTransactionDialogSimple::userRequestedAdvancedDialog() const
+bool CreateTransactionDialogSimple::switchModeRequested() const
 {
    return advancedDialogRequested_;
 }
 
-std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogSimple::CreateAdvancedDialog()
+std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::SwithcMode()
 {
    auto advancedDialog = std::make_shared<CreateTransactionDialogAdvanced>(armory_, walletsManager_
       , utxoReservationManager_, signContainer_, true, logger_, applicationSettings_, transactionData_, std::move(utxoRes_), parentWidget());

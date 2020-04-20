@@ -256,7 +256,6 @@ private:
 
    void setupShortcuts();
 
-   void createAdvancedTxDialog(const std::string &selectedWalletId);
    void createAuthWallet(const std::function<void()> &);
 
    bool isUserLoggedIn() const;

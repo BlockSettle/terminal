@@ -34,8 +34,8 @@ public:
       , QWidget* parent = nullptr);
    ~CreateTransactionDialogSimple() override;
 
-   bool userRequestedAdvancedDialog() const;
-   std::shared_ptr<CreateTransactionDialogAdvanced> CreateAdvancedDialog();
+   bool switchModeRequested() const override;
+   std::shared_ptr<CreateTransactionDialog> SwithcMode() override;
 
 protected:
    QComboBox * comboBoxWallets() const override;
