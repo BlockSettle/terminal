@@ -1396,9 +1396,9 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
    if (!isRegistered && envType == ApplicationSettings::EnvConfiguration::Test) {
       auto createTestAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlTest);
-      BSMessageBox dlg(BSMessageBox::info, tr("Login failed")
-         , tr("Create BlockSettle Test Account")
-         , tr("<p>Login requires a test account - create one in minutes on out webpage.</p>"
+      BSMessageBox dlg(BSMessageBox::info, tr("Create Test Account")
+         , tr("Create a BlockSettle test account")
+         , tr("<p>Login requires a test account - create one in minutes on test.blocksettle.com</p>"
               "<p>Once you have registered, return to login in the Terminal.</p>"
               "<a href=\"%1\"><span style=\"text-decoration: underline;color:%2;\">Create Test Account Now</span></a>")
          .arg(createTestAccountUrl).arg(BSMessageBox::kUrlColor), this);
