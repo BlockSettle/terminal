@@ -553,7 +553,9 @@ void RFQReplyWidget::eraseReply(const QString &reqId)
    if (settlement != sentReplyIdsToSettlementsIds_.end()) {
       sentXbtReplies_.erase(settlement->second);
       sentReplyIdsToSettlementsIds_.erase(settlement);
+      return;
    }
+   sentCCReplies_.erase(reqId.toStdString());
 }
 
 void RFQReplyWidget::hideEvent(QHideEvent* event)

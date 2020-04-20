@@ -130,7 +130,6 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
                for (const auto &txOutIdx : itTxOut->second) {
                   TxOut prevOut = prevTx.second->getTxOutCopy(txOutIdx);
                   value += prevOut.getValue();
-                  const bool isOutput = false;
                   const auto addr = bs::Address::fromTxOut(prevOut);
                   const auto addressWallet = walletsManager_->getWalletByAddress(addr);
                   if (addressWallet) {
@@ -158,15 +157,21 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
                         ccLeaf_ = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(addressWallet);
                      }
                   }
-                  addAddress(prevOut, isOutput, isInternalTx, prevTx.first, {});
+                  addAddress(prevOut, false, prevTx.first, {});
                }
+            }
+
+            std::vector<TxOut> allOutputs;
+            for (size_t i = 0; i < item->tx.getNumTxOut(); ++i) {
+               const TxOut out = item->tx.getTxOutCopy(i);
+               value -= out.getValue();
+               allOutputs.push_back(out);
             }
 
             for (size_t i = 0; i < item->tx.getNumTxOut(); ++i) {
                const TxOut out = item->tx.getTxOutCopy(i);
-               value -= out.getValue();
-               const bool isOutput = true;
-               addAddress(out, isOutput, isInternalTx, item->tx.getThisHash(), inputWallets);
+               addAddress(out, true, item->tx.getThisHash(), inputWallets
+                  , allOutputs);
             }
 
             if (!item->wallets.empty()) {
@@ -200,7 +205,7 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
             cbTXs({}, nullptr);
          }
          else {
-            armory->getTXsByHash(txHashSet, cbTXs);
+            armory->getTXsByHash(txHashSet, cbTXs, true);
          }
       }
 
@@ -260,21 +265,44 @@ QSize TransactionDetailDialog::minimumSizeHint() const
 //      The TX hash. (const BinaryData&)
 // OUT: None
 // RET: None
-void TransactionDetailDialog::addAddress(TxOut out    // can't use const ref due to getIndex()
-   , bool isOutput, bool isInternalTx, const BinaryData& txHash
-   , const WalletsSet &inputWallets)
+void TransactionDetailDialog::addAddress(TxOut out    // can't use const ref due to TxOut::getIndex()
+   , bool isOutput, const BinaryData& txHash
+   , const WalletsSet &inputWallets, const std::vector<TxOut> &allOutputs)
 {
    QString addressType;
    QString displayedAddress;
    bs::sync::WalletsManager::WalletPtr addressWallet;
    bool isChange = false;
    try {
-      const auto addr = bs::Address::fromTxOut(out);
+      const auto &addr = bs::Address::fromTxOut(out);
       addressWallet = walletsManager_->getWalletByAddress(addr);
 
-      // Do not try mark outputs as change for internal tx (or there would be only input and change, without output)
-      isChange = isOutput && !isInternalTx
-         && (inputWallets.find(addressWallet) != inputWallets.end());
+      TxOut lastChange;
+      const auto &setLastChange = [&lastChange, inputWallets, this]
+         (TxOut out)
+      {
+         const auto &addr = bs::Address::fromTxOut(out);
+         const auto &addrWallet = walletsManager_->getWalletByAddress(addr);
+         if (inputWallets.find(addrWallet) != inputWallets.end()) {
+            lastChange = out;
+         }
+      };
+
+      if (isOutput) {
+         if (!allOutputs.empty()) {
+            for (auto output : allOutputs) {
+               setLastChange(output);
+            }
+         } else {
+            setLastChange(out);
+         }
+
+         if (lastChange.isInitialized()) {
+            if (out.getScript() == lastChange.getScript()) {
+               isChange = true;
+            }
+         }
+      }
 
       addressType = isChange ? tr("Change") : (isOutput ? tr("Output") : tr("Input"));
       displayedAddress = QString::fromStdString(addr.display());

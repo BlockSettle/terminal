@@ -206,12 +206,12 @@ void BSTerminalMainWindow::onAddrStateChanged()
 
    if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
       && !authManager_->isAtLeastOneAwaitingVerification() && canSubmitAuthAddr) {
+      allowAuthAddressDialogShow_ = false;
       BSMessageBox qry(BSMessageBox::question, tr("Submit Authentication Address"), tr("Submit Authentication Address?")
          , tr("In order to access XBT trading, you will need to submit an Authentication Address. Do you wish to do so now?"), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
-      allowAuthAddressDialogShow_ = false;
    }
 
    if (authManager_->isAtLeastOneAwaitingVerification()) {
@@ -420,8 +420,10 @@ void BSTerminalMainWindow::LoadWallets()
       , &BSTerminalMainWindow::updateControlEnabledState);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletDeleted, this
       , &BSTerminalMainWindow::updateControlEnabledState);
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletAdded, this
-      , &BSTerminalMainWindow::updateControlEnabledState);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletAdded, this, [this] {
+      updateControlEnabledState();
+      promptToCreateTestAccountIfNeeded();
+   });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
       , &BSTerminalMainWindow::updateControlEnabledState);
 
@@ -793,7 +795,6 @@ void BSTerminalMainWindow::tryGetChatKeys()
       chatPrivKey_ = node.getPrivateKey();
       gotChatKeys_ = true;
       tryInitChatView();
-      promptToCreateAccountIfNeeded();
    });
 }
 
@@ -1184,18 +1185,6 @@ void BSTerminalMainWindow::onGenerateAddress()
    newAddressDialog->show();
 }
 
-void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWalletId)
-{
-   CreateTransactionDialogAdvanced advancedDialog{armory_, walletsMgr_, utxoReservationMgr_
-      , signContainer_, true, logMgr_->logger("ui"), applicationSettings_, nullptr, {}, this };
-
-   if (!selectedWalletId.empty()) {
-      advancedDialog.SelectWallet(selectedWalletId);
-   }
-
-   advancedDialog.exec();
-}
-
 void BSTerminalMainWindow::onSend()
 {
    std::string selectedWalletId;
@@ -1210,27 +1199,31 @@ void BSTerminalMainWindow::onSend()
       }
    }
 
-   if (QGuiApplication::keyboardModifiers() & Qt::ShiftModifier) {
-      createAdvancedTxDialog(selectedWalletId);
+
+   std::shared_ptr<CreateTransactionDialog> dlg;
+
+   if ((QGuiApplication::keyboardModifiers() & Qt::ShiftModifier)
+       || applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
+      dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory_, walletsMgr_, utxoReservationMgr_
+         , signContainer_, true, logMgr_->logger("ui"), applicationSettings_, nullptr, bs::UtxoReservationToken{}, this );
    } else {
-      if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
-         createAdvancedTxDialog(selectedWalletId);
-      } else {
-         CreateTransactionDialogSimple dlg(armory_, walletsMgr_, utxoReservationMgr_, signContainer_
+      dlg = std::make_shared<CreateTransactionDialogSimple>(armory_, walletsMgr_, utxoReservationMgr_, signContainer_
             , logMgr_->logger("ui"), applicationSettings_, this);
+   }
 
-         if (!selectedWalletId.empty()) {
-            dlg.SelectWallet(selectedWalletId);
-         }
+   if (!selectedWalletId.empty()) {
+      dlg->SelectWallet(selectedWalletId);
+   }
 
-         dlg.exec();
+   while(true) {
+      dlg->exec();
 
-         if ((dlg.result() == QDialog::Accepted) && dlg.userRequestedAdvancedDialog()) {
-            auto advancedDialog = dlg.CreateAdvancedDialog();
-
-            advancedDialog->exec();
-         }
+      if  ((dlg->result() != QDialog::Accepted) || !dlg->switchModeRequested()) {
+         break;
       }
+
+      auto nextDialog = dlg->SwithcMode();
+      dlg = nextDialog;
    }
 }
 
@@ -1352,6 +1345,19 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::onLogin()
 {
+   if (!gotChatKeys_) {
+      addDeferredDialog([this] {
+         CreatePrimaryWalletPrompt dlg;
+         int rc = dlg.exec();
+         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
+            ui_->widgetWallets->CreateNewWallet();
+         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
+            ui_->widgetWallets->ImportNewWallet();
+         }
+      });
+      return;
+   }
+
    onNetworkSettingsRequired(NetworkSettingsClient::Login);
 }
 
@@ -1396,9 +1402,9 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
    if (!isRegistered && envType == ApplicationSettings::EnvConfiguration::Test) {
       auto createTestAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlTest);
-      BSMessageBox dlg(BSMessageBox::info, tr("Login failed")
-         , tr("Create BlockSettle Test Account")
-         , tr("<p>Login requires a test account - create one in minutes on out webpage.</p>"
+      BSMessageBox dlg(BSMessageBox::info, tr("Create Test Account")
+         , tr("Create a BlockSettle test account")
+         , tr("<p>Login requires a test account - create one in minutes on test.blocksettle.com</p>"
               "<p>Once you have registered, return to login in the Terminal.</p>"
               "<a href=\"%1\"><span style=\"text-decoration: underline;color:%2;\">Create Test Account Now</span></a>")
          .arg(createTestAccountUrl).arg(BSMessageBox::kUrlColor), this);
@@ -1482,18 +1488,6 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    connect(bsClient_.get(), &BsClient::accountStateChanged, this, [this](bs::network::UserType userType, bool enabled) {
       onAccountTypeChanged(userType, enabled);
    });
-
-   if (!gotChatKeys_) {
-      addDeferredDialog([this] {
-         CreatePrimaryWalletPrompt dlg;
-         int rc = dlg.exec();
-         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
-            ui_->widgetWallets->CreateNewWallet();
-         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
-            ui_->widgetWallets->ImportNewWallet();
-         }
-      });
-   }
 }
 
 void BSTerminalMainWindow::onLogout()
@@ -1688,7 +1682,7 @@ void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> &entries)
          walletsMgr_->getTransactionDirection(tx, wallet->walletId(), cbDir);
          walletsMgr_->getTransactionMainAddress(tx, wallet->walletId(), (entry.value > 0), cbMainAddr);
       };
-      armory_->getTxByHash(entry.txHash, cbTx);
+      armory_->getTxByHash(entry.txHash, cbTx, true);
    }
 }
 
@@ -2095,7 +2089,7 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
    }
 }
 
-void BSTerminalMainWindow::promptToCreateAccountIfNeeded()
+void BSTerminalMainWindow::promptToCreateTestAccountIfNeeded()
 {
    addDeferredDialog([this] {
       auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
@@ -2104,6 +2098,10 @@ void BSTerminalMainWindow::promptToCreateAccountIfNeeded()
          return;
       }
       applicationSettings_->set(ApplicationSettings::HideCreateAccountPromptTestnet, true);
+      if (bs::network::isTradingEnabled(userType_)) {
+         // Do not prompt if user is already logged in
+         return;
+      }
 
       CreateAccountPrompt dlg(this);
       int rc = dlg.exec();

@@ -2409,6 +2409,25 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="pushButtonShowSimple">
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>35</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Show Simple</string>
+        </property>
+        <property name="autoDefault">
+         <bool>false</bool>
+        </property>
+        <property name="flat">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>

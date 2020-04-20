@@ -64,12 +64,12 @@ CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryCon
    : QDialog(parent)
    , armory_(armory)
    , walletsManager_(walletManager)
-   , utxoReservationManager_(utxoReservationManager)
    , signContainer_(container)
    , logger_(logger)
    , applicationSettings_(applicationSettings)
-   , loadFeeSuggestions_(loadFeeSuggestions)
+   , utxoReservationManager_(utxoReservationManager)
    , utxoRes_(std::move(utxoReservation))
+   , loadFeeSuggestions_(loadFeeSuggestions)
 {
    qRegisterMetaType<std::map<unsigned int, float>>();
 }

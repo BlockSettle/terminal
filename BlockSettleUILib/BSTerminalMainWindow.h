@@ -256,7 +256,6 @@ private:
 
    void setupShortcuts();
 
-   void createAdvancedTxDialog(const std::string &selectedWalletId);
    void createAuthWallet(const std::function<void()> &);
 
    bool isUserLoggedIn() const;
@@ -268,7 +267,7 @@ private:
 
    void promoteToPrimaryIfNeeded();
 
-   void promptToCreateAccountIfNeeded();
+   void promptToCreateTestAccountIfNeeded();
 
    void promptSwitchEnv(bool prod);
    void switchToTestEnv();
