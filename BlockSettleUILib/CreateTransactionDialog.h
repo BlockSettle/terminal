@@ -63,6 +63,9 @@ public:
 
    int SelectWallet(const std::string& walletId);
 
+   virtual bool switchModeRequested() const= 0;
+   virtual std::shared_ptr<CreateTransactionDialog> SwithcMode() = 0;
+
 protected:
    virtual void init();
    virtual void clear();
