@@ -138,11 +138,28 @@ LedgerDevice::~LedgerDevice()
 
 DeviceKey LedgerDevice::key() const
 {
+   QString walletId;
+   if (!xpubRoot_.empty()) {
+      auto expectedWalletId = bs::core::wallet::computeID(
+         BinaryData::fromString(xpubRoot_)).toBinStr();
+
+      auto imported = walletManager_->getHwDeviceIdToWallet();
+      for (auto iWallet = imported.lower_bound(kDeviceLedgerId);
+         iWallet != imported.end() && iWallet->first == kDeviceLedgerId; ++iWallet) {
+
+         if (iWallet->second == expectedWalletId) {
+            walletId = QString::fromStdString(expectedWalletId);
+            break;
+         }
+
+      }
+   }
+
    return {
       hidDeviceInfo_.productString_,
       hidDeviceInfo_.manufacturerString_,
       hidDeviceInfo_.manufacturerString_,
-      {},
+      walletId,
       {},
       DeviceType::HWLedger
    };
@@ -155,9 +172,18 @@ DeviceType LedgerDevice::type() const
 
 void LedgerDevice::init(AsyncCallBack&& cb /*= nullptr*/)
 {
-   if (cb) {
-      cb();
-   }
+   auto saveRootKey = [caller = QPointer<LedgerDevice>(this), cbCopy = std::move(cb)](QVariant result) {
+      caller->xpubRoot_ =  result.value<HwWalletWrapper>().info_.xpubRoot_;
+
+      if (cbCopy) {
+         cbCopy();
+      }
+   };
+
+   auto commandThread = blankCommand(std::move(saveRootKey));
+   commandThread->prepareGetRootKey();
+   connect(commandThread, &LedgerCommandThread::finished, commandThread, &QObject::deleteLater);
+   commandThread->start();
 }
 
 void LedgerDevice::cancel()
@@ -323,6 +349,9 @@ void LedgerCommandThread::run()
             processTXSegwit();
          }
          break;
+      case HardwareCommand::GetRootPublicKey:
+         processGetRootKey();
+         break;
       case HardwareCommand::None:
       default:
          // Please add handler for a new command
@@ -361,6 +390,11 @@ void LedgerCommandThread::prepareSignTx(
    coreReq_ = std::make_unique<bs::core::wallet::TXSignRequest>(std::move(coreReq));
    inputPaths_ = std::move(paths);
    changePath_ = std::move(changePath);
+}
+
+void LedgerCommandThread::prepareGetRootKey()
+{
+   threadPurpose_ = HardwareCommand::GetRootPublicKey;
 }
 
 void LedgerCommandThread::processGetPublicKey()
@@ -445,6 +479,26 @@ void LedgerCommandThread::processGetPublicKey()
          + walletInfo.info_.xpubNestedSegwit_ + " \nNativeSegwit: "
          + walletInfo.info_.xpubNativeSegwit_);
    }
+
+   emit resultReady(QVariant::fromValue<>(walletInfo));
+}
+
+void LedgerCommandThread::processGetRootKey()
+{
+   HwWalletWrapper walletInfo;
+   auto pubKey = retrievePublicKeyFromPath({ { bs::hd::hardFlag } });
+   try {
+      walletInfo.info_.xpubRoot_ = pubKey.getBase58().toBinStr();
+   }
+   catch (...) {
+      logger_->debug(
+         "[LedgerCommandThread] getPublicKey - Cannot retrieve root xpub key.");
+      emit error(Ledger::INTERNAL_ERROR);
+      return;
+   }
+   logger_->debug(
+      "[LedgerCommandThread] processGetPublicKey - Done retrieve root xpub key.");
+
 
    emit resultReady(QVariant::fromValue<>(walletInfo));
 }

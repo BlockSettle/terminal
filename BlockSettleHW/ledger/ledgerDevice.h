@@ -65,7 +65,7 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletManager_;
    QPointer<LedgerCommandThread> commandThread_;
    
-   BIP32_Node deviceRootNode_;
+   std::string xpubRoot_;
 };
 
 class LedgerCommandThread : public QThread
@@ -83,6 +83,7 @@ public:
       const DeviceKey &deviceKey, 
       bs::core::wallet::TXSignRequest&& coreReq,
       std::vector<bs::hd::Path>&& paths, bs::hd::Path&& changePath);
+   void prepareGetRootKey();
 
 signals:
    void resultReady(QVariant const &result);
@@ -101,6 +102,7 @@ protected:
 
    // Get public key processing
    void processGetPublicKey();
+   void processGetRootKey();
    BIP32_Node retrievePublicKeyFromPath(bs::hd::Path&& derivationPath);
    BIP32_Node getPublicKeyApdu(bs::hd::Path&& derivationPath, const std::unique_ptr<BIP32_Node>& parent = nullptr);
 
@@ -134,7 +136,8 @@ private:
    enum class HardwareCommand {
       None,
       GetPublicKey,
-      SignTX
+      SignTX,
+      GetRootPublicKey
    };
 
    // Thread purpose data

@@ -70,7 +70,7 @@ QPointer<LedgerDevice> LedgerClient::getDevice(const QString& deviceId)
    return nullptr;
 }
 
-void LedgerClient::scanDevices()
+void LedgerClient::scanDevices(AsyncCallBack&& cb)
 {
    availableDevices_.clear();
 
@@ -96,4 +96,14 @@ void LedgerClient::scanDevices()
    }
 
    hid_exit();
+
+   // Init first one
+   if (availableDevices_.empty()) {
+      if (cb) {
+         cb();
+      }
+   }
+   else {
+      availableDevices_[0]->init(std::move(cb));
+   }
 }

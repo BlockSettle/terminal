@@ -32,7 +32,7 @@ public:
    LedgerClient(std::shared_ptr<spdlog::logger> logger, std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet, QObject *parent = nullptr);
    ~LedgerClient() override = default;
 
-   void scanDevices();
+   void scanDevices(AsyncCallBack&& cb);
 
    QVector<DeviceKey> deviceKeys() const;
 

@@ -22,6 +22,10 @@
 using AsyncCallBack = std::function<void()>;
 using AsyncCallBackCall = std::function<void(QVariant&&)>;
 
+// There is no way to determinate difference between ledger devices
+// so we use vendor name for identification
+const std::string kDeviceLedgerId = "Ledger";
+
 struct DeviceData
 {
    QByteArray path_ = {};

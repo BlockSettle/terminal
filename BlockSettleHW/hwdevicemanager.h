@@ -52,7 +52,7 @@ public:
    Q_INVOKABLE void setPassphrase(int deviceIndex, QString passphrase);
    Q_INVOKABLE void cancel(int deviceIndex);
 
-   Q_INVOKABLE void prepareHwDeviceForSign(QString deviceId);
+   Q_INVOKABLE void prepareHwDeviceForSign(QString walletId);
    Q_INVOKABLE void signTX(QVariant reqTX);
 
    Q_INVOKABLE void releaseDevices();
@@ -75,6 +75,7 @@ signals:
 private:
    void setScanningFlag(bool isScanning);
    void releaseConnection(AsyncCallBack&& cb = nullptr);
+   void scanningDone();
 
    QPointer<HwDeviceInterface> getDevice(DeviceKey key);
 
