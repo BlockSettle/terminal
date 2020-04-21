@@ -207,8 +207,10 @@ void BSTerminalMainWindow::onAddrStateChanged()
    if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
       && !authManager_->isAtLeastOneAwaitingVerification() && canSubmitAuthAddr) {
       allowAuthAddressDialogShow_ = false;
-      BSMessageBox qry(BSMessageBox::question, tr("Submit Authentication Address"), tr("Submit Authentication Address?")
-         , tr("In order to access XBT trading, you will need to submit an Authentication Address. Do you wish to do so now?"), this);
+      BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Authentication Address")
+         , tr("Trading and settlement of XBT products require an Authentication Address to validate you as a Participant of BlockSettle’s Trading Network.\n"
+              "\n"
+              "Submit Authentication Address now?"), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
@@ -403,7 +405,6 @@ void BSTerminalMainWindow::LoadWallets()
       ui_->widgetRFQ->setWalletsManager(walletsMgr_);
       ui_->widgetRFQReply->setWalletsManager(walletsMgr_);
       autoSignQuoteProvider_->setWalletsManager(walletsMgr_);
-      tryGetChatKeys();
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, [this] {
       walletsSynched_ = true;
@@ -418,11 +419,14 @@ void BSTerminalMainWindow::LoadWallets()
    // Enable/disable send action when first wallet created/last wallet removed
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletChanged, this
       , &BSTerminalMainWindow::updateControlEnabledState);
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletDeleted, this
-      , &BSTerminalMainWindow::updateControlEnabledState);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletDeleted, this, [this] {
+      updateControlEnabledState();
+      resetChatKeys();
+   });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletAdded, this, [this] {
       updateControlEnabledState();
       promptToCreateTestAccountIfNeeded();
+      tryGetChatKeys();
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
       , &BSTerminalMainWindow::updateControlEnabledState);
@@ -775,6 +779,14 @@ void BSTerminalMainWindow::tryLoginIntoChat()
 
    chatTokenData_.clear();
    chatTokenSign_.clear();
+}
+
+void BSTerminalMainWindow::resetChatKeys()
+{
+   gotChatKeys_ = false;
+   chatPubKey_.clear();
+   chatPrivKey_.clear();
+   tryGetChatKeys();
 }
 
 void BSTerminalMainWindow::tryGetChatKeys()

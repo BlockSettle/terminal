@@ -26,7 +26,6 @@ namespace {
    const QString kOkButton = QObject::tr("Ok");
    const QString kCancelButton = QObject::tr("Cancel");
    const QString kAgreeButton = QObject::tr("Agree");
-   const QString kBackButton = QObject::tr("Back");
    const QString kDoneButton = QObject::tr("Continue");
 
    const QString kNetworkType = QObject::tr("ENVIRONMENT");
@@ -158,7 +157,7 @@ void StartupDialog::updateStatus()
       break;
 
    case Pages::Settings:
-      ui_->pushButtonBack->setText(kBackButton);
+      ui_->pushButtonBack->hide();
       ui_->pushButtonNext->setText(kDoneButton);
       break;
    }
