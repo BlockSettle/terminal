@@ -221,7 +221,8 @@ void UiUtils::fillRecvAddressesComboBox(QComboBox* comboBox, const std::shared_p
    }
 }
 
-void UiUtils::fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox, const std::shared_ptr<bs::sync::hd::Wallet>& targetHDWallet)
+void UiUtils::fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox
+   , const std::shared_ptr<bs::sync::hd::Wallet>& targetHDWallet, bool showRegularWalletsOnly)
 {
    comboBox->clear();
    if (!targetHDWallet) {
@@ -230,9 +231,11 @@ void UiUtils::fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox, const std::
    }
 
    comboBox->addItem(QObject::tr("Auto Create"));
-   for (const auto& wallet : targetHDWallet->getGroup(targetHDWallet->getXBTGroupType())->getAllLeaves()) {
-      for (auto addr : wallet->getExtAddressList()) {
-         comboBox->addItem(QString::fromStdString(addr.display()));
+   for (const auto& wallet : targetHDWallet->getGroup(targetHDWallet->getXBTGroupType())->getLeaves()) {
+      if (!showRegularWalletsOnly || wallet->purpose() != bs::hd::Purpose::NonSegWit) {
+         for (auto addr : wallet->getExtAddressList()) {
+            comboBox->addItem(QString::fromStdString(addr.display()));
+         }
       }
    }
 

@@ -286,7 +286,7 @@ void OTCNegotiationRequestWidget::onParentAboutToHide()
 
 void OTCNegotiationRequestWidget::onCurrentWalletChanged()
 {
-   UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, getCurrentHDWallet());
+   UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, getCurrentHDWallet(), true);
    clearSelectedInputs();
    onUpdateBalances();
 }
