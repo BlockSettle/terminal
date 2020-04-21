@@ -127,7 +127,7 @@ private:
    void populateWalletsList();
    void startBroadcasting();
    void stopBroadcasting();
-   bool createTransactionImpl(const bs::Address &changeAddress);
+   bool createTransactionImpl(bs::core::wallet::TXSignRequest txReq);
 
 protected:
    std::shared_ptr<ArmoryConnection>   armory_;

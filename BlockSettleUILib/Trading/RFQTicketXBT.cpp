@@ -30,7 +30,6 @@
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
 #include "TradesUtils.h"
-#include "TransactionData.h"
 #include "TxClasses.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
