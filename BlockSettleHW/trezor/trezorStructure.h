@@ -28,4 +28,9 @@ struct MessageData
    std::string message_;
 };
 
+namespace HWInfoStatus {
+   const QString kRequestPassphrase = QObject::tr("Please enter the trezor passphrase");
+   const QString kRequestPin = QObject::tr("Please enter the pin from device");
+}
+
 #endif // TREZORSTRUCTURE_H

@@ -55,14 +55,15 @@ public:
    void signTX(const QVariant& reqTX, AsyncCallBackCall&& cb = nullptr) override;
 
 private:
-   LedgerCommandThread *blankCommand(AsyncCallBackCall&& cb = nullptr);
+   QPointer<LedgerCommandThread> blankCommand(AsyncCallBackCall&& cb = nullptr);
+   void cancelCommandThread();
 
 private:
    HidDeviceInfo hidDeviceInfo_;
    bool testNet_{};
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<bs::sync::WalletsManager> walletManager_;
-
+   QPointer<LedgerCommandThread> commandThread_;
    
 };
 
@@ -85,6 +86,7 @@ public:
 signals:
    void resultReady(QVariant const &result);
    void error(qint32 erroCode);
+   void info(QString message);
 
 protected:
    // Device management

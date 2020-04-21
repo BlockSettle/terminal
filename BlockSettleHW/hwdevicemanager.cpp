@@ -62,11 +62,11 @@ void HwDeviceManager::requestPublicKey(int deviceIndex)
       emit publicKeyReady(data);
    });
 
-   connect(device, &TrezorDevice::requestPinMatrix,
+   connect(device, &HwDeviceInterface::requestPinMatrix,
       this, &HwDeviceManager::requestPinMatrix, Qt::UniqueConnection);
-   connect(device, &TrezorDevice::requestHWPass,
+   connect(device, &HwDeviceInterface::requestHWPass,
       this, &HwDeviceManager::requestHWPass, Qt::UniqueConnection);
-   connect(device, &TrezorDevice::operationFailed,
+   connect(device, &HwDeviceInterface::operationFailed,
       this, &HwDeviceManager::operationFailed, Qt::UniqueConnection);
 }
 
@@ -164,14 +164,21 @@ void HwDeviceManager::signTX(QVariant reqTX)
       releaseDevices();
    });
 
-   connect(device, &TrezorDevice::requestPinMatrix,
+   connect(device, &HwDeviceInterface::requestPinMatrix,
       this, &HwDeviceManager::requestPinMatrix, Qt::UniqueConnection);
-   connect(device, &TrezorDevice::requestHWPass,
+   connect(device, &HwDeviceInterface::requestHWPass,
       this, &HwDeviceManager::requestHWPass, Qt::UniqueConnection);
-   connect(device, &TrezorDevice::deviceTxStatusChanged,
+   connect(device, &HwDeviceInterface::deviceTxStatusChanged,
       this, &HwDeviceManager::deviceTxStatusChanged, Qt::UniqueConnection);
-   connect(device, &TrezorDevice::cancelledOnDevice,
+   connect(device, &HwDeviceInterface::cancelledOnDevice,
       this, &HwDeviceManager::cancelledOnDevice, Qt::UniqueConnection);
+   connect(device, &HwDeviceInterface::operationFailed,
+      this, &HwDeviceManager::deviceTxStatusChanged, Qt::UniqueConnection);
+   connect(device, &HwDeviceInterface::requestForRescan,
+      this, [this]() {
+      auto deviceInfo = model_->getDevice(0);
+      emit deviceNotFound(deviceInfo.deviceId_);
+   }, Qt::UniqueConnection);
 }
 
 void HwDeviceManager::releaseDevices()

@@ -76,4 +76,12 @@ bs::hd::Path getDerivationPath(bool testNet, bs::hd::Purpose element);
 bool isNestedSegwit(const bs::hd::Path& path);
 bool isNativeSegwit(const bs::hd::Path& path);
 bool isNonSegwit(const bs::hd::Path& path);
+
+namespace HWInfoStatus {
+   const QString kPressButton = QObject::tr("Confirm transaction output(s) on your device");
+   const QString kTransaction = QObject::tr("Setup transaction...");
+   const QString kTransactionFinished = QObject::tr("Transaction signing finished with success");
+   const QString kCancelledByUser = QObject::tr("Cancelled by user");
+}
+
 #endif // HWCOMMONSTRUCTURE_H

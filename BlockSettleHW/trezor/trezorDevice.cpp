@@ -75,14 +75,6 @@ namespace {
    }
 
    const std::string tesNetCoin = "Testnet";
-   // Messages to show in UI
-   const QString requestPassphrase= QObject::tr("Please enter the trezor passphrase");
-   const QString requestPin = QObject::tr("Please enter the pin from device");
-   const QString pressButton = QObject::tr("Confirm transaction output(s) on your device");
-   const QString transaction = QObject::tr("Setup transaction...");
-   const QString transactionFinished = QObject::tr("Transaction signing finished with success");
-   const QString cancelledByUser = QObject::tr("Cancelled by user");
-
 }
 
 TrezorDevice::TrezorDevice(const std::shared_ptr<ConnectionManager> &connectionManager, std::shared_ptr<bs::sync::WalletsManager> walletManager
@@ -238,7 +230,7 @@ void TrezorDevice::cancel()
    connectionManager_->GetLogger()->debug("[TrezorDevice] cancel previous operation");
    management::Cancel message;
    makeCall(message);
-   sendTxMessage(cancelledByUser);
+   sendTxMessage(HWInfoStatus::kCancelledByUser);
 }
 
 void TrezorDevice::clearSession(AsyncCallBack&& cb)
@@ -332,7 +324,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
          }
          common::ButtonAck response;
          makeCall(response);
-         sendTxMessage(pressButton);
+         sendTxMessage(HWInfoStatus::kPressButton);
       }
       break;
    case MessageType_PinMatrixRequest:
@@ -340,7 +332,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
          common::PinMatrixRequest request;
          if (parseResponse(request, data)) {
             emit requestPinMatrix();
-            sendTxMessage(requestPin);
+            sendTxMessage(HWInfoStatus::kRequestPin);
          }
       }
       break;
@@ -349,7 +341,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
          common::PassphraseRequest request;
          if (parseResponse(request, data)) {
             emit requestHWPass();
-            sendTxMessage(requestPassphrase);
+            sendTxMessage(HWInfoStatus::kRequestPassphrase);
          }
       }
       break;
@@ -372,7 +364,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
    case MessageType_TxRequest:
       {
          handleTxRequest(data);
-         sendTxMessage(transaction);
+         sendTxMessage(HWInfoStatus::kTransaction);
       }
       break;
    default:
@@ -552,7 +544,7 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
    case bitcoin::TxRequest_RequestType_TXFINISHED:
    {
       dataCallback(MessageType_TxRequest, QVariant::fromValue<>(awaitingTransaction_));
-      sendTxMessage(transactionFinished);
+      sendTxMessage(HWInfoStatus::kTransactionFinished);
       resetCaches();
    }
    break;

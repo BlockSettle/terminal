@@ -119,11 +119,6 @@ namespace {
       command.append(payload);
       return command;
    }
-
-   const QString kErrorNoDevice = QObject::tr("No device found");
-   const QString kErrorInternalError = QObject::tr("Internal error");
-   const QString kErrorNoEnvironment = QObject::tr("Please make sure you device is ready for using");
-   const QString kCancelledByUser = QObject::tr("Cancelled by user");
 }
 
 LedgerDevice::LedgerDevice(HidDeviceInfo&& hidDeviceInfo, bool testNet,
@@ -138,7 +133,7 @@ LedgerDevice::LedgerDevice(HidDeviceInfo&& hidDeviceInfo, bool testNet,
 
 LedgerDevice::~LedgerDevice()
 {
-   //releaseDevice();
+   cancelCommandThread();
 }
 
 DeviceKey LedgerDevice::key() const
@@ -163,16 +158,16 @@ void LedgerDevice::init(AsyncCallBack&& cb /*= nullptr*/)
    if (cb) {
       cb();
    }
-   // Define when async
 }
 
 void LedgerDevice::cancel()
 {
+   cancelCommandThread();
 }
 
 void LedgerDevice::getPublicKey(AsyncCallBackCall&& cb /*= nullptr*/)
 {
-   auto *commandThread = blankCommand(std::move(cb));
+   auto commandThread = blankCommand(std::move(cb));
    commandThread->prepareGetPublicKey(key());
    connect(commandThread, &LedgerCommandThread::finished, commandThread, &QObject::deleteLater);
    commandThread->start();
@@ -224,49 +219,66 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
    }
 
    // create different thread because hidapi is working in blocking mode
-   auto *commandThread = blankCommand(std::move(cb));
+   auto commandThread = blankCommand(std::move(cb));
    commandThread->prepareSignTx(
       key(), std::move(coreReq), std::move(inputPathes), std::move(changePath));
    commandThread->start();
 }
 
-LedgerCommandThread *LedgerDevice::blankCommand(AsyncCallBackCall&& cb /*= nullptr*/)
+QPointer<LedgerCommandThread> LedgerDevice::blankCommand(AsyncCallBackCall&& cb /*= nullptr*/)
 {
-   auto newCommandThread = new LedgerCommandThread(hidDeviceInfo_, testNet_, logger_, this);
-   connect(newCommandThread, &LedgerCommandThread::resultReady, this, [cbCopy = std::move(cb)](QVariant result) {
+   commandThread_ = new LedgerCommandThread(hidDeviceInfo_, testNet_, logger_, this);
+   connect(commandThread_, &LedgerCommandThread::resultReady, this, [cbCopy = std::move(cb)](QVariant result) {
       if (cbCopy) {
          cbCopy(std::move(result));
       }
    });
-   connect(newCommandThread, &LedgerCommandThread::error, this, [caller = QPointer<LedgerDevice>(this)](uint32_t errorCode) {
-      if (caller) {
-         QString error;
-         switch (errorCode)
-         {
-         case Ledger::SW_NO_ENVIRONMENT:
-            error = kErrorNoEnvironment;
-            break;
-         case Ledger::SW_CANCELED_BY_USER:
-            error = kCancelledByUser;
-            break;
-         case Ledger::NO_DEVICE:
-            error = kErrorNoDevice;
-            break;
-         case Ledger::NO_INPUTDATA:
-         default:
-            error = kErrorInternalError;
-            break;
-         }
-
-         caller->operationFailed({});
+   connect(commandThread_, &LedgerCommandThread::info, this, [caller = QPointer<LedgerDevice>(this)](QString info) {
+      if (!caller) {
+         return;
       }
+      caller->deviceTxStatusChanged(info);
    });
-   connect(newCommandThread, &LedgerCommandThread::finished, newCommandThread, &QObject::deleteLater);
+   connect(commandThread_, &LedgerCommandThread::error, this, [caller = QPointer<LedgerDevice>(this)](uint32_t errorCode) {
+      if (!caller) {
+         return;
+      }
 
-   return newCommandThread;
+      QString error;
+      switch (errorCode)
+      {
+      case Ledger::SW_NO_ENVIRONMENT:
+         caller->requestForRescan();
+         error = HWInfoStatus::kErrorNoEnvironment;
+         break;
+      case Ledger::SW_CANCELED_BY_USER:
+         caller->cancelledOnDevice();
+         error = HWInfoStatus::kCancelledByUser;
+         break;
+      case Ledger::NO_DEVICE:
+         caller->requestForRescan();
+         error = HWInfoStatus::kErrorNoDevice;
+         break;
+      case Ledger::NO_INPUTDATA:
+      default:
+         error = HWInfoStatus::kErrorInternalError;
+         break;
+      }
+
+      caller->operationFailed(error);
+   });
+   connect(commandThread_, &LedgerCommandThread::finished, commandThread_, &QObject::deleteLater);
+
+   return commandThread_;
 }
 
-
+void LedgerDevice::cancelCommandThread()
+{
+   if (commandThread_ && commandThread_->isRunning()) {
+      commandThread_->disconnect();
+      commandThread_->quit();
+   }
+}
 
 LedgerCommandThread::LedgerCommandThread(const HidDeviceInfo &hidDeviceInfo, bool testNet
    , const std::shared_ptr<spdlog::logger> &logger, QObject *parent /* = nullptr */)
@@ -361,6 +373,7 @@ void LedgerCommandThread::processGetPublicKey()
 
    logger_->debug(
       "[LedgerCommandThread] processGetPublicKey - Start retrieve root xpub key.");
+   
    auto pubKey = retrievePublicKeyFromPath({ { bs::hd::hardFlag } });
    try {
       walletInfo.info_.xpubRoot_ = pubKey.getBase58().toBinStr();
@@ -738,6 +751,7 @@ void LedgerCommandThread::finalizeInputFull()
       outputCommands.push_back(std::move(outputCommand));
    }
 
+   emit info(HWInfoStatus::kPressButton);
    for (auto &outputCommand : outputCommands) {
       QByteArray responseOutput;
       if (!exchangeData(outputCommand, responseOutput, "[LedgerCommandThread] finalizeInputFull - outputPayload ")) {
@@ -752,6 +766,7 @@ void LedgerCommandThread::finalizeInputFull()
 void LedgerCommandThread::processTXLegacy()
 {
    //upload supporting tx to ledger, get trusted input back for our outpoints
+   emit info(HWInfoStatus::kTransaction);
    std::vector<QByteArray> trustedInputs;
    for (auto& utxo : coreReq_->inputs) {
       auto trustedInput = getTrustedInput(utxo);
@@ -761,15 +776,16 @@ void LedgerCommandThread::processTXLegacy()
    // -- Start input upload section --
 
    //upload the redeem script for each outpoint
-   for (auto& utxo : coreReq_->inputs)
+   for (int i = 0; i < coreReq_->inputs.size(); ++i)
    {
+      auto& utxo = coreReq_->inputs[i];
       auto redeemScript = utxo.getScript();
       auto redeemScriptQ = QByteArray::fromRawData(
          redeemScript.getCharPtr(), redeemScript.getSize());
 
       //pass true as this is a newly presented redeem script
       startUntrustedTransaction(
-         trustedInputs, redeemScriptQ, utxo.getTxOutIndex(), true, false, coreReq_->RBF);
+         trustedInputs, redeemScriptQ, i, true, false, coreReq_->RBF);
    }
 
    // -- Done input section --
@@ -782,6 +798,7 @@ void LedgerCommandThread::processTXLegacy()
    // -- Done output section --
 
    // At this point user verified all outputs and we can start signing inputs
+   emit info(HWInfoStatus::kTransaction);
 
    // -- Start signing one by one all addresses -- 
    logger_->debug("[LedgerCommandThread] processTXLegacy - Start signing section");
@@ -832,6 +849,7 @@ void LedgerCommandThread::processTXLegacy()
       inputNodes.push_back(pubKeyNode);
    }
 
+   emit info(HWInfoStatus::kTransactionFinished);
    // Debug check
    debugPrintLegacyResult(responseSigned[0], inputNodes[0]);
 
@@ -840,6 +858,7 @@ void LedgerCommandThread::processTXLegacy()
 
 void LedgerCommandThread::processTXSegwit()
 {
+   emit info(HWInfoStatus::kTransaction);
    // ---- Prepare all pib32 nodes for input from device -----
    auto segwitData = getSegwitData();
 
@@ -867,6 +886,7 @@ void LedgerCommandThread::processTXSegwit()
    // -- Done output section --
 
    // At this point user verified all outputs and we can start signing inputs
+   emit info(HWInfoStatus::kTransaction);
 
    // -- Start signing one by one all addresses -- 
 
@@ -911,6 +931,8 @@ void LedgerCommandThread::processTXSegwit()
       responseInputSign[0] = 0x30; // force first but to be 0x30 for a newer version of ledger
       responseSigned.push_back(responseInputSign);
    }
+
+   emit info(HWInfoStatus::kTransactionFinished);
 
    // -- Done signing one by one all addresses -- 
 
