@@ -84,7 +84,7 @@ public:
 
 signals:
    void resultReady(QVariant const &result);
-   void error(uint16_t erroCode);
+   void error(qint32 erroCode);
 
 protected:
    // Device management

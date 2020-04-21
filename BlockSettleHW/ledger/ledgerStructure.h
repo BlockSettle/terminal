@@ -56,13 +56,13 @@ namespace Ledger {
    const uint8_t INS_ADM_FIRMWARE_UPDATE = 0x42;
 
    // APDU return data
-   const int32_t SW_OK = 0x9000;
-   const int32_t SW_UNKNOWN = 0x6D00;
-   const int32_t SW_NO_ENVIRONMENT = 0x6DFF;
-   const int32_t SW_CANCELED_BY_USER = 0x6985;
-   const int32_t NO_DEVICE = -1;
-   const int32_t NO_INPUTDATA = -2;
-   const int32_t INTERNAL_ERROR = -3;
+   const qint32 SW_OK = 0x9000;
+   const qint32 SW_UNKNOWN = 0x6D00;
+   const qint32 SW_NO_ENVIRONMENT = 0x6DFF;
+   const qint32 SW_CANCELED_BY_USER = 0x6985;
+   const qint32 NO_DEVICE = -1;
+   const qint32 NO_INPUTDATA = -2;
+   const qint32 INTERNAL_ERROR = -3;
 
    // General
    const size_t OFFSET_CDATA = 4;

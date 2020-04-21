@@ -292,12 +292,6 @@ void LedgerCommandThread::run()
       return;
    }
 
-   if (!coreReq_) {
-      logger_->debug("[LedgerCommandThread] processTXLegacy - the core request is no valid");
-      emit error(Ledger::NO_INPUTDATA);
-      return;
-   }
-
    try {
       switch (threadPurpose_)
       {
@@ -305,6 +299,11 @@ void LedgerCommandThread::run()
          processGetPublicKey();
          break;
       case HardwareCommand::SignTX:
+         if (!coreReq_) {
+            logger_->debug("[LedgerCommandThread] run - the core request is no valid");
+            emit error(Ledger::NO_INPUTDATA);
+            break;
+         }
          if (isNonSegwit(inputPaths_[0])) {
             processTXLegacy();
          }
