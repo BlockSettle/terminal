@@ -1172,17 +1172,15 @@ void BSTerminalMainWindow::onGenerateAddress()
          }
       }
    }
-   SelectWalletDialog *selectWalletDialog = new SelectWalletDialog(
-      walletsMgr_, selWalletId, this);
-   selectWalletDialog->exec();
+   SelectWalletDialog selectWalletDialog(walletsMgr_, selWalletId, this);
+   selectWalletDialog.exec();
 
-   if (selectWalletDialog->result() == QDialog::Rejected) {
+   if (selectWalletDialog.result() == QDialog::Rejected) {
       return;
    }
 
-   NewAddressDialog* newAddressDialog = new NewAddressDialog(
-      selectWalletDialog->getSelectedWallet(), this);
-   newAddressDialog->show();
+   NewAddressDialog newAddressDialog(selectWalletDialog.getSelectedWallet(), this);
+   newAddressDialog.exec();
 }
 
 void BSTerminalMainWindow::onSend()
