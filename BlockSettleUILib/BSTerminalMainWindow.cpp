@@ -207,8 +207,10 @@ void BSTerminalMainWindow::onAddrStateChanged()
    if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
       && !authManager_->isAtLeastOneAwaitingVerification() && canSubmitAuthAddr) {
       allowAuthAddressDialogShow_ = false;
-      BSMessageBox qry(BSMessageBox::question, tr("Submit Authentication Address"), tr("Submit Authentication Address?")
-         , tr("In order to access XBT trading, you will need to submit an Authentication Address. Do you wish to do so now?"), this);
+      BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Authentication Address")
+         , tr("Trading and settlement of XBT products require an Authentication Address to validate you as a Participant of BlockSettle’s Trading Network.\n"
+              "\n"
+              "Submit Authentication Address now?"), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
