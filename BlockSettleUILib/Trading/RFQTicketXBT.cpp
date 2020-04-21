@@ -514,8 +514,10 @@ void RFQTicketXBT::onAuthAddrChanged(int index)
 
 void RFQTicketXBT::onUTXOReservationChanged(const std::string& walletId)
 {
+   logger_->debug("[{}] walletId='{}'", __func__, walletId);
    if (walletId.empty()) {
       updateBalances();
+      updateSubmitButton();
       return;
    }
 
