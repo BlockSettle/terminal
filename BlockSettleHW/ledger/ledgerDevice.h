@@ -54,6 +54,10 @@ public:
    void getPublicKey(AsyncCallBackCall&& cb = nullptr) override;
    void signTX(const QVariant& reqTX, AsyncCallBackCall&& cb = nullptr) override;
 
+   bool inited() {
+      return !xpubRoot_.empty();
+   }
+
 private:
    QPointer<LedgerCommandThread> blankCommand(AsyncCallBackCall&& cb = nullptr);
    void cancelCommandThread();

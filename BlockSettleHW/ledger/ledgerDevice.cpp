@@ -363,6 +363,9 @@ void LedgerCommandThread::run()
       releaseDevice();
       logger_->debug("[LedgerCommandThread] run - Done command with exception");
       emit error(lastError_);
+      if (threadPurpose_ == HardwareCommand::GetRootPublicKey) {
+         emit resultReady({});
+      }
       return;
    }
 

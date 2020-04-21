@@ -54,7 +54,9 @@ QVector<DeviceKey> LedgerClient::deviceKeys() const
    QVector<DeviceKey> keys;
    keys.reserve(availableDevices_.size());
    for (const auto device : availableDevices_) {
-      keys.push_back(device->key());
+      if (device->inited()) {
+         keys.push_back(device->key());
+      }      
    }
    return keys;
 }
