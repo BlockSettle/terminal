@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>460</width>
-    <height>150</height>
+    <width>498</width>
+    <height>189</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -53,11 +53,15 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>No BlockSettle Primary Wallet was detected.
-In order to trade you must set up a BlockSettle Primary Wallet.</string>
+         <string>A BlockSettle Wallet is needed to trade and access BlockSettle services. It creates your encrypted chat keys, Authentication Addresses and Private Market equity tokens.
+
+Do you wish to create a BlockSettle Wallet now?</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
