@@ -1343,19 +1343,6 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::onLogin()
 {
-   if (!gotChatKeys_) {
-      addDeferredDialog([this] {
-         CreatePrimaryWalletPrompt dlg;
-         int rc = dlg.exec();
-         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
-            ui_->widgetWallets->CreateNewWallet();
-         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
-            ui_->widgetWallets->ImportNewWallet();
-         }
-      });
-      return;
-   }
-
    onNetworkSettingsRequired(NetworkSettingsClient::Login);
 }
 
@@ -1371,6 +1358,19 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
          switchToTestEnv();
          restartTerminal();
       }
+      return;
+   }
+
+   if (!gotChatKeys_) {
+      addDeferredDialog([this] {
+         CreatePrimaryWalletPrompt dlg;
+         int rc = dlg.exec();
+         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
+            ui_->widgetWallets->CreateNewWallet();
+         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
+            ui_->widgetWallets->ImportNewWallet();
+         }
+      });
       return;
    }
 
