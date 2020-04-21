@@ -295,9 +295,6 @@ BSTerminalMainWindow::~BSTerminalMainWindow()
       bs::UtxoReservation::instance()->shutdownCheck();
    }
 
-   const auto &geom = geometry();
-   logMgr_->logger()->debug("[{}] geometry = {} {} {} {}", __func__
-      , geom.x(), geom.y(), geom.width(), geom.height());
    applicationSettings_->set(ApplicationSettings::GUI_main_geometry, geometry());
    applicationSettings_->set(ApplicationSettings::GUI_main_tab, ui_->tabWidget->currentIndex());
    applicationSettings_->SaveSettings();
