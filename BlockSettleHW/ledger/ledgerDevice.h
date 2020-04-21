@@ -65,6 +65,7 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletManager_;
    QPointer<LedgerCommandThread> commandThread_;
    
+   BIP32_Node deviceRootNode_;
 };
 
 class LedgerCommandThread : public QThread
