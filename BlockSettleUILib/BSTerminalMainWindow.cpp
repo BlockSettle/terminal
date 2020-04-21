@@ -1185,18 +1185,6 @@ void BSTerminalMainWindow::onGenerateAddress()
    newAddressDialog->show();
 }
 
-void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWalletId)
-{
-   CreateTransactionDialogAdvanced advancedDialog{armory_, walletsMgr_, utxoReservationMgr_
-      , signContainer_, true, logMgr_->logger("ui"), applicationSettings_, nullptr, {}, this };
-
-   if (!selectedWalletId.empty()) {
-      advancedDialog.SelectWallet(selectedWalletId);
-   }
-
-   advancedDialog.exec();
-}
-
 void BSTerminalMainWindow::onSend()
 {
    std::string selectedWalletId;
@@ -1211,27 +1199,31 @@ void BSTerminalMainWindow::onSend()
       }
    }
 
-   if (QGuiApplication::keyboardModifiers() & Qt::ShiftModifier) {
-      createAdvancedTxDialog(selectedWalletId);
+
+   std::shared_ptr<CreateTransactionDialog> dlg;
+
+   if ((QGuiApplication::keyboardModifiers() & Qt::ShiftModifier)
+       || applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
+      dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory_, walletsMgr_, utxoReservationMgr_
+         , signContainer_, true, logMgr_->logger("ui"), applicationSettings_, nullptr, bs::UtxoReservationToken{}, this );
    } else {
-      if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
-         createAdvancedTxDialog(selectedWalletId);
-      } else {
-         CreateTransactionDialogSimple dlg(armory_, walletsMgr_, utxoReservationMgr_, signContainer_
+      dlg = std::make_shared<CreateTransactionDialogSimple>(armory_, walletsMgr_, utxoReservationMgr_, signContainer_
             , logMgr_->logger("ui"), applicationSettings_, this);
+   }
 
-         if (!selectedWalletId.empty()) {
-            dlg.SelectWallet(selectedWalletId);
-         }
+   if (!selectedWalletId.empty()) {
+      dlg->SelectWallet(selectedWalletId);
+   }
 
-         dlg.exec();
+   while(true) {
+      dlg->exec();
 
-         if ((dlg.result() == QDialog::Accepted) && dlg.userRequestedAdvancedDialog()) {
-            auto advancedDialog = dlg.CreateAdvancedDialog();
-
-            advancedDialog->exec();
-         }
+      if  ((dlg->result() != QDialog::Accepted) || !dlg->switchModeRequested()) {
+         break;
       }
+
+      auto nextDialog = dlg->SwithcMode();
+      dlg = nextDialog;
    }
 }
 
@@ -1353,19 +1345,6 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::onLogin()
 {
-   if (!gotChatKeys_) {
-      addDeferredDialog([this] {
-         CreatePrimaryWalletPrompt dlg;
-         int rc = dlg.exec();
-         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
-            ui_->widgetWallets->CreateNewWallet();
-         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
-            ui_->widgetWallets->ImportNewWallet();
-         }
-      });
-      return;
-   }
-
    onNetworkSettingsRequired(NetworkSettingsClient::Login);
 }
 
@@ -1381,6 +1360,19 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
          switchToTestEnv();
          restartTerminal();
       }
+      return;
+   }
+
+   if (!gotChatKeys_) {
+      addDeferredDialog([this] {
+         CreatePrimaryWalletPrompt dlg;
+         int rc = dlg.exec();
+         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
+            ui_->widgetWallets->CreateNewWallet();
+         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
+            ui_->widgetWallets->ImportNewWallet();
+         }
+      });
       return;
    }
 

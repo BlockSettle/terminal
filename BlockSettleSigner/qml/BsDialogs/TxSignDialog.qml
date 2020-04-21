@@ -93,7 +93,7 @@ BSWalletHandlerDialog {
         onRequestPinMatrix: JsHelper.showHwPinMatrix(0);
         onDeviceReady: hwDeviceManager.signTX(passwordDialogData.TxRequest);
         onDeviceNotFound: {
-            hwDeviceStatus = "Searching device"
+            hwDeviceStatus = "Searching for device"
             delayScanDevice.start();
         }
         onDeviceTxStatusChanged: hwDeviceStatus = status;
