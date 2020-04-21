@@ -329,6 +329,7 @@ void AuthAddressDialog::revokeSelectedAddress()
 
 void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount)
 {
+   const bool testnet = settings_->get<NetworkType>(ApplicationSettings::netType) == NetworkType::TestNet;
    const auto eurBalance = assetManager_->getBalance("EUR");
    if (validationAmount > eurBalance) {
       BSMessageBox warnFunds(BSMessageBox::warning, tr("Insufficient EUR Balance")
@@ -352,9 +353,12 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
    const auto &qryTitle = tr("Authentication Address");
    const auto &qryText = tr("New Authentication Address");
    if (validationAmount > 0) {
+      auto msgText = testnet ? tr("Setting up an Authentication Address costs %1 %2\n"
+                                  "\n"
+                                  "This will be deducted from the ‘play money’ in your test account.")
+                             : tr("Setting up a new Authentication Address costs %1 %2");
       promptResult = BSMessageBox(BSMessageBox::question, qryTitle, qryText
-         , tr("Setting up a new Authentication Address costs %1 %2")
-            .arg(QLatin1String("EUR")).arg(UiUtils::displayCurrencyAmount(validationAmount))
+         , msgText.arg(QLatin1String("EUR")).arg(UiUtils::displayCurrencyAmount(validationAmount))
          , this).exec();
    }
    else {
