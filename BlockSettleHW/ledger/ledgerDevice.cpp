@@ -265,7 +265,7 @@ QPointer<LedgerCommandThread> LedgerDevice::blankCommand(AsyncCallBackCall&& cb 
       }
       caller->deviceTxStatusChanged(info);
    });
-   connect(commandThread_, &LedgerCommandThread::error, this, [caller = QPointer<LedgerDevice>(this)](uint32_t errorCode) {
+   connect(commandThread_, &LedgerCommandThread::error, this, [caller = QPointer<LedgerDevice>(this)](qint32 errorCode) {
       if (!caller) {
          return;
       }
