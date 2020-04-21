@@ -288,10 +288,10 @@ QMenu::item:first {
   text-transform: none;
   padding: 0 15px 0 15px;
   color: #ffffff;
-  height: 20px;
-  text-decoration: underline;}
+  height: 20px;}
   *[usernameButton="true"]:hover {
-    color: #ffffff; }
+    color: #ffffff;
+    text-decoration: underline;}
 
 *[usernameButtonLoggedIn="true"] {
   border: none;
