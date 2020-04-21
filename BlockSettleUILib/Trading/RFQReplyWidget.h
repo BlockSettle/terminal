@@ -19,7 +19,6 @@
 #include <tuple>
 
 #include "AutoSignQuoteProvider.h"
-#include "TransactionData.h"
 #include "CoinControlModel.h"
 #include "CommonTypes.h"
 #include "TabWithShortcut.h"
@@ -144,9 +143,6 @@ protected:
    void hideEvent(QHideEvent* event) override;
 
 private:
-   using transaction_data_ptr = std::shared_ptr<TransactionData>;
-   using settl_addr_ptr = std::shared_ptr<bs::SettlementAddressEntry>;
-
    struct SentXbtReply
    {
       std::shared_ptr<bs::sync::hd::Wallet> xbtWallet;
