@@ -127,7 +127,8 @@ namespace UiUtils
       , int walletTypes);
    void fillAuthAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager>& authAddressManager);
    void fillRecvAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::Wallet>& targetWallet);
-   void fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox, const std::shared_ptr<bs::sync::hd::Wallet>& targetHDWallet);
+   void fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox
+      , const std::shared_ptr<bs::sync::hd::Wallet>& targetHDWallet, bool showRegularWalletsOnly);
 
    int selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId);
    std::string getSelectedWalletId(QComboBox* comboBox);
