@@ -450,7 +450,8 @@ void RFQReplyWidget::onSignTxRequested(QString orderId, QString reqId, QDateTime
    Q_UNUSED(reqId);
 
    if (!ui_->widgetQuoteRequests->StartCCSignOnOrder(orderId, timestamp)) {
-      logger_->error("[RFQReplyWidget::onSignTxRequested] failed to initiate sign on CC order: {}"
+      // Not an error because onSignTxRequested is also called for requesters
+      logger_->debug("[RFQReplyWidget::onSignTxRequested] failed to initiate sign on CC order: {}"
                      , orderId.toStdString());
    }
 }
