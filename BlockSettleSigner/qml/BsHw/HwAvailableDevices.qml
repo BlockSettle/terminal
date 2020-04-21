@@ -139,7 +139,6 @@ Item {
                     if (hwList.currentIndex === index) {
                         hwList.deviceIndex = model.pairedWallet.length === 0 ? index : -1
                         root.readyForImport = (hwList.deviceIndex !== -1);
-                        console.log("Current index changed2", hwList.currentIndex)
                     }
                 }
             }

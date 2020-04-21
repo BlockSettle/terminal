@@ -30,7 +30,6 @@
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
 #include "TradesUtils.h"
-#include "TransactionData.h"
 #include "TxClasses.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
@@ -322,7 +321,7 @@ void RFQTicketXBT::fillRecvAddresses()
 {
    auto recvWallet = getRecvXbtWallet();
    if (recvWallet) {
-      UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, recvWallet);
+      UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, recvWallet, true);
    }
 }
 

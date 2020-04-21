@@ -54,7 +54,6 @@ class FXAmountValidator;
 class QuoteProvider;
 class SelectedTransactionInputs;
 class SignContainer;
-class TransactionData;
 class XbtAmountValidator;
 
 

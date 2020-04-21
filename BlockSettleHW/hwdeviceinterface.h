@@ -46,6 +46,7 @@ signals:
    void publicKeyReady();
    void deviceTxStatusChanged(QString status);
    void operationFailed(QString reason);
+   void requestForRescan();
 
    // Management
    void requestPinMatrix();

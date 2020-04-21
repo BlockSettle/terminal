@@ -75,14 +75,6 @@ namespace {
    }
 
    const std::string tesNetCoin = "Testnet";
-   // Messages to show in UI
-   const QString requestPassphrase= QObject::tr("Please enter the trezor passphrase");
-   const QString requestPin = QObject::tr("Please enter the pin from device");
-   const QString pressButton = QObject::tr("Confirm transaction output(s) on your device");
-   const QString transaction = QObject::tr("Setup transaction...");
-   const QString transactionFinished = QObject::tr("Transaction signing finished with success");
-   const QString cancelledByUser = QObject::tr("Cancelled by user");
-
 }
 
 TrezorDevice::TrezorDevice(const std::shared_ptr<ConnectionManager> &connectionManager, std::shared_ptr<bs::sync::WalletsManager> walletManager
@@ -133,57 +125,73 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
 {
    awaitingWalletInfo_ = {};
 
-   // We cannot get all data from one call so we make three calls:
+   // We cannot get all data from one call so we make four calls:
    // fetching first address for "m/0'" as wallet id
-   // fetching first address for "m/49'" as nested segwit xpub
    // fetching first address for "m/84'" as native segwit xpub
+   // fetching first address for "m/49'" as nested segwit xpub
+   // fetching first address for "m/44'" as legacy xpub
 
-   AsyncCallBackCall cbFinal = [this, originCb = std::move(cb)](QVariant &&data) mutable {
-      awaitingWalletInfo_.info_.xpubNativeSegwit_ = data.toByteArray().toStdString();
+   AsyncCallBackCall cbLegacy = [this, cb = std::move(cb)](QVariant &&data) mutable {
+      awaitingWalletInfo_.info_.xpubLegacy_ = data.toByteArray().toStdString();
       
+      cb(QVariant::fromValue<>(awaitingWalletInfo_));
+   };
+
+   AsyncCallBackCall cbNested = [this, cbLegacy = std::move(cbLegacy)](QVariant &&data) mutable {
+      awaitingWalletInfo_.info_.xpubNestedSegwit_ = data.toByteArray().toStdString();
+
+      connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving legacy public key from device "
+         + features_.label());
+      bitcoin::GetPublicKey message;
+      for (const uint32_t add : getDerivationPath(testNet_, bs::hd::Purpose::NonSegWit)) {
+         message.add_address_n(add);
+      }
+      if (testNet_) {
+         message.set_coin_name(tesNetCoin);
+      }
+
+      setDataCallback(MessageType_PublicKey, std::move(cbLegacy));
+      makeCall(message);
+   };
+
+   AsyncCallBackCall cbNative = [this, cbNested = std::move(cbNested)](QVariant &&data) mutable {
+      awaitingWalletInfo_.info_.xpubNativeSegwit_ = data.toByteArray().toStdString();
+
+      connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving nested segwit public key from device "
+         + features_.label());
+      bitcoin::GetPublicKey message;
+      for (const uint32_t add : getDerivationPath(testNet_, bs::hd::Purpose::Nested)) {
+         message.add_address_n(add);
+      }
+
+      if (testNet_) {
+         message.set_coin_name(tesNetCoin);
+      }
+
+      setDataCallback(MessageType_PublicKey, std::move(cbNested));
+      makeCall(message);
+   };
+
+   AsyncCallBackCall cbRoot = [this, cbNative = std::move(cbNative)](QVariant &&data) mutable {
+      awaitingWalletInfo_.info_.xpubRoot_ = data.toByteArray().toStdString();
+
       // General data
       awaitingWalletInfo_.info_.label_ = features_.label();
       awaitingWalletInfo_.info_.deviceId_ = features_.device_id();
       awaitingWalletInfo_.info_.vendor_ = features_.vendor();
 
-      originCb(QVariant::fromValue<>(awaitingWalletInfo_));
-   };
-
-   // Fetching native segwit
-   AsyncCallBackCall cbNative = [this, originCbFinal = std::move(cbFinal)](QVariant &&data) mutable {
-      awaitingWalletInfo_.info_.xpubNestedSegwit_ = data.toByteArray().toStdString();
-
       connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving native segwit public key from device "
          + features_.label());
       bitcoin::GetPublicKey message;
-      auto Path = getDerivationPath(testNet_, false);
-      for (size_t i = 0; i < Path.length(); ++i) {
-         message.add_address_n(Path.get(i));
+      for (const uint32_t add : getDerivationPath(testNet_, bs::hd::Purpose::Native)) {
+         message.add_address_n(add);
       }
+
       if (testNet_) {
          message.set_coin_name(tesNetCoin);
       }
 
-      setDataCallback(MessageType_PublicKey, std::move(originCbFinal));
-      makeCall(message);
-   };
-
-   // Fetching nested segwit
-   AsyncCallBackCall cbNested = [this, originCbNative = std::move(cbNative)](QVariant &&data) mutable {
-      awaitingWalletInfo_.info_.xpubRoot_ = data.toByteArray().toStdString();
-
-      connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving nested segwit public key from device "
-         + features_.label());
-      bitcoin::GetPublicKey message;
-      auto Path = getDerivationPath(testNet_, true);
-      for (size_t i = 0; i < Path.length(); ++i) {
-         message.add_address_n(Path.get(i));
-      }
-      if (testNet_) {
-         message.set_coin_name(tesNetCoin);
-      }
-
-      setDataCallback(MessageType_PublicKey, std::move(originCbNative));
+      setDataCallback(MessageType_PublicKey, std::move(cbNative));
       makeCall(message);
    };
 
@@ -191,13 +199,13 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
    connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving root public key from device "
       + features_.label());
    bitcoin::GetPublicKey message;
-   message.add_address_n(0x80000000);
+   message.add_address_n(bs::hd::hardFlag);
    if (testNet_) {
       message.set_coin_name(tesNetCoin);
    }
 
    // Fetching nested segwit
-   setDataCallback(MessageType_PublicKey, std::move(cbNested));
+   setDataCallback(MessageType_PublicKey, std::move(cbRoot));
    makeCall(message);
 }
 
@@ -222,7 +230,7 @@ void TrezorDevice::cancel()
    connectionManager_->GetLogger()->debug("[TrezorDevice] cancel previous operation");
    management::Cancel message;
    makeCall(message);
-   sendTxMessage(cancelledByUser);
+   sendTxMessage(HWInfoStatus::kCancelledByUser);
 }
 
 void TrezorDevice::clearSession(AsyncCallBack&& cb)
@@ -316,7 +324,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
          }
          common::ButtonAck response;
          makeCall(response);
-         sendTxMessage(pressButton);
+         sendTxMessage(HWInfoStatus::kPressButton);
       }
       break;
    case MessageType_PinMatrixRequest:
@@ -324,7 +332,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
          common::PinMatrixRequest request;
          if (parseResponse(request, data)) {
             emit requestPinMatrix();
-            sendTxMessage(requestPin);
+            sendTxMessage(HWInfoStatus::kRequestPin);
          }
       }
       break;
@@ -333,7 +341,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
          common::PassphraseRequest request;
          if (parseResponse(request, data)) {
             emit requestHWPass();
-            sendTxMessage(requestPassphrase);
+            sendTxMessage(HWInfoStatus::kRequestPassphrase);
          }
       }
       break;
@@ -356,7 +364,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
    case MessageType_TxRequest:
       {
          handleTxRequest(data);
-         sendTxMessage(transaction);
+         sendTxMessage(HWInfoStatus::kTransaction);
       }
       break;
    default:
@@ -449,7 +457,8 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       auto utxo = currentTxSignReq_->inputs[index];
 
       auto address = bs::Address::fromUTXO(utxo);
-      bool isNestedSegwit = (address.getType() == AddressEntryType_P2SH);
+      const bool isNestedSegwit = (address.getType() == AddressEntryType_P2SH);
+      const auto purp = bs::hd::purpose(address.getType());
 
       std::string addrIndex;
       for (const auto &walletId : currentTxSignReq_->walletIds) {
@@ -463,14 +472,10 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
          throw std::logic_error(fmt::format("can't find input address index for '{}'", address.display()));
       }
 
-      auto Path = getDerivationPath(testNet_, isNestedSegwit);
-      for (size_t i = 0; i < Path.length(); ++i) {
-         input->add_address_n(Path.get(i));
-      }
-
-      const auto path = bs::hd::Path::fromString(addrIndex);
-      for (int i = 0; i < path.length(); ++i) {
-         input->add_address_n(path.get(i));
+      auto path = getDerivationPath(testNet_, purp);
+      path.append(bs::hd::Path::fromString(addrIndex));
+      for (const uint32_t add : path) {
+         input->add_address_n(add);
       }
 
       input->set_prev_hash(utxo.getTxHash().copySwapEndian().toBinStr());
@@ -508,18 +513,17 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
          const auto &change = currentTxSignReq_->change;
          output->set_amount(change.value);
 
-         bool isNestedSegwit = (change.address.getType() == AddressEntryType_P2SH);
+         const bool isNestedSegwit = (change.address.getType() == AddressEntryType_P2SH);
+         const auto purp = bs::hd::purpose(change.address.getType());
 
          if (change.index.empty()) {
             throw std::logic_error(fmt::format("can't find change address index for '{}'", change.address.display()));
          }
-         auto Path = getDerivationPath(testNet_, isNestedSegwit);
-         for (size_t i = 0; i < Path.length(); ++i) {
-            output->add_address_n(Path.get(i));
-         }
-         const auto path = bs::hd::Path::fromString(change.index);
-         for (int i = 0; i < path.length(); ++i) {
-            output->add_address_n(path.get(i));
+
+         auto path = getDerivationPath(testNet_, purp);
+         path.append(bs::hd::Path::fromString(change.index));
+         for (const uint32_t add : path) {
+            output->add_address_n(add);
          }
 
          output->set_script_type(isNestedSegwit ? bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOP2SHWITNESS
@@ -540,7 +544,7 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
    case bitcoin::TxRequest_RequestType_TXFINISHED:
    {
       dataCallback(MessageType_TxRequest, QVariant::fromValue<>(awaitingTransaction_));
-      sendTxMessage(transactionFinished);
+      sendTxMessage(HWInfoStatus::kTransactionFinished);
       resetCaches();
    }
    break;

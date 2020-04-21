@@ -204,6 +204,7 @@ void SignerAdapter::importHwWallet(const bs::core::wallet::HwWalletInfo &walletI
    request.set_xpubroot(walletInfo.xpubRoot_);
    request.set_xpubnestedsegwit(walletInfo.xpubNestedSegwit_);
    request.set_xpubnativesegwit(walletInfo.xpubNativeSegwit_);
+   request.set_xpublegacy(walletInfo.xpubLegacy_);
 
    const auto reqId = listener_->send(signer::ImportHwWalletType, request.SerializeAsString());
    listener_->setWatchOnlyCb(reqId, cb);
