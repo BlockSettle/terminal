@@ -239,19 +239,43 @@ void BSTerminalMainWindow::postSplashscreenActions()
 void BSTerminalMainWindow::loadPositionAndShow()
 {
    auto geom = applicationSettings_->get<QRect>(ApplicationSettings::GUI_main_geometry);
-   if (!geom.isEmpty()) {
-      setGeometry(geom);
+   if (geom.isEmpty()) {
+      show();
+      return;
    }
+   setGeometry(geom);   // This call is required for screenNumber() method to work properly
 
+#ifdef Q_OS_WINDOWS
+   int screenNo = QApplication::desktop()->screenNumber(this);
+   if (screenNo < 0) {
+      screenNo = 0;
+   }
+   const auto screenGeom = QApplication::desktop()->screenGeometry(screenNo);
+   if (!screenGeom.contains(geom)) {
+      const int screenWidth = screenGeom.width() * 0.9;
+      const int screenHeight = screenGeom.height() * 0.9;
+      geom.setWidth(std::min(geom.width(), screenWidth));
+      geom.setHeight(std::min(geom.height(), screenHeight));
+      geom.moveCenter(screenGeom.center());
+   }
+   const auto screen = qApp->screens()[screenNo];
+   const float pixelRatio = screen->devicePixelRatio();
+   if (pixelRatio > 1.0) {
+      const float coeff = 0.9999;   // some coefficient that prevents oversizing of main window on HiRes display on Windows
+      geom.setWidth(geom.width() * coeff);
+      geom.setHeight(geom.height() * coeff);
+   }
+   setGeometry(geom);
+#else
    if (QApplication::desktop()->screenNumber(this) == -1) {
       auto currentScreenRect = QApplication::desktop()->screenGeometry(QCursor::pos());
-      auto rect = geometry();
       // Do not delete 0.9 multiplier, since in some system window size is applying without system native toolbar
-      rect.setWidth(std::min(rect.width(), static_cast<int>(currentScreenRect.width() * 0.9)));
-      rect.setHeight(std::min(rect.height(), static_cast<int>(currentScreenRect.height() * 0.9)));
-      rect.moveCenter(currentScreenRect.center());
-      setGeometry(rect);
-   }
+      geom.setWidth(std::min(geom.width(), static_cast<int>(currentScreenRect.width() * 0.9)));
+      geom.setHeight(std::min(geom.height(), static_cast<int>(currentScreenRect.height() * 0.9)));
+      geom.moveCenter(currentScreenRect.center());
+      setGeometry(geom);
+}
+#endif   // not Windows
 
    show();
 }
