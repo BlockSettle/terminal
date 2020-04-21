@@ -403,7 +403,6 @@ void BSTerminalMainWindow::LoadWallets()
       ui_->widgetRFQ->setWalletsManager(walletsMgr_);
       ui_->widgetRFQReply->setWalletsManager(walletsMgr_);
       autoSignQuoteProvider_->setWalletsManager(walletsMgr_);
-      tryGetChatKeys();
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, [this] {
       walletsSynched_ = true;
@@ -418,11 +417,14 @@ void BSTerminalMainWindow::LoadWallets()
    // Enable/disable send action when first wallet created/last wallet removed
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletChanged, this
       , &BSTerminalMainWindow::updateControlEnabledState);
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletDeleted, this
-      , &BSTerminalMainWindow::updateControlEnabledState);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletDeleted, this, [this] {
+      updateControlEnabledState();
+      resetChatKeys();
+   });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletAdded, this, [this] {
       updateControlEnabledState();
       promptToCreateTestAccountIfNeeded();
+      tryGetChatKeys();
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
       , &BSTerminalMainWindow::updateControlEnabledState);
@@ -775,6 +777,14 @@ void BSTerminalMainWindow::tryLoginIntoChat()
 
    chatTokenData_.clear();
    chatTokenSign_.clear();
+}
+
+void BSTerminalMainWindow::resetChatKeys()
+{
+   gotChatKeys_ = false;
+   chatPubKey_.clear();
+   chatPrivKey_.clear();
+   tryGetChatKeys();
 }
 
 void BSTerminalMainWindow::tryGetChatKeys()

@@ -118,6 +118,7 @@ private:
 
    void tryInitChatView();
    void tryLoginIntoChat();
+   void resetChatKeys();
    void tryGetChatKeys();
 
    void UpdateMainWindowAppearence();
