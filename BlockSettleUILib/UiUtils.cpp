@@ -167,19 +167,36 @@ int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs
       }
 
       bool addWallet = false;
+      WalletsTypes walletType = WalletsTypes::All;
       // HW wallets marked as offline too, make sure to check that first
       if (hdWallet->isHardwareWallet()) {
          addWallet = walletTypes & WalletsTypes::Hardware;
+         walletType = WalletsTypes::Hardware;
       } else if (hdWallet->isOffline()) {
          addWallet = walletTypes & WalletsTypes::WatchOnly;
+         walletType = WalletsTypes::WatchOnly;
       } else {
          addWallet = walletTypes & WalletsTypes::Full;
+         walletType = WalletsTypes::Full;
       }
 
       if (addWallet) {
          comboBox->addItem(QString::fromStdString(hdWallet->name()));
          comboBox->setItemData(i, QString::fromStdString(hdWallet->walletId()), UiUtils::WalletIdRole);
+         comboBox->setItemData(i, QVariant::fromValue(static_cast<int>(walletType)), UiUtils::WalletType);
          i++;
+      }
+
+      if (hdWallet->isHardwareWallet() && (walletTypes & WalletsTypes::Hardware_Legacy)) {
+         auto grp = hdWallet->getGroup(hdWallet->getXBTGroupType());
+         auto legacyLeaf = grp->getLeaf(bs::hd::Purpose::NonSegWit);
+
+         if (legacyLeaf->getTotalBalance() > 0) {
+            comboBox->addItem(QString::fromStdString(hdWallet->name() + " Legacy"));
+            comboBox->setItemData(i, QString::fromStdString(hdWallet->walletId()), UiUtils::WalletIdRole);
+            comboBox->setItemData(i, QVariant::fromValue(static_cast<int>(WalletsTypes::Hardware_Legacy)), UiUtils::WalletType);
+            i++;
+         }
       }
    }
    comboBox->blockSignals(b);
@@ -456,6 +473,11 @@ QString UiUtils::displayShortAddress(const QString &addr, const uint maxLength)
 std::string UiUtils::getSelectedWalletId(QComboBox* comboBox)
 {
    return comboBox->currentData(WalletIdRole).toString().toStdString();
+}
+
+UiUtils::WalletsTypes UiUtils::getSelectedWalletType(QComboBox* comboBox)
+{
+   return static_cast<UiUtils::WalletsTypes>(comboBox->currentData(WalletType).toInt());
 }
 
 static QtAwesome* qtAwesome_ = nullptr;

@@ -40,6 +40,7 @@ CustomTitleDialogWindowWithExpander {
 
     // expanding
     property bool isExpanded: false
+    property string hwDeviceStatus: qsTr("Searching for device")
     onHeaderButtonClicked: {
         isExpanded = !isExpanded
         signerSettings.defaultSettlDialogExpandedState = isExpanded
@@ -492,6 +493,24 @@ CustomTitleDialogWindowWithExpander {
                         }
                     }
                     signal expired()
+                }
+
+                RowLayout {
+                    spacing: 25
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 10
+                    Layout.rightMargin: 10
+                    visible: walletInfo.encType === QPasswordData.Hardware
+
+                    CustomLabel {
+                        Layout.fillWidth: true
+                        text: qsTr("Hardware Security Module")
+                    }
+
+                    CustomLabel {
+                        Layout.alignment: Qt.AlignRight
+                        text: hwDeviceStatus
+                    }
                 }
 
                 CustomProgressBar {
