@@ -486,12 +486,52 @@ CoinControlNode* CoinControlModel::getNodeByIndex(const QModelIndex& index) cons
    return static_cast<CoinControlNode*>(index.internalPointer());
 }
 
+static int addressWeight(const bs::Address &addr)
+{
+   if (!addr.isValid()) {
+      return INT_MAX;
+   }
+   switch (addr.getType()) {
+   case AddressEntryType_P2WPKH: return 0;
+   case AddressEntryType_P2SH:
+   case static_cast<AddressEntryType>(AddressEntryType_P2SH + AddressEntryType_P2WPKH):
+      return 1;
+   case AddressEntryType_P2PKH:  return 2;
+   default: return 3;
+   }
+}
+
 void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs)
 {
-   for (size_t i = 0; i < selectedInputs->GetTransactionsCount(); ++i ) {
-      const UTXO& input = selectedInputs->GetTransaction(i);
-      bool isSelected = selectedInputs->IsTransactionSelected(i);
-      const auto address = bs::Address::fromUTXO(input);
+   struct InputKey {
+      UTXO  utxo;
+      int   index;
+
+      bool operator<(const InputKey &other) const
+      {
+         const auto aw1 = addressWeight(bs::Address::fromUTXO(utxo));
+         const auto aw2 = addressWeight(bs::Address::fromUTXO(other.utxo));
+         if (aw1 != aw2) {
+            return aw1 < aw2;
+         }
+         if (index != other.index) {
+            return (index < other.index);
+         }
+         return (utxo < other.utxo);
+      }
+   };
+   struct UtxoState {
+      bool selected;
+      bool enabled;
+   };
+   std::map<InputKey, UtxoState> inputs;
+   for (int i = 0; i < selectedInputs->GetTransactionsCount(); ++i) {
+      inputs[{selectedInputs->GetTransaction(i), i}] = {
+         selectedInputs->IsTransactionSelected(i), true };
+   }
+
+   for (const auto &input : inputs) {
+      const auto address = bs::Address::fromUTXO(input.first.utxo);
       const auto addrStr = address.display();
 
       auto addressIt = addressNodes_.find(addrStr);
@@ -499,7 +539,7 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
 
       if (addressIt == addressNodes_.end()) {
          auto wallet = selectedInputs->GetWallet();
-         auto comment = wallet ? wallet->getAddressComment(bs::Address::fromHash(input.getRecipientScrAddr())) : "";
+         auto comment = wallet ? wallet->getAddressComment(bs::Address::fromHash(input.first.utxo.getRecipientScrAddr())) : "";
          addressNode = new AddressNode(CoinControlNode::detectType(address), QString::fromStdString(address.display())
             , QString::fromStdString(comment), (int)addressNodes_.size(), root_.get());
          root_->appendChildrenNode(addressNode);
@@ -507,7 +547,8 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
       } else {
          addressNode = static_cast<AddressNode*>(addressIt->second);
       }
-      addressNode->AddTransaction(new TransactionNode(isSelected, i, input, selectedInputs->GetWallet(), addressNode));    //TODO: Add TX comment
+      addressNode->AddTransaction(new TransactionNode(input.second.selected
+         , input.first.index, input.first.utxo, selectedInputs->GetWallet(), addressNode));    //TODO: Add TX comment
    }
 
    const auto cpfpList = selectedInputs->GetCPFPInputs();
