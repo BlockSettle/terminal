@@ -35,7 +35,7 @@ CustomTitleDialogWindow {
 
     title: qsTr("Import Wallet")
     width: 480
-    height: 260
+    height: 320
     abortBoxType: BSAbortBox.AbortType.WalletImport
 
     onAboutToShow: hwDeviceList.init()
@@ -118,9 +118,11 @@ CustomTitleDialogWindow {
                         CustomLabel {
                             Layout.fillWidth: true
                             text: qsTr(
-                             "No hardware device detected.\n" +
+                             "No hardware device detected.\n\n" +
                              "If your device cannot be detected, please consider the following steps before consulting your hardware wallet manufacturer:\n\n" +
-                             "• If you are a Linux user, your device must be added to udev rule to make possible to communicate with it. Please make sure device is detected correctly on system.\n" +
+                             (Qt.platform.os === "linux" ?
+                                  "• If you are a Linux user, your device must be added to the udev rule-set to communicate with it. Please ensure your device can be detected by the system.\n"
+                                  : "") +
                              "• If you are a Trezor user, ensure you have the Trezor Bridge installed (if not install and press \"Rescan\")\n" +
                              "• If you are a Ledger user, ensure your PIN has been entered and that your device displays \"Application is Ready\"")
                         }
