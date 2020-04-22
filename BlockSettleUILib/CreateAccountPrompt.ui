@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>443</width>
-    <height>201</height>
+    <width>354</width>
+    <height>229</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -30,48 +30,53 @@
     <widget class="QWidget" name="widget_2" native="true">
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
-       <widget class="QLabel" name="label_5">
-        <property name="text">
+       <widget class="QGroupBox" name="groupBox">
+        <property name="title">
          <string>Login to Test environment</string>
         </property>
-        <property name="h1" stdset="0">
-         <bool>true</bool>
-        </property>
-        <property name="statusWarningLabel" stdset="0">
-         <bool>true</bool>
-        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <spacer name="verticalSpacer_3">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>You have now created a BlockSettle Testnet Wallet.
+
+To try trading, you will need a test account.</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
      </layout>
     </widget>
-   </item>
-   <item>
-    <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <property name="leftMargin">
-      <number>10</number>
-     </property>
-     <property name="rightMargin">
-      <number>10</number>
-     </property>
-     <item>
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Great, you have now created your BlockSettle Testnet Wallet.
-
-To try p2p trading, you will need a test account.
-
-Create one if you have not already.</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
    </item>
    <item>
     <spacer name="verticalSpacer">
@@ -88,6 +93,12 @@ Create one if you have not already.</string>
    </item>
    <item>
     <widget class="QWidget" name="widget_3" native="true">
+     <property name="buttonBar" stdset="0">
+      <bool>true</bool>
+     </property>
+     <property name="buttonBarTransparent" stdset="0">
+      <bool>true</bool>
+     </property>
      <layout class="QHBoxLayout" name="horizontalLayout_3">
       <property name="topMargin">
        <number>0</number>
@@ -117,7 +128,7 @@ Create one if you have not already.</string>
          </size>
         </property>
         <property name="text">
-         <string>Create Test Account</string>
+         <string>Create Account</string>
         </property>
        </widget>
       </item>
@@ -138,7 +149,7 @@ Create one if you have not already.</string>
        <widget class="QPushButton" name="pushButtonLogin">
         <property name="minimumSize">
          <size>
-          <width>100</width>
+          <width>120</width>
           <height>0</height>
          </size>
         </property>
@@ -199,7 +210,7 @@ Create one if you have not already.</string>
        <widget class="QPushButton" name="pushButtonCancel">
         <property name="minimumSize">
          <size>
-          <width>100</width>
+          <width>120</width>
           <height>0</height>
          </size>
         </property>
