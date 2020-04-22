@@ -105,8 +105,9 @@ std::vector<UTXO> bs::UTXOReservationManager::getAvailableXbtUTXOs(const HDWalle
    }
 
    std::vector<UTXO> utxos;
+   std::vector<UTXO> filtered;
    utxos = availableUtxos->second.availableUtxo_;
-   UtxoReservation::instance()->filter(utxos);
+   UtxoReservation::instance()->filter(utxos, filtered);
    return utxos;
 }
 
@@ -172,7 +173,8 @@ std::vector<UTXO> bs::UTXOReservationManager::getAvailableCCUTXOs(const CCWallet
    }
 
    utxos = availableUtxos->second;
-   UtxoReservation::instance()->filter(utxos);
+   std::vector<UTXO> filtered;
+   UtxoReservation::instance()->filter(utxos, filtered);
    return utxos;
 }
 

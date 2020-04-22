@@ -126,6 +126,10 @@ void CoinControlWidget::rowClicked(const QModelIndex &index)
 {
    if (index.isValid() && index.column() != 0) {
       const QModelIndex column0Index = coinControlModel_->index(index.row(), 0, index.parent());
+      const bool isEnabled = coinControlModel_->data(column0Index, Qt::UserRole).toBool();
+      if (!isEnabled) {
+         return;
+      }
       const int currentState = coinControlModel_->data(column0Index, Qt::CheckStateRole).toInt();
       coinControlModel_->setData(column0Index,
          (currentState == Qt::Unchecked ? Qt::Checked : Qt::Unchecked), Qt::CheckStateRole);
