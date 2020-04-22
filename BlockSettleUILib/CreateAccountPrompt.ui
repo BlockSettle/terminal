@@ -32,7 +32,7 @@
       <item>
        <widget class="QGroupBox" name="groupBox">
         <property name="title">
-         <string>Login to Test environment</string>
+         <string>LOGIN TO TEST ENVIRONMENT</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_3">
          <property name="spacing">
