@@ -302,7 +302,7 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
 
    if ((transactionData_->getGroup() != group || walletType == UiUtils::Hardware_Legacy) || resetInputs) {
       if (walletType == UiUtils::Hardware_Legacy) {
-         auto& wallet = group->getLeaf(bs::hd::Purpose::NonSegWit);
+         auto wallet = group->getLeaf(bs::hd::Purpose::NonSegWit);
          transactionData_->setWallet(wallet, armory_->topBlock()
             , resetInputs, cbInputsReset);
       }
