@@ -296,10 +296,20 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
    } else {
       pushButtonCreate()->setText(tr("Broadcast"));
    }
-   const auto group = rootWallet->getGroup(rootWallet->getXBTGroupType());
-   if ((transactionData_->getGroup() != group) || resetInputs) {
-      transactionData_->setGroup(group, armory_->topBlock()
-         , resetInputs, cbInputsReset);
+
+   auto group = rootWallet->getGroup(rootWallet->getXBTGroupType());
+   auto walletType = UiUtils::getSelectedWalletType(comboBoxWallets());
+
+   if ((transactionData_->getGroup() != group || walletType == UiUtils::Hardware_Legacy) || resetInputs) {
+      if (walletType == UiUtils::Hardware_Legacy) {
+         auto& wallet = group->getLeaf(bs::hd::Purpose::NonSegWit);
+         transactionData_->setWallet(wallet, armory_->topBlock()
+            , resetInputs, cbInputsReset);
+      }
+      else {
+         transactionData_->setGroup(group, armory_->topBlock(), rootWallet->isHardwareWallet()
+            , resetInputs, cbInputsReset);
+      }
    }
 }
 
