@@ -128,7 +128,7 @@ TEST(TestCommon, AssetManager)
 
 TEST(TestCommon, UtxoReservation)
 {
-   std::vector<UTXO> utxos, utxos1, utxos2, filtered;
+   std::vector<UTXO> utxos, utxos1, utxos2, filtered, tmp;
    const size_t nbUtxos = 100;
    utxos.reserve(nbUtxos);
    for (int i = 1; i <= nbUtxos; i++) {
@@ -149,21 +149,21 @@ TEST(TestCommon, UtxoReservation)
    bs::UtxoReservation ur(StaticLogger::loggerPtr);
    ur.reserve("id1", utxos1);
    ur.reserve("id2", utxos2);
-   ur.filter(filtered);
+   ur.filter(filtered, tmp);
    EXPECT_EQ(filtered.size(), nbUtxos - 6);
 
-   ur.filter(filtered);
+   ur.filter(filtered, tmp);
    EXPECT_EQ(filtered.size(), nbUtxos - 6);
    EXPECT_EQ(ur.unreserve("id3"), false);
 
    EXPECT_EQ(ur.unreserve("id1"), true);
    filtered = utxos;
-   ur.filter(filtered);
+   ur.filter(filtered, tmp);
    EXPECT_EQ(filtered.size(), nbUtxos - 3);
 
    EXPECT_EQ(ur.unreserve("id2"), true);
    filtered = utxos;
-   ur.filter(filtered);
+   ur.filter(filtered, tmp);
    EXPECT_EQ(filtered.size(), nbUtxos);
 }
 
