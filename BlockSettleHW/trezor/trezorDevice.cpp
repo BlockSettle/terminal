@@ -455,7 +455,7 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
 
          auto input = txAck.mutable_tx()->add_inputs();
          input->set_prev_hash(txIn.getOutPoint().getTxHash().copySwapEndian().toBinStr());
-         input->set_prev_index(txIn.getIndex());
+         input->set_prev_index(txIn.getOutPoint().getTxOutIndex());
          input->set_sequence(txIn.getSequence());
          input->set_script_sig(txIn.getScript().toBinStr());
 
