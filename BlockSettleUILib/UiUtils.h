@@ -123,7 +123,8 @@ namespace UiUtils
       Hardware_Legacy = 0x4,
       WatchOnly = 0x8,
 
-      All = Full | Hardware | Hardware_Legacy | WatchOnly,
+      All = Full | Hardware | WatchOnly,
+      All_AllowLegacy = Full | Hardware | Hardware_Legacy | WatchOnly
    };
    int fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
       , int walletTypes);
