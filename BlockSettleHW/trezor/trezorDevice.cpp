@@ -87,9 +87,7 @@ TrezorDevice::TrezorDevice(const std::shared_ptr<ConnectionManager> &connectionM
 {
 }
 
-TrezorDevice::~TrezorDevice()
-{
-}
+TrezorDevice::~TrezorDevice() = default;
 
 DeviceKey TrezorDevice::key() const
 {
@@ -399,6 +397,7 @@ void TrezorDevice::resetCaches()
    currentTxSignReq_.reset(nullptr);
    awaitingTransaction_ = {};
    awaitingWalletInfo_ = {};
+   prevTxs_.clear();
 }
 
 void TrezorDevice::setCallbackNoData(MessageType type, AsyncCallBack&& cb)
@@ -449,6 +448,24 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
    {
    case bitcoin::TxRequest_RequestType_TXINPUT:
    {
+      // Legacy inputs support
+      if (!txRequest.details().tx_hash().empty()) {
+         auto tx = prevTx(txRequest);
+         auto txIn = tx.getTxInCopy(txRequest.details().request_index());
+
+         auto input = txAck.mutable_tx()->add_inputs();
+         input->set_prev_hash(txIn.getOutPoint().getTxHash().copySwapEndian().toBinStr());
+         input->set_prev_index(txIn.getOutPoint().getTxOutIndex());
+         input->set_sequence(txIn.getSequence());
+         input->set_script_sig(txIn.getScript().toBinStr());
+
+         connectionManager_->GetLogger()->debug("[TrezorDevice] handleTxRequest TXINPUT for prev hash"
+             + getJSONReadableMessage(txAck));
+
+         makeCall(txAck);
+         break;
+      }
+
       auto *type = new bitcoin::TxAck_TransactionType();
       bitcoin::TxAck_TransactionType_TxInputType *input = type->add_inputs();
 
@@ -457,7 +474,6 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       auto utxo = currentTxSignReq_->inputs[index];
 
       auto address = bs::Address::fromUTXO(utxo);
-      const bool isNestedSegwit = (address.getType() == AddressEntryType_P2SH);
       const auto purp = bs::hd::purpose(address.getType());
 
       std::string addrIndex;
@@ -480,8 +496,22 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
 
       input->set_prev_hash(utxo.getTxHash().copySwapEndian().toBinStr());
       input->set_prev_index(utxo.getTxOutIndex());
-      input->set_script_type(isNestedSegwit ? bitcoin::SPENDP2SHWITNESS : bitcoin::SPENDWITNESS);
-      input->set_amount(utxo.getValue());
+
+      switch (purp) {
+         case bs::hd::Purpose::Native:
+            input->set_script_type(bitcoin::SPENDWITNESS);
+            input->set_amount(utxo.getValue());
+            break;
+         case bs::hd::Purpose::Nested:
+            input->set_script_type(bitcoin::SPENDP2SHWITNESS);
+            input->set_amount(utxo.getValue());
+            break;
+         case bs::hd::Purpose::NonSegWit:
+            input->set_script_type(bitcoin::SPENDADDRESS);
+            // No need to set amount for legacy input, will be computes from prev tx
+            break;
+      }
+
       if (currentTxSignReq_->RBF) {
          input->set_sequence(UINT32_MAX - 2);
       }
@@ -496,6 +526,22 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
    break;
    case bitcoin::TxRequest_RequestType_TXOUTPUT:
    {
+      // Legacy inputs support
+      if (!txRequest.details().tx_hash().empty()) {
+         auto tx = prevTx(txRequest);
+         auto txOut = tx.getTxOutCopy(txRequest.details().request_index());
+
+         auto binOutput = txAck.mutable_tx()->add_bin_outputs();
+         binOutput->set_amount(txOut.getValue());
+         binOutput->set_script_pubkey(txOut.getScript().toBinStr());
+
+         connectionManager_->GetLogger()->debug("[TrezorDevice] handleTxRequest TXOUTPUT for prev hash"
+             + getJSONReadableMessage(txAck));
+
+         makeCall(txAck);
+         break;
+      }
+
       auto *type = new bitcoin::TxAck_TransactionType();
       bitcoin::TxAck_TransactionType_TxOutputType *output = type->add_outputs();
 
@@ -541,6 +587,24 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       makeCall(txAck);
    }
    break;
+   case bitcoin::TxRequest_RequestType_TXMETA:
+   {
+      // Return previous tx details for legacy inputs
+      // See https://wiki.trezor.io/Developers_guide:Message_Workflows
+      auto tx = prevTx(txRequest);
+
+      auto data = txAck.mutable_tx();
+      data->set_version(tx.getVersion());
+      data->set_lock_time(tx.getLockTime());
+      data->set_inputs_cnt(tx.getNumTxIn());
+      data->set_outputs_cnt(tx.getNumTxOut());
+
+      connectionManager_->GetLogger()->debug("[TrezorDevice] handleTxRequest TXMETA"
+         + getJSONReadableMessage(txAck));
+
+      makeCall(txAck);
+   }
+   break;
    case bitcoin::TxRequest_RequestType_TXFINISHED:
    {
       dataCallback(MessageType_TxRequest, QVariant::fromValue<>(awaitingTransaction_));
@@ -560,4 +624,15 @@ void TrezorDevice::sendTxMessage(const QString& status)
    }
 
    emit deviceTxStatusChanged(status);
+}
+
+const Tx &TrezorDevice::prevTx(const bitcoin::TxRequest &txRequest)
+{
+   auto txHash = BinaryData::fromString(txRequest.details().tx_hash()).swapEndian();
+   auto &tx = prevTxs_[txHash];
+   if (!tx.isInitialized()) {
+      auto txRaw = currentTxSignReq_->supportingTxMap_.at(txHash);
+      tx = Tx(txRaw);
+   }
+   return tx;
 }
