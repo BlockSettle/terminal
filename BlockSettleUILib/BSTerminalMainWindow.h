@@ -271,6 +271,8 @@ private:
    void disableCreateTestAccountPrompt();
    void promptToCreateTestAccountIfNeeded();
 
+   void showLegacyWarningIfNeeded();
+
    void promptSwitchEnv(bool prod);
    void switchToTestEnv();
    void switchToProdEnv();

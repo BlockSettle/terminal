@@ -460,6 +460,13 @@ void BSTerminalMainWindow::LoadWallets()
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
       , &BSTerminalMainWindow::updateControlEnabledState);
 
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, [this](const std::string &walletId) {
+      auto wallet = dynamic_cast<bs::sync::hd::Leaf*>(walletsMgr_->getWalletById(walletId).get());
+      if (wallet && wallet->purpose() == bs::hd::Purpose::NonSegWit && wallet->getTotalBalance() > 0) {
+         showLegacyWarningIfNeeded();
+      }
+   });
+
    onSyncWallets();
 }
 
@@ -2162,6 +2169,27 @@ void BSTerminalMainWindow::promptToCreateTestAccountIfNeeded()
          case CreateAccountPrompt::Cancel:
             break;
       }
+   });
+}
+
+void BSTerminalMainWindow::showLegacyWarningIfNeeded()
+{
+   if (applicationSettings_->get<bool>(ApplicationSettings::HideLegacyWalletWarning)) {
+      return;
+   }
+   applicationSettings_->set(ApplicationSettings::HideLegacyWalletWarning, true);
+   addDeferredDialog([this] {
+      BSMessageBox mbox(BSMessageBox::warning
+         , tr("Legacy Wallets ")
+         , tr("Legacy Address Balances")
+         , tr("We have detected that your hardware wallet holds, or has held, balances on legacy type addresses. "
+              "BlockSettle does not intend to support legacy address types and we strongly "
+              "recommend any balances held on such addresses are moved to native SegWit addresses.\n\n"
+              "- No GUI support for legacy address generation\n"
+              "- No trading using legacy addresses inputs\n"
+              "- No mixing of input types when spending from legacy addresses")
+         , this);
+      mbox.exec();
    });
 }
 
