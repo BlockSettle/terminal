@@ -268,6 +268,7 @@ private:
 
    void promoteToPrimaryIfNeeded();
 
+   void disableCreateTestAccountPrompt();
    void promptToCreateTestAccountIfNeeded();
 
    void promptSwitchEnv(bool prod);

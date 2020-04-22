@@ -436,6 +436,11 @@ void BSTerminalMainWindow::LoadWallets()
       CompleteDBConnection();
       act_->onRefresh({}, true);
       tryGetChatKeys();
+
+      // BST-2645: Do not show create account prompt if already have wallets
+      if (walletsMgr_->walletsCount() > 0) {
+         disableCreateTestAccountPrompt();
+      }
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::info, this, &BSTerminalMainWindow::showInfo);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::error, this, &BSTerminalMainWindow::showError);
@@ -2123,6 +2128,11 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
    }
 }
 
+void BSTerminalMainWindow::disableCreateTestAccountPrompt()
+{
+   applicationSettings_->set(ApplicationSettings::HideCreateAccountPromptTestnet, true);
+}
+
 void BSTerminalMainWindow::promptToCreateTestAccountIfNeeded()
 {
    addDeferredDialog([this] {
@@ -2131,7 +2141,7 @@ void BSTerminalMainWindow::promptToCreateTestAccountIfNeeded()
       if (envType != ApplicationSettings::EnvConfiguration::Test || hideCreateAccountTestnet) {
          return;
       }
-      applicationSettings_->set(ApplicationSettings::HideCreateAccountPromptTestnet, true);
+      disableCreateTestAccountPrompt();
       if (bs::network::isTradingEnabled(userType_)) {
          // Do not prompt if user is already logged in
          return;
