@@ -147,7 +147,7 @@ private:
    void AddRecipients(const std::vector<std::tuple<bs::Address, double, bool>> &);
    void UpdateRecipientAmount(unsigned int recipId, double amount, bool isMax = false);
    bool FixRecipientsAmount();
-   void onOutputRemoved();
+   void onOutputRemoved(int rowNumber);
 
    void AddManualFeeEntries(float feePerByte, float totalFee);
    void setAdvisedFees(float totalFee, float feePerByte);
