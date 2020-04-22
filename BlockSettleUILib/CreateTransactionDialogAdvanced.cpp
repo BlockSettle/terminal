@@ -422,7 +422,7 @@ void CreateTransactionDialogAdvanced::initUI()
    // QModelIndex isn't used. We should use it or lose it.
    connect(ui_->treeViewOutputs, &QTreeView::clicked, this, &CreateTransactionDialogAdvanced::onOutputsClicked);
    connect(outputsModel_, &TransactionOutputsModel::rowsRemoved, [this](const QModelIndex &parent, int first, int last) {
-      onOutputRemoved();
+      onOutputRemoved(first);
    });
 
    currentAddress_.clear();
@@ -629,11 +629,25 @@ void CreateTransactionDialogAdvanced::onRemoveOutput()
 {
    int row = removeOutputAction_->data().toInt();
    RemoveOutputByRow(row);
-   onOutputRemoved();
 }
 
-void CreateTransactionDialogAdvanced::onOutputRemoved()
+void CreateTransactionDialogAdvanced::onOutputRemoved(int rowNumber)
 {
+   if (outputRow_ >= 0) {
+      if (rowNumber < outputRow_) {
+         --outputRow_;
+      } else if (rowNumber == outputRow_) {
+         outputRow_ = -1;
+      }
+
+      if (outputRow_ == -1) {
+         ui_->lineEditAddress->clear();
+         ui_->lineEditAmount->clear();
+
+         ui_->treeViewOutputs->clearSelection();
+      }
+   }
+
    for (const auto &recipId : transactionData_->allRecipientIds()) {
       UpdateRecipientAmount(recipId, transactionData_->GetRecipientAmount(recipId), false);
    }
@@ -757,7 +771,6 @@ void CreateTransactionDialogAdvanced::onSelectInputs()
                break;
             }
          }
-         onOutputRemoved();
       }
    }
    else if (curBalance > prevBalance) {
@@ -775,6 +788,8 @@ void CreateTransactionDialogAdvanced::onAddOutput()
       ui_->lineEditAddress->clear();
       ui_->lineEditAmount->clear();
       ui_->lineEditAddress->setFocus();
+
+      ui_->treeViewOutputs->clearSelection();
    }
    else {
       currentAddress_ = bs::Address::fromAddressString(ui_->lineEditAddress->text().trimmed().toStdString());
