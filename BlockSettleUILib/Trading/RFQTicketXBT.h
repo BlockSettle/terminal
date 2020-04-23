@@ -54,7 +54,6 @@ class FXAmountValidator;
 class QuoteProvider;
 class SelectedTransactionInputs;
 class SignContainer;
-class TransactionData;
 class XbtAmountValidator;
 
 
@@ -204,6 +203,7 @@ private:
    bs::XBTAmount getXbtBalance() const;
    QString getProductToSpend() const;
    QString getProductToRecv() const;
+   bs::XBTAmount getXbtReservationAmountForCc(double quantity, double offerPrice) const;
 
    void reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network::RFQ>& rfq);
 

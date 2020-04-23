@@ -126,7 +126,7 @@ void AuthAddressConfirmDialog::onAuthAddrSubmitSuccess(const QString &address)
       static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
 
    const auto body = isProd ? tr("A validation transaction will be sent within the next 24 hours.")
-      : tr("A validation transaction will be sent within the next 15 minutes.");
+      : tr("BlockSettle will conduct a validation transaction to your Authentication Address within the next 15 minutes. Once mined 6 blocks you will be able to trade in our XBT products.");
 
    BSMessageBox(BSMessageBox::success, tr("Submission Successful")
       , tr("Authentication Address submitted")

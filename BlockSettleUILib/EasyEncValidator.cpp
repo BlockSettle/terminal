@@ -14,6 +14,8 @@
 
 QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
 {
+   QString origInput = input;
+
    if (input.isEmpty()) {
       setStatusMsg({});
       return QValidator::State::Intermediate;
@@ -61,6 +63,15 @@ QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
    if (input.length() == maxLen()) {
        if (validateKey(input) == Valid) {
            setStatusMsg(validMsgTmpl_.arg(name_));
+
+           // Fix problem when text is pasted with new lines.
+           // Return QValidator::State::Intermediate with modified input.
+           // `validate` will be called one more time with updated input and will return Acceptable next time.
+           // Workaround for https://bugreports.qt.io/browse/QTBUG-54582
+           if (input != origInput) {
+              return QValidator::State::Intermediate;
+           }
+
            return QValidator::State::Acceptable;
        }
    }

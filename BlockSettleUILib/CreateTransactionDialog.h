@@ -63,6 +63,9 @@ public:
 
    int SelectWallet(const std::string& walletId);
 
+   virtual bool switchModeRequested() const= 0;
+   virtual std::shared_ptr<CreateTransactionDialog> SwithcMode() = 0;
+
 protected:
    virtual void init();
    virtual void clear();
@@ -124,7 +127,7 @@ private:
    void populateWalletsList();
    void startBroadcasting();
    void stopBroadcasting();
-   bool createTransactionImpl(const bs::Address &changeAddress);
+   bool createTransactionImpl(bs::core::wallet::TXSignRequest txReq);
 
 protected:
    std::shared_ptr<ArmoryConnection>   armory_;

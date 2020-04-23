@@ -30,7 +30,6 @@
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
 #include "TradesUtils.h"
-#include "TransactionData.h"
 #include "TxClasses.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
@@ -322,7 +321,7 @@ void RFQTicketXBT::fillRecvAddresses()
 {
    auto recvWallet = getRecvXbtWallet();
    if (recvWallet) {
-      UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, recvWallet);
+      UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, recvWallet, true);
    }
 }
 
@@ -514,8 +513,10 @@ void RFQTicketXBT::onAuthAddrChanged(int index)
 
 void RFQTicketXBT::onUTXOReservationChanged(const std::string& walletId)
 {
+   logger_->debug("[{}] walletId='{}'", __func__, walletId);
    if (walletId.empty()) {
       updateBalances();
+      updateSubmitButton();
       return;
    }
 
@@ -580,6 +581,9 @@ bool RFQTicketXBT::checkBalance(double qty) const
 {
    const auto balance = getBalanceInfo();
    if (getSelectedSide() == bs::network::Side::Buy) {
+      if (currentGroupType_ == ProductGroupType::CCGroupType) {
+         return balance.amount >= getXbtReservationAmountForCc(qty, getOfferPrice()).GetValueBitcoin();
+      }
       return (balance.amount > 0);
    }
    else {
@@ -1211,6 +1215,11 @@ QString RFQTicketXBT::getProductToRecv() const
    }
 }
 
+bs::XBTAmount RFQTicketXBT::getXbtReservationAmountForCc(double quantity, double offerPrice) const
+{
+   return bs::XBTAmount(quantity * offerPrice * bs::tradeutils::reservationQuantityMultiplier());
+}
+
 void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network::RFQ>& rfq)
 {
    auto submitRFQWrapper = [rfqTicket = QPointer<RFQTicketXBT>(this), rfq] {
@@ -1219,11 +1228,21 @@ void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network
       }
       rfqTicket->submitRFQCb_(*rfq, std::move(rfqTicket->fixedXbtInputs_.utxoRes));
    };
+   auto cbBestUtxoSet = [rfqTicket = QPointer<RFQTicketXBT>(this), submitRFQWrapper] (bs::FixedXbtInputs&& fixedXbt) {
+      if (!rfqTicket) {
+         return;
+      }
+      rfqTicket->fixedXbtInputs_ = std::move(fixedXbt);
+      submitRFQWrapper();
+   };
 
    if (rfq->assetType == bs::network::Asset::PrivateMarket
        && rfq->side == bs::network::Side::Buy) {
-      submitRFQWrapper();
-      return; // Nothing to reserve
+      auto maxXbtQuantity = getXbtReservationAmountForCc(rfq->quantity, getOfferPrice()).GetValue();
+      utxoReservationManager_->reserveBestXbtUtxoSet(
+         getSendXbtWallet()->walletId(), maxXbtQuantity,
+         true, std::move(cbBestUtxoSet), true);
+      return;
    }
 
    if ((rfq->side == bs::network::Side::Sell && rfq->product != bs::network::XbtCurrency) ||
@@ -1246,15 +1265,6 @@ void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network
          quantity /= getOfferPrice();
       }
    }
-
-   auto cbBestUtxoSet = [rfqTicket = QPointer<RFQTicketXBT>(this),
-      submitRFQCb = std::move(submitRFQWrapper)] (bs::FixedXbtInputs&& fixedXbt) {
-      if (!rfqTicket) {
-         return;
-      }
-      rfqTicket->fixedXbtInputs_ = std::move(fixedXbt);
-      submitRFQCb();
-   };
 
    const bool partial = rfq->assetType == bs::network::Asset::PrivateMarket;
    utxoReservationManager_->reserveBestXbtUtxoSet(

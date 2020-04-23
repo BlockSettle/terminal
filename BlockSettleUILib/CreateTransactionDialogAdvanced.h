@@ -56,8 +56,10 @@ public:
 
 public:
    CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &, const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer> &, bool loadFeeSuggestions
+      , const std::shared_ptr<bs::sync::WalletsManager> &
+      , const std::shared_ptr<bs::UTXOReservationManager> &
+      , const std::shared_ptr<SignContainer> &
+      , bool loadFeeSuggestions
       , const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
       , const std::shared_ptr<TransactionData> &
@@ -69,6 +71,9 @@ public:
    void preSetValue(const double value);
 
    void SetImportedTransactions(const std::vector<bs::core::wallet::TXSignRequest>& transactions);
+
+   bool switchModeRequested() const override;
+   std::shared_ptr<CreateTransactionDialog> SwithcMode() override;
 
 protected:
    bool eventFilter(QObject *watched, QEvent *) override;
@@ -109,6 +114,7 @@ protected slots:
    void onAddOutput();
    void onCreatePressed();
    void onImportPressed();
+   void onMaxPressed() override;
 
    void feeSelectionChanged(int currentIndex) override;
 
@@ -122,10 +128,13 @@ private slots:
    void updateManualFeeControls();
    void setTxFees();
    void onOutputsClicked(const QModelIndex &index);
+   void onSimpleDialogRequested();
 
 private:
    void clear() override;
    void initUI();
+
+   void updateOutputButtonTitle();
 
    void setRBFinputs(const Tx &);
    void setCPFPinputs(const Tx &, const std::shared_ptr<bs::sync::Wallet> &);
@@ -138,7 +147,7 @@ private:
    void AddRecipients(const std::vector<std::tuple<bs::Address, double, bool>> &);
    void UpdateRecipientAmount(unsigned int recipId, double amount, bool isMax = false);
    bool FixRecipientsAmount();
-   void onOutputRemoved();
+   void onOutputRemoved(int rowNumber);
 
    void AddManualFeeEntries(float feePerByte, float totalFee);
    void setAdvisedFees(float totalFee, float feePerByte);
@@ -169,6 +178,7 @@ private:
    double      currentValue_ = 0;
    bool     isRBF_ = false;
    bool     allowAutoSelInputs_ = true;
+   int      outputRow_{ -1 };
 
    UsedInputsModel         *  usedInputsModel_ = nullptr;
    TransactionOutputsModel *  outputsModel_ = nullptr;
@@ -183,6 +193,7 @@ private:
    bool        feeChangeDisabled_ = false;
 
    bool        showUnknownWalletWarning_ = false;
+   bool        simpleDialogRequested_ = false;
 };
 
 #endif // __CREATE_TRANSACTION_DIALOG_ADVANCED_H__

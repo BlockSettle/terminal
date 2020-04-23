@@ -1359,8 +1359,9 @@ TEST_F(TestWalletWithArmory, CallbackReturnTxCrash)
    auto promSync = std::make_shared<std::promise<bool>>();
    auto futSync = promSync->get_future();
    // request some unknown TX, CallbackReturn_Tx should not crash
-   envPtr_->armoryConnection()->getTxByHash(BinaryData::CreateFromHex("ed3e119ee826752bc49bf33e86eee1b079dcd7d3ee294a4586192fb0bb1f1002"), [promSync] (const Tx& tx) {
+   envPtr_->armoryConnection()->getTxByHash(BinaryData::CreateFromHex("ed3e119ee826752bc49bf33e86eee1b079dcd7d3ee294a4586192fb0bb1f1002")
+      , [promSync] (const Tx& tx) {
       promSync->set_value(true);
-   });
+   }, true);
    futSync.wait();
 }

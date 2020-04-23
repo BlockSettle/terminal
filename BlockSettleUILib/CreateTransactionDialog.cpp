@@ -13,7 +13,6 @@
 #include <stdexcept>
 #include <thread>
 
-#include <QDebug>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QCoreApplication>
@@ -64,12 +63,12 @@ CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryCon
    : QDialog(parent)
    , armory_(armory)
    , walletsManager_(walletManager)
-   , utxoReservationManager_(utxoReservationManager)
    , signContainer_(container)
    , logger_(logger)
    , applicationSettings_(applicationSettings)
-   , loadFeeSuggestions_(loadFeeSuggestions)
+   , utxoReservationManager_(utxoReservationManager)
    , utxoRes_(std::move(utxoReservation))
+   , loadFeeSuggestions_(loadFeeSuggestions)
 {
    qRegisterMetaType<std::map<unsigned int, float>>();
 }
@@ -206,7 +205,7 @@ int CreateTransactionDialog::SelectWallet(const std::string& walletId)
 
 void CreateTransactionDialog::populateWalletsList()
 {
-   int index = UiUtils::fillHDWalletsComboBox(comboBoxWallets(), walletsManager_, UiUtils::WalletsTypes::All);
+   int index = UiUtils::fillHDWalletsComboBox(comboBoxWallets(), walletsManager_, UiUtils::WalletsTypes::All_AllowLegacy);
    selectedWalletChanged(index);
 }
 
@@ -297,10 +296,20 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
    } else {
       pushButtonCreate()->setText(tr("Broadcast"));
    }
-   const auto group = rootWallet->getGroup(rootWallet->getXBTGroupType());
-   if ((transactionData_->getGroup() != group) || resetInputs) {
-      transactionData_->setGroup(group, armory_->topBlock()
-         , resetInputs, cbInputsReset);
+
+   auto group = rootWallet->getGroup(rootWallet->getXBTGroupType());
+   auto walletType = UiUtils::getSelectedWalletType(comboBoxWallets());
+
+   if ((transactionData_->getGroup() != group || walletType == UiUtils::Hardware_Legacy) || resetInputs) {
+      if (walletType == UiUtils::Hardware_Legacy) {
+         auto wallet = group->getLeaf(bs::hd::Purpose::NonSegWit);
+         transactionData_->setWallet(wallet, armory_->topBlock()
+            , resetInputs, cbInputsReset);
+      }
+      else {
+         transactionData_->setGroup(group, armory_->topBlock(), rootWallet->isHardwareWallet()
+            , resetInputs, cbInputsReset);
+      }
    }
 }
 
@@ -463,12 +472,56 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
       if (!handle.isValid()) {
          return;
       }
-      bool result = createTransactionImpl(changeAddress);
-      cb(result);
+      try {
+         auto txReq = transactionData_->createTXRequest(checkBoxRBF()->checkState() == Qt::Checked, changeAddress);
+
+         // grab supporting transactions for the utxo map.
+         // required only for legacy wallets (HW-only)
+         std::set<BinaryData> hashes;
+         for (const auto& input : txReq.inputs) {
+            if (!input.isSegWit()) {
+               hashes.emplace(input.getTxHash());
+            }
+         }
+
+         auto supportingTxMapCb = [this, handle, txReq = std::move(txReq), cb]
+               (const AsyncClient::TxBatchResult& result, std::exception_ptr eptr) mutable
+         {
+            if (!handle.isValid()) {
+               return;
+            }
+
+            if (eptr) {
+               SPDLOG_LOGGER_ERROR(logger_, "getTXsByHash failed");
+               cb(false);
+               return;
+            }
+
+            for (auto& txPair : result) {
+               txReq.supportingTxMap_.emplace(txPair.first, txPair.second->serialize());
+            }
+
+            bool rc = createTransactionImpl(std::move(txReq));
+            cb(rc);
+         };
+
+         if (hashes.empty()) {
+            supportingTxMapCb({}, nullptr);
+            return;
+         }
+         if (!armory_->getTXsByHash(hashes, supportingTxMapCb, true)) {
+            SPDLOG_LOGGER_ERROR(logger_, "getTXsByHash failed");
+            cb(false);
+         }
+      }
+      catch (const std::exception &e) {
+         SPDLOG_LOGGER_ERROR(logger_, "exception: {}", e.what());
+         cb(false);
+      }
    });
 }
 
-bool CreateTransactionDialog::createTransactionImpl(const bs::Address &changeAddress)
+bool CreateTransactionDialog::createTransactionImpl(bs::core::wallet::TXSignRequest txReq)
 {
    QString text;
    QString detailedText;
@@ -482,8 +535,7 @@ bool CreateTransactionDialog::createTransactionImpl(const bs::Address &changeAdd
    const auto hdWallet = walletsManager_->getHDWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
 
    try {
-      txReq_ = transactionData_->createTXRequest(checkBoxRBF()->checkState() == Qt::Checked
-         , changeAddress);
+      txReq_ = std::move(txReq);
       txReq_.comment = textEditComment()->document()->toPlainText().toStdString();
 
       if (isRBF_) {
@@ -532,7 +584,6 @@ bool CreateTransactionDialog::createTransactionImpl(const bs::Address &changeAdd
          // do we need some checks here?
       }
 
-
       if (hdWallet->isOffline() && !hdWallet->isHardwareWallet()) {
          QString offlineFilePath;
          QString signerOfflineDir = applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
@@ -576,17 +627,12 @@ bool CreateTransactionDialog::createTransactionImpl(const bs::Address &changeAdd
    catch (const std::runtime_error &e) {
       text = tr("Failed to broadcast transaction");
       detailedText = QString::fromStdString(e.what());
-      qDebug() << QLatin1String("[CreateTransactionDialog::CreateTransaction] exception: ") << QString::fromStdString(e.what());
-   }
-   catch (const std::logic_error &e) {
-      text = tr("Failed to create transaction");
-      detailedText = QString::fromStdString(e.what());
-      qDebug() << QLatin1String("[CreateTransactionDialog::CreateTransaction] exception: ") << QString::fromStdString(e.what());
+      SPDLOG_LOGGER_ERROR(logger_, "runtime exception: {}", e.what());
    }
    catch (const std::exception &e) {
       text = tr("Failed to create transaction");
       detailedText = QString::fromStdString(e.what());
-      qDebug() << QLatin1String("[CreateTransactionDialog::CreateTransaction] exception: ") << QString::fromStdString(e.what());
+      SPDLOG_LOGGER_ERROR(logger_, "exception: {}", e.what());
    }
 
    stopBroadcasting();

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>457</width>
-    <height>149</height>
+    <width>498</width>
+    <height>189</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -53,11 +53,15 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>No BlockSettle Primary Wallet was detected.
-In order to trade you must set up a BlockSettle Primary Wallet.</string>
+         <string>A BlockSettle Wallet is needed to trade and access BlockSettle services. It creates your encrypted chat keys, Authentication Addresses and Private Market equity tokens.
+
+Do you wish to create a BlockSettle Wallet now?</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -153,9 +157,15 @@ In order to trade you must set up a BlockSettle Primary Wallet.</string>
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Create a BlockSettle wallet</string>
+            <string>Create a BlockSettle wallet?</string>
            </property>
            <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+           <property name="statusWarningLabel" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="h1" stdset="0">
             <bool>true</bool>
            </property>
           </widget>
@@ -213,7 +223,7 @@ In order to trade you must set up a BlockSettle Primary Wallet.</string>
         </property>
         <property name="minimumSize">
          <size>
-          <width>100</width>
+          <width>120</width>
           <height>0</height>
          </size>
         </property>
@@ -248,7 +258,7 @@ In order to trade you must set up a BlockSettle Primary Wallet.</string>
         </property>
         <property name="minimumSize">
          <size>
-          <width>100</width>
+          <width>120</width>
           <height>0</height>
          </size>
         </property>
@@ -273,7 +283,7 @@ In order to trade you must set up a BlockSettle Primary Wallet.</string>
         </property>
         <property name="minimumSize">
          <size>
-          <width>100</width>
+          <width>120</width>
           <height>0</height>
          </size>
         </property>

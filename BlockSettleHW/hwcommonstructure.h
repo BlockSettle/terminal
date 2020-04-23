@@ -22,6 +22,10 @@
 using AsyncCallBack = std::function<void()>;
 using AsyncCallBackCall = std::function<void(QVariant&&)>;
 
+// There is no way to determinate difference between ledger devices
+// so we use vendor name for identification
+const std::string kDeviceLedgerId = "Ledger";
+
 struct DeviceData
 {
    QByteArray path_ = {};
@@ -72,5 +76,16 @@ struct HWSignedTx {
 };
 Q_DECLARE_METATYPE(HWSignedTx)
 
-bs::hd::Path getDerivationPath(bool testNet, bool isNestedSegwit);
+bs::hd::Path getDerivationPath(bool testNet, bs::hd::Purpose element);
+bool isNestedSegwit(const bs::hd::Path& path);
+bool isNativeSegwit(const bs::hd::Path& path);
+bool isNonSegwit(const bs::hd::Path& path);
+
+namespace HWInfoStatus {
+   const QString kPressButton = QObject::tr("Confirm transaction output(s) on your device");
+   const QString kTransaction = QObject::tr("Setup transaction...");
+   const QString kTransactionFinished = QObject::tr("Transaction signing finished with success");
+   const QString kCancelledByUser = QObject::tr("Cancelled by user");
+}
+
 #endif // HWCOMMONSTRUCTURE_H

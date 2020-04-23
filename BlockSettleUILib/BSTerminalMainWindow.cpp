@@ -100,6 +100,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
       return;
    }
 
+   splashScreen.show();
+
    connect(ui_->actionQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
 
    logMgr_ = std::make_shared<bs::LogManager>();
@@ -204,12 +206,14 @@ void BSTerminalMainWindow::onAddrStateChanged()
 
    if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
       && !authManager_->isAtLeastOneAwaitingVerification() && canSubmitAuthAddr) {
-      BSMessageBox qry(BSMessageBox::question, tr("Submit Authentication Address"), tr("Submit Authentication Address?")
-         , tr("In order to access XBT trading, you will need to submit an Authentication Address. Do you wish to do so now?"), this);
+      allowAuthAddressDialogShow_ = false;
+      BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Authentication Address")
+         , tr("Trading and settlement of XBT products require an Authentication Address to validate you as a Participant of BlockSettle’s Trading Network.\n"
+              "\n"
+              "Submit Authentication Address now?"), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
-      allowAuthAddressDialogShow_ = false;
    }
 
    if (authManager_->isAtLeastOneAwaitingVerification()) {
@@ -235,9 +239,44 @@ void BSTerminalMainWindow::postSplashscreenActions()
 void BSTerminalMainWindow::loadPositionAndShow()
 {
    auto geom = applicationSettings_->get<QRect>(ApplicationSettings::GUI_main_geometry);
-   if (!geom.isEmpty()) {
-      setGeometry(geom);
+   if (geom.isEmpty()) {
+      show();
+      return;
    }
+   setGeometry(geom);   // This call is required for screenNumber() method to work properly
+
+#ifdef Q_OS_WINDOWS
+   int screenNo = QApplication::desktop()->screenNumber(this);
+   if (screenNo < 0) {
+      screenNo = 0;
+   }
+   const auto screenGeom = QApplication::desktop()->screenGeometry(screenNo);
+   if (!screenGeom.contains(geom)) {
+      const int screenWidth = screenGeom.width() * 0.9;
+      const int screenHeight = screenGeom.height() * 0.9;
+      geom.setWidth(std::min(geom.width(), screenWidth));
+      geom.setHeight(std::min(geom.height(), screenHeight));
+      geom.moveCenter(screenGeom.center());
+   }
+   const auto screen = qApp->screens()[screenNo];
+   const float pixelRatio = screen->devicePixelRatio();
+   if (pixelRatio > 1.0) {
+      const float coeff = 0.9999;   // some coefficient that prevents oversizing of main window on HiRes display on Windows
+      geom.setWidth(geom.width() * coeff);
+      geom.setHeight(geom.height() * coeff);
+   }
+   setGeometry(geom);
+#else
+   if (QApplication::desktop()->screenNumber(this) == -1) {
+      auto currentScreenRect = QApplication::desktop()->screenGeometry(QCursor::pos());
+      // Do not delete 0.9 multiplier, since in some system window size is applying without system native toolbar
+      geom.setWidth(std::min(geom.width(), static_cast<int>(currentScreenRect.width() * 0.9)));
+      geom.setHeight(std::min(geom.height(), static_cast<int>(currentScreenRect.height() * 0.9)));
+      geom.moveCenter(currentScreenRect.center());
+      setGeometry(geom);
+}
+#endif   // not Windows
+
    show();
 }
 
@@ -390,7 +429,6 @@ void BSTerminalMainWindow::LoadWallets()
       ui_->widgetRFQ->setWalletsManager(walletsMgr_);
       ui_->widgetRFQReply->setWalletsManager(walletsMgr_);
       autoSignQuoteProvider_->setWalletsManager(walletsMgr_);
-      tryGetChatKeys();
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, [this] {
       walletsSynched_ = true;
@@ -398,6 +436,11 @@ void BSTerminalMainWindow::LoadWallets()
       CompleteDBConnection();
       act_->onRefresh({}, true);
       tryGetChatKeys();
+
+      // BST-2645: Do not show create account prompt if already have wallets
+      if (walletsMgr_->walletsCount() > 0) {
+         disableCreateTestAccountPrompt();
+      }
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::info, this, &BSTerminalMainWindow::showInfo);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::error, this, &BSTerminalMainWindow::showError);
@@ -405,12 +448,24 @@ void BSTerminalMainWindow::LoadWallets()
    // Enable/disable send action when first wallet created/last wallet removed
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletChanged, this
       , &BSTerminalMainWindow::updateControlEnabledState);
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletDeleted, this
-      , &BSTerminalMainWindow::updateControlEnabledState);
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletAdded, this
-      , &BSTerminalMainWindow::updateControlEnabledState);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletDeleted, this, [this] {
+      updateControlEnabledState();
+      resetChatKeys();
+   });
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletAdded, this, [this] {
+      updateControlEnabledState();
+      promptToCreateTestAccountIfNeeded();
+      tryGetChatKeys();
+   });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
       , &BSTerminalMainWindow::updateControlEnabledState);
+
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, [this](const std::string &walletId) {
+      auto wallet = dynamic_cast<bs::sync::hd::Leaf*>(walletsMgr_->getWalletById(walletId).get());
+      if (wallet && wallet->purpose() == bs::hd::Purpose::NonSegWit && wallet->getTotalBalance() > 0) {
+         showLegacyWarningIfNeeded();
+      }
+   });
 
    onSyncWallets();
 }
@@ -563,6 +618,7 @@ bool BSTerminalMainWindow::InitSigningContainer()
    connect(signContainer_.get(), &WalletSignerContainer::ready, this, &BSTerminalMainWindow::SignerReady, Qt::QueuedConnection);
    connect(signContainer_.get(), &WalletSignerContainer::needNewWalletPrompt, this, &BSTerminalMainWindow::onNeedNewWallet, Qt::QueuedConnection);
    connect(signContainer_.get(), &WalletSignerContainer::walletsReadyToSync, this, &BSTerminalMainWindow::onSyncWallets, Qt::QueuedConnection);
+   connect(signContainer_.get(), &WalletSignerContainer::windowVisibilityChanged, this, &BSTerminalMainWindow::onSignerVisibleChanged, Qt::QueuedConnection);
 
    return true;
 }
@@ -761,6 +817,14 @@ void BSTerminalMainWindow::tryLoginIntoChat()
    chatTokenSign_.clear();
 }
 
+void BSTerminalMainWindow::resetChatKeys()
+{
+   gotChatKeys_ = false;
+   chatPubKey_.clear();
+   chatPrivKey_.clear();
+   tryGetChatKeys();
+}
+
 void BSTerminalMainWindow::tryGetChatKeys()
 {
    if (gotChatKeys_) {
@@ -779,7 +843,6 @@ void BSTerminalMainWindow::tryGetChatKeys()
       chatPrivKey_ = node.getPrivateKey();
       gotChatKeys_ = true;
       tryInitChatView();
-      promptToCreateAccountIfNeeded();
    });
 }
 
@@ -1157,29 +1220,15 @@ void BSTerminalMainWindow::onGenerateAddress()
          }
       }
    }
-   SelectWalletDialog *selectWalletDialog = new SelectWalletDialog(
-      walletsMgr_, selWalletId, this);
-   selectWalletDialog->exec();
+   SelectWalletDialog selectWalletDialog(walletsMgr_, selWalletId, this);
+   selectWalletDialog.exec();
 
-   if (selectWalletDialog->result() == QDialog::Rejected) {
+   if (selectWalletDialog.result() == QDialog::Rejected) {
       return;
    }
 
-   NewAddressDialog* newAddressDialog = new NewAddressDialog(
-      selectWalletDialog->getSelectedWallet(), this);
-   newAddressDialog->show();
-}
-
-void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWalletId)
-{
-   CreateTransactionDialogAdvanced advancedDialog{armory_, walletsMgr_, utxoReservationMgr_
-      , signContainer_, true, logMgr_->logger("ui"), applicationSettings_, nullptr, {}, this };
-
-   if (!selectedWalletId.empty()) {
-      advancedDialog.SelectWallet(selectedWalletId);
-   }
-
-   advancedDialog.exec();
+   NewAddressDialog newAddressDialog(selectWalletDialog.getSelectedWallet(), this);
+   newAddressDialog.exec();
 }
 
 void BSTerminalMainWindow::onSend()
@@ -1196,27 +1245,31 @@ void BSTerminalMainWindow::onSend()
       }
    }
 
-   if (QGuiApplication::keyboardModifiers() & Qt::ShiftModifier) {
-      createAdvancedTxDialog(selectedWalletId);
+
+   std::shared_ptr<CreateTransactionDialog> dlg;
+
+   if ((QGuiApplication::keyboardModifiers() & Qt::ShiftModifier)
+       || applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
+      dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory_, walletsMgr_, utxoReservationMgr_
+         , signContainer_, true, logMgr_->logger("ui"), applicationSettings_, nullptr, bs::UtxoReservationToken{}, this );
    } else {
-      if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
-         createAdvancedTxDialog(selectedWalletId);
-      } else {
-         CreateTransactionDialogSimple dlg(armory_, walletsMgr_, utxoReservationMgr_, signContainer_
+      dlg = std::make_shared<CreateTransactionDialogSimple>(armory_, walletsMgr_, utxoReservationMgr_, signContainer_
             , logMgr_->logger("ui"), applicationSettings_, this);
+   }
 
-         if (!selectedWalletId.empty()) {
-            dlg.SelectWallet(selectedWalletId);
-         }
+   if (!selectedWalletId.empty()) {
+      dlg->SelectWallet(selectedWalletId);
+   }
 
-         dlg.exec();
+   while(true) {
+      dlg->exec();
 
-         if ((dlg.result() == QDialog::Accepted) && dlg.userRequestedAdvancedDialog()) {
-            auto advancedDialog = dlg.CreateAdvancedDialog();
-
-            advancedDialog->exec();
-         }
+      if  ((dlg->result() != QDialog::Accepted) || !dlg->switchModeRequested()) {
+         break;
       }
+
+      auto nextDialog = dlg->SwithcMode();
+      dlg = nextDialog;
    }
 }
 
@@ -1357,6 +1410,19 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    }
 
    if (!gotChatKeys_) {
+      addDeferredDialog([this] {
+         CreatePrimaryWalletPrompt dlg;
+         int rc = dlg.exec();
+         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
+            ui_->widgetWallets->CreateNewWallet();
+         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
+            ui_->widgetWallets->ImportNewWallet();
+         }
+      });
+      return;
+   }
+
+   if (!gotChatKeys_) {
       if (!signContainer_ || !signContainer_->isReady()) {
          BSMessageBox signerMsg(BSMessageBox::warning
             , tr("Login Failed")
@@ -1373,7 +1439,24 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    int rc = loginDialog.exec();
 
    if (rc != QDialog::Accepted && !loginDialog.result()) {
-      setWidgetsAuthorized(false);
+      return;
+   }
+
+   bool isRegistered = (loginDialog.result()->userType == bs::network::UserType::Market
+      || loginDialog.result()->userType == bs::network::UserType::Trading
+      || loginDialog.result()->userType == bs::network::UserType::Dealing);
+   auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
+   if (!isRegistered && envType == ApplicationSettings::EnvConfiguration::Test) {
+      auto createTestAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlTest);
+      BSMessageBox dlg(BSMessageBox::info, tr("Create Test Account")
+         , tr("Create a BlockSettle test account")
+         , tr("<p>Login requires a test account - create one in minutes on test.blocksettle.com</p>"
+              "<p>Once you have registered, return to login in the Terminal.</p>"
+              "<a href=\"%1\"><span style=\"text-decoration: underline;color:%2;\">Create Test Account Now</span></a>")
+         .arg(createTestAccountUrl).arg(BSMessageBox::kUrlColor), this);
+      dlg.setOkVisible(false);
+      dlg.setCancelVisible(true);
+      dlg.exec();
       return;
    }
 
@@ -1451,18 +1534,6 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    connect(bsClient_.get(), &BsClient::accountStateChanged, this, [this](bs::network::UserType userType, bool enabled) {
       onAccountTypeChanged(userType, enabled);
    });
-
-   if (!gotChatKeys_) {
-      addDeferredDialog([this] {
-         CreatePrimaryWalletPrompt dlg;
-         int rc = dlg.exec();
-         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
-            ui_->widgetWallets->CreateNewWallet();
-         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
-            ui_->widgetWallets->ImportNewWallet();
-         }
-      });
-   }
 }
 
 void BSTerminalMainWindow::onLogout()
@@ -1657,7 +1728,7 @@ void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> &entries)
          walletsMgr_->getTransactionDirection(tx, wallet->walletId(), cbDir);
          walletsMgr_->getTransactionMainAddress(tx, wallet->walletId(), (entry.value > 0), cbMainAddr);
       };
-      armory_->getTxByHash(entry.txHash, cbTx);
+      armory_->getTxByHash(entry.txHash, cbTx, true);
    }
 }
 
@@ -1736,7 +1807,13 @@ void BSTerminalMainWindow::changeEvent(QEvent* e)
 
 void BSTerminalMainWindow::setLoginButtonText(const QString& text)
 {
-   ui_->pushButtonUser->setText(text);
+   auto *button = ui_->pushButtonUser;
+   button->setText(text);
+   button->setProperty("usernameButton", QVariant(text == loginButtonText_));
+   button->setProperty("usernameButtonLoggedIn", QVariant(text != loginButtonText_));
+   button->style()->unpolish(button);
+   button->style()->polish(button);
+   button->update();
 
 #ifndef Q_OS_MAC
    ui_->menubar->adjustSize();
@@ -1925,6 +2002,11 @@ void BSTerminalMainWindow::onSyncWallets()
    walletsMgr_->syncWallets(progressDelegate);
 }
 
+void BSTerminalMainWindow::onSignerVisibleChanged()
+{
+   processDeferredDialogs();
+}
+
 void BSTerminalMainWindow::InitWidgets()
 {
    authAddrDlg_ = std::make_shared<AuthAddressDialog>(logMgr_->logger(), authManager_
@@ -2053,28 +2135,62 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
    }
 }
 
-void BSTerminalMainWindow::promptToCreateAccountIfNeeded()
+void BSTerminalMainWindow::disableCreateTestAccountPrompt()
 {
-   auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
-   bool hideCreateAccountTestnet = applicationSettings_->get<bool>(ApplicationSettings::HideCreateAccountPromptTestnet);
-   if (envType != ApplicationSettings::EnvConfiguration::Test || hideCreateAccountTestnet) {
+   applicationSettings_->set(ApplicationSettings::HideCreateAccountPromptTestnet, true);
+}
+
+void BSTerminalMainWindow::promptToCreateTestAccountIfNeeded()
+{
+   addDeferredDialog([this] {
+      auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
+      bool hideCreateAccountTestnet = applicationSettings_->get<bool>(ApplicationSettings::HideCreateAccountPromptTestnet);
+      if (envType != ApplicationSettings::EnvConfiguration::Test || hideCreateAccountTestnet) {
+         return;
+      }
+      disableCreateTestAccountPrompt();
+      if (bs::network::isTradingEnabled(userType_)) {
+         // Do not prompt if user is already logged in
+         return;
+      }
+
+      CreateAccountPrompt dlg(this);
+      int rc = dlg.exec();
+
+      switch (rc) {
+         case CreateAccountPrompt::Login:
+            onLogin();
+            break;
+         case CreateAccountPrompt::CreateAccount: {
+            auto createTestAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlTest);
+            QDesktopServices::openUrl(QUrl(createTestAccountUrl));
+            break;
+         }
+         case CreateAccountPrompt::Cancel:
+            break;
+      }
+   });
+}
+
+void BSTerminalMainWindow::showLegacyWarningIfNeeded()
+{
+   if (applicationSettings_->get<bool>(ApplicationSettings::HideLegacyWalletWarning)) {
       return;
    }
-   applicationSettings_->set(ApplicationSettings::HideCreateAccountPromptTestnet, true);
-
-   CreateAccountPrompt dlg(this);
-   int rc = dlg.exec();
-
-   switch (rc) {
-      case CreateAccountPrompt::Login:
-         onLogin();
-         break;
-      case CreateAccountPrompt::CreateAccount:
-         QDesktopServices::openUrl(QUrl(QStringLiteral("https://test.blocksettle.com/#login")));
-         break;
-      case CreateAccountPrompt::Cancel:
-         break;
-   }
+   applicationSettings_->set(ApplicationSettings::HideLegacyWalletWarning, true);
+   addDeferredDialog([this] {
+      BSMessageBox mbox(BSMessageBox::warning
+         , tr("Legacy Wallets ")
+         , tr("Legacy Address Balances")
+         , tr("We have detected that your hardware wallet holds, or has held, balances on legacy type addresses. "
+              "BlockSettle does not intend to support legacy address types and we strongly "
+              "recommend any balances held on such addresses are moved to native SegWit addresses.\n\n"
+              "- No GUI support for legacy address generation\n"
+              "- No trading using legacy addresses inputs\n"
+              "- No mixing of input types when spending from legacy addresses")
+         , this);
+      mbox.exec();
+   });
 }
 
 void BSTerminalMainWindow::promptSwitchEnv(bool prod)
@@ -2082,7 +2198,7 @@ void BSTerminalMainWindow::promptSwitchEnv(bool prod)
    BSMessageBox mbox(BSMessageBox::question
       , tr("Environment selection")
       , tr("Switch Environment")
-      , tr("Do you wish to switch to %1 environment and restart Terminal now?").arg(prod ? tr("Production") : tr("Test"))
+      , tr("Do you wish to change to the %1 environment now?").arg(prod ? tr("Production") : tr("Test"))
       , this);
    mbox.setConfirmButtonText(tr("Yes"));
    int rc = mbox.exec();
@@ -2117,6 +2233,23 @@ void BSTerminalMainWindow::restartTerminal()
    qApp->quit();
 }
 
+void BSTerminalMainWindow::processDeferredDialogs()
+{
+   if(deferredDialogRunning_) {
+      return;
+   }
+   if (signContainer_ && signContainer_->isLocal() && signContainer_->isWindowVisible()) {
+      return;
+   }
+
+   deferredDialogRunning_ = true;
+   while (!deferredDialogs_.empty()) {
+      deferredDialogs_.front()(); // run stored lambda
+      deferredDialogs_.pop();
+   }
+   deferredDialogRunning_ = false;
+}
+
 void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &deferredDialog)
 {
    // multi thread scope, it's safe to call this function from different threads
@@ -2124,14 +2257,6 @@ void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &de
       // single thread scope (main thread), it's safe to push to deferredDialogs_
       // and check deferredDialogRunning_ variable
       deferredDialogs_.push(deferredDialog);
-      if(!deferredDialogRunning_) {
-         deferredDialogRunning_ = true;
-         while (!deferredDialogs_.empty()) {
-            deferredDialogs_.front()(); // run stored lambda
-            deferredDialogs_.pop();
-         }
-         deferredDialogRunning_ = false;
-      }
-
+      processDeferredDialogs();
    }, Qt::QueuedConnection);
 }

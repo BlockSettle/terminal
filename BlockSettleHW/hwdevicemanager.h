@@ -22,6 +22,7 @@
 
 class HwDeviceInterface;
 class TrezorClient;
+class LedgerClient;
 class ConnectionManager;
 namespace bs {
    namespace sync {
@@ -48,9 +49,10 @@ public:
    Q_INVOKABLE void scanDevices();
    Q_INVOKABLE void requestPublicKey(int deviceIndex);
    Q_INVOKABLE void setMatrixPin(int deviceIndex, QString pin);
+   Q_INVOKABLE void setPassphrase(int deviceIndex, QString passphrase);
    Q_INVOKABLE void cancel(int deviceIndex);
 
-   Q_INVOKABLE void prepareHwDeviceForSign(QString deviceId);
+   Q_INVOKABLE void prepareHwDeviceForSign(QString walletId);
    Q_INVOKABLE void signTX(QVariant reqTX);
 
    Q_INVOKABLE void releaseDevices();
@@ -59,6 +61,7 @@ signals:
    void devicesChanged();
    void publicKeyReady(QVariant walletInfo);
    void requestPinMatrix();
+   void requestHWPass();
 
    void deviceNotFound(QString deviceId);
    void deviceReady(QString deviceId);
@@ -66,16 +69,19 @@ signals:
 
    void txSigned(SecureBinaryData signData);
    void isScanningChanged();
-   void operationFailed();
+   void operationFailed(QString reason);
+   void cancelledOnDevice();
 
 private:
    void setScanningFlag(bool isScanning);
    void releaseConnection(AsyncCallBack&& cb = nullptr);
+   void scanningDone();
 
    QPointer<HwDeviceInterface> getDevice(DeviceKey key);
 
 public:
    std::unique_ptr<TrezorClient> trezorClient_;
+   std::unique_ptr<LedgerClient> ledgerClient_;
    std::shared_ptr<bs::sync::WalletsManager> walletManager_;
 
    HwDeviceModel* model_;

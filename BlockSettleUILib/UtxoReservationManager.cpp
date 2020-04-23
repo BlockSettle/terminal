@@ -105,8 +105,9 @@ std::vector<UTXO> bs::UTXOReservationManager::getAvailableXbtUTXOs(const HDWalle
    }
 
    std::vector<UTXO> utxos;
+   std::vector<UTXO> filtered;
    utxos = availableUtxos->second.availableUtxo_;
-   UtxoReservation::instance()->filter(utxos);
+   UtxoReservation::instance()->filter(utxos, filtered);
    return utxos;
 }
 
@@ -172,7 +173,8 @@ std::vector<UTXO> bs::UTXOReservationManager::getAvailableCCUTXOs(const CCWallet
    }
 
    utxos = availableUtxos->second;
-   UtxoReservation::instance()->filter(utxos);
+   std::vector<UTXO> filtered;
+   UtxoReservation::instance()->filter(utxos, filtered);
    return utxos;
 }
 
@@ -282,11 +284,19 @@ bool bs::UTXOReservationManager::resetHdWallet(const std::string& hdWalledId)
 void bs::UTXOReservationManager::resetSpendableXbt(const std::shared_ptr<bs::sync::hd::Wallet>& hdWallet)
 {
    assert(hdWallet);
-   const auto &leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
-   std::vector<bs::sync::WalletsManager::WalletPtr> wallets(leaves.begin(), leaves.end());
+   auto leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
+   std::vector<bs::sync::WalletsManager::WalletPtr> wallets;
+   for (const auto &leaf : leaves) {
+      auto purpose = leaf->purpose();
+      // Filter non-segwit leaves (for HW wallets)
+      if (purpose == bs::hd::Purpose::Native || purpose == bs::hd::Purpose::Nested) {
+         wallets.push_back(leaf);
+      }
+   }
 
-   bs::tradeutils::getSpendableTxOutList(wallets, [mgr = QPointer<bs::UTXOReservationManager>(this),
-      walletId = hdWallet->walletId()](const std::map<UTXO, std::string> &utxos) {
+   bs::tradeutils::getSpendableTxOutList(wallets, [mgr = QPointer<bs::UTXOReservationManager>(this)
+      , walletId = hdWallet->walletId(), leaves]
+         (const std::map<UTXO, std::string> &utxos) {
       if (!mgr) {
          return; // manager thread die, nothing to do
       }
@@ -296,10 +306,8 @@ void bs::UTXOReservationManager::resetSpendableXbt(const std::shared_ptr<bs::syn
       for (const auto &utxo : utxos) {
          utxosContainer.availableUtxo_.push_back(utxo.first);
       }
-
       QMetaObject::invokeMethod(mgr, [mgr, container = std::move(utxosContainer), id = walletId]{
          mgr->availableXbtUTXOs_[id] = std::move(container);
-
          emit mgr->availableUtxoChanged(id);
          });
    }, false);

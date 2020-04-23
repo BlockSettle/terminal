@@ -28,13 +28,14 @@ CustomTitleDialogWindow {
 
     property WalletInfo walletInfo: WalletInfo{}
 
-    property bool acceptable: !hwDeviceList.isScanning && !hwDeviceList.isImporting && (hwDeviceList.readyForImport || hwDeviceList.isNoDevice)
+    property bool acceptable: !hwDeviceList.isScanning && !hwDeviceList.isImporting &&
+                              (hwDeviceList.readyForImport || hwDeviceList.isNoDevice) && !scanUpdateDelay.running
 
     property int inputLabelsWidth: 110
 
     title: qsTr("Import Wallet")
-    width: 600
-    height: 250
+    width: 480
+    height: 320
     abortBoxType: BSAbortBox.AbortType.WalletImport
 
     onAboutToShow: hwDeviceList.init()
@@ -44,71 +45,91 @@ CustomTitleDialogWindow {
         if (btnAccept.enabled) btnAccept.onClicked()
     }
 
-    cContentItem: ColumnLayout {
-        id: mainLayout
-        spacing: 10
+    Timer {
+        id: scanUpdateDelay
+        interval: 2000
+        repeat: false
+    }
 
-        CustomHeader {
-            id: headerText
-            text: qsTr("Hardware Device")
-            Layout.fillWidth: true
-            Layout.preferredHeight: 25
-            Layout.topMargin: 5
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
-        }
+    runSpinner: hwDeviceList.isImporting || hwDeviceList.isScanning || scanUpdateDelay.running
 
-        StackLayout {
-            currentIndex: hwDeviceList.isNoDevice ? 1 : 0
-            Layout.fillWidth: true
+    cContentItem: Item {
+        width: parent.width
 
-            ColumnLayout {
-                id: fullImportTab
+        ColumnLayout {
+            id: mainLayout
+            spacing: 5
+            anchors.fill: parent
 
-                RowLayout {
-                    Layout.topMargin: 0
-                    Layout.leftMargin: 10
-                    Layout.rightMargin: 10
-                    Layout.fillWidth: true
+            CustomHeader {
+                id: headerText
+                text: qsTr("Hardware Device")
+                Layout.fillWidth: true
+                Layout.preferredHeight: 25
+                Layout.topMargin: 5
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+            }
 
-                    ColumnLayout {
-                        id: selectLayout
+            StackLayout {
+                currentIndex: hwDeviceList.isNoDevice ? 1 : 0
+                Layout.fillWidth: true
+
+                ColumnLayout {
+                    id: fullImportTab
+
+                    RowLayout {
+                        Layout.topMargin: 0
+                        Layout.leftMargin: 10
+                        Layout.rightMargin: 10
                         Layout.fillWidth: true
 
-                        // HARDWARE DEVICES
-                        HwAvailableDevices {
-                            id: hwDeviceList
-
+                        ColumnLayout {
+                            id: selectLayout
                             Layout.fillWidth: true
-                            Layout.fillHeight: true
 
-                            onPubKeyReady: {
-                                importWoWallet();
-                            }
+                            // HARDWARE DEVICES
+                            HwAvailableDevices {
+                                id: hwDeviceList
 
-                            onFailed: {
-                                JsHelper.messageBox(BSMessageBox.Type.Critical
-                                    , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+
+                                onPubKeyReady: {
+                                    importWoWallet();
+                                }
+
+                                onFailed: {
+                                    JsHelper.messageBox(BSMessageBox.Type.Critical
+                                        , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + reason)
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            ColumnLayout {
-                id: noDevicesAvailable
+                ColumnLayout {
+                    id: noDevicesAvailable
 
-                RowLayout {
-                    Layout.leftMargin: 10
-                    Layout.rightMargin: 10
+                    RowLayout {
+                        Layout.leftMargin: 10
+                        Layout.rightMargin: 10
 
-                    CustomLabel {
-                        Layout.fillWidth: true
-                        text: qsTr("No hardware device was detected.\nPlease ensure your device is properly connected and press the \"Rescan\" button.")
+                        CustomLabel {
+                            Layout.fillWidth: true
+                            text: qsTr(
+                             "No hardware device detected.\n\n" +
+                             "If your device cannot be detected, please consider the following steps before consulting your hardware wallet manufacturer:\n\n" +
+                             (Qt.platform.os === "linux" ?
+                                  "• If you are a Linux user, your device must be added to the udev rule-set to communicate with it. Please ensure your device can be detected by the system.\n"
+                                  : "") +
+                             "• If you are a Trezor user, ensure you have the Trezor Bridge installed (if not install and press \"Rescan\")\n" +
+                             "• If you are a Ledger user, ensure your PIN has been entered and that your device displays \"Application is Ready\"")
+                        }
                     }
                 }
-            }
 
+            }
         }
     }
 
@@ -137,6 +158,7 @@ CustomTitleDialogWindow {
                     if (hwDeviceList.readyForImport) {
                         hwDeviceList.importXpub();
                     } else if (hwDeviceList.isNoDevice) {
+                        scanUpdateDelay.start();
                         hwDeviceList.rescan();
                     }
 

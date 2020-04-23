@@ -102,7 +102,7 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Submit an Authentication Address for access to Spot XBT trading. BlockSettle will validate your Authentication Address within our 24h cycle.</string>
+            <string>Submit an Authentication Address for access to trading in XBT products.</string>
            </property>
            <property name="textFormat">
             <enum>Qt::PlainText</enum>

@@ -109,7 +109,8 @@ namespace UiUtils
    enum WalletDataRole
    {
       WalletIdRole = Qt::UserRole,
-      WalletBalanceRole
+      WalletBalanceRole,
+      WalletType
    };
 
    // Returns default wallet index (or -1 if empty).
@@ -119,18 +120,22 @@ namespace UiUtils
    {
       Full = 0x1,
       Hardware = 0x2,
-      WatchOnly = 0x4,
+      Hardware_Legacy = 0x4,
+      WatchOnly = 0x8,
 
       All = Full | Hardware | WatchOnly,
+      All_AllowLegacy = Full | Hardware | Hardware_Legacy | WatchOnly
    };
    int fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
       , int walletTypes);
    void fillAuthAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager>& authAddressManager);
    void fillRecvAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::Wallet>& targetWallet);
-   void fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox, const std::shared_ptr<bs::sync::hd::Wallet>& targetHDWallet);
+   void fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox
+      , const std::shared_ptr<bs::sync::hd::Wallet>& targetHDWallet, bool showRegularWalletsOnly);
 
    int selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId);
    std::string getSelectedWalletId(QComboBox* comboBox);
+   WalletsTypes getSelectedWalletType(QComboBox* comboBox);
 
    QPixmap getQRCode(const QString& address, int size = 0);
 

@@ -56,6 +56,7 @@ public:
    // lifecycle
    void init(AsyncCallBack&& cb = nullptr) override;
    void cancel() override;
+   void clearSession(AsyncCallBack&& cb = nullptr) override;
 
    // operation
    void getPublicKey(AsyncCallBackCall&& cb = nullptr) override;
@@ -83,6 +84,9 @@ private:
    void handleTxRequest(const MessageData& data);
    void sendTxMessage(const QString& status);
 
+   // Returns previous Tx for legacy inputs
+   const Tx &prevTx(const hw::trezor::messages::bitcoin::TxRequest &txRequest);
+
 private:
    std::shared_ptr<ConnectionManager> connectionManager_{};
    std::shared_ptr<bs::sync::WalletsManager> walletManager_{};
@@ -96,6 +100,7 @@ private:
 
    std::unordered_map<int, AsyncCallBack> awaitingCallbackNoData_;
    std::unordered_map<int, AsyncCallBackCall> awaitingCallbackData_;
+   std::map<BinaryData, Tx> prevTxs_;
 };
 
 #endif // TREZORDEVICE_H

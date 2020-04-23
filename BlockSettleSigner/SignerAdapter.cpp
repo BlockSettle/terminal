@@ -204,6 +204,7 @@ void SignerAdapter::importHwWallet(const bs::core::wallet::HwWalletInfo &walletI
    request.set_xpubroot(walletInfo.xpubRoot_);
    request.set_xpubnestedsegwit(walletInfo.xpubNestedSegwit_);
    request.set_xpubnativesegwit(walletInfo.xpubNativeSegwit_);
+   request.set_xpublegacy(walletInfo.xpubLegacy_);
 
    const auto reqId = listener_->send(signer::ImportHwWalletType, request.SerializeAsString());
    listener_->setWatchOnlyCb(reqId, cb);
@@ -319,4 +320,11 @@ void SignerAdapter::changeControlPassword(const bs::wallet::QPasswordData &oldPa
    const auto reqId = listener_->send(signer::ChangeControlPasswordType, request.SerializeAsString());
 
    listener_->setChangeControlPwCb(reqId, cb);
+}
+
+void SignerAdapter::sendWindowStatus(bool visible)
+{
+   headless::WindowStatus msg;
+   msg.set_visible(visible);
+   listener_->send(signer::WindowStatusType, msg.SerializeAsString());
 }

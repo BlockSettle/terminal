@@ -41,6 +41,8 @@ CustomTitleDialogWindow {
     property var seed
     property var passwordData: QPasswordData{}
 
+    property bool importStarted: false
+
     width: 410
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletCreation
@@ -229,11 +231,6 @@ CustomTitleDialogWindow {
                         // show notice dialog
                         if (!signerSettings.hideEidInfoBox) {
                             var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
-                            sizeChanged(noticeEidDialog.width, noticeEidDialog.height)
-
-                            noticeEidDialog.closed.connect(function(){
-                                sizeChanged(root.width, root.height)
-                            })
                             noticeEidDialog.open()
                         }
                     }
@@ -292,6 +289,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Cancel")
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
+                enabled: !importStarted
                 onClicked: {
                     JsHelper.openAbortBox(root, abortBoxType)
                 }
@@ -302,7 +300,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Continue")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                enabled: !walletsProxy.walletNameExists(tfName.text)
+                enabled: !importStarted && !walletsProxy.walletNameExists(tfName.text)
                             && tfName.text.length
                             && (newPasswordWithConfirm.acceptableInput && rbPassword.checked ||
                                 textInputEmail.text && rbAuth.checked)
@@ -315,6 +313,7 @@ CustomTitleDialogWindow {
                     walletInfo.encType = QPasswordData.Password
 
                     var createCallback = function(success, errorMsg) {
+                        importStarted = false
                         if (success) {
                             var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletCreate, true, walletInfo)
                             mb.bsAccepted.connect(acceptAnimated)
@@ -323,6 +322,11 @@ CustomTitleDialogWindow {
                                 , qsTr("Import Failed"), qsTr("Create wallet failed with error: \n") + errorMsg)
                         }
                     }
+                    var failedCallback = function() {
+                        importStarted = false
+                    }
+
+                    importStarted = true
 
                     if (rbPassword.checked) {
                         // auth password
@@ -336,13 +340,15 @@ CustomTitleDialogWindow {
                             passwordData.textPassword = newPasswordWithConfirm.password
                             walletsProxy.createWallet(cbPrimary.checked, seed, walletInfo, passwordData, createCallback)
                         })
+                        checkPasswordDialog.bsRejected.connect(failedCallback)
                     }
                     else {
                         // auth eID
                         let authEidMessage = JsHelper.getAuthEidWalletInfo(walletInfo);
-                        JsHelper.activateeIdAuth(textInputEmail.text, walletInfo, authEidMessage, function(newPasswordData) {
+                        var successCallback = function(newPasswordData) {
                             walletsProxy.createWallet(cbPrimary.checked, seed, walletInfo, newPasswordData, createCallback)
-                        })
+                        }
+                        JsHelper.activateeIdAuth(textInputEmail.text, walletInfo, authEidMessage, successCallback, failedCallback)
                     }
                 }
             }

@@ -81,19 +81,17 @@ QVariant UsedInputsModel::headerData(int section, Qt::Orientation orientation, i
 
 void UsedInputsModel::updateInputs(const std::vector<UTXO>& usedInputs)
 {
-   std::unordered_map<std::string, InputData> loadedInputs;
+   std::map<bs::Address, InputData> loadedInputs;
+   for (const auto &utxo : usedInputs) {
+      const auto &address = bs::Address::fromUTXO(utxo);
 
-   for (const auto& utx : usedInputs) {
-      const auto address = bs::Address::fromUTXO(utx);
-      const auto addrStr = address.display();
-
-      auto it = loadedInputs.find(addrStr);
+      auto it = loadedInputs.find(address);
       if (it == loadedInputs.end()) {
-         loadedInputs.emplace(addrStr
-            , InputData{QString::fromStdString(addrStr), 1, UiUtils::amountToBtc(utx.getValue())} );
+         loadedInputs[address] = { QString::fromStdString(address.display()), 1
+            , UiUtils::amountToBtc(utxo.getValue()) };
       } else {
          it->second.txCount++;
-         it->second.balance += UiUtils::amountToBtc(utx.getValue());
+         it->second.balance += UiUtils::amountToBtc(utxo.getValue());
       }
    }
 

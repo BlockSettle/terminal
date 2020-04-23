@@ -19,14 +19,13 @@
 #include "ArmoryServersProvider.h"
 
 namespace {
-   const char *kLicenseFilePath = "://resources/license.txt";
+   const char *kLicenseFilePath = "://resources/license.html";
    const QString kLicenseAgreementTitle = QObject::tr("License Agreement");
    const QString kEnvConnectivityTitle = QObject::tr("BlockSettle Environment");
 
    const QString kOkButton = QObject::tr("Ok");
    const QString kCancelButton = QObject::tr("Cancel");
    const QString kAgreeButton = QObject::tr("Agree");
-   const QString kBackButton = QObject::tr("Back");
    const QString kDoneButton = QObject::tr("Continue");
 
    const QString kNetworkType = QObject::tr("ENVIRONMENT");
@@ -51,7 +50,7 @@ StartupDialog::StartupDialog(bool showLicense, QWidget *parent) :
 
    QString licenseText = QString::fromUtf8(file.readAll());
 
-   ui_->textBrowserLicense->setPlainText(licenseText);
+   ui_->textBrowserLicense->setHtml(licenseText);
    setupConnectivityList();
    updateStatus();
 }
@@ -158,7 +157,7 @@ void StartupDialog::updateStatus()
       break;
 
    case Pages::Settings:
-      ui_->pushButtonBack->setText(kBackButton);
+      ui_->pushButtonBack->hide();
       ui_->pushButtonNext->setText(kDoneButton);
       break;
    }

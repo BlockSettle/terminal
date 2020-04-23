@@ -118,6 +118,7 @@ private:
 
    void tryInitChatView();
    void tryLoginIntoChat();
+   void resetChatKeys();
    void tryGetChatKeys();
 
    void UpdateMainWindowAppearence();
@@ -156,6 +157,7 @@ private slots:
 
    void onTabWidgetCurrentChanged(const int &index);
    void onSyncWallets();
+   void onSignerVisibleChanged();
 
 private:
    std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
@@ -255,7 +257,6 @@ private:
 
    void setupShortcuts();
 
-   void createAdvancedTxDialog(const std::string &selectedWalletId);
    void createAuthWallet(const std::function<void()> &);
 
    bool isUserLoggedIn() const;
@@ -267,13 +268,17 @@ private:
 
    void promoteToPrimaryIfNeeded();
 
-   void promptToCreateAccountIfNeeded();
+   void disableCreateTestAccountPrompt();
+   void promptToCreateTestAccountIfNeeded();
+
+   void showLegacyWarningIfNeeded();
 
    void promptSwitchEnv(bool prod);
    void switchToTestEnv();
    void switchToProdEnv();
 
    void restartTerminal();
+   void processDeferredDialogs();
 
 private:
    enum class ChatInitState

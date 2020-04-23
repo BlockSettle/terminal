@@ -1628,11 +1628,12 @@ void OtcClient::changePeerStateWithoutUpdate(Peer *peer, State state)
 
    switch (state)
    {
-   case bs::network::otc::State::Idle:
-   case bs::network::otc::State::Blacklisted:
-      releaseReservation(peer);
-   default:
-      break;
+      case bs::network::otc::State::Idle:
+      case bs::network::otc::State::Blacklisted:
+         releaseReservation(peer);
+         break;
+      default:
+         break;
    }
 }
 
@@ -1651,6 +1652,9 @@ void OtcClient::resetPeerStateToIdle(Peer *peer)
 
    changePeerStateWithoutUpdate(peer, State::Idle);
    auto request = std::move(peer->request);
+   if (!peer->settlementId.empty()) {
+      deals_.erase(peer->settlementId);
+   }
    *peer = Peer(peer->contactId, peer->type);
    peer->request = std::move(request);
    emit peerUpdated(peer);
@@ -1773,5 +1777,8 @@ void OtcClient::initTradesArgs(bs::tradeutils::Args &args, Peer *peer, const std
    args.cpAuthPubKey = peer->authPubKey;
    args.armory = armory_;
    args.signContainer = signContainer_;
-   args.feeRatePb_ = utxoReservationManager_->feeRatePb();
+   // utxoReservationManager_ is null in unit tests
+   if (utxoReservationManager_) {
+      args.feeRatePb_ = utxoReservationManager_->feeRatePb();
+   }
 }

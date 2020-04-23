@@ -20,6 +20,7 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QVariant>
+#include <QTimer>
 
 TrezorClient::TrezorClient(const std::shared_ptr<ConnectionManager>& connectionManager,
    std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet, QObject* parent /*= nullptr*/)
@@ -42,6 +43,9 @@ void TrezorClient::initConnection(AsyncCallBack&& cb)
       if (!reply || reply->error() != QNetworkReply::NoError) {
          connectionManager_->GetLogger()->error(
             "[TrezorClient] initConnection - Network error : " + reply->errorString().toUtf8());
+         if (cbCopy) {
+            cbCopy();
+         }
          return;
       }
 
@@ -68,7 +72,7 @@ void TrezorClient::initConnection(AsyncCallBack&& cb)
    };
 
    connectionManager_->GetLogger()->info("[TrezorClient] Initialize connection");
-   postToTrezor("/", std::move(initCallBack));
+   postToTrezor("/", std::move(initCallBack), true);
 }
 
 void TrezorClient::initConnection(QString&& deviceId, AsyncCallBackCall&& cb /*= nullptr*/)
@@ -116,9 +120,9 @@ void TrezorClient::releaseConnection(AsyncCallBack&& cb)
 
 }
 
-void TrezorClient::postToTrezor(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb)
+void TrezorClient::postToTrezor(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb, bool timeout /* = false */)
 {
-   post(std::move(urlMethod), std::move(cb), QByteArray());
+   post(std::move(urlMethod), std::move(cb), QByteArray(), timeout);
 }
 
 void TrezorClient::postToTrezorInput(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb, QByteArray&& input)
@@ -261,7 +265,7 @@ void TrezorClient::acquireDevice(AsyncCallBack&& cb)
       state_ = State::Acquired;
       emit deviceReady();
 
-      trezorDevice_ = { new TrezorDevice(connectionManager_, walletManager_, testNet_, { this }, this) };
+      trezorDevice_ = new TrezorDevice(connectionManager_, walletManager_, testNet_, { this }, this) ;
       trezorDevice_->init(std::move(cbCopy));
 
       reply->deleteLater();
@@ -274,7 +278,7 @@ void TrezorClient::acquireDevice(AsyncCallBack&& cb)
    postToTrezor(std::move(acquireUrl), std::move(acquireCallback));
 }
 
-void TrezorClient::post(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb, QByteArray&& input)
+void TrezorClient::post(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb, QByteArray&& input, bool timeout /* = false*/)
 {
    QNetworkRequest request;
    request.setRawHeader({ "Origin" }, { blocksettleOrigin });
@@ -285,11 +289,23 @@ void TrezorClient::post(QByteArray&& urlMethod, std::function<void(QNetworkReply
    }
 
    QNetworkReply *reply = connectionManager_->GetNAM()->post(request, input);
-   connect(reply, &QNetworkReply::finished, this, [cbCopy = std::move(cb), repCopy = reply, sender = QPointer<TrezorClient>(this)]{
+   auto connection = connect(reply, &QNetworkReply::finished, this, [cbCopy = cb, repCopy = reply, sender = QPointer<TrezorClient>(this)]{
       if (!sender) {
          return; // TREZOR client already destroyed
       }
 
       cbCopy(repCopy);
+      repCopy->deleteLater();
    });
+
+   // Timeout
+   if (timeout) {
+      QTimer::singleShot(2000, [replyCopy = QPointer<QNetworkReply>(reply)]() {
+         if (!replyCopy) {
+            return;
+         }
+         replyCopy->abort();
+      });
+   }
+
 }

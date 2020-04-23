@@ -46,9 +46,6 @@ namespace {
    const QString kReservedBalance = QLatin1String("Reserved input balance");
    const QString kAvailableBalance = QLatin1String("Available balance");
 
-   // We reserved another 20% to allow user trade within it
-   const double kReplyQuantityMultiplier = 1.2;
-
    constexpr auto kBuySortOrder = bs::core::wallet::OutputSortOrder{
       bs::core::wallet::OutputOrderType::Recipients,
       bs::core::wallet::OutputOrderType::PrevState,
@@ -711,17 +708,20 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                   (const std::map<UTXO, std::string> &inputs)
                {
                   QMetaObject::invokeMethod(this, [this, feePerByte, qrn, replyData, spendVal, spendWallet, isSpendCC, inputs, price] {
-                     const auto &cbChangeAddr = [this, feePerByte, qrn, replyData, spendVal, spendWallet, inputs, price]
+                     const auto &cbChangeAddr = [this, feePerByte, qrn, replyData, spendVal, spendWallet, inputs, price, isSpendCC]
                         (const bs::Address &changeAddress)
                      {
                         try {
                            const auto recipient = bs::Address::fromAddressString(qrn.requestorRecvAddress).getRecipient(bs::XBTAmount{ spendVal });
 
-                           logger_->debug("[cbFee] {} input[s], fpb={}, recip={}, prevPart={}", inputs.size(), feePerByte
-                              , bs::Address::fromAddressString(qrn.requestorRecvAddress).display(), qrn.requestorAuthPublicKey);
-                           const auto outSortOrder = (qrn.side == bs::network::Side::Buy) ? kBuySortOrder : kSellSortOrder;
-                           const auto txReq = walletsManager_->createPartialTXRequest(spendVal, inputs, changeAddress, feePerByte
-                              , { recipient }, outSortOrder, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false);
+                           const auto outSortOrder = isSpendCC ? kBuySortOrder : kSellSortOrder;
+                           const auto txReq = walletsManager_->createPartialTXRequest(spendVal, inputs, changeAddress
+                              , isSpendCC ? 0 : feePerByte, { recipient }, outSortOrder
+                              , BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false);
+                           logger_->debug("[RFQDealerReply::submitReply] {} input[s], fpb={}, recip={}, "
+                              "change amount={}, prevPart={}", inputs.size(), feePerByte
+                              , bs::Address::fromAddressString(qrn.requestorRecvAddress).display()
+                              , txReq.change.value, qrn.requestorAuthPublicKey);
                            replyData->qn.transactionData = txReq.serializeState().toHexStr();
                            replyData->utxoRes = utxoReservationManager_->makeNewReservation(txReq.inputs, replyData->qn.quoteRequestId);
                            submit(price, replyData);
@@ -747,8 +747,6 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
 
                // Try to reset current reservation if needed when user sends another quote
                resetCurrentReservationCb_(replyData);
-
-
 
                if (isSpendCC) {
                   const auto  inputsWrapCb = [inputsCb, ccWallet](const std::vector<UTXO> &utxos) {
@@ -1140,7 +1138,7 @@ void bs::ui::RFQDealerReply::reserveBestUtxoSetAndSubmit(double quantity, double
    else {
       xbtQuantity = XBTAmount(quantity).GetValue();
    }
-   xbtQuantity *= kReplyQuantityMultiplier;
+   xbtQuantity = static_cast<uint64_t>(xbtQuantity * tradeutils::reservationQuantityMultiplier());
 
    auto cbBestUtxoSet = [rfqReply = QPointer<bs::ui::RFQDealerReply>(this),
       replyRFQ = std::move(replyRFQWrapper)](std::vector<UTXO>&& utxos) {

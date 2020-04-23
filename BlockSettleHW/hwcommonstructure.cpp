@@ -12,13 +12,26 @@
 #include "hwcommonstructure.h"
 using namespace bs::hd;
 
-Path getDerivationPath(bool testNet, bool isNestedSegwit)
+Path getDerivationPath(bool testNet, Purpose element)
 {
-   auto element = isNestedSegwit ? Purpose::Nested : Purpose::Native;
-
    Path path;
    path.append(hardFlag | element);
    path.append(testNet ? CoinType::Bitcoin_test : CoinType::Bitcoin_main);
    path.append(hardFlag);
    return path;
+}
+
+bool isNestedSegwit(const bs::hd::Path& path)
+{
+   return path.get(0) == (bs::hd::Purpose::Nested | bs::hd::hardFlag);
+}
+
+bool isNativeSegwit(const bs::hd::Path& path)
+{
+   return path.get(0) == (bs::hd::Purpose::Native | bs::hd::hardFlag);
+}
+
+bool isNonSegwit(const bs::hd::Path& path)
+{
+   return path.get(0) == (bs::hd::Purpose::NonSegWit | bs::hd::hardFlag);
 }

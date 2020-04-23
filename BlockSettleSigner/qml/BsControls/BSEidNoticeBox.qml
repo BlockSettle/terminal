@@ -15,6 +15,8 @@ import QtQuick.Layouts 1.0
 import "../StyledControls"
 import "../BsStyles"
 
+// NOTE: Make sure that BSEidNoticeBox size is less than sizes of WalletCreateDialog, WalletImportDialog, WalletManageEncryptionDialog.
+// We don't resize root window in light mode to prevent ugly size jumps.
 
 BSMessageBox {
     id: root
@@ -27,8 +29,6 @@ you can download Auth eID on your mobile device and encrypt your wallet with a d
 
     acceptable: true
     cancelButtonVisible: false
-    width: 410
-    height: 550
 
     messageDialogContentItem: ColumnLayout {
         Layout.leftMargin: 72

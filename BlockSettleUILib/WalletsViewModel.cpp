@@ -262,9 +262,9 @@ public:
 
    std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const override { return wallets_; }
 
-   void addLeaves(const std::vector<std::shared_ptr<bs::sync::Wallet>> &leaves) {
+   void addLeaves(const std::vector<std::shared_ptr<bs::sync::hd::Leaf>> &leaves) {
       for (const auto &leaf : leaves) {
-         if (viewModel_->showRegularWallets() && (leaf->type() != bs::core::wallet::Type::Bitcoin)) {
+         if (viewModel_->showRegularWallets() && (leaf->type() != bs::core::wallet::Type::Bitcoin || leaf->purpose() == bs::hd::Purpose::NonSegWit)) {
             continue;
          }
          const auto leafNode = new WalletLeafNode(viewModel_, leaf, hdWallet_, nbChildren(), this);
@@ -284,7 +284,7 @@ void WalletRootNode::addGroups(const std::vector<std::shared_ptr<bs::sync::hd::G
       const auto groupNode = new WalletGroupNode(viewModel_, hdWallet_, group->name(), group->description()
          , getNodeType(group->type()), nbChildren(), this);
       add(groupNode);
-      groupNode->addLeaves(group->getAllLeaves());
+      groupNode->addLeaves(group->getLeaves());
    }
 }
 
@@ -301,10 +301,9 @@ WalletsViewModel::WalletsViewModel(const std::shared_ptr<bs::sync::WalletsManage
    rootNode_ = std::make_shared<WalletNode>(this, WalletNode::Type::Root);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, [this](std::string) { onWalletChanged(); });
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::blockchainEvent, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::invalidatedZCs, [this](const std::set<BinaryData> &) {
-      onWalletChanged(); });
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::invalidatedZCs, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::newWalletAdded, this, &WalletsViewModel::onNewWalletAdded);
 

@@ -40,6 +40,7 @@ CustomTitleDialogWindowWithExpander {
 
     // expanding
     property bool isExpanded: false
+    property string hwDeviceStatus: qsTr("Searching for device")
     onHeaderButtonClicked: {
         isExpanded = !isExpanded
         signerSettings.defaultSettlDialogExpandedState = isExpanded
@@ -164,14 +165,27 @@ CustomTitleDialogWindowWithExpander {
 
     Connections {
         target: hwDeviceManager
-        onRequestPinMatrix: JsHelper.showPinMatrix(0);
+        onRequestPinMatrix: JsHelper.showHwPinMatrix(0);
         onDeviceReady: hwDeviceManager.signTX(passwordDialogData.TxRequest);
-        onDeviceNotFound: hwDeviceStatus = qsTr("Cannot find device paired with this wallet, device label is :\n") + walletInfo.name;
+        onDeviceNotFound: {
+            hwDeviceStatus = qsTr("Searching for device")
+            delayScanDevice.start();
+        }
         onDeviceTxStatusChanged: hwDeviceStatus = status;
         onTxSigned: {
             passwordData.binaryPassword = signData
             passwordData.encType = QPasswordData.Hardware
             acceptAnimated();
+        }
+        onCancelledOnDevice: rejectAnimated()
+    }
+
+    Timer {
+        id: delayScanDevice
+        interval: 2000
+        repeat: false
+        onTriggered: {
+            hwDeviceManager.prepareHwDeviceForSign(walletInfo.walletId)
         }
     }
 
@@ -481,6 +495,24 @@ CustomTitleDialogWindowWithExpander {
                     signal expired()
                 }
 
+                RowLayout {
+                    spacing: 25
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 10
+                    Layout.rightMargin: 10
+                    visible: walletInfo.encType === QPasswordData.Hardware
+
+                    CustomLabel {
+                        Layout.fillWidth: true
+                        text: qsTr("Hardware Security Module")
+                    }
+
+                    CustomLabel {
+                        Layout.alignment: Qt.AlignRight
+                        text: hwDeviceStatus
+                    }
+                }
+
                 CustomProgressBar {
                     Layout.minimumHeight: 6
                     Layout.preferredHeight: 6
@@ -510,7 +542,8 @@ CustomTitleDialogWindowWithExpander {
             CustomButton {
                 id: btnCancel
                 text: qsTr("Cancel")
-                anchors.left: parent.left
+                anchors.left: walletInfo.encType !== QPasswordData.Hardware ? parent.left : undefined
+                anchors.right: walletInfo.encType === QPasswordData.Hardware ? parent.right : undefined
                 anchors.bottom: parent.bottom
                 onClicked: {
                     rejectAnimated()
