@@ -476,17 +476,7 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       auto address = bs::Address::fromUTXO(utxo);
       const auto purp = bs::hd::purpose(address.getType());
 
-      std::string addrIndex;
-      for (const auto &walletId : currentTxSignReq_->walletIds) {
-         auto wallet = walletManager_->getWalletById(walletId);
-         addrIndex = wallet->getAddressIndex(address);
-         if (!addrIndex.empty()) {
-            break;
-         }
-      }
-      if (addrIndex.empty()) {
-         throw std::logic_error(fmt::format("can't find input address index for '{}'", address.display()));
-      }
+      std::string addrIndex = currentTxSignReq_->inputIndices.at(index);
 
       auto path = getDerivationPath(testNet_, purp);
       path.append(bs::hd::Path::fromString(addrIndex));
