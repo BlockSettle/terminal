@@ -102,7 +102,7 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Submit an Authentication Address for access to XBT products.</string>
+            <string>Submit an Authentication Address for access to trading in XBT products.</string>
            </property>
            <property name="textFormat">
             <enum>Qt::PlainText</enum>
