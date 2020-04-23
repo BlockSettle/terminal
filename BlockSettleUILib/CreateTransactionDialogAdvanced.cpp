@@ -606,6 +606,7 @@ void CreateTransactionDialogAdvanced::onOutputsClicked(const QModelIndex &index)
       currentAddress_ = transactionData_->GetRecipientAddress(outputId);
       ui_->lineEditAddress->setText(QString::fromStdString(currentAddress_.display()));
       ui_->lineEditAmount->setText(UiUtils::displayAmount(transactionData_->GetRecipientAmount(outputId)));
+      ui_->lineEditAmount->setFocus();
       updateOutputButtonTitle();
    }
 }
