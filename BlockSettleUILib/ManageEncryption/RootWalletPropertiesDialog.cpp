@@ -106,7 +106,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
    ui_->manageEncryptionButton->setEnabled(false);
 
    if (signingContainer_) {
-      if (signingContainer_->isOffline() || walletInfo_.isHardwareWallet()) {
+      if (signingContainer_->isOffline()) {
          ui_->backupButton->setEnabled(false);
          ui_->manageEncryptionButton->setEnabled(false);
       }
