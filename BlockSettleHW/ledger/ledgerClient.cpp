@@ -72,6 +72,11 @@ QPointer<LedgerDevice> LedgerClient::getDevice(const QString& deviceId)
    return nullptr;
 }
 
+QString LedgerClient::lastScanError() const
+{
+   return lastScanError_;
+}
+
 void LedgerClient::scanDevices(AsyncCallBack&& cb)
 {
    availableDevices_.clear();
@@ -106,6 +111,14 @@ void LedgerClient::scanDevices(AsyncCallBack&& cb)
       }
    }
    else {
-      availableDevices_[0]->init(std::move(cb));
+      auto cbSaveScanError = [caller = QPointer<LedgerClient>(this), cbCopy = std::move(cb)]() {
+         caller->lastScanError_ = caller->availableDevices_[0]->lastError();
+
+         if (cbCopy) {
+            cbCopy();
+         }
+      };
+
+      availableDevices_[0]->init(std::move(cbSaveScanError));
    }
 }

@@ -58,6 +58,7 @@ public:
 
    // Info asked from UI
    Q_INVOKABLE bool awaitingUserAction(int deviceIndex);
+   Q_INVOKABLE QString lastDeviceError();
 
 signals:
    void devicesChanged();
@@ -90,6 +91,7 @@ public:
    bool testNet_{};
    bool isScanning_{};
    bool isSigning_{};
+   QString lastOperationError_;
 };
 
 #endif // HWDEVICESCANNER_H

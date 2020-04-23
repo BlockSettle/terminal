@@ -61,6 +61,9 @@ public:
    bool isBlocked() override {
       return isBlocked_;
    }
+   QString lastError() override {
+      return lastError_;
+   }
 
 private:
    QPointer<LedgerCommandThread> blankCommand(AsyncCallBackCall&& cb = nullptr);
@@ -73,6 +76,7 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletManager_;
    QPointer<LedgerCommandThread> commandThread_;
    bool isBlocked_{};
+   QString lastError_{};
    
    std::string xpubRoot_;
 };

@@ -38,11 +38,16 @@ public:
 
    QPointer<LedgerDevice> getDevice(const QString& deviceId);
 
+   QString lastScanError() const;
+
 private:
    QVector<QPointer<LedgerDevice>> availableDevices_;
    bool testNet_;
+   QString lastScanError_;
+
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<bs::sync::WalletsManager> walletManager_;
+
 };
 
 #endif // LEDGERCLIENT_H

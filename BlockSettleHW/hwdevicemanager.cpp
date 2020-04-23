@@ -123,6 +123,7 @@ void HwDeviceManager::prepareHwDeviceForSign(QString walletId)
 
          auto devices = caller->ledgerClient_->deviceKeys();
          if (devices.empty()) {
+            caller->lastOperationError_ = caller->ledgerClient_->lastScanError();
             caller->deviceNotFound(QString::fromStdString(deviceId));
             return;
          }
@@ -138,6 +139,10 @@ void HwDeviceManager::prepareHwDeviceForSign(QString walletId)
          }
 
          if (!found) {
+            if (!devices.isEmpty()) {
+               caller->lastOperationError_ = caller->getDevice(devices.front())->lastError();
+            }
+
             caller->deviceNotFound(QString::fromStdString(deviceId));
          }  
          else {
@@ -201,6 +206,7 @@ void HwDeviceManager::signTX(QVariant reqTX)
    connect(device, &HwDeviceInterface::requestForRescan,
       this, [this]() {
       auto deviceInfo = model_->getDevice(0);
+      lastOperationError_ = getDevice(deviceInfo)->lastError();
       emit deviceNotFound(deviceInfo.deviceId_);
    }, Qt::UniqueConnection);
 }
@@ -212,8 +218,17 @@ void HwDeviceManager::releaseDevices()
 
 bool HwDeviceManager::awaitingUserAction(int deviceIndex)
 {
+   if (model_->rowCount() <= deviceIndex) {
+      return false;
+   }
+
    auto device = getDevice(model_->getDevice(deviceIndex));
    return device && device->isBlocked();
+}
+
+QString HwDeviceManager::lastDeviceError()
+{
+   return lastOperationError_;
 }
 
 void HwDeviceManager::releaseConnection(AsyncCallBack&& cb/*= nullptr*/)

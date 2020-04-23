@@ -297,6 +297,7 @@ QPointer<LedgerCommandThread> LedgerDevice::blankCommand(AsyncCallBackCall&& cb 
          break;
       }
 
+      caller->lastError_ = error;
       caller->operationFailed(error);
    });
    connect(commandThread_, &LedgerCommandThread::finished, commandThread_, &QObject::deleteLater);

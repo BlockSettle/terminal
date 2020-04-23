@@ -43,6 +43,7 @@ public:
 
    // State
    virtual bool isBlocked() = 0;
+   virtual QString lastError() { return {}; };
 
 signals:
    // operation result informing
