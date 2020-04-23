@@ -1,14 +1,27 @@
 {
-   "latest_version": "0.26.2",
-   "release_date": "14 Apr 2020",
+   "latest_version": "0.89.0",
+   "release_date": "23 Apr 2020",
    "changes": [
+      {
+         "version_string": "0.89.0",
+         "previous_version": "0.26.2",
+         "release_date": "23 Apr 2020",
+         "release_type": "dev",
+         "improvements": [
+            "Improved support for Trezor and Ledger hardware wallets"
+         ],
+         "bug_fixes": [
+            "Multipl UI fixes"
+         ],
+         "revision": "fe308be6a",
+         "common_revision": "0432fb20"
+      },
       {
          "version_string": "0.26.2",
          "previous_version": "0.26.1",
          "release_date": "14 Apr 2020",
          "release_type": "prod",
-         "improvements": [
-         ],
+         "improvements": [],
          "bug_fixes": [
             "Spend limit fixes"
          ],
