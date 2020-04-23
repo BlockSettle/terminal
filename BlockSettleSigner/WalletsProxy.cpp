@@ -249,6 +249,10 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
                failCallback("unexpected error");
                return;
             }
+
+            QFileInfo info(filePath);
+            QString lockFilePath = info.path() + QDir::separator() + info.baseName() + QStringLiteral(".lmdb-lock");
+            QFile::remove(lockFilePath);
          }
 
          successCallback();
