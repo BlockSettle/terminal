@@ -220,23 +220,35 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
    if (walletsMgr_->isWatchingOnly(walletId.toStdString())) {
       SPDLOG_LOGGER_DEBUG(logger_, "copy WO from WO wallet to '{}'", filePath.toStdString());
 
-      adapter_->exportWoWallet(walletId.toStdString(), [walletId, successCallback, failCallback, filePath](const BinaryData &content) {
+      bool isHw = walletsMgr_->getHDWalletById(walletId.toStdString())->isHardwareWallet();
+      adapter_->exportWoWallet(walletId.toStdString(), [this, walletId, successCallback, failCallback, filePath, isHw](const BinaryData &content) {
          if (content.empty()) {
             failCallback("can't read WO file");
             return;
          }
 
-         QFile f(filePath);
-         bool result = f.open(QIODevice::WriteOnly);
-         if (!result) {
-            failCallback("can't open output file");
-            return;
+         {  QFile f(filePath);
+            bool result = f.open(QIODevice::WriteOnly);
+            if (!result) {
+               failCallback("can't open output file");
+               return;
+            }
+            auto size = f.write(reinterpret_cast<const char*>(content.getPtr()), int(content.getSize()));
+            if (size != int(content.getSize())) {
+               failCallback("write failed");
+               return;
+            }
          }
 
-         auto size = f.write(reinterpret_cast<const char*>(content.getPtr()), int(content.getSize()));
-         if (size != int(content.getSize())) {
-            failCallback("write failed");
-            return;
+         if (isHw) {
+            try {
+               bs::core::hd::Wallet wallet(filePath.toStdString(), NetworkType::TestNet);
+               wallet.convertHardwareToWo();
+            } catch (const std::exception &e) {
+               SPDLOG_LOGGER_ERROR(logger_, "converting HW to WO wallet failed: {}", e.what());
+               failCallback("unexpected error");
+               return;
+            }
          }
 
          successCallback();
