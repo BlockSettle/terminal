@@ -60,6 +60,7 @@ namespace Ledger {
    const qint32 SW_UNKNOWN = 0x6D00;
    const qint32 SW_NO_ENVIRONMENT = 0x6982;
    const qint32 SW_CANCELED_BY_USER = 0x6985;
+   const qint32 SW_RECONNECT_DEVICE = 0x6FAA;
    const qint32 NO_DEVICE = -1;
    const qint32 NO_INPUTDATA = -2;
    const qint32 INTERNAL_ERROR = -3;
@@ -191,6 +192,7 @@ namespace HWInfoStatus {
    const QString kErrorNoDevice = QObject::tr("No device found");
    const QString kErrorInternalError = QObject::tr("Internal error");
    const QString kErrorNoEnvironment = QObject::tr("Please make sure you device is ready for using");
+   const QString kErrorReconnectDevice= QObject::tr("Internal device error, please reconnect device to system");
 }
 
 #endif // LEDGERSTRUCTURE_H

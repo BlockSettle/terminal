@@ -263,6 +263,8 @@ QPointer<LedgerCommandThread> LedgerDevice::blankCommand(AsyncCallBackCall&& cb 
       if (!caller) {
          return;
       }
+
+      caller->isBlocked_ = (info == HWInfoStatus::kPressButton);
       caller->deviceTxStatusChanged(info);
    });
    connect(commandThread_, &LedgerCommandThread::error, this, [caller = QPointer<LedgerDevice>(this)](qint32 errorCode) {
@@ -284,6 +286,10 @@ QPointer<LedgerCommandThread> LedgerDevice::blankCommand(AsyncCallBackCall&& cb 
       case Ledger::NO_DEVICE:
          caller->requestForRescan();
          error = HWInfoStatus::kErrorNoDevice;
+         break;
+      case Ledger::SW_RECONNECT_DEVICE:
+         caller->requestForRescan();
+         error = HWInfoStatus::kErrorReconnectDevice;
          break;
       case Ledger::NO_INPUTDATA:
       default:
@@ -809,6 +815,7 @@ void LedgerCommandThread::finalizeInputFull()
    }
 
    emit info(HWInfoStatus::kPressButton);
+
    for (auto &outputCommand : outputCommands) {
       QByteArray responseOutput;
       if (!exchangeData(outputCommand, responseOutput, "[LedgerCommandThread] finalizeInputFull - outputPayload ")) {

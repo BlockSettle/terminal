@@ -210,6 +210,12 @@ void HwDeviceManager::releaseDevices()
    releaseConnection();
 }
 
+bool HwDeviceManager::awaitingUserAction(int deviceIndex)
+{
+   auto device = getDevice(model_->getDevice(deviceIndex));
+   return device && device->isBlocked();
+}
+
 void HwDeviceManager::releaseConnection(AsyncCallBack&& cb/*= nullptr*/)
 {
    for (int i = 0; i < model_->rowCount(); ++i) {

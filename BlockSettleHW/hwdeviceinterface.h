@@ -41,6 +41,9 @@ public:
    virtual void setMatrixPin(const std::string& pin) {};
    virtual void setPassword(const std::string& password) {};
 
+   // State
+   virtual bool isBlocked() = 0;
+
 signals:
    // operation result informing
    void publicKeyReady();

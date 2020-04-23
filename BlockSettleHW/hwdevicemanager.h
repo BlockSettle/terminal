@@ -36,6 +36,7 @@ class HwDeviceManager : public QObject
    Q_OBJECT
    Q_PROPERTY(HwDeviceModel* devices READ devices NOTIFY devicesChanged)
    Q_PROPERTY(bool isScanning READ isScanning NOTIFY isScanningChanged)
+
 public:
    HwDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager,
       std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet, QObject* parent = nullptr);
@@ -45,17 +46,18 @@ public:
    HwDeviceModel* devices();
    bool isScanning() const;
 
-   ///
+   // Actions from UI
    Q_INVOKABLE void scanDevices();
    Q_INVOKABLE void requestPublicKey(int deviceIndex);
    Q_INVOKABLE void setMatrixPin(int deviceIndex, QString pin);
    Q_INVOKABLE void setPassphrase(int deviceIndex, QString passphrase);
    Q_INVOKABLE void cancel(int deviceIndex);
-
    Q_INVOKABLE void prepareHwDeviceForSign(QString walletId);
    Q_INVOKABLE void signTX(QVariant reqTX);
-
    Q_INVOKABLE void releaseDevices();
+
+   // Info asked from UI
+   Q_INVOKABLE bool awaitingUserAction(int deviceIndex);
 
 signals:
    void devicesChanged();
@@ -87,6 +89,7 @@ public:
    HwDeviceModel* model_;
    bool testNet_{};
    bool isScanning_{};
+   bool isSigning_{};
 };
 
 #endif // HWDEVICESCANNER_H

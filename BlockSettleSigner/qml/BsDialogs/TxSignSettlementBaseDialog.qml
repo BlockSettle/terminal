@@ -546,7 +546,14 @@ CustomTitleDialogWindowWithExpander {
                 anchors.right: walletInfo.encType === QPasswordData.Hardware ? parent.right : undefined
                 anchors.bottom: parent.bottom
                 onClicked: {
-                    rejectAnimated()
+                    if (walletInfo.encType === QPasswordData.Hardware &&
+                            hwDeviceManager.awaitingUserAction(0)) {
+                        let warning = JsHelper.showDropHwDeviceMessage();
+                        warning.bsAccepted.connect(function(){ rejectAnimated() })
+                    }
+                    else {
+                        rejectAnimated();
+                    }
                 }
             }
 
