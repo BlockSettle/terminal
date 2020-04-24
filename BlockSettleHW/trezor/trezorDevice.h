@@ -66,6 +66,12 @@ public:
    void setMatrixPin(const std::string& pin) override;
    void setPassword(const std::string& password) override;
 
+   // State
+   bool isBlocked() override {
+      // There is no blocking state for Trezor
+      return false;
+   }
+
 private:
    void makeCall(const google::protobuf::Message &msg);
 

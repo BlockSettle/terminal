@@ -169,6 +169,10 @@ CustomTitleDialogWindowWithExpander {
         onDeviceReady: hwDeviceManager.signTX(passwordDialogData.TxRequest);
         onDeviceNotFound: {
             hwDeviceStatus = qsTr("Searching for device")
+            let lastDeviceError = hwDeviceManager.lastDeviceError(0);
+            if (lastDeviceError.length > 0) {
+                hwDeviceStatus += '(error: '+ lastDeviceError + ')'
+            }
             delayScanDevice.start();
         }
         onDeviceTxStatusChanged: hwDeviceStatus = status;
@@ -503,12 +507,12 @@ CustomTitleDialogWindowWithExpander {
                     visible: walletInfo.encType === QPasswordData.Hardware
 
                     CustomLabel {
-                        Layout.fillWidth: true
                         text: qsTr("Hardware Security Module")
                     }
 
                     CustomLabel {
-                        Layout.alignment: Qt.AlignRight
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignRight
                         text: hwDeviceStatus
                     }
                 }
@@ -546,7 +550,14 @@ CustomTitleDialogWindowWithExpander {
                 anchors.right: walletInfo.encType === QPasswordData.Hardware ? parent.right : undefined
                 anchors.bottom: parent.bottom
                 onClicked: {
-                    rejectAnimated()
+                    if (walletInfo.encType === QPasswordData.Hardware &&
+                            hwDeviceManager.awaitingUserAction(0)) {
+                        let warning = JsHelper.showDropHwDeviceMessage();
+                        warning.bsAccepted.connect(function(){ rejectAnimated() })
+                    }
+                    else {
+                        rejectAnimated();
+                    }
                 }
             }
 

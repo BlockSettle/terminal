@@ -885,3 +885,12 @@ function showHwPassphrase(deviceIndex) {
 
     return passphrase;
 }
+
+function showDropHwDeviceMessage() {
+    return JsHelper.messageBox(BSMessageBox.Type.Warning
+        , qsTr("Hardware wallet transaction signing")
+        , qsTr("Cancelling transaction on device")
+        , qsTr("The signer cannot force device to drop current transaction data due to device specification." +
+               " Please make sure you will reject data on device manually before next transaction on this device will be started." +
+               " Otherwise further transactions could lead to wrong result."));
+}

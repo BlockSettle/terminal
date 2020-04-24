@@ -58,6 +58,13 @@ public:
       return !xpubRoot_.empty();
    }
 
+   bool isBlocked() override {
+      return isBlocked_;
+   }
+   QString lastError() override {
+      return lastError_;
+   }
+
 private:
    QPointer<LedgerCommandThread> blankCommand(AsyncCallBackCall&& cb = nullptr);
    void cancelCommandThread();
@@ -68,6 +75,8 @@ private:
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<bs::sync::WalletsManager> walletManager_;
    QPointer<LedgerCommandThread> commandThread_;
+   bool isBlocked_{};
+   QString lastError_{};
    
    std::string xpubRoot_;
 };
@@ -90,8 +99,13 @@ public:
    void prepareGetRootKey();
 
 signals:
+   // Done with success
    void resultReady(QVariant const &result);
+
+   // Done with error
    void error(qint32 erroCode);
+
+   // Intermediate state
    void info(QString message);
 
 protected:
