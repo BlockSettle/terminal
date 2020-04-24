@@ -156,7 +156,10 @@ void RFQDialog::logError(bs::error::ErrorCode code, const QString &errorMessage)
    logger_->error("[RFQDialog::logError] {}", errorMessage.toStdString());
 
    if (bs::error::ErrorCode::TxCancelled != code) {
-      MessageBoxBroadcastError(errorMessage, code, this).exec();
+      // Do not use this as the parent as it will be destroyed when RFQDialog is closed
+      QMetaObject::invokeMethod(qApp, [code, errorMessage] {
+         MessageBoxBroadcastError(errorMessage, code).exec();
+      }, Qt::QueuedConnection);
    }
 }
 
