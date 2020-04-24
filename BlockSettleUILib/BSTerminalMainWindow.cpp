@@ -674,6 +674,9 @@ void BSTerminalMainWindow::updateControlEnabledState()
       action_send_->setEnabled(!walletsMgr_->hdWallets().empty()
          && armory_->isOnline() && signContainer_ && signContainer_->isReady());
    }
+   // Do not allow login until wallets synced (we need to check if user has primary wallet or not).
+   // Should be OK for both local and remote signer.
+   ui_->pushButtonUser->setEnabled(walletsSynched_);
 }
 
 bool BSTerminalMainWindow::isMDLicenseAccepted() const
@@ -1988,6 +1991,7 @@ void BSTerminalMainWindow::onSyncWallets()
 
    walletsMgr_->reset();
    walletsMgr_->syncWallets(progressDelegate);
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::onSignerVisibleChanged()
