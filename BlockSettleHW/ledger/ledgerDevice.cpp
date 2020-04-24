@@ -214,18 +214,12 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
 
    // retrieve inputs paths
    std::vector<bs::hd::Path> inputPathes;
-   for (auto &utxo : coreReq.inputs) {
+   for (int i = 0; i < coreReq.inputs.size(); ++i) {
+      const auto &utxo = coreReq.inputs.at(i);
       const auto address = bs::Address::fromUTXO(utxo);
       const auto purp = bs::hd::purpose(address.getType());
 
-      std::string addrIndex;
-      for (const auto &walletId : coreReq.walletIds) {
-         auto wallet = walletManager_->getWalletById(walletId);
-         addrIndex = wallet->getAddressIndex(address);
-         if (!addrIndex.empty()) {
-            break;
-         }
-      }
+      std::string addrIndex = coreReq.inputIndices.at(i);
 
       auto path = getDerivationPath(testNet_, purp);
       path.append(bs::hd::Path::fromString(addrIndex));

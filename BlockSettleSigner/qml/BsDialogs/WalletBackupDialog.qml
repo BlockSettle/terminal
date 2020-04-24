@@ -42,6 +42,7 @@ CustomTitleDialogWindow {
 
     property bool   isPrintable: false
     property bool   acceptable: (walletInfo.encType === QPasswordData.Unencrypted)
+                                    || walletInfo.encType === QPasswordData.Hardware
                                     || walletInfo.encType === QPasswordData.Auth
                                     || walletDetailsFrame.password.length
 
@@ -252,7 +253,9 @@ CustomTitleDialogWindow {
                         }
                     }
 
-                    if (walletInfo.encType === QPasswordData.Password || walletInfo.encType === QPasswordData.Unencrypted) {
+                    if (walletInfo.encType === QPasswordData.Password
+                            || walletInfo.encType === QPasswordData.Unencrypted
+                            || walletInfo.encType === QPasswordData.Hardware) {
                         var passwordData = qmlFactory.createPasswordData()
                         passwordData.textPassword = walletDetailsFrame.password
 
