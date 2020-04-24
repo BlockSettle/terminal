@@ -49,6 +49,12 @@ public:
       , const QString& description, const QString& details
       , QWidget* parent = nullptr);
 
+   BSMessageBox(Type mbType
+      , const QString& title, const QString& text
+      , const QString& description, const QString& details
+      , int forceWidth
+      , QWidget* parent = nullptr);
+
    ~BSMessageBox() override;
    void setConfirmButtonText(const QString &text);
    void setCancelButtonText(const QString &text);

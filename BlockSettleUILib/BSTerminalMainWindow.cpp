@@ -2179,15 +2179,18 @@ void BSTerminalMainWindow::showLegacyWarningIfNeeded()
    }
    applicationSettings_->set(ApplicationSettings::HideLegacyWalletWarning, true);
    addDeferredDialog([this] {
-      BSMessageBox mbox(BSMessageBox::warning
-         , tr("Legacy Wallets ")
+      int forcedWidth = 640;
+      BSMessageBox mbox(BSMessageBox::info
+         , tr("Legacy Wallets")
          , tr("Legacy Address Balances")
-         , tr("We have detected that your hardware wallet holds, or has held, balances on legacy type addresses. "
-              "BlockSettle does not intend to support legacy address types and we strongly "
-              "recommend any balances held on such addresses are moved to native SegWit addresses.\n\n"
+         , tr("The BlockSettle Terminal has detected the use of legacy addresses on your hardware wallet.\n\n"
+              "The BlockSettle Terminal supports viewing and spending from legacy addresses, but will not support the following actions related to these addresses:\n\n"
               "- No GUI support for legacy address generation\n"
-              "- No trading using legacy addresses inputs\n"
-              "- No mixing of input types when spending from legacy addresses")
+              "- No trading using legacy address input\n"
+              "- No mixing of input types when spending from legacy addresses\n\n"
+              "BlockSettle strongly recommends that you move your legacy address balances to native SegWit addresses.")
+         , {}
+         , forcedWidth
          , this);
       mbox.exec();
    });
