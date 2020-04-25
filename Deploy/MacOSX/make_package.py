@@ -32,11 +32,15 @@ def make_project(sourcesRoot):
    result = subprocess.call(command, cwd=wd)
    return result == 0
 
-def sign_single_app(appPath):
+def sign_single_app(appPath, dmg=False):
 
    command = []
 
    command.append('codesign')
+
+   if not dmg:
+       command.append('--options=runtime')
+
    command.append('-s')
    command.append('Developer ID Application: BlockSettle AB (Q47AVPUL6K)')
    command.append(appPath)
@@ -118,7 +122,7 @@ def make_package(sourcesRoot, packagePath):
       return False
 
 def sign_package(packagePath):
-   if not (sign_single_app(packagePath) and check_signature(packagePath)):
+   if not (sign_single_app(packagePath, True) and check_signature(packagePath)):
       print('Failed to sign package')
       return False
 
