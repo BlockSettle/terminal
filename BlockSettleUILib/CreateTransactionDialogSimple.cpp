@@ -142,16 +142,14 @@ QLabel* CreateTransactionDialogSimple::changeLabel() const
 
 void CreateTransactionDialogSimple::onAddressTextChanged(const QString &addressString)
 {
-   bool addrStateOk = true;
+   bs::Address address;
    try {
-      const auto address = bs::Address::fromAddressString(addressString.trimmed().toStdString());
-      addrStateOk = address.isValid() && (address.format() != bs::Address::Format::Hex);
-      if (addrStateOk) {
-         transactionData_->UpdateRecipientAddress(recipientId_, address);
-      }
+      address = bs::Address::fromAddressString(addressString.trimmed().toStdString());
    } catch (...) {
-      addrStateOk = false;
    }
+   bool addrStateOk = address.isValid() && (address.format() != bs::Address::Format::Hex);
+   // Always update address (to make transactionData_ invalid if needed)
+   transactionData_->UpdateRecipientAddress(recipientId_, address);
    UiUtils::setWrongState(ui_->lineEditAddress, !addrStateOk);
    ui_->pushButtonMax->setEnabled(addrStateOk);
 }
