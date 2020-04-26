@@ -77,11 +77,12 @@ bool ChatPartiesSortProxyModel::filterAcceptsRow(int row, const QModelIndex& par
       return false;
    }
 
+   // return true if you want to display tree item
    switch (item->modelType()) {
    case UI::ElementType::Party:
       return true;
    case UI::ElementType::Container:
-      return item->childCount() > 0;
+      return true;
    default:
       return false;
    }
