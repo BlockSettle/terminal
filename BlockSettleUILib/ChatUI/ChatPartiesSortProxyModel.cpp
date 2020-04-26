@@ -107,7 +107,8 @@ bool ChatPartiesSortProxyModel::lessThan(const QModelIndex &left, const QModelIn
          Chat::ClientPartyPtr rightParty = itemRight->data().value<Chat::ClientPartyPtr>();
          return leftParty->displayName() < rightParty->displayName();
       }
-      else if (itemLeft->modelType() == UI::ElementType::Container) {
+      
+      if (itemLeft->modelType() == UI::ElementType::Container) {
          return itemLeft->childNumber() < itemRight->childNumber();
       }
    }
