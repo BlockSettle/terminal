@@ -318,7 +318,7 @@
            <item>
             <widget class="QStackedWidget" name="stackedWidgetMessages">
              <property name="currentIndex">
-              <number>1</number>
+              <number>0</number>
              </property>
              <widget class="QFrame" name="page_6">
               <layout class="QVBoxLayout" name="verticalLayout_3">
