@@ -468,12 +468,52 @@ bool CreateTransactionDialog::BroadcastImportedTx()
 
 void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
 {
-   getChangeAddress([this, cb = std::move(cb), handle = validityFlag_.handle()](bs::Address changeAddress) {
+   getChangeAddress([this, cb = std::move(cb), handle = validityFlag_.handle()](bs::Address changeAddress, std::string changeWalletId) {
       if (!handle.isValid()) {
          return;
       }
       try {
-         auto txReq = transactionData_->createTXRequest(checkBoxRBF()->checkState() == Qt::Checked, changeAddress);
+         // Find changed index
+         std::string changeIndex;
+         if (changeWalletId.empty()) {
+            auto wallet = walletsManager_->getWalletById(changeWalletId);
+            changeIndex = wallet->getAddressIndex(changeAddress);
+         }
+         else {
+            std::vector<std::shared_ptr<bs::sync::Wallet>> wallets;
+            auto group = transactionData_->getGroup();
+            if (group) {
+               wallets = group->getAllLeaves();
+            }
+            else {
+               auto wallet = transactionData_->getWallet();
+               if (wallet) {
+                  auto hdWallet = walletsManager_->getHDRootForLeaf(wallet->walletId());
+                  if (hdWallet) {
+                     auto xbtGroup = hdWallet->getGroup(hdWallet->getXBTGroupType());
+                     wallets = xbtGroup->getAllLeaves();
+                  }
+               }
+            }
+
+            for (const auto &wallet : wallets) {
+               changeIndex = wallet->getAddressIndex(changeAddress);
+               if (!changeIndex.empty()) {
+                  wallet->setAddressComment(changeAddress,
+                     bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::ChangeAddress));
+                  break;
+               }
+            }
+         }
+
+         if (changeIndex.empty()) {
+            SPDLOG_LOGGER_ERROR(logger_, "can't find change address index");
+            cb(false);
+            return;
+         }
+
+         auto txReq = transactionData_->createTXRequest(checkBoxRBF()->checkState() == Qt::Checked
+            , changeAddress, changeIndex);
 
          // grab supporting transactions for the utxo map.
          // required only for legacy wallets (HW-only)

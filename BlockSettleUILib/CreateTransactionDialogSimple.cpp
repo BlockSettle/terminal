@@ -180,15 +180,15 @@ void CreateTransactionDialogSimple::showAdvanced()
    accept();
 }
 
-void CreateTransactionDialogSimple::getChangeAddress(AddressCb cb) const
+void CreateTransactionDialogSimple::getChangeAddress(AddressFullCb cb) const
 {
    if (transactionData_->GetTransactionSummary().hasChange) {
       transactionData_->getWallet()->getNewChangeAddress([cb = std::move(cb)](const bs::Address &addr) {
-         cb(addr);
+         cb(addr, {});
       });
       return;
    }
-   cb({});
+   cb({}, {});
 }
 
 void CreateTransactionDialogSimple::createTransaction()

@@ -101,7 +101,7 @@ protected:
    virtual QLabel *changeLabel() const override;
 
    void onTransactionUpdated() override;
-   void getChangeAddress(AddressCb cb) const override;
+   void getChangeAddress(AddressFullCb cb) const override;
 
    bool HaveSignedImportedTransaction() const override;
 

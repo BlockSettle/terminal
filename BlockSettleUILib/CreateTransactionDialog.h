@@ -94,7 +94,8 @@ protected:
    virtual QLabel* changeLabel() const {return nullptr; }
 
    using AddressCb = std::function<void(const bs::Address&)>;
-   virtual void getChangeAddress(AddressCb) const = 0;
+   using AddressFullCb = std::function<void(const bs::Address&, const std::string&)>;
+   virtual void getChangeAddress(AddressFullCb) const = 0;
 
    virtual void onTransactionUpdated();
 

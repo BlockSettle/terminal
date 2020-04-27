@@ -1056,24 +1056,33 @@ void CreateTransactionDialogAdvanced::feeSelectionChanged(int currentIndex)
    setTxFees();
 }
 
-void CreateTransactionDialogAdvanced::getChangeAddress(AddressCb cb) const
+void CreateTransactionDialogAdvanced::getChangeAddress(AddressFullCb cb) const
 {
    if (transactionData_->GetTransactionSummary().hasChange) {
       if (changeAddressFixed_) {
-         cb(selectedChangeAddress_);
+         cb(selectedChangeAddress_, {});
          return;
       }
       else if (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()) {
          const auto group = transactionData_->getGroup();
          std::shared_ptr<bs::sync::Wallet> wallet;
+         const auto purpose = ui_->radioButtonNewAddrNative->isChecked()
+            ? bs::hd::Purpose::Native : bs::hd::Purpose::Nested;
+         auto path = bs::hd::Path({ purpose
+                  , bs::sync::hd::Wallet::getXBTGroupType(), 0 });
+
          if (group) {
-            const auto purpose = ui_->radioButtonNewAddrNative->isChecked()
-               ? bs::hd::Purpose::Native : bs::hd::Purpose::Nested;
-            wallet = group->getLeaf(bs::hd::Path({ purpose
-               , bs::sync::hd::Wallet::getXBTGroupType(), 0 }));
+            wallet = group->getLeaf(path);
          }
          if (!wallet) {
-            wallet = transactionData_->getWallet();
+            auto hdWallet = walletsManager_->getHDRootForLeaf(transactionData_->getWallet()->walletId());
+            if (!hdWallet) {
+               wallet = transactionData_->getWallet();
+            }
+            else {
+               auto groupXBT = hdWallet->getGroup(hdWallet->getXBTGroupType());
+               wallet = groupXBT->getLeaf(path);
+            }
          }
 
          const auto &cbAddr = [this, cb = std::move(cb), wallet, handle = validityFlag_.handle()](const bs::Address &addr) {
@@ -1085,16 +1094,16 @@ void CreateTransactionDialogAdvanced::getChangeAddress(AddressCb cb) const
             wallet->setAddressComment(addr
                , bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::ChangeAddress));
             transactionData_->getWallet()->syncAddresses();
-            cb(addr);
+            cb(addr, wallet->walletId());
          };
          wallet->getNewChangeAddress(cbAddr);
          return;
       } else {
-         cb(selectedChangeAddress_);
+         cb(selectedChangeAddress_, {});
          return;
       }
    }
-   cb({});
+   cb({}, {});
 }
 
 void CreateTransactionDialogAdvanced::onCreatePressed()
