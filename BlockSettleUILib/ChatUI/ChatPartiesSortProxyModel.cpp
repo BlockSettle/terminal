@@ -81,8 +81,12 @@ bool ChatPartiesSortProxyModel::filterAcceptsRow(int row, const QModelIndex& par
    switch (item->modelType()) {
    case UI::ElementType::Party:
       return true;
-   case UI::ElementType::Container:
+   case UI::ElementType::Container: {
+      if (item->childCount() == 0 && item->data().toString() == ChatModelNames::ContainerTabOTCIdentifier) {
+         return false;
+      }
       return true;
+   }
    default:
       return false;
    }

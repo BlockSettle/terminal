@@ -20,7 +20,6 @@ namespace {
    // Translation
    const QString contextMenuRemoveUser = QObject::tr("Remove from contacts");
    const QString contextMenuEditUser = QObject::tr("Edit contact");
-   const QString contextMenuRemoveRequest = QObject::tr("Remove this request");
    const QString contextMenuAcceptRequest = QObject::tr("Accept friend request");
    const QString contextMenuDeclineRequest = QObject::tr("Decline friend request");
 

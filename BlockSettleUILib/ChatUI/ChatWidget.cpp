@@ -45,6 +45,11 @@
 
 using namespace bs::network;
 
+namespace
+{
+   const QString showHistoryButtonName = QObject::tr("Show History");
+}
+
 ChatWidget::ChatWidget(QWidget* parent)
    : QWidget(parent), ui_(new Ui::ChatWidget)
 {
