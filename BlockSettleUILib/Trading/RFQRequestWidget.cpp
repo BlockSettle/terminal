@@ -26,6 +26,7 @@
 #include "RfqStorage.h"
 #include "WalletSignerContainer.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "Wallets/SyncHDWallet.h"
 #include "UtxoReservationManager.h"
 
 #include "bs_proxy_terminal_pb.pb.h"
@@ -281,6 +282,12 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservat
    connect(this, &RFQRequestWidget::signedPayinRequested, dialog, &RFQDialog::onSignedPayinRequested);
 
    dialog->setAttribute(Qt::WA_DeleteOnClose);
+
+   if (xbtWallet->isHardwareWallet()) {
+      auto walletType = ui_->pageRFQTicket->xbtWalletType();
+      auto purpose = UiUtils::getHwWalletPurpose(walletType);
+      dialog->setHwWalletPurpose(purpose);
+   }
 
    dialogManager_->adjustDialogPosition(dialog);
    dialog->show();

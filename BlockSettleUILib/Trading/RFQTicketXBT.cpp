@@ -919,6 +919,24 @@ std::shared_ptr<bs::sync::hd::Wallet> RFQTicketXBT::xbtWallet() const
    return nullptr;
 }
 
+UiUtils::WalletsTypes RFQTicketXBT::xbtWalletType() const
+{
+   QComboBox* combobox = nullptr;
+   if (getProductToSpend() == UiUtils::XbtCurrency) {
+      combobox = ui_->comboBoxXBTWalletsSend;
+   }
+   if (getProductToRecv() == UiUtils::XbtCurrency) {
+      combobox = ui_->comboBoxXBTWalletsRecv;
+   }
+
+   if (!combobox) {
+      return UiUtils::None;
+   }
+
+   return static_cast<UiUtils::WalletsTypes>(combobox->
+      currentData(UiUtils::WalletType).toInt());
+}
+
 void RFQTicketXBT::onParentAboutToHide()
 {
    fixedXbtInputs_ = {};

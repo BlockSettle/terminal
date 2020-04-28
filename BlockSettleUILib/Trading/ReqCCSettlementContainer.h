@@ -72,6 +72,7 @@ public:
    bool startSigning(QDateTime timestamp);
 
    void setClOrdId(const std::string& clientOrderId);
+   void setHwWalletPurpose(bs::hd::Purpose purpose);
 
 signals:
    void sendOrder();
@@ -125,6 +126,7 @@ private:
    std::map<UTXO, std::string> manualXbtInputs_;
 
    std::string clOrdId_;
+   bs::hd::Purpose hwWalletPurpose_;
 };
 
 #endif // __REQ_CC_SETTLEMENT_CONTAINER_H__

@@ -23,6 +23,7 @@
 #include "UiUtils.h"
 #include "UtxoReservationManager.h"
 #include "WalletSignerContainer.h"
+#include "Wallets/SyncHDWallet.h"
 
 
 RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
@@ -97,6 +98,11 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
 }
 
 RFQDialog::~RFQDialog() = default;
+
+void RFQDialog::setHwWalletPurpose(bs::hd::Purpose purpose)
+{
+   hwPurpose_ = purpose;
+}
 
 void RFQDialog::onOrderFilled(const std::string &quoteId)
 {
@@ -215,6 +221,10 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
    try {
       ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
          , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_, fixedXbtInputs_, utxoReservationManager_, std::move(ccUtxoRes_));
+
+      if (xbtWallet_->isHardwareWallet()) {
+         ccSettlContainer_->setHwWalletPurpose(hwPurpose_);
+      }
 
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::txSigned
          , this, &RFQDialog::onCCTxSigned);

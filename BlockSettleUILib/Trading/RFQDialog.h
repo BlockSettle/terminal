@@ -18,6 +18,7 @@
 #include "CommonTypes.h"
 #include "UtxoReservationToken.h"
 #include "BSErrorCode.h"
+#include "HDPath.h"
 
 namespace Ui {
    class RFQDialog;
@@ -78,6 +79,8 @@ public:
       , RFQRequestWidget* parent = nullptr);
    ~RFQDialog() override;
 
+   // Optional hw wallet purpose to detect correct wallet
+   void setHwWalletPurpose(bs::hd::Purpose purpose);
 protected:
    void reject() override;
 
@@ -142,6 +145,7 @@ private:
 
    QString           ccOrderId_;
    bs::UtxoReservationToken ccUtxoRes_;
+   bs::hd::Purpose hwPurpose_;
 
 };
 

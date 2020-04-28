@@ -266,7 +266,14 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
             xbtLeaves_.front()->getNewChangeAddress(changeAddrCb);
          };
          if (manualXbtInputs_.empty()) {
-            auto utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId());
+            std::vector<UTXO> utxos;
+            if (xbtWallet_->isHardwareWallet()) {
+               utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId(), hwWalletPurpose_);
+            }
+            else {
+               utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId());
+            }
+
             auto fixedUtxo = utxoReservationManager_->convertUtxoToPartialFixedInput(xbtWallet_->walletId(), utxos);
             inputsCb(fixedUtxo.inputs);
          } else {
@@ -388,4 +395,9 @@ std::string ReqCCSettlementContainer::txData() const
 void ReqCCSettlementContainer::setClOrdId(const std::string& clientOrderId)
 {
    clOrdId_ = clientOrderId;
+}
+
+void ReqCCSettlementContainer::setHwWalletPurpose(bs::hd::Purpose purpose)
+{
+   hwWalletPurpose_ = purpose;
 }
