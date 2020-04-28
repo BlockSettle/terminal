@@ -21,6 +21,7 @@
 #include "BTCNumericTypes.h"
 #include "ApplicationSettings.h"
 #include "CommonTypes.h"
+#include "HDPath.h"
 
 QT_BEGIN_NAMESPACE
 class QAbstractItemModel;
@@ -104,6 +105,8 @@ namespace UiUtils
    QString displayDateTime(const QDateTime& datetime);
    QString displayTimeMs(const QDateTime& datetime);
 
+   constexpr int bit(int b) { return 1 << b; }
+
    QString displayAddress(const QString &addr);
    QString displayShortAddress(const QString &addr, const uint maxLength);
    enum WalletDataRole
@@ -118,13 +121,17 @@ namespace UiUtils
 
    enum WalletsTypes : int
    {
-      Full = 0x1,
-      Hardware = 0x2,
-      Hardware_Legacy = 0x4,
-      WatchOnly = 0x8,
+      None = 0,
+      Full = bit(0),
+      WatchOnly = bit(1),
+      HardwareLegacy = bit(2),
+      HardwareNativeSW= bit(3),
+      HardwareNestedSW = bit(4),
 
-      All = Full | Hardware | WatchOnly,
-      All_AllowLegacy = Full | Hardware | Hardware_Legacy | WatchOnly
+      HardwareSW = HardwareNativeSW | HardwareNestedSW,
+      HardwareAll = HardwareSW | HardwareLegacy,
+      All = Full | HardwareSW | WatchOnly,
+      All_AllowHwLegacy = All | HardwareAll
    };
    int fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
       , int walletTypes);
@@ -155,6 +162,8 @@ namespace UiUtils
    extern const QLatin1String XbtCurrency;
 
    double actualXbtPrice(bs::XBTAmount amount, double price);
+
+   bs::hd::Purpose getHwWalletPurpose(WalletsTypes hwType);
 
    //
    // WalletDescriptionValidator

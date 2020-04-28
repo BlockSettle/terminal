@@ -220,23 +220,13 @@ void OTCNegotiationResponseWidget::onAcceptOrUpdateClicked()
       return;
    }
 
-   const auto hdWallet = getCurrentHDWalletFromCombobox(ui_->comboBoxXBTWallets);
-   if (!hdWallet) {
-      return;
-   }
-
-   auto cbUtxoSet = [wdgt = QPointer<OTCNegotiationResponseWidget>(this), signal](std::vector<UTXO>&& utxos) {
-      if (!wdgt) {
-         return;
-      }
-
-      wdgt->setSelectedInputs(utxos);
-      wdgt->setReservation(wdgt->getUtxoManager()->makeNewReservation(utxos));
-      signal.invoke(wdgt);
-   };
-
-   getUtxoManager()->getBestXbtUtxoSet(hdWallet->walletId(), bs::XBTAmount(ui_->quantitySpinBox->value()).GetValue()
-      , std::move(cbUtxoSet), true);
+   submitProposal(ui_->comboBoxXBTWallets, bs::XBTAmount(ui_->quantitySpinBox->value()),
+      [caller = QPointer<OTCNegotiationResponseWidget>(this), signal]() {
+         if (!caller) {
+            return;
+         }
+         signal.invoke(caller);
+   });
 }
 
 void OTCNegotiationResponseWidget::onShowXBTInputsClicked()

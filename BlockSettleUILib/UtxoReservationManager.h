@@ -14,6 +14,7 @@
 #include <atomic>
 #include <QObject>
 #include "CommonTypes.h"
+#include "UiUtils.h"
 #include "UtxoReservationToken.h"
 
 namespace spdlog {
@@ -59,9 +60,14 @@ namespace bs {
       void reserveBestXbtUtxoSet(const HDWalletId& walletId, BTCNumericTypes::satoshi_type quantity, bool partial,
          std::function<void(FixedXbtInputs&&)>&& cb, bool checkPbFeeFloor);
       BTCNumericTypes::satoshi_type getAvailableXbtUtxoSum(const HDWalletId& walletId) const;
+      BTCNumericTypes::satoshi_type getAvailableXbtUtxoSum(const HDWalletId& walletId, bs::hd::Purpose purpose) const;
+      
       std::vector<UTXO> getAvailableXbtUTXOs(const HDWalletId& walletId) const;
+      std::vector<UTXO> getAvailableXbtUTXOs(const HDWalletId& walletId, bs::hd::Purpose purpose) const;
 
       void getBestXbtUtxoSet(const HDWalletId& walletId, BTCNumericTypes::satoshi_type quantity,
+         std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor);
+      void getBestXbtUtxoSet(const HDWalletId& walletId, bs::hd::Purpose purpose, BTCNumericTypes::satoshi_type quantity,
          std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor);
   
       // CC specific implementation
@@ -89,6 +95,8 @@ namespace bs {
       void resetSpendableXbt(const std::shared_ptr<bs::sync::hd::Wallet>& hdWallet);
       void resetSpendableCC(const std::shared_ptr<bs::sync::Wallet>& leaf);
       void resetAllSpendableCC(const std::shared_ptr<bs::sync::hd::Wallet>& hdWallet);
+      void getBestXbtFromUtxos(std::vector<UTXO> selectedUtxo, const HDWalletId& walletId, BTCNumericTypes::satoshi_type quantity,
+         std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor);
 
    private:
       struct XBTUtxoContainer {

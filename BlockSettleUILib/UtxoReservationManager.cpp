@@ -17,6 +17,7 @@
 #include "UtxoReservationToken.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "Wallets/SyncHDLeaf.h"
 #include "TradesUtils.h"
 #include "ArmoryObject.h"
 #include "WalletUtils.h"
@@ -97,6 +98,17 @@ BTCNumericTypes::satoshi_type bs::UTXOReservationManager::getAvailableXbtUtxoSum
    return sum;
 }
 
+BTCNumericTypes::satoshi_type bs::UTXOReservationManager::getAvailableXbtUtxoSum(const HDWalletId& walletId, bs::hd::Purpose purpose) const
+{
+   BTCNumericTypes::satoshi_type sum = 0;
+   auto const availableUtxos = getAvailableXbtUTXOs(walletId, purpose);
+   for (const auto &utxo : availableUtxos) {
+      sum += utxo.getValue();
+   }
+
+   return sum;
+}
+
 std::vector<UTXO> bs::UTXOReservationManager::getAvailableXbtUTXOs(const HDWalletId& walletId) const
 {
    auto const availableUtxos = availableXbtUTXOs_.find(walletId);
@@ -105,9 +117,39 @@ std::vector<UTXO> bs::UTXOReservationManager::getAvailableXbtUTXOs(const HDWalle
    }
 
    std::vector<UTXO> utxos;
-   std::vector<UTXO> filtered;
    utxos = availableUtxos->second.availableUtxo_;
+   std::vector<UTXO> filtered;
    UtxoReservation::instance()->filter(utxos, filtered);
+   return utxos;
+}
+
+std::vector<UTXO> bs::UTXOReservationManager::getAvailableXbtUTXOs(const HDWalletId& walletId
+   , bs::hd::Purpose purpose) const
+{
+   auto hdWallet = walletsManager_->getHDWalletById(walletId);
+   auto leaf = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaf(purpose);
+
+   if (!leaf) {
+      return {};
+   }
+
+   const auto& leafId = leaf->walletId();
+   std::vector<UTXO> utxos = getAvailableXbtUTXOs(walletId);
+   if (utxos.empty()) {
+      return utxos;
+   }
+
+   auto const availableUtxos = availableXbtUTXOs_.find(walletId);
+   if (availableUtxos == availableXbtUTXOs_.end()) {
+      return {};
+   }
+
+   auto& leafLookup = availableUtxos->second.utxosLookup_;
+   auto i = std::remove_if(utxos.begin(), utxos.end(), [&leafLookup, &leafId](const UTXO& utxo) -> bool {
+      return leafId != leafLookup.at(utxo);
+   });
+   utxos.erase(i, utxos.end());
+
    return utxos;
 }
 
@@ -115,37 +157,14 @@ void bs::UTXOReservationManager::getBestXbtUtxoSet(const HDWalletId& walletId,
    BTCNumericTypes::satoshi_type quantity, std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor)
 {
    auto walletUtxos = getAvailableXbtUTXOs(walletId);
-   std::vector<UTXO> selectedUtxos = bs::selectUtxoForAmount(std::move(walletUtxos), quantity);
+   getBestXbtFromUtxos(walletUtxos, walletId, quantity, std::move(cb), checkPbFeeFloor);
+}
 
-   // Here we calculating fee based on chosen utxos, if total price with fee will cover by all utxo sum - then we good and could continue
-   // otherwise let's try to find better set of utxo again till the moment we will cover the difference or use all available utxos from wallet
-   auto feeCb = [mgr = QPointer<bs::UTXOReservationManager>(this), quantity, walletId
-         , utxos = std::move(selectedUtxos), cbCopy = std::move(cb), checkPbFeeFloor](float fee) mutable {
-      if (!mgr) {
-         return; // main thread die, nothing to do
-      }
-
-      QMetaObject::invokeMethod(mgr, [mgr, quantity, walletId, fee, utxos = std::move(utxos), cb = std::move(cbCopy), checkPbFeeFloor]() mutable {
-         float feePerByte = ArmoryConnection::toFeePerByte(fee);
-         if (checkPbFeeFloor) {
-            feePerByte = std::max(mgr->feeRatePb(), feePerByte);
-         }
-         BTCNumericTypes::satoshi_type total = 0;
-         for (const auto &utxo : utxos) {
-            total += utxo.getValue();
-         }
-         const auto fee = bs::tradeutils::estimatePayinFeeWithoutChange(utxos, feePerByte);
-
-         const BTCNumericTypes::satoshi_type spendableQuantity = quantity + fee;
-         if (spendableQuantity > total) {
-            mgr->getBestXbtUtxoSet(walletId, spendableQuantity, std::move(cb), checkPbFeeFloor);
-         }
-         else {
-            cb(std::move(utxos));
-         }
-      });
-   };
-   armory_->estimateFee(bs::tradeutils::feeTargetBlockCount(), feeCb);
+void bs::UTXOReservationManager::getBestXbtUtxoSet(const HDWalletId& walletId, bs::hd::Purpose purpose,
+   BTCNumericTypes::satoshi_type quantity, std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor)
+{
+   auto walletUtxos = getAvailableXbtUTXOs(walletId, purpose);
+   getBestXbtFromUtxos(walletUtxos, walletId, quantity, std::move(cb), checkPbFeeFloor);
 }
 
 BTCNumericTypes::balance_type bs::UTXOReservationManager::getAvailableCCUtxoSum(const CCProductName& CCProduct) const
@@ -349,4 +368,40 @@ void bs::UTXOReservationManager::resetAllSpendableCC(const std::shared_ptr<bs::s
    for (const auto &leaf : ccGroup->getLeaves()) {
       resetSpendableCC(leaf);
    }
+}
+
+void bs::UTXOReservationManager::getBestXbtFromUtxos(std::vector<UTXO> selectedUtxo, const HDWalletId& walletId,
+   BTCNumericTypes::satoshi_type quantity, std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor)
+{
+   std::vector<UTXO> selectedUtxos = bs::selectUtxoForAmount(std::move(selectedUtxo), quantity);
+
+   // Here we calculating fee based on chosen utxos, if total price with fee will cover by all utxo sum - then we good and could continue
+   // otherwise let's try to find better set of utxo again till the moment we will cover the difference or use all available utxos from wallet
+   auto feeCb = [mgr = QPointer<bs::UTXOReservationManager>(this), quantity, walletId
+      , utxos = std::move(selectedUtxos), cbCopy = std::move(cb), checkPbFeeFloor](float fee) mutable {
+      if (!mgr) {
+         return; // main thread die, nothing to do
+      }
+
+      QMetaObject::invokeMethod(mgr, [mgr, quantity, walletId, fee, utxos = std::move(utxos), cb = std::move(cbCopy), checkPbFeeFloor]() mutable {
+         float feePerByte = ArmoryConnection::toFeePerByte(fee);
+         if (checkPbFeeFloor) {
+            feePerByte = std::max(mgr->feeRatePb(), feePerByte);
+         }
+         BTCNumericTypes::satoshi_type total = 0;
+         for (const auto &utxo : utxos) {
+            total += utxo.getValue();
+         }
+         const auto fee = bs::tradeutils::estimatePayinFeeWithoutChange(utxos, feePerByte);
+
+         const BTCNumericTypes::satoshi_type spendableQuantity = quantity + fee;
+         if (spendableQuantity > total) {
+            mgr->getBestXbtUtxoSet(walletId, spendableQuantity, std::move(cb), checkPbFeeFloor);
+         }
+         else {
+            cb(std::move(utxos));
+         }
+      });
+   };
+   armory_->estimateFee(bs::tradeutils::feeTargetBlockCount(), feeCb);
 }

@@ -386,7 +386,7 @@ void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &
 
       updateWalletsList((qrn.side == bs::network::Side::Sell) ? UiUtils::WalletsTypes::Full : UiUtils::WalletsTypes::All);
    } else if (qrn.assetType == bs::network::Asset::SpotXBT) {
-      updateWalletsList((qrn.side == bs::network::Side::Sell) ? (UiUtils::WalletsTypes::Full | UiUtils::WalletsTypes::Hardware) : UiUtils::WalletsTypes::All);
+      updateWalletsList((qrn.side == bs::network::Side::Sell) ? (UiUtils::WalletsTypes::Full | UiUtils::WalletsTypes::HardwareSW) : UiUtils::WalletsTypes::All);
    }
 }
 
