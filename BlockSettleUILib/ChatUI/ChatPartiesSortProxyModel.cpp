@@ -77,11 +77,16 @@ bool ChatPartiesSortProxyModel::filterAcceptsRow(int row, const QModelIndex& par
       return false;
    }
 
+   // return true if you want to display tree item
    switch (item->modelType()) {
    case UI::ElementType::Party:
       return true;
-   case UI::ElementType::Container:
-      return item->childCount() > 0;
+   case UI::ElementType::Container: {
+      if (item->childCount() == 0 && item->data().toString() == ChatModelNames::ContainerTabOTCIdentifier) {
+         return false;
+      }
+      return true;
+   }
    default:
       return false;
    }
@@ -106,7 +111,8 @@ bool ChatPartiesSortProxyModel::lessThan(const QModelIndex &left, const QModelIn
          Chat::ClientPartyPtr rightParty = itemRight->data().value<Chat::ClientPartyPtr>();
          return leftParty->displayName() < rightParty->displayName();
       }
-      else if (itemLeft->modelType() == UI::ElementType::Container) {
+      
+      if (itemLeft->modelType() == UI::ElementType::Container) {
          return itemLeft->childNumber() < itemRight->childNumber();
       }
    }

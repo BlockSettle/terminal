@@ -40,10 +40,10 @@ class ChatMessagesTextEditStyle : public QWidget
               WRITE setColorOtc)
 
 public:
-   inline explicit ChatMessagesTextEditStyle(QWidget *parent)
+   explicit ChatMessagesTextEditStyle(QWidget *parent)
       : QWidget(parent), colorHyperlink_(Qt::blue), colorWhite_(Qt::white), colorRed_(Qt::red), colorOtc_(Qt::lightGray)
    {
-      setVisible(false);
+      QWidget::setVisible(false);
    }
 
    QColor colorHyperlink() const { return colorHyperlink_; }
@@ -79,8 +79,8 @@ public:
    ChatMessagesTextEdit(QWidget* parent = nullptr);
    ~ChatMessagesTextEdit() noexcept override = default;
 
-public:
    QString getFormattedTextFromSelection() const;
+   int messagesCount(const std::string& partyId) const;
 
 public slots:
    void onSetColumnsWidth(int time, int icon, int user, int message);
