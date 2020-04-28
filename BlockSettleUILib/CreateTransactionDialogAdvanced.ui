@@ -1292,6 +1292,13 @@
              </widget>
             </item>
             <item>
+             <widget class="QRadioButton" name="radioButtonNewAddrLegacy">
+              <property name="text">
+               <string>Legacy</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QRadioButton" name="radioButtonExistingAddress">
               <property name="text">
                <string>Select Existing</string>

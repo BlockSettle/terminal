@@ -933,8 +933,7 @@ UiUtils::WalletsTypes RFQTicketXBT::xbtWalletType() const
       return UiUtils::None;
    }
 
-   return static_cast<UiUtils::WalletsTypes>(combobox->
-      currentData(UiUtils::WalletType).toInt());
+   return UiUtils::getSelectedWalletType(combobox);
 }
 
 void RFQTicketXBT::onParentAboutToHide()
