@@ -130,9 +130,7 @@ void OTCWindowsAdapterBase::showXBTInputs(QComboBox *walletsCombobox)
 
    std::vector<UTXO> allUTXOs;
    if (hdWallet->isHardwareWallet()) {
-      const auto walletType = static_cast<UiUtils::WalletsTypes>(
-         walletsCombobox->currentData(UiUtils::WalletType).toInt());
-      auto purpose = UiUtils::getHwWalletPurpose(walletType);
+      auto purpose = UiUtils::getSelectedHwPurpose(walletsCombobox);
       allUTXOs = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId(), purpose);
    }
    else {
@@ -219,9 +217,7 @@ BTCNumericTypes::balance_type OTCWindowsAdapterBase::getXBTSpendableBalanceFromC
    if (selectedUTXO_.empty()) {
       BTCNumericTypes::satoshi_type sum = 0;
       if (hdWallet->isHardwareWallet()) {
-         const auto walletType = static_cast<UiUtils::WalletsTypes>(
-            walletsCombobox->currentData(UiUtils::WalletType).toInt());
-         auto purpose = UiUtils::getHwWalletPurpose(walletType);
+         auto purpose = UiUtils::getSelectedHwPurpose(walletsCombobox);
          sum = getUtxoManager()->getAvailableXbtUtxoSum(hdWallet->walletId(), purpose);
       }
       else {
@@ -264,9 +260,7 @@ void OTCWindowsAdapterBase::submitProposal(QComboBox *walletsCombobox, bs::XBTAm
    };
 
    if (hdWallet->isHardwareWallet()) {
-      const auto walletType = static_cast<UiUtils::WalletsTypes>(
-         walletsCombobox->currentData(UiUtils::WalletType).toInt());
-      auto purpose = UiUtils::getHwWalletPurpose(walletType);
+      auto purpose = UiUtils::getSelectedHwPurpose(walletsCombobox);
       getUtxoManager()->getBestXbtUtxoSet(hdWallet->walletId(), purpose, amount.GetValue()
          , std::move(cbUtxoSet), true);
    }

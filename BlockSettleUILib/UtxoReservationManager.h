@@ -56,9 +56,14 @@ namespace bs {
       UtxoReservationToken makeNewReservation(const std::vector<UTXO> &utxos, const std::string &reserveId);
       UtxoReservationToken makeNewReservation(const std::vector<UTXO> &utxos);
 
-      // Xbt specific implementation
+      // Xbt specific implementation, each function defined two times
+      // 1 - for hd wallet, and 2 - for hd leaf(wallet_id + purpose) which is needed for hw wallet
       void reserveBestXbtUtxoSet(const HDWalletId& walletId, BTCNumericTypes::satoshi_type quantity, bool partial,
          std::function<void(FixedXbtInputs&&)>&& cb, bool checkPbFeeFloor);
+      void reserveBestXbtUtxoSet(const HDWalletId& walletId, bs::hd::Purpose purpose,
+         BTCNumericTypes::satoshi_type quantity, bool partial,
+         std::function<void(FixedXbtInputs&&)>&& cb, bool checkPbFeeFloor);
+
       BTCNumericTypes::satoshi_type getAvailableXbtUtxoSum(const HDWalletId& walletId) const;
       BTCNumericTypes::satoshi_type getAvailableXbtUtxoSum(const HDWalletId& walletId, bs::hd::Purpose purpose) const;
       
@@ -97,6 +102,9 @@ namespace bs {
       void resetAllSpendableCC(const std::shared_ptr<bs::sync::hd::Wallet>& hdWallet);
       void getBestXbtFromUtxos(std::vector<UTXO> selectedUtxo, const HDWalletId& walletId, BTCNumericTypes::satoshi_type quantity,
          std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor);
+
+      std::function<void(std::vector<UTXO>&&)> getReservationCb(const HDWalletId& walletId, bool partial,
+         std::function<void(FixedXbtInputs&&)>&& cb);
 
    private:
       struct XBTUtxoContainer {

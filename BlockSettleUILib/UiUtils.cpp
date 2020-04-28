@@ -520,6 +520,13 @@ UiUtils::WalletsTypes UiUtils::getSelectedWalletType(QComboBox* comboBox)
    return static_cast<UiUtils::WalletsTypes>(comboBox->currentData(WalletType).toInt());
 }
 
+bs::hd::Purpose UiUtils::getSelectedHwPurpose(QComboBox* comboBox)
+{
+   const auto walletType = static_cast<UiUtils::WalletsTypes>(
+      comboBox->currentData(UiUtils::WalletType).toInt());
+   return UiUtils::getHwWalletPurpose(walletType);
+}
+
 static QtAwesome* qtAwesome_ = nullptr;
 
 void UiUtils::setupIconFont(QObject* parent)

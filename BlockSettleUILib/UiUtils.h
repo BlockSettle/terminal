@@ -143,6 +143,7 @@ namespace UiUtils
    int selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId);
    std::string getSelectedWalletId(QComboBox* comboBox);
    WalletsTypes getSelectedWalletType(QComboBox* comboBox);
+   bs::hd::Purpose getSelectedHwPurpose(QComboBox* comboBox);
 
    QPixmap getQRCode(const QString& address, int size = 0);
 

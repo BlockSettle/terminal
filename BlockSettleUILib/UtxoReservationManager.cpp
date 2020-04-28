@@ -66,25 +66,14 @@ bs::UtxoReservationToken bs::UTXOReservationManager::makeNewReservation(const st
 void UTXOReservationManager::reserveBestXbtUtxoSet(const HDWalletId& walletId, BTCNumericTypes::satoshi_type quantity, bool partial,
    std::function<void(FixedXbtInputs&&)>&& cb, bool checkPbFeeFloor)
 {
-   auto bestUtxoSetCb = [mgr = QPointer<bs::UTXOReservationManager>(this), walletId, partial
-         , cbFixedXBT = std::move(cb)](std::vector<UTXO>&& utxos) {
-      if (!mgr) {
-         return;
-      }
+   auto bestUtxoSetCb = getReservationCb(walletId, partial, std::move(cb));
+   getBestXbtUtxoSet(walletId, quantity, std::move(bestUtxoSetCb), checkPbFeeFloor);
+}
 
-      FixedXbtInputs fixedXbtInputs;
-      if (partial) {
-         fixedXbtInputs = std::move(mgr->convertUtxoToPartialFixedInput(walletId, utxos));
-      }
-      else {
-         fixedXbtInputs = std::move(mgr->convertUtxoToFixedInput(walletId, utxos));
-      }
-      fixedXbtInputs.utxoRes = mgr->makeNewReservation(utxos);
-
-      cbFixedXBT(std::move(fixedXbtInputs));
-   };
-
-   getBestXbtUtxoSet(walletId, quantity, bestUtxoSetCb, checkPbFeeFloor);
+void bs::UTXOReservationManager::reserveBestXbtUtxoSet(const HDWalletId& walletId, bs::hd::Purpose purpose, BTCNumericTypes::satoshi_type quantity, bool partial, std::function<void(FixedXbtInputs&&)>&& cb, bool checkPbFeeFloor)
+{
+   auto bestUtxoSetCb = getReservationCb(walletId, partial, std::move(cb));
+   getBestXbtUtxoSet(walletId, purpose, quantity, std::move(bestUtxoSetCb), checkPbFeeFloor);
 }
 
 BTCNumericTypes::satoshi_type bs::UTXOReservationManager::getAvailableXbtUtxoSum(const HDWalletId& walletId) const
@@ -404,4 +393,26 @@ void bs::UTXOReservationManager::getBestXbtFromUtxos(std::vector<UTXO> selectedU
       });
    };
    armory_->estimateFee(bs::tradeutils::feeTargetBlockCount(), feeCb);
+}
+
+std::function<void(std::vector<UTXO>&&)> bs::UTXOReservationManager::getReservationCb(const HDWalletId& walletId,
+   bool partial, std::function<void(FixedXbtInputs&&)>&& cb)
+{
+   return   [mgr = QPointer<bs::UTXOReservationManager>(this), walletId, partial
+      , cbFixedXBT = std::move(cb)](std::vector<UTXO>&& utxos) {
+      if (!mgr) {
+         return;
+      }
+
+      FixedXbtInputs fixedXbtInputs;
+      if (partial) {
+         fixedXbtInputs = std::move(mgr->convertUtxoToPartialFixedInput(walletId, utxos));
+      }
+      else {
+         fixedXbtInputs = std::move(mgr->convertUtxoToFixedInput(walletId, utxos));
+      }
+      fixedXbtInputs.utxoRes = mgr->makeNewReservation(utxos);
+
+      cbFixedXBT(std::move(fixedXbtInputs));
+   };
 }
