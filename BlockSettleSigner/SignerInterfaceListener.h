@@ -56,6 +56,8 @@ public:
    bs::signer::RequestId send(signer::PacketType pt, const std::string &data);
    std::shared_ptr<ZmqBIP15XDataConnection> getDataConnection() { return connection_; }
 
+   using BasicCb = std::function<void(bs::error::ErrorCode errorCode)>;
+
    void setTxSignCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode result, const BinaryData &)> &cb) {
       cbSignReqs_[reqId] = cb;
    }
@@ -79,20 +81,23 @@ public:
       , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb) {
       cbDecryptNode_[reqId] = cb;
    }
-   void setChangePwCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode errorCode)> &cb) {
+   void setChangePwCb(bs::signer::RequestId reqId, const BasicCb &cb) {
       cbChangePwReqs_[reqId] = cb;
    }
-   void setCreateHDWalletCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode errorCode)> &cb) {
+   void setCreateHDWalletCb(bs::signer::RequestId reqId, const BasicCb &cb) {
       cbCreateHDWalletReqs_[reqId] = cb;
    }
    void setDeleteHDWalletCb(bs::signer::RequestId reqId, const std::function<void(bool success, const std::string& errorMsg)> &cb) {
       cbDeleteHDWalletReqs_[reqId] = cb;
    }
-   void setAutoSignCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode errorCode)> &cb) {
+   void setAutoSignCb(bs::signer::RequestId reqId, const BasicCb &cb) {
       cbAutoSignReqs_[reqId] = cb;
    }
-   void setChangeControlPwCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode errorCode)> &cb) {
+   void setChangeControlPwCb(bs::signer::RequestId reqId, const BasicCb &cb) {
       cbChangeControlPwReqs_[reqId] = cb;
+   }
+   void setVerifyOfflineTxRequestCb(bs::signer::RequestId reqId, const BasicCb &cb) {
+      cbVerifyOfflineTxRequestReqs_[reqId] = cb;
    }
 
    void setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory);
@@ -129,6 +134,7 @@ private:
    void onUpdateControlPasswordStatus(const std::string &data);
    void onTerminalEvent(const std::string &data);
    void onChangeControlPassword(const std::string &data, bs::signer::RequestId);
+   void onVerifyOfflineTxRequest(const std::string &data, bs::signer::RequestId);
 
    void requestPasswordForTx(signer::PasswordDialogType reqType, bs::sync::PasswordDialogData *dialogData
       , bs::wallet::TXInfo *txInfo, bs::hd::WalletInfo *walletInfo);
@@ -158,11 +164,12 @@ private:
    std::map<bs::signer::RequestId, std::function<void(const BinaryData &)>>      cbExportWO_;
    std::map<bs::signer::RequestId
       , std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)>>   cbDecryptNode_;
-   std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbChangePwReqs_;
-   std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbCreateHDWalletReqs_;
+   std::map<bs::signer::RequestId, BasicCb> cbChangePwReqs_;
+   std::map<bs::signer::RequestId, BasicCb> cbCreateHDWalletReqs_;
    std::map<bs::signer::RequestId, std::function<void(bool success, const std::string& errorMsg)>> cbDeleteHDWalletReqs_;
-   std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbAutoSignReqs_;
-   std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbChangeControlPwReqs_;
+   std::map<bs::signer::RequestId, BasicCb> cbAutoSignReqs_;
+   std::map<bs::signer::RequestId, BasicCb> cbChangeControlPwReqs_;
+   std::map<bs::signer::RequestId, BasicCb> cbVerifyOfflineTxRequestReqs_;
 
    std::shared_ptr<QmlBridge>  qmlBridge_;
 

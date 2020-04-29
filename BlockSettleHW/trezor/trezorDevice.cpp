@@ -253,7 +253,7 @@ void TrezorDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
       return;
    }
 
-   currentTxSignReq_.reset(new bs::core::wallet::TXSignRequest(bs::signer::pbTxRequestToCore(request)));
+   currentTxSignReq_.reset(new bs::core::wallet::TXSignRequest(bs::signer::pbTxRequestToCore(request, connectionManager_->GetLogger())));
    connectionManager_->GetLogger()->debug("[TrezorDevice] SignTX - specify init data to " + features_.label());
 
    const int change = static_cast<bool>(currentTxSignReq_->change.value) ? 1 : 0;

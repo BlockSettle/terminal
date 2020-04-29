@@ -30,7 +30,7 @@ TXInfo::TXInfo(const bs::core::wallet::TXSignRequest &txReq, const std::shared_p
 
 TXInfo::TXInfo(const headless::SignTxRequest &txRequest, const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<spdlog::logger> &logger)
-   : QObject(), txReq_(bs::signer::pbTxRequestToCore(txRequest)), walletsMgr_(walletsMgr), logger_(logger)
+   : QObject(), txReq_(bs::signer::pbTxRequestToCore(txRequest, logger)), walletsMgr_(walletsMgr), logger_(logger)
 {
    init();
 }
