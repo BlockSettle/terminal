@@ -549,7 +549,6 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
          const auto &change = currentTxSignReq_->change;
          output->set_amount(change.value);
 
-         const bool isNestedSegwit = (change.address.getType() == AddressEntryType_P2SH);
          const auto purp = bs::hd::purpose(change.address.getType());
 
          if (change.index.empty()) {
@@ -562,8 +561,19 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
             output->add_address_n(add);
          }
 
-         output->set_script_type(isNestedSegwit ? bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOP2SHWITNESS
-                                                : bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOWITNESS);
+         const bool changeType = change.address.getType();
+         bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType scriptType;
+         if (changeType == AddressEntryType_P2SH) {
+            scriptType = bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOP2SHWITNESS;
+         }
+         else if (changeType == AddressEntryType_P2WPKH) {
+            scriptType = bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOWITNESS;
+         }
+         else if (changeType == AddressEntryType_P2PKH) {
+            scriptType = bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOADDRESS;
+         }
+
+         output->set_script_type(scriptType);
       }
       else {
          // Shouldn't be here
