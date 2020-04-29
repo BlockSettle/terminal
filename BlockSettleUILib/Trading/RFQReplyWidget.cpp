@@ -233,6 +233,7 @@ void RFQReplyWidget::onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyDat
          reply.authAddr = data->authAddr;
          reply.utxosPayinFixed = data->fixedXbtInputs;
          reply.utxoRes = std::move(data->utxoRes);
+         reply.walletPurpose = std::move(data->walletPurpose);
          break;
       }
 
@@ -243,6 +244,7 @@ void RFQReplyWidget::onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyDat
          reply.requestorAuthAddress = data->qn.reqAuthKey;
          reply.utxoRes = std::move(data->utxoRes);
          reply.xbtWallet = data->xbtWallet;
+         reply.walletPurpose = std::move(data->walletPurpose);
          break;
       }
 
@@ -298,7 +300,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
          try {
             const auto settlContainer = std::make_shared<DealerCCSettlementContainer>(logger_, order, quoteReqId
                , assetManager_->getCCLotSize(order.product), assetManager_->getCCGenesisAddr(order.product)
-               , sr.recipientAddress, sr.xbtWallet, signingContainer_, armory_, walletsManager_, std::move(sr.utxoRes));
+               , sr.recipientAddress, sr.xbtWallet, signingContainer_, armory_, walletsManager_, std::move(sr.walletPurpose), std::move(sr.utxoRes));
             connect(settlContainer.get(), &DealerCCSettlementContainer::signTxRequest, this, &RFQReplyWidget::saveTxData);
             connect(settlContainer.get(), &DealerCCSettlementContainer::error, this, &RFQReplyWidget::onTransactionError);
             connect(settlContainer.get(), &DealerCCSettlementContainer::cancelTrade, this, &RFQReplyWidget::cancelCCTrade);
@@ -333,7 +335,8 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             const auto recvXbtAddr = bs::Address();
             const auto settlContainer = std::make_shared<DealerXBTSettlementContainer>(logger_, order
                , walletsManager_, reply.xbtWallet, quoteProvider_, signingContainer_, armory_, authAddressManager_
-               , reply.authAddr, reply.utxosPayinFixed, recvXbtAddr, utxoReservationManager_, std::move(reply.utxoRes));
+               , reply.authAddr, reply.utxosPayinFixed, recvXbtAddr, utxoReservationManager_,
+               std::move(reply.walletPurpose), std::move(reply.utxoRes));
 
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendUnsignedPayinToPB, this, &RFQReplyWidget::sendUnsignedPayinToPB);
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayinToPB, this, &RFQReplyWidget::sendSignedPayinToPB);

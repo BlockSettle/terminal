@@ -76,11 +76,10 @@ public:
       , const std::map<UTXO, std::string> &fixedXbtInputs
       , bs::UtxoReservationToken fixedXbtUtxoRes
       , bs::UtxoReservationToken ccUtxoRes
+      , std::unique_ptr<bs::hd::Purpose> purpose
       , RFQRequestWidget* parent = nullptr);
    ~RFQDialog() override;
 
-   // Optional hw wallet purpose to detect correct wallet
-   void setHwWalletPurpose(bs::hd::Purpose purpose);
 protected:
    void reject() override;
 
@@ -145,7 +144,7 @@ private:
 
    QString           ccOrderId_;
    bs::UtxoReservationToken ccUtxoRes_;
-   bs::hd::Purpose hwPurpose_;
+   std::unique_ptr<bs::hd::Purpose> walletPurpose_;
 
 };
 

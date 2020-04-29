@@ -643,6 +643,11 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
          SPDLOG_LOGGER_ERROR(logger_, "can't submit CC/XBT reply without XBT wallet");
          return;
       }
+
+      if (replyData->xbtWallet->isHardwareWallet()) {
+         auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXbtWallet);
+         replyData->walletPurpose.reset(new bs::hd::Purpose(purpose));
+      }
    }
 
    if (qrn.assetType == bs::network::Asset::SpotXBT) {

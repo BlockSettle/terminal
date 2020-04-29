@@ -44,8 +44,9 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , const std::map<UTXO, std::string> &utxosPayinFixed
    , bs::UtxoReservationToken utxoRes
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
+   , std::unique_ptr<bs::hd::Purpose> walletPurpose
    , const bs::Address &recvAddrIfSet)
-   : bs::SettlementContainer(std::move(utxoRes))
+   : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose))
    , logger_(logger)
    , authAddrMgr_(authAddrMgr)
    , walletsMgr_(walletsMgr)
@@ -314,9 +315,19 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
    for (const auto &input : utxosPayinFixed_) {
       args.fixedInputs.push_back(input.first);
    }
-   for (const auto &leaf : xbtWallet_->getGroup(xbtWallet_->getXBTGroupType())->getLeaves()) {
+
+   const auto xbtGroup = xbtWallet_->getGroup(xbtWallet_->getXBTGroupType());
+   if (xbtWallet_->isHardwareWallet()) {
+      assert(walletPurpose_);
+      const auto leaf = xbtGroup->getLeaf(*walletPurpose_);
       args.inputXbtWallets.push_back(leaf);
    }
+   else {
+      for (const auto &leaf : xbtWallet_->getGroup(xbtWallet_->getXBTGroupType())->getLeaves()) {
+         args.inputXbtWallets.push_back(leaf);
+      }
+   }
+
    args.utxoReservation = bs::UtxoReservation::instance();
 
    auto payinCb = bs::tradeutils::PayinResultCb([this, handle = validityFlag_.handle()]

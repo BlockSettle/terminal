@@ -272,10 +272,16 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservat
    auto xbtWallet = ui_->pageRFQTicket->xbtWallet();
    auto fixedXbtInputs = ui_->pageRFQTicket->fixedXbtInputs();
 
+   std::unique_ptr<bs::hd::Purpose> purpose;
+   if (xbtWallet->isHardwareWallet()) {
+      auto walletType = ui_->pageRFQTicket->xbtWalletType();
+      purpose.reset(new bs::hd::Purpose(UiUtils::getHwWalletPurpose(walletType)));
+   }
+
    RFQDialog* dialog = new RFQDialog(logger_, rfq, quoteProvider_
       , authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_
       , connectionManager_, rfqStorage_, xbtWallet, ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, utxoReservationManager_
-      , fixedXbtInputs.inputs, std::move(fixedXbtInputs.utxoRes), std::move(ccUtxoRes), this);
+      , fixedXbtInputs.inputs, std::move(fixedXbtInputs.utxoRes), std::move(ccUtxoRes), std::move(purpose), this);
 
    connect(this, &RFQRequestWidget::unsignedPayinRequested, dialog, &RFQDialog::onUnsignedPayinRequested);
    connect(this, &RFQRequestWidget::signedPayoutRequested, dialog, &RFQDialog::onSignedPayoutRequested);
@@ -283,11 +289,7 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservat
 
    dialog->setAttribute(Qt::WA_DeleteOnClose);
 
-   if (xbtWallet->isHardwareWallet()) {
-      auto walletType = ui_->pageRFQTicket->xbtWalletType();
-      auto purpose = UiUtils::getHwWalletPurpose(walletType);
-      dialog->setHwWalletPurpose(purpose);
-   }
+
 
    dialogManager_->adjustDialogPosition(dialog);
    dialog->show();
