@@ -214,7 +214,8 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
 {
    try {
       ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
-         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_, fixedXbtInputs_, utxoReservationManager_, std::move(ccUtxoRes_));
+         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_
+         , fixedXbtInputs_, utxoReservationManager_, std::move(ccUtxoRes_), armory_->topBlock());
 
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::txSigned
          , this, &RFQDialog::onCCTxSigned);

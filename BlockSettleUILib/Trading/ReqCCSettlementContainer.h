@@ -47,7 +47,8 @@ public:
       , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
       , const std::map<UTXO, std::string> &manualXbtInputs
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , bs::UtxoReservationToken utxoRes);
+      , bs::UtxoReservationToken utxoRes
+      , uint32_t topBlock);
    ~ReqCCSettlementContainer() override;
 
    bool cancel() override;
@@ -125,6 +126,8 @@ private:
    std::map<UTXO, std::string> manualXbtInputs_;
 
    std::string clOrdId_;
+   const uint32_t topBlock_;
+
 };
 
 #endif // __REQ_CC_SETTLEMENT_CONTAINER_H__

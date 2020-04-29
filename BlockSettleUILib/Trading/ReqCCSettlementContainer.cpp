@@ -34,7 +34,8 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::map<UTXO, std::string> &manualXbtInputs
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , bs::UtxoReservationToken utxoRes)
+   , bs::UtxoReservationToken utxoRes
+   , uint32_t topBlock)
    : bs::SettlementContainer(std::move(utxoRes))
    , logger_(logger)
    , signingContainer_(container)
@@ -49,6 +50,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , lotSize_(assetMgr_->getCCLotSize(product()))
    , manualXbtInputs_(manualXbtInputs)
    , utxoReservationManager_(utxoReservationManager)
+   , topBlock_(topBlock)
 {
    if (!xbtWallet_) {
       throw std::logic_error("invalid hd wallet");
@@ -247,8 +249,8 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                      bs::core::wallet::OutputOrderType::Change
                   };
 
-                  ccTxData_ = walletsMgr_->createPartialTXRequest(spendVal, xbtInputs, changeAddr, feePerByte
-                     , { recipient }, outSortOrder, dealerTx_, false/*calcFeeFromPrevData*/, useAllInputs);
+                  ccTxData_ = bs::sync::WalletsManager::createPartialTXRequest(spendVal, xbtInputs, changeAddr, feePerByte, topBlock_
+                     , { recipient }, outSortOrder, dealerTx_, useAllInputs, logger_);
                   ccTxData_.populateUTXOs = true;
 
                   logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());

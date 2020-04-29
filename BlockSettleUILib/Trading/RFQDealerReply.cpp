@@ -715,9 +715,9 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                            const auto recipient = bs::Address::fromAddressString(qrn.requestorRecvAddress).getRecipient(bs::XBTAmount{ spendVal });
 
                            const auto outSortOrder = isSpendCC ? kBuySortOrder : kSellSortOrder;
-                           const auto txReq = walletsManager_->createPartialTXRequest(spendVal, inputs, changeAddress
-                              , isSpendCC ? 0 : feePerByte, { recipient }, outSortOrder
-                              , BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false);
+                           const auto txReq = bs::sync::WalletsManager::createPartialTXRequest(spendVal, inputs, changeAddress
+                              , isSpendCC ? 0 : feePerByte, armory_->topBlock(), { recipient }, outSortOrder
+                              , BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false, logger_);
                            logger_->debug("[RFQDealerReply::submitReply] {} input[s], fpb={}, recip={}, "
                               "change amount={}, prevPart={}", inputs.size(), feePerByte
                               , bs::Address::fromAddressString(qrn.requestorRecvAddress).display()
