@@ -1014,7 +1014,7 @@ void CreateTransactionDialogAdvanced::validateCreateButton()
    ui_->pushButtonCreate->setEnabled(isTxValid
       && !broadcasting_
       && (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()
-         || (selectedChangeAddress_.isValid())));
+         || ui_->radioButtonNewAddrLegacy->isChecked() || (selectedChangeAddress_.isValid())));
 }
 
 void CreateTransactionDialogAdvanced::SetInputs(const std::vector<UTXO> &inputs)
