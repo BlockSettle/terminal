@@ -1458,8 +1458,16 @@ void OtcClient::createSellerRequest(const std::string &settlementId, Peer *peer,
       return;
    }
 
-   auto leaves = targetHdWallet->getGroup(targetHdWallet->getXBTGroupType())->getLeaves();
-   auto xbtWallets = std::vector<std::shared_ptr<bs::sync::Wallet>>(leaves.begin(), leaves.end());
+   auto group = targetHdWallet->getGroup(targetHdWallet->getXBTGroupType());
+   std::vector<std::shared_ptr<bs::sync::Wallet>> xbtWallets;
+   if (targetHdWallet->isHardwareWallet()) {
+      assert(peer->offer.walletPurpose);
+      xbtWallets.push_back(group->getLeaf(*peer->offer.walletPurpose));
+   }
+   else {
+      xbtWallets = group->getAllLeaves();
+   }
+
    if (xbtWallets.empty()) {
       cb(OtcClientDeal::error("can't find XBT wallets"));
       return;

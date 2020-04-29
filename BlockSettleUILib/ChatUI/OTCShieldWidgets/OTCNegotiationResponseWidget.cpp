@@ -111,6 +111,12 @@ bs::network::otc::Offer OTCNegotiationResponseWidget::offer() const
 
    result.inputs = selectedUTXOs();
 
+   auto walletType = UiUtils::getSelectedWalletType(ui_->comboBoxXBTWallets);
+   if (walletType & UiUtils::WalletsTypes::HardwareSW) {
+      auto purpose = UiUtils::getHwWalletPurpose(walletType);
+      result.walletPurpose.reset(new bs::hd::Purpose(purpose));
+   }
+
    return result;
 }
 
