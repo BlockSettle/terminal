@@ -146,14 +146,14 @@ void bs::UTXOReservationManager::getBestXbtUtxoSet(const HDWalletId& walletId,
    BTCNumericTypes::satoshi_type quantity, std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor)
 {
    auto walletUtxos = getAvailableXbtUTXOs(walletId);
-   getBestXbtFromUtxos(walletUtxos, walletId, quantity, std::move(cb), checkPbFeeFloor);
+   getBestXbtFromUtxos(walletUtxos, quantity, std::move(cb), checkPbFeeFloor);
 }
 
 void bs::UTXOReservationManager::getBestXbtUtxoSet(const HDWalletId& walletId, bs::hd::Purpose purpose,
    BTCNumericTypes::satoshi_type quantity, std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor)
 {
    auto walletUtxos = getAvailableXbtUTXOs(walletId, purpose);
-   getBestXbtFromUtxos(walletUtxos, walletId, quantity, std::move(cb), checkPbFeeFloor);
+   getBestXbtFromUtxos(walletUtxos, quantity, std::move(cb), checkPbFeeFloor);
 }
 
 BTCNumericTypes::balance_type bs::UTXOReservationManager::getAvailableCCUtxoSum(const CCProductName& CCProduct) const
@@ -359,20 +359,25 @@ void bs::UTXOReservationManager::resetAllSpendableCC(const std::shared_ptr<bs::s
    }
 }
 
-void bs::UTXOReservationManager::getBestXbtFromUtxos(std::vector<UTXO> selectedUtxo, const HDWalletId& walletId,
+void bs::UTXOReservationManager::getBestXbtFromUtxos(std::vector<UTXO> inputUtxo,
    BTCNumericTypes::satoshi_type quantity, std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor)
 {
-   std::vector<UTXO> selectedUtxos = bs::selectUtxoForAmount(std::move(selectedUtxo), quantity);
+   std::vector<UTXO> selectedUtxos = bs::selectUtxoForAmount(std::move(inputUtxo), quantity);
 
    // Here we calculating fee based on chosen utxos, if total price with fee will cover by all utxo sum - then we good and could continue
    // otherwise let's try to find better set of utxo again till the moment we will cover the difference or use all available utxos from wallet
-   auto feeCb = [mgr = QPointer<bs::UTXOReservationManager>(this), quantity, walletId
+   if (selectedUtxos.size() == inputUtxo.size()) {
+      cb(std::move(selectedUtxos));
+      return;
+   }
+
+   auto feeCb = [mgr = QPointer<bs::UTXOReservationManager>(this), inputUtxoCopy = std::move(inputUtxo), quantity
       , utxos = std::move(selectedUtxos), cbCopy = std::move(cb), checkPbFeeFloor](float fee) mutable {
       if (!mgr) {
          return; // main thread die, nothing to do
       }
 
-      QMetaObject::invokeMethod(mgr, [mgr, quantity, walletId, fee, utxos = std::move(utxos), cb = std::move(cbCopy), checkPbFeeFloor]() mutable {
+      QMetaObject::invokeMethod(mgr, [mgr, quantity, inputUtxo = std::move(inputUtxoCopy), fee, utxos = std::move(utxos), cb = std::move(cbCopy), checkPbFeeFloor]() mutable {
          float feePerByte = ArmoryConnection::toFeePerByte(fee);
          if (checkPbFeeFloor) {
             feePerByte = std::max(mgr->feeRatePb(), feePerByte);
@@ -385,7 +390,7 @@ void bs::UTXOReservationManager::getBestXbtFromUtxos(std::vector<UTXO> selectedU
 
          const BTCNumericTypes::satoshi_type spendableQuantity = quantity + fee;
          if (spendableQuantity > total) {
-            mgr->getBestXbtUtxoSet(walletId, spendableQuantity, std::move(cb), checkPbFeeFloor);
+            mgr->getBestXbtFromUtxos(std::move(inputUtxo), spendableQuantity, std::move(cb), checkPbFeeFloor);
          }
          else {
             cb(std::move(utxos));

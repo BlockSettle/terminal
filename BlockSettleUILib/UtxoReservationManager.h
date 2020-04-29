@@ -100,7 +100,7 @@ namespace bs {
       void resetSpendableXbt(const std::shared_ptr<bs::sync::hd::Wallet>& hdWallet);
       void resetSpendableCC(const std::shared_ptr<bs::sync::Wallet>& leaf);
       void resetAllSpendableCC(const std::shared_ptr<bs::sync::hd::Wallet>& hdWallet);
-      void getBestXbtFromUtxos(std::vector<UTXO> selectedUtxo, const HDWalletId& walletId, BTCNumericTypes::satoshi_type quantity,
+      void getBestXbtFromUtxos(std::vector<UTXO> selectedUtxo, BTCNumericTypes::satoshi_type quantity,
          std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor);
 
       std::function<void(std::vector<UTXO>&&)> getReservationCb(const HDWalletId& walletId, bool partial,

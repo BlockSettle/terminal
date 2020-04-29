@@ -315,7 +315,13 @@ void OTCNegotiationRequestWidget::onMaxQuantityClicked()
 
    std::vector<UTXO> utxos = selectedUTXOs();
    if (utxos.empty()) {
-      utxos = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId());
+      if (hdWallet->isHardwareWallet()) {
+         auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWallets);
+         utxos = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId(), purpose);
+      }
+      else {
+         utxos = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId());
+      }
    }
 
    auto feeCb = [this, parentWidget = QPointer<OTCWindowsAdapterBase>(this), utxos = std::move(utxos)](float fee) {
