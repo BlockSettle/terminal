@@ -1029,7 +1029,7 @@ void BSTerminalMainWindow::initUtxoReservationManager()
       walletsMgr_, armory_, logMgr_->logger());
 }
 
-void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const BinaryData &txHash, int errCode
+void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const std::string& requestId, const BinaryData &txHash, int errCode
    , const std::string &errMsg)
 {
    NotificationCenter::notify(bs::ui::NotifyType::BroadcastError,
@@ -1043,7 +1043,7 @@ void BSTerminalMainWindow::MainWinACT::onNodeStatus(NodeStatus nodeStatus, bool 
    });
 }
 
-void BSTerminalMainWindow::MainWinACT::onZCReceived(const std::vector<bs::TXEntry> &zcs)
+void BSTerminalMainWindow::MainWinACT::onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry>& zcs)
 {
    QMetaObject::invokeMethod(parent_, [this, zcs] { parent_->onZCreceived(zcs); });
 }

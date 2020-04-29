@@ -413,7 +413,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
    }
 
    if (result == bs::error::ErrorCode::NoError) {
-      if (armory_->broadcastZC(signedTX)) {
+      if (!armory_->broadcastZC(signedTX).empty()) {
          if (!textEditComment()->document()->isEmpty()) {
             const auto &comment = textEditComment()->document()->toPlainText().toStdString();
             transactionData_->getWallet()->setTransactionComment(signedTX, comment);
@@ -453,7 +453,7 @@ bool CreateTransactionDialog::BroadcastImportedTx()
       return false;
    }
    startBroadcasting();
-   if (armory_->broadcastZC(importedSignedTX_)) {
+   if (!armory_->broadcastZC(importedSignedTX_).empty()) {
       if (!textEditComment()->document()->isEmpty()) {
          const auto &comment = textEditComment()->document()->toPlainText().toStdString();
          transactionData_->getWallet()->setTransactionComment(importedSignedTX_, comment);
