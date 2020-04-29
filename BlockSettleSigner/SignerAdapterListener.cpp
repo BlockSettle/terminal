@@ -1011,7 +1011,7 @@ bs::error::ErrorCode SignerAdapterListener::verifyOfflineSignRequest(const bs::c
       SPDLOG_LOGGER_ERROR(logger_, "can't find HD wallet for leaf '{}'", txSignReq.walletIds.front());
       return bs::error::ErrorCode::WalletNotFound;
    }
-   if (hdWallet->isWatchingOnly()) {
+   if (hdWallet->isWatchingOnly() && !hdWallet->isHardwareWallet()) {
       SPDLOG_LOGGER_ERROR(logger_, "can't sign with watching-only HD wallet {}", hdWallet->walletId());
       return bs::error::ErrorCode::WalletNotFound;
    }
