@@ -20,9 +20,10 @@ namespace {
 
 } // namespace
 
-SettlementContainer::SettlementContainer(UtxoReservationToken utxoRes)
+SettlementContainer::SettlementContainer(UtxoReservationToken utxoRes, std::unique_ptr<bs::hd::Purpose> walletPurpose)
    : QObject(nullptr)
    , utxoRes_(std::move(utxoRes))
+   , walletPurpose_(std::move(walletPurpose))
 {}
 
 SettlementContainer::~SettlementContainer()

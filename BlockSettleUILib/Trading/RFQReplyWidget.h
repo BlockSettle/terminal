@@ -23,6 +23,7 @@
 #include "CommonTypes.h"
 #include "TabWithShortcut.h"
 #include "UtxoReservationToken.h"
+#include "HDPath.h"
 
 namespace Ui {
     class RFQReplyWidget;
@@ -149,6 +150,7 @@ private:
       bs::Address authAddr;
       std::vector<UTXO> utxosPayinFixed;
       bs::UtxoReservationToken utxoRes;
+      std::unique_ptr<bs::hd::Purpose> walletPurpose;
    };
 
    struct SentCCReply
@@ -157,6 +159,7 @@ private:
       std::string                         requestorAuthAddress;
       std::shared_ptr<bs::sync::hd::Wallet>  xbtWallet;
       bs::UtxoReservationToken            utxoRes;
+      std::unique_ptr<bs::hd::Purpose> walletPurpose;
    };
 
 private:

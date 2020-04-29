@@ -34,8 +34,9 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::map<UTXO, std::string> &manualXbtInputs
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
+   , std::unique_ptr<bs::hd::Purpose> walletPurpose
    , bs::UtxoReservationToken utxoRes)
-   : bs::SettlementContainer(std::move(utxoRes))
+   : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose))
    , logger_(logger)
    , signingContainer_(container)
    , xbtWallet_(xbtWallet)
@@ -266,7 +267,15 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
             xbtLeaves_.front()->getNewChangeAddress(changeAddrCb);
          };
          if (manualXbtInputs_.empty()) {
-            auto utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId());
+            std::vector<UTXO> utxos;
+            if (xbtWallet_->isHardwareWallet()) {
+               assert(walletPurpose_);
+               utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId(), *walletPurpose_);
+            }
+            else {
+               utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId());
+            }
+
             auto fixedUtxo = utxoReservationManager_->convertUtxoToPartialFixedInput(xbtWallet_->walletId(), utxos);
             inputsCb(fixedUtxo.inputs);
          } else {

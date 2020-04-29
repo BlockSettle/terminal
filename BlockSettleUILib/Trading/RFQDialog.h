@@ -18,6 +18,7 @@
 #include "CommonTypes.h"
 #include "UtxoReservationToken.h"
 #include "BSErrorCode.h"
+#include "HDPath.h"
 
 namespace Ui {
    class RFQDialog;
@@ -75,6 +76,7 @@ public:
       , const std::map<UTXO, std::string> &fixedXbtInputs
       , bs::UtxoReservationToken fixedXbtUtxoRes
       , bs::UtxoReservationToken ccUtxoRes
+      , std::unique_ptr<bs::hd::Purpose> purpose
       , RFQRequestWidget* parent = nullptr);
    ~RFQDialog() override;
 
@@ -142,6 +144,7 @@ private:
 
    QString           ccOrderId_;
    bs::UtxoReservationToken ccUtxoRes_;
+   std::unique_ptr<bs::hd::Purpose> walletPurpose_;
 
 };
 
