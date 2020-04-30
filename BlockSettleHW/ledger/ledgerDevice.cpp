@@ -210,7 +210,7 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
 
    // We do not pass wallet manager in next thread,
    // so catch any data we need here and put it in other thread
-   auto coreReq = bs::signer::pbTxRequestToCore(request);
+   auto coreReq = bs::signer::pbTxRequestToCore(request, logger_);
 
    // retrieve inputs paths
    std::vector<bs::hd::Path> inputPathes;

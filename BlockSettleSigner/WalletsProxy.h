@@ -123,6 +123,7 @@ private:
    std::shared_ptr<bs::sync::hd::Wallet> getWoSyncWallet(const bs::sync::WatchingOnlyWallet &) const;
    bool hasCCInfo() const { return hasCCInfo_; }
    std::shared_ptr<SignAdapterContainer> signContainer() const;
+   void signOfflineTxProceed(const QString& fileName, const std::vector<bs::core::wallet::TXSignRequest> &parsedReqs, const QJSValue &jsCallback);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

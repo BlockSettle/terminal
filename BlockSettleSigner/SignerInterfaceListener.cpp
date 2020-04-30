@@ -176,6 +176,9 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::ChangeControlPasswordType:
       onChangeControlPassword(packet.data(), packet.id());
       break;
+   case signer::VerifyOfflineTxRequestType:
+      onVerifyOfflineTxRequest(packet.data(), packet.id());
+      break;
    default:
       logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
       break;
@@ -576,6 +579,23 @@ void SignerInterfaceListener::onChangeControlPassword(const std::string &data, b
    }
    itCb->second(static_cast<bs::error::ErrorCode>(response.errorcode()));
    cbChangeControlPwReqs_.erase(itCb);
+}
+
+void SignerInterfaceListener::onVerifyOfflineTxRequest(const std::string &data, RequestId reqId)
+{
+   signer::VerifyOfflineTxResponse response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+   const auto &itCb = cbVerifyOfflineTxRequestReqs_.find(reqId);
+   if (itCb == cbVerifyOfflineTxRequestReqs_.end()) {
+      logger_->error("[SignerInterfaceListener::{}] failed to find callback for id {}"
+         , __func__, reqId);
+      return;
+   }
+   itCb->second(static_cast<bs::error::ErrorCode>(response.error_code()));
+   cbVerifyOfflineTxRequestReqs_.erase(itCb);
 }
 
 void SignerInterfaceListener::onCreateHDWallet(const std::string &data, bs::signer::RequestId reqId)
