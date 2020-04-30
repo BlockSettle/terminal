@@ -120,6 +120,7 @@ private:
 
    BinaryData                 dealerTx_;
    bs::core::wallet::TXSignRequest  ccTxData_;
+   BinaryData                 ccTxResolvedData_;
    std::string                ccTxSigned_;
    bool                       genAddrVerified_ = false;
 

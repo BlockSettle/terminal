@@ -503,7 +503,7 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
             }
 
             for (auto& txPair : result) {
-               txReq.supportingTxMap_.emplace(txPair.first, txPair.second->serialize());
+               txReq.supportingTXs.emplace(txPair.first, txPair.second->serialize());
             }
 
             bool rc = createTransactionImpl(std::move(txReq));

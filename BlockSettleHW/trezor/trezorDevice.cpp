@@ -631,7 +631,7 @@ const Tx &TrezorDevice::prevTx(const bitcoin::TxRequest &txRequest)
    auto txHash = BinaryData::fromString(txRequest.details().tx_hash()).swapEndian();
    auto &tx = prevTxs_[txHash];
    if (!tx.isInitialized()) {
-      auto txRaw = currentTxSignReq_->supportingTxMap_.at(txHash);
+      auto txRaw = currentTxSignReq_->supportingTXs.at(txHash);
       tx = Tx(txRaw);
    }
    return tx;
