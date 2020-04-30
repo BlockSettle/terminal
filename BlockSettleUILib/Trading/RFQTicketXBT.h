@@ -23,6 +23,7 @@
 #include "CommonTypes.h"
 #include "UtxoReservationToken.h"
 #include "XBTAmount.h"
+#include "UiUtils.h"
 
 QT_BEGIN_NAMESPACE
 class QPushButton;
@@ -93,6 +94,7 @@ public:
    void setSubmitRFQ(SubmitRFQCb submitRFQCb);
 
    std::shared_ptr<bs::sync::hd::Wallet> xbtWallet() const;
+   UiUtils::WalletsTypes xbtWalletType() const;
 
    void onParentAboutToHide();
 

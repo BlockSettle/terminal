@@ -24,6 +24,7 @@
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
 #include "QWalletInfo.h"
+#include "HDPath.h"
 #include "UtxoReservationToken.h"
 
 namespace Ui {
@@ -77,6 +78,7 @@ namespace bs {
          std::shared_ptr<bs::sync::hd::Wallet> xbtWallet;
          bs::Address authAddr;
          std::vector<UTXO> fixedXbtInputs;
+         std::unique_ptr<bs::hd::Purpose> walletPurpose;
       };
 
       class RFQDealerReply : public QWidget

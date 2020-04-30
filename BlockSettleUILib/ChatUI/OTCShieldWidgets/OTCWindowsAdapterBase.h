@@ -52,6 +52,7 @@ struct TimeoutData
    QPointer<QLabel> labelTimeLeft_{};
 };
 
+using CbSuccess = std::function<void(void)>;
 class OTCWindowsAdapterBase : public QWidget {
    Q_OBJECT
 public:
@@ -97,6 +98,8 @@ protected:
    BTCNumericTypes::balance_type getXBTSpendableBalanceFromCombobox(QComboBox *walletsCombobox) const;
    std::shared_ptr<bs::sync::hd::Wallet> getCurrentHDWalletFromCombobox(QComboBox *walletsCombobox) const;
 
+   void submitProposal(QComboBox *walletsCombobox, bs::XBTAmount amount, CbSuccess onSuccess);
+
    QString getXBTRange(bs::network::otc::Range xbtRange);
    QString getCCRange(bs::network::otc::Range ccRange);
 
@@ -127,7 +130,7 @@ protected:
    bs::UtxoReservationToken reservation_;
 
 private:
-   void showXBTInputs(const std::string& walletId);
+   void showXBTInputs(QComboBox *walletsCombobox);
 
    QTimer timeoutTimer_;
    TimeoutData currentTimeoutData_{};

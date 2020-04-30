@@ -57,6 +57,7 @@ public:
       , const std::vector<UTXO> &utxosPayinFixed
       , const bs::Address &recvAddr
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
+      , std::unique_ptr<bs::hd::Purpose> walletPurpose
       , bs::UtxoReservationToken utxoRes);
    ~DealerXBTSettlementContainer() override;
 

@@ -31,7 +31,8 @@ namespace bs {
    {
       Q_OBJECT
    public:
-      explicit SettlementContainer(bs::UtxoReservationToken utxoRes);
+      explicit SettlementContainer(bs::UtxoReservationToken utxoRes,
+         std::unique_ptr<bs::hd::Purpose> walletPurpose);
       ~SettlementContainer() override;
 
       virtual bool cancel() = 0;
@@ -56,6 +57,7 @@ namespace bs {
          , QDateTime timestamp) const;
 
       static constexpr unsigned int kWaitTimeoutInSec = 30;
+
    signals:
       void error(bs::error::ErrorCode, QString);
 
@@ -75,13 +77,13 @@ namespace bs {
 
       ValidityFlag validityFlag_;
       bs::UtxoReservationToken utxoRes_;
+      std::unique_ptr<bs::hd::Purpose> walletPurpose_;
 
    private:
       QTimer   timer_;
       int      msDuration_ = 0;
       int      msTimeLeft_ = 0;
       std::chrono::steady_clock::time_point startTime_;
-
    };
 
 }  // namespace bs

@@ -386,7 +386,7 @@ void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &
 
       updateWalletsList((qrn.side == bs::network::Side::Sell) ? UiUtils::WalletsTypes::Full : UiUtils::WalletsTypes::All);
    } else if (qrn.assetType == bs::network::Asset::SpotXBT) {
-      updateWalletsList((qrn.side == bs::network::Side::Sell) ? (UiUtils::WalletsTypes::Full | UiUtils::WalletsTypes::Hardware) : UiUtils::WalletsTypes::All);
+      updateWalletsList((qrn.side == bs::network::Side::Sell) ? (UiUtils::WalletsTypes::Full | UiUtils::WalletsTypes::HardwareSW) : UiUtils::WalletsTypes::All);
    }
 }
 
@@ -643,6 +643,11 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
          SPDLOG_LOGGER_ERROR(logger_, "can't submit CC/XBT reply without XBT wallet");
          return;
       }
+
+      if (replyData->xbtWallet->isHardwareWallet()) {
+         auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXbtWallet);
+         replyData->walletPurpose.reset(new bs::hd::Purpose(purpose));
+      }
    }
 
    if (qrn.assetType == bs::network::Asset::SpotXBT) {
@@ -760,7 +765,16 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                   ccWallet->getSpendableTxOutList(inputsWrapCb, spendVal, true);
                } else {
                   // For XBT request all available inputs as we don't know fee yet (createPartialTXRequest will use correct inputs if fee rate is set)
-                  auto utxos = utxoReservationManager_->getAvailableXbtUTXOs(replyData->xbtWallet->walletId());
+                  std::vector<UTXO> utxos;
+                  if (replyData->xbtWallet->isHardwareWallet()) {
+                     auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXbtWallet);
+                     utxos = utxoReservationManager_->getAvailableXbtUTXOs(
+                        replyData->xbtWallet->walletId(), purpose);
+                  }
+                  else {
+                     utxos = utxoReservationManager_->getAvailableXbtUTXOs(
+                        replyData->xbtWallet->walletId());
+                  }
                   auto fixedUtxo = utxoReservationManager_->convertUtxoToPartialFixedInput(replyData->xbtWallet->walletId(), utxos);
                   inputsCb(fixedUtxo.inputs);
                }
@@ -861,7 +875,14 @@ void RFQDealerReply::showCoinControl()
 
    // Need to release current reservation to be able select them back
    selectedXbtRes_.release();
-   auto allUTXOs = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId());
+   std::vector<UTXO> allUTXOs;
+   if (xbtWallet->isHardwareWallet()) {
+      auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXbtWallet);
+      allUTXOs = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId(), purpose);
+   }
+   else {
+      allUTXOs = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId());
+   }
 
    ui_->toolButtonXBTInputsSend->setEnabled(true);
 
@@ -1149,8 +1170,17 @@ void bs::ui::RFQDealerReply::reserveBestUtxoSetAndSubmit(double quantity, double
       replyRFQ(std::move(utxos));
    };
 
-   utxoReservationManager_->getBestXbtUtxoSet(replyData->xbtWallet->walletId(),
-      xbtQuantity, cbBestUtxoSet, true);
+   if (replyData->xbtWallet->isHardwareWallet()) {
+      auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXbtWallet);
+      utxoReservationManager_->getBestXbtUtxoSet(replyData->xbtWallet->walletId(), purpose,
+         xbtQuantity, cbBestUtxoSet, true);
+   }
+   else {
+      utxoReservationManager_->getBestXbtUtxoSet(replyData->xbtWallet->walletId(),
+         xbtQuantity, cbBestUtxoSet, true);
+   }
+
+
 }
 
 void bs::ui::RFQDealerReply::refreshSettlementDetails()
@@ -1230,7 +1260,15 @@ bs::XBTAmount RFQDealerReply::getXbtBalance() const
       return {};
    }
 
-   return bs::XBTAmount(utxoReservationManager_->getAvailableXbtUtxoSum(xbtWallet->walletId()));
+   if (xbtWallet->isHardwareWallet()) {
+      auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXbtWallet);
+      return bs::XBTAmount(utxoReservationManager_->getAvailableXbtUtxoSum(
+         xbtWallet->walletId(), purpose));
+   }
+   else {
+      return bs::XBTAmount(utxoReservationManager_->getAvailableXbtUtxoSum(
+         xbtWallet->walletId()));
+   }
 }
 
 BTCNumericTypes::balance_type bs::ui::RFQDealerReply::getPrivateMarketCoinBalance() const
