@@ -835,6 +835,7 @@ void LedgerCommandThread::processTXLegacy()
    // -- Start input upload section --
 
    //upload the redeem script for each outpoint
+   QVector<QByteArray> responseSigned;
    for (int i = 0; i < coreReq_->inputs.size(); ++i)
    {
       auto& utxo = coreReq_->inputs[i];
@@ -844,26 +845,23 @@ void LedgerCommandThread::processTXLegacy()
 
       //pass true as this is a newly presented redeem script
       startUntrustedTransaction(
-         trustedInputs, redeemScriptQ, i, true, false, coreReq_->RBF);
-   }
+         trustedInputs, redeemScriptQ, i, i == 0, false, coreReq_->RBF);
 
-   // -- Done input section --
+      // -- Done input section --
 
-   // -- Start output section --
+      // -- Start output section --
 
-   //upload our recipients as serialized outputs
-   finalizeInputFull();
+      //upload our recipients as serialized outputs
+      finalizeInputFull();
 
-   // -- Done output section --
+      // -- Done output section --
 
-   // At this point user verified all outputs and we can start signing inputs
-   emit info(HWInfoStatus::kTransaction);
+      // At this point user verified all outputs and we can start signing inputs
+      emit info(HWInfoStatus::kTransaction);
 
-   // -- Start signing one by one all addresses -- 
-   logger_->debug("[LedgerCommandThread] processTXLegacy - Start signing section");
+      // -- Start signing one by one all addresses -- 
+      logger_->debug("[LedgerCommandThread] processTXLegacy - Start signing section");
 
-   QVector<QByteArray> inputSignCommands;
-   for (int i = 0; i < coreReq_->inputs.size(); ++i) {
       auto &path = inputPaths_[i];
       QByteArray signPayload;
       signPayload.append(static_cast<char>(path.length()));
@@ -879,27 +877,20 @@ void LedgerCommandThread::processTXLegacy()
       signPayload.append(static_cast<char>(0x01));
 
       auto commandSign = getApduCommand(Ledger::CLA, Ledger::INS_HASH_SIGN, 0x00, 0x00, std::move(signPayload));
-      inputSignCommands.push_back(std::move(commandSign));
-   }
 
-   QVector<QByteArray> responseSigned;
-   for (auto &inputCommandSign : inputSignCommands) {
       QByteArray responseInputSign;
-      if (!exchangeData(inputCommandSign, responseInputSign, "[LedgerCommandThread] signTX - Sign Payload")) {
+      if (!exchangeData(commandSign, responseInputSign, "[LedgerCommandThread] signTX - Sign Payload")) {
          releaseDevice();
          return;
       }
-      if (inputCommandSign[1] == static_cast<char>(Ledger::INS_HASH_SIGN)) {
-         responseInputSign[0] = 0x30; // force first but to be 0x30 for a newer version of ledger
-         responseSigned.push_back(responseInputSign);
-      }
+      responseInputSign[0] = 0x30; // force first but to be 0x30 for a newer version of ledger
+      responseSigned.push_back(responseInputSign);
    }
 
    logger_->debug("[LedgerCommandThread] processTXLegacy - Done signing section");
    // -- Done signing one by one all addresses -- 
 
    // Done with device in this point 
-
 
    // Composing and send data back
    std::vector<BIP32_Node> inputNodes;
