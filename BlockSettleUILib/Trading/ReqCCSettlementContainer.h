@@ -106,6 +106,7 @@ private:
    std::shared_ptr<AssetManager>             assetMgr_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
+   std::shared_ptr<ArmoryConnection>         armory_;
    bs::network::RFQ           rfq_;
    bs::network::Quote         quote_;
    const bs::Address          genAddress_;
@@ -126,6 +127,7 @@ private:
    std::map<UTXO, std::string> manualXbtInputs_;
 
    std::string clOrdId_;
+
 };
 
 #endif // __REQ_CC_SETTLEMENT_CONTAINER_H__

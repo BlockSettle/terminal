@@ -50,6 +50,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , lotSize_(assetMgr_->getCCLotSize(product()))
    , manualXbtInputs_(manualXbtInputs)
    , utxoReservationManager_(utxoReservationManager)
+   , armory_(armory)
 {
    if (!xbtWallet_) {
       throw std::logic_error("invalid hd wallet");
@@ -248,8 +249,8 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                      bs::core::wallet::OutputOrderType::Change
                   };
 
-                  ccTxData_ = walletsMgr_->createPartialTXRequest(spendVal, xbtInputs, changeAddr, feePerByte
-                     , { recipient }, outSortOrder, dealerTx_, false/*calcFeeFromPrevData*/, useAllInputs);
+                  ccTxData_ = bs::sync::WalletsManager::createPartialTXRequest(spendVal, xbtInputs, changeAddr, feePerByte, armory_->topBlock()
+                     , { recipient }, outSortOrder, dealerTx_, useAllInputs, logger_);
                   ccTxData_.populateUTXOs = true;
 
                   logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
