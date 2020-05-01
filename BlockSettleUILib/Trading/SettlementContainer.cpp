@@ -20,10 +20,12 @@ namespace {
 
 } // namespace
 
-SettlementContainer::SettlementContainer(UtxoReservationToken utxoRes, std::unique_ptr<bs::hd::Purpose> walletPurpose)
+SettlementContainer::SettlementContainer(UtxoReservationToken utxoRes,
+   std::unique_ptr<bs::hd::Purpose> walletPurpose, bool expandTxDialogInfo)
    : QObject(nullptr)
    , utxoRes_(std::move(utxoRes))
    , walletPurpose_(std::move(walletPurpose))
+   , expandTxDialogInfo_(expandTxDialogInfo)
 {}
 
 SettlementContainer::~SettlementContainer()
@@ -50,6 +52,7 @@ sync::PasswordDialogData SettlementContainer::toPasswordDialogData(QDateTime tim
    info.setValue(PasswordDialogData::Security, security());
    info.setValue(PasswordDialogData::Product, product());
    info.setValue(PasswordDialogData::Side, tr(bs::network::Side::toString(side())));
+   info.setValue(PasswordDialogData::ExpandTxInfo, expandTxDialogInfo_);
 
    return info;
 }

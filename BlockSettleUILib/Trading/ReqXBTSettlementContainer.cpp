@@ -45,8 +45,9 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , bs::UtxoReservationToken utxoRes
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , std::unique_ptr<bs::hd::Purpose> walletPurpose
-   , const bs::Address &recvAddrIfSet)
-   : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose))
+   , const bs::Address &recvAddrIfSet
+   , bool expandTxDialogInfo)
+   : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose), expandTxDialogInfo)
    , logger_(logger)
    , authAddrMgr_(authAddrMgr)
    , walletsMgr_(walletsMgr)

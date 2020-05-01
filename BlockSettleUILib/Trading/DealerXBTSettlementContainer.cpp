@@ -42,8 +42,9 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const bs::Address &recvAddr
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , std::unique_ptr<bs::hd::Purpose> walletPurpose
-   , bs::UtxoReservationToken utxoRes)
-   : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose))
+   , bs::UtxoReservationToken utxoRes
+   , bool expandTxDialogInfo)
+   : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose), expandTxDialogInfo)
    , order_(order)
    , weSellXbt_((order.side == bs::network::Side::Buy) != (order.product == bs::network::XbtCurrency))
    , amount_((order.product != bs::network::XbtCurrency) ? order.quantity / order.price : order.quantity)

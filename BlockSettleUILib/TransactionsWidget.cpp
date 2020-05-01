@@ -303,6 +303,7 @@ void TransactionsWidget::init(const std::shared_ptr<bs::sync::WalletsManager> &w
                               , const std::shared_ptr<ArmoryConnection> &armory
                               , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
                               , const std::shared_ptr<WalletSignerContainer> &signContainer
+                              , const std::shared_ptr<ApplicationSettings> &appSettings
                               , const std::shared_ptr<spdlog::logger> &logger)
 
 {
@@ -310,6 +311,7 @@ void TransactionsWidget::init(const std::shared_ptr<bs::sync::WalletsManager> &w
    armory_ = armory;
    utxoReservationManager_ = utxoReservationManager;
    signContainer_ = signContainer;
+   appSettings_ = appSettings;
    logger_ = logger;
 
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &TransactionsWidget::walletsChanged);
@@ -380,11 +382,6 @@ void TransactionsWidget::onProgressInited(int start, int end)
 void TransactionsWidget::onProgressUpdated(int value)
 {
    ui_->progressBar->setValue(value);
-}
-
-void TransactionsWidget::setAppSettings(std::shared_ptr<ApplicationSettings> appSettings)
-{
-   appSettings_ = appSettings;
 }
 
 void TransactionsWidget::shortcutActivated(ShortcutType s)
@@ -645,6 +642,9 @@ void TransactionsWidget::onRevokeSettlement()
          dlgData.setValue(PasswordDialogData::RequesterAuthAddressVerified, true);
          dlgData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
          dlgData.setValue(PasswordDialogData::SigningAllowed, true);
+
+         dlgData.setValue(PasswordDialogData::ExpandTxInfo,
+            appSettings_->get(ApplicationSettings::AdvancedTxDialogByDefault).toBool());
 
          const auto amount = args->amount.GetValueBitcoin();
          SPDLOG_LOGGER_DEBUG(logger_, "revoke fee={}, qty={} ({}), recv addr: {}"

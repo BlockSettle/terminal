@@ -284,6 +284,9 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
       return;
    }
 
+   const bool expandTxInfo = appSettings_->get<bool>(
+      ApplicationSettings::DetailedSettlementTxDialogByDefault);
+
    if (order.status == bs::network::Order::Pending) {
       if (order.assetType == bs::network::Asset::PrivateMarket) {
          const auto &quoteReqId = quoteProvider_->getQuoteReqId(order.quoteId);
@@ -300,7 +303,8 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
          try {
             const auto settlContainer = std::make_shared<DealerCCSettlementContainer>(logger_, order, quoteReqId
                , assetManager_->getCCLotSize(order.product), assetManager_->getCCGenesisAddr(order.product)
-               , sr.recipientAddress, sr.xbtWallet, signingContainer_, armory_, walletsManager_, std::move(sr.walletPurpose), std::move(sr.utxoRes));
+               , sr.recipientAddress, sr.xbtWallet, signingContainer_, armory_, walletsManager_
+               , std::move(sr.walletPurpose), std::move(sr.utxoRes), expandTxInfo);
             connect(settlContainer.get(), &DealerCCSettlementContainer::signTxRequest, this, &RFQReplyWidget::saveTxData);
             connect(settlContainer.get(), &DealerCCSettlementContainer::error, this, &RFQReplyWidget::onTransactionError);
             connect(settlContainer.get(), &DealerCCSettlementContainer::cancelTrade, this, &RFQReplyWidget::cancelCCTrade);
@@ -336,7 +340,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             const auto settlContainer = std::make_shared<DealerXBTSettlementContainer>(logger_, order
                , walletsManager_, reply.xbtWallet, quoteProvider_, signingContainer_, armory_, authAddressManager_
                , reply.authAddr, reply.utxosPayinFixed, recvXbtAddr, utxoReservationManager_,
-               std::move(reply.walletPurpose), std::move(reply.utxoRes));
+               std::move(reply.walletPurpose), std::move(reply.utxoRes), expandTxInfo);
 
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendUnsignedPayinToPB, this, &RFQReplyWidget::sendUnsignedPayinToPB);
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendSignedPayinToPB, this, &RFQReplyWidget::sendSignedPayinToPB);

@@ -43,7 +43,6 @@ CustomTitleDialogWindowWithExpander {
     property string hwDeviceStatus: qsTr("Searching for device")
     onHeaderButtonClicked: {
         isExpanded = !isExpanded
-        signerSettings.defaultSettlDialogExpandedState = isExpanded
     }
 
     headerButtonText: isExpanded ? "Hide Details" : "Details"
@@ -142,10 +141,6 @@ CustomTitleDialogWindowWithExpander {
            return BSStyle.inputsValidColor;
        else
            return BSStyle.inputsInvalidColor;
-    }
-
-    Component.onCompleted: {
-        isExpanded = signerSettings.defaultSettlDialogExpandedState
     }
 
     Connections {
