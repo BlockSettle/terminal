@@ -84,6 +84,7 @@ bool isNonSegwit(const bs::hd::Path& path);
 namespace HWInfoStatus {
    const QString kPressButton = QObject::tr("Confirm transaction output(s) on your device");
    const QString kTransaction = QObject::tr("Loading transaction to your device....");
+   const QString kReceiveSignedTx = QObject::tr("Receiving signed transaction from device....");
    const QString kTransactionFinished = QObject::tr("Transaction signing finished with success");
    const QString kCancelledByUser = QObject::tr("Cancelled by user");
 }
