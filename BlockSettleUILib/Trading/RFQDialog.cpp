@@ -240,9 +240,8 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::cancelTrade
          , requestWidget_, &RFQRequestWidget::cancelCCTrade);
 
-      auto orderUpdatedCb = [qId = quote_.quoteId, ccContainer = ccSettlContainer_]
-         (const bs::network::Order& order)
-      {
+      // Do not make circular dependency, capture bare pointer
+      auto orderUpdatedCb = [qId = quote_.quoteId, ccContainer = ccSettlContainer_.get()] (const bs::network::Order& order) {
          if (order.status == bs::network::Order::Pending && order.quoteId == qId) {
             ccContainer->setClOrdId(order.clOrderId);
          }
