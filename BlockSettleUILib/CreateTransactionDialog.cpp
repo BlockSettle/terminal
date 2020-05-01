@@ -205,7 +205,7 @@ int CreateTransactionDialog::SelectWallet(const std::string& walletId)
 
 void CreateTransactionDialog::populateWalletsList()
 {
-   int index = UiUtils::fillHDWalletsComboBox(comboBoxWallets(), walletsManager_, UiUtils::WalletsTypes::All_AllowLegacy);
+   int index = UiUtils::fillHDWalletsComboBox(comboBoxWallets(), walletsManager_, UiUtils::WalletsTypes::All_AllowHwLegacy);
    selectedWalletChanged(index);
 }
 
@@ -298,12 +298,15 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
    }
 
    auto group = rootWallet->getGroup(rootWallet->getXBTGroupType());
-   auto walletType = UiUtils::getSelectedWalletType(comboBoxWallets());
+   const bool isHardware = rootWallet->isHardwareWallet();
+   bs::hd::Purpose hwPurpose;
+   if (isHardware) {
+      hwPurpose = UiUtils::getSelectedHwPurpose(comboBoxWallets());
+   }
 
-   if ((transactionData_->getGroup() != group || walletType == UiUtils::Hardware_Legacy) || resetInputs) {
-      if (walletType == UiUtils::Hardware_Legacy) {
-         auto wallet = group->getLeaf(bs::hd::Purpose::NonSegWit);
-         transactionData_->setWallet(wallet, armory_->topBlock()
+   if (transactionData_->getGroup() != group || rootWallet->isHardwareWallet() || resetInputs) {
+      if (rootWallet->isHardwareWallet()) {
+         transactionData_->setWallet(group->getLeaf(hwPurpose), armory_->topBlock()
             , resetInputs, cbInputsReset);
       }
       else {
@@ -311,6 +314,8 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
             , resetInputs, cbInputsReset);
       }
    }
+
+   emit walletChanged();
 }
 
 void CreateTransactionDialog::onTransactionUpdated()

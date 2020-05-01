@@ -108,6 +108,7 @@ protected:
 
 signals:
    void feeLoadingCompleted(const std::map<unsigned int, float> &);
+   void walletChanged();
 
 protected slots:
    virtual void onFeeSuggestionsLoaded(const std::map<unsigned int, float> &);

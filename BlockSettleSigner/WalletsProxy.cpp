@@ -463,12 +463,27 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
       return;
    }
 
-   const auto &parsedReqs = bs::core::wallet::ParseOfflineTXFile(data);
+   auto parsedReqs = bs::core::wallet::ParseOfflineTXFile(data);
    if (parsedReqs.empty()) {
       invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("File %1 contains no TX sign requests").arg(fileName));
       return;
    }
 
+   adapter_->verifyOfflineTxRequest(BinaryData::fromString(data)
+      , [this, fileName, jsCallback, parsedReqs = std::move(parsedReqs), data](bs::error::ErrorCode errorCode) {
+      if (errorCode != bs::error::ErrorCode::NoError) {
+         invokeJsCallBack(jsCallback, QJSValueList()
+            << QJSValue(false)
+            << tr("Sign request verification failed: %1").arg(bs::error::ErrorCodeToString(errorCode)));
+         return;
+      }
+
+      signOfflineTxProceed(fileName, parsedReqs, jsCallback);
+   });
+}
+
+void WalletsProxy::signOfflineTxProceed(const QString &fileName, const std::vector<bs::core::wallet::TXSignRequest> &parsedReqs, const QJSValue &jsCallback)
+{
    struct Requests
    {
       std::vector<bs::core::wallet::TXSignRequest> requests;
@@ -547,6 +562,7 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
                   }
                };
                if (reqs.isHw) {
+                  // Signed request is stored in binaryPassword field for HW wallets
                   cbSigned(bs::error::ErrorCode::NoError, passwordData->binaryPassword());
                } else {
                   adapter_->signOfflineTxRequest(reqs.requests[0], passwordData->binaryPassword(), cbSigned);
@@ -564,6 +580,7 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
          dialogData->setValue(bs::sync::PasswordDialogData::Title, tr("Sign Offline TX"));
 
          if (reqs.isHw) {
+            // Pass sign request as it is, HW wallet will handle it
             auto reqData = coreTxRequestToPb(reqs.requests[0]).SerializeAsString();
             dialogData->setValue(bs::sync::PasswordDialogData::TxRequest, QByteArray::fromStdString(reqData));
          }

@@ -111,6 +111,12 @@ bs::network::otc::Offer OTCNegotiationResponseWidget::offer() const
 
    result.inputs = selectedUTXOs();
 
+   auto walletType = UiUtils::getSelectedWalletType(ui_->comboBoxXBTWallets);
+   if (walletType & UiUtils::WalletsTypes::HardwareSW) {
+      auto purpose = UiUtils::getHwWalletPurpose(walletType);
+      result.walletPurpose.reset(new bs::hd::Purpose(purpose));
+   }
+
    return result;
 }
 
@@ -220,23 +226,13 @@ void OTCNegotiationResponseWidget::onAcceptOrUpdateClicked()
       return;
    }
 
-   const auto hdWallet = getCurrentHDWalletFromCombobox(ui_->comboBoxXBTWallets);
-   if (!hdWallet) {
-      return;
-   }
-
-   auto cbUtxoSet = [wdgt = QPointer<OTCNegotiationResponseWidget>(this), signal](std::vector<UTXO>&& utxos) {
-      if (!wdgt) {
-         return;
-      }
-
-      wdgt->setSelectedInputs(utxos);
-      wdgt->setReservation(wdgt->getUtxoManager()->makeNewReservation(utxos));
-      signal.invoke(wdgt);
-   };
-
-   getUtxoManager()->getBestXbtUtxoSet(hdWallet->walletId(), bs::XBTAmount(ui_->quantitySpinBox->value()).GetValue()
-      , std::move(cbUtxoSet), true);
+   submitProposal(ui_->comboBoxXBTWallets, bs::XBTAmount(ui_->quantitySpinBox->value()),
+      [caller = QPointer<OTCNegotiationResponseWidget>(this), signal]() {
+         if (!caller) {
+            return;
+         }
+         signal.invoke(caller);
+   });
 }
 
 void OTCNegotiationResponseWidget::onShowXBTInputsClicked()

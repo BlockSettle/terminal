@@ -91,6 +91,30 @@ std::shared_ptr<bs::sync::WalletsManager> SignerAdapter::getWalletsManager()
    return walletsMgr_;
 }
 
+
+void SignerAdapter::verifyOfflineTxRequest(const BinaryData &signRequest, const std::function<void (bs::error::ErrorCode)> &cb)
+{
+   signer::VerifyOfflineTxRequest request;
+   request.set_content(signRequest.toBinStr());
+   const auto reqId = listener_->send(signer::VerifyOfflineTxRequestType, request.SerializeAsString());
+   listener_->setVerifyOfflineTxRequestCb(reqId, [this, cb](bs::error::ErrorCode errorCode) {
+      if (errorCode != bs::error::ErrorCode::NoError) {
+         cb(errorCode);
+         return;
+      }
+      // Need to sync wallets because they might be extended and include new addresses
+      bool result = getWalletsManager()->syncWallets([cb](int count, int total) {
+         if (count == total) {
+            cb(bs::error::ErrorCode::NoError);
+         }
+      });
+      if (!result) {
+         SPDLOG_LOGGER_ERROR(logger_, "wallets sync failed");
+         cb(bs::error::ErrorCode::InternalError);
+      }
+   });
+}
+
 void SignerAdapter::signOfflineTxRequest(const bs::core::wallet::TXSignRequest &txReq
    , const SecureBinaryData &password, const std::function<void(bs::error::ErrorCode result, const BinaryData &)> &cb)
 {
