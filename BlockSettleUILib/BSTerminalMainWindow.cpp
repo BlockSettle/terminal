@@ -1260,7 +1260,7 @@ void BSTerminalMainWindow::onSend()
    }
 
    if (!selectedWalletId.empty()) {
-      dlg->SelectWallet(selectedWalletId);
+      dlg->SelectWallet(selectedWalletId, UiUtils::WalletsTypes::None);
    }
 
    while(true) {

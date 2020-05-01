@@ -61,7 +61,7 @@ public:
       , QWidget* parent);
    ~CreateTransactionDialog() noexcept override;
 
-   int SelectWallet(const std::string& walletId);
+   int SelectWallet(const std::string& walletId, int type);
 
    virtual bool switchModeRequested() const= 0;
    virtual std::shared_ptr<CreateTransactionDialog> SwithcMode() = 0;

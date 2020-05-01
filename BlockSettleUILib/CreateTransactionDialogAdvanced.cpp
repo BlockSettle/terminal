@@ -1392,7 +1392,7 @@ void CreateTransactionDialogAdvanced::onExistingAddressSelectedForChange()
 
 void CreateTransactionDialogAdvanced::SetFixedWallet(const std::string& walletId, const std::function<void()> &cbInputsReset)
 {
-   const int idx = SelectWallet(walletId);
+   const int idx = SelectWallet(walletId, UiUtils::WalletsTypes::None);
    selectedWalletChanged(idx, true, cbInputsReset);
    ui_->comboBoxWallets->setEnabled(false);
 }
@@ -1404,7 +1404,7 @@ void CreateTransactionDialogAdvanced::setFixedGroupInputs(const std::shared_ptr<
    if (leaves.empty()) {
       return;
    }
-   SelectWallet(leaves.front()->walletId());
+   SelectWallet(leaves.front()->walletId(), UiUtils::WalletsTypes::None);
    ui_->comboBoxWallets->setEnabled(false);
    disableInputSelection();
    transactionData_->setGroupAndInputs(group, inputs, armory_->topBlock());
@@ -1580,7 +1580,8 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::Swithc
       , walletsManager_, utxoReservationManager_, signContainer_
       , logger_, applicationSettings_, parentWidget());
 
-   simpleDialog->SelectWallet(UiUtils::getSelectedWalletId(ui_->comboBoxWallets));
+   simpleDialog->SelectWallet(UiUtils::getSelectedWalletId(ui_->comboBoxWallets),
+      UiUtils::getSelectedWalletType(ui_->comboBoxWallets));
 
    const auto recipientIdList = transactionData_->allRecipientIds();
 

@@ -153,7 +153,7 @@ bs::hd::Purpose getHwWalletPurpose(WalletsTypes hwType)
 
 }
 
-int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId)
+int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId, WalletsTypes type /* = WalletsTypes::None */)
 {
    int walletIndex = -1;
    if (comboBox->count() == 0) {
@@ -162,6 +162,15 @@ int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& wall
 
    for (int i=0; i<comboBox->count(); ++i) {
       if (comboBox->itemData(i, WalletIdRole).toString().toStdString() == walletId) {
+         if (type != WalletsTypes::None) {
+            auto walletType =
+               static_cast<UiUtils::WalletsTypes>(comboBox->itemData(i, WalletType).toInt());
+
+            if (type != walletType) {
+               continue;
+            }
+         }
+
          walletIndex = i;
          break;
       }
