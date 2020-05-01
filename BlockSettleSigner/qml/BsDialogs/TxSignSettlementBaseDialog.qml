@@ -39,7 +39,7 @@ CustomTitleDialogWindowWithExpander {
     property bool signingIsNotSet: true
 
     // expanding
-    property bool isExpanded: false
+    property bool isExpanded: passwordDialogData.ExpandTxInfo
     property string hwDeviceStatus: qsTr("Searching for device")
     onHeaderButtonClicked: {
         isExpanded = !isExpanded
