@@ -305,12 +305,14 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             connect(settlContainer.get(), &DealerCCSettlementContainer::error, this, &RFQReplyWidget::onTransactionError);
             connect(settlContainer.get(), &DealerCCSettlementContainer::cancelTrade, this, &RFQReplyWidget::cancelCCTrade);
 
-            connect(quoteProvider_.get(), &QuoteProvider::orderFailed, this
-                    , [settlContainer, quoteId = order.quoteId](const std::string& failedQuoteId, const std::string& reason){
-               if (quoteId == failedQuoteId) {
-                  settlContainer->cancel();
-               }
-            });
+            // Do not make circular dependency, capture bare pointer
+            auto orderUpdatedCb = [settlContainer = settlContainer.get(), quoteId = order.quoteId]
+               (const std::string& failedQuoteId, const std::string& reason) {
+                if (settlContainer && quoteId == failedQuoteId) {
+                   settlContainer->cancel();
+                }
+            };
+            connect(quoteProvider_.get(), &QuoteProvider::orderFailed, settlContainer.get(), orderUpdatedCb);
 
             ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
             settlContainer->activate();
@@ -349,8 +351,9 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             connect(this, &RFQReplyWidget::signedPayoutRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayoutRequested);
             connect(this, &RFQReplyWidget::signedPayinRequested, settlContainer.get(), &DealerXBTSettlementContainer::onSignedPayinRequested);
 
-            connect(quoteProvider_.get(), &QuoteProvider::orderFailed, this
-                    , [settlContainer, quoteId = order.quoteId](const std::string& failedQuoteId, const std::string& reason){
+            // Do not make circular dependency, capture bare pointer
+            connect(quoteProvider_.get(), &QuoteProvider::orderFailed, settlContainer.get()
+                    , [settlContainer = settlContainer.get(), quoteId = order.quoteId](const std::string& failedQuoteId, const std::string& reason){
                if (quoteId == failedQuoteId) {
                   settlContainer->cancel();
                }
