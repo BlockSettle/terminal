@@ -118,7 +118,7 @@ BinaryData TestAuth::sendTo(uint64_t value, bs::Address& addr)
 
    //sign & send
    signer.sign();
-   auto&& txData = signer.serialize();
+   auto&& txData = signer.serializeSignedTx();
    Tx txObj(txData);
    
    envPtr_->armoryInstance()->pushZC(txData);
