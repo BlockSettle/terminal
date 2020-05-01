@@ -13,7 +13,7 @@
   <property name="sizeHint" stdset="0">
    <size>
     <width>922</width>
-    <height>469</height>
+    <height>459</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -397,7 +397,7 @@
                <item>
                 <widget class="QLabel" name="labelZmqPubKey_5">
                  <property name="text">
-                  <string>ArmoryDB Key</string>
+                  <string>BlockSettleDB Key</string>
                  </property>
                 </widget>
                </item>
@@ -422,7 +422,7 @@
                   </size>
                  </property>
                  <property name="toolTip">
-                  <string>Optional when connecting to a public ArmoryDB</string>
+                  <string>Optional when connecting to a public BlockSettleDB</string>
                  </property>
                  <property name="styleSheet">
                   <string notr="true">image: url(&quot;:/resources/notification_info@2x.png&quot;);</string>

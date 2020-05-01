@@ -427,7 +427,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
          return;
       }
 
-      detailedText = tr("Failed to communicate to armory to broadcast transaction. Maybe Armory is offline");
+      detailedText = tr("Failed to communicate to BlockSettleDB to broadcast transaction. Maybe BlockSettleDB is offline");
    }
    else {
       detailedText = bs::error::ErrorCodeToString(result);

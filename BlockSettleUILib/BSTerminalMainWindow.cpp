@@ -1743,10 +1743,10 @@ void BSTerminalMainWindow::onNodeStatus(NodeStatus nodeStatus, bool isSegWitEnab
    if (isBitcoinCoreOnline != isBitcoinCoreOnline_) {
       isBitcoinCoreOnline_ = isBitcoinCoreOnline;
       if (isBitcoinCoreOnline) {
-         SPDLOG_LOGGER_INFO(logMgr_->logger(), "ArmoryDB connected to Bitcoin Core RPC");
+         SPDLOG_LOGGER_INFO(logMgr_->logger(), "BlockSettleDB connected to Bitcoin Core RPC");
          NotificationCenter::notify(bs::ui::NotifyType::BitcoinCoreOnline, {});
       } else {
-         SPDLOG_LOGGER_ERROR(logMgr_->logger(), "ArmoryDB disconnected from Bitcoin Core RPC");
+         SPDLOG_LOGGER_ERROR(logMgr_->logger(), "BlockSettleDB disconnected from Bitcoin Core RPC");
          NotificationCenter::notify(bs::ui::NotifyType::BitcoinCoreOffline, {});
       }
    }
@@ -1901,7 +1901,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
       const auto &deferredDialog = [this, server, promiseObj, srvPubKey, srvIPPort]{
          if (server.armoryDBKey.isEmpty()) {
             ImportKeyBox box(BSMessageBox::question
-               , tr("Import ArmoryDB ID Key?")
+               , tr("Import BlockSettleDB ID Key?")
                , this);
 
             box.setNewKeyFromBinary(srvPubKey);
@@ -1917,7 +1917,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
          }
          else if (server.armoryDBKey.toStdString() != srvPubKey.toHexStr()) {
             ImportKeyBox box(BSMessageBox::question
-               , tr("Import ArmoryDB ID Key?")
+               , tr("Import BlockSettleDB ID Key?")
                , this);
 
             box.setNewKeyFromBinary(srvPubKey);

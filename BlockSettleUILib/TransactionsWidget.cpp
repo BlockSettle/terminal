@@ -746,7 +746,7 @@ void TransactionsWidget::onTXSigned(unsigned int id, BinaryData signedTX
       if (!armory_->pushZC(signedTX)) {
          BSMessageBox(BSMessageBox::critical, tr("Revoke Transaction")
             , tr("Failed to send revoke transaction")
-            , tr("armory connection unavailable"), this).exec();
+            , tr("BlockSettleDB connection unavailable"), this).exec();
       }
    }
 }
