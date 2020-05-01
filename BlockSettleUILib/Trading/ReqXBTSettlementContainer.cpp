@@ -324,7 +324,7 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
       args.inputXbtWallets.push_back(leaf);
    }
    else {
-      for (const auto &leaf : xbtWallet_->getGroup(xbtWallet_->getXBTGroupType())->getLeaves()) {
+      for (const auto &leaf : xbtGroup->getLeaves()) {
          args.inputXbtWallets.push_back(leaf);
       }
    }
@@ -394,7 +394,16 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
    initTradesArgs(args, settlementId);
    args.payinTxId = payinHash;
    args.recvAddr = recvAddrIfSet_;
-   args.outputXbtWallet = xbtWallet_->getGroup(xbtWallet_->getXBTGroupType())->getLeaves().at(0);
+
+   const auto xbtGroup = xbtWallet_->getGroup(xbtWallet_->getXBTGroupType());
+   if (xbtWallet_->isHardwareWallet()) {
+      assert(walletPurpose_);
+      const auto leaf = xbtGroup->getLeaf(*walletPurpose_);
+      args.outputXbtWallet = leaf;
+   }
+   else {
+      args.outputXbtWallet = xbtGroup->getLeaves().at(0);
+   }
 
    auto payoutCb = bs::tradeutils::PayoutResultCb([this, payinHash, timestamp, handle = validityFlag_.handle()]
       (bs::tradeutils::PayoutResult result)

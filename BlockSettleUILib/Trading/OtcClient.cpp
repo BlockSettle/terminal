@@ -1543,10 +1543,14 @@ void OtcClient::createBuyerRequest(const std::string &settlementId, Peer *peer, 
       return;
    }
 
-   auto leaves = targetHdWallet->getGroup(targetHdWallet->getXBTGroupType())->getLeaves();
-   if (leaves.empty()) {
-      cb(OtcClientDeal::error("can't find XBT wallets"));
-      return;
+   auto group = targetHdWallet->getGroup(targetHdWallet->getXBTGroupType());
+   std::vector<std::shared_ptr<bs::sync::Wallet>> xbtWallets;
+   if (targetHdWallet->isHardwareWallet()) {
+      assert(peer->offer.walletPurpose);
+      xbtWallets.push_back(group->getLeaf(*peer->offer.walletPurpose));
+   }
+   else {
+      xbtWallets = group->getAllLeaves();
    }
 
    bs::tradeutils::PayoutArgs args;
@@ -1555,7 +1559,7 @@ void OtcClient::createBuyerRequest(const std::string &settlementId, Peer *peer, 
    if (!peer->offer.recvAddress.empty()) {
       args.recvAddr = bs::Address::fromAddressString(peer->offer.recvAddress);
    }
-   args.outputXbtWallet = leaves.front();
+   args.outputXbtWallet = xbtWallets.front();
 
    auto payoutCb = bs::tradeutils::PayoutResultCb([this, cb, peer, settlementId, targetHdWallet, handle = peer->validityFlag.handle(), logger = logger_]
       (bs::tradeutils::PayoutResult payout)

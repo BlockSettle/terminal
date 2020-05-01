@@ -321,7 +321,14 @@ void RFQTicketXBT::fillRecvAddresses()
 {
    auto recvWallet = getRecvXbtWallet();
    if (recvWallet) {
-      UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, recvWallet, true);
+      if (recvWallet->isHardwareWallet()) {
+         auto xbtGroup = recvWallet->getGroup(recvWallet->getXBTGroupType());
+         auto purpose =  UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWalletsRecv);
+         UiUtils::fillRecvAddressesComboBox(ui_->receivingAddressComboBox, { xbtGroup->getLeaf(purpose) });
+      }
+      else {
+         UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, recvWallet, true);
+      }
    }
 }
 
