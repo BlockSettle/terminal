@@ -31,6 +31,7 @@ class MDCallbacksQt;
 class OTCRequestViewModel;
 class OTCWindowsManager;
 class SignContainer;
+class ApplicationSettings;
 
 namespace Ui {
    class ChatWidget;
@@ -73,6 +74,7 @@ public:
       , const std::shared_ptr<MDCallbacksQt> &
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<bs::UTXOReservationManager> &
+      , const std::shared_ptr<ApplicationSettings>&
    );
 
    bs::network::otc::Peer *currentPeer() const;

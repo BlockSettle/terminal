@@ -58,9 +58,16 @@
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="checkBox_subscribeToMdOnStart">
+       <widget class="QCheckBox" name="subscribeToMdOnStartCheckBox">
         <property name="text">
          <string>Activate Market Data at launch</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="detailedSettlementTxDialogByDefaultCheckBox">
+        <property name="text">
+         <string>Use detailed settlement dialog by default</string>
         </property>
        </widget>
       </item>
@@ -458,7 +465,7 @@
  </widget>
  <tabstops>
   <tabstop>addvancedDialogByDefaultCheckBox</tabstop>
-  <tabstop>checkBox_subscribeToMdOnStart</tabstop>
+  <tabstop>subscribeToMdOnStartCheckBox</tabstop>
   <tabstop>logFileName</tabstop>
   <tabstop>chooseLogFileBtn</tabstop>
   <tabstop>logLevel</tabstop>

@@ -159,8 +159,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    ui_->tabWidget->setCurrentIndex(settings->get<int>(ApplicationSettings::GUI_main_tab));
 
-   ui_->widgetTransactions->setAppSettings(applicationSettings_);
-
    UpdateMainWindowAppearence();
    setWidgetsAuthorized(false);
 
@@ -779,7 +777,8 @@ void BSTerminalMainWindow::tryInitChatView()
       const auto env = isProd ? bs::network::otc::Env::Prod : bs::network::otc::Env::Test;
 
       ui_->widgetChat->init(connectionManager_, env, chatClientServicePtr_,
-         logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_, mdCallbacks_, assetManager_, utxoReservationMgr_);
+         logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_,
+         mdCallbacks_, assetManager_, utxoReservationMgr_, applicationSettings_);
 
       connect(chatClientServicePtr_->getClientPartyModelPtr().get(), &Chat::ClientPartyModel::userPublicKeyChanged,
          this, [this](const Chat::UserPublicKeyInfoList& userPublicKeyInfoList) {
@@ -863,8 +862,8 @@ void BSTerminalMainWindow::InitChartsView()
 void BSTerminalMainWindow::InitTransactionsView()
 {
    ui_->widgetExplorer->init(armory_, logMgr_->logger(), walletsMgr_, ccFileManager_, authManager_);
-   ui_->widgetTransactions->init(walletsMgr_, armory_, utxoReservationMgr_, signContainer_,
-                                logMgr_->logger("ui"));
+   ui_->widgetTransactions->init(walletsMgr_, armory_, utxoReservationMgr_, signContainer_, applicationSettings_
+                                , logMgr_->logger("ui"));
    ui_->widgetTransactions->setEnabled(true);
 
    ui_->widgetTransactions->SetTransactionsModel(transactionsModel_);
@@ -1265,7 +1264,7 @@ void BSTerminalMainWindow::onSend()
    }
 
    if (!selectedWalletId.empty()) {
-      dlg->SelectWallet(selectedWalletId);
+      dlg->SelectWallet(selectedWalletId, UiUtils::WalletsTypes::None);
    }
 
    while(true) {
@@ -1748,10 +1747,10 @@ void BSTerminalMainWindow::onNodeStatus(NodeStatus nodeStatus, bool isSegWitEnab
    if (isBitcoinCoreOnline != isBitcoinCoreOnline_) {
       isBitcoinCoreOnline_ = isBitcoinCoreOnline;
       if (isBitcoinCoreOnline) {
-         SPDLOG_LOGGER_INFO(logMgr_->logger(), "ArmoryDB connected to Bitcoin Core RPC");
+         SPDLOG_LOGGER_INFO(logMgr_->logger(), "BlockSettleDB connected to Bitcoin Core RPC");
          NotificationCenter::notify(bs::ui::NotifyType::BitcoinCoreOnline, {});
       } else {
-         SPDLOG_LOGGER_ERROR(logMgr_->logger(), "ArmoryDB disconnected from Bitcoin Core RPC");
+         SPDLOG_LOGGER_ERROR(logMgr_->logger(), "BlockSettleDB disconnected from Bitcoin Core RPC");
          NotificationCenter::notify(bs::ui::NotifyType::BitcoinCoreOffline, {});
       }
    }
@@ -1906,7 +1905,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
       const auto &deferredDialog = [this, server, promiseObj, srvPubKey, srvIPPort]{
          if (server.armoryDBKey.isEmpty()) {
             ImportKeyBox box(BSMessageBox::question
-               , tr("Import ArmoryDB ID Key?")
+               , tr("Import BlockSettleDB ID Key?")
                , this);
 
             box.setNewKeyFromBinary(srvPubKey);
@@ -1922,7 +1921,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
          }
          else if (server.armoryDBKey.toStdString() != srvPubKey.toHexStr()) {
             ImportKeyBox box(BSMessageBox::question
-               , tr("Import ArmoryDB ID Key?")
+               , tr("Import BlockSettleDB ID Key?")
                , this);
 
             box.setNewKeyFromBinary(srvPubKey);

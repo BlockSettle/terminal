@@ -104,6 +104,7 @@ private:
    HWSignedTx awaitingTransaction_;
    HwWalletWrapper awaitingWalletInfo_;
 
+   bool txSignedByUser_ = false;
    std::unordered_map<int, AsyncCallBack> awaitingCallbackNoData_;
    std::unordered_map<int, AsyncCallBackCall> awaitingCallbackData_;
    std::map<BinaryData, Tx> prevTxs_;

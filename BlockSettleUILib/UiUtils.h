@@ -140,7 +140,7 @@ namespace UiUtils
    void fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox
       , const std::shared_ptr<bs::sync::hd::Wallet>& targetHDWallet, bool showRegularWalletsOnly);
 
-   int selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId);
+   int selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId, WalletsTypes type = WalletsTypes::None);
    std::string getSelectedWalletId(QComboBox* comboBox);
    WalletsTypes getSelectedWalletType(QComboBox* comboBox);
    bs::hd::Purpose getSelectedHwPurpose(QComboBox* comboBox);

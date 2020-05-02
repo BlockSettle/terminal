@@ -57,7 +57,7 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
       QVBoxLayout *l = new QVBoxLayout(d);
       l->setContentsMargins(0,0,0,0);
       d->setLayout(l);
-      d->setWindowTitle(tr("ArmoryDB connection"));
+      d->setWindowTitle(tr("BlockSettleDB connection"));
       d->resize(847, 593);
 
       ArmoryServersWidget *armoryServersWidget = new ArmoryServersWidget(armoryServersProvider_, appSettings_, this);
@@ -90,7 +90,7 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
    });
    connect(ui_->pushButtonArmoryServerKeySave, &QPushButton::clicked, this, [this](){
       QString fileName = QFileDialog::getSaveFileName(this
-                                   , tr("Save Armory Public Key")
+                                   , tr("Save BlockSettleDB Public Key")
                                    , QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QDir::separator() + QStringLiteral("Armory_Server_Public_Key.pub")
                                    , tr("Key files (*.pub)"));
 

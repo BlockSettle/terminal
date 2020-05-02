@@ -46,7 +46,7 @@ SignerSettingsPage::SignerSettingsPage(QWidget* parent)
    });
    connect(ui_->pushButtonTerminalKeySave, &QPushButton::clicked, this, [this](){
       QString fileName = QFileDialog::getSaveFileName(this
-                                   , tr("Save Armory Public Key")
+                                   , tr("Save BlockSettleDB Public Key")
                                    , QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QDir::separator() + QStringLiteral("Terminal_Public_Key.pub")
                                    , tr("Key files (*.pub)"));
 

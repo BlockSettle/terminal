@@ -38,7 +38,7 @@
       </size>
      </property>
      <property name="title">
-      <string>ARMORY DATABASE</string>
+      <string>BLOCKSETTLE DATABASE</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_6">
       <property name="spacing">
@@ -101,7 +101,7 @@
             </size>
            </property>
            <property name="text">
-            <string>ArmoryDB Server</string>
+            <string>BlockSettleDB Server</string>
            </property>
            <property name="wordWrap">
             <bool>true</bool>
@@ -207,7 +207,7 @@
       </size>
      </property>
      <property name="title">
-      <string>ARMORYDB DETAILS</string>
+      <string>BLOCKSETTLEDB DETAILS</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_4">
       <property name="spacing">

@@ -32,14 +32,15 @@ void ChatOTCHelper::init(bs::network::otc::Env env
    , const std::shared_ptr<ArmoryConnection>& armory
    , const std::shared_ptr<SignContainer>& signContainer
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
-   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager)
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
+   , const std::shared_ptr<ApplicationSettings>& applicationSettings)
 {
    loggerPtr_ = loggerPtr;
 
    OtcClientParams params;
    params.env = env;
    otcClient_ = new OtcClient(loggerPtr, walletsMgr, armory, signContainer, authAddressManager,
-      utxoReservationManager, std::move(params), this);
+      utxoReservationManager, applicationSettings, std::move(params), this);
 }
 
 OtcClient* ChatOTCHelper::client() const

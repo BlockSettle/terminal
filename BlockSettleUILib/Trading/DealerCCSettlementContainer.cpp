@@ -36,8 +36,9 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , std::unique_ptr<bs::hd::Purpose> walletPurpose
-   , bs::UtxoReservationToken utxoRes)
-   : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose))
+   , bs::UtxoReservationToken utxoRes
+   , bool expandTxDialogInfo)
+   : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose), expandTxDialogInfo)
    , logger_(logger)
    , order_(order)
    , lotSize_(lotSize)

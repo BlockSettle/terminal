@@ -50,6 +50,7 @@ class ArmoryConnection;
 class AuthAddressManager;
 class OtcClient;
 class SignContainer;
+class ApplicationSettings;
 
 class ChatOTCHelper : public QObject {
    Q_OBJECT
@@ -63,7 +64,8 @@ public:
       , const std::shared_ptr<ArmoryConnection>& armory
       , const std::shared_ptr<SignContainer>& signContainer
       , const std::shared_ptr<AuthAddressManager> &authAddressManager
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager);
+      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
+      , const std::shared_ptr<ApplicationSettings>& applicationSettings);
 
    OtcClient* client() const;
 

@@ -48,7 +48,8 @@ public:
       , const std::map<UTXO, std::string> &manualXbtInputs
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
       , std::unique_ptr<bs::hd::Purpose> walletPurpose
-      , bs::UtxoReservationToken utxoRes);
+      , bs::UtxoReservationToken utxoRes
+      , bool expandTxDialogInfo);
    ~ReqCCSettlementContainer() override;
 
    bool cancel() override;

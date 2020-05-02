@@ -147,7 +147,7 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
    ui_->outputAddressesWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
    if (armory_->state() != ArmoryState::Ready) {
-      ui_->labelError->setText(tr("Armory is not connected"));
+      ui_->labelError->setText(tr("BlockSettleDB is not connected"));
       onError();
    }
    else {
