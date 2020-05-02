@@ -191,7 +191,7 @@ void CreateTransactionDialog::closeEvent(QCloseEvent *e)
    e->ignore();
 }
 
-int CreateTransactionDialog::SelectWallet(const std::string& walletId, int type)
+int CreateTransactionDialog::SelectWallet(const std::string& walletId, UiUtils::WalletsTypes type)
 {
    auto index = UiUtils::selectWalletInCombobox(comboBoxWallets(), walletId
       , static_cast<UiUtils::WalletsTypes>(type));
