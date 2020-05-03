@@ -191,9 +191,10 @@ void CreateTransactionDialog::closeEvent(QCloseEvent *e)
    e->ignore();
 }
 
-int CreateTransactionDialog::SelectWallet(const std::string& walletId)
+int CreateTransactionDialog::SelectWallet(const std::string& walletId, UiUtils::WalletsTypes type)
 {
-   auto index = UiUtils::selectWalletInCombobox(comboBoxWallets(), walletId);
+   auto index = UiUtils::selectWalletInCombobox(comboBoxWallets(), walletId
+      , static_cast<UiUtils::WalletsTypes>(type));
    if (index < 0) {
       const auto rootWallet = walletsManager_->getHDRootForLeaf(walletId);
       if (rootWallet) {
@@ -427,7 +428,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
          return;
       }
 
-      detailedText = tr("Failed to communicate to armory to broadcast transaction. Maybe Armory is offline");
+      detailedText = tr("Failed to communicate to BlockSettleDB to broadcast transaction. Maybe BlockSettleDB is offline");
    }
    else {
       detailedText = bs::error::ErrorCodeToString(result);

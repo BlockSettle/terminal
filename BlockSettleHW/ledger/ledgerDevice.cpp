@@ -857,7 +857,7 @@ void LedgerCommandThread::processTXLegacy()
       // -- Done output section --
 
       // At this point user verified all outputs and we can start signing inputs
-      emit info(HWInfoStatus::kTransaction);
+      emit info(HWInfoStatus::kReceiveSignedTx);
 
       // -- Start signing one by one all addresses -- 
       logger_->debug("[LedgerCommandThread] processTXLegacy - Start signing section");
@@ -936,7 +936,7 @@ void LedgerCommandThread::processTXSegwit()
    // -- Done output section --
 
    // At this point user verified all outputs and we can start signing inputs
-   emit info(HWInfoStatus::kTransaction);
+   emit info(HWInfoStatus::kReceiveSignedTx);
 
    // -- Start signing one by one all addresses -- 
 

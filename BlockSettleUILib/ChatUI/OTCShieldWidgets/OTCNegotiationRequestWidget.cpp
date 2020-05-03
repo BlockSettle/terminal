@@ -282,7 +282,16 @@ void OTCNegotiationRequestWidget::onParentAboutToHide()
 
 void OTCNegotiationRequestWidget::onCurrentWalletChanged()
 {
-   UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, getCurrentHDWallet(), true);
+   auto recvHdWallet = getCurrentHDWallet();
+   if (recvHdWallet->isHardwareWallet()) {
+      auto xbtGroup = recvHdWallet->getGroup(recvHdWallet->getXBTGroupType());
+      auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWallets);
+      UiUtils::fillRecvAddressesComboBox(ui_->receivingAddressComboBox, { xbtGroup->getLeaf(purpose) });
+   }
+   else {
+      UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, recvHdWallet, true);
+   }
+
    clearSelectedInputs();
    onUpdateBalances();
 }

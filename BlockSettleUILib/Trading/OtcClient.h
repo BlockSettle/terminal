@@ -75,6 +75,7 @@ namespace bs {
 
 class ArmoryConnection;
 class AuthAddressManager;
+class ApplicationSettings;
 class SignContainer;
 struct OtcClientDeal;
 
@@ -95,6 +96,7 @@ public:
       , const std::shared_ptr<SignContainer> &signContainer
       , const std::shared_ptr<AuthAddressManager> &authAddressManager
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
+      , const std::shared_ptr<ApplicationSettings>& applicationSettings
       , OtcClientParams params
       , QObject *parent = nullptr);
    ~OtcClient() override;
@@ -192,6 +194,8 @@ private:
 
    void initTradesArgs(bs::tradeutils::Args &args, bs::network::otc::Peer *peer, const std::string &settlementId);
 
+   bool expandTxDialog() const;
+
    std::shared_ptr<spdlog::logger> logger_;
 
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
@@ -199,6 +203,7 @@ private:
    std::shared_ptr<SignContainer> signContainer_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;
    std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
+   std::shared_ptr<ApplicationSettings> applicationSettings_;
 
    std::string ownContactId_;
 

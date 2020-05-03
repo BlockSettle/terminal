@@ -32,7 +32,8 @@ namespace bs {
       Q_OBJECT
    public:
       explicit SettlementContainer(bs::UtxoReservationToken utxoRes,
-         std::unique_ptr<bs::hd::Purpose> walletPurpose);
+         std::unique_ptr<bs::hd::Purpose> walletPurpose,
+         bool expandTxDialogInfo);
       ~SettlementContainer() override;
 
       virtual bool cancel() = 0;
@@ -78,6 +79,7 @@ namespace bs {
       ValidityFlag validityFlag_;
       bs::UtxoReservationToken utxoRes_;
       std::unique_ptr<bs::hd::Purpose> walletPurpose_;
+      bool expandTxDialogInfo_{};
 
    private:
       QTimer   timer_;

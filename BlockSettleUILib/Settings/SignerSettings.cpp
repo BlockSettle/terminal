@@ -407,12 +407,6 @@ void SignerSettings::setTwoWaySignerAuth(bool val)
    }
 }
 
-void SignerSettings::setDefaultSettlDialogExpandedState(bool state)
-{
-   defaultSettlDialogExpandedState_ = state;
-   emit defaultSettlDialogExpandedStateChanged();
-}
-
 QString SignerSettings::secondsToIntervalStr(int s)
 {
    QString result;
