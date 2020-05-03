@@ -299,8 +299,17 @@ void ReqCCSettlementContainer::AcceptQuote()
          return;
       }
    }
-
-   emit sendOrder();
+   signingContainer_->resolvePublicSpenders(ccTxData_, [this]
+      (bs::error::ErrorCode result, const BinaryData &txState)
+   {
+      if (result == bs::error::ErrorCode::NoError) {
+         ccTxResolvedData_ = txState;
+         emit sendOrder();
+      }
+      else {
+         emit error(result, bs::error::ErrorCodeToString(result));
+      }
+   });
 }
 
 bool ReqCCSettlementContainer::startSigning(QDateTime timestamp)
@@ -391,7 +400,11 @@ bool ReqCCSettlementContainer::cancel()
 
 std::string ReqCCSettlementContainer::txData() const
 {
-   const auto &data = ccTxData_.serializeState().toHexStr();
+   if (ccTxResolvedData_.empty()) {
+      logger_->error("[ReqCCSettlementContainer::txData] no resolved data");
+      return {};
+   }
+   const auto &data = ccTxResolvedData_.toHexStr();
    logger_->debug("[ReqCCSettlementContainer::txData] {}", data);
    return data;
 }

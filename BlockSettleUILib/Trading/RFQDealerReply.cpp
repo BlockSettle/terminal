@@ -727,9 +727,20 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                               "change amount={}, prevPart={}", inputs.size(), feePerByte
                               , bs::Address::fromAddressString(qrn.requestorRecvAddress).display()
                               , txReq.change.value, qrn.requestorAuthPublicKey);
-                           replyData->qn.transactionData = txReq.serializeState().toHexStr();
-                           replyData->utxoRes = utxoReservationManager_->makeNewReservation(txReq.inputs, replyData->qn.quoteRequestId);
-                           submit(price, replyData);
+
+                           signingContainer_->resolvePublicSpenders(txReq, [replyData, this, price, txReq]
+                              (bs::error::ErrorCode result, const BinaryData &txState)
+                           {
+                              if (result == bs::error::ErrorCode::NoError) {
+                                 replyData->qn.transactionData = txState.toHexStr();
+                                 replyData->utxoRes = utxoReservationManager_->makeNewReservation(txReq.inputs, replyData->qn.quoteRequestId);
+                                 submit(price, replyData);
+                              }
+                              else {
+                                 SPDLOG_LOGGER_ERROR(logger_, "error resolving public spenders: {}"
+                                    , bs::error::ErrorCodeToString(result).toStdString());
+                              }
+                           });
                         } catch (const std::exception &e) {
                            SPDLOG_LOGGER_ERROR(logger_, "error creating own unsigned half: {}", e.what());
                            return;
