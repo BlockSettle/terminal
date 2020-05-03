@@ -154,6 +154,7 @@ static inline QString encTypeToString(bs::wallet::EncryptionType enc)
          return QObject::tr("Auth eID");
 
       case bs::wallet::EncryptionType::Hardware :
+      case bs::wallet::EncryptionType::HardwareOffline:
          return QObject::tr("Hardware Security Module");
    };
 

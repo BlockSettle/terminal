@@ -299,19 +299,19 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
    }
 
    auto group = rootWallet->getGroup(rootWallet->getXBTGroupType());
-   const bool isHardware = rootWallet->isHardwareWallet();
+   const bool isHardware = rootWallet->isHardwareWallet() || rootWallet->isHardwareOfflineWallet();
    bs::hd::Purpose hwPurpose;
    if (isHardware) {
       hwPurpose = UiUtils::getSelectedHwPurpose(comboBoxWallets());
    }
 
-   if (transactionData_->getGroup() != group || rootWallet->isHardwareWallet() || resetInputs) {
-      if (rootWallet->isHardwareWallet()) {
+   if (transactionData_->getGroup() != group || isHardware || resetInputs) {
+      if (isHardware) {
          transactionData_->setWallet(group->getLeaf(hwPurpose), armory_->topBlock()
             , resetInputs, cbInputsReset);
       }
       else {
-         transactionData_->setGroup(group, armory_->topBlock(), rootWallet->isHardwareWallet()
+         transactionData_->setGroup(group, armory_->topBlock(), true
             , resetInputs, cbInputsReset);
       }
    }

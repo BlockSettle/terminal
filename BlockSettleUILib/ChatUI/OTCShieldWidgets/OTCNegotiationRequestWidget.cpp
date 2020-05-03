@@ -283,7 +283,7 @@ void OTCNegotiationRequestWidget::onParentAboutToHide()
 void OTCNegotiationRequestWidget::onCurrentWalletChanged()
 {
    auto recvHdWallet = getCurrentHDWallet();
-   if (recvHdWallet->isHardwareWallet()) {
+   if (!recvHdWallet->canMixLeafs()) {
       auto xbtGroup = recvHdWallet->getGroup(recvHdWallet->getXBTGroupType());
       auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWallets);
       UiUtils::fillRecvAddressesComboBox(ui_->receivingAddressComboBox, { xbtGroup->getLeaf(purpose) });
@@ -324,7 +324,7 @@ void OTCNegotiationRequestWidget::onMaxQuantityClicked()
 
    std::vector<UTXO> utxos = selectedUTXOs();
    if (utxos.empty()) {
-      if (hdWallet->isHardwareWallet()) {
+      if (!hdWallet->canMixLeafs()) {
          auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWallets);
          utxos = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId(), purpose);
       }

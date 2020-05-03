@@ -644,7 +644,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
          return;
       }
 
-      if (replyData->xbtWallet->isHardwareWallet()) {
+      if (!replyData->xbtWallet->canMixLeafs()) {
          auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXbtWallet);
          replyData->walletPurpose.reset(new bs::hd::Purpose(purpose));
       }
@@ -766,7 +766,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                } else {
                   // For XBT request all available inputs as we don't know fee yet (createPartialTXRequest will use correct inputs if fee rate is set)
                   std::vector<UTXO> utxos;
-                  if (replyData->xbtWallet->isHardwareWallet()) {
+                  if (!replyData->xbtWallet->canMixLeafs()) {
                      auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXbtWallet);
                      utxos = utxoReservationManager_->getAvailableXbtUTXOs(
                         replyData->xbtWallet->walletId(), purpose);
@@ -877,7 +877,7 @@ void RFQDealerReply::showCoinControl()
    // Need to release current reservation to be able select them back
    selectedXbtRes_.release();
    std::vector<UTXO> allUTXOs;
-   if (xbtWallet->isHardwareWallet()) {
+   if (!xbtWallet->canMixLeafs()) {
       auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXbtWallet);
       allUTXOs = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId(), purpose);
    }
@@ -1171,7 +1171,7 @@ void bs::ui::RFQDealerReply::reserveBestUtxoSetAndSubmit(double quantity, double
       replyRFQ(std::move(utxos));
    };
 
-   if (replyData->xbtWallet->isHardwareWallet()) {
+   if (!replyData->xbtWallet->canMixLeafs()) {
       auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXbtWallet);
       utxoReservationManager_->getBestXbtUtxoSet(replyData->xbtWallet->walletId(), purpose,
          xbtQuantity, cbBestUtxoSet, true);
@@ -1261,7 +1261,7 @@ bs::XBTAmount RFQDealerReply::getXbtBalance() const
       return {};
    }
 
-   if (xbtWallet->isHardwareWallet()) {
+   if (!xbtWallet->canMixLeafs()) {
       auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXbtWallet);
       return bs::XBTAmount(utxoReservationManager_->getAvailableXbtUtxoSum(
          xbtWallet->walletId(), purpose));

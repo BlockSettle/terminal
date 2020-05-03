@@ -253,7 +253,7 @@ void OTCNegotiationResponseWidget::onXbtInputsProcessed()
 void OTCNegotiationResponseWidget::onCurrentWalletChanged()
 {
    auto recvHdWallet = getCurrentHDWalletFromCombobox(ui_->comboBoxXBTWallets);
-   if (recvHdWallet->isHardwareWallet()) {
+   if (!recvHdWallet->canMixLeafs()) {
       auto xbtGroup = recvHdWallet->getGroup(recvHdWallet->getXBTGroupType());
       auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWallets);
       UiUtils::fillRecvAddressesComboBox(ui_->receivingAddressComboBox, { xbtGroup->getLeaf(purpose) });
