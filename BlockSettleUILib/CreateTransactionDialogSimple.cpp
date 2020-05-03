@@ -227,7 +227,8 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::SwithcMo
       advancedDialog->SetImportedTransactions(offlineTransactions_);
    } else {
       // select wallet
-      advancedDialog->SelectWallet(UiUtils::getSelectedWalletId(ui_->comboBoxWallets));
+      advancedDialog->SelectWallet(UiUtils::getSelectedWalletId(ui_->comboBoxWallets),
+         UiUtils::getSelectedWalletType(ui_->comboBoxWallets));
 
       // set inputs and amounts
       auto address = ui_->lineEditAddress->text().trimmed();

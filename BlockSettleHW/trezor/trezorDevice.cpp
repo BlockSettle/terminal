@@ -323,6 +323,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
          common::ButtonAck response;
          makeCall(response);
          sendTxMessage(HWInfoStatus::kPressButton);
+         txSignedByUser_ = true;
       }
       break;
    case MessageType_PinMatrixRequest:
@@ -362,7 +363,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
    case MessageType_TxRequest:
       {
          handleTxRequest(data);
-         sendTxMessage(HWInfoStatus::kTransaction);
+         sendTxMessage(txSignedByUser_ ? HWInfoStatus::kReceiveSignedTx : HWInfoStatus::kTransaction);
       }
       break;
    default:

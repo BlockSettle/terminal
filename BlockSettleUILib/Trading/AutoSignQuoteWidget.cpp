@@ -99,11 +99,13 @@ void AutoSignQuoteWidget::onAutoSignStateChanged()
 
 void AutoSignQuoteWidget::onAutoSignQuoteAvailChanged()
 {
-   ui_->groupBoxAutoSign->setEnabled(autoSignQuoteProvider_->autoSignQuoteAvailable());
-
    ui_->checkBoxAQ->setChecked(false);
-
    ui_->labelAutoSignWalletName->setText(autoSignQuoteProvider_->getAutoSignWalletName());
+
+   const bool enableWidget = autoSignQuoteProvider_->autoSignQuoteAvailable();
+   ui_->groupBoxAutoSign->setEnabled(enableWidget);
+   ui_->checkBoxAutoSign->setEnabled(enableWidget);
+   ui_->checkBoxAQ->setEnabled(enableWidget);
 }
 
 void AutoSignQuoteWidget::onAqScriptLoaded()

@@ -174,11 +174,14 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
       return nullptr;
    }
 
+   const bool expandTxInfo = appSettings_->get<bool>(
+      ApplicationSettings::DetailedSettlementTxDialogByDefault);
+
    try {
       xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
          , authAddressManager_, signContainer_, armory_, xbtWallet_, walletsManager_
          , rfq_, quote_, authAddr_, fixedXbtInputs_, std::move(fixedXbtUtxoRes_), utxoReservationManager_
-         , std::move(walletPurpose_), recvXbtAddrIfSet_);
+         , std::move(walletPurpose_), recvXbtAddrIfSet_, expandTxInfo);
 
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
          , this, &RFQDialog::onXBTSettlementAccepted);
@@ -217,10 +220,13 @@ void RFQDialog::hideIfNoRemoteSignerMode()
 
 std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
 {
+   const bool expandTxInfo = appSettings_->get<bool>(
+      ApplicationSettings::DetailedSettlementTxDialogByDefault);
+
    try {
       ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
          , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_,
-         fixedXbtInputs_, utxoReservationManager_, std::move(walletPurpose_), std::move(ccUtxoRes_));
+         fixedXbtInputs_, utxoReservationManager_, std::move(walletPurpose_), std::move(ccUtxoRes_), expandTxInfo);
 
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::txSigned
          , this, &RFQDialog::onCCTxSigned);
@@ -234,9 +240,8 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::cancelTrade
          , requestWidget_, &RFQRequestWidget::cancelCCTrade);
 
-      auto orderUpdatedCb = [qId = quote_.quoteId, ccContainer = ccSettlContainer_]
-         (const bs::network::Order& order)
-      {
+      // Do not make circular dependency, capture bare pointer
+      auto orderUpdatedCb = [qId = quote_.quoteId, ccContainer = ccSettlContainer_.get()] (const bs::network::Order& order) {
          if (order.status == bs::network::Order::Pending && order.quoteId == qId) {
             ccContainer->setClOrdId(order.clOrderId);
          }

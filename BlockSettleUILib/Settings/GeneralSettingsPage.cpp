@@ -56,7 +56,12 @@ void GeneralSettingsPage::display()
    ui_->checkBoxCloseToTray->setChecked(appSettings_->get<bool>(ApplicationSettings::closeToTray));
    ui_->checkBoxShowTxNotification->setChecked(appSettings_->get<bool>(ApplicationSettings::notifyOnTX));
    ui_->addvancedDialogByDefaultCheckBox->setChecked(appSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault));
-   ui_->checkBox_subscribeToMdOnStart->setChecked(appSettings_->get<bool>(ApplicationSettings::SubscribeToMDOnStart));
+   ui_->subscribeToMdOnStartCheckBox->setChecked(appSettings_->get<bool>(ApplicationSettings::SubscribeToMDOnStart));
+   ui_->detailedSettlementTxDialogByDefaultCheckBox->setChecked(
+      appSettings_->get<bool>(ApplicationSettings::DetailedSettlementTxDialogByDefault));
+
+   
+   // DetailedSettlementTxDialogByDefault
 
    const auto cfg = appSettings_->GetLogsConfig();
    ui_->logFileName->setText(QString::fromStdString(cfg.at(0).fileName));
@@ -101,7 +106,10 @@ void GeneralSettingsPage::apply()
       ui_->addvancedDialogByDefaultCheckBox->isChecked());
 
    appSettings_->set(ApplicationSettings::SubscribeToMDOnStart
-      , ui_->checkBox_subscribeToMdOnStart->isChecked());
+      , ui_->subscribeToMdOnStartCheckBox->isChecked());
+
+   appSettings_->set(ApplicationSettings::DetailedSettlementTxDialogByDefault
+      , ui_->detailedSettlementTxDialogByDefaultCheckBox->isChecked());
 
    auto cfg = appSettings_->GetLogsConfig();
 

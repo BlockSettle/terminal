@@ -54,7 +54,8 @@ public:
       , bs::UtxoReservationToken utxoRes
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
       , std::unique_ptr<bs::hd::Purpose> walletPurpose
-      , const bs::Address &recvAddrIfSet);
+      , const bs::Address &recvAddrIfSet
+      , bool expandTxDialogInfo);
    ~ReqXBTSettlementContainer() override;
 
    bool cancel() override;

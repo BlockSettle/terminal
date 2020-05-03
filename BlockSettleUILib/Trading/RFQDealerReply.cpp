@@ -810,9 +810,10 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
 
 void RFQDealerReply::updateWalletsList(int walletsFlags)
 {
-   auto oldWalletId = ui_->comboBoxXbtWallet->currentData(UiUtils::WalletIdRole).toString().toStdString();
+   auto oldWalletId = UiUtils::getSelectedWalletId(ui_->comboBoxXbtWallet);
+   auto oldType = UiUtils::getSelectedWalletType(ui_->comboBoxXbtWallet);
    int defaultIndex = UiUtils::fillHDWalletsComboBox(ui_->comboBoxXbtWallet, walletsManager_, walletsFlags);
-   int oldIndex = UiUtils::selectWalletInCombobox(ui_->comboBoxXbtWallet, oldWalletId);
+   int oldIndex = UiUtils::selectWalletInCombobox(ui_->comboBoxXbtWallet, oldWalletId, oldType);
    if (oldIndex < 0) {
       ui_->comboBoxXbtWallet->setCurrentIndex(defaultIndex);
    }

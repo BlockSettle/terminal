@@ -35,8 +35,9 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , const std::map<UTXO, std::string> &manualXbtInputs
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , std::unique_ptr<bs::hd::Purpose> walletPurpose
-   , bs::UtxoReservationToken utxoRes)
-   : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose))
+   , bs::UtxoReservationToken utxoRes
+   , bool expandTxDialogInfo)
+   : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose), expandTxDialogInfo)
    , logger_(logger)
    , signingContainer_(container)
    , xbtWallet_(xbtWallet)

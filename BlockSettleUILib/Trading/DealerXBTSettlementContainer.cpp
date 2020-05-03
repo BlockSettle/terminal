@@ -42,8 +42,9 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const bs::Address &recvAddr
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , std::unique_ptr<bs::hd::Purpose> walletPurpose
-   , bs::UtxoReservationToken utxoRes)
-   : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose))
+   , bs::UtxoReservationToken utxoRes
+   , bool expandTxDialogInfo)
+   : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose), expandTxDialogInfo)
    , order_(order)
    , weSellXbt_((order.side == bs::network::Side::Buy) != (order.product == bs::network::XbtCurrency))
    , amount_((order.product != bs::network::XbtCurrency) ? order.quantity / order.price : order.quantity)
@@ -298,7 +299,7 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
       args.inputXbtWallets.push_back(leaf);
    }
    else {
-      for (const auto &leaf : xbtWallet_->getGroup(xbtWallet_->getXBTGroupType())->getLeaves()) {
+      for (const auto &leaf : xbtGroup->getLeaves()) {
          args.inputXbtWallets.push_back(leaf);
       }
    }
@@ -359,7 +360,16 @@ void DealerXBTSettlementContainer::onSignedPayoutRequested(const std::string& se
    initTradesArgs(args, settlementId);
    args.payinTxId = payinHash;
    args.recvAddr = recvAddr_;
-   args.outputXbtWallet = xbtWallet_->getGroup(bs::sync::hd::Wallet::getXBTGroupType())->getLeaves().at(0);
+
+   const auto xbtGroup = xbtWallet_->getGroup(xbtWallet_->getXBTGroupType());
+   if (xbtWallet_->isHardwareWallet()) {
+      assert(walletPurpose_);
+      const auto leaf = xbtGroup->getLeaf(*walletPurpose_);
+      args.outputXbtWallet = leaf;
+   }
+   else {
+      args.outputXbtWallet = xbtGroup->getLeaves().at(0);
+   }
 
    auto payoutCb = bs::tradeutils::PayoutResultCb([this, payinHash, timestamp, handle = validityFlag_.handle()]
       (bs::tradeutils::PayoutResult result)

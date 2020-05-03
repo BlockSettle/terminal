@@ -200,6 +200,6 @@ MessageBoxBroadcastError::MessageBoxBroadcastError(const QString &details
 
 MessageBoxExpTimeout::MessageBoxExpTimeout(QWidget *parent)
    : BSMessageBox(BSMessageBox::warning, tr("Explorer Timeout"),
-      tr("Explorer Timeout"), tr("Armory has timed out. Cannot resolve query.")
+      tr("Explorer Timeout"), tr("BlockSettleDB has timed out. Cannot resolve query.")
       , parent)
 {}
