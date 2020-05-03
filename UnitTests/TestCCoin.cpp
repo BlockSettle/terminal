@@ -238,7 +238,7 @@ BinaryData TestCCoin::FundFromCoinbase(
 
    //sign & send
    signer.sign();
-   auto signedTx = signer.serialize();
+   auto signedTx = signer.serializeSignedTx();
    Tx tx(signedTx);
    
    envPtr_->armoryInstance()->pushZC(signedTx);
@@ -384,7 +384,7 @@ Tx TestCCoin::CreateCJtx(
 
    EXPECT_TRUE(cjSigner.isValid());
    EXPECT_TRUE(cjSigner.verify());
-   auto signedTx = cjSigner.serialize();
+   auto signedTx = cjSigner.serializeSignedTx();
    EXPECT_FALSE(signedTx.empty());
 
    Tx tx(signedTx);
@@ -2243,7 +2243,7 @@ TEST_F(TestCCoin, ZeroConfChain)
       signer.addRecipient(changeRec);
 
       signer.sign();
-      Tx tx(signer.serialize());
+      Tx tx(signer.serializeSignedTx());
       return tx;
    };
 
@@ -2369,7 +2369,7 @@ TEST_F(TestCCoin, Reorg)
       signer.addRecipient(changeRec);
 
       signer.sign();
-      Tx tx(signer.serialize());
+      Tx tx(signer.serializeSignedTx());
       return tx;
    };
 
@@ -2733,7 +2733,7 @@ TEST_F(TestCCoin, Reorg_WithACT)
       signer.addRecipient(changeRec);
 
       signer.sign();
-      Tx tx(signer.serialize());
+      Tx tx(signer.serializeSignedTx());
       return tx;
    };
 

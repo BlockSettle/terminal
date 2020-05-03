@@ -51,7 +51,7 @@ public:
       : ColoredCoinACT(armory)
    {}
 
-   virtual void onZCReceived(const std::vector<bs::TXEntry> &zcs) override {}
+   virtual void onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry>& zcs) override {}
    virtual void onNewBlock(unsigned, unsigned) override {}
    virtual void onRefresh(const std::vector<BinaryData>& ids, bool online) override
    {
