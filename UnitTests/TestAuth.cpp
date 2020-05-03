@@ -71,7 +71,7 @@ void TestValidationACT::onRefresh(const std::vector<BinaryData>& ids, bool onlin
 }
 
 ////
-void TestValidationACT::onZCReceived(const std::vector<bs::TXEntry> &zcs)
+void TestValidationACT::onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry>& zcs)
 {
    auto dbns = std::make_shared<DBNotificationStruct>(DBNS_ZC);
    dbns->zc_ = zcs;
@@ -118,7 +118,7 @@ BinaryData TestAuth::sendTo(uint64_t value, bs::Address& addr)
 
    //sign & send
    signer.sign();
-   auto&& txData = signer.serialize();
+   auto&& txData = signer.serializeSignedTx();
    Tx txObj(txData);
    
    envPtr_->armoryInstance()->pushZC(txData);

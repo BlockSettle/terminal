@@ -50,7 +50,7 @@ void TestCC::sendTo(uint64_t value, bs::Address& addr)
 
    //sign & send
    signer.sign();
-   envPtr_->armoryInstance()->pushZC(signer.serialize());
+   envPtr_->armoryInstance()->pushZC(signer.serializeSignedTx());
    envPtr_->blockMonitor()->waitForZC();
 }
 
@@ -328,7 +328,7 @@ TEST_F(TestCC, DISABLED_TX_buy)
          signer.deserializeState(signed2);
          ASSERT_TRUE(signer.isValid());
          ASSERT_TRUE(signer.verify());
-         auto tx = signer.serialize();
+         auto tx = signer.serializeSignedTx();
          ASSERT_FALSE(tx.empty());
 
          Tx txObj(tx);
@@ -452,7 +452,7 @@ TEST_F(TestCC, DISABLED_TX_sell)
          signer.deserializeState(signed2);
          ASSERT_TRUE(signer.isValid());
          ASSERT_TRUE(signer.verify());
-         auto tx = signer.serialize();
+         auto tx = signer.serializeSignedTx();
          ASSERT_FALSE(tx.empty());
 
          Tx txObj(tx);

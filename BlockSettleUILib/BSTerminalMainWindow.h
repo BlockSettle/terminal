@@ -319,9 +319,9 @@ private:
       MainWinACT(BSTerminalMainWindow *wnd)
          : parent_(wnd) {}
       ~MainWinACT() override { cleanup(); }
-      void onZCReceived(const std::vector<bs::TXEntry> &) override;
+      void onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry>&) override;
       void onStateChanged(ArmoryState) override;
-      void onTxBroadcastError(const BinaryData &txHash, int errCode
+      void onTxBroadcastError(const std::string& requestId, const BinaryData &txHash, int errCode
          , const std::string &errMsg) override;
       void onNodeStatus(NodeStatus, bool isSegWitEnabled, RpcStatus) override;
 

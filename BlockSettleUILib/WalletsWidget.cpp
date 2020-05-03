@@ -678,7 +678,7 @@ void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::
       return;
    }
 
-   if (armory_->broadcastZC(signedTX)) {
+   if (!armory_->broadcastZC(signedTX).empty()) {
 //      walletsManager_->getSettlementWallet()->setTransactionComment(signedTX, "Settlement Revoke"); //TODO later
    }
    else {
