@@ -708,16 +708,16 @@ TEST_F(TestCCoin, Case_TxProcessOrder1)
 
    //
    for (const auto &utxo : utxosD1) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValidHistory(utxo.getTxHash()));
    }
    for (const auto &utxo : utxosD3) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValidHistory(utxo.getTxHash()));
    }
 
    const auto utxosD = GetUTXOsFor(ccsD.ccAddr_);
    ASSERT_FALSE(utxosD.empty());
    for (const auto &utxo : utxosD) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
    }
 
    //set up new cct object, should have same balance as first cct;
@@ -844,16 +844,16 @@ TEST_F(TestCCoin, Case_TxProcessOrder2)
 
    //
    for (const auto &utxo : utxosD1) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValidHistory(utxo.getTxHash()));
    }
    for (const auto &utxo : utxosD3) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValidHistory(utxo.getTxHash()));
    }
 
    const auto utxosD = GetUTXOsFor(ccsD.ccAddr_);
    ASSERT_FALSE(utxosD.empty());
    for (const auto &utxo : utxosD) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
    }
 
    //set up new cct object, should have same balance as first cct;
@@ -966,6 +966,7 @@ TEST_F(TestCCoin, Case_TxProcessOrder3)
    auto utxosD3 = GetUTXOsFor(userCCAddresses_[2]);
    ASSERT_FALSE(utxosD3.empty());
 
+   //delay mining of cc tx by 20 blocks
    tx = CreateCJtx(utxosD1, utxosD2, ccsC, ccsD, utxosD3, 20);
    MineBlocks(6);
    update(cct);
@@ -982,16 +983,26 @@ TEST_F(TestCCoin, Case_TxProcessOrder3)
 
    //
    for (const auto &utxo : utxosD1) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      //spent cc utxo is valid if checked without zc
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
+
+      //and invalid if checked with zc
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), true));
    }
    for (const auto &utxo : utxosD3) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      //same as above
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), true));
    }
 
    const auto utxosD = GetCCUTXOsFor(cct, ccsD.ccAddr_, true, true);
    ASSERT_FALSE(utxosD.empty());
    for (const auto &utxo : utxosD) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      //newly created cc output is invalid is checked without zc
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
+
+      //and valid if checked with zc
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), true));
    }
 
    //set up new cct object, should have same balance as first cct;
@@ -1097,6 +1108,11 @@ TEST_F(TestCCoin, Case_TxProcessOrder4)
 
    auto utxosD1 = GetCCUTXOsFor(cct, ccsC.ccAddr_, false, true);
    ASSERT_FALSE(utxosD1.empty());
+   for (const auto &utxo : utxosD1) {
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), true));
+   }
+
    auto utxosD2 = GetUTXOsFor(ccsD.xbtAddr_);
    ASSERT_FALSE(utxosD2.empty());
    auto utxosD3 = GetCCUTXOsFor(cct, userCCAddresses_[2], false, true);
@@ -1116,16 +1132,19 @@ TEST_F(TestCCoin, Case_TxProcessOrder4)
 
    //
    for (const auto &utxo : utxosD1) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), true));
    }
    for (const auto &utxo : utxosD3) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), true));
    }
 
    const auto utxosD = GetCCUTXOsFor(cct, ccsD.ccAddr_, false, true);
    ASSERT_FALSE(utxosD.empty());
    for (const auto &utxo : utxosD) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), true));
    }
 
    //set up new cct object, should have same balance as first cct;
@@ -1832,10 +1851,10 @@ TEST_F(TestCCoin, Case_1CC_2CC)
    EXPECT_FALSE(utxosC3.empty());
 
    for (const auto &utxo : utxosC1)
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
 
    for (const auto &utxo : utxosC3)
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
 
    // add change from previous TX as an input - sort it after XBT inputs
    tx = CreateCJtx(utxosC1, utxosC2, ccsB, ccsC, utxosC3);
@@ -1862,18 +1881,18 @@ TEST_F(TestCCoin, Case_1CC_2CC)
    whether the tx had valid CC at any point in time
    */
    for (const auto &utxo : utxosC1) {
-      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
       EXPECT_TRUE(cct->isTxHashValidHistory(utxo.getTxHash()));
    }
    for (const auto &utxo : utxosC3) {
-      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
       EXPECT_TRUE(cct->isTxHashValidHistory(utxo.getTxHash()));
    }
 
    const auto utxosC = GetUTXOsFor(ccsC.ccAddr_);
    ASSERT_FALSE(utxosC.empty());
    for (const auto &utxo : utxosC) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
    }
 }
 
