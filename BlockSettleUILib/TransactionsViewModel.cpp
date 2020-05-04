@@ -507,7 +507,7 @@ std::shared_ptr<TransactionsViewItem> TransactionsViewModel::itemFromTransaction
    return item;
 }
 
-void TransactionsViewModel::onZCReceived(const std::vector<bs::TXEntry> &entries)
+void TransactionsViewModel::onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry>& entries)
 {
    QMetaObject::invokeMethod(this, [this, entries] { updateTransactionsPage(entries); });
 }

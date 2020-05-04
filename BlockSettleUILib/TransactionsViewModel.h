@@ -173,7 +173,7 @@ private slots:
 private:
    void onNewBlock(unsigned int height, unsigned int branchHgt) override;
    void onStateChanged(ArmoryState) override;
-   void onZCReceived(const std::vector<bs::TXEntry> &) override;
+   void onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry> &) override;
    void onZCInvalidated(const std::set<BinaryData> &ids) override;
 
    void init();

@@ -568,8 +568,8 @@ QByteArray LedgerCommandThread::getTrustedInput(const UTXO& utxo)
       "[LedgerCommandThread] getTrustedInput - Start retrieve trusted input for legacy address.");
 
    //find the supporting tx
-   auto txIter = coreReq_->supportingTxMap_.find(utxo.getTxHash());
-   if (txIter == coreReq_->supportingTxMap_.end())
+   auto txIter = coreReq_->supportingTXs.find(utxo.getTxHash());
+   if (txIter == coreReq_->supportingTXs.end())
       throw std::runtime_error("missing supporting tx");
 
    const auto& rawTx = txIter->second;

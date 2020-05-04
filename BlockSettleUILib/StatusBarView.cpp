@@ -147,6 +147,13 @@ void StatusBarView::onPrepareConnection(NetworkType netType, const std::string &
    QMetaObject::invokeMethod(this, [this, netType] { onPrepareArmoryConnection(netType); });
 }
 
+void StatusBarView::onNewBlock(unsigned, unsigned)
+{
+   QMetaObject::invokeMethod(this, [this] {
+      updateConnectionStatusDetails();
+   });
+}
+
 void StatusBarView::setupBtcIcon(NetworkType netType)
 {
    QString iconSuffix;
@@ -198,25 +205,24 @@ void StatusBarView::onArmoryStateChanged(ArmoryState state)
    switch (state) {
    case ArmoryState::Scanning:
    case ArmoryState::Connecting:
-      connectionStatusLabel_->setToolTip(tr("Connecting..."));
       connectionStatusLabel_->setPixmap(iconConnecting_);
       break;
 
    case ArmoryState::Closing:
    case ArmoryState::Offline:
    case ArmoryState::Cancelled:
-      connectionStatusLabel_->setToolTip(tr("Database Offline"));
       connectionStatusLabel_->setPixmap(iconOffline_);
       break;
 
    case ArmoryState::Ready:
-      connectionStatusLabel_->setToolTip(tr("Connected to DB (%1 blocks)").arg(armory_->topBlock()));
       connectionStatusLabel_->setPixmap(iconOnline_);
       updateBalances();
       break;
 
    default:    break;
    }
+
+   updateConnectionStatusDetails();
 }
 
 void StatusBarView::onArmoryProgress(BDMPhase phase, float progress, unsigned int secondsRem)
@@ -283,6 +289,31 @@ void StatusBarView::setBalances()
    }
 
    balanceLabel_->setText(text);
+}
+
+void StatusBarView::updateConnectionStatusDetails()
+{
+   switch (armory_->state()) {
+      case ArmoryState::Scanning:
+      case ArmoryState::Connecting:
+      case ArmoryState::Connected:
+         connectionStatusLabel_->setToolTip(tr("Connecting..."));
+         break;
+
+      case ArmoryState::Closing:
+      case ArmoryState::Offline:
+      case ArmoryState::Cancelled:
+         connectionStatusLabel_->setToolTip(tr("Database Offline"));
+         break;
+
+      case ArmoryState::Ready:
+         connectionStatusLabel_->setToolTip(tr("Connected to DB (%1 blocks)").arg(armory_->topBlock()));
+         break;
+
+      case ArmoryState::Error:
+         // Do not update error tooltip
+         break;
+   }
 }
 
 void StatusBarView::updateBalances()

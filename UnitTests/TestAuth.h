@@ -43,7 +43,7 @@ public:
 
    ////
    void onRefresh(const std::vector<BinaryData> &, bool) override;
-   void onZCReceived(const std::vector<bs::TXEntry> &zcs) override;
+   void onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry>& zcs) override;
 
    ////
    virtual void start() override {}

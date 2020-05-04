@@ -743,7 +743,7 @@ void TransactionsWidget::onTXSigned(unsigned int id, BinaryData signedTX
       }
       SPDLOG_LOGGER_DEBUG(logger_, "signed revoke: {}", signedTX.toHexStr());
 
-      if (!armory_->pushZC(signedTX)) {
+      if (armory_->pushZC(signedTX).empty()) {
          BSMessageBox(BSMessageBox::critical, tr("Revoke Transaction")
             , tr("Failed to send revoke transaction")
             , tr("BlockSettleDB connection unavailable"), this).exec();

@@ -53,7 +53,7 @@ void TestSettlement::sendTo(uint64_t value, bs::Address& addr)
 
    //sign & send
    signer.sign();
-   envPtr_->armoryInstance()->pushZC(signer.serialize());
+   envPtr_->armoryInstance()->pushZC(signer.serializeSignedTx());
 }
 
 TestSettlement::TestSettlement()
