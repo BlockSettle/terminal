@@ -143,15 +143,14 @@ DeviceKey LedgerDevice::key() const
       auto expectedWalletId = bs::core::wallet::computeID(
          BinaryData::fromString(xpubRoot_)).toBinStr();
 
-      auto imported = walletManager_->getHwDeviceIdToWallet();
-      for (auto iWallet = imported.lower_bound(kDeviceLedgerId);
-         iWallet != imported.end() && iWallet->first == kDeviceLedgerId; ++iWallet) {
+      auto importedWallets = walletManager_->getHwWallets(
+         bs::wallet::HardwareEncKey::WalletType::Ledger, {});
 
-         if (iWallet->second == expectedWalletId) {
+      for (const auto imported : importedWallets) {
+         if (expectedWalletId == imported) {
             walletId = QString::fromStdString(expectedWalletId);
             break;
          }
-
       }
    }
 
@@ -173,7 +172,7 @@ DeviceType LedgerDevice::type() const
 void LedgerDevice::init(AsyncCallBack&& cb /*= nullptr*/)
 {
    auto saveRootKey = [caller = QPointer<LedgerDevice>(this), cbCopy = std::move(cb)](QVariant result) {
-      caller->xpubRoot_ =  result.value<HwWalletWrapper>().info_.xpubRoot_;
+      caller->xpubRoot_ =  result.value<HwWalletWrapper>().info_.xpubRoot;
 
       if (cbCopy) {
          cbCopy();
@@ -405,16 +404,17 @@ void LedgerCommandThread::processGetPublicKey()
 {
    auto deviceKey = deviceKey_;
    HwWalletWrapper walletInfo;
-   walletInfo.info_.vendor_ = deviceKey.vendor_.toStdString();
-   walletInfo.info_.label_ = deviceKey.deviceLabel_.toStdString();
-   walletInfo.info_.deviceId_ = deviceKey.deviceId_.toStdString();
+   walletInfo.info_.type = bs::wallet::HardwareEncKey::WalletType::Ledger;
+   walletInfo.info_.vendor = deviceKey.vendor_.toStdString();
+   walletInfo.info_.label = deviceKey.deviceLabel_.toStdString();
+   walletInfo.info_.deviceId = {};
 
    logger_->debug(
       "[LedgerCommandThread] processGetPublicKey - Start retrieve root xpub key.");
    
    auto pubKey = retrievePublicKeyFromPath({ { bs::hd::hardFlag } });
    try {
-      walletInfo.info_.xpubRoot_ = pubKey.getBase58().toBinStr();
+      walletInfo.info_.xpubRoot = pubKey.getBase58().toBinStr();
    }
    catch (...) {
       logger_->debug(
@@ -429,7 +429,7 @@ void LedgerCommandThread::processGetPublicKey()
       "[LedgerCommandThread] processGetPublicKey - Start retrieve nested segwit xpub key.");
    pubKey = retrievePublicKeyFromPath(getDerivationPath(testNet_, bs::hd::Nested));
    try {
-      walletInfo.info_.xpubNestedSegwit_ = pubKey.getBase58().toBinStr();
+      walletInfo.info_.xpubNestedSegwit = pubKey.getBase58().toBinStr();
    }
    catch (...) {
       logger_->debug(
@@ -444,7 +444,7 @@ void LedgerCommandThread::processGetPublicKey()
       "[LedgerCommandThread] processGetPublicKey - Start retrieve native segwit xpub key.");
    pubKey = retrievePublicKeyFromPath(getDerivationPath(testNet_, bs::hd::Native));
    try {
-      walletInfo.info_.xpubNativeSegwit_ = pubKey.getBase58().toBinStr();
+      walletInfo.info_.xpubNativeSegwit = pubKey.getBase58().toBinStr();
    }
    catch (...) {
       logger_->debug(
@@ -459,7 +459,7 @@ void LedgerCommandThread::processGetPublicKey()
       "[LedgerCommandThread] processGetPublicKey - Start retrieve legacy xpub key.");
    pubKey = retrievePublicKeyFromPath(getDerivationPath(testNet_, bs::hd::NonSegWit));
    try {
-      walletInfo.info_.xpubLegacy_ = pubKey.getBase58().toBinStr();
+      walletInfo.info_.xpubLegacy = pubKey.getBase58().toBinStr();
    }
    catch (...) {
       logger_->debug(
@@ -479,9 +479,10 @@ void LedgerCommandThread::processGetPublicKey()
    else {
       logger_->debug(
          "[LedgerCommandThread] getPublicKey - Operation succeeded.\nRoot xpub : "
-         + walletInfo.info_.xpubRoot_ + " \nNested xpub: "
-         + walletInfo.info_.xpubNestedSegwit_ + " \nNativeSegwit: "
-         + walletInfo.info_.xpubNativeSegwit_);
+         + walletInfo.info_.xpubRoot + " \nNested xpub: "
+         + walletInfo.info_.xpubNestedSegwit + " \nNativeSegwit: "
+         + walletInfo.info_.xpubNativeSegwit + "\nLegacy: "
+         + walletInfo.info_.xpubLegacy);
    }
 
    emit resultReady(QVariant::fromValue<>(walletInfo));
@@ -490,9 +491,10 @@ void LedgerCommandThread::processGetPublicKey()
 void LedgerCommandThread::processGetRootKey()
 {
    HwWalletWrapper walletInfo;
+   walletInfo.info_.type = bs::wallet::HardwareEncKey::WalletType::Ledger;
    auto pubKey = retrievePublicKeyFromPath({ { bs::hd::hardFlag } });
    try {
-      walletInfo.info_.xpubRoot_ = pubKey.getBase58().toBinStr();
+      walletInfo.info_.xpubRoot = pubKey.getBase58().toBinStr();
    }
    catch (...) {
       logger_->debug(
