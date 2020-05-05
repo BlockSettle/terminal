@@ -36,7 +36,6 @@
 #include "CelerAccountInfoDialog.h"
 #include "ColoredCoinServer.h"
 #include "ConnectionManager.h"
-#include "CreateAccountPrompt.h"
 #include "CreatePrimaryWalletPrompt.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
@@ -438,11 +437,6 @@ void BSTerminalMainWindow::LoadWallets()
       CompleteDBConnection();
       act_->onRefresh({}, true);
       tryGetChatKeys();
-
-      // BST-2645: Do not show create account prompt if already have wallets
-      if (walletsMgr_->walletsCount() > 0) {
-         disableCreateTestAccountPrompt();
-      }
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::info, this, &BSTerminalMainWindow::showInfo);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::error, this, &BSTerminalMainWindow::showError);
@@ -456,7 +450,6 @@ void BSTerminalMainWindow::LoadWallets()
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletAdded, this, [this] {
       updateControlEnabledState();
-      promptToCreateTestAccountIfNeeded();
       tryGetChatKeys();
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
@@ -2102,43 +2095,6 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
          break;
       }
    }
-}
-
-void BSTerminalMainWindow::disableCreateTestAccountPrompt()
-{
-   applicationSettings_->set(ApplicationSettings::HideCreateAccountPromptTestnet, true);
-}
-
-void BSTerminalMainWindow::promptToCreateTestAccountIfNeeded()
-{
-   addDeferredDialog([this] {
-      auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
-      bool hideCreateAccountTestnet = applicationSettings_->get<bool>(ApplicationSettings::HideCreateAccountPromptTestnet);
-      if (envType != ApplicationSettings::EnvConfiguration::Test || hideCreateAccountTestnet) {
-         return;
-      }
-      disableCreateTestAccountPrompt();
-      if (bs::network::isTradingEnabled(userType_)) {
-         // Do not prompt if user is already logged in
-         return;
-      }
-
-      CreateAccountPrompt dlg(this);
-      int rc = dlg.exec();
-
-      switch (rc) {
-         case CreateAccountPrompt::Login:
-            onLogin();
-            break;
-         case CreateAccountPrompt::CreateAccount: {
-            auto createTestAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlTest);
-            QDesktopServices::openUrl(QUrl(createTestAccountUrl));
-            break;
-         }
-         case CreateAccountPrompt::Cancel:
-            break;
-      }
-   });
 }
 
 void BSTerminalMainWindow::showLegacyWarningIfNeeded()
