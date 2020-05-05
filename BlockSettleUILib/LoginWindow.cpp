@@ -62,16 +62,14 @@ LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
    if (isProd) {
       urlType = ApplicationSettings::GetAccount_UrlProd;
       title = kProdTitle;
-      ui_->widgetSignup->setProperty("prodEnv", QVariant(true));
    }
    else {
       urlType = ApplicationSettings::GetAccount_UrlTest;
       title = kTestTitle;
       getAccountText.replace(kCreateAccountProd, kCreateAccountTest);
-      getAccountText.replace(QLatin1String("#fefeff"), QLatin1String("#217d9a"));
-      ui_->widgetSignup->setProperty("testEnv", QVariant(true));
    }
 
+   ui_->widgetSignup->setProperty("prodEnv", QVariant(true));
    getAccountText.replace(QLatin1String("{GetAccountLink}")
       , settings->get<QString>(urlType));
    ui_->labelGetAccount->setText(getAccountText);

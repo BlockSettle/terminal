@@ -2071,6 +2071,7 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
                   .arg(QStringLiteral("http://pubb.blocksettle.com/PDF/BlockSettle%20Trading%20Procedures.pdf"))
                   .arg(BSMessageBox::kUrlColor)
             , this);
+         qry.enableRichText();
          if (qry.exec() == QDialog::Accepted) {
             allowAuthAddressDialogShow_ = true;
             walletsMgr_->PromoteHDWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {

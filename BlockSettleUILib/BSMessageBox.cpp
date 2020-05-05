@@ -106,6 +106,11 @@ void BSMessageBox::setCancelVisible(bool visible)
    ui_->pushButtonCancel->setVisible(visible);
 }
 
+void BSMessageBox::enableRichText()
+{
+   ui_->labelText->setTextFormat(Qt::RichText);
+}
+
 void BSMessageBox::onDetailsPressed()
 {
    if (detailsVisible()) {
