@@ -273,7 +273,7 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservat
    auto fixedXbtInputs = ui_->pageRFQTicket->fixedXbtInputs();
 
    std::unique_ptr<bs::hd::Purpose> purpose;
-   if (xbtWallet && xbtWallet->isHardwareWallet()) {
+   if (xbtWallet && !xbtWallet->canMixLeaves()) {
       auto walletType = ui_->pageRFQTicket->xbtWalletType();
       purpose.reset(new bs::hd::Purpose(UiUtils::getHwWalletPurpose(walletType)));
    }

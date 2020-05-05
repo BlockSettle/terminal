@@ -122,6 +122,11 @@ void TrezorDevice::init(AsyncCallBack&& cb)
 void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
 {
    awaitingWalletInfo_ = {};
+   // General data
+   awaitingWalletInfo_.info_.type = bs::wallet::HardwareEncKey::WalletType::Trezor;
+   awaitingWalletInfo_.info_.label = features_.label();
+   awaitingWalletInfo_.info_.deviceId = features_.device_id();
+   awaitingWalletInfo_.info_.vendor = features_.vendor();
 
    // We cannot get all data from one call so we make four calls:
    // fetching first address for "m/0'" as wallet id
@@ -130,13 +135,13 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
    // fetching first address for "m/44'" as legacy xpub
 
    AsyncCallBackCall cbLegacy = [this, cb = std::move(cb)](QVariant &&data) mutable {
-      awaitingWalletInfo_.info_.xpubLegacy_ = data.toByteArray().toStdString();
+      awaitingWalletInfo_.info_.xpubLegacy = data.toByteArray().toStdString();
       
       cb(QVariant::fromValue<>(awaitingWalletInfo_));
    };
 
    AsyncCallBackCall cbNested = [this, cbLegacy = std::move(cbLegacy)](QVariant &&data) mutable {
-      awaitingWalletInfo_.info_.xpubNestedSegwit_ = data.toByteArray().toStdString();
+      awaitingWalletInfo_.info_.xpubNestedSegwit = data.toByteArray().toStdString();
 
       connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving legacy public key from device "
          + features_.label());
@@ -153,7 +158,7 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
    };
 
    AsyncCallBackCall cbNative = [this, cbNested = std::move(cbNested)](QVariant &&data) mutable {
-      awaitingWalletInfo_.info_.xpubNativeSegwit_ = data.toByteArray().toStdString();
+      awaitingWalletInfo_.info_.xpubNativeSegwit = data.toByteArray().toStdString();
 
       connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving nested segwit public key from device "
          + features_.label());
@@ -171,12 +176,7 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
    };
 
    AsyncCallBackCall cbRoot = [this, cbNative = std::move(cbNative)](QVariant &&data) mutable {
-      awaitingWalletInfo_.info_.xpubRoot_ = data.toByteArray().toStdString();
-
-      // General data
-      awaitingWalletInfo_.info_.label_ = features_.label();
-      awaitingWalletInfo_.info_.deviceId_ = features_.device_id();
-      awaitingWalletInfo_.info_.vendor_ = features_.vendor();
+      awaitingWalletInfo_.info_.xpubRoot = data.toByteArray().toStdString();
 
       connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving native segwit public key from device "
          + features_.label());

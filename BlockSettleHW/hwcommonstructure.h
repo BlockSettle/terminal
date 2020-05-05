@@ -58,15 +58,16 @@ class HwWalletWrapper {
 public:
    bs::core::wallet::HwWalletInfo info_;
    Q_INVOKABLE QString walletName() {
-      return QString::fromStdString(info_.label_);
+      return QString::fromStdString(info_.label);
    }
    Q_INVOKABLE QString walletDesc() {
-      return QString::fromStdString(info_.vendor_);
+      return QString::fromStdString(info_.vendor);
    }
    bool isValid() {
-      return !info_.xpubRoot_.empty() &&
-         !info_.xpubNestedSegwit_.empty() &&
-         !info_.xpubNativeSegwit_.empty();
+      return !info_.xpubRoot.empty() &&
+         !info_.xpubNestedSegwit.empty() &&
+         !info_.xpubNativeSegwit.empty() &&
+         !info_.xpubLegacy.empty();
    }
 };
 Q_DECLARE_METATYPE(HwWalletWrapper)

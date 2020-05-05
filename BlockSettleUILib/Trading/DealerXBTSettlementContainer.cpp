@@ -293,7 +293,7 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
    args.fixedInputs = utxosPayinFixed_;
 
    const auto xbtGroup = xbtWallet_->getGroup(xbtWallet_->getXBTGroupType());
-   if (xbtWallet_->isHardwareWallet()) {
+   if (!xbtWallet_->canMixLeaves()) {
       assert(walletPurpose_);
       const auto leaf = xbtGroup->getLeaf(*walletPurpose_);
       args.inputXbtWallets.push_back(leaf);
@@ -362,7 +362,7 @@ void DealerXBTSettlementContainer::onSignedPayoutRequested(const std::string& se
    args.recvAddr = recvAddr_;
 
    const auto xbtGroup = xbtWallet_->getGroup(xbtWallet_->getXBTGroupType());
-   if (xbtWallet_->isHardwareWallet()) {
+   if (!xbtWallet_->canMixLeaves()) {
       assert(walletPurpose_);
       const auto leaf = xbtGroup->getLeaf(*walletPurpose_);
       args.outputXbtWallet = leaf;

@@ -222,13 +222,14 @@ void SignerAdapter::importWoWallet(const std::string &filename, const BinaryData
 void SignerAdapter::importHwWallet(const bs::core::wallet::HwWalletInfo &walletInfo, const CreateWoCb &cb)
 {
    signer::ImportHwWalletRequest request;
-   request.set_label(walletInfo.label_);
-   request.set_vendor(walletInfo.vendor_);
-   request.set_deviceid(walletInfo.deviceId_);
-   request.set_xpubroot(walletInfo.xpubRoot_);
-   request.set_xpubnestedsegwit(walletInfo.xpubNestedSegwit_);
-   request.set_xpubnativesegwit(walletInfo.xpubNativeSegwit_);
-   request.set_xpublegacy(walletInfo.xpubLegacy_);
+   request.set_wallettype(walletInfo.type);
+   request.set_label(walletInfo.label);
+   request.set_vendor(walletInfo.vendor);
+   request.set_deviceid(walletInfo.deviceId);
+   request.set_xpubroot(walletInfo.xpubRoot);
+   request.set_xpubnestedsegwit(walletInfo.xpubNestedSegwit);
+   request.set_xpubnativesegwit(walletInfo.xpubNativeSegwit);
+   request.set_xpublegacy(walletInfo.xpubLegacy);
 
    const auto reqId = listener_->send(signer::ImportHwWalletType, request.SerializeAsString());
    listener_->setWatchOnlyCb(reqId, cb);
