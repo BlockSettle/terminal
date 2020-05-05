@@ -166,7 +166,7 @@ void CCTokenEntryDialog::onCCAddrSubmitted(const QString addr)
 
    auto body = tr("BlockSettle will issue your tokens within the next %1.").arg(isProd ? tr("24 hours") : tr("15 minutes"));
    if (!isProd) {
-      body += tr(" Once mined 1 block, they are eligible for trading..");
+      body += tr(" Once mined 1 block, they are eligible for trading.");
    }
 
    BSMessageBox(BSMessageBox::success, tr("Submission Successful")

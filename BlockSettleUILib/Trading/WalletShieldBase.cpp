@@ -255,6 +255,6 @@ void WalletShieldBase::showShieldAuthValidationProcess()
    const bool isProd = appSettings_->get<int>(ApplicationSettings::envConfiguration) ==
       static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
 
-   showShield(shieldAuthValidationProcessText.arg(isProd ? tr("24h") : tr("15minutes")),
+   showShield(shieldAuthValidationProcessText.arg(isProd ? tr("24h") : tr("15 minutes")),
       shieldButtonView, shieldAuthValidationProcessHeader);
 }

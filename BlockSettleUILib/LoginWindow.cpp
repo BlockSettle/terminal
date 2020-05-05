@@ -25,11 +25,11 @@
 
 namespace {
    const auto kAutheIdTimeout = int(BsClient::autheidLoginTimeout() / std::chrono::seconds(1));
-   const auto kProdTitle = QObject::tr("Login Into BlockSettle");
+   const auto kProdTitle = QObject::tr("Login to BlockSettle");
    const auto kTestTitle = QObject::tr("Test Environment Login");
 
-   const auto kCreateAccountProd = QLatin1String("Get a BlockSettle Account");
-   const auto kCreateAccountTest = QLatin1String("Create your Test Account");
+   const auto kCreateAccountProd = QObject::tr("Get a BlockSettle Account");
+   const auto kCreateAccountTest = QObject::tr("Create your Test Account");
 
    //<span style = " font-size:12px;">Not signed up yet ? < / span><br><a href = "{GetAccountLink}"><span style = " font-size:12px; text-decoration: underline; color:#fefeff">Get a BlockSettle Account< / span>< / a>
 }
