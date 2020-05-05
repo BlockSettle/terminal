@@ -48,6 +48,16 @@ CustomTitleDialogWindow {
     abortBoxType: BSAbortBox.AbortType.WalletCreation
     title: qsTr("Manage encryption")
 
+    Component.onCompleted: {
+        if (isPrimaryWalletChecked) {
+            cbPrimary.checked = true
+            tfName.text = qsTr("Primary Wallet");
+        }
+        else {
+            tfName.text = walletsProxy.generateNextWalletName();
+        }
+    }
+
     cContentItem: ColumnLayout {
         spacing: 10
 
@@ -100,7 +110,6 @@ CustomTitleDialogWindow {
                 color: walletsProxy.walletNameExists(tfName.text) ? BSStyle.inputsInvalidColor : BSStyle.inputsFontColor
                 Keys.onEnterPressed: tfDesc.forceActiveFocus()
                 Keys.onReturnPressed: tfDesc.forceActiveFocus()
-                text: ""
             }
         }
         RowLayout {
@@ -202,6 +211,13 @@ CustomTitleDialogWindow {
                 onCheckedChanged: {
                     if (checked) {
                         newPasswordWithConfirm.tfPasswordInput.focus = true
+                    }
+
+                    if (!primaryWalletExists && tfName.text === walletsProxy.generateNextWalletName()) {
+                        tfName.text = qsTr("Primary Wallet");
+                    }
+                    else if (tfName.text === qsTr("Primary Wallet")){
+                        tfName.text = walletsProxy.generateNextWalletName();
                     }
                 }
             }
