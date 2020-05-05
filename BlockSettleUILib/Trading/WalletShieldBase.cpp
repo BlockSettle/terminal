@@ -15,6 +15,7 @@
 #include "AuthAddressManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "ApplicationSettings.h"
 
 #include "ui_WalletShieldPage.h"
 
@@ -32,7 +33,7 @@ namespace {
 
    const QString shieldAuthValidationProcessHeader = QObject::tr("Authentication Address Validation Process");
    const QString shieldAuthValidationProcessText = QObject::tr("Your Authentication Address has been submitted.\n\n"
-      "BlockSettle validates the public key against the UserID and executes a transaction from it's Validation Address sometime within a 24h cycle.\n\n"
+      "BlockSettle validates the public key against the UserID and executes a transaction from it's Validation Address sometime within a %1 cycle.\n\n"
       "Once executed the Authentication Address need 6 blockchain confirmations to be considered as valid"
    );
 
@@ -61,11 +62,12 @@ void WalletShieldBase::setShieldButtonAction(std::function<void(void)>&& action)
    });
 }
 
-void WalletShieldBase::init(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , const std::shared_ptr<AuthAddressManager> &authMgr)
+void WalletShieldBase::init(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager,
+   const std::shared_ptr<AuthAddressManager> &authMgr, const std::shared_ptr<ApplicationSettings> &appSettings)
 {
    walletsManager_ = walletsManager;
    authMgr_ = authMgr;
+   appSettings_ = appSettings;
 }
 
 void WalletShieldBase::setTabType(QString&& tabType)
@@ -250,5 +252,9 @@ void WalletShieldBase::showShieldGenerateAuthAddress()
 
 void WalletShieldBase::showShieldAuthValidationProcess()
 {
-   showShield(shieldAuthValidationProcessText, shieldButtonView, shieldAuthValidationProcessHeader);
+   const bool isProd = appSettings_->get<int>(ApplicationSettings::envConfiguration) ==
+      static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
+
+   showShield(shieldAuthValidationProcessText.arg(isProd ? tr("24h") : tr("15minutes")),
+      shieldButtonView, shieldAuthValidationProcessHeader);
 }

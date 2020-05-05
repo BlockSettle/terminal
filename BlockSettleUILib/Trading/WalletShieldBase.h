@@ -25,6 +25,7 @@ namespace bs {
       class WalletsManager;
    }
 }
+class ApplicationSettings;
 
 class WalletShieldBase : public QWidget
 {
@@ -37,7 +38,8 @@ public:
    void setShieldButtonAction(std::function<void(void)>&& action);
 
    void init(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-      , const std::shared_ptr<AuthAddressManager> &authMgr);
+      , const std::shared_ptr<AuthAddressManager> &authMgr
+      , const std::shared_ptr<ApplicationSettings> &appSettings);
 
    using ProductType = bs::network::Asset::Type;
    bool checkWalletSettings(ProductType productType, const QString &product);
@@ -70,6 +72,7 @@ protected:
    std::unique_ptr<Ui::WalletShieldPage> ui_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<AuthAddressManager>       authMgr_;
+   std::shared_ptr<ApplicationSettings>      appSettings_;
 
    QString tabType_;
 };

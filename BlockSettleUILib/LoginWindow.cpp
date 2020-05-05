@@ -56,7 +56,6 @@ LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
    const bool isProd = settings_->get<int>(ApplicationSettings::envConfiguration) ==
       static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
 
-
    ApplicationSettings::Setting urlType;
    auto getAccountText = ui_->labelGetAccount->text();
    QString title;

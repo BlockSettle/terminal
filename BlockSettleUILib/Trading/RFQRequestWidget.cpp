@@ -69,7 +69,7 @@ void RFQRequestWidget::setWalletsManager(const std::shared_ptr<bs::sync::Wallets
    if (walletsManager_ == nullptr) {
       walletsManager_ = walletsManager;
       ui_->pageRFQTicket->setWalletsManager(walletsManager);
-      ui_->shieldPage->init(walletsManager, authAddressManager_);
+      ui_->shieldPage->init(walletsManager, authAddressManager_, appSettings_);
 
       // Do not listen for walletChanged (too verbose and resets UI too often) and walletsReady (to late and resets UI after startup unexpectedly)
       connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &RFQRequestWidget::forceCheckCondition);
