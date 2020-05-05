@@ -866,6 +866,7 @@ bool SignerAdapterListener::onImportHwWallet(const std::string &data, bs::signer
    }
 
    bs::core::wallet::HwWalletInfo info{
+      static_cast<bs::wallet::HardwareEncKey::WalletType>(request.wallettype()),
       request.vendor(),
       request.label(),
       request.deviceid(),

@@ -151,15 +151,19 @@ void TrezorClient::call(QByteArray&& input, AsyncCallBackCall&& cb)
 
 QVector<DeviceKey> TrezorClient::deviceKeys() const
 {
-   auto deviceToWalletId = walletManager_->getHwDeviceIdToWallet();
    if (!trezorDevice_) {
       return {};
    }
 
    auto key = trezorDevice_->key();
-   auto deviceWalletPair = deviceToWalletId.find(key.deviceId_.toStdString());
-   if (deviceWalletPair != deviceToWalletId.end()) {
-      key.walletId_ = QString::fromStdString(deviceWalletPair->second);
+   auto wallets = walletManager_->getHwWallets(bs::wallet::HardwareEncKey::WalletType::Trezor
+      , key.deviceId_.toStdString());
+
+   if (!wallets.empty()) {
+      // Some hw devices do not have proper deviceid
+      // but trezor do have, and we expected it unique
+      assert(wallets.size() == 1);
+      key.walletId_ = QString::fromStdString(wallets[0]);
    }
 
    return { key };

@@ -270,7 +270,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
          };
          if (manualXbtInputs_.empty()) {
             std::vector<UTXO> utxos;
-            if (xbtWallet_->isHardwareWallet()) {
+            if (!xbtWallet_->canMixLeaves()) {
                assert(walletPurpose_);
                utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId(), *walletPurpose_);
             }
