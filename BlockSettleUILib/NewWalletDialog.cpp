@@ -10,6 +10,7 @@
 */
 #include "NewWalletDialog.h"
 #include "ui_NewWalletDialog.h"
+#include "WalletsWidget.h"
 
 #include "ApplicationSettings.h"
 #include "BSMessageBox.h"
@@ -63,9 +64,18 @@ NewWalletDialog::NewWalletDialog(bool noWalletsFound, const std::shared_ptr<Appl
       reject();
 
       if (link == kSupportDialogLink) {
-         SupportDialog *supportDlg = new SupportDialog(parentWidget());
+         auto* parent = parentWidget();
+
+         SupportDialog* supportDlg = new SupportDialog(parent);
          supportDlg->setTab(0);
          supportDlg->show();
+
+         auto* walletWidget = qobject_cast<WalletsWidget*>(parent);
+         if (walletWidget) {
+            connect(supportDlg, &QDialog::finished, walletWidget, [walletWidget]() {
+               walletWidget->onNewWallet();
+            });
+         }
       }
    });
 }

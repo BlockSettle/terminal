@@ -1131,37 +1131,10 @@ bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
       }
    }
 
-   if (!signContainer_->isOffline()) {
-      NewWalletDialog newWalletDialog(true, applicationSettings_, this);
-      onInitWalletDialogWasShown();
-
-      int rc = newWalletDialog.exec();
-
-      switch (rc) {
-         case NewWalletDialog::CreateNew:
-            ui_->widgetWallets->CreateNewWallet();
-            break;
-         case NewWalletDialog::ImportExisting:
-            ui_->widgetWallets->ImportNewWallet();
-            break;
-         case NewWalletDialog::ImportHw:
-            ui_->widgetWallets->ImportHwWallet();
-            break;
-         case NewWalletDialog::Cancel:
-            return false;
-      }
-
-      if (cb) {
-         cb();
-      }
-      return true;
-   } else {
-      ui_->widgetWallets->ImportNewWallet();
-      if (cb) {
-         cb();
-      }
+   ui_->widgetWallets->onNewWallet();
+   if (cb) {
+      cb();
    }
-
    return true;
 }
 
