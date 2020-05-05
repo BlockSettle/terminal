@@ -71,7 +71,7 @@ void TestValidationACT::onRefresh(const std::vector<BinaryData>& ids, bool onlin
 }
 
 ////
-void TestValidationACT::onZCReceived(const std::vector<bs::TXEntry> &zcs)
+void TestValidationACT::onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry>& zcs)
 {
    auto dbns = std::make_shared<DBNotificationStruct>(DBNS_ZC);
    dbns->zc_ = zcs;
@@ -118,7 +118,7 @@ BinaryData TestAuth::sendTo(uint64_t value, bs::Address& addr)
 
    //sign & send
    signer.sign();
-   auto&& txData = signer.serialize();
+   auto&& txData = signer.serializeSignedTx();
    Tx txObj(txData);
    
    envPtr_->armoryInstance()->pushZC(txData);
@@ -180,12 +180,12 @@ void TestAuth::SetUp()
    {
       //first UTXO, should remain untouched until validation address 
       //is revoked
-      auto&& hash = sendTo(50 * COIN, validationAddr_);
+      auto&& hash = sendTo(10 * COIN, validationAddr_);
       actPtr_->waitOnZC(hash);
       mineBlocks(1);
 
       //actual spendable UTXO for vetting user auth addresses
-      hash = sendTo(300 * COIN, validationAddr_);
+      hash = sendTo(10 * COIN, validationAddr_);
       actPtr_->waitOnZC(hash);
       mineBlocks(6);
    }
@@ -550,11 +550,11 @@ TEST_F(TestAuth, Revoke)
    {
       //first UTXO, should remain untouched until validation address 
       //is revoked
-      sendTo(50 * COIN, validationAddr2);
+      sendTo(10 * COIN, validationAddr2);
       mineBlocks(1);
 
       //actual spendable UTXO for vetting user auth addresses
-      sendTo(300 * COIN, validationAddr2);
+      sendTo(10 * COIN, validationAddr2);
       mineBlocks(6);
    }
 
@@ -847,13 +847,13 @@ TEST_F(TestAuth, Concurrency)
    {
       //first UTXO, should remain untouched until validation address 
       //is revoked
-      sendTo(50 * COIN, validationAddr2);
-      sendTo(50 * COIN, validationAddr3);
+      sendTo(10 * COIN, validationAddr2);
+      sendTo(10 * COIN, validationAddr3);
       mineBlocks(1);
 
       //actual spendable UTXO for vetting user auth addresses
-      sendTo(300 * COIN, validationAddr2);
-      sendTo(300 * COIN, validationAddr3);
+      sendTo(10 * COIN, validationAddr2);
+      sendTo(10 * COIN, validationAddr3);
       mineBlocks(6);
    }
 
@@ -1062,13 +1062,13 @@ TEST_F(TestAuth, Concurrency_WithACT)
    {
       //first UTXO, should remain untouched until validation address 
       //is revoked
-      sendTo(50 * COIN, validationAddr2);
-      sendTo(50 * COIN, validationAddr3);
+      sendTo(10 * COIN, validationAddr2);
+      sendTo(10 * COIN, validationAddr3);
       mineBlocks(1);
 
       //actual spendable UTXO for vetting user auth addresses
-      sendTo(300 * COIN, validationAddr2);
-      sendTo(300 * COIN, validationAddr3);
+      sendTo(10 * COIN, validationAddr2);
+      sendTo(10 * COIN, validationAddr3);
       mineBlocks(6);
    }
 

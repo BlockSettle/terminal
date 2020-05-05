@@ -400,6 +400,49 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
    armory_->getTXsByHash(txHashSet, cbTXs, true);
 }
 
+void CreateTransactionDialogAdvanced::onUpdateChangeWidget()
+{
+   auto walletType = UiUtils::getSelectedWalletType(comboBoxWallets());
+
+   ui_->radioButtonExistingAddress->setVisible(false);
+   ui_->radioButtonNewAddrNative->setVisible(false);
+   ui_->radioButtonNewAddrNested->setVisible(false);
+   ui_->radioButtonNewAddrLegacy->setVisible(false);
+
+   switch (walletType)
+   {
+   case UiUtils::WalletsTypes::Full:
+   case UiUtils::WalletsTypes::WatchOnly:
+   {
+      ui_->radioButtonExistingAddress->setVisible(true);
+      ui_->radioButtonNewAddrNative->setVisible(true);
+      ui_->radioButtonNewAddrNested->setVisible(true);
+      ui_->radioButtonNewAddrNative->setChecked(true);
+   }
+   break;
+   case UiUtils::WalletsTypes::HardwareLegacy:
+      ui_->radioButtonNewAddrLegacy->setVisible(true);
+      ui_->radioButtonNewAddrLegacy->setChecked(true);
+      break;
+   case UiUtils::WalletsTypes::HardwareNativeSW:
+   {
+      ui_->radioButtonNewAddrNative->setVisible(true);
+      ui_->radioButtonNewAddrNative->setChecked(true);
+      break;
+   }  
+   case UiUtils::WalletsTypes::HardwareNestedSW:
+   {
+      ui_->radioButtonNewAddrNested->setVisible(true);
+      ui_->radioButtonNewAddrNested->setChecked(true);
+      break;
+   }
+   default:
+      break;
+   }
+
+   ui_->widgetChangeAddress->setEnabled(!(walletType & UiUtils::WalletsTypes::HardwareAll));
+}
+
 void CreateTransactionDialogAdvanced::initUI()
 {
    usedInputsModel_ = new UsedInputsModel(this);
@@ -465,6 +508,9 @@ void CreateTransactionDialogAdvanced::initUI()
       , this, &CreateTransactionDialogAdvanced::setTxFees);
    connect(ui_->spinBoxFeesManualTotal, QOverload<int>::of(&QSpinBox::valueChanged)
       , this, &CreateTransactionDialogAdvanced::setTxFees);
+
+   // Signal from parent class
+   connect(this, &CreateTransactionDialogAdvanced::walletChanged, this, &CreateTransactionDialogAdvanced::onUpdateChangeWidget);
 
    updateManualFeeControls();
 }
@@ -968,7 +1014,7 @@ void CreateTransactionDialogAdvanced::validateCreateButton()
    ui_->pushButtonCreate->setEnabled(isTxValid
       && !broadcasting_
       && (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()
-         || (selectedChangeAddress_.isValid())));
+         || ui_->radioButtonNewAddrLegacy->isChecked() || (selectedChangeAddress_.isValid())));
 }
 
 void CreateTransactionDialogAdvanced::SetInputs(const std::vector<UTXO> &inputs)
@@ -1063,7 +1109,8 @@ void CreateTransactionDialogAdvanced::getChangeAddress(AddressCb cb) const
          cb(selectedChangeAddress_);
          return;
       }
-      else if (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()) {
+      else if (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()
+         || ui_->radioButtonNewAddrLegacy->isChecked()) {
          const auto group = transactionData_->getGroup();
          std::shared_ptr<bs::sync::Wallet> wallet;
          if (group) {
@@ -1345,7 +1392,7 @@ void CreateTransactionDialogAdvanced::onExistingAddressSelectedForChange()
 
 void CreateTransactionDialogAdvanced::SetFixedWallet(const std::string& walletId, const std::function<void()> &cbInputsReset)
 {
-   const int idx = SelectWallet(walletId);
+   const int idx = SelectWallet(walletId, UiUtils::WalletsTypes::None);
    selectedWalletChanged(idx, true, cbInputsReset);
    ui_->comboBoxWallets->setEnabled(false);
 }
@@ -1357,7 +1404,7 @@ void CreateTransactionDialogAdvanced::setFixedGroupInputs(const std::shared_ptr<
    if (leaves.empty()) {
       return;
    }
-   SelectWallet(leaves.front()->walletId());
+   SelectWallet(leaves.front()->walletId(), UiUtils::WalletsTypes::None);
    ui_->comboBoxWallets->setEnabled(false);
    disableInputSelection();
    transactionData_->setGroupAndInputs(group, inputs, armory_->topBlock());
@@ -1533,7 +1580,8 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::Swithc
       , walletsManager_, utxoReservationManager_, signContainer_
       , logger_, applicationSettings_, parentWidget());
 
-   simpleDialog->SelectWallet(UiUtils::getSelectedWalletId(ui_->comboBoxWallets));
+   simpleDialog->SelectWallet(UiUtils::getSelectedWalletId(ui_->comboBoxWallets),
+      UiUtils::getSelectedWalletType(ui_->comboBoxWallets));
 
    const auto recipientIdList = transactionData_->allRecipientIds();
 

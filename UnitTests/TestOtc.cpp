@@ -92,7 +92,7 @@ public:
       UnitTestWalletACT::waitOnRefresh(regIDs);
 
       OtcClientParams params;
-      otc_ = std::make_shared<OtcClient>(env.logger(), syncWalletMgr_, env.armoryConnection(), signer_, nullptr, nullptr, params);
+      otc_ = std::make_shared<OtcClient>(env.logger(), syncWalletMgr_, env.armoryConnection(), signer_, nullptr, nullptr, env.appSettings(), params);
       otc_->setOwnContactId(name);
    }
 
@@ -189,12 +189,10 @@ public:
                         bs::Address::fromAddressString(result->changeAddr));
                      ASSERT_FALSE(isExternal);
                   }
-
                   totalFee_ = result->totalFee;
-
+                  inputs_ = result->utxos;
                   sendStateUpdate(ProxyTerminalPb::OTC_STATE_WAIT_BUYER_SIGN);
                }
-
                break;
             }
 
@@ -222,7 +220,7 @@ public:
                   const auto &data = verifySeller_.getValue();
 
                   auto result = bs::TradesVerification::verifySignedPayin(BinaryData::fromString(request.process_tx().signed_tx())
-                     , BinaryData::fromString(data.payin_tx_hash()));
+                     , BinaryData::fromString(data.payin_tx_hash()), inputs_);
                   ASSERT_TRUE(result->success);
 
                   sendStateUpdate(ProxyTerminalPb::OTC_STATE_SUCCEED);
@@ -388,6 +386,7 @@ public:
    bool payoutDone_{};
    bool payinSealDone_{};
    bool payinDone_{};
+   std::vector<UTXO> inputs_;
    std::atomic_bool quit_{false};
 };
 

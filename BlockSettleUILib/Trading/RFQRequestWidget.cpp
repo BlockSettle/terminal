@@ -26,6 +26,7 @@
 #include "RfqStorage.h"
 #include "WalletSignerContainer.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "Wallets/SyncHDWallet.h"
 #include "UtxoReservationManager.h"
 
 #include "bs_proxy_terminal_pb.pb.h"
@@ -68,7 +69,7 @@ void RFQRequestWidget::setWalletsManager(const std::shared_ptr<bs::sync::Wallets
    if (walletsManager_ == nullptr) {
       walletsManager_ = walletsManager;
       ui_->pageRFQTicket->setWalletsManager(walletsManager);
-      ui_->shieldPage->init(walletsManager, authAddressManager_);
+      ui_->shieldPage->init(walletsManager, authAddressManager_, appSettings_);
 
       // Do not listen for walletChanged (too verbose and resets UI too often) and walletsReady (to late and resets UI after startup unexpectedly)
       connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &RFQRequestWidget::forceCheckCondition);
@@ -271,16 +272,24 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservat
    auto xbtWallet = ui_->pageRFQTicket->xbtWallet();
    auto fixedXbtInputs = ui_->pageRFQTicket->fixedXbtInputs();
 
+   std::unique_ptr<bs::hd::Purpose> purpose;
+   if (xbtWallet && !xbtWallet->canMixLeaves()) {
+      auto walletType = ui_->pageRFQTicket->xbtWalletType();
+      purpose.reset(new bs::hd::Purpose(UiUtils::getHwWalletPurpose(walletType)));
+   }
+
    RFQDialog* dialog = new RFQDialog(logger_, rfq, quoteProvider_
       , authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_
       , connectionManager_, rfqStorage_, xbtWallet, ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, utxoReservationManager_
-      , fixedXbtInputs.inputs, std::move(fixedXbtInputs.utxoRes), std::move(ccUtxoRes), this);
+      , fixedXbtInputs.inputs, std::move(fixedXbtInputs.utxoRes), std::move(ccUtxoRes), std::move(purpose), this);
 
    connect(this, &RFQRequestWidget::unsignedPayinRequested, dialog, &RFQDialog::onUnsignedPayinRequested);
    connect(this, &RFQRequestWidget::signedPayoutRequested, dialog, &RFQDialog::onSignedPayoutRequested);
    connect(this, &RFQRequestWidget::signedPayinRequested, dialog, &RFQDialog::onSignedPayinRequested);
 
    dialog->setAttribute(Qt::WA_DeleteOnClose);
+
+
 
    dialogManager_->adjustDialogPosition(dialog);
    dialog->show();
@@ -346,16 +355,14 @@ bool RFQRequestWidget::checkWalletSettings(bs::network::Asset::Type productType,
 
 void RFQRequestWidget::forceCheckCondition()
 {
-   if (!ui_->widgetMarketData) {
+   if (!ui_->widgetMarketData || !celerClient_->IsConnected()) {
       return;
    }
 
    const auto& currentInfo = ui_->widgetMarketData->getCurrentlySelectedInfo();
-
    if (!currentInfo.isValid()) {
       return;
    }
-
    onCurrencySelected(currentInfo);
 }
 

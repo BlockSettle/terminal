@@ -19,14 +19,21 @@ QString BSMessageBox::kUrlColor = QLatin1String("#ffffff");
 // Basic constructor, sets message box type, title and text
 BSMessageBox::BSMessageBox(Type mbType, const QString& title
    , const QString& text, QWidget* parent)
-   : BSMessageBox(mbType, title, text, QString(), QString(), parent)
+   : BSMessageBox(mbType, title, text, QString(), QString(), 0, parent)
 {}
 
 // This constructor sets message box type, title, text and description.
 BSMessageBox::BSMessageBox(Type mbType
    , const QString& title, const QString& text
    , const QString& description, QWidget* parent)
-   : BSMessageBox(mbType, title, text, description, QString(), parent)
+   : BSMessageBox(mbType, title, text, description, QString(), 0, parent)
+{}
+
+BSMessageBox::BSMessageBox(Type mbType
+   , const QString& title, const QString& text
+   , const QString& description, const QString& details
+   , QWidget* parent)
+   : BSMessageBox(mbType, title, text, description, details, 0, parent)
 {}
 
 // Constructor parameters:
@@ -38,11 +45,17 @@ BSMessageBox::BSMessageBox(Type mbType
 // message box expands to show another text area with a scroll bar
 BSMessageBox::BSMessageBox(Type mbType, const QString& title
    , const QString& text, const QString& description
-   , const QString& details, QWidget* parent)
+   , const QString& details, int forceWidth, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::BSMessageBox)
 {
    ui_->setupUi(this);
+
+   if (forceWidth != 0) {
+      setMinimumWidth(forceWidth);
+      setMaximumWidth(forceWidth);
+   }
+
    setWindowTitle(title);
    ui_->labelTitle->setText(text);
    ui_->labelText->setText(description);
@@ -187,6 +200,6 @@ MessageBoxBroadcastError::MessageBoxBroadcastError(const QString &details
 
 MessageBoxExpTimeout::MessageBoxExpTimeout(QWidget *parent)
    : BSMessageBox(BSMessageBox::warning, tr("Explorer Timeout"),
-      tr("Explorer Timeout"), tr("Armory has timed out. Cannot resolve query.")
+      tr("Explorer Timeout"), tr("BlockSettleDB has timed out. Cannot resolve query.")
       , parent)
 {}

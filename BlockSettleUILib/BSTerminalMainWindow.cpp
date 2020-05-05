@@ -36,7 +36,6 @@
 #include "CelerAccountInfoDialog.h"
 #include "ColoredCoinServer.h"
 #include "ConnectionManager.h"
-#include "CreateAccountPrompt.h"
 #include "CreatePrimaryWalletPrompt.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
@@ -159,8 +158,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    ui_->tabWidget->setCurrentIndex(settings->get<int>(ApplicationSettings::GUI_main_tab));
 
-   ui_->widgetTransactions->setAppSettings(applicationSettings_);
-
    UpdateMainWindowAppearence();
    setWidgetsAuthorized(false);
 
@@ -187,10 +184,14 @@ void BSTerminalMainWindow::onNetworkSettingsRequired(NetworkSettingsClient clien
    networkSettingsLoader_->loadSettings();
 }
 
+void BSTerminalMainWindow::onBsConnectionDisconnected()
+{
+   onCelerDisconnected();
+}
+
 void BSTerminalMainWindow::onBsConnectionFailed()
 {
    SPDLOG_LOGGER_ERROR(logMgr_->logger(), "BsClient disconnected unexpectedly");
-   onCelerDisconnected();
    showError(tr("Network error"), tr("Connection to BlockSettle server failed"));
 }
 
@@ -207,9 +208,9 @@ void BSTerminalMainWindow::onAddrStateChanged()
    if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
       && !authManager_->isAtLeastOneAwaitingVerification() && canSubmitAuthAddr) {
       allowAuthAddressDialogShow_ = false;
-      BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Authentication Address")
-         , tr("Trading and settlement of XBT products require an Authentication Address to validate you as a Participant of BlockSettle’s Trading Network.\n"
-              "\n"
+      BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Create Authentication Address?")
+         , tr("An Authentication Address is your on-chain verification as a Participant in our trading network and is required for access to Spot XBT products.\n\n"
+              "After submission by the Participant, the Authentication Address is verified by the funding of a small amount of bitcoin from one of BlockSettle’s Validation Addresses.\n\n"
               "Submit Authentication Address now?"), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
@@ -436,11 +437,6 @@ void BSTerminalMainWindow::LoadWallets()
       CompleteDBConnection();
       act_->onRefresh({}, true);
       tryGetChatKeys();
-
-      // BST-2645: Do not show create account prompt if already have wallets
-      if (walletsMgr_->walletsCount() > 0) {
-         disableCreateTestAccountPrompt();
-      }
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::info, this, &BSTerminalMainWindow::showInfo);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::error, this, &BSTerminalMainWindow::showError);
@@ -454,7 +450,6 @@ void BSTerminalMainWindow::LoadWallets()
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletAdded, this, [this] {
       updateControlEnabledState();
-      promptToCreateTestAccountIfNeeded();
       tryGetChatKeys();
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
@@ -674,6 +669,9 @@ void BSTerminalMainWindow::updateControlEnabledState()
       action_send_->setEnabled(!walletsMgr_->hdWallets().empty()
          && armory_->isOnline() && signContainer_ && signContainer_->isReady());
    }
+   // Do not allow login until wallets synced (we need to check if user has primary wallet or not).
+   // Should be OK for both local and remote signer.
+   ui_->pushButtonUser->setEnabled(walletsSynched_);
 }
 
 bool BSTerminalMainWindow::isMDLicenseAccepted() const
@@ -772,7 +770,8 @@ void BSTerminalMainWindow::tryInitChatView()
       const auto env = isProd ? bs::network::otc::Env::Prod : bs::network::otc::Env::Test;
 
       ui_->widgetChat->init(connectionManager_, env, chatClientServicePtr_,
-         logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_, mdCallbacks_, assetManager_, utxoReservationMgr_);
+         logMgr_->logger("chat"), walletsMgr_, authManager_, armory_, signContainer_,
+         mdCallbacks_, assetManager_, utxoReservationMgr_, applicationSettings_);
 
       connect(chatClientServicePtr_->getClientPartyModelPtr().get(), &Chat::ClientPartyModel::userPublicKeyChanged,
          this, [this](const Chat::UserPublicKeyInfoList& userPublicKeyInfoList) {
@@ -856,8 +855,8 @@ void BSTerminalMainWindow::InitChartsView()
 void BSTerminalMainWindow::InitTransactionsView()
 {
    ui_->widgetExplorer->init(armory_, logMgr_->logger(), walletsMgr_, ccFileManager_, authManager_);
-   ui_->widgetTransactions->init(walletsMgr_, armory_, utxoReservationMgr_, signContainer_,
-                                logMgr_->logger("ui"));
+   ui_->widgetTransactions->init(walletsMgr_, armory_, utxoReservationMgr_, signContainer_, applicationSettings_
+                                , logMgr_->logger("ui"));
    ui_->widgetTransactions->setEnabled(true);
 
    ui_->widgetTransactions->SetTransactionsModel(transactionsModel_);
@@ -1026,7 +1025,7 @@ void BSTerminalMainWindow::initUtxoReservationManager()
       walletsMgr_, armory_, logMgr_->logger());
 }
 
-void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const BinaryData &txHash, int errCode
+void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const std::string& requestId, const BinaryData &txHash, int errCode
    , const std::string &errMsg)
 {
    NotificationCenter::notify(bs::ui::NotifyType::BroadcastError,
@@ -1040,7 +1039,7 @@ void BSTerminalMainWindow::MainWinACT::onNodeStatus(NodeStatus nodeStatus, bool 
    });
 }
 
-void BSTerminalMainWindow::MainWinACT::onZCReceived(const std::vector<bs::TXEntry> &zcs)
+void BSTerminalMainWindow::MainWinACT::onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry>& zcs)
 {
    QMetaObject::invokeMethod(parent_, [this, zcs] { parent_->onZCreceived(zcs); });
 }
@@ -1125,37 +1124,10 @@ bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
       }
    }
 
-   if (!signContainer_->isOffline()) {
-      NewWalletDialog newWalletDialog(true, applicationSettings_, this);
-      onInitWalletDialogWasShown();
-
-      int rc = newWalletDialog.exec();
-
-      switch (rc) {
-         case NewWalletDialog::CreateNew:
-            ui_->widgetWallets->CreateNewWallet();
-            break;
-         case NewWalletDialog::ImportExisting:
-            ui_->widgetWallets->ImportNewWallet();
-            break;
-         case NewWalletDialog::ImportHw:
-            ui_->widgetWallets->ImportHwWallet();
-            break;
-         case NewWalletDialog::Cancel:
-            return false;
-      }
-
-      if (cb) {
-         cb();
-      }
-      return true;
-   } else {
-      ui_->widgetWallets->ImportNewWallet();
-      if (cb) {
-         cb();
-      }
+   ui_->widgetWallets->onNewWallet();
+   if (cb) {
+      cb();
    }
-
    return true;
 }
 
@@ -1258,7 +1230,7 @@ void BSTerminalMainWindow::onSend()
    }
 
    if (!selectedWalletId.empty()) {
-      dlg->SelectWallet(selectedWalletId);
+      dlg->SelectWallet(selectedWalletId, UiUtils::WalletsTypes::None);
    }
 
    while(true) {
@@ -1409,7 +1381,7 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
       return;
    }
 
-   if (!gotChatKeys_) {
+   if (walletsSynched_ && !walletsMgr_->getPrimaryWallet()) {
       addDeferredDialog([this] {
          CreatePrimaryWalletPrompt dlg;
          int rc = dlg.exec();
@@ -1420,18 +1392,6 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
          }
       });
       return;
-   }
-
-   if (!gotChatKeys_) {
-      if (!signContainer_ || !signContainer_->isReady()) {
-         BSMessageBox signerMsg(BSMessageBox::warning
-            , tr("Login Failed")
-            , tr("Login Failed")
-            , tr("Signer connection lost. Please reconnect and try to login again.")
-            , this);
-         signerMsg.exec();
-         return;
-      }
    }
 
    LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, &cbApprovePuB_, &cbApproveProxy_, this);
@@ -1476,6 +1436,7 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    authManager_->setAuthAddressesSigned(loginDialog.result()->authAddressesSigned);
 
    connect(bsClient_.get(), &BsClient::disconnected, orderListModel_.get(), &OrderListModel::onDisconnected);
+   connect(bsClient_.get(), &BsClient::disconnected, this, &BSTerminalMainWindow::onBsConnectionDisconnected);
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
 
    // connect to RFQ dialog
@@ -1752,10 +1713,10 @@ void BSTerminalMainWindow::onNodeStatus(NodeStatus nodeStatus, bool isSegWitEnab
    if (isBitcoinCoreOnline != isBitcoinCoreOnline_) {
       isBitcoinCoreOnline_ = isBitcoinCoreOnline;
       if (isBitcoinCoreOnline) {
-         SPDLOG_LOGGER_INFO(logMgr_->logger(), "ArmoryDB connected to Bitcoin Core RPC");
+         SPDLOG_LOGGER_INFO(logMgr_->logger(), "BlockSettleDB connected to Bitcoin Core RPC");
          NotificationCenter::notify(bs::ui::NotifyType::BitcoinCoreOnline, {});
       } else {
-         SPDLOG_LOGGER_ERROR(logMgr_->logger(), "ArmoryDB disconnected from Bitcoin Core RPC");
+         SPDLOG_LOGGER_ERROR(logMgr_->logger(), "BlockSettleDB disconnected from Bitcoin Core RPC");
          NotificationCenter::notify(bs::ui::NotifyType::BitcoinCoreOffline, {});
       }
    }
@@ -1910,7 +1871,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
       const auto &deferredDialog = [this, server, promiseObj, srvPubKey, srvIPPort]{
          if (server.armoryDBKey.isEmpty()) {
             ImportKeyBox box(BSMessageBox::question
-               , tr("Import ArmoryDB ID Key?")
+               , tr("Import BlockSettleDB ID Key?")
                , this);
 
             box.setNewKeyFromBinary(srvPubKey);
@@ -1926,7 +1887,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
          }
          else if (server.armoryDBKey.toStdString() != srvPubKey.toHexStr()) {
             ImportKeyBox box(BSMessageBox::question
-               , tr("Import ArmoryDB ID Key?")
+               , tr("Import BlockSettleDB ID Key?")
                , this);
 
             box.setNewKeyFromBinary(srvPubKey);
@@ -2000,6 +1961,7 @@ void BSTerminalMainWindow::onSyncWallets()
 
    walletsMgr_->reset();
    walletsMgr_->syncWallets(progressDelegate);
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::onSignerVisibleChanged()
@@ -2103,7 +2065,12 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
       addDeferredDialog([this, wallet] {
          promoteToPrimaryShown_ = true;
          BSMessageBox qry(BSMessageBox::question, tr("Upgrade Wallet"), tr("Enable Trading?")
-            , tr("BlockSettle requires you to hold sub-wallets able to interact with our trading system. Do you wish to create them now?"), this);
+            , tr("BlockSettle requires you to hold sub-wallets able to interact with our trading system. Do you wish to create them now?\n\n"
+                 "For more information regarding our settlement models, please consult our ") +
+                  QStringLiteral("<a href=\"%1\"><span style=\"text-decoration: underline; color: %2;\">Trading Procedures</span></a>")
+                  .arg(QStringLiteral("http://pubb.blocksettle.com/PDF/BlockSettle%20Trading%20Procedures.pdf"))
+                  .arg(BSMessageBox::kUrlColor)
+            , this);
          if (qry.exec() == QDialog::Accepted) {
             allowAuthAddressDialogShow_ = true;
             walletsMgr_->PromoteHDWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {
@@ -2135,43 +2102,6 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
    }
 }
 
-void BSTerminalMainWindow::disableCreateTestAccountPrompt()
-{
-   applicationSettings_->set(ApplicationSettings::HideCreateAccountPromptTestnet, true);
-}
-
-void BSTerminalMainWindow::promptToCreateTestAccountIfNeeded()
-{
-   addDeferredDialog([this] {
-      auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
-      bool hideCreateAccountTestnet = applicationSettings_->get<bool>(ApplicationSettings::HideCreateAccountPromptTestnet);
-      if (envType != ApplicationSettings::EnvConfiguration::Test || hideCreateAccountTestnet) {
-         return;
-      }
-      disableCreateTestAccountPrompt();
-      if (bs::network::isTradingEnabled(userType_)) {
-         // Do not prompt if user is already logged in
-         return;
-      }
-
-      CreateAccountPrompt dlg(this);
-      int rc = dlg.exec();
-
-      switch (rc) {
-         case CreateAccountPrompt::Login:
-            onLogin();
-            break;
-         case CreateAccountPrompt::CreateAccount: {
-            auto createTestAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlTest);
-            QDesktopServices::openUrl(QUrl(createTestAccountUrl));
-            break;
-         }
-         case CreateAccountPrompt::Cancel:
-            break;
-      }
-   });
-}
-
 void BSTerminalMainWindow::showLegacyWarningIfNeeded()
 {
    if (applicationSettings_->get<bool>(ApplicationSettings::HideLegacyWalletWarning)) {
@@ -2179,15 +2109,19 @@ void BSTerminalMainWindow::showLegacyWarningIfNeeded()
    }
    applicationSettings_->set(ApplicationSettings::HideLegacyWalletWarning, true);
    addDeferredDialog([this] {
-      BSMessageBox mbox(BSMessageBox::warning
-         , tr("Legacy Wallets ")
+      int forcedWidth = 640;
+      BSMessageBox mbox(BSMessageBox::info
+         , tr("Legacy Wallets")
          , tr("Legacy Address Balances")
-         , tr("We have detected that your hardware wallet holds, or has held, balances on legacy type addresses. "
-              "BlockSettle does not intend to support legacy address types and we strongly "
-              "recommend any balances held on such addresses are moved to native SegWit addresses.\n\n"
+         , tr("The BlockSettle Terminal has detected the use of legacy addresses on your hardware wallet.\n\n"
+              "The BlockSettle Terminal supports viewing and spending from legacy addresses, but will not support the following actions related to these addresses:\n\n"
               "- No GUI support for legacy address generation\n"
-              "- No trading using legacy addresses inputs\n"
-              "- No mixing of input types when spending from legacy addresses")
+              "- No trading using legacy address input\n"
+              "- GUI support for legacy address generation\n"
+              "- Trading and settlement using legacy inputs\n\n"
+              "BlockSettle strongly recommends that you move your legacy address balances to native SegWit addresses.")
+         , {}
+         , forcedWidth
          , this);
       mbox.exec();
    });

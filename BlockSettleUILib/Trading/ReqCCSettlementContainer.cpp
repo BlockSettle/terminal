@@ -34,8 +34,10 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::map<UTXO, std::string> &manualXbtInputs
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , bs::UtxoReservationToken utxoRes)
-   : bs::SettlementContainer(std::move(utxoRes))
+   , std::unique_ptr<bs::hd::Purpose> walletPurpose
+   , bs::UtxoReservationToken utxoRes
+   , bool expandTxDialogInfo)
+   : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose), expandTxDialogInfo)
    , logger_(logger)
    , signingContainer_(container)
    , xbtWallet_(xbtWallet)
@@ -49,6 +51,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , lotSize_(assetMgr_->getCCLotSize(product()))
    , manualXbtInputs_(manualXbtInputs)
    , utxoReservationManager_(utxoReservationManager)
+   , armory_(armory)
 {
    if (!xbtWallet_) {
       throw std::logic_error("invalid hd wallet");
@@ -247,8 +250,8 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                      bs::core::wallet::OutputOrderType::Change
                   };
 
-                  ccTxData_ = walletsMgr_->createPartialTXRequest(spendVal, xbtInputs, changeAddr, feePerByte
-                     , { recipient }, outSortOrder, dealerTx_, false/*calcFeeFromPrevData*/, useAllInputs);
+                  ccTxData_ = bs::sync::WalletsManager::createPartialTXRequest(spendVal, xbtInputs, changeAddr, feePerByte, armory_->topBlock()
+                     , { recipient }, outSortOrder, dealerTx_, useAllInputs, logger_);
                   ccTxData_.populateUTXOs = true;
 
                   logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
@@ -266,7 +269,15 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
             xbtLeaves_.front()->getNewChangeAddress(changeAddrCb);
          };
          if (manualXbtInputs_.empty()) {
-            auto utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId());
+            std::vector<UTXO> utxos;
+            if (!xbtWallet_->canMixLeaves()) {
+               assert(walletPurpose_);
+               utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId(), *walletPurpose_);
+            }
+            else {
+               utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId());
+            }
+
             auto fixedUtxo = utxoReservationManager_->convertUtxoToPartialFixedInput(xbtWallet_->walletId(), utxos);
             inputsCb(fixedUtxo.inputs);
          } else {
@@ -288,8 +299,17 @@ void ReqCCSettlementContainer::AcceptQuote()
          return;
       }
    }
-
-   emit sendOrder();
+   signingContainer_->resolvePublicSpenders(ccTxData_, [this]
+      (bs::error::ErrorCode result, const BinaryData &txState)
+   {
+      if (result == bs::error::ErrorCode::NoError) {
+         ccTxResolvedData_ = txState;
+         emit sendOrder();
+      }
+      else {
+         emit error(result, bs::error::ErrorCodeToString(result));
+      }
+   });
 }
 
 bool ReqCCSettlementContainer::startSigning(QDateTime timestamp)
@@ -380,7 +400,11 @@ bool ReqCCSettlementContainer::cancel()
 
 std::string ReqCCSettlementContainer::txData() const
 {
-   const auto &data = ccTxData_.serializeState().toHexStr();
+   if (ccTxResolvedData_.empty()) {
+      logger_->error("[ReqCCSettlementContainer::txData] no resolved data");
+      return {};
+   }
+   const auto &data = ccTxResolvedData_.toHexStr();
    logger_->debug("[ReqCCSettlementContainer::txData] {}", data);
    return data;
 }

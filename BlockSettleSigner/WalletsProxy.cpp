@@ -220,23 +220,39 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
    if (walletsMgr_->isWatchingOnly(walletId.toStdString())) {
       SPDLOG_LOGGER_DEBUG(logger_, "copy WO from WO wallet to '{}'", filePath.toStdString());
 
-      adapter_->exportWoWallet(walletId.toStdString(), [walletId, successCallback, failCallback, filePath](const BinaryData &content) {
+      bool isHw = walletsMgr_->getHDWalletById(walletId.toStdString())->isHardwareWallet();
+      adapter_->exportWoWallet(walletId.toStdString(), [this, walletId, successCallback, failCallback, filePath, isHw](const BinaryData &content) {
          if (content.empty()) {
             failCallback("can't read WO file");
             return;
          }
 
-         QFile f(filePath);
-         bool result = f.open(QIODevice::WriteOnly);
-         if (!result) {
-            failCallback("can't open output file");
-            return;
+         {  QFile f(filePath);
+            bool result = f.open(QIODevice::WriteOnly);
+            if (!result) {
+               failCallback("can't open output file");
+               return;
+            }
+            auto size = f.write(reinterpret_cast<const char*>(content.getPtr()), int(content.getSize()));
+            if (size != int(content.getSize())) {
+               failCallback("write failed");
+               return;
+            }
          }
 
-         auto size = f.write(reinterpret_cast<const char*>(content.getPtr()), int(content.getSize()));
-         if (size != int(content.getSize())) {
-            failCallback("write failed");
-            return;
+         if (isHw) {
+            try {
+               bs::core::hd::Wallet wallet(filePath.toStdString(), NetworkType::TestNet);
+               wallet.convertHardwareToWo();
+            } catch (const std::exception &e) {
+               SPDLOG_LOGGER_ERROR(logger_, "converting HW to WO wallet failed: {}", e.what());
+               failCallback("unexpected error");
+               return;
+            }
+
+            QFileInfo info(filePath);
+            QString lockFilePath = info.path() + QDir::separator() + info.baseName() + QStringLiteral(".lmdb-lock");
+            QFile::remove(lockFilePath);
          }
 
          successCallback();
@@ -447,14 +463,35 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
       return;
    }
 
-   const auto &parsedReqs = bs::core::wallet::ParseOfflineTXFile(data);
+   auto parsedReqs = bs::core::wallet::ParseOfflineTXFile(data);
    if (parsedReqs.empty()) {
       invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("File %1 contains no TX sign requests").arg(fileName));
       return;
    }
 
+   adapter_->verifyOfflineTxRequest(BinaryData::fromString(data)
+      , [this, fileName, jsCallback, parsedReqs = std::move(parsedReqs), data](bs::error::ErrorCode errorCode) {
+      if (errorCode != bs::error::ErrorCode::NoError) {
+         invokeJsCallBack(jsCallback, QJSValueList()
+            << QJSValue(false)
+            << tr("Sign request verification failed: %1").arg(bs::error::ErrorCodeToString(errorCode)));
+         return;
+      }
+
+      signOfflineTxProceed(fileName, parsedReqs, jsCallback);
+   });
+}
+
+void WalletsProxy::signOfflineTxProceed(const QString &fileName, const std::vector<bs::core::wallet::TXSignRequest> &parsedReqs, const QJSValue &jsCallback)
+{
+   struct Requests
+   {
+      std::vector<bs::core::wallet::TXSignRequest> requests;
+      bool isHw{};
+   };
+
    // sort reqs by wallets
-   const auto &parsedReqsForWallets = std::make_shared<std::unordered_map<std::string, std::vector<bs::core::wallet::TXSignRequest>>>(); // <wallet_id, reqList>
+   const auto &parsedReqsForWallets = std::make_shared<std::unordered_map<std::string, Requests>>(); // <wallet_id, Requests>
    //const auto walletsMgr = adapter_->getWalletsManager();
    for (const auto &req : parsedReqs) {
       if (!req.prevStates.empty()) {
@@ -472,7 +509,9 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
          return;
       }
 
-      parsedReqsForWallets->operator[](rootWallet->walletId()).push_back(req);
+      auto data = &parsedReqsForWallets->operator[](rootWallet->walletId());
+      data->requests.push_back(req);
+      data->isHw = rootWallet->isHardwareWallet();
    }
 
    // sign reqs by wallets
@@ -501,7 +540,7 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
                   QFileInfo fi(fileName);
                   QString outputFN = fi.path() + QLatin1String("/") + fi.baseName() + QLatin1String("_signed.bin");
 
-                  bs::error::ErrorCode exportResult = bs::core::wallet::ExportSignedTxToFile(signedTX, outputFN, reqs[0].comment);
+                  bs::error::ErrorCode exportResult = bs::core::wallet::ExportSignedTxToFile(signedTX, outputFN, reqs.requests[0].comment);
 
                   if (exportResult != bs::error::ErrorCode::NoError) {
                      invokeJsCallBack(jsCallback, QJSValueList()
@@ -522,18 +561,29 @@ void WalletsProxy::signOfflineTx(const QString &fileName, const QJSValue &jsCall
                      fn();
                   }
                };
-               adapter_->signOfflineTxRequest(reqs[0], passwordData->binaryPassword(), cbSigned);
+               if (reqs.isHw) {
+                  // Signed request is stored in binaryPassword field for HW wallets
+                  cbSigned(bs::error::ErrorCode::NoError, passwordData->binaryPassword());
+               } else {
+                  adapter_->signOfflineTxRequest(reqs.requests[0], passwordData->binaryPassword(), cbSigned);
+               }
             }
          });
 
 
          // TODO: send to qml list of txInfo
-         bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(reqs[0], walletsMgr_, logger_);
+         bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(reqs.requests[0], walletsMgr_, logger_);
          QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
 
          bs::sync::PasswordDialogData *dialogData = new bs::sync::PasswordDialogData();
          QQmlEngine::setObjectOwnership(dialogData, QQmlEngine::JavaScriptOwnership);
          dialogData->setValue(bs::sync::PasswordDialogData::Title, tr("Sign Offline TX"));
+
+         if (reqs.isHw) {
+            // Pass sign request as it is, HW wallet will handle it
+            auto reqData = coreTxRequestToPb(reqs.requests[0]).SerializeAsString();
+            dialogData->setValue(bs::sync::PasswordDialogData::TxRequest, QByteArray::fromStdString(reqData));
+         }
 
          bs::hd::WalletInfo *walletInfo = adapter_->qmlFactory()->createWalletInfo(walletId);
 

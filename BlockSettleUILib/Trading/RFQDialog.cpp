@@ -23,6 +23,7 @@
 #include "UiUtils.h"
 #include "UtxoReservationManager.h"
 #include "WalletSignerContainer.h"
+#include "Wallets/SyncHDWallet.h"
 
 
 RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
@@ -44,6 +45,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::map<UTXO, std::string> &fixedXbtInputs
    , bs::UtxoReservationToken fixedXbtUtxoRes
    , bs::UtxoReservationToken ccUtxoRes
+   , std::unique_ptr<bs::hd::Purpose> purpose
    , RFQRequestWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
@@ -67,6 +69,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , requestWidget_(parent)
    , utxoReservationManager_(utxoReservationManager)
    , ccUtxoRes_(std::move(ccUtxoRes))
+   , walletPurpose_(std::move(purpose))
 {
    ui_->setupUi(this);
 
@@ -134,6 +137,7 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
       } else {
          curContainer_ = newCCcontainer();
       }
+
       if (curContainer_) {
          rfqStorage_->addSettlementContainer(curContainer_);
          curContainer_->activate();
@@ -156,7 +160,10 @@ void RFQDialog::logError(bs::error::ErrorCode code, const QString &errorMessage)
    logger_->error("[RFQDialog::logError] {}", errorMessage.toStdString());
 
    if (bs::error::ErrorCode::TxCancelled != code) {
-      MessageBoxBroadcastError(errorMessage, code, this).exec();
+      // Do not use this as the parent as it will be destroyed when RFQDialog is closed
+      QMetaObject::invokeMethod(qApp, [code, errorMessage] {
+         MessageBoxBroadcastError(errorMessage, code).exec();
+      }, Qt::QueuedConnection);
    }
 }
 
@@ -167,10 +174,14 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
       return nullptr;
    }
 
+   const bool expandTxInfo = appSettings_->get<bool>(
+      ApplicationSettings::DetailedSettlementTxDialogByDefault);
+
    try {
       xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
          , authAddressManager_, signContainer_, armory_, xbtWallet_, walletsManager_
-         , rfq_, quote_, authAddr_, fixedXbtInputs_, std::move(fixedXbtUtxoRes_), utxoReservationManager_, recvXbtAddrIfSet_);
+         , rfq_, quote_, authAddr_, fixedXbtInputs_, std::move(fixedXbtUtxoRes_), utxoReservationManager_
+         , std::move(walletPurpose_), recvXbtAddrIfSet_, expandTxInfo);
 
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
          , this, &RFQDialog::onXBTSettlementAccepted);
@@ -209,9 +220,13 @@ void RFQDialog::hideIfNoRemoteSignerMode()
 
 std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
 {
+   const bool expandTxInfo = appSettings_->get<bool>(
+      ApplicationSettings::DetailedSettlementTxDialogByDefault);
+
    try {
       ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
-         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_, fixedXbtInputs_, utxoReservationManager_, std::move(ccUtxoRes_));
+         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_,
+         fixedXbtInputs_, utxoReservationManager_, std::move(walletPurpose_), std::move(ccUtxoRes_), expandTxInfo);
 
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::txSigned
          , this, &RFQDialog::onCCTxSigned);
@@ -225,9 +240,8 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::cancelTrade
          , requestWidget_, &RFQRequestWidget::cancelCCTrade);
 
-      auto orderUpdatedCb = [qId = quote_.quoteId, ccContainer = ccSettlContainer_]
-         (const bs::network::Order& order)
-      {
+      // Do not make circular dependency, capture bare pointer
+      auto orderUpdatedCb = [qId = quote_.quoteId, ccContainer = ccSettlContainer_.get()] (const bs::network::Order& order) {
          if (order.status == bs::network::Order::Pending && order.quoteId == qId) {
             ccContainer->setClOrdId(order.clOrderId);
          }

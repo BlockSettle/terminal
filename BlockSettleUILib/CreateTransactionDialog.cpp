@@ -191,9 +191,10 @@ void CreateTransactionDialog::closeEvent(QCloseEvent *e)
    e->ignore();
 }
 
-int CreateTransactionDialog::SelectWallet(const std::string& walletId)
+int CreateTransactionDialog::SelectWallet(const std::string& walletId, UiUtils::WalletsTypes type)
 {
-   auto index = UiUtils::selectWalletInCombobox(comboBoxWallets(), walletId);
+   auto index = UiUtils::selectWalletInCombobox(comboBoxWallets(), walletId
+      , static_cast<UiUtils::WalletsTypes>(type));
    if (index < 0) {
       const auto rootWallet = walletsManager_->getHDRootForLeaf(walletId);
       if (rootWallet) {
@@ -205,7 +206,7 @@ int CreateTransactionDialog::SelectWallet(const std::string& walletId)
 
 void CreateTransactionDialog::populateWalletsList()
 {
-   int index = UiUtils::fillHDWalletsComboBox(comboBoxWallets(), walletsManager_, UiUtils::WalletsTypes::All_AllowLegacy);
+   int index = UiUtils::fillHDWalletsComboBox(comboBoxWallets(), walletsManager_, UiUtils::WalletsTypes::All_AllowHwLegacy);
    selectedWalletChanged(index);
 }
 
@@ -298,19 +299,24 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
    }
 
    auto group = rootWallet->getGroup(rootWallet->getXBTGroupType());
-   auto walletType = UiUtils::getSelectedWalletType(comboBoxWallets());
+   const bool isHardware = rootWallet->isHardwareWallet() || rootWallet->isHardwareOfflineWallet();
+   bs::hd::Purpose hwPurpose;
+   if (isHardware) {
+      hwPurpose = UiUtils::getSelectedHwPurpose(comboBoxWallets());
+   }
 
-   if ((transactionData_->getGroup() != group || walletType == UiUtils::Hardware_Legacy) || resetInputs) {
-      if (walletType == UiUtils::Hardware_Legacy) {
-         auto wallet = group->getLeaf(bs::hd::Purpose::NonSegWit);
-         transactionData_->setWallet(wallet, armory_->topBlock()
+   if (transactionData_->getGroup() != group || isHardware || resetInputs) {
+      if (isHardware) {
+         transactionData_->setWallet(group->getLeaf(hwPurpose), armory_->topBlock()
             , resetInputs, cbInputsReset);
       }
       else {
-         transactionData_->setGroup(group, armory_->topBlock(), rootWallet->isHardwareWallet()
+         transactionData_->setGroup(group, armory_->topBlock(), true
             , resetInputs, cbInputsReset);
       }
    }
+
+   emit walletChanged();
 }
 
 void CreateTransactionDialog::onTransactionUpdated()
@@ -413,7 +419,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
    }
 
    if (result == bs::error::ErrorCode::NoError) {
-      if (armory_->broadcastZC(signedTX)) {
+      if (!armory_->broadcastZC(signedTX).empty()) {
          if (!textEditComment()->document()->isEmpty()) {
             const auto &comment = textEditComment()->document()->toPlainText().toStdString();
             transactionData_->getWallet()->setTransactionComment(signedTX, comment);
@@ -422,7 +428,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
          return;
       }
 
-      detailedText = tr("Failed to communicate to armory to broadcast transaction. Maybe Armory is offline");
+      detailedText = tr("Failed to communicate to BlockSettleDB to broadcast transaction. Maybe BlockSettleDB is offline");
    }
    else {
       detailedText = bs::error::ErrorCodeToString(result);
@@ -453,7 +459,7 @@ bool CreateTransactionDialog::BroadcastImportedTx()
       return false;
    }
    startBroadcasting();
-   if (armory_->broadcastZC(importedSignedTX_)) {
+   if (!armory_->broadcastZC(importedSignedTX_).empty()) {
       if (!textEditComment()->document()->isEmpty()) {
          const auto &comment = textEditComment()->document()->toPlainText().toStdString();
          transactionData_->getWallet()->setTransactionComment(importedSignedTX_, comment);
@@ -498,7 +504,7 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
             }
 
             for (auto& txPair : result) {
-               txReq.supportingTxMap_.emplace(txPair.first, txPair.second->serialize());
+               txReq.supportingTXs.emplace(txPair.first, txPair.second->serialize());
             }
 
             bool rc = createTransactionImpl(std::move(txReq));

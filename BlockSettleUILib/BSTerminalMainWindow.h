@@ -237,6 +237,7 @@ private slots:
 
    void onNetworkSettingsRequired(NetworkSettingsClient client);
 
+   void onBsConnectionDisconnected();
    void onBsConnectionFailed();
 
    void onInitWalletDialogWasShown();
@@ -267,9 +268,6 @@ private:
    void networkSettingsReceived(const NetworkSettings &settings, NetworkSettingsClient client);
 
    void promoteToPrimaryIfNeeded();
-
-   void disableCreateTestAccountPrompt();
-   void promptToCreateTestAccountIfNeeded();
 
    void showLegacyWarningIfNeeded();
 
@@ -318,9 +316,9 @@ private:
       MainWinACT(BSTerminalMainWindow *wnd)
          : parent_(wnd) {}
       ~MainWinACT() override { cleanup(); }
-      void onZCReceived(const std::vector<bs::TXEntry> &) override;
+      void onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry>&) override;
       void onStateChanged(ArmoryState) override;
-      void onTxBroadcastError(const BinaryData &txHash, int errCode
+      void onTxBroadcastError(const std::string& requestId, const BinaryData &txHash, int errCode
          , const std::string &errMsg) override;
       void onNodeStatus(NodeStatus, bool isSegWitEnabled, RpcStatus) override;
 

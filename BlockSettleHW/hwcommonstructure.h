@@ -58,15 +58,16 @@ class HwWalletWrapper {
 public:
    bs::core::wallet::HwWalletInfo info_;
    Q_INVOKABLE QString walletName() {
-      return QString::fromStdString(info_.label_);
+      return QString::fromStdString(info_.label);
    }
    Q_INVOKABLE QString walletDesc() {
-      return QString::fromStdString(info_.vendor_);
+      return QString::fromStdString(info_.vendor);
    }
    bool isValid() {
-      return !info_.xpubRoot_.empty() &&
-         !info_.xpubNestedSegwit_.empty() &&
-         !info_.xpubNativeSegwit_.empty();
+      return !info_.xpubRoot.empty() &&
+         !info_.xpubNestedSegwit.empty() &&
+         !info_.xpubNativeSegwit.empty() &&
+         !info_.xpubLegacy.empty();
    }
 };
 Q_DECLARE_METATYPE(HwWalletWrapper)
@@ -83,7 +84,8 @@ bool isNonSegwit(const bs::hd::Path& path);
 
 namespace HWInfoStatus {
    const QString kPressButton = QObject::tr("Confirm transaction output(s) on your device");
-   const QString kTransaction = QObject::tr("Setup transaction...");
+   const QString kTransaction = QObject::tr("Loading transaction to your device....");
+   const QString kReceiveSignedTx = QObject::tr("Receiving signed transaction from device....");
    const QString kTransactionFinished = QObject::tr("Transaction signing finished with success");
    const QString kCancelledByUser = QObject::tr("Cancelled by user");
 }

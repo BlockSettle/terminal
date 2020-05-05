@@ -81,6 +81,12 @@ bs::network::otc::Offer OTCNegotiationRequestWidget::offer() const
 
    result.inputs = selectedUTXOs();
 
+   auto walletType = UiUtils::getSelectedWalletType(ui_->comboBoxXBTWallets);
+   if (walletType & UiUtils::WalletsTypes::HardwareSW) {
+      auto purpose = UiUtils::getHwWalletPurpose(walletType);
+      result.walletPurpose.reset(new bs::hd::Purpose(purpose));
+   }
+
    return result;
 }
 
@@ -177,23 +183,13 @@ void OTCNegotiationRequestWidget::onSubmited()
       return;
    }
 
-   const auto hdWallet = getCurrentHDWalletFromCombobox(ui_->comboBoxXBTWallets);
-   if (!hdWallet) {
-      return;
-   }
-
-   auto cbUtxoSet = [wdgt = QPointer<OTCNegotiationRequestWidget>(this)](std::vector<UTXO>&& utxos) {
-      if (!wdgt) {
+   submitProposal(ui_->comboBoxXBTWallets, bs::XBTAmount(ui_->quantitySpinBox->value()),
+      [caller = QPointer<OTCNegotiationRequestWidget>(this)]() {
+      if (!caller) {
          return;
       }
-
-      wdgt->setSelectedInputs(utxos);
-      wdgt->setReservation(wdgt->getUtxoManager()->makeNewReservation(utxos));
-      emit wdgt->requestCreated();
-   };
-
-   getUtxoManager()->getBestXbtUtxoSet(hdWallet->walletId(), bs::XBTAmount(ui_->quantitySpinBox->value()).GetValue()
-      , std::move(cbUtxoSet), true);
+      caller->requestCreated();
+   });
 }
 
 std::shared_ptr<bs::sync::hd::Wallet> OTCNegotiationRequestWidget::getCurrentHDWallet() const
@@ -286,7 +282,19 @@ void OTCNegotiationRequestWidget::onParentAboutToHide()
 
 void OTCNegotiationRequestWidget::onCurrentWalletChanged()
 {
-   UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, getCurrentHDWallet(), true);
+   auto recvHdWallet = getCurrentHDWallet();
+   if (!recvHdWallet) {
+      return;
+   }
+   if (!recvHdWallet->canMixLeaves()) {
+      auto xbtGroup = recvHdWallet->getGroup(recvHdWallet->getXBTGroupType());
+      auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWallets);
+      UiUtils::fillRecvAddressesComboBox(ui_->receivingAddressComboBox, { xbtGroup->getLeaf(purpose) });
+   }
+   else {
+      UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, recvHdWallet, true);
+   }
+
    clearSelectedInputs();
    onUpdateBalances();
 }
@@ -319,7 +327,13 @@ void OTCNegotiationRequestWidget::onMaxQuantityClicked()
 
    std::vector<UTXO> utxos = selectedUTXOs();
    if (utxos.empty()) {
-      utxos = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId());
+      if (!hdWallet->canMixLeaves()) {
+         auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWallets);
+         utxos = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId(), purpose);
+      }
+      else {
+         utxos = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId());
+      }
    }
 
    auto feeCb = [this, parentWidget = QPointer<OTCWindowsAdapterBase>(this), utxos = std::move(utxos)](float fee) {

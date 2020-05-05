@@ -91,6 +91,30 @@ std::shared_ptr<bs::sync::WalletsManager> SignerAdapter::getWalletsManager()
    return walletsMgr_;
 }
 
+
+void SignerAdapter::verifyOfflineTxRequest(const BinaryData &signRequest, const std::function<void (bs::error::ErrorCode)> &cb)
+{
+   signer::VerifyOfflineTxRequest request;
+   request.set_content(signRequest.toBinStr());
+   const auto reqId = listener_->send(signer::VerifyOfflineTxRequestType, request.SerializeAsString());
+   listener_->setVerifyOfflineTxRequestCb(reqId, [this, cb](bs::error::ErrorCode errorCode) {
+      if (errorCode != bs::error::ErrorCode::NoError) {
+         cb(errorCode);
+         return;
+      }
+      // Need to sync wallets because they might be extended and include new addresses
+      bool result = getWalletsManager()->syncWallets([cb](int count, int total) {
+         if (count == total) {
+            cb(bs::error::ErrorCode::NoError);
+         }
+      });
+      if (!result) {
+         SPDLOG_LOGGER_ERROR(logger_, "wallets sync failed");
+         cb(bs::error::ErrorCode::InternalError);
+      }
+   });
+}
+
 void SignerAdapter::signOfflineTxRequest(const bs::core::wallet::TXSignRequest &txReq
    , const SecureBinaryData &password, const std::function<void(bs::error::ErrorCode result, const BinaryData &)> &cb)
 {
@@ -198,13 +222,14 @@ void SignerAdapter::importWoWallet(const std::string &filename, const BinaryData
 void SignerAdapter::importHwWallet(const bs::core::wallet::HwWalletInfo &walletInfo, const CreateWoCb &cb)
 {
    signer::ImportHwWalletRequest request;
-   request.set_label(walletInfo.label_);
-   request.set_vendor(walletInfo.vendor_);
-   request.set_deviceid(walletInfo.deviceId_);
-   request.set_xpubroot(walletInfo.xpubRoot_);
-   request.set_xpubnestedsegwit(walletInfo.xpubNestedSegwit_);
-   request.set_xpubnativesegwit(walletInfo.xpubNativeSegwit_);
-   request.set_xpublegacy(walletInfo.xpubLegacy_);
+   request.set_wallettype(walletInfo.type);
+   request.set_label(walletInfo.label);
+   request.set_vendor(walletInfo.vendor);
+   request.set_deviceid(walletInfo.deviceId);
+   request.set_xpubroot(walletInfo.xpubRoot);
+   request.set_xpubnestedsegwit(walletInfo.xpubNestedSegwit);
+   request.set_xpubnativesegwit(walletInfo.xpubNativeSegwit);
+   request.set_xpublegacy(walletInfo.xpubLegacy);
 
    const auto reqId = listener_->send(signer::ImportHwWalletType, request.SerializeAsString());
    listener_->setWatchOnlyCb(reqId, cb);

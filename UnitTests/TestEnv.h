@@ -130,7 +130,7 @@ public:
    ~SingleUTWalletACT() override;
 
    void onRefresh(const std::vector<BinaryData> &ids, bool online) override;
-   void onZCReceived(const std::vector<bs::TXEntry> &zcs) override;
+   void onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry>& zcs) override;
    void onNewBlock(unsigned int block, unsigned int branchHgt) override;
 };
 
@@ -160,12 +160,13 @@ public:
       ACTqueue::notifQueue_.push_back(std::move(dbns));
    }
 
-   void onZCReceived(const std::vector<bs::TXEntry> &zcs) override
+   void onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry>& zcs) override
    {
-      bs::sync::WalletACT::onZCReceived(zcs);
+      bs::sync::WalletACT::onZCReceived(requestId, zcs);
 
       auto dbns = std::make_shared<DBNotificationStruct>(DBNS_ZC);
       dbns->zc_ = zcs;
+      dbns->requestId_ = requestId;
 
       ACTqueue::notifQueue_.push_back(std::move(dbns));
    }
@@ -272,12 +273,13 @@ public:
       notifQueue_.push_back(std::move(dbns));
    }
 
-   void onZCReceived(const std::vector<bs::TXEntry> &zcs) override
+   void onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry>& zcs) override
    {
-      bs::sync::WalletACT::onZCReceived(zcs);
+      bs::sync::WalletACT::onZCReceived(requestId, zcs);
 
       auto dbns = std::make_shared<DBNotificationStruct>(DBNS_ZC);
       dbns->zc_ = zcs;
+      dbns->requestId_ = requestId;
 
       notifQueue_.push_back(std::move(dbns));
    }

@@ -14,6 +14,8 @@
 #include "AbstractChatWidgetState.h"
 #include "ChatUI/ChatWidget.h"
 #include "OtcClient.h"
+#include "ChatUI/OTCShieldWidgets/OTCWindowsAdapterBase.h"
+#include "ui_ChatWidget.h"
 
 class PrivatePartyInitState : public AbstractChatWidgetState {
 public:
@@ -40,6 +42,7 @@ protected:
       if (clientPartyPtr->isGlobalOTC()) {
          chat_->ui_->treeViewOTCRequests->selectionModel()->reset();
          chat_->ui_->stackedWidgetMessages->setCurrentIndex(static_cast<int>(StackedMessages::OTCTable));
+         chat_->ui_->showHistoryButton->setVisible(false);
          return;
       }
 

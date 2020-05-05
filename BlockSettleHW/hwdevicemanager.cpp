@@ -111,19 +111,18 @@ void HwDeviceManager::prepareHwDeviceForSign(QString walletId)
    auto hdWallet = walletManager_->getHDWalletById(walletId.toStdString());
    assert(hdWallet->isHardwareWallet());
    auto encKeys = hdWallet->encryptionKeys();
-   auto deviceId = encKeys[0].toBinStr();
+   bs::wallet::HardwareEncKey hwEncType(encKeys[0]);
 
-   // #TREZOR_INTEGRATION:  bad way to distinguish device type
-   // we need better here
-   if (deviceId == kDeviceLedgerId) {
-      ledgerClient_->scanDevices([caller = QPointer<HwDeviceManager>(this), deviceId, walletId]() {
+   if (bs::wallet::HardwareEncKey::WalletType::Ledger == hwEncType.deviceType()) {
+      ledgerClient_->scanDevices([caller = QPointer<HwDeviceManager>(this), walletId]() {
          if (!caller) {
             return;
          }
 
          auto devices = caller->ledgerClient_->deviceKeys();
          if (devices.empty()) {
-            caller->deviceNotFound(QString::fromStdString(deviceId));
+            caller->lastOperationError_ = caller->ledgerClient_->lastScanError();
+            caller->deviceNotFound(QString::fromStdString(kDeviceLedgerId));
             return;
          }
 
@@ -138,15 +137,20 @@ void HwDeviceManager::prepareHwDeviceForSign(QString walletId)
          }
 
          if (!found) {
-            caller->deviceNotFound(QString::fromStdString(deviceId));
+            if (!devices.isEmpty()) {
+               caller->lastOperationError_ = caller->getDevice(devices.front())->lastError();
+            }
+
+            caller->deviceNotFound(QString::fromStdString(kDeviceLedgerId));
          }  
          else {
             caller->model_->resetModel({ std::move(deviceKey) });
-            caller->deviceReady(QString::fromStdString(deviceId));
+            caller->deviceReady(QString::fromStdString(kDeviceLedgerId));
          }
       });
    }
-   else {
+   else if (bs::wallet::HardwareEncKey::WalletType::Trezor == hwEncType.deviceType()) {
+      auto deviceId = hwEncType.deviceId();
       trezorClient_->initConnection(QString::fromStdString(deviceId), [this](QVariant&& deviceId) {
          DeviceKey deviceKey;
 
@@ -201,6 +205,7 @@ void HwDeviceManager::signTX(QVariant reqTX)
    connect(device, &HwDeviceInterface::requestForRescan,
       this, [this]() {
       auto deviceInfo = model_->getDevice(0);
+      lastOperationError_ = getDevice(deviceInfo)->lastError();
       emit deviceNotFound(deviceInfo.deviceId_);
    }, Qt::UniqueConnection);
 }
@@ -208,6 +213,21 @@ void HwDeviceManager::signTX(QVariant reqTX)
 void HwDeviceManager::releaseDevices()
 {
    releaseConnection();
+}
+
+bool HwDeviceManager::awaitingUserAction(int deviceIndex)
+{
+   if (model_->rowCount() <= deviceIndex) {
+      return false;
+   }
+
+   auto device = getDevice(model_->getDevice(deviceIndex));
+   return device && device->isBlocked();
+}
+
+QString HwDeviceManager::lastDeviceError()
+{
+   return lastOperationError_;
 }
 
 void HwDeviceManager::releaseConnection(AsyncCallBack&& cb/*= nullptr*/)

@@ -66,6 +66,12 @@ public:
    void setMatrixPin(const std::string& pin) override;
    void setPassword(const std::string& password) override;
 
+   // State
+   bool isBlocked() override {
+      // There is no blocking state for Trezor
+      return false;
+   }
+
 private:
    void makeCall(const google::protobuf::Message &msg);
 
@@ -98,6 +104,7 @@ private:
    HWSignedTx awaitingTransaction_;
    HwWalletWrapper awaitingWalletInfo_;
 
+   bool txSignedByUser_ = false;
    std::unordered_map<int, AsyncCallBack> awaitingCallbackNoData_;
    std::unordered_map<int, AsyncCallBackCall> awaitingCallbackData_;
    std::map<BinaryData, Tx> prevTxs_;

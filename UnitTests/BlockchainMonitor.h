@@ -36,7 +36,7 @@ private:
    void onNewBlock(unsigned int, unsigned int) override {
       receivedNewBlock_ = true;
    }
-   void onZCReceived(const std::vector<bs::TXEntry> &zcs) override {
+   void onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry>& zcs) override {
       auto zcCopy = zcs;
       zcQueue_.push_back(std::move(zcCopy));
    }

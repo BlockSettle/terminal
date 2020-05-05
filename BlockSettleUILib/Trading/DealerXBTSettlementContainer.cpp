@@ -41,8 +41,10 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const std::vector<UTXO> &utxosPayinFixed
    , const bs::Address &recvAddr
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , bs::UtxoReservationToken utxoRes)
-   : bs::SettlementContainer(std::move(utxoRes))
+   , std::unique_ptr<bs::hd::Purpose> walletPurpose
+   , bs::UtxoReservationToken utxoRes
+   , bool expandTxDialogInfo)
+   : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose), expandTxDialogInfo)
    , order_(order)
    , weSellXbt_((order.side == bs::network::Side::Buy) != (order.product == bs::network::XbtCurrency))
    , amount_((order.product != bs::network::XbtCurrency) ? order.quantity / order.price : order.quantity)
@@ -289,9 +291,19 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
    bs::tradeutils::PayinArgs args;
    initTradesArgs(args, settlementId);
    args.fixedInputs = utxosPayinFixed_;
-   for (const auto &leaf : xbtWallet_->getGroup(bs::sync::hd::Wallet::getXBTGroupType())->getLeaves()) {
+
+   const auto xbtGroup = xbtWallet_->getGroup(xbtWallet_->getXBTGroupType());
+   if (!xbtWallet_->canMixLeaves()) {
+      assert(walletPurpose_);
+      const auto leaf = xbtGroup->getLeaf(*walletPurpose_);
       args.inputXbtWallets.push_back(leaf);
    }
+   else {
+      for (const auto &leaf : xbtGroup->getLeaves()) {
+         args.inputXbtWallets.push_back(leaf);
+      }
+   }
+
    args.utxoReservation = bs::UtxoReservation::instance();
 
    auto payinCb = bs::tradeutils::PayinResultCb([this, handle = validityFlag_.handle()]
@@ -348,7 +360,16 @@ void DealerXBTSettlementContainer::onSignedPayoutRequested(const std::string& se
    initTradesArgs(args, settlementId);
    args.payinTxId = payinHash;
    args.recvAddr = recvAddr_;
-   args.outputXbtWallet = xbtWallet_->getGroup(bs::sync::hd::Wallet::getXBTGroupType())->getLeaves().at(0);
+
+   const auto xbtGroup = xbtWallet_->getGroup(xbtWallet_->getXBTGroupType());
+   if (!xbtWallet_->canMixLeaves()) {
+      assert(walletPurpose_);
+      const auto leaf = xbtGroup->getLeaf(*walletPurpose_);
+      args.outputXbtWallet = leaf;
+   }
+   else {
+      args.outputXbtWallet = xbtGroup->getLeaves().at(0);
+   }
 
    auto payoutCb = bs::tradeutils::PayoutResultCb([this, payinHash, timestamp, handle = validityFlag_.handle()]
       (bs::tradeutils::PayoutResult result)

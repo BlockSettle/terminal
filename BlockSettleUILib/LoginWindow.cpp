@@ -21,9 +21,17 @@
 #include "ZmqContext.h"
 #include "ui_LoginWindow.h"
 #include "FutureValue.h"
+#include "QBitmap"
 
 namespace {
    const auto kAutheIdTimeout = int(BsClient::autheidLoginTimeout() / std::chrono::seconds(1));
+   const auto kProdTitle = QObject::tr("Login to BlockSettle");
+   const auto kTestTitle = QObject::tr("Test Environment Login");
+
+   const auto kCreateAccountProd = QObject::tr("Get a BlockSettle Account");
+   const auto kCreateAccountTest = QObject::tr("Create your Test Account");
+
+   //<span style = " font-size:12px;">Not signed up yet ? < / span><br><a href = "{GetAccountLink}"><span style = " font-size:12px; text-decoration: underline; color:#fefeff">Get a BlockSettle Account< / span>< / a>
 }
 
 LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
@@ -47,9 +55,27 @@ LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
 
    const bool isProd = settings_->get<int>(ApplicationSettings::envConfiguration) ==
       static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
-   const auto accountLink = ui_->labelGetAccount->text().replace(QLatin1String("{GetAccountLink}")
-      , settings->get<QString>(isProd ? ApplicationSettings::GetAccount_UrlProd : ApplicationSettings::GetAccount_UrlTest));
-   ui_->labelGetAccount->setText(accountLink);
+
+   ApplicationSettings::Setting urlType;
+   auto getAccountText = ui_->labelGetAccount->text();
+   QString title;
+   if (isProd) {
+      urlType = ApplicationSettings::GetAccount_UrlProd;
+      title = kProdTitle;
+      ui_->widgetSignup->setProperty("prodEnv", QVariant(true));
+   }
+   else {
+      urlType = ApplicationSettings::GetAccount_UrlTest;
+      title = kTestTitle;
+      getAccountText.replace(kCreateAccountProd, kCreateAccountTest);
+      getAccountText.replace(QLatin1String("#fefeff"), QLatin1String("#217d9a"));
+      ui_->widgetSignup->setProperty("testEnv", QVariant(true));
+   }
+
+   getAccountText.replace(QLatin1String("{GetAccountLink}")
+      , settings->get<QString>(urlType));
+   ui_->labelGetAccount->setText(getAccountText);
+   ui_->widgetSignup->update();
 
    connect(ui_->lineEditUsername, &QLineEdit::textChanged, this, &LoginWindow::onTextChanged);
 
@@ -62,6 +88,7 @@ LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
    else {
       ui_->lineEditUsername->setFocus();
    }
+
 
    connect(ui_->signWithEidButton, &QPushButton::clicked, this, &LoginWindow::accept);
 

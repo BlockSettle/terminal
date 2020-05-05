@@ -45,6 +45,10 @@ class TransactionOutputsModel;
 class UsedInputsModel;
 class XbtAmountValidator;
 
+namespace UiUtils {
+   enum WalletsTypes : int;
+}
+
 
 class CreateTransactionDialog : public QDialog
 {
@@ -61,7 +65,7 @@ public:
       , QWidget* parent);
    ~CreateTransactionDialog() noexcept override;
 
-   int SelectWallet(const std::string& walletId);
+   int SelectWallet(const std::string& walletId, UiUtils::WalletsTypes type);
 
    virtual bool switchModeRequested() const= 0;
    virtual std::shared_ptr<CreateTransactionDialog> SwithcMode() = 0;
@@ -108,6 +112,7 @@ protected:
 
 signals:
    void feeLoadingCompleted(const std::map<unsigned int, float> &);
+   void walletChanged();
 
 protected slots:
    virtual void onFeeSuggestionsLoaded(const std::map<unsigned int, float> &);

@@ -46,7 +46,9 @@ public:
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-      , bs::UtxoReservationToken utxoRes);
+      , std::unique_ptr<bs::hd::Purpose> walletPurpose
+      , bs::UtxoReservationToken utxoRes
+      , bool expandTxDialogInfo);
    ~DealerCCSettlementContainer() override;
 
    bool startSigning(QDateTime timestamp);

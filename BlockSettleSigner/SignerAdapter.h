@@ -85,6 +85,8 @@ public:
       , const bs::wallet::PasswordData &oldPass, bool addNew, bool removeOld
       , const std::function<void(bs::error::ErrorCode errorCode)> &);
 
+   void verifyOfflineTxRequest(const BinaryData &signRequest
+      , const std::function<void(bs::error::ErrorCode result)> &);
    void signOfflineTxRequest(const bs::core::wallet::TXSignRequest &, const SecureBinaryData &password
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &)> &);
    void createWatchingOnlyWallet(const QString &walletId, const SecureBinaryData &password
@@ -147,6 +149,7 @@ private:
    bool closeHeadless_{true};
 
    QString headlessPubKey_;
+
 };
 
 

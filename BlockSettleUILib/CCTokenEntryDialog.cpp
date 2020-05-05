@@ -46,6 +46,7 @@ CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<bs::sync::WalletsMa
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &CCTokenEntryDialog::accept);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &CCTokenEntryDialog::onCancel);
    connect(ui_->lineEditToken, &QLineEdit::textEdited, this, &CCTokenEntryDialog::tokenChanged);
+   connect(ui_->lineEditToken, &QLineEdit::returnPressed, this, &CCTokenEntryDialog::accept, Qt::QueuedConnection);
 
    connect(ccFileMgr_.get(), &CCFileManager::CCAddressSubmitted, this, &CCTokenEntryDialog::onCCAddrSubmitted, Qt::QueuedConnection);
    connect(ccFileMgr_.get(), &CCFileManager::CCInitialSubmitted, this, &CCTokenEntryDialog::onCCInitialSubmitted, Qt::QueuedConnection);
@@ -163,8 +164,10 @@ void CCTokenEntryDialog::onCCAddrSubmitted(const QString addr)
    const bool isProd = settings_->get<int>(ApplicationSettings::envConfiguration) ==
       static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
 
-   const auto body = isProd ? tr("BlockSettle will issue your tokens within the next 24 hours.")
-      : tr("BlockSettle will issue your tokens within the next 15 minutes.");
+   auto body = tr("BlockSettle will issue your tokens within the next %1.").arg(isProd ? tr("24 hours") : tr("15 minutes"));
+   if (!isProd) {
+      body += tr(" Once mined 1 block, they are eligible for trading.");
+   }
 
    BSMessageBox(BSMessageBox::success, tr("Submission Successful")
       , tr("Equity Token Submitted")

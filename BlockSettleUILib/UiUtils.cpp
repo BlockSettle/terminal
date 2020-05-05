@@ -128,9 +128,32 @@ double actualXbtPrice(bs::XBTAmount amount, double price)
    return  ccAmount / amount.GetValueBitcoin();
 }
 
+bs::hd::Purpose getHwWalletPurpose(WalletsTypes hwType)
+{
+   if (!(hwType & WalletsTypes::HardwareAll)) {
+      // incorrect function using
+      assert(false);
+      return {};
+   }
+
+   if (UiUtils::HardwareLegacy == hwType) {
+      return bs::hd::Purpose::NonSegWit;
+   }
+   else if (UiUtils::HardwareNativeSW == hwType) {
+      return bs::hd::Purpose::Native;
+   }
+   else if (UiUtils::HardwareNestedSW == hwType) {
+      return bs::hd::Purpose::Nested;
+   }
+
+   // You should specify new case here
+   assert(false);
+   return {};
 }
 
-int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId)
+}
+
+int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId, WalletsTypes type /* = WalletsTypes::None */)
 {
    int walletIndex = -1;
    if (comboBox->count() == 0) {
@@ -139,6 +162,15 @@ int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& wall
 
    for (int i=0; i<comboBox->count(); ++i) {
       if (comboBox->itemData(i, WalletIdRole).toString().toStdString() == walletId) {
+         if (type != WalletsTypes::None) {
+            auto walletType =
+               static_cast<UiUtils::WalletsTypes>(comboBox->itemData(i, WalletType).toInt());
+
+            if (type != walletType) {
+               continue;
+            }
+         }
+
          walletIndex = i;
          break;
       }
@@ -160,44 +192,61 @@ int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs
    const auto &priWallet = walletsManager->getPrimaryWallet();
    auto b = comboBox->blockSignals(true);
    comboBox->clear();
-   size_t i = 0;
+
+   auto addRow = [comboBox](const std::string& label, const std::string& walletId, WalletsTypes type) {
+      if (WalletsTypes::None == type) {
+         return;
+      }
+
+      int i = comboBox->count();
+      comboBox->addItem(QString::fromStdString(label));
+      comboBox->setItemData(i, QString::fromStdString(walletId), UiUtils::WalletIdRole);
+      comboBox->setItemData(i, QVariant::fromValue(static_cast<int>(type)), UiUtils::WalletType);
+   };
+
    for (const auto &hdWallet : walletsManager->hdWallets()) {
       if (hdWallet == priWallet) {
-         selected = i;
+         selected = comboBox->count();
       }
 
-      bool addWallet = false;
-      WalletsTypes walletType = WalletsTypes::All;
+      WalletsTypes type = WalletsTypes::None;
       // HW wallets marked as offline too, make sure to check that first
-      if (hdWallet->isHardwareWallet()) {
-         addWallet = walletTypes & WalletsTypes::Hardware;
-         walletType = WalletsTypes::Hardware;
-      } else if (hdWallet->isOffline()) {
-         addWallet = walletTypes & WalletsTypes::WatchOnly;
-         walletType = WalletsTypes::WatchOnly;
-      } else {
-         addWallet = walletTypes & WalletsTypes::Full;
-         walletType = WalletsTypes::Full;
-      }
+      if (!hdWallet->canMixLeaves()) {
+         for (auto const &leaf : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
+            std::string label = hdWallet->name();
+            type = WalletsTypes::None;
 
-      if (addWallet) {
-         comboBox->addItem(QString::fromStdString(hdWallet->name()));
-         comboBox->setItemData(i, QString::fromStdString(hdWallet->walletId()), UiUtils::WalletIdRole);
-         comboBox->setItemData(i, QVariant::fromValue(static_cast<int>(walletType)), UiUtils::WalletType);
-         i++;
-      }
+            auto purpose = leaf->purpose();
+            if (purpose == bs::hd::Purpose::Native &&
+               (walletTypes & WalletsTypes::HardwareNativeSW)) {
+               label += " Native";
+               type = WalletsTypes::HardwareNativeSW;
+            }
+            else if (purpose == bs::hd::Purpose::Nested &&
+               (walletTypes & WalletsTypes::HardwareNestedSW)) {
+               label += " Nested";
+               type = WalletsTypes::HardwareNestedSW;
+            }
+            else if (purpose == bs::hd::Purpose::NonSegWit &&
+               (walletTypes & WalletsTypes::HardwareLegacy) && leaf->getTotalBalance() > 0) {
+               label += " Legacy";
+               type = WalletsTypes::HardwareLegacy;
+            }
 
-      if (hdWallet->isHardwareWallet() && (walletTypes & WalletsTypes::Hardware_Legacy)) {
-         auto grp = hdWallet->getGroup(hdWallet->getXBTGroupType());
-         auto legacyLeaf = grp->getLeaf(bs::hd::Purpose::NonSegWit);
-
-         if (legacyLeaf->getTotalBalance() > 0) {
-            comboBox->addItem(QString::fromStdString(hdWallet->name() + " Legacy"));
-            comboBox->setItemData(i, QString::fromStdString(hdWallet->walletId()), UiUtils::WalletIdRole);
-            comboBox->setItemData(i, QVariant::fromValue(static_cast<int>(WalletsTypes::Hardware_Legacy)), UiUtils::WalletType);
-            i++;
+            addRow(label, hdWallet->walletId(), type);
          }
+
+         continue;
+      } 
+      
+      
+      if (hdWallet->isOffline() && (walletTypes & WalletsTypes::WatchOnly)) {
+         type = WalletsTypes::WatchOnly;
+      } else if (walletTypes & WalletsTypes::Full) {
+         type = WalletsTypes::Full;
       }
+
+      addRow(hdWallet->name(), hdWallet->walletId(), type);
    }
    comboBox->blockSignals(b);
    comboBox->setCurrentIndex(selected);
@@ -478,6 +527,13 @@ std::string UiUtils::getSelectedWalletId(QComboBox* comboBox)
 UiUtils::WalletsTypes UiUtils::getSelectedWalletType(QComboBox* comboBox)
 {
    return static_cast<UiUtils::WalletsTypes>(comboBox->currentData(WalletType).toInt());
+}
+
+bs::hd::Purpose UiUtils::getSelectedHwPurpose(QComboBox* comboBox)
+{
+   const auto walletType = static_cast<UiUtils::WalletsTypes>(
+      comboBox->currentData(UiUtils::WalletType).toInt());
+   return UiUtils::getHwWalletPurpose(walletType);
 }
 
 static QtAwesome* qtAwesome_ = nullptr;

@@ -129,6 +129,7 @@ private slots:
    void setTxFees();
    void onOutputsClicked(const QModelIndex &index);
    void onSimpleDialogRequested();
+   void onUpdateChangeWidget();
 
 private:
    void clear() override;

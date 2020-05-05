@@ -122,6 +122,11 @@ void TrezorDevice::init(AsyncCallBack&& cb)
 void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
 {
    awaitingWalletInfo_ = {};
+   // General data
+   awaitingWalletInfo_.info_.type = bs::wallet::HardwareEncKey::WalletType::Trezor;
+   awaitingWalletInfo_.info_.label = features_.label();
+   awaitingWalletInfo_.info_.deviceId = features_.device_id();
+   awaitingWalletInfo_.info_.vendor = features_.vendor();
 
    // We cannot get all data from one call so we make four calls:
    // fetching first address for "m/0'" as wallet id
@@ -130,13 +135,13 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
    // fetching first address for "m/44'" as legacy xpub
 
    AsyncCallBackCall cbLegacy = [this, cb = std::move(cb)](QVariant &&data) mutable {
-      awaitingWalletInfo_.info_.xpubLegacy_ = data.toByteArray().toStdString();
+      awaitingWalletInfo_.info_.xpubLegacy = data.toByteArray().toStdString();
       
       cb(QVariant::fromValue<>(awaitingWalletInfo_));
    };
 
    AsyncCallBackCall cbNested = [this, cbLegacy = std::move(cbLegacy)](QVariant &&data) mutable {
-      awaitingWalletInfo_.info_.xpubNestedSegwit_ = data.toByteArray().toStdString();
+      awaitingWalletInfo_.info_.xpubNestedSegwit = data.toByteArray().toStdString();
 
       connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving legacy public key from device "
          + features_.label());
@@ -153,7 +158,7 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
    };
 
    AsyncCallBackCall cbNative = [this, cbNested = std::move(cbNested)](QVariant &&data) mutable {
-      awaitingWalletInfo_.info_.xpubNativeSegwit_ = data.toByteArray().toStdString();
+      awaitingWalletInfo_.info_.xpubNativeSegwit = data.toByteArray().toStdString();
 
       connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving nested segwit public key from device "
          + features_.label());
@@ -171,12 +176,7 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
    };
 
    AsyncCallBackCall cbRoot = [this, cbNative = std::move(cbNative)](QVariant &&data) mutable {
-      awaitingWalletInfo_.info_.xpubRoot_ = data.toByteArray().toStdString();
-
-      // General data
-      awaitingWalletInfo_.info_.label_ = features_.label();
-      awaitingWalletInfo_.info_.deviceId_ = features_.device_id();
-      awaitingWalletInfo_.info_.vendor_ = features_.vendor();
+      awaitingWalletInfo_.info_.xpubRoot = data.toByteArray().toStdString();
 
       connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving native segwit public key from device "
          + features_.label());
@@ -253,7 +253,7 @@ void TrezorDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
       return;
    }
 
-   currentTxSignReq_.reset(new bs::core::wallet::TXSignRequest(bs::signer::pbTxRequestToCore(request)));
+   currentTxSignReq_.reset(new bs::core::wallet::TXSignRequest(bs::signer::pbTxRequestToCore(request, connectionManager_->GetLogger())));
    connectionManager_->GetLogger()->debug("[TrezorDevice] SignTX - specify init data to " + features_.label());
 
    const int change = static_cast<bool>(currentTxSignReq_->change.value) ? 1 : 0;
@@ -323,6 +323,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
          common::ButtonAck response;
          makeCall(response);
          sendTxMessage(HWInfoStatus::kPressButton);
+         txSignedByUser_ = true;
       }
       break;
    case MessageType_PinMatrixRequest:
@@ -362,7 +363,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
    case MessageType_TxRequest:
       {
          handleTxRequest(data);
-         sendTxMessage(HWInfoStatus::kTransaction);
+         sendTxMessage(txSignedByUser_ ? HWInfoStatus::kReceiveSignedTx : HWInfoStatus::kTransaction);
       }
       break;
    default:
@@ -476,17 +477,7 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       auto address = bs::Address::fromUTXO(utxo);
       const auto purp = bs::hd::purpose(address.getType());
 
-      std::string addrIndex;
-      for (const auto &walletId : currentTxSignReq_->walletIds) {
-         auto wallet = walletManager_->getWalletById(walletId);
-         addrIndex = wallet->getAddressIndex(address);
-         if (!addrIndex.empty()) {
-            break;
-         }
-      }
-      if (addrIndex.empty()) {
-         throw std::logic_error(fmt::format("can't find input address index for '{}'", address.display()));
-      }
+      std::string addrIndex = currentTxSignReq_->inputIndices.at(index);
 
       auto path = getDerivationPath(testNet_, purp);
       path.append(bs::hd::Path::fromString(addrIndex));
@@ -559,7 +550,6 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
          const auto &change = currentTxSignReq_->change;
          output->set_amount(change.value);
 
-         const bool isNestedSegwit = (change.address.getType() == AddressEntryType_P2SH);
          const auto purp = bs::hd::purpose(change.address.getType());
 
          if (change.index.empty()) {
@@ -572,8 +562,19 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
             output->add_address_n(add);
          }
 
-         output->set_script_type(isNestedSegwit ? bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOP2SHWITNESS
-                                                : bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOWITNESS);
+         const bool changeType = change.address.getType();
+         bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType scriptType;
+         if (changeType == AddressEntryType_P2SH) {
+            scriptType = bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOP2SHWITNESS;
+         }
+         else if (changeType == AddressEntryType_P2WPKH) {
+            scriptType = bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOWITNESS;
+         }
+         else if (changeType == AddressEntryType_P2PKH) {
+            scriptType = bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOADDRESS;
+         }
+
+         output->set_script_type(scriptType);
       }
       else {
          // Shouldn't be here
@@ -631,7 +632,7 @@ const Tx &TrezorDevice::prevTx(const bitcoin::TxRequest &txRequest)
    auto txHash = BinaryData::fromString(txRequest.details().tx_hash()).swapEndian();
    auto &tx = prevTxs_[txHash];
    if (!tx.isInitialized()) {
-      auto txRaw = currentTxSignReq_->supportingTxMap_.at(txHash);
+      auto txRaw = currentTxSignReq_->supportingTXs.at(txHash);
       tx = Tx(txRaw);
    }
    return tx;

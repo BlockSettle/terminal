@@ -66,6 +66,7 @@ private:
    void onLoadProgress(BDMPhase, float, unsigned int, unsigned int) override;
    void onPrepareConnection(NetworkType, const std::string &host
       , const std::string &port) override;
+   void onNewBlock(unsigned, unsigned) override;
 
 public:
    void updateDBHeadersProgress(float progress, unsigned secondsRem);
@@ -82,6 +83,7 @@ private:
    void SetCelerConnectingStatus();
    QWidget *CreateSeparator();
    void setBalances();
+   void updateConnectionStatusDetails();
 
 private:
    void updateProgress(float progress, unsigned secondsRem);

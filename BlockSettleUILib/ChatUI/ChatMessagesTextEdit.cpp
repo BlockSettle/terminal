@@ -11,8 +11,8 @@
 #include "ChatMessagesTextEdit.h"
 
 #include "OtcUtils.h"
-#include "ProtobufUtils.h"
 #include "RequestPartyBox.h"
+#include "chat.pb.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -54,6 +54,11 @@ void ChatMessagesTextEdit::setupHighlightPalette()
    highlightPalette.setColor(QPalette::Inactive, QPalette::Highlight, highlightPalette.color(QPalette::Active, QPalette::Highlight));
    highlightPalette.setColor(QPalette::Inactive, QPalette::HighlightedText, highlightPalette.color(QPalette::Active, QPalette::HighlightedText));
    setPalette(highlightPalette);
+}
+
+int ChatMessagesTextEdit::messagesCount(const std::string& partyId) const
+{
+   return messages_[partyId].count();
 }
 
 Chat::MessagePtr ChatMessagesTextEdit::getMessage(const std::string& partyId, const std::string& messageId) const

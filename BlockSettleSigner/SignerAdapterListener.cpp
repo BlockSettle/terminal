@@ -18,9 +18,10 @@
 #include "DispatchQueue.h"
 #include "HeadlessApp.h"
 #include "HeadlessContainerListener.h"
-#include "Settings/HeadlessSettings.h"
+#include "OfflineSigner.h"
 #include "ProtobufHeadlessUtils.h"
 #include "ServerConnection.h"
+#include "Settings/HeadlessSettings.h"
 #include "StringUtils.h"
 #include "SystemFileUtils.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
@@ -254,6 +255,9 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
    case signer::WindowStatusType:
       rc = onWindowsStatus(packet.data(), packet.id());
       break;
+   case signer::VerifyOfflineTxRequestType:
+      rc = onVerifyOfflineTx(packet.data(), packet.id());
+      break;
    default:
       logger_->warn("[SignerAdapterListener::{}] unprocessed packet type {}", __func__, packet.type());
       break;
@@ -318,72 +322,13 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
       return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);
    }
 
-   bs::core::wallet::TXSignRequest txSignReq = bs::signer::pbTxRequestToCore(request.tx_request());
+   bs::core::wallet::TXSignRequest txSignReq = bs::signer::pbTxRequestToCore(request.tx_request(), logger_);
 
-   if (txSignReq.walletIds.empty()) {
-      logger_->error("[SignerAdapterListener::{}] wallet not specified", __func__);
-      evt.set_errorcode((int)bs::error::ErrorCode::WalletNotFound);
+   auto errorCode = verifyOfflineSignRequest(txSignReq);
+   if (errorCode != bs::error::ErrorCode::NoError) {
+      SPDLOG_LOGGER_ERROR(logger_, "offline sign verification failed");
+      evt.set_errorcode(static_cast<uint32_t>(errorCode));
       return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);
-   }
-
-   for (const auto &walletId : txSignReq.walletIds) { // sync new addresses in all wallets
-      const auto wallet = walletsMgr_->getWalletById(walletId);
-      if (!wallet) {
-         logger_->error("[SignerAdapterListener::{}] failed to find wallet with id {}"
-            , __func__, walletId);
-         evt.set_errorcode((int)bs::error::ErrorCode::WalletNotFound);
-         return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);
-      }
-      if (wallet->isWatchingOnly()) {
-         logger_->error("[SignerAdapterListener::{}] can't sign with watching-only wallet {}"
-            , __func__, walletId);
-         evt.set_errorcode((int)bs::error::ErrorCode::WalletNotFound);
-         return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);
-      }
-
-      std::set<BinaryData> usedAddrSet;
-      for (const auto &utxo : txSignReq.inputs) {
-         const auto addr = bs::Address::fromUTXO(utxo);
-         const auto addrEntry = wallet->getAddressEntryForAddr(addr.id());
-         if (!addrEntry) {
-            continue;
-         }
-         usedAddrSet.insert(addr.id());
-      }
-      if (usedAddrSet.empty()) {
-         logger_->error("[{}] failed to find any addresses for {}", __func__, walletId);
-         evt.set_errorcode((int)bs::error::ErrorCode::WalletNotFound);
-         return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);
-      }
-
-      std::map<BinaryData, bs::hd::Path> parsedMap;
-      try {
-         typedef std::map<bs::hd::Path, BinaryData> pathMapping;
-         std::map<bs::hd::Path::Elem, pathMapping> mapByPath;
-         parsedMap = wallet->indexPath(usedAddrSet);
-
-         for (auto& parsedPair : parsedMap) {
-            auto& mapping = mapByPath[parsedPair.second.get(-2)];
-            mapping[parsedPair.second] = parsedPair.first;
-         }
-
-         unsigned int nbNewAddrs = 0;
-         for (auto& mapping : mapByPath) {
-            for (auto& pathPair : mapping.second) {
-               const auto resultPair = wallet->synchronizeUsedAddressChain(
-                  pathPair.first.toString());
-               if (resultPair.second) {
-                  nbNewAddrs++;
-               }
-            }
-         }
-         logger_->debug("[{}] created {} new address[es] in {} after sync", __func__
-            , nbNewAddrs, walletId);
-      } catch (const AccountException &e) {
-         logger_->error("[{}] failed to sync address[es]: {}", __func__, e.what());
-         evt.set_errorcode((int)bs::error::ErrorCode::WrongAddress);
-         return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);
-      }
    }
 
    // implication: all input leaves should belong to one hdWallet
@@ -654,6 +599,36 @@ bool SignerAdapterListener::onWindowsStatus(const std::string &data, bs::signer:
    return true;
 }
 
+bool SignerAdapterListener::onVerifyOfflineTx(const std::string &data, bs::signer::RequestId reqId)
+{
+   signer::VerifyOfflineTxRequest request;
+   if (!request.ParseFromString(data)) {
+      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
+      return false;
+   }
+   signer::VerifyOfflineTxResponse response;
+
+   auto parsedReqs = bs::core::wallet::ParseOfflineTXFile(request.content());
+   if (parsedReqs.empty()) {
+      SPDLOG_LOGGER_ERROR(logger_, "empty offline sign request");
+      response.set_error_code(static_cast<uint32_t>(bs::error::ErrorCode::FailedToParse));
+      return sendData(signer::VerifyOfflineTxRequestType, response.SerializeAsString(), reqId);
+   }
+
+   for (const auto &parsedReq : parsedReqs) {
+      auto errorCode = verifyOfflineSignRequest(parsedReq);
+      if (errorCode != bs::error::ErrorCode::NoError) {
+         SPDLOG_LOGGER_ERROR(logger_, "offline sign request verification failed");
+         response.set_error_code(static_cast<uint32_t>(errorCode));
+         return sendData(signer::VerifyOfflineTxRequestType, response.SerializeAsString(), reqId);
+      }
+   }
+
+   response.set_error_code(static_cast<uint32_t>(bs::error::ErrorCode::NoError));
+   sendData(signer::VerifyOfflineTxRequestType, response.SerializeAsString(), reqId);
+   return true;
+}
+
 bool SignerAdapterListener::onPasswordReceived(const std::string &data)
 {
    signer::DecryptWalletEvent request;
@@ -891,6 +866,7 @@ bool SignerAdapterListener::onImportHwWallet(const std::string &data, bs::signer
    }
 
    bs::core::wallet::HwWalletInfo info{
+      static_cast<bs::wallet::HardwareEncKey::WalletType>(request.wallettype()),
       request.vendor(),
       request.label(),
       request.deviceid(),
@@ -981,4 +957,130 @@ bool SignerAdapterListener::sendReady()
    sendStatusUpdate();
 
    return sendData(signer::HeadlessReadyType, {});
+}
+
+bs::error::ErrorCode SignerAdapterListener::verifyOfflineSignRequest(const bs::core::wallet::TXSignRequest &txSignReq)
+{
+   if (txSignReq.walletIds.empty()) {
+      SPDLOG_LOGGER_ERROR(logger_, "wallet(s) not specified");
+      return bs::error::ErrorCode::WalletNotFound;
+   }
+
+   auto checkIndexValidity = [this](const std::string &index) {
+      if (index.empty()) {
+         SPDLOG_LOGGER_ERROR(logger_, "empty path found, must be set for offline signer");
+         return false;
+      }
+
+      try {
+         auto path = bs::hd::Path::fromString(index);
+
+         if (path.length() != 2) {
+            SPDLOG_LOGGER_ERROR(logger_, "path length must be 2");
+            return false;
+         }
+         if (path.get(0) != bs::core::hd::Leaf::addrTypeExternal_
+             && path.get(0) != bs::core::hd::Leaf::addrTypeInternal_) {
+            SPDLOG_LOGGER_ERROR(logger_, "found unknown path at level 0: '{}', must be 0 or 1", path.get(0));
+            return false;
+         }
+         if (path.get(1) >= bs::hd::hardFlag) {
+            SPDLOG_LOGGER_ERROR(logger_, "found hardened path at level 1: '{}', must be non-hardened", path.get(1));
+            return false;
+         }
+      } catch (const std::exception &e) {
+         SPDLOG_LOGGER_ERROR(logger_, "parsing index failed: {}", e.what());
+         return false;
+      }
+
+      return true;
+   };
+
+   if (txSignReq.inputs.size() != txSignReq.inputIndices.size()) {
+      SPDLOG_LOGGER_ERROR(logger_, "all input indices must be set");
+      return bs::error::ErrorCode::FailedToParse;
+   }
+   for (const auto &inputIndex : txSignReq.inputIndices) {
+      if (!checkIndexValidity(inputIndex)) {
+         SPDLOG_LOGGER_ERROR(logger_, "invalid input address index for UTXO");
+         return bs::error::ErrorCode::FailedToParse;
+      }
+   }
+
+   auto hdWallet = walletsMgr_->getHDRootForLeaf(txSignReq.walletIds.front());
+   if (!hdWallet) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't find HD wallet for leaf '{}'", txSignReq.walletIds.front());
+      return bs::error::ErrorCode::WalletNotFound;
+   }
+   if (hdWallet->isWatchingOnly() && !hdWallet->isHardwareWallet()) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't sign with watching-only HD wallet {}", hdWallet->walletId());
+      return bs::error::ErrorCode::WalletNotFound;
+   }
+
+   size_t foundInputCount = 0;
+   for (const auto &walletId : txSignReq.walletIds) { // sync new addresses in all wallets
+      const auto wallet = walletsMgr_->getWalletById(walletId);
+      if (!wallet) {
+         SPDLOG_LOGGER_ERROR(logger_, "failed to find wallet with id {}", walletId);
+         return bs::error::ErrorCode::WalletNotFound;
+      }
+      if (walletsMgr_->getHDRootForLeaf(walletId) != hdWallet) {
+         SPDLOG_LOGGER_ERROR(logger_, "different HD roots used");
+         return bs::error::ErrorCode::WalletNotFound;
+      }
+      if (wallet->type() != bs::core::wallet::Type::Bitcoin) {
+         SPDLOG_LOGGER_ERROR(logger_, "only XBT leaves supported");
+         return bs::error::ErrorCode::WalletNotFound;
+      }
+
+      for (size_t i = 0; i < txSignReq.inputs.size(); ++i) {
+         const auto addr = bs::Address::fromUTXO(txSignReq.inputs.at(i));
+         if (wallet->addressType() != addr.getType()) {
+            continue;
+         }
+         // Need to extend used address chain for offline wallets
+         wallet->synchronizeUsedAddressChain(txSignReq.inputIndices.at(i));
+         const auto addrEntry = wallet->getAddressEntryForAddr(addr.id());
+         if (!addrEntry) {
+            SPDLOG_LOGGER_ERROR(logger_, "can't find input with address {} in wallet {}"
+               , addr.display(), walletId);
+            return bs::error::ErrorCode::WrongAddress;
+         }
+         foundInputCount += 1;
+      }
+   }
+   if (txSignReq.inputs.size() != foundInputCount) {
+      SPDLOG_LOGGER_ERROR(logger_, "failed to find all inputs");
+      return bs::error::ErrorCode::WalletNotFound;
+   }
+
+   // Verify that change belongs to the same HD wallet
+   if (txSignReq.change.value > 0) {
+      if (!checkIndexValidity(txSignReq.change.index)) {
+         SPDLOG_LOGGER_ERROR(logger_, "invalid change address index");
+         return bs::error::ErrorCode::FailedToParse;
+      }
+
+      // Need to extend change wallet too (find change wallet by change type).
+      std::shared_ptr<bs::core::hd::Leaf> changeWallet;
+      for (const auto &leaf : hdWallet->getLeaves()) {
+         if (leaf->type() == bs::core::wallet::Type::Bitcoin && leaf->addressType() == txSignReq.change.address.getType()) {
+            changeWallet = leaf;
+            break;
+         }
+      }
+      if (!changeWallet) {
+         SPDLOG_LOGGER_ERROR(logger_, "can't find change wallet");
+         return bs::error::ErrorCode::WrongAddress;
+      }
+      changeWallet->synchronizeUsedAddressChain(txSignReq.change.index);
+
+      // Verify that change address is valid
+      if (txSignReq.change.index != changeWallet->getAddressIndex(txSignReq.change.address)) {
+         SPDLOG_LOGGER_ERROR(logger_, "invalid change address");
+         return bs::error::ErrorCode::WrongAddress;
+      }
+   }
+
+   return bs::error::ErrorCode::NoError;
 }

@@ -29,6 +29,7 @@
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "ApplicationSettings.h"
 
 #include "bs_proxy_terminal_pb.pb.h"
 #include "otc.pb.h"
@@ -116,7 +117,8 @@ namespace {
    const auto kStartOtcTimeout = std::chrono::seconds(10);
 
    bs::sync::PasswordDialogData toPasswordDialogData(const OtcClientDeal &deal
-      , const bs::core::wallet::TXSignRequest &signRequest, QDateTime timestamp)
+      , const bs::core::wallet::TXSignRequest &signRequest
+      , QDateTime timestamp, bool expandTxInfo)
    {
       double price = fromCents(deal.price);
 
@@ -154,13 +156,16 @@ namespace {
       // Set timestamp that will be used by auth eid server to update timers.
       dialogData.setValue(PasswordDialogData::DurationTimestamp, static_cast<int>(timestamp.toSecsSinceEpoch()));
 
+      dialogData.setValue(PasswordDialogData::ExpandTxInfo, expandTxInfo);
+
       return dialogData;
    }
 
    bs::sync::PasswordDialogData toPasswordDialogDataPayin(const OtcClientDeal &deal
-      , const bs::core::wallet::TXSignRequest &signRequest, QDateTime timestamp)
+      , const bs::core::wallet::TXSignRequest &signRequest
+      , QDateTime timestamp, bool expandTxInfo)
    {
-      auto dialogData = toPasswordDialogData(deal, signRequest, timestamp);
+      auto dialogData = toPasswordDialogData(deal, signRequest, timestamp, expandTxInfo);
       dialogData.setValue(PasswordDialogData::SettlementPayInVisible, true);
       dialogData.setValue(PasswordDialogData::Title, QObject::tr("Settlement Pay-In"));
       dialogData.setValue(PasswordDialogData::DurationTotal, int(std::chrono::duration_cast<std::chrono::milliseconds>(otc::payinTimeout()).count()));
@@ -169,9 +174,10 @@ namespace {
    }
 
    bs::sync::PasswordDialogData toPasswordDialogDataPayout(const OtcClientDeal &deal
-      , const bs::core::wallet::TXSignRequest &signRequest, QDateTime timestamp)
+      , const bs::core::wallet::TXSignRequest &signRequest
+      , QDateTime timestamp, bool expandTxInfo)
    {
-      auto dialogData = toPasswordDialogData(deal, signRequest, timestamp);
+      auto dialogData = toPasswordDialogData(deal, signRequest, timestamp, expandTxInfo);
       dialogData.setValue(PasswordDialogData::SettlementPayOutVisible, true);
       dialogData.setValue(PasswordDialogData::Title, QObject::tr("Settlement Pay-Out"));
       dialogData.setValue(PasswordDialogData::DurationTotal, int(std::chrono::duration_cast<std::chrono::milliseconds>(otc::payoutTimeout()).count()));
@@ -216,6 +222,7 @@ OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<SignContainer> &signContainer
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
+   , const std::shared_ptr<ApplicationSettings>& applicationSettings
    , OtcClientParams params
    , QObject *parent)
    : QObject (parent)
@@ -225,6 +232,7 @@ OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
    , signContainer_(signContainer)
    , authAddressManager_(authAddressManager)
    , utxoReservationManager_(utxoReservationManager)
+   , applicationSettings_(applicationSettings)
    , params_(std::move(params))
 {
    connect(signContainer.get(), &SignContainer::TXSigned, this, &OtcClient::onTxSigned);
@@ -1294,7 +1302,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             settlData.cpPublicKey = deal->cpPubKey;
             settlData.ownKeyFirst = true;
 
-            auto payoutInfo = toPasswordDialogDataPayout(*deal, deal->payout, timestamp);
+            auto payoutInfo = toPasswordDialogDataPayout(*deal, deal->payout, timestamp, expandTxDialog());
             auto reqId = signContainer_->signSettlementPayoutTXRequest(deal->payout, settlData, payoutInfo);
             signRequestIds_[reqId] = deal->settlementId;
             deal->payoutReqId = reqId;
@@ -1323,7 +1331,10 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
          if (deal->side == otc::Side::Sell) {
             assert(deal->payin.isValid());
 
-            auto payinInfo = toPasswordDialogDataPayin(*deal, deal->payin, timestamp);
+            const bool expandTxInfo = applicationSettings_->get<bool>(
+               ApplicationSettings::DetailedSettlementTxDialogByDefault);
+
+            auto payinInfo = toPasswordDialogDataPayin(*deal, deal->payin, timestamp, expandTxDialog());
             auto reqId = signContainer_->signSettlementTXRequest(deal->payin, payinInfo);
             signRequestIds_[reqId] = deal->settlementId;
             deal->payinReqId = reqId;
@@ -1458,8 +1469,16 @@ void OtcClient::createSellerRequest(const std::string &settlementId, Peer *peer,
       return;
    }
 
-   auto leaves = targetHdWallet->getGroup(targetHdWallet->getXBTGroupType())->getLeaves();
-   auto xbtWallets = std::vector<std::shared_ptr<bs::sync::Wallet>>(leaves.begin(), leaves.end());
+   auto group = targetHdWallet->getGroup(targetHdWallet->getXBTGroupType());
+   std::vector<std::shared_ptr<bs::sync::Wallet>> xbtWallets;
+   if (!targetHdWallet->canMixLeaves()) {
+      assert(peer->offer.walletPurpose);
+      xbtWallets.push_back(group->getLeaf(*peer->offer.walletPurpose));
+   }
+   else {
+      xbtWallets = group->getAllLeaves();
+   }
+
    if (xbtWallets.empty()) {
       cb(OtcClientDeal::error("can't find XBT wallets"));
       return;
@@ -1524,10 +1543,14 @@ void OtcClient::createBuyerRequest(const std::string &settlementId, Peer *peer, 
       return;
    }
 
-   auto leaves = targetHdWallet->getGroup(targetHdWallet->getXBTGroupType())->getLeaves();
-   if (leaves.empty()) {
-      cb(OtcClientDeal::error("can't find XBT wallets"));
-      return;
+   auto group = targetHdWallet->getGroup(targetHdWallet->getXBTGroupType());
+   std::vector<std::shared_ptr<bs::sync::Wallet>> xbtWallets;
+   if (!targetHdWallet->canMixLeaves()) {
+      assert(peer->offer.walletPurpose);
+      xbtWallets.push_back(group->getLeaf(*peer->offer.walletPurpose));
+   }
+   else {
+      xbtWallets = group->getAllLeaves();
    }
 
    bs::tradeutils::PayoutArgs args;
@@ -1536,7 +1559,7 @@ void OtcClient::createBuyerRequest(const std::string &settlementId, Peer *peer, 
    if (!peer->offer.recvAddress.empty()) {
       args.recvAddr = bs::Address::fromAddressString(peer->offer.recvAddress);
    }
-   args.outputXbtWallet = leaves.front();
+   args.outputXbtWallet = xbtWallets.front();
 
    auto payoutCb = bs::tradeutils::PayoutResultCb([this, cb, peer, settlementId, targetHdWallet, handle = peer->validityFlag.handle(), logger = logger_]
       (bs::tradeutils::PayoutResult payout)
@@ -1781,4 +1804,10 @@ void OtcClient::initTradesArgs(bs::tradeutils::Args &args, Peer *peer, const std
    if (utxoReservationManager_) {
       args.feeRatePb_ = utxoReservationManager_->feeRatePb();
    }
+}
+
+bool OtcClient::expandTxDialog() const
+{
+   return applicationSettings_->get<bool>(
+      ApplicationSettings::DetailedSettlementTxDialogByDefault);
 }

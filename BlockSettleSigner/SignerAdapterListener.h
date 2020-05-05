@@ -15,6 +15,7 @@
 #include "CoreWallet.h"
 #include "SignerDefs.h"
 #include "ServerConnectionListener.h"
+#include "BSErrorCode.h"
 
 #include "bs_signer.pb.h"
 #include "headless.pb.h"
@@ -94,10 +95,13 @@ protected:
    bool onControlPasswordReceived(const std::string &data);
    bool onChangeControlPassword(const std::string &data, bs::signer::RequestId);
    bool onWindowsStatus(const std::string &data, bs::signer::RequestId);
+   bool onVerifyOfflineTx(const std::string &data, bs::signer::RequestId);
 
    void shutdownIfNeeded();
 
    bool sendReady();
+
+   bs::error::ErrorCode verifyOfflineSignRequest(const bs::core::wallet::TXSignRequest &txSignReq);
 
 private:
    friend class HeadlessContainerCallbacksImpl;

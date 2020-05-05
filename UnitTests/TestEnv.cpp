@@ -296,7 +296,7 @@ void SingleUTWalletACT::onRefresh(const std::vector<BinaryData> &ids, bool onlin
    ACTqueue::notifQueue_.push_back(std::move(dbns));
 }
 
-void SingleUTWalletACT::onZCReceived(const std::vector<bs::TXEntry> &zcs)
+void SingleUTWalletACT::onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry>& zcs)
 {
    auto dbns = std::make_shared<DBNotificationStruct>(DBNS_ZC);
    dbns->zc_ = zcs;
