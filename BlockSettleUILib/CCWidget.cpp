@@ -35,6 +35,7 @@ void CCWidget::SetPortfolioModel(const std::shared_ptr<CCPortfolioModel>& model)
    ui_->treeViewCC->header()->setSectionResizeMode(QHeaderView::Stretch);
 
    connect(model.get(), &CCPortfolioModel::rowsInserted, this, &CCWidget::onRowsInserted);
+   connect(model.get(), &CCPortfolioModel::modelReset, this, [this]() { ui_->treeViewCC->expandAll(); });
    connect(assetManager_.get(), &AssetManager::totalChanged, this, &CCWidget::updateTotalAssets);
    connect(walletsManager.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &CCWidget::updateTotalAssets);
    updateTotalAssets();
@@ -55,7 +56,5 @@ void CCWidget::onRowsInserted(const QModelIndex &parent, int first, int last)
 {
     Q_UNUSED(first)
     Q_UNUSED(last)
-   if (ui_->treeViewCC->model()->data(parent) != UiUtils::XbtCurrency) {
-      ui_->treeViewCC->expand(parent);
-   }
+    ui_->treeViewCC->expand(parent);
 }
