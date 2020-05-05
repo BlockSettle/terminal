@@ -129,7 +129,7 @@ void OTCWindowsAdapterBase::showXBTInputs(QComboBox *walletsCombobox)
    const auto &hdWallet = getCurrentHDWalletFromCombobox(walletsCombobox);
 
    std::vector<UTXO> allUTXOs;
-   if (!hdWallet->canMixLeafs()) {
+   if (!hdWallet->canMixLeaves()) {
       auto purpose = UiUtils::getSelectedHwPurpose(walletsCombobox);
       allUTXOs = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId(), purpose);
    }
@@ -216,7 +216,7 @@ BTCNumericTypes::balance_type OTCWindowsAdapterBase::getXBTSpendableBalanceFromC
    BTCNumericTypes::balance_type totalBalance{};
    if (selectedUTXO_.empty()) {
       BTCNumericTypes::satoshi_type sum = 0;
-      if (!hdWallet->canMixLeafs()) {
+      if (!hdWallet->canMixLeaves()) {
          auto purpose = UiUtils::getSelectedHwPurpose(walletsCombobox);
          sum = getUtxoManager()->getAvailableXbtUtxoSum(hdWallet->walletId(), purpose);
       }
@@ -259,7 +259,7 @@ void OTCWindowsAdapterBase::submitProposal(QComboBox *walletsCombobox, bs::XBTAm
       cbSuccess();
    };
 
-   if (!hdWallet->canMixLeafs()) {
+   if (!hdWallet->canMixLeaves()) {
       auto purpose = UiUtils::getSelectedHwPurpose(walletsCombobox);
       getUtxoManager()->getBestXbtUtxoSet(hdWallet->walletId(), purpose, amount.GetValue()
          , std::move(cbUtxoSet), true);

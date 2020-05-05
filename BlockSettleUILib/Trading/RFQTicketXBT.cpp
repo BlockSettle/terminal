@@ -321,7 +321,7 @@ void RFQTicketXBT::fillRecvAddresses()
 {
    auto recvWallet = getRecvXbtWallet();
    if (recvWallet) {
-      if (!recvWallet->canMixLeafs()) {
+      if (!recvWallet->canMixLeaves()) {
          auto xbtGroup = recvWallet->getGroup(recvWallet->getXBTGroupType());
          auto purpose =  UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWalletsRecv);
          UiUtils::fillRecvAddressesComboBox(ui_->receivingAddressComboBox, { xbtGroup->getLeaf(purpose) });
@@ -346,7 +346,7 @@ void RFQTicketXBT::showCoinControl()
    fixedXbtInputs_.utxoRes.release();
 
    std::vector<UTXO> utxos;
-   if (!xbtWallet->canMixLeafs()) {
+   if (!xbtWallet->canMixLeaves()) {
       auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWalletsSend);
       utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId(), purpose);
    }
@@ -1019,7 +1019,7 @@ void RFQTicketXBT::onMaxClicked()
             }
          }
          else {
-            if (!xbtWallet->canMixLeafs()) {
+            if (!xbtWallet->canMixLeaves()) {
                auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWalletsSend);
                utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId(), purpose);
             }
@@ -1232,7 +1232,7 @@ bs::XBTAmount RFQTicketXBT::getXbtBalance() const
       return bs::XBTAmount(0.0);
    }
 
-   if (!xbtWallet->canMixLeafs()) {
+   if (!xbtWallet->canMixLeaves()) {
       auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWalletsSend);
       return bs::XBTAmount(utxoReservationManager_->getAvailableXbtUtxoSum(
          xbtWallet->walletId(), purpose));
@@ -1284,7 +1284,7 @@ void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network
       };
 
       auto hdWallet = rfqTicket->getSendXbtWallet();
-      if (!hdWallet->canMixLeafs()) {
+      if (!hdWallet->canMixLeaves()) {
          auto purpose = UiUtils::getSelectedHwPurpose(rfqTicket->ui_->comboBoxXBTWalletsSend);
          rfqTicket->utxoReservationManager_->reserveBestXbtUtxoSet(
             hdWallet->walletId(), purpose, amount,

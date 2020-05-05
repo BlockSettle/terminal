@@ -211,7 +211,7 @@ int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs
 
       WalletsTypes type = WalletsTypes::None;
       // HW wallets marked as offline too, make sure to check that first
-      if (!hdWallet->canMixLeafs()) {
+      if (!hdWallet->canMixLeaves()) {
          for (auto const &leaf : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
             std::string label = hdWallet->name();
             type = WalletsTypes::None;

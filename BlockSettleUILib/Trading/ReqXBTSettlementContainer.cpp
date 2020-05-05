@@ -318,7 +318,7 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
    }
 
    const auto xbtGroup = xbtWallet_->getGroup(xbtWallet_->getXBTGroupType());
-   if (!xbtWallet_->canMixLeafs()) {
+   if (!xbtWallet_->canMixLeaves()) {
       assert(walletPurpose_);
       const auto leaf = xbtGroup->getLeaf(*walletPurpose_);
       args.inputXbtWallets.push_back(leaf);
@@ -396,7 +396,7 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
    args.recvAddr = recvAddrIfSet_;
 
    const auto xbtGroup = xbtWallet_->getGroup(xbtWallet_->getXBTGroupType());
-   if (!xbtWallet_->canMixLeafs()) {
+   if (!xbtWallet_->canMixLeaves()) {
       assert(walletPurpose_);
       const auto leaf = xbtGroup->getLeaf(*walletPurpose_);
       args.outputXbtWallet = leaf;
