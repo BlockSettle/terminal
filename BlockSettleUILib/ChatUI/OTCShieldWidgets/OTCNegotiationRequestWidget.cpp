@@ -283,6 +283,9 @@ void OTCNegotiationRequestWidget::onParentAboutToHide()
 void OTCNegotiationRequestWidget::onCurrentWalletChanged()
 {
    auto recvHdWallet = getCurrentHDWallet();
+   if (!recvHdWallet) {
+      return;
+   }
    if (!recvHdWallet->canMixLeaves()) {
       auto xbtGroup = recvHdWallet->getGroup(recvHdWallet->getXBTGroupType());
       auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWallets);
