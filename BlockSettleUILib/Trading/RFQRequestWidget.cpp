@@ -355,16 +355,14 @@ bool RFQRequestWidget::checkWalletSettings(bs::network::Asset::Type productType,
 
 void RFQRequestWidget::forceCheckCondition()
 {
-   if (!ui_->widgetMarketData) {
+   if (!ui_->widgetMarketData || !celerClient_->IsConnected()) {
       return;
    }
 
    const auto& currentInfo = ui_->widgetMarketData->getCurrentlySelectedInfo();
-
    if (!currentInfo.isValid()) {
       return;
    }
-
    onCurrencySelected(currentInfo);
 }
 
