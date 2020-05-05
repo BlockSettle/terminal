@@ -451,6 +451,12 @@ padding-left: 0px;
    </item>
    <item>
     <widget class="QWidget" name="widgetSignup" native="true">
+     <property name="prodEnv" stdset="0">
+      <bool>false</bool>
+     </property>
+     <property name="testEnv" stdset="0">
+      <bool>false</bool>
+     </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <property name="spacing">
        <number>12</number>

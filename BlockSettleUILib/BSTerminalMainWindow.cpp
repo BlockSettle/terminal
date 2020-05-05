@@ -36,7 +36,6 @@
 #include "CelerAccountInfoDialog.h"
 #include "ColoredCoinServer.h"
 #include "ConnectionManager.h"
-#include "CreateAccountPrompt.h"
 #include "CreatePrimaryWalletPrompt.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
@@ -209,9 +208,9 @@ void BSTerminalMainWindow::onAddrStateChanged()
    if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
       && !authManager_->isAtLeastOneAwaitingVerification() && canSubmitAuthAddr) {
       allowAuthAddressDialogShow_ = false;
-      BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Authentication Address")
-         , tr("Trading and settlement of XBT products require an Authentication Address to validate you as a Participant of BlockSettle’s Trading Network.\n"
-              "\n"
+      BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Create Authentication Address?")
+         , tr("An Authentication Address is your on-chain verification as a Participant in our trading network and is required for access to Spot XBT products.\n\n"
+              "After submission by the Participant, the Authentication Address is verified by the funding of a small amount of bitcoin from one of BlockSettle’s Validation Addresses.\n\n"
               "Submit Authentication Address now?"), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
@@ -438,11 +437,6 @@ void BSTerminalMainWindow::LoadWallets()
       CompleteDBConnection();
       act_->onRefresh({}, true);
       tryGetChatKeys();
-
-      // BST-2645: Do not show create account prompt if already have wallets
-      if (walletsMgr_->walletsCount() > 0) {
-         disableCreateTestAccountPrompt();
-      }
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::info, this, &BSTerminalMainWindow::showInfo);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::error, this, &BSTerminalMainWindow::showError);
@@ -456,7 +450,6 @@ void BSTerminalMainWindow::LoadWallets()
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletAdded, this, [this] {
       updateControlEnabledState();
-      promptToCreateTestAccountIfNeeded();
       tryGetChatKeys();
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
@@ -1131,37 +1124,10 @@ bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
       }
    }
 
-   if (!signContainer_->isOffline()) {
-      NewWalletDialog newWalletDialog(true, applicationSettings_, this);
-      onInitWalletDialogWasShown();
-
-      int rc = newWalletDialog.exec();
-
-      switch (rc) {
-         case NewWalletDialog::CreateNew:
-            ui_->widgetWallets->CreateNewWallet();
-            break;
-         case NewWalletDialog::ImportExisting:
-            ui_->widgetWallets->ImportNewWallet();
-            break;
-         case NewWalletDialog::ImportHw:
-            ui_->widgetWallets->ImportHwWallet();
-            break;
-         case NewWalletDialog::Cancel:
-            return false;
-      }
-
-      if (cb) {
-         cb();
-      }
-      return true;
-   } else {
-      ui_->widgetWallets->ImportNewWallet();
-      if (cb) {
-         cb();
-      }
+   ui_->widgetWallets->onNewWallet();
+   if (cb) {
+      cb();
    }
-
    return true;
 }
 
@@ -2099,7 +2065,12 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
       addDeferredDialog([this, wallet] {
          promoteToPrimaryShown_ = true;
          BSMessageBox qry(BSMessageBox::question, tr("Upgrade Wallet"), tr("Enable Trading?")
-            , tr("BlockSettle requires you to hold sub-wallets able to interact with our trading system. Do you wish to create them now?"), this);
+            , tr("BlockSettle requires you to hold sub-wallets able to interact with our trading system. Do you wish to create them now?\n\n"
+                 "For more information regarding our settlement models, please consult our ") +
+                  QStringLiteral("<a href=\"%1\"><span style=\"text-decoration: underline; color: %2;\">Trading Procedures</span></a>")
+                  .arg(QStringLiteral("http://pubb.blocksettle.com/PDF/BlockSettle%20Trading%20Procedures.pdf"))
+                  .arg(BSMessageBox::kUrlColor)
+            , this);
          if (qry.exec() == QDialog::Accepted) {
             allowAuthAddressDialogShow_ = true;
             walletsMgr_->PromoteHDWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {
@@ -2131,43 +2102,6 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
    }
 }
 
-void BSTerminalMainWindow::disableCreateTestAccountPrompt()
-{
-   applicationSettings_->set(ApplicationSettings::HideCreateAccountPromptTestnet, true);
-}
-
-void BSTerminalMainWindow::promptToCreateTestAccountIfNeeded()
-{
-   addDeferredDialog([this] {
-      auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
-      bool hideCreateAccountTestnet = applicationSettings_->get<bool>(ApplicationSettings::HideCreateAccountPromptTestnet);
-      if (envType != ApplicationSettings::EnvConfiguration::Test || hideCreateAccountTestnet) {
-         return;
-      }
-      disableCreateTestAccountPrompt();
-      if (bs::network::isTradingEnabled(userType_)) {
-         // Do not prompt if user is already logged in
-         return;
-      }
-
-      CreateAccountPrompt dlg(this);
-      int rc = dlg.exec();
-
-      switch (rc) {
-         case CreateAccountPrompt::Login:
-            onLogin();
-            break;
-         case CreateAccountPrompt::CreateAccount: {
-            auto createTestAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlTest);
-            QDesktopServices::openUrl(QUrl(createTestAccountUrl));
-            break;
-         }
-         case CreateAccountPrompt::Cancel:
-            break;
-      }
-   });
-}
-
 void BSTerminalMainWindow::showLegacyWarningIfNeeded()
 {
    if (applicationSettings_->get<bool>(ApplicationSettings::HideLegacyWalletWarning)) {
@@ -2183,7 +2117,8 @@ void BSTerminalMainWindow::showLegacyWarningIfNeeded()
               "The BlockSettle Terminal supports viewing and spending from legacy addresses, but will not support the following actions related to these addresses:\n\n"
               "- No GUI support for legacy address generation\n"
               "- No trading using legacy address input\n"
-              "- No mixing of input types when spending from legacy addresses\n\n"
+              "- GUI support for legacy address generation\n"
+              "- Trading and settlement using legacy inputs\n\n"
               "BlockSettle strongly recommends that you move your legacy address balances to native SegWit addresses.")
          , {}
          , forcedWidth
