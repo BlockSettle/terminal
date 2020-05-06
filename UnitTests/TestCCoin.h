@@ -202,7 +202,7 @@ public:
       const std::vector<UTXO> & paymentSortedInputsUserB,
       const CCoinSpender& structA, const CCoinSpender& structB,
       const std::vector<UTXO> & ccInputsAppend = {},
-      unsigned blockDelay = 0);
+      unsigned blockDelay = 0, bool returnUnsigned = false);
 
    void revoke(const bs::Address&);
 
