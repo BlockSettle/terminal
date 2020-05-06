@@ -562,7 +562,7 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
             output->add_address_n(add);
          }
 
-         const bool changeType = change.address.getType();
+         const auto changeType = change.address.getType();
          bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType scriptType;
          if (changeType == AddressEntryType_P2SH) {
             scriptType = bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOP2SHWITNESS;
