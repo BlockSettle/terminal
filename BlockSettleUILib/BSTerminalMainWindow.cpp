@@ -2065,12 +2065,13 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
       addDeferredDialog([this, wallet] {
          promoteToPrimaryShown_ = true;
          BSMessageBox qry(BSMessageBox::question, tr("Upgrade Wallet"), tr("Enable Trading?")
-            , tr("BlockSettle requires you to hold sub-wallets able to interact with our trading system. Do you wish to create them now?\n\n"
+            , tr("BlockSettle requires you to hold sub-wallets able to interact with our trading system. Do you wish to create them now?<br/><br/>"
                  "For more information regarding our settlement models, please consult our ") +
                   QStringLiteral("<a href=\"%1\"><span style=\"text-decoration: underline; color: %2;\">Trading Procedures</span></a>")
                   .arg(QStringLiteral("http://pubb.blocksettle.com/PDF/BlockSettle%20Trading%20Procedures.pdf"))
                   .arg(BSMessageBox::kUrlColor)
             , this);
+         qry.enableRichText();
          if (qry.exec() == QDialog::Accepted) {
             allowAuthAddressDialogShow_ = true;
             walletsMgr_->PromoteHDWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {
@@ -2115,8 +2116,6 @@ void BSTerminalMainWindow::showLegacyWarningIfNeeded()
          , tr("Legacy Address Balances")
          , tr("The BlockSettle Terminal has detected the use of legacy addresses on your hardware wallet.\n\n"
               "The BlockSettle Terminal supports viewing and spending from legacy addresses, but will not support the following actions related to these addresses:\n\n"
-              "- No GUI support for legacy address generation\n"
-              "- No trading using legacy address input\n"
               "- GUI support for legacy address generation\n"
               "- Trading and settlement using legacy inputs\n\n"
               "BlockSettle strongly recommends that you move your legacy address balances to native SegWit addresses.")

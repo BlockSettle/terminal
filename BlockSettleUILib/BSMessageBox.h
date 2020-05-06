@@ -64,6 +64,7 @@ public:
 
    void setOkVisible(bool visible);
    void setCancelVisible(bool visible);
+   void enableRichText();
 
 protected slots:
    void onDetailsPressed();
