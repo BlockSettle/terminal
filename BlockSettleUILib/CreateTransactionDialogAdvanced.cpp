@@ -1397,16 +1397,17 @@ void CreateTransactionDialogAdvanced::SetFixedWallet(const std::string& walletId
    auto walletType = UiUtils::WalletsTypes::None;
    if (!hdWallet) {
       hdWallet = walletsManager_->getHDRootForLeaf(walletId);
-      for (auto leaf : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
-         if (leaf->walletId() == walletId) {
-            walletType = UiUtils::getHwWalletType(leaf->purpose());
-            break;
+      if (hdWallet && (hdWallet->isHardwareWallet() || hdWallet->isHardwareOfflineWallet())) {
+         for (auto leaf : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
+            if (leaf->walletId() == walletId) {
+               walletType = UiUtils::getHwWalletType(leaf->purpose());
+               break;
+            }
          }
       }
    }
-   assert(hdWallet);
 
-   const int idx = SelectWallet(hdWallet->walletId(), walletType);
+   const int idx = hdWallet ? SelectWallet(hdWallet->walletId(), walletType) : -1;
    selectedWalletChanged(idx, true, cbInputsReset);
    ui_->comboBoxWallets->setEnabled(false);
 }
