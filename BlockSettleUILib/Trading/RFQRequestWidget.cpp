@@ -69,7 +69,7 @@ void RFQRequestWidget::setWalletsManager(const std::shared_ptr<bs::sync::Wallets
    if (walletsManager_ == nullptr) {
       walletsManager_ = walletsManager;
       ui_->pageRFQTicket->setWalletsManager(walletsManager);
-      ui_->shieldPage->init(walletsManager, authAddressManager_);
+      ui_->shieldPage->init(walletsManager, authAddressManager_, appSettings_);
 
       // Do not listen for walletChanged (too verbose and resets UI too often) and walletsReady (to late and resets UI after startup unexpectedly)
       connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &RFQRequestWidget::forceCheckCondition);
@@ -273,7 +273,7 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservat
    auto fixedXbtInputs = ui_->pageRFQTicket->fixedXbtInputs();
 
    std::unique_ptr<bs::hd::Purpose> purpose;
-   if (xbtWallet && xbtWallet->isHardwareWallet()) {
+   if (xbtWallet && !xbtWallet->canMixLeaves()) {
       auto walletType = ui_->pageRFQTicket->xbtWalletType();
       purpose.reset(new bs::hd::Purpose(UiUtils::getHwWalletPurpose(walletType)));
    }
@@ -355,16 +355,14 @@ bool RFQRequestWidget::checkWalletSettings(bs::network::Asset::Type productType,
 
 void RFQRequestWidget::forceCheckCondition()
 {
-   if (!ui_->widgetMarketData) {
+   if (!ui_->widgetMarketData || !celerClient_->IsConnected()) {
       return;
    }
 
    const auto& currentInfo = ui_->widgetMarketData->getCurrentlySelectedInfo();
-
    if (!currentInfo.isValid()) {
       return;
    }
-
    onCurrencySelected(currentInfo);
 }
 

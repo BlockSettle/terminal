@@ -165,6 +165,7 @@ namespace UiUtils
    double actualXbtPrice(bs::XBTAmount amount, double price);
 
    bs::hd::Purpose getHwWalletPurpose(WalletsTypes hwType);
+   WalletsTypes getHwWalletType(bs::hd::Purpose purpose);
 
    //
    // WalletDescriptionValidator

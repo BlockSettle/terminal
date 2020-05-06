@@ -164,8 +164,10 @@ void CCTokenEntryDialog::onCCAddrSubmitted(const QString addr)
    const bool isProd = settings_->get<int>(ApplicationSettings::envConfiguration) ==
       static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
 
-   const auto body = isProd ? tr("BlockSettle will issue your tokens within the next 24 hours.")
-      : tr("BlockSettle will issue your tokens within the next 15 minutes.");
+   auto body = tr("BlockSettle will issue your tokens within the next %1.").arg(isProd ? tr("24 hours") : tr("15 minutes"));
+   if (!isProd) {
+      body += tr(" Once mined 1 block, they are eligible for trading.");
+   }
 
    BSMessageBox(BSMessageBox::success, tr("Submission Successful")
       , tr("Equity Token Submitted")

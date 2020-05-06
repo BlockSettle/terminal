@@ -1,7 +1,33 @@
 {
-   "latest_version": "0.89.0",
-   "release_date": "23 Apr 2020",
+   "latest_version": "0.89.2",
+   "release_date": "06 May 2020",
    "changes": [
+      {
+         "version_string": "0.89.2",
+         "previous_version": "0.89.1",
+         "release_date": "06 May 2020",
+         "release_type": "dev",
+         "improvements": [
+         ],
+         "bug_fixes": [
+            "Ui fixes"
+         ],
+         "revision": "f70ad92dd",
+         "common_revision": "21640055"
+      },
+      {
+         "version_string": "0.89.1",
+         "previous_version": "0.89.0",
+         "release_date": "05 May 2020",
+         "release_type": "dev",
+         "improvements": [
+            "Polishing ledger UI flow",
+            "Export Hardware Wallet"
+         ],
+         "bug_fixes": [],
+         "revision": "601f20297",
+         "common_revision": "21640055"
+      },
       {
          "version_string": "0.89.0",
          "previous_version": "0.26.2",

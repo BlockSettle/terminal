@@ -111,12 +111,10 @@ void HwDeviceManager::prepareHwDeviceForSign(QString walletId)
    auto hdWallet = walletManager_->getHDWalletById(walletId.toStdString());
    assert(hdWallet->isHardwareWallet());
    auto encKeys = hdWallet->encryptionKeys();
-   auto deviceId = encKeys[0].toBinStr();
+   bs::wallet::HardwareEncKey hwEncType(encKeys[0]);
 
-   // #TREZOR_INTEGRATION:  bad way to distinguish device type
-   // we need better here
-   if (deviceId == kDeviceLedgerId) {
-      ledgerClient_->scanDevices([caller = QPointer<HwDeviceManager>(this), deviceId, walletId]() {
+   if (bs::wallet::HardwareEncKey::WalletType::Ledger == hwEncType.deviceType()) {
+      ledgerClient_->scanDevices([caller = QPointer<HwDeviceManager>(this), walletId]() {
          if (!caller) {
             return;
          }
@@ -124,7 +122,7 @@ void HwDeviceManager::prepareHwDeviceForSign(QString walletId)
          auto devices = caller->ledgerClient_->deviceKeys();
          if (devices.empty()) {
             caller->lastOperationError_ = caller->ledgerClient_->lastScanError();
-            caller->deviceNotFound(QString::fromStdString(deviceId));
+            caller->deviceNotFound(QString::fromStdString(kDeviceLedgerId));
             return;
          }
 
@@ -143,15 +141,16 @@ void HwDeviceManager::prepareHwDeviceForSign(QString walletId)
                caller->lastOperationError_ = caller->getDevice(devices.front())->lastError();
             }
 
-            caller->deviceNotFound(QString::fromStdString(deviceId));
+            caller->deviceNotFound(QString::fromStdString(kDeviceLedgerId));
          }  
          else {
             caller->model_->resetModel({ std::move(deviceKey) });
-            caller->deviceReady(QString::fromStdString(deviceId));
+            caller->deviceReady(QString::fromStdString(kDeviceLedgerId));
          }
       });
    }
-   else {
+   else if (bs::wallet::HardwareEncKey::WalletType::Trezor == hwEncType.deviceType()) {
+      auto deviceId = hwEncType.deviceId();
       trezorClient_->initConnection(QString::fromStdString(deviceId), [this](QVariant&& deviceId) {
          DeviceKey deviceKey;
 

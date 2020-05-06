@@ -1471,7 +1471,7 @@ void OtcClient::createSellerRequest(const std::string &settlementId, Peer *peer,
 
    auto group = targetHdWallet->getGroup(targetHdWallet->getXBTGroupType());
    std::vector<std::shared_ptr<bs::sync::Wallet>> xbtWallets;
-   if (targetHdWallet->isHardwareWallet()) {
+   if (!targetHdWallet->canMixLeaves()) {
       assert(peer->offer.walletPurpose);
       xbtWallets.push_back(group->getLeaf(*peer->offer.walletPurpose));
    }
@@ -1545,7 +1545,7 @@ void OtcClient::createBuyerRequest(const std::string &settlementId, Peer *peer, 
 
    auto group = targetHdWallet->getGroup(targetHdWallet->getXBTGroupType());
    std::vector<std::shared_ptr<bs::sync::Wallet>> xbtWallets;
-   if (targetHdWallet->isHardwareWallet()) {
+   if (!targetHdWallet->canMixLeaves()) {
       assert(peer->offer.walletPurpose);
       xbtWallets.push_back(group->getLeaf(*peer->offer.walletPurpose));
    }

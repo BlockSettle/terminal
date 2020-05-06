@@ -143,7 +143,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->showHistoryButton, &QPushButton::pressed, this, &ChatWidget::onRequestAllPrivateMessages);
 
 
-   ui_->widgetOTCShield->init(walletsMgr, authManager);
+   ui_->widgetOTCShield->init(walletsMgr, authManager, applicationSettings);
    connect(ui_->widgetOTCShield, &OTCShield::requestPrimaryWalletCreation, this, &ChatWidget::requestPrimaryWalletCreation);
 
    // connections

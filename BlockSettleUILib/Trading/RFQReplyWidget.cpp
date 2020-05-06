@@ -70,7 +70,7 @@ void RFQReplyWidget::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMa
    if (!walletsManager_ && walletsManager) {
       walletsManager_ = walletsManager;
       ui_->pageRFQReply->setWalletsManager(walletsManager_);
-      ui_->shieldPage->init(walletsManager_, authAddressManager_);
+      ui_->shieldPage->init(walletsManager_, authAddressManager_, appSettings_);
 
       if (signingContainer_) {
          auto primaryWallet = walletsManager_->getPrimaryWallet();
