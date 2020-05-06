@@ -109,6 +109,7 @@ void BSMessageBox::setCancelVisible(bool visible)
 void BSMessageBox::enableRichText()
 {
    ui_->labelText->setTextFormat(Qt::RichText);
+   adjustSize();
 }
 
 void BSMessageBox::onDetailsPressed()
