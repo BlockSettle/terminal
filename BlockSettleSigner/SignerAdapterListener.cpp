@@ -1018,6 +1018,12 @@ bs::error::ErrorCode SignerAdapterListener::verifyOfflineSignRequest(const bs::c
    }
 
    size_t foundInputCount = 0;
+   auto checkAddress = [](const bs::core::WalletsManager::WalletPtr& wallet,
+      bs::Address addr) {
+      return wallet->addressType() == addr.getType() ||
+         (addr.getType() == AddressEntryType_P2SH && (wallet->addressType() & addr.getType()));
+   };
+
    for (const auto &walletId : txSignReq.walletIds) { // sync new addresses in all wallets
       const auto wallet = walletsMgr_->getWalletById(walletId);
       if (!wallet) {
@@ -1035,7 +1041,7 @@ bs::error::ErrorCode SignerAdapterListener::verifyOfflineSignRequest(const bs::c
 
       for (size_t i = 0; i < txSignReq.inputs.size(); ++i) {
          const auto addr = bs::Address::fromUTXO(txSignReq.inputs.at(i));
-         if (wallet->addressType() != addr.getType()) {
+         if (!checkAddress(wallet, addr)) {
             continue;
          }
          // Need to extend used address chain for offline wallets
@@ -1064,7 +1070,8 @@ bs::error::ErrorCode SignerAdapterListener::verifyOfflineSignRequest(const bs::c
       // Need to extend change wallet too (find change wallet by change type).
       std::shared_ptr<bs::core::hd::Leaf> changeWallet;
       for (const auto &leaf : hdWallet->getLeaves()) {
-         if (leaf->type() == bs::core::wallet::Type::Bitcoin && leaf->addressType() == txSignReq.change.address.getType()) {
+         if (leaf->type() == bs::core::wallet::Type::Bitcoin
+            && checkAddress(leaf, txSignReq.change.address)) {
             changeWallet = leaf;
             break;
          }
