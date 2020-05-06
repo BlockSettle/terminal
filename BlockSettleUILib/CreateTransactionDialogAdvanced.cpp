@@ -513,6 +513,7 @@ void CreateTransactionDialogAdvanced::initUI()
    connect(this, &CreateTransactionDialogAdvanced::walletChanged, this, &CreateTransactionDialogAdvanced::onUpdateChangeWidget);
 
    updateManualFeeControls();
+   onUpdateChangeWidget();
 }
 
 void CreateTransactionDialogAdvanced::clear()
@@ -1392,7 +1393,20 @@ void CreateTransactionDialogAdvanced::onExistingAddressSelectedForChange()
 
 void CreateTransactionDialogAdvanced::SetFixedWallet(const std::string& walletId, const std::function<void()> &cbInputsReset)
 {
-   const int idx = SelectWallet(walletId, UiUtils::WalletsTypes::None);
+   auto hdWallet = walletsManager_->getHDWalletById(walletId);
+   auto walletType = UiUtils::WalletsTypes::None;
+   if (!hdWallet) {
+      hdWallet = walletsManager_->getHDRootForLeaf(walletId);
+      for (auto leaf : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
+         if (leaf->walletId() == walletId) {
+            walletType = UiUtils::getHwWalletType(leaf->purpose());
+            break;
+         }
+      }
+   }
+   assert(hdWallet);
+
+   const int idx = SelectWallet(hdWallet->walletId(), walletType);
    selectedWalletChanged(idx, true, cbInputsReset);
    ui_->comboBoxWallets->setEnabled(false);
 }
@@ -1439,8 +1453,14 @@ void CreateTransactionDialogAdvanced::enableFeeChanging(bool enable)
 void CreateTransactionDialogAdvanced::SetFixedChangeAddress(const QString& changeAddress)
 {
    ui_->radioButtonExistingAddress->setChecked(true);
+   ui_->radioButtonExistingAddress->setVisible(true);
+
    ui_->radioButtonNewAddrNative->setEnabled(false);
    ui_->radioButtonNewAddrNested->setEnabled(false);
+   ui_->radioButtonNewAddrLegacy->setEnabled(false);
+   ui_->radioButtonNewAddrNative->setVisible(false);
+   ui_->radioButtonNewAddrNested->setVisible(false);
+   ui_->radioButtonNewAddrLegacy->setVisible(false);
 
    selectedChangeAddress_ = bs::Address::fromAddressString(changeAddress.toStdString());
    showExistingChangeAddress(true);

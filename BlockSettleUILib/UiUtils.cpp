@@ -151,6 +151,21 @@ bs::hd::Purpose getHwWalletPurpose(WalletsTypes hwType)
    return {};
 }
 
+UiUtils::WalletsTypes getHwWalletType(bs::hd::Purpose purpose)
+{
+   switch (purpose)
+   {
+   case bs::hd::Native:
+      return WalletsTypes::HardwareNativeSW;
+   case bs::hd::Nested:
+      return WalletsTypes::HardwareNestedSW;
+   case bs::hd::NonSegWit:
+      return WalletsTypes::HardwareLegacy;
+   default:
+      return WalletsTypes::None;
+   }
+}
+
 }
 
 int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId, WalletsTypes type /* = WalletsTypes::None */)
