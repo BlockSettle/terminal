@@ -337,8 +337,34 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
       if (txSignReq.walletIds.size() == 1) {
          const auto &wallet = walletsMgr_->getWalletById(txSignReq.walletIds.front());
          bs::core::WalletPasswordScoped lock(hdWallet, SecureBinaryData::fromString(request.password()));
-         const auto tx = wallet->signTXRequest(txSignReq);
-         evt.set_signedtx(tx.toBinStr());
+
+         bool isLedgerHw = false;
+         if (hdWallet->isHardwareWallet()) {
+            bs::wallet::HardwareEncKey hwEncKey(hdWallet->encryptionKeys()[0]);
+            isLedgerHw = hwEncKey.deviceType() == bs::wallet::HardwareEncKey::WalletType::Ledger;
+         }
+
+         BinaryData signedTx;
+         if (isLedgerHw) {
+            // For ledger hw data is not prepared straight away
+            Blocksettle::Communication::headless::InputSigs sigs;
+            if (!sigs.ParseFromString(SecureBinaryData::fromString(request.password()).toBinStr())) {
+               throw std::exception(" Cannot parse offline sig sign response from ledger");
+            }
+
+            bs::core::InputSigs inputSigs;
+            for (size_t i = 0; i < sigs.inputsig_size(); ++i) {
+               auto sig = sigs.inputsig(i);
+               inputSigs[sig.index()] = BinaryData::fromString(sig.data());
+            }
+            
+            signedTx = wallet->signTXRequestWithWitness(txSignReq, inputSigs);
+         }
+         else {
+            signedTx = wallet->signTXRequest(txSignReq);
+         }
+
+         evt.set_signedtx(signedTx.toBinStr());
       }
       else {
          bs::core::wallet::TXMultiSignRequest multiReq;
