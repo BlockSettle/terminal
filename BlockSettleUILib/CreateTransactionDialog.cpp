@@ -614,6 +614,7 @@ bool CreateTransactionDialog::createTransactionImpl(bs::core::wallet::TXSignRequ
             BSMessageBox(BSMessageBox::info, tr("Offline Transaction")
                , tr("Request was successfully exported")
                , tr("Saved to %1").arg(offlineFilePath), this).exec();
+            return false; // export was success so we could close the dialog
          }
          else {
             BSMessageBox(BSMessageBox::warning, tr("Offline Transaction")

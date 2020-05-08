@@ -335,10 +335,9 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
    const auto hdWallet = walletsMgr_->getHDRootForLeaf(txSignReq.walletIds.front());
    try {
       if (txSignReq.walletIds.size() == 1) {
-         const auto &wallet = walletsMgr_->getWalletById(txSignReq.walletIds.front());
          bs::core::WalletPasswordScoped lock(hdWallet, SecureBinaryData::fromString(request.password()));
-         const auto tx = wallet->signTXRequest(txSignReq);
-         evt.set_signedtx(tx.toBinStr());
+         BinaryData signedTx = hdWallet->signTXRequestWithWallet(txSignReq);
+         evt.set_signedtx(signedTx.toBinStr());
       }
       else {
          bs::core::wallet::TXMultiSignRequest multiReq;
