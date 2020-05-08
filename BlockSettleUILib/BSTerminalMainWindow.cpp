@@ -211,7 +211,7 @@ void BSTerminalMainWindow::onAddrStateChanged()
       BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Create Authentication Address?")
          , tr("An Authentication Address is your on-chain verification as a Participant in our trading network and is required for access to Spot XBT products.\n\n"
               "After submission by the Participant, the Authentication Address is verified by the funding of a small amount of bitcoin from one of BlockSettle’s Validation Addresses.\n\n"
-              "Submit Authentication Address now?"), this);
+              "Create Authentication Address now?"), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
