@@ -653,7 +653,7 @@ std::vector<bs::core::wallet::TXSignRequest> CreateTransactionDialog::ImportTran
    QString signerOfflineDir = applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
 
    const QString reqFile = QFileDialog::getOpenFileName(this, tr("Select Transaction file"), signerOfflineDir
-      , tr("TX files (*.bin)"));
+      , tr("TX files (*.bin);; All files (*)"));
    if (reqFile.isEmpty()) {
       return {};
    }
