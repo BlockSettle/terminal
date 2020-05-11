@@ -1406,6 +1406,7 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
       || loginDialog.result()->userType == bs::network::UserType::Trading
       || loginDialog.result()->userType == bs::network::UserType::Dealing);
    auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
+
    if (!isRegistered && envType == ApplicationSettings::EnvConfiguration::Test) {
       auto createTestAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlTest);
       BSMessageBox dlg(BSMessageBox::info, tr("Create Test Account")
@@ -1416,6 +1417,22 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
          .arg(createTestAccountUrl).arg(BSMessageBox::kUrlColor), this);
       dlg.setOkVisible(false);
       dlg.setCancelVisible(true);
+      dlg.enableRichText();
+      dlg.exec();
+      return;
+   }
+
+   if (!isRegistered && envType == ApplicationSettings::EnvConfiguration::Production) {
+      auto createAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlProd);
+      BSMessageBox dlg(BSMessageBox::info, tr("Create Account")
+         , tr("Create a BlockSettle account")
+         , tr("<p>Login requires an account - create one in minutes on blocksettle.com</p>"
+              "<p>Once you have registered, return to login in the Terminal.</p>"
+              "<a href=\"%1\"><span style=\"text-decoration: underline;color:%2;\">Create Account Now</span></a>")
+         .arg(createAccountUrl).arg(BSMessageBox::kUrlColor), this);
+      dlg.setOkVisible(false);
+      dlg.setCancelVisible(true);
+      dlg.enableRichText();
       dlg.exec();
       return;
    }
