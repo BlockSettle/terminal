@@ -1308,13 +1308,8 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
          if (!thisPtr) {
             return;
          }
-         auto selInputs = thisPtr->transactionData_->getSelectedInputs();
-         for (const auto &utxo : inputs) {
-            bool result = selInputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
-            if (!result) {
-               SPDLOG_LOGGER_WARN(thisPtr->logger_, "selecting input failed for imported TX");
-            }
-         }
+         thisPtr->transactionData_->setSelectedUtxo(inputs);
+         thisPtr->usedInputsModel_->updateInputs(thisPtr->transactionData_->inputs());
       };
       SetFixedWallet(tx.walletIds.front(), cbInputsReceived);
 
