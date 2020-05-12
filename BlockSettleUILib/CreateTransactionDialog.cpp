@@ -604,9 +604,13 @@ bool CreateTransactionDialog::createTransactionImpl(bs::core::wallet::TXSignRequ
             return true;
          }
 
-         QString newSignerOfflineDir = QFileInfo(offlineFilePath).absoluteDir().path();
+         QFileInfo exportFileIndo(offlineFilePath);
+         QString newSignerOfflineDir = exportFileIndo.absoluteDir().path();
          if (signerOfflineDir != newSignerOfflineDir) {
             applicationSettings_->set(ApplicationSettings::signerOfflineDir, newSignerOfflineDir);
+         }
+         if (exportFileIndo.suffix() != QLatin1String("bin")) {
+            offlineFilePath += QLatin1String(".bin");
          }
 
          bs::error::ErrorCode result = bs::core::wallet::ExportTxToFile(txReq_, offlineFilePath);
