@@ -27,9 +27,9 @@ CustomTitleDialogWindow {
     id: root
 
     property WalletInfo walletInfo: WalletInfo{}
-    property bool   isRootWallet: (walletInfo.rootId == walletInfo.walletId)
+    property bool   isRootWallet: (walletInfo.rootId === walletInfo.walletId)
     property string rootName
-    property bool   backupAvailable: !walletInfo.isHardwareWallet()
+    property bool   backupAvailable: !walletInfo.isHardwareWallet() && !walletInfo.isWo()
     property bool   backup: chkBackup.checked && backupAvailable
 
     width: 400
