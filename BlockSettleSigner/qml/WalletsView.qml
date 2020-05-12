@@ -92,7 +92,12 @@ TreeView {
         }
     }
 
+    onExpanded: selectOnExpanding(index);
+    onCollapsed: selectOnExpanding(index);
+
+    property bool disableSetCurrentIndex: false
     function expandAll() {
+        disableSetCurrentIndex = true;
         for (var i = 0; i < model.rowCount(); i++) {
             var index = model.index(i, 0)
             if (!isExpanded(index)) {
@@ -105,13 +110,13 @@ TreeView {
                 }
             }
         }
+        disableSetCurrentIndex = false;
     }
 
-    onExpanded: {
-        selection.setCurrentIndex(index, ItemSelectionModel.SelectCurrent)
-    }
-
-    onCollapsed: {
+    function selectOnExpanding(index) {
+        if (disableSetCurrentIndex) {
+            return;
+        }
         selection.setCurrentIndex(index, ItemSelectionModel.SelectCurrent)
     }
 }
