@@ -106,4 +106,12 @@ TreeView {
             }
         }
     }
+
+    onExpanded: {
+        selection.setCurrentIndex(index, ItemSelectionModel.SelectCurrent)
+    }
+
+    onCollapsed: {
+        selection.setCurrentIndex(index, ItemSelectionModel.SelectCurrent)
+    }
 }

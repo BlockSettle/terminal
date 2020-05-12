@@ -78,27 +78,42 @@ ApplicationWindow {
         bgColor: "darkred"
     }
 
-    SwipeView {
-        id: swipeView
+    ColumnLayout {
         anchors.fill: parent
-        currentIndex: tabBar.currentIndex
 
-        StatusPage {
-            id: dashboardPage
+        InfoBar {
+            id: infoBar
+            Layout.fillWidth: true
+            Layout.rightMargin: 5
+            Layout.leftMargin: 5
         }
 
-        SettingsPage {
-            id: settingsPage
-        }
+        SwipeView {
+            id: swipeView
+            currentIndex: tabBar.currentIndex
+            Layout.fillWidth: true
+            Layout.fillHeight: true
 
-        AutoSignPage {
-            id: autoSignPage
-        }
+            StatusPage {
+                id: dashboardPage
+            }
 
-        WalletsPage {
-            id: walletsPage
+            SettingsPage {
+                id: settingsPage
+                onSettingsChanged: infoBar.showChangeApplyMessage = true;
+            }
+
+            AutoSignPage {
+                id: autoSignPage
+            }
+
+            WalletsPage {
+                id: walletsPage
+            }
         }
     }
+
+
 
     footer: TabBar {
         id: tabBar
