@@ -1220,7 +1220,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
 
             std::set<BinaryData> txHashSet;
             std::map<BinaryData, std::set<uint32_t>> txOutIndices;
-            std::vector<std::pair<BinaryData, uint32_t>> utxoHashes;
+            TransactionData::UtxoHashes utxoHashes;
 
             for (size_t i = 0; i < tx.getNumTxIn(); i++) {
                auto in = tx.getTxInCopy((int)i);
@@ -1268,13 +1268,8 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                      if (!thisPtr) {
                         return;
                      }
-                     auto selInputs = thisPtr->transactionData_->getSelectedInputs();
-                     for (const auto &utxo : utxoHashes) {
-                        bool result = selInputs->SetUTXOSelection(utxo.first, utxo.second);
-                        if (!result) {
-                           SPDLOG_LOGGER_WARN(thisPtr->logger_, "selecting input failed for imported TX");
-                        }
-                     }
+                     thisPtr->transactionData_->setSelectedUtxo(utxoHashes);
+                     thisPtr->usedInputsModel_->updateInputs(thisPtr->transactionData_->inputs());
                   };
 
                   thisPtr->SetFixedWallet(wallet->walletId(), cbInputsReceived);
@@ -1308,13 +1303,8 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
          if (!thisPtr) {
             return;
          }
-         auto selInputs = thisPtr->transactionData_->getSelectedInputs();
-         for (const auto &utxo : inputs) {
-            bool result = selInputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
-            if (!result) {
-               SPDLOG_LOGGER_WARN(thisPtr->logger_, "selecting input failed for imported TX");
-            }
-         }
+         thisPtr->transactionData_->setSelectedUtxo(inputs);
+         thisPtr->usedInputsModel_->updateInputs(thisPtr->transactionData_->inputs());
       };
       SetFixedWallet(tx.walletIds.front(), cbInputsReceived);
 
