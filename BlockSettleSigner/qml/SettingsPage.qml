@@ -22,6 +22,9 @@ import "BsDialogs"
 import "js/helper.js" as JsHelper
 
 Item {
+
+    signal settingsChanged();
+
     Rectangle {
         id: rectHelp
 
@@ -74,6 +77,7 @@ Item {
                     gridGeneral.state = checked ? "normal" : "hidden"
                     highlighted = !checked
                     down = checked
+                    settingsChanged();
                 }
             }
 
@@ -95,6 +99,7 @@ Item {
                     checked: !signerStatus.offline
                     onClicked: {
                         signerSettings.offline = !checked
+                        settingsChanged();
                     }
                 }
             }
@@ -116,6 +121,7 @@ Item {
                     checked: signerSettings.testNet
                     onClicked: {
                         signerSettings.testNet = checked
+                        settingsChanged();
                     }
                 }
             }
