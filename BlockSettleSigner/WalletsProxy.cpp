@@ -540,7 +540,8 @@ void WalletsProxy::signOfflineTxProceed(const QString &fileName, const std::vect
                   QFileInfo fi(fileName);
                   QString outputFN = fi.path() + QLatin1String("/") + fi.baseName() + QLatin1String("_signed.bin");
 
-                  bs::error::ErrorCode exportResult = bs::core::wallet::ExportSignedTxToFile(signedTX, outputFN, reqs.requests[0].comment);
+                  bs::error::ErrorCode exportResult = bs::core::wallet::ExportSignedTxToFile(signedTX, outputFN
+                     , reqs.requests[0].allowBroadcasts, reqs.requests[0].comment);
 
                   if (exportResult != bs::error::ErrorCode::NoError) {
                      invokeJsCallBack(jsCallback, QJSValueList()

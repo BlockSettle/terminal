@@ -960,6 +960,16 @@ bool SignerAdapterListener::sendReady()
 
 bs::error::ErrorCode SignerAdapterListener::verifyOfflineSignRequest(const bs::core::wallet::TXSignRequest &txSignReq)
 {
+   if (!txSignReq.allowBroadcasts && txSignReq.expiredTimestamp == std::chrono::system_clock::time_point{}) {
+      SPDLOG_LOGGER_ERROR(logger_, "expiration timestamp must be set for offline settlement requests");
+      return bs::error::ErrorCode::TxInvalidRequest;
+   }
+   if (txSignReq.expiredTimestamp != std::chrono::system_clock::time_point{}
+       && txSignReq.expiredTimestamp < std::chrono::system_clock::now()) {
+      SPDLOG_LOGGER_ERROR(logger_, "settlement have been expired already");
+      return bs::error::ErrorCode::TxSettlementExpired;
+   }
+
    if (txSignReq.walletIds.empty()) {
       SPDLOG_LOGGER_ERROR(logger_, "wallet(s) not specified");
       return bs::error::ErrorCode::WalletNotFound;

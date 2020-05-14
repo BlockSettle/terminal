@@ -180,7 +180,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    (std::vector<UTXO> inputs)->void
    {
       const auto recipient = addrVec[11].getRecipient(bs::XBTAmount{ (uint64_t)(25 * COIN) });
-      const auto txReq = syncLeaf->createTXRequest(inputs, { recipient }, 0, false, addrVec[0]);
+      const auto txReq = syncLeaf->createTXRequest(inputs, { recipient }, true, 0, false, addrVec[0]);
       BinaryData txWrongSigned;
       {
          const bs::core::WalletPasswordScoped lock(walletPtr_, SecureBinaryData::fromString("wrongPass"));
@@ -359,7 +359,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
 
          const auto recipient = extVec[13].getRecipient(bs::XBTAmount{ (uint64_t)(25 * COIN) });
          const auto txReq = syncLeaf->createTXRequest(
-            utxos, { recipient }, 0, false, intVec[41]);
+            utxos, { recipient }, true, 0, false, intVec[41]);
 
          BinaryData txSigned;
          {
@@ -706,7 +706,7 @@ TEST_F(TestWalletWithArmory, Comments)
    ASSERT_FALSE(inputs.empty());
    const auto recip = addr.getRecipient(bs::XBTAmount{ (uint64_t)12000 });
 
-   const auto txReq = syncWallet->createTXRequest(inputs, { recip }, 345
+   const auto txReq = syncWallet->createTXRequest(inputs, { recip }, true, 345
       , false, changeAddr);
    BinaryData txData;
    {
@@ -811,7 +811,7 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    recipient = addr2.getRecipient(bs::XBTAmount{ amount });
    const auto recipient2 = otherAddr.getRecipient(bs::XBTAmount{ amount });
    const auto txReq = syncLeaf->createTXRequest(
-      utxos, { recipient, recipient2 }, fee, false, changeAddr);
+      utxos, { recipient, recipient2 }, true, fee, false, changeAddr);
    BinaryData txSigned;
    {
       const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
@@ -948,7 +948,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    const auto recipient1 = addr2.getRecipient(bs::XBTAmount{ amount1 });
    ASSERT_NE(recipient1, nullptr);
    const auto txReq1 = syncLeaf->createTXRequest(
-      inputs1, { recipient1 }, fee, false, changeAddr);
+      inputs1, { recipient1 }, true, fee, false, changeAddr);
 
    BinaryData txSigned1;
    {
@@ -994,7 +994,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    const auto recipient2 = addr3.getRecipient(bs::XBTAmount{ amount2 });
    ASSERT_NE(recipient2, nullptr);
    const auto txReq2 = syncLeaf->createTXRequest(
-      inputs2, { recipient2 }, fee, false, changeAddr);
+      inputs2, { recipient2 }, true, fee, false, changeAddr);
 
    BinaryData txSigned2;
    {
@@ -1287,7 +1287,7 @@ TEST_F(TestWalletWithArmory, GlobalDelegateConf)
       (std::vector<UTXO> inputs)->void
    {
       const auto recipient = addr1.getRecipient(bs::XBTAmount{ (uint64_t)(5 * COIN) });
-      const auto txReq = syncLeaf->createTXRequest(inputs, { recipient });
+      const auto txReq = syncLeaf->createTXRequest(inputs, { recipient }, true);
       BinaryData txSigned;
       {
          const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
