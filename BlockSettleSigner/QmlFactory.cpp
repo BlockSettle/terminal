@@ -167,6 +167,7 @@ bool QmlFactory::eventFilter(QObject *object, QEvent *event)
 {
    if (event->type() == QEvent::Close) {
       emit closeEventReceived();
+      event->ignore();
       return true;
    }
 
