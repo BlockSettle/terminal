@@ -1522,6 +1522,7 @@ void OtcClient::createSellerRequest(const std::string &settlementId, Peer *peer,
          result.success = true;
          result.side = otc::Side::Sell;
          result.payin = std::move(payin.signRequest);
+         result.payin.expiredTimestamp = std::chrono::system_clock::now() + otc::payinTimeout();
 
          result.preimageData = std::move(payin.preimageData);
          result.unsignedPayinHash = payin.payinHash;

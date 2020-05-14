@@ -692,6 +692,12 @@ std::vector<bs::core::wallet::TXSignRequest> CreateTransactionDialog::ImportTran
       return {};
    }
 
+   if (!transactions.at(0).allowBroadcasts) {
+      showError(title, tr("You are trying to import a settlement transaction into a BlockSettle Terminal. "
+                          "Settlement transactions must be imported into a BlockSettle Signer if signed offline."));
+      return {};
+   }
+
    clear();
    return transactions;
 }

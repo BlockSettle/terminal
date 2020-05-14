@@ -159,10 +159,9 @@ void TestCC::SetUp()
    {
       try 
       {
-         const auto fundingTxReq = xbtWallet_->createTXRequest(
-            inputs, 
-            { addr.getRecipient(bs::XBTAmount{uint64_t(ccFundingAmount_ * ccLotSize_)}) },
-            987, false, genesisAddr_);
+         const auto fundingTxReq = xbtWallet_->createTXRequest(inputs
+            , { addr.getRecipient(bs::XBTAmount{uint64_t(ccFundingAmount_ * ccLotSize_)}) }
+            , true, 987, false, genesisAddr_);
 
          BinaryData fundingTx;
          {
