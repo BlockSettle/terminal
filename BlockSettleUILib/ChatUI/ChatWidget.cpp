@@ -98,7 +98,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    , const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr
    , const std::shared_ptr<AuthAddressManager> &authManager
    , const std::shared_ptr<ArmoryConnection>& armory
-   , const std::shared_ptr<SignContainer>& signContainer
+   , const std::shared_ptr<WalletSignerContainer>& signContainer
    , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
