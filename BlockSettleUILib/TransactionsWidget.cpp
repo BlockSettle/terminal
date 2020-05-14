@@ -707,11 +707,13 @@ void TransactionsWidget::onRevokeSettlement()
       args->armory = armory_;
       args->signContainer = signContainer_;
       args->payinTxId = txItem->txEntry.txHash;
-      args->recvAddr = xbtWallet->getExtAddressList()[std::rand() % xbtWallet->getExtAddressCount()];
       args->outputXbtWallet = xbtWallet;
 
-      signContainer_->getSettlCP(walletsManager_->getPrimaryWallet()->walletId()
-         , args->payinTxId, cbSettlCP);
+      xbtWallet->getNewExtAddress([this, args, cbSettlCP](const bs::Address &addr) {
+         args->recvAddr = addr;
+         signContainer_->getSettlCP(walletsManager_->getPrimaryWallet()->walletId()
+            , args->payinTxId, cbSettlCP);
+      });
    };
 
    if (txItem->initialized) {

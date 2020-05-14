@@ -219,7 +219,7 @@ namespace {
 OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<SignContainer> &signContainer
+   , const std::shared_ptr<WalletSignerContainer> &signContainer
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , const std::shared_ptr<ApplicationSettings>& applicationSettings
@@ -1331,8 +1331,13 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
          if (deal->side == otc::Side::Sell) {
             assert(deal->payin.isValid());
 
-            const bool expandTxInfo = applicationSettings_->get<bool>(
-               ApplicationSettings::DetailedSettlementTxDialogByDefault);
+            const auto &authLeaf = walletsMgr_->getAuthWallet();
+            if (!authLeaf) {
+               SPDLOG_LOGGER_ERROR(logger_, "can't find auth wallet");
+               return;
+            }
+            signContainer_->setSettlCP(authLeaf->walletId(), deal->payin.txId(), BinaryData::CreateFromHex(deal->settlementId), deal->cpPubKey);
+            signContainer_->setSettlAuthAddr(authLeaf->walletId(), BinaryData::CreateFromHex(deal->settlementId), deal->ourAuthAddress);
 
             auto payinInfo = toPasswordDialogDataPayin(*deal, deal->payin, timestamp, expandTxDialog());
             auto reqId = signContainer_->signSettlementTXRequest(deal->payin, payinInfo);

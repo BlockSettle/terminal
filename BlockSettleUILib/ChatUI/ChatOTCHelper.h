@@ -46,11 +46,11 @@ namespace Blocksettle {
    }
 }
 
+class ApplicationSettings;
 class ArmoryConnection;
 class AuthAddressManager;
 class OtcClient;
-class SignContainer;
-class ApplicationSettings;
+class WalletSignerContainer;
 
 class ChatOTCHelper : public QObject {
    Q_OBJECT
@@ -62,7 +62,7 @@ public:
       , const std::shared_ptr<spdlog::logger>& loggerPtr
       , const std::shared_ptr<bs::sync::WalletsManager>& walletsMgr
       , const std::shared_ptr<ArmoryConnection>& armory
-      , const std::shared_ptr<SignContainer>& signContainer
+      , const std::shared_ptr<WalletSignerContainer>& signContainer
       , const std::shared_ptr<AuthAddressManager> &authAddressManager
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
       , const std::shared_ptr<ApplicationSettings>& applicationSettings);

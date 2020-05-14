@@ -22,16 +22,16 @@
 
 class QItemSelection;
 
-class AuthAddressManager;
+class ApplicationSettings;
 class ArmoryConnection;
 class AssetManager;
-class ChatPartiesTreeModel;
+class AuthAddressManager;
 class ChatOTCHelper;
+class ChatPartiesTreeModel;
 class MDCallbacksQt;
 class OTCRequestViewModel;
 class OTCWindowsManager;
-class SignContainer;
-class ApplicationSettings;
+class WalletSignerContainer;
 
 namespace Ui {
    class ChatWidget;
@@ -70,7 +70,7 @@ public:
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<AuthAddressManager> &
       , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<WalletSignerContainer> &
       , const std::shared_ptr<MDCallbacksQt> &
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<bs::UTXOReservationManager> &

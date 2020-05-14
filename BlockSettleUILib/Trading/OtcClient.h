@@ -73,10 +73,10 @@ namespace bs {
    class UTXOReservationManager;
 }
 
+class ApplicationSettings;
 class ArmoryConnection;
 class AuthAddressManager;
-class ApplicationSettings;
-class SignContainer;
+class WalletSignerContainer;
 struct OtcClientDeal;
 
 struct OtcClientParams
@@ -93,7 +93,7 @@ public:
    OtcClient(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
       , const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<SignContainer> &signContainer
+      , const std::shared_ptr<WalletSignerContainer> &signContainer
       , const std::shared_ptr<AuthAddressManager> &authAddressManager
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
       , const std::shared_ptr<ApplicationSettings>& applicationSettings
@@ -200,7 +200,7 @@ private:
 
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<ArmoryConnection> armory_;
-   std::shared_ptr<SignContainer> signContainer_;
+   std::shared_ptr<WalletSignerContainer> signContainer_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;
    std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
    std::shared_ptr<ApplicationSettings> applicationSettings_;
