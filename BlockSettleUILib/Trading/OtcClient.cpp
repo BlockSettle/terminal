@@ -1336,7 +1336,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
                SPDLOG_LOGGER_ERROR(logger_, "can't find auth wallet");
                return;
             }
-            signContainer_->setSettlCP(authLeaf->walletId(), deal->payin.txId(), BinaryData::CreateFromHex(deal->settlementId), deal->cpPubKey);
+            signContainer_->setSettlCP(authLeaf->walletId(), deal->unsignedPayinHash, BinaryData::CreateFromHex(deal->settlementId), deal->cpPubKey);
             signContainer_->setSettlAuthAddr(authLeaf->walletId(), BinaryData::CreateFromHex(deal->settlementId), deal->ourAuthAddress);
 
             auto payinInfo = toPasswordDialogDataPayin(*deal, deal->payin, timestamp, expandTxDialog());
