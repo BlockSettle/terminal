@@ -381,7 +381,7 @@ Tx TestCCoin::CreateCJtx(
       for (const auto &wallet : signWallets) {        
          auto localSigner = Signer::createFromState(signerState);
          localSigner.setFlags(SCRIPT_VERIFY_SEGWIT);
-         localSigner.getTxId();
+         localSigner.resolveSpenders();
          signerState = localSigner.serializeState();
       }
 
@@ -399,7 +399,7 @@ Tx TestCCoin::CreateCJtx(
       cjSigner.sign();
    }
 
-   EXPECT_TRUE(cjSigner.isValid());
+   EXPECT_TRUE(cjSigner.isSigned());
    EXPECT_TRUE(cjSigner.verify());
    auto signedTx = cjSigner.serializeSignedTx();
    EXPECT_FALSE(signedTx.empty());

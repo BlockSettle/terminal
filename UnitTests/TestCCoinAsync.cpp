@@ -361,7 +361,7 @@ Tx TestCCoinAsync::CreateCJtx(
       cjSigner.sign();
    }
 
-   EXPECT_TRUE(cjSigner.isValid());
+   EXPECT_TRUE(cjSigner.isSigned());
    EXPECT_TRUE(cjSigner.verify());
    auto signedTx = cjSigner.serializeSignedTx();
    EXPECT_FALSE(signedTx.empty());
