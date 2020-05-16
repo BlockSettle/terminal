@@ -51,7 +51,12 @@ CustomTitleDialogWindow {
 
     property bool digitalBackupAcceptable: false
     property bool digitalWoBackupAcceptable: false
-    property bool walletSelected: rbPaperBackup.checked ? rootKeyInput.acceptableInput : digitalBackupAcceptable
+    property bool walletSelected: if (rbPaperBackup.checked)
+                                      rootKeyInput.acceptableInput
+                                  else if(rbBip39_12.checked || rbBip39_24.checked)
+                                      rootKeyInputBip39.accepted
+                                  else
+                                      digitalBackupAcceptable
     property bool importAcceptable: tfName.text.length
                                     && (newPasswordWithConfirm.acceptableInput && rbPassword.checked
                                         || textInputEmail.text && rbAuth.checked)
@@ -60,7 +65,7 @@ CustomTitleDialogWindow {
     property bool authNoticeShown: false
 
     title: qsTr("Import Wallet")
-    width: 410
+    width: 460
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletImport
 
@@ -143,7 +148,7 @@ CustomTitleDialogWindow {
 
                     CustomHeader {
                         id: headerText
-                        text: qsTr("Backup Type")
+                        text: qsTr("Wallet Type")
                         Layout.fillWidth: true
                         Layout.preferredHeight: 25
                         Layout.topMargin: 5
@@ -155,20 +160,72 @@ CustomTitleDialogWindow {
                         id: fullImportLayout
 
                         RowLayout {
+                            id: radioButtonsParent
+
                             spacing: 5
                             Layout.fillWidth: true
                             Layout.leftMargin: 10
                             Layout.rightMargin: 10
 
-                            CustomRadioButton {
-                                id: rbPaperBackup
-                                Layout.leftMargin: rootKeyInput.inputLabelsWidth
-                                text: qsTr("Paper Backup")
-                                checked: true
+
+                            ColumnLayout {
+                                Layout.leftMargin: 5
+                                spacing: 1
+
+                                CustomLabel {
+                                    text: "BlockSettle"
+                                    Layout.alignment: Qt.AlignLeft
+                                }
+
+                                RowLayout {
+                                    CustomRadioButton {
+                                        id: rbPaperBackup
+                                        text: qsTr("Paper Backup")
+                                        checked: true
+                                        onClicked: radioButtonsParent.checkedChanged(this)
+                                    }
+                                    CustomRadioButton {
+                                        id: rbFileBackup
+                                        text: qsTr("Digital Backup")
+                                        onClicked: radioButtonsParent.checkedChanged(this)
+                                    }
+                                }
                             }
-                            CustomRadioButton {
-                                id: rbFileBackup
-                                text: qsTr("Digital Backup")
+
+                            Rectangle {
+                                height: rbFileBackup.height
+                                width: 1
+                                color: Qt.rgba(1, 1, 1, 0.1)
+                                Layout.alignment: Qt.AlignBottom
+                            }
+
+                            ColumnLayout {
+                                spacing: 1
+
+                                CustomLabel {
+                                    text:  qsTr("Bip39")
+                                    Layout.alignment: Qt.AlignLeft
+                                }
+
+                                RowLayout {
+                                    CustomRadioButton {
+                                        id: rbBip39_12
+                                        text: qsTr("12 word seed")
+                                        onClicked: radioButtonsParent.checkedChanged(this)
+                                    }
+                                    CustomRadioButton {
+                                        id: rbBip39_24
+                                        text: qsTr("24 word seed")
+                                        onClicked: radioButtonsParent.checkedChanged(this)
+                                    }
+                                }
+                            }
+
+                            function checkedChanged(rbutton) {
+                                rbPaperBackup.checked = (rbutton === rbPaperBackup);
+                                rbFileBackup.checked = (rbutton === rbFileBackup);
+                                rbBip39_12.checked = (rbutton === rbBip39_12);
+                                rbBip39_24.checked = (rbutton === rbBip39_24);
                             }
                         }
 
@@ -197,7 +254,6 @@ CustomTitleDialogWindow {
                             rowSpacing: 0
                             columnSpacing: 0
                             Layout.margins: 5
-                            //sectionHeaderTxt: qsTr("Enter Root Private Key")
                             line1LabelTxt: qsTr("Line 1")
                             line2LabelTxt: qsTr("Line 2")
                             onEntryComplete: {
@@ -205,6 +261,18 @@ CustomTitleDialogWindow {
                                 if (seed.networkType === WalletInfo.Invalid) {
                                     JsHelper.messageBoxCritical(qsTr("Error"), qsTr("Failed to parse paper backup key."), "")
                                 }
+                            }
+                        }
+
+                        BSPib39Input {
+                            id: rootKeyInputBip39
+                            visible: rbBip39_24.checked || rbBip39_12.checked
+                            wordsCount: rbBip39_12.checked ? 12 : 24
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 5
+                            Layout.rightMargin: 10
+                            onEntryComplete: {
+                                seed = qmlFactory.createSeedFromMnemonic(mnemonicSentence, signerSettings.testNet)
                             }
                         }
                     }
@@ -585,6 +653,9 @@ CustomTitleDialogWindow {
 
                         if (rbPaperBackup.checked) {
                             seed = qmlFactory.createSeedFromPaperBackupT(rootKeyInput.privateRootKey, signerSettings.testNet)
+                        }
+                        else if (rbBip39_24.checked || rbBip39_12.checked) {
+                            seed = qmlFactory.createSeedFromMnemonic(rootKeyInputBip39.mnemonicSentence, signerSettings.testNet)
                         }
                         else {
                             seed = qmlFactory.createSeedFromDigitalBackupT(lblDBFile.text, signerSettings.testNet)

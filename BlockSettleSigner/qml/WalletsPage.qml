@@ -37,8 +37,7 @@ Item {
         onModelReset: {
             // when model resetted selectionChanged signal is not emitted
             // button states needs to be updated after model reset, this emitted signal will do that
-            var idx = walletsView_.model.index(-1,-1);
-            walletsView_.selection.currentChanged(idx, idx)
+            buttonRow.enableButtons = Qt.binding(function(){ return walletsView_.selection.hasSelection; })
         }
     }
 
@@ -124,7 +123,12 @@ Item {
                         enabled: buttonRow.enableButtons
                         text: qsTr("Delete")
                         onClicked: {
-                            JsHelper.deleteWalletDialog(getCurrentWalletIdData())
+                            let dialog = JsHelper.deleteWalletDialog(getCurrentWalletIdData())
+                            dialog.bsAccepted.connect(function(){
+                                console.log("HERE", walletsView_.selection.hasSelection
+                                            , buttonRow.enableButtons)
+                                walletsView_.selection.clear();
+                            })
                         }
                     }
                 }

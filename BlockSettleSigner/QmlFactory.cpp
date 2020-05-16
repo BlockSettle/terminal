@@ -9,14 +9,19 @@
 
 */
 #include "QmlFactory.h"
+
 #include <QApplication>
 #include <QStyle>
 #include <QClipboard>
 #include <QQuickWindow>
 #include <QKeyEvent>
+#include <QDir>
+
 #include <spdlog/spdlog.h>
 #include "Wallets/SyncWalletsManager.h"
 #include "SignerAdapter.h"
+
+#include "Bip39EntryValidator.h"
 
 using namespace bs::hd;
 
@@ -37,6 +42,14 @@ QmlFactory::QmlFactory(const std::shared_ptr<ApplicationSettings> &settings
 void QmlFactory::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
 {
    walletsMgr_ = walletsMgr;
+}
+
+bs::wallet::QSeed* QmlFactory::createSeedFromMnemonic(const QString &key, bool isTestNet)
+{
+   auto networkType = isTestNet ? bs::wallet::QSeed::QNetworkType::TestNet : bs::wallet::QSeed::QNetworkType::MainNet;
+   auto seed = new bs::wallet::QSeed(bs::wallet::QSeed::fromMnemonicWordList(key, networkType, bip39Dictionaries()));
+   QQmlEngine::setObjectOwnership(seed, QQmlEngine::JavaScriptOwnership);
+   return seed;
 }
 
 WalletInfo *QmlFactory::createWalletInfo() const{
@@ -217,3 +230,39 @@ void QmlFactory::setInitMessageWasShown()
     isControlPassMessageShown = true;
 }
 
+const std::vector<std::vector<std::string>>& QmlFactory::bip39Dictionaries()
+{
+   if (!bip39Dictionaries_.empty()) {
+      return bip39Dictionaries_;
+   }
+
+   // Lazy init from resources
+   QDir dictLocation(QLatin1String(":/bip39Dictionaries/"));
+   QStringList dictFiles = dictLocation.entryList(QStringList(QLatin1String("*.txt")));
+   bip39Dictionaries_.reserve(dictFiles.size());
+   for (const auto &dictFileName : dictFiles) {
+      QFile dictFile(QString::fromLatin1("://bip39Dictionaries/%1").arg(dictFileName));
+      if (!dictFile.open(QFile::ReadOnly)) {
+         continue;
+      }
+
+      QTextStream fileStream(&dictFile);
+      std::vector<std::string> dictionary;
+      while (!fileStream.atEnd()) {
+         dictionary.push_back(fileStream.readLine().toStdString());
+      }
+      // According to standard dictionary size 2048 words
+      assert(dictionary.size() == 2048);
+      bip39Dictionaries_.push_back(std::move(dictionary));
+      dictFile.close();
+
+      // We wanted English dictionary to be always in first place
+      // to avoid lookup in other, with less chance to be use
+      if (dictFileName == QLatin1String("english.txt")) {
+         std::iter_swap(bip39Dictionaries_.begin(), bip39Dictionaries_.end() - 1);
+      }
+   }
+   assert(!bip39Dictionaries_.empty());
+
+   return bip39Dictionaries_;
+}
