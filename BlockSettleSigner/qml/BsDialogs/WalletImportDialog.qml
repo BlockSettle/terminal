@@ -264,7 +264,7 @@ CustomTitleDialogWindow {
                             }
                         }
 
-                        BSPib39Input {
+                        BSBip39Input {
                             id: rootKeyInputBip39
                             visible: rbBip39_24.checked || rbBip39_12.checked
                             wordsCount: rbBip39_12.checked ? 12 : 24

@@ -81,16 +81,7 @@
         <file>qml/BsHw/HwAvailableDevices.qml</file>
         <file>qml/BsHw/PassphraseDialog.qml</file>
         <file>qml/InfoBar.qml</file>
-        <file>bip39Dictionaries/chinese_simplified.txt</file>
-        <file>bip39Dictionaries/chinese_traditional.txt</file>
-        <file>bip39Dictionaries/czech.txt</file>
-        <file>bip39Dictionaries/english.txt</file>
-        <file>bip39Dictionaries/french.txt</file>
-        <file>bip39Dictionaries/italian.txt</file>
-        <file>bip39Dictionaries/japanese.txt</file>
-        <file>bip39Dictionaries/korean.txt</file>
-        <file>bip39Dictionaries/spanish.txt</file>
-        <file>qml/BsControls/BSPib39Input.qml</file>
+        <file>qml/BsControls/BSBip39Input.qml</file>
         <file>qml/StyledControls/CustomContextMenu.qml</file>
     </qresource>
 </RCC>

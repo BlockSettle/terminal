@@ -123,12 +123,7 @@ Item {
                         enabled: buttonRow.enableButtons
                         text: qsTr("Delete")
                         onClicked: {
-                            let dialog = JsHelper.deleteWalletDialog(getCurrentWalletIdData())
-                            dialog.bsAccepted.connect(function(){
-                                console.log("HERE", walletsView_.selection.hasSelection
-                                            , buttonRow.enableButtons)
-                                walletsView_.selection.clear();
-                            })
+                            JsHelper.deleteWalletDialog(getCurrentWalletIdData())
                         }
                     }
                 }
