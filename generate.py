@@ -29,6 +29,7 @@ from build_scripts.botan_settings         import BotanSettings
 from build_scripts.hidapi_settings        import HidapiSettings
 from build_scripts.libusb_settings        import LibusbSettings
 from build_scripts.trezor_common_settings import TrezorCommonSettings
+from build_scripts.bip_protocols_settings import BipProtocolsSettings
 
 def generate_project(build_mode, link_mode, build_production, hide_warnings, cmake_flags, build_tests, build_tracker):
    project_settings = Settings(build_mode, link_mode)
@@ -58,7 +59,8 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
       QtSettings(project_settings),
       HidapiSettings(project_settings),
       LibusbSettings(project_settings),
-      TrezorCommonSettings(project_settings)
+      TrezorCommonSettings(project_settings),
+      BipProtocolsSettings(project_settings)
    ]
 
    if build_tests:
