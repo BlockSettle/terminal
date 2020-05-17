@@ -14,6 +14,7 @@
 #include "ConnectionManager.h"
 #include "CoreWalletsManager.h"
 #include "EasyEncValidator.h"
+#include "Bip39EntryValidator.h"
 #include "PasswordConfirmValidator.h"
 #include "PdfBackupQmlPrinter.h"
 #include "QMLApp.h"
@@ -233,6 +234,7 @@ void QMLAppObj::registerQtTypes()
    qmlRegisterType<bs::wallet::TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
    qmlRegisterType<bs::sync::PasswordDialogData>("com.blocksettle.PasswordDialogData", 1, 0, "PasswordDialogData");
    qmlRegisterType<QmlPdfBackup>("com.blocksettle.QmlPdfBackup", 1, 0, "QmlPdfBackup");
+   qmlRegisterType<Bip39EntryValidator>("com.blocksettle.Bip39EntryValidator", 1, 0, "Bip39EntryValidator");
    qmlRegisterType<EasyEncValidator>("com.blocksettle.EasyEncValidator", 1, 0, "EasyEncValidator");
    qmlRegisterType<PasswordConfirmValidator>("com.blocksettle.PasswordConfirmValidator", 1, 0, "PasswordConfirmValidator");
 

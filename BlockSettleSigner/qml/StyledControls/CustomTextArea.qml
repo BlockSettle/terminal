@@ -13,6 +13,7 @@ import QtQuick.Controls 2.3
 import "../BsStyles"
 
 TextArea {
+    id: root
     horizontalAlignment: Text.AlignHLeft
     font.pixelSize: 11
     color: "white"
@@ -23,5 +24,9 @@ TextArea {
         implicitHeight: 50
         color:"transparent"
         border.color: BSStyle.inputsBorderColor
+    }
+
+    CustomContextMenu {
+        anchors.fill: parent
     }
 }

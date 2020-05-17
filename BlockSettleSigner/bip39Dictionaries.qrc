@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/">
+        <file>bip39Dictionaries/chinese_simplified.txt</file>
+        <file>bip39Dictionaries/chinese_traditional.txt</file>
+        <file>bip39Dictionaries/czech.txt</file>
+        <file>bip39Dictionaries/english.txt</file>
+        <file>bip39Dictionaries/french.txt</file>
+        <file>bip39Dictionaries/italian.txt</file>
+        <file>bip39Dictionaries/japanese.txt</file>
+        <file>bip39Dictionaries/korean.txt</file>
+        <file>bip39Dictionaries/spanish.txt</file>
+    </qresource>
+</RCC>
