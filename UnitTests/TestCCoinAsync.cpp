@@ -281,7 +281,7 @@ BinaryData TestCCoinAsync::SimpleSendMany(const bs::Address & fromAddress, const
          if (inputsValue < requiredValue + fee)
             throw std::runtime_error("Not enough money on the source address");
 
-         const auto txReq = wallet->createTXRequest(valInputs, recipients, fee, false, fromAddress);
+         const auto txReq = wallet->createTXRequest(valInputs, recipients, true, fee, false, fromAddress);
          BinaryData txSigned;
          {
             const bs::core::WalletPasswordScoped lock(lockWallet, passphrase_);
@@ -361,7 +361,7 @@ Tx TestCCoinAsync::CreateCJtx(
       cjSigner.sign();
    }
 
-   EXPECT_TRUE(cjSigner.isValid());
+   EXPECT_TRUE(cjSigner.isSigned());
    EXPECT_TRUE(cjSigner.verify());
    auto signedTx = cjSigner.serializeSignedTx();
    EXPECT_FALSE(signedTx.empty());

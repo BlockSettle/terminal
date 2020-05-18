@@ -467,7 +467,7 @@ QuoteReqSortModel::QuoteReqSortModel(QuoteRequestsModel *model, QObject *parent)
    , showQuoted_(true)
 {
    connect(model_, &QuoteRequestsModel::invalidateFilterModel,
-      this, &QuoteReqSortModel::invalidate);
+      this, &QuoteReqSortModel::invalidateFilter);
 }
 
 bool QuoteReqSortModel::filterAcceptsRow(int row, const QModelIndex &parent) const

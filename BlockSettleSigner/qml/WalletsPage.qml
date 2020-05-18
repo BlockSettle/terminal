@@ -37,14 +37,17 @@ Item {
         onModelReset: {
             // when model resetted selectionChanged signal is not emitted
             // button states needs to be updated after model reset, this emitted signal will do that
-            var idx = walletsView_.model.index(-1,-1);
-            walletsView_.selection.currentChanged(idx, idx)
+            buttonRow.enableButtons = Qt.binding(function(){ return walletsView_.selection.hasSelection; })
         }
     }
 
     function getCurrentWalletIdData() {
-        var data = {}
-        data["rootId"] = walletsView_.model.data(walletsView_.selection.currentIndex, WalletsModel.WalletIdRole)
+        let data = {}
+        let parent = walletsView_.selection.currentIndex;
+        while (!walletsView.model.data(parent, WalletsModel.IsHDRootRole)) {
+            parent = walletsView_.model.parent(parent);
+        }
+        data["rootId"] = walletsView_.model.data(parent, WalletsModel.WalletIdRole)
         return data
     }
 
@@ -69,6 +72,8 @@ Item {
                     padding: 5
                     height: childrenRect.height + 10
                     width: parent.width
+
+                    property bool enableButtons: walletsView_.selection.hasSelection
 
                     CustomButton {
                         primary: true
@@ -96,7 +101,7 @@ Item {
                         width: 150
 
                         text: qsTr("Manage")
-                        enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
+                        enabled: buttonRow.enableButtons
                         onClicked: {
                             JsHelper.manageEncryptionDialog(getCurrentWalletIdData())
                         }
@@ -106,7 +111,7 @@ Item {
                         primary: true
                         width: 150
                         text: qsTr("Export")
-                        enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
+                        enabled: buttonRow.enableButtons
                         onClicked: {
                             JsHelper.backupWalletDialog(getCurrentWalletIdData())
                         }
@@ -115,7 +120,7 @@ Item {
                     CustomButton {
                         primary: true
                         width: 150
-                        enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
+                        enabled: buttonRow.enableButtons
                         text: qsTr("Delete")
                         onClicked: {
                             JsHelper.deleteWalletDialog(getCurrentWalletIdData())

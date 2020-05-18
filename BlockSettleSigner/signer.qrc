@@ -80,5 +80,8 @@
         <file>qml/BsHw/PinMatrixDialog.qml</file>
         <file>qml/BsHw/HwAvailableDevices.qml</file>
         <file>qml/BsHw/PassphraseDialog.qml</file>
+        <file>qml/InfoBar.qml</file>
+        <file>qml/BsControls/BSBip39Input.qml</file>
+        <file>qml/StyledControls/CustomContextMenu.qml</file>
     </qresource>
 </RCC>

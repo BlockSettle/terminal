@@ -159,10 +159,9 @@ void TestCC::SetUp()
    {
       try 
       {
-         const auto fundingTxReq = xbtWallet_->createTXRequest(
-            inputs, 
-            { addr.getRecipient(bs::XBTAmount{uint64_t(ccFundingAmount_ * ccLotSize_)}) },
-            987, false, genesisAddr_);
+         const auto fundingTxReq = xbtWallet_->createTXRequest(inputs
+            , { addr.getRecipient(bs::XBTAmount{uint64_t(ccFundingAmount_ * ccLotSize_)}) }
+            , true, 987, false, genesisAddr_);
 
          BinaryData fundingTx;
          {
@@ -326,7 +325,7 @@ TEST_F(TestCC, DISABLED_TX_buy)
          Signer signer;                         // merge halves
          signer.deserializeState(signed1);
          signer.deserializeState(signed2);
-         ASSERT_TRUE(signer.isValid());
+         ASSERT_TRUE(signer.isSigned());
          ASSERT_TRUE(signer.verify());
          auto tx = signer.serializeSignedTx();
          ASSERT_FALSE(tx.empty());
@@ -450,7 +449,7 @@ TEST_F(TestCC, DISABLED_TX_sell)
          Signer signer;                         // merge halves
          signer.deserializeState(signed1);
          signer.deserializeState(signed2);
-         ASSERT_TRUE(signer.isValid());
+         ASSERT_TRUE(signer.isSigned());
          ASSERT_TRUE(signer.verify());
          auto tx = signer.serializeSignedTx();
          ASSERT_FALSE(tx.empty());

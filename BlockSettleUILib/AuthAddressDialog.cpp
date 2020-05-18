@@ -339,6 +339,7 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
          .arg(UiUtils::displayCurrencyAmount(validationAmount))
          .arg(BSMessageBox::kUrlColor), this);
       warnFunds.setWindowTitle(tr("Insufficient Funds"));
+      warnFunds.enableRichText();
       warnFunds.exec();
 
       if (bsClient_) {

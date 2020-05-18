@@ -281,7 +281,7 @@ BinaryData TestCCoin::SimpleSendMany(const bs::Address & fromAddress, const std:
          if (inputsValue < requiredValue + fee)
             throw std::runtime_error("Not enough money on the source address");
 
-         const auto txReq = wallet->createTXRequest(valInputs, recipients, fee, false, fromAddress);
+         const auto txReq = wallet->createTXRequest(valInputs, recipients, true, fee, false, fromAddress);
          BinaryData txSigned;
          {
             const bs::core::WalletPasswordScoped lock(lockWallet, passphrase_);
@@ -308,7 +308,7 @@ Tx TestCCoin::CreateCJtx(
    const std::vector<UTXO> & paymentSortedInputsUserB,
    const CCoinSpender& structA, const CCoinSpender& structB,
    const std::vector<UTXO> & ccInputsAppend,
-   unsigned blockDelay)
+   unsigned blockDelay, bool returnUnsigned)
 {
    uint64_t fee = 1000;
    uint64_t ccValue = 0;
@@ -373,6 +373,23 @@ Tx TestCCoin::CreateCJtx(
    if(xbtValue - structA.xbtValue_ - fee > 0)
       cjSigner.addRecipient(structB.xbtAddr_.getRecipient(bs::XBTAmount{ xbtValue - structA.xbtValue_ - fee }));
 
+   //grab unsigned tx if applicable
+   Tx unsignedTx;
+   if (returnUnsigned) {
+      auto signerState = cjSigner.serializeState();
+
+      for (const auto &wallet : signWallets) {        
+         auto localSigner = Signer::createFromState(signerState);
+         localSigner.setFlags(SCRIPT_VERIFY_SEGWIT);
+         localSigner.resolveSpenders();
+         signerState = localSigner.serializeState();
+      }
+
+      auto finalSigner = Signer::createFromState(signerState);
+      unsignedTx.unserialize(finalSigner.serializeUnsignedTx());
+   }
+
+   //sign
    for (const auto &wallet : signWallets) {
       auto hdRoot = envPtr_->walletsMgr()->getHDRootForLeaf(wallet->walletId());
       const bs::core::WalletPasswordScoped passScoped(hdRoot, passphrase_);
@@ -382,7 +399,7 @@ Tx TestCCoin::CreateCJtx(
       cjSigner.sign();
    }
 
-   EXPECT_TRUE(cjSigner.isValid());
+   EXPECT_TRUE(cjSigner.isSigned());
    EXPECT_TRUE(cjSigner.verify());
    auto signedTx = cjSigner.serializeSignedTx();
    EXPECT_FALSE(signedTx.empty());
@@ -410,6 +427,9 @@ Tx TestCCoin::CreateCJtx(
 
    envPtr_->armoryInstance()->pushZC(signedTx, blockDelay);
    EXPECT_TRUE(waitOnZc(tx.getThisHash(), addresses));
+
+   if (returnUnsigned)
+      return unsignedTx;
 
    return tx;
 }
@@ -632,6 +652,40 @@ TEST_F(TestCCoin, Case_TxProcessOrder1)
    ccsB.ccValue_ = amountCC * ccLotSize_;
 
    auto tx = CreateCJtx(utxosA, utxosB, ccsA, ccsB);
+   {
+      /*
+      createCJtx pushes the tx but doesn't trigger the ColoredCoinTracker 
+      maintenance routine. Candidacy checks should pass as if the tx was not 
+      broadcasted.
+      */
+      auto candidacyResult = cct->tracker()->parseCcCandidateTx(tx);
+      EXPECT_TRUE(candidacyResult.isValidCcTx_);
+      EXPECT_NE(candidacyResult.totalCcRedeemed_, 0);
+      EXPECT_NE(candidacyResult.totalXbtSpent_, 0);
+      EXPECT_EQ(candidacyResult.totalCcRedeemed_, 100 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalCcRedeemed_, candidacyResult.totalCcSpent_);
+      
+      //buyer cc addr
+      auto ccAddrIter1 = candidacyResult.ccPerAddr_.find(userCCAddresses_[1]);
+      ASSERT_NE(ccAddrIter1, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccAddrIter1->second, ccsB.ccValue_);
+
+      //cc change addr
+      auto ccAddrIter9 = candidacyResult.ccPerAddr_.find(userCCAddresses_[9]);
+      ASSERT_NE(ccAddrIter9, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccAddrIter9->second, 100*ccLotSize_ - ccsB.ccValue_);
+
+      //buyer xbt addr
+      auto xbtAddrIter1 = candidacyResult.xbtPerAddr_.find(userFundAddresses_[1]);
+      ASSERT_NE(xbtAddrIter1, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtAddrIter1->second, 49 * COIN - 1000); //1000sat fee
+
+      //seller change addr
+      auto xbtAddrIter0 = candidacyResult.xbtPerAddr_.find(userFundAddresses_[0]);
+      ASSERT_NE(xbtAddrIter0, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtAddrIter0->second, COIN);
+   }
+
    EXPECT_EQ(tx.getNumTxIn(), 2);
    EXPECT_EQ(tx.getNumTxOut(), 4);
    MineBlocks(6);
@@ -665,7 +719,37 @@ TEST_F(TestCCoin, Case_TxProcessOrder1)
    auto utxosC2 = GetUTXOsFor(ccsC.xbtAddr_);
    ASSERT_FALSE(utxosC2.empty());
 
-   tx = CreateCJtx(utxosC1, utxosC2, ccsB, ccsC);
+   tx = CreateCJtx(utxosC1, utxosC2, ccsB, ccsC, {}, 0, true);
+   {
+      //run this check on the unsigned tx this time around
+      auto candidacyResult = cct->tracker()->parseCcCandidateTx(tx);
+      EXPECT_TRUE(candidacyResult.isValidCcTx_);
+      EXPECT_NE(candidacyResult.totalCcRedeemed_, 0);
+      EXPECT_NE(candidacyResult.totalXbtSpent_, 0);
+      EXPECT_EQ(candidacyResult.totalCcRedeemed_, amountCC * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalCcRedeemed_, candidacyResult.totalCcSpent_);
+      
+      //buyer cc addr
+      auto ccAddrIter7 = candidacyResult.ccPerAddr_.find(userCCAddresses_[7]);
+      ASSERT_NE(ccAddrIter7, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccAddrIter7->second, 25 * ccLotSize_);
+
+      //cc change addr
+      auto ccAddrIter8 = candidacyResult.ccPerAddr_.find(userCCAddresses_[8]);
+      ASSERT_NE(ccAddrIter8, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccAddrIter8->second, ccsB.ccValue_ - 25 * ccLotSize_);
+
+      //buyer xbt addr
+      auto xbtAddrIter2 = candidacyResult.xbtPerAddr_.find(userFundAddresses_[2]);
+      ASSERT_NE(xbtAddrIter2, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtAddrIter2->second, 49 * COIN - 1000); //1000sat fee
+
+      //seller change addr
+      auto xbtAddrIter1 = candidacyResult.xbtPerAddr_.find(userFundAddresses_[1]);
+      ASSERT_NE(xbtAddrIter1, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtAddrIter1->second, COIN);
+   }
+
    MineBlocks(6);
    update(cct);
 
@@ -708,16 +792,16 @@ TEST_F(TestCCoin, Case_TxProcessOrder1)
 
    //
    for (const auto &utxo : utxosD1) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValidHistory(utxo.getTxHash()));
    }
    for (const auto &utxo : utxosD3) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValidHistory(utxo.getTxHash()));
    }
 
    const auto utxosD = GetUTXOsFor(ccsD.ccAddr_);
    ASSERT_FALSE(utxosD.empty());
    for (const auto &utxo : utxosD) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
    }
 
    //set up new cct object, should have same balance as first cct;
@@ -844,16 +928,16 @@ TEST_F(TestCCoin, Case_TxProcessOrder2)
 
    //
    for (const auto &utxo : utxosD1) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValidHistory(utxo.getTxHash()));
    }
    for (const auto &utxo : utxosD3) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValidHistory(utxo.getTxHash()));
    }
 
    const auto utxosD = GetUTXOsFor(ccsD.ccAddr_);
    ASSERT_FALSE(utxosD.empty());
    for (const auto &utxo : utxosD) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
    }
 
    //set up new cct object, should have same balance as first cct;
@@ -966,6 +1050,7 @@ TEST_F(TestCCoin, Case_TxProcessOrder3)
    auto utxosD3 = GetUTXOsFor(userCCAddresses_[2]);
    ASSERT_FALSE(utxosD3.empty());
 
+   //delay mining of cc tx by 20 blocks
    tx = CreateCJtx(utxosD1, utxosD2, ccsC, ccsD, utxosD3, 20);
    MineBlocks(6);
    update(cct);
@@ -982,16 +1067,26 @@ TEST_F(TestCCoin, Case_TxProcessOrder3)
 
    //
    for (const auto &utxo : utxosD1) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      //spent cc utxo is valid if checked without zc
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
+
+      //and invalid if checked with zc
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), true));
    }
    for (const auto &utxo : utxosD3) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      //same as above
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), true));
    }
 
    const auto utxosD = GetCCUTXOsFor(cct, ccsD.ccAddr_, true, true);
    ASSERT_FALSE(utxosD.empty());
    for (const auto &utxo : utxosD) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      //newly created cc output is invalid is checked without zc
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
+
+      //and valid if checked with zc
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), true));
    }
 
    //set up new cct object, should have same balance as first cct;
@@ -1097,6 +1192,11 @@ TEST_F(TestCCoin, Case_TxProcessOrder4)
 
    auto utxosD1 = GetCCUTXOsFor(cct, ccsC.ccAddr_, false, true);
    ASSERT_FALSE(utxosD1.empty());
+   for (const auto &utxo : utxosD1) {
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), true));
+   }
+
    auto utxosD2 = GetUTXOsFor(ccsD.xbtAddr_);
    ASSERT_FALSE(utxosD2.empty());
    auto utxosD3 = GetCCUTXOsFor(cct, userCCAddresses_[2], false, true);
@@ -1116,16 +1216,19 @@ TEST_F(TestCCoin, Case_TxProcessOrder4)
 
    //
    for (const auto &utxo : utxosD1) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), true));
    }
    for (const auto &utxo : utxosD3) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), true));
    }
 
    const auto utxosD = GetCCUTXOsFor(cct, ccsD.ccAddr_, false, true);
    ASSERT_FALSE(utxosD.empty());
    for (const auto &utxo : utxosD) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), true));
    }
 
    //set up new cct object, should have same balance as first cct;
@@ -1832,10 +1935,10 @@ TEST_F(TestCCoin, Case_1CC_2CC)
    EXPECT_FALSE(utxosC3.empty());
 
    for (const auto &utxo : utxosC1)
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
 
    for (const auto &utxo : utxosC3)
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
 
    // add change from previous TX as an input - sort it after XBT inputs
    tx = CreateCJtx(utxosC1, utxosC2, ccsB, ccsC, utxosC3);
@@ -1862,18 +1965,18 @@ TEST_F(TestCCoin, Case_1CC_2CC)
    whether the tx had valid CC at any point in time
    */
    for (const auto &utxo : utxosC1) {
-      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
       EXPECT_TRUE(cct->isTxHashValidHistory(utxo.getTxHash()));
    }
    for (const auto &utxo : utxosC3) {
-      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_FALSE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
       EXPECT_TRUE(cct->isTxHashValidHistory(utxo.getTxHash()));
    }
 
    const auto utxosC = GetUTXOsFor(ccsC.ccAddr_);
    ASSERT_FALSE(utxosC.empty());
    for (const auto &utxo : utxosC) {
-      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash()));
+      EXPECT_TRUE(cct->isTxHashValid(utxo.getTxHash(), utxo.getTxOutIndex(), false));
    }
 }
 
@@ -2984,6 +3087,541 @@ TEST_F(TestCCoin, Reorg_WithACT)
    }
 }
 
+////
+TEST_F(TestCCoin, DestroyCC)
+{
+   /*
+   Create a set of unsigned CC transaction to be evaluated 
+   by ColoredCoinTracker::parseCcCandidateTx, verify results
+   */
+   InitialFund({ userCCAddresses_[0], userCCAddresses_[1], userCCAddresses_[2] });
+
+   auto&& cct = makeCct();
+   cct->goOnline();
+
+   const uint64_t gaBalance = COIN + (usersCount_ - 3) * 100 * ccLotSize_;
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), gaBalance);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+
+   auto ccUtxos1 = GetCCUTXOsFor(cct, userCCAddresses_[0]);
+   auto ccUtxos2 = GetCCUTXOsFor(cct, userCCAddresses_[1]);
+   auto ccUtxos3 = GetCCUTXOsFor(cct, userCCAddresses_[2]);
+   auto xbtUtxos1 = GetUTXOsFor(userFundAddresses_[3]);
+
+   EXPECT_EQ(ccUtxos1.size(), 1);
+   EXPECT_EQ(ccUtxos2.size(), 1);
+   EXPECT_EQ(ccUtxos3.size(), 1);
+
+   EXPECT_EQ(xbtUtxos1.size(), 1);
+
+   {
+      std::vector<UTXO> utxoVec = {
+         ccUtxos1.back(), ccUtxos2.back(), ccUtxos3.back(),
+         xbtUtxos1.back()
+      };
+
+      //destroy cc
+      Signer signer;
+      signer.setFlags(SCRIPT_VERIFY_SEGWIT);
+
+      //spenders
+      for (auto& utxo : utxoVec) {
+         signer.addSpender(std::make_shared<ScriptSpender>(utxo));
+      }
+      
+      //recipients
+      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(uint64_t(25 * COIN))));
+      signer.addRecipient(userFundAddresses_[7].getRecipient(bs::XBTAmount(uint64_t(20 * COIN))));
+
+      signer.addRecipient(userCCAddresses_[3].getRecipient(bs::XBTAmount(100 * ccLotSize_)));
+      signer.addRecipient(userCCAddresses_[4].getRecipient(bs::XBTAmount(120 * ccLotSize_)));
+      signer.addRecipient(userCCAddresses_[5].getRecipient(bs::XBTAmount(70 * ccLotSize_)));
+
+      //signing
+      for (auto& utxo : utxoVec) {
+         const auto addr = bs::Address::fromUTXO(utxo);
+         const auto signWallet = envPtr_->walletsMgr()->getWalletByAddress(addr);
+         ASSERT_NE(signWallet, nullptr);
+
+         auto hdRoot = envPtr_->walletsMgr()->getHDRootForLeaf(signWallet->walletId());
+         const bs::core::WalletPasswordScoped passScoped(hdRoot, passphrase_);
+         const auto&& lock = signWallet->lockDecryptedContainer();
+
+         signer.resetFeeds();
+         signer.setFeed(signWallet->getResolver());
+         signer.sign();
+      }
+
+      ASSERT_TRUE(signer.verify());
+
+      //push
+      auto rawTx = signer.serializeSignedTx();
+      envPtr_->armoryInstance()->pushZC(rawTx, 0);
+
+      //mine a block
+      MineBlocks(1, true);
+   }
+
+   update(cct);
+
+   //check all these addresses have no CC balance left
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), gaBalance);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 0);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 0);
+}
+
+////
+TEST_F(TestCCoin, TxCandidateParsing)
+{
+   /*
+   Create a set of unsigned CC transaction to be evaluated 
+   by ColoredCoinTracker::parseCcCandidateTx, verify results
+   */
+   InitialFund({ userCCAddresses_[0], userCCAddresses_[1], userCCAddresses_[2] });
+
+   auto&& cct = makeCct();
+   cct->goOnline();
+
+   const uint64_t gaBalance = COIN + (usersCount_ - 3) * 100 * ccLotSize_;
+
+   EXPECT_EQ(cct->getCcValueForAddress(genesisAddr_), gaBalance);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[0].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[1].prefixed()), 100 * ccLotSize_);
+   EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[2].prefixed()), 100 * ccLotSize_);
+
+   auto ccUtxos1 = GetCCUTXOsFor(cct, userCCAddresses_[0]);
+   auto ccUtxos2 = GetCCUTXOsFor(cct, userCCAddresses_[1]);
+   auto ccUtxos3 = GetCCUTXOsFor(cct, userCCAddresses_[2]);
+   auto xbtUtxos1 = GetUTXOsFor(userFundAddresses_[3]);
+   auto xbtUtxos2 = GetUTXOsFor(userFundAddresses_[4]);
+   auto xbtUtxos3 = GetUTXOsFor(userFundAddresses_[5]);
+
+   EXPECT_EQ(ccUtxos1.size(), 1);
+   EXPECT_EQ(ccUtxos2.size(), 1);
+   EXPECT_EQ(ccUtxos3.size(), 1);
+
+   EXPECT_EQ(xbtUtxos1.size(), 1);
+   EXPECT_EQ(xbtUtxos2.size(), 1);
+   EXPECT_EQ(xbtUtxos3.size(), 1);
+
+   /*input cases*/
+   {
+      //basic cc case: 1 cc input, 1 xbt input -> 1 cc output, 1 xbt output
+      Signer signer;
+      signer.setFlags(SCRIPT_VERIFY_SEGWIT);
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos1.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos1.back()));
+
+      signer.addRecipient(userCCAddresses_[3].getRecipient(bs::XBTAmount(100 * ccLotSize_)));
+      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(uint64_t(50 * COIN))));
+
+      auto unsignedTxRaw = signer.serializeUnsignedTx();
+      Tx txUnsigned(unsignedTxRaw);
+      
+      auto candidacyResult = cct->tracker()->parseCcCandidateTx(txUnsigned);
+      EXPECT_TRUE(candidacyResult.isValidCcTx_);
+
+      EXPECT_EQ(candidacyResult.totalCcRedeemed_, 100 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalCcSpent_, 100 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalXbtSpent_, 50 * COIN);
+
+      //cc outputs
+      ASSERT_EQ(candidacyResult.ccPerAddr_.size(), 1);
+
+      auto ccIter0 = candidacyResult.ccPerAddr_.find(userCCAddresses_[3]);
+      ASSERT_NE(ccIter0, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccIter0->second, 100 * ccLotSize_);
+
+      //xbt outputs
+      ASSERT_EQ(candidacyResult.xbtPerAddr_.size(), 1);
+
+      auto xbtIter0 = candidacyResult.xbtPerAddr_.find(userFundAddresses_[6]);
+      ASSERT_NE(xbtIter0, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtIter0->second, 50 * COIN);
+   }
+
+   {
+      //many cc inputs, 1 xbt input -> 1 cc output, 1 xbt output
+      Signer signer;
+      signer.setFlags(SCRIPT_VERIFY_SEGWIT);
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos1.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos1.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos2.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos3.back()));
+
+      signer.addRecipient(userCCAddresses_[3].getRecipient(bs::XBTAmount(200 * ccLotSize_)));
+      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(uint64_t(50 * COIN))));
+
+      auto unsignedTxRaw = signer.serializeUnsignedTx();
+      Tx txUnsigned(unsignedTxRaw);
+      
+      auto candidacyResult = cct->tracker()->parseCcCandidateTx(txUnsigned);
+      EXPECT_TRUE(candidacyResult.isValidCcTx_);
+
+      EXPECT_EQ(candidacyResult.totalCcRedeemed_, 300 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalCcSpent_, 200 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalXbtSpent_, 50 * COIN);
+
+      //cc outputs
+      ASSERT_EQ(candidacyResult.ccPerAddr_.size(), 1);
+
+      auto ccIter0 = candidacyResult.ccPerAddr_.find(userCCAddresses_[3]);
+      ASSERT_NE(ccIter0, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccIter0->second, 200 * ccLotSize_);
+
+      //xbt outputs
+      ASSERT_EQ(candidacyResult.xbtPerAddr_.size(), 1);
+
+      auto xbtIter0 = candidacyResult.xbtPerAddr_.find(userFundAddresses_[6]);
+      ASSERT_NE(xbtIter0, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtIter0->second, 50 * COIN);
+   }
+
+   {
+      //1 cc input, many xbt inputs -> 1 cc output, 1 xbt output
+      Signer signer;
+      signer.setFlags(SCRIPT_VERIFY_SEGWIT);
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos1.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos1.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos2.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos3.back()));
+
+      signer.addRecipient(userCCAddresses_[3].getRecipient(bs::XBTAmount(100 * ccLotSize_)));
+      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(uint64_t(120 * COIN))));
+
+      auto unsignedTxRaw = signer.serializeUnsignedTx();
+      Tx txUnsigned(unsignedTxRaw);
+      
+      auto candidacyResult = cct->tracker()->parseCcCandidateTx(txUnsigned);
+      EXPECT_TRUE(candidacyResult.isValidCcTx_);
+
+      EXPECT_EQ(candidacyResult.totalCcRedeemed_, 100 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalCcSpent_, 100 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalXbtSpent_, 120 * COIN);
+
+      //cc outputs
+      ASSERT_EQ(candidacyResult.ccPerAddr_.size(), 1);
+
+      auto ccIter0 = candidacyResult.ccPerAddr_.find(userCCAddresses_[3]);
+      ASSERT_NE(ccIter0, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccIter0->second, 100 * ccLotSize_);
+
+      //xbt outputs
+      ASSERT_EQ(candidacyResult.xbtPerAddr_.size(), 1);
+
+      auto xbtIter0 = candidacyResult.xbtPerAddr_.find(userFundAddresses_[6]);
+      ASSERT_NE(xbtIter0, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtIter0->second, 120 * COIN);
+   }
+
+   {
+      //many cc inputs, no xbt input -> 1 cc output
+      Signer signer;
+      signer.setFlags(SCRIPT_VERIFY_SEGWIT);
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos1.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos2.back()));
+
+      signer.addRecipient(userCCAddresses_[3].getRecipient(bs::XBTAmount(180 * ccLotSize_)));
+
+      auto unsignedTxRaw = signer.serializeUnsignedTx();
+      Tx txUnsigned(unsignedTxRaw);
+      
+      auto candidacyResult = cct->tracker()->parseCcCandidateTx(txUnsigned);
+      EXPECT_TRUE(candidacyResult.isValidCcTx_);
+
+      EXPECT_EQ(candidacyResult.totalCcRedeemed_, 200 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalCcSpent_, 180 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalXbtSpent_, 0);
+
+      //cc outputs
+      ASSERT_EQ(candidacyResult.ccPerAddr_.size(), 1);
+
+      auto ccIter0 = candidacyResult.ccPerAddr_.find(userCCAddresses_[3]);
+      ASSERT_NE(ccIter0, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccIter0->second, 180 * ccLotSize_);
+
+      //xbt outputs
+      ASSERT_EQ(candidacyResult.xbtPerAddr_.size(), 0);
+   }
+
+   {
+      //no cc input, many xbt inputs -> 1 xbt output
+      Signer signer;
+      signer.setFlags(SCRIPT_VERIFY_SEGWIT);
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos1.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos2.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos3.back()));
+
+      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(uint64_t(149 * COIN))));
+
+      auto unsignedTxRaw = signer.serializeUnsignedTx();
+      Tx txUnsigned(unsignedTxRaw);
+      
+      auto candidacyResult = cct->tracker()->parseCcCandidateTx(txUnsigned);
+      EXPECT_FALSE(candidacyResult.isValidCcTx_);
+
+      //candidate result values are not set if the tx isn't a valid cc operation
+   }
+
+   /*output cases */
+   {
+      //many cc inputs, 1 xbt input -> many cc outputs, many xbt outputs
+      Signer signer;
+      signer.setFlags(SCRIPT_VERIFY_SEGWIT);
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos1.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos2.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos3.back()));
+      
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos1.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos2.back()));
+
+      signer.addRecipient(userCCAddresses_[3].getRecipient(bs::XBTAmount(100 * ccLotSize_)));
+      signer.addRecipient(userCCAddresses_[4].getRecipient(bs::XBTAmount(120 * ccLotSize_)));
+      signer.addRecipient(userCCAddresses_[5].getRecipient(bs::XBTAmount(50 * ccLotSize_)));
+
+      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(uint64_t(70 * COIN))));
+      signer.addRecipient(userFundAddresses_[7].getRecipient(bs::XBTAmount(uint64_t(30 * COIN))));
+
+      auto unsignedTxRaw = signer.serializeUnsignedTx();
+      Tx txUnsigned(unsignedTxRaw);
+      
+      auto candidacyResult = cct->tracker()->parseCcCandidateTx(txUnsigned);
+      EXPECT_TRUE(candidacyResult.isValidCcTx_);
+
+      EXPECT_EQ(candidacyResult.totalCcRedeemed_, 300 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalCcSpent_, 270 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalXbtSpent_, 100 * COIN);
+
+      //cc outputs
+      ASSERT_EQ(candidacyResult.ccPerAddr_.size(), 3);
+
+      auto ccIter0 = candidacyResult.ccPerAddr_.find(userCCAddresses_[3]);
+      ASSERT_NE(ccIter0, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccIter0->second, 100 * ccLotSize_);
+
+      auto ccIter1 = candidacyResult.ccPerAddr_.find(userCCAddresses_[4]);
+      ASSERT_NE(ccIter1, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccIter1->second, 120 * ccLotSize_);
+
+      auto ccIter2 = candidacyResult.ccPerAddr_.find(userCCAddresses_[5]);
+      ASSERT_NE(ccIter2, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccIter2->second, 50 * ccLotSize_);
+
+      //xbt outputs
+      ASSERT_EQ(candidacyResult.xbtPerAddr_.size(), 2);
+
+      auto xbtIter0 = candidacyResult.xbtPerAddr_.find(userFundAddresses_[6]);
+      ASSERT_NE(xbtIter0, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtIter0->second, 70 * COIN);
+
+      auto xbtIter1 = candidacyResult.xbtPerAddr_.find(userFundAddresses_[7]);
+      ASSERT_NE(xbtIter1, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtIter1->second, 30 * COIN);
+   }
+
+   {
+      //many cc inputs, many xbt inputs -> many cc outputs, no xbt output
+      Signer signer;
+      signer.setFlags(SCRIPT_VERIFY_SEGWIT);
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos1.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos2.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos3.back()));
+      
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos1.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos2.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos3.back()));
+
+      signer.addRecipient(userCCAddresses_[3].getRecipient(bs::XBTAmount(100 * ccLotSize_)));
+      signer.addRecipient(userCCAddresses_[4].getRecipient(bs::XBTAmount(120 * ccLotSize_)));
+      signer.addRecipient(userCCAddresses_[5].getRecipient(bs::XBTAmount(50 * ccLotSize_)));
+
+      auto unsignedTxRaw = signer.serializeUnsignedTx();
+      Tx txUnsigned(unsignedTxRaw);
+      
+      auto candidacyResult = cct->tracker()->parseCcCandidateTx(txUnsigned);
+      EXPECT_TRUE(candidacyResult.isValidCcTx_);
+
+      EXPECT_EQ(candidacyResult.totalCcRedeemed_, 300 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalCcSpent_, 270 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalXbtSpent_, 0);
+
+      //cc outputs
+      ASSERT_EQ(candidacyResult.ccPerAddr_.size(), 3);
+
+      auto ccIter0 = candidacyResult.ccPerAddr_.find(userCCAddresses_[3]);
+      ASSERT_NE(ccIter0, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccIter0->second, 100 * ccLotSize_);
+
+      auto ccIter1 = candidacyResult.ccPerAddr_.find(userCCAddresses_[4]);
+      ASSERT_NE(ccIter1, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccIter1->second, 120 * ccLotSize_);
+
+      auto ccIter2 = candidacyResult.ccPerAddr_.find(userCCAddresses_[5]);
+      ASSERT_NE(ccIter2, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccIter2->second, 50 * ccLotSize_);
+
+      //xbt outputs
+      ASSERT_EQ(candidacyResult.xbtPerAddr_.size(), 0);
+   }
+
+   {
+      //many cc inputs, no xbt inputs -> many cc outputs
+      Signer signer;
+      signer.setFlags(SCRIPT_VERIFY_SEGWIT);
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos1.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos2.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos3.back()));
+      
+      signer.addRecipient(userCCAddresses_[3].getRecipient(bs::XBTAmount(100 * ccLotSize_)));
+      signer.addRecipient(userCCAddresses_[4].getRecipient(bs::XBTAmount(120 * ccLotSize_)));
+      signer.addRecipient(userCCAddresses_[5].getRecipient(bs::XBTAmount(50 * ccLotSize_)));
+
+      auto unsignedTxRaw = signer.serializeUnsignedTx();
+      Tx txUnsigned(unsignedTxRaw);
+      
+      auto candidacyResult = cct->tracker()->parseCcCandidateTx(txUnsigned);
+      EXPECT_TRUE(candidacyResult.isValidCcTx_);
+
+      EXPECT_EQ(candidacyResult.totalCcRedeemed_, 300 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalCcSpent_, 270 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalXbtSpent_, 0);
+
+      //cc outputs
+      ASSERT_EQ(candidacyResult.ccPerAddr_.size(), 3);
+
+      auto ccIter0 = candidacyResult.ccPerAddr_.find(userCCAddresses_[3]);
+      ASSERT_NE(ccIter0, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccIter0->second, 100 * ccLotSize_);
+
+      auto ccIter1 = candidacyResult.ccPerAddr_.find(userCCAddresses_[4]);
+      ASSERT_NE(ccIter1, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccIter1->second, 120 * ccLotSize_);
+
+      auto ccIter2 = candidacyResult.ccPerAddr_.find(userCCAddresses_[5]);
+      ASSERT_NE(ccIter2, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccIter2->second, 50 * ccLotSize_);
+
+      //xbt outputs
+      ASSERT_EQ(candidacyResult.xbtPerAddr_.size(), 0);
+   }
+
+   /*bad cases*/
+
+   {
+      //over assign cc
+      Signer signer;
+      signer.setFlags(SCRIPT_VERIFY_SEGWIT);
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos1.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos2.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos3.back()));
+      
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos1.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos2.back()));
+
+      signer.addRecipient(userCCAddresses_[3].getRecipient(bs::XBTAmount(100 * ccLotSize_)));
+      signer.addRecipient(userCCAddresses_[4].getRecipient(bs::XBTAmount(210 * ccLotSize_)));
+      signer.addRecipient(userCCAddresses_[5].getRecipient(bs::XBTAmount(70 * ccLotSize_)));
+
+      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(uint64_t(70 * COIN))));
+      signer.addRecipient(userFundAddresses_[7].getRecipient(bs::XBTAmount(uint64_t(20 * COIN))));
+
+      auto unsignedTxRaw = signer.serializeUnsignedTx();
+      Tx txUnsigned(unsignedTxRaw);
+      
+      auto candidacyResult = cct->tracker()->parseCcCandidateTx(txUnsigned);
+      EXPECT_TRUE(candidacyResult.isValidCcTx_);
+
+      EXPECT_EQ(candidacyResult.totalCcRedeemed_, 300 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalCcSpent_, 100 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalXbtSpent_, 90 * COIN + 280 * ccLotSize_);
+
+      //cc outputs
+      ASSERT_EQ(candidacyResult.ccPerAddr_.size(), 1);
+
+      auto ccIter0 = candidacyResult.ccPerAddr_.find(userCCAddresses_[3]);
+      ASSERT_NE(ccIter0, candidacyResult.ccPerAddr_.end());
+      EXPECT_EQ(ccIter0->second, 100 * ccLotSize_);
+
+      //xbt outputs
+      ASSERT_EQ(candidacyResult.xbtPerAddr_.size(), 4);
+
+      auto xbtIter0 = candidacyResult.xbtPerAddr_.find(userFundAddresses_[6]);
+      ASSERT_NE(xbtIter0, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtIter0->second, 70 * COIN);
+
+      auto xbtIter1 = candidacyResult.xbtPerAddr_.find(userFundAddresses_[7]);
+      ASSERT_NE(xbtIter1, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtIter1->second, 20 * COIN);
+
+      auto xbtIter2 = candidacyResult.xbtPerAddr_.find(userCCAddresses_[4]);
+      ASSERT_NE(xbtIter2, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtIter2->second, 210 * ccLotSize_);
+
+      auto xbtIter3 = candidacyResult.xbtPerAddr_.find(userCCAddresses_[5]);
+      ASSERT_NE(xbtIter3, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtIter3->second, 70 * ccLotSize_);
+   }
+
+   {
+      //destroy cc
+      Signer signer;
+      signer.setFlags(SCRIPT_VERIFY_SEGWIT);
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos1.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos2.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos3.back()));
+      
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos1.back()));
+      signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos2.back()));
+
+      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(uint64_t(70 * COIN))));
+      signer.addRecipient(userFundAddresses_[7].getRecipient(bs::XBTAmount(uint64_t(20 * COIN))));
+
+      signer.addRecipient(userCCAddresses_[3].getRecipient(bs::XBTAmount(100 * ccLotSize_)));
+      signer.addRecipient(userCCAddresses_[4].getRecipient(bs::XBTAmount(120 * ccLotSize_)));
+      signer.addRecipient(userCCAddresses_[5].getRecipient(bs::XBTAmount(70 * ccLotSize_)));
+
+      auto unsignedTxRaw = signer.serializeUnsignedTx();
+      Tx txUnsigned(unsignedTxRaw);
+      
+      auto candidacyResult = cct->tracker()->parseCcCandidateTx(txUnsigned);
+      EXPECT_TRUE(candidacyResult.isValidCcTx_);
+
+      EXPECT_EQ(candidacyResult.totalCcRedeemed_, 300 * ccLotSize_);
+      EXPECT_EQ(candidacyResult.totalCcSpent_, 0);
+      EXPECT_EQ(candidacyResult.totalXbtSpent_, 90 * COIN + 290 * ccLotSize_);
+
+      //cc outputs
+      ASSERT_EQ(candidacyResult.ccPerAddr_.size(), 0);
+
+      //xbt outputs
+      ASSERT_EQ(candidacyResult.xbtPerAddr_.size(), 5);
+
+      auto xbtIter0 = candidacyResult.xbtPerAddr_.find(userFundAddresses_[6]);
+      ASSERT_NE(xbtIter0, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtIter0->second, 70 * COIN);
+
+      auto xbtIter1 = candidacyResult.xbtPerAddr_.find(userFundAddresses_[7]);
+      ASSERT_NE(xbtIter1, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtIter1->second, 20 * COIN);
+
+      auto xbtIter2 = candidacyResult.xbtPerAddr_.find(userCCAddresses_[3]);
+      ASSERT_NE(xbtIter2, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtIter2->second, 100 * ccLotSize_);
+
+      auto xbtIter3 = candidacyResult.xbtPerAddr_.find(userCCAddresses_[4]);
+      ASSERT_NE(xbtIter3, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtIter3->second, 120 * ccLotSize_);
+
+      auto xbtIter4 = candidacyResult.xbtPerAddr_.find(userCCAddresses_[5]);
+      ASSERT_NE(xbtIter4, candidacyResult.xbtPerAddr_.end());
+      EXPECT_EQ(xbtIter4->second, 70 * ccLotSize_);
+   }
+}
+
 TEST_F(TestCCoin, processZC_whileMined)
 {
    // This is just a placeholder for the test that should do the following:
@@ -2992,7 +3630,6 @@ TEST_F(TestCCoin, processZC_whileMined)
 }
 
 //TODO:
-//blackhole cc
 //over assign cc
 
 //cc chains within same block

@@ -72,6 +72,8 @@ private slots:
    void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode, std::string error);
 
 private:
+   void scheduleDateFilterCheck();
+
    std::unique_ptr<Ui::TransactionsWidget> ui_;
    std::shared_ptr<spdlog::logger>     logger_;
 

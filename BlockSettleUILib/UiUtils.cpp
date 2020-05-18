@@ -151,6 +151,21 @@ bs::hd::Purpose getHwWalletPurpose(WalletsTypes hwType)
    return {};
 }
 
+UiUtils::WalletsTypes getHwWalletType(bs::hd::Purpose purpose)
+{
+   switch (purpose)
+   {
+   case bs::hd::Native:
+      return WalletsTypes::HardwareNativeSW;
+   case bs::hd::Nested:
+      return WalletsTypes::HardwareNestedSW;
+   case bs::hd::NonSegWit:
+      return WalletsTypes::HardwareLegacy;
+   default:
+      return WalletsTypes::None;
+   }
+}
+
 }
 
 int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId, WalletsTypes type /* = WalletsTypes::None */)
@@ -212,6 +227,11 @@ int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs
       WalletsTypes type = WalletsTypes::None;
       // HW wallets marked as offline too, make sure to check that first
       if (!hdWallet->canMixLeaves()) {
+
+         if (hdWallet->isHardwareOfflineWallet() && !(walletTypes & WalletsTypes::WatchOnly)) {
+            continue;
+         }
+
          for (auto const &leaf : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
             std::string label = hdWallet->name();
             type = WalletsTypes::None;
@@ -238,10 +258,9 @@ int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs
 
          continue;
       } 
-      
-      
-      if (hdWallet->isOffline() && (walletTypes & WalletsTypes::WatchOnly)) {
-         type = WalletsTypes::WatchOnly;
+
+      if (hdWallet->isOffline()) {
+         type = (walletTypes & WalletsTypes::WatchOnly) ? WalletsTypes::WatchOnly : WalletsTypes::None;
       } else if (walletTypes & WalletsTypes::Full) {
          type = WalletsTypes::Full;
       }

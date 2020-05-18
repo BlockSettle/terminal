@@ -839,6 +839,11 @@ void TransactionsViewModel::loadLedgerEntries(bool onNewBlock)
       try {
          int inPageCnt = int(pageCnt.get());
 
+         if (inPageCnt == 0) {
+            SPDLOG_LOGGER_ERROR(logger, "page count is 0");
+            return;
+         }
+
          QMetaObject::invokeMethod(qApp, [thisPtr, inPageCnt] {
             if (thisPtr) {
                emit thisPtr->initProgress(0, int(inPageCnt * 2));

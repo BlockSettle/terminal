@@ -59,6 +59,7 @@ public:
       , const std::shared_ptr<ConnectionManager> &connectionManager
       , const std::shared_ptr<spdlog::logger> &logger
       , QObject *parent = nullptr);
+   ~QmlFactory() override = default;
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
@@ -87,6 +88,8 @@ public:
       QQmlEngine::setObjectOwnership(seed, QQmlEngine::JavaScriptOwnership);
       return seed;
    }
+
+   Q_INVOKABLE bs::wallet::QSeed *createSeedFromMnemonic(const QString &key, bool isTestNet);
 
    Q_INVOKABLE bs::wallet::QSeed *createSeedFromDigitalBackup(const QString &filename, bs::wallet::QSeed::QNetworkType netType) {
       auto seed = new bs::wallet::QSeed(bs::wallet::QSeed::fromDigitalBackup(filename, netType));
@@ -149,13 +152,15 @@ public:
    Q_INVOKABLE bool initMessageWasShown() const;
    Q_INVOKABLE void setInitMessageWasShown();
 
+   const std::vector<std::vector<std::string>>& bip39Dictionaries();
+
 signals:
    void closeEventReceived();
    void headlessPubKeyChanged();
    void showTrayNotify(const QString &title, const QString &msg);
 
 public slots:
-   void setHeadlessPubKey(const QString &headlessPubKey);
+   void setHeadlessPubKey(const QString &headlessPubKey);  
 
 private:
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
@@ -168,6 +173,7 @@ private:
 
    bool isControlPassMessageShown = false;
 
+   std::vector<std::vector<std::string>> bip39Dictionaries_;
 };
 
 #endif // QMLFACTORY_H

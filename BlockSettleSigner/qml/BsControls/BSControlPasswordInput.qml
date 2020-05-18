@@ -28,7 +28,9 @@ CustomTitleDialogWindow {
     property bool usedInChain: false
     property bool initDialog: false
 
-    property string decryptHeaderText: qsTr("Set Password")
+    property string decryptHeaderText: controlPasswordStatus === ControlPasswordStatus.Rejected
+                                       ? qsTr("Enter Password")
+                                       : qsTr("Set Password")
 
     title: controlPasswordStatus === ControlPasswordStatus.RequestedNew
                ? qsTr("PUBLIC DATA ENCRYPTION")

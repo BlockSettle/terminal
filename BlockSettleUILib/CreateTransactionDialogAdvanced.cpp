@@ -513,6 +513,7 @@ void CreateTransactionDialogAdvanced::initUI()
    connect(this, &CreateTransactionDialogAdvanced::walletChanged, this, &CreateTransactionDialogAdvanced::onUpdateChangeWidget);
 
    updateManualFeeControls();
+   onUpdateChangeWidget();
 }
 
 void CreateTransactionDialogAdvanced::clear()
@@ -1219,7 +1220,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
 
             std::set<BinaryData> txHashSet;
             std::map<BinaryData, std::set<uint32_t>> txOutIndices;
-            std::vector<std::pair<BinaryData, uint32_t>> utxoHashes;
+            TransactionData::UtxoHashes utxoHashes;
 
             for (size_t i = 0; i < tx.getNumTxIn(); i++) {
                auto in = tx.getTxInCopy((int)i);
@@ -1267,13 +1268,8 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                      if (!thisPtr) {
                         return;
                      }
-                     auto selInputs = thisPtr->transactionData_->getSelectedInputs();
-                     for (const auto &utxo : utxoHashes) {
-                        bool result = selInputs->SetUTXOSelection(utxo.first, utxo.second);
-                        if (!result) {
-                           SPDLOG_LOGGER_WARN(thisPtr->logger_, "selecting input failed for imported TX");
-                        }
-                     }
+                     thisPtr->transactionData_->setSelectedUtxo(utxoHashes);
+                     thisPtr->usedInputsModel_->updateInputs(thisPtr->transactionData_->inputs());
                   };
 
                   thisPtr->SetFixedWallet(wallet->walletId(), cbInputsReceived);
@@ -1307,13 +1303,8 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
          if (!thisPtr) {
             return;
          }
-         auto selInputs = thisPtr->transactionData_->getSelectedInputs();
-         for (const auto &utxo : inputs) {
-            bool result = selInputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
-            if (!result) {
-               SPDLOG_LOGGER_WARN(thisPtr->logger_, "selecting input failed for imported TX");
-            }
-         }
+         thisPtr->transactionData_->setSelectedUtxo(inputs);
+         thisPtr->usedInputsModel_->updateInputs(thisPtr->transactionData_->inputs());
       };
       SetFixedWallet(tx.walletIds.front(), cbInputsReceived);
 
@@ -1392,7 +1383,21 @@ void CreateTransactionDialogAdvanced::onExistingAddressSelectedForChange()
 
 void CreateTransactionDialogAdvanced::SetFixedWallet(const std::string& walletId, const std::function<void()> &cbInputsReset)
 {
-   const int idx = SelectWallet(walletId, UiUtils::WalletsTypes::None);
+   auto hdWallet = walletsManager_->getHDWalletById(walletId);
+   auto walletType = UiUtils::WalletsTypes::None;
+   if (!hdWallet) {
+      hdWallet = walletsManager_->getHDRootForLeaf(walletId);
+      if (hdWallet && (hdWallet->isHardwareWallet() || hdWallet->isHardwareOfflineWallet())) {
+         for (auto leaf : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
+            if (leaf->walletId() == walletId) {
+               walletType = UiUtils::getHwWalletType(leaf->purpose());
+               break;
+            }
+         }
+      }
+   }
+
+   const int idx = hdWallet ? SelectWallet(hdWallet->walletId(), walletType) : -1;
    selectedWalletChanged(idx, true, cbInputsReset);
    ui_->comboBoxWallets->setEnabled(false);
 }
@@ -1439,8 +1444,14 @@ void CreateTransactionDialogAdvanced::enableFeeChanging(bool enable)
 void CreateTransactionDialogAdvanced::SetFixedChangeAddress(const QString& changeAddress)
 {
    ui_->radioButtonExistingAddress->setChecked(true);
+   ui_->radioButtonExistingAddress->setVisible(true);
+
    ui_->radioButtonNewAddrNative->setEnabled(false);
    ui_->radioButtonNewAddrNested->setEnabled(false);
+   ui_->radioButtonNewAddrLegacy->setEnabled(false);
+   ui_->radioButtonNewAddrNative->setVisible(false);
+   ui_->radioButtonNewAddrNested->setVisible(false);
+   ui_->radioButtonNewAddrLegacy->setVisible(false);
 
    selectedChangeAddress_ = bs::Address::fromAddressString(changeAddress.toStdString());
    showExistingChangeAddress(true);

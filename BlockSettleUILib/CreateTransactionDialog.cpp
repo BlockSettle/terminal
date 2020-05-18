@@ -604,9 +604,13 @@ bool CreateTransactionDialog::createTransactionImpl(bs::core::wallet::TXSignRequ
             return true;
          }
 
-         QString newSignerOfflineDir = QFileInfo(offlineFilePath).absoluteDir().path();
+         QFileInfo exportFileIndo(offlineFilePath);
+         QString newSignerOfflineDir = exportFileIndo.absoluteDir().path();
          if (signerOfflineDir != newSignerOfflineDir) {
             applicationSettings_->set(ApplicationSettings::signerOfflineDir, newSignerOfflineDir);
+         }
+         if (exportFileIndo.suffix() != QLatin1String("bin")) {
+            offlineFilePath += QLatin1String(".bin");
          }
 
          bs::error::ErrorCode result = bs::core::wallet::ExportTxToFile(txReq_, offlineFilePath);
@@ -614,6 +618,7 @@ bool CreateTransactionDialog::createTransactionImpl(bs::core::wallet::TXSignRequ
             BSMessageBox(BSMessageBox::info, tr("Offline Transaction")
                , tr("Request was successfully exported")
                , tr("Saved to %1").arg(offlineFilePath), this).exec();
+            return false; // export was success so we could close the dialog
          }
          else {
             BSMessageBox(BSMessageBox::warning, tr("Offline Transaction")
@@ -652,7 +657,7 @@ std::vector<bs::core::wallet::TXSignRequest> CreateTransactionDialog::ImportTran
    QString signerOfflineDir = applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
 
    const QString reqFile = QFileDialog::getOpenFileName(this, tr("Select Transaction file"), signerOfflineDir
-      , tr("TX files (*.bin)"));
+      , tr("TX files (*.bin);; All files (*)"));
    if (reqFile.isEmpty()) {
       return {};
    }
@@ -684,6 +689,14 @@ std::vector<bs::core::wallet::TXSignRequest> CreateTransactionDialog::ImportTran
    auto transactions = bs::core::wallet::ParseOfflineTXFile(data);
    if (transactions.size() != 1) {
       showError(title, tr("Invalid file %1 format").arg(reqFile));
+      return {};
+   }
+
+   if (!transactions.at(0).allowBroadcasts) {
+      BSMessageBox errorMessage(BSMessageBox::warning, tr("Import failure")
+         , tr("You are trying to import a settlement transaction into a BlockSettle Terminal. "
+              "Settlement transactions must be imported into a BlockSettle Signer if signed offline."), this);
+      errorMessage.exec();
       return {};
    }
 

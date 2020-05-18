@@ -1,14 +1,28 @@
 {
-   "latest_version": "0.89.2",
-   "release_date": "06 May 2020",
+   "latest_version": "0.89.3",
+   "release_date": "18 May 2020",
    "changes": [
+      {
+         "version_string": "0.89.3",
+         "previous_version": "0.89.2",
+         "release_date": "18 May 2020",
+         "release_type": "prod",
+         "improvements": [
+            "Armory signer updated",
+            "BIP39 support added"
+         ],
+         "bug_fixes": [
+            "Multiple UI fixes"
+         ],
+         "revision": "6e44903dd",
+         "common_revision": "0a501985"
+      },
       {
          "version_string": "0.89.2",
          "previous_version": "0.89.1",
          "release_date": "06 May 2020",
          "release_type": "dev",
-         "improvements": [
-         ],
+         "improvements": [],
          "bug_fixes": [
             "Ui fixes"
          ],

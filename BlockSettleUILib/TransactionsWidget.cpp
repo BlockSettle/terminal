@@ -278,14 +278,12 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
    ui_->dateEditEnd->setDate(QDate::currentDate());
 
    connect(ui_->dateEditEnd, &QDateTimeEdit::dateTimeChanged, [=](const QDateTime& dateTime) {
-      if (ui_->dateEditStart->dateTime() > dateTime)
-      {
+      if (ui_->dateEditStart->dateTime() > dateTime) {
          ui_->dateEditStart->setDate(dateTime.date());
       }
    });
    connect(ui_->dateEditStart, &QDateTimeEdit::dateTimeChanged, [=](const QDateTime& dateTime) {
-      if (ui_->dateEditEnd->dateTime() < dateTime)
-      {
+      if (ui_->dateEditEnd->dateTime() < dateTime) {
          ui_->dateEditEnd->setDate(dateTime.date());
       }
    });
@@ -317,6 +315,8 @@ void TransactionsWidget::init(const std::shared_ptr<bs::sync::WalletsManager> &w
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &TransactionsWidget::walletsChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, [this](std::string) { walletsChanged(); });
    connect(signContainer_.get(), &SignContainer::TXSigned, this, &TransactionsWidget::onTXSigned);
+
+   scheduleDateFilterCheck();
 }
 
 void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<TransactionsViewModel>& model)
@@ -707,11 +707,13 @@ void TransactionsWidget::onRevokeSettlement()
       args->armory = armory_;
       args->signContainer = signContainer_;
       args->payinTxId = txItem->txEntry.txHash;
-      args->recvAddr = xbtWallet->getExtAddressList()[std::rand() % xbtWallet->getExtAddressCount()];
       args->outputXbtWallet = xbtWallet;
 
-      signContainer_->getSettlCP(walletsManager_->getPrimaryWallet()->walletId()
-         , args->payinTxId, cbSettlCP);
+      xbtWallet->getNewExtAddress([this, args, cbSettlCP](const bs::Address &addr) {
+         args->recvAddr = addr;
+         signContainer_->getSettlCP(walletsManager_->getPrimaryWallet()->walletId()
+            , args->payinTxId, cbSettlCP);
+      });
    };
 
    if (txItem->initialized) {
@@ -749,4 +751,20 @@ void TransactionsWidget::onTXSigned(unsigned int id, BinaryData signedTX
             , tr("BlockSettleDB connection unavailable"), this).exec();
       }
    }
+}
+
+void TransactionsWidget::scheduleDateFilterCheck()
+{
+   const auto delay = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::hours(24)
+      - std::chrono::milliseconds(QDateTime::currentDateTime().time().msecsSinceStartOfDay())
+      + std::chrono::seconds(10));
+
+   // Update end date at midnight filter if it was not changed manually
+   QTimer::singleShot(delay, this, [this] {
+      auto currentDate = QDate::currentDate();
+      if (ui_->dateEditEnd->date().daysTo(currentDate) == 1) {
+         ui_->dateEditEnd->setDate(currentDate);
+      }
+      scheduleDateFilterCheck();
+   });
 }
