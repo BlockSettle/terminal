@@ -460,6 +460,11 @@ bool OtcClient::pullOrReject(Peer *peer)
 
       case State::WaitBuyerSign:
       case State::WaitSellerSeal: {
+         if (peer->state == State::WaitSellerSeal && peer->offer.ourSide == bs::network::otc::Side::Buy) {
+            SPDLOG_LOGGER_ERROR(logger_, "buyer can't cancel deal while waiting payin sign", peer->toString());
+            return false;
+         }
+
          auto deal = deals_.at(peer->settlementId).get();
          ProxyTerminalPb::Request request;
          auto d = request.mutable_cancel();
@@ -638,23 +643,12 @@ void OtcClient::contactConnected(const std::string &contactId)
 void OtcClient::contactDisconnected(const std::string &contactId)
 {
    const auto peer = &contactMap_.at(contactId);
-
-   switch (peer->state) {
-      case State::WaitBuyerSign:
-      case State::WaitSellerSeal:
-         // Notify PB that contact was disconnected and deal could be canceled
-         pullOrReject(peer);
-         break;
-      default:
-         // No need to notify PB in other cases:
-         // WaitVerification - temporary state (perhaps about 5 seconds) and PB would detect pay-out timeout
-         // WaitSellerSign - temporary state (about 10 seconds) and PB would detect pay-in timeout
-         break;
+   // Do not try to cancel deal waiting pay-in sign (will result in ban)
+   if (peer->state == State::WaitBuyerSign) {
+      pullOrReject(peer);
    }
-
    contactMap_.erase(contactId);
    reservedTokens_.erase(contactId);
-
    emit publicUpdated();
 }
 
