@@ -15,7 +15,7 @@
 #include "UiUtils.h"
 
 TransactionOutputsModel::TransactionOutputsModel(QObject* parent)
-   : QAbstractTableModel{parent}
+   : UtxoModelInterface{parent}
 {
    removeIcon_ = UiUtils::icon(0xeaf1, QVariantMap{
                { QLatin1String{ "color" }, QColor{ Qt::white } }
@@ -43,22 +43,6 @@ void TransactionOutputsModel::clear()
    endResetModel();
 }
 
-void TransactionOutputsModel::enableRows(bool flag)
-{
-   if (rowsEnabled_ != flag) {
-      rowsEnabled_ = flag;
-      emit dataChanged(index(0, 0), index(rowCount({}) - 1, columnCount({}) - 1));
-   }
-}
-
-Qt::ItemFlags TransactionOutputsModel::flags(const QModelIndex &index) const
-{
-   if (rowsEnabled_) {
-      return QAbstractTableModel::flags(index);
-   }
-   return Qt::ItemNeverHasChildren;
-}
-
 QVariant TransactionOutputsModel::data(const QModelIndex & index, int role) const
 {
    // workaround dont working here
@@ -75,10 +59,8 @@ QVariant TransactionOutputsModel::data(const QModelIndex & index, int role) cons
       return getRowData(index.column(), outputs_[index.row()]);
    case Qt::DecorationRole:
       return getImageData(index.column());
-   case Qt::TextColorRole:
-      return rowsEnabled_ ? QVariant{} : QColor(Qt::gray);
    }
-   return QVariant{};
+   return UtxoModelInterface::data(index, role);
 }
 
 void TransactionOutputsModel::AddRecipient(unsigned int recipientId, const QString& address, double amount)

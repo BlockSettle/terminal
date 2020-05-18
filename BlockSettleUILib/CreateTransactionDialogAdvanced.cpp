@@ -1149,8 +1149,11 @@ void CreateTransactionDialogAdvanced::onCreatePressed()
 {
    if (!importedSignedTX_.empty()) {
       if (showUnknownWalletWarning_) {
-         int rc = BSMessageBox(BSMessageBox::question, tr("Unknown Wallet")
-            , tr("Broadcasted transaction will be available in the explorer only.\nProceed?")).exec();
+         int rc = BSMessageBox(BSMessageBox::question, tr("Transaction Broadcast")
+            , tr("Transaction Broadcast")
+            , tr("The Terminal does not have access to the underlying wallet. Once the transaction is broadcast, you will only be able to view it in the explorer.\n\n"
+            "Do you want to proceed with broadcasting?"
+            )).exec();
          if (rc == QDialog::Rejected) {
             return;
          }
@@ -1330,12 +1333,15 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
    ui_->checkBoxRBF->setChecked(tx.RBF);
    ui_->checkBoxRBF->setEnabled(false);
 
-   disableOutputsEditing();
-   disableInputSelection();
-   enableFeeChanging(false);
-   feeChangeDisabled_ = true;
+   if (HaveSignedImportedTransaction()) {
+      disableOutputsEditing();
+      disableInputSelection();
+      enableFeeChanging(false);
+      feeChangeDisabled_ = true;
+      disableChangeAddressSelecting();
+   }
    updateCreateButtonText();
-   disableChangeAddressSelecting();
+
 }
 
 void CreateTransactionDialogAdvanced::onImportPressed()
@@ -1429,6 +1435,7 @@ void CreateTransactionDialogAdvanced::disableOutputsEditing()
 void CreateTransactionDialogAdvanced::disableInputSelection()
 {
    ui_->pushButtonSelectInputs->setEnabled(false);
+   usedInputsModel_->enableRows(false);
 }
 
 void CreateTransactionDialogAdvanced::enableFeeChanging(bool enable)

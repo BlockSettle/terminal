@@ -11,14 +11,14 @@
 #ifndef __USED_INPITS_MODEL_H__
 #define __USED_INPITS_MODEL_H__
 
-#include <QAbstractTableModel>
+#include "UtxoModelInterface.h"
 #include <QString>
 
 #include <vector>
 
 struct UTXO;
 
-class UsedInputsModel : public QAbstractTableModel
+class UsedInputsModel : public UtxoModelInterface
 {
 Q_OBJECT
 
