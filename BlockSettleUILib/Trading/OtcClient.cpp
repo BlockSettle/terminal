@@ -350,10 +350,6 @@ bool OtcClient::sendOffer(Peer *peer, const Offer &offer)
       return false;
    }
 
-   /*
-   findSettlementLeaf can never find the settlement leaf as it is written. More
-   details in the declaration.
-   */
    auto settlementLeaf = findSettlementLeaf(offer.authAddress);
    if (!settlementLeaf) {
       SPDLOG_LOGGER_ERROR(logger_, "can't find settlement leaf with address '{}'", offer.authAddress);
@@ -1624,28 +1620,7 @@ void OtcClient::sendSellerAccepts(Peer *peer)
 
 std::shared_ptr<bs::sync::hd::SettlementLeaf> OtcClient::findSettlementLeaf(const std::string &ourAuthAddress)
 {
-   auto wallet = walletsMgr_->getPrimaryWallet();
-   if (!wallet) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't find primary wallet");
-      return nullptr;
-   }
-
-   auto group = std::dynamic_pointer_cast<bs::sync::hd::SettlementGroup>(wallet->getGroup(bs::hd::BlockSettle_Settlement));
-   if (!group) {
-      SPDLOG_LOGGER_ERROR(logger_, "don't have settlement group");
-      return nullptr;
-   }
-
-   /*
-   This will never succeed. getLeaf searches leaves address map for the specific address.
-   Settlement leaves do not carry auth addresses within their address map. Settlement
-   leaves are constructed from an auth address. 
-
-   Leaves are stored within groups by their path. Settlement leaves path are constructed
-   from the address path. Either getLeaf needs to be overloaded to search on that basis
-   for settlement groups, or another method needs to be added that actually does that.
-   */
-   return group->getLeaf(bs::Address::fromAddressString(ourAuthAddress));
+   return walletsMgr_->getSettlementLeaf(bs::Address::fromAddressString(ourAuthAddress));
 }
 
 void OtcClient::changePeerStateWithoutUpdate(Peer *peer, State state)
