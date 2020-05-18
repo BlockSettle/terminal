@@ -796,39 +796,33 @@ void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::Error
    }
    OtcClientDeal *deal = dealIt->second.get();
 
+   if (result == bs::error::ErrorCode::NoError) {
+      if (deal->payinReqId == reqId) {
+         SPDLOG_LOGGER_DEBUG(logger_, "pay-in was succesfully signed, settlementId: {}", deal->settlementId);
+         deal->signedTx = signedTX;
+
+         ProxyTerminalPb::Request request;
+         auto d = request.mutable_seal_payin_validity();
+         d->set_settlement_id(deal->settlementId);
+         emit sendPbMessage(request.SerializeAsString());
+      }
+
+      if (deal->payoutReqId == reqId) {
+         SPDLOG_LOGGER_DEBUG(logger_, "pay-out was succesfully signed, settlementId: {}", deal->settlementId);
+         deal->signedTx = signedTX;
+         trySendSignedTx(deal);
+      }
+
+      return;
+   }
+
    if (!deal->peerHandle.isValid()) {
       SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
       return;
    }
    auto peer = deal->peer;
-
    peer->activeSettlementId.clear();
-
-   if (result != bs::error::ErrorCode::NoError) {
-      pullOrReject(peer);
-      return;
-   }
-
-   if (deal->payinReqId == reqId) {
-      if (peer->state != State::WaitSellerSeal) {
-         SPDLOG_LOGGER_ERROR(logger_, "unexpected pay-in sign");
-         return;
-      }
-
-      SPDLOG_LOGGER_DEBUG(logger_, "pay-in was succesfully signed, settlementId: {}", deal->settlementId);
-      deal->signedTx = signedTX;
-
-      ProxyTerminalPb::Request request;
-      auto d = request.mutable_seal_payin_validity();
-      d->set_settlement_id(deal->settlementId);
-      emit sendPbMessage(request.SerializeAsString());
-   }
-
-   if (deal->payoutReqId == reqId) {
-      SPDLOG_LOGGER_DEBUG(logger_, "pay-out was succesfully signed, settlementId: {}", deal->settlementId);
-      deal->signedTx = signedTX;
-      trySendSignedTx(deal);
-   }
+   pullOrReject(peer);
 }
 
 void OtcClient::processBuyerOffers(Peer *peer, const ContactMessage_BuyerOffers &msg)
@@ -1247,6 +1241,16 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
    }
    auto deal = it->second.get();
 
+   switch (response.state()) {
+      case ProxyTerminalPb::OTC_STATE_WAIT_SELLER_SIGN:
+         if (deal->side == otc::Side::Sell) {
+            trySendSignedTx(deal);
+         }
+         break;
+      default:
+         break;
+   }
+
    if (!deal->peerHandle.isValid()) {
       SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
       return;
@@ -1354,12 +1358,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             SPDLOG_LOGGER_ERROR(logger_, "unexpected state update request");
             return;
          }
-
          changePeerState(peer, State::WaitSellerSign);
-
-         if (deal->side == otc::Side::Sell) {
-            trySendSignedTx(deal);
-         }
          break;
       }
 
