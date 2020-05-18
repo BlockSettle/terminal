@@ -257,9 +257,12 @@ QPointer<LedgerCommandThread> LedgerDevice::blankCommand(AsyncCallBackCall&& cb 
          return;
       }
 
-      caller->isBlocked_ = (info == HWInfoStatus::kPressButton);
+      if (info == HWInfoStatus::kTransaction)
+         caller->isBlocked_ = true;
+      else if (info == HWInfoStatus::kReceiveSignedTx)
+         caller->isBlocked_ = true;
       caller->deviceTxStatusChanged(info);
-   });
+   }, Qt::BlockingQueuedConnection);
    connect(commandThread_, &LedgerCommandThread::error, this, [caller = QPointer<LedgerDevice>(this)](qint32 errorCode) {
       if (!caller) {
          return;
@@ -292,7 +295,7 @@ QPointer<LedgerCommandThread> LedgerDevice::blankCommand(AsyncCallBackCall&& cb 
 
       caller->lastError_ = error;
       caller->operationFailed(error);
-   });
+   }, Qt::BlockingQueuedConnection);
    connect(commandThread_, &LedgerCommandThread::finished, commandThread_, &QObject::deleteLater);
 
    return commandThread_;
