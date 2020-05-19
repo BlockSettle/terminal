@@ -341,8 +341,6 @@ public:
       auto remotePeer = receiver.otc_->contact(sender.name_);
       ASSERT_TRUE(remotePeer);
 
-      /*This check can never succeed due do how OtcClient::sendOffer is written. 
-      The issue is commented thoroughly within that method's definition.*/
       ASSERT_TRUE(remotePeer->state == otc::State::OfferRecv);
 
       {
