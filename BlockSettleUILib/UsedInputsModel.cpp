@@ -18,7 +18,7 @@
 #include <unordered_map>
 
 UsedInputsModel::UsedInputsModel(QObject* parent)
-   : QAbstractTableModel{parent}
+   : UtxoModelInterface{parent}
 {}
 
 int UsedInputsModel::rowCount(const QModelIndex & parent) const
@@ -56,7 +56,7 @@ QVariant UsedInputsModel::data(const QModelIndex & index, int role) const
    case Qt::DisplayRole:
       return getRowData(index.column(), inputs_[index.row()]);
    }
-   return QVariant{};
+   return UtxoModelInterface::data(index, role);
 }
 
 QVariant UsedInputsModel::headerData(int section, Qt::Orientation orientation, int role) const

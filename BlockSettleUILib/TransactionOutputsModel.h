@@ -11,11 +11,11 @@
 #ifndef __TRANSACTION_OUTPUTS_MODEL_H__
 #define __TRANSACTION_OUTPUTS_MODEL_H__
 
-#include <QAbstractTableModel>
+#include "UtxoModelInterface.h"
 #include <tuple>
 #include <vector>
 
-class TransactionOutputsModel : public QAbstractTableModel
+class TransactionOutputsModel : public UtxoModelInterface
 {
 Q_OBJECT
 
@@ -33,11 +33,9 @@ public:
    bool           isRemoveColumn(int column);
 
    void clear();
-   void enableRows(bool flag = true);
 
    int rowCount(const QModelIndex & parent) const override;
    int columnCount(const QModelIndex & parent) const override;
-   Qt::ItemFlags flags(const QModelIndex &index) const override;
    QVariant data(const QModelIndex & index, int role = Qt::DisplayRole) const override;
    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
@@ -63,7 +61,6 @@ private:
 
 private:
    std::vector<OutputRow> outputs_;
-   bool rowsEnabled_ = true;
    QIcon removeIcon_;
 };
 

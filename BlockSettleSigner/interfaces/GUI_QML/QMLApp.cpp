@@ -304,6 +304,14 @@ QString QMLAppObj::getUrlPath(const QUrl &url)
    return path;
 }
 
+QString QMLAppObj::getUrlPathWithoutExtention(const QUrl &url)
+{
+   QString filePath = getUrlPath(url);
+   QFileInfo fileInfo(filePath);
+
+   return QDir(fileInfo.path()).absoluteFilePath(fileInfo.baseName());
+}
+
 void QMLAppObj::onSysTrayMsgClicked()
 {
    logger_->debug("Systray message clicked");

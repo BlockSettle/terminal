@@ -32,22 +32,25 @@ Item {
         }
 
         Rectangle {
-            visible: showTestNet
+            id: netLabel
+            property bool bInitAsTestNet: signerSettings.testNet
+
             radius: 5
-            color: BSStyle.testNetColor
+            color: bInitAsTestNet ? BSStyle.testnetColor : BSStyle.mainnetColor
             width: 100
             height: 20
             Layout.alignment: Qt.AlignVCenter
 
             Text {
-                text: qsTr("Test environment")
+                text: netLabel.bInitAsTestNet ? qsTr("Testnet") : qsTr("Mainnet")
+                color: netLabel.bInitAsTestNet ? BSStyle.testnetTextColor : BSStyle.mainnetTextColor
                 anchors.fill: parent
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
             }
 
             Component.onCompleted: {
-                visible = signerSettings.testNet
+                bInitAsTestNet = signerSettings.testNet
             }
         }
     }
