@@ -363,11 +363,14 @@ void BSTerminalMainWindow::setupTopRightWidget()
       }
    }
 
-#ifdef Q_OS_WIN
+#if defined(Q_OS_WIN)
    ui_->tabWidget->setProperty("onWindows", QVariant(true));
-#else
+#elif defined(Q_OS_LINUX)
    ui_->tabWidget->setProperty("onLinux", QVariant(true));
-#endif // DEBUG
+#else
+   ui_->tabWidget->setProperty("onMacos", QVariant(true));
+#endif
+
    auto *prevStyle = ui_->tabWidget->style();
    ui_->tabWidget->setStyle(nullptr);
    ui_->tabWidget->setStyle(prevStyle);
