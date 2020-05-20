@@ -33,19 +33,11 @@ QValidator::State Bip39EntryValidator::validate(QString &input, int &pos) const
       return State::Intermediate;
    }
 
-   std::vector<std::string> words;
-   words.reserve(qWordsList.size());
-   for (auto qWord : qWordsList) {
-      words.push_back(qWord.toStdString());
+   if (!validateMnemonic(input.toStdString(), dictionaries_)) {
+      return State::Invalid;
    }
 
-   for (const auto& dict : dictionaries_) {
-      if (validate_mnemonic(words, dict)) {
-         return State::Acceptable;
-      }
-   }
-
-   return State::Invalid;
+   return State::Acceptable;
 }
 
 bool Bip39EntryValidator::validate(QString input)
