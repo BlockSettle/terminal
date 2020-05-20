@@ -208,9 +208,10 @@ void BSTerminalMainWindow::onAddrStateChanged()
    if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
       && !authManager_->isAtLeastOneAwaitingVerification() && canSubmitAuthAddr) {
       allowAuthAddressDialogShow_ = false;
-      BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Create Authentication Address?")
-         , tr("An Authentication Address is your on-chain verification as a Participant in our trading network and is required for access to Spot XBT products.\n\n"
-              "After submission by the Participant, the Authentication Address is verified by the funding of a small amount of bitcoin from one of BlockSettle’s Validation Addresses.\n\n"
+      BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Create Authentication Address")
+         , tr("The Authentication Address verifies you on-chain as a Participant of BlockSettle.\n"
+              "It is required for access to Spot XBT products (bitcoin trading).\n\n"
+              "BlockSettle validates your Authentication Address by funding it with 1'000 satoshis. Once the validation transaction is mined six blocks, you have access to bitcoin trading.\n\n"
               "Create Authentication Address now?"), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
