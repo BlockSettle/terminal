@@ -692,6 +692,7 @@ std::vector<bs::core::wallet::TXSignRequest> CreateTransactionDialog::ImportTran
       return {};
    }
 
+#ifdef PRODUCTION_BUILD
    if (!transactions.at(0).allowBroadcasts) {
       BSMessageBox errorMessage(BSMessageBox::warning, tr("Import failure")
          , tr("You are trying to import a settlement transaction into a BlockSettle Terminal. "
@@ -699,6 +700,7 @@ std::vector<bs::core::wallet::TXSignRequest> CreateTransactionDialog::ImportTran
       errorMessage.exec();
       return {};
    }
+#endif
 
    clear();
    return transactions;
