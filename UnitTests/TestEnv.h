@@ -404,15 +404,6 @@ public:
       return 1.0f;
    }
 
-   bool pushZC(const BinaryData &rawTx) const
-   {
-      if (armoryInstance_ == nullptr) {
-         return false;
-      }
-      armoryInstance_->pushZC(rawTx);
-      return true;
-   }
-
    bool estimateFee(unsigned int nbBlocks, const FloatCb &cb) override
    {
       std::thread([cb] {
