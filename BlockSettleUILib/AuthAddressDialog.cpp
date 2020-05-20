@@ -352,21 +352,15 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
 
    int promptResult = 0;
    const auto &qryTitle = tr("Authentication Address");
-   const auto &qryText = tr("Submit Authentication Address?");
+   const auto &qryText = tr("Submit Authentication Address");
    if (validationAmount > 0) {
       auto msgText = tr("Approve %1 %2 cost?\n\n"
-         "The price of setting up an authentication address is based on the cost of the authentication amount (1000 satoshis), "
-         "the network transaction fee, and the current price of bitcoin."
+         "The cost covers the funding of 1'000 satoshis to validate your Authentication Address (at current spot price of bitcoin, including the network fee)."
       );
 
       if (testnet) {
-         msgText += tr("\n\nThe amount will be deducted from the ‘play money’ in your test account.");
+         msgText += tr("\n\nIt will be deducted from the ‘play money’ in your test account.");
       }
-      else {
-         msgText += tr("\n\nThe amount will be deducted from your account.");
-      }
-
-      msgText += tr("\n\nOnce mined 6 blocks, you will have access to Spot XBT products.");
 
       promptResult = BSMessageBox(BSMessageBox::question, qryTitle, qryText
          , msgText.arg(QLatin1String("EUR")).arg(UiUtils::displayCurrencyAmount(validationAmount))
