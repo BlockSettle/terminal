@@ -694,7 +694,7 @@ std::vector<bs::core::wallet::TXSignRequest> CreateTransactionDialog::ImportTran
 
 #ifdef PRODUCTION_BUILD
    if (!transactions.at(0).allowBroadcasts) {
-      BSMessageBox errorMessage(BSMessageBox::warning, tr("Import failure")
+      BSMessageBox errorMessage(BSMessageBox::warning, tr("Warning"), tr("Import failure")
          , tr("You are trying to import a settlement transaction into a BlockSettle Terminal. "
               "Settlement transactions must be imported into a BlockSettle Signer if signed offline."), this);
       errorMessage.exec();
