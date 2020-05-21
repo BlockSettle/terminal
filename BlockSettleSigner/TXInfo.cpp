@@ -43,7 +43,7 @@ TXInfo::TXInfo(const TXInfo &src)
 
 void TXInfo::init()
 {
-   txId_ = QString::fromStdString(txReq_.serializeState().toBinStr());
+   txId_ = QString::fromStdString(txReq_.serializeState().SerializeAsString());
 }
 
 bool TXInfo::containsAddressImpl(const bs::Address &address, bs::core::wallet::Type walletType) const
@@ -134,7 +134,7 @@ bool TXInfo::loadSignedTx(const QString &fileName)
    }
 
    // check signed tx
-   if (!txReq_.isSourceOfTx(Tx(loadedTxs.front().prevStates.front()))) {
+   if (!txReq_.isSourceOfTx(Tx(loadedTxs.front().serializedTx))) {
       SPDLOG_LOGGER_ERROR(logger_, "sign request not equal to signed tx in '{}'", fileName.toStdString());
       return false;
    }
@@ -154,11 +154,10 @@ QString TXInfo::getSaveOfflineTxFileName()
 
 SecureBinaryData TXInfo::getSignedTx()
 {
-   if (txReqSigned_.prevStates.empty()) {
-      SPDLOG_LOGGER_ERROR(logger_, "missing signed offline request prevStates[1]");
-      return {};
+   if (txReqSigned_.serializedTx.empty()) {
+      SPDLOG_LOGGER_ERROR(logger_, "missing signed offline TX in request");
    }
-   return txReqSigned_.prevStates.front();
+   return txReqSigned_.serializedTx;
 }
 
 QStringList TXInfo::inputs(bs::core::wallet::Type leafType) const

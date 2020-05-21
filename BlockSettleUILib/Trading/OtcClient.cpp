@@ -1030,7 +1030,7 @@ void OtcClient::processSellerAccepts(Peer *peer, const ContactMessage_SellerAcce
       d->set_settlement_id(settlementId);
       d->set_auth_address_buyer(peer->ourAuthPubKey.toBinStr());
       d->set_auth_address_seller(peer->authPubKey.toBinStr());
-      d->set_unsigned_tx(unsignedPayout.toBinStr());
+      d->set_unsigned_tx(unsignedPayout.SerializeAsString());
       d->set_payin_tx_hash(peer->payinTxIdFromSeller.toBinStr());
       d->set_chat_id_buyer(ownContactId_);
       d->set_chat_id_seller(peer->contactId);
@@ -1066,7 +1066,7 @@ void OtcClient::processBuyerAcks(Peer *peer, const ContactMessage_BuyerAcks &msg
    d->set_settlement_id(settlementId);
    d->set_auth_address_buyer(peer->authPubKey.toBinStr());
    d->set_auth_address_seller(peer->ourAuthPubKey.toBinStr());
-   d->set_unsigned_tx(deal->payin.serializeState().toBinStr());
+   d->set_unsigned_tx(deal->payin.serializeState().SerializeAsString());
 
    for (const auto& it : deal->preimageData) {
       auto preImage = d->add_preimage_data();

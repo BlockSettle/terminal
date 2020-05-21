@@ -171,7 +171,9 @@ public:
                      preimageData.emplace(peer1_.nestedAddr_.display(), preimage);
                   }
 
-                  auto result = bs::TradesVerification::verifyUnsignedPayin(BinaryData::fromString(s.unsigned_tx()), preimageData, env_->armoryConnection()->testFeePerByte()
+                  Codec_SignerState::SignerState payinState;
+                  payinState.ParseFromString(s.unsigned_tx());
+                  auto result = bs::TradesVerification::verifyUnsignedPayin(payinState, preimageData, env_->armoryConnection()->testFeePerByte()
                      , settlementAddress.display(), uint64_t(s.amount()));
                   ASSERT_TRUE(result->success);
 
