@@ -119,9 +119,9 @@ private:
    unsigned int   infoReqId_ = 0;
    bool           userKeyOk_ = false;
 
-   BinaryData                 dealerTx_;
+   Codec_SignerState::SignerState   dealerTx_;
    bs::core::wallet::TXSignRequest  ccTxData_;
-   BinaryData                 ccTxResolvedData_;
+   Codec_SignerState::SignerState   ccTxResolvedData_;
    std::string                ccTxSigned_;
    bool                       genAddrVerified_ = false;
 

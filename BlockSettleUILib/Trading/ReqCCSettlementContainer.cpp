@@ -87,9 +87,8 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    walletInfo_ = bs::hd::WalletInfo(walletsMgr_, rootWallet);
    infoReqId_ = signingContainer_->GetInfo(walletInfo_.rootId().toStdString());
 
-   dealerTx_ = BinaryData::CreateFromHex(quote_.dealerTransaction);
-   if (dealerTx_.empty()) {
-      throw std::invalid_argument("missing dealer's transaction");
+   if (!dealerTx_.ParseFromString(BinaryData::CreateFromHex(quote_.dealerTransaction).toBinStr())) {
+      throw std::invalid_argument("invalid dealer's transaction");
    }
 }
 
@@ -300,10 +299,10 @@ void ReqCCSettlementContainer::AcceptQuote()
       }
    }
    signingContainer_->resolvePublicSpenders(ccTxData_, [this]
-      (bs::error::ErrorCode result, const BinaryData &txState)
+      (bs::error::ErrorCode result, const Codec_SignerState::SignerState &state)
    {
       if (result == bs::error::ErrorCode::NoError) {
-         ccTxResolvedData_ = txState;
+         ccTxResolvedData_ = state;
          emit sendOrder();
       }
       else {
@@ -400,13 +399,11 @@ bool ReqCCSettlementContainer::cancel()
 
 std::string ReqCCSettlementContainer::txData() const
 {
-   if (ccTxResolvedData_.empty()) {
+   if (!ccTxResolvedData_.IsInitialized()) {
       logger_->error("[ReqCCSettlementContainer::txData] no resolved data");
       return {};
    }
-   const auto &data = ccTxResolvedData_.toHexStr();
-   logger_->debug("[ReqCCSettlementContainer::txData] {}", data);
-   return data;
+   return BinaryData::fromString(ccTxResolvedData_.SerializeAsString()).toHexStr();
 }
 
 void ReqCCSettlementContainer::setClOrdId(const std::string& clientOrderId)

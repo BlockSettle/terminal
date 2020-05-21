@@ -47,7 +47,6 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , xbtWallet_(xbtWallet)
    , signingContainer_(container)
    , walletsMgr_(walletsMgr)
-   , txReqData_(BinaryData::CreateFromHex(order.reqTransaction))
    , ownRecvAddr_(bs::Address::fromAddressString(ownRecvAddr))
    , orderId_(QString::fromStdString(order.clOrderId))
    , signer_(armory)
@@ -59,6 +58,10 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    ccWallet_ = walletsMgr->getCCWallet(order.product);
    if (!ccWallet_) {
       throw std::logic_error("can't find CC wallet");
+   }
+
+   if (!txReqData_.ParseFromString(BinaryData::CreateFromHex(order.reqTransaction).toBinStr())) {
+      throw std::invalid_argument("invalid requester transaction");
    }
 
    connect(this, &DealerCCSettlementContainer::genAddressVerified, this
