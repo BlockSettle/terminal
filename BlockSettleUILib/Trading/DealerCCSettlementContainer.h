@@ -94,7 +94,7 @@ private:
    std::shared_ptr<bs::sync::hd::Wallet>   xbtWallet_;
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
-   const BinaryData  txReqData_;
+   Codec_SignerState::SignerState   txReqData_;
    const bs::Address ownRecvAddr_;
    const QString     orderId_;
    bool              foundRecipAddr_ = false;

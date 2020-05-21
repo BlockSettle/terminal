@@ -304,22 +304,22 @@ TEST_F(TestCC, DISABLED_TX_buy)
 
          const auto priWallet = envPtr_->walletsMgr()->getPrimaryWallet();
 
-         BinaryData signed1;
+         Codec_SignerState::SignerState signed1;
          {
             auto ccLeaf =
                std::dynamic_pointer_cast<bs::core::hd::Leaf>(ccSignWallet_);
             const bs::core::WalletPasswordScoped lock(priWallet, passphrase_);
             signed1 = ccSignWallet_->signPartialTXRequest(txReq3);
-            ASSERT_FALSE(signed1.empty());
+            ASSERT_TRUE(signed1.IsInitialized());
          }
 
-         BinaryData signed2;
+         Codec_SignerState::SignerState signed2;
          {
             auto xbtLeaf =
                std::dynamic_pointer_cast<bs::core::hd::Leaf>(xbtSignWallet_);
             const bs::core::WalletPasswordScoped lock(priWallet, passphrase_);
             signed2 = xbtSignWallet_->signPartialTXRequest(txReq2);
-            ASSERT_FALSE(signed2.empty());
+            ASSERT_TRUE(signed2.IsInitialized());
          }
 
          Signer signer;                         // merge halves
@@ -426,13 +426,13 @@ TEST_F(TestCC, DISABLED_TX_sell)
 
          const auto priWallet = envPtr_->walletsMgr()->getPrimaryWallet();
 
-         BinaryData signed1, signed2;
+         Codec_SignerState::SignerState signed1, signed2;
          {
             auto ccLeaf =
                std::dynamic_pointer_cast<bs::core::hd::Leaf>(ccSignWallet_);
             const bs::core::WalletPasswordScoped lock(priWallet, passphrase_);
             signed1 = ccSignWallet_->signPartialTXRequest(txReq3);
-            ASSERT_FALSE(signed1.empty());
+            ASSERT_TRUE(signed1.IsInitialized());
          }
 
          // use full requester's half on dealer side
@@ -443,7 +443,7 @@ TEST_F(TestCC, DISABLED_TX_sell)
                std::dynamic_pointer_cast<bs::core::hd::Leaf>(xbtSignWallet_);
             const bs::core::WalletPasswordScoped lock(priWallet, passphrase_);
             signed2 = xbtSignWallet_->signPartialTXRequest(txReq2);
-            ASSERT_FALSE(signed2.empty());
+            ASSERT_TRUE(signed2.IsInitialized());
          }
 
          Signer signer;                         // merge halves

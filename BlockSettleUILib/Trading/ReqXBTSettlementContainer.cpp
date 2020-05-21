@@ -368,7 +368,9 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
             utxoRes_ = utxoReservationManager_->makeNewReservation(unsignedPayinRequest_.inputs, id());
          }
 
-         emit sendUnsignedPayinToPB(settlementIdHex_, bs::network::UnsignedPayinData{ unsignedPayinRequest_.serializeState(), std::move(result.preimageData)} );
+         emit sendUnsignedPayinToPB(settlementIdHex_
+            , bs::network::UnsignedPayinData{ unsignedPayinRequest_.serializeState().SerializeAsString()
+               , std::move(result.preimageData)} );
 
          const auto &authLeaf = walletsMgr_->getAuthWallet();
          signContainer_->setSettlCP(authLeaf->walletId(), result.payinHash, settlementId_, dealerAuthKey_);

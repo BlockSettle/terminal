@@ -1194,112 +1194,109 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
    ui_->pushButtonShowSimple->setEnabled(false);
 
    const auto &tx = transactions[0];
-   if (!tx.prevStates.empty()) {    // signed TX
+   if (!tx.serializedTx.empty()) {    // signed TX
       ui_->textEditComment->insertPlainText(QString::fromStdString(tx.comment));
 
-      if (tx.prevStates.size() == 1) {
-         importedSignedTX_ = tx.prevStates[0];
+      importedSignedTX_ = tx.serializedTx;
+      Tx tx;
+      try {
+         tx = Tx(importedSignedTX_);
+      }
+      catch (const BlockDeserializingException &e) {
+         // BlockDeserializingException sometimes does not have meaningful details
+         SPDLOG_LOGGER_ERROR(logger_, "TX import failed: BlockDeserializingException: '{}'", e.what());
+         BSMessageBox(BSMessageBox::critical, tr("Transaction import")
+            , tr("Deserialization failed")).exec();
+         return;
+      }
+      catch (const std::exception &e) {
+         SPDLOG_LOGGER_ERROR(logger_, "TX import failed: '{}'", e.what());
+         BSMessageBox(BSMessageBox::critical, tr("Transaction import")
+            , tr("Import failed"), QString::fromStdString(e.what())).exec();
+         return;
+      }
 
-         Tx tx;
-         try {
-            tx = Tx(importedSignedTX_);
+      if (tx.isInitialized()) {
+         ui_->pushButtonCreate->setEnabled(true);
+
+         std::set<BinaryData> txHashSet;
+         std::map<BinaryData, std::set<uint32_t>> txOutIndices;
+         TransactionData::UtxoHashes utxoHashes;
+
+         for (size_t i = 0; i < tx.getNumTxIn(); i++) {
+            auto in = tx.getTxInCopy((int)i);
+            OutPoint op = in.getOutPoint();
+            utxoHashes.push_back({ op.getTxHash(), op.getTxOutIndex() });
+            txHashSet.insert(op.getTxHash());
+            txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
          }
-         catch (const BlockDeserializingException &e) {
-            // BlockDeserializingException sometimes does not have meaningful details
-            SPDLOG_LOGGER_ERROR(logger_, "TX import failed: BlockDeserializingException: '{}'", e.what());
-            BSMessageBox(BSMessageBox::critical, tr("Transaction import")
-               , tr("Deserialization failed")).exec();
-            return;
-         }
-         catch (const std::exception &e) {
-            SPDLOG_LOGGER_ERROR(logger_, "TX import failed: '{}'", e.what());
-            BSMessageBox(BSMessageBox::critical, tr("Transaction import")
-               , tr("Import failed"), QString::fromStdString(e.what())).exec();
-            return;
-         }
 
-         if (tx.isInitialized()) {
-            ui_->pushButtonCreate->setEnabled(true);
-
-            std::set<BinaryData> txHashSet;
-            std::map<BinaryData, std::set<uint32_t>> txOutIndices;
-            TransactionData::UtxoHashes utxoHashes;
-
-            for (size_t i = 0; i < tx.getNumTxIn(); i++) {
-               auto in = tx.getTxInCopy((int)i);
-               OutPoint op = in.getOutPoint();
-               utxoHashes.push_back({ op.getTxHash(), op.getTxOutIndex() });
-               txHashSet.insert(op.getTxHash());
-               txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
+         const auto &cbTXs = [thisPtr, tx, utxoHashes, txOutIndices]
+            (const AsyncClient::TxBatchResult &result, std::exception_ptr exPtr)
+         {
+            if (!thisPtr || exPtr) {
+               return;
             }
 
-            const auto &cbTXs = [thisPtr, tx, utxoHashes, txOutIndices]
-               (const AsyncClient::TxBatchResult &result, std::exception_ptr exPtr)
-            {
-               if (!thisPtr || exPtr) {
-                  return;
+            std::shared_ptr<bs::sync::Wallet> wallet;
+            int64_t totalVal = 0;
+
+            for (const auto &item : result) {
+               if (!item.second || !item.second->isInitialized()) {
+                  SPDLOG_LOGGER_ERROR(thisPtr->logger_, "uninitialized TX received - skipping, tx hash: {}", item.first.toHexStr(true));
+                  continue;
                }
-
-               std::shared_ptr<bs::sync::Wallet> wallet;
-               int64_t totalVal = 0;
-
-               for (const auto &item : result) {
-                  if (!item.second || !item.second->isInitialized()) {
-                     SPDLOG_LOGGER_ERROR(thisPtr->logger_, "uninitialized TX received - skipping, tx hash: {}", item.first.toHexStr(true));
-                     continue;
-                  }
-                  const auto &prevTx = *item.second;
-                  const auto &itTxOut = txOutIndices.find(prevTx.getThisHash());
-                  if (itTxOut == txOutIndices.end()) {
-                     continue;
-                  }
-                  for (const auto &txOutIdx : itTxOut->second) {
-                     const auto prevOut = prevTx.getTxOutCopy(txOutIdx);
-                     totalVal += prevOut.getValue();
-                     if (!wallet) {
-                        const auto addr = bs::Address::fromTxOut(prevOut);
-                        const auto &addrWallet = thisPtr->walletsManager_->getWalletByAddress(addr);
-                        if (addrWallet) {
-                           wallet = addrWallet;
-                        }
+               const auto &prevTx = *item.second;
+               const auto &itTxOut = txOutIndices.find(prevTx.getThisHash());
+               if (itTxOut == txOutIndices.end()) {
+                  continue;
+               }
+               for (const auto &txOutIdx : itTxOut->second) {
+                  const auto prevOut = prevTx.getTxOutCopy(txOutIdx);
+                  totalVal += prevOut.getValue();
+                  if (!wallet) {
+                     const auto addr = bs::Address::fromTxOut(prevOut);
+                     const auto &addrWallet = thisPtr->walletsManager_->getWalletByAddress(addr);
+                     if (addrWallet) {
+                        wallet = addrWallet;
                      }
                   }
                }
+            }
 
-               if (wallet) {
-                  auto cbInputsReceived = [thisPtr, utxoHashes] {
-                     if (!thisPtr) {
-                        return;
-                     }
-                     thisPtr->transactionData_->setSelectedUtxo(utxoHashes);
-                     thisPtr->usedInputsModel_->updateInputs(thisPtr->transactionData_->inputs());
-                  };
-
-                  thisPtr->SetFixedWallet(wallet->walletId(), cbInputsReceived);
-               } else {
-                  thisPtr->showUnknownWalletWarning_ = true;
-                  thisPtr->ui_->comboBoxWallets->clear();
-                  // labelBalance will still update balance, let's hide it
-                  thisPtr->ui_->labelBalance->hide();
-               }
-
-               std::vector<std::tuple<bs::Address, double, bool>> recipients;
-               for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
-                  TxOut out = tx.getTxOutCopy((int)i);
-                  const auto addr = bs::Address::fromTxOut(out);
-                  if (wallet && (i == (tx.getNumTxOut() - 1)) && (wallet->containsAddress(addr))) {
-                     thisPtr->SetFixedChangeAddress(QString::fromStdString(addr.display()));
+            if (wallet) {
+               auto cbInputsReceived = [thisPtr, utxoHashes] {
+                  if (!thisPtr) {
+                     return;
                   }
-                  recipients.push_back({ addr, out.getValue() / BTCNumericTypes::BalanceDivider, false });
-                  totalVal -= out.getValue();
+                  thisPtr->transactionData_->setSelectedUtxo(utxoHashes);
+                  thisPtr->usedInputsModel_->updateInputs(thisPtr->transactionData_->inputs());
+               };
+
+               thisPtr->SetFixedWallet(wallet->walletId(), cbInputsReceived);
+            } else {
+               thisPtr->showUnknownWalletWarning_ = true;
+               thisPtr->ui_->comboBoxWallets->clear();
+               // labelBalance will still update balance, let's hide it
+               thisPtr->ui_->labelBalance->hide();
+            }
+
+            std::vector<std::tuple<bs::Address, double, bool>> recipients;
+            for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
+               TxOut out = tx.getTxOutCopy((int)i);
+               const auto addr = bs::Address::fromTxOut(out);
+               if (wallet && (i == (tx.getNumTxOut() - 1)) && (wallet->containsAddress(addr))) {
+                  thisPtr->SetFixedChangeAddress(QString::fromStdString(addr.display()));
                }
-               if (!recipients.empty()) {
-                  thisPtr->AddRecipients(recipients);
-               }
-               thisPtr->SetPredefinedFee(totalVal);
-            };
-            armory_->getTXsByHash(txHashSet, cbTXs, true);
-         }
+               recipients.push_back({ addr, out.getValue() / BTCNumericTypes::BalanceDivider, false });
+               totalVal -= out.getValue();
+            }
+            if (!recipients.empty()) {
+               thisPtr->AddRecipients(recipients);
+            }
+            thisPtr->SetPredefinedFee(totalVal);
+         };
+         armory_->getTXsByHash(txHashSet, cbTXs, true);
       }
    } else { // unsigned TX
       auto cbInputsReceived = [thisPtr, inputs = tx.inputs] {
