@@ -54,7 +54,7 @@ void CCWidget::updateTotalAssets()
 
 void CCWidget::onRowsInserted(const QModelIndex &parent, int first, int last)
 {
-    Q_UNUSED(first)
-    Q_UNUSED(last)
-    ui_->treeViewCC->expand(parent);
+   Q_UNUSED(first)
+   Q_UNUSED(last)
+   ui_->treeViewCC->expandAll();
 }
