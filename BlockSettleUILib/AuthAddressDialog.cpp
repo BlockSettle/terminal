@@ -359,7 +359,7 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
       );
 
       if (testnet) {
-         msgText += tr("\n\nIt will be deducted from the ‘play money’ in your test account.");
+         msgText += tr("\n\nIt will be deducted from the ‘play money’ in your test account.\n");
       }
 
       promptResult = BSMessageBox(BSMessageBox::question, qryTitle, qryText

@@ -187,45 +187,24 @@ public:
 
 
 TransactionsWidget::TransactionsWidget(QWidget* parent)
-   : TabWithShortcut(parent)
+   : TransactionsWidgetInterface(parent)
    , ui_(new Ui::TransactionsWidget())
-   , transactionsModel_(nullptr)
    , sortFilterModel_(nullptr)
-
 {
    ui_->setupUi(this);
    connect(ui_->treeViewTransactions, &QAbstractItemView::doubleClicked, this, &TransactionsWidget::showTransactionDetails);
    ui_->treeViewTransactions->setContextMenuPolicy(Qt::CustomContextMenu);
 
-   actionCopyAddr_ = new QAction(tr("&Copy Address"));
-   connect(actionCopyAddr_, &QAction::triggered, [this]() {
-      qApp->clipboard()->setText(curAddress_);
-   });
-
-   actionCopyTx_ = new QAction(tr("Copy &Transaction Hash"));
-   connect(actionCopyTx_, &QAction::triggered, [this]() {
-      qApp->clipboard()->setText(curTx_);
-   });
-
-   actionRBF_ = new QAction(tr("Replace-By-Fee (RBF)"), this);
-   connect(actionRBF_, &QAction::triggered, this, &TransactionsWidget::onCreateRBFDialog);
-
-   actionCPFP_ = new QAction(tr("Child-Pays-For-Parent (CPFP)"), this);
-   connect(actionCPFP_, &QAction::triggered, this, &TransactionsWidget::onCreateCPFPDialog);
-
-   actionRevoke_ = new QAction(tr("Revoke"), this);
-   connect(actionRevoke_, &QAction::triggered, this, &TransactionsWidget::onRevokeSettlement);
-
    connect(ui_->treeViewTransactions, &QAbstractItemView::customContextMenuRequested, [=](const QPoint& p) {
       auto index = sortFilterModel_->mapToSource(ui_->treeViewTransactions->indexAt(p));
-      auto addressIndex = transactionsModel_->index(index.row(), static_cast<int>(TransactionsViewModel::Columns::Address));
-      curAddress_ = transactionsModel_->data(addressIndex).toString();
+      auto addressIndex = model_->index(index.row(), static_cast<int>(TransactionsViewModel::Columns::Address));
+      curAddress_ = model_->data(addressIndex).toString();
 
       contextMenu_.clear();
 
       if (sortFilterModel_) {
          const auto &sourceIndex = sortFilterModel_->mapToSource(ui_->treeViewTransactions->indexAt(p));
-         const auto &txNode = transactionsModel_->getNode(sourceIndex);
+         const auto &txNode = model_->getNode(sourceIndex);
          if (txNode && txNode->item() && txNode->item()->initialized) {
             if (txNode->item()->isRBFeligible() && (txNode->level() < 2)) {
                contextMenu_.addAction(actionRBF_);
@@ -305,26 +284,20 @@ void TransactionsWidget::init(const std::shared_ptr<bs::sync::WalletsManager> &w
                               , const std::shared_ptr<spdlog::logger> &logger)
 
 {
-   walletsManager_ = walletsMgr;
-   armory_ = armory;
-   utxoReservationManager_ = utxoReservationManager;
-   signContainer_ = signContainer;
-   appSettings_ = appSettings;
-   logger_ = logger;
+   TransactionsWidgetInterface::init(walletsMgr, armory, utxoReservationManager, signContainer, appSettings, logger);
 
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &TransactionsWidget::walletsChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, [this](std::string) { walletsChanged(); });
-   connect(signContainer_.get(), &SignContainer::TXSigned, this, &TransactionsWidget::onTXSigned);
 
    scheduleDateFilterCheck();
 }
 
 void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<TransactionsViewModel>& model)
 {
-   transactionsModel_ = model;
-   connect(transactionsModel_.get(), &TransactionsViewModel::dataLoaded, this, &TransactionsWidget::onDataLoaded, Qt::QueuedConnection);
-   connect(transactionsModel_.get(), &TransactionsViewModel::initProgress, this, &TransactionsWidget::onProgressInited);
-   connect(transactionsModel_.get(), &TransactionsViewModel::updateProgress, this, &TransactionsWidget::onProgressUpdated);
+   model_ = model;
+   connect(model_.get(), &TransactionsViewModel::dataLoaded, this, &TransactionsWidget::onDataLoaded, Qt::QueuedConnection);
+   connect(model_.get(), &TransactionsViewModel::initProgress, this, &TransactionsWidget::onProgressInited);
+   connect(model_.get(), &TransactionsViewModel::updateProgress, this, &TransactionsWidget::onProgressUpdated);
 
    sortFilterModel_ = new TransactionsSortFilterModel(appSettings_, this);
    sortFilterModel_->setSourceModel(model.get());
@@ -366,7 +339,7 @@ void TransactionsWidget::onDataLoaded(int count)
    if ((count <= 0) || (ui_->dateEditStart->dateTime().date().year() > 2009)) {
       return;
    }
-   const auto &item = transactionsModel_->getOldestItem();
+   const auto &item = model_->getOldestItem();
    if (item) {
       ui_->dateEditStart->setDateTime(QDateTime::fromTime_t(item->txEntry.txTime));
    }
@@ -513,7 +486,7 @@ void TransactionsWidget::onEnterKeyInTrxPressed(const QModelIndex &index)
 
 void TransactionsWidget::showTransactionDetails(const QModelIndex& index)
 {
-   const auto &txItem = transactionsModel_->getItem(sortFilterModel_->mapToSource(index));
+   const auto &txItem = model_->getItem(sortFilterModel_->mapToSource(index));
    if (!txItem) {
       SPDLOG_LOGGER_ERROR(logger_, "item not found");
       return;
@@ -526,231 +499,10 @@ void TransactionsWidget::showTransactionDetails(const QModelIndex& index)
 void TransactionsWidget::updateResultCount()
 {
    auto shown = sortFilterModel_->rowCount();
-   auto total = transactionsModel_->itemsCount();
+   auto total = model_->itemsCount();
    ui_->labelResultCount->setText(tr("Displaying %L1 transactions (of %L2 total).")
       .arg(shown).arg(total));
    ui_->labelResultCount->show();
-}
-
-void TransactionsWidget::onCreateRBFDialog()
-{
-   auto txItem = transactionsModel_->getItem(actionRBF_->data().toModelIndex());
-   if (!txItem) {
-      SPDLOG_LOGGER_ERROR(logger_, "item not found");
-      return;
-   }
-
-   const auto &cbDialog = [this](const TransactionPtr &txItem) {
-      try {
-         auto dlg = CreateTransactionDialogAdvanced::CreateForRBF(armory_
-            , walletsManager_, utxoReservationManager_, signContainer_, logger_, appSettings_, txItem->tx
-            , this);
-         dlg->exec();
-      }
-      catch (const std::exception &e) {
-         BSMessageBox(BSMessageBox::critical, tr("RBF Transaction"), tr("Failed to create RBF transaction")
-            , QLatin1String(e.what()), this).exec();
-      }
-   };
-
-   if (txItem->initialized) {
-      cbDialog(txItem);
-   }
-   else {
-      TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
-   }
-}
-
-void TransactionsWidget::onCreateCPFPDialog()
-{
-   auto txItem = transactionsModel_->getItem(actionCPFP_->data().toModelIndex());
-   if (!txItem) {
-      SPDLOG_LOGGER_ERROR(logger_, "item not found");
-      return;
-   }
-
-   const auto &cbDialog = [this](const TransactionPtr &txItem) {
-      try {
-         std::shared_ptr<bs::sync::Wallet> wallet;
-         for (const auto &w : txItem->wallets) {
-            if (w->type() == bs::core::wallet::Type::Bitcoin) {
-               wallet = w;
-               break;
-            }
-         }
-         auto dlg = CreateTransactionDialogAdvanced::CreateForCPFP(armory_
-            , walletsManager_, utxoReservationManager_, signContainer_, wallet
-            , logger_, appSettings_, txItem->tx, this);
-         dlg->exec();
-      }
-      catch (const std::exception &e) {
-         BSMessageBox(BSMessageBox::critical, tr("CPFP Transaction"), tr("Failed to create CPFP transaction")
-            , QLatin1String(e.what()), this).exec();
-      }
-   };
-
-   if (txItem->initialized) {
-      cbDialog(txItem);
-   }
-   else {
-      TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
-   }
-}
-
-void TransactionsWidget::onRevokeSettlement()
-{
-   auto txItem = transactionsModel_->getItem(actionRevoke_->data().toModelIndex());
-   if (!txItem) {
-      SPDLOG_LOGGER_ERROR(logger_, "item not found");
-      return;
-   }
-   auto args = std::make_shared<bs::tradeutils::PayoutArgs>();
-
-   auto payoutCb = bs::tradeutils::PayoutResultCb([this, args, txItem]
-      (bs::tradeutils::PayoutResult result)
-   {
-      const auto &timestamp = QDateTime::currentDateTimeUtc();
-      QMetaObject::invokeMethod(qApp, [this, args, txItem, timestamp, result]{
-         if (!result.success) {
-            SPDLOG_LOGGER_ERROR(logger_, "creating payout failed: {}", result.errorMsg);
-            BSMessageBox(BSMessageBox::critical, tr("Revoke Transaction")
-               , tr("Revoke failed")
-               , tr("failed to create pay-out TX"), this).exec();
-            return;
-         }
-
-         constexpr int kRevokeTimeout = 60;
-         const auto &settlementIdHex = args->settlementId.toHexStr();
-         bs::sync::PasswordDialogData dlgData;
-         dlgData.setValue(PasswordDialogData::SettlementId, QString::fromStdString(settlementIdHex));
-         dlgData.setValue(PasswordDialogData::Title, tr("Settlement Revoke"));
-         dlgData.setValue(PasswordDialogData::DurationLeft, kRevokeTimeout * 1000);
-         dlgData.setValue(PasswordDialogData::DurationTotal, kRevokeTimeout * 1000);
-         dlgData.setValue(PasswordDialogData::SettlementPayOutVisible, true);
-
-         // Set timestamp that will be used by auth eid server to update timers.
-         dlgData.setValue(PasswordDialogData::DurationTimestamp, static_cast<int>(timestamp.toSecsSinceEpoch()));
-
-         dlgData.setValue(PasswordDialogData::ProductGroup, tr(bs::network::Asset::toString(bs::network::Asset::SpotXBT)));
-         dlgData.setValue(PasswordDialogData::Security, txItem->comment);
-         dlgData.setValue(PasswordDialogData::Product, "XXX");
-         dlgData.setValue(PasswordDialogData::Side, tr("Revoke"));
-         dlgData.setValue(PasswordDialogData::Price, tr("N/A"));
-
-         dlgData.setValue(PasswordDialogData::Market, "XBT");
-         dlgData.setValue(PasswordDialogData::SettlementId, settlementIdHex);
-         dlgData.setValue(PasswordDialogData::RequesterAuthAddressVerified, true);
-         dlgData.setValue(PasswordDialogData::ResponderAuthAddressVerified, true);
-         dlgData.setValue(PasswordDialogData::SigningAllowed, true);
-
-         dlgData.setValue(PasswordDialogData::ExpandTxInfo,
-            appSettings_->get(ApplicationSettings::AdvancedTxDialogByDefault).toBool());
-
-         const auto amount = args->amount.GetValueBitcoin();
-         SPDLOG_LOGGER_DEBUG(logger_, "revoke fee={}, qty={} ({}), recv addr: {}"
-            ", settl addr: {}", result.signRequest.fee, amount
-            , amount * BTCNumericTypes::BalanceDivider, args->recvAddr.display()
-            , result.settlementAddr.display());
-
-         const auto reqId = signContainer_->signSettlementPayoutTXRequest(result.signRequest
-            , { args->settlementId, args->cpAuthPubKey, false}, dlgData);
-         if (reqId) {
-            revokeIds_.insert(reqId);
-         }
-         else {
-            BSMessageBox(BSMessageBox::critical, tr("Revoke Transaction")
-               , tr("Revoke failed")
-               , tr("failed to send TX request to signer"), this).exec();
-         }
-      });
-   });
-
-   const auto &cbSettlAuth = [this, args, payoutCb](const bs::Address &ownAuthAddr)
-   {
-      if (ownAuthAddr.empty()) {
-         QMetaObject::invokeMethod(this, [this] {
-            BSMessageBox(BSMessageBox::critical, tr("Revoke Transaction")
-               , tr("Failed to create revoke transaction")
-               , tr("auth wallet doesn't contain settlement metadata"), this).exec();
-         });
-         return;
-      }
-      args->ourAuthAddress = ownAuthAddr;
-      bs::tradeutils::createPayout(*args, payoutCb, false);
-   };
-   const auto &cbSettlCP = [this, args, cbSettlAuth]
-      (const BinaryData &settlementId, const BinaryData &dealerAuthKey)
-   {
-      if (settlementId.empty() || dealerAuthKey.empty()) {
-         cbSettlAuth({});
-         return;
-      }
-      args->settlementId = settlementId;
-      args->cpAuthPubKey = dealerAuthKey;
-      signContainer_->getSettlAuthAddr(walletsManager_->getPrimaryWallet()->walletId()
-         , settlementId, cbSettlAuth);
-   };
-   const auto &cbDialog = [this, args, cbSettlCP]
-      (const TransactionPtr &txItem)
-   {
-      for (int i = 0; i < txItem->tx.getNumTxOut(); ++i) {
-         const auto &txOut = txItem->tx.getTxOutCopy(i);
-         const auto &addr = bs::Address::fromTxOut(txOut);
-         if (addr.getType() == AddressEntryType_P2WSH) {
-            args->amount = bs::XBTAmount{ txOut.getValue() };
-            break;
-         }
-      }
-
-      const auto &xbtWallet = walletsManager_->getDefaultWallet();
-      args->walletsMgr = walletsManager_;
-      args->armory = armory_;
-      args->signContainer = signContainer_;
-      args->payinTxId = txItem->txEntry.txHash;
-      args->outputXbtWallet = xbtWallet;
-
-      xbtWallet->getNewExtAddress([this, args, cbSettlCP](const bs::Address &addr) {
-         args->recvAddr = addr;
-         signContainer_->getSettlCP(walletsManager_->getPrimaryWallet()->walletId()
-            , args->payinTxId, cbSettlCP);
-      });
-   };
-
-   if (txItem->initialized) {
-      cbDialog(txItem);
-   } else {
-      TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
-   }
-}
-
-void TransactionsWidget::onTXSigned(unsigned int id, BinaryData signedTX
-   , bs::error::ErrorCode errCode, std::string errTxt)
-{
-   if (revokeIds_.find(id) != revokeIds_.end()) {
-      revokeIds_.erase(id);
-      if (errCode == bs::error::ErrorCode::TxCancelled) {
-         SPDLOG_LOGGER_INFO(logger_, "revoke {} cancelled", id);
-         return;
-      }
-
-      if ((errCode != bs::error::ErrorCode::NoError) || signedTX.empty()) {
-         logger_->warn("[TransactionsWidget::onTXSigned] revoke sign failure: {} ({})"
-            , (int)errCode, errTxt);
-         QMetaObject::invokeMethod(this, [this, errTxt] {
-            BSMessageBox(BSMessageBox::critical, tr("Revoke Transaction")
-               , tr("Failed to sign revoke transaction")
-               , QString::fromStdString(errTxt), this).exec();
-         });
-         return;
-      }
-      SPDLOG_LOGGER_DEBUG(logger_, "signed revoke: {}", signedTX.toHexStr());
-
-      if (armory_->pushZC(signedTX).empty()) {
-         BSMessageBox(BSMessageBox::critical, tr("Revoke Transaction")
-            , tr("Failed to send revoke transaction")
-            , tr("BlockSettleDB connection unavailable"), this).exec();
-      }
-   }
 }
 
 void TransactionsWidget::scheduleDateFilterCheck()
