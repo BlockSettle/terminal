@@ -1299,6 +1299,12 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
          armory_->getTXsByHash(txHashSet, cbTXs, true);
       }
    } else { // unsigned TX
+      if (tx.walletIds.empty()) {
+         SPDLOG_LOGGER_ERROR(thisPtr->logger_, "invalid unsigned TX");
+         BSMessageBox(BSMessageBox::critical, tr("Transaction import")
+            , tr("Import failed"), tr("Invalid unsigned TX (corrupted file)")).exec();
+         return;
+      }
       auto cbInputsReceived = [thisPtr, inputs = tx.inputs] {
          if (!thisPtr) {
             return;
@@ -1338,7 +1344,6 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       disableChangeAddressSelecting();
    }
    updateCreateButtonText();
-
 }
 
 void CreateTransactionDialogAdvanced::onImportPressed()
@@ -1347,7 +1352,6 @@ void CreateTransactionDialogAdvanced::onImportPressed()
    if (transactions.empty()) {
       return;
    }
-
    SetImportedTransactions(transactions);
 }
 
