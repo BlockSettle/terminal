@@ -341,6 +341,60 @@ TXNode *TransactionsViewModel::getNode(const QModelIndex &index) const
    return static_cast<TXNode *>(index.internalPointer());
 }
 
+bool TransactionsViewModel::isTxRevocable(const Tx& tx)
+{
+   auto iRevokable = revocableTxs_.find(tx.getThisHash());
+   if (iRevokable != revocableTxs_.cend()) {
+      return iRevokable->second;
+   }
+
+   std::set<unsigned> indexes;
+   for (unsigned i = 0; i < tx.getNumTxOut(); i++) {
+      const auto &txOut = tx.getTxOutCopy(i);
+      const auto &addr = bs::Address::fromTxOut(txOut);
+      if (addr.getType() == AddressEntryType_P2WSH) {
+         indexes.insert(i);
+      }
+   }
+
+   if (indexes.empty()) {
+      return false;
+   }
+
+   std::map<BinaryData, std::set<unsigned>> spentnessToTrack = 
+         { { tx.getThisHash(), std::move(indexes) } };
+   
+   auto cbStoreRevoke = [caller = QPointer<TransactionsViewModel>(this), txHash = tx.getThisHash()](const std::map<BinaryData
+      , std::map<unsigned int, SpentnessResult>> &results, std::exception_ptr exPtr) {
+      if (!caller) {
+         return;
+      }
+
+      if (exPtr != nullptr) {
+         caller->revocableTxs_.erase(txHash);
+         return;
+      }
+
+      auto iResult = results.find(txHash);
+      if (iResult == results.cend()) {
+         return;
+      }
+
+      for (auto const &result : iResult->second) {
+         if (result.second.state_ == OutputSpentnessState::Unspent) {
+            caller->revocableTxs_[txHash] = true;
+            return;
+         }
+      }
+   };
+
+   armory_->getSpentnessForZcOutputs(spentnessToTrack, cbStoreRevoke);
+
+   // We want user to have this as false while result is not returning back
+   revocableTxs_[tx.getThisHash()] = false;
+   return false;
+}
+
 int TransactionsViewModel::rowCount(const QModelIndex &parent) const
 {
    const auto &node = getNode(parent);

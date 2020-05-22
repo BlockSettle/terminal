@@ -161,6 +161,8 @@ public:
    TransactionPtr getOldestItem() const { return oldestItem_; }
    TXNode *getNode(const QModelIndex &) const;
 
+   bool isTxRevocable(const Tx& tx);
+
 private slots:
    void updatePage();
    void refresh();
@@ -233,6 +235,9 @@ private:
    // Right now used with AddressDetailDialog only.
    // See BST-1982 and BST-1983 for details.
    const bs::Address filterAddress_;
+
+   // Tx that could be revoked
+   std::map<BinaryData, bool> revocableTxs_;
 };
 
 #endif // __TRANSACTIONS_VIEW_MODEL_H__
