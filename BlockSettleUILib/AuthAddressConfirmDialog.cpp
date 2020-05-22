@@ -130,7 +130,7 @@ void AuthAddressConfirmDialog::onAuthAddrSubmitSuccess(const QString &address)
          "Once mined six blocks, you have access to bitcoin trading.");
 
    BSMessageBox(BSMessageBox::success, tr("Submission Successful")
-      , tr("Authentication Address submitted")
+      , tr("Authentication Address Submitted")
       , body
       , this).exec();
    accept();
