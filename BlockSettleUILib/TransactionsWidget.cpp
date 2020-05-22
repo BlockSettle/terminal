@@ -225,6 +225,7 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
             if (txNode->item()->isPayin()) {
                contextMenu_.addAction(actionRevoke_);
                actionRevoke_->setData(sourceIndex);
+               actionRevoke_->setEnabled(model_->isTxRevocable(txNode->item()->tx));
             }
             else {
                actionRevoke_->setData(-1);
