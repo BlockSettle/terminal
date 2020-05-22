@@ -127,7 +127,7 @@ void AuthAddressConfirmDialog::onAuthAddrSubmitSuccess(const QString &address)
 
    const auto body = isProd ? tr("A validation transaction will be sent within the next 24 hours.")
       : tr("Within the next 15 minutes, BlockSettle initiates the validation transaction.\n\n"
-         "Once mined six blocks, you have access to bitcoin trading.");
+         "Once mined six blocks, you have access to bitcoin trading.\n");
 
    BSMessageBox(BSMessageBox::success, tr("Submission Successful")
       , tr("Authentication Address Submitted")
