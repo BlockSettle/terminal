@@ -39,7 +39,7 @@ PullOwnOTCRequestWidget::~PullOwnOTCRequestWidget() = default;
 void PullOwnOTCRequestWidget::setOffer(const bs::network::otc::Offer &offer)
 {
    setupNegotiationInterface(headerTextOTCRequest);
-   setupOfferInfo(offer);
+   setupOfferInfo(offer, true);
    timeoutSec_ = getSeconds(bs::network::otc::negotiationTimeout());
 }
 
@@ -74,14 +74,14 @@ void PullOwnOTCRequestWidget::setResponse(const otc::QuoteResponse &response)
 void PullOwnOTCRequestWidget::setPendingBuyerSign(const bs::network::otc::Offer &offer)
 {
    setupSignAwaitingInterface(headerTextOTCPendingSellerSign);
-   setupOfferInfo(offer);
+   setupOfferInfo(offer, true);
    timeoutSec_ = getSeconds(bs::network::otc::payoutTimeout());
 }
 
 void PullOwnOTCRequestWidget::setPendingSellerSign(const bs::network::otc::Offer &offer)
 {
    setupSignAwaitingInterface(headerTextOTCPendingBuyerSign);
-   setupOfferInfo(offer);
+   setupOfferInfo(offer, false);
    timeoutSec_ = getSeconds(bs::network::otc::payinTimeout());
 }
 
@@ -123,7 +123,7 @@ void PullOwnOTCRequestWidget::setupSignAwaitingInterface(const QString& headerTe
    ui_->headerLabel->setText(headerText);
 }
 
-void PullOwnOTCRequestWidget::setupOfferInfo(const bs::network::otc::Offer &offer)
+void PullOwnOTCRequestWidget::setupOfferInfo(const bs::network::otc::Offer &offer, bool allowCancel)
 {
    ourSide_ = offer.ourSide;
    ui_->sideValue->setText(QString::fromStdString(otc::toString(offer.ourSide)));
@@ -136,4 +136,5 @@ void PullOwnOTCRequestWidget::setupOfferInfo(const bs::network::otc::Offer &offe
    ui_->totalValue->setText(UiUtils::displayCurrencyAmount(price * amount));
 
    ui_->priceWidget->show();
+   ui_->pullPushButton->setVisible(allowCancel);
 }

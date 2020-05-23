@@ -177,7 +177,7 @@ void CreateTransactionDialog::reject()
       }
 
       if (txReq_.isValid() && signContainer_) {
-         signContainer_->CancelSignTx(txReq_.serializeState());
+         signContainer_->CancelSignTx(BinaryData::fromString(txReq_.serializeState().SerializeAsString()));
       }
    }
 
@@ -692,13 +692,15 @@ std::vector<bs::core::wallet::TXSignRequest> CreateTransactionDialog::ImportTran
       return {};
    }
 
+#ifdef PRODUCTION_BUILD
    if (!transactions.at(0).allowBroadcasts) {
-      BSMessageBox errorMessage(BSMessageBox::warning, tr("Import failure")
+      BSMessageBox errorMessage(BSMessageBox::warning, tr("Warning"), tr("Import failure")
          , tr("You are trying to import a settlement transaction into a BlockSettle Terminal. "
               "Settlement transactions must be imported into a BlockSettle Signer if signed offline."), this);
       errorMessage.exec();
       return {};
    }
+#endif
 
    clear();
    return transactions;

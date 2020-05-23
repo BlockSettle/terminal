@@ -720,19 +720,21 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                            const auto recipient = bs::Address::fromAddressString(qrn.requestorRecvAddress).getRecipient(bs::XBTAmount{ spendVal });
 
                            const auto outSortOrder = isSpendCC ? kBuySortOrder : kSellSortOrder;
+                           Codec_SignerState::SignerState state;
+                           state.ParseFromString(BinaryData::CreateFromHex(qrn.requestorAuthPublicKey).toBinStr());
                            const auto txReq = bs::sync::WalletsManager::createPartialTXRequest(spendVal, inputs, changeAddress
                               , isSpendCC ? 0 : feePerByte, armory_->topBlock(), { recipient }, outSortOrder
-                              , BinaryData::CreateFromHex(qrn.requestorAuthPublicKey), false, logger_);
+                              , state, false, logger_);
                            logger_->debug("[RFQDealerReply::submitReply] {} input[s], fpb={}, recip={}, "
                               "change amount={}, prevPart={}", inputs.size(), feePerByte
                               , bs::Address::fromAddressString(qrn.requestorRecvAddress).display()
                               , txReq.change.value, qrn.requestorAuthPublicKey);
 
                            signingContainer_->resolvePublicSpenders(txReq, [replyData, this, price, txReq]
-                              (bs::error::ErrorCode result, const BinaryData &txState)
+                              (bs::error::ErrorCode result, const Codec_SignerState::SignerState &state)
                            {
                               if (result == bs::error::ErrorCode::NoError) {
-                                 replyData->qn.transactionData = txState.toHexStr();
+                                 replyData->qn.transactionData = BinaryData::fromString(state.SerializeAsString()).toHexStr();
                                  replyData->utxoRes = utxoReservationManager_->makeNewReservation(txReq.inputs, replyData->qn.quoteRequestId);
                                  submit(price, replyData);
                               }

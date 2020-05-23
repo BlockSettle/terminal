@@ -208,10 +208,10 @@ void BSTerminalMainWindow::onAddrStateChanged()
    if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
       && !authManager_->isAtLeastOneAwaitingVerification() && canSubmitAuthAddr) {
       allowAuthAddressDialogShow_ = false;
-      BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Create Authentication Address?")
-         , tr("An Authentication Address is your on-chain verification as a Participant in our trading network and is required for access to Spot XBT products.\n\n"
-              "After submission by the Participant, the Authentication Address is verified by the funding of a small amount of bitcoin from one of BlockSettle’s Validation Addresses.\n\n"
-              "Create Authentication Address now?"), this);
+      BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Create Authentication Address")
+         , tr("The Authentication Address verifies you as a Participant of our trading network on the bitcoin blockchain. It is required for access to the Spot XBT market (bitcoin trading).\n\n"
+              "BlockSettle will validate the Authentication Address you submit by funding it with 1'000 satoshis. Once mined six blocks, you have access to our Spot XBT market.\n\n"
+              "Create Authentication Address now?\n"), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
@@ -363,11 +363,14 @@ void BSTerminalMainWindow::setupTopRightWidget()
       }
    }
 
-#ifdef Q_OS_WIN
+#if defined(Q_OS_WIN)
    ui_->tabWidget->setProperty("onWindows", QVariant(true));
-#else
+#elif defined(Q_OS_LINUX)
    ui_->tabWidget->setProperty("onLinux", QVariant(true));
-#endif // DEBUG
+#else
+   ui_->tabWidget->setProperty("onMacos", QVariant(true));
+#endif
+
    auto *prevStyle = ui_->tabWidget->style();
    ui_->tabWidget->setStyle(nullptr);
    ui_->tabWidget->setStyle(prevStyle);
@@ -2081,8 +2084,9 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
    auto promoteToPrimary = [this](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
       addDeferredDialog([this, wallet] {
          promoteToPrimaryShown_ = true;
-         BSMessageBox qry(BSMessageBox::question, tr("Upgrade Wallet"), tr("Enable Trading?")
-            , tr("BlockSettle requires you to hold sub-wallets able to interact with our trading system. Do you wish to create them now?<br/><br/>"
+         BSMessageBox qry(BSMessageBox::question, tr("Upgrade Wallet"), tr("Enable Trading")
+            , tr("BlockSettle requires you to hold sub-wallets able to interact with our trading system.</br></br>"
+                 "Do you wish to create them now?<br/><br/>"
                  "For more information regarding our settlement models, please consult our ") +
                   QStringLiteral("<a href=\"%1\"><span style=\"text-decoration: underline; color: %2;\">Trading Procedures</span></a>")
                   .arg(QStringLiteral("http://pubb.blocksettle.com/PDF/BlockSettle%20Trading%20Procedures.pdf"))

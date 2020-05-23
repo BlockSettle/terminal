@@ -350,10 +350,6 @@ bool OtcClient::sendOffer(Peer *peer, const Offer &offer)
       return false;
    }
 
-   /*
-   findSettlementLeaf can never find the settlement leaf as it is written. More
-   details in the declaration.
-   */
    auto settlementLeaf = findSettlementLeaf(offer.authAddress);
    if (!settlementLeaf) {
       SPDLOG_LOGGER_ERROR(logger_, "can't find settlement leaf with address '{}'", offer.authAddress);
@@ -464,6 +460,11 @@ bool OtcClient::pullOrReject(Peer *peer)
 
       case State::WaitBuyerSign:
       case State::WaitSellerSeal: {
+         if (peer->state == State::WaitSellerSeal && peer->offer.ourSide == bs::network::otc::Side::Buy) {
+            SPDLOG_LOGGER_ERROR(logger_, "buyer can't cancel deal while waiting payin sign", peer->toString());
+            return false;
+         }
+
          auto deal = deals_.at(peer->settlementId).get();
          ProxyTerminalPb::Request request;
          auto d = request.mutable_cancel();
@@ -642,23 +643,12 @@ void OtcClient::contactConnected(const std::string &contactId)
 void OtcClient::contactDisconnected(const std::string &contactId)
 {
    const auto peer = &contactMap_.at(contactId);
-
-   switch (peer->state) {
-      case State::WaitBuyerSign:
-      case State::WaitSellerSeal:
-         // Notify PB that contact was disconnected and deal could be canceled
-         pullOrReject(peer);
-         break;
-      default:
-         // No need to notify PB in other cases:
-         // WaitVerification - temporary state (perhaps about 5 seconds) and PB would detect pay-out timeout
-         // WaitSellerSign - temporary state (about 10 seconds) and PB would detect pay-in timeout
-         break;
+   // Do not try to cancel deal waiting pay-in sign (will result in ban)
+   if (peer->state == State::WaitBuyerSign) {
+      pullOrReject(peer);
    }
-
    contactMap_.erase(contactId);
    reservedTokens_.erase(contactId);
-
    emit publicUpdated();
 }
 
@@ -806,39 +796,33 @@ void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::Error
    }
    OtcClientDeal *deal = dealIt->second.get();
 
+   if (result == bs::error::ErrorCode::NoError) {
+      if (deal->payinReqId == reqId) {
+         SPDLOG_LOGGER_DEBUG(logger_, "pay-in was succesfully signed, settlementId: {}", deal->settlementId);
+         deal->signedTx = signedTX;
+
+         ProxyTerminalPb::Request request;
+         auto d = request.mutable_seal_payin_validity();
+         d->set_settlement_id(deal->settlementId);
+         emit sendPbMessage(request.SerializeAsString());
+      }
+
+      if (deal->payoutReqId == reqId) {
+         SPDLOG_LOGGER_DEBUG(logger_, "pay-out was succesfully signed, settlementId: {}", deal->settlementId);
+         deal->signedTx = signedTX;
+         trySendSignedTx(deal);
+      }
+
+      return;
+   }
+
    if (!deal->peerHandle.isValid()) {
       SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
       return;
    }
    auto peer = deal->peer;
-
    peer->activeSettlementId.clear();
-
-   if (result != bs::error::ErrorCode::NoError) {
-      pullOrReject(peer);
-      return;
-   }
-
-   if (deal->payinReqId == reqId) {
-      if (peer->state != State::WaitSellerSeal) {
-         SPDLOG_LOGGER_ERROR(logger_, "unexpected pay-in sign");
-         return;
-      }
-
-      SPDLOG_LOGGER_DEBUG(logger_, "pay-in was succesfully signed, settlementId: {}", deal->settlementId);
-      deal->signedTx = signedTX;
-
-      ProxyTerminalPb::Request request;
-      auto d = request.mutable_seal_payin_validity();
-      d->set_settlement_id(deal->settlementId);
-      emit sendPbMessage(request.SerializeAsString());
-   }
-
-   if (deal->payoutReqId == reqId) {
-      SPDLOG_LOGGER_DEBUG(logger_, "pay-out was succesfully signed, settlementId: {}", deal->settlementId);
-      deal->signedTx = signedTX;
-      trySendSignedTx(deal);
-   }
+   pullOrReject(peer);
 }
 
 void OtcClient::processBuyerOffers(Peer *peer, const ContactMessage_BuyerOffers &msg)
@@ -1046,7 +1030,7 @@ void OtcClient::processSellerAccepts(Peer *peer, const ContactMessage_SellerAcce
       d->set_settlement_id(settlementId);
       d->set_auth_address_buyer(peer->ourAuthPubKey.toBinStr());
       d->set_auth_address_seller(peer->authPubKey.toBinStr());
-      d->set_unsigned_tx(unsignedPayout.toBinStr());
+      d->set_unsigned_tx(unsignedPayout.SerializeAsString());
       d->set_payin_tx_hash(peer->payinTxIdFromSeller.toBinStr());
       d->set_chat_id_buyer(ownContactId_);
       d->set_chat_id_seller(peer->contactId);
@@ -1082,7 +1066,7 @@ void OtcClient::processBuyerAcks(Peer *peer, const ContactMessage_BuyerAcks &msg
    d->set_settlement_id(settlementId);
    d->set_auth_address_buyer(peer->authPubKey.toBinStr());
    d->set_auth_address_seller(peer->ourAuthPubKey.toBinStr());
-   d->set_unsigned_tx(deal->payin.serializeState().toBinStr());
+   d->set_unsigned_tx(deal->payin.serializeState().SerializeAsString());
 
    for (const auto& it : deal->preimageData) {
       auto preImage = d->add_preimage_data();
@@ -1257,6 +1241,16 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
    }
    auto deal = it->second.get();
 
+   switch (response.state()) {
+      case ProxyTerminalPb::OTC_STATE_WAIT_SELLER_SIGN:
+         if (deal->side == otc::Side::Sell) {
+            trySendSignedTx(deal);
+         }
+         break;
+      default:
+         break;
+   }
+
    if (!deal->peerHandle.isValid()) {
       SPDLOG_LOGGER_ERROR(logger_, "peer was destroyed");
       return;
@@ -1364,12 +1358,7 @@ void OtcClient::processPbUpdateOtcState(const ProxyTerminalPb::Response_UpdateOt
             SPDLOG_LOGGER_ERROR(logger_, "unexpected state update request");
             return;
          }
-
          changePeerState(peer, State::WaitSellerSign);
-
-         if (deal->side == otc::Side::Sell) {
-            trySendSignedTx(deal);
-         }
          break;
       }
 
@@ -1624,28 +1613,7 @@ void OtcClient::sendSellerAccepts(Peer *peer)
 
 std::shared_ptr<bs::sync::hd::SettlementLeaf> OtcClient::findSettlementLeaf(const std::string &ourAuthAddress)
 {
-   auto wallet = walletsMgr_->getPrimaryWallet();
-   if (!wallet) {
-      SPDLOG_LOGGER_ERROR(logger_, "can't find primary wallet");
-      return nullptr;
-   }
-
-   auto group = std::dynamic_pointer_cast<bs::sync::hd::SettlementGroup>(wallet->getGroup(bs::hd::BlockSettle_Settlement));
-   if (!group) {
-      SPDLOG_LOGGER_ERROR(logger_, "don't have settlement group");
-      return nullptr;
-   }
-
-   /*
-   This will never succeed. getLeaf searches leaves address map for the specific address.
-   Settlement leaves do not carry auth addresses within their address map. Settlement
-   leaves are constructed from an auth address. 
-
-   Leaves are stored within groups by their path. Settlement leaves path are constructed
-   from the address path. Either getLeaf needs to be overloaded to search on that basis
-   for settlement groups, or another method needs to be added that actually does that.
-   */
-   return group->getLeaf(bs::Address::fromAddressString(ourAuthAddress));
+   return walletsMgr_->getSettlementLeaf(bs::Address::fromAddressString(ourAuthAddress));
 }
 
 void OtcClient::changePeerStateWithoutUpdate(Peer *peer, State state)

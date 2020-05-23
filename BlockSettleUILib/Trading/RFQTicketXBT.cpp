@@ -797,7 +797,7 @@ void RFQTicketXBT::submitButtonClicked()
                   const auto cbAddr = [this, spendVal, rfq, ccInputs, ccWallet](const bs::Address &addr) {
                      try {
                         const auto txReq = ccWallet->createPartialTXRequest(spendVal, ccInputs, addr);
-                        rfq->coinTxInput = txReq.serializeState().toHexStr();
+                        rfq->coinTxInput = BinaryData::fromString(txReq.serializeState().SerializeAsString()).toHexStr();
                         auto reservationToken = utxoReservationManager_->makeNewReservation(txReq.inputs, rfq->requestId);
                         submitRFQCb_(*rfq, std::move(reservationToken));
                      }

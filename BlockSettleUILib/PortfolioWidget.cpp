@@ -58,9 +58,8 @@ private:
 
 
 PortfolioWidget::PortfolioWidget(QWidget* parent)
-   : TabWithShortcut(parent)
+   : TransactionsWidgetInterface(parent)
    , ui_(new Ui::PortfolioWidget())
-   , model_(nullptr)
    , filter_(nullptr)
 {
    ui_->setupUi(this);
@@ -69,22 +68,6 @@ PortfolioWidget::PortfolioWidget(QWidget* parent)
    connect(ui_->treeViewUnconfirmedTransactions, &QTreeView::customContextMenuRequested, this, &PortfolioWidget::showContextMenu);
    connect(ui_->treeViewUnconfirmedTransactions, &QTreeView::activated, this, &PortfolioWidget::showTransactionDetails);
    ui_->treeViewUnconfirmedTransactions->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-
-   actionCopyAddr_ = new QAction(tr("&Copy Address"));
-   connect(actionCopyAddr_, &QAction::triggered, [this]() {
-      qApp->clipboard()->setText(curAddress_);
-   });
-
-   actionCopyTx_ = new QAction(tr("Copy &Transaction Hash"));
-   connect(actionCopyTx_, &QAction::triggered, [this]() {
-      qApp->clipboard()->setText(curTx_);
-   });
-
-   actionRBF_ = new QAction(tr("Replace-By-Fee (RBF)"), this);
-   connect(actionRBF_, &QAction::triggered, this, &PortfolioWidget::onCreateRBFDialog);
-
-   actionCPFP_ = new QAction(tr("Child-Pays-For-Parent (CPFP)"), this);
-   connect(actionCPFP_, &QAction::triggered, this, &PortfolioWidget::onCreateCPFPDialog);
 }
 
 PortfolioWidget::~PortfolioWidget() = default;
@@ -108,18 +91,13 @@ void PortfolioWidget::init(const std::shared_ptr<ApplicationSettings> &appSettin
    , const std::shared_ptr<MarketDataProvider> &mdProvider
    , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
    , const std::shared_ptr<CCPortfolioModel> &model
-   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<WalletSignerContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
 {
-   signContainer_ = container;
-   armory_ = armory;
-   walletsManager_ = walletsMgr;
-   logger_ = logger;
-   appSettings_ = appSettings;
-   utxoReservationManager_ = utxoReservationManager;
+   TransactionsWidgetInterface::init(walletsMgr, armory, utxoReservationManager, container, appSettings, logger);
 
    ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ_Portfolio
       , mdProvider, mdCallbacks);
@@ -181,6 +159,15 @@ void PortfolioWidget::showContextMenu(const QPoint &point)
       actionCPFP_->setData(-1);
    }
 
+   if (txNode->item()->isPayin()) {
+      actionRevoke_->setData(sourceIndex);
+      actionRevoke_->setEnabled(model_->isTxRevocable(txNode->item()->tx));
+      contextMenu_.addAction(actionRevoke_);
+   }
+   else {
+      actionRevoke_->setData(-1);
+   }
+
    // save transaction id and add context menu for copying it to clipboard
    curTx_ = QString::fromStdString(txNode->item()->txEntry.txHash.toHexStr(true));
    contextMenu_.addAction(actionCopyTx_);
@@ -195,70 +182,6 @@ void PortfolioWidget::showContextMenu(const QPoint &point)
    }
 }
 
-void PortfolioWidget::onCreateRBFDialog()
-{
-   const auto &txItem = model_->getItem(actionRBF_->data().toModelIndex());
-   if (!txItem) {
-      SPDLOG_LOGGER_ERROR(logger_, "item not found");
-      return;
-   }
-
-   const auto &cbDialog = [this](const TransactionPtr &txItem) {
-      try {
-         auto dlg = CreateTransactionDialogAdvanced::CreateForRBF(armory_
-            , walletsManager_, utxoReservationManager_, signContainer_, logger_, appSettings_, txItem->tx
-            , this);
-         dlg->exec();
-      }
-      catch (const std::exception &e) {
-         BSMessageBox(BSMessageBox::critical, tr("RBF Transaction"), tr("Failed to create RBF transaction")
-            , QLatin1String(e.what()), this).exec();
-      }
-   };
-
-   if (txItem->initialized) {
-      cbDialog(txItem);
-   }
-   else {
-      TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
-   }
-}
-
-void PortfolioWidget::onCreateCPFPDialog()
-{
-   const auto &txItem = model_->getItem(actionCPFP_->data().toModelIndex());
-   if (!txItem) {
-      SPDLOG_LOGGER_ERROR(logger_, "item not found");
-      return;
-   }
-
-   const auto &cbDialog = [this](const TransactionPtr &txItem) {
-      try {
-         std::shared_ptr<bs::sync::Wallet> wallet;
-         for (const auto &w : txItem->wallets) {
-            if (w->type() == bs::core::wallet::Type::Bitcoin) {
-               wallet = w;
-               break;
-            }
-         }
-         auto dlg = CreateTransactionDialogAdvanced::CreateForCPFP(armory_
-            , walletsManager_, utxoReservationManager_, signContainer_, wallet, logger_, appSettings_
-            , txItem->tx, this);
-         dlg->exec();
-      }
-      catch (const std::exception &e) {
-         BSMessageBox(BSMessageBox::critical, tr("CPFP Transaction"), tr("Failed to create CPFP transaction")
-            , QLatin1String(e.what()), this).exec();
-      }
-   };
-
-   if (txItem->initialized) {
-      cbDialog(txItem);
-   }
-   else {
-      TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
-   }
-}
 
 
 #include "PortfolioWidget.moc"

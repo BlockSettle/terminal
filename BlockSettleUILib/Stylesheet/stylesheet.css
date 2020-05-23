@@ -1,5 +1,5 @@
 /******************************************************************************
-* COLORS                                              		      *
+* COLORS                                                        *
 ***************************************************************************** */
 /* PRIMARY COLORS */
 /* BLACK COLORS */
@@ -7,7 +7,7 @@
 /* ASK COLORS */
 /* BID COLORS */
 /******************************************************************************
-* SASS IMPORTS                                              		      *
+* SASS IMPORTS                                                        *
 ***************************************************************************** */
 default-font, QTableView,
 QTreeView, QHeaderView::section, *[tableFooter="true"] QLabel {
@@ -209,9 +209,8 @@ QToolBar {
   spacing: 5px;
   border: none; }
 
-QToolButton#mainToolBarActions
-{
-    height: 27px; }
+QToolButton#mainToolBarActions {
+  max-height: 24px; }
 
 *[applicationBar="true"] {
   background-color: #1c2835;
@@ -274,6 +273,11 @@ QMenu::item {
 QMenu::item:selected {
    background-color: #5097bd;
    color: #ffffff;
+}
+
+QMenu::item:disabled {
+    color: rgba(0, 0, 0, 0.3);
+    background-color: rgba(0, 0, 0, 0.1);
 }
 
 QMenu::item:first {
@@ -430,7 +434,10 @@ QTabWidget[onWindows="true"]::right-corner {
   bottom: 2px; }
 
 QTabWidget[onLinux="true"]::right-corner {
-  bottom: 1px; }
+  bottom: 3px; }
+
+QTabWidget[onMacos="true"]::right-corner {
+  bottom: 3px; }
 
 QTabWidget::pane {
   /* The tab widget frame */

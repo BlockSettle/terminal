@@ -166,7 +166,10 @@ public:
 
    void ApplySelection(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs) override
    {
-     selectedInputs->SetTransactionSelection(transactionIndex_, checkedState_ == Qt::Checked);
+      // transactionIndex_ will be -1 for unconfirmed inputs
+      if (transactionIndex_ >= 0) {
+         selectedInputs->SetTransactionSelection(transactionIndex_, checkedState_ == Qt::Checked);
+      }
    }
 
 protected:

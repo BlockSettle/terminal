@@ -61,6 +61,7 @@ public:
    void hideQmlWindow();
 
    Q_INVOKABLE QString getUrlPath(const QUrl &url);
+   Q_INVOKABLE QString getUrlPathWithoutExtention(const QUrl &url);
 
 signals:
    void cancelSignTx(const QString &txId);

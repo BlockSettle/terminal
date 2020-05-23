@@ -69,5 +69,8 @@ QtObject {
     readonly property color comboBoxItemTextColor: textColor
     readonly property color comboBoxItemTextHighlightedColor: textColor
 
-    readonly property color testNetColor: "#fe9727"
+    readonly property color mainnetColor: "#fe9727"
+    readonly property color testnetColor: "#22c064"
+    readonly property color mainnetTextColor: "white"
+    readonly property color testnetTextColor: "black"
 }

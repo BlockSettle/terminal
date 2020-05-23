@@ -49,7 +49,7 @@ signals:
 protected:
    void setupNegotiationInterface(const QString& headerText, bool isResponse = false);
    void setupSignAwaitingInterface(const QString& headerText);
-   void setupOfferInfo(const bs::network::otc::Offer &offer);
+   void setupOfferInfo(const bs::network::otc::Offer &offer, bool allowCancel);
 
 private:
    std::unique_ptr<Ui::PullOwnOTCRequestWidget> ui_;

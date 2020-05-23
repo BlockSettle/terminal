@@ -378,14 +378,14 @@ Tx TestCCoin::CreateCJtx(
    if (returnUnsigned) {
       auto signerState = cjSigner.serializeState();
 
-      for (const auto &wallet : signWallets) {        
-         auto localSigner = Signer::createFromState(signerState);
+      for (const auto &wallet : signWallets) {
+         Signer localSigner(signerState);
          localSigner.setFlags(SCRIPT_VERIFY_SEGWIT);
          localSigner.resolveSpenders();
          signerState = localSigner.serializeState();
       }
 
-      auto finalSigner = Signer::createFromState(signerState);
+      Signer finalSigner(signerState);
       unsignedTx.unserialize(finalSigner.serializeUnsignedTx());
    }
 
@@ -3626,7 +3626,7 @@ TEST_F(TestCCoin, processZC_whileMined)
 {
    // This is just a placeholder for the test that should do the following:
    // While obtaining ZCs in processZcBatch, one of the transactions got mined
-   ASSERT_TRUE(false);
+   ASSERT_TRUE(false) << "Forcefully fails - to be implemented (see comments in source code)";
 }
 
 //TODO:

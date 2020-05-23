@@ -30,15 +30,18 @@ CustomTitleDialogWindow {
     property AuthSignWalletObject authSign: AuthSignWalletObject {}
     property WalletInfo walletInfo: WalletInfo {}
 
-    property string targetFile: qmlAppObj.getUrlPath(StandardPaths.writableLocation(StandardPaths.DocumentsLocation) + "/" + backupFileName)
+    property string userSelection: ""
+    property string targetFile: userSelection.length === 0
+        ? qmlAppObj.getUrlPath(StandardPaths.writableLocation(StandardPaths.DocumentsLocation) + "/" + backupFileName)
+        : userSelection + backupFileExt
 
-    property string backupFileExt: "." + (isPrintable ? "pdf" : "wdb")
+    property string backupFileExt: "." + (fullBackupMode ? (isPrintable ? "pdf" : "wdb") : "lmdb")
     property string netTypeStr: signerSettings.testNet ? "testnet" : "mainnet";
 
     // suggested new file names
     property string backupFileName: fullBackupMode
                                     ? "BlockSettle_" + netTypeStr + "_" + walletInfo.walletId + backupFileExt
-                                    : "BlockSettle_" + netTypeStr + "_" + walletInfo.walletId + "_WatchingOnly.lmdb"
+                                    : "BlockSettle_" + netTypeStr + "_" + walletInfo.walletId + "_WatchingOnly" + backupFileExt
 
     property bool   isPrintable: false
     property bool   acceptable: (walletInfo.encType === QPasswordData.Unencrypted)
@@ -193,7 +196,7 @@ CustomTitleDialogWindow {
                     fileMode: FileDialog.SaveFile
 
                     onAccepted: {
-                        targetFile = qmlAppObj.getUrlPath(file)
+                        userSelection = qmlAppObj.getUrlPathWithoutExtention(file)
                     }
                 }
 

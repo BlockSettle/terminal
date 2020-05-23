@@ -84,7 +84,7 @@ CustomTitleDialogWindowWithExpander {
     property string validationTitle
 
     id: root
-    title: isExpanded ? passwordDialogData.Title : ""
+    title: passwordDialogData.Title
     rejectable: true
     width: 500
 

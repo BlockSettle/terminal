@@ -17,7 +17,7 @@
 #include <QWidget>
 #include "BinaryData.h"
 #include "BSErrorCode.h"
-#include "TabWithShortcut.h"
+#include "TransactionsWidgetInterface.h"
 
 namespace spdlog {
    class logger;
@@ -39,7 +39,7 @@ class TransactionsSortFilterModel;
 class WalletSignerContainer;
 
 
-class TransactionsWidget : public TabWithShortcut
+class TransactionsWidget : public TransactionsWidgetInterface
 {
 Q_OBJECT
 
@@ -64,35 +64,15 @@ private slots:
    void walletsFilterChanged(int index);
    void onEnterKeyInTrxPressed(const QModelIndex &index);
    void onDataLoaded(int count);
-   void onCreateRBFDialog();
-   void onCreateCPFPDialog();
    void onProgressInited(int start, int end);
    void onProgressUpdated(int value);
-   void onRevokeSettlement();
-   void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode, std::string error);
 
 private:
    void scheduleDateFilterCheck();
-
    std::unique_ptr<Ui::TransactionsWidget> ui_;
-   std::shared_ptr<spdlog::logger>     logger_;
 
-   std::shared_ptr<TransactionsViewModel> transactionsModel_;
-   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<WalletSignerContainer> signContainer_;
-   std::shared_ptr<ArmoryConnection>      armory_;
-   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
-   std::shared_ptr<ApplicationSettings>   appSettings_;
    TransactionsSortFilterModel         *  sortFilterModel_;
-   QMenu    contextMenu_;
-   QAction  *actionCopyAddr_ = nullptr;
-   QAction  *actionCopyTx_ = nullptr;
-   QAction  *actionRBF_ = nullptr;
-   QAction  *actionCPFP_ = nullptr;
-   QAction  *actionRevoke_ = nullptr;
-   QString  curAddress_;
-   QString  curTx_;
-   std::set<unsigned int>  revokeIds_;
+   
 };
 
 
