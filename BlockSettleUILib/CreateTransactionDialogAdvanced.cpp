@@ -284,7 +284,8 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
             walletsToWait->erase(walletId);
             if (walletsToWait->empty()) {
                const auto lbdSetInputs = [this, inputsGroup, utxoSelected, tx, totalVal, rbfUtxos]
-               () mutable {
+                  () mutable
+               {
                   setFixedGroupInputs(inputsGroup, *rbfUtxos);
 
                   for (const auto &sel : utxoSelected) {
@@ -1186,6 +1187,10 @@ bool CreateTransactionDialogAdvanced::HaveSignedImportedTransaction() const
 
 void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<bs::core::wallet::TXSignRequest>& transactions)
 {
+   transactionData_->clear();
+   transactionData_->getSelectedInputs()->SetUseAutoSel(false);
+   selectedChangeAddress_.clear();
+   ui_->labelChangeAddress->clear();
    QPointer<CreateTransactionDialogAdvanced> thisPtr = this;
 
    ui_->pushButtonCreate->setEnabled(false);
@@ -1201,6 +1206,9 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       Tx tx;
       try {
          tx = Tx(importedSignedTX_);
+         if (!tx.isInitialized()) {
+            throw std::runtime_error("invalid TX data");
+         }
       }
       catch (const BlockDeserializingException &e) {
          // BlockDeserializingException sometimes does not have meaningful details
@@ -1216,110 +1224,146 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
          return;
       }
 
-      if (tx.isInitialized()) {
-         ui_->pushButtonCreate->setEnabled(true);
+      ui_->pushButtonCreate->setEnabled(true);
 
-         std::set<BinaryData> txHashSet;
-         std::map<BinaryData, std::set<uint32_t>> txOutIndices;
-         TransactionData::UtxoHashes utxoHashes;
+      std::set<BinaryData> txHashSet;
+      std::map<BinaryData, std::set<uint32_t>> txOutIndices;
+      TransactionData::UtxoHashes utxoHashes;
 
-         for (size_t i = 0; i < tx.getNumTxIn(); i++) {
-            auto in = tx.getTxInCopy((int)i);
-            OutPoint op = in.getOutPoint();
-            utxoHashes.push_back({ op.getTxHash(), op.getTxOutIndex() });
-            txHashSet.insert(op.getTxHash());
-            txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
+      for (size_t i = 0; i < tx.getNumTxIn(); i++) {
+         auto in = tx.getTxInCopy((int)i);
+         OutPoint op = in.getOutPoint();
+         utxoHashes.push_back({ op.getTxHash(), op.getTxOutIndex() });
+         txHashSet.insert(op.getTxHash());
+         txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
+      }
+
+      const auto &cbTXs = [thisPtr, tx, utxoHashes, txOutIndices]
+         (const AsyncClient::TxBatchResult &result, std::exception_ptr exPtr)
+      {
+         if (!thisPtr || exPtr) {
+            return;
          }
 
-         const auto &cbTXs = [thisPtr, tx, utxoHashes, txOutIndices]
-            (const AsyncClient::TxBatchResult &result, std::exception_ptr exPtr)
-         {
-            if (!thisPtr || exPtr) {
-               return;
+         std::shared_ptr<bs::sync::Wallet> wallet;
+         int64_t totalVal = 0;
+         std::vector<UTXO> utxos;
+
+         for (const auto &item : result) {
+            if (!item.second || !item.second->isInitialized()) {
+               SPDLOG_LOGGER_ERROR(thisPtr->logger_, "uninitialized TX received - skipping, tx hash: {}", item.first.toHexStr(true));
+               continue;
             }
-
-            std::shared_ptr<bs::sync::Wallet> wallet;
-            int64_t totalVal = 0;
-
-            for (const auto &item : result) {
-               if (!item.second || !item.second->isInitialized()) {
-                  SPDLOG_LOGGER_ERROR(thisPtr->logger_, "uninitialized TX received - skipping, tx hash: {}", item.first.toHexStr(true));
-                  continue;
-               }
-               const auto &prevTx = *item.second;
-               const auto &itTxOut = txOutIndices.find(prevTx.getThisHash());
-               if (itTxOut == txOutIndices.end()) {
-                  continue;
-               }
-               for (const auto &txOutIdx : itTxOut->second) {
-                  const auto prevOut = prevTx.getTxOutCopy(txOutIdx);
-                  totalVal += prevOut.getValue();
-                  if (!wallet) {
-                     const auto addr = bs::Address::fromTxOut(prevOut);
-                     const auto &addrWallet = thisPtr->walletsManager_->getWalletByAddress(addr);
-                     if (addrWallet) {
-                        wallet = addrWallet;
-                     }
+            const auto &prevTx = *item.second;
+            const auto &itTxOut = txOutIndices.find(prevTx.getThisHash());
+            if (itTxOut == txOutIndices.end()) {
+               continue;
+            }
+            for (const auto &txOutIdx : itTxOut->second) {
+               auto prevOut = prevTx.getTxOutCopy(txOutIdx);
+               const auto &addr = bs::Address::fromTxOut(prevOut);
+               UTXO utxo(prevOut.getValue(), prevTx.getTxHeight(), prevTx.getTxIndex(), txOutIdx
+                  , prevTx.getThisHash(), prevOut.getScript());
+               utxos.push_back(utxo);
+               totalVal += prevOut.getValue();
+               if (!wallet) {
+                  const auto &addrWallet = thisPtr->walletsManager_->getWalletByAddress(addr);
+                  if (addrWallet) {
+                     wallet = addrWallet;
                   }
                }
             }
+         }
 
-            if (wallet) {
-               auto cbInputsReceived = [thisPtr, utxoHashes] {
-                  if (!thisPtr) {
-                     return;
-                  }
-                  thisPtr->transactionData_->setSelectedUtxo(utxoHashes);
-                  thisPtr->usedInputsModel_->updateInputs(thisPtr->transactionData_->inputs());
-               };
-
-               thisPtr->SetFixedWallet(wallet->walletId(), cbInputsReceived);
-            } else {
-               thisPtr->showUnknownWalletWarning_ = true;
-               thisPtr->ui_->comboBoxWallets->clear();
-               // labelBalance will still update balance, let's hide it
-               thisPtr->ui_->labelBalance->hide();
-            }
-
-            std::vector<std::tuple<bs::Address, double, bool>> recipients;
-            for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
-               TxOut out = tx.getTxOutCopy((int)i);
-               const auto addr = bs::Address::fromTxOut(out);
-               if (wallet && (i == (tx.getNumTxOut() - 1)) && (wallet->containsAddress(addr))) {
-                  thisPtr->SetFixedChangeAddress(QString::fromStdString(addr.display()));
+         thisPtr->transactionData_->setFixedInputs(utxos, tx.getTxWeight());
+         if (wallet) {
+            auto cbInputsReceived = [thisPtr, utxos] {
+               if (!thisPtr) {
+                  return;
                }
+               thisPtr->usedInputsModel_->updateInputs(utxos);
+            };
+            thisPtr->ui_->comboBoxWallets->show();
+            thisPtr->ui_->labelBalance->show();
+            thisPtr->ui_->labelBal->show();
+            thisPtr->ui_->labelWallet->show();
+            thisPtr->showUnknownWalletWarning_ = false;
+            thisPtr->SetFixedWallet(wallet->walletId(), cbInputsReceived);
+         } else {
+            thisPtr->showUnknownWalletWarning_ = true;
+            thisPtr->ui_->comboBoxWallets->hide();
+            // labelBalance will still update balance, let's hide it
+            thisPtr->ui_->labelBalance->hide();
+            thisPtr->ui_->labelBal->hide();
+            thisPtr->ui_->labelWallet->hide();
+         }
+         thisPtr->usedInputsModel_->updateInputs(utxos);
+
+         std::vector<std::tuple<bs::Address, double, bool>> recipients;
+         for (int i = tx.getNumTxOut() - 1; i >= 0; --i) {
+            TxOut out = tx.getTxOutCopy(i);
+            const auto addr = bs::Address::fromTxOut(out);
+            if (thisPtr->selectedChangeAddress_.empty() && wallet && (wallet->containsAddress(addr))) {
+               thisPtr->SetFixedChangeAddress(QString::fromStdString(addr.display()));
+            }
+            else {
                recipients.push_back({ addr, out.getValue() / BTCNumericTypes::BalanceDivider, false });
-               totalVal -= out.getValue();
             }
-            if (!recipients.empty()) {
-               thisPtr->AddRecipients(recipients);
-            }
-            thisPtr->SetPredefinedFee(totalVal);
-         };
-         armory_->getTXsByHash(txHashSet, cbTXs, true);
-      }
-   } else { // unsigned TX
+            totalVal -= out.getValue();
+         }
+         thisPtr->SetPredefinedFee(totalVal);
+         if (!recipients.empty()) {
+            std::reverse(recipients.begin(), recipients.end());
+            thisPtr->AddRecipients(recipients);
+         }
+      };
+      armory_->getTXsByHash(txHashSet, cbTXs, true);
+   }
+   else { // unsigned TX
+      importedSignedTX_.clear();
       if (tx.walletIds.empty()) {
          SPDLOG_LOGGER_ERROR(thisPtr->logger_, "invalid unsigned TX");
          BSMessageBox(BSMessageBox::critical, tr("Transaction import")
             , tr("Import failed"), tr("Invalid unsigned TX (corrupted file)")).exec();
          return;
       }
-      auto cbInputsReceived = [thisPtr, inputs = tx.inputs] {
-         if (!thisPtr) {
-            return;
+      std::string selectedWalletId;
+      for (const auto &walletId : tx.walletIds) {
+         if (thisPtr->walletsManager_->getWalletById(walletId)) {
+            selectedWalletId = walletId;
+            break;
          }
-         thisPtr->transactionData_->setSelectedUtxo(inputs);
-         thisPtr->usedInputsModel_->updateInputs(thisPtr->transactionData_->inputs());
-      };
-      SetFixedWallet(tx.walletIds.front(), cbInputsReceived);
+      }
+
+      ui_->textEditComment->insertPlainText(QString::fromStdString(tx.comment));
+      thisPtr->transactionData_->setFixedInputs(tx.inputs);
+
+      if (selectedWalletId.empty()) {
+         thisPtr->usedInputsModel_->updateInputs(tx.inputs);
+         thisPtr->ui_->comboBoxWallets->hide();
+         thisPtr->ui_->labelWallet->hide();
+      }
+      else {
+         auto cbInputsReceived = [thisPtr, inputs = tx.inputs]{
+            if (!thisPtr) {
+               return;
+            }
+            thisPtr->usedInputsModel_->updateInputs(inputs);
+         };
+         thisPtr->ui_->comboBoxWallets->show();
+         thisPtr->ui_->labelWallet->show();
+         SetFixedWallet(selectedWalletId, cbInputsReceived);
+      }
+      thisPtr->ui_->labelBalance->hide();
+      thisPtr->ui_->labelBal->hide();
+
+      const auto summary = thisPtr->transactionData_->GetTransactionSummary();
 
       if (tx.change.value) {
          SetFixedChangeAddress(QString::fromStdString(tx.change.address.display()));
       }
       SetPredefinedFee(tx.fee);
       labelEstimatedFee()->setText(UiUtils::displayAmount(tx.fee));
-      ui_->textEditComment->insertPlainText(QString::fromStdString(tx.comment));
 
       std::vector<std::tuple<bs::Address, double, bool>> recipients;
       for (const auto &recip : tx.recipients) {
@@ -1328,9 +1372,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       }
       AddRecipients(recipients);
 
-      if (!signContainer_->isOffline() && tx.isValid()) {
-         ui_->pushButtonCreate->setEnabled(true);
-      }
+      ui_->pushButtonCreate->setEnabled(false);
    }
 
    ui_->checkBoxRBF->setChecked(tx.RBF);
