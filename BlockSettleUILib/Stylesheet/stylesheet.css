@@ -275,6 +275,11 @@ QMenu::item:selected {
    color: #ffffff;
 }
 
+QMenu::item:disabled {
+    color: rgba(0, 0, 0, 0.3);
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
 QMenu::item:first {
    border-top: 0px;
 }

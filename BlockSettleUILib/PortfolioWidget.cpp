@@ -160,8 +160,9 @@ void PortfolioWidget::showContextMenu(const QPoint &point)
    }
 
    if (txNode->item()->isPayin()) {
-      contextMenu_.addAction(actionRevoke_);
       actionRevoke_->setData(sourceIndex);
+      actionRevoke_->setEnabled(model_->isTxRevocable(txNode->item()->tx));
+      contextMenu_.addAction(actionRevoke_);
    }
    else {
       actionRevoke_->setData(-1);

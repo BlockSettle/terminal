@@ -1,7 +1,22 @@
 {
-   "latest_version": "0.89.3",
-   "release_date": "18 May 2020",
+   "latest_version": "0.89.4",
+   "release_date": "23 May 2020",
    "changes": [
+      {
+         "version_string": "0.89.4",
+         "previous_version": "0.89.3",
+         "release_date": "23 May 2020",
+         "release_type": "prod",
+         "improvements": [
+            "Update to latest armory code"
+         ],
+         "bug_fixes": [
+            "Offline sign fixes",
+            "Fix crash for unconfirmed inputs selection"
+         ],
+         "revision": "c11f007ca",
+         "common_revision": "b9a847a4"
+      },
       {
          "version_string": "0.89.3",
          "previous_version": "0.89.2",
