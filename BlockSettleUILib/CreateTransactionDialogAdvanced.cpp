@@ -1187,6 +1187,7 @@ bool CreateTransactionDialogAdvanced::HaveSignedImportedTransaction() const
 
 void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<bs::core::wallet::TXSignRequest>& transactions)
 {
+   broadcasting_ = false;
    transactionData_->clear();
    transactionData_->getSelectedInputs()->SetUseAutoSel(false);
    selectedChangeAddress_.clear();
@@ -1328,10 +1329,13 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
          return;
       }
       std::string selectedWalletId;
+      unsigned int foundWallets = 0;
       for (const auto &walletId : tx.walletIds) {
          if (thisPtr->walletsManager_->getWalletById(walletId)) {
-            selectedWalletId = walletId;
-            break;
+            if (selectedWalletId.empty()) {
+               selectedWalletId = walletId;
+            }
+            foundWallets++;
          }
       }
 
@@ -1372,7 +1376,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       }
       AddRecipients(recipients);
 
-      ui_->pushButtonCreate->setEnabled(false);
+      broadcasting_ = signContainer_->isOffline() || !tx.isValid() || (foundWallets < tx.walletIds.size());
    }
 
    ui_->checkBoxRBF->setChecked(tx.RBF);
