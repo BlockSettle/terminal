@@ -766,6 +766,27 @@ void WalletsProxy::importWoWallet(const QString &walletPath, const QJSValue &jsC
 
    QFileInfo fi(walletPath);
 
+   try {
+      const auto wallet = std::make_shared<bs::core::hd::Wallet>(fi.fileName().toStdString()
+         , adapter_->netType(), fi.path().toStdString(), SecureBinaryData(), logger_);
+      if (wallet->networkType() != adapter_->netType()) {
+         SPDLOG_LOGGER_ERROR(logger_, "invalid net type in WO file: {}, expected: {}"
+            , static_cast<int>(wallet->networkType()), static_cast<int>(adapter_->netType()));
+         if (adapter_->netType() == NetworkType::MainNet) {
+            errWallet.description = "Can not import testnet WO wallet";
+         } else {
+            errWallet.description = "Can not import mainnet WO wallet";
+         }
+         cb(errWallet);
+         return;
+      }
+   } catch (const std::exception &e) {
+      SPDLOG_LOGGER_ERROR(logger_, "loading WO wallet failed: {}", e.what());
+      errWallet.description = fmt::format("Loading WO wallet failed: {}", e.what());
+      cb(errWallet);
+      return;
+   }
+
    adapter_->importWoWallet(fi.fileName().toStdString(), content, cb);
 }
 
