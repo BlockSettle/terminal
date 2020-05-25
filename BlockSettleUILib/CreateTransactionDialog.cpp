@@ -693,15 +693,16 @@ std::vector<bs::core::wallet::TXSignRequest> CreateTransactionDialog::ImportTran
       return {};
    }
 
-#ifdef PRODUCTION_BUILD
-   if (!transactions.at(0).allowBroadcasts) {
+   const auto envConf = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+   const bool isProd = (envConf == ApplicationSettings::EnvConfiguration::Production);
+   const bool isTest = (envConf == ApplicationSettings::EnvConfiguration::Test);
+   if ((isProd || isTest) && !transactions.at(0).allowBroadcasts) {
       BSMessageBox errorMessage(BSMessageBox::warning, tr("Warning"), tr("Import failure")
          , tr("You are trying to import a settlement transaction into a BlockSettle Terminal. "
               "Settlement transactions must be imported into a BlockSettle Signer if signed offline."), this);
       errorMessage.exec();
       return {};
    }
-#endif
 
    clear();
    return transactions;
