@@ -1451,5 +1451,5 @@ TEST_F(TestWalletWithArmory, PushZC_retry)
    ASSERT_EQ(curHeight + blockCount, newTop);
 
    const auto &zcId = envPtr_->armoryConnection()->pushZC(txSigned);
-   EXPECT_TRUE(UnitTestWalletACT::waitOnBroadcastError(zcId));
+   EXPECT_EQ(UnitTestWalletACT::waitOnBroadcastError(zcId), -27); // Already-in-chain
 }

@@ -235,7 +235,7 @@ public:
    }
 
    static std::vector<bs::TXEntry> waitOnZC(bool soft = false);
-   static bool waitOnBroadcastError(const std::string &reqId);
+   static int waitOnBroadcastError(const std::string &reqId);
 
    static std::shared_ptr<DBNotificationStruct> popNotif()
    {

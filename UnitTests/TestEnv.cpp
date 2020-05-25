@@ -344,19 +344,19 @@ std::vector<bs::TXEntry> UnitTestWalletACT::waitOnZC(bool soft)
    }
 }
 
-bool UnitTestWalletACT::waitOnBroadcastError(const std::string &reqId)
+int UnitTestWalletACT::waitOnBroadcastError(const std::string &reqId)
 {
    try {
       const auto &notif = ACTqueue::notifQueue_.pop_front(std::chrono::seconds{ 10 });
       if (notif->type_ != DBNS_TxBroadcastError) {
-         return false;
+         return 1;
       }
       if (notif->requestId_ != reqId) {
-         return false;
+         return 1;
       }
-      return true;
+      return notif->errCode_;
    }
    catch (const ArmoryThreading::StackTimedOutException &) {
-      return false;
+      return 0;
    }
 }
