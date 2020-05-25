@@ -30,7 +30,7 @@ e64206261696c6f757420666f722062616e6b73ffffffff0100f2052a01000000434104678afdb0f
 112de5c384df7ba0b8d578a4c702b6bf11d5fac00000000");
 
 std::shared_ptr<spdlog::logger> StaticLogger::loggerPtr = nullptr;
-ArmoryThreading::BlockingQueue<std::shared_ptr<DBNotificationStruct>> ACTqueue::notifQueue_;
+ArmoryThreading::TimedQueue<std::shared_ptr<DBNotificationStruct>> ACTqueue::notifQueue_;
 
 TestEnv::TestEnv(const std::shared_ptr<spdlog::logger> &logger)
 {
@@ -312,16 +312,51 @@ void SingleUTWalletACT::onNewBlock(unsigned int block, unsigned int)
    ACTqueue::notifQueue_.push_back(std::move(dbns));
 }
 
+void UnitTestWalletACT::onTxBroadcastError(const std::string &reqId, const BinaryData &txHash
+   , int errCode, const std::string &errMsg)
+{
+   bs::sync::WalletACT::onTxBroadcastError(reqId, txHash, errCode, errMsg);
+
+   auto dbns = std::make_shared<DBNotificationStruct>(DBNS_TxBroadcastError);
+   dbns->zc_ = { { txHash } };
+   dbns->requestId_ = reqId;
+   dbns->errCode_ = errCode;
+
+   ACTqueue::notifQueue_.push_back(std::move(dbns));
+}
+
 std::vector<bs::TXEntry> UnitTestWalletACT::waitOnZC(bool soft)
 {
    while (true) {
-      const auto &notif = ACTqueue::notifQueue_.pop_front();
-      if (notif->type_ != DBNS_ZC) {
-         if (soft) {
-            continue;
+      try {
+         const auto &notif = ACTqueue::notifQueue_.pop_front(std::chrono::seconds{ 10 });
+         if (notif->type_ != DBNS_ZC) {
+            if (soft) {
+               continue;
+            }
+            throw std::runtime_error("expected zc notification");
          }
-         throw std::runtime_error("expected zc notification");
+         return notif->zc_;
       }
-      return notif->zc_;
+      catch (const ArmoryThreading::StackTimedOutException &) {
+         return {};
+      }
+   }
+}
+
+bool UnitTestWalletACT::waitOnBroadcastError(const std::string &reqId)
+{
+   try {
+      const auto &notif = ACTqueue::notifQueue_.pop_front(std::chrono::seconds{ 10 });
+      if (notif->type_ != DBNS_TxBroadcastError) {
+         return false;
+      }
+      if (notif->requestId_ != reqId) {
+         return false;
+      }
+      return true;
+   }
+   catch (const ArmoryThreading::StackTimedOutException &) {
+      return false;
    }
 }

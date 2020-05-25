@@ -116,7 +116,7 @@ public:
 
 
 struct ACTqueue {
-   static ArmoryThreading::BlockingQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
+   static ArmoryThreading::TimedQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
 };
 
 class SingleUTWalletACT : public ArmoryCallbackTarget
@@ -136,8 +136,6 @@ public:
 
 class UnitTestWalletACT : public bs::sync::WalletACT
 {
-//   static BlockingQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
-
 public:
    UnitTestWalletACT(ArmoryConnection *armory, bs::sync::Wallet *leaf) :
       bs::sync::WalletACT(leaf)
@@ -159,6 +157,9 @@ public:
 
       ACTqueue::notifQueue_.push_back(std::move(dbns));
    }
+
+   void onTxBroadcastError(const std::string &reqId, const BinaryData &txHash
+      , int errCode, const std::string &errMsg) override;
 
    void onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry>& zcs) override
    {
@@ -234,6 +235,7 @@ public:
    }
 
    static std::vector<bs::TXEntry> waitOnZC(bool soft = false);
+   static bool waitOnBroadcastError(const std::string &reqId);
 
    static std::shared_ptr<DBNotificationStruct> popNotif()
    {
