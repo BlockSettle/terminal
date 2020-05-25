@@ -242,7 +242,7 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
 
          if (isHw) {
             try {
-               bs::core::hd::Wallet wallet(filePath.toStdString(), NetworkType::TestNet);
+               bs::core::hd::Wallet wallet(filePath.toStdString(), adapter_->netType());
                wallet.convertHardwareToWo();
             } catch (const std::exception &e) {
                SPDLOG_LOGGER_ERROR(logger_, "converting HW to WO wallet failed: {}", e.what());
