@@ -61,9 +61,13 @@ CustomTitleDialogWindowWithExpander {
     property alias txDetailsItem: txDetailsContainer.data
 
     readonly property bool acceptable: {
-        if (walletInfo.encType === QPasswordData.Password) return tfPassword.text.length > 0
-        else if (walletInfo.encType === QPasswordData.Unencrypted) return txInfo.isOfflineTxSigned
-        else return true
+        if (walletInfo.encType === QPasswordData.Password) {
+            return tfPassword.text.length > 0
+        }
+        if (walletInfo.encType === QPasswordData.Unencrypted) {
+            return txInfo.isOfflineTxSigned
+        }
+        return true
     }
 
     readonly property int addressRowHeight: 24
@@ -619,7 +623,7 @@ CustomTitleDialogWindowWithExpander {
                             JsHelper.messageBox(BSMessageBox.Type.Warning
                                 , qsTr("Signed Transacton Import")
                                 , qsTr("Error importing signed transaction")
-                                , qsTr("Error while importing signed transaction file.\nComparsion between signed and unsigned transaction failed."))
+                                , qsTr("Error while importing signed transaction file.\nComparison between signed and unsigned transaction failed."))
                         }
                     }
                 }
