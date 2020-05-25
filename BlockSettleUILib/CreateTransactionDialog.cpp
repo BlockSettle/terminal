@@ -144,7 +144,8 @@ void CreateTransactionDialog::updateCreateButtonText()
    const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
 
    auto walletPtr = walletsManager_->getHDWalletById(walletId);
-   if (!walletPtr->isHardwareWallet() && (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId))) {
+   if (walletPtr && !walletPtr->isHardwareWallet() && (signContainer_->isOffline()
+      || signContainer_->isWalletOffline(walletId))) {
       pushButtonCreate()->setText(tr("Export"));
    } else {
       selectedWalletChanged(-1);
