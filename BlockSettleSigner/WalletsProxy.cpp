@@ -242,7 +242,7 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
 
          if (isHw) {
             try {
-               bs::core::hd::Wallet wallet(filePath.toStdString(), NetworkType::TestNet);
+               bs::core::hd::Wallet wallet(filePath.toStdString(), adapter_->netType());
                wallet.convertHardwareToWo();
             } catch (const std::exception &e) {
                SPDLOG_LOGGER_ERROR(logger_, "converting HW to WO wallet failed: {}", e.what());
@@ -765,6 +765,27 @@ void WalletsProxy::importWoWallet(const QString &walletPath, const QJSValue &jsC
    f.close();
 
    QFileInfo fi(walletPath);
+
+   try {
+      const auto wallet = std::make_shared<bs::core::hd::Wallet>(fi.fileName().toStdString()
+         , adapter_->netType(), fi.path().toStdString(), SecureBinaryData(), logger_);
+      if (wallet->networkType() != adapter_->netType()) {
+         SPDLOG_LOGGER_ERROR(logger_, "invalid net type in WO file: {}, expected: {}"
+            , static_cast<int>(wallet->networkType()), static_cast<int>(adapter_->netType()));
+         if (adapter_->netType() == NetworkType::MainNet) {
+            errWallet.description = "Can not import testnet WO wallet";
+         } else {
+            errWallet.description = "Can not import mainnet WO wallet";
+         }
+         cb(errWallet);
+         return;
+      }
+   } catch (const std::exception &e) {
+      SPDLOG_LOGGER_ERROR(logger_, "loading WO wallet failed: {}", e.what());
+      errWallet.description = fmt::format("Loading WO wallet failed: {}", e.what());
+      cb(errWallet);
+      return;
+   }
 
    adapter_->importWoWallet(fi.fileName().toStdString(), content, cb);
 }

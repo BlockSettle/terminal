@@ -128,7 +128,7 @@ bool TXInfo::loadSignedTx(const QString &fileName)
       SPDLOG_LOGGER_ERROR(logger_, "loading signed offline request failed from '{}'", fileName.toStdString());
       return false;
    }
-   if (loadedTxs.size() != 1 || loadedTxs.front().prevStates.size() != 1) {
+   if (loadedTxs.size() != 1) {
       SPDLOG_LOGGER_ERROR(logger_, "invalid signed offline request in '{}'", fileName.toStdString());
       return false;
    }

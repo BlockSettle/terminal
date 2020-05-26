@@ -838,8 +838,8 @@ bool SignerAdapterListener::onImportWoWallet(const std::string &data, bs::signer
       }
    }
 
+   const std::string filePath = settings_->getWalletsDir() + "/" + request.filename();
    {
-      const std::string filePath = settings_->getWalletsDir() + "/" + request.filename();
       std::ofstream ofs(filePath, std::ios::out | std::ios::binary | std::ios::trunc);
       if (!ofs.good()) {
          logger_->error("[{}] failed to write to {}", __func__, filePath);
@@ -851,6 +851,7 @@ bool SignerAdapterListener::onImportWoWallet(const std::string &data, bs::signer
    const auto woWallet = walletsMgr_->loadWoWallet(settings_->netType()
       , settings_->getWalletsDir(), request.filename(), app_->controlPassword());
    if (!woWallet) {
+      SystemFileUtils::rmFile(filePath);
       return false;
    }
    walletsListUpdated();
