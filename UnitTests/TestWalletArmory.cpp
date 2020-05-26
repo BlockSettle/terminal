@@ -1365,3 +1365,91 @@ TEST_F(TestWalletWithArmory, CallbackReturnTxCrash)
    }, true);
    futSync.wait();
 }
+
+TEST_F(TestWalletWithArmory, PushZC_retry)
+{
+   const auto addr1 = leafPtr_->getNewExtAddress();
+   const auto addr2 = leafPtr_->getNewExtAddress();
+   const auto changeAddr = leafPtr_->getNewChangeAddress();
+   EXPECT_EQ(leafPtr_->getUsedAddressCount(), 3);
+
+   //add an extra address not part of the wallet
+   BinaryData prefixed;
+   prefixed.append(AddressEntry::getPrefixByte(AddressEntryType_P2PKH));
+   prefixed.append(CryptoPRNG::generateRandom(20));
+   auto otherAddr = bs::Address::fromHash(prefixed);
+
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+   inprocSigner->Start();
+   auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
+      , envPtr_->appSettings(), envPtr_->armoryConnection());
+   syncMgr->setSignContainer(inprocSigner);
+   syncMgr->syncWallets();
+
+   //register the wallet
+   auto syncWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
+   auto syncLeaf = syncMgr->getWalletById(leafPtr_->walletId());
+
+   syncWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+   auto regIDs = syncWallet->registerWallet(envPtr_->armoryConnection());
+   UnitTestWalletACT::waitOnRefresh(regIDs);
+
+   regIDs = syncWallet->setUnconfirmedTargets();
+   ASSERT_EQ(regIDs.size(), 2);
+   UnitTestWalletACT::waitOnRefresh(regIDs);
+
+   //mine some coins
+   auto armoryInstance = envPtr_->armoryInstance();
+   unsigned blockCount = 6;
+
+   auto curHeight = envPtr_->armoryConnection()->topBlock();
+   auto recipient = addr1.getRecipient(bs::XBTAmount{ (uint64_t)(50 * COIN) });
+   armoryInstance->mineNewBlock(recipient.get(), blockCount);
+   auto newTop = UnitTestWalletACT::waitOnNewBlock();
+   ASSERT_EQ(curHeight + blockCount, newTop);
+
+   //spend these coins
+   const uint64_t amount = 5.0 * BTCNumericTypes::BalanceDivider;
+   const uint64_t fee = 0.0001 * BTCNumericTypes::BalanceDivider;
+
+   auto promPtr1 = std::make_shared<std::promise<std::vector<UTXO>>>();
+   auto fut1 = promPtr1->get_future();
+   const auto &cbTxOutList = [promPtr1](std::vector<UTXO> inputs)->void
+   {
+      promPtr1->set_value(inputs);
+   };
+   //async, has to wait
+   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
+   const auto inputs = fut1.get();
+   ASSERT_GE(inputs.size(), 1);
+
+   //pick a single input
+   std::vector<UTXO> utxos;
+   utxos.push_back(inputs[0]);
+
+   recipient = addr2.getRecipient(bs::XBTAmount{ amount });
+   const auto recipient2 = otherAddr.getRecipient(bs::XBTAmount{ amount });
+   const auto txReq = syncLeaf->createTXRequest(
+      utxos, { recipient, recipient2 }, true, fee, false, changeAddr);
+   BinaryData txSigned;
+   {
+      const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
+      txSigned = leafPtr_->signTXRequest(txReq);
+      ASSERT_FALSE(txSigned.empty());
+   }
+
+   Tx txObj(txSigned);
+   envPtr_->armoryConnection()->pushZC(txSigned);
+
+   auto&& zcVec = UnitTestWalletACT::waitOnZC();
+   EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
+
+   blockCount = 7;
+   curHeight = envPtr_->armoryConnection()->topBlock();
+   armoryInstance->mineNewBlock(recipient.get(), blockCount);
+   newTop = UnitTestWalletACT::waitOnNewBlock();
+   ASSERT_EQ(curHeight + blockCount, newTop);
+
+   const auto &zcId = envPtr_->armoryConnection()->pushZC(txSigned);
+   EXPECT_EQ(UnitTestWalletACT::waitOnBroadcastError(zcId), -27); // Already-in-chain
+}
