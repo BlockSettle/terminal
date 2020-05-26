@@ -130,7 +130,7 @@ namespace bs {
          void onCelerConnected();
          void onCelerDisconnected();
          void onAutoSignStateChanged();
-         void onQuoteCanceled(const std::string &quoteId);
+         void onQuoteCancelled(const std::string &quoteId);
 
       private slots:
          void initUi();

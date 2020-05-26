@@ -1095,7 +1095,7 @@ void RFQDealerReply::onAutoSignStateChanged()
    ui_->comboBoxXbtWallet->setEnabled(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::AutoSignDisabled);
 }
 
-void bs::ui::RFQDealerReply::onQuoteCanceled(const std::string &quoteId)
+void bs::ui::RFQDealerReply::onQuoteCancelled(const std::string &quoteId)
 {
    preparingCCRequest_.erase(quoteId);
 }
