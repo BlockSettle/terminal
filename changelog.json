@@ -1,7 +1,23 @@
 {
-   "latest_version": "0.89.4",
-   "release_date": "23 May 2020",
+   "latest_version": "0.89.5",
+   "release_date": "26 May 2020",
    "changes": [
+      {
+         "version_string": "0.89.5",
+         "previous_version": "0.89.4",
+         "release_date": "26 May 2020",
+         "release_type": "prod",
+         "improvements": [
+            "Push ZC retry",
+            "Disable OTC broadcast"
+         ],
+         "bug_fixes": [
+            "Fix offline OTC",
+            "Offline sign fixes"
+         ],
+         "revision": "b3c610bac",
+         "common_revision": "6443f26c"
+      },
       {
          "version_string": "0.89.4",
          "previous_version": "0.89.3",
