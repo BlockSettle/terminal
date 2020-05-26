@@ -391,6 +391,7 @@ void RFQReplyWidget::onQuoteCancelled(const QString &reqId, bool userCancelled)
 {
    eraseReply(reqId);
    ui_->widgetQuoteRequests->onQuoteReqCancelled(reqId, userCancelled);
+   ui_->pageRFQReply->onQuoteCancelled(reqId.toStdString());
 }
 
 void RFQReplyWidget::onQuoteRejected(const QString &reqId, const QString &reason)
