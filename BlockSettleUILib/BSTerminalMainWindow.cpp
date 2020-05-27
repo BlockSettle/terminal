@@ -1397,7 +1397,21 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
       return;
    }
 
-   LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, &cbApprovePuB_, &cbApproveProxy_, this);
+   auto logger = logMgr_->logger("proxy");
+
+   BsClientParams params;
+   params.connectAddress = networkSettings.proxy.host;
+   params.connectPort = networkSettings.proxy.port;
+   params.context = std::make_shared<ZmqContext>(logger);
+   params.newServerKeyCallback = cbApproveProxy_;
+
+   auto bsClient = std::make_shared<BsClient>(logger, params);
+
+   // Must be connected before loginDialog.exec call (balances could be received before loginDialog.exec returns)!
+   connect(bsClient.get(), &BsClient::balanceLoaded, assetManager_.get(), &AssetManager::fxBalanceLoaded);
+   connect(bsClient.get(), &BsClient::balanceUpdated, assetManager_.get(), &AssetManager::onAccountBalanceLoaded);
+
+   LoginWindow loginDialog(logger, bsClient, applicationSettings_, this);
 
    int rc = loginDialog.exec();
 
@@ -1442,15 +1456,15 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
 
    currentUserLogin_ = loginDialog.email();
 
-   networkSettingsReceived(loginDialog.networkSettings(), NetworkSettingsClient::MarketData);
+   networkSettingsReceived(networkSettings, NetworkSettingsClient::MarketData);
 
    chatTokenData_ = loginDialog.result()->chatTokenData;
    chatTokenSign_ = loginDialog.result()->chatTokenSign;
    tryLoginIntoChat();
 
-   bsClient_ = loginDialog.getClient();
-   ccFileManager_->setBsClient(bsClient_.get());
-   authAddrDlg_->setBsClient(bsClient_.get());
+   bsClient_ = bsClient;
+   ccFileManager_->setBsClient(bsClient);
+   authAddrDlg_->setBsClient(bsClient);
 
    ccFileManager_->setCcAddressesSigned(loginDialog.result()->ccAddressesSigned);
    authManager_->setAuthAddressesSigned(loginDialog.result()->authAddressesSigned);

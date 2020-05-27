@@ -130,6 +130,7 @@ namespace bs {
          void onCelerConnected();
          void onCelerDisconnected();
          void onAutoSignStateChanged();
+         void onQuoteCancelled(const std::string &quoteId);
 
       private slots:
          void initUi();
@@ -198,6 +199,8 @@ namespace bs {
          SubmitQuoteNotifCb submitQuoteNotifCb_;
          ResetCurrentReservationCb resetCurrentReservationCb_;
          GetLastUTXOReplyCb getLastUTXOReplyCb_;
+
+         std::set<std::string> preparingCCRequest_;
 
       private:
          enum class ReplyType

@@ -703,6 +703,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
          const auto &spendWallet = isSpendCC ? ccWallet : xbtWallet;
          const auto &recvWallet = isSpendCC ? xbtWallet : ccWallet;
 
+         preparingCCRequest_.insert(replyData->qn.quoteRequestId);
          auto recvAddrCb = [this, replyData, qrn, spendWallet, spendVal, isSpendCC, ccWallet, xbtWallets, price](const bs::Address &addr) {
             replyData->qn.receiptAddress = addr.display();
             replyData->qn.reqAuthKey = qrn.requestorRecvAddress;
@@ -733,6 +734,10 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                            signingContainer_->resolvePublicSpenders(txReq, [replyData, this, price, txReq]
                               (bs::error::ErrorCode result, const Codec_SignerState::SignerState &state)
                            {
+                              if (preparingCCRequest_.count(replyData->qn.quoteRequestId) == 0) {
+                                 return;
+                              }
+
                               if (result == bs::error::ErrorCode::NoError) {
                                  replyData->qn.transactionData = BinaryData::fromString(state.SerializeAsString()).toHexStr();
                                  replyData->utxoRes = utxoReservationManager_->makeNewReservation(txReq.inputs, replyData->qn.quoteRequestId);
@@ -742,6 +747,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                                  SPDLOG_LOGGER_ERROR(logger_, "error resolving public spenders: {}"
                                     , bs::error::ErrorCodeToString(result).toStdString());
                               }
+                              preparingCCRequest_.erase(replyData->qn.quoteRequestId);
                            });
                         } catch (const std::exception &e) {
                            SPDLOG_LOGGER_ERROR(logger_, "error creating own unsigned half: {}", e.what());
@@ -1087,6 +1093,11 @@ void RFQDealerReply::onAutoSignStateChanged()
       ui_->comboBoxXbtWallet->setCurrentText(autoSignQuoteProvider_->getAutoSignWalletName());
    }
    ui_->comboBoxXbtWallet->setEnabled(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::AutoSignDisabled);
+}
+
+void bs::ui::RFQDealerReply::onQuoteCancelled(const std::string &quoteId)
+{
+   preparingCCRequest_.erase(quoteId);
 }
 
 void bs::ui::RFQDealerReply::onUTXOReservationChanged(const std::string& walletId)

@@ -212,7 +212,7 @@ void AuthAddressDialog::setAddressToVerify(const QString &addr)
    }
 }
 
-void AuthAddressDialog::setBsClient(BsClient *bsClient)
+void AuthAddressDialog::setBsClient(const std::weak_ptr<BsClient> &bsClient)
 {
    bsClient_ = bsClient;
 }
@@ -329,6 +329,8 @@ void AuthAddressDialog::revokeSelectedAddress()
 
 void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount)
 {
+   auto bsClient = bsClient_.lock();
+
    const bool testnet = settings_->get<NetworkType>(ApplicationSettings::netType) == NetworkType::TestNet;
    const auto eurBalance = assetManager_->getBalance("EUR");
    if (validationAmount > eurBalance) {
@@ -342,8 +344,8 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
       warnFunds.enableRichText();
       warnFunds.exec();
 
-      if (bsClient_) {
-         bsClient_->cancelActiveSign();
+      if (bsClient) {
+         bsClient->cancelActiveSign();
       }
       setLastSubmittedAddress({});
 
@@ -376,8 +378,8 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
    if (promptResult == QDialog::Accepted) {
       ConfirmAuthAddressSubmission();
    } else {
-      if (bsClient_) {
-         bsClient_->cancelActiveSign();
+      if (bsClient) {
+         bsClient->cancelActiveSign();
       }
       setLastSubmittedAddress({});
    }
@@ -385,7 +387,9 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
 
 void AuthAddressDialog::ConfirmAuthAddressSubmission()
 {
-   if (!bsClient_) {
+   auto bsClient = bsClient_.lock();
+
+   if (!bsClient) {
       SPDLOG_LOGGER_ERROR(logger_, "bsClient_ in not set");
       return;
    }
@@ -394,7 +398,7 @@ void AuthAddressDialog::ConfirmAuthAddressSubmission()
       return;
    }
 
-   AuthAddressConfirmDialog confirmDlg{bsClient_.data(), lastSubmittedAddress_, authAddressManager_, settings_, this};
+   AuthAddressConfirmDialog confirmDlg{bsClient_, lastSubmittedAddress_, authAddressManager_, settings_, this};
 
    auto result = confirmDlg.exec();
 

@@ -20,14 +20,14 @@ namespace {
    constexpr auto UiTimerInterval = std::chrono::milliseconds(250);
 }
 
-AuthAddressConfirmDialog::AuthAddressConfirmDialog(BsClient *bsClient, const bs::Address& address
+AuthAddressConfirmDialog::AuthAddressConfirmDialog(const std::weak_ptr<BsClient> &bsClient, const bs::Address& address
    , const std::shared_ptr<AuthAddressManager>& authManager, const std::shared_ptr<ApplicationSettings> &settings, QWidget* parent)
-  : QDialog(parent)
-  , ui_{new Ui::AuthAddressConfirmDialog()}
-  , address_{address}
-  , authManager_{authManager}
-  , bsClient_{bsClient}
+   : QDialog(parent)
+   , ui_{new Ui::AuthAddressConfirmDialog()}
+   , address_{address}
+   , authManager_{authManager}
    , settings_(settings)
+   , bsClient_(bsClient)
 {
    ui_->setupUi(this);
 
@@ -81,9 +81,12 @@ void AuthAddressConfirmDialog::onCancelPressed()
 void AuthAddressConfirmDialog::reject()
 {
    progressTimer_.stop();
-   if (bsClient_) {
-      bsClient_->cancelActiveSign();
+
+   auto bsClient = bsClient_.lock();
+   if (bsClient) {
+      bsClient->cancelActiveSign();
    }
+
    QDialog::reject();
 }
 
