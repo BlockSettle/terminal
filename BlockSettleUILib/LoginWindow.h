@@ -35,7 +35,7 @@ Q_OBJECT
 
 public:
    LoginWindow(const std::shared_ptr<spdlog::logger> &logger
-      , BsClient *bsClient
+      , const std::shared_ptr<BsClient> &bsClient
       , std::shared_ptr<ApplicationSettings> &settings
       , QWidget* parent = nullptr);
    ~LoginWindow() override;
@@ -72,7 +72,7 @@ private:
    State       state_{State::Idle};
    QTimer      timer_;
    float       timeLeft_{};
-   BsClient *bsClient_{};
+   std::shared_ptr<BsClient>   bsClient_;
    std::unique_ptr<BsClientLoginResult> result_;
 };
 

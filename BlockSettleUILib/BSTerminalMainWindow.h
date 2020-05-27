@@ -327,7 +327,7 @@ private:
    };
    std::unique_ptr<MainWinACT>   act_;
 
-   std::unique_ptr<BsClient> bsClient_;
+   std::shared_ptr<BsClient> bsClient_;
 
    Chat::ChatClientServicePtr chatClientServicePtr_;
 

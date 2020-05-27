@@ -31,7 +31,7 @@ class AuthAddressConfirmDialog : public QDialog
 Q_OBJECT
 
 public:
-   AuthAddressConfirmDialog(BsClient *bsClient,
+   AuthAddressConfirmDialog(const std::weak_ptr<BsClient> &bsClient,
       const bs::Address& address,
       const std::shared_ptr<AuthAddressManager>& authManager,
       const std::shared_ptr<ApplicationSettings> &settings,
@@ -61,7 +61,7 @@ private:
    QTimer                                 progressTimer_;
    std::chrono::steady_clock::time_point  startTime_;
 
-   QPointer<BsClient> bsClient_;
+   std::weak_ptr<BsClient> bsClient_;
 };
 
 #endif // AUTH_ADDRESS_CONFIRMATION_DIALOG_H__

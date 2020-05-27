@@ -35,7 +35,7 @@ namespace {
 }
 
 LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
-   , BsClient *bsClient
+   , const std::shared_ptr<BsClient> &bsClient
    , std::shared_ptr<ApplicationSettings> &settings
    , QWidget* parent)
    : QDialog(parent)
@@ -94,8 +94,8 @@ LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
 
    updateState();
 
-   connect(bsClient_, &BsClient::startLoginDone, this, &LoginWindow::onStartLoginDone);
-   connect(bsClient_, &BsClient::getLoginResultDone, this, &LoginWindow::onGetLoginResultDone);
+   connect(bsClient_.get(), &BsClient::startLoginDone, this, &LoginWindow::onStartLoginDone);
+   connect(bsClient_.get(), &BsClient::getLoginResultDone, this, &LoginWindow::onGetLoginResultDone);
 }
 
 LoginWindow::~LoginWindow() = default;
