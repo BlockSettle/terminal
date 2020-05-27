@@ -25,7 +25,7 @@ public:
    ReadyError readyError() const override { return ReadyError::NoError; }
 
    bool CreateNewAuthAddress() override { return false; }
-   void SubmitForVerification(BsClient *client, const bs::Address &) override {}
+   void SubmitForVerification(const std::weak_ptr<BsClient>&, const bs::Address &) override {}
    bool RevokeAddress(const bs::Address &address) override { return true; }
 
    std::vector<bs::Address> GetVerifiedAddressList() const override { return addresses_; }

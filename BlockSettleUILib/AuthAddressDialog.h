@@ -44,7 +44,7 @@ public:
    ~AuthAddressDialog() override;
 
    void setAddressToVerify(const QString &addr);
-   void setBsClient(BsClient *bsClient);
+   void setBsClient(const std::weak_ptr<BsClient> &bsClient);
 
 signals:
    void askForConfirmation(const QString &address, double txAmount);
@@ -95,7 +95,7 @@ private:
    std::shared_ptr<ApplicationSettings>   settings_;
    QPointer<AuthAdressControlProxyModel>  model_;
    bs::Address                            defaultAddr_;
-   QPointer<BsClient>                     bsClient_;
+   std::weak_ptr<BsClient>                bsClient_;
    ValidityFlag                           validityFlag_;
 
    bs::Address                            lastSubmittedAddress_{};
