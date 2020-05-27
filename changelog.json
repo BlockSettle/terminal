@@ -1,7 +1,18 @@
 {
-   "latest_version": "0.89.6",
+   "latest_version": "0.90.0",
    "release_date": "27 May 2020",
    "changes": [
+      {
+         "version_string": "0.90.0",
+         "previous_version": "0.89.6",
+         "release_date": "27 May 2020",
+         "release_type": "prod",
+         "improvements": [
+         ],
+         "bug_fixes": [],
+         "revision": "faae2721d",
+         "common_revision": "4ed66b41"
+      },
       {
          "version_string": "0.89.6",
          "previous_version": "0.89.5",

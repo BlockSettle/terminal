@@ -1,5 +1,5 @@
 Package: bsterminal
-Version: 0.89.6
+Version: 0.90.0
 Section: x11
 Priority: optional
 Architecture: amd64
