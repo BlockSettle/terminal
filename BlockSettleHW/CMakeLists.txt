@@ -1,3 +1,13 @@
+#
+#
+# ***********************************************************************************
+# * Copyright (C) 2020 - 2020, BlockSettle AB
+# * Distributed under the GNU Affero General Public License (AGPL v3)
+# * See LICENSE or http://www.gnu.org/licenses/agpl.html
+# *
+# **********************************************************************************
+#
+#
 PROJECT( ${BLOCKSETTLE_HW_LIBRARY_NAME} )
 
 SET(BLOCKSETTLE_HW_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
