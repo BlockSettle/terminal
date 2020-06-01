@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2016 - , BlockSettle AB
+* Copyright (C) 2018 - 2020, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -41,6 +41,7 @@ void TXNode::init()
    colorYellow_ = Qt::darkYellow;
    colorGreen_ = Qt::darkGreen;
    colorInvalid_ = Qt::red;
+   colorUnknown_ = Qt::gray;
 }
 
 void TXNode::clear(bool del)
@@ -126,11 +127,12 @@ QVariant TXNode::data(int column, int role) const
       }
 
       default:
-         if (!item_->isValid) {
-            return colorInvalid_;
-         } else {
-            return QVariant();
+         switch (item_->isValid) {
+            case bs::sync::TxValidity::Unknown:    return colorUnknown_;
+            case bs::sync::TxValidity::Valid:      return QVariant();
+            case bs::sync::TxValidity::Invalid:    return colorInvalid_;
          }
+         return colorInvalid_;
       }
    } else if (role == Qt::FontRole) {
       bool boldFont = false;
@@ -286,6 +288,9 @@ void TransactionsViewModel::init()
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &TransactionsViewModel::onRefreshTxValidity, Qt::QueuedConnection);
+
+   // Need this to be able mark invalid CC TXs in red
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::ccTrackerReady, this, &TransactionsViewModel::onRefreshTxValidity, Qt::QueuedConnection);
 }
 
 TransactionsViewModel::~TransactionsViewModel() noexcept
@@ -557,7 +562,7 @@ std::shared_ptr<TransactionsViewItem> TransactionsViewModel::itemFromTransaction
       item->walletName = QString::fromStdString(item->wallets[0]->name());
    }
    const auto validWallet = item->wallets.empty() ? nullptr : item->wallets[0];
-   item->isValid = validWallet ? validWallet->isTxValid(entry.txHash) : false;
+   item->isValid = validWallet ? validWallet->isTxValid(entry.txHash) : bs::sync::TxValidity::Invalid;
    return item;
 }
 
@@ -861,12 +866,13 @@ void TransactionsViewModel::onRefreshTxValidity()
       const auto item = rootNode_->children()[i]->item();
       // This fixes race with CC tracker (when it updates after adding new TX).
       // So there is no need to check already valid TXs.
-      if (!item || item->isValid) {
+      if (!item || item->isValid == bs::sync::TxValidity::Valid) {
          continue;
       }
       const auto validWallet = item->wallets.empty() ? nullptr : item->wallets[0];
-      item->isValid = validWallet ? validWallet->isTxValid(item->txEntry.txHash) : false;
-      if (item->isValid) {
+      auto newState = validWallet ? validWallet->isTxValid(item->txEntry.txHash) : bs::sync::TxValidity::Invalid;
+      if (item->isValid != newState) {
+         item->isValid = newState;
          emit dataChanged(index(i, static_cast<int>(Columns::first))
          , index(i, static_cast<int>(Columns::last)));
       }

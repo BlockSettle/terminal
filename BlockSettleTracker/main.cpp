@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2020 - 2020, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #include <btc/ecc.h>
 #include <cxxopts.hpp>
 #include <spdlog/sinks/daily_file_sink.h>

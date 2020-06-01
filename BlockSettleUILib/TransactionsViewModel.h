@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2016 - , BlockSettle AB
+* Copyright (C) 2018 - 2020, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -54,7 +54,7 @@ struct TransactionsViewItem
    QString displayDateTime;
    QString amountStr;
    BTCNumericTypes::balance_type amount = 0;
-   bool     isValid = true;
+   bs::sync::TxValidity isValid = bs::sync::TxValidity::Invalid;
    bool     isCPFP = false;
    int confirmations = 0;
 
@@ -115,7 +115,7 @@ private:
    int      row_ = 0;
    TXNode*  parent_ = nullptr;
    QFont    fontBold_;
-   QColor   colorGray_, colorRed_, colorYellow_, colorGreen_, colorInvalid_;
+   QColor   colorGray_, colorRed_, colorYellow_, colorGreen_, colorInvalid_, colorUnknown_;
 };
 
 Q_DECLARE_METATYPE(TransactionsViewItem)
