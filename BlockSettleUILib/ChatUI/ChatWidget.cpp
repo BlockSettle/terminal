@@ -217,7 +217,7 @@ otc::Peer *ChatWidget::currentPeer() const
    }
 
    const auto clientPartyPtr = partyTreeItem->data().value<Chat::ClientPartyPtr>();
-   if (!clientPartyPtr) {
+   if (!clientPartyPtr || clientPartyPtr->isGlobalStandard()) {
       return nullptr;
    }
 
