@@ -1,3 +1,13 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2019 - 2020, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
 #ifndef __TEST_AUTH_H__
 #define __TEST_AUTH_H__
 

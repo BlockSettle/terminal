@@ -1,3 +1,13 @@
+#
+#
+# ***********************************************************************************
+# * Copyright (C) 2018 - 2020, BlockSettle AB
+# * Distributed under the GNU Affero General Public License (AGPL v3)
+# * See LICENSE or http://www.gnu.org/licenses/agpl.html
+# *
+# **********************************************************************************
+#
+#
 Copyright (c) 2010, Matt McInerney (matt@pixelspread.com),
 Copyright (c) 2011, Pablo Impallari (www.impallari.com|impallari@gmail.com),
 Copyright (c) 2011, Rodrigo Fuenzalida (www.rfuenzalida.com|hello@rfuenzalida.com), with Reserved Font Name Raleway
