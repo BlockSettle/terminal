@@ -1,7 +1,19 @@
 {
-   "latest_version": "0.90.2",
+   "latest_version": "0.90.3",
    "release_date": "01 Jun 2020",
    "changes": [
+      {
+         "version_string": "0.90.3",
+         "previous_version": "0.90.2",
+         "release_date": "01 Jun 2020",
+         "release_type": "prod",
+         "improvements": [
+            "Update chat server key"
+         ],
+         "bug_fixes": [],
+         "revision": "4cb3d0a86",
+         "common_revision": "2beef9be"
+      },
       {
          "version_string": "0.90.2",
          "previous_version": "0.90.1",
