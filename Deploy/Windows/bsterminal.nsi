@@ -4,7 +4,7 @@ SetCompressor /SOLID lzma
 # General Symbol Definitions
 !define COMPANY "BlockSettle AB"
 !define URL http://blocksettle.com/
-!define VERSION "0.90.1"
+!define VERSION "0.90.2"
 !define PRODUCT_NAME "BlockSettle Terminal"
 
 # MultiUser Symbol Definitions

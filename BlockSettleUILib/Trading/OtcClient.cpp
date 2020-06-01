@@ -258,7 +258,7 @@ Peer *OtcClient::response(const std::string &contactId)
 Peer *OtcClient::peer(const std::string &contactId, PeerType type)
 {
    if (contactId.size() != kContactIdSize) {
-      SPDLOG_LOGGER_DEBUG(logger_, "unexpected contact requested: {}");
+      SPDLOG_LOGGER_DEBUG(logger_, "unexpected contact requested: {}", contactId);
    }
 
    switch (type)
