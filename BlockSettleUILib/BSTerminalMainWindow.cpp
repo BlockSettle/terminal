@@ -1371,6 +1371,7 @@ void BSTerminalMainWindow::onLogin()
 
 void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings)
 {
+#ifdef PRODUCTION_BUILD
    if (networkSettings.status == Blocksettle::Communication::GetNetworkSettingsResponse_Status_LIVE_TRADING_COMING_SOON) {
       BSMessageBox mbox(BSMessageBox::question, tr("Login to BlockSettle"), tr("Live trading is coming soon...")
                    , tr("In the meantime, you can try p2p trading in our testnet environment. Would you like to do so now?"), this);
@@ -1383,6 +1384,7 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
       }
       return;
    }
+#endif
 
    if (walletsSynched_ && !walletsMgr_->getPrimaryWallet()) {
       addDeferredDialog([this] {
