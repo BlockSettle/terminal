@@ -367,7 +367,7 @@ bool TransactionsViewModel::isTxRevocable(const Tx& tx)
       return false;
    }
 
-   const std::map<BinaryData, std::set<unsigned>> spentnessToTrack = { { tx.getThisHash(), { settlementOutIndex } } };
+   const std::map<BinaryData, std::set<unsigned>> spentnessToTrack = { { tx.getThisHash(), { static_cast<unsigned>(settlementOutIndex) } } };
    
    auto cbStoreRevoke = [this, caller = QPointer<TransactionsViewModel>(this), txHash = tx.getThisHash()](const std::map<BinaryData
       , std::map<unsigned int, SpentnessResult>> &results, std::exception_ptr exPtr) {
