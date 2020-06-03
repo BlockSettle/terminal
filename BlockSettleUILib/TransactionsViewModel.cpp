@@ -369,30 +369,34 @@ bool TransactionsViewModel::isTxRevocable(const Tx& tx)
    std::map<BinaryData, std::set<unsigned>> spentnessToTrack = 
          { { tx.getThisHash(), std::move(indexes) } };
    
-   auto cbStoreRevoke = [caller = QPointer<TransactionsViewModel>(this), txHash = tx.getThisHash()](const std::map<BinaryData
+   auto cbStoreRevoke = [this, caller = QPointer<TransactionsViewModel>(this), txHash = tx.getThisHash()](const std::map<BinaryData
       , std::map<unsigned int, SpentnessResult>> &results, std::exception_ptr exPtr) {
-      if (!caller) {
-         return;
-      }
-
-      if (exPtr != nullptr) {
-         caller->revocableTxs_.erase(txHash);
-         return;
-      }
-
-      auto iResult = results.find(txHash);
-      if (iResult == results.cend()) {
-         return;
-      }
-
-      for (auto const &result : iResult->second) {
-         if (result.second.state_ == OutputSpentnessState::Unspent) {
-            caller->revocableTxs_[txHash] = true;
+      QMetaObject::invokeMethod(qApp, [this, caller, txHash, results, exPtr] {
+         if (!caller) {
             return;
          }
-      }
+
+         if (exPtr != nullptr) {
+            SPDLOG_LOGGER_ERROR(logger_, "request failed");
+            return;
+         }
+
+         auto iResult = results.find(txHash);
+         if (iResult == results.cend()) {
+            SPDLOG_LOGGER_ERROR(logger_, "TX not found");
+            return;
+         }
+
+         for (auto const &result : iResult->second) {
+            if (result.second.state_ == OutputSpentnessState::Unspent) {
+               revocableTxs_[txHash] = true;
+               return;
+            }
+         }
+      });
    };
 
+   armory_->getSpentnessForOutputs(spentnessToTrack, cbStoreRevoke);
    armory_->getSpentnessForZcOutputs(spentnessToTrack, cbStoreRevoke);
 
    // We want user to have this as false while result is not returning back
