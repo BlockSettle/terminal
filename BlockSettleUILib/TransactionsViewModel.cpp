@@ -353,46 +353,50 @@ bool TransactionsViewModel::isTxRevocable(const Tx& tx)
       return iRevokable->second;
    }
 
-   std::set<unsigned> indexes;
-   for (unsigned i = 0; i < tx.getNumTxOut(); i++) {
-      const auto &txOut = tx.getTxOutCopy(i);
-      const auto &addr = bs::Address::fromTxOut(txOut);
-      if (addr.getType() == AddressEntryType_P2WSH) {
-         indexes.insert(i);
-      }
-   }
+   // Output to settlement address must be first
+   const auto settlementOutIndex = 0;
 
-   if (indexes.empty()) {
+   try {
+      const auto &txOut = tx.getTxOutCopy(settlementOutIndex);
+      const auto &addr = bs::Address::fromTxOut(txOut);
+      if (addr.getType() != AddressEntryType_P2WSH) {
+         return false;
+      }
+   } catch (...) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't get address");
       return false;
    }
 
-   std::map<BinaryData, std::set<unsigned>> spentnessToTrack = 
-         { { tx.getThisHash(), std::move(indexes) } };
+   const std::map<BinaryData, std::set<unsigned>> spentnessToTrack = { { tx.getThisHash(), { settlementOutIndex } } };
    
-   auto cbStoreRevoke = [caller = QPointer<TransactionsViewModel>(this), txHash = tx.getThisHash()](const std::map<BinaryData
+   auto cbStoreRevoke = [this, caller = QPointer<TransactionsViewModel>(this), txHash = tx.getThisHash()](const std::map<BinaryData
       , std::map<unsigned int, SpentnessResult>> &results, std::exception_ptr exPtr) {
-      if (!caller) {
-         return;
-      }
-
-      if (exPtr != nullptr) {
-         caller->revocableTxs_.erase(txHash);
-         return;
-      }
-
-      auto iResult = results.find(txHash);
-      if (iResult == results.cend()) {
-         return;
-      }
-
-      for (auto const &result : iResult->second) {
-         if (result.second.state_ == OutputSpentnessState::Unspent) {
-            caller->revocableTxs_[txHash] = true;
+      QMetaObject::invokeMethod(qApp, [this, caller, txHash, results, exPtr] {
+         if (!caller) {
             return;
          }
-      }
+
+         if (exPtr != nullptr) {
+            SPDLOG_LOGGER_ERROR(logger_, "request failed");
+            return;
+         }
+
+         auto iResult = results.find(txHash);
+         if (iResult == results.cend()) {
+            SPDLOG_LOGGER_ERROR(logger_, "TX not found");
+            return;
+         }
+
+         for (auto const &result : iResult->second) {
+            if (result.second.state_ == OutputSpentnessState::Unspent) {
+               revocableTxs_[txHash] = true;
+               return;
+            }
+         }
+      });
    };
 
+   armory_->getSpentnessForOutputs(spentnessToTrack, cbStoreRevoke);
    armory_->getSpentnessForZcOutputs(spentnessToTrack, cbStoreRevoke);
 
    // We want user to have this as false while result is not returning back
