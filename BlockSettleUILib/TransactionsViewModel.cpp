@@ -353,21 +353,21 @@ bool TransactionsViewModel::isTxRevocable(const Tx& tx)
       return iRevokable->second;
    }
 
-   std::set<unsigned> indexes;
-   for (unsigned i = 0; i < tx.getNumTxOut(); i++) {
-      const auto &txOut = tx.getTxOutCopy(i);
-      const auto &addr = bs::Address::fromTxOut(txOut);
-      if (addr.getType() == AddressEntryType_P2WSH) {
-         indexes.insert(i);
-      }
-   }
+   // Output to settlement address must be first
+   const auto settlementOutIndex = 0;
 
-   if (indexes.empty()) {
+   try {
+      const auto &txOut = tx.getTxOutCopy(settlementOutIndex);
+      const auto &addr = bs::Address::fromTxOut(txOut);
+      if (addr.getType() != AddressEntryType_P2WSH) {
+         return false;
+      }
+   } catch (...) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't get address");
       return false;
    }
 
-   std::map<BinaryData, std::set<unsigned>> spentnessToTrack = 
-         { { tx.getThisHash(), std::move(indexes) } };
+   const std::map<BinaryData, std::set<unsigned>> spentnessToTrack = { { tx.getThisHash(), { settlementOutIndex } } };
    
    auto cbStoreRevoke = [this, caller = QPointer<TransactionsViewModel>(this), txHash = tx.getThisHash()](const std::map<BinaryData
       , std::map<unsigned int, SpentnessResult>> &results, std::exception_ptr exPtr) {
