@@ -398,7 +398,6 @@ void TrezorDevice::resetCaches()
    currentTxSignReq_.reset(nullptr);
    awaitingTransaction_ = {};
    awaitingWalletInfo_ = {};
-   prevTxs_.clear();
 }
 
 void TrezorDevice::setCallbackNoData(MessageType type, AsyncCallBack&& cb)
@@ -451,14 +450,16 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
    {
       // Legacy inputs support
       if (!txRequest.details().tx_hash().empty()) {
-         auto tx = prevTx(txRequest);
-         auto txIn = tx.getTxInCopy(txRequest.details().request_index());
-
          auto input = txAck.mutable_tx()->add_inputs();
-         input->set_prev_hash(txIn.getOutPoint().getTxHash().copySwapEndian().toBinStr());
-         input->set_prev_index(txIn.getOutPoint().getTxOutIndex());
-         input->set_sequence(txIn.getSequence());
-         input->set_script_sig(txIn.getScript().toBinStr());
+
+         auto tx = prevTx(txRequest);
+         if (tx.isInitialized()) {
+            auto txIn = tx.getTxInCopy(txRequest.details().request_index());
+            input->set_prev_hash(txIn.getOutPoint().getTxHash().copySwapEndian().toBinStr());
+            input->set_prev_index(txIn.getOutPoint().getTxOutIndex());
+            input->set_sequence(txIn.getSequence());
+            input->set_script_sig(txIn.getScript().toBinStr());
+         }
 
          connectionManager_->GetLogger()->debug("[TrezorDevice] handleTxRequest TXINPUT for prev hash"
              + getJSONReadableMessage(txAck));
@@ -520,11 +521,12 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       // Legacy inputs support
       if (!txRequest.details().tx_hash().empty()) {
          auto tx = prevTx(txRequest);
-         auto txOut = tx.getTxOutCopy(txRequest.details().request_index());
-
          auto binOutput = txAck.mutable_tx()->add_bin_outputs();
-         binOutput->set_amount(txOut.getValue());
-         binOutput->set_script_pubkey(txOut.getScript().toBinStr());
+         if (tx.isInitialized()) {
+            auto txOut = tx.getTxOutCopy(txRequest.details().request_index());
+            binOutput->set_amount(txOut.getValue());
+            binOutput->set_script_pubkey(txOut.getScript().toBinStr());
+         }
 
          connectionManager_->GetLogger()->debug("[TrezorDevice] handleTxRequest TXOUTPUT for prev hash"
              + getJSONReadableMessage(txAck));
@@ -593,12 +595,13 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       // Return previous tx details for legacy inputs
       // See https://wiki.trezor.io/Developers_guide:Message_Workflows
       auto tx = prevTx(txRequest);
-
       auto data = txAck.mutable_tx();
-      data->set_version(tx.getVersion());
-      data->set_lock_time(tx.getLockTime());
-      data->set_inputs_cnt(tx.getNumTxIn());
-      data->set_outputs_cnt(tx.getNumTxOut());
+      if (tx.isInitialized()) {
+         data->set_version(tx.getVersion());
+         data->set_lock_time(tx.getLockTime());
+         data->set_inputs_cnt(tx.getNumTxIn());
+         data->set_outputs_cnt(tx.getNumTxOut());
+      }
 
       connectionManager_->GetLogger()->debug("[TrezorDevice] handleTxRequest TXMETA"
          + getJSONReadableMessage(txAck));
@@ -627,13 +630,13 @@ void TrezorDevice::sendTxMessage(const QString& status)
    emit deviceTxStatusChanged(status);
 }
 
-const Tx &TrezorDevice::prevTx(const bitcoin::TxRequest &txRequest)
+Tx TrezorDevice::prevTx(const bitcoin::TxRequest &txRequest)
 {
    auto txHash = BinaryData::fromString(txRequest.details().tx_hash()).swapEndian();
-   auto &tx = prevTxs_[txHash];
-   if (!tx.isInitialized()) {
-      auto txRaw = currentTxSignReq_->supportingTXs.at(txHash);
-      tx = Tx(txRaw);
+   auto supportingTxIt = currentTxSignReq_->supportingTXs.find(txHash);
+   if (supportingTxIt == currentTxSignReq_->supportingTXs.end()) {
+      SPDLOG_LOGGER_ERROR(connectionManager_->GetLogger(), "can't find prev TX {}", txHash.toHexStr(1));
+      return {};
    }
-   return tx;
+   return Tx(supportingTxIt->second);
 }
