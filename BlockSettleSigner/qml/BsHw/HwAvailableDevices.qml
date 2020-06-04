@@ -56,8 +56,8 @@ Item {
     }
 
     function importXpub() {
-        hwDeviceManager.requestPublicKey(hwList.deviceIndex);
         isImporting = true;
+        hwDeviceManager.requestPublicKey(hwList.deviceIndex);
     }
 
     function rescan() {

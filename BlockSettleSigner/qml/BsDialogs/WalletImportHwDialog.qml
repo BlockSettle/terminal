@@ -186,6 +186,7 @@ CustomTitleDialogWindow {
                 mb.bsAccepted.connect(acceptAnimated)
             }
             else {
+                hwDeviceList.isImporting = false
                 JsHelper.messageBox(BSMessageBox.Type.Critical
                     , qsTr("Import Failed"), qsTr("Import HW-wallet failed:\n") + desc)
             }
