@@ -45,7 +45,7 @@ CustomTitleDialogWindow {
         }
     }
 
-    onEnterPressed: accept();
+    onEnterPressed: acceptOnHost();
 
     cFooterItem: RowLayout {
         CustomButtonBar {
@@ -69,7 +69,7 @@ CustomTitleDialogWindow {
                 text: qsTr("On Device")
                 visible: allowedOnDevice
                 onClicked: {
-                    accept();
+                    acceptOnDevice();
                 }
             }
 
@@ -80,18 +80,19 @@ CustomTitleDialogWindow {
                 anchors.bottom: parent.bottom
                 text: qsTr("Accept")
                 onClicked: {
-                    accept();
+                    acceptOnHost();
                 }
             }
         }
     }
 
-    function accept() {
-        if (allowedOnDevice) {
-            hwDeviceManager.setPassphrase(deviceIndex, "", true)
-        } else {
-            hwDeviceManager.setPassphrase(deviceIndex, pinInputField.text, false)
-        }
+    function acceptOnDevice() {
+        hwDeviceManager.setPassphrase(deviceIndex, "", true)
+        close();
+    }
+
+    function acceptOnHost() {
+        hwDeviceManager.setPassphrase(deviceIndex, pinInputField.text, false)
         close();
     }
 }
