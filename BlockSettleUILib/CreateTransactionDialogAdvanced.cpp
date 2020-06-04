@@ -1409,6 +1409,10 @@ void CreateTransactionDialogAdvanced::onNewAddressSelectedForChange()
 
 void CreateTransactionDialogAdvanced::onExistingAddressSelectedForChange()
 {
+   if (!transactionData_->getWallet()) {
+      SPDLOG_LOGGER_ERROR(logger_, "wallet now found");
+      return;
+   }
    const auto hdWallet = walletsManager_->getHDRootForLeaf(transactionData_->getWallet()->walletId());
    std::shared_ptr<bs::sync::hd::Group> group;
    if (hdWallet) {

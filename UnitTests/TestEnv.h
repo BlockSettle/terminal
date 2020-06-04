@@ -469,4 +469,6 @@ private:
    std::shared_ptr<ArmoryInstance>       armoryInstance_;
 };
 
+bs::Address randomAddressPKH();
+
 #endif // __TEST_ENV_H__

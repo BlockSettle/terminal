@@ -1,7 +1,21 @@
 {
-   "latest_version": "0.90.3",
-   "release_date": "01 Jun 2020",
+   "latest_version": "0.90.4",
+   "release_date": "04 Jun 2020",
    "changes": [
+      {
+         "version_string": "0.90.4",
+         "previous_version": "0.90.3",
+         "release_date": "04 Jun 2020",
+         "release_type": "prod",
+         "improvements": [
+            "Check for supported Trezor HW versions"
+         ],
+         "bug_fixes": [
+            "Minor fix for signing with Ledger"
+         ],
+         "revision": "ecc93d620",
+         "common_revision": "4d6b2978"
+      },
       {
          "version_string": "0.90.3",
          "previous_version": "0.90.2",

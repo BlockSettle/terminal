@@ -50,7 +50,7 @@ public:
    Q_INVOKABLE void scanDevices();
    Q_INVOKABLE void requestPublicKey(int deviceIndex);
    Q_INVOKABLE void setMatrixPin(int deviceIndex, QString pin);
-   Q_INVOKABLE void setPassphrase(int deviceIndex, QString passphrase);
+   Q_INVOKABLE void setPassphrase(int deviceIndex, QString passphrase, bool enterOnDevice);
    Q_INVOKABLE void cancel(int deviceIndex);
    Q_INVOKABLE void prepareHwDeviceForSign(QString walletId);
    Q_INVOKABLE void signTX(QVariant reqTX);
@@ -64,7 +64,7 @@ signals:
    void devicesChanged();
    void publicKeyReady(QVariant walletInfo);
    void requestPinMatrix();
-   void requestHWPass();
+   void requestHWPass(bool allowedOnDevice);
 
    void deviceNotFound(QString deviceId);
    void deviceReady(QString deviceId);
