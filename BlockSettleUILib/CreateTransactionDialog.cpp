@@ -510,10 +510,6 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
             cb(rc);
          };
 
-         if (hashes.empty()) {
-            supportingTxMapCb({}, nullptr);
-            return;
-         }
          if (!armory_->getTXsByHash(hashes, supportingTxMapCb, true)) {
             SPDLOG_LOGGER_ERROR(logger_, "getTXsByHash failed");
             cb(false);
