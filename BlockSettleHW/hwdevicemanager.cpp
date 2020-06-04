@@ -86,14 +86,14 @@ void HwDeviceManager::setMatrixPin(int deviceIndex, QString pin)
    device->setMatrixPin(pin.toStdString());
 }
 
-void HwDeviceManager::setPassphrase(int deviceIndex, QString passphrase)
+void HwDeviceManager::setPassphrase(int deviceIndex, QString passphrase, bool enterOnDevice)
 {
    auto device = getDevice(model_->getDevice(deviceIndex));
    if (!device) {
       return;
    }
 
-   device->setPassword(passphrase.toStdString());
+   device->setPassword(passphrase.toStdString(), enterOnDevice);
 }
 
 void HwDeviceManager::cancel(int deviceIndex)

@@ -877,10 +877,11 @@ function showHwPinMatrix(deviceIndex) {
     return pinMatrix;
 }
 
-function showHwPassphrase(deviceIndex) {
+function showHwPassphrase(deviceIndex, allowedOnDevice) {
     let passphrase = Qt.createComponent("../BsHw/PassphraseDialog.qml").createObject(mainWindow);
 
     passphrase.deviceIndex = deviceIndex;
+    passphrase.allowedOnDevice = allowedOnDevice;
     passphrase.open();
 
     return passphrase;

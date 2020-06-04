@@ -21,9 +21,10 @@ import "../js/helper.js" as JsHelper
 import "../BsStyles"
 
 CustomDialog {
-    width: 250
+    width: 380
     height: 100
     property int deviceIndex: -1
+    property bool allowedOnDevice: false
 
     cHeaderItem: CustomHeader {
         Layout.leftMargin: 10
@@ -45,11 +46,24 @@ CustomDialog {
             Layout.fillWidth: true
 
             CustomButton {
+                id: btnCancel
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 text: qsTr("Cancel")
                 onClicked: {
                     hwDeviceManager.cancel(deviceIndex)
+                    close();
+                }
+            }
+
+            CustomButton {
+                anchors.left: btnCancel.right
+                anchors.right: btnAccept.left
+                anchors.bottom: parent.bottom
+                text: qsTr("On Device")
+                visible: allowedOnDevice
+                onClicked: {
+                    hwDeviceManager.setPassphrase(deviceIndex, "", true)
                     close();
                 }
             }
@@ -61,11 +75,10 @@ CustomDialog {
                 anchors.bottom: parent.bottom
                 text: qsTr("Accept")
                 onClicked: {
-                    hwDeviceManager.setPassphrase(deviceIndex, pinInputField.text)
+                    hwDeviceManager.setPassphrase(deviceIndex, pinInputField.text, false)
                     close();
                 }
             }
-
         }
     }
 }

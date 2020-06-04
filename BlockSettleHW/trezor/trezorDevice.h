@@ -45,7 +45,8 @@ class TrezorDevice : public HwDeviceInterface
    Q_OBJECT
 
 public:
-   TrezorDevice(const std::shared_ptr<ConnectionManager> &, std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet
+   TrezorDevice(const std::shared_ptr<ConnectionManager> &
+      , std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet
       , const QPointer<TrezorClient> &, QObject* parent = nullptr);
    ~TrezorDevice() override;
 
@@ -64,7 +65,7 @@ public:
 
    // Management
    void setMatrixPin(const std::string& pin) override;
-   void setPassword(const std::string& password) override;
+   void setPassword(const std::string& password, bool enterOnDevice) override;
 
    // State
    bool isBlocked() override {
@@ -91,9 +92,12 @@ private:
    void sendTxMessage(const QString& status);
 
    // Returns previous Tx for legacy inputs
-   const Tx &prevTx(const hw::trezor::messages::bitcoin::TxRequest &txRequest);
+   // Trezor could request non-existing hash if wrong passphrase entered
+   Tx prevTx(const hw::trezor::messages::bitcoin::TxRequest &txRequest);
 
 private:
+   bool hasCapability(hw::trezor::messages::management::Features::Capability cap) const;
+
    std::shared_ptr<ConnectionManager> connectionManager_{};
    std::shared_ptr<bs::sync::WalletsManager> walletManager_{};
 
@@ -107,7 +111,6 @@ private:
    bool txSignedByUser_ = false;
    std::unordered_map<int, AsyncCallBack> awaitingCallbackNoData_;
    std::unordered_map<int, AsyncCallBackCall> awaitingCallbackData_;
-   std::map<BinaryData, Tx> prevTxs_;
 };
 
 #endif // TREZORDEVICE_H
