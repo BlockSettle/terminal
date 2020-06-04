@@ -483,6 +483,7 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
          auto txReq = transactionData_->createTXRequest(checkBoxRBF()->checkState() == Qt::Checked, changeAddress);
 
          // grab supporting transactions for the utxo map.
+         // required only for HW
          std::set<BinaryData> hashes;
          for (const auto& input : txReq.inputs) {
             hashes.emplace(input.getTxHash());
