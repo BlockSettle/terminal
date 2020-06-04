@@ -13,6 +13,7 @@
 
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
+#include "AutoSignQuoteProvider.h"
 #include "BSMessageBox.h"
 #include "CelerClient.h"
 #include "CelerSubmitQuoteNotifSequence.h"
@@ -134,7 +135,7 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<WalletSignerContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<ConnectionManager> &connectionManager
-   , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider
+   , const std::shared_ptr<AutoSignScriptProvider> &autoSignProvider
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , OrderListModel *orderListModel
 )
@@ -149,7 +150,7 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    armory_ = armory;
    appSettings_ = appSettings;
    connectionManager_ = connectionManager;
-   autoSignQuoteProvider_ = autoSignQuoteProvider;
+   autoSignProvider_ = autoSignProvider;
    utxoReservationManager_ = utxoReservationManager;
 
    statsCollector_ = std::make_shared<bs::SecurityStatsCollector>(appSettings, ApplicationSettings::Filter_MD_QN_cnt);
@@ -157,9 +158,9 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    ui_->widgetQuoteRequests->init(logger_, quoteProvider_, assetManager, statsCollector_,
                                   appSettings, celerClient_);
    ui_->pageRFQReply->init(logger, authAddressManager, assetManager, quoteProvider_,
-                           appSettings, connectionManager, signingContainer_, armory_, autoSignQuoteProvider_, utxoReservationManager);
+                           appSettings, connectionManager, signingContainer_, armory_, autoSignProvider_, utxoReservationManager);
 
-   ui_->widgetAutoSignQuote->init(autoSignQuoteProvider_);
+   ui_->widgetAutoSignQuote->init(autoSignProvider_);
 
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::Selected, this, &RFQReplyWidget::onSelected);
 

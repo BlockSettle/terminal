@@ -63,7 +63,6 @@ void UserScript::load(const QString &filename)
          }
       });
    }
-
 }
 
 QObject *UserScript::instantiate()
@@ -212,21 +211,18 @@ AutoQuoter::AutoQuoter(const std::shared_ptr<spdlog::logger> &logger
    , const QString &filename
    , const std::shared_ptr<AssetManager> &assetManager
    , const std::shared_ptr<MDCallbacksQt> &mdCallbacks, QObject* parent)
-   : QObject(parent), script_(logger, mdCallbacks, this)
-   , logger_(logger), assetManager_(assetManager)
+   : UserScript(logger, mdCallbacks, parent)
+   , assetManager_(assetManager)
 {
    qmlRegisterType<BSQuoteReqReply>("bs.terminal", 1, 0, "BSQuoteReqReply");
    qmlRegisterUncreatableType<BSQuoteRequest>("bs.terminal", 1, 0, "BSQuoteRequest", tr("Can't create this type"));
 
-   connect(&script_, &UserScript::loaded, [this] { emit loaded(); });
-   connect(&script_, &UserScript::failed, [this](const QString &err) { emit failed(err); });
-
-   script_.load(filename);
+   load(filename);
 }
 
 QObject *AutoQuoter::instantiate(const bs::network::QuoteReqNotification &qrn)
 {
-   QObject *rv = script_.instantiate();
+   QObject *rv = UserScript::instantiate();
    if (rv) {
       BSQuoteReqReply *qrr = qobject_cast<BSQuoteReqReply *>(rv);
       qrr->init(logger_, assetManager_);
@@ -248,16 +244,6 @@ QObject *AutoQuoter::instantiate(const bs::network::QuoteReqNotification &qrn)
       qrr->start();
    }
    return rv;
-}
-
-void AutoQuoter::destroy(QObject *o)
-{
-   delete o;
-}
-
-void AutoQuoter::setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> walletsManager)
-{
-   script_.setWalletsManager(walletsManager);
 }
 
 
@@ -306,4 +292,66 @@ QString BSQuoteReqReply::product()
 double BSQuoteReqReply::accountBalance(const QString &product)
 {
    return assetManager_->getBalance(product.toStdString());
+}
+
+
+void SubmitRFQ::init(const std::shared_ptr<spdlog::logger> &logger, const std::string &id)
+{
+   logger_ = logger;
+   id_ = id;
+}
+
+void SubmitRFQ::log(const QString &s)
+{
+   logger_->info("[SubmitRFQ] {}", s.toStdString());
+}
+
+void SubmitRFQ::sendRFQ(double amount)
+{
+   emit sendingRFQ(id_, amount, buy_);
+}
+
+void SubmitRFQ::cancelRFQ()
+{
+   emit cancellingRFQ(id_);
+}
+
+void SubmitRFQ::stop()
+{
+   emit stopRFQ(id_);
+}
+
+
+AutoRFQ::AutoRFQ(const std::shared_ptr<spdlog::logger> &logger
+   , const QString &filename
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks, QObject* parent)
+   : UserScript(logger, mdCallbacks, parent)
+{
+   qmlRegisterType<SubmitRFQ>("bs.terminal", 1, 0, "SubmitRFQ");
+   load(filename);
+}
+
+QObject *AutoRFQ::instantiate(const std::string &id, const QString &symbol
+   , double amount, bool buy)
+{
+   QObject *rv = UserScript::instantiate();
+   if (!rv) {
+      return nullptr;
+   }
+   SubmitRFQ *rfq = qobject_cast<SubmitRFQ *>(rv);
+   if (!rfq) {
+      logger_->error("[AutoRFQ::instantiate] wrong script type");
+      return nullptr;
+   }
+   rfq->init(logger_, id);
+   rfq->setSecurity(symbol);
+   rfq->setAmount(amount);
+   rfq->setBuy(buy);
+
+   connect(rfq, &SubmitRFQ::sendingRFQ, this, &AutoRFQ::sendRFQ);
+   connect(rfq, &SubmitRFQ::cancellingRFQ, this, &AutoRFQ::cancelRFQ);
+   connect(rfq, &SubmitRFQ::stopRFQ, this, &AutoRFQ::stopRFQ);
+
+   rfq->start();
+   return rv;
 }

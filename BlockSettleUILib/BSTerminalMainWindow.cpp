@@ -27,6 +27,7 @@
 #include "AuthAddressDialog.h"
 #include "AuthAddressManager.h"
 #include "AutheIDClient.h"
+#include "AutoSignQuoteProvider.h"
 #include "BSMarketDataProvider.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
@@ -67,6 +68,7 @@
 #include "TransactionsViewModel.h"
 #include "TransactionsWidget.h"
 #include "UiUtils.h"
+#include "UserScriptRunner.h"
 #include "UtxoReservationManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -2015,38 +2017,46 @@ void BSTerminalMainWindow::InitWidgets()
 
    ui_->widgetRFQ->initWidgets(mdProvider_, mdCallbacks_, applicationSettings_);
 
-   auto quoteProvider = std::make_shared<QuoteProvider>(assetManager_, logMgr_->logger("message"));
+   auto quoteProvider = std::make_shared<QuoteProvider>(assetManager_
+      , logMgr_->logger("message"));
    quoteProvider->ConnectToCelerClient(celerConnection_);
 
-   autoSignQuoteProvider_ = std::make_shared<AutoSignQuoteProvider>(logMgr_->logger(), assetManager_, quoteProvider
-      , applicationSettings_, signContainer_, mdCallbacks_, celerConnection_);
+   const auto &logger = logMgr_->logger();
+
+   const auto scriptRunner = new AQScriptRunner(quoteProvider, signContainer_
+      , mdCallbacks_, assetManager_, logger, nullptr);
+   autoSignQuoteProvider_ = std::make_shared<AutoSignScriptProvider>(logger
+      , scriptRunner, applicationSettings_, signContainer_, celerConnection_);
 
    auto dialogManager = std::make_shared<DialogManager>(this);
 
-   ui_->widgetRFQ->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, assetManager_
-      , dialogManager, signContainer_, armory_, connectionManager_, utxoReservationMgr_, orderListModel_.get());
-   ui_->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdCallbacks_, assetManager_
-      , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_, autoSignQuoteProvider_, utxoReservationMgr_, orderListModel_.get());
+   ui_->widgetRFQ->init(logger, celerConnection_, authManager_, quoteProvider
+      , assetManager_, dialogManager, signContainer_, armory_, connectionManager_
+      , utxoReservationMgr_, orderListModel_.get());
+   ui_->widgetRFQReply->init(logger, celerConnection_, authManager_
+      , quoteProvider, mdCallbacks_, assetManager_, applicationSettings_, dialogManager
+      , signContainer_, armory_, connectionManager_, autoSignQuoteProvider_
+      , utxoReservationMgr_, orderListModel_.get());
 
-   connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this
+      , &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this
+      , &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
 
    connect(ui_->tabWidget, &QTabWidget::tabBarClicked, this,
-      [requestRFQ = QPointer<RFQRequestWidget>(ui_->widgetRFQ), replyRFQ = QPointer<RFQReplyWidget>(ui_->widgetRFQReply),
-         tabWidget = QPointer<QTabWidget>(ui_->tabWidget)](int index) {
-
+      [requestRFQ = QPointer<RFQRequestWidget>(ui_->widgetRFQ)
+         , replyRFQ = QPointer<RFQReplyWidget>(ui_->widgetRFQReply)
+         , tabWidget = QPointer<QTabWidget>(ui_->tabWidget)] (int index)
+   {
       if (!tabWidget) {
          return;
       }
-
       if (requestRFQ && requestRFQ == tabWidget->widget(index)) {
          requestRFQ->forceCheckCondition();
       }
-
       if (replyRFQ && replyRFQ == tabWidget->widget(index)) {
          replyRFQ->forceCheckCondition();
       }
-
    });
 }
 
