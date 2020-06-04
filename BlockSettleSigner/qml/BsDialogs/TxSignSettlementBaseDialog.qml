@@ -166,7 +166,7 @@ CustomTitleDialogWindowWithExpander {
         target: hwDeviceManager
         onRequestPinMatrix: JsHelper.showHwPinMatrix(0);
         onDeviceReady: hwDeviceManager.signTX(passwordDialogData.TxRequest);
-        onRequestHWPass: JsHelper.showHwPassphrase(0);
+        onRequestHWPass: JsHelper.showHwPassphrase(0, allowedOnDevice);
         onDeviceNotFound: {
             hwDeviceStatus = qsTr("Searching for device")
             let lastDeviceError = hwDeviceManager.lastDeviceError(0);

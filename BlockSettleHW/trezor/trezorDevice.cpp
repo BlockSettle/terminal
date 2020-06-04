@@ -215,11 +215,15 @@ void TrezorDevice::setMatrixPin(const std::string& pin)
    makeCall(message);
 }
 
-void TrezorDevice::setPassword(const std::string& password)
+void TrezorDevice::setPassword(const std::string& password, bool enterOnDevice)
 {
    connectionManager_->GetLogger()->debug("[TrezorDevice] setPassword - send passphrase response");
    common::PassphraseAck message;
-   message.set_passphrase(password);
+   if (enterOnDevice) {
+      message.set_on_device(true);
+   } else {
+      message.set_passphrase(password);
+   }
    makeCall(message);
 }
 
@@ -339,7 +343,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
       {
          common::PassphraseRequest request;
          if (parseResponse(request, data)) {
-            emit requestHWPass();
+            emit requestHWPass(hasCapability(management::Features_Capability_Capability_PassphraseEntry));
             sendTxMessage(HWInfoStatus::kRequestPassphrase);
          }
       }
@@ -638,4 +642,10 @@ Tx TrezorDevice::prevTx(const bitcoin::TxRequest &txRequest)
       return {};
    }
    return Tx(supportingTxIt->second);
+}
+
+bool TrezorDevice::hasCapability(management::Features::Capability cap) const
+{
+   return std::find(features_.capabilities().begin(), features_.capabilities().end(), cap)
+         != features_.capabilities().end();
 }

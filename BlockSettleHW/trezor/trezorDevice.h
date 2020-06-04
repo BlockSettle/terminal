@@ -65,7 +65,7 @@ public:
 
    // Management
    void setMatrixPin(const std::string& pin) override;
-   void setPassword(const std::string& password) override;
+   void setPassword(const std::string& password, bool enterOnDevice) override;
 
    // State
    bool isBlocked() override {
@@ -96,6 +96,8 @@ private:
    Tx prevTx(const hw::trezor::messages::bitcoin::TxRequest &txRequest);
 
 private:
+   bool hasCapability(hw::trezor::messages::management::Features::Capability cap) const;
+
    std::shared_ptr<ConnectionManager> connectionManager_{};
    std::shared_ptr<bs::sync::WalletsManager> walletManager_{};
 
