@@ -26,6 +26,14 @@
 using namespace hw::trezor::messages;
 
 namespace {
+   const auto kModel1 = "1";
+   const auto kModelT = "T";
+
+   const std::map<std::string, std::array<unsigned, 3>> kMinVersion = {
+      { kModel1, { 1, 9, 1 } },
+      { kModelT, { 2, 3, 1 } }
+   };
+
    // Trezor package rule (source - https://github.com/trezor/trezord-go)
    int getMessageType(const google::protobuf::Message &msg)
    {
@@ -127,6 +135,13 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
    awaitingWalletInfo_.info_.label = features_.label();
    awaitingWalletInfo_.info_.deviceId = features_.device_id();
    awaitingWalletInfo_.info_.vendor = features_.vendor();
+
+   awaitingWalletInfo_.isFirmwareSupported_ = isFirmwareSupported();
+   if (!awaitingWalletInfo_.isFirmwareSupported_) {
+      awaitingWalletInfo_.firmwareSupportedMsg_ = firmwareSupportedVersion();
+      cb(QVariant::fromValue<>(awaitingWalletInfo_));
+      return;
+   }
 
    // We cannot get all data from one call so we make four calls:
    // fetching first address for "m/0'" as wallet id
@@ -312,7 +327,8 @@ void TrezorDevice::handleMessage(const MessageData& data)
    case MessageType_Features:
       {
          if (parseResponse(features_, data)) {
-            connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage Features ");
+            connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage Features, model: '{}' - {}.{}.{} ({})"
+               , features_.model(), features_.major_version(), features_.minor_version(), features_.patch_version(), features_.revision());
             // + getJSONReadableMessage(features_)); 
          }
       }
@@ -648,4 +664,38 @@ bool TrezorDevice::hasCapability(management::Features::Capability cap) const
 {
    return std::find(features_.capabilities().begin(), features_.capabilities().end(), cap)
          != features_.capabilities().end();
+}
+
+bool TrezorDevice::isFirmwareSupported() const
+{
+   auto verIt = kMinVersion.find(features_.model());
+   if (verIt == kMinVersion.end()) {
+      return false;
+   }
+
+   const auto &minVer = verIt->second;
+   if (features_.major_version() > minVer[0]) {
+      return true;
+   }
+   if (features_.major_version() < minVer[0]) {
+      return false;
+   }
+   if (features_.minor_version() > minVer[1]) {
+      return true;
+   }
+   if (features_.minor_version() < minVer[1]) {
+      return false;
+   }
+   return features_.patch_version() >= minVer[2];
+}
+
+std::string TrezorDevice::firmwareSupportedVersion() const
+{
+   auto verIt = kMinVersion.find(features_.model());
+   if (verIt == kMinVersion.end()) {
+      return fmt::format("Unknown model: {}", features_.model());
+   }
+   const auto &minVer = verIt->second;
+   return fmt::format("Please update wallet firmware to version {}.{}.{} or later"
+      , minVer[0], minVer[1], minVer[2]);
 }

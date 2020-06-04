@@ -98,6 +98,9 @@ private:
 private:
    bool hasCapability(hw::trezor::messages::management::Features::Capability cap) const;
 
+   bool isFirmwareSupported() const;
+   std::string firmwareSupportedVersion() const;
+
    std::shared_ptr<ConnectionManager> connectionManager_{};
    std::shared_ptr<bs::sync::WalletsManager> walletManager_{};
 

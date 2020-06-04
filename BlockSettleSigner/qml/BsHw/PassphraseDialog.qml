@@ -20,26 +20,32 @@ import "../StyledControls"
 import "../js/helper.js" as JsHelper
 import "../BsStyles"
 
-CustomDialog {
+CustomTitleDialogWindow {
     width: 380
-    height: 100
+    height: 130
     property int deviceIndex: -1
     property bool allowedOnDevice: false
 
-    cHeaderItem: CustomHeader {
-        Layout.leftMargin: 10
-        text: "Please enter passphrase"
+    title: "Hw Device Passphrase"
+
+    cContentItem: RowLayout{
+        spacing: 10
+        CustomLabel {
+            text: "Enter passphrase"
+            Layout.leftMargin: 10
+        }
+
+        CustomPasswordTextInput {
+            id: pinInputField
+            Layout.fillWidth: true
+            Layout.preferredHeight: 30
+            Layout.rightMargin: 5
+
+            text: ""
+        }
     }
 
-    cContentItem: CustomPasswordTextInput {
-        id: pinInputField
-        Layout.fillWidth: true
-        Layout.preferredHeight: 30
-        Layout.leftMargin: 5
-        Layout.rightMargin: 5
-
-        text: ""
-    }
+    onEnterPressed: acceptOnHost();
 
     cFooterItem: RowLayout {
         CustomButtonBar {
@@ -63,8 +69,7 @@ CustomDialog {
                 text: qsTr("On Device")
                 visible: allowedOnDevice
                 onClicked: {
-                    hwDeviceManager.setPassphrase(deviceIndex, "", true)
-                    close();
+                    acceptOnDevice();
                 }
             }
 
@@ -75,10 +80,19 @@ CustomDialog {
                 anchors.bottom: parent.bottom
                 text: qsTr("Accept")
                 onClicked: {
-                    hwDeviceManager.setPassphrase(deviceIndex, pinInputField.text, false)
-                    close();
+                    acceptOnHost();
                 }
             }
         }
+    }
+
+    function acceptOnDevice() {
+        hwDeviceManager.setPassphrase(deviceIndex, "", true)
+        close();
+    }
+
+    function acceptOnHost() {
+        hwDeviceManager.setPassphrase(deviceIndex, pinInputField.text, false)
+        close();
     }
 }
