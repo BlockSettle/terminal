@@ -69,6 +69,9 @@ public:
          !info_.xpubNativeSegwit.empty() &&
          !info_.xpubLegacy.empty();
    }
+
+   bool isFirmwareSupported_{true};
+   std::string firmwareSupportedMsg_;
 };
 Q_DECLARE_METATYPE(HwWalletWrapper)
 

@@ -101,7 +101,7 @@ CustomTitleDialogWindow {
 
                                 onFailed: {
                                     JsHelper.messageBox(BSMessageBox.Type.Critical
-                                        , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + reason)
+                                        , qsTr("Import Failed"), qsTr("Import HW-wallet failed:\n") + reason)
                                 }
                             }
                         }
@@ -187,7 +187,7 @@ CustomTitleDialogWindow {
             }
             else {
                 JsHelper.messageBox(BSMessageBox.Type.Critical
-                    , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
+                    , qsTr("Import Failed"), qsTr("Import HW-wallet failed:\n") + desc)
             }
         }
 

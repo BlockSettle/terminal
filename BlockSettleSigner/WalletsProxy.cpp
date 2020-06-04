@@ -804,6 +804,13 @@ void WalletsProxy::importHwWallet(HwWalletWrapper walletInfo, const QJSValue &js
       });
    };
 
+   if (!walletInfo.isFirmwareSupported_) {
+      bs::sync::WatchingOnlyWallet result;
+      result.description = walletInfo.firmwareSupportedMsg_;
+      cb(result);
+      return;
+   }
+
    adapter_->importHwWallet(walletInfo.info_, cb);
 }
 
