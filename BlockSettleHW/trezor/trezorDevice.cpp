@@ -448,7 +448,6 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
    {
    case bitcoin::TxRequest_RequestType_TXINPUT:
    {
-      // Legacy inputs support
       if (!txRequest.details().tx_hash().empty()) {
          auto input = txAck.mutable_tx()->add_inputs();
 
