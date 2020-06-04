@@ -370,3 +370,12 @@ int UnitTestWalletACT::waitOnBroadcastError(const std::string &reqId)
       return 0;
    }
 }
+
+bs::Address randomAddressPKH()
+{
+   auto privKey = CryptoPRNG::generateRandom(32);
+   auto pubkey = CryptoECDSA().ComputePublicKey(privKey, true);
+   auto pubkeyHash = BtcUtils::getHash160(pubkey.getRef());
+   auto addr = bs::Address::fromPubKey(pubkey, AddressEntryType_P2PKH);
+   return addr;
+}

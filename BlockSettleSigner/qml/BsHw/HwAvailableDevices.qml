@@ -39,7 +39,7 @@ Item {
             root.pubKeyReady()
         }
         onRequestPinMatrix: JsHelper.showHwPinMatrix(hwList.deviceIndex);
-        onRequestHWPass: JsHelper.showHwPassphrase(hwList.deviceIndex);
+        onRequestHWPass: JsHelper.showHwPassphrase(hwList.deviceIndex, allowedOnDevice);
         onOperationFailed: {
             hwWalletInfo = {};
             isImporting = false;
@@ -56,8 +56,8 @@ Item {
     }
 
     function importXpub() {
-        hwDeviceManager.requestPublicKey(hwList.deviceIndex);
         isImporting = true;
+        hwDeviceManager.requestPublicKey(hwList.deviceIndex);
     }
 
     function rescan() {

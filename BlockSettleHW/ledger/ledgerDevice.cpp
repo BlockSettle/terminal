@@ -1049,19 +1049,10 @@ void LedgerCommandThread::sendTxSigningResult(const QVector<QByteArray>& respons
    Blocksettle::Communication::headless::InputSigs sigs;
    for (std::size_t i = 0; i < responseSigned.size(); ++i) {
       auto &signedInput = responseSigned[i];
-      auto pubKey = inputNodes[i].getPublicKey();
-      Asset_PublicKey pubKeyAsset(pubKey);
-      auto compressedKey = pubKeyAsset.getCompressedKey();
-
-      QByteArray composedData;
-      composedData.append(static_cast<char>(signedInput.size()));
-      composedData.append(signedInput);
-      composedData.append(static_cast<char>(compressedKey.getSize()));
-      composedData.push_back(QByteArray::fromStdString(compressedKey.toBinStr()));
 
       auto *sig = sigs.add_inputsig();
       sig->set_index(static_cast<uint>(i));
-      sig->set_data(composedData.toStdString().c_str(), composedData.size());
+      sig->set_data(signedInput.toStdString().c_str(), signedInput.size());
    }
 
    HWSignedTx wrapper;

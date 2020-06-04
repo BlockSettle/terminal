@@ -26,6 +26,14 @@
 using namespace hw::trezor::messages;
 
 namespace {
+   const auto kModel1 = "1";
+   const auto kModelT = "T";
+
+   const std::map<std::string, std::array<unsigned, 3>> kMinVersion = {
+      { kModel1, { 1, 9, 1 } },
+      { kModelT, { 2, 3, 1 } }
+   };
+
    // Trezor package rule (source - https://github.com/trezor/trezord-go)
    int getMessageType(const google::protobuf::Message &msg)
    {
@@ -128,6 +136,13 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
    awaitingWalletInfo_.info_.deviceId = features_.device_id();
    awaitingWalletInfo_.info_.vendor = features_.vendor();
 
+   awaitingWalletInfo_.isFirmwareSupported_ = isFirmwareSupported();
+   if (!awaitingWalletInfo_.isFirmwareSupported_) {
+      awaitingWalletInfo_.firmwareSupportedMsg_ = firmwareSupportedVersion();
+      cb(QVariant::fromValue<>(awaitingWalletInfo_));
+      return;
+   }
+
    // We cannot get all data from one call so we make four calls:
    // fetching first address for "m/0'" as wallet id
    // fetching first address for "m/84'" as native segwit xpub
@@ -215,11 +230,15 @@ void TrezorDevice::setMatrixPin(const std::string& pin)
    makeCall(message);
 }
 
-void TrezorDevice::setPassword(const std::string& password)
+void TrezorDevice::setPassword(const std::string& password, bool enterOnDevice)
 {
    connectionManager_->GetLogger()->debug("[TrezorDevice] setPassword - send passphrase response");
    common::PassphraseAck message;
-   message.set_passphrase(password);
+   if (enterOnDevice) {
+      message.set_on_device(true);
+   } else {
+      message.set_passphrase(password);
+   }
    makeCall(message);
 }
 
@@ -308,7 +327,8 @@ void TrezorDevice::handleMessage(const MessageData& data)
    case MessageType_Features:
       {
          if (parseResponse(features_, data)) {
-            connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage Features ");
+            connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage Features, model: '{}' - {}.{}.{} ({})"
+               , features_.model(), features_.major_version(), features_.minor_version(), features_.patch_version(), features_.revision());
             // + getJSONReadableMessage(features_)); 
          }
       }
@@ -339,7 +359,7 @@ void TrezorDevice::handleMessage(const MessageData& data)
       {
          common::PassphraseRequest request;
          if (parseResponse(request, data)) {
-            emit requestHWPass();
+            emit requestHWPass(hasCapability(management::Features_Capability_Capability_PassphraseEntry));
             sendTxMessage(HWInfoStatus::kRequestPassphrase);
          }
       }
@@ -398,7 +418,6 @@ void TrezorDevice::resetCaches()
    currentTxSignReq_.reset(nullptr);
    awaitingTransaction_ = {};
    awaitingWalletInfo_ = {};
-   prevTxs_.clear();
 }
 
 void TrezorDevice::setCallbackNoData(MessageType type, AsyncCallBack&& cb)
@@ -449,16 +468,17 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
    {
    case bitcoin::TxRequest_RequestType_TXINPUT:
    {
-      // Legacy inputs support
       if (!txRequest.details().tx_hash().empty()) {
-         auto tx = prevTx(txRequest);
-         auto txIn = tx.getTxInCopy(txRequest.details().request_index());
-
          auto input = txAck.mutable_tx()->add_inputs();
-         input->set_prev_hash(txIn.getOutPoint().getTxHash().copySwapEndian().toBinStr());
-         input->set_prev_index(txIn.getOutPoint().getTxOutIndex());
-         input->set_sequence(txIn.getSequence());
-         input->set_script_sig(txIn.getScript().toBinStr());
+
+         auto tx = prevTx(txRequest);
+         if (tx.isInitialized()) {
+            auto txIn = tx.getTxInCopy(txRequest.details().request_index());
+            input->set_prev_hash(txIn.getOutPoint().getTxHash().copySwapEndian().toBinStr());
+            input->set_prev_index(txIn.getOutPoint().getTxOutIndex());
+            input->set_sequence(txIn.getSequence());
+            input->set_script_sig(txIn.getScript().toBinStr());
+         }
 
          connectionManager_->GetLogger()->debug("[TrezorDevice] handleTxRequest TXINPUT for prev hash"
              + getJSONReadableMessage(txAck));
@@ -520,11 +540,12 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       // Legacy inputs support
       if (!txRequest.details().tx_hash().empty()) {
          auto tx = prevTx(txRequest);
-         auto txOut = tx.getTxOutCopy(txRequest.details().request_index());
-
          auto binOutput = txAck.mutable_tx()->add_bin_outputs();
-         binOutput->set_amount(txOut.getValue());
-         binOutput->set_script_pubkey(txOut.getScript().toBinStr());
+         if (tx.isInitialized()) {
+            auto txOut = tx.getTxOutCopy(txRequest.details().request_index());
+            binOutput->set_amount(txOut.getValue());
+            binOutput->set_script_pubkey(txOut.getScript().toBinStr());
+         }
 
          connectionManager_->GetLogger()->debug("[TrezorDevice] handleTxRequest TXOUTPUT for prev hash"
              + getJSONReadableMessage(txAck));
@@ -593,12 +614,13 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       // Return previous tx details for legacy inputs
       // See https://wiki.trezor.io/Developers_guide:Message_Workflows
       auto tx = prevTx(txRequest);
-
       auto data = txAck.mutable_tx();
-      data->set_version(tx.getVersion());
-      data->set_lock_time(tx.getLockTime());
-      data->set_inputs_cnt(tx.getNumTxIn());
-      data->set_outputs_cnt(tx.getNumTxOut());
+      if (tx.isInitialized()) {
+         data->set_version(tx.getVersion());
+         data->set_lock_time(tx.getLockTime());
+         data->set_inputs_cnt(tx.getNumTxIn());
+         data->set_outputs_cnt(tx.getNumTxOut());
+      }
 
       connectionManager_->GetLogger()->debug("[TrezorDevice] handleTxRequest TXMETA"
          + getJSONReadableMessage(txAck));
@@ -627,13 +649,53 @@ void TrezorDevice::sendTxMessage(const QString& status)
    emit deviceTxStatusChanged(status);
 }
 
-const Tx &TrezorDevice::prevTx(const bitcoin::TxRequest &txRequest)
+Tx TrezorDevice::prevTx(const bitcoin::TxRequest &txRequest)
 {
    auto txHash = BinaryData::fromString(txRequest.details().tx_hash()).swapEndian();
-   auto &tx = prevTxs_[txHash];
-   if (!tx.isInitialized()) {
-      auto txRaw = currentTxSignReq_->supportingTXs.at(txHash);
-      tx = Tx(txRaw);
+   auto supportingTxIt = currentTxSignReq_->supportingTXs.find(txHash);
+   if (supportingTxIt == currentTxSignReq_->supportingTXs.end()) {
+      SPDLOG_LOGGER_ERROR(connectionManager_->GetLogger(), "can't find prev TX {}", txHash.toHexStr(1));
+      return {};
    }
-   return tx;
+   return Tx(supportingTxIt->second);
+}
+
+bool TrezorDevice::hasCapability(management::Features::Capability cap) const
+{
+   return std::find(features_.capabilities().begin(), features_.capabilities().end(), cap)
+         != features_.capabilities().end();
+}
+
+bool TrezorDevice::isFirmwareSupported() const
+{
+   auto verIt = kMinVersion.find(features_.model());
+   if (verIt == kMinVersion.end()) {
+      return false;
+   }
+
+   const auto &minVer = verIt->second;
+   if (features_.major_version() > minVer[0]) {
+      return true;
+   }
+   if (features_.major_version() < minVer[0]) {
+      return false;
+   }
+   if (features_.minor_version() > minVer[1]) {
+      return true;
+   }
+   if (features_.minor_version() < minVer[1]) {
+      return false;
+   }
+   return features_.patch_version() >= minVer[2];
+}
+
+std::string TrezorDevice::firmwareSupportedVersion() const
+{
+   auto verIt = kMinVersion.find(features_.model());
+   if (verIt == kMinVersion.end()) {
+      return fmt::format("Unknown model: {}", features_.model());
+   }
+   const auto &minVer = verIt->second;
+   return fmt::format("Please update wallet firmware to version {}.{}.{} or later"
+      , minVer[0], minVer[1], minVer[2]);
 }

@@ -483,12 +483,10 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
          auto txReq = transactionData_->createTXRequest(checkBoxRBF()->checkState() == Qt::Checked, changeAddress);
 
          // grab supporting transactions for the utxo map.
-         // required only for legacy wallets (HW-only)
+         // required only for HW
          std::set<BinaryData> hashes;
          for (const auto& input : txReq.inputs) {
-            if (!input.isSegWit()) {
-               hashes.emplace(input.getTxHash());
-            }
+            hashes.emplace(input.getTxHash());
          }
 
          auto supportingTxMapCb = [this, handle, txReq = std::move(txReq), cb]
@@ -512,10 +510,6 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
             cb(rc);
          };
 
-         if (hashes.empty()) {
-            supportingTxMapCb({}, nullptr);
-            return;
-         }
          if (!armory_->getTXsByHash(hashes, supportingTxMapCb, true)) {
             SPDLOG_LOGGER_ERROR(logger_, "getTXsByHash failed");
             cb(false);

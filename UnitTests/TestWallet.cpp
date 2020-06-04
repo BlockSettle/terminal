@@ -1957,3 +1957,108 @@ TEST_F(TestWallet, ChangeControlPassword)
 
    EXPECT_NO_THROW(bs::core::hd::Wallet(fileName, NetworkType::TestNet, "", controlPassphrase2, envPtr_->logger()));
 }
+
+TEST_F(TestWallet, WalletMeta)
+{
+   const auto metaCount = 20;
+
+   std::vector<std::pair<bs::Address, std::string>> addrComments;
+   std::vector<std::pair<BinaryData, std::string>> txComments;
+   for (int i = 0; i < metaCount; i++) {
+      addrComments.push_back(std::make_pair(randomAddressPKH(), CryptoPRNG::generateRandom(20).toHexStr()));
+   }
+
+   struct SettlCp
+   {
+      BinaryData payinHash;
+      BinaryData settlementId;
+      BinaryData cpAddr;
+   };
+   std::vector<SettlCp> settlCps;
+   for (int i = 0; i < metaCount; i++) {
+      SettlCp cp;
+      cp.payinHash = CryptoPRNG::generateRandom(32);
+      cp.settlementId = CryptoPRNG::generateRandom(32);
+      cp.cpAddr = CryptoPRNG::generateRandom(33);
+      settlCps.push_back(cp);
+      txComments.push_back(std::make_pair(cp.payinHash, CryptoPRNG::generateRandom(20).toHexStr()));
+   }
+
+   struct SettlMeta
+   {
+      BinaryData settlementId;
+      bs::Address authAddr;
+   };
+   std::vector<SettlMeta> settlMetas;
+   for (int i = 0; i < metaCount; i++) {
+      SettlMeta meta;
+      meta.settlementId = CryptoPRNG::generateRandom(32);
+      meta.authAddr = randomAddressPKH();
+      settlMetas.push_back(meta);
+   }
+
+   const auto passphrase = SecureBinaryData::fromString("test");
+   std::string fileName;
+   {
+      //create a wallet
+      const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("test seed"), NetworkType::TestNet };
+      const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
+      auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
+         "test", "", seed, pd, walletFolder_, envPtr_->logger());
+
+      {
+         const bs::core::WalletPasswordScoped lock(walletPtr, passphrase);
+         walletPtr->createStructure(10);
+      }
+
+      auto group = walletPtr->getGroup(bs::hd::Bitcoin_test);
+      ASSERT_TRUE(group != nullptr);
+
+      const bs::hd::Path xbtPathNative({ bs::hd::Purpose::Native, walletPtr->getXBTGroupType(), 0 });
+      auto leafNative = group->getLeafByPath(xbtPathNative);
+      ASSERT_NE(leafNative, nullptr);
+      fileName = walletPtr->getFileName();
+
+      for (auto &settlCp : settlCps) {
+         EXPECT_TRUE(leafNative->setSettlCPMeta(settlCp.payinHash, settlCp.settlementId, settlCp.cpAddr));
+      }
+      for (auto &settlMeta : settlMetas) {
+         EXPECT_TRUE(leafNative->setSettlementMeta(settlMeta.settlementId, settlMeta.authAddr));
+      }
+      for (auto &addr : addrComments) {
+         EXPECT_TRUE(leafNative->setAddressComment(addr.first, addr.second));
+      }
+      for (auto &tx : txComments) {
+         EXPECT_TRUE(leafNative->setTransactionComment(tx.first, tx.second));
+      }
+   }
+
+   const SecureBinaryData ctrlPass;
+   {
+      auto walletPtr = std::make_shared<bs::core::hd::Wallet>(fileName
+         , NetworkType::TestNet, "", ctrlPass, envPtr_->logger());
+
+      auto groupPtr = walletPtr->getGroup(bs::hd::Bitcoin_test);
+      ASSERT_TRUE(groupPtr);
+
+      const bs::hd::Path xbtPathNative({ bs::hd::Purpose::Native, walletPtr->getXBTGroupType(), 0 });
+      auto leafNative = groupPtr->getLeafByPath(xbtPathNative);
+      ASSERT_TRUE(leafNative);
+
+      for (auto &settlCp : settlCps) {
+         auto result = leafNative->getSettlCP(settlCp.payinHash);
+         EXPECT_EQ(result.first, settlCp.settlementId);
+         EXPECT_EQ(result.second, settlCp.cpAddr);
+      }
+      for (auto &settlMeta : settlMetas) {
+         auto result = leafNative->getSettlAuthAddr(settlMeta.settlementId);
+         EXPECT_EQ(result, settlMeta.authAddr);
+      }
+      for (auto &addr : addrComments) {
+         EXPECT_EQ(leafNative->getAddressComment(addr.first), addr.second);
+      }
+      for (auto &tx : txComments) {
+         EXPECT_EQ(leafNative->getTransactionComment(tx.first), tx.second);
+      }
+   }
+}

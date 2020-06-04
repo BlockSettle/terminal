@@ -39,7 +39,7 @@ public:
 
    // Management
    virtual void setMatrixPin(const std::string& pin) {};
-   virtual void setPassword(const std::string& password) {};
+   virtual void setPassword(const std::string& password, bool enterOnDevice) {};
 
    // State
    virtual bool isBlocked() = 0;
@@ -54,7 +54,7 @@ signals:
 
    // Management
    void requestPinMatrix();
-   void requestHWPass();
+   void requestHWPass(bool allowedOnDevice);
    void cancelledOnDevice();
 };
 
