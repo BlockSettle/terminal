@@ -104,6 +104,7 @@ BSWalletHandlerDialog {
             acceptAnimated();
         }
         onCancelledOnDevice: rejectAnimated()
+        onOperationFailed: showWalletError(reason)
     }
 
     Timer {

@@ -82,6 +82,8 @@ private:
 
    QPointer<HwDeviceInterface> getDevice(DeviceKey key);
 
+   std::shared_ptr<spdlog::logger> logger_;
+
 public:
    std::unique_ptr<TrezorClient> trezorClient_;
    std::unique_ptr<LedgerClient> ledgerClient_;
