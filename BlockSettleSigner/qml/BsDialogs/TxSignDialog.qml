@@ -54,6 +54,8 @@ BSWalletHandlerDialog {
     rejectable: true
     width: 500
 
+    onAboutToHide: hwDeviceManager.hwOperationDone()
+
     function init() {
         if (walletInfo.encType === QPasswordData.Auth) {
             btnConfirm.visible = false

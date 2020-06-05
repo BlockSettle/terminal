@@ -55,6 +55,7 @@ public:
    Q_INVOKABLE void prepareHwDeviceForSign(QString walletId);
    Q_INVOKABLE void signTX(QVariant reqTX);
    Q_INVOKABLE void releaseDevices();
+   Q_INVOKABLE void hwOperationDone();
 
    // Info asked from UI
    Q_INVOKABLE bool awaitingUserAction(int deviceIndex);

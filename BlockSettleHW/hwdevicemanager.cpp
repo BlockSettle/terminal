@@ -41,7 +41,6 @@ void HwDeviceManager::scanDevices()
       return;
    }
 
-
    setScanningFlag(true);
    
    auto doneScanning = [this, expectedClients = 2, finished = std::make_shared<int>(0)]() {
@@ -215,6 +214,11 @@ void HwDeviceManager::signTX(QVariant reqTX)
 void HwDeviceManager::releaseDevices()
 {
    releaseConnection();
+}
+
+void HwDeviceManager::hwOperationDone()
+{
+   model_->resetModel({});
 }
 
 bool HwDeviceManager::awaitingUserAction(int deviceIndex)
