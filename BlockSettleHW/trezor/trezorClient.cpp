@@ -109,6 +109,10 @@ void TrezorClient::releaseConnection(AsyncCallBack&& cb)
       state_ = State::Released;
       emit deviceReleased();
 
+      if (cbCopy) {
+         cbCopy();
+      }
+
       reply->deleteLater();
    };
 
