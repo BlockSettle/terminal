@@ -1,7 +1,32 @@
 {
-   "latest_version": "0.90.5",
+   "latest_version": "0.90.6",
    "release_date": "05 Jun 2020",
    "changes": [
+      {
+         "version_string": "0.90.6",
+         "previous_version": "0.90.6",
+         "release_date": "05 Jun 2020",
+         "release_type": "prod",
+         "improvements": [
+            "",
+            ""
+         ],
+         "bug_fixes": [],
+         "revision": "e311f0a9a",
+         "common_revision": "e311f0a9a"
+      },
+      {
+         "version_string": "0.90.6",
+         "previous_version": "0.90.5",
+         "release_date": "05 Jun 2020",
+         "release_type": "prod",
+         "improvements": [
+            "Reset Trezor session if wrong passphrase used"
+         ],
+         "bug_fixes": [],
+         "revision": "e311f0a9a",
+         "common_revision": "e311f0a9a"
+      },
       {
          "version_string": "0.90.5",
          "previous_version": "0.90.4",
