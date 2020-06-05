@@ -30,7 +30,10 @@ HwDeviceManager::HwDeviceManager(const std::shared_ptr<ConnectionManager>& conne
    model_ = new HwDeviceModel(this);
 }
 
-HwDeviceManager::~HwDeviceManager() = default;
+HwDeviceManager::~HwDeviceManager()
+{
+   releaseConnection(nullptr);
+};
 
 void HwDeviceManager::scanDevices()
 {
@@ -51,7 +54,7 @@ void HwDeviceManager::scanDevices()
 
    ledgerClient_->scanDevices(doneScanning);
    releaseConnection([this, doneScanning] {
-      trezorClient_->initConnection([this, doneScanning]() {
+      trezorClient_->initConnection(true, [this, doneScanning]() {
          doneScanning();
       });
    });
@@ -189,7 +192,6 @@ void HwDeviceManager::signTX(QVariant reqTX)
       assert(data.canConvert<HWSignedTx>());
       auto tx = data.value<HWSignedTx>();
       txSigned({ BinaryData::fromString(tx.signedTx) });
-      releaseDevices();
    });
 
    connect(device, &HwDeviceInterface::requestPinMatrix,
@@ -235,7 +237,7 @@ void HwDeviceManager::releaseConnection(AsyncCallBack&& cb/*= nullptr*/)
    for (int i = 0; i < model_->rowCount(); ++i) {
       auto device = getDevice(model_->getDevice(i));
       if (device) {
-         trezorClient_->initConnection([this, cbCopy = std::move(cb)] {
+         trezorClient_->initConnection(true, [this, cbCopy = std::move(cb)] {
             trezorClient_->releaseConnection([this, cb = std::move(cbCopy)]() {
                if (cb) {
                   cb();

@@ -158,10 +158,6 @@ CustomTitleDialogWindowWithExpander {
         }
     }
 
-    onAboutToHide: {
-        hwDeviceManager.releaseDevices();
-    }
-
     Connections {
         target: hwDeviceManager
         onRequestPinMatrix: JsHelper.showHwPinMatrix(0);
@@ -550,6 +546,7 @@ CustomTitleDialogWindowWithExpander {
                 anchors.right: walletInfo.encType === QPasswordData.Hardware ? parent.right : undefined
                 anchors.bottom: parent.bottom
                 onClicked: {
+                    hwDeviceManager.releaseDevices()
                     if (walletInfo.encType === QPasswordData.Hardware &&
                             hwDeviceManager.awaitingUserAction(0)) {
                         let warning = JsHelper.showDropHwDeviceMessage();

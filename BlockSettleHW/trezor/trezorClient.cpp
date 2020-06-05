@@ -36,9 +36,9 @@ QByteArray TrezorClient::getSessionId()
    return deviceData_.sessionId_;
 }
 
-void TrezorClient::initConnection(AsyncCallBack&& cb)
+void TrezorClient::initConnection(bool force, AsyncCallBack&& cb)
 {
-   auto initCallBack = [this, cbCopy = std::move(cb)](QNetworkReply* reply) mutable {
+   auto initCallBack = [this, cbCopy = std::move(cb), force](QNetworkReply* reply) mutable {
 
       if (!reply || reply->error() != QNetworkReply::NoError) {
          connectionManager_->GetLogger()->error(
@@ -67,7 +67,7 @@ void TrezorClient::initConnection(AsyncCallBack&& cb)
       state_ = State::Init;
       emit initialized();
 
-      enumDevices(std::move(cbCopy));
+      enumDevices(force, std::move(cbCopy));
       reply->deleteLater();
    };
 
@@ -81,7 +81,7 @@ void TrezorClient::initConnection(QString&& deviceId, AsyncCallBackCall&& cb /*=
       originCb({ copyDeviceId });
    };
 
-   initConnection(std::move(cbWrapper));
+   initConnection(false, std::move(cbWrapper));
 }
 
 void TrezorClient::releaseConnection(AsyncCallBack&& cb)
@@ -180,9 +180,9 @@ QPointer<TrezorDevice> TrezorClient::getTrezorDevice(const QString& deviceId)
    return trezorDevice_;
 }
 
-void TrezorClient::enumDevices(AsyncCallBack&& cb)
+void TrezorClient::enumDevices(bool forceAcquire, AsyncCallBack&& cb)
 {
-   auto enumCallback = [this, cbCopy = std::move(cb)](QNetworkReply* reply) mutable {
+   auto enumCallback = [this, cbCopy = std::move(cb), forceAcquire](QNetworkReply* reply) mutable {
 
       if (!reply || reply->error() != QNetworkReply::NoError) {
          connectionManager_->GetLogger()->error(
@@ -223,6 +223,12 @@ void TrezorClient::enumDevices(AsyncCallBack&& cb)
 
       // If there will be a few trezor devices connected, let's choose first one for now
       // later we could expand this functionality to many of them
+      if (!forceAcquire && trezorDevice_ && trezorDevices.first().sessionId_ == deviceData_.sessionId_) {
+         // this is our previous session so we could go straight away on it
+         cbCopy();
+         return;
+      }
+
       deviceData_ = trezorDevices.first();
       connectionManager_->GetLogger()->info(
          "[TrezorClient] enumDevices - Enumerate request succeeded. Total device available : "
