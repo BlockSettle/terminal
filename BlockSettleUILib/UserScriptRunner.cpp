@@ -509,8 +509,17 @@ void RFQScriptHandler::submitRFQ(const std::string &id, const QString &symbol
    if (itRFQ == rfqObjs_.end()) {
       obj = rfq_->instantiate(id, symbol, amount, buy);
       rfqObjs_[id] = obj;
+      auto rfqObj = qobject_cast<SubmitRFQ *>(obj);
+      if (!rfqObj) {
+         logger_->error("[RFQScriptHandler::submitRFQ] {} has wrong script object", id);
+         emit failedToLoad({}, tr("wrong script for %1").arg(QString::fromStdString(id)));
+         return;
+      }
+      logger_->debug("[RFQScriptHandler::submitRFQ] {}", id);
+      rfqObj->start();
    }
    else {
+      logger_->debug("[RFQScriptHandler::submitRFQ] {} already exists", id);
       obj = itRFQ->second;
    }
 
@@ -539,13 +548,14 @@ void RFQScriptHandler::rfqAccepted(const std::string &id)
 {
    const auto &itRFQ = rfqObjs_.find(id);
    if (itRFQ == rfqObjs_.end()) {
-      logger_->warn("[RFQScriptHandler::rfqAccepted] failed to find id {}", id);
       return;
    }
    const auto rfq = qobject_cast<SubmitRFQ *>(itRFQ->second);
    if (rfq) {
       emit rfq->accepted();
+      rfq->deleteLater();
    }
+   rfqObjs_.erase(itRFQ);
 }
 
 void RFQScriptHandler::rfqCancelled(const std::string &id)
@@ -558,7 +568,9 @@ void RFQScriptHandler::rfqCancelled(const std::string &id)
    const auto rfq = qobject_cast<SubmitRFQ *>(itRFQ->second);
    if (rfq) {
       emit rfq->cancelled();
+      rfq->deleteLater();
    }
+   rfqObjs_.erase(itRFQ);
 }
 
 void RFQScriptHandler::rfqExpired(const std::string &id)
@@ -577,6 +589,7 @@ void RFQScriptHandler::rfqExpired(const std::string &id)
 void RFQScriptHandler::onSendRFQ(const std::string &id, double amount, bool buy)
 {
    if (rfqObjs_.find(id) == rfqObjs_.end()) {
+      logger_->warn("[RFQScriptHandler::onSendRFQ] id {} not found", id);
       return;
    }
    emit sendRFQ(id);
@@ -585,6 +598,7 @@ void RFQScriptHandler::onSendRFQ(const std::string &id, double amount, bool buy)
 void RFQScriptHandler::onCancelRFQ(const std::string &id)
 {
    if (rfqObjs_.find(id) == rfqObjs_.end()) {
+      logger_->warn("[RFQScriptHandler::onCancelRFQ] id {} not found", id);
       return;
    }
    emit cancelRFQ(id);

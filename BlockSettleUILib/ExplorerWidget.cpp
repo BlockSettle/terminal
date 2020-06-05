@@ -89,14 +89,8 @@ void ExplorerWidget::init(const std::shared_ptr<ArmoryConnection> &armory
       "Search for a transaction or address."));
 }
 
-void ExplorerWidget::shortcutActivated(ShortcutType s)
-{
-   switch (s) {
-
-   default:
-      break;
-   }
-}
+void ExplorerWidget::shortcutActivated(ShortcutType)
+{}
 
 void ExplorerWidget::mousePressEvent(QMouseEvent *event)
 {

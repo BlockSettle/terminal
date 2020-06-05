@@ -303,7 +303,10 @@ void SubmitRFQ::init(const std::shared_ptr<spdlog::logger> &logger, const std::s
 
 void SubmitRFQ::log(const QString &s)
 {
-   logger_->info("[SubmitRFQ] {}", s.toStdString());
+   if (!logger_) {
+      return;
+   }
+   logger_->info("[SubmitRFQ::{}] {}", id_, s.toStdString());
 }
 
 void SubmitRFQ::sendRFQ(double amount)
@@ -336,6 +339,7 @@ QObject *AutoRFQ::instantiate(const std::string &id, const QString &symbol
 {
    QObject *rv = UserScript::instantiate();
    if (!rv) {
+      logger_->error("[AutoRFQ::instantiate] failed to instantiate script");
       return nullptr;
    }
    SubmitRFQ *rfq = qobject_cast<SubmitRFQ *>(rv);
@@ -352,6 +356,5 @@ QObject *AutoRFQ::instantiate(const std::string &id, const QString &symbol
    connect(rfq, &SubmitRFQ::cancellingRFQ, this, &AutoRFQ::cancelRFQ);
    connect(rfq, &SubmitRFQ::stopRFQ, this, &AutoRFQ::stopRFQ);
 
-   rfq->start();
    return rv;
 }

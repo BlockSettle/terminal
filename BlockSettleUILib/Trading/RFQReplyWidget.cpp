@@ -150,28 +150,33 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    armory_ = armory;
    appSettings_ = appSettings;
    connectionManager_ = connectionManager;
-   autoSignProvider_ = autoSignProvider;
    utxoReservationManager_ = utxoReservationManager;
 
-   statsCollector_ = std::make_shared<bs::SecurityStatsCollector>(appSettings, ApplicationSettings::Filter_MD_QN_cnt);
+   statsCollector_ = std::make_shared<bs::SecurityStatsCollector>(appSettings
+      , ApplicationSettings::Filter_MD_QN_cnt);
 
-   ui_->widgetQuoteRequests->init(logger_, quoteProvider_, assetManager, statsCollector_,
-                                  appSettings, celerClient_);
-   ui_->pageRFQReply->init(logger, authAddressManager, assetManager, quoteProvider_,
-                           appSettings, connectionManager, signingContainer_, armory_, autoSignProvider_, utxoReservationManager);
+   ui_->widgetQuoteRequests->init(logger_, quoteProvider_, assetManager, statsCollector_
+      , appSettings, celerClient_);
+   ui_->pageRFQReply->init(logger, authAddressManager, assetManager, quoteProvider_
+      , appSettings, connectionManager, signingContainer_, armory_, autoSignProvider
+      , utxoReservationManager);
+   ui_->widgetAutoSignQuote->init(autoSignProvider);
 
-   ui_->widgetAutoSignQuote->init(autoSignProvider_);
+   connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::Selected, this
+      , &RFQReplyWidget::onSelected);
 
-   connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::Selected, this, &RFQReplyWidget::onSelected);
-
-   ui_->pageRFQReply->setSubmitQuoteNotifCb([this](const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data) {
+   ui_->pageRFQReply->setSubmitQuoteNotifCb([this]
+      (const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data)
+   {
       statsCollector_->onQuoteSubmitted(data->qn);
       quoteProvider_->SubmitQuoteNotif(data->qn);
       ui_->widgetQuoteRequests->onQuoteReqNotifReplied(data->qn);
       onReplied(data);
    });
 
-   ui_->pageRFQReply->setGetLastSettlementReply([this](const std::string& settlementId) -> const std::vector<UTXO>* {
+   ui_->pageRFQReply->setGetLastSettlementReply([this]
+      (const std::string& settlementId) -> const std::vector<UTXO>*
+   {
       auto lastReply = sentXbtReplies_.find(settlementId);
       if (lastReply == sentXbtReplies_.end()) {
          return nullptr;

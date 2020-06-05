@@ -45,13 +45,14 @@ class ApplicationSettings;
 class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
+class AutoSignScriptProvider;
 class BaseCelerClient;
-class ConnectionManager;
 class DialogManager;
 class MarketDataProvider;
 class MDCallbacksQt;
 class OrderListModel;
 class QuoteProvider;
+class RFQDialog;
 class RfqStorage;
 class WalletSignerContainer;
 
@@ -67,17 +68,17 @@ public:
       , const std::shared_ptr<MDCallbacksQt> &
       , const std::shared_ptr<ApplicationSettings> &);
 
-   void init(std::shared_ptr<spdlog::logger> logger
-         , const std::shared_ptr<BaseCelerClient>& celerClient
-         , const std::shared_ptr<AuthAddressManager> &
-         , std::shared_ptr<QuoteProvider> quoteProvider
-         , const std::shared_ptr<AssetManager>& assetManager
-         , const std::shared_ptr<DialogManager> &dialogManager
-         , const std::shared_ptr<WalletSignerContainer> &
-         , const std::shared_ptr<ArmoryConnection> &
-         , const std::shared_ptr<ConnectionManager> &connectionManager
-         , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-         , OrderListModel *orderListModel);
+   void init(const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<BaseCelerClient> &
+      , const std::shared_ptr<AuthAddressManager> &
+      , const std::shared_ptr<QuoteProvider> &
+      , const std::shared_ptr<AssetManager> &
+      , const std::shared_ptr<DialogManager> &
+      , const std::shared_ptr<WalletSignerContainer> &
+      , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<AutoSignScriptProvider> &
+      , const std::shared_ptr<bs::UTXOReservationManager> &
+      , OrderListModel *orderListModel);
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
@@ -108,8 +109,11 @@ private:
    void popShield();
 
    bool checkConditions(const MarketSelectedInfo& productGroup);
-   bool checkWalletSettings(bs::network::Asset::Type productType, const MarketSelectedInfo& productGroup);
-   void onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservationToken ccUtxoRes);
+   bool checkWalletSettings(bs::network::Asset::Type productType
+      , const MarketSelectedInfo& productGroup);
+   void onRFQSubmit(const std::string &rfqId, const bs::network::RFQ& rfq
+      , bs::UtxoReservationToken ccUtxoRes);
+   void onRFQCancel(const std::string &rfqId);
 
 public slots:
    void onCurrencySelected(const MarketSelectedInfo& selectedInfo);
@@ -119,6 +123,8 @@ public slots:
    void onRefreshFocus();
 
    void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
+   void onUserConnected(const bs::network::UserType &);
+   void onUserDisconnected();
 
 private slots:
    void onConnectedToCeler();
@@ -141,12 +147,13 @@ private:
    std::shared_ptr<WalletSignerContainer>    signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<ApplicationSettings> appSettings_;
-   std::shared_ptr<ConnectionManager>  connectionManager_;
    std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
 
    std::shared_ptr<RfqStorage> rfqStorage_;
 
    QList<QMetaObject::Connection>   marketDataConnection;
+
+   std::unordered_map<std::string, RFQDialog *> dialogs_;
 };
 
 #endif // __RFQ_REQUEST_WIDGET_H__

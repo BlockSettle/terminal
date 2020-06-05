@@ -118,6 +118,9 @@ void AutoSignScriptProvider::tryEnableAutoSign()
 
 bool AutoSignScriptProvider::isReady() const
 {
+   logger_->debug("[{}] signCont: {}, walletsMgr: {}, celer: {}", __func__
+      , signingContainer_ && !signingContainer_->isOffline()
+      , walletsManager_ && walletsManager_->isReadyForTrading(), celerClient_->IsConnected());
    return signingContainer_ && !signingContainer_->isOffline()
       && walletsManager_ && walletsManager_->isReadyForTrading()
       && celerClient_->IsConnected();

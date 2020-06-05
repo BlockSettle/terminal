@@ -27,7 +27,7 @@
 
 
 RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
-   , const bs::network::RFQ& rfq
+   , const std::string &id, const bs::network::RFQ& rfq
    , const std::shared_ptr<QuoteProvider>& quoteProvider
    , const std::shared_ptr<AuthAddressManager>& authAddressManager
    , const std::shared_ptr<AssetManager>& assetManager
@@ -36,7 +36,6 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<BaseCelerClient> &celerClient
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<RfqStorage> &rfqStorage
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const bs::Address &recvXbtAddrIfSet
@@ -50,7 +49,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
    , logger_(logger)
-   , rfq_(rfq)
+   , id_(id), rfq_(rfq)
    , recvXbtAddrIfSet_(recvXbtAddrIfSet)
    , quoteProvider_(quoteProvider)
    , authAddressManager_(authAddressManager)
@@ -60,7 +59,6 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , armory_(armory)
    , celerClient_(celerClient)
    , appSettings_(appSettings)
-   , connectionManager_(connectionManager)
    , rfqStorage_(rfqStorage)
    , xbtWallet_(xbtWallet)
    , authAddr_(authAddr)
@@ -80,10 +78,10 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    // Do not make connections that must live after RFQDialog closing.
 
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::cancelRFQ, this, &RFQDialog::reject);
-   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::requestTimedOut, this, &RFQDialog::close);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::requestTimedOut, this, &RFQDialog::onTimeout);
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteAccepted, this, &RFQDialog::onRFQResponseAccepted, Qt::QueuedConnection);
-   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFinished, this, &RFQDialog::close);
-   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFailed, this, &RFQDialog::close);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFinished, this, &RFQDialog::onQuoteFinished);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFailed, this, &RFQDialog::onQuoteFailed);
 
    connect(quoteProvider_.get(), &QuoteProvider::quoteReceived, this, &RFQDialog::onQuoteReceived);
    connect(quoteProvider_.get(), &QuoteProvider::quoteRejected, ui_->pageRequestingQuote, &RequestingQuoteWidget::onReject);
@@ -126,6 +124,7 @@ void RFQDialog::onOrderFailed(const std::string& quoteId, const std::string& rea
 
 void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Quote &quote)
 {
+   emit accepted(id_);
    quote_ = quote;
 
    if (rfq_.assetType == bs::network::Asset::SpotFX) {
@@ -264,6 +263,13 @@ void RFQDialog::onCCTxSigned()
 
 void RFQDialog::reject()
 {
+   cancel(false);
+   emit cancelled(id_);
+   QDialog::reject();
+}
+
+void RFQDialog::cancel(bool force)
+{
    // curContainer_->cancel call could emit settlementCancelled which will result in RFQDialog::reject re-enter.
    // This will result in duplicated finished signals. Let's add a workaround for this.
    if (isRejectStarted_) {
@@ -280,8 +286,29 @@ void RFQDialog::reject()
    if (cancelOnClose_) {
       quoteProvider_->CancelQuote(QString::fromStdString(rfq_.requestId));
    }
+   if (force) {
+      close();
+   }
+}
 
-   QDialog::reject();
+void RFQDialog::onTimeout()
+{
+   emit expired(id_);
+   cancelOnClose_ = false;
+   hide();
+}
+
+void RFQDialog::onQuoteFinished()
+{
+   emit accepted(id_);
+   cancelOnClose_ = false;
+   hide();
+}
+
+void RFQDialog::onQuoteFailed()
+{
+   emit cancelled(id_);
+   close();
 }
 
 bool RFQDialog::close()

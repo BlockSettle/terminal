@@ -437,10 +437,6 @@ signals:
    void sendRFQ(const std::string &id, double amount, bool buy);
    void cancelRFQ(const std::string &id);
    void stopRFQ(const std::string &id);
-
-private:
-   std::shared_ptr<spdlog::logger> logger_;
-   std::shared_ptr<AssetManager> assetManager_;
 };
 
 
