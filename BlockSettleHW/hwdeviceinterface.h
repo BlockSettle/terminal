@@ -16,6 +16,14 @@
 #include <QNetworkReply>
 #include <QPointer>
 
+namespace bs {
+   namespace core {
+      namespace wallet {
+         class TXSignRequest;
+      }
+   }
+}
+
 class HwDeviceInterface : public QObject
 {
    Q_OBJECT
@@ -35,7 +43,7 @@ public:
 
    // operation
    virtual void getPublicKey(AsyncCallBackCall&& cb = nullptr) = 0;
-   virtual void signTX(const QVariant& reqTX, AsyncCallBackCall&& cb = nullptr) = 0;
+   virtual void signTX(const bs::core::wallet::TXSignRequest& reqTX, AsyncCallBackCall&& cb = nullptr) = 0;
 
    // Management
    virtual void setMatrixPin(const std::string& pin) {};
