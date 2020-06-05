@@ -215,13 +215,13 @@ void HwDeviceManager::signTX(QVariant reqTX)
          if (!validSign) {
             SPDLOG_LOGGER_ERROR(logger_, "sign verification failed");
             releaseConnection();
-            emit operationFailed(tr("Signing failed. Please ensure you type the correct password."));
+            emit operationFailed(tr("Signing failed. Please ensure you type the correct passphrase."));
             return;
          }
       } catch (const std::exception &e) {
          SPDLOG_LOGGER_ERROR(logger_, "sign verification failed: {}", e.what());
          releaseConnection();
-         emit operationFailed(tr("Signing failed. Please ensure you type the correct password."));
+         emit operationFailed(tr("Signing failed. Please ensure you type the correct passphrase."));
          return;
       }
 
