@@ -40,7 +40,7 @@ CustomTitleDialogWindow {
             Layout.fillWidth: true
             Layout.preferredHeight: 30
             Layout.rightMargin: 5
-
+            focus: true
             text: ""
         }
     }
