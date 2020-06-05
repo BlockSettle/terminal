@@ -1,7 +1,21 @@
 {
-   "latest_version": "0.90.4",
-   "release_date": "04 Jun 2020",
+   "latest_version": "0.90.5",
+   "release_date": "05 Jun 2020",
    "changes": [
+      {
+         "version_string": "0.90.5",
+         "previous_version": "0.90.4",
+         "release_date": "05 Jun 2020",
+         "release_type": "prod",
+         "improvements": [
+            "Create PayIn without dust",
+            "Update check on HW sign",
+            "Change Trezor session hold"
+         ],
+         "bug_fixes": [],
+         "revision": "96d11d747",
+         "common_revision": "e1c8abc0"
+      },
       {
          "version_string": "0.90.4",
          "previous_version": "0.90.3",
