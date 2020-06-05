@@ -47,12 +47,12 @@ Item {
         }
     }
 
-    function init() {
-        rescan();
+    function release() {
+        hwDeviceManager.hwOperationDone();
     }
 
-    function release() {
-        hwDeviceManager.releaseDevices();
+    function init() {
+        rescan();
     }
 
     function importXpub() {

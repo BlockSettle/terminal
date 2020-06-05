@@ -40,7 +40,7 @@ public:
 
    QByteArray getSessionId();
 
-   void initConnection(AsyncCallBack&& cb = nullptr);
+   void initConnection(bool force, AsyncCallBack&& cb = nullptr);
    void initConnection(QString&& deviceId, AsyncCallBackCall&& cb = nullptr);
    void releaseConnection(AsyncCallBack&& cb = nullptr);
 
@@ -53,7 +53,7 @@ private:
    void postToTrezor(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb, bool timeout = false);
    void postToTrezorInput(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb, QByteArray&& input);
 
-   void enumDevices(AsyncCallBack&& cb = nullptr);
+   void enumDevices(bool forceAcquire, AsyncCallBack&& cb = nullptr);
    void acquireDevice(AsyncCallBack&& cb = nullptr);
    void post(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb, QByteArray&& input, bool timeout = false);
 

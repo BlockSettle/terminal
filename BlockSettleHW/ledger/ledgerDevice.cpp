@@ -198,19 +198,8 @@ void LedgerDevice::getPublicKey(AsyncCallBackCall&& cb /*= nullptr*/)
    commandThread->start();
 }
 
-void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= nullptr*/)
+void LedgerDevice::signTX(const bs::core::wallet::TXSignRequest& coreReq, AsyncCallBackCall&& cb /*= nullptr*/)
 {
-   Blocksettle::Communication::headless::SignTxRequest request;
-   if (!request.ParseFromString(reqTX.toByteArray().toStdString())) {
-      logger_->debug("[LedgerDevice] signTX - failed to parse transaction request ");
-      emit operationFailed({});
-      return;
-   }
-
-   // We do not pass wallet manager in next thread,
-   // so catch any data we need here and put it in other thread
-   auto coreReq = bs::signer::pbTxRequestToCore(request, logger_);
-
    // retrieve inputs paths
    std::vector<bs::hd::Path> inputPathes;
    for (int i = 0; i < coreReq.inputs.size(); ++i) {
@@ -240,7 +229,7 @@ void LedgerDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= null
    // create different thread because hidapi is working in blocking mode
    auto commandThread = blankCommand(std::move(cb));
    commandThread->prepareSignTx(
-      key(), std::move(coreReq), std::move(inputPathes), std::move(changePath));
+      key(), coreReq, std::move(inputPathes), std::move(changePath));
    commandThread->start();
 }
 
@@ -386,9 +375,8 @@ void LedgerCommandThread::prepareGetPublicKey(const DeviceKey &deviceKey)
    deviceKey_ = deviceKey;
 }
 
-void LedgerCommandThread::prepareSignTx(
-   const DeviceKey &deviceKey, 
-   bs::core::wallet::TXSignRequest&& coreReq,
+void LedgerCommandThread::prepareSignTx(const DeviceKey &deviceKey,
+   bs::core::wallet::TXSignRequest coreReq,
    std::vector<bs::hd::Path>&& paths, bs::hd::Path&& changePath)
 {
    threadPurpose_ = HardwareCommand::SignTX;

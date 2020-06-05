@@ -61,7 +61,7 @@ public:
 
    // operation
    void getPublicKey(AsyncCallBackCall&& cb = nullptr) override;
-   void signTX(const QVariant& reqTX, AsyncCallBackCall&& cb = nullptr) override;
+   void signTX(const bs::core::wallet::TXSignRequest& reqTX, AsyncCallBackCall&& cb = nullptr) override;
 
    // Management
    void setMatrixPin(const std::string& pin) override;

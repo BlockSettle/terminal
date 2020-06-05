@@ -52,7 +52,7 @@ public:
 
    // operation
    void getPublicKey(AsyncCallBackCall&& cb = nullptr) override;
-   void signTX(const QVariant& reqTX, AsyncCallBackCall&& cb = nullptr) override;
+   void signTX(const bs::core::wallet::TXSignRequest &reqTX, AsyncCallBackCall&& cb = nullptr) override;
 
    bool inited() {
       return !xpubRoot_.empty();
@@ -94,7 +94,7 @@ public:
    void prepareGetPublicKey(const DeviceKey &deviceKey);
    void prepareSignTx(
       const DeviceKey &deviceKey, 
-      bs::core::wallet::TXSignRequest&& coreReq,
+      bs::core::wallet::TXSignRequest coreReq,
       std::vector<bs::hd::Path>&& paths, bs::hd::Path&& changePath);
    void prepareGetRootKey();
 

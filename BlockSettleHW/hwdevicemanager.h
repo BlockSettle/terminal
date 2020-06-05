@@ -55,6 +55,7 @@ public:
    Q_INVOKABLE void prepareHwDeviceForSign(QString walletId);
    Q_INVOKABLE void signTX(QVariant reqTX);
    Q_INVOKABLE void releaseDevices();
+   Q_INVOKABLE void hwOperationDone();
 
    // Info asked from UI
    Q_INVOKABLE bool awaitingUserAction(int deviceIndex);
@@ -81,6 +82,8 @@ private:
    void scanningDone();
 
    QPointer<HwDeviceInterface> getDevice(DeviceKey key);
+
+   std::shared_ptr<spdlog::logger> logger_;
 
 public:
    std::unique_ptr<TrezorClient> trezorClient_;

@@ -263,16 +263,9 @@ void TrezorDevice::clearSession(AsyncCallBack&& cb)
 }
 
 
-void TrezorDevice::signTX(const QVariant& reqTX, AsyncCallBackCall&& cb /*= nullptr*/)
+void TrezorDevice::signTX(const bs::core::wallet::TXSignRequest &reqTX, AsyncCallBackCall&& cb /*= nullptr*/)
 {
-   Blocksettle::Communication::headless::SignTxRequest request;
-   bool res = request.ParseFromString(reqTX.toByteArray().toStdString());
-   if (!res) {
-      connectionManager_->GetLogger()->debug("[TrezorDevice] signTX - failed to parse transaction request ");
-      return;
-   }
-
-   currentTxSignReq_.reset(new bs::core::wallet::TXSignRequest(bs::signer::pbTxRequestToCore(request, connectionManager_->GetLogger())));
+   currentTxSignReq_.reset(new bs::core::wallet::TXSignRequest(reqTX));
    connectionManager_->GetLogger()->debug("[TrezorDevice] SignTX - specify init data to " + features_.label());
 
    const int change = static_cast<bool>(currentTxSignReq_->change.value) ? 1 : 0;
