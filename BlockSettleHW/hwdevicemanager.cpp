@@ -17,15 +17,17 @@
 #include "WalletManager.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"
+#include "ProtobufHeadlessUtils.h"
 
 HwDeviceManager::HwDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager, std::shared_ptr<bs::sync::WalletsManager> walletManager,
    bool testNet, QObject* parent /*= nullptr*/)
    : QObject(parent)
+   , logger_(connectionManager->GetLogger())
    , testNet_(testNet)
 {
    walletManager_ = walletManager;
    trezorClient_ = std::make_unique<TrezorClient>(connectionManager, walletManager, testNet, this);
-   ledgerClient_ = std::make_unique<LedgerClient>(connectionManager->GetLogger(), walletManager, testNet);
+   ledgerClient_ = std::make_unique<LedgerClient>(logger_, walletManager, testNet);
 
    model_ = new HwDeviceModel(this);
 }
@@ -188,9 +190,40 @@ void HwDeviceManager::signTX(QVariant reqTX)
       return;
    }
 
-   device->signTX(reqTX, [this](QVariant&& data) {
+   Blocksettle::Communication::headless::SignTxRequest pbSignReq;
+   bool rc = pbSignReq.ParseFromString(reqTX.toByteArray().toStdString());
+   if (!rc) {
+      SPDLOG_LOGGER_ERROR(logger_, "parse TX failed");
+      emit operationFailed(tr("Invalid sign request"));
+      return;
+   }
+
+   auto signReq = bs::signer::pbTxRequestToCore(pbSignReq);
+
+   device->signTX(signReq, [this, signReq](QVariant&& data) {
       assert(data.canConvert<HWSignedTx>());
       auto tx = data.value<HWSignedTx>();
+
+      try {
+         std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
+         for (const auto &utxo : signReq.inputs) {
+            auto& idMap = utxoMap[utxo.getTxHash()];
+            idMap.emplace(utxo.getTxOutIndex(), utxo);
+         }
+         unsigned flags = SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_SEGWIT | SCRIPT_VERIFY_P2SH_SHA256;
+         bool validSign = Signer::verify(SecureBinaryData::fromString(tx.signedTx)
+            , utxoMap, flags, true).isValid();
+         if (!validSign) {
+            SPDLOG_LOGGER_ERROR(logger_, "sign verification failed");
+            emit operationFailed(tr("Sign verification failed"));
+            return;
+         }
+      } catch (const std::exception &e) {
+         SPDLOG_LOGGER_ERROR(logger_, "sign verification failed: {}", e.what());
+         emit operationFailed(tr("Sign verification failed"));
+         return;
+      }
+
       txSigned({ BinaryData::fromString(tx.signedTx) });
    });
 
