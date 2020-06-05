@@ -1,7 +1,20 @@
 {
-   "latest_version": "0.90.6",
+   "latest_version": "0.90.7",
    "release_date": "05 Jun 2020",
    "changes": [
+      {
+         "version_string": "0.90.7",
+         "previous_version": "0.90.6",
+         "release_date": "05 Jun 2020",
+         "release_type": "prod",
+         "improvements": [
+            "Minor rename",
+            "Merge pull request #779 from BlockSettle/fixImportButton"
+         ],
+         "bug_fixes": [],
+         "revision": "de41cb6e4",
+         "common_revision": "de41cb6e4"
+      },
       {
          "version_string": "0.90.6",
          "previous_version": "0.90.6",

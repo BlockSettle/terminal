@@ -47,6 +47,10 @@ Item {
         }
     }
 
+    function release() {
+        hwDeviceManager.hwOperationDone();
+    }
+
     function init() {
         rescan();
     }

@@ -43,7 +43,6 @@ void HwDeviceManager::scanDevices()
       return;
    }
 
-
    setScanningFlag(true);
    
    auto doneScanning = [this, expectedClients = 2, finished = std::make_shared<int>(0)]() {
@@ -216,13 +215,13 @@ void HwDeviceManager::signTX(QVariant reqTX)
          if (!validSign) {
             SPDLOG_LOGGER_ERROR(logger_, "sign verification failed");
             releaseConnection();
-            emit operationFailed(tr("Signing failed. Please ensure you type the correct password."));
+            emit operationFailed(tr("Signing failed. Please ensure you type the correct passphrase."));
             return;
          }
       } catch (const std::exception &e) {
          SPDLOG_LOGGER_ERROR(logger_, "sign verification failed: {}", e.what());
          releaseConnection();
-         emit operationFailed(tr("Signing failed. Please ensure you type the correct password."));
+         emit operationFailed(tr("Signing failed. Please ensure you type the correct passphrase."));
          return;
       }
 
@@ -250,6 +249,11 @@ void HwDeviceManager::signTX(QVariant reqTX)
 void HwDeviceManager::releaseDevices()
 {
    releaseConnection();
+}
+
+void HwDeviceManager::hwOperationDone()
+{
+   model_->resetModel({});
 }
 
 bool HwDeviceManager::awaitingUserAction(int deviceIndex)
