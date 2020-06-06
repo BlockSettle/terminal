@@ -31,7 +31,7 @@ UserScriptHandler::~UserScriptHandler() noexcept = default;
 
 void UserScriptHandler::setParent(UserScriptRunner *runner)
 {
-   QObject::setParent(runner);
+   QObject::setParent(nullptr);
 
    connect(runner, &UserScriptRunner::init, this, &UserScriptHandler::init,
       Qt::QueuedConnection);
@@ -334,7 +334,7 @@ UserScriptRunner::UserScriptRunner(const std::shared_ptr<spdlog::logger> &logger
    , thread_(new QThread(this)), script_(script), logger_(logger)
 {
    script_->setParent(this);
-   script_->moveToThread(thread_);
+//   script_->moveToThread(thread_);   //FIXME: QmlEngine can't run in different QThread
    connect(thread_, &QThread::finished, script_, &UserScriptHandler::onThreadStopped
       , Qt::QueuedConnection);
 

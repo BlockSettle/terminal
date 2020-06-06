@@ -50,7 +50,7 @@ public:
    ~UserScriptHandler() noexcept override;
 
    virtual void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
-   void setParent(UserScriptRunner *runner);
+   void setParent(UserScriptRunner *);
 
 signals:
    void scriptLoaded(const QString &fileName);

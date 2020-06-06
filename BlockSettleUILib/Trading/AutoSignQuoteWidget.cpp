@@ -29,7 +29,7 @@ AutoSignQuoteWidget::AutoSignQuoteWidget(QWidget *parent) :
    ui_->setupUi(this);
 
    connect(ui_->checkBoxAQ, &ToggleSwitch::clicked, this, &AutoSignQuoteWidget::onAutoQuoteToggled);
-   connect(ui_->comboBoxAQScript, SIGNAL(activated(int)), this, SLOT(aqScriptChanged(int)));
+   connect(ui_->comboBoxAQScript, SIGNAL(activated(int)), this, SLOT(scriptChanged(int)));
    connect(ui_->checkBoxAutoSign, &ToggleSwitch::clicked, this, &AutoSignQuoteWidget::onAutoSignToggled);
 
    ui_->comboBoxAQScript->setFirstItemHidden(true);
