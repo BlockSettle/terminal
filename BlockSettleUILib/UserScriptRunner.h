@@ -50,7 +50,8 @@ public:
    ~UserScriptHandler() noexcept override;
 
    virtual void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
-   void setParent(UserScriptRunner *runner);
+   void setParent(UserScriptRunner *);
+   void setRunningThread(QThread *thread) { thread_ = thread; }
 
 signals:
    void scriptLoaded(const QString &fileName);
@@ -69,6 +70,7 @@ protected slots:
 protected:
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
+   QThread *thread_{nullptr};
 }; // class UserScriptHandler
 
 
@@ -192,6 +194,7 @@ public:
    ~UserScriptRunner() noexcept override;
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
+   void setRunningThread(QThread *thread) { script_->setRunningThread(thread); }
 
 signals:
    void init(const QString &fileName);

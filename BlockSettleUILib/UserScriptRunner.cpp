@@ -31,7 +31,7 @@ UserScriptHandler::~UserScriptHandler() noexcept = default;
 
 void UserScriptHandler::setParent(UserScriptRunner *runner)
 {
-   QObject::setParent(runner);
+   QObject::setParent(nullptr);
 
    connect(runner, &UserScriptRunner::init, this, &UserScriptHandler::init,
       Qt::QueuedConnection);
@@ -106,6 +106,9 @@ void AQScriptHandler::onQuoteReqNotification(const bs::network::QuoteReqNotifica
       if (aqEnabled_ && aq_ && (itAQObj == aqObjs_.end())) {
          QObject *obj = aq_->instantiate(qrn);
          aqObjs_[qrn.quoteRequestId] = obj;
+         if (thread_) {
+            obj->moveToThread(thread_);
+         }
 
          const auto &mdIt = mdInfo_.find(qrn.security);
          if (mdIt != mdInfo_.end()) {
@@ -334,9 +337,9 @@ UserScriptRunner::UserScriptRunner(const std::shared_ptr<spdlog::logger> &logger
    , thread_(new QThread(this)), script_(script), logger_(logger)
 {
    script_->setParent(this);
-   script_->moveToThread(thread_);
    connect(thread_, &QThread::finished, script_, &UserScriptHandler::onThreadStopped
       , Qt::QueuedConnection);
+   script_->setRunningThread(thread_);
 
    connect(script_, &UserScriptHandler::scriptLoaded, this, &UserScriptRunner::scriptLoaded);
    connect(script_, &UserScriptHandler::failedToLoad, this, &UserScriptRunner::failedToLoad);
@@ -540,6 +543,9 @@ void RFQScriptHandler::submitRFQ(const std::string &id, const QString &symbol
       if (mdIt->second.lastPrice > 0) {
          reqReply->setLastPrice(mdIt->second.lastPrice);
       }
+   }
+   if (thread_) {
+      reqReply->moveToThread(thread_);
    }
    reqReply->start();
 }
