@@ -359,10 +359,10 @@ void bs::UTXOReservationManager::resetAllSpendableCC(const std::shared_ptr<bs::s
    }
 }
 
-void bs::UTXOReservationManager::getBestXbtFromUtxos(std::vector<UTXO> inputUtxo,
+void bs::UTXOReservationManager::getBestXbtFromUtxos(const std::vector<UTXO> &inputUtxo,
    BTCNumericTypes::satoshi_type quantity, std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor)
 {
-   std::vector<UTXO> selectedUtxos = bs::selectUtxoForAmount(std::move(inputUtxo), quantity);
+   std::vector<UTXO> selectedUtxos = bs::selectUtxoForAmount(inputUtxo, quantity);
 
    // Here we calculating fee based on chosen utxos, if total price with fee will cover by all utxo sum - then we good and could continue
    // otherwise let's try to find better set of utxo again till the moment we will cover the difference or use all available utxos from wallet
@@ -371,13 +371,15 @@ void bs::UTXOReservationManager::getBestXbtFromUtxos(std::vector<UTXO> inputUtxo
       return;
    }
 
-   auto feeCb = [mgr = QPointer<bs::UTXOReservationManager>(this), inputUtxoCopy = std::move(inputUtxo), quantity
+   auto feeCb = [mgr = QPointer<bs::UTXOReservationManager>(this), inputUtxo, quantity
       , utxos = std::move(selectedUtxos), cbCopy = std::move(cb), checkPbFeeFloor](float fee) mutable {
       if (!mgr) {
          return; // main thread die, nothing to do
       }
 
-      QMetaObject::invokeMethod(mgr, [mgr, quantity, inputUtxo = std::move(inputUtxoCopy), fee, utxos = std::move(utxos), cb = std::move(cbCopy), checkPbFeeFloor]() mutable {
+      QMetaObject::invokeMethod(mgr, [mgr, quantity, inputUtxo
+         , fee, utxos = std::move(utxos), cb = std::move(cbCopy), checkPbFeeFloor]() mutable
+      {
          float feePerByte = ArmoryConnection::toFeePerByte(fee);
          if (checkPbFeeFloor) {
             feePerByte = std::max(mgr->feeRatePb(), feePerByte);
@@ -390,7 +392,7 @@ void bs::UTXOReservationManager::getBestXbtFromUtxos(std::vector<UTXO> inputUtxo
 
          const BTCNumericTypes::satoshi_type spendableQuantity = quantity + fee;
          if (spendableQuantity > total) {
-            mgr->getBestXbtFromUtxos(std::move(inputUtxo), spendableQuantity, std::move(cb), checkPbFeeFloor);
+            mgr->getBestXbtFromUtxos(inputUtxo, spendableQuantity, std::move(cb), checkPbFeeFloor);
          }
          else {
             cb(std::move(utxos));

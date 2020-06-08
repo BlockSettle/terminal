@@ -277,9 +277,17 @@ void RFQDialog::cancel(bool force)
    }
    isRejectStarted_ = true;
 
-   if (cancelOnClose_ && curContainer_) {
-      if (!curContainer_->cancel()) {
-         logger_->warn("[RFQDialog::reject] settlement container failed to cancel");
+   if (cancelOnClose_) {
+      if (curContainer_) {
+         if (curContainer_->cancel()) {
+            logger_->debug("[RFQDialog::reject] container cancelled");
+         } else {
+            logger_->warn("[RFQDialog::reject] settlement container failed to cancel");
+         }
+      }
+      else {
+         fixedXbtUtxoRes_.release();
+         ccUtxoRes_.release();
       }
    }
 
@@ -313,6 +321,7 @@ void RFQDialog::onQuoteFailed()
 
 bool RFQDialog::close()
 {
+   curContainer_.reset();
    cancelOnClose_ = false;
    return QDialog::close();
 }
