@@ -29,28 +29,32 @@ AutoSignQuoteWidget::AutoSignQuoteWidget(QWidget *parent) :
    ui_->setupUi(this);
 
    connect(ui_->checkBoxAQ, &ToggleSwitch::clicked, this, &AutoSignQuoteWidget::onAutoQuoteToggled);
-   connect(ui_->comboBoxAQScript, SIGNAL(activated(int)), this, SLOT(aqScriptChanged(int)));
+   connect(ui_->comboBoxAQScript, SIGNAL(activated(int)), this, SLOT(scriptChanged(int)));
    connect(ui_->checkBoxAutoSign, &ToggleSwitch::clicked, this, &AutoSignQuoteWidget::onAutoSignToggled);
 
    ui_->comboBoxAQScript->setFirstItemHidden(true);
 }
 
-void AutoSignQuoteWidget::init(const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider)
+void AutoSignQuoteWidget::init(const std::shared_ptr<AutoSignScriptProvider> &autoSignProvider)
 {
-   autoSignQuoteProvider_ = autoSignQuoteProvider;
-   aqFillHistory();
-   onAutoSignQuoteAvailChanged();
+   autoSignProvider_ = autoSignProvider;
+   fillScriptHistory();
+   onAutoSignReady();
 
-   ui_->checkBoxAutoSign->setChecked(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError);
+   ui_->checkBoxAutoSign->setChecked(autoSignProvider_->autoSignState() == bs::error::ErrorCode::NoError);
 
-   connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::autoSignQuoteAvailabilityChanged, this, &AutoSignQuoteWidget::onAutoSignQuoteAvailChanged);
-   connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::autoSignStateChanged, this, &AutoSignQuoteWidget::onAutoSignStateChanged);
+   connect(autoSignProvider_.get(), &AutoSignScriptProvider::autoSignQuoteAvailabilityChanged
+      , this, &AutoSignQuoteWidget::onAutoSignReady);
+   connect(autoSignProvider_.get(), &AutoSignScriptProvider::autoSignStateChanged
+      , this, &AutoSignQuoteWidget::onAutoSignStateChanged);
+   connect(autoSignProvider_.get(), &AutoSignScriptProvider::scriptLoaded, this
+      , &AutoSignQuoteWidget::onScriptLoaded);
+   connect(autoSignProvider_.get(), &AutoSignScriptProvider::scriptUnLoaded, this
+      , &AutoSignQuoteWidget::onScriptUnloaded);
+   connect(autoSignProvider_.get(), &AutoSignScriptProvider::scriptHistoryChanged
+      , this, &AutoSignQuoteWidget::fillScriptHistory);
 
-   connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::aqScriptLoaded, this, &AutoSignQuoteWidget::onAqScriptLoaded);
-   connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::aqScriptUnLoaded, this, &AutoSignQuoteWidget::onAqScriptUnloaded);
-   connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::aqHistoryChanged, this, &AutoSignQuoteWidget::aqFillHistory);
-
-   ui_->labelAutoSignWalletName->setText(autoSignQuoteProvider_->getAutoSignWalletName());
+   ui_->labelAutoSignWalletName->setText(autoSignProvider_->getAutoSignWalletName());
 }
 
 AutoSignQuoteWidget::~AutoSignQuoteWidget() = default;
@@ -60,25 +64,25 @@ void AutoSignQuoteWidget::onAutoQuoteToggled()
    bool isValidScript = (ui_->comboBoxAQScript->currentIndex() > kSelectAQFileItemIndex);
    if (ui_->checkBoxAQ->isChecked() && !isValidScript) {
       BSMessageBox question(BSMessageBox::question
-         , tr("Try to enable Auto Quoting")
-         , tr("Auto Quoting Script is not specified. Do you want to select a script from file?"));
+         , tr("Try to enable scripting")
+         , tr("Script is not specified. Do you want to select a script from file?"));
       const bool answerYes = (question.exec() == QDialog::Accepted);
       if (answerYes) {
-         const auto scriptFileName = askForAQScript();
+         const auto scriptFileName = askForScript();
          if (scriptFileName.isEmpty()) {
             ui_->checkBoxAQ->setChecked(false);
          } else {
-            autoSignQuoteProvider_->initAQ(scriptFileName);
+            autoSignProvider_->init(scriptFileName);
          }
       } else {
          ui_->checkBoxAQ->setChecked(false);
       }
    }
 
-   if (autoSignQuoteProvider_->aqLoaded()) {
-      autoSignQuoteProvider_->setAqLoaded(false);
+   if (autoSignProvider_->isScriptLoaded()) {
+      autoSignProvider_->setScriptLoaded(false);
    } else {
-      autoSignQuoteProvider_->initAQ(ui_->comboBoxAQScript->currentData().toString());
+      autoSignProvider_->init(ui_->comboBoxAQScript->currentData().toString());
    }
 
    validateGUI();
@@ -86,47 +90,47 @@ void AutoSignQuoteWidget::onAutoQuoteToggled()
 
 void AutoSignQuoteWidget::onAutoSignStateChanged()
 {
-   ui_->checkBoxAutoSign->setChecked(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError);
-   if (autoSignQuoteProvider_->autoSignState() != bs::error::ErrorCode::NoError
-       && autoSignQuoteProvider_->autoSignState() != bs::error::ErrorCode::AutoSignDisabled) {
+   ui_->checkBoxAutoSign->setChecked(autoSignProvider_->autoSignState() == bs::error::ErrorCode::NoError);
+   if (autoSignProvider_->autoSignState() != bs::error::ErrorCode::NoError
+       && autoSignProvider_->autoSignState() != bs::error::ErrorCode::AutoSignDisabled) {
       BSMessageBox(BSMessageBox::warning, tr("Auto Signing")
          , tr("Failed to enable Auto Signing")
-         , bs::error::ErrorCodeToString(autoSignQuoteProvider_->autoSignState())).exec();
+         , bs::error::ErrorCodeToString(autoSignProvider_->autoSignState())).exec();
    }
 
-   ui_->labelAutoSignWalletName->setText(autoSignQuoteProvider_->getAutoSignWalletName());
+   ui_->labelAutoSignWalletName->setText(autoSignProvider_->getAutoSignWalletName());
 }
 
-void AutoSignQuoteWidget::onAutoSignQuoteAvailChanged()
+void AutoSignQuoteWidget::onAutoSignReady()
 {
    ui_->checkBoxAQ->setChecked(false);
-   ui_->labelAutoSignWalletName->setText(autoSignQuoteProvider_->getAutoSignWalletName());
+   ui_->labelAutoSignWalletName->setText(autoSignProvider_->getAutoSignWalletName());
 
-   const bool enableWidget = autoSignQuoteProvider_->autoSignQuoteAvailable();
+   const bool enableWidget = autoSignProvider_->isReady();
    ui_->groupBoxAutoSign->setEnabled(enableWidget);
    ui_->checkBoxAutoSign->setEnabled(enableWidget);
    ui_->checkBoxAQ->setEnabled(enableWidget);
 }
 
-void AutoSignQuoteWidget::onAqScriptLoaded()
+void AutoSignQuoteWidget::onScriptLoaded()
 {
    ui_->checkBoxAQ->setChecked(true);
 }
 
-void AutoSignQuoteWidget::onAqScriptUnloaded()
+void AutoSignQuoteWidget::onScriptUnloaded()
 {
    ui_->checkBoxAQ->setChecked(false);
 }
 
-void AutoSignQuoteWidget::aqFillHistory()
+void AutoSignQuoteWidget::fillScriptHistory()
 {
    ui_->comboBoxAQScript->clear();
    int curIndex = 0;
    ui_->comboBoxAQScript->addItem(tr("Select script..."));
-   ui_->comboBoxAQScript->addItem(tr("Load new AQ script"));
-   const auto scripts = autoSignQuoteProvider_->getAQScripts();
+   ui_->comboBoxAQScript->addItem(tr("Load new script"));
+   const auto scripts = autoSignProvider_->getScripts();
    if (!scripts.isEmpty()) {
-      const auto lastScript = autoSignQuoteProvider_->getAQLastScript();
+      const auto lastScript = autoSignProvider_->getLastScript();
       for (int i = 0; i < scripts.size(); i++) {
          QFileInfo fi(scripts[i]);
          ui_->comboBoxAQScript->addItem(fi.fileName(), scripts[i]);
@@ -138,24 +142,24 @@ void AutoSignQuoteWidget::aqFillHistory()
    ui_->comboBoxAQScript->setCurrentIndex(curIndex);
 }
 
-void AutoSignQuoteWidget::aqScriptChanged(int curIndex)
+void AutoSignQuoteWidget::scriptChanged(int curIndex)
 {
    if (curIndex < kSelectAQFileItemIndex) {
       return;
    }
 
    if (curIndex == kSelectAQFileItemIndex) {
-      const auto scriptFileName = askForAQScript();
+      const auto scriptFileName = askForScript();
 
       if (scriptFileName.isEmpty()) {
-         aqFillHistory();
+         fillScriptHistory();
          return;
       }
 
-      autoSignQuoteProvider_->initAQ(scriptFileName);
+      autoSignProvider_->init(scriptFileName);
    } else {
-      if (autoSignQuoteProvider_->aqLoaded()) {
-         autoSignQuoteProvider_->deinitAQ();
+      if (autoSignProvider_->isScriptLoaded()) {
+         autoSignProvider_->deinit();
       }
    }
 }
@@ -163,30 +167,30 @@ void AutoSignQuoteWidget::aqScriptChanged(int curIndex)
 void AutoSignQuoteWidget::onAutoSignToggled()
 {
    if (ui_->checkBoxAutoSign->isChecked()) {
-      autoSignQuoteProvider_->tryEnableAutoSign();
+      autoSignProvider_->tryEnableAutoSign();
    } else {
-      autoSignQuoteProvider_->disableAutoSign();
+      autoSignProvider_->disableAutoSign();
    }
-   ui_->checkBoxAutoSign->setChecked(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError);
+   ui_->checkBoxAutoSign->setChecked(autoSignProvider_->autoSignState() == bs::error::ErrorCode::NoError);
 }
 
 void AutoSignQuoteWidget::validateGUI()
 {
-   ui_->checkBoxAQ->setChecked(autoSignQuoteProvider_->aqLoaded());
+   ui_->checkBoxAQ->setChecked(autoSignProvider_->isScriptLoaded());
 }
 
-QString AutoSignQuoteWidget::askForAQScript()
+QString AutoSignQuoteWidget::askForScript()
 {
-   auto lastDir = autoSignQuoteProvider_->getAQLastDir();
+   auto lastDir = autoSignProvider_->getLastDir();
    if (lastDir.isEmpty()) {
-      lastDir = autoSignQuoteProvider_->getDefaultScriptsDir();
+      lastDir = autoSignProvider_->getDefaultScriptsDir();
    }
 
-   auto path = QFileDialog::getOpenFileName(this, tr("Open Auto-quoting script file")
+   auto path = QFileDialog::getOpenFileName(this, tr("Open script file")
       , lastDir, tr("QML files (*.qml)"));
 
    if (!path.isEmpty()) {
-      autoSignQuoteProvider_->setAQLastDir(path);
+      autoSignProvider_->setLastDir(path);
    }
 
    return path;

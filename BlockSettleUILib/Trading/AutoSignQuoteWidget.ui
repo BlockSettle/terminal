@@ -1,14 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-
-***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
-* Distributed under the GNU Affero General Public License (AGPL v3)
-* See LICENSE or http://www.gnu.org/licenses/agpl.html
-*
-**********************************************************************************
-
--->
 <ui version="4.0">
  <class>AutoSignQuoteWidget</class>
  <widget class="QWidget" name="AutoSignQuoteWidget">
@@ -17,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>344</width>
-    <height>124</height>
+    <height>125</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -256,7 +246,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QLabel" name="label_10">
+          <widget class="QLabel" name="labelAQ">
            <property name="text">
             <string>Auto Quoting</string>
            </property>

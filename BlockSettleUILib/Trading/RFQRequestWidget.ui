@@ -273,6 +273,16 @@
         </widget>
        </widget>
       </item>
+      <item>
+       <widget class="AutoSignQuoteWidget" name="widgetAutoRFQ" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>100</height>
+         </size>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
@@ -300,6 +310,12 @@
    <class>RFQTicketXBT</class>
    <extends>QWidget</extends>
    <header>RFQTicketXBT.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>AutoSignQuoteWidget</class>
+   <extends>QWidget</extends>
+   <header>AutoSignQuoteWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

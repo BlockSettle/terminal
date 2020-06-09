@@ -50,6 +50,7 @@ namespace bs {
 class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
+class AutoSignScriptProvider;
 class CCAmountValidator;
 class FXAmountValidator;
 class QuoteProvider;
@@ -72,6 +73,7 @@ public:
       , const std::shared_ptr<QuoteProvider> &quoteProvider
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<AutoSignScriptProvider> &
       , const std::shared_ptr<bs::UTXOReservationManager> &);
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
@@ -90,8 +92,11 @@ public:
    // returns empty address if automatic selected
    bs::Address recvXbtAddressIfSet() const;
 
-   using SubmitRFQCb = std::function<void(const bs::network::RFQ& rfq, bs::UtxoReservationToken ccUtxoRes)>;
-   void setSubmitRFQ(SubmitRFQCb submitRFQCb);
+   using SubmitRFQCb = std::function<void(const std::string &id
+      , const bs::network::RFQ& rfq, bs::UtxoReservationToken ccUtxoRes)>;
+   void setSubmitRFQ(SubmitRFQCb);
+   using CancelRFQCb = std::function<void(const std::string &id)>;
+   void setCancelRFQ(CancelRFQCb);
 
    std::shared_ptr<bs::sync::hd::Wallet> xbtWallet() const;
    UiUtils::WalletsTypes xbtWalletType() const;
@@ -110,6 +115,10 @@ public slots:
 
    void enablePanel();
    void disablePanel();
+
+   void onRFQAccepted(const std::string &id);
+   void onRFQExpired(const std::string &id);
+   void onRFQCancelled(const std::string &id);
 
 private slots:
    void updateBalances();
@@ -138,6 +147,12 @@ private slots:
    void onCreateWalletClicked();
 
    void onAuthAddrChanged(int);
+   void onAutoSignStateChanged();
+
+   void onSendRFQ(const std::string &id);
+   void onCancelRFQ(const std::string &id);
+   void onScriptLoaded(const QString &);
+   void onScriptUnloaded();
 
    void onUTXOReservationChanged(const std::string& walletId);
 
@@ -207,7 +222,8 @@ private:
    QString getProductToRecv() const;
    bs::XBTAmount getXbtReservationAmountForCc(double quantity, double offerPrice) const;
 
-   void reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network::RFQ>& rfq);
+   void reserveBestUtxoSetAndSubmit(const std::string &id
+      , const std::shared_ptr<bs::network::RFQ>& rfq);
 
 private:
    std::unique_ptr<Ui::RFQTicketXBT> ui_;
@@ -219,7 +235,8 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
-   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
+   std::shared_ptr<AutoSignScriptProvider>      autoSignProvider_;
+   std::shared_ptr<bs::UTXOReservationManager>  utxoReservationManager_;
 
    bs::Address authAddr_;
    std::string authKey_;
@@ -227,6 +244,7 @@ private:
    unsigned int      leafCreateReqId_ = 0;
 
    std::unordered_map<std::string, double>      rfqMap_;
+   std::unordered_map<std::string, std::shared_ptr<bs::network::RFQ>>   pendingRFQs_;
 
    std::unordered_map<std::string, bs::network::Side::Type>         lastSideSelection_;
 
@@ -245,9 +263,12 @@ private:
    QString currentBidPrice_;
    QString currentOfferPrice_;
 
-   SubmitRFQCb submitRFQCb_;
+   SubmitRFQCb submitRFQCb_{};
+   CancelRFQCb cancelRFQCb_{};
 
    bs::FixedXbtInputs fixedXbtInputs_;
+
+   bool  autoRFQenabled_{ false };
 };
 
 #endif // __RFQ_TICKET_XBT_H__

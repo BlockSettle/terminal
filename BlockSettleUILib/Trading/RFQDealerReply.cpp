@@ -93,7 +93,7 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider
+   , const std::shared_ptr<AutoSignScriptProvider> &autoSignProvider
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager)
 {
    logger_ = logger;
@@ -104,13 +104,15 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    signingContainer_ = container;
    armory_ = armory;
    connectionManager_ = connectionManager;
-   autoSignQuoteProvider_ = autoSignQuoteProvider;
+   autoSignProvider_ = autoSignProvider;
    utxoReservationManager_ = utxoReservationManager;
 
-   connect(autoSignQuoteProvider_->autoQuoter(), &UserScriptRunner::sendQuote, this, &RFQDealerReply::onAQReply, Qt::QueuedConnection);
-   connect(autoSignQuoteProvider_->autoQuoter(), &UserScriptRunner::pullQuoteNotif, this, &RFQDealerReply::pullQuoteNotif, Qt::QueuedConnection);
+   connect((AQScriptRunner *)autoSignProvider_->scriptRunner(), &AQScriptRunner::sendQuote
+      , this, &RFQDealerReply::onAQReply, Qt::QueuedConnection);
+   connect((AQScriptRunner *)autoSignProvider_->scriptRunner(), &AQScriptRunner::pullQuoteNotif
+      , this, &RFQDealerReply::pullQuoteNotif, Qt::QueuedConnection);
 
-   connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::autoSignStateChanged,
+   connect(autoSignProvider_.get(), &AutoSignScriptProvider::autoSignStateChanged,
       this, &RFQDealerReply::onAutoSignStateChanged, Qt::QueuedConnection);
    connect(utxoReservationManager_.get(), &bs::UTXOReservationManager::availableUtxoChanged,
       this, &RFQDealerReply::onUTXOReservationChanged);
@@ -145,8 +147,8 @@ void RFQDealerReply::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMa
    connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &RFQDealerReply::onHDLeafCreated);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreateFailed, this, &RFQDealerReply::onCreateHDWalletError);
 
-   if (autoSignQuoteProvider_->autoQuoter()) {
-      autoSignQuoteProvider_->autoQuoter()->setWalletsManager(walletsManager_);
+   if (autoSignProvider_->scriptRunner()) {
+      autoSignProvider_->scriptRunner()->setWalletsManager(walletsManager_);
    }
 
    auto updateAuthAddresses = [this] {
@@ -1089,10 +1091,10 @@ void RFQDealerReply::onCelerDisconnected()
 
 void RFQDealerReply::onAutoSignStateChanged()
 {
-   if (autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError) {
-      ui_->comboBoxXbtWallet->setCurrentText(autoSignQuoteProvider_->getAutoSignWalletName());
+   if (autoSignProvider_->autoSignState() == bs::error::ErrorCode::NoError) {
+      ui_->comboBoxXbtWallet->setCurrentText(autoSignProvider_->getAutoSignWalletName());
    }
-   ui_->comboBoxXbtWallet->setEnabled(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::AutoSignDisabled);
+   ui_->comboBoxXbtWallet->setEnabled(autoSignProvider_->autoSignState() == bs::error::ErrorCode::AutoSignDisabled);
 }
 
 void bs::ui::RFQDealerReply::onQuoteCancelled(const std::string &quoteId)

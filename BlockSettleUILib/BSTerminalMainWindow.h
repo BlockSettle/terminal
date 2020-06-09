@@ -50,7 +50,7 @@ class AssetManager;
 class AuthAddressDialog;
 class AuthAddressManager;
 class AutheIDClient;
-class AutoSignQuoteProvider;
+class AutoSignScriptProvider;
 class BSMarketDataProvider;
 class BSTerminalSplashScreen;
 class BaseCelerClient;
@@ -187,7 +187,8 @@ private:
    std::shared_ptr<CCFileManager>            ccFileManager_;
    std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
    std::shared_ptr<WalletSignerContainer>    signContainer_;
-   std::shared_ptr<AutoSignQuoteProvider>    autoSignQuoteProvider_;
+   std::shared_ptr<AutoSignScriptProvider>   autoSignQuoteProvider_;
+   std::shared_ptr<AutoSignScriptProvider>   autoSignRFQProvider_;
 
    std::shared_ptr<OrderListModel>           orderListModel_;
 

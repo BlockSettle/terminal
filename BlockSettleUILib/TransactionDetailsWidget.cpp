@@ -158,7 +158,7 @@ void TransactionDetailsWidget::processTxData(const Tx &tx)
    std::set<BinaryData> prevTxHashSet; // A Tx's associated prev Tx hashes.
    // While here, we need to get the prev Tx with the UTXO being spent.
    // This is done so that we can calculate fees later.
-   for (size_t i = 0; i < tx.getNumTxIn(); i++) {
+   for (int i = 0; i < tx.getNumTxIn(); i++) {
       TxIn in = tx.getTxInCopy(i);
       OutPoint op = in.getOutPoint();
       const TxHash intPrevTXID(op.getTxHash());
@@ -287,14 +287,14 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
    tree->clear();
 
    std::map<TxHash, unsigned int> hashCounts;
-   for (size_t i = 0; i < curTx_.getNumTxIn(); i++) {
+   for (int i = 0; i < curTx_.getNumTxIn(); i++) {
       TxOut prevOut;
       const OutPoint op = curTx_.getTxInCopy(i).getOutPoint();
       hashCounts[op.getTxHash()]++;
    }
 
    // here's the code to add data to the Input tree.
-   for (size_t i = 0; i < curTx_.getNumTxIn(); i++) {
+   for (int i = 0; i < curTx_.getNumTxIn(); i++) {
       TxOut prevOut;
       const TxIn in = curTx_.getTxInCopy(i);
       const OutPoint op = in.getOutPoint();
@@ -334,7 +334,7 @@ void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree)
    tree->clear();
 
    // here's the code to add data to the Input tree.
-   for (size_t i = 0; i < curTx_.getNumTxOut(); i++) {
+   for (int i = 0; i < curTx_.getNumTxOut(); i++) {
       TxOut txOut = curTx_.getTxOutCopy(i);
       auto txType = txOut.getScriptType();
       QString addrStr;
