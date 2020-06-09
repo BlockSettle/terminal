@@ -137,7 +137,7 @@ void TransactionDetailsWidget::processTxData(Tx tx)
    std::set<BinaryData> prevTxHashSet; // A Tx's associated prev Tx hashes.
    // While here, we need to get the prev Tx with the UTXO being spent.
    // This is done so that we can calculate fees later.
-   for (size_t i = 0; i < tx.getNumTxIn(); i++) {
+   for (int i = 0; i < tx.getNumTxIn(); i++) {
       TxIn in = tx.getTxInCopy(i);
       OutPoint op = in.getOutPoint();
       const TxHash intPrevTXID(op.getTxHash());
@@ -187,7 +187,7 @@ void TransactionDetailsWidget::setTxGUIValues()
 
    // Get fees & fee/byte by looping through the prev Tx set and calculating.
    uint64_t totIn = 0;
-   for (size_t r = 0; r < curTx_.getNumTxIn(); ++r) {
+   for (int r = 0; r < curTx_.getNumTxIn(); ++r) {
       TxIn in = curTx_.getTxInCopy(r);
       OutPoint op = in.getOutPoint();
       const auto &prevTx = prevTxMap_[op.getTxHash()];
@@ -284,7 +284,7 @@ void TransactionDetailsWidget::updateCCInputs()
       , const bs::network::CCSecurityDef &ccDef) {
    };
 
-   for (size_t i = 0; i < curTx_.getNumTxIn(); ++i) {
+   for (int i = 0; i < curTx_.getNumTxIn(); ++i) {
       const OutPoint op = curTx_.getTxInCopy(i).getOutPoint();
       const auto &prevTx = prevTxMap_[op.getTxHash()];
       checkTxForCC(*prevTx, ui_->treeInput);
@@ -297,14 +297,14 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
    tree->clear();
 
    std::map<TxHash, unsigned int> hashCounts;
-   for (size_t i = 0; i < curTx_.getNumTxIn(); i++) {
+   for (int i = 0; i < curTx_.getNumTxIn(); i++) {
       TxOut prevOut;
       const OutPoint op = curTx_.getTxInCopy(i).getOutPoint();
       hashCounts[op.getTxHash()]++;
    }
 
    // here's the code to add data to the Input tree.
-   for (size_t i = 0; i < curTx_.getNumTxIn(); i++) {
+   for (int i = 0; i < curTx_.getNumTxIn(); i++) {
       TxOut prevOut;
       const TxIn in = curTx_.getTxInCopy(i);
       const OutPoint op = in.getOutPoint();
@@ -344,7 +344,7 @@ void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree)
    tree->clear();
 
    // here's the code to add data to the Input tree.
-   for (size_t i = 0; i < curTx_.getNumTxOut(); i++) {
+   for (int i = 0; i < curTx_.getNumTxOut(); i++) {
       TxOut txOut = curTx_.getTxOutCopy(i);
       auto txType = txOut.getScriptType();
       QString addrStr;

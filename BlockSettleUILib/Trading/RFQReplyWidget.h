@@ -18,7 +18,7 @@
 #include <unordered_set>
 #include <tuple>
 
-#include "AutoSignQuoteProvider.h"
+#include "BSErrorCode.h"
 #include "CoinControlModel.h"
 #include "CommonTypes.h"
 #include "TabWithShortcut.h"
@@ -46,6 +46,7 @@ class ApplicationSettings;
 class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
+class AutoSignScriptProvider;
 class BaseCelerClient;
 class ConnectionManager;
 class DialogManager;
@@ -87,7 +88,7 @@ public:
       , const std::shared_ptr<WalletSignerContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<ConnectionManager> &
-      , const std::shared_ptr<AutoSignQuoteProvider> &
+      , const std::shared_ptr<AutoSignScriptProvider> &
       , const std::shared_ptr<bs::UTXOReservationManager> &
       , OrderListModel *orderListModel);
 
@@ -175,7 +176,6 @@ private:
    std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
-   std::shared_ptr<AutoSignQuoteProvider>    autoSignQuoteProvider_;
    std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
 
    std::unordered_map<std::string, SentXbtReply>   sentXbtReplies_;

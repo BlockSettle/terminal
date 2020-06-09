@@ -280,11 +280,11 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
          return;
       }
 
-      emit sendSignedPayinToPB(settlementIdHex_, signedTX);
-
       for (const auto &leaf : xbtWallet_->getGroup(xbtWallet_->getXBTGroupType())->getLeaves()) {
          leaf->setTransactionComment(signedTX, comment_);
       }
+
+      emit sendSignedPayinToPB(settlementIdHex_, signedTX);
 
       // OK. if payin created - settletlement accepted for this RFQ
       deactivate();

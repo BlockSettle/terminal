@@ -52,11 +52,18 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
 
    connect(ui_->shieldPage, &RFQShieldPage::requestPrimaryWalletCreation, this, &RFQRequestWidget::requestPrimaryWalletCreation);
 
-   ui_->pageRFQTicket->setSubmitRFQ([this](const bs::network::RFQ& rfq, bs::UtxoReservationToken utxoRes) {
-      onRFQSubmit(rfq, std::move(utxoRes));
+   ui_->pageRFQTicket->setSubmitRFQ([this]
+      (const std::string &id, const bs::network::RFQ& rfq, bs::UtxoReservationToken utxoRes)
+   {
+      onRFQSubmit(id, rfq, std::move(utxoRes));
+   });
+   ui_->pageRFQTicket->setCancelRFQ([this] (const std::string &id)
+   {
+      onRFQCancel(id);
    });
 
    ui_->shieldPage->showShieldLoginToSubmitRequired();
+   ui_->widgetAutoRFQ->hide();
 
    ui_->pageRFQTicket->lineEditAmount()->installEventFilter(this);
    popShield();
@@ -163,7 +170,6 @@ bool RFQRequestWidget::eventFilter(QObject* sender, QEvent* event)
          return true;
       }
    }
-
    return false;
 }
 
@@ -192,18 +198,17 @@ void RFQRequestWidget::initWidgets(const std::shared_ptr<MarketDataProvider>& md
       , mdProvider, mdCallbacks);
 }
 
-void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
+void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<BaseCelerClient>& celerClient
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
-   , std::shared_ptr<QuoteProvider> quoteProvider
-   , const std::shared_ptr<AssetManager>& assetManager
+   , const std::shared_ptr<QuoteProvider> &quoteProvider
+   , const std::shared_ptr<AssetManager> &assetManager
    , const std::shared_ptr<DialogManager> &dialogManager
    , const std::shared_ptr<WalletSignerContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<ConnectionManager> &connectionManager
+   , const std::shared_ptr<AutoSignScriptProvider> &autoSignProvider
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , OrderListModel *orderListModel
-)
+   , OrderListModel *orderListModel)
 {
    logger_ = logger;
    celerClient_ = celerClient;
@@ -213,11 +218,10 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    dialogManager_ = dialogManager;
    signingContainer_ = container;
    armory_ = armory;
-   connectionManager_ = connectionManager;
    utxoReservationManager_ = utxoReservationManager;
 
    ui_->pageRFQTicket->init(logger, authAddressManager, assetManager,
-      quoteProvider, container, armory, utxoReservationManager);
+      quoteProvider, container, armory, autoSignProvider, utxoReservationManager);
 
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewOrders->setModel(orderListModel);
@@ -234,6 +238,7 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &RFQRequestWidget::onDisconnectedFromCeler);
 
    ui_->pageRFQTicket->disablePanel();
+   ui_->widgetAutoRFQ->init(autoSignProvider);
 
    connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, &RFQRequestWidget::forceCheckCondition);
 }
@@ -265,7 +270,8 @@ void RFQRequestWidget::onDisconnectedFromCeler()
    popShield();
 }
 
-void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservationToken ccUtxoRes)
+void RFQRequestWidget::onRFQSubmit(const std::string &id, const bs::network::RFQ& rfq
+   , bs::UtxoReservationToken ccUtxoRes)
 {
    auto authAddr = ui_->pageRFQTicket->selectedAuthAddress();
 
@@ -278,27 +284,60 @@ void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq, bs::UtxoReservat
       purpose.reset(new bs::hd::Purpose(UiUtils::getHwWalletPurpose(walletType)));
    }
 
-   RFQDialog* dialog = new RFQDialog(logger_, rfq, quoteProvider_
-      , authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_
-      , connectionManager_, rfqStorage_, xbtWallet, ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, utxoReservationManager_
-      , fixedXbtInputs.inputs, std::move(fixedXbtInputs.utxoRes), std::move(ccUtxoRes), std::move(purpose), this);
+   RFQDialog* dialog = new RFQDialog(logger_, id, rfq, quoteProvider_
+      , authAddressManager_, assetManager_, walletsManager_, signingContainer_
+      , armory_, celerClient_, appSettings_, rfqStorage_, xbtWallet
+      , ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, utxoReservationManager_
+      , fixedXbtInputs.inputs, std::move(fixedXbtInputs.utxoRes)
+      , std::move(ccUtxoRes), std::move(purpose), this);
 
    connect(this, &RFQRequestWidget::unsignedPayinRequested, dialog, &RFQDialog::onUnsignedPayinRequested);
    connect(this, &RFQRequestWidget::signedPayoutRequested, dialog, &RFQDialog::onSignedPayoutRequested);
    connect(this, &RFQRequestWidget::signedPayinRequested, dialog, &RFQDialog::onSignedPayinRequested);
+   connect(dialog, &RFQDialog::accepted, ui_->pageRFQTicket, &RFQTicketXBT::onRFQAccepted);
+   connect(dialog, &RFQDialog::expired, ui_->pageRFQTicket, &RFQTicketXBT::onRFQExpired);
+   connect(dialog, &RFQDialog::cancelled, ui_->pageRFQTicket, &RFQTicketXBT::onRFQCancelled);
 
-   dialog->setAttribute(Qt::WA_DeleteOnClose);
-
-
-
+//   dialog->setAttribute(Qt::WA_DeleteOnClose);
    dialogManager_->adjustDialogPosition(dialog);
    dialog->show();
 
+   const auto &itDlg = dialogs_.find(id);
+   if (itDlg != dialogs_.end()) {   //np, most likely a resend from script
+      itDlg->second->deleteLater();
+      itDlg->second = dialog;
+   }
+   else {
+      dialogs_[id] = dialog;
+   }
    ui_->pageRFQTicket->resetTicket();
 
    const auto& currentInfo = ui_->widgetMarketData->getCurrentlySelectedInfo();
-   ui_->pageRFQTicket->SetProductAndSide(currentInfo.productGroup_, currentInfo.currencyPair_,
-                                         currentInfo.bidPrice_, currentInfo.offerPrice_, bs::network::Side::Undefined);
+   ui_->pageRFQTicket->SetProductAndSide(currentInfo.productGroup_
+      , currentInfo.currencyPair_, currentInfo.bidPrice_, currentInfo.offerPrice_
+      , bs::network::Side::Undefined);
+
+   std::vector<std::string> closedDialogs;
+   for (const auto &dlg : dialogs_) {
+      if (dlg.second->isHidden()) {
+         dlg.second->deleteLater();
+         closedDialogs.push_back(dlg.first);
+      }
+   }
+   for (const auto &dlg : closedDialogs) {
+      dialogs_.erase(dlg);
+   }
+}
+
+void RFQRequestWidget::onRFQCancel(const std::string &id)
+{
+   const auto &itDlg = dialogs_.find(id);
+   if (itDlg == dialogs_.end()) {
+      return;
+   }
+   itDlg->second->cancel();
+   itDlg->second->deleteLater();
+   dialogs_.erase(itDlg);
 }
 
 bool RFQRequestWidget::checkConditions(const MarketSelectedInfo& selectedInfo)
@@ -329,9 +368,7 @@ bool RFQRequestWidget::checkConditions(const MarketSelectedInfo& selectedInfo)
       }
       break;
    }
-   default: {
-      break;
-   }
+   default: break;
    }
 
    if (ui_->stackedWidgetRFQ->currentIndex() != static_cast<int>(RFQPages::EditableRFQPage)) {
@@ -371,9 +408,8 @@ void RFQRequestWidget::onCurrencySelected(const MarketSelectedInfo& selectedInfo
    if (!checkConditions(selectedInfo)) {
       return;
    }
-
-   ui_->pageRFQTicket->setSecurityId(selectedInfo.productGroup_, selectedInfo.currencyPair_,
-                                     selectedInfo.bidPrice_, selectedInfo.offerPrice_);
+   ui_->pageRFQTicket->setSecurityId(selectedInfo.productGroup_
+      , selectedInfo.currencyPair_, selectedInfo.bidPrice_, selectedInfo.offerPrice_);
 }
 
 void RFQRequestWidget::onBidClicked(const MarketSelectedInfo& selectedInfo)
@@ -381,9 +417,8 @@ void RFQRequestWidget::onBidClicked(const MarketSelectedInfo& selectedInfo)
    if (!checkConditions(selectedInfo)) {
       return;
    }
-
-   ui_->pageRFQTicket->setSecuritySell(selectedInfo.productGroup_, selectedInfo.currencyPair_,
-                                       selectedInfo.bidPrice_, selectedInfo.offerPrice_);
+   ui_->pageRFQTicket->setSecuritySell(selectedInfo.productGroup_
+      , selectedInfo.currencyPair_, selectedInfo.bidPrice_, selectedInfo.offerPrice_);
 }
 
 void RFQRequestWidget::onAskClicked(const MarketSelectedInfo& selectedInfo)
@@ -391,9 +426,8 @@ void RFQRequestWidget::onAskClicked(const MarketSelectedInfo& selectedInfo)
    if (!checkConditions(selectedInfo)) {
       return;
    }
-
-   ui_->pageRFQTicket->setSecurityBuy(selectedInfo.productGroup_, selectedInfo.currencyPair_,
-                                       selectedInfo.bidPrice_, selectedInfo.offerPrice_);
+   ui_->pageRFQTicket->setSecurityBuy(selectedInfo.productGroup_
+      , selectedInfo.currencyPair_, selectedInfo.bidPrice_, selectedInfo.offerPrice_);
 }
 
 void RFQRequestWidget::onDisableSelectedInfo()
@@ -437,6 +471,16 @@ void RFQRequestWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTe
       default:
          break;
    }
-
    // if not processed - not RFQ releated message. not error
+}
+
+void RFQRequestWidget::onUserConnected(const bs::network::UserType &ut)
+{
+   ui_->widgetAutoRFQ->setVisible((ut == bs::network::UserType::Dealing) ||
+      (ut == bs::network::UserType::Trading));
+}
+
+void RFQRequestWidget::onUserDisconnected()
+{
+   ui_->widgetAutoRFQ->hide();
 }

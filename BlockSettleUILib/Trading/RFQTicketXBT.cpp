@@ -18,6 +18,7 @@
 
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
+#include "AutoSignQuoteProvider.h"
 #include "BSErrorCodeStrings.h"
 #include "BSMessageBox.h"
 #include "CCAmountValidator.h"
@@ -35,6 +36,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
+#include "UserScriptRunner.h"
 #include "UtxoReservationManager.h"
 #include "UtxoReservation.h"
 
@@ -118,9 +120,13 @@ bs::FixedXbtInputs RFQTicketXBT::fixedXbtInputs()
    return std::move(fixedXbtInputs_);
 }
 
-void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AuthAddressManager> &authAddressManager
-   , const std::shared_ptr<AssetManager>& assetManager, const std::shared_ptr<QuoteProvider> &quoteProvider
-   , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<ArmoryConnection> &armory
+void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<AuthAddressManager> &authAddressManager
+   , const std::shared_ptr<AssetManager>& assetManager
+   , const std::shared_ptr<QuoteProvider> &quoteProvider
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<AutoSignScriptProvider> &autoSignProvider
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager)
 {
    logger_ = logger;
@@ -128,11 +134,23 @@ void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger, const std
    assetManager_ = assetManager;
    signingContainer_ = container;
    armory_ = armory;
+   autoSignProvider_ = autoSignProvider;
    utxoReservationManager_ = utxoReservationManager;
 
    if (signingContainer_) {
       connect(signingContainer_.get(), &SignContainer::ready, this, &RFQTicketXBT::onSignerReady);
    }
+   connect((RFQScriptRunner *)autoSignProvider_->scriptRunner(), &RFQScriptRunner::sendRFQ
+      , this, &RFQTicketXBT::onSendRFQ, Qt::QueuedConnection);
+   connect((RFQScriptRunner *)autoSignProvider_->scriptRunner(), &RFQScriptRunner::cancelRFQ
+      , this, &RFQTicketXBT::onCancelRFQ, Qt::QueuedConnection);
+   connect(autoSignProvider_.get(), &AutoSignScriptProvider::autoSignStateChanged,
+      this, &RFQTicketXBT::onAutoSignStateChanged, Qt::QueuedConnection);
+   connect(autoSignProvider_.get(), &AutoSignScriptProvider::scriptLoaded
+      , this, &RFQTicketXBT::onScriptLoaded);
+   connect(autoSignProvider_.get(), &AutoSignScriptProvider::scriptUnLoaded
+      , this, &RFQTicketXBT::onScriptUnloaded);
+
    connect(utxoReservationManager_.get(), &bs::UTXOReservationManager::availableUtxoChanged,
       this, &RFQTicketXBT::onUTXOReservationChanged);
 
@@ -268,6 +286,8 @@ void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMana
 
    connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &RFQTicketXBT::onHDLeafCreated);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreateFailed, this, &RFQTicketXBT::onCreateHDWalletError);
+
+   autoSignProvider_->scriptRunner()->setWalletsManager(walletsManager_);
 
    walletsLoaded();
 
@@ -545,6 +565,11 @@ void RFQTicketXBT::setSubmitRFQ(RFQTicketXBT::SubmitRFQCb submitRFQCb)
    submitRFQCb_ = std::move(submitRFQCb);
 }
 
+void RFQTicketXBT::setCancelRFQ(RFQTicketXBT::CancelRFQCb cb)
+{
+   cancelRFQCb_ = std::move(cb);
+}
+
 bs::Address RFQTicketXBT::recvXbtAddressIfSet() const
 {
    const auto index = ui_->receivingAddressComboBox->currentIndex();
@@ -724,14 +749,34 @@ void RFQTicketXBT::submitButtonClicked()
    saveLastSideSelection(rfq->product, rfq->security, getSelectedSide());
 
    rfq->quantity = getQuantity();
-
    if (qFuzzyIsNull(rfq->quantity)) {
       return;
    }
-   if (existsRFQ(*rfq)) {
+
+   const auto &rfqId = CryptoPRNG::generateRandom(8).toHexStr();
+   pendingRFQs_[rfqId] = rfq;
+
+   if (autoRFQenabled_ && autoSignProvider_->scriptRunner()) {
+      ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->submitRFQ(rfqId
+         , ui_->labelSecurityId->text(), rfq->quantity, (rfq->side == bs::network::Side::Buy));
+   }
+   else {
+      if (!existsRFQ(*rfq)) {
+         putRFQ(*rfq);
+         onSendRFQ(rfqId);
+      }
+   }
+}
+
+void RFQTicketXBT::onSendRFQ(const std::string &id)
+{
+   const auto &itRFQ = pendingRFQs_.find(id);
+   if (itRFQ == pendingRFQs_.end()) {
+      logger_->error("[RFQTicketXBT::onSendRFQ] RFQ with id {} not found", id);
       return;
    }
-   putRFQ(*rfq);
+   logger_->debug("[{}] sending RFQ {}", __func__, id);
+   auto rfq = itRFQ->second;
 
    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
    // just in case if 2 customers submit RFQ in exactly same ms
@@ -754,11 +799,9 @@ void RFQTicketXBT::submitButtonClicked()
 
    if (rfq->assetType == bs::network::Asset::SpotXBT) {
       rfq->requestorAuthPublicKey = authKey();
-      if (rfq->requestorAuthPublicKey.empty()) {
-         return;
+      if (!rfq->requestorAuthPublicKey.empty()) {
+         reserveBestUtxoSetAndSubmit(id, rfq);
       }
-
-      reserveBestUtxoSetAndSubmit(rfq);
       return;
    }
    else if (rfq->assetType == bs::network::Asset::PrivateMarket) {
@@ -770,7 +813,9 @@ void RFQTicketXBT::submitButtonClicked()
 
       if (rfq->side == bs::network::Side::Sell) {
          // Sell
-         auto recvXbtAddressCb = [this, rfq, ccWallet](const bs::Address &recvXbtAddr) {
+         const auto &recvXbtAddressCb = [this, id, rfq, ccWallet]
+            (const bs::Address &recvXbtAddr)
+         {
             rfq->receiptAddress = recvXbtAddr.display();
             const uint64_t spendVal = rfq->quantity * assetManager_->getCCLotSize(rfq->product);
             if (!ccWallet) {
@@ -778,10 +823,10 @@ void RFQTicketXBT::submitButtonClicked()
                return;
             }
 
-            const auto ccInputsCb = [this, spendVal, rfq, ccWallet]
-            (const std::vector<UTXO> &ccInputs) mutable
+            const auto ccInputsCb = [this, id, spendVal, rfq, ccWallet]
+               (const std::vector<UTXO> &ccInputs) mutable
             {
-               QMetaObject::invokeMethod(this, [this, spendVal, rfq, ccInputs, ccWallet] {
+               QMetaObject::invokeMethod(this, [this, id, spendVal, rfq, ccInputs, ccWallet] {
                   uint64_t inputVal = 0;
                   for (const auto &input : ccInputs) {
                      inputVal += input.getValue();
@@ -794,12 +839,13 @@ void RFQTicketXBT::submitButtonClicked()
                      return;
                   }
 
-                  const auto cbAddr = [this, spendVal, rfq, ccInputs, ccWallet](const bs::Address &addr) {
+                  const auto cbAddr = [this, spendVal, id, rfq, ccInputs, ccWallet](const bs::Address &addr)
+                  {
                      try {
                         const auto txReq = ccWallet->createPartialTXRequest(spendVal, ccInputs, addr);
                         rfq->coinTxInput = BinaryData::fromString(txReq.serializeState().SerializeAsString()).toHexStr();
                         auto reservationToken = utxoReservationManager_->makeNewReservation(txReq.inputs, rfq->requestId);
-                        submitRFQCb_(*rfq, std::move(reservationToken));
+                        submitRFQCb_(id, *rfq, std::move(reservationToken));
                      }
                      catch (const std::exception &e) {
                         BSMessageBox(BSMessageBox::critical, tr("RFQ Failure")
@@ -843,9 +889,9 @@ void RFQTicketXBT::submitButtonClicked()
       }
 
       // Buy
-      auto cbRecvAddr = [this, rfq](const bs::Address &recvAddr) {
+      auto cbRecvAddr = [this, id, rfq](const bs::Address &recvAddr) {
          rfq->receiptAddress = recvAddr.display();
-         reserveBestUtxoSetAndSubmit(rfq);
+         reserveBestUtxoSetAndSubmit(id, rfq);
       };
       // BST-2474: All addresses related to trading, not just change addresses, should use internal addresses.
       // This has no effect as CC wallets have only external addresses.
@@ -854,7 +900,58 @@ void RFQTicketXBT::submitButtonClicked()
       return;
    }
 
-   submitRFQCb_(*rfq, bs::UtxoReservationToken{});
+   submitRFQCb_(id, *rfq, bs::UtxoReservationToken{});
+}
+
+void RFQTicketXBT::onCancelRFQ(const std::string &id)
+{
+   const auto &itRFQ = pendingRFQs_.find(id);
+   if (itRFQ == pendingRFQs_.end()) {
+      logger_->error("[RFQTicketXBT::onCancelRFQ] failed to find RFQ {}", id);
+      return;
+   }
+   logger_->debug("[{}] cancelling RFQ {}", __func__, id);
+   if (cancelRFQCb_) {
+      cancelRFQCb_(id);
+   }
+   pendingRFQs_.erase(itRFQ);
+}
+
+void RFQTicketXBT::onRFQAccepted(const std::string &id)
+{
+   if (autoRFQenabled_) {
+      ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->rfqAccepted(id);
+   }
+   pendingRFQs_.erase(id);
+}
+
+void RFQTicketXBT::onRFQExpired(const std::string &id)
+{
+   if (autoRFQenabled_) {
+      ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->rfqExpired(id);
+   }
+   else {
+      pendingRFQs_.erase(id);
+   }
+}
+
+void RFQTicketXBT::onRFQCancelled(const std::string &id)
+{
+   if (autoRFQenabled_) {
+      logger_->debug("[{}] {}", __func__, id);
+      ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->rfqCancelled(id);
+   }
+   pendingRFQs_.erase(id);
+}
+
+void RFQTicketXBT::onScriptLoaded(const QString &scriptFN)
+{
+   autoRFQenabled_ = true;
+}
+
+void RFQTicketXBT::onScriptUnloaded()
+{
+   autoRFQenabled_ = false;
 }
 
 QPushButton* RFQTicketXBT::submitButton() const
@@ -1266,13 +1363,15 @@ bs::XBTAmount RFQTicketXBT::getXbtReservationAmountForCc(double quantity, double
    return bs::XBTAmount(quantity * offerPrice * bs::tradeutils::reservationQuantityMultiplier());
 }
 
-void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network::RFQ>& rfq)
+void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::string &id
+   , const std::shared_ptr<bs::network::RFQ>& rfq)
 {
-   auto submitRFQWrapper = [rfqTicket = QPointer<RFQTicketXBT>(this), rfq] {
+   const auto &submitRFQWrapper = [rfqTicket = QPointer<RFQTicketXBT>(this), id, rfq]
+   {
       if (!rfqTicket) {
          return;
       }
-      rfqTicket->submitRFQCb_(*rfq, std::move(rfqTicket->fixedXbtInputs_.utxoRes));
+      rfqTicket->submitRFQCb_(id, *rfq, std::move(rfqTicket->fixedXbtInputs_.utxoRes));
    };
    auto getWalletAndReserve = [rfqTicket = QPointer<RFQTicketXBT>(this), submitRFQWrapper](BTCNumericTypes::satoshi_type amount, bool partial) {
       auto cbBestUtxoSet = [rfqTicket, submitRFQWrapper](bs::FixedXbtInputs&& fixedXbt) {
@@ -1336,4 +1435,13 @@ void RFQTicketXBT::onCreateWalletClicked()
    if (!walletsManager_->CreateCCLeaf(getProduct().toStdString())) {
       showHelp(tr("Create CC wallet request failed"));
    }
+}
+
+void RFQTicketXBT::onAutoSignStateChanged()
+{
+   if (autoSignProvider_->autoSignState() == bs::error::ErrorCode::NoError) {
+      ui_->comboBoxXBTWalletsSend->setCurrentText(autoSignProvider_->getAutoSignWalletName());
+   }
+   ui_->comboBoxXBTWalletsSend->setEnabled(autoSignProvider_->autoSignState()
+      == bs::error::ErrorCode::AutoSignDisabled);
 }

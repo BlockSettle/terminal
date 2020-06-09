@@ -244,6 +244,7 @@ static int GuiApp(int &argc, char** argv)
    qRegisterMetaType<std::shared_ptr<std::promise<bool>>>();
    qRegisterMetaType<ArmorySettings>();
    qRegisterMetaType<CelerAPI::CelerMessageType>();
+   qRegisterMetaType<bs::network::UserType>();
 
    // load settings
    auto settings = std::make_shared<ApplicationSettings>();

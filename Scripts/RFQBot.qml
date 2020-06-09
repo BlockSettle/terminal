@@ -38,6 +38,7 @@ BSQuoteReqReply {
         'GBP/JPY',
         'GBP/SEK',
         'JPY/SEK',
+        'POC/XBT'
     ]
 
 
@@ -68,9 +69,6 @@ BSQuoteReqReply {
     onIndicAskChanged: {
         log('#new indic ask: ' + indicAsk)
         onBidOrAskChanged();
-    }
-    onSendFailed: {
-
     }
 
     function checkPrice(price) {

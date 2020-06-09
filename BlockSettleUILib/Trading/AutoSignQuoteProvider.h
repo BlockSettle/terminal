@@ -30,85 +30,80 @@ namespace bs {
       class WalletsManager;
    }
 }
-
 namespace spdlog {
    class logger;
 }
 
-// Auto quoting and signing provider
-class AutoSignQuoteProvider : public QObject
+
+class AutoSignScriptProvider : public QObject
 {
    Q_OBJECT
 public:
-   explicit AutoSignQuoteProvider(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<AssetManager>&
-      , const std::shared_ptr<QuoteProvider>&
+   explicit AutoSignScriptProvider(const std::shared_ptr<spdlog::logger> &
+      , UserScriptRunner *
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<MDCallbacksQt> &
       , const std::shared_ptr<BaseCelerClient> &
       , QObject *parent = nullptr);
 
-   // auto quote
-   bool aqLoaded() const;
-   void setAqLoaded(bool loaded);
+   bool isScriptLoaded() const { return scriptLoaded_; }
+   void setScriptLoaded(bool loaded);
 
-   void initAQ(const QString &filename);
-   void deinitAQ();
+   void init(const QString &filename);
+   void deinit();
 
    QString getDefaultScriptsDir();
 
-   QStringList getAQScripts();
-   QString getAQLastScript();
+   QStringList getScripts();
+   QString getLastScript();
 
-   QString getAQLastDir();
-   void setAQLastDir(const QString &path);
+   QString getLastDir();
+   void setLastDir(const QString &path);
 
    // auto sign
-   bs::error::ErrorCode autoSignState() const;
+   bs::error::ErrorCode autoSignState() const { return autoSignState_; }
    QString autoSignWalletId() const { return autoSignWalletId_; }
 
    void disableAutoSign();
    void tryEnableAutoSign();
 
-   //
-   bool autoSignQuoteAvailable();
+   bool isReady() const;
    void setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> &);
 
    QString getAutoSignWalletName();
 
-   UserScriptRunner *autoQuoter() const;
-
-signals:
-   void aqScriptLoaded(const QString &filename);
-   void aqScriptUnLoaded();
-   void aqHistoryChanged();
-   void autoSignStateChanged();
-   void autoSignQuoteAvailabilityChanged();
+   UserScriptRunner *scriptRunner() const { return scriptRunner_; }
 
 public slots:
    void onSignerStateUpdated();
    void onAutoSignStateChanged(bs::error::ErrorCode result, const std::string &walletId);
 
-   void onAqScriptLoaded(const QString &filename);
-   void onAqScriptFailed(const QString &filename, const QString &error);
+   void onScriptLoaded(const QString &filename);
+   void onScriptFailed(const QString &filename, const QString &error);
 
    void onConnectedToCeler();
    void onDisconnectedFromCeler();
 
-private:
-   bs::error::ErrorCode  autoSignState_{bs::error::ErrorCode::AutoSignDisabled};
-   QString autoSignWalletId_;
-   UserScriptRunner *aq_{};
-   bool              aqLoaded_{false};
-   bool              celerConnected_{false};
-   bool              newLoaded_{false};
+signals:
+   void scriptLoaded(const QString &filename);
+   void scriptUnLoaded();
+   void scriptHistoryChanged();
+   void autoSignStateChanged();
+   void autoSignQuoteAvailabilityChanged();
 
+protected:
    std::shared_ptr<ApplicationSettings>       appSettings_;
    std::shared_ptr<spdlog::logger>            logger_;
    std::shared_ptr<SignContainer>             signingContainer_;
    std::shared_ptr<bs::sync::WalletsManager>  walletsManager_;
    std::shared_ptr<BaseCelerClient>           celerClient_;
+   UserScriptRunner *scriptRunner_{};
+
+   bs::error::ErrorCode  autoSignState_{ bs::error::ErrorCode::AutoSignDisabled };
+   QString  autoSignWalletId_;
+   bool     scriptLoaded_{ false };
+   bool     celerConnected_{ false };
+   bool     newLoaded_{ false };
 };
 
 #endif // AUTOSIGNQUOTEPROVIDER_H
