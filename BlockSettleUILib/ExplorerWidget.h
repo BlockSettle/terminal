@@ -63,7 +63,7 @@ protected slots:
 private:
    bool canGoBack() const;
    bool canGoForward() const;
-   void setTransaction(QString txId);
+   void setTransaction(const QString &txId);
    void pushTransactionHistory(QString itemId);
    void truncateSearchHistory(int position = -1);
    void clearSearchHistory();

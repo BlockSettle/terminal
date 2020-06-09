@@ -143,7 +143,7 @@ void ExplorerWidget::onSearchStarted(bool saveToHistory)
          pushTransactionHistory(userStr);
       }
    }
-   else if ((userStr.length() == 64) &&
+   else if ((userStr.length() >= 64) &&
            userStr.toStdString().find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos) {
       // String is a valid 32 byte hex string, so we may proceed.
       if (saveToHistory) {
@@ -156,7 +156,7 @@ void ExplorerWidget::onSearchStarted(bool saveToHistory)
    else {
       // This isn't a valid address or 32 byte hex string.
       QToolTip::showText(ui_->searchBox->mapToGlobal(QPoint(0, 7))
-         , tr("This is not a valid address or transaction ID."), ui_->searchBox);
+         , tr("This is not a valid address or transaction ID"), ui_->searchBox);
    }
 
    ui_->btnBack->setEnabled(canGoBack());
@@ -242,7 +242,7 @@ bool ExplorerWidget::canGoForward() const
    return searchHistoryPosition_ < static_cast<int>(searchHistory_.size()) - 1;
 }
 
-void ExplorerWidget::setTransaction(QString txId)
+void ExplorerWidget::setTransaction(const QString &txId)
 {
    ui_->stackedWidget->setCurrentIndex(TxPage);
    // Pass the Tx hash to the Tx widget and populate the fields.

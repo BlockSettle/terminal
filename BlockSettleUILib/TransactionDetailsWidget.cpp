@@ -73,13 +73,6 @@ void TransactionDetailsWidget::init(
 void TransactionDetailsWidget::populateTransactionWidget(const TxHash &rpcTXID
    , const bool &firstPass)
 {
-   if (!armoryPtr_) {
-      if (logger_) {
-         logger_->error("[{}] Armory is not initialized.", __func__);
-      }
-      return;
-   }
-
    // In case we've been here earlier, clear all the text.
    if (firstPass) {
       clear();
@@ -89,21 +82,49 @@ void TransactionDetailsWidget::populateTransactionWidget(const TxHash &rpcTXID
    const auto cbTX = [this, txidStr](const Tx &tx) {
       if (!tx.isInitialized()) {
          if (logger_) {
-            logger_->error("[TransactionDetailsWidget::cbTx] TXID {} is not initialized."
+            logger_->error("[TransactionDetailsWidget::cbTx] TXID {} is not inited"
                , txidStr);
          }
          ui_->tranID->setText(tr("%1 (load failed)").arg(QString::fromStdString(txidStr)));
          emit finished();
          return;
       }
-
       processTxData(tx);
    };
 
    if (firstPass || !curTx_.isInitialized() || (curTx_.getThisHash() != rpcTXID)) {
-      if (!armoryPtr_->getTxByHash(rpcTXID, cbTX, false)) {
-         if (logger_) {
-            logger_->error("[{}] - Failed to get TXID {}.", __func__, txidStr);
+      if (rpcTXID.getSize() == 32) {
+         if (!armoryPtr_) {
+            logger_->error("[TransactionDetailsWidget::populateTransactionWidget] Armory is not inited");
+            return;
+         }
+         if (!armoryPtr_->getTxByHash(rpcTXID, cbTX, false)) {
+            if (logger_) {
+               logger_->error("[TransactionDetailsWidget::populateTransactionWidget]"
+                  " failed to get TXID {}", txidStr);
+            }
+         }
+      }
+      else {
+         Codec_SignerState::SignerState signerState;
+         if (signerState.ParseFromString(rpcTXID.toBinStr(true))) {
+            Signer signer(signerState);
+            const auto &serTx = signer.serializeUnsignedTx(true);
+            try {
+               const Tx tx(serTx);
+               if (!tx.isInitialized()) {
+                  throw std::runtime_error("Uninited TX");
+               }
+               cbTX(tx);
+            }
+            catch (const std::exception &e) {
+               logger_->error("[TransactionDetailsWidget::populateTransactionWidget]"
+                  " {}", e.what());
+            }
+         }
+         else {
+            logger_->error("[TransactionDetailsWidget::populateTransactionWidget]"
+               " failed to decode signer state");
          }
       }
    }
@@ -113,7 +134,7 @@ void TransactionDetailsWidget::populateTransactionWidget(const TxHash &rpcTXID
 }
 
 // Used in callback to process the Tx object returned by Armory.
-void TransactionDetailsWidget::processTxData(Tx tx)
+void TransactionDetailsWidget::processTxData(const Tx &tx)
 {
    // Save Tx and the prev Tx entries (get input amounts & such)
    curTx_ = tx;
@@ -156,40 +177,14 @@ void TransactionDetailsWidget::processTxData(Tx tx)
    }
 }
 
-// NB: Don't use ClientClasses::BlockHeader. It has parsing capabilities but
-// it's meant to be an internal Armory class, touching things like the DB. Just
-// parse the raw data header here.
-void TransactionDetailsWidget::getHeaderData(const BinaryData& inHeader)
-{
-   if (inHeader.getSize() != 80) {
-      if (logger_) {
-         logger_->error("[{}] Header is not the correct size - size = {}"
-            , __func__, inHeader.getSize());
-      }
-         return;
-   }
-
-   // FIX - May want to rethink where the data is saved.
-/*   curTxVersion = READ_UINT32_LE(inHeader.getPtr());
-   curTxPrevHash = BinaryData(inHeader.getPtr() + 4, 32);
-   curTxMerkleRoot = BinaryData(inHeader.getPtr() + 36, 32);
-   curTxTimestamp = READ_UINT32_LE(inHeader.getPtr() + 68);
-   curTxDifficulty = BinaryData(inHeader.getPtr() + 72, 4);
-   curTxNonce = READ_UINT32_LE(inHeader.getPtr() + 76);*/
-}
-
 // The function that will actually populate the GUI with TX data.
 void TransactionDetailsWidget::setTxGUIValues()
 {
-   // Get Tx header data. NOT USED FOR NOW.
-//   BinaryData txHdr(curTx_.getPtr(), 80);
-//   getHeaderData(txHdr);
-
    // Get fees & fee/byte by looping through the prev Tx set and calculating.
    uint64_t totIn = 0;
-   for (size_t r = 0; r < curTx_.getNumTxIn(); ++r) {
-      TxIn in = curTx_.getTxInCopy(r);
-      OutPoint op = in.getOutPoint();
+   for (int i = 0; i < curTx_.getNumTxIn(); ++i) {
+      const TxIn &in = curTx_.getTxInCopy(i);
+      const OutPoint &op = in.getOutPoint();
       const auto &prevTx = prevTxMap_[op.getTxHash()];
       if (prevTx && prevTx->isInitialized()) {
          TxOut prevOut = prevTx->getTxOutCopy(op.getTxOutIndex());
@@ -212,7 +207,6 @@ void TransactionDetailsWidget::setTxGUIValues()
    // relabeled getVirtSize().)
    // Output TXID in RPC byte order by flipping TXID bytes rcv'd by Armory (internal
    // order).
-//   ui_->tranDate->setText(UiUtils::displayDateTime(QDateTime::fromTime_t(curTxTimestamp)));
 
    ui_->tranNumInputs->setText(QString::number(curTx_.getNumTxIn()));
    ui_->tranNumOutputs->setText(QString::number(curTx_.getNumTxOut()));
@@ -280,11 +274,7 @@ void TransactionDetailsWidget::checkTxForCC(const Tx &tx, QTreeWidget *treeWidge
 
 void TransactionDetailsWidget::updateCCInputs()
 {
-   const auto &cbUpdateCCInput = [this](const BinaryData &txHash
-      , const bs::network::CCSecurityDef &ccDef) {
-   };
-
-   for (size_t i = 0; i < curTx_.getNumTxIn(); ++i) {
+   for (int i = 0; i < curTx_.getNumTxIn(); ++i) {
       const OutPoint op = curTx_.getTxInCopy(i).getOutPoint();
       const auto &prevTx = prevTxMap_[op.getTxHash()];
       checkTxForCC(*prevTx, ui_->treeInput);
