@@ -102,14 +102,13 @@ protected:
    void loadTreeOut(CustomTreeWidget *tree);
 
 private:
-   void getHeaderData(const BinaryData& inHeader);
    void loadInputs();
    void setTxGUIValues();
    void clear();
    void updateCCInputs();
    void checkTxForCC(const Tx &, QTreeWidget *);
 
-   void processTxData(Tx tx);
+   void processTxData(const Tx &tx);
 
    void addItem(QTreeWidget *tree, const QString &address, const uint64_t amount
       , const QString &wallet, const BinaryData &txHash, const int txIndex = -1);
