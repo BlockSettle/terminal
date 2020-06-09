@@ -156,22 +156,22 @@ void CreateTransactionDialogSimple::onAddressTextChanged(const QString &addressS
 
 void CreateTransactionDialogSimple::onXBTAmountChanged(const QString &text)
 {
-   const double value = UiUtils::parseAmountBtc(text);
+   const bs::XBTAmount value{ UiUtils::parseAmountBtc(text) };
    transactionData_->UpdateRecipientAmount(recipientId_, value);
 }
 
 void CreateTransactionDialogSimple::onMaxPressed()
 {
-   transactionData_->UpdateRecipientAmount(recipientId_, 0, false);
+   transactionData_->UpdateRecipientAmount(recipientId_, {}, false);
    CreateTransactionDialog::onMaxPressed();
-   const double value = UiUtils::parseAmountBtc(ui_->lineEditAmount->text());
+   const bs::XBTAmount value{ UiUtils::parseAmountBtc(ui_->lineEditAmount->text()) };
    transactionData_->UpdateRecipientAmount(recipientId_, value, true);
 }
 
 void CreateTransactionDialogSimple::onTransactionUpdated()
 {
    if (!advancedDialogRequested_) {
-      if (std::fpclassify(transactionData_->GetRecipientAmount(recipientId_)) == FP_ZERO) {
+      if (transactionData_->GetRecipientAmount(recipientId_).isZero()) {
          UiUtils::setWrongState(ui_->lineEditAmount, false);
       }
       else {
