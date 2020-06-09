@@ -847,7 +847,7 @@ void CreateTransactionDialogAdvanced::onAddOutput()
       bool maxAmount = std::abs(maxValue - curVal
          - transactionData_->GetTotalRecipientsAmount()) <= 1;
 
-      AddRecipient({ currentAddress_, bs::XBTAmount{currentValue_}, maxAmount });
+      AddRecipient({ currentAddress_, curVal, maxAmount });
 
       maxAmount |= FixRecipientsAmount();
 
