@@ -34,6 +34,7 @@
 #include "ApplicationSettings.h"
 #include "chat.pb.h"
 
+using namespace bs;
 using namespace bs::network;
 
 namespace
@@ -212,7 +213,7 @@ otc::Peer *ChatWidget::currentPeer() const
 {
    const auto chartProxyModel = dynamic_cast<ChatPartiesSortProxyModel*>(ui_->treeViewUsers->model());
    PartyTreeItem* partyTreeItem = chartProxyModel->getInternalData(ui_->treeViewUsers->currentIndex());
-   if (!partyTreeItem || partyTreeItem->modelType() == UI::ElementType::Container) {
+   if (!partyTreeItem || partyTreeItem->modelType() == bs::UI::ElementType::Container) {
       return nullptr;
    }
 
@@ -465,7 +466,7 @@ void ChatWidget::onUserListClicked(const QModelIndex& index)
    auto* chartProxyModel = dynamic_cast<ChatPartiesSortProxyModel*>(ui_->treeViewUsers->model());
    PartyTreeItem* partyTreeItem = chartProxyModel->getInternalData(index);
 
-   if (partyTreeItem->modelType() == UI::ElementType::Container) {
+   if (partyTreeItem->modelType() == bs::UI::ElementType::Container) {
       return;
    }
 

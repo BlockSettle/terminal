@@ -26,13 +26,15 @@ namespace bs {
    }
 }
 
-namespace UI {
-   enum class ElementType
-   {
-      Root = 0,
-      Container,
-      Party,
-   };
+namespace bs {
+   namespace UI {
+      enum class ElementType
+      {
+         Root = 0,
+         Container,
+         Party,
+      };
+   }
 }
 
 struct ReusableItemData
@@ -44,7 +46,7 @@ struct ReusableItemData
 class PartyTreeItem
 {
 public:
-   PartyTreeItem(const QVariant& data, UI::ElementType modelType, PartyTreeItem* parent = nullptr);
+   PartyTreeItem(const QVariant& data, bs::UI::ElementType modelType, PartyTreeItem* parent = nullptr);
    ~PartyTreeItem();
 
    PartyTreeItem* child(int number);
@@ -60,7 +62,7 @@ public:
    int childNumber() const;
    bool setData(const QVariant& value);
 
-   UI::ElementType modelType() const;
+   bs::UI::ElementType modelType() const;
 
    void increaseUnseenCounter(int newMessageCount);
    void decreaseUnseenCounter(int seenMessageCount);
@@ -82,7 +84,7 @@ private:
    std::vector<std::unique_ptr<PartyTreeItem>> childItems_;
    QVariant itemData_;
    PartyTreeItem* parentItem_;
-   UI::ElementType modelType_;
+   bs::UI::ElementType modelType_;
    int unseenCounter_{};
 
    // OTC toggling

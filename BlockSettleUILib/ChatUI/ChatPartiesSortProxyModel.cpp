@@ -10,6 +10,8 @@
 */
 #include "ChatPartiesSortProxyModel.h"
 
+using namespace bs;
+
 ChatPartiesSortProxyModel::ChatPartiesSortProxyModel(ChatPartiesTreeModelPtr sourceModel, QObject *parent /*= nullptr*/)
    : QSortFilterProxyModel(parent)
    , sourceModel_(std::move(sourceModel))

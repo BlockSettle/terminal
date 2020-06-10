@@ -18,6 +18,7 @@
         <file alias="ICON_MSG_STATUS_ONLINE">resources/msg_status_online_2.png</file>
         <file alias="ICON_MSG_STATUS_CONNECTING">resources/msg_status_connecting_2.png</file>
         <file alias="ICON_MSG_STATUS_READ">resources/msg_status_read_2.png</file>
+        <file>resources/ca-bundle.crt</file>
         <file>resources/preferences-system.png</file>
         <file>resources/preferences-system-network.png</file>
         <file>resources/Raleway/Raleway-Regular.ttf</file>

@@ -62,6 +62,7 @@
 #include "SelectWalletDialog.h"
 #include "Settings/ConfigDialog.h"
 #include "SignersProvider.h"
+#include "SslCaBundle.h"
 #include "StatusBarView.h"
 #include "SystemFileUtils.h"
 #include "TabWithShortcut.h"
@@ -72,6 +73,7 @@
 #include "UtxoReservationManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "WsDataConnection.h"
 
 #include "ui_BSTerminalMainWindow.h"
 
@@ -1374,6 +1376,8 @@ void BSTerminalMainWindow::onLogin()
 
 void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings)
 {
+   auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
+
 #ifdef PRODUCTION_BUILD
    if (networkSettings.status == Blocksettle::Communication::GetNetworkSettingsResponse_Status_LIVE_TRADING_COMING_SOON) {
       BSMessageBox mbox(BSMessageBox::question, tr("Login to BlockSettle"), tr("Live trading is coming soon...")
@@ -1404,13 +1408,36 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
 
    auto logger = logMgr_->logger("proxy");
 
-   BsClientParams params;
-   params.connectAddress = networkSettings.proxy.host;
-   params.connectPort = networkSettings.proxy.port;
-   params.context = std::make_shared<ZmqContext>(logger);
-   params.newServerKeyCallback = cbApproveProxy_;
+   auto bsClient = std::make_shared<BsClient>(logger);
 
-   auto bsClient = std::make_shared<BsClient>(logger, params);
+#ifdef PRODUCTION_BUILD
+   const bool useWebSockets = false;
+#else
+   // Use with staging only for now
+   const bool useWebSockets = (envType == ApplicationSettings::EnvConfiguration::Staging);
+#endif
+
+   if (useWebSockets) {
+      WsDataConnectionParams params;
+      params.caBundlePtr = bs::caBundlePtr();
+      params.caBundleSize = bs::caBundleSize();
+      auto connection = std::make_unique<WsDataConnection>(logger, params);
+      bool result = connection->openConnection("proxy-staging.blocksettle.com", "443", bsClient.get());
+      if (!result) {
+         // FIXME: Show something
+         return;
+      }
+      bsClient->setConnection(std::move(connection));
+   } else {
+      ZmqBIP15XDataConnectionParams params;
+      params.ephemeralPeers = true;
+      auto connection = std::make_unique<ZmqBIP15XDataConnection>(logger, params);
+      connection->setCBs(cbApproveProxy_);
+      // This should not ever fail
+      bool result = connection->openConnection(networkSettings.proxy.host, std::to_string(networkSettings.proxy.port), bsClient.get());
+      assert(result);
+      bsClient->setConnection(std::move(connection));
+   }
 
    // Must be connected before loginDialog.exec call (balances could be received before loginDialog.exec returns)!
    connect(bsClient.get(), &BsClient::balanceLoaded, assetManager_.get(), &AssetManager::fxBalanceLoaded);
@@ -1427,7 +1454,6 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    bool isRegistered = (loginDialog.result()->userType == bs::network::UserType::Market
       || loginDialog.result()->userType == bs::network::UserType::Trading
       || loginDialog.result()->userType == bs::network::UserType::Dealing);
-   auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
 
    if (!isRegistered && envType == ApplicationSettings::EnvConfiguration::Test) {
       auto createTestAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlTest);
