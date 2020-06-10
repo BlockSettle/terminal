@@ -59,7 +59,8 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
    }
    prevState_ = appSettings_->getState();
 
-   pages_ = {ui_->pageGeneral, ui_->pageNetwork, ui_->pageSigner, ui_->pageDealing };
+   pages_ = {ui_->pageGeneral, ui_->pageNetwork, ui_->pageSigner, ui_->pageDealing
+      , ui_->pageAPI };
 
    for (const auto &page : pages_) {
       page->init(appSettings_, armoryServersProvider_, signersProvider_, signContainer_);

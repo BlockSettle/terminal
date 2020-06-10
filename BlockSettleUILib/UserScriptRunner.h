@@ -33,6 +33,7 @@ namespace bs {
    }
 }
 class MDCallbacksQt;
+class RFQScript;
 class SignContainer;
 class UserScriptRunner;
 
@@ -52,6 +53,7 @@ public:
    virtual void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
    void setParent(UserScriptRunner *);
    void setRunningThread(QThread *thread) { thread_ = thread; }
+   virtual void reload(const QString &filename) = 0;
 
 signals:
    void scriptLoaded(const QString &fileName);
@@ -86,6 +88,7 @@ public:
    ~AQScriptHandler() noexcept override;
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &) override;
+   void reload(const QString &filename) override;
 
 signals:
    void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
@@ -140,20 +143,19 @@ class RFQScriptHandler : public UserScriptHandler
    Q_OBJECT
 public:
    explicit RFQScriptHandler(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<MDCallbacksQt> &
-      , UserScriptRunner *runner);
+      , const std::shared_ptr<MDCallbacksQt> &);
    ~RFQScriptHandler() noexcept override;
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &) override;
+   void reload(const QString &filename) override;
 
-   void submitRFQ(const std::string &id, const QString &symbol, double amount
-      , bool buy);
+   void suspend();
    void rfqAccepted(const std::string &id);
    void rfqCancelled(const std::string &id);
    void rfqExpired(const std::string &id);
 
 signals:
-   void sendRFQ(const std::string &id);
+   void sendRFQ(const std::string &id, const QString &symbol, double amount, bool buy);
    void cancelRFQ(const std::string &id);
 
 protected slots:
@@ -163,25 +165,16 @@ protected slots:
 private slots:
    void onMDUpdate(bs::network::Asset::Type, const QString &security,
       bs::network::MDFields mdFields);
-   void onSendRFQ(const std::string &id, double amount, bool buy);
-   void onCancelRFQ(const std::string &id);
    void onStopRFQ(const std::string &id);
 
 private:
    void clear();
+   void start();
 
 private:
    AutoRFQ *rfq_{ nullptr };
    std::shared_ptr<MDCallbacksQt>            mdCallbacks_;
-
-   std::unordered_map<std::string, QObject*> rfqObjs_;
-
-   struct MDInfo {
-      double   bidPrice;
-      double   askPrice;
-      double   lastPrice;
-   };
-   std::unordered_map<std::string, MDInfo>  mdInfo_;
+   RFQScript * rfqObj_{ nullptr };
 };
 
 
@@ -195,6 +188,7 @@ public:
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
    void setRunningThread(QThread *thread) { script_->setRunningThread(thread); }
+   void reload(const QString &filename) { script_->reload(filename); }
 
 signals:
    void init(const QString &fileName);
@@ -239,14 +233,14 @@ public:
       QObject *parent);
    ~RFQScriptRunner() noexcept override;
 
-   void submitRFQ(const std::string &id, const QString &symbol, double amount
-      , bool buy);
+   void start(const QString &file);
+   void suspend();
    void rfqAccepted(const std::string &id);
    void rfqCancelled(const std::string &id);
    void rfqExpired(const std::string &id);
 
 signals:
-   void sendRFQ(const std::string &id);
+   void sendRFQ(const std::string &id, const QString &symbol, double amount, bool buy);
    void cancelRFQ(const std::string &id);
 };
 

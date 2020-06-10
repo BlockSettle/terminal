@@ -8,35 +8,37 @@
 **********************************************************************************
 
 */
-#ifndef DEALING_SETTINGS_PAGE_H
-#define DEALING_SETTINGS_PAGE_H
+#ifndef API_SETTINGS_PAGE_H
+#define API_SETTINGS_PAGE_H
 
 #include <memory>
 #include "ConfigDialog.h"
 
 namespace Ui {
-   class DealingSettingsPage;
-};
+   class APISettingsPage;
+}
+class AutoRFQ;
 
-class ApplicationSettings;
-class AssetManager;
-class SecuritiesModel;
-
-class DealingSettingsPage : public SettingsPage
+class APISettingsPage : public SettingsPage
 {
 public:
-   DealingSettingsPage(QWidget* parent = nullptr);
-   ~DealingSettingsPage() override;
+   APISettingsPage(QWidget* parent = nullptr);
+   ~APISettingsPage() override;
 
    void display() override;
    void reset() override;
    void apply() override;
 
 private slots:
-   void onResetCounters();
+   void onRFQSelect();
 
 private:
-   std::unique_ptr<Ui::DealingSettingsPage> ui_;
+   void displayRFQScriptFN();
+
+private:
+   std::unique_ptr<Ui::APISettingsPage> ui_;
+   AutoRFQ *   rfqLoader_{ nullptr };
+   QString     rfqScriptFN_;
 };
 
-#endif // DEALING_SETTINGS_PAGE_H
+#endif // API_SETTINGS_PAGE_H

@@ -1,14 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-
-***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
-* Distributed under the GNU Affero General Public License (AGPL v3)
-* See LICENSE or http://www.gnu.org/licenses/agpl.html
-*
-**********************************************************************************
-
--->
 <ui version="4.0">
  <class>RFQRequestWidget</class>
  <widget class="QWidget" name="RFQRequestWidget">
@@ -273,16 +263,6 @@
         </widget>
        </widget>
       </item>
-      <item>
-       <widget class="AutoSignQuoteWidget" name="widgetAutoRFQ" native="true">
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>100</height>
-         </size>
-        </property>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>
@@ -310,12 +290,6 @@
    <class>RFQTicketXBT</class>
    <extends>QWidget</extends>
    <header>RFQTicketXBT.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>AutoSignQuoteWidget</class>
-   <extends>QWidget</extends>
-   <header>AutoSignQuoteWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
