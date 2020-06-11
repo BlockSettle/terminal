@@ -202,6 +202,8 @@ private:
 
    bool        showUnknownWalletWarning_ = false;
    bool        simpleDialogRequested_ = false;
+
+   bs::XBTAmount importedTxTotalFee_{};
 };
 
 #endif // __CREATE_TRANSACTION_DIALOG_ADVANCED_H__

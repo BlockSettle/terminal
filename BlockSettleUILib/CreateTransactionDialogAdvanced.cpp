@@ -1089,6 +1089,10 @@ void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsi
    if (feeValues.empty()) {
       feeSelectionChanged(0);
    }
+
+   if (!importedTxTotalFee_.isZero()) {
+      SetPredefinedFee(importedTxTotalFee_.GetValue());
+   }
 }
 
 void CreateTransactionDialogAdvanced::SetMinimumFee(float totalFee, float feePerByte)
@@ -1204,7 +1208,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
 
    ui_->pushButtonShowSimple->setEnabled(false);
 
-   const auto &tx = transactions[0];
+   const auto &tx = transactions.at(0);
    if (!tx.serializedTx.empty()) {    // signed TX
       ui_->textEditComment->insertPlainText(QString::fromStdString(tx.comment));
 
@@ -1367,6 +1371,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       thisPtr->ui_->labelBal->hide();
 
       const auto summary = thisPtr->transactionData_->GetTransactionSummary();
+      importedTxTotalFee_ = bs::XBTAmount(tx.fee);
 
       if (tx.change.value) {
          SetFixedChangeAddress(QString::fromStdString(tx.change.address.display()));
