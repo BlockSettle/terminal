@@ -77,8 +77,7 @@ public:
    Q_INVOKABLE void importHwWallet(HwWalletWrapper walletInfo, const QJSValue &jsCallback);
 
    Q_INVOKABLE void exportWatchingOnly(const QString &walletId
-      , const QString &filePath, bs::wallet::QPasswordData *passwordData
-      , const QJSValue &jsCallback);
+      , const QString &filePath, const QJSValue &jsCallback);
 
    Q_INVOKABLE bool backupPrivateKey(const QString &walletId
       , QString fileName, bool isPrintable, bs::wallet::QPasswordData *passwordData

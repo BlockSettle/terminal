@@ -89,8 +89,6 @@ public:
       , const std::function<void(bs::error::ErrorCode result)> &);
    void signOfflineTxRequest(const bs::core::wallet::TXSignRequest &, const SecureBinaryData &password
       , const std::function<void(bs::error::ErrorCode result, const BinaryData &)> &);
-   void createWatchingOnlyWallet(const QString &walletId, const SecureBinaryData &password
-      , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &);
    void getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password
       , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &
       , Blocksettle::Communication::signer::PacketType pt = Blocksettle::Communication::signer::GetDecryptedNodeType);

@@ -20,6 +20,7 @@
 #include "HeadlessContainerListener.h"
 #include "OfflineSigner.h"
 #include "ProtobufHeadlessUtils.h"
+#include "ScopeGuard.h"
 #include "ServerConnection.h"
 #include "Settings/HeadlessSettings.h"
 #include "StringUtils.h"
@@ -209,7 +210,6 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
    case signer::SyncWalletType:
       rc = onSyncWallet(packet.data(), packet.id());
       break;
-   case signer::CreateWOType:
    case signer::GetDecryptedNodeType:
       rc = onGetDecryptedNode(packet.data(), packet.id());
       break;
@@ -898,10 +898,22 @@ bool SignerAdapterListener::onExportWoWallet(const std::string &data, bs::signer
       return false;
    }
 
+   bool isForked = false;
    if (!woWallet->isWatchingOnly()) {
-      SPDLOG_LOGGER_ERROR(logger_, "not a WO wallet: {}", request.rootwalletid());
-      return false;
+      woWallet = woWallet->createWatchingOnly();
+      if (!woWallet) {
+         SPDLOG_LOGGER_ERROR(logger_, "forking as WO wallet failed: {}", request.rootwalletid());
+         return false;
+      }
+      isForked = true;
    }
+
+   auto eraseFile = ScopedGuard([isForked, woWallet] {
+      if (isForked) {
+         // Remove forked WO file from wallets dir
+         woWallet->eraseFile();
+      }
+   });
 
    std::ifstream file(woWallet->getFileName(), std::ios::in | std::ios::binary | std::ios::ate);
    if (!file.is_open()) {
