@@ -174,6 +174,7 @@ TEST_F(TestWebSocket, Basic)
    auto server = std::make_shared<WsServerConnection>(StaticLogger::loggerPtr, serverParams);
 
    WsDataConnectionParams clientParams;
+   clientParams.useSsl = false;
    auto client = std::make_shared<WsDataConnection>(StaticLogger::loggerPtr, clientParams);
 
    doTest(std::move(server), std::move(client), kTestTcpHost, kTestTcpPort, kTestTcpHost, kTestTcpPort);
@@ -193,6 +194,7 @@ TEST_F(TestWebSocket, Router)
    auto server = std::make_shared<RouterServerConnection>(StaticLogger::loggerPtr, routerServerParams);
 
    WsDataConnectionParams clientParams;
+   clientParams.useSsl = false;
    auto client = std::make_shared<WsDataConnection>(StaticLogger::loggerPtr, clientParams);
 
    // RouterServerConnection ignores host and port used to bind
