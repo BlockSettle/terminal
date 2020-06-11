@@ -2028,11 +2028,11 @@ void BSTerminalMainWindow::InitWidgets()
 
    const auto aqScriptRunner = new AQScriptRunner(quoteProvider, signContainer_
       , mdCallbacks_, assetManager_, logger, nullptr);
-   autoSignQuoteProvider_ = std::make_shared<AutoSignScriptProvider>(logger
+   autoSignQuoteProvider_ = std::make_shared<AutoSignAQProvider>(logger
       , aqScriptRunner, applicationSettings_, signContainer_, celerConnection_);
 
    const auto rfqScriptRunner = new RFQScriptRunner(mdCallbacks_, logger, nullptr);
-   autoSignRFQProvider_ = std::make_shared<AutoSignScriptProvider>(logger
+   autoSignRFQProvider_ = std::make_shared<AutoSignRFQProvider>(logger
       , rfqScriptRunner, applicationSettings_, signContainer_, celerConnection_);
 
    auto dialogManager = std::make_shared<DialogManager>(this);

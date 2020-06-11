@@ -129,6 +129,9 @@ public slots:
 private slots:
    void onConnectedToCeler();
    void onDisconnectedFromCeler();
+   void onRFQAccepted(const std::string &id);
+   void onRFQExpired(const std::string &id);
+   void onRFQCancelled(const std::string &id);
 
 public slots:
    void forceCheckCondition();
@@ -147,7 +150,8 @@ private:
    std::shared_ptr<WalletSignerContainer>    signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<ApplicationSettings> appSettings_;
-   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
+   std::shared_ptr<AutoSignScriptProvider>      autoSignProvider_;
+   std::shared_ptr<bs::UTXOReservationManager>  utxoReservationManager_;
 
    std::shared_ptr<RfqStorage> rfqStorage_;
 
