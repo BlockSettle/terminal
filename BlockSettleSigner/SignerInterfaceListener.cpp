@@ -142,7 +142,6 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::ExportWoWalletType:
       onExportWO(packet.data(), packet.id());
       break;
-   case signer::CreateWOType:
    case signer::GetDecryptedNodeType:
       onDecryptedKey(packet.data(), packet.id());
       break;
