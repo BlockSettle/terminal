@@ -106,6 +106,12 @@ BSWalletHandlerDialog {
             acceptAnimated();
         }
         onCancelledOnDevice: rejectAnimated()
+        onInvalidPin: {
+            var dlg = JsHelper.messageBox(BSMessageBox.Type.Critical, "Invalid PIN", "Please try again")
+            dlg.bsAccepted.connect(function(){
+                hwDeviceManager.signTX(passwordDialogData.TxRequest)
+            })
+        }
         onOperationFailed: showWalletError(reason)
     }
 

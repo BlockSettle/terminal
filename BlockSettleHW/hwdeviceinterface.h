@@ -64,6 +64,7 @@ signals:
    void requestPinMatrix();
    void requestHWPass(bool allowedOnDevice);
    void cancelledOnDevice();
+   void invalidPin();
 };
 
 #endif // HWDEVICEABSTRACT_H
