@@ -311,17 +311,25 @@ void TrezorDevice::handleMessage(const MessageData& data)
          }
          sendTxMessage(QString::fromStdString(failure.message()));
          resetCaches();
-         emit operationFailed(QString::fromStdString(failure.message()));
-         if (failure.code() == common::Failure_FailureType_Failure_ActionCancelled) {
-            emit cancelledOnDevice();
+
+         switch (failure.code()) {
+            case common::Failure_FailureType_Failure_ActionCancelled:
+               emit cancelledOnDevice();
+               break;
+            case common::Failure_FailureType_Failure_PinInvalid:
+               emit invalidPin();
+               break;
+            default:
+               emit operationFailed(QString::fromStdString(failure.message()));
+               break;
          }
       }
       break;
    case MessageType_Features:
       {
          if (parseResponse(features_, data)) {
-            connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage Features, model: '{}' - {}.{}.{} ({})"
-               , features_.model(), features_.major_version(), features_.minor_version(), features_.patch_version(), features_.revision());
+            connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage Features, model: '{}' - {}.{}.{}"
+               , features_.model(), features_.major_version(), features_.minor_version(), features_.patch_version());
             // + getJSONReadableMessage(features_)); 
          }
       }

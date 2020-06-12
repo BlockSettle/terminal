@@ -238,6 +238,8 @@ void HwDeviceManager::signTX(QVariant reqTX)
       this, &HwDeviceManager::cancelledOnDevice, Qt::UniqueConnection);
    connect(device, &HwDeviceInterface::operationFailed,
       this, &HwDeviceManager::deviceTxStatusChanged, Qt::UniqueConnection);
+   connect(device, &HwDeviceInterface::invalidPin,
+      this, &HwDeviceManager::invalidPin, Qt::UniqueConnection);
    connect(device, &HwDeviceInterface::requestForRescan,
       this, [this]() {
       auto deviceInfo = model_->getDevice(0);
