@@ -1536,6 +1536,10 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    connect(bsClient_.get(), &BsClient::accountStateChanged, this, [this](bs::network::UserType userType, bool enabled) {
       onAccountTypeChanged(userType, enabled);
    });
+
+   connect(bsClient_.get(), &BsClient::tradingStatusChanged, this, [this](bool tradingEnabled) {
+      NotificationCenter::notify(tradingEnabled ? bs::ui::NotifyType::TradingEnabledOnPB : bs::ui::NotifyType::TradingDisabledOnPB, {});
+   });
 }
 
 void BSTerminalMainWindow::onLogout()
