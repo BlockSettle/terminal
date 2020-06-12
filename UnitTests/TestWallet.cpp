@@ -1743,7 +1743,9 @@ TEST_F(TestWallet, MultipleKeys)
       bs::core::WalletPasswordScoped lock(wallet, pd1.password);
       privKey = wallet->getDecryptedRootXpriv();
       ASSERT_FALSE(privKey.empty());
-      wallet->addPassword(pd2);
+
+      bool result = wallet->addPassword(pd2);
+      ASSERT_TRUE(result);
    }
    {
       bs::core::WalletPasswordScoped lock(wallet, pd2.password);
@@ -1751,10 +1753,131 @@ TEST_F(TestWallet, MultipleKeys)
       EXPECT_EQ(privKey, privKey2);
    }
 
-   EXPECT_EQ(wallet->encryptionKeys().size(), 2);
-   EXPECT_EQ(wallet->encryptionTypes().size(), 2);
-   EXPECT_EQ(wallet->encryptionRank().n, 2);
-   EXPECT_EQ(wallet->encryptionKeys()[1], pd2.metaData.encKey);
+   ASSERT_EQ(wallet->encryptionKeys().size(), 2);
+   ASSERT_EQ(wallet->encryptionTypes().size(), 2);
+   ASSERT_EQ(wallet->encryptionRank().n, 2);
+   ASSERT_EQ(wallet->encryptionKeys()[1], pd2.metaData.encKey);
+}
+
+TEST_F(TestWallet, RemoveAuthEid)
+{
+   const auto authEidKey1 = CryptoPRNG::generateRandom(32);
+   const auto authEidKey2 = CryptoPRNG::generateRandom(32);
+   const auto authEidKey3 = CryptoPRNG::generateRandom(32);
+   const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("test seed"), NetworkType::TestNet };
+   const bs::wallet::PasswordData pd1{ authEidKey1, { bs::wallet::EncryptionType::Auth, BinaryData::fromString("test@example.com:1NhzmQEQOyIx/DHqRj7zULPomE65/97Bjv0AlykbEzVV:Phone1") } };
+   const bs::wallet::PasswordData pd2{ authEidKey2, { bs::wallet::EncryptionType::Auth, BinaryData::fromString("test@example.com:KJd8AxATUCQdCOZLEmYz3Y1PllRY4XxnD+LWxsSaOauv:Phone2") } };
+   const bs::wallet::PasswordData pd3{ authEidKey3, { bs::wallet::EncryptionType::Auth, BinaryData::fromString("test@example.com:KCj08HSOR5rooqTGjoJbISun9McTeLNfFGv5tMPKPjJW:Phone3") } };
+   auto wallet = std::make_shared<bs::core::hd::Wallet>("test1", "", seed, pd1, "./homedir"
+      , StaticLogger::loggerPtr);
+   ASSERT_NE(wallet, nullptr);
+
+   SecureBinaryData privKey;
+   {
+      bs::core::WalletPasswordScoped lock(wallet, pd1.password);
+      ASSERT_NO_THROW(wallet->getDecryptedRootXpriv());
+      privKey = wallet->getDecryptedRootXpriv();
+      ASSERT_FALSE(privKey.empty());
+
+      bool result = wallet->addPassword(pd2);
+      ASSERT_TRUE(result);
+
+      result = wallet->addPassword(pd3);
+      ASSERT_TRUE(result);
+   }
+
+   {
+      bs::core::WalletPasswordScoped lock(wallet, pd1.password);
+      ASSERT_NO_THROW(wallet->getDecryptedRootXpriv());
+      ASSERT_EQ(wallet->getDecryptedRootXpriv(), privKey);
+   }
+
+   {
+      bs::core::WalletPasswordScoped lock(wallet, pd2.password);
+      ASSERT_NO_THROW(wallet->getDecryptedRootXpriv());
+      ASSERT_EQ(wallet->getDecryptedRootXpriv(), privKey);
+   }
+
+   {
+      bs::core::WalletPasswordScoped lock(wallet, pd3.password);
+      ASSERT_NO_THROW(wallet->getDecryptedRootXpriv());
+      ASSERT_EQ(wallet->getDecryptedRootXpriv(), privKey);
+   }
+
+   ASSERT_EQ(wallet->encryptionKeys().size(), 3);
+   ASSERT_EQ(wallet->encryptionTypes().size(), 1);
+   ASSERT_EQ(wallet->encryptionRank().m, 1);
+   ASSERT_EQ(wallet->encryptionRank().n, 3);
+   ASSERT_EQ(wallet->encryptionKeys()[0], pd1.metaData.encKey);
+   ASSERT_EQ(wallet->encryptionKeys()[1], pd2.metaData.encKey);
+   ASSERT_EQ(wallet->encryptionKeys()[2], pd3.metaData.encKey);
+
+   {
+      // Remove one newly added password
+      bs::core::WalletPasswordScoped lock(wallet, pd1.password);
+      // FIXME: This will remove pd1 but we need to remove pd3 here
+      bool result = wallet->removePassword(pd3.metaData);
+      ASSERT_TRUE(result);
+   }
+
+   ASSERT_EQ(wallet->encryptionKeys().size(), 2);
+   ASSERT_EQ(wallet->encryptionTypes().size(), 1);
+   ASSERT_EQ(wallet->encryptionRank().m, 1);
+   ASSERT_EQ(wallet->encryptionRank().n, 2);
+   ASSERT_EQ(wallet->encryptionKeys()[0], pd1.metaData.encKey);
+   ASSERT_EQ(wallet->encryptionKeys()[1], pd2.metaData.encKey);
+
+   {
+      // Make sure remaining passwords still work
+      bs::core::WalletPasswordScoped lock(wallet, pd2.password);
+      ASSERT_NO_THROW(wallet->getDecryptedRootXpriv());
+      ASSERT_FALSE(wallet->getDecryptedRootXpriv().empty());
+   }
+
+   {
+      // Make sure remaining passwords still work
+      bs::core::WalletPasswordScoped lock(wallet, pd1.password);
+      ASSERT_NO_THROW(wallet->getDecryptedRootXpriv());
+      ASSERT_FALSE(wallet->getDecryptedRootXpriv().empty());
+   }
+
+   {
+      // Make sure removed password does not work
+      bs::core::WalletPasswordScoped lock(wallet, pd3.password);
+      ASSERT_THROW(wallet->getDecryptedRootXpriv(), std::runtime_error);
+   }
+
+   {
+      // Remove one more added password
+      bs::core::WalletPasswordScoped lock(wallet, pd2.password);
+      bool result = wallet->removePassword(pd1.metaData);
+      ASSERT_TRUE(result);
+   }
+
+   ASSERT_EQ(wallet->encryptionKeys().size(), 1);
+   ASSERT_EQ(wallet->encryptionTypes().size(), 1);
+   ASSERT_EQ(wallet->encryptionRank().m, 1);
+   ASSERT_EQ(wallet->encryptionRank().n, 1);
+   ASSERT_EQ(wallet->encryptionKeys()[0], pd2.metaData.encKey);
+
+   {
+      // Make sure remaining passwords still work
+      bs::core::WalletPasswordScoped lock(wallet, pd2.password);
+      ASSERT_NO_THROW(wallet->getDecryptedRootXpriv());
+      ASSERT_FALSE(wallet->getDecryptedRootXpriv().empty());
+   }
+
+   {
+      // Make sure removed password does not work
+      bs::core::WalletPasswordScoped lock(wallet, pd3.password);
+      ASSERT_THROW(wallet->getDecryptedRootXpriv(), std::runtime_error);
+   }
+
+   {
+      // Make sure removed password does not work
+      bs::core::WalletPasswordScoped lock(wallet, pd1.password);
+      ASSERT_THROW(wallet->getDecryptedRootXpriv(), std::runtime_error);
+   }
 }
 
 TEST_F(TestWallet, TxIdNativeSegwit)
