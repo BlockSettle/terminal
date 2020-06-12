@@ -75,6 +75,7 @@ signals:
    void isScanningChanged();
    void operationFailed(QString reason);
    void cancelledOnDevice();
+   void invalidPin();
 
 private:
    void setScanningFlag(bool isScanning);
