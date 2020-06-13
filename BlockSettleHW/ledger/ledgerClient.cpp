@@ -81,6 +81,12 @@ void LedgerClient::scanDevices(AsyncCallBack&& cb)
 {
    availableDevices_.clear();
 
+   HidDeviceInfo hidDeviceInfo;
+   hidDeviceInfo.productString_ = QStringLiteral("product1");
+   hidDeviceInfo.manufacturerString_ = QStringLiteral("manufacturer1");
+   auto device = new LedgerDevice{ std::move(hidDeviceInfo), testNet_, walletManager_, logger_, this };
+   availableDevices_.push_back({ device });
+
    hid_device_info* info = hid_enumerate(0, 0);
    for (; info; info = info->next) {
       if (info->vendor_id == Ledger::HID_VENDOR_ID &&

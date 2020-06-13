@@ -20,7 +20,41 @@
 #include "QByteArray"
 #include "QDataStream"
 
+#include <arpa/inet.h>
+
 namespace {
+
+   int socket_ = 0;
+
+   int sendApduEmu(hid_device* dongle, const QByteArray& command) {
+      if (socket_ == 0) {
+         socket_ = socket(AF_INET, SOCK_STREAM, 0);
+         struct sockaddr_in serv_addr;
+         serv_addr.sin_family = AF_INET;
+         serv_addr.sin_port = htons(9999);
+         inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr);
+         connect(socket_, reinterpret_cast<sockaddr*>(&serv_addr), sizeof(serv_addr));
+      }
+
+      uint32_t size = htonl(command.size());
+      send(socket_, &size, sizeof(size), 0);
+      int result = send(socket_, command.data(), command.size(), 0);
+      return result;
+   }
+
+   uint16_t receiveApduResultEmu(hid_device* dongle, QByteArray& response) {
+      uint32_t size;
+      recv(socket_, &size, sizeof(size), 0);
+      size = ntohl(size);
+      assert(size < 16*1024);
+      response.resize(size);
+      recv(socket_, response.data(), size, 0);
+      uint16_t resultCode;
+      recv(socket_, &resultCode, sizeof(resultCode), 0);
+      resultCode = ntohs(resultCode);
+      return resultCode;
+   }
+
    int sendApdu(hid_device* dongle, const QByteArray& command) {
       int result = 0;
       QVector<QByteArray> chunks;
@@ -146,7 +180,7 @@ DeviceKey LedgerDevice::key() const
       auto importedWallets = walletManager_->getHwWallets(
          bs::wallet::HardwareEncKey::WalletType::Ledger, {});
 
-      for (const auto imported : importedWallets) {
+      for (const auto &imported : importedWallets) {
          if (expectedWalletId == imported) {
             walletId = QString::fromStdString(expectedWalletId);
             break;
@@ -1091,6 +1125,8 @@ void LedgerCommandThread::debugPrintLegacyResult(const QByteArray& responseSigne
 
 bool LedgerCommandThread::initDevice()
 {
+   return true;
+
    if (hid_init() < 0) {
       logger_->info(
          "[LedgerCommandThread] getPublicKey - Cannot init hid.");
@@ -1129,7 +1165,7 @@ bool LedgerCommandThread::exchangeData(const QByteArray& input,
 bool LedgerCommandThread::writeData(const QByteArray& input, std::string&& logHeader)
 {
    logger_->debug(logHeader + " - >>> " + input.toHex().toStdString());
-   if (sendApdu(dongle_, input) < 0) {
+   if (sendApduEmu(dongle_, input) < 0) {
       logger_->debug(
          logHeader + " - Cannot write to device.");
       return false;
@@ -1140,7 +1176,7 @@ bool LedgerCommandThread::writeData(const QByteArray& input, std::string&& logHe
 
 bool LedgerCommandThread::readData(QByteArray& output, std::string&& logHeader)
 {
-   auto res = receiveApduResult(dongle_, output);
+   auto res = receiveApduResultEmu(dongle_, output);
    if (res != Ledger::SW_OK) {
       logger_->debug(
          logHeader + " - Cannot read from device. APDU error code : "
