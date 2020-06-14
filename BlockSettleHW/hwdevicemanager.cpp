@@ -199,31 +199,40 @@ void HwDeviceManager::signTX(QVariant reqTX)
 
    auto signReq = bs::signer::pbTxRequestToCore(pbSignReq);
 
-   device->signTX(signReq, [this, signReq](QVariant&& data) {
+   device->signTX(signReq, [this, signReq, device](QVariant&& data) {
       assert(data.canConvert<HWSignedTx>());
       auto tx = data.value<HWSignedTx>();
 
-      try {
-         std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
-         for (const auto &utxo : signReq.inputs) {
-            auto& idMap = utxoMap[utxo.getTxHash()];
-            idMap.emplace(utxo.getTxOutIndex(), utxo);
+      if (device && device->key().type_ == DeviceType::HWTrezor) {
+         // According to architecture, Trezor allow us to sign tx with incorrect 
+         // passphrase, so let's check that the final tx is correct. In Ledger case
+         // this situation is impossible, since the wallets with different passphrase will be treated
+         // as different devices, which will be verified in sign part.
+         try {
+            std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
+            for (const auto &utxo : signReq.inputs) {
+               auto& idMap = utxoMap[utxo.getTxHash()];
+               idMap.emplace(utxo.getTxOutIndex(), utxo);
+            }
+            unsigned flags = SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_SEGWIT | SCRIPT_VERIFY_P2SH_SHA256;
+            bool validSign = Signer::verify(SecureBinaryData::fromString(tx.signedTx)
+               , utxoMap, flags, true).isValid();
+            if (!validSign) {
+               SPDLOG_LOGGER_ERROR(logger_, "sign verification failed");
+               releaseConnection();
+               emit operationFailed(tr("Signing failed. Please ensure you type the correct passphrase."));
+               return;
+            }
          }
-         unsigned flags = SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_SEGWIT | SCRIPT_VERIFY_P2SH_SHA256;
-         bool validSign = Signer::verify(SecureBinaryData::fromString(tx.signedTx)
-            , utxoMap, flags, true).isValid();
-         if (!validSign) {
-            SPDLOG_LOGGER_ERROR(logger_, "sign verification failed");
+         catch (const std::exception &e) {
+            SPDLOG_LOGGER_ERROR(logger_, "sign verification failed: {}", e.what());
             releaseConnection();
             emit operationFailed(tr("Signing failed. Please ensure you type the correct passphrase."));
             return;
          }
-      } catch (const std::exception &e) {
-         SPDLOG_LOGGER_ERROR(logger_, "sign verification failed: {}", e.what());
-         releaseConnection();
-         emit operationFailed(tr("Signing failed. Please ensure you type the correct passphrase."));
-         return;
       }
+
+
 
       txSigned({ BinaryData::fromString(tx.signedTx) });
    });
