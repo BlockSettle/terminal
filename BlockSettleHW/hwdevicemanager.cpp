@@ -73,9 +73,9 @@ void HwDeviceManager::requestPublicKey(int deviceIndex)
    });
 
    connect(device, &HwDeviceInterface::requestPinMatrix,
-      this, &HwDeviceManager::requestPinMatrix, Qt::UniqueConnection);
+      this, &HwDeviceManager::onRequestPinMatrix, Qt::UniqueConnection);
    connect(device, &HwDeviceInterface::requestHWPass,
-      this, &HwDeviceManager::requestHWPass, Qt::UniqueConnection);
+      this, &HwDeviceManager::onRequestHWPass, Qt::UniqueConnection);
    connect(device, &HwDeviceInterface::operationFailed,
       this, &HwDeviceManager::operationFailed, Qt::UniqueConnection);
 }
@@ -229,9 +229,9 @@ void HwDeviceManager::signTX(QVariant reqTX)
    });
 
    connect(device, &HwDeviceInterface::requestPinMatrix,
-      this, &HwDeviceManager::requestPinMatrix, Qt::UniqueConnection);
+      this, &HwDeviceManager::onRequestPinMatrix, Qt::UniqueConnection);
    connect(device, &HwDeviceInterface::requestHWPass,
-      this, &HwDeviceManager::requestHWPass, Qt::UniqueConnection);
+      this, &HwDeviceManager::onRequestHWPass, Qt::UniqueConnection);
    connect(device, &HwDeviceInterface::deviceTxStatusChanged,
       this, &HwDeviceManager::deviceTxStatusChanged, Qt::UniqueConnection);
    connect(device, &HwDeviceInterface::cancelledOnDevice,
@@ -295,13 +295,37 @@ void HwDeviceManager::releaseConnection(AsyncCallBack&& cb/*= nullptr*/)
    }
 }
 
-void HwDeviceManager::scanningDone()
+void HwDeviceManager::scanningDone(bool initDevices /* = true */)
 {
    setScanningFlag(false);
    auto allDevices = ledgerClient_->deviceKeys();
    allDevices.append(trezorClient_->deviceKeys());
    model_->resetModel(std::move(allDevices));
    emit devicesChanged();
+
+   if (!initDevices) {
+      return;
+   }
+
+   for (const auto& key : trezorClient_->deviceKeys()) {
+      auto device = trezorClient_->getTrezorDevice(key.deviceId_);
+      if (!device->inited()) {
+         connect(device, &HwDeviceInterface::requestPinMatrix,
+            this, &HwDeviceManager::onRequestPinMatrix, Qt::UniqueConnection);
+         connect(device, &HwDeviceInterface::requestHWPass,
+            this, &HwDeviceManager::onRequestHWPass, Qt::UniqueConnection);
+         connect(device, &HwDeviceInterface::operationFailed,
+            this, &HwDeviceManager::operationFailed, Qt::UniqueConnection);
+
+         device->retrieveXPubRoot([caller = QPointer<HwDeviceManager>(this)]() {
+            if (!caller) {
+               return;
+            }
+
+            caller->scanningDone(false);
+         });
+      }
+   }
 }
 
 QPointer<HwDeviceInterface> HwDeviceManager::getDevice(DeviceKey key)
@@ -321,6 +345,26 @@ QPointer<HwDeviceInterface> HwDeviceManager::getDevice(DeviceKey key)
    }
 
    return nullptr;
+}
+
+void HwDeviceManager::onRequestPinMatrix()
+{
+   auto sender = qobject_cast<HwDeviceInterface *>(QObject::sender());
+   int index = model_->getDeviceIndex(sender->key());
+
+   if (index >= 0) {
+      emit requestPinMatrix(index);
+   }
+}
+
+void HwDeviceManager::onRequestHWPass(bool allowedOnDevice)
+{
+   auto sender = qobject_cast<HwDeviceInterface *>(QObject::sender());
+   int index = model_->getDeviceIndex(sender->key());
+
+   if (index >= 0) {
+      emit requestHWPass(index, allowedOnDevice);
+   }
 }
 
 void HwDeviceManager::setScanningFlag(bool isScanning)

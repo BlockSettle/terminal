@@ -88,9 +88,9 @@ BSWalletHandlerDialog {
 
     Connections {
         target: hwDeviceManager
-        onRequestPinMatrix: JsHelper.showHwPinMatrix(0);
+        onRequestPinMatrix: JsHelper.showHwPinMatrix(deviceIndex);
         onDeviceReady: hwDeviceManager.signTX(passwordDialogData.TxRequest);
-        onRequestHWPass: JsHelper.showHwPassphrase(0, allowedOnDevice);
+        onRequestHWPass: JsHelper.showHwPassphrase(deviceIndex, allowedOnDevice);
         onDeviceNotFound: {
             hwDeviceStatus = "Searching for device"
             let lastDeviceError = hwDeviceManager.lastDeviceError(0);
