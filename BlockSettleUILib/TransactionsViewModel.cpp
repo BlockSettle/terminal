@@ -328,8 +328,11 @@ void TransactionsViewModel::loadAllWallets(bool onNewBlock)
          loadLedgerEntries(onNewBlock);
       }
       else {
+         SPDLOG_LOGGER_DEBUG(logger_, "create new ledger delegate");
          armory_->getWalletsLedgerDelegate(cbWalletsLD);
       }
+   } else {
+      SPDLOG_LOGGER_WARN(logger_, "initial load is not completed yet");
    }
 }
 
@@ -905,6 +908,7 @@ void TransactionsViewModel::loadLedgerEntries(bool onNewBlock)
 
          if (inPageCnt == 0) {
             SPDLOG_LOGGER_ERROR(logger, "page count is 0");
+            thisPtr->initialLoadCompleted_ = true;
             return;
          }
 

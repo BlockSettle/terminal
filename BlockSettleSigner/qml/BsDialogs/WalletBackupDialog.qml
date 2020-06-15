@@ -48,6 +48,7 @@ CustomTitleDialogWindow {
                                     || walletInfo.encType === QPasswordData.Hardware
                                     || walletInfo.encType === QPasswordData.Auth
                                     || walletDetailsFrame.password.length
+                                    || !fullBackupMode
 
     property bool fullBackupMode: tabBar.currentIndex === 0
     property bool woBackupAllowed: true
@@ -110,6 +111,7 @@ CustomTitleDialogWindow {
         BSWalletDetailsFrame {
             id: walletDetailsFrame
             Layout.fillHeight: false
+            showPasswordPrompt: fullBackupMode
 
             walletInfo: walletInfo
             inputsWidth: 250
@@ -256,43 +258,33 @@ CustomTitleDialogWindow {
                         }
                     }
 
-                    if (walletInfo.encType === QPasswordData.Password
-                            || walletInfo.encType === QPasswordData.Unencrypted
-                            || walletInfo.encType === QPasswordData.Hardware) {
+                    if (!fullBackupMode) {
+                        walletsProxy.exportWatchingOnly(walletInfo.walletId
+                           , targetFile, exportCallback)
+                        return
+                    }
+
+                    if (walletInfo.encType === QPasswordData.Password) {
                         var passwordData = qmlFactory.createPasswordData()
                         passwordData.textPassword = walletDetailsFrame.password
 
-                        if (fullBackupMode) {
-                            rc = walletsProxy.backupPrivateKey(walletInfo.walletId
-                               , targetFile, isPrintable
-                               , passwordData, exportCallback)
-                            if (! rc) {
-                                JsHelper.messageBox(BSMessageBox.Type.Critical
-                                    , qsTr("Error")
-                                    , qsTr("Wallet export failed")
-                                    , qsTr("Internal error"))
-                            }
-                        }
-                        else {
-                            walletsProxy.exportWatchingOnly(walletInfo.walletId
-                               , targetFile, passwordData
-                               , exportCallback)
+                        var rc = walletsProxy.backupPrivateKey(walletInfo.walletId
+                           , targetFile, isPrintable
+                           , passwordData, exportCallback)
+                        if (!rc) {
+                            JsHelper.messageBox(BSMessageBox.Type.Critical
+                                , qsTr("Error")
+                                , qsTr("Wallet export failed")
+                                , qsTr("Internal error"))
                         }
                     }
                     else if (walletInfo.encType === QPasswordData.Auth) {
                         let authEidMessage = JsHelper.getAuthEidWalletInfo(walletInfo);
                         JsHelper.requesteIdAuth(AutheIDClient.BackupWallet, walletInfo, authEidMessage
                             , function(passwordData){
-                                if (fullBackupMode) {
-                                    walletsProxy.backupPrivateKey(walletInfo.walletId
-                                       , targetFile, isPrintable
-                                       , passwordData, exportCallback)
-                                }
-                                else {
-                                    walletsProxy.exportWatchingOnly(walletInfo.walletId
-                                       , targetFile, passwordData
-                                       , exportCallback)
-                                }
+                                walletsProxy.backupPrivateKey(walletInfo.walletId
+                                   , targetFile, isPrintable
+                                   , passwordData, exportCallback)
                         })
                     }
                 }

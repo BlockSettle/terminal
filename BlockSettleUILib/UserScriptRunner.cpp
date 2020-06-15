@@ -95,6 +95,13 @@ void AQScriptHandler::setWalletsManager(const std::shared_ptr<bs::sync::WalletsM
    }
 }
 
+void AQScriptHandler::reload(const QString &filename)
+{
+   if (aq_) {
+      aq_->load(filename);
+   }
+}
+
 void AQScriptHandler::onQuoteReqNotification(const bs::network::QuoteReqNotification &qrn)
 {
    const auto itAQObj = aqObjs_.find(qrn.quoteRequestId);
@@ -392,8 +399,7 @@ AQScriptRunner::~AQScriptRunner() = default;
 
 
 RFQScriptHandler::RFQScriptHandler(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
-   , UserScriptRunner *runner)
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks)
    : UserScriptHandler(logger)
    , mdCallbacks_(mdCallbacks)
 {
@@ -416,13 +422,25 @@ void RFQScriptHandler::setWalletsManager(const std::shared_ptr<bs::sync::Wallets
    }
 }
 
+void RFQScriptHandler::reload(const QString &filename)
+{
+   if (rfq_) {
+      rfq_->load(filename);
+   }
+}
+
 void RFQScriptHandler::init(const QString &fileName)
 {
    if (fileName.isEmpty()) {
+      emit failedToLoad(fileName, tr("invalid script filename"));
       return;
    }
+   if (rfq_) {
+      start();
+      return;  // already inited
+   }
 
-   rfq_ = new AutoRFQ(logger_, fileName, mdCallbacks_, this);
+   rfq_ = new AutoRFQ(logger_, mdCallbacks_, this);
    if (walletsManager_) {
       rfq_->setWalletsManager(walletsManager_);
    }
@@ -438,9 +456,14 @@ void RFQScriptHandler::init(const QString &fileName)
       emit failedToLoad(fileName, err);
    });
 
-   connect(rfq_, &AutoRFQ::sendRFQ, this, &RFQScriptHandler::onSendRFQ);
-   connect(rfq_, &AutoRFQ::cancelRFQ, this, &RFQScriptHandler::onCancelRFQ);
+   connect(rfq_, &AutoRFQ::sendRFQ, this, &RFQScriptHandler::sendRFQ);
+   connect(rfq_, &AutoRFQ::cancelRFQ, this, &RFQScriptHandler::cancelRFQ);
    connect(rfq_, &AutoRFQ::stopRFQ, this, &RFQScriptHandler::onStopRFQ);
+
+   if (!rfq_->load(fileName)) {
+      emit failedToLoad(fileName, tr("script loading failed"));
+   }
+   start();
 }
 
 void RFQScriptHandler::deinit()
@@ -458,174 +481,85 @@ void RFQScriptHandler::clear()
    if (!rfq_) {
       return;
    }
-
-   for (auto rfq : rfqObjs_) {
-      onCancelRFQ(rfq.first);
-      rfq.second->deleteLater();
+   if (rfqObj_) {
+      rfqObj_->cancelAll();
+      rfqObj_->deleteLater();
+      rfqObj_ = nullptr;
    }
-   rfqObjs_.clear();
 }
 
-void RFQScriptHandler::onMDUpdate(bs::network::Asset::Type, const QString &security,
+void RFQScriptHandler::onMDUpdate(bs::network::Asset::Type at, const QString &security,
    bs::network::MDFields mdFields)
 {
-   const double bid = bs::network::MDField::get(mdFields, bs::network::MDField::PriceBid).value;
-   const double ask = bs::network::MDField::get(mdFields, bs::network::MDField::PriceOffer).value;
-   const double last = bs::network::MDField::get(mdFields, bs::network::MDField::PriceLast).value;
-
-   auto &mdInfo = mdInfo_[security.toStdString()];
-   if (bid > 0) {
-      mdInfo.bidPrice = bid;
+   if (!rfqObj_) {
+      return;
    }
-   if (ask > 0) {
-      mdInfo.askPrice = ask;
-   }
-   if (last > 0) {
-      mdInfo.lastPrice = last;
-   }
-
-   for (auto rfq : rfqObjs_) {
-      const auto &sec = rfq.second->property("security").toString();
-      if (sec.isEmpty() || (security != sec)) {
-         continue;
-      }
-      if (bid > 0) {
-         rfq.second->setProperty("indicBid", bid);
-      }
-      if (ask > 0) {
-         rfq.second->setProperty("indicAsk", ask);
-      }
-      if (last > 0) {
-         rfq.second->setProperty("lastPrice", last);
-      }
-   }
+   rfqObj_->onMDUpdate(at, security, mdFields);
 }
 
-void RFQScriptHandler::submitRFQ(const std::string &id, const QString &symbol
-   , double amount, bool buy)
+void RFQScriptHandler::start()
 {
    if (!rfq_) {
       return;
    }
-   QObject *obj = nullptr;
-   const auto &itRFQ = rfqObjs_.find(id);
-   if (itRFQ == rfqObjs_.end()) {
-      obj = rfq_->instantiate(id, symbol, amount, buy);
-      rfqObjs_[id] = obj;
-      auto rfqObj = qobject_cast<SubmitRFQ *>(obj);
-      if (!rfqObj) {
-         logger_->error("[RFQScriptHandler::submitRFQ] {} has wrong script object", id);
-         emit failedToLoad({}, tr("wrong script for %1").arg(QString::fromStdString(id)));
+   if (!rfqObj_) {
+      auto obj = rfq_->instantiate();
+      if (!obj) {
+         emit failedToLoad({}, tr("failed to instantiate"));
          return;
       }
-      logger_->debug("[RFQScriptHandler::submitRFQ] {}", id);
-      rfqObj->start();
+      rfqObj_ = qobject_cast<RFQScript *>(obj);
+      if (!rfqObj_) {
+         logger_->error("[RFQScriptHandler::start] {} has wrong script object");
+         emit failedToLoad({}, tr("wrong script loaded"));
+         return;
+      }
    }
-   else {
-      logger_->debug("[RFQScriptHandler::submitRFQ] {} already exists", id);
-      obj = itRFQ->second;
-   }
+   logger_->debug("[RFQScriptHandler::start]");
+   rfqObj_->moveToThread(thread_);
+   rfqObj_->start();
+}
 
-   if (!obj) {
-      emit failedToLoad({}, tr("failed to instantiate %1").arg(QString::fromStdString(id)));
-      return;
+void RFQScriptHandler::suspend()
+{
+   if (rfqObj_) {
+      rfqObj_->suspend();
    }
-
-   auto *reqReply = qobject_cast<SubmitRFQ *>(obj);
-   const auto &mdIt = mdInfo_.find(symbol.toStdString());
-   if (mdIt != mdInfo_.end()) {
-      if (mdIt->second.bidPrice > 0) {
-         reqReply->setIndicBid(mdIt->second.bidPrice);
-      }
-      if (mdIt->second.askPrice > 0) {
-         reqReply->setIndicAsk(mdIt->second.askPrice);
-      }
-      if (mdIt->second.lastPrice > 0) {
-         reqReply->setLastPrice(mdIt->second.lastPrice);
-      }
-   }
-   if (thread_) {
-      reqReply->moveToThread(thread_);
-   }
-   reqReply->start();
 }
 
 void RFQScriptHandler::rfqAccepted(const std::string &id)
 {
-   const auto &itRFQ = rfqObjs_.find(id);
-   if (itRFQ == rfqObjs_.end()) {
-      return;
+   if (rfqObj_) {
+      rfqObj_->onAccepted(id);
    }
-   const auto rfq = qobject_cast<SubmitRFQ *>(itRFQ->second);
-   if (rfq) {
-      emit rfq->accepted();
-      rfq->deleteLater();
-   }
-   rfqObjs_.erase(itRFQ);
 }
 
 void RFQScriptHandler::rfqCancelled(const std::string &id)
 {
-   const auto &itRFQ = rfqObjs_.find(id);
-   if (itRFQ == rfqObjs_.end()) {
-      logger_->warn("[RFQScriptHandler::rfqCancelled] failed to find id {}", id);
-      return;
+   if (rfqObj_) {
+      rfqObj_->onCancelled(id);
    }
-   const auto rfq = qobject_cast<SubmitRFQ *>(itRFQ->second);
-   if (rfq) {
-      emit rfq->cancelled();
-      rfq->deleteLater();
-   }
-   rfqObjs_.erase(itRFQ);
 }
 
 void RFQScriptHandler::rfqExpired(const std::string &id)
 {
-   const auto &itRFQ = rfqObjs_.find(id);
-   if (itRFQ == rfqObjs_.end()) {
-      logger_->warn("[RFQScriptHandler::rfqExpired] failed to find id {}", id);
-      return;
+   if (rfqObj_) {
+      rfqObj_->onExpired(id);
    }
-   const auto rfq = qobject_cast<SubmitRFQ *>(itRFQ->second);
-   if (rfq) {
-      emit rfq->expired();
-   }
-}
-
-void RFQScriptHandler::onSendRFQ(const std::string &id, double amount, bool buy)
-{
-   if (rfqObjs_.find(id) == rfqObjs_.end()) {
-      logger_->warn("[RFQScriptHandler::onSendRFQ] id {} not found", id);
-      return;
-   }
-   emit sendRFQ(id);
-}
-
-void RFQScriptHandler::onCancelRFQ(const std::string &id)
-{
-   if (rfqObjs_.find(id) == rfqObjs_.end()) {
-      logger_->warn("[RFQScriptHandler::onCancelRFQ] id {} not found", id);
-      return;
-   }
-   emit cancelRFQ(id);
 }
 
 void RFQScriptHandler::onStopRFQ(const std::string &id)
 {
-   const auto &itRFQ = rfqObjs_.find(id);
-   if (itRFQ == rfqObjs_.end()) {
-      logger_->warn("[RFQScriptHandler::onStopRFQ] failed to find id {}", id);
-      return;
+   if (rfqObj_) {
+      rfqObj_->onCancelled(id);
    }
-   itRFQ->second->deleteLater();
-   rfqObjs_.erase(itRFQ);
 }
 
 
 RFQScriptRunner::RFQScriptRunner(const std::shared_ptr<MDCallbacksQt> &mdCallbacks
    , const std::shared_ptr<spdlog::logger> &logger
    , QObject *parent)
-   : UserScriptRunner(logger, new RFQScriptHandler(logger, mdCallbacks, this), parent)
+   : UserScriptRunner(logger, new RFQScriptHandler(logger, mdCallbacks), parent)
 {
    thread_->setObjectName(QStringLiteral("RFQScriptRunner"));
 
@@ -637,10 +571,14 @@ RFQScriptRunner::RFQScriptRunner(const std::shared_ptr<MDCallbacksQt> &mdCallbac
 
 RFQScriptRunner::~RFQScriptRunner() = default;
 
-void RFQScriptRunner::submitRFQ(const std::string &id, const QString &symbol
-   , double amount, bool buy)
+void RFQScriptRunner::start(const QString &filename)
 {
-   ((RFQScriptHandler *)script_)->submitRFQ(id, symbol, amount, buy);
+   emit init(filename);
+}
+
+void RFQScriptRunner::suspend()
+{
+   ((RFQScriptHandler *)script_)->suspend();
 }
 
 void RFQScriptRunner::rfqAccepted(const std::string &id)

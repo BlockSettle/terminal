@@ -53,10 +53,7 @@ public:
    // operation
    void getPublicKey(AsyncCallBackCall&& cb = nullptr) override;
    void signTX(const bs::core::wallet::TXSignRequest &reqTX, AsyncCallBackCall&& cb = nullptr) override;
-
-   bool inited() {
-      return !xpubRoot_.empty();
-   }
+   void retrieveXPubRoot(AsyncCallBack&& cb) override {} // no special rule for ledger device
 
    bool isBlocked() override {
       return isBlocked_;
@@ -77,8 +74,6 @@ private:
    QPointer<LedgerCommandThread> commandThread_;
    bool isBlocked_{};
    QString lastError_{};
-   
-   std::string xpubRoot_;
 };
 
 class LedgerCommandThread : public QThread

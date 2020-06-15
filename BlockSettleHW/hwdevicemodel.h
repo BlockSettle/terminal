@@ -39,6 +39,7 @@ public:
 
    void resetModel(QVector<DeviceKey>&& deviceKey);
    DeviceKey getDevice(int index);
+   int getDeviceIndex(DeviceKey key);
 
 private:
    QVector<DeviceKey> devices_;

@@ -27,6 +27,7 @@ ColumnLayout {
     property alias passwordInput: passwordInput
     property int inputsWidth
     property var nextFocusItem
+    property bool showPasswordPrompt: true
 
     signal passwordEntered()
 
@@ -81,7 +82,7 @@ ColumnLayout {
 
     CustomHeader {
         text: qsTr("Enter Password")
-        visible: walletInfo.encType === QPasswordData.Password
+        visible: walletInfo.encType === QPasswordData.Password && showPasswordPrompt
         Layout.fillWidth: true
         Layout.preferredHeight: 25
         Layout.topMargin: 5
@@ -94,6 +95,7 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.leftMargin: 10
         Layout.rightMargin: 10
+        visible: showPasswordPrompt
 
         CustomLabel {
             visible: walletInfo.encType === QPasswordData.Password

@@ -99,12 +99,32 @@ TrezorDevice::~TrezorDevice() = default;
 
 DeviceKey TrezorDevice::key() const
 {
+   QString walletId;
+   QString status;
+   if (!xpubRoot_.empty()) {
+      auto expectedWalletId = bs::core::wallet::computeID(
+         BinaryData::fromString(xpubRoot_)).toBinStr();
+
+      auto importedWallets = walletManager_->getHwWallets(
+         bs::wallet::HardwareEncKey::WalletType::Trezor, features_.device_id());
+
+      for (const auto imported : importedWallets) {
+         if (expectedWalletId == imported) {
+            walletId = QString::fromStdString(expectedWalletId);
+            break;
+         }
+      }
+   }
+   else {
+      status = tr("Not initialized");
+   }
+
    return {
       QString::fromStdString(features_.label())
       , QString::fromStdString(features_.device_id())
       , QString::fromStdString(features_.vendor())
-      , {}
-      , {}
+      , walletId
+      , status
       , type()
    };
 }
@@ -120,10 +140,7 @@ void TrezorDevice::init(AsyncCallBack&& cb)
    management::Initialize message;
    message.set_session_id(client_->getSessionId());
 
-   if (cb) {
-      setCallbackNoData(MessageType_Features, std::move(cb));
-   }
-
+   setCallbackNoData(MessageType_Features, std::move(cb));
    makeCall(message);
 }
 
@@ -135,6 +152,7 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
    awaitingWalletInfo_.info_.label = features_.label();
    awaitingWalletInfo_.info_.deviceId = features_.device_id();
    awaitingWalletInfo_.info_.vendor = features_.vendor();
+   awaitingWalletInfo_.info_.xpubRoot = xpubRoot_;
 
    awaitingWalletInfo_.isFirmwareSupported_ = isFirmwareSupported();
    if (!awaitingWalletInfo_.isFirmwareSupported_) {
@@ -190,35 +208,19 @@ void TrezorDevice::getPublicKey(AsyncCallBackCall&& cb)
       makeCall(message);
    };
 
-   AsyncCallBackCall cbRoot = [this, cbNative = std::move(cbNative)](QVariant &&data) mutable {
-      awaitingWalletInfo_.info_.xpubRoot = data.toByteArray().toStdString();
 
-      connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving native segwit public key from device "
-         + features_.label());
-      bitcoin::GetPublicKey message;
-      for (const uint32_t add : getDerivationPath(testNet_, bs::hd::Purpose::Native)) {
-         message.add_address_n(add);
-      }
-
-      if (testNet_) {
-         message.set_coin_name(tesNetCoin);
-      }
-
-      setDataCallback(MessageType_PublicKey, std::move(cbNative));
-      makeCall(message);
-   };
-
-   // Fetching walletId
-   connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving root public key from device "
+   connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving native segwit public key from device "
       + features_.label());
    bitcoin::GetPublicKey message;
-   message.add_address_n(bs::hd::hardFlag);
+   for (const uint32_t add : getDerivationPath(testNet_, bs::hd::Purpose::Native)) {
+      message.add_address_n(add);
+   }
+
    if (testNet_) {
       message.set_coin_name(tesNetCoin);
    }
 
-   // Fetching nested segwit
-   setDataCallback(MessageType_PublicKey, std::move(cbRoot));
+   setDataCallback(MessageType_PublicKey, std::move(cbNative));
    makeCall(message);
 }
 
@@ -285,6 +287,32 @@ void TrezorDevice::signTX(const bs::core::wallet::TXSignRequest &reqTX, AsyncCal
    makeCall(message);
 }
 
+void TrezorDevice::retrieveXPubRoot(AsyncCallBack&& cb)
+{
+   // Fetching walletId
+   connectionManager_->GetLogger()->debug("[TrezorDevice] init - start retrieving root public key from device "
+      + features_.label());
+   bitcoin::GetPublicKey message;
+   message.add_address_n(bs::hd::hardFlag);
+   if (testNet_) {
+      message.set_coin_name(tesNetCoin);
+   }
+
+   auto saveXpubRoot = [caller = QPointer<TrezorDevice>(this), cb = std::move(cb)](QVariant&& data) {
+      if (!caller) {
+         return;
+      }
+
+      caller->xpubRoot_ = data.toByteArray().toStdString();
+      if (cb) {
+         cb();
+      }
+   };
+
+   setDataCallback(MessageType_PublicKey, std::move(saveXpubRoot));
+   makeCall(message);
+}
+
 void TrezorDevice::makeCall(const google::protobuf::Message &msg)
 {
    client_->call(packMessage(msg), [this](QVariant&& answer) {
@@ -311,17 +339,25 @@ void TrezorDevice::handleMessage(const MessageData& data)
          }
          sendTxMessage(QString::fromStdString(failure.message()));
          resetCaches();
-         emit operationFailed(QString::fromStdString(failure.message()));
-         if (failure.code() == common::Failure_FailureType_Failure_ActionCancelled) {
-            emit cancelledOnDevice();
+
+         switch (failure.code()) {
+            case common::Failure_FailureType_Failure_ActionCancelled:
+               emit cancelledOnDevice();
+               break;
+            case common::Failure_FailureType_Failure_PinInvalid:
+               emit invalidPin();
+               break;
+            default:
+               emit operationFailed(QString::fromStdString(failure.message()));
+               break;
          }
       }
       break;
    case MessageType_Features:
       {
          if (parseResponse(features_, data)) {
-            connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage Features, model: '{}' - {}.{}.{} ({})"
-               , features_.model(), features_.major_version(), features_.minor_version(), features_.patch_version(), features_.revision());
+            connectionManager_->GetLogger()->debug("[TrezorDevice] handleMessage Features, model: '{}' - {}.{}.{}"
+               , features_.model(), features_.major_version(), features_.minor_version(), features_.patch_version());
             // + getJSONReadableMessage(features_)); 
          }
       }

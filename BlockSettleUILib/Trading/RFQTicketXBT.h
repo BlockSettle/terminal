@@ -50,7 +50,6 @@ namespace bs {
 class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
-class AutoSignScriptProvider;
 class CCAmountValidator;
 class FXAmountValidator;
 class QuoteProvider;
@@ -73,7 +72,6 @@ public:
       , const std::shared_ptr<QuoteProvider> &quoteProvider
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<AutoSignScriptProvider> &
       , const std::shared_ptr<bs::UTXOReservationManager> &);
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
@@ -116,9 +114,8 @@ public slots:
    void enablePanel();
    void disablePanel();
 
-   void onRFQAccepted(const std::string &id);
-   void onRFQExpired(const std::string &id);
-   void onRFQCancelled(const std::string &id);
+   void onSendRFQ(const std::string &id, const QString &symbol, double amount, bool buy);
+   void onCancelRFQ(const std::string &id);
 
 private slots:
    void updateBalances();
@@ -147,12 +144,6 @@ private slots:
    void onCreateWalletClicked();
 
    void onAuthAddrChanged(int);
-   void onAutoSignStateChanged();
-
-   void onSendRFQ(const std::string &id);
-   void onCancelRFQ(const std::string &id);
-   void onScriptLoaded(const QString &);
-   void onScriptUnloaded();
 
    void onUTXOReservationChanged(const std::string& walletId);
 
@@ -178,6 +169,7 @@ private:
 private:
    void showHelp(const QString& helpText);
    void clearHelp();
+   void sendRFQ(const std::string &id);
 
    void updatePanel();
 
@@ -235,7 +227,6 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
-   std::shared_ptr<AutoSignScriptProvider>      autoSignProvider_;
    std::shared_ptr<bs::UTXOReservationManager>  utxoReservationManager_;
 
    bs::Address authAddr_;
