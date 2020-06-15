@@ -64,10 +64,6 @@ private slots:
    void onAuthMgrError(const QString &details);
    void onAuthMgrInfo(const QString &text);
 
-   void onAuthAddressConfirmationRequired(float validationAmount);
-
-   void ConfirmAuthAddressSubmission();
-
    void onAuthVerifyTxSent();
    void onUpdateSelection(int row);
    void copySelectedToClipboard();

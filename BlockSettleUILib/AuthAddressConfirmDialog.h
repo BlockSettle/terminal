@@ -43,9 +43,8 @@ private slots:
    void onCancelPressed();
 
    void onError(const QString &errorText);
-   void onAuthAddrSubmitError(const QString &address, const QString &error);
-   void onAuthConfirmSubmitError(const QString &address, const QString &error);
-   void onAuthAddrSubmitSuccess(const QString &address);
+   void onAuthAddressSubmitError(const QString &address, const QString &error);
+   void onAuthAddressSubmitSuccess(const QString &address);
    void onAuthAddressSubmitCancelled(const QString &address);
 
 private:
