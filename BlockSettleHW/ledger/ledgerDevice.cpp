@@ -1091,7 +1091,7 @@ void LedgerCommandThread::debugPrintLegacyResult(const QByteArray& responseSigne
 
 bool LedgerCommandThread::initDevice()
 {
-   if (hid_init() < 0) {
+   if (hid_init() < 0 || hidDeviceInfo_.serialNumber_.isEmpty()) {
       logger_->info(
          "[LedgerCommandThread] getPublicKey - Cannot init hid.");
       return false;
@@ -1101,12 +1101,7 @@ bool LedgerCommandThread::initDevice()
    hidDeviceInfo_.serialNumber_.toWCharArray(serNumb.get());
    serNumb.get()[hidDeviceInfo_.serialNumber_.length()] = 0x00;
    dongle_ = nullptr;
-   try {
-      dongle_ = hid_open(static_cast<ushort>(Ledger::HID_VENDOR_ID), static_cast<ushort>(hidDeviceInfo_.productId_), serNumb.get());
-   }
-   catch (...) {
-      dongle_ = nullptr;
-   }
+   dongle_ = hid_open(static_cast<ushort>(Ledger::HID_VENDOR_ID), static_cast<ushort>(hidDeviceInfo_.productId_), serNumb.get());
 
    return dongle_ != nullptr;
 }
