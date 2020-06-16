@@ -85,6 +85,7 @@ private:
    void setScanningFlag(bool isScanning);
    void releaseConnection(AsyncCallBack&& cb = nullptr);
    void scanningDone(bool initDevices = true);
+   void connectDevice(QPointer<HwDeviceInterface> device);
 
    QPointer<HwDeviceInterface> getDevice(DeviceKey key);
 
@@ -100,6 +101,7 @@ public:
    bool isScanning_{};
    bool isSigning_{};
    QString lastOperationError_;
+   QString lastUsedTrezorWallet_;
 };
 
 #endif // HWDEVICESCANNER_H

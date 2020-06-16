@@ -72,12 +72,7 @@ void HwDeviceManager::requestPublicKey(int deviceIndex)
       emit publicKeyReady(data);
    });
 
-   connect(device, &HwDeviceInterface::requestPinMatrix,
-      this, &HwDeviceManager::onRequestPinMatrix, Qt::UniqueConnection);
-   connect(device, &HwDeviceInterface::requestHWPass,
-      this, &HwDeviceManager::onRequestHWPass, Qt::UniqueConnection);
-   connect(device, &HwDeviceInterface::operationFailed,
-      this, &HwDeviceManager::operationFailed, Qt::UniqueConnection);
+   connectDevice(device);
 }
 
 void HwDeviceManager::setMatrixPin(int deviceIndex, QString pin)
@@ -155,7 +150,8 @@ void HwDeviceManager::prepareHwDeviceForSign(QString walletId)
    }
    else if (bs::wallet::HardwareEncKey::WalletType::Trezor == hwEncType.deviceType()) {
       auto deviceId = hwEncType.deviceId();
-      trezorClient_->initConnection(QString::fromStdString(deviceId), [this](QVariant&& deviceId) {
+      const bool cleanPrevSession = (lastUsedTrezorWallet_ != walletId);
+      trezorClient_->initConnection(QString::fromStdString(deviceId), cleanPrevSession, [this](QVariant&& deviceId) {
          DeviceKey deviceKey;
 
          const auto id = deviceId.toString();
@@ -177,9 +173,8 @@ void HwDeviceManager::prepareHwDeviceForSign(QString walletId)
             emit deviceReady(id);
          }
       });
+      lastUsedTrezorWallet_ = walletId;
    }
-
-
 }
 
 void HwDeviceManager::signTX(QVariant reqTX)
@@ -198,12 +193,11 @@ void HwDeviceManager::signTX(QVariant reqTX)
    }
 
    auto signReq = bs::signer::pbTxRequestToCore(pbSignReq);
-
-   device->signTX(signReq, [this, signReq, device](QVariant&& data) {
+   auto cbSigned = [this, signReq, device](QVariant&& data) {
       assert(data.canConvert<HWSignedTx>());
       auto tx = data.value<HWSignedTx>();
 
-      if (device && device->key().type_ == DeviceType::HWTrezor) {
+      if (device->key().type_ == DeviceType::HWTrezor) {
          // According to architecture, Trezor allow us to sign tx with incorrect 
          // passphrase, so let's check that the final tx is correct. In Ledger case
          // this situation is impossible, since the wallets with different passphrase will be treated
@@ -231,16 +225,14 @@ void HwDeviceManager::signTX(QVariant reqTX)
             return;
          }
       }
-
-
-
       txSigned({ BinaryData::fromString(tx.signedTx) });
-   });
+   };
 
-   connect(device, &HwDeviceInterface::requestPinMatrix,
-      this, &HwDeviceManager::onRequestPinMatrix, Qt::UniqueConnection);
-   connect(device, &HwDeviceInterface::requestHWPass,
-      this, &HwDeviceManager::onRequestHWPass, Qt::UniqueConnection);
+   device->signTX(signReq, std::move(cbSigned));
+
+   connectDevice(qobject_cast<HwDeviceInterface*>(device));
+
+   // tx specific connections
    connect(device, &HwDeviceInterface::deviceTxStatusChanged,
       this, &HwDeviceManager::deviceTxStatusChanged, Qt::UniqueConnection);
    connect(device, &HwDeviceInterface::cancelledOnDevice,
@@ -319,13 +311,7 @@ void HwDeviceManager::scanningDone(bool initDevices /* = true */)
    for (const auto& key : trezorClient_->deviceKeys()) {
       auto device = trezorClient_->getTrezorDevice(key.deviceId_);
       if (!device->inited()) {
-         connect(device, &HwDeviceInterface::requestPinMatrix,
-            this, &HwDeviceManager::onRequestPinMatrix, Qt::UniqueConnection);
-         connect(device, &HwDeviceInterface::requestHWPass,
-            this, &HwDeviceManager::onRequestHWPass, Qt::UniqueConnection);
-         connect(device, &HwDeviceInterface::operationFailed,
-            this, &HwDeviceManager::operationFailed, Qt::UniqueConnection);
-
+         connectDevice(qobject_cast<HwDeviceInterface*>(device));
          device->retrieveXPubRoot([caller = QPointer<HwDeviceManager>(this)]() {
             if (!caller) {
                return;
@@ -335,6 +321,16 @@ void HwDeviceManager::scanningDone(bool initDevices /* = true */)
          });
       }
    }
+}
+
+void HwDeviceManager::connectDevice(QPointer<HwDeviceInterface> device)
+{
+   connect(device, &HwDeviceInterface::requestPinMatrix,
+      this, &HwDeviceManager::onRequestPinMatrix, Qt::UniqueConnection);
+   connect(device, &HwDeviceInterface::requestHWPass,
+      this, &HwDeviceManager::onRequestHWPass, Qt::UniqueConnection);
+   connect(device, &HwDeviceInterface::operationFailed,
+      this, &HwDeviceManager::operationFailed, Qt::UniqueConnection);
 }
 
 QPointer<HwDeviceInterface> HwDeviceManager::getDevice(DeviceKey key)
