@@ -85,11 +85,10 @@ public slots:
    void onDisconnectedFromCeler();
 
 signals:
-   void scriptLoaded(const QString &filename);
-   void scriptUnLoaded();
    void scriptHistoryChanged();
    void autoSignStateChanged();
    void autoSignQuoteAvailabilityChanged();
+   void scriptLoadedChanged();
 
 protected:
    std::shared_ptr<ApplicationSettings>       appSettings_;

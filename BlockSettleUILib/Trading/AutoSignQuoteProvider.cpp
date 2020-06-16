@@ -125,6 +125,7 @@ void AutoSignScriptProvider::setScriptLoaded(bool loaded)
    if (!loaded) {
       scriptRunner_->disable();
    }
+   emit scriptLoadedChanged();
 }
 
 void AutoSignScriptProvider::init(const QString &filename)
@@ -134,13 +135,14 @@ void AutoSignScriptProvider::init(const QString &filename)
    }
    scriptLoaded_ = false;
    scriptRunner_->enable(filename);
+   emit scriptLoadedChanged();
 }
 
 void AutoSignScriptProvider::deinit()
 {
    scriptRunner_->disable();
    scriptLoaded_ = false;
-   emit scriptUnLoaded();
+   emit scriptLoadedChanged();
 }
 
 void AutoSignScriptProvider::onScriptLoaded(const QString &filename)
@@ -148,6 +150,7 @@ void AutoSignScriptProvider::onScriptLoaded(const QString &filename)
    logger_->info("[AutoSignScriptProvider::onScriptLoaded] script {} loaded"
       , filename.toStdString());
    scriptLoaded_ = true;
+   emit scriptLoadedChanged();
 
    auto scripts = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
    if (scripts.indexOf(filename) < 0) {
@@ -155,7 +158,6 @@ void AutoSignScriptProvider::onScriptLoaded(const QString &filename)
       appSettings_->set(ApplicationSettings::aqScripts, scripts);
    }
    appSettings_->set(lastScript_, filename);
-   emit scriptLoaded(filename);
    emit scriptHistoryChanged();
 }
 
