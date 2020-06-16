@@ -470,6 +470,12 @@ bool CreateTransactionDialog::BroadcastImportedTx()
 
 void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
 {
+   if (!signContainer_) {
+      BSMessageBox(BSMessageBox::critical, tr("Error")
+         , tr("Signer is invalid - unable to send transaction"), this).exec();
+      return;
+   }
+
    getChangeAddress([this, cb = std::move(cb), handle = validityFlag_.handle()](bs::Address changeAddress) {
       if (!handle.isValid()) {
          return;
@@ -480,11 +486,16 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
          // grab supporting transactions for the utxo map.
          // required only for HW
          std::set<BinaryData> hashes;
+         std::vector<UTXO> p2shInputs;
          for (const auto& input : txReq.inputs) {
             hashes.emplace(input.getTxHash());
+            const auto scrType = BtcUtils::getTxOutScriptType(input.getScript());
+            if (scrType == TXOUT_SCRIPT_P2SH) {
+               p2shInputs.push_back(input);
+            }
          }
 
-         auto supportingTxMapCb = [this, handle, txReq = std::move(txReq), cb]
+         auto supportingTxMapCb = [this, handle, txReq = std::move(txReq), cb, p2shInputs]
                (const AsyncClient::TxBatchResult& result, std::exception_ptr eptr) mutable
          {
             if (!handle.isValid()) {
@@ -501,8 +512,22 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
                txReq.supportingTXs.emplace(txPair.first, txPair.second->serialize());
             }
 
-            bool rc = createTransactionImpl(std::move(txReq));
-            cb(rc);
+            const auto cbPreimage = [this, handle, txReq, cb]
+               (const std::map<bs::Address, BinaryData> &preimages) {
+               if (!handle.isValid()) {
+                  return;
+               }
+
+               bool rc = createTransactionImpl(txReq, preimages);
+               cb(rc);
+            };
+
+            if (p2shInputs.empty()) {
+               cbPreimage({});
+            } else {
+               const auto addrMapping = walletsManager_->getAddressToWalletsMapping(p2shInputs);
+               signContainer_->getAddressPreimage(addrMapping, cbPreimage);
+            }
          };
 
          if (!armory_->getTXsByHash(hashes, supportingTxMapCb, true)) {
@@ -517,16 +542,10 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
    });
 }
 
-bool CreateTransactionDialog::createTransactionImpl(bs::core::wallet::TXSignRequest txReq)
+bool CreateTransactionDialog::createTransactionImpl(bs::core::wallet::TXSignRequest txReq, const std::map<bs::Address, BinaryData> &preimages)
 {
    QString text;
    QString detailedText;
-
-   if (!signContainer_) {
-      BSMessageBox(BSMessageBox::critical, tr("Error")
-         , tr("Signer is invalid - unable to send transaction"), this).exec();
-      return false;
-   }
 
    const auto hdWallet = walletsManager_->getHDWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
 
@@ -578,6 +597,18 @@ bool CreateTransactionDialog::createTransactionImpl(bs::core::wallet::TXSignRequ
       }
       else {
          // do we need some checks here?
+      }
+
+      bool isLegacy = false;
+      for (const auto& input : txReq.inputs) {
+         if (bs::Address::fromUTXO(input).getType() == AddressEntryType_P2PKH) {
+            isLegacy = true;
+            break;
+         }
+      }
+      if (!isLegacy) {
+         const auto resolver = bs::sync::WalletsManager::getPublicResolver(preimages);
+         txReq_.txHash = txReq_.txId(resolver);
       }
 
       if (hdWallet->isOffline() && !hdWallet->isHardwareWallet()) {
