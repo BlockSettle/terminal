@@ -12,6 +12,7 @@
 
 #include "OtcClient.h"
 
+using namespace bs;
 using namespace bs::network;
 
 namespace {

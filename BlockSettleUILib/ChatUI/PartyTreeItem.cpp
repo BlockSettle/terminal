@@ -10,6 +10,8 @@
 */
 #include "PartyTreeItem.h"
 
+using namespace bs;
+
 PartyTreeItem::PartyTreeItem(const QVariant& data, UI::ElementType modelType, PartyTreeItem* parent /*= nullptr*/)
    : itemData_(data)
    , modelType_(modelType)
