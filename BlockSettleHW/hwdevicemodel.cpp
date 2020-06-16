@@ -90,6 +90,17 @@ DeviceKey HwDeviceModel::getDevice(int index)
    return devices_[index];
 }
 
+int HwDeviceModel::getDeviceIndex(DeviceKey key)
+{
+   for (int i = 0; i < devices_.size(); ++i) {
+      if (devices_[i].deviceId_ == key.deviceId_) {
+         return i;
+      }
+   }
+
+   return -1;
+}
+
 QHash<int, QByteArray> HwDeviceModel::roleNames() const
 {
    return {

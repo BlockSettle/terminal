@@ -1127,7 +1127,7 @@ bool LedgerCommandThread::initDevice()
 {
    return true;
 
-   if (hid_init() < 0) {
+   if (hid_init() < 0 || hidDeviceInfo_.serialNumber_.isEmpty()) {
       logger_->info(
          "[LedgerCommandThread] getPublicKey - Cannot init hid.");
       return false;
