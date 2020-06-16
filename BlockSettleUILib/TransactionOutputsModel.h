@@ -14,6 +14,7 @@
 #include "UtxoModelInterface.h"
 #include <tuple>
 #include <vector>
+#include "XBTAmount.h"
 
 class TransactionOutputsModel : public UtxoModelInterface
 {
@@ -23,9 +24,9 @@ public:
    TransactionOutputsModel(QObject* parent);
    ~TransactionOutputsModel() noexcept override = default;
 
-   void AddRecipient(unsigned int recipientId, const QString& address, double amount);
-   void AddRecipients(const std::vector<std::tuple<unsigned int, QString, double>> &);
-   void UpdateRecipientAmount(unsigned int recipientId, double amount);
+   void AddRecipient(unsigned int recipientId, const QString& address, const bs::XBTAmount &);
+   void AddRecipients(const std::vector<std::tuple<unsigned int, QString, bs::XBTAmount>> &);
+   void UpdateRecipientAmount(unsigned int recipientId, const bs::XBTAmount &);
 
    unsigned int   GetOutputId(int row);
    int            GetRowById(unsigned int id);
@@ -44,7 +45,7 @@ private:
    {
       unsigned int   recipientId;
       QString        address;
-      double         amount;
+      bs::XBTAmount  amount;
    };
 
    enum Columns

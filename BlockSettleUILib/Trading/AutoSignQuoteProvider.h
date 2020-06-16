@@ -15,8 +15,8 @@
 
 #include <QObject>
 #include <memory>
+#include "ApplicationSettings.h"
 
-class ApplicationSettings;
 class BaseCelerClient;
 class SignContainer;
 class UserScriptRunner;
@@ -52,7 +52,7 @@ public:
    void init(const QString &filename);
    void deinit();
 
-   QString getDefaultScriptsDir();
+   static QString getDefaultScriptsDir();
 
    QStringList getScripts();
    QString getLastScript();
@@ -93,6 +93,7 @@ signals:
 
 protected:
    std::shared_ptr<ApplicationSettings>       appSettings_;
+   ApplicationSettings::Setting  lastScript_{ ApplicationSettings::_last };
    std::shared_ptr<spdlog::logger>            logger_;
    std::shared_ptr<SignContainer>             signingContainer_;
    std::shared_ptr<bs::sync::WalletsManager>  walletsManager_;
@@ -104,6 +105,30 @@ protected:
    bool     scriptLoaded_{ false };
    bool     celerConnected_{ false };
    bool     newLoaded_{ false };
+};
+
+class AutoSignAQProvider : public AutoSignScriptProvider
+{
+   Q_OBJECT
+public:
+   explicit AutoSignAQProvider(const std::shared_ptr<spdlog::logger> &
+      , UserScriptRunner *
+      , const std::shared_ptr<ApplicationSettings> &
+      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<BaseCelerClient> &
+      , QObject *parent = nullptr);
+};
+
+class AutoSignRFQProvider : public AutoSignScriptProvider
+{
+   Q_OBJECT
+public:
+   explicit AutoSignRFQProvider(const std::shared_ptr<spdlog::logger> &
+      , UserScriptRunner *
+      , const std::shared_ptr<ApplicationSettings> &
+      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<BaseCelerClient> &
+      , QObject *parent = nullptr);
 };
 
 #endif // AUTOSIGNQUOTEPROVIDER_H

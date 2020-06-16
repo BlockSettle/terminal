@@ -44,6 +44,7 @@ public:
    // operation
    virtual void getPublicKey(AsyncCallBackCall&& cb = nullptr) = 0;
    virtual void signTX(const bs::core::wallet::TXSignRequest& reqTX, AsyncCallBackCall&& cb = nullptr) = 0;
+   virtual void retrieveXPubRoot(AsyncCallBack&& cb) = 0;
 
    // Management
    virtual void setMatrixPin(const std::string& pin) {};
@@ -52,6 +53,11 @@ public:
    // State
    virtual bool isBlocked() = 0;
    virtual QString lastError() { return {}; };
+
+   // xpub root
+   bool inited() {
+      return !xpubRoot_.empty();
+   }
 
 signals:
    // operation result informing
@@ -64,6 +70,10 @@ signals:
    void requestPinMatrix();
    void requestHWPass(bool allowedOnDevice);
    void cancelledOnDevice();
+   void invalidPin();
+
+protected:
+   std::string xpubRoot_;
 };
 
 #endif // HWDEVICEABSTRACT_H

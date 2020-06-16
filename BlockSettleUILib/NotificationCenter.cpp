@@ -84,7 +84,7 @@ NotificationTabResponder::NotificationTabResponder(const Ui::BSTerminalMainWindo
 
 void NotificationTabResponder::respond(bs::ui::NotifyType nt, bs::ui::NotifyMessage msg)
 {
-   if (nt == bs::ui::NotifyType::UpdateUnreadMessage) {  
+   if (nt == bs::ui::NotifyType::UpdateUnreadMessage) {
       return;
    }
 
@@ -153,7 +153,7 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
    newVersionMessage_ = false;
    newChatMessage_ = false;
    newChatId_ = QString();
-   
+
    const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
    const bool isChatTabActive = mainWinUi_->tabWidget->currentIndex() == chatIndex && QApplication::activeWindow();
    auto updateChatIconAndCheckChatTab = [&]() -> bool {
@@ -289,6 +289,16 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       text = tr("Your account has now been activated again. We thank you for your patience and apologise for any inconvenience. "
                 "If you have any questions, don't hesitate to contact our Support team through the Client Portal.");
       icon = QSystemTrayIcon::Information;
+      break;
+   case bs::ui::NotifyType::TradingEnabledOnPB:
+      icon = QSystemTrayIcon::Information;
+      title = tr("System status");
+      text = tr("Order entry has resumed");
+      break;
+   case bs::ui::NotifyType::TradingDisabledOnPB:
+      icon = QSystemTrayIcon::Information;
+      title = tr("System status");
+      text = tr("Order entry has been temporarily suspended");
       break;
 
    default: return;

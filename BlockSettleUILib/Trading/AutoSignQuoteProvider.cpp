@@ -10,7 +10,6 @@
 */
 #include "AutoSignQuoteProvider.h"
 
-#include "ApplicationSettings.h"
 #include "SignContainer.h"
 #include "WalletManager.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -53,20 +52,6 @@ AutoSignScriptProvider::AutoSignScriptProvider(const std::shared_ptr<spdlog::log
    connect(scriptRunner_, &UserScriptRunner::failedToLoad, this, &AutoSignScriptProvider::onScriptFailed);
 
    onSignerStateUpdated();
-
-   auto botFileInfo = QFileInfo(getDefaultScriptsDir() + QStringLiteral("/RFQBot.qml"));
-   if (botFileInfo.exists() && botFileInfo.isFile()) {
-      auto list = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
-      if (list.indexOf(botFileInfo.absoluteFilePath()) == -1) {
-         list << botFileInfo.absoluteFilePath();
-      }
-      appSettings_->set(ApplicationSettings::aqScripts, list);
-      const auto lastScript = appSettings_->get<QString>(ApplicationSettings::lastAqScript);
-      if (lastScript.isEmpty()) {
-         appSettings_->set(ApplicationSettings::lastAqScript, botFileInfo.absoluteFilePath());
-      }
-
-   }
 
    connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this, &AutoSignScriptProvider::onConnectedToCeler);
    connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &AutoSignScriptProvider::onDisconnectedFromCeler);
@@ -169,7 +154,7 @@ void AutoSignScriptProvider::onScriptLoaded(const QString &filename)
       scripts << filename;
       appSettings_->set(ApplicationSettings::aqScripts, scripts);
    }
-   appSettings_->set(ApplicationSettings::lastAqScript, filename);
+   appSettings_->set(lastScript_, filename);
    emit scriptLoaded(filename);
    emit scriptHistoryChanged();
 }
@@ -183,7 +168,7 @@ void AutoSignScriptProvider::onScriptFailed(const QString &filename, const QStri
    auto scripts = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
    scripts.removeOne(filename);
    appSettings_->set(ApplicationSettings::aqScripts, scripts);
-   appSettings_->reset(ApplicationSettings::lastAqScript);
+   appSettings_->reset(lastScript_);
    emit scriptHistoryChanged();
 }
 
@@ -250,7 +235,7 @@ QStringList AutoSignScriptProvider::getScripts()
 
 QString AutoSignScriptProvider::getLastScript()
 {
-   return appSettings_->get<QString>(ApplicationSettings::lastAqScript);
+   return appSettings_->get<QString>(lastScript_);
 }
 
 QString AutoSignScriptProvider::getLastDir()
@@ -261,4 +246,52 @@ QString AutoSignScriptProvider::getLastDir()
 void AutoSignScriptProvider::setLastDir(const QString &path)
 {
    appSettings_->set(ApplicationSettings::LastAqDir, QFileInfo(path).dir().absolutePath());
+}
+
+
+AutoSignAQProvider::AutoSignAQProvider(const std::shared_ptr<spdlog::logger> &logger
+   , UserScriptRunner *scriptRunner
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<BaseCelerClient> &celerClient
+   , QObject *parent)
+   : AutoSignScriptProvider(logger, scriptRunner, appSettings, container, celerClient, parent)
+{
+   auto botFileInfo = QFileInfo(getDefaultScriptsDir() + QStringLiteral("/RFQBot.qml"));
+   if (botFileInfo.exists() && botFileInfo.isFile()) {
+      auto list = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
+      if (list.indexOf(botFileInfo.absoluteFilePath()) == -1) {
+         list << botFileInfo.absoluteFilePath();
+      }
+      appSettings_->set(ApplicationSettings::aqScripts, list);
+      const auto lastScript = appSettings_->get<QString>(ApplicationSettings::lastAqScript);
+      if (lastScript.isEmpty()) {
+         appSettings_->set(ApplicationSettings::lastAqScript, botFileInfo.absoluteFilePath());
+      }
+   }
+   lastScript_ = ApplicationSettings::lastAqScript;
+}
+
+
+AutoSignRFQProvider::AutoSignRFQProvider(const std::shared_ptr<spdlog::logger> &logger
+   , UserScriptRunner *scriptRunner
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<BaseCelerClient> &celerClient
+   , QObject *parent)
+   : AutoSignScriptProvider(logger, scriptRunner, appSettings, container, celerClient, parent)
+{
+   auto botFileInfo = QFileInfo(getDefaultScriptsDir() + QStringLiteral("/AutoRFQ.qml"));
+   if (botFileInfo.exists() && botFileInfo.isFile()) {
+      auto list = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
+      if (list.indexOf(botFileInfo.absoluteFilePath()) == -1) {
+         list << botFileInfo.absoluteFilePath();
+      }
+      appSettings_->set(ApplicationSettings::aqScripts, list);
+      const auto lastScript = appSettings_->get<QString>(ApplicationSettings::CurrentRFQScript);
+      if (lastScript.isEmpty()) {
+         appSettings_->set(ApplicationSettings::CurrentRFQScript, botFileInfo.absoluteFilePath());
+      }
+   }
+   lastScript_ = ApplicationSettings::CurrentRFQScript;
 }

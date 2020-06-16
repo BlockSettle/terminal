@@ -1483,7 +1483,8 @@ void OtcClient::createSellerRequest(const std::string &settlementId, Peer *peer,
    args.fixedInputs = peer->offer.inputs;
    args.inputXbtWallets = xbtWallets;
 
-   auto payinCb = bs::tradeutils::PayinResultCb([this, cb, peer, settlementId, targetHdWallet, handle = peer->validityFlag.handle(), logger = logger_]
+   auto payinCb = bs::tradeutils::PayinResultCb([this, cb, peer, settlementId
+      , targetHdWallet, handle = peer->validityFlag.handle(), logger = logger_]
       (bs::tradeutils::PayinResult payin)
    {
       QMetaObject::invokeMethod(this, [cb, targetHdWallet, settlementId, handle, logger, peer, payin = std::move(payin)] {

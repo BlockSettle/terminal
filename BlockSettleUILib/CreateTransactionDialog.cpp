@@ -73,12 +73,7 @@ CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryCon
    qRegisterMetaType<std::map<unsigned int, float>>();
 }
 
-CreateTransactionDialog::~CreateTransactionDialog() noexcept
-{
-   if (feeUpdatingThread_.joinable()) {
-      feeUpdatingThread_.join();
-   }
-}
+CreateTransactionDialog::~CreateTransactionDialog() noexcept = default;
 
 void CreateTransactionDialog::init()
 {

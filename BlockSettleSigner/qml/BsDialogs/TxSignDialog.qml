@@ -88,9 +88,9 @@ BSWalletHandlerDialog {
 
     Connections {
         target: hwDeviceManager
-        onRequestPinMatrix: JsHelper.showHwPinMatrix(0);
+        onRequestPinMatrix: JsHelper.showHwPinMatrix(deviceIndex);
         onDeviceReady: hwDeviceManager.signTX(passwordDialogData.TxRequest);
-        onRequestHWPass: JsHelper.showHwPassphrase(0, allowedOnDevice);
+        onRequestHWPass: JsHelper.showHwPassphrase(deviceIndex, allowedOnDevice);
         onDeviceNotFound: {
             hwDeviceStatus = "Searching for device"
             let lastDeviceError = hwDeviceManager.lastDeviceError(0);
@@ -106,6 +106,12 @@ BSWalletHandlerDialog {
             acceptAnimated();
         }
         onCancelledOnDevice: rejectAnimated()
+        onInvalidPin: {
+            var dlg = JsHelper.messageBox(BSMessageBox.Type.Critical, "Invalid PIN", "Please try again")
+            dlg.bsAccepted.connect(function(){
+                hwDeviceManager.signTX(passwordDialogData.TxRequest)
+            })
+        }
         onOperationFailed: showWalletError(reason)
     }
 

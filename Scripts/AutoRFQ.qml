@@ -9,7 +9,8 @@
 
 */
 import bs.terminal 1.0
-SubmitRFQ {
+
+RFQScript {
     property var tradeRules: [
         'EUR/XBT',
         'EUR/GBP',
@@ -19,16 +20,6 @@ SubmitRFQ {
 /* This example script just resends RFQ on its expiration for selected instruments */
 
     onStarted: {
-        log("Started " + security);
-        sendRFQ(amount);
-    }
-
-    onExpired: {
-        log("Expired " + security);
-        if (tradeRules.indexOf(security) === -1) {
-            stop();
-            return;
-        }
-        sendRFQ(amount);
+        log("Started");
     }
 }

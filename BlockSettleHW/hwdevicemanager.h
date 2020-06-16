@@ -64,8 +64,8 @@ public:
 signals:
    void devicesChanged();
    void publicKeyReady(QVariant walletInfo);
-   void requestPinMatrix();
-   void requestHWPass(bool allowedOnDevice);
+   void requestPinMatrix(int deviceIndex);
+   void requestHWPass(int deviceIndex, bool allowedOnDevice);
 
    void deviceNotFound(QString deviceId);
    void deviceReady(QString deviceId);
@@ -75,11 +75,16 @@ signals:
    void isScanningChanged();
    void operationFailed(QString reason);
    void cancelledOnDevice();
+   void invalidPin();
+
+protected slots:
+   void onRequestPinMatrix();
+   void onRequestHWPass(bool allowedOnDevice);
 
 private:
    void setScanningFlag(bool isScanning);
    void releaseConnection(AsyncCallBack&& cb = nullptr);
-   void scanningDone();
+   void scanningDone(bool initDevices = true);
 
    QPointer<HwDeviceInterface> getDevice(DeviceKey key);
 

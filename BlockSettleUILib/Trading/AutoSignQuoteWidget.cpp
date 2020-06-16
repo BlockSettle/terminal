@@ -183,7 +183,7 @@ QString AutoSignQuoteWidget::askForScript()
 {
    auto lastDir = autoSignProvider_->getLastDir();
    if (lastDir.isEmpty()) {
-      lastDir = autoSignProvider_->getDefaultScriptsDir();
+      lastDir = AutoSignScriptProvider::getDefaultScriptsDir();
    }
 
    auto path = QFileDialog::getOpenFileName(this, tr("Open script file")

@@ -147,7 +147,6 @@ protected:
    XbtAmountValidator * xbtValidator_ = nullptr;
 
    const bool     loadFeeSuggestions_;
-   std::thread    feeUpdatingThread_;
 
    unsigned int   pendingTXSignId_ = 0;
    bool           broadcasting_ = false;
@@ -164,7 +163,7 @@ protected:
    float       advisedFeePerByte_ = 0;
    float       advisedTotalFee_ = 0;
    float       addedFee_ = 0;
-   const float minRelayFeePerByte_ = 5;
+
 
    ValidityFlag validityFlag_;
 

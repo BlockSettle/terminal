@@ -15,6 +15,7 @@
 
 #include "ApplicationSettings.h"
 #include "AuthAddressManager.h"
+#include "AutoSignQuoteProvider.h"
 #include "CelerClient.h"
 #include "CurrencyPair.h"
 #include "DialogManager.h"
@@ -27,6 +28,7 @@
 #include "WalletSignerContainer.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"
+#include "UserScriptRunner.h"
 #include "UtxoReservationManager.h"
 
 #include "bs_proxy_terminal_pb.pb.h"
@@ -63,7 +65,6 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    });
 
    ui_->shieldPage->showShieldLoginToSubmitRequired();
-   ui_->widgetAutoRFQ->hide();
 
    ui_->pageRFQTicket->lineEditAmount()->installEventFilter(this);
    popShield();
@@ -77,6 +78,10 @@ void RFQRequestWidget::setWalletsManager(const std::shared_ptr<bs::sync::Wallets
       walletsManager_ = walletsManager;
       ui_->pageRFQTicket->setWalletsManager(walletsManager);
       ui_->shieldPage->init(walletsManager, authAddressManager_, appSettings_);
+
+      if (autoSignProvider_) {
+         autoSignProvider_->scriptRunner()->setWalletsManager(walletsManager_);
+      }
 
       // Do not listen for walletChanged (too verbose and resets UI too often) and walletsReady (to late and resets UI after startup unexpectedly)
       connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &RFQRequestWidget::forceCheckCondition);
@@ -218,10 +223,15 @@ void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
    dialogManager_ = dialogManager;
    signingContainer_ = container;
    armory_ = armory;
+   autoSignProvider_ = autoSignProvider;
    utxoReservationManager_ = utxoReservationManager;
 
+   if (walletsManager_) {
+      autoSignProvider_->scriptRunner()->setWalletsManager(walletsManager_);
+   }
+
    ui_->pageRFQTicket->init(logger, authAddressManager, assetManager,
-      quoteProvider, container, armory, autoSignProvider, utxoReservationManager);
+      quoteProvider, container, armory, utxoReservationManager);
 
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewOrders->setModel(orderListModel);
@@ -237,8 +247,12 @@ void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
    connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this, &RFQRequestWidget::onConnectedToCeler);
    connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &RFQRequestWidget::onDisconnectedFromCeler);
 
+   connect((RFQScriptRunner *)autoSignProvider_->scriptRunner(), &RFQScriptRunner::sendRFQ
+      , ui_->pageRFQTicket, &RFQTicketXBT::onSendRFQ, Qt::QueuedConnection);
+   connect((RFQScriptRunner *)autoSignProvider_->scriptRunner(), &RFQScriptRunner::cancelRFQ
+      , ui_->pageRFQTicket, &RFQTicketXBT::onCancelRFQ, Qt::QueuedConnection);
+
    ui_->pageRFQTicket->disablePanel();
-   ui_->widgetAutoRFQ->init(autoSignProvider);
 
    connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, &RFQRequestWidget::forceCheckCondition);
 }
@@ -294,9 +308,9 @@ void RFQRequestWidget::onRFQSubmit(const std::string &id, const bs::network::RFQ
    connect(this, &RFQRequestWidget::unsignedPayinRequested, dialog, &RFQDialog::onUnsignedPayinRequested);
    connect(this, &RFQRequestWidget::signedPayoutRequested, dialog, &RFQDialog::onSignedPayoutRequested);
    connect(this, &RFQRequestWidget::signedPayinRequested, dialog, &RFQDialog::onSignedPayinRequested);
-   connect(dialog, &RFQDialog::accepted, ui_->pageRFQTicket, &RFQTicketXBT::onRFQAccepted);
-   connect(dialog, &RFQDialog::expired, ui_->pageRFQTicket, &RFQTicketXBT::onRFQExpired);
-   connect(dialog, &RFQDialog::cancelled, ui_->pageRFQTicket, &RFQTicketXBT::onRFQCancelled);
+   connect(dialog, &RFQDialog::accepted, this, &RFQRequestWidget::onRFQAccepted);
+   connect(dialog, &RFQDialog::expired, this, &RFQRequestWidget::onRFQExpired);
+   connect(dialog, &RFQDialog::cancelled, this, &RFQRequestWidget::onRFQCancelled);
 
 //   dialog->setAttribute(Qt::WA_DeleteOnClose);
    dialogManager_->adjustDialogPosition(dialog);
@@ -476,11 +490,29 @@ void RFQRequestWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTe
 
 void RFQRequestWidget::onUserConnected(const bs::network::UserType &ut)
 {
-   ui_->widgetAutoRFQ->setVisible((ut == bs::network::UserType::Dealing) ||
-      (ut == bs::network::UserType::Trading));
+   logger_->debug("[RFQRequestWidget::onUserConnected]");
+   if (appSettings_->get<bool>(ApplicationSettings::AutoStartRFQScript)) {
+      ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->start(
+         autoSignProvider_->getLastScript());
+   }
 }
 
 void RFQRequestWidget::onUserDisconnected()
 {
-   ui_->widgetAutoRFQ->hide();
+   ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->suspend();
+}
+
+void RFQRequestWidget::onRFQAccepted(const std::string &id)
+{
+   ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->rfqAccepted(id);
+}
+
+void RFQRequestWidget::onRFQExpired(const std::string &id)
+{
+   ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->rfqExpired(id);
+}
+
+void RFQRequestWidget::onRFQCancelled(const std::string &id)
+{
+   ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->rfqCancelled(id);
 }

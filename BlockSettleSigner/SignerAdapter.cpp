@@ -122,12 +122,6 @@ void SignerAdapter::signOfflineTxRequest(const bs::core::wallet::TXSignRequest &
    listener_->setTxSignCb(reqId, cb);
 }
 
-void SignerAdapter::createWatchingOnlyWallet(const QString &walletId, const SecureBinaryData &password
-   , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb)
-{
-   getDecryptedRootNode(walletId.toStdString(), password, cb, signer::CreateWOType);
-}
-
 void SignerAdapter::getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password
    , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb
    , signer::PacketType pt)

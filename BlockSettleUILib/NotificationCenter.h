@@ -53,6 +53,8 @@ namespace bs {
          BitcoinCoreOffline,
          AccountDisabled,
          AccountEnabled,
+         TradingEnabledOnPB,
+         TradingDisabledOnPB
       };
 
       using NotifyMessage = QList<QVariant>;
@@ -132,7 +134,7 @@ public:
    NotificationTrayIconResponder(const std::shared_ptr<spdlog::logger> &, const Ui::BSTerminalMainWindow *mainWinUi
       , const std::shared_ptr<QSystemTrayIcon> &trayIcon, const std::shared_ptr<ApplicationSettings> &appSettings
       , QObject *parent = nullptr);
-   
+
    void respond(bs::ui::NotifyType, bs::ui::NotifyMessage) override;
 
 private slots:
