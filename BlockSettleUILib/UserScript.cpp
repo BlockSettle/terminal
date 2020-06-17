@@ -223,7 +223,6 @@ void Constants::setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> wall
 
 
 AutoQuoter::AutoQuoter(const std::shared_ptr<spdlog::logger> &logger
-   , const QString &filename
    , const std::shared_ptr<AssetManager> &assetManager
    , const std::shared_ptr<MDCallbacksQt> &mdCallbacks, QObject* parent)
    : UserScript(logger, mdCallbacks, parent)
@@ -231,10 +230,6 @@ AutoQuoter::AutoQuoter(const std::shared_ptr<spdlog::logger> &logger
 {
    qmlRegisterType<BSQuoteReqReply>("bs.terminal", 1, 0, "BSQuoteReqReply");
    qmlRegisterUncreatableType<BSQuoteRequest>("bs.terminal", 1, 0, "BSQuoteRequest", tr("Can't create this type"));
-
-   if (!load(filename)) {
-      throw std::runtime_error("failed to load " + filename.toStdString());
-   }
 }
 
 QObject *AutoQuoter::instantiate(const bs::network::QuoteReqNotification &qrn)

@@ -41,7 +41,7 @@ public:
    QByteArray getSessionId();
 
    void initConnection(bool force, AsyncCallBack&& cb = nullptr);
-   void initConnection(QString&& deviceId, AsyncCallBackCall&& cb = nullptr);
+   void initConnection(QString&& deviceId, bool force, AsyncCallBackCall&& cb = nullptr);
    void releaseConnection(AsyncCallBack&& cb = nullptr);
 
    void call(QByteArray&& input, AsyncCallBackCall&& cb);

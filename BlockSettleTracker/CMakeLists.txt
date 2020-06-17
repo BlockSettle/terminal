@@ -28,8 +28,13 @@ ADD_EXECUTABLE(${BLOCKSETTLE_TRACKER}
    ${TRACKER_SOURCES}
 )
 
+# There is something with linking order, system ssl and crypto used as a workaround for now
 TARGET_LINK_LIBRARIES(${BLOCKSETTLE_TRACKER}
    ${BS_NETWORK_LIB_NAME}
    ${ZMQ_LIB}
+   ${OPENSSL_LIBS}
+   ${WS_LIB}
+   ssl
+   crypto
    ${CMAKE_THREAD_LIBS_INIT}
 )

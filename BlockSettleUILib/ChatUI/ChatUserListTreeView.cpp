@@ -16,6 +16,8 @@
 #include "BSMessageBox.h"
 #include "EditContactDialog.h"
 
+using namespace bs;
+
 namespace {
    // Translation
    const QString contextMenuRemoveUser = QObject::tr("Remove from contacts");

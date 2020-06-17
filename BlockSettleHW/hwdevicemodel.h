@@ -25,6 +25,7 @@ enum HwDeviceRoles {
 class HwDeviceModel : public QAbstractItemModel 
 {
    Q_OBJECT
+   Q_PROPERTY(int toppestImport READ toppestImport NOTIFY toppestImportChanged)
 public:
    HwDeviceModel(QObject *parent = nullptr);
    ~HwDeviceModel() override = default;
@@ -40,6 +41,11 @@ public:
    void resetModel(QVector<DeviceKey>&& deviceKey);
    DeviceKey getDevice(int index);
    int getDeviceIndex(DeviceKey key);
+
+   Q_INVOKABLE int toppestImport() const;
+
+signals:
+   void toppestImportChanged();
 
 private:
    QVector<DeviceKey> devices_;
