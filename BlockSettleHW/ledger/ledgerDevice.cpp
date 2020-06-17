@@ -22,6 +22,7 @@
 #include "QDataStream"
 
 namespace {
+   const uint16_t kHidapiBrokenSequence = 191;
    const std::string kHidapiSequence191 = "Unexpected sequence number 191";
    int sendApdu(hid_device* dongle, const QByteArray& command) {
       int result = 0;
@@ -78,10 +79,10 @@ namespace {
       }
 
       QByteArray chunk(reinterpret_cast<char*>(buf), Ledger::CHUNK_MAX_BLOCK);
-      auto checkChunkIndex = [&]() {
+      auto checkChunkIndex = [&chunk, &expectedChunkIndex]() {
          auto chunkIndex = static_cast<uint16_t>(((uint8_t)chunk[3] << 8) | (uint8_t)chunk[4]);
          if (chunkIndex != expectedChunkIndex++) {
-            if (chunkIndex == static_cast<uint16_t>(191)) {
+            if (chunkIndex == static_cast<uint16_t>(kHidapiBrokenSequence)) {
                throw std::logic_error(kHidapiSequence191);
             }
             else {
@@ -1147,7 +1148,7 @@ bool LedgerCommandThread::exchangeData(const QByteArray& input,
       static int maxAttempts = 10;
       if (e.what() == kHidapiSequence191 && maxAttempts > 0) {
          --maxAttempts;
-         ScopedGuard guard([&] {
+         ScopedGuard guard([] {
             ++maxAttempts;
          });
 
@@ -1168,8 +1169,7 @@ bool LedgerCommandThread::writeData(const QByteArray& input, const std::string& 
 {
    logger_->error(logHeader + " - >>> " + input.toHex().toStdString());
    if (sendApdu(dongle_, input) < 0) {
-      logger_->error(
-         logHeader + " - Cannot write to device.");
+      logger_->error(fmt::format("{} - Cannot write to device.", logHeader));
       return false;
    }
 
@@ -1181,9 +1181,8 @@ bool LedgerCommandThread::readData(QByteArray& output, const std::string& logHea
 {
    auto res = receiveApduResult(dongle_, output);
    if (res != Ledger::SW_OK) {
-      logger_->error(
-         logHeader + " - Cannot read from device. APDU error code : "
-         + QByteArray::number(res, 16).toStdString());
+      logger_->error(fmt::format("{} - Cannot read from device. APDU error code : {}",
+         logHeader, QByteArray::number(res, 16).toStdString()));
       lastError_ = res;
       throw std::logic_error("Can't read from device");
    }
