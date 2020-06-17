@@ -77,8 +77,6 @@ namespace {
          return result;
       }
 
-      std::vector<uint8_t> buff(&buf[0], &buf[0] + 64);
-
       QByteArray chunk(reinterpret_cast<char*>(buf), Ledger::CHUNK_MAX_BLOCK);
       auto checkChunkIndex = [&]() {
          auto chunkIndex = static_cast<uint16_t>(((uint8_t)chunk[3] << 8) | (uint8_t)chunk[4]);
