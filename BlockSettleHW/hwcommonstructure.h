@@ -93,4 +93,17 @@ namespace HWInfoStatus {
    const QString kCancelledByUser = QObject::tr("Cancelled by user");
 }
 
+class OnExitCb {
+public:
+   OnExitCb(std::function<void()>&& cb)
+      : cb_(std::move(cb))
+   {}
+   ~OnExitCb() {
+      cb_();
+   }
+
+private:
+   std::function<void()> cb_;
+};
+
 #endif // HWCOMMONSTRUCTURE_H

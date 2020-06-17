@@ -21,6 +21,7 @@
 #include "QDataStream"
 
 namespace {
+   const std::string kHidapiSequence191 = "Unexpected sequence number 191";
    int sendApdu(hid_device* dongle, const QByteArray& command) {
       int result = 0;
       QVector<QByteArray> chunks;
@@ -67,7 +68,7 @@ namespace {
 
    uint16_t receiveApduResult(hid_device* dongle, QByteArray& response) {
       response.clear();
-      uint16_t chunkNumber = 0;
+      uint16_t expectedChunkIndex = 0;
 
       unsigned char buf[Ledger::CHUNK_MAX_BLOCK];
       uint16_t result = hid_read(dongle, buf, Ledger::CHUNK_MAX_BLOCK);
@@ -78,8 +79,19 @@ namespace {
       std::vector<uint8_t> buff(&buf[0], &buf[0] + 64);
 
       QByteArray chunk(reinterpret_cast<char*>(buf), Ledger::CHUNK_MAX_BLOCK);
-      assert(chunkNumber++ == chunk.mid(3, 2).toHex().toInt());
+      auto checkChunkIndex = [&]() {
+         auto chunkIndex = static_cast<uint16_t>(((uint8_t)chunk[3] << 8) | (uint8_t)chunk[4]);
+         if (chunkIndex != expectedChunkIndex++) {
+            if (chunkIndex == static_cast<uint16_t>(191)) {
+               throw std::logic_error(kHidapiSequence191);
+            }
+            else {
+               throw std::logic_error("Unexpected sequence number");
+            }
+         }
+      };
 
+      checkChunkIndex();
       int left = static_cast<int>(((uint8_t)chunk[5] << 8) | (uint8_t)chunk[6]);
 
       response.append(chunk.mid(Ledger::FIRST_BLOCK_OFFSET, left));
@@ -93,7 +105,7 @@ namespace {
          }
 
          chunk = QByteArray(reinterpret_cast<char*>(buf), Ledger::CHUNK_MAX_BLOCK);
-         assert(chunkNumber++ == chunk.mid(3, 2).toHex().toInt());
+         checkChunkIndex();
 
          response.append(chunk.mid(Ledger::NEXT_BLOCK_OFFSET, left));
       }
@@ -1118,15 +1130,42 @@ void LedgerCommandThread::releaseDevice()
 bool LedgerCommandThread::exchangeData(const QByteArray& input,
    QByteArray& output, std::string&& logHeader)
 {
-   auto logHeaderCopy = logHeader;
-   if (!writeData(input, std::move(logHeader))) {
+   if (!writeData(input, logHeader)) {
       return false;
    }
 
-   return readData(output, std::move(logHeaderCopy));
+   try {
+      return readData(output, logHeader);
+   }
+   catch (std::exception &e){
+      // Special case : sometimes hidapi return incorrect sequence_index as response
+      // and there is really now good solution for it, except restart dongle session
+      // till the moment error gone.
+      // https://github.com/obsidiansystems/ledger-app-tezos/blob/191-troubleshooting/README.md#error-unexpected-sequence-number-expected-0-got-191-on-macos
+      // (solution in link above is not working, given here for reference)
+      // Also it's a general issue for OSX really, but let's left it for all system, just in case
+      // And let's have 10 times threshold to avoid trying infinitively
+      static int maxAttempts = 10;
+      if (e.what() == kHidapiSequence191 && maxAttempts > 0) {
+         --maxAttempts;
+         OnExitCb([&] {
+            ++maxAttempts;
+         });
+
+         releaseDevice();
+         initDevice();
+         output.clear();
+
+         return exchangeData(input, output, std::move(logHeader));
+      }
+      else {
+         throw e;
+      }
+   }  
 }
 
-bool LedgerCommandThread::writeData(const QByteArray& input, std::string&& logHeader)
+// Do not use this function anywhere except inside exchangeData
+bool LedgerCommandThread::writeData(const QByteArray& input, const std::string& logHeader)
 {
    logger_->debug(logHeader + " - >>> " + input.toHex().toStdString());
    if (sendApdu(dongle_, input) < 0) {
@@ -1138,7 +1177,8 @@ bool LedgerCommandThread::writeData(const QByteArray& input, std::string&& logHe
    return true;
 }
 
-bool LedgerCommandThread::readData(QByteArray& output, std::string&& logHeader)
+// Do not use this function anywhere except inside exchangeData
+bool LedgerCommandThread::readData(QByteArray& output, const std::string& logHeader)
 {
    auto res = receiveApduResult(dongle_, output);
    if (res != Ledger::SW_OK) {
