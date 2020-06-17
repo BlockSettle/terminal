@@ -16,6 +16,7 @@
 #include "CoreWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"
+#include "ScopeGuard.h"
 
 #include "QByteArray"
 #include "QDataStream"
@@ -326,7 +327,7 @@ LedgerCommandThread::~LedgerCommandThread()
 
 void LedgerCommandThread::run()
 {
-   logger_->debug("[LedgerCommandThread] run - Start command");
+   logger_->error("[LedgerCommandThread] run - Start command");
    if (!initDevice()) {
       logger_->info(
          "[LedgerCommandThread] processTXLegacy - Cannot open device.");
@@ -342,7 +343,7 @@ void LedgerCommandThread::run()
          break;
       case HardwareCommand::SignTX:
          if (!coreReq_) {
-            logger_->debug("[LedgerCommandThread] run - the core request is no valid");
+            logger_->error("[LedgerCommandThread] run - the core request is no valid");
             emit error(Ledger::NO_INPUTDATA);
             break;
          }
@@ -365,7 +366,7 @@ void LedgerCommandThread::run()
    }
    catch (std::exception& exc) {
       releaseDevice();
-      logger_->debug("[LedgerCommandThread] run - Done command with exception");
+      logger_->error("[LedgerCommandThread] run - Done command with exception");
       emit error(lastError_);
       if (threadPurpose_ == HardwareCommand::GetRootPublicKey) {
          emit resultReady({});
@@ -378,7 +379,7 @@ void LedgerCommandThread::run()
    }
 
    releaseDevice();
-   logger_->debug("[LedgerCommandThread] run - Done command successfully");
+   logger_->error("[LedgerCommandThread] run - Done command successfully");
 }
 
 void LedgerCommandThread::prepareGetPublicKey(const DeviceKey &deviceKey)
@@ -412,7 +413,7 @@ void LedgerCommandThread::processGetPublicKey()
    walletInfo.info_.label = deviceKey.deviceLabel_.toStdString();
    walletInfo.info_.deviceId = {};
 
-   logger_->debug(
+   logger_->error(
       "[LedgerCommandThread] processGetPublicKey - Start retrieve root xpub key.");
    
    auto pubKey = retrievePublicKeyFromPath({ { bs::hd::hardFlag } });
@@ -420,67 +421,67 @@ void LedgerCommandThread::processGetPublicKey()
       walletInfo.info_.xpubRoot = pubKey.getBase58().toBinStr();
    }
    catch (...) {
-      logger_->debug(
+      logger_->error(
          "[LedgerCommandThread] getPublicKey - Cannot retrieve root xpub key.");
       emit error(Ledger::INTERNAL_ERROR);
       return;
    }
-   logger_->debug(
+   logger_->error(
       "[LedgerCommandThread] processGetPublicKey - Done retrieve root xpub key.");
 
-   logger_->debug(
+   logger_->error(
       "[LedgerCommandThread] processGetPublicKey - Start retrieve nested segwit xpub key.");
    pubKey = retrievePublicKeyFromPath(getDerivationPath(testNet_, bs::hd::Nested));
    try {
       walletInfo.info_.xpubNestedSegwit = pubKey.getBase58().toBinStr();
    }
    catch (...) {
-      logger_->debug(
+      logger_->error(
          "[LedgerCommandThread] getPublicKey - Cannot retrieve nested segwit xpub key.");
       emit error(Ledger::INTERNAL_ERROR);
       return;
    }
-   logger_->debug(
+   logger_->error(
       "[LedgerCommandThread] processGetPublicKey - Done retrieve nested segwit xpub key.");
 
-   logger_->debug(
+   logger_->error(
       "[LedgerCommandThread] processGetPublicKey - Start retrieve native segwit xpub key.");
    pubKey = retrievePublicKeyFromPath(getDerivationPath(testNet_, bs::hd::Native));
    try {
       walletInfo.info_.xpubNativeSegwit = pubKey.getBase58().toBinStr();
    }
    catch (...) {
-      logger_->debug(
+      logger_->error(
          "[LedgerCommandThread] getPublicKey - Cannot retrieve native segwit xpub key.");
       emit error(Ledger::INTERNAL_ERROR);
       return;
    }
-   logger_->debug(
+   logger_->error(
       "[LedgerCommandThread] processGetPublicKey - Done retrieve native segwit xpub key.");
 
-   logger_->debug(
+   logger_->error(
       "[LedgerCommandThread] processGetPublicKey - Start retrieve legacy xpub key.");
    pubKey = retrievePublicKeyFromPath(getDerivationPath(testNet_, bs::hd::NonSegWit));
    try {
       walletInfo.info_.xpubLegacy = pubKey.getBase58().toBinStr();
    }
    catch (...) {
-      logger_->debug(
+      logger_->error(
          "[LedgerCommandThread] getPublicKey - Cannot retrieve legacy xpub key.");
       emit error(Ledger::INTERNAL_ERROR);
       return;
    }
-   logger_->debug(
+   logger_->error(
       "[LedgerCommandThread] processGetPublicKey - Done retrieve legacy xpub key.");
 
    if (!walletInfo.isValid()) {
-      logger_->debug(
+      logger_->error(
          "[LedgerCommandThread] getPublicKey - Wallet info is not correct.");
       emit error(Ledger::INTERNAL_ERROR);
       return;
    }
    else {
-      logger_->debug(
+      logger_->error(
          fmt::format("[LedgerCommandThread] getPublicKey - Operation succeeded." \
             "\nRoot xpub : {}\nNested segwit xpub: {}\nNative segwit xpub: {}\nLegacy: {}"
          , walletInfo.info_.xpubRoot, walletInfo.info_.xpubNestedSegwit
@@ -499,12 +500,12 @@ void LedgerCommandThread::processGetRootKey()
       walletInfo.info_.xpubRoot = pubKey.getBase58().toBinStr();
    }
    catch (...) {
-      logger_->debug(
+      logger_->error(
          "[LedgerCommandThread] getPublicKey - Cannot retrieve root xpub key.");
       emit error(Ledger::INTERNAL_ERROR);
       return;
    }
-   logger_->debug(
+   logger_->error(
       "[LedgerCommandThread] processGetPublicKey - Done retrieve root xpub key.");
 
 
@@ -566,7 +567,7 @@ BIP32_Node LedgerCommandThread::getPublicKeyApdu(bs::hd::Path&& derivationPath, 
 
 QByteArray LedgerCommandThread::getTrustedInput(const UTXO& utxo)
 {
-   logger_->debug(
+   logger_->error(
       "[LedgerCommandThread] getTrustedInput - Start retrieve trusted input for legacy address.");
 
    //find the supporting tx
@@ -672,7 +673,7 @@ QByteArray LedgerCommandThread::getTrustedInput(const UTXO& utxo)
       throw std::runtime_error("failed to get trusted input");
    }
 
-   logger_->debug(
+   logger_->error(
       "[LedgerCommandThread] getTrustedInput - Done retrieve trusted input for legacy address.");
 
    return trustedInput;
@@ -695,7 +696,7 @@ void LedgerCommandThread::startUntrustedTransaction(
 {
    {
       //setup untrusted transaction
-      logger_->debug("[LedgerCommandThread] startUntrustedTransaction - Start Init section");
+      logger_->error("[LedgerCommandThread] startUntrustedTransaction - Start Init section");
       QByteArray initPayload;
       writeUintLE(initPayload, Ledger::DEFAULT_VERSION);
       writeVarInt(initPayload, trustedInputs.size());
@@ -711,11 +712,11 @@ void LedgerCommandThread::startUntrustedTransaction(
          releaseDevice();
          throw std::runtime_error("failed to init untrusted tx");
       }
-      logger_->debug("[LedgerCommandThread] startUntrustedTransaction - Done Init section");
+      logger_->error("[LedgerCommandThread] startUntrustedTransaction - Done Init section");
    }
 
    //pass each input
-   logger_->debug("[LedgerCommandThread] startUntrustedTransaction - Start Input section");
+   logger_->error("[LedgerCommandThread] startUntrustedTransaction - Start Input section");
    QVector<QByteArray> inputCommands;
    for (unsigned i=0; i<trustedInputs.size(); i++) {
       const auto& trustedInput = trustedInputs[i];
@@ -759,14 +760,14 @@ void LedgerCommandThread::startUntrustedTransaction(
          throw std::runtime_error("failed to create untrusted tx");
       }
    }
-   logger_->debug("[LedgerCommandThread] startUntrustedTransaction - Done Input section");
+   logger_->error("[LedgerCommandThread] startUntrustedTransaction - Done Input section");
 }
 
 void LedgerCommandThread::finalizeInputFull()
 {
    const bool hasChangeOutput = (changePath_.length() != 0);
    if (hasChangeOutput) {
-      logger_->debug("[LedgerCommandThread] finalizeInputFull - Start Change section");
+      logger_->error("[LedgerCommandThread] finalizeInputFull - Start Change section");
       // If tx has change, we send derivation path of return address in prio
       // before send all output addresses and change with it, so device could detect it
       QByteArray changeInputPayload;
@@ -781,10 +782,10 @@ void LedgerCommandThread::finalizeInputFull()
          releaseDevice();
          return;
       }
-      logger_->debug("[LedgerCommandThread] finalizeInputFull - Done Change section");
+      logger_->error("[LedgerCommandThread] finalizeInputFull - Done Change section");
    }
 
-   logger_->debug("[LedgerCommandThread] finalizeInputFull - Start output section");
+   logger_->error("[LedgerCommandThread] finalizeInputFull - Start output section");
    size_t totalOutput = coreReq_->recipients.size();
    if (hasChangeOutput) {
       ++totalOutput;
@@ -823,7 +824,7 @@ void LedgerCommandThread::finalizeInputFull()
       }
    }
 
-   logger_->debug("[LedgerCommandThread] finalizeInputFull - Done output section");
+   logger_->error("[LedgerCommandThread] finalizeInputFull - Done output section");
 }
 
 void LedgerCommandThread::processTXLegacy()
@@ -864,7 +865,7 @@ void LedgerCommandThread::processTXLegacy()
       emit info(HWInfoStatus::kReceiveSignedTx);
 
       // -- Start signing one by one all addresses -- 
-      logger_->debug("[LedgerCommandThread] processTXLegacy - Start signing section");
+      logger_->error("[LedgerCommandThread] processTXLegacy - Start signing section");
 
       auto &path = inputPaths_[i];
       QByteArray signPayload;
@@ -891,7 +892,7 @@ void LedgerCommandThread::processTXLegacy()
       responseSigned.push_back(responseInputSign);
    }
 
-   logger_->debug("[LedgerCommandThread] processTXLegacy - Done signing section");
+   logger_->error("[LedgerCommandThread] processTXLegacy - Done signing section");
    // -- Done signing one by one all addresses -- 
 
    // Done with device in this point 
@@ -1148,7 +1149,7 @@ bool LedgerCommandThread::exchangeData(const QByteArray& input,
       static int maxAttempts = 10;
       if (e.what() == kHidapiSequence191 && maxAttempts > 0) {
          --maxAttempts;
-         OnExitCb([&] {
+         ScopedGuard guard([&] {
             ++maxAttempts;
          });
 
@@ -1167,9 +1168,9 @@ bool LedgerCommandThread::exchangeData(const QByteArray& input,
 // Do not use this function anywhere except inside exchangeData
 bool LedgerCommandThread::writeData(const QByteArray& input, const std::string& logHeader)
 {
-   logger_->debug(logHeader + " - >>> " + input.toHex().toStdString());
+   logger_->error(logHeader + " - >>> " + input.toHex().toStdString());
    if (sendApdu(dongle_, input) < 0) {
-      logger_->debug(
+      logger_->error(
          logHeader + " - Cannot write to device.");
       return false;
    }
@@ -1182,13 +1183,13 @@ bool LedgerCommandThread::readData(QByteArray& output, const std::string& logHea
 {
    auto res = receiveApduResult(dongle_, output);
    if (res != Ledger::SW_OK) {
-      logger_->debug(
+      logger_->error(
          logHeader + " - Cannot read from device. APDU error code : "
          + QByteArray::number(res, 16).toStdString());
       lastError_ = res;
       throw std::logic_error("Can't read from device");
    }
 
-   logger_->debug(logHeader + " - <<< " + BinaryData::fromString(output.toStdString()).toHexStr() + "9000");
+   logger_->error(logHeader + " - <<< " + BinaryData::fromString(output.toStdString()).toHexStr() + "9000");
    return true;
 }
