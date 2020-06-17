@@ -174,7 +174,7 @@ void AQScriptHandler::init(const QString &fileName)
 
    aqEnabled_ = false;
 
-   aq_ = new AutoQuoter(logger_, fileName, assetManager_, mdCallbacks_, this);
+   aq_ = new AutoQuoter(logger_, assetManager_, mdCallbacks_, this);
    if (walletsManager_) {
       aq_->setWalletsManager(walletsManager_);
    }
@@ -185,15 +185,15 @@ void AQScriptHandler::init(const QString &fileName)
    connect(aq_, &AutoQuoter::failed, [this, fileName](const QString &err) {
       logger_->error("Script loading failed: {}", err.toStdString());
 
-      if (aq_) {
-         aq_->deleteLater();
-         aq_ = nullptr;
-      }
+      aq_->deleteLater();
+      aq_ = nullptr;
 
       emit failedToLoad(fileName, err);
    });
    connect(aq_, &AutoQuoter::sendingQuoteReply, this, &AQScriptHandler::onAQReply);
    connect(aq_, &AutoQuoter::pullingQuoteReply, this, &AQScriptHandler::onAQPull);
+
+   aq_->load(fileName);
 }
 
 void AQScriptHandler::deinit()

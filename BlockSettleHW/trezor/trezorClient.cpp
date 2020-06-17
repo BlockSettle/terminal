@@ -75,13 +75,13 @@ void TrezorClient::initConnection(bool force, AsyncCallBack&& cb)
    postToTrezor("/", std::move(initCallBack), true);
 }
 
-void TrezorClient::initConnection(QString&& deviceId, AsyncCallBackCall&& cb /*= nullptr*/)
+void TrezorClient::initConnection(QString&& deviceId, bool force, AsyncCallBackCall&& cb /*= nullptr*/)
 {
    AsyncCallBack cbWrapper = [copyDeviceId = std::move(deviceId), originCb = std::move(cb)]() {
       originCb({ copyDeviceId });
    };
 
-   initConnection(false, std::move(cbWrapper));
+   initConnection(force, std::move(cbWrapper));
 }
 
 void TrezorClient::releaseConnection(AsyncCallBack&& cb)
