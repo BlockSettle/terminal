@@ -70,7 +70,7 @@ namespace {
       uint16_t chunkNumber = 0;
 
       unsigned char buf[Ledger::CHUNK_MAX_BLOCK];
-      int result = hid_read(dongle, buf, Ledger::CHUNK_MAX_BLOCK);
+      uint16_t result = hid_read(dongle, buf, Ledger::CHUNK_MAX_BLOCK);
       if (result < 0) {
          return result;
       }
