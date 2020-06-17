@@ -119,53 +119,61 @@ namespace UiUtils {
          return CommonUiUtilsText::tr("Loading...");
       }
       return UnifyValueString(QLocale().toString(amountToBtc(value), 'f', GetAmountPrecisionXBT()));
-}
+   }
 
-double actualXbtPrice(bs::XBTAmount amount, double price)
-{
-   int64_t ccAmountInCents = std::llround(amount.GetValueBitcoin() * price * 100);
-   double ccAmount = ccAmountInCents / 100.;
-   return  ccAmount / amount.GetValueBitcoin();
-}
+   QString displayAmount(const bs::XBTAmount &amount)
+   {
+      if (!amount.isValid()) {
+         return CommonUiUtilsText::tr("Loading...");
+      }
+      return UnifyValueString(QLocale().toString(amountToBtc(amount.GetValue())
+         , 'f', GetAmountPrecisionXBT()));
+   }
 
-bs::hd::Purpose getHwWalletPurpose(WalletsTypes hwType)
-{
-   if (!(hwType & WalletsTypes::HardwareAll)) {
-      // incorrect function using
+   double actualXbtPrice(bs::XBTAmount amount, double price)
+   {
+      int64_t ccAmountInCents = std::llround(amount.GetValueBitcoin() * price * 100);
+      double ccAmount = ccAmountInCents / 100.;
+      return  ccAmount / amount.GetValueBitcoin();
+   }
+
+   bs::hd::Purpose getHwWalletPurpose(WalletsTypes hwType)
+   {
+      if (!(hwType & WalletsTypes::HardwareAll)) {
+         // incorrect function using
+         assert(false);
+         return {};
+      }
+
+      if (HardwareLegacy == hwType) {
+         return bs::hd::Purpose::NonSegWit;
+      }
+      else if (HardwareNativeSW == hwType) {
+         return bs::hd::Purpose::Native;
+      }
+      else if (HardwareNestedSW == hwType) {
+         return bs::hd::Purpose::Nested;
+      }
+
+      // You should specify new case here
       assert(false);
       return {};
    }
 
-   if (UiUtils::HardwareLegacy == hwType) {
-      return bs::hd::Purpose::NonSegWit;
-   }
-   else if (UiUtils::HardwareNativeSW == hwType) {
-      return bs::hd::Purpose::Native;
-   }
-   else if (UiUtils::HardwareNestedSW == hwType) {
-      return bs::hd::Purpose::Nested;
-   }
-
-   // You should specify new case here
-   assert(false);
-   return {};
-}
-
-UiUtils::WalletsTypes getHwWalletType(bs::hd::Purpose purpose)
-{
-   switch (purpose)
+   WalletsTypes getHwWalletType(bs::hd::Purpose purpose)
    {
-   case bs::hd::Native:
-      return WalletsTypes::HardwareNativeSW;
-   case bs::hd::Nested:
-      return WalletsTypes::HardwareNestedSW;
-   case bs::hd::NonSegWit:
-      return WalletsTypes::HardwareLegacy;
-   default:
-      return WalletsTypes::None;
+      switch (purpose)
+      {
+      case bs::hd::Native:
+         return WalletsTypes::HardwareNativeSW;
+      case bs::hd::Nested:
+         return WalletsTypes::HardwareNestedSW;
+      case bs::hd::NonSegWit:
+         return WalletsTypes::HardwareLegacy;
+      default:
+         return WalletsTypes::None;
+      }
    }
-}
-
 }
 
 int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId, WalletsTypes type /* = WalletsTypes::None */)

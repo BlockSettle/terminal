@@ -17,6 +17,8 @@ namespace {
    const QString kDotPathname = QLatin1String{ ":/ICON_DOT" };
 }
 
+using namespace bs;
+
 ChatClientUsersViewItemDelegate::ChatClientUsersViewItemDelegate(ChatPartiesSortProxyModelPtr proxyModel, QObject *parent)
    : QStyledItemDelegate (parent)
    , proxyModel_(proxyModel)

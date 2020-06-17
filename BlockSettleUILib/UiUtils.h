@@ -77,6 +77,7 @@ namespace UiUtils
    QValidator::State ValidateDoubleString(QString &input, int &pos, const int decimals);
 
    template <typename T> QString displayAmount(T value);
+   QString displayAmount(const bs::XBTAmount &);
 
    double parseAmountBtc(const QString& text);
 

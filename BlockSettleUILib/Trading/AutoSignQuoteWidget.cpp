@@ -47,12 +47,10 @@ void AutoSignQuoteWidget::init(const std::shared_ptr<AutoSignScriptProvider> &au
       , this, &AutoSignQuoteWidget::onAutoSignReady);
    connect(autoSignProvider_.get(), &AutoSignScriptProvider::autoSignStateChanged
       , this, &AutoSignQuoteWidget::onAutoSignStateChanged);
-   connect(autoSignProvider_.get(), &AutoSignScriptProvider::scriptLoaded, this
-      , &AutoSignQuoteWidget::onScriptLoaded);
-   connect(autoSignProvider_.get(), &AutoSignScriptProvider::scriptUnLoaded, this
-      , &AutoSignQuoteWidget::onScriptUnloaded);
    connect(autoSignProvider_.get(), &AutoSignScriptProvider::scriptHistoryChanged
       , this, &AutoSignQuoteWidget::fillScriptHistory);
+   connect(autoSignProvider_.get(), &AutoSignScriptProvider::scriptLoadedChanged
+      , this, &AutoSignQuoteWidget::validateGUI);
 
    ui_->labelAutoSignWalletName->setText(autoSignProvider_->getAutoSignWalletName());
 }
@@ -69,13 +67,9 @@ void AutoSignQuoteWidget::onAutoQuoteToggled()
       const bool answerYes = (question.exec() == QDialog::Accepted);
       if (answerYes) {
          const auto scriptFileName = askForScript();
-         if (scriptFileName.isEmpty()) {
-            ui_->checkBoxAQ->setChecked(false);
-         } else {
+         if (!scriptFileName.isEmpty()) {
             autoSignProvider_->init(scriptFileName);
          }
-      } else {
-         ui_->checkBoxAQ->setChecked(false);
       }
    }
 
@@ -103,23 +97,12 @@ void AutoSignQuoteWidget::onAutoSignStateChanged()
 
 void AutoSignQuoteWidget::onAutoSignReady()
 {
-   ui_->checkBoxAQ->setChecked(false);
    ui_->labelAutoSignWalletName->setText(autoSignProvider_->getAutoSignWalletName());
-
    const bool enableWidget = autoSignProvider_->isReady();
    ui_->groupBoxAutoSign->setEnabled(enableWidget);
    ui_->checkBoxAutoSign->setEnabled(enableWidget);
    ui_->checkBoxAQ->setEnabled(enableWidget);
-}
-
-void AutoSignQuoteWidget::onScriptLoaded()
-{
-   ui_->checkBoxAQ->setChecked(true);
-}
-
-void AutoSignQuoteWidget::onScriptUnloaded()
-{
-   ui_->checkBoxAQ->setChecked(false);
+   validateGUI();
 }
 
 void AutoSignQuoteWidget::fillScriptHistory()

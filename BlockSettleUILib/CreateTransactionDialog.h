@@ -132,7 +132,7 @@ private:
    void populateWalletsList();
    void startBroadcasting();
    void stopBroadcasting();
-   bool createTransactionImpl(bs::core::wallet::TXSignRequest txReq);
+   bool createTransactionImpl(bs::core::wallet::TXSignRequest txReq, const std::map<bs::Address, BinaryData> &preimages);
 
 protected:
    std::shared_ptr<ArmoryConnection>   armory_;
@@ -147,7 +147,6 @@ protected:
    XbtAmountValidator * xbtValidator_ = nullptr;
 
    const bool     loadFeeSuggestions_;
-   std::thread    feeUpdatingThread_;
 
    unsigned int   pendingTXSignId_ = 0;
    bool           broadcasting_ = false;
@@ -164,7 +163,7 @@ protected:
    float       advisedFeePerByte_ = 0;
    float       advisedTotalFee_ = 0;
    float       addedFee_ = 0;
-   const float minRelayFeePerByte_ = 5;
+
 
    ValidityFlag validityFlag_;
 

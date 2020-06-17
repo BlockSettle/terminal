@@ -145,7 +145,6 @@ class AutoQuoter : public UserScript
    Q_OBJECT
 public:
    AutoQuoter(const std::shared_ptr<spdlog::logger> &
-      , const QString &filename
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<MDCallbacksQt> &
       , QObject* parent = nullptr);

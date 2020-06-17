@@ -64,8 +64,8 @@ public:
 signals:
    void devicesChanged();
    void publicKeyReady(QVariant walletInfo);
-   void requestPinMatrix();
-   void requestHWPass(bool allowedOnDevice);
+   void requestPinMatrix(int deviceIndex);
+   void requestHWPass(int deviceIndex, bool allowedOnDevice);
 
    void deviceNotFound(QString deviceId);
    void deviceReady(QString deviceId);
@@ -77,10 +77,15 @@ signals:
    void cancelledOnDevice();
    void invalidPin();
 
+protected slots:
+   void onRequestPinMatrix();
+   void onRequestHWPass(bool allowedOnDevice);
+
 private:
    void setScanningFlag(bool isScanning);
    void releaseConnection(AsyncCallBack&& cb = nullptr);
-   void scanningDone();
+   void scanningDone(bool initDevices = true);
+   void connectDevice(QPointer<HwDeviceInterface> device);
 
    QPointer<HwDeviceInterface> getDevice(DeviceKey key);
 
@@ -96,6 +101,7 @@ public:
    bool isScanning_{};
    bool isSigning_{};
    QString lastOperationError_;
+   QString lastUsedTrezorWallet_;
 };
 
 #endif // HWDEVICESCANNER_H
