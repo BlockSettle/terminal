@@ -128,7 +128,6 @@ Item {
 
             MouseArea {
                 anchors.fill: parent
-                enabled: model.pairedWallet.length === 0
                 onClicked: {
                     if (hwList.currentIndex === index) {
                         return;
@@ -145,7 +144,9 @@ Item {
 
             Connections {
                 target: hwDeviceManager.devices
-                onModelReset: checkReadyForImport()
+                onModelReset: {
+                    checkReadyForImport();
+                }
             }
 
             function checkReadyForImport() {
@@ -159,6 +160,15 @@ Item {
         onCountChanged: {
             if (count !== 0 && hwList.currentIndex === -1)
                 hwList.currentIndex = 0;
+        }
+
+        Connections {
+            target: hwDeviceManager.devices
+            onToppestImportChanged: {
+                if (!root.readyForImport) {
+                    hwList.currentIndex = hwDeviceManager.devices.toppestImport;
+                }
+            }
         }
 
     }

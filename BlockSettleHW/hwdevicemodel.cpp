@@ -79,6 +79,7 @@ void HwDeviceModel::resetModel(QVector<DeviceKey>&& deviceKeys)
    beginResetModel();
    devices_ = std::move(deviceKeys);
    endResetModel();
+   emit toppestImportChanged();
 }
 
 DeviceKey HwDeviceModel::getDevice(int index)
@@ -94,6 +95,21 @@ int HwDeviceModel::getDeviceIndex(DeviceKey key)
 {
    for (int i = 0; i < devices_.size(); ++i) {
       if (devices_[i].deviceId_ == key.deviceId_) {
+         return i;
+      }
+   }
+
+   return -1;
+}
+
+int HwDeviceModel::toppestImport() const
+{
+   if (devices_.empty()) {
+      return -1;
+   }
+
+   for (int i = 0; i < devices_.size(); ++i) {
+      if (devices_[i].status_.isEmpty() && devices_[i].walletId_.isEmpty()) {
          return i;
       }
    }
