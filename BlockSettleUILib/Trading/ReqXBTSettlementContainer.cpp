@@ -347,7 +347,7 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
 
          settlAddr_ = result.settlementAddr;
 
-         const auto list = authAddrMgr_->GetVerifiedAddressList();
+         const auto list = authAddrMgr_->GetSubmittedAddressList();
          const auto userAddress = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
          userKeyOk_ = (std::find(list.begin(), list.end(), userAddress) != list.end());
          if (!userKeyOk_) {

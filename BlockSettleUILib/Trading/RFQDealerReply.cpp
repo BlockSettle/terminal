@@ -152,7 +152,7 @@ void RFQDealerReply::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMa
    }
 
    auto updateAuthAddresses = [this] {
-      UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
+      UiUtils::fillAuthAddressesComboBoxWithSubmitted(ui_->authenticationAddressComboBox, authAddressManager_);
       onAuthAddrChanged(ui_->authenticationAddressComboBox->currentIndex());
    };
    updateAuthAddresses();
