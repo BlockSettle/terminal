@@ -36,9 +36,6 @@ public slots:
    void onAutoSignStateChanged();
    void onAutoSignReady();
 
-   void onScriptLoaded();
-   void onScriptUnloaded();
-
 private slots:
    void fillScriptHistory();
    void scriptChanged(int curIndex);
