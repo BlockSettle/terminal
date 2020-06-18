@@ -41,7 +41,7 @@ void OTCWindowsManager::init(const std::shared_ptr<bs::sync::WalletsManager>& wa
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &OTCWindowsManager::updateBalances);
 
    authManager_ = authManager;
-   connect(authManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, &OTCWindowsManager::syncInterfaceRequired);
+   connect(authManager_.get(), &AuthAddressManager::AddressListUpdated, this, &OTCWindowsManager::syncInterfaceRequired);
 
    connect(mdCallbacks.get(), &MDCallbacksQt::MDUpdate, this, &OTCWindowsManager::updateMDDataRequired);
 

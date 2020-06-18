@@ -254,7 +254,7 @@ void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
 
    ui_->pageRFQTicket->disablePanel();
 
-   connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, &RFQRequestWidget::forceCheckCondition);
+   connect(authAddressManager_.get(), &AuthAddressManager::AddressListUpdated, this, &RFQRequestWidget::forceCheckCondition);
 }
 
 void RFQRequestWidget::onConnectedToCeler()

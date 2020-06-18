@@ -156,7 +156,7 @@ void RFQDealerReply::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMa
       onAuthAddrChanged(ui_->authenticationAddressComboBox->currentIndex());
    };
    updateAuthAddresses();
-   connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, updateAuthAddresses);
+   connect(authAddressManager_.get(), &AuthAddressManager::AddressListUpdated, this, updateAuthAddresses);
 }
 
 CustomDoubleSpinBox* RFQDealerReply::bidSpinBox() const
@@ -400,7 +400,11 @@ void RFQDealerReply::priceChanged()
 
 void RFQDealerReply::onAuthAddrChanged(int index)
 {
-   authAddr_ = authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(index));
+   auto addressString = ui_->authenticationAddressComboBox->itemText(index).toStdString();
+   if (addressString.empty()) {
+      return;
+   }
+   authAddr_  = bs::Address::fromAddressString(addressString);
    authKey_.clear();
 
    if (authAddr_.empty()) {

@@ -279,7 +279,7 @@ void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMana
       onAuthAddrChanged(ui_->authenticationAddressComboBox->currentIndex());
    };
    updateAuthAddresses();
-   connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, updateAuthAddresses);
+   connect(authAddressManager_.get(), &AuthAddressManager::AddressListUpdated, this, updateAuthAddresses);
 
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, [this] {
       // This will update balance after receiving ZC
@@ -508,11 +508,14 @@ bs::network::Side::Type RFQTicketXBT::getSelectedSide() const
 
 void RFQTicketXBT::onAuthAddrChanged(int index)
 {
-   authAddr_ = authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(index));
-   authKey_.clear();
-   if (authAddr_.empty()) {
+   auto addressString = ui_->authenticationAddressComboBox->itemText(index).toStdString();
+   if (addressString.empty()) {
       return;
    }
+
+   authAddr_ = bs::Address::fromAddressString(addressString);
+
+   authKey_.clear();
    const auto settlLeaf = walletsManager_->getSettlementLeaf(authAddr_);
 
    const auto &cbPubKey = [this](const SecureBinaryData &pubKey) {
@@ -530,7 +533,7 @@ void RFQTicketXBT::onAuthAddrChanged(int index)
 
 void RFQTicketXBT::onUTXOReservationChanged(const std::string& walletId)
 {
-   logger_->debug("[{}] walletId='{}'", __func__, walletId);
+   logger_->debug("[RFQTicketXBT::onUTXOReservationChanged] walletId='{}'", walletId);
    if (walletId.empty()) {
       updateBalances();
       updateSubmitButton();
@@ -770,7 +773,7 @@ void RFQTicketXBT::sendRFQ(const std::string &id)
       logger_->error("[RFQTicketXBT::onSendRFQ] RFQ with id {} not found", id);
       return;
    }
-   logger_->debug("[{}] sending RFQ {}", __func__, id);
+   logger_->debug("[RFQTicketXBT::sendRFQ] sending RFQ {}", id);
    auto rfq = itRFQ->second;
 
    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
@@ -905,7 +908,7 @@ void RFQTicketXBT::onCancelRFQ(const std::string &id)
       logger_->error("[RFQTicketXBT::onCancelRFQ] failed to find RFQ {}", id);
       return;
    }
-   logger_->debug("[{}] cancelling RFQ {}", __func__, id);
+   logger_->debug("[RFQTicketXBT::onCancelRFQ] cancelling RFQ {}", id);
    if (cancelRFQCb_) {
       cancelRFQCb_(id);
    }
