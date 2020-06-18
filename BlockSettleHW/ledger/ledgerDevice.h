@@ -110,8 +110,9 @@ protected:
 
    // APDU commands processing
    bool exchangeData(const QByteArray& input, QByteArray& output, std::string&& logHeader);
-   bool writeData(const QByteArray& input, std::string&& logHeader);
-   bool readData(QByteArray& output, std::string&& logHeader);
+   // Do not use those functions straight away, use exchangeData instead
+   bool writeData(const QByteArray& input, const std::string& logHeader);
+   bool readData(QByteArray& output, const std::string& logHeader);
 
    // Get public key processing
    void processGetPublicKey();
