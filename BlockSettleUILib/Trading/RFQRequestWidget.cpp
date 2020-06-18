@@ -479,7 +479,8 @@ void RFQRequestWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTe
          const auto &command = response.sign_payin();
          auto timestamp = QDateTime::fromMSecsSinceEpoch(command.timestamp_ms());
          // unsigned_payin_data - serialized payin. binary
-         emit signedPayinRequested(command.settlement_id(), BinaryData::fromString(command.unsigned_payin_data()), timestamp);
+         emit signedPayinRequested(command.settlement_id(), BinaryData::fromString(command.unsigned_payin_data())
+            , BinaryData::fromString(command.payin_hash()), timestamp);
          break;
       }
 
