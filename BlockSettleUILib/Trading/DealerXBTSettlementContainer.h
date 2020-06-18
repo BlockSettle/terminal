@@ -79,8 +79,10 @@ public:
 
 public slots:
    void onUnsignedPayinRequested(const std::string& settlementId);
-   void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp);
-   void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp);
+   void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash
+      , QDateTime timestamp);
+   void onSignedPayinRequested(const std::string& settlementId, const BinaryData &unsignedPayin
+      , const BinaryData &payinHash, QDateTime timestamp);
 
 signals:
    void sendUnsignedPayinToPB(const std::string& settlementId, const bs::network::UnsignedPayinData& unsignedPayinData);
@@ -127,7 +129,7 @@ private:
    unsigned int   payinSignId_ = 0;
    unsigned int   payoutSignId_ = 0;
 
-   BinaryData		usedPayinHash_;
+   BinaryData        usedPayinHash_;
 
    std::vector<UTXO> utxosPayinFixed_;
    bs::Address       recvAddr_;

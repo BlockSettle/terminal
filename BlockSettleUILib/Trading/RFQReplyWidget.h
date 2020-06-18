@@ -109,7 +109,8 @@ signals:
 
    void unsignedPayinRequested(const std::string& settlementId);
    void signedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp);
-   void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp);
+   void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin
+      , const BinaryData &payinHash, QDateTime timestamp);
 
 public slots:
    void forceCheckCondition();
