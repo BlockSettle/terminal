@@ -1167,9 +1167,9 @@ bool LedgerCommandThread::exchangeData(const QByteArray& input,
 // Do not use this function anywhere except inside exchangeData
 bool LedgerCommandThread::writeData(const QByteArray& input, const std::string& logHeader)
 {
-   logger_->error(fmt::format("{} - >>> {}", logHeader, input.toHex().toStdString()));
+   logger_->error("{} - >>> {}", logHeader, input.toHex().toStdString());
    if (sendApdu(dongle_, input) < 0) {
-      logger_->error(fmt::format("{} - Cannot write to device.", logHeader));
+      logger_->error("{} - Cannot write to device.", logHeader);
       return false;
    }
 
@@ -1181,12 +1181,12 @@ bool LedgerCommandThread::readData(QByteArray& output, const std::string& logHea
 {
    auto res = receiveApduResult(dongle_, output);
    if (res != Ledger::SW_OK) {
-      logger_->error(fmt::format("{} - Cannot read from device. APDU error code : {}",
-         logHeader, QByteArray::number(res, 16).toStdString()));
+      logger_->error("{} - Cannot read from device. APDU error code : {}",
+         logHeader, QByteArray::number(res, 16).toStdString());
       lastError_ = res;
       throw std::logic_error("Can't read from device");
    }
 
-   logger_->error(fmt::format("{} - <<< {}", logHeader, BinaryData::fromString(output.toStdString()).toHexStr() + "9000"));
+   logger_->error("{} - <<< {}", logHeader, BinaryData::fromString(output.toStdString()).toHexStr() + "9000");
    return true;
 }
