@@ -183,7 +183,7 @@ bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData(QDa
    dialogData.setValue(PasswordDialogData::RequesterAuthAddress, authAddr_.display());
    dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, true);
 
-   dialogData.setValue(PasswordDialogData::ResponderAuthAddress, 
+   dialogData.setValue(PasswordDialogData::ResponderAuthAddress,
       bs::Address::fromPubKey(dealerAuthKey_, AddressEntryType_P2WPKH).display());
    dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, dealerVerifState_ == AddressVerificationState::Verified);
 
