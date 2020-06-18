@@ -247,7 +247,6 @@ void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
    connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this, &RFQRequestWidget::onConnectedToCeler);
    connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &RFQRequestWidget::onDisconnectedFromCeler);
 
-   logger_->debug("[{}]", __func__);
    connect((RFQScriptRunner *)autoSignProvider_->scriptRunner(), &RFQScriptRunner::sendRFQ
       , ui_->pageRFQTicket, &RFQTicketXBT::onSendRFQ, Qt::QueuedConnection);
    connect((RFQScriptRunner *)autoSignProvider_->scriptRunner(), &RFQScriptRunner::cancelRFQ
