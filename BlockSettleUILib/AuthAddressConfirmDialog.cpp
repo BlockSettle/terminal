@@ -120,7 +120,7 @@ void AuthAddressConfirmDialog::onAuthAddressSubmitSuccess(const QString &address
 
    BSMessageBox(BSMessageBox::success, tr("Submission Successful")
       , tr("Authentication Address Submitted")
-      , tr("You could start XBT trading using auth address")
+      , tr("You now have access to Spot XBT (bitcoin) trading.")
       , this).exec();
    accept();
 }
