@@ -28,9 +28,9 @@ DialogManager::DialogManager(const QWidget *mainWindow)
 
 void DialogManager::adjustDialogPosition(QDialog *dlg)
 {
-   if (!prepare(dlg))
+   if (!prepare(dlg)) {
       return;
-
+   }
    connect(dlg, &QDialog::destroyed, this, &DialogManager::onDialogFinished);
    dlg->setModal(false);
 
@@ -43,7 +43,6 @@ void DialogManager::adjustDialogPosition(QDialog *dlg)
 #ifndef Q_OS_WIN
    center.setY(center.y() - unixHeightDelta);
 #endif
-
 
    const QRect inputGeometry = getGeometry(dlg);
    const QRect screenSize = getGeometry(QApplication::desktop());
@@ -122,29 +121,21 @@ void DialogManager::adjustDialogPosition(QDialog *dlg)
          continue;
       }
 
-      const QRect otherGeometry = getGeometry(other.data());
+      const QRect otherGeometry = getGeometry(other);
       QPoint otherP = otherGeometry.topLeft();
       QPoint delta = dialogTopLeft - otherP;
 
-      // If there less then 5 pixels difference
-      // update position.
-      if (delta.manhattanLength() <= 5) {
-         dialogTopLeft.setX(dialogTopLeft.x() + otherGeometry.width());
-         adjustX(other);
-
-         // Check again - if true we in the same position
-         delta = dialogTopLeft - otherP;
-         if (delta.manhattanLength() <= 5) {
-            int const startX = center.x() - (inputGeometry.width() / 2);
-            if (dialogTopLeft.x() == startX) {
-               dialogTopLeft.setX(dialogTopLeft.x() + otherGeometry.width());
-            } else {
-               dialogTopLeft.setX(startX);
-            }
+      // update position if there's less than 32 pixels difference
+      if (delta.manhattanLength() <= 32) {
+         dialogTopLeft.setX(otherP.x() + otherGeometry.width());
+         if ((dialogTopLeft.x() + inputGeometry.width()) > available.width()) {
+            dialogTopLeft.setX(0);
             dialogTopLeft.setY(otherP.y() + otherGeometry.height());
-            adjustX(other);
-            adjustY(other);
          }
+      }
+      if ((dialogTopLeft.y() + inputGeometry.height()) > available.height()) {
+         dialogTopLeft.setX(0);
+         dialogTopLeft.setY(0);
       }
    }
 

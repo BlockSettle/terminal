@@ -422,6 +422,7 @@ public:
    Q_INVOKABLE void log(const QString &);
    Q_INVOKABLE SubmitRFQ *sendRFQ(const QString &symbol, bool buy, double amount);
    Q_INVOKABLE void cancelRFQ(const std::string &id);
+   Q_INVOKABLE SubmitRFQ *activeRFQ(const QString &id);
    void cancelAll();
 
    void onMDUpdate(bs::network::Asset::Type, const QString &security,
@@ -436,6 +437,14 @@ signals:
    void suspended();
    void sendingRFQ(SubmitRFQ *);
    void cancellingRFQ(const std::string &id);
+
+   void indicBidChanged(const QString &security, double price);
+   void indicAskChanged(const QString &security, double price);
+   void lastPriceChanged(const QString &security, double price);
+
+   void cancelled(const QString &id);
+   void accepted(const QString &id);
+   void expired(const QString &id);
 
 private:
    bool  started_ = false;

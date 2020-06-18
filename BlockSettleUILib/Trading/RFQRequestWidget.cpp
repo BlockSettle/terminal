@@ -247,6 +247,7 @@ void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
    connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this, &RFQRequestWidget::onConnectedToCeler);
    connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &RFQRequestWidget::onDisconnectedFromCeler);
 
+   logger_->debug("[{}]", __func__);
    connect((RFQScriptRunner *)autoSignProvider_->scriptRunner(), &RFQScriptRunner::sendRFQ
       , ui_->pageRFQTicket, &RFQTicketXBT::onSendRFQ, Qt::QueuedConnection);
    connect((RFQScriptRunner *)autoSignProvider_->scriptRunner(), &RFQScriptRunner::cancelRFQ
@@ -490,10 +491,11 @@ void RFQRequestWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTe
 
 void RFQRequestWidget::onUserConnected(const bs::network::UserType &ut)
 {
-   logger_->debug("[RFQRequestWidget::onUserConnected]");
    if (appSettings_->get<bool>(ApplicationSettings::AutoStartRFQScript)) {
-      ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->start(
-         autoSignProvider_->getLastScript());
+      QTimer::singleShot(1000, [this] { // add some delay to allow initial sync of data
+         ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->start(
+            autoSignProvider_->getLastScript());
+      });
    }
 }
 

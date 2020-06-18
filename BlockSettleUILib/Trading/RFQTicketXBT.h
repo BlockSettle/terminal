@@ -144,6 +144,7 @@ private slots:
    void onCreateWalletClicked();
 
    void onAuthAddrChanged(int);
+   void onSettlLeavesLoaded(unsigned int);
 
    void onUTXOReservationChanged(const std::string& walletId);
 
@@ -181,7 +182,7 @@ private:
    bool isXBTProduct() const;
    bool checkBalance(double qty) const;
    bs::network::Side::Type getSelectedSide() const;
-   std::string authKey() const { return authKey_; }
+   std::string authKey() const;
 
    void putRFQ(const bs::network::RFQ &);
    bool existsRFQ(const bs::network::RFQ &);
@@ -229,8 +230,8 @@ private:
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<bs::UTXOReservationManager>  utxoReservationManager_;
 
-   bs::Address authAddr_;
-   std::string authKey_;
+   mutable bs::Address authAddr_;
+   mutable std::string authKey_;
 
    unsigned int      leafCreateReqId_ = 0;
 
@@ -260,6 +261,7 @@ private:
    bs::FixedXbtInputs fixedXbtInputs_;
 
    bool  autoRFQenabled_{ false };
+   std::vector<std::string>   deferredRFQs_;
 };
 
 #endif // __RFQ_TICKET_XBT_H__
