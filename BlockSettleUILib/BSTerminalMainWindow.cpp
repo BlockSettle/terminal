@@ -1898,6 +1898,18 @@ void BSTerminalMainWindow::setupShortcuts()
    transactionsTabShortcut->setContext(Qt::WindowShortcut);
    connect(transactionsTabShortcut, &QShortcut::activated, [this](){ ui_->tabWidget->setCurrentIndex(4);});
 
+   auto explorerTabShortcut = new QShortcut(QKeySequence(QStringLiteral("Ctrl+6")), this);
+   explorerTabShortcut->setContext(Qt::WindowShortcut);
+   connect(explorerTabShortcut, &QShortcut::activated, [this](){ ui_->tabWidget->setCurrentIndex(5);});
+
+   auto chartsTabShortcut = new QShortcut(QKeySequence(QStringLiteral("Ctrl+7")), this);
+   chartsTabShortcut->setContext(Qt::WindowShortcut);
+   connect(chartsTabShortcut, &QShortcut::activated, [this](){ ui_->tabWidget->setCurrentIndex(6);});
+
+   auto chatTabShortcut = new QShortcut(QKeySequence(QStringLiteral("Ctrl+8")), this);
+   chatTabShortcut->setContext(Qt::WindowShortcut);
+   connect(chatTabShortcut, &QShortcut::activated, [this](){ ui_->tabWidget->setCurrentIndex(7);});
+
    // TODO: Switch ChatWidget to TabWithShortcut if needed (it will ignore shortcuts right now)
 
    auto addShotcut = [this](const char *keySequence, TabWithShortcut::ShortcutType type) {

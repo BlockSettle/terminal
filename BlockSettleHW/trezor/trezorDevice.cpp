@@ -316,6 +316,11 @@ void TrezorDevice::retrieveXPubRoot(AsyncCallBack&& cb)
 void TrezorDevice::makeCall(const google::protobuf::Message &msg)
 {
    client_->call(packMessage(msg), [this](QVariant&& answer) {
+      if (answer.isNull()) {
+         emit operationFailed(QLatin1String("Network error"));
+         resetCaches();
+      }
+
       MessageData data = unpackMessage(answer.toByteArray());
       handleMessage(data);
    });

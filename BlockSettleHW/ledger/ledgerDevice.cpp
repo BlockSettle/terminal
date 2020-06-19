@@ -1109,11 +1109,31 @@ bool LedgerCommandThread::initDevice()
       return false;
    }
 
+   // make sure that user do not switch off device in the middle of operation
+   {
+      auto* info = hid_enumerate(hidDeviceInfo_.vendorId_, hidDeviceInfo_.productId_);
+      if (!info) {
+         return false;
+      }
+
+      bool bFound = false;
+      for (; info; info = info->next) {
+         if (checkLedgerDevice(info)) {
+            bFound = true;
+            break;
+         }
+      }
+
+      if (!bFound) {
+         return false;
+      }
+   }
+
    std::unique_ptr<wchar_t> serNumb(new wchar_t[hidDeviceInfo_.serialNumber_.length() + 1]);
    hidDeviceInfo_.serialNumber_.toWCharArray(serNumb.get());
    serNumb.get()[hidDeviceInfo_.serialNumber_.length()] = 0x00;
    dongle_ = nullptr;
-   dongle_ = hid_open(static_cast<ushort>(Ledger::HID_VENDOR_ID), static_cast<ushort>(hidDeviceInfo_.productId_), serNumb.get());
+   dongle_ = hid_open(hidDeviceInfo_.vendorId_, static_cast<ushort>(hidDeviceInfo_.productId_), serNumb.get());
 
    return dongle_ != nullptr;
 }
@@ -1170,7 +1190,7 @@ bool LedgerCommandThread::writeData(const QByteArray& input, const std::string& 
    logger_->error("{} - >>> {}", logHeader, input.toHex().toStdString());
    if (sendApdu(dongle_, input) < 0) {
       logger_->error("{} - Cannot write to device.", logHeader);
-      return false;
+      throw std::logic_error("Cannot write to device");
    }
 
    return true;
