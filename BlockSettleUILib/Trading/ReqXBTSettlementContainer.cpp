@@ -280,6 +280,22 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
          return;
       }
 
+      try {
+         const Tx tx(signedTX);
+         if (!tx.isInitialized()) {
+            throw std::runtime_error("uninited TX");
+         }
+
+         if (tx.getThisHash() != usedPayinHash_) {
+            emit cancelWithError(tr("payin hash mismatch"), bs::error::ErrorCode::TxInvalidRequest);
+            return;
+         }
+      }
+      catch (const std::exception &e) {
+         emit cancelWithError(tr("invalid signed pay-in"), bs::error::ErrorCode::TxInvalidRequest);
+         return;
+      }
+
       for (const auto &leaf : xbtWallet_->getGroup(xbtWallet_->getXBTGroupType())->getLeaves()) {
          leaf->setTransactionComment(signedTX, comment_);
       }
@@ -440,10 +456,23 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
 
 }
 
-void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp)
+void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settlementId
+   , const BinaryData &payinHash, QDateTime timestamp)
 {
    if (settlementIdHex_ != settlementId) {
-      SPDLOG_LOGGER_ERROR(logger_, "invalid id : {} . {} expected", settlementId, settlementIdHex_);
+      SPDLOG_LOGGER_ERROR(logger_, "invalid id: {} - {} expected", settlementId
+         , settlementIdHex_);
+      return;
+   }
+
+   if (payinHash.empty()) {
+      SPDLOG_LOGGER_WARN(logger_, "empty payin hash - either PB or Proxy update is required");
+      emit error(bs::error::ErrorCode::TxInvalidRequest, tr("empty payin hash in request"));
+   }
+   if (usedPayinHash_ != payinHash) {
+      SPDLOG_LOGGER_ERROR(logger_, "invalid payin hash: {} - {} expected"
+         , usedPayinHash_.toHexStr(true), payinHash.toHexStr(true));
+      emit error(bs::error::ErrorCode::TxInvalidRequest, tr("payin hash mismatch"));
       return;
    }
 

@@ -263,6 +263,21 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
          return;
       }
 
+      try {
+         const Tx tx(signedTX);
+         if (!tx.isInitialized()) {
+            throw std::runtime_error("uninited TX");
+         }
+
+         if (tx.getThisHash() != usedPayinHash_) {
+            failWithErrorText(tr("payin hash mismatch"), bs::error::ErrorCode::TxInvalidRequest);
+            return;
+         }
+      } catch (const std::exception &e) {
+         failWithErrorText(tr("invalid signed pay-in"), bs::error::ErrorCode::TxInvalidRequest);
+         return;
+      }
+
       for (const auto &leaf : xbtWallet_->getGroup(bs::sync::hd::Wallet::getXBTGroupType())->getLeaves()) {
          leaf->setTransactionComment(signedTX, comment_);
       }
@@ -405,10 +420,17 @@ void DealerXBTSettlementContainer::onSignedPayoutRequested(const std::string& se
 }
 
 void DealerXBTSettlementContainer::onSignedPayinRequested(const std::string& settlementId
-   , const BinaryData& unsignedPayin, QDateTime timestamp)
+   , const BinaryData &, const BinaryData& payinHash, QDateTime timestamp)
 {
    if (settlementIdHex_ != settlementId) {
       // ignore
+      return;
+   }
+
+   if (payinHash.empty() || (usedPayinHash_ != payinHash)) {
+      SPDLOG_LOGGER_ERROR(logger_, "payin hash mismatch: {} vs {}"
+         , usedPayinHash_.toHexStr(true), payinHash.toHexStr(true));
+      failWithErrorText(tr("pay-in hash mismatch"), bs::error::ErrorCode::TxInvalidRequest);
       return;
    }
 
