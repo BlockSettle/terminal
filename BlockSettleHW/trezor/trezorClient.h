@@ -57,6 +57,8 @@ private:
    void acquireDevice(AsyncCallBack&& cb = nullptr);
    void post(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb, QByteArray&& input, bool timeout = false);
 
+   void cleanDeviceData();
+
 signals:
    void initialized();
    void devicesScanned();
