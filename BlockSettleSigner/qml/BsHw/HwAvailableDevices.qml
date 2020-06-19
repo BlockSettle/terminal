@@ -151,9 +151,13 @@ Item {
 
             function checkReadyForImport() {
                 if (hwList.currentIndex === index) {
-                    hwList.deviceIndex = model.pairedWallet.length === 0 && model.status.length === 0 ? index : -1
+                    hwList.deviceIndex = (
+                                (typeof model.pairedWallet !== 'undefined' && model.pairedWallet.length === 0)
+                                && (typeof model.status !== 'undefined' && model.status.length === 0)
+                                ) ? index : -1
                     root.readyForImport = (hwList.deviceIndex !== -1);
                 }
+
             }
         }
 

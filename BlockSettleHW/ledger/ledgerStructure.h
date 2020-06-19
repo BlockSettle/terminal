@@ -14,11 +14,20 @@
 #include "hwcommonstructure.h"
 #include "QDataStream"
 
+
 namespace Ledger {
    // HIDAPI data
-   const uint16_t HID_VENDOR_ID = 0x2c97;
+   const uint16_t HID_VENDOR_ID_LEDGER_NANO_S = 0x2c97;
+   const uint16_t HID_VENDOR_ID_LEDGER_NANO_X = 0x2581;
    const uint8_t  HID_INTERFACE_NUMBER = 0;
    const uint16_t HID_USAGE_PAGE = 0xFFA0;
+   // https://github.com/LedgerHQ/btchip-python/blob/master/btchip/btchipComm.py#L213
+   const std::unordered_set<uint16_t> HID_PRODUCT_ID_LEDGER_NANO_X {
+      0x2b7c,
+      0x3b7c,
+      0x4b7c,
+      0x1807
+   };
 
    // APDU data
    const uint8_t CLA = 0xE0;
@@ -194,5 +203,8 @@ namespace HWInfoStatus {
    const QString kErrorNoEnvironment = QObject::tr("Please make sure you device is ready for using");
    const QString kErrorReconnectDevice= QObject::tr("Internal device error, please reconnect device to system");
 }
+
+struct hid_device_info;
+bool checkLedgerDevice(hid_device_info* info);
 
 #endif // LEDGERSTRUCTURE_H

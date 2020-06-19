@@ -83,10 +83,7 @@ void LedgerClient::scanDevices(AsyncCallBack&& cb)
 
    hid_device_info* info = hid_enumerate(0, 0);
    for (; info; info = info->next) {
-      if (info->vendor_id == Ledger::HID_VENDOR_ID &&
-         (info->interface_number == Ledger::HID_INTERFACE_NUMBER
-            || info->usage_page == Ledger::HID_USAGE_PAGE)) {
-
+      if (checkLedgerDevice(info)) {
          auto device = new LedgerDevice{ fromHidOriginal(info), testNet_, walletManager_, logger_, this };
          availableDevices_.push_back({ device });
       }
