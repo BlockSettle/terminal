@@ -73,7 +73,7 @@ QVariant AuthAddressViewModel::data(const QModelIndex &index, int role) const
       }
    }
    else if (role == Qt::FontRole) {
-      if (address.prefixed() == defaultAddr_.prefixed()) {
+      if (!defaultAddr_.empty() && (address.prefixed() == defaultAddr_.prefixed())) {
          QFont font;
          font.setBold(true);
          return font;

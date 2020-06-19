@@ -439,9 +439,6 @@ void AuthAddressDialog::setDefaultAddress()
    auto selectedAddress = GetSelectedAddress();
    if (!selectedAddress.empty()) {
       defaultAddr_ = selectedAddress;
-      settings_->set(ApplicationSettings::defaultAuthAddr
-         , QString::fromStdString(defaultAddr_.display()));
-      settings_->SaveSettings();
       model_->setDefaultAddr(defaultAddr_);
       authAddressManager_->setDefault(defaultAddr_);
       resizeTreeViewColumns();

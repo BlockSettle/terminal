@@ -73,6 +73,8 @@ bool UserScript::load(const QString &filename)
       return true;
    }
    if (component_->isError()) {
+      logger_->error("Failed to load {}: {}", filename.toStdString()
+         , component_->errorString().toStdString());
       emit failed(component_->errorString());
    }
    return false;
@@ -359,6 +361,9 @@ void RFQScript::cancelAll()
 void RFQScript::onMDUpdate(bs::network::Asset::Type, const QString &security,
    bs::network::MDFields mdFields)
 {
+   if (!started_) {
+      return;
+   }
    const double bid = bs::network::MDField::get(mdFields, bs::network::MDField::PriceBid).value;
    const double ask = bs::network::MDField::get(mdFields, bs::network::MDField::PriceOffer).value;
    const double last = bs::network::MDField::get(mdFields, bs::network::MDField::PriceLast).value;
@@ -366,57 +371,83 @@ void RFQScript::onMDUpdate(bs::network::Asset::Type, const QString &security,
    auto &mdInfo = mdInfo_[security.toStdString()];
    if (bid > 0) {
       mdInfo.bidPrice = bid;
+      emit indicBidChanged(security, bid);
    }
    if (ask > 0) {
       mdInfo.askPrice = ask;
+      emit indicAskChanged(security, ask);
    }
    if (last > 0) {
       mdInfo.lastPrice = last;
+      emit lastPriceChanged(security, last);
    }
 
-   for (auto rfq : activeRFQs_) {
+   for (const auto &rfq : activeRFQs_) {
       const auto &sec = rfq.second->security();
       if (sec.isEmpty() || (security != sec)) {
          continue;
       }
       if (bid > 0) {
-         rfq.second->setProperty("indicBid", bid);
+         rfq.second->setIndicBid(bid);
       }
       if (ask > 0) {
-         rfq.second->setProperty("indicAsk", ask);
+         rfq.second->setIndicAsk(ask);
       }
       if (last > 0) {
-         rfq.second->setProperty("lastPrice", last);
+         rfq.second->setLastPrice(last);
       }
    }
+}
 
+SubmitRFQ *RFQScript::activeRFQ(const QString &id)
+{
+   if (!started_) {
+      return nullptr;
+   }
+   const auto &itRFQ = activeRFQs_.find(id.toStdString());
+   if (itRFQ == activeRFQs_.end()) {
+      return nullptr;
+   }
+   return itRFQ->second;
 }
 
 void RFQScript::onAccepted(const std::string &id)
 {
+   if (!started_) {
+      return;
+   }
    const auto &itRFQ = activeRFQs_.find(id);
    if (itRFQ == activeRFQs_.end()) {
       return;
    }
+   emit accepted(QString::fromStdString(id));
    emit itRFQ->second->accepted();
 }
 
 void RFQScript::onExpired(const std::string &id)
 {
+   if (!started_) {
+      return;
+   }
    const auto &itRFQ = activeRFQs_.find(id);
    if (itRFQ == activeRFQs_.end()) {
       logger_->warn("[RFQScript::onExpired] failed to find id {}", id);
       return;
    }
+   emit expired(QString::fromStdString(id));
    emit itRFQ->second->expired();
 }
 
 void RFQScript::onCancelled(const std::string &id)
 {
+   if (!started_) {
+      return;
+   }
    const auto &itRFQ = activeRFQs_.find(id);
    if (itRFQ == activeRFQs_.end()) {
       return;
    }
+   emit cancelled(QString::fromStdString(id));
    emit itRFQ->second->cancelled();
    itRFQ->second->deleteLater();
    activeRFQs_.erase(itRFQ);

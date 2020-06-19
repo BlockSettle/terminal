@@ -1505,7 +1505,6 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
 
    // connect to RFQ dialog
-   ui_->widgetRFQ->onUserConnected(loginDialog.result()->userType);
    connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetRFQ, &RFQRequestWidget::onMessageFromPB);
    connect(bsClient_.get(), &BsClient::disconnected, ui_->widgetRFQ, &RFQRequestWidget::onUserDisconnected);
    connect(ui_->widgetRFQ, &RFQRequestWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClient::sendUnsignedPayin);
@@ -1602,6 +1601,7 @@ void BSTerminalMainWindow::onUserLoggedIn()
    ui_->actionLinkAdditionalBankAccount->setEnabled(true);
 
    ccFileManager_->ConnectToCelerClient(celerConnection_);
+   ui_->widgetRFQ->onUserConnected(userType_);
 
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
    const auto &deferredDialog = [this, userId] {
