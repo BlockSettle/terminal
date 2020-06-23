@@ -1,14 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-
-***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
-* Distributed under the GNU Affero General Public License (AGPL v3)
-* See LICENSE or http://www.gnu.org/licenses/agpl.html
-*
-**********************************************************************************
-
--->
 <ui version="4.0">
  <class>CreateTransactionDialogSimple</class>
  <widget class="QDialog" name="CreateTransactionDialogSimple">
@@ -21,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Create transaction</string>
+   <string>Send Bitcoin</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_8">
    <property name="spacing">
