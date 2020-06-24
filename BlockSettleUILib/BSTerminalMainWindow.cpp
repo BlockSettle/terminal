@@ -319,7 +319,7 @@ BSTerminalMainWindow::~BSTerminalMainWindow()
 
 void BSTerminalMainWindow::setupToolbar()
 {
-   action_send_ = new QAction(tr("Create &Transaction"), this);
+   action_send_ = new QAction(tr("Send Bitcoin"), this);
    connect(action_send_, &QAction::triggered, this, &BSTerminalMainWindow::onSend);
 
    action_generate_address_ = new QAction(tr("Generate &Address"), this);
