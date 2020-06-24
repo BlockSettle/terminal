@@ -15,7 +15,7 @@
 #include <QMenu>
 #include <QClipboard>
 #include <QDateTime>
-
+#include <spdlog/spdlog.h>
 #include "ApplicationSettings.h"
 #include "BSMessageBox.h"
 #include "CreateTransactionDialogAdvanced.h"

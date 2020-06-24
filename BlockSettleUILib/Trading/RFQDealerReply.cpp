@@ -11,7 +11,7 @@
 #include "RFQDealerReply.h"
 #include "ui_RFQDealerReply.h"
 
-#include <spdlog/logger.h>
+#include <spdlog/spdlog.h>
 
 #include <chrono>
 

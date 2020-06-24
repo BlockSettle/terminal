@@ -68,12 +68,14 @@
 #include "TabWithShortcut.h"
 #include "TransactionsViewModel.h"
 #include "TransactionsWidget.h"
+#include "TransportBIP15x.h"
 #include "UiUtils.h"
 #include "UserScriptRunner.h"
 #include "UtxoReservationManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "WsDataConnection.h"
+#include "ZmqDataConnection.h"
 
 #include "ui_BSTerminalMainWindow.h"
 
@@ -556,11 +558,11 @@ std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createRemoteSigner(
       , SignContainer::OpMode::Remote, false
       , signersProvider_->remoteSignerKeysDir(), signersProvider_->remoteSignerKeysFile(), ourNewKeyCB);
 
-   ZmqBIP15XPeers peers;
+   bs::network::BIP15xPeers peers;
    for (const auto &signer : signersProvider_->signers()) {
       try {
          const BinaryData signerKey = BinaryData::CreateFromHex(signer.key.toStdString());
-         peers.push_back(ZmqBIP15XPeer(signer.serverId(), signerKey));
+         peers.push_back(bs::network::BIP15xPeer(signer.serverId(), signerKey));
       }
       catch (const std::exception &e) {
          logMgr_->logger()->warn("[{}] invalid signer key: {}", __func__, e.what());
@@ -1417,22 +1419,21 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    const bool useWebSockets = (envType == ApplicationSettings::EnvConfiguration::Staging);
 #endif
 
+   bs::network::BIP15xParams params;
+   params.ephemeralPeers = true;
+   const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15x>(logger, params);
+   bip15xTransport->setKeyCb(cbApproveProxy_);
+
    if (useWebSockets) {
-      WsDataConnectionParams params;
+/*      WsDataConnectionParams params;
       params.caBundlePtr = bs::caBundlePtr();
-      params.caBundleSize = bs::caBundleSize();
-      auto connection = std::make_unique<WsDataConnection>(logger, params);
+      params.caBundleSize = bs::caBundleSize();*/
+      auto connection = std::make_unique<WsDataConnection>(logger, bip15xTransport);
       bool result = connection->openConnection("proxy-staging.blocksettle.com", "443", bsClient.get());
-      if (!result) {
-         // FIXME: Show something
-         return;
-      }
+      assert(result);
       bsClient->setConnection(std::move(connection));
    } else {
-      ZmqBIP15XDataConnectionParams params;
-      params.ephemeralPeers = true;
-      auto connection = std::make_unique<ZmqBIP15XDataConnection>(logger, params);
-      connection->setCBs(cbApproveProxy_);
+      auto connection = connectionManager_->createZmqBIP15xDataConnection(bip15xTransport);
       // This should not ever fail
       bool result = connection->openConnection(networkSettings.proxy.host, std::to_string(networkSettings.proxy.port), bsClient.get());
       assert(result);

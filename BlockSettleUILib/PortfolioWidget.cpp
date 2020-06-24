@@ -13,7 +13,7 @@
 #include <QSortFilterProxyModel>
 #include <QMenu>
 #include <QClipboard>
-
+#include <spdlog/spdlog.h>
 #include "ApplicationSettings.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "BSMessageBox.h"

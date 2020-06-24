@@ -15,7 +15,7 @@
 #include "TxClasses.h"
 #include "Wallets/SyncHDWallet.h"
 #include "QWalletInfo.h"
-
+#include <spdlog/spdlog.h>
 #include <QFile>
 
 using namespace bs::wallet;

@@ -12,7 +12,7 @@
 #include "ui_AddressDetailsWidget.h"
 
 #include <QDateTime>
-
+#include <spdlog/spdlog.h>
 #include "AddressVerificator.h"
 #include "CheckRecipSigner.h"
 #include "ColoredCoinLogic.h"

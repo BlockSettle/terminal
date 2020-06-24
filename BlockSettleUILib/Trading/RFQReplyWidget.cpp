@@ -34,7 +34,7 @@
 
 #include "bs_proxy_terminal_pb.pb.h"
 
-#include <spdlog/logger.h>
+#include <spdlog/spdlog.h>
 
 #include <QDesktopWidget>
 #include <QPushButton>

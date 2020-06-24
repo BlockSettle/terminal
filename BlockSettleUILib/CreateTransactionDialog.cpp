@@ -24,7 +24,7 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QCloseEvent>
-
+#include <spdlog/spdlog.h>
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "BSMessageBox.h"

@@ -25,6 +25,9 @@ namespace bs {
    namespace core {
       class WalletsManager;
    }
+   namespace network {
+      class TransportBIP15xServer;
+   }
 }
 namespace Blocksettle {
    namespace Communication {
@@ -34,11 +37,12 @@ namespace Blocksettle {
       }
    }
 }
-class HeadlessContainerListener;
-class SignerAdapterListener;
-class HeadlessSettings;
-class ZmqBIP15XServerConnection;
 class DispatchQueue;
+class HeadlessContainerListener;
+class HeadlessSettings;
+class ServerConnection;
+class SignerAdapterListener;
+class ZmqServerConnection;
 
 class HeadlessAppObj
 {
@@ -64,7 +68,7 @@ public:
 
    void updateSettings(const Blocksettle::Communication::signer::Settings&);
 
-   ZmqBIP15XServerConnection* connection() const;
+   ServerConnection* connection() const;
    bs::signer::BindStatus signerBindStatus() const { return signerBindStatus_; }
    BinaryData signerPubKey() const;
 
@@ -90,8 +94,10 @@ private:
    std::unique_ptr<HeadlessContainerListener>   terminalListener_;
    std::unique_ptr<SignerAdapterListener>       guiListener_;
 
-   std::unique_ptr<ZmqBIP15XServerConnection>   terminalConnection_;
-   std::unique_ptr<ZmqBIP15XServerConnection>   guiConnection_;
+   std::unique_ptr<ZmqServerConnection>   terminalConnection_;
+   std::shared_ptr<bs::network::TransportBIP15xServer>   terminalTransport_;
+   std::shared_ptr<ServerConnection>      guiConnection_;
+   std::shared_ptr<bs::network::TransportBIP15xServer>   guiTransport_;
 
    std::atomic<bs::signer::BindStatus> signerBindStatus_{bs::signer::BindStatus::Inactive};
 
