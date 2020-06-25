@@ -1421,13 +1421,10 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
 
    bs::network::BIP15xParams params;
    params.ephemeralPeers = true;
-   const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15x>(logger, params);
+   const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger, params);
    bip15xTransport->setKeyCb(cbApproveProxy_);
 
    if (useWebSockets) {
-/*      WsDataConnectionParams params;
-      params.caBundlePtr = bs::caBundlePtr();
-      params.caBundleSize = bs::caBundleSize();*/
       auto connection = std::make_unique<WsDataConnection>(logger, bip15xTransport);
       bool result = connection->openConnection("proxy-staging.blocksettle.com", "443", bsClient.get());
       assert(result);

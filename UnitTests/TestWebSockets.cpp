@@ -207,7 +207,7 @@ static bs::network::BIP15xPeer getPeerKey(const std::string &name, bs::network::
 }
 
 static bs::network::BIP15xPeer getPeerKey(const std::string &host, const std::string &port
-   , bs::network::TransportBIP15xServer *tr)
+   , bs::network::TransportBIP15x *tr)
 {
    std::string name = fmt::format("{}:{}", host, port);
    return bs::network::BIP15xPeer(name, tr->getOwnPubKey());
@@ -220,7 +220,7 @@ TEST_F(TestWebSocket, Basic)
       StaticLogger::loggerPtr, getEmptyPeersCallback());
    auto server = std::make_shared<WsServerConnection>(StaticLogger::loggerPtr, srvTransport);
 
-   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15x>(
+   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, getTestParams());
    auto client = std::make_shared<WsDataConnection>(StaticLogger::loggerPtr, clientTransport);
 
@@ -244,7 +244,7 @@ TEST_F(TestWebSocket, Router)
    routerServerParams.servers.push_back(std::move(server1));
    auto server = std::make_shared<RouterServerConnection>(StaticLogger::loggerPtr, routerServerParams);
 
-   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15x>(
+   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, getTestParams());
    auto client = std::make_shared<WsDataConnection>(StaticLogger::loggerPtr, clientTransport);
 

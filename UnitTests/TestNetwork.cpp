@@ -38,7 +38,7 @@ static bs::network::BIP15xPeer getPeerKey(const std::string &name, bs::network::
 }
 
 static bs::network::BIP15xPeer getPeerKey(const std::string &host, const std::string &port
-   , bs::network::TransportBIP15xServer *tr)
+   , bs::network::TransportBIP15x *tr)
 {
    std::string name = fmt::format("{}:{}", host, port);
    return bs::network::BIP15xPeer(name, tr->getOwnPubKey());
@@ -239,7 +239,7 @@ TEST(TestNetwork, ZMQ_BIP15X)
    const auto srvLsn = std::make_unique<ServerConnListener>(logger);
    const auto clientLsn = std::make_unique<ClientConnListener>(logger);
 
-   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15x>(logger
+   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger
       , getTestParams());
    const auto zmqContext = std::make_shared<ZmqContext>(logger);
    const auto clientConn = std::make_unique<ZmqBinaryConnection>(logger, clientTransport);
@@ -459,7 +459,7 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
    const auto clientLsn = std::make_unique<ClientConnListener>(StaticLogger::loggerPtr);
 
    const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
-   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15x>(
+   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, getTestParams());
    const auto clientConn = std::make_shared<ZmqBinaryConnection>(
       StaticLogger::loggerPtr, clientTransport);
@@ -502,7 +502,7 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
    EXPECT_TRUE(clientPktsFut2.get());
    EXPECT_TRUE(clientConn->closeConnection());
 
-   const auto &client2Transport = std::make_shared<bs::network::TransportBIP15x>(
+   const auto &client2Transport = std::make_shared<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, getTestParams());
    const auto client2Conn = std::make_shared<ZmqBinaryConnection>(
       StaticLogger::loggerPtr, client2Transport);
@@ -631,7 +631,7 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
     const size_t passes = sizeof pass / sizeof pass[0];
 
     for (size_t i = 0; i < passes; ++i) {
-       const auto &clientTransport = std::make_shared<bs::network::TransportBIP15x>(
+       const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
           StaticLogger::loggerPtr, getTestParams());
        const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
        const auto clientConn = std::make_shared<ZmqBinaryConnection>(
@@ -697,7 +697,7 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientReopen)
     const auto srvLsn = std::make_shared<TstServerListener>(StaticLogger::loggerPtr);
     const auto clientLsn = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
 
-    const auto &clientTransport = std::make_shared<bs::network::TransportBIP15x>(
+    const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
        StaticLogger::loggerPtr, getTestParams());
     const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
     const auto clientConn = std::make_shared<ZmqBinaryConnection>(
@@ -790,7 +790,7 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_Heartbeat)
     const size_t passes = sizeof pass / sizeof pass[0];
 
     for (size_t i = 0; i < passes; ++i) {
-       const auto &clientTransport = std::make_shared<bs::network::TransportBIP15x>(
+       const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
           StaticLogger::loggerPtr, getTestParams());
        const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
        auto clientConn = std::make_shared<ZmqBinaryConnection>(
@@ -855,7 +855,7 @@ TEST(TestNetwork, ZMQ_BIP15X_DisconnectCounters)
    const auto srvLsn = std::make_shared<TstServerListener>(StaticLogger::loggerPtr);
    const auto clientLsn = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
 
-   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15x>(
+   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, getTestParams());
    const auto clientConn = std::make_shared<ZmqBinaryConnection>(
       StaticLogger::loggerPtr, clientTransport);
@@ -904,11 +904,11 @@ TEST(TestNetwork, ZMQ_BIP15X_ConnectionTimeout)
    const auto clientLsn = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
 
    auto params = getTestParams();
-   params.heartbeatInterval = std::chrono::milliseconds{1};
    params.connectionTimeout = std::chrono::milliseconds{1};
 
-   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15x>(
+   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, params);
+   clientTransport->setHeartbeatInterval(std::chrono::milliseconds{ 1 });
    const auto clientConn = std::make_shared<ZmqBinaryConnection>(
       StaticLogger::loggerPtr, clientTransport);
    clientConn->SetContext(zmqContext);
@@ -928,7 +928,7 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_StressTest)
    const auto srvLsn = std::make_shared<TstServerListener>(StaticLogger::loggerPtr);
    const auto clientLsn = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
 
-   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15x>(
+   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, getTestParams());
    const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
    const auto clientConn = std::make_shared<ZmqBinaryConnection>(
@@ -979,13 +979,13 @@ TEST(TestNetwork, ZMQ_BIP15X_MalformedData)
       const auto clientLsn2 = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
       const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
 
-      const auto &client1Transport = std::make_shared<bs::network::TransportBIP15x>(
+      const auto &client1Transport = std::make_shared<bs::network::TransportBIP15xClient>(
          StaticLogger::loggerPtr, getTestParams());
       const auto clientConn = std::make_shared<ZmqBinaryConnection>(
                StaticLogger::loggerPtr, client1Transport);
       clientConn->SetContext(zmqContext);
 
-      const auto &client2Transport = std::make_shared<bs::network::TransportBIP15x>(
+      const auto &client2Transport = std::make_shared<bs::network::TransportBIP15xClient>(
          StaticLogger::loggerPtr, getTestParams());
       const auto clientConn2 = std::make_shared<ZmqBinaryConnection>(
                StaticLogger::loggerPtr, client2Transport);
@@ -1044,13 +1044,13 @@ TEST(TestNetwork, ZMQ_BIP15X_MalformedSndMore)
    const auto clientLsn2 = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
    const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
 
-   const auto &client1Transport = std::make_shared<bs::network::TransportBIP15x>(
+   const auto &client1Transport = std::make_shared<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, getTestParams());
    const auto clientConn = std::make_shared<ZmqBinaryConnection>(
             StaticLogger::loggerPtr, client1Transport);
    clientConn->SetContext(zmqContext);
 
-   const auto &client2Transport = std::make_shared<bs::network::TransportBIP15x>(
+   const auto &client2Transport = std::make_shared<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, getTestParams());
    const auto clientConn2 = std::make_shared<ZmqBinaryConnection>(
             StaticLogger::loggerPtr, client2Transport);
@@ -1117,7 +1117,7 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientKey)
    const auto srvLsn = std::make_shared<TstServerListener>(StaticLogger::loggerPtr);
    const auto clientLsn = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
 
-   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15x>(
+   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, getTestParams());
    const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
    const auto clientConn = std::make_shared<ZmqBinaryConnection>(

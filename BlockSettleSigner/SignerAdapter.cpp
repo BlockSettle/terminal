@@ -40,7 +40,6 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
 {
    bs::network::BIP15xParams params;
    params.ephemeralPeers = true;
-   params.setLocalHeartbeatInterval();
 
    // When creating the client connection, we need to generate a cookie for the
    // server connection in order to enable verification. We also need to add
@@ -48,8 +47,9 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
    params.cookie = bs::network::BIP15xCookie::MakeClient;
    params.cookiePath = SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
 
-   const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15x>(
+   const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(
       logger, params);
+   bip15xTransport->setLocalHeartbeatInterval();
    auto adapterConn = std::make_shared<ZmqBinaryConnection>(logger_, bip15xTransport);
    adapterConn->SetContext(std::make_shared<ZmqContext>(logger_));
 
