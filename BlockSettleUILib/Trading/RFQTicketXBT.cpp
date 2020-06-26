@@ -15,7 +15,7 @@
 #include <QEvent>
 #include <QKeyEvent>
 #include <QLineEdit>
-
+#include <spdlog/spdlog.h>
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
 #include "BSErrorCodeStrings.h"

@@ -18,10 +18,8 @@
 #include "DataConnectionListener.h"
 #include "HeadlessApp.h"
 #include "ProtobufHeadlessUtils.h"
-#include "Wallets/SyncWalletsManager.h"
-#include "ZmqContext.h"
-#include "ZMQ_BIP15X_DataConnection.h"
 #include "SignerInterfaceListener.h"
+#include "Wallets/SyncWalletsManager.h"
 
 #include "bs_signer.pb.h"
 

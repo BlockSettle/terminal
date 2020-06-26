@@ -33,7 +33,7 @@
 #include <QFileDialog>
 #include <QKeyEvent>
 #include <QPushButton>
-
+#include <spdlog/spdlog.h>
 #include <stdexcept>
 
 static const float kDustFeePerByte = 3.0;
