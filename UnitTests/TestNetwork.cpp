@@ -282,6 +282,7 @@ TEST(TestNetwork, ZMQ_BIP15X)
    EXPECT_TRUE(srvPktsFut.get());
 
    ASSERT_TRUE(clientConn->closeConnection());
+//   std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
 }
 
 TEST(TestNetwork, ZMQ_BIP15X_Rekey)
@@ -1034,6 +1035,7 @@ TEST(TestNetwork, ZMQ_BIP15X_MalformedData)
       //Temporarily disabled - not sure what this code should test
 /*    ASSERT_EQ(zmq_close(badSocket), 0);
       ASSERT_EQ(zmq_ctx_term(badContext), 0);*/
+      std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
    }
 }
 
