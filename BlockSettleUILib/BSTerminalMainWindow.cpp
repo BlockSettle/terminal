@@ -214,9 +214,10 @@ void BSTerminalMainWindow::onAddrStateChanged()
       allowAuthAddressDialogShow_ = false;
       BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Create Authentication Address")
          , tr("The Authentication Address verifies you as a Participant in our trading network. It is required for Spot XBT (bitcoin) trading.\n\n"
-              "Submitted Authentication Addresses are limited to one (1) bitcoin per trade.\n\n"
-              "After three (3) trades, BlockSettle will automatically fund your Authentication Address with 1,000 satoshis. Once validated, other Participants may independently verify you on-chain as a Participant of BlockSettle, and the trade limit is removed.\n\n"
-              "Create Authentication Address now?\n"), this);
+              "Submitted Authentication Addresses are limited to %1 bitcoin per trade.\n\n"
+              "After %2 trades, BlockSettle will automatically fund your Authentication Address with 1,000 satoshis. Once validated, other Participants may independently verify you on-chain as a Participant of BlockSettle, and the trade limit is removed.\n\n"
+              "Create Authentication Address now?\n")
+         .arg(tradeSettings_->xbtTier1Limit).arg(tradeSettings_->authRequiredSettledTrades), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
