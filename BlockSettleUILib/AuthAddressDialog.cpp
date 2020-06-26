@@ -202,9 +202,11 @@ void AuthAddressDialog::setAddressToVerify(const QString &addr)
    }
 }
 
-void AuthAddressDialog::setBsClient(const std::weak_ptr<BsClient> &bsClient)
+void AuthAddressDialog::initAfterLogin(const std::weak_ptr<BsClient>& bsClient
+   , const std::unique_ptr<bs::TradeSettings>& tradeSettings)
 {
    bsClient_ = bsClient;
+   tradeSettings_ = tradeSettings;
 }
 
 void AuthAddressDialog::onAuthVerifyTxSent()

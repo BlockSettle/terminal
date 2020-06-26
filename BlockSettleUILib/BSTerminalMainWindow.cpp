@@ -1487,7 +1487,6 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    }
 
    currentUserLogin_ = loginDialog.email();
-
    networkSettingsReceived(networkSettings, NetworkSettingsClient::MarketData);
 
    chatTokenData_ = loginDialog.result()->chatTokenData;
@@ -1496,7 +1495,8 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
 
    bsClient_ = bsClient;
    ccFileManager_->setBsClient(bsClient);
-   authAddrDlg_->setBsClient(bsClient);
+   tradeSettings_ = std::make_shared<bs::TradeSettings>(loginDialog.result()->tradeSettings);
+   authAddrDlg_->initAfterLogin(bsClient, tradeSettings_);
 
    ccFileManager_->setCcAddressesSigned(loginDialog.result()->ccAddressesSigned);
    authManager_->setAuthAddressesSigned(loginDialog.result()->authAddressesSigned);
