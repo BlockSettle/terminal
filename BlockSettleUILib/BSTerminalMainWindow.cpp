@@ -206,18 +206,22 @@ void BSTerminalMainWindow::onInitWalletDialogWasShown()
 
 void BSTerminalMainWindow::onAddrStateChanged()
 {
-   bool canSubmitAuthAddr = (userType_ == bs::network::UserType::Trading)
+   const bool canSubmitAuthAddr = (userType_ == bs::network::UserType::Trading)
          || (userType_ == bs::network::UserType::Dealing);
 
-   if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
-      && !authManager_->isAtLeastOneAwaitingVerification() && canSubmitAuthAddr) {
+   const bool needSignAuthAddress = authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
+      && !authManager_->isAtLeastOneAwaitingVerification();
+
+   const auto& tradeSettings = authManager_->tradeSettings();
+
+   if (allowAuthAddressDialogShow_ && authManager_ && tradeSettings && needSignAuthAddress && canSubmitAuthAddr) {
       allowAuthAddressDialogShow_ = false;
       BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Create Authentication Address")
          , tr("The Authentication Address verifies you as a Participant in our trading network. It is required for Spot XBT (bitcoin) trading.\n\n"
               "Submitted Authentication Addresses are limited to %1 bitcoin per trade.\n\n"
               "After %2 trades, BlockSettle will automatically fund your Authentication Address with 1,000 satoshis. Once validated, other Participants may independently verify you on-chain as a Participant of BlockSettle, and the trade limit is removed.\n\n"
               "Create Authentication Address now?\n")
-         .arg(tradeSettings_->xbtTier1Limit).arg(tradeSettings_->authRequiredSettledTrades), this);
+         .arg(tradeSettings->xbtTier1Limit).arg(tradeSettings->authRequiredSettledTrades), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
@@ -1496,8 +1500,8 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
 
    bsClient_ = bsClient;
    ccFileManager_->setBsClient(bsClient);
-   tradeSettings_ = std::make_shared<bs::TradeSettings>(loginDialog.result()->tradeSettings);
-   authAddrDlg_->initAfterLogin(bsClient, tradeSettings_);
+   authAddrDlg_->init(bsClient);
+   onAddrStateChanged();
 
    ccFileManager_->setCcAddressesSigned(loginDialog.result()->ccAddressesSigned);
    authManager_->setAuthAddressesSigned(loginDialog.result()->authAddressesSigned);
@@ -1535,7 +1539,8 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
       utxoReservationMgr_->setFeeRatePb(feeRate);
    });
 
-   authManager_->setCelerClient(celerConnection_);
+   auto tradeSettings = std::make_shared<bs::TradeSettings>(loginDialog.result()->tradeSettings);
+   authManager_->initLogin(celerConnection_, tradeSettings);
 
    setLoginButtonText(currentUserLogin_);
    setWidgetsAuthorized(true);

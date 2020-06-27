@@ -339,7 +339,6 @@ private:
    SecureBinaryData chatTokenSign_;
    BinaryData chatPubKey_;
    SecureBinaryData chatPrivKey_;
-   std::shared_ptr<bs::TradeSettings> tradeSettings_{nullptr};
 
    // Default is online to not show online notification after terminal startup
    bool isBitcoinCoreOnline_{true};
