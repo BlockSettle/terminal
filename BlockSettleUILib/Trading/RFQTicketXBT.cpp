@@ -37,6 +37,7 @@
 #include "XbtAmountValidator.h"
 #include "UtxoReservationManager.h"
 #include "UtxoReservation.h"
+#include "TradeSettings.h"
 
 #include <cstdlib>
 
@@ -658,6 +659,49 @@ bool RFQTicketXBT::checkBalance(double qty) const
    }
 }
 
+bool RFQTicketXBT::checkAuthAddr(double qty) const
+{
+   if (!ui_->authenticationAddressComboBox->isVisible()) {
+      return true;
+   }
+   else if (ui_->authenticationAddressComboBox->count() == 0) {
+      return false;
+   }
+
+   auto addr = ui_->authenticationAddressComboBox->currentText();
+   auto authAddr = bs::Address::fromAddressString(addr.toStdString());
+
+   if (authAddr.empty() || !authAddressManager_) {
+      return false;
+   }
+
+   if (authAddressManager_->GetState(authAddr)
+      == AddressVerificationState::Verified) {
+      return true;
+   }
+
+   const auto& tradeSettings = authAddressManager_->tradeSettings();
+   if (!tradeSettings) {
+      return false;
+   }
+
+   if (currentGroupType_ == ProductGroupType::XBTGroupType){
+      if (getProductToSpend() == UiUtils::XbtCurrency) {
+         return tradeSettings->xbtTier1Limit > bs::XBTAmount(qty).GetValue();
+      }
+      else {
+         QString indicativePrice = ui_->labelIndicativePrice->text();
+         QRegExp space(QLatin1String("\\s"));
+         indicativePrice.remove(space);
+         const double indPrice = indicativePrice.replace(QLatin1String(" "), QLatin1String("")).toDouble();
+         bs::XBTAmount price(indPrice * (1 + (tradeSettings->xbtPriceBand / 100)));
+         return price > bs::XBTAmount(qty);
+      }
+   }
+
+   return true;
+}
+
 void RFQTicketXBT::updateSubmitButton()
 {
    ui_->pushButtonSubmit->setEnabled(false);
@@ -695,8 +739,9 @@ void RFQTicketXBT::updateSubmitButton()
 
    const double qty = getQuantity();
    const bool isBalanceOk = checkBalance(qty);
+   const bool isAuthOk = checkAuthAddr(qty);
 
-   if (!isBalanceOk) {
+   if (!isBalanceOk || !isAuthOk) {
       ui_->labelBalanceValue->setFont(invalidBalanceFont_);
       return;
    }
