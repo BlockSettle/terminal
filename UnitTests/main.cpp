@@ -87,7 +87,7 @@ int main(int argc, char** argv)
    sinks.push_back(stdout_sink);
    sinks.push_back(file_sink);
 
-   StaticLogger::loggerPtr = std::make_shared<spdlog::logger>("unit_tests", begin(sinks), end(sinks));
+   StaticLogger::loggerPtr = std::make_shared<spdlog::logger>("", begin(sinks), end(sinks));
 
    StaticLogger::loggerPtr->set_pattern("[%D %H:%M:%S.%e] [%l](%t) %s:%#:%!: %v");
    StaticLogger::loggerPtr->set_level(spdlog::level::debug);

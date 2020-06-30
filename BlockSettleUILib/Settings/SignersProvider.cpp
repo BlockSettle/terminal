@@ -14,6 +14,8 @@
 #include <QStandardPaths>
 #include "SignContainer.h"
 #include "SystemFileUtils.h"
+#include "TransportBIP15x.h"
+
 
 SignersProvider::SignersProvider(const std::shared_ptr<ApplicationSettings> &appSettings, QObject *parent)
    : QObject(parent)
@@ -275,7 +277,8 @@ std::string SignersProvider::remoteSignerKeysFile() const
 BinaryData SignersProvider::remoteSignerOwnKey() const
 {
    if (remoteSignerOwnKey_.empty()) {
-      remoteSignerOwnKey_ = ZmqBIP15XDataConnection::getOwnPubKey(remoteSignerKeysDir(), remoteSignerKeysFile());
+      remoteSignerOwnKey_ = bs::network::TransportBIP15x::getOwnPubKey(
+         remoteSignerKeysDir(), remoteSignerKeysFile());
    }
    return remoteSignerOwnKey_;
 }

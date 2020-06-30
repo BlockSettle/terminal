@@ -15,7 +15,7 @@
 #include <QEvent>
 #include <QKeyEvent>
 #include <QLineEdit>
-
+#include <spdlog/spdlog.h>
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
 #include "BSErrorCodeStrings.h"
@@ -1385,7 +1385,7 @@ std::shared_ptr<bs::sync::hd::Wallet> RFQTicketXBT::getRecvXbtWallet() const
    }
    auto wallet = walletsManager_->getHDWalletById(ui_->comboBoxXBTWalletsRecv->
       currentData(UiUtils::WalletIdRole).toString().toStdString());
-   if (!wallet) {
+   if (!wallet && walletsManager_->getDefaultWallet()) {
       wallet = walletsManager_->getHDRootForLeaf(walletsManager_->getDefaultWallet()->walletId());
    }
    return wallet;

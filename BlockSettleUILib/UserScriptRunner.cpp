@@ -14,7 +14,7 @@
 #include "MDCallbacksQt.h"
 #include "UserScript.h"
 #include "Wallets/SyncWalletsManager.h"
-
+#include <spdlog/spdlog.h>
 #include <QThread>
 #include <QTimer>
 

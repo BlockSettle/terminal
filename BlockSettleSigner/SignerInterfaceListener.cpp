@@ -21,7 +21,6 @@
 #include "HeadlessApp.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ZmqContext.h"
-#include "ZMQ_BIP15X_DataConnection.h"
 
 #include "SignerInterfaceListener.h"
 #include "SignerAdapterContainer.h"
@@ -32,14 +31,13 @@ using namespace bs::signer;
 
 SignerInterfaceListener::SignerInterfaceListener(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<QmlBridge> &qmlBridge
-   , const std::shared_ptr<ZmqBIP15XDataConnection> &conn
+   , const std::shared_ptr<DataConnection> &conn
    , SignerAdapter *parent)
    : logger_(logger)
    , connection_(conn)
    , parent_(parent)
    , qmlBridge_(qmlBridge)
-{
-}
+{}
 
 void SignerInterfaceListener::OnDataReceived(const std::string &data)
 {
