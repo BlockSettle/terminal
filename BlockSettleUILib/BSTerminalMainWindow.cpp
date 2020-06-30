@@ -91,6 +91,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    ui_->setupUi(this);
 
    setupShortcuts();
+   setupInfoWidget();
 
    loginButtonText_ = tr("Login");
 
@@ -411,6 +412,27 @@ void BSTerminalMainWindow::setupIcon()
 
    connect(qApp, &QCoreApplication::aboutToQuit, sysTrayIcon_.get(), &QSystemTrayIcon::hide);
    connect(qApp, SIGNAL(lastWindowClosed()), sysTrayIcon_.get(), SLOT(hide()));
+}
+
+void BSTerminalMainWindow::setupInfoWidget()
+{
+   const bool show = applicationSettings_->get<bool>(ApplicationSettings::ShowInfoWidget);
+   ui_->infoWidget->setVisible(show);
+
+   if (!show) {
+      return;
+   }
+
+   connect(ui_->introductionBtn, &QPushButton::clicked, this, []() {
+      QDesktopServices::openUrl(QUrl(QLatin1String("")));
+   });
+   connect(ui_->setUpBtn, &QPushButton::clicked, this, []() {
+      QDesktopServices::openUrl(QUrl(QLatin1String("")));
+   });
+   connect(ui_->closeBtn, &QPushButton::clicked, this, [this]() {
+      ui_->infoWidget->setVisible(false);
+      applicationSettings_->set(ApplicationSettings::ShowInfoWidget, false);
+   });
 }
 
 void BSTerminalMainWindow::initConnections()
@@ -1278,9 +1300,10 @@ void BSTerminalMainWindow::setupMenu()
    };
 
    SupportDialog *supportDlg = new SupportDialog(this);
-   auto supportDlgCb = [supportDlg] (int tab) {
-      return [supportDlg, tab]() {
+   auto supportDlgCb = [supportDlg] (int tab, QString title) {
+      return [supportDlg, tab, title]() {
          supportDlg->setTab(tab);
+         supportDlg->setWindowTitle(title);
          supportDlg->show();
       };
    };
@@ -1292,8 +1315,9 @@ void BSTerminalMainWindow::setupMenu()
    connect(ui_->actionEnterColorCoinToken, &QAction::triggered, this, &BSTerminalMainWindow::openCCTokenDialog);
    connect(ui_->actionAbout, &QAction::triggered, aboutDlgCb(0));
    connect(ui_->actionVersion, &QAction::triggered, aboutDlgCb(3));
-   connect(ui_->actionGuides, &QAction::triggered, supportDlgCb(0));
-   connect(ui_->actionContact, &QAction::triggered, supportDlgCb(1));
+   connect(ui_->actionGuides, &QAction::triggered, supportDlgCb(0, QObject::tr("Guides")));
+   connect(ui_->actionVideoTutorials, &QAction::triggered, supportDlgCb(1, QObject::tr("Video Tutorials")));
+   connect(ui_->actionContact, &QAction::triggered, supportDlgCb(2, QObject::tr("Support")));
 
    onUserLoggedOut();
 
