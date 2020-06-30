@@ -1426,7 +1426,7 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
 
    if (useWebSockets) {
       auto connection = std::make_unique<WsDataConnection>(logger, bip15xTransport);
-      bool result = connection->openConnection("proxy-staging.blocksettle.com", "443", bsClient.get());
+      bool result = connection->openConnection("proxy-staging.blocksettle.com", "80", bsClient.get());
       assert(result);
       bsClient->setConnection(std::move(connection));
    } else {
