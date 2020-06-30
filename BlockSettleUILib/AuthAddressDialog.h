@@ -100,9 +100,6 @@ private:
 
    bs::Address                            lastSubmittedAddress_{};
 
-   // temp variable to show submit address count
-   const int submit_address_limit = 1;
-
    bool  unconfirmedExists_ = false;
 };
 

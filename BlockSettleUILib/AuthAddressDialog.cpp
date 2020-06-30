@@ -406,7 +406,8 @@ void AuthAddressDialog::updateEnabledStates()
    if (selectionModel->hasSelection()) {
       const auto address = model_->getAddress(selectionModel->selectedRows()[0]);
 
-      const bool allowSubmit = authAddressManager_->GetSubmittedAddressList().size() < submit_address_limit;
+      auto tradeSettings_ = authAddressManager_->tradeSettings();
+      const bool allowSubmit = authAddressManager_->GetSubmittedAddressList().size() < tradeSettings_->authSubmitAddressLimit;
 
       switch (authAddressManager_->GetState(address)) {
          case AddressVerificationState::NotSubmitted:
