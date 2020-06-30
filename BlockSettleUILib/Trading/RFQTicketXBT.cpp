@@ -693,7 +693,7 @@ bool RFQTicketXBT::checkAuthAddr(double qty) const
          QString indicativePrice = ui_->labelIndicativePrice->text();
          QRegExp space(QLatin1String("\\s"));
          indicativePrice.remove(space);
-         const double indPrice = indicativePrice.replace(QLatin1String(" "), QLatin1String("")).toDouble();
+         const double indPrice = indicativePrice.toDouble();
          bs::XBTAmount price(indPrice * (1 + (tradeSettings->xbtPriceBand / 100)));
          return price > bs::XBTAmount(qty);
       }
