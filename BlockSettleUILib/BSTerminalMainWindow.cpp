@@ -1079,7 +1079,8 @@ void BSTerminalMainWindow::connectCcClient()
 {
    if (trackerClient_) {
       bool testnet = applicationSettings_->get<NetworkType>(ApplicationSettings::netType) == NetworkType::TestNet;
-      trackerClient_->openConnection("185.213.153.37", testnet ? "19003" : "9003", cbApproveCcServer_);
+      trackerClient_->openConnection(testnet ? "cc-tracker-testnet.blocksettle.com" : "cc-tracker-mainnet.blocksettle.com"
+         , "80", cbApproveCcServer_);
    }
 }
 
