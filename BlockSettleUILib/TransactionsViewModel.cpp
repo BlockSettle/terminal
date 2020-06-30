@@ -14,7 +14,7 @@
 #include "CheckRecipSigner.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWalletsManager.h"
-
+#include <spdlog/spdlog.h>
 #include <QApplication>
 #include <QDateTime>
 #include <QMutexLocker>

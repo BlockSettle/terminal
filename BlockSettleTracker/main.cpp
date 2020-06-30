@@ -17,7 +17,8 @@
 #include "ArmoryConnection.h"
 #include "BsTrackerVersion.h"
 #include "ColoredCoinServer.h"
-#include "ZMQ_BIP15X_ServerConnection.h"
+#include "TransportBIP15xServer.h"
+#include "WsServerConnection.h"
 
 int main(int argc, char** argv) {
    auto logger = spdlog::stdout_color_mt("stdout logger");
@@ -106,7 +107,7 @@ int main(int argc, char** argv) {
    startupBIP150CTX(4, publicRequester);
    NetworkConfig::selectNetwork(testnet ? NETWORK_MODE_TESTNET : NETWORK_MODE_MAINNET);
 
-   auto ownKey = ZmqBIP15XServerConnection::getOwnPubKey(ownKeyPath, ownKeyName);
+   auto ownKey = bs::network::TransportBIP15xServer::getOwnPubKey(ownKeyPath, ownKeyName);
    if (ownKey.empty()) {
       SPDLOG_LOGGER_CRITICAL(logger, "can't read own key");
       exit(EXIT_FAILURE);
@@ -142,8 +143,16 @@ int main(int argc, char** argv) {
       exit(EXIT_FAILURE);
    }
 
-   auto server = std::make_unique<CcTrackerServer>(logger, armory);
-   result = server->startServer(listenAddress, std::to_string(listenPort), std::make_shared<ZmqContext>(logger), ownKeyPath, ownKeyName);
+   auto cbTrustedClients = []() -> bs::network::BIP15xPeers{
+      return {};
+   };
+   const auto &transport = std::make_shared<bs::network::TransportBIP15xServer>(logger
+      , cbTrustedClients, ownKeyPath, ownKeyName);
+   auto wsServer = std::make_unique<WsServerConnection>(logger, transport);
+
+   auto ccServer = std::make_unique<CcTrackerServer>(logger, armory, wsServer.get());
+
+   result = wsServer->BindConnection(listenAddress, std::to_string(listenPort), ccServer.get());
    if (!result) {
       SPDLOG_LOGGER_CRITICAL(logger, "starting server failed");
       exit(EXIT_FAILURE);

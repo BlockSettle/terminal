@@ -21,7 +21,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Create transaction</string>
+   <string>Send Bitcoin</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_8">
    <property name="spacing">
