@@ -668,14 +668,7 @@ bool RFQTicketXBT::checkAuthAddr(double qty) const
       return false;
    }
 
-   auto addr = ui_->authenticationAddressComboBox->currentText();
-   auto authAddr = bs::Address::fromAddressString(addr.toStdString());
-
-   if (authAddr.empty() || !authAddressManager_) {
-      return false;
-   }
-
-   if (authAddressManager_->GetState(authAddr)
+   if (authAddressManager_->GetState(authAddr_)
       == AddressVerificationState::Verified) {
       return true;
    }
