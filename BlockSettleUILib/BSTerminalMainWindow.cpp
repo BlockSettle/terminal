@@ -1625,6 +1625,7 @@ void BSTerminalMainWindow::onUserLoggedIn()
 
    ccFileManager_->ConnectToCelerClient(celerConnection_);
    ui_->widgetRFQ->onUserConnected(userType_);
+   ui_->widgetRFQReply->onUserConnected(userType_);
 
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
    const auto &deferredDialog = [this, userId] {
