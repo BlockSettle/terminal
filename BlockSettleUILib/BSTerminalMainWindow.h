@@ -92,6 +92,7 @@ private:
 
    void setupWalletsView();
    void setupTransactionsView();
+   void setupInfoWidget();
 
    void initConnections();
    void initArmory();
