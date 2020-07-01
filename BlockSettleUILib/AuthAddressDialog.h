@@ -48,7 +48,7 @@ public:
    ~AuthAddressDialog() override;
 
    void setAddressToVerify(const QString &addr);
-   void init(const std::weak_ptr<BsClient>& bsClient);
+   void setBsClient(const std::weak_ptr<BsClient>& bsClient);
 
 signals:
    void askForConfirmation(const QString &address, double txAmount);

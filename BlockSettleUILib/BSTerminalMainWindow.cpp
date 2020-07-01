@@ -223,7 +223,7 @@ void BSTerminalMainWindow::onAddrStateChanged()
               "Submitted Authentication Addresses are limited to %1 bitcoin per trade.\n\n"
               "After %2 trades, BlockSettle will automatically fund your Authentication Address with 1,000 satoshis. Once validated, other Participants may independently verify you on-chain as a Participant of BlockSettle, and the trade limit is removed.\n\n"
               "Create Authentication Address now?\n")
-         .arg(tradeSettings->xbtTier1Limit).arg(tradeSettings->authRequiredSettledTrades), this);
+         .arg(bs::XBTAmount(tradeSettings->xbtTier1Limit).GetValueBitcoin()).arg(tradeSettings->authRequiredSettledTrades), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
@@ -1499,7 +1499,7 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
 
    bsClient_ = bsClient;
    ccFileManager_->setBsClient(bsClient);
-   authAddrDlg_->init(bsClient);
+   authAddrDlg_->setBsClient(bsClient);
    onAddrStateChanged();
 
    ccFileManager_->setCcAddressesSigned(loginDialog.result()->ccAddressesSigned);
