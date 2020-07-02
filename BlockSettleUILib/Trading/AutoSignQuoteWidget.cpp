@@ -105,6 +105,18 @@ void AutoSignQuoteWidget::onAutoSignReady()
    validateGUI();
 }
 
+void AutoSignQuoteWidget::onUserConnected(bool autoSigning, bool autoQuoting)
+{
+   if (autoSigning) {
+      ui_->checkBoxAutoSign->setChecked(true);
+      onAutoSignToggled();
+   }
+   if (autoQuoting) {
+      ui_->checkBoxAQ->setChecked(true);
+      onAutoQuoteToggled();
+   }
+}
+
 void AutoSignQuoteWidget::fillScriptHistory()
 {
    ui_->comboBoxAQScript->clear();
