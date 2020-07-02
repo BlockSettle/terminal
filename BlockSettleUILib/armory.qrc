@@ -1,13 +1,3 @@
-<!--
-
-***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
-* Distributed under the GNU Affero General Public License (AGPL v3)
-* See LICENSE or http://www.gnu.org/licenses/agpl.html
-*
-**********************************************************************************
-
--->
 <RCC>
     <qresource prefix="/">
         <file alias="ICON_STATUS_OFFLINE">resources/status_offline_2.png</file>
@@ -237,5 +227,7 @@
         <file>resources/create_account.png</file>
         <file>resources/create_account@1.5x.png</file>
         <file>resources/create_account@2x.png</file>
+        <file>resources/youtube_social_squircle_dark.png</file>
+        <file>resources/youtube_social_icon_white.png</file>
     </qresource>
 </RCC>
