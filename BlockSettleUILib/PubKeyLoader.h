@@ -13,7 +13,7 @@
 
 #include "ApplicationSettings.h"
 #include "BinaryData.h"
-#include "ZMQ_BIP15X_Helpers.h"
+#include "BIP15xHelpers.h"
 
 class QWidget;
 

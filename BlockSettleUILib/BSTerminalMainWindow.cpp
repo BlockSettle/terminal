@@ -68,12 +68,14 @@
 #include "TabWithShortcut.h"
 #include "TransactionsViewModel.h"
 #include "TransactionsWidget.h"
+#include "TransportBIP15x.h"
 #include "UiUtils.h"
 #include "UserScriptRunner.h"
 #include "UtxoReservationManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "WsDataConnection.h"
+#include "ZmqDataConnection.h"
 
 #include "ui_BSTerminalMainWindow.h"
 
@@ -320,7 +322,7 @@ BSTerminalMainWindow::~BSTerminalMainWindow()
 
 void BSTerminalMainWindow::setupToolbar()
 {
-   action_send_ = new QAction(tr("Create &Transaction"), this);
+   action_send_ = new QAction(tr("Send Bitcoin"), this);
    connect(action_send_, &QAction::triggered, this, &BSTerminalMainWindow::onSend);
 
    action_generate_address_ = new QAction(tr("Generate &Address"), this);
@@ -559,11 +561,11 @@ std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createRemoteSigner(
       , SignContainer::OpMode::Remote, false
       , signersProvider_->remoteSignerKeysDir(), signersProvider_->remoteSignerKeysFile(), ourNewKeyCB);
 
-   ZmqBIP15XPeers peers;
+   bs::network::BIP15xPeers peers;
    for (const auto &signer : signersProvider_->signers()) {
       try {
          const BinaryData signerKey = BinaryData::CreateFromHex(signer.key.toStdString());
-         peers.push_back(ZmqBIP15XPeer(signer.serverId(), signerKey));
+         peers.push_back(bs::network::BIP15xPeer(signer.serverId(), signerKey));
       }
       catch (const std::exception &e) {
          logMgr_->logger()->warn("[{}] invalid signer key: {}", __func__, e.what());
@@ -1081,7 +1083,8 @@ void BSTerminalMainWindow::connectCcClient()
 {
    if (trackerClient_) {
       bool testnet = applicationSettings_->get<NetworkType>(ApplicationSettings::netType) == NetworkType::TestNet;
-      trackerClient_->openConnection("185.213.153.37", testnet ? "19003" : "9003", cbApproveCcServer_);
+      trackerClient_->openConnection(testnet ? "cc-tracker-testnet.blocksettle.com" : "cc-tracker-mainnet.blocksettle.com"
+         , "80", cbApproveCcServer_);
    }
 }
 

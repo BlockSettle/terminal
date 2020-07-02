@@ -21,7 +21,7 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "UiUtils.h"
 #include "UtxoReservationManager.h"
-
+#include <spdlog/spdlog.h>
 #include <QApplication>
 #include <QClipboard>
 

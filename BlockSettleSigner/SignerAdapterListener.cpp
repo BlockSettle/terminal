@@ -25,7 +25,6 @@
 #include "Settings/HeadlessSettings.h"
 #include "StringUtils.h"
 #include "SystemFileUtils.h"
-#include "ZMQ_BIP15X_ServerConnection.h"
 
 using namespace Blocksettle::Communication;
 
@@ -142,7 +141,7 @@ public:
 };
 
 SignerAdapterListener::SignerAdapterListener(HeadlessAppObj *app
-   , ZmqBIP15XServerConnection *connection
+   , const std::weak_ptr<ServerConnection> &connection
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
    , const std::shared_ptr<DispatchQueue> &queue
@@ -154,8 +153,7 @@ SignerAdapterListener::SignerAdapterListener(HeadlessAppObj *app
    , queue_(queue)
    , settings_(settings)
    , callbacks_(new HeadlessContainerCallbacksImpl(this))
-{
-}
+{}
 
 SignerAdapterListener::~SignerAdapterListener() noexcept = default;
 
@@ -270,7 +268,8 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
 bool SignerAdapterListener::sendData(signer::PacketType pt, const std::string &data
    , bs::signer::RequestId reqId)
 {
-   if (!connection_) {
+   auto connection = connection_.lock();
+   if (!connection) {
       return false;
    }
 
@@ -281,7 +280,7 @@ bool SignerAdapterListener::sendData(signer::PacketType pt, const std::string &d
       packet.set_id(reqId);
    }
 
-   return connection_->SendDataToAllClients(packet.SerializeAsString());
+   return connection->SendDataToAllClients(packet.SerializeAsString());
 }
 
 void SignerAdapterListener::sendStatusUpdate()
@@ -303,7 +302,7 @@ void SignerAdapterListener::sendControlPasswordStatusUpdate(signer::ControlPassw
 
 void SignerAdapterListener::resetConnection()
 {
-   connection_ = nullptr;
+   connection_.reset();
 }
 
 HeadlessContainerCallbacks *SignerAdapterListener::callbacks() const

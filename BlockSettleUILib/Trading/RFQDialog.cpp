@@ -11,7 +11,7 @@
 #include "RFQDialog.h"
 #include "ui_RFQDialog.h"
 
-#include <spdlog/logger.h>
+#include <spdlog/spdlog.h>
 
 #include "AssetManager.h"
 #include "BSMessageBox.h"

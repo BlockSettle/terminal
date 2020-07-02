@@ -24,8 +24,7 @@
 #include "QWalletInfo.h"
 #include "SignContainer.h"
 #include "WalletSignerContainer.h"
-#include "ZMQ_BIP15X_DataConnection.h"
-#include "ZMQ_BIP15X_Helpers.h"
+#include "BIP15xHelpers.h"
 
 #include "ChatProtocol/ChatClientService.h"
 
@@ -322,10 +321,10 @@ private:
 
    SignContainer::ConnectionError lastSignerError_{};
 
-   ZmqBipNewKeyCb   cbApprovePuB_ = nullptr;
-   ZmqBipNewKeyCb   cbApproveChat_ = nullptr;
-   ZmqBipNewKeyCb   cbApproveProxy_ = nullptr;
-   ZmqBipNewKeyCb   cbApproveCcServer_ = nullptr;
+   bs::network::BIP15xNewKeyCb   cbApprovePuB_{ nullptr };
+   bs::network::BIP15xNewKeyCb   cbApproveChat_{ nullptr };
+   bs::network::BIP15xNewKeyCb   cbApproveProxy_{ nullptr };
+   bs::network::BIP15xNewKeyCb   cbApproveCcServer_{ nullptr };
 
    std::queue<std::function<void(void)>> deferredDialogs_;
    bool deferredDialogRunning_ = false;
