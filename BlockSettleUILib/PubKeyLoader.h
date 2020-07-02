@@ -38,8 +38,13 @@ public:
    BinaryData loadKey(const KeyType) const;
    bool saveKey(const KeyType, const BinaryData &);
 
-   static ZmqBipNewKeyCb getApprovingCallback(const KeyType
+   static bs::network::BIP15xNewKeyCb getApprovingCallback(const KeyType
       , QWidget *bsMainWindow, const std::shared_ptr<ApplicationSettings> &);
+
+   static std::string envNameShort(ApplicationSettings::EnvConfiguration env);
+   static std::string serverNameShort(KeyType);
+   static std::string serverHostName(const KeyType, ApplicationSettings::EnvConfiguration env);
+   static std::string serverPort();
 
 private:
    static BinaryData loadKeyFromResource(KeyType, ApplicationSettings::EnvConfiguration);
