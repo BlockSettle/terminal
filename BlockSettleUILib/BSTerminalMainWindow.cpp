@@ -2301,8 +2301,7 @@ void BSTerminalMainWindow::initApiKeyLogins()
 
 void BSTerminalMainWindow::tryLoginUsingApiKey()
 {
-   const auto &apiKey = loginApiKey();
-   if (apiKey.empty() || autoLoginState_ != AutoLoginState::Idle) {
+   if (loginApiKey().empty() || autoLoginState_ != AutoLoginState::Idle) {
       return;
    }
 
@@ -2310,24 +2309,24 @@ void BSTerminalMainWindow::tryLoginUsingApiKey()
    auto client = createClient();
 
    autoLoginState_ = AutoLoginState::Connecting;
-   connect(client.get(), &BsClient::connected, this, [this, client, logger, apiKey] {
-      client->startLogin(apiKey);
-      connect(client.get(), &BsClient::startLoginDone, this, [this, client, logger, apiKey](AutheIDClient::ErrorType status) {
-         if (status != AutheIDClient::NoError) {
-            SPDLOG_LOGGER_ERROR(logger, "login failed");
+   connect(client.get(), &BsClient::connected, this, [this, client, logger] {
+      client->authorize(loginApiKey());
+      connect(client.get(), &BsClient::authorizeDone, this, [this, client, logger](bool success, const std::string &email) {
+         if (!success) {
+            SPDLOG_LOGGER_ERROR(logger, "authorization failed");
             autoLoginState_ = AutoLoginState::Idle;
             return;
          }
 
          client->getLoginResult();
-         connect(client.get(), &BsClient::getLoginResultDone, this, [this, client, logger, apiKey](const BsClientLoginResult &result) {
+         connect(client.get(), &BsClient::getLoginResultDone, this, [this, client, logger, email](const BsClientLoginResult &result) {
             if (result.status != AutheIDClient::NoError) {
                SPDLOG_LOGGER_ERROR(logger, "login failed");
                autoLoginState_ = AutoLoginState::Idle;
                return;
             }
 
-            activateClient(client, result, apiKey);
+            activateClient(client, result, email);
             autoLoginState_ = AutoLoginState::Connected;
          });
       });
