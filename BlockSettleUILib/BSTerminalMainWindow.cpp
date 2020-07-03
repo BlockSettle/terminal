@@ -2341,7 +2341,6 @@ void BSTerminalMainWindow::tryLoginUsingApiKey()
 
    autoLoginState_ = AutoLoginState::Connecting;
    connect(client.get(), &BsClient::connected, this, [this, client, logger] {
-      client->authorize(loginApiKey());
       connect(client.get(), &BsClient::authorizeDone, this, [this, client, logger](bool success, const std::string &email) {
          if (!success) {
             SPDLOG_LOGGER_ERROR(logger, "authorization failed");
@@ -2349,7 +2348,6 @@ void BSTerminalMainWindow::tryLoginUsingApiKey()
             return;
          }
 
-         client->getLoginResult();
          connect(client.get(), &BsClient::getLoginResultDone, this, [this, client, logger, email](const BsClientLoginResult &result) {
             if (result.status != AutheIDClient::NoError) {
                SPDLOG_LOGGER_ERROR(logger, "login failed");
@@ -2360,7 +2358,9 @@ void BSTerminalMainWindow::tryLoginUsingApiKey()
             activateClient(client, result, email);
             autoLoginState_ = AutoLoginState::Connected;
          });
+         client->getLoginResult();
       });
+      client->authorize(loginApiKey());
    });
 
    connect(client.get(), &BsClient::disconnected, this, [this, logger] {
