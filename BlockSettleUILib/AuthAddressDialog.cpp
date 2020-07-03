@@ -202,7 +202,7 @@ void AuthAddressDialog::setAddressToVerify(const QString &addr)
    }
 }
 
-void AuthAddressDialog::setBsClient(const std::weak_ptr<BsClient> &bsClient)
+void AuthAddressDialog::setBsClient(const std::weak_ptr<BsClient>& bsClient)
 {
    bsClient_ = bsClient;
 }
@@ -406,10 +406,13 @@ void AuthAddressDialog::updateEnabledStates()
    if (selectionModel->hasSelection()) {
       const auto address = model_->getAddress(selectionModel->selectedRows()[0]);
 
+      auto tradeSettings_ = authAddressManager_->tradeSettings();
+      const bool allowSubmit = authAddressManager_->GetSubmittedAddressList(false).size() < tradeSettings_->authSubmitAddressLimit;
+
       switch (authAddressManager_->GetState(address)) {
          case AddressVerificationState::NotSubmitted:
             ui_->pushButtonRevoke->setEnabled(false);
-            ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.empty());
+            ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.empty() && allowSubmit);
             ui_->pushButtonDefault->setEnabled(false);
             break;
          case AddressVerificationState::Submitted:

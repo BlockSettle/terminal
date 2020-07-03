@@ -211,17 +211,22 @@ void BSTerminalMainWindow::onInitWalletDialogWasShown()
 
 void BSTerminalMainWindow::onAddrStateChanged()
 {
-   bool canSubmitAuthAddr = (userType_ == bs::network::UserType::Trading)
+   const bool canSubmitAuthAddr = (userType_ == bs::network::UserType::Trading)
          || (userType_ == bs::network::UserType::Dealing);
 
-   if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
-      && !authManager_->isAtLeastOneAwaitingVerification() && canSubmitAuthAddr) {
+   const bool needSignAuthAddress = authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
+      && !authManager_->isAtLeastOneAwaitingVerification();
+
+   const auto& tradeSettings = authManager_->tradeSettings();
+
+   if (allowAuthAddressDialogShow_ && authManager_ && tradeSettings && needSignAuthAddress && canSubmitAuthAddr) {
       allowAuthAddressDialogShow_ = false;
       BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Create Authentication Address")
          , tr("The Authentication Address verifies you as a Participant in our trading network. It is required for Spot XBT (bitcoin) trading.\n\n"
-              "Submitted Authentication Addresses are limited to one (1) bitcoin per trade.\n\n"
-              "After three (3) trades, BlockSettle will automatically fund your Authentication Address with 1,000 satoshis. Once validated, other Participants may independently verify you on-chain as a Participant of BlockSettle, and the trade limit is removed.\n\n"
-              "Create Authentication Address now?\n"), this);
+              "Submitted Authentication Addresses are limited to %1 bitcoin per trade.\n\n"
+              "After %2 trades, BlockSettle will automatically fund your Authentication Address with 1,000 satoshis. Once validated, other Participants may independently verify you on-chain as a Participant of BlockSettle, and the trade limit is removed.\n\n"
+              "Create Authentication Address now?\n")
+         .arg(bs::XBTAmount(tradeSettings->xbtTier1Limit).GetValueBitcoin()).arg(tradeSettings->authRequiredSettledTrades), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
@@ -430,7 +435,7 @@ void BSTerminalMainWindow::setupInfoWidget()
       QDesktopServices::openUrl(QUrl(QLatin1String("")));
    });
    connect(ui_->setUpBtn, &QPushButton::clicked, this, []() {
-      QDesktopServices::openUrl(QUrl(QLatin1String("")));
+      QDesktopServices::openUrl(QUrl(QLatin1String("https://youtu.be/bvGNi6sBkTo")));
    });
    connect(ui_->closeBtn, &QPushButton::clicked, this, [this]() {
       ui_->infoWidget->setVisible(false);
@@ -2236,6 +2241,10 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
    ccFileManager_->setBsClient(bsClient);
    authAddrDlg_->setBsClient(bsClient);
 
+   auto tradeSettings = std::make_shared<bs::TradeSettings>(result.tradeSettings);
+   authManager_->initLogin(celerConnection_, tradeSettings);
+   onAddrStateChanged();
+
    ccFileManager_->setCcAddressesSigned(result.ccAddressesSigned);
    authManager_->setAuthAddressesSigned(result.authAddressesSigned);
 
@@ -2271,8 +2280,6 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
    connect(bsClient_.get(), &BsClient::feeRateReceived, this, [this] (float feeRate) {
       utxoReservationMgr_->setFeeRatePb(feeRate);
    });
-
-   authManager_->setCelerClient(celerConnection_);
 
    setLoginButtonText(currentUserLogin_);
    setWidgetsAuthorized(true);
