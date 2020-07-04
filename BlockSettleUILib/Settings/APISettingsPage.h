@@ -29,16 +29,8 @@ public:
    void reset() override;
    void apply() override;
 
-private slots:
-   void onRFQSelect();
-
-private:
-   void displayRFQScriptFN();
-
 private:
    std::unique_ptr<Ui::APISettingsPage> ui_;
-   AutoRFQ *   rfqLoader_{ nullptr };
-   QString     rfqScriptFN_;
 };
 
 #endif // API_SETTINGS_PAGE_H

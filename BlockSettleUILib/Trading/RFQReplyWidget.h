@@ -116,6 +116,7 @@ public slots:
    void forceCheckCondition();
 
    void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
+   void onUserConnected(const bs::network::UserType &);
 
 private slots:
    void onOrder(const bs::network::Order &o);
