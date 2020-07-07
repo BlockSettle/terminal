@@ -170,6 +170,44 @@ bs::network::BIP15xNewKeyCb PubKeyLoader::getApprovingCallback(const KeyType kt
    };
 }
 
+std::string PubKeyLoader::envNameShort(ApplicationSettings::EnvConfiguration env)
+{
+   switch (env) {
+      case ApplicationSettings::EnvConfiguration::Production:
+         return "prod";
+      case ApplicationSettings::EnvConfiguration::Test:
+         return "test";
+#ifndef PRODUCTION_BUILD
+      case ApplicationSettings::EnvConfiguration::Staging:
+            return "staging";
+      case ApplicationSettings::EnvConfiguration::Custom:
+         return "custom";
+#endif
+   }
+   return "unknown";
+}
+
+std::string PubKeyLoader::serverNameShort(PubKeyLoader::KeyType kt)
+{
+   switch (kt) {
+      case KeyType::PublicBridge:   return "pub";
+      case KeyType::Chat:           return "char";
+      case KeyType::Proxy:          return "proxy";
+      case KeyType::CcServer:       return "cc-tracker";
+   }
+   return {};
+}
+
+std::string PubKeyLoader::serverHostName(PubKeyLoader::KeyType kt, ApplicationSettings::EnvConfiguration env)
+{
+   return fmt::format("{}-{}.blocksettle.com", serverNameShort(kt), envNameShort(env));
+}
+
+std::string PubKeyLoader::serverPort()
+{
+   return "80";
+}
+
 QString PubKeyLoader::serverName(const KeyType kt)
 {
    switch (kt) {

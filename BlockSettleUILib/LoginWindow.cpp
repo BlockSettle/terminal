@@ -16,7 +16,6 @@
 #include "ApplicationSettings.h"
 #include "BSMessageBox.h"
 #include "BsClient.h"
-#include "NetworkSettingsLoader.h"
 #include "UiUtils.h"
 #include "ZmqContext.h"
 #include "ui_LoginWindow.h"
@@ -84,7 +83,6 @@ LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
    else {
       ui_->lineEditUsername->setFocus();
    }
-
 
    connect(ui_->signWithEidButton, &QPushButton::clicked, this, &LoginWindow::accept);
 
@@ -189,7 +187,6 @@ void LoginWindow::updateState()
          ui_->signWithEidButton->setEnabled(!ui_->lineEditUsername->text().isEmpty());
          ui_->lineEditUsername->setEnabled(true);
          break;
-      case WaitNetworkSettings:
       case WaitLoginResult:
          ui_->signWithEidButton->setText(tr("Cancel"));
          ui_->signWithEidButton->setEnabled(true);
@@ -217,8 +214,6 @@ void LoginWindow::onAuthPressed()
 
    timeLeft_ = kAutheIdTimeout;
 
-   setState(WaitLoginResult);
-
    QString login = ui_->lineEditUsername->text().trimmed();
    ui_->lineEditUsername->setText(login);
 
@@ -232,5 +227,5 @@ void LoginWindow::onAuthPressed()
       settings_->set(ApplicationSettings::rememberLoginUserName, false);
    }
 
-   setState(WaitNetworkSettings);
+   setState(WaitLoginResult);
 }
