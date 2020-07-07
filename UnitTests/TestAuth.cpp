@@ -278,7 +278,7 @@ TEST_F(TestAuth, ValidationAddressManager)
 
    //add a block, check validation address is still valid
    mineBlocks(1);
-   //maw.update();
+   maw.update();
    EXPECT_TRUE(maw.isValid(validationAddr_));
 
    for (unsigned i = 0; i < 5; i++) {
