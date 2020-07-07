@@ -22,6 +22,7 @@
 
 #include "UserScript.h"
 #include "QuoteProvider.h"
+#include "CommonTypes.h"
 
 QT_BEGIN_NAMESPACE
 class QThread;
@@ -126,12 +127,7 @@ private:
    std::unordered_map<std::string, bs::network::QuoteReqNotification> aqQuoteReqs_;
    std::unordered_map<std::string, double>   bestQPrices_;
 
-   struct MDInfo {
-      double   bidPrice;
-      double   askPrice;
-      double   lastPrice;
-   };
-   std::unordered_map<std::string, MDInfo>  mdInfo_;
+   std::unordered_map<std::string, bs::network::MDInfo>  mdInfo_;
 
    bool aqEnabled_;
    QTimer *aqTimer_;
