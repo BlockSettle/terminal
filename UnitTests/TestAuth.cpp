@@ -76,8 +76,10 @@ void TestValidationACT::onRefresh(const std::vector<BinaryData>& ids, bool onlin
    notifTestQueue_.push_back(std::move(dbns));
    auto idsCopy = ids;
 
-   if(testVamPtr_ != nullptr)
-      testVamPtr_->pushRefreshID(idsCopy);
+   const auto callbacks = callbacks_.lock();
+   if (callbacks && callbacks->onRefresh) {
+      callbacks->onRefresh(idsCopy);
+   }
 }
 
 ////
@@ -269,14 +271,14 @@ TEST_F(TestAuth, ValidationAddressManager)
    maw.setCustomACT(actPtr_);
 
    //go online
-   ASSERT_EQ(maw.goOnline(), 2);
+   ASSERT_TRUE(maw.goOnline());
 
    //check the validation address is valid
    EXPECT_TRUE(maw.isValid(validationAddr_));
 
    //add a block, check validation address is still valid
    mineBlocks(1);
-   ASSERT_EQ(maw.update(), 0);
+   maw.update();
    EXPECT_TRUE(maw.isValid(validationAddr_));
 
    for (unsigned i = 0; i < 5; i++) {
@@ -296,7 +298,7 @@ TEST_F(TestAuth, ValidationAddressManager)
       }
 
       //validation address should still be valid
-      EXPECT_EQ(maw.update(), 2);
+      maw.update();
       EXPECT_TRUE(maw.isValid(validationAddr_));
 
       //validation address should have no eligible outpoints for vetting at this point
@@ -308,7 +310,7 @@ TEST_F(TestAuth, ValidationAddressManager)
       mineBlocks(1);
 
       //validation address should still be valid
-      EXPECT_EQ(maw.update(), 2);
+      maw.update();
       EXPECT_TRUE(maw.isValid(validationAddr_));
 
       //validation address should have an eligible outpoint and no zc
@@ -318,7 +320,7 @@ TEST_F(TestAuth, ValidationAddressManager)
 
    //add a few blocks, check validation address is still valid
    mineBlocks(3);
-   EXPECT_EQ(maw.update(), 0);
+   maw.update();
    EXPECT_TRUE(maw.isValid(validationAddr_));
 
    //revoke validation address
@@ -343,12 +345,12 @@ TEST_F(TestAuth, ValidationAddressManager)
    In revocations, only spending the first utxo matters,
    not where it is spent to.
    */
-   EXPECT_EQ(maw.update(), 2);
+   maw.update();
    EXPECT_FALSE(maw.isValid(validationAddr_));
 
    //same thing once the revocation is mined
    mineBlocks(1);
-   EXPECT_EQ(maw.update(), 2);
+   maw.update();
    EXPECT_FALSE(maw.isValid(validationAddr_));
 }
 
@@ -378,7 +380,7 @@ TEST_F(TestAuth, ValidateUserAddress)
    vam.addValidationAddress(validationAddr_);
 
    //go online
-   ASSERT_EQ(vam.goOnline(), 2);
+   ASSERT_TRUE(vam.goOnline());
 
    //check the validation address is valid
    EXPECT_TRUE(vam.isValid(validationAddr_));
@@ -449,7 +451,7 @@ TEST_F(TestAuth, BadUserAddress)
    maw.addValidationAddress(validationAddr_);
 
    //go online
-   ASSERT_EQ(maw.goOnline(), 2);
+   ASSERT_TRUE(maw.goOnline());
 
    //check the validation address is valid
    EXPECT_TRUE(maw.isValid(validationAddr_));
@@ -610,7 +612,7 @@ TEST_F(TestAuth, Revoke)
    auto&& userAddr6 = getNewAuthAddress();
 
    //go online
-   ASSERT_EQ(vam.goOnline(), 4);
+   ASSERT_TRUE(vam.goOnline());
 
    //vet them all
    try {
@@ -909,7 +911,7 @@ TEST_F(TestAuth, Concurrency)
       authAddresses.push_back(getNewAuthAddress());
    }
    //go online
-   ASSERT_EQ(vam->goOnline(), 6);
+   ASSERT_TRUE(vam->goOnline());
 
    //start verifications in side threads, they should return
    //once the addr is valid
@@ -941,8 +943,8 @@ TEST_F(TestAuth, Concurrency)
    }
 
    mineBlocks(1);
-   EXPECT_EQ(vam->update(), 6);
-   
+   vam->update();
+
    try {
       actPtr_->waitOnZC(vam->vetUserAddress(
          authAddresses[3], resolverMam, validationAddr_));
@@ -956,7 +958,7 @@ TEST_F(TestAuth, Concurrency)
    }
 
    mineBlocks(VALIDATION_CONF_COUNT);
-   EXPECT_EQ(vam->update(), 6);
+   vam->update();
 
    //wait on all verification threads and check addresses are valid
    for (auto& thr : threads) {
@@ -1123,7 +1125,7 @@ TEST_F(TestAuth, Concurrency_WithACT)
       authAddresses.push_back(getNewAuthAddress());
    }
    //go online
-   ASSERT_EQ(vam->goOnline(), 6);
+   ASSERT_TRUE(vam->goOnline());
 
    //start verifications in side threads, they should return
    //once the address is valid
