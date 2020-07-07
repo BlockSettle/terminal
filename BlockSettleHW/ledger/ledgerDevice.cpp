@@ -678,7 +678,8 @@ QByteArray LedgerCommandThread::getTrustedInput(const UTXO& utxo)
    return trustedInput;
 }
 
-QByteArray LedgerCommandThread::getTrustedInputSegWit(const UTXO& utxo)
+// DO NOT DELETE JUST FOR HISTORICAL REFFERENCE
+QByteArray LedgerCommandThread::getTrustedInputSegWit_outdated(const UTXO& utxo)
 {
    QByteArray trustedInput;
    trustedInput.push_back(QByteArray::fromStdString(utxo.getTxHash().toBinStr()));
@@ -689,8 +690,8 @@ QByteArray LedgerCommandThread::getTrustedInputSegWit(const UTXO& utxo)
 }
 
 void LedgerCommandThread::startUntrustedTransaction(
-   const std::vector<QByteArray> trustedInputs, 
-   const QByteArray& redeemScript, 
+   const std::vector<QByteArray>& trustedInputs,
+   const std::vector<QByteArray>& redeemScripts,
    unsigned txOutIndex, bool isNew, bool isSW, bool isRbf)
 {
    {
@@ -724,32 +725,28 @@ void LedgerCommandThread::startUntrustedTransaction(
 
       /*assuming the entire payload will be less than 256 bytes*/
 
-      //trusted input
-      if (!isSW) {
-         inputPayload.push_back(0x01); //trusted input flag
-         inputPayload.push_back(uint8_t(trustedInput.size())); 
-         inputPayload.push_back(trustedInput);
-      }
-      else {
-         inputPayload.push_back(0x02); //sw input flag
-         inputPayload.push_back(trustedInput); //no size prefix
-      }
+      inputPayload.push_back(0x01); //trusted input flag
+      inputPayload.push_back(uint8_t(trustedInput.size())); 
+      inputPayload.push_back(trustedInput);
 
+      const bool includeScript = (txOutIndex == std::numeric_limits<unsigned>::max() || txOutIndex == i);
+
+      writeVarInt(inputPayload, includeScript ? redeemScripts[i].size() : 0);
+      auto firstPart = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x00, std::move(inputPayload));
+      inputCommands.push_back(std::move(firstPart));
       //utxo script
-      if (i != txOutIndex) {
-         writeVarInt(inputPayload, 0);
-      }
-      else {
-         writeVarInt(inputPayload, redeemScript.size()); 
-         inputPayload.push_back(redeemScript);
+     
+      inputPayload.clear();
+      if (includeScript) {
+         inputPayload.push_back(redeemScripts[i]);
       }
 
       //sequence
       uint32_t defSeq = isRbf ? Ledger::DEFAULT_SEQUENCE - 2 : Ledger::DEFAULT_SEQUENCE;
       writeUintLE(inputPayload, defSeq);
       
-      auto command = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x00, std::move(inputPayload));
-      inputCommands.push_back(std::move(command));
+      auto secondPart = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_START, 0x80, 0x00, std::move(inputPayload));
+      inputCommands.push_back(std::move(secondPart));
    }
 
    for (auto &inputCommand : inputCommands) {
@@ -771,6 +768,8 @@ void LedgerCommandThread::finalizeInputFull()
       // before send all output addresses and change with it, so device could detect it
       QByteArray changeInputPayload;
       changeInputPayload.append(static_cast<char>(changePath_.length()));
+
+
       for (auto el : changePath_) {
          writeUintBE(changeInputPayload, el);
       }
@@ -836,20 +835,25 @@ void LedgerCommandThread::processTXLegacy()
       trustedInputs.push_back(trustedInput);
    }
 
+   // -- collect all redeem scripts
+   std::vector<QByteArray> redeemScripts;
+   for (int i = 0; i < coreReq_->inputs.size(); ++i) {
+      auto& utxo = coreReq_->inputs[i];
+      auto redeemScript = utxo.getScript();
+      auto redeemScriptQ = QByteArray(
+         redeemScript.getCharPtr(), redeemScript.getSize());
+      redeemScripts.push_back(redeemScriptQ);
+   }
+
    // -- Start input upload section --
 
    //upload the redeem script for each outpoint
    QVector<QByteArray> responseSigned;
    for (int i = 0; i < coreReq_->inputs.size(); ++i)
    {
-      auto& utxo = coreReq_->inputs[i];
-      auto redeemScript = utxo.getScript();
-      auto redeemScriptQ = QByteArray::fromRawData(
-         redeemScript.getCharPtr(), redeemScript.getSize());
-
       //pass true as this is a newly presented redeem script
       startUntrustedTransaction(
-         trustedInputs, redeemScriptQ, i, i == 0, false, coreReq_->RBF);
+         trustedInputs, redeemScripts, i, i == 0, false, coreReq_->RBF);
 
       // -- Done input section --
 
@@ -919,15 +923,34 @@ void LedgerCommandThread::processTXSegwit()
    //upload supporting tx to ledger, get trusted input back for our outpoints
    std::vector<QByteArray> trustedInputs;
    for (auto& utxo : coreReq_->inputs) {
-      auto trustedInput = getTrustedInputSegWit(utxo);
+      auto trustedInput = getTrustedInput(utxo);
       trustedInputs.push_back(trustedInput);
+   }
+
+   // -- Collect all redeem scripts
+
+   std::vector<QByteArray> redeemScripts;
+   for (int i = 0; i < coreReq_->inputs.size(); ++i) {
+      auto path = inputPaths_[i];
+
+      BinaryData redeemScriptWitness;
+      if (isNativeSegwit(path)) {
+         auto& utxo = coreReq_->inputs[i];
+         auto redeemScript = utxo.getScript();
+         redeemScriptWitness =
+            BtcUtils::getP2WPKHWitnessScript(redeemScript.getSliceRef(2, 20));
+      }
+      else if (isNestedSegwit(path)) {
+         redeemScriptWitness = segwitData.redeemScripts_[i];
+      }
+      redeemScripts.push_back(QByteArray(redeemScriptWitness.toBinStr().c_str()));
    }
 
    // -- Start input upload section --
 
    {
-      //setup inputs with explicitly empty redeem script
-      startUntrustedTransaction(trustedInputs, QByteArray(), UINT32_MAX, true, true, coreReq_->RBF);
+      startUntrustedTransaction(trustedInputs, redeemScripts,
+         std::numeric_limits<unsigned>::max(), true, true, coreReq_->RBF);
    }
 
    // -- Done input section --
@@ -948,20 +971,7 @@ void LedgerCommandThread::processTXSegwit()
    for (int i = 0; i < coreReq_->inputs.size(); ++i) {
       auto path = inputPaths_[i];
       
-      BinaryData redeemScriptWitness;
-      if (isNativeSegwit(path)) {
-         auto& utxo = coreReq_->inputs[i];
-         auto redeemScript = utxo.getScript();
-         redeemScriptWitness =
-            BtcUtils::getP2WPKHWitnessScript(redeemScript.getSliceRef(2, 20));
-      }
-      else if (isNestedSegwit(path)) {
-         redeemScriptWitness = segwitData.redeemScripts_[i];
-      }
-      QByteArray redeemScriptQ = QByteArray::fromRawData(
-         redeemScriptWitness.getCharPtr(), redeemScriptWitness.getSize());
-
-      startUntrustedTransaction({trustedInputs[i]}, redeemScriptQ, 0, false, true, coreReq_->RBF);
+      startUntrustedTransaction({ trustedInputs[i] }, { redeemScripts[i] }, 0, false, true, coreReq_->RBF);
 
       QByteArray signPayload;
       signPayload.append(static_cast<char>(path.length()));

@@ -122,10 +122,10 @@ protected:
 
    // Sign tx processing  
    QByteArray getTrustedInput(const UTXO&);
-   QByteArray getTrustedInputSegWit(const UTXO&);
+   QByteArray getTrustedInputSegWit_outdated(const UTXO&);
 
    void startUntrustedTransaction(
-      const std::vector<QByteArray>, const QByteArray&, 
+      const std::vector<QByteArray>&, const std::vector<QByteArray>&,
       unsigned, bool, bool, bool);
    void finalizeInputFull();
    void processTXLegacy();
