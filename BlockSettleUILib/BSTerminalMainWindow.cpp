@@ -1326,6 +1326,7 @@ void BSTerminalMainWindow::setupMenu()
    ui_->menubar->setCornerWidget(ui_->loginGroupWidget);
 #endif
 
+#ifndef PRODUCTION_BUILD
    auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
    bool isProd = envType == ApplicationSettings::EnvConfiguration::Production;
    ui_->prodEnvSettings->setEnabled(!isProd);
@@ -1336,6 +1337,10 @@ void BSTerminalMainWindow::setupMenu()
    connect(ui_->testEnvSettings, &QPushButton::clicked, this, [this] {
       promptSwitchEnv(false);
    });
+#else
+   ui_->prodEnvSettings->setVisible(false);
+   ui_->testEnvSettings->setVisible(false);
+#endif // !PRODUCTION_BUILD
 }
 
 void BSTerminalMainWindow::openAuthManagerDialog()
