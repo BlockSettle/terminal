@@ -147,11 +147,7 @@ void AuthAddressDialog::updateUnsubmittedState()
          return;
       }
       switch (authAddressManager_->GetState(authAddr)) {
-      case AddressVerificationState::NotSubmitted:
-         //ui_->labelHint->setText(tr("There are unsubmitted addresses - adding new ones is temporarily suspended"));
-         [[clang::fallthrough]];
-      case AddressVerificationState::InProgress:
-      case AddressVerificationState::VerificationFailed:
+      case AddressVerificationState::Verifying:
          unconfirmedExists_ = true;
          break;
       default:
@@ -328,7 +324,7 @@ void AuthAddressDialog::submitSelectedAddress()
    }
 
    const auto state = authAddressManager_->GetState(selectedAddress);
-   if (state != AddressVerificationState::NotSubmitted) {
+   if (state != AddressVerificationState::Virgin) {
       SPDLOG_LOGGER_ERROR(logger_, "refuse to submit address in state: {}", (int)state);
       return;
    }
@@ -410,16 +406,17 @@ void AuthAddressDialog::updateEnabledStates()
       const bool allowSubmit = authAddressManager_->GetSubmittedAddressList(false).size() < tradeSettings_->authSubmitAddressLimit;
 
       switch (authAddressManager_->GetState(address)) {
-         case AddressVerificationState::NotSubmitted:
+         case AddressVerificationState::Virgin:
             ui_->pushButtonRevoke->setEnabled(false);
             ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.empty() && allowSubmit);
             ui_->pushButtonDefault->setEnabled(false);
             break;
-         case AddressVerificationState::Submitted:
+         case AddressVerificationState::Tainted:
+         case AddressVerificationState::Verifying:
          case AddressVerificationState::Revoked:
-         case AddressVerificationState::PendingVerification:
          case AddressVerificationState::VerificationFailed:
-         case AddressVerificationState::InProgress:
+         case AddressVerificationState::Invalidated_Explicit:
+         case AddressVerificationState::Invalidated_Implicit:
             ui_->pushButtonRevoke->setEnabled(false);
             ui_->pushButtonSubmit->setEnabled(false);
             ui_->pushButtonDefault->setEnabled(false);
