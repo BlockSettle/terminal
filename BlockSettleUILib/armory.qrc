@@ -229,5 +229,7 @@
         <file>resources/create_account@2x.png</file>
         <file>resources/youtube_social_squircle_dark.png</file>
         <file>resources/youtube_social_icon_white.png</file>
+        <file>resources/api@1.5.png</file>
+        <file>resources/api-selected@1.5.png</file>
     </qresource>
 </RCC>

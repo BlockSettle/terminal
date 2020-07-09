@@ -267,6 +267,14 @@ void RFQReplyWidget::onPulled(const std::string& settlementId, const std::string
    quoteProvider_->CancelQuoteNotif(QString::fromStdString(reqId), QString::fromStdString(reqSessToken));
 }
 
+void RFQReplyWidget::onUserConnected(const bs::network::UserType &)
+{
+   const bool autoSigning = appSettings_->get<bool>(ApplicationSettings::AutoSigning);
+   const bool autoQuoting = appSettings_->get<bool>(ApplicationSettings::AutoQouting);
+
+   ui_->widgetAutoSignQuote->onUserConnected(autoSigning, autoQuoting);
+}
+
 void RFQReplyWidget::onResetCurrentReservation(const std::shared_ptr<SubmitQuoteReplyData> &data)
 {
    switch (data->qn.assetType) {

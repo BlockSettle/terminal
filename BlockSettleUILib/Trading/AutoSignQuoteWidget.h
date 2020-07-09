@@ -35,6 +35,7 @@ public:
 public slots:
    void onAutoSignStateChanged();
    void onAutoSignReady();
+   void onUserConnected(bool, bool);
 
 private slots:
    void fillScriptHistory();
