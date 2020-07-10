@@ -271,7 +271,10 @@ TEST_F(TestAuth, ValidationAddressManager)
    maw.setCustomACT(actPtr_);
 
    //go online
-   ASSERT_TRUE(maw.goOnline());
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   ASSERT_TRUE(maw.goOnline([promOnline](bool result) { promOnline->set_value(result); }));
+   EXPECT_TRUE(futOnline.get());
 
    //check the validation address is valid
    EXPECT_TRUE(maw.isValidMasterAddress(validationAddr_));
@@ -380,7 +383,10 @@ TEST_F(TestAuth, ValidateUserAddress)
    vam.addValidationAddress(validationAddr_);
 
    //go online
-   ASSERT_TRUE(vam.goOnline());
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   ASSERT_TRUE(vam.goOnline([promOnline](bool result) { promOnline->set_value(result); }));
+   EXPECT_TRUE(futOnline.get());
 
    //check the validation address is valid
    EXPECT_TRUE(vam.isValidMasterAddress(validationAddr_));
@@ -450,7 +456,10 @@ TEST_F(TestAuth, BadUserAddress)
    maw.addValidationAddress(validationAddr_);
 
    //go online
-   ASSERT_TRUE(maw.goOnline());
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   ASSERT_TRUE(maw.goOnline([promOnline](bool result) { promOnline->set_value(result); }));
+   EXPECT_TRUE(futOnline.get());
 
    //check the validation address is valid
    EXPECT_TRUE(maw.isValidMasterAddress(validationAddr_));
@@ -613,7 +622,10 @@ TEST_F(TestAuth, Revoke)
    auto&& userAddr6 = getNewAuthAddress();
 
    //go online
-   ASSERT_TRUE(vam.goOnline());
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   ASSERT_TRUE(vam.goOnline([promOnline](bool result) { promOnline->set_value(result); }));
+   EXPECT_TRUE(futOnline.get());
 
    //vet them all
    try {
@@ -924,7 +936,10 @@ TEST_F(TestAuth, Concurrency)
       authAddresses.push_back(getNewAuthAddress());
    }
    //go online
-   ASSERT_TRUE(vam->goOnline());
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   ASSERT_TRUE(vam->goOnline([promOnline](bool result) { promOnline->set_value(result); }));
+   EXPECT_TRUE(futOnline.get());
 
    //start verifications in side threads, they should return
    //once the addr is valid
@@ -1138,7 +1153,10 @@ TEST_F(TestAuth, Concurrency_WithACT)
       authAddresses.push_back(getNewAuthAddress());
    }
    //go online
-   ASSERT_TRUE(vam->goOnline());
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   ASSERT_TRUE(vam->goOnline([promOnline](bool result) { promOnline->set_value(result); }));
+   EXPECT_TRUE(futOnline.get());
 
    //start verifications in side threads, they should return
    //once the address is valid
