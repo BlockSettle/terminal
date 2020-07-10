@@ -20,6 +20,8 @@
 #include <memory>
 #include <QToolTip>
 
+using namespace ArmorySigner;
+
 Q_DECLARE_METATYPE(Tx);
 
 

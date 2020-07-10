@@ -20,6 +20,8 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
+using namespace ArmorySigner;
+
 TestCCoinAsync::TestCCoinAsync()
 {}
 

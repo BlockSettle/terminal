@@ -19,6 +19,8 @@
 #include "Wallets/SyncHDWallet.h"
 #include "ProtobufHeadlessUtils.h"
 
+using namespace ArmorySigner;
+
 HwDeviceManager::HwDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager, std::shared_ptr<bs::sync::WalletsManager> walletManager,
    bool testNet, QObject* parent /*= nullptr*/)
    : QObject(parent)

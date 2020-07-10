@@ -124,7 +124,7 @@ TEST_F(TestWallet, BIP84_derivation)
    }
 
    BIP32_Node pubNode;
-   pubNode.initFromPublicKey(derPath.size(), derPath.back(), node.getFingerPrint()
+   pubNode.initFromPublicKey(derPath.size(), derPath.back(), node.getThisFingerprint()
       , node.getPublicKey(), node.getChaincode());
    pubNode.derivePublic(0);
    pubNode.derivePublic(8);
@@ -1762,10 +1762,12 @@ TEST_F(TestWallet, TxIdNativeSegwit)
    bs::core::wallet::TXSignRequest request;
 
    UTXO input;
-   input.unserialize(BinaryData::CreateFromHex("cc16060000000000741618000300010020d5921cfa9b95c9fdafa9dca6d2765b5d7d2285914909b8f5f74f0b137259153b16001428d45f4ef82103691ea40c26b893a4566729b335ffffffff"));
+   input.unserialize(BinaryData::CreateFromHex(
+      "cc16060000000000741618000300010020d5921cfa9b95c9fdafa9dca6d2765b5d7d2285914909b8f5f74f0b137259153b16001428d45f4ef82103691ea40c26b893a4566729b335ffffffff"));
    request.inputs.push_back(input);
 
-   auto recipient = ScriptRecipient::deserialize(BinaryData::CreateFromHex("a086010000000000220020aa38b39ed9b524967159ad2bd488d14c1b9ccd70364655a7d9f35cb83e4dc6ed"));
+   auto recipient = ScriptRecipient::fromScript(BinaryData::CreateFromHex(
+      "a086010000000000220020aa38b39ed9b524967159ad2bd488d14c1b9ccd70364655a7d9f35cb83e4dc6ed"));
    request.recipients.push_back(recipient);
 
    request.change.value = 298894;
@@ -1841,7 +1843,7 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    const auto &cbTxOutList = [this, promUtxo]
       (const std::vector<UTXO> &inputs)->void
    {
-      if (inputs.size() != 1) {
+      if (inputs.empty()) {
          promUtxo->set_value({});
       }
       else {
@@ -1855,7 +1857,8 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    bs::core::wallet::TXSignRequest request;
    request.inputs.push_back(input);
 
-   auto recipient = ScriptRecipient::deserialize(BinaryData::CreateFromHex("a086010000000000220020d35c94ed03ae988841bd990124e176dae3928ba41f5a684074a857e788d768ba"));
+   auto recipient = ScriptRecipient::fromScript(BinaryData::CreateFromHex(
+      "a086010000000000220020d35c94ed03ae988841bd990124e176dae3928ba41f5a684074a857e788d768ba"));
    request.recipients.push_back(recipient);
 
    request.change.value = 19899729;

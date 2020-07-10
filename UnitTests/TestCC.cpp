@@ -17,6 +17,8 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
+using namespace ArmorySigner;
+
 /***
 All tests here are disabled. Use TestCCoin instead with new CC logic.
 This file is kept just for reference - until anyone needs it and

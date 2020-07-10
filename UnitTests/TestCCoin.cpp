@@ -20,6 +20,8 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
+using namespace ArmorySigner;
+
 TestCCoin::TestCCoin()
 {}
 
@@ -391,7 +393,7 @@ Tx TestCCoin::CreateCJtx(
       for (const auto &wallet : signWallets) {
          Signer localSigner(signerState);
          localSigner.setFlags(SCRIPT_VERIFY_SEGWIT);
-         localSigner.resolveSpenders();
+         localSigner.resolvePublicData();
          signerState = localSigner.serializeState();
       }
 
