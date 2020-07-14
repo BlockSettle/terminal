@@ -51,22 +51,18 @@ QVariant AuthAddressViewModel::data(const QModelIndex &index, int role) const
          switch (authManager_->GetState(address)) {
          case AddressVerificationState::VerificationFailed:
             return tr("State loading failed");
-         case AddressVerificationState::InProgress:
-            return tr("Loading state");
-         case AddressVerificationState::NotSubmitted:
+         case AddressVerificationState::Virgin:
+         case AddressVerificationState::Tainted:
             return tr("Not Submitted");
-         case AddressVerificationState::Submitted:
+         case AddressVerificationState::Verifying:
             return tr("Submitted");
-         case AddressVerificationState::PendingVerification:
-            return tr("Pending verification");
-         case AddressVerificationState::VerificationSubmitted:
-            return tr("Verification submitted");
          case AddressVerificationState::Verified:
             return tr("Verified");
          case AddressVerificationState::Revoked:
             return tr("Revoked");
-         case AddressVerificationState::RevokedByBS:
-            return tr("Revoked by BS");
+         case AddressVerificationState::Invalidated_Explicit:
+         case AddressVerificationState::Invalidated_Implicit:
+            return tr("Invalidated by BS");
          }
       default:
          return {};
@@ -132,8 +128,10 @@ bool AuthAddressViewModel::isAddressNotSubmitted(int row) const
       return false;
    }
 
-   const auto address = addresses_[row];
-   return authManager_->GetState(address) == AddressVerificationState::NotSubmitted || authManager_->GetState(address) == AddressVerificationState::InProgress;
+   const auto& address = addresses_[row];
+   auto addrState = authManager_->GetState(address);
+   return addrState == AddressVerificationState::Virgin || 
+      addrState == AddressVerificationState::Tainted;
 }
 
 void AuthAddressViewModel::setDefaultAddr(const bs::Address &addr)

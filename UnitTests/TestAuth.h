@@ -44,8 +44,6 @@ private:
    ArmoryThreading::BlockingQueue<std::shared_ptr<DBNotificationStruct>>
       notifTestQueue_;
 
-   ValidationAddressManager* testVamPtr_ = nullptr;
-
 public:
    TestValidationACT(ArmoryConnection *armory) :
       ValidationAddressACT(armory)
@@ -58,11 +56,6 @@ public:
    ////
    virtual void start() override {}
    virtual void stop() override {}
-   void setAddressMgr(ValidationAddressManager* mamPtr) override
-   {
-      testVamPtr_ = mamPtr;
-      ValidationAddressACT::setAddressMgr(mamPtr);
-   }
 
    ////
    void waitOnRefresh(const std::vector<std::string>& ids)
