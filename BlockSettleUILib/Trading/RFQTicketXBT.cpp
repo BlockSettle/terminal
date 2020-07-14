@@ -683,7 +683,7 @@ bool RFQTicketXBT::checkAuthAddr(double qty) const
          return tradeSettings->xbtTier1Limit > bs::XBTAmount(qty).GetValue();
       }
       else {
-         const double indPrice = getInidcativePrice();
+         const double indPrice = getIndicativePrice();
          bs::XBTAmount price(indPrice * (1 + (tradeSettings->xbtPriceBand / 100)));
          return price > bs::XBTAmount(qty);
       }
@@ -1257,7 +1257,7 @@ void RFQTicketXBT::updateIndicativePrice()
    }
 }
 
-double RFQTicketXBT::getInidcativePrice() const
+double RFQTicketXBT::getIndicativePrice() const
 {
    const auto &mdIt = mdInfo_.find(ui_->labelSecurityId->text().toStdString());
    if (mdIt == mdInfo_.end()) {
@@ -1268,8 +1268,11 @@ double RFQTicketXBT::getInidcativePrice() const
    if (selectedSide == bs::network::Side::Undefined) {
       return .0;
    }
-   int numCcySelected = ui_->pushButtonNumCcy->isChecked();
-   bool isSell = numCcySelected ^ (selectedSide == bs::network::Side::Buy);
+   bool numCcySelected = ui_->pushButtonNumCcy->isChecked();
+   bool isSell = selectedSide == bs::network::Side::Buy
+      ? !numCcySelected
+      : numCcySelected;
+
    if (isSell) {
       return mdIt->second.bidPrice;
    }

@@ -208,7 +208,7 @@ private:
 
    void SetCurrentIndicativePrices(const QString& bidPrice, const QString& offerPrice);
    void updateIndicativePrice();
-   double getInidcativePrice() const;
+   double getIndicativePrice() const;
 
    void productSelectionChanged();
 
