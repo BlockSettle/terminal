@@ -18,6 +18,7 @@
 #include <functional>
 #include <spdlog/spdlog.h>
 
+#include "Bip15xServerConnection.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
 #include "DispatchQueue.h"
@@ -29,8 +30,7 @@
 #include "SignerVersion.h"
 #include "SystemFileUtils.h"
 #include "TransportBIP15xServer.h"
-#include "ZmqContext.h"
-#include "ZmqServerConnection.h"
+#include "WsServerConnection.h"
 
 #include "bs_signer.pb.h"
 
@@ -57,13 +57,12 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    const bool makeServerCookie = false;
    const std::string absCookiePath = SystemFilePaths::appDataLocation() + "/adapterClientID";
 
-   const auto zmqContext = std::make_shared<ZmqContext>(logger_);
+   auto guiWsConn = std::make_unique<WsServerConnection>(logger, WsServerConnectionParams{});
    guiTransport_ = std::make_shared<bs::network::TransportBIP15xServer>(logger_
       , cbTrustedClientsSL, "", "", makeServerCookie, readClientCookie
       , absCookiePath);
-   guiTransport_->setLocalHeartbeatInterval();
-   guiConnection_ = std::make_shared<GenoaStreamServerConnection>(logger_
-      , zmqContext, guiTransport_);
+   guiConnection_ = std::make_shared<Bip15xServerConnection>(logger_
+      , std::move(guiWsConn), guiTransport_);
    guiListener_ = std::make_unique<SignerAdapterListener>(this, guiConnection_
       , logger_, walletsMgr_, queue_, params);
 
@@ -286,15 +285,15 @@ void HeadlessAppObj::startTerminalsProcessing()
    };
 
    // This would stop old server if any
+   auto terminalWsConn = std::make_unique<WsServerConnection>(logger_, WsServerConnectionParams{});
    terminalTransport_ = std::make_shared<bs::network::TransportBIP15xServer>(logger_
       , getClientIDKeys, ourKeyFileDir, ourKeyFileName, makeServerCookie, false
       , absTermCookiePath);
-   terminalTransport_->setLocalHeartbeatInterval();
-   terminalConnection_ = std::make_unique<GenoaStreamServerConnection>(logger_
-      , zmqContext, terminalTransport_);
+   terminalConnection_ = std::make_unique<Bip15xServerConnection>(logger_
+      , std::move(terminalWsConn), terminalTransport_);
 
    if (!settings_->acceptFrom().empty()) {
-      terminalConnection_->setListenFrom({settings_->acceptFrom()});
+      //terminalConnection_->setListenFrom({settings_->acceptFrom()});
    }
    terminalListener_->SetLimits(settings_->limits());
 

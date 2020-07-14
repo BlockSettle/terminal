@@ -36,5 +36,6 @@ TARGET_LINK_LIBRARIES(${BLOCKSETTLE_TRACKER}
    ${WS_LIB}
    ssl
    crypto
+   dl
    ${CMAKE_THREAD_LIBS_INIT}
 )

@@ -20,9 +20,9 @@
 #include "TransportBIP15x.h"
 #include "TransportBIP15xServer.h"
 #include "ZmqContext.h"
-#include "ZmqDataConnection.h"
 #include "zmq.h"
 
+#if 0
 using namespace std::chrono_literals;
 
 static bs::network::BIP15xParams getTestParams()
@@ -1154,3 +1154,4 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientKey)
    ASSERT_TRUE(clientTransport->getOwnPubKey().getSize() == 33);
    EXPECT_TRUE(srvLsn->lastConnectedKey_->pubKey() == clientTransport->getOwnPubKey());
 }
+#endif

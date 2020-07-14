@@ -75,7 +75,6 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "WsDataConnection.h"
-#include "ZmqDataConnection.h"
 
 #include "ui_BSTerminalMainWindow.h"
 
@@ -1442,30 +1441,16 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
 
    auto bsClient = std::make_shared<BsClient>(logger);
 
-#ifdef PRODUCTION_BUILD
-   const bool useWebSockets = false;
-#else
-   // Use with staging only for now
-   const bool useWebSockets = (envType == ApplicationSettings::EnvConfiguration::Staging);
-#endif
-
    bs::network::BIP15xParams params;
    params.ephemeralPeers = true;
    const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger, params);
    bip15xTransport->setKeyCb(cbApproveProxy_);
 
-   if (useWebSockets) {
-      auto connection = std::make_unique<WsDataConnection>(logger, bip15xTransport);
-      bool result = connection->openConnection("proxy-staging.blocksettle.com", "80", bsClient.get());
-      assert(result);
-      bsClient->setConnection(std::move(connection));
-   } else {
-      auto connection = connectionManager_->createZmqBIP15xDataConnection(bip15xTransport);
-      // This should not ever fail
-      bool result = connection->openConnection(networkSettings.proxy.host, std::to_string(networkSettings.proxy.port), bsClient.get());
-      assert(result);
-      bsClient->setConnection(std::move(connection));
-   }
+   WsDataConnectionParams wsParams;
+   auto connection = std::make_unique<WsDataConnection>(logger, wsParams);
+   bool result = connection->openConnection("proxy-staging.blocksettle.com", "80", bsClient.get());
+   assert(result);
+   bsClient->setConnection(std::move(connection));
 
    // Must be connected before loginDialog.exec call (balances could be received before loginDialog.exec returns)!
    connect(bsClient.get(), &BsClient::balanceLoaded, assetManager_.get(), &AssetManager::fxBalanceLoaded);
