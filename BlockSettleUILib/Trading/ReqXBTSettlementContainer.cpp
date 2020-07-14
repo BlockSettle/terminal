@@ -385,8 +385,7 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
          }
 
          emit sendUnsignedPayinToPB(settlementIdHex_
-            , bs::network::UnsignedPayinData{ unsignedPayinRequest_.serializeState().SerializeAsString()
-               , std::move(result.preimageData)} );
+            , bs::network::UnsignedPayinData{ unsignedPayinRequest_.serializeState().SerializeAsString() });
 
          const auto &authLeaf = walletsMgr_->getAuthWallet();
          signContainer_->setSettlCP(authLeaf->walletId(), result.payinHash, settlementId_, dealerAuthKey_);
