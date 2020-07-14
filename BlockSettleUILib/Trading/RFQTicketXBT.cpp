@@ -683,10 +683,7 @@ bool RFQTicketXBT::checkAuthAddr(double qty) const
          return tradeSettings->xbtTier1Limit > bs::XBTAmount(qty).GetValue();
       }
       else {
-         QString indicativePrice = ui_->labelIndicativePrice->text();
-         QRegExp space(QLatin1String("\\s"));
-         indicativePrice.remove(space);
-         const double indPrice = indicativePrice.toDouble();
+         const double indPrice = getIndicativePrice();
          bs::XBTAmount price(indPrice * (1 + (tradeSettings->xbtPriceBand / 100)));
          return price > bs::XBTAmount(qty);
       }
@@ -1015,6 +1012,12 @@ void RFQTicketXBT::onCancelRFQ(const std::string &id)
    pendingRFQs_.erase(itRFQ);
 }
 
+void RFQTicketXBT::onMDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields mdFields)
+{
+   auto &mdInfo = mdInfo_[security.toStdString()];
+   mdInfo.merge(bs::network::MDField::get(mdFields));
+}
+
 QPushButton* RFQTicketXBT::submitButton() const
 {
    return ui_->pushButtonSubmit;
@@ -1251,6 +1254,30 @@ void RFQTicketXBT::updateIndicativePrice()
       }
    } else {
       ui_->labelIndicativePrice->setText(kEmptyInformationalLabelText);
+   }
+}
+
+double RFQTicketXBT::getIndicativePrice() const
+{
+   const auto &mdIt = mdInfo_.find(ui_->labelSecurityId->text().toStdString());
+   if (mdIt == mdInfo_.end()) {
+      return false;
+   }
+
+   auto selectedSide = getSelectedSide();
+   if (selectedSide == bs::network::Side::Undefined) {
+      return .0;
+   }
+   bool numCcySelected = ui_->pushButtonNumCcy->isChecked();
+   bool isSell = selectedSide == bs::network::Side::Buy
+      ? !numCcySelected
+      : numCcySelected;
+
+   if (isSell) {
+      return mdIt->second.bidPrice;
+   }
+   else {
+      return mdIt->second.askPrice;
    }
 }
 

@@ -30,6 +30,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "UserScriptRunner.h"
 #include "UtxoReservationManager.h"
+#include "MDCallbacksQt.h"
 
 #include "bs_proxy_terminal_pb.pb.h"
 
@@ -201,6 +202,8 @@ void RFQRequestWidget::initWidgets(const std::shared_ptr<MarketDataProvider>& md
    appSettings_ = appSettings;
    ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ
       , mdProvider, mdCallbacks);
+
+   connect(mdCallbacks.get(), &MDCallbacksQt::MDUpdate, ui_->pageRFQTicket, &RFQTicketXBT::onMDUpdate);
 }
 
 void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger

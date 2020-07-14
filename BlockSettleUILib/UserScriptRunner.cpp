@@ -244,20 +244,8 @@ void AQScriptHandler::clear()
 void AQScriptHandler::onMDUpdate(bs::network::Asset::Type, const QString &security,
    bs::network::MDFields mdFields)
 {
-   const double bid = bs::network::MDField::get(mdFields, bs::network::MDField::PriceBid).value;
-   const double ask = bs::network::MDField::get(mdFields, bs::network::MDField::PriceOffer).value;
-   const double last = bs::network::MDField::get(mdFields, bs::network::MDField::PriceLast).value;
-
    auto &mdInfo = mdInfo_[security.toStdString()];
-   if (bid > 0) {
-      mdInfo.bidPrice = bid;
-   }
-   if (ask > 0) {
-      mdInfo.askPrice = ask;
-   }
-   if (last > 0) {
-      mdInfo.lastPrice = last;
-   }
+   mdInfo.merge(bs::network::MDField::get(mdFields));
 
    for (auto aqObj : aqObjs_) {
       QString sec = aqObj.second->property("security").toString();
@@ -266,14 +254,14 @@ void AQScriptHandler::onMDUpdate(bs::network::Asset::Type, const QString &securi
       }
 
       auto *reqReply = qobject_cast<BSQuoteReqReply *>(aqObj.second);
-      if (bid > 0) {
-         reqReply->setIndicBid(bid);
+      if (mdInfo.bidPrice > 0) {
+         reqReply->setIndicBid(mdInfo.bidPrice);
       }
-      if (ask > 0) {
-         reqReply->setIndicAsk(ask);
+      if (mdInfo.askPrice > 0) {
+         reqReply->setIndicAsk(mdInfo.askPrice);
       }
-      if (last > 0) {
-         reqReply->setLastPrice(last);
+      if (mdInfo.lastPrice > 0) {
+         reqReply->setLastPrice(mdInfo.lastPrice);
       }
       reqReply->start();
    }

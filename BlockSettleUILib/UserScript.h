@@ -451,12 +451,7 @@ private:
    std::shared_ptr<spdlog::logger> logger_;
    std::unordered_map<std::string, SubmitRFQ *> activeRFQs_;
 
-   struct MDInfo {
-      double   bidPrice;
-      double   askPrice;
-      double   lastPrice;
-   };
-   std::unordered_map<std::string, MDInfo>  mdInfo_;
+   std::unordered_map<std::string, bs::network::MDInfo>  mdInfo_;
 };
 
 
