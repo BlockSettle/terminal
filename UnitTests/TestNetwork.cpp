@@ -10,19 +10,20 @@
 */
 #include <gtest/gtest.h>
 #include <random>
+
+#include "Bip15xDataConnection.h"
+#include "Bip15xServerConnection.h"
 #include "CelerMessageMapper.h"
 #include "CommonTypes.h"
-#include "GenoaStreamServerConnection.h"
 #include "IdStringGenerator.h"
 #include "QuoteProvider.h"
-#include "TestEnv.h"
 #include "ServerConnection.h"
+#include "TestEnv.h"
 #include "TransportBIP15x.h"
 #include "TransportBIP15xServer.h"
-#include "ZmqContext.h"
-#include "zmq.h"
+#include "WsDataConnection.h"
+#include "WsServerConnection.h"
 
-#if 0
 using namespace std::chrono_literals;
 
 static bs::network::BIP15xParams getTestParams()
@@ -159,15 +160,15 @@ TEST(TestNetwork, ZMQ_BIP15X)
             clientPktsProm.set_value(packetsMatch_);
          }
       }
-      void onClientError(const std::string &clientId, const std::string &errStr) override
+      void onClientError(const std::string &clientId, ClientError error, const Details &details) override
       {
-         logger_->debug("[{}] {}: {}", __func__, BinaryData::fromString(clientId).toHexStr(), errStr);
+         logger_->debug("[{}] {}", __func__, BinaryData::fromString(clientId).toHexStr());
          if (!failed_) {
             clientPktsProm.set_value(false);
             failed_ = true;
          }
       }
-      void OnClientConnected(const std::string &clientId) override
+      void OnClientConnected(const std::string &clientId, const Details &details) override
       {
          logger_->debug("[{}] {}", __func__, BinaryData::fromString(clientId).toHexStr());
       }
@@ -241,14 +242,14 @@ TEST(TestNetwork, ZMQ_BIP15X)
 
    const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger
       , getTestParams());
-   const auto zmqContext = std::make_shared<ZmqContext>(logger);
-   const auto clientConn = std::make_unique<ZmqBinaryConnection>(logger, clientTransport);
-   clientConn->SetContext(zmqContext);
+   auto wsConn = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
+   const auto clientConn = std::make_unique<Bip15xDataConnection>(logger, std::move(wsConn), clientTransport);
 
    const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(logger
       , getEmptyPeersCallback());
-   auto serverConn = std::make_unique<GenoaStreamServerConnection>(
-      logger, zmqContext, srvTransport);
+   auto wsServ = std::make_unique<WsServerConnection>(logger, WsServerConnectionParams{});
+   auto serverConn = std::make_unique<Bip15xServerConnection>(
+      logger, std::move(wsServ), srvTransport);
 //   serverConn->enableClientCookieUsage();
 
    const std::string host = "127.0.0.1";
@@ -344,8 +345,8 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
             }
          }
       }
-      void onClientError(const std::string &clientId, const std::string &errStr) override {
-         logger_->debug("[{}] {}: {}", __func__, BinaryData::fromString(clientId).toHexStr(), errStr);
+      void onClientError(const std::string &clientId, ClientError error, const Details &details) override {
+         logger_->debug("[{}] {}", __func__, BinaryData::fromString(clientId).toHexStr());
          if (!conn1Reported) {
             connectProm1.set_value(false);
             conn1Reported = true;
@@ -359,7 +360,7 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
             prom2Set_ = true;
          }
       }
-      void OnClientConnected(const std::string &clientId) override {
+      void OnClientConnected(const std::string &clientId, const Details &details) override {
          logger_->debug("[{}] {}", __func__, BinaryData::fromString(clientId).toHexStr());
       }
       void OnClientDisconnected(const std::string &clientId) override {
@@ -459,17 +460,16 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
    const auto client2Lsn = std::make_unique<AnotherClientConnListener>(StaticLogger::loggerPtr);
    const auto clientLsn = std::make_unique<ClientConnListener>(StaticLogger::loggerPtr);
 
-   const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
    const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, getTestParams());
-   const auto clientConn = std::make_shared<ZmqBinaryConnection>(
-      StaticLogger::loggerPtr, clientTransport);
-   clientConn->SetContext(zmqContext);
+   auto wsConn = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
+   const auto clientConn = std::make_unique<Bip15xDataConnection>(StaticLogger::loggerPtr, std::move(wsConn), clientTransport);
 
    const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
       StaticLogger::loggerPtr, getEmptyPeersCallback());
-   auto serverConn = std::make_shared<GenoaStreamServerConnection>(
-      StaticLogger::loggerPtr, zmqContext, srvTransport);
+   auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   auto serverConn = std::make_unique<Bip15xServerConnection>(
+      StaticLogger::loggerPtr, std::move(wsServ), srvTransport);
    srvLsn->transport_ = srvTransport;
 
    const std::string host = "127.0.0.1";
@@ -505,9 +505,8 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
 
    const auto &client2Transport = std::make_shared<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, getTestParams());
-   const auto client2Conn = std::make_shared<ZmqBinaryConnection>(
-      StaticLogger::loggerPtr, client2Transport);
-   client2Conn->SetContext(zmqContext);
+   auto wsConn2 = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
+   const auto client2Conn = std::make_unique<Bip15xDataConnection>(StaticLogger::loggerPtr, std::move(wsConn2), clientTransport);
    client2Transport->addAuthPeer(getPeerKey(host, port, srvTransport.get()));
    ASSERT_TRUE(client2Conn->openConnection(host, port, client2Lsn.get()));
    EXPECT_TRUE(connectFut2.get());
@@ -570,11 +569,11 @@ public:
        logger_->debug("[{}] {} from {}", __func__, data.size()
            , BinaryData::fromString(clientId).toHexStr());
     }
-    void onClientError(const std::string &clientId, const std::string &errStr) override {
+    void onClientError(const std::string &clientId, ClientError error, const Details &details) override {
        error_++;
-       logger_->debug("[{}] {}: {}", __func__, BinaryData::fromString(clientId).toHexStr(), errStr);
+       logger_->debug("[{}] {}", __func__, BinaryData::fromString(clientId).toHexStr());
     }
-    void OnClientConnected(const std::string &clientId) override {
+    void OnClientConnected(const std::string &clientId, const Details &details) override {
        lastConnectedClient_ = clientId;
        connected_++;
        if (transport_) {
@@ -634,17 +633,16 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
     for (size_t i = 0; i < passes; ++i) {
        const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
           StaticLogger::loggerPtr, getTestParams());
-       const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
-       const auto clientConn = std::make_shared<ZmqBinaryConnection>(
-            StaticLogger::loggerPtr, clientTransport);
-       clientConn->SetContext(zmqContext);
+       auto wsConn = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
+       const auto clientConn = std::make_unique<Bip15xDataConnection>(StaticLogger::loggerPtr, std::move(wsConn), clientTransport);
 
         const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
            StaticLogger::loggerPtr, getEmptyPeersCallback());
         std::vector<std::string> trustedClients = {
             std::string("test:") + clientTransport->getOwnPubKey().toHexStr() };
-        auto serverConn = std::make_shared<GenoaStreamServerConnection>(
-            StaticLogger::loggerPtr, zmqContext, srvTransport);
+        auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+        auto serverConn = std::make_unique<Bip15xServerConnection>(
+           StaticLogger::loggerPtr, std::move(wsServ), srvTransport);
 
         clientLsn->connected_ = 0;
         clientLsn->disconnected_ = 0;
@@ -700,17 +698,16 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientReopen)
 
     const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
        StaticLogger::loggerPtr, getTestParams());
-    const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
-    const auto clientConn = std::make_shared<ZmqBinaryConnection>(
-        StaticLogger::loggerPtr, clientTransport);
-    clientConn->SetContext(zmqContext);
+    auto wsConn = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
+    const auto clientConn = std::make_unique<Bip15xDataConnection>(StaticLogger::loggerPtr, std::move(wsConn), clientTransport);
 
     const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
        StaticLogger::loggerPtr, getEmptyPeersCallback());
     std::vector<std::string> trustedClients = {
         std::string("test:") + clientTransport->getOwnPubKey().toHexStr() };
-    auto serverConn = std::make_shared<GenoaStreamServerConnection>(
-        StaticLogger::loggerPtr, zmqContext, srvTransport);
+    auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+    auto serverConn = std::make_unique<Bip15xServerConnection>(
+       StaticLogger::loggerPtr, std::move(wsServ), srvTransport);
 
     const std::string host = "127.0.0.1";
     std::string port;
@@ -761,113 +758,23 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientReopen)
     serverConn.reset();  // This is needed to detach listener before it's destroyed
 }
 
-TEST(TestNetwork, DISABLED_ZMQ_BIP15X_Heartbeat)
-{
-    static std::vector<std::string> clientPackets;
-    for (int i = 0; i < 5; ++i) {
-        clientPackets.push_back(CryptoPRNG::generateRandom(23).toBinStr());
-    }
-
-    static std::vector<std::string> srvPackets;
-    uint32_t pktSize = 100;
-    for (int i = 0; i < 5; ++i) {
-        srvPackets.push_back(CryptoPRNG::generateRandom(pktSize).toBinStr());
-        pktSize *= 2;
-    }
-
-    const auto srvLsn = std::make_shared<TstServerListener>(StaticLogger::loggerPtr);
-    const auto clientLsn = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
-
-    struct Messages {
-        size_t clientMsgs;
-        size_t serverMsgs;
-    } pass[] = {
-        {1, 1},
-        {5, 5},
-        {0, 0},
-        {0, 1},
-        {1, 0}
-    };
-    const size_t passes = sizeof pass / sizeof pass[0];
-
-    for (size_t i = 0; i < passes; ++i) {
-       const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
-          StaticLogger::loggerPtr, getTestParams());
-       const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
-       auto clientConn = std::make_shared<ZmqBinaryConnection>(
-            StaticLogger::loggerPtr, clientTransport);
-       clientConn->SetContext(zmqContext);
-
-        const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-           StaticLogger::loggerPtr, getEmptyPeersCallback());
-        std::vector<std::string> trustedClients = {
-            std::string("test:") + clientTransport->getOwnPubKey().toHexStr() };
-        auto serverConn = std::make_shared<GenoaStreamServerConnection>(
-            StaticLogger::loggerPtr, zmqContext, srvTransport);
-
-        clientLsn->connected_ = false;
-        srvLsn->connected_ = false;
-
-        const std::string host = "127.0.0.1";
-        std::string port;
-        do {
-            port = std::to_string((rand() % 50000) + 10000);
-        } while (!serverConn->BindConnection(host, port, srvLsn.get()));
-
-        srvTransport->addAuthPeer(getPeerKey("client", clientTransport.get()));
-        clientTransport->addAuthPeer(getPeerKey(host, port, srvTransport.get()));
-
-        ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
-
-        ASSERT_TRUE(await(clientLsn->connected_));
-        ASSERT_TRUE(await(srvLsn->connected_));
-
-        for (size_t j = 0; j < pass[i].clientMsgs; ++j) {
-            clientConn->send(clientPackets.at(j));
-        }
-        for (size_t j = 0; j < pass[i].serverMsgs; ++j) {
-            serverConn->SendDataToAllClients(srvPackets.at(j));
-        }
-
-        srvLsn->disconnected_ = false;
-
-        const auto allowedJitter = 1000ms;
-
-        std::this_thread::sleep_for(2 * bs::network::TransportBIP15xServer
-           ::getDefaultHeartbeatInterval() + allowedJitter);
-        ASSERT_FALSE(clientLsn->disconnected_.load());
-        ASSERT_FALSE(srvLsn->disconnected_.load());
-
-        clientConn.reset();
-
-        ASSERT_TRUE(await(srvLsn->disconnected_, 2 * bs::network::TransportBIP15xServer
-           ::getDefaultHeartbeatInterval() + allowedJitter));
-        ASSERT_FALSE(clientLsn->error_.load());
-        ASSERT_FALSE(srvLsn->error_.load());
-
-        serverConn.reset();  // This is needed to detach listener before it's destroyed
-    }
-}
-
 TEST(TestNetwork, ZMQ_BIP15X_DisconnectCounters)
 {
-   const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
-
    const auto srvLsn = std::make_shared<TstServerListener>(StaticLogger::loggerPtr);
    const auto clientLsn = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
 
    const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, getTestParams());
-   const auto clientConn = std::make_shared<ZmqBinaryConnection>(
-      StaticLogger::loggerPtr, clientTransport);
-   clientConn->SetContext(zmqContext);
+   auto wsConn = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
+   const auto clientConn = std::make_unique<Bip15xDataConnection>(StaticLogger::loggerPtr, std::move(wsConn), clientTransport);
    std::vector<std::string> trustedClients = {
       std::string("test:") + clientTransport->getOwnPubKey().toHexStr() };
 
    const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
       StaticLogger::loggerPtr, getEmptyPeersCallback());
-   auto serverConn = std::make_shared<GenoaStreamServerConnection>(
-      StaticLogger::loggerPtr, zmqContext, srvTransport);
+   auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   auto serverConn = std::make_unique<Bip15xServerConnection>(
+      StaticLogger::loggerPtr, std::move(wsServ), srvTransport);
 
    const std::string host = "127.0.0.1";
    std::string port;
@@ -898,31 +805,6 @@ TEST(TestNetwork, ZMQ_BIP15X_DisconnectCounters)
    ASSERT_EQ(srvLsn->error_.load(), 0);
 }
 
-TEST(TestNetwork, ZMQ_BIP15X_ConnectionTimeout)
-{
-   const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
-
-   const auto clientLsn = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
-
-   auto params = getTestParams();
-   params.connectionTimeout = std::chrono::milliseconds{1};
-
-   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
-      StaticLogger::loggerPtr, params);
-   clientTransport->setHeartbeatInterval(std::chrono::milliseconds{ 1 });
-   const auto clientConn = std::make_shared<ZmqBinaryConnection>(
-      StaticLogger::loggerPtr, clientTransport);
-   clientConn->SetContext(zmqContext);
-
-   ASSERT_TRUE(clientConn->openConnection("localhost", "64000", clientLsn.get()));
-
-   ASSERT_TRUE(await(clientLsn->error_));
-
-   ASSERT_EQ(clientLsn->connected_.load(), 0);
-   ASSERT_EQ(clientLsn->disconnected_.load(), 0);
-   ASSERT_EQ(clientLsn->error_.load(), 1);
-}
-
 // Disabled because it's not really a unit test
 TEST(TestNetwork, DISABLED_ZMQ_BIP15X_StressTest)
 {
@@ -931,17 +813,16 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_StressTest)
 
    const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, getTestParams());
-   const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
-   const auto clientConn = std::make_shared<ZmqBinaryConnection>(
-            StaticLogger::loggerPtr, clientTransport);
-   clientConn->SetContext(zmqContext);
+   auto wsConn = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
+   const auto clientConn = std::make_unique<Bip15xDataConnection>(StaticLogger::loggerPtr, std::move(wsConn), clientTransport);
 
    const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
       StaticLogger::loggerPtr, getEmptyPeersCallback());
    std::vector<std::string> trustedClients = {
       std::string("test:") + clientTransport->getOwnPubKey().toHexStr() };
-   auto serverConn = std::make_shared<GenoaStreamServerConnection>(
-            StaticLogger::loggerPtr, zmqContext, srvTransport);
+   auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   auto serverConn = std::make_unique<Bip15xServerConnection>(
+      StaticLogger::loggerPtr, std::move(wsServ), srvTransport);
 
    const std::string host = "127.0.0.1";
    std::string port;
@@ -968,152 +849,6 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_StressTest)
    }
 }
 
-TEST(TestNetwork, ZMQ_BIP15X_MalformedData)
-{
-   std::uniform_int_distribution<uint32_t> distribution(0, 255);
-   std::mt19937 generator;
-   generator.seed(1);
-
-   for (int i = 0; i < 10; ++i) {
-      const auto srvLsn = std::make_shared<TstServerListener>(StaticLogger::loggerPtr);
-      const auto clientLsn = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
-      const auto clientLsn2 = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
-      const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
-
-      const auto &client1Transport = std::make_shared<bs::network::TransportBIP15xClient>(
-         StaticLogger::loggerPtr, getTestParams());
-      const auto clientConn = std::make_shared<ZmqBinaryConnection>(
-               StaticLogger::loggerPtr, client1Transport);
-      clientConn->SetContext(zmqContext);
-
-      const auto &client2Transport = std::make_shared<bs::network::TransportBIP15xClient>(
-         StaticLogger::loggerPtr, getTestParams());
-      const auto clientConn2 = std::make_shared<ZmqBinaryConnection>(
-               StaticLogger::loggerPtr, client2Transport);
-      clientConn2->SetContext(zmqContext);
-
-      const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-         StaticLogger::loggerPtr, getEmptyPeersCallback());
-      auto serverConn = std::make_shared<GenoaStreamServerConnection>(
-               StaticLogger::loggerPtr, zmqContext, srvTransport);
-
-      const std::string host = "127.0.0.1";
-      std::string port;
-      do {
-         port = std::to_string((rand() % 50000) + 10000);
-      } while (!serverConn->BindConnection(host, port, srvLsn.get()));
-
-      srvTransport->addAuthPeer(getPeerKey("client", client1Transport.get()));
-      srvTransport->addAuthPeer(getPeerKey("client2", client2Transport.get()));
-      client1Transport->addAuthPeer(getPeerKey(host, port, srvTransport.get()));
-      client2Transport->addAuthPeer(getPeerKey(host, port, srvTransport.get()));
-
-      auto badContext = zmq_ctx_new();
-      auto badSocket = zmq_socket(badContext, ZMQ_DEALER);
-
-      ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
-      ASSERT_TRUE(await(clientLsn->connected_));
-
-      ASSERT_TRUE(clientConn->send("test"));
-      ASSERT_TRUE(await(srvLsn->dataRecv_));
-      srvLsn->dataRecv_ = 0;
-
-      ASSERT_EQ(zmq_connect(badSocket, fmt::format("tcp://{}:{}", host, port).c_str()), 0);
-
-      auto badSize = distribution(generator);
-      auto badData = CryptoPRNG::generateRandom(badSize).toBinStr();
-      ASSERT_EQ(zmq_send(badSocket, badData.data(), badData.size(), 0), badData.size());
-
-      ASSERT_TRUE(await(srvLsn->error_));
-
-      ASSERT_TRUE(clientConn->send("test2"));
-      ASSERT_TRUE(await(srvLsn->dataRecv_));
-
-      ASSERT_TRUE(clientConn2->openConnection(host, port, clientLsn2.get()));
-      ASSERT_TRUE(await(clientLsn2->connected_));
-
-      //Temporarily disabled - not sure what this code should test
-/*    ASSERT_EQ(zmq_close(badSocket), 0);
-      ASSERT_EQ(zmq_ctx_term(badContext), 0);*/
-      std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
-   }
-}
-
-TEST(TestNetwork, ZMQ_BIP15X_MalformedSndMore)
-{
-   const auto srvLsn = std::make_shared<TstServerListener>(StaticLogger::loggerPtr);
-   const auto clientLsn = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
-   const auto clientLsn2 = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
-   const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
-
-   const auto &client1Transport = std::make_shared<bs::network::TransportBIP15xClient>(
-      StaticLogger::loggerPtr, getTestParams());
-   const auto clientConn = std::make_shared<ZmqBinaryConnection>(
-            StaticLogger::loggerPtr, client1Transport);
-   clientConn->SetContext(zmqContext);
-
-   const auto &client2Transport = std::make_shared<bs::network::TransportBIP15xClient>(
-      StaticLogger::loggerPtr, getTestParams());
-   const auto clientConn2 = std::make_shared<ZmqBinaryConnection>(
-            StaticLogger::loggerPtr, client2Transport);
-   clientConn2->SetContext(zmqContext);
-
-   const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-      StaticLogger::loggerPtr, getEmptyPeersCallback());
-   auto serverConn = std::make_shared<GenoaStreamServerConnection>(
-            StaticLogger::loggerPtr, zmqContext, srvTransport);
-
-   const std::string host = "127.0.0.1";
-   std::string port;
-   do {
-      port = std::to_string((rand() % 50000) + 10000);
-   } while (!serverConn->BindConnection(host, port, srvLsn.get()));
-
-   srvTransport->addAuthPeer(getPeerKey("client", client1Transport.get()));
-   srvTransport->addAuthPeer(getPeerKey("client2", client2Transport.get()));
-   client1Transport->addAuthPeer(getPeerKey(host, port, srvTransport.get()));
-   client2Transport->addAuthPeer(getPeerKey(host, port, srvTransport.get()));
-
-   auto badContext = zmq_ctx_new();
-   auto badSocket = zmq_socket(badContext, ZMQ_DEALER);
-
-   ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
-   ASSERT_TRUE(await(clientLsn->connected_));
-
-   ASSERT_TRUE(clientConn->send("test"));
-   ASSERT_TRUE(await(srvLsn->dataRecv_));
-   srvLsn->dataRecv_ = 0;
-
-   ASSERT_EQ(zmq_connect(badSocket, fmt::format("tcp://{}:{}", host, port).c_str()), 0);
-
-   auto badData = CryptoPRNG::generateRandom(10).toBinStr();
-   ASSERT_EQ(zmq_send(badSocket, badData.data(), badData.size(), ZMQ_SNDMORE), badData.size());
-   ASSERT_EQ(zmq_send(badSocket, badData.data(), badData.size(), 0), badData.size());
-
-   ASSERT_TRUE(await(srvLsn->error_));
-
-   ASSERT_TRUE(clientConn->send("test2"));
-   ASSERT_TRUE(await(srvLsn->dataRecv_));
-
-   srvLsn->connected_ = 0;
-   ASSERT_TRUE(clientConn2->openConnection(host, port, clientLsn2.get()));
-   ASSERT_TRUE(await(clientLsn2->connected_));
-   ASSERT_TRUE(await(srvLsn->connected_));
-   ASSERT_TRUE(!srvLsn->lastConnectedClient_.empty());
-
-   srvLsn->dataRecv_ = 0;
-   clientConn2->send("request 2");
-   ASSERT_TRUE(await(srvLsn->dataRecv_));
-
-   clientLsn2->dataRecv_ = 0;
-   serverConn->SendDataToClient(srvLsn->lastConnectedClient_, "reply 2");
-   ASSERT_TRUE(await(clientLsn2->dataRecv_));
-
-   //Temporarily disabled - not sure what this code should test
-/*   ASSERT_EQ(zmq_close(badSocket), 0);
-   ASSERT_EQ(zmq_ctx_term(badContext), 0);*/
-}
-
 TEST(TestNetwork, ZMQ_BIP15X_ClientKey)
 {
    const auto srvLsn = std::make_shared<TstServerListener>(StaticLogger::loggerPtr);
@@ -1121,15 +856,14 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientKey)
 
    const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, getTestParams());
-   const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
-   const auto clientConn = std::make_shared<ZmqBinaryConnection>(
-            StaticLogger::loggerPtr, clientTransport);
-   clientConn->SetContext(zmqContext);
+   auto wsConn = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
+   const auto clientConn = std::make_unique<Bip15xDataConnection>(StaticLogger::loggerPtr, std::move(wsConn), clientTransport);
 
    const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
       StaticLogger::loggerPtr, getEmptyPeersCallback());
-   auto serverConn = std::make_shared<GenoaStreamServerConnection>(
-            StaticLogger::loggerPtr, zmqContext, srvTransport);
+   auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   auto serverConn = std::make_unique<Bip15xServerConnection>(
+      StaticLogger::loggerPtr, std::move(wsServ), srvTransport);
 
    srvLsn->transport_ = srvTransport;
 
@@ -1154,4 +888,3 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientKey)
    ASSERT_TRUE(clientTransport->getOwnPubKey().getSize() == 33);
    EXPECT_TRUE(srvLsn->lastConnectedKey_->pubKey() == clientTransport->getOwnPubKey());
 }
-#endif
