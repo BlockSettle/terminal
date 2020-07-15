@@ -154,7 +154,7 @@ int main(int argc, char** argv) {
 
    auto ccServer = std::make_unique<CcTrackerServer>(logger, armory, bipServer);
 
-   result = wsServer->BindConnection(listenAddress, std::to_string(listenPort), ccServer.get());
+   result = bipServer->BindConnection(listenAddress, std::to_string(listenPort), ccServer.get());
    if (!result) {
       SPDLOG_LOGGER_CRITICAL(logger, "starting server failed");
       exit(EXIT_FAILURE);
