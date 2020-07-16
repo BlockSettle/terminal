@@ -398,7 +398,4 @@ TEST(WebSocketHelpers, WsPacket)
    packet = parsePacket(WsPacket::ack(recvCounter));
    EXPECT_EQ(packet.type, WsPacket::Type::Ack);
    EXPECT_EQ(packet.recvCounter, recvCounter);
-
-   packet = parsePacket(WsPacket::close());
-   EXPECT_EQ(packet.type, WsPacket::Type::Close);
 }
