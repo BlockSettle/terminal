@@ -94,7 +94,7 @@ private:
    std::unique_ptr<HeadlessContainerListener>   terminalListener_;
    std::unique_ptr<SignerAdapterListener>       guiListener_;
 
-   std::unique_ptr<Bip15xServerConnection>   terminalConnection_;
+   std::unique_ptr<ServerConnection>   terminalConnection_;
    std::shared_ptr<bs::network::TransportBIP15xServer>   terminalTransport_;
    std::shared_ptr<ServerConnection>      guiConnection_;
    std::shared_ptr<bs::network::TransportBIP15xServer>   guiTransport_;
