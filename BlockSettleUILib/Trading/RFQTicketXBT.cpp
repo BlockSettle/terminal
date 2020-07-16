@@ -37,6 +37,7 @@
 #include "XbtAmountValidator.h"
 #include "UtxoReservationManager.h"
 #include "UtxoReservation.h"
+#include "TradeSettings.h"
 
 #include <cstdlib>
 
@@ -276,7 +277,7 @@ void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMana
    walletsLoaded();
 
    auto updateAuthAddresses = [this] {
-      UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
+      UiUtils::fillAuthAddressesComboBoxWithSubmitted(ui_->authenticationAddressComboBox, authAddressManager_);
       onAuthAddrChanged(ui_->authenticationAddressComboBox->currentIndex());
       authAddr_ = authAddressManager_->getDefault();
       if (authKey_.empty()) {
@@ -284,7 +285,7 @@ void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMana
       }
    };
    updateAuthAddresses();
-   connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, updateAuthAddresses);
+   connect(authAddressManager_.get(), &AuthAddressManager::AddressListUpdated, this, updateAuthAddresses);
 
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, [this] {
       // This will update balance after receiving ZC
@@ -550,11 +551,14 @@ std::string RFQTicketXBT::authKey() const
 
 void RFQTicketXBT::onAuthAddrChanged(int index)
 {
-   authAddr_ = authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(index));
-   authKey_.clear();
-   if (authAddr_.empty()) {
+   auto addressString = ui_->authenticationAddressComboBox->itemText(index).toStdString();
+   if (addressString.empty()) {
       return;
    }
+
+   authAddr_ = bs::Address::fromAddressString(addressString);
+
+   authKey_.clear();
    const auto settlLeaf = walletsManager_->getSettlementLeaf(authAddr_);
 
    const auto &cbPubKey = [this](const SecureBinaryData &pubKey) {
@@ -572,7 +576,7 @@ void RFQTicketXBT::onAuthAddrChanged(int index)
 
 void RFQTicketXBT::onUTXOReservationChanged(const std::string& walletId)
 {
-   logger_->debug("[{}] walletId='{}'", __func__, walletId);
+   logger_->debug("[RFQTicketXBT::onUTXOReservationChanged] walletId='{}'", walletId);
    if (walletId.empty()) {
       updateBalances();
       updateSubmitButton();
@@ -655,6 +659,39 @@ bool RFQTicketXBT::checkBalance(double qty) const
    }
 }
 
+bool RFQTicketXBT::checkAuthAddr(double qty) const
+{
+   if (!ui_->authenticationAddressComboBox->isVisible()) {
+      return true;
+   }
+   else if (ui_->authenticationAddressComboBox->count() == 0) {
+      return false;
+   }
+
+   if (authAddressManager_->GetState(authAddr_)
+      == AddressVerificationState::Verified) {
+      return true;
+   }
+
+   const auto& tradeSettings = authAddressManager_->tradeSettings();
+   if (!tradeSettings) {
+      return false;
+   }
+
+   if (currentGroupType_ == ProductGroupType::XBTGroupType){
+      if (getProductToSpend() == UiUtils::XbtCurrency) {
+         return tradeSettings->xbtTier1Limit > bs::XBTAmount(qty).GetValue();
+      }
+      else {
+         const double indPrice = getIndicativePrice();
+         bs::XBTAmount price(indPrice * (1 + (tradeSettings->xbtPriceBand / 100)));
+         return price > bs::XBTAmount(qty);
+      }
+   }
+
+   return true;
+}
+
 void RFQTicketXBT::updateSubmitButton()
 {
    ui_->pushButtonSubmit->setEnabled(false);
@@ -692,8 +729,9 @@ void RFQTicketXBT::updateSubmitButton()
 
    const double qty = getQuantity();
    const bool isBalanceOk = checkBalance(qty);
+   const bool isAuthOk = checkAuthAddr(qty);
 
-   if (!isBalanceOk) {
+   if (!isBalanceOk || !isAuthOk) {
       ui_->labelBalanceValue->setFont(invalidBalanceFont_);
       return;
    }
@@ -841,6 +879,9 @@ void RFQTicketXBT::sendRFQ(const std::string &id)
       logger_->error("[RFQTicketXBT::onSendRFQ] RFQ with id {} not found", id);
       return;
    }
+
+   logger_->debug("[RFQTicketXBT::sendRFQ] sending RFQ {}", id);
+
    auto rfq = itRFQ->second;
 
    if (rfq->requestId.empty()) {
@@ -964,11 +1005,17 @@ void RFQTicketXBT::onCancelRFQ(const std::string &id)
       logger_->error("[RFQTicketXBT::onCancelRFQ] failed to find RFQ {}", id);
       return;
    }
-   logger_->debug("[{}] cancelling RFQ {}", __func__, id);
+   logger_->debug("[RFQTicketXBT::onCancelRFQ] cancelling RFQ {}", id);
    if (cancelRFQCb_) {
       cancelRFQCb_(id);
    }
    pendingRFQs_.erase(itRFQ);
+}
+
+void RFQTicketXBT::onMDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields mdFields)
+{
+   auto &mdInfo = mdInfo_[security.toStdString()];
+   mdInfo.merge(bs::network::MDField::get(mdFields));
 }
 
 QPushButton* RFQTicketXBT::submitButton() const
@@ -1207,6 +1254,30 @@ void RFQTicketXBT::updateIndicativePrice()
       }
    } else {
       ui_->labelIndicativePrice->setText(kEmptyInformationalLabelText);
+   }
+}
+
+double RFQTicketXBT::getIndicativePrice() const
+{
+   const auto &mdIt = mdInfo_.find(ui_->labelSecurityId->text().toStdString());
+   if (mdIt == mdInfo_.end()) {
+      return false;
+   }
+
+   auto selectedSide = getSelectedSide();
+   if (selectedSide == bs::network::Side::Undefined) {
+      return .0;
+   }
+   bool numCcySelected = ui_->pushButtonNumCcy->isChecked();
+   bool isSell = selectedSide == bs::network::Side::Buy
+      ? !numCcySelected
+      : numCcySelected;
+
+   if (isSell) {
+      return mdIt->second.bidPrice;
+   }
+   else {
+      return mdIt->second.askPrice;
    }
 }
 

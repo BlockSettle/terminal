@@ -42,7 +42,9 @@ namespace bs {
 
 class QLockFile;
 
+struct BsClientLoginResult;
 struct NetworkSettings;
+
 class AboutDialog;
 class ArmoryServersProvider;
 class AssetManager;
@@ -210,6 +212,13 @@ private:
       MarketData,
    };
 
+   enum class AutoLoginState
+   {
+      Idle,
+      Connecting,
+      Connected,
+   };
+
 private slots:
 
    void onSend();
@@ -279,6 +288,13 @@ private:
    void restartTerminal();
    void processDeferredDialogs();
 
+   std::shared_ptr<BsClient> createClient();
+   void activateClient(const std::shared_ptr<BsClient> &bsClient
+      , const BsClientLoginResult &result, const std::string &email);
+   const std::string &loginApiKey() const;
+   void initApiKeyLogins();
+   void tryLoginUsingApiKey();
+
 private:
    enum class ChatInitState
    {
@@ -288,6 +304,9 @@ private:
    };
 
    QString           loginButtonText_;
+   AutoLoginState    autoLoginState_{AutoLoginState::Idle};
+   std::string loginApiKey_;
+   QTimer *loginTimer_{};
 
    bool initialWalletCreateDialogShown_ = false;
    bool allowAuthAddressDialogShow_ = true;

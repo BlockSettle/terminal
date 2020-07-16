@@ -26,6 +26,7 @@
 #include "QWalletInfo.h"
 #include "HDPath.h"
 #include "UtxoReservationToken.h"
+#include "CommonTypes.h"
 
 namespace Ui {
     class RFQDealerReply;
@@ -186,12 +187,7 @@ namespace bs {
          std::unordered_map<std::string, double>   bestQPrices_;
          QFont invalidBalanceFont_;
 
-         struct MDInfo {
-            double   bidPrice{};
-            double   askPrice{};
-            double   lastPrice{};
-         };
-         std::unordered_map<std::string, MDInfo>  mdInfo_;
+         std::unordered_map<std::string, bs::network::MDInfo>  mdInfo_;
 
          std::vector<UTXO> selectedXbtInputs_;
          bs::UtxoReservationToken selectedXbtRes_;

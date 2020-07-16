@@ -27,6 +27,10 @@ namespace Ui {
     class AuthAddressDialog;
 }
 
+namespace bs {
+   struct TradeSettings;
+}
+
 namespace spdlog {
    class logger;
 }
@@ -44,7 +48,7 @@ public:
    ~AuthAddressDialog() override;
 
    void setAddressToVerify(const QString &addr);
-   void setBsClient(const std::weak_ptr<BsClient> &bsClient);
+   void setBsClient(const std::weak_ptr<BsClient>& bsClient);
 
 signals:
    void askForConfirmation(const QString &address, double txAmount);
@@ -63,10 +67,6 @@ private slots:
 
    void onAuthMgrError(const QString &details);
    void onAuthMgrInfo(const QString &text);
-
-   void onAuthAddressConfirmationRequired(float validationAmount);
-
-   void ConfirmAuthAddressSubmission();
 
    void onAuthVerifyTxSent();
    void onUpdateSelection(int row);

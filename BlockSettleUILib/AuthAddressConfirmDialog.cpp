@@ -49,9 +49,8 @@ AuthAddressConfirmDialog::AuthAddressConfirmDialog(const std::weak_ptr<BsClient>
    connect(&progressTimer_, &QTimer::timeout, this, &AuthAddressConfirmDialog::onUiTimerTick);
 
    // connect to auth manager
-   connect(authManager_.get(), &AuthAddressManager::AuthAddrSubmitError, this, &AuthAddressConfirmDialog::onAuthAddrSubmitError, Qt::QueuedConnection);
-   connect(authManager_.get(), &AuthAddressManager::AuthConfirmSubmitError, this, &AuthAddressConfirmDialog::onAuthConfirmSubmitError, Qt::QueuedConnection);
-   connect(authManager_.get(), &AuthAddressManager::AuthAddrSubmitSuccess, this, &AuthAddressConfirmDialog::onAuthAddrSubmitSuccess, Qt::QueuedConnection);
+   connect(authManager_.get(), &AuthAddressManager::AuthAddressSubmitError, this, &AuthAddressConfirmDialog::onAuthAddressSubmitError, Qt::QueuedConnection);
+   connect(authManager_.get(), &AuthAddressManager::AuthAddressSubmitSuccess, this, &AuthAddressConfirmDialog::onAuthAddressSubmitSuccess, Qt::QueuedConnection);
    connect(authManager_.get(), &AuthAddressManager::AuthAddressSubmitCancelled, this, &AuthAddressConfirmDialog::onAuthAddressSubmitCancelled, Qt::QueuedConnection);
 
    // send confirm request
@@ -103,7 +102,7 @@ void AuthAddressConfirmDialog::onError(const QString &errorText)
    reject();
 }
 
-void AuthAddressConfirmDialog::onAuthAddrSubmitError(const QString &address, const QString &error)
+void AuthAddressConfirmDialog::onAuthAddressSubmitError(const QString &address, const QString &error)
 {
    progressTimer_.stop();
    BSMessageBox(BSMessageBox::critical, tr("Submission")
@@ -112,29 +111,16 @@ void AuthAddressConfirmDialog::onAuthAddrSubmitError(const QString &address, con
    reject();
 }
 
-void AuthAddressConfirmDialog::onAuthConfirmSubmitError(const QString &address, const QString &error)
-{
-   progressTimer_.stop();
-   BSMessageBox(BSMessageBox::critical, tr("Confirmation")
-      , tr("Confirmation failed")
-      , error, this).exec();
-   reject();
-}
-
-void AuthAddressConfirmDialog::onAuthAddrSubmitSuccess(const QString &address)
+void AuthAddressConfirmDialog::onAuthAddressSubmitSuccess(const QString &address)
 {
    progressTimer_.stop();
 
    const bool isProd = settings_->get<int>(ApplicationSettings::envConfiguration) ==
       static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
 
-   const auto body = isProd ? tr("A validation transaction will be sent within the next 24 hours.")
-      : tr("Within the next 15 minutes, BlockSettle initiates the validation transaction.\n\n"
-         "Once mined six blocks, you have access to bitcoin trading.\n");
-
    BSMessageBox(BSMessageBox::success, tr("Submission Successful")
       , tr("Authentication Address Submitted")
-      , body
+      , tr("You now have access to Spot XBT (bitcoin) trading.")
       , this).exec();
    accept();
 }

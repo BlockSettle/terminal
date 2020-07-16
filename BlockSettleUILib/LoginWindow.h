@@ -42,7 +42,6 @@ public:
 
    enum State {
       Idle,
-      WaitNetworkSettings,
       WaitLoginResult,
    };
 
