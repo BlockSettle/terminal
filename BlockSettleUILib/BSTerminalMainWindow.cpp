@@ -31,6 +31,7 @@
 #include "BSMarketDataProvider.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
+#include "Bip15xDataConnection.h"
 #include "CCFileManager.h"
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
@@ -2219,7 +2220,8 @@ std::shared_ptr<BsClient> BSTerminalMainWindow::createClient()
    const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger, params);
    bip15xTransport->setKeyCb(cbApproveProxy_);
 
-   auto connection = std::make_unique<WsDataConnection>(logger, bip15xTransport);
+   auto wsConnection = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
+   auto connection = std::make_unique<Bip15xDataConnection>(logger, std::move(wsConnection), bip15xTransport);
    auto env = static_cast<ApplicationSettings::EnvConfiguration>(
             applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
    bool result = connection->openConnection(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Proxy, env)
