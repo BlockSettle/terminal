@@ -30,6 +30,35 @@
 using namespace bs::network;
 using namespace std::chrono_literals;
 
+class TestTcpProxyProcess
+{
+   QProcess process;
+public:
+   TestTcpProxyProcess(int listenPort, int connectPort)
+   {
+      {  QProcess killOldProcess;
+         QStringList args;
+         args.push_back(QStringLiteral("socat"));
+         process.start(QStringLiteral("pkill"), args);
+         process.waitForFinished();
+      }
+
+      QStringList args;
+      args.push_back(QStringLiteral("TCP-LISTEN:%1,reuseaddr").arg(listenPort));
+      args.push_back(QStringLiteral("TCP:127.0.0.1:%1").arg(connectPort));
+      process.start(QStringLiteral("socat"), args);
+      bool result = process.waitForStarted(1000);
+      assert(result);
+   }
+
+   ~TestTcpProxyProcess()
+   {
+      process.kill();
+      bool result = process.waitForFinished(1000);
+      assert(result);
+   }
+};
+
 namespace  {
 
    const auto kTestTcpHost = "127.0.0.1";
@@ -250,69 +279,33 @@ static bs::network::BIP15xPeer getPeerKey(const std::string &host, const std::st
 
 TEST_F(TestWebSocket, Basic)
 {
-   WsServerConnectionParams serverParams;
-   server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, serverParams);
-
-   WsDataConnectionParams clientParams;
-   clientParams.useSsl = false;
-   client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, clientParams);
-
+   server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
    doTest(kTestTcpHost, kTestTcpPort, kTestTcpHost, kTestTcpPort, FirstStart::Server);
 }
 
 TEST_F(TestWebSocket, ClientStartsFirst)
 {
-   WsServerConnectionParams serverParams;
-   server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, serverParams);
-
-   WsDataConnectionParams clientParams;
-   clientParams.useSsl = false;
-   client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, clientParams);
-
+   server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
    doTest(kTestTcpHost, kTestTcpPort, kTestTcpHost, kTestTcpPort, FirstStart::Client);
 }
 
 TEST_F(TestWebSocket, ServerStopsFirst)
 {
-   WsServerConnectionParams serverParams;
-   server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, serverParams);
-
-   WsDataConnectionParams clientParams;
-   clientParams.useSsl = false;
-   client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, clientParams);
-
+   server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
    doTest(kTestTcpHost, kTestTcpPort, kTestTcpHost, kTestTcpPort, FirstStart::Server, nullptr, FirstStop::Server);
 }
 
-
-class TestTcpProxyProcess
+TEST_F(TestWebSocket, BindFailed)
 {
-   QProcess process;
-public:
-   TestTcpProxyProcess(int listenPort, int connectPort)
-   {
-      {  QProcess killOldProcess;
-         QStringList args;
-         args.push_back(QStringLiteral("socat"));
-         process.start(QStringLiteral("pkill"), args);
-         process.waitForFinished();
-      }
-
-      QStringList args;
-      args.push_back(QStringLiteral("TCP-LISTEN:%1,reuseaddr").arg(listenPort));
-      args.push_back(QStringLiteral("TCP:127.0.0.1:%1").arg(connectPort));
-      process.start(QStringLiteral("socat"), args);
-      bool result = process.waitForStarted(1000);
-      assert(result);
-   }
-
-   ~TestTcpProxyProcess()
-   {
-      process.kill();
-      bool result = process.waitForFinished(1000);
-      assert(result);
-   }
-};
+   serverListener_ = std::make_unique<TestServerConnListener>(StaticLogger::loggerPtr);
+   auto server1 = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   auto server2 = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   ASSERT_TRUE(server1->BindConnection(kTestTcpHost, kTestTcpPort, serverListener_.get()));
+   ASSERT_FALSE(server2->BindConnection(kTestTcpHost, kTestTcpPort, serverListener_.get()));
+}
 
 
 // Disabled because test requires socat installed
@@ -322,12 +315,8 @@ TEST_F(TestWebSocket, DISABLE_Restart)
    int serverPort = 19502;
    auto proxy = std::make_unique<TestTcpProxyProcess>(clientPort, serverPort);
 
-   WsServerConnectionParams serverParams;
-   server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, serverParams);
-
-   WsDataConnectionParams clientParams;
-   clientParams.useSsl = false;
-   client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, clientParams);
+   server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
 
    auto callback = [&] {
       proxy.reset();
@@ -342,16 +331,13 @@ TEST_F(TestWebSocket, Router)
    RouterServerConnectionParams::Server server1;
    server1.host = kTestTcpHost;
    server1.port = kTestTcpPort;
-   WsServerConnectionParams wsParams;
-   server1.server = std::make_shared<WsServerConnection>(StaticLogger::loggerPtr, wsParams);
+   server1.server = std::make_shared<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
 
    RouterServerConnectionParams routerServerParams;
    routerServerParams.servers.push_back(std::move(server1));
    server_ = std::make_unique<RouterServerConnection>(StaticLogger::loggerPtr, routerServerParams);
 
-   WsDataConnectionParams clientParams;
-   clientParams.useSsl = false;
-   client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, clientParams);
+   client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
 
    // RouterServerConnection ignores host and port used to bind
    doTest(kTestTcpHost, kTestTcpPort, kTestTcpHost, kTestTcpPort, FirstStart::Server);
