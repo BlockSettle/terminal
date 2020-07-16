@@ -364,37 +364,23 @@ void RFQScript::onMDUpdate(bs::network::Asset::Type, const QString &security,
    if (!started_) {
       return;
    }
-   const double bid = bs::network::MDField::get(mdFields, bs::network::MDField::PriceBid).value;
-   const double ask = bs::network::MDField::get(mdFields, bs::network::MDField::PriceOffer).value;
-   const double last = bs::network::MDField::get(mdFields, bs::network::MDField::PriceLast).value;
 
    auto &mdInfo = mdInfo_[security.toStdString()];
-   if (bid > 0) {
-      mdInfo.bidPrice = bid;
-      emit indicBidChanged(security, bid);
-   }
-   if (ask > 0) {
-      mdInfo.askPrice = ask;
-      emit indicAskChanged(security, ask);
-   }
-   if (last > 0) {
-      mdInfo.lastPrice = last;
-      emit lastPriceChanged(security, last);
-   }
+   mdInfo.merge(bs::network::MDField::get(mdFields));
 
    for (const auto &rfq : activeRFQs_) {
       const auto &sec = rfq.second->security();
       if (sec.isEmpty() || (security != sec)) {
          continue;
       }
-      if (bid > 0) {
-         rfq.second->setIndicBid(bid);
+      if (mdInfo.bidPrice > 0) {
+         rfq.second->setIndicBid(mdInfo.bidPrice);
       }
-      if (ask > 0) {
-         rfq.second->setIndicAsk(ask);
+      if (mdInfo.askPrice > 0) {
+         rfq.second->setIndicAsk(mdInfo.askPrice);
       }
-      if (last > 0) {
-         rfq.second->setLastPrice(last);
+      if (mdInfo.lastPrice > 0) {
+         rfq.second->setLastPrice(mdInfo.lastPrice);
       }
    }
 }

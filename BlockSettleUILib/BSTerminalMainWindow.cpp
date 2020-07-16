@@ -170,6 +170,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    updateControlEnabledState();
 
    InitWidgets();
+
+   loginApiKey_ = applicationSettings_->get<std::string>(ApplicationSettings::LoginApiKey);
 }
 
 void BSTerminalMainWindow::onNetworkSettingsRequired(NetworkSettingsClient client)
@@ -208,16 +210,22 @@ void BSTerminalMainWindow::onInitWalletDialogWasShown()
 
 void BSTerminalMainWindow::onAddrStateChanged()
 {
-   bool canSubmitAuthAddr = (userType_ == bs::network::UserType::Trading)
+   const bool canSubmitAuthAddr = (userType_ == bs::network::UserType::Trading)
          || (userType_ == bs::network::UserType::Dealing);
 
-   if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
-      && !authManager_->isAtLeastOneAwaitingVerification() && canSubmitAuthAddr) {
+   const bool needSignAuthAddress = authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
+      && !authManager_->isAtLeastOneAwaitingVerification();
+
+   const auto& tradeSettings = authManager_->tradeSettings();
+
+   if (allowAuthAddressDialogShow_ && authManager_ && tradeSettings && needSignAuthAddress && canSubmitAuthAddr) {
       allowAuthAddressDialogShow_ = false;
       BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Create Authentication Address")
-         , tr("The Authentication Address verifies you as a Participant of our trading network on the bitcoin blockchain. It is required for access to the Spot XBT market (bitcoin trading).\n\n"
-              "BlockSettle will validate the Authentication Address you submit by funding it with 1'000 satoshis. Once mined six blocks, you have access to our Spot XBT market.\n\n"
-              "Create Authentication Address now?\n"), this);
+         , tr("The Authentication Address verifies you as a Participant in our trading network. It is required for Spot XBT (bitcoin) trading.\n\n"
+              "Submitted Authentication Addresses are limited to %1 bitcoin per trade.\n\n"
+              "After %2 trades, BlockSettle will automatically fund your Authentication Address with 1,000 satoshis. Once validated, other Participants may independently verify you on-chain as a Participant of BlockSettle, and the trade limit is removed.\n\n"
+              "Create Authentication Address now?\n")
+         .arg(bs::XBTAmount(tradeSettings->xbtTier1Limit).GetValueBitcoin()).arg(tradeSettings->authRequiredSettledTrades), this);
       if (qry.exec() == QDialog::Accepted) {
          openAuthManagerDialog();
       }
@@ -426,7 +434,7 @@ void BSTerminalMainWindow::setupInfoWidget()
       QDesktopServices::openUrl(QUrl(QLatin1String("")));
    });
    connect(ui_->setUpBtn, &QPushButton::clicked, this, []() {
-      QDesktopServices::openUrl(QUrl(QLatin1String("")));
+      QDesktopServices::openUrl(QUrl(QLatin1String("https://youtu.be/bvGNi6sBkTo")));
    });
    connect(ui_->closeBtn, &QPushButton::clicked, this, [this]() {
       ui_->infoWidget->setVisible(false);
@@ -702,7 +710,7 @@ void BSTerminalMainWindow::updateControlEnabledState()
    }
    // Do not allow login until wallets synced (we need to check if user has primary wallet or not).
    // Should be OK for both local and remote signer.
-   ui_->pushButtonUser->setEnabled(walletsSynched_);
+   ui_->pushButtonUser->setEnabled(walletsSynched_ && loginApiKey().empty());
 }
 
 bool BSTerminalMainWindow::isMDLicenseAccepted() const
@@ -873,6 +881,7 @@ void BSTerminalMainWindow::tryGetChatKeys()
       chatPrivKey_ = node.getPrivateKey();
       gotChatKeys_ = true;
       tryInitChatView();
+      initApiKeyLogins();
    });
 }
 
@@ -1437,29 +1446,13 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
       return;
    }
 
+
+   auto bsClient = createClient();
+
    auto logger = logMgr_->logger("proxy");
-
-   auto bsClient = std::make_shared<BsClient>(logger);
-
-   bs::network::BIP15xParams params;
-   params.ephemeralPeers = true;
-   const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger, params);
-   bip15xTransport->setKeyCb(cbApproveProxy_);
-
-   WsDataConnectionParams wsParams;
-   auto connection = std::make_unique<WsDataConnection>(logger, wsParams);
-   bool result = connection->openConnection("proxy-staging.blocksettle.com", "80", bsClient.get());
-   assert(result);
-   bsClient->setConnection(std::move(connection));
-
-   // Must be connected before loginDialog.exec call (balances could be received before loginDialog.exec returns)!
-   connect(bsClient.get(), &BsClient::balanceLoaded, assetManager_.get(), &AssetManager::fxBalanceLoaded);
-   connect(bsClient.get(), &BsClient::balanceUpdated, assetManager_.get(), &AssetManager::onAccountBalanceLoaded);
-
    LoginWindow loginDialog(logger, bsClient, applicationSettings_, this);
 
    int rc = loginDialog.exec();
-
    if (rc != QDialog::Accepted && !loginDialog.result()) {
       return;
    }
@@ -1498,86 +1491,9 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
       return;
    }
 
-   currentUserLogin_ = loginDialog.email();
-
    networkSettingsReceived(networkSettings, NetworkSettingsClient::MarketData);
 
-   chatTokenData_ = loginDialog.result()->chatTokenData;
-   chatTokenSign_ = loginDialog.result()->chatTokenSign;
-   tryLoginIntoChat();
-
-   bsClient_ = bsClient;
-   ccFileManager_->setBsClient(bsClient);
-   authAddrDlg_->setBsClient(bsClient);
-
-   ccFileManager_->setCcAddressesSigned(loginDialog.result()->ccAddressesSigned);
-   authManager_->setAuthAddressesSigned(loginDialog.result()->authAddressesSigned);
-
-   connect(bsClient_.get(), &BsClient::disconnected, orderListModel_.get(), &OrderListModel::onDisconnected);
-   connect(bsClient_.get(), &BsClient::disconnected, this, &BSTerminalMainWindow::onBsConnectionDisconnected);
-   connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
-
-   // connect to RFQ dialog
-   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetRFQ, &RFQRequestWidget::onMessageFromPB);
-   connect(bsClient_.get(), &BsClient::disconnected, ui_->widgetRFQ, &RFQRequestWidget::onUserDisconnected);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClient::sendUnsignedPayin);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::sendSignedPayinToPB, bsClient_.get(), &BsClient::sendSignedPayin);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::sendSignedPayoutToPB, bsClient_.get(), &BsClient::sendSignedPayout);
-
-   connect(ui_->widgetRFQ, &RFQRequestWidget::cancelXBTTrade, bsClient_.get(), &BsClient::sendCancelOnXBTTrade);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::cancelCCTrade, bsClient_.get(), &BsClient::sendCancelOnCCTrade);
-
-   // connect to quote dialog
-   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetRFQReply, &RFQReplyWidget::onMessageFromPB);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClient::sendUnsignedPayin);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayinToPB, bsClient_.get(), &BsClient::sendSignedPayin);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayoutToPB, bsClient_.get(), &BsClient::sendSignedPayout);
-
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::cancelXBTTrade, bsClient_.get(), &BsClient::sendCancelOnXBTTrade);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::cancelCCTrade, bsClient_.get(), &BsClient::sendCancelOnCCTrade);
-
-   connect(ui_->widgetChat, &ChatWidget::emailHashRequested, bsClient_.get(), &BsClient::findEmailHash);
-   connect(bsClient_.get(), &BsClient::emailHashReceived, ui_->widgetChat, &ChatWidget::onEmailHashReceived);
-
-   connect(bsClient_.get(), &BsClient::processPbMessage, orderListModel_.get(), &OrderListModel::onMessageFromPB);
-
-   utxoReservationMgr_->setFeeRatePb(loginDialog.result()->feeRatePb);
-   connect(bsClient_.get(), &BsClient::feeRateReceived, this, [this] (float feeRate) {
-      utxoReservationMgr_->setFeeRatePb(feeRate);
-   });
-
-   authManager_->setCelerClient(celerConnection_);
-
-   setLoginButtonText(currentUserLogin_);
-   setWidgetsAuthorized(true);
-
-   // We don't use password here, BsProxy will manage authentication
-   SPDLOG_LOGGER_DEBUG(logMgr_->logger(), "got celer login: {}", loginDialog.result()->celerLogin);
-   celerConnection_->LoginToServer(bsClient_.get(), loginDialog.result()->celerLogin, loginDialog.email().toStdString());
-
-   ui_->widgetWallets->setUsername(currentUserLogin_);
-   action_logout_->setVisible(false);
-   action_login_->setEnabled(false);
-
-   // Market data, charts and chat should be available for all Auth eID logins
-   mdProvider_->SubscribeToMD();
-
-   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetChat, &ChatWidget::onProcessOtcPbMessage);
-   connect(ui_->widgetChat, &ChatWidget::sendOtcPbMessage, bsClient_.get(), &BsClient::sendPbMessage);
-
-   connect(bsClient_.get(), &BsClient::ccGenAddrUpdated, this, [this](const BinaryData &ccGenAddrData) {
-      ccFileManager_->setCcAddressesSigned(ccGenAddrData);
-   });
-
-   accountEnabled_ = true;
-   onAccountTypeChanged(loginDialog.result()->userType, loginDialog.result()->enabled);
-   connect(bsClient_.get(), &BsClient::accountStateChanged, this, [this](bs::network::UserType userType, bool enabled) {
-      onAccountTypeChanged(userType, enabled);
-   });
-
-   connect(bsClient_.get(), &BsClient::tradingStatusChanged, this, [this](bool tradingEnabled) {
-      NotificationCenter::notify(tradingEnabled ? bs::ui::NotifyType::TradingEnabledOnPB : bs::ui::NotifyType::TradingDisabledOnPB, {});
-   });
+   activateClient(bsClient, *loginDialog.result(), loginDialog.email().toStdString());
 }
 
 void BSTerminalMainWindow::onLogout()
@@ -2291,6 +2207,176 @@ void BSTerminalMainWindow::processDeferredDialogs()
       deferredDialogs_.pop();
    }
    deferredDialogRunning_ = false;
+}
+
+std::shared_ptr<BsClient> BSTerminalMainWindow::createClient()
+{
+   auto logger = logMgr_->logger("proxy");
+   auto bsClient = std::make_shared<BsClient>(logger);
+
+   bs::network::BIP15xParams params;
+   params.ephemeralPeers = true;
+   const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger, params);
+   bip15xTransport->setKeyCb(cbApproveProxy_);
+
+   auto connection = std::make_unique<WsDataConnection>(logger, bip15xTransport);
+   auto env = static_cast<ApplicationSettings::EnvConfiguration>(
+            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+   bool result = connection->openConnection(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Proxy, env)
+      , PubKeyLoader::serverPort(), bsClient.get());
+   assert(result);
+   bsClient->setConnection(std::move(connection));
+
+   // Must be connected before loginDialog.exec call (balances could be received before loginDialog.exec returns)!
+   connect(bsClient.get(), &BsClient::balanceLoaded, assetManager_.get(), &AssetManager::fxBalanceLoaded);
+   connect(bsClient.get(), &BsClient::balanceUpdated, assetManager_.get(), &AssetManager::onAccountBalanceLoaded);
+
+   return bsClient;
+}
+
+void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsClient
+   , const BsClientLoginResult &result, const std::string &email)
+{
+   currentUserLogin_ = QString::fromStdString(email);
+
+   chatTokenData_ = result.chatTokenData;
+   chatTokenSign_ = result.chatTokenSign;
+   tryLoginIntoChat();
+
+   bsClient_ = bsClient;
+   ccFileManager_->setBsClient(bsClient);
+   authAddrDlg_->setBsClient(bsClient);
+
+   auto tradeSettings = std::make_shared<bs::TradeSettings>(result.tradeSettings);
+   authManager_->initLogin(celerConnection_, tradeSettings);
+   onAddrStateChanged();
+
+   ccFileManager_->setCcAddressesSigned(result.ccAddressesSigned);
+   authManager_->setAuthAddressesSigned(result.authAddressesSigned);
+
+   connect(bsClient_.get(), &BsClient::disconnected, orderListModel_.get(), &OrderListModel::onDisconnected);
+   connect(bsClient_.get(), &BsClient::disconnected, this, &BSTerminalMainWindow::onBsConnectionDisconnected);
+   connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
+
+   // connect to RFQ dialog
+   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetRFQ, &RFQRequestWidget::onMessageFromPB);
+   connect(bsClient_.get(), &BsClient::disconnected, ui_->widgetRFQ, &RFQRequestWidget::onUserDisconnected);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClient::sendUnsignedPayin);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::sendSignedPayinToPB, bsClient_.get(), &BsClient::sendSignedPayin);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::sendSignedPayoutToPB, bsClient_.get(), &BsClient::sendSignedPayout);
+
+   connect(ui_->widgetRFQ, &RFQRequestWidget::cancelXBTTrade, bsClient_.get(), &BsClient::sendCancelOnXBTTrade);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::cancelCCTrade, bsClient_.get(), &BsClient::sendCancelOnCCTrade);
+
+   // connect to quote dialog
+   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetRFQReply, &RFQReplyWidget::onMessageFromPB);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClient::sendUnsignedPayin);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayinToPB, bsClient_.get(), &BsClient::sendSignedPayin);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayoutToPB, bsClient_.get(), &BsClient::sendSignedPayout);
+
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::cancelXBTTrade, bsClient_.get(), &BsClient::sendCancelOnXBTTrade);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::cancelCCTrade, bsClient_.get(), &BsClient::sendCancelOnCCTrade);
+
+   connect(ui_->widgetChat, &ChatWidget::emailHashRequested, bsClient_.get(), &BsClient::findEmailHash);
+   connect(bsClient_.get(), &BsClient::emailHashReceived, ui_->widgetChat, &ChatWidget::onEmailHashReceived);
+
+   connect(bsClient_.get(), &BsClient::processPbMessage, orderListModel_.get(), &OrderListModel::onMessageFromPB);
+
+   utxoReservationMgr_->setFeeRatePb(result.feeRatePb);
+   connect(bsClient_.get(), &BsClient::feeRateReceived, this, [this] (float feeRate) {
+      utxoReservationMgr_->setFeeRatePb(feeRate);
+   });
+
+   setLoginButtonText(currentUserLogin_);
+   setWidgetsAuthorized(true);
+
+   // We don't use password here, BsProxy will manage authentication
+   SPDLOG_LOGGER_DEBUG(logMgr_->logger(), "got celer login: {}", result.celerLogin);
+   celerConnection_->LoginToServer(bsClient_.get(), result.celerLogin, email);
+
+   ui_->widgetWallets->setUsername(currentUserLogin_);
+   action_logout_->setVisible(false);
+   action_login_->setEnabled(false);
+
+   // Market data, charts and chat should be available for all Auth eID logins
+   mdProvider_->SubscribeToMD();
+
+   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetChat, &ChatWidget::onProcessOtcPbMessage);
+   connect(ui_->widgetChat, &ChatWidget::sendOtcPbMessage, bsClient_.get(), &BsClient::sendPbMessage);
+
+   connect(bsClient_.get(), &BsClient::ccGenAddrUpdated, this, [this](const BinaryData &ccGenAddrData) {
+      ccFileManager_->setCcAddressesSigned(ccGenAddrData);
+   });
+
+   accountEnabled_ = true;
+   onAccountTypeChanged(result.userType, result.enabled);
+   connect(bsClient_.get(), &BsClient::accountStateChanged, this, [this](bs::network::UserType userType, bool enabled) {
+      onAccountTypeChanged(userType, enabled);
+   });
+
+   connect(bsClient_.get(), &BsClient::tradingStatusChanged, this, [](bool tradingEnabled) {
+      NotificationCenter::notify(tradingEnabled ? bs::ui::NotifyType::TradingEnabledOnPB : bs::ui::NotifyType::TradingDisabledOnPB, {});
+   });
+}
+
+const std::string &BSTerminalMainWindow::loginApiKey() const
+{
+   return loginApiKey_;
+}
+
+void BSTerminalMainWindow::initApiKeyLogins()
+{
+   if (loginTimer_ || loginApiKey().empty() || !gotChatKeys_) {
+      return;
+   }
+   loginTimer_ = new QTimer(this);
+   connect(loginTimer_, &QTimer::timeout, this, [this] {
+      tryLoginUsingApiKey();
+   });
+   tryLoginUsingApiKey();
+}
+
+void BSTerminalMainWindow::tryLoginUsingApiKey()
+{
+   if (loginApiKey().empty() || autoLoginState_ != AutoLoginState::Idle) {
+      return;
+   }
+
+   auto logger = logMgr_->logger("proxy");
+   auto client = createClient();
+
+   autoLoginState_ = AutoLoginState::Connecting;
+   connect(client.get(), &BsClient::connected, this, [this, client, logger] {
+      connect(client.get(), &BsClient::authorizeDone, this, [this, client, logger](bool success, const std::string &email) {
+         if (!success) {
+            SPDLOG_LOGGER_ERROR(logger, "authorization failed");
+            autoLoginState_ = AutoLoginState::Idle;
+            return;
+         }
+
+         connect(client.get(), &BsClient::getLoginResultDone, this, [this, client, logger, email](const BsClientLoginResult &result) {
+            if (result.status != AutheIDClient::NoError) {
+               SPDLOG_LOGGER_ERROR(logger, "login failed");
+               autoLoginState_ = AutoLoginState::Idle;
+               return;
+            }
+
+            activateClient(client, result, email);
+            autoLoginState_ = AutoLoginState::Connected;
+         });
+         client->getLoginResult();
+      });
+      client->authorize(loginApiKey());
+   });
+
+   connect(client.get(), &BsClient::disconnected, this, [this, logger] {
+      SPDLOG_LOGGER_DEBUG(logger, "proxy disconnected");
+      autoLoginState_ = AutoLoginState::Idle;
+   });
+   connect(client.get(), &BsClient::connectionFailed, this, [this, logger] {
+      SPDLOG_LOGGER_ERROR(logger, "proxy connection failed");
+      autoLoginState_ = AutoLoginState::Idle;
+   });
 }
 
 void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &deferredDialog)

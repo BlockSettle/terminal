@@ -183,7 +183,7 @@ bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData(QDa
    dialogData.setValue(PasswordDialogData::RequesterAuthAddress, authAddr_.display());
    dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, true);
 
-   dialogData.setValue(PasswordDialogData::ResponderAuthAddress, 
+   dialogData.setValue(PasswordDialogData::ResponderAuthAddress,
       bs::Address::fromPubKey(dealerAuthKey_, AddressEntryType_P2WPKH).display());
    dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, dealerVerifState_ == AddressVerificationState::Verified);
 
@@ -363,7 +363,7 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
 
          settlAddr_ = result.settlementAddr;
 
-         const auto list = authAddrMgr_->GetVerifiedAddressList();
+         const auto list = authAddrMgr_->GetSubmittedAddressList();
          const auto userAddress = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
          userKeyOk_ = (std::find(list.begin(), list.end(), userAddress) != list.end());
          if (!userKeyOk_) {

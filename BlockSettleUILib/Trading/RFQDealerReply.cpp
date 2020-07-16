@@ -152,11 +152,11 @@ void RFQDealerReply::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMa
    }
 
    auto updateAuthAddresses = [this] {
-      UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
+      UiUtils::fillAuthAddressesComboBoxWithSubmitted(ui_->authenticationAddressComboBox, authAddressManager_);
       onAuthAddrChanged(ui_->authenticationAddressComboBox->currentIndex());
    };
    updateAuthAddresses();
-   connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, updateAuthAddresses);
+   connect(authAddressManager_.get(), &AuthAddressManager::AddressListUpdated, this, updateAuthAddresses);
 }
 
 CustomDoubleSpinBox* RFQDealerReply::bidSpinBox() const
@@ -400,7 +400,11 @@ void RFQDealerReply::priceChanged()
 
 void RFQDealerReply::onAuthAddrChanged(int index)
 {
-   authAddr_ = authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(index));
+   auto addressString = ui_->authenticationAddressComboBox->itemText(index).toStdString();
+   if (addressString.empty()) {
+      return;
+   }
+   authAddr_  = bs::Address::fromAddressString(addressString);
    authKey_.clear();
 
    if (authAddr_.empty()) {
@@ -956,28 +960,15 @@ void RFQDealerReply::onTransactionDataChanged()
 
 void RFQDealerReply::onMDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields mdFields)
 {
-   const double bid = bs::network::MDField::get(mdFields, bs::network::MDField::PriceBid).value;
-   const double ask = bs::network::MDField::get(mdFields, bs::network::MDField::PriceOffer).value;
-   const double last = bs::network::MDField::get(mdFields, bs::network::MDField::PriceLast).value;
-
    auto &mdInfo = mdInfo_[security.toStdString()];
-   if (bid > 0) {
-      mdInfo.bidPrice = bid;
-   }
-   if (ask > 0) {
-      mdInfo.askPrice = ask;
-   }
-   if (last > 0) {
-      mdInfo.lastPrice = last;
-   }
-
+   mdInfo.merge(bs::network::MDField::get(mdFields));
    if (autoUpdatePrices_ && (currentQRN_.security == security.toStdString())
       && (bestQPrices_.find(currentQRN_.quoteRequestId) == bestQPrices_.end())) {
-      if (!qFuzzyIsNull(bid)) {
-         ui_->spinBoxBidPx->setValue(bid);
+      if (!qFuzzyIsNull(mdInfo.bidPrice)) {
+         ui_->spinBoxBidPx->setValue(mdInfo.bidPrice);
       }
-      if (!qFuzzyIsNull(ask)) {
-         ui_->spinBoxOfferPx->setValue(ask);
+      if (!qFuzzyIsNull(mdInfo.askPrice)) {
+         ui_->spinBoxOfferPx->setValue(mdInfo.askPrice);
       }
    }
 }

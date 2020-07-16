@@ -117,6 +117,8 @@ public slots:
    void onSendRFQ(const std::string &id, const QString &symbol, double amount, bool buy);
    void onCancelRFQ(const std::string &id);
 
+   void onMDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
+
 private slots:
    void updateBalances();
    void onSignerReady();
@@ -181,6 +183,7 @@ private:
    std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc) const;
    bool isXBTProduct() const;
    bool checkBalance(double qty) const;
+   bool checkAuthAddr(double qty) const;
    bs::network::Side::Type getSelectedSide() const;
    std::string authKey() const;
 
@@ -205,6 +208,7 @@ private:
 
    void SetCurrentIndicativePrices(const QString& bidPrice, const QString& offerPrice);
    void updateIndicativePrice();
+   double getIndicativePrice() const;
 
    void productSelectionChanged();
 
@@ -262,6 +266,8 @@ private:
 
    bool  autoRFQenabled_{ false };
    std::vector<std::string>   deferredRFQs_;
+
+   std::unordered_map<std::string, bs::network::MDInfo>  mdInfo_;
 };
 
 #endif // __RFQ_TICKET_XBT_H__
