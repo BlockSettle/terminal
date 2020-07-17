@@ -668,8 +668,7 @@ bool RFQTicketXBT::checkAuthAddr(double qty) const
       return false;
    }
 
-   if (authAddressManager_->GetState(authAddr_)
-      == AddressVerificationState::Verified) {
+   if (authAddressManager_->GetState(authAddr_) == AuthAddressManager::AuthAddressState::Verified) {
       return true;
    }
 
