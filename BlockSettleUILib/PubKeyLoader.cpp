@@ -191,9 +191,9 @@ std::string PubKeyLoader::serverNameShort(PubKeyLoader::KeyType kt)
 {
    switch (kt) {
       case KeyType::PublicBridge:   return "pub";
-      case KeyType::Chat:           return "char";
+      case KeyType::Chat:           return "chat";
       case KeyType::Proxy:          return "proxy";
-      case KeyType::CcServer:       return "cc-tracker";
+      case KeyType::CcServer:       return "cctracker";
    }
    return {};
 }
