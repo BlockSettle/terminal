@@ -97,7 +97,6 @@ namespace  {
       std::promise<std::pair<std::string, std::string>> data_;
    };
 
-
    class TestClientConnListener : public DataConnectionListener
    {
    public:
@@ -132,8 +131,33 @@ namespace  {
       std::promise<DataConnectionError> error_;
    };
 
+   class WsDataConnectionBroken : public WsDataConnection
+   {
+   public:
+      WsPacket::Type typeToMangle_{};
+
+      WsDataConnectionBroken(WsPacket::Type typeToMangle)
+         : WsDataConnection(StaticLogger::loggerPtr, WsDataConnectionParams{})
+         , typeToMangle_(typeToMangle)
+      {
+      }
+
+      WsRawPacket filterRawPacket(WsRawPacket rawPacket) override
+      {
+         auto packet = bs::network::WsPacket::parsePacket(
+            std::string(rawPacket.getPtr(), rawPacket.getPtr() + rawPacket.getSize()), StaticLogger::loggerPtr);
+         assert(packet.type != WsPacket::Type::Invalid);
+         if (packet.type != typeToMangle_) {
+            return rawPacket;
+         }
+         return WsRawPacket(CryptoPRNG::generateRandom(8).toBinStr());
+      }
+   };
+
+   const auto kDefaultTimeout = 1000ms;
+
    template<class T>
-   T getFeature(std::promise<T> &prom)
+   T getFeature(std::promise<T> &prom, std::chrono::milliseconds timeout = kDefaultTimeout)
    {
       auto feature = prom.get_future();
       if (feature.wait_for(1000ms) != std::future_status::ready) {
@@ -144,7 +168,7 @@ namespace  {
       return result;
    }
 
-   void waitFeature(std::promise<void> &prom)
+   void waitFeature(std::promise<void> &prom, std::chrono::milliseconds timeout = kDefaultTimeout)
    {
       auto feature = prom.get_future();
       if (feature.wait_for(1000ms) != std::future_status::ready) {
@@ -282,6 +306,40 @@ TEST_F(TestWebSocket, Basic)
    server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
    client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
    doTest(kTestTcpHost, kTestTcpPort, kTestTcpHost, kTestTcpPort, FirstStart::Server);
+}
+
+TEST_F(TestWebSocket, BrokenConnect)
+{
+   server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   client_ = std::make_unique<WsDataConnectionBroken>(WsPacket::Type::RequestNew);
+   serverListener_ = std::make_unique<TestServerConnListener>(StaticLogger::loggerPtr);
+   clientListener_ = std::make_unique<TestClientConnListener>(StaticLogger::loggerPtr);
+
+   ASSERT_TRUE(server_->BindConnection(kTestTcpHost, kTestTcpPort, serverListener_.get()));
+   ASSERT_TRUE(client_->openConnection(kTestTcpHost, kTestTcpPort, clientListener_.get()));
+
+   ASSERT_THROW(waitFeature(clientListener_->connected_, 100ms), std::runtime_error);
+}
+
+TEST_F(TestWebSocket, BrokenData)
+{
+   server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   client_ = std::make_unique<WsDataConnectionBroken>(WsPacket::Type::Data);
+   serverListener_ = std::make_unique<TestServerConnListener>(StaticLogger::loggerPtr);
+   clientListener_ = std::make_unique<TestClientConnListener>(StaticLogger::loggerPtr);
+
+   ASSERT_TRUE(server_->BindConnection(kTestTcpHost, kTestTcpPort, serverListener_.get()));
+   ASSERT_TRUE(client_->openConnection(kTestTcpHost, kTestTcpPort, clientListener_.get()));
+
+   waitFeature(clientListener_->connected_);
+   auto clientId = getFeature(serverListener_->connected_);
+
+   auto packet = CryptoPRNG::generateRandom(rand() % 10000).toBinStr();
+   ASSERT_TRUE(client_->send(packet));
+   ASSERT_THROW(getFeature(serverListener_->data_, 100ms), std::runtime_error);
+
+   client_.reset();
+   ASSERT_EQ(clientId, getFeature(serverListener_->disconnected_));
 }
 
 TEST_F(TestWebSocket, ClientStartsFirst)
