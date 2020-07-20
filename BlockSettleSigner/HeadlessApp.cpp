@@ -17,6 +17,7 @@
 #include <fstream>
 #include <functional>
 #include <spdlog/spdlog.h>
+#include <QHostAddress>
 
 #include "Bip15xServerConnection.h"
 #include "CoreHDWallet.h"
@@ -284,17 +285,28 @@ void HeadlessAppObj::startTerminalsProcessing()
       return retKeys;
    };
 
+   WsServerConnectionParams params;
+   if (!settings_->acceptFrom().empty()) {
+      auto subnet = QHostAddress::parseSubnet(QString::fromStdString(settings_->acceptFrom()));
+      if (subnet.first.isNull()) {
+         SPDLOG_LOGGER_ERROR(logger_, "invalid acceptFrom value: {}", settings_->acceptFrom());
+         signerBindStatus_ = bs::signer::BindStatus::Failed;
+         return;
+      }
+      params.filterCallback = [subnet, logger = logger_](const std::string &ipAddr) -> bool {
+         auto parsedIp = QHostAddress(QString::fromStdString(ipAddr));
+         bool result = parsedIp.isInSubnet(subnet.first, subnet.second);
+         SPDLOG_LOGGER_DEBUG(logger, "accept connection from {}: {}", ipAddr, result);
+         return result;
+      };
+   }
+   auto terminalWsConn = std::make_unique<WsServerConnection>(logger_, params);
    // This would stop old server if any
-   auto terminalWsConn = std::make_unique<WsServerConnection>(logger_, WsServerConnectionParams{});
    terminalTransport_ = std::make_shared<bs::network::TransportBIP15xServer>(logger_
       , getClientIDKeys, ourKeyFileDir, ourKeyFileName, makeServerCookie, false
       , absTermCookiePath);
    terminalConnection_ = std::make_unique<Bip15xServerConnection>(logger_
       , std::move(terminalWsConn), terminalTransport_);
-
-   if (!settings_->acceptFrom().empty()) {
-      //terminalConnection_->setListenFrom({settings_->acceptFrom()});
-   }
    terminalListener_->SetLimits(settings_->limits());
 
    terminalListener_->resetConnection(terminalConnection_.get());

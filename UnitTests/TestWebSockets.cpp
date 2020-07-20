@@ -457,3 +457,25 @@ TEST(WebSocketHelpers, WsPacket)
    EXPECT_EQ(packet.type, WsPacket::Type::Ack);
    EXPECT_EQ(packet.recvCounter, recvCounter);
 }
+
+TEST(WebSocketHelpers, Split)
+{
+   EXPECT_EQ(bs::split("a", ','), std::vector<std::string>({"a"}));
+   EXPECT_EQ(bs::split("a,b", ','), std::vector<std::string>({"a", "b"}));
+   EXPECT_EQ(bs::split("", ','), std::vector<std::string>({""}));
+   EXPECT_EQ(bs::split("a,", ','), std::vector<std::string>({"a", ""}));
+   EXPECT_EQ(bs::split(",b", ','), std::vector<std::string>({"", "b"}));
+   EXPECT_EQ(bs::split(",", ','), std::vector<std::string>({"", ""}));
+}
+
+TEST(WebSocketHelpers, Trim)
+{
+   EXPECT_EQ(bs::trim("a"), "a");
+   EXPECT_EQ(bs::trim(""), "");
+   EXPECT_EQ(bs::trim(" "), "");
+   EXPECT_EQ(bs::trim("   "), "");
+   EXPECT_EQ(bs::trim(" a"), "a");
+   EXPECT_EQ(bs::trim("a "), "a");
+   EXPECT_EQ(bs::trim(" a a "), "a a");
+   EXPECT_EQ(bs::trim("  a  "), "a");
+}
