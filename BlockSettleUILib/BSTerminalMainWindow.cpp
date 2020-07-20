@@ -824,14 +824,15 @@ void BSTerminalMainWindow::tryInitChatView()
       tryLoginIntoChat();
    });
 
+   auto env = static_cast<ApplicationSettings::EnvConfiguration>(
+            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+
    Chat::ChatSettings chatSettings;
    chatSettings.connectionManager = connectionManager_;
-
    chatSettings.chatPrivKey = chatPrivKey_;
    chatSettings.chatPubKey = chatPubKey_;
-
-   chatSettings.chatServerHost = applicationSettings_->get<std::string>(ApplicationSettings::chatServerHost);
-   chatSettings.chatServerPort = applicationSettings_->get<std::string>(ApplicationSettings::chatServerPort);
+   chatSettings.chatServerHost = PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Chat, env);
+   chatSettings.chatServerPort = PubKeyLoader::serverPort();
    chatSettings.chatDbFile = applicationSettings_->get<QString>(ApplicationSettings::chatDbFile);
 
    chatClientServicePtr_->Init(logMgr_->logger("chat"), chatSettings);
@@ -1109,9 +1110,10 @@ void BSTerminalMainWindow::connectArmory()
 void BSTerminalMainWindow::connectCcClient()
 {
    if (trackerClient_) {
-      bool testnet = applicationSettings_->get<NetworkType>(ApplicationSettings::netType) == NetworkType::TestNet;
-      trackerClient_->openConnection(testnet ? "cc-tracker-testnet.blocksettle.com" : "cc-tracker-mainnet.blocksettle.com"
-         , "80", cbApproveCcServer_);
+      auto env = static_cast<ApplicationSettings::EnvConfiguration>(
+               applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+      auto trackerHostName = PubKeyLoader::serverHostName(PubKeyLoader::KeyType::CcServer, env);
+      trackerClient_->openConnection(trackerHostName, PubKeyLoader::serverPort(), cbApproveCcServer_);
    }
 }
 
