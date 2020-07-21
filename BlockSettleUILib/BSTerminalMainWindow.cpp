@@ -177,8 +177,10 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
 void BSTerminalMainWindow::onNetworkSettingsRequired(NetworkSettingsClient client)
 {
+   auto env = static_cast<ApplicationSettings::EnvConfiguration>(
+            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
    networkSettingsLoader_ = std::make_unique<NetworkSettingsLoader>(logMgr_->logger()
-      , applicationSettings_->pubBridgeHost(), applicationSettings_->pubBridgePort(), cbApprovePuB_);
+      , PubKeyLoader::serverHostName(PubKeyLoader::KeyType::PublicBridge, env), PubKeyLoader::serverHttpPort(), cbApprovePuB_);
 
    connect(networkSettingsLoader_.get(), &NetworkSettingsLoader::succeed, this, [this, client] {
       networkSettingsReceived(networkSettingsLoader_->settings(), client);
