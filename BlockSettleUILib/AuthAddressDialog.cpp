@@ -147,7 +147,7 @@ void AuthAddressDialog::updateUnsubmittedState()
          return;
       }
       switch (authAddressManager_->GetState(authAddr)) {
-      case AddressVerificationState::Verifying:
+      case AuthAddressManager::AuthAddressState::Verifying:
          unconfirmedExists_ = true;
          break;
       default:
@@ -236,12 +236,12 @@ void AuthAddressDialog::copySelectedToClipboard()
 
 void AuthAddressDialog::onAddressStateChanged(const QString &addr, const QString &state)
 {
-   if (state == QLatin1String("Verified")) {
+   if (state == QStringLiteral("Verified")) {
       BSMessageBox(BSMessageBox::success, tr("Authentication Address")
          , tr("Authentication Address verified")
          , tr("You may now place orders in the Spot XBT product group.")
          ).exec();
-   } else if (state == QLatin1String("Revoked")) {
+   } else if (state == QStringLiteral("Revoked")) {
       BSMessageBox(BSMessageBox::warning, tr("Authentication Address")
          , tr("Authentication Address revoked")
          , tr("Authentication Address %1 was revoked and could not be used for Spot XBT trading.").arg(addr)).exec();
@@ -324,7 +324,7 @@ void AuthAddressDialog::submitSelectedAddress()
    }
 
    const auto state = authAddressManager_->GetState(selectedAddress);
-   if (state != AddressVerificationState::Virgin) {
+   if (state != AuthAddressManager::AuthAddressState::NotSubmitted) {
       SPDLOG_LOGGER_ERROR(logger_, "refuse to submit address in state: {}", (int)state);
       return;
    }
@@ -402,26 +402,25 @@ void AuthAddressDialog::updateEnabledStates()
    if (selectionModel->hasSelection()) {
       const auto address = model_->getAddress(selectionModel->selectedRows()[0]);
 
-      auto tradeSettings_ = authAddressManager_->tradeSettings();
-      const bool allowSubmit = authAddressManager_->GetSubmittedAddressList(false).size() < tradeSettings_->authSubmitAddressLimit;
+      auto tradeSettings = authAddressManager_->tradeSettings();
+      const bool allowSubmit = authAddressManager_->GetSubmittedAddressList(false).size() < tradeSettings->authSubmitAddressLimit;
 
       switch (authAddressManager_->GetState(address)) {
-         case AddressVerificationState::Virgin:
+         case AuthAddressManager::AuthAddressState::NotSubmitted:
             ui_->pushButtonRevoke->setEnabled(false);
             ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.empty() && allowSubmit);
             ui_->pushButtonDefault->setEnabled(false);
             break;
-         case AddressVerificationState::Tainted:
-         case AddressVerificationState::Verifying:
-         case AddressVerificationState::Revoked:
-         case AddressVerificationState::VerificationFailed:
-         case AddressVerificationState::Invalidated_Explicit:
-         case AddressVerificationState::Invalidated_Implicit:
+         case AuthAddressManager::AuthAddressState::Tainted:
+         case AuthAddressManager::AuthAddressState::Verifying:
+         case AuthAddressManager::AuthAddressState::Revoked:
+         case AuthAddressManager::AuthAddressState::RevokedByBS:
+         case AuthAddressManager::AuthAddressState::Invalid:
             ui_->pushButtonRevoke->setEnabled(false);
             ui_->pushButtonSubmit->setEnabled(false);
             ui_->pushButtonDefault->setEnabled(false);
             break;
-         case AddressVerificationState::Verified:
+         case AuthAddressManager::AuthAddressState::Verified:
             ui_->pushButtonRevoke->setEnabled(authAddressManager_->readyError() == AuthAddressManager::ReadyError::NoError);
             ui_->pushButtonSubmit->setEnabled(false);
             ui_->pushButtonDefault->setEnabled(address != defaultAddr_);
