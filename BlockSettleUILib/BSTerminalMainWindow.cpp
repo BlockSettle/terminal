@@ -457,7 +457,7 @@ void BSTerminalMainWindow::initConnections()
 
    mdCallbacks_ = std::make_shared<MDCallbacksQt>();
    mdProvider_ = std::make_shared<BSMarketDataProvider>(connectionManager_
-      , logMgr_->logger("message"), mdCallbacks_.get());
+      , logMgr_->logger("message"), mdCallbacks_.get(), true, false);
    connect(mdCallbacks_.get(), &MDCallbacksQt::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
    connect(mdCallbacks_.get(), &MDCallbacksQt::WaitingForConnectionDetails, this, [this] {
       onNetworkSettingsRequired(NetworkSettingsClient::MarketData);
