@@ -448,6 +448,7 @@ void BSTerminalMainWindow::setupInfoWidget()
 void BSTerminalMainWindow::initConnections()
 {
    connectionManager_ = std::make_shared<ConnectionManager>(logMgr_->logger("message"));
+   connectionManager_->setCaBundle(bs::caBundlePtr(), bs::caBundleSize());
 
    celerConnection_ = std::make_shared<CelerClientProxy>(logMgr_->logger());
    connect(celerConnection_.get(), &BaseCelerClient::OnConnectedToServer, this, &BSTerminalMainWindow::onCelerConnected);
@@ -2057,8 +2058,8 @@ void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settin
    applicationSettings_->set(ApplicationSettings::mdServerHost,   QString::fromStdString(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::MdServer, env)));
    applicationSettings_->set(ApplicationSettings::mdhsHost,       QString::fromStdString(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Mdhs, env)));
    applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Chat, env)));
-   applicationSettings_->set(ApplicationSettings::mdServerPort,   QString::fromStdString(PubKeyLoader::serverHttpPort()));
-   applicationSettings_->set(ApplicationSettings::mdhsPort,       QString::fromStdString(PubKeyLoader::serverHttpPort()));
+   applicationSettings_->set(ApplicationSettings::mdServerPort,   QString::fromStdString(PubKeyLoader::serverHttpsPort()));
+   applicationSettings_->set(ApplicationSettings::mdhsPort,       QString::fromStdString(PubKeyLoader::serverHttpsPort()));
    applicationSettings_->set(ApplicationSettings::chatServerPort, QString::fromStdString(PubKeyLoader::serverHttpPort()));
 
    mdProvider_->SetConnectionSettings(applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
