@@ -33,6 +33,8 @@ public:
       Chat,
       Proxy,
       CcServer,
+      MdServer,
+      Mdhs,
    };
 
    BinaryData loadKey(const KeyType) const;
@@ -43,8 +45,9 @@ public:
 
    static std::string envNameShort(ApplicationSettings::EnvConfiguration env);
    static std::string serverNameShort(KeyType);
-   static std::string serverHostName(const KeyType, ApplicationSettings::EnvConfiguration env);
-   static std::string serverPort();
+   static std::string serverHostName(KeyType, ApplicationSettings::EnvConfiguration env);
+   static std::string serverHttpPort();
+   static std::string serverHttpsPort();
 
 private:
    static BinaryData loadKeyFromResource(KeyType, ApplicationSettings::EnvConfiguration);

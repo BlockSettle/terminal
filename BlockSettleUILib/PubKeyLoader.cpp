@@ -194,6 +194,8 @@ std::string PubKeyLoader::serverNameShort(PubKeyLoader::KeyType kt)
       case KeyType::Chat:           return "chat";
       case KeyType::Proxy:          return "proxy";
       case KeyType::CcServer:       return "cctracker";
+      case KeyType::MdServer:       return "mdserver";
+      case KeyType::Mdhs:           return "mdhs";
    }
    return {};
 }
@@ -203,9 +205,14 @@ std::string PubKeyLoader::serverHostName(PubKeyLoader::KeyType kt, ApplicationSe
    return fmt::format("{}-{}.blocksettle.com", serverNameShort(kt), envNameShort(env));
 }
 
-std::string PubKeyLoader::serverPort()
+std::string PubKeyLoader::serverHttpPort()
 {
    return "80";
+}
+
+std::string PubKeyLoader::serverHttpsPort()
+{
+   return "443";
 }
 
 QString PubKeyLoader::serverName(const KeyType kt)

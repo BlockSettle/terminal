@@ -832,7 +832,7 @@ void BSTerminalMainWindow::tryInitChatView()
    chatSettings.chatPrivKey = chatPrivKey_;
    chatSettings.chatPubKey = chatPubKey_;
    chatSettings.chatServerHost = PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Chat, env);
-   chatSettings.chatServerPort = PubKeyLoader::serverPort();
+   chatSettings.chatServerPort = PubKeyLoader::serverHttpPort();
    chatSettings.chatDbFile = applicationSettings_->get<QString>(ApplicationSettings::chatDbFile);
 
    chatClientServicePtr_->Init(logMgr_->logger("chat"), chatSettings);
@@ -1113,7 +1113,7 @@ void BSTerminalMainWindow::connectCcClient()
       auto env = static_cast<ApplicationSettings::EnvConfiguration>(
                applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
       auto trackerHostName = PubKeyLoader::serverHostName(PubKeyLoader::KeyType::CcServer, env);
-      trackerClient_->openConnection(trackerHostName, PubKeyLoader::serverPort(), cbApproveCcServer_);
+      trackerClient_->openConnection(trackerHostName, PubKeyLoader::serverHttpPort(), cbApproveCcServer_);
    }
 }
 
@@ -2049,31 +2049,15 @@ void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settin
       return;
    }
 
-   if (!settings.marketData.host.empty()) {
-      applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(settings.marketData.host));
-      applicationSettings_->set(ApplicationSettings::mdServerPort, settings.marketData.port);
-   }
-   if (!settings.mdhs.host.empty()) {
-      applicationSettings_->set(ApplicationSettings::mdhsHost, QString::fromStdString(settings.mdhs.host));
-      applicationSettings_->set(ApplicationSettings::mdhsPort, settings.mdhs.port);
-   }
-#ifndef NDEBUG
-   QString chost = applicationSettings_->get<QString>(ApplicationSettings::chatServerHost);
-   QString cport = applicationSettings_->get<QString>(ApplicationSettings::chatServerPort);
-   if (!settings.chat.host.empty()) {
-      if (chost.isEmpty()) {
-         applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
-      }
-      if (cport.isEmpty()) {
-         applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
-      }
-   }
-#else
-   if (!settings.chat.host.empty()) {
-      applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
-      applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
-   }
-#endif // NDEBUG
+   auto env = static_cast<ApplicationSettings::EnvConfiguration>(
+            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+
+   applicationSettings_->set(ApplicationSettings::mdServerHost,   QString::fromStdString(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::MdServer, env)));
+   applicationSettings_->set(ApplicationSettings::mdhsHost,       QString::fromStdString(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Mdhs, env)));
+   applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Chat, env)));
+   applicationSettings_->set(ApplicationSettings::mdServerPort,   QString::fromStdString(PubKeyLoader::serverHttpPort()));
+   applicationSettings_->set(ApplicationSettings::mdhsPort,       QString::fromStdString(PubKeyLoader::serverHttpPort()));
+   applicationSettings_->set(ApplicationSettings::chatServerPort, QString::fromStdString(PubKeyLoader::serverHttpPort()));
 
    mdProvider_->SetConnectionSettings(applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
       , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort));
@@ -2227,7 +2211,7 @@ std::shared_ptr<BsClient> BSTerminalMainWindow::createClient()
    auto env = static_cast<ApplicationSettings::EnvConfiguration>(
             applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
    bool result = connection->openConnection(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Proxy, env)
-      , PubKeyLoader::serverPort(), bsClient.get());
+      , PubKeyLoader::serverHttpPort(), bsClient.get());
    assert(result);
    bsClient->setConnection(std::move(connection));
 
