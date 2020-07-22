@@ -35,6 +35,7 @@ public:
       CcServer,
       MdServer,
       Mdhs,
+      ExtConnector
    };
 
    BinaryData loadKey(const KeyType) const;
