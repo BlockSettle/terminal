@@ -155,7 +155,7 @@ namespace  {
       }
    };
 
-   const auto kDefaultTimeout = 1000ms;
+   const auto kDefaultTimeout = 10000ms;
 
    template<class T>
    T getFeature(ArmoryThreading::TimedQueue<T> &data, std::chrono::milliseconds timeout = kDefaultTimeout)
@@ -167,7 +167,8 @@ namespace  {
    T getFeature(std::promise<T> &prom, std::chrono::milliseconds timeout = kDefaultTimeout)
    {
       auto feature = prom.get_future();
-      if (feature.wait_for(1000ms) != std::future_status::ready) {
+      if (feature.wait_for(timeout) != std::future_status::ready) {
+         SPDLOG_LOGGER_ERROR(StaticLogger::loggerPtr, "feature wait failed");
          throw std::runtime_error("feature wait failed");
       }
       auto result = feature.get();
@@ -178,8 +179,9 @@ namespace  {
    void waitFeature(std::promise<void> &prom, std::chrono::milliseconds timeout = kDefaultTimeout)
    {
       auto feature = prom.get_future();
-      if (feature.wait_for(1000ms) != std::future_status::ready) {
-         throw std::runtime_error("feature wait failed");
+      if (feature.wait_for(timeout) != std::future_status::ready) {
+         SPDLOG_LOGGER_ERROR(StaticLogger::loggerPtr, "void feature wait failed");
+         throw std::runtime_error("void feature wait failed");
       }
       feature.get();
       prom = {};
@@ -371,6 +373,7 @@ TEST_F(TestWebSocket, BindFailed)
 
 TEST_F(TestWebSocket, DISABLED_StressTest)
 {
+   auto logger = StaticLogger::loggerPtr;
    auto clientPort = 19501;
    auto serverPort = 19502;
 
@@ -381,17 +384,21 @@ TEST_F(TestWebSocket, DISABLED_StressTest)
       }
    }).detach();
 
-   for (int i = 0; i < 200; ++i) {
+   while (true) {
       WsDataConnectionParams clientParams;
       clientParams.delaysTableMs = std::vector<uint32_t>(1000, 10);
-      server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+      WsServerConnectionParams serverParams;
+      serverParams.clientTimeout = std::chrono::seconds(5);
+      server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, serverParams);
       client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, clientParams);
       serverListener_ = std::make_unique<TestServerConnListener>(StaticLogger::loggerPtr);
       clientListener_ = std::make_unique<TestClientConnListener>(StaticLogger::loggerPtr);
       ASSERT_TRUE(server_->BindConnection(kTestTcpHost, std::to_string(serverPort), serverListener_.get()));
       ASSERT_TRUE(client_->openConnection(kTestTcpHost, std::to_string(clientPort), clientListener_.get()));
 
+      SPDLOG_LOGGER_DEBUG(logger, "wait connected on client...");
       waitFeature(clientListener_->connected_);
+      SPDLOG_LOGGER_DEBUG(logger, "wait connected on server...");
       auto clientId = getFeature(serverListener_->connected_);
 
       for (int i = 0; i < 200; ++i) {
@@ -411,17 +418,22 @@ TEST_F(TestWebSocket, DISABLED_StressTest)
 
          for (const auto &clientPacket : clientPackets) {
             auto data = getFeature(serverListener_->data_);
+            SPDLOG_LOGGER_DEBUG(logger, "wait data on server...");
             ASSERT_EQ(data.first, clientId);
             ASSERT_EQ(data.second, clientPacket);
          }
          for (const auto &serverPacket : serverPackets) {
+            SPDLOG_LOGGER_DEBUG(logger, "wait data on client...");
             auto data = getFeature(clientListener_->data_);
             ASSERT_EQ(data, serverPacket);
          }
       }
 
       client_.reset();
+      SPDLOG_LOGGER_DEBUG(logger, "wait diconnected on server...");
       ASSERT_EQ(clientId, getFeature(serverListener_->disconnected_));
+      server_.reset();
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
    }
 }
 
