@@ -166,7 +166,8 @@ void ReqCCSettlementContainer::activate()
    }
    catch (const std::exception &e) {
       logger_->debug("Signer deser exc: {}", e.what());
-      emit error(bs::error::ErrorCode::InternalError, tr("Failed to verify dealer's TX: %1").arg(QLatin1String(e.what())));
+      emit error(id(), bs::error::ErrorCode::InternalError
+         , tr("Failed to verify dealer's TX: %1").arg(QLatin1String(e.what())));
    }
 
    emit paymentVerified(foundRecipAddr && amountValid, QString{});
@@ -193,7 +194,8 @@ void ReqCCSettlementContainer::activate()
 
    if (!createCCUnsignedTXdata()) {
       userKeyOk_ = false;
-      emit error(bs::error::ErrorCode::InternalError, tr("Failed to create unsigned CC transaction"));
+      emit error(id(), bs::error::ErrorCode::InternalError
+         , tr("Failed to create unsigned CC transaction"));
    }
 }
 
@@ -261,8 +263,10 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                   AcceptQuote();
                }
                catch (const std::exception &e) {
-                  SPDLOG_LOGGER_ERROR(logger_, "Failed to create partial CC TX to {}: {}", dealerAddress_, e.what());
-                  emit error(bs::error::ErrorCode::InternalError, tr("Failed to create CC TX half"));
+                  SPDLOG_LOGGER_ERROR(logger_, "Failed to create partial CC TX "
+                     "to {}: {}", dealerAddress_, e.what());
+                  emit error(id(), bs::error::ErrorCode::InternalError
+                     , tr("Failed to create CC TX half"));
                }
             };
             xbtLeaves_.front()->getNewChangeAddress(changeAddrCb);
@@ -294,7 +298,8 @@ void ReqCCSettlementContainer::AcceptQuote()
    if (side() == bs::network::Side::Sell) {
       if (!ccTxData_.isValid()) {
          logger_->error("[CCSettlementTransactionWidget::AcceptQuote] CC TX half wasn't created properly");
-         emit error(bs::error::ErrorCode::InternalError, tr("Failed to create TX half"));
+         emit error(id(), bs::error::ErrorCode::InternalError
+            , tr("Failed to create TX half"));
          return;
       }
    }
@@ -306,7 +311,7 @@ void ReqCCSettlementContainer::AcceptQuote()
          emit sendOrder();
       }
       else {
-         emit error(result, bs::error::ErrorCodeToString(result));
+         emit error(id(), result, bs::error::ErrorCodeToString(result));
       }
    });
 }
@@ -341,11 +346,12 @@ bool ReqCCSettlementContainer::startSigning(QDateTime timestamp)
       }
       else {
          logger->error("[CCSettlementTransactionWidget::onTXSigned] CC TX sign failure: {}", bs::error::ErrorCodeToString(result).toStdString());
-         emit error(result, tr("Own TX half signing failed: %1").arg(bs::error::ErrorCodeToString(result)));
+         emit error(id(), result, tr("Own TX half signing failed: %1")
+            .arg(bs::error::ErrorCodeToString(result)));
       }
 
       // Call completed to remove from RfqStorage and cleanup memory
-      emit completed();
+      emit completed(id());
    };
 
    ccSignId_ = signingContainer_->signSettlementPartialTXRequest(ccTxData_, toPasswordDialogData(timestamp), cbTx);

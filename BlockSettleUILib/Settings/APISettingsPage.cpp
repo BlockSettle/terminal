@@ -31,6 +31,10 @@ void APISettingsPage::display()
 {
    ui_->toggleAutoSign->setChecked(appSettings_->get<bool>(ApplicationSettings::AutoSigning));
    ui_->toggleEnableRFQ->setChecked(appSettings_->get<bool>(ApplicationSettings::AutoQouting));
+   ui_->lineEditConnName->setText(appSettings_->get<QString>(ApplicationSettings::ExtConnName));
+   ui_->lineEditConnHost->setText(appSettings_->get<QString>(ApplicationSettings::ExtConnHost));
+   ui_->lineEditConnPort->setText(appSettings_->get<QString>(ApplicationSettings::ExtConnPort));
+   ui_->lineEditConnPubKey->setText(appSettings_->get<QString>(ApplicationSettings::ExtConnPubKey));
 }
 
 void APISettingsPage::reset()
@@ -42,4 +46,8 @@ void APISettingsPage::apply()
 {
    appSettings_->set(ApplicationSettings::AutoSigning, ui_->toggleAutoSign->isChecked());
    appSettings_->set(ApplicationSettings::AutoQouting, ui_->toggleEnableRFQ->isChecked());
+   appSettings_->set(ApplicationSettings::ExtConnName, ui_->lineEditConnName->text());
+   appSettings_->set(ApplicationSettings::ExtConnHost, ui_->lineEditConnHost->text());
+   appSettings_->set(ApplicationSettings::ExtConnPort, ui_->lineEditConnPort->text());
+   appSettings_->set(ApplicationSettings::ExtConnPubKey, ui_->lineEditConnPubKey->text());
 }

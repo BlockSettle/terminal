@@ -100,8 +100,7 @@ bool DealerXBTSettlementContainer::cancel()
 
    SPDLOG_LOGGER_DEBUG(logger_, "cancel on a trade : {}", settlementIdHex_);
 
-   emit completed();
-
+   emit timerExpired();
    return true;
 }
 
@@ -201,10 +200,10 @@ void DealerXBTSettlementContainer::deactivate()
    stopTimer();
 }
 
-void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
+void DealerXBTSettlementContainer::onTXSigned(unsigned int idReq, BinaryData signedTX
    , bs::error::ErrorCode errCode, std::string errMsg)
 {
-   if (payoutSignId_ && (payoutSignId_ == id)) {
+   if (payoutSignId_ && (payoutSignId_ == idReq)) {
       payoutSignId_ = 0;
 
       if (errCode == bs::error::ErrorCode::TxCancelled) {
@@ -240,10 +239,10 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
       emit sendSignedPayoutToPB(settlementIdHex_, signedTX);
 
       // ok. there is nothing this container could/should do
-      emit completed();
+      emit completed(id());
    }
 
-   if ((payinSignId_ != 0) && (payinSignId_ == id)) {
+   if ((payinSignId_ != 0) && (payinSignId_ == idReq)) {
       payinSignId_ = 0;
 
       if (errCode == bs::error::ErrorCode::TxCancelled) {
@@ -287,7 +286,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
       logger_->debug("[DealerXBTSettlementContainer::onTXSigned] Payin sent");
 
       // ok. there is nothing this container could/should do
-      emit completed();
+      emit completed(id());
    }
 }
 
@@ -461,8 +460,8 @@ void DealerXBTSettlementContainer::failWithErrorText(const QString &errorMessage
 
    emit cancelTrade(settlementIdHex_);
 
-   emit error(code, errorMessage);
-   emit failed();
+   emit error(id(), code, errorMessage);
+   emit failed(id());
 }
 
 void DealerXBTSettlementContainer::initTradesArgs(bs::tradeutils::Args &args, const std::string &settlementId)

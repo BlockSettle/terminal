@@ -1999,7 +1999,7 @@ void BSTerminalMainWindow::InitWidgets()
    const auto &logger = logMgr_->logger();
 
    const auto aqScriptRunner = new AQScriptRunner(quoteProvider, signContainer_
-      , mdCallbacks_, assetManager_, logger, nullptr);
+      , mdCallbacks_, assetManager_, logger, {/*TODO: add real connection[s]*/ }, nullptr);
    autoSignQuoteProvider_ = std::make_shared<AutoSignAQProvider>(logger
       , aqScriptRunner, applicationSettings_, signContainer_, celerConnection_);
 

@@ -130,10 +130,14 @@ private slots:
    void onDisconnectedFromCeler();
    void onEnterKeyPressed(const QModelIndex &index);
    void onSelected(const QString& productGroup, const bs::network::QuoteReqNotification& request, double indicBid, double indicAsk);
-   void onTransactionError(bs::error::ErrorCode code, const QString& error);
+   void onTransactionError(const std::string &id, bs::error::ErrorCode code, const QString& error);
 
    void onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data);
    void onPulled(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
+
+   void onCancelXBTTrade(const std::string& settlementId);
+   void onCancelCCTrade(const std::string& clientOrderId);
+   void onSettlementComplete(const std::string &id);
 
 private:
    void onResetCurrentReservation(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data);
@@ -178,12 +182,13 @@ private:
    std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
-   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
+   std::shared_ptr<AutoSignScriptProvider>      autoSignProvider_;
+   std::shared_ptr<bs::UTXOReservationManager>  utxoReservationManager_;
 
    std::unordered_map<std::string, SentXbtReply>   sentXbtReplies_;
    std::unordered_map<std::string, SentCCReply>    sentCCReplies_;
    std::shared_ptr<bs::SecurityStatsCollector>     statsCollector_;
-   std::unordered_map<std::string, std::string>    sentReplyIdsToSettlementsIds_;
+   std::unordered_map<std::string, std::string>    sentReplyToSettlementsIds_, settlementToReplyIds_;
 };
 
 #endif // __RFQ_REPLY_WIDGET_H__

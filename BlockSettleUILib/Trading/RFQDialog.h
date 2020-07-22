@@ -111,7 +111,8 @@ private slots:
    void onCCTxSigned();
 
    void onXBTQuoteAccept(std::string reqId, std::string hexPayoutTx);
-   void logError(bs::error::ErrorCode code, const QString &errorMessage);
+   void logError(const std::string &id, bs::error::ErrorCode code
+      , const QString &errorMessage);
 
 private:
    std::shared_ptr<bs::SettlementContainer> newCCcontainer();

@@ -208,17 +208,17 @@ void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState
 void ReqXBTSettlementContainer::cancelWithError(const QString& errorMessage, bs::error::ErrorCode code)
 {
    emit cancelTrade(settlementIdHex_);
-   emit error(code, errorMessage);
+   emit error(id(), code, errorMessage);
    cancel();
 
    // Call failed to remove from RfqStorage and cleanup memory
-   emit failed();
+   emit failed(id());
 }
 
-void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
+void ReqXBTSettlementContainer::onTXSigned(unsigned int idReq, BinaryData signedTX
    , bs::error::ErrorCode errCode, std::string errTxt)
 {
-   if ((payoutSignId_ != 0) && (payoutSignId_ == id)) {
+   if ((payoutSignId_ != 0) && (payoutSignId_ == idReq)) {
       payoutSignId_ = 0;
 
       if (errCode == bs::error::ErrorCode::TxCancelled) {
@@ -261,10 +261,10 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       emit settlementAccepted();
 
       // Call completed to remove from RfqStorage and cleanup memory
-      emit completed();
+      emit completed(id());
    }
 
-   if ((payinSignId_ != 0) && (payinSignId_ == id)) {
+   if ((payinSignId_ != 0) && (payinSignId_ == idReq)) {
       payinSignId_ = 0;
 
       if (errCode == bs::error::ErrorCode::TxCancelled) {
@@ -307,7 +307,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       emit settlementAccepted();
 
       // Call completed to remove from RfqStorage and cleanup memory
-      emit completed();
+      emit completed(id());
    }
 }
 
@@ -466,13 +466,16 @@ void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settle
    }
 
    if (payinHash.empty()) {
-      SPDLOG_LOGGER_WARN(logger_, "empty payin hash - either PB or Proxy update is required");
-      emit error(bs::error::ErrorCode::TxInvalidRequest, tr("empty payin hash in request"));
+      SPDLOG_LOGGER_WARN(logger_, "empty payin hash - either PB or Proxy update"
+         " is required");
+      emit error(id(), bs::error::ErrorCode::TxInvalidRequest
+         , tr("empty payin hash in request"));
    }
    if (usedPayinHash_ != payinHash) {
       SPDLOG_LOGGER_ERROR(logger_, "invalid payin hash: {} - {} expected"
          , usedPayinHash_.toHexStr(true), payinHash.toHexStr(true));
-      emit error(bs::error::ErrorCode::TxInvalidRequest, tr("payin hash mismatch"));
+      emit error(id(), bs::error::ErrorCode::TxInvalidRequest
+         , tr("payin hash mismatch"));
       return;
    }
 

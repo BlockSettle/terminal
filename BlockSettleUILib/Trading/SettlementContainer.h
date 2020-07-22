@@ -31,9 +31,9 @@ namespace bs {
    {
       Q_OBJECT
    public:
-      explicit SettlementContainer(bs::UtxoReservationToken utxoRes,
-         std::unique_ptr<bs::hd::Purpose> walletPurpose,
-         bool expandTxDialogInfo);
+      explicit SettlementContainer(bs::UtxoReservationToken
+         , std::unique_ptr<bs::hd::Purpose> walletPurpose
+         , bool expandTxDialogInfo);
       ~SettlementContainer() override;
 
       virtual bool cancel() = 0;
@@ -60,10 +60,10 @@ namespace bs {
       static constexpr unsigned int kWaitTimeoutInSec = 30;
 
    signals:
-      void error(bs::error::ErrorCode, QString);
+      void error(const std::string &id, bs::error::ErrorCode, QString);
 
-      void completed();
-      void failed();
+      void completed(const std::string &id);
+      void failed(const std::string &id);
 
       void timerExpired();
       void timerStarted(int msDuration);
@@ -77,7 +77,7 @@ namespace bs {
       void releaseUtxoRes();
 
       ValidityFlag validityFlag_;
-      bs::UtxoReservationToken utxoRes_;
+      bs::UtxoReservationToken   utxoRes_;
       std::unique_ptr<bs::hd::Purpose> walletPurpose_;
       bool expandTxDialogInfo_{};
 
