@@ -337,9 +337,6 @@ TEST_F(TestWebSocket, BrokenData)
    auto packet = CryptoPRNG::generateRandom(rand() % 10000).toBinStr();
    ASSERT_TRUE(client_->send(packet));
    ASSERT_THROW(getFeature(serverListener_->data_, 100ms), std::runtime_error);
-
-   client_.reset();
-   ASSERT_EQ(clientId, getFeature(serverListener_->disconnected_));
 }
 
 TEST_F(TestWebSocket, ClientStartsFirst)
