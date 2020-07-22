@@ -20,6 +20,7 @@
 #include "ServerConnectionListener.h"
 #include "StringUtils.h"
 #include "TestEnv.h"
+#include "ThreadSafeClasses.h"
 #include "TransportBIP15x.h"
 #include "TransportBIP15xServer.h"
 #include "WsDataConnection.h"
@@ -44,7 +45,7 @@ public:
       }
 
       QStringList args;
-      args.push_back(QStringLiteral("TCP-LISTEN:%1,reuseaddr").arg(listenPort));
+      args.push_back(QStringLiteral("TCP-LISTEN:%1,reuseaddr,fork").arg(listenPort));
       args.push_back(QStringLiteral("TCP:127.0.0.1:%1").arg(connectPort));
       process.start(QStringLiteral("socat"), args);
       bool result = process.waitForStarted(1000);
@@ -74,7 +75,7 @@ namespace  {
       void OnDataFromClient(const std::string &clientId, const std::string &data) override
       {
          logger_->debug("[{}] {} [{}]", __func__, bs::toHex(clientId), data.size());
-         data_.set_value(std::make_pair(clientId, data));
+         data_.push_back(std::make_pair(clientId, data));
       }
       void onClientError(const std::string &clientId, ClientError error, const Details &details) override
       {
@@ -94,7 +95,7 @@ namespace  {
       std::shared_ptr<spdlog::logger>  logger_;
       std::promise<std::string> connected_;
       std::promise<std::string> disconnected_;
-      std::promise<std::pair<std::string, std::string>> data_;
+      ArmoryThreading::TimedQueue<std::pair<std::string, std::string>> data_;
    };
 
    class TestClientConnListener : public DataConnectionListener
@@ -106,7 +107,7 @@ namespace  {
       void OnDataReceived(const std::string &data) override
       {
          logger_->debug("[{}] {} bytes", __func__, data.size());
-         data_.set_value(data);
+         data_.push_back(std::string(data));
       }
       void OnConnected() override
       {
@@ -127,7 +128,7 @@ namespace  {
       std::shared_ptr<spdlog::logger>  logger_;
       std::promise<void> connected_;
       std::promise<void> disconnected_;
-      std::promise<std::string> data_;
+      ArmoryThreading::TimedQueue<std::string> data_;
       std::promise<DataConnectionError> error_;
    };
 
@@ -155,6 +156,12 @@ namespace  {
    };
 
    const auto kDefaultTimeout = 1000ms;
+
+   template<class T>
+   T getFeature(ArmoryThreading::TimedQueue<T> &data, std::chrono::milliseconds timeout = kDefaultTimeout)
+   {
+      return data.pop_front(timeout);
+   }
 
    template<class T>
    T getFeature(std::promise<T> &prom, std::chrono::milliseconds timeout = kDefaultTimeout)
@@ -336,7 +343,7 @@ TEST_F(TestWebSocket, BrokenData)
 
    auto packet = CryptoPRNG::generateRandom(rand() % 10000).toBinStr();
    ASSERT_TRUE(client_->send(packet));
-   ASSERT_THROW(getFeature(serverListener_->data_, 100ms), std::runtime_error);
+   ASSERT_THROW(getFeature(serverListener_->data_, 100ms), ArmoryThreading::StackTimedOutException);
 }
 
 TEST_F(TestWebSocket, ClientStartsFirst)
@@ -362,9 +369,64 @@ TEST_F(TestWebSocket, BindFailed)
    ASSERT_FALSE(server2->BindConnection(kTestTcpHost, kTestTcpPort, serverListener_.get()));
 }
 
+TEST_F(TestWebSocket, DISABLED_StressTest)
+{
+   auto clientPort = 19501;
+   auto serverPort = 19502;
+
+   std::thread([&] {
+      while (true) {
+         TestTcpProxyProcess proxy(clientPort, serverPort);
+         std::this_thread::sleep_for(std::chrono::milliseconds(rand() % 50));
+      }
+   }).detach();
+
+   for (int i = 0; i < 200; ++i) {
+      WsDataConnectionParams clientParams;
+      clientParams.delaysTableMs = std::vector<uint32_t>(1000, 10);
+      server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+      client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, clientParams);
+      serverListener_ = std::make_unique<TestServerConnListener>(StaticLogger::loggerPtr);
+      clientListener_ = std::make_unique<TestClientConnListener>(StaticLogger::loggerPtr);
+      ASSERT_TRUE(server_->BindConnection(kTestTcpHost, std::to_string(serverPort), serverListener_.get()));
+      ASSERT_TRUE(client_->openConnection(kTestTcpHost, std::to_string(clientPort), clientListener_.get()));
+
+      waitFeature(clientListener_->connected_);
+      auto clientId = getFeature(serverListener_->connected_);
+
+      for (int i = 0; i < 200; ++i) {
+         std::vector<std::string> clientPackets;
+         std::vector<std::string> serverPackets;
+         int clientPacketCount = rand() % 10;
+         int serverPacketCount = rand() % 10;
+
+         for (int i = 0; i < clientPacketCount; ++i) {
+            clientPackets.push_back(std::string(size_t(rand() % 1000 + 1), 'a'));
+            ASSERT_TRUE(client_->send(clientPackets.back()));
+         }
+         for (int i = 0; i < serverPacketCount; ++i) {
+            serverPackets.push_back(std::string(size_t(rand() % 1000 + 1), 'b'));
+            ASSERT_TRUE(server_->SendDataToClient(clientId, serverPackets.back()));
+         }
+
+         for (const auto &clientPacket : clientPackets) {
+            auto data = getFeature(serverListener_->data_);
+            ASSERT_EQ(data.first, clientId);
+            ASSERT_EQ(data.second, clientPacket);
+         }
+         for (const auto &serverPacket : serverPackets) {
+            auto data = getFeature(clientListener_->data_);
+            ASSERT_EQ(data, serverPacket);
+         }
+      }
+
+      client_.reset();
+      ASSERT_EQ(clientId, getFeature(serverListener_->disconnected_));
+   }
+}
 
 // Disabled because test requires socat installed
-TEST_F(TestWebSocket, DISABLE_Restart)
+TEST_F(TestWebSocket, DISABLED_Restart)
 {
    int clientPort = 19501;
    int serverPort = 19502;
