@@ -12,6 +12,9 @@
 #include <gtest/gtest.h>
 #include <libwebsockets.h>
 
+
+#include "Bip15xDataConnection.h"
+#include "Bip15xServerConnection.h"
 #include "DataConnectionListener.h"
 #include "RouterServerConnection.h"
 #include "ServerConnectionListener.h"
@@ -22,7 +25,39 @@
 #include "WsDataConnection.h"
 #include "WsServerConnection.h"
 
+#include <QProcess>
+
+using namespace bs::network;
 using namespace std::chrono_literals;
+
+class TestTcpProxyProcess
+{
+   QProcess process;
+public:
+   TestTcpProxyProcess(int listenPort, int connectPort)
+   {
+      {  QProcess killOldProcess;
+         QStringList args;
+         args.push_back(QStringLiteral("socat"));
+         process.start(QStringLiteral("pkill"), args);
+         process.waitForFinished();
+      }
+
+      QStringList args;
+      args.push_back(QStringLiteral("TCP-LISTEN:%1,reuseaddr").arg(listenPort));
+      args.push_back(QStringLiteral("TCP:127.0.0.1:%1").arg(connectPort));
+      process.start(QStringLiteral("socat"), args);
+      bool result = process.waitForStarted(1000);
+      assert(result);
+   }
+
+   ~TestTcpProxyProcess()
+   {
+      process.kill();
+      bool result = process.waitForFinished(1000);
+      assert(result);
+   }
+};
 
 namespace  {
 
@@ -41,11 +76,11 @@ namespace  {
          logger_->debug("[{}] {} [{}]", __func__, bs::toHex(clientId), data.size());
          data_.set_value(std::make_pair(clientId, data));
       }
-      void onClientError(const std::string &clientId, const std::string &errStr) override
+      void onClientError(const std::string &clientId, ClientError error, const Details &details) override
       {
-         logger_->debug("[{}] {}: {}", __func__, bs::toHex(clientId), errStr);
+         logger_->debug("[{}] {}", __func__, bs::toHex(clientId));
       }
-      void OnClientConnected(const std::string &clientId) override
+      void OnClientConnected(const std::string &clientId, const Details &details) override
       {
          logger_->debug("[{}] {}", __func__, bs::toHex(clientId));
          connected_.set_value(clientId);
@@ -61,7 +96,6 @@ namespace  {
       std::promise<std::string> disconnected_;
       std::promise<std::pair<std::string, std::string>> data_;
    };
-
 
    class TestClientConnListener : public DataConnectionListener
    {
@@ -97,8 +131,33 @@ namespace  {
       std::promise<DataConnectionError> error_;
    };
 
+   class WsDataConnectionBroken : public WsDataConnection
+   {
+   public:
+      WsPacket::Type typeToMangle_{};
+
+      WsDataConnectionBroken(WsPacket::Type typeToMangle)
+         : WsDataConnection(StaticLogger::loggerPtr, WsDataConnectionParams{})
+         , typeToMangle_(typeToMangle)
+      {
+      }
+
+      WsRawPacket filterRawPacket(WsRawPacket rawPacket) override
+      {
+         auto packet = bs::network::WsPacket::parsePacket(
+            std::string(rawPacket.getPtr(), rawPacket.getPtr() + rawPacket.getSize()), StaticLogger::loggerPtr);
+         assert(packet.type != WsPacket::Type::Invalid);
+         if (packet.type != typeToMangle_) {
+            return rawPacket;
+         }
+         return WsRawPacket(CryptoPRNG::generateRandom(8).toBinStr());
+      }
+   };
+
+   const auto kDefaultTimeout = 1000ms;
+
    template<class T>
-   T getFeature(std::promise<T> &prom)
+   T getFeature(std::promise<T> &prom, std::chrono::milliseconds timeout = kDefaultTimeout)
    {
       auto feature = prom.get_future();
       if (feature.wait_for(1000ms) != std::future_status::ready) {
@@ -109,7 +168,7 @@ namespace  {
       return result;
    }
 
-   void waitFeature(std::promise<void> &prom)
+   void waitFeature(std::promise<void> &prom, std::chrono::milliseconds timeout = kDefaultTimeout)
    {
       auto feature = prom.get_future();
       if (feature.wait_for(1000ms) != std::future_status::ready) {
@@ -122,6 +181,7 @@ namespace  {
 
 class TestWebSocket : public testing::Test
 {
+public:
    void SetUp()
    {
       //lws_set_log_level(LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO | LLL_DEBUG, nullptr);
@@ -133,59 +193,86 @@ class TestWebSocket : public testing::Test
       lws_set_log_level(LLL_ERR | LLL_WARN | LLL_NOTICE, nullptr);
    }
 
-public:
-   SecureBinaryData passphrase_;
-   std::shared_ptr<TestEnv> envPtr_;
-   std::string walletFolder_;
+   // Listeners must be declared before connections
+   std::unique_ptr<TestServerConnListener> serverListener_;
+   std::unique_ptr<TestClientConnListener> clientListener_;
+   std::unique_ptr<ServerConnection> server_;
+   std::unique_ptr<DataConnection> client_;
+
+   enum class FirstStart
+   {
+      Server,
+      Client,
+   };
+
+   enum class FirstStop
+   {
+      Server,
+      Client,
+   };
+
+   void doTest(const std::string &serverHost, const std::string &serverPort
+      , const std::string &clientHost, const std::string &clientPort
+      , FirstStart firstStart
+      , std::function<void()> callback = nullptr, FirstStop firstStop = FirstStop::Client)
+   {
+      serverListener_ = std::make_unique<TestServerConnListener>(StaticLogger::loggerPtr);
+      clientListener_ = std::make_unique<TestClientConnListener>(StaticLogger::loggerPtr);
+      if (firstStart == FirstStart::Server) {
+         ASSERT_TRUE(server_->BindConnection(serverHost, serverPort, serverListener_.get()));
+         ASSERT_TRUE(client_->openConnection(clientHost, clientPort, clientListener_.get()));
+      } else {
+         ASSERT_TRUE(client_->openConnection(clientHost, clientPort, clientListener_.get()));
+         std::this_thread::sleep_for(std::chrono::milliseconds(10));
+         ASSERT_TRUE(server_->BindConnection(serverHost, serverPort, serverListener_.get()));
+      }
+
+      waitFeature(clientListener_->connected_);
+      auto clientId = getFeature(serverListener_->connected_);
+
+      for (int i = 0; i < 5; ++i) {
+         {
+            auto packet = CryptoPRNG::generateRandom(rand() % 10000).toBinStr();
+            ASSERT_TRUE(client_->send(packet));
+            auto data = getFeature(serverListener_->data_);
+            ASSERT_EQ(data.first, clientId);
+            ASSERT_EQ(data.second, packet);
+         }
+         {
+            auto packet = CryptoPRNG::generateRandom(rand() % 10000).toBinStr();
+            ASSERT_TRUE(server_->SendDataToClient(clientId, packet));
+            auto data = getFeature(clientListener_->data_);
+            ASSERT_EQ(data, packet);
+         }
+      }
+
+      if (callback) {
+         callback();
+      }
+
+      for (int i = 0; i < 5; ++i) {
+         {  auto packet = CryptoPRNG::generateRandom(rand() % 10000).toBinStr();
+            ASSERT_TRUE(server_->SendDataToAllClients(packet));
+            auto data = getFeature(clientListener_->data_);
+            ASSERT_EQ(data, packet);
+         }
+
+         {  auto packet = CryptoPRNG::generateRandom(rand() % 10000).toBinStr();
+            ASSERT_TRUE(client_->send(packet));
+            auto data = getFeature(serverListener_->data_);
+            ASSERT_EQ(data.first, clientId);
+            ASSERT_EQ(data.second, packet);
+         }
+      }
+      if (firstStop == FirstStop::Client) {
+         client_.reset();
+         ASSERT_EQ(clientId, getFeature(serverListener_->disconnected_));
+      } else {
+         server_.reset();
+         waitFeature(clientListener_->disconnected_);
+      }
+   }
 };
-
-void doTest(std::shared_ptr<ServerConnection> server, std::shared_ptr<DataConnection> client
-   , const std::string &serverHost, const std::string &serverPort
-   , const std::string &clientHost, const std::string &clientPort)
-{
-  TestServerConnListener serverListener(StaticLogger::loggerPtr);
-  TestClientConnListener clientListener(StaticLogger::loggerPtr);
-
-  ASSERT_TRUE(server->BindConnection(serverHost, serverPort, &serverListener));
-  ASSERT_TRUE(client->openConnection(clientHost, clientPort, &clientListener));
-
-  waitFeature(clientListener.connected_);
-  auto clientId = getFeature(serverListener.connected_);
-
-  for (int i = 0; i < 5; ++i) {
-     {
-        auto packet = CryptoPRNG::generateRandom(rand() % 10000).toBinStr();
-        ASSERT_TRUE(client->send(packet));
-        auto data = getFeature(serverListener.data_);
-        ASSERT_EQ(data.first, clientId);
-        ASSERT_EQ(data.second, packet);
-     }
-     {
-        auto packet = CryptoPRNG::generateRandom(rand() % 10000).toBinStr();
-        ASSERT_TRUE(server->SendDataToClient(clientId, packet));
-        auto data = getFeature(clientListener.data_);
-        ASSERT_EQ(data, packet);
-     }
-  }
-
-  for (int i = 0; i < 5; ++i) {
-     {  auto packet = CryptoPRNG::generateRandom(rand() % 10000).toBinStr();
-        ASSERT_TRUE(server->SendDataToAllClients(packet));
-        auto data = getFeature(clientListener.data_);
-        ASSERT_EQ(data, packet);
-     }
-
-     {  auto packet = CryptoPRNG::generateRandom(rand() % 10000).toBinStr();
-        ASSERT_TRUE(client->send(packet));
-        auto data = getFeature(serverListener.data_);
-        ASSERT_EQ(data.first, clientId);
-        ASSERT_EQ(data.second, packet);
-     }
-  }
-  client.reset();
-  ASSERT_EQ(clientId, getFeature(serverListener.disconnected_));
-  server.reset();
-}
 
 static bs::network::BIP15xParams getTestParams()
 {
@@ -216,41 +303,179 @@ static bs::network::BIP15xPeer getPeerKey(const std::string &host, const std::st
 
 TEST_F(TestWebSocket, Basic)
 {
-   const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-      StaticLogger::loggerPtr, getEmptyPeersCallback());
-   auto server = std::make_shared<WsServerConnection>(StaticLogger::loggerPtr, srvTransport);
+   server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
+   doTest(kTestTcpHost, kTestTcpPort, kTestTcpHost, kTestTcpPort, FirstStart::Server);
+}
 
-   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
-      StaticLogger::loggerPtr, getTestParams());
-   auto client = std::make_shared<WsDataConnection>(StaticLogger::loggerPtr, clientTransport);
+TEST_F(TestWebSocket, BrokenConnect)
+{
+   server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   client_ = std::make_unique<WsDataConnectionBroken>(WsPacket::Type::RequestNew);
+   serverListener_ = std::make_unique<TestServerConnListener>(StaticLogger::loggerPtr);
+   clientListener_ = std::make_unique<TestClientConnListener>(StaticLogger::loggerPtr);
 
-   srvTransport->addAuthPeer(getPeerKey("client", clientTransport.get()));
-   clientTransport->addAuthPeer(getPeerKey(kTestTcpHost, kTestTcpPort, srvTransport.get()));
+   ASSERT_TRUE(server_->BindConnection(kTestTcpHost, kTestTcpPort, serverListener_.get()));
+   ASSERT_TRUE(client_->openConnection(kTestTcpHost, kTestTcpPort, clientListener_.get()));
 
-   doTest(std::move(server), std::move(client), kTestTcpHost, kTestTcpPort, kTestTcpHost, kTestTcpPort);
+   ASSERT_THROW(waitFeature(clientListener_->connected_, 100ms), std::runtime_error);
+}
+
+TEST_F(TestWebSocket, BrokenData)
+{
+   server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   client_ = std::make_unique<WsDataConnectionBroken>(WsPacket::Type::Data);
+   serverListener_ = std::make_unique<TestServerConnListener>(StaticLogger::loggerPtr);
+   clientListener_ = std::make_unique<TestClientConnListener>(StaticLogger::loggerPtr);
+
+   ASSERT_TRUE(server_->BindConnection(kTestTcpHost, kTestTcpPort, serverListener_.get()));
+   ASSERT_TRUE(client_->openConnection(kTestTcpHost, kTestTcpPort, clientListener_.get()));
+
+   waitFeature(clientListener_->connected_);
+   auto clientId = getFeature(serverListener_->connected_);
+
+   auto packet = CryptoPRNG::generateRandom(rand() % 10000).toBinStr();
+   ASSERT_TRUE(client_->send(packet));
+   ASSERT_THROW(getFeature(serverListener_->data_, 100ms), std::runtime_error);
+
+   client_.reset();
+   ASSERT_EQ(clientId, getFeature(serverListener_->disconnected_));
+}
+
+TEST_F(TestWebSocket, ClientStartsFirst)
+{
+   server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
+   doTest(kTestTcpHost, kTestTcpPort, kTestTcpHost, kTestTcpPort, FirstStart::Client);
+}
+
+TEST_F(TestWebSocket, ServerStopsFirst)
+{
+   server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
+   doTest(kTestTcpHost, kTestTcpPort, kTestTcpHost, kTestTcpPort, FirstStart::Server, nullptr, FirstStop::Server);
+}
+
+TEST_F(TestWebSocket, BindFailed)
+{
+   serverListener_ = std::make_unique<TestServerConnListener>(StaticLogger::loggerPtr);
+   auto server1 = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   auto server2 = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   ASSERT_TRUE(server1->BindConnection(kTestTcpHost, kTestTcpPort, serverListener_.get()));
+   ASSERT_FALSE(server2->BindConnection(kTestTcpHost, kTestTcpPort, serverListener_.get()));
+}
+
+
+// Disabled because test requires socat installed
+TEST_F(TestWebSocket, DISABLE_Restart)
+{
+   int clientPort = 19501;
+   int serverPort = 19502;
+   auto proxy = std::make_unique<TestTcpProxyProcess>(clientPort, serverPort);
+
+   server_ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
+
+   auto callback = [&] {
+      proxy.reset();
+      proxy = std::make_unique<TestTcpProxyProcess>(clientPort, serverPort);
+   };
+
+   doTest(kTestTcpHost, std::to_string(serverPort), kTestTcpHost, std::to_string(clientPort), FirstStart::Server, callback);
 }
 
 TEST_F(TestWebSocket, Router)
 {
-   const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-      StaticLogger::loggerPtr, getEmptyPeersCallback());
-
    RouterServerConnectionParams::Server server1;
    server1.host = kTestTcpHost;
    server1.port = kTestTcpPort;
-   server1.server = std::make_shared<WsServerConnection>(StaticLogger::loggerPtr, srvTransport);
+   server1.server = std::make_shared<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
 
    RouterServerConnectionParams routerServerParams;
    routerServerParams.servers.push_back(std::move(server1));
-   auto server = std::make_shared<RouterServerConnection>(StaticLogger::loggerPtr, routerServerParams);
+   server_ = std::make_unique<RouterServerConnection>(StaticLogger::loggerPtr, routerServerParams);
 
-   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(
+   client_ = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
+
+   // RouterServerConnection ignores host and port used to bind
+   doTest(kTestTcpHost, kTestTcpPort, kTestTcpHost, kTestTcpPort, FirstStart::Server);
+}
+
+TEST_F(TestWebSocket, Bip15X)
+{
+   auto server = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
+   auto client = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
+
+   auto srvTransport = std::make_unique<bs::network::TransportBIP15xServer>(
+      StaticLogger::loggerPtr, getEmptyPeersCallback());
+   auto clientTransport = std::make_unique<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, getTestParams());
-   auto client = std::make_shared<WsDataConnection>(StaticLogger::loggerPtr, clientTransport);
 
    srvTransport->addAuthPeer(getPeerKey("client", clientTransport.get()));
    clientTransport->addAuthPeer(getPeerKey(kTestTcpHost, kTestTcpPort, srvTransport.get()));
 
-   // RouterServerConnection ignores host and port used to bind
-   doTest(std::move(server), std::move(client), "", "", kTestTcpHost, kTestTcpPort);
+   server_ = std::make_unique<Bip15xServerConnection>(StaticLogger::loggerPtr, std::move(server), std::move(srvTransport));
+   client_ = std::make_unique<Bip15xDataConnection>(StaticLogger::loggerPtr, std::move(client), std::move(clientTransport));
+
+   doTest(kTestTcpHost, kTestTcpPort, kTestTcpHost, kTestTcpPort, FirstStart::Server);
+}
+
+TEST(WebSocketHelpers, WsPacket)
+{
+   auto cookie = "<COOKIE>";
+   auto data = "<DATA>";
+   uint64_t recvCounter = 1234567890;
+
+   auto parsePacket = [](WsRawPacket p) -> WsPacket {
+      return WsPacket::parsePacket(std::string(p.getPtr(), p.getPtr() + p.getSize()), StaticLogger::loggerPtr);
+   };
+
+   auto packet = parsePacket(WsPacket::requestNew());
+   EXPECT_EQ(packet.type, WsPacket::Type::RequestNew);
+
+   packet = parsePacket(WsPacket::requestResumed(cookie, recvCounter));
+   EXPECT_EQ(packet.type, WsPacket::Type::RequestResumed);
+   EXPECT_EQ(packet.payload, cookie);
+   EXPECT_EQ(packet.recvCounter, recvCounter);
+
+   packet = parsePacket(WsPacket::responseNew(cookie));
+   EXPECT_EQ(packet.type, WsPacket::Type::ResponseNew);
+   EXPECT_EQ(packet.payload, cookie);
+
+   packet = parsePacket(WsPacket::responseResumed(recvCounter));
+   EXPECT_EQ(packet.type, WsPacket::Type::ResponseResumed);
+   EXPECT_EQ(packet.recvCounter, recvCounter);
+
+   packet = parsePacket(WsPacket::responseUnknown());
+   EXPECT_EQ(packet.type, WsPacket::Type::ResponseUnknown);
+
+   packet = parsePacket(WsPacket::data(data));
+   EXPECT_EQ(packet.type, WsPacket::Type::Data);
+   EXPECT_EQ(packet.payload, data);
+
+   packet = parsePacket(WsPacket::ack(recvCounter));
+   EXPECT_EQ(packet.type, WsPacket::Type::Ack);
+   EXPECT_EQ(packet.recvCounter, recvCounter);
+}
+
+TEST(WebSocketHelpers, Split)
+{
+   EXPECT_EQ(bs::split("a", ','), std::vector<std::string>({"a"}));
+   EXPECT_EQ(bs::split("a,b", ','), std::vector<std::string>({"a", "b"}));
+   EXPECT_EQ(bs::split("", ','), std::vector<std::string>({""}));
+   EXPECT_EQ(bs::split("a,", ','), std::vector<std::string>({"a", ""}));
+   EXPECT_EQ(bs::split(",b", ','), std::vector<std::string>({"", "b"}));
+   EXPECT_EQ(bs::split(",", ','), std::vector<std::string>({"", ""}));
+}
+
+TEST(WebSocketHelpers, Trim)
+{
+   EXPECT_EQ(bs::trim("a"), "a");
+   EXPECT_EQ(bs::trim(""), "");
+   EXPECT_EQ(bs::trim(" "), "");
+   EXPECT_EQ(bs::trim("   "), "");
+   EXPECT_EQ(bs::trim(" a"), "a");
+   EXPECT_EQ(bs::trim("a "), "a");
+   EXPECT_EQ(bs::trim(" a a "), "a a");
+   EXPECT_EQ(bs::trim("  a  "), "a");
 }

@@ -66,9 +66,9 @@ public:
 
 protected:
    void OnDataFromClient(const std::string &clientId, const std::string &data) override;
-   void OnClientConnected(const std::string &clientId) override;
+   void OnClientConnected(const std::string &clientId, const Details &details) override;
    void OnClientDisconnected(const std::string &clientId) override;
-   void onClientError(const std::string& clientId, const std::string &error) override;
+   void onClientError(const std::string& clientId, ClientError error, const Details &details) override;
 
    void processData(const std::string &clientId, const std::string &data);
 

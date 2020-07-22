@@ -15,6 +15,7 @@
 #include <spdlog/spdlog.h>
 
 #include "ArmoryConnection.h"
+#include "Bip15xServerConnection.h"
 #include "BsTrackerVersion.h"
 #include "ColoredCoinServer.h"
 #include "TransportBIP15xServer.h"
@@ -146,13 +147,14 @@ int main(int argc, char** argv) {
    auto cbTrustedClients = []() -> bs::network::BIP15xPeers{
       return {};
    };
+   auto wsServer = std::make_unique<WsServerConnection>(logger, WsServerConnectionParams{});
    const auto &transport = std::make_shared<bs::network::TransportBIP15xServer>(logger
       , cbTrustedClients, ownKeyPath, ownKeyName);
-   auto wsServer = std::make_unique<WsServerConnection>(logger, transport);
+   auto bipServer = std::make_shared<Bip15xServerConnection>(logger, std::move(wsServer), transport);
 
-   auto ccServer = std::make_unique<CcTrackerServer>(logger, armory, wsServer.get());
+   auto ccServer = std::make_unique<CcTrackerServer>(logger, armory, bipServer);
 
-   result = wsServer->BindConnection(listenAddress, std::to_string(listenPort), ccServer.get());
+   result = bipServer->BindConnection(listenAddress, std::to_string(listenPort), ccServer.get());
    if (!result) {
       SPDLOG_LOGGER_CRITICAL(logger, "starting server failed");
       exit(EXIT_FAILURE);

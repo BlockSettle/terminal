@@ -31,6 +31,7 @@
 #include "BSMarketDataProvider.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
+#include "Bip15xDataConnection.h"
 #include "CCFileManager.h"
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
@@ -75,7 +76,6 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "WsDataConnection.h"
-#include "ZmqDataConnection.h"
 
 #include "ui_BSTerminalMainWindow.h"
 
@@ -177,8 +177,10 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
 void BSTerminalMainWindow::onNetworkSettingsRequired(NetworkSettingsClient client)
 {
+   auto env = static_cast<ApplicationSettings::EnvConfiguration>(
+            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
    networkSettingsLoader_ = std::make_unique<NetworkSettingsLoader>(logMgr_->logger()
-      , applicationSettings_->pubBridgeHost(), applicationSettings_->pubBridgePort(), cbApprovePuB_);
+      , PubKeyLoader::serverHostName(PubKeyLoader::KeyType::PublicBridge, env), PubKeyLoader::serverHttpPort(), cbApprovePuB_);
 
    connect(networkSettingsLoader_.get(), &NetworkSettingsLoader::succeed, this, [this, client] {
       networkSettingsReceived(networkSettingsLoader_->settings(), client);
@@ -446,6 +448,7 @@ void BSTerminalMainWindow::setupInfoWidget()
 void BSTerminalMainWindow::initConnections()
 {
    connectionManager_ = std::make_shared<ConnectionManager>(logMgr_->logger("message"));
+   connectionManager_->setCaBundle(bs::caBundlePtr(), bs::caBundleSize());
 
    celerConnection_ = std::make_shared<CelerClientProxy>(logMgr_->logger());
    connect(celerConnection_.get(), &BaseCelerClient::OnConnectedToServer, this, &BSTerminalMainWindow::onCelerConnected);
@@ -454,7 +457,7 @@ void BSTerminalMainWindow::initConnections()
 
    mdCallbacks_ = std::make_shared<MDCallbacksQt>();
    mdProvider_ = std::make_shared<BSMarketDataProvider>(connectionManager_
-      , logMgr_->logger("message"), mdCallbacks_.get());
+      , logMgr_->logger("message"), mdCallbacks_.get(), true, false);
    connect(mdCallbacks_.get(), &MDCallbacksQt::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
    connect(mdCallbacks_.get(), &MDCallbacksQt::WaitingForConnectionDetails, this, [this] {
       onNetworkSettingsRequired(NetworkSettingsClient::MarketData);
@@ -824,14 +827,15 @@ void BSTerminalMainWindow::tryInitChatView()
       tryLoginIntoChat();
    });
 
+   auto env = static_cast<ApplicationSettings::EnvConfiguration>(
+            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+
    Chat::ChatSettings chatSettings;
    chatSettings.connectionManager = connectionManager_;
-
    chatSettings.chatPrivKey = chatPrivKey_;
    chatSettings.chatPubKey = chatPubKey_;
-
-   chatSettings.chatServerHost = applicationSettings_->get<std::string>(ApplicationSettings::chatServerHost);
-   chatSettings.chatServerPort = applicationSettings_->get<std::string>(ApplicationSettings::chatServerPort);
+   chatSettings.chatServerHost = PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Chat, env);
+   chatSettings.chatServerPort = PubKeyLoader::serverHttpPort();
    chatSettings.chatDbFile = applicationSettings_->get<QString>(ApplicationSettings::chatDbFile);
 
    chatClientServicePtr_->Init(logMgr_->logger("chat"), chatSettings);
@@ -1109,9 +1113,10 @@ void BSTerminalMainWindow::connectArmory()
 void BSTerminalMainWindow::connectCcClient()
 {
    if (trackerClient_) {
-      bool testnet = applicationSettings_->get<NetworkType>(ApplicationSettings::netType) == NetworkType::TestNet;
-      trackerClient_->openConnection(testnet ? "cc-tracker-testnet.blocksettle.com" : "cc-tracker-mainnet.blocksettle.com"
-         , "80", cbApproveCcServer_);
+      auto env = static_cast<ApplicationSettings::EnvConfiguration>(
+               applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+      auto trackerHostName = PubKeyLoader::serverHostName(PubKeyLoader::KeyType::CcServer, env);
+      trackerClient_->openConnection(trackerHostName, PubKeyLoader::serverHttpPort(), cbApproveCcServer_);
    }
 }
 
@@ -1449,6 +1454,7 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
 
 
    auto bsClient = createClient();
+
    auto logger = logMgr_->logger("proxy");
    LoginWindow loginDialog(logger, bsClient, applicationSettings_, this);
 
@@ -2046,31 +2052,15 @@ void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settin
       return;
    }
 
-   if (!settings.marketData.host.empty()) {
-      applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(settings.marketData.host));
-      applicationSettings_->set(ApplicationSettings::mdServerPort, settings.marketData.port);
-   }
-   if (!settings.mdhs.host.empty()) {
-      applicationSettings_->set(ApplicationSettings::mdhsHost, QString::fromStdString(settings.mdhs.host));
-      applicationSettings_->set(ApplicationSettings::mdhsPort, settings.mdhs.port);
-   }
-#ifndef NDEBUG
-   QString chost = applicationSettings_->get<QString>(ApplicationSettings::chatServerHost);
-   QString cport = applicationSettings_->get<QString>(ApplicationSettings::chatServerPort);
-   if (!settings.chat.host.empty()) {
-      if (chost.isEmpty()) {
-         applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
-      }
-      if (cport.isEmpty()) {
-         applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
-      }
-   }
-#else
-   if (!settings.chat.host.empty()) {
-      applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
-      applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
-   }
-#endif // NDEBUG
+   auto env = static_cast<ApplicationSettings::EnvConfiguration>(
+            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+
+   applicationSettings_->set(ApplicationSettings::mdServerHost,   QString::fromStdString(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::MdServer, env)));
+   applicationSettings_->set(ApplicationSettings::mdhsHost,       QString::fromStdString(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Mdhs, env)));
+   applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Chat, env)));
+   applicationSettings_->set(ApplicationSettings::mdServerPort,   QString::fromStdString(PubKeyLoader::serverHttpsPort()));
+   applicationSettings_->set(ApplicationSettings::mdhsPort,       QString::fromStdString(PubKeyLoader::serverHttpsPort()));
+   applicationSettings_->set(ApplicationSettings::chatServerPort, QString::fromStdString(PubKeyLoader::serverHttpPort()));
 
    mdProvider_->SetConnectionSettings(applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
       , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort));
@@ -2219,11 +2209,12 @@ std::shared_ptr<BsClient> BSTerminalMainWindow::createClient()
    const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger, params);
    bip15xTransport->setKeyCb(cbApproveProxy_);
 
-   auto connection = std::make_unique<WsDataConnection>(logger, bip15xTransport);
+   auto wsConnection = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
+   auto connection = std::make_unique<Bip15xDataConnection>(logger, std::move(wsConnection), bip15xTransport);
    auto env = static_cast<ApplicationSettings::EnvConfiguration>(
             applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
    bool result = connection->openConnection(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Proxy, env)
-      , PubKeyLoader::serverPort(), bsClient.get());
+      , PubKeyLoader::serverHttpPort(), bsClient.get());
    assert(result);
    bsClient->setConnection(std::move(connection));
 
