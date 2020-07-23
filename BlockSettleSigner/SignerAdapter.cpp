@@ -12,15 +12,15 @@
 #include <spdlog/spdlog.h>
 #include <QDataStream>
 #include <QFile>
+
+#include "Bip15xDataConnection.h"
 #include "SignContainer.h"
+#include "SignerAdapterContainer.h"
+#include "SignerInterfaceListener.h"
 #include "SystemFileUtils.h"
 #include "TransportBIP15x.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "ZmqContext.h"
-#include "ZmqDataConnection.h"
-
-#include "SignerAdapterContainer.h"
-#include "SignerInterfaceListener.h"
+#include "WsDataConnection.h"
 
 namespace {
 
@@ -47,11 +47,10 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
    params.cookie = bs::network::BIP15xCookie::MakeClient;
    params.cookiePath = SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
 
+   auto wsConnection = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
    const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(
       logger, params);
-   bip15xTransport->setLocalHeartbeatInterval();
-   auto adapterConn = std::make_shared<ZmqBinaryConnection>(logger_, bip15xTransport);
-   adapterConn->SetContext(std::make_shared<ZmqContext>(logger_));
+   auto adapterConn = std::make_shared<Bip15xDataConnection>(logger_, std::move(wsConnection), bip15xTransport);
 
    if (inSrvIDKey) {
       std::string connectAddr = kLocalAddrV4 + ":" + std::to_string(signerPort);

@@ -121,8 +121,8 @@ signals:
    void ready() const;
    void connectionError() const;
    void headlessBindUpdated(bs::signer::BindStatus status) const;
-   void peerConnected(const QString &ip);
-   void peerDisconnected(const QString &ip);
+   void peerConnected(const std::string &clientId, const std::string &ip, const std::string &publicKey);
+   void peerDisconnected(const std::string &clientId);
    void cancelTxSign(const BinaryData &txId);
    void txSigned(const BinaryData &);
    void xbtSpent(const qint64 value, bool autoSign);

@@ -76,13 +76,13 @@ private slots:
    void onAutoSignActivated(const std::string &walletId);
    void onAutoSignDeactivated(const std::string &walletId);
    void onAutoSignTick();
-   void onPeerConnected(const QString &ip);
-   void onPeerDisconnected(const QString &ip);
+   void onPeerConnected(const std::string &clientId, const std::string &ip, const std::string &publicKey);
+   void onPeerDisconnected(const std::string &clientId);
    QJSValue invokeJsCallBack(QJSValue jsCallback, QJSValueList args);
 
 private:
    bool offline() const { return settings_->offline(); }
-   int connections() const { return connectedClients_.size(); }
+   int connections() const { return connectedClientIps_.size(); }
    QStringList connectedClients() const;
    bool autoSignUnlimited() const { return settings_->autoSignUnlimited(); }
    bool manualSignUnlimited() const { return settings_->manualSignUnlimited(); }
@@ -109,7 +109,7 @@ private:
    QElapsedTimer autoSignTimeSpent_;
    bool     autoSignActive_ = false;
    bool     socketOk_ = true;
-   std::multiset<QString> connectedClients_;
+   std::map<std::string, std::string> connectedClientIps_;
 };
 
 #endif // __QML_STATUS_UPDATER_H__

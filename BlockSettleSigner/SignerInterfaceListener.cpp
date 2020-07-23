@@ -98,10 +98,10 @@ void SignerInterfaceListener::processData(const std::string &data)
       onReady(packet.data());
       break;
    case signer::PeerConnectedType:
-      onPeerConnected(packet.data(), true);
+      onPeerConnected(packet.data());
       break;
    case signer::PeerDisconnectedType:
-      onPeerConnected(packet.data(), false);
+      onPeerConnected(packet.data());
       break;
    case signer::DecryptWalletRequestType:
       onDecryptWalletRequested(packet.data());
@@ -188,20 +188,24 @@ void SignerInterfaceListener::onReady(const std::string &data)
    emit parent_->ready();
 }
 
-void SignerInterfaceListener::onPeerConnected(const std::string &data, bool connected)
+void SignerInterfaceListener::onPeerConnected(const std::string &data)
 {
-   signer::PeerEvent evt;
+   signer::ClientConnected evt;
    if (!evt.ParseFromString(data)) {
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
       return;
    }
-   const auto ip = QString::fromStdString(evt.ip_address());
-   if (connected) {
-      emit parent_->peerConnected(ip);
+   emit parent_->peerConnected(evt.client_id(), evt.ip_address(), evt.public_key());
+}
+
+void SignerInterfaceListener::onPeerDisconnected(const std::string &data)
+{
+   signer::ClientDisconnected evt;
+   if (!evt.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
    }
-   else {
-      emit parent_->peerDisconnected(ip);
-   }
+   emit parent_->peerDisconnected(evt.client_id());
 }
 
 void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
