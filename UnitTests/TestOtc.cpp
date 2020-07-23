@@ -169,23 +169,11 @@ public:
                      , BinaryData::fromString(s.auth_address_buyer()), BinaryData::fromString(s.auth_address_seller()));
                   ASSERT_TRUE(settlementAddress.isValid());
 
-                  std::map<std::string, BinaryData> preimageData;
-
-                  if (!nativeAddr_) {
-                     auto wallet = peer1_.walletsMgr_->getWalletByAddress(peer1_.nestedAddr_);
-                     ASSERT_TRUE(wallet);
-                     auto entry = wallet->getAddressEntryForAddr(peer1_.nestedAddr_.prefixed());
-                     ASSERT_TRUE(entry);
-                     auto preimage = entry->getPreimage();
-                     ASSERT_FALSE(preimage.empty());
-                     preimageData.emplace(peer1_.nestedAddr_.display(), preimage);
-                  }
-
                   Codec_SignerState::SignerState payinState;
                   payinState.ParseFromString(s.unsigned_tx());
-                  auto result = bs::TradesVerification::verifyUnsignedPayin(payinState, preimageData, env_->armoryConnection()->testFeePerByte()
+                  auto result = bs::TradesVerification::verifyUnsignedPayin(payinState, env_->armoryConnection()->testFeePerByte()
                      , settlementAddress.display(), uint64_t(s.amount()));
-                  ASSERT_TRUE(result->success);
+                  ASSERT_TRUE(result->success) << result->errorMsg;
 
                   if (withoutChange_) {
                      ASSERT_EQ(result->totalOutputCount, 1);
@@ -251,7 +239,7 @@ public:
             }
 
             default:
-               ASSERT_TRUE(false);
+               ASSERT_TRUE(false) << std::to_string(request.data_case());
          }
       };
 
