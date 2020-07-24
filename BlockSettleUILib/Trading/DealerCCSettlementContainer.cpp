@@ -126,7 +126,7 @@ bool DealerCCSettlementContainer::startSigning(QDateTime timestamp)
 
       if (result == bs::error::ErrorCode::NoError) {
          emit signTxRequest(orderId_, signedTX.toHexStr());
-         emit completed();
+         emit completed(id());
          // FIXME: Does not work as expected as signedTX txid is different from combined txid
          //wallet_->setTransactionComment(signedTX, txComment());
       }
@@ -134,8 +134,10 @@ bool DealerCCSettlementContainer::startSigning(QDateTime timestamp)
          emit cancelTrade(orderId_.toStdString());
       }
       else {
-         SPDLOG_LOGGER_ERROR(logger_, "failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
-         emit error(result, tr("TX half signing failed: %1").arg(bs::error::ErrorCodeToString(result)));
+         SPDLOG_LOGGER_ERROR(logger_, "failed to sign TX half: {}"
+            , bs::error::ErrorCodeToString(result).toStdString());
+         emit error(id(), result, tr("TX half signing failed: %1")
+            .arg(bs::error::ErrorCodeToString(result)));
          sendFailed();
       }
    };
@@ -209,8 +211,10 @@ void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
 {
    genAddrVerified_ = addressVerified;
    if (!addressVerified) {
-      logger_->warn("[DealerCCSettlementContainer::onGenAddressVerified] counterparty's TX is unverified");
-      emit error(bs::error::ErrorCode::InternalError, tr("Failed to verify counterparty's transaction"));
+      logger_->warn("[DealerCCSettlementContainer::onGenAddressVerified] "
+         "counterparty's TX is unverified");
+      emit error(id(), bs::error::ErrorCode::InternalError
+         , tr("Failed to verify counterparty's transaction"));
       ccWallet_ = nullptr;
       xbtWallet_ = nullptr;
    }
@@ -231,8 +235,7 @@ bool DealerCCSettlementContainer::cancel()
 
    SettlementContainer::releaseUtxoRes();
 
-   emit completed();
-
+   emit timerExpired();
    return true;
 }
 
@@ -245,5 +248,5 @@ std::string DealerCCSettlementContainer::txComment()
 void DealerCCSettlementContainer::sendFailed()
 {
    SettlementContainer::releaseUtxoRes();
-   emit failed();
+   emit failed(id());
 }

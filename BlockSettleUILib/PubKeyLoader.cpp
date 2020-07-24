@@ -35,6 +35,9 @@ BinaryData PubKeyLoader::loadKey(const KeyType kt) const
    case KeyType::CcServer:
       keyString = appSettings_->get<std::string>(ApplicationSettings::ccServerPubKey);
       break;
+   case KeyType::ExtConnector:
+      keyString = appSettings_->get<std::string>(ApplicationSettings::ExtConnPubKey);
+      break;
    }
 
    if (!keyString.empty()) {
@@ -119,6 +122,9 @@ bool PubKeyLoader::saveKey(const KeyType kt, const BinaryData &key)
       break;
    case KeyType::CcServer:
       appSettings_->set(ApplicationSettings::ccServerPubKey, QString::fromStdString(key.toHexStr()));
+      break;
+   case KeyType::ExtConnector:
+      appSettings_->set(ApplicationSettings::ExtConnPubKey, QString::fromStdString(key.toHexStr()));
       break;
    }
    return true;
@@ -222,6 +228,7 @@ QString PubKeyLoader::serverName(const KeyType kt)
       case KeyType::Chat:           return QObject::tr("Chat Server");
       case KeyType::Proxy:          return QObject::tr("Proxy");
       case KeyType::CcServer:       return QObject::tr("CC tracker server");
+      case KeyType::ExtConnector:   return QObject::tr("External Connector");
    }
    return {};
 }

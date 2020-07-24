@@ -154,9 +154,9 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
    }
 }
 
-void RFQDialog::logError(bs::error::ErrorCode code, const QString &errorMessage)
+void RFQDialog::logError(const std::string &id, bs::error::ErrorCode code, const QString &errorMessage)
 {
-   logger_->error("[RFQDialog::logError] {}", errorMessage.toStdString());
+   logger_->error("[RFQDialog::logError] {}: {}", id, errorMessage.toStdString());
 
    if (bs::error::ErrorCode::TxCancelled != code) {
       // Do not use this as the parent as it will be destroyed when RFQDialog is closed
@@ -203,7 +203,8 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
          , requestWidget_, &RFQRequestWidget::cancelXBTTrade);
    }
    catch (const std::exception &e) {
-      logError(bs::error::ErrorCode::InternalError, tr("Failed to create XBT settlement container: %1")
+      logError({}, bs::error::ErrorCode::InternalError
+         , tr("Failed to create XBT settlement container: %1")
          .arg(QString::fromLatin1(e.what())));
    }
 
@@ -248,7 +249,8 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
       connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, ccSettlContainer_.get(), orderUpdatedCb);
    }
    catch (const std::exception &e) {
-      logError(bs::error::ErrorCode::InternalError, tr("Failed to create CC settlement container: %1")
+      logError({}, bs::error::ErrorCode::InternalError
+         , tr("Failed to create CC settlement container: %1")
          .arg(QString::fromLatin1(e.what())));
    }
 

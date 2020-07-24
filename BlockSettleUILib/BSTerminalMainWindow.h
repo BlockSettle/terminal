@@ -326,6 +326,7 @@ private:
    bs::network::BIP15xNewKeyCb   cbApproveChat_{ nullptr };
    bs::network::BIP15xNewKeyCb   cbApproveProxy_{ nullptr };
    bs::network::BIP15xNewKeyCb   cbApproveCcServer_{ nullptr };
+   bs::network::BIP15xNewKeyCb   cbApproveExtConn_{ nullptr };
 
    std::queue<std::function<void(void)>> deferredDialogs_;
    bool deferredDialogRunning_ = false;
@@ -367,7 +368,7 @@ private:
    QLockFile &lockFile_;
 
    bs::network::UserType userType_{};
-
+   std::unique_ptr<DataConnectionListener>   extConnLsn_;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

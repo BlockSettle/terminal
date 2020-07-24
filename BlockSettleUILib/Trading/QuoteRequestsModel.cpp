@@ -940,12 +940,10 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
    settlContainers_[id] = container;
 
    // Use queued connections to not destroy SettlementContainer inside callbacks
-   connect(container.get(), &bs::SettlementContainer::failed, this, [this, id] {
-      deleteSettlement(id);
-   }, Qt::QueuedConnection);
-   connect(container.get(), &bs::SettlementContainer::completed, this, [this, id] {
-      deleteSettlement(id);
-   }, Qt::QueuedConnection);
+   connect(container.get(), &bs::SettlementContainer::failed, this
+      , &QuoteRequestsModel::deleteSettlement, Qt::QueuedConnection);
+   connect(container.get(), &bs::SettlementContainer::completed, this
+      , &QuoteRequestsModel::deleteSettlement, Qt::QueuedConnection);
    connect(container.get(), &bs::SettlementContainer::timerExpired, this, [this, id] {
       deleteSettlement(id);
    }, Qt::QueuedConnection);

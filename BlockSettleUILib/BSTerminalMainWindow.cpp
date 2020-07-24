@@ -129,6 +129,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
       , this, applicationSettings_);
    cbApproveCcServer_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::CcServer
       , this, applicationSettings_);
+   cbApproveExtConn_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::ExtConnector
+      , this, applicationSettings_);
 
    initConnections();
    initArmory();
@@ -2003,9 +2005,41 @@ void BSTerminalMainWindow::InitWidgets()
    quoteProvider->ConnectToCelerClient(celerConnection_);
 
    const auto &logger = logMgr_->logger();
+   ExtConnections extConns;
+   if (!applicationSettings_->get<std::string>(ApplicationSettings::ExtConnName).empty()
+      && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnHost).empty()
+      && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPort).empty()
+      && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPubKey).empty()) {
+      bs::network::BIP15xParams params;
+      params.ephemeralPeers = true;
+      params.cookie = bs::network::BIP15xCookie::ReadServer;
+      params.serverPublicKey = BinaryData::CreateFromHex(applicationSettings_->get<std::string>(
+         ApplicationSettings::ExtConnPubKey));
+      const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger, params);
+      bip15xTransport->setKeyCb(cbApproveExtConn_);
+
+      class ExtConnListener : public DataConnectionListener
+      {
+      public:
+         void OnDataReceived(const std::string &) override {}
+         void OnConnected() override {}
+         void OnDisconnected() override {}
+         void OnError(DataConnectionError) override {}
+      };
+      if (!extConnLsn_) {  // If needed later, this listener can be passed to ScriptRunner
+         extConnLsn_ = std::make_unique<ExtConnListener>();
+      }
+
+      auto wsConnection = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
+      auto connection = std::make_shared<Bip15xDataConnection>(logger, std::move(wsConnection), bip15xTransport);
+      if (connection->openConnection(applicationSettings_->get<std::string>(ApplicationSettings::ExtConnHost)
+         , applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPort), extConnLsn_.get())) {
+         extConns[applicationSettings_->get<std::string>(ApplicationSettings::ExtConnName)] = connection;
+      }
+   }
 
    const auto aqScriptRunner = new AQScriptRunner(quoteProvider, signContainer_
-      , mdCallbacks_, assetManager_, logger, nullptr);
+      , mdCallbacks_, assetManager_, logger, extConns, nullptr);
    autoSignQuoteProvider_ = std::make_shared<AutoSignAQProvider>(logger
       , aqScriptRunner, applicationSettings_, signContainer_, celerConnection_);
 

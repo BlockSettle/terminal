@@ -49,10 +49,10 @@ AQScriptHandler::AQScriptHandler(const std::shared_ptr<QuoteProvider> &quoteProv
    , const std::shared_ptr<SignContainer> &signingContainer
    , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
    , const std::shared_ptr<AssetManager> &assetManager
-   , const std::shared_ptr<spdlog::logger> &logger)
+   , const std::shared_ptr<spdlog::logger> &logger, const ExtConnections &extConns)
    : UserScriptHandler(logger)
    , signingContainer_(signingContainer), mdCallbacks_(mdCallbacks)
-   , assetManager_(assetManager)
+   , assetManager_(assetManager), extConns_(extConns)
    , aqEnabled_(false)
    , aqTimer_(new QTimer(this))
 {
@@ -104,10 +104,12 @@ void AQScriptHandler::reload(const QString &filename)
 
 void AQScriptHandler::onQuoteReqNotification(const bs::network::QuoteReqNotification &qrn)
 {
-   const auto itAQObj = aqObjs_.find(qrn.quoteRequestId);
+   const auto &itAQObj = aqObjs_.find(qrn.quoteRequestId);
    if ((qrn.status == bs::network::QuoteReqNotification::PendingAck) || (qrn.status == bs::network::QuoteReqNotification::Replied)) {
       aqQuoteReqs_[qrn.quoteRequestId] = qrn;
       if ((qrn.assetType != bs::network::Asset::SpotFX) && (!signingContainer_ || signingContainer_->isOffline())) {
+         logger_->error("[AQScriptHandler::onQuoteReqNotification] can't handle"
+            " non-FX quote without online signer");
          return;
       }
       if (aqEnabled_ && aq_ && (itAQObj == aqObjs_.end())) {
@@ -133,13 +135,26 @@ void AQScriptHandler::onQuoteReqNotification(const bs::network::QuoteReqNotifica
          }
       }
    }
-   else {
-      aqQuoteReqs_.erase(qrn.quoteRequestId);
+   else if ((qrn.status == bs::network::QuoteReqNotification::Rejected)
+      || (qrn.status == bs::network::QuoteReqNotification::TimedOut)) {
       if (itAQObj != aqObjs_.end()) {
-         itAQObj->second->deleteLater();
-         aqObjs_.erase(qrn.quoteRequestId);
-         bestQPrices_.erase(qrn.quoteRequestId);
+         const auto replyObj = qobject_cast<BSQuoteReqReply *>(itAQObj->second);
+         if (replyObj) {
+            emit replyObj->cancelled();
+         }
       }
+      stop(qrn.quoteRequestId);
+   }
+}
+
+void AQScriptHandler::stop(const std::string &quoteReqId)
+{
+   const auto &itAQObj = aqObjs_.find(quoteReqId);
+   aqQuoteReqs_.erase(quoteReqId);
+   if (itAQObj != aqObjs_.end()) {
+      itAQObj->second->deleteLater();
+      aqObjs_.erase(itAQObj);
+      bestQPrices_.erase(quoteReqId);
    }
 }
 
@@ -171,10 +186,9 @@ void AQScriptHandler::init(const QString &fileName)
    if (fileName.isEmpty()) {
       return;
    }
-
    aqEnabled_ = false;
 
-   aq_ = new AutoQuoter(logger_, assetManager_, mdCallbacks_, this);
+   aq_ = new AutoQuoter(logger_, assetManager_, mdCallbacks_, extConns_, this);
    if (walletsManager_) {
       aq_->setWalletsManager(walletsManager_);
    }
@@ -322,10 +336,36 @@ void AQScriptHandler::aqTick()
    }
 }
 
+void AQScriptHandler::performOnReplyAndStop(const std::string &quoteReqId
+   , const std::function<void(BSQuoteReqReply *)> &cb)
+{
+   const auto &itAQObj = aqObjs_.find(quoteReqId);
+   if (itAQObj != aqObjs_.end()) {
+      const auto replyObj = qobject_cast<BSQuoteReqReply *>(itAQObj->second);
+      if (replyObj && cb) {
+         cb(replyObj);
+      }
+   }
+   QTimer::singleShot(1000, [this, quoteReqId] { stop(quoteReqId); });
+}
+
+void AQScriptHandler::cancelled(const std::string &quoteReqId)
+{
+   performOnReplyAndStop(quoteReqId, [](BSQuoteReqReply *replyObj) {
+      emit replyObj->cancelled();
+   });
+}
+
+void AQScriptHandler::settled(const std::string &quoteReqId)
+{
+   performOnReplyAndStop(quoteReqId, [](BSQuoteReqReply *replyObj) {
+      emit replyObj->settled();
+   });
+}
+
 //
 // UserScriptRunner
 //
-
 UserScriptRunner::UserScriptRunner(const std::shared_ptr<spdlog::logger> &logger
    , UserScriptHandler *script, QObject *parent)
    : QObject(parent)
@@ -371,9 +411,9 @@ AQScriptRunner::AQScriptRunner(const std::shared_ptr<QuoteProvider> &quoteProvid
    , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
    , const std::shared_ptr<AssetManager> &assetManager
    , const std::shared_ptr<spdlog::logger> &logger
-   , QObject *parent)
+   , const ExtConnections &extConns, QObject *parent)
    : UserScriptRunner(logger, new AQScriptHandler(quoteProvider, signingContainer,
-      mdCallbacks, assetManager, logger), parent)
+      mdCallbacks, assetManager, logger, extConns), parent)
 {
    thread_->setObjectName(QStringLiteral("AQScriptRunner"));
 
@@ -384,6 +424,22 @@ AQScriptRunner::AQScriptRunner(const std::shared_ptr<QuoteProvider> &quoteProvid
 }
 
 AQScriptRunner::~AQScriptRunner() = default;
+
+void AQScriptRunner::cancelled(const std::string &quoteReqId)
+{
+   const auto aqHandler = qobject_cast<AQScriptHandler *>(script_);
+   if (aqHandler) {
+      aqHandler->cancelled(quoteReqId);
+   }
+}
+
+void AQScriptRunner::settled(const std::string &quoteReqId)
+{
+   const auto aqHandler = qobject_cast<AQScriptHandler *>(script_);
+   if (aqHandler) {
+      aqHandler->settled(quoteReqId);
+   }
+}
 
 
 RFQScriptHandler::RFQScriptHandler(const std::shared_ptr<spdlog::logger> &logger

@@ -85,11 +85,14 @@ public:
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<MDCallbacksQt> &
       , const std::shared_ptr<AssetManager> &
-      , const std::shared_ptr<spdlog::logger> &);
+      , const std::shared_ptr<spdlog::logger> &, const ExtConnections &);
    ~AQScriptHandler() noexcept override;
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &) override;
    void reload(const QString &filename) override;
+
+   void cancelled(const std::string &quoteReqId);
+   void settled(const std::string &quoteReqId);
 
 signals:
    void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
@@ -116,12 +119,16 @@ private slots:
 
 private:
    void clear();
+   void stop(const std::string &quoteReqId);
+   void performOnReplyAndStop(const std::string &quoteReqId
+      , const std::function<void(BSQuoteReqReply *)> &);
 
 private:
    AutoQuoter *aq_ = nullptr;
    std::shared_ptr<SignContainer>            signingContainer_;
    std::shared_ptr<MDCallbacksQt>            mdCallbacks_;
    std::shared_ptr<AssetManager> assetManager_;
+   const ExtConnections          extConns_;
 
    std::unordered_map<std::string, QObject*> aqObjs_;
    std::unordered_map<std::string, bs::network::QuoteReqNotification> aqQuoteReqs_;
@@ -212,8 +219,11 @@ public:
       const std::shared_ptr<MDCallbacksQt> &,
       const std::shared_ptr<AssetManager> &,
       const std::shared_ptr<spdlog::logger> &,
-      QObject *parent);
+      const ExtConnections &, QObject *parent);
    ~AQScriptRunner() noexcept override;
+
+   void cancelled(const std::string &quoteReqId);
+   void settled(const std::string &quoteReqId);
 
 signals:
    void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
