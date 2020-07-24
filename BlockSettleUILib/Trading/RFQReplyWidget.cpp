@@ -311,7 +311,12 @@ void RFQReplyWidget::onResetCurrentReservation(const std::shared_ptr<SubmitQuote
 
 void RFQReplyWidget::onOrder(const bs::network::Order &order)
 {
+   const auto &quoteReqId = quoteProvider_->getQuoteReqId(order.quoteId);
    if (order.assetType == bs::network::Asset::SpotFX) {
+      if (order.status == bs::network::Order::Filled) {
+         onSettlementComplete(quoteReqId);
+         quoteProvider_->delQuoteReqId(quoteReqId);
+      }
       return;
    }
 
@@ -320,7 +325,6 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
 
    if (order.status == bs::network::Order::Pending) {
       if (order.assetType == bs::network::Asset::PrivateMarket) {
-         const auto &quoteReqId = quoteProvider_->getQuoteReqId(order.quoteId);
          if (quoteReqId.empty()) {
             SPDLOG_LOGGER_ERROR(logger_, "quoteReqId is empty for {}", order.quoteId);
             return;
@@ -428,7 +432,6 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
          }
       }
    } else {
-      const auto &quoteReqId = quoteProvider_->getQuoteReqId(order.quoteId);
       if (!quoteReqId.empty()) {
          sentCCReplies_.erase(quoteReqId);
          quoteProvider_->delQuoteReqId(quoteReqId);
@@ -527,7 +530,10 @@ void RFQReplyWidget::onCancelCCTrade(const std::string& clientOrderId)
 void RFQReplyWidget::onSettlementComplete(const std::string &id)
 {
    const auto &itReqId = settlementToReplyIds_.find(id);
-   if (itReqId != settlementToReplyIds_.end()) {
+   if (itReqId == settlementToReplyIds_.end()) {
+      ((AQScriptRunner *)autoSignProvider_->scriptRunner())->settled(id);  // FX settlement
+   }
+   else {
       ((AQScriptRunner *)autoSignProvider_->scriptRunner())->settled(itReqId->second);
    }
 }

@@ -135,7 +135,8 @@ void AQScriptHandler::onQuoteReqNotification(const bs::network::QuoteReqNotifica
          }
       }
    }
-   else if (qrn.status != bs::network::QuoteReqNotification::Replied) {
+   else if ((qrn.status == bs::network::QuoteReqNotification::Rejected)
+      || (qrn.status == bs::network::QuoteReqNotification::TimedOut)) {
       if (itAQObj != aqObjs_.end()) {
          const auto replyObj = qobject_cast<BSQuoteReqReply *>(itAQObj->second);
          if (replyObj) {

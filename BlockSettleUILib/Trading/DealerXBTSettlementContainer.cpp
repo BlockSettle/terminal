@@ -426,6 +426,11 @@ void DealerXBTSettlementContainer::onSignedPayinRequested(const std::string& set
       return;
    }
 
+   if (usedPayinHash_.empty()) {
+      logger_->warn("[DealerXBTSettlementContainer::onSignedPayinRequested] "
+         "previously saved payin hash was empty");
+      usedPayinHash_ = payinHash;
+   }
    if (payinHash.empty() || (usedPayinHash_ != payinHash)) {
       SPDLOG_LOGGER_ERROR(logger_, "payin hash mismatch: {} vs {}"
          , usedPayinHash_.toHexStr(true), payinHash.toHexStr(true));
