@@ -129,7 +129,7 @@ private:
    unsigned int   payinSignId_ = 0;
    unsigned int   payoutSignId_ = 0;
 
-   BinaryData        usedPayinHash_;
+   BinaryData        expectedPayinHash_;
 
    std::vector<UTXO> utxosPayinFixed_;
    bs::Address       recvAddr_;

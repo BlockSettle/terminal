@@ -220,7 +220,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int idReq, BinaryData sig
       bs::tradeutils::PayoutVerifyArgs verifyArgs;
       verifyArgs.signedTx = signedTX;
       verifyArgs.settlAddr = settlAddr_;
-      verifyArgs.usedPayinHash = usedPayinHash_;
+      verifyArgs.usedPayinHash = expectedPayinHash_;
       verifyArgs.amount = bs::XBTAmount(amount_);
       auto verifyResult = bs::tradeutils::verifySignedPayout(verifyArgs);
       if (!verifyResult.success) {
@@ -268,7 +268,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int idReq, BinaryData sig
             throw std::runtime_error("uninited TX");
          }
 
-         if (tx.getThisHash() != usedPayinHash_) {
+         if (tx.getThisHash() != expectedPayinHash_) {
             failWithErrorText(tr("payin hash mismatch"), bs::error::ErrorCode::TxInvalidRequest);
             return;
          }
@@ -369,7 +369,7 @@ void DealerXBTSettlementContainer::onSignedPayoutRequested(const std::string& se
       return;
    }
 
-   usedPayinHash_ = payinHash;
+   expectedPayinHash_ = payinHash;
 
    bs::tradeutils::PayoutArgs args;
    initTradesArgs(args, settlementId);
@@ -426,17 +426,12 @@ void DealerXBTSettlementContainer::onSignedPayinRequested(const std::string& set
       return;
    }
 
-   if (usedPayinHash_.empty()) {
-      logger_->warn("[DealerXBTSettlementContainer::onSignedPayinRequested] "
-         "previously saved payin hash was empty");
-      usedPayinHash_ = payinHash;
-   }
-   if (payinHash.empty() || (usedPayinHash_ != payinHash)) {
-      SPDLOG_LOGGER_ERROR(logger_, "payin hash mismatch: {} vs {}"
-         , usedPayinHash_.toHexStr(true), payinHash.toHexStr(true));
-      failWithErrorText(tr("pay-in hash mismatch"), bs::error::ErrorCode::TxInvalidRequest);
+   if (payinHash.empty()) {
+      failWithErrorText(tr("Invalid Sign Pay-In request"), bs::error::ErrorCode::InternalError);
       return;
    }
+
+   expectedPayinHash_ = payinHash;
 
    startTimer(kWaitTimeoutInSec);
 
