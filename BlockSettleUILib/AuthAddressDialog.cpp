@@ -410,6 +410,7 @@ void AuthAddressDialog::updateEnabledStates()
             ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.empty() && allowSubmit);
             ui_->pushButtonDefault->setEnabled(false);
             break;
+         case AuthAddressManager::AuthAddressState::Submitted:
          case AuthAddressManager::AuthAddressState::Tainted:
          case AuthAddressManager::AuthAddressState::Verifying:
          case AuthAddressManager::AuthAddressState::Revoked:
