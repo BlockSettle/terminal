@@ -15,7 +15,9 @@
 #include "BinaryData.h"
 #include "BsClient.h"
 #include "ValidityFlag.h"
+
 #include <memory>
+
 #include <QDialog>
 #include <QPointer>
 
@@ -89,7 +91,7 @@ private:
 
 private:
    std::unique_ptr<Ui::AuthAddressDialog> ui_;
-   std::shared_ptr<spdlog::logger> logger_;
+   std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<AuthAddressManager>    authAddressManager_;
    std::shared_ptr<AssetManager>          assetManager_;
    std::shared_ptr<ApplicationSettings>   settings_;
