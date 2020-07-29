@@ -59,6 +59,7 @@ namespace Blocksettle {
    namespace Communication {
       namespace ProxyTerminalPb {
          class Response;
+         class Response_UpdateOrders;
       }
    }
 }

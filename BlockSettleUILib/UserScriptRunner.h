@@ -15,10 +15,11 @@
 #include <QObject>
 #include <QTimer>
 
-#include <unordered_map>
+#include <deque>
 #include <memory>
-#include <string>
 #include <mutex>
+#include <string>
+#include <unordered_map>
 
 #include "UserScript.h"
 #include "QuoteProvider.h"
@@ -33,6 +34,7 @@ namespace bs {
       class WalletsManager;
    }
 }
+class DataConnectionListener;
 class MDCallbacksQt;
 class RFQScript;
 class SignContainer;
@@ -85,14 +87,16 @@ public:
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<MDCallbacksQt> &
       , const std::shared_ptr<AssetManager> &
-      , const std::shared_ptr<spdlog::logger> &, const ExtConnections &);
+      , const std::shared_ptr<spdlog::logger> &);
    ~AQScriptHandler() noexcept override;
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &) override;
+   void setExtConnections(const ExtConnections &conns);
    void reload(const QString &filename) override;
 
    void cancelled(const std::string &quoteReqId);
    void settled(const std::string &quoteReqId);
+   void extMsgReceived(const std::string &data);
 
 signals:
    void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
@@ -128,13 +132,21 @@ private:
    std::shared_ptr<SignContainer>            signingContainer_;
    std::shared_ptr<MDCallbacksQt>            mdCallbacks_;
    std::shared_ptr<AssetManager> assetManager_;
-   const ExtConnections          extConns_;
+   ExtConnections                extConns_;
 
    std::unordered_map<std::string, QObject*> aqObjs_;
    std::unordered_map<std::string, bs::network::QuoteReqNotification> aqQuoteReqs_;
    std::unordered_map<std::string, double>   bestQPrices_;
 
    std::unordered_map<std::string, bs::network::MDInfo>  mdInfo_;
+
+   struct ExtMessage {
+      QString  from;
+      QString  type;
+      QString  msg;
+   };
+   std::deque<ExtMessage>  extDataPool_;
+   const size_t maxExtDataPoolSize_{ 16 };
 
    bool aqEnabled_;
    QTimer *aqTimer_;
@@ -214,20 +226,26 @@ class AQScriptRunner : public UserScriptRunner
 {
    Q_OBJECT
 public:
-   AQScriptRunner(const std::shared_ptr<QuoteProvider> &,
-      const std::shared_ptr<SignContainer> &,
-      const std::shared_ptr<MDCallbacksQt> &,
-      const std::shared_ptr<AssetManager> &,
-      const std::shared_ptr<spdlog::logger> &,
-      const ExtConnections &, QObject *parent);
+   AQScriptRunner(const std::shared_ptr<QuoteProvider> &
+      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<MDCallbacksQt> &
+      , const std::shared_ptr<AssetManager> &
+      , const std::shared_ptr<spdlog::logger> &, QObject *parent = nullptr);
    ~AQScriptRunner() noexcept override;
 
    void cancelled(const std::string &quoteReqId);
    void settled(const std::string &quoteReqId);
 
+   void setExtConnections(const ExtConnections &);
+   std::shared_ptr<DataConnectionListener> getExtConnListener();
+   void onExtDataReceived(const std::string &data);
+
 signals:
    void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
    void sendQuote(const bs::network::QuoteReqNotification &qrn, double price);
+
+private:
+   std::shared_ptr<DataConnectionListener>   extConnListener_;
 };
 
 class RFQScriptRunner : public UserScriptRunner

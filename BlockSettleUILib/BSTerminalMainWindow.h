@@ -368,7 +368,6 @@ private:
    QLockFile &lockFile_;
 
    bs::network::UserType userType_{};
-   std::unique_ptr<DataConnectionListener>   extConnLsn_;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

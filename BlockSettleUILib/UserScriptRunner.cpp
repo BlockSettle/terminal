@@ -10,13 +10,16 @@
 */
 
 #include "UserScriptRunner.h"
-#include "SignContainer.h"
-#include "MDCallbacksQt.h"
-#include "UserScript.h"
-#include "Wallets/SyncWalletsManager.h"
-#include <spdlog/spdlog.h>
+#include <QJsonObject>
+#include <QJsonDocument>
 #include <QThread>
 #include <QTimer>
+#include <spdlog/spdlog.h>
+#include "DataConnectionListener.h"
+#include "MDCallbacksQt.h"
+#include "SignContainer.h"
+#include "UserScript.h"
+#include "Wallets/SyncWalletsManager.h"
 
 
 //
@@ -49,10 +52,10 @@ AQScriptHandler::AQScriptHandler(const std::shared_ptr<QuoteProvider> &quoteProv
    , const std::shared_ptr<SignContainer> &signingContainer
    , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
    , const std::shared_ptr<AssetManager> &assetManager
-   , const std::shared_ptr<spdlog::logger> &logger, const ExtConnections &extConns)
+   , const std::shared_ptr<spdlog::logger> &logger)
    : UserScriptHandler(logger)
    , signingContainer_(signingContainer), mdCallbacks_(mdCallbacks)
-   , assetManager_(assetManager), extConns_(extConns)
+   , assetManager_(assetManager)
    , aqEnabled_(false)
    , aqTimer_(new QTimer(this))
 {
@@ -93,6 +96,11 @@ void AQScriptHandler::setWalletsManager(const std::shared_ptr<bs::sync::WalletsM
    if (aq_) {
       aq_->setWalletsManager(walletsManager);
    }
+}
+
+void AQScriptHandler::setExtConnections(const ExtConnections &conns)
+{
+   extConns_ = conns;
 }
 
 void AQScriptHandler::reload(const QString &filename)
@@ -278,6 +286,10 @@ void AQScriptHandler::onMDUpdate(bs::network::Asset::Type, const QString &securi
          reqReply->setLastPrice(mdInfo.lastPrice);
       }
       reqReply->start();
+
+      for (const auto &extMsg : extDataPool_) {
+         emit reqReply->extDataReceived(extMsg.from, extMsg.type, extMsg.msg);
+      }
    }
 }
 
@@ -363,6 +375,42 @@ void AQScriptHandler::settled(const std::string &quoteReqId)
    });
 }
 
+void AQScriptHandler::extMsgReceived(const std::string &data)
+{
+   QJsonParseError jsonError;
+   const auto &jsonDoc = QJsonDocument::fromJson(QByteArray::fromStdString(data)
+      , &jsonError);
+   if (jsonError.error != QJsonParseError::NoError) {
+      logger_->error("[AQScriptRunner::onExtDataReceived] invalid JSON message: {}"
+         , jsonError.errorString().toUtf8().toStdString());
+      return;
+   }
+   const auto &jsonObj = jsonDoc.object();
+   const auto &strFrom = jsonObj[QLatin1Literal("from")].toString();
+   const auto &strType = jsonObj[QLatin1Literal("type")].toString();
+   const auto &msgObj = jsonObj[QLatin1Literal("message")].toObject();
+   QJsonDocument msgDoc(msgObj);
+   const auto &strMsg = QString::fromStdString(msgDoc.toJson(QJsonDocument::Compact).toStdString());
+   if (strFrom.isEmpty() || strType.isEmpty() || msgObj.isEmpty()) {
+      logger_->error("[AQScriptRunner::onExtDataReceived] invalid data in JSON: {}"
+         , data);
+      return;
+   }
+
+   extDataPool_.push_back({strFrom, strType, strMsg});
+   while (extDataPool_.size() > maxExtDataPoolSize_) {
+      extDataPool_.pop_front();
+   }
+
+   for (const auto &aqObj : aqObjs_) {
+      const auto replyObj = qobject_cast<BSQuoteReqReply *>(aqObj.second);
+      if (replyObj) {
+         emit replyObj->extDataReceived(strFrom, strType, strMsg);
+      }
+   }
+}
+
+
 //
 // UserScriptRunner
 //
@@ -411,9 +459,9 @@ AQScriptRunner::AQScriptRunner(const std::shared_ptr<QuoteProvider> &quoteProvid
    , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
    , const std::shared_ptr<AssetManager> &assetManager
    , const std::shared_ptr<spdlog::logger> &logger
-   , const ExtConnections &extConns, QObject *parent)
+   , QObject *parent)
    : UserScriptRunner(logger, new AQScriptHandler(quoteProvider, signingContainer,
-      mdCallbacks, assetManager, logger, extConns), parent)
+      mdCallbacks, assetManager, logger), parent)
 {
    thread_->setObjectName(QStringLiteral("AQScriptRunner"));
 
@@ -438,6 +486,51 @@ void AQScriptRunner::settled(const std::string &quoteReqId)
    const auto aqHandler = qobject_cast<AQScriptHandler *>(script_);
    if (aqHandler) {
       aqHandler->settled(quoteReqId);
+   }
+}
+
+class ExtConnListener : public DataConnectionListener
+{
+public:
+   ExtConnListener(AQScriptRunner *parent, std::shared_ptr<spdlog::logger> &logger)
+      : parent_(parent), logger_(logger)
+   {}
+
+   void OnDataReceived(const std::string &data) override
+   {
+      parent_->onExtDataReceived(data);
+   }
+
+   void OnConnected() override { logger_->debug("[{}]", __func__); }
+   void OnDisconnected() override { logger_->debug("[{}]", __func__); }
+   void OnError(DataConnectionError err) override { logger_->debug("[{}] {}", __func__, (int)err); }
+
+private:
+   AQScriptRunner *parent_{nullptr};
+   std::shared_ptr<spdlog::logger>  logger_;
+};
+
+void AQScriptRunner::setExtConnections(const ExtConnections &conns)
+{
+   const auto aqHandler = qobject_cast<AQScriptHandler *>(script_);
+   if (aqHandler) {
+      aqHandler->setExtConnections(conns);
+   }
+}
+
+std::shared_ptr<DataConnectionListener> AQScriptRunner::getExtConnListener()
+{
+   if (!extConnListener_) {
+      extConnListener_ = std::make_shared<ExtConnListener>(this, logger_);
+   }
+   return extConnListener_;
+}
+
+void AQScriptRunner::onExtDataReceived(const std::string &data)
+{
+   const auto aqHandler = qobject_cast<AQScriptHandler *>(script_);
+   if (aqHandler) {
+      aqHandler->extMsgReceived(data);
    }
 }
 

@@ -27,58 +27,135 @@ BSQuoteReqReply {
     */
 
     property var initialPrice: 0.0
-    property var directionInvoked: false
-    property var directionSign: 1
-    property var priceIncrement: 0.0001 // in percent
+    property var prcIncrement: 0.005 // in percent
+    property var priceIncrement: 0.01
     property var finalPrice: 0.0
+    property var hedgePrice: 0.0
 
-    property var tradeRules: [
-        'EUR/XBT',
-        'PLN/XBT',
-        'EUR/USD',
-        'EUR/GBP'
+    property var ccInstruments: [
+        'LOL/XBT',
+        'POC/XBT'
+    ]
+    property var xbtInstruments: [
+        'XBT/CAD',
+        'XBT/EUR',
+        'XBT/GBP',
+        'XBT/PLN'
     ]
 
 
     onBestPriceChanged: {
-        if (tradeRules.indexOf(security) === -1) return;
-        finalPrice = addIncrementToFXPrice(bestPrice);
+        log('new best price: ' + bestPrice)
+        if (bestPrice === finalPrice)  return   // our quote
 
-        if (!checkPrice(finalPrice))  return
-        if (!checkBalance(quoteReq.quantity * finalPrice, security.split("/")[1])) return
+        if (hedgePrice) {
+            if (quoteReq.isBuy) {
+                if (bestPrice > hedgePrice) {
+                    sendPrice(hedgePrice)
+                }
+                else {
+                    log("give up - best price too low: " + bestPrice + " vs " + hedgePrice)
+                }
+            }
+            else {
+                if (bestPrice < hedgePrice) {
+                    sendPrice(hedgePrice)
+                }
+                else {
+                    log("give up - best price too high: " + bestPrice + " vs " + hedgePrice)
+                }
+            }
+        }
 
-        sendPrice(finalPrice)
+/*        var price = calcInitialPrice();
+
+        if (!checkPrice(price))  return
+        if (!checkBalance(quoteReq.quantity * price, security.split("/")[1])) return
+
+        sendPrice(price)*/
     }
+
     onExpirationInSecChanged: {
-        if (tradeRules.indexOf(security) === -1) return;
-        if (initialPrice) return;
-        finalPrice = countInitialPrice();
+/*        if (initialPrice) return;
+        var price = countInitialPrice();
 
-        if (!checkPrice(finalPrice))  return
-        if (!checkBalance(quoteReq.quantity * finalPrice, security.split("/")[1])) return // check balance
-        log('#set first price: ' + finalPrice)
-        sendPrice(finalPrice)
-
+        if (!checkPrice(price))  return
+        if (!checkBalance(quoteReq.quantity * price, security.split("/")[1])) return // check balance
+        log('#set first price: ' + price)
+        sendPrice(price)*/
     }
     onIndicBidChanged: {
-        log('#new indic bid: ' + indicBid)
         onBidOrAskChanged();
     }
     onIndicAskChanged: {
-        log('#new indic ask: ' + indicAsk)
         onBidOrAskChanged();
+    }
+
+    onExtDataReceived: {
+//        log('from: ' + from + ', type: ' + type + ', msg:\n' + msg)
+        if ((from === 'LMAX') && (type === 'mdprices')) {
+            var msgObj = JSON.parse(msg)
+            onLMAXprices(msgObj)
+        }
     }
     
     onSettled: {
-	log(security + ' settled at ' + finalPrice)
-        var orderBuy = quoteReq.isBuy ? 'true' : 'false'
-        var order = '{"symbol":"' + security + '","buy":' + orderBuy
-		+ ', "amount":' + quoteReq.quantity + ', "price":'
-		+ finalPrice + '}'
-	log('sending order: ' + order)
+        if (!(ccInstruments.indexOf(security) === -1)) return;
+        log(security + ' settled at ' + finalPrice)
+        sendHedgeOrder(hedgePrice)
     }
 
-    function checkPrice(price) {
+    function onLMAXprices(msgObj)
+    {
+        for (var i in msgObj.prices) {
+            var priceObj = msgObj.prices[i]
+            if (priceObj.symbol === security) {
+                onLMAXprice(priceObj)
+            }
+        }
+    }
+
+    function onLMAXprice(priceObj)
+    {
+        if (quoteReq.isBuy) {
+            hedgePrice = priceObj.ask * (1.0 + prcIncrement)
+        }
+        else {
+            hedgePrice = priceObj.bid * (1.0 - prcIncrement)
+        }
+
+        var price = 0.0
+        if (bestPrice && (bestPrice != finalPrice)) {   // at least one quote exists
+            if (quoteReq.isBuy) {                       // and it's not ours
+                if ((bestPrice < hedgePrice) && (finalPrice < bestPrice)) {
+                    price = Math.min(bestPrice + priceIncrement, hedgePrice)
+                }
+            }
+            else {
+                if ((bestPrice > hedgePrice) && (finalPrice > bestPrice)) {
+                    price = Math.max(hedgePrice, bestPrice - priceIncrement)
+                }
+            }
+            if (price) {
+                log("beating competitor")
+                sendPrice(price)
+            }
+        }
+        else if (bestPrice && (bestPrice === finalPrice)) {}    // do nothing
+        else {  // no quote was sent before
+            if (quoteReq.isBuy) {
+                price = priceObj.ask * (1.0 + 3 * prcIncrement)
+            }
+            else {
+                price = priceObj.bid * (1.0 - 3 * prcIncrement)
+            }
+            log("sending first RFQ response")
+            sendPrice(price)
+        }
+    }
+
+    function checkPrice(price)
+    {
         if (initialPrice){
             if (!isContraCur()){
                 if (quoteReq.isBuy && price < indicAsk * ((100.00 + shiftLimitFromIndicPrice * direction()) / 100.00)) return false;
@@ -95,29 +172,30 @@ BSQuoteReqReply {
         return true
     }
 
-    function isContraCur(){
+    function isContraCur()
+    {
         if( typeof isContraCur.value == 'undefined' ) {
             isContraCur.value = (security.split("/")[1] === quoteReq.product);
         }
         return isContraCur.value;
     }
 
-    function onBidOrAskChanged(){
-        log ("security: " + security)
-        if (tradeRules.indexOf(security) === -1) return;
+    function onBidOrAskChanged()
+    {
+/*        log ("security: " + security)
         if (initialPrice) return;
         log ("direction: " + direction())
-        finalPrice = countInitialPrice();
-
-        log ("set new price: "+ finalPrice)
-        if (!checkPrice(finalPrice))  return
+        var price = countInitialPrice();
+        log ("set new price: "+ price)
+        if (!checkPrice(price))  return
         log("price is OK");
-        if (!checkBalance(quoteReq.quantity * finalPrice, security.split("/")[1])) return // check balance
+        if (!checkBalance(quoteReq.quantity * price, security.split("/")[1])) return // check balance
         log("balance is OK");
-        sendPrice(finalPrice)
+        sendPrice(price)*/
     }
 
-    function checkBalance(value, product) {
+    function checkBalance(value, product)
+    {
         var balance = accountBalance(product)
         if (value > balance) {
             log("Not enough balance for " + product + ": " + value + " > " + balance)
@@ -126,36 +204,53 @@ BSQuoteReqReply {
         return true
     }
 
-    function countInitialPrice(){
-        var indicChoose = 0;
-        if (quoteReq.isBuy){
-            if (!isContraCur()){
-                indicChoose = indicAsk ;
-            } else {
-                indicChoose = indicBid ;
-            }
-        } else {
-            if (!isContraCur()){
-                indicChoose =  indicBid;
-            } else {
-                indicChoose = indicAsk;
-            }
+    function sendPrice(price)
+    {
+        if (finalPrice === price) {
+            log('price ' + price + ' not changed')
+            return
         }
-
-        log("count initital price: " + indicChoose * ((100.00 + firstShiftFromIndicPrice * direction()) / 100.00));
-        return indicChoose * ((100.00 + firstShiftFromIndicPrice * direction()) / 100.00);
-    }
-
-    function sendPrice(price) {
-        if (!initialPrice){
+        finalPrice = price
+        if (!initialPrice) {
             initialPrice = price
         }
 
+        if (quoteReq.isBuy) {
+            if (!checkBalance(quoteReq.quantity * price, security.split("/")[1])) return
+        }
+        else {
+            if (!checkBalance(quoteReq.quantity, security.split("/")[0])) return
+        }
+
+        log('sending new reply: ' + price)
         sendQuoteReply(price)
     }
 
-    function addIncrementToFXPrice(price){
+    function sendHedgeOrder(price)
+    {
+        if (ccInstruments.indexOf(security) != -1) return
+        if (xbtInstruments.indexOf(security) != -1) {
+            if ((quoteReq.quantity > 1.0) || (quoteReq.quantity < 0.01)) {
+                log('XBT amount is out of limits: ' + quoteReq.quantity)
+                return
+            }
+        }
+        else {
+            if (quoteReq.quantity < 1000) {
+                log('FX amount is too low - not hedging it atm')
+                return
+            }
+        }
 
+        var orderBuy = quoteReq.isBuy ? 'true' : 'false'
+        var order = '{"symbol":"' + security + '", "buy":' + orderBuy
+            + ', "amount":' + quoteReq.quantity + ', "price":' + price + '}'
+        log('sending order: ' + order)
+        sendExtConn('LMAX', 'order', order)
+    }
+
+    function addIncrementToFXPrice(price)
+    {
         const baseIncrement = 0.0001;
         const incrementInPercent = 0.01;
 
@@ -167,7 +262,8 @@ BSQuoteReqReply {
         }
     }
 
-    function direction() {
+    function direction()
+    {
         if( typeof direction.value == 'undefined' ) {
             if ((quoteReq.isBuy && !isContraCur()) || (!quoteReq.isBuy && isContraCur())) {
                 direction.value = 1;
