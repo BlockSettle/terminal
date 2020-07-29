@@ -1581,6 +1581,8 @@ void BSTerminalMainWindow::onAccountTypeChanged(bs::network::UserType userType, 
       NotificationCenter::notify(enabled ? bs::ui::NotifyType::AccountEnabled : bs::ui::NotifyType::AccountDisabled, {});
    }
 
+   authManager_->setUserType(userType);
+
    ui_->widgetChat->setUserType(enabled ? userType : bs::network::UserType::Chat);
 }
 

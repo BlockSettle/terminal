@@ -136,7 +136,7 @@ private:
    bs::Address       dealerAuthAddress_;
 
    bs::core::wallet::TXSignRequest        unsignedPayinRequest_;
-   BinaryData                    usedPayinHash_;
+   BinaryData                    expectedPayinHash_;
    std::map<UTXO, std::string>   utxosPayinFixed_;
 
    bool tradeCancelled_ = false;

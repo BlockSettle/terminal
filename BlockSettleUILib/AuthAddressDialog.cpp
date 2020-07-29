@@ -402,8 +402,7 @@ void AuthAddressDialog::updateEnabledStates()
    if (selectionModel->hasSelection()) {
       const auto address = model_->getAddress(selectionModel->selectedRows()[0]);
 
-      auto tradeSettings = authAddressManager_->tradeSettings();
-      const bool allowSubmit = authAddressManager_->GetSubmittedAddressList(false).size() < tradeSettings->authSubmitAddressLimit;
+      const bool allowSubmit = authAddressManager_->UserCanSubmitAuthAddress();
 
       switch (authAddressManager_->GetState(address)) {
          case AuthAddressManager::AuthAddressState::NotSubmitted:
@@ -411,6 +410,7 @@ void AuthAddressDialog::updateEnabledStates()
             ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.empty() && allowSubmit);
             ui_->pushButtonDefault->setEnabled(false);
             break;
+         case AuthAddressManager::AuthAddressState::Submitted:
          case AuthAddressManager::AuthAddressState::Tainted:
          case AuthAddressManager::AuthAddressState::Verifying:
          case AuthAddressManager::AuthAddressState::Revoked:

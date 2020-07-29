@@ -240,7 +240,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int idReq, BinaryData signed
       bs::tradeutils::PayoutVerifyArgs verifyArgs;
       verifyArgs.signedTx = signedTX;
       verifyArgs.settlAddr = settlAddr_;
-      verifyArgs.usedPayinHash = usedPayinHash_;
+      verifyArgs.usedPayinHash = expectedPayinHash_;
       verifyArgs.amount = bs::XBTAmount(amount_);
       auto verifyResult = bs::tradeutils::verifySignedPayout(verifyArgs);
       if (!verifyResult.success) {
@@ -286,7 +286,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int idReq, BinaryData signed
             throw std::runtime_error("uninited TX");
          }
 
-         if (tx.getThisHash() != usedPayinHash_) {
+         if (tx.getThisHash() != expectedPayinHash_) {
             emit cancelWithError(tr("payin hash mismatch"), bs::error::ErrorCode::TxInvalidRequest);
             return;
          }
@@ -406,7 +406,7 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
    startTimer(kWaitTimeoutInSec);
 
    SPDLOG_LOGGER_DEBUG(logger_, "create payout for {} on {} for {}", settlementId, payinHash.toHexStr(), amount_);
-   usedPayinHash_ = payinHash;
+   expectedPayinHash_ = payinHash;
 
    bs::tradeutils::PayoutArgs args;
    initTradesArgs(args, settlementId);
@@ -466,18 +466,12 @@ void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settle
    }
 
    if (payinHash.empty()) {
-      SPDLOG_LOGGER_WARN(logger_, "empty payin hash - either PB or Proxy update"
-         " is required");
-      emit error(id(), bs::error::ErrorCode::TxInvalidRequest
-         , tr("empty payin hash in request"));
-   }
-   if (usedPayinHash_ != payinHash) {
-      SPDLOG_LOGGER_ERROR(logger_, "invalid payin hash: {} - {} expected"
-         , usedPayinHash_.toHexStr(true), payinHash.toHexStr(true));
-      emit error(id(), bs::error::ErrorCode::TxInvalidRequest
-         , tr("payin hash mismatch"));
+      logger_->error("[ReqXBTSettlementContainer::onSignedPayinRequested] missing expected payin hash");
+      emit cancelWithError(tr("payin hash mismatch"), bs::error::ErrorCode::TxInvalidRequest);
       return;
    }
+
+   expectedPayinHash_ = payinHash;
 
    startTimer(kWaitTimeoutInSec);
 
