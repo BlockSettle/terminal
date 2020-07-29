@@ -64,11 +64,18 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
       throw std::invalid_argument("invalid requester transaction");
    }
 
+   init(armory.get());
+   settlWallet_ = armory->instantiateWallet(order_.clOrderId);
+
    connect(this, &DealerCCSettlementContainer::genAddressVerified, this
       , &DealerCCSettlementContainer::onGenAddressVerified, Qt::QueuedConnection);
 }
 
-DealerCCSettlementContainer::~DealerCCSettlementContainer() = default;
+DealerCCSettlementContainer::~DealerCCSettlementContainer()
+{
+   settlWallet_->unregister();
+   cleanup();
+}
 
 bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData(QDateTime timestamp) const
 {
@@ -108,6 +115,20 @@ bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData(Q
    return dialogData;
 }
 
+void DealerCCSettlementContainer::onZCReceived(const std::string &
+   , const std::vector<bs::TXEntry> &entries)
+{
+   if (expectedTxId_.empty()) {
+      return;
+   }
+   for (const auto &entry : entries) {
+      if (entry.txHash == expectedTxId_) {
+         emit completed(id());
+         break;
+      }
+   }
+}
+
 bool DealerCCSettlementContainer::startSigning(QDateTime timestamp)
 {
    if (!ccWallet_ || !xbtWallet_) {
@@ -116,7 +137,9 @@ bool DealerCCSettlementContainer::startSigning(QDateTime timestamp)
       return false;
    }
 
-   const auto &cbTx = [this, handle = validityFlag_.handle(), logger = logger_](bs::error::ErrorCode result, const BinaryData &signedTX) {
+   const auto &cbTx = [this, handle = validityFlag_.handle(), logger = logger_]
+      (bs::error::ErrorCode result, const BinaryData &signedTX)
+   {
       if (!handle.isValid()) {
          SPDLOG_LOGGER_ERROR(logger, "failed to sign TX half, already destroyed");
          return;
@@ -126,7 +149,17 @@ bool DealerCCSettlementContainer::startSigning(QDateTime timestamp)
 
       if (result == bs::error::ErrorCode::NoError) {
          emit signTxRequest(orderId_, signedTX.toHexStr());
-         emit completed(id());
+         try {
+            Codec_SignerState::SignerState state;
+            if (!state.ParseFromString(signedTX.toBinStr())) {
+               throw std::runtime_error("invalid signed state");
+            }
+            Signer signer(state);
+            expectedTxId_ = signer.getTxId();
+         }
+         catch (const std::exception &e) {
+            SPDLOG_LOGGER_ERROR(logger, "failed to parse signer state: {}", e.what());
+         }
          // FIXME: Does not work as expected as signedTX txid is different from combined txid
          //wallet_->setTransactionComment(signedTX, txComment());
       }
@@ -165,6 +198,7 @@ bool DealerCCSettlementContainer::startSigning(QDateTime timestamp)
 
 void DealerCCSettlementContainer::activate()
 {
+   settlWallet_->registerAddresses({ ownRecvAddr_.prefixed() }, true);
    try {
       signer_.deserializeState(txReqData_);
       foundRecipAddr_ = signer_.findRecipAddress(ownRecvAddr_, [this](uint64_t value, uint64_t valReturn, uint64_t valInput) {

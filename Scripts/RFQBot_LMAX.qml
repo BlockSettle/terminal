@@ -100,7 +100,6 @@ BSQuoteReqReply {
     }
     
     onSettled: {
-        if (!(ccInstruments.indexOf(security) === -1)) return;
         log(security + ' settled at ' + finalPrice)
         sendHedgeOrder(hedgePrice)
     }
