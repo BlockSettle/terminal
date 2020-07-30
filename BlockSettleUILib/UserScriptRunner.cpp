@@ -381,7 +381,7 @@ void AQScriptHandler::extMsgReceived(const std::string &data)
    const auto &jsonDoc = QJsonDocument::fromJson(QByteArray::fromStdString(data)
       , &jsonError);
    if (jsonError.error != QJsonParseError::NoError) {
-      logger_->error("[AQScriptRunner::onExtDataReceived] invalid JSON message: {}"
+      logger_->error("[AQScriptHandler::extMsgReceived] invalid JSON message: {}"
          , jsonError.errorString().toUtf8().toStdString());
       return;
    }
@@ -392,7 +392,7 @@ void AQScriptHandler::extMsgReceived(const std::string &data)
    QJsonDocument msgDoc(msgObj);
    const auto &strMsg = QString::fromStdString(msgDoc.toJson(QJsonDocument::Compact).toStdString());
    if (strFrom.isEmpty() || strType.isEmpty() || msgObj.isEmpty()) {
-      logger_->error("[AQScriptRunner::onExtDataReceived] invalid data in JSON: {}"
+      logger_->error("[AQScriptHandler::extMsgReceived] invalid data in JSON: {}"
          , data);
       return;
    }
