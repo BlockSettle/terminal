@@ -110,7 +110,10 @@ void AuthAddressConfirmDialog::onAuthAddressSubmitError(const QString &address, 
 
    switch (statusCode) {
    case bs::error::AuthAddressSubmitResult::SubmitLimitExceeded:
-      errorText = tr("Your account has reach the limit of how many Authentication Addresses it may have in submitted state. Please verify your currently submitted addresses before submitting further addresses");
+      errorText = tr("Your account has reached the limit of how many "
+                     "Authentication Addresses it may have in submitted state."
+                     " Please verify your currently submitted addresses before "
+                     "submitting further addresses.");
       break;
    case bs::error::AuthAddressSubmitResult::ServerError:
       errorText = tr("Server error. Please try again later.");
@@ -119,13 +122,13 @@ void AuthAddressConfirmDialog::onAuthAddressSubmitError(const QString &address, 
       errorText = tr("Authentication Address already in use.");
       break;
    case bs::error::AuthAddressSubmitResult::RequestTimeout:
-      errorText = tr("Request processing timeout");
+      errorText = tr("Request processing timeout.");
       break;
    case bs::error::AuthAddressSubmitResult::AuthRequestSignFailed:
       errorText = tr("Failed to sign request to submit Authentication Address.");
       break;
    default:
-      errorText = tr("Undefined error code");
+      errorText = tr("Undefined error code.");
       break;
    }
 
