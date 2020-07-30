@@ -147,6 +147,7 @@ private:
    };
    std::deque<ExtMessage>  extDataPool_;
    const size_t maxExtDataPoolSize_{ 16 };
+   std::mutex  mtxExtData_;
 
    bool aqEnabled_;
    QTimer *aqTimer_;

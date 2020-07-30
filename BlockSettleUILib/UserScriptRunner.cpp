@@ -128,8 +128,12 @@ void AQScriptHandler::onQuoteReqNotification(const bs::network::QuoteReqNotifica
          }
 
          const auto &mdIt = mdInfo_.find(qrn.security);
+         auto reqReply = qobject_cast<BSQuoteReqReply *>(obj);
+         if (!reqReply) {
+            logger_->error("[AQScriptHandler::onQuoteReqNotification] invalid AQ object instantiated");
+            return;
+         }
          if (mdIt != mdInfo_.end()) {
-            auto *reqReply = qobject_cast<BSQuoteReqReply *>(obj);
             if (mdIt->second.bidPrice > 0) {
                reqReply->setIndicBid(mdIt->second.bidPrice);
             }
@@ -139,7 +143,12 @@ void AQScriptHandler::onQuoteReqNotification(const bs::network::QuoteReqNotifica
             if (mdIt->second.lastPrice > 0) {
                reqReply->setLastPrice(mdIt->second.lastPrice);
             }
-            reqReply->start();
+         }
+         reqReply->start();
+
+         std::unique_lock<std::mutex> lock(mtxExtData_);
+         for (const auto &extMsg : extDataPool_) {
+            emit reqReply->extDataReceived(extMsg.from, extMsg.type, extMsg.msg);
          }
       }
    }
@@ -285,11 +294,6 @@ void AQScriptHandler::onMDUpdate(bs::network::Asset::Type, const QString &securi
       if (mdInfo.lastPrice > 0) {
          reqReply->setLastPrice(mdInfo.lastPrice);
       }
-      reqReply->start();
-
-      for (const auto &extMsg : extDataPool_) {
-         emit reqReply->extDataReceived(extMsg.from, extMsg.type, extMsg.msg);
-      }
    }
 }
 
@@ -397,9 +401,12 @@ void AQScriptHandler::extMsgReceived(const std::string &data)
       return;
    }
 
-   extDataPool_.push_back({strFrom, strType, strMsg});
-   while (extDataPool_.size() > maxExtDataPoolSize_) {
-      extDataPool_.pop_front();
+   {
+      std::unique_lock<std::mutex> lock(mtxExtData_);
+      extDataPool_.push_back({ strFrom, strType, strMsg });
+      while (extDataPool_.size() > maxExtDataPoolSize_) {
+         extDataPool_.pop_front();
+      }
    }
 
    for (const auto &aqObj : aqObjs_) {
