@@ -49,7 +49,7 @@ BSQuoteReqReply {
         if (bestPrice === finalPrice)  return   // our quote
 
         if (hedgePrice) {
-            if (quoteReq.isBuy) {
+            if (direction() === 1) {
                 if (bestPrice > hedgePrice) {
                     sendPrice(hedgePrice)
                 }
@@ -116,7 +116,7 @@ BSQuoteReqReply {
 
     function onLMAXprice(priceObj)
     {
-        if (quoteReq.isBuy) {
+        if (direction() === 1) {
             hedgePrice = priceObj.ask * (1.0 + prcIncrement)
         }
         else {
@@ -125,7 +125,7 @@ BSQuoteReqReply {
 
         var price = 0.0
         if (bestPrice && (bestPrice != finalPrice)) {   // at least one quote exists
-            if (quoteReq.isBuy) {                       // and it's not ours
+            if (direction() === 1) {     // and it's not ours
                 if ((bestPrice < hedgePrice) && (finalPrice < bestPrice)) {
                     price = Math.min(bestPrice + priceIncrement, hedgePrice)
                 }
@@ -142,7 +142,7 @@ BSQuoteReqReply {
         }
         else if (bestPrice && (bestPrice === finalPrice)) {}    // do nothing
         else {  // no quote was sent before
-            if (quoteReq.isBuy) {
+            if (direction() === 1) {
                 price = priceObj.ask * (1.0 + 3 * prcIncrement)
             }
             else {
@@ -153,7 +153,7 @@ BSQuoteReqReply {
         }
     }
 
-    function checkPrice(price)
+/*    function checkPrice(price)
     {
         if (initialPrice){
             if (!isContraCur()){
@@ -165,11 +165,9 @@ BSQuoteReqReply {
             }
 
         }
-
-
         if (!price || price < 0) return false
         return true
-    }
+    }*/
 
     function isContraCur()
     {
@@ -214,7 +212,7 @@ BSQuoteReqReply {
             initialPrice = price
         }
 
-        if (quoteReq.isBuy) {
+        if (direction() === 1) {
             if (!checkBalance(quoteReq.quantity * price, security.split("/")[1])) return
         }
         else {
@@ -227,28 +225,28 @@ BSQuoteReqReply {
 
     function sendHedgeOrder(price)
     {
+        if (!price) {
+            log('sendHedgeOrder: invalid zero price');
+            return
+        }
+
         if (ccInstruments.indexOf(security) != -1) return
         if (xbtInstruments.indexOf(security) != -1) {
-            if ((quoteReq.quantity > 1.0) || (quoteReq.quantity < 0.01)) {
-                log('XBT amount is out of limits: ' + quoteReq.quantity)
-                return
-            }
-        }
-        else {
-            if (quoteReq.quantity < 1000) {
-                log('FX amount is too low - not hedging it atm')
+            if (quoteReq.quantity > 1.0) {
+                log('XBT amount exceeds limit: ' + quoteReq.quantity)
                 return
             }
         }
 
-        var orderBuy = quoteReq.isBuy ? 'true' : 'false'
+        var amount = isContraCur() ? quoteReq.quantity / price : quoteReq.quantity;
+        var orderBuy = (direction() === 1) ? 'true' : 'false'
         var order = '{"symbol":"' + security + '", "buy":' + orderBuy
-            + ', "amount":' + quoteReq.quantity + ', "price":' + price + '}'
+            + ', "amount":' + amount + ', "price":' + price + '}'
         log('sending order: ' + order)
         sendExtConn('LMAX', 'order', order)
     }
 
-    function addIncrementToFXPrice(price)
+/*    function addIncrementToFXPrice(price)
     {
         const baseIncrement = 0.0001;
         const incrementInPercent = 0.01;
@@ -259,7 +257,7 @@ BSQuoteReqReply {
         } else {
             return price + baseIncrement * direction() * -1;
         }
-    }
+    }*/
 
     function direction()
     {
