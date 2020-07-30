@@ -41,6 +41,7 @@
 #include <QPushButton>
 
 using namespace bs::ui;
+using namespace Blocksettle::Communication;
 
 enum class DealingPages : int
 {
@@ -349,7 +350,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                , this, &RFQReplyWidget::onTransactionError);
             connect(settlContainer.get(), &DealerCCSettlementContainer::cancelTrade
                , this, &RFQReplyWidget::onCancelCCTrade);
-            connect(settlContainer.get(), &bs::SettlementContainer::completed
+            connect(settlContainer.get(), &DealerCCSettlementContainer::completed
                , this, &RFQReplyWidget::onSettlementComplete);
 
             // Do not make circular dependency, capture bare pointer
@@ -398,7 +399,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                , this, &RFQReplyWidget::onCancelXBTTrade);
             connect(settlContainer.get(), &DealerXBTSettlementContainer::error
                , this, &RFQReplyWidget::onTransactionError);
-            connect(settlContainer.get(), &bs::SettlementContainer::completed
+            connect(settlContainer.get(), &DealerCCSettlementContainer::completed
                , this, &RFQReplyWidget::onSettlementComplete);
 
             connect(this, &RFQReplyWidget::unsignedPayinRequested, settlContainer.get()
@@ -663,7 +664,7 @@ void RFQReplyWidget::hideEvent(QHideEvent* event)
    QWidget::hideEvent(event);
 }
 
-void RFQReplyWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response)
+void RFQReplyWidget::onMessageFromPB(const ProxyTerminalPb::Response &response)
 {
    switch (response.data_case()) {
       case Blocksettle::Communication::ProxyTerminalPb::Response::kSendUnsignedPayin: {
@@ -692,6 +693,5 @@ void RFQReplyWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTerm
       default:
          break;
    }
-
    // if not processed - not RFQ releated message. not error
 }

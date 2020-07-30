@@ -300,6 +300,7 @@ signals:
    void settled();
    void cancelled();
    void started();
+   void extDataReceived(QString from, QString type, QString msg);
 
 private:
    BSQuoteRequest *quoteReq_;
