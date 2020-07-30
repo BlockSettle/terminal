@@ -1368,6 +1368,7 @@ void BSTerminalMainWindow::openAuthManagerDialog()
 void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
 {
    const auto showAuthDlg = [this, addrToVerify] {
+      authAddrDlg_->setModal(true);
       authAddrDlg_->show();
       QApplication::processEvents();
       authAddrDlg_->setAddressToVerify(addrToVerify);

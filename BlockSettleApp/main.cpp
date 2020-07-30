@@ -24,10 +24,11 @@
 #include <memory>
 
 #include "ApplicationSettings.h"
-#include "BSTerminalSplashScreen.h"
-#include "BSTerminalMainWindow.h"
-#include "EncryptionUtils.h"
+#include "BSErrorCode.h"
 #include "BSMessageBox.h"
+#include "BSTerminalMainWindow.h"
+#include "BSTerminalSplashScreen.h"
+#include "EncryptionUtils.h"
 
 #include "btc/ecc.h"
 
@@ -53,16 +54,17 @@ Q_IMPORT_PLUGIN(QSQLiteDriverPlugin)
 Q_IMPORT_PLUGIN(QICOPlugin)
 #endif // STATIC_BUILD
 
-Q_DECLARE_METATYPE(std::string)
-Q_DECLARE_METATYPE(BinaryData)
-Q_DECLARE_METATYPE(SecureBinaryData)
-Q_DECLARE_METATYPE(std::vector<BinaryData>)
-Q_DECLARE_METATYPE(UTXO)
-Q_DECLARE_METATYPE(std::vector<UTXO>)
-Q_DECLARE_METATYPE(AsyncClient::LedgerDelegate)
-Q_DECLARE_METATYPE(std::shared_ptr<std::promise<bool>>)
 Q_DECLARE_METATYPE(ArmorySettings)
+Q_DECLARE_METATYPE(AsyncClient::LedgerDelegate)
+Q_DECLARE_METATYPE(BinaryData)
+Q_DECLARE_METATYPE(bs::error::AuthAddressSubmitResult);
 Q_DECLARE_METATYPE(CelerAPI::CelerMessageType);
+Q_DECLARE_METATYPE(SecureBinaryData)
+Q_DECLARE_METATYPE(std::shared_ptr<std::promise<bool>>)
+Q_DECLARE_METATYPE(std::string)
+Q_DECLARE_METATYPE(std::vector<BinaryData>)
+Q_DECLARE_METATYPE(std::vector<UTXO>)
+Q_DECLARE_METATYPE(UTXO)
 
 #include <QEvent>
 #include <QApplicationStateChangeEvent>
@@ -233,18 +235,19 @@ static int GuiApp(int &argc, char** argv)
       return box.exec();
    }
 
-   qRegisterMetaType<QVector<int>>();
-   qRegisterMetaType<std::string>();
-   qRegisterMetaType<BinaryData>();
-   qRegisterMetaType<SecureBinaryData>();
-   qRegisterMetaType<std::vector<BinaryData>>();
-   qRegisterMetaType<UTXO>();
-   qRegisterMetaType<std::vector<UTXO>>();
-   qRegisterMetaType<AsyncClient::LedgerDelegate>();
-   qRegisterMetaType<std::shared_ptr<std::promise<bool>>>();
    qRegisterMetaType<ArmorySettings>();
-   qRegisterMetaType<CelerAPI::CelerMessageType>();
+   qRegisterMetaType<AsyncClient::LedgerDelegate>();
+   qRegisterMetaType<BinaryData>();
+   qRegisterMetaType<bs::error::AuthAddressSubmitResult>();
    qRegisterMetaType<bs::network::UserType>();
+   qRegisterMetaType<CelerAPI::CelerMessageType>();
+   qRegisterMetaType<QVector<int>>();
+   qRegisterMetaType<SecureBinaryData>();
+   qRegisterMetaType<std::shared_ptr<std::promise<bool>>>();
+   qRegisterMetaType<std::string>();
+   qRegisterMetaType<std::vector<BinaryData>>();
+   qRegisterMetaType<std::vector<UTXO>>();
+   qRegisterMetaType<UTXO>();
 
    // load settings
    auto settings = std::make_shared<ApplicationSettings>();
