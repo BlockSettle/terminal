@@ -1004,7 +1004,7 @@ void CreateTransactionDialogAdvanced::validateAddOutputButton()
    if (outputRow_ >= 0) {
       const auto &outputId = outputsModel_->GetOutputId(outputRow_);
       const auto &prevValue = transactionData_->GetRecipientAmount(outputId);
-      if (prevValue != curVal) {
+      if (prevValue == curVal) {
          hasAmountChanged = false;
       }
    }
