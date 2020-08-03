@@ -362,7 +362,6 @@ void AuthAddressDialog::setDefaultAddress()
 
 void AuthAddressDialog::onModelReset()
 {
-   model_->adjustVisibleCount();
    updateEnabledStates();
    saveAddressesNumber();
    adressSelected();
