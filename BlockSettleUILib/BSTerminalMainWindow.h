@@ -34,6 +34,7 @@ namespace Ui {
 namespace bs {
    class LogManager;
    class UTXOReservationManager;
+   struct TradeSettings;
    namespace sync {
       class Wallet;
       class WalletsManager;
@@ -225,7 +226,6 @@ private slots:
    void onGenerateAddress();
 
    void openAuthManagerDialog();
-   void openAuthDlgVerify(const QString &addrToVerify);
    void openConfigDialog(bool showInNetworkPage = false);
    void openAccountInfoDialog();
    void openCCTokenDialog();
@@ -243,7 +243,6 @@ private slots:
    void onCelerConnectionError(int errorCode);
    void showRunInBackgroundMessage();
    void onCCInfoMissing();
-   void onCcDefinitionsLoadedFromPub();
 
    void onNetworkSettingsRequired(NetworkSettingsClient client);
 
@@ -251,8 +250,6 @@ private slots:
    void onBsConnectionFailed();
 
    void onInitWalletDialogWasShown();
-
-   void onAddrStateChanged();
 
 protected:
    void closeEvent(QCloseEvent* event) override;
@@ -368,6 +365,8 @@ private:
    QLockFile &lockFile_;
 
    bs::network::UserType userType_{};
+
+   std::shared_ptr<bs::TradeSettings> tradeSettings_;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__
