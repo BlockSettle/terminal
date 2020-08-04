@@ -1349,15 +1349,15 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       }
 
       ui_->textEditComment->insertPlainText(QString::fromStdString(tx.comment));
-      thisPtr->transactionData_->setFixedInputs(tx.inputs);
+      thisPtr->transactionData_->setFixedInputs(tx.getInputs(nullptr));
 
       if (selectedWalletId.empty()) {
-         thisPtr->usedInputsModel_->updateInputs(tx.inputs);
+         thisPtr->usedInputsModel_->updateInputs(tx.getInputs(nullptr));
          thisPtr->ui_->comboBoxWallets->hide();
          thisPtr->ui_->labelWallet->hide();
       }
       else {
-         auto cbInputsReceived = [thisPtr, inputs = tx.inputs]{
+         auto cbInputsReceived = [thisPtr, inputs = tx.getInputs(nullptr)]{
             if (!thisPtr) {
                return;
             }
@@ -1380,7 +1380,8 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       labelEstimatedFee()->setText(UiUtils::displayAmount(tx.fee));
 
       std::vector<Recipient> recipients;
-      for (const auto &recip : tx.recipients) {
+      for (unsigned i=0; i<tx.armorySigner_.getTxOutCount(); i++) {
+         auto recip = tx.armorySigner_.getRecipient(i);
          const auto addr = bs::Address::fromRecipient(recip);
          recipients.push_back({ addr, bs::XBTAmount{recip->getValue()}, false });
       }

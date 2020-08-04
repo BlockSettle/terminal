@@ -1520,7 +1520,7 @@ void OtcClient::createSellerRequest(const std::string &settlementId, Peer *peer,
             , const Codec_SignerState::SignerState &state)
          {
             if (errCode == bs::error::ErrorCode::NoError) {
-               result->payin.setSignerState(state);
+               result->payin.armorySigner_.deserializeState(state);
             }
             cb(std::move(*result));
          };

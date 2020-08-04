@@ -381,7 +381,8 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
          // Make new reservation only for automatic inputs.
          // Manual inputs should be already reserved.
          if (utxosPayinFixed_.empty()) {
-            utxoRes_ = utxoReservationManager_->makeNewReservation(unsignedPayinRequest_.inputs, id());
+            utxoRes_ = utxoReservationManager_->makeNewReservation(
+               unsignedPayinRequest_.getInputs(nullptr), id());
          }
 
          emit sendUnsignedPayinToPB(settlementIdHex_
@@ -447,7 +448,9 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
          SPDLOG_LOGGER_DEBUG(logger_, "pay-out fee={}, qty={} ({}), payin hash={}"
             , result.signRequest.fee, amount_, amount_ * BTCNumericTypes::BalanceDivider, payinHash.toHexStr(true));
 
-         payoutSignId_ = signContainer_->signSettlementPayoutTXRequest(result.signRequest
+         //note: signRequest should prolly be a shared_ptr
+         auto signerObj = result.signRequest;
+         payoutSignId_ = signContainer_->signSettlementPayoutTXRequest(signerObj
             , {settlementId_, dealerAuthKey_, true}, dlgData);
       });
    });

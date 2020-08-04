@@ -486,16 +486,12 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
          // grab supporting transactions for the utxo map.
          // required only for HW
          std::set<BinaryData> hashes;
-         std::vector<UTXO> p2shInputs;
-         for (const auto& input : txReq_.inputs) {
-            hashes.emplace(input.getTxHash());
-            const auto scrType = BtcUtils::getTxOutScriptType(input.getScript());
-            if (scrType == TXOUT_SCRIPT_P2SH) {
-               p2shInputs.push_back(input);
-            }
+         for (unsigned i=0; i<txReq_.armorySigner_.getTxInCount(); i++) {
+            auto spender = txReq_.armorySigner_.getSpender(i);
+            hashes.emplace(spender->getOutputHash());
          }
 
-         auto supportingTxMapCb = [this, handle, cb, p2shInputs]
+         auto supportingTxMapCb = [this, handle, cb]
                (const AsyncClient::TxBatchResult& result, std::exception_ptr eptr) mutable
          {
             if (!handle.isValid()) {
@@ -509,7 +505,7 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
             }
 
             for (auto& txPair : result) {
-               txReq_.supportingTXs.emplace(txPair.first, txPair.second->serialize());
+               txReq_.armorySigner_.addSupportingTx(*txPair.second);
             }
 
             const auto cbResolvePublicData = [this, handle, cb]
@@ -519,18 +515,11 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
                   return;
                }
                logger_->debug("[{}] result={}, state: {}", __func__, (int)result, state.IsInitialized());
-               if (result == bs::error::ErrorCode::NoError) {
-                  txReq_.setSignerState(state);
-               }
                bool rc = createTransactionImpl();
                cb(rc);
             };
 
-            if (p2shInputs.empty()) {
-               cbResolvePublicData(bs::error::ErrorCode::WrongAddress, {});
-            } else {
-               signContainer_->resolvePublicSpenders(txReq_, cbResolvePublicData);
-            }
+            signContainer_->resolvePublicSpenders(txReq_, cbResolvePublicData);
          };
 
          if (!armory_->getTXsByHash(hashes, supportingTxMapCb, true)) {
@@ -601,14 +590,7 @@ bool CreateTransactionDialog::createTransactionImpl()
          // do we need some checks here?
       }
 
-      bool isLegacy = false;
-      for (const auto& input : txReq_.inputs) {
-         if (bs::Address::fromUTXO(input).getType() == AddressEntryType_P2PKH) {
-            isLegacy = true;
-            break;
-         }
-      }
-      if (!isLegacy) {
+      if (txReq_.armorySigner_.isSegWit()) {
          txReq_.txHash = txReq_.txId();
       }
 

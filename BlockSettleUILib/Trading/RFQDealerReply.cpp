@@ -725,7 +725,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                            const auto outSortOrder = isSpendCC ? kBuySortOrder : kSellSortOrder;
                            Codec_SignerState::SignerState state;
                            state.ParseFromString(BinaryData::CreateFromHex(qrn.requestorAuthPublicKey).toBinStr());
-                           const auto txReq = bs::sync::WalletsManager::createPartialTXRequest(spendVal, inputs, changeAddress
+                           auto txReq = bs::sync::WalletsManager::createPartialTXRequest(spendVal, inputs, changeAddress
                               , isSpendCC ? 0 : feePerByte, armory_->topBlock(), { recipient }, outSortOrder
                               , state, false, logger_);
                            logger_->debug("[RFQDealerReply::submitReply] {} input[s], fpb={}, recip={}, "
@@ -742,7 +742,8 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
 
                               if (result == bs::error::ErrorCode::NoError) {
                                  replyData->qn.transactionData = BinaryData::fromString(state.SerializeAsString()).toHexStr();
-                                 replyData->utxoRes = utxoReservationManager_->makeNewReservation(txReq.inputs, replyData->qn.quoteRequestId);
+                                 replyData->utxoRes = utxoReservationManager_->makeNewReservation(
+                                    txReq.getInputs(nullptr), replyData->qn.quoteRequestId);
                                  submit(price, replyData);
                               }
                               else {
