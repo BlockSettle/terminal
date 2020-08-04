@@ -52,7 +52,7 @@ class MarketDataProvider;
 class MDCallbacksQt;
 class QuoteProvider;
 
-class ResolverOneAddress : public ResolverFeed
+class ResolverOneAddress : public ArmorySigner::ResolverFeed
 {
 private:
    SecureBinaryData privKey_;
@@ -94,7 +94,7 @@ public:
    }
 };
 
-class ResolverManyAddresses : public ResolverFeed
+class ResolverManyAddresses : public ArmorySigner::ResolverFeed
 {
 private:
    std::map<BinaryData, SecureBinaryData> hashToPubKey_;
@@ -407,7 +407,7 @@ struct ArmoryInstance
    ArmoryInstance();
    ~ArmoryInstance(void);
 
-   std::map<unsigned, BinaryData> mineNewBlock(ScriptRecipient*, unsigned);
+   std::map<unsigned, BinaryData> mineNewBlock(ArmorySigner::ScriptRecipient*, unsigned);
    void pushZC(const BinaryData &, unsigned int blocksUntilMined = 0, bool stage = false);
 
    void setReorgBranchPoint(const BinaryData&);

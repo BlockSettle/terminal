@@ -310,9 +310,7 @@ TEST_F(TestCC, DISABLED_TX_buy)
 
          // dealer uses requester's TX
          bs::core::wallet::TXSignRequest txReq3;
-         txReq3.prevStates = { txReq2.serializeState() };
-         txReq3.populateUTXOs = true;
-         txReq3.inputs = txReq1.inputs;
+         txReq3.armorySigner_.deserializeState(txReq2.serializeState());
 
          const auto priWallet = envPtr_->walletsMgr()->getPrimaryWallet();
 
@@ -431,10 +429,8 @@ TEST_F(TestCC, DISABLED_TX_sell)
          bs::core::wallet::TXSignRequest txReq3;
          const auto recipient1 = ccRecvAddr.getRecipient(bs::XBTAmount{ spendVal1 });
          ASSERT_NE(recipient1, nullptr);
-         txReq3.recipients.push_back(recipient1);
-         txReq3.inputs = inputs1;
-         txReq3.populateUTXOs = true;
-         txReq3.prevStates = { txReq2.serializeState() };
+         txReq3.armorySigner_.addRecipient(recipient1);
+         txReq3.armorySigner_.merge(txReq2.armorySigner_);
 
          const auto priWallet = envPtr_->walletsMgr()->getPrimaryWallet();
 
@@ -448,7 +444,7 @@ TEST_F(TestCC, DISABLED_TX_sell)
          }
 
          // use full requester's half on dealer side
-         txReq2.prevStates = { txReq3.serializeState() };
+         txReq2.armorySigner_.deserializeState(txReq3.serializeState());
 
          {
             auto xbtLeaf =

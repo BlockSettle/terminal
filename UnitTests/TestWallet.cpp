@@ -1764,11 +1764,11 @@ TEST_F(TestWallet, TxIdNativeSegwit)
    UTXO input;
    input.unserialize(BinaryData::CreateFromHex(
       "cc16060000000000741618000300010020d5921cfa9b95c9fdafa9dca6d2765b5d7d2285914909b8f5f74f0b137259153b16001428d45f4ef82103691ea40c26b893a4566729b335ffffffff"));
-   request.inputs.push_back(input);
+   request.armorySigner_.addSpender(std::make_shared<ArmorySigner::ScriptSpender>(input));
 
-   auto recipient = ScriptRecipient::fromScript(BinaryData::CreateFromHex(
+   auto recipient = ArmorySigner::ScriptRecipient::fromScript(BinaryData::CreateFromHex(
       "a086010000000000220020aa38b39ed9b524967159ad2bd488d14c1b9ccd70364655a7d9f35cb83e4dc6ed"));
-   request.recipients.push_back(recipient);
+   request.armorySigner_.addRecipient(recipient);
 
    request.change.value = 298894;
    request.fee = 158;
@@ -1855,11 +1855,11 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    ASSERT_TRUE(input.isInitialized());
 
    bs::core::wallet::TXSignRequest request;
-   request.inputs.push_back(input);
+   request.armorySigner_.addSpender(std::make_shared<ArmorySigner::ScriptSpender>(input));
 
-   auto recipient = ScriptRecipient::fromScript(BinaryData::CreateFromHex(
+   auto recipient = ArmorySigner::ScriptRecipient::fromScript(BinaryData::CreateFromHex(
       "a086010000000000220020d35c94ed03ae988841bd990124e176dae3928ba41f5a684074a857e788d768ba"));
-   request.recipients.push_back(recipient);
+   request.armorySigner_.addRecipient(recipient);
 
    request.change.value = 19899729;
    request.fee = 271;
