@@ -273,8 +273,8 @@ void TrezorDevice::signTX(const bs::core::wallet::TXSignRequest &reqTX, AsyncCal
    const int change = static_cast<bool>(currentTxSignReq_->change.value) ? 1 : 0;
 
    bitcoin::SignTx message;
-   message.set_inputs_count(currentTxSignReq_->inputs.size());
-   message.set_outputs_count(currentTxSignReq_->recipients.size() + change);
+   message.set_inputs_count(currentTxSignReq_->armorySigner_.getTxInCount());
+   message.set_outputs_count(currentTxSignReq_->armorySigner_.getTxOutCount() + change);
    if (testNet_) {
       message.set_coin_name(tesNetCoin);
    }
@@ -525,18 +525,22 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       bitcoin::TxAck_TransactionType_TxInputType *input = type->add_inputs();
 
       const int index = txRequest.details().request_index();
-      assert(index >= 0 && index < currentTxSignReq_->inputs.size());
-      auto utxo = currentTxSignReq_->inputs[index];
+      assert(index >= 0 && index < currentTxSignReq_->armorySigner_.getTxInCount());
+      auto spender = currentTxSignReq_->armorySigner_.getSpender(index);
+      auto utxo = spender->getUtxo();
 
       auto address = bs::Address::fromUTXO(utxo);
       const auto purp = bs::hd::purpose(address.getType());
 
-      std::string addrIndex = currentTxSignReq_->inputIndices.at(index);
+      auto bip32Paths = spender->getBip32Paths();
+      if (bip32Paths.size() != 1) {
+         throw std::logic_error("unexpected pubkey count for spender");
+      }
+      const auto& path = bip32Paths.begin()->second.getDerivationPathFromSeed();
 
-      auto path = getDerivationPath(testNet_, purp);
-      path.append(bs::hd::Path::fromString(addrIndex));
-      for (const uint32_t add : path) {
-         input->add_address_n(add);
+      for (unsigned i=0; i<path.size(); i++) {
+         //skip first index, it's the wallet root fingerprint
+         input->add_address_n(path[i]);
       }
 
       input->set_prev_hash(utxo.getTxHash().copySwapEndian().toBinStr());
@@ -593,15 +597,16 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
 
       const int index = txRequest.details().request_index();
 
-      if (currentTxSignReq_->recipients.size() > index) { // general output
-         auto &bsOutput = currentTxSignReq_->recipients[index];
+      if (currentTxSignReq_->armorySigner_.getTxOutCount() > index) { // general output
+         auto bsOutput = currentTxSignReq_->armorySigner_.getRecipient(index);
 
          auto address = bs::Address::fromRecipient(bsOutput);
          output->set_address(address.display());
          output->set_amount(bsOutput->getValue());
          output->set_script_type(bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOADDRESS);
       }
-      else if (currentTxSignReq_->recipients.size() == index && currentTxSignReq_->change.value > 0) { // one last for change
+      else if (currentTxSignReq_->armorySigner_.getTxOutCount() == index 
+               && currentTxSignReq_->change.value > 0) { // one last for change
          const auto &change = currentTxSignReq_->change;
          output->set_amount(change.value);
 
@@ -686,12 +691,15 @@ void TrezorDevice::sendTxMessage(const QString& status)
 Tx TrezorDevice::prevTx(const bitcoin::TxRequest &txRequest)
 {
    auto txHash = BinaryData::fromString(txRequest.details().tx_hash()).swapEndian();
-   auto supportingTxIt = currentTxSignReq_->supportingTXs.find(txHash);
-   if (supportingTxIt == currentTxSignReq_->supportingTXs.end()) {
+   try
+   {
+      return currentTxSignReq_->armorySigner_.getSupportingTx(txHash);
+   }
+   catch (const std::exception&)
+   {
       SPDLOG_LOGGER_ERROR(connectionManager_->GetLogger(), "can't find prev TX {}", txHash.toHexStr(1));
       return {};
    }
-   return Tx(supportingTxIt->second);
 }
 
 bool TrezorDevice::hasCapability(management::Features::Capability cap) const

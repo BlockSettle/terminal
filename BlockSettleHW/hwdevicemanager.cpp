@@ -206,7 +206,8 @@ void HwDeviceManager::signTX(QVariant reqTX)
          // as different devices, which will be verified in sign part.
          try {
             std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
-            for (const auto &utxo : signReq.inputs) {
+            for (unsigned i=0; i<signReq.armorySigner_.getTxInCount(); i++) {
+               const auto& utxo = signReq.armorySigner_.getSpender(i)->getUtxo();
                auto& idMap = utxoMap[utxo.getTxHash()];
                idMap.emplace(utxo.getTxOutIndex(), utxo);
             }
