@@ -2111,7 +2111,7 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
                  "Do you wish to create them now?<br/><br/>"
                  "For more information regarding our settlement models, please consult our ") +
                   QStringLiteral("<a href=\"%1\"><span style=\"text-decoration: underline; color: %2;\">Trading Procedures</span></a>")
-                  .arg(QStringLiteral("http://pubb.blocksettle.com/PDF/BlockSettle%20Trading%20Procedures.pdf"))
+                  .arg(QStringLiteral("http://blocksettle.com/PDF/BlockSettle%20Trading%20Procedures.pdf"))
                   .arg(BSMessageBox::kUrlColor)
             , this);
          qry.enableRichText();
