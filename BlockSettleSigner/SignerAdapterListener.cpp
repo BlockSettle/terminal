@@ -340,18 +340,13 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
       }
       else {
          bs::core::wallet::TXMultiSignRequest multiReq;
-         multiReq.recipients = txSignReq.recipients;
-         if (txSignReq.change.value) {
-            multiReq.recipients.push_back(txSignReq.change.address.getRecipient(bs::XBTAmount{txSignReq.change.value}));
-         }
-         if (!txSignReq.prevStates.empty()) {
-            multiReq.prevState = txSignReq.prevStates.front();
-         }
+         multiReq.armorySigner_.merge(txSignReq.armorySigner_);
          multiReq.RBF = txSignReq.RBF;
 
          bs::core::WalletMap wallets;
-         for (const auto &input : txSignReq.inputs) {
-            const auto addr = bs::Address::fromUTXO(input);
+         for (unsigned i=0; i<txSignReq.armorySigner_.getTxInCount(); i++) {
+            auto spender = txSignReq.armorySigner_.getSpender(i);
+            const auto addr = bs::Address::fromScript(spender->getOutputScript());
             const auto wallet = walletsMgr_->getWalletByAddress(addr);
             if (!wallet) {
                logger_->error("[{}] failed to find wallet for input address {}"
@@ -359,7 +354,7 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
                evt.set_errorcode((int)bs::error::ErrorCode::WrongAddress);
                return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);
             }
-            multiReq.addInput(input, wallet->walletId());
+            multiReq.addWalletId(wallet->walletId());
             wallets[wallet->walletId()] = wallet;
          }
          {
@@ -1017,17 +1012,6 @@ bs::error::ErrorCode SignerAdapterListener::verifyOfflineSignRequest(const bs::c
       return true;
    };
 
-   if (txSignReq.inputs.size() != txSignReq.inputIndices.size()) {
-      SPDLOG_LOGGER_ERROR(logger_, "all input indices must be set");
-      return bs::error::ErrorCode::FailedToParse;
-   }
-   for (const auto &inputIndex : txSignReq.inputIndices) {
-      if (!checkIndexValidity(inputIndex)) {
-         SPDLOG_LOGGER_ERROR(logger_, "invalid input address index for UTXO");
-         return bs::error::ErrorCode::FailedToParse;
-      }
-   }
-
    auto hdWallet = walletsMgr_->getHDRootForLeaf(txSignReq.walletIds.front());
    if (!hdWallet) {
       SPDLOG_LOGGER_ERROR(logger_, "can't find HD wallet for leaf '{}'", txSignReq.walletIds.front());
@@ -1060,13 +1044,14 @@ bs::error::ErrorCode SignerAdapterListener::verifyOfflineSignRequest(const bs::c
          return bs::error::ErrorCode::WalletNotFound;
       }
 
-      for (size_t i = 0; i < txSignReq.inputs.size(); ++i) {
-         const auto addr = bs::Address::fromUTXO(txSignReq.inputs.at(i));
+      for (size_t i = 0; i < txSignReq.armorySigner_.getTxInCount(); ++i) {
+         auto spender = txSignReq.armorySigner_.getSpender(i);
+         const auto addr = bs::Address::fromScript(spender->getOutputScript());
          if (!checkAddress(wallet, addr)) {
             continue;
          }
          // Need to extend used address chain for offline wallets
-         wallet->synchronizeUsedAddressChain(txSignReq.inputIndices.at(i));
+         //TODO: fix me. wallet->synchronizeUsedAddressChain(txSignReq.inputIndices.at(i));
          const auto addrEntry = wallet->getAddressEntryForAddr(addr.id());
          if (!addrEntry) {
             SPDLOG_LOGGER_ERROR(logger_, "can't find input with address {} in wallet {}"
@@ -1076,7 +1061,7 @@ bs::error::ErrorCode SignerAdapterListener::verifyOfflineSignRequest(const bs::c
          foundInputCount += 1;
       }
    }
-   if (txSignReq.inputs.size() != foundInputCount) {
+   if (txSignReq.armorySigner_.getTxInCount() != foundInputCount) {
       SPDLOG_LOGGER_ERROR(logger_, "failed to find all inputs");
       return bs::error::ErrorCode::WalletNotFound;
    }
