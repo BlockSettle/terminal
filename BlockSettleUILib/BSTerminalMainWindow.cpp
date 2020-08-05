@@ -213,34 +213,6 @@ void BSTerminalMainWindow::onInitWalletDialogWasShown()
    initialWalletCreateDialogShown_ = true;
 }
 
-void BSTerminalMainWindow::onAddrStateChanged()
-{
-   const bool canSubmitAuthAddr = (userType_ == bs::network::UserType::Trading)
-         || (userType_ == bs::network::UserType::Dealing);
-
-   const bool needSignAuthAddress = authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
-      && !authManager_->isAtLeastOneAwaitingVerification();
-
-   const auto& tradeSettings = authManager_->tradeSettings();
-
-   if (allowAuthAddressDialogShow_ && authManager_ && tradeSettings && needSignAuthAddress && canSubmitAuthAddr) {
-      allowAuthAddressDialogShow_ = false;
-      BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Create Authentication Address")
-         , tr("The Authentication Address verifies you as a Participant in our trading network. It is required for Spot XBT (bitcoin) trading.\n\n"
-              "Submitted Authentication Addresses are limited to %1 bitcoin per trade.\n\n"
-              "After %2 trades, BlockSettle will automatically fund your Authentication Address with 1,000 satoshis. Once validated, other Participants may independently verify you on-chain as a Participant of BlockSettle, and the trade limit is removed.\n\n"
-              "Create Authentication Address now?\n")
-         .arg(bs::XBTAmount(tradeSettings->xbtTier1Limit).GetValueBitcoin()).arg(tradeSettings->authRequiredSettledTrades), this);
-      if (qry.exec() == QDialog::Accepted) {
-         openAuthManagerDialog();
-      }
-   }
-
-   if (authManager_->isAtLeastOneAwaitingVerification()) {
-      allowAuthAddressDialogShow_ = false;
-   }
-}
-
 void BSTerminalMainWindow::setWidgetsAuthorized(bool authorized)
 {
    // Update authorized state for some widgets
@@ -518,16 +490,9 @@ void BSTerminalMainWindow::InitAuthManager()
    connect(authManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked, this, [](const QString &addr, const QString &state) {
       NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, state });
    });
-   connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, this, &BSTerminalMainWindow::onAddrStateChanged, Qt::QueuedConnection);
    connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, this, [this](const QString &walletId) {
       if (authAddrDlg_ && walletId.isEmpty()) {
          openAuthManagerDialog();
-      }
-   });
-   connect(authManager_.get(), &AuthAddressManager::ConnectionComplete, this, [this]() {
-      if (!authManager_->HaveAuthWallet() && !createAuthWalletDialogShown_ && !promoteToPrimaryShown_) {
-         createAuthWalletDialogShown_ = true;
-         createAuthWallet(nullptr);
       }
    });
 }
@@ -773,7 +738,6 @@ void BSTerminalMainWindow::InitAssets()
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityInfo, walletsMgr_.get(), &bs::sync::WalletsManager::onCCSecurityInfo);
    connect(ccFileManager_.get(), &CCFileManager::Loaded, this, &BSTerminalMainWindow::onCCLoaded);
    connect(ccFileManager_.get(), &CCFileManager::LoadingFailed, this, &BSTerminalMainWindow::onCCInfoMissing);
-   connect(ccFileManager_.get(), &CCFileManager::definitionsLoadedFromPub, this, &BSTerminalMainWindow::onCcDefinitionsLoadedFromPub);
 
    connect(mdCallbacks_.get(), &MDCallbacksQt::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
 
@@ -1151,7 +1115,6 @@ bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
       });
       if (fullWalletIt != hdWallets.end()) {
          auto wallet = *fullWalletIt;
-         promoteToPrimaryShown_ = true;
          BSMessageBox qry(BSMessageBox::question, tr("Promote to primary wallet"), tr("Promote to primary wallet?")
             , tr("To trade through BlockSettle, you are required to have a wallet which"
                " supports the sub-wallets required to interact with the system. Each Terminal"
@@ -1361,25 +1324,7 @@ void BSTerminalMainWindow::setupMenu()
 
 void BSTerminalMainWindow::openAuthManagerDialog()
 {
-   allowAuthAddressDialogShow_ = false;
-   openAuthDlgVerify(QString());
-}
-
-void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
-{
-   const auto showAuthDlg = [this, addrToVerify] {
-      authAddrDlg_->setModal(true);
-      authAddrDlg_->show();
-      QApplication::processEvents();
-      authAddrDlg_->setAddressToVerify(addrToVerify);
-   };
-   if (authManager_->HaveAuthWallet()) {
-      showAuthDlg();
-   } else {
-      createAuthWallet([this, showAuthDlg] {
-         QMetaObject::invokeMethod(this, showAuthDlg);
-      });
-   }
+   authAddrDlg_->exec();
 }
 
 void BSTerminalMainWindow::openConfigDialog(bool showInNetworkPage)
@@ -1812,11 +1757,6 @@ void BSTerminalMainWindow::onCCInfoMissing()
    // do nothing here since we don't know if user will need Private Market before logon to Celer
 }
 
-void BSTerminalMainWindow::onCcDefinitionsLoadedFromPub()
-{
-   promoteToPrimaryIfNeeded();
-}
-
 void BSTerminalMainWindow::setupShortcuts()
 {
    auto overviewTabShortcut = new QShortcut(QKeySequence(QStringLiteral("Ctrl+1")), this);
@@ -2105,23 +2045,26 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
 
    auto promoteToPrimary = [this](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
       addDeferredDialog([this, wallet] {
-         promoteToPrimaryShown_ = true;
          BSMessageBox qry(BSMessageBox::question, tr("Upgrade Wallet"), tr("Enable Trading")
-            , tr("BlockSettle requires you to hold sub-wallets able to interact with our trading system.</br></br>"
-                 "Do you wish to create them now?<br/><br/>"
-                 "For more information regarding our settlement models, please consult our ") +
-                  QStringLiteral("<a href=\"%1\"><span style=\"text-decoration: underline; color: %2;\">Trading Procedures</span></a>")
-                  .arg(QStringLiteral("http://pubb.blocksettle.com/PDF/BlockSettle%20Trading%20Procedures.pdf"))
-                  .arg(BSMessageBox::kUrlColor)
+            , tr("BlockSettle requires you to hold sub-wallets with Authentication Addresses to interact with our trading system.<br><br>"
+                  "You will be able to trade up to %1 bitcoin per trade once your Authentication Address has been submitted.<br><br>"
+                  "After %2 trades your Authentication Address will be verified and your trading limit removed.<br><br>"
+                  "Do you wish to enable XBT trading?").arg(bs::XBTAmount(tradeSettings_->xbtTier1Limit).GetValueBitcoin()).arg(tradeSettings_->authRequiredSettledTrades)
             , this);
          qry.enableRichText();
          if (qry.exec() == QDialog::Accepted) {
-            allowAuthAddressDialogShow_ = true;
             walletsMgr_->PromoteHDWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {
                if (result == bs::error::ErrorCode::NoError) {
                   // If wallet was promoted to primary we could try to get chat keys now
                   tryGetChatKeys();
                   walletsMgr_->setUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
+
+                  if (celerConnection_->GetSubmittedAuthAddressSet().empty()) {
+                     addDeferredDialog([this]()
+                                       {
+                                          openAuthManagerDialog();
+                                       });
+                  }
                }
             });
          }
@@ -2265,9 +2208,8 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
    ccFileManager_->setBsClient(bsClient);
    authAddrDlg_->setBsClient(bsClient);
 
-   auto tradeSettings = std::make_shared<bs::TradeSettings>(result.tradeSettings);
-   authManager_->initLogin(celerConnection_, tradeSettings);
-   onAddrStateChanged();
+   tradeSettings_ = std::make_shared<bs::TradeSettings>(result.tradeSettings);
+   authManager_->initLogin(celerConnection_, tradeSettings_);
 
    ccFileManager_->setCcAddressesSigned(result.ccAddressesSigned);
    authManager_->setAuthAddressesSigned(result.authAddressesSigned);
