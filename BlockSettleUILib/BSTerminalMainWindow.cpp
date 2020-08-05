@@ -1115,7 +1115,6 @@ bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
       });
       if (fullWalletIt != hdWallets.end()) {
          auto wallet = *fullWalletIt;
-         promoteToPrimaryShown_ = true;
          BSMessageBox qry(BSMessageBox::question, tr("Promote to primary wallet"), tr("Promote to primary wallet?")
             , tr("To trade through BlockSettle, you are required to have a wallet which"
                " supports the sub-wallets required to interact with the system. Each Terminal"
@@ -1325,7 +1324,6 @@ void BSTerminalMainWindow::setupMenu()
 
 void BSTerminalMainWindow::openAuthManagerDialog()
 {
-   allowAuthAddressDialogShow_ = false;
    authAddrDlg_->setModal(true);
    authAddrDlg_->show();
    QApplication::processEvents();
@@ -2049,7 +2047,6 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
 
    auto promoteToPrimary = [this](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
       addDeferredDialog([this, wallet] {
-         promoteToPrimaryShown_ = true;
          BSMessageBox qry(BSMessageBox::question, tr("Upgrade Wallet"), tr("Enable Trading")
             , tr("BlockSettle requires you to hold sub-wallets with Authentication Addresses to interact with our trading system.<br><br>"
                   "You will be able to trade up to %1 bitcoin per trade once your Authentication Address has been submitted.<br><br>"
@@ -2058,7 +2055,6 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
             , this);
          qry.enableRichText();
          if (qry.exec() == QDialog::Accepted) {
-            allowAuthAddressDialogShow_ = true;
             walletsMgr_->PromoteHDWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {
                if (result == bs::error::ErrorCode::NoError) {
                   // If wallet was promoted to primary we could try to get chat keys now

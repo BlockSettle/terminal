@@ -306,9 +306,6 @@ private:
    QTimer *loginTimer_{};
 
    bool initialWalletCreateDialogShown_ = false;
-   bool allowAuthAddressDialogShow_ = true;
-   bool createAuthWalletDialogShown_ = false;
-   bool promoteToPrimaryShown_ = false;
    bool deferCCsync_ = false;
 
    bool wasWalletsRegistered_ = false;
