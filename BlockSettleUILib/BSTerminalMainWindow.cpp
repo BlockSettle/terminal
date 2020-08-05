@@ -1324,9 +1324,7 @@ void BSTerminalMainWindow::setupMenu()
 
 void BSTerminalMainWindow::openAuthManagerDialog()
 {
-   authAddrDlg_->setModal(true);
-   authAddrDlg_->show();
-   QApplication::processEvents();
+   authAddrDlg_->exec();
 }
 
 void BSTerminalMainWindow::openConfigDialog(bool showInNetworkPage)
