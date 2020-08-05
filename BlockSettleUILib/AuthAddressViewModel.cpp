@@ -258,7 +258,5 @@ bool AuthAdressControlProxyModel::isUnsubmittedAddressVisible() const
 
 bool AuthAdressControlProxyModel::filterAcceptsRow(int row, const QModelIndex&) const
 {
-   const int max_rot = visibleRowsCount_;
-   const int max_count = row + 1;
    return visibleRowsCount_ > row;
 }
