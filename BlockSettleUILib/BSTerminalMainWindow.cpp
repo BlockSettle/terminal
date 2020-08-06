@@ -2209,6 +2209,8 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
    authAddrDlg_->setBsClient(bsClient);
 
    tradeSettings_ = std::make_shared<bs::TradeSettings>(result.tradeSettings);
+   applicationSettings_->set(ApplicationSettings::SubmittedAddressXbtLimit, tradeSettings_->xbtTier1Limit);
+
    authManager_->initLogin(celerConnection_, tradeSettings_);
 
    ccFileManager_->setCcAddressesSigned(result.ccAddressesSigned);

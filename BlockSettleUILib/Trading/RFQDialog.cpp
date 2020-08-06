@@ -176,11 +176,14 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
    const bool expandTxInfo = appSettings_->get<bool>(
       ApplicationSettings::DetailedSettlementTxDialogByDefault);
 
+   const auto tier1XbtLimit = appSettings_->get<uint64_t>(
+      ApplicationSettings::SubmittedAddressXbtLimit);
+
    try {
       xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
          , authAddressManager_, signContainer_, armory_, xbtWallet_, walletsManager_
          , rfq_, quote_, authAddr_, fixedXbtInputs_, std::move(fixedXbtUtxoRes_), utxoReservationManager_
-         , std::move(walletPurpose_), recvXbtAddrIfSet_, expandTxInfo);
+         , std::move(walletPurpose_), recvXbtAddrIfSet_, expandTxInfo, tier1XbtLimit);
 
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
          , this, &RFQDialog::onXBTSettlementAccepted);
