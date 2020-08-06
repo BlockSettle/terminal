@@ -383,11 +383,15 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             auto &reply = it->second;
             // Dealers can't select receiving address, use new
             const auto recvXbtAddr = bs::Address();
+
+            const auto tier1XbtLimit = appSettings_->get<uint64_t>(
+               ApplicationSettings::SubmittedAddressXbtLimit);
+
             const auto settlContainer = std::make_shared<DealerXBTSettlementContainer>(logger_
                , order, walletsManager_, reply.xbtWallet, quoteProvider_, signingContainer_
                , armory_, authAddressManager_, reply.authAddr, reply.utxosPayinFixed
                , recvXbtAddr, utxoReservationManager_, std::move(reply.walletPurpose)
-               , std::move(reply.utxoRes), expandTxInfo);
+               , std::move(reply.utxoRes), expandTxInfo, tier1XbtLimit);
 
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendUnsignedPayinToPB
                , this, &RFQReplyWidget::sendUnsignedPayinToPB);
