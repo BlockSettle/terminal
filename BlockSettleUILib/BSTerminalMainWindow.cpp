@@ -1560,41 +1560,6 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
    }
 }
 
-void BSTerminalMainWindow::createAuthWallet(const std::function<void()> &cb)
-{
-   if (celerConnection_->tradingAllowed()) {
-      const auto &deferredDialog = [this, cb]{
-         const auto lbdCreateAuthWallet = [this, cb] {
-            QMetaObject::invokeMethod(this, [this, cb] {
-               if (walletsMgr_->getAuthWallet()) {
-                  if (cb) {
-                     cb();
-                  }
-                  // Primary wallet is one with auth wallet and so we could try to grab chat keys now
-                  tryGetChatKeys();
-               }
-               else if (!walletsMgr_->hdWallets().empty()) {
-                  BSMessageBox createAuthReq(BSMessageBox::question, tr("Authentication Wallet")
-                     , tr("Create Authentication Wallet")
-                     , tr("You don't have a sub-wallet in which to hold Authentication Addresses."
-                        " Would you like to create one?"), this);
-                  if (createAuthReq.exec() == QDialog::Accepted) {
-                     authManager_->createAuthWallet(cb);
-                  }
-               }
-            });
-         };
-         if (walletsMgr_->hasPrimaryWallet()) {
-            lbdCreateAuthWallet();
-         }
-         else {
-            createWallet(true, lbdCreateAuthWallet);
-         }
-      };
-      addDeferredDialog(deferredDialog);
-   }
-}
-
 struct BSTerminalMainWindow::TxInfo {
    Tx       tx;
    uint32_t txTime{};
