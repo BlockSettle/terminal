@@ -52,6 +52,10 @@ class MarketDataProvider;
 class MDCallbacksQt;
 class QuoteProvider;
 
+namespace ArmorySigner {
+   class BIP32_AssetPath;
+};
+
 class ResolverOneAddress : public ArmorySigner::ResolverFeed
 {
 private:
@@ -83,12 +87,12 @@ public:
       return privKey_;
    }
 
-   void setBip32PathForPubkey(const BinaryData &, const std::vector<uint32_t>&) override
+   void setBip32PathForPubkey(const BinaryData &, const ArmorySigner::BIP32_AssetPath&) override
    {
       throw std::runtime_error("not implemented");
    }
 
-   std::vector<uint32_t> resolveBip32PathForPubkey(const BinaryData&) override
+   ArmorySigner::BIP32_AssetPath resolveBip32PathForPubkey(const BinaryData&) override
    {
       throw std::runtime_error("not implemented");
    }
@@ -130,12 +134,12 @@ public:
       return iter->second;
    }
 
-   void setBip32PathForPubkey(const BinaryData &, const std::vector<uint32_t>&) override
+   void setBip32PathForPubkey(const BinaryData &, const ArmorySigner::BIP32_AssetPath&) override
    {
       throw std::runtime_error("not implemented");
    }
 
-   std::vector<uint32_t> resolveBip32PathForPubkey(const BinaryData&) override
+   ArmorySigner::BIP32_AssetPath resolveBip32PathForPubkey(const BinaryData&) override
    {
       throw std::runtime_error("not implemented");
    }

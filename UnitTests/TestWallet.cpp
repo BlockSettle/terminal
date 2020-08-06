@@ -163,7 +163,7 @@ TEST_F(TestWallet, BIP84_primary)
    EXPECT_NE(leafXbt, nullptr);
    EXPECT_EQ(leafXbt->shortName(), "0'");
    EXPECT_EQ(leafXbt->name(), "84'/1'/0'");
-   EXPECT_EQ(leafXbt->getRootId().toHexStr(), "efddafc2");
+   EXPECT_EQ(leafXbt->getRootId().toHexStr(), "ead70174");
 
    EXPECT_THROW(grpXbt->createLeaf(AddressEntryType_Default, 0), std::exception);
 
@@ -1869,7 +1869,6 @@ TEST_F(TestWallet, TxIdNestedSegwit)
 
    try {
       const auto txId = request.txId(resolver);
-      std::cout << "txId = " << txId.toHexStr(true) << "\n";
    }
    catch (const std::exception &e) {
       ASSERT_FALSE(true) << e.what();
