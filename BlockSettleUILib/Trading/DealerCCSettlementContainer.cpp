@@ -25,6 +25,7 @@
 #include <QPointer>
 
 using namespace bs::sync;
+using namespace ArmorySigner;
 
 DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
    , const bs::network::Order &order
