@@ -265,8 +265,6 @@ private:
 
    void setupShortcuts();
 
-   void createAuthWallet(const std::function<void()> &);
-
    bool isUserLoggedIn() const;
    bool isArmoryConnected() const;
 
