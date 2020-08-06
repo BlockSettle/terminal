@@ -35,22 +35,27 @@ public:
       : owner_(owner)
    {}
 
-   void peerConn(const std::string &ip) override
+   void clientConn(const std::string &clientId, const ServerConnectionListener::Details &details) override
    {
-      signer::PeerEvent evt;
-      evt.set_ip_address(ip);
+      signer::ClientConnected evt;
+      evt.set_client_id(clientId);
+      auto ipAddrIt = details.find(ServerConnectionListener::Detail::IpAddr);
+      if (ipAddrIt != details.end()) {
+         evt.set_ip_address(ipAddrIt->second);
+      }
+      auto pubKeyIt = details.find(ServerConnectionListener::Detail::PublicKey);
+      if (pubKeyIt != details.end()) {
+         evt.set_public_key(pubKeyIt->second);
+      }
       owner_->sendData(signer::PeerConnectedType, evt.SerializeAsString());
    }
 
-   void peerDisconn(const std::string &ip) override
+   void clientDisconn(const std::string &clientId) override
    {
-      signer::PeerEvent evt;
-      evt.set_ip_address(ip);
+      signer::ClientDisconnected evt;
+      evt.set_client_id(clientId);
       owner_->sendData(signer::PeerDisconnectedType, evt.SerializeAsString());
-   }
 
-   void clientDisconn(const std::string &) override
-   {
       if (owner_->settings_->runMode() == bs::signer::RunMode::litegui) {
          owner_->logger_->info("Quit because terminal disconnected unexpectedly and litegui used");
          owner_->queue_->quit();
@@ -165,7 +170,7 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
    });
 }
 
-void SignerAdapterListener::OnClientConnected(const std::string &clientId)
+void SignerAdapterListener::OnClientConnected(const std::string &clientId, const Details &details)
 {
    logger_->debug("[SignerAdapterListener] client {} connected", bs::toHex(clientId));
 }
@@ -177,7 +182,7 @@ void SignerAdapterListener::OnClientDisconnected(const std::string &clientId)
    shutdownIfNeeded();
 }
 
-void SignerAdapterListener::onClientError(const std::string &clientId, const std::string &error)
+void SignerAdapterListener::onClientError(const std::string &clientId, ClientError error, const Details &details)
 {
    logger_->debug("[SignerAdapterListener] client {} error: {}", bs::toHex(clientId), error);
 

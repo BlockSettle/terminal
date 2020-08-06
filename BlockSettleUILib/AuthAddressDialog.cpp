@@ -55,16 +55,6 @@ AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logg
    connect(authAddressManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked, this, &AuthAddressDialog::onAddressStateChanged, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Error, this, &AuthAddressDialog::onAuthMgrError, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Info, this, &AuthAddressDialog::onAuthMgrInfo, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::AuthAddressConfirmationRequired, this, &AuthAddressDialog::onAuthAddressConfirmationRequired, Qt::QueuedConnection);
-
-   auto resetLastSubmittedAddress = [this] {
-      setLastSubmittedAddress({});
-   };
-   connect(authAddressManager_.get(), &AuthAddressManager::Error, this, resetLastSubmittedAddress, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::AuthAddressSubmitCancelled, this, resetLastSubmittedAddress, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::AuthAddrSubmitSuccess, this, resetLastSubmittedAddress, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::AuthConfirmSubmitError, this, resetLastSubmittedAddress, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::AuthAddrSubmitError, this, resetLastSubmittedAddress, Qt::QueuedConnection);
 
    connect(ui_->pushButtonCreate, &QPushButton::clicked, this, &AuthAddressDialog::createAddress);
    connect(ui_->pushButtonRevoke, &QPushButton::clicked, this, &AuthAddressDialog::revokeSelectedAddress);
@@ -157,11 +147,7 @@ void AuthAddressDialog::updateUnsubmittedState()
          return;
       }
       switch (authAddressManager_->GetState(authAddr)) {
-      case AddressVerificationState::NotSubmitted:
-         //ui_->labelHint->setText(tr("There are unsubmitted addresses - adding new ones is temporarily suspended"));
-         [[clang::fallthrough]];
-      case AddressVerificationState::InProgress:
-      case AddressVerificationState::VerificationFailed:
+      case AuthAddressManager::AuthAddressState::Verifying:
          unconfirmedExists_ = true;
          break;
       default:
@@ -212,7 +198,7 @@ void AuthAddressDialog::setAddressToVerify(const QString &addr)
    }
 }
 
-void AuthAddressDialog::setBsClient(const std::weak_ptr<BsClient> &bsClient)
+void AuthAddressDialog::setBsClient(const std::weak_ptr<BsClient>& bsClient)
 {
    bsClient_ = bsClient;
 }
@@ -250,12 +236,12 @@ void AuthAddressDialog::copySelectedToClipboard()
 
 void AuthAddressDialog::onAddressStateChanged(const QString &addr, const QString &state)
 {
-   if (state == QLatin1String("Verified")) {
+   if (state == QStringLiteral("Verified")) {
       BSMessageBox(BSMessageBox::success, tr("Authentication Address")
          , tr("Authentication Address verified")
          , tr("You may now place orders in the Spot XBT product group.")
          ).exec();
-   } else if (state == QLatin1String("Revoked")) {
+   } else if (state == QStringLiteral("Revoked")) {
       BSMessageBox(BSMessageBox::warning, tr("Authentication Address")
          , tr("Authentication Address revoked")
          , tr("Authentication Address %1 was revoked and could not be used for Spot XBT trading.").arg(addr)).exec();
@@ -327,76 +313,30 @@ void AuthAddressDialog::revokeSelectedAddress()
    }
 }
 
-void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount)
+void AuthAddressDialog::submitSelectedAddress()
 {
-   auto bsClient = bsClient_.lock();
+   ui_->pushButtonSubmit->setEnabled(false);
+   ui_->labelHint->clear();
 
-   const bool testnet = settings_->get<NetworkType>(ApplicationSettings::netType) == NetworkType::TestNet;
-   const auto eurBalance = assetManager_->getBalance("EUR");
-   if (validationAmount > eurBalance) {
-      BSMessageBox warnFunds(BSMessageBox::warning, tr("Insufficient EUR Balance")
-         , tr("Please fund your EUR account prior to submitting an Authentication Address")
-         , tr("Required amount (EUR): %1<br/>Deposits and withdrawals are administered through the "
-            "<a href=\"https://blocksettle.com\"><span style=\"text-decoration: underline;color:%2;\">Client Portal</span></a>")
-         .arg(UiUtils::displayCurrencyAmount(validationAmount))
-         .arg(BSMessageBox::kUrlColor), this);
-      warnFunds.setWindowTitle(tr("Insufficient Funds"));
-      warnFunds.enableRichText();
-      warnFunds.exec();
-
-      if (bsClient) {
-         bsClient->cancelActiveSign();
-      }
-      setLastSubmittedAddress({});
-
+   const auto selectedAddress = GetSelectedAddress();
+   if (selectedAddress.empty()) {
       return;
    }
 
-   int promptResult = 0;
-   const auto &qryTitle = tr("Authentication Address");
-   const auto &qryText = tr("Submit Authentication Address");
-   if (validationAmount > 0) {
-      auto msgText = tr("Approve %1 %2 cost?\n\n"
-         "The cost covers the funding of 1'000 satoshis to validate your Authentication Address (at current spot price of bitcoin, including the network fee)."
-      );
-
-      if (testnet) {
-         msgText += tr("\n\nIt will be deducted from the ‘play money’ in your test account.\n");
-      }
-
-      promptResult = BSMessageBox(BSMessageBox::question, qryTitle, qryText
-         , msgText.arg(QLatin1String("EUR")).arg(UiUtils::displayCurrencyAmount(validationAmount))
-         , this).exec();
-   }
-   else {
-      promptResult = BSMessageBox(BSMessageBox::question, qryTitle, qryText
-         , tr("Are you sure you wish to submit a new authentication address?")
-         , tr("It appears that you're submitting the same Authentication Address again. The confirmation is"
-            " formal and won't result in any withdrawals from your account."), this).exec();
+   const auto state = authAddressManager_->GetState(selectedAddress);
+   if (state != AuthAddressManager::AuthAddressState::NotSubmitted) {
+      SPDLOG_LOGGER_ERROR(logger_, "refuse to submit address in state: {}", (int)state);
+      return;
    }
 
-   if (promptResult == QDialog::Accepted) {
-      ConfirmAuthAddressSubmission();
-   } else {
-      if (bsClient) {
-         bsClient->cancelActiveSign();
-      }
-      setLastSubmittedAddress({});
-   }
-}
-
-void AuthAddressDialog::ConfirmAuthAddressSubmission()
-{
    auto bsClient = bsClient_.lock();
 
    if (!bsClient) {
       SPDLOG_LOGGER_ERROR(logger_, "bsClient_ in not set");
       return;
    }
-   if (lastSubmittedAddress_.empty()) {
-      SPDLOG_LOGGER_ERROR(logger_, "invalid lastSubmittedAddress_");
-      return;
-   }
+
+   setLastSubmittedAddress(selectedAddress);
 
    AuthAddressConfirmDialog confirmDlg{bsClient_, lastSubmittedAddress_, authAddressManager_, settings_, this};
 
@@ -406,31 +346,6 @@ void AuthAddressDialog::ConfirmAuthAddressSubmission()
 
    if (result == QDialog::Accepted) {
       accept();
-   }
-}
-
-void AuthAddressDialog::submitSelectedAddress()
-{
-   ui_->pushButtonSubmit->setEnabled(false);
-   ui_->labelHint->clear();
-
-   setLastSubmittedAddress(GetSelectedAddress());
-   if (lastSubmittedAddress_.empty()) {
-      return;
-   }
-
-   if (authAddressManager_->hasSettlementLeaf(lastSubmittedAddress_)) {
-      authAddressManager_->SubmitForVerification(bsClient_, lastSubmittedAddress_);
-   }
-   else {
-      authAddressManager_->createSettlementLeaf(lastSubmittedAddress_, [this, handle = validityFlag_.handle()] {
-         QMetaObject::invokeMethod(this, [this, handle] {
-            if (!handle.isValid()) {
-               return;
-            }
-            authAddressManager_->SubmitForVerification(bsClient_, lastSubmittedAddress_);
-         });
-      });
    }
 }
 
@@ -447,7 +362,6 @@ void AuthAddressDialog::setDefaultAddress()
 
 void AuthAddressDialog::onModelReset()
 {
-   model_->adjustVisibleCount();
    updateEnabledStates();
    saveAddressesNumber();
    adressSelected();
@@ -487,22 +401,25 @@ void AuthAddressDialog::updateEnabledStates()
    if (selectionModel->hasSelection()) {
       const auto address = model_->getAddress(selectionModel->selectedRows()[0]);
 
+      const bool allowSubmit = authAddressManager_->UserCanSubmitAuthAddress();
+
       switch (authAddressManager_->GetState(address)) {
-         case AddressVerificationState::NotSubmitted:
+         case AuthAddressManager::AuthAddressState::NotSubmitted:
             ui_->pushButtonRevoke->setEnabled(false);
-            ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.empty());
+            ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.empty() && allowSubmit);
             ui_->pushButtonDefault->setEnabled(false);
             break;
-         case AddressVerificationState::Submitted:
-         case AddressVerificationState::Revoked:
-         case AddressVerificationState::PendingVerification:
-         case AddressVerificationState::VerificationFailed:
-         case AddressVerificationState::InProgress:
+         case AuthAddressManager::AuthAddressState::Submitted:
+         case AuthAddressManager::AuthAddressState::Tainted:
+         case AuthAddressManager::AuthAddressState::Verifying:
+         case AuthAddressManager::AuthAddressState::Revoked:
+         case AuthAddressManager::AuthAddressState::RevokedByBS:
+         case AuthAddressManager::AuthAddressState::Invalid:
             ui_->pushButtonRevoke->setEnabled(false);
             ui_->pushButtonSubmit->setEnabled(false);
             ui_->pushButtonDefault->setEnabled(false);
             break;
-         case AddressVerificationState::Verified:
+         case AuthAddressManager::AuthAddressState::Verified:
             ui_->pushButtonRevoke->setEnabled(authAddressManager_->readyError() == AuthAddressManager::ReadyError::NoError);
             ui_->pushButtonSubmit->setEnabled(false);
             ui_->pushButtonDefault->setEnabled(address != defaultAddr_);

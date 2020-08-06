@@ -112,7 +112,8 @@ private:
    void processData(const std::string &);
 
    void onReady(const std::string &data);
-   void onPeerConnected(const std::string &data, bool connected);
+   void onPeerConnected(const std::string &data);
+   void onPeerDisconnected(const std::string &data);
    void onDecryptWalletRequested(const std::string &data);
    void onTxSigned(const std::string &data, bs::signer::RequestId);
    void onUpdateDialogData(const std::string &data, bs::signer::RequestId);

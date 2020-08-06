@@ -265,7 +265,7 @@ int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs
          }
 
          continue;
-      } 
+      }
 
       if (hdWallet->isOffline()) {
          type = (walletTypes & WalletsTypes::WatchOnly) ? WalletsTypes::WatchOnly : WalletsTypes::None;
@@ -280,10 +280,10 @@ int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs
    return selected;
 }
 
-void UiUtils::fillAuthAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager> &authAddressManager)
+void UiUtils::fillAuthAddressesComboBoxWithSubmitted(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager> &authAddressManager)
 {
    comboBox->clear();
-   const auto &addrList = authAddressManager->GetVerifiedAddressList();
+   const auto &addrList = authAddressManager->GetSubmittedAddressList();
    if (!addrList.empty()) {
       const auto b = comboBox->blockSignals(true);
       for (const auto &address : addrList) {
@@ -292,8 +292,7 @@ void UiUtils::fillAuthAddressesComboBox(QComboBox* comboBox, const std::shared_p
       comboBox->blockSignals(b);
       QMetaObject::invokeMethod(comboBox, "setCurrentIndex", Q_ARG(int, authAddressManager->getDefaultIndex()));
       comboBox->setEnabled(true);
-   }
-   else {
+   } else {
       comboBox->setEnabled(false);
    }
 }

@@ -42,6 +42,7 @@ class WalletSignerContainer;
 
 
 class DealerXBTSettlementContainer : public bs::SettlementContainer
+   , public ArmoryCallbackTarget
 {
    Q_OBJECT
 public:
@@ -95,12 +96,13 @@ private slots:
    void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode, std::string errMsg);
 
 private:
-   bool startPayInSigning();
-
    void failWithErrorText(const QString& error, bs::error::ErrorCode code);
 
    void initTradesArgs(bs::tradeutils::Args &args, const std::string &settlementId);
 
+   void onZCReceived(const std::string &, const std::vector<bs::TXEntry> &) override;
+
+private:
    const bs::network::Order   order_;
    std::string    fxProd_;
    const bool     weSellXbt_;
@@ -129,11 +131,13 @@ private:
    unsigned int   payinSignId_ = 0;
    unsigned int   payoutSignId_ = 0;
 
-   BinaryData        usedPayinHash_;
+   BinaryData        expectedPayinHash_;
 
    std::vector<UTXO> utxosPayinFixed_;
    bs::Address       recvAddr_;
    bs::Address       authAddr_;
+
+   std::shared_ptr<AsyncClient::BtcWallet>   settlWallet_;
 };
 
 #endif // __DEALER_XBT_SETTLEMENT_CONTAINER_H__

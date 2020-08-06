@@ -15,7 +15,9 @@
 #include "BinaryData.h"
 #include "BsClient.h"
 #include "ValidityFlag.h"
+
 #include <memory>
+
 #include <QDialog>
 #include <QPointer>
 
@@ -25,6 +27,10 @@ class QItemSelection;
 
 namespace Ui {
     class AuthAddressDialog;
+}
+
+namespace bs {
+   struct TradeSettings;
 }
 
 namespace spdlog {
@@ -44,7 +50,7 @@ public:
    ~AuthAddressDialog() override;
 
    void setAddressToVerify(const QString &addr);
-   void setBsClient(const std::weak_ptr<BsClient> &bsClient);
+   void setBsClient(const std::weak_ptr<BsClient>& bsClient);
 
 signals:
    void askForConfirmation(const QString &address, double txAmount);
@@ -63,10 +69,6 @@ private slots:
 
    void onAuthMgrError(const QString &details);
    void onAuthMgrInfo(const QString &text);
-
-   void onAuthAddressConfirmationRequired(float validationAmount);
-
-   void ConfirmAuthAddressSubmission();
 
    void onAuthVerifyTxSent();
    void onUpdateSelection(int row);
@@ -89,7 +91,7 @@ private:
 
 private:
    std::unique_ptr<Ui::AuthAddressDialog> ui_;
-   std::shared_ptr<spdlog::logger> logger_;
+   std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<AuthAddressManager>    authAddressManager_;
    std::shared_ptr<AssetManager>          assetManager_;
    std::shared_ptr<ApplicationSettings>   settings_;

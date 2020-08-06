@@ -25,9 +25,10 @@ namespace bs {
       class WalletsManager;
    }
 }
-class QQmlComponent;
 class AssetManager;
+class DataConnection;
 class MDCallbacksQt;
+class QQmlComponent;
 
 
 //
@@ -109,6 +110,7 @@ private:
    mutable float feePerByte_ = 0.0;
 }; // class Constants
 
+using ExtConnections = std::unordered_map<std::string, std::shared_ptr<DataConnection>>;
 
 class UserScript : public QObject
 {
@@ -117,11 +119,13 @@ Q_OBJECT
 public:
    UserScript(const std::shared_ptr<spdlog::logger> &,
       const std::shared_ptr<MDCallbacksQt> &,
-      QObject* parent = nullptr);
+      const ExtConnections &, QObject* parent = nullptr);
    ~UserScript() override;
 
    void setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> walletsManager);
    bool load(const QString &filename);
+
+   bool sendExtConn(const QString &name, const QString &type, const QString &message);
 
 signals:
    void loaded();
@@ -135,6 +139,7 @@ protected:
    QQmlEngine *engine_;
    QQmlComponent *component_;
    MarketData *md_;
+   ExtConnections extConns_;
    Constants *const_;
    DataStorage *storage_;
 };
@@ -147,7 +152,7 @@ public:
    AutoQuoter(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<MDCallbacksQt> &
-      , QObject* parent = nullptr);
+      , const ExtConnections &, QObject* parent = nullptr);
    ~AutoQuoter() override = default;
 
    QObject *instantiate(const bs::network::QuoteReqNotification &qrn);
@@ -267,13 +272,15 @@ public:
    double bestPrice() const { return bestPrice_; }
    bool   isOwnBestPrice() const { return isOwnBestPrice_; }
 
-   void init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AssetManager> &assetManager);
+   void init(const std::shared_ptr<spdlog::logger> &logger
+      , const std::shared_ptr<AssetManager> &assetManager, UserScript *parent);
 
    Q_INVOKABLE void log(const QString &);
    Q_INVOKABLE bool sendQuoteReply(double price);
    Q_INVOKABLE bool pullQuoteReply();
    Q_INVOKABLE QString product();
    Q_INVOKABLE double accountBalance(const QString &product);
+   Q_INVOKABLE bool sendExtConn(const QString &name, const QString &type, const QString &message);
 
    void start() {
       if (!started_ && indicBid_ > .0 && indicAsk_ > .0 && lastPrice_ > .0) {
@@ -290,7 +297,10 @@ signals:
    void bestPriceChanged();
    void sendingQuoteReply(const QString &reqId, double price);
    void pullingQuoteReply(const QString &reqId);
+   void settled();
+   void cancelled();
    void started();
+   void extDataReceived(QString from, QString type, QString msg);
 
 private:
    BSQuoteRequest *quoteReq_;
@@ -304,6 +314,7 @@ private:
    bool     started_ = false;
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<AssetManager> assetManager_;
+   UserScript  * parent_;
 };
 
 
@@ -451,12 +462,7 @@ private:
    std::shared_ptr<spdlog::logger> logger_;
    std::unordered_map<std::string, SubmitRFQ *> activeRFQs_;
 
-   struct MDInfo {
-      double   bidPrice;
-      double   askPrice;
-      double   lastPrice;
-   };
-   std::unordered_map<std::string, MDInfo>  mdInfo_;
+   std::unordered_map<std::string, bs::network::MDInfo>  mdInfo_;
 };
 
 

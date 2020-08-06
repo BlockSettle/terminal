@@ -35,6 +35,9 @@ BinaryData PubKeyLoader::loadKey(const KeyType kt) const
    case KeyType::CcServer:
       keyString = appSettings_->get<std::string>(ApplicationSettings::ccServerPubKey);
       break;
+   case KeyType::ExtConnector:
+      keyString = appSettings_->get<std::string>(ApplicationSettings::ExtConnPubKey);
+      break;
    }
 
    if (!keyString.empty()) {
@@ -120,6 +123,9 @@ bool PubKeyLoader::saveKey(const KeyType kt, const BinaryData &key)
    case KeyType::CcServer:
       appSettings_->set(ApplicationSettings::ccServerPubKey, QString::fromStdString(key.toHexStr()));
       break;
+   case KeyType::ExtConnector:
+      appSettings_->set(ApplicationSettings::ExtConnPubKey, QString::fromStdString(key.toHexStr()));
+      break;
    }
    return true;
 }
@@ -170,6 +176,51 @@ bs::network::BIP15xNewKeyCb PubKeyLoader::getApprovingCallback(const KeyType kt
    };
 }
 
+std::string PubKeyLoader::envNameShort(ApplicationSettings::EnvConfiguration env)
+{
+   switch (env) {
+      case ApplicationSettings::EnvConfiguration::Production:
+         return "prod";
+      case ApplicationSettings::EnvConfiguration::Test:
+         return "test";
+#ifndef PRODUCTION_BUILD
+      case ApplicationSettings::EnvConfiguration::Staging:
+            return "staging";
+      case ApplicationSettings::EnvConfiguration::Custom:
+         return "custom";
+#endif
+   }
+   return "unknown";
+}
+
+std::string PubKeyLoader::serverNameShort(PubKeyLoader::KeyType kt)
+{
+   switch (kt) {
+      case KeyType::PublicBridge:   return "pub";
+      case KeyType::Chat:           return "chat";
+      case KeyType::Proxy:          return "proxy";
+      case KeyType::CcServer:       return "cctracker";
+      case KeyType::MdServer:       return "mdserver";
+      case KeyType::Mdhs:           return "mdhs";
+   }
+   return {};
+}
+
+std::string PubKeyLoader::serverHostName(PubKeyLoader::KeyType kt, ApplicationSettings::EnvConfiguration env)
+{
+   return fmt::format("{}-{}.blocksettle.com", serverNameShort(kt), envNameShort(env));
+}
+
+std::string PubKeyLoader::serverHttpPort()
+{
+   return "80";
+}
+
+std::string PubKeyLoader::serverHttpsPort()
+{
+   return "443";
+}
+
 QString PubKeyLoader::serverName(const KeyType kt)
 {
    switch (kt) {
@@ -177,6 +228,7 @@ QString PubKeyLoader::serverName(const KeyType kt)
       case KeyType::Chat:           return QObject::tr("Chat Server");
       case KeyType::Proxy:          return QObject::tr("Proxy");
       case KeyType::CcServer:       return QObject::tr("CC tracker server");
+      case KeyType::ExtConnector:   return QObject::tr("External Connector");
    }
    return {};
 }

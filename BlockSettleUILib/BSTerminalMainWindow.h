@@ -34,6 +34,7 @@ namespace Ui {
 namespace bs {
    class LogManager;
    class UTXOReservationManager;
+   struct TradeSettings;
    namespace sync {
       class Wallet;
       class WalletsManager;
@@ -42,7 +43,9 @@ namespace bs {
 
 class QLockFile;
 
+struct BsClientLoginResult;
 struct NetworkSettings;
+
 class AboutDialog;
 class ArmoryServersProvider;
 class AssetManager;
@@ -210,13 +213,19 @@ private:
       MarketData,
    };
 
+   enum class AutoLoginState
+   {
+      Idle,
+      Connecting,
+      Connected,
+   };
+
 private slots:
 
    void onSend();
    void onGenerateAddress();
 
    void openAuthManagerDialog();
-   void openAuthDlgVerify(const QString &addrToVerify);
    void openConfigDialog(bool showInNetworkPage = false);
    void openAccountInfoDialog();
    void openCCTokenDialog();
@@ -234,7 +243,6 @@ private slots:
    void onCelerConnectionError(int errorCode);
    void showRunInBackgroundMessage();
    void onCCInfoMissing();
-   void onCcDefinitionsLoadedFromPub();
 
    void onNetworkSettingsRequired(NetworkSettingsClient client);
 
@@ -242,8 +250,6 @@ private slots:
    void onBsConnectionFailed();
 
    void onInitWalletDialogWasShown();
-
-   void onAddrStateChanged();
 
 protected:
    void closeEvent(QCloseEvent* event) override;
@@ -279,6 +285,13 @@ private:
    void restartTerminal();
    void processDeferredDialogs();
 
+   std::shared_ptr<BsClient> createClient();
+   void activateClient(const std::shared_ptr<BsClient> &bsClient
+      , const BsClientLoginResult &result, const std::string &email);
+   const std::string &loginApiKey() const;
+   void initApiKeyLogins();
+   void tryLoginUsingApiKey();
+
 private:
    enum class ChatInitState
    {
@@ -288,11 +301,11 @@ private:
    };
 
    QString           loginButtonText_;
+   AutoLoginState    autoLoginState_{AutoLoginState::Idle};
+   std::string loginApiKey_;
+   QTimer *loginTimer_{};
 
    bool initialWalletCreateDialogShown_ = false;
-   bool allowAuthAddressDialogShow_ = true;
-   bool createAuthWalletDialogShown_ = false;
-   bool promoteToPrimaryShown_ = false;
    bool deferCCsync_ = false;
 
    bool wasWalletsRegistered_ = false;
@@ -307,6 +320,7 @@ private:
    bs::network::BIP15xNewKeyCb   cbApproveChat_{ nullptr };
    bs::network::BIP15xNewKeyCb   cbApproveProxy_{ nullptr };
    bs::network::BIP15xNewKeyCb   cbApproveCcServer_{ nullptr };
+   bs::network::BIP15xNewKeyCb   cbApproveExtConn_{ nullptr };
 
    std::queue<std::function<void(void)>> deferredDialogs_;
    bool deferredDialogRunning_ = false;
@@ -349,6 +363,7 @@ private:
 
    bs::network::UserType userType_{};
 
+   std::shared_ptr<bs::TradeSettings> tradeSettings_;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

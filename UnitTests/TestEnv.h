@@ -11,22 +11,22 @@
 #ifndef __TEST_ENV_H__
 #define __TEST_ENV_H__
 
+#include "ArmoryObject.h"
+#include "AuthAddressLogic.h"
+#include "BDM_mainthread.h"
+#include "BlockchainMonitor.h"
+#include "BlockDataManagerConfig.h"
+#include "gtest/NodeUnitTest.h"
+#include "MockAssetMgr.h"
+#include "Server.h"
+#include "Wallets/SyncWallet.h"
+
 #include <memory>
 #include <string>
+
 #include <gtest/gtest.h>
-#include "BlockchainMonitor.h"
-#include "MockAssetMgr.h"
-#include "MockAuthAddrMgr.h"
-#include "Server.h"
-#include "gtest/NodeUnitTest.h"
-#include "BlockDataManagerConfig.h"
-#include "BDM_mainthread.h"
+
 #include <btc/ecc.h>
-
-#include "ArmoryObject.h"
-#include "Wallets/SyncWallet.h"
-#include "AuthAddressLogic.h"
-
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
@@ -455,12 +455,11 @@ public:
    ~TestEnv(void) { shutdown(); }
 
    void shutdown(void);
-   
+
    std::shared_ptr<ApplicationSettings> appSettings() { return appSettings_; }
    std::shared_ptr<TestArmoryConnection> armoryConnection() { return armoryConnection_; }
    std::shared_ptr<ArmoryInstance> armoryInstance() { return armoryInstance_; }
    std::shared_ptr<MockAssetManager> assetMgr() { return assetMgr_; }
-   std::shared_ptr<MockAuthAddrMgr> authAddrMgr() { return authAddrMgr_; }
    std::shared_ptr<BlockchainMonitor> blockMonitor() { return blockMonitor_; }
    std::shared_ptr<ConnectionManager> connectionMgr() { return connMgr_; }
    std::shared_ptr<BaseCelerClient> celerConnection() { return celerConn_; }
@@ -477,7 +476,6 @@ public:
 private:
    std::shared_ptr<ApplicationSettings>  appSettings_;
    std::shared_ptr<MockAssetManager>     assetMgr_;
-   std::shared_ptr<MockAuthAddrMgr>      authAddrMgr_;
    std::shared_ptr<BlockchainMonitor>    blockMonitor_;
    std::shared_ptr<BaseCelerClient>      celerConn_;
    std::shared_ptr<ConnectionManager>    connMgr_;

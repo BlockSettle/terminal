@@ -152,7 +152,7 @@ void OTCNegotiationResponseWidget::onSyncInterface()
    ui_->comboBoxXBTWallets->setCurrentIndex(index);
    onCurrentWalletChanged();
 
-   UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, getAuthManager());
+   UiUtils::fillAuthAddressesComboBoxWithSubmitted(ui_->authenticationAddressComboBox, getAuthManager());
    ui_->widgetButtons->setEnabled(ui_->authenticationAddressComboBox->isEnabled());
 }
 

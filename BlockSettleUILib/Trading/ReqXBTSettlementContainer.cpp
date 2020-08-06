@@ -183,7 +183,7 @@ bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData(QDa
    dialogData.setValue(PasswordDialogData::RequesterAuthAddress, authAddr_.display());
    dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, true);
 
-   dialogData.setValue(PasswordDialogData::ResponderAuthAddress, 
+   dialogData.setValue(PasswordDialogData::ResponderAuthAddress,
       bs::Address::fromPubKey(dealerAuthKey_, AddressEntryType_P2WPKH).display());
    dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, dealerVerifState_ == AddressVerificationState::Verified);
 
@@ -208,17 +208,17 @@ void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState
 void ReqXBTSettlementContainer::cancelWithError(const QString& errorMessage, bs::error::ErrorCode code)
 {
    emit cancelTrade(settlementIdHex_);
-   emit error(code, errorMessage);
+   emit error(id(), code, errorMessage);
    cancel();
 
    // Call failed to remove from RfqStorage and cleanup memory
-   emit failed();
+   emit failed(id());
 }
 
-void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
+void ReqXBTSettlementContainer::onTXSigned(unsigned int idReq, BinaryData signedTX
    , bs::error::ErrorCode errCode, std::string errTxt)
 {
-   if ((payoutSignId_ != 0) && (payoutSignId_ == id)) {
+   if ((payoutSignId_ != 0) && (payoutSignId_ == idReq)) {
       payoutSignId_ = 0;
 
       if (errCode == bs::error::ErrorCode::TxCancelled) {
@@ -240,7 +240,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       bs::tradeutils::PayoutVerifyArgs verifyArgs;
       verifyArgs.signedTx = signedTX;
       verifyArgs.settlAddr = settlAddr_;
-      verifyArgs.usedPayinHash = usedPayinHash_;
+      verifyArgs.usedPayinHash = expectedPayinHash_;
       verifyArgs.amount = bs::XBTAmount(amount_);
       auto verifyResult = bs::tradeutils::verifySignedPayout(verifyArgs);
       if (!verifyResult.success) {
@@ -261,10 +261,10 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       emit settlementAccepted();
 
       // Call completed to remove from RfqStorage and cleanup memory
-      emit completed();
+      emit completed(id());
    }
 
-   if ((payinSignId_ != 0) && (payinSignId_ == id)) {
+   if ((payinSignId_ != 0) && (payinSignId_ == idReq)) {
       payinSignId_ = 0;
 
       if (errCode == bs::error::ErrorCode::TxCancelled) {
@@ -286,7 +286,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
             throw std::runtime_error("uninited TX");
          }
 
-         if (tx.getThisHash() != usedPayinHash_) {
+         if (tx.getThisHash() != expectedPayinHash_) {
             emit cancelWithError(tr("payin hash mismatch"), bs::error::ErrorCode::TxInvalidRequest);
             return;
          }
@@ -307,7 +307,7 @@ void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX
       emit settlementAccepted();
 
       // Call completed to remove from RfqStorage and cleanup memory
-      emit completed();
+      emit completed(id());
    }
 }
 
@@ -363,7 +363,7 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
 
          settlAddr_ = result.settlementAddr;
 
-         const auto list = authAddrMgr_->GetVerifiedAddressList();
+         const auto list = authAddrMgr_->GetSubmittedAddressList();
          const auto userAddress = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
          userKeyOk_ = (std::find(list.begin(), list.end(), userAddress) != list.end());
          if (!userKeyOk_) {
@@ -406,7 +406,7 @@ void ReqXBTSettlementContainer::onSignedPayoutRequested(const std::string& settl
    startTimer(kWaitTimeoutInSec);
 
    SPDLOG_LOGGER_DEBUG(logger_, "create payout for {} on {} for {}", settlementId, payinHash.toHexStr(), amount_);
-   usedPayinHash_ = payinHash;
+   expectedPayinHash_ = payinHash;
 
    bs::tradeutils::PayoutArgs args;
    initTradesArgs(args, settlementId);
@@ -468,15 +468,12 @@ void ReqXBTSettlementContainer::onSignedPayinRequested(const std::string& settle
    }
 
    if (payinHash.empty()) {
-      SPDLOG_LOGGER_WARN(logger_, "empty payin hash - either PB or Proxy update is required");
-      emit error(bs::error::ErrorCode::TxInvalidRequest, tr("empty payin hash in request"));
-   }
-   if (usedPayinHash_ != payinHash) {
-      SPDLOG_LOGGER_ERROR(logger_, "invalid payin hash: {} - {} expected"
-         , usedPayinHash_.toHexStr(true), payinHash.toHexStr(true));
-      emit error(bs::error::ErrorCode::TxInvalidRequest, tr("payin hash mismatch"));
+      logger_->error("[ReqXBTSettlementContainer::onSignedPayinRequested] missing expected payin hash");
+      emit cancelWithError(tr("payin hash mismatch"), bs::error::ErrorCode::TxInvalidRequest);
       return;
    }
+
+   expectedPayinHash_ = payinHash;
 
    startTimer(kWaitTimeoutInSec);
 

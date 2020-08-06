@@ -33,6 +33,9 @@ public:
       Chat,
       Proxy,
       CcServer,
+      MdServer,
+      Mdhs,
+      ExtConnector
    };
 
    BinaryData loadKey(const KeyType) const;
@@ -40,6 +43,12 @@ public:
 
    static bs::network::BIP15xNewKeyCb getApprovingCallback(const KeyType
       , QWidget *bsMainWindow, const std::shared_ptr<ApplicationSettings> &);
+
+   static std::string envNameShort(ApplicationSettings::EnvConfiguration env);
+   static std::string serverNameShort(KeyType);
+   static std::string serverHostName(KeyType, ApplicationSettings::EnvConfiguration env);
+   static std::string serverHttpPort();
+   static std::string serverHttpsPort();
 
 private:
    static BinaryData loadKeyFromResource(KeyType, ApplicationSettings::EnvConfiguration);

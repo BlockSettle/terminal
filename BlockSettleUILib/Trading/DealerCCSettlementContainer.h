@@ -35,6 +35,7 @@ class SignContainer;
 
 
 class DealerCCSettlementContainer : public bs::SettlementContainer
+   , public ArmoryCallbackTarget
 {
    Q_OBJECT
 public:
@@ -84,6 +85,7 @@ private slots:
 private:
    std::string txComment();
    void sendFailed();
+   void onZCReceived(const std::string &, const std::vector<bs::TXEntry> &) override;
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;
@@ -105,7 +107,8 @@ private:
    bs::core::wallet::TXSignRequest txReq_;
    bool isGetAddressValid_ = false;
    std::shared_ptr<bs::sync::Wallet>         ccWallet_;
-
+   std::shared_ptr<AsyncClient::BtcWallet>   settlWallet_;
+   BinaryData  expectedTxId_;
 };
 
 #endif // __DEALER_CC_SETTLEMENT_CONTAINER_H__

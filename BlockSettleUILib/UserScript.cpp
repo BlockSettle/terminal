@@ -10,10 +10,13 @@
 */
 #include "UserScript.h"
 #include <spdlog/logger.h>
+#include <QJsonObject>
+#include <QJsonDocument>
 #include <QQmlComponent>
 #include <QQmlContext>
 #include "AssetManager.h"
 #include "CurrencyPair.h"
+#include "DataConnection.h"
 #include "MDCallbacksQt.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -22,12 +25,14 @@
 
 
 UserScript::UserScript(const std::shared_ptr<spdlog::logger> &logger,
-   const std::shared_ptr<MDCallbacksQt> &mdCallbacks, QObject* parent)
+   const std::shared_ptr<MDCallbacksQt> &mdCallbacks, const ExtConnections &extConns
+   , QObject* parent)
    : QObject(parent)
    , logger_(logger)
    , engine_(new QQmlEngine(this))
    , component_(nullptr)
    , md_(mdCallbacks ? new MarketData(mdCallbacks, this) : nullptr)
+   , extConns_(extConns)
    , const_(new Constants(this))
    , storage_(new DataStorage(this))
 {
@@ -54,19 +59,6 @@ bool UserScript::load(const QString &filename)
       emit failed(tr("Failed to load script %1").arg(filename));
       return false;
    }
-/*   else {
-      connect(component_, &QQmlComponent::statusChanged, [this](QQmlComponent::Status status) {
-         switch (status) {
-         case QQmlComponent::Ready:
-            emit loaded();
-            return;
-         case QQmlComponent::Error:
-            emit failed(component_->errorString());
-            break;
-         default:    break;
-         }
-      });
-   }*/   // Switched to synchronous loading
 
    if (component_->isReady()) {
       emit loaded();
@@ -92,6 +84,38 @@ QObject *UserScript::instantiate()
 void UserScript::setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> walletsManager)
 {
    const_->setWalletsManager(walletsManager);
+}
+
+bool UserScript::sendExtConn(const QString &name, const QString &type, const QString &message)
+{
+   const auto &itConn = extConns_.find(name.toStdString());
+   if (itConn == extConns_.end()) {
+      logger_->error("[UserScript::sendExtConn] can't find external connector {}"
+         , name.toStdString());
+      return false;
+   }
+   if (!itConn->second->isActive()) {
+      logger_->error("[UserScript::sendExtConn] external connector {} is not "
+         "active", name.toStdString());
+      return false;
+   }
+   QJsonParseError jsonError;
+   auto jsonDoc = QJsonDocument::fromJson(QByteArray::fromStdString(message.toStdString())
+      , &jsonError);
+   if (jsonError.error != QJsonParseError::NoError) {
+      logger_->error("[UserScript::sendExtConn] invalid JSON message: {}\n{}"
+         , jsonError.errorString().toUtf8().toStdString(), message.toStdString());
+      return false;
+   }
+   const auto messageObj = jsonDoc.object();
+   QJsonObject jsonEnvelope;
+   jsonEnvelope[QLatin1Literal("to")] = name;
+   jsonEnvelope[QLatin1Literal("type")] = type;
+   jsonEnvelope[QLatin1Literal("message")] = messageObj;
+   jsonDoc.setObject(jsonEnvelope);
+   const auto &msgJSON = jsonDoc.toJson(QJsonDocument::JsonFormat::Compact).toStdString();
+
+   return itConn->second->send(msgJSON);
 }
 
 
@@ -226,8 +250,9 @@ void Constants::setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> wall
 
 AutoQuoter::AutoQuoter(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AssetManager> &assetManager
-   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks, QObject* parent)
-   : UserScript(logger, mdCallbacks, parent)
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
+   , const ExtConnections &extConns, QObject* parent)
+   : UserScript(logger, mdCallbacks, extConns, parent)
    , assetManager_(assetManager)
 {
    qmlRegisterType<BSQuoteReqReply>("bs.terminal", 1, 0, "BSQuoteReqReply");
@@ -239,7 +264,7 @@ QObject *AutoQuoter::instantiate(const bs::network::QuoteReqNotification &qrn)
    QObject *rv = UserScript::instantiate();
    if (rv) {
       BSQuoteReqReply *qrr = qobject_cast<BSQuoteReqReply *>(rv);
-      qrr->init(logger_, assetManager_);
+      qrr->init(logger_, assetManager_, this);
 
       BSQuoteRequest *qr = new BSQuoteRequest(rv);
       qr->init(QString::fromStdString(qrn.quoteRequestId), QString::fromStdString(qrn.product)
@@ -270,15 +295,17 @@ void BSQuoteRequest::init(const QString &reqId, const QString &product, bool buy
    assetType_ = at;
 }
 
-void BSQuoteReqReply::init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AssetManager> &assetManager)
+void BSQuoteReqReply::init(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<AssetManager> &assetManager, UserScript *parent)
 {
    logger_ = logger;
    assetManager_ = assetManager;
+   parent_ = parent;
 }
 
 void BSQuoteReqReply::log(const QString &s)
 {
-   logger_->info("[BSQuoteReply] {}", s.toStdString());
+   logger_->info("[BSQuoteReqReply] {}", s.toStdString());
 }
 
 bool BSQuoteReqReply::sendQuoteReply(double price)
@@ -306,6 +333,12 @@ QString BSQuoteReqReply::product()
 double BSQuoteReqReply::accountBalance(const QString &product)
 {
    return assetManager_->getBalance(product.toStdString());
+}
+
+bool BSQuoteReqReply::sendExtConn(const QString &name, const QString &type
+   , const QString &message)
+{
+   return parent_->sendExtConn(name, type, message);
 }
 
 
@@ -364,37 +397,23 @@ void RFQScript::onMDUpdate(bs::network::Asset::Type, const QString &security,
    if (!started_) {
       return;
    }
-   const double bid = bs::network::MDField::get(mdFields, bs::network::MDField::PriceBid).value;
-   const double ask = bs::network::MDField::get(mdFields, bs::network::MDField::PriceOffer).value;
-   const double last = bs::network::MDField::get(mdFields, bs::network::MDField::PriceLast).value;
 
    auto &mdInfo = mdInfo_[security.toStdString()];
-   if (bid > 0) {
-      mdInfo.bidPrice = bid;
-      emit indicBidChanged(security, bid);
-   }
-   if (ask > 0) {
-      mdInfo.askPrice = ask;
-      emit indicAskChanged(security, ask);
-   }
-   if (last > 0) {
-      mdInfo.lastPrice = last;
-      emit lastPriceChanged(security, last);
-   }
+   mdInfo.merge(bs::network::MDField::get(mdFields));
 
    for (const auto &rfq : activeRFQs_) {
       const auto &sec = rfq.second->security();
       if (sec.isEmpty() || (security != sec)) {
          continue;
       }
-      if (bid > 0) {
-         rfq.second->setIndicBid(bid);
+      if (mdInfo.bidPrice > 0) {
+         rfq.second->setIndicBid(mdInfo.bidPrice);
       }
-      if (ask > 0) {
-         rfq.second->setIndicAsk(ask);
+      if (mdInfo.askPrice > 0) {
+         rfq.second->setIndicAsk(mdInfo.askPrice);
       }
-      if (last > 0) {
-         rfq.second->setLastPrice(last);
+      if (mdInfo.lastPrice > 0) {
+         rfq.second->setLastPrice(mdInfo.lastPrice);
       }
    }
 }
@@ -456,7 +475,7 @@ void RFQScript::onCancelled(const std::string &id)
 
 AutoRFQ::AutoRFQ(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<MDCallbacksQt> &mdCallbacks, QObject* parent)
-   : UserScript(logger, mdCallbacks, parent)
+   : UserScript(logger, mdCallbacks, {}, parent)
 {
    qRegisterMetaType<SubmitRFQ *>();
    qmlRegisterType<SubmitRFQ>("bs.terminal", 1, 0, "SubmitRFQ");

@@ -8,12 +8,6 @@
 **********************************************************************************
 
 */
-#include <atomic>
-#include <QDebug>
-#include <QDir>
-#include <QStandardPaths>
-#include <spdlog/spdlog.h>
-#include <btc/ecc.h>
 
 #include "TestEnv.h"
 
@@ -29,6 +23,13 @@
 #include "QuoteProvider.h"
 #include "SystemFileUtils.h"
 #include "UiUtils.h"
+
+#include <atomic>
+#include <QDebug>
+#include <QDir>
+#include <QStandardPaths>
+#include <spdlog/spdlog.h>
+#include <btc/ecc.h>
 
 const BinaryData testnetGenesisBlock = READHEX("0100000000000000000000000000000000000\
 000000000000000000000000000000000003ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51\
@@ -75,7 +76,6 @@ void TestEnv::shutdown()
 
    mdProvider_ = nullptr;
    quoteProvider_ = nullptr;
-   authAddrMgr_ = nullptr;
    celerConn_ = nullptr;
 
    assetMgr_ = nullptr;
@@ -129,7 +129,6 @@ void TestEnv::requireArmory()
 void TestEnv::requireAssets()
 {
    requireConnections();
-   authAddrMgr_ = std::make_shared<MockAuthAddrMgr>(logger_, armoryConnection_);
 
    assetMgr_ = std::make_shared<MockAssetManager>(logger_);
    assetMgr_->init();

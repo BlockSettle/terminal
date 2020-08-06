@@ -12,6 +12,7 @@
 #include <spdlog/spdlog.h>
 #include "SignerAdapter.h"
 #include "BSErrorCodeStrings.h"
+#include "StringUtils.h"
 
 
 QMLStatusUpdater::QMLStatusUpdater(const std::shared_ptr<SignerSettings> &params, SignerAdapter *adapter
@@ -44,7 +45,7 @@ void QMLStatusUpdater::setSocketOk(bool val)
 
 void QMLStatusUpdater::clearConnections()
 {
-   connectedClients_.clear();
+   connectedClientIps_.clear();
    emit connectionsChanged();
 }
 
@@ -90,21 +91,17 @@ void QMLStatusUpdater::onAutoSignTick()
 //   }
 }
 
-void QMLStatusUpdater::onPeerConnected(const QString &ip)
+void QMLStatusUpdater::onPeerConnected(const std::string &clientId, const std::string &ip, const std::string &publicKey)
 {
-   logger_->debug("[{}] {}", __func__, ip.toStdString());
-   connectedClients_.insert(ip);
+   logger_->debug("[{}] connected client {} with ip {}, public key: ", __func__, bs::toHex(clientId), ip);
+   connectedClientIps_[clientId] = ip;
    emit connectionsChanged();
 }
 
-void QMLStatusUpdater::onPeerDisconnected(const QString &ip)
+void QMLStatusUpdater::onPeerDisconnected(const std::string &clientId)
 {
-   logger_->debug("[{}] {}", __func__, ip.toStdString());
-   auto it = connectedClients_.find(ip);
-   if (it == connectedClients_.end()) {
-      return;
-   }
-   connectedClients_.erase(it);
+   logger_->debug("[{}] {}", __func__, bs::toHex(clientId));
+   connectedClientIps_.erase(clientId);
    emit connectionsChanged();
 }
 
@@ -117,8 +114,8 @@ void QMLStatusUpdater::txSigned(const BinaryData &)
 QStringList QMLStatusUpdater::connectedClients() const
 {
    QStringList result;
-   for (const auto &client : connectedClients_) {
-      result.push_back(client);
+   for (const auto &client : connectedClientIps_) {
+      result.push_back(QString::fromStdString(client.second));
    }
    return result;
 }

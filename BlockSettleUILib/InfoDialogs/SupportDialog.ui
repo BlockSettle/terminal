@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+***********************************************************************************
+* Copyright (C) 2019 - 2020, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+-->
 <ui version="4.0">
  <class>SupportDialog</class>
  <widget class="QDialog" name="SupportDialog">
@@ -611,7 +619,7 @@
              <item>
               <widget class="QLabel" name="label_4">
                <property name="text">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Customer Support:&lt;/span&gt;&lt;br/&gt;Contact BlockSettle through our &lt;a href=&quot;http://pubb.blocksettle.com/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;Client Portal&lt;/span&gt;&lt;/a&gt; (Participants only)&lt;br/&gt;&lt;br/&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Technical Support:&lt;/span&gt;&lt;br/&gt;&lt;a href=&quot;mailto:support@blocksettle.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;support@blocksettle.com&lt;/span&gt;&lt;/a&gt;&lt;br/&gt;&lt;br/&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Compliance:&lt;/span&gt;&lt;br/&gt;&lt;a href=&quot;mailto:compliance@blocksettle.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;compliance@blocksettle.com&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Customer Support:&lt;/span&gt;&lt;br/&gt;Contact BlockSettle through our &lt;a href=&quot;http://blocksettle.com/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;Client Portal&lt;/span&gt;&lt;/a&gt; (Participants only)&lt;br/&gt;&lt;br/&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Technical Support:&lt;/span&gt;&lt;br/&gt;&lt;a href=&quot;mailto:support@blocksettle.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;support@blocksettle.com&lt;/span&gt;&lt;/a&gt;&lt;br/&gt;&lt;br/&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Compliance:&lt;/span&gt;&lt;br/&gt;&lt;a href=&quot;mailto:compliance@blocksettle.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;compliance@blocksettle.com&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="textFormat">
                 <enum>Qt::RichText</enum>
@@ -658,6 +666,9 @@
                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;OTC Chat&lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;&lt;br/&gt;&lt;/span&gt;Ask the Community in the public chat room &lt;br/&gt;(Login to chat requires &lt;a href=&quot;https://blocksettle.com/auth-eid&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#247dac;&quot;&gt;Auth eID&lt;/span&gt;&lt;/a&gt;)&lt;/p&gt;&lt;p&gt;Someone from the BlockSettle team or the BlockSettle community will be happy to help.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+               <property name="openExternalLinks">
                 <bool>true</bool>
                </property>
               </widget>
