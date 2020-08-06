@@ -2209,7 +2209,7 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
    authAddrDlg_->setBsClient(bsClient);
 
    tradeSettings_ = std::make_shared<bs::TradeSettings>(result.tradeSettings);
-   applicationSettings_->set(ApplicationSettings::SubmittedAddressXbtLimit, tradeSettings_->xbtTier1Limit);
+   applicationSettings_->set(ApplicationSettings::SubmittedAddressXbtLimit, static_cast<quint64>(tradeSettings_->xbtTier1Limit));
 
    authManager_->initLogin(celerConnection_, tradeSettings_);
 
