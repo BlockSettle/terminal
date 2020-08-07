@@ -31,6 +31,7 @@ BSQuoteReqReply {
     property var priceIncrement: 0.01
     property var finalPrice: 0.0
     property var hedgePrice: 0.0
+    property var hedgeAllowed: true
 
     property var ccInstruments: [
         'LOL/XBT',
@@ -45,6 +46,7 @@ BSQuoteReqReply {
 
 
     onBestPriceChanged: {
+        if (!hedgeAllowed) return
         log('new best price: ' + bestPrice)
         if (bestPrice === finalPrice)  return   // our quote
 
@@ -66,36 +68,18 @@ BSQuoteReqReply {
                 }
             }
         }
-
-/*        var price = calcInitialPrice();
-
-        if (!checkPrice(price))  return
-        if (!checkBalance(quoteReq.quantity * price, security.split("/")[1])) return
-
-        sendPrice(price)*/
-    }
-
-    onExpirationInSecChanged: {
-/*        if (initialPrice) return;
-        var price = countInitialPrice();
-
-        if (!checkPrice(price))  return
-        if (!checkBalance(quoteReq.quantity * price, security.split("/")[1])) return // check balance
-        log('#set first price: ' + price)
-        sendPrice(price)*/
-    }
-    onIndicBidChanged: {
-        onBidOrAskChanged();
-    }
-    onIndicAskChanged: {
-        onBidOrAskChanged();
     }
 
     onExtDataReceived: {
 //        log('from: ' + from + ', type: ' + type + ', msg:\n' + msg)
-        if ((from === 'LMAX') && (type === 'mdprices')) {
+        if (from === 'LMAX') {
             var msgObj = JSON.parse(msg)
-            onLMAXprices(msgObj)
+            if (type === 'mdprices') {
+                onLMAXprices(msgObj)
+            }
+            else if (type === 'order_intent') {
+                onLMAXintent(msgObj)
+            }
         }
     }
     
@@ -116,6 +100,7 @@ BSQuoteReqReply {
 
     function onLMAXprice(priceObj)
     {
+        if (!hedgeAllowed) return
         if (direction() === 1) {
             hedgePrice = priceObj.ask * (1.0 + prcIncrement)
         }
@@ -124,50 +109,64 @@ BSQuoteReqReply {
         }
 
         var price = 0.0
-        if (bestPrice && (bestPrice != finalPrice)) {   // at least one quote exists
-            if (direction() === 1) {     // and it's not ours
-                if ((bestPrice < hedgePrice) && (finalPrice < bestPrice)) {
-                    price = Math.min(bestPrice + priceIncrement, hedgePrice)
+        if (direction() === 1) {
+            price = priceObj.ask * (1.0 + 3 * prcIncrement)
+        }
+        else {
+            price = priceObj.bid * (1.0 - 3 * prcIncrement)
+        }
+
+        if (bestPrice) {
+            if (bestPrice != finalPrice) {   // at least one quote exists
+                if (direction() === 1) {     // and it's not ours
+                    if ((bestPrice < hedgePrice) && (finalPrice < bestPrice)) {
+                        price = Math.min(bestPrice + priceIncrement, hedgePrice)
+                    }
+                }
+                else {
+                    if ((bestPrice > hedgePrice) && (finalPrice > bestPrice)) {
+                        price = Math.max(hedgePrice, bestPrice - priceIncrement)
+                    }
+                }
+                if (price) {
+                    log("beating competitor")
+                    sendPrice(price)
                 }
             }
             else {
-                if ((bestPrice > hedgePrice) && (finalPrice > bestPrice)) {
-                    price = Math.max(hedgePrice, bestPrice - priceIncrement)
+                if (direction() === 1) {
+                    if (finalPrice < price) {
+                        log("improving own bid")
+                        sendPrice(price)
+                    }
                 }
-            }
-            if (price) {
-                log("beating competitor")
-                sendPrice(price)
+                else {
+                    if (finalPrice > price) {
+                        log("improving own ask")
+                        sendPrice(price)
+                    }
+                }
             }
         }
-        else if (bestPrice && (bestPrice === finalPrice)) {}    // do nothing
         else {  // no quote was sent before
-            if (direction() === 1) {
-                price = priceObj.ask * (1.0 + 3 * prcIncrement)
-            }
-            else {
-                price = priceObj.bid * (1.0 - 3 * prcIncrement)
-            }
             log("sending first RFQ response")
             sendPrice(price)
         }
     }
 
-/*    function checkPrice(price)
+    function onLMAXintent(intentObj)
     {
-        if (initialPrice){
-            if (!isContraCur()){
-                if (quoteReq.isBuy && price < indicAsk * ((100.00 + shiftLimitFromIndicPrice * direction()) / 100.00)) return false;
-                if (!quoteReq.isBuy && price > indicBid * ((100.00 + shiftLimitFromIndicPrice * direction()) / 100.00)) return false;
-            } else {
-                if (quoteReq.isBuy && price > indicBid * ((100.00 + shiftLimitFromIndicPrice * direction()) / 100.00)) return false;
-                if (!quoteReq.isBuy && price < indicAsk * ((100.00 + shiftLimitFromIndicPrice * direction()) / 100.00)) return false;
-            }
-
+        if ((intentObj.symbol !== security) || (intentObj.buy !== (direction() === 1))) {
+            return  // not our intent
         }
-        if (!price || price < 0) return false
-        return true
-    }*/
+        hedgeAllowed = intentObj.allowed
+        if (!intentObj.allowed) {
+            log('intent is not allowed - pulling reply')
+            pullQuoteReply()
+            initialPrice = 0
+            finalPrice = 0
+        }
+    }
 
     function isContraCur()
     {
@@ -175,20 +174,6 @@ BSQuoteReqReply {
             isContraCur.value = (security.split("/")[1] === quoteReq.product);
         }
         return isContraCur.value;
-    }
-
-    function onBidOrAskChanged()
-    {
-/*        log ("security: " + security)
-        if (initialPrice) return;
-        log ("direction: " + direction())
-        var price = countInitialPrice();
-        log ("set new price: "+ price)
-        if (!checkPrice(price))  return
-        log("price is OK");
-        if (!checkBalance(quoteReq.quantity * price, security.split("/")[1])) return // check balance
-        log("balance is OK");
-        sendPrice(price)*/
     }
 
     function checkBalance(value, product)
@@ -221,6 +206,19 @@ BSQuoteReqReply {
 
         log('sending new reply: ' + price)
         sendQuoteReply(price)
+        sendOrderIntent(hedgePrice)
+    }
+
+    function hedgeOrderBuy()
+    {
+        var orderBuy = (direction() === 1) ? 'true' : 'false'
+        return orderBuy
+    }
+
+    function hedgeOrderAmount(price)
+    {
+        var amount = isContraCur() ? quoteReq.quantity / price : quoteReq.quantity;
+        return amount
     }
 
     function sendHedgeOrder(price)
@@ -237,27 +235,24 @@ BSQuoteReqReply {
                 return
             }
         }
-
-        var amount = isContraCur() ? quoteReq.quantity / price : quoteReq.quantity;
-        var orderBuy = (direction() === 1) ? 'true' : 'false'
-        var order = '{"symbol":"' + security + '", "buy":' + orderBuy
-            + ', "amount":' + amount + ', "price":' + price + '}'
+        var order = '{"symbol":"' + security + '", "buy":' + hedgeOrderBuy()()
+            + ', "amount":' + hedgeOrderAmount(price) + ', "price":' + price + '}'
         log('sending order: ' + order)
         sendExtConn('LMAX', 'order', order)
     }
 
-/*    function addIncrementToFXPrice(price)
-    {
-        const baseIncrement = 0.0001;
-        const incrementInPercent = 0.01;
-
-        const coeff = incrementInPercent / 100.0;
-        if (indicAsk  * (coeff + 1) > indicAsk + baseIncrement ){
-            return price * (1 + coeff * direction() * -1);
-        } else {
-            return price + baseIncrement * direction() * -1;
+    function sendOrderIntent(price)
+    {   // This request just signals LMAX connector that order will follow soon,
+        // if LMAX's reply on it is negative, quote reply should be pulled
+        // price is used here only to calculate contra qty
+        if (ccInstruments.indexOf(security) != -1) return
+        if (!price) {
+            return
         }
-    }*/
+        var intent = '{"symbol":"' + security + '", "buy":' + hedgeOrderBuy()
+            + ', "amount":' + hedgeOrderAmount(price) + '}'
+        sendExtConn('LMAX', 'order_intent', intent)
+    }
 
     function direction()
     {
