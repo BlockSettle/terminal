@@ -219,7 +219,7 @@ function removeEidDevice (index, walletInfo, authEidMessage, onSuccess) {
 }
 
 
-function activateeIdAuth(email, walletInfo, authEidMessage, onSuccess, onFailure, onQrCode) {
+function activateeIdAuth(walletInfo, authEidMessage, onSuccess, onFailure) {
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow)
     let qrCallback = function(code) {
         console.log("show QR code" + code)
@@ -227,7 +227,6 @@ function activateeIdAuth(email, walletInfo, authEidMessage, onSuccess, onFailure
     }
     var authObject = qmlFactory.createActivateEidObject(walletInfo.rootId, authEidMessage, qrCallback)
 
-    authProgress.email = walletInfo.email()
     authProgress.walletId = walletInfo.rootId
     authProgress.walletName = walletInfo.name
     authProgress.requestType = AutheIDClient.ActivateWallet

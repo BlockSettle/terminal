@@ -132,9 +132,9 @@ CustomTitleDialogWindow {
                 validator: RegExpValidator {
                     regExp: /^[^\\\\/?:*<>|]*$/
                 }
-                Keys.onEnterPressed: rbPassword.checked ? newPasswordWithConfirm.tfPasswordInput.forceActiveFocus() : textInputEmail.forceActiveFocus()
-                Keys.onReturnPressed: rbPassword.checked ? newPasswordWithConfirm.tfPasswordInput.forceActiveFocus() : textInputEmail.forceActiveFocus()
-                KeyNavigation.tab: rbPassword.checked ? newPasswordWithConfirm.tfPasswordInput : textInputEmail
+                Keys.onEnterPressed: rbPassword.checked ? newPasswordWithConfirm.tfPasswordInput.forceActiveFocus() : null
+                Keys.onReturnPressed: rbPassword.checked ? newPasswordWithConfirm.tfPasswordInput.forceActiveFocus() : null
+                KeyNavigation.tab: rbPassword.checked ? newPasswordWithConfirm.tfPasswordInput : null
             }
         }
 
@@ -227,7 +227,6 @@ CustomTitleDialogWindow {
 
                 onCheckedChanged: {
                     if (checked) {
-                        textInputEmail.focus = true
                         // show notice dialog
                         if (!signerSettings.hideEidInfoBox) {
                             var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
@@ -255,26 +254,6 @@ CustomTitleDialogWindow {
             Layout.fillWidth: true
             Layout.leftMargin: 10
             Layout.rightMargin: 10
-
-            CustomLabel {
-                Layout.minimumWidth: inputLabelsWidth
-                Layout.preferredWidth: inputLabelsWidth
-                Layout.maximumWidth: inputLabelsWidth
-                Layout.fillWidth: true
-                text: qsTr("Auth eID email")
-            }
-            CustomTextInput {
-                id: textInputEmail
-                Layout.fillWidth: true
-                selectByMouse: true
-                focus: true
-                Keys.onEnterPressed: {
-                    if (btnAccept.enabled) btnAccept.onClicked()
-                }
-                Keys.onReturnPressed: {
-                    if (btnAccept.enabled) btnAccept.onClicked()
-                }
-            }
         }
 
         Rectangle {
@@ -303,7 +282,7 @@ CustomTitleDialogWindow {
                 enabled: !importStarted && !walletsProxy.walletNameExists(tfName.text)
                             && tfName.text.length
                             && (newPasswordWithConfirm.acceptableInput && rbPassword.checked ||
-                                textInputEmail.text && rbAuth.checked)
+                                rbAuth.checked)
 
                 onClicked: {
                     walletInfo.name = tfName.text
@@ -348,7 +327,7 @@ CustomTitleDialogWindow {
                         var successCallback = function(newPasswordData) {
                             walletsProxy.createWallet(cbPrimary.checked, seed, walletInfo, newPasswordData, createCallback)
                         }
-                        JsHelper.activateeIdAuth(textInputEmail.text, walletInfo, authEidMessage, successCallback, failedCallback)
+                        JsHelper.activateeIdAuth(walletInfo, authEidMessage, successCallback, failedCallback)
                     }
                 }
             }

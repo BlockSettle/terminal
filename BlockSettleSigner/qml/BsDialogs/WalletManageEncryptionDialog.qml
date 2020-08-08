@@ -37,7 +37,7 @@ CustomTitleDialogWindow {
 
     property bool acceptableOld : walletInfo.encType === QPasswordData.Password ? walletDetailsFrame.password.length : true
     property bool acceptableNewPw : newPasswordInput.acceptableInput
-    property bool acceptableNewAuth : textInputEmail.text.length > 3
+    property bool acceptableNewAuth : true
     property bool acceptableNew : rbPassword.checked ? acceptableNewPw : acceptableNewAuth
 
     property bool acceptable : {
@@ -135,8 +135,8 @@ CustomTitleDialogWindow {
                         id: walletDetailsFrame
                         walletInfo: walletInfo
                         inputsWidth: 250
-                        nextFocusItem: rbPassword.checked ? newPasswordInput.tfPasswordInput : textInputEmail
-                        KeyNavigation.tab: rbPassword.checked ? newPasswordInput.tfPasswordInput : textInputEmail
+                        nextFocusItem: rbPassword.checked ? newPasswordInput.tfPasswordInput : null
+                        KeyNavigation.tab: rbPassword.checked ? newPasswordInput.tfPasswordInput : null
                     }
 
                     // do we show Primary Wallet section for wallet encryption dialog?
@@ -221,7 +221,6 @@ CustomTitleDialogWindow {
                             checked: false
                             onCheckedChanged: {
                                 if (checked) {
-                                    textInputEmail.focus = true
                                     // show notice dialog
                                     if (!signerSettings.hideEidInfoBox) {
                                         var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
@@ -251,28 +250,6 @@ CustomTitleDialogWindow {
                         Layout.fillWidth: true
                         Layout.leftMargin: 10
                         Layout.rightMargin: 10
-
-                        CustomLabel {
-                            Layout.minimumWidth: 110
-                            Layout.preferredWidth: 110
-                            Layout.maximumWidth: 110
-                            Layout.fillWidth: true
-                            text: qsTr("Auth eID email")
-                        }
-                        CustomTextInput {
-                            id: textInputEmail
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: inputsWidth_
-                            Layout.preferredWidth: inputsWidth_
-                            selectByMouse: true
-                            focus: true
-                            Keys.onEnterPressed: {
-                                if (btnAccept.enabled) btnAccept.onClicked()
-                            }
-                            Keys.onReturnPressed: {
-                                if (btnAccept.enabled) btnAccept.onClicked()
-                            }
-                        }
                     }
                 }
 
@@ -488,7 +465,7 @@ CustomTitleDialogWindow {
                                 };
                                 let failCallback = function() {
                                 };
-                                JsHelper.activateeIdAuth(textInputEmail.text, walletInfo, authEidMessage
+                                JsHelper.activateeIdAuth(walletInfo, authEidMessage
                                     , successCallback, failCallback)
                             }
                         }
