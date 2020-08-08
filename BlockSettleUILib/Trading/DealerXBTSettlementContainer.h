@@ -60,7 +60,8 @@ public:
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
       , std::unique_ptr<bs::hd::Purpose> walletPurpose
       , bs::UtxoReservationToken utxoRes
-      , bool expandTxDialogInfo);
+      , bool expandTxDialogInfo
+      , uint64_t tier1XbtLimit);
    ~DealerXBTSettlementContainer() override;
 
    bool cancel() override;
@@ -138,6 +139,7 @@ private:
    bs::Address       authAddr_;
 
    std::shared_ptr<AsyncClient::BtcWallet>   settlWallet_;
+   bool requesterAddressShouldBeVerified_ = true;
 };
 
 #endif // __DEALER_XBT_SETTLEMENT_CONTAINER_H__
