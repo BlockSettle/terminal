@@ -105,6 +105,10 @@ public:
    Q_INVOKABLE void changeControlPassword(bs::wallet::QPasswordData *oldPassword, bs::wallet::QPasswordData *newPassword
       , const QJSValue &jsCallback);
 
+   Q_INVOKABLE QPixmap getQRCode(const QString& data, int size = 0) const;
+
+   Q_INVOKABLE QString pixmapToDataUrl(const QPixmap &pixmap) const;
+
 signals:
    void walletsChanged();
    void ccInfoChanged();

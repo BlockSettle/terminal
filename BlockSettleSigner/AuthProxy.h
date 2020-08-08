@@ -18,6 +18,7 @@
 
 class ApplicationSettings;
 class ConnectionManager;
+class QJSValue;
 
 namespace spdlog {
    class logger;
@@ -46,6 +47,7 @@ public:
    // used for wallet creation and signing
    void signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo
       , const QString& authEidMessage, int expiration = AutheIDClient::kDefaultExpiration, int timestamp = 0);
+   void activateWallet(const QString &walletId, const QString &authEidMessage, QJSValue &jsCallback);
 
    // used for device removing
    void removeDevice(int index, bs::hd::WalletInfo *walletInfo, const QString& authEidMessage);

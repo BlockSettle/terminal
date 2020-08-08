@@ -473,23 +473,23 @@ CustomTitleDialogWindow {
                             else {
                                 // new auth is eID
                                 let authEidMessage = JsHelper.getAuthEidWalletInfo(walletInfo);
-                                JsHelper.activateeIdAuth(textInputEmail.text
-                                    , walletInfo
-                                    , authEidMessage
-                                    , function(newPwEidData){
-                                         walletsProxy.changePassword(walletInfo.walletId
-                                             , oldPasswordData
-                                             , newPwEidData
-                                             , function(result){
-                                                 var mb = JsHelper.resultBox(BSResultBox.EncryptionChangeToAuth, result, walletInfo)
-                                                 if (result) {
-                                                     mb.bsAccepted.connect(function(){
-                                                         // addTabButton.onClicked()
-                                                         acceptAnimated()
-                                                     })
-                                                 }
-                                         })
-                                })
+                                let successCallback = function(newPwEidData) {
+                                    walletsProxy.changePassword(walletInfo.walletId, oldPasswordData
+                                        , newPwEidData
+                                        , function(result) {
+                                            var mb = JsHelper.resultBox(BSResultBox.EncryptionChangeToAuth, result, walletInfo)
+                                            if (result) {
+                                                mb.bsAccepted.connect(function(){
+                                                    // addTabButton.onClicked()
+                                                    acceptAnimated()
+                                                })
+                                            }
+                                    })
+                                };
+                                let failCallback = function() {
+                                };
+                                JsHelper.activateeIdAuth(textInputEmail.text, walletInfo, authEidMessage
+                                    , successCallback, failCallback)
                             }
                         }
                     }
@@ -508,7 +508,7 @@ CustomTitleDialogWindow {
                             }
 
                             // step #2. add new device
-                            JsHelper.requesteIdAuth(AutheIDClient.ActivateWalletNewDevice, walletInfo, authEidMessage, eidNewPasswordCb)
+                            JsHelper.addEidDevice(walletInfo, authEidMessage, eidNewPasswordCb)
                         }
 
                         // step #1. request old device

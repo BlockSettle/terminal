@@ -8,14 +8,15 @@
 **********************************************************************************
 
 */
+#include <QBuffer>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QVariant>
+#include <QMetaMethod>
 #include <QPixmap>
 #include <QStandardPaths>
-#include <QDir>
-#include <QMetaMethod>
 #include <QTemporaryDir>
+#include <QVariant>
 
 #include <spdlog/spdlog.h>
 
@@ -817,4 +818,19 @@ void WalletsProxy::changeControlPassword(bs::wallet::QPasswordData *oldPassword,
       const bs::wallet::QPasswordData &newPassDataRef = newPassword ? *newPassword : bs::wallet::QPasswordData();
       adapter_->changeControlPassword(*oldPassword, newPassDataRef, cb);
    }
+}
+
+QString WalletsProxy::pixmapToDataUrl(const QPixmap &pixmap) const
+{
+   QByteArray array;
+   QBuffer buffer(&array);
+   buffer.open(QIODevice::WriteOnly);
+   pixmap.save(&buffer, "PNG");
+   QString image(QStringLiteral("data:image/png;base64,") + QString::fromLatin1(array.toBase64().data()));
+   return image;
+}
+
+QPixmap WalletsProxy::getQRCode(const QString &data, int size) const
+{
+   return UiUtils::getQRCode(data, size);
 }

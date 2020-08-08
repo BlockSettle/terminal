@@ -10,12 +10,15 @@
 */
 #include "AuthProxy.h"
 
+#include <botan/hex.h>
 #include <spdlog/spdlog.h>
-#include <QFile>
-#include <QVariant>
+
 #include <QBuffer>
 #include <QByteArray>
+#include <QFile>
+#include <QJSValue>
 #include <QPixmap>
+#include <QVariant>
 
 #include "ApplicationSettings.h"
 #include "ConnectionManager.h"
@@ -91,7 +94,7 @@ void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs
          throw std::runtime_error("Auth eID email not found when signing");
       }
       autheIDClient_->getDeviceKey(requestType, userIds[0]
-         , walletInfo->rootId().toStdString(), authEidMessage, knownDeviceIds, expiration, timestamp);
+         , walletInfo->rootId().toStdString(), authEidMessage, knownDeviceIds, "", expiration, timestamp);
    }
    catch (const std::exception &e) {
       logger_->error("AuthEidClient failed to sign wallet: {}", e.what());
@@ -100,6 +103,18 @@ void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs
       },
       Qt::QueuedConnection);
    }
+}
+
+void AuthSignWalletObject::activateWallet(const QString &walletId, const QString& authEidMessage, QJSValue &jsCallback)
+{
+   auto qrSecret = Botan::hex_encode(autheid::generatePrivateKey());
+   autheIDClient_->getDeviceKey(AutheIDClient::RequestType::ActivateWallet, ""
+      , walletId.toStdString(), authEidMessage, {}, qrSecret);
+   connect(autheIDClient_.get(), &AutheIDClient::requestIdReceived, this, [this, jsCallback, qrSecret](const std::string &requestId) mutable {
+      auto pubKey = Botan::hex_encode(settings_->GetAuthKeys().second);
+      auto url = fmt::format("https://autheid.com/app/requests/?request_id={}&ra_pub_key={}&qr_secret={}", requestId, pubKey, qrSecret);
+      jsCallback.call({QJSValue(QString::fromStdString(url))});
+   });
 }
 
 void AuthSignWalletObject::removeDevice(int index, bs::hd::WalletInfo *walletInfo, const QString &authEidMessage)

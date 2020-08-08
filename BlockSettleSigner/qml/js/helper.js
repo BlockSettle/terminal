@@ -72,7 +72,7 @@ function hideWindow(w) {
     w.hide()
 }
 
-function requesteIdAuth (requestType, walletInfo, authEidMessage, onSuccess) {
+function requesteIdAuth(requestType, walletInfo, authEidMessage, onSuccess) {
     var authObject = qmlFactory.createAutheIDSignObject(requestType, walletInfo, authEidMessage, authSign.defaultExpiration())
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
 
@@ -98,6 +98,62 @@ function requesteIdAuth (requestType, walletInfo, authEidMessage, onSuccess) {
         authObject.destroy()
     })
     authObject.failed.connect(function(errorText) {       
+        console.log("QML requesteIdAuth: authObject.failed")
+        var mb = messageBox(BSMessageBox.Type.Critical
+           , qsTr("Wallet")
+           , errorText
+           , qsTr("Wallet Name: %1\nWallet ID: %2")
+               .arg(walletInfo.name)
+               .arg(walletInfo.rootId))
+
+        authProgress.setNextChainDialog(mb)
+        authProgress.rejectAnimated()
+        authObject.destroy()
+    })
+    authObject.userCancelled.connect(function() {
+        console.log("QML requesteIdAuth: authObject.userCancelled")
+        authProgress.rejectAnimated()
+        authObject.destroy()
+    })
+    authObject.canceledByTimeout.connect(function() {
+        console.log("QML requesteIdAuth: authObject.canceledByTimeout")
+        authProgress.rejectAnimated()
+        authObject.destroy()
+    })
+
+    return authProgress
+}
+
+function addEidDevice(walletInfo, authEidMessage, onSuccess) {
+    var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow)
+    let qrCallback = function(code) {
+        console.log("show QR code" + code)
+        authProgress.qrCode = code
+    }
+    var authObject = qmlFactory.createActivateEidObject(walletInfo.rootId, authEidMessage, qrCallback)
+
+    authProgress.email = walletInfo.email()
+    authProgress.walletId = walletInfo.rootId
+    authProgress.walletName = walletInfo.name
+    authProgress.requestType = AutheIDClient.ActivateWallet
+
+    authProgress.open()
+    authProgress.bsRejected.connect(function() {
+        authObject.destroy()
+    })
+
+    authObject.succeeded.connect(function(encKey_, password_) {
+        authProgress.acceptAnimated()
+
+        var passwordData = qmlFactory.createPasswordData()
+        passwordData.encType = QPasswordData.Auth
+        passwordData.encKey = encKey_
+        passwordData.binaryPassword = password_
+
+        onSuccess(passwordData);
+        authObject.destroy()
+    })
+    authObject.failed.connect(function(errorText) {
         console.log("QML requesteIdAuth: authObject.failed")
         var mb = messageBox(BSMessageBox.Type.Critical
            , qsTr("Wallet")
@@ -163,9 +219,13 @@ function removeEidDevice (index, walletInfo, authEidMessage, onSuccess) {
 }
 
 
-function activateeIdAuth (email, walletInfo, authEidMessage, onSuccess, onFailure) {
-    var authObject = qmlFactory.createActivateEidObject(email, walletInfo, authEidMessage)
-    var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
+function activateeIdAuth(email, walletInfo, authEidMessage, onSuccess, onFailure, onQrCode) {
+    var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow)
+    let qrCallback = function(code) {
+        console.log("show QR code" + code)
+        authProgress.qrCode = code
+    }
+    var authObject = qmlFactory.createActivateEidObject(walletInfo.rootId, authEidMessage, qrCallback)
 
     authProgress.email = walletInfo.email()
     authProgress.walletId = walletInfo.rootId
