@@ -32,7 +32,7 @@ TxSignSettlementBaseDialog {
     readonly property bool is_payOut: passwordDialogData.PayOutType
     readonly property bool is_payIn: !is_payOut
 
-    signingAllowed: true
+    signingAllowed: passwordDialogData.RequesterAuthAddressVerified && passwordDialogData.ResponderAuthAddressVerified
     errorMessage: qsTr("Authentication Address could not be verified")
     validationTitle: qsTr("Counterparty")
 

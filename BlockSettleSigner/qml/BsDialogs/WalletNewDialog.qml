@@ -38,7 +38,7 @@ CustomTitleDialogWindow {
 
         CustomLabelValue{
             Layout.fillWidth: true
-            text: qsTr("For guidance, please consult the <a href=\"https://pubb.blocksettle.com/PDF/BlockSettle%20Getting%20Started.pdf\">Getting Started Guide</a>")
+            text: qsTr("For guidance, please consult the <a href=\"https://blocksettle.com/PDF/BlockSettle%20Getting%20Started.pdf\">Getting Started Guide</a>")
         }
     }
 

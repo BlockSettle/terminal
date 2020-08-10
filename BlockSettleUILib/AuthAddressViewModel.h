@@ -83,8 +83,6 @@ public:
    QModelIndex getFirstUnsubmitted() const;
    bool isUnsubmittedAddressVisible() const;
 
-   void adjustVisibleCount();
-
 protected:
    bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
 

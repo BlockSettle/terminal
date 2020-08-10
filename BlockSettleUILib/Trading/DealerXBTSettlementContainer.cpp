@@ -44,7 +44,8 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , std::unique_ptr<bs::hd::Purpose> walletPurpose
    , bs::UtxoReservationToken utxoRes
-   , bool expandTxDialogInfo)
+   , bool expandTxDialogInfo
+   , uint64_t tier1XbtLimit )
    : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose), expandTxDialogInfo)
    , order_(order)
    , weSellXbt_((order.side == bs::network::Side::Buy) != (order.product == bs::network::XbtCurrency))
@@ -74,8 +75,11 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       throw std::invalid_argument("failed to get submitted QN for " + order.quoteId);
    }
 
+   const auto xbtAmount = bs::XBTAmount(amount_);
+   requesterAddressShouldBeVerified_ = xbtAmount > bs::XBTAmount(tier1XbtLimit);
+
    // BST-2545: Use price as it see Genoa (and it computes it as ROUNDED_CCY / XBT)
-   const auto actualXbtPrice = UiUtils::actualXbtPrice(bs::XBTAmount(amount_), price());
+   const auto actualXbtPrice = UiUtils::actualXbtPrice(xbtAmount, price());
 
    comment_ = fmt::format("{} {} @ {}", bs::network::Side::toString(order.side)
       , order.security, UiUtils::displayPriceXBT(actualXbtPrice).toStdString());
@@ -153,6 +157,7 @@ bs::sync::PasswordDialogData DealerXBTSettlementContainer::toPasswordDialogData(
    dialogData.setValue(PasswordDialogData::RequesterAuthAddress,
       bs::Address::fromPubKey(reqAuthKey_, AddressEntryType_P2WPKH).display());
    dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, requestorAddressState_ == AddressVerificationState::Verified);
+   dialogData.setValue(PasswordDialogData::SigningAllowed, requestorAddressState_ == AddressVerificationState::Verified);
 
    dialogData.setValue(PasswordDialogData::ResponderAuthAddress,
       bs::Address::fromPubKey(authKey_, AddressEntryType_P2WPKH).display());
@@ -194,9 +199,13 @@ void DealerXBTSettlementContainer::activate()
 
    addrVerificator_->SetBSAddressList(authAddrMgr_->GetBSAddresses());
 
-   const auto reqAuthAddrSW = bs::Address::fromPubKey(reqAuthKey_, AddressEntryType_P2WPKH);
-   addrVerificator_->addAddress(reqAuthAddrSW);
-   addrVerificator_->startAddressVerification();
+   if (requesterAddressShouldBeVerified_) {
+      const auto reqAuthAddrSW = bs::Address::fromPubKey(reqAuthKey_, AddressEntryType_P2WPKH);
+      addrVerificator_->addAddress(reqAuthAddrSW);
+      addrVerificator_->startAddressVerification();
+   } else {
+      requestorAddressState_ = AddressVerificationState::Verified;
+   }
 
    const auto &authLeaf = walletsMgr_->getAuthWallet();
    signContainer_->setSettlAuthAddr(authLeaf->walletId(), settlementId_, authAddr_);
