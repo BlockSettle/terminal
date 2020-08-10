@@ -62,7 +62,7 @@ void AuthSignWalletObject::connectToServer()
    });
    connect(autheIDClient_.get(), &AutheIDClient::failed, this, [this](AutheIDClient::ErrorType authError){
       if (authError == AutheIDClient::Timeout) {
-         emit canceledByTimeout();
+         emit cancelledByTimeout();
          return;
       }
       emit failed(AutheIDClient::errorString(authError));
@@ -107,9 +107,15 @@ void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs
 
 void AuthSignWalletObject::activateWallet(const QString &walletId, const QString& authEidMessage, QJSValue &jsCallback)
 {
+   // Same flow as adding device except old email checks
+   addDevice(walletId, authEidMessage, jsCallback, {});
+}
+
+void AuthSignWalletObject::addDevice(const QString &walletId, const QString &authEidMessage, QJSValue &jsCallback, const QString &oldEmail)
+{
    auto qrSecret = Botan::hex_encode(autheid::generatePrivateKey());
    autheIDClient_->getDeviceKey(AutheIDClient::RequestType::ActivateWallet, ""
-      , walletId.toStdString(), authEidMessage, {}, qrSecret);
+      , walletId.toStdString(), authEidMessage, {}, qrSecret, AutheIDClient::kDefaultExpiration, 0, oldEmail.toStdString());
    connect(autheIDClient_.get(), &AutheIDClient::requestIdReceived, this, [this, jsCallback, qrSecret](const std::string &requestId) mutable {
       auto pubKey = Botan::hex_encode(settings_->GetAuthKeys().second);
       auto url = fmt::format("https://autheid.com/app/requests/?request_id={}&ra_pub_key={}&qr_secret={}", requestId, pubKey, qrSecret);

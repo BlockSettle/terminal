@@ -48,6 +48,7 @@ public:
    void signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo
       , const QString& authEidMessage, int expiration = AutheIDClient::kDefaultExpiration, int timestamp = 0);
    void activateWallet(const QString &walletId, const QString &authEidMessage, QJSValue &jsCallback);
+   void addDevice(const QString &walletId, const QString &authEidMessage, QJSValue &jsCallback, const QString &oldEmail);
 
    // used for device removing
    void removeDevice(int index, bs::hd::WalletInfo *walletInfo, const QString& authEidMessage);
@@ -63,7 +64,7 @@ signals:
    void succeeded(const QString &encKey, const SecureBinaryData &password) const;
    void failed(const QString &text) const;
    void userCancelled() const;
-   void canceledByTimeout() const;
+   void cancelledByTimeout() const;
 
 public:
    QString status() const { return status_; }

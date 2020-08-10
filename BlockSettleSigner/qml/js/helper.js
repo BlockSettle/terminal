@@ -97,7 +97,7 @@ function requesteIdAuth(requestType, walletInfo, authEidMessage, onSuccess) {
         onSuccess(passwordData);
         authObject.destroy()
     })
-    authObject.failed.connect(function(errorText) {       
+    authObject.failed.connect(function(errorText) {
         console.log("QML requesteIdAuth: authObject.failed")
         var mb = messageBox(BSMessageBox.Type.Critical
            , qsTr("Wallet")
@@ -115,8 +115,8 @@ function requesteIdAuth(requestType, walletInfo, authEidMessage, onSuccess) {
         authProgress.rejectAnimated()
         authObject.destroy()
     })
-    authObject.canceledByTimeout.connect(function() {
-        console.log("QML requesteIdAuth: authObject.canceledByTimeout")
+    authObject.cancelledByTimeout.connect(function() {
+        console.log("QML requesteIdAuth: authObject.cancelledByTimeout")
         authProgress.rejectAnimated()
         authObject.destroy()
     })
@@ -130,7 +130,7 @@ function addEidDevice(walletInfo, authEidMessage, onSuccess) {
         console.log("show QR code" + code)
         authProgress.qrCode = code
     }
-    var authObject = qmlFactory.createActivateEidObject(walletInfo.rootId, authEidMessage, qrCallback)
+    var authObject = qmlFactory.createAddEidObject(walletInfo, authEidMessage, qrCallback)
 
     authProgress.email = walletInfo.email()
     authProgress.walletId = walletInfo.rootId
@@ -171,8 +171,8 @@ function addEidDevice(walletInfo, authEidMessage, onSuccess) {
         authProgress.rejectAnimated()
         authObject.destroy()
     })
-    authObject.canceledByTimeout.connect(function() {
-        console.log("QML requesteIdAuth: authObject.canceledByTimeout")
+    authObject.cancelledByTimeout.connect(function() {
+        console.log("QML requesteIdAuth: authObject.cancelledByTimeout")
         authProgress.rejectAnimated()
         authObject.destroy()
     })

@@ -124,6 +124,15 @@ AuthSignWalletObject *QmlFactory::createActivateEidObject(const QString &walletI
    return authObject;
 }
 
+AuthSignWalletObject *QmlFactory::createAddEidObject(WalletInfo *walletInfo, const QString &authEidMessage, QJSValue callback)
+{
+   AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, settings_, connectionManager_);
+   authObject->connectToServer();
+   authObject->addDevice(walletInfo->walletId(), authEidMessage, callback, walletInfo->email());
+   QQmlEngine::setObjectOwnership(authObject, QQmlEngine::JavaScriptOwnership);
+   return authObject;
+}
+
 AuthSignWalletObject *QmlFactory::createRemoveEidObject(int index, WalletInfo *walletInfo, const QString &authEidMessage)
 {
    logger_->debug("[QmlFactory] remove device for {}, device index: {}", walletInfo->walletId().toStdString(), index);
