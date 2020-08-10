@@ -26,6 +26,7 @@ CustomTitleDialogWindow {
     property string walletName
     property int requestType
     property string qrCode
+    property int qrCodeSize: 200
 
     acceptable: false
     rejectable: true
@@ -58,7 +59,7 @@ CustomTitleDialogWindow {
 
     onQrCodeChanged: {
         imageRequestQr.visible = true
-        imageRequestQr.source = walletsProxy.pixmapToDataUrl(walletsProxy.getQRCode(qrCode));
+        imageRequestQr.source = walletsProxy.pixmapToDataUrl(walletsProxy.getQRCode(qrCode, qrCodeSize));
     }
 
     Timer {
@@ -80,8 +81,8 @@ CustomTitleDialogWindow {
             id: imageRequestQr
             width: 150
             height: 150
-            sourceSize.width:  150
-            sourceSize.height: 150
+            sourceSize.width:  qrCodeSize
+            sourceSize.height: qrCodeSize
             visible: false
             Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
         }
