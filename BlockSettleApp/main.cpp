@@ -30,7 +30,11 @@
 #include "BSTerminalSplashScreen.h"
 #include "EncryptionUtils.h"
 
+#include "ApiAdapter.h"
+#include "TerminalMessage.h"
+
 #include "btc/ecc.h"
+#include <spdlog/sinks/daily_file_sink.h>
 
 #include "AppNap.h"
 
@@ -291,6 +295,25 @@ int main(int argc, char** argv)
    btc_ecc_start();
    startupBIP151CTX();
    startupBIP150CTX(4, true);
+
+   const auto loggerName = "terminal";    //FIXME: temporary logger
+   auto logger = spdlog::daily_logger_mt(loggerName, "terminal.log");
+
+   // [date time.milliseconds] [level](thread id): text
+   logger->set_pattern("[%D %H:%M:%S.%e] [%l](%t) %s:%#:%!: %v");
+   logger->set_level(spdlog::level::debug);
+   logger->flush_on(spdlog::level::debug);
+
+   bs::message::TerminalInprocBus inprocBus(logger);
+
+   const auto &apiAdapter = std::make_shared<ApiAdapter>(logger);
+   // apiAdapter->add(guiAdapter);
+   inprocBus.addAdapter(apiAdapter);
+
+   if (!inprocBus.run()) {
+      logger->error("No runnable adapter found on main inproc bus");
+      // return 1;
+   }
 
    return GuiApp(argc, argv);
 }
