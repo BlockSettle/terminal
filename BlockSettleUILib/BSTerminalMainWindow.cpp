@@ -1930,6 +1930,7 @@ void BSTerminalMainWindow::InitWidgets()
 
       logger->debug("Setting up ext connection");
       auto connection = std::make_shared<WsDataConnection>(logger, WsDataConnectionParams{ });
+      //TODO: BIP15x will be superceded with SSL with certificate checking on both ends
 //      auto wsConnection = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
 //      auto connection = std::make_shared<Bip15xDataConnection>(logger, std::move(wsConnection), bip15xTransport);
       if (connection->openConnection(applicationSettings_->get<std::string>(ApplicationSettings::ExtConnHost)
