@@ -724,14 +724,24 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                         (const bs::Address &changeAddress)
                      {
                         try {
+                           //group 1 for cc, group 2 for xbt
+                           unsigned spendGroup = isSpendCC ? RECIP_GROUP_SPEND_1 : RECIP_GROUP_SPEND_2;
+                           unsigned changGroup = isSpendCC ? RECIP_GROUP_CHANG_1 : RECIP_GROUP_CHANG_2;
+                           
+                           std::map<unsigned, std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>>> recipientMap;
                            const auto recipient = bs::Address::fromAddressString(qrn.requestorRecvAddress).getRecipient(bs::XBTAmount{ spendVal });
+                           std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recVec({recipient});
+                           recipientMap.emplace(spendGroup, std::move(recVec));
+                           
 
                            const auto outSortOrder = isSpendCC ? kBuySortOrder : kSellSortOrder;
                            Codec_SignerState::SignerState state;
                            state.ParseFromString(BinaryData::CreateFromHex(qrn.requestorAuthPublicKey).toBinStr());
-                           auto txReq = bs::sync::WalletsManager::createPartialTXRequest(spendVal, inputs, changeAddress
-                              , isSpendCC ? 0 : feePerByte, armory_->topBlock(), { recipient }, outSortOrder
-                              , state, false, logger_);
+                           auto txReq = bs::sync::WalletsManager::createPartialTXRequest(spendVal, inputs
+                              , changeAddress
+                              , isSpendCC ? 0 : feePerByte, armory_->topBlock()
+                              , recipientMap, changGroup, state
+                              , false, UINT32_MAX, logger_);
                            logger_->debug("[RFQDealerReply::submitReply] {} input[s], fpb={}, recip={}, "
                               "change amount={}, prevPart={}", inputs.size(), feePerByte
                               , bs::Address::fromAddressString(qrn.requestorRecvAddress).display()

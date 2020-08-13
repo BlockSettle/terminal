@@ -254,6 +254,9 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                      logger_->error("[{}] invalid recipient: {}", __func__, dealerAddress_);
                      return;
                   }
+                  std::map<unsigned, std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>>> recipientMap;
+                  std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recVec({recipient});
+                  recipientMap.emplace(RECIP_GROUP_SPEND_1, std::move(recVec));
 
                   const bs::core::wallet::OutputSortOrder outSortOrder{
                      bs::core::wallet::OutputOrderType::PrevState,
@@ -261,8 +264,10 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                      bs::core::wallet::OutputOrderType::Change
                   };
 
-                  ccTxData_ = bs::sync::WalletsManager::createPartialTXRequest(spendVal, xbtInputs, changeAddr, feePerByte, armory_->topBlock()
-                     , { recipient }, outSortOrder, dealerTx_, useAllInputs, logger_);
+                  ccTxData_ = bs::sync::WalletsManager::createPartialTXRequest(spendVal
+                     , xbtInputs, changeAddr, feePerByte, armory_->topBlock()
+                     , recipientMap, RECIP_GROUP_CHANG_1
+                     , dealerTx_, useAllInputs, UINT32_MAX, logger_);
 
                   logger_->debug("{} inputs in ccTxData", ccTxData_.armorySigner_.getTxInCount());
                   // Must release old reservation first (we reserve excessive XBT inputs in advance for CC buy requests)!
