@@ -523,7 +523,7 @@ TEST_F(TestWebSocket, SslConnectionSelfSigned)
    serverParams.verifyCallback = [&clientPubKeyValid, pubKeyClient](const std::string &pubKey) -> bool {
       SPDLOG_LOGGER_DEBUG(StaticLogger::loggerPtr, "client public key: {}", bs::toHex(pubKey));
       clientPubKeyValid = pubKeyClient == pubKey;
-      return true;
+      return clientPubKeyValid;
    };
 
    SslDataConnectionParams clientParams;
@@ -535,7 +535,7 @@ TEST_F(TestWebSocket, SslConnectionSelfSigned)
    clientParams.verifyCallback = [&serverPubKeyValid, pubKeyServer](const std::string &pubKey) -> bool {
       SPDLOG_LOGGER_DEBUG(StaticLogger::loggerPtr, "server public key: {}", bs::toHex(pubKey));
       serverPubKeyValid = pubKeyServer == pubKey;
-      return true;
+      return serverPubKeyValid;
    };
 
    client_ = std::make_unique<SslDataConnection>(StaticLogger::loggerPtr, clientParams);
