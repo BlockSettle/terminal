@@ -46,7 +46,8 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , std::unique_ptr<bs::hd::Purpose> walletPurpose
    , const bs::Address &recvAddrIfSet
-   , bool expandTxDialogInfo)
+   , bool expandTxDialogInfo
+   , uint64_t tier1XbtLimit)
    : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose), expandTxDialogInfo)
    , logger_(logger)
    , authAddrMgr_(authAddrMgr)
@@ -75,11 +76,15 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    fxProd_ = cp.ContraCurrency(bs::network::XbtCurrency);
    amount_ = isFxProd ? quantity() / price() : quantity();
 
+   const auto xbtAmount = bs::XBTAmount(amount_);
+
    // BST-2545: Use price as it see Genoa (and it computes it as ROUNDED_CCY / XBT)
-   const auto actualXbtPrice = UiUtils::actualXbtPrice(bs::XBTAmount(amount_), price());
+   const auto actualXbtPrice = UiUtils::actualXbtPrice(xbtAmount, price());
 
    comment_ = fmt::format("{} {} @ {}", bs::network::Side::toString(bs::network::Side::invert(quote_.side))
       , quote_.security, UiUtils::displayPriceXBT(actualXbtPrice).toStdString());
+
+   dealerAddressValidationRequired_ = xbtAmount > bs::XBTAmount(tier1XbtLimit);
 }
 
 ReqXBTSettlementContainer::~ReqXBTSettlementContainer() = default;
@@ -121,7 +126,6 @@ void ReqXBTSettlementContainer::activate()
          if (!handle.isValid()) {
             return;
          }
-         dealerAuthAddress_ = address;
          dealerVerifStateChanged(state);
       });
    });
@@ -131,6 +135,7 @@ void ReqXBTSettlementContainer::activate()
    settlementId_ = BinaryData::CreateFromHex(quote_.settlementId);
    userKey_ = BinaryData::CreateFromHex(quote_.requestorAuthPublicKey);
    dealerAuthKey_ = BinaryData::CreateFromHex(quote_.dealerAuthPublicKey);
+   dealerAuthAddress_ = bs::Address::fromPubKey(dealerAuthKey_, AddressEntryType_P2WPKH);
 
    acceptSpotXBT();
 
@@ -184,9 +189,9 @@ bs::sync::PasswordDialogData ReqXBTSettlementContainer::toPasswordDialogData(QDa
    dialogData.setValue(PasswordDialogData::RequesterAuthAddressVerified, true);
 
    dialogData.setValue(PasswordDialogData::ResponderAuthAddress,
-      bs::Address::fromPubKey(dealerAuthKey_, AddressEntryType_P2WPKH).display());
+      dealerAuthAddress_.display());
    dialogData.setValue(PasswordDialogData::ResponderAuthAddressVerified, dealerVerifState_ == AddressVerificationState::Verified);
-
+   dialogData.setValue(PasswordDialogData::SigningAllowed, dealerVerifState_ == AddressVerificationState::Verified);
 
    // tx details
    dialogData.setValue(PasswordDialogData::TxInputProduct, UiUtils::XbtCurrency);
@@ -372,9 +377,12 @@ void ReqXBTSettlementContainer::onUnsignedPayinRequested(const std::string& sett
             return;
          }
 
-         const auto dealerAddrSW = bs::Address::fromPubKey(dealerAuthKey_, AddressEntryType_P2WPKH);
-         addrVerificator_->addAddress(dealerAddrSW);
-         addrVerificator_->startAddressVerification();
+         if (dealerAddressValidationRequired_) {
+            addrVerificator_->addAddress(dealerAuthAddress_);
+            addrVerificator_->startAddressVerification();
+         } else {
+            dealerVerifState_ = AddressVerificationState::Verified;
+         }
 
          unsignedPayinRequest_ = std::move(result.signRequest);
 

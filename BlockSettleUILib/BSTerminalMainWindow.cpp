@@ -1560,41 +1560,6 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
    }
 }
 
-void BSTerminalMainWindow::createAuthWallet(const std::function<void()> &cb)
-{
-   if (celerConnection_->tradingAllowed()) {
-      const auto &deferredDialog = [this, cb]{
-         const auto lbdCreateAuthWallet = [this, cb] {
-            QMetaObject::invokeMethod(this, [this, cb] {
-               if (walletsMgr_->getAuthWallet()) {
-                  if (cb) {
-                     cb();
-                  }
-                  // Primary wallet is one with auth wallet and so we could try to grab chat keys now
-                  tryGetChatKeys();
-               }
-               else if (!walletsMgr_->hdWallets().empty()) {
-                  BSMessageBox createAuthReq(BSMessageBox::question, tr("Authentication Wallet")
-                     , tr("Create Authentication Wallet")
-                     , tr("You don't have a sub-wallet in which to hold Authentication Addresses."
-                        " Would you like to create one?"), this);
-                  if (createAuthReq.exec() == QDialog::Accepted) {
-                     authManager_->createAuthWallet(cb);
-                  }
-               }
-            });
-         };
-         if (walletsMgr_->hasPrimaryWallet()) {
-            lbdCreateAuthWallet();
-         }
-         else {
-            createWallet(true, lbdCreateAuthWallet);
-         }
-      };
-      addDeferredDialog(deferredDialog);
-   }
-}
-
 struct BSTerminalMainWindow::TxInfo {
    Tx       tx;
    uint32_t txTime{};
@@ -1953,18 +1918,21 @@ void BSTerminalMainWindow::InitWidgets()
    if (!applicationSettings_->get<std::string>(ApplicationSettings::ExtConnName).empty()
       && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnHost).empty()
       && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPort).empty()
-      && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPubKey).empty()) {
+      /*&& !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPubKey).empty()*/) {
       ExtConnections extConns;
-      bs::network::BIP15xParams params;
+/*      bs::network::BIP15xParams params;
       params.ephemeralPeers = true;
       params.cookie = bs::network::BIP15xCookie::ReadServer;
       params.serverPublicKey = BinaryData::CreateFromHex(applicationSettings_->get<std::string>(
          ApplicationSettings::ExtConnPubKey));
       const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger, params);
-      bip15xTransport->setKeyCb(cbApproveExtConn_);
+      bip15xTransport->setKeyCb(cbApproveExtConn_);*/
 
-      auto wsConnection = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
-      auto connection = std::make_shared<Bip15xDataConnection>(logger, std::move(wsConnection), bip15xTransport);
+      logger->debug("Setting up ext connection");
+      auto connection = std::make_shared<WsDataConnection>(logger, WsDataConnectionParams{ });
+      //TODO: BIP15x will be superceded with SSL with certificate checking on both ends
+//      auto wsConnection = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
+//      auto connection = std::make_shared<Bip15xDataConnection>(logger, std::move(wsConnection), bip15xTransport);
       if (connection->openConnection(applicationSettings_->get<std::string>(ApplicationSettings::ExtConnHost)
          , applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPort)
          , aqScriptRunner->getExtConnListener().get())) {
@@ -2209,6 +2177,8 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
    authAddrDlg_->setBsClient(bsClient);
 
    tradeSettings_ = std::make_shared<bs::TradeSettings>(result.tradeSettings);
+   applicationSettings_->set(ApplicationSettings::SubmittedAddressXbtLimit, static_cast<quint64>(tradeSettings_->xbtTier1Limit));
+
    authManager_->initLogin(celerConnection_, tradeSettings_);
 
    ccFileManager_->setCcAddressesSigned(result.ccAddressesSigned);
