@@ -18,6 +18,8 @@
 #include "DataConnectionListener.h"
 #include "RouterServerConnection.h"
 #include "ServerConnectionListener.h"
+#include "SslDataConnection.h"
+#include "SslServerConnection.h"
 #include "StringUtils.h"
 #include "TestEnv.h"
 #include "ThreadSafeClasses.h"
@@ -489,6 +491,60 @@ TEST_F(TestWebSocket, Bip15X)
    client_ = std::make_unique<Bip15xDataConnection>(StaticLogger::loggerPtr, std::move(client), std::move(clientTransport));
 
    doTest(kTestTcpHost, kTestTcpPort, kTestTcpHost, kTestTcpPort, FirstStart::Server);
+}
+
+TEST_F(TestWebSocket, SslConnectionPlain)
+{
+   server_ = std::make_unique<SslServerConnection>(StaticLogger::loggerPtr, SslServerConnectionParams{});
+   client_ = std::make_unique<SslDataConnection>(StaticLogger::loggerPtr, SslDataConnectionParams{});
+   doTest(kTestTcpHost, kTestTcpPort, kTestTcpHost, kTestTcpPort, FirstStart::Server);
+}
+
+TEST_F(TestWebSocket, SslConnectionSelfSigned)
+{
+   auto privKeyServer = bs::network::ws::generatePrivKey();
+   auto certServer = bs::network::ws::generateSelfSignedCert(privKeyServer);
+   auto pubKeyServer = bs::network::ws::publicKey(privKeyServer);
+   SPDLOG_LOGGER_DEBUG(StaticLogger::loggerPtr, "server public key: {}", bs::toHex(pubKeyServer));
+
+   auto privKeyClient = bs::network::ws::generatePrivKey();
+   auto certClient = bs::network::ws::generateSelfSignedCert(privKeyClient);
+   auto pubKeyClient = bs::network::ws::publicKey(privKeyClient);
+   SPDLOG_LOGGER_DEBUG(StaticLogger::loggerPtr, "client public key: {}", bs::toHex(pubKeyClient));
+
+   bool serverPubKeyValid = false;
+   bool clientPubKeyValid = false;
+
+   SslServerConnectionParams serverParams;
+   serverParams.useSsl = true;
+   serverParams.requireClientCert = true;
+   serverParams.cert = certServer;
+   serverParams.privKey = privKeyServer;
+   serverParams.verifyCallback = [&clientPubKeyValid, pubKeyClient](const std::string &pubKey) -> bool {
+      SPDLOG_LOGGER_DEBUG(StaticLogger::loggerPtr, "client public key: {}", bs::toHex(pubKey));
+      clientPubKeyValid = pubKeyClient == pubKey;
+      return true;
+   };
+
+   SslDataConnectionParams clientParams;
+   clientParams.useSsl = true;
+   clientParams.cert = certClient;
+   clientParams.privKey = privKeyClient;
+   clientParams.allowSelfSigned = true;
+   clientParams.skipHostNameChecks = true;
+   clientParams.verifyCallback = [&serverPubKeyValid, pubKeyServer](const std::string &pubKey) -> bool {
+      SPDLOG_LOGGER_DEBUG(StaticLogger::loggerPtr, "server public key: {}", bs::toHex(pubKey));
+      serverPubKeyValid = pubKeyServer == pubKey;
+      return true;
+   };
+
+   client_ = std::make_unique<SslDataConnection>(StaticLogger::loggerPtr, clientParams);
+   server_ = std::make_unique<SslServerConnection>(StaticLogger::loggerPtr, serverParams);
+
+   doTest(kTestTcpHost, kTestTcpPort, kTestTcpHost, kTestTcpPort, FirstStart::Server);
+
+   EXPECT_TRUE(serverPubKeyValid);
+   EXPECT_TRUE(clientPubKeyValid);
 }
 
 TEST(WebSocketHelpers, WsPacket)
