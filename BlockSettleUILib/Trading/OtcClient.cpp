@@ -1720,11 +1720,14 @@ void OtcClient::verifyAuthAddresses(OtcClientDeal *deal)
       });
    };
 
-   deal->addressVerificator = std::make_unique<AddressVerificator>(logger_, armory_, verificatorCb);
-
-   deal->addressVerificator->SetBSAddressList(authAddressManager_->GetBSAddresses());
-   deal->addressVerificator->addAddress(deal->cpAuthAddress());
-   deal->addressVerificator->startAddressVerification();
+   if (authAddressVerificationRequired(deal)) {
+      deal->addressVerificator = std::make_unique<AddressVerificator>(logger_, armory_, verificatorCb);
+      deal->addressVerificator->SetBSAddressList(authAddressManager_->GetBSAddresses());
+      deal->addressVerificator->addAddress(deal->cpAuthAddress());
+      deal->addressVerificator->startAddressVerification();
+   } else {
+      verificatorCb(deal->cpAuthAddress(), AddressVerificationState::Verified);
+   }
 }
 
 void OtcClient::setComments(OtcClientDeal *deal)
@@ -1784,5 +1787,15 @@ void OtcClient::initTradesArgs(bs::tradeutils::Args &args, const PeerPtr &peer, 
 bool OtcClient::expandTxDialog() const
 {
    return applicationSettings_->get<bool>(
-      ApplicationSettings::DetailedSettlementTxDialogByDefault);
+            ApplicationSettings::DetailedSettlementTxDialogByDefault);
+}
+
+bool OtcClient::authAddressVerificationRequired(OtcClientDeal *deal) const
+{
+   if (!applicationSettings_) {
+      return true;
+   }
+   const auto tier1XbtLimit = applicationSettings_->get<uint64_t>(
+      ApplicationSettings::SubmittedAddressXbtLimit);
+   return static_cast<uint64_t>(deal->amount) > tier1XbtLimit;
 }

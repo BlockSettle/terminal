@@ -195,6 +195,7 @@ private:
    void initTradesArgs(bs::tradeutils::Args &args, const bs::network::otc::PeerPtr &peer, const std::string &settlementId);
 
    bool expandTxDialog() const;
+   bool authAddressVerificationRequired(OtcClientDeal *deal) const;
 
    std::shared_ptr<spdlog::logger> logger_;
 
