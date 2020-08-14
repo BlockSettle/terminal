@@ -19,6 +19,8 @@
 #include "Wallets/SyncHDWallet.h"
 #include "ProtobufHeadlessUtils.h"
 
+using namespace ArmorySigner;
+
 HwDeviceManager::HwDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager, std::shared_ptr<bs::sync::WalletsManager> walletManager,
    bool testNet, QObject* parent /*= nullptr*/)
    : QObject(parent)
@@ -204,7 +206,8 @@ void HwDeviceManager::signTX(QVariant reqTX)
          // as different devices, which will be verified in sign part.
          try {
             std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
-            for (const auto &utxo : signReq.inputs) {
+            for (unsigned i=0; i<signReq.armorySigner_.getTxInCount(); i++) {
+               const auto& utxo = signReq.armorySigner_.getSpender(i)->getUtxo();
                auto& idMap = utxoMap[utxo.getTxHash()];
                idMap.emplace(utxo.getTxOutIndex(), utxo);
             }

@@ -214,15 +214,19 @@ void LedgerDevice::signTX(const bs::core::wallet::TXSignRequest& coreReq, AsyncC
 {
    // retrieve inputs paths
    std::vector<bs::hd::Path> inputPathes;
-   for (int i = 0; i < coreReq.inputs.size(); ++i) {
-      const auto &utxo = coreReq.inputs.at(i);
-      const auto address = bs::Address::fromUTXO(utxo);
-      const auto purp = bs::hd::purpose(address.getType());
+   for (int i = 0; i < coreReq.armorySigner_.getTxInCount(); ++i) {
+      auto spender = coreReq.armorySigner_.getSpender(i);
+      const auto& bip32Paths = spender->getBip32Paths();
+      if (bip32Paths.size() != 1) {
+         throw std::logic_error("spender should only have one bip32 path");
+      }
+      auto pathFromRoot = bip32Paths.begin()->second.getDerivationPathFromSeed();
 
-      std::string addrIndex = coreReq.inputIndices.at(i);
+      bs::hd::Path path;
+      for (unsigned i=0; i<pathFromRoot.size(); i++) {
+         path.append(pathFromRoot[i]);
+      }
 
-      auto path = getDerivationPath(testNet_, purp);
-      path.append(bs::hd::Path::fromString(addrIndex));
       inputPathes.push_back(std::move(path));
    }
 
@@ -564,24 +568,19 @@ BIP32_Node LedgerCommandThread::getPublicKeyApdu(bs::hd::Path&& derivationPath, 
    return pubNode;
 }
 
-QByteArray LedgerCommandThread::getTrustedInput(const UTXO& utxo)
+QByteArray LedgerCommandThread::getTrustedInput(const BinaryData& hash, unsigned txOutId)
 {
    logger_->error(
       "[LedgerCommandThread] getTrustedInput - Start retrieve trusted input for legacy address.");
 
    //find the supporting tx
-   auto txIter = coreReq_->supportingTXs.find(utxo.getTxHash());
-   if (txIter == coreReq_->supportingTXs.end())
-      throw std::runtime_error("missing supporting tx");
-
-   const auto& rawTx = txIter->second;
-   Tx tx(rawTx);
+   auto tx = coreReq_->armorySigner_.getSupportingTx(hash);
    QVector<QByteArray> inputCommands;
 
    {
       //trusted input request header
       QByteArray txPayload;
-      writeUintBE(txPayload, utxo.getTxOutIndex()); //outpoint index
+      writeUintBE(txPayload, txOutId); //outpoint index
          
       writeUintLE(txPayload, tx.getVersion()); //supporting tx version
       writeVarInt(txPayload, tx.getNumTxIn()); //supporting tx input count
@@ -784,7 +783,7 @@ void LedgerCommandThread::finalizeInputFull()
    }
 
    logger_->error("[LedgerCommandThread] finalizeInputFull - Start output section");
-   size_t totalOutput = coreReq_->recipients.size();
+   size_t totalOutput = coreReq_->armorySigner_.getTxOutCount();
    if (hasChangeOutput) {
       ++totalOutput;
    }
@@ -792,7 +791,8 @@ void LedgerCommandThread::finalizeInputFull()
    QByteArray outputFullPayload;
    writeVarInt(outputFullPayload, totalOutput);
 
-   for (auto &recipient : coreReq_->recipients) {
+   for (unsigned i=0; i<coreReq_->armorySigner_.getTxOutCount(); i++) {
+      auto recipient = coreReq_->armorySigner_.getRecipient(i);
       outputFullPayload.push_back(QByteArray::fromStdString(recipient->getSerializedScript().toBinStr()));
    }
 
@@ -830,15 +830,16 @@ void LedgerCommandThread::processTXLegacy()
    //upload supporting tx to ledger, get trusted input back for our outpoints
    emit info(HWInfoStatus::kTransaction);
    std::vector<QByteArray> trustedInputs;
-   for (auto& utxo : coreReq_->inputs) {
-      auto trustedInput = getTrustedInput(utxo);
+   for (unsigned i=0; i<coreReq_->armorySigner_.getTxInCount(); i++) {
+      auto spender = coreReq_->armorySigner_.getSpender(i);
+      auto trustedInput = getTrustedInput(spender->getOutputHash(), spender->getOutputIndex());
       trustedInputs.push_back(trustedInput);
    }
 
    // -- collect all redeem scripts
    std::vector<QByteArray> redeemScripts;
-   for (int i = 0; i < coreReq_->inputs.size(); ++i) {
-      auto& utxo = coreReq_->inputs[i];
+   for (int i = 0; i < coreReq_->armorySigner_.getTxInCount(); ++i) {
+      auto& utxo = coreReq_->armorySigner_.getSpender(i)->getUtxo();
       auto redeemScript = utxo.getScript();
       auto redeemScriptQ = QByteArray(
          redeemScript.getCharPtr(), redeemScript.getSize());
@@ -849,7 +850,7 @@ void LedgerCommandThread::processTXLegacy()
 
    //upload the redeem script for each outpoint
    QVector<QByteArray> responseSigned;
-   for (int i = 0; i < coreReq_->inputs.size(); ++i)
+   for (int i = 0; i < coreReq_->armorySigner_.getTxInCount(); ++i)
    {
       //pass true as this is a newly presented redeem script
       startUntrustedTransaction(
@@ -922,20 +923,21 @@ void LedgerCommandThread::processTXSegwit()
 
    //upload supporting tx to ledger, get trusted input back for our outpoints
    std::vector<QByteArray> trustedInputs;
-   for (auto& utxo : coreReq_->inputs) {
-      auto trustedInput = getTrustedInput(utxo);
+   for (unsigned i=0; i<coreReq_->armorySigner_.getTxInCount(); i++) {
+      auto spender = coreReq_->armorySigner_.getSpender(i);
+      auto trustedInput = getTrustedInput(spender->getOutputHash(), spender->getOutputIndex());
       trustedInputs.push_back(trustedInput);
    }
 
    // -- Collect all redeem scripts
 
    std::vector<QByteArray> redeemScripts;
-   for (int i = 0; i < coreReq_->inputs.size(); ++i) {
+   for (int i = 0; i < coreReq_->armorySigner_.getTxInCount(); ++i) {
       auto path = inputPaths_[i];
 
       BinaryData redeemScriptWitness;
       if (isNativeSegwit(path)) {
-         auto& utxo = coreReq_->inputs[i];
+         auto& utxo = coreReq_->armorySigner_.getSpender(i)->getUtxo();
          auto redeemScript = utxo.getScript();
          redeemScriptWitness =
             BtcUtils::getP2WPKHWitnessScript(redeemScript.getSliceRef(2, 20));
@@ -968,7 +970,7 @@ void LedgerCommandThread::processTXSegwit()
    // -- Start signing one by one all addresses -- 
 
    QVector<QByteArray> responseSigned;
-   for (int i = 0; i < coreReq_->inputs.size(); ++i) {
+   for (int i = 0; i < coreReq_->armorySigner_.getTxInCount(); ++i) {
       auto path = inputPaths_[i];
       
       startUntrustedTransaction({ trustedInputs[i] }, { redeemScripts[i] }, 0, false, true, coreReq_->RBF);
@@ -1009,8 +1011,9 @@ SegwitInputData LedgerCommandThread::getSegwitData(void)
       "[LedgerCommandThread] getSegwitData - Start retrieving segwit data.");
 
    SegwitInputData data;
-   for (unsigned i = 0; i < coreReq_->inputs.size(); i++) {
+   for (unsigned i = 0; i < coreReq_->armorySigner_.getTxInCount(); i++) {
       const auto& path = inputPaths_[i];
+      auto spender = coreReq_->armorySigner_.getSpender(i);
 
       auto pubKeyNode = retrievePublicKeyFromPath(std::move(bs::hd::Path(path)));
       data.inputNodes_.push_back(pubKeyNode);
@@ -1040,7 +1043,7 @@ SegwitInputData LedgerCommandThread::getSegwitData(void)
       auto p2shScript = BtcUtils::getP2SHScript(p2shHash);
 
       //check vs utxo's script
-      if (coreReq_->inputs[i].getScript() != p2shScript) {
+      if (spender->getOutputScript() != p2shScript) {
          throw std::runtime_error("p2sh script mismatch");
       }
 
@@ -1077,7 +1080,7 @@ void LedgerCommandThread::debugPrintLegacyResult(const QByteArray& responseSigne
    bw.put_var_int(1); //txin count
 
    //inputs
-   auto utxo = coreReq_->inputs[0];
+   auto utxo = coreReq_->armorySigner_.getSpender(0)->getUtxo();
 
    //outpoint
    bw.put_BinaryData(utxo.getTxHash());
@@ -1105,7 +1108,7 @@ void LedgerCommandThread::debugPrintLegacyResult(const QByteArray& responseSigne
    //txouts
    bw.put_var_int(1); //count
 
-   bw.put_BinaryData(coreReq_->recipients[0]->getSerializedScript());
+   bw.put_BinaryData(coreReq_->armorySigner_.getRecipient(0)->getSerializedScript());
    bw.put_uint32_t(0);
 
    std::cout << bw.getData().toHexStr() << std::endl;

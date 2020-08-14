@@ -49,12 +49,11 @@ struct OtcClientDeal
    bs::Address settlementAddr;
 
    bs::core::wallet::TXSignRequest payin;
+   std::string payinState;
    bs::core::wallet::TXSignRequest payout;
 
    bs::signer::RequestId payinReqId{};
    bs::signer::RequestId payoutReqId{};
-
-   std::map<bs::Address, BinaryData> preimageData;
 
    BinaryData unsignedPayinHash;
 
@@ -780,7 +779,8 @@ void OtcClient::processPublicMessage(QDateTime timestamp, const std::string &con
    SPDLOG_LOGGER_CRITICAL(logger_, "unknown public message was detected!");
 }
 
-void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason)
+void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX
+   , bs::error::ErrorCode result, const std::string &errorReason)
 {
    auto it = signRequestIds_.find(reqId);
    if (it == signRequestIds_.end()) {
@@ -812,8 +812,10 @@ void OtcClient::onTxSigned(unsigned reqId, BinaryData signedTX, bs::error::Error
          deal->signedTx = signedTX;
          trySendSignedTx(deal);
       }
-
       return;
+   }
+   else {
+      SPDLOG_LOGGER_ERROR(logger_, "sign error: {}", errorReason);
    }
 
    if (!deal->peerHandle.isValid()) {
@@ -1066,14 +1068,7 @@ void OtcClient::processBuyerAcks(Peer *peer, const ContactMessage_BuyerAcks &msg
    d->set_settlement_id(settlementId);
    d->set_auth_address_buyer(peer->authPubKey.toBinStr());
    d->set_auth_address_seller(peer->ourAuthPubKey.toBinStr());
-   d->set_unsigned_tx(deal->payin.serializeState().SerializeAsString());
-
-   for (const auto& it : deal->preimageData) {
-      auto preImage = d->add_preimage_data();
-
-      preImage->set_address(it.first.display());
-      preImage->set_preimage_script(it.second.toBinStr());
-   }
+   d->set_unsigned_tx(deal->payinState);
 
    d->set_payin_tx_hash(deal->unsignedPayinHash.toBinStr());
 
@@ -1222,10 +1217,12 @@ void OtcClient::processPbStartOtc(const ProxyTerminalPb::Response_StartOtc &resp
       d->set_settlement_id(settlementId);
       d->set_auth_address_seller(peer->ourAuthPubKey.toBinStr());
       d->set_payin_tx_id(deal.unsignedPayinHash.toBinStr());
+      d->set_payin_tx(deal.payin.serializeState().SerializeAsString());
       send(peer, msg);
 
       deal.peer = peer;
       deal.peerHandle = std::move(handle);
+      deal.payinState = deal.payin.serializeState().SerializeAsString();
       deals_.emplace(settlementId, std::make_unique<OtcClientDeal>(std::move(deal)));
 
       changePeerState(peer, State::SentPayinInfo);
@@ -1487,7 +1484,8 @@ void OtcClient::createSellerRequest(const std::string &settlementId, Peer *peer,
       , targetHdWallet, handle = peer->validityFlag.handle(), logger = logger_]
       (bs::tradeutils::PayinResult payin)
    {
-      QMetaObject::invokeMethod(this, [cb, targetHdWallet, settlementId, handle, logger, peer, payin = std::move(payin)] {
+      QMetaObject::invokeMethod(this, [this, cb, targetHdWallet, settlementId, handle, logger, peer, payin = std::move(payin)]
+         {
          if (!handle.isValid()) {
             SPDLOG_LOGGER_ERROR(logger, "peer was destroyed");
             return;
@@ -1501,24 +1499,32 @@ void OtcClient::createSellerRequest(const std::string &settlementId, Peer *peer,
 
          peer->settlementId = settlementId;
 
-         OtcClientDeal result;
-         result.settlementId = settlementId;
-         result.settlementAddr = payin.settlementAddr;
-         result.ourAuthAddress = bs::Address::fromAddressString(peer->offer.authAddress);
-         result.cpPubKey = peer->authPubKey;
-         result.amount = peer->offer.amount;
-         result.price = peer->offer.price;
-         result.hdWalletId = targetHdWallet->walletId();
-         result.success = true;
-         result.side = otc::Side::Sell;
-         result.payin = std::move(payin.signRequest);
-         result.payin.expiredTimestamp = std::chrono::system_clock::now() + otc::payinTimeout();
+         auto result = std::make_shared<OtcClientDeal>();
+         result->settlementId = settlementId;
+         result->settlementAddr = payin.settlementAddr;
+         result->ourAuthAddress = bs::Address::fromAddressString(peer->offer.authAddress);
+         result->cpPubKey = peer->authPubKey;
+         result->amount = peer->offer.amount;
+         result->price = peer->offer.price;
+         result->hdWalletId = targetHdWallet->walletId();
+         result->success = true;
+         result->side = otc::Side::Sell;
+         result->payin = std::move(payin.signRequest);
+         result->payin.expiredTimestamp = std::chrono::system_clock::now() + otc::payinTimeout();
 
-         result.preimageData = std::move(payin.preimageData);
-         result.unsignedPayinHash = payin.payinHash;
+         result->unsignedPayinHash = payin.payinHash;
 
-         result.fee = int64_t(result.payin.fee);
-         cb(std::move(result));
+         result->fee = int64_t(result->payin.fee);
+
+         const auto &cbResolveSpenders = [result, cb, this](bs::error::ErrorCode errCode
+            , const Codec_SignerState::SignerState &state)
+         {
+            if (errCode == bs::error::ErrorCode::NoError) {
+               result->payin.armorySigner_.deserializeState(state);
+            }
+            cb(std::move(*result));
+         };
+         signContainer_->resolvePublicSpenders(result->payin, cbResolveSpenders);
       });
    });
 
