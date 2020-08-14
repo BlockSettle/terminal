@@ -27,7 +27,7 @@ public:
       auto* otcWidget = qobject_cast<OTCWindowsAdapterBase*>(chat_->ui_->stackedWidgetOTC->currentWidget());
       if (otcWidget) {
          auto reservation = otcWidget->releaseReservation();
-         const bs::network::otc::Peer* peer = chat_->currentPeer();
+         const auto &peer = chat_->currentPeer();
          if (reservation.isValid() && peer) {
             chat_->otcHelper_->client()->setReservation(peer, std::move(reservation));
          }
@@ -111,7 +111,7 @@ protected:
    void applyPostChanged() override {
       // enter peer chat window, let's take ownership on reservation
       auto* otcWidget = qobject_cast<OTCWindowsAdapterBase*>(chat_->ui_->stackedWidgetOTC->currentWidget());
-      const bs::network::otc::Peer* peer = chat_->currentPeer();
+      const auto &peer = chat_->currentPeer();
       if (otcWidget && peer) {
          otcWidget->setReservation(chat_->otcHelper_->client()->releaseReservation(peer));
       }

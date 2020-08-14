@@ -209,7 +209,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    ui_->widgetCreateOTCRequest->init(env);
 }
 
-otc::Peer *ChatWidget::currentPeer() const
+otc::PeerPtr ChatWidget::currentPeer() const
 {
    const auto chartProxyModel = dynamic_cast<ChatPartiesSortProxyModel*>(ui_->treeViewUsers->model());
    PartyTreeItem* partyTreeItem = chartProxyModel->getInternalData(ui_->treeViewUsers->currentIndex());
@@ -275,7 +275,7 @@ void ChatWidget::onRemovePartyRequest(const std::string& partyId) const
    stateCurrent_->onRemovePartyRequest(partyId);
 }
 
-void ChatWidget::onOtcUpdated(const otc::Peer *peer)
+void ChatWidget::onOtcUpdated(const otc::PeerPtr &peer)
 {
    stateCurrent_->onOtcUpdated(peer);
 }
@@ -286,7 +286,7 @@ void ChatWidget::onOtcPublicUpdated() const
    ui_->treeViewUsers->onExpandGlobalOTC();
 }
 
-void ChatWidget::onOTCPeerError(const bs::network::otc::Peer *peer, bs::network::otc::PeerErrorType type, const std::string* errorMsg)
+void ChatWidget::onOTCPeerError(const otc::PeerPtr &peer, bs::network::otc::PeerErrorType type, const std::string* errorMsg)
 {
    stateCurrent_->onOTCPeerError(peer, type, errorMsg);
 }

@@ -101,28 +101,28 @@ public:
       , QObject *parent = nullptr);
    ~OtcClient() override;
 
-   bs::network::otc::Peer *contact(const std::string &contactId);
-   bs::network::otc::Peer *request(const std::string &contactId);
-   bs::network::otc::Peer *response(const std::string &contactId);
+   bs::network::otc::PeerPtr contact(const std::string &contactId);
+   bs::network::otc::PeerPtr request(const std::string &contactId);
+   bs::network::otc::PeerPtr response(const std::string &contactId);
 
    // Calls one of above methods depending on type
-   bs::network::otc::Peer *peer(const std::string &contactId, bs::network::otc::PeerType type);
+   bs::network::otc::PeerPtr peer(const std::string &contactId, bs::network::otc::PeerType type);
 
    void setOwnContactId(const std::string &contactId);
    const std::string &ownContactId() const;
 
    bool sendQuoteRequest(const bs::network::otc::QuoteRequest &request);
-   bool sendQuoteResponse(bs::network::otc::Peer *peer, const bs::network::otc::QuoteResponse &quoteResponse);
-   bool sendOffer(bs::network::otc::Peer *peer, const bs::network::otc::Offer &offer);
-   bool acceptOffer(bs::network::otc::Peer *peer, const bs::network::otc::Offer &offer);
-   bool updateOffer(bs::network::otc::Peer *peer, const bs::network::otc::Offer &offer);
-   bool pullOrReject(bs::network::otc::Peer *peer);
-   void setReservation(const bs::network::otc::Peer *peer, bs::UtxoReservationToken&& reserv);
-   bs::UtxoReservationToken releaseReservation(const bs::network::otc::Peer *peer);
+   bool sendQuoteResponse(const bs::network::otc::PeerPtr &peer, const bs::network::otc::QuoteResponse &quoteResponse);
+   bool sendOffer(const bs::network::otc::PeerPtr &peer, const bs::network::otc::Offer &offer);
+   bool acceptOffer(const bs::network::otc::PeerPtr &peer, const bs::network::otc::Offer &offer);
+   bool updateOffer(const bs::network::otc::PeerPtr &peer, const bs::network::otc::Offer &offer);
+   bool pullOrReject(const bs::network::otc::PeerPtr &peer);
+   void setReservation(const bs::network::otc::PeerPtr &peer, bs::UtxoReservationToken&& reserv);
+   bs::UtxoReservationToken releaseReservation(const bs::network::otc::PeerPtr &peer);
 
-   const bs::network::otc::Peers &requests() { return requests_; }
-   const bs::network::otc::Peers &responses() { return responses_; }
-   bs::network::otc::Peer *ownRequest() const;
+   const bs::network::otc::PeerPtrs &requests() { return requests_; }
+   const bs::network::otc::PeerPtrs &responses() { return responses_; }
+   const bs::network::otc::PeerPtr &ownRequest() const;
 
 public slots:
    void contactConnected(const std::string &contactId);
@@ -136,9 +136,9 @@ signals:
    void sendPbMessage(const std::string &data);
    void sendPublicMessage(const BinaryData &data);
 
-   void peerUpdated(const bs::network::otc::Peer *peer);
+   void peerUpdated(const bs::network::otc::PeerPtr &peer);
    // Used to update UI when there is some problems (for example deal verification failed)
-   void peerError(const bs::network::otc::Peer *peer, bs::network::otc::PeerErrorType type, const std::string *errorMsg);
+   void peerError(const bs::network::otc::PeerPtr &peer, bs::network::otc::PeerErrorType type, const std::string *errorMsg);
 
    void publicUpdated();
 
@@ -150,17 +150,17 @@ private:
 
    struct SettlementIdRequest
    {
-      bs::network::otc::Peer *peer{};
+      bs::network::otc::PeerPtr peer;
       ValidityHandle handle;
    };
 
-   void processQuoteResponse(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::ContactMessage_QuoteResponse &msg);
-   void processBuyerOffers(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::ContactMessage_BuyerOffers &msg);
-   void processSellerOffers(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::ContactMessage_SellerOffers &msg);
-   void processBuyerAccepts(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::ContactMessage_BuyerAccepts &msg);
-   void processSellerAccepts(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::ContactMessage_SellerAccepts &msg);
-   void processBuyerAcks(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::ContactMessage_BuyerAcks &msg);
-   void processClose(bs::network::otc::Peer *peer, const Blocksettle::Communication::Otc::ContactMessage_Close &msg);
+   void processQuoteResponse(const bs::network::otc::PeerPtr &peer, const Blocksettle::Communication::Otc::ContactMessage_QuoteResponse &msg);
+   void processBuyerOffers(const bs::network::otc::PeerPtr &peer, const Blocksettle::Communication::Otc::ContactMessage_BuyerOffers &msg);
+   void processSellerOffers(const bs::network::otc::PeerPtr &peer, const Blocksettle::Communication::Otc::ContactMessage_SellerOffers &msg);
+   void processBuyerAccepts(const bs::network::otc::PeerPtr &peer, const Blocksettle::Communication::Otc::ContactMessage_BuyerAccepts &msg);
+   void processSellerAccepts(const bs::network::otc::PeerPtr &peer, const Blocksettle::Communication::Otc::ContactMessage_SellerAccepts &msg);
+   void processBuyerAcks(const bs::network::otc::PeerPtr &peer, const Blocksettle::Communication::Otc::ContactMessage_BuyerAcks &msg);
+   void processClose(const bs::network::otc::PeerPtr &peer, const Blocksettle::Communication::Otc::ContactMessage_Close &msg);
 
    void processPublicRequest(QDateTime timestamp, const std::string &contactId, const Blocksettle::Communication::Otc::PublicMessage_Request &msg);
    void processPublicClose(QDateTime timestamp, const std::string &contactId, const Blocksettle::Communication::Otc::PublicMessage_Close &msg);
@@ -170,20 +170,20 @@ private:
 
    // Checks that hdWallet, auth address and recv address (is set) are valid
    bool verifyOffer(const bs::network::otc::Offer &offer) const;
-   void blockPeer(const std::string &reason, bs::network::otc::Peer *peer);
+   void blockPeer(const std::string &reason, const bs::network::otc::PeerPtr &peer);
 
-   void send(bs::network::otc::Peer *peer, Blocksettle::Communication::Otc::ContactMessage &msg);
+   void send(const bs::network::otc::PeerPtr &peer, Blocksettle::Communication::Otc::ContactMessage &msg);
 
-   void createSellerRequest(const std::string &settlementId, bs::network::otc::Peer *peer, const OtcClientDealCb &cb);
-   void createBuyerRequest(const std::string &settlementId, bs::network::otc::Peer *peer, const OtcClientDealCb &cb);
-   void sendSellerAccepts(bs::network::otc::Peer *peer);
+   void createSellerRequest(const std::string &settlementId, const bs::network::otc::PeerPtr &peer, const OtcClientDealCb &cb);
+   void createBuyerRequest(const std::string &settlementId, const bs::network::otc::PeerPtr &peer, const OtcClientDealCb &cb);
+   void sendSellerAccepts(const bs::network::otc::PeerPtr &peer);
 
    std::shared_ptr<bs::sync::hd::SettlementLeaf> findSettlementLeaf(const std::string &ourAuthAddress);
 
-   void changePeerStateWithoutUpdate(bs::network::otc::Peer *peer, bs::network::otc::State state);
-   void changePeerState(bs::network::otc::Peer *peer, bs::network::otc::State state);
-   void resetPeerStateToIdle(bs::network::otc::Peer *peer);
-   void scheduleCloseAfterTimeout(std::chrono::milliseconds timeout, bs::network::otc::Peer *peer);
+   void changePeerStateWithoutUpdate(const bs::network::otc::PeerPtr &peer, bs::network::otc::State state);
+   void changePeerState(const bs::network::otc::PeerPtr &peer, bs::network::otc::State state);
+   void resetPeerStateToIdle(const bs::network::otc::PeerPtr &peer);
+   void scheduleCloseAfterTimeout(std::chrono::milliseconds timeout, const bs::network::otc::PeerPtr &peer);
 
    int genLocalUniqueId() { return ++latestUniqueId_; }
    void trySendSignedTx(OtcClientDeal *deal);
@@ -192,7 +192,7 @@ private:
 
    void updatePublicLists();
 
-   void initTradesArgs(bs::tradeutils::Args &args, bs::network::otc::Peer *peer, const std::string &settlementId);
+   void initTradesArgs(bs::tradeutils::Args &args, const bs::network::otc::PeerPtr &peer, const std::string &settlementId);
 
    bool expandTxDialog() const;
 
@@ -217,17 +217,17 @@ private:
    std::map<unsigned, std::string> signRequestIds_;
 
    // Own public request if exists
-   std::unique_ptr<bs::network::otc::Peer> ownRequest_;
+   bs::network::otc::PeerPtr ownRequest_;
 
    // Maps contactId to corresponding Peer
-   std::unordered_map<std::string, bs::network::otc::Peer> contactMap_;
-   std::unordered_map<std::string, bs::network::otc::Peer> requestMap_;
-   std::unordered_map<std::string, bs::network::otc::Peer> responseMap_;
+   std::unordered_map<std::string, bs::network::otc::PeerPtr> contactMap_;
+   std::unordered_map<std::string, bs::network::otc::PeerPtr> requestMap_;
+   std::unordered_map<std::string, bs::network::otc::PeerPtr> responseMap_;
 
    // Cached pointer lists from the above
-   bs::network::otc::Peers contacts_;
-   bs::network::otc::Peers requests_;
-   bs::network::otc::Peers responses_;
+   bs::network::otc::PeerPtrs contacts_;
+   bs::network::otc::PeerPtrs requests_;
+   bs::network::otc::PeerPtrs responses_;
 
    OtcClientParams params_;
 
