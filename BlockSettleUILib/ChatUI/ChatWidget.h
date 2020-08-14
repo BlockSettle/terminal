@@ -77,7 +77,7 @@ public:
       , const std::shared_ptr<ApplicationSettings>&
    );
 
-   bs::network::otc::Peer *currentPeer() const;
+   bs::network::otc::PeerPtr currentPeer() const;
 
    void setUserType(bs::network::UserType userType);
 
@@ -128,9 +128,9 @@ private slots:
    void onNewPartyRequest(const std::string& userName, const std::string& initialMessage) const;
    void onRemovePartyRequest(const std::string& partyId) const;
 
-   void onOtcUpdated(const bs::network::otc::Peer *peer);
+   void onOtcUpdated(const bs::network::otc::PeerPtr &peer);
    void onOtcPublicUpdated() const;
-   void onOTCPeerError(const bs::network::otc::Peer *peer, bs::network::otc::PeerErrorType type, const std::string* errorMsg);
+   void onOTCPeerError(const bs::network::otc::PeerPtr &peer, bs::network::otc::PeerErrorType type, const std::string* errorMsg);
 
    void onOtcRequestSubmit() const;
    void onOtcResponseAccept() const;

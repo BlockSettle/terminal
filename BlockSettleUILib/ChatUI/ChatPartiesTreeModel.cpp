@@ -123,7 +123,7 @@ void ChatPartiesTreeModel::onGlobalOTCChanged(QMap<std::string, ReusableItemData
       endRemoveRows();
    }
 
-   auto fAddOtcParty = [this, &reusableItemData](const bs::network::otc::Peer* peer, std::unique_ptr<PartyTreeItem>& section, otc::PeerType peerType) {
+   auto fAddOtcParty = [this, &reusableItemData](const bs::network::otc::PeerPtr &peer, std::unique_ptr<PartyTreeItem>& section, otc::PeerType peerType) {
       Chat::ClientPartyModelPtr clientPartyModelPtr = chatClientServicePtr_->getClientPartyModelPtr();
       Chat::ClientPartyPtr otcPartyPtr = clientPartyModelPtr->getOtcPartyForUsers(currentUser(), peer->contactId);
       if (!otcPartyPtr) {
