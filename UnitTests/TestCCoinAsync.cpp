@@ -20,6 +20,8 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
+using namespace ArmorySigner;
+
 TestCCoinAsync::TestCCoinAsync()
 {}
 
@@ -271,7 +273,7 @@ BinaryData TestCCoinAsync::SimpleSendMany(const bs::Address & fromAddress, const
    const auto &cbTxOutList =
       [this, lockWallet, signWallet, wallet, fromAddress, toAddresses, valuePerOne, promPtr, fee] (std::vector<UTXO> inputs) -> void
       {
-         std::vector<std::shared_ptr<ScriptRecipient>> recipients;
+         std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recipients;
          for(const auto & addr : toAddresses) {
             recipients.push_back(addr.getRecipient(bs::XBTAmount{ valuePerOne }));
          }
@@ -291,7 +293,7 @@ BinaryData TestCCoinAsync::SimpleSendMany(const bs::Address & fromAddress, const
          if (inputsValue < requiredValue + fee)
             throw std::runtime_error("Not enough money on the source address");
 
-         const auto txReq = wallet->createTXRequest(valInputs, recipients, true, fee, false, fromAddress);
+         auto txReq = wallet->createTXRequest(valInputs, recipients, true, fee, false, fromAddress);
          BinaryData txSigned;
          {
             const bs::core::WalletPasswordScoped lock(lockWallet, passphrase_);
@@ -366,7 +368,7 @@ Tx TestCCoinAsync::CreateCJtx(
       auto leaf = envPtr_->walletsMgr()->getHDRootForLeaf(buyerSignWallet->walletId());
       const bs::core::WalletPasswordScoped passScoped(leaf, passphrase_);
       const auto&& lock = buyerSignWallet->lockDecryptedContainer();
-      cjSigner.resetFeeds();
+      cjSigner.resetFeed();
       cjSigner.setFeed(buyerSignWallet->getResolver());
       cjSigner.sign();
    }
@@ -1019,7 +1021,10 @@ TEST_F(TestCCoinAsync, ZeroConfChain)
    for (size_t i = 0; i < usersCount_; ++i)
       EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
 
-   auto createTxLbd = [](uint64_t value, std::shared_ptr<ScriptSpender> spender, bs::Address& addr)->Tx
+   auto createTxLbd = [](uint64_t value, 
+      std::shared_ptr<ScriptSpender> spender, 
+      bs::Address& addr, 
+      std::shared_ptr<ResolverFeed> feedPtr)->Tx
    {
       Signer signer;
       signer.addSpender(spender);
@@ -1031,6 +1036,7 @@ TEST_F(TestCCoinAsync, ZeroConfChain)
          changeAddr.getSliceCopy(1, 20), spender->getValue() - value);
       signer.addRecipient(changeRec);
 
+      signer.setFeed(feedPtr);
       signer.sign();
       Tx tx(signer.serializeSignedTx());
       return tx;
@@ -1063,10 +1069,9 @@ TEST_F(TestCCoinAsync, ZeroConfChain)
       Tx zc;
       {
          auto spender = std::make_shared<ScriptSpender>(utxo);
-         spender->setFeed(signWallet->getResolver());
          const bs::core::WalletPasswordScoped passScoped(lockWallet, passphrase_);
          const auto&& lock = signWallet->lockDecryptedContainer();
-         zc = createTxLbd(y*ccLotSize_, spender, userCCAddresses_[i]);
+         zc = createTxLbd(y*ccLotSize_, spender, userCCAddresses_[i], signWallet->getResolver());
       }
 
       //set block delay and broadcast 
@@ -1157,7 +1162,8 @@ TEST_F(TestCCoinAsync, Reorg)
       EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[i].prefixed()), 100 * ccLotSize_);
 
    auto createTxLbd = [](std::shared_ptr<ScriptSpender> spender,
-      const std::map<bs::Address, uint64_t>& recipients)->Tx
+      const std::map<bs::Address, uint64_t>& recipients,
+      std::shared_ptr<ResolverFeed> feedPtr)->Tx
    {
       Signer signer;
       signer.addSpender(spender);
@@ -1178,6 +1184,7 @@ TEST_F(TestCCoinAsync, Reorg)
          changeAddr.getSliceCopy(1, 20), spender->getValue() - total);
       signer.addRecipient(changeRec);
 
+      signer.setFeed(feedPtr);
       signer.sign();
       Tx tx(signer.serializeSignedTx());
       return tx;
@@ -1214,7 +1221,6 @@ TEST_F(TestCCoinAsync, Reorg)
    {
       //zc for the branch point
       auto spender = std::make_shared<ScriptSpender>(utxoMain);
-      spender->setFeed(signWalletMain->getResolver());
       const bs::core::WalletPasswordScoped passScoped(lockWalletMain, passphrase_);
 
       std::vector<bs::Address> addresses;
@@ -1225,7 +1231,7 @@ TEST_F(TestCCoinAsync, Reorg)
       std::map<bs::Address, uint64_t> recipients;
       recipients.insert(std::make_pair(userCCAddresses_[0], 100 * ccLotSize_));
       recipients.insert(std::make_pair(userCCAddresses_[1], 100 * ccLotSize_));
-      auto&& zc = createTxLbd(spender, recipients);
+      auto&& zc = createTxLbd(spender, recipients, signWalletMain->getResolver());
 
       for (auto& recipient : recipients)
          addresses.push_back(recipient.first);
@@ -1279,13 +1285,12 @@ TEST_F(TestCCoinAsync, Reorg)
       auto y = (i + 1);
       {
          auto spender = std::make_shared<ScriptSpender>(utxoMain);
-         spender->setFeed(signWalletMain->getResolver());
          const bs::core::WalletPasswordScoped passScoped(lockWalletMain, passphrase_);
          auto lock = signWalletMain->lockDecryptedContainer();
 
          std::map<bs::Address, uint64_t> recipients;
          recipients.insert(std::make_pair(userCCAddresses_[i], y*ccLotSize_));
-         auto&& zc = createTxLbd(spender, recipients);
+         auto&& zc = createTxLbd(spender, recipients, signWalletMain->getResolver());
          vecMain.push_back(zc.serialize());
 
          auto txOut = zc.getTxOutCopy(1);
@@ -1303,13 +1308,12 @@ TEST_F(TestCCoinAsync, Reorg)
       y = (c + 1);
       {
          auto spender = std::make_shared<ScriptSpender>(utxoA);
-         spender->setFeed(signWalletA->getResolver());
          const bs::core::WalletPasswordScoped passScoped(lockWalletA, passphrase_);
          auto lock = signWalletA->lockDecryptedContainer();
 
          std::map<bs::Address, uint64_t> recipients;
          recipients.insert(std::make_pair(userCCAddresses_[c], y*ccLotSize_));
-         auto&& zc = createTxLbd(spender, recipients);
+         auto&& zc = createTxLbd(spender, recipients, signWalletA->getResolver());
          vecA.push_back(zc.serialize());
 
          auto txOut = zc.getTxOutCopy(1);
@@ -1325,13 +1329,12 @@ TEST_F(TestCCoinAsync, Reorg)
       y *= 2;
       {
          auto spender = std::make_shared<ScriptSpender>(utxoB);
-         spender->setFeed(signWalletB->getResolver());
          const bs::core::WalletPasswordScoped passScoped(lockWalletB, passphrase_);
          auto lock = signWalletB->lockDecryptedContainer();
 
          std::map<bs::Address, uint64_t> recipients;
          recipients.insert(std::make_pair(userCCAddresses_[c], y*ccLotSize_));
-         auto&& zc = createTxLbd(spender, recipients);
+         auto&& zc = createTxLbd(spender, recipients, signWalletB->getResolver());
          vecB.push_back(zc.serialize());
 
          auto txOut = zc.getTxOutCopy(1);

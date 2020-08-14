@@ -1522,7 +1522,7 @@ void BSTerminalMainWindow::onAccountTypeChanged(bs::network::UserType userType, 
 {
    userType_ = userType;
 
-   if (enabled != accountEnabled_) {
+   if (enabled != accountEnabled_ && userType != bs::network::UserType::Chat) {
       accountEnabled_ = enabled;
       NotificationCenter::notify(enabled ? bs::ui::NotifyType::AccountEnabled : bs::ui::NotifyType::AccountDisabled, {});
    }
