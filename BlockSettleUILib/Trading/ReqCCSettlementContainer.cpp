@@ -258,12 +258,6 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                   std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recVec({recipient});
                   recipientMap.emplace(RECIP_GROUP_SPEND_1, std::move(recVec));
 
-                  const bs::core::wallet::OutputSortOrder outSortOrder{
-                     bs::core::wallet::OutputOrderType::PrevState,
-                     bs::core::wallet::OutputOrderType::Recipients,
-                     bs::core::wallet::OutputOrderType::Change
-                  };
-
                   ccTxData_ = bs::sync::WalletsManager::createPartialTXRequest(spendVal
                      , xbtInputs, changeAddr, feePerByte, armory_->topBlock()
                      , recipientMap, RECIP_GROUP_CHANG_1
