@@ -107,6 +107,69 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
    containerStatusLabel_->setPixmap(iconContainerOffline_);
 }
 
+StatusBarView::StatusBarView(QStatusBar *parent)
+   : QObject(nullptr)
+   , statusBar_(parent)
+   , iconSize_(16, 16)
+{
+   for (int s : {16, 24, 32})
+   {
+      iconCeler_.addFile(QString(QLatin1String(":/ICON_BS_%1")).arg(s), QSize(s, s), QIcon::Normal);
+      iconCeler_.addFile(QString(QLatin1String(":/ICON_BS_%1_GRAY")).arg(s), QSize(s, s), QIcon::Disabled);
+   }
+   estimateLabel_ = new QLabel(statusBar_);
+
+   iconCelerOffline_ = iconCeler_.pixmap(iconSize_, QIcon::Disabled);
+   iconCelerConnecting_ = iconCeler_.pixmap(iconSize_, QIcon::Disabled);
+   iconCelerOnline_ = iconCeler_.pixmap(iconSize_, QIcon::Normal);
+   iconCelerError_ = iconCeler_.pixmap(iconSize_, QIcon::Disabled);
+
+   QIcon contIconGray(QLatin1String(":/ICON_STATUS_OFFLINE"));
+   QIcon contIconYellow(QLatin1String(":/ICON_STATUS_CONNECTING"));
+   QIcon contIconRed(QLatin1String(":/ICON_STATUS_ERROR"));
+   QIcon contIconGreen(QLatin1String(":/ICON_STATUS_ONLINE"));
+
+   iconContainerOffline_ = contIconGray.pixmap(iconSize_);
+   iconContainerError_ = contIconRed.pixmap(iconSize_);
+   iconContainerOnline_ = contIconGreen.pixmap(iconSize_);
+
+   balanceLabel_ = new QLabel(statusBar_);
+
+   progressBar_ = new CircleProgressBar(statusBar_);
+   progressBar_->setMinimum(0);
+   progressBar_->setMaximum(100);
+   progressBar_->hide();
+
+   celerConnectionIconLabel_ = new QLabel(statusBar_);
+   connectionStatusLabel_ = new QLabel(statusBar_);
+
+   containerStatusLabel_ = new QLabel(statusBar_);
+   containerStatusLabel_->setPixmap(iconContainerOffline_);
+   containerStatusLabel_->setToolTip(tr("Signing container status"));
+
+   statusBar_->addWidget(estimateLabel_);
+   statusBar_->addWidget(balanceLabel_);
+
+   statusBar_->addPermanentWidget(celerConnectionIconLabel_);
+   statusBar_->addPermanentWidget(CreateSeparator());
+   statusBar_->addPermanentWidget(progressBar_);
+   statusBar_->addPermanentWidget(connectionStatusLabel_);
+   statusBar_->addPermanentWidget(CreateSeparator());
+   statusBar_->addPermanentWidget(containerStatusLabel_);
+
+   QWidget* w = new QWidget();
+   w->setFixedWidth(6);
+   statusBar_->addPermanentWidget(w);
+
+   statusBar_->setStyleSheet(QLatin1String("QStatusBar::item { border: none; }"));
+
+   SetLoggedOutStatus();
+
+   onConnectionClosed();
+
+   containerStatusLabel_->setPixmap(iconContainerOffline_);
+}
+
 StatusBarView::~StatusBarView() noexcept
 {
    estimateLabel_->deleteLater();
@@ -288,6 +351,53 @@ void StatusBarView::setBalances()
          .arg(UiUtils::displayCurrencyAmount(assetManager_->getBalance(currency)));
    }
 
+   balanceLabel_->setText(text);
+}
+
+void StatusBarView::onBalanceUpdated(const std::string &symbol, double balance)
+{
+   balances_[symbol] = balance;
+   const auto &it = std::find(balanceSymbols_.cbegin(), balanceSymbols_.cend(), symbol);
+   if (it == balanceSymbols_.cend()) {
+      if (symbol == bs::network::XbtCurrency) {
+         balanceSymbols_.insert(balanceSymbols_.cbegin(), symbol);
+      }
+      else {
+         balanceSymbols_.push_back(symbol);
+      }
+   }
+
+   QString text;
+   for (const auto &currency : balanceSymbols_) {
+      if (currency == bs::network::XbtCurrency) {
+         QString xbt;
+         switch (armoryConnState_) {
+         case ArmoryState::Ready:
+            xbt = UiUtils::displayAmount(balances_.at(currency));
+            break;
+
+         case ArmoryState::Scanning:
+         case ArmoryState::Connected:
+            xbt = tr("Loading...");
+            break;
+
+         case ArmoryState::Closing:
+         case ArmoryState::Offline:
+            xbt = tr("...");
+            break;
+
+         default:
+            xbt = tr("...");
+         }
+
+         text += tr("   XBT: <b>%1</b> ").arg(xbt);
+      }
+      else {
+         text += tr("| %1: <b>%2</b> ")
+            .arg(QString::fromStdString(currency))
+            .arg(UiUtils::displayCurrencyAmount(balances_.at(currency)));
+      }
+   }
    balanceLabel_->setText(text);
 }
 

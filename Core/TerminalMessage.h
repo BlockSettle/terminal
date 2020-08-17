@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2020, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -19,7 +19,7 @@ namespace bs {
    class MainLoopRuner
    {
    public:
-      virtual void run() = 0;
+      virtual void run(int &argc, char **argv) = 0;
    };
 
    namespace message {
@@ -27,6 +27,7 @@ namespace bs {
       {
          Unknown = 0,
          BROADCAST,
+         System,        // Used only as a sender of administrative messages, no adapter registers it
          Signer,
          API,
          Settings,
@@ -37,6 +38,7 @@ namespace bs {
          MDHistory,     // Charts data storage
          Blockchain,    // General name for Armory connection
          Wallets,
+         OnChainTracker,// Auth & CC tracker combined in one adapter
          Settlement,
          Chat,
          UsersCount
@@ -53,18 +55,17 @@ namespace bs {
          {
             return (static_cast<TerminalUsers>(value()) == TerminalUsers::BROADCAST);
          }
-      };
 
-/*      Envelope pbEnvelope(uint64_t id, TerminalUsers sender, TerminalUsers receiver
-         , const TimeStamp &posted, const TimeStamp &execAt, const std::string &message
-         , bool request = false);
-      Envelope pbEnvelope(uint64_t id, UsersPB sender, const std::shared_ptr<User> &receiver
-         , const std::string &message);
-      Envelope pbEnvelope(UsersPB sender, UsersPB receiver, const std::string &message
-         , bool request = false, const TimeStamp &execAt = {});
-      Envelope pbEnvelope(const std::shared_ptr<User> &sender, UsersPB receiver
-         , const std::string &message, bool request = false, const TimeStamp &execAt = {});
-*/
+         bool isFallback() const override
+         {
+            return (static_cast<TerminalUsers>(value()) == TerminalUsers::System);
+         }
+
+         static std::shared_ptr<UserTerminal> create(TerminalUsers value)
+         {
+            return std::make_shared<UserTerminal>(value);
+         }
+      };
 
       class TerminalInprocBus : public Bus
       {
@@ -75,7 +76,8 @@ namespace bs {
          void addAdapter(const std::shared_ptr<Adapter> &) override;
 
          void shutdown();
-         bool run();
+         bool run(int &argc, char **argv);
+         void start();
 
       private:
          std::shared_ptr<spdlog::logger>  logger_;

@@ -30,13 +30,22 @@
 #include "BSTerminalSplashScreen.h"
 #include "EncryptionUtils.h"
 
+#include "Adapters/BlockchainAdapter.h"
+#include "Adapters/WalletsAdapter.h"
 #include "ApiAdapter.h"
-#include "TerminalMessage.h"
+#include "ChatAdapter.h"
+#include "MatchingAdapter.h"
+#include "MDHistAdapter.h"
+#include "MktDataAdapter.h"
+#include "QtGuiAdapter.h"
+#include "SettingsAdapter.h"
+#include "SettlementAdapter.h"
+#include "SignerAdapter.h"
 
 #include "btc/ecc.h"
 #include <spdlog/sinks/daily_file_sink.h>
 
-#include "AppNap.h"
+//#include "AppNap.h"
 
 #ifdef USE_QWindowsIntegrationPlugin
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
@@ -129,7 +138,7 @@ static void checkStyleSheet(QApplication &app)
    app.setStyleSheet(QString::fromLatin1(stylesheetFile.readAll()));
 }
 
-QScreen *getDisplay(QPoint position)
+static QScreen *getDisplay(QPoint position)
 {
    for (auto currentScreen : QGuiApplication::screens()) {
       if (currentScreen->availableGeometry().contains(position, false)) {
@@ -157,7 +166,7 @@ static int runUnchecked(QApplication *app, const std::shared_ptr<ApplicationSett
 
    mainWindow.postSplashscreenActions();
 
-   bs::disableAppNap();
+//   bs::disableAppNap();
 
    return app->exec();
 }
@@ -190,7 +199,6 @@ static int GuiApp(int &argc, char** argv)
 #else
    QApplication app(argc, argv);
 #endif
-
 
    QApplication::setQuitOnLastWindowClosed(false);
 
@@ -296,26 +304,50 @@ int main(int argc, char** argv)
    startupBIP151CTX();
    startupBIP150CTX(4, true);
 
-   const auto loggerName = "terminal";    //FIXME: temporary logger
-   auto logger = spdlog::daily_logger_mt(loggerName, "terminal.log");
-
-   // [date time.milliseconds] [level](thread id): text
-   logger->set_pattern("[%D %H:%M:%S.%e] [%l](%t) %s:%#:%!: %v");
-   logger->set_level(spdlog::level::debug);
-   logger->flush_on(spdlog::level::debug);
-
-   bs::message::TerminalInprocBus inprocBus(logger);
-
-   const auto &apiAdapter = std::make_shared<ApiAdapter>(logger);
-   // apiAdapter->add(guiAdapter);
-   inprocBus.addAdapter(apiAdapter);
-
-   if (!inprocBus.run()) {
-      logger->error("No runnable adapter found on main inproc bus");
-      // return 1;
+   QStringList args;
+   for (int i = 0; i < argc; ++i) {
+      args << QLatin1String(argv[i]);
    }
 
-   return GuiApp(argc, argv);
+   try {
+      const auto &settings = std::make_shared<ApplicationSettings>();
+      const auto &adSettings = std::make_shared<SettingsAdapter>(settings, args);
+      const auto &logMgr = adSettings->logManager();
+
+      bs::message::TerminalInprocBus inprocBus(logMgr->logger());
+      inprocBus.addAdapter(adSettings);
+
+      const auto &apiAdapter = std::make_shared<ApiAdapter>(logMgr->logger("API"));
+      const auto &guiAdapter = std::make_shared<QtGuiAdapter>(logMgr->logger("ui"));
+      apiAdapter->add(guiAdapter);
+      inprocBus.addAdapter(apiAdapter);
+
+      inprocBus.addAdapter(std::make_shared<SignerAdapter>(logMgr->logger()));
+      inprocBus.addAdapter(std::make_shared<BlockchainAdapter>(logMgr->logger()
+         , bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain)));
+      inprocBus.addAdapter(std::make_shared<WalletsAdapter>(logMgr->logger()
+         , bs::message::UserTerminal::create(bs::message::TerminalUsers::Wallets)));
+
+      inprocBus.addAdapter(std::make_shared<MatchingAdapter>(logMgr->logger()));
+      inprocBus.addAdapter(std::make_shared<SettlementAdapter>(logMgr->logger()));
+      inprocBus.addAdapter(std::make_shared<MktDataAdapter>(logMgr->logger()));
+      inprocBus.addAdapter(std::make_shared<MDHistAdapter>(logMgr->logger()));
+      inprocBus.addAdapter(std::make_shared<ChatAdapter>(logMgr->logger()));
+
+      inprocBus.start();
+      if (!inprocBus.run(argc, argv)) {
+         logMgr->logger()->error("No runnable adapter found on main inproc bus");
+         return EXIT_FAILURE;
+      }
+   }
+   catch (const std::exception &e) {
+      std::cerr << "Failed to start BlockSettle Terminal: " << e.what() << std::endl;
+      BSMessageBox(BSMessageBox::critical, QObject::tr("BlockSettle Terminal")
+         , QObject::tr("Unhandled exception detected: %1").arg(QLatin1String(e.what()))).exec();
+      return EXIT_FAILURE;
+   }
+
+//   return GuiApp(argc, argv);
 }
 
 #include "main.moc"

@@ -103,7 +103,7 @@ NotificationTabResponder::TabAction NotificationTabResponder::getTabActionFor(bs
          return { -1, false, false };
       }
       return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetRFQReply), (msg[0].toInt() > 0),
-         !appSettings_->get<bool>(ApplicationSettings::DisableBlueDotOnTabOfRfqBlotter)};
+         appSettings_ ? !appSettings_->get<bool>(ApplicationSettings::DisableBlueDotOnTabOfRfqBlotter) : true};
 
    case bs::ui::NotifyType::BlockchainTX:
       return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetTransactions), true, true };
@@ -167,7 +167,7 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
 
    switch (nt) {
    case bs::ui::NotifyType::BlockchainTX:
-      if ((msg.size() < 2) || !appSettings_->get<bool>(ApplicationSettings::notifyOnTX)) {
+      if ((msg.size() < 2) || appSettings_ ? !appSettings_->get<bool>(ApplicationSettings::notifyOnTX) : true) {
          return;
       }
       title = msg[0].toString();
@@ -321,8 +321,7 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
 
 void NotificationTrayIconResponder::messageClicked()
 {
-   if (newVersionMessage_) {
-      qDebug() << "NEW VERSION";
+   if (newVersionMessage_ && appSettings_) {
       const auto url = appSettings_->get<std::string>(ApplicationSettings::Binaries_Dl_Url);
       const auto title = tr("New version download");
       const auto errDownload = tr("Failed to open download URL");

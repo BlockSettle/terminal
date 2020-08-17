@@ -1,1 +1,1 @@
-ADD_SUBDIRECTORY( QtWidgets )
+ADD_SUBDIRECTORY(QtWidgets)

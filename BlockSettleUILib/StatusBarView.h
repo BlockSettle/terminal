@@ -35,10 +35,11 @@ class StatusBarView  : public QObject, public ArmoryCallbackTarget
 {
    Q_OBJECT
 public:
-   StatusBarView(const std::shared_ptr<ArmoryConnection> &
+   [[deprecated]] StatusBarView(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<BaseCelerClient> &
       , const std::shared_ptr<SignContainer> &, QStatusBar *parent);
+   StatusBarView(QStatusBar *parent);
    ~StatusBarView() noexcept override;
 
    StatusBarView(const StatusBarView&) = delete;
@@ -46,7 +47,8 @@ public:
    StatusBarView(StatusBarView&&) = delete;
    StatusBarView& operator = (StatusBarView&&) = delete;
 
-private slots:
+public slots:
+   void onBalanceUpdated(const std::string &symbol, double balance);
    void onPrepareArmoryConnection(NetworkType);
    void onArmoryStateChanged(ArmoryState);
    void onArmoryProgress(BDMPhase, float progress, unsigned int secondsRem);
@@ -78,16 +80,15 @@ public:
 private:
    void setupBtcIcon(NetworkType);
    void SetLoggedinStatus();
-   void SetCelerErrorStatus(const QString& message);
    void SetLoggedOutStatus();
    void SetCelerConnectingStatus();
    QWidget *CreateSeparator();
-   void setBalances();
-   void updateConnectionStatusDetails();
+   [[deprecated]] void setBalances();
+   [[deprecated]] void updateConnectionStatusDetails();
 
 private:
    void updateProgress(float progress, unsigned secondsRem);
-   QString getImportingText() const;
+   [[deprecated]] QString getImportingText() const;
 
 private:
    QStatusBar     *statusBar_;
@@ -118,6 +119,8 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<AssetManager>       assetManager_;
    std::unordered_set<std::string>     importingWallets_;
+   std::vector<std::string>   balanceSymbols_;
+   std::unordered_map<std::string, double>   balances_;
 };
 
 #endif // __STATUS_BAR_VIEW_H__

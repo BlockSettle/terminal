@@ -35,6 +35,7 @@ BSQuoteReqReply {
 
     property var ccInstruments: [
         'LOL/XBT',
+        'ARM/XBT',
         'POC/XBT'
     ]
     property var xbtInstruments: [
@@ -44,6 +45,17 @@ BSQuoteReqReply {
         'XBT/PLN'
     ]
 
+    onStarted: {    // serve only fixed CC quotes here
+        if (!isCC() || (direction() !== 1)) {
+            return
+        }
+        if (security == "LOL/XBT") {
+            sendPrice(0.0001)
+        }
+        else if (security == "ARM/XBT") {
+            sendPrice(0.001)
+        }
+    }
 
     onBestPriceChanged: {
         if (!hedgeAllowed) return
@@ -110,10 +122,11 @@ BSQuoteReqReply {
 
         var price = 0.0
         if (direction() === 1) {
-            price = priceObj.ask * (1.0 + 3 * prcIncrement)
+            var mult = isXBT() ? 1.5 : 1.0
+            price = priceObj.ask * (1.0 + mult * prcIncrement)
         }
         else {
-            price = priceObj.bid * (1.0 - 3 * prcIncrement)
+            price = priceObj.bid * (1.0 - prcIncrement)
         }
 
         if (bestPrice) {
@@ -221,6 +234,16 @@ BSQuoteReqReply {
         return amount
     }
 
+    function isXBT()
+    {
+        return (xbtInstruments.indexOf(security) != -1)
+    }
+
+    function isCC()
+    {
+        return (ccInstruments.indexOf(security) != -1)
+    }
+
     function sendHedgeOrder(price)
     {
         if (!price) {
@@ -228,8 +251,8 @@ BSQuoteReqReply {
             return
         }
 
-        if (ccInstruments.indexOf(security) != -1) return
-        if (xbtInstruments.indexOf(security) != -1) {
+        if (isCC()) return
+        if (isXBT()) {
             if (quoteReq.quantity > 1.0) {
                 log('XBT amount exceeds limit: ' + quoteReq.quantity)
                 return
