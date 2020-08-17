@@ -511,6 +511,7 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
             const auto cbResolvePublicData = [this, handle, cb]
                   (bs::error::ErrorCode result, const Codec_SignerState::SignerState &state)
             {
+               txReq_.armorySigner_.deserializeState(state);
                if (!handle.isValid()) {
                   return;
                }
