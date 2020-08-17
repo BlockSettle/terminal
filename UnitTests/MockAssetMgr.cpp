@@ -41,7 +41,7 @@ void MockAssetManager::init()
          bs::network::Asset::PrivateMarket};
 
       const CurrencyPair cp(cc);
-      ccSecurities_[cp.NumCurrency()] = bs::network::CCSecurityDef{ cc, cp.NumCurrency(), "desc",  {}, 526 };
+      ccSecurities_[cp.NumCurrency()] = bs::network::CCSecurityDef{ cc, cp.NumCurrency(),  {}, 526 };
    }
    securitiesReceived_ = true;
 }
