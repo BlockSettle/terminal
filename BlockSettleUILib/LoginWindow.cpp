@@ -125,11 +125,11 @@ QString LoginWindow::email() const
    return ui_->lineEditUsername->text().toLower();
 }
 
-void LoginWindow::onStartLoginDone(AutheIDClient::ErrorType errorCode)
+void LoginWindow::onStartLoginDone(bool success, const std::string &errorMsg)
 {
-   if (errorCode != AutheIDClient::NoError) {
+   if (!success) {
       setState(Idle);
-      displayError(errorCode);
+      displayError(errorMsg);
       return;
    }
 
@@ -147,7 +147,7 @@ void LoginWindow::onGetLoginResultDone(const BsClientLoginResult &result)
 
    if (result.status != AutheIDClient::NoError) {
       setState(Idle);
-      displayError(result.status);
+      displayError(result.errorMsg);
       return;
    }
 
@@ -196,13 +196,11 @@ void LoginWindow::updateState()
    }
 }
 
-void LoginWindow::displayError(AutheIDClient::ErrorType errorCode)
+void LoginWindow::displayError(const std::string &message)
 {
-   if (errorCode != AutheIDClient::ErrorType::NetworkError) {
-      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed")
-         , AutheIDClient::errorString(errorCode), this);
-      loginErrorBox.exec();
-   }
+   BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed")
+      , QString::fromStdString(message), this);
+   loginErrorBox.exec();
 }
 
 void LoginWindow::onAuthPressed()
