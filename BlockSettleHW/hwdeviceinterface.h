@@ -19,7 +19,7 @@
 namespace bs {
    namespace core {
       namespace wallet {
-         class TXSignRequest;
+         struct TXSignRequest;
       }
    }
 }
