@@ -69,7 +69,7 @@ BSWalletHandlerDialog {
         authSign.userCancelled.connect(function() {
             rejectWithNoError();
         })
-        authSign.canceledByTimeout.connect(function() {
+        authSign.cancelledByTimeout.connect(function() {
             rejectWithNoError();
         })
     }
