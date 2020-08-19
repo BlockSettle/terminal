@@ -10,19 +10,21 @@
 */
 #include "APISettingsPage.h"
 #include "ui_APISettingsPage.h"
-#include <QFileDialog>
-#include <spdlog/spdlog.h>
-#include "ApplicationSettings.h"
-#include "AutoSignQuoteProvider.h"
-#include "UserScript.h"
-#include "ApplicationSettings.h"
 
+#include <spdlog/spdlog.h>
+#include <QPushButton>
+
+#include "ApplicationSettings.h"
 
 APISettingsPage::APISettingsPage(QWidget* parent)
    : SettingsPage{parent}
    , ui_{new Ui::APISettingsPage{}}
 {
    ui_->setupUi(this);
+
+   connect(ui_->pushButtonApiKeyClear, &QPushButton::clicked, this, [this] {
+      ui_->lineEditApiKey->clear();
+   });
 }
 
 APISettingsPage::~APISettingsPage() = default;
@@ -35,6 +37,7 @@ void APISettingsPage::display()
    ui_->lineEditConnHost->setText(appSettings_->get<QString>(ApplicationSettings::ExtConnHost));
    ui_->lineEditConnPort->setText(appSettings_->get<QString>(ApplicationSettings::ExtConnPort));
    ui_->lineEditConnPubKey->setText(appSettings_->get<QString>(ApplicationSettings::ExtConnPubKey));
+   ui_->lineEditApiKey->setText(appSettings_->get<QString>(ApplicationSettings::LoginApiKey));
 }
 
 void APISettingsPage::reset()
@@ -50,4 +53,5 @@ void APISettingsPage::apply()
    appSettings_->set(ApplicationSettings::ExtConnHost, ui_->lineEditConnHost->text());
    appSettings_->set(ApplicationSettings::ExtConnPort, ui_->lineEditConnPort->text());
    appSettings_->set(ApplicationSettings::ExtConnPubKey, ui_->lineEditConnPubKey->text());
+   appSettings_->set(ApplicationSettings::LoginApiKey, ui_->lineEditApiKey->text());
 }

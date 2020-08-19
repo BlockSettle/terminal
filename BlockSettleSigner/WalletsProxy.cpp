@@ -394,7 +394,7 @@ void WalletsProxy::signOfflineTxProceed(const QString &fileName, const std::vect
    const auto &parsedReqsForWallets = std::make_shared<std::unordered_map<std::string, Requests>>(); // <wallet_id, Requests>
    //const auto walletsMgr = adapter_->getWalletsManager();
    for (const auto &req : parsedReqs) {
-      if (!req.prevStates.empty()) {
+      if (req.armorySigner_.isSigned()) {
          invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Transaction already signed"));
          return;
       }

@@ -1522,7 +1522,7 @@ void BSTerminalMainWindow::onAccountTypeChanged(bs::network::UserType userType, 
 {
    userType_ = userType;
 
-   if (enabled != accountEnabled_) {
+   if (enabled != accountEnabled_ && userType != bs::network::UserType::Chat) {
       accountEnabled_ = enabled;
       NotificationCenter::notify(enabled ? bs::ui::NotifyType::AccountEnabled : bs::ui::NotifyType::AccountDisabled, {});
    }
@@ -1918,18 +1918,21 @@ void BSTerminalMainWindow::InitWidgets()
    if (!applicationSettings_->get<std::string>(ApplicationSettings::ExtConnName).empty()
       && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnHost).empty()
       && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPort).empty()
-      && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPubKey).empty()) {
+      /*&& !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPubKey).empty()*/) {
       ExtConnections extConns;
-      bs::network::BIP15xParams params;
+/*      bs::network::BIP15xParams params;
       params.ephemeralPeers = true;
       params.cookie = bs::network::BIP15xCookie::ReadServer;
       params.serverPublicKey = BinaryData::CreateFromHex(applicationSettings_->get<std::string>(
          ApplicationSettings::ExtConnPubKey));
       const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger, params);
-      bip15xTransport->setKeyCb(cbApproveExtConn_);
+      bip15xTransport->setKeyCb(cbApproveExtConn_);*/
 
-      auto wsConnection = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
-      auto connection = std::make_shared<Bip15xDataConnection>(logger, std::move(wsConnection), bip15xTransport);
+      logger->debug("Setting up ext connection");
+      auto connection = std::make_shared<WsDataConnection>(logger, WsDataConnectionParams{ });
+      //TODO: BIP15x will be superceded with SSL with certificate checking on both ends
+//      auto wsConnection = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
+//      auto connection = std::make_shared<Bip15xDataConnection>(logger, std::move(wsConnection), bip15xTransport);
       if (connection->openConnection(applicationSettings_->get<std::string>(ApplicationSettings::ExtConnHost)
          , applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPort)
          , aqScriptRunner->getExtConnListener().get())) {

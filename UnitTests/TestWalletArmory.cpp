@@ -585,10 +585,10 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
 
       //resync address chain use, it should not disrupt current state
       auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
-      inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
       syncMgr->setSignContainer(inprocSigner);
+      inprocSigner->Start();
 
       auto promSync = std::make_shared<std::promise<bool>>();
       auto futSync = promSync->get_future();
@@ -633,7 +633,6 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       {
          promPtr2->set_value(true);
       };
-
       //async, has to wait
       ASSERT_TRUE(syncLeaf->updateBalances(cbBalance));
       fut2.wait();
@@ -738,12 +737,6 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    const auto changeAddr = leafPtr_->getNewChangeAddress();
    EXPECT_EQ(leafPtr_->getUsedAddressCount(), 3);
 
-   //add an extra address not part of the wallet
-   BinaryData prefixed;
-   prefixed.append(AddressEntry::getPrefixByte(AddressEntryType_P2PKH));
-   prefixed.append(CryptoPRNG::generateRandom(20));
-   auto otherAddr = bs::Address::fromHash(prefixed);
-
    auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
@@ -819,7 +812,11 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    utxos.push_back(inputs[0]);
 
    recipient = addr2.getRecipient(bs::XBTAmount{ amount });
-   const auto recipient2 = otherAddr.getRecipient(bs::XBTAmount{ amount });
+   const auto randomPrivKey2 = CryptoPRNG::generateRandom(32);
+   const auto randomPubKey2 = CryptoECDSA().ComputePublicKey(randomPrivKey2, true);
+   const auto &otherAddr2 = bs::Address::fromPubKey(randomPubKey2, AddressEntryType_P2WPKH);
+   const auto &recipient2 = otherAddr2.getRecipient(bs::XBTAmount{ amount });
+
    const auto txReq = syncLeaf->createTXRequest(
       utxos, { recipient, recipient2 }, true, fee, false, changeAddr);
    BinaryData txSigned;
@@ -877,32 +874,52 @@ TEST_F(TestWalletWithArmory, ZCBalance)
 
       prom3->set_value(true);
    };
-
    syncLeaf->getSpendableZCList(zcTxOutLbd);
    fut3.wait();
 
    blockCount = 1;
    curHeight = envPtr_->armoryConnection()->topBlock();
-   armoryInstance->mineNewBlock(recipient.get(), blockCount);
+   armoryInstance->mineNewBlock(recipient2.get(), blockCount);
    newTop = UnitTestWalletACT::waitOnNewBlock();
    ASSERT_EQ(curHeight + blockCount, newTop);
 
-   auto promPtr4 = std::make_shared<std::promise<bool>>();
-   auto fut4 = promPtr4->get_future();
-   const auto &cbBalance4 = [promPtr4](void)
+   auto promUpdBal = std::make_shared<std::promise<bool>>();
+   auto futUpdBal = promUpdBal->get_future();
+   const auto &cbBalance4 = [promUpdBal](void)
    {
-      promPtr4->set_value(true);
+      promUpdBal->set_value(true);
    };
-
    //async, has to wait
    syncLeaf->updateBalances(cbBalance4);
-   fut4.wait();
+   futUpdBal.wait();
 
    EXPECT_EQ(syncLeaf->getTotalBalance(),
-      double(350 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider);
+      double(300 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider);
    EXPECT_EQ(syncLeaf->getSpendableBalance(),
-      double(350 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider - syncLeaf->getUnconfirmedBalance());
-   EXPECT_EQ(syncLeaf->getUnconfirmedBalance(), amount / BTCNumericTypes::BalanceDivider);
+      double(300 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider - syncLeaf->getUnconfirmedBalance());
+   EXPECT_EQ(syncLeaf->getUnconfirmedBalance(), 0);
+
+   blockCount = 5;
+   curHeight = envPtr_->armoryConnection()->topBlock();
+   armoryInstance->mineNewBlock(recipient2.get(), blockCount);
+   newTop = UnitTestWalletACT::waitOnNewBlock();
+   ASSERT_EQ(curHeight + blockCount, newTop);
+
+   promUpdBal = std::make_shared<std::promise<bool>>();
+   futUpdBal = promUpdBal->get_future();
+   const auto &cbBalance5 = [promUpdBal](void)
+   {
+      promUpdBal->set_value(true);
+   };
+   //async, has to wait
+   syncLeaf->updateBalances(cbBalance5);
+   futUpdBal.wait();
+
+   EXPECT_EQ(syncLeaf->getTotalBalance(),
+      double(300 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider);
+   EXPECT_EQ(syncLeaf->getSpendableBalance(),
+      double(300 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider - syncLeaf->getUnconfirmedBalance());
+   EXPECT_EQ(syncLeaf->getUnconfirmedBalance(), 0);
 }
 
 TEST_F(TestWalletWithArmory, SimpleTX_bech32)
@@ -1205,6 +1222,15 @@ TEST_F(TestWalletWithArmory, GlobalDelegateConf)
       syncWallet->getNewExtAddress(cbAddr);
       return futAddr.get();
    };
+   const auto &lbdGetIntAddress = [syncWallet](AddressEntryType aet = AddressEntryType_Default) -> bs::Address {
+      auto promAddr = std::make_shared<std::promise<bs::Address>>();
+      auto futAddr = promAddr->get_future();
+      const auto &cbAddr = [promAddr](const bs::Address &addr) {
+         promAddr->set_value(addr);
+      };
+      syncWallet->getNewIntAddress(cbAddr);
+      return futAddr.get();
+   };
 
    const bs::Address addr = lbdGetExtAddress();
 
@@ -1225,7 +1251,6 @@ TEST_F(TestWalletWithArmory, GlobalDelegateConf)
    {
       promPtrBal->set_value(true);
    };
-
    //async, has to wait
    syncLeaf->updateBalances(cbBalance);
    futBal.wait();
@@ -1290,36 +1315,37 @@ TEST_F(TestWalletWithArmory, GlobalDelegateConf)
    EXPECT_EQ((*ledgerEntries)[5].getBlockNum(), 1);
 
    const auto addr1 = lbdGetExtAddress();
+   const auto changeAddr = lbdGetIntAddress();
 
-   auto promTxOut = std::make_shared<std::promise<bool>>();
+   auto promTxOut = std::make_shared<std::promise<std::vector<UTXO>>>();
    auto futTxOut = promTxOut->get_future();
-   const auto &cbTxOutList = [this, leaf = leafPtr_, syncLeaf, addr1, promTxOut]
-      (std::vector<UTXO> inputs)->void
+   const auto &cbTxOutList = [promTxOut] (const std::vector<UTXO> &inputs)
    {
-      const auto recipient = addr1.getRecipient(bs::XBTAmount{ (uint64_t)(5 * COIN) });
-      const auto txReq = syncLeaf->createTXRequest(inputs, { recipient }, true);
-      BinaryData txSigned;
-      {
-         const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
-         txSigned = leaf->signTXRequest(txReq);
-         ASSERT_FALSE(txSigned.empty());
-      }
-
-      UnitTestWalletACT::clear();
-
-      envPtr_->armoryInstance()->pushZC(txSigned);
-
-      auto&& zcVec = UnitTestWalletACT::waitOnZC();
-      promTxOut->set_value(zcVec.size() == 1);
+      promTxOut->set_value(inputs);
    };
-
    //async, has to wait
-   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
-   ASSERT_TRUE(futTxOut.get());
+   EXPECT_TRUE(syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true));
+   const auto &inputs = futTxOut.get();
+   ASSERT_FALSE(inputs.empty());
+
+   const auto recip1 = addr1.getRecipient(bs::XBTAmount{ (uint64_t)(5 * COIN) });
+   const auto txReq = syncLeaf->createTXRequest(inputs, { recip1 }, true, 0, false, changeAddr);
+   BinaryData txSigned;
+   {
+      const bs::core::WalletPasswordScoped lock(walletPtr_, passphrase_);
+      txSigned = leafPtr_->signTXRequest(txReq);
+      ASSERT_FALSE(txSigned.empty());
+   }
+
+   UnitTestWalletACT::clear();
+
+   envPtr_->armoryInstance()->pushZC(txSigned);
+
+   auto&& zcVec = UnitTestWalletACT::waitOnZC();
 
    ledgerEntries = lbdGetLDEntries(globalLedger);
    ASSERT_FALSE(ledgerEntries->empty());
-   EXPECT_EQ(ledgerEntries->size(), 7);
+   EXPECT_EQ(ledgerEntries->size(), 8);
    EXPECT_EQ((*ledgerEntries)[0].getBlockNum(), UINT32_MAX);
 
    // Mine new block - conf count for entry[0] should increase
@@ -1340,7 +1366,7 @@ TEST_F(TestWalletWithArmory, GlobalDelegateConf)
 
    ledgerEntries = lbdGetLDEntries(globalLedger);
    ASSERT_FALSE(ledgerEntries->empty());
-   EXPECT_EQ(ledgerEntries->size(), 8);   // we have one additional TX on addr at mining
+   EXPECT_EQ(ledgerEntries->size(), 9);   // we have one additional TX on addr at mining
    EXPECT_EQ(envPtr_->armoryConnection()->getConfirmationsNumber((*ledgerEntries)[1].getBlockNum()), 1);
 }
 

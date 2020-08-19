@@ -936,9 +936,22 @@ void RFQTicketXBT::sendRFQ(const std::string &id)
                   const auto cbAddr = [this, spendVal, id, rfq, ccInputs, ccWallet](const bs::Address &addr)
                   {
                      try {
-                        const auto txReq = ccWallet->createPartialTXRequest(spendVal, ccInputs, addr);
+                        const auto txReq = ccWallet->createPartialTXRequest(
+                           spendVal, ccInputs
+                           , { addr, RECIP_GROUP_CHANG_1 } //change to group 1 (cc group)
+                           , 0, {}, {}
+                           /* 
+                           This cc is created without recipients. Set the assumed recipient count
+                           to 1 so the coin selection algo can run, otherwise all presented inputs
+                           will be selected, which is wasteful. 
+
+                           The assumed recipient count isn't relevant to the fee calculation on
+                           the cc side of the tx since only the xbt side covers network fees.
+                           */
+                           , 1); 
                         rfq->coinTxInput = BinaryData::fromString(txReq.serializeState().SerializeAsString()).toHexStr();
-                        auto reservationToken = utxoReservationManager_->makeNewReservation(txReq.inputs, rfq->requestId);
+                        auto reservationToken = utxoReservationManager_->makeNewReservation(
+                           txReq.getInputs(nullptr), rfq->requestId);
                         submitRFQCb_(id, *rfq, std::move(reservationToken));
                      }
                      catch (const std::exception &e) {

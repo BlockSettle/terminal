@@ -78,14 +78,14 @@ public slots:
    void onLogout();
    void onProcessOtcPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
 
-   void onOtcRequestSubmit(bs::network::otc::Peer *peer, const bs::network::otc::Offer& offer);
-   void onOtcPullOrReject(bs::network::otc::Peer *peer);
-   void onOtcResponseAccept(bs::network::otc::Peer *peer, const bs::network::otc::Offer& offer);
-   void onOtcResponseUpdate(bs::network::otc::Peer *peer, const bs::network::otc::Offer& offer);
-   void onOtcResponseReject(bs::network::otc::Peer *peer);
+   void onOtcRequestSubmit(const bs::network::otc::PeerPtr &peer, const bs::network::otc::Offer& offer);
+   void onOtcPullOrReject(const bs::network::otc::PeerPtr &peer);
+   void onOtcResponseAccept(const bs::network::otc::PeerPtr &peer, const bs::network::otc::Offer& offer);
+   void onOtcResponseUpdate(const bs::network::otc::PeerPtr &peer, const bs::network::otc::Offer& offer);
+   void onOtcResponseReject(const bs::network::otc::PeerPtr &peer);
 
    void onOtcQuoteRequestSubmit(const bs::network::otc::QuoteRequest &request);
-   void onOtcQuoteResponseSubmit(bs::network::otc::Peer *peer, const bs::network::otc::QuoteResponse &response);
+   void onOtcQuoteResponseSubmit(const bs::network::otc::PeerPtr &peer, const bs::network::otc::QuoteResponse &response);
 
    void onMessageArrived(const Chat::MessagePtrList& messagePtr);
    void onPartyStateChanged(const Chat::ClientPartyPtr& clientPartyPtr);

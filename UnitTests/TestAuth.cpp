@@ -66,6 +66,8 @@ check unflagged return
 
 #include "TestAuth.h"
 
+using namespace ArmorySigner;
+
 ///////////////////////////////////////////////////////////////////////////////
 void TestValidationACT::onRefresh(const std::vector<BinaryData>& ids, bool online)
 {
