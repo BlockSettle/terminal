@@ -757,7 +757,6 @@ ELSE(WIN32)
             ${ZLIB_LIBRARIES}
             png
             m
-            double-conversion
             dl
             cups
             udev
