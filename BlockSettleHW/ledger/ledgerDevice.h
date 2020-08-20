@@ -121,7 +121,7 @@ protected:
    BIP32_Node getPublicKeyApdu(bs::hd::Path&& derivationPath, const std::unique_ptr<BIP32_Node>& parent = nullptr);
 
    // Sign tx processing  
-   QByteArray getTrustedInput(const UTXO&);
+   QByteArray getTrustedInput(const BinaryData&, unsigned);
    QByteArray getTrustedInputSegWit_outdated(const UTXO&);
 
    void startUntrustedTransaction(

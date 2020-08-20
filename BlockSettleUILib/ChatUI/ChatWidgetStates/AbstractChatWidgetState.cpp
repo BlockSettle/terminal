@@ -226,7 +226,7 @@ void AbstractChatWidgetState::onProcessOtcPbMessage(const Blocksettle::Communica
    }
 }
 
-void AbstractChatWidgetState::onOtcUpdated(const otc::Peer *peer)
+void AbstractChatWidgetState::onOtcUpdated(const otc::PeerPtr &peer)
 {
    if (canReceiveOTCOperations() && chat_->currentPeer() == peer) {
       onUpdateOTCShield();
@@ -252,7 +252,7 @@ void AbstractChatWidgetState::onUpdateOTCShield()
    applyRoomsFrameChange();
 }
 
-void AbstractChatWidgetState::onOTCPeerError(const bs::network::otc::Peer *peer, bs::network::otc::PeerErrorType type, const std::string* errorMsg)
+void AbstractChatWidgetState::onOTCPeerError(const bs::network::otc::PeerPtr &peer, bs::network::otc::PeerErrorType type, const std::string* errorMsg)
 {
    if (!canReceiveOTCOperations()) {
       return;
@@ -384,7 +384,7 @@ void AbstractChatWidgetState::updateOtc()
    }
 
    const bool globalRoom = chat_->currentPartyId_ == Chat::OtcRoomName;
-   const bs::network::otc::Peer* peer = chat_->currentPeer();
+   const auto &peer = chat_->currentPeer();
    if (!peer && !globalRoom) {
       chat_->ui_->widgetOTCShield->showContactIsOffline();
       return;

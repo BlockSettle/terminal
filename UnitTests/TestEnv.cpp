@@ -260,7 +260,7 @@ ArmoryInstance::~ArmoryInstance()
 }
 
 std::map<unsigned, BinaryData> ArmoryInstance::mineNewBlock(
-   ScriptRecipient* rec, unsigned count)
+   ArmorySigner::ScriptRecipient* rec, unsigned count)
 {
    return nodePtr_->mineNewBlock(theBDMt_->bdm(), count, rec);
 }

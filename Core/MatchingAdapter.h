@@ -11,14 +11,17 @@
 #ifndef MATCHING_ADAPTER_H
 #define MATCHING_ADAPTER_H
 
+#include <QObject>
 #include "Message/Adapter.h"
 
 namespace spdlog {
    class logger;
 }
+class CelerClientProxy;
 
-class MatchingAdapter : public bs::message::Adapter
+class MatchingAdapter : public QObject, public bs::message::Adapter
 {
+   Q_OBJECT
 public:
    MatchingAdapter(const std::shared_ptr<spdlog::logger> &);
    ~MatchingAdapter() override = default;
@@ -30,11 +33,17 @@ public:
    }
    std::string name() const override { return "Matching"; }
 
+private slots:
+   void onCelerConnected();
+   void onCelerDisconnected();
+   void onCelerConnectionError(int);
+
 private:
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::message::User>  user_;
+   std::shared_ptr<CelerClientProxy>   celerConnection_;
 };
 
 

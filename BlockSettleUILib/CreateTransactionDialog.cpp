@@ -481,21 +481,17 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
          return;
       }
       try {
-         auto txReq = transactionData_->createTXRequest(checkBoxRBF()->checkState() == Qt::Checked, changeAddress);
+         txReq_ = transactionData_->createTXRequest(checkBoxRBF()->checkState() == Qt::Checked, changeAddress);
 
          // grab supporting transactions for the utxo map.
          // required only for HW
          std::set<BinaryData> hashes;
-         std::vector<UTXO> p2shInputs;
-         for (const auto& input : txReq.inputs) {
-            hashes.emplace(input.getTxHash());
-            const auto scrType = BtcUtils::getTxOutScriptType(input.getScript());
-            if (scrType == TXOUT_SCRIPT_P2SH) {
-               p2shInputs.push_back(input);
-            }
+         for (unsigned i=0; i<txReq_.armorySigner_.getTxInCount(); i++) {
+            auto spender = txReq_.armorySigner_.getSpender(i);
+            hashes.emplace(spender->getOutputHash());
          }
 
-         auto supportingTxMapCb = [this, handle, txReq = std::move(txReq), cb, p2shInputs]
+         auto supportingTxMapCb = [this, handle, cb]
                (const AsyncClient::TxBatchResult& result, std::exception_ptr eptr) mutable
          {
             if (!handle.isValid()) {
@@ -509,25 +505,22 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
             }
 
             for (auto& txPair : result) {
-               txReq.supportingTXs.emplace(txPair.first, txPair.second->serialize());
+               txReq_.armorySigner_.addSupportingTx(*txPair.second);
             }
 
-            const auto cbPreimage = [this, handle, txReq, cb]
-               (const std::map<bs::Address, BinaryData> &preimages) {
+            const auto cbResolvePublicData = [this, handle, cb]
+                  (bs::error::ErrorCode result, const Codec_SignerState::SignerState &state)
+            {
+               txReq_.armorySigner_.deserializeState(state);
                if (!handle.isValid()) {
                   return;
                }
-
-               bool rc = createTransactionImpl(txReq, preimages);
+               logger_->debug("[{}] result={}, state: {}", __func__, (int)result, state.IsInitialized());
+               bool rc = createTransactionImpl();
                cb(rc);
             };
 
-            if (p2shInputs.empty()) {
-               cbPreimage({});
-            } else {
-               const auto addrMapping = walletsManager_->getAddressToWalletsMapping(p2shInputs);
-               signContainer_->getAddressPreimage(addrMapping, cbPreimage);
-            }
+            signContainer_->resolvePublicSpenders(txReq_, cbResolvePublicData);
          };
 
          if (!armory_->getTXsByHash(hashes, supportingTxMapCb, true)) {
@@ -542,7 +535,7 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
    });
 }
 
-bool CreateTransactionDialog::createTransactionImpl(bs::core::wallet::TXSignRequest txReq, const std::map<bs::Address, BinaryData> &preimages)
+bool CreateTransactionDialog::createTransactionImpl()
 {
    QString text;
    QString detailedText;
@@ -550,7 +543,6 @@ bool CreateTransactionDialog::createTransactionImpl(bs::core::wallet::TXSignRequ
    const auto hdWallet = walletsManager_->getHDWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
 
    try {
-      txReq_ = std::move(txReq);
       txReq_.comment = textEditComment()->document()->toPlainText().toStdString();
 
       if (isRBF_) {
@@ -599,16 +591,8 @@ bool CreateTransactionDialog::createTransactionImpl(bs::core::wallet::TXSignRequ
          // do we need some checks here?
       }
 
-      bool isLegacy = false;
-      for (const auto& input : txReq.inputs) {
-         if (bs::Address::fromUTXO(input).getType() == AddressEntryType_P2PKH) {
-            isLegacy = true;
-            break;
-         }
-      }
-      if (!isLegacy) {
-         const auto resolver = bs::sync::WalletsManager::getPublicResolver(preimages);
-         txReq_.txHash = txReq_.txId(resolver);
+      if (txReq_.armorySigner_.isSegWit()) {
+         txReq_.txHash = txReq_.txId();
       }
 
       if (hdWallet->isOffline() && !hdWallet->isHardwareWallet()) {

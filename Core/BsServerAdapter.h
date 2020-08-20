@@ -12,11 +12,19 @@
 #define BS_SERVER_ADAPTER_H
 
 #include "Message/Adapter.h"
+#include "FutureValue.h"
+#include "NetworkSettingsLoader.h"
 
 namespace spdlog {
    class logger;
 }
+namespace BlockSettle {
+   namespace Terminal {
+      class SettingsMessage_SettingsResponse;
+   }
+}
 class ConnectionManager;
+class RequestReplyCommand;
 
 class BsServerAdapter : public bs::message::Adapter
 {
@@ -32,11 +40,24 @@ public:
    std::string name() const override { return "BS Servers"; }
 
 private:
+   void start();
+   bool processOwnRequest(const bs::message::Envelope &);
+   bool processLocalSettings(const BlockSettle::Terminal::SettingsMessage_SettingsResponse &);
+   bool processNetworkSettings(const bs::message::Envelope &);
+   void sendNetworkSettings(const bs::message::Envelope &);
+   bool processPuBKeyResponse(bool);
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::message::User>  user_;
    std::shared_ptr<ConnectionManager>  connMgr_;
+
+   std::string       pubHost_;
+   const std::string pubPort_;
+   std::atomic_bool  hasNetworkSettings_{ false };
+   NetworkSettings   networkSettings_;
+   std::shared_ptr<RequestReplyCommand>   cmdNetworkSettings_;
+   std::shared_ptr<FutureValue<bool>>     futPuBkey_;
 };
 
 

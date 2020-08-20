@@ -25,6 +25,7 @@
 #include <QPointer>
 
 using namespace bs::sync;
+using namespace ArmorySigner;
 
 DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
    , const bs::network::Order &order
@@ -175,13 +176,23 @@ bool DealerCCSettlementContainer::startSigning(QDateTime timestamp)
       }
    };
 
-   txReq_.prevStates = { txReqData_ };
-   txReq_.populateUTXOs = true;
-   txReq_.inputs = bs::UtxoReservation::instance()->get(utxoRes_.reserveId());
+   {
+      txReq_.armorySigner_.deserializeState(txReqData_);
+      auto inputs = bs::UtxoReservation::instance()->get(utxoRes_.reserveId());
+      for (auto& input : inputs) {
+         try {
+            txReq_.armorySigner_.populateUtxo(input);
+         }
+         catch (const std::exception&) {
+            continue;
+         }
+      }
+   }
 
    txReq_.walletIds.clear();
-   for (const auto &input : txReq_.inputs) {
-      const auto addr = bs::Address::fromUTXO(input);
+   for (unsigned i=0; i < txReq_.armorySigner_.getTxInCount(); i++) {
+      const auto& utxo = txReq_.armorySigner_.getSpender(i)->getUtxo();
+      const auto addr = bs::Address::fromUTXO(utxo);
       const auto wallet = walletsMgr_->getWalletByAddress(addr);
       if (!wallet) {
          SPDLOG_LOGGER_ERROR(logger_, "can't find wallet from UTXO");
@@ -191,7 +202,7 @@ bool DealerCCSettlementContainer::startSigning(QDateTime timestamp)
    }
 
    //Waiting for TX half signing...
-   SPDLOG_LOGGER_DEBUG(logger_, "signing with {} inputs", txReq_.inputs.size());
+   SPDLOG_LOGGER_DEBUG(logger_, "signing with {} inputs", txReq_.armorySigner_.getTxInCount());
    signId_ = signingContainer_->signSettlementPartialTXRequest(txReq_, toPasswordDialogData(timestamp), cbTx);
    return ( signId_ > 0);
 }

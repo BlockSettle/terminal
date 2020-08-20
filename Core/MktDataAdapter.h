@@ -11,13 +11,15 @@
 #ifndef MKT_DATA_ADAPTER_H
 #define MKT_DATA_ADAPTER_H
 
+#include "MarketDataProvider.h"
 #include "Message/Adapter.h"
 
 namespace spdlog {
    class logger;
 }
+class BSMarketDataProvider;
 
-class MktDataAdapter : public bs::message::Adapter
+class MktDataAdapter : public bs::message::Adapter, public MDCallbackTarget
 {
 public:
    MktDataAdapter(const std::shared_ptr<spdlog::logger> &);
@@ -30,11 +32,16 @@ public:
    }
    std::string name() const override { return "MktData"; }
 
+protected:
+   void userWantsToConnect() override;
+   void waitingForConnectionDetails() override;
+
 private:
 
 private:
-   std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<bs::message::User>  user_;
+   std::shared_ptr<spdlog::logger>        logger_;
+   std::shared_ptr<bs::message::User>     user_;
+   std::shared_ptr<BSMarketDataProvider>  mdProvider_;
 };
 
 

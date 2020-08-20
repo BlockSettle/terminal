@@ -15,6 +15,7 @@
 #include "ArmoryServersProvider.h"
 #include "Settings/SignersProvider.h"
 #include "LogManager.h"
+#include "PubKeyLoader.h"
 
 #include "terminal.pb.h"
 
@@ -73,7 +74,18 @@ bool SettingsAdapter::process(const bs::message::Envelope &env)
       }
    }
    else if (env.sender->value<TerminalUsers>() == TerminalUsers::Blockchain) {
-      //TODO: parse Armory messages
+      //TODO: parse Armory request
+   }
+   return true;
+}
+
+bool SettingsAdapter::processRemoteSettings(uint64_t msgId)
+{
+   const auto &itReq = remoteSetReqs_.find(msgId);
+   if (itReq == remoteSetReqs_.end()) {
+      logger_->error("[{}] failed to find remote settings request #{}", __func__
+         , msgId);
+      return true;
    }
    return true;
 }
@@ -81,6 +93,7 @@ bool SettingsAdapter::process(const bs::message::Envelope &env)
 bool SettingsAdapter::processGetRequest(const bs::message::Envelope &env
    , const SettingsMessage_SettingsRequest &request)
 {
+   unsigned int nbFetched = 0;
    SettingsMessage msg;
    auto msgResp = msg.mutable_get_response();
    for (const auto &req : request.requests()) {
@@ -136,17 +149,32 @@ bool SettingsAdapter::processGetRequest(const bs::message::Envelope &env
             break;
          default:
             logger_->error("[{}] unknown setting type: {}", __func__, (int)req.type());
+            nbFetched--;
             break;
          }
+         nbFetched++;
+      }
+      else if (req.source() == SettingSource_Remote) {
+         BsServerMessage msg;
+         msg.mutable_network_settings_request();
+         Envelope envReq{ 0, user_, UserTerminal::create(TerminalUsers::BsServer)
+            , {}, {}, msg.SerializeAsString(), true };
+         pushFill(envReq);
+         remoteSetReqs_[envReq.id] = env;
+         break;
       }
    }
-   bs::message::Envelope envResp{ env.id, user_, env.sender, {}, {}
-      , msg.SerializeAsString() };
-   return pushFill(envResp);
+   if (nbFetched > 0) {
+      bs::message::Envelope envResp{ env.id, user_, env.sender, {}, {}
+         , msg.SerializeAsString() };
+      return pushFill(envResp);
+   }
+   return true;
 }
 
 bool SettingsAdapter::processPutRequest(const SettingsMessage_SettingsResponse &request)
 {
+   unsigned int nbUpdates = 0;
    for (const auto &req : request.responses()) {
       if (req.request().source() == SettingSource_Local) {
          const auto setting = static_cast<ApplicationSettings::Setting>(req.request().index());
@@ -193,15 +221,25 @@ bool SettingsAdapter::processPutRequest(const SettingsMessage_SettingsResponse &
             break;
          default:
             logger_->error("[{}] unknown setting type: {}", __func__, (int)req.request().type());
+            nbUpdates--;
             break;
          }
+         nbUpdates++;
+      }
+      else if (req.request().source() == SettingSource_Remote) {
+         logger_->warn("[{}] remote settings ({}) are read-only", __func__
+            , req.request().index());
+         continue;
       }
    }
-   SettingsMessage msg;
-   *(msg.mutable_settings_updated()) = request;
-   bs::message::Envelope env{ 0, user_, userBC_, bs::message::TimeStamp{}
-      , bs::message::TimeStamp{}, msg.SerializeAsString() };
-   return pushFill(env);
+   if (nbUpdates) {
+      SettingsMessage msg;
+      *(msg.mutable_settings_updated()) = request;
+      bs::message::Envelope env{ 0, user_, userBC_, bs::message::TimeStamp{}
+         , bs::message::TimeStamp{}, msg.SerializeAsString() };
+      return pushFill(env);
+   }
+   return true;
 }
 
 bool SettingsAdapter::processArmoryServer(const BlockSettle::Terminal::SettingsMessage_ArmoryServerSet &request)
@@ -263,28 +301,3 @@ bool SettingsAdapter::processSignerReset()
    signersProvider_->setupSigner(0, true);
    return true;
 }
-
-/*void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settings, NetworkSettingsClient client)
-{
-   if (client == NetworkSettingsClient::Login) {
-      onLoginProceed(settings);
-      return;
-   }
-
-   auto env = static_cast<ApplicationSettings::EnvConfiguration>(
-      applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
-
-   applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::MdServer, env)));
-   applicationSettings_->set(ApplicationSettings::mdhsHost, QString::fromStdString(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Mdhs, env)));
-   applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Chat, env)));
-   applicationSettings_->set(ApplicationSettings::mdServerPort, QString::fromStdString(PubKeyLoader::serverHttpsPort()));
-   applicationSettings_->set(ApplicationSettings::mdhsPort, QString::fromStdString(PubKeyLoader::serverHttpsPort()));
-   applicationSettings_->set(ApplicationSettings::chatServerPort, QString::fromStdString(PubKeyLoader::serverHttpPort()));
-
-   mdProvider_->SetConnectionSettings(applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
-      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort));
-
-   networkSettingsReceived_ = true;
-   tryInitChatView();
-}*/
-

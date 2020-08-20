@@ -79,10 +79,10 @@ public:
    void onSendOtcPublicMessage(const std::string& data);
    void onProcessOtcPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
 
-   void onOtcUpdated(const bs::network::otc::Peer *peer);
+   void onOtcUpdated(const bs::network::otc::PeerPtr &peer);
    void onOtcPublicUpdated();
    void onUpdateOTCShield();
-   void onOTCPeerError(const bs::network::otc::Peer *peer, bs::network::otc::PeerErrorType type, const std::string* errorMsg);
+   void onOTCPeerError(const bs::network::otc::PeerPtr &peer, bs::network::otc::PeerErrorType type, const std::string* errorMsg);
 
    void onOtcRequestSubmit();
    void onOtcResponseAccept();

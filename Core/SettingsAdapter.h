@@ -11,10 +11,10 @@
 #ifndef SETTINGS_ADAPTER_H
 #define SETTINGS_ADAPTER_H
 
+#include <QObject>
 #include <QStringList>
 #include "Message/Adapter.h"
 #include "TerminalMessage.h"
-#include "NetworkSettingsLoader.h"
 
 namespace spdlog {
    class logger;
@@ -61,8 +61,7 @@ private:
    bool processSignerSettings(const bs::message::Envelope &);
    bool processSignerSetKey(const BlockSettle::Terminal::SettingsMessage_SignerSetKey &);
    bool processSignerReset();
-
-//   void networkSettingsReceived(const NetworkSettings &settings, NetworkSettingsClient client);
+   bool processRemoteSettings(uint64_t msgId);
 
 private:
    std::shared_ptr<bs::message::User>  user_, userBC_;
@@ -72,10 +71,9 @@ private:
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
    std::shared_ptr<SignersProvider>       signersProvider_;
    std::shared_ptr<CCFileManager>         ccFileManager_;
-   std::unique_ptr<NetworkSettingsLoader> networkSettingsLoader_;
    std::shared_ptr<bs::TradeSettings>     tradeSettings_;
 
-   bool networkSettingsReceived_{ false };
+   std::map<uint64_t, bs::message::Envelope> remoteSetReqs_;
 };
 
 

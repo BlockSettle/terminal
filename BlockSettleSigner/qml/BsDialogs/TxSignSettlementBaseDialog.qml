@@ -135,7 +135,7 @@ CustomTitleDialogWindowWithExpander {
         authSign.userCancelled.connect(function() {
             if (root) rejectWithNoError();
         })
-        authSign.canceledByTimeout.connect(function() {
+        authSign.cancelledByTimeout.connect(function() {
             if (root) rejectWithNoError();
         })
     }

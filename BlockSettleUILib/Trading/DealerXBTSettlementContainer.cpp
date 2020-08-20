@@ -395,12 +395,11 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
          unsignedPayinRequest_ = std::move(result.signRequest);
          // Reserve only automatic UTXO selection
          if (utxosPayinFixed_.empty()) {
-            utxoRes_ = utxoReservationManager_->makeNewReservation(unsignedPayinRequest_.inputs, id());
+            utxoRes_ = utxoReservationManager_->makeNewReservation(unsignedPayinRequest_.getInputs(nullptr), id());
          }
 
          emit sendUnsignedPayinToPB(settlementIdHex_
-            , bs::network::UnsignedPayinData{ unsignedPayinRequest_.serializeState().SerializeAsString()
-               , std::move(result.preimageData)});
+            , bs::network::UnsignedPayinData{ unsignedPayinRequest_.serializeState().SerializeAsString() });
 
          const auto &authLeaf = walletsMgr_->getAuthWallet();
          signContainer_->setSettlCP(authLeaf->walletId(), result.payinHash, settlementId_, reqAuthKey_);
@@ -465,7 +464,9 @@ void DealerXBTSettlementContainer::onSignedPayoutRequested(const std::string& se
          dlgData.setValue(PasswordDialogData::SettlementId, settlementId_.toHexStr());
          dlgData.setValue(PasswordDialogData::AutoSignCategory, static_cast<int>(bs::signer::AutoSignCategory::SettlementDealer));
 
-         payoutSignId_ = signContainer_->signSettlementPayoutTXRequest(result.signRequest
+         //note: signRequest should propably be a shared_ptr
+         auto signerObj = result.signRequest;
+         payoutSignId_ = signContainer_->signSettlementPayoutTXRequest(signerObj
             , { settlementId_, reqAuthKey_, true }, dlgData);
       });
    });

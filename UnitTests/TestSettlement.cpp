@@ -28,6 +28,7 @@
 
 using std::make_unique;
 using namespace std::chrono_literals;
+using namespace ArmorySigner;
 
 void TestSettlement::mineBlocks(unsigned count)
 {
