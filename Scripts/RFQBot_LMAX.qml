@@ -32,18 +32,20 @@ BSQuoteReqReply {
     property var finalPrice: 0.0
     property var hedgePrice: 0.0
     property var hedgeAllowed: true
+    property var settled: false
 
-    property var ccInstruments: [
-        'LOL/XBT',
-        'POC/XBT'
-    ]
-    property var xbtInstruments: [
-        'XBT/CAD',
-        'XBT/EUR',
-        'XBT/GBP',
-        'XBT/PLN'
-    ]
 
+    onStarted: {    // serve only fixed CC quotes here
+        if (!isCC() || (direction() !== 1)) {
+            return
+        }
+        if (security == "LOL/XBT") {
+            sendPrice(0.0001)
+        }
+        else if (security == "ARM/XBT") {
+            sendPrice(0.001)
+        }
+    }
 
     onBestPriceChanged: {
         if (!hedgeAllowed) return
@@ -84,6 +86,7 @@ BSQuoteReqReply {
     }
     
     onSettled: {
+        settled = true
         log(security + ' settled at ' + finalPrice)
         sendHedgeOrder(hedgePrice)
     }
@@ -108,12 +111,17 @@ BSQuoteReqReply {
             hedgePrice = priceObj.bid * (1.0 - prcIncrement)
         }
 
+        if (settled) {
+            return
+        }
+
         var price = 0.0
         if (direction() === 1) {
-            price = priceObj.ask * (1.0 + 3 * prcIncrement)
+            var mult = isXBT() ? 1.5 : 1.0
+            price = priceObj.ask * (1.0 + mult * prcIncrement)
         }
         else {
-            price = priceObj.bid * (1.0 - 3 * prcIncrement)
+            price = priceObj.bid * (1.0 - prcIncrement)
         }
 
         if (bestPrice) {
@@ -221,6 +229,16 @@ BSQuoteReqReply {
         return amount
     }
 
+    function isCC()
+    {
+        return (quoteReq.assetType == 3)
+    }
+
+    function isXBT()
+    {
+        return (quoteReq.assetType == 2)
+    }
+
     function sendHedgeOrder(price)
     {
         if (!price) {
@@ -228,14 +246,17 @@ BSQuoteReqReply {
             return
         }
 
-        if (ccInstruments.indexOf(security) != -1) return
-        if (xbtInstruments.indexOf(security) != -1) {
+        if (isCC()) {
+            log('not hedging for CC');
+            return
+        }
+        if (isXBT()) {
             if (quoteReq.quantity > 1.0) {
                 log('XBT amount exceeds limit: ' + quoteReq.quantity)
                 return
             }
         }
-        var order = '{"symbol":"' + security + '", "buy":' + hedgeOrderBuy()()
+        var order = '{"symbol":"' + security + '", "buy":' + hedgeOrderBuy()
             + ', "amount":' + hedgeOrderAmount(price) + ', "price":' + price + '}'
         log('sending order: ' + order)
         sendExtConn('LMAX', 'order', order)
@@ -245,7 +266,7 @@ BSQuoteReqReply {
     {   // This request just signals LMAX connector that order will follow soon,
         // if LMAX's reply on it is negative, quote reply should be pulled
         // price is used here only to calculate contra qty
-        if (ccInstruments.indexOf(security) != -1) return
+        if (isCC()) return
         if (!price) {
             return
         }
