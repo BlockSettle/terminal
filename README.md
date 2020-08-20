@@ -182,7 +182,7 @@ For access to trade our FX and XBT products please upgrade your account to Tradi
  10. When pulling code, the submodules may be updated, or new submodules may be added. Run the following commands to ensure that the submodules are properly updated.
 
 		git submodule init  (Required *only* if a new submodule has been added.)
-		git submodult update
+		git submodule update --init --recursive
 
  11. (**WINDOWS ONLY**) A one-time step is required upon the first compilation. Go to `DEV_3RD_ROOT/release/ZeroMQ/lib` and copy the libzmq DLL file to same directory as the BlockSettle Terminal binary. The DLL need only be copied once but it'll have to be re-copied whenever `libzmq` is updated. This will eventually be automated. For now, the build script occasionally crashes when attempting to automate this process.
 
