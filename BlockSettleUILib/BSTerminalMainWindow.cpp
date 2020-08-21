@@ -175,6 +175,14 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    InitWidgets();
 
    loginApiKey_ = applicationSettings_->get<std::string>(ApplicationSettings::LoginApiKey);
+
+#ifdef PRODUCTION_BUILD
+   const bool showEnvSelector = false;
+#else
+   const bool showEnvSelector = true;
+#endif
+   ui_->prodEnvSettings->setVisible(showEnvSelector);
+   ui_->testEnvSettings->setVisible(showEnvSelector);
 }
 
 void BSTerminalMainWindow::onNetworkSettingsRequired(NetworkSettingsClient client)
