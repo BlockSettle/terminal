@@ -79,6 +79,10 @@
 
 #include "ui_BSTerminalMainWindow.h"
 
+namespace {
+   const auto kAutoLoginTimer = std::chrono::seconds(10);
+}
+
 BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings
    , BSTerminalSplashScreen& splashScreen, QLockFile &lockFile, QWidget* parent)
    : QMainWindow(parent)
@@ -2279,6 +2283,7 @@ void BSTerminalMainWindow::initApiKeyLogins()
       tryLoginUsingApiKey();
    });
    tryLoginUsingApiKey();
+   loginTimer_->start(kAutoLoginTimer);
 }
 
 void BSTerminalMainWindow::tryLoginUsingApiKey()
