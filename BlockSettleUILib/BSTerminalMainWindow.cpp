@@ -20,6 +20,7 @@
 #include <QToolBar>
 #include <QTreeView>
 #include <spdlog/spdlog.h>
+#include <streambuf>
 #include <thread>
 
 #include "ArmoryServersProvider.h"
@@ -64,7 +65,9 @@
 #include "Settings/ConfigDialog.h"
 #include "SignersProvider.h"
 #include "SslCaBundle.h"
+#include "SslDataConnection.h"
 #include "StatusBarView.h"
+#include "StringUtils.h"
 #include "SystemFileUtils.h"
 #include "TabWithShortcut.h"
 #include "TransactionsViewModel.h"
@@ -1933,21 +1936,51 @@ void BSTerminalMainWindow::InitWidgets()
    if (!applicationSettings_->get<std::string>(ApplicationSettings::ExtConnName).empty()
       && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnHost).empty()
       && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPort).empty()
-      /*&& !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPubKey).empty()*/) {
+      && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPubKey).empty()) {
       ExtConnections extConns;
-/*      bs::network::BIP15xParams params;
-      params.ephemeralPeers = true;
-      params.cookie = bs::network::BIP15xCookie::ReadServer;
-      params.serverPublicKey = BinaryData::CreateFromHex(applicationSettings_->get<std::string>(
-         ApplicationSettings::ExtConnPubKey));
-      const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger, params);
-      bip15xTransport->setKeyCb(cbApproveExtConn_);*/
-
       logger->debug("Setting up ext connection");
-      auto connection = std::make_shared<WsDataConnection>(logger, WsDataConnectionParams{ });
-      //TODO: BIP15x will be superceded with SSL with certificate checking on both ends
-//      auto wsConnection = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
-//      auto connection = std::make_shared<Bip15xDataConnection>(logger, std::move(wsConnection), bip15xTransport);
+
+      const auto &clientKeyPath = SystemFilePaths::appDataLocation() + "/extConnKey";
+      bs::network::ws::PrivateKey privKeyClient;
+      std::ifstream privKeyReader(clientKeyPath, std::ios::binary);
+      if (privKeyReader.is_open()) {
+         std::string str;
+         str.assign(std::istreambuf_iterator<char>(privKeyReader)
+            , std::istreambuf_iterator<char>());
+         privKeyClient.reserve(str.size());
+         std::for_each(str.cbegin(), str.cend(), [&privKeyClient](char c) {
+            privKeyClient.push_back(c);
+         });
+      }
+      if (privKeyClient.empty()) {
+         logger->debug("Creating new ext connection key");
+         privKeyClient = bs::network::ws::generatePrivKey();
+         std::ofstream privKeyWriter(clientKeyPath, std::ios::out|std::ios::binary);
+         privKeyWriter.write((char *)&privKeyClient[0], privKeyClient.size());
+         const auto &pubKeyClient = bs::network::ws::publicKey(privKeyClient);
+         applicationSettings_->set(ApplicationSettings::ExtConnOwnPubKey
+            , QString::fromStdString(bs::toHex(pubKeyClient)));
+      }
+      const auto &certClient = bs::network::ws::generateSelfSignedCert(privKeyClient);
+      const auto &srvPubKey = applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPubKey);
+      SslDataConnectionParams clientParams;
+      clientParams.useSsl = true;
+      clientParams.cert = certClient;
+      clientParams.privKey = privKeyClient;
+      clientParams.allowSelfSigned = true;
+      clientParams.skipHostNameChecks = true;
+      clientParams.verifyCallback = [srvPubKey, this](const std::string &pubKey) -> bool {
+         if (BinaryData::CreateFromHex(srvPubKey).toBinStr() == pubKey) {
+            return true;
+         }
+         QMetaObject::invokeMethod(this, [this, pubKey] {
+            BSMessageBox(BSMessageBox::warning, tr("External Connection error")
+               , tr("Invalid server key: %1").arg(QString::fromStdString(bs::toHex(pubKey)))).exec();
+         });
+         return false;
+      };
+
+      auto connection = std::make_shared<SslDataConnection>(logger, clientParams);
       if (connection->openConnection(applicationSettings_->get<std::string>(ApplicationSettings::ExtConnHost)
          , applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPort)
          , aqScriptRunner->getExtConnListener().get())) {
