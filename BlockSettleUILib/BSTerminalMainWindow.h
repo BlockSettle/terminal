@@ -220,6 +220,7 @@ private:
       Idle,
       Connecting,
       Connected,
+      Failed,
    };
 
 private slots:
@@ -302,6 +303,7 @@ private:
 
    QString           loginButtonText_;
    AutoLoginState    autoLoginState_{AutoLoginState::Idle};
+   QString autoLoginLastErrorMsg_;
    std::string loginApiKey_;
    QTimer *loginTimer_{};
 

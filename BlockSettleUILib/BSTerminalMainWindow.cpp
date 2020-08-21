@@ -2297,10 +2297,35 @@ void BSTerminalMainWindow::tryLoginUsingApiKey()
 
    autoLoginState_ = AutoLoginState::Connecting;
    connect(client.get(), &BsClient::connected, this, [this, client, logger] {
-      connect(client.get(), &BsClient::authorizeDone, this, [this, client, logger](bool success, const std::string &email) {
-         if (!success) {
-            SPDLOG_LOGGER_ERROR(logger, "authorization failed");
-            autoLoginState_ = AutoLoginState::Idle;
+      connect(client.get(), &BsClient::authorizeDone, this, [this, client, logger](BsClient::AuthorizeError error, const std::string &email) {
+         if (error != BsClient::AuthorizeError::NoError) {
+            QString errorMsg;
+            switch (error) {
+               case BsClient::AuthorizeError::UnknownIpAddr:
+                  errorMsg = tr("Unexpected IP address");
+                  autoLoginState_ = AutoLoginState::Failed;
+                  break;
+               case BsClient::AuthorizeError::UnknownApiKey:
+                  errorMsg = tr("API key not found");
+                  autoLoginState_ = AutoLoginState::Failed;
+                  break;
+               case BsClient::AuthorizeError::Timeout:
+                  errorMsg = tr("Request timeout");
+                  autoLoginState_ = AutoLoginState::Idle;
+                  break;
+               default:
+                  errorMsg = tr("Unknown server error");
+                  autoLoginState_ = AutoLoginState::Idle;
+                  break;
+            }
+            SPDLOG_LOGGER_ERROR(logger, "authorization failed: {}", errorMsg.toStdString());
+            if (autoLoginLastErrorMsg_ != errorMsg) {
+               autoLoginLastErrorMsg_ = errorMsg;
+               BSMessageBox(BSMessageBox::critical, tr("API key login")
+                  , tr("Login failed")
+                  , errorMsg
+                  , this).exec();
+            }
             return;
          }
 
