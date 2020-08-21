@@ -1728,9 +1728,16 @@ void BSTerminalMainWindow::onCCLoaded()
    }
 }
 
-void BSTerminalMainWindow::onCCInfoMissing()
+void BSTerminalMainWindow::onCCInfoMissing(CcGenFileError error)
 {
-   // do nothing here since we don't know if user will need Private Market before logon to Celer
+   if (error == CcGenFileError::InvalidSign) {
+      addDeferredDialog([this] {
+         BSMessageBox(BSMessageBox::warning, tr("CC gen")
+            , tr("CC gen file load failed")
+            , tr("Invalid CC gen file sign detected. Please login to download new CC gen file.")
+            , this).exec();
+      });
+   }
 }
 
 void BSTerminalMainWindow::setupShortcuts()
