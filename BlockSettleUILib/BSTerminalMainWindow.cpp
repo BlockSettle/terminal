@@ -53,7 +53,6 @@
 #include "LoginWindow.h"
 #include "MDCallbacksQt.h"
 #include "MarketDataProvider.h"
-#include "NetworkSettingsLoader.h"
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
 #include "NotificationCenter.h"
@@ -124,8 +123,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    UiUtils::setupIconFont(this);
    NotificationCenter::createInstance(logMgr_->logger(), applicationSettings_, ui_.get(), sysTrayIcon_, this);
 
-   cbApprovePuB_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::PublicBridge
-      , this, applicationSettings_);
    cbApproveChat_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Chat
       , this, applicationSettings_);
    cbApproveProxy_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Proxy
@@ -186,26 +183,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 #endif
    ui_->prodEnvSettings->setVisible(showEnvSelector);
    ui_->testEnvSettings->setVisible(showEnvSelector);
-}
-
-void BSTerminalMainWindow::onNetworkSettingsRequired(NetworkSettingsClient client)
-{
-   auto env = static_cast<ApplicationSettings::EnvConfiguration>(
-            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
-   networkSettingsLoader_ = std::make_unique<NetworkSettingsLoader>(logMgr_->logger()
-      , PubKeyLoader::serverHostName(PubKeyLoader::KeyType::PublicBridge, env), PubKeyLoader::serverHttpPort(), cbApprovePuB_);
-
-   connect(networkSettingsLoader_.get(), &NetworkSettingsLoader::succeed, this, [this, client] {
-      networkSettingsReceived(networkSettingsLoader_->settings(), client);
-      networkSettingsLoader_.reset();
-   });
-
-   connect(networkSettingsLoader_.get(), &NetworkSettingsLoader::failed, this, [this](const QString &errorMsg) {
-      showError(tr("Network settings"), errorMsg);
-      networkSettingsLoader_.reset();
-   });
-
-   networkSettingsLoader_->loadSettings();
 }
 
 void BSTerminalMainWindow::onBsConnectionDisconnected()
@@ -445,7 +422,10 @@ void BSTerminalMainWindow::initConnections()
       , logMgr_->logger("message"), mdCallbacks_.get(), true, false);
    connect(mdCallbacks_.get(), &MDCallbacksQt::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
    connect(mdCallbacks_.get(), &MDCallbacksQt::WaitingForConnectionDetails, this, [this] {
-      onNetworkSettingsRequired(NetworkSettingsClient::MarketData);
+      auto env = static_cast<ApplicationSettings::EnvConfiguration>(
+               applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+      mdProvider_->SetConnectionSettings(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::MdServer, env)
+         , PubKeyLoader::serverHttpsPort());
    });
 }
 
@@ -777,7 +757,7 @@ void BSTerminalMainWindow::tryInitChatView()
    // First we need to create and initialize chatClientServicePtr_ (which lives in background thread and so is async).
    // For this it needs to know chat server address where to connect and chat keys used for chat messages encryption.
    // Only after that we could init ui_->widgetChat and try to login after that.
-   if (chatInitState_ != ChatInitState::NoStarted || !networkSettingsReceived_ || !gotChatKeys_) {
+   if (chatInitState_ != ChatInitState::NoStarted || !gotChatKeys_) {
       return;
    }
    chatInitState_ = ChatInitState::InProgress;
@@ -1376,27 +1356,7 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::onLogin()
 {
-   onNetworkSettingsRequired(NetworkSettingsClient::Login);
-}
-
-void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings)
-{
    auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
-
-#ifdef PRODUCTION_BUILD
-   if (networkSettings.status == Blocksettle::Communication::GetNetworkSettingsResponse_Status_LIVE_TRADING_COMING_SOON) {
-      BSMessageBox mbox(BSMessageBox::question, tr("Login to BlockSettle"), tr("Live trading is coming soon...")
-                   , tr("In the meantime, you can try p2p trading in our testnet environment. Would you like to do so now?"), this);
-      mbox.setCancelButtonText(tr("Cancel"));
-      mbox.setConfirmButtonText(tr("Yes"));
-      int rc = mbox.exec();
-      if (rc == QDialog::Accepted) {
-         switchToTestEnv();
-         restartTerminal();
-      }
-      return;
-   }
-#endif
 
    if (walletsSynched_ && !walletsMgr_->getPrimaryWallet()) {
       addDeferredDialog([this] {
@@ -1410,7 +1370,6 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
       });
       return;
    }
-
 
    auto bsClient = createClient();
 
@@ -1455,8 +1414,6 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
       dlg.exec();
       return;
    }
-
-   networkSettingsReceived(networkSettings, NetworkSettingsClient::MarketData);
 
    activateClient(bsClient, *loginDialog.result(), loginDialog.email().toStdString());
 }
@@ -2026,30 +1983,6 @@ void BSTerminalMainWindow::InitWidgets()
          replyRFQ->forceCheckCondition();
       }
    });
-}
-
-void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settings, NetworkSettingsClient client)
-{
-   if (client == NetworkSettingsClient::Login) {
-      onLoginProceed(settings);
-      return;
-   }
-
-   auto env = static_cast<ApplicationSettings::EnvConfiguration>(
-            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
-
-   applicationSettings_->set(ApplicationSettings::mdServerHost,   QString::fromStdString(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::MdServer, env)));
-   applicationSettings_->set(ApplicationSettings::mdhsHost,       QString::fromStdString(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Mdhs, env)));
-   applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Chat, env)));
-   applicationSettings_->set(ApplicationSettings::mdServerPort,   QString::fromStdString(PubKeyLoader::serverHttpsPort()));
-   applicationSettings_->set(ApplicationSettings::mdhsPort,       QString::fromStdString(PubKeyLoader::serverHttpsPort()));
-   applicationSettings_->set(ApplicationSettings::chatServerPort, QString::fromStdString(PubKeyLoader::serverHttpPort()));
-
-   mdProvider_->SetConnectionSettings(applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
-      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort));
-
-   networkSettingsReceived_ = true;
-   tryInitChatView();
 }
 
 void BSTerminalMainWindow::promoteToPrimaryIfNeeded()

@@ -205,9 +205,6 @@
         <file>resources/cancel@2x.png</file>
         <file>resources/finger.png</file>
         <file>resources/finger@2x.png</file>
-        <file>resources/PublicKeys/pub_prod.key</file>
-        <file>resources/PublicKeys/pub_uat.key</file>
-        <file>resources/PublicKeys/pub_staging.key</file>
         <file>resources/PublicKeys/cc_server_prod.key</file>
         <file>resources/PublicKeys/cc_server_uat.key</file>
         <file>resources/PublicKeys/cc_server_staging.key</file>

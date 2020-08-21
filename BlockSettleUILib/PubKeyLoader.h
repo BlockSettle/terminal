@@ -29,8 +29,7 @@ public:
    PubKeyLoader& operator = (PubKeyLoader&&) = delete;
 
    enum class KeyType {
-      PublicBridge = 1,
-      Chat,
+      Chat = 2,
       Proxy,
       CcServer,
       MdServer,

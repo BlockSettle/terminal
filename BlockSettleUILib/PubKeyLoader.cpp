@@ -23,9 +23,6 @@ BinaryData PubKeyLoader::loadKey(const KeyType kt) const
 {
    std::string keyString;
    switch (kt) {
-   case KeyType::PublicBridge:
-      keyString = appSettings_->get<std::string>(ApplicationSettings::pubBridgePubKey);
-      break;
    case KeyType::Chat:
       keyString = appSettings_->get<std::string>(ApplicationSettings::chatServerPubKey);
       break;
@@ -56,9 +53,6 @@ BinaryData PubKeyLoader::loadKeyFromResource(KeyType kt, ApplicationSettings::En
 {
    QString filename;
    switch (kt) {
-   case KeyType::PublicBridge:
-      filename = QStringLiteral("pub_");
-      break;
    case KeyType::Chat:
       filename = QStringLiteral("chat_");
       break;
@@ -111,9 +105,6 @@ BinaryData PubKeyLoader::loadKeyFromResource(KeyType kt, ApplicationSettings::En
 bool PubKeyLoader::saveKey(const KeyType kt, const BinaryData &key)
 {
    switch (kt) {
-   case KeyType::PublicBridge:
-      appSettings_->set(ApplicationSettings::pubBridgePubKey, QString::fromStdString(key.toHexStr()));
-      break;
    case KeyType::Chat:
       appSettings_->set(ApplicationSettings::chatServerPubKey, QString::fromStdString(key.toHexStr()));
       break;
@@ -196,7 +187,6 @@ std::string PubKeyLoader::envNameShort(ApplicationSettings::EnvConfiguration env
 std::string PubKeyLoader::serverNameShort(PubKeyLoader::KeyType kt)
 {
    switch (kt) {
-      case KeyType::PublicBridge:   return "pub";
       case KeyType::Chat:           return "chat";
       case KeyType::Proxy:          return "proxy";
       case KeyType::CcServer:       return "cctracker";
@@ -224,7 +214,6 @@ std::string PubKeyLoader::serverHttpsPort()
 QString PubKeyLoader::serverName(const KeyType kt)
 {
    switch (kt) {
-      case KeyType::PublicBridge:   return QObject::tr("PuB");
       case KeyType::Chat:           return QObject::tr("Chat Server");
       case KeyType::Proxy:          return QObject::tr("Proxy");
       case KeyType::CcServer:       return QObject::tr("CC tracker server");
