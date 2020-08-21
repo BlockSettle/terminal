@@ -114,7 +114,12 @@ void StartupDialog::onBack()
 
 void StartupDialog::onNext()
 {
-   if (!showLicense_ || ui_->stackedWidget->currentIndex() == Pages::Settings) {
+#ifdef PRODUCTION_BUILD
+   const bool showSettingsPage = false;
+#else
+   const bool showSettingsPage = true;
+#endif
+   if (!showLicense_ || ui_->stackedWidget->currentIndex() == Pages::Settings || !showSettingsPage) {
       accept();
       return;
    }
