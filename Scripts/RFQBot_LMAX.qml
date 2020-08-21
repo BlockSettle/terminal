@@ -32,18 +32,7 @@ BSQuoteReqReply {
     property var finalPrice: 0.0
     property var hedgePrice: 0.0
     property var hedgeAllowed: true
-
-    property var ccInstruments: [
-        'LOL/XBT',
-        'ARM/XBT',
-        'POC/XBT'
-    ]
-    property var xbtInstruments: [
-        'XBT/CAD',
-        'XBT/EUR',
-        'XBT/GBP',
-        'XBT/PLN'
-    ]
+    property var settled: false
 
     onStarted: {    // serve only fixed CC quotes here
         if (!isCC() || (direction() !== 1)) {
@@ -96,6 +85,7 @@ BSQuoteReqReply {
     }
     
     onSettled: {
+        settled = true
         log(security + ' settled at ' + finalPrice)
         sendHedgeOrder(hedgePrice)
     }
@@ -118,6 +108,10 @@ BSQuoteReqReply {
         }
         else {
             hedgePrice = priceObj.bid * (1.0 - prcIncrement)
+        }
+
+        if (settled) {
+            return
         }
 
         var price = 0.0
@@ -234,14 +228,14 @@ BSQuoteReqReply {
         return amount
     }
 
-    function isXBT()
-    {
-        return (xbtInstruments.indexOf(security) != -1)
-    }
-
     function isCC()
     {
-        return (ccInstruments.indexOf(security) != -1)
+        return (quoteReq.assetType == 3)
+    }
+
+    function isXBT()
+    {
+        return (quoteReq.assetType == 2)
     }
 
     function sendHedgeOrder(price)
@@ -251,14 +245,16 @@ BSQuoteReqReply {
             return
         }
 
-        if (isCC()) return
+        if (isCC()) {
+            return
+        }
         if (isXBT()) {
             if (quoteReq.quantity > 1.0) {
                 log('XBT amount exceeds limit: ' + quoteReq.quantity)
                 return
             }
         }
-        var order = '{"symbol":"' + security + '", "buy":' + hedgeOrderBuy()()
+        var order = '{"symbol":"' + security + '", "buy":' + hedgeOrderBuy()
             + ', "amount":' + hedgeOrderAmount(price) + ', "price":' + price + '}'
         log('sending order: ' + order)
         sendExtConn('LMAX', 'order', order)
@@ -268,7 +264,7 @@ BSQuoteReqReply {
     {   // This request just signals LMAX connector that order will follow soon,
         // if LMAX's reply on it is negative, quote reply should be pulled
         // price is used here only to calculate contra qty
-        if (ccInstruments.indexOf(security) != -1) return
+        if (isCC()) return
         if (!price) {
             return
         }
