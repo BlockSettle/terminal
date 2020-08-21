@@ -72,6 +72,8 @@ class StatusViewBlockListener;
 class TransactionsViewModel;
 class WalletManagementWizard;
 
+enum class CcGenFileError: int;
+
 class BSTerminalMainWindow : public QMainWindow
 {
 Q_OBJECT
@@ -242,7 +244,7 @@ private slots:
    void onCelerDisconnected();
    void onCelerConnectionError(int errorCode);
    void showRunInBackgroundMessage();
-   void onCCInfoMissing();
+   void onCCInfoMissing(CcGenFileError error);
 
    void onNetworkSettingsRequired(NetworkSettingsClient client);
 
