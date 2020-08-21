@@ -880,6 +880,8 @@ void TransactionsViewModel::onRefreshTxValidity()
       auto newState = validWallet ? validWallet->isTxValid(item->txEntry.txHash) : bs::sync::TxValidity::Invalid;
       if (item->isValid != newState) {
          item->isValid = newState;
+         // Update balance in case lotSize_ is received after CC gen file loaded
+         item->calcAmount(walletsManager_);
          emit dataChanged(index(i, static_cast<int>(Columns::first))
          , index(i, static_cast<int>(Columns::last)));
       }
