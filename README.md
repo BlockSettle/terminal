@@ -162,8 +162,7 @@ For access to trade our FX and XBT products please upgrade your account to Tradi
  4. Initialize the Git submodules. You may be asked for your password again. If so, use your password/PAT.
 
 		git config credential.helper store  (NB: This command saves the password/PAT for the submodules, and need only be issued once in the project's lifetime. Once successful, don't use it again.)
-		git submodule init
-		git submodule update
+		git submodule update --init --recursive
 
  5. Build the terminal compilation environment. This will involve downloading and compiling all required prerequisite binaries for the terminal, and performing any required environment changes. Note that on Linux and macOS, the `python` binary may actually be `python2`.
 
