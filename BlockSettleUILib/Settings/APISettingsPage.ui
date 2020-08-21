@@ -75,6 +75,16 @@
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
        <layout class="QFormLayout" name="formLayout">
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_4">
+          <property name="text">
+           <string>Name:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="lineEditConnName"/>
+        </item>
         <item row="1" column="0">
          <widget class="QLabel" name="label">
           <property name="text">
@@ -105,15 +115,36 @@
         <item row="3" column="1">
          <widget class="QLineEdit" name="lineEditConnPubKey"/>
         </item>
-        <item row="0" column="0">
-         <widget class="QLabel" name="label_4">
+        <item row="4" column="0">
+         <widget class="QLabel" name="label_6">
           <property name="text">
-           <string>Name:</string>
+           <string>Own Public Key:</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
-         <widget class="QLineEdit" name="lineEditConnName"/>
+        <item row="4" column="1">
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QLabel" name="labelOwnPubKey">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonCopyOwnPubKey">
+            <property name="text">
+             <string>Copy</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </item>
