@@ -157,8 +157,6 @@ void NetworkSettingsPage::displayEnvironmentSettings()
 {
    auto env = appSettings_->get<int>(ApplicationSettings::envConfiguration);
    ui_->comboBoxEnvironment->setCurrentIndex(env);
-   ui_->lineEditCustomPubBridgeHost->setText(appSettings_->get<QString>(ApplicationSettings::customPubBridgeHost));
-   ui_->spinBoxCustomPubBridgePort->setValue(appSettings_->get<int>(ApplicationSettings::customPubBridgePort));
    onEnvSelected(env);
 }
 
@@ -175,8 +173,6 @@ void NetworkSettingsPage::reset()
         ApplicationSettings::runArmoryLocally,
         ApplicationSettings::netType,
         ApplicationSettings::envConfiguration,
-        ApplicationSettings::customPubBridgeHost,
-        ApplicationSettings::customPubBridgePort,
         ApplicationSettings::armoryDbIp,
         ApplicationSettings::armoryDbPort}) {
       appSettings_->reset(setting, false);
@@ -189,8 +185,6 @@ void NetworkSettingsPage::apply()
    armoryServersProvider_->setupServer(ui_->comboBoxArmoryServer->currentIndex());
 
    appSettings_->set(ApplicationSettings::envConfiguration, ui_->comboBoxEnvironment->currentIndex());
-   appSettings_->set(ApplicationSettings::customPubBridgeHost, ui_->lineEditCustomPubBridgeHost->text());
-   appSettings_->set(ApplicationSettings::customPubBridgePort, ui_->spinBoxCustomPubBridgePort->value());
 
    if (signersProvider_->currentSignerIsLocal()) {
       applyLocalSignerNetOption();
@@ -200,15 +194,6 @@ void NetworkSettingsPage::apply()
 void NetworkSettingsPage::onEnvSelected(int envIndex)
 {
    auto env = ApplicationSettings::EnvConfiguration(envIndex);
-#ifndef PRODUCTION_BUILD
-   const bool isCustom = (env == ApplicationSettings::EnvConfiguration::Custom);
-#else
-   const bool isCustom = false;
-#endif
-   ui_->lineEditCustomPubBridgeHost->setVisible(isCustom);
-   ui_->spinBoxCustomPubBridgePort->setVisible(isCustom);
-   ui_->labelCustomPubBridgeHost->setVisible(isCustom);
-   ui_->labelCustomPubBridgePort->setVisible(isCustom);
 
    if (disableSettingUpdate_) {
       return;

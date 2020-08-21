@@ -9,15 +9,19 @@
 
 */
 #include "ChartWidget.h"
-#include "spdlog/logger.h"
-#include "ui_ChartWidget.h"
-#include "Colors.h"
-#include "MarketDataProvider.h"
-#include "MDCallbacksQt.h"
-#include "MdhsClient.h"
-#include "market_data_history.pb.h"
-#include "trade_history.pb.h"
+
+#include <spdlog/logger.h>
+
 #include "ApplicationSettings.h"
+#include "Colors.h"
+#include "MDCallbacksQt.h"
+#include "MarketDataProvider.h"
+#include "MdhsClient.h"
+#include "PubKeyLoader.h"
+#include "market_data_history.pb.h"
+
+#include "trade_history.pb.h"
+#include "ui_ChartWidget.h"
 
 const QColor BACKGROUND_COLOR = QColor(28, 40, 53);
 const QColor FOREGROUND_COLOR = QColor(Qt::white);
@@ -110,9 +114,14 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
    , const std::shared_ptr<ConnectionManager>& connectionManager
    , const std::shared_ptr<spdlog::logger>& logger)
 {
+   auto env = static_cast<ApplicationSettings::EnvConfiguration>(
+            appSettings->get<int>(ApplicationSettings::envConfiguration));
+   const auto &mdhsHost = PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Mdhs, env);
+   const auto &mdhsPort = PubKeyLoader::serverHttpsPort();
+
    appSettings_ = appSettings;
    mdProvider_ = mdProvider;
-   mdhsClient_ = std::make_shared<MdhsClient>(appSettings, connectionManager, logger);
+   mdhsClient_ = std::make_shared<MdhsClient>(connectionManager, logger, mdhsHost, mdhsPort);
    logger_ = logger;
 
    connect(mdhsClient_.get(), &MdhsClient::DataReceived, this, &ChartWidget::OnDataReceived);
