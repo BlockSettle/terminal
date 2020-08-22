@@ -100,7 +100,12 @@ void AQScriptHandler::setWalletsManager(const std::shared_ptr<bs::sync::WalletsM
 
 void AQScriptHandler::setExtConnections(const ExtConnections &conns)
 {
-   extConns_ = conns;
+   if (conns.empty()) {
+      extConns_.clear();
+   }
+   else {
+      extConns_ = conns;
+   }
 }
 
 void AQScriptHandler::reload(const QString &filename)
@@ -478,7 +483,13 @@ AQScriptRunner::AQScriptRunner(const std::shared_ptr<QuoteProvider> &quoteProvid
       , &AQScriptRunner::sendQuote);
 }
 
-AQScriptRunner::~AQScriptRunner() = default;
+AQScriptRunner::~AQScriptRunner()
+{
+   const auto aqHandler = qobject_cast<AQScriptHandler *>(script_);
+   if (aqHandler) {
+      aqHandler->setExtConnections({});
+   }
+}
 
 void AQScriptRunner::cancelled(const std::string &quoteReqId)
 {

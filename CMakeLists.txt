@@ -759,7 +759,7 @@ ELSE(WIN32)
             ${ZLIB_LIBRARIES}
             png
             m
-            double-conversion
+            double-conversion.a
             dl
             cups
             udev
@@ -849,6 +849,7 @@ IF(BSTERMINAL_SHARED_LIBS)
    ENDIF()
 
    IF(UNIX AND NOT APPLE)
+      SET( OS_SPECIFIC_LIBS udev )
    ENDIF()
 
    IF(APPLE AND NOT UNIX)

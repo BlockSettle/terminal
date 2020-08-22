@@ -12,6 +12,7 @@
 #include "ui_APISettingsPage.h"
 
 #include <spdlog/spdlog.h>
+#include <QClipboard>
 #include <QPushButton>
 
 #include "ApplicationSettings.h"
@@ -22,6 +23,9 @@ APISettingsPage::APISettingsPage(QWidget* parent)
 {
    ui_->setupUi(this);
 
+   connect(ui_->pushButtonCopyOwnPubKey, &QPushButton::clicked, this, [this] {
+      QApplication::clipboard()->setText(ui_->labelOwnPubKey->text());
+   });
    connect(ui_->pushButtonApiKeyClear, &QPushButton::clicked, this, [this] {
       ui_->lineEditApiKey->clear();
    });
@@ -37,6 +41,7 @@ void APISettingsPage::display()
    ui_->lineEditConnHost->setText(appSettings_->get<QString>(ApplicationSettings::ExtConnHost));
    ui_->lineEditConnPort->setText(appSettings_->get<QString>(ApplicationSettings::ExtConnPort));
    ui_->lineEditConnPubKey->setText(appSettings_->get<QString>(ApplicationSettings::ExtConnPubKey));
+   ui_->labelOwnPubKey->setText(appSettings_->get<QString>(ApplicationSettings::ExtConnOwnPubKey));
    ui_->lineEditApiKey->setText(appSettings_->get<QString>(ApplicationSettings::LoginApiKey));
 }
 
