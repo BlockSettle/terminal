@@ -62,7 +62,6 @@ class CcTrackerClient;
 class ConnectionManager;
 class LoginWindow;
 class MDCallbacksQt;
-class NetworkSettingsLoader;
 class OrderListModel;
 class QSystemTrayIcon;
 class RequestReplyCommand;
@@ -209,12 +208,6 @@ public slots:
 private:
    struct TxInfo;
 
-   enum NetworkSettingsClient
-   {
-      Login,
-      MarketData,
-   };
-
    enum class AutoLoginState
    {
       Idle,
@@ -238,7 +231,6 @@ private slots:
    void onNodeStatus(NodeStatus, bool isSegWitEnabled, RpcStatus);
 
    void onLogin();
-   void onLoginProceed(const NetworkSettings &networkSettings);
    void onLogout();
 
    void onCelerConnected();
@@ -246,8 +238,6 @@ private slots:
    void onCelerConnectionError(int errorCode);
    void showRunInBackgroundMessage();
    void onCCInfoMissing(CcGenFileError error);
-
-   void onNetworkSettingsRequired(NetworkSettingsClient client);
 
    void onBsConnectionDisconnected();
    void onBsConnectionFailed();
@@ -272,8 +262,6 @@ private:
    bool isArmoryConnected() const;
 
    void InitWidgets();
-
-   void networkSettingsReceived(const NetworkSettings &settings, NetworkSettingsClient client);
 
    void promoteToPrimaryIfNeeded();
 
@@ -314,11 +302,8 @@ private:
    bool walletsSynched_ = false;
    bool isArmoryReady_ = false;
 
-   std::unique_ptr<NetworkSettingsLoader> networkSettingsLoader_;
-
    SignContainer::ConnectionError lastSignerError_{};
 
-   bs::network::BIP15xNewKeyCb   cbApprovePuB_{ nullptr };
    bs::network::BIP15xNewKeyCb   cbApproveChat_{ nullptr };
    bs::network::BIP15xNewKeyCb   cbApproveProxy_{ nullptr };
    bs::network::BIP15xNewKeyCb   cbApproveCcServer_{ nullptr };
@@ -349,7 +334,6 @@ private:
    Chat::ChatClientServicePtr chatClientServicePtr_;
 
    ChatInitState chatInitState_{ChatInitState::NoStarted};
-   bool networkSettingsReceived_{false};
    bool gotChatKeys_{false};
    BinaryData chatTokenData_;
    SecureBinaryData chatTokenSign_;
