@@ -178,7 +178,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    InitWidgets();
 
-   loginApiKey_ = applicationSettings_->get<std::string>(ApplicationSettings::LoginApiKey);
+   loginApiKeyEncrypted_ = applicationSettings_->get<std::string>(ApplicationSettings::LoginApiKey);
 
 #ifdef PRODUCTION_BUILD
    const bool showEnvSelector = false;
@@ -676,7 +676,7 @@ void BSTerminalMainWindow::updateControlEnabledState()
    }
    // Do not allow login until wallets synced (we need to check if user has primary wallet or not).
    // Should be OK for both local and remote signer.
-   ui_->pushButtonUser->setEnabled(walletsSynched_ && loginApiKey().empty());
+   ui_->pushButtonUser->setEnabled(walletsSynched_ && loginApiKeyEncrypted().empty());
 }
 
 bool BSTerminalMainWindow::isMDLicenseAccepted() const
@@ -1324,7 +1324,7 @@ void BSTerminalMainWindow::openAuthManagerDialog()
 
 void BSTerminalMainWindow::openConfigDialog(bool showInNetworkPage)
 {
-   ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, signersProvider_, signContainer_, this);
+   ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, signersProvider_, signContainer_, walletsMgr_, this);
    connect(&configDialog, &ConfigDialog::reconnectArmory, this, &BSTerminalMainWindow::onArmoryNeedsReconnect);
 
    if (showInNetworkPage) {
@@ -2234,14 +2234,14 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
    });
 }
 
-const std::string &BSTerminalMainWindow::loginApiKey() const
+const std::string &BSTerminalMainWindow::loginApiKeyEncrypted() const
 {
-   return loginApiKey_;
+   return loginApiKeyEncrypted_;
 }
 
 void BSTerminalMainWindow::initApiKeyLogins()
 {
-   if (loginTimer_ || loginApiKey().empty() || !gotChatKeys_) {
+   if (loginTimer_ || loginApiKeyEncrypted().empty() || !gotChatKeys_) {
       return;
    }
    loginTimer_ = new QTimer(this);
@@ -2254,70 +2254,91 @@ void BSTerminalMainWindow::initApiKeyLogins()
 
 void BSTerminalMainWindow::tryLoginUsingApiKey()
 {
-   if (loginApiKey().empty() || autoLoginState_ != AutoLoginState::Idle) {
+   if (loginApiKeyEncrypted().empty() || autoLoginState_ != AutoLoginState::Idle) {
       return;
    }
 
    auto logger = logMgr_->logger("proxy");
-   auto client = createClient();
+   autoLoginClient_ = createClient();
 
-   autoLoginState_ = AutoLoginState::Connecting;
-   connect(client.get(), &BsClient::connected, this, [this, client, logger] {
-      connect(client.get(), &BsClient::authorizeDone, this, [this, client, logger](BsClient::AuthorizeError error, const std::string &email) {
+   auto apiKeyErrorCb = [this, logger](AutoLoginState newState, const QString &errorMsg) {
+      // Do not show related errors multiple times
+      if (autoLoginState_ == AutoLoginState::Idle || autoLoginState_ == AutoLoginState::Failed) {
+         return;
+      }
+      SPDLOG_LOGGER_ERROR(logger, "authorization failed: {}", errorMsg.toStdString());
+      autoLoginState_ = newState;
+      autoLoginClient_ = nullptr;
+      if (autoLoginLastErrorMsg_ != errorMsg) {
+         autoLoginLastErrorMsg_ = errorMsg;
+         BSMessageBox(BSMessageBox::critical, tr("API key login")
+            , tr("Login failed")
+            , errorMsg
+            , this).exec();
+      }
+   };
+
+   connect(autoLoginClient_.get(), &BsClient::connected, this, [this, logger, apiKeyErrorCb] {
+      connect(autoLoginClient_.get(), &BsClient::authorizeDone, this, [this, logger, apiKeyErrorCb]
+            (BsClient::AuthorizeError error, const std::string &email) {
          if (error != BsClient::AuthorizeError::NoError) {
-            QString errorMsg;
             switch (error) {
                case BsClient::AuthorizeError::UnknownIpAddr:
-                  errorMsg = tr("Unexpected IP address");
-                  autoLoginState_ = AutoLoginState::Failed;
+                  apiKeyErrorCb(AutoLoginState::Failed, tr("Unexpected IP address"));
                   break;
                case BsClient::AuthorizeError::UnknownApiKey:
-                  errorMsg = tr("API key not found");
-                  autoLoginState_ = AutoLoginState::Failed;
+                  apiKeyErrorCb(AutoLoginState::Failed, tr("API key not found"));
                   break;
                case BsClient::AuthorizeError::Timeout:
-                  errorMsg = tr("Request timeout");
-                  autoLoginState_ = AutoLoginState::Idle;
+                  apiKeyErrorCb(AutoLoginState::Idle, tr("Request timeout"));
                   break;
                default:
-                  errorMsg = tr("Unknown server error");
-                  autoLoginState_ = AutoLoginState::Idle;
+                  apiKeyErrorCb(AutoLoginState::Idle, tr("Unknown server error"));
                   break;
-            }
-            SPDLOG_LOGGER_ERROR(logger, "authorization failed: {}", errorMsg.toStdString());
-            if (autoLoginLastErrorMsg_ != errorMsg) {
-               autoLoginLastErrorMsg_ = errorMsg;
-               BSMessageBox(BSMessageBox::critical, tr("API key login")
-                  , tr("Login failed")
-                  , errorMsg
-                  , this).exec();
             }
             return;
          }
 
-         connect(client.get(), &BsClient::getLoginResultDone, this, [this, client, logger, email](const BsClientLoginResult &result) {
+         connect(autoLoginClient_.get(), &BsClient::getLoginResultDone, this, [this, logger, email, apiKeyErrorCb]
+               (const BsClientLoginResult &result) {
             if (result.status != AutheIDClient::NoError) {
-               SPDLOG_LOGGER_ERROR(logger, "login failed");
-               autoLoginState_ = AutoLoginState::Idle;
+               apiKeyErrorCb(AutoLoginState::Idle, tr("Login failed"));
                return;
             }
-
-            activateClient(client, result, email);
+            activateClient(autoLoginClient_, result, email);
             autoLoginState_ = AutoLoginState::Connected;
+            autoLoginClient_ = nullptr;
+            autoLoginLastErrorMsg_.clear();
          });
-         client->getLoginResult();
+         autoLoginClient_->getLoginResult();
       });
-      client->authorize(loginApiKey());
+
+      SecureBinaryData apiKeyEncCopy;
+      try {
+         apiKeyEncCopy = SecureBinaryData::CreateFromHex(loginApiKeyEncrypted());
+      } catch (...) {
+         apiKeyErrorCb(AutoLoginState::Failed, tr("Encrypted API key invalid"));
+         return;
+      }
+
+      ConfigDialog::decryptData(walletsMgr_, signContainer_, apiKeyEncCopy, [this, apiKeyErrorCb]
+         (ConfigDialog::EncryptError error, const SecureBinaryData &data) {
+         if (error != ConfigDialog::EncryptError::NoError) {
+            apiKeyErrorCb(AutoLoginState::Failed, ConfigDialog::encryptErrorStr(error));
+            return;
+         }
+         autoLoginClient_->authorize(data.toBinStr());
+      });
    });
 
-   connect(client.get(), &BsClient::disconnected, this, [this, logger] {
-      SPDLOG_LOGGER_DEBUG(logger, "proxy disconnected");
-      autoLoginState_ = AutoLoginState::Idle;
+   connect(autoLoginClient_.get(), &BsClient::disconnected, this, [logger, apiKeyErrorCb] {
+      apiKeyErrorCb(AutoLoginState::Idle, tr("Proxy disconnected"));
    });
-   connect(client.get(), &BsClient::connectionFailed, this, [this, logger] {
-      SPDLOG_LOGGER_ERROR(logger, "proxy connection failed");
-      autoLoginState_ = AutoLoginState::Idle;
+   connect(autoLoginClient_.get(), &BsClient::connectionFailed, this, [logger, apiKeyErrorCb] {
+      apiKeyErrorCb(AutoLoginState::Idle, tr("Proxy connection failed"));
    });
+
+   autoLoginState_ = AutoLoginState::Connecting;
 }
 
 void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &deferredDialog)

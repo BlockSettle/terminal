@@ -34,7 +34,8 @@ public:
    virtual void init(const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
       , const std::shared_ptr<SignersProvider> &signersProvider
-      , std::shared_ptr<SignContainer> signContainer);
+      , const std::shared_ptr<SignContainer> &signContainer
+      , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr);
 
 public slots:
    virtual void initSettings() {}
@@ -50,6 +51,7 @@ protected:
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
    std::shared_ptr<SignersProvider>       signersProvider_;
    std::shared_ptr<SignContainer>         signContainer_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
 };
 
 
@@ -61,11 +63,26 @@ public:
    ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettings
      , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
      , const std::shared_ptr<SignersProvider> &signersProvider
-     , std::shared_ptr<SignContainer> signContainer
+     , const std::shared_ptr<SignContainer> &signContainer
+     , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
      , QWidget* parent = nullptr);
    ~ConfigDialog() override;
 
    void popupNetworkSettings();
+
+   enum class EncryptError
+   {
+      NoError,
+      NoPrimaryWallet,
+      NoEncryptionKey,
+      EncryptError,
+   };
+   static QString encryptErrorStr(EncryptError error);
+   using EncryptCb = std::function<void(EncryptError, const SecureBinaryData &data)>;
+   static void encryptData(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+      , const std::shared_ptr<SignContainer> &signContainer, const SecureBinaryData &data, const EncryptCb &cb);
+   static void decryptData(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+      , const std::shared_ptr<SignContainer> &signContainer, const SecureBinaryData &data, const EncryptCb &cb);
 
 protected:
    void reject() override;
@@ -80,6 +97,9 @@ signals:
    void reconnectArmory();
 
 private:
+   static void getChatPrivKey(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+      , const std::shared_ptr<SignContainer> &signContainer, const EncryptCb &cb);
+
    std::unique_ptr<Ui::ConfigDialog> ui_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;

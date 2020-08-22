@@ -277,7 +277,7 @@ private:
    std::shared_ptr<BsClient> createClient();
    void activateClient(const std::shared_ptr<BsClient> &bsClient
       , const BsClientLoginResult &result, const std::string &email);
-   const std::string &loginApiKey() const;
+   const std::string &loginApiKeyEncrypted() const;
    void initApiKeyLogins();
    void tryLoginUsingApiKey();
 
@@ -292,8 +292,9 @@ private:
    QString           loginButtonText_;
    AutoLoginState    autoLoginState_{AutoLoginState::Idle};
    QString autoLoginLastErrorMsg_;
-   std::string loginApiKey_;
+   std::string loginApiKeyEncrypted_;
    QTimer *loginTimer_{};
+   std::shared_ptr<BsClient> autoLoginClient_;
 
    bool initialWalletCreateDialogShown_ = false;
    bool deferCCsync_ = false;

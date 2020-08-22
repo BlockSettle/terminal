@@ -9,10 +9,13 @@
 
 */
 #include "APISettingsPage.h"
+
+#include "BSMessageBox.h"
 #include "ui_APISettingsPage.h"
 
 #include <spdlog/spdlog.h>
 #include <QClipboard>
+#include <QInputDialog>
 #include <QPushButton>
 
 #include "ApplicationSettings.h"
@@ -26,8 +29,32 @@ APISettingsPage::APISettingsPage(QWidget* parent)
    connect(ui_->pushButtonCopyOwnPubKey, &QPushButton::clicked, this, [this] {
       QApplication::clipboard()->setText(ui_->labelOwnPubKey->text());
    });
+   connect(ui_->pushButtonApiKeyImport, &QPushButton::clicked, this, [this] {
+      auto apiKey = QInputDialog::getText(this, tr("Import"), tr("API key"));
+      if (apiKey.isEmpty()) {
+         return;
+      }
+      auto apiKeyCopy = SecureBinaryData::fromString(apiKey.toStdString());
+      auto handle = validityFlag_.handle();
+      ConfigDialog::encryptData(walletsMgr_, signContainer_, apiKeyCopy
+         , [this, handle](ConfigDialog::EncryptError error, const SecureBinaryData &data) {
+         if (!handle.isValid()) {
+            return;
+         }
+         if (error != ConfigDialog::EncryptError::NoError) {
+            BSMessageBox(BSMessageBox::critical, tr("Import")
+               , tr("API key import failed")
+               , ConfigDialog::encryptErrorStr(error)
+               , this).exec();
+            return;
+         }
+         apiKeyEncrypted_ = data.toHexStr();
+         updateApiKeyStatus();
+      });
+   });
    connect(ui_->pushButtonApiKeyClear, &QPushButton::clicked, this, [this] {
-      ui_->lineEditApiKey->clear();
+      apiKeyEncrypted_.clear();
+      updateApiKeyStatus();
    });
 }
 
@@ -42,7 +69,9 @@ void APISettingsPage::display()
    ui_->lineEditConnPort->setText(appSettings_->get<QString>(ApplicationSettings::ExtConnPort));
    ui_->lineEditConnPubKey->setText(appSettings_->get<QString>(ApplicationSettings::ExtConnPubKey));
    ui_->labelOwnPubKey->setText(appSettings_->get<QString>(ApplicationSettings::ExtConnOwnPubKey));
-   ui_->lineEditApiKey->setText(appSettings_->get<QString>(ApplicationSettings::LoginApiKey));
+
+   apiKeyEncrypted_ = appSettings_->get<std::string>(ApplicationSettings::LoginApiKey);
+   updateApiKeyStatus();
 }
 
 void APISettingsPage::reset()
@@ -58,5 +87,14 @@ void APISettingsPage::apply()
    appSettings_->set(ApplicationSettings::ExtConnHost, ui_->lineEditConnHost->text());
    appSettings_->set(ApplicationSettings::ExtConnPort, ui_->lineEditConnPort->text());
    appSettings_->set(ApplicationSettings::ExtConnPubKey, ui_->lineEditConnPubKey->text());
-   appSettings_->set(ApplicationSettings::LoginApiKey, ui_->lineEditApiKey->text());
+   appSettings_->set(ApplicationSettings::LoginApiKey, QString::fromStdString(apiKeyEncrypted_));
+}
+
+void APISettingsPage::updateApiKeyStatus()
+{
+   if (apiKeyEncrypted_.empty()) {
+      ui_->labelApiKeyStatus->clear();
+   } else {
+      ui_->labelApiKeyStatus->setText(tr("Imported"));
+   }
 }
