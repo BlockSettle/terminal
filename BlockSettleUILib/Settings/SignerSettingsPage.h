@@ -37,7 +37,8 @@ public:
    void init(const std::shared_ptr<ApplicationSettings> &appSettings
              , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
              , const std::shared_ptr<SignersProvider> &signersProvider
-             , std::shared_ptr<SignContainer> signContainer) override;
+             , const std::shared_ptr<SignContainer> &signContainer
+             , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr) override;
 
 private slots:
    void onAsSpendLimitChanged(double);
