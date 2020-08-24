@@ -949,10 +949,25 @@ void RFQTicketXBT::sendRFQ(const std::string &id)
                            the cc side of the tx since only the xbt side covers network fees.
                            */
                            , 1); 
-                        rfq->coinTxInput = BinaryData::fromString(txReq.serializeState().SerializeAsString()).toHexStr();
-                        auto reservationToken = utxoReservationManager_->makeNewReservation(
-                           txReq.getInputs(nullptr), rfq->requestId);
-                        submitRFQCb_(id, *rfq, std::move(reservationToken));
+
+                        auto resolveCB = [this, id, rfq]
+                           (bs::error::ErrorCode result, const Codec_SignerState::SignerState &state)
+                        {
+                           if (result != bs::error::ErrorCode::NoError) {
+                              std::stringstream ss;
+                              ss << "failed to resolve CC half signer with error code: " << (int)result;
+                              throw std::runtime_error(ss.str());
+                           }
+
+                           bs::core::wallet::TXSignRequest req; 
+                           req.armorySigner_.deserializeState(state);
+                           auto reservationToken = utxoReservationManager_->makeNewReservation(
+                              req.getInputs(nullptr), rfq->requestId);
+
+                           rfq->coinTxInput = BinaryData::fromString(state.SerializeAsString()).toHexStr();
+                           submitRFQCb_(id, *rfq, std::move(reservationToken));
+                        };
+                        signingContainer_->resolvePublicSpenders(txReq, resolveCB);
                      }
                      catch (const std::exception &e) {
                         BSMessageBox(BSMessageBox::critical, tr("RFQ Failure")
