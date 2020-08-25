@@ -32,6 +32,7 @@ namespace bs {
          API,
          Settings,
          BsServer,      // General target/origin of all sorts of BS server messages
+         AuthEid,
          Matching,      // Alias for Celer or other matching system
          Assets,        // Alias for Genoa data storage atm
          MktData,

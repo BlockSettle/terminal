@@ -30,7 +30,9 @@
 #include "BSTerminalSplashScreen.h"
 #include "EncryptionUtils.h"
 
+#include "Adapters/AuthEidAdapter.h"
 #include "Adapters/BlockchainAdapter.h"
+#include "Adapters/OnChainTrackerAdapter.h"
 #include "Adapters/WalletsAdapter.h"
 #include "ApiAdapter.h"
 #include "ChatAdapter.h"
@@ -322,11 +324,19 @@ int main(int argc, char** argv)
       apiAdapter->add(guiAdapter);
       inprocBus.addAdapter(apiAdapter);
 
-      inprocBus.addAdapter(std::make_shared<SignerAdapter>(logMgr->logger()));
+      const auto &signAdapter = std::make_shared<SignerAdapter>(logMgr->logger());
+      inprocBus.addAdapter(signAdapter);
+
+      inprocBus.addAdapter(std::make_shared<AuthEidAdapter>(logMgr->logger()
+         , bs::message::UserTerminal::create(bs::message::TerminalUsers::AuthEid)));
+      inprocBus.addAdapter(std::make_shared<OnChainTrackerAdapter>(logMgr->logger()
+         , bs::message::UserTerminal::create(bs::message::TerminalUsers::OnChainTracker)));
+      inprocBus.addAdapter(std::make_shared<WalletsAdapter>(logMgr->logger()
+         , bs::message::UserTerminal::create(bs::message::TerminalUsers::Wallets)
+         , signAdapter->createClient()
+         , bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain)));
       inprocBus.addAdapter(std::make_shared<BlockchainAdapter>(logMgr->logger()
          , bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain)));
-      inprocBus.addAdapter(std::make_shared<WalletsAdapter>(logMgr->logger()
-         , bs::message::UserTerminal::create(bs::message::TerminalUsers::Wallets)));
 
       inprocBus.addAdapter(std::make_shared<MatchingAdapter>(logMgr->logger()));
       inprocBus.addAdapter(std::make_shared<SettlementAdapter>(logMgr->logger()));

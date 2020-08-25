@@ -154,14 +154,8 @@ bool SettingsAdapter::processGetRequest(const bs::message::Envelope &env
          }
          nbFetched++;
       }
-      else if (req.source() == SettingSource_Remote) {
-         BsServerMessage msg;
-         msg.mutable_network_settings_request();
-         Envelope envReq{ 0, user_, UserTerminal::create(TerminalUsers::BsServer)
-            , {}, {}, msg.SerializeAsString(), true };
-         pushFill(envReq);
-         remoteSetReqs_[envReq.id] = env;
-         break;
+      else {
+         logger_->error("[{}] unknown settings source: {}", __func__, req.source());
       }
    }
    if (nbFetched > 0) {
@@ -226,8 +220,8 @@ bool SettingsAdapter::processPutRequest(const SettingsMessage_SettingsResponse &
          }
          nbUpdates++;
       }
-      else if (req.request().source() == SettingSource_Remote) {
-         logger_->warn("[{}] remote settings ({}) are read-only", __func__
+      else {
+         logger_->warn("[{}] unknown source for setting ({})", __func__
             , req.request().index());
          continue;
       }

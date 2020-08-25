@@ -13,9 +13,12 @@
 #include "ConnectionManager.h"
 #include "TerminalMessage.h"
 #include "HeadlessContainer.h"
+#include "Adapters/SignerClient.h"
 
+#include "common.pb.h"
 #include "terminal.pb.h"
 
+using namespace BlockSettle::Common;
 using namespace BlockSettle::Terminal;
 using namespace bs::message;
 
@@ -24,6 +27,13 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger)
    : QObject(nullptr), logger_(logger)
    , user_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Signer))
 {}
+
+std::unique_ptr<SignerClient> SignerAdapter::createClient() const
+{
+   auto client = std::make_unique<SignerClient>(logger_, user_);
+   client->setQueue(queue_);
+   return client;
+}
 
 bool SignerAdapter::process(const bs::message::Envelope &env)
 {
@@ -82,8 +92,12 @@ void SignerAdapter::start()
 }
 
 bool SignerAdapter::processOwnRequest(const bs::message::Envelope &env
-   , const BlockSettle::Terminal::SignerMessage &request)
+   , const SignerMessage &request)
 {
+   switch (request.data_case()) {
+   case SignerMessage::kStartWalletsSync:
+      return processStartWalletSync(env);
+   }
    return true;
 }
 
@@ -164,11 +178,13 @@ bool SignerAdapter::processSignerSettings(const SettingsMessage_SignerServer &re
          , QString::fromStdString(response.home_dir()), netType, localSignerPort
          , connMgr, startLocalSignerProcess, "", "", response.auto_sign_spend_limit());
       connectSignals();
+      signer_->Start();
       return sendComponentLoading();
    }
    else {
       signer_ = makeRemoteSigner(response);
       connectSignals();
+      signer_->Start();
       return sendComponentLoading();
    }
    return true;
@@ -274,5 +290,43 @@ bool SignerAdapter::processNewKeyResponse(bool acceptNewKey)
       pushFill(env);
    }
    connFuture_.reset();
+   return true;
+}
+
+bool SignerAdapter::processStartWalletSync(const bs::message::Envelope &env)
+{
+   requests_[env.id] = env.sender;
+   const auto &cbWallets = [this, msgId=env.id]
+      (const std::vector<bs::sync::WalletInfo> &wi)
+   {
+      const auto &itReq = requests_.find(msgId);
+      if (itReq == requests_.end()) {
+         return;
+      }
+      SignerMessage msg;
+      auto msgResp = msg.mutable_wallets_info();
+      for (const auto &entry : wi) {
+         auto wallet = msgResp->add_wallets();
+         wallet->set_format((int)entry.format);
+         wallet->set_id(entry.id);
+         wallet->set_name(entry.name);
+         wallet->set_description(entry.description);
+         wallet->set_network_type((int)entry.netType);
+         wallet->set_watch_only(entry.watchOnly);
+         for (const auto &encType : entry.encryptionTypes) {
+            wallet->add_encryption_types((int)encType);
+         }
+         for (const auto &encKey : entry.encryptionKeys) {
+            wallet->add_encryption_keys(encKey.toBinStr());
+         }
+         auto keyRank = wallet->mutable_encryption_rank();
+         keyRank->set_m(entry.encryptionRank.m);
+         keyRank->set_n(entry.encryptionRank.n);
+      }
+      Envelope envResp{ msgId, user_, itReq->second, {}, {}, msg.SerializeAsString() };
+      pushFill(envResp);
+      requests_.erase(itReq);
+   };
+   signer_->syncWalletInfo(cbWallets);
    return true;
 }

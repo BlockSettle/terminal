@@ -19,11 +19,14 @@ namespace spdlog {
    class logger;
 }
 namespace BlockSettle {
-   namespace Terminal {
-      class SettingsMessage_SignerServer;
+   namespace Common {
       class SignerMessage;
    }
+   namespace Terminal {
+      class SettingsMessage_SignerServer;
+   }
 }
+class SignerClient;
 class WalletSignerContainer;
 
 class SignerAdapter : public QObject, public bs::message::Adapter
@@ -40,17 +43,21 @@ public:
    }
    std::string name() const override { return "Signer"; }
 
+   std::unique_ptr<SignerClient> createClient() const;
+
 private:
    void start();
 
    bool processOwnRequest(const bs::message::Envelope &
-      , const BlockSettle::Terminal::SignerMessage &);
+      , const BlockSettle::Common::SignerMessage &);
    bool processSignerSettings(const BlockSettle::Terminal::SettingsMessage_SignerServer &);
    bool processNewKeyResponse(bool);
    std::shared_ptr<WalletSignerContainer> makeRemoteSigner(
       const BlockSettle::Terminal::SettingsMessage_SignerServer &);
    bool sendComponentLoading();
    void connectSignals();
+
+   bool processStartWalletSync(const bs::message::Envelope &);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
@@ -60,6 +67,8 @@ private:
    std::shared_ptr<FutureValue<bool>>  connFuture_;
    std::string    curServerId_;
    std::string    connKey_;
+
+   std::map<uint64_t, std::shared_ptr<bs::message::User>>   requests_;
 };
 
 
