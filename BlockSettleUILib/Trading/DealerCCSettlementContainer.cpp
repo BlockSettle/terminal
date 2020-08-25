@@ -94,9 +94,8 @@ bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData(Q
    }
 
    // rfq details
-   QString qtyProd = UiUtils::XbtCurrency;
-
    dialogData.setValue(PasswordDialogData::Price, UiUtils::displayPriceCC(price()));
+   dialogData.setValue(PasswordDialogData::Quantity, order_.quantity);
 
    // tx details
    if (side() == bs::network::Side::Buy) {
