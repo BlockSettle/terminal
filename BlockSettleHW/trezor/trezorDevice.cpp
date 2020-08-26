@@ -108,7 +108,7 @@ DeviceKey TrezorDevice::key() const
       auto importedWallets = walletManager_->getHwWallets(
          bs::wallet::HardwareEncKey::WalletType::Trezor, features_.device_id());
 
-      for (const auto imported : importedWallets) {
+      for (const auto &imported : importedWallets) {
          if (expectedWalletId == imported) {
             walletId = QString::fromStdString(expectedWalletId);
             break;
@@ -270,11 +270,9 @@ void TrezorDevice::signTX(const bs::core::wallet::TXSignRequest &reqTX, AsyncCal
    currentTxSignReq_.reset(new bs::core::wallet::TXSignRequest(reqTX));
    connectionManager_->GetLogger()->debug("[TrezorDevice] SignTX - specify init data to " + features_.label());
 
-   const int change = static_cast<bool>(currentTxSignReq_->change.value) ? 1 : 0;
-
    bitcoin::SignTx message;
    message.set_inputs_count(currentTxSignReq_->armorySigner_.getTxInCount());
-   message.set_outputs_count(currentTxSignReq_->armorySigner_.getTxOutCount() + change);
+   message.set_outputs_count(currentTxSignReq_->armorySigner_.getTxOutCount());
    if (testNet_) {
       message.set_coin_name(tesNetCoin);
    }
@@ -595,18 +593,15 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
       auto *type = new bitcoin::TxAck_TransactionType();
       bitcoin::TxAck_TransactionType_TxOutputType *output = type->add_outputs();
 
-      const int index = txRequest.details().request_index();
+      const auto index = txRequest.details().request_index();
+      auto bsOutput = currentTxSignReq_->armorySigner_.getRecipient(index);
+      auto address = bs::Address::fromRecipient(bsOutput);
 
-      if (currentTxSignReq_->armorySigner_.getTxOutCount() > index) { // general output
-         auto bsOutput = currentTxSignReq_->armorySigner_.getRecipient(index);
-
-         auto address = bs::Address::fromRecipient(bsOutput);
+      if (currentTxSignReq_->change.address != address) { // general output
          output->set_address(address.display());
          output->set_amount(bsOutput->getValue());
          output->set_script_type(bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOADDRESS);
-      }
-      else if (currentTxSignReq_->armorySigner_.getTxOutCount() == index 
-               && currentTxSignReq_->change.value > 0) { // one last for change
+      } else {
          const auto &change = currentTxSignReq_->change;
          output->set_amount(change.value);
 
@@ -632,13 +627,11 @@ void TrezorDevice::handleTxRequest(const MessageData& data)
          }
          else if (changeType == AddressEntryType_P2PKH) {
             scriptType = bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOADDRESS;
+         } else {
+            throw std::runtime_error(fmt::format("unexpected changeType: {}", static_cast<int>(changeType)));
          }
 
          output->set_script_type(scriptType);
-      }
-      else {
-         // Shouldn't be here
-         assert(false);
       }
 
       txAck.set_allocated_tx(type);
