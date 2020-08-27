@@ -38,8 +38,8 @@ Item {
             hwWalletInfo = walletInfo;
             root.pubKeyReady()
         }
-        onRequestPinMatrix: JsHelper.showHwPinMatrix(hwList.deviceIndex);
-        onRequestHWPass: JsHelper.showHwPassphrase(hwList.deviceIndex, allowedOnDevice);
+        onRequestPinMatrix: JsHelper.showHwPinMatrix(deviceIndex);
+        onRequestHWPass: JsHelper.showHwPassphrase(deviceIndex, allowedOnDevice);
         onOperationFailed: {
             hwWalletInfo = {};
             isImporting = false;
@@ -98,7 +98,7 @@ Item {
 
                     leftPadding: 10
                     text: model.label + "(" + model.vendor + ")"
-                    enabled: model.pairedWallet.length === 0
+                    enabled: model.pairedWallet.length === 0 && model.status.length === 0
                     color: textColor
                     font.pixelSize: 12
                     horizontalAlignment: Text.AlignLeft
@@ -111,8 +111,13 @@ Item {
                     height: parent.height
 
                     rightPadding: 10
-                    text: model.pairedWallet.length ? "Imported(" + model.pairedWallet + ")" : "New Device"
-                    enabled: model.pairedWallet.length === 0
+                    text: if (model.status.length)
+                              status;
+                          else if (model.pairedWallet.length)
+                              "Imported(" + model.pairedWallet + ")";
+                          else
+                              "New Device";
+                    enabled: model.pairedWallet.length === 0 && model.status.length === 0
                     color: textColor
                     font.pixelSize: 12
                     horizontalAlignment: Text.AlignRight
@@ -123,7 +128,6 @@ Item {
 
             MouseArea {
                 anchors.fill: parent
-                enabled: model.pairedWallet.length === 0
                 onClicked: {
                     if (hwList.currentIndex === index) {
                         return;
@@ -135,12 +139,25 @@ Item {
 
             Connections {
                 target: hwList
-                onCurrentIndexChanged: {
-                    if (hwList.currentIndex === index) {
-                        hwList.deviceIndex = model.pairedWallet.length === 0 ? index : -1
-                        root.readyForImport = (hwList.deviceIndex !== -1);
-                    }
+                onCurrentIndexChanged: checkReadyForImport()
+            }
+
+            Connections {
+                target: hwDeviceManager.devices
+                onModelReset: {
+                    checkReadyForImport();
                 }
+            }
+
+            function checkReadyForImport() {
+                if (hwList.currentIndex === index) {
+                    hwList.deviceIndex = (
+                                (typeof model.pairedWallet !== 'undefined' && model.pairedWallet.length === 0)
+                                && (typeof model.status !== 'undefined' && model.status.length === 0)
+                                ) ? index : -1
+                    root.readyForImport = (hwList.deviceIndex !== -1);
+                }
+
             }
         }
 
@@ -149,5 +166,16 @@ Item {
                 hwList.currentIndex = 0;
         }
 
+        Connections {
+            target: hwDeviceManager.devices
+            onToppestImportChanged: {
+                if (!root.readyForImport) {
+                    hwList.currentIndex = hwDeviceManager.devices.toppestImport;
+                }
+            }
+        }
+
     }
+
+
 }

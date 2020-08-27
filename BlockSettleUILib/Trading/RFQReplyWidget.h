@@ -18,7 +18,7 @@
 #include <unordered_set>
 #include <tuple>
 
-#include "AutoSignQuoteProvider.h"
+#include "BSErrorCode.h"
 #include "CoinControlModel.h"
 #include "CommonTypes.h"
 #include "TabWithShortcut.h"
@@ -46,6 +46,7 @@ class ApplicationSettings;
 class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
+class AutoSignScriptProvider;
 class BaseCelerClient;
 class ConnectionManager;
 class DialogManager;
@@ -58,6 +59,7 @@ namespace Blocksettle {
    namespace Communication {
       namespace ProxyTerminalPb {
          class Response;
+         class Response_UpdateOrders;
       }
    }
 }
@@ -87,7 +89,7 @@ public:
       , const std::shared_ptr<WalletSignerContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<ConnectionManager> &
-      , const std::shared_ptr<AutoSignQuoteProvider> &
+      , const std::shared_ptr<AutoSignScriptProvider> &
       , const std::shared_ptr<bs::UTXOReservationManager> &
       , OrderListModel *orderListModel);
 
@@ -108,12 +110,14 @@ signals:
 
    void unsignedPayinRequested(const std::string& settlementId);
    void signedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp);
-   void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp);
+   void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin
+      , const BinaryData &payinHash, QDateTime timestamp);
 
 public slots:
    void forceCheckCondition();
 
    void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
+   void onUserConnected(const bs::network::UserType &);
 
 private slots:
    void onOrder(const bs::network::Order &o);
@@ -127,10 +131,14 @@ private slots:
    void onDisconnectedFromCeler();
    void onEnterKeyPressed(const QModelIndex &index);
    void onSelected(const QString& productGroup, const bs::network::QuoteReqNotification& request, double indicBid, double indicAsk);
-   void onTransactionError(bs::error::ErrorCode code, const QString& error);
+   void onTransactionError(const std::string &id, bs::error::ErrorCode code, const QString& error);
 
    void onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data);
    void onPulled(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
+
+   void onCancelXBTTrade(const std::string& settlementId);
+   void onCancelCCTrade(const std::string& clientOrderId);
+   void onSettlementComplete(const std::string &id);
 
 private:
    void onResetCurrentReservation(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data);
@@ -175,13 +183,13 @@ private:
    std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
-   std::shared_ptr<AutoSignQuoteProvider>    autoSignQuoteProvider_;
-   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
+   std::shared_ptr<AutoSignScriptProvider>      autoSignProvider_;
+   std::shared_ptr<bs::UTXOReservationManager>  utxoReservationManager_;
 
    std::unordered_map<std::string, SentXbtReply>   sentXbtReplies_;
    std::unordered_map<std::string, SentCCReply>    sentCCReplies_;
    std::shared_ptr<bs::SecurityStatsCollector>     statsCollector_;
-   std::unordered_map<std::string, std::string>    sentReplyIdsToSettlementsIds_;
+   std::unordered_map<std::string, std::string>    sentReplyToSettlementsIds_, settlementToReplyIds_;
 };
 
 #endif // __RFQ_REPLY_WIDGET_H__

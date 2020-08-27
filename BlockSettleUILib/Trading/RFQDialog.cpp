@@ -11,7 +11,7 @@
 #include "RFQDialog.h"
 #include "ui_RFQDialog.h"
 
-#include <spdlog/logger.h>
+#include <spdlog/spdlog.h>
 
 #include "AssetManager.h"
 #include "BSMessageBox.h"
@@ -27,7 +27,7 @@
 
 
 RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
-   , const bs::network::RFQ& rfq
+   , const std::string &id, const bs::network::RFQ& rfq
    , const std::shared_ptr<QuoteProvider>& quoteProvider
    , const std::shared_ptr<AuthAddressManager>& authAddressManager
    , const std::shared_ptr<AssetManager>& assetManager
@@ -36,7 +36,6 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<BaseCelerClient> &celerClient
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<RfqStorage> &rfqStorage
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const bs::Address &recvXbtAddrIfSet
@@ -50,7 +49,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
    , logger_(logger)
-   , rfq_(rfq)
+   , id_(id), rfq_(rfq)
    , recvXbtAddrIfSet_(recvXbtAddrIfSet)
    , quoteProvider_(quoteProvider)
    , authAddressManager_(authAddressManager)
@@ -60,7 +59,6 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , armory_(armory)
    , celerClient_(celerClient)
    , appSettings_(appSettings)
-   , connectionManager_(connectionManager)
    , rfqStorage_(rfqStorage)
    , xbtWallet_(xbtWallet)
    , authAddr_(authAddr)
@@ -80,10 +78,10 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    // Do not make connections that must live after RFQDialog closing.
 
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::cancelRFQ, this, &RFQDialog::reject);
-   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::requestTimedOut, this, &RFQDialog::close);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::requestTimedOut, this, &RFQDialog::onTimeout);
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteAccepted, this, &RFQDialog::onRFQResponseAccepted, Qt::QueuedConnection);
-   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFinished, this, &RFQDialog::close);
-   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFailed, this, &RFQDialog::close);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFinished, this, &RFQDialog::onQuoteFinished);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFailed, this, &RFQDialog::onQuoteFailed);
 
    connect(quoteProvider_.get(), &QuoteProvider::quoteReceived, this, &RFQDialog::onQuoteReceived);
    connect(quoteProvider_.get(), &QuoteProvider::quoteRejected, ui_->pageRequestingQuote, &RequestingQuoteWidget::onReject);
@@ -126,6 +124,7 @@ void RFQDialog::onOrderFailed(const std::string& quoteId, const std::string& rea
 
 void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Quote &quote)
 {
+   emit accepted(id_);
    quote_ = quote;
 
    if (rfq_.assetType == bs::network::Asset::SpotFX) {
@@ -155,9 +154,9 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
    }
 }
 
-void RFQDialog::logError(bs::error::ErrorCode code, const QString &errorMessage)
+void RFQDialog::logError(const std::string &id, bs::error::ErrorCode code, const QString &errorMessage)
 {
-   logger_->error("[RFQDialog::logError] {}", errorMessage.toStdString());
+   logger_->error("[RFQDialog::logError] {}: {}", id, errorMessage.toStdString());
 
    if (bs::error::ErrorCode::TxCancelled != code) {
       // Do not use this as the parent as it will be destroyed when RFQDialog is closed
@@ -177,11 +176,14 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
    const bool expandTxInfo = appSettings_->get<bool>(
       ApplicationSettings::DetailedSettlementTxDialogByDefault);
 
+   const auto tier1XbtLimit = appSettings_->get<uint64_t>(
+      ApplicationSettings::SubmittedAddressXbtLimit);
+
    try {
       xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
          , authAddressManager_, signContainer_, armory_, xbtWallet_, walletsManager_
          , rfq_, quote_, authAddr_, fixedXbtInputs_, std::move(fixedXbtUtxoRes_), utxoReservationManager_
-         , std::move(walletPurpose_), recvXbtAddrIfSet_, expandTxInfo);
+         , std::move(walletPurpose_), recvXbtAddrIfSet_, expandTxInfo, tier1XbtLimit);
 
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
          , this, &RFQDialog::onXBTSettlementAccepted);
@@ -204,7 +206,8 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
          , requestWidget_, &RFQRequestWidget::cancelXBTTrade);
    }
    catch (const std::exception &e) {
-      logError(bs::error::ErrorCode::InternalError, tr("Failed to create XBT settlement container: %1")
+      logError({}, bs::error::ErrorCode::InternalError
+         , tr("Failed to create XBT settlement container: %1")
          .arg(QString::fromLatin1(e.what())));
    }
 
@@ -249,7 +252,8 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
       connect(quoteProvider_.get(), &QuoteProvider::orderUpdated, ccSettlContainer_.get(), orderUpdatedCb);
    }
    catch (const std::exception &e) {
-      logError(bs::error::ErrorCode::InternalError, tr("Failed to create CC settlement container: %1")
+      logError({}, bs::error::ErrorCode::InternalError
+         , tr("Failed to create CC settlement container: %1")
          .arg(QString::fromLatin1(e.what())));
    }
 
@@ -264,6 +268,13 @@ void RFQDialog::onCCTxSigned()
 
 void RFQDialog::reject()
 {
+   cancel(false);
+   emit cancelled(id_);
+   QDialog::reject();
+}
+
+void RFQDialog::cancel(bool force)
+{
    // curContainer_->cancel call could emit settlementCancelled which will result in RFQDialog::reject re-enter.
    // This will result in duplicated finished signals. Let's add a workaround for this.
    if (isRejectStarted_) {
@@ -271,21 +282,51 @@ void RFQDialog::reject()
    }
    isRejectStarted_ = true;
 
-   if (cancelOnClose_ && curContainer_) {
-      if (!curContainer_->cancel()) {
-         logger_->warn("[RFQDialog::reject] settlement container failed to cancel");
+   if (cancelOnClose_) {
+      if (curContainer_) {
+         if (curContainer_->cancel()) {
+            logger_->debug("[RFQDialog::reject] container cancelled");
+         } else {
+            logger_->warn("[RFQDialog::reject] settlement container failed to cancel");
+         }
+      }
+      else {
+         fixedXbtUtxoRes_.release();
+         ccUtxoRes_.release();
       }
    }
 
    if (cancelOnClose_) {
       quoteProvider_->CancelQuote(QString::fromStdString(rfq_.requestId));
    }
+   if (force) {
+      close();
+   }
+}
 
-   QDialog::reject();
+void RFQDialog::onTimeout()
+{
+   emit expired(id_);
+   cancelOnClose_ = false;
+   hide();
+}
+
+void RFQDialog::onQuoteFinished()
+{
+   emit accepted(id_);
+   cancelOnClose_ = false;
+   hide();
+}
+
+void RFQDialog::onQuoteFailed()
+{
+   emit cancelled(id_);
+   close();
 }
 
 bool RFQDialog::close()
 {
+   curContainer_.reset();
    cancelOnClose_ = false;
    return QDialog::close();
 }
@@ -355,7 +396,8 @@ void RFQDialog::onSignedPayoutRequested(const std::string& settlementId, const B
    xbtSettlContainer_->onSignedPayoutRequested(settlementId, payinHash, timestamp);
 }
 
-void RFQDialog::onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp)
+void RFQDialog::onSignedPayinRequested(const std::string& settlementId
+   , const BinaryData& unsignedPayin, const BinaryData &payinHash, QDateTime timestamp)
 {
    if (!xbtSettlContainer_ || (settlementId != quote_.settlementId)) {
       return;
@@ -363,5 +405,5 @@ void RFQDialog::onSignedPayinRequested(const std::string& settlementId, const Bi
 
    hideIfNoRemoteSignerMode();
 
-   xbtSettlContainer_->onSignedPayinRequested(settlementId, unsignedPayin, timestamp);
+   xbtSettlContainer_->onSignedPayinRequested(settlementId, payinHash, timestamp);
 }

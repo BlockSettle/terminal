@@ -84,7 +84,7 @@ set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
 SET(BS_VERSION_MINOR 90 )
-SET(BS_VERSION_PATCH 7 )
+SET(BS_VERSION_PATCH 8 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
 include(GetGitRevisionDescription)
@@ -757,7 +757,7 @@ ELSE(WIN32)
             ${ZLIB_LIBRARIES}
             png
             m
-            double-conversion
+            double-conversion.a
             dl
             cups
             udev
@@ -847,6 +847,7 @@ IF(BSTERMINAL_SHARED_LIBS)
    ENDIF()
 
    IF(UNIX AND NOT APPLE)
+      SET( OS_SPECIFIC_LIBS udev )
    ENDIF()
 
    IF(APPLE AND NOT UNIX)

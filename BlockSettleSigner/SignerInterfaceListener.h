@@ -31,7 +31,7 @@ namespace spdlog {
    class logger;
 }
 
-class ZmqBIP15XDataConnection;
+class DataConnection;
 class SignerAdapter;
 class QmlBridge;
 class QmlFactory;
@@ -46,7 +46,7 @@ class SignerInterfaceListener : public QObject, public DataConnectionListener
 public:
    SignerInterfaceListener(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<QmlBridge> &qmlBridge
-      , const std::shared_ptr<ZmqBIP15XDataConnection> &conn, SignerAdapter *parent);
+      , const std::shared_ptr<DataConnection> &conn, SignerAdapter *parent);
 
    void OnDataReceived(const std::string &) override;
    void OnConnected() override;
@@ -54,7 +54,7 @@ public:
    void OnError(DataConnectionError errorCode) override;
 
    bs::signer::RequestId send(signer::PacketType pt, const std::string &data);
-   std::shared_ptr<ZmqBIP15XDataConnection> getDataConnection() { return connection_; }
+   std::shared_ptr<DataConnection> getDataConnection() { return connection_; }
 
    using BasicCb = std::function<void(bs::error::ErrorCode errorCode)>;
 
@@ -112,7 +112,8 @@ private:
    void processData(const std::string &);
 
    void onReady(const std::string &data);
-   void onPeerConnected(const std::string &data, bool connected);
+   void onPeerConnected(const std::string &data);
+   void onPeerDisconnected(const std::string &data);
    void onDecryptWalletRequested(const std::string &data);
    void onTxSigned(const std::string &data, bs::signer::RequestId);
    void onUpdateDialogData(const std::string &data, bs::signer::RequestId);
@@ -150,10 +151,10 @@ protected:
       , bs::sync::PasswordDialogData* dialogData, bs::hd::WalletInfo* walletInfo);
 
 private:
-   std::shared_ptr<spdlog::logger>           logger_;
-   std::shared_ptr<ZmqBIP15XDataConnection>  connection_;
-   std::shared_ptr<QmlFactory>               qmlFactory_;
-   SignerAdapter                             * parent_;
+   std::shared_ptr<spdlog::logger>     logger_;
+   std::shared_ptr<DataConnection>     connection_;
+   std::shared_ptr<QmlFactory>         qmlFactory_;
+   SignerAdapter                       * parent_;
 
    bs::signer::RequestId seq_ = 1;
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode, const BinaryData &)>> cbSignReqs_;

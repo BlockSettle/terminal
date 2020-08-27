@@ -1,14 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-
-***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
-* Distributed under the GNU Affero General Public License (AGPL v3)
-* See LICENSE or http://www.gnu.org/licenses/agpl.html
-*
-**********************************************************************************
-
--->
 <ui version="4.0">
  <class>ConfigDialog</class>
  <widget class="QDialog" name="ConfigDialog">
@@ -266,6 +256,40 @@
           <set>ItemIsSelectable|ItemIsEnabled</set>
          </property>
         </item>
+        <item>
+         <property name="text">
+          <string>API</string>
+         </property>
+         <property name="textAlignment">
+          <set>AlignCenter</set>
+         </property>
+         <property name="background">
+          <brush brushstyle="NoBrush">
+           <color alpha="255">
+            <red>243</red>
+            <green>244</green>
+            <blue>245</blue>
+           </color>
+          </brush>
+         </property>
+         <property name="foreground">
+          <brush brushstyle="NoBrush">
+           <color alpha="255">
+            <red>243</red>
+            <green>244</green>
+            <blue>245</blue>
+           </color>
+          </brush>
+         </property>
+         <property name="icon">
+          <iconset resource="../armory.qrc">
+           <normaloff>:/resources/api@1.5.png</normaloff>
+           <selectedoff>:/resources/api-selected@1.5.png</selectedoff>:/resources/api@1.5.png</iconset>
+         </property>
+         <property name="flags">
+          <set>ItemIsSelectable|ItemIsEnabled</set>
+         </property>
+        </item>
        </widget>
       </item>
       <item>
@@ -274,12 +298,13 @@
          <number>0</number>
         </property>
         <property name="currentIndex">
-         <number>1</number>
+         <number>3</number>
         </property>
         <widget class="GeneralSettingsPage" name="pageGeneral"/>
         <widget class="NetworkSettingsPage" name="pageNetwork"/>
         <widget class="SignerSettingsPage" name="pageSigner"/>
         <widget class="DealingSettingsPage" name="pageDealing"/>
+        <widget class="APISettingsPage" name="pageAPI"/>
        </widget>
       </item>
      </layout>
@@ -394,8 +419,15 @@
    <header>DealingSettingsPage.h</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>APISettingsPage</class>
+   <extends>QWidget</extends>
+   <header>APISettingsPage.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <resources>
+  <include location="../armory.qrc"/>
   <include location="../armory.qrc"/>
  </resources>
  <connections/>

@@ -12,14 +12,15 @@
 #include <spdlog/spdlog.h>
 #include <QDataStream>
 #include <QFile>
-#include "SignContainer.h"
-#include "SystemFileUtils.h"
-#include "Wallets/SyncWalletsManager.h"
-#include "ZmqContext.h"
-#include "ZMQ_BIP15X_DataConnection.h"
 
+#include "Bip15xDataConnection.h"
+#include "SignContainer.h"
 #include "SignerAdapterContainer.h"
 #include "SignerInterfaceListener.h"
+#include "SystemFileUtils.h"
+#include "TransportBIP15x.h"
+#include "Wallets/SyncWalletsManager.h"
+#include "WsDataConnection.h"
 
 namespace {
 
@@ -37,26 +38,29 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
    , netType_(netType)
    , qmlBridge_(qmlBridge)
 {
-   ZmqBIP15XDataConnectionParams params;
+   bs::network::BIP15xParams params;
    params.ephemeralPeers = true;
-   params.setLocalHeartbeatInterval();
 
    // When creating the client connection, we need to generate a cookie for the
    // server connection in order to enable verification. We also need to add
    // the key we got on the command line to the list of trusted keys.
-   params.cookie = BIP15XCookie::MakeClient;
+   params.cookie = bs::network::BIP15xCookie::MakeClient;
    params.cookiePath = SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
 
-   auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, params);
+   auto wsConnection = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
+   const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(
+      logger, params);
+   auto adapterConn = std::make_shared<Bip15xDataConnection>(logger_, std::move(wsConnection), bip15xTransport);
+
    if (inSrvIDKey) {
       std::string connectAddr = kLocalAddrV4 + ":" + std::to_string(signerPort);
-      adapterConn->addAuthPeer(ZmqBIP15XPeer(connectAddr, *inSrvIDKey));
+      bip15xTransport->addAuthPeer(bs::network::BIP15xPeer(connectAddr, *inSrvIDKey));
 
       // Temporary (?) kludge: Sometimes, the key gets checked with "_1" at the
       // end of the checked key name. This should be checked and corrected
       // elsewhere, but for now, add a kludge to keep the code happy.
       connectAddr = kLocalAddrV4 + ":" + std::to_string(signerPort) + "_1";
-      adapterConn->addAuthPeer(ZmqBIP15XPeer(connectAddr, *inSrvIDKey));
+      bip15xTransport->addAuthPeer(bs::network::BIP15xPeer(connectAddr, *inSrvIDKey));
    }
 
    listener_ = std::make_shared<SignerInterfaceListener>(logger, qmlBridge_, adapterConn, this);
@@ -64,7 +68,6 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
       , listener_.get())) {
       throw std::runtime_error("adapter connection failed");
    }
-
    signContainer_ = std::make_shared<SignAdapterContainer>(logger_, listener_);
 }
 
@@ -120,12 +123,6 @@ void SignerAdapter::signOfflineTxRequest(const bs::core::wallet::TXSignRequest &
 {
    const auto reqId = signContainer_->signTXRequest(txReq, password);
    listener_->setTxSignCb(reqId, cb);
-}
-
-void SignerAdapter::createWatchingOnlyWallet(const QString &walletId, const SecureBinaryData &password
-   , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb)
-{
-   getDecryptedRootNode(walletId.toStdString(), password, cb, signer::CreateWOType);
 }
 
 void SignerAdapter::getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password

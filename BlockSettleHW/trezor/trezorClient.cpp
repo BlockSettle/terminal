@@ -13,6 +13,7 @@
 #include "trezorDevice.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"
+#include "ScopeGuard.h"
 
 #include <QNetworkRequest>
 #include <QPointer>
@@ -39,13 +40,14 @@ QByteArray TrezorClient::getSessionId()
 void TrezorClient::initConnection(bool force, AsyncCallBack&& cb)
 {
    auto initCallBack = [this, cbCopy = std::move(cb), force](QNetworkReply* reply) mutable {
-
+      ScopedGuard guard([cb = std::move(cbCopy)]{
+         if (cb) {
+            cb();
+         }
+      });
       if (!reply || reply->error() != QNetworkReply::NoError) {
          connectionManager_->GetLogger()->error(
             "[TrezorClient] initConnection - Network error : " + reply->errorString().toUtf8());
-         if (cbCopy) {
-            cbCopy();
-         }
          return;
       }
 
@@ -67,7 +69,7 @@ void TrezorClient::initConnection(bool force, AsyncCallBack&& cb)
       state_ = State::Init;
       emit initialized();
 
-      enumDevices(force, std::move(cbCopy));
+      enumDevices(force, std::move(guard.releaseCb()));
       reply->deleteLater();
    };
 
@@ -75,18 +77,19 @@ void TrezorClient::initConnection(bool force, AsyncCallBack&& cb)
    postToTrezor("/", std::move(initCallBack), true);
 }
 
-void TrezorClient::initConnection(QString&& deviceId, AsyncCallBackCall&& cb /*= nullptr*/)
+void TrezorClient::initConnection(QString&& deviceId, bool force, AsyncCallBackCall&& cb /*= nullptr*/)
 {
    AsyncCallBack cbWrapper = [copyDeviceId = std::move(deviceId), originCb = std::move(cb)]() {
       originCb({ copyDeviceId });
    };
 
-   initConnection(false, std::move(cbWrapper));
+   initConnection(force, std::move(cbWrapper));
 }
 
 void TrezorClient::releaseConnection(AsyncCallBack&& cb)
 {
    if (deviceData_.sessionId_.isEmpty()) {
+      cleanDeviceData();
       if (cb) {
          cb();
       }
@@ -94,6 +97,12 @@ void TrezorClient::releaseConnection(AsyncCallBack&& cb)
    }
 
    auto releaseCallback = [this, cbCopy = std::move(cb)](QNetworkReply* reply) mutable {
+      ScopedGuard ensureCb([this, cb = std::move(cbCopy)]{
+         cleanDeviceData();
+         if (cb) {
+            cb();
+         }
+      });
 
       if (!reply || reply->error() != QNetworkReply::NoError) {
          connectionManager_->GetLogger()->error(
@@ -101,17 +110,11 @@ void TrezorClient::releaseConnection(AsyncCallBack&& cb)
          return;
       }
 
-      deviceData_ = {};
-      trezorDevice_ = {};
       connectionManager_->GetLogger()->info(
          "[TrezorClient] releaseConnection - Connection successfully released");
 
       state_ = State::Released;
       emit deviceReleased();
-
-      if (cbCopy) {
-         cbCopy();
-      }
 
       reply->deleteLater();
    };
@@ -137,9 +140,13 @@ void TrezorClient::postToTrezorInput(QByteArray&& urlMethod, std::function<void(
 void TrezorClient::call(QByteArray&& input, AsyncCallBackCall&& cb)
 {
    auto callCallback = [this, cbCopy = std::move(cb)](QNetworkReply* reply) mutable {
+
       if (!reply || reply->error() != QNetworkReply::NoError) {
          connectionManager_->GetLogger()->error(
             "[TrezorClient] call - Network error : " + reply->errorString().toUtf8());
+         if (cbCopy) {
+            cbCopy({});
+         }
          return;
       }
 
@@ -158,18 +165,7 @@ QVector<DeviceKey> TrezorClient::deviceKeys() const
    if (!trezorDevice_) {
       return {};
    }
-
    auto key = trezorDevice_->key();
-   auto wallets = walletManager_->getHwWallets(bs::wallet::HardwareEncKey::WalletType::Trezor
-      , key.deviceId_.toStdString());
-
-   if (!wallets.empty()) {
-      // Some hw devices do not have proper deviceid
-      // but trezor do have, and we expected it unique
-      assert(wallets.size() == 1);
-      key.walletId_ = QString::fromStdString(wallets[0]);
-   }
-
    return { key };
 }
 
@@ -187,6 +183,11 @@ QPointer<TrezorDevice> TrezorClient::getTrezorDevice(const QString& deviceId)
 void TrezorClient::enumDevices(bool forceAcquire, AsyncCallBack&& cb)
 {
    auto enumCallback = [this, cbCopy = std::move(cb), forceAcquire](QNetworkReply* reply) mutable {
+      ScopedGuard ensureCb([cb = std::move(cbCopy)]{
+         if (cb) {
+            cb();
+         }
+      });
 
       if (!reply || reply->error() != QNetworkReply::NoError) {
          connectionManager_->GetLogger()->error(
@@ -209,7 +210,6 @@ void TrezorClient::enumDevices(bool forceAcquire, AsyncCallBack&& cb)
       if (deviceCount == 0) {
          connectionManager_->GetLogger()->info(
             "[TrezorClient] enumDevices - No trezor device available");
-         cbCopy();
          return;
       }
 
@@ -229,7 +229,6 @@ void TrezorClient::enumDevices(bool forceAcquire, AsyncCallBack&& cb)
       // later we could expand this functionality to many of them
       if (!forceAcquire && trezorDevice_ && trezorDevices.first().sessionId_ == deviceData_.sessionId_) {
          // this is our previous session so we could go straight away on it
-         cbCopy();
          return;
       }
 
@@ -241,7 +240,7 @@ void TrezorClient::enumDevices(bool forceAcquire, AsyncCallBack&& cb)
       state_ = State::Enumerated;
       emit devicesScanned();
 
-      acquireDevice(std::move(cbCopy));
+      acquireDevice(std::move(ensureCb.releaseCb()));
       reply->deleteLater();
    };
 
@@ -255,6 +254,11 @@ void TrezorClient::acquireDevice(AsyncCallBack&& cb)
       "null" : deviceData_.sessionId_;
 
    auto acquireCallback = [this, previousSessionId, cbCopy = std::move(cb)](QNetworkReply* reply) mutable {
+      ScopedGuard ensureCb([cb = std::move(cbCopy)]{
+         if (cb) {
+            cb();
+         }
+      });
 
       if (!reply || reply->error() != QNetworkReply::NoError) {
          connectionManager_->GetLogger()->error(
@@ -280,7 +284,7 @@ void TrezorClient::acquireDevice(AsyncCallBack&& cb)
       emit deviceReady();
 
       trezorDevice_ = new TrezorDevice(connectionManager_, walletManager_, testNet_, { this }, this) ;
-      trezorDevice_->init(std::move(cbCopy));
+      trezorDevice_->init(std::move(ensureCb.releaseCb()));
 
       reply->deleteLater();
    };
@@ -322,4 +326,13 @@ void TrezorClient::post(QByteArray&& urlMethod, std::function<void(QNetworkReply
       });
    }
 
+}
+
+void TrezorClient::cleanDeviceData()
+{
+   if (trezorDevice_) {
+      trezorDevice_->deleteLater();
+      trezorDevice_ = nullptr;
+   }
+   deviceData_ = {};
 }

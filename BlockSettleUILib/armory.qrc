@@ -1,13 +1,3 @@
-<!--
-
-***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
-* Distributed under the GNU Affero General Public License (AGPL v3)
-* See LICENSE or http://www.gnu.org/licenses/agpl.html
-*
-**********************************************************************************
-
--->
 <RCC>
     <qresource prefix="/">
         <file alias="ICON_STATUS_OFFLINE">resources/status_offline_2.png</file>
@@ -18,6 +8,7 @@
         <file alias="ICON_MSG_STATUS_ONLINE">resources/msg_status_online_2.png</file>
         <file alias="ICON_MSG_STATUS_CONNECTING">resources/msg_status_connecting_2.png</file>
         <file alias="ICON_MSG_STATUS_READ">resources/msg_status_read_2.png</file>
+        <file>resources/ca-bundle.crt</file>
         <file>resources/preferences-system.png</file>
         <file>resources/preferences-system-network.png</file>
         <file>resources/Raleway/Raleway-Regular.ttf</file>
@@ -214,9 +205,6 @@
         <file>resources/cancel@2x.png</file>
         <file>resources/finger.png</file>
         <file>resources/finger@2x.png</file>
-        <file>resources/PublicKeys/pub_prod.key</file>
-        <file>resources/PublicKeys/pub_uat.key</file>
-        <file>resources/PublicKeys/pub_staging.key</file>
         <file>resources/PublicKeys/cc_server_prod.key</file>
         <file>resources/PublicKeys/cc_server_uat.key</file>
         <file>resources/PublicKeys/cc_server_staging.key</file>
@@ -236,5 +224,9 @@
         <file>resources/create_account.png</file>
         <file>resources/create_account@1.5x.png</file>
         <file>resources/create_account@2x.png</file>
+        <file>resources/youtube_social_squircle_dark.png</file>
+        <file>resources/youtube_social_icon_white.png</file>
+        <file>resources/api@1.5.png</file>
+        <file>resources/api-selected@1.5.png</file>
     </qresource>
 </RCC>

@@ -1673,3 +1673,16 @@ QDialog#LoginWindow QWidget#widgetSignup[testEnv="true"] {
   background-color: #fceadf;
 }
 
+*[infoButton="true"] {
+  background-color: transparent;
+  border: none;
+  color: #247dac;
+  text-decoration: underline;
+  text-transform: none;
+    }
+  *[infoButton="true"]:hover {
+    background-color: transparent;
+    border: none;
+    color: #5097bd;
+    text-decoration: underline;
+    text-transform: none;}

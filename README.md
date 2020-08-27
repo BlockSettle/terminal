@@ -162,8 +162,7 @@ For access to trade our FX and XBT products please upgrade your account to Tradi
  4. Initialize the Git submodules. You may be asked for your password again. If so, use your password/PAT.
 
 		git config credential.helper store  (NB: This command saves the password/PAT for the submodules, and need only be issued once in the project's lifetime. Once successful, don't use it again.)
-		git submodule init
-		git submodule update
+		git submodule update --init --recursive
 
  5. Build the terminal compilation environment. This will involve downloading and compiling all required prerequisite binaries for the terminal, and performing any required environment changes. Note that on Linux and macOS, the `python` binary may actually be `python2`.
 
@@ -182,7 +181,7 @@ For access to trade our FX and XBT products please upgrade your account to Tradi
  10. When pulling code, the submodules may be updated, or new submodules may be added. Run the following commands to ensure that the submodules are properly updated.
 
 		git submodule init  (Required *only* if a new submodule has been added.)
-		git submodult update
+		git submodule update --init --recursive
 
  11. (**WINDOWS ONLY**) A one-time step is required upon the first compilation. Go to `DEV_3RD_ROOT/release/ZeroMQ/lib` and copy the libzmq DLL file to same directory as the BlockSettle Terminal binary. The DLL need only be copied once but it'll have to be re-copied whenever `libzmq` is updated. This will eventually be automated. For now, the build script occasionally crashes when attempting to automate this process.
 

@@ -35,7 +35,7 @@ namespace bs {
       ~UtxoReservationToken();
 
       UtxoReservationToken(const UtxoReservationToken&) = delete;
-      UtxoReservationToken &operator = (const UtxoReservationToken&) = delete;
+      UtxoReservationToken &operator=(const UtxoReservationToken&) = delete;
 
       // Move out reservation from other
       UtxoReservationToken(UtxoReservationToken &&other);

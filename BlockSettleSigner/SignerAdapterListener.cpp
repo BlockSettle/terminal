@@ -20,11 +20,11 @@
 #include "HeadlessContainerListener.h"
 #include "OfflineSigner.h"
 #include "ProtobufHeadlessUtils.h"
+#include "ScopeGuard.h"
 #include "ServerConnection.h"
 #include "Settings/HeadlessSettings.h"
 #include "StringUtils.h"
 #include "SystemFileUtils.h"
-#include "ZMQ_BIP15X_ServerConnection.h"
 
 using namespace Blocksettle::Communication;
 
@@ -35,22 +35,27 @@ public:
       : owner_(owner)
    {}
 
-   void peerConn(const std::string &ip) override
+   void clientConn(const std::string &clientId, const ServerConnectionListener::Details &details) override
    {
-      signer::PeerEvent evt;
-      evt.set_ip_address(ip);
+      signer::ClientConnected evt;
+      evt.set_client_id(clientId);
+      auto ipAddrIt = details.find(ServerConnectionListener::Detail::IpAddr);
+      if (ipAddrIt != details.end()) {
+         evt.set_ip_address(ipAddrIt->second);
+      }
+      auto pubKeyIt = details.find(ServerConnectionListener::Detail::PublicKey);
+      if (pubKeyIt != details.end()) {
+         evt.set_public_key(pubKeyIt->second);
+      }
       owner_->sendData(signer::PeerConnectedType, evt.SerializeAsString());
    }
 
-   void peerDisconn(const std::string &ip) override
+   void clientDisconn(const std::string &clientId) override
    {
-      signer::PeerEvent evt;
-      evt.set_ip_address(ip);
+      signer::ClientDisconnected evt;
+      evt.set_client_id(clientId);
       owner_->sendData(signer::PeerDisconnectedType, evt.SerializeAsString());
-   }
 
-   void clientDisconn(const std::string &) override
-   {
       if (owner_->settings_->runMode() == bs::signer::RunMode::litegui) {
          owner_->logger_->info("Quit because terminal disconnected unexpectedly and litegui used");
          owner_->queue_->quit();
@@ -141,7 +146,7 @@ public:
 };
 
 SignerAdapterListener::SignerAdapterListener(HeadlessAppObj *app
-   , ZmqBIP15XServerConnection *connection
+   , const std::weak_ptr<ServerConnection> &connection
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
    , const std::shared_ptr<DispatchQueue> &queue
@@ -153,8 +158,7 @@ SignerAdapterListener::SignerAdapterListener(HeadlessAppObj *app
    , queue_(queue)
    , settings_(settings)
    , callbacks_(new HeadlessContainerCallbacksImpl(this))
-{
-}
+{}
 
 SignerAdapterListener::~SignerAdapterListener() noexcept = default;
 
@@ -166,7 +170,7 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
    });
 }
 
-void SignerAdapterListener::OnClientConnected(const std::string &clientId)
+void SignerAdapterListener::OnClientConnected(const std::string &clientId, const Details &details)
 {
    logger_->debug("[SignerAdapterListener] client {} connected", bs::toHex(clientId));
 }
@@ -178,7 +182,7 @@ void SignerAdapterListener::OnClientDisconnected(const std::string &clientId)
    shutdownIfNeeded();
 }
 
-void SignerAdapterListener::onClientError(const std::string &clientId, const std::string &error)
+void SignerAdapterListener::onClientError(const std::string &clientId, ClientError error, const Details &details)
 {
    logger_->debug("[SignerAdapterListener] client {} error: {}", bs::toHex(clientId), error);
 
@@ -209,7 +213,6 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
    case signer::SyncWalletType:
       rc = onSyncWallet(packet.data(), packet.id());
       break;
-   case signer::CreateWOType:
    case signer::GetDecryptedNodeType:
       rc = onGetDecryptedNode(packet.data(), packet.id());
       break;
@@ -270,7 +273,8 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
 bool SignerAdapterListener::sendData(signer::PacketType pt, const std::string &data
    , bs::signer::RequestId reqId)
 {
-   if (!connection_) {
+   auto connection = connection_.lock();
+   if (!connection) {
       return false;
    }
 
@@ -281,7 +285,7 @@ bool SignerAdapterListener::sendData(signer::PacketType pt, const std::string &d
       packet.set_id(reqId);
    }
 
-   return connection_->SendDataToAllClients(packet.SerializeAsString());
+   return connection->SendDataToAllClients(packet.SerializeAsString());
 }
 
 void SignerAdapterListener::sendStatusUpdate()
@@ -303,7 +307,7 @@ void SignerAdapterListener::sendControlPasswordStatusUpdate(signer::ControlPassw
 
 void SignerAdapterListener::resetConnection()
 {
-   connection_ = nullptr;
+   connection_.reset();
 }
 
 HeadlessContainerCallbacks *SignerAdapterListener::callbacks() const
@@ -341,18 +345,13 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
       }
       else {
          bs::core::wallet::TXMultiSignRequest multiReq;
-         multiReq.recipients = txSignReq.recipients;
-         if (txSignReq.change.value) {
-            multiReq.recipients.push_back(txSignReq.change.address.getRecipient(bs::XBTAmount{txSignReq.change.value}));
-         }
-         if (!txSignReq.prevStates.empty()) {
-            multiReq.prevState = txSignReq.prevStates.front();
-         }
+         multiReq.armorySigner_.merge(txSignReq.armorySigner_);
          multiReq.RBF = txSignReq.RBF;
 
          bs::core::WalletMap wallets;
-         for (const auto &input : txSignReq.inputs) {
-            const auto addr = bs::Address::fromUTXO(input);
+         for (unsigned i=0; i<txSignReq.armorySigner_.getTxInCount(); i++) {
+            auto spender = txSignReq.armorySigner_.getSpender(i);
+            const auto addr = bs::Address::fromScript(spender->getOutputScript());
             const auto wallet = walletsMgr_->getWalletByAddress(addr);
             if (!wallet) {
                logger_->error("[{}] failed to find wallet for input address {}"
@@ -360,7 +359,7 @@ bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::
                evt.set_errorcode((int)bs::error::ErrorCode::WrongAddress);
                return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);
             }
-            multiReq.addInput(input, wallet->walletId());
+            multiReq.addWalletId(wallet->walletId());
             wallets[wallet->walletId()] = wallet;
          }
          {
@@ -770,6 +769,12 @@ bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer
       const auto seed = w.privatekey().empty() ? bs::core::wallet::Seed(SecureBinaryData::fromString(w.seed()), netType)
          : bs::core::wallet::Seed::fromXpriv(SecureBinaryData::fromString(w.privatekey()), netType);
 
+      if (walletsMgr_->getHDWalletById(seed.getWalletId()) != nullptr) {
+         signer::CreateHDWalletResponse response;
+         response.set_errorcode(static_cast<uint32_t>(bs::error::ErrorCode::WalletAlreadyPresent));
+         return sendData(signer::CreateHDWalletType, response.SerializeAsString(), reqId);
+      }
+
       const auto wallet = walletsMgr_->createWallet(w.name(), w.description(), seed
          , settings_->getWalletsDir(), pwdData, w.primary());
 
@@ -898,10 +903,22 @@ bool SignerAdapterListener::onExportWoWallet(const std::string &data, bs::signer
       return false;
    }
 
+   bool isForked = false;
    if (!woWallet->isWatchingOnly()) {
-      SPDLOG_LOGGER_ERROR(logger_, "not a WO wallet: {}", request.rootwalletid());
-      return false;
+      woWallet = woWallet->createWatchingOnly();
+      if (!woWallet) {
+         SPDLOG_LOGGER_ERROR(logger_, "forking as WO wallet failed: {}", request.rootwalletid());
+         return false;
+      }
+      isForked = true;
    }
+
+   auto eraseFile = ScopedGuard([isForked, woWallet] {
+      if (isForked) {
+         // Remove forked WO file from wallets dir
+         woWallet->eraseFile();
+      }
+   });
 
    std::ifstream file(woWallet->getFileName(), std::ios::in | std::ios::binary | std::ios::ate);
    if (!file.is_open()) {
@@ -1006,17 +1023,6 @@ bs::error::ErrorCode SignerAdapterListener::verifyOfflineSignRequest(const bs::c
       return true;
    };
 
-   if (txSignReq.inputs.size() != txSignReq.inputIndices.size()) {
-      SPDLOG_LOGGER_ERROR(logger_, "all input indices must be set");
-      return bs::error::ErrorCode::FailedToParse;
-   }
-   for (const auto &inputIndex : txSignReq.inputIndices) {
-      if (!checkIndexValidity(inputIndex)) {
-         SPDLOG_LOGGER_ERROR(logger_, "invalid input address index for UTXO");
-         return bs::error::ErrorCode::FailedToParse;
-      }
-   }
-
    auto hdWallet = walletsMgr_->getHDRootForLeaf(txSignReq.walletIds.front());
    if (!hdWallet) {
       SPDLOG_LOGGER_ERROR(logger_, "can't find HD wallet for leaf '{}'", txSignReq.walletIds.front());
@@ -1049,13 +1055,14 @@ bs::error::ErrorCode SignerAdapterListener::verifyOfflineSignRequest(const bs::c
          return bs::error::ErrorCode::WalletNotFound;
       }
 
-      for (size_t i = 0; i < txSignReq.inputs.size(); ++i) {
-         const auto addr = bs::Address::fromUTXO(txSignReq.inputs.at(i));
+      for (size_t i = 0; i < txSignReq.armorySigner_.getTxInCount(); ++i) {
+         auto spender = txSignReq.armorySigner_.getSpender(i);
+         const auto addr = bs::Address::fromScript(spender->getOutputScript());
          if (!checkAddress(wallet, addr)) {
             continue;
          }
          // Need to extend used address chain for offline wallets
-         wallet->synchronizeUsedAddressChain(txSignReq.inputIndices.at(i));
+         //TODO: fix me. wallet->synchronizeUsedAddressChain(txSignReq.inputIndices.at(i));
          const auto addrEntry = wallet->getAddressEntryForAddr(addr.id());
          if (!addrEntry) {
             SPDLOG_LOGGER_ERROR(logger_, "can't find input with address {} in wallet {}"
@@ -1065,7 +1072,7 @@ bs::error::ErrorCode SignerAdapterListener::verifyOfflineSignRequest(const bs::c
          foundInputCount += 1;
       }
    }
-   if (txSignReq.inputs.size() != foundInputCount) {
+   if (txSignReq.armorySigner_.getTxInCount() != foundInputCount) {
       SPDLOG_LOGGER_ERROR(logger_, "failed to find all inputs");
       return bs::error::ErrorCode::WalletNotFound;
    }

@@ -25,9 +25,10 @@ namespace bs {
       class WalletsManager;
    }
 }
-class QQmlComponent;
 class AssetManager;
+class DataConnection;
 class MDCallbacksQt;
+class QQmlComponent;
 
 
 //
@@ -109,6 +110,7 @@ private:
    mutable float feePerByte_ = 0.0;
 }; // class Constants
 
+using ExtConnections = std::unordered_map<std::string, std::shared_ptr<DataConnection>>;
 
 class UserScript : public QObject
 {
@@ -117,54 +119,49 @@ Q_OBJECT
 public:
    UserScript(const std::shared_ptr<spdlog::logger> &,
       const std::shared_ptr<MDCallbacksQt> &,
-      QObject* parent = nullptr);
+      const ExtConnections &, QObject* parent = nullptr);
    ~UserScript() override;
 
-   void load(const QString &filename);
-   QObject *instantiate();
-
    void setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> walletsManager);
+   bool load(const QString &filename);
+
+   bool sendExtConn(const QString &name, const QString &type, const QString &message);
 
 signals:
    void loaded();
    void failed(const QString &desc);
 
-private:
+protected:
+   QObject *instantiate();
+
+protected:
    std::shared_ptr<spdlog::logger> logger_;
    QQmlEngine *engine_;
    QQmlComponent *component_;
    MarketData *md_;
+   ExtConnections extConns_;
    Constants *const_;
    DataStorage *storage_;
 };
 
 
-class AutoQuoter : public QObject
+class AutoQuoter : public UserScript
 {
-Q_OBJECT
-
+   Q_OBJECT
 public:
    AutoQuoter(const std::shared_ptr<spdlog::logger> &
-      , const QString &filename
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<MDCallbacksQt> &
-      , QObject* parent = nullptr);
+      , const ExtConnections &, QObject* parent = nullptr);
    ~AutoQuoter() override = default;
 
    QObject *instantiate(const bs::network::QuoteReqNotification &qrn);
-   void destroy(QObject *);
-
-   void setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> walletsManager);
 
 signals:
-   void loaded();
-   void failed(const QString &desc);
    void sendingQuoteReply(const QString &reqId, double price);
    void pullingQuoteReply(const QString &reqId);
 
 private:
-   UserScript  script_;
-   std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<AssetManager> assetManager_;
 };
 
@@ -262,8 +259,6 @@ public:
          }
       }
    }
-
-
    void setBestPrice(double prc, bool own) {
       isOwnBestPrice_ = own;
       if (bestPrice_ != prc) {
@@ -277,13 +272,15 @@ public:
    double bestPrice() const { return bestPrice_; }
    bool   isOwnBestPrice() const { return isOwnBestPrice_; }
 
-   void init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AssetManager> &assetManager);
+   void init(const std::shared_ptr<spdlog::logger> &logger
+      , const std::shared_ptr<AssetManager> &assetManager, UserScript *parent);
 
    Q_INVOKABLE void log(const QString &);
    Q_INVOKABLE bool sendQuoteReply(double price);
    Q_INVOKABLE bool pullQuoteReply();
    Q_INVOKABLE QString product();
    Q_INVOKABLE double accountBalance(const QString &product);
+   Q_INVOKABLE bool sendExtConn(const QString &name, const QString &type, const QString &message);
 
    void start() {
       if (!started_ && indicBid_ > .0 && indicAsk_ > .0 && lastPrice_ > .0) {
@@ -300,7 +297,10 @@ signals:
    void bestPriceChanged();
    void sendingQuoteReply(const QString &reqId, double price);
    void pullingQuoteReply(const QString &reqId);
+   void settled();
+   void cancelled();
    void started();
+   void extDataReceived(QString from, QString type, QString msg);
 
 private:
    BSQuoteRequest *quoteReq_;
@@ -314,6 +314,178 @@ private:
    bool     started_ = false;
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<AssetManager> assetManager_;
+   UserScript  * parent_;
+};
+
+
+class SubmitRFQ : public QObject
+{  // Container for individual RFQ submitted
+   Q_OBJECT
+   Q_PROPERTY(QString id READ id)
+   Q_PROPERTY(QString security READ security)
+   Q_PROPERTY(double amount READ amount WRITE setAmount NOTIFY amountChanged)
+   Q_PROPERTY(bool buy READ buy NOTIFY buyChanged)
+   Q_PROPERTY(double indicBid READ indicBid WRITE setIndicBid NOTIFY indicBidChanged)
+   Q_PROPERTY(double indicAsk READ indicAsk WRITE setIndicAsk NOTIFY indicAskChanged)
+   Q_PROPERTY(double lastPrice READ lastPrice WRITE setLastPrice NOTIFY lastPriceChanged)
+
+public:
+   explicit SubmitRFQ(QObject *parent = nullptr) : QObject(parent) {}
+   ~SubmitRFQ() override = default;
+
+   void setId(const std::string &id) { id_ = QString::fromStdString(id); }
+   QString id() const { return id_; }
+
+   void setSecurity(const QString &security) { security_ = security; }
+   QString security() const { return security_; }
+
+   void setAmount(double amount)
+   {
+      if (amount_ != amount) {
+         amount_ = amount;
+         emit amountChanged();
+      }
+   }
+   double amount() const { return amount_; }
+
+   void setBuy(bool buy)
+   {
+      buy_ = buy;
+      emit buyChanged();
+   }
+   bool buy() const { return buy_; }
+
+   void setIndicBid(double prc) {
+      if (indicBid_ != prc) {
+         indicBid_ = prc;
+         emit indicBidChanged();
+      }
+   }
+   void setIndicAsk(double prc) {
+      if (indicAsk_ != prc) {
+         indicAsk_ = prc;
+         emit indicAskChanged();
+      }
+   }
+   void setLastPrice(double prc) {
+      if (lastPrice_ != prc) {
+         lastPrice_ = prc;
+         emit lastPriceChanged();
+      }
+   }
+   double indicBid() const { return indicBid_; }
+   double indicAsk() const { return indicAsk_; }
+   double lastPrice() const { return lastPrice_; }
+
+   Q_INVOKABLE void stop();
+
+signals:
+   void amountChanged();
+   void buyChanged();
+   void indicBidChanged();
+   void indicAskChanged();
+   void lastPriceChanged();
+   void stopRFQ(const std::string &id);
+   void cancelled();
+   void accepted();
+   void expired();
+
+private:
+   QString  id_;
+   QString  security_;
+   double   amount_ = 0;
+   bool     buy_ = true;
+   double   indicBid_ = 0;
+   double   indicAsk_ = 0;
+   double   lastPrice_ = 0;
+   std::shared_ptr<AssetManager> assetManager_;
+};
+Q_DECLARE_METATYPE(SubmitRFQ *)
+
+
+class RFQScript : public QObject
+{     // Main QML-script facing class
+   Q_OBJECT
+
+public:
+   explicit RFQScript(QObject *parent = nullptr) : QObject(parent) {}
+   ~RFQScript() override = default;
+
+   void init(const std::shared_ptr<spdlog::logger> &logger)
+   {
+      logger_ = logger;
+   }
+
+   void start() {
+      if (!started_) {
+         started_ = true;
+         emit started();
+      }
+   }
+
+   void suspend() {
+      if (started_) {
+         started_ = false;
+         emit suspended();
+      }
+   }
+
+   Q_INVOKABLE void log(const QString &);
+   Q_INVOKABLE SubmitRFQ *sendRFQ(const QString &symbol, bool buy, double amount);
+   Q_INVOKABLE void cancelRFQ(const std::string &id);
+   Q_INVOKABLE SubmitRFQ *activeRFQ(const QString &id);
+   void cancelAll();
+
+   void onMDUpdate(bs::network::Asset::Type, const QString &security,
+      bs::network::MDFields mdFields);
+
+   void onAccepted(const std::string &id);
+   void onExpired(const std::string &id);
+   void onCancelled(const std::string &id);
+
+signals:
+   void started();
+   void suspended();
+   void sendingRFQ(SubmitRFQ *);
+   void cancellingRFQ(const std::string &id);
+
+   void indicBidChanged(const QString &security, double price);
+   void indicAskChanged(const QString &security, double price);
+   void lastPriceChanged(const QString &security, double price);
+
+   void cancelled(const QString &id);
+   void accepted(const QString &id);
+   void expired(const QString &id);
+
+private:
+   bool  started_ = false;
+   std::shared_ptr<spdlog::logger> logger_;
+   std::unordered_map<std::string, SubmitRFQ *> activeRFQs_;
+
+   std::unordered_map<std::string, bs::network::MDInfo>  mdInfo_;
+};
+
+
+class AutoRFQ : public UserScript
+{
+   Q_OBJECT
+public:
+   AutoRFQ(const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<MDCallbacksQt> &
+      , QObject* parent = nullptr);
+   ~AutoRFQ() override = default;
+
+   QObject *instantiate();
+
+private slots:
+   void onSendRFQ(SubmitRFQ *);
+
+signals:
+   void loaded();
+   void failed(const QString &desc);
+   void sendRFQ(const std::string &id, const QString &symbol, double amount, bool buy);
+   void cancelRFQ(const std::string &id);
+   void stopRFQ(const std::string &id);
 };
 
 

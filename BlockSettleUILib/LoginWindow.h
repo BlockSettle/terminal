@@ -42,7 +42,6 @@ public:
 
    enum State {
       Idle,
-      WaitNetworkSettings,
       WaitLoginResult,
    };
 
@@ -50,7 +49,7 @@ public:
    BsClientLoginResult *result() const { return result_.get(); }
 
 private slots:
-   void onStartLoginDone(AutheIDClient::ErrorType errorCode);
+   void onStartLoginDone(bool success, const std::string &errorMsg);
    void onGetLoginResultDone(const BsClientLoginResult &result);
    void onTextChanged();
    void onAuthPressed();
@@ -63,7 +62,7 @@ protected:
 private:
    void setState(State state);
    void updateState();
-   void displayError(AutheIDClient::ErrorType errorCode);
+   void displayError(const std::string &message);
 
    std::unique_ptr<Ui::LoginWindow>       ui_;
    std::shared_ptr<spdlog::logger>        logger_;

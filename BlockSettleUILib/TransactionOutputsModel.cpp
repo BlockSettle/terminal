@@ -63,14 +63,16 @@ QVariant TransactionOutputsModel::data(const QModelIndex & index, int role) cons
    return UtxoModelInterface::data(index, role);
 }
 
-void TransactionOutputsModel::AddRecipient(unsigned int recipientId, const QString& address, double amount)
+void TransactionOutputsModel::AddRecipient(unsigned int recipientId, const QString& address
+   , const bs::XBTAmount &amount)
 {
    beginInsertRows(QModelIndex{}, (int)outputs_.size(), (int)outputs_.size());
    outputs_.emplace_back(OutputRow{recipientId, address, amount});
    endInsertRows();
 }
 
-void TransactionOutputsModel::AddRecipients(const std::vector<std::tuple<unsigned int, QString, double>> &recipients)
+void TransactionOutputsModel::AddRecipients(const std::vector<std::tuple<unsigned int
+   , QString, bs::XBTAmount>> &recipients)
 {
    beginInsertRows(QModelIndex{}, (int)outputs_.size(), (int)outputs_.size());
    for (const auto &recip : recipients) {
@@ -79,7 +81,7 @@ void TransactionOutputsModel::AddRecipients(const std::vector<std::tuple<unsigne
    endInsertRows();
 }
 
-void TransactionOutputsModel::UpdateRecipientAmount(unsigned int recipientId, double amount)
+void TransactionOutputsModel::UpdateRecipientAmount(unsigned int recipientId, const bs::XBTAmount &amount)
 {
    int row = -1;
    for (int i = 0; i < outputs_.size(); ++i) {

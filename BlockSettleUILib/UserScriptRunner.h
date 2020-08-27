@@ -15,13 +15,15 @@
 #include <QObject>
 #include <QTimer>
 
-#include <unordered_map>
+#include <deque>
 #include <memory>
-#include <string>
 #include <mutex>
+#include <string>
+#include <unordered_map>
 
 #include "UserScript.h"
 #include "QuoteProvider.h"
+#include "CommonTypes.h"
 
 QT_BEGIN_NAMESPACE
 class QThread;
@@ -32,7 +34,9 @@ namespace bs {
       class WalletsManager;
    }
 }
+class DataConnectionListener;
 class MDCallbacksQt;
+class RFQScript;
 class SignContainer;
 class UserScriptRunner;
 
@@ -45,31 +49,71 @@ class UserScriptRunner;
 class UserScriptHandler : public QObject
 {
    Q_OBJECT
+public:
+   explicit UserScriptHandler(const std::shared_ptr<spdlog::logger> &);
+   ~UserScriptHandler() noexcept override;
+
+   virtual void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
+   void setParent(UserScriptRunner *);
+   void setRunningThread(QThread *thread) { thread_ = thread; }
+   virtual void reload(const QString &filename) = 0;
 
 signals:
-   void aqScriptLoaded(const QString &fileName);
+   void scriptLoaded(const QString &fileName);
    void failedToLoad(const QString &fileName, const QString &error);
-   void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
-   void sendQuote(const bs::network::QuoteReqNotification &qrn, double price);
 
+public slots:
+   virtual void onThreadStopped()
+   {
+      deleteLater();
+   }
+
+protected slots:
+   virtual void init(const QString &fileName) {}
+   virtual void deinit() {}
+
+protected:
+   std::shared_ptr<spdlog::logger> logger_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
+   QThread *thread_{nullptr};
+}; // class UserScriptHandler
+
+
+class AQScriptHandler : public UserScriptHandler
+{
+   Q_OBJECT
 public:
-   explicit UserScriptHandler(const std::shared_ptr<QuoteProvider> &
+   explicit AQScriptHandler(const std::shared_ptr<QuoteProvider> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<MDCallbacksQt> &
       , const std::shared_ptr<AssetManager> &
-      , const std::shared_ptr<spdlog::logger> &
-      , UserScriptRunner *runner, QThread *handlerThread);
-   ~UserScriptHandler() noexcept override;
+      , const std::shared_ptr<spdlog::logger> &);
+   ~AQScriptHandler() noexcept override;
 
-   void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
+   void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &) override;
+   void setExtConnections(const ExtConnections &conns);
+   void reload(const QString &filename) override;
+
+   void cancelled(const std::string &quoteReqId);
+   void settled(const std::string &quoteReqId);
+   void extMsgReceived(const std::string &data);
+
+signals:
+   void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
+   void sendQuote(const bs::network::QuoteReqNotification &qrn, double price);
+
+public slots:
+   void onThreadStopped() override;
+
+protected slots:
+   void init(const QString &fileName) override;
+   void deinit() override;
 
 private slots:
    void onQuoteReqNotification(const bs::network::QuoteReqNotification &qrn);
    void onQuoteReqCancelled(const QString &reqId, bool userCancelled);
    void onQuoteNotifCancelled(const QString &reqId);
    void onQuoteReqRejected(const QString &reqId, const QString &);
-   void initAQ(const QString &fileName);
-   void deinitAQ(bool deleteAq = true);
    void onMDUpdate(bs::network::Asset::Type, const QString &security,
       bs::network::MDFields mdFields);
    void onBestQuotePrice(const QString reqId, double price, bool own);
@@ -78,66 +122,151 @@ private slots:
    void aqTick();
 
 private:
+   void clear();
+   void stop(const std::string &quoteReqId);
+   void performOnReplyAndStop(const std::string &quoteReqId
+      , const std::function<void(BSQuoteReqReply *)> &);
+
+private:
    AutoQuoter *aq_ = nullptr;
    std::shared_ptr<SignContainer>            signingContainer_;
-   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<MDCallbacksQt>            mdCallbacks_;
    std::shared_ptr<AssetManager> assetManager_;
-   std::shared_ptr<spdlog::logger> logger_;
+   ExtConnections                extConns_;
 
    std::unordered_map<std::string, QObject*> aqObjs_;
    std::unordered_map<std::string, bs::network::QuoteReqNotification> aqQuoteReqs_;
    std::unordered_map<std::string, double>   bestQPrices_;
 
-   struct MDInfo {
-      double   bidPrice;
-      double   askPrice;
-      double   lastPrice;
+   std::unordered_map<std::string, bs::network::MDInfo>  mdInfo_;
+
+   struct ExtMessage {
+      QString  from;
+      QString  type;
+      QString  msg;
    };
-   std::unordered_map<std::string, MDInfo>  mdInfo_;
+   std::deque<ExtMessage>  extDataPool_;
+   const size_t maxExtDataPoolSize_{ 16 };
+   std::mutex  mtxExtData_;
 
    bool aqEnabled_;
    QTimer *aqTimer_;
 }; // class UserScriptHandler
 
 
-//
-// UserScriptRunner
-//
+class RFQScriptHandler : public UserScriptHandler
+{
+   Q_OBJECT
+public:
+   explicit RFQScriptHandler(const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<MDCallbacksQt> &);
+   ~RFQScriptHandler() noexcept override;
 
-//! Runner of user script.
+   void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &) override;
+   void reload(const QString &filename) override;
+
+   void suspend();
+   void rfqAccepted(const std::string &id);
+   void rfqCancelled(const std::string &id);
+   void rfqExpired(const std::string &id);
+
+signals:
+   void sendRFQ(const std::string &id, const QString &symbol, double amount, bool buy);
+   void cancelRFQ(const std::string &id);
+
+protected slots:
+   void init(const QString &fileName) override;
+   void deinit() override;
+
+private slots:
+   void onMDUpdate(bs::network::Asset::Type, const QString &security,
+      bs::network::MDFields mdFields);
+   void onStopRFQ(const std::string &id);
+
+private:
+   void clear();
+   void start();
+
+private:
+   AutoRFQ *rfq_{ nullptr };
+   std::shared_ptr<MDCallbacksQt>            mdCallbacks_;
+   RFQScript * rfqObj_{ nullptr };
+};
+
+
 class UserScriptRunner : public QObject
 {
    Q_OBJECT
-
-signals:
-   void initAQ(const QString &fileName);
-   void deinitAQ(bool deleteAq);
-   void stateChanged(bool enabled);
-   void aqScriptLoaded(const QString &fileName);
-   void failedToLoad(const QString &fileName, const QString &error);
-   void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
-   void sendQuote(const bs::network::QuoteReqNotification &qrn, double price);
-
 public:
-   UserScriptRunner(const std::shared_ptr<QuoteProvider> &,
-      const std::shared_ptr<SignContainer> &,
-      const std::shared_ptr<MDCallbacksQt> &,
-      const std::shared_ptr<AssetManager> &,
-      const std::shared_ptr<spdlog::logger> &,
-      QObject *parent);
+   UserScriptRunner(const std::shared_ptr<spdlog::logger> &
+      , UserScriptHandler *, QObject *parent);
    ~UserScriptRunner() noexcept override;
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
+   void setRunningThread(QThread *thread) { script_->setRunningThread(thread); }
+   void reload(const QString &filename) { script_->reload(filename); }
+
+signals:
+   void init(const QString &fileName);
+   void deinit();
+   void stateChanged(bool enabled);
+   void scriptLoaded(const QString &fileName);
+   void failedToLoad(const QString &fileName, const QString &error);
 
 public slots:
-   void enableAQ(const QString &fileName);
-   void disableAQ();
+   void enable(const QString &fileName);
+   void disable();
 
-private:
+protected:
    QThread *thread_;
    UserScriptHandler *script_;
    std::shared_ptr<spdlog::logger> logger_;
 }; // class UserScriptRunner
+
+class AQScriptRunner : public UserScriptRunner
+{
+   Q_OBJECT
+public:
+   AQScriptRunner(const std::shared_ptr<QuoteProvider> &
+      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<MDCallbacksQt> &
+      , const std::shared_ptr<AssetManager> &
+      , const std::shared_ptr<spdlog::logger> &, QObject *parent = nullptr);
+   ~AQScriptRunner() noexcept override;
+
+   void cancelled(const std::string &quoteReqId);
+   void settled(const std::string &quoteReqId);
+
+   void setExtConnections(const ExtConnections &);
+   std::shared_ptr<DataConnectionListener> getExtConnListener();
+   void onExtDataReceived(const std::string &data);
+
+signals:
+   void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
+   void sendQuote(const bs::network::QuoteReqNotification &qrn, double price);
+
+private:
+   std::shared_ptr<DataConnectionListener>   extConnListener_;
+};
+
+class RFQScriptRunner : public UserScriptRunner
+{
+   Q_OBJECT
+public:
+   RFQScriptRunner(const std::shared_ptr<MDCallbacksQt> &,
+      const std::shared_ptr<spdlog::logger> &,
+      QObject *parent);
+   ~RFQScriptRunner() noexcept override;
+
+   void start(const QString &file);
+   void suspend();
+   void rfqAccepted(const std::string &id);
+   void rfqCancelled(const std::string &id);
+   void rfqExpired(const std::string &id);
+
+signals:
+   void sendRFQ(const std::string &id, const QString &symbol, double amount, bool buy);
+   void cancelRFQ(const std::string &id);
+};
 
 #endif // USERSCRIPTRUNNER_H_INCLUDED

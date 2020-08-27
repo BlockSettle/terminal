@@ -16,7 +16,7 @@
 #include <QWidget>
 #include <memory>
 
-class AutoSignQuoteProvider;
+class AutoSignScriptProvider;
 
 namespace Ui {
 class AutoSignQuoteWidget;
@@ -30,29 +30,27 @@ public:
    explicit AutoSignQuoteWidget(QWidget *parent = nullptr);
    ~AutoSignQuoteWidget();
 
-   void init(const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider);
+   void init(const std::shared_ptr<AutoSignScriptProvider> &autoSignQuoteProvider);
 
 public slots:
    void onAutoSignStateChanged();
-   void onAutoSignQuoteAvailChanged();
-
-   void onAqScriptLoaded();
-   void onAqScriptUnloaded();
+   void onAutoSignReady();
+   void onUserConnected(bool, bool);
 
 private slots:
-   void aqFillHistory();
-   void aqScriptChanged(int curIndex);
+   void fillScriptHistory();
+   void scriptChanged(int curIndex);
 
    void onAutoQuoteToggled();
    void onAutoSignToggled();
 
 private:
-   QString askForAQScript();
+   QString askForScript();
    void validateGUI();
 
 private:
    std::unique_ptr<Ui::AutoSignQuoteWidget>      ui_;
-   std::shared_ptr<AutoSignQuoteProvider>        autoSignQuoteProvider_;
+   std::shared_ptr<AutoSignScriptProvider>       autoSignProvider_;
 };
 
 #endif // AUTOSIGNQUOTEWIDGET_H

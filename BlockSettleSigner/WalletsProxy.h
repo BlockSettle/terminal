@@ -77,8 +77,7 @@ public:
    Q_INVOKABLE void importHwWallet(HwWalletWrapper walletInfo, const QJSValue &jsCallback);
 
    Q_INVOKABLE void exportWatchingOnly(const QString &walletId
-      , const QString &filePath, bs::wallet::QPasswordData *passwordData
-      , const QJSValue &jsCallback);
+      , const QString &filePath, const QJSValue &jsCallback);
 
    Q_INVOKABLE bool backupPrivateKey(const QString &walletId
       , QString fileName, bool isPrintable, bs::wallet::QPasswordData *passwordData
@@ -105,6 +104,10 @@ public:
    Q_INVOKABLE void sendControlPassword(bs::wallet::QPasswordData *password);
    Q_INVOKABLE void changeControlPassword(bs::wallet::QPasswordData *oldPassword, bs::wallet::QPasswordData *newPassword
       , const QJSValue &jsCallback);
+
+   Q_INVOKABLE QPixmap getQRCode(const QString& data, int size = 0) const;
+
+   Q_INVOKABLE QString pixmapToDataUrl(const QPixmap &pixmap) const;
 
 signals:
    void walletsChanged();

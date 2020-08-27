@@ -24,7 +24,7 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QCloseEvent>
-
+#include <spdlog/spdlog.h>
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "BSMessageBox.h"
@@ -73,12 +73,7 @@ CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryCon
    qRegisterMetaType<std::map<unsigned int, float>>();
 }
 
-CreateTransactionDialog::~CreateTransactionDialog() noexcept
-{
-   if (feeUpdatingThread_.joinable()) {
-      feeUpdatingThread_.join();
-   }
-}
+CreateTransactionDialog::~CreateTransactionDialog() noexcept = default;
 
 void CreateTransactionDialog::init()
 {
@@ -475,21 +470,28 @@ bool CreateTransactionDialog::BroadcastImportedTx()
 
 void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
 {
+   if (!signContainer_) {
+      BSMessageBox(BSMessageBox::critical, tr("Error")
+         , tr("Signer is invalid - unable to send transaction"), this).exec();
+      return;
+   }
+
    getChangeAddress([this, cb = std::move(cb), handle = validityFlag_.handle()](bs::Address changeAddress) {
       if (!handle.isValid()) {
          return;
       }
       try {
-         auto txReq = transactionData_->createTXRequest(checkBoxRBF()->checkState() == Qt::Checked, changeAddress);
+         txReq_ = transactionData_->createTXRequest(checkBoxRBF()->checkState() == Qt::Checked, changeAddress);
 
          // grab supporting transactions for the utxo map.
          // required only for HW
          std::set<BinaryData> hashes;
-         for (const auto& input : txReq.inputs) {
-            hashes.emplace(input.getTxHash());
+         for (unsigned i=0; i<txReq_.armorySigner_.getTxInCount(); i++) {
+            auto spender = txReq_.armorySigner_.getSpender(i);
+            hashes.emplace(spender->getOutputHash());
          }
 
-         auto supportingTxMapCb = [this, handle, txReq = std::move(txReq), cb]
+         auto supportingTxMapCb = [this, handle, cb]
                (const AsyncClient::TxBatchResult& result, std::exception_ptr eptr) mutable
          {
             if (!handle.isValid()) {
@@ -503,11 +505,22 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
             }
 
             for (auto& txPair : result) {
-               txReq.supportingTXs.emplace(txPair.first, txPair.second->serialize());
+               txReq_.armorySigner_.addSupportingTx(*txPair.second);
             }
 
-            bool rc = createTransactionImpl(std::move(txReq));
-            cb(rc);
+            const auto cbResolvePublicData = [this, handle, cb]
+                  (bs::error::ErrorCode result, const Codec_SignerState::SignerState &state)
+            {
+               txReq_.armorySigner_.deserializeState(state);
+               if (!handle.isValid()) {
+                  return;
+               }
+               logger_->debug("[{}] result={}, state: {}", __func__, (int)result, state.IsInitialized());
+               bool rc = createTransactionImpl();
+               cb(rc);
+            };
+
+            signContainer_->resolvePublicSpenders(txReq_, cbResolvePublicData);
          };
 
          if (!armory_->getTXsByHash(hashes, supportingTxMapCb, true)) {
@@ -522,21 +535,14 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
    });
 }
 
-bool CreateTransactionDialog::createTransactionImpl(bs::core::wallet::TXSignRequest txReq)
+bool CreateTransactionDialog::createTransactionImpl()
 {
    QString text;
    QString detailedText;
 
-   if (!signContainer_) {
-      BSMessageBox(BSMessageBox::critical, tr("Error")
-         , tr("Signer is invalid - unable to send transaction"), this).exec();
-      return false;
-   }
-
    const auto hdWallet = walletsManager_->getHDWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
 
    try {
-      txReq_ = std::move(txReq);
       txReq_.comment = textEditComment()->document()->toPlainText().toStdString();
 
       if (isRBF_) {
@@ -583,6 +589,10 @@ bool CreateTransactionDialog::createTransactionImpl(bs::core::wallet::TXSignRequ
       }
       else {
          // do we need some checks here?
+      }
+
+      if (txReq_.armorySigner_.isSegWit()) {
+         txReq_.txHash = txReq_.txId();
       }
 
       if (hdWallet->isOffline() && !hdWallet->isHardwareWallet()) {

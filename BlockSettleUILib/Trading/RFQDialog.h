@@ -43,7 +43,6 @@ class AssetManager;
 class AuthAddressManager;
 class BaseCelerClient;
 class CCSettlementTransactionWidget;
-class ConnectionManager;
 class QuoteProvider;
 class RFQRequestWidget;
 class ReqCCSettlementContainer;
@@ -58,7 +57,7 @@ Q_OBJECT
 
 public:
    RFQDialog(const std::shared_ptr<spdlog::logger> &logger
-      , const bs::network::RFQ& rfq
+      , const std::string &id, const bs::network::RFQ& rfq
       , const std::shared_ptr<QuoteProvider>& quoteProvider
       , const std::shared_ptr<AuthAddressManager>& authAddressManager
       , const std::shared_ptr<AssetManager>& assetManager
@@ -67,7 +66,6 @@ public:
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<BaseCelerClient> &celerClient
       , const std::shared_ptr<ApplicationSettings> &appSettings
-      , const std::shared_ptr<ConnectionManager> &
       , const std::shared_ptr<RfqStorage> &rfqStorage
       , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
       , const bs::Address &recvXbtAddrIfSet
@@ -80,16 +78,27 @@ public:
       , RFQRequestWidget* parent = nullptr);
    ~RFQDialog() override;
 
+   void cancel(bool force = true);
+
+signals:
+   void accepted(const std::string &id);
+   void expired(const std::string &id);
+   void cancelled(const std::string &id);
+
 protected:
    void reject() override;
 
 public slots:
    void onUnsignedPayinRequested(const std::string& settlementId);
    void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp);
-   void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp);
+   void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin
+      , const BinaryData &payinHash, QDateTime timestamp);
 
 private slots:
    bool close();
+   void onTimeout();
+   void onQuoteFinished();
+   void onQuoteFailed();
 
    void onRFQResponseAccepted(const QString &reqId, const bs::network::Quote& quote);
    void onQuoteReceived(const bs::network::Quote& quote);
@@ -102,7 +111,8 @@ private slots:
    void onCCTxSigned();
 
    void onXBTQuoteAccept(std::string reqId, std::string hexPayoutTx);
-   void logError(bs::error::ErrorCode code, const QString &errorMessage);
+   void logError(const std::string &id, bs::error::ErrorCode code
+      , const QString &errorMessage);
 
 private:
    std::shared_ptr<bs::SettlementContainer> newCCcontainer();
@@ -112,6 +122,7 @@ private:
 private:
    std::unique_ptr<Ui::RFQDialog> ui_;
    std::shared_ptr<spdlog::logger>     logger_;
+   const std::string                   id_;
    const bs::network::RFQ              rfq_;
    bs::network::Quote                  quote_;
    bs::Address recvXbtAddrIfSet_;
@@ -124,7 +135,6 @@ private:
    std::shared_ptr<ArmoryConnection>            armory_;
    std::shared_ptr<BaseCelerClient>             celerClient_;
    std::shared_ptr<ApplicationSettings>         appSettings_;
-   std::shared_ptr<ConnectionManager>           connectionManager_;
    std::shared_ptr<RfqStorage>                  rfqStorage_;
    std::shared_ptr<bs::sync::hd::Wallet>        xbtWallet_;
    std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;

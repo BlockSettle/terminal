@@ -30,26 +30,27 @@ namespace bs {
       }
       class WalletsManager;
    }
+   namespace network {
+      class TransportBIP15xServer;
+   }
 }
 class DispatchQueue;
 class HeadlessAppObj;
 class HeadlessContainerCallbacks;
 class HeadlessContainerCallbacksImpl;
 class HeadlessSettings;
-class ZmqBIP15XServerConnection;
+class ServerConnection;
 
 class SignerAdapterListener : public ServerConnectionListener
 {
 public:
    SignerAdapterListener(HeadlessAppObj *app
-      , ZmqBIP15XServerConnection *connection
+      , const std::weak_ptr<ServerConnection> &
       , const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
       , const std::shared_ptr<DispatchQueue> &queue
       , const std::shared_ptr<HeadlessSettings> &settings);
    ~SignerAdapterListener() noexcept override;
-
-   ZmqBIP15XServerConnection *getServerConn() const { return connection_; }
 
    // Sent to GUI status update message
    void sendStatusUpdate();
@@ -65,9 +66,9 @@ public:
 
 protected:
    void OnDataFromClient(const std::string &clientId, const std::string &data) override;
-   void OnClientConnected(const std::string &clientId) override;
+   void OnClientConnected(const std::string &clientId, const Details &details) override;
    void OnClientDisconnected(const std::string &clientId) override;
-   void onClientError(const std::string& clientId, const std::string &error) override;
+   void onClientError(const std::string& clientId, ClientError error, const Details &details) override;
 
    void processData(const std::string &clientId, const std::string &data);
 
@@ -107,8 +108,8 @@ private:
    friend class HeadlessContainerCallbacksImpl;
 
    HeadlessAppObj *  app_;
-   ZmqBIP15XServerConnection *connection_{};
-   std::shared_ptr<spdlog::logger>     logger_;
+   std::weak_ptr<ServerConnection>  connection_;
+   std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
    std::shared_ptr<DispatchQueue> queue_;
    std::shared_ptr<HeadlessSettings>   settings_;

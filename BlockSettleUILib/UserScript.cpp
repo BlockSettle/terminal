@@ -10,10 +10,13 @@
 */
 #include "UserScript.h"
 #include <spdlog/logger.h>
+#include <QJsonObject>
+#include <QJsonDocument>
 #include <QQmlComponent>
 #include <QQmlContext>
 #include "AssetManager.h"
 #include "CurrencyPair.h"
+#include "DataConnection.h"
 #include "MDCallbacksQt.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -22,16 +25,20 @@
 
 
 UserScript::UserScript(const std::shared_ptr<spdlog::logger> &logger,
-   const std::shared_ptr<MDCallbacksQt> &mdCallbacks, QObject* parent)
+   const std::shared_ptr<MDCallbacksQt> &mdCallbacks, const ExtConnections &extConns
+   , QObject* parent)
    : QObject(parent)
    , logger_(logger)
    , engine_(new QQmlEngine(this))
    , component_(nullptr)
-   , md_(new MarketData(mdCallbacks, this))
+   , md_(mdCallbacks ? new MarketData(mdCallbacks, this) : nullptr)
+   , extConns_(extConns)
    , const_(new Constants(this))
    , storage_(new DataStorage(this))
 {
-   engine_->rootContext()->setContextProperty(QLatin1String("marketData"), md_);
+   if (md_) {
+      engine_->rootContext()->setContextProperty(QLatin1String("marketData"), md_);
+   }
    engine_->rootContext()->setContextProperty(QLatin1String("constants"), const_);
    engine_->rootContext()->setContextProperty(QLatin1String("dataStorage"), storage_);
 }
@@ -42,40 +49,73 @@ UserScript::~UserScript()
    component_ = nullptr;
 }
 
-void UserScript::load(const QString &filename)
+bool UserScript::load(const QString &filename)
 {
    if (component_)  component_->deleteLater();
-   component_ = new QQmlComponent(engine_, QUrl::fromLocalFile(filename), QQmlComponent::Asynchronous, this);
+   component_ = new QQmlComponent(engine_, QUrl::fromLocalFile(filename)
+      , QQmlComponent::PreferSynchronous, this);
    if (!component_) {
       logger_->error("Failed to load component for file {}", filename.toStdString());
       emit failed(tr("Failed to load script %1").arg(filename));
-   }
-   else {
-      connect(component_, &QQmlComponent::statusChanged, [this](QQmlComponent::Status status) {
-         switch (status) {
-         case QQmlComponent::Ready:
-            emit loaded();
-            break;
-         case QQmlComponent::Error:
-            emit failed(component_->errorString());
-            break;
-         default:    break;
-         }
-      });
+      return false;
    }
 
+   if (component_->isReady()) {
+      emit loaded();
+      return true;
+   }
+   if (component_->isError()) {
+      logger_->error("Failed to load {}: {}", filename.toStdString()
+         , component_->errorString().toStdString());
+      emit failed(component_->errorString());
+   }
+   return false;
 }
 
 QObject *UserScript::instantiate()
 {
    auto rv = component_->create();
-   if (!rv)  emit failed(tr("Failed to instantiate: %1").arg(component_->errorString()));
+   if (!rv) {
+      emit failed(tr("Failed to instantiate: %1").arg(component_->errorString()));
+   }
    return rv;
 }
 
 void UserScript::setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> walletsManager)
 {
    const_->setWalletsManager(walletsManager);
+}
+
+bool UserScript::sendExtConn(const QString &name, const QString &type, const QString &message)
+{
+   const auto &itConn = extConns_.find(name.toStdString());
+   if (itConn == extConns_.end()) {
+      logger_->error("[UserScript::sendExtConn] can't find external connector {}"
+         , name.toStdString());
+      return false;
+   }
+   if (!itConn->second->isActive()) {
+      logger_->error("[UserScript::sendExtConn] external connector {} is not "
+         "active", name.toStdString());
+      return false;
+   }
+   QJsonParseError jsonError;
+   auto jsonDoc = QJsonDocument::fromJson(QByteArray::fromStdString(message.toStdString())
+      , &jsonError);
+   if (jsonError.error != QJsonParseError::NoError) {
+      logger_->error("[UserScript::sendExtConn] invalid JSON message: {}\n{}"
+         , jsonError.errorString().toUtf8().toStdString(), message.toStdString());
+      return false;
+   }
+   const auto messageObj = jsonDoc.object();
+   QJsonObject jsonEnvelope;
+   jsonEnvelope[QLatin1Literal("to")] = name;
+   jsonEnvelope[QLatin1Literal("type")] = type;
+   jsonEnvelope[QLatin1Literal("message")] = messageObj;
+   jsonDoc.setObject(jsonEnvelope);
+   const auto &msgJSON = jsonDoc.toJson(QJsonDocument::JsonFormat::Compact).toStdString();
+
+   return itConn->second->send(msgJSON);
 }
 
 
@@ -209,27 +249,22 @@ void Constants::setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> wall
 
 
 AutoQuoter::AutoQuoter(const std::shared_ptr<spdlog::logger> &logger
-   , const QString &filename
    , const std::shared_ptr<AssetManager> &assetManager
-   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks, QObject* parent)
-   : QObject(parent), script_(logger, mdCallbacks, this)
-   , logger_(logger), assetManager_(assetManager)
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
+   , const ExtConnections &extConns, QObject* parent)
+   : UserScript(logger, mdCallbacks, extConns, parent)
+   , assetManager_(assetManager)
 {
    qmlRegisterType<BSQuoteReqReply>("bs.terminal", 1, 0, "BSQuoteReqReply");
    qmlRegisterUncreatableType<BSQuoteRequest>("bs.terminal", 1, 0, "BSQuoteRequest", tr("Can't create this type"));
-
-   connect(&script_, &UserScript::loaded, [this] { emit loaded(); });
-   connect(&script_, &UserScript::failed, [this](const QString &err) { emit failed(err); });
-
-   script_.load(filename);
 }
 
 QObject *AutoQuoter::instantiate(const bs::network::QuoteReqNotification &qrn)
 {
-   QObject *rv = script_.instantiate();
+   QObject *rv = UserScript::instantiate();
    if (rv) {
       BSQuoteReqReply *qrr = qobject_cast<BSQuoteReqReply *>(rv);
-      qrr->init(logger_, assetManager_);
+      qrr->init(logger_, assetManager_, this);
 
       BSQuoteRequest *qr = new BSQuoteRequest(rv);
       qr->init(QString::fromStdString(qrn.quoteRequestId), QString::fromStdString(qrn.product)
@@ -250,16 +285,6 @@ QObject *AutoQuoter::instantiate(const bs::network::QuoteReqNotification &qrn)
    return rv;
 }
 
-void AutoQuoter::destroy(QObject *o)
-{
-   delete o;
-}
-
-void AutoQuoter::setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> walletsManager)
-{
-   script_.setWalletsManager(walletsManager);
-}
-
 
 void BSQuoteRequest::init(const QString &reqId, const QString &product, bool buy, double qty, int at)
 {
@@ -270,15 +295,17 @@ void BSQuoteRequest::init(const QString &reqId, const QString &product, bool buy
    assetType_ = at;
 }
 
-void BSQuoteReqReply::init(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<AssetManager> &assetManager)
+void BSQuoteReqReply::init(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<AssetManager> &assetManager, UserScript *parent)
 {
    logger_ = logger;
    assetManager_ = assetManager;
+   parent_ = parent;
 }
 
 void BSQuoteReqReply::log(const QString &s)
 {
-   logger_->info("[BSQuoteReply] {}", s.toStdString());
+   logger_->info("[BSQuoteReqReply] {}", s.toStdString());
 }
 
 bool BSQuoteReqReply::sendQuoteReply(double price)
@@ -306,4 +333,181 @@ QString BSQuoteReqReply::product()
 double BSQuoteReqReply::accountBalance(const QString &product)
 {
    return assetManager_->getBalance(product.toStdString());
+}
+
+bool BSQuoteReqReply::sendExtConn(const QString &name, const QString &type
+   , const QString &message)
+{
+   return parent_->sendExtConn(name, type, message);
+}
+
+
+void SubmitRFQ::stop()
+{
+   emit stopRFQ(id_.toStdString());
+}
+
+
+void RFQScript::log(const QString &s)
+{
+   if (!logger_) {
+      return;
+   }
+   logger_->info("[RFQScript] {}", s.toStdString());
+}
+
+SubmitRFQ *RFQScript::sendRFQ(const QString &symbol, bool buy, double amount)
+{
+   const auto id = CryptoPRNG::generateRandom(8).toHexStr();
+   const auto submitRFQ = new SubmitRFQ(this);
+   submitRFQ->setId(id);
+   submitRFQ->setSecurity(symbol);
+   submitRFQ->setAmount(amount);
+   submitRFQ->setBuy(buy);
+
+   activeRFQs_[id] = submitRFQ;
+   emit sendingRFQ(submitRFQ);
+   return submitRFQ;
+}
+
+void RFQScript::cancelRFQ(const std::string &id)
+{
+   const auto &itRFQ = activeRFQs_.find(id);
+   if (itRFQ == activeRFQs_.end()) {
+      logger_->error("[RFQScript::cancelRFQ] no active RFQ with id {}", id);
+      return;
+   }
+   emit cancellingRFQ(id);
+   itRFQ->second->deleteLater();
+   activeRFQs_.erase(itRFQ);
+}
+
+void RFQScript::cancelAll()
+{
+   for (const auto &rfq : activeRFQs_) {
+      emit cancellingRFQ(rfq.first);
+      rfq.second->deleteLater();
+   }
+   activeRFQs_.clear();
+}
+
+void RFQScript::onMDUpdate(bs::network::Asset::Type, const QString &security,
+   bs::network::MDFields mdFields)
+{
+   if (!started_) {
+      return;
+   }
+
+   auto &mdInfo = mdInfo_[security.toStdString()];
+   mdInfo.merge(bs::network::MDField::get(mdFields));
+
+   for (const auto &rfq : activeRFQs_) {
+      const auto &sec = rfq.second->security();
+      if (sec.isEmpty() || (security != sec)) {
+         continue;
+      }
+      if (mdInfo.bidPrice > 0) {
+         rfq.second->setIndicBid(mdInfo.bidPrice);
+      }
+      if (mdInfo.askPrice > 0) {
+         rfq.second->setIndicAsk(mdInfo.askPrice);
+      }
+      if (mdInfo.lastPrice > 0) {
+         rfq.second->setLastPrice(mdInfo.lastPrice);
+      }
+   }
+}
+
+SubmitRFQ *RFQScript::activeRFQ(const QString &id)
+{
+   if (!started_) {
+      return nullptr;
+   }
+   const auto &itRFQ = activeRFQs_.find(id.toStdString());
+   if (itRFQ == activeRFQs_.end()) {
+      return nullptr;
+   }
+   return itRFQ->second;
+}
+
+void RFQScript::onAccepted(const std::string &id)
+{
+   if (!started_) {
+      return;
+   }
+   const auto &itRFQ = activeRFQs_.find(id);
+   if (itRFQ == activeRFQs_.end()) {
+      return;
+   }
+   emit accepted(QString::fromStdString(id));
+   emit itRFQ->second->accepted();
+}
+
+void RFQScript::onExpired(const std::string &id)
+{
+   if (!started_) {
+      return;
+   }
+   const auto &itRFQ = activeRFQs_.find(id);
+   if (itRFQ == activeRFQs_.end()) {
+      logger_->warn("[RFQScript::onExpired] failed to find id {}", id);
+      return;
+   }
+   emit expired(QString::fromStdString(id));
+   emit itRFQ->second->expired();
+}
+
+void RFQScript::onCancelled(const std::string &id)
+{
+   if (!started_) {
+      return;
+   }
+   const auto &itRFQ = activeRFQs_.find(id);
+   if (itRFQ == activeRFQs_.end()) {
+      return;
+   }
+   emit cancelled(QString::fromStdString(id));
+   emit itRFQ->second->cancelled();
+   itRFQ->second->deleteLater();
+   activeRFQs_.erase(itRFQ);
+}
+
+
+AutoRFQ::AutoRFQ(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks, QObject* parent)
+   : UserScript(logger, mdCallbacks, {}, parent)
+{
+   qRegisterMetaType<SubmitRFQ *>();
+   qmlRegisterType<SubmitRFQ>("bs.terminal", 1, 0, "SubmitRFQ");
+   qmlRegisterType<RFQScript>("bs.terminal", 1, 0, "RFQScript");
+}
+
+QObject *AutoRFQ::instantiate()
+{
+   QObject *rv = UserScript::instantiate();
+   if (!rv) {
+      logger_->error("[AutoRFQ::instantiate] failed to instantiate script");
+      return nullptr;
+   }
+   RFQScript *rfq = qobject_cast<RFQScript *>(rv);
+   if (!rfq) {
+      logger_->error("[AutoRFQ::instantiate] wrong script type");
+      return nullptr;
+   }
+   rfq->init(logger_);
+
+   connect(rfq, &RFQScript::sendingRFQ, this, &AutoRFQ::onSendRFQ);
+   connect(rfq, &RFQScript::cancellingRFQ, this, &AutoRFQ::cancelRFQ);
+
+   return rv;
+}
+
+void AutoRFQ::onSendRFQ(SubmitRFQ *rfq)
+{
+   if (!rfq) {
+      logger_->error("[AutoRFQ::onSendRFQ] no RFQ passed");
+      return;
+   }
+   connect(rfq, &SubmitRFQ::stopRFQ, this, &AutoRFQ::stopRFQ);
+   emit sendRFQ(rfq->id().toStdString(), rfq->security(), rfq->amount(), rfq->buy());
 }

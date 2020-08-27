@@ -13,7 +13,7 @@
 
 #include "ApplicationSettings.h"
 #include "BinaryData.h"
-#include "ZMQ_BIP15X_Helpers.h"
+#include "BIP15xHelpers.h"
 
 class QWidget;
 
@@ -29,17 +29,25 @@ public:
    PubKeyLoader& operator = (PubKeyLoader&&) = delete;
 
    enum class KeyType {
-      PublicBridge = 1,
-      Chat,
+      Chat = 2,
       Proxy,
       CcServer,
+      MdServer,
+      Mdhs,
+      ExtConnector
    };
 
    BinaryData loadKey(const KeyType) const;
    bool saveKey(const KeyType, const BinaryData &);
 
-   static ZmqBipNewKeyCb getApprovingCallback(const KeyType
+   static bs::network::BIP15xNewKeyCb getApprovingCallback(const KeyType
       , QWidget *bsMainWindow, const std::shared_ptr<ApplicationSettings> &);
+
+   static std::string envNameShort(ApplicationSettings::EnvConfiguration env);
+   static std::string serverNameShort(KeyType);
+   static std::string serverHostName(KeyType, ApplicationSettings::EnvConfiguration env);
+   static std::string serverHttpPort();
+   static std::string serverHttpsPort();
 
 private:
    static BinaryData loadKeyFromResource(KeyType, ApplicationSettings::EnvConfiguration);

@@ -8,14 +8,15 @@
 **********************************************************************************
 
 */
+#include <QBuffer>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QVariant>
+#include <QMetaMethod>
 #include <QPixmap>
 #include <QStandardPaths>
-#include <QDir>
-#include <QMetaMethod>
 #include <QTemporaryDir>
+#include <QVariant>
 
 #include <spdlog/spdlog.h>
 
@@ -194,8 +195,7 @@ QString WalletsProxy::getWoWalletFile(const QString &walletId) const
    return (QString::fromStdString(bs::core::hd::Wallet::fileNamePrefix(true)) + walletId + QLatin1String("_wallet.lmdb"));
 }
 
-void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &filePath
-   , bs::wallet::QPasswordData *passwordData, const QJSValue &jsCallback)
+void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &filePath, const QJSValue &jsCallback)
 {
    auto successCallback = [this, jsCallback, walletId, filePath] {
       SPDLOG_LOGGER_DEBUG(logger_, "WO export succeed");
@@ -217,145 +217,45 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &fi
       });
    };
 
-   if (walletsMgr_->isWatchingOnly(walletId.toStdString())) {
-      SPDLOG_LOGGER_DEBUG(logger_, "copy WO from WO wallet to '{}'", filePath.toStdString());
+   SPDLOG_LOGGER_DEBUG(logger_, "copy WO from WO wallet to '{}'", filePath.toStdString());
 
-      bool isHw = walletsMgr_->getHDWalletById(walletId.toStdString())->isHardwareWallet();
-      adapter_->exportWoWallet(walletId.toStdString(), [this, walletId, successCallback, failCallback, filePath, isHw](const BinaryData &content) {
-         if (content.empty()) {
-            failCallback("can't read WO file");
-            return;
-         }
-
-         {  QFile f(filePath);
-            bool result = f.open(QIODevice::WriteOnly);
-            if (!result) {
-               failCallback("can't open output file");
-               return;
-            }
-            auto size = f.write(reinterpret_cast<const char*>(content.getPtr()), int(content.getSize()));
-            if (size != int(content.getSize())) {
-               failCallback("write failed");
-               return;
-            }
-         }
-
-         if (isHw) {
-            try {
-               bs::core::hd::Wallet wallet(filePath.toStdString(), adapter_->netType());
-               wallet.convertHardwareToWo();
-            } catch (const std::exception &e) {
-               SPDLOG_LOGGER_ERROR(logger_, "converting HW to WO wallet failed: {}", e.what());
-               failCallback("unexpected error");
-               return;
-            }
-
-            QFileInfo info(filePath);
-            QString lockFilePath = info.path() + QDir::separator() + info.baseName() + QStringLiteral(".lmdb-lock");
-            QFile::remove(lockFilePath);
-         }
-
-         successCallback();
-      });
-      return;
-   }
-
-   SPDLOG_LOGGER_DEBUG(logger_, "export WO from full wallet to '{}'", filePath.toStdString());
-   const auto &cbResult = [this, walletId, filePath, successCallback, failCallback, passwordData](const SecureBinaryData &privKey, const SecureBinaryData &seedData) {
-      std::shared_ptr<bs::core::hd::Wallet> newWallet;
-      try {
-         const auto hdWallet = walletsMgr_->getHDWalletById(walletId.toStdString());
-         if (!hdWallet) {
-            throw std::runtime_error("failed to find wallet with id " + walletId.toStdString());
-         }
-
-         // New wallets currently do not allow select file name used to save.
-         // Save WO wallet to the temporary dir and move out where it should be.
-         // Temporary directory will be removed when goes out of scope.
-         QTemporaryDir tmpDir;
-         if (!tmpDir.isValid()) {
-            throw std::runtime_error("failed to create temporary dir");
-         }
-         SPDLOG_LOGGER_DEBUG(logger_, "temporary export WO file to {}", tmpDir.path().toStdString());
-
-         const bs::core::wallet::Seed seed(seedData, hdWallet->networkType());
-         newWallet = std::make_shared<bs::core::hd::Wallet>(hdWallet->name(), hdWallet->description()
-            , seed, *passwordData, tmpDir.path().toStdString());
-
-         for (const auto &group : hdWallet->getGroups()) {
-            if (group->type() != bs::core::wallet::Type::Bitcoin
-                && group->type() != bs::core::wallet::Type::ColorCoin) {
-               continue;
-            }
-            auto newGroup = newWallet->createGroup(static_cast<bs::hd::CoinType>(group->index()));
-            if (!newGroup) {
-               throw std::runtime_error("failed to create group");
-            }
-            const bs::core::WalletPasswordScoped lock(newWallet, passwordData->password);
-            for (const auto &leaf : group->getLeaves()) {
-               try {
-                  auto newLeaf = newGroup->createLeaf(leaf->path());
-                  if (!newLeaf) {
-                     throw std::runtime_error("uncreatable");
-                  }
-                  for (int i = int(leaf->getExtAddressCount()); i > 0; --i) {
-                     newLeaf->getNewExtAddress();
-                  }
-                  for (int i = int(leaf->getIntAddressCount()); i > 0; --i) {
-                     newLeaf->getNewIntAddress();
-                  }
-                  logger_->debug("[WalletsProxy::exportWatchingOnly] leaf {} has {} + {} addresses"
-                     , newLeaf->walletId(), newLeaf->getExtAddressCount(), newLeaf->getIntAddressCount());
-               }
-               catch (const std::exception &e) {
-                  logger_->warn("[WalletsProxy::exportWatchingOnly] WO leaf {} ({}/{}) not created: {}"
-                     , leaf->walletId(), group->index(), leaf->index(), e.what());
-               }
-            }
-         }
-
-         // Do not keep WO wallet ptr here as it would lock file
-         if (newWallet->createWatchingOnly() == nullptr) {
-             throw std::runtime_error("can't create WO wallet");
-         }
-
-         newWallet->eraseFile();
-         // Clear pointer to not call one more time eraseFile if something would fail below
-         newWallet = nullptr;
-
-         QDir dir(tmpDir.path());
-         auto entryList = dir.entryList({QStringLiteral("*.lmdb")});
-         if (entryList.empty()) {
-            throw std::runtime_error("export failed (can't find exported file)");
-         }
-
-         if (entryList.size() != 1) {
-            throw std::runtime_error("export failed (too many exported files)");
-         }
-
-         if (QFile::exists(filePath)) {
-            bool result = QFile::remove(filePath);
-            if (!result) {
-               throw std::runtime_error("can't delete old file");
-            }
-         }
-
-         bool result = QFile::rename(dir.filePath(entryList[0]), filePath);
-         if (!result) {
-            throw std::runtime_error("write failed");
-         }
-      }
-      catch (const std::exception &e) {
-         if (newWallet) {
-            newWallet->eraseFile();
-         }
-         failCallback(e.what());
+   bool isHw = walletsMgr_->getHDWalletById(walletId.toStdString())->isHardwareWallet();
+   adapter_->exportWoWallet(walletId.toStdString(), [this, walletId, successCallback, failCallback, filePath, isHw](const BinaryData &content) {
+      if (content.empty()) {
+         failCallback("can't read WO file");
          return;
       }
 
+      {  QFile f(filePath);
+         bool result = f.open(QIODevice::WriteOnly);
+         if (!result) {
+            failCallback("can't open output file");
+            return;
+         }
+         auto size = f.write(reinterpret_cast<const char*>(content.getPtr()), int(content.getSize()));
+         if (size != int(content.getSize())) {
+            failCallback("write failed");
+            return;
+         }
+      }
+
+      if (isHw) {
+         try {
+            bs::core::hd::Wallet wallet(filePath.toStdString(), adapter_->netType());
+            wallet.convertHardwareToWo();
+         } catch (const std::exception &e) {
+            SPDLOG_LOGGER_ERROR(logger_, "converting HW to WO wallet failed: {}", e.what());
+            failCallback("unexpected error");
+            return;
+         }
+
+         QFileInfo info(filePath);
+         QString lockFilePath = info.path() + QDir::separator() + info.baseName() + QStringLiteral(".lmdb-lock");
+         QFile::remove(lockFilePath);
+      }
+
       successCallback();
-   };
-   adapter_->createWatchingOnlyWallet(walletId, passwordData->password, cbResult);
+   });
 }
 
 bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, bool isPrintable
@@ -494,7 +394,7 @@ void WalletsProxy::signOfflineTxProceed(const QString &fileName, const std::vect
    const auto &parsedReqsForWallets = std::make_shared<std::unordered_map<std::string, Requests>>(); // <wallet_id, Requests>
    //const auto walletsMgr = adapter_->getWalletsManager();
    for (const auto &req : parsedReqs) {
-      if (!req.prevStates.empty()) {
+      if (req.armorySigner_.isSigned()) {
          invokeJsCallBack(jsCallback, QJSValueList() << QJSValue(false) << tr("Transaction already signed"));
          return;
       }
@@ -918,4 +818,19 @@ void WalletsProxy::changeControlPassword(bs::wallet::QPasswordData *oldPassword,
       const bs::wallet::QPasswordData &newPassDataRef = newPassword ? *newPassword : bs::wallet::QPasswordData();
       adapter_->changeControlPassword(*oldPassword, newPassDataRef, cb);
    }
+}
+
+QString WalletsProxy::pixmapToDataUrl(const QPixmap &pixmap) const
+{
+   QByteArray array;
+   QBuffer buffer(&array);
+   buffer.open(QIODevice::WriteOnly);
+   pixmap.save(&buffer, "PNG");
+   QString image(QStringLiteral("data:image/png;base64,") + QString::fromLatin1(array.toBase64().data()));
+   return image;
+}
+
+QPixmap WalletsProxy::getQRCode(const QString &data, int size) const
+{
+   return UiUtils::getQRCode(data, size);
 }

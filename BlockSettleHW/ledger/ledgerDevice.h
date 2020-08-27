@@ -53,10 +53,7 @@ public:
    // operation
    void getPublicKey(AsyncCallBackCall&& cb = nullptr) override;
    void signTX(const bs::core::wallet::TXSignRequest &reqTX, AsyncCallBackCall&& cb = nullptr) override;
-
-   bool inited() {
-      return !xpubRoot_.empty();
-   }
+   void retrieveXPubRoot(AsyncCallBack&& cb) override {} // no special rule for ledger device
 
    bool isBlocked() override {
       return isBlocked_;
@@ -77,8 +74,6 @@ private:
    QPointer<LedgerCommandThread> commandThread_;
    bool isBlocked_{};
    QString lastError_{};
-   
-   std::string xpubRoot_;
 };
 
 class LedgerCommandThread : public QThread
@@ -115,8 +110,9 @@ protected:
 
    // APDU commands processing
    bool exchangeData(const QByteArray& input, QByteArray& output, std::string&& logHeader);
-   bool writeData(const QByteArray& input, std::string&& logHeader);
-   bool readData(QByteArray& output, std::string&& logHeader);
+   // Do not use those functions straight away, use exchangeData instead
+   bool writeData(const QByteArray& input, const std::string& logHeader);
+   bool readData(QByteArray& output, const std::string& logHeader);
 
    // Get public key processing
    void processGetPublicKey();
@@ -125,11 +121,11 @@ protected:
    BIP32_Node getPublicKeyApdu(bs::hd::Path&& derivationPath, const std::unique_ptr<BIP32_Node>& parent = nullptr);
 
    // Sign tx processing  
-   QByteArray getTrustedInput(const UTXO&);
-   QByteArray getTrustedInputSegWit(const UTXO&);
+   QByteArray getTrustedInput(const BinaryData&, unsigned);
+   QByteArray getTrustedInputSegWit_outdated(const UTXO&);
 
    void startUntrustedTransaction(
-      const std::vector<QByteArray>, const QByteArray&, 
+      const std::vector<QByteArray>&, const std::vector<QByteArray>&,
       unsigned, bool, bool, bool);
    void finalizeInputFull();
    void processTXLegacy();

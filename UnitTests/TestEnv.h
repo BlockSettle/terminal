@@ -11,22 +11,22 @@
 #ifndef __TEST_ENV_H__
 #define __TEST_ENV_H__
 
+#include "ArmoryObject.h"
+#include "AuthAddressLogic.h"
+#include "BDM_mainthread.h"
+#include "BlockchainMonitor.h"
+#include "BlockDataManagerConfig.h"
+#include "gtest/NodeUnitTest.h"
+#include "MockAssetMgr.h"
+#include "Server.h"
+#include "Wallets/SyncWallet.h"
+
 #include <memory>
 #include <string>
+
 #include <gtest/gtest.h>
-#include "BlockchainMonitor.h"
-#include "MockAssetMgr.h"
-#include "MockAuthAddrMgr.h"
-#include "Server.h"
-#include "gtest/NodeUnitTest.h"
-#include "BlockDataManagerConfig.h"
-#include "BDM_mainthread.h"
+
 #include <btc/ecc.h>
-
-#include "ArmoryObject.h"
-#include "Wallets/SyncWallet.h"
-#include "AuthAddressLogic.h"
-
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
@@ -52,7 +52,11 @@ class MarketDataProvider;
 class MDCallbacksQt;
 class QuoteProvider;
 
-class ResolverOneAddress : public ResolverFeed
+namespace ArmorySigner {
+   class BIP32_AssetPath;
+};
+
+class ResolverOneAddress : public ArmorySigner::ResolverFeed
 {
 private:
    SecureBinaryData privKey_;
@@ -60,32 +64,41 @@ private:
    BinaryData hash_;
 
 public:
-   ResolverOneAddress(
-      const SecureBinaryData& privkey,
-      const BinaryData& pubkey) :
-      privKey_(privkey), pubKey_(pubkey)
+   ResolverOneAddress(const SecureBinaryData &privkey
+      , const BinaryData& pubkey)
+      : privKey_(privkey), pubKey_(pubkey)
    {
       hash_ = BtcUtils::hash160(pubKey_);
    }
 
    BinaryData getByVal(const BinaryData& hash)
    {
-      if(hash != hash_)
+      if (hash != hash_) {
          throw std::runtime_error("no pubkey for this hash");
-         
+      }
       return pubKey_;
    }
 
    const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey)
    {
-      if(pubkey != pubKey_)
+      if (pubkey != pubKey_) {
          throw std::runtime_error("no privkey for this pubkey");
-
+      }
       return privKey_;
+   }
+
+   void setBip32PathForPubkey(const BinaryData &, const ArmorySigner::BIP32_AssetPath&) override
+   {
+      throw std::runtime_error("not implemented");
+   }
+
+   ArmorySigner::BIP32_AssetPath resolveBip32PathForPubkey(const BinaryData&) override
+   {
+      throw std::runtime_error("not implemented");
    }
 };
 
-class ResolverManyAddresses : public ResolverFeed
+class ResolverManyAddresses : public ArmorySigner::ResolverFeed
 {
 private:
    std::map<BinaryData, SecureBinaryData> hashToPubKey_;
@@ -94,8 +107,7 @@ private:
 public:
    ResolverManyAddresses(std::set<SecureBinaryData> privKeys)
    {
-      for (auto& privKey : privKeys)
-      {
+      for (const auto& privKey : privKeys) {
          auto&& pubKey = CryptoECDSA().ComputePublicKey(privKey, true);
          auto&& hash = BtcUtils::getHash160(pubKey);
 
@@ -107,21 +119,30 @@ public:
    BinaryData getByVal(const BinaryData& hash)
    {
       auto iter = hashToPubKey_.find(hash);
-      if (iter == hashToPubKey_.end())
+      if (iter == hashToPubKey_.end()) {
          throw std::runtime_error("no pubkey for this hash");
-
+      }
       return iter->second;
    }
 
    const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey)
    {
       auto iter = pubKeyToPriv_.find(pubkey);
-      if (iter == pubKeyToPriv_.end())
+      if (iter == pubKeyToPriv_.end()) {
          throw std::runtime_error("no privkey for this pubkey");
-
+      }
       return iter->second;
    }
 
+   void setBip32PathForPubkey(const BinaryData &, const ArmorySigner::BIP32_AssetPath&) override
+   {
+      throw std::runtime_error("not implemented");
+   }
+
+   ArmorySigner::BIP32_AssetPath resolveBip32PathForPubkey(const BinaryData&) override
+   {
+      throw std::runtime_error("not implemented");
+   }
 };
 
 
@@ -390,7 +411,7 @@ struct ArmoryInstance
    ArmoryInstance();
    ~ArmoryInstance(void);
 
-   std::map<unsigned, BinaryData> mineNewBlock(ScriptRecipient*, unsigned);
+   std::map<unsigned, BinaryData> mineNewBlock(ArmorySigner::ScriptRecipient*, unsigned);
    void pushZC(const BinaryData &, unsigned int blocksUntilMined = 0, bool stage = false);
 
    void setReorgBranchPoint(const BinaryData&);
@@ -434,12 +455,11 @@ public:
    ~TestEnv(void) { shutdown(); }
 
    void shutdown(void);
-   
+
    std::shared_ptr<ApplicationSettings> appSettings() { return appSettings_; }
    std::shared_ptr<TestArmoryConnection> armoryConnection() { return armoryConnection_; }
    std::shared_ptr<ArmoryInstance> armoryInstance() { return armoryInstance_; }
    std::shared_ptr<MockAssetManager> assetMgr() { return assetMgr_; }
-   std::shared_ptr<MockAuthAddrMgr> authAddrMgr() { return authAddrMgr_; }
    std::shared_ptr<BlockchainMonitor> blockMonitor() { return blockMonitor_; }
    std::shared_ptr<ConnectionManager> connectionMgr() { return connMgr_; }
    std::shared_ptr<BaseCelerClient> celerConnection() { return celerConn_; }
@@ -456,7 +476,6 @@ public:
 private:
    std::shared_ptr<ApplicationSettings>  appSettings_;
    std::shared_ptr<MockAssetManager>     assetMgr_;
-   std::shared_ptr<MockAuthAddrMgr>      authAddrMgr_;
    std::shared_ptr<BlockchainMonitor>    blockMonitor_;
    std::shared_ptr<BaseCelerClient>      celerConn_;
    std::shared_ptr<ConnectionManager>    connMgr_;

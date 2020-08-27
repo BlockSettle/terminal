@@ -28,6 +28,10 @@
 #include "TestEnv.h"
 #include "BinaryData.h"
 
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+
 #ifdef WIN32
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
 #elif __linux__
@@ -72,7 +76,19 @@ int main(int argc, char** argv)
    WSAStartup(wVersion, &wsaData);
 #endif
 
-   StaticLogger::loggerPtr = spdlog::basic_logger_mt("unit_tests", "unit_tests.log");
+   std::vector<spdlog::sink_ptr> sinks;
+
+   //create stdout color sink
+   auto stdout_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+
+   // create file sink
+   auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("unit_tests.log");
+
+   sinks.push_back(stdout_sink);
+   sinks.push_back(file_sink);
+
+   StaticLogger::loggerPtr = std::make_shared<spdlog::logger>("", begin(sinks), end(sinks));
+
    StaticLogger::loggerPtr->set_pattern("[%D %H:%M:%S.%e] [%l](%t) %s:%#:%!: %v");
    StaticLogger::loggerPtr->set_level(spdlog::level::debug);
    StaticLogger::loggerPtr->flush_on(spdlog::level::debug);

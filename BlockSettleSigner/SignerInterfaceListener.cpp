@@ -21,7 +21,6 @@
 #include "HeadlessApp.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ZmqContext.h"
-#include "ZMQ_BIP15X_DataConnection.h"
 
 #include "SignerInterfaceListener.h"
 #include "SignerAdapterContainer.h"
@@ -32,14 +31,13 @@ using namespace bs::signer;
 
 SignerInterfaceListener::SignerInterfaceListener(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<QmlBridge> &qmlBridge
-   , const std::shared_ptr<ZmqBIP15XDataConnection> &conn
+   , const std::shared_ptr<DataConnection> &conn
    , SignerAdapter *parent)
    : logger_(logger)
    , connection_(conn)
    , parent_(parent)
    , qmlBridge_(qmlBridge)
-{
-}
+{}
 
 void SignerInterfaceListener::OnDataReceived(const std::string &data)
 {
@@ -100,10 +98,10 @@ void SignerInterfaceListener::processData(const std::string &data)
       onReady(packet.data());
       break;
    case signer::PeerConnectedType:
-      onPeerConnected(packet.data(), true);
+      onPeerConnected(packet.data());
       break;
    case signer::PeerDisconnectedType:
-      onPeerConnected(packet.data(), false);
+      onPeerConnected(packet.data());
       break;
    case signer::DecryptWalletRequestType:
       onDecryptWalletRequested(packet.data());
@@ -142,7 +140,6 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::ExportWoWalletType:
       onExportWO(packet.data(), packet.id());
       break;
-   case signer::CreateWOType:
    case signer::GetDecryptedNodeType:
       onDecryptedKey(packet.data(), packet.id());
       break;
@@ -191,20 +188,24 @@ void SignerInterfaceListener::onReady(const std::string &data)
    emit parent_->ready();
 }
 
-void SignerInterfaceListener::onPeerConnected(const std::string &data, bool connected)
+void SignerInterfaceListener::onPeerConnected(const std::string &data)
 {
-   signer::PeerEvent evt;
+   signer::ClientConnected evt;
    if (!evt.ParseFromString(data)) {
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
       return;
    }
-   const auto ip = QString::fromStdString(evt.ip_address());
-   if (connected) {
-      emit parent_->peerConnected(ip);
+   emit parent_->peerConnected(evt.client_id(), evt.ip_address(), evt.public_key());
+}
+
+void SignerInterfaceListener::onPeerDisconnected(const std::string &data)
+{
+   signer::ClientDisconnected evt;
+   if (!evt.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
    }
-   else {
-      emit parent_->peerDisconnected(ip);
-   }
+   emit parent_->peerDisconnected(evt.client_id());
 }
 
 void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)

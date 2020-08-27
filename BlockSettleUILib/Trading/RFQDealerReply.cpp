@@ -11,7 +11,7 @@
 #include "RFQDealerReply.h"
 #include "ui_RFQDealerReply.h"
 
-#include <spdlog/logger.h>
+#include <spdlog/spdlog.h>
 
 #include <chrono>
 
@@ -93,7 +93,7 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<AutoSignQuoteProvider> &autoSignQuoteProvider
+   , const std::shared_ptr<AutoSignScriptProvider> &autoSignProvider
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager)
 {
    logger_ = logger;
@@ -104,13 +104,15 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    signingContainer_ = container;
    armory_ = armory;
    connectionManager_ = connectionManager;
-   autoSignQuoteProvider_ = autoSignQuoteProvider;
+   autoSignProvider_ = autoSignProvider;
    utxoReservationManager_ = utxoReservationManager;
 
-   connect(autoSignQuoteProvider_->autoQuoter(), &UserScriptRunner::sendQuote, this, &RFQDealerReply::onAQReply, Qt::QueuedConnection);
-   connect(autoSignQuoteProvider_->autoQuoter(), &UserScriptRunner::pullQuoteNotif, this, &RFQDealerReply::pullQuoteNotif, Qt::QueuedConnection);
+   connect((AQScriptRunner *)autoSignProvider_->scriptRunner(), &AQScriptRunner::sendQuote
+      , this, &RFQDealerReply::onAQReply, Qt::QueuedConnection);
+   connect((AQScriptRunner *)autoSignProvider_->scriptRunner(), &AQScriptRunner::pullQuoteNotif
+      , this, &RFQDealerReply::pullQuoteNotif, Qt::QueuedConnection);
 
-   connect(autoSignQuoteProvider_.get(), &AutoSignQuoteProvider::autoSignStateChanged,
+   connect(autoSignProvider_.get(), &AutoSignScriptProvider::autoSignStateChanged,
       this, &RFQDealerReply::onAutoSignStateChanged, Qt::QueuedConnection);
    connect(utxoReservationManager_.get(), &bs::UTXOReservationManager::availableUtxoChanged,
       this, &RFQDealerReply::onUTXOReservationChanged);
@@ -145,16 +147,16 @@ void RFQDealerReply::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMa
    connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &RFQDealerReply::onHDLeafCreated);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreateFailed, this, &RFQDealerReply::onCreateHDWalletError);
 
-   if (autoSignQuoteProvider_->autoQuoter()) {
-      autoSignQuoteProvider_->autoQuoter()->setWalletsManager(walletsManager_);
+   if (autoSignProvider_->scriptRunner()) {
+      autoSignProvider_->scriptRunner()->setWalletsManager(walletsManager_);
    }
 
    auto updateAuthAddresses = [this] {
-      UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
+      UiUtils::fillAuthAddressesComboBoxWithSubmitted(ui_->authenticationAddressComboBox, authAddressManager_);
       onAuthAddrChanged(ui_->authenticationAddressComboBox->currentIndex());
    };
    updateAuthAddresses();
-   connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, this, updateAuthAddresses);
+   connect(authAddressManager_.get(), &AuthAddressManager::AddressListUpdated, this, updateAuthAddresses);
 }
 
 CustomDoubleSpinBox* RFQDealerReply::bidSpinBox() const
@@ -398,7 +400,11 @@ void RFQDealerReply::priceChanged()
 
 void RFQDealerReply::onAuthAddrChanged(int index)
 {
-   authAddr_ = authAddressManager_->GetAddress(authAddressManager_->FromVerifiedIndex(index));
+   auto addressString = ui_->authenticationAddressComboBox->itemText(index).toStdString();
+   if (addressString.empty()) {
+      return;
+   }
+   authAddr_  = bs::Address::fromAddressString(addressString);
    authKey_.clear();
 
    if (authAddr_.empty()) {
@@ -718,14 +724,24 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                         (const bs::Address &changeAddress)
                      {
                         try {
+                           //group 1 for cc, group 2 for xbt
+                           unsigned spendGroup = isSpendCC ? RECIP_GROUP_SPEND_1 : RECIP_GROUP_SPEND_2;
+                           unsigned changGroup = isSpendCC ? RECIP_GROUP_CHANG_1 : RECIP_GROUP_CHANG_2;
+                           
+                           std::map<unsigned, std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>>> recipientMap;
                            const auto recipient = bs::Address::fromAddressString(qrn.requestorRecvAddress).getRecipient(bs::XBTAmount{ spendVal });
+                           std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recVec({recipient});
+                           recipientMap.emplace(spendGroup, std::move(recVec));
+                           
 
                            const auto outSortOrder = isSpendCC ? kBuySortOrder : kSellSortOrder;
                            Codec_SignerState::SignerState state;
                            state.ParseFromString(BinaryData::CreateFromHex(qrn.requestorAuthPublicKey).toBinStr());
-                           const auto txReq = bs::sync::WalletsManager::createPartialTXRequest(spendVal, inputs, changeAddress
-                              , isSpendCC ? 0 : feePerByte, armory_->topBlock(), { recipient }, outSortOrder
-                              , state, false, logger_);
+                           auto txReq = bs::sync::WalletsManager::createPartialTXRequest(spendVal, inputs
+                              , changeAddress
+                              , isSpendCC ? 0 : feePerByte, armory_->topBlock()
+                              , recipientMap, changGroup, state
+                              , false, UINT32_MAX, logger_);
                            logger_->debug("[RFQDealerReply::submitReply] {} input[s], fpb={}, recip={}, "
                               "change amount={}, prevPart={}", inputs.size(), feePerByte
                               , bs::Address::fromAddressString(qrn.requestorRecvAddress).display()
@@ -740,7 +756,8 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
 
                               if (result == bs::error::ErrorCode::NoError) {
                                  replyData->qn.transactionData = BinaryData::fromString(state.SerializeAsString()).toHexStr();
-                                 replyData->utxoRes = utxoReservationManager_->makeNewReservation(txReq.inputs, replyData->qn.quoteRequestId);
+                                 replyData->utxoRes = utxoReservationManager_->makeNewReservation(
+                                    txReq.getInputs(nullptr), replyData->qn.quoteRequestId);
                                  submit(price, replyData);
                               }
                               else {
@@ -954,28 +971,15 @@ void RFQDealerReply::onTransactionDataChanged()
 
 void RFQDealerReply::onMDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields mdFields)
 {
-   const double bid = bs::network::MDField::get(mdFields, bs::network::MDField::PriceBid).value;
-   const double ask = bs::network::MDField::get(mdFields, bs::network::MDField::PriceOffer).value;
-   const double last = bs::network::MDField::get(mdFields, bs::network::MDField::PriceLast).value;
-
    auto &mdInfo = mdInfo_[security.toStdString()];
-   if (bid > 0) {
-      mdInfo.bidPrice = bid;
-   }
-   if (ask > 0) {
-      mdInfo.askPrice = ask;
-   }
-   if (last > 0) {
-      mdInfo.lastPrice = last;
-   }
-
+   mdInfo.merge(bs::network::MDField::get(mdFields));
    if (autoUpdatePrices_ && (currentQRN_.security == security.toStdString())
       && (bestQPrices_.find(currentQRN_.quoteRequestId) == bestQPrices_.end())) {
-      if (!qFuzzyIsNull(bid)) {
-         ui_->spinBoxBidPx->setValue(bid);
+      if (!qFuzzyIsNull(mdInfo.bidPrice)) {
+         ui_->spinBoxBidPx->setValue(mdInfo.bidPrice);
       }
-      if (!qFuzzyIsNull(ask)) {
-         ui_->spinBoxOfferPx->setValue(ask);
+      if (!qFuzzyIsNull(mdInfo.askPrice)) {
+         ui_->spinBoxOfferPx->setValue(mdInfo.askPrice);
       }
    }
 }
@@ -1089,10 +1093,10 @@ void RFQDealerReply::onCelerDisconnected()
 
 void RFQDealerReply::onAutoSignStateChanged()
 {
-   if (autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError) {
-      ui_->comboBoxXbtWallet->setCurrentText(autoSignQuoteProvider_->getAutoSignWalletName());
+   if (autoSignProvider_->autoSignState() == bs::error::ErrorCode::NoError) {
+      ui_->comboBoxXbtWallet->setCurrentText(autoSignProvider_->getAutoSignWalletName());
    }
-   ui_->comboBoxXbtWallet->setEnabled(autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::AutoSignDisabled);
+   ui_->comboBoxXbtWallet->setEnabled(autoSignProvider_->autoSignState() == bs::error::ErrorCode::AutoSignDisabled);
 }
 
 void bs::ui::RFQDealerReply::onQuoteCancelled(const std::string &quoteId)

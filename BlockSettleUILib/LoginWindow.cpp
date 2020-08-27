@@ -16,7 +16,6 @@
 #include "ApplicationSettings.h"
 #include "BSMessageBox.h"
 #include "BsClient.h"
-#include "NetworkSettingsLoader.h"
 #include "UiUtils.h"
 #include "ZmqContext.h"
 #include "ui_LoginWindow.h"
@@ -85,7 +84,6 @@ LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
       ui_->lineEditUsername->setFocus();
    }
 
-
    connect(ui_->signWithEidButton, &QPushButton::clicked, this, &LoginWindow::accept);
 
    timer_.setInterval(500);
@@ -127,11 +125,11 @@ QString LoginWindow::email() const
    return ui_->lineEditUsername->text().toLower();
 }
 
-void LoginWindow::onStartLoginDone(AutheIDClient::ErrorType errorCode)
+void LoginWindow::onStartLoginDone(bool success, const std::string &errorMsg)
 {
-   if (errorCode != AutheIDClient::NoError) {
+   if (!success) {
       setState(Idle);
-      displayError(errorCode);
+      displayError(errorMsg);
       return;
    }
 
@@ -149,7 +147,7 @@ void LoginWindow::onGetLoginResultDone(const BsClientLoginResult &result)
 
    if (result.status != AutheIDClient::NoError) {
       setState(Idle);
-      displayError(result.status);
+      displayError(result.errorMsg);
       return;
    }
 
@@ -189,7 +187,6 @@ void LoginWindow::updateState()
          ui_->signWithEidButton->setEnabled(!ui_->lineEditUsername->text().isEmpty());
          ui_->lineEditUsername->setEnabled(true);
          break;
-      case WaitNetworkSettings:
       case WaitLoginResult:
          ui_->signWithEidButton->setText(tr("Cancel"));
          ui_->signWithEidButton->setEnabled(true);
@@ -199,13 +196,11 @@ void LoginWindow::updateState()
    }
 }
 
-void LoginWindow::displayError(AutheIDClient::ErrorType errorCode)
+void LoginWindow::displayError(const std::string &message)
 {
-   if (errorCode != AutheIDClient::ErrorType::NetworkError) {
-      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed")
-         , AutheIDClient::errorString(errorCode), this);
-      loginErrorBox.exec();
-   }
+   BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed")
+      , QString::fromStdString(message), this);
+   loginErrorBox.exec();
 }
 
 void LoginWindow::onAuthPressed()
@@ -216,8 +211,6 @@ void LoginWindow::onAuthPressed()
    }
 
    timeLeft_ = kAutheIdTimeout;
-
-   setState(WaitLoginResult);
 
    QString login = ui_->lineEditUsername->text().trimmed();
    ui_->lineEditUsername->setText(login);
@@ -232,5 +225,5 @@ void LoginWindow::onAuthPressed()
       settings_->set(ApplicationSettings::rememberLoginUserName, false);
    }
 
-   setState(WaitNetworkSettings);
+   setState(WaitLoginResult);
 }

@@ -55,7 +55,8 @@ public:
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
       , std::unique_ptr<bs::hd::Purpose> walletPurpose
       , const bs::Address &recvAddrIfSet
-      , bool expandTxDialogInfo);
+      , bool expandTxDialogInfo
+      , uint64_t tier1XbtLimit);
    ~ReqXBTSettlementContainer() override;
 
    bool cancel() override;
@@ -74,8 +75,10 @@ public:
    bs::sync::PasswordDialogData toPasswordDialogData(QDateTime timestamp) const override;
 
    void onUnsignedPayinRequested(const std::string& settlementId);
-   void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp);
-   void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp);
+   void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash
+      , QDateTime timestamp);
+   void onSignedPayinRequested(const std::string& settlementId, const BinaryData &payinHash
+      , QDateTime timestamp);
 
 signals:
    void settlementCancelled();
@@ -100,6 +103,7 @@ private:
 
    void initTradesArgs(bs::tradeutils::Args &args, const std::string &settlementId);
 
+private:
    std::shared_ptr<spdlog::logger>           logger_;
    std::shared_ptr<AuthAddressManager>       authAddrMgr_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
@@ -133,11 +137,12 @@ private:
    const bs::Address authAddr_;
    bs::Address       dealerAuthAddress_;
 
-   bs::core::wallet::TXSignRequest        unsignedPayinRequest_;
-   BinaryData                    usedPayinHash_;
-   std::map<UTXO, std::string>   utxosPayinFixed_;
+   bs::core::wallet::TXSignRequest  unsignedPayinRequest_;
+   BinaryData                       expectedPayinHash_;
+   std::map<UTXO, std::string>      utxosPayinFixed_;
 
    bool tradeCancelled_ = false;
+   bool dealerAddressValidationRequired_ = true;
 };
 
 #endif // __REQ_XBT_SETTLEMENT_CONTAINER_H__

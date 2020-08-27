@@ -46,12 +46,17 @@ UtxoReservationToken UtxoReservationToken::makeNewReservation(const std::shared_
    assert(!reserveId.empty());
    assert(UtxoReservation::instance());
 
+   uint64_t sum = 0;
+   for (const auto &utxo : utxos) {
+      sum += utxo.getValue();
+   }
+   if (sum == 0) {
+      //TODO: return invalid result
+   }
+
    if (logger) {
-      uint64_t sum = 0;
-      for (const auto &utxo : utxos) {
-         sum += utxo.getValue();
-      }
-      SPDLOG_LOGGER_DEBUG(logger, "make new UTXO reservation, amount: {}, reserveId: {}", sum, reserveId);
+      SPDLOG_LOGGER_DEBUG(logger, "make new UTXO reservation, amount: {} (from "
+         "{} UTXOs), reserveId: {}", sum, utxos.size(), reserveId);
    }
 
    UtxoReservationToken result;
@@ -70,13 +75,18 @@ void UtxoReservationToken::release()
    }
 
    if (!bs::UtxoReservation::instance()) {
-      SPDLOG_LOGGER_ERROR(logger_, "UtxoReservation::instance is already destroyed");
+      if (logger_) {
+         SPDLOG_LOGGER_ERROR(logger_, "UtxoReservation::instance is already destroyed");
+      }
       return;
    }
 
    bool result = bs::UtxoReservation::instance()->unreserve(reserveId_);
    if (!result && logger_) {
       SPDLOG_LOGGER_ERROR(logger_, "release UTXO reservation failed, reserveId: '{}'", reserveId_);
+   }
+   if (logger_) {
+      SPDLOG_LOGGER_DEBUG(logger_, "{}: released", reserveId_);
    }
    reserveId_.clear();
    onReleasedCb_();

@@ -119,9 +119,11 @@ public:
    Q_INVOKABLE AuthSignWalletObject *createAutheIDSignObject(AutheIDClient::RequestType requestType
       , bs::hd::WalletInfo *walletInfo, const QString &authEidMessage, int expiration = AutheIDClient::kDefaultExpiration, int timestamp = 0);
 
+   // used for add eID
+   Q_INVOKABLE AuthSignWalletObject *createActivateEidObject(const QString &walletId, const QString &authEidMessage, QJSValue callback);
+
    // used for add new eID device
-   Q_INVOKABLE AuthSignWalletObject *createActivateEidObject(const QString &userId
-      , bs::hd::WalletInfo *walletInfo, const QString &authEidMessage);
+   Q_INVOKABLE AuthSignWalletObject *createAddEidObject(bs::hd::WalletInfo *walletInfo, const QString &authEidMessage, QJSValue callback);
 
    // used for remove eID device
    // index: is encKeys index which should be deleted

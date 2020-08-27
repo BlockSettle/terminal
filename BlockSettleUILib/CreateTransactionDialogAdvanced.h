@@ -144,9 +144,16 @@ private:
    void validateAddOutputButton();
    Q_INVOKABLE void validateCreateButton();
 
-   unsigned int AddRecipient(const bs::Address &, double amount, bool isMax = false);
-   void AddRecipients(const std::vector<std::tuple<bs::Address, double, bool>> &);
-   void UpdateRecipientAmount(unsigned int recipId, double amount, bool isMax = false);
+   struct Recipient {
+      bs::Address    address;
+      bs::XBTAmount  amount;
+      bool  isMax{ false };
+   };
+
+   unsigned int AddRecipient(const Recipient &);
+   void AddRecipients(const std::vector<Recipient> &);
+   void UpdateRecipientAmount(unsigned int recipId, const bs::XBTAmount &
+      , bool isMax = false);
    bool FixRecipientsAmount();
    void onOutputRemoved(int rowNumber);
 
@@ -195,6 +202,8 @@ private:
 
    bool        showUnknownWalletWarning_ = false;
    bool        simpleDialogRequested_ = false;
+
+   bs::XBTAmount importedTxTotalFee_{};
 };
 
 #endif // __CREATE_TRANSACTION_DIALOG_ADVANCED_H__

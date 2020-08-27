@@ -17,18 +17,21 @@
 #include <fstream>
 #include <functional>
 #include <spdlog/spdlog.h>
+#include <QHostAddress>
 
+#include "Bip15xServerConnection.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
 #include "DispatchQueue.h"
+#include "GenoaStreamServerConnection.h"
 #include "HeadlessApp.h"
 #include "HeadlessContainerListener.h"
 #include "Settings/HeadlessSettings.h"
 #include "SignerAdapterListener.h"
 #include "SignerVersion.h"
 #include "SystemFileUtils.h"
-#include "ZmqContext.h"
-#include "ZMQ_BIP15X_ServerConnection.h"
+#include "TransportBIP15xServer.h"
+#include "WsServerConnection.h"
 
 #include "bs_signer.pb.h"
 
@@ -41,30 +44,30 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , queue_(queue)
    , controlPasswordStatus_(Blocksettle::Communication::signer::ControlPasswordStatus::RequestedNew)
 {
-   signerPubKey_ = ZmqBIP15XServerConnection::getOwnPubKey(getOwnKeyFileDir(), getOwnKeyFileName());
+   signerPubKey_ = bs::network::TransportBIP15xServer::getOwnPubKey(getOwnKeyFileDir(), getOwnKeyFileName());
 
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
 
    // Only the SignerListener's cookie will be trusted. Supply an empty set of
    // non-cookie trusted clients.
    const auto &cbTrustedClientsSL = [] {
-      return ZmqBIP15XPeers();
+      return bs::network::BIP15xPeers();
    };
 
    const bool readClientCookie = true;
    const bool makeServerCookie = false;
    const std::string absCookiePath = SystemFilePaths::appDataLocation() + "/adapterClientID";
 
-   const auto zmqContext = std::make_shared<ZmqContext>(logger_);
-   guiConnection_ = std::make_unique<ZmqBIP15XServerConnection>(logger_
-      , zmqContext, cbTrustedClientsSL, "", ""
-      , makeServerCookie, readClientCookie, absCookiePath);
-   guiListener_ = std::make_unique<SignerAdapterListener>(this, guiConnection_.get()
+   auto guiWsConn = std::make_unique<WsServerConnection>(logger, WsServerConnectionParams{});
+   guiTransport_ = std::make_shared<bs::network::TransportBIP15xServer>(logger_
+      , cbTrustedClientsSL, "", "", makeServerCookie, readClientCookie
+      , absCookiePath);
+   guiConnection_ = std::make_shared<Bip15xServerConnection>(logger_
+      , std::move(guiWsConn), guiTransport_);
+   guiListener_ = std::make_unique<SignerAdapterListener>(this, guiConnection_
       , logger_, walletsMgr_, queue_, params);
 
-   settings_->setServerIdKey(guiListener_->getServerConn()->getOwnPubKey());
-
-   guiConnection_->setLocalHeartbeatInterval();
+   settings_->setServerIdKey(guiTransport_->getOwnPubKey());
 
    int port = 0;
    bool success = false;
@@ -229,8 +232,8 @@ void HeadlessAppObj::startTerminalsProcessing()
    // The whitelisted key set depends on whether or not the signer is meant to
    // be local (signer invoked with --terminal_id_key) or remote (use a set of
    // trusted terminals).
-   auto getClientIDKeys = [this]() -> ZmqBIP15XPeers {
-      ZmqBIP15XPeers retKeys;
+   auto getClientIDKeys = [this]() -> bs::network::BIP15xPeers {
+      bs::network::BIP15xPeers retKeys;
 
       if (settings_->getTermIDKeyStr().empty()) {
          // We're using a user-defined, whitelisted key set. Make sure the keys are
@@ -253,7 +256,7 @@ void HeadlessAppObj::startTerminalsProcessing()
                   throw std::runtime_error(fmt::format("trusted client list key entry {} has no key", i));
                }
 
-               retKeys.push_back(ZmqBIP15XPeer(name, inKey));
+               retKeys.push_back(bs::network::BIP15xPeer(name, inKey));
             } catch (const std::exception &e) {
                logger_->error("invalid trusted terminal key found: {}: {}", hexValue, e.what());
                continue;
@@ -271,7 +274,7 @@ void HeadlessAppObj::startTerminalsProcessing()
          // We're using a cookie. Only the one key in the cookie will be trusted.
          try {
             BinaryData termIDKey = READHEX(termIDKeyStr);
-            retKeys.push_back(ZmqBIP15XPeer("127.0.0.1", termIDKey));
+            retKeys.push_back(bs::network::BIP15xPeer("127.0.0.1", termIDKey));
          } catch (const std::exception &e) {
             logger_->error("[{}] Local connection requested but key is invalid: {}: {}"
                , __func__, termIDKeyStr, e.what());
@@ -282,15 +285,28 @@ void HeadlessAppObj::startTerminalsProcessing()
       return retKeys;
    };
 
+   WsServerConnectionParams params;
+   if (!settings_->acceptFrom().empty()) {
+      auto subnet = QHostAddress::parseSubnet(QString::fromStdString(settings_->acceptFrom()));
+      if (subnet.first.isNull()) {
+         SPDLOG_LOGGER_ERROR(logger_, "invalid acceptFrom value: {}", settings_->acceptFrom());
+         signerBindStatus_ = bs::signer::BindStatus::Failed;
+         return;
+      }
+      params.filterCallback = [subnet, logger = logger_](const std::string &ipAddr) -> bool {
+         auto parsedIp = QHostAddress(QString::fromStdString(ipAddr));
+         bool result = parsedIp.isInSubnet(subnet.first, subnet.second);
+         SPDLOG_LOGGER_DEBUG(logger, "accept connection from {}: {}", ipAddr, result);
+         return result;
+      };
+   }
+   auto terminalWsConn = std::make_unique<WsServerConnection>(logger_, params);
    // This would stop old server if any
-   terminalConnection_ = std::make_unique<ZmqBIP15XServerConnection>(logger_, zmqContext
+   terminalTransport_ = std::make_shared<bs::network::TransportBIP15xServer>(logger_
       , getClientIDKeys, ourKeyFileDir, ourKeyFileName, makeServerCookie, false
       , absTermCookiePath);
-
-   terminalConnection_->setLocalHeartbeatInterval();
-   if (!settings_->acceptFrom().empty()) {
-      terminalConnection_->setListenFrom({settings_->acceptFrom()});
-   }
+   terminalConnection_ = std::make_unique<Bip15xServerConnection>(logger_
+      , std::move(terminalWsConn), terminalTransport_);
    terminalListener_->SetLimits(settings_->limits());
 
    terminalListener_->resetConnection(terminalConnection_.get());
@@ -381,7 +397,7 @@ bs::error::ErrorCode HeadlessAppObj::changeControlPassword(const SecureBinaryDat
    return bs::error::ErrorCode::NoError;
 }
 
-ZmqBIP15XServerConnection *HeadlessAppObj::connection() const
+ServerConnection *HeadlessAppObj::connection() const
 {
    return terminalConnection_.get();
 }
@@ -507,7 +523,7 @@ void HeadlessAppObj::updateSettings(const Blocksettle::Communication::signer::Se
 
    const auto trustedTerminals = settings_->trustedTerminals();
    if (terminalConnection_ && (trustedTerminals != prevTrustedTerminals)) {
-      ZmqBIP15XPeers updatedKeys;
+      bs::network::BIP15xPeers updatedKeys;
       for (const auto &line : trustedTerminals) {
          const auto colonIndex = line.find(':');
          if (colonIndex == std::string::npos) {
@@ -523,7 +539,7 @@ void HeadlessAppObj::updateSettings(const Blocksettle::Communication::signer::Se
                throw std::invalid_argument("no or malformed key data");
             }
 
-            updatedKeys.push_back(ZmqBIP15XPeer(name, inKey));
+            updatedKeys.push_back(bs::network::BIP15xPeer(name, inKey));
          }
          catch (const std::exception &e) {
             logger_->error("[{}] Trusted client list key entry ({}) has invalid key: {}"
@@ -532,7 +548,7 @@ void HeadlessAppObj::updateSettings(const Blocksettle::Communication::signer::Se
       }
 
       logger_->info("[{}] Updating {} trusted keys", __func__, updatedKeys.size());
-      terminalConnection_->updatePeerKeys(updatedKeys);
+      terminalTransport_->updatePeerKeys(updatedKeys);
    }
 
    if (needReconnect) {

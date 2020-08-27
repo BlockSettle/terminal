@@ -21,7 +21,7 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "UiUtils.h"
 #include "UtxoReservationManager.h"
-
+#include <spdlog/spdlog.h>
 #include <QApplication>
 #include <QClipboard>
 
@@ -122,7 +122,9 @@ void TransactionsWidgetInterface::onRevokeSettlement()
             , amount * BTCNumericTypes::BalanceDivider, args->recvAddr.display()
             , result.settlementAddr.display());
 
-         const auto reqId = signContainer_->signSettlementPayoutTXRequest(result.signRequest
+         //note: signRequest should be a shared_ptr
+         auto signObj = result.signRequest;
+         const auto reqId = signContainer_->signSettlementPayoutTXRequest(signObj
             , { args->settlementId, args->cpAuthPubKey, false }, dlgData);
          if (reqId) {
             revokeIds_.insert(reqId);

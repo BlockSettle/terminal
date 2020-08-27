@@ -90,8 +90,11 @@ public:
    // returns empty address if automatic selected
    bs::Address recvXbtAddressIfSet() const;
 
-   using SubmitRFQCb = std::function<void(const bs::network::RFQ& rfq, bs::UtxoReservationToken ccUtxoRes)>;
-   void setSubmitRFQ(SubmitRFQCb submitRFQCb);
+   using SubmitRFQCb = std::function<void(const std::string &id
+      , const bs::network::RFQ& rfq, bs::UtxoReservationToken ccUtxoRes)>;
+   void setSubmitRFQ(SubmitRFQCb);
+   using CancelRFQCb = std::function<void(const std::string &id)>;
+   void setCancelRFQ(CancelRFQCb);
 
    std::shared_ptr<bs::sync::hd::Wallet> xbtWallet() const;
    UiUtils::WalletsTypes xbtWalletType() const;
@@ -110,6 +113,11 @@ public slots:
 
    void enablePanel();
    void disablePanel();
+
+   void onSendRFQ(const std::string &id, const QString &symbol, double amount, bool buy);
+   void onCancelRFQ(const std::string &id);
+
+   void onMDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
 
 private slots:
    void updateBalances();
@@ -138,6 +146,7 @@ private slots:
    void onCreateWalletClicked();
 
    void onAuthAddrChanged(int);
+   void onSettlLeavesLoaded(unsigned int);
 
    void onUTXOReservationChanged(const std::string& walletId);
 
@@ -163,6 +172,7 @@ private:
 private:
    void showHelp(const QString& helpText);
    void clearHelp();
+   void sendRFQ(const std::string &id);
 
    void updatePanel();
 
@@ -173,8 +183,9 @@ private:
    std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc) const;
    bool isXBTProduct() const;
    bool checkBalance(double qty) const;
+   bool checkAuthAddr(double qty) const;
    bs::network::Side::Type getSelectedSide() const;
-   std::string authKey() const { return authKey_; }
+   std::string authKey() const;
 
    void putRFQ(const bs::network::RFQ &);
    bool existsRFQ(const bs::network::RFQ &);
@@ -197,6 +208,7 @@ private:
 
    void SetCurrentIndicativePrices(const QString& bidPrice, const QString& offerPrice);
    void updateIndicativePrice();
+   double getIndicativePrice() const;
 
    void productSelectionChanged();
 
@@ -207,7 +219,8 @@ private:
    QString getProductToRecv() const;
    bs::XBTAmount getXbtReservationAmountForCc(double quantity, double offerPrice) const;
 
-   void reserveBestUtxoSetAndSubmit(const std::shared_ptr<bs::network::RFQ>& rfq);
+   void reserveBestUtxoSetAndSubmit(const std::string &id
+      , const std::shared_ptr<bs::network::RFQ>& rfq);
 
 private:
    std::unique_ptr<Ui::RFQTicketXBT> ui_;
@@ -219,14 +232,15 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
-   std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
+   std::shared_ptr<bs::UTXOReservationManager>  utxoReservationManager_;
 
-   bs::Address authAddr_;
-   std::string authKey_;
+   mutable bs::Address authAddr_;
+   mutable std::string authKey_;
 
    unsigned int      leafCreateReqId_ = 0;
 
    std::unordered_map<std::string, double>      rfqMap_;
+   std::unordered_map<std::string, std::shared_ptr<bs::network::RFQ>>   pendingRFQs_;
 
    std::unordered_map<std::string, bs::network::Side::Type>         lastSideSelection_;
 
@@ -245,9 +259,15 @@ private:
    QString currentBidPrice_;
    QString currentOfferPrice_;
 
-   SubmitRFQCb submitRFQCb_;
+   SubmitRFQCb submitRFQCb_{};
+   CancelRFQCb cancelRFQCb_{};
 
    bs::FixedXbtInputs fixedXbtInputs_;
+
+   bool  autoRFQenabled_{ false };
+   std::vector<std::string>   deferredRFQs_;
+
+   std::unordered_map<std::string, bs::network::MDInfo>  mdInfo_;
 };
 
 #endif // __RFQ_TICKET_XBT_H__

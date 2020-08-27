@@ -14,7 +14,7 @@
 #include "CheckRecipSigner.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWalletsManager.h"
-
+#include <spdlog/spdlog.h>
 #include <QApplication>
 #include <QDateTime>
 #include <QMutexLocker>
@@ -328,8 +328,11 @@ void TransactionsViewModel::loadAllWallets(bool onNewBlock)
          loadLedgerEntries(onNewBlock);
       }
       else {
+         SPDLOG_LOGGER_DEBUG(logger_, "create new ledger delegate");
          armory_->getWalletsLedgerDelegate(cbWalletsLD);
       }
+   } else {
+      SPDLOG_LOGGER_WARN(logger_, "initial load is not completed yet");
    }
 }
 
@@ -877,6 +880,8 @@ void TransactionsViewModel::onRefreshTxValidity()
       auto newState = validWallet ? validWallet->isTxValid(item->txEntry.txHash) : bs::sync::TxValidity::Invalid;
       if (item->isValid != newState) {
          item->isValid = newState;
+         // Update balance in case lotSize_ is received after CC gen file loaded
+         item->calcAmount(walletsManager_);
          emit dataChanged(index(i, static_cast<int>(Columns::first))
          , index(i, static_cast<int>(Columns::last)));
       }
@@ -905,6 +910,7 @@ void TransactionsViewModel::loadLedgerEntries(bool onNewBlock)
 
          if (inPageCnt == 0) {
             SPDLOG_LOGGER_ERROR(logger, "page count is 0");
+            thisPtr->initialLoadCompleted_ = true;
             return;
          }
 

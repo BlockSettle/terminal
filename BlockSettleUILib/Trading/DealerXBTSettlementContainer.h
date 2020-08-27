@@ -42,6 +42,7 @@ class WalletSignerContainer;
 
 
 class DealerXBTSettlementContainer : public bs::SettlementContainer
+   , public ArmoryCallbackTarget
 {
    Q_OBJECT
 public:
@@ -59,7 +60,8 @@ public:
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
       , std::unique_ptr<bs::hd::Purpose> walletPurpose
       , bs::UtxoReservationToken utxoRes
-      , bool expandTxDialogInfo);
+      , bool expandTxDialogInfo
+      , uint64_t tier1XbtLimit);
    ~DealerXBTSettlementContainer() override;
 
    bool cancel() override;
@@ -79,8 +81,10 @@ public:
 
 public slots:
    void onUnsignedPayinRequested(const std::string& settlementId);
-   void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp);
-   void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin, QDateTime timestamp);
+   void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash
+      , QDateTime timestamp);
+   void onSignedPayinRequested(const std::string& settlementId, const BinaryData &unsignedPayin
+      , const BinaryData &payinHash, QDateTime timestamp);
 
 signals:
    void sendUnsignedPayinToPB(const std::string& settlementId, const bs::network::UnsignedPayinData& unsignedPayinData);
@@ -93,12 +97,13 @@ private slots:
    void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode, std::string errMsg);
 
 private:
-   bool startPayInSigning();
-
    void failWithErrorText(const QString& error, bs::error::ErrorCode code);
 
    void initTradesArgs(bs::tradeutils::Args &args, const std::string &settlementId);
 
+   void onZCReceived(const std::string &, const std::vector<bs::TXEntry> &) override;
+
+private:
    const bs::network::Order   order_;
    std::string    fxProd_;
    const bool     weSellXbt_;
@@ -127,11 +132,14 @@ private:
    unsigned int   payinSignId_ = 0;
    unsigned int   payoutSignId_ = 0;
 
-   BinaryData		usedPayinHash_;
+   BinaryData        expectedPayinHash_;
 
    std::vector<UTXO> utxosPayinFixed_;
    bs::Address       recvAddr_;
    bs::Address       authAddr_;
+
+   std::shared_ptr<AsyncClient::BtcWallet>   settlWallet_;
+   bool requesterAddressShouldBeVerified_ = true;
 };
 
 #endif // __DEALER_XBT_SETTLEMENT_CONTAINER_H__

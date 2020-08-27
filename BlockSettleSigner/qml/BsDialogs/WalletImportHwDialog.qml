@@ -147,22 +147,26 @@ CustomTitleDialogWindow {
             }
 
             CustomButton {
+                primary: true
+                anchors.right: btnAccept.left
+                anchors.bottom: parent.bottom
+                text: qsTr("Rescan")
+
+                onClicked: {
+                    scanUpdateDelay.start();
+                    hwDeviceList.rescan();
+                }
+            }
+
+            CustomButton {
                 id: btnAccept
                 primary: true
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                text: hwDeviceList.isNoDevice ? qsTr("Rescan") : qsTr("Import")
-                enabled: acceptable
+                text: qsTr("Import")
+                enabled: acceptable && hwDeviceList.readyForImport
 
-                onClicked: {
-                    if (hwDeviceList.readyForImport) {
-                        hwDeviceList.importXpub();
-                    } else if (hwDeviceList.isNoDevice) {
-                        scanUpdateDelay.start();
-                        hwDeviceList.rescan();
-                    }
-
-                }
+                onClicked:  hwDeviceList.importXpub();
             }
         }
     }

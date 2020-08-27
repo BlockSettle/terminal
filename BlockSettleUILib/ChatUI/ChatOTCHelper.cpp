@@ -76,7 +76,7 @@ void ChatOTCHelper::onProcessOtcPbMessage(const Blocksettle::Communication::Prox
    otcClient_->processPbMessage(response);
 }
 
-void ChatOTCHelper::onOtcRequestSubmit(bs::network::otc::Peer *peer, const bs::network::otc::Offer& offer)
+void ChatOTCHelper::onOtcRequestSubmit(const bs::network::otc::PeerPtr &peer, const bs::network::otc::Offer& offer)
 {
    if (!peer) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "peer not found");
@@ -90,7 +90,7 @@ void ChatOTCHelper::onOtcRequestSubmit(bs::network::otc::Peer *peer, const bs::n
    }
 }
 
-void ChatOTCHelper::onOtcPullOrReject(bs::network::otc::Peer *peer)
+void ChatOTCHelper::onOtcPullOrReject(const bs::network::otc::PeerPtr &peer)
 {
    if (!peer) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "peer not found");
@@ -104,7 +104,7 @@ void ChatOTCHelper::onOtcPullOrReject(bs::network::otc::Peer *peer)
    }
 }
 
-void ChatOTCHelper::onOtcResponseAccept(bs::network::otc::Peer *peer, const bs::network::otc::Offer& offer)
+void ChatOTCHelper::onOtcResponseAccept(const bs::network::otc::PeerPtr &peer, const bs::network::otc::Offer& offer)
 {
    if (!peer) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "peer not found");
@@ -118,7 +118,7 @@ void ChatOTCHelper::onOtcResponseAccept(bs::network::otc::Peer *peer, const bs::
    }
 }
 
-void ChatOTCHelper::onOtcResponseUpdate(bs::network::otc::Peer *peer, const bs::network::otc::Offer& offer)
+void ChatOTCHelper::onOtcResponseUpdate(const bs::network::otc::PeerPtr &peer, const bs::network::otc::Offer& offer)
 {
    if (!peer) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "peer not found");
@@ -132,7 +132,7 @@ void ChatOTCHelper::onOtcResponseUpdate(bs::network::otc::Peer *peer, const bs::
    }
 }
 
-void ChatOTCHelper::onOtcResponseReject(bs::network::otc::Peer *peer)
+void ChatOTCHelper::onOtcResponseReject(const bs::network::otc::PeerPtr &peer)
 {
    if (!peer) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "peer not found");
@@ -155,7 +155,7 @@ void ChatOTCHelper::onOtcQuoteRequestSubmit(const bs::network::otc::QuoteRequest
    }
 }
 
-void ChatOTCHelper::onOtcQuoteResponseSubmit(bs::network::otc::Peer *peer, const bs::network::otc::QuoteResponse &response)
+void ChatOTCHelper::onOtcQuoteResponseSubmit(const bs::network::otc::PeerPtr &peer, const bs::network::otc::QuoteResponse &response)
 {
    if (!peer) {
       SPDLOG_LOGGER_ERROR(loggerPtr_, "peer not found");

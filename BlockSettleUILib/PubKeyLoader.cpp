@@ -23,9 +23,6 @@ BinaryData PubKeyLoader::loadKey(const KeyType kt) const
 {
    std::string keyString;
    switch (kt) {
-   case KeyType::PublicBridge:
-      keyString = appSettings_->get<std::string>(ApplicationSettings::pubBridgePubKey);
-      break;
    case KeyType::Chat:
       keyString = appSettings_->get<std::string>(ApplicationSettings::chatServerPubKey);
       break;
@@ -34,6 +31,9 @@ BinaryData PubKeyLoader::loadKey(const KeyType kt) const
       break;
    case KeyType::CcServer:
       keyString = appSettings_->get<std::string>(ApplicationSettings::ccServerPubKey);
+      break;
+   case KeyType::ExtConnector:
+      keyString = appSettings_->get<std::string>(ApplicationSettings::ExtConnPubKey);
       break;
    }
 
@@ -53,9 +53,6 @@ BinaryData PubKeyLoader::loadKeyFromResource(KeyType kt, ApplicationSettings::En
 {
    QString filename;
    switch (kt) {
-   case KeyType::PublicBridge:
-      filename = QStringLiteral("pub_");
-      break;
    case KeyType::Chat:
       filename = QStringLiteral("chat_");
       break;
@@ -108,9 +105,6 @@ BinaryData PubKeyLoader::loadKeyFromResource(KeyType kt, ApplicationSettings::En
 bool PubKeyLoader::saveKey(const KeyType kt, const BinaryData &key)
 {
    switch (kt) {
-   case KeyType::PublicBridge:
-      appSettings_->set(ApplicationSettings::pubBridgePubKey, QString::fromStdString(key.toHexStr()));
-      break;
    case KeyType::Chat:
       appSettings_->set(ApplicationSettings::chatServerPubKey, QString::fromStdString(key.toHexStr()));
       break;
@@ -120,11 +114,14 @@ bool PubKeyLoader::saveKey(const KeyType kt, const BinaryData &key)
    case KeyType::CcServer:
       appSettings_->set(ApplicationSettings::ccServerPubKey, QString::fromStdString(key.toHexStr()));
       break;
+   case KeyType::ExtConnector:
+      appSettings_->set(ApplicationSettings::ExtConnPubKey, QString::fromStdString(key.toHexStr()));
+      break;
    }
    return true;
 }
 
-ZmqBipNewKeyCb PubKeyLoader::getApprovingCallback(const KeyType kt
+bs::network::BIP15xNewKeyCb PubKeyLoader::getApprovingCallback(const KeyType kt
    , QWidget *bsMainWindow, const std::shared_ptr<ApplicationSettings> &appSettings)
 {
    // Define the callback that will be used to determine if the signer's BIP
@@ -170,13 +167,57 @@ ZmqBipNewKeyCb PubKeyLoader::getApprovingCallback(const KeyType kt
    };
 }
 
+std::string PubKeyLoader::envNameShort(ApplicationSettings::EnvConfiguration env)
+{
+   switch (env) {
+      case ApplicationSettings::EnvConfiguration::Production:
+         return "prod";
+      case ApplicationSettings::EnvConfiguration::Test:
+         return "test";
+#ifndef PRODUCTION_BUILD
+      case ApplicationSettings::EnvConfiguration::Staging:
+            return "staging";
+      case ApplicationSettings::EnvConfiguration::Custom:
+         return "custom";
+#endif
+   }
+   return "unknown";
+}
+
+std::string PubKeyLoader::serverNameShort(PubKeyLoader::KeyType kt)
+{
+   switch (kt) {
+      case KeyType::Chat:           return "chat";
+      case KeyType::Proxy:          return "proxy";
+      case KeyType::CcServer:       return "cctracker";
+      case KeyType::MdServer:       return "mdserver";
+      case KeyType::Mdhs:           return "mdhs";
+   }
+   return {};
+}
+
+std::string PubKeyLoader::serverHostName(PubKeyLoader::KeyType kt, ApplicationSettings::EnvConfiguration env)
+{
+   return fmt::format("{}-{}.blocksettle.com", serverNameShort(kt), envNameShort(env));
+}
+
+std::string PubKeyLoader::serverHttpPort()
+{
+   return "80";
+}
+
+std::string PubKeyLoader::serverHttpsPort()
+{
+   return "443";
+}
+
 QString PubKeyLoader::serverName(const KeyType kt)
 {
    switch (kt) {
-      case KeyType::PublicBridge:   return QObject::tr("PuB");
       case KeyType::Chat:           return QObject::tr("Chat Server");
       case KeyType::Proxy:          return QObject::tr("Proxy");
       case KeyType::CcServer:       return QObject::tr("CC tracker server");
+      case KeyType::ExtConnector:   return QObject::tr("External Connector");
    }
    return {};
 }

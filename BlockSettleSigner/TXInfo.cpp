@@ -13,9 +13,12 @@
 #include "CheckRecipSigner.h"
 #include "OfflineSigner.h"
 #include "TxClasses.h"
+#include "ScriptRecipient.h"
 #include "Wallets/SyncHDWallet.h"
+
 #include "QWalletInfo.h"
 
+#include <spdlog/spdlog.h>
 #include <QFile>
 
 using namespace bs::wallet;
@@ -184,7 +187,7 @@ QStringList TXInfo::counterPartyRecipients() const
    // Get recipients not listed in our wallets
    // Usable for settlement tx dialog
 
-   std::vector<std::shared_ptr<ScriptRecipient>> recipientsList;
+   std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recipientsList;
    recipientsList = txReq_.getRecipients(containsCounterPartyAddressCb_);
 
    QStringList result;
@@ -202,7 +205,7 @@ QStringList TXInfo::allRecipients() const
    // Get all recipients from this tx
    // Usable for regular tx sign dialog
 
-   std::vector<std::shared_ptr<ScriptRecipient>> recipientsList;
+   std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recipientsList;
    recipientsList = txReq_.getRecipients([](const bs::Address &){ return true; });
 
    QStringList result;

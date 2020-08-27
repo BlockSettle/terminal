@@ -41,7 +41,7 @@ public:
    QByteArray getSessionId();
 
    void initConnection(bool force, AsyncCallBack&& cb = nullptr);
-   void initConnection(QString&& deviceId, AsyncCallBackCall&& cb = nullptr);
+   void initConnection(QString&& deviceId, bool force, AsyncCallBackCall&& cb = nullptr);
    void releaseConnection(AsyncCallBack&& cb = nullptr);
 
    void call(QByteArray&& input, AsyncCallBackCall&& cb);
@@ -56,6 +56,8 @@ private:
    void enumDevices(bool forceAcquire, AsyncCallBack&& cb = nullptr);
    void acquireDevice(AsyncCallBack&& cb = nullptr);
    void post(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb, QByteArray&& input, bool timeout = false);
+
+   void cleanDeviceData();
 
 signals:
    void initialized();

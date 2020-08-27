@@ -20,6 +20,7 @@
 #include <QToolBar>
 #include <QTreeView>
 #include <spdlog/spdlog.h>
+#include <streambuf>
 #include <thread>
 
 #include "ArmoryServersProvider.h"
@@ -27,9 +28,11 @@
 #include "AuthAddressDialog.h"
 #include "AuthAddressManager.h"
 #include "AutheIDClient.h"
+#include "AutoSignQuoteProvider.h"
 #include "BSMarketDataProvider.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
+#include "Bip15xDataConnection.h"
 #include "CCFileManager.h"
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
@@ -50,7 +53,6 @@
 #include "LoginWindow.h"
 #include "MDCallbacksQt.h"
 #include "MarketDataProvider.h"
-#include "NetworkSettingsLoader.h"
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
 #include "NotificationCenter.h"
@@ -61,17 +63,27 @@
 #include "SelectWalletDialog.h"
 #include "Settings/ConfigDialog.h"
 #include "SignersProvider.h"
+#include "SslCaBundle.h"
+#include "SslDataConnection.h"
 #include "StatusBarView.h"
+#include "StringUtils.h"
 #include "SystemFileUtils.h"
 #include "TabWithShortcut.h"
 #include "TransactionsViewModel.h"
 #include "TransactionsWidget.h"
+#include "TransportBIP15x.h"
 #include "UiUtils.h"
+#include "UserScriptRunner.h"
 #include "UtxoReservationManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "WsDataConnection.h"
 
 #include "ui_BSTerminalMainWindow.h"
+
+namespace {
+   const auto kAutoLoginTimer = std::chrono::seconds(10);
+}
 
 BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings
    , BSTerminalSplashScreen& splashScreen, QLockFile &lockFile, QWidget* parent)
@@ -85,6 +97,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    ui_->setupUi(this);
 
    setupShortcuts();
+   setupInfoWidget();
 
    loginButtonText_ = tr("Login");
 
@@ -114,13 +127,13 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    UiUtils::setupIconFont(this);
    NotificationCenter::createInstance(logMgr_->logger(), applicationSettings_, ui_.get(), sysTrayIcon_, this);
 
-   cbApprovePuB_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::PublicBridge
-      , this, applicationSettings_);
    cbApproveChat_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Chat
       , this, applicationSettings_);
    cbApproveProxy_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Proxy
       , this, applicationSettings_);
    cbApproveCcServer_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::CcServer
+      , this, applicationSettings_);
+   cbApproveExtConn_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::ExtConnector
       , this, applicationSettings_);
 
    initConnections();
@@ -164,24 +177,16 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    updateControlEnabledState();
 
    InitWidgets();
-}
 
-void BSTerminalMainWindow::onNetworkSettingsRequired(NetworkSettingsClient client)
-{
-   networkSettingsLoader_ = std::make_unique<NetworkSettingsLoader>(logMgr_->logger()
-      , applicationSettings_->pubBridgeHost(), applicationSettings_->pubBridgePort(), cbApprovePuB_);
+   loginApiKeyEncrypted_ = applicationSettings_->get<std::string>(ApplicationSettings::LoginApiKey);
 
-   connect(networkSettingsLoader_.get(), &NetworkSettingsLoader::succeed, this, [this, client] {
-      networkSettingsReceived(networkSettingsLoader_->settings(), client);
-      networkSettingsLoader_.reset();
-   });
-
-   connect(networkSettingsLoader_.get(), &NetworkSettingsLoader::failed, this, [this](const QString &errorMsg) {
-      showError(tr("Network settings"), errorMsg);
-      networkSettingsLoader_.reset();
-   });
-
-   networkSettingsLoader_->loadSettings();
+#ifdef PRODUCTION_BUILD
+   const bool showEnvSelector = false;
+#else
+   const bool showEnvSelector = true;
+#endif
+   ui_->prodEnvSettings->setVisible(showEnvSelector);
+   ui_->testEnvSettings->setVisible(showEnvSelector);
 }
 
 void BSTerminalMainWindow::onBsConnectionDisconnected()
@@ -198,28 +203,6 @@ void BSTerminalMainWindow::onBsConnectionFailed()
 void BSTerminalMainWindow::onInitWalletDialogWasShown()
 {
    initialWalletCreateDialogShown_ = true;
-}
-
-void BSTerminalMainWindow::onAddrStateChanged()
-{
-   bool canSubmitAuthAddr = (userType_ == bs::network::UserType::Trading)
-         || (userType_ == bs::network::UserType::Dealing);
-
-   if (allowAuthAddressDialogShow_ && authManager_ && authManager_->HasAuthAddr() && authManager_->isAllLoadded()
-      && !authManager_->isAtLeastOneAwaitingVerification() && canSubmitAuthAddr) {
-      allowAuthAddressDialogShow_ = false;
-      BSMessageBox qry(BSMessageBox::question, tr("Authentication Address"), tr("Create Authentication Address")
-         , tr("The Authentication Address verifies you as a Participant of our trading network on the bitcoin blockchain. It is required for access to the Spot XBT market (bitcoin trading).\n\n"
-              "BlockSettle will validate the Authentication Address you submit by funding it with 1'000 satoshis. Once mined six blocks, you have access to our Spot XBT market.\n\n"
-              "Create Authentication Address now?\n"), this);
-      if (qry.exec() == QDialog::Accepted) {
-         openAuthManagerDialog();
-      }
-   }
-
-   if (authManager_->isAtLeastOneAwaitingVerification()) {
-      allowAuthAddressDialogShow_ = false;
-   }
 }
 
 void BSTerminalMainWindow::setWidgetsAuthorized(bool authorized)
@@ -262,7 +245,7 @@ void BSTerminalMainWindow::loadPositionAndShow()
    const auto screen = qApp->screens()[screenNo];
    const float pixelRatio = screen->devicePixelRatio();
    if (pixelRatio > 1.0) {
-      const float coeff = 0.9999;   // some coefficient that prevents oversizing of main window on HiRes display on Windows
+      const float coeff = (float)0.9999;   // some coefficient that prevents oversizing of main window on HiRes display on Windows
       geom.setWidth(geom.width() * coeff);
       geom.setHeight(geom.height() * coeff);
    }
@@ -313,7 +296,7 @@ BSTerminalMainWindow::~BSTerminalMainWindow()
 
 void BSTerminalMainWindow::setupToolbar()
 {
-   action_send_ = new QAction(tr("Create &Transaction"), this);
+   action_send_ = new QAction(tr("Send Bitcoin"), this);
    connect(action_send_, &QAction::triggered, this, &BSTerminalMainWindow::onSend);
 
    action_generate_address_ = new QAction(tr("Generate &Address"), this);
@@ -407,9 +390,31 @@ void BSTerminalMainWindow::setupIcon()
    connect(qApp, SIGNAL(lastWindowClosed()), sysTrayIcon_.get(), SLOT(hide()));
 }
 
+void BSTerminalMainWindow::setupInfoWidget()
+{
+   const bool show = applicationSettings_->get<bool>(ApplicationSettings::ShowInfoWidget);
+   ui_->infoWidget->setVisible(show);
+
+   if (!show) {
+      return;
+   }
+
+   connect(ui_->introductionBtn, &QPushButton::clicked, this, []() {
+      QDesktopServices::openUrl(QUrl(QLatin1String("")));
+   });
+   connect(ui_->setUpBtn, &QPushButton::clicked, this, []() {
+      QDesktopServices::openUrl(QUrl(QLatin1String("https://youtu.be/bvGNi6sBkTo")));
+   });
+   connect(ui_->closeBtn, &QPushButton::clicked, this, [this]() {
+      ui_->infoWidget->setVisible(false);
+      applicationSettings_->set(ApplicationSettings::ShowInfoWidget, false);
+   });
+}
+
 void BSTerminalMainWindow::initConnections()
 {
    connectionManager_ = std::make_shared<ConnectionManager>(logMgr_->logger("message"));
+   connectionManager_->setCaBundle(bs::caBundlePtr(), bs::caBundleSize());
 
    celerConnection_ = std::make_shared<CelerClientProxy>(logMgr_->logger());
    connect(celerConnection_.get(), &BaseCelerClient::OnConnectedToServer, this, &BSTerminalMainWindow::onCelerConnected);
@@ -418,10 +423,13 @@ void BSTerminalMainWindow::initConnections()
 
    mdCallbacks_ = std::make_shared<MDCallbacksQt>();
    mdProvider_ = std::make_shared<BSMarketDataProvider>(connectionManager_
-      , logMgr_->logger("message"), mdCallbacks_.get());
+      , logMgr_->logger("message"), mdCallbacks_.get(), true, false);
    connect(mdCallbacks_.get(), &MDCallbacksQt::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
    connect(mdCallbacks_.get(), &MDCallbacksQt::WaitingForConnectionDetails, this, [this] {
-      onNetworkSettingsRequired(NetworkSettingsClient::MarketData);
+      auto env = static_cast<ApplicationSettings::EnvConfiguration>(
+               applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+      mdProvider_->SetConnectionSettings(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::MdServer, env)
+         , PubKeyLoader::serverHttpsPort());
    });
 }
 
@@ -433,6 +441,7 @@ void BSTerminalMainWindow::LoadWallets()
       ui_->widgetRFQ->setWalletsManager(walletsMgr_);
       ui_->widgetRFQReply->setWalletsManager(walletsMgr_);
       autoSignQuoteProvider_->setWalletsManager(walletsMgr_);
+      autoSignRFQProvider_->setWalletsManager(walletsMgr_);
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, [this] {
       walletsSynched_ = true;
@@ -476,16 +485,9 @@ void BSTerminalMainWindow::InitAuthManager()
    connect(authManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked, this, [](const QString &addr, const QString &state) {
       NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, state });
    });
-   connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, this, &BSTerminalMainWindow::onAddrStateChanged, Qt::QueuedConnection);
    connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, this, [this](const QString &walletId) {
       if (authAddrDlg_ && walletId.isEmpty()) {
          openAuthManagerDialog();
-      }
-   });
-   connect(authManager_.get(), &AuthAddressManager::ConnectionComplete, this, [this]() {
-      if (!authManager_->HaveAuthWallet() && !createAuthWalletDialogShown_ && !promoteToPrimaryShown_) {
-         createAuthWalletDialogShown_ = true;
-         createAuthWallet(nullptr);
       }
    });
 }
@@ -551,11 +553,11 @@ std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createRemoteSigner(
       , SignContainer::OpMode::Remote, false
       , signersProvider_->remoteSignerKeysDir(), signersProvider_->remoteSignerKeysFile(), ourNewKeyCB);
 
-   ZmqBIP15XPeers peers;
+   bs::network::BIP15xPeers peers;
    for (const auto &signer : signersProvider_->signers()) {
       try {
          const BinaryData signerKey = BinaryData::CreateFromHex(signer.key.toStdString());
-         peers.push_back(ZmqBIP15XPeer(signer.serverId(), signerKey));
+         peers.push_back(bs::network::BIP15xPeer(signer.serverId(), signerKey));
       }
       catch (const std::exception &e) {
          logMgr_->logger()->warn("[{}] invalid signer key: {}", __func__, e.what());
@@ -674,7 +676,7 @@ void BSTerminalMainWindow::updateControlEnabledState()
    }
    // Do not allow login until wallets synced (we need to check if user has primary wallet or not).
    // Should be OK for both local and remote signer.
-   ui_->pushButtonUser->setEnabled(walletsSynched_);
+   ui_->pushButtonUser->setEnabled(walletsSynched_ && loginApiKeyEncrypted().empty());
 }
 
 bool BSTerminalMainWindow::isMDLicenseAccepted() const
@@ -731,7 +733,6 @@ void BSTerminalMainWindow::InitAssets()
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityInfo, walletsMgr_.get(), &bs::sync::WalletsManager::onCCSecurityInfo);
    connect(ccFileManager_.get(), &CCFileManager::Loaded, this, &BSTerminalMainWindow::onCCLoaded);
    connect(ccFileManager_.get(), &CCFileManager::LoadingFailed, this, &BSTerminalMainWindow::onCCInfoMissing);
-   connect(ccFileManager_.get(), &CCFileManager::definitionsLoadedFromPub, this, &BSTerminalMainWindow::onCcDefinitionsLoadedFromPub);
 
    connect(mdCallbacks_.get(), &MDCallbacksQt::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
 
@@ -760,7 +761,7 @@ void BSTerminalMainWindow::tryInitChatView()
    // First we need to create and initialize chatClientServicePtr_ (which lives in background thread and so is async).
    // For this it needs to know chat server address where to connect and chat keys used for chat messages encryption.
    // Only after that we could init ui_->widgetChat and try to login after that.
-   if (chatInitState_ != ChatInitState::NoStarted || !networkSettingsReceived_ || !gotChatKeys_) {
+   if (chatInitState_ != ChatInitState::NoStarted || !gotChatKeys_) {
       return;
    }
    chatInitState_ = ChatInitState::InProgress;
@@ -787,14 +788,15 @@ void BSTerminalMainWindow::tryInitChatView()
       tryLoginIntoChat();
    });
 
+   auto env = static_cast<ApplicationSettings::EnvConfiguration>(
+            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+
    Chat::ChatSettings chatSettings;
    chatSettings.connectionManager = connectionManager_;
-
    chatSettings.chatPrivKey = chatPrivKey_;
    chatSettings.chatPubKey = chatPubKey_;
-
-   chatSettings.chatServerHost = applicationSettings_->get<std::string>(ApplicationSettings::chatServerHost);
-   chatSettings.chatServerPort = applicationSettings_->get<std::string>(ApplicationSettings::chatServerPort);
+   chatSettings.chatServerHost = PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Chat, env);
+   chatSettings.chatServerPort = PubKeyLoader::serverHttpPort();
    chatSettings.chatDbFile = applicationSettings_->get<QString>(ApplicationSettings::chatDbFile);
 
    chatClientServicePtr_->Init(logMgr_->logger("chat"), chatSettings);
@@ -845,6 +847,7 @@ void BSTerminalMainWindow::tryGetChatKeys()
       chatPrivKey_ = node.getPrivateKey();
       gotChatKeys_ = true;
       tryInitChatView();
+      initApiKeyLogins();
    });
 }
 
@@ -1071,8 +1074,10 @@ void BSTerminalMainWindow::connectArmory()
 void BSTerminalMainWindow::connectCcClient()
 {
    if (trackerClient_) {
-      bool testnet = applicationSettings_->get<NetworkType>(ApplicationSettings::netType) == NetworkType::TestNet;
-      trackerClient_->openConnection("185.213.153.37", testnet ? "19003" : "9003", cbApproveCcServer_);
+      auto env = static_cast<ApplicationSettings::EnvConfiguration>(
+               applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+      auto trackerHostName = PubKeyLoader::serverHostName(PubKeyLoader::KeyType::CcServer, env);
+      trackerClient_->openConnection(trackerHostName, PubKeyLoader::serverHttpPort(), cbApproveCcServer_);
    }
 }
 
@@ -1105,7 +1110,6 @@ bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
       });
       if (fullWalletIt != hdWallets.end()) {
          auto wallet = *fullWalletIt;
-         promoteToPrimaryShown_ = true;
          BSMessageBox qry(BSMessageBox::question, tr("Promote to primary wallet"), tr("Promote to primary wallet?")
             , tr("To trade through BlockSettle, you are required to have a wallet which"
                " supports the sub-wallets required to interact with the system. Each Terminal"
@@ -1270,9 +1274,10 @@ void BSTerminalMainWindow::setupMenu()
    };
 
    SupportDialog *supportDlg = new SupportDialog(this);
-   auto supportDlgCb = [supportDlg] (int tab) {
-      return [supportDlg, tab]() {
+   auto supportDlgCb = [supportDlg] (int tab, QString title) {
+      return [supportDlg, tab, title]() {
          supportDlg->setTab(tab);
+         supportDlg->setWindowTitle(title);
          supportDlg->show();
       };
    };
@@ -1284,8 +1289,9 @@ void BSTerminalMainWindow::setupMenu()
    connect(ui_->actionEnterColorCoinToken, &QAction::triggered, this, &BSTerminalMainWindow::openCCTokenDialog);
    connect(ui_->actionAbout, &QAction::triggered, aboutDlgCb(0));
    connect(ui_->actionVersion, &QAction::triggered, aboutDlgCb(3));
-   connect(ui_->actionGuides, &QAction::triggered, supportDlgCb(0));
-   connect(ui_->actionContact, &QAction::triggered, supportDlgCb(1));
+   connect(ui_->actionGuides, &QAction::triggered, supportDlgCb(0, QObject::tr("Guides")));
+   connect(ui_->actionVideoTutorials, &QAction::triggered, supportDlgCb(1, QObject::tr("Video Tutorials")));
+   connect(ui_->actionContact, &QAction::triggered, supportDlgCb(2, QObject::tr("Support")));
 
    onUserLoggedOut();
 
@@ -1294,6 +1300,7 @@ void BSTerminalMainWindow::setupMenu()
    ui_->menubar->setCornerWidget(ui_->loginGroupWidget);
 #endif
 
+#ifndef PRODUCTION_BUILD
    auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
    bool isProd = envType == ApplicationSettings::EnvConfiguration::Production;
    ui_->prodEnvSettings->setEnabled(!isProd);
@@ -1304,33 +1311,20 @@ void BSTerminalMainWindow::setupMenu()
    connect(ui_->testEnvSettings, &QPushButton::clicked, this, [this] {
       promptSwitchEnv(false);
    });
+#else
+   ui_->prodEnvSettings->setVisible(false);
+   ui_->testEnvSettings->setVisible(false);
+#endif // !PRODUCTION_BUILD
 }
 
 void BSTerminalMainWindow::openAuthManagerDialog()
 {
-   allowAuthAddressDialogShow_ = false;
-   openAuthDlgVerify(QString());
-}
-
-void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
-{
-   const auto showAuthDlg = [this, addrToVerify] {
-      authAddrDlg_->show();
-      QApplication::processEvents();
-      authAddrDlg_->setAddressToVerify(addrToVerify);
-   };
-   if (authManager_->HaveAuthWallet()) {
-      showAuthDlg();
-   } else {
-      createAuthWallet([this, showAuthDlg] {
-         QMetaObject::invokeMethod(this, showAuthDlg);
-      });
-   }
+   authAddrDlg_->exec();
 }
 
 void BSTerminalMainWindow::openConfigDialog(bool showInNetworkPage)
 {
-   ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, signersProvider_, signContainer_, this);
+   ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, signersProvider_, signContainer_, walletsMgr_, this);
    connect(&configDialog, &ConfigDialog::reconnectArmory, this, &BSTerminalMainWindow::onArmoryNeedsReconnect);
 
    if (showInNetworkPage) {
@@ -1366,25 +1360,7 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::onLogin()
 {
-   onNetworkSettingsRequired(NetworkSettingsClient::Login);
-}
-
-void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings)
-{
-#ifdef PRODUCTION_BUILD
-   if (networkSettings.status == Blocksettle::Communication::GetNetworkSettingsResponse_Status_LIVE_TRADING_COMING_SOON) {
-      BSMessageBox mbox(BSMessageBox::question, tr("Login to BlockSettle"), tr("Live trading is coming soon...")
-                   , tr("In the meantime, you can try p2p trading in our testnet environment. Would you like to do so now?"), this);
-      mbox.setCancelButtonText(tr("Cancel"));
-      mbox.setConfirmButtonText(tr("Yes"));
-      int rc = mbox.exec();
-      if (rc == QDialog::Accepted) {
-         switchToTestEnv();
-         restartTerminal();
-      }
-      return;
-   }
-#endif
+   auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
 
    if (walletsSynched_ && !walletsMgr_->getPrimaryWallet()) {
       addDeferredDialog([this] {
@@ -1399,24 +1375,12 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
       return;
    }
 
+   auto bsClient = createClient();
+
    auto logger = logMgr_->logger("proxy");
-
-   BsClientParams params;
-   params.connectAddress = networkSettings.proxy.host;
-   params.connectPort = networkSettings.proxy.port;
-   params.context = std::make_shared<ZmqContext>(logger);
-   params.newServerKeyCallback = cbApproveProxy_;
-
-   auto bsClient = std::make_shared<BsClient>(logger, params);
-
-   // Must be connected before loginDialog.exec call (balances could be received before loginDialog.exec returns)!
-   connect(bsClient.get(), &BsClient::balanceLoaded, assetManager_.get(), &AssetManager::fxBalanceLoaded);
-   connect(bsClient.get(), &BsClient::balanceUpdated, assetManager_.get(), &AssetManager::onAccountBalanceLoaded);
-
    LoginWindow loginDialog(logger, bsClient, applicationSettings_, this);
 
    int rc = loginDialog.exec();
-
    if (rc != QDialog::Accepted && !loginDialog.result()) {
       return;
    }
@@ -1424,7 +1388,6 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
    bool isRegistered = (loginDialog.result()->userType == bs::network::UserType::Market
       || loginDialog.result()->userType == bs::network::UserType::Trading
       || loginDialog.result()->userType == bs::network::UserType::Dealing);
-   auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
 
    if (!isRegistered && envType == ApplicationSettings::EnvConfiguration::Test) {
       auto createTestAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlTest);
@@ -1456,81 +1419,7 @@ void BSTerminalMainWindow::onLoginProceed(const NetworkSettings &networkSettings
       return;
    }
 
-   currentUserLogin_ = loginDialog.email();
-
-   networkSettingsReceived(networkSettings, NetworkSettingsClient::MarketData);
-
-   chatTokenData_ = loginDialog.result()->chatTokenData;
-   chatTokenSign_ = loginDialog.result()->chatTokenSign;
-   tryLoginIntoChat();
-
-   bsClient_ = bsClient;
-   ccFileManager_->setBsClient(bsClient);
-   authAddrDlg_->setBsClient(bsClient);
-
-   ccFileManager_->setCcAddressesSigned(loginDialog.result()->ccAddressesSigned);
-   authManager_->setAuthAddressesSigned(loginDialog.result()->authAddressesSigned);
-
-   connect(bsClient_.get(), &BsClient::disconnected, orderListModel_.get(), &OrderListModel::onDisconnected);
-   connect(bsClient_.get(), &BsClient::disconnected, this, &BSTerminalMainWindow::onBsConnectionDisconnected);
-   connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
-
-   // connect to RFQ dialog
-   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetRFQ, &RFQRequestWidget::onMessageFromPB);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClient::sendUnsignedPayin);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::sendSignedPayinToPB, bsClient_.get(), &BsClient::sendSignedPayin);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::sendSignedPayoutToPB, bsClient_.get(), &BsClient::sendSignedPayout);
-
-   connect(ui_->widgetRFQ, &RFQRequestWidget::cancelXBTTrade, bsClient_.get(), &BsClient::sendCancelOnXBTTrade);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::cancelCCTrade, bsClient_.get(), &BsClient::sendCancelOnCCTrade);
-
-   // connect to quote dialog
-   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetRFQReply, &RFQReplyWidget::onMessageFromPB);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClient::sendUnsignedPayin);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayinToPB, bsClient_.get(), &BsClient::sendSignedPayin);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayoutToPB, bsClient_.get(), &BsClient::sendSignedPayout);
-
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::cancelXBTTrade, bsClient_.get(), &BsClient::sendCancelOnXBTTrade);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::cancelCCTrade, bsClient_.get(), &BsClient::sendCancelOnCCTrade);
-
-   connect(ui_->widgetChat, &ChatWidget::emailHashRequested, bsClient_.get(), &BsClient::findEmailHash);
-   connect(bsClient_.get(), &BsClient::emailHashReceived, ui_->widgetChat, &ChatWidget::onEmailHashReceived);
-
-   connect(bsClient_.get(), &BsClient::processPbMessage, orderListModel_.get(), &OrderListModel::onMessageFromPB);
-
-   utxoReservationMgr_->setFeeRatePb(loginDialog.result()->feeRatePb);
-   connect(bsClient_.get(), &BsClient::feeRateReceived, this, [this] (float feeRate) {
-      utxoReservationMgr_->setFeeRatePb(feeRate);
-   });
-
-   authManager_->setCelerClient(celerConnection_);
-
-   setLoginButtonText(currentUserLogin_);
-   setWidgetsAuthorized(true);
-
-   // We don't use password here, BsProxy will manage authentication
-   SPDLOG_LOGGER_DEBUG(logMgr_->logger(), "got celer login: {}", loginDialog.result()->celerLogin);
-   celerConnection_->LoginToServer(bsClient_.get(), loginDialog.result()->celerLogin, loginDialog.email().toStdString());
-
-   ui_->widgetWallets->setUsername(currentUserLogin_);
-   action_logout_->setVisible(false);
-   action_login_->setEnabled(false);
-
-   // Market data, charts and chat should be available for all Auth eID logins
-   mdProvider_->SubscribeToMD();
-
-   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetChat, &ChatWidget::onProcessOtcPbMessage);
-   connect(ui_->widgetChat, &ChatWidget::sendOtcPbMessage, bsClient_.get(), &BsClient::sendPbMessage);
-
-   connect(bsClient_.get(), &BsClient::ccGenAddrUpdated, this, [this](const BinaryData &ccGenAddrData) {
-      ccFileManager_->setCcAddressesSigned(ccGenAddrData);
-   });
-
-   accountEnabled_ = true;
-   onAccountTypeChanged(loginDialog.result()->userType, loginDialog.result()->enabled);
-   connect(bsClient_.get(), &BsClient::accountStateChanged, this, [this](bs::network::UserType userType, bool enabled) {
-      onAccountTypeChanged(userType, enabled);
-   });
+   activateClient(bsClient, *loginDialog.result(), loginDialog.email().toStdString());
 }
 
 void BSTerminalMainWindow::onLogout()
@@ -1567,6 +1456,8 @@ void BSTerminalMainWindow::onUserLoggedIn()
    ui_->actionLinkAdditionalBankAccount->setEnabled(true);
 
    ccFileManager_->ConnectToCelerClient(celerConnection_);
+   ui_->widgetRFQ->onUserConnected(userType_);
+   ui_->widgetRFQReply->onUserConnected(userType_);
 
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
    const auto &deferredDialog = [this, userId] {
@@ -1603,10 +1494,12 @@ void BSTerminalMainWindow::onAccountTypeChanged(bs::network::UserType userType, 
 {
    userType_ = userType;
 
-   if (enabled != accountEnabled_) {
+   if (enabled != accountEnabled_ && userType != bs::network::UserType::Chat) {
       accountEnabled_ = enabled;
       NotificationCenter::notify(enabled ? bs::ui::NotifyType::AccountEnabled : bs::ui::NotifyType::AccountDisabled, {});
    }
+
+   authManager_->setUserType(userType);
 
    ui_->widgetChat->setUserType(enabled ? userType : bs::network::UserType::Chat);
 }
@@ -1636,41 +1529,6 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
    case BaseCelerClient::LoginError:
       logMgr_->logger("ui")->debug("[BSTerminalMainWindow::onCelerConnectionError] login failed. Probably user do not have BS matching account");
       break;
-   }
-}
-
-void BSTerminalMainWindow::createAuthWallet(const std::function<void()> &cb)
-{
-   if (celerConnection_->tradingAllowed()) {
-      const auto &deferredDialog = [this, cb]{
-         const auto lbdCreateAuthWallet = [this, cb] {
-            QMetaObject::invokeMethod(this, [this, cb] {
-               if (walletsMgr_->getAuthWallet()) {
-                  if (cb) {
-                     cb();
-                  }
-                  // Primary wallet is one with auth wallet and so we could try to grab chat keys now
-                  tryGetChatKeys();
-               }
-               else if (!walletsMgr_->hdWallets().empty()) {
-                  BSMessageBox createAuthReq(BSMessageBox::question, tr("Authentication Wallet")
-                     , tr("Create Authentication Wallet")
-                     , tr("You don't have a sub-wallet in which to hold Authentication Addresses."
-                        " Would you like to create one?"), this);
-                  if (createAuthReq.exec() == QDialog::Accepted) {
-                     authManager_->createAuthWallet(cb);
-                  }
-               }
-            });
-         };
-         if (walletsMgr_->hasPrimaryWallet()) {
-            lbdCreateAuthWallet();
-         }
-         else {
-            createWallet(true, lbdCreateAuthWallet);
-         }
-      };
-      addDeferredDialog(deferredDialog);
    }
 }
 
@@ -1831,14 +1689,16 @@ void BSTerminalMainWindow::onCCLoaded()
    }
 }
 
-void BSTerminalMainWindow::onCCInfoMissing()
+void BSTerminalMainWindow::onCCInfoMissing(CcGenFileError error)
 {
-   // do nothing here since we don't know if user will need Private Market before logon to Celer
-}
-
-void BSTerminalMainWindow::onCcDefinitionsLoadedFromPub()
-{
-   promoteToPrimaryIfNeeded();
+   if (error == CcGenFileError::InvalidSign) {
+      addDeferredDialog([this] {
+         BSMessageBox(BSMessageBox::warning, tr("CC gen")
+            , tr("CC gen file load failed")
+            , tr("Invalid CC gen file sign detected. Please login to download new CC gen file.")
+            , this).exec();
+      });
+   }
 }
 
 void BSTerminalMainWindow::setupShortcuts()
@@ -1862,6 +1722,18 @@ void BSTerminalMainWindow::setupShortcuts()
    auto transactionsTabShortcut = new QShortcut(QKeySequence(QStringLiteral("Ctrl+5")), this);
    transactionsTabShortcut->setContext(Qt::WindowShortcut);
    connect(transactionsTabShortcut, &QShortcut::activated, [this](){ ui_->tabWidget->setCurrentIndex(4);});
+
+   auto explorerTabShortcut = new QShortcut(QKeySequence(QStringLiteral("Ctrl+6")), this);
+   explorerTabShortcut->setContext(Qt::WindowShortcut);
+   connect(explorerTabShortcut, &QShortcut::activated, [this](){ ui_->tabWidget->setCurrentIndex(5);});
+
+   auto chartsTabShortcut = new QShortcut(QKeySequence(QStringLiteral("Ctrl+7")), this);
+   chartsTabShortcut->setContext(Qt::WindowShortcut);
+   connect(chartsTabShortcut, &QShortcut::activated, [this](){ ui_->tabWidget->setCurrentIndex(6);});
+
+   auto chatTabShortcut = new QShortcut(QKeySequence(QStringLiteral("Ctrl+8")), this);
+   chatTabShortcut->setContext(Qt::WindowShortcut);
+   connect(chatTabShortcut, &QShortcut::activated, [this](){ ui_->tabWidget->setCurrentIndex(7);});
 
    // TODO: Switch ChatWidget to TabWithShortcut if needed (it will ignore shortcuts right now)
 
@@ -2015,79 +1887,106 @@ void BSTerminalMainWindow::InitWidgets()
 
    ui_->widgetRFQ->initWidgets(mdProvider_, mdCallbacks_, applicationSettings_);
 
-   auto quoteProvider = std::make_shared<QuoteProvider>(assetManager_, logMgr_->logger("message"));
+   auto quoteProvider = std::make_shared<QuoteProvider>(assetManager_
+      , logMgr_->logger("message"));
    quoteProvider->ConnectToCelerClient(celerConnection_);
 
-   autoSignQuoteProvider_ = std::make_shared<AutoSignQuoteProvider>(logMgr_->logger(), assetManager_, quoteProvider
-      , applicationSettings_, signContainer_, mdCallbacks_, celerConnection_);
+   const auto &logger = logMgr_->logger();
+   const auto aqScriptRunner = new AQScriptRunner(quoteProvider, signContainer_
+      , mdCallbacks_, assetManager_, logger);
+   if (!applicationSettings_->get<std::string>(ApplicationSettings::ExtConnName).empty()
+      && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnHost).empty()
+      && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPort).empty()
+      && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPubKey).empty()) {
+      ExtConnections extConns;
+      logger->debug("Setting up ext connection");
+
+      const auto &clientKeyPath = SystemFilePaths::appDataLocation() + "/extConnKey";
+      bs::network::ws::PrivateKey privKeyClient;
+      std::ifstream privKeyReader(clientKeyPath, std::ios::binary);
+      if (privKeyReader.is_open()) {
+         std::string str;
+         str.assign(std::istreambuf_iterator<char>(privKeyReader)
+            , std::istreambuf_iterator<char>());
+         privKeyClient.reserve(str.size());
+         std::for_each(str.cbegin(), str.cend(), [&privKeyClient](char c) {
+            privKeyClient.push_back(c);
+         });
+      }
+      if (privKeyClient.empty()) {
+         logger->debug("Creating new ext connection key");
+         privKeyClient = bs::network::ws::generatePrivKey();
+         std::ofstream privKeyWriter(clientKeyPath, std::ios::out|std::ios::binary);
+         privKeyWriter.write((char *)&privKeyClient[0], privKeyClient.size());
+         const auto &pubKeyClient = bs::network::ws::publicKey(privKeyClient);
+         applicationSettings_->set(ApplicationSettings::ExtConnOwnPubKey
+            , QString::fromStdString(bs::toHex(pubKeyClient)));
+      }
+      const auto &certClient = bs::network::ws::generateSelfSignedCert(privKeyClient);
+      const auto &srvPubKey = applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPubKey);
+      SslDataConnectionParams clientParams;
+      clientParams.useSsl = true;
+      clientParams.cert = certClient;
+      clientParams.privKey = privKeyClient;
+      clientParams.allowSelfSigned = true;
+      clientParams.skipHostNameChecks = true;
+      clientParams.verifyCallback = [srvPubKey, this](const std::string &pubKey) -> bool {
+         if (BinaryData::CreateFromHex(srvPubKey).toBinStr() == pubKey) {
+            return true;
+         }
+         QMetaObject::invokeMethod(this, [this, pubKey] {
+            BSMessageBox(BSMessageBox::warning, tr("External Connection error")
+               , tr("Invalid server key: %1").arg(QString::fromStdString(bs::toHex(pubKey)))).exec();
+         });
+         return false;
+      };
+
+      auto connection = std::make_shared<SslDataConnection>(logger, clientParams);
+      if (connection->openConnection(applicationSettings_->get<std::string>(ApplicationSettings::ExtConnHost)
+         , applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPort)
+         , aqScriptRunner->getExtConnListener().get())) {
+         extConns[applicationSettings_->get<std::string>(ApplicationSettings::ExtConnName)] = connection;
+      }
+      aqScriptRunner->setExtConnections(extConns);
+   }
+
+   autoSignQuoteProvider_ = std::make_shared<AutoSignAQProvider>(logger
+      , aqScriptRunner, applicationSettings_, signContainer_, celerConnection_);
+
+   const auto rfqScriptRunner = new RFQScriptRunner(mdCallbacks_, logger, nullptr);
+   autoSignRFQProvider_ = std::make_shared<AutoSignRFQProvider>(logger
+      , rfqScriptRunner, applicationSettings_, signContainer_, celerConnection_);
 
    auto dialogManager = std::make_shared<DialogManager>(this);
 
-   ui_->widgetRFQ->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, assetManager_
-      , dialogManager, signContainer_, armory_, connectionManager_, utxoReservationMgr_, orderListModel_.get());
-   ui_->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdCallbacks_, assetManager_
-      , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_, autoSignQuoteProvider_, utxoReservationMgr_, orderListModel_.get());
+   ui_->widgetRFQ->init(logger, celerConnection_, authManager_, quoteProvider
+      , assetManager_, dialogManager, signContainer_, armory_, autoSignRFQProvider_
+      , utxoReservationMgr_, orderListModel_.get());
+   ui_->widgetRFQReply->init(logger, celerConnection_, authManager_
+      , quoteProvider, mdCallbacks_, assetManager_, applicationSettings_, dialogManager
+      , signContainer_, armory_, connectionManager_, autoSignQuoteProvider_
+      , utxoReservationMgr_, orderListModel_.get());
 
-   connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this, &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this
+      , &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this
+      , &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
 
    connect(ui_->tabWidget, &QTabWidget::tabBarClicked, this,
-      [requestRFQ = QPointer<RFQRequestWidget>(ui_->widgetRFQ), replyRFQ = QPointer<RFQReplyWidget>(ui_->widgetRFQReply),
-         tabWidget = QPointer<QTabWidget>(ui_->tabWidget)](int index) {
-
+      [requestRFQ = QPointer<RFQRequestWidget>(ui_->widgetRFQ)
+         , replyRFQ = QPointer<RFQReplyWidget>(ui_->widgetRFQReply)
+         , tabWidget = QPointer<QTabWidget>(ui_->tabWidget)] (int index)
+   {
       if (!tabWidget) {
          return;
       }
-
       if (requestRFQ && requestRFQ == tabWidget->widget(index)) {
          requestRFQ->forceCheckCondition();
       }
-
       if (replyRFQ && replyRFQ == tabWidget->widget(index)) {
          replyRFQ->forceCheckCondition();
       }
-
    });
-}
-
-void BSTerminalMainWindow::networkSettingsReceived(const NetworkSettings &settings, NetworkSettingsClient client)
-{
-   if (client == NetworkSettingsClient::Login) {
-      onLoginProceed(settings);
-      return;
-   }
-
-   if (!settings.marketData.host.empty()) {
-      applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(settings.marketData.host));
-      applicationSettings_->set(ApplicationSettings::mdServerPort, settings.marketData.port);
-   }
-   if (!settings.mdhs.host.empty()) {
-      applicationSettings_->set(ApplicationSettings::mdhsHost, QString::fromStdString(settings.mdhs.host));
-      applicationSettings_->set(ApplicationSettings::mdhsPort, settings.mdhs.port);
-   }
-#ifndef NDEBUG
-   QString chost = applicationSettings_->get<QString>(ApplicationSettings::chatServerHost);
-   QString cport = applicationSettings_->get<QString>(ApplicationSettings::chatServerPort);
-   if (!settings.chat.host.empty()) {
-      if (chost.isEmpty()) {
-         applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
-      }
-      if (cport.isEmpty()) {
-         applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
-      }
-   }
-#else
-   if (!settings.chat.host.empty()) {
-      applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
-      applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
-   }
-#endif // NDEBUG
-
-   mdProvider_->SetConnectionSettings(applicationSettings_->get<std::string>(ApplicationSettings::mdServerHost)
-      , applicationSettings_->get<std::string>(ApplicationSettings::mdServerPort));
-
-   networkSettingsReceived_ = true;
-   tryInitChatView();
 }
 
 void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
@@ -2099,23 +1998,26 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
 
    auto promoteToPrimary = [this](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
       addDeferredDialog([this, wallet] {
-         promoteToPrimaryShown_ = true;
          BSMessageBox qry(BSMessageBox::question, tr("Upgrade Wallet"), tr("Enable Trading")
-            , tr("BlockSettle requires you to hold sub-wallets able to interact with our trading system.</br></br>"
-                 "Do you wish to create them now?<br/><br/>"
-                 "For more information regarding our settlement models, please consult our ") +
-                  QStringLiteral("<a href=\"%1\"><span style=\"text-decoration: underline; color: %2;\">Trading Procedures</span></a>")
-                  .arg(QStringLiteral("http://pubb.blocksettle.com/PDF/BlockSettle%20Trading%20Procedures.pdf"))
-                  .arg(BSMessageBox::kUrlColor)
+            , tr("BlockSettle requires you to hold sub-wallets with Authentication Addresses to interact with our trading system.<br><br>"
+                  "You will be able to trade up to %1 bitcoin per trade once your Authentication Address has been submitted.<br><br>"
+                  "After %2 trades your Authentication Address will be verified and your trading limit removed.<br><br>"
+                  "Do you wish to enable XBT trading?").arg(bs::XBTAmount(tradeSettings_->xbtTier1Limit).GetValueBitcoin()).arg(tradeSettings_->authRequiredSettledTrades)
             , this);
          qry.enableRichText();
          if (qry.exec() == QDialog::Accepted) {
-            allowAuthAddressDialogShow_ = true;
             walletsMgr_->PromoteHDWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {
                if (result == bs::error::ErrorCode::NoError) {
                   // If wallet was promoted to primary we could try to get chat keys now
                   tryGetChatKeys();
                   walletsMgr_->setUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
+
+                  if (celerConnection_->GetSubmittedAuthAddressSet().empty()) {
+                     addDeferredDialog([this]()
+                                       {
+                                          openAuthManagerDialog();
+                                       });
+                  }
                }
             });
          }
@@ -2218,6 +2120,225 @@ void BSTerminalMainWindow::processDeferredDialogs()
       deferredDialogs_.pop();
    }
    deferredDialogRunning_ = false;
+}
+
+std::shared_ptr<BsClient> BSTerminalMainWindow::createClient()
+{
+   auto logger = logMgr_->logger("proxy");
+   auto bsClient = std::make_shared<BsClient>(logger);
+
+   bs::network::BIP15xParams params;
+   params.ephemeralPeers = true;
+   const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger, params);
+   bip15xTransport->setKeyCb(cbApproveProxy_);
+
+   auto wsConnection = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
+   auto connection = std::make_unique<Bip15xDataConnection>(logger, std::move(wsConnection), bip15xTransport);
+   auto env = static_cast<ApplicationSettings::EnvConfiguration>(
+            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+   bool result = connection->openConnection(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Proxy, env)
+      , PubKeyLoader::serverHttpPort(), bsClient.get());
+   assert(result);
+   bsClient->setConnection(std::move(connection));
+
+   // Must be connected before loginDialog.exec call (balances could be received before loginDialog.exec returns)!
+   connect(bsClient.get(), &BsClient::balanceLoaded, assetManager_.get(), &AssetManager::fxBalanceLoaded);
+   connect(bsClient.get(), &BsClient::balanceUpdated, assetManager_.get(), &AssetManager::onAccountBalanceLoaded);
+
+   return bsClient;
+}
+
+void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsClient
+   , const BsClientLoginResult &result, const std::string &email)
+{
+   currentUserLogin_ = QString::fromStdString(email);
+
+   chatTokenData_ = result.chatTokenData;
+   chatTokenSign_ = result.chatTokenSign;
+   tryLoginIntoChat();
+
+   bsClient_ = bsClient;
+   ccFileManager_->setBsClient(bsClient);
+   authAddrDlg_->setBsClient(bsClient);
+
+   tradeSettings_ = std::make_shared<bs::TradeSettings>(result.tradeSettings);
+   applicationSettings_->set(ApplicationSettings::SubmittedAddressXbtLimit, static_cast<quint64>(tradeSettings_->xbtTier1Limit));
+
+   authManager_->initLogin(celerConnection_, tradeSettings_);
+
+   ccFileManager_->setCcAddressesSigned(result.ccAddressesSigned);
+   authManager_->setAuthAddressesSigned(result.authAddressesSigned);
+
+   connect(bsClient_.get(), &BsClient::disconnected, orderListModel_.get(), &OrderListModel::onDisconnected);
+   connect(bsClient_.get(), &BsClient::disconnected, this, &BSTerminalMainWindow::onBsConnectionDisconnected);
+   connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
+
+   // connect to RFQ dialog
+   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetRFQ, &RFQRequestWidget::onMessageFromPB);
+   connect(bsClient_.get(), &BsClient::disconnected, ui_->widgetRFQ, &RFQRequestWidget::onUserDisconnected);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClient::sendUnsignedPayin);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::sendSignedPayinToPB, bsClient_.get(), &BsClient::sendSignedPayin);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::sendSignedPayoutToPB, bsClient_.get(), &BsClient::sendSignedPayout);
+
+   connect(ui_->widgetRFQ, &RFQRequestWidget::cancelXBTTrade, bsClient_.get(), &BsClient::sendCancelOnXBTTrade);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::cancelCCTrade, bsClient_.get(), &BsClient::sendCancelOnCCTrade);
+
+   // connect to quote dialog
+   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetRFQReply, &RFQReplyWidget::onMessageFromPB);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClient::sendUnsignedPayin);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayinToPB, bsClient_.get(), &BsClient::sendSignedPayin);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayoutToPB, bsClient_.get(), &BsClient::sendSignedPayout);
+
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::cancelXBTTrade, bsClient_.get(), &BsClient::sendCancelOnXBTTrade);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::cancelCCTrade, bsClient_.get(), &BsClient::sendCancelOnCCTrade);
+
+   connect(ui_->widgetChat, &ChatWidget::emailHashRequested, bsClient_.get(), &BsClient::findEmailHash);
+   connect(bsClient_.get(), &BsClient::emailHashReceived, ui_->widgetChat, &ChatWidget::onEmailHashReceived);
+
+   connect(bsClient_.get(), &BsClient::processPbMessage, orderListModel_.get(), &OrderListModel::onMessageFromPB);
+
+   utxoReservationMgr_->setFeeRatePb(result.feeRatePb);
+   connect(bsClient_.get(), &BsClient::feeRateReceived, this, [this] (float feeRate) {
+      utxoReservationMgr_->setFeeRatePb(feeRate);
+   });
+
+   setLoginButtonText(currentUserLogin_);
+   setWidgetsAuthorized(true);
+
+   // We don't use password here, BsProxy will manage authentication
+   SPDLOG_LOGGER_DEBUG(logMgr_->logger(), "got celer login: {}", result.celerLogin);
+   celerConnection_->LoginToServer(bsClient_.get(), result.celerLogin, email);
+
+   ui_->widgetWallets->setUsername(currentUserLogin_);
+   action_logout_->setVisible(false);
+   action_login_->setEnabled(false);
+
+   // Market data, charts and chat should be available for all Auth eID logins
+   mdProvider_->SubscribeToMD();
+
+   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetChat, &ChatWidget::onProcessOtcPbMessage);
+   connect(ui_->widgetChat, &ChatWidget::sendOtcPbMessage, bsClient_.get(), &BsClient::sendPbMessage);
+
+   connect(bsClient_.get(), &BsClient::ccGenAddrUpdated, this, [this](const BinaryData &ccGenAddrData) {
+      ccFileManager_->setCcAddressesSigned(ccGenAddrData);
+   });
+
+   accountEnabled_ = true;
+   onAccountTypeChanged(result.userType, result.enabled);
+   connect(bsClient_.get(), &BsClient::accountStateChanged, this, [this](bs::network::UserType userType, bool enabled) {
+      onAccountTypeChanged(userType, enabled);
+   });
+
+   connect(bsClient_.get(), &BsClient::tradingStatusChanged, this, [](bool tradingEnabled) {
+      NotificationCenter::notify(tradingEnabled ? bs::ui::NotifyType::TradingEnabledOnPB : bs::ui::NotifyType::TradingDisabledOnPB, {});
+   });
+}
+
+const std::string &BSTerminalMainWindow::loginApiKeyEncrypted() const
+{
+   return loginApiKeyEncrypted_;
+}
+
+void BSTerminalMainWindow::initApiKeyLogins()
+{
+   if (loginTimer_ || loginApiKeyEncrypted().empty() || !gotChatKeys_) {
+      return;
+   }
+   loginTimer_ = new QTimer(this);
+   connect(loginTimer_, &QTimer::timeout, this, [this] {
+      tryLoginUsingApiKey();
+   });
+   tryLoginUsingApiKey();
+   loginTimer_->start(kAutoLoginTimer);
+}
+
+void BSTerminalMainWindow::tryLoginUsingApiKey()
+{
+   if (loginApiKeyEncrypted().empty() || autoLoginState_ != AutoLoginState::Idle) {
+      return;
+   }
+
+   auto logger = logMgr_->logger("proxy");
+   autoLoginClient_ = createClient();
+
+   auto apiKeyErrorCb = [this, logger](AutoLoginState newState, const QString &errorMsg) {
+      // Do not show related errors multiple times
+      if (autoLoginState_ == AutoLoginState::Idle || autoLoginState_ == AutoLoginState::Failed) {
+         return;
+      }
+      SPDLOG_LOGGER_ERROR(logger, "authorization failed: {}", errorMsg.toStdString());
+      autoLoginState_ = newState;
+      autoLoginClient_ = nullptr;
+      if (autoLoginLastErrorMsg_ != errorMsg) {
+         autoLoginLastErrorMsg_ = errorMsg;
+         BSMessageBox(BSMessageBox::critical, tr("API key login")
+            , tr("Login failed")
+            , errorMsg
+            , this).exec();
+      }
+   };
+
+   connect(autoLoginClient_.get(), &BsClient::connected, this, [this, logger, apiKeyErrorCb] {
+      connect(autoLoginClient_.get(), &BsClient::authorizeDone, this, [this, logger, apiKeyErrorCb]
+            (BsClient::AuthorizeError error, const std::string &email) {
+         if (error != BsClient::AuthorizeError::NoError) {
+            switch (error) {
+               case BsClient::AuthorizeError::UnknownIpAddr:
+                  apiKeyErrorCb(AutoLoginState::Failed, tr("Unexpected IP address"));
+                  break;
+               case BsClient::AuthorizeError::UnknownApiKey:
+                  apiKeyErrorCb(AutoLoginState::Failed, tr("API key not found"));
+                  break;
+               case BsClient::AuthorizeError::Timeout:
+                  apiKeyErrorCb(AutoLoginState::Idle, tr("Request timeout"));
+                  break;
+               default:
+                  apiKeyErrorCb(AutoLoginState::Idle, tr("Unknown server error"));
+                  break;
+            }
+            return;
+         }
+
+         connect(autoLoginClient_.get(), &BsClient::getLoginResultDone, this, [this, logger, email, apiKeyErrorCb]
+               (const BsClientLoginResult &result) {
+            if (result.status != AutheIDClient::NoError) {
+               apiKeyErrorCb(AutoLoginState::Idle, tr("Login failed"));
+               return;
+            }
+            activateClient(autoLoginClient_, result, email);
+            autoLoginState_ = AutoLoginState::Connected;
+            autoLoginClient_ = nullptr;
+            autoLoginLastErrorMsg_.clear();
+         });
+         autoLoginClient_->getLoginResult();
+      });
+
+      SecureBinaryData apiKeyEncCopy;
+      try {
+         apiKeyEncCopy = SecureBinaryData::CreateFromHex(loginApiKeyEncrypted());
+      } catch (...) {
+         apiKeyErrorCb(AutoLoginState::Failed, tr("Encrypted API key invalid"));
+         return;
+      }
+
+      ConfigDialog::decryptData(walletsMgr_, signContainer_, apiKeyEncCopy, [this, apiKeyErrorCb]
+         (ConfigDialog::EncryptError error, const SecureBinaryData &data) {
+         if (error != ConfigDialog::EncryptError::NoError) {
+            apiKeyErrorCb(AutoLoginState::Failed, ConfigDialog::encryptErrorStr(error));
+            return;
+         }
+         autoLoginClient_->authorize(data.toBinStr());
+      });
+   });
+
+   connect(autoLoginClient_.get(), &BsClient::disconnected, this, [logger, apiKeyErrorCb] {
+      apiKeyErrorCb(AutoLoginState::Idle, tr("Proxy disconnected"));
+   });
+   connect(autoLoginClient_.get(), &BsClient::connectionFailed, this, [logger, apiKeyErrorCb] {
+      apiKeyErrorCb(AutoLoginState::Idle, tr("Proxy connection failed"));
+   });
+
+   autoLoginState_ = AutoLoginState::Connecting;
 }
 
 void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &deferredDialog)

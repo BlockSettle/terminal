@@ -115,13 +115,20 @@ AuthSignWalletObject *QmlFactory::createAutheIDSignObject(AutheIDClient::Request
    return authObject;
 }
 
-AuthSignWalletObject *QmlFactory::createActivateEidObject(const QString &userId, WalletInfo *walletInfo, const QString &authEidMessage)
+AuthSignWalletObject *QmlFactory::createActivateEidObject(const QString &walletId, const QString &authEidMessage, QJSValue callback)
 {
-   logger_->debug("[QmlFactory] activate wallet {} for {}", walletInfo->walletId().toStdString(), userId.toStdString());
    AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, settings_, connectionManager_);
-   walletInfo->setEncKeys(QStringList() << (userId + QStringLiteral("::")));
    authObject->connectToServer();
-   authObject->signWallet(AutheIDClient::ActivateWallet, walletInfo, authEidMessage);
+   authObject->activateWallet(walletId, authEidMessage, callback);
+   QQmlEngine::setObjectOwnership(authObject, QQmlEngine::JavaScriptOwnership);
+   return authObject;
+}
+
+AuthSignWalletObject *QmlFactory::createAddEidObject(WalletInfo *walletInfo, const QString &authEidMessage, QJSValue callback)
+{
+   AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, settings_, connectionManager_);
+   authObject->connectToServer();
+   authObject->addDevice(walletInfo->walletId(), authEidMessage, callback, walletInfo->email());
    QQmlEngine::setObjectOwnership(authObject, QQmlEngine::JavaScriptOwnership);
    return authObject;
 }

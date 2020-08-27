@@ -33,7 +33,7 @@
 #include <QFileDialog>
 #include <QKeyEvent>
 #include <QPushButton>
-
+#include <spdlog/spdlog.h>
 #include <stdexcept>
 
 static const float kDustFeePerByte = 3.0;
@@ -800,23 +800,23 @@ void CreateTransactionDialogAdvanced::onXBTAmountChanged(const QString &text)
 
 void CreateTransactionDialogAdvanced::onSelectInputs()
 {
-   const double prevBalance = transactionData_->GetTransactionSummary().availableBalance;
-   const double spendBalance = transactionData_->GetTotalRecipientsAmount();
-   const double totalFee = transactionData_->GetTransactionSummary().totalFee / BTCNumericTypes::BalanceDivider;
+   const uint64_t prevBalance = transactionData_->GetTransactionSummary().availableBalance * BTCNumericTypes::BalanceDivider;
+   const auto &spendBalance = transactionData_->GetTotalRecipientsAmount();
+   const uint64_t totalFee = transactionData_->GetTransactionSummary().totalFee;
    CoinControlDialog dlg(transactionData_->getSelectedInputs(), allowAutoSelInputs_, this);
    if (dlg.exec() == QDialog::Accepted) {
       SetInputs(dlg.selectedInputs());
    }
 
-   const double curBalance = transactionData_->GetTransactionSummary().availableBalance;
-   if (curBalance < (spendBalance + totalFee)) {
+   const uint64_t curBalance = transactionData_->GetTransactionSummary().availableBalance * BTCNumericTypes::BalanceDivider;
+   if (curBalance < (spendBalance.GetValue() + totalFee)) {
       BSMessageBox lowInputs(BSMessageBox::question, tr("Insufficient Input Amount")
          , tr("The output[s] exceed the value of the input[s]. Do you wish to delete some output[s]?"));
       if (lowInputs.exec() == QDialog::Accepted) {
          while (outputsModel_->rowCount({})) {
             RemoveOutputByRow(0);
-            if (curBalance >= (transactionData_->GetTotalRecipientsAmount()
-               + transactionData_->GetTransactionSummary().totalFee / BTCNumericTypes::BalanceDivider)) {
+            if (curBalance >= (transactionData_->GetTotalRecipientsAmount().GetValue()
+               + transactionData_->GetTransactionSummary().totalFee)) {
                break;
             }
          }
@@ -829,9 +829,10 @@ void CreateTransactionDialogAdvanced::onSelectInputs()
 
 void CreateTransactionDialogAdvanced::onAddOutput()
 {
+   const bs::XBTAmount curVal{ currentValue_ };
    if (outputRow_ >= 0) {
       const auto &outputId = outputsModel_->GetOutputId(outputRow_);
-      UpdateRecipientAmount(outputId, currentValue_, false);
+      UpdateRecipientAmount(outputId, curVal, false);
 
       outputRow_ = -1;
       ui_->lineEditAddress->clear();
@@ -842,11 +843,11 @@ void CreateTransactionDialogAdvanced::onAddOutput()
    }
    else {
       currentAddress_ = bs::Address::fromAddressString(ui_->lineEditAddress->text().trimmed().toStdString());
-      const double maxValue = transactionData_->CalculateMaxAmount(currentAddress_);
-      bool maxAmount = std::abs(maxValue
-         - transactionData_->GetTotalRecipientsAmount() - currentValue_) <= 0.00000001;
+      const auto &maxValue = transactionData_->CalculateMaxAmount(currentAddress_);
+      bool maxAmount = std::abs(maxValue - curVal
+         - transactionData_->GetTotalRecipientsAmount()) <= 1;
 
-      AddRecipient(currentAddress_, currentValue_, maxAmount);
+      AddRecipient({ currentAddress_, curVal, maxAmount });
 
       maxAmount |= FixRecipientsAmount();
 
@@ -872,26 +873,28 @@ void CreateTransactionDialogAdvanced::updateOutputButtonTitle()
 }
 
 // Nothing is being done with isMax right now. We should use it or lose it.
-unsigned int CreateTransactionDialogAdvanced::AddRecipient(const bs::Address &address, double amount, bool isMax)
+unsigned int CreateTransactionDialogAdvanced::AddRecipient(const Recipient &recip)
 {
    const auto recipientId = transactionData_->RegisterNewRecipient();
-   transactionData_->UpdateRecipientAddress(recipientId, address);
-   transactionData_->UpdateRecipientAmount(recipientId, amount, isMax);
+   transactionData_->UpdateRecipientAddress(recipientId, recip.address);
+   transactionData_->UpdateRecipientAmount(recipientId, recip.amount, recip.isMax);
 
    // add to the model
-   outputsModel_->AddRecipient(recipientId, QString::fromStdString(address.display()), amount);
+   outputsModel_->AddRecipient(recipientId
+      , QString::fromStdString(recip.address.display()), recip.amount);
 
    return recipientId;
 }
 
-void CreateTransactionDialogAdvanced::AddRecipients(const std::vector<std::tuple<bs::Address, double, bool>> &recipients)
+void CreateTransactionDialogAdvanced::AddRecipients(const std::vector<Recipient> &recipients)
 {
-   std::vector<std::tuple<unsigned int, QString, double>> modelRecips;
+   std::vector<std::tuple<unsigned int, QString, bs::XBTAmount>> modelRecips;
    for (const auto &recip : recipients) {
       const auto recipientId = transactionData_->RegisterNewRecipient();
-      transactionData_->UpdateRecipientAddress(recipientId, std::get<0>(recip));
-      transactionData_->UpdateRecipientAmount(recipientId, std::get<1>(recip), std::get<2>(recip));
-      modelRecips.push_back({recipientId, QString::fromStdString(std::get<0>(recip).display()), std::get<1>(recip)});
+      transactionData_->UpdateRecipientAddress(recipientId, recip.address);
+      transactionData_->UpdateRecipientAmount(recipientId, recip.amount, recip.isMax);
+      modelRecips.push_back({recipientId, QString::fromStdString(recip.address.display())
+         , recip.amount});
    }
    QMetaObject::invokeMethod(outputsModel_, [this, modelRecips] { outputsModel_->AddRecipients(modelRecips); });
 }
@@ -902,7 +905,7 @@ void CreateTransactionDialogAdvanced::onMaxPressed()
 
    if (outputRow_ >= 0) {
       const auto maxValue = transactionData_->CalculateMaxAmount({});
-      if (maxValue > 0) {
+      if (maxValue.GetValue() > 0) {
          const auto &outputId = outputsModel_->GetOutputId(outputRow_);
          const auto prevValue = transactionData_->GetRecipientAmount(outputId);
          lineEditAmount()->setText(UiUtils::displayAmount(maxValue + prevValue));
@@ -916,14 +919,13 @@ bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
    if (!transactionData_->totalFee()) {
       return false;
    }
-   const double totalFee = UiUtils::amountToBtc(transactionData_->totalFee());
-   double diffMax = transactionData_->GetTransactionSummary().availableBalance
-      - transactionData_->GetTotalRecipientsAmount() - totalFee;
-   const double newTotalFee = diffMax + totalFee;
+   const uint64_t totalFee = transactionData_->totalFee();
+   int64_t diffMax = transactionData_->GetTransactionSummary().availableBalance * BTCNumericTypes::BalanceDivider
+      - transactionData_->GetTotalRecipientsAmount().GetValue() - totalFee;
+   const uint64_t newTotalFee = diffMax + totalFee;
 
    size_t maxOutputSize = 0;
    for (const auto &recipId : transactionData_->allRecipientIds()) {
-
       const auto recip = transactionData_->GetScriptRecipient(recipId);
       if (!recip) {
          continue;
@@ -962,7 +964,8 @@ bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
    return false;
 }
 
-void CreateTransactionDialogAdvanced::UpdateRecipientAmount(unsigned int recipId, double amount, bool isMax)
+void CreateTransactionDialogAdvanced::UpdateRecipientAmount(unsigned int recipId
+   , const bs::XBTAmount &amount, bool isMax)
 {
    transactionData_->UpdateRecipientAmount(recipId, amount, isMax);
    outputsModel_->UpdateRecipientAmount(recipId, amount);
@@ -970,19 +973,20 @@ void CreateTransactionDialogAdvanced::UpdateRecipientAmount(unsigned int recipId
 
 bool CreateTransactionDialogAdvanced::isCurrentAmountValid() const
 {
-   if (qFuzzyIsNull(currentValue_)) {
+   const bs::XBTAmount curVal{ currentValue_ };
+   if (!curVal.GetValue()) {
       return false;
    }
-   double maxAmount = 0;
+   bs::XBTAmount maxAmount;
    if (outputRow_ >= 0) {
       const auto &outputId = outputsModel_->GetOutputId(outputRow_);
-      const auto prevValue = transactionData_->GetRecipientAmount(outputId);
+      const auto &prevValue = transactionData_->GetRecipientAmount(outputId);
       maxAmount = transactionData_->CalculateMaxAmount({}) + prevValue;
    }
    else {
       maxAmount = transactionData_->CalculateMaxAmount(currentAddress_);
    }
-   if ((maxAmount - currentValue_) < -0.00000001) {  // 1 satoshi difference is allowed due to rounding error
+   if ((maxAmount - curVal) < -1) {  // 1 satoshi difference is allowed due to rounding error
       UiUtils::setWrongState(ui_->lineEditAmount, true);
       return false;
    }
@@ -995,11 +999,12 @@ void CreateTransactionDialogAdvanced::validateAddOutputButton()
    updateOutputButtonTitle();
    ui_->pushButtonMax->setEnabled(currentAddress_.isValid());
 
+   const bs::XBTAmount curVal{ currentValue_ };
    bool hasAmountChanged = true;
    if (outputRow_ >= 0) {
       const auto &outputId = outputsModel_->GetOutputId(outputRow_);
-      const auto prevValue = transactionData_->GetRecipientAmount(outputId);
-      if (qFuzzyCompare(prevValue, currentValue_)) {
+      const auto &prevValue = transactionData_->GetRecipientAmount(outputId);
+      if (prevValue == curVal) {
          hasAmountChanged = false;
       }
    }
@@ -1024,8 +1029,8 @@ void CreateTransactionDialogAdvanced::SetInputs(const std::vector<UTXO> &inputs)
    usedInputsModel_->updateInputs(inputs);
 
    const auto maxAmt = transactionData_->CalculateMaxAmount();
-   const double recipSumAmt = transactionData_->GetTotalRecipientsAmount();
-   if (!qFuzzyCompare(maxAmt, recipSumAmt)) {
+   const auto &recipSumAmt = transactionData_->GetTotalRecipientsAmount();
+   if (maxAmt != recipSumAmt) {
       for (const auto &recip : transactionData_->allRecipientIds()) {
          const auto recipAmt = transactionData_->GetRecipientAmount(recip);
          transactionData_->UpdateRecipientAmount(recip, recipAmt, false);
@@ -1083,6 +1088,10 @@ void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsi
 
    if (feeValues.empty()) {
       feeSelectionChanged(0);
+   }
+
+   if (!importedTxTotalFee_.isZero()) {
+      SetPredefinedFee(importedTxTotalFee_.GetValue());
    }
 }
 
@@ -1199,7 +1208,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
 
    ui_->pushButtonShowSimple->setEnabled(false);
 
-   const auto &tx = transactions[0];
+   const auto &tx = transactions.at(0);
    if (!tx.serializedTx.empty()) {    // signed TX
       ui_->textEditComment->insertPlainText(QString::fromStdString(tx.comment));
 
@@ -1300,7 +1309,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
          }
          thisPtr->usedInputsModel_->updateInputs(utxos);
 
-         std::vector<std::tuple<bs::Address, double, bool>> recipients;
+         std::vector<Recipient> recipients;
          for (int i = tx.getNumTxOut() - 1; i >= 0; --i) {
             TxOut out = tx.getTxOutCopy(i);
             const auto addr = bs::Address::fromTxOut(out);
@@ -1308,7 +1317,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                thisPtr->SetFixedChangeAddress(QString::fromStdString(addr.display()));
             }
             else {
-               recipients.push_back({ addr, out.getValue() / BTCNumericTypes::BalanceDivider, false });
+               recipients.push_back({ addr, bs::XBTAmount{out.getValue()}, false });
             }
             totalVal -= out.getValue();
          }
@@ -1340,15 +1349,15 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       }
 
       ui_->textEditComment->insertPlainText(QString::fromStdString(tx.comment));
-      thisPtr->transactionData_->setFixedInputs(tx.inputs);
+      thisPtr->transactionData_->setFixedInputs(tx.getInputs(nullptr));
 
       if (selectedWalletId.empty()) {
-         thisPtr->usedInputsModel_->updateInputs(tx.inputs);
+         thisPtr->usedInputsModel_->updateInputs(tx.getInputs(nullptr));
          thisPtr->ui_->comboBoxWallets->hide();
          thisPtr->ui_->labelWallet->hide();
       }
       else {
-         auto cbInputsReceived = [thisPtr, inputs = tx.inputs]{
+         auto cbInputsReceived = [thisPtr, inputs = tx.getInputs(nullptr)]{
             if (!thisPtr) {
                return;
             }
@@ -1362,6 +1371,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       thisPtr->ui_->labelBal->hide();
 
       const auto summary = thisPtr->transactionData_->GetTransactionSummary();
+      importedTxTotalFee_ = bs::XBTAmount(tx.fee);
 
       if (tx.change.value) {
          SetFixedChangeAddress(QString::fromStdString(tx.change.address.display()));
@@ -1369,10 +1379,11 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       SetPredefinedFee(tx.fee);
       labelEstimatedFee()->setText(UiUtils::displayAmount(tx.fee));
 
-      std::vector<std::tuple<bs::Address, double, bool>> recipients;
-      for (const auto &recip : tx.recipients) {
+      std::vector<Recipient> recipients;
+      for (unsigned i=0; i<tx.armorySigner_.getTxOutCount(); i++) {
+         auto recip = tx.armorySigner_.getRecipient(i);
          const auto addr = bs::Address::fromRecipient(recip);
-         recipients.push_back({ addr, recip->getValue() / BTCNumericTypes::BalanceDivider, false });
+         recipients.push_back({ addr, bs::XBTAmount{recip->getValue()}, false });
       }
       AddRecipients(recipients);
 
@@ -1671,7 +1682,7 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::Swithc
       else {
          // set details from first recipient
          simpleDialog->preSetAddress(QString::fromStdString(transactionData_->GetRecipientAddress(recipientIdList[0]).display()));
-         simpleDialog->preSetValue(transactionData_->GetRecipientAmount(recipientIdList[0]));
+         simpleDialog->preSetValue(transactionData_->GetRecipientAmount(recipientIdList[0]).GetValueBitcoin());
       }
    }
 

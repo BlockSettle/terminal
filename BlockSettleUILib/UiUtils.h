@@ -77,6 +77,7 @@ namespace UiUtils
    QValidator::State ValidateDoubleString(QString &input, int &pos, const int decimals);
 
    template <typename T> QString displayAmount(T value);
+   QString displayAmount(const bs::XBTAmount &);
 
    double parseAmountBtc(const QString& text);
 
@@ -135,7 +136,9 @@ namespace UiUtils
    };
    int fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
       , int walletTypes);
-   void fillAuthAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager>& authAddressManager);
+
+   void fillAuthAddressesComboBoxWithSubmitted(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager>& authAddressManager);
+
    void fillRecvAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::Wallet>& targetWallet);
    void fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox
       , const std::shared_ptr<bs::sync::hd::Wallet>& targetHDWallet, bool showRegularWalletsOnly);

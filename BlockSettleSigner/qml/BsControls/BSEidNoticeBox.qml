@@ -24,7 +24,7 @@ BSMessageBox {
     customText: qsTr("Encrypting your wallet with Auth eID")
 
     customDetails: qsTr("Auth eID is a free-to-use mobile app that offers a convenient alternative to passwords. \
-<br><br>Instead of manually selecting a password to encrypt your wallet’s Root Private Key (RPK), \
+<br><br>Instead of manually selecting a password to encrypt your wallet’s Root Private Key, \
 you can download Auth eID on your mobile device and encrypt your wallet with a data generated password secured by a pin or fingerprint.")
 
     acceptable: true
@@ -46,7 +46,7 @@ you can download Auth eID on your mobile device and encrypt your wallet with a d
 
             text: qsTr("Auth eID is not your wallet backup. \
 If you lose or damage your mobile device, or forget your selected pin, \
-you will need restore your wallet with the RPK backup.")
+you will need restore your wallet with the Root Private Key backup.")
         }
 
         CustomLabel {

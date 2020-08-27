@@ -22,7 +22,7 @@ DealingSettingsPage::DealingSettingsPage(QWidget* parent)
 {
    ui_->setupUi(this);
 
-   connect(ui_->pushButtonResetCnt, &QPushButton::clicked, this, &DealingSettingsPage::onResetCountes);
+   connect(ui_->pushButtonResetCnt, &QPushButton::clicked, this, &DealingSettingsPage::onResetCounters);
 }
 
 DealingSettingsPage::~DealingSettingsPage() = default;
@@ -143,7 +143,7 @@ void DealingSettingsPage::apply()
       ui_->priceUpdateTimeout->currentIndex()));
 }
 
-void DealingSettingsPage::onResetCountes()
+void DealingSettingsPage::onResetCounters()
 {
    appSettings_->reset(ApplicationSettings::Filter_MD_QN_cnt);
    ui_->pushButtonResetCnt->setEnabled(false);

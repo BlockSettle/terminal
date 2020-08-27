@@ -33,7 +33,7 @@ public:
    void apply() override;
 
 private slots:
-   void onResetCountes();
+   void onResetCounters();
 
 private:
    std::unique_ptr<Ui::DealingSettingsPage> ui_;

@@ -66,6 +66,8 @@ check unflagged return
 
 #include "TestAuth.h"
 
+using namespace ArmorySigner;
+
 ///////////////////////////////////////////////////////////////////////////////
 void TestValidationACT::onRefresh(const std::vector<BinaryData>& ids, bool online)
 {
@@ -76,8 +78,10 @@ void TestValidationACT::onRefresh(const std::vector<BinaryData>& ids, bool onlin
    notifTestQueue_.push_back(std::move(dbns));
    auto idsCopy = ids;
 
-   if(testVamPtr_ != nullptr)
-      testVamPtr_->pushRefreshID(idsCopy);
+   const auto callbacks = callbacks_.lock();
+   if (callbacks && callbacks->onRefresh) {
+      callbacks->onRefresh(idsCopy);
+   }
 }
 
 ////
@@ -269,15 +273,18 @@ TEST_F(TestAuth, ValidationAddressManager)
    maw.setCustomACT(actPtr_);
 
    //go online
-   ASSERT_EQ(maw.goOnline(), 2);
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   ASSERT_TRUE(maw.goOnline([promOnline](bool result) { promOnline->set_value(result); }));
+   EXPECT_TRUE(futOnline.get());
 
    //check the validation address is valid
-   EXPECT_TRUE(maw.isValid(validationAddr_));
+   EXPECT_TRUE(maw.isValidMasterAddress(validationAddr_));
 
    //add a block, check validation address is still valid
    mineBlocks(1);
-   ASSERT_EQ(maw.update(), 0);
-   EXPECT_TRUE(maw.isValid(validationAddr_));
+   maw.update();
+   EXPECT_TRUE(maw.isValidMasterAddress(validationAddr_));
 
    for (unsigned i = 0; i < 5; i++) {
       //generate user address
@@ -296,8 +303,8 @@ TEST_F(TestAuth, ValidationAddressManager)
       }
 
       //validation address should still be valid
-      EXPECT_EQ(maw.update(), 2);
-      EXPECT_TRUE(maw.isValid(validationAddr_));
+      maw.update();
+      EXPECT_TRUE(maw.isValidMasterAddress(validationAddr_));
 
       //validation address should have no eligible outpoints for vetting at this point
       //(it only has one atm, which is zc change)
@@ -308,8 +315,8 @@ TEST_F(TestAuth, ValidationAddressManager)
       mineBlocks(1);
 
       //validation address should still be valid
-      EXPECT_EQ(maw.update(), 2);
-      EXPECT_TRUE(maw.isValid(validationAddr_));
+      maw.update();
+      EXPECT_TRUE(maw.isValidMasterAddress(validationAddr_));
 
       //validation address should have an eligible outpoint and no zc
       ASSERT_TRUE(maw.hasSpendableOutputs(validationAddr_));
@@ -318,8 +325,8 @@ TEST_F(TestAuth, ValidationAddressManager)
 
    //add a few blocks, check validation address is still valid
    mineBlocks(3);
-   EXPECT_EQ(maw.update(), 0);
-   EXPECT_TRUE(maw.isValid(validationAddr_));
+   maw.update();
+   EXPECT_TRUE(maw.isValidMasterAddress(validationAddr_));
 
    //revoke validation address
    try
@@ -333,7 +340,7 @@ TEST_F(TestAuth, ValidationAddressManager)
    }
 
    //should still be valid prior to update
-   EXPECT_TRUE(maw.isValid(validationAddr_));
+   EXPECT_TRUE(maw.isValidMasterAddress(validationAddr_));
 
    /*
    Should be invalid after update. There should be 2 new
@@ -343,13 +350,13 @@ TEST_F(TestAuth, ValidationAddressManager)
    In revocations, only spending the first utxo matters,
    not where it is spent to.
    */
-   EXPECT_EQ(maw.update(), 2);
-   EXPECT_FALSE(maw.isValid(validationAddr_));
+   maw.update();
+   EXPECT_FALSE(maw.isValidMasterAddress(validationAddr_));
 
    //same thing once the revocation is mined
    mineBlocks(1);
-   EXPECT_EQ(maw.update(), 2);
-   EXPECT_FALSE(maw.isValid(validationAddr_));
+   maw.update();
+   EXPECT_FALSE(maw.isValidMasterAddress(validationAddr_));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -378,10 +385,13 @@ TEST_F(TestAuth, ValidateUserAddress)
    vam.addValidationAddress(validationAddr_);
 
    //go online
-   ASSERT_EQ(vam.goOnline(), 2);
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   ASSERT_TRUE(vam.goOnline([promOnline](bool result) { promOnline->set_value(result); }));
+   EXPECT_TRUE(futOnline.get());
 
    //check the validation address is valid
-   EXPECT_TRUE(vam.isValid(validationAddr_));
+   EXPECT_TRUE(vam.isValidMasterAddress(validationAddr_));
 
    auto promPtr = std::make_shared<std::promise<bs::Address>>();
    auto fut = promPtr->get_future();
@@ -393,7 +403,7 @@ TEST_F(TestAuth, ValidateUserAddress)
    authWallet_->getNewExtAddress(addrCb);
    auto&& userAddr = fut.get();
 
-   //validation validation leg
+   //validation leg
    try
    {
       actPtr_->waitOnZC(vam.vetUserAddress(userAddr, validationFeed_));
@@ -417,8 +427,7 @@ TEST_F(TestAuth, ValidateUserAddress)
 
 ///////////////////////////////////////////////////////////////////////////////
 TEST_F(TestAuth, BadUserAddress)
-{  // This test crashes in Armory code:
-   // [ArmoryConnection::getCombinedTxNs] failed to get result: device or resource busy
+{
    //sync wallets
    auto promSync = std::make_shared<std::promise<bool>>();
    auto futSync = promSync->get_future();
@@ -449,10 +458,13 @@ TEST_F(TestAuth, BadUserAddress)
    maw.addValidationAddress(validationAddr_);
 
    //go online
-   ASSERT_EQ(maw.goOnline(), 2);
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   ASSERT_TRUE(maw.goOnline([promOnline](bool result) { promOnline->set_value(result); }));
+   EXPECT_TRUE(futOnline.get());
 
    //check the validation address is valid
-   EXPECT_TRUE(maw.isValid(validationAddr_));
+   EXPECT_TRUE(maw.isValidMasterAddress(validationAddr_));
 
    //generate user address
    ASSERT_NE(authWallet_, nullptr);
@@ -526,16 +538,18 @@ TEST_F(TestAuth, BadUserAddress)
    mineBlocks(VALIDATION_CONF_COUNT);
    maw.update();
 
-   EXPECT_FALSE(AuthAddressLogic::isValid(maw, userAddr1));
-   EXPECT_TRUE(AuthAddressLogic::isValid(maw, userAddr2));
+   {
+      auto userAddr1_state = AuthAddressLogic::getAuthAddrState(maw, userAddr1);
+      EXPECT_EQ(userAddr1_state, AddressVerificationState::Tainted);
 
-   //empty address should be invalid by default
-   EXPECT_FALSE(AuthAddressLogic::isValid(maw, userAddr3));
+      auto userAddr2_state = AuthAddressLogic::getAuthAddrState(maw, userAddr2);
+      EXPECT_EQ(userAddr2_state, AddressVerificationState::Verified);
 
-   /*
-   Trying to vet userAddr1 while it has a mined tx instead of a zc should
-   fail all the same
-   */
+      //empty address should be invalid by default
+      auto userAddr3_state = AuthAddressLogic::getAuthAddrState(maw, userAddr3);
+      EXPECT_EQ(userAddr3_state, AddressVerificationState::Virgin);
+   }
+
    try {
       auto&& txHash = maw.vetUserAddress(userAddr1, validationFeed_);
       ASSERT_TRUE(false);
@@ -610,7 +624,10 @@ TEST_F(TestAuth, Revoke)
    auto&& userAddr6 = getNewAuthAddress();
 
    //go online
-   ASSERT_EQ(vam.goOnline(), 4);
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   ASSERT_TRUE(vam.goOnline([promOnline](bool result) { promOnline->set_value(result); }));
+   EXPECT_TRUE(futOnline.get());
 
    //vet them all
    try {
@@ -691,8 +708,6 @@ TEST_F(TestAuth, Revoke)
       }
       
       /*
-      User revoke burns validation utxo as fee.
-
       Since auth address checks are a wallet agnostic process, 
       auth addresses do not need to be registered for the stack
       to run, and therefor are not. 
@@ -701,7 +716,7 @@ TEST_F(TestAuth, Revoke)
       impacting only user auth addresses will result in a 
       notification. 
 
-      User revokes as implementedin AuthAddressLogic burn the 
+      User revokes as implemented in AuthAddressLogic burn the 
       validation UTXO as fee, therefor the test has no 
       standardized way to wait on a signal notifying of this
       revocation.
@@ -712,13 +727,15 @@ TEST_F(TestAuth, Revoke)
 
       It is the responsibility of the user to register auth 
       addresses for which he wants to receive ZC notifications. 
-      Typically, users and settlement monitors would register
-      counterparty addresses to monitor for revokes.
+      Typically, users and settlement monitoring services would 
+      register counterparty addresses to detect zc revokes.
       */
       std::this_thread::sleep_for(std::chrono::seconds(2));
       vam.update();
 
-      EXPECT_FALSE(AuthAddressLogic::isValid(vam, userAddr1));
+      auto userAddr1_state = 
+         AuthAddressLogic::getAuthAddrState(vam, userAddr1);
+      EXPECT_EQ(userAddr1_state, AddressVerificationState::Revoked);
    }
    catch (const std::exception &) {
       ASSERT_TRUE(false);
@@ -734,7 +751,9 @@ TEST_F(TestAuth, Revoke)
       ASSERT_TRUE(false);
    }
 
-   EXPECT_FALSE(AuthAddressLogic::isValid(vam, userAddr2));
+      auto userAddr2_state = 
+         AuthAddressLogic::getAuthAddrState(vam, userAddr2);
+      EXPECT_EQ(userAddr2_state, AddressVerificationState::Invalidated_Explicit);
 
    //try to revoke revoked addresses, should fail
    try {
@@ -816,9 +835,19 @@ TEST_F(TestAuth, Revoke)
    EXPECT_FALSE(AuthAddressLogic::isValid(vam, userAddr2));
    EXPECT_TRUE(AuthAddressLogic::isValid(vam, userAddr3));
 
-   EXPECT_FALSE(AuthAddressLogic::isValid(vam, userAddr4));
-   EXPECT_FALSE(AuthAddressLogic::isValid(vam, userAddr5));
-   EXPECT_FALSE(AuthAddressLogic::isValid(vam, userAddr6));
+   {
+      auto userAddr4_state = 
+         AuthAddressLogic::getAuthAddrState(vam, userAddr4);
+      EXPECT_EQ(userAddr4_state, AddressVerificationState::Invalidated_Implicit);
+
+      auto userAddr5_state = 
+         AuthAddressLogic::getAuthAddrState(vam, userAddr5);
+      EXPECT_EQ(userAddr5_state, AddressVerificationState::Invalidated_Implicit);
+
+      auto userAddr6_state = 
+         AuthAddressLogic::getAuthAddrState(vam, userAddr6);
+      EXPECT_EQ(userAddr6_state, AddressVerificationState::Invalidated_Implicit);
+   }
 
    //mine a block and check states. new block shouldn't change anything.
    mineBlocks(1);
@@ -909,7 +938,10 @@ TEST_F(TestAuth, Concurrency)
       authAddresses.push_back(getNewAuthAddress());
    }
    //go online
-   ASSERT_EQ(vam->goOnline(), 6);
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   ASSERT_TRUE(vam->goOnline([promOnline](bool result) { promOnline->set_value(result); }));
+   EXPECT_TRUE(futOnline.get());
 
    //start verifications in side threads, they should return
    //once the addr is valid
@@ -941,8 +973,8 @@ TEST_F(TestAuth, Concurrency)
    }
 
    mineBlocks(1);
-   EXPECT_EQ(vam->update(), 6);
-   
+   vam->update();
+
    try {
       actPtr_->waitOnZC(vam->vetUserAddress(
          authAddresses[3], resolverMam, validationAddr_));
@@ -956,7 +988,7 @@ TEST_F(TestAuth, Concurrency)
    }
 
    mineBlocks(VALIDATION_CONF_COUNT);
-   EXPECT_EQ(vam->update(), 6);
+   vam->update();
 
    //wait on all verification threads and check addresses are valid
    for (auto& thr : threads) {
@@ -1123,7 +1155,10 @@ TEST_F(TestAuth, Concurrency_WithACT)
       authAddresses.push_back(getNewAuthAddress());
    }
    //go online
-   ASSERT_EQ(vam->goOnline(), 6);
+   auto promOnline = std::make_shared<std::promise<bool>>();
+   auto futOnline = promOnline->get_future();
+   ASSERT_TRUE(vam->goOnline([promOnline](bool result) { promOnline->set_value(result); }));
+   EXPECT_TRUE(futOnline.get());
 
    //start verifications in side threads, they should return
    //once the address is valid

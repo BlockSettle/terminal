@@ -10,11 +10,13 @@
 */
 #include <QMenu>
 #include <QLabel>
-
+#include <cctype>
 #include "ChatUserListTreeView.h"
 #include "ChatClientUsersViewItemDelegate.h"
 #include "BSMessageBox.h"
 #include "EditContactDialog.h"
+
+using namespace bs;
 
 namespace {
    // Translation
@@ -79,8 +81,9 @@ void ChatUserListTreeView::editContact(const QModelIndex& index)
 
          // do not allow display name to contains only whitespaces
          std::string newDisplayName = dialog.displayName().toStdString();
-         std::string::iterator it_first_nonspace = std::find_if(newDisplayName.begin(), newDisplayName.end(), [l = std::locale{}](auto ch) {
-            return !std::isspace(ch, l);
+         std::string::iterator it_first_nonspace = std::find_if(newDisplayName.begin(), newDisplayName.end()
+            , [l = std::locale{}](auto ch) {
+            return !std::isspace(ch);
          });
 
          if (it_first_nonspace != newDisplayName.end())

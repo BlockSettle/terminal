@@ -110,6 +110,7 @@ bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData(QDat
 
    // rfq details
    dialogData.setValue(PasswordDialogData::Price, UiUtils::displayPriceCC(price()));
+   dialogData.setValue(PasswordDialogData::Quantity, quantity());
 
    // tx details
    if (side() == bs::network::Side::Buy) {
@@ -166,7 +167,8 @@ void ReqCCSettlementContainer::activate()
    }
    catch (const std::exception &e) {
       logger_->debug("Signer deser exc: {}", e.what());
-      emit error(bs::error::ErrorCode::InternalError, tr("Failed to verify dealer's TX: %1").arg(QLatin1String(e.what())));
+      emit error(id(), bs::error::ErrorCode::InternalError
+         , tr("Failed to verify dealer's TX: %1").arg(QLatin1String(e.what())));
    }
 
    emit paymentVerified(foundRecipAddr && amountValid, QString{});
@@ -193,7 +195,8 @@ void ReqCCSettlementContainer::activate()
 
    if (!createCCUnsignedTXdata()) {
       userKeyOk_ = false;
-      emit error(bs::error::ErrorCode::InternalError, tr("Failed to create unsigned CC transaction"));
+      emit error(id(), bs::error::ErrorCode::InternalError
+         , tr("Failed to create unsigned CC transaction"));
    }
 }
 
@@ -209,22 +212,20 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
       const uint64_t spendVal = quantity() * assetMgr_->getCCLotSize(product());
       logger_->debug("[{}] sell amount={}, spend value = {}", __func__, quantity(), spendVal);
       ccTxData_.walletIds = { ccWallet_->walletId() };
-      ccTxData_.prevStates = { dealerTx_ };
+      ccTxData_.armorySigner_.deserializeState(dealerTx_);
       const auto recipient = bs::Address::fromAddressString(dealerAddress_).getRecipient(bs::XBTAmount{ spendVal });
       if (recipient) {
-         ccTxData_.recipients.push_back(recipient);
+         ccTxData_.armorySigner_.addRecipient(recipient, RECIP_GROUP_SPEND_1);
       }
       else {
          logger_->error("[{}] failed to create recipient from {} and value {}"
             , __func__, dealerAddress_, spendVal);
          return false;
       }
-      ccTxData_.outSortOrder = {bs::core::wallet::OutputOrderType::Recipients
-         , bs::core::wallet::OutputOrderType::PrevState, bs::core::wallet::OutputOrderType::Change };
-      ccTxData_.populateUTXOs = true;
-      ccTxData_.inputs = bs::UtxoReservation::instance()->get(utxoRes_.reserveId());
+
       logger_->debug("[{}] {} CC inputs reserved ({} recipients)"
-         , __func__, ccTxData_.inputs.size(), ccTxData_.recipients.size());
+         , __func__, ccTxData_.armorySigner_.getTxInCount(), 
+                     ccTxData_.armorySigner_.getTxOutCount());
 
       // KLUDGE - in current implementation, we should sign first to have sell/buy process aligned
       AcceptQuote();
@@ -242,27 +243,39 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                      logger_->error("[{}] invalid recipient: {}", __func__, dealerAddress_);
                      return;
                   }
+                  std::map<unsigned, std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>>> recipientMap;
+                  std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recVec({recipient});
+                  recipientMap.emplace(RECIP_GROUP_SPEND_2, std::move(recVec));
 
-                  const bs::core::wallet::OutputSortOrder outSortOrder{
-                     bs::core::wallet::OutputOrderType::PrevState,
-                     bs::core::wallet::OutputOrderType::Recipients,
-                     bs::core::wallet::OutputOrderType::Change
-                  };
+                  ccTxData_ = bs::sync::WalletsManager::createPartialTXRequest(spendVal
+                     , xbtInputs, changeAddr, feePerByte, armory_->topBlock()
+                     , recipientMap, RECIP_GROUP_CHANG_2
+                     , dealerTx_, useAllInputs, UINT32_MAX, logger_);
 
-                  ccTxData_ = bs::sync::WalletsManager::createPartialTXRequest(spendVal, xbtInputs, changeAddr, feePerByte, armory_->topBlock()
-                     , { recipient }, outSortOrder, dealerTx_, useAllInputs, logger_);
-                  ccTxData_.populateUTXOs = true;
-
-                  logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
+                  logger_->debug("{} inputs in ccTxData", ccTxData_.armorySigner_.getTxInCount());
                   // Must release old reservation first (we reserve excessive XBT inputs in advance for CC buy requests)!
-                  utxoRes_.release();
-                  utxoRes_ = utxoReservationManager_->makeNewReservation(ccTxData_.inputs, id());
 
-                  AcceptQuote();
+                  auto resolveCB = [this](
+                     bs::error::ErrorCode result, const Codec_SignerState::SignerState &state)
+                  {
+                     utxoRes_.release();
+                     if (result != bs::error::ErrorCode::NoError) {
+                        std::stringstream ss;
+                        ss << "failed to resolve CC half reply with error code: " << (int)result;
+                        throw std::runtime_error(ss.str());
+                     }
+
+                     ccTxData_.armorySigner_.deserializeState(state);
+                     utxoRes_ = utxoReservationManager_->makeNewReservation(ccTxData_.getInputs(nullptr), id());
+                     AcceptQuote();
+                  };
+                  signingContainer_->resolvePublicSpenders(ccTxData_, resolveCB);
                }
                catch (const std::exception &e) {
-                  SPDLOG_LOGGER_ERROR(logger_, "Failed to create partial CC TX to {}: {}", dealerAddress_, e.what());
-                  emit error(bs::error::ErrorCode::InternalError, tr("Failed to create CC TX half"));
+                  SPDLOG_LOGGER_ERROR(logger_, "Failed to create partial CC TX "
+                     "to {}: {}", dealerAddress_, e.what());
+                  emit error(id(), bs::error::ErrorCode::InternalError
+                     , tr("Failed to create CC TX half"));
                }
             };
             xbtLeaves_.front()->getNewChangeAddress(changeAddrCb);
@@ -294,7 +307,8 @@ void ReqCCSettlementContainer::AcceptQuote()
    if (side() == bs::network::Side::Sell) {
       if (!ccTxData_.isValid()) {
          logger_->error("[CCSettlementTransactionWidget::AcceptQuote] CC TX half wasn't created properly");
-         emit error(bs::error::ErrorCode::InternalError, tr("Failed to create TX half"));
+         emit error(id(), bs::error::ErrorCode::InternalError
+            , tr("Failed to create TX half"));
          return;
       }
    }
@@ -306,7 +320,7 @@ void ReqCCSettlementContainer::AcceptQuote()
          emit sendOrder();
       }
       else {
-         emit error(result, bs::error::ErrorCodeToString(result));
+         emit error(id(), result, bs::error::ErrorCodeToString(result));
       }
    });
 }
@@ -341,15 +355,18 @@ bool ReqCCSettlementContainer::startSigning(QDateTime timestamp)
       }
       else {
          logger->error("[CCSettlementTransactionWidget::onTXSigned] CC TX sign failure: {}", bs::error::ErrorCodeToString(result).toStdString());
-         emit error(result, tr("Own TX half signing failed: %1").arg(bs::error::ErrorCodeToString(result)));
+         emit error(id(), result, tr("Own TX half signing failed: %1")
+            .arg(bs::error::ErrorCodeToString(result)));
       }
 
       // Call completed to remove from RfqStorage and cleanup memory
-      emit completed();
+      emit completed(id());
    };
 
    ccSignId_ = signingContainer_->signSettlementPartialTXRequest(ccTxData_, toPasswordDialogData(timestamp), cbTx);
-   logger_->debug("[CCSettlementTransactionWidget::createCCSignedTXdata] {} recipients", ccTxData_.recipients.size());
+   logger_->debug(
+      "[CCSettlementTransactionWidget::createCCSignedTXdata] {} recipients", 
+      ccTxData_.armorySigner_.getTxInCount());
    return (ccSignId_ > 0);
 }
 

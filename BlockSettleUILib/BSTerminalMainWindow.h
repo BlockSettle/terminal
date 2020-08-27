@@ -24,8 +24,7 @@
 #include "QWalletInfo.h"
 #include "SignContainer.h"
 #include "WalletSignerContainer.h"
-#include "ZMQ_BIP15X_DataConnection.h"
-#include "ZMQ_BIP15X_Helpers.h"
+#include "BIP15xHelpers.h"
 
 #include "ChatProtocol/ChatClientService.h"
 
@@ -35,6 +34,7 @@ namespace Ui {
 namespace bs {
    class LogManager;
    class UTXOReservationManager;
+   struct TradeSettings;
    namespace sync {
       class Wallet;
       class WalletsManager;
@@ -43,14 +43,16 @@ namespace bs {
 
 class QLockFile;
 
+struct BsClientLoginResult;
 struct NetworkSettings;
+
 class AboutDialog;
 class ArmoryServersProvider;
 class AssetManager;
 class AuthAddressDialog;
 class AuthAddressManager;
 class AutheIDClient;
-class AutoSignQuoteProvider;
+class AutoSignScriptProvider;
 class BSMarketDataProvider;
 class BSTerminalSplashScreen;
 class BaseCelerClient;
@@ -60,7 +62,6 @@ class CcTrackerClient;
 class ConnectionManager;
 class LoginWindow;
 class MDCallbacksQt;
-class NetworkSettingsLoader;
 class OrderListModel;
 class QSystemTrayIcon;
 class RequestReplyCommand;
@@ -69,6 +70,8 @@ class StatusBarView;
 class StatusViewBlockListener;
 class TransactionsViewModel;
 class WalletManagementWizard;
+
+enum class CcGenFileError: int;
 
 class BSTerminalMainWindow : public QMainWindow
 {
@@ -93,6 +96,7 @@ private:
 
    void setupWalletsView();
    void setupTransactionsView();
+   void setupInfoWidget();
 
    void initConnections();
    void initArmory();
@@ -187,7 +191,8 @@ private:
    std::shared_ptr<CCFileManager>            ccFileManager_;
    std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
    std::shared_ptr<WalletSignerContainer>    signContainer_;
-   std::shared_ptr<AutoSignQuoteProvider>    autoSignQuoteProvider_;
+   std::shared_ptr<AutoSignScriptProvider>   autoSignQuoteProvider_;
+   std::shared_ptr<AutoSignScriptProvider>   autoSignRFQProvider_;
 
    std::shared_ptr<OrderListModel>           orderListModel_;
 
@@ -203,10 +208,12 @@ public slots:
 private:
    struct TxInfo;
 
-   enum NetworkSettingsClient
+   enum class AutoLoginState
    {
-      Login,
-      MarketData,
+      Idle,
+      Connecting,
+      Connected,
+      Failed,
    };
 
 private slots:
@@ -215,7 +222,6 @@ private slots:
    void onGenerateAddress();
 
    void openAuthManagerDialog();
-   void openAuthDlgVerify(const QString &addrToVerify);
    void openConfigDialog(bool showInNetworkPage = false);
    void openAccountInfoDialog();
    void openCCTokenDialog();
@@ -225,24 +231,18 @@ private slots:
    void onNodeStatus(NodeStatus, bool isSegWitEnabled, RpcStatus);
 
    void onLogin();
-   void onLoginProceed(const NetworkSettings &networkSettings);
    void onLogout();
 
    void onCelerConnected();
    void onCelerDisconnected();
    void onCelerConnectionError(int errorCode);
    void showRunInBackgroundMessage();
-   void onCCInfoMissing();
-   void onCcDefinitionsLoadedFromPub();
-
-   void onNetworkSettingsRequired(NetworkSettingsClient client);
+   void onCCInfoMissing(CcGenFileError error);
 
    void onBsConnectionDisconnected();
    void onBsConnectionFailed();
 
    void onInitWalletDialogWasShown();
-
-   void onAddrStateChanged();
 
 protected:
    void closeEvent(QCloseEvent* event) override;
@@ -258,14 +258,10 @@ private:
 
    void setupShortcuts();
 
-   void createAuthWallet(const std::function<void()> &);
-
    bool isUserLoggedIn() const;
    bool isArmoryConnected() const;
 
    void InitWidgets();
-
-   void networkSettingsReceived(const NetworkSettings &settings, NetworkSettingsClient client);
 
    void promoteToPrimaryIfNeeded();
 
@@ -278,6 +274,13 @@ private:
    void restartTerminal();
    void processDeferredDialogs();
 
+   std::shared_ptr<BsClient> createClient();
+   void activateClient(const std::shared_ptr<BsClient> &bsClient
+      , const BsClientLoginResult &result, const std::string &email);
+   const std::string &loginApiKeyEncrypted() const;
+   void initApiKeyLogins();
+   void tryLoginUsingApiKey();
+
 private:
    enum class ChatInitState
    {
@@ -287,25 +290,25 @@ private:
    };
 
    QString           loginButtonText_;
+   AutoLoginState    autoLoginState_{AutoLoginState::Idle};
+   QString autoLoginLastErrorMsg_;
+   std::string loginApiKeyEncrypted_;
+   QTimer *loginTimer_{};
+   std::shared_ptr<BsClient> autoLoginClient_;
 
    bool initialWalletCreateDialogShown_ = false;
-   bool allowAuthAddressDialogShow_ = true;
-   bool createAuthWalletDialogShown_ = false;
-   bool promoteToPrimaryShown_ = false;
    bool deferCCsync_ = false;
 
    bool wasWalletsRegistered_ = false;
    bool walletsSynched_ = false;
    bool isArmoryReady_ = false;
 
-   std::unique_ptr<NetworkSettingsLoader> networkSettingsLoader_;
-
    SignContainer::ConnectionError lastSignerError_{};
 
-   ZmqBipNewKeyCb   cbApprovePuB_ = nullptr;
-   ZmqBipNewKeyCb   cbApproveChat_ = nullptr;
-   ZmqBipNewKeyCb   cbApproveProxy_ = nullptr;
-   ZmqBipNewKeyCb   cbApproveCcServer_ = nullptr;
+   bs::network::BIP15xNewKeyCb   cbApproveChat_{ nullptr };
+   bs::network::BIP15xNewKeyCb   cbApproveProxy_{ nullptr };
+   bs::network::BIP15xNewKeyCb   cbApproveCcServer_{ nullptr };
+   bs::network::BIP15xNewKeyCb   cbApproveExtConn_{ nullptr };
 
    std::queue<std::function<void(void)>> deferredDialogs_;
    bool deferredDialogRunning_ = false;
@@ -332,7 +335,6 @@ private:
    Chat::ChatClientServicePtr chatClientServicePtr_;
 
    ChatInitState chatInitState_{ChatInitState::NoStarted};
-   bool networkSettingsReceived_{false};
    bool gotChatKeys_{false};
    BinaryData chatTokenData_;
    SecureBinaryData chatTokenSign_;
@@ -348,6 +350,7 @@ private:
 
    bs::network::UserType userType_{};
 
+   std::shared_ptr<bs::TradeSettings> tradeSettings_;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__
