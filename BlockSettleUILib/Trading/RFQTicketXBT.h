@@ -181,7 +181,6 @@ private:
    BalanceInfoContainer getBalanceInfo() const;
    QString getProduct() const;
    std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc) const;
-   bool isXBTProduct() const;
    bool checkBalance(double qty) const;
    bool checkAuthAddr(double qty) const;
    bs::network::Side::Type getSelectedSide() const;
