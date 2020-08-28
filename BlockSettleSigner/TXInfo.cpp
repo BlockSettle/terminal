@@ -202,11 +202,12 @@ QStringList TXInfo::counterPartyRecipients() const
 
 QStringList TXInfo::allRecipients() const
 {
-   // Get all recipients from this tx
+   // Get all recipients from this tx (minus change)
    // Usable for regular tx sign dialog
 
    std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recipientsList;
-   recipientsList = txReq_.getRecipients([](const bs::Address &){ return true; });
+   recipientsList = txReq_.getRecipients([this](const bs::Address &addr){
+      return (addr != txReq_.change.address); });
 
    QStringList result;
    for (const auto &recip : recipientsList) {

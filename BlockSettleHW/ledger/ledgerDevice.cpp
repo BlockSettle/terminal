@@ -765,15 +765,15 @@ void LedgerCommandThread::finalizeInputFull()
       logger_->error("[LedgerCommandThread] finalizeInputFull - Start Change section");
       // If tx has change, we send derivation path of return address in prio
       // before send all output addresses and change with it, so device could detect it
-      QByteArray changeInputPayload;
-      changeInputPayload.append(static_cast<char>(changePath_.length()));
+      QByteArray changeOutputPayload;
+      changeOutputPayload.append(static_cast<char>(changePath_.length()));
 
 
       for (auto el : changePath_) {
-         writeUintBE(changeInputPayload, el);
+         writeUintBE(changeOutputPayload, el);
       }
 
-      auto changeCommand = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_FINALIZE_FULL, 0xFF, 0x00, std::move(changeInputPayload));
+      auto changeCommand = getApduCommand(Ledger::CLA, Ledger::INS_HASH_INPUT_FINALIZE_FULL, 0xFF, 0x00, std::move(changeOutputPayload));
       QByteArray responseInput;
       if (!exchangeData(changeCommand, responseInput, "[LedgerCommandThread] finalizeInputFull - changePayload ")) {
          releaseDevice();
@@ -784,9 +784,6 @@ void LedgerCommandThread::finalizeInputFull()
 
    logger_->error("[LedgerCommandThread] finalizeInputFull - Start output section");
    size_t totalOutput = coreReq_->armorySigner_.getTxOutCount();
-   if (hasChangeOutput) {
-      ++totalOutput;
-   }
 
    QByteArray outputFullPayload;
    writeVarInt(outputFullPayload, totalOutput);
@@ -794,12 +791,6 @@ void LedgerCommandThread::finalizeInputFull()
    for (unsigned i=0; i<coreReq_->armorySigner_.getTxOutCount(); i++) {
       auto recipient = coreReq_->armorySigner_.getRecipient(i);
       outputFullPayload.push_back(QByteArray::fromStdString(recipient->getSerializedScript().toBinStr()));
-   }
-
-   if (hasChangeOutput) {
-      bs::XBTAmount amount(coreReq_->change.value);
-      auto changeScript = coreReq_->change.address.getRecipient(amount)->getSerializedScript();
-      outputFullPayload.push_back(QByteArray::fromStdString(changeScript.toBinStr()));
    }
    
    QVector<QByteArray> outputCommands;
