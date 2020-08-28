@@ -93,14 +93,14 @@ void QMLStatusUpdater::onAutoSignTick()
 
 void QMLStatusUpdater::onPeerConnected(const std::string &clientId, const std::string &ip, const std::string &publicKey)
 {
-   logger_->debug("[{}] connected client {} with ip {}, public key: ", __func__, bs::toHex(clientId), ip);
+   logger_->debug("[QMLStatusUpdater::onPeerConnected] connected client {} with ip {}, public key: ", bs::toHex(clientId), ip);
    connectedClientIps_[clientId] = ip;
    emit connectionsChanged();
 }
 
 void QMLStatusUpdater::onPeerDisconnected(const std::string &clientId)
 {
-   logger_->debug("[{}] {}", __func__, bs::toHex(clientId));
+   logger_->debug("[QMLStatusUpdater::onPeerDisconnected] {}", bs::toHex(clientId));
    connectedClientIps_.erase(clientId);
    emit connectionsChanged();
 }

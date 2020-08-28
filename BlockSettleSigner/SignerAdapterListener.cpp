@@ -945,7 +945,7 @@ bool SignerAdapterListener::onExportWoWallet(const std::string &data, bs::signer
 
 void SignerAdapterListener::walletsListUpdated()
 {
-   logger_->debug("[{}]", __func__);
+   logger_->debug("[SignerAdapterListener::walletsListUpdated]");
    app_->walletsListUpdated();
    sendData(signer::WalletsListUpdatedType, {});
 }

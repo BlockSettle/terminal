@@ -154,7 +154,6 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
 
 void QMLAppObj::onReady()
 {
-   logger_->debug("[{}]", __func__);
    walletsMgr_ = adapter_->getWalletsManager();
    qmlFactory_->setWalletsManager(walletsMgr_);
 
@@ -185,7 +184,7 @@ void QMLAppObj::onHeadlessBindUpdated(bs::signer::BindStatus status)
 
 void QMLAppObj::onWalletsSynced()
 {
-   logger_->debug("[{}]", __func__);
+   logger_->debug("[QMLAppObj::onWalletsSynced]");
    if (splashScreen_) {
       splashScreen_->deleteLater();
       splashScreen_ = nullptr;

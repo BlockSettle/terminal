@@ -184,7 +184,7 @@ void SignerInterfaceListener::processData(const std::string &data)
 
 void SignerInterfaceListener::onReady(const std::string &data)
 {
-   logger_->info("received ready signal");
+   logger_->info("[SignerInterfaceListener::onReady] received ready signal");
    emit parent_->ready();
 }
 
@@ -684,14 +684,13 @@ void SignerInterfaceListener::onUpdateControlPasswordStatus(const std::string &d
 
 void SignerInterfaceListener::onTerminalEvent(const std::string &data)
 {
-   logger_->debug("[{}]", __func__);
    signer::TerminalEvent evt;
    if (!evt.ParseFromString(data)) {
       SPDLOG_LOGGER_ERROR(logger_, "failed to parse");
       return;
    }
 
-   logger_->debug("[{}] cc info received: {}", __func__, evt.cc_info_received());
+   logger_->debug("[SignerInterfaceListener::onTerminalEvent] cc info received: {}", evt.cc_info_received());
    if (!evt.peer_address().empty() && !evt.handshake_ok()) {
       emit parent_->terminalHandshakeFailed(evt.peer_address());
    }

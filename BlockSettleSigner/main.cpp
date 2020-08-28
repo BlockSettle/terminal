@@ -245,13 +245,8 @@ static int QMLApp(int argc, char **argv
       logger->set_pattern(bs::LogManager::detectFormatOverride("[%L](%t): %v"));
    }
 
-#ifdef NDEBUG
-   logger->set_level(spdlog::level::err);
-   logger->flush_on(spdlog::level::err);
-#else
    logger->set_level(spdlog::level::debug);
    logger->flush_on(spdlog::level::debug);
-#endif
 
 #ifndef NDEBUG
    qInstallMessageHandler(qMessageHandler);
@@ -358,11 +353,7 @@ int main(int argc, char** argv)
       config.fileName = settings->logFile();
       config.pattern = "%D %H:%M:%S.%e (%t)[%L]: %v";
 
-#ifdef NDEBUG
-      config.level = bs::LogLevel::err;
-#else
       config.level = bs::LogLevel::debug;
-#endif
 
       logMgr.add(config);
       logger = logMgr.logger();

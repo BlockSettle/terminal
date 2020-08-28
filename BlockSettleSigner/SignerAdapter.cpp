@@ -293,7 +293,7 @@ void SignerAdapter::activateAutoSign(const std::string &walletId
 
 void SignerAdapter::walletsListUpdated()
 {
-   logger_->debug("[{}]", __func__);
+   logger_->debug("[SignerAdapter::walletsListUpdated]");
    getWalletsManager()->reset();
    getWalletsManager()->syncWallets();
 }
