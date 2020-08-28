@@ -216,6 +216,7 @@ private:
    bs::XBTAmount getXbtBalance() const;
    QString getProductToSpend() const;
    QString getProductToRecv() const;
+   bs::XBTAmount expectedXbtAmountMin() const;
    bs::XBTAmount getXbtReservationAmountForCc(double quantity, double offerPrice) const;
 
    void reserveBestUtxoSetAndSubmit(const std::string &id

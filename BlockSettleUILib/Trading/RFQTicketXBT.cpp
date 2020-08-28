@@ -810,6 +810,16 @@ void RFQTicketXBT::submitButtonClicked()
       return;
    }
 
+   if (currentGroupType_ == ProductGroupType::XBTGroupType) {
+      auto minXbtAmount = bs::tradeutils::minXbtAmount(utxoReservationManager_->feeRatePb());
+      if (expectedXbtAmountMin().GetValue() < minXbtAmount.GetValue()) {
+         auto minAmountStr = UiUtils::displayQuantity(minXbtAmount.GetValueBitcoin(), bs::network::XbtCurrency);
+         BSMessageBox(BSMessageBox::critical, tr("Spot XBT"), tr("Invalid amount")
+            , tr("Expected bitcoin amount will not cover network fee.\nMinimum amount: %1").arg(minAmountStr), this).exec();
+         return;
+      }
+   }
+
    switch (currentGroupType_) {
    case ProductGroupType::GroupNotSelected:
       rfq->assetType = bs::network::Asset::Undefined;
@@ -1476,6 +1486,16 @@ QString RFQTicketXBT::getProductToRecv() const
    } else {
       return contraProduct_;
    }
+}
+
+bs::XBTAmount RFQTicketXBT::expectedXbtAmountMin() const
+{
+   if (currentProduct_ == UiUtils::XbtCurrency) {
+      return bs::XBTAmount(getQuantity());
+   }
+   const auto &tradeSettings = authAddressManager_->tradeSettings();
+   auto maxPrice = getIndicativePrice() * (1 + (tradeSettings->xbtPriceBand / 100));
+   return bs::XBTAmount(getQuantity() / maxPrice);
 }
 
 bs::XBTAmount RFQTicketXBT::getXbtReservationAmountForCc(double quantity, double offerPrice) const
