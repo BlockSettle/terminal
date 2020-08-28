@@ -1424,6 +1424,29 @@ bool OtcClient::verifyOffer(const Offer &offer) const
       }
    }
 
+   if (!walletsMgr_->getHDWalletById(offer.hdWalletId)) {
+      SPDLOG_LOGGER_ERROR(logger_, "hd wallet not found: {}", offer.hdWalletId);
+      return false;
+   }
+   if (offer.ourSide == bs::network::otc::Side::Buy && !offer.inputs.empty()) {
+      SPDLOG_LOGGER_CRITICAL(logger_, "inputs must be empty for sell");
+      return false;
+   }
+   for (const auto &input : offer.inputs) {
+      auto address = bs::Address::fromUTXO(input);
+      auto wallet = walletsMgr_->getWalletByAddress(address);
+      if (!wallet) {
+         SPDLOG_LOGGER_CRITICAL(logger_, "wallet not found for UTXO from address: {}", address.display());
+         return false;
+      }
+      const auto hdWalletId = walletsMgr_->getHDRootForLeaf(wallet->walletId())->walletId();
+      if (hdWalletId != offer.hdWalletId) {
+         SPDLOG_LOGGER_CRITICAL(logger_, "invalid UTXO, hdWalletId: {}, expected hdWalletId: {}"
+            , hdWalletId, offer.hdWalletId);
+         return false;
+      }
+   }
+
    return true;
 }
 
