@@ -45,17 +45,6 @@ namespace {
    const QString kNoBalanceAvailable = QLatin1String("-");
    const QString kReservedBalance = QLatin1String("Reserved input balance");
    const QString kAvailableBalance = QLatin1String("Available balance");
-
-   constexpr auto kBuySortOrder = bs::core::wallet::OutputSortOrder{
-      bs::core::wallet::OutputOrderType::Recipients,
-      bs::core::wallet::OutputOrderType::PrevState,
-      bs::core::wallet::OutputOrderType::Change
-   };
-   constexpr auto kSellSortOrder = bs::core::wallet::OutputSortOrder{
-      bs::core::wallet::OutputOrderType::PrevState,
-      bs::core::wallet::OutputOrderType::Recipients,
-      bs::core::wallet::OutputOrderType::Change
-   };
 }
 
 using namespace bs::ui;
@@ -742,7 +731,6 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                            recipientMap.emplace(spendGroup, std::move(recVec));
                            
 
-                           const auto outSortOrder = isSpendCC ? kBuySortOrder : kSellSortOrder;
                            Codec_SignerState::SignerState state;
                            state.ParseFromString(BinaryData::CreateFromHex(qrn.requestorAuthPublicKey).toBinStr());
                            auto txReq = bs::sync::WalletsManager::createPartialTXRequest(spendVal, inputs
