@@ -26,6 +26,8 @@ namespace {
 
    const std::string kLocalAddrV4 = "127.0.0.1";
 
+   const uint32_t kConnectTimeoutSec = 1;
+
 } // namespace
 
 using namespace Blocksettle::Communication;
@@ -47,7 +49,9 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
    params.cookie = bs::network::BIP15xCookie::MakeClient;
    params.cookiePath = SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
 
-   auto wsConnection = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
+   WsDataConnectionParams wsParams;
+   wsParams.timeoutSecs = kConnectTimeoutSec;
+   auto wsConnection = std::make_unique<WsDataConnection>(logger, wsParams);
    const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(
       logger, params);
    auto adapterConn = std::make_shared<Bip15xDataConnection>(logger_, std::move(wsConnection), bip15xTransport);
