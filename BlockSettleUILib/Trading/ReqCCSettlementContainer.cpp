@@ -110,6 +110,7 @@ bs::sync::PasswordDialogData ReqCCSettlementContainer::toPasswordDialogData(QDat
 
    // rfq details
    dialogData.setValue(PasswordDialogData::Price, UiUtils::displayPriceCC(price()));
+   dialogData.setValue(PasswordDialogData::Quantity, quantity());
 
    // tx details
    if (side() == bs::network::Side::Buy) {

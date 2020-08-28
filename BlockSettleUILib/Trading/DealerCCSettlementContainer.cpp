@@ -67,6 +67,9 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
 
    init(armory.get());
    settlWallet_ = armory->instantiateWallet(order_.clOrderId);
+   if (!settlWallet_) {
+      throw std::runtime_error("can't register settlement wallet in armory");
+   }
 
    connect(this, &DealerCCSettlementContainer::genAddressVerified, this
       , &DealerCCSettlementContainer::onGenAddressVerified, Qt::QueuedConnection);
@@ -94,9 +97,8 @@ bs::sync::PasswordDialogData DealerCCSettlementContainer::toPasswordDialogData(Q
    }
 
    // rfq details
-   QString qtyProd = UiUtils::XbtCurrency;
-
    dialogData.setValue(PasswordDialogData::Price, UiUtils::displayPriceCC(price()));
+   dialogData.setValue(PasswordDialogData::Quantity, order_.quantity);
 
    // tx details
    if (side() == bs::network::Side::Buy) {

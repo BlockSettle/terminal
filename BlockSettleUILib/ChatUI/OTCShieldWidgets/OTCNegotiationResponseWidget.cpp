@@ -207,6 +207,18 @@ void OTCNegotiationResponseWidget::onChanged()
    else {
       ui_->pushButtonAccept->setText(tr("Update"));
    }
+
+   // Review updated price, disable wallet details changing
+   bool walletDetailsFixed = !receivedOffer_.hdWalletId.empty();
+   ui_->comboBoxXBTWallets->setEnabled(!walletDetailsFixed);
+   ui_->receivingAddressComboBox->setEnabled(!walletDetailsFixed);
+   ui_->toolButtonXBTInputs->setEnabled(!walletDetailsFixed);
+   ui_->authenticationAddressComboBox->setEnabled(!walletDetailsFixed);
+   if (walletDetailsFixed) {
+      UiUtils::selectWalletInCombobox(ui_->comboBoxXBTWallets, receivedOffer_.hdWalletId);
+      ui_->receivingAddressComboBox->setCurrentText(QString::fromStdString(receivedOffer_.recvAddress));
+      ui_->authenticationAddressComboBox->setCurrentText(QString::fromStdString(receivedOffer_.authAddress));
+   }
 }
 
 void OTCNegotiationResponseWidget::onAcceptOrUpdateClicked()

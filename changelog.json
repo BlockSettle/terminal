@@ -1,44 +1,20 @@
 {
-   "latest_version": "0.90.7",
-   "release_date": "05 Jun 2020",
+   "latest_version": "0.90.8",
+   "release_date": "27 Aug 2020",
    "changes": [
       {
-         "version_string": "0.90.7",
-         "previous_version": "0.90.6",
-         "release_date": "05 Jun 2020",
-         "release_type": "prod",
-         "improvements": [
-            "Minor rename",
-            "Merge pull request #779 from BlockSettle/fixImportButton"
-         ],
-         "bug_fixes": [],
-         "revision": "de41cb6e4",
-         "common_revision": "de41cb6e4"
-      },
-      {
-         "version_string": "0.90.6",
-         "previous_version": "0.90.6",
-         "release_date": "05 Jun 2020",
-         "release_type": "prod",
-         "improvements": [
-            "",
-            ""
-         ],
-         "bug_fixes": [],
-         "revision": "e311f0a9a",
-         "common_revision": "e311f0a9a"
-      },
-      {
-         "version_string": "0.90.6",
+         "version_string": "0.90.8",
          "previous_version": "0.90.5",
-         "release_date": "05 Jun 2020",
+         "release_date": "27 Aug 2020",
          "release_type": "prod",
          "improvements": [
-            "Reset Trezor session if wrong passphrase used"
+            "Improved Hardware Wallets support",
+            "Add support for Partially signed Bitcoin transaction",
+            "Updated infrastructure"
          ],
          "bug_fixes": [],
-         "revision": "e311f0a9a",
-         "common_revision": "e311f0a9a"
+         "revision": "d6fd9dc3c",
+         "common_revision": "3a266377"
       },
       {
          "version_string": "0.90.5",
