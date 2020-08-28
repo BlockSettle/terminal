@@ -11,8 +11,8 @@
 #ifndef SIGNER_ADAPTER_H
 #define SIGNER_ADAPTER_H
 
-#include <QObject>
 #include "FutureValue.h"
+#include "HeadlessContainer.h"
 #include "Message/Adapter.h"
 
 namespace spdlog {
@@ -21,6 +21,12 @@ namespace spdlog {
 namespace BlockSettle {
    namespace Common {
       class SignerMessage;
+      class SignerMessage_ExtendAddrChain;
+      class SignerMessage_SetSettlementId;
+      class SignerMessage_SyncAddresses;
+      class SignerMessage_SyncAddressComment;
+      class SignerMessage_SyncNewAddresses;
+      class SignerMessage_SyncTxComment;
    }
    namespace Terminal {
       class SettingsMessage_SignerServer;
@@ -29,9 +35,8 @@ namespace BlockSettle {
 class SignerClient;
 class WalletSignerContainer;
 
-class SignerAdapter : public QObject, public bs::message::Adapter
+class SignerAdapter : public bs::message::Adapter, public HeadlessCallbackTarget
 {
-   Q_OBJECT
 public:
    SignerAdapter(const std::shared_ptr<spdlog::logger> &);
    ~SignerAdapter() override = default;
@@ -45,8 +50,21 @@ public:
 
    std::unique_ptr<SignerClient> createClient() const;
 
+protected:
+
+
 private:
    void start();
+
+   // HCT overrides
+   void connError(SignContainer::ConnectionError, const QString &) override;
+   void connTorn() override;
+   void authLeafAdded(const std::string &walletId) override;
+   void walletsChanged() override;
+   void onReady() override;
+   void walletsReady() override;
+   void newWalletPrompt() override;
+   void windowIsVisible(bool) override;
 
    bool processOwnRequest(const bs::message::Envelope &
       , const BlockSettle::Common::SignerMessage &);
@@ -55,9 +73,23 @@ private:
    std::shared_ptr<WalletSignerContainer> makeRemoteSigner(
       const BlockSettle::Terminal::SettingsMessage_SignerServer &);
    bool sendComponentLoading();
-   void connectSignals();
 
    bool processStartWalletSync(const bs::message::Envelope &);
+   bool processSyncAddresses(const bs::message::Envelope &
+      , const BlockSettle::Common::SignerMessage_SyncAddresses &);
+   bool processSyncNewAddresses(const bs::message::Envelope &
+      , const BlockSettle::Common::SignerMessage_SyncNewAddresses &);
+   bool processExtendAddrChain(const bs::message::Envelope &
+      , const BlockSettle::Common::SignerMessage_ExtendAddrChain &);
+   bool processSyncWallet(const bs::message::Envelope &, const std::string &walletId);
+   bool processSyncHdWallet(const bs::message::Envelope &, const std::string &walletId);
+   bool processSyncAddrComment(const BlockSettle::Common::SignerMessage_SyncAddressComment &);
+   bool processSyncTxComment(const BlockSettle::Common::SignerMessage_SyncTxComment &);
+   bool processSetSettlId(const bs::message::Envelope &
+      , const BlockSettle::Common::SignerMessage_SetSettlementId &);
+   bool processGetRootPubKey(const bs::message::Envelope &, const std::string &walletId);
+   bool processDelHdRoot(const std::string &walletId);
+   bool processDelHdLeaf(const std::string &walletId);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

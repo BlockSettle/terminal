@@ -76,6 +76,7 @@ bool MatchingAdapter::process(const bs::message::Envelope &env)
          admMsg.set_component_loading(user_->value());
          Envelope envBC{ 0, UserTerminal::create(TerminalUsers::System), nullptr
             , {}, {}, admMsg.SerializeAsString() };
+         pushFill(envBC);
       }
    }
    return true;

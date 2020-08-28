@@ -100,7 +100,7 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
       connect(container.get(), &SignContainer::connectionError, this, &StatusBarView::onContainerError);
    }
 
-   onArmoryStateChanged(armory_->state());
+   onArmoryStateChanged(armory_->state(), armory_->topBlock());
    onConnectionClosed();
    setBalances();
 
@@ -167,6 +167,7 @@ StatusBarView::StatusBarView(QStatusBar *parent)
 
    onConnectionClosed();
 
+   connectionStatusLabel_->setPixmap(iconContainerOffline_);
    containerStatusLabel_->setPixmap(iconContainerOffline_);
 }
 
@@ -183,12 +184,19 @@ StatusBarView::~StatusBarView() noexcept
       separator->deleteLater();
    }
 
-   cleanup();
+   if (armory_) {
+      cleanup();
+   }
+}
+
+void StatusBarView::onBlockchainStateChanged(int state, unsigned int blockNum)
+{
+   onArmoryStateChanged(static_cast<ArmoryState>(state), blockNum);
 }
 
 void StatusBarView::onStateChanged(ArmoryState state)
 {
-   QMetaObject::invokeMethod(this, [this, state] { onArmoryStateChanged(state); });
+   QMetaObject::invokeMethod(this, [this, state] { onArmoryStateChanged(state, blockNum_); });
 }
 
 void StatusBarView::onError(int, const std::string &errMsg)
@@ -210,10 +218,10 @@ void StatusBarView::onPrepareConnection(NetworkType netType, const std::string &
    QMetaObject::invokeMethod(this, [this, netType] { onPrepareArmoryConnection(netType); });
 }
 
-void StatusBarView::onNewBlock(unsigned, unsigned)
+void StatusBarView::onNewBlock(unsigned topBlock, unsigned)
 {
-   QMetaObject::invokeMethod(this, [this] {
-      updateConnectionStatusDetails();
+   QMetaObject::invokeMethod(this, [this, topBlock] {
+      updateConnectionStatusDetails(static_cast<ArmoryState>(armoryState_), topBlock);
    });
 }
 
@@ -252,19 +260,23 @@ void StatusBarView::onPrepareArmoryConnection(NetworkType netType)
    progressBar_->setVisible(false);
    estimateLabel_->setVisible(false);
 
-   onArmoryStateChanged(ArmoryState::Offline);
+   onArmoryStateChanged(ArmoryState::Offline, 0);
 }
 
-void StatusBarView::onArmoryStateChanged(ArmoryState state)
+void StatusBarView::onArmoryStateChanged(ArmoryState state, unsigned int topBlock)
 {
-   progressBar_->setVisible(false);
-   estimateLabel_->setVisible(false);
+   armoryState_ = (int)state;
+   blockNum_ = topBlock;
+
+   progressBar_->hide();
+   estimateLabel_->hide();
    connectionStatusLabel_->show();
 
    armoryConnState_ = state;
 
    setBalances();
 
+   // for some reason previous icons don't display at all now
    switch (state) {
    case ArmoryState::Scanning:
    case ArmoryState::Connecting:
@@ -274,18 +286,18 @@ void StatusBarView::onArmoryStateChanged(ArmoryState state)
    case ArmoryState::Closing:
    case ArmoryState::Offline:
    case ArmoryState::Cancelled:
-      connectionStatusLabel_->setPixmap(iconOffline_);
+      connectionStatusLabel_->setPixmap(/*iconOffline_*/iconContainerOnline_);
       break;
 
    case ArmoryState::Ready:
-      connectionStatusLabel_->setPixmap(iconOnline_);
+      connectionStatusLabel_->setPixmap(/*iconOnline_*/iconContainerOnline_);
       updateBalances();
       break;
 
    default:    break;
    }
 
-   updateConnectionStatusDetails();
+   updateConnectionStatusDetails(state, topBlock);
 }
 
 void StatusBarView::onArmoryProgress(BDMPhase phase, float progress, unsigned int secondsRem)
@@ -322,6 +334,9 @@ void StatusBarView::onArmoryError(QString errorMessage)
 
 void StatusBarView::setBalances()
 {
+   if (!walletsManager_) {
+      return;
+   }
    QString xbt;
 
    switch (armoryConnState_) {
@@ -401,9 +416,9 @@ void StatusBarView::onBalanceUpdated(const std::string &symbol, double balance)
    balanceLabel_->setText(text);
 }
 
-void StatusBarView::updateConnectionStatusDetails()
+void StatusBarView::updateConnectionStatusDetails(ArmoryState state, unsigned int topBlock)
 {
-   switch (armory_->state()) {
+   switch (state) {
       case ArmoryState::Scanning:
       case ArmoryState::Connecting:
       case ArmoryState::Connected:
@@ -417,7 +432,7 @@ void StatusBarView::updateConnectionStatusDetails()
          break;
 
       case ArmoryState::Ready:
-         connectionStatusLabel_->setToolTip(tr("Connected to DB (%1 blocks)").arg(armory_->topBlock()));
+         connectionStatusLabel_->setToolTip(tr("Connected to DB (%1 blocks)").arg(topBlock));
          break;
 
       case ArmoryState::Error:

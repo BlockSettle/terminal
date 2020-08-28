@@ -8,6 +8,7 @@
 **********************************************************************************
 
 */
+#include <spdlog/spdlog.h>
 #include "TerminalMessage.h"
 #include "Message/Adapter.h"
 
@@ -87,6 +88,7 @@ void TerminalInprocBus::shutdown()
 
 bool TerminalInprocBus::run(int &argc, char **argv)
 {
+   start();
    if (!runnableAdapter_) {
       return false;
    }

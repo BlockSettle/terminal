@@ -15,6 +15,10 @@
 #include "GeneralSettingsPage.h"
 #include "NetworkSettingsPage.h"
 #include "SignersProvider.h"
+#include "WalletSignerContainer.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
+#include "autheid_utils.h"
 
 #include "ui_ConfigDialog.h"
 
@@ -29,11 +33,13 @@ SettingsPage::SettingsPage(QWidget *parent)
 void SettingsPage::init(const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
    , const std::shared_ptr<SignersProvider> &signersProvider
-   , std::shared_ptr<SignContainer> signContainer) {
+   , const std::shared_ptr<SignContainer> &signContainer
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr) {
    appSettings_ = appSettings;
    armoryServersProvider_ = armoryServersProvider;
    signersProvider_ = signersProvider;
    signContainer_ = signContainer;
+   walletsMgr_ = walletsMgr;
    initSettings();
    display();
 }
@@ -42,7 +48,8 @@ void SettingsPage::init(const std::shared_ptr<ApplicationSettings> &appSettings
 ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettings
       , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
       , const std::shared_ptr<SignersProvider> &signersProvider
-      , std::shared_ptr<SignContainer> signContainer
+      , const std::shared_ptr<SignContainer> &signContainer
+      , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
       , QWidget* parent)
  : QDialog(parent)
  , ui_(new Ui::ConfigDialog)
@@ -63,7 +70,7 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
       , ui_->pageAPI };
 
    for (const auto &page : pages_) {
-      page->init(appSettings_, armoryServersProvider_, signersProvider_, signContainer_);
+      page->init(appSettings_, armoryServersProvider_, signersProvider_, signContainer_, walletsMgr);
       connect(page, &SettingsPage::illformedSettings, this, &ConfigDialog::illformedSettings);
    }
 
@@ -112,6 +119,76 @@ void ConfigDialog::popupNetworkSettings()
 {
    ui_->stackedWidget->setCurrentWidget(ui_->pageNetwork);
    ui_->listWidget->setCurrentRow(ui_->stackedWidget->indexOf(ui_->pageNetwork));
+}
+
+QString ConfigDialog::encryptErrorStr(EncryptError error)
+{
+   switch (error) {
+      case EncryptError::NoError:            return tr("No error");
+      case EncryptError::NoPrimaryWallet:    return tr("No primary wallet");
+      case EncryptError::NoEncryptionKey:    return tr("No encryption key");
+      case EncryptError::EncryptError:       return tr("Encryption error");
+   }
+   assert(false);
+   return tr("Unknown error");
+}
+
+void ConfigDialog::encryptData(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+   , const std::shared_ptr<SignContainer> &signContainer
+   , const SecureBinaryData &data
+   , const ConfigDialog::EncryptCb &cb)
+{
+   getChatPrivKey(walletsMgr, signContainer, [data, cb](EncryptError error, const SecureBinaryData &privKey) {
+      if (error != EncryptError::NoError) {
+         cb(error, {});
+         return;
+      }
+      auto pubKey = autheid::getPublicKey(autheid::PrivateKey(privKey.getPtr(), privKey.getPtr() + privKey.getSize()));
+      auto encrypted = autheid::encryptData(data.getPtr(), data.getSize(), pubKey);
+      if (encrypted.empty()) {
+         cb(EncryptError::EncryptError, {});
+         return;
+      }
+      cb(EncryptError::NoError, SecureBinaryData(encrypted.data(), encrypted.size()));
+   });
+}
+
+void ConfigDialog::decryptData(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+   , const std::shared_ptr<SignContainer> &signContainer
+   , const SecureBinaryData &data, const ConfigDialog::EncryptCb &cb)
+{
+   getChatPrivKey(walletsMgr, signContainer, [data, cb](EncryptError error, const SecureBinaryData &privKey) {
+      if (error != EncryptError::NoError) {
+         cb(error, {});
+         return;
+      }
+      auto privKeyCopy = autheid::PrivateKey(privKey.getPtr(), privKey.getPtr() + privKey.getSize());
+      auto decrypted = autheid::decryptData(data.getPtr(), data.getSize(), privKeyCopy);
+      if (decrypted.empty()) {
+         cb(EncryptError::EncryptError, {});
+         return;
+      }
+      cb(EncryptError::NoError, SecureBinaryData(decrypted.data(), decrypted.size()));
+   });
+}
+
+void ConfigDialog::getChatPrivKey(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+   , const std::shared_ptr<SignContainer> &signContainer
+   , const ConfigDialog::EncryptCb &cb)
+{
+   const auto &primaryWallet = walletsMgr->getPrimaryWallet();
+   if (!primaryWallet) {
+      cb(EncryptError::NoPrimaryWallet, {});
+      return;
+   }
+   auto walletSigner = std::dynamic_pointer_cast<WalletSignerContainer>(signContainer);
+   walletSigner->getChatNode(primaryWallet->walletId(), [cb](const BIP32_Node &node) {
+      if (node.getPrivateKey().empty()) {
+         cb(EncryptError::NoEncryptionKey, {});
+         return;
+      }
+      cb(EncryptError::NoError, node.getPrivateKey());
+   });
 }
 
 void ConfigDialog::onDisplayDefault()

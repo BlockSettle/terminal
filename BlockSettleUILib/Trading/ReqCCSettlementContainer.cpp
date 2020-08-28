@@ -214,24 +214,12 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
       ccTxData_.armorySigner_.deserializeState(dealerTx_);
       const auto recipient = bs::Address::fromAddressString(dealerAddress_).getRecipient(bs::XBTAmount{ spendVal });
       if (recipient) {
-         ccTxData_.armorySigner_.addRecipient(recipient);
+         ccTxData_.armorySigner_.addRecipient(recipient, RECIP_GROUP_SPEND_1);
       }
       else {
          logger_->error("[{}] failed to create recipient from {} and value {}"
             , __func__, dealerAddress_, spendVal);
          return false;
-      }
-      ccTxData_.outSortOrder = {bs::core::wallet::OutputOrderType::Recipients
-         , bs::core::wallet::OutputOrderType::PrevState, bs::core::wallet::OutputOrderType::Change };
-      
-      auto inputs = bs::UtxoReservation::instance()->get(utxoRes_.reserveId());
-      for (const auto& input : inputs) {
-         try {
-            ccTxData_.armorySigner_.populateUtxo(input);
-         }
-         catch (const std::exception&) {
-            continue;
-         }
       }
 
       logger_->debug("[{}] {} CC inputs reserved ({} recipients)"
@@ -256,19 +244,31 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                   }
                   std::map<unsigned, std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>>> recipientMap;
                   std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recVec({recipient});
-                  recipientMap.emplace(RECIP_GROUP_SPEND_1, std::move(recVec));
+                  recipientMap.emplace(RECIP_GROUP_SPEND_2, std::move(recVec));
 
                   ccTxData_ = bs::sync::WalletsManager::createPartialTXRequest(spendVal
                      , xbtInputs, changeAddr, feePerByte, armory_->topBlock()
-                     , recipientMap, RECIP_GROUP_CHANG_1
+                     , recipientMap, RECIP_GROUP_CHANG_2
                      , dealerTx_, useAllInputs, UINT32_MAX, logger_);
 
                   logger_->debug("{} inputs in ccTxData", ccTxData_.armorySigner_.getTxInCount());
                   // Must release old reservation first (we reserve excessive XBT inputs in advance for CC buy requests)!
-                  utxoRes_.release();
-                  utxoRes_ = utxoReservationManager_->makeNewReservation(ccTxData_.getInputs(nullptr), id());
 
-                  AcceptQuote();
+                  auto resolveCB = [this](
+                     bs::error::ErrorCode result, const Codec_SignerState::SignerState &state)
+                  {
+                     utxoRes_.release();
+                     if (result != bs::error::ErrorCode::NoError) {
+                        std::stringstream ss;
+                        ss << "failed to resolve CC half reply with error code: " << (int)result;
+                        throw std::runtime_error(ss.str());
+                     }
+
+                     ccTxData_.armorySigner_.deserializeState(state);
+                     utxoRes_ = utxoReservationManager_->makeNewReservation(ccTxData_.getInputs(nullptr), id());
+                     AcceptQuote();
+                  };
+                  signingContainer_->resolvePublicSpenders(ccTxData_, resolveCB);
                }
                catch (const std::exception &e) {
                   SPDLOG_LOGGER_ERROR(logger_, "Failed to create partial CC TX "

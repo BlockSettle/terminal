@@ -50,6 +50,9 @@ namespace bs {
             void onGetGeometry(const QRect &);
             void showStartupDialog(bool showLic);
 
+            void onArmoryStateChanged(int state, unsigned int blockNum);
+            void onSignerStateChanged(int state);
+
          public slots:
             void onReactivate();
             void raiseWindow();

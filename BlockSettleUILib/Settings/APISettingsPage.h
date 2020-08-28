@@ -13,6 +13,7 @@
 
 #include <memory>
 #include "ConfigDialog.h"
+#include "ValidityFlag.h"
 
 namespace Ui {
    class APISettingsPage;
@@ -30,7 +31,11 @@ public:
    void apply() override;
 
 private:
+   void updateApiKeyStatus();
+
    std::unique_ptr<Ui::APISettingsPage> ui_;
+   std::string apiKeyEncrypted_;
+   ValidityFlag validityFlag_;
 };
 
 #endif // API_SETTINGS_PAGE_H

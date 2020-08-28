@@ -772,6 +772,12 @@ bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer
       const auto seed = w.privatekey().empty() ? bs::core::wallet::Seed(SecureBinaryData::fromString(w.seed()), netType)
          : bs::core::wallet::Seed::fromXpriv(SecureBinaryData::fromString(w.privatekey()), netType);
 
+      if (walletsMgr_->getHDWalletById(seed.getWalletId()) != nullptr) {
+         signer::CreateHDWalletResponse response;
+         response.set_errorcode(static_cast<uint32_t>(bs::error::ErrorCode::WalletAlreadyPresent));
+         return sendData(signer::CreateHDWalletType, response.SerializeAsString(), reqId);
+      }
+
       const auto wallet = walletsMgr_->createWallet(w.name(), w.description(), seed
          , settings_->getWalletsDir(), pwdData, w.primary());
 

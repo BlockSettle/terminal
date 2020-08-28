@@ -59,6 +59,11 @@ namespace bs {
 
          bool isFallback() const override
          {
+            return (static_cast<TerminalUsers>(value()) == TerminalUsers::Unknown);
+         }
+
+         bool isSystem() const override
+         {
             return (static_cast<TerminalUsers>(value()) == TerminalUsers::System);
          }
 
@@ -78,6 +83,8 @@ namespace bs {
 
          void shutdown();
          bool run(int &argc, char **argv);
+
+      private:
          void start();
 
       private:

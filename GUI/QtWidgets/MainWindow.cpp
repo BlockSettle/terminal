@@ -136,6 +136,20 @@ void MainWindow::onGetGeometry(const QRect &mainGeom)
 #endif   // not Windows
 }
 
+void MainWindow::onArmoryStateChanged(int state, unsigned int blockNum)
+{
+   if (statusBarView_) {
+      statusBarView_->onBlockchainStateChanged(state, blockNum);
+   }
+}
+
+void MainWindow::onSignerStateChanged(int state)
+{
+   if (statusBarView_) {
+   }
+}
+
+
 void MainWindow::showStartupDialog(bool showLicense)
 {
    StartupDialog startupDialog(showLicense, this);

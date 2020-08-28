@@ -27,9 +27,12 @@
 #include "BSTerminalSplashScreen.h"
 #include "MainWindow.h"
 
+#include "common.pb.h"
 #include "terminal.pb.h"
 
+using namespace BlockSettle::Common;
 using namespace BlockSettle::Terminal;
+using namespace bs::message;
 
 Q_DECLARE_METATYPE(bs::error::AuthAddressSubmitResult);
 Q_DECLARE_METATYPE(std::string)
@@ -107,7 +110,7 @@ static QScreen *getDisplay(QPoint position)
 
 QtGuiAdapter::QtGuiAdapter(const std::shared_ptr<spdlog::logger> &logger)
    : QObject(nullptr), logger_(logger)
-   , userSettings_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Settings))
+   , userSettings_(std::make_shared<UserTerminal>(TerminalUsers::Settings))
 {}
 
 QtGuiAdapter::~QtGuiAdapter()
@@ -187,10 +190,11 @@ void QtGuiAdapter::run(int &argc, char **argv)
    const int splashScreenWidth = 400;
    splashScreen_ = new BSTerminalSplashScreen(splashLogo.scaledToWidth(splashScreenWidth
       , Qt::SmoothTransformation));
+   updateSplashProgress();
    splashScreen_->show();
 
    mainWindow_ = new bs::gui::qt::MainWindow(logger_, queue_, user_);
-   updateSplashProgress();
+   updateStates();
 
    requestInitialSettings();
    logger_->debug("[QtGuiAdapter::run] initial setup done");
@@ -207,20 +211,29 @@ void QtGuiAdapter::run(int &argc, char **argv)
    }
 }
 
-bool QtGuiAdapter::process(const bs::message::Envelope &env)
+bool QtGuiAdapter::process(const Envelope &env)
 {
-   if (std::dynamic_pointer_cast<bs::message::UserTerminal>(env.sender)) {
+   if (std::dynamic_pointer_cast<UserTerminal>(env.sender)) {
       switch (env.sender->value<bs::message::TerminalUsers>()) {
-      case bs::message::TerminalUsers::System:
+      case TerminalUsers::System:
          return processAdminMessage(env);
-      case bs::message::TerminalUsers::Settings:
+      case TerminalUsers::Settings:
          return processSettings(env);
+      case TerminalUsers::Blockchain:
+         return processBlockchain(env);
+      case TerminalUsers::Wallets:
+         return processWallets(env);
+      case TerminalUsers::AuthEid:
+         return processAuthEid(env);
+      case TerminalUsers::OnChainTracker:
+         return processOnChainTrack(env);
+      default:    break;
       }
    }
    return true;
 }
 
-bool QtGuiAdapter::processSettings(const bs::message::Envelope &env)
+bool QtGuiAdapter::processSettings(const Envelope &env)
 {
    SettingsMessage msg;
    if (!msg.ParseFromString(env.message)) {
@@ -276,7 +289,7 @@ bool QtGuiAdapter::processSettingsGetResponse(const SettingsMessage_SettingsResp
    return true;
 }
 
-bool QtGuiAdapter::processAdminMessage(const bs::message::Envelope &env)
+bool QtGuiAdapter::processAdminMessage(const Envelope &env)
 {
    AdministrativeMessage msg;
    if (!msg.ParseFromString(env.message)) {
@@ -285,7 +298,14 @@ bool QtGuiAdapter::processAdminMessage(const bs::message::Envelope &env)
    }
    switch (msg.data_case()) {
    case AdministrativeMessage::kComponentCreated:
-      createdComponents_.insert(msg.component_created());
+      switch (static_cast<TerminalUsers>(msg.component_created())) {
+      case TerminalUsers::API:
+      case TerminalUsers::Settings:
+         break;
+      default:
+         createdComponents_.insert(msg.component_created());
+         break;
+      }
       break;
    case AdministrativeMessage::kComponentLoading:
       loadingComponents_.insert(msg.component_loading());
@@ -294,6 +314,108 @@ bool QtGuiAdapter::processAdminMessage(const bs::message::Envelope &env)
    }
    updateSplashProgress();
    return true;
+}
+
+bool QtGuiAdapter::processBlockchain(const Envelope &env)
+{
+   ArmoryMessage msg;
+   if (!msg.ParseFromString(env.message)) {
+      logger_->error("[QtGuiAdapter::processBlockchain] failed to parse msg #{}"
+         , env.id);
+      if (!env.receiver) {
+         logger_->debug("[{}] no receiver", __func__);
+      }
+      return true;
+   }
+   switch (msg.data_case()) {
+   case ArmoryMessage::kLoading:
+      loadingComponents_.insert(env.sender->value());
+      updateSplashProgress();
+      break;
+   case ArmoryMessage::kStateChanged:
+      armoryState_ = msg.state_changed().state();
+      blockNum_ = msg.state_changed().top_block();
+      if (mainWindow_) {
+         QMetaObject::invokeMethod(mainWindow_, [this, state=msg.state_changed()] {
+            mainWindow_->onArmoryStateChanged(state.state(), state.top_block());
+         });
+      }
+      break;
+   case ArmoryMessage::kNewBlock:
+      blockNum_ = msg.new_block().top_block();
+      if (mainWindow_) {
+         QMetaObject::invokeMethod(mainWindow_, [this]{
+            mainWindow_->onArmoryStateChanged(armoryState_, blockNum_);
+            });
+      }
+      break;
+   default:    break;
+   }
+   return true;
+}
+
+bool QtGuiAdapter::processWallets(const Envelope &env)
+{
+   WalletsMessage msg;
+   if (!msg.ParseFromString(env.message)) {
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      return true;
+   }
+   switch (msg.data_case()) {
+   case WalletsMessage::kLoading:
+      loadingComponents_.insert(env.sender->value());
+      updateSplashProgress();
+      break;
+   default:    break;
+   }
+   return true;
+}
+
+bool QtGuiAdapter::processAuthEid(const Envelope &env)
+{
+   AuthEidMessage msg;
+   if (!msg.ParseFromString(env.message)) {
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      return true;
+   }
+   switch (msg.data_case()) {
+   case AuthEidMessage::kLoading:
+      loadingComponents_.insert(env.sender->value());
+      updateSplashProgress();
+      break;
+   default:    break;
+   }
+   return true;
+}
+
+bool QtGuiAdapter::processOnChainTrack(const Envelope &env)
+{
+   OnChainTrackMessage msg;
+   if (!msg.ParseFromString(env.message)) {
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      return true;
+   }
+   switch (msg.data_case()) {
+   case OnChainTrackMessage::kLoading:
+      loadingComponents_.insert(env.sender->value());
+      updateSplashProgress();
+      break;
+   default:    break;
+   }
+   return true;
+}
+
+void QtGuiAdapter::updateStates()
+{
+   if (!mainWindow_) {
+      return;
+   }
+   if (armoryState_ >= 0) {
+      mainWindow_->onArmoryStateChanged(armoryState_, blockNum_);
+   }
+   if (signerState_ >= 0) {
+      mainWindow_->onSignerStateChanged(signerState_);
+   }
 }
 
 void QtGuiAdapter::updateSplashProgress()
@@ -315,9 +437,10 @@ void QtGuiAdapter::splashProgressCompleted()
    if (!splashScreen_) {
       return;
    }
+   loadingComponents_.clear();
+
    QMetaObject::invokeMethod(splashScreen_, [this] {
       mainWindow_->show();
-      loadingComponents_.clear();
       QTimer::singleShot(500, [this] {
          if (splashScreen_) {
             splashScreen_->hide();
@@ -342,8 +465,7 @@ void QtGuiAdapter::requestInitialSettings()
    setReq->set_index(SetIdx_Initialized);
    setReq->set_type(SettingType_Bool);
 
-   bs::message::Envelope env{ 0, user_, userSettings_, bs::message::TimeStamp{}
-      , bs::message::TimeStamp{}, msg.SerializeAsString(), true };
+   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
    pushFill(env);
 }
 

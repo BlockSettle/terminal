@@ -50,7 +50,7 @@ public:
 public slots:
    void onBalanceUpdated(const std::string &symbol, double balance);
    void onPrepareArmoryConnection(NetworkType);
-   void onArmoryStateChanged(ArmoryState);
+   void onArmoryStateChanged(ArmoryState, unsigned int topBlock);
    void onArmoryProgress(BDMPhase, float progress, unsigned int secondsRem);
    void onArmoryError(QString);
    void onConnectedToServer();
@@ -61,14 +61,15 @@ public slots:
    void updateBalances();
    void onWalletImportStarted(const std::string &walletId);
    void onWalletImportFinished(const std::string &walletId);
+   void onBlockchainStateChanged(int, unsigned int);
 
 private:
-   void onStateChanged(ArmoryState) override;
-   void onError(int errCode, const std::string &) override;
-   void onLoadProgress(BDMPhase, float, unsigned int, unsigned int) override;
-   void onPrepareConnection(NetworkType, const std::string &host
+   [[deprecated]] void onStateChanged(ArmoryState) override;
+   [[deprecated]] void onError(int errCode, const std::string &) override;
+   [[deprecated]] void onLoadProgress(BDMPhase, float, unsigned int, unsigned int) override;
+   [[deprecated]] void onPrepareConnection(NetworkType, const std::string &host
       , const std::string &port) override;
-   void onNewBlock(unsigned, unsigned) override;
+   [[deprecated]] void onNewBlock(unsigned, unsigned) override;
 
 public:
    void updateDBHeadersProgress(float progress, unsigned secondsRem);
@@ -84,7 +85,7 @@ private:
    void SetCelerConnectingStatus();
    QWidget *CreateSeparator();
    [[deprecated]] void setBalances();
-   [[deprecated]] void updateConnectionStatusDetails();
+   void updateConnectionStatusDetails(ArmoryState state, unsigned int blockNum);
 
 private:
    void updateProgress(float progress, unsigned secondsRem);
@@ -121,6 +122,8 @@ private:
    std::unordered_set<std::string>     importingWallets_;
    std::vector<std::string>   balanceSymbols_;
    std::unordered_map<std::string, double>   balances_;
+   int            armoryState_{ -1 };
+   unsigned int   blockNum_{ 0 };
 };
 
 #endif // __STATUS_BAR_VIEW_H__

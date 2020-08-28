@@ -60,7 +60,7 @@ bool BsServerAdapter::process(const bs::message::Envelope &env)
          return processLocalSettings(msg.get_response());
       }
    }
-   else if (env.receiver->value<TerminalUsers>() == TerminalUsers::BsServer) {
+   else if (env.receiver && (env.receiver->value<TerminalUsers>() == TerminalUsers::BsServer)) {
       return processOwnRequest(env);
    }
    return true;

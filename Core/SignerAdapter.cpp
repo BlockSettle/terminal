@@ -24,7 +24,7 @@ using namespace bs::message;
 
 
 SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger)
-   : QObject(nullptr), logger_(logger)
+   : logger_(logger)
    , user_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Signer))
 {}
 
@@ -97,6 +97,31 @@ bool SignerAdapter::processOwnRequest(const bs::message::Envelope &env
    switch (request.data_case()) {
    case SignerMessage::kStartWalletsSync:
       return processStartWalletSync(env);
+   case SignerMessage::kSyncAddresses:
+      return processSyncAddresses(env, request.sync_addresses());
+   case SignerMessage::kSyncNewAddresses:
+      return processSyncNewAddresses(env, request.sync_new_addresses());
+   case SignerMessage::kExtAddrChain:
+      return processExtendAddrChain(env, request.ext_addr_chain());
+   case SignerMessage::kSyncWallet:
+      return processSyncWallet(env, request.sync_wallet());
+   case SignerMessage::kSyncHdWallet:
+      return processSyncHdWallet(env, request.sync_hd_wallet());
+   case SignerMessage::kSyncAddrComment:
+      return processSyncAddrComment(request.sync_addr_comment());
+   case SignerMessage::kSyncTxComment:
+      return processSyncTxComment(request.sync_tx_comment());
+   case SignerMessage::kSetSettlId:
+      return processSetSettlId(env, request.set_settl_id());
+   case SignerMessage::kGetRootPubkey:
+      return processGetRootPubKey(env, request.get_root_pubkey());
+   case SignerMessage::kDelHdRoot:
+      return processDelHdRoot(request.del_hd_root());
+   case SignerMessage::kDelHdLeaf:
+      return processDelHdLeaf(request.del_hd_leaf());
+   default:
+      logger_->warn("[{}] unknown signer request: {}", __func__, request.data_case());
+      break;
    }
    return true;
 }
@@ -125,7 +150,7 @@ std::shared_ptr<WalletSignerContainer> SignerAdapter::makeRemoteSigner(
 
    auto remoteSigner = std::make_shared<RemoteSigner>(logger_
       , QString::fromStdString(response.host()), QString::fromStdString(response.port())
-      , netType, connMgr, SignContainer::OpMode::Remote, false
+      , netType, connMgr, this, SignContainer::OpMode::Remote, false
       , response.remote_keys_dir(), response.remote_keys_file(), cbOurNewKey);
 
    bs::network::BIP15xPeers peers;
@@ -176,92 +201,86 @@ bool SignerAdapter::processSignerSettings(const SettingsMessage_SignerServer &re
       const bool startLocalSignerProcess = true;
       signer_ = std::make_shared<LocalSigner>(logger_
          , QString::fromStdString(response.home_dir()), netType, localSignerPort
-         , connMgr, startLocalSignerProcess, "", "", response.auto_sign_spend_limit());
-      connectSignals();
+         , connMgr, this, startLocalSignerProcess, "", ""
+         , response.auto_sign_spend_limit());
       signer_->Start();
       return sendComponentLoading();
    }
    else {
       signer_ = makeRemoteSigner(response);
-      connectSignals();
       signer_->Start();
       return sendComponentLoading();
    }
    return true;
 }
 
-void SignerAdapter::connectSignals()
+
+void SignerAdapter::connError(SignContainer::ConnectionError errCode, const QString &errMsg)
 {
-   if (!signer_) {
-      return;
-   }
-   connect(signer_.get(), &SignContainer::connectionError, this, [this]
-      (SignContainer::ConnectionError code, QString text) {
-      SignerMessage msg;
-      auto msgErr = msg.mutable_error();
-      msgErr->set_code((int)code);
-      msgErr->set_text(text.toStdString());
-      Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-      pushFill(env);
-   }, Qt::QueuedConnection);
+   SignerMessage msg;
+   auto msgErr = msg.mutable_error();
+   msgErr->set_code((int)errCode);
+   msgErr->set_text(errMsg.toStdString());
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(env);
+}
 
-   connect(signer_.get(), &SignContainer::disconnected, this, [this] {
-      SignerMessage msg;
-      auto msgErr = msg.mutable_error();
-      msgErr->set_code((int)SignContainer::ConnectionError::SignerGoesOffline);
-      msgErr->set_text("disconnected");
-      Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-      pushFill(env);
-   }, Qt::QueuedConnection);
+void SignerAdapter::connTorn()
+{
+   SignerMessage msg;
+   auto msgErr = msg.mutable_error();
+   msgErr->set_code((int)SignContainer::ConnectionError::SignerGoesOffline);
+   msgErr->set_text("disconnected");
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(env);
+}
 
-   connect(signer_.get(), &WalletSignerContainer::AuthLeafAdded, this, [this](const std::string &leafId) {
-      SignerMessage msg;
-      msg.set_auth_leaf_added(leafId);
-      Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-      pushFill(env);
-   }, Qt::QueuedConnection);
+void SignerAdapter::authLeafAdded(const std::string &walletId)
+{
+   SignerMessage msg;
+   msg.set_auth_leaf_added(walletId);
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(env);
+}
 
-   connect(signer_.get(), &WalletSignerContainer::walletsListUpdated, this, [this] {
-      SignerMessage msg;
-      msg.mutable_wallets_list_updated();
-      Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-      pushFill(env);
-   }, Qt::QueuedConnection);
+void SignerAdapter::walletsChanged()
+{
+   SignerMessage msg;
+   msg.mutable_wallets_list_updated();
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(env);
+}
 
-   connect(signer_.get(), &WalletSignerContainer::walletsStorageDecrypted, this, [this] {
-      SignerMessage msg;
-      msg.mutable_wallet_storage_decrypted();
-      Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-      pushFill(env);
-   }, Qt::QueuedConnection);
+void SignerAdapter::onReady()
+{
+   SignerMessage msg;
+   msg.mutable_ready();
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(env);
+}
 
-   connect(signer_.get(), &WalletSignerContainer::ready, this, [this] {
-      SignerMessage msg;
-      msg.mutable_ready();
-      Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-      pushFill(env);
-   }, Qt::QueuedConnection);
+void SignerAdapter::walletsReady()
+{
+   SignerMessage msg;
+   msg.mutable_wallets_ready_to_sync();
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(env);
+}
 
-   connect(signer_.get(), &WalletSignerContainer::needNewWalletPrompt, this, [this] {
-      SignerMessage msg;
-      msg.mutable_need_new_wallet_prompt();
-      Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-      pushFill(env);
-   }, Qt::QueuedConnection);
+void SignerAdapter::newWalletPrompt()
+{
+   SignerMessage msg;
+   msg.mutable_need_new_wallet_prompt();
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(env);
+}
 
-   connect(signer_.get(), &WalletSignerContainer::walletsReadyToSync, this, [this] {
-      SignerMessage msg;
-      msg.mutable_wallets_ready_to_sync();
-      Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-      pushFill(env);
-   }, Qt::QueuedConnection);
-
-   connect(signer_.get(), &WalletSignerContainer::windowVisibilityChanged, this, [this](bool visible) {
-      SignerMessage msg;
-      msg.set_window_visible_changed(visible);
-      Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-      pushFill(env);
-   }, Qt::QueuedConnection);
+void SignerAdapter::windowIsVisible(bool flag)
+{
+   SignerMessage msg;
+   msg.set_window_visible_changed(flag);
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(env);
 }
 
 bool SignerAdapter::sendComponentLoading()
@@ -329,4 +348,262 @@ bool SignerAdapter::processStartWalletSync(const bs::message::Envelope &env)
    };
    signer_->syncWalletInfo(cbWallets);
    return true;
+}
+
+bool SignerAdapter::processSyncAddresses(const bs::message::Envelope &env
+   , const SignerMessage_SyncAddresses &request)
+{
+   requests_[env.id] = env.sender;
+   const auto &cb = [this, msgId = env.id, walletId = request.wallet_id()]
+      (bs::sync::SyncState st)
+   {
+      const auto &itReq = requests_.find(msgId);
+      if (itReq == requests_.end()) {
+         return;
+      }
+      SignerMessage msg;
+      auto msgResp = msg.mutable_sync_addr_result();
+      msgResp->set_wallet_id(walletId);
+      msgResp->set_status(static_cast<int>(st));
+
+      Envelope envResp{ msgId, user_, itReq->second, {}, {}, msg.SerializeAsString() };
+      pushFill(envResp);
+      requests_.erase(itReq);
+   };
+   std::set<BinaryData> addrSet;
+   for (const auto &addr : request.addresses()) {
+      try {
+         const auto &address = bs::Address::fromAddressString(addr);
+         addrSet.insert(address.prefixed());
+      }
+      catch (const std::exception &) {}
+   }
+   signer_->syncAddressBatch(request.wallet_id(), addrSet, cb);
+   return true;
+}
+
+bool SignerAdapter::processSyncNewAddresses(const bs::message::Envelope &env
+   , const SignerMessage_SyncNewAddresses &request)
+{
+   requests_[env.id] = env.sender;
+   if (request.single()) {
+      const auto &cb = [this, msgId = env.id, walletId = request.wallet_id()]
+      (const bs::Address &addr)
+      {
+         const auto &itReq = requests_.find(msgId);
+         if (itReq == requests_.end()) {
+            return;
+         }
+         SignerMessage msg;
+         auto msgResp = msg.mutable_new_addresses();
+         msgResp->set_wallet_id(walletId);
+         msgResp->add_addresses()->set_address(addr.display());
+
+         Envelope envResp{ msgId, user_, itReq->second, {}, {}, msg.SerializeAsString() };
+         pushFill(envResp);
+         requests_.erase(itReq);
+      };
+      if (request.indices_size() != 1) {
+         logger_->error("[{}] not a single new address request", __func__);
+         return true;
+      }
+      signer_->syncNewAddress(request.wallet_id(), request.indices(0), cb);
+   }
+   else {
+      const auto &cb = [this, msgId=env.id, walletId = request.wallet_id()]
+         (const std::vector<std::pair<bs::Address, std::string>> &addrIdxPairs)
+      {
+         const auto &itReq = requests_.find(msgId);
+         if (itReq == requests_.end()) {
+            return;
+         }
+         SignerMessage msg;
+         auto msgResp = msg.mutable_new_addresses();
+         msgResp->set_wallet_id(walletId);
+         for (const auto &aiPair : addrIdxPairs) {
+            auto msgPair = msgResp->add_addresses();
+            msgPair->set_address(aiPair.first.display());
+            msgPair->set_index(aiPair.second);
+         }
+
+         Envelope envResp{ msgId, user_, itReq->second, {}, {}, msg.SerializeAsString() };
+         pushFill(envResp);
+         requests_.erase(itReq);
+      };
+      std::vector<std::string> indices;
+      indices.reserve(request.indices_size());
+      for (const auto &idx : request.indices()) {
+         indices.push_back(idx);
+      }
+      signer_->syncNewAddresses(request.wallet_id(), indices, cb);
+   }
+   return true;
+}
+
+bool SignerAdapter::processExtendAddrChain(const bs::message::Envelope &env
+   , const SignerMessage_ExtendAddrChain &request)
+{
+   requests_[env.id] = env.sender;
+   const auto &cb = [this, msgId = env.id, walletId = request.wallet_id()]
+      (const std::vector<std::pair<bs::Address, std::string>> &addrIdxPairs)
+   {
+      const auto &itReq = requests_.find(msgId);
+      if (itReq == requests_.end()) {
+         return;
+      }
+      SignerMessage msg;
+      auto msgResp = msg.mutable_addr_chain_extended();
+      msgResp->set_wallet_id(walletId);
+      for (const auto &aiPair : addrIdxPairs) {
+         auto msgPair = msgResp->add_addresses();
+         msgPair->set_address(aiPair.first.display());
+         msgPair->set_index(aiPair.second);
+      }
+
+      Envelope envResp{ msgId, user_, itReq->second, {}, {}, msg.SerializeAsString() };
+      pushFill(envResp);
+      requests_.erase(itReq);
+   };
+   signer_->extendAddressChain(request.wallet_id(), request.count(), request.ext_int(), cb);
+   return true;
+}
+
+bool SignerAdapter::processSyncWallet(const bs::message::Envelope &env
+   , const std::string &walletId)
+{
+   requests_[env.id] = env.sender;
+   const auto &cb = [this, msgId=env.id, walletId]
+      (bs::sync::WalletData data)
+   {
+      const auto &itReq = requests_.find(msgId);
+      if (itReq == requests_.end()) {
+         return;
+      }
+      SignerMessage msg;
+      auto msgResp = msg.mutable_wallet_synced();
+      msgResp->set_wallet_id(walletId);
+      msgResp->set_high_ext_index(data.highestExtIndex);
+      msgResp->set_high_int_index(data.highestIntIndex);
+
+      for (const auto &addr : data.addresses) {
+         auto msgAddr = msgResp->add_addresses();
+         msgAddr->set_index(addr.index);
+         msgAddr->set_address(addr.address.display());
+         msgAddr->set_comment(addr.comment);
+      }
+      for (const auto &addr : data.addrPool) {
+         auto msgAddr = msgResp->add_addr_pool();
+         msgAddr->set_index(addr.index);
+         msgAddr->set_address(addr.address.display());
+         msgAddr->set_comment(addr.comment);
+      }
+      for (const auto &txCom : data.txComments) {
+         auto msgTxCom = msgResp->add_tx_comments();
+         msgTxCom->set_tx_hash(txCom.txHash.toBinStr());
+         msgTxCom->set_comment(txCom.comment);
+      }
+
+      Envelope envResp{ msgId, user_, itReq->second, {}, {}, msg.SerializeAsString() };
+      pushFill(envResp);
+      requests_.erase(itReq);
+   };
+   signer_->syncWallet(walletId, cb);
+   return true;
+}
+
+bool SignerAdapter::processSyncHdWallet(const bs::message::Envelope &env
+   , const std::string &walletId)
+{
+   requests_[env.id] = env.sender;
+   const auto &cb = [this, msgId = env.id, walletId]
+      (bs::sync::HDWalletData data)
+   {
+      const auto &itReq = requests_.find(msgId);
+      if (itReq == requests_.end()) {
+         return;
+      }
+      SignerMessage msg;
+      auto msgResp = msg.mutable_hd_wallet_synced();
+      *msgResp = data.toCommonMessage();
+      msgResp->set_wallet_id(walletId);
+
+      Envelope envResp{ msgId, user_, itReq->second, {}, {}, msg.SerializeAsString() };
+      pushFill(envResp);
+      requests_.erase(itReq);
+   };
+   signer_->syncHDWallet(walletId, cb);
+   return true;
+}
+
+bool SignerAdapter::processSyncAddrComment(const SignerMessage_SyncAddressComment &request)
+{
+   try {
+      signer_->syncAddressComment(request.wallet_id()
+         , bs::Address::fromAddressString(request.address()), request.comment());
+   }
+   catch (const std::exception &) {}
+   return true;
+}
+
+bool SignerAdapter::processSyncTxComment(const SignerMessage_SyncTxComment &request)
+{
+   signer_->syncTxComment(request.wallet_id()
+      , BinaryData::fromString(request.tx_hash()), request.comment());
+   return true;
+}
+
+bool SignerAdapter::processSetSettlId(const bs::message::Envelope &env
+   , const SignerMessage_SetSettlementId &request)
+{
+   requests_[env.id] = env.sender;
+   const auto &cb = [this, msgId=env.id](bool result)
+   {
+      const auto &itReq = requests_.find(msgId);
+      if (itReq == requests_.end()) {
+         return;
+      }
+      SignerMessage msg;
+      msg.set_settl_id_set(result);
+      Envelope envResp{ msgId, user_, itReq->second, {}, {}, msg.SerializeAsString() };
+      pushFill(envResp);
+      requests_.erase(itReq);
+   };
+   signer_->setSettlementID(request.wallet_id()
+      , BinaryData::fromString(request.settlement_id()), cb);
+   return true;
+}
+
+bool SignerAdapter::processGetRootPubKey(const bs::message::Envelope &env
+   , const std::string &walletId)
+{
+   requests_[env.id] = env.sender;
+   const auto &cb = [this, msgId=env.id, walletId]
+      (bool result, const SecureBinaryData &key)
+   {
+      const auto &itReq = requests_.find(msgId);
+      if (itReq == requests_.end()) {
+         return;
+      }
+      SignerMessage msg;
+      auto msgResp = msg.mutable_root_pubkey();
+      msgResp->set_wallet_id(walletId);
+      msgResp->set_pub_key(key.toBinStr());
+      msgResp->set_success(result);
+
+      Envelope envResp{ msgId, user_, itReq->second, {}, {}, msg.SerializeAsString() };
+      pushFill(envResp);
+      requests_.erase(itReq);
+   };
+   signer_->getRootPubkey(walletId, cb);
+   return true;
+}
+
+bool SignerAdapter::processDelHdRoot(const std::string &walletId)
+{
+   return (signer_->DeleteHDRoot(walletId) > 0);
+}
+
+bool SignerAdapter::processDelHdLeaf(const std::string &walletId)
+{
+   return (signer_->DeleteHDLeaf(walletId) > 0);
 }

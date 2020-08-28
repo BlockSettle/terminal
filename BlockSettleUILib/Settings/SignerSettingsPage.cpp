@@ -155,11 +155,11 @@ void SignerSettingsPage::initSettings()
 }
 
 void SignerSettingsPage::init(const std::shared_ptr<ApplicationSettings> &appSettings
-                              , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
-                              , const std::shared_ptr<SignersProvider> &signersProvider
-                              , std::shared_ptr<SignContainer> signContainer)
+   , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
+   , const std::shared_ptr<SignersProvider> &signersProvider, const std::shared_ptr<SignContainer> &signContainer
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
 {
    reset_ = true;
-   SettingsPage::init(appSettings, armoryServersProvider, signersProvider, signContainer);
+   SettingsPage::init(appSettings, armoryServersProvider, signersProvider, signContainer, walletsMgr);
    reset_ = false;
 }

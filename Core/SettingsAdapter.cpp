@@ -17,8 +17,10 @@
 #include "LogManager.h"
 #include "PubKeyLoader.h"
 
+#include "common.pb.h"
 #include "terminal.pb.h"
 
+using namespace BlockSettle::Common;
 using namespace BlockSettle::Terminal;
 using namespace bs::message;
 
@@ -74,7 +76,30 @@ bool SettingsAdapter::process(const bs::message::Envelope &env)
       }
    }
    else if (env.sender->value<TerminalUsers>() == TerminalUsers::Blockchain) {
-      //TODO: parse Armory request
+      ArmoryMessage msg;
+      if (!msg.ParseFromString(env.message)) {
+         logger_->error("[{}] failed to parse armory msg #{}", __func__, env.id);
+         return true;
+      }
+      if (msg.data_case() == ArmoryMessage::kSettingsRequest) {
+         ArmoryMessage msgReply;
+         auto msgResp = msgReply.mutable_settings_response();
+         const auto &armorySettings = armoryServersProvider_->getArmorySettings();
+         armoryServersProvider_->setConnectedArmorySettings(armorySettings);
+         msgResp->set_socket_type(armorySettings.socketType);
+         msgResp->set_network_type((int)armorySettings.netType);
+         msgResp->set_host(armorySettings.armoryDBIp.toStdString());
+         msgResp->set_port(std::to_string(armorySettings.armoryDBPort));
+         msgResp->set_bip15x_key(armorySettings.armoryDBKey.toStdString());
+         msgResp->set_run_locally(armorySettings.runLocally);
+         msgResp->set_data_dir(armorySettings.dataDir.toStdString());
+         msgResp->set_executable_path(armorySettings.armoryExecutablePath.toStdString());
+         msgResp->set_bitcoin_dir(armorySettings.bitcoinBlocksDir.toStdString());
+         msgResp->set_db_dir(armorySettings.dbDir.toStdString());
+         msgResp->set_cache_file_name(appSettings_->get<std::string>(ApplicationSettings::txCacheFileName));
+         Envelope envResp{ env.id, user_, env.sender, {}, {}, msgReply.SerializeAsString() };
+         pushFill(envResp);
+      }
    }
    return true;
 }

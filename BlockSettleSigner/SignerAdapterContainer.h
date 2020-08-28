@@ -96,7 +96,7 @@ public:
    void extendAddressChain(const std::string&, unsigned, bool,
       const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) override {}
    void syncNewAddresses(const std::string &, const std::vector<std::string> &
-      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool = true) override {}
+      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) override {}
    void getChatNode(const std::string &walletID, const std::function<void(const BIP32_Node &)> &) override {}
    void setSettlAuthAddr(const std::string &walletId, const BinaryData &, const bs::Address &addr) override {}
    void getSettlAuthAddr(const std::string &walletId, const BinaryData &

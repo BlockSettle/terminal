@@ -52,12 +52,18 @@ public:
    void run(int &argc, char **argv) override;
 
 private:
-   bool processSettings(const bs::message::Envelope &env);
+   bool processSettings(const bs::message::Envelope &);
    bool processSettingsGetResponse(const BlockSettle::Terminal::SettingsMessage_SettingsResponse &);
-   bool processAdminMessage(const bs::message::Envelope &env);
+   bool processAdminMessage(const bs::message::Envelope &);
+   bool processBlockchain(const bs::message::Envelope &);
+   bool processWallets(const bs::message::Envelope &);
+   bool processAuthEid(const bs::message::Envelope &);
+   bool processOnChainTrack(const bs::message::Envelope &);
+
    void requestInitialSettings();
    void updateSplashProgress();
    void splashProgressCompleted();
+   void updateStates();
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
@@ -67,6 +73,9 @@ private:
 
    std::set<int>  createdComponents_;
    std::set<int>  loadingComponents_;
+   int armoryState_{ -1 };
+   uint32_t blockNum_{ 0 };
+   int signerState_{ -1 };
 };
 
 
