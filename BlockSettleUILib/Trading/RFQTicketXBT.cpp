@@ -673,7 +673,7 @@ bool RFQTicketXBT::checkAuthAddr(double qty) const
    }
 
    if (currentGroupType_ == ProductGroupType::XBTGroupType){
-      if (getProductToSpend() == UiUtils::XbtCurrency) {
+      if (currentProduct_ == UiUtils::XbtCurrency) {
          return tradeSettings->xbtTier1Limit > bs::XBTAmount(qty).GetValue();
       }
       else {
