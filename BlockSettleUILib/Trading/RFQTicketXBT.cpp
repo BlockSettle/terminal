@@ -1392,8 +1392,7 @@ void RFQTicketXBT::productSelectionChanged()
             }
          }
       } else {
-         const bool sellXBT = getProductToSpend() == UiUtils::XbtCurrency;
-         if (sellXBT) {
+         if (currentProduct_ == UiUtils::XbtCurrency) {
             ui_->lineEditAmount->setValidator(xbtAmountValidator_);
          } else {
             ui_->lineEditAmount->setValidator(fxAmountValidator_);
