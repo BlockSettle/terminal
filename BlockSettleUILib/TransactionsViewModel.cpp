@@ -90,7 +90,11 @@ QVariant TXNode::data(int column, int role) const
          }
          break;
       case TransactionsViewModel::Columns::TxHash:
-         return QString::fromStdString(item_->txEntry.txHash.toHexStr(true));
+         if (item_->txOutIndex >= 0 && !item_->txMultipleOutIndex) {
+            return QString::fromStdString(fmt::format("{}/{}", item_->txEntry.txHash.toHexStr(true), item_->txOutIndex));
+         } else {
+            return QString::fromStdString(item_->txEntry.txHash.toHexStr(true));
+         }
          /*      case Columns::MissedBlocks:
                   return item.confirmations < 6 ? 0 : QVariant();*/
       default:
@@ -1249,7 +1253,7 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
 
       std::shared_ptr<bs::sync::Wallet> totalValWallet;
       for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
-         const TxOut out = tx.getTxOutCopy(i);
+         TxOut out = tx.getTxOutCopy(i);
          try {
             const auto addr = bs::Address::fromTxOut(out);
             const auto addrWallet = walletsManager->getWalletByAddress(addr);
@@ -1265,6 +1269,10 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
             }
             if (filterAddress.isValid() && addr == filterAddress) {
                addressVal += out.getValue();
+               if (txOutIndex >= 0) {
+                  txMultipleOutIndex = true;
+               }
+               txOutIndex = out.getIndex();
             }
          } catch (const std::exception &) {
             addressVal += out.getValue();
@@ -1296,6 +1304,10 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
             }
             if (filterAddress.isValid() && filterAddress == addr) {
                addressVal -= prevOut.getValue();
+               if (txOutIndex >= 0) {
+                  txMultipleOutIndex = true;
+               }
+               txOutIndex = in.getIndex();
             }
          }
       }
