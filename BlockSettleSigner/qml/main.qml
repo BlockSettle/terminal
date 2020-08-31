@@ -193,8 +193,14 @@ ApplicationWindow {
     }
 
     onClosing: {
-        settingsPage.storeSettings();
-        autoSignPage.storeSettings();
+        close.accepted = false;
+        var mb = JsHelper.messageBox(BSMessageBox.Type.Question
+            , qsTr("Close"), qsTr("Do you want to close signer?"))
+        mb.bsAccepted.connect(function() {
+            settingsPage.storeSettings();
+            autoSignPage.storeSettings();
+            Qt.quit()
+        })
     }
 
     function raiseWindow() {
