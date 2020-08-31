@@ -479,11 +479,7 @@ void LedgerCommandThread::processGetPublicKey()
       return;
    }
    else {
-      logger_->debug(
-         "[LedgerCommandThread] getPublicKey - Operation succeeded."
-         "\nRoot xpub : {}\nNested segwit xpub: {}\nNative segwit xpub: {}\nLegacy: {}"
-         , walletInfo.info_.xpubRoot, walletInfo.info_.xpubNestedSegwit
-         , walletInfo.info_.xpubNativeSegwit, walletInfo.info_.xpubLegacy);
+      logger_->debug("[LedgerCommandThread] getPublicKey - Operation succeeded.");
    }
 
    emit resultReady(QVariant::fromValue<>(walletInfo));
