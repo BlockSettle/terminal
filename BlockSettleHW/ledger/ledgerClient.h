@@ -13,6 +13,9 @@
 
 #include "ledgerStructure.h"
 
+#include <memory>
+#include <mutex>
+
 #include <QVector>
 
 class LedgerDevice;
@@ -45,8 +48,9 @@ private:
    bool testNet_;
    QString lastScanError_;
 
-   std::shared_ptr<spdlog::logger> logger_;
+   std::shared_ptr<spdlog::logger>           logger_;
    std::shared_ptr<bs::sync::WalletsManager> walletManager_;
+   std::shared_ptr<std::mutex>               hidLock_;
 
 };
 
