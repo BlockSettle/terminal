@@ -49,7 +49,6 @@ private:
 
    std::unique_ptr<Ui::CreateOTCRequestWidget> ui_;
 
-   QString buyProduct_{ QLatin1String("EUR") };
    int env_{};
 };
 

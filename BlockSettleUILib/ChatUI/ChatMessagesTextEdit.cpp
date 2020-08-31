@@ -625,7 +625,7 @@ QString ChatMessagesTextEdit::toHtmlText(const QString &text) const
       return QStringLiteral("<font color=\"%1\">*** %2 ***</font>").arg(internalStyle_.colorOtc().name()).arg(otcText);
    }
 
-   QString changedText = text;
+   QString changedText = text.toHtmlEscaped();
 
    // make linkable
    int index = 0;
