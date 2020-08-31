@@ -175,7 +175,7 @@ void OTCNegotiationRequestWidget::onUpdateBalances()
 void OTCNegotiationRequestWidget::onSubmited()
 {
    auto minXbtAmount = bs::tradeutils::minXbtAmount(getUtxoManager()->feeRatePb());
-   if (ui_->quantitySpinBox->value() < minXbtAmount.GetValue()) {
+   if (ui_->quantitySpinBox->value() < minXbtAmount.GetValueBitcoin()) {
       auto minAmountStr = UiUtils::displayQuantity(minXbtAmount.GetValueBitcoin(), bs::network::XbtCurrency);
       BSMessageBox(BSMessageBox::critical, tr("OTC"), tr("Invalid amount"),
          tr("Amount will not cover network fee.\nMinimum amount: %1").arg(minAmountStr), this).exec();
