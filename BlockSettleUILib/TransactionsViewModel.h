@@ -54,6 +54,8 @@ struct TransactionsViewItem
    QString displayDateTime;
    QString amountStr;
    BTCNumericTypes::balance_type amount = 0;
+   int32_t txOutIndex{-1};
+   bool txMultipleOutIndex{false};
    bs::sync::TxValidity isValid = bs::sync::TxValidity::Invalid;
    bool     isCPFP = false;
    int confirmations = 0;
