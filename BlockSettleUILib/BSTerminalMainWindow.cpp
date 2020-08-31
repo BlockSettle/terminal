@@ -836,6 +836,9 @@ void BSTerminalMainWindow::tryGetChatKeys()
    }
    const auto &primaryWallet = walletsMgr_->getPrimaryWallet();
    if (!primaryWallet) {
+      // Reset API key if it was stored (as it won't be possible to decrypt it)
+      applicationSettings_->reset(ApplicationSettings::LoginApiKey);
+      loginApiKeyEncrypted_.clear();
       return;
    }
    signContainer_->getChatNode(primaryWallet->walletId(), [this](const BIP32_Node &node) {
