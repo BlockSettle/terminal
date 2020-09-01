@@ -79,6 +79,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
 
    dlg->ui_->checkBoxRBF->setChecked(true);
    dlg->ui_->checkBoxRBF->setEnabled(false);
+
    dlg->ui_->pushButtonImport->setEnabled(false);
    dlg->ui_->pushButtonShowSimple->setEnabled(false);
 
@@ -291,7 +292,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
                   for (const auto &sel : utxoSelected) {
                      if (!transactionData_->getSelectedInputs()->SetUTXOSelection(sel.first, sel.second)) {
                         if (logger_ != nullptr) {
-                           logger_->warn("[setRBFinputs] no input(s) found for TX {}/{}"
+                           logger_->warn("[CreateTransactionDialogAdvanced::setRBFinputs] no input(s) found for TX {}/{}"
                               , sel.first.toHexStr(true), sel.second);
                         }
                      }
@@ -301,11 +302,10 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
                   usedInputsModel_->updateInputs(inputs);
 
                   QString  changeAddress;
-                  double   changeAmount = 0;
 
                   struct OwnOutput {
                      bs::Address    address;
-                     double         amount;
+                     bs::XBTAmount  amount;
                      bs::hd::Path   path;
                   };
                   std::vector<OwnOutput> ownOutputs;
@@ -314,12 +314,14 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
                   for (size_t i = 0; i < tx.getNumTxOut(); i++) {
                      TxOut out = tx.getTxOutCopy(i);
                      const auto addr = bs::Address::fromTxOut(out);
-                     const auto amount = UiUtils::amountToBtc(out.getValue());
+                     bs::XBTAmount amount{out.getValue()};
 
                      const auto wallet = walletsManager_->getWalletByAddress(addr);
                      if (wallet) {
                         ownOutputs.push_back({ addr, amount
                            , bs::hd::Path::fromString(wallet->getAddressIndex(addr)) });
+                     } else {
+                        AddRecipient({ addr, amount});
                      }
                      totalVal -= out.getValue();
                   }
@@ -328,22 +330,31 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
                   // list of outputs belonging to the wallet
                   for (const auto &output : ownOutputs) {
                      const auto path = output.path;
-                     if (path.length() == 2) {
-                        if (path.get(-2) == 1) {   // internal HD address
-                           changeAddress = QString::fromStdString(output.address.display());
-                           changeAmount = output.amount;
+
+                     bool isChange = false;
+
+                     if (changeAddress.isEmpty() ) {
+                        if (path.length() == 2) {
+                           if (path.get(-2) == 1) {   // internal HD address
+                              isChange = true;
+                           }
+                        } else {   // not an HD wallet/address
+                           isChange = true;
                         }
-                     } else {   // not an HD wallet/address
+                     }
+
+                     if (isChange) {
                         changeAddress = QString::fromStdString(output.address.display());
-                        changeAmount = output.amount;
+                     } else {
+                        AddRecipient({ output.address, output.amount });
                      }
                   }
 
                   // Error check.
                   if (totalVal < 0) {
                      if (logger_ != nullptr) {
-                        logger_->error("[{}] Negative TX balance ({}) for TX {}."
-                           , __func__, totalVal
+                        logger_->error("[CreateTransactionDialogAdvanced::setRBFinputs] Negative TX balance ({}) for TX {}."
+                           , totalVal
                            , tx.getThisHash().toHexStr(true));
                      }
                      return;
@@ -388,7 +399,9 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
                   const uint64_t newMinFee = originalFee_ + tx.getTxWeight();
                   SetMinimumFee(newMinFee, originalFeePerByte_ + 1.0);
                   advisedFeePerByte_ = originalFeePerByte_ + 1.0;
-                  populateFeeList();
+
+                  onFeeSuggestionsLoaded({});
+
                   SetInputs(transactionData_->getSelectedInputs()->GetSelectedTransactions());
                };
                QMetaObject::invokeMethod(this, lbdSetInputs);
@@ -403,6 +416,10 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
 
 void CreateTransactionDialogAdvanced::onUpdateChangeWidget()
 {
+   if (changeAddressFixed_) {
+      return;
+   }
+
    auto walletType = UiUtils::getSelectedWalletType(comboBoxWallets());
 
    ui_->radioButtonExistingAddress->setVisible(false);
@@ -430,7 +447,7 @@ void CreateTransactionDialogAdvanced::onUpdateChangeWidget()
       ui_->radioButtonNewAddrNative->setVisible(true);
       ui_->radioButtonNewAddrNative->setChecked(true);
       break;
-   }  
+   }
    case UiUtils::WalletsTypes::HardwareNestedSW:
    {
       ui_->radioButtonNewAddrNested->setVisible(true);
@@ -1520,6 +1537,8 @@ void CreateTransactionDialogAdvanced::SetFixedChangeAddress(const QString& chang
    ui_->radioButtonNewAddrNative->setEnabled(false);
    ui_->radioButtonNewAddrNested->setEnabled(false);
    ui_->radioButtonNewAddrLegacy->setEnabled(false);
+   ui_->radioButtonExistingAddress->setEnabled(false);
+
    ui_->radioButtonNewAddrNative->setVisible(false);
    ui_->radioButtonNewAddrNested->setVisible(false);
    ui_->radioButtonNewAddrLegacy->setVisible(false);
