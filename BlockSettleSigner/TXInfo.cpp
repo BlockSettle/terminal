@@ -89,6 +89,16 @@ QString TXInfo::walletId() const
    return QString::fromStdString(txReq_.walletIds.front());
 }
 
+double TXInfo::inputAmountFull() const
+{
+   return txReq_.armorySigner_.getTotalInputsValue() / BTCNumericTypes::BalanceDivider;
+}
+
+double TXInfo::outputAmountFull() const
+{
+   return txReq_.armorySigner_.getTotalOutputsValue() / BTCNumericTypes::BalanceDivider;
+}
+
 double TXInfo::amountCCReceived(const QString &cc) const
 {
    ContainsAddressCb &containsCCAddressCb = [this, cc](const bs::Address &address){

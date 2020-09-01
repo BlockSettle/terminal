@@ -1179,11 +1179,13 @@ void CreateTransactionDialogAdvanced::onCreatePressed()
       return;
    }
 
-   CreateTransaction([this, handle = validityFlag_.handle()](bool result) {
+   CreateTransaction([this, handle = validityFlag_.handle()](bool result, const std::string &errorMsg) {
       if (!handle.isValid()) {
          return;
       }
       if (!result) {
+         BSMessageBox(BSMessageBox::critical, tr("Transaction")
+            , tr("Transaction error"), QString::fromStdString(errorMsg)).exec();
          reject();
       }
    });

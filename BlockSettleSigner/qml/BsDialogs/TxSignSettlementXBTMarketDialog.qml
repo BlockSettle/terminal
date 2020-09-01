@@ -38,7 +38,7 @@ TxSignSettlementBaseDialog {
 
     function getInputValue() {
         if (is_payOut) {
-            return txInfo.amount + txInfo.fee
+            return txInfo.inputAmountFull
         } else {
             return txInfo.inputAmount
         }
@@ -46,9 +46,17 @@ TxSignSettlementBaseDialog {
 
     function getTotalValue() {
         if (is_payOut) {
-            return txInfo.amount + txInfo.fee
+            return txInfo.outputAmountFull
         } else {
             return txInfo.total
+        }
+    }
+
+    function getChangeValue() {
+        if (is_payOut) {
+            return 0
+        } else {
+            return txInfo.changeAmount
         }
     }
 
@@ -178,7 +186,7 @@ TxSignSettlementBaseDialog {
             text: qsTr("Return Amount")
         }
         CustomLabelValue {
-            text: plus_string + txInfo.changeAmount.toFixed(8) + inputProduct
+            text: plus_string + getChangeValue().toFixed(8) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
 
@@ -212,7 +220,7 @@ TxSignSettlementBaseDialog {
         }
         CustomLabelValue {
             visible: is_payOut
-            text: plus_string + txInfo.amount.toFixed(8) + inputProduct
+            text: plus_string + getTotalValue().toFixed(8) + inputProduct
             Layout.alignment: Qt.AlignRight
         }
      }

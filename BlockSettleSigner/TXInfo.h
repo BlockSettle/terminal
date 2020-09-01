@@ -52,6 +52,8 @@ class TXInfo : public QObject
    Q_PROPERTY(QString walletId READ walletId NOTIFY dataChanged)
 
    Q_PROPERTY(bool isOfflineTxSigned READ isOfflineTxSigned NOTIFY dataChanged)
+   Q_PROPERTY(double inputAmountFull READ inputAmountFull NOTIFY dataChanged)
+   Q_PROPERTY(double outputAmountFull READ outputAmountFull NOTIFY dataChanged)
 
 public:
    TXInfo() : QObject(), txReq_() {}
@@ -84,6 +86,8 @@ public:
    void setTxId(const QString &);
    QString walletId() const;
    bool isOfflineTxSigned() { return txReqSigned_.isValid(); }
+   double inputAmountFull() const;
+   double outputAmountFull() const;
 
    Q_INVOKABLE double amountCCReceived(const QString &cc) const;
    Q_INVOKABLE double amountCCSent() const;
@@ -119,11 +123,10 @@ private:
             if (wallet->containsAddress(address)) {
                return true;
             }
-            continue;
-         }
-
-         const auto &hdWallet = walletsMgr_->getHDWalletById(walletId);
-         if (hdWallet) {
+         } else {
+            // Payout sets HW wallet ID
+            const auto &hdWallet = walletsMgr_->getHDWalletById(walletId);
+            assert(hdWallet);
             for (auto leaf : hdWallet->getLeaves()) {
                if (leaf->containsAddress(address)) {
                   return true;
