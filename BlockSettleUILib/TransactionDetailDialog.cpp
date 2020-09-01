@@ -350,7 +350,7 @@ void TransactionDetailDialog::addAddress(TxOut out    // can't use const ref due
    item->setData(0, Qt::UserRole, displayedAddress);
    item->setData(1, Qt::UserRole, (qulonglong)out.getValue());
    parent->addChild(item);
-   const auto txHashStr = QString::fromStdString(txHash.toHexStr(true));
+   const auto txHashStr = QString::fromStdString(fmt::format("{}/{}", txHash.toHexStr(true), out.getIndex()));
    auto txItem = new QTreeWidgetItem(QStringList() << getScriptType(out)
                                      << QString::number(out.getValue())
                                      << txHashStr);

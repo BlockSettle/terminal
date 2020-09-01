@@ -165,7 +165,7 @@ void RFQTicketXBT::updatePanel()
    ui_->toolButtonMax->setVisible(selectedSide == bs::network::Side::Sell);
 
    if (currentGroupType_ != ProductGroupType::FXGroupType) {
-      const bool buyXBT = isXBTProduct() != (selectedSide == bs::network::Side::Sell);
+      const bool buyXBT = getProductToRecv() == UiUtils::XbtCurrency;
       ui_->recAddressLayout->setVisible(buyXBT);
       ui_->XBTWalletLayoutRecv->setVisible(buyXBT);
       ui_->XBTWalletLayoutSend->setVisible(!buyXBT);
@@ -258,11 +258,6 @@ QString RFQTicketXBT::getProduct() const
    return currentProduct_;
 }
 
-bool RFQTicketXBT::isXBTProduct() const
-{
-   return (getProduct() == UiUtils::XbtCurrency);
-}
-
 void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
 {
    walletsManager_ = walletsManager;
@@ -310,7 +305,7 @@ void RFQTicketXBT::walletsLoaded()
       ui_->comboBoxXBTWalletsSend->setEnabled(true);
 
       UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWalletsRecv, walletsManager_, UiUtils::WalletsTypes::All);
-      // CC does not support to send from Harware wallets
+      // CC does not support to send from hardware wallets
       int sendWalletTypes = (currentGroupType_ == ProductGroupType::CCGroupType) ?
                UiUtils::WalletsTypes::Full : (UiUtils::WalletsTypes::Full | UiUtils::WalletsTypes::HardwareSW);
       UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWalletsSend, walletsManager_, sendWalletTypes);
@@ -678,7 +673,7 @@ bool RFQTicketXBT::checkAuthAddr(double qty) const
    }
 
    if (currentGroupType_ == ProductGroupType::XBTGroupType){
-      if (getProductToSpend() == UiUtils::XbtCurrency) {
+      if (currentProduct_ == UiUtils::XbtCurrency) {
          return tradeSettings->xbtTier1Limit > bs::XBTAmount(qty).GetValue();
       }
       else {
@@ -813,6 +808,16 @@ void RFQTicketXBT::submitButtonClicked()
    rfq->quantity = getQuantity();
    if (qFuzzyIsNull(rfq->quantity)) {
       return;
+   }
+
+   if (currentGroupType_ == ProductGroupType::XBTGroupType) {
+      auto minXbtAmount = bs::tradeutils::minXbtAmount(utxoReservationManager_->feeRatePb());
+      if (expectedXbtAmountMin().GetValue() < minXbtAmount.GetValue()) {
+         auto minAmountStr = UiUtils::displayQuantity(minXbtAmount.GetValueBitcoin(), bs::network::XbtCurrency);
+         BSMessageBox(BSMessageBox::critical, tr("Spot XBT"), tr("Invalid amount")
+            , tr("Expected bitcoin amount will not cover network fee.\nMinimum amount: %1").arg(minAmountStr), this).exec();
+         return;
+      }
    }
 
    switch (currentGroupType_) {
@@ -1377,28 +1382,28 @@ void RFQTicketXBT::productSelectionChanged()
          return;
       }
 
-      if (isXBTProduct()) {
-         ui_->lineEditAmount->setValidator(xbtAmountValidator_);
-      } else {
-         if (currentGroupType_ == ProductGroupType::CCGroupType) {
-            ui_->lineEditAmount->setValidator(ccAmountValidator_);
+      if (currentGroupType_ == ProductGroupType::CCGroupType) {
+         ui_->lineEditAmount->setValidator(ccAmountValidator_);
 
-            const auto &product = getProduct();
-            const auto ccWallet = getCCWallet(product.toStdString());
-            if (!ccWallet) {
-               if (signingContainer_ && !signingContainer_->isOffline() && walletsManager_) {
-                  ui_->pushButtonSubmit->hide();
-                  ui_->pushButtonCreateWallet->show();
-                  ui_->pushButtonCreateWallet->setEnabled(true);
-                  ui_->pushButtonCreateWallet->setText(tr("Create %1 wallet").arg(product));
-               } else {
-                  BSMessageBox errorMessage(BSMessageBox::critical, tr("Signer not connected")
-                     , tr("Could not create CC subwallet.")
-                     , this);
-                  errorMessage.exec();
-                  showHelp(tr("CC wallet missing"));
-               }
+         const auto &product = getProduct();
+         const auto ccWallet = getCCWallet(product.toStdString());
+         if (!ccWallet) {
+            if (signingContainer_ && !signingContainer_->isOffline() && walletsManager_) {
+               ui_->pushButtonSubmit->hide();
+               ui_->pushButtonCreateWallet->show();
+               ui_->pushButtonCreateWallet->setEnabled(true);
+               ui_->pushButtonCreateWallet->setText(tr("Create %1 wallet").arg(product));
+            } else {
+               BSMessageBox errorMessage(BSMessageBox::critical, tr("Signer not connected")
+                  , tr("Could not create CC subwallet.")
+                  , this);
+               errorMessage.exec();
+               showHelp(tr("CC wallet missing"));
             }
+         }
+      } else {
+         if (currentProduct_ == UiUtils::XbtCurrency) {
+            ui_->lineEditAmount->setValidator(xbtAmountValidator_);
          } else {
             ui_->lineEditAmount->setValidator(fxAmountValidator_);
          }
@@ -1481,6 +1486,16 @@ QString RFQTicketXBT::getProductToRecv() const
    } else {
       return contraProduct_;
    }
+}
+
+bs::XBTAmount RFQTicketXBT::expectedXbtAmountMin() const
+{
+   if (currentProduct_ == UiUtils::XbtCurrency) {
+      return bs::XBTAmount(getQuantity());
+   }
+   const auto &tradeSettings = authAddressManager_->tradeSettings();
+   auto maxPrice = getIndicativePrice() * (1 + (tradeSettings->xbtPriceBand / 100));
+   return bs::XBTAmount(getQuantity() / maxPrice);
 }
 
 bs::XBTAmount RFQTicketXBT::getXbtReservationAmountForCc(double quantity, double offerPrice) const

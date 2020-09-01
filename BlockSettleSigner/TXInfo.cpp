@@ -89,6 +89,16 @@ QString TXInfo::walletId() const
    return QString::fromStdString(txReq_.walletIds.front());
 }
 
+double TXInfo::inputAmountFull() const
+{
+   return txReq_.armorySigner_.getTotalInputsValue() / BTCNumericTypes::BalanceDivider;
+}
+
+double TXInfo::outputAmountFull() const
+{
+   return txReq_.armorySigner_.getTotalOutputsValue() / BTCNumericTypes::BalanceDivider;
+}
+
 double TXInfo::amountCCReceived(const QString &cc) const
 {
    ContainsAddressCb &containsCCAddressCb = [this, cc](const bs::Address &address){
@@ -202,11 +212,12 @@ QStringList TXInfo::counterPartyRecipients() const
 
 QStringList TXInfo::allRecipients() const
 {
-   // Get all recipients from this tx
+   // Get all recipients from this tx (minus change)
    // Usable for regular tx sign dialog
 
    std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recipientsList;
-   recipientsList = txReq_.getRecipients([](const bs::Address &){ return true; });
+   recipientsList = txReq_.getRecipients([this](const bs::Address &addr){
+      return (addr != txReq_.change.address); });
 
    QStringList result;
    for (const auto &recip : recipientsList) {

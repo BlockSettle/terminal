@@ -836,6 +836,9 @@ void BSTerminalMainWindow::tryGetChatKeys()
    }
    const auto &primaryWallet = walletsMgr_->getPrimaryWallet();
    if (!primaryWallet) {
+      // Reset API key if it was stored (as it won't be possible to decrypt it)
+      applicationSettings_->reset(ApplicationSettings::LoginApiKey);
+      loginApiKeyEncrypted_.clear();
       return;
    }
    signContainer_->getChatNode(primaryWallet->walletId(), [this](const BIP32_Node &node) {
@@ -2012,11 +2015,27 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
                   tryGetChatKeys();
                   walletsMgr_->setUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
 
-                  if (celerConnection_->GetSubmittedAuthAddressSet().empty()) {
-                     addDeferredDialog([this]()
-                                       {
-                                          openAuthManagerDialog();
-                                       });
+                  auto authWallet = walletsMgr_->getAuthWallet();
+                  if (authWallet != nullptr) {
+                     // check that current wallet has auth address that was submitted at some point
+                     // if there is no such address - display auth address dialog, so user could submit
+                     auto submittedAddresses = celerConnection_->GetSubmittedAuthAddressSet();
+                     auto existingAddresses = authWallet->getUsedAddressList();
+
+                     bool haveSubmittedAddress = false;
+                     for ( const auto& address : existingAddresses) {
+                        if (submittedAddresses.find(address.display()) != submittedAddresses.end()) {
+                           haveSubmittedAddress = true;
+                           break;
+                        }
+                     }
+
+                     if (!haveSubmittedAddress) {
+                        addDeferredDialog([this]()
+                                          {
+                                             openAuthManagerDialog();
+                                          });
+                     }
                   }
                }
             });

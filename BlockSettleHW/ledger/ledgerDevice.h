@@ -39,7 +39,9 @@ class LedgerDevice : public HwDeviceInterface
 
 public:
    LedgerDevice(HidDeviceInfo&& hidDeviceInfo, bool testNet,
-      std::shared_ptr<bs::sync::WalletsManager> walletManager, const std::shared_ptr<spdlog::logger> &logger, QObject* parent = nullptr);
+      std::shared_ptr<bs::sync::WalletsManager> walletManager
+      , const std::shared_ptr<spdlog::logger> &logger, QObject* parent
+      , const std::shared_ptr<std::mutex>& hidLock);
    ~LedgerDevice() override;
 
    DeviceKey key() const override;
@@ -74,6 +76,7 @@ private:
    QPointer<LedgerCommandThread> commandThread_;
    bool isBlocked_{};
    QString lastError_{};
+   std::shared_ptr<std::mutex> hidLock_;
 };
 
 class LedgerCommandThread : public QThread
@@ -81,14 +84,14 @@ class LedgerCommandThread : public QThread
    Q_OBJECT
 public:
    LedgerCommandThread(const HidDeviceInfo &hidDeviceInfo, bool testNet,
-      const std::shared_ptr<spdlog::logger> &logger, QObject *parent = nullptr);
+      const std::shared_ptr<spdlog::logger> &logger, QObject *parent, const std::shared_ptr<std::mutex>& hidLock);
    ~LedgerCommandThread() override;
 
    void run() override;
 
    void prepareGetPublicKey(const DeviceKey &deviceKey);
    void prepareSignTx(
-      const DeviceKey &deviceKey, 
+      const DeviceKey &deviceKey,
       bs::core::wallet::TXSignRequest coreReq,
       std::vector<bs::hd::Path>&& paths, bs::hd::Path&& changePath);
    void prepareGetRootKey();
@@ -120,7 +123,7 @@ protected:
    BIP32_Node retrievePublicKeyFromPath(bs::hd::Path&& derivationPath);
    BIP32_Node getPublicKeyApdu(bs::hd::Path&& derivationPath, const std::unique_ptr<BIP32_Node>& parent = nullptr);
 
-   // Sign tx processing  
+   // Sign tx processing
    QByteArray getTrustedInput(const BinaryData&, unsigned);
    QByteArray getTrustedInputSegWit_outdated(const UTXO&);
 
@@ -155,12 +158,13 @@ private:
    };
 
    // Thread purpose data
-   HardwareCommand threadPurpose_;
-   DeviceKey deviceKey_;
+   HardwareCommand               threadPurpose_;
+   DeviceKey                     deviceKey_;
    std::unique_ptr<bs::core::wallet::TXSignRequest> coreReq_{};
-   std::vector<bs::hd::Path> inputPaths_;
-   bs::hd::Path changePath_;
-   uint32_t lastError_ = 0x9000;
+   std::vector<bs::hd::Path>     inputPaths_;
+   bs::hd::Path                  changePath_;
+   uint32_t                      lastError_ = 0x9000;
+   std::shared_ptr<std::mutex>   hidLock_;
 };
 
 #endif // LEDGERDEVICE_H

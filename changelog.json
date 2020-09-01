@@ -1,7 +1,22 @@
 {
-   "latest_version": "0.90.8",
-   "release_date": "27 Aug 2020",
+   "latest_version": "0.90.9",
+   "release_date": "01 Sep 2020",
    "changes": [
+      {
+         "version_string": "0.90.9",
+         "previous_version": "0.90.8",
+         "release_date": "01 Sep 2020",
+         "release_type": "prod",
+         "improvements": [],
+         "bug_fixes": [
+            "Fix WS networking timeouts",
+            "Fix crash on PayOut",
+            "Fix chat DB setup",
+            "Fixes for CPFP and RBF TX creation"
+         ],
+         "revision": "2c830a6ac",
+         "common_revision": "a92c59a3"
+      },
       {
          "version_string": "0.90.8",
          "previous_version": "0.90.5",
