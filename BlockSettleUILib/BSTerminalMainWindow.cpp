@@ -2017,8 +2017,8 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
 
                   auto authWallet = walletsMgr_->getAuthWallet();
                   if (authWallet != nullptr) {
-                     // check that current wallet have auth address that was submitted at some point
-                     // if there are no such address - display auth address dialog, so user could submit
+                     // check that current wallet has auth address that was submitted at some point
+                     // if there is no such address - display auth address dialog, so user could submit
                      auto submittedAddresses = celerConnection_->GetSubmittedAuthAddressSet();
                      auto existingAddresses = authWallet->getUsedAddressList();
 
