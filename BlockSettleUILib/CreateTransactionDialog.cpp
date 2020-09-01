@@ -482,6 +482,13 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
       }
       try {
          txReq_ = transactionData_->createTXRequest(checkBoxRBF()->checkState() == Qt::Checked, changeAddress);
+         if (!changeAddress.empty()) {
+            auto changeWallet = walletsManager_->getWalletByAddress(changeAddress);
+            assert(changeWallet);
+            if (std::find(txReq_.walletIds.begin(), txReq_.walletIds.end(), changeWallet->walletId()) == txReq_.walletIds.end()) {
+               txReq_.walletIds.push_back(changeWallet->walletId());
+            }
+         }
 
          // grab supporting transactions for the utxo map.
          // required only for HW
