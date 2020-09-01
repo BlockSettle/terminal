@@ -399,7 +399,9 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
                   const uint64_t newMinFee = originalFee_ + tx.getTxWeight();
                   SetMinimumFee(newMinFee, originalFeePerByte_ + 1.0);
                   advisedFeePerByte_ = originalFeePerByte_ + 1.0;
-                  populateFeeList();
+
+                  onFeeSuggestionsLoaded({});
+
                   SetInputs(transactionData_->getSelectedInputs()->GetSelectedTransactions());
                };
                QMetaObject::invokeMethod(this, lbdSetInputs);
@@ -441,7 +443,7 @@ void CreateTransactionDialogAdvanced::onUpdateChangeWidget()
       ui_->radioButtonNewAddrNative->setVisible(true);
       ui_->radioButtonNewAddrNative->setChecked(true);
       break;
-   }  
+   }
    case UiUtils::WalletsTypes::HardwareNestedSW:
    {
       ui_->radioButtonNewAddrNested->setVisible(true);
