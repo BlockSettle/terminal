@@ -91,22 +91,12 @@ QString TXInfo::walletId() const
 
 double TXInfo::inputAmountFull() const
 {
-   uint64_t result = 0;
-   for (unsigned i = 0; i < txReq_.armorySigner_.getTxInCount(); ++i) {
-      const auto &spender = txReq_.armorySigner_.getSpender(i);
-      result += spender->getValue();
-   }
-   return result / BTCNumericTypes::BalanceDivider;
+   return txReq_.armorySigner_.getTotalInputsValue() / BTCNumericTypes::BalanceDivider;
 }
 
 double TXInfo::outputAmountFull() const
 {
-   uint64_t result = 0;
-   for (unsigned i = 0; i < txReq_.armorySigner_.getTxOutCount(); ++i) {
-      const auto &recipient = txReq_.armorySigner_.getRecipient(i);
-      result += recipient->getValue();
-   }
-   return result / BTCNumericTypes::BalanceDivider;
+   return txReq_.armorySigner_.getTotalOutputsValue() / BTCNumericTypes::BalanceDivider;
 }
 
 double TXInfo::amountCCReceived(const QString &cc) const
