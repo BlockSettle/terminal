@@ -416,6 +416,10 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
 
 void CreateTransactionDialogAdvanced::onUpdateChangeWidget()
 {
+   if (changeAddressFixed_) {
+      return;
+   }
+
    auto walletType = UiUtils::getSelectedWalletType(comboBoxWallets());
 
    ui_->radioButtonExistingAddress->setVisible(false);
@@ -1531,6 +1535,8 @@ void CreateTransactionDialogAdvanced::SetFixedChangeAddress(const QString& chang
    ui_->radioButtonNewAddrNative->setEnabled(false);
    ui_->radioButtonNewAddrNested->setEnabled(false);
    ui_->radioButtonNewAddrLegacy->setEnabled(false);
+   ui_->radioButtonExistingAddress->setEnabled(false);
+
    ui_->radioButtonNewAddrNative->setVisible(false);
    ui_->radioButtonNewAddrNested->setVisible(false);
    ui_->radioButtonNewAddrLegacy->setVisible(false);
