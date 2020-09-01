@@ -2015,11 +2015,27 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
                   tryGetChatKeys();
                   walletsMgr_->setUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
 
-                  if (celerConnection_->GetSubmittedAuthAddressSet().empty()) {
-                     addDeferredDialog([this]()
-                                       {
-                                          openAuthManagerDialog();
-                                       });
+                  auto authWallet = walletsMgr_->getAuthWallet();
+                  if (authWallet != nullptr) {
+                     // check that current wallet has auth address that was submitted at some point
+                     // if there is no such address - display auth address dialog, so user could submit
+                     auto submittedAddresses = celerConnection_->GetSubmittedAuthAddressSet();
+                     auto existingAddresses = authWallet->getUsedAddressList();
+
+                     bool haveSubmittedAddress = false;
+                     for ( const auto& address : existingAddresses) {
+                        if (submittedAddresses.find(address.display()) != submittedAddresses.end()) {
+                           haveSubmittedAddress = true;
+                           break;
+                        }
+                     }
+
+                     if (!haveSubmittedAddress) {
+                        addDeferredDialog([this]()
+                                          {
+                                             openAuthManagerDialog();
+                                          });
+                     }
                   }
                }
             });
