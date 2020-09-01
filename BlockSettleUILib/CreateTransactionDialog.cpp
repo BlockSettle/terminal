@@ -468,7 +468,7 @@ bool CreateTransactionDialog::BroadcastImportedTx()
    return false;
 }
 
-void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
+void CreateTransactionDialog::CreateTransaction(const CreateTransactionCb &cb)
 {
    if (!signContainer_) {
       BSMessageBox(BSMessageBox::critical, tr("Error")
@@ -507,7 +507,7 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
 
             if (eptr) {
                SPDLOG_LOGGER_ERROR(logger_, "getTXsByHash failed");
-               cb(false);
+               cb(false, "receving supporting transactions failed");
                return;
             }
 
@@ -524,7 +524,7 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
                }
                logger_->debug("[{}] result={}, state: {}", __func__, (int)result, state.IsInitialized());
                bool rc = createTransactionImpl();
-               cb(rc);
+               cb(rc, rc ? "" : "unknown error");
             };
 
             signContainer_->resolvePublicSpenders(txReq_, cbResolvePublicData);
@@ -532,12 +532,12 @@ void CreateTransactionDialog::CreateTransaction(std::function<void(bool)> cb)
 
          if (!armory_->getTXsByHash(hashes, supportingTxMapCb, true)) {
             SPDLOG_LOGGER_ERROR(logger_, "getTXsByHash failed");
-            cb(false);
+            cb(false, "receving supporting transactions failed");
          }
       }
       catch (const std::exception &e) {
          SPDLOG_LOGGER_ERROR(logger_, "exception: {}", e.what());
-         cb(false);
+         cb(false, e.what());
       }
    });
 }
