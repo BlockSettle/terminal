@@ -414,13 +414,13 @@
                 </size>
                </property>
                <property name="text">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;a href=&quot;Getting_Started_With_Trading.pdf&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#247dac;&quot;&gt;Set-up for trading&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;a href=&quot;https://www.youtube.com/watch?v=mUqKq9GKjmI&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#247dac;&quot;&gt;Introduction&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="wordWrap">
                 <bool>true</bool>
                </property>
                <property name="openExternalLinks">
-                <bool>false</bool>
+                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -480,7 +480,7 @@
                    </sizepolicy>
                   </property>
                   <property name="text">
-                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Additional guides and documentation can be found under the Resources on the BlockSettle Webpage.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   <string>Visit our video &lt;a href=&quot;https://www.blocksettle.com/tutorials&quot;&gt;&lt;span style=&quot; font-size:12px; text-decoration: underline; color:#fefeff&quot;&gt;library&lt;/span&gt;&lt;/a&gt; for more tutorials.</string>
                   </property>
                   <property name="textFormat">
                    <enum>Qt::RichText</enum>
@@ -514,13 +514,13 @@
                 </size>
                </property>
                <property name="text">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;a href=&quot;Getting_Started_With_Wallet.pdf&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#247dac;&quot;&gt;Trading with the Terminal&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;a href=&quot;https://www.youtube.com/watch?v=6ZhTa3o-yus&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#247dac;&quot;&gt;Enable Trading&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="wordWrap">
                 <bool>true</bool>
                </property>
                <property name="openExternalLinks">
-                <bool>false</bool>
+                <bool>true</bool>
                </property>
               </widget>
              </item>
