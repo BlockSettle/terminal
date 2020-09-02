@@ -146,7 +146,7 @@ private:
       QString  msg;
    };
    std::deque<ExtMessage>  extDataPool_;
-   const size_t maxExtDataPoolSize_{ 16 };
+   const size_t maxExtDataPoolSize_{ 100 };
    std::mutex  mtxExtData_;
 
    bool aqEnabled_;
