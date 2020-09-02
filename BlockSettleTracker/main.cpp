@@ -127,7 +127,7 @@ int main(int argc, char** argv) {
       return validKey;
    };
 
-   armory->setupConnection(testnet ? NetworkType::TestNet : NetworkType::MainNet, armoryHost, std::to_string(armoryPort), ownKeyPath, {}, {}, armoryKeyCb);
+   armory->setupConnection(testnet ? NetworkType::TestNet : NetworkType::MainNet, armoryHost, std::to_string(armoryPort), armoryKeyCb);
    auto now = std::chrono::steady_clock::now();
    while (std::chrono::steady_clock::now() - now < std::chrono::seconds(60) && armory->state() != ArmoryState::Connected) {
       std::this_thread::sleep_for(std::chrono::seconds(1));

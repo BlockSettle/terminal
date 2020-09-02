@@ -1339,6 +1339,9 @@ void BSTerminalMainWindow::openAuthManagerDialog()
 
 void BSTerminalMainWindow::openConfigDialog(bool showInNetworkPage)
 {
+   auto oldEnv = static_cast<ApplicationSettings::EnvConfiguration>(
+            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+
    ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, signersProvider_, signContainer_, walletsMgr_, this);
    connect(&configDialog, &ConfigDialog::reconnectArmory, this, &BSTerminalMainWindow::onArmoryNeedsReconnect);
 
@@ -1346,9 +1349,25 @@ void BSTerminalMainWindow::openConfigDialog(bool showInNetworkPage)
       configDialog.popupNetworkSettings();
    }
 
-   configDialog.exec();
+   int rc = configDialog.exec();
 
    UpdateMainWindowAppearence();
+
+   auto newEnv = static_cast<ApplicationSettings::EnvConfiguration>(
+            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+   if (rc == QDialog::Accepted && newEnv != oldEnv) {
+      bool prod = newEnv == ApplicationSettings::EnvConfiguration::Production;
+      BSMessageBox mbox(BSMessageBox::question
+         , tr("Environment selection")
+         , tr("Switch Environment")
+         , tr("Do you wish to change to the %1 environment now?").arg(prod ? tr("Production") : tr("Test"))
+         , this);
+      mbox.setConfirmButtonText(tr("Yes"));
+      int rc = mbox.exec();
+      if (rc == QDialog::Accepted) {
+         restartTerminal();
+      }
+   }
 }
 
 void BSTerminalMainWindow::openAccountInfoDialog()
