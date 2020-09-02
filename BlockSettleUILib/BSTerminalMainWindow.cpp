@@ -893,6 +893,7 @@ void BSTerminalMainWindow::MainWinACT::onStateChanged(ArmoryState state)
       break;
    case ArmoryState::Connected:
       QMetaObject::invokeMethod(parent_, [this] {
+         parent_->armoryRestartCount_ = 0;
          parent_->wasWalletsRegistered_ = false;
          parent_->armory_->goOnline();
       });
@@ -1002,14 +1003,25 @@ bool BSTerminalMainWindow::isArmoryConnected() const
 
 void BSTerminalMainWindow::ArmoryIsOffline()
 {
+   auto restartDelays = std::vector<int>{ 1, 5, 15, 30, 60 };
+   int restartDelay = *restartDelays.rbegin();
+   if (armoryRestartCount_ < restartDelays.size()) {
+      restartDelay = restartDelays.at(armoryRestartCount_);
+   }
+   armoryRestartCount_ += 1;
+
    logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
    if (walletsMgr_) {
       walletsMgr_->unregisterWallets();
    }
-   connectArmory();
    updateControlEnabledState();
    // XXX: disabled until armory connection is stable in terminal
    // updateLoginActionState();
+
+   SPDLOG_LOGGER_DEBUG(logMgr_->logger("ui"), "restart armory connection in {} second", restartDelay);
+   QTimer::singleShot(std::chrono::seconds(restartDelay), this, [this] {
+      connectArmory();
+   });
 }
 
 void BSTerminalMainWindow::initArmory()
