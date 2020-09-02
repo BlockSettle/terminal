@@ -370,7 +370,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="setUpBtn">
+        <widget class="QPushButton" name="tutorialsButton">
          <property name="minimumSize">
           <size>
            <width>120</width>
@@ -390,7 +390,7 @@
           <enum>Qt::LeftToRight</enum>
          </property>
          <property name="text">
-          <string>Set-up for trading</string>
+          <string>Video tutorials</string>
          </property>
          <property name="icon">
           <iconset resource="armory.qrc">
