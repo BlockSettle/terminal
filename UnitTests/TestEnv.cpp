@@ -109,7 +109,12 @@ void TestEnv::requireArmory()
    settings.armoryDBIp = QLatin1String("127.0.0.1");
    settings.armoryDBPort = armoryInstance_->port_;
    settings.dataDir = QLatin1String("armory_regtest_db");
-   armoryConnection->setupConnection(settings);
+
+   auto keyCb = [](const BinaryData&, const std::string&)->bool
+   {
+      return true;
+   };   
+   armoryConnection->setupConnection(settings, keyCb);
    armoryConnection_ = armoryConnection;
 
    blockMonitor_ = std::make_shared<BlockchainMonitor>(armoryConnection_);
