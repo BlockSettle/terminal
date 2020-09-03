@@ -49,6 +49,11 @@ BSQuoteReqReply {
         }
     }
 
+    onCancelled: {
+	settled = true
+        //todo: stop
+    }
+
     onBestPriceChanged: {
         if (!hedgeAllowed || settled) return
         log('new best price: ' + bestPrice)
@@ -282,7 +287,7 @@ BSQuoteReqReply {
     {   // This request just signals LMAX connector that order will follow soon,
         // if LMAX's reply on it is negative, quote reply should be pulled
         // price is used here only to calculate contra qty
-        if (isCC()) return
+        if (isCC() || settled) return
         if (!price) {
             return
         }
