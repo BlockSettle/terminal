@@ -1119,7 +1119,7 @@ QLineEdit {
   QLineEdit:disabled {
     color: #586266; }
 
-QTextEdit {
+QPlainTextEdit, QTextEdit {
   border: 1px solid #81888f;
   padding: 1px 5px;
   background: transparent;
