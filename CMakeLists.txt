@@ -695,7 +695,7 @@ ELSE(WIN32)
       FIND_PACKAGE( X11 REQUIRED )
       FIND_PACKAGE( X11_XCB REQUIRED )
       FIND_PACKAGE( XCB REQUIRED
-         COMPONENTS XKB RENDERUTIL SYNC XFIXES XINERAMA RANDR RENDER IMAGE SHM KEYSYMS ICCCM SHAPE
+         COMPONENTS XKB RENDERUTIL SYNC XFIXES RANDR RENDER IMAGE SHM KEYSYMS ICCCM SHAPE
          OPTIONAL_COMPONENTS XINPUT )
       FIND_PACKAGE( Freetype REQUIRED )
       FIND_PACKAGE( Fontconfig REQUIRED )
@@ -758,6 +758,7 @@ ELSE(WIN32)
             png
             m
             double-conversion.a
+            libxcb-xinerama.a
             dl
             cups
             udev
