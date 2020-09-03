@@ -36,7 +36,7 @@ BSQuoteReqReply {
 
     onStarted: {    // serve only fixed CC quotes here
         if (!isCC()) {
-            var subs = '{"symbol":"' + security + '}'
+            var subs = '{"symbol":"' + security + '"}'
             sendExtConn('LMAX', 'subscribe_prices', subs)
             return
         }
@@ -92,7 +92,7 @@ BSQuoteReqReply {
         log(security + ' settled at ' + finalPrice)
         sendHedgeOrder(hedgePrice)
 
-        var subs = '{"symbol":"' + security + '}'
+        var subs = '{"symbol":"' + security + '"}'
         sendExtConn('LMAX', 'unsubscribe_prices', subs)
     }
 
