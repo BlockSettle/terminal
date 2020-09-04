@@ -651,6 +651,14 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
          SPDLOG_LOGGER_ERROR(logger_, "can't submit XBT without valid auth address");
          return;
       }
+
+      auto minXbtAmount = bs::tradeutils::minXbtAmount(utxoReservationManager_->feeRatePb());
+      auto xbtAmount = XBTAmount(qrn.product == bs::network::XbtCurrency ? qrn.quantity : qrn.quantity / price);
+      if (xbtAmount.GetValue() < minXbtAmount.GetValue()) {
+         SPDLOG_LOGGER_ERROR(logger_, "XBT amount is too low to cover network fee: {}, min. amount: {}"
+            , xbtAmount.GetValue(), minXbtAmount.GetValue());
+         return;
+      }
    }
 
    auto it = activeQuoteSubmits_.find(replyData->qn.quoteRequestId);

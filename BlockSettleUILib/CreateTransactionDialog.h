@@ -106,7 +106,8 @@ protected:
 
    std::vector<bs::core::wallet::TXSignRequest> ImportTransactions();
    bool BroadcastImportedTx();
-   void CreateTransaction(std::function<void(bool result)> cb);
+   using CreateTransactionCb = std::function<void(bool success, const std::string &errorMsg)>;
+   void CreateTransaction(const CreateTransactionCb &cb);
 
    void showError(const QString &text, const QString &detailedText);
 

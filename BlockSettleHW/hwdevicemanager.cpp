@@ -46,7 +46,7 @@ void HwDeviceManager::scanDevices()
    }
 
    setScanningFlag(true);
-   
+
    auto doneScanning = [this, expectedClients = 2, finished = std::make_shared<int>(0)]() {
       ++(*finished);
 

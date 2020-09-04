@@ -12,14 +12,15 @@
 
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
+#include "BSMessageBox.h"
 #include "OTCWindowsManager.h"
 #include "OtcTypes.h"
 #include "TradesUtils.h"
 #include "UiUtils.h"
+#include "UtxoReservationManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ui_OTCNegotiationRequestWidget.h"
-#include "UtxoReservationManager.h"
 
 #include <QComboBox>
 #include <QPushButton>
@@ -173,6 +174,14 @@ void OTCNegotiationRequestWidget::onUpdateBalances()
 
 void OTCNegotiationRequestWidget::onSubmited()
 {
+   auto minXbtAmount = bs::tradeutils::minXbtAmount(getUtxoManager()->feeRatePb());
+   if (ui_->quantitySpinBox->value() < minXbtAmount.GetValueBitcoin()) {
+      auto minAmountStr = UiUtils::displayQuantity(minXbtAmount.GetValueBitcoin(), bs::network::XbtCurrency);
+      BSMessageBox(BSMessageBox::critical, tr("OTC"), tr("Invalid amount"),
+         tr("Amount will not cover network fee.\nMinimum amount: %1").arg(minAmountStr), this).exec();
+      return;
+   }
+
    if (ui_->pushButtonBuy->isChecked()) {
       emit requestCreated();
       return;

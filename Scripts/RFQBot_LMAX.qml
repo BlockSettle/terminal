@@ -35,9 +35,12 @@ BSQuoteReqReply {
     property var settled: false
 
     onStarted: {    // serve only fixed CC quotes here
-        if (!isCC() || (direction() !== 1)) {
+        if (!isCC()) {
+            var subs = '{"symbol":"' + security + '"}'
+            sendExtConn('LMAX', 'subscribe_prices', subs)
             return
         }
+        if (direction() !== 1)  return
         if (security == "LOL/XBT") {
             sendPrice(0.0001)
         }
@@ -46,8 +49,13 @@ BSQuoteReqReply {
         }
     }
 
+    onCancelled: {
+	settled = true
+        //todo: stop
+    }
+
     onBestPriceChanged: {
-        if (!hedgeAllowed) return
+        if (!hedgeAllowed || settled) return
         log('new best price: ' + bestPrice)
         if (bestPrice === finalPrice)  return   // our quote
 
@@ -88,6 +96,9 @@ BSQuoteReqReply {
         settled = true
         log(security + ' settled at ' + finalPrice)
         sendHedgeOrder(hedgePrice)
+
+        var subs = '{"symbol":"' + security + '"}'
+        sendExtConn('LMAX', 'unsubscribe_prices', subs)
     }
 
     function onLMAXprices(msgObj)
@@ -104,10 +115,10 @@ BSQuoteReqReply {
     {
         if (!hedgeAllowed) return
         if (direction() === 1) {
-            hedgePrice = priceObj.ask * (1.0 + prcIncrement)
+            hedgePrice = priceObj.ask
         }
         else {
-            hedgePrice = priceObj.bid * (1.0 - prcIncrement)
+            hedgePrice = priceObj.bid
         }
 
         if (settled) {
@@ -116,11 +127,10 @@ BSQuoteReqReply {
 
         var price = 0.0
         if (direction() === 1) {
-            var mult = isXBT() ? 1.5 : 1.0
-            price = priceObj.ask * (1.0 + mult * prcIncrement)
+            price = priceObj.ask
         }
         else {
-            price = priceObj.bid * (1.0 - prcIncrement)
+            price = priceObj.bid
         }
 
         if (bestPrice) {
@@ -183,8 +193,26 @@ BSQuoteReqReply {
         return isContraCur.value;
     }
 
-    function checkBalance(value, product)
+    function contraCur(product)
     {
+        var spl = security.split("/")
+        return (spl[1] === product) ? spl[0] : spl[1];
+    }
+
+    function checkBalance(price)
+    {
+        var value = quoteReq.quantity
+        var product = quoteReq.product
+        if (!quoteReq.isBuy) {
+            product = contraCur(quoteReq.product)
+            if (isContraCur()) {
+                value = quoteReq.quantity / price
+            }
+            else {
+                value = quoteReq.quantity * price
+            }
+        }
+
         var balance = accountBalance(product)
         if (value > balance) {
             log("Not enough balance for " + product + ": " + value + " > " + balance)
@@ -204,12 +232,7 @@ BSQuoteReqReply {
             initialPrice = price
         }
 
-        if (direction() === 1) {
-            if (!checkBalance(quoteReq.quantity * price, security.split("/")[1])) return
-        }
-        else {
-            if (!checkBalance(quoteReq.quantity, security.split("/")[0])) return
-        }
+        if (!checkBalance(price)) return
 
         log('sending new reply: ' + price)
         sendQuoteReply(price)
@@ -264,7 +287,7 @@ BSQuoteReqReply {
     {   // This request just signals LMAX connector that order will follow soon,
         // if LMAX's reply on it is negative, quote reply should be pulled
         // price is used here only to calculate contra qty
-        if (isCC()) return
+        if (isCC() || settled) return
         if (!price) {
             return
         }

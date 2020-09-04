@@ -283,7 +283,7 @@ public:
    Q_INVOKABLE bool sendExtConn(const QString &name, const QString &type, const QString &message);
 
    void start() {
-      if (!started_ && indicBid_ > .0 && indicAsk_ > .0 && lastPrice_ > .0) {
+      if (!started_) {
          started_ = true;
          emit started();
       }

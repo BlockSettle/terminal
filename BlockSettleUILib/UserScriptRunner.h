@@ -140,15 +140,6 @@ private:
 
    std::unordered_map<std::string, bs::network::MDInfo>  mdInfo_;
 
-   struct ExtMessage {
-      QString  from;
-      QString  type;
-      QString  msg;
-   };
-   std::deque<ExtMessage>  extDataPool_;
-   const size_t maxExtDataPoolSize_{ 16 };
-   std::mutex  mtxExtData_;
-
    bool aqEnabled_;
    QTimer *aqTimer_;
 }; // class UserScriptHandler

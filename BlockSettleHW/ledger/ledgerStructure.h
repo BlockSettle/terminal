@@ -144,16 +144,16 @@ void writeUintLE(QByteArray& out, T value) {
 void writeVarInt(QByteArray &output, size_t size);
 
 struct HidDeviceInfo {
-   QString path_;
+   QString  path_;
    uint16_t vendorId_;
    uint16_t productId_;
-   QString serialNumber_;
+   QString  serialNumber_;
    uint16_t releaseNumber_;
-   QString manufacturerString_;
-   QString productString_;
+   QString  manufacturerString_;
+   QString  productString_;
    uint16_t usagePage_;
    uint16_t usage_;
-   int interfaceNumber_;
+   int      interfaceNumber_;
 };
 
 struct SegwitInputData {

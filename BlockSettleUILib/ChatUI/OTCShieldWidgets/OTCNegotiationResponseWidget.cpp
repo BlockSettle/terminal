@@ -10,14 +10,15 @@
 */
 #include "OTCNegotiationResponseWidget.h"
 
-#include "OtcTypes.h"
-#include "UiUtils.h"
-#include "Wallets/SyncWalletsManager.h"
+#include "AssetManager.h"
 #include "AuthAddressManager.h"
 #include "OtcClient.h"
-#include "AssetManager.h"
+#include "OtcTypes.h"
+#include "TradesUtils.h"
+#include "UiUtils.h"
 #include "UtxoReservationManager.h"
 #include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 #include "ui_OTCNegotiationResponseWidget.h"
 
 #include <QComboBox>

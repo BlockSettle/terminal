@@ -47,6 +47,7 @@ LedgerClient::LedgerClient(std::shared_ptr<spdlog::logger> logger, std::shared_p
    , testNet_(testNet)
    , walletManager_(walletManager)
 {
+   hidLock_ = std::make_shared<std::mutex>();
 }
 
 QVector<DeviceKey> LedgerClient::deviceKeys() const
@@ -56,7 +57,7 @@ QVector<DeviceKey> LedgerClient::deviceKeys() const
    for (const auto device : availableDevices_) {
       if (device->inited()) {
          keys.push_back(device->key());
-      }      
+      }
    }
    return keys;
 }
@@ -84,7 +85,7 @@ void LedgerClient::scanDevices(AsyncCallBack&& cb)
    hid_device_info* info = hid_enumerate(0, 0);
    for (; info; info = info->next) {
       if (checkLedgerDevice(info)) {
-         auto device = new LedgerDevice{ fromHidOriginal(info), testNet_, walletManager_, logger_, this };
+         auto device = new LedgerDevice{ fromHidOriginal(info), testNet_, walletManager_, logger_, this, hidLock_};
          availableDevices_.push_back({ device });
       }
    }

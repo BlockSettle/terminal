@@ -400,10 +400,10 @@ void BSTerminalMainWindow::setupInfoWidget()
    }
 
    connect(ui_->introductionBtn, &QPushButton::clicked, this, []() {
-      QDesktopServices::openUrl(QUrl(QLatin1String("")));
+      QDesktopServices::openUrl(QUrl(QLatin1String("https://www.youtube.com/watch?v=mUqKq9GKjmI")));
    });
-   connect(ui_->setUpBtn, &QPushButton::clicked, this, []() {
-      QDesktopServices::openUrl(QUrl(QLatin1String("https://youtu.be/bvGNi6sBkTo")));
+   connect(ui_->tutorialsButton, &QPushButton::clicked, this, []() {
+      QDesktopServices::openUrl(QUrl(QLatin1String("https://blocksettle.com/tutorials")));
    });
    connect(ui_->closeBtn, &QPushButton::clicked, this, [this]() {
       ui_->infoWidget->setVisible(false);
@@ -836,6 +836,9 @@ void BSTerminalMainWindow::tryGetChatKeys()
    }
    const auto &primaryWallet = walletsMgr_->getPrimaryWallet();
    if (!primaryWallet) {
+      // Reset API key if it was stored (as it won't be possible to decrypt it)
+      applicationSettings_->reset(ApplicationSettings::LoginApiKey);
+      loginApiKeyEncrypted_.clear();
       return;
    }
    signContainer_->getChatNode(primaryWallet->walletId(), [this](const BIP32_Node &node) {
@@ -890,6 +893,7 @@ void BSTerminalMainWindow::MainWinACT::onStateChanged(ArmoryState state)
       break;
    case ArmoryState::Connected:
       QMetaObject::invokeMethod(parent_, [this] {
+         parent_->armoryRestartCount_ = 0;
          parent_->wasWalletsRegistered_ = false;
          parent_->armory_->goOnline();
       });
@@ -999,14 +1003,25 @@ bool BSTerminalMainWindow::isArmoryConnected() const
 
 void BSTerminalMainWindow::ArmoryIsOffline()
 {
+   auto restartDelays = std::vector<int>{ 1, 5, 15, 30, 60 };
+   int restartDelay = *restartDelays.rbegin();
+   if (armoryRestartCount_ < restartDelays.size()) {
+      restartDelay = restartDelays.at(armoryRestartCount_);
+   }
+   armoryRestartCount_ += 1;
+
    logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
    if (walletsMgr_) {
       walletsMgr_->unregisterWallets();
    }
-   connectArmory();
    updateControlEnabledState();
    // XXX: disabled until armory connection is stable in terminal
    // updateLoginActionState();
+
+   SPDLOG_LOGGER_DEBUG(logMgr_->logger("ui"), "restart armory connection in {} second", restartDelay);
+   QTimer::singleShot(std::chrono::seconds(restartDelay), this, [this] {
+      connectArmory();
+   });
 }
 
 void BSTerminalMainWindow::initArmory()
@@ -1327,6 +1342,9 @@ void BSTerminalMainWindow::openAuthManagerDialog()
 
 void BSTerminalMainWindow::openConfigDialog(bool showInNetworkPage)
 {
+   auto oldEnv = static_cast<ApplicationSettings::EnvConfiguration>(
+            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+
    ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, signersProvider_, signContainer_, walletsMgr_, this);
    connect(&configDialog, &ConfigDialog::reconnectArmory, this, &BSTerminalMainWindow::onArmoryNeedsReconnect);
 
@@ -1334,9 +1352,25 @@ void BSTerminalMainWindow::openConfigDialog(bool showInNetworkPage)
       configDialog.popupNetworkSettings();
    }
 
-   configDialog.exec();
+   int rc = configDialog.exec();
 
    UpdateMainWindowAppearence();
+
+   auto newEnv = static_cast<ApplicationSettings::EnvConfiguration>(
+            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+   if (rc == QDialog::Accepted && newEnv != oldEnv) {
+      bool prod = newEnv == ApplicationSettings::EnvConfiguration::Production;
+      BSMessageBox mbox(BSMessageBox::question
+         , tr("Environment selection")
+         , tr("Switch Environment")
+         , tr("Do you wish to change to the %1 environment now?").arg(prod ? tr("Production") : tr("Test"))
+         , this);
+      mbox.setConfirmButtonText(tr("Yes"));
+      int rc = mbox.exec();
+      if (rc == QDialog::Accepted) {
+         restartTerminal();
+      }
+   }
 }
 
 void BSTerminalMainWindow::openAccountInfoDialog()
@@ -2015,11 +2049,27 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
                   tryGetChatKeys();
                   walletsMgr_->setUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
 
-                  if (celerConnection_->GetSubmittedAuthAddressSet().empty()) {
-                     addDeferredDialog([this]()
-                                       {
-                                          openAuthManagerDialog();
-                                       });
+                  auto authWallet = walletsMgr_->getAuthWallet();
+                  if (authWallet != nullptr) {
+                     // check that current wallet has auth address that was submitted at some point
+                     // if there is no such address - display auth address dialog, so user could submit
+                     auto submittedAddresses = celerConnection_->GetSubmittedAuthAddressSet();
+                     auto existingAddresses = authWallet->getUsedAddressList();
+
+                     bool haveSubmittedAddress = false;
+                     for ( const auto& address : existingAddresses) {
+                        if (submittedAddresses.find(address.display()) != submittedAddresses.end()) {
+                           haveSubmittedAddress = true;
+                           break;
+                        }
+                     }
+
+                     if (!haveSubmittedAddress) {
+                        addDeferredDialog([this]()
+                                          {
+                                             openAuthManagerDialog();
+                                          });
+                     }
                   }
                }
             });
