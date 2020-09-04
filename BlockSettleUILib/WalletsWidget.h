@@ -16,6 +16,7 @@
 #include <QWidget>
 #include <QItemSelection>
 #include "Address.h"
+#include "SignerDefs.h"
 #include "TabWithShortcut.h"
 #include "BSErrorCode.h"
 #include "BSErrorCodeStrings.h"
@@ -57,7 +58,7 @@ public:
    WalletsWidget(QWidget* parent = nullptr );
    ~WalletsWidget() override;
 
-   void init(const std::shared_ptr<spdlog::logger> &logger
+   [[deprecated]] void init(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ApplicationSettings> &
@@ -66,16 +67,22 @@ public:
       , const std::shared_ptr<AuthAddressManager> &
       , const std::shared_ptr<ArmoryConnection> &);
 
+   void init(const std::shared_ptr<spdlog::logger> &logger);
+
    void setUsername(const QString& username);
 
    WalletNode *getSelectedNode() const;
-   std::vector<std::shared_ptr<bs::sync::Wallet>> getSelectedWallets() const;
-   std::vector<std::shared_ptr<bs::sync::Wallet>> getFirstWallets() const;
-   std::shared_ptr<bs::sync::hd::Wallet> getSelectedHdWallet() const;
+   std::vector<bs::sync::WalletInfo> getSelectedWallets() const;
+   std::vector<bs::sync::WalletInfo> getFirstWallets() const;
+   bs::sync::WalletInfo getSelectedHdWallet() const;
 
    void CreateNewWallet();
    void ImportNewWallet();
    void ImportHwWallet();
+
+   void onHDWallet(const bs::sync::WalletInfo &);
+   void onHDWalletDetails(const bs::sync::HDWalletData &);
+   void onAddresses(const std::string &walletId, const std::vector<bs::Address> &);
 
    void shortcutActivated(ShortcutType s) override;
 
@@ -96,6 +103,11 @@ private:
 signals:
    void showContextMenu(QMenu *, QPoint);
    void newWalletCreationRequest();
+   void needHDWalletDetails(const std::string &walletId);
+   void needExtAddresses(std::string walletId);
+   void needIntAddresses(std::string walletId);
+   void needUsedAddresses(std::string walletId);
+   void needAddrComments(std::string walletId, const std::vector<bs::Address> &);
 
 private slots:
    void showWalletProperties(const QModelIndex& index);
@@ -141,7 +153,7 @@ private:
    std::shared_ptr<bs::sync::Wallet>   curWallet_;
    unsigned int   revokeReqId_ = 0;
    QString username_;
-   std::vector<std::shared_ptr<bs::sync::Wallet>>  prevSelectedWallets_;
+   std::vector<bs::sync::WalletInfo>   prevSelectedWallets_;
    int prevSelectedWalletRow_{-1};
    int prevSelectedAddressRow_{-1};
    QPoint walletsScrollPos_;

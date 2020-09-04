@@ -22,6 +22,7 @@
 #include <QThread>
 #include <QTimer>
 #include <spdlog/spdlog.h>
+#include "Address.h"
 #include "AppNap.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
@@ -34,8 +35,9 @@ using namespace BlockSettle::Common;
 using namespace BlockSettle::Terminal;
 using namespace bs::message;
 
-Q_DECLARE_METATYPE(bs::error::AuthAddressSubmitResult);
+Q_DECLARE_METATYPE(bs::error::AuthAddressSubmitResult)
 Q_DECLARE_METATYPE(std::string)
+Q_DECLARE_METATYPE(std::vector<bs::Address>)
 
 #if defined (Q_OS_MAC)
 class MacOsApp : public QApplication
@@ -111,6 +113,7 @@ static QScreen *getDisplay(QPoint position)
 QtGuiAdapter::QtGuiAdapter(const std::shared_ptr<spdlog::logger> &logger)
    : QObject(nullptr), logger_(logger)
    , userSettings_(std::make_shared<UserTerminal>(TerminalUsers::Settings))
+   , userWallets_(std::make_shared<UserTerminal>(TerminalUsers::Wallets))
 {}
 
 QtGuiAdapter::~QtGuiAdapter()
@@ -182,6 +185,7 @@ void QtGuiAdapter::run(int &argc, char **argv)
    qRegisterMetaType<bs::error::AuthAddressSubmitResult>();
    qRegisterMetaType<QVector<int>>();
    qRegisterMetaType<std::string>();
+   qRegisterMetaType<std::vector<bs::Address>>();
 
    QString logoIcon;
    logoIcon = QLatin1String(":/SPLASH_LOGO");
@@ -194,6 +198,7 @@ void QtGuiAdapter::run(int &argc, char **argv)
    splashScreen_->show();
 
    mainWindow_ = new bs::gui::qt::MainWindow(logger_, queue_, user_);
+   makeMainWinConnections();
    updateStates();
 
    requestInitialSettings();
@@ -221,6 +226,8 @@ bool QtGuiAdapter::process(const Envelope &env)
          return processSettings(env);
       case TerminalUsers::Blockchain:
          return processBlockchain(env);
+      case TerminalUsers::Signer:
+         return processSigner(env);
       case TerminalUsers::Wallets:
          return processWallets(env);
       case TerminalUsers::AuthEid:
@@ -354,6 +361,35 @@ bool QtGuiAdapter::processBlockchain(const Envelope &env)
    return true;
 }
 
+bool QtGuiAdapter::processSigner(const Envelope &env)
+{
+   SignerMessage msg;
+   if (!msg.ParseFromString(env.message)) {
+      logger_->error("[QtGuiAdapter::processSigner] failed to parse msg #{}"
+         , env.id);
+      if (!env.receiver) {
+         logger_->debug("[{}] no receiver", __func__);
+      }
+      return true;
+   }
+   switch (msg.data_case()) {
+   case SignerMessage::kState:
+      signerState_ = msg.state().code();
+      signerDetails_ = msg.state().text();
+      if (mainWindow_) {
+         QMetaObject::invokeMethod(mainWindow_, [this]{
+            mainWindow_->onSignerStateChanged(signerState_, signerDetails_);
+            });
+      }
+      break;
+   case SignerMessage::kNeedNewWalletPrompt:
+      createWallet(true);
+      break;
+   default:    break;
+   }
+   return true;
+}
+
 bool QtGuiAdapter::processWallets(const Envelope &env)
 {
    WalletsMessage msg;
@@ -365,6 +401,18 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
    case WalletsMessage::kLoading:
       loadingComponents_.insert(env.sender->value());
       updateSplashProgress();
+      break;
+   case WalletsMessage::kWalletLoaded: {
+      const auto &wi = bs::sync::WalletInfo::fromCommonMsg(msg.wallet_loaded());
+      processWalletLoaded(wi);
+   }
+      break;
+   case WalletsMessage::kHdWallet: {
+      const auto &hdw = bs::sync::HDWalletData::fromCommonMessage(msg.hd_wallet());
+      QMetaObject::invokeMethod(mainWindow_, [this, hdw] {
+         mainWindow_->onHDWalletDetails(hdw);
+      });
+   }
       break;
    default:    break;
    }
@@ -414,7 +462,10 @@ void QtGuiAdapter::updateStates()
       mainWindow_->onArmoryStateChanged(armoryState_, blockNum_);
    }
    if (signerState_ >= 0) {
-      mainWindow_->onSignerStateChanged(signerState_);
+      mainWindow_->onSignerStateChanged(signerState_, signerDetails_);
+   }
+   for (const auto &hdWallet : hdWallets_) {
+      mainWindow_->onHDWallet(hdWallet.second);
    }
 }
 
@@ -423,6 +474,14 @@ void QtGuiAdapter::updateSplashProgress()
    if (!splashScreen_ || createdComponents_.empty()) {
       return;
    }
+/*   std::string l, c;
+   for (const auto &lc : loadingComponents_) {
+      l += std::to_string(lc) + " ";
+   }
+   for (const auto &cc : createdComponents_) {
+      c += std::to_string(cc) + " ";
+   }
+   logger_->debug("[{}] {}/{}", __func__, l, c);*/
    int percent = 100 * loadingComponents_.size() / createdComponents_.size();
    QMetaObject::invokeMethod(splashScreen_, [this, percent] {
       splashScreen_->SetProgress(percent);
@@ -468,5 +527,58 @@ void QtGuiAdapter::requestInitialSettings()
    Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
    pushFill(env);
 }
+
+void QtGuiAdapter::makeMainWinConnections()
+{
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needHDWalletDetails, this, &QtGuiAdapter::onNeedHDWalletDetails);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needExtAddresses, this, &QtGuiAdapter::onNeedExtAddresses);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needIntAddresses, this, &QtGuiAdapter::onNeedIntAddresses);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needUsedAddresses, this, &QtGuiAdapter::onNeedUsedAddresses);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needAddrComments, this, &QtGuiAdapter::onNeedAddrComments);
+}
+
+void QtGuiAdapter::createWallet(bool primary)
+{
+   logger_->debug("[{}]", __func__);
+}
+
+void QtGuiAdapter::onNeedHDWalletDetails(const std::string &walletId)
+{
+   WalletsMessage msg;
+   msg.set_hd_wallet_get(walletId);
+   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedExtAddresses(std::string walletId)
+{
+   logger_->debug("[{}] {}", __func__, walletId);
+}
+
+void QtGuiAdapter::onNeedIntAddresses(std::string walletId)
+{
+   logger_->debug("[{}] {}", __func__, walletId);
+}
+
+void QtGuiAdapter::onNeedUsedAddresses(std::string walletId)
+{
+   logger_->debug("[{}] {}", __func__, walletId);
+}
+
+void QtGuiAdapter::onNeedAddrComments(std::string walletId, const std::vector<bs::Address> &)
+{
+   logger_->debug("[{}] {}", __func__, walletId);
+}
+
+void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
+{
+   hdWallets_[wi.id] = wi;
+   if (mainWindow_) {
+      QMetaObject::invokeMethod(mainWindow_, [this, wi] {
+         mainWindow_->onHDWallet(wi);
+      });
+   }
+}
+
 
 #include "QtGuiAdapter.moc"

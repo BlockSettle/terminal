@@ -14,6 +14,7 @@
 #include <QDialog>
 #include <memory>
 #include "Address.h"
+#include "SignerDefs.h"
 
 namespace Ui {
    class NewAddressDialog;
@@ -30,8 +31,9 @@ class NewAddressDialog : public QDialog
 Q_OBJECT
 
 public:
-   NewAddressDialog(const std::shared_ptr<bs::sync::Wallet>& wallet
+   [[deprecated]] NewAddressDialog(const std::shared_ptr<bs::sync::Wallet>& wallet
       , QWidget* parent = nullptr);
+   NewAddressDialog(const bs::sync::WalletInfo &, QWidget* parent = nullptr);
    ~NewAddressDialog() override;
 
 protected:

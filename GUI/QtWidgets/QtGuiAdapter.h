@@ -13,7 +13,9 @@
 
 #include <set>
 #include <QObject>
+#include "Address.h"
 #include "ApiAdapter.h"
+#include "SignerDefs.h"
 #include "ThreadSafeClasses.h"
 
 namespace bs {
@@ -56,6 +58,7 @@ private:
    bool processSettingsGetResponse(const BlockSettle::Terminal::SettingsMessage_SettingsResponse &);
    bool processAdminMessage(const bs::message::Envelope &);
    bool processBlockchain(const bs::message::Envelope &);
+   bool processSigner(const bs::message::Envelope &);
    bool processWallets(const bs::message::Envelope &);
    bool processAuthEid(const bs::message::Envelope &);
    bool processOnChainTrack(const bs::message::Envelope &);
@@ -65,17 +68,32 @@ private:
    void splashProgressCompleted();
    void updateStates();
 
+   void createWallet(bool primary);
+   void makeMainWinConnections();
+
+   void processWalletLoaded(const bs::sync::WalletInfo &);
+
+private slots:
+   void onNeedHDWalletDetails(const std::string &walletId);
+   void onNeedExtAddresses(std::string walletId);
+   void onNeedIntAddresses(std::string walletId);
+   void onNeedUsedAddresses(std::string walletId);
+   void onNeedAddrComments(std::string walletId, const std::vector<bs::Address> &);
+
 private:
    std::shared_ptr<spdlog::logger>        logger_;
-   std::shared_ptr<bs::message::UserTerminal>   userSettings_;
+   std::shared_ptr<bs::message::UserTerminal>   userSettings_, userWallets_;
    bs::gui::qt::MainWindow * mainWindow_{ nullptr };
    BSTerminalSplashScreen  * splashScreen_{ nullptr };
 
    std::set<int>  createdComponents_;
    std::set<int>  loadingComponents_;
-   int armoryState_{ -1 };
-   uint32_t blockNum_{ 0 };
-   int signerState_{ -1 };
+   int         armoryState_{ -1 };
+   uint32_t    blockNum_{ 0 };
+   int         signerState_{ -1 };
+   std::string signerDetails_;
+
+   std::unordered_map<std::string, bs::sync::WalletInfo> hdWallets_;
 };
 
 

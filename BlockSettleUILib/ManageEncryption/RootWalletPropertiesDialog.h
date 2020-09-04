@@ -14,6 +14,7 @@
 #include <QDialog>
 #include <memory>
 #include "BinaryData.h"
+#include "SignerDefs.h"
 #include "QWalletInfo.h"
 
 namespace Ui {
@@ -43,8 +44,8 @@ class RootWalletPropertiesDialog : public QDialog
 Q_OBJECT
 
 public:
-   RootWalletPropertiesDialog(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<bs::sync::hd::Wallet> &
+   [[deprecated]] RootWalletPropertiesDialog(const std::shared_ptr<spdlog::logger> &logger
+      , const bs::sync::WalletInfo &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<SignContainer> &
@@ -52,7 +53,20 @@ public:
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<ConnectionManager> &
       , const std::shared_ptr<AssetManager> &, QWidget* parent = nullptr);
+   RootWalletPropertiesDialog(const std::shared_ptr<spdlog::logger> &logger
+      , const bs::sync::WalletInfo &, WalletsViewModel *walletsModel
+      , QWidget* parent = nullptr);
    ~RootWalletPropertiesDialog() override;
+
+   void onHDWalletDetails();
+   void onWalletBalances();
+   void onSpendableUTXOs();
+
+signals:
+   void startRescan(std::string walletId);
+   void needHDWalletDetails(std::string walletId);
+   void needWalletBalances(std::string walletId);
+   void needSpendableUTXOs(std::string walletId);
 
 private slots:
    void onDeleteWallet();
@@ -64,12 +78,11 @@ private slots:
    void onModelReset();
 
 private:
-   void updateWalletDetails(const std::shared_ptr<bs::sync::hd::Wallet> &);
-   void updateWalletDetails(const std::shared_ptr<bs::sync::Wallet> &);
+   void updateWalletDetails(const bs::sync::WalletInfo &);
 
 private:
    std::unique_ptr<Ui::WalletPropertiesDialog>  ui_;
-   std::shared_ptr<bs::sync::hd::Wallet>        wallet_;
+   bs::sync::WalletInfo    wallet_;
    std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;
    bs::hd::WalletInfo                  walletInfo_;
    std::shared_ptr<SignContainer>      signingContainer_;

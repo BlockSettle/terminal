@@ -14,6 +14,8 @@
 #include <functional>
 #include <queue>
 #include <QMainWindow>
+#include "Address.h"
+#include "SignerDefs.h"
 
 namespace spdlog {
    class logger;
@@ -51,7 +53,10 @@ namespace bs {
             void showStartupDialog(bool showLic);
 
             void onArmoryStateChanged(int state, unsigned int blockNum);
-            void onSignerStateChanged(int state);
+            void onSignerStateChanged(int state, const std::string &);
+
+            void onHDWallet(const bs::sync::WalletInfo &);
+            void onHDWalletDetails(const bs::sync::HDWalletData &);
 
          public slots:
             void onReactivate();
@@ -64,6 +69,15 @@ namespace bs {
                Connecting,
                Connected,
             };*/
+
+         signals:
+            void createNewWallet();
+            void needHDWalletDetails(const std::string &walletId);
+
+            void needExtAddresses(std::string walletId);
+            void needIntAddresses(std::string walletId);
+            void needUsedAddresses(std::string walletId);
+            void needAddrComments(std::string walletId, const std::vector<bs::Address> &);
 
          private slots:
             void onSend();

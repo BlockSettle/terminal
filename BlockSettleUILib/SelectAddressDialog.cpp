@@ -38,6 +38,29 @@ SelectAddressDialog::SelectAddressDialog(const std::shared_ptr<bs::sync::hd::Gro
    init();
 }
 
+SelectAddressDialog::SelectAddressDialog(const AddressListModel::Wallets &wallets
+   , QWidget* parent, AddressListModel::AddressType addrType)
+   : QDialog(parent)
+   , ui_(new Ui::SelectAddressDialog)
+   , addrType_(addrType)
+{
+   ui_->setupUi(this);
+
+   model_ = std::make_unique<AddressListModel>(ui_->treeView, addrType);
+   model_->setWallets(wallets, false, false);
+   ui_->treeView->setModel(model_.get());
+
+   ui_->treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
+   connect(ui_->treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &SelectAddressDialog::onSelectionChanged);
+   connect(ui_->treeView, &QTreeView::doubleClicked, this, &SelectAddressDialog::onDoubleClicked);
+
+   connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &SelectAddressDialog::reject);
+   connect(ui_->pushButtonSelect, &QPushButton::clicked, this, &SelectAddressDialog::accept);
+
+   onSelectionChanged();
+}
+
 SelectAddressDialog::~SelectAddressDialog() = default;
 
 void SelectAddressDialog::init()
@@ -45,7 +68,12 @@ void SelectAddressDialog::init()
    ui_->setupUi(this);
 
    model_ = std::make_unique<AddressListModel>(walletsMgr_, ui_->treeView, addrType_);
-   model_->setWallets(wallets_, false, false);
+   std::vector<bs::sync::WalletInfo> walletsInfo;
+   for (const auto &wallet : wallets_) {
+      const auto leaf = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(wallet);
+      walletsInfo.push_back(bs::sync::WalletInfo::fromLeaf(leaf));
+   }
+   model_->setWallets(walletsInfo, false, false);
    ui_->treeView->setModel(model_.get());
 
    ui_->treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);

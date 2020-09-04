@@ -52,7 +52,7 @@ void SelectWalletDialog::onSelectionChanged()
 {
    auto selectedRows = ui_->treeViewWallets->selectionModel()->selectedRows();
    if (selectedRows.size() == 1) {
-      selectedWallet_ = walletsModel_->getWallet(selectedRows[0]);
+      selectedWallet_ = walletsModel_->getWallet(selectedRows[0]).id;
    }
    else {
       selectedWallet_ = nullptr;
@@ -60,20 +60,20 @@ void SelectWalletDialog::onSelectionChanged()
    walletsModel_->setSelectedWallet(selectedWallet_);
 
    auto okButton = ui_->buttonBox->button(QDialogButtonBox::Ok);
-   okButton->setEnabled(selectedWallet_ != nullptr);
+   okButton->setEnabled(!selectedWallet_.empty());
 }
 
-std::shared_ptr<bs::sync::Wallet> SelectWalletDialog::getSelectedWallet() const
+std::string SelectWalletDialog::getSelectedWallet() const
 {
    return selectedWallet_;
 }
 
 void SelectWalletDialog::onDoubleClicked(const QModelIndex& index)
 {
-   if (!selectedWallet_) {
+   if (selectedWallet_.empty()) {
       return;
    }
 
-   selectedWallet_ = walletsModel_->getWallet(index);
+   selectedWallet_ = walletsModel_->getWallet(index).id;
    QDialog::accept();
 }

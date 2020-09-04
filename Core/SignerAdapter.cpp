@@ -177,8 +177,8 @@ bool SignerAdapter::processSignerSettings(const SettingsMessage_SignerServer &re
       if (SignerConnectionExists(localSignerHost, localSignerPort)) {
          logger_->error("[{}] failed to bind on local port {}", __func__, response.local_port());
          SignerMessage msg;
-         auto msgError = msg.mutable_error();
-         msgError->set_code((int)bs::error::ErrorCode::InternalError);
+         auto msgError = msg.mutable_state();
+         msgError->set_code((int)SignContainer::SocketFailed);
          msgError->set_text("failed to bind local port");
          Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
          return pushFill(env);
@@ -218,7 +218,7 @@ bool SignerAdapter::processSignerSettings(const SettingsMessage_SignerServer &re
 void SignerAdapter::connError(SignContainer::ConnectionError errCode, const QString &errMsg)
 {
    SignerMessage msg;
-   auto msgErr = msg.mutable_error();
+   auto msgErr = msg.mutable_state();
    msgErr->set_code((int)errCode);
    msgErr->set_text(errMsg.toStdString());
    Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
@@ -228,9 +228,9 @@ void SignerAdapter::connError(SignContainer::ConnectionError errCode, const QStr
 void SignerAdapter::connTorn()
 {
    SignerMessage msg;
-   auto msgErr = msg.mutable_error();
-   msgErr->set_code((int)SignContainer::ConnectionError::SignerGoesOffline);
-   msgErr->set_text("disconnected");
+   auto msgState = msg.mutable_state();
+   msgState->set_code((int)SignContainer::ConnectionError::SignerGoesOffline);
+   msgState->set_text("disconnected");
    Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
    pushFill(env);
 }
@@ -254,7 +254,8 @@ void SignerAdapter::walletsChanged()
 void SignerAdapter::onReady()
 {
    SignerMessage msg;
-   msg.mutable_ready();
+   auto msgState = msg.mutable_state();
+   msgState->set_code((int)SignContainer::Ready);
    Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
    pushFill(env);
 }

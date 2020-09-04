@@ -35,7 +35,7 @@ public:
    SelectWalletDialog(const std::shared_ptr<bs::sync::WalletsManager> &, const std::string &selWalletId, QWidget* parent = nullptr);
    ~SelectWalletDialog() override;
 
-   std::shared_ptr<bs::sync::Wallet> getSelectedWallet() const;
+   std::string getSelectedWallet() const;
 
 public slots:
    void onSelectionChanged();
@@ -44,7 +44,7 @@ public slots:
 private:
    std::unique_ptr<Ui::SelectWalletDialog> ui_;
    WalletsViewModel  *              walletsModel_;
-   std::shared_ptr<bs::sync::Wallet>         selectedWallet_;
+   std::string    selectedWallet_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
 };
 

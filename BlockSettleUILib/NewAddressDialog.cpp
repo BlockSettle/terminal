@@ -64,6 +64,26 @@ NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::sync::Wallet> &wall
    }
 }
 
+NewAddressDialog::NewAddressDialog(const bs::sync::WalletInfo &wallet
+   , QWidget* parent)
+   : QDialog(parent)
+   , ui_(new Ui::NewAddressDialog())
+{
+   ui_->setupUi(this);
+   ui_->labelWallet->setText(QString::fromStdString(wallet.name));
+
+   auto copyButton = ui_->buttonBox->addButton(tr("Copy to clipboard"), QDialogButtonBox::ActionRole);
+   connect(copyButton, &QPushButton::clicked, this, &NewAddressDialog::copyToClipboard);
+   connect(ui_->pushButtonCopyToClipboard, &QPushButton::clicked, this, &NewAddressDialog::copyToClipboard);
+
+   const auto closeButton = ui_->buttonBox->button(QDialogButtonBox::StandardButton::Close);
+   if (closeButton) {
+      connect(closeButton, &QPushButton::clicked, this, &NewAddressDialog::onClose);
+   }
+   copyButton->setEnabled(false);
+   closeButton->setEnabled(false);
+}
+
 NewAddressDialog::~NewAddressDialog() = default;
 
 void NewAddressDialog::displayAddress()

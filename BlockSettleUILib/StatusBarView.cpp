@@ -97,7 +97,7 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
       // connected are not used here because we wait for authenticated signal instead
       // disconnected are not used here because onContainerError should be always called
       connect(container.get(), &SignContainer::authenticated, this, &StatusBarView::onContainerAuthorized);
-      connect(container.get(), &SignContainer::connectionError, this, &StatusBarView::onContainerError);
+      connect(container.get(), &SignContainer::connectionError, this, &StatusBarView::onSignerStatusChanged);
    }
 
    onArmoryStateChanged(armory_->state(), armory_->topBlock());
@@ -540,13 +540,17 @@ void StatusBarView::onContainerAuthorized()
    containerStatusLabel_->setPixmap(iconContainerOnline_);
 }
 
-void StatusBarView::onContainerError(SignContainer::ConnectionError error, const QString &details)
+void StatusBarView::onSignerStatusChanged(SignContainer::ConnectionError error, const QString &details)
 {
    Q_UNUSED(details);
 
    switch (error) {
       case SignContainer::NoError:
          assert(false);
+         break;
+
+      case SignContainer::Ready:
+         containerStatusLabel_->setPixmap(iconContainerOnline_);
          break;
 
       case SignContainer::UnknownError:

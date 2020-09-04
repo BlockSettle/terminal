@@ -143,12 +143,23 @@ void MainWindow::onArmoryStateChanged(int state, unsigned int blockNum)
    }
 }
 
-void MainWindow::onSignerStateChanged(int state)
+void MainWindow::onSignerStateChanged(int state, const std::string &details)
 {
    if (statusBarView_) {
+      statusBarView_->onSignerStatusChanged(static_cast<SignContainer::ConnectionError>(state)
+         , QString::fromStdString(details));
    }
 }
 
+void MainWindow::onHDWallet(const bs::sync::WalletInfo &wi)
+{
+   ui_->widgetWallets->onHDWallet(wi);
+}
+
+void MainWindow::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
+{
+   ui_->widgetWallets->onHDWalletDetails(hdWallet);
+}
 
 void MainWindow::showStartupDialog(bool showLicense)
 {
@@ -475,11 +486,11 @@ void MainWindow::onSend()
 
    if (ui_->tabWidget->currentWidget() == ui_->widgetWallets) {
       auto wallet = ui_->widgetWallets->getSelectedHdWallet();
-      if (!wallet) {
+      if (wallet.id.empty()) {
 //         wallet = walletsMgr_->getPrimaryWallet();
       }
-      if (wallet) {
-//         selectedWalletId = wallet->walletId();
+      if (!wallet.id.empty()) {
+         selectedWalletId = wallet.id;
       }
    }
 
@@ -898,7 +909,14 @@ void MainWindow::onSignerVisibleChanged()
 
 void MainWindow::initWidgets()
 {
-//   InitWalletsView();
+   ui_->widgetWallets->init(logger_);
+//   connect(ui_->widgetWallets, &WalletsWidget::newWalletCreationRequest, this, &MainWindow::createNewWallet);
+   connect(ui_->widgetWallets, &WalletsWidget::needHDWalletDetails, this, &MainWindow::needHDWalletDetails);
+   connect(ui_->widgetWallets, &WalletsWidget::needExtAddresses, this, &MainWindow::needExtAddresses);
+   connect(ui_->widgetWallets, &WalletsWidget::needIntAddresses, this, &MainWindow::needIntAddresses);
+   connect(ui_->widgetWallets, &WalletsWidget::needUsedAddresses, this, &MainWindow::needUsedAddresses);
+   connect(ui_->widgetWallets, &WalletsWidget::needAddrComments, this, &MainWindow::needAddrComments);
+
 //   InitPortfolioView();
 
 //   ui_->widgetRFQ->initWidgets(mdProvider_, mdCallbacks_, applicationSettings_);

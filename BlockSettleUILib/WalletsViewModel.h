@@ -18,14 +18,11 @@
 #include <unordered_set>
 #include <vector>
 #include "QWalletInfo.h"
+#include "SignerDefs.h"
 
 
 namespace bs {
    namespace sync {
-      namespace hd {
-         class Wallet;
-      }
-      class Wallet;
       class WalletsManager;
    }
 }
@@ -59,12 +56,13 @@ public:
       : viewModel_(vm), parent_(parent), row_(row), type_(type) {}
    virtual ~WalletNode() { clear(); }
 
-   virtual std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const { return {}; }
-   virtual std::shared_ptr<bs::sync::hd::Wallet> hdWallet() const { return nullptr; }
+   virtual std::vector<bs::sync::WalletInfo> wallets() const { return {}; }
+   virtual bs::sync::WalletInfo hdWallet() const { return {}; }
    virtual QVariant data(int, int) const { return QVariant(); }
    virtual std::string id() const { return {}; }
 
    void add(WalletNode *child) { children_.append(child); }
+   void replace(WalletNode *child);
    void clear();
    int nbChildren() const { return children_.count(); }
    bool hasChildren() const { return !children_.empty(); }
@@ -93,8 +91,9 @@ class WalletsViewModel : public QAbstractItemModel
 {
 Q_OBJECT
 public:
-   WalletsViewModel(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager, const std::string &defaultWalletId
+   [[deprecated]] WalletsViewModel(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager, const std::string &defaultWalletId
       , const std::shared_ptr<SignContainer> &sc = nullptr, QObject *parent = nullptr, bool showOnlyRegular = false);
+   WalletsViewModel(const std::string &defaultWalletId, QObject *parent = nullptr, bool showOnlyRegular = false);
    ~WalletsViewModel() noexcept override = default;
 
    WalletsViewModel(const WalletsViewModel&) = delete;
@@ -102,16 +101,19 @@ public:
    WalletsViewModel(WalletsViewModel&&) = delete;
    WalletsViewModel& operator = (WalletsViewModel&&) = delete;
 
-   std::vector<std::shared_ptr<bs::sync::Wallet>> getWallets(const QModelIndex &index) const;
-   std::shared_ptr<bs::sync::Wallet> getWallet(const QModelIndex &index) const;
+   std::vector<bs::sync::WalletInfo> getWallets(const QModelIndex &index) const;
+   bs::sync::WalletInfo getWallet(const QModelIndex &index) const;
    WalletNode *getNode(const QModelIndex &) const;
-   void setSelectedWallet(const std::shared_ptr<bs::sync::Wallet> &selWallet) { selectedWallet_ = selWallet; }
+   void setSelectedWallet(const std::string &selWallet) { selectedWalletId_ = selWallet; }
 
-   std::shared_ptr<bs::sync::Wallet> selectedWallet() const { return selectedWallet_; }
+   std::string selectedWallet() const { return selectedWalletId_; }
    bool showRegularWallets() const { return showRegularWallets_; }
    std::shared_ptr<bs::sync::Wallet> getAuthWallet() const;
 
-   void LoadWallets(bool keepSelection = false);
+   [[deprecated]] void LoadWallets(bool keepSelection = false);
+   void onHDWallet(const bs::sync::WalletInfo &);
+   void onHDWalletDetails(const bs::sync::HDWalletData &);
+   void onWalletBalances();   //TODO: add arg
 
    void setBitcoinLeafSelectionMode(bool flag = true) { bitcoinLeafSelectionMode_ = flag; }
 
@@ -125,8 +127,10 @@ public:
    QModelIndex parent(const QModelIndex &child) const override;
    bool hasChildren(const QModelIndex& parent = QModelIndex()) const override;
    Qt::ItemFlags flags(const QModelIndex &index) const override;
+
 signals:
    void updateAddresses();
+   void needHDWalletDetails(const std::string &walletId);
 
 private slots:
    void onWalletChanged();
@@ -162,7 +166,7 @@ public:
 private:
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>   signContainer_;
-   std::shared_ptr<bs::sync::Wallet>      selectedWallet_;
+   std::string       selectedWalletId_;
    std::shared_ptr<WalletNode>      rootNode_;
    std::string       defaultWalletId_;
    bool              showRegularWallets_;

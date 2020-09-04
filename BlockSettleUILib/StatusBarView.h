@@ -57,7 +57,7 @@ public slots:
    void onConnectionClosed();
    void onConnectionError(int errorCode);
    void onContainerAuthorized();
-   void onContainerError(SignContainer::ConnectionError error, const QString &details);
+   void onSignerStatusChanged(SignContainer::ConnectionError error, const QString &details);
    void updateBalances();
    void onWalletImportStarted(const std::string &walletId);
    void onWalletImportFinished(const std::string &walletId);
