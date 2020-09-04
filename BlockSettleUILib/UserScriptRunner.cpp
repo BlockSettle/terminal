@@ -150,11 +150,6 @@ void AQScriptHandler::onQuoteReqNotification(const bs::network::QuoteReqNotifica
             }
          }
          reqReply->start();
-
-         std::unique_lock<std::mutex> lock(mtxExtData_);
-         for (const auto &extMsg : extDataPool_) {
-            emit reqReply->extDataReceived(extMsg.from, extMsg.type, extMsg.msg);
-         }
       }
    }
    else if ((qrn.status == bs::network::QuoteReqNotification::Rejected)
@@ -404,14 +399,6 @@ void AQScriptHandler::extMsgReceived(const std::string &data)
       logger_->error("[AQScriptHandler::extMsgReceived] invalid data in JSON: {}"
          , data);
       return;
-   }
-
-   {
-      std::unique_lock<std::mutex> lock(mtxExtData_);
-      extDataPool_.push_back({ strFrom, strType, strMsg });
-      while (extDataPool_.size() > maxExtDataPoolSize_) {
-         extDataPool_.pop_front();
-      }
    }
 
    for (const auto &aqObj : aqObjs_) {
