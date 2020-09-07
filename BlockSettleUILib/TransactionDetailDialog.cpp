@@ -297,10 +297,9 @@ void TransactionDetailDialog::addAddress(TxOut out    // can't use const ref due
             setLastChange(out);
          }
 
-         if (lastChange.isInitialized()) {
-            if (out.getScript() == lastChange.getScript()) {
-               isChange = true;
-            }
+         if (lastChange.isInitialized() && (allOutputs.size() > 1)
+            && (out.getScript() == lastChange.getScript())) {
+            isChange = true;
          }
       }
 
