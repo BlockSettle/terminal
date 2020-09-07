@@ -115,6 +115,7 @@ private:
    void onRFQSubmit(const std::string &rfqId, const bs::network::RFQ& rfq
       , bs::UtxoReservationToken ccUtxoRes);
    void onRFQCancel(const std::string &rfqId);
+   void deleteDialog(const std::string &rfqId);
 
 public slots:
    void onCurrencySelected(const MarketSelectedInfo& selectedInfo);
