@@ -668,6 +668,7 @@ void WalletsViewModel::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
             groupNode->addLeaf(leaf, groupType);
             endInsertRows();
          }
+         emit needWalletBalances(leaf.id);
       }
    }
 }

@@ -75,10 +75,11 @@ private:
 
 private slots:
    void onNeedHDWalletDetails(const std::string &walletId);
-   void onNeedExtAddresses(std::string walletId);
-   void onNeedIntAddresses(std::string walletId);
-   void onNeedUsedAddresses(std::string walletId);
-   void onNeedAddrComments(std::string walletId, const std::vector<bs::Address> &);
+   void onNeedWalletBalances(const std::string &walletId);
+   void onNeedExtAddresses(const std::string &walletId);
+   void onNeedIntAddresses(const std::string &walletId);
+   void onNeedUsedAddresses(const std::string &walletId);
+   void onNeedAddrComments(const std::string &walletId, const std::vector<bs::Address> &);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

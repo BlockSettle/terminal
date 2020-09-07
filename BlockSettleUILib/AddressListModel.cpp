@@ -84,6 +84,10 @@ void AddressListModel::setWallets(const Wallets &wallets, bool force, bool filte
    if ((wallets != wallets_) || (filterBtcOnly != filterBtcOnly_) || force) {
       wallets_ = wallets;
       filterBtcOnly_ = filterBtcOnly;
+      beginResetModel();
+      indexByAddr_.clear();
+      addressRows_.clear();
+      endResetModel();
       for (const auto &wallet : wallets_) {
          updateWallet(wallet);
       }
@@ -202,20 +206,25 @@ void AddressListModel::onAddresses(const std::string &walletId
       , [walletId](const bs::sync::WalletInfo &wallet) {
       return (wallet.id == walletId);
    });
-   if (itWallet == wallets_.cend()) {
+   if ((itWallet == wallets_.cend()) || addrs.empty()) {
       return;
    }
-   std::vector<AddressRow> addresses;
-   for (size_t i = 0; i < addrs.size(); i++) {
-      const auto &addr = addrs[i];
+   beginInsertRows(QModelIndex(), addressRows_.size()
+      , addressRows_.size() + addrs.size() - 1);
+   for (const auto &addr : addrs) {
       auto row = createRow(addr, *itWallet);
-      row.addrIndex = i;
-      addresses.emplace_back(std::move(row));
+      row.addrIndex = addressRows_.size();
+      indexByAddr_[addr.id()] = row.addrIndex;
+      addressRows_.push_back(std::move(row));
    }
-   beginResetModel();
-   addressRows_ = std::move(addresses);
-   endResetModel();
+   endInsertRows();
    emit needAddrComments(walletId, addrs);
+}
+
+void AddressListModel::onAddressComments(const std::string &walletId
+   , const std::map<bs::Address, std::string> &comments)
+{
+   //TODO: implement
 }
 
 void AddressListModel::updateWalletData()

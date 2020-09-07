@@ -315,7 +315,6 @@ void RFQRequestWidget::onRFQSubmit(const std::string &id, const bs::network::RFQ
    connect(dialog, &RFQDialog::expired, this, &RFQRequestWidget::onRFQExpired);
    connect(dialog, &RFQDialog::cancelled, this, &RFQRequestWidget::onRFQCancelled);
 
-//   dialog->setAttribute(Qt::WA_DeleteOnClose);
    dialogManager_->adjustDialogPosition(dialog);
    dialog->show();
 
@@ -348,7 +347,12 @@ void RFQRequestWidget::onRFQSubmit(const std::string &id, const bs::network::RFQ
 
 void RFQRequestWidget::onRFQCancel(const std::string &id)
 {
-   const auto &itDlg = dialogs_.find(id);
+   deleteDialog(id);
+}
+
+void RFQRequestWidget::deleteDialog(const std::string &rfqId)
+{
+   const auto &itDlg = dialogs_.find(rfqId);
    if (itDlg == dialogs_.end()) {
       return;
    }
@@ -514,6 +518,7 @@ void RFQRequestWidget::onRFQAccepted(const std::string &id)
 
 void RFQRequestWidget::onRFQExpired(const std::string &id)
 {
+   deleteDialog(id);
    ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->rfqExpired(id);
 }
 

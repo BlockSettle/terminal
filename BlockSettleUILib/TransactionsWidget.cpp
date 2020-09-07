@@ -426,6 +426,9 @@ void TransactionsWidget::walletsChanged()
       ui_->walletBox->setItemData(index++, allLeafIds, UiUtils::WalletIdRole);
 
       for (const auto &group : hdWallet->getGroups()) {
+         if (group->type() == bs::core::wallet::Type::Settlement) {
+            continue;
+         }
          ui_->walletBox->addItem(QString::fromStdString("   " + group->name()));
          const auto groupIndex = index++;
          QStringList groupLeafIds;

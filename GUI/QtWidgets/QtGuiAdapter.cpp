@@ -402,11 +402,13 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
       loadingComponents_.insert(env.sender->value());
       updateSplashProgress();
       break;
+
    case WalletsMessage::kWalletLoaded: {
       const auto &wi = bs::sync::WalletInfo::fromCommonMsg(msg.wallet_loaded());
       processWalletLoaded(wi);
    }
       break;
+
    case WalletsMessage::kHdWallet: {
       const auto &hdw = bs::sync::HDWalletData::fromCommonMessage(msg.hd_wallet());
       QMetaObject::invokeMethod(mainWindow_, [this, hdw] {
@@ -414,6 +416,36 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
       });
    }
       break;
+
+   case WalletsMessage::kWalletAddresses: {
+      std::vector<bs::Address> addresses;
+      addresses.reserve(msg.wallet_addresses().addresses_size());
+      for (const auto &addr : msg.wallet_addresses().addresses()) {
+         try {
+            addresses.emplace_back(std::move(bs::Address::fromAddressString(addr)));
+         }
+         catch (const std::exception &) {}
+      }
+      QMetaObject::invokeMethod(mainWindow_, [this, addresses, walletId=msg.wallet_addresses().wallet_id()] {
+         mainWindow_->onAddresses(walletId, addresses);
+      });
+   }
+      break;
+
+   case WalletsMessage::kAddrComments: {
+      std::map<bs::Address, std::string> comments;
+      for (const auto &addrComment : msg.addr_comments().comments()) {
+         try {
+            comments[bs::Address::fromAddressString(addrComment.address())] = addrComment.comment();
+         }
+         catch (const std::exception &) {}
+      }
+      QMetaObject::invokeMethod(mainWindow_, [this, comments, walletId = msg.addr_comments().wallet_id()]{
+         mainWindow_->onAddressComments(walletId, comments);
+      });
+   }
+      break;
+
    default:    break;
    }
    return true;
@@ -550,24 +582,49 @@ void QtGuiAdapter::onNeedHDWalletDetails(const std::string &walletId)
    pushFill(env);
 }
 
-void QtGuiAdapter::onNeedExtAddresses(std::string walletId)
+void QtGuiAdapter::onNeedWalletBalances(const std::string &walletId)
 {
-   logger_->debug("[{}] {}", __func__, walletId);
+   WalletsMessage msg;
+   msg.set_get_wallet_balances(walletId);
+   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
 }
 
-void QtGuiAdapter::onNeedIntAddresses(std::string walletId)
+void QtGuiAdapter::onNeedExtAddresses(const std::string &walletId)
 {
-   logger_->debug("[{}] {}", __func__, walletId);
+   WalletsMessage msg;
+   msg.set_get_ext_addresses(walletId);
+   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
 }
 
-void QtGuiAdapter::onNeedUsedAddresses(std::string walletId)
+void QtGuiAdapter::onNeedIntAddresses(const std::string &walletId)
 {
-   logger_->debug("[{}] {}", __func__, walletId);
+   WalletsMessage msg;
+   msg.set_get_ext_addresses(walletId);
+   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
 }
 
-void QtGuiAdapter::onNeedAddrComments(std::string walletId, const std::vector<bs::Address> &)
+void QtGuiAdapter::onNeedUsedAddresses(const std::string &walletId)
 {
-   logger_->debug("[{}] {}", __func__, walletId);
+   WalletsMessage msg;
+   msg.set_get_used_addresses(walletId);
+   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedAddrComments(const std::string &walletId
+   , const std::vector<bs::Address> &addrs)
+{
+   WalletsMessage msg;
+   auto msgReq = msg.mutable_get_addr_comments();
+   msgReq->set_wallet_id(walletId);
+   for (const auto &addr : addrs) {
+      msgReq->add_addresses(addr.display());
+   }
+   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
 }
 
 void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)

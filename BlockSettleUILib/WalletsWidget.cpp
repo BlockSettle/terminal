@@ -258,6 +258,7 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
       walletsModel_ = new WalletsViewModel(defaultWalletId, ui_->treeViewWallets);
    }
    connect(walletsModel_, &WalletsViewModel::needHDWalletDetails, this, &WalletsWidget::needHDWalletDetails);
+   connect(walletsModel_, &WalletsViewModel::needWalletBalances, this, &WalletsWidget::needWalletBalances);
 
    ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewWallets->setModel(walletsModel_);
@@ -352,11 +353,27 @@ void WalletsWidget::onHDWallet(const bs::sync::WalletInfo &wi)
 void WalletsWidget::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
 {
    walletsModel_->onHDWalletDetails(hdWallet);
+
+   for (int i = 0; i < walletsModel_->rowCount(); ++i) {
+      ui_->treeViewWallets->expand(walletsModel_->index(i, 0));
+      // Expand XBT leaves
+      ui_->treeViewWallets->expand(walletsModel_->index(0, 0
+         , walletsModel_->index(i, 0)));
+   }
+
+   //TODO: keep wallets treeView selection
 }
 
 void WalletsWidget::onAddresses(const std::string &walletId, const std::vector<bs::Address> &addrs)
 {
    addressModel_->onAddresses(walletId, addrs);
+}
+
+void WalletsWidget::onAddressComments(const std::string &walletId
+   , const std::map<bs::Address, std::string> &comments)
+{
+   logger_->debug("[{}] {} comments", __func__, comments.size());
+   addressModel_->onAddressComments(walletId, comments);
 }
 
 void WalletsWidget::showSelectedWalletProperties()

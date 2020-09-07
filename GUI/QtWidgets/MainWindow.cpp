@@ -161,6 +161,18 @@ void MainWindow::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
    ui_->widgetWallets->onHDWalletDetails(hdWallet);
 }
 
+void MainWindow::onAddresses(const std::string &walletId
+   , const std::vector<bs::Address> &addrs)
+{
+   ui_->widgetWallets->onAddresses(walletId, addrs);
+}
+
+void MainWindow::onAddressComments(const std::string &walletId
+   , const std::map<bs::Address, std::string> &comments)
+{
+   ui_->widgetWallets->onAddressComments(walletId, comments);
+}
+
 void MainWindow::showStartupDialog(bool showLicense)
 {
    StartupDialog startupDialog(showLicense, this);
@@ -909,6 +921,7 @@ void MainWindow::initWidgets()
    ui_->widgetWallets->init(logger_);
 //   connect(ui_->widgetWallets, &WalletsWidget::newWalletCreationRequest, this, &MainWindow::createNewWallet);
    connect(ui_->widgetWallets, &WalletsWidget::needHDWalletDetails, this, &MainWindow::needHDWalletDetails);
+   connect(ui_->widgetWallets, &WalletsWidget::needWalletBalances, this, &MainWindow::needWalletBalances);
    connect(ui_->widgetWallets, &WalletsWidget::needExtAddresses, this, &MainWindow::needExtAddresses);
    connect(ui_->widgetWallets, &WalletsWidget::needIntAddresses, this, &MainWindow::needIntAddresses);
    connect(ui_->widgetWallets, &WalletsWidget::needUsedAddresses, this, &MainWindow::needUsedAddresses);

@@ -113,7 +113,7 @@ public:
    [[deprecated]] void LoadWallets(bool keepSelection = false);
    void onHDWallet(const bs::sync::WalletInfo &);
    void onHDWalletDetails(const bs::sync::HDWalletData &);
-   void onWalletBalances();   //TODO: add arg
+   void onWalletBalances(const bs::sync::WalletBalanceData &);
 
    void setBitcoinLeafSelectionMode(bool flag = true) { bitcoinLeafSelectionMode_ = flag; }
 
@@ -131,6 +131,7 @@ public:
 signals:
    void updateAddresses();
    void needHDWalletDetails(const std::string &walletId);
+   void needWalletBalances(const std::string &walletId);
 
 private slots:
    void onWalletChanged();

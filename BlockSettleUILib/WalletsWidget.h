@@ -83,6 +83,9 @@ public:
    void onHDWallet(const bs::sync::WalletInfo &);
    void onHDWalletDetails(const bs::sync::HDWalletData &);
    void onAddresses(const std::string &walletId, const std::vector<bs::Address> &);
+   void onAddressComments(const std::string &walletId
+      , const std::map<bs::Address, std::string> &);
+   void onWalletBalance(const bs::sync::WalletBalanceData &);
 
    void shortcutActivated(ShortcutType s) override;
 
@@ -104,10 +107,11 @@ signals:
    void showContextMenu(QMenu *, QPoint);
    void newWalletCreationRequest();
    void needHDWalletDetails(const std::string &walletId);
-   void needExtAddresses(std::string walletId);
-   void needIntAddresses(std::string walletId);
-   void needUsedAddresses(std::string walletId);
-   void needAddrComments(std::string walletId, const std::vector<bs::Address> &);
+   void needWalletBalances(const std::string &walletId);
+   void needExtAddresses(const std::string &walletId);
+   void needIntAddresses(const std::string &walletId);
+   void needUsedAddresses(const std::string &walletId);
+   void needAddrComments(const std::string &walletId, const std::vector<bs::Address> &);
 
 private slots:
    void showWalletProperties(const QModelIndex& index);

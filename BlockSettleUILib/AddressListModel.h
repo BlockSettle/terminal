@@ -95,14 +95,16 @@ public:
 
    void setWallets(const Wallets &, bool force, bool filterBtcOnly);
    void onAddresses(const std::string &walletId, const std::vector<bs::Address> &);
-   void onAddressComments(const std::map<bs::Address, std::string> &);
-   void onAddressBalances();
+   void onAddressComments(const std::string &walletId
+      , const std::map<bs::Address, std::string> &);
+   void onAddressBalances(const std::string &walletId
+      , const std::vector<bs::sync::WalletBalanceData::AddressBalance> &);
 
 signals:
-   void needExtAddresses(std::string walletId);
-   void needIntAddresses(std::string walletId);
-   void needUsedAddresses(std::string walletId);
-   void needAddrComments(std::string walletId, const std::vector<bs::Address> &);
+   void needExtAddresses(const std::string &walletId);
+   void needIntAddresses(const std::string &walletId);
+   void needUsedAddresses(const std::string &walletId);
+   void needAddrComments(const std::string &walletId, const std::vector<bs::Address> &);
 
 private slots:
    void updateWallets();   // deprecated
@@ -114,6 +116,7 @@ private:
    Wallets                    wallets_;
    std::vector<AddressRow>    addressRows_;
    const AddressType          addrType_;
+   std::map<BinaryData, int>  indexByAddr_;
 
    std::atomic_bool           processing_;
    bool filterBtcOnly_{false};
