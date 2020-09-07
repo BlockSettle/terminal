@@ -331,9 +331,6 @@ void MainWindow::setupInfoWidget()
    connect(ui_->introductionBtn, &QPushButton::clicked, this, []() {
       QDesktopServices::openUrl(QUrl(QLatin1String("")));
    });
-   connect(ui_->setUpBtn, &QPushButton::clicked, this, []() {
-      QDesktopServices::openUrl(QUrl(QLatin1String("https://youtu.be/bvGNi6sBkTo")));
-   });
    connect(ui_->closeBtn, &QPushButton::clicked, this, [this]() {
       ui_->infoWidget->setVisible(false);
 //      applicationSettings_->set(ApplicationSettings::ShowInfoWidget, false);
