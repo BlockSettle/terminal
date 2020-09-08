@@ -34,7 +34,7 @@ CustomTitleDialogWindow {
     // Let's skip hasCCInfo checking, seems to work fine anyway
     //property bool hasCCInfoLoaded: walletsProxy.hasCCInfo
     property bool isPrimaryWalletSelectionVisible: true
-    property bool isPrimaryWalletChecked: !primaryWalletExists
+    property bool canBePrimary: !primaryWalletExists
 
     property string password
     property QSeed seed: QSeed{}
@@ -70,7 +70,7 @@ CustomTitleDialogWindow {
     abortBoxType: BSAbortBox.AbortType.WalletImport
 
     Component.onCompleted: {
-        if (isPrimaryWalletChecked) {
+        if (!(primaryWalletExists || chkImportLegacy.checked)) {
             cbPrimary.checked = true
             tfName.text = qsTr("Primary Wallet");
         }
@@ -228,6 +228,8 @@ CustomTitleDialogWindow {
                                 rbBip39_24.checked = (rbutton === rbBip39_24);
 
                                 chkImportLegacy.checked = rbBip39_12.checked || rbBip39_24.checked
+
+                                canBePrimary = !(primaryWalletExists || chkImportLegacy.checked)
                             }
                         }
 
@@ -352,6 +354,10 @@ CustomTitleDialogWindow {
                             id: chkImportLegacy
                             text: qsTr("Import Legacy derivation")
                             checked: false
+
+                            onClicked: {
+                                canBePrimary = !(primaryWalletExists || checked)
+                            }
                         }
                     }
                 }
@@ -465,12 +471,14 @@ CustomTitleDialogWindow {
                             id: cbPrimary
                             visible: isPrimaryWalletSelectionVisible
                             Layout.fillWidth: true
-                            checked: isPrimaryWalletChecked
+                            checked: canBePrimary
                             text: qsTr("Primary Wallet")
 
-                            ToolTip.text: { primaryWalletExists
+                            ToolTip.text: { canBePrimary
+                                ? qsTr("A primary wallet does not exist, wallet will be created as primary.")
+                                : (primaryWalletExists
                                             ? qsTr("A primary wallet already exists, wallet will be created as regular wallet.")
-                                            : qsTr("A primary wallet does not exist, wallet will be created as primary.") }
+                                            :  qsTr("This wallet could not be imported as primary."))}
 
                             ToolTip.delay: 150
                             ToolTip.timeout: 5000
@@ -480,7 +488,7 @@ CustomTitleDialogWindow {
                             // enabled: !primaryWalletExists
                             onCheckedChanged: {
                                 // BST-2411: first wallet is always created as primary
-                                cbPrimary.checked = isPrimaryWalletChecked;
+                                cbPrimary.checked = canBePrimary;
                             }
                         }
                     }
