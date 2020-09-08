@@ -54,7 +54,7 @@ class WalletsProxy : public QObject
 public:
    WalletsProxy(const std::shared_ptr<spdlog::logger> &, SignerAdapter *);
 
-   Q_INVOKABLE void createWallet(bool isPrimary, bs::wallet::QSeed *
+   Q_INVOKABLE void createWallet(bool isPrimary, bool createLegacyLeaf, bs::wallet::QSeed *
       , bs::hd::WalletInfo *
       , bs::wallet::QPasswordData *, const QJSValue &jsCallback);
 

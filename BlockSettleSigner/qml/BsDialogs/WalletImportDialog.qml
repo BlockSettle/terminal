@@ -706,7 +706,7 @@ CustomTitleDialogWindow {
                             checkPasswordDialog.passwordToCheck = newPasswordWithConfirm.password
                             checkPasswordDialog.open()
                             checkPasswordDialog.bsAccepted.connect(function() {
-                                walletsProxy.createWallet(cbPrimary.checked, seed, walletInfo, passwordData, createCallback)
+                                walletsProxy.createWallet(cbPrimary.checked, chkImportLegacy.checked, seed, walletInfo, passwordData, createCallback)
                             })
                             checkPasswordDialog.bsRejected.connect(failedCallback)
                         }
@@ -714,7 +714,7 @@ CustomTitleDialogWindow {
                             // auth eID
                             let authEidMessage = JsHelper.getAuthEidWalletInfo(walletInfo);
                             var successCallback = function(newPasswordData) {
-                                walletsProxy.createWallet(cbPrimary.checked, seed, walletInfo, newPasswordData, createCallback)
+                                walletsProxy.createWallet(cbPrimary.checked, chkImportLegacy.checked, seed, walletInfo, newPasswordData, createCallback)
                             }
                             JsHelper.activateeIdAuth(walletInfo, authEidMessage, successCallback, failedCallback)
                         }
