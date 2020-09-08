@@ -69,16 +69,6 @@ CustomTitleDialogWindow {
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletImport
 
-    Component.onCompleted: {
-        if (!(primaryWalletExists || chkImportLegacy.checked)) {
-            cbPrimary.checked = true
-            tfName.text = qsTr("Primary Wallet");
-        }
-        else {
-            tfName.text = walletsProxy.generateNextWalletName();
-        }
-    }
-
     onEnterPressed: {
         if (btnAccept.enabled) btnAccept.onClicked()
     }
@@ -654,6 +644,15 @@ CustomTitleDialogWindow {
                     if (isWO) {
                         importWoWallet();
                         return;
+                    }
+
+                    if (!(primaryWalletExists || chkImportLegacy.checked)) {
+                        cbPrimary.checked = true
+                        tfName.text = qsTr("Primary Wallet");
+                    }
+                    else {
+                        cbPrimary.checked = false
+                        tfName.text = walletsProxy.generateNextWalletName();
                     }
 
                     if (curPage === 1) {
