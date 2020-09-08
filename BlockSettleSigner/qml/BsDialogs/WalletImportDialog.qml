@@ -226,6 +226,8 @@ CustomTitleDialogWindow {
                                 rbFileBackup.checked = (rbutton === rbFileBackup);
                                 rbBip39_12.checked = (rbutton === rbBip39_12);
                                 rbBip39_24.checked = (rbutton === rbBip39_24);
+
+                                chkImportLegacy.checked = rbBip39_12.checked || rbBip39_24.checked
                             }
                         }
 
@@ -330,6 +332,26 @@ CustomTitleDialogWindow {
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    Item {
+                        // spacer item
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                    }
+
+                    RowLayout {
+                        spacing: 5
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 10
+                        Layout.rightMargin: 10
+
+
+                        CustomCheckBox {
+                            id: chkImportLegacy
+                            text: qsTr("Import Legacy derivation")
+                            checked: false
                         }
                     }
                 }
