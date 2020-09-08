@@ -44,13 +44,8 @@ WalletNode *WalletNode::child(int index) const
 
 WalletNode *WalletNode::findByWalletId(const std::string &walletId)
 {
-   const auto &tmpWallets = wallets();
-   if ((type() == Type::Leaf) && !tmpWallets.empty()) {
-      for (const auto &wallet : tmpWallets) {
-         if (wallet.id == walletId) {
-            return this;
-         }
-      }
+   if (id() == walletId) {
+      return this;
    }
    for (const auto &child : children_) {
       auto node = child->findByWalletId(walletId);
@@ -150,14 +145,6 @@ public:
    size_t getNbUsedAddresses() const { return nbAddr_; }
    bs::sync::WalletInfo hdWallet() const override { return hdWallet_; }
 
-protected:
-   std::string desc_;
-   std::atomic<BTCNumericTypes::balance_type> balTotal_, balUnconf_, balSpend_;
-   size_t      nbAddr_;
-   bs::sync::WalletInfo hdWallet_;
-   std::vector<bs::sync::WalletInfo> wallets_;
-
-protected:
    void updateCounters(WalletRootNode *node) {
       if (!node) {
          return;
@@ -176,6 +163,14 @@ protected:
       }
    }
 
+protected:
+   std::string desc_;
+   std::atomic<BTCNumericTypes::balance_type> balTotal_, balUnconf_, balSpend_;
+   size_t      nbAddr_;
+   bs::sync::WalletInfo hdWallet_;
+   std::vector<bs::sync::WalletInfo> wallets_;
+
+protected:
    QString displayAmountOrLoading(BTCNumericTypes::balance_type balance) const {
       if (balance < 0) {
          return QObject::tr("Loading...");
@@ -243,6 +238,15 @@ public:
          balUnconf_ = wallet->getUnconfirmedBalance();
          balSpend_ = wallet->getSpendableBalance();
       });
+   }
+
+   void setBalances(size_t nbAddr, BTCNumericTypes::balance_type total
+      , BTCNumericTypes::balance_type spendable, BTCNumericTypes::balance_type unconfirmed)
+   {
+      nbAddr_ = nbAddr;
+      balTotal_ = total;
+      balSpend_ = spendable;
+      balUnconf_ = unconfirmed;
    }
 
    std::vector<bs::sync::WalletInfo> wallets() const override
@@ -607,7 +611,7 @@ void WalletsViewModel::onHDWallet(const bs::sync::WalletInfo &wi)
          , createIndex(row, (int)WalletColumns::ColumnCount - 1, static_cast<void*>(rootNode_.get())));
    }
    else {
-      beginInsertRows(createIndex(rootNode_->row(), 0, static_cast<void*>(rootNode_.get()))
+      beginInsertRows(QModelIndex()
          , rootNode_->nbChildren(), rootNode_->nbChildren());
       rootNode_->add(hdNode);
       endInsertRows();
@@ -671,6 +675,27 @@ void WalletsViewModel::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
          emit needWalletBalances(leaf.id);
       }
    }
+}
+
+void WalletsViewModel::onWalletBalances(const bs::sync::WalletBalanceData &wbd)
+{
+   auto node = rootNode_->findByWalletId(wbd.id);
+   auto leafNode = dynamic_cast<WalletLeafNode *>(node);
+   if (!node || !leafNode) {
+      return;
+   }
+   leafNode->setBalances(wbd.nbAddresses, wbd.balTotal, wbd.balSpendable, wbd.balUnconfirmed);
+   node = leafNode->parent();
+   emit dataChanged(createIndex(leafNode->row(), (int)WalletColumns::ColumnSpendableBalance, static_cast<void*>(node))
+      , createIndex(leafNode->row(), (int)WalletColumns::ColumnNbAddresses, static_cast<void*>(node)));
+
+   auto groupNode = dynamic_cast<WalletGroupNode *>(node);
+   if (!groupNode) {
+      return;
+   }
+   groupNode->updateCounters(leafNode);
+   emit dataChanged(createIndex(groupNode->row(), (int)WalletColumns::ColumnSpendableBalance, static_cast<void*>(groupNode->parent()))
+      , createIndex(leafNode->row(), (int)WalletColumns::ColumnNbAddresses, static_cast<void*>(groupNode->parent())));
 }
 
 void WalletsViewModel::LoadWallets(bool keepSelection)

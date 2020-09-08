@@ -26,6 +26,9 @@ namespace bs {
    }
 }
 namespace BlockSettle {
+   namespace Common {
+      class WalletsMessage_WalletBalances;
+   }
    namespace Terminal {
       class SettingsMessage_SettingsResponse;
    }
@@ -72,14 +75,20 @@ private:
    void makeMainWinConnections();
 
    void processWalletLoaded(const bs::sync::WalletInfo &);
+   bool processWalletBalances(const bs::message::Envelope &
+      , const BlockSettle::Common::WalletsMessage_WalletBalances &);
 
 private slots:
+   void onPutSetting(int idx, const QVariant &value);
    void onNeedHDWalletDetails(const std::string &walletId);
    void onNeedWalletBalances(const std::string &walletId);
+   void onNeedSpendableUTXOs(const std::string &walletId);
    void onNeedExtAddresses(const std::string &walletId);
    void onNeedIntAddresses(const std::string &walletId);
    void onNeedUsedAddresses(const std::string &walletId);
    void onNeedAddrComments(const std::string &walletId, const std::vector<bs::Address> &);
+   void onSetAddrComment(const std::string &walletId, const bs::Address &
+      , const std::string &comment);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

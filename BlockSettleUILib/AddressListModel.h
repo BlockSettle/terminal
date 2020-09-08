@@ -34,7 +34,6 @@ class AddressListModel : public QAbstractTableModel
 public:
    struct AddressRow
    {
-//      std::shared_ptr<bs::sync::Wallet> wallet;
       bs::Address address;
       QByteArray bytes;
       int transactionCount = 0;
@@ -43,7 +42,7 @@ public:
       QString  displayedAddress;
       QString  walletName;
       QString  walletId;
-      size_t   addrIndex = 0;
+      int      addrIndex = 0;
       bs::core::wallet::Type wltType = bs::core::wallet::Type::Unknown;
       bool     isExternal;
 
@@ -71,7 +70,9 @@ public:
       WalletIdRole,
       AddrIndexRole,
       AddressRole,
-      IsExternalRole
+      AddressCommentRole,
+      IsExternalRole,
+      WalletTypeRole
    };
 
    enum AddressType {
@@ -109,14 +110,20 @@ signals:
 private slots:
    void updateWallets();   // deprecated
 //   void updateData(const std::string &walletId);
-   void removeEmptyIntAddresses();
+   void removeEmptyIntAddresses();  // deprecated
 
 private:
-   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
+   [[deprecated]] std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    Wallets                    wallets_;
    std::vector<AddressRow>    addressRows_;
    const AddressType          addrType_;
    std::map<BinaryData, int>  indexByAddr_;
+
+   struct AddrBalance {
+      uint64_t    balance;
+      uint32_t    txn;
+   };
+   std::unordered_map<std::string, std::map<BinaryData, AddrBalance>>   pooledBalances_;
 
    std::atomic_bool           processing_;
    bool filterBtcOnly_{false};

@@ -117,6 +117,49 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
    ui_->treeViewWallets->expandAll();
 }
 
+RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spdlog::logger> &logger
+   , const bs::sync::WalletInfo &wallet
+   , WalletsViewModel *walletsModel
+   , QWidget* parent)
+   : QDialog(parent)
+   , ui_(new Ui::WalletPropertiesDialog())
+   , wallet_(wallet)
+   , walletInfo_(wallet)
+   , logger_(logger)
+{
+   ui_->setupUi(this);
+
+   ui_->labelEncRank->clear();
+
+   walletFilter_ = new CurrentWalletFilter(wallet.id, this);
+   walletFilter_->setSourceModel(walletsModel);
+   ui_->treeViewWallets->setModel(walletFilter_);
+
+   connect(walletsModel, &WalletsViewModel::modelReset,
+      this, &RootWalletPropertiesDialog::onModelReset);
+
+   ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnDescription));
+   ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnState));
+   ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnSpendableBalance));
+   ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnUnconfirmedBalance));
+   ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnNbAddresses));
+   ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
+   connect(ui_->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged
+      , this, &RootWalletPropertiesDialog::onWalletSelected);
+
+   connect(ui_->deleteButton, &QPushButton::clicked, this, &RootWalletPropertiesDialog::onDeleteWallet);
+   connect(ui_->backupButton, &QPushButton::clicked, this, &RootWalletPropertiesDialog::onBackupWallet);
+   connect(ui_->manageEncryptionButton, &QPushButton::clicked, this, &RootWalletPropertiesDialog::onChangePassword);
+   connect(ui_->rescanButton, &QPushButton::clicked, this, &RootWalletPropertiesDialog::onRescanBlockchain);
+
+   updateWalletDetails(wallet_);
+
+   ui_->manageEncryptionButton->setEnabled(false);
+
+   ui_->treeViewWallets->expandAll();
+}
+
 RootWalletPropertiesDialog::~RootWalletPropertiesDialog() = default;
 
 void RootWalletPropertiesDialog::onDeleteWallet()

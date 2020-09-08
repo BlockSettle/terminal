@@ -49,6 +49,7 @@ namespace bs {
                , const std::shared_ptr < bs::message::User> &);
             ~MainWindow() override;
 
+            void onSetting(int setting, const QVariant &value);
             void onGetGeometry(const QRect &);
             void showStartupDialog(bool showLic);
 
@@ -76,14 +77,18 @@ namespace bs {
             };*/
 
          signals:
+            void putSetting(int, const QVariant &);
             void createNewWallet();
             void needHDWalletDetails(const std::string &walletId);
             void needWalletBalances(const std::string &walletId);
+            void needSpendableUTXOs(const std::string &walletId);
 
             void needExtAddresses(const std::string &walletId);
             void needIntAddresses(const std::string &walletId);
             void needUsedAddresses(const std::string &walletId);
             void needAddrComments(const std::string &walletId, const std::vector<bs::Address> &);
+            void setAddrComment(const std::string &walletId, const bs::Address &
+               , const std::string &comment);
 
          private slots:
             void onSend();

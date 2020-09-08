@@ -64,9 +64,9 @@ public:
 
 signals:
    void startRescan(std::string walletId);
-   void needHDWalletDetails(std::string walletId);
-   void needWalletBalances(std::string walletId);
-   void needSpendableUTXOs(std::string walletId);
+   void needHDWalletDetails(const std::string &walletId);
+   void needWalletBalances(const std::string &walletId);
+   void needSpendableUTXOs(const std::string &walletId);
 
 private slots:
    void onDeleteWallet();

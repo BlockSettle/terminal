@@ -352,6 +352,9 @@ void WalletsWidget::onHDWallet(const bs::sync::WalletInfo &wi)
 
 void WalletsWidget::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
 {
+   if (rootDlg_) {
+      //TODO: pass wallet details to currently running root wallet dialog
+   }
    walletsModel_->onHDWalletDetails(hdWallet);
 
    for (int i = 0; i < walletsModel_->rowCount(); ++i) {
@@ -372,8 +375,16 @@ void WalletsWidget::onAddresses(const std::string &walletId, const std::vector<b
 void WalletsWidget::onAddressComments(const std::string &walletId
    , const std::map<bs::Address, std::string> &comments)
 {
-   logger_->debug("[{}] {} comments", __func__, comments.size());
    addressModel_->onAddressComments(walletId, comments);
+}
+
+void WalletsWidget::onWalletBalance(const bs::sync::WalletBalanceData &wbd)
+{
+   if (rootDlg_) {
+      //TODO: pass data to root wallet dialog
+   }
+   walletsModel_->onWalletBalances(wbd);
+   addressModel_->onAddressBalances(wbd.id, wbd.addrBalances);
 }
 
 void WalletsWidget::showSelectedWalletProperties()
@@ -398,8 +409,21 @@ void WalletsWidget::showWalletProperties(const QModelIndex& index)
 
    const auto &hdWallet = node->hdWallet();
    if (!hdWallet.id.empty()) {
-      RootWalletPropertiesDialog(logger_, hdWallet, walletsManager_, armory_, signingContainer_
-         , walletsModel_, appSettings_, connectionManager_, assetManager_, this).exec();
+      if (walletsManager_ && armory_ && signingContainer_ && appSettings_ && connectionManager_ && assetManager_) {
+         RootWalletPropertiesDialog(logger_, hdWallet, walletsManager_, armory_, signingContainer_
+            , walletsModel_, appSettings_, connectionManager_, assetManager_, this).exec();
+      }
+      else {
+         rootDlg_ = new RootWalletPropertiesDialog(logger_, hdWallet, walletsModel_, this);
+         connect(rootDlg_, &RootWalletPropertiesDialog::needHDWalletDetails, this, &WalletsWidget::needHDWalletDetails);
+         connect(rootDlg_, &RootWalletPropertiesDialog::needWalletBalances, this, &WalletsWidget::needWalletBalances);
+         connect(rootDlg_, &QDialog::finished, [this](int) {
+            rootDlg_->deleteLater();
+            rootDlg_ = nullptr;
+         });
+         rootDlg_->setModal(true);
+         rootDlg_->show();
+      }
    }
 }
 
@@ -433,33 +457,61 @@ void WalletsWidget::onAddressContextMenu(const QPoint &p)
       curAddress_.clear();
       return;
    }
-   curWallet_ = walletsManager_->getWalletByAddress(curAddress_);
+   if (walletsManager_) {
+      curWallet_ = walletsManager_->getWalletByAddress(curAddress_);
 
-   if (!curWallet_) {
+      if (!curWallet_) {
+         logger_->warn("Failed to find wallet for address {}", curAddress_.display());
+         return;
+      }
+      auto contextMenu = new QMenu(this);
+
+      if ((curWallet_->type() == bs::core::wallet::Type::Bitcoin) || (getSelectedWallets().size() == 1)) {
+         contextMenu->addAction(actCopyAddr_);
+      }
+      contextMenu->addAction(actEditComment_);
+
+      const auto &cbAddrBalance = [this, p, contextMenu](std::vector<uint64_t> balances)
+      {
+         if (/*(curWallet_ == walletsManager_->getSettlementWallet()) &&*/ walletsManager_->getAuthWallet()
+            /*&& (curWallet_->getAddrTxN(curAddress_) == 1)*/ && balances[0]) {
+            contextMenu->addAction(actRevokeSettl_);
+         }
+         emit showContextMenu(contextMenu, ui_->treeViewAddresses->mapToGlobal(p));
+      };
+
+      auto balanceVec = curWallet_->getAddrBalance(curAddress_);
+      if (balanceVec.size() == 0)
+         emit showContextMenu(contextMenu, ui_->treeViewAddresses->mapToGlobal(p));
+      else
+         cbAddrBalance(balanceVec);
+      return;
+   }
+
+   curWalletId_ = addressModel_->data(addressIndex, AddressListModel::Role::WalletIdRole).toString().toStdString();
+   if (curWalletId_.empty()) {
       logger_->warn("Failed to find wallet for address {}", curAddress_.display());
       return;
    }
+   curComment_ = addressModel_->data(addressIndex, AddressListModel::Role::AddressCommentRole).toString().toStdString();
    auto contextMenu = new QMenu(this);
 
-   if ((curWallet_->type() == bs::core::wallet::Type::Bitcoin) || (getSelectedWallets().size() == 1)) {
+   if ((static_cast<bs::core::wallet::Type>(addressModel_->data(addressIndex, AddressListModel::Role::WalletTypeRole).toInt())
+      == bs::core::wallet::Type::Bitcoin) || (getSelectedWallets().size() == 1)) {
       contextMenu->addAction(actCopyAddr_);
    }
    contextMenu->addAction(actEditComment_);
 
-   const auto &cbAddrBalance = [this, p, contextMenu](std::vector<uint64_t> balances) 
+   const auto &cbAddrBalance = [this, p, contextMenu](std::vector<uint64_t> balances)
    {
-      if (/*(curWallet_ == walletsManager_->getSettlementWallet()) &&*/ walletsManager_->getAuthWallet()
-         /*&& (curWallet_->getAddrTxN(curAddress_) == 1)*/ && balances[0]) {
+      if (/*walletsManager_->getAuthWallet() && balances[0]*/false) {   //FIXME
          contextMenu->addAction(actRevokeSettl_);
       }
       emit showContextMenu(contextMenu, ui_->treeViewAddresses->mapToGlobal(p));
    };
 
-   auto balanceVec = curWallet_->getAddrBalance(curAddress_);
-   if (balanceVec.size() == 0)
-      emit showContextMenu(contextMenu, ui_->treeViewAddresses->mapToGlobal(p));
-   else
-      cbAddrBalance(balanceVec);
+   //TODO: get address balance and add revoke action if needed
+   contextMenu ->exec(ui_->treeViewAddresses->mapToGlobal(p));
 }
 
 void WalletsWidget::onShowContextMenu(QMenu *menu, QPoint where)
@@ -718,17 +770,28 @@ void WalletsWidget::onCopyAddress()
 
 void WalletsWidget::onEditAddrComment()
 {
-   if (!curWallet_ || curAddress_.empty()) {
+   if ((!curWallet_ && curWalletId_.empty()) || curAddress_.empty()) {
       return;
    }
    bool isOk = false;
-   const auto oldComment = curWallet_->getAddressComment(curAddress_);
+   std::string oldComment;
+   if (curWallet_) {
+      oldComment = curWallet_->getAddressComment(curAddress_);
+   }
+   else {
+      oldComment = curComment_;
+   }
    const auto comment = QInputDialog::getText(this, tr("Edit Comment")
       , tr("Enter new comment for address %1:").arg(QString::fromStdString(curAddress_.display()))
       , QLineEdit::Normal, QString::fromStdString(oldComment), &isOk);
    if (isOk) {
-      if (!curWallet_->setAddressComment(curAddress_, comment.toStdString())) {
-         BSMessageBox(BSMessageBox::critical, tr("Address Comment"), tr("Failed to save comment")).exec();
+      if (curWallet_) {
+         if (!curWallet_->setAddressComment(curAddress_, comment.toStdString())) {
+            BSMessageBox(BSMessageBox::critical, tr("Address Comment"), tr("Failed to save comment")).exec();
+         }
+      }
+      else {
+         emit setAddrComment(curWalletId_, curAddress_, comment.toStdString());
       }
    }
 }

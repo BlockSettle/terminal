@@ -160,9 +160,9 @@ void AddressListModel::updateWallet(const bs::sync::WalletInfo &wallet)
    if (wallet.type == bs::core::wallet::Type::Authentication) {
       const auto addr = bs::Address();
       auto row = createRow(addr, wallet);
-      beginResetModel();
+      beginInsertRows(QModelIndex(), addressRows_.size(), addressRows_.size());
       addressRows_.emplace_back(std::move(row));
-      endResetModel();
+      endInsertRows();
    } else {
       if ((wallets_.size() > 1) && (wallet.type == bs::core::wallet::Type::ColorCoin)) {
          return;  // don't populate PM addresses when multiple wallets selected
@@ -209,11 +209,23 @@ void AddressListModel::onAddresses(const std::string &walletId
    if ((itWallet == wallets_.cend()) || addrs.empty()) {
       return;
    }
+   const auto &itWalletBal = pooledBalances_.find(walletId);
    beginInsertRows(QModelIndex(), addressRows_.size()
       , addressRows_.size() + addrs.size() - 1);
    for (const auto &addr : addrs) {
       auto row = createRow(addr, *itWallet);
       row.addrIndex = addressRows_.size();
+      if (itWalletBal != pooledBalances_.end()) {
+         const auto &itAddrBal = itWalletBal->second.find(addr.id());
+         if (itAddrBal == itWalletBal->second.end()) {
+            row.balance = 0;
+            row.transactionCount = 0;
+         }
+         else {
+            row.balance = itAddrBal->second.balance;
+            row.transactionCount = itAddrBal->second.txn;
+         }
+      }
       indexByAddr_[addr.id()] = row.addrIndex;
       addressRows_.push_back(std::move(row));
    }
@@ -224,7 +236,67 @@ void AddressListModel::onAddresses(const std::string &walletId
 void AddressListModel::onAddressComments(const std::string &walletId
    , const std::map<bs::Address, std::string> &comments)
 {
-   //TODO: implement
+   const auto &itWallet = std::find_if(wallets_.cbegin(), wallets_.cend()
+      , [walletId](const bs::sync::WalletInfo &wallet) {
+      return (wallet.id == walletId);
+   });
+   if ((itWallet == wallets_.cend()) || comments.empty()) {
+      return;
+   }
+   for (const auto &comm : comments) {
+      const auto &itAddr = indexByAddr_.find(comm.first.id());
+      if (itAddr == indexByAddr_.end()) {
+         continue;
+      }
+      addressRows_[itAddr->second].comment = QString::fromStdString(comm.second);
+      emit dataChanged(index(itAddr->second, ColumnComment), index(itAddr->second, ColumnComment));
+   }
+}
+
+void AddressListModel::onAddressBalances(const std::string &walletId
+   , const std::vector<bs::sync::WalletBalanceData::AddressBalance> &balances)
+{
+   if (balances.empty()) {
+      return;
+   }
+   const auto &lbdSaveBalToPool = [this, walletId, balances]
+   {
+      auto &walletBal = pooledBalances_[walletId];
+      for (const auto &bal : balances) {
+         walletBal[bal.address] = { bal.balTotal, bal.txn };
+      }
+   };
+   lbdSaveBalToPool();
+   const auto &itWallet = std::find_if(wallets_.cbegin(), wallets_.cend()
+      , [walletId](const bs::sync::WalletInfo &wallet) {
+      return (wallet.id == walletId);
+   });
+   if (itWallet == wallets_.cend()) {  // balances arrived before wallet was set
+      return;
+   }
+   int startRow = INT32_MAX, endRow = 0;
+   for (const auto &bal : balances) {
+      const auto &itAddr = indexByAddr_.find(bal.address);
+      if (itAddr == indexByAddr_.end()) { // wallet was set, but addresses haven't arrived
+         lbdSaveBalToPool();
+         return;
+      }
+      startRow = std::min(startRow, itAddr->second);
+      endRow = std::max(endRow, itAddr->second);
+      addressRows_[itAddr->second].balance = bal.balTotal;
+      addressRows_[itAddr->second].transactionCount = bal.txn;
+   }
+   for (auto &addrRow : addressRows_) {
+      if ((addrRow.balance > 0) || (addrRow.transactionCount > 0)
+         || (addrRow.walletId.toStdString() != walletId)) {
+         continue;
+      }
+      startRow = std::min(startRow, addrRow.addrIndex);
+      endRow = std::max(endRow, addrRow.addrIndex);
+      addrRow.balance = 0;
+      addrRow.transactionCount = 0;
+   }
+   emit dataChanged(index(startRow, ColumnTxCount), index(endRow, ColumnBalance));
 }
 
 void AddressListModel::updateWalletData()
@@ -392,6 +464,9 @@ QVariant AddressListModel::dataForRow(const AddressListModel::AddressRow &row, i
       case AddressListModel::ColumnAddress:
          return row.getAddress();
       case AddressListModel::ColumnBalance:
+         if (row.balance == UINT64_MAX) {
+            return {};
+         }
          if (row.wltType == bs::core::wallet::Type::ColorCoin) {
             if (wallets_.size() == 1) {
                return UiUtils::displayCCAmount(row.balance);
@@ -404,7 +479,12 @@ QVariant AddressListModel::dataForRow(const AddressListModel::AddressRow &row, i
             return UiUtils::displayAmount(row.balance);
          }
       case AddressListModel::ColumnTxCount:
-         return row.transactionCount;
+         if (row.transactionCount >= 0) {
+            return row.transactionCount;
+         }
+         else {
+            return tr("Loading...");
+         }
       case AddressListModel::ColumnComment:
          return row.getComment();
       case AddressListModel::ColumnWallet:
@@ -447,6 +527,17 @@ QVariant AddressListModel::data(const QModelIndex& index, int role) const
 
       case AddressRole:
          return row.displayedAddress;
+
+      case AddressCommentRole:
+         return row.comment;
+
+      case WalletTypeRole:
+         for (const auto &wallet : wallets_) {
+            if (wallet.id == row.walletId.toStdString()) {
+               return static_cast<int>(wallet.type);
+            }
+         }
+         return 0;
 
       case Qt::ToolTipRole:
          if ((index.column() == ColumnComment) && row.isMultiLineComment()) {

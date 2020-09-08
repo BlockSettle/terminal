@@ -46,6 +46,7 @@ class AuthAddressManager;
 class ConnectionManager;
 class QAction;
 class QMenu;
+class RootWalletPropertiesDialog;
 class SignContainer;
 class WalletNode;
 class WalletsViewModel;
@@ -104,14 +105,17 @@ private:
    bool filterBtcOnly() const;
 
 signals:
-   void showContextMenu(QMenu *, QPoint);
+   void showContextMenu(QMenu *, QPoint); // deprecated
    void newWalletCreationRequest();
    void needHDWalletDetails(const std::string &walletId);
    void needWalletBalances(const std::string &walletId);
+   void needSpendableUTXOs(const std::string &walletId);
    void needExtAddresses(const std::string &walletId);
    void needIntAddresses(const std::string &walletId);
    void needUsedAddresses(const std::string &walletId);
    void needAddrComments(const std::string &walletId, const std::vector<bs::Address> &);
+   void setAddrComment(const std::string &walletId, const bs::Address &
+      , const std::string &comment);
 
 private slots:
    void showWalletProperties(const QModelIndex& index);
@@ -149,12 +153,15 @@ private:
    WalletsViewModel        *  walletsModel_;
    AddressListModel        *  addressModel_;
    AddressSortFilterModel  *  addressSortFilterModel_;
+   RootWalletPropertiesDialog *  rootDlg_{ nullptr };
    QAction  *  actCopyAddr_ = nullptr;
    QAction  *  actEditComment_ = nullptr;
    QAction  *  actRevokeSettl_ = nullptr;
    //QAction  *  actDeleteWallet_ = nullptr;
    bs::Address curAddress_;
    std::shared_ptr<bs::sync::Wallet>   curWallet_;
+   std::string    curWalletId_;
+   std::string    curComment_;
    unsigned int   revokeReqId_ = 0;
    QString username_;
    std::vector<bs::sync::WalletInfo>   prevSelectedWallets_;

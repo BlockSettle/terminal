@@ -290,7 +290,56 @@ bool QtGuiAdapter::processSettingsGetResponse(const SettingsMessage_SettingsResp
             });
          }
          break;
-      default: break;
+
+      default: {
+         int idx = setting.request().index();
+         QVariant value;
+         switch (setting.request().type()) {
+         case SettingType_String:
+            value = QString::fromStdString(setting.s());
+            break;
+         case SettingType_Int:
+            value = setting.i();
+            break;
+         case SettingType_UInt:
+            value = setting.ui();
+            break;
+         case SettingType_UInt64:
+            value = setting.ui64();
+            break;
+         case SettingType_Bool:
+            value = setting.b();
+            break;
+         case SettingType_Float:
+            value = setting.f();
+            break;
+         case SettingType_Rect:
+            value = QRect(setting.rect().left(), setting.rect().top()
+               , setting.rect().width(), setting.rect().height());
+            break;
+         case SettingType_Strings: {
+            QStringList sl;
+            for (const auto &s : setting.strings().strings()) {
+               sl << QString::fromStdString(s);
+            }
+            value = sl;
+         }
+            break;
+         case SettingType_StrMap: {
+            QVariantMap vm;
+            for (const auto &keyVal : setting.key_vals().key_vals()) {
+               vm[QString::fromStdString(keyVal.key())] = QString::fromStdString(keyVal.value());
+            }
+            value = vm;
+         }
+            break;
+         default: break;
+         }
+         QMetaObject::invokeMethod(mainWindow_, [mw = mainWindow_, idx, value] {
+            mw->onSetting(idx, value);
+         });
+      }
+         break;
       }
    }
    return true;
@@ -446,6 +495,8 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
    }
       break;
 
+   case WalletsMessage::kWalletBalances:
+      return processWalletBalances(env, msg.wallet_balances());
    default:    break;
    }
    return true;
@@ -556,17 +607,95 @@ void QtGuiAdapter::requestInitialSettings()
    setReq->set_index(SetIdx_Initialized);
    setReq->set_type(SettingType_Bool);
 
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_GUI_MainTab);
+   setReq->set_type(SettingType_Int);
+
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_ShowInfoWidget);
+   setReq->set_type(SettingType_Bool);
+
    Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
    pushFill(env);
 }
 
 void QtGuiAdapter::makeMainWinConnections()
 {
+   connect(mainWindow_, &bs::gui::qt::MainWindow::putSetting, this, &QtGuiAdapter::onPutSetting);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needHDWalletDetails, this, &QtGuiAdapter::onNeedHDWalletDetails);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needWalletBalances, this, &QtGuiAdapter::onNeedWalletBalances);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needSpendableUTXOs, this, &QtGuiAdapter::onNeedSpendableUTXOs);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needExtAddresses, this, &QtGuiAdapter::onNeedExtAddresses);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needIntAddresses, this, &QtGuiAdapter::onNeedIntAddresses);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needUsedAddresses, this, &QtGuiAdapter::onNeedUsedAddresses);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needAddrComments, this, &QtGuiAdapter::onNeedAddrComments);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::setAddrComment, this, &QtGuiAdapter::onSetAddrComment);
+}
+
+void QtGuiAdapter::onPutSetting(int idx, const QVariant &value)
+{
+   SettingsMessage msg;
+   auto msgReq = msg.mutable_put_request();
+   auto setResp = msgReq->add_responses();
+   auto setReq = setResp->mutable_request();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(static_cast<SettingIndex>(idx));
+   switch (value.type()) {
+   case QVariant::Type::String:
+      setReq->set_type(SettingType_String);
+      setResp->set_s(value.toString().toStdString());
+      break;
+   case QVariant::Type::Int:
+      setReq->set_type(SettingType_Int);
+      setResp->set_i(value.toInt());
+      break;
+   case QVariant::Type::UInt:
+      setReq->set_type(SettingType_UInt);
+      setResp->set_ui(value.toUInt());
+      break;
+   case QVariant::Type::ULongLong:
+   case QVariant::Type::LongLong:
+      setReq->set_type(SettingType_UInt64);
+      setResp->set_ui64(value.toULongLong());
+      break;
+   case QVariant::Type::Double:
+      setReq->set_type(SettingType_Float);
+      setResp->set_f(value.toDouble());
+      break;
+   case QVariant::Type::Bool:
+      setReq->set_type(SettingType_Bool);
+      setResp->set_b(value.toBool());
+      break;
+   case QVariant::Type::Rect:
+      setReq->set_type(SettingType_Rect);
+      {
+         auto setRect = setResp->mutable_rect();
+         setRect->set_left(value.toRect().left());
+         setRect->set_top(value.toRect().top());
+         setRect->set_height(value.toRect().height());
+         setRect->set_width(value.toRect().width());
+      }
+      break;
+   case QVariant::Type::StringList:
+      setReq->set_type(SettingType_Strings);
+      for (const auto &s : value.toStringList()) {
+         setResp->mutable_strings()->add_strings(s.toStdString());
+      }
+      break;
+   case QVariant::Type::Map:
+      setReq->set_type(SettingType_StrMap);
+      for (const auto &key : value.toMap().keys()) {
+         auto kvData = setResp->mutable_key_vals()->add_key_vals();
+         kvData->set_key(key.toStdString());
+         kvData->set_value(value.toMap()[key].toString().toStdString());
+      }
+      break;
+   }
+
+   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
 }
 
 void QtGuiAdapter::createWallet(bool primary)
@@ -586,6 +715,14 @@ void QtGuiAdapter::onNeedWalletBalances(const std::string &walletId)
 {
    WalletsMessage msg;
    msg.set_get_wallet_balances(walletId);
+   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedSpendableUTXOs(const std::string &walletId)
+{
+   WalletsMessage msg;
+   msg.set_get_spendable_utxos(walletId);
    Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
    pushFill(env);
 }
@@ -627,6 +764,19 @@ void QtGuiAdapter::onNeedAddrComments(const std::string &walletId
    pushFill(env);
 }
 
+void QtGuiAdapter::onSetAddrComment(const std::string &walletId, const bs::Address &addr
+   , const std::string &comment)
+{
+   WalletsMessage msg;
+   auto msgReq = msg.mutable_set_addr_comments();
+   msgReq->set_wallet_id(walletId);
+   auto msgComm = msgReq->add_comments();
+   msgComm->set_address(addr.display());
+   msgComm->set_comment(comment);
+   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
 void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
 {
    hdWallets_[wi.id] = wi;
@@ -637,5 +787,24 @@ void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
    }
 }
 
+bool QtGuiAdapter::processWalletBalances(const bs::message::Envelope &env
+   , const BlockSettle::Common::WalletsMessage_WalletBalances &response)
+{
+   bs::sync::WalletBalanceData wbd;
+   wbd.id = response.wallet_id();
+   wbd.balTotal = response.total_balance();
+   wbd.balSpendable = response.spendable_balance();
+   wbd.balUnconfirmed = response.unconfirmed_balance();
+   wbd.nbAddresses = response.nb_addresses();
+   for (const auto &addrBal : response.address_balances()) {
+      wbd.addrBalances.push_back({ BinaryData::fromString(addrBal.address())
+         , addrBal.txn(), addrBal.total_balance(), addrBal.spendable_balance()
+         , addrBal.unconfirmed_balance() });
+   }
+   QMetaObject::invokeMethod(mainWindow_, [this, wbd] {
+      mainWindow_->onWalletBalance(wbd);
+   });
+   return true;
+}
 
 #include "QtGuiAdapter.moc"

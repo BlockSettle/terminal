@@ -26,6 +26,7 @@
 #include <QTreeView>
 #include "ui_BSTerminalMainWindow.h"
 #include "ApiAdapter.h"
+#include "ApplicationSettings.h"
 #include "BSMessageBox.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
@@ -136,6 +137,19 @@ void MainWindow::onGetGeometry(const QRect &mainGeom)
 #endif   // not Windows
 }
 
+void MainWindow::onSetting(int setting, const QVariant &value)
+{
+   switch (static_cast<ApplicationSettings::Setting>(setting)) {
+   case ApplicationSettings::GUI_main_tab:
+      ui_->tabWidget->setCurrentIndex(value.toInt());
+      break;
+   case ApplicationSettings::ShowInfoWidget:
+      ui_->infoWidget->setVisible(value.toBool());
+      break;
+   default: break;
+   }
+}
+
 void MainWindow::onArmoryStateChanged(int state, unsigned int blockNum)
 {
    if (statusBarView_) {
@@ -171,6 +185,11 @@ void MainWindow::onAddressComments(const std::string &walletId
    , const std::map<bs::Address, std::string> &comments)
 {
    ui_->widgetWallets->onAddressComments(walletId, comments);
+}
+
+void MainWindow::onWalletBalance(const bs::sync::WalletBalanceData &wbd)
+{
+   ui_->widgetWallets->onWalletBalance(wbd);
 }
 
 void MainWindow::showStartupDialog(bool showLicense)
@@ -232,6 +251,9 @@ bool MainWindow::event(QEvent *event)
 
 MainWindow::~MainWindow()
 {
+   emit putSetting(static_cast<int>(ApplicationSettings::GUI_main_geometry), geometry());
+   emit putSetting(static_cast<int>(ApplicationSettings::GUI_main_tab), ui_->tabWidget->currentIndex());
+
    NotificationCenter::destroyInstance();
 }
 
@@ -333,19 +355,15 @@ void MainWindow::setupIcon()
 
 void MainWindow::setupInfoWidget()
 {
-   const bool show = true; // applicationSettings_->get<bool>(ApplicationSettings::ShowInfoWidget);
-   ui_->infoWidget->setVisible(show);
-
-/*   if (!show) {
-      return;
-   }*/
-
    connect(ui_->introductionBtn, &QPushButton::clicked, this, []() {
-      QDesktopServices::openUrl(QUrl(QLatin1String("")));
+      QDesktopServices::openUrl(QUrl(QLatin1String("https://www.youtube.com/watch?v=mUqKq9GKjmI")));
+   });
+   connect(ui_->tutorialsButton, &QPushButton::clicked, this, []() {
+      QDesktopServices::openUrl(QUrl(QLatin1String("https://blocksettle.com/tutorials")));
    });
    connect(ui_->closeBtn, &QPushButton::clicked, this, [this]() {
       ui_->infoWidget->setVisible(false);
-//      applicationSettings_->set(ApplicationSettings::ShowInfoWidget, false);
+      emit putSetting(static_cast<int>(ApplicationSettings::ShowInfoWidget), false);
    });
 }
 
@@ -922,10 +940,12 @@ void MainWindow::initWidgets()
 //   connect(ui_->widgetWallets, &WalletsWidget::newWalletCreationRequest, this, &MainWindow::createNewWallet);
    connect(ui_->widgetWallets, &WalletsWidget::needHDWalletDetails, this, &MainWindow::needHDWalletDetails);
    connect(ui_->widgetWallets, &WalletsWidget::needWalletBalances, this, &MainWindow::needWalletBalances);
+   connect(ui_->widgetWallets, &WalletsWidget::needSpendableUTXOs, this, &MainWindow::needSpendableUTXOs);
    connect(ui_->widgetWallets, &WalletsWidget::needExtAddresses, this, &MainWindow::needExtAddresses);
    connect(ui_->widgetWallets, &WalletsWidget::needIntAddresses, this, &MainWindow::needIntAddresses);
    connect(ui_->widgetWallets, &WalletsWidget::needUsedAddresses, this, &MainWindow::needUsedAddresses);
    connect(ui_->widgetWallets, &WalletsWidget::needAddrComments, this, &MainWindow::needAddrComments);
+   connect(ui_->widgetWallets, &WalletsWidget::setAddrComment, this, &MainWindow::setAddrComment);
 
 //   InitPortfolioView();
 
