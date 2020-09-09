@@ -67,7 +67,7 @@ public:
 
    using ResultCb = std::function<void(bool, const std::string&)>;
    void createWallet(const std::string &name, const std::string &desc, bs::core::wallet::Seed
-      , bool primary, const bs::wallet::PasswordData &pwdData
+      , bool primary, bool createLegacyLeaf, const bs::wallet::PasswordData &pwdData
       , const std::function<void(bs::error::ErrorCode)> &cb);
 
    using CreateWoCb = std::function<void(const bs::sync::WatchingOnlyWallet &)>;

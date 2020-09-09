@@ -34,7 +34,7 @@ CustomTitleDialogWindow {
     // Let's skip hasCCInfo checking, seems to work fine anyway
     //property bool hasCCInfoLoaded: walletsProxy.hasCCInfo
     property bool isPrimaryWalletSelectionVisible: true
-    property bool isPrimaryWalletChecked: !primaryWalletExists
+    property bool canBePrimary: !primaryWalletExists
 
     property string password
     property QSeed seed: QSeed{}
@@ -68,16 +68,6 @@ CustomTitleDialogWindow {
     width: 540
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletImport
-
-    Component.onCompleted: {
-        if (isPrimaryWalletChecked) {
-            cbPrimary.checked = true
-            tfName.text = qsTr("Primary Wallet");
-        }
-        else {
-            tfName.text = walletsProxy.generateNextWalletName();
-        }
-    }
 
     onEnterPressed: {
         if (btnAccept.enabled) btnAccept.onClicked()
@@ -226,6 +216,10 @@ CustomTitleDialogWindow {
                                 rbFileBackup.checked = (rbutton === rbFileBackup);
                                 rbBip39_12.checked = (rbutton === rbBip39_12);
                                 rbBip39_24.checked = (rbutton === rbBip39_24);
+
+                                chkImportLegacy.checked = rbBip39_12.checked || rbBip39_24.checked
+
+                                canBePrimary = !(primaryWalletExists || chkImportLegacy.checked)
                             }
                         }
 
@@ -329,6 +323,30 @@ CustomTitleDialogWindow {
                                         digitalBackupAcceptable = true
                                     }
                                 }
+                            }
+                        }
+                    }
+
+                    Item {
+                        // spacer item
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                    }
+
+                    RowLayout {
+                        spacing: 5
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 10
+                        Layout.rightMargin: 10
+
+
+                        CustomCheckBox {
+                            id: chkImportLegacy
+                            text: qsTr("Import legacy path (BIP44)")
+                            checked: false
+
+                            onClicked: {
+                                canBePrimary = !(primaryWalletExists || checked)
                             }
                         }
                     }
@@ -443,12 +461,14 @@ CustomTitleDialogWindow {
                             id: cbPrimary
                             visible: isPrimaryWalletSelectionVisible
                             Layout.fillWidth: true
-                            checked: isPrimaryWalletChecked
+                            checked: canBePrimary
                             text: qsTr("Primary Wallet")
 
-                            ToolTip.text: { primaryWalletExists
+                            ToolTip.text: { canBePrimary
+                                ? qsTr("A primary wallet does not exist, wallet will be created as primary.")
+                                : (primaryWalletExists
                                             ? qsTr("A primary wallet already exists, wallet will be created as regular wallet.")
-                                            : qsTr("A primary wallet does not exist, wallet will be created as primary.") }
+                                            :  qsTr("This wallet could not be imported as primary."))}
 
                             ToolTip.delay: 150
                             ToolTip.timeout: 5000
@@ -458,7 +478,7 @@ CustomTitleDialogWindow {
                             // enabled: !primaryWalletExists
                             onCheckedChanged: {
                                 // BST-2411: first wallet is always created as primary
-                                cbPrimary.checked = isPrimaryWalletChecked;
+                                cbPrimary.checked = canBePrimary;
                             }
                         }
                     }
@@ -626,6 +646,15 @@ CustomTitleDialogWindow {
                         return;
                     }
 
+                    if (!(primaryWalletExists || chkImportLegacy.checked)) {
+                        cbPrimary.checked = true
+                        tfName.text = qsTr("Primary Wallet");
+                    }
+                    else {
+                        cbPrimary.checked = false
+                        tfName.text = walletsProxy.generateNextWalletName();
+                    }
+
                     if (curPage === 1) {
                         curPage = 2
                         tfName.forceActiveFocus()
@@ -677,7 +706,7 @@ CustomTitleDialogWindow {
                             checkPasswordDialog.passwordToCheck = newPasswordWithConfirm.password
                             checkPasswordDialog.open()
                             checkPasswordDialog.bsAccepted.connect(function() {
-                                walletsProxy.createWallet(cbPrimary.checked, seed, walletInfo, passwordData, createCallback)
+                                walletsProxy.createWallet(cbPrimary.checked, chkImportLegacy.checked, seed, walletInfo, passwordData, createCallback)
                             })
                             checkPasswordDialog.bsRejected.connect(failedCallback)
                         }
@@ -685,7 +714,7 @@ CustomTitleDialogWindow {
                             // auth eID
                             let authEidMessage = JsHelper.getAuthEidWalletInfo(walletInfo);
                             var successCallback = function(newPasswordData) {
-                                walletsProxy.createWallet(cbPrimary.checked, seed, walletInfo, newPasswordData, createCallback)
+                                walletsProxy.createWallet(cbPrimary.checked, chkImportLegacy.checked, seed, walletInfo, newPasswordData, createCallback)
                             }
                             JsHelper.activateeIdAuth(walletInfo, authEidMessage, successCallback, failedCallback)
                         }

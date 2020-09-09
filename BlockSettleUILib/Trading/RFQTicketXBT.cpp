@@ -1426,10 +1426,9 @@ std::shared_ptr<bs::sync::hd::Wallet> RFQTicketXBT::getSendXbtWallet() const
       currentData(UiUtils::WalletIdRole).toString().toStdString());
    if (!wallet) {
       const auto &defaultWallet = walletsManager_->getDefaultWallet();
-      if (!defaultWallet) {
-         return nullptr;
+      if (defaultWallet) {
+         wallet = walletsManager_->getHDRootForLeaf(defaultWallet->walletId());
       }
-      wallet = walletsManager_->getHDRootForLeaf(defaultWallet->walletId());
    }
    return wallet;
 }

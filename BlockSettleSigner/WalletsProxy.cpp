@@ -555,7 +555,7 @@ QString WalletsProxy::defaultBackupLocation() const
       QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
 }
 
-void WalletsProxy::createWallet(bool isPrimary, bs::wallet::QSeed *seed, bs::hd::WalletInfo *walletInfo
+void WalletsProxy::createWallet(bool isPrimary, bool createLegacyLeaf, bs::wallet::QSeed *seed, bs::hd::WalletInfo *walletInfo
    , bs::wallet::QPasswordData *passwordData, const QJSValue &jsCallback)
 {
    auto cb = [this, jsCallback] (bs::error::ErrorCode errorCode) {
@@ -581,7 +581,7 @@ void WalletsProxy::createWallet(bool isPrimary, bs::wallet::QSeed *seed, bs::hd:
    }
 
    adapter_->createWallet(walletInfo->name().toStdString(), walletInfo->desc().toStdString()
-      , *seed, isPrimary, *passwordData, cb);
+      , *seed, isPrimary, createLegacyLeaf, *passwordData, cb);
 }
 
 void WalletsProxy::deleteWallet(const QString &walletId, const QJSValue &jsCallback)
