@@ -776,7 +776,7 @@ bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer
       }
 
       const auto wallet = walletsMgr_->createWallet(w.name(), w.description(), seed
-         , settings_->getWalletsDir(), pwdData, w.primary());
+         , settings_->getWalletsDir(), pwdData, w.primary(), w.create_legacy_leaf());
 
       walletsListUpdated();
 

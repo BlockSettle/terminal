@@ -182,7 +182,7 @@ void SignerAdapter::passwordReceived(const std::string &walletId
 }
 
 void SignerAdapter::createWallet(const std::string &name, const std::string &desc
-   , bs::core::wallet::Seed seed, bool primary, const bs::wallet::PasswordData &pwdData
+   , bs::core::wallet::Seed seed, bool primary, bool createLegacyLeaf, const bs::wallet::PasswordData &pwdData
    , const std::function<void(bs::error::ErrorCode errorCode)> &cb)
 {
    signer::CreateHDWalletRequest request;
@@ -199,6 +199,9 @@ void SignerAdapter::createWallet(const std::string &name, const std::string &des
    if (primary) {
       wallet->set_primary(true);
    }
+
+   wallet->set_create_legacy_leaf(createLegacyLeaf);
+
    if (!seed.empty()) {
       wallet->set_seed(seed.seed().toBinStr());
    }
