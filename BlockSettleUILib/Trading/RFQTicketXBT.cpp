@@ -1425,7 +1425,7 @@ std::shared_ptr<bs::sync::hd::Wallet> RFQTicketXBT::getSendXbtWallet() const
    auto wallet = walletsManager_->getHDWalletById(ui_->comboBoxXBTWalletsSend->
       currentData(UiUtils::WalletIdRole).toString().toStdString());
    if (!wallet) {
-      auto defaultWallet = walletsManager_->getDefaultWallet();
+      const auto &defaultWallet = walletsManager_->getDefaultWallet();
       if (defaultWallet) {
          wallet = walletsManager_->getHDRootForLeaf(defaultWallet->walletId());
       }
