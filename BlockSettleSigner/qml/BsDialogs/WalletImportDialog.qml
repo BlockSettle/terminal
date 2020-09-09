@@ -342,7 +342,7 @@ CustomTitleDialogWindow {
 
                         CustomCheckBox {
                             id: chkImportLegacy
-                            text: qsTr("Import Legacy derivation")
+                            text: qsTr("Import legacy path (BIP44)")
                             checked: false
 
                             onClicked: {
