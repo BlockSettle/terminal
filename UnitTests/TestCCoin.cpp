@@ -67,7 +67,7 @@ void TestCCoin::SetUp()
    {
       const auto coreWallet = envPtr_->walletsMgr()->createWallet("root", "",
          bs::core::wallet::Seed(SecureBinaryData::fromString("genesis seed"), NetworkType::TestNet),
-         envPtr_->armoryInstance()->homedir_, pd, true); // added inside
+         envPtr_->armoryInstance()->homedir_, pd, true, false); // added inside
       {
          auto grp = coreWallet->createGroup(coreWallet->getXBTGroupType());
 
@@ -80,7 +80,7 @@ void TestCCoin::SetUp()
    for (size_t i = 0; i < usersCount_; ++i) {
       const auto coreWallet = envPtr_->walletsMgr()->createWallet("user"+std::to_string(i), "",
          bs::core::wallet::Seed(SecureBinaryData::fromString("seed for user"+std::to_string(i)), NetworkType::TestNet),
-         envPtr_->armoryInstance()->homedir_, pd, true); // added inside
+         envPtr_->armoryInstance()->homedir_, pd, true, false); // added inside
       {
          auto grp = coreWallet->createGroup(coreWallet->getXBTGroupType());
 
