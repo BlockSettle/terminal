@@ -144,7 +144,7 @@ TEST_F(TestWallet, BIP84_primary)
    const bs::wallet::PasswordData pd{ passphrase, { bs::wallet::EncryptionType::Password } };
 
    auto coreWallet = envPtr_->walletsMgr()->createWallet("primary", "test"
-      , seed, walletFolder_, pd, true);
+      , seed, walletFolder_, pd, true, false);
    EXPECT_NE(envPtr_->walletsMgr()->getPrimaryWallet(), nullptr);
 
    auto wltMgr = envPtr_->walletsMgr();
@@ -1889,7 +1889,7 @@ TEST_F(TestWallet, ChangePassword)
 
    const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("Sample test seed")
       , NetworkType::TestNet };
-   auto coreWallet = envPtr_->walletsMgr()->createWallet("primary", "test", seed, walletFolder_, pdOld, true);
+   auto coreWallet = envPtr_->walletsMgr()->createWallet("primary", "test", seed, walletFolder_, pdOld, true, false);
    envPtr_->walletsMgr()->reset();
 
    {

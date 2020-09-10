@@ -209,7 +209,7 @@ void TestAuth::SetUp()
    //setup user wallet
    priWallet_ = envPtr_->walletsMgr()->createWallet("Primary", "",
       bs::core::wallet::Seed(CryptoPRNG::generateRandom(32), NetworkType::TestNet),
-      envPtr_->armoryInstance()->homedir_, pd, true);
+      envPtr_->armoryInstance()->homedir_, pd, true, false);
 
    if (!priWallet_) {
       return;
