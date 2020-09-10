@@ -60,6 +60,7 @@
 #include "PubKeyLoader.h"
 #include "QuoteProvider.h"
 #include "RequestReplyCommand.h"
+#include "RetryingDataConnection.h"
 #include "SelectWalletDialog.h"
 #include "Settings/ConfigDialog.h"
 #include "SignersProvider.h"
@@ -1968,14 +1969,17 @@ void BSTerminalMainWindow::InitWidgets()
          if (BinaryData::CreateFromHex(srvPubKey).toBinStr() == pubKey) {
             return true;
          }
-         QMetaObject::invokeMethod(this, [this, pubKey] {
+         QMetaObject::invokeMethod(this, [pubKey] {
             BSMessageBox(BSMessageBox::warning, tr("External Connection error")
                , tr("Invalid server key: %1").arg(QString::fromStdString(bs::toHex(pubKey)))).exec();
          });
          return false;
       };
 
-      auto connection = std::make_shared<SslDataConnection>(logger, clientParams);
+      RetryingDataConnectionParams retryingParams;
+      retryingParams.connection = std::make_unique<SslDataConnection>(logger, clientParams);
+      auto connection = std::make_shared<RetryingDataConnection>(logger, std::move(retryingParams));
+
       if (connection->openConnection(applicationSettings_->get<std::string>(ApplicationSettings::ExtConnHost)
          , applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPort)
          , aqScriptRunner->getExtConnListener().get())) {
