@@ -133,6 +133,8 @@ private:
    bool showStartupDialog();
    void setWidgetsAuthorized(bool authorized);
 
+   void openURIDialog();
+
 signals:
    void armoryServerPromptResultReady();
 

@@ -1299,6 +1299,7 @@ void BSTerminalMainWindow::setupMenu()
    };
 
    connect(ui_->actionCreateNewWallet, &QAction::triggered, this, [ww = ui_->widgetWallets]{ ww->onNewWallet(); });
+   connect(ui_->actionOpenURI, &QAction::triggered, this, [this]{ openURIDialog(); });
    connect(ui_->actionAuthenticationAddresses, &QAction::triggered, this, &BSTerminalMainWindow::openAuthManagerDialog);
    connect(ui_->actionSettings, &QAction::triggered, this, [=]() { openConfigDialog(); });
    connect(ui_->actionAccountInformation, &QAction::triggered, this, &BSTerminalMainWindow::openAccountInfoDialog);
@@ -2405,3 +2406,6 @@ void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &de
       processDeferredDialogs();
    }, Qt::QueuedConnection);
 }
+
+void BSTerminalMainWindow::openURIDialog()
+{}
