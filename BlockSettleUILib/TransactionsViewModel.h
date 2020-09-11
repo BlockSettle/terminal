@@ -22,7 +22,7 @@
 #include <atomic>
 #include "ArmoryConnection.h"
 #include "AsyncClient.h"
-#include "Wallets/SyncWallet.h"
+#include "SignerDefs.h"
 
 namespace spdlog {
    class logger;
@@ -45,6 +45,7 @@ struct TransactionsViewItem
    bool initialized = false;
    QString mainAddress;
    int addressCount;
+   std::vector<bs::Address> outAddresses;
    bs::sync::Transaction::Direction direction = bs::sync::Transaction::Unknown;
    std::vector<std::shared_ptr<bs::sync::Wallet>> wallets;
    QString dirStr;
@@ -56,7 +57,7 @@ struct TransactionsViewItem
    BTCNumericTypes::balance_type amount = 0;
    int32_t txOutIndex{-1};
    bool txMultipleOutIndex{false};
-   bs::sync::TxValidity isValid = bs::sync::TxValidity::Invalid;
+   bs::sync::TxValidity isValid = bs::sync::TxValidity::Unknown;
    bool     isCPFP = false;
    int confirmations = 0;
 
@@ -128,17 +129,18 @@ class TransactionsViewModel : public QAbstractItemModel, public ArmoryCallbackTa
 {
 Q_OBJECT
 public:
-   TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
+   [[deprecated]] TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
                           , const std::shared_ptr<bs::sync::WalletsManager> &
                           , const std::shared_ptr<AsyncClient::LedgerDelegate> &
                           , const std::shared_ptr<spdlog::logger> &
                           , const std::shared_ptr<bs::sync::Wallet> &defWlt
                           , const bs::Address &filterAddress = bs::Address()
                           , QObject* parent = nullptr);
-   TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
+   [[deprecated]] TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
                           , const std::shared_ptr<bs::sync::WalletsManager> &
                           , const std::shared_ptr<spdlog::logger> &
                           , QObject* parent = nullptr);
+   TransactionsViewModel(const std::shared_ptr<spdlog::logger> &, QObject* parent = nullptr);
    ~TransactionsViewModel() noexcept override;
 
    TransactionsViewModel(const TransactionsViewModel&) = delete;
@@ -149,7 +151,6 @@ public:
    void loadAllWallets(bool onNewBlock=false);
    size_t itemsCount() const { return rootNode_->nbChildren(); }
 
-public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
@@ -162,8 +163,15 @@ public:
    TransactionPtr getItem(const QModelIndex &) const;
    TransactionPtr getOldestItem() const { return oldestItem_; }
    TXNode *getNode(const QModelIndex &) const;
-
    bool isTxRevocable(const Tx& tx);
+
+   void onLedgerEntries(const std::string &filter, uint32_t totalPages
+      , uint32_t curPage, uint32_t curBlock, const std::vector<bs::TXEntry> &);
+   void onNewBlock(unsigned int topBlock);
+   void onTXDetails(const std::vector<bs::sync::TXWalletDetails> &);
+
+signals:
+   void needTXDetails(const std::vector<bs::sync::TXWallet> &);
 
 private slots:
    void updatePage();
@@ -175,21 +183,22 @@ private slots:
    void onRefreshTxValidity();
 
 private:
-   void onNewBlock(unsigned int height, unsigned int branchHgt) override;
-   void onStateChanged(ArmoryState) override;
-   void onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry> &) override;
-   void onZCInvalidated(const std::set<BinaryData> &ids) override;
+   [[deprecated]] void onNewBlock(unsigned int height, unsigned int branchHgt) override;
+   [[deprecated]] void onStateChanged(ArmoryState) override;
+   [[deprecated]] void onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry> &) override;
+   [[deprecated]] void onZCInvalidated(const std::set<BinaryData> &ids) override;
 
-   void init();
+   [[deprecated]] void init();
    void clear();
-   void loadLedgerEntries(bool onNewBlock=false);
-   void ledgerToTxData(const std::map<int, std::vector<bs::TXEntry>> &rawData
+   [[deprecated]] void loadLedgerEntries(bool onNewBlock=false);
+   [[deprecated]] void ledgerToTxData(const std::map<int, std::vector<bs::TXEntry>> &rawData
       , bool onNewBlock=false);
    std::pair<size_t, size_t> updateTransactionsPage(const std::vector<bs::TXEntry> &);
    void updateBlockHeight(const std::vector<std::shared_ptr<TransactionsViewItem>> &);
    void updateTransactionDetails(const TransactionPtr &item
       , const std::function<void(const TransactionPtr &)> &cb);
-   std::shared_ptr<TransactionsViewItem> itemFromTransaction(const bs::TXEntry &);
+   [[deprecated]] std::shared_ptr<TransactionsViewItem> itemFromTransaction(const bs::TXEntry &);
+   std::shared_ptr<TransactionsViewItem> createTxItem(const bs::TXEntry &);
 
 signals:
    void dataLoaded(int count);
@@ -232,6 +241,22 @@ private:
    std::shared_ptr<std::atomic_bool>  stopped_;
    std::atomic_bool  initialLoadCompleted_{ true };
 
+   struct ItemKey {
+      BinaryData  txHash;
+      std::string walletId;
+
+      bool operator<(const ItemKey &other) const
+      {
+         return ((txHash < other.txHash) || ((txHash == other.txHash)
+            && (walletId < other.walletId)));
+      }
+      bool operator==(const ItemKey &other) const
+      {
+         return ((txHash == other.txHash) && (walletId == other.walletId));
+      }
+   };
+   std::map<ItemKey, int>  itemIndex_;
+
    // If set, amount field will show only related address balance changes
    // (without fees because fees are related to transaction, not address).
    // Right now used with AddressDetailDialog only.
@@ -240,6 +265,8 @@ private:
 
    // Tx that could be revoked
    std::map<BinaryData, bool> revocableTxs_;
+
+   uint32_t curBlock_{ 0 };
 };
 
 #endif // __TRANSACTIONS_VIEW_MODEL_H__

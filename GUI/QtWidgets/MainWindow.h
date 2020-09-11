@@ -15,6 +15,7 @@
 #include <queue>
 #include <QMainWindow>
 #include "Address.h"
+#include "ArmoryConnection.h"
 #include "SignerDefs.h"
 
 namespace spdlog {
@@ -35,6 +36,7 @@ class AuthAddressDialog;
 class NotificationCenter;
 class QSystemTrayIcon;
 class StatusBarView;
+class TransactionsViewModel;
 
 namespace bs {
    namespace gui {
@@ -54,7 +56,9 @@ namespace bs {
             void showStartupDialog(bool showLic);
 
             void onArmoryStateChanged(int state, unsigned int blockNum);
+            void onNewBlock(int state, unsigned int blockNum);
             void onSignerStateChanged(int state, const std::string &);
+            void onWalletsReady();
 
             void onHDWallet(const bs::sync::WalletInfo &);
             void onHDWalletDetails(const bs::sync::HDWalletData &);
@@ -63,6 +67,9 @@ namespace bs {
             void onAddressComments(const std::string &walletId
                , const std::map<bs::Address, std::string> &);
             void onWalletBalance(const bs::sync::WalletBalanceData &);
+            void onLedgerEntries(const std::string &filter, uint32_t totalPages
+               , uint32_t curPage, uint32_t curBlock, const std::vector<bs::TXEntry> &);
+            void onTXDetails(const std::vector<bs::sync::TXWalletDetails> &);
 
          public slots:
             void onReactivate();
@@ -89,6 +96,9 @@ namespace bs {
             void needAddrComments(const std::string &walletId, const std::vector<bs::Address> &);
             void setAddrComment(const std::string &walletId, const bs::Address &
                , const std::string &comment);
+
+            void needLedgerEntries(const std::string &filter);
+            void needTXDetails(const std::vector<bs::sync::TXWallet> &);
 
          private slots:
             void onSend();
@@ -139,6 +149,7 @@ namespace bs {
             void setWidgetsAuthorized(bool);
 
             void initWidgets();
+            void initTransactionsView();
             void initChartsView();
 
             void promptSwitchEnv(bool prod);
@@ -167,6 +178,8 @@ namespace bs {
             //   std::shared_ptr<CCPortfolioModel>         portfolioModel_;
             //   std::shared_ptr<OrderListModel>           orderListModel_;
             std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
+
+            std::shared_ptr<TransactionsViewModel>    txModel_;
 
             //   std::shared_ptr<WalletManagementWizard> walletsWizard_;
 

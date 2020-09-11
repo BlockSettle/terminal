@@ -114,6 +114,7 @@ QtGuiAdapter::QtGuiAdapter(const std::shared_ptr<spdlog::logger> &logger)
    : QObject(nullptr), logger_(logger)
    , userSettings_(std::make_shared<UserTerminal>(TerminalUsers::Settings))
    , userWallets_(std::make_shared<UserTerminal>(TerminalUsers::Wallets))
+   , userBlockchain_(std::make_shared<UserTerminal>(TerminalUsers::Blockchain))
 {}
 
 QtGuiAdapter::~QtGuiAdapter()
@@ -401,10 +402,19 @@ bool QtGuiAdapter::processBlockchain(const Envelope &env)
       blockNum_ = msg.new_block().top_block();
       if (mainWindow_) {
          QMetaObject::invokeMethod(mainWindow_, [this]{
-            mainWindow_->onArmoryStateChanged(armoryState_, blockNum_);
-            });
+            mainWindow_->onNewBlock(armoryState_, blockNum_);
+         });
       }
       break;
+   case ArmoryMessage::kWalletRegistered:
+      if (msg.wallet_registered().success() && msg.wallet_registered().wallet_id().empty()) {
+         walletsReady_ = true;
+         QMetaObject::invokeMethod(mainWindow_, [this] {
+            mainWindow_->onWalletsReady();
+         });
+      }
+   case ArmoryMessage::kLedgerEntries:
+      return processLedgerEntries(env, msg.ledger_entries());
    default:    break;
    }
    return true;
@@ -497,6 +507,8 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
 
    case WalletsMessage::kWalletBalances:
       return processWalletBalances(env, msg.wallet_balances());
+   case WalletsMessage::kTxDetailsResponse:
+      return processTXDetails(msg.tx_details_response());
    default:    break;
    }
    return true;
@@ -549,6 +561,9 @@ void QtGuiAdapter::updateStates()
    }
    for (const auto &hdWallet : hdWallets_) {
       mainWindow_->onHDWallet(hdWallet.second);
+   }
+   if (walletsReady_) {
+      mainWindow_->onWalletsReady();
    }
 }
 
@@ -632,6 +647,8 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::needUsedAddresses, this, &QtGuiAdapter::onNeedUsedAddresses);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needAddrComments, this, &QtGuiAdapter::onNeedAddrComments);
    connect(mainWindow_, &bs::gui::qt::MainWindow::setAddrComment, this, &QtGuiAdapter::onSetAddrComment);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needLedgerEntries, this, &QtGuiAdapter::onNeedLedgerEntries);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needTXDetails, this, &QtGuiAdapter::onNeedTXDetails);
 }
 
 void QtGuiAdapter::onPutSetting(int idx, const QVariant &value)
@@ -777,6 +794,28 @@ void QtGuiAdapter::onSetAddrComment(const std::string &walletId, const bs::Addre
    pushFill(env);
 }
 
+void QtGuiAdapter::onNeedLedgerEntries(const std::string &filter)
+{
+   ArmoryMessage msg;
+   msg.set_get_ledger_entries(filter);
+   Envelope env{ 0, user_, userBlockchain_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedTXDetails(const const std::vector<bs::sync::TXWallet> &txWallet)
+{
+   WalletsMessage msg;
+   auto msgReq = msg.mutable_tx_details_request();
+   for (const auto &txw : txWallet) {
+      auto request = msgReq->add_requests();
+      request->set_tx_hash(txw.txHash.toBinStr());
+      request->set_wallet_id(txw.walletId);
+      request->set_value(txw.value);
+   }
+   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
 void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
 {
    hdWallets_[wi.id] = wi;
@@ -788,7 +827,7 @@ void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
 }
 
 bool QtGuiAdapter::processWalletBalances(const bs::message::Envelope &env
-   , const BlockSettle::Common::WalletsMessage_WalletBalances &response)
+   , const WalletsMessage_WalletBalances &response)
 {
    bs::sync::WalletBalanceData wbd;
    wbd.id = response.wallet_id();
@@ -806,5 +845,62 @@ bool QtGuiAdapter::processWalletBalances(const bs::message::Envelope &env
    });
    return true;
 }
+
+bool QtGuiAdapter::processTXDetails(const WalletsMessage_TXDetailsResponse &response)
+{
+   std::vector<bs::sync::TXWalletDetails> txDetails;
+   for (const auto &resp : response.responses()) {
+      std::vector<bs::Address> outAddrs;
+      for (const auto &addrStr : resp.out_addresses()) {
+         try {
+            outAddrs.emplace_back(std::move(bs::Address::fromAddressString(addrStr)));
+         }
+         catch (const std::exception &) {}
+      }
+      txDetails.push_back({ BinaryData::fromString(resp.tx_hash()), resp.wallet_id()
+         , resp.wallet_name(), static_cast<bs::core::wallet::Type>(resp.wallet_type())
+         , static_cast<bs::sync::Transaction::Direction>(resp.direction())
+         , resp.comment(), resp.valid(), resp.amount(), outAddrs });
+   }
+   QMetaObject::invokeMethod(mainWindow_, [this, txDetails] {
+      mainWindow_->onTXDetails(txDetails);
+   });
+   return true;
+}
+
+bool QtGuiAdapter::processLedgerEntries(const bs::message::Envelope &env
+   , const ArmoryMessage_LedgerEntries &response)
+{
+   std::vector<bs::TXEntry> entries;
+   entries.reserve(response.entries_size());
+   for (const auto &entry : response.entries()) {
+      bs::TXEntry txEntry;
+      txEntry.txHash = BinaryData::fromString(entry.tx_hash());
+      txEntry.value = entry.value();
+      txEntry.blockNum = entry.block_num();
+      txEntry.txTime = entry.tx_time();
+      txEntry.isRBF = entry.rbf();
+      txEntry.isChainedZC = entry.chained_zc();
+      txEntry.nbConf = entry.nb_conf();
+      for (const auto &walletId : entry.wallet_ids()) {
+         txEntry.walletIds.insert(walletId);
+      }
+      for (const auto &addrStr : entry.addresses()) {
+         try {
+            const auto &addr = bs::Address::fromAddressString(addrStr);
+            txEntry.addresses.emplace_back(std::move(addr));
+         }
+         catch (const std::exception &) {}
+      }
+      entries.emplace_back(std::move(txEntry));
+   }
+   QMetaObject::invokeMethod(mainWindow_, [this, entries, filter=response.filter()
+      , totPages=response.total_pages(), curPage=response.cur_page()
+      , curBlock=response.cur_block()] {
+         mainWindow_->onLedgerEntries(filter, totPages, curPage, curBlock, entries);
+   });
+   return true;
+}
+
 
 #include "QtGuiAdapter.moc"

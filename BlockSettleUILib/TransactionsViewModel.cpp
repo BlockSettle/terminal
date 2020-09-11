@@ -279,6 +279,15 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
    init();
 }
 
+TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<spdlog::logger> &logger
+   , QObject* parent)
+   : QAbstractItemModel(parent), logger_(logger)
+   , allWallets_(true), filterAddress_()
+{
+   stopped_ = std::make_shared<std::atomic_bool>(false);
+   rootNode_.reset(new TXNode);
+}
+
 void TransactionsViewModel::init()
 {
    stopped_ = std::make_shared<std::atomic_bool>(false);
@@ -577,6 +586,21 @@ std::shared_ptr<TransactionsViewItem> TransactionsViewModel::itemFromTransaction
    return item;
 }
 
+std::shared_ptr<TransactionsViewItem> TransactionsViewModel::createTxItem(const bs::TXEntry &entry)
+{
+   auto item = std::make_shared<TransactionsViewItem>();
+   item->txEntry = entry;
+   item->displayDateTime = UiUtils::displayDateTime(entry.txTime);
+//   item->filterAddress = filterAddress_;
+   item->walletID = QString::fromStdString(*entry.walletIds.cbegin());
+   item->confirmations = entry.nbConf;
+   if (!item->wallets.empty()) {
+      item->walletName = QString::fromStdString(item->wallets[0]->name());
+   }
+   item->amountStr = UiUtils::displayAmount(entry.value);
+   return item;
+}
+
 void TransactionsViewModel::onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry>& entries)
 {
    QMetaObject::invokeMethod(this, [this, entries] { updateTransactionsPage(entries); });
@@ -856,7 +880,7 @@ void TransactionsViewModel::updateBlockHeight(const std::vector<std::shared_ptr<
    }
 
    emit dataChanged(index(0, static_cast<int>(Columns::Amount))
-   , index(rootNode_->nbChildren() - 1, static_cast<int>(Columns::Status)));
+      , index(rootNode_->nbChildren() - 1, static_cast<int>(Columns::Status)));
 }
 
 void TransactionsViewModel::onItemConfirmed(const TransactionPtr item)
@@ -1063,6 +1087,92 @@ void TransactionsViewModel::updateTransactionDetails(const TransactionPtr &item
       }
    };
    TransactionsViewItem::initialize(item, armory_, walletsManager_, cbInited);
+}
+
+void TransactionsViewModel::onNewBlock(unsigned int curBlock)
+{
+   if (curBlock_ == curBlock) {
+      return;
+   }
+   const unsigned int diff = curBlock - curBlock_;
+   curBlock_ = curBlock;
+
+   for (const auto &node : rootNode_->children()) {
+      node->item()->confirmations += diff;
+      node->item()->txEntry.nbConf += diff;
+   }
+   emit dataChanged(index(0, static_cast<int>(Columns::Status))
+      , index(rootNode_->nbChildren() - 1, static_cast<int>(Columns::Status)));
+}
+
+void TransactionsViewModel::onLedgerEntries(const std::string &filter, uint32_t totalPages
+   , uint32_t curPage, uint32_t curBlock, const std::vector<bs::TXEntry> &entries)
+{
+   if (!curBlock_) {
+      curBlock_ = curBlock;
+   }
+   else if (curBlock_ != curBlock) {
+      curBlock_ = curBlock;
+      onNewBlock(curBlock);
+   }
+   if (entries.empty()) {
+      return;
+   }
+
+   beginInsertRows(QModelIndex(), rootNode_->nbChildren()
+      , rootNode_->nbChildren() + entries.size() - 1);
+   for (const auto &entry : entries) {
+      const auto &item = createTxItem(entry);
+      itemIndex_[{item->txEntry.txHash, item->walletID.toStdString()}] = rootNode_->nbChildren();
+      rootNode_->add(new TXNode(item));
+   }
+   endInsertRows();
+
+   std::vector<bs::sync::TXWallet> txWallet;
+   txWallet.reserve(entries.size());
+   for (const auto &entry : entries) {
+      const auto &walletId = entry.walletIds.empty() ? std::string{} : *(entry.walletIds.cbegin());
+      txWallet.push_back({ entry.txHash,  walletId, entry.value });
+   }   //TODO: can be optimized later to retrieve details only for visible rows
+   emit needTXDetails(txWallet);
+}
+
+void TransactionsViewModel::onTXDetails(const std::vector<bs::sync::TXWalletDetails> &txDet)
+{
+   for (const auto &tx : txDet) {
+      const auto &itIndex = itemIndex_.find({tx.txHash, tx.walletId});
+      if (itIndex == itemIndex_.end()) {
+         logger_->warn("[{}] invalid TX: {}", __func__, tx.txHash.toHexStr(true));
+         continue;
+      }
+      const int row = itIndex->second;
+      if (row >= rootNode_->nbChildren()) {
+         logger_->warn("[{}] invalid row: {} of {}", __func__, row, rootNode_->nbChildren());
+         continue;
+      }
+      const auto &item = rootNode_->children()[row]->item();
+      item->walletName = QString::fromStdString(tx.walletName);
+      item->direction = tx.direction;
+      item->dirStr = QObject::tr(bs::sync::Transaction::toStringDir(tx.direction));
+      item->isValid = tx.isValid ? bs::sync::TxValidity::Valid : bs::sync::TxValidity::Invalid;
+      item->comment = QString::fromStdString(tx.comment);
+      item->amountStr = QString::fromStdString(tx.amount);
+
+      item->addressCount = tx.outAddresses.size();
+      switch (tx.outAddresses.size()) {
+      case 0:
+         item->mainAddress = tr("no addresses");
+         break;
+      case 1:
+         item->mainAddress = QString::fromStdString(tx.outAddresses[0].display());
+         break;
+      default:
+         item->mainAddress = tr("%1 output addresses").arg(tx.outAddresses.size());
+         break;
+      }
+      emit dataChanged(index(row, static_cast<int>(Columns::Wallet))
+         , index(row, static_cast<int>(Columns::Comment)));
+   }
 }
 
 

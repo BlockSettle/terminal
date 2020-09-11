@@ -39,6 +39,7 @@
 #include "StatusBarView.h"
 #include "TabWithShortcut.h"
 #include "TerminalMessage.h"
+#include "TransactionsViewModel.h"
 #include "UiUtils.h"
 
 #include "terminal.pb.h"
@@ -157,6 +158,22 @@ void MainWindow::onArmoryStateChanged(int state, unsigned int blockNum)
    }
 }
 
+void MainWindow::onNewBlock(int state, unsigned int blockNum)
+{
+   if (statusBarView_) {
+      statusBarView_->onBlockchainStateChanged(state, blockNum);
+   }
+   if (txModel_) {
+      txModel_->onNewBlock(blockNum);
+   }
+}
+
+void MainWindow::onWalletsReady()
+{
+   logger_->debug("[{}]", __func__);
+   emit needLedgerEntries({});
+}
+
 void MainWindow::onSignerStateChanged(int state, const std::string &details)
 {
    if (statusBarView_) {
@@ -190,6 +207,19 @@ void MainWindow::onAddressComments(const std::string &walletId
 void MainWindow::onWalletBalance(const bs::sync::WalletBalanceData &wbd)
 {
    ui_->widgetWallets->onWalletBalance(wbd);
+}
+
+void MainWindow::onLedgerEntries(const std::string &filter, uint32_t totalPages
+   , uint32_t curPage, uint32_t curBlock, const std::vector<bs::TXEntry> &entries)
+{
+   if (filter.empty()) {
+      txModel_->onLedgerEntries(filter, totalPages, curPage, curBlock, entries);
+   }
+}
+
+void MainWindow::onTXDetails(const std::vector<bs::sync::TXWalletDetails> &txDet)
+{
+   txModel_->onTXDetails(txDet);
 }
 
 void MainWindow::showStartupDialog(bool showLicense)
@@ -251,9 +281,6 @@ bool MainWindow::event(QEvent *event)
 
 MainWindow::~MainWindow()
 {
-   emit putSetting(static_cast<int>(ApplicationSettings::GUI_main_geometry), geometry());
-   emit putSetting(static_cast<int>(ApplicationSettings::GUI_main_tab), ui_->tabWidget->currentIndex());
-
    NotificationCenter::destroyInstance();
 }
 
@@ -399,16 +426,18 @@ void MainWindow::initChartsView()
 }
 
 // Initialize widgets related to transactions.
-/*void MainWindow::initTransactionsView()
+void MainWindow::initTransactionsView()
 {
-   ui_->widgetExplorer->init(armory_, logMgr_->logger(), walletsMgr_, ccFileManager_, authManager_);
-   ui_->widgetTransactions->init(walletsMgr_, armory_, utxoReservationMgr_, signContainer_, applicationSettings_
-                                , logMgr_->logger("ui"));
+   txModel_ = std::make_shared<TransactionsViewModel>(logger_, this);
+   connect(txModel_.get(), &TransactionsViewModel::needTXDetails, this
+      , &MainWindow::needTXDetails);
+
+//   ui_->widgetExplorer->init(armory_, logMgr_->logger(), walletsMgr_, ccFileManager_, authManager_);
+   ui_->widgetTransactions->init(logger_, txModel_);
    ui_->widgetTransactions->setEnabled(true);
 
-   ui_->widgetTransactions->SetTransactionsModel(transactionsModel_);
-   ui_->widgetPortfolio->SetTransactionsModel(transactionsModel_);
-}*/
+   ui_->widgetPortfolio->SetTransactionsModel(txModel_);
+}
 
 void MainWindow::onReactivate()
 {
@@ -808,6 +837,9 @@ void MainWindow::showRunInBackgroundMessage()
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
+   emit putSetting(static_cast<int>(ApplicationSettings::GUI_main_geometry), geometry());
+   emit putSetting(static_cast<int>(ApplicationSettings::GUI_main_tab), ui_->tabWidget->currentIndex());
+
 /*   if (applicationSettings_->get<bool>(ApplicationSettings::closeToTray)) {
       hide();
       event->ignore();
@@ -818,7 +850,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
       }
       */
       QMainWindow::closeEvent(event);
-      QApplication::exit();
+      QTimer::singleShot(100, [] { QApplication::exit(); });
 //   }
 }
 
@@ -947,6 +979,7 @@ void MainWindow::initWidgets()
    connect(ui_->widgetWallets, &WalletsWidget::needAddrComments, this, &MainWindow::needAddrComments);
    connect(ui_->widgetWallets, &WalletsWidget::setAddrComment, this, &MainWindow::setAddrComment);
 
+   initTransactionsView();
 //   InitPortfolioView();
 
 //   ui_->widgetRFQ->initWidgets(mdProvider_, mdCallbacks_, applicationSettings_);

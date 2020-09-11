@@ -27,6 +27,8 @@ namespace bs {
 }
 namespace BlockSettle {
    namespace Common {
+      class ArmoryMessage_LedgerEntries;
+      class WalletsMessage_TXDetailsResponse;
       class WalletsMessage_WalletBalances;
    }
    namespace Terminal {
@@ -77,6 +79,9 @@ private:
    void processWalletLoaded(const bs::sync::WalletInfo &);
    bool processWalletBalances(const bs::message::Envelope &
       , const BlockSettle::Common::WalletsMessage_WalletBalances &);
+   bool processTXDetails(const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
+   bool processLedgerEntries(const bs::message::Envelope &
+      , const BlockSettle::Common::ArmoryMessage_LedgerEntries &);
 
 private slots:
    void onPutSetting(int idx, const QVariant &value);
@@ -89,10 +94,13 @@ private slots:
    void onNeedAddrComments(const std::string &walletId, const std::vector<bs::Address> &);
    void onSetAddrComment(const std::string &walletId, const bs::Address &
       , const std::string &comment);
+   void onNeedLedgerEntries(const std::string &filter);
+   void onNeedTXDetails(const std::vector<bs::sync::TXWallet> &);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<bs::message::UserTerminal>   userSettings_, userWallets_;
+   std::shared_ptr<bs::message::UserTerminal>   userBlockchain_;
    bs::gui::qt::MainWindow * mainWindow_{ nullptr };
    BSTerminalSplashScreen  * splashScreen_{ nullptr };
 
@@ -102,6 +110,7 @@ private:
    uint32_t    blockNum_{ 0 };
    int         signerState_{ -1 };
    std::string signerDetails_;
+   bool  walletsReady_{ false };
 
    std::unordered_map<std::string, bs::sync::WalletInfo> hdWallets_;
 };

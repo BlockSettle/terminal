@@ -67,6 +67,11 @@ void TransactionsWidgetInterface::init(const std::shared_ptr<bs::sync::WalletsMa
    connect(signContainer_.get(), &SignContainer::TXSigned, this, &TransactionsWidgetInterface::onTXSigned);
 }
 
+void TransactionsWidgetInterface::init(const std::shared_ptr<spdlog::logger> &logger)
+{
+   logger_ = logger;
+}
+
 void TransactionsWidgetInterface::onRevokeSettlement()
 {
    auto txItem = model_->getItem(actionRevoke_->data().toModelIndex());
