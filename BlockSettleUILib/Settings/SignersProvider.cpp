@@ -277,7 +277,7 @@ std::string SignersProvider::remoteSignerKeysFile() const
 BinaryData SignersProvider::remoteSignerOwnKey() const
 {
    if (remoteSignerOwnKey_.empty()) {
-      remoteSignerOwnKey_ = bs::network::TransportBIP15x::getOwnPubKey(
+      remoteSignerOwnKey_ = bs::network::TransportBIP15x::getOwnPubKey_FromKeyFile(
          remoteSignerKeysDir(), remoteSignerKeysFile());
    }
    return remoteSignerOwnKey_;
