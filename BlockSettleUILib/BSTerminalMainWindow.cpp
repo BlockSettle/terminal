@@ -101,6 +101,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    loginButtonText_ = tr("Login");
 
+   nextArmoryReconnectAttempt_ = std::chrono::steady_clock::now();
    armoryServersProvider_= std::make_shared<ArmoryServersProvider>(applicationSettings_);
    signersProvider_= std::make_shared<SignersProvider>(applicationSettings_);
 
@@ -878,6 +879,7 @@ void BSTerminalMainWindow::MainWinACT::onStateChanged(ArmoryState state)
    case ArmoryState::Ready:
       QMetaObject::invokeMethod(parent_, [this] {
          parent_->isArmoryReady_ = true;
+         parent_->armoryReconnectDelay_ = 0;
          parent_->CompleteDBConnection();
          parent_->CompleteUIOnlineView();
          parent_->walletsMgr_->goOnline();
@@ -1002,12 +1004,31 @@ bool BSTerminalMainWindow::isArmoryConnected() const
 
 void BSTerminalMainWindow::ArmoryIsOffline()
 {
+   auto now = std::chrono::steady_clock::now();
+   std::chrono::milliseconds nextConnDelay(0);
+   if (now < nextArmoryReconnectAttempt_) {
+      nextConnDelay = std::chrono::duration_cast<std::chrono::milliseconds>(
+         nextArmoryReconnectAttempt_ - now);
+   }
+   if (nextConnDelay != std::chrono::milliseconds::zero()) {
+      QTimer::singleShot(nextConnDelay, this, &BSTerminalMainWindow::ArmoryIsOffline);
+      return;
+   }
+
    logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
    if (walletsMgr_) {
       walletsMgr_->unregisterWallets();
    }
-   connectArmory();
    updateControlEnabledState();
+
+   //increase reconnect delay
+   armoryReconnectDelay_ = armoryReconnectDelay_ % 2 ? 
+      armoryReconnectDelay_ * 2 : armoryReconnectDelay_ + 1;
+   nextArmoryReconnectAttempt_ = 
+      std::chrono::steady_clock::now() + std::chrono::seconds(armoryReconnectDelay_);
+   
+   connectArmory();
+
    // XXX: disabled until armory connection is stable in terminal
    // updateLoginActionState();
 }
@@ -1090,10 +1111,7 @@ void BSTerminalMainWindow::connectSigner()
       return;
    }
 
-   if (!signContainer_->Start()) {
-      BSMessageBox(BSMessageBox::warning, tr("BlockSettle Signer Connection")
-         , tr("Failed to start signer connection.")).exec();
-   }
+   signContainer_->Start();
 }
 
 bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()> &cb)

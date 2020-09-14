@@ -201,6 +201,10 @@ private:
 
    QString currentUserLogin_;
 
+
+   unsigned armoryReconnectDelay_ = 0;
+   std::chrono::time_point<std::chrono::steady_clock> nextArmoryReconnectAttempt_;
+
 public slots:
    void onReactivate();
    void raiseWindow();
