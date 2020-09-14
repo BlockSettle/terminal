@@ -230,7 +230,7 @@ void AddressDetailsWidget::loadTransactions()
          TxIn in = tx->getTxInCopy(r);
          OutPoint op = in.getOutPoint();
          const auto &prevTx = txMap_[op.getTxHash()];
-         if (prevTx->isInitialized()) {
+         if (prevTx && prevTx->isInitialized()) {
             TxOut prevOut = prevTx->getTxOutCopy(op.getTxOutIndex());
             totIn += prevOut.getValue();
          }
