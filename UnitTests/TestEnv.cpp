@@ -199,7 +199,7 @@ ArmoryInstance::ArmoryInstance()
    config_.listenPort_ = port_ss.str();
 
    //setup bip151 context
-   startupBIP150CTX(4, true);
+   startupBIP150CTX(4);
 
    const auto lbdEmptyPassphrase = [](const std::set<BinaryData> &) {
       return SecureBinaryData{};
@@ -246,7 +246,7 @@ ArmoryInstance::~ArmoryInstance()
    auto&& bdvObj2 = AsyncClient::BlockDataViewer::getNewBDV("127.0.0.1"
       , config_.listenPort_, BlockDataManagerConfig::getDataDir()
       , [](const std::set<BinaryData> &) { return SecureBinaryData{}; }
-      , BlockDataManagerConfig::ephemeralPeers_, nullptr);
+      , BlockDataManagerConfig::ephemeralPeers_, true, nullptr);
    auto&& serverPubkey = WebSocketServer::getPublicKey();
    bdvObj2->addPublicKey(serverPubkey);
    bdvObj2->connectToRemote();
