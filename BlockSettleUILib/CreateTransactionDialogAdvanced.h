@@ -73,7 +73,7 @@ public:
    void SetImportedTransactions(const std::vector<bs::core::wallet::TXSignRequest>& transactions);
 
    bool switchModeRequested() const override;
-   std::shared_ptr<CreateTransactionDialog> SwithcMode() override;
+   std::shared_ptr<CreateTransactionDialog> SwitchMode() override;
 
 protected:
    bool eventFilter(QObject *watched, QEvent *) override;

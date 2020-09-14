@@ -11,18 +11,20 @@
 #ifndef __CREATE_TRANSACTION_DIALOG_H__
 #define __CREATE_TRANSACTION_DIALOG_H__
 
-#include <vector>
 #include <memory>
 #include <string>
+#include <vector>
+
 #include <QAction>
 #include <QDialog>
 #include <QMenu>
 #include <QPoint>
 #include <QString>
+
 #include "BSErrorCodeStrings.h"
 #include "CoreWallet.h"
-#include "ValidityFlag.h"
 #include "UtxoReservationToken.h"
+#include "ValidityFlag.h"
 
 namespace bs {
    namespace sync {
@@ -68,7 +70,7 @@ public:
    int SelectWallet(const std::string& walletId, UiUtils::WalletsTypes type);
 
    virtual bool switchModeRequested() const= 0;
-   virtual std::shared_ptr<CreateTransactionDialog> SwithcMode() = 0;
+   virtual std::shared_ptr<CreateTransactionDialog> SwitchMode() = 0;
 
 protected:
    virtual void init();

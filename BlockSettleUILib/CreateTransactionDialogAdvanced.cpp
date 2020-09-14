@@ -33,6 +33,7 @@
 #include <QFileDialog>
 #include <QKeyEvent>
 #include <QPushButton>
+
 #include <spdlog/spdlog.h>
 #include <stdexcept>
 
@@ -1675,7 +1676,7 @@ bool CreateTransactionDialogAdvanced::switchModeRequested() const
    return simpleDialogRequested_;
 }
 
-std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::SwithcMode()
+std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::SwitchMode()
 {
    auto simpleDialog = std::make_shared<CreateTransactionDialogSimple>(armory_
       , walletsManager_, utxoReservationManager_, signContainer_

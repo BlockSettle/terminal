@@ -14,31 +14,33 @@
 #include <thread>
 
 #include <QCheckBox>
+#include <QCloseEvent>
 #include <QComboBox>
 #include <QCoreApplication>
+#include <QFile>
+#include <QFileDialog>
+#include <QIntValidator>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QTextEdit>
-#include <QIntValidator>
-#include <QFile>
-#include <QFileDialog>
-#include <QCloseEvent>
+
 #include <spdlog/spdlog.h>
+
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "BSMessageBox.h"
 #include "OfflineSigner.h"
+#include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
 #include "TransactionData.h"
 #include "TransactionOutputsModel.h"
 #include "UiUtils.h"
 #include "UsedInputsModel.h"
+#include "UtxoReservationManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
-#include "UtxoReservationManager.h"
-#include "SelectedTransactionInputs.h"
 
 // Mirror of cached Armory wait times - NodeRPC::aggregateFeeEstimates()
 const std::map<unsigned int, QString> feeLevels = {

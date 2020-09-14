@@ -53,13 +53,14 @@ class AuthAddressDialog;
 class AuthAddressManager;
 class AutheIDClient;
 class AutoSignScriptProvider;
+class BaseCelerClient;
 class BSMarketDataProvider;
 class BSTerminalSplashScreen;
-class BaseCelerClient;
 class CCFileManager;
 class CCPortfolioModel;
 class CcTrackerClient;
 class ConnectionManager;
+class CreateTransactionDialog;
 class LoginWindow;
 class MDCallbacksQt;
 class OrderListModel;
@@ -282,6 +283,8 @@ private:
    const std::string &loginApiKeyEncrypted() const;
    void initApiKeyLogins();
    void tryLoginUsingApiKey();
+
+   void DisplayCreateTransactionDialog(std::shared_ptr<CreateTransactionDialog> dlg);
 
 private:
    enum class ChatInitState

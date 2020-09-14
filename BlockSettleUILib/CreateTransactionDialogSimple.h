@@ -35,7 +35,7 @@ public:
    ~CreateTransactionDialogSimple() override;
 
    bool switchModeRequested() const override;
-   std::shared_ptr<CreateTransactionDialog> SwithcMode() override;
+   std::shared_ptr<CreateTransactionDialog> SwitchMode() override;
 
    void preSetAddress(const QString& address);
    void preSetValue(const double value);

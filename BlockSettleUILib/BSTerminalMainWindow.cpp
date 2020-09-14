@@ -29,10 +29,10 @@
 #include "AuthAddressManager.h"
 #include "AutheIDClient.h"
 #include "AutoSignQuoteProvider.h"
+#include "Bip15xDataConnection.h"
 #include "BSMarketDataProvider.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
-#include "Bip15xDataConnection.h"
 #include "CCFileManager.h"
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
@@ -51,11 +51,12 @@
 #include "InfoDialogs/StartupDialog.h"
 #include "InfoDialogs/SupportDialog.h"
 #include "LoginWindow.h"
-#include "MDCallbacksQt.h"
 #include "MarketDataProvider.h"
+#include "MDCallbacksQt.h"
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
 #include "NotificationCenter.h"
+#include "OpenURIDialog.h"
 #include "OrderListModel.h"
 #include "PubKeyLoader.h"
 #include "QuoteProvider.h"
@@ -672,8 +673,11 @@ void BSTerminalMainWindow::acceptMDAgreement()
 void BSTerminalMainWindow::updateControlEnabledState()
 {
    if (action_send_) {
-      action_send_->setEnabled(!walletsMgr_->hdWallets().empty()
-         && armory_->isOnline() && signContainer_ && signContainer_->isReady());
+      const bool txCreationEnabled = !walletsMgr_->hdWallets().empty()
+         && armory_->isOnline() && signContainer_ && signContainer_->isReady();
+
+      action_send_->setEnabled(txCreationEnabled);
+      ui_->actionOpenURI->setEnabled(txCreationEnabled);
    }
    // Do not allow login until wallets synced (we need to check if user has primary wallet or not).
    // Should be OK for both local and remote signer.
@@ -1256,16 +1260,7 @@ void BSTerminalMainWindow::onSend()
       dlg->SelectWallet(selectedWalletId, UiUtils::WalletsTypes::None);
    }
 
-   while(true) {
-      dlg->exec();
-
-      if  ((dlg->result() != QDialog::Accepted) || !dlg->switchModeRequested()) {
-         break;
-      }
-
-      auto nextDialog = dlg->SwithcMode();
-      dlg = nextDialog;
-   }
+   DisplayCreateTransactionDialog(dlg);
 }
 
 void BSTerminalMainWindow::setupMenu()
@@ -2408,4 +2403,28 @@ void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &de
 }
 
 void BSTerminalMainWindow::openURIDialog()
-{}
+{
+   OpenURIDialog dlg{this};
+   if (dlg.exec() == QDialog::Accepted) {
+      // open create transaction dialog
+
+      const auto requestInfo = dlg.getRequestInfo();
+      // if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
+
+      // }
+   }
+}
+
+void BSTerminalMainWindow::DisplayCreateTransactionDialog(std::shared_ptr<CreateTransactionDialog> dlg)
+{
+   while(true) {
+      dlg->exec();
+
+      if  ((dlg->result() != QDialog::Accepted) || !dlg->switchModeRequested()) {
+         break;
+      }
+
+      auto nextDialog = dlg->SwitchMode();
+      dlg = nextDialog;
+   }
+}
