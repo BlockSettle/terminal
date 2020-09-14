@@ -44,12 +44,11 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , queue_(queue)
    , controlPasswordStatus_(Blocksettle::Communication::signer::ControlPasswordStatus::RequestedNew)
 {
-   signerPubKey_ = bs::network::TransportBIP15xServer::getOwnPubKey(getOwnKeyFileDir(), getOwnKeyFileName());
+   signerPubKey_ = bs::network::TransportBIP15xServer::getOwnPubKey_FromKeyFile(
+      getOwnKeyFileDir(), getOwnKeyFileName());
 
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
 
-   // Only the SignerListener's cookie will be trusted. Supply an empty set of
-   // non-cookie trusted clients.
    const auto &cbTrustedClientsSL = [] {
       return bs::network::BIP15xPeers();
    };
@@ -60,8 +59,9 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
 
    auto guiWsConn = std::make_unique<WsServerConnection>(logger, WsServerConnectionParams{});
    guiTransport_ = std::make_shared<bs::network::TransportBIP15xServer>(logger_
-      , cbTrustedClientsSL, "", "", makeServerCookie, readClientCookie
-      , absCookiePath);
+      , cbTrustedClientsSL //empty trusted clients, will be seeded with gui adatper key later
+      , false); //gui transport is always 2-way
+      
    guiConnection_ = std::make_shared<Bip15xServerConnection>(logger_
       , std::move(guiWsConn), guiTransport_);
    guiListener_ = std::make_unique<SignerAdapterListener>(this, guiConnection_
@@ -214,7 +214,6 @@ void HeadlessAppObj::startTerminalsProcessing()
       , (settings_->testNet() ? "testnet" : "mainnet"));
 
    // Set up the connection with the terminal.
-   const auto zmqContext = std::make_shared<ZmqContext>(logger_);
    std::vector<std::string> trustedTerms;
    std::string absTermCookiePath =
       SystemFilePaths::appDataLocation() + "/signerServerID";
@@ -271,10 +270,13 @@ void HeadlessAppObj::startTerminalsProcessing()
             return retKeys;
          }
 
-         // We're using a cookie. Only the one key in the cookie will be trusted.
+         // We were passed a public key at spawn, only trust this client key
          try {
-            BinaryData termIDKey = READHEX(termIDKeyStr);
+            BinaryData termIDKey = READHEX(termIDKeyStr);               
             retKeys.push_back(bs::network::BIP15xPeer("127.0.0.1", termIDKey));
+
+            logger_->debug("[{}] Setup trusted clients key store with {}"
+               , __func__, termIDKeyStr);            
          } catch (const std::exception &e) {
             logger_->error("[{}] Local connection requested but key is invalid: {}: {}"
                , __func__, termIDKeyStr, e.what());
@@ -303,7 +305,8 @@ void HeadlessAppObj::startTerminalsProcessing()
    auto terminalWsConn = std::make_unique<WsServerConnection>(logger_, params);
    // This would stop old server if any
    terminalTransport_ = std::make_shared<bs::network::TransportBIP15xServer>(logger_
-      , getClientIDKeys, ourKeyFileDir, ourKeyFileName, makeServerCookie, false
+      , getClientIDKeys, !settings_->twoWaySignerAuth()
+      , ourKeyFileDir, ourKeyFileName, makeServerCookie, false
       , absTermCookiePath);
    terminalConnection_ = std::make_unique<Bip15xServerConnection>(logger_
       , std::move(terminalWsConn), terminalTransport_);
@@ -564,4 +567,9 @@ void HeadlessAppObj::updateSettings(const Blocksettle::Communication::signer::Se
 
       guiListener_->sendStatusUpdate();
    }
+}
+
+bs::network::BIP15xServerParams HeadlessAppObj::getGuiServerParams() const
+{
+   return guiTransport_->getParams(settings_->interfacePort());
 }

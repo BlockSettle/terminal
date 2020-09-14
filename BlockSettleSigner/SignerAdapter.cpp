@@ -34,14 +34,49 @@ using namespace Blocksettle::Communication;
 
 SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<QmlBridge> &qmlBridge
-   , const NetworkType netType, int signerPort, const BinaryData* inSrvIDKey)
+   , const NetworkType netType
+   , int signerPort, const BinaryData& inSrvIDKey)
    : QObject(nullptr)
    ,logger_(logger)
    , netType_(netType)
    , qmlBridge_(qmlBridge)
 {
+   auto adapterConn = instantiateAdapterConnection(logger, signerPort, inSrvIDKey);
+
+   listener_ = std::make_shared<SignerInterfaceListener>(logger, qmlBridge_, adapterConn, this);
+   if (!adapterConn->openConnection(kLocalAddrV4, std::to_string(signerPort)
+      , listener_.get())) {
+      throw std::runtime_error("adapter connection failed");
+   }
+   signContainer_ = std::make_shared<SignAdapterContainer>(logger_, listener_);
+}
+
+SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<QmlBridge> &qmlBridge
+   , const NetworkType netType, int signerPort
+   , std::shared_ptr<DataConnection> adapterConn)
+   : QObject(nullptr)
+   ,logger_(logger)
+   , netType_(netType)
+   , qmlBridge_(qmlBridge)
+{
+   listener_ = std::make_shared<SignerInterfaceListener>(logger, qmlBridge_, adapterConn, this);
+   if (!adapterConn->openConnection(kLocalAddrV4, std::to_string(signerPort)
+      , listener_.get())) {
+      throw std::runtime_error("adapter connection failed");
+   }
+   signContainer_ = std::make_shared<SignAdapterContainer>(logger_, listener_);
+}
+
+std::shared_ptr<DataConnection> SignerAdapter::instantiateAdapterConnection(
+   const std::shared_ptr<spdlog::logger> &logger
+   , int signerPort, const BinaryData& inSrvIDKey)
+{
    bs::network::BIP15xParams params;
    params.ephemeralPeers = true;
+
+   //connection from GUI to headless signer should be 2-way
+   params.oneWayAuth = false;
 
    // When creating the client connection, we need to generate a cookie for the
    // server connection in order to enable verification. We also need to add
@@ -54,25 +89,23 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
    auto wsConnection = std::make_unique<WsDataConnection>(logger, wsParams);
    const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(
       logger, params);
-   auto adapterConn = std::make_shared<Bip15xDataConnection>(logger_, std::move(wsConnection), bip15xTransport);
 
-   if (inSrvIDKey) {
+   //add server key if provided
+   if (!inSrvIDKey.empty()) {
       std::string connectAddr = kLocalAddrV4 + ":" + std::to_string(signerPort);
-      bip15xTransport->addAuthPeer(bs::network::BIP15xPeer(connectAddr, *inSrvIDKey));
+      bip15xTransport->addAuthPeer(bs::network::BIP15xPeer(connectAddr, inSrvIDKey));
 
       // Temporary (?) kludge: Sometimes, the key gets checked with "_1" at the
       // end of the checked key name. This should be checked and corrected
       // elsewhere, but for now, add a kludge to keep the code happy.
       connectAddr = kLocalAddrV4 + ":" + std::to_string(signerPort) + "_1";
-      bip15xTransport->addAuthPeer(bs::network::BIP15xPeer(connectAddr, *inSrvIDKey));
+      bip15xTransport->addAuthPeer(bs::network::BIP15xPeer(connectAddr, inSrvIDKey));
    }
 
-   listener_ = std::make_shared<SignerInterfaceListener>(logger, qmlBridge_, adapterConn, this);
-   if (!adapterConn->openConnection(kLocalAddrV4, std::to_string(signerPort)
-      , listener_.get())) {
-      throw std::runtime_error("adapter connection failed");
-   }
-   signContainer_ = std::make_shared<SignAdapterContainer>(logger_, listener_);
+   auto adapterConn = std::make_shared<Bip15xDataConnection>(
+      logger, std::move(wsConnection), bip15xTransport);
+
+   return adapterConn;
 }
 
 SignerAdapter::~SignerAdapter()
