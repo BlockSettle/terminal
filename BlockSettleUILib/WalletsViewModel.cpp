@@ -115,7 +115,7 @@ public:
    }
 
    std::string id() const override {
-      return (!hdWallet_.id.empty() ? hdWallet_.id : std::string{});
+      return (!hdWallet_.ids.empty() ? hdWallet_.ids[0] : std::string{});
    }
 
    void setState(State state) override {
@@ -256,12 +256,12 @@ public:
 
    std::string id() const override
    {
-      return wallet_.id;
+      return *wallet_.ids.cbegin();
    }
 
    QVariant data(int col, int role) const override {
       if (role == Qt::FontRole) {
-         if (wallet_.id == viewModel_->selectedWallet()) {
+         if (*wallet_.ids.cbegin() == viewModel_->selectedWallet()) {
             QFont font;
             font.setUnderline(true);
             return font;
@@ -310,7 +310,7 @@ public:
       }
       bs::sync::WalletInfo wi;
       wi.format = bs::sync::WalletFormat::Plain;
-      wi.id = leaf.id;
+      wi.ids = leaf.ids;
       wi.name = leaf.name;
       wi.description = leaf.description;
       wi.purpose = static_cast<bs::hd::Purpose>(leaf.path.get(-2));
@@ -600,7 +600,7 @@ void WalletsViewModel::onNewWalletAdded(const std::string &walletId)
 
 void WalletsViewModel::onHDWallet(const bs::sync::WalletInfo &wi)
 {
-   const auto &wallet = rootNode_->findByWalletId(wi.id);
+   const auto &wallet = rootNode_->findByWalletId(*wi.ids.cbegin());
    int row = wallet ? wallet->row() : rootNode_->nbChildren();
    const auto hdNode = new WalletRootNode(this, wi, wi.name, wi.description
       , wi.primary ? WalletNode::Type::WalletPrimary : WalletNode::Type::WalletRegular
@@ -616,7 +616,7 @@ void WalletsViewModel::onHDWallet(const bs::sync::WalletInfo &wi)
       rootNode_->add(hdNode);
       endInsertRows();
    }
-   emit needHDWalletDetails(wi.id);
+   emit needHDWalletDetails(*wi.ids.cbegin());
 }
 
 void WalletsViewModel::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
@@ -665,14 +665,14 @@ void WalletsViewModel::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
          endInsertRows();
       }
       for (const auto &leaf : group.leaves) {
-         const auto &leafNode = groupNode->findByWalletId(leaf.id);
+         const auto &leafNode = groupNode->findByWalletId(*leaf.ids.cbegin());
          if (!leafNode) {
             beginInsertRows(createIndex(groupNode->row(), 0, static_cast<void*>(groupNode))
                , groupNode->nbChildren(), groupNode->nbChildren());
             groupNode->addLeaf(leaf, groupType);
             endInsertRows();
          }
-         emit needWalletBalances(leaf.id);
+         emit needWalletBalances(*leaf.ids.cbegin());
       }
    }
 }
@@ -712,7 +712,7 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
          if (node != nullptr) {
             const auto &wallets = node->wallets();
             if (wallets.size() == 1) {
-               selectedWalletId = wallets[0].id;
+               selectedWalletId = *wallets[0].ids.cbegin();
             }
          }
       }

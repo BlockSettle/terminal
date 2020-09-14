@@ -42,6 +42,7 @@ public:
       QString  displayedAddress;
       QString  walletName;
       QString  walletId;
+      QString  index;
       int      addrIndex = 0;
       bs::core::wallet::Type wltType = bs::core::wallet::Type::Unknown;
       bool     isExternal;
@@ -72,7 +73,11 @@ public:
       AddressRole,
       AddressCommentRole,
       IsExternalRole,
-      WalletTypeRole
+      AddressIndexRole,
+      WalletTypeRole,
+      WalletNameRole,
+      TxNRole,
+      BalanceRole
    };
 
    enum AddressType {
@@ -82,7 +87,7 @@ public:
       ExtAndNonEmptyInt = 4
    };
 
-   typedef std::vector<bs::sync::WalletInfo>   Wallets;
+   typedef std::vector<bs::sync::WalletInfo> Wallets;
 
    [[deprecated]] AddressListModel(const std::shared_ptr<bs::sync::WalletsManager> &, QObject* parent
       , AddressType addrType = AddressType::All);
@@ -95,7 +100,7 @@ public:
    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
    void setWallets(const Wallets &, bool force, bool filterBtcOnly);
-   void onAddresses(const std::string &walletId, const std::vector<bs::Address> &);
+   void onAddresses(const std::vector<bs::sync::Address> &);
    void onAddressComments(const std::string &walletId
       , const std::map<bs::Address, std::string> &);
    void onAddressBalances(const std::string &walletId

@@ -48,7 +48,7 @@ void SignAdapterContainer::syncWalletInfo(const std::function<void(std::vector<b
       woWallets_.clear();
       for (const auto &wallet : wi) {
          if (wallet.watchOnly && (wallet.format == bs::sync::WalletFormat::HD)) {
-            woWallets_.insert(wallet.id);
+            woWallets_.insert(*wallet.ids.cbegin());
          }
       }
       if (cb) {

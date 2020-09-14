@@ -42,12 +42,16 @@ struct TransactionsViewItem
 {
    bs::TXEntry txEntry;
    Tx tx;
+   std::vector<Tx>   prevTXs;
    bool initialized = false;
    QString mainAddress;
    int addressCount;
    std::vector<bs::Address> outAddresses;
    bs::sync::Transaction::Direction direction = bs::sync::Transaction::Unknown;
    std::vector<std::shared_ptr<bs::sync::Wallet>> wallets;
+   std::vector<bs::sync::AddressDetails>  inputAddresses;
+   std::vector<bs::sync::AddressDetails>  outputAddresses;
+   bs::sync::AddressDetails   changeAddress;
    QString dirStr;
    QString walletName;
    QString walletID;
@@ -91,6 +95,7 @@ public:
    ~TXNode() { clear(); }
 
    std::shared_ptr<TransactionsViewItem> item() const { return item_; }
+   void setItem(const std::shared_ptr<TransactionsViewItem> &item) { item_ = item; }
    size_t nbChildren() const { return children_.size(); }
    bool hasChildren() const { return !children_.empty(); }
    TXNode *child(int index) const;

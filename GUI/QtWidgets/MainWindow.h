@@ -62,8 +62,7 @@ namespace bs {
 
             void onHDWallet(const bs::sync::WalletInfo &);
             void onHDWalletDetails(const bs::sync::HDWalletData &);
-            void onAddresses(const std::string &walletId
-               , const std::vector<bs::Address> &);
+            void onAddresses(const std::vector<bs::sync::Address> &);
             void onAddressComments(const std::string &walletId
                , const std::map<bs::Address, std::string> &);
             void onWalletBalance(const bs::sync::WalletBalanceData &);

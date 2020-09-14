@@ -328,7 +328,9 @@ bool SignerAdapter::processStartWalletSync(const bs::message::Envelope &env)
       for (const auto &entry : wi) {
          auto wallet = msgResp->add_wallets();
          wallet->set_format((int)entry.format);
-         wallet->set_id(entry.id);
+         for (const auto &id : entry.ids) {
+            wallet->add_ids(id);
+         }
          wallet->set_name(entry.name);
          wallet->set_description(entry.description);
          wallet->set_network_type((int)entry.netType);

@@ -345,6 +345,13 @@ std::vector<bs::sync::WalletInfo> WalletsWidget::getFirstWallets() const
    }
 }
 
+void WalletsWidget::onNewBlock(unsigned int blockNum)
+{
+   for (const auto &dlg : addrDetDialogs_) {
+      dlg.second->onNewBlock(blockNum);
+   }
+}
+
 void WalletsWidget::onHDWallet(const bs::sync::WalletInfo &wi)
 {
    walletsModel_->onHDWallet(wi);
@@ -367,9 +374,25 @@ void WalletsWidget::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
    //TODO: keep wallets treeView selection
 }
 
-void WalletsWidget::onAddresses(const std::string &walletId, const std::vector<bs::Address> &addrs)
+void WalletsWidget::onAddresses(const std::vector<bs::sync::Address> &addrs)
 {
-   addressModel_->onAddresses(walletId, addrs);
+   addressModel_->onAddresses(addrs);
+}
+
+void WalletsWidget::onLedgerEntries(const std::string &filter, uint32_t totalPages
+   , uint32_t curPage, uint32_t curBlock, const std::vector<bs::TXEntry> &entries)
+{
+   const auto &itDlg = addrDetDialogs_.find(filter);
+   if (itDlg != addrDetDialogs_.end()) {
+      itDlg->second->onLedgerEntries(curBlock, entries);
+   }
+}
+
+void WalletsWidget::onTXDetails(const std::vector<bs::sync::TXWalletDetails> &details)
+{
+   for (const auto &dlg : addrDetDialogs_) {
+      dlg.second->onTXDetails(details);
+   }
 }
 
 void WalletsWidget::onAddressComments(const std::string &walletId
@@ -408,7 +431,7 @@ void WalletsWidget::showWalletProperties(const QModelIndex& index)
    }
 
    const auto &hdWallet = node->hdWallet();
-   if (!hdWallet.id.empty()) {
+   if (!(*hdWallet.ids.cbegin()).empty()) {
       if (walletsManager_ && armory_ && signingContainer_ && appSettings_ && connectionManager_ && assetManager_) {
          RootWalletPropertiesDialog(logger_, hdWallet, walletsManager_, armory_, signingContainer_
             , walletsModel_, appSettings_, connectionManager_, assetManager_, this).exec();
@@ -430,20 +453,46 @@ void WalletsWidget::showWalletProperties(const QModelIndex& index)
 void WalletsWidget::showAddressProperties(const QModelIndex& index)
 {
    auto sourceIndex = addressSortFilterModel_->mapToSource(index);
-   const auto walletId = addressModel_->data(sourceIndex, AddressListModel::WalletIdRole).toString().toStdString();
-   const auto wallet = walletsManager_->getWalletById(walletId);
-   if (!wallet || (wallet->type() == bs::core::wallet::Type::Authentication)) {
-      return;
+   const auto &walletId = addressModel_->data(sourceIndex, AddressListModel::WalletIdRole).toString().toStdString();
+   if (walletsManager_ && armory_) {
+      const auto &wallet = walletsManager_->getWalletById(walletId);
+      if (!wallet || (wallet->type() == bs::core::wallet::Type::Authentication)) {
+         return;
+      }
+
+      const auto &addresses = wallet->getUsedAddressList();
+      const size_t addrIndex = addressModel_->data(sourceIndex, AddressListModel::AddrIndexRole).toUInt();
+      const auto address = (addrIndex < addresses.size()) ? addresses[addrIndex] : bs::Address();
+
+      wallet->onBalanceAvailable([this, address, wallet] {
+         auto dialog = new AddressDetailDialog(address, wallet, walletsManager_, armory_, logger_, this);
+         QMetaObject::invokeMethod(this, [dialog] { dialog->exec(); });
+      });
    }
-
-   const auto &addresses = wallet->getUsedAddressList();
-   const size_t addrIndex = addressModel_->data(sourceIndex, AddressListModel::AddrIndexRole).toUInt();
-   const auto address = (addrIndex < addresses.size()) ? addresses[addrIndex] : bs::Address();
-
-   wallet->onBalanceAvailable([this, address, wallet] {
-      auto dialog = new AddressDetailDialog(address, wallet, walletsManager_, armory_, logger_, this);
-      QMetaObject::invokeMethod(this, [dialog] { dialog->exec(); });
-   });
+   else {
+      const auto &addrStr = addressModel_->data(sourceIndex, AddressListModel::AddressRole).toString().toStdString();
+      const auto &ledgerFilter = walletId + "." + addrStr;
+      emit needLedgerEntries(ledgerFilter);
+      const auto wltType = static_cast<bs::core::wallet::Type>(addressModel_->data(sourceIndex, AddressListModel::WalletTypeRole).toInt());
+      const auto txn = addressModel_->data(sourceIndex, AddressListModel::TxNRole).toInt();
+      const uint64_t balance = addressModel_->data(sourceIndex, AddressListModel::BalanceRole).toULongLong();
+      const auto &walletName = addressModel_->data(sourceIndex, AddressListModel::WalletNameRole).toString();
+      const auto &index = addressModel_->data(sourceIndex, AddressListModel::AddressIndexRole).toString().toStdString();
+      const auto &comment = addressModel_->data(sourceIndex, AddressListModel::AddressCommentRole).toString().toStdString();
+      try {
+         const auto &address = bs::Address::fromAddressString(addrStr);
+         auto dialog = new AddressDetailDialog(address, logger_, wltType, balance
+            , txn, walletName, index, comment, this);
+         addrDetDialogs_[ledgerFilter] = dialog;
+         connect(dialog, &AddressDetailDialog::needTXDetails, this, &WalletsWidget::needTXDetails);
+         connect(dialog, &QDialog::finished, [dialog, ledgerFilter, this](int) {
+            dialog->deleteLater();
+            addrDetDialogs_.erase(ledgerFilter);
+         });
+         dialog->show();
+      }
+      catch (const std::exception &) {}
+   }
 }
 
 void WalletsWidget::onAddressContextMenu(const QPoint &p)
@@ -637,7 +686,7 @@ void WalletsWidget::onWalletBalanceChanged(std::string walletId)
    const auto &selectedWallets = getSelectedWallets();
    bool changedSelected = false;
    for (const auto &wallet : selectedWallets) {
-      if (wallet.id == walletId) {
+      if (*wallet.ids.cbegin() == walletId) {
          changedSelected = true;
          break;
       }

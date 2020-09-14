@@ -240,6 +240,80 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
    resize(minimumSize());
 }
 
+TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &txi
+   , QWidget* parent)
+   : QDialog(parent)
+   , ui_(new Ui::TransactionDetailDialog())
+{
+   ui_->setupUi(this);
+   itemSender_ = new QTreeWidgetItem(QStringList(tr("Sender")));
+   itemReceiver_ = new QTreeWidgetItem(QStringList(tr("Receiver")));
+
+   ui_->labelAmount->setText(txi->amountStr);
+   ui_->labelDirection->setText(tr(bs::sync::Transaction::toString(txi->direction)));
+   ui_->labelAddress->setText(txi->mainAddress);
+
+   if (txi->confirmations > 0) {
+      ui_->labelHeight->setText(QString::number(txi->txEntry.blockNum));
+   } else {
+      if (txi->txEntry.isRBF) {
+         ui_->labelFlag->setText(tr("RBF eligible"));
+      } else if (txi->isCPFP) {
+         ui_->labelFlag->setText(tr("CPFP eligible"));
+      }
+   }
+
+   ui_->treeAddresses->addTopLevelItem(itemSender_);
+   ui_->treeAddresses->addTopLevelItem(itemReceiver_);
+   ui_->labelComment->setText(txi->comment);
+
+   if (txi->tx.isInitialized()) {
+      ui_->labelSize->setText(QString::number(txi->tx.getTxWeight()));
+   }
+
+   int64_t value = 0;
+   for (const auto &addrDet : txi->inputAddresses) {
+      addInputAddress(addrDet);
+      value += addrDet.value;
+   }
+   if (!txi->changeAddress.address.empty()) {
+      addChangeAddress(txi->changeAddress);
+      value -= txi->changeAddress.value;
+   }
+   for (const auto &addrDet : txi->outputAddresses) {
+      addOutputAddress(addrDet);
+      value -= addrDet.value;
+   }
+
+   ui_->labelFee->setText(UiUtils::displayAmount(value));
+   ui_->labelSb->setText(
+      QString::number((float)value / (float)txi->tx.getTxWeight()));
+
+   for (int i = 0; i < ui_->treeAddresses->columnCount(); ++i) {
+      ui_->treeAddresses->resizeColumnToContents(i);
+      ui_->treeAddresses->setColumnWidth(i,
+         ui_->treeAddresses->columnWidth(i) + extraTreeWidgetColumnMargin);
+   }
+
+   ui_->treeAddresses->expandItem(itemSender_);
+   ui_->treeAddresses->expandItem(itemReceiver_);
+   adjustSize();
+
+   ui_->labelConfirmations->setText(QString::number(txi->confirmations));
+
+   const bool bigEndianHash = true;
+   ui_->labelHash->setText(QString::fromStdString(txi->txEntry.txHash.toHexStr(bigEndianHash)));
+   ui_->labelTime->setText(UiUtils::displayDateTime(QDateTime::fromTime_t(txi->txEntry.txTime)));
+
+   ui_->labelWalletName->setText(txi->walletName.isEmpty() ? tr("Unknown") : txi->walletName);
+
+   // allow address column to be copied to clipboard with right click
+   ui_->treeAddresses->copyToClipboardColumns_.append(2);
+
+   setMinimumHeight(minHeightAtRendering);
+   resize(minimumSize());
+}
+
 TransactionDetailDialog::~TransactionDetailDialog() = default;
 
 QSize TransactionDetailDialog::minimumSize() const
@@ -357,6 +431,66 @@ void TransactionDetailDialog::addAddress(TxOut out    // can't use const ref due
    item->addChild(txItem);
 }
 
+void TransactionDetailDialog::addInputAddress(const bs::sync::AddressDetails &addrDet)
+{
+   const auto &addressType = tr("Input");
+   const auto &displayedAddress = QString::fromStdString(addrDet.address.display());
+   const auto &valueStr = QString::fromStdString(addrDet.valueStr);
+   QStringList items;
+   items << addressType << valueStr << displayedAddress << QString::fromStdString(addrDet.walletName);
+
+   auto item = new QTreeWidgetItem(items);
+   item->setData(0, Qt::UserRole, displayedAddress);
+   item->setData(1, Qt::UserRole, (qulonglong)addrDet.value);
+   itemSender_->addChild(item);
+   const auto &txHashStr = QString::fromStdString(fmt::format("{}/{}"
+      , addrDet.outHash.toHexStr(true), addrDet.outIndex));
+   auto txItem = new QTreeWidgetItem(QStringList() << getScriptType(addrDet.type)
+      << QString::number(addrDet.value) << txHashStr);
+   txItem->setData(0, Qt::UserRole, txHashStr);
+   item->addChild(txItem);
+}
+
+void TransactionDetailDialog::addChangeAddress(const bs::sync::AddressDetails &addrDet)
+{
+   const auto &addressType = tr("Change");
+   const auto &displayedAddress = QString::fromStdString(addrDet.address.display());
+   const auto &valueStr = QString::fromStdString(addrDet.valueStr);
+   QStringList items;
+   items << addressType << valueStr << displayedAddress << QString::fromStdString(addrDet.walletName);
+
+   auto item = new QTreeWidgetItem(items);
+   item->setData(0, Qt::UserRole, displayedAddress);
+   item->setData(1, Qt::UserRole, (qulonglong)addrDet.value);
+   itemSender_->addChild(item);
+   const auto &txHashStr = QString::fromStdString(fmt::format("{}/{}"
+      , addrDet.outHash.toHexStr(true), addrDet.outIndex));
+   auto txItem = new QTreeWidgetItem(QStringList() << getScriptType(addrDet.type)
+      << QString::number(addrDet.value) << txHashStr);
+   txItem->setData(0, Qt::UserRole, txHashStr);
+   item->addChild(txItem);
+}
+
+void TransactionDetailDialog::addOutputAddress(const bs::sync::AddressDetails &addrDet)
+{
+   const auto &addressType = tr("Output");
+   const auto &displayedAddress = QString::fromStdString(addrDet.address.display());
+   const auto &valueStr = QString::fromStdString(addrDet.valueStr);
+   QStringList items;
+   items << addressType << valueStr << displayedAddress << QString::fromStdString(addrDet.walletName);
+
+   auto item = new QTreeWidgetItem(items);
+   item->setData(0, Qt::UserRole, displayedAddress);
+   item->setData(1, Qt::UserRole, (qulonglong)addrDet.value);
+   itemReceiver_->addChild(item);
+   const auto &txHashStr = QString::fromStdString(fmt::format("{}/{}"
+      , addrDet.outHash.toHexStr(true), addrDet.outIndex));
+   auto txItem = new QTreeWidgetItem(QStringList() << getScriptType(addrDet.type)
+      << QString::number(addrDet.value) << txHashStr);
+   txItem->setData(0, Qt::UserRole, txHashStr);
+   item->addChild(txItem);
+}
+
 QString TransactionDetailDialog::getScriptType(const TxOut &out)
 {
    switch (out.getScriptType()) {
@@ -369,6 +503,22 @@ QString TransactionDetailDialog::getScriptType(const TxOut &out)
       case TXOUT_SCRIPT_P2WPKH:        return tr("p2wpkh");
       case TXOUT_SCRIPT_P2WSH:         return tr("p2wsh");
       case TXOUT_SCRIPT_OPRETURN:      return tr("op-return");
+   }
+   return tr("unknown");
+}
+
+QString TransactionDetailDialog::getScriptType(TXOUT_SCRIPT_TYPE scrType)
+{
+   switch (scrType) {
+   case TXOUT_SCRIPT_STDHASH160:    return tr("hash160");
+   case TXOUT_SCRIPT_STDPUBKEY65:   return tr("pubkey65");
+   case TXOUT_SCRIPT_STDPUBKEY33:   return tr("pubkey33");
+   case TXOUT_SCRIPT_MULTISIG:      return tr("multisig");
+   case TXOUT_SCRIPT_P2SH:          return tr("p2sh");
+   case TXOUT_SCRIPT_NONSTANDARD:   return tr("non-std");
+   case TXOUT_SCRIPT_P2WPKH:        return tr("p2wpkh");
+   case TXOUT_SCRIPT_P2WSH:         return tr("p2wsh");
+   case TXOUT_SCRIPT_OPRETURN:      return tr("op-return");
    }
    return tr("unknown");
 }

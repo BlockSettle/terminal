@@ -477,16 +477,17 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
       break;
 
    case WalletsMessage::kWalletAddresses: {
-      std::vector<bs::Address> addresses;
+      std::vector<bs::sync::Address> addresses;
       addresses.reserve(msg.wallet_addresses().addresses_size());
       for (const auto &addr : msg.wallet_addresses().addresses()) {
          try {
-            addresses.emplace_back(std::move(bs::Address::fromAddressString(addr)));
+            addresses.push_back({ std::move(bs::Address::fromAddressString(addr.address()))
+               , addr.index(), addr.wallet_id() });
          }
          catch (const std::exception &) {}
       }
-      QMetaObject::invokeMethod(mainWindow_, [this, addresses, walletId=msg.wallet_addresses().wallet_id()] {
-         mainWindow_->onAddresses(walletId, addresses);
+      QMetaObject::invokeMethod(mainWindow_, [this, addresses] {
+         mainWindow_->onAddresses(addresses);
       });
    }
       break;
@@ -775,7 +776,8 @@ void QtGuiAdapter::onNeedAddrComments(const std::string &walletId
    auto msgReq = msg.mutable_get_addr_comments();
    msgReq->set_wallet_id(walletId);
    for (const auto &addr : addrs) {
-      msgReq->add_addresses(addr.display());
+      auto addrReq = msgReq->add_addresses();
+      addrReq->set_address(addr.display());
    }
    Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
    pushFill(env);
@@ -818,7 +820,7 @@ void QtGuiAdapter::onNeedTXDetails(const const std::vector<bs::sync::TXWallet> &
 
 void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
 {
-   hdWallets_[wi.id] = wi;
+   hdWallets_[*wi.ids.cbegin()] = wi;
    if (mainWindow_) {
       QMetaObject::invokeMethod(mainWindow_, [this, wi] {
          mainWindow_->onHDWallet(wi);
@@ -850,17 +852,61 @@ bool QtGuiAdapter::processTXDetails(const WalletsMessage_TXDetailsResponse &resp
 {
    std::vector<bs::sync::TXWalletDetails> txDetails;
    for (const auto &resp : response.responses()) {
-      std::vector<bs::Address> outAddrs;
-      for (const auto &addrStr : resp.out_addresses()) {
-         try {
-            outAddrs.emplace_back(std::move(bs::Address::fromAddressString(addrStr)));
-         }
-         catch (const std::exception &) {}
-      }
-      txDetails.push_back({ BinaryData::fromString(resp.tx_hash()), resp.wallet_id()
+      bs::sync::TXWalletDetails txDet{ BinaryData::fromString(resp.tx_hash()), resp.wallet_id()
          , resp.wallet_name(), static_cast<bs::core::wallet::Type>(resp.wallet_type())
          , static_cast<bs::sync::Transaction::Direction>(resp.direction())
-         , resp.comment(), resp.valid(), resp.amount(), outAddrs });
+         , resp.comment(), resp.valid(), resp.amount() };
+
+      const auto &ownTxHash = BinaryData::fromString(resp.tx_hash());
+      try {
+         if (!resp.tx().empty()) {
+            Tx tx(BinaryData::fromString(resp.tx()));
+            if (tx.isInitialized()) {
+               txDet.tx = std::move(tx);
+            }
+         }
+      } catch (const std::exception &e) {
+         logger_->warn("[QtGuiAdapter::processTXDetails] TX deser error: {}", e.what());
+      }
+      for (const auto &addrStr : resp.out_addresses()) {
+         try {
+            txDet.outAddresses.emplace_back(std::move(bs::Address::fromAddressString(addrStr)));
+         } catch (const std::exception &e) {
+            logger_->warn("[QtGuiAdapter::processTXDetails] out deser error: {}", e.what());
+         }
+      }
+      for (const auto &inAddr : resp.input_addresses()) {
+         try {
+            txDet.inputAddresses.push_back({ bs::Address::fromAddressString(inAddr.address())
+               , inAddr.value(), inAddr.value_string(), inAddr.wallet_name()
+               , static_cast<TXOUT_SCRIPT_TYPE>(inAddr.script_type())
+               , BinaryData::fromString(inAddr.out_hash()), inAddr.out_index() });
+         } catch (const std::exception &e) {
+            logger_->warn("[QtGuiAdapter::processTXDetails] input deser error: {}", e.what());
+         }
+      }
+      for (const auto &outAddr : resp.output_addresses()) {
+         try {
+            txDet.outputAddresses.push_back({ bs::Address::fromAddressString(outAddr.address())
+               , outAddr.value(), outAddr.value_string(), outAddr.wallet_name()
+               , static_cast<TXOUT_SCRIPT_TYPE>(outAddr.script_type()), ownTxHash
+               , outAddr.out_index() });
+         } catch (const std::exception &e) { // OP_RETURN data for valueStr
+            txDet.outputAddresses.push_back({ bs::Address{}
+               , outAddr.value(), outAddr.address(), outAddr.wallet_name()
+               , static_cast<TXOUT_SCRIPT_TYPE>(outAddr.script_type()), ownTxHash
+               , outAddr.out_index() });
+         }
+      }
+      try {
+         txDet.changeAddress = { bs::Address::fromAddressString(resp.change_address().address())
+            , resp.change_address().value(), resp.change_address().value_string()
+            , resp.change_address().wallet_name()
+            , static_cast<TXOUT_SCRIPT_TYPE>(resp.change_address().script_type())
+            , ownTxHash, resp.change_address().out_index() };
+      }
+      catch (const std::exception &) {}
+      txDetails.push_back(txDet);
    }
    QMetaObject::invokeMethod(mainWindow_, [this, txDetails] {
       mainWindow_->onTXDetails(txDetails);

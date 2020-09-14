@@ -114,7 +114,6 @@ AddressListModel::AddressRow AddressListModel::createRow(const bs::Address &addr
 //      row.comment = QString::fromStdString(wallet->getAddressComment(addr));
       row.displayedAddress = QString::fromStdString(addr.display());
       row.walletName = QString::fromStdString(wallet.name);
-      row.walletId = QString::fromStdString(wallet.id);
 //      row.isExternal = wallet->isExternalAddress(addr);
    }
    row.wltType = wallet.type;
@@ -160,6 +159,7 @@ void AddressListModel::updateWallet(const bs::sync::WalletInfo &wallet)
    if (wallet.type == bs::core::wallet::Type::Authentication) {
       const auto addr = bs::Address();
       auto row = createRow(addr, wallet);
+      row.walletId = QString::fromStdString(*wallet.ids.cbegin());
       beginInsertRows(QModelIndex(), addressRows_.size(), addressRows_.size());
       addressRows_.emplace_back(std::move(row));
       endInsertRows();
@@ -170,18 +170,18 @@ void AddressListModel::updateWallet(const bs::sync::WalletInfo &wallet)
       std::vector<bs::Address> addressList;
       switch (addrType_) {
       case AddressType::External:
-         emit needExtAddresses(wallet.id);
+         emit needExtAddresses(*wallet.ids.cbegin());
 //         addressList = wallet->getExtAddressList();
          break;
       case AddressType::Internal:
-         emit needIntAddresses(wallet.id);
+         emit needIntAddresses(*wallet.ids.cbegin());
 //         addressList = wallet->getIntAddressList();
          break;
       case AddressType::All:
       case AddressType::ExtAndNonEmptyInt:
       default:
 //         addressList = wallet->getUsedAddressList();
-         emit needUsedAddresses(wallet.id);
+         emit needUsedAddresses(*wallet.ids.cbegin());
          break;
       }
 
@@ -199,24 +199,31 @@ void AddressListModel::updateWallet(const bs::sync::WalletInfo &wallet)
    }
 }
 
-void AddressListModel::onAddresses(const std::string &walletId
-   , const std::vector<bs::Address> &addrs)
+void AddressListModel::onAddresses(const std::vector<bs::sync::Address> &addrs)
 {
-   const auto &itWallet = std::find_if(wallets_.cbegin(), wallets_.cend()
-      , [walletId](const bs::sync::WalletInfo &wallet) {
-      return (wallet.id == walletId);
-   });
-   if ((itWallet == wallets_.cend()) || addrs.empty()) {
-      return;
-   }
-   const auto &itWalletBal = pooledBalances_.find(walletId);
+   std::string mainWalletId;
    beginInsertRows(QModelIndex(), addressRows_.size()
       , addressRows_.size() + addrs.size() - 1);
    for (const auto &addr : addrs) {
-      auto row = createRow(addr, *itWallet);
+      const auto &itWallet = std::find_if(wallets_.cbegin(), wallets_.cend()
+         , [walletId = addr.walletId](const bs::sync::WalletInfo &wi){
+         for (const auto &id : wi.ids) {
+            if (id == walletId) {
+               return true;
+            }
+         }
+         return false;
+      });
+      auto row = createRow(addr.address, *itWallet);
+      row.index = QString::fromStdString(addr.index);
       row.addrIndex = addressRows_.size();
+      row.walletId = QString::fromStdString(addr.walletId);
+      if (mainWalletId.empty()) {
+         mainWalletId = *(*itWallet).ids.cbegin();
+      }
+      const auto &itWalletBal = pooledBalances_.find(mainWalletId);
       if (itWalletBal != pooledBalances_.end()) {
-         const auto &itAddrBal = itWalletBal->second.find(addr.id());
+         const auto &itAddrBal = itWalletBal->second.find(addr.address.id());
          if (itAddrBal == itWalletBal->second.end()) {
             row.balance = 0;
             row.transactionCount = 0;
@@ -226,23 +233,22 @@ void AddressListModel::onAddresses(const std::string &walletId
             row.transactionCount = itAddrBal->second.txn;
          }
       }
-      indexByAddr_[addr.id()] = row.addrIndex;
+      indexByAddr_[addr.address.id()] = row.addrIndex;
       addressRows_.push_back(std::move(row));
    }
    endInsertRows();
-   emit needAddrComments(walletId, addrs);
+
+   std::vector<bs::Address> addrsReq;
+   addrsReq.reserve(addrs.size());
+   for (const auto &addr : addrs) {
+      addrsReq.push_back(addr.address);
+   }
+   emit needAddrComments(mainWalletId, addrsReq);
 }
 
 void AddressListModel::onAddressComments(const std::string &walletId
    , const std::map<bs::Address, std::string> &comments)
 {
-   const auto &itWallet = std::find_if(wallets_.cbegin(), wallets_.cend()
-      , [walletId](const bs::sync::WalletInfo &wallet) {
-      return (wallet.id == walletId);
-   });
-   if ((itWallet == wallets_.cend()) || comments.empty()) {
-      return;
-   }
    for (const auto &comm : comments) {
       const auto &itAddr = indexByAddr_.find(comm.first.id());
       if (itAddr == indexByAddr_.end()) {
@@ -269,7 +275,7 @@ void AddressListModel::onAddressBalances(const std::string &walletId
    lbdSaveBalToPool();
    const auto &itWallet = std::find_if(wallets_.cbegin(), wallets_.cend()
       , [walletId](const bs::sync::WalletInfo &wallet) {
-      return (wallet.id == walletId);
+      return (*wallet.ids.cbegin() == walletId);
    });
    if (itWallet == wallets_.cend()) {  // balances arrived before wallet was set
       return;
@@ -531,13 +537,27 @@ QVariant AddressListModel::data(const QModelIndex& index, int role) const
       case AddressCommentRole:
          return row.comment;
 
+      case AddressIndexRole:
+         return row.index;
+
       case WalletTypeRole:
          for (const auto &wallet : wallets_) {
-            if (wallet.id == row.walletId.toStdString()) {
-               return static_cast<int>(wallet.type);
+            for (const auto &id : wallet.ids) {
+               if (id == row.walletId.toStdString()) {
+                  return static_cast<int>(wallet.type);
+               }
             }
          }
          return 0;
+
+      case WalletNameRole:
+         return row.walletName;
+
+      case TxNRole:
+         return row.transactionCount;
+
+      case BalanceRole:
+         return row.balance;
 
       case Qt::ToolTipRole:
          if ((index.column() == ColumnComment) && row.isMultiLineComment()) {

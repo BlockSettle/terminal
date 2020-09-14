@@ -1105,8 +1105,8 @@ void TransactionsViewModel::onNewBlock(unsigned int curBlock)
       , index(rootNode_->nbChildren() - 1, static_cast<int>(Columns::Status)));
 }
 
-void TransactionsViewModel::onLedgerEntries(const std::string &filter, uint32_t totalPages
-   , uint32_t curPage, uint32_t curBlock, const std::vector<bs::TXEntry> &entries)
+void TransactionsViewModel::onLedgerEntries(const std::string &, uint32_t
+   , uint32_t, uint32_t curBlock, const std::vector<bs::TXEntry> &entries)
 {
    if (!curBlock_) {
       curBlock_ = curBlock;
@@ -1119,14 +1119,30 @@ void TransactionsViewModel::onLedgerEntries(const std::string &filter, uint32_t 
       return;
    }
 
-   beginInsertRows(QModelIndex(), rootNode_->nbChildren()
-      , rootNode_->nbChildren() + entries.size() - 1);
+   std::vector<TXNode *> newNodes;
    for (const auto &entry : entries) {
       const auto &item = createTxItem(entry);
-      itemIndex_[{item->txEntry.txHash, item->walletID.toStdString()}] = rootNode_->nbChildren();
-      rootNode_->add(new TXNode(item));
+      const auto &itItem = itemIndex_.find({entry.txHash, item->walletID.toStdString()});
+      if (itItem == itemIndex_.end()) {
+         newNodes.push_back(new TXNode(item));
+      }
+      else {
+         const int row = itItem->second;
+         rootNode_->children()[row]->setItem(item);
+         emit dataChanged(index(row, static_cast<int>(Columns::first))
+            , index(row, static_cast<int>(Columns::last)));
+      }
    }
-   endInsertRows();
+
+   if (!newNodes.empty()) {
+      beginInsertRows(QModelIndex(), rootNode_->nbChildren()
+         , rootNode_->nbChildren() + newNodes.size() - 1);
+      for (const auto &node : newNodes) {
+         itemIndex_[{node->item()->txEntry.txHash, node->item()->walletID.toStdString()}] = rootNode_->nbChildren();
+         rootNode_->add(node);
+      }
+      endInsertRows();
+   }
 
    std::vector<bs::sync::TXWallet> txWallet;
    txWallet.reserve(entries.size());
@@ -1142,7 +1158,6 @@ void TransactionsViewModel::onTXDetails(const std::vector<bs::sync::TXWalletDeta
    for (const auto &tx : txDet) {
       const auto &itIndex = itemIndex_.find({tx.txHash, tx.walletId});
       if (itIndex == itemIndex_.end()) {
-         logger_->warn("[{}] invalid TX: {}", __func__, tx.txHash.toHexStr(true));
          continue;
       }
       const int row = itIndex->second;
@@ -1155,7 +1170,9 @@ void TransactionsViewModel::onTXDetails(const std::vector<bs::sync::TXWalletDeta
       item->direction = tx.direction;
       item->dirStr = QObject::tr(bs::sync::Transaction::toStringDir(tx.direction));
       item->isValid = tx.isValid ? bs::sync::TxValidity::Valid : bs::sync::TxValidity::Invalid;
-      item->comment = QString::fromStdString(tx.comment);
+      if (!tx.comment.empty()) {
+         item->comment = QString::fromStdString(tx.comment);
+      }
       item->amountStr = QString::fromStdString(tx.amount);
 
       item->addressCount = tx.outAddresses.size();
@@ -1172,6 +1189,11 @@ void TransactionsViewModel::onTXDetails(const std::vector<bs::sync::TXWalletDeta
       }
       emit dataChanged(index(row, static_cast<int>(Columns::Wallet))
          , index(row, static_cast<int>(Columns::Comment)));
+
+      item->tx = tx.tx;
+      item->inputAddresses = tx.inputAddresses;
+      item->outputAddresses = tx.outputAddresses;
+      item->changeAddress = tx.changeAddress;
    }
 }
 

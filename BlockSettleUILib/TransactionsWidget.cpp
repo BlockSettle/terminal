@@ -536,8 +536,17 @@ void TransactionsWidget::showTransactionDetails(const QModelIndex& index)
       return;
    }
 
-   TransactionDetailDialog transactionDetailDialog(txItem, walletsManager_, armory_, this);
-   transactionDetailDialog.exec();
+   if (walletsManager_ && armory_) {
+      TransactionDetailDialog transactionDetailDialog(txItem, walletsManager_, armory_, this);
+      transactionDetailDialog.exec();
+   }
+   else {
+      auto txDetailDialog = new TransactionDetailDialog(txItem, this);
+      connect(txDetailDialog, &QDialog::finished, [txDetailDialog](int) {
+         txDetailDialog->deleteLater();
+      });
+      txDetailDialog->show();
+   }
 }
 
 void TransactionsWidget::updateResultCount()

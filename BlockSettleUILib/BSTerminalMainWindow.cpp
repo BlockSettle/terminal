@@ -1205,12 +1205,12 @@ void BSTerminalMainWindow::onGenerateAddress()
    if (ui_->tabWidget->currentWidget() == ui_->widgetWallets) {
       auto wallets = ui_->widgetWallets->getSelectedWallets();
       if (!wallets.empty()) {
-         selWalletId = wallets[0].id;
+         selWalletId = wallets[0].ids[0];
       } else {
          wallets = ui_->widgetWallets->getFirstWallets();
 
          if (!wallets.empty()) {
-            selWalletId = wallets[0].id;
+            selWalletId = wallets[0].ids[0];
          }
       }
    }
@@ -1232,14 +1232,14 @@ void BSTerminalMainWindow::onSend()
 
    if (ui_->tabWidget->currentWidget() == ui_->widgetWallets) {
       auto wallet = ui_->widgetWallets->getSelectedHdWallet();
-      if (wallet.id.empty()) {
+      if (wallet.ids.empty()) {
          const auto &priWallet = walletsMgr_->getPrimaryWallet();
          if (priWallet) {
-            wallet.id = priWallet->walletId();
+            wallet.ids.push_back(priWallet->walletId());
          }
       }
-      if (!wallet.id.empty()) {
-         selectedWalletId = wallet.id;
+      if (!wallet.ids.empty()) {
+         selectedWalletId = wallet.ids[0];
       }
    }
 

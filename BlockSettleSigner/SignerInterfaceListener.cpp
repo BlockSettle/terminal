@@ -421,7 +421,7 @@ void SignerInterfaceListener::onSyncHDWallet(const std::string &data, bs::signer
    for (const auto &group : response.groups()) {
       std::vector<bs::sync::HDWalletData::Leaf> leaves;
       for (const auto &leaf : group.leaves()) {
-         leaves.push_back({ leaf.id(), bs::hd::Path::fromString(leaf.path())
+         leaves.push_back({ {leaf.id()}, bs::hd::Path::fromString(leaf.path())
             , std::string{}, std::string{}, false
             , BinaryData::fromString(leaf.extra_data()) });
       }

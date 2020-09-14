@@ -46,7 +46,7 @@ public:
       auto node = dynamic_cast<WalletsViewModel*>(sourceModel())->getNode(index);
 
       auto wallet = node->hdWallet();
-      return (node->hdWallet().id == walletId_);
+      return (*node->hdWallet().ids.cbegin() == walletId_);
    }
 
 private:
@@ -78,7 +78,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
 
    ui_->labelEncRank->clear();
 
-   walletFilter_ = new CurrentWalletFilter(wallet.id, this);
+   walletFilter_ = new CurrentWalletFilter(*wallet.ids.cbegin(), this);
    walletFilter_->setSourceModel(walletsModel);
    ui_->treeViewWallets->setModel(walletFilter_);
 
@@ -111,7 +111,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
       }
       connect(signingContainer_.get(), &SignContainer::QWalletInfo, this, &RootWalletPropertiesDialog::onHDWalletInfo);
 
-      infoReqId_ = signingContainer_->GetInfo(wallet_.id);
+      infoReqId_ = signingContainer_->GetInfo(*wallet_.ids.cbegin());
    }
 
    ui_->treeViewWallets->expandAll();
@@ -131,7 +131,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
 
    ui_->labelEncRank->clear();
 
-   walletFilter_ = new CurrentWalletFilter(wallet.id, this);
+   walletFilter_ = new CurrentWalletFilter(*wallet.ids.cbegin(), this);
    walletFilter_->setSourceModel(walletsModel);
    ui_->treeViewWallets->setModel(walletFilter_);
 
@@ -243,7 +243,7 @@ void RootWalletPropertiesDialog::onWalletSelected()
       auto node = dynamic_cast<WalletsViewModel*>(walletFilter_->sourceModel())->getNode(modelIndex);
       const auto wallet = node->hdWallet();
 
-      if (!wallet.id.empty()) {
+      if (!wallet.ids.empty()) {
          updateWalletDetails(wallet);
       } else {
          const auto wallets = node->wallets();
@@ -257,7 +257,7 @@ void RootWalletPropertiesDialog::onWalletSelected()
 
 void RootWalletPropertiesDialog::updateWalletDetails(const bs::sync::WalletInfo &wi)
 {
-   ui_->labelWalletId->setText(QString::fromStdString(wi.id));
+   ui_->labelWalletId->setText(QString::fromStdString(*wi.ids.cbegin()));
    ui_->labelWalletName->setText(QString::fromStdString(wi.name));
    ui_->labelDescription->setText(QString::fromStdString(wi.description));
 
@@ -280,13 +280,13 @@ void RootWalletPropertiesDialog::updateWalletDetails(const bs::sync::WalletInfo 
    };
 
    if (wi.format == bs::sync::WalletFormat::HD) {
-      emit needHDWalletDetails(wi.id);
+      emit needHDWalletDetails(*wi.ids.cbegin());
    }
    else {
       ui_->labelAddressesActive->setText(tr("Loading..."));
       ui_->labelUTXOs->setText(tr("Loading..."));
-      emit needWalletBalances(wi.id);
-      emit needSpendableUTXOs(wi.id);
+      emit needWalletBalances(*wi.ids.cbegin());
+      emit needSpendableUTXOs(*wi.ids.cbegin());
    }
 }
 
@@ -344,7 +344,7 @@ void RootWalletPropertiesDialog::onRescanBlockchain()
       startWalletScan();
    }*/
 //   wallet_->startRescan();  //TODO: reimplement
-   emit startRescan(wallet_.id);
+   emit startRescan(*wallet_.ids.cbegin());
    accept();
 }
 

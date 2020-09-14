@@ -166,6 +166,7 @@ void MainWindow::onNewBlock(int state, unsigned int blockNum)
    if (txModel_) {
       txModel_->onNewBlock(blockNum);
    }
+   ui_->widgetWallets->onNewBlock(blockNum);
 }
 
 void MainWindow::onWalletsReady()
@@ -192,10 +193,9 @@ void MainWindow::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
    ui_->widgetWallets->onHDWalletDetails(hdWallet);
 }
 
-void MainWindow::onAddresses(const std::string &walletId
-   , const std::vector<bs::Address> &addrs)
+void MainWindow::onAddresses(const std::vector<bs::sync::Address> &addrs)
 {
-   ui_->widgetWallets->onAddresses(walletId, addrs);
+   ui_->widgetWallets->onAddresses(addrs);
 }
 
 void MainWindow::onAddressComments(const std::string &walletId
@@ -215,11 +215,15 @@ void MainWindow::onLedgerEntries(const std::string &filter, uint32_t totalPages
    if (filter.empty()) {
       txModel_->onLedgerEntries(filter, totalPages, curPage, curBlock, entries);
    }
+   else {
+      ui_->widgetWallets->onLedgerEntries(filter, totalPages, curPage, curBlock, entries);
+   }
 }
 
 void MainWindow::onTXDetails(const std::vector<bs::sync::TXWalletDetails> &txDet)
 {
    txModel_->onTXDetails(txDet);
+   ui_->widgetWallets->onTXDetails(txDet);
 }
 
 void MainWindow::showStartupDialog(bool showLicense)
@@ -542,14 +546,13 @@ void MainWindow::onSend()
 
    if (ui_->tabWidget->currentWidget() == ui_->widgetWallets) {
       auto wallet = ui_->widgetWallets->getSelectedHdWallet();
-      if (wallet.id.empty()) {
+      if (wallet.ids.empty()) {
 //         wallet = walletsMgr_->getPrimaryWallet();
       }
-      if (!wallet.id.empty()) {
-         selectedWalletId = wallet.id;
+      if (!wallet.ids.empty()) {
+         selectedWalletId = *wallet.ids.cbegin();
       }
    }
-
 
    std::shared_ptr<CreateTransactionDialog> dlg;
 
@@ -978,6 +981,8 @@ void MainWindow::initWidgets()
    connect(ui_->widgetWallets, &WalletsWidget::needUsedAddresses, this, &MainWindow::needUsedAddresses);
    connect(ui_->widgetWallets, &WalletsWidget::needAddrComments, this, &MainWindow::needAddrComments);
    connect(ui_->widgetWallets, &WalletsWidget::setAddrComment, this, &MainWindow::setAddrComment);
+   connect(ui_->widgetWallets, &WalletsWidget::needLedgerEntries, this, &MainWindow::needLedgerEntries);
+   connect(ui_->widgetWallets, &WalletsWidget::needTXDetails, this, &MainWindow::needTXDetails);
 
    initTransactionsView();
 //   InitPortfolioView();

@@ -37,6 +37,7 @@ namespace bs {
       class WalletsManager;
    }
 }
+class AddressDetailDialog;
 class AddressListModel;
 class AddressSortFilterModel;
 class ApplicationSettings;
@@ -81,12 +82,16 @@ public:
    void ImportNewWallet();
    void ImportHwWallet();
 
+   void onNewBlock(unsigned int blockNum);
    void onHDWallet(const bs::sync::WalletInfo &);
    void onHDWalletDetails(const bs::sync::HDWalletData &);
-   void onAddresses(const std::string &walletId, const std::vector<bs::Address> &);
+   void onAddresses(const std::vector<bs::sync::Address> &);
    void onAddressComments(const std::string &walletId
       , const std::map<bs::Address, std::string> &);
    void onWalletBalance(const bs::sync::WalletBalanceData &);
+   void onLedgerEntries(const std::string &filter, uint32_t totalPages
+      , uint32_t curPage, uint32_t curBlock, const std::vector<bs::TXEntry> &);
+   void onTXDetails(const std::vector<bs::sync::TXWalletDetails> &);
 
    void shortcutActivated(ShortcutType s) override;
 
@@ -116,6 +121,8 @@ signals:
    void needAddrComments(const std::string &walletId, const std::vector<bs::Address> &);
    void setAddrComment(const std::string &walletId, const bs::Address &
       , const std::string &comment);
+   void needLedgerEntries(const std::string &filter);
+   void needTXDetails(const std::vector<bs::sync::TXWallet> &);
 
 private slots:
    void showWalletProperties(const QModelIndex& index);
@@ -169,6 +176,7 @@ private:
    int prevSelectedAddressRow_{-1};
    QPoint walletsScrollPos_;
    QPoint addressesScrollPos_;
+   std::unordered_map<std::string, AddressDetailDialog *>   addrDetDialogs_;
 };
 
 #endif // __WALLETS_WIDGET_H__
