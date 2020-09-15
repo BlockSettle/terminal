@@ -16,6 +16,7 @@
 #include "Bip15xDataConnection.h"
 #include "Bip15xServerConnection.h"
 #include "DataConnectionListener.h"
+#include "RetryingDataConnection.h"
 #include "RouterServerConnection.h"
 #include "ServerConnectionListener.h"
 #include "SslDataConnection.h"
@@ -545,6 +546,17 @@ TEST_F(TestWebSocket, SslConnectionSelfSigned)
 
    EXPECT_TRUE(serverPubKeyValid);
    EXPECT_TRUE(clientPubKeyValid);
+}
+
+TEST_F(TestWebSocket, RetryingDataConnection)
+{
+   server_ = std::make_unique<SslServerConnection>(StaticLogger::loggerPtr, SslServerConnectionParams{});
+
+   RetryingDataConnectionParams clientParams;
+   clientParams.connection = std::make_unique<SslDataConnection>(StaticLogger::loggerPtr, SslDataConnectionParams{});
+   client_ = std::make_unique<RetryingDataConnection>(StaticLogger::loggerPtr, std::move(clientParams));
+
+   doTest(kTestTcpHost, kTestTcpPort, kTestTcpHost, kTestTcpPort, FirstStart::Server);
 }
 
 TEST(WebSocketHelpers, WsPacket)

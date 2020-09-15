@@ -317,7 +317,7 @@ CustomTitleDialogWindow {
                             passwordData.encType = QPasswordData.Password
                             passwordData.encKey = ""
                             passwordData.textPassword = newPasswordWithConfirm.password
-                            walletsProxy.createWallet(cbPrimary.checked, seed, walletInfo, passwordData, createCallback)
+                            walletsProxy.createWallet(cbPrimary.checked, false, seed, walletInfo, passwordData, createCallback)
                         })
                         checkPasswordDialog.bsRejected.connect(failedCallback)
                     }
@@ -325,7 +325,7 @@ CustomTitleDialogWindow {
                         // auth eID
                         let authEidMessage = JsHelper.getAuthEidWalletInfo(walletInfo);
                         var successCallback = function(newPasswordData) {
-                            walletsProxy.createWallet(cbPrimary.checked, seed, walletInfo, newPasswordData, createCallback)
+                            walletsProxy.createWallet(cbPrimary.checked, false, seed, walletInfo, newPasswordData, createCallback)
                         }
                         JsHelper.activateeIdAuth(walletInfo, authEidMessage, successCallback, failedCallback)
                     }

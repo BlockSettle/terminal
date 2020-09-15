@@ -1447,10 +1447,13 @@ bool OtcClient::verifyOffer(const Offer &offer) const
       }
    }
 
-   auto minXbtAmount = bs::tradeutils::minXbtAmount(utxoReservationManager_->feeRatePb());
-   if (offer.amount < static_cast<int64_t>(minXbtAmount.GetValue())) {
-      SPDLOG_LOGGER_ERROR(logger_, "amount is too low: {}, min amount: {}", offer.amount, minXbtAmount.GetValue());
-      return false;
+   // utxoReservationManager_ is not available in unit tests
+   if (utxoReservationManager_) {
+      auto minXbtAmount = bs::tradeutils::minXbtAmount(utxoReservationManager_->feeRatePb());
+      if (offer.amount < static_cast<int64_t>(minXbtAmount.GetValue())) {
+         SPDLOG_LOGGER_ERROR(logger_, "amount is too low: {}, min amount: {}", offer.amount, minXbtAmount.GetValue());
+         return false;
+      }
    }
 
    return true;

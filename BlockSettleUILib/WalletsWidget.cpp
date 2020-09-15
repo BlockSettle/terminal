@@ -698,6 +698,10 @@ void WalletsWidget::onWalletBalanceChanged(std::string walletId)
 
 void WalletsWidget::onNewWallet()
 {
+   if (!signingContainer_) {
+      showError(tr("Signer not created (yet)"));
+      return;
+   }
    if (!signingContainer_->isOffline()) {
       NewWalletDialog newWalletDialog(false, appSettings_, this);
       emit newWalletCreationRequest();
