@@ -21,6 +21,7 @@
 #include <QPoint>
 #include <QString>
 
+#include "Bip21Types.h"
 #include "BSErrorCodeStrings.h"
 #include "CoreWallet.h"
 #include "UtxoReservationToken.h"
@@ -129,6 +130,8 @@ protected slots:
 
 protected:
    void populateFeeList();
+
+   static bool canUseSimpleMode(const Bip21::PaymentRequestInfo& paymentInfo);
 
 private:
    void loadFees();

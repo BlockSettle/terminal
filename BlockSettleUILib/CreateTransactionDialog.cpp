@@ -726,3 +726,8 @@ void CreateTransactionDialog::showError(const QString &text, const QString &deta
    BSMessageBox errorMessage(BSMessageBox::critical, text, detailedText, this);
    errorMessage.exec();
 }
+
+bool CreateTransactionDialog::canUseSimpleMode(const Bip21::PaymentRequestInfo& paymentInfo)
+{
+   return paymentInfo.requestURL.isEmpty();
+}

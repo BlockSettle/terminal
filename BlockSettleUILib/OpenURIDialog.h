@@ -15,35 +15,38 @@
 
 #include <QDialog>
 
+#include <spdlog/spdlog.h>
+
 #include "BinaryData.h"
+#include "Bip21Types.h"
 #include "XBTAmount.h"
 
 namespace Ui {
     class OpenURIDialog;
 }
 
+class QNetworkAccessManager;
+
 class OpenURIDialog : public QDialog
 {
 Q_OBJECT
 
 public:
-   struct PaymentRequestInfo
-   {
-      QString        address;
-      bs::XBTAmount  amount;
-      QString        label;
-      QString        message;
-      QString        requestURL;
-   };
-
-public:
-   OpenURIDialog(QWidget *parent);
+   OpenURIDialog(const std::shared_ptr<QNetworkAccessManager>& nam
+                 , bool onTestnet
+                 , const std::shared_ptr<spdlog::logger> &logger
+                 , QWidget *parent = nullptr);
    ~OpenURIDialog() override;
 
-   PaymentRequestInfo getRequestInfo() const;
+   Bip21::PaymentRequestInfo getRequestInfo() const;
 
 private slots:
    void onURIChanhed();
+
+   void onBitpayPaymentLoaded(bool result);
+
+signals:
+   void BitpayPaymentLoaded(bool result);
 
 private:
    bool ParseURI();
@@ -56,9 +59,14 @@ private:
    void ClearErrorText();
    void ClearStatusText();
 
+   void LoadPaymentOptions();
+
 private:
-   std::unique_ptr<Ui::OpenURIDialog>  ui_;
-   PaymentRequestInfo                  requestInfo_;
+   std::unique_ptr<Ui::OpenURIDialog>     ui_;
+   Bip21::PaymentRequestInfo              requestInfo_;
+   std::shared_ptr<QNetworkAccessManager> nam_;
+   bool                                   onTestnet_;
+   std::shared_ptr<spdlog::logger>        logger_;
 };
 
 #endif // __OPEN_URI_DIALOG_H__

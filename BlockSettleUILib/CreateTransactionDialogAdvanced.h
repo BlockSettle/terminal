@@ -54,6 +54,16 @@ public:
       , const Tx &
       , QWidget* parent = nullptr);
 
+   static std::shared_ptr<CreateTransactionDialog> CreateForPaymentRequest(
+        const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &
+      , const std::shared_ptr<bs::UTXOReservationManager> &
+      , const std::shared_ptr<SignContainer>&
+      , const std::shared_ptr<spdlog::logger>&
+      , const std::shared_ptr<ApplicationSettings> &
+      , const Bip21::PaymentRequestInfo& paymentInfo
+      , QWidget* parent = nullptr);
+
 public:
    CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
@@ -169,6 +179,7 @@ private:
    void enableFeeChanging(bool flag = true);
    void SetFixedChangeAddress(const QString& changeAddress);
    void SetPredefinedFee(const int64_t& manualFee);
+   void SetPredefinedFeeRate(const float feeRate);
    void setUnchangeableTx();
 
    void RemoveOutputByRow(int row);
@@ -204,6 +215,7 @@ private:
    bool        simpleDialogRequested_ = false;
 
    bs::XBTAmount importedTxTotalFee_{};
+   Bip21::PaymentRequestInfo paymentInfo_;
 };
 
 #endif // __CREATE_TRANSACTION_DIALOG_ADVANCED_H__

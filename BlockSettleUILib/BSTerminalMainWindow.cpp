@@ -2404,14 +2404,28 @@ void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &de
 
 void BSTerminalMainWindow::openURIDialog()
 {
-   OpenURIDialog dlg{this};
+   const bool testnetNetwork = applicationSettings_->get<NetworkType>(ApplicationSettings::netType) == NetworkType::TestNet;
+
+   auto uiLogger = logMgr_->logger("ui");
+
+   OpenURIDialog dlg{connectionManager_->GetNAM(), testnetNetwork, uiLogger, this};
    if (dlg.exec() == QDialog::Accepted) {
       // open create transaction dialog
 
       const auto requestInfo = dlg.getRequestInfo();
-      // if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
+      std::shared_ptr<CreateTransactionDialog> cerateTxDlg;
 
-      // }
+      if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
+         cerateTxDlg = CreateTransactionDialogAdvanced::CreateForPaymentRequest(armory_, walletsMgr_
+            , utxoReservationMgr_, signContainer_, uiLogger, applicationSettings_
+            , requestInfo, this);
+      } else {
+         cerateTxDlg = CreateTransactionDialogSimple::CreateForPaymentRequest(armory_, walletsMgr_
+            , utxoReservationMgr_, signContainer_, uiLogger, applicationSettings_
+            , requestInfo, this);
+      }
+
+      DisplayCreateTransactionDialog(cerateTxDlg);
    }
 }
 

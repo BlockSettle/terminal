@@ -112,6 +112,58 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
    return dlg;
 }
 
+std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::CreateForPaymentRequest(
+        const std::shared_ptr<ArmoryConnection> &armory
+      , const std::shared_ptr<bs::sync::WalletsManager> &walletManager
+      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
+      , const std::shared_ptr<SignContainer>& container
+      , const std::shared_ptr<spdlog::logger>& logger
+      , const std::shared_ptr<ApplicationSettings> & applicationSettings
+      , const Bip21::PaymentRequestInfo& paymentInfo
+      , QWidget* parent)
+{
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
+      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, bs::UtxoReservationToken(), parent);
+
+   dlg->ui_->pushButtonImport->setEnabled(false);
+   dlg->ui_->pushButtonShowSimple->setEnabled(CreateTransactionDialog::canUseSimpleMode(paymentInfo));
+
+   dlg->paymentInfo_ = paymentInfo;
+
+   // set output
+   const auto addr = bs::Address::fromAddressString(paymentInfo.address.toStdString());
+   dlg->AddRecipient(CreateTransactionDialogAdvanced::Recipient{ addr, paymentInfo.amount});
+
+   dlg->ui_->treeViewOutputs->setEnabled(false);
+
+   dlg->ui_->lineEditAddress->setEnabled(false);
+   dlg->ui_->pushButtonMax->setEnabled(false);
+   dlg->ui_->lineEditAmount->setEnabled(false);
+
+   // set fee
+   if (!qFuzzyIsNull(paymentInfo.feePerByte)) {
+      dlg->SetPredefinedFeeRate(paymentInfo.feePerByte);
+   }
+
+   // disable RBF for request
+   if (!paymentInfo.requestURL.isEmpty()) {
+      dlg->ui_->checkBoxRBF->setChecked(false);
+      dlg->ui_->checkBoxRBF->setEnabled(false);
+      dlg->ui_->checkBoxRBF->setToolTip(tr("RBF disabled for BitPay request"));
+   }
+
+   // set message or label to comment
+   if (!paymentInfo.message.isEmpty()) {
+      dlg->ui_->textEditComment->setText(paymentInfo.message);
+   } else if (!paymentInfo.label.isEmpty()) {
+      dlg->ui_->textEditComment->setText(paymentInfo.label);
+   }
+
+   dlg->validateAddOutputButton();
+
+   return dlg;
+}
+
 void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::shared_ptr<bs::sync::Wallet> &wallet)
 {
    std::set<BinaryData> txHashSet;
@@ -1557,6 +1609,13 @@ void CreateTransactionDialogAdvanced::SetPredefinedFee(const int64_t& manualFee)
    transactionData_->setTotalFee(manualFee);
 }
 
+void CreateTransactionDialogAdvanced::SetPredefinedFeeRate(const float feeRate)
+{
+   ui_->comboBoxFeeSuggestions->clear();
+   ui_->comboBoxFeeSuggestions->addItem(tr("%1 s/b").arg(feeRate), (qlonglong)feeRate);
+   transactionData_->setFeePerByte(feeRate);
+}
+
 // Set a TX such that it can't be altered.
 void CreateTransactionDialogAdvanced::setUnchangeableTx()
 {
@@ -1678,6 +1737,11 @@ bool CreateTransactionDialogAdvanced::switchModeRequested() const
 
 std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::SwitchMode()
 {
+   if (!paymentInfo_.address.isEmpty()) {
+      return CreateTransactionDialogSimple::CreateForPaymentRequest(armory_, walletsManager_
+         , utxoReservationManager_, signContainer_, logger_, applicationSettings_, paymentInfo_, parentWidget());
+   }
+
    auto simpleDialog = std::make_shared<CreateTransactionDialogSimple>(armory_
       , walletsManager_, utxoReservationManager_, signContainer_
       , logger_, applicationSettings_, parentWidget());
