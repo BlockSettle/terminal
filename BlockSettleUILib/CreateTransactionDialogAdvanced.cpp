@@ -13,6 +13,7 @@
 
 #include "Address.h"
 #include "ArmoryConnection.h"
+#include "BitPayRequests.h"
 #include "BSMessageBox.h"
 #include "CoinControlDialog.h"
 #include "CreateTransactionDialogSimple.h"
@@ -32,6 +33,9 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QKeyEvent>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QPushButton>
 
 #include <spdlog/spdlog.h>
@@ -150,6 +154,8 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::Create
       dlg->ui_->checkBoxRBF->setChecked(false);
       dlg->ui_->checkBoxRBF->setEnabled(false);
       dlg->ui_->checkBoxRBF->setToolTip(tr("RBF disabled for BitPay request"));
+
+      dlg->nam_ = std::make_shared<QNetworkAccessManager>();
    }
 
    // set message or label to comment
@@ -162,6 +168,9 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::Create
    }
 
    dlg->validateAddOutputButton();
+
+   connect(dlg.get(), &CreateTransactionDialogAdvanced::VerifyBitPayUnsignedTx, dlg.get(), &CreateTransactionDialogAdvanced::onVerifyBitPayUnsignedTx);
+   connect(dlg.get(), &CreateTransactionDialogAdvanced::BitPayTxVerified, dlg.get(), &CreateTransactionDialogAdvanced::onBitPayTxVerified);
 
    return dlg;
 }
@@ -1251,7 +1260,7 @@ void CreateTransactionDialogAdvanced::onCreatePressed()
       return;
    }
 
-   CreateTransaction([this, handle = validityFlag_.handle()](bool result, const std::string &errorMsg) {
+   CreateTransaction([this, handle = validityFlag_.handle()](bool result, const std::string &errorMsg, const std::string& unsignedTx, uint64_t virtSize) {
       if (!handle.isValid()) {
          return;
       }
@@ -1259,6 +1268,12 @@ void CreateTransactionDialogAdvanced::onCreatePressed()
          BSMessageBox(BSMessageBox::critical, tr("Transaction")
             , tr("Transaction error"), QString::fromStdString(errorMsg)).exec();
          reject();
+      }
+
+      if (!paymentInfo_.requestURL.isEmpty()) {
+         emit VerifyBitPayUnsignedTx(unsignedTx, virtSize);
+      } else {
+         createTransactionImpl();
       }
    });
 }
@@ -1777,7 +1792,28 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::Switch
    return simpleDialog;
 }
 
-bool CreateTransactionDialogAdvanced::verifyUnsignedTx(const std::string& unsignedTx, uint64_t virtSize)
+void CreateTransactionDialogAdvanced::onVerifyBitPayUnsignedTx(const std::string& unsignedTx, uint64_t virtSize)
 {
-   return true;
+   // send request
+   QNetworkRequest request = BitPay::getBTCPaymentVerificationRequest(paymentInfo_.requestURL);
+   QNetworkReply *reply = nam_->post(request, BitPay::getBTCPaymentVerificationPayload(unsignedTx, virtSize));
+
+   connect(reply, &QNetworkReply::finished, this, [this, reply] {
+      if (reply->error() == QNetworkReply::NoError) {
+         emit BitPayTxVerified(true);
+         return;
+      }
+
+      emit BitPayTxVerified(false);
+   });
+
+   connect(reply, &QNetworkReply::finished, reply, &QNetworkReply::deleteLater);
+   connect(this, &QDialog::finished, reply, &QNetworkReply::abort);
+}
+
+void CreateTransactionDialogAdvanced::onBitPayTxVerified(bool result)
+{
+   if (result) {
+      createTransactionImpl();
+   }
 }

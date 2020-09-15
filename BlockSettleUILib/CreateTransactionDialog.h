@@ -109,12 +109,11 @@ protected:
 
    std::vector<bs::core::wallet::TXSignRequest> ImportTransactions();
    bool BroadcastImportedTx();
-   using CreateTransactionCb = std::function<void(bool success, const std::string &errorMsg)>;
+   using CreateTransactionCb = std::function<void(bool success, const std::string &errorMsg
+                                                  , const std::string& unsignedTx, uint64_t virtSize)>;
    void CreateTransaction(const CreateTransactionCb &cb);
 
    void showError(const QString &text, const QString &detailedText);
-
-   virtual bool verifyUnsignedTx(const std::string& unsignedTx, uint64_t virtSize) = 0;
 
 signals:
    void feeLoadingCompleted(const std::map<unsigned int, float> &);
@@ -133,6 +132,8 @@ protected slots:
 protected:
    void populateFeeList();
 
+   bool createTransactionImpl();
+
    static bool canUseSimpleMode(const Bip21::PaymentRequestInfo& paymentInfo);
 
 private:
@@ -140,7 +141,6 @@ private:
    void populateWalletsList();
    void startBroadcasting();
    void stopBroadcasting();
-   bool createTransactionImpl();
 
 protected:
    std::shared_ptr<ArmoryConnection>   armory_;

@@ -211,7 +211,7 @@ void CreateTransactionDialogSimple::createTransaction()
       return;
    }
 
-   CreateTransaction([this, handle = validityFlag_.handle()](bool result, const std::string &errorMsg) {
+   CreateTransaction([this, handle = validityFlag_.handle()](bool result, const std::string &errorMsg, const std::string& unsignedTx, uint64_t virtSize) {
       if (!handle.isValid()) {
          return;
       }
@@ -220,6 +220,8 @@ void CreateTransactionDialogSimple::createTransaction()
             , tr("Transaction error"), QString::fromStdString(errorMsg)).exec();
          reject();
       }
+
+      createTransactionImpl();
    });
 }
 
@@ -335,9 +337,4 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::CreateFo
    dlg->paymentInfo_ = paymentInfo;
 
    return dlg;
-}
-
-bool CreateTransactionDialogSimple::verifyUnsignedTx(const std::string&, uint64_t)
-{
-   return true;
 }

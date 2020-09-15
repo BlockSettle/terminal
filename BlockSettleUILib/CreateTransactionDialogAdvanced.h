@@ -27,6 +27,7 @@ namespace bs {
    }
 }
 
+class QNetworkAccessManager;
 
 class CreateTransactionDialogAdvanced : public CreateTransactionDialog
 {
@@ -115,8 +116,6 @@ protected:
 
    bool HaveSignedImportedTransaction() const override;
 
-   bool verifyUnsignedTx(const std::string& unsignedTx, uint64_t virtSize) override;
-
 protected slots:
    void onAddressTextChanged(const QString& addressString);
    void onFeeSuggestionsLoaded(const std::map<unsigned int, float> &) override;
@@ -142,6 +141,11 @@ private slots:
    void onOutputsClicked(const QModelIndex &index);
    void onSimpleDialogRequested();
    void onUpdateChangeWidget();
+   void onBitPayTxVerified(bool result);
+   void onVerifyBitPayUnsignedTx(const std::string& unsignedTx, uint64_t virtSize);
+signals:
+   void VerifyBitPayUnsignedTx(const std::string& unsignedTx, uint64_t virtSize);
+   void BitPayTxVerified(bool result);
 
 private:
    void clear() override;
@@ -218,6 +222,8 @@ private:
 
    bs::XBTAmount importedTxTotalFee_{};
    Bip21::PaymentRequestInfo paymentInfo_;
+
+   std::shared_ptr<QNetworkAccessManager> nam_;
 };
 
 #endif // __CREATE_TRANSACTION_DIALOG_ADVANCED_H__

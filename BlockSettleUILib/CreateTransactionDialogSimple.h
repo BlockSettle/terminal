@@ -76,8 +76,6 @@ protected:
 
    void getChangeAddress(AddressCb cb) const override;
 
-   bool verifyUnsignedTx(const std::string& unsignedTx, uint64_t virtSize) override;
-
 protected slots:
    void onMaxPressed() override;
    void onTransactionUpdated() override;
