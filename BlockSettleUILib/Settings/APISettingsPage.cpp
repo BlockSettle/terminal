@@ -18,6 +18,7 @@
 #include <QInputDialog>
 #include <QPushButton>
 
+#include "ApiKeyEntryDialog.h"
 #include "ApplicationSettings.h"
 
 APISettingsPage::APISettingsPage(QWidget* parent)
@@ -30,7 +31,7 @@ APISettingsPage::APISettingsPage(QWidget* parent)
       QApplication::clipboard()->setText(ui_->labelOwnPubKey->text());
    });
    connect(ui_->pushButtonApiKeyImport, &QPushButton::clicked, this, [this] {
-      auto apiKey = QInputDialog::getText(this, tr("Import"), tr("API key"));
+      auto apiKey = ApiKeyEntryDialog::getApiKey(this);
       if (apiKey.isEmpty()) {
          return;
       }

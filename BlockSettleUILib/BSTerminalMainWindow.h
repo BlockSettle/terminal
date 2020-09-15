@@ -317,6 +317,8 @@ private:
    std::queue<std::function<void(void)>> deferredDialogs_;
    bool deferredDialogRunning_ = false;
 
+   uint32_t armoryRestartCount_{};
+
    class MainWinACT : public ArmoryCallbackTarget
    {
    public:

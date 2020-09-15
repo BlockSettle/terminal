@@ -60,6 +60,7 @@
 #include "PubKeyLoader.h"
 #include "QuoteProvider.h"
 #include "RequestReplyCommand.h"
+#include "RetryingDataConnection.h"
 #include "SelectWalletDialog.h"
 #include "Settings/ConfigDialog.h"
 #include "SignersProvider.h"
@@ -895,6 +896,7 @@ void BSTerminalMainWindow::MainWinACT::onStateChanged(ArmoryState state)
       break;
    case ArmoryState::Connected:
       QMetaObject::invokeMethod(parent_, [this] {
+         parent_->armoryRestartCount_ = 0;
          parent_->wasWalletsRegistered_ = false;
          parent_->armory_->goOnline();
       });
@@ -1004,6 +1006,8 @@ bool BSTerminalMainWindow::isArmoryConnected() const
 
 void BSTerminalMainWindow::ArmoryIsOffline()
 {
+   logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
+
    auto now = std::chrono::steady_clock::now();
    std::chrono::milliseconds nextConnDelay(0);
    if (now < nextArmoryReconnectAttempt_) {
@@ -1011,11 +1015,15 @@ void BSTerminalMainWindow::ArmoryIsOffline()
          nextArmoryReconnectAttempt_ - now);
    }
    if (nextConnDelay != std::chrono::milliseconds::zero()) {
+      
+      auto delaySec = std::chrono::duration_cast<std::chrono::seconds>(nextConnDelay);
+      SPDLOG_LOGGER_DEBUG(logMgr_->logger("ui")
+         , "restart armory connection in {} second", nextConnDelay.count());
+      
       QTimer::singleShot(nextConnDelay, this, &BSTerminalMainWindow::ArmoryIsOffline);
       return;
    }
 
-   logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
    if (walletsMgr_) {
       walletsMgr_->unregisterWallets();
    }
@@ -1024,6 +1032,7 @@ void BSTerminalMainWindow::ArmoryIsOffline()
    //increase reconnect delay
    armoryReconnectDelay_ = armoryReconnectDelay_ % 2 ? 
       armoryReconnectDelay_ * 2 : armoryReconnectDelay_ + 1;
+   armoryReconnectDelay_ = std::max(armoryReconnectDelay_, unsigned(60));
    nextArmoryReconnectAttempt_ = 
       std::chrono::steady_clock::now() + std::chrono::seconds(armoryReconnectDelay_);
    
@@ -1345,6 +1354,9 @@ void BSTerminalMainWindow::openAuthManagerDialog()
 
 void BSTerminalMainWindow::openConfigDialog(bool showInNetworkPage)
 {
+   auto oldEnv = static_cast<ApplicationSettings::EnvConfiguration>(
+            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+
    ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, signersProvider_, signContainer_, walletsMgr_, this);
    connect(&configDialog, &ConfigDialog::reconnectArmory, this, &BSTerminalMainWindow::onArmoryNeedsReconnect);
 
@@ -1352,9 +1364,25 @@ void BSTerminalMainWindow::openConfigDialog(bool showInNetworkPage)
       configDialog.popupNetworkSettings();
    }
 
-   configDialog.exec();
+   int rc = configDialog.exec();
 
    UpdateMainWindowAppearence();
+
+   auto newEnv = static_cast<ApplicationSettings::EnvConfiguration>(
+            applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+   if (rc == QDialog::Accepted && newEnv != oldEnv) {
+      bool prod = newEnv == ApplicationSettings::EnvConfiguration::Production;
+      BSMessageBox mbox(BSMessageBox::question
+         , tr("Environment selection")
+         , tr("Switch Environment")
+         , tr("Do you wish to change to the %1 environment now?").arg(prod ? tr("Production") : tr("Test"))
+         , this);
+      mbox.setConfirmButtonText(tr("Yes"));
+      int rc = mbox.exec();
+      if (rc == QDialog::Accepted) {
+         restartTerminal();
+      }
+   }
 }
 
 void BSTerminalMainWindow::openAccountInfoDialog()
@@ -1955,14 +1983,17 @@ void BSTerminalMainWindow::InitWidgets()
          if (BinaryData::CreateFromHex(srvPubKey).toBinStr() == pubKey) {
             return true;
          }
-         QMetaObject::invokeMethod(this, [this, pubKey] {
+         QMetaObject::invokeMethod(this, [pubKey] {
             BSMessageBox(BSMessageBox::warning, tr("External Connection error")
                , tr("Invalid server key: %1").arg(QString::fromStdString(bs::toHex(pubKey)))).exec();
          });
          return false;
       };
 
-      auto connection = std::make_shared<SslDataConnection>(logger, clientParams);
+      RetryingDataConnectionParams retryingParams;
+      retryingParams.connection = std::make_unique<SslDataConnection>(logger, clientParams);
+      auto connection = std::make_shared<RetryingDataConnection>(logger, std::move(retryingParams));
+
       if (connection->openConnection(applicationSettings_->get<std::string>(ApplicationSettings::ExtConnHost)
          , applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPort)
          , aqScriptRunner->getExtConnListener().get())) {
