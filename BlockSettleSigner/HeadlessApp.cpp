@@ -305,7 +305,8 @@ void HeadlessAppObj::startTerminalsProcessing()
    auto terminalWsConn = std::make_unique<WsServerConnection>(logger_, params);
    // This would stop old server if any
    terminalTransport_ = std::make_shared<bs::network::TransportBIP15xServer>(logger_
-      , getClientIDKeys, !settings_->twoWaySignerAuth()
+      , getClientIDKeys
+      , !settings_->getTermIDKeyStr().empty(), !settings_->twoWaySignerAuth()
       , ourKeyFileDir, ourKeyFileName, makeServerCookie, false
       , absTermCookiePath);
    terminalConnection_ = std::make_unique<Bip15xServerConnection>(logger_
