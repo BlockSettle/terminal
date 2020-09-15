@@ -114,6 +114,8 @@ protected:
 
    void showError(const QString &text, const QString &detailedText);
 
+   virtual bool verifyUnsignedTx(const std::string& unsignedTx, uint64_t virtSize) = 0;
+
 signals:
    void feeLoadingCompleted(const std::map<unsigned int, float> &);
    void walletChanged();

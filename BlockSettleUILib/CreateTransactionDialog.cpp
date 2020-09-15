@@ -524,7 +524,18 @@ void CreateTransactionDialog::CreateTransaction(const CreateTransactionCb &cb)
                if (!handle.isValid()) {
                   return;
                }
-               logger_->debug("[{}] result={}, state: {}", __func__, (int)result, state.IsInitialized());
+
+               const auto serializedUnsigned = txReq_.armorySigner_.serializeUnsignedTx().toHexStr();
+               const auto estimatedSize = txReq_.estimateTxVirtSize();
+
+               if (!verifyUnsignedTx(serializedUnsigned, estimatedSize)) {
+                  logger_->debug("[CreateTransactionDialog::CreateTransaction cbResolvePublicData] rejected by verifyUnsignedTx");
+                  cb(false, "user verification failed");
+                  return;
+               }
+
+               logger_->debug("[CreateTransactionDialog::CreateTransaction cbResolvePublicData] result={}, state: {}"
+                              , (int)result, state.IsInitialized());
                bool rc = createTransactionImpl();
                cb(rc, rc ? "" : "unknown error");
             };

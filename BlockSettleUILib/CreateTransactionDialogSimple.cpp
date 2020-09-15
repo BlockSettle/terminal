@@ -336,3 +336,8 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::CreateFo
 
    return dlg;
 }
+
+bool CreateTransactionDialogSimple::verifyUnsignedTx(const std::string&, uint64_t)
+{
+   return true;
+}

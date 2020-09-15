@@ -115,6 +115,8 @@ protected:
 
    bool HaveSignedImportedTransaction() const override;
 
+   bool verifyUnsignedTx(const std::string& unsignedTx, uint64_t virtSize) override;
+
 protected slots:
    void onAddressTextChanged(const QString& addressString);
    void onFeeSuggestionsLoaded(const std::map<unsigned int, float> &) override;

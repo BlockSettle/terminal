@@ -153,7 +153,9 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::Create
    }
 
    // set message or label to comment
-   if (!paymentInfo.message.isEmpty()) {
+   if (!paymentInfo.requestMemo.isEmpty()) {
+      dlg->ui_->textEditComment->setText(paymentInfo.requestMemo);
+   } else if (!paymentInfo.message.isEmpty()) {
       dlg->ui_->textEditComment->setText(paymentInfo.message);
    } else if (!paymentInfo.label.isEmpty()) {
       dlg->ui_->textEditComment->setText(paymentInfo.label);
@@ -1773,4 +1775,9 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::Switch
    }
 
    return simpleDialog;
+}
+
+bool CreateTransactionDialogAdvanced::verifyUnsignedTx(const std::string& unsignedTx, uint64_t virtSize)
+{
+   return true;
 }

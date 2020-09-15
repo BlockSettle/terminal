@@ -395,9 +395,8 @@ void OpenURIDialog::DisplayRequestDetails()
       }
 
       ui_->labelDetailsFeeRate->setText(tr("%1 s/b").arg(requestInfo_.feePerByte));
+      ui_->labelDetailsMemo->setText(requestInfo_.requestMemo);
    }
-
-
 }
 
 void OpenURIDialog::ClearRequestDetailsOnUI()
