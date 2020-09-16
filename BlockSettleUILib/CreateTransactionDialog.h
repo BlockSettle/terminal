@@ -11,18 +11,21 @@
 #ifndef __CREATE_TRANSACTION_DIALOG_H__
 #define __CREATE_TRANSACTION_DIALOG_H__
 
-#include <vector>
 #include <memory>
 #include <string>
+#include <vector>
+
 #include <QAction>
 #include <QDialog>
 #include <QMenu>
 #include <QPoint>
 #include <QString>
+
+#include "Bip21Types.h"
 #include "BSErrorCodeStrings.h"
 #include "CoreWallet.h"
-#include "ValidityFlag.h"
 #include "UtxoReservationToken.h"
+#include "ValidityFlag.h"
 
 namespace bs {
    namespace sync {
@@ -68,7 +71,7 @@ public:
    int SelectWallet(const std::string& walletId, UiUtils::WalletsTypes type);
 
    virtual bool switchModeRequested() const= 0;
-   virtual std::shared_ptr<CreateTransactionDialog> SwithcMode() = 0;
+   virtual std::shared_ptr<CreateTransactionDialog> SwitchMode() = 0;
 
 protected:
    virtual void init();
@@ -106,7 +109,8 @@ protected:
 
    std::vector<bs::core::wallet::TXSignRequest> ImportTransactions();
    bool BroadcastImportedTx();
-   using CreateTransactionCb = std::function<void(bool success, const std::string &errorMsg)>;
+   using CreateTransactionCb = std::function<void(bool success, const std::string &errorMsg
+                                                  , const std::string& unsignedTx, uint64_t virtSize)>;
    void CreateTransaction(const CreateTransactionCb &cb);
 
    void showError(const QString &text, const QString &detailedText);
@@ -128,12 +132,15 @@ protected slots:
 protected:
    void populateFeeList();
 
+   bool createTransactionImpl();
+
+   static bool canUseSimpleMode(const Bip21::PaymentRequestInfo& paymentInfo);
+
 private:
    void loadFees();
    void populateWalletsList();
    void startBroadcasting();
    void stopBroadcasting();
-   bool createTransactionImpl();
 
 protected:
    std::shared_ptr<ArmoryConnection>   armory_;
