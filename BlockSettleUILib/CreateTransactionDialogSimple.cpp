@@ -22,8 +22,6 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
 
-#include <QFileDialog>
-
 CreateTransactionDialogSimple::CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager

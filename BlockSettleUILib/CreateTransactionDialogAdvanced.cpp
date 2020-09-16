@@ -30,7 +30,6 @@
 
 #include <QEvent>
 #include <QFile>
-#include <QFileDialog>
 #include <QKeyEvent>
 #include <QPushButton>
 #include <spdlog/spdlog.h>
