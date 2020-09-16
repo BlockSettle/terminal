@@ -579,23 +579,29 @@ std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createRemoteSigner(
 std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createLocalSigner()
 {
    QLatin1String localSignerHost("127.0.0.1");
-   QString localSignerPort = applicationSettings_->get<QString>(ApplicationSettings::localSignerPort);
+   QString localSignerPort;
    NetworkType netType = applicationSettings_->get<NetworkType>(ApplicationSettings::netType);
 
-   if (SignerConnectionExists(localSignerHost, localSignerPort)) {
-      BSMessageBox mbox(BSMessageBox::Type::question
-                  , tr("Local Signer Connection")
-                  , tr("Continue with Remote connection in Local GUI mode?")
-                  , tr("The Terminal failed to spawn the headless signer as the program is already running. "
-                       "Would you like to continue with remote connection in Local GUI mode?")
-                  , this);
-      if (mbox.exec() == QDialog::Rejected) {
-         return nullptr;
-      }
+   for (int attempts = 0; attempts < 10; ++attempts) {
+      // https://tools.ietf.org/html/rfc6335
+      // the Dynamic Ports, also known as the Private or Ephemeral Ports,
+      // from 49152-65535 (never assigned)
+      auto port = 49152 + rand() % 16000;
 
-      // Use locally started signer as remote
-      signersProvider_->switchToLocalFullGUI(localSignerHost, localSignerPort);
-      return createRemoteSigner(true);
+      auto portToTest = QString::number(port);
+
+      if (!SignerConnectionExists(localSignerHost, portToTest)) {
+         localSignerPort = portToTest;
+         break;
+      } else {
+         logMgr_->logger()->error("[BSTerminalMainWindow::createLocalSigner] attempt {} : port {} used"
+                        , port);
+      }
+   }
+
+   if (localSignerPort.isEmpty()) {
+      logMgr_->logger()->error("[BSTerminalMainWindow::createLocalSigner] failed to find not busy port");
+      return nullptr;
    }
 
    const bool startLocalSignerProcess = true;
