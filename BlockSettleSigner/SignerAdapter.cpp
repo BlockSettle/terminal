@@ -82,7 +82,6 @@ std::shared_ptr<DataConnection> SignerAdapter::instantiateAdapterConnection(
    // server connection in order to enable verification. We also need to add
    // the key we got on the command line to the list of trusted keys.
    params.cookie = bs::network::BIP15xCookie::MakeClient;
-   params.cookiePath = SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
 
    WsDataConnectionParams wsParams;
    wsParams.timeoutSecs = kConnectTimeoutSec;
