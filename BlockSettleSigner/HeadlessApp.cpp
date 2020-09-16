@@ -53,8 +53,6 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
       return bs::network::BIP15xPeers();
    };
 
-   const bool readClientCookie = true;
-   const bool makeServerCookie = false;
    const std::string absCookiePath = SystemFilePaths::appDataLocation() + "/adapterClientID";
 
    auto guiWsConn = std::make_unique<WsServerConnection>(logger, WsServerConnectionParams{});
