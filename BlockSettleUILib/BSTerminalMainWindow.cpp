@@ -681,7 +681,13 @@ void BSTerminalMainWindow::updateControlEnabledState()
    }
    // Do not allow login until wallets synced (we need to check if user has primary wallet or not).
    // Should be OK for both local and remote signer.
-   ui_->pushButtonUser->setEnabled(walletsSynched_ && loginApiKeyEncrypted().empty());
+   bool loginAllowed = walletsSynched_ && loginApiKeyEncrypted().empty();
+   ui_->pushButtonUser->setEnabled(loginAllowed);
+   action_login_->setEnabled(true);
+
+   action_login_->setVisible(!celerConnection_->IsConnected());
+   action_login_->setEnabled(loginAllowed);
+   action_logout_->setVisible(celerConnection_->IsConnected());
 }
 
 bool BSTerminalMainWindow::isMDLicenseAccepted() const
@@ -1537,20 +1543,15 @@ void BSTerminalMainWindow::onAccountTypeChanged(bs::network::UserType userType, 
 
 void BSTerminalMainWindow::onCelerConnected()
 {
-   action_login_->setVisible(false);
-   action_logout_->setVisible(true);
-
    onUserLoggedIn();
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::onCelerDisconnected()
 {
-   action_logout_->setVisible(false);
-   action_login_->setEnabled(true);
-   action_login_->setVisible(true);
-
    onUserLoggedOut();
    celerConnection_->CloseConnection();
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
