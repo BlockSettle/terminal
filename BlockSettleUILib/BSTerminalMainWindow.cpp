@@ -1397,6 +1397,9 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::onLogin()
 {
+   if (!action_login_->isEnabled()) {
+      return;
+   }
    auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
 
    if (walletsSynched_ && !walletsMgr_->getPrimaryWallet()) {
@@ -2006,6 +2009,8 @@ void BSTerminalMainWindow::InitWidgets()
       , &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
    connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this
       , &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::loginRequested, this
+      , &BSTerminalMainWindow::onLogin);
 
    connect(ui_->tabWidget, &QTabWidget::tabBarClicked, this,
       [requestRFQ = QPointer<RFQRequestWidget>(ui_->widgetRFQ)
