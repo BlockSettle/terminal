@@ -42,6 +42,7 @@ namespace Blocksettle {
 
 class SignAdapterContainer;
 class SignerInterfaceListener;
+class DataConnection;
 
 class SignerAdapter : public QObject
 {
@@ -51,13 +52,25 @@ class SignerAdapter : public QObject
 public:
    SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<QmlBridge> &qmlBridge
-      , const NetworkType netType, int signerPort, const BinaryData* inSrvIDKey = nullptr);
+      , const NetworkType netType
+      , int signerPort, const BinaryData& inSrvIDKey = {});
+
+   SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
+      , const std::shared_ptr<QmlBridge> &qmlBridge
+      , const NetworkType netType, int signerPort
+      , std::shared_ptr<DataConnection>);
+
    ~SignerAdapter() override;
 
    SignerAdapter(const SignerAdapter&) = delete;
    SignerAdapter& operator = (const SignerAdapter&) = delete;
    SignerAdapter(SignerAdapter&&) = delete;
    SignerAdapter& operator = (SignerAdapter&&) = delete;
+
+   static std::shared_ptr<DataConnection> instantiateAdapterConnection(
+      const std::shared_ptr<spdlog::logger> &logger
+      , int signerPort, const BinaryData& inSrvIDKey);
+
 
    std::shared_ptr<bs::sync::WalletsManager> getWalletsManager();
    void updateWallet(const std::string &walletId);

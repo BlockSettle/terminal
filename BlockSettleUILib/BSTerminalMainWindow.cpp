@@ -103,6 +103,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    loginButtonText_ = tr("Login");
 
+   nextArmoryReconnectAttempt_ = std::chrono::steady_clock::now();
    armoryServersProvider_= std::make_shared<ArmoryServersProvider>(applicationSettings_);
    signersProvider_= std::make_shared<SignersProvider>(applicationSettings_);
 
@@ -889,6 +890,7 @@ void BSTerminalMainWindow::MainWinACT::onStateChanged(ArmoryState state)
    case ArmoryState::Ready:
       QMetaObject::invokeMethod(parent_, [this] {
          parent_->isArmoryReady_ = true;
+         parent_->armoryReconnectDelay_ = 0;
          parent_->CompleteDBConnection();
          parent_->CompleteUIOnlineView();
          parent_->walletsMgr_->goOnline();
@@ -1014,25 +1016,40 @@ bool BSTerminalMainWindow::isArmoryConnected() const
 
 void BSTerminalMainWindow::ArmoryIsOffline()
 {
-   auto restartDelays = std::vector<int>{ 1, 5, 15, 30, 60 };
-   int restartDelay = *restartDelays.rbegin();
-   if (armoryRestartCount_ < restartDelays.size()) {
-      restartDelay = restartDelays.at(armoryRestartCount_);
-   }
-   armoryRestartCount_ += 1;
-
    logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
+
+   auto now = std::chrono::steady_clock::now();
+   std::chrono::milliseconds nextConnDelay(0);
+   if (now < nextArmoryReconnectAttempt_) {
+      nextConnDelay = std::chrono::duration_cast<std::chrono::milliseconds>(
+         nextArmoryReconnectAttempt_ - now);
+   }
+   if (nextConnDelay != std::chrono::milliseconds::zero()) {
+      
+      auto delaySec = std::chrono::duration_cast<std::chrono::seconds>(nextConnDelay);
+      SPDLOG_LOGGER_DEBUG(logMgr_->logger("ui")
+         , "restart armory connection in {} second", nextConnDelay.count());
+      
+      QTimer::singleShot(nextConnDelay, this, &BSTerminalMainWindow::ArmoryIsOffline);
+      return;
+   }
+
    if (walletsMgr_) {
       walletsMgr_->unregisterWallets();
    }
    updateControlEnabledState();
+
+   //increase reconnect delay
+   armoryReconnectDelay_ = armoryReconnectDelay_ % 2 ? 
+      armoryReconnectDelay_ * 2 : armoryReconnectDelay_ + 1;
+   armoryReconnectDelay_ = std::max(armoryReconnectDelay_, unsigned(60));
+   nextArmoryReconnectAttempt_ = 
+      std::chrono::steady_clock::now() + std::chrono::seconds(armoryReconnectDelay_);
+   
+   connectArmory();
+
    // XXX: disabled until armory connection is stable in terminal
    // updateLoginActionState();
-
-   SPDLOG_LOGGER_DEBUG(logMgr_->logger("ui"), "restart armory connection in {} second", restartDelay);
-   QTimer::singleShot(std::chrono::seconds(restartDelay), this, [this] {
-      connectArmory();
-   });
 }
 
 void BSTerminalMainWindow::initArmory()
@@ -1113,10 +1130,7 @@ void BSTerminalMainWindow::connectSigner()
       return;
    }
 
-   if (!signContainer_->Start()) {
-      BSMessageBox(BSMessageBox::warning, tr("BlockSettle Signer Connection")
-         , tr("Failed to start signer connection.")).exec();
-   }
+   signContainer_->Start();
 }
 
 bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()> &cb)
