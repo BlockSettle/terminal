@@ -54,7 +54,7 @@ OpenURIDialog::OpenURIDialog(const std::shared_ptr<QNetworkAccessManager>& nam
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &QDialog::accept);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &QDialog::reject);
 
-   connect(ui_->lineEditURI, &QLineEdit::textEdited, this, &OpenURIDialog::onURIChanhed);
+   connect(ui_->lineEditURI, &QLineEdit::textEdited, this, &OpenURIDialog::onURIChanged);
 
    connect(this, &OpenURIDialog::BitpayPaymentLoaded, this, &OpenURIDialog::onBitpayPaymentLoaded);
 
@@ -65,7 +65,7 @@ OpenURIDialog::OpenURIDialog(const std::shared_ptr<QNetworkAccessManager>& nam
 
 OpenURIDialog::~OpenURIDialog() = default;
 
-void OpenURIDialog::onURIChanhed()
+void OpenURIDialog::onURIChanged()
 {
    ClearErrorText();
    ClearStatusText();

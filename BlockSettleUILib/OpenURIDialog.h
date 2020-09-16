@@ -41,7 +41,7 @@ public:
    Bip21::PaymentRequestInfo getRequestInfo() const;
 
 private slots:
-   void onURIChanhed();
+   void onURIChanged();
 
    void onBitpayPaymentLoaded(bool result);
 
