@@ -370,9 +370,9 @@ QPixmap UiUtils::getQRCode(const QString& address, int size)
    }
 }
 
-double UiUtils::parseAmountBtc(const QString& text)
+double UiUtils::parseAmountBtc(const QString& text, bool *converted)
 {
-   return QLocale().toDouble(text);
+   return QLocale().toDouble(text, converted);
 }
 
 QString UiUtils::displayCurrencyAmount(double amount)

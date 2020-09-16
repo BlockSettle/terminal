@@ -211,7 +211,7 @@ void CreateTransactionDialogSimple::createTransaction()
       return;
    }
 
-   CreateTransaction([this, handle = validityFlag_.handle()](bool result, const std::string &errorMsg) {
+   CreateTransaction([this, handle = validityFlag_.handle()](bool result, const std::string &errorMsg, const std::string& unsignedTx, uint64_t virtSize) {
       if (!handle.isValid()) {
          return;
       }
@@ -220,6 +220,8 @@ void CreateTransactionDialogSimple::createTransaction()
             , tr("Transaction error"), QString::fromStdString(errorMsg)).exec();
          reject();
       }
+
+      createTransactionImpl();
    });
 }
 
@@ -228,8 +230,13 @@ bool CreateTransactionDialogSimple::switchModeRequested() const
    return advancedDialogRequested_;
 }
 
-std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::SwithcMode()
+std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::SwitchMode()
 {
+   if (!paymentInfo_.address.isEmpty()) {
+      return CreateTransactionDialogAdvanced::CreateForPaymentRequest(armory_, walletsManager_
+         , utxoReservationManager_, signContainer_, logger_, applicationSettings_, paymentInfo_, parentWidget());
+   }
+
    auto advancedDialog = std::make_shared<CreateTransactionDialogAdvanced>(armory_, walletsManager_
       , utxoReservationManager_, signContainer_, true, logger_, applicationSettings_, transactionData_, std::move(utxoRes_), parentWidget());
 
@@ -285,4 +292,49 @@ void CreateTransactionDialogSimple::preSetAddress(const QString& address)
 void CreateTransactionDialogSimple::preSetValue(const double value)
 {
    ui_->lineEditAmount->setText(UiUtils::displayAmount(value));
+}
+
+void CreateTransactionDialogSimple::preSetValue(const bs::XBTAmount& value)
+{
+   ui_->lineEditAmount->setText(UiUtils::displayAmount(value));
+}
+
+std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::CreateForPaymentRequest(const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
+   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<spdlog::logger>& logger
+   , const std::shared_ptr<ApplicationSettings> &applicationSettings
+   , const Bip21::PaymentRequestInfo& paymentInfo
+   , QWidget* parent)
+{
+   if (!canUseSimpleMode(paymentInfo)) {
+      return CreateTransactionDialogAdvanced::CreateForPaymentRequest(armory, walletManager
+         , utxoReservationManager, container, logger, applicationSettings, paymentInfo, parent);
+   }
+
+   auto dlg = std::make_shared<CreateTransactionDialogSimple>(armory, walletManager
+      , utxoReservationManager, container, logger, applicationSettings, parent);
+
+   // set address and lock
+   dlg->preSetAddress(paymentInfo.address);
+   dlg->ui_->lineEditAddress->setEnabled(false);
+
+   // set amount and lock
+   if (paymentInfo.amount.GetValue() != 0) {
+      dlg->preSetValue(paymentInfo.amount);
+      dlg->ui_->lineEditAmount->setEnabled(false);
+      dlg->ui_->pushButtonMax->setEnabled(false);
+   }
+
+   // set message or label to comment
+   if (!paymentInfo.message.isEmpty()) {
+      dlg->ui_->textEditComment->setText(paymentInfo.message);
+   } else if (!paymentInfo.label.isEmpty()) {
+      dlg->ui_->textEditComment->setText(paymentInfo.label);
+   }
+
+   dlg->paymentInfo_ = paymentInfo;
+
+   return dlg;
 }

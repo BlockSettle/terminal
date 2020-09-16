@@ -79,7 +79,7 @@ namespace UiUtils
    template <typename T> QString displayAmount(T value);
    QString displayAmount(const bs::XBTAmount &);
 
-   double parseAmountBtc(const QString& text);
+   double parseAmountBtc(const QString& text, bool *converted = nullptr);
 
    QString displayCurrencyAmount(double value);
    QString displayCCAmount(double value);

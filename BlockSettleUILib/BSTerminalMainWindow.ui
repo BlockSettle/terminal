@@ -539,7 +539,7 @@
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -549,6 +549,7 @@
     <addaction name="actionSettings"/>
     <addaction name="separator"/>
     <addaction name="actionCreateNewWallet"/>
+    <addaction name="actionOpenURI"/>
     <addaction name="separator"/>
     <addaction name="actionAbout"/>
     <addaction name="separator"/>
@@ -911,6 +912,14 @@
   <action name="actionVideoTutorials">
    <property name="text">
     <string>Video Tutorials</string>
+   </property>
+  </action>
+  <action name="actionOpenURI">
+   <property name="text">
+    <string>&amp;Open URI</string>
+   </property>
+   <property name="toolTip">
+    <string>Open bitcoin URI or payment request</string>
    </property>
   </action>
  </widget>

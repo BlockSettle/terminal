@@ -25,6 +25,17 @@ class CreateTransactionDialogSimple : public CreateTransactionDialog
 Q_OBJECT
 
 public:
+   static std::shared_ptr<CreateTransactionDialog> CreateForPaymentRequest(
+        const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &
+      , const std::shared_ptr<bs::UTXOReservationManager> &
+      , const std::shared_ptr<SignContainer>&
+      , const std::shared_ptr<spdlog::logger>&
+      , const std::shared_ptr<ApplicationSettings> &
+      , const Bip21::PaymentRequestInfo& paymentInfo
+      , QWidget* parent = nullptr);
+
+public:
    CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
@@ -35,10 +46,12 @@ public:
    ~CreateTransactionDialogSimple() override;
 
    bool switchModeRequested() const override;
-   std::shared_ptr<CreateTransactionDialog> SwithcMode() override;
+   std::shared_ptr<CreateTransactionDialog> SwitchMode() override;
 
    void preSetAddress(const QString& address);
    void preSetValue(const double value);
+   void preSetValue(const bs::XBTAmount& value);
+
 
 protected:
    QComboBox * comboBoxWallets() const override;
@@ -82,6 +95,8 @@ private:
    bool  advancedDialogRequested_ = false;
 
    std::vector<bs::core::wallet::TXSignRequest> offlineTransactions_;
+
+   Bip21::PaymentRequestInfo paymentInfo_;
 };
 
 #endif // __CREATE_TRANSACTION_DIALOG_SIMPLE_H__

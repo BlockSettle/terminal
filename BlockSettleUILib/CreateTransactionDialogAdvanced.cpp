@@ -13,6 +13,7 @@
 
 #include "Address.h"
 #include "ArmoryConnection.h"
+#include "BitPayRequests.h"
 #include "BSMessageBox.h"
 #include "CoinControlDialog.h"
 #include "CreateTransactionDialogSimple.h"
@@ -32,7 +33,11 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QKeyEvent>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QPushButton>
+
 #include <spdlog/spdlog.h>
 #include <stdexcept>
 
@@ -108,6 +113,65 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
 
    dlg->setCPFPinputs(tx, wallet);
    dlg->isCPFP_ = true;
+   return dlg;
+}
+
+std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::CreateForPaymentRequest(
+        const std::shared_ptr<ArmoryConnection> &armory
+      , const std::shared_ptr<bs::sync::WalletsManager> &walletManager
+      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
+      , const std::shared_ptr<SignContainer>& container
+      , const std::shared_ptr<spdlog::logger>& logger
+      , const std::shared_ptr<ApplicationSettings> & applicationSettings
+      , const Bip21::PaymentRequestInfo& paymentInfo
+      , QWidget* parent)
+{
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
+      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, bs::UtxoReservationToken(), parent);
+
+   dlg->ui_->pushButtonImport->setEnabled(false);
+   dlg->ui_->pushButtonShowSimple->setEnabled(CreateTransactionDialog::canUseSimpleMode(paymentInfo));
+
+   dlg->paymentInfo_ = paymentInfo;
+
+   // set output
+   const auto addr = bs::Address::fromAddressString(paymentInfo.address.toStdString());
+   dlg->AddRecipient(CreateTransactionDialogAdvanced::Recipient{ addr, paymentInfo.amount});
+
+   dlg->ui_->treeViewOutputs->setEnabled(false);
+
+   dlg->ui_->lineEditAddress->setEnabled(false);
+   dlg->ui_->pushButtonMax->setEnabled(false);
+   dlg->ui_->lineEditAmount->setEnabled(false);
+
+   // set fee
+   if (!qFuzzyIsNull(paymentInfo.feePerByte)) {
+      dlg->SetPredefinedFeeRate(paymentInfo.feePerByte);
+   }
+
+   // disable RBF for request
+   if (!paymentInfo.requestURL.isEmpty()) {
+      dlg->ui_->checkBoxRBF->setChecked(false);
+      dlg->ui_->checkBoxRBF->setEnabled(false);
+      dlg->ui_->checkBoxRBF->setToolTip(tr("RBF disabled for BitPay request"));
+
+      dlg->nam_ = std::make_shared<QNetworkAccessManager>();
+   }
+
+   // set message or label to comment
+   if (!paymentInfo.requestMemo.isEmpty()) {
+      dlg->ui_->textEditComment->setText(paymentInfo.requestMemo);
+   } else if (!paymentInfo.message.isEmpty()) {
+      dlg->ui_->textEditComment->setText(paymentInfo.message);
+   } else if (!paymentInfo.label.isEmpty()) {
+      dlg->ui_->textEditComment->setText(paymentInfo.label);
+   }
+
+   dlg->validateAddOutputButton();
+
+   connect(dlg.get(), &CreateTransactionDialogAdvanced::VerifyBitPayUnsignedTx, dlg.get(), &CreateTransactionDialogAdvanced::onVerifyBitPayUnsignedTx);
+   connect(dlg.get(), &CreateTransactionDialogAdvanced::BitPayTxVerified, dlg.get(), &CreateTransactionDialogAdvanced::onBitPayTxVerified);
+
    return dlg;
 }
 
@@ -1196,7 +1260,7 @@ void CreateTransactionDialogAdvanced::onCreatePressed()
       return;
    }
 
-   CreateTransaction([this, handle = validityFlag_.handle()](bool result, const std::string &errorMsg) {
+   CreateTransaction([this, handle = validityFlag_.handle()](bool result, const std::string &errorMsg, const std::string& unsignedTx, uint64_t virtSize) {
       if (!handle.isValid()) {
          return;
       }
@@ -1204,6 +1268,12 @@ void CreateTransactionDialogAdvanced::onCreatePressed()
          BSMessageBox(BSMessageBox::critical, tr("Transaction")
             , tr("Transaction error"), QString::fromStdString(errorMsg)).exec();
          reject();
+      }
+
+      if (!paymentInfo_.requestURL.isEmpty()) {
+         emit VerifyBitPayUnsignedTx(unsignedTx, virtSize);
+      } else {
+         createTransactionImpl();
       }
    });
 }
@@ -1556,6 +1626,13 @@ void CreateTransactionDialogAdvanced::SetPredefinedFee(const int64_t& manualFee)
    transactionData_->setTotalFee(manualFee);
 }
 
+void CreateTransactionDialogAdvanced::SetPredefinedFeeRate(const float feeRate)
+{
+   ui_->comboBoxFeeSuggestions->clear();
+   ui_->comboBoxFeeSuggestions->addItem(tr("%1 s/b").arg(feeRate), (qlonglong)feeRate);
+   transactionData_->setFeePerByte(feeRate);
+}
+
 // Set a TX such that it can't be altered.
 void CreateTransactionDialogAdvanced::setUnchangeableTx()
 {
@@ -1675,8 +1752,13 @@ bool CreateTransactionDialogAdvanced::switchModeRequested() const
    return simpleDialogRequested_;
 }
 
-std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::SwithcMode()
+std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::SwitchMode()
 {
+   if (!paymentInfo_.address.isEmpty()) {
+      return CreateTransactionDialogSimple::CreateForPaymentRequest(armory_, walletsManager_
+         , utxoReservationManager_, signContainer_, logger_, applicationSettings_, paymentInfo_, parentWidget());
+   }
+
    auto simpleDialog = std::make_shared<CreateTransactionDialogSimple>(armory_
       , walletsManager_, utxoReservationManager_, signContainer_
       , logger_, applicationSettings_, parentWidget());
@@ -1708,4 +1790,30 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::Swithc
    }
 
    return simpleDialog;
+}
+
+void CreateTransactionDialogAdvanced::onVerifyBitPayUnsignedTx(const std::string& unsignedTx, uint64_t virtSize)
+{
+   // send request
+   QNetworkRequest request = BitPay::getBTCPaymentVerificationRequest(paymentInfo_.requestURL);
+   QNetworkReply *reply = nam_->post(request, BitPay::getBTCPaymentVerificationPayload(unsignedTx, virtSize));
+
+   connect(reply, &QNetworkReply::finished, this, [this, reply] {
+      if (reply->error() == QNetworkReply::NoError) {
+         emit BitPayTxVerified(true);
+         return;
+      }
+
+      emit BitPayTxVerified(false);
+   });
+
+   connect(reply, &QNetworkReply::finished, reply, &QNetworkReply::deleteLater);
+   connect(this, &QDialog::finished, reply, &QNetworkReply::abort);
+}
+
+void CreateTransactionDialogAdvanced::onBitPayTxVerified(bool result)
+{
+   if (result) {
+      createTransactionImpl();
+   }
 }

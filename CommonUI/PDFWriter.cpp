@@ -8,6 +8,7 @@
 **********************************************************************************
 
 */
+#include <stdexcept>
 #include <QFile>
 #include <QFileInfo>
 #include <QPainter>
