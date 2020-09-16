@@ -27,6 +27,11 @@ public:
    void showShieldReservedDealingParticipant();
    void showShieldSelectTargetTrade();
    void showShieldSelectTargetDealing();
+
+   void setLoginEnabled(bool enabled);
+
+private:
+   bool loginEnabled_{};
 };
 
 #endif // RFQREPLYLOGINREQUIREDSHIELD_H
