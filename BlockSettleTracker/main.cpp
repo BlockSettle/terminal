@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
    };
    auto wsServer = std::make_unique<WsServerConnection>(logger, WsServerConnectionParams{});
    const auto &transport = std::make_shared<bs::network::TransportBIP15xServer>(logger
-      , cbTrustedClients, true, ownKeyPath, ownKeyName);
+      , cbTrustedClients, false, ownKeyPath, ownKeyName);
    auto bipServer = std::make_shared<Bip15xServerConnection>(logger, std::move(wsServer), transport);
 
    auto ccServer = std::make_unique<CcTrackerServer>(logger, armory, bipServer);
