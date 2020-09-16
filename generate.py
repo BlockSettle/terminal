@@ -110,17 +110,18 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
    command.append('..')
    command.append('-G')
    command.append( project_settings.get_cmake_generator())
+   command.append('-A x64 ')
    command.append('-DCMAKE_CURRENT_SOURCE_DIR=..')
    if build_mode == 'debug':
       command.append('-DCMAKE_BUILD_TYPE=Debug')
       if project_settings._is_windows:
-         command.append('-DCMAKE_CXX_FLAGS_DEBUG=/D_DEBUG -DBUILD_MT_RELEASE=OFF /MTd /Zi /Ob0 /Od /RTC1')
+         command.append('"-DCMAKE_CXX_FLAGS_DEBUG=/D_DEBUG -DBUILD_MT_RELEASE=OFF /MTd /Zi /Ob0 /Od /RTC1"')
          command.append('-DCMAKE_CONFIGURATION_TYPES=Debug')
    else:
       command.append('-DCMAKE_BUILD_TYPE=RelWithDebInfo')
       if project_settings._is_windows:
-         command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT /O2 /Ob2 /DNDEBUG')
-         command.append('-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=/MT /O2 /Ob2 /DNDEBUG')
+         command.append('"-DCMAKE_CXX_FLAGS_RELEASE=/MT /O2 /Ob2 /DNDEBUG"')
+         command.append('"-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=/MT /O2 /Ob2 /DNDEBUG"')
          command.append('-DCMAKE_CONFIGURATION_TYPES=RelWithDebInfo')
 
    if build_production:
@@ -142,7 +143,9 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
       for flag in cmake_flags.split():
          command.append(flag)
 
-   result = subprocess.call(command)
+   #result = subprocess.call(command)
+   cmdStr = r' '.join(command)
+   result = subprocess.call(cmdStr)
    if result == 0:
       print('Project generated to :' + build_dir)
       return 0
