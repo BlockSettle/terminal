@@ -53,11 +53,13 @@ WalletShieldBase::WalletShieldBase(QWidget *parent) :
 
 WalletShieldBase::~WalletShieldBase() noexcept = default;
 
-void WalletShieldBase::setShieldButtonAction(std::function<void(void)>&& action)
+void WalletShieldBase::setShieldButtonAction(std::function<void(void)>&& action, bool oneShot)
 {
    ui_->shieldButton->disconnect();
-   connect(ui_->shieldButton, &QPushButton::clicked, this, [act = std::move(action), this]() {
-      ui_->shieldButton->setDisabled(true);
+   connect(ui_->shieldButton, &QPushButton::clicked, this, [act = std::move(action), this, oneShot]() {
+      if (oneShot) {
+         ui_->shieldButton->setDisabled(true);
+      }
       act();
    });
 }

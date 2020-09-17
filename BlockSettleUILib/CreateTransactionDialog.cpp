@@ -14,31 +14,33 @@
 #include <thread>
 
 #include <QCheckBox>
+#include <QCloseEvent>
 #include <QComboBox>
 #include <QCoreApplication>
+#include <QFile>
+#include <QFileDialog>
+#include <QIntValidator>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QTextEdit>
-#include <QIntValidator>
-#include <QFile>
-#include <QFileDialog>
-#include <QCloseEvent>
+
 #include <spdlog/spdlog.h>
+
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "BSMessageBox.h"
 #include "OfflineSigner.h"
+#include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
 #include "TransactionData.h"
 #include "TransactionOutputsModel.h"
 #include "UiUtils.h"
 #include "UsedInputsModel.h"
+#include "UtxoReservationManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
-#include "UtxoReservationManager.h"
-#include "SelectedTransactionInputs.h"
 
 // Mirror of cached Armory wait times - NodeRPC::aggregateFeeEstimates()
 const std::map<unsigned int, QString> feeLevels = {
@@ -507,7 +509,7 @@ void CreateTransactionDialog::CreateTransaction(const CreateTransactionCb &cb)
 
             if (eptr) {
                SPDLOG_LOGGER_ERROR(logger_, "getTXsByHash failed");
-               cb(false, "receving supporting transactions failed");
+               cb(false, "receving supporting transactions failed", "", 0);
                return;
             }
 
@@ -522,9 +524,14 @@ void CreateTransactionDialog::CreateTransaction(const CreateTransactionCb &cb)
                if (!handle.isValid()) {
                   return;
                }
-               logger_->debug("[{}] result={}, state: {}", __func__, (int)result, state.IsInitialized());
-               bool rc = createTransactionImpl();
-               cb(rc, rc ? "" : "unknown error");
+
+               logger_->debug("[CreateTransactionDialog::CreateTransaction cbResolvePublicData] result={}, state: {}"
+                              , (int)result, state.IsInitialized());
+
+               const auto serializedUnsigned = txReq_.armorySigner_.serializeUnsignedTx().toHexStr();
+               const auto estimatedSize = txReq_.estimateTxVirtSize();
+
+               cb(true, "", serializedUnsigned, estimatedSize);
             };
 
             signContainer_->resolvePublicSpenders(txReq_, cbResolvePublicData);
@@ -532,12 +539,12 @@ void CreateTransactionDialog::CreateTransaction(const CreateTransactionCb &cb)
 
          if (!armory_->getTXsByHash(hashes, supportingTxMapCb, true)) {
             SPDLOG_LOGGER_ERROR(logger_, "getTXsByHash failed");
-            cb(false, "receving supporting transactions failed");
+            cb(false, "receving supporting transactions failed", "", 0);
          }
       }
       catch (const std::exception &e) {
          SPDLOG_LOGGER_ERROR(logger_, "exception: {}", e.what());
-         cb(false, e.what());
+         cb(false, e.what(), "", 0);
       }
    });
 }
@@ -724,4 +731,9 @@ void CreateTransactionDialog::showError(const QString &text, const QString &deta
 {
    BSMessageBox errorMessage(BSMessageBox::critical, text, detailedText, this);
    errorMessage.exec();
+}
+
+bool CreateTransactionDialog::canUseSimpleMode(const Bip21::PaymentRequestInfo& paymentInfo)
+{
+   return paymentInfo.requestURL.isEmpty();
 }

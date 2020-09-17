@@ -29,10 +29,10 @@
 #include "AuthAddressManager.h"
 #include "AutheIDClient.h"
 #include "AutoSignQuoteProvider.h"
+#include "Bip15xDataConnection.h"
 #include "BSMarketDataProvider.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
-#include "Bip15xDataConnection.h"
 #include "CCFileManager.h"
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
@@ -51,11 +51,12 @@
 #include "InfoDialogs/StartupDialog.h"
 #include "InfoDialogs/SupportDialog.h"
 #include "LoginWindow.h"
-#include "MDCallbacksQt.h"
 #include "MarketDataProvider.h"
+#include "MDCallbacksQt.h"
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
 #include "NotificationCenter.h"
+#include "OpenURIDialog.h"
 #include "OrderListModel.h"
 #include "PubKeyLoader.h"
 #include "QuoteProvider.h"
@@ -672,12 +673,21 @@ void BSTerminalMainWindow::acceptMDAgreement()
 void BSTerminalMainWindow::updateControlEnabledState()
 {
    if (action_send_) {
-      action_send_->setEnabled(!walletsMgr_->hdWallets().empty()
-         && armory_->isOnline() && signContainer_ && signContainer_->isReady());
+      const bool txCreationEnabled = !walletsMgr_->hdWallets().empty()
+         && armory_->isOnline() && signContainer_ && signContainer_->isReady();
+
+      action_send_->setEnabled(txCreationEnabled);
+      ui_->actionOpenURI->setEnabled(txCreationEnabled);
    }
    // Do not allow login until wallets synced (we need to check if user has primary wallet or not).
    // Should be OK for both local and remote signer.
-   ui_->pushButtonUser->setEnabled(walletsSynched_ && loginApiKeyEncrypted().empty());
+   bool loginAllowed = walletsSynched_ && loginApiKeyEncrypted().empty();
+   ui_->pushButtonUser->setEnabled(loginAllowed);
+   action_login_->setEnabled(true);
+
+   action_login_->setVisible(!celerConnection_->IsConnected());
+   action_login_->setEnabled(loginAllowed);
+   action_logout_->setVisible(celerConnection_->IsConnected());
 }
 
 bool BSTerminalMainWindow::isMDLicenseAccepted() const
@@ -1256,16 +1266,7 @@ void BSTerminalMainWindow::onSend()
       dlg->SelectWallet(selectedWalletId, UiUtils::WalletsTypes::None);
    }
 
-   while(true) {
-      dlg->exec();
-
-      if  ((dlg->result() != QDialog::Accepted) || !dlg->switchModeRequested()) {
-         break;
-      }
-
-      auto nextDialog = dlg->SwithcMode();
-      dlg = nextDialog;
-   }
+   DisplayCreateTransactionDialog(dlg);
 }
 
 void BSTerminalMainWindow::setupMenu()
@@ -1299,6 +1300,7 @@ void BSTerminalMainWindow::setupMenu()
    };
 
    connect(ui_->actionCreateNewWallet, &QAction::triggered, this, [ww = ui_->widgetWallets]{ ww->onNewWallet(); });
+   connect(ui_->actionOpenURI, &QAction::triggered, this, [this]{ openURIDialog(); });
    connect(ui_->actionAuthenticationAddresses, &QAction::triggered, this, &BSTerminalMainWindow::openAuthManagerDialog);
    connect(ui_->actionSettings, &QAction::triggered, this, [=]() { openConfigDialog(); });
    connect(ui_->actionAccountInformation, &QAction::triggered, this, &BSTerminalMainWindow::openAccountInfoDialog);
@@ -1395,6 +1397,9 @@ void BSTerminalMainWindow::openCCTokenDialog()
 
 void BSTerminalMainWindow::onLogin()
 {
+   if (!action_login_->isEnabled()) {
+      return;
+   }
    auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
 
    if (walletsSynched_ && !walletsMgr_->getPrimaryWallet()) {
@@ -1541,20 +1546,15 @@ void BSTerminalMainWindow::onAccountTypeChanged(bs::network::UserType userType, 
 
 void BSTerminalMainWindow::onCelerConnected()
 {
-   action_login_->setVisible(false);
-   action_logout_->setVisible(true);
-
    onUserLoggedIn();
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::onCelerDisconnected()
 {
-   action_logout_->setVisible(false);
-   action_login_->setEnabled(true);
-   action_login_->setVisible(true);
-
    onUserLoggedOut();
    celerConnection_->CloseConnection();
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
@@ -2009,6 +2009,8 @@ void BSTerminalMainWindow::InitWidgets()
       , &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
    connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this
       , &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::loginRequested, this
+      , &BSTerminalMainWindow::onLogin);
 
    connect(ui_->tabWidget, &QTabWidget::tabBarClicked, this,
       [requestRFQ = QPointer<RFQRequestWidget>(ui_->widgetRFQ)
@@ -2404,4 +2406,45 @@ void BSTerminalMainWindow::addDeferredDialog(const std::function<void(void)> &de
       deferredDialogs_.push(deferredDialog);
       processDeferredDialogs();
    }, Qt::QueuedConnection);
+}
+
+void BSTerminalMainWindow::openURIDialog()
+{
+   const bool testnetNetwork = applicationSettings_->get<NetworkType>(ApplicationSettings::netType) == NetworkType::TestNet;
+
+   auto uiLogger = logMgr_->logger("ui");
+
+   OpenURIDialog dlg{connectionManager_->GetNAM(), testnetNetwork, uiLogger, this};
+   if (dlg.exec() == QDialog::Accepted) {
+      // open create transaction dialog
+
+      const auto requestInfo = dlg.getRequestInfo();
+      std::shared_ptr<CreateTransactionDialog> cerateTxDlg;
+
+      if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
+         cerateTxDlg = CreateTransactionDialogAdvanced::CreateForPaymentRequest(armory_, walletsMgr_
+            , utxoReservationMgr_, signContainer_, uiLogger, applicationSettings_
+            , requestInfo, this);
+      } else {
+         cerateTxDlg = CreateTransactionDialogSimple::CreateForPaymentRequest(armory_, walletsMgr_
+            , utxoReservationMgr_, signContainer_, uiLogger, applicationSettings_
+            , requestInfo, this);
+      }
+
+      DisplayCreateTransactionDialog(cerateTxDlg);
+   }
+}
+
+void BSTerminalMainWindow::DisplayCreateTransactionDialog(std::shared_ptr<CreateTransactionDialog> dlg)
+{
+   while(true) {
+      dlg->exec();
+
+      if  ((dlg->result() != QDialog::Accepted) || !dlg->switchModeRequested()) {
+         break;
+      }
+
+      auto nextDialog = dlg->SwitchMode();
+      dlg = nextDialog;
+   }
 }

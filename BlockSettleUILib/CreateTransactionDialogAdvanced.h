@@ -27,6 +27,7 @@ namespace bs {
    }
 }
 
+class QNetworkAccessManager;
 
 class CreateTransactionDialogAdvanced : public CreateTransactionDialog
 {
@@ -54,6 +55,16 @@ public:
       , const Tx &
       , QWidget* parent = nullptr);
 
+   static std::shared_ptr<CreateTransactionDialog> CreateForPaymentRequest(
+        const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &
+      , const std::shared_ptr<bs::UTXOReservationManager> &
+      , const std::shared_ptr<SignContainer>&
+      , const std::shared_ptr<spdlog::logger>&
+      , const std::shared_ptr<ApplicationSettings> &
+      , const Bip21::PaymentRequestInfo& paymentInfo
+      , QWidget* parent = nullptr);
+
 public:
    CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
@@ -73,7 +84,7 @@ public:
    void SetImportedTransactions(const std::vector<bs::core::wallet::TXSignRequest>& transactions);
 
    bool switchModeRequested() const override;
-   std::shared_ptr<CreateTransactionDialog> SwithcMode() override;
+   std::shared_ptr<CreateTransactionDialog> SwitchMode() override;
 
 protected:
    bool eventFilter(QObject *watched, QEvent *) override;
@@ -130,6 +141,11 @@ private slots:
    void onOutputsClicked(const QModelIndex &index);
    void onSimpleDialogRequested();
    void onUpdateChangeWidget();
+   void onBitPayTxVerified(bool result);
+   void onVerifyBitPayUnsignedTx(const std::string& unsignedTx, uint64_t virtSize);
+signals:
+   void VerifyBitPayUnsignedTx(const std::string& unsignedTx, uint64_t virtSize);
+   void BitPayTxVerified(bool result);
 
 private:
    void clear() override;
@@ -169,6 +185,7 @@ private:
    void enableFeeChanging(bool flag = true);
    void SetFixedChangeAddress(const QString& changeAddress);
    void SetPredefinedFee(const int64_t& manualFee);
+   void SetPredefinedFeeRate(const float feeRate);
    void setUnchangeableTx();
 
    void RemoveOutputByRow(int row);
@@ -204,6 +221,9 @@ private:
    bool        simpleDialogRequested_ = false;
 
    bs::XBTAmount importedTxTotalFee_{};
+   Bip21::PaymentRequestInfo paymentInfo_;
+
+   std::shared_ptr<QNetworkAccessManager> nam_;
 };
 
 #endif // __CREATE_TRANSACTION_DIALOG_ADVANCED_H__

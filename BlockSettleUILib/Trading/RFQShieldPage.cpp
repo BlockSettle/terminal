@@ -29,7 +29,10 @@ RFQShieldPage::~RFQShieldPage() noexcept = default;
 
 void RFQShieldPage::showShieldLoginToSubmitRequired()
 {
-   showShield(shieldLoginToSubmitRFQs);
+   showShield(shieldLoginToSubmitRFQs, tr("Login"));
+   setShieldButtonAction([this]() {
+      emit loginRequested();
+   }, false);
 }
 
 void RFQShieldPage::showShieldLoginToResponseRequired()
@@ -55,4 +58,9 @@ void RFQShieldPage::showShieldSelectTargetTrade()
 void RFQShieldPage::showShieldSelectTargetDealing()
 {
    showShield(shieldDealingUnselectedTargetRequest);
+}
+
+void RFQShieldPage::setLoginEnabled(bool enabled)
+{
+   loginEnabled_ = enabled;
 }

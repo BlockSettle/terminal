@@ -187,7 +187,7 @@ CustomTitleDialogWindow {
 
             CustomButton {
                 text: qsTr("Select Target Dir")
-                Layout.preferredWidth: 80
+                Layout.preferredWidth: 160
                 Layout.maximumHeight: 25
                 Layout.leftMargin: 110 + 5
 
