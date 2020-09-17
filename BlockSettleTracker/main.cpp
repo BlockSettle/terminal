@@ -147,8 +147,10 @@ int main(int argc, char** argv) {
       return {};
    };
    auto wsServer = std::make_unique<WsServerConnection>(logger, WsServerConnectionParams{});
+   const auto ephemeralPeersServer = false; // Required for persistent server's public key
+   const bool oneWayAuthServer = true;
    const auto &transport = std::make_shared<bs::network::TransportBIP15xServer>(logger
-      , cbTrustedClients, false, ownKeyPath, ownKeyName);
+      , cbTrustedClients, ephemeralPeersServer, oneWayAuthServer, ownKeyPath, ownKeyName);
    auto bipServer = std::make_shared<Bip15xServerConnection>(logger, std::move(wsServer), transport);
 
    auto ccServer = std::make_unique<CcTrackerServer>(logger, armory, bipServer);
