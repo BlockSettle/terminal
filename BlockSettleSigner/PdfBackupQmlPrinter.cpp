@@ -111,7 +111,7 @@ void QmlPdfBackup::save()
    QFileDialog dlg;
    dlg.setFileMode(QFileDialog::AnyFile);
    filePath = dlg.getSaveFileName(nullptr,
-      tr("Select file for backup"), filePath, QLatin1String("*.pdf"));
+      tr("Select file for backup"), filePath, tr("PDF Files *.pdf"));
 
    if (filePath.isEmpty()) {
       return;

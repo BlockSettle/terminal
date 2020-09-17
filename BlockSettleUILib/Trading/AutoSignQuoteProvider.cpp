@@ -18,8 +18,8 @@
 
 #include <BaseCelerClient.h>
 #include <QCoreApplication>
-#include <QFileDialog>
 #include <QFileInfo>
+#include <QDir>
 
 
 AutoSignScriptProvider::AutoSignScriptProvider(const std::shared_ptr<spdlog::logger> &logger

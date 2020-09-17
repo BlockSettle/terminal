@@ -617,7 +617,8 @@ bool CreateTransactionDialog::createTransactionImpl()
          const std::string fileName = fmt::format("{}_{}.bin", hdWallet->walletId(), timestamp);
 
          QString defaultFilePath = QDir(signerOfflineDir).filePath(QString::fromStdString(fileName));
-         offlineFilePath = QFileDialog::getSaveFileName(this, tr("Save Offline TX as..."), defaultFilePath);
+         offlineFilePath = QFileDialog::getSaveFileName(this, tr("Save Offline TX as...")
+                                                        , defaultFilePath, tr("TX files (*.bin);; All files (*)"));
 
          if (offlineFilePath.isEmpty()) {
             return true;

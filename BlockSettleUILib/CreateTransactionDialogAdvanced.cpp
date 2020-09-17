@@ -31,7 +31,6 @@
 
 #include <QEvent>
 #include <QFile>
-#include <QFileDialog>
 #include <QKeyEvent>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>

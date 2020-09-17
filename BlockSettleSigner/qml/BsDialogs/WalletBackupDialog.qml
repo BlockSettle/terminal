@@ -196,6 +196,7 @@ CustomTitleDialogWindow {
                     currentFile: StandardPaths.writableLocation(StandardPaths.DocumentsLocation) + "/" + backupFileName
                     folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
                     fileMode: FileDialog.SaveFile
+                    nameFilters: [ (fullBackupMode ? (isPrintable ? "PDF files (*.pdf)" : "Full Wallet files (*.wdb)") : "Watching-Only Wallet files (*.lmdb)"), "All files (*)" ]
 
                     onAccepted: {
                         userSelection = qmlAppObj.getUrlPathWithoutExtention(file)
