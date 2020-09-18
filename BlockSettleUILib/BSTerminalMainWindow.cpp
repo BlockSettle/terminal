@@ -2109,7 +2109,7 @@ void BSTerminalMainWindow::showLegacyWarningIfNeeded()
       BSMessageBox mbox(BSMessageBox::info
          , tr("Legacy Wallets")
          , tr("Legacy Address Balances")
-         , tr("The BlockSettle Terminal has detected the use of legacy addresses on your hardware wallet.\n\n"
+         , tr("The BlockSettle Terminal has detected the use of legacy addresses in your wallet.\n\n"
               "The BlockSettle Terminal supports viewing and spending from legacy addresses, but will not support the following actions related to these addresses:\n\n"
               "- GUI support for legacy address generation\n"
               "- Trading and settlement using legacy inputs\n\n"
