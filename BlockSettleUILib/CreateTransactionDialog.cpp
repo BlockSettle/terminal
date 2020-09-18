@@ -605,7 +605,7 @@ bool CreateTransactionDialog::createTransactionImpl()
          // do we need some checks here?
       }
 
-      if (txReq_.armorySigner_.isSegWit()) {
+      if (!txReq_.armorySigner_.hasLegacyInputs()) {
          txReq_.txHash = txReq_.txId();
       }
 
