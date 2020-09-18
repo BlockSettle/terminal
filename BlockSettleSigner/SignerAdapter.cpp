@@ -76,7 +76,7 @@ std::shared_ptr<DataConnection> SignerAdapter::instantiateAdapterConnection(
    params.ephemeralPeers = true;
 
    //connection from GUI to headless signer should be 2-way
-   params.oneWayAuth = false;
+   params.authMode = bs::network::BIP15xAuthMode::TwoWay;
 
    // When creating the client connection, we need to generate a cookie for the
    // server connection in order to enable verification. We also need to add

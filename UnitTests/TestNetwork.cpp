@@ -431,7 +431,7 @@ TEST(TestNetwork, BIP15X_1Way)
    const auto clientLsn = std::make_unique<ClientConnListener>(logger);
 
    auto testParams = getTestParams();
-   testParams.oneWayAuth = true;
+   testParams.authMode = bs::network::BIP15xAuthMode::OneWay;
    const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger
       , testParams);
    auto wsConn = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});

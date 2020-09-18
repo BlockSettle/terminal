@@ -2199,7 +2199,7 @@ std::shared_ptr<BsClient> BSTerminalMainWindow::createClient()
 
    bs::network::BIP15xParams params;
    params.ephemeralPeers = true;
-   params.oneWayAuth = true;
+   params.authMode = bs::network::BIP15xAuthMode::OneWay;
    const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger, params);
    bip15xTransport->setKeyCb(cbApproveProxy_);
 

@@ -490,7 +490,7 @@ TEST_F(TestWebSocket, Bip15X_1Way)
    auto client = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
 
    auto params = getTestParams();
-   params.oneWayAuth = true;
+   params.authMode = bs::network::BIP15xAuthMode::OneWay;
    auto srvTransport = std::make_unique<bs::network::TransportBIP15xServer>(
       StaticLogger::loggerPtr, getEmptyPeersCallback(), true);
    auto clientTransport = std::make_unique<bs::network::TransportBIP15xClient>(
@@ -510,7 +510,7 @@ TEST_F(TestWebSocket, Bip15X_1Way_Announce)
    auto client = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
 
    auto params = getTestParams();
-   params.oneWayAuth = true;
+   params.authMode = bs::network::BIP15xAuthMode::OneWay;
    auto srvTransport = std::make_unique<bs::network::TransportBIP15xServer>(
       StaticLogger::loggerPtr, getEmptyPeersCallback(), true);
    auto clientTransport = std::make_unique<bs::network::TransportBIP15xClient>(
