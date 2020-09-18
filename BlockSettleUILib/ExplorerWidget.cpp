@@ -89,6 +89,20 @@ void ExplorerWidget::init(const std::shared_ptr<ArmoryConnection> &armory
       "Search for a transaction or address."));
 }
 
+void ExplorerWidget::init(const std::shared_ptr<spdlog::logger> &logger)
+{
+   logger_ = logger;
+   ui_->Transaction->init(logger);
+   ui_->Address->init(logger);
+
+   ui_->searchBox->setReadOnly(false);
+   ui_->searchBox->setPlaceholderText(tr("Search for a transaction or address"));
+
+   connect(ui_->Address, &AddressDetailsWidget::needAddressHistory, this, &ExplorerWidget::needAddressHistory);
+   connect(ui_->Address, &AddressDetailsWidget::needTXDetails, this, &ExplorerWidget::needTXDetails);
+   connect(ui_->Transaction, &TransactionDetailsWidget::needTXDetails, this, &ExplorerWidget::needTXDetails);
+}
+
 void ExplorerWidget::shortcutActivated(ShortcutType)
 {}
 
@@ -98,6 +112,27 @@ void ExplorerWidget::mousePressEvent(QMouseEvent *event)
       onBackButtonClicked();
    } else if (event->button() == Qt::ForwardButton && ui_->btnForward->isEnabled()) {
       onForwardButtonClicked();
+   }
+}
+
+void ExplorerWidget::onNewBlock(unsigned int blockNum)
+{
+   ui_->Address->onNewBlock(blockNum);
+   ui_->Transaction->onNewBlock(blockNum);
+}
+
+void ExplorerWidget::onAddressHistory(const bs::Address& addr, uint32_t curBlock, const std::vector<bs::TXEntry>& entries)
+{
+   ui_->Address->onAddressHistory(addr, curBlock, entries);
+}
+
+void ExplorerWidget::onTXDetails(const std::vector<bs::sync::TXWalletDetails>& txDet)
+{
+   if (ui_->stackedWidget->currentIndex() == AddressPage) {
+      ui_->Address->onTXDetails(txDet);
+   }
+   else if (ui_->stackedWidget->currentIndex() == TxPage) {
+      ui_->Transaction->onTXDetails(txDet);
    }
 }
 

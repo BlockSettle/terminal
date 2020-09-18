@@ -21,7 +21,7 @@ namespace spdlog {
 }
 namespace bs {
    class LogManager;
-   class TradeSettings;
+   struct TradeSettings;
 }
 namespace BlockSettle {
    namespace Terminal {

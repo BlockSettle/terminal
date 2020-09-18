@@ -414,7 +414,9 @@ bool QtGuiAdapter::processBlockchain(const Envelope &env)
          });
       }
    case ArmoryMessage::kLedgerEntries:
-      return processLedgerEntries(env, msg.ledger_entries());
+      return processLedgerEntries(msg.ledger_entries());
+   case ArmoryMessage::kAddressHistory:
+      return processAddressHist(msg.address_history());
    default:    break;
    }
    return true;
@@ -650,6 +652,7 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::setAddrComment, this, &QtGuiAdapter::onSetAddrComment);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needLedgerEntries, this, &QtGuiAdapter::onNeedLedgerEntries);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needTXDetails, this, &QtGuiAdapter::onNeedTXDetails);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needAddressHistory, this, &QtGuiAdapter::onNeedAddressHistory);
 }
 
 void QtGuiAdapter::onPutSetting(int idx, const QVariant &value)
@@ -804,7 +807,8 @@ void QtGuiAdapter::onNeedLedgerEntries(const std::string &filter)
    pushFill(env);
 }
 
-void QtGuiAdapter::onNeedTXDetails(const const std::vector<bs::sync::TXWallet> &txWallet)
+void QtGuiAdapter::onNeedTXDetails(const const std::vector<bs::sync::TXWallet> &txWallet
+   , const bs::Address &addr)
 {
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_details_request();
@@ -814,8 +818,25 @@ void QtGuiAdapter::onNeedTXDetails(const const std::vector<bs::sync::TXWallet> &
       request->set_wallet_id(txw.walletId);
       request->set_value(txw.value);
    }
+   if (!addr.empty()) {
+      msgReq->set_address(addr.display());
+   }
    Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
    pushFill(env);
+}
+
+void QtGuiAdapter::onNeedAddressHistory(const bs::Address& addr)
+{
+   logger_->debug("[{}] {}", __func__, addr.display());
+   ArmoryMessage msg;
+   msg.set_get_address_history(addr.display());
+   Envelope env{ 0, user_, userBlockchain_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedTxEntries(const std::set<BinaryData>& txHashes)
+{
+   logger_->debug("[{}] {}", __func__, txHashes.size());
 }
 
 void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
@@ -889,8 +910,8 @@ bool QtGuiAdapter::processTXDetails(const WalletsMessage_TXDetailsResponse &resp
          try {
             txDet.outputAddresses.push_back({ bs::Address::fromAddressString(outAddr.address())
                , outAddr.value(), outAddr.value_string(), outAddr.wallet_name()
-               , static_cast<TXOUT_SCRIPT_TYPE>(outAddr.script_type()), ownTxHash
-               , outAddr.out_index() });
+               , static_cast<TXOUT_SCRIPT_TYPE>(outAddr.script_type())
+               , BinaryData::fromString(outAddr.out_hash()), outAddr.out_index() });
          } catch (const std::exception &e) { // OP_RETURN data for valueStr
             txDet.outputAddresses.push_back({ bs::Address{}
                , outAddr.value(), outAddr.address(), outAddr.wallet_name()
@@ -903,7 +924,8 @@ bool QtGuiAdapter::processTXDetails(const WalletsMessage_TXDetailsResponse &resp
             , resp.change_address().value(), resp.change_address().value_string()
             , resp.change_address().wallet_name()
             , static_cast<TXOUT_SCRIPT_TYPE>(resp.change_address().script_type())
-            , ownTxHash, resp.change_address().out_index() };
+            , BinaryData::fromString(resp.change_address().out_hash())
+            , resp.change_address().out_index() };
       }
       catch (const std::exception &) {}
       txDetails.push_back(txDet);
@@ -914,8 +936,7 @@ bool QtGuiAdapter::processTXDetails(const WalletsMessage_TXDetailsResponse &resp
    return true;
 }
 
-bool QtGuiAdapter::processLedgerEntries(const bs::message::Envelope &env
-   , const ArmoryMessage_LedgerEntries &response)
+bool QtGuiAdapter::processLedgerEntries(const ArmoryMessage_LedgerEntries &response)
 {
    std::vector<bs::TXEntry> entries;
    entries.reserve(response.entries_size());
@@ -934,7 +955,7 @@ bool QtGuiAdapter::processLedgerEntries(const bs::message::Envelope &env
       for (const auto &addrStr : entry.addresses()) {
          try {
             const auto &addr = bs::Address::fromAddressString(addrStr);
-            txEntry.addresses.emplace_back(std::move(addr));
+            txEntry.addresses.push_back(addr);
          }
          catch (const std::exception &) {}
       }
@@ -948,5 +969,44 @@ bool QtGuiAdapter::processLedgerEntries(const bs::message::Envelope &env
    return true;
 }
 
+
+bool QtGuiAdapter::processAddressHist(const ArmoryMessage_AddressHistory& response)
+{
+   bs::Address addr;
+   try {
+      addr = std::move(bs::Address::fromAddressString(response.address()));
+   }
+   catch (const std::exception& e) {
+      logger_->error("[{}] invalid address: {}", __func__, e.what());
+      return true;
+   }
+   std::vector<bs::TXEntry> entries;
+   entries.reserve(response.entries_size());
+   for (const auto& entry : response.entries()) {
+      bs::TXEntry txEntry;
+      txEntry.txHash = BinaryData::fromString(entry.tx_hash());
+      txEntry.value = entry.value();
+      txEntry.blockNum = entry.block_num();
+      txEntry.txTime = entry.tx_time();
+      txEntry.isRBF = entry.rbf();
+      txEntry.isChainedZC = entry.chained_zc();
+      txEntry.nbConf = entry.nb_conf();
+      for (const auto& walletId : entry.wallet_ids()) {
+         txEntry.walletIds.insert(walletId);
+      }
+      for (const auto& addrStr : entry.addresses()) {
+         try {
+            const auto& addr = bs::Address::fromAddressString(addrStr);
+            txEntry.addresses.push_back(addr);
+         }
+         catch (const std::exception&) {}
+      }
+      entries.emplace_back(std::move(txEntry));
+   }
+   QMetaObject::invokeMethod(mainWindow_, [this, entries, addr, curBlock = response.cur_block()] {
+         mainWindow_->onAddressHistory(addr, curBlock, entries);
+      });
+   return true;
+}
 
 #include "QtGuiAdapter.moc"

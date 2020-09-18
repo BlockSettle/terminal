@@ -58,10 +58,11 @@ public slots:
    void onConnectionError(int errorCode);
    void onContainerAuthorized();
    void onSignerStatusChanged(SignContainer::ConnectionError error, const QString &details);
-   void updateBalances();
+   void updateBalances();  //deprecated
    void onWalletImportStarted(const std::string &walletId);
    void onWalletImportFinished(const std::string &walletId);
    void onBlockchainStateChanged(int, unsigned int);
+   void onXbtBalance(const bs::sync::WalletBalanceData&);
 
 private:
    [[deprecated]] void onStateChanged(ArmoryState) override;
@@ -85,6 +86,7 @@ private:
    void SetCelerConnectingStatus();
    QWidget *CreateSeparator();
    [[deprecated]] void setBalances();
+   void displayXbtBalance();
    void updateConnectionStatusDetails(ArmoryState state, unsigned int blockNum);
 
 private:
@@ -122,6 +124,7 @@ private:
    std::unordered_set<std::string>     importingWallets_;
    std::vector<std::string>   balanceSymbols_;
    std::unordered_map<std::string, double>   balances_;
+   std::unordered_map<std::string, BTCNumericTypes::balance_type> xbtBalances_;
    int            armoryState_{ -1 };
    unsigned int   blockNum_{ 0 };
 };

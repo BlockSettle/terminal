@@ -1150,7 +1150,7 @@ void TransactionsViewModel::onLedgerEntries(const std::string &, uint32_t
       const auto &walletId = entry.walletIds.empty() ? std::string{} : *(entry.walletIds.cbegin());
       txWallet.push_back({ entry.txHash,  walletId, entry.value });
    }   //TODO: can be optimized later to retrieve details only for visible rows
-   emit needTXDetails(txWallet);
+   emit needTXDetails(txWallet, {});
 }
 
 void TransactionsViewModel::onTXDetails(const std::vector<bs::sync::TXWalletDetails> &txDet)

@@ -194,6 +194,26 @@ void StatusBarView::onBlockchainStateChanged(int state, unsigned int blockNum)
    onArmoryStateChanged(static_cast<ArmoryState>(state), blockNum);
 }
 
+void StatusBarView::onXbtBalance(const bs::sync::WalletBalanceData &wbd)
+{
+   xbtBalances_[wbd.id] = wbd.balTotal;
+   displayXbtBalance();
+}
+
+void StatusBarView::displayXbtBalance()
+{
+   BTCNumericTypes::balance_type accBalance = 0;
+   for (const auto& bal : xbtBalances_) {
+      accBalance += bal.second;
+   }
+   const auto xbt = UiUtils::displayAmount(accBalance);
+   QString text = tr("   XBT: <b>%1</b> ").arg(xbt);
+   balanceLabel_->setText(text);
+   progressBar_->setVisible(false);
+   estimateLabel_->setVisible(false);
+   connectionStatusLabel_->show();
+}
+
 void StatusBarView::onStateChanged(ArmoryState state)
 {
    QMetaObject::invokeMethod(this, [this, state] { onArmoryStateChanged(state, blockNum_); });

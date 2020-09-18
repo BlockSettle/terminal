@@ -156,6 +156,7 @@ void MainWindow::onArmoryStateChanged(int state, unsigned int blockNum)
    if (statusBarView_) {
       statusBarView_->onBlockchainStateChanged(state, blockNum);
    }
+   ui_->widgetExplorer->onNewBlock(blockNum);
 }
 
 void MainWindow::onNewBlock(int state, unsigned int blockNum)
@@ -167,6 +168,7 @@ void MainWindow::onNewBlock(int state, unsigned int blockNum)
       txModel_->onNewBlock(blockNum);
    }
    ui_->widgetWallets->onNewBlock(blockNum);
+   ui_->widgetExplorer->onNewBlock(blockNum);
 }
 
 void MainWindow::onWalletsReady()
@@ -207,6 +209,7 @@ void MainWindow::onAddressComments(const std::string &walletId
 void MainWindow::onWalletBalance(const bs::sync::WalletBalanceData &wbd)
 {
    ui_->widgetWallets->onWalletBalance(wbd);
+   statusBarView_->onXbtBalance(wbd);
 }
 
 void MainWindow::onLedgerEntries(const std::string &filter, uint32_t totalPages
@@ -224,6 +227,12 @@ void MainWindow::onTXDetails(const std::vector<bs::sync::TXWalletDetails> &txDet
 {
    txModel_->onTXDetails(txDet);
    ui_->widgetWallets->onTXDetails(txDet);
+   ui_->widgetExplorer->onTXDetails(txDet);
+}
+
+void bs::gui::qt::MainWindow::onAddressHistory(const bs::Address& addr, uint32_t curBlock, const std::vector<bs::TXEntry>& entries)
+{
+   ui_->widgetExplorer->onAddressHistory(addr, curBlock, entries);
 }
 
 void MainWindow::showStartupDialog(bool showLicense)
@@ -436,7 +445,7 @@ void MainWindow::initTransactionsView()
    connect(txModel_.get(), &TransactionsViewModel::needTXDetails, this
       , &MainWindow::needTXDetails);
 
-//   ui_->widgetExplorer->init(armory_, logMgr_->logger(), walletsMgr_, ccFileManager_, authManager_);
+   ui_->widgetExplorer->init(logger_);
    ui_->widgetTransactions->init(logger_, txModel_);
    ui_->widgetTransactions->setEnabled(true);
 
@@ -569,7 +578,7 @@ void MainWindow::onSend()
       dlg->SelectWallet(selectedWalletId, UiUtils::WalletsTypes::None);
    }
 
-   while(true) {
+/*   while(true) {
       dlg->exec();
 
       if  ((dlg->result() != QDialog::Accepted) || !dlg->switchModeRequested()) {
@@ -578,7 +587,7 @@ void MainWindow::onSend()
 
       auto nextDialog = dlg->SwithcMode();
       dlg = nextDialog;
-   }
+   }*/
 }
 
 void MainWindow::setupMenu()
@@ -983,6 +992,9 @@ void MainWindow::initWidgets()
    connect(ui_->widgetWallets, &WalletsWidget::setAddrComment, this, &MainWindow::setAddrComment);
    connect(ui_->widgetWallets, &WalletsWidget::needLedgerEntries, this, &MainWindow::needLedgerEntries);
    connect(ui_->widgetWallets, &WalletsWidget::needTXDetails, this, &MainWindow::needTXDetails);
+
+   connect(ui_->widgetExplorer, &ExplorerWidget::needAddressHistory, this, &MainWindow::needAddressHistory);
+   connect(ui_->widgetExplorer, &ExplorerWidget::needTXDetails, this, &MainWindow::needTXDetails);
 
    initTransactionsView();
 //   InitPortfolioView();

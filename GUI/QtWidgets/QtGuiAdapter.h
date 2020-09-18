@@ -28,6 +28,7 @@ namespace bs {
 namespace BlockSettle {
    namespace Common {
       class ArmoryMessage_LedgerEntries;
+      class ArmoryMessage_AddressHistory;
       class WalletsMessage_TXDetailsResponse;
       class WalletsMessage_WalletBalances;
    }
@@ -80,8 +81,8 @@ private:
    bool processWalletBalances(const bs::message::Envelope &
       , const BlockSettle::Common::WalletsMessage_WalletBalances &);
    bool processTXDetails(const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
-   bool processLedgerEntries(const bs::message::Envelope &
-      , const BlockSettle::Common::ArmoryMessage_LedgerEntries &);
+   bool processLedgerEntries(const BlockSettle::Common::ArmoryMessage_LedgerEntries &);
+   bool processAddressHist(const BlockSettle::Common::ArmoryMessage_AddressHistory&);
 
 private slots:
    void onPutSetting(int idx, const QVariant &value);
@@ -95,7 +96,9 @@ private slots:
    void onSetAddrComment(const std::string &walletId, const bs::Address &
       , const std::string &comment);
    void onNeedLedgerEntries(const std::string &filter);
-   void onNeedTXDetails(const std::vector<bs::sync::TXWallet> &);
+   void onNeedTXDetails(const std::vector<bs::sync::TXWallet> &, const bs::Address &);
+   void onNeedAddressHistory(const bs::Address&);
+   void onNeedTxEntries(const std::set<BinaryData>&);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

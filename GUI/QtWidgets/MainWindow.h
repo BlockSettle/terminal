@@ -69,6 +69,8 @@ namespace bs {
             void onLedgerEntries(const std::string &filter, uint32_t totalPages
                , uint32_t curPage, uint32_t curBlock, const std::vector<bs::TXEntry> &);
             void onTXDetails(const std::vector<bs::sync::TXWalletDetails> &);
+            void onAddressHistory(const bs::Address&, uint32_t curBlock
+               , const std::vector<bs::TXEntry>&);
 
          public slots:
             void onReactivate();
@@ -97,7 +99,8 @@ namespace bs {
                , const std::string &comment);
 
             void needLedgerEntries(const std::string &filter);
-            void needTXDetails(const std::vector<bs::sync::TXWallet> &);
+            void needTXDetails(const std::vector<bs::sync::TXWallet>&, const bs::Address& addr = {});
+            void needAddressHistory(const bs::Address&);
 
          private slots:
             void onSend();

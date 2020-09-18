@@ -176,7 +176,7 @@ public:
    void onTXDetails(const std::vector<bs::sync::TXWalletDetails> &);
 
 signals:
-   void needTXDetails(const std::vector<bs::sync::TXWallet> &);
+   void needTXDetails(const std::vector<bs::sync::TXWallet> &, const bs::Address &);
 
 private slots:
    void updatePage();

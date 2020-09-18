@@ -122,7 +122,7 @@ signals:
    void setAddrComment(const std::string &walletId, const bs::Address &
       , const std::string &comment);
    void needLedgerEntries(const std::string &filter);
-   void needTXDetails(const std::vector<bs::sync::TXWallet> &);
+   void needTXDetails(const std::vector<bs::sync::TXWallet> &, const bs::Address &);
 
 private slots:
    void showWalletProperties(const QModelIndex& index);
