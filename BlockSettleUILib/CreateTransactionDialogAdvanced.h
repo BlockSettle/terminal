@@ -116,6 +116,8 @@ protected:
 
    bool HaveSignedImportedTransaction() const override;
 
+   void validateAmountLine();
+
 protected slots:
    void onAddressTextChanged(const QString& addressString);
    void onFeeSuggestionsLoaded(const std::map<unsigned int, float> &) override;
@@ -195,6 +197,8 @@ private:
    void disableChangeAddressSelecting();
 
    void fixFeePerByte();
+
+   void setValidationStateOnAmount(bool isValid);
 
 private:
    std::unique_ptr<Ui::CreateTransactionDialogAdvanced> ui_;

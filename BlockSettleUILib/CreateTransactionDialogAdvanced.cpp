@@ -835,6 +835,9 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
       }
    }
 
+   QMetaObject::invokeMethod(this, &CreateTransactionDialogAdvanced::validateAmountLine
+      , Qt::QueuedConnection);
+
    QMetaObject::invokeMethod(this, &CreateTransactionDialogAdvanced::validateCreateButton
       , Qt::QueuedConnection);
 }
@@ -1051,6 +1054,11 @@ void CreateTransactionDialogAdvanced::UpdateRecipientAmount(unsigned int recipId
    outputsModel_->UpdateRecipientAmount(recipId, amount);
 }
 
+void CreateTransactionDialogAdvanced::setValidationStateOnAmount(bool isValid)
+{
+   UiUtils::setWrongState(ui_->lineEditAmount, !isValid);
+}
+
 bool CreateTransactionDialogAdvanced::isCurrentAmountValid() const
 {
    const bs::XBTAmount curVal{ currentValue_ };
@@ -1067,10 +1075,8 @@ bool CreateTransactionDialogAdvanced::isCurrentAmountValid() const
       maxAmount = transactionData_->CalculateMaxAmount(currentAddress_);
    }
    if ((maxAmount - curVal) < -1) {  // 1 satoshi difference is allowed due to rounding error
-      UiUtils::setWrongState(ui_->lineEditAmount, true);
       return false;
    }
-   UiUtils::setWrongState(ui_->lineEditAmount, false);
    return true;
 }
 
@@ -1089,8 +1095,12 @@ void CreateTransactionDialogAdvanced::validateAddOutputButton()
       }
    }
 
+   const bool amountIsValid = isCurrentAmountValid();
+
+   setValidationStateOnAmount(amountIsValid);
+
    ui_->pushButtonAddOutput->setEnabled(currentAddress_.isValid()
-      && hasAmountChanged && isCurrentAmountValid());
+      && hasAmountChanged && amountIsValid);
 }
 
 void CreateTransactionDialogAdvanced::validateCreateButton()
@@ -1815,4 +1825,9 @@ void CreateTransactionDialogAdvanced::onBitPayTxVerified(bool result)
    if (result) {
       createTransactionImpl();
    }
+}
+
+void CreateTransactionDialogAdvanced::validateAmountLine()
+{
+   setValidationStateOnAmount(isCurrentAmountValid());
 }
