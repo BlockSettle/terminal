@@ -256,7 +256,7 @@ TEST(TestNetwork, BIP15X_2Way)
    auto serverTrustedClients = constructTrustedPeersCallback({clientKey});
 
    const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(logger
-      , serverTrustedClients, false);
+      , serverTrustedClients, bs::network::BIP15xAuthMode::TwoWay);
    auto wsServ = std::make_unique<WsServerConnection>(logger, WsServerConnectionParams{});
    auto serverConn = std::make_unique<Bip15xServerConnection>(
       logger, std::move(wsServ), srvTransport);
@@ -438,7 +438,7 @@ TEST(TestNetwork, BIP15X_1Way)
    const auto clientConn = std::make_unique<Bip15xDataConnection>(logger, std::move(wsConn), clientTransport);
 
    const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(logger
-      , getEmptyPeersCallback(), true);
+      , getEmptyPeersCallback(), bs::network::BIP15xAuthMode::OneWay);
    auto wsServ = std::make_unique<WsServerConnection>(logger, WsServerConnectionParams{});
    auto serverConn = std::make_unique<Bip15xServerConnection>(
       logger, std::move(wsServ), srvTransport);
@@ -659,7 +659,7 @@ TEST(TestNetwork, BIP15X_Rekey)
    auto serverTrustedClients = constructTrustedPeersCallback({clientKey});
 
    const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-      StaticLogger::loggerPtr, serverTrustedClients, false);
+      StaticLogger::loggerPtr, serverTrustedClients, bs::network::BIP15xAuthMode::TwoWay);
    
    auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
    auto serverConn = std::make_unique<Bip15xServerConnection>(
@@ -832,7 +832,7 @@ TEST(TestNetwork, BIP15X_ClientClose)
        auto clientKey = getPeerKey("client", clientTransport.get());
        auto serverPeersCb = constructTrustedPeersCallback({clientKey});
        const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-           StaticLogger::loggerPtr, serverPeersCb, false);
+           StaticLogger::loggerPtr, serverPeersCb, bs::network::BIP15xAuthMode::TwoWay);
         std::vector<std::string> trustedClients = {
             std::string("test:") + clientTransport->getOwnPubKey().toHexStr() };
         auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
@@ -898,7 +898,7 @@ TEST(TestNetwork, BIP15X_ClientReopen)
     auto clientKey = getPeerKey("client", clientTransport.get());
     auto serverPeersCb = constructTrustedPeersCallback({clientKey});
     const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-       StaticLogger::loggerPtr, serverPeersCb, false);
+       StaticLogger::loggerPtr, serverPeersCb, bs::network::BIP15xAuthMode::TwoWay);
     std::vector<std::string> trustedClients = {
         std::string("test:") + clientTransport->getOwnPubKey().toHexStr() };
     auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
@@ -969,7 +969,7 @@ TEST(TestNetwork, BIP15X_DisconnectCounters)
    auto clientKey = getPeerKey("client", clientTransport.get());
    auto serverPeersCb = constructTrustedPeersCallback({clientKey});
    const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-      StaticLogger::loggerPtr, serverPeersCb, false);
+      StaticLogger::loggerPtr, serverPeersCb, bs::network::BIP15xAuthMode::TwoWay);
    auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
    auto serverConn = std::make_unique<Bip15xServerConnection>(
       StaticLogger::loggerPtr, std::move(wsServ), srvTransport);
@@ -1014,7 +1014,7 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_StressTest)
    const auto clientConn = std::make_unique<Bip15xDataConnection>(StaticLogger::loggerPtr, std::move(wsConn), clientTransport);
 
    const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-      StaticLogger::loggerPtr, getEmptyPeersCallback(), false);
+      StaticLogger::loggerPtr, getEmptyPeersCallback(), bs::network::BIP15xAuthMode::TwoWay);
    std::vector<std::string> trustedClients = {
       std::string("test:") + clientTransport->getOwnPubKey().toHexStr() };
    auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
@@ -1058,7 +1058,7 @@ TEST(TestNetwork, BIP15X_ClientKey)
    auto clientKey = getPeerKey("client", clientTransport.get());
    auto serverPeersCb = constructTrustedPeersCallback({clientKey});
    const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-      StaticLogger::loggerPtr, serverPeersCb, false);
+      StaticLogger::loggerPtr, serverPeersCb, bs::network::BIP15xAuthMode::TwoWay);
    auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
    auto serverConn = std::make_unique<Bip15xServerConnection>(
       StaticLogger::loggerPtr, std::move(wsServ), srvTransport);

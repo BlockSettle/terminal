@@ -492,7 +492,7 @@ TEST_F(TestWebSocket, Bip15X_1Way)
    auto params = getTestParams();
    params.authMode = bs::network::BIP15xAuthMode::OneWay;
    auto srvTransport = std::make_unique<bs::network::TransportBIP15xServer>(
-      StaticLogger::loggerPtr, getEmptyPeersCallback(), true);
+      StaticLogger::loggerPtr, getEmptyPeersCallback(), bs::network::BIP15xAuthMode::OneWay);
    auto clientTransport = std::make_unique<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, params);
 
@@ -512,7 +512,7 @@ TEST_F(TestWebSocket, Bip15X_1Way_Announce)
    auto params = getTestParams();
    params.authMode = bs::network::BIP15xAuthMode::OneWay;
    auto srvTransport = std::make_unique<bs::network::TransportBIP15xServer>(
-      StaticLogger::loggerPtr, getEmptyPeersCallback(), true);
+      StaticLogger::loggerPtr, getEmptyPeersCallback(), bs::network::BIP15xAuthMode::OneWay);
    auto clientTransport = std::make_unique<bs::network::TransportBIP15xClient>(
       StaticLogger::loggerPtr, params);
 
@@ -547,7 +547,7 @@ TEST_F(TestWebSocket, Bip15X_2Way)
    auto clientKey = getPeerKey("client", clientTransport.get());
    auto serverPeersCb = constructTrustedPeersCallback({clientKey});
    auto srvTransport = std::make_unique<bs::network::TransportBIP15xServer>(
-      StaticLogger::loggerPtr, serverPeersCb, false);
+      StaticLogger::loggerPtr, serverPeersCb, bs::network::BIP15xAuthMode::TwoWay);
 
    clientTransport->addAuthPeer(getPeerKey(kTestTcpHost, kTestTcpPort, srvTransport.get()));
 

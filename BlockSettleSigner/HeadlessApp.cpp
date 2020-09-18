@@ -58,7 +58,7 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    auto guiWsConn = std::make_unique<WsServerConnection>(logger, WsServerConnectionParams{});
    guiTransport_ = std::make_shared<bs::network::TransportBIP15xServer>(logger_
       , cbTrustedClientsSL //empty trusted clients, will be seeded with gui adatper key later
-      , false); //gui transport is always 2-way
+      , bs::network::BIP15xAuthMode::TwoWay); //gui transport is always 2-way
       
    guiConnection_ = std::make_shared<Bip15xServerConnection>(logger_
       , std::move(guiWsConn), guiTransport_);
@@ -304,7 +304,9 @@ void HeadlessAppObj::startTerminalsProcessing()
    // This would stop old server if any
    terminalTransport_ = std::make_shared<bs::network::TransportBIP15xServer>(logger_
       , getClientIDKeys
-      , !settings_->getTermIDKeyStr().empty(), !settings_->twoWaySignerAuth()
+      , !settings_->getTermIDKeyStr().empty()
+      // do not tolerate 1-way signers
+      , bs::network::BIP15xAuthMode::TwoWay
       , ourKeyFileDir, ourKeyFileName, makeServerCookie, false
       , absTermCookiePath);
    terminalConnection_ = std::make_unique<Bip15xServerConnection>(logger_
