@@ -81,7 +81,8 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    // BST-2545: Use price as it see Genoa (and it computes it as ROUNDED_CCY / XBT)
    const auto actualXbtPrice = UiUtils::actualXbtPrice(xbtAmount, price());
 
-   comment_ = fmt::format("{} {} @ {}", bs::network::Side::toString(order.side)
+   auto side = order.product == bs::network::XbtCurrency ? order.side : bs::network::Side::invert(order.side);
+   comment_ = fmt::format("{} {} @ {}", bs::network::Side::toString(side)
       , order.security, UiUtils::displayPriceXBT(actualXbtPrice).toStdString());
    authKey_ = BinaryData::CreateFromHex(qn.authKey);
    reqAuthKey_ = BinaryData::CreateFromHex(qn.reqAuthKey);
