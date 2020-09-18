@@ -309,7 +309,7 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
             , resetInputs, cbInputsReset);
       }
       else {
-         transactionData_->setGroup(group, armory_->topBlock(), true
+         transactionData_->setGroup(group, armory_->topBlock(), false
             , resetInputs, cbInputsReset);
       }
    }
