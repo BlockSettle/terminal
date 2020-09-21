@@ -309,7 +309,7 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
             , resetInputs, cbInputsReset);
       }
       else {
-         transactionData_->setGroup(group, armory_->topBlock(), true
+         transactionData_->setGroup(group, armory_->topBlock(), false
             , resetInputs, cbInputsReset);
       }
    }
@@ -605,7 +605,7 @@ bool CreateTransactionDialog::createTransactionImpl()
          // do we need some checks here?
       }
 
-      if (txReq_.armorySigner_.isSegWit()) {
+      if (!txReq_.armorySigner_.hasLegacyInputs()) {
          txReq_.txHash = txReq_.txId();
       }
 
@@ -617,7 +617,8 @@ bool CreateTransactionDialog::createTransactionImpl()
          const std::string fileName = fmt::format("{}_{}.bin", hdWallet->walletId(), timestamp);
 
          QString defaultFilePath = QDir(signerOfflineDir).filePath(QString::fromStdString(fileName));
-         offlineFilePath = QFileDialog::getSaveFileName(this, tr("Save Offline TX as..."), defaultFilePath);
+         offlineFilePath = QFileDialog::getSaveFileName(this, tr("Save Offline TX as...")
+                                                        , defaultFilePath, tr("TX files (*.bin);; All files (*)"));
 
          if (offlineFilePath.isEmpty()) {
             return true;

@@ -81,7 +81,8 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    // BST-2545: Use price as it see Genoa (and it computes it as ROUNDED_CCY / XBT)
    const auto actualXbtPrice = UiUtils::actualXbtPrice(xbtAmount, price());
 
-   comment_ = fmt::format("{} {} @ {}", bs::network::Side::toString(bs::network::Side::invert(quote_.side))
+   auto side = quote_.product == bs::network::XbtCurrency ? bs::network::Side::invert(quote_.side) : quote_.side;
+   comment_ = fmt::format("{} {} @ {}", bs::network::Side::toString(side)
       , quote_.security, UiUtils::displayPriceXBT(actualXbtPrice).toStdString());
 
    dealerAddressValidationRequired_ = xbtAmount > bs::XBTAmount(tier1XbtLimit);

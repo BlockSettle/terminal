@@ -448,7 +448,7 @@ QVariant WalletsViewModel::headerData(int section, Qt::Orientation orientation, 
          case WalletRegColumns::ColumnState:
             return tr("Signer state");
          case WalletRegColumns::ColumnNbAddresses:
-            return tr("# Used Addrs");
+            return tr("# Used Addresses");
          default:
             return QVariant();
          }
@@ -468,7 +468,7 @@ QVariant WalletsViewModel::headerData(int section, Qt::Orientation orientation, 
          case WalletColumns::ColumnState:
             return tr("Wallet type");
          case WalletColumns::ColumnNbAddresses:
-            return tr("# Used Addrs");
+            return tr("# Used Addresses");
          case WalletColumns::ColumnID:
             return tr("ID");
          default:

@@ -1165,7 +1165,7 @@
          <string notr="true"/>
         </property>
         <property name="text">
-         <string>SUBMIT RFQ</string>
+         <string>SUBMIT QUOTE REQUEST</string>
         </property>
        </widget>
       </item>

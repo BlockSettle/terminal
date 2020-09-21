@@ -12,7 +12,6 @@
 #include "ui_WalletPropertiesDialog.h"
 
 #include <QFile>
-#include <QFileDialog>
 #include <QInputDialog>
 #include <QStandardPaths>
 #include <QSortFilterProxyModel>
