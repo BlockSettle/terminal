@@ -417,6 +417,8 @@ bool QtGuiAdapter::processBlockchain(const Envelope &env)
       return processLedgerEntries(msg.ledger_entries());
    case ArmoryMessage::kAddressHistory:
       return processAddressHist(msg.address_history());
+   case ArmoryMessage::kFeeLevelsResponse:
+      return processFeeLevels(msg.fee_levels_response());
    default:    break;
    }
    return true;
@@ -635,6 +637,11 @@ void QtGuiAdapter::requestInitialSettings()
    setReq->set_index(SetIdx_ShowInfoWidget);
    setReq->set_type(SettingType_Bool);
 
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_AdvancedTXisDefault);
+   setReq->set_type(SettingType_Bool);
+
    Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
    pushFill(env);
 }
@@ -653,6 +660,8 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::needLedgerEntries, this, &QtGuiAdapter::onNeedLedgerEntries);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needTXDetails, this, &QtGuiAdapter::onNeedTXDetails);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needAddressHistory, this, &QtGuiAdapter::onNeedAddressHistory);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needWalletsList, this, &QtGuiAdapter::onNeedWalletsList);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needFeeLevels, this, &QtGuiAdapter::onNeedFeeLevels);
 }
 
 void QtGuiAdapter::onPutSetting(int idx, const QVariant &value)
@@ -834,9 +843,19 @@ void QtGuiAdapter::onNeedAddressHistory(const bs::Address& addr)
    pushFill(env);
 }
 
-void QtGuiAdapter::onNeedTxEntries(const std::set<BinaryData>& txHashes)
+void QtGuiAdapter::onNeedWalletsList(UiUtils::WalletsTypes)
 {
-   logger_->debug("[{}] {}", __func__, txHashes.size());
+}
+
+void QtGuiAdapter::onNeedFeeLevels(const std::vector<unsigned int>& levels)
+{
+   ArmoryMessage msg;
+   auto msgReq = msg.mutable_fee_levels_request();
+   for (const auto& level : levels) {
+      msgReq->add_levels(level);
+   }
+   Envelope env{ 0, user_, userBlockchain_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
 }
 
 void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
@@ -1006,6 +1025,18 @@ bool QtGuiAdapter::processAddressHist(const ArmoryMessage_AddressHistory& respon
    QMetaObject::invokeMethod(mainWindow_, [this, entries, addr, curBlock = response.cur_block()] {
          mainWindow_->onAddressHistory(addr, curBlock, entries);
       });
+   return true;
+}
+
+bool QtGuiAdapter::processFeeLevels(const ArmoryMessage_FeeLevelsResponse& response)
+{
+   std::map<unsigned int, float> feeLevels;
+   for (const auto& pair : response.fee_levels()) {
+      feeLevels[pair.level()] = pair.fee();
+   }
+   QMetaObject::invokeMethod(mainWindow_, [this, feeLevels]{
+      mainWindow_->onFeeLevels(feeLevels);
+   });
    return true;
 }
 

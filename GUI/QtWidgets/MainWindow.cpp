@@ -147,12 +147,15 @@ void MainWindow::onSetting(int setting, const QVariant &value)
    case ApplicationSettings::ShowInfoWidget:
       ui_->infoWidget->setVisible(value.toBool());
       break;
+   case ApplicationSettings::AdvancedTxDialogByDefault:
+      advTxDlgByDefault_ = value.toBool();
    default: break;
    }
 }
 
 void MainWindow::onArmoryStateChanged(int state, unsigned int blockNum)
 {
+   topBlock_ = blockNum;
    if (statusBarView_) {
       statusBarView_->onBlockchainStateChanged(state, blockNum);
    }
@@ -161,6 +164,7 @@ void MainWindow::onArmoryStateChanged(int state, unsigned int blockNum)
 
 void MainWindow::onNewBlock(int state, unsigned int blockNum)
 {
+   topBlock_ = blockNum;
    if (statusBarView_) {
       statusBarView_->onBlockchainStateChanged(state, blockNum);
    }
@@ -193,6 +197,13 @@ void MainWindow::onHDWallet(const bs::sync::WalletInfo &wi)
 void MainWindow::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
 {
    ui_->widgetWallets->onHDWalletDetails(hdWallet);
+}
+
+void MainWindow::onWalletsList(const std::vector<bs::sync::HDWalletData>& wallets)
+{
+   if (txDlg_) {
+      txDlg_->onWalletsList(wallets);
+   }
 }
 
 void MainWindow::onAddresses(const std::vector<bs::sync::Address> &addrs)
@@ -230,9 +241,16 @@ void MainWindow::onTXDetails(const std::vector<bs::sync::TXWalletDetails> &txDet
    ui_->widgetExplorer->onTXDetails(txDet);
 }
 
-void bs::gui::qt::MainWindow::onAddressHistory(const bs::Address& addr, uint32_t curBlock, const std::vector<bs::TXEntry>& entries)
+void MainWindow::onAddressHistory(const bs::Address& addr, uint32_t curBlock, const std::vector<bs::TXEntry>& entries)
 {
    ui_->widgetExplorer->onAddressHistory(addr, curBlock, entries);
+}
+
+void MainWindow::onFeeLevels(const std::map<unsigned int, float>& feeLevels)
+{
+   if (txDlg_) {
+      txDlg_->onFeeLevels(feeLevels);
+   }
 }
 
 void MainWindow::showStartupDialog(bool showLicense)
@@ -555,39 +573,30 @@ void MainWindow::onSend()
 
    if (ui_->tabWidget->currentWidget() == ui_->widgetWallets) {
       auto wallet = ui_->widgetWallets->getSelectedHdWallet();
-      if (wallet.ids.empty()) {
-//         wallet = walletsMgr_->getPrimaryWallet();
-      }
       if (!wallet.ids.empty()) {
          selectedWalletId = *wallet.ids.cbegin();
       }
    }
 
-   std::shared_ptr<CreateTransactionDialog> dlg;
-
-/*   if ((QGuiApplication::keyboardModifiers() & Qt::ShiftModifier)
-       || applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
-      dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory_, walletsMgr_, utxoReservationMgr_
-         , signContainer_, true, logMgr_->logger("ui"), applicationSettings_, nullptr, bs::UtxoReservationToken{}, this );
+   if ((QGuiApplication::keyboardModifiers() & Qt::ShiftModifier) || advTxDlgByDefault_) {
+      const bool loadFees = true;
+      txDlg_ = new CreateTransactionDialogAdvanced(loadFees, topBlock_, logger_
+         , nullptr, bs::UtxoReservationToken{}, this );
    } else {
-      dlg = std::make_shared<CreateTransactionDialogSimple>(armory_, walletsMgr_, utxoReservationMgr_, signContainer_
-            , logMgr_->logger("ui"), applicationSettings_, this);
-   }*/
-
-   if (!selectedWalletId.empty()) {
-      dlg->SelectWallet(selectedWalletId, UiUtils::WalletsTypes::None);
+      txDlg_ = new CreateTransactionDialogSimple(topBlock_, logger_, this);
    }
+   connect(txDlg_, &QDialog::finished, [this](int) {
+      txDlg_->deleteLater();
+      txDlg_ = nullptr;
+   });
+   connect(txDlg_, &CreateTransactionDialog::needWalletsList, this, &MainWindow::needWalletsList);
+   connect(txDlg_, &CreateTransactionDialog::needFeeLevels, this, &MainWindow::needFeeLevels);
 
-/*   while(true) {
-      dlg->exec();
-
-      if  ((dlg->result() != QDialog::Accepted) || !dlg->switchModeRequested()) {
-         break;
-      }
-
-      auto nextDialog = dlg->SwithcMode();
-      dlg = nextDialog;
-   }*/
+   txDlg_->initUI();
+   if (!selectedWalletId.empty()) {
+      txDlg_->SelectWallet(selectedWalletId, UiUtils::WalletsTypes::None);
+   }
+   txDlg_->exec();
 }
 
 void MainWindow::setupMenu()

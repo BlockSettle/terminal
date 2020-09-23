@@ -17,6 +17,7 @@
 #include "ApiAdapter.h"
 #include "SignerDefs.h"
 #include "ThreadSafeClasses.h"
+#include "UiUtils.h"
 
 namespace bs {
    namespace gui {
@@ -27,8 +28,9 @@ namespace bs {
 }
 namespace BlockSettle {
    namespace Common {
-      class ArmoryMessage_LedgerEntries;
       class ArmoryMessage_AddressHistory;
+      class ArmoryMessage_FeeLevelsResponse;
+      class ArmoryMessage_LedgerEntries;
       class WalletsMessage_TXDetailsResponse;
       class WalletsMessage_WalletBalances;
    }
@@ -83,6 +85,7 @@ private:
    bool processTXDetails(const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
    bool processLedgerEntries(const BlockSettle::Common::ArmoryMessage_LedgerEntries &);
    bool processAddressHist(const BlockSettle::Common::ArmoryMessage_AddressHistory&);
+   bool processFeeLevels(const BlockSettle::Common::ArmoryMessage_FeeLevelsResponse&);
 
 private slots:
    void onPutSetting(int idx, const QVariant &value);
@@ -98,7 +101,8 @@ private slots:
    void onNeedLedgerEntries(const std::string &filter);
    void onNeedTXDetails(const std::vector<bs::sync::TXWallet> &, const bs::Address &);
    void onNeedAddressHistory(const bs::Address&);
-   void onNeedTxEntries(const std::set<BinaryData>&);
+   void onNeedWalletsList(UiUtils::WalletsTypes);
+   void onNeedFeeLevels(const std::vector<unsigned int>&);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

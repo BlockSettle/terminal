@@ -43,7 +43,7 @@
 #include "XbtAmountValidator.h"
 
 // Mirror of cached Armory wait times - NodeRPC::aggregateFeeEstimates()
-const std::map<unsigned int, QString> feeLevels = {
+const std::map<unsigned int, QString> kFeeLevels = {
    { 2, QObject::tr("20 minutes") },
    { 4, QObject::tr("40 minutes") },
    { 6, QObject::tr("1 hour") },
@@ -71,6 +71,17 @@ CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryCon
    , utxoReservationManager_(utxoReservationManager)
    , utxoRes_(std::move(utxoReservation))
    , loadFeeSuggestions_(loadFeeSuggestions)
+{
+   qRegisterMetaType<std::map<unsigned int, float>>();
+}
+
+CreateTransactionDialog::CreateTransactionDialog(bool loadFeeSuggestions
+   , uint32_t topBlock, const std::shared_ptr<spdlog::logger>& logger
+   , QWidget* parent)
+   : QDialog(parent)
+   , logger_(logger)
+   , loadFeeSuggestions_(loadFeeSuggestions)
+   , topBlock_(topBlock)
 {
    qRegisterMetaType<std::map<unsigned int, float>>();
 }
@@ -127,7 +138,7 @@ void CreateTransactionDialog::init()
 
 void CreateTransactionDialog::updateCreateButtonText()
 {
-   if (!signContainer_) {
+   if (!signContainer_ && !walletsManager_) {
       pushButtonCreate()->setEnabled(false);
       return;
    }
@@ -140,11 +151,16 @@ void CreateTransactionDialog::updateCreateButtonText()
    }
    const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
 
-   auto walletPtr = walletsManager_->getHDWalletById(walletId);
-   if (walletPtr && !walletPtr->isHardwareWallet() && (signContainer_->isOffline()
-      || signContainer_->isWalletOffline(walletId))) {
-      pushButtonCreate()->setText(tr("Export"));
-   } else {
+   if (walletsManager_) {
+      auto walletPtr = walletsManager_->getHDWalletById(walletId);
+      if (walletPtr && !walletPtr->isHardwareWallet() && (signContainer_->isOffline()
+         || signContainer_->isWalletOffline(walletId))) {
+         pushButtonCreate()->setText(tr("Export"));
+      } else {
+         selectedWalletChanged(-1);
+      }
+   }
+   else {
       selectedWalletChanged(-1);
    }
 }
@@ -194,9 +210,14 @@ int CreateTransactionDialog::SelectWallet(const std::string& walletId, UiUtils::
    auto index = UiUtils::selectWalletInCombobox(comboBoxWallets(), walletId
       , static_cast<UiUtils::WalletsTypes>(type));
    if (index < 0) {
-      const auto rootWallet = walletsManager_->getHDRootForLeaf(walletId);
-      if (rootWallet) {
-         index = UiUtils::selectWalletInCombobox(comboBoxWallets(), rootWallet->walletId());
+      if (walletsManager_) {
+         const auto rootWallet = walletsManager_->getHDRootForLeaf(walletId);
+         if (rootWallet) {
+            index = UiUtils::selectWalletInCombobox(comboBoxWallets(), rootWallet->walletId());
+         }
+      }
+      else {
+         //TODO: select root wallet if needed
       }
    }
    return index;
@@ -204,8 +225,38 @@ int CreateTransactionDialog::SelectWallet(const std::string& walletId, UiUtils::
 
 void CreateTransactionDialog::populateWalletsList()
 {
-   int index = UiUtils::fillHDWalletsComboBox(comboBoxWallets(), walletsManager_, UiUtils::WalletsTypes::All_AllowHwLegacy);
-   selectedWalletChanged(index);
+   if (walletsManager_) {
+      int index = UiUtils::fillHDWalletsComboBox(comboBoxWallets(), walletsManager_, UiUtils::WalletsTypes::All_AllowHwLegacy);
+      selectedWalletChanged(index);
+   }
+   else {
+      emit needWalletsList(UiUtils::WalletsTypes::All_AllowHwLegacy);
+   }
+}
+
+void CreateTransactionDialog::onWalletsList(const std::vector<bs::sync::HDWalletData>&)
+{
+   //TODO: fill in comboBoxWallets
+}
+
+void CreateTransactionDialog::onFeeLevels(const std::map<unsigned int, float>& feeLevels)
+{
+   comboBoxFeeSuggestions()->clear();
+
+   for (const auto& feeVal : feeLevels) {
+      QString desc;
+      const auto itLevel = kFeeLevels.find(feeVal.first);
+      if (itLevel == kFeeLevels.end()) {
+         desc = tr("%1 minutes").arg(10 * feeVal.first);
+      } else {
+         desc = itLevel->second;
+      }
+      comboBoxFeeSuggestions()->addItem(tr("%1 blocks (%2): %3 s/b").arg(feeVal.first).arg(desc).arg(feeVal.second)
+         , feeVal.second);
+   }
+
+   comboBoxFeeSuggestions()->setEnabled(true);
+   feeSelectionChanged(0);
 }
 
 void CreateTransactionDialog::populateFeeList()
@@ -214,11 +265,21 @@ void CreateTransactionDialog::populateFeeList()
    comboBoxFeeSuggestions()->setCurrentIndex(0);
    comboBoxFeeSuggestions()->setEnabled(false);
 
-   connect(this, &CreateTransactionDialog::feeLoadingCompleted
-      , this, &CreateTransactionDialog::onFeeSuggestionsLoaded
-      , Qt::QueuedConnection);
+   if (walletsManager_) {
+      connect(this, &CreateTransactionDialog::feeLoadingCompleted
+         , this, &CreateTransactionDialog::onFeeSuggestionsLoaded
+         , Qt::QueuedConnection);
 
-   loadFees();
+      loadFees();
+   }
+   else {
+      std::vector<unsigned int> feeLevels;
+      feeLevels.reserve(kFeeLevels.size());
+      for (const auto& level : kFeeLevels) {
+         feeLevels.push_back(level.first);
+      }
+      emit needFeeLevels(feeLevels);
+   }
 }
 
 void CreateTransactionDialog::loadFees()
@@ -229,10 +290,10 @@ void CreateTransactionDialog::loadFees()
    };
    auto result = std::make_shared<Result>();
 
-   for (const auto &feeLevel : feeLevels) {
+   for (const auto &feeLevel : kFeeLevels) {
       result->levels.insert(feeLevel.first);
    }
-   for (const auto &feeLevel : feeLevels) {
+   for (const auto &feeLevel : kFeeLevels) {
       const auto &cbFee = [this, result, level=feeLevel.first](float fee) {
          result->levels.erase(level);
          if (fee < std::numeric_limits<float>::infinity()) {
@@ -256,8 +317,8 @@ void CreateTransactionDialog::onFeeSuggestionsLoaded(const std::map<unsigned int
 
    for (const auto &feeVal : feeValues) {
       QString desc;
-      const auto itLevel = feeLevels.find(feeVal.first);
-      if (itLevel == feeLevels.end()) {
+      const auto itLevel = kFeeLevels.find(feeVal.first);
+      if (itLevel == kFeeLevels.end()) {
          desc = tr("%1 minutes").arg(10 * feeVal.first);
       }
       else {
@@ -284,34 +345,40 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
       return;
    }
    const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
-   const auto rootWallet = walletsManager_->getHDWalletById(walletId);
-   if (!rootWallet) {
-      logger_->error("[{}] wallet with id {} not found", __func__, walletId);
-      return;
-   }
-   if (!rootWallet->isHardwareWallet() && (signContainer_->isWalletOffline(rootWallet->walletId())
-      || !rootWallet || signContainer_->isWalletOffline(rootWallet->walletId()))) {
-      pushButtonCreate()->setText(tr("Export"));
-   } else {
-      pushButtonCreate()->setText(tr("Broadcast"));
-   }
+   if (walletsManager_) {
+      const auto rootWallet = walletsManager_->getHDWalletById(walletId);
+      if (!rootWallet) {
+         logger_->error("[{}] wallet with id {} not found", __func__, walletId);
+         return;
+      }
+      if (!rootWallet->isHardwareWallet() && (signContainer_->isWalletOffline(rootWallet->walletId())
+         || !rootWallet || signContainer_->isWalletOffline(rootWallet->walletId()))) {
+         pushButtonCreate()->setText(tr("Export"));
+      } else {
+         pushButtonCreate()->setText(tr("Broadcast"));
+      }
 
-   auto group = rootWallet->getGroup(rootWallet->getXBTGroupType());
-   const bool isHardware = rootWallet->isHardwareWallet() || rootWallet->isHardwareOfflineWallet();
-   bs::hd::Purpose hwPurpose;
-   if (isHardware) {
-      hwPurpose = UiUtils::getSelectedHwPurpose(comboBoxWallets());
-   }
-
-   if (transactionData_->getGroup() != group || isHardware || resetInputs) {
+      auto group = rootWallet->getGroup(rootWallet->getXBTGroupType());
+      const bool isHardware = rootWallet->isHardwareWallet() || rootWallet->isHardwareOfflineWallet();
+      bs::hd::Purpose hwPurpose;
       if (isHardware) {
-         transactionData_->setWallet(group->getLeaf(hwPurpose), armory_->topBlock()
-            , resetInputs, cbInputsReset);
+         hwPurpose = UiUtils::getSelectedHwPurpose(comboBoxWallets());
       }
-      else {
-         transactionData_->setGroup(group, armory_->topBlock(), false
-            , resetInputs, cbInputsReset);
+
+      if (transactionData_->getGroup() != group || isHardware || resetInputs) {
+         if (isHardware) {
+            transactionData_->setWallet(group->getLeaf(hwPurpose), armory_->topBlock()
+               , resetInputs, cbInputsReset);
+         } else {
+            transactionData_->setGroup(group, armory_->topBlock(), false
+               , resetInputs, cbInputsReset);
+         }
       }
+   }
+   else {
+      pushButtonCreate()->setText(tr("Broadcast"));
+      //TODO: collect selected wallet UTXOs first
+      transactionData_->setWallets({ walletId }, topBlock_, {});
    }
 
    emit walletChanged();

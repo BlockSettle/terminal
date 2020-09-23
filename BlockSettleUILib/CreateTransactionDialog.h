@@ -24,6 +24,7 @@
 #include "Bip21Types.h"
 #include "BSErrorCodeStrings.h"
 #include "CoreWallet.h"
+#include "SignerDefs.h"
 #include "UtxoReservationToken.h"
 #include "ValidityFlag.h"
 
@@ -58,7 +59,7 @@ class CreateTransactionDialog : public QDialog
 Q_OBJECT
 
 public:
-   CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &
+   [[deprecated]] CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<bs::UTXOReservationManager> &
       , const std::shared_ptr<SignContainer> &
@@ -66,12 +67,24 @@ public:
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
       , bs::UtxoReservationToken utxoReservation
       , QWidget* parent);
+   CreateTransactionDialog(bool loadFeeSuggestions, uint32_t topBlock
+      , const std::shared_ptr<spdlog::logger>&, QWidget* parent);
    ~CreateTransactionDialog() noexcept override;
 
    int SelectWallet(const std::string& walletId, UiUtils::WalletsTypes type);
 
+   virtual void initUI() = 0;
    virtual bool switchModeRequested() const= 0;
    virtual std::shared_ptr<CreateTransactionDialog> SwitchMode() = 0;
+
+   void onWalletsList(const std::vector<bs::sync::HDWalletData>&);
+   void onFeeLevels(const std::map<unsigned int, float>&);
+
+signals:
+   void feeLoadingCompleted(const std::map<unsigned int, float>&);  //deprecated
+   void walletChanged();
+   void needWalletsList(UiUtils::WalletsTypes);
+   void needFeeLevels(const std::vector<unsigned int>&);
 
 protected:
    virtual void init();
@@ -115,10 +128,6 @@ protected:
 
    void showError(const QString &text, const QString &detailedText);
 
-signals:
-   void feeLoadingCompleted(const std::map<unsigned int, float> &);
-   void walletChanged();
-
 protected slots:
    virtual void onFeeSuggestionsLoaded(const std::map<unsigned int, float> &);
    virtual void feeSelectionChanged(int);
@@ -151,6 +160,7 @@ protected:
    std::shared_ptr<ApplicationSettings> applicationSettings_;
    std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
    bs::UtxoReservationToken utxoRes_;
+   uint32_t topBlock_;
 
    XbtAmountValidator * xbtValidator_ = nullptr;
 

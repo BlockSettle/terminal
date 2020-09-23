@@ -17,6 +17,7 @@
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "SignerDefs.h"
+#include "UiUtils.h"
 
 namespace spdlog {
    class logger;
@@ -33,6 +34,7 @@ namespace bs {
 
 class AboutDialog;
 class AuthAddressDialog;
+class CreateTransactionDialog;
 class NotificationCenter;
 class QSystemTrayIcon;
 class StatusBarView;
@@ -62,6 +64,7 @@ namespace bs {
 
             void onHDWallet(const bs::sync::WalletInfo &);
             void onHDWalletDetails(const bs::sync::HDWalletData &);
+            void onWalletsList(const std::vector<bs::sync::HDWalletData>&);
             void onAddresses(const std::vector<bs::sync::Address> &);
             void onAddressComments(const std::string &walletId
                , const std::map<bs::Address, std::string> &);
@@ -71,6 +74,8 @@ namespace bs {
             void onTXDetails(const std::vector<bs::sync::TXWalletDetails> &);
             void onAddressHistory(const bs::Address&, uint32_t curBlock
                , const std::vector<bs::TXEntry>&);
+
+            void onFeeLevels(const std::map<unsigned int, float>&);
 
          public slots:
             void onReactivate();
@@ -88,6 +93,7 @@ namespace bs {
             void putSetting(int, const QVariant &);
             void createNewWallet();
             void needHDWalletDetails(const std::string &walletId);
+            void needWalletsList(UiUtils::WalletsTypes);
             void needWalletBalances(const std::string &walletId);
             void needSpendableUTXOs(const std::string &walletId);
 
@@ -101,6 +107,8 @@ namespace bs {
             void needLedgerEntries(const std::string &filter);
             void needTXDetails(const std::vector<bs::sync::TXWallet>&, const bs::Address& addr = {});
             void needAddressHistory(const bs::Address&);
+
+            void needFeeLevels(const std::vector<unsigned int>&);
 
          private slots:
             void onSend();
@@ -182,6 +190,7 @@ namespace bs {
             std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
 
             std::shared_ptr<TransactionsViewModel>    txModel_;
+            CreateTransactionDialog* txDlg_{ nullptr };
 
             //   std::shared_ptr<WalletManagementWizard> walletsWizard_;
 
@@ -191,10 +200,13 @@ namespace bs {
 
             bool initialWalletCreateDialogShown_ = false;
             bool deferCCsync_ = false;
+            bool advTxDlgByDefault_{ false };
 
             std::queue<std::function<void(void)>> deferredDialogs_;
             bool deferredDialogRunning_ = false;
             //   bs::network::UserType userType_{};
+
+            uint32_t topBlock_{ 0 };
          };
       }
    }

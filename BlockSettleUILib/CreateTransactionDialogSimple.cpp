@@ -36,6 +36,14 @@ CreateTransactionDialogSimple::CreateTransactionDialogSimple(const std::shared_p
    initUI();
 }
 
+CreateTransactionDialogSimple::CreateTransactionDialogSimple(uint32_t topBlock
+   , const std::shared_ptr<spdlog::logger>& logger, QWidget* parent)
+   : CreateTransactionDialog(true, topBlock, logger, parent)
+   , ui_(new Ui::CreateTransactionDialogSimple)
+{
+   ui_->setupUi(this);
+}
+
 CreateTransactionDialogSimple::~CreateTransactionDialogSimple() = default;
 
 void CreateTransactionDialogSimple::initUI()

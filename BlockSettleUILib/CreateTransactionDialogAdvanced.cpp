@@ -55,13 +55,26 @@ CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shar
       , QWidget* parent)
    : CreateTransactionDialog(armory, walletManager, utxoReservationManager, container, loadFeeSuggestions,
       logger, applicationSettings, std::move(utxoReservation), parent)
- , ui_(new Ui::CreateTransactionDialogAdvanced)
+   , ui_(new Ui::CreateTransactionDialogAdvanced)
 {
    transactionData_ = txData;
    selectedChangeAddress_ = bs::Address{};
 
    ui_->setupUi(this);
    initUI();
+}
+
+CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(bool loadFeeSuggestions
+   , uint32_t topBlock, const std::shared_ptr<spdlog::logger>& logger
+   , const std::shared_ptr<TransactionData>& txData, bs::UtxoReservationToken utxoReservation
+   , QWidget* parent)
+   : CreateTransactionDialog(loadFeeSuggestions, topBlock, logger, parent)
+   , ui_(new Ui::CreateTransactionDialogAdvanced)
+{
+   transactionData_ = txData;
+   selectedChangeAddress_ = bs::Address{};
+
+   ui_->setupUi(this);
 }
 
 CreateTransactionDialogAdvanced::~CreateTransactionDialogAdvanced() = default;

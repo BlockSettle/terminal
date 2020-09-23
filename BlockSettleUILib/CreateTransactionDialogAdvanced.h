@@ -66,7 +66,7 @@ public:
       , QWidget* parent = nullptr);
 
 public:
-   CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &
+   [[deprecated]] CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<bs::UTXOReservationManager> &
       , const std::shared_ptr<SignContainer> &
@@ -74,6 +74,11 @@ public:
       , const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
       , const std::shared_ptr<TransactionData> &
+      , bs::UtxoReservationToken utxoReservation
+      , QWidget* parent = nullptr);
+   CreateTransactionDialogAdvanced(bool loadFeeSuggestions, uint32_t topBlock
+      , const std::shared_ptr<spdlog::logger>&
+      , const std::shared_ptr<TransactionData>&
       , bs::UtxoReservationToken utxoReservation
       , QWidget* parent = nullptr);
    ~CreateTransactionDialogAdvanced() override;
@@ -151,7 +156,7 @@ signals:
 
 private:
    void clear() override;
-   void initUI();
+   void initUI() override;
 
    void updateOutputButtonTitle();
 
