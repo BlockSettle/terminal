@@ -187,7 +187,7 @@ CustomTitleDialogWindow {
 
             CustomButton {
                 text: qsTr("Select Target Dir")
-                Layout.preferredWidth: 80
+                Layout.preferredWidth: 160
                 Layout.maximumHeight: 25
                 Layout.leftMargin: 110 + 5
 
@@ -196,6 +196,7 @@ CustomTitleDialogWindow {
                     currentFile: StandardPaths.writableLocation(StandardPaths.DocumentsLocation) + "/" + backupFileName
                     folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
                     fileMode: FileDialog.SaveFile
+                    nameFilters: [ (fullBackupMode ? (isPrintable ? "PDF files (*.pdf)" : "Full Wallet files (*.wdb)") : "Watching-Only Wallet files (*.lmdb)"), "All files (*)" ]
 
                     onAccepted: {
                         userSelection = qmlAppObj.getUrlPathWithoutExtention(file)

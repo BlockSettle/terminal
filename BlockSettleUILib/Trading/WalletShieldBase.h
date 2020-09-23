@@ -35,7 +35,7 @@ public:
    explicit WalletShieldBase(QWidget *parent = nullptr);
    virtual ~WalletShieldBase() noexcept;
 
-   void setShieldButtonAction(std::function<void(void)>&& action);
+   void setShieldButtonAction(std::function<void(void)>&& action, bool oneShot = true);
 
    void init(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
       , const std::shared_ptr<AuthAddressManager> &authMgr
@@ -48,6 +48,7 @@ public:
 
 signals:
    void requestPrimaryWalletCreation();
+   void loginRequested();
 
 protected:
    void showShield(const QString& labelText,

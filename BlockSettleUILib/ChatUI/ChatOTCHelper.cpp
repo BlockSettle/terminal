@@ -10,7 +10,6 @@
 */
 #include "ChatOTCHelper.h"
 
-#include <QFileDialog>
 #include <spdlog/spdlog.h>
 
 #include "ArmoryConnection.h"

@@ -155,7 +155,6 @@
         <file>resources/sign.png</file>
         <file>resources/sign@2x.png</file>
         <file>resources/sign@3x.png</file>
-        <file alias="TEMPLATE_WALLET_BACKUP">resources/wallet_backup_template.html</file>
         <file>resources/wallet_backup.png</file>
         <file>resources/wallet_backup@2x.png</file>
         <file>resources/wallet_create.png</file>
