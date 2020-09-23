@@ -518,8 +518,8 @@ QVariant QuoteRequestsModel::headerData(int section, Qt::Orientation orientation
       case Column::Party:       return tr("Party");
       case Column::Status:      return tr("Status");
       case Column::QuotedPx:    return tr("Quoted Price");
-      case Column::IndicPx:     return tr("Indicative Px");
-      case Column::BestPx:      return tr("Best Quoted Px");
+      case Column::IndicPx:     return tr("Indicative price");
+      case Column::BestPx:      return tr("Best Quoted price");
       default:                  return QString();
    }
 }

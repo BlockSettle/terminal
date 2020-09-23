@@ -54,6 +54,7 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    ui_->shieldPage->setTabType(QLatin1String("trade"));
 
    connect(ui_->shieldPage, &RFQShieldPage::requestPrimaryWalletCreation, this, &RFQRequestWidget::requestPrimaryWalletCreation);
+   connect(ui_->shieldPage, &RFQShieldPage::loginRequested, this, &RFQRequestWidget::loginRequested);
 
    ui_->pageRFQTicket->setSubmitRFQ([this]
       (const std::string &id, const bs::network::RFQ& rfq, bs::UtxoReservationToken utxoRes)

@@ -92,6 +92,7 @@ protected:
 
 signals:
    void requestPrimaryWalletCreation();
+   void loginRequested();
 
    void sendUnsignedPayinToPB(const std::string& settlementId, const bs::network::UnsignedPayinData& unsignedPayinData);
    void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);

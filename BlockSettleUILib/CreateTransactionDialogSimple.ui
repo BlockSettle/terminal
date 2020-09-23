@@ -463,7 +463,7 @@
                   <bool>false</bool>
                  </property>
                  <property name="text">
-                  <string>Set RBF flag</string>
+                  <string>Replace-By-Fee (RBF)</string>
                  </property>
                 </widget>
                </item>

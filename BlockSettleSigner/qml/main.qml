@@ -193,14 +193,20 @@ ApplicationWindow {
     }
 
     onClosing: {
-        close.accepted = false;
-        var mb = JsHelper.messageBox(BSMessageBox.Type.Question
-            , qsTr("Close"), qsTr("Do you want to close signer?"))
-        mb.bsAccepted.connect(function() {
-            settingsPage.storeSettings();
-            autoSignPage.storeSettings();
-            Qt.quit()
-        })
+        let count = signerStatus.connectedClients.length
+        if (count > 0) {
+            close.accepted = false;
+            var prompt = count === 1 ?
+                        qsTr("Do you want to close signer?\nThere is %n connected terminal.", "", count) :
+                        qsTr("Do you want to close signer?\nThere are %n connected terminals.", "", count);
+            var mb = JsHelper.messageBox(BSMessageBox.Type.Question
+                , qsTr("Close"), prompt)
+            mb.bsAccepted.connect(function() {
+                settingsPage.storeSettings();
+                autoSignPage.storeSettings();
+                Qt.quit()
+            })
+        }
     }
 
     function raiseWindow() {
