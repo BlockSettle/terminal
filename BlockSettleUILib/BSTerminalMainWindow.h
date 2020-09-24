@@ -73,7 +73,7 @@ class StatusViewBlockListener;
 class TransactionsViewModel;
 class WalletManagementWizard;
 
-enum class CcGenFileError: int;
+enum class BootstrapFileError: int;
 
 class BSTerminalMainWindow : public QMainWindow
 {
@@ -104,6 +104,7 @@ private:
    void initArmory();
    void initCcClient();
    void initUtxoReservationManager();
+   void initBootstrapDataManager();
    void connectArmory();
    void connectCcClient();
    void connectSigner();
@@ -246,7 +247,7 @@ private slots:
    void onCelerDisconnected();
    void onCelerConnectionError(int errorCode);
    void showRunInBackgroundMessage();
-   void onCCInfoMissing(CcGenFileError error);
+   void onCCInfoMissing(BootstrapFileError error);
 
    void onBsConnectionDisconnected();
    void onBsConnectionFailed();
