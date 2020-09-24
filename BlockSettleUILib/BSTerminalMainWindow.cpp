@@ -29,10 +29,11 @@
 #include "AuthAddressManager.h"
 #include "AutheIDClient.h"
 #include "AutoSignQuoteProvider.h"
-#include "Bip15xDataConnection.h"
 #include "BSMarketDataProvider.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
+#include "Bip15xDataConnection.h"
+#include "BootstrapDataManager.h"
 #include "CCFileManager.h"
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
@@ -756,6 +757,11 @@ void BSTerminalMainWindow::InitAssets()
 
    if (ccFileManager_->hasLocalFile()) {
       ccFileManager_->LoadSavedCCDefinitions();
+   }
+
+   bootstrapDataManager_ = std::make_shared<BootstrapDataManager>(logMgr_->logger(), applicationSettings_);
+   if (bootstrapDataManager_->hasLocalFile()) {
+      bootstrapDataManager_->loadSavedData();
    }
 }
 
@@ -2245,6 +2251,7 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
 
    ccFileManager_->setCcAddressesSigned(result.ccAddressesSigned);
    authManager_->setAuthAddressesSigned(result.authAddressesSigned);
+   bootstrapDataManager_->setReceivedData(result.bootstrapDataSigned);
 
    connect(bsClient_.get(), &BsClient::disconnected, orderListModel_.get(), &OrderListModel::onDisconnected);
    connect(bsClient_.get(), &BsClient::disconnected, this, &BSTerminalMainWindow::onBsConnectionDisconnected);
@@ -2298,6 +2305,9 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
 
    connect(bsClient_.get(), &BsClient::ccGenAddrUpdated, this, [this](const BinaryData &ccGenAddrData) {
       ccFileManager_->setCcAddressesSigned(ccGenAddrData);
+   });
+   connect(bsClient_.get(), &BsClient::bootstapDataUpdated, this, [this](const BinaryData &data) {
+      bootstrapDataManager_->setReceivedData(data);
    });
 
    accountEnabled_ = true;
