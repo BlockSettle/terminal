@@ -53,9 +53,10 @@ class AuthAddressDialog;
 class AuthAddressManager;
 class AutheIDClient;
 class AutoSignScriptProvider;
-class BaseCelerClient;
 class BSMarketDataProvider;
 class BSTerminalSplashScreen;
+class BaseCelerClient;
+class BootstrapDataManager;
 class CCFileManager;
 class CCPortfolioModel;
 class CcTrackerClient;
@@ -72,7 +73,7 @@ class StatusViewBlockListener;
 class TransactionsViewModel;
 class WalletManagementWizard;
 
-enum class CcGenFileError: int;
+enum class BootstrapFileError: int;
 
 class BSTerminalMainWindow : public QMainWindow
 {
@@ -103,6 +104,7 @@ private:
    void initArmory();
    void initCcClient();
    void initUtxoReservationManager();
+   void initBootstrapDataManager();
    void connectArmory();
    void connectCcClient();
    void connectSigner();
@@ -192,6 +194,7 @@ private:
    std::shared_ptr<MDCallbacksQt>            mdCallbacks_;
    std::shared_ptr<AssetManager>             assetManager_;
    std::shared_ptr<CCFileManager>            ccFileManager_;
+   std::shared_ptr<BootstrapDataManager>     bootstrapDataManager_;
    std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
    std::shared_ptr<WalletSignerContainer>    signContainer_;
    std::shared_ptr<AutoSignScriptProvider>   autoSignQuoteProvider_;
@@ -244,7 +247,7 @@ private slots:
    void onCelerDisconnected();
    void onCelerConnectionError(int errorCode);
    void showRunInBackgroundMessage();
-   void onCCInfoMissing(CcGenFileError error);
+   void onCCInfoMissing(BootstrapFileError error);
 
    void onBsConnectionDisconnected();
    void onBsConnectionFailed();

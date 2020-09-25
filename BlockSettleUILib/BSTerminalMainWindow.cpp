@@ -29,10 +29,11 @@
 #include "AuthAddressManager.h"
 #include "AutheIDClient.h"
 #include "AutoSignQuoteProvider.h"
-#include "Bip15xDataConnection.h"
 #include "BSMarketDataProvider.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
+#include "Bip15xDataConnection.h"
+#include "BootstrapDataManager.h"
 #include "CCFileManager.h"
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
@@ -153,6 +154,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    InitSigningContainer();
    InitAuthManager();
    initUtxoReservationManager();
+   initBootstrapDataManager();
 
    statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
       , signContainer_, ui_->statusbar);
@@ -750,13 +752,8 @@ void BSTerminalMainWindow::InitAssets()
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityDef, assetManager_.get(), &AssetManager::onCCSecurityReceived);
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityInfo, walletsMgr_.get(), &bs::sync::WalletsManager::onCCSecurityInfo);
    connect(ccFileManager_.get(), &CCFileManager::Loaded, this, &BSTerminalMainWindow::onCCLoaded);
-   connect(ccFileManager_.get(), &CCFileManager::LoadingFailed, this, &BSTerminalMainWindow::onCCInfoMissing);
 
    connect(mdCallbacks_.get(), &MDCallbacksQt::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
-
-   if (ccFileManager_->hasLocalFile()) {
-      ccFileManager_->LoadSavedCCDefinitions();
-   }
 }
 
 void BSTerminalMainWindow::InitPortfolioView()
@@ -1077,7 +1074,18 @@ void BSTerminalMainWindow::initCcClient()
 void BSTerminalMainWindow::initUtxoReservationManager()
 {
    utxoReservationMgr_ = std::make_shared<bs::UTXOReservationManager>(
-      walletsMgr_, armory_, logMgr_->logger());
+            walletsMgr_, armory_, logMgr_->logger());
+}
+
+void BSTerminalMainWindow::initBootstrapDataManager()
+{
+   bootstrapDataManager_ = std::make_shared<BootstrapDataManager>(logMgr_->logger(), applicationSettings_, authManager_, ccFileManager_);
+   if (bootstrapDataManager_->hasLocalFile()) {
+      auto result = bootstrapDataManager_->loadSavedData();
+      if (result != BootstrapFileError::NoError) {
+         onCCInfoMissing(result);
+      }
+   }
 }
 
 void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const std::string& requestId, const BinaryData &txHash, int errCode
@@ -1744,9 +1752,9 @@ void BSTerminalMainWindow::onCCLoaded()
    }
 }
 
-void BSTerminalMainWindow::onCCInfoMissing(CcGenFileError error)
+void BSTerminalMainWindow::onCCInfoMissing(BootstrapFileError error)
 {
-   if (error == CcGenFileError::InvalidSign) {
+   if (error == BootstrapFileError::InvalidSign) {
       addDeferredDialog([this] {
          BSMessageBox(BSMessageBox::warning, tr("CC gen")
             , tr("CC gen file load failed")
@@ -2243,8 +2251,7 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
 
    authManager_->initLogin(celerConnection_, tradeSettings_);
 
-   ccFileManager_->setCcAddressesSigned(result.ccAddressesSigned);
-   authManager_->setAuthAddressesSigned(result.authAddressesSigned);
+   bootstrapDataManager_->setReceivedData(result.bootstrapDataSigned);
 
    connect(bsClient_.get(), &BsClient::disconnected, orderListModel_.get(), &OrderListModel::onDisconnected);
    connect(bsClient_.get(), &BsClient::disconnected, this, &BSTerminalMainWindow::onBsConnectionDisconnected);
@@ -2296,8 +2303,8 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
    connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetChat, &ChatWidget::onProcessOtcPbMessage);
    connect(ui_->widgetChat, &ChatWidget::sendOtcPbMessage, bsClient_.get(), &BsClient::sendPbMessage);
 
-   connect(bsClient_.get(), &BsClient::ccGenAddrUpdated, this, [this](const BinaryData &ccGenAddrData) {
-      ccFileManager_->setCcAddressesSigned(ccGenAddrData);
+   connect(bsClient_.get(), &BsClient::bootstapDataUpdated, this, [this](const BinaryData &data) {
+      bootstrapDataManager_->setReceivedData(data);
    });
 
    accountEnabled_ = true;
