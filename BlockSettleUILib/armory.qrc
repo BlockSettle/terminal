@@ -204,15 +204,6 @@
         <file>resources/cancel@2x.png</file>
         <file>resources/finger.png</file>
         <file>resources/finger@2x.png</file>
-        <file>resources/PublicKeys/cc_server_prod.key</file>
-        <file>resources/PublicKeys/cc_server_uat.key</file>
-        <file>resources/PublicKeys/cc_server_staging.key</file>
-        <file>resources/PublicKeys/chat_prod.key</file>
-        <file>resources/PublicKeys/chat_uat.key</file>
-        <file>resources/PublicKeys/chat_staging.key</file>
-        <file>resources/PublicKeys/proxy_prod.key</file>
-        <file>resources/PublicKeys/proxy_uat.key</file>
-        <file>resources/PublicKeys/proxy_staging.key</file>
         <file>resources/eye.png</file>
         <file>resources/getstarted-manual@2x.png</file>
         <file>resources/getstarted-manual.png</file>
