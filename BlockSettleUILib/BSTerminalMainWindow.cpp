@@ -29,11 +29,11 @@
 #include "AuthAddressManager.h"
 #include "AutheIDClient.h"
 #include "AutoSignQuoteProvider.h"
+#include "Bip15xDataConnection.h"
+#include "BootstrapDataManager.h"
 #include "BSMarketDataProvider.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
-#include "Bip15xDataConnection.h"
-#include "BootstrapDataManager.h"
 #include "CCFileManager.h"
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
@@ -1028,11 +1028,11 @@ void BSTerminalMainWindow::ArmoryIsOffline()
          nextArmoryReconnectAttempt_ - now);
    }
    if (nextConnDelay != std::chrono::milliseconds::zero()) {
-      
+
       auto delaySec = std::chrono::duration_cast<std::chrono::seconds>(nextConnDelay);
       SPDLOG_LOGGER_DEBUG(logMgr_->logger("ui")
          , "restart armory connection in {} second", nextConnDelay.count());
-      
+
       QTimer::singleShot(nextConnDelay, this, &BSTerminalMainWindow::ArmoryIsOffline);
       return;
    }
@@ -1043,12 +1043,12 @@ void BSTerminalMainWindow::ArmoryIsOffline()
    updateControlEnabledState();
 
    //increase reconnect delay
-   armoryReconnectDelay_ = armoryReconnectDelay_ % 2 ? 
+   armoryReconnectDelay_ = armoryReconnectDelay_ % 2 ?
       armoryReconnectDelay_ * 2 : armoryReconnectDelay_ + 1;
    armoryReconnectDelay_ = std::max(armoryReconnectDelay_, unsigned(60));
-   nextArmoryReconnectAttempt_ = 
+   nextArmoryReconnectAttempt_ =
       std::chrono::steady_clock::now() + std::chrono::seconds(armoryReconnectDelay_);
-   
+
    connectArmory();
 
    // XXX: disabled until armory connection is stable in terminal
@@ -1085,6 +1085,22 @@ void BSTerminalMainWindow::initBootstrapDataManager()
       if (result != BootstrapFileError::NoError) {
          onCCInfoMissing(result);
       }
+   } else {
+      // load from resources
+      const QString filePathInResources = applicationSettings_->bootstrapResourceFileName();
+
+      QFile file;
+      file.setFileName(filePathInResources);
+      if (file.open(QIODevice::ReadOnly)) {
+         const std::string bootstrapData = file.readAll().toStdString();
+
+         bootstrapDataManager_->setReceivedData(bootstrapData);
+
+      } else {
+         logMgr_->logger()->error("[BSTerminalMainWindow::initBootstrapDataManager] failed to locate bootstra file in resources: {}"
+                        , filePathInResources.toStdString());
+      }
+
    }
 }
 
@@ -2303,7 +2319,7 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
    connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetChat, &ChatWidget::onProcessOtcPbMessage);
    connect(ui_->widgetChat, &ChatWidget::sendOtcPbMessage, bsClient_.get(), &BsClient::sendPbMessage);
 
-   connect(bsClient_.get(), &BsClient::bootstapDataUpdated, this, [this](const BinaryData &data) {
+   connect(bsClient_.get(), &BsClient::bootstapDataUpdated, this, [this](const std::string& data) {
       bootstrapDataManager_->setReceivedData(data);
    });
 
