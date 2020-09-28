@@ -16,7 +16,6 @@
 #include <chrono>
 
 #include <QComboBox>
-#include <QFileDialog>
 #include <QLineEdit>
 
 #include "ApplicationSettings.h"
@@ -37,9 +36,9 @@
 #include "TxClasses.h"
 #include "UiUtils.h"
 #include "UserScriptRunner.h"
+#include "UtxoReservationManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "UtxoReservationManager.h"
 
 namespace {
    const QString kNoBalanceAvailable = QLatin1String("-");

@@ -13,7 +13,6 @@
 #include <spdlog/spdlog.h>
 
 #include <QClipboard>
-#include <QFileDialog>
 #include <QUrl>
 
 #include "BSChatInput.h"
