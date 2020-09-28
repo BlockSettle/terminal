@@ -292,6 +292,8 @@ private:
 
    void DisplayCreateTransactionDialog(std::shared_ptr<CreateTransactionDialog> dlg);
 
+   void onBootstrapDataLoaded(const std::string& data);
+
 private:
    enum class ChatInitState
    {

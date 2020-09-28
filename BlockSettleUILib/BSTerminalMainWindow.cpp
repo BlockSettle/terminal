@@ -104,9 +104,11 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    loginButtonText_ = tr("Login");
 
+   initBootstrapDataManager();
+
    nextArmoryReconnectAttempt_ = std::chrono::steady_clock::now();
-   armoryServersProvider_= std::make_shared<ArmoryServersProvider>(applicationSettings_);
    signersProvider_= std::make_shared<SignersProvider>(applicationSettings_);
+   armoryServersProvider_ = std::make_shared<ArmoryServersProvider>(applicationSettings_, bootstrapDataManager_);
 
    bool licenseAccepted = showStartupDialog();
    if (!licenseAccepted) {
@@ -145,7 +147,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    InitSigningContainer();
    InitAuthManager();
    initUtxoReservationManager();
-   initBootstrapDataManager();
 
    cbApproveChat_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Chat
       , this, applicationSettings_, bootstrapDataManager_);
@@ -495,6 +496,8 @@ void BSTerminalMainWindow::InitAuthManager()
          openAuthManagerDialog();
       }
    });
+
+   authManager_->SetLoadedValidationAddressList(bootstrapDataManager_->GetAuthValidationList());
 }
 
 std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createSigner()
@@ -754,6 +757,8 @@ void BSTerminalMainWindow::InitAssets()
    connect(ccFileManager_.get(), &CCFileManager::Loaded, this, &BSTerminalMainWindow::onCCLoaded);
 
    connect(mdCallbacks_.get(), &MDCallbacksQt::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
+
+   ccFileManager_->SetLoadedDefinitions(bootstrapDataManager_->GetCCDefinitions());
 }
 
 void BSTerminalMainWindow::InitPortfolioView()
@@ -1079,7 +1084,7 @@ void BSTerminalMainWindow::initUtxoReservationManager()
 
 void BSTerminalMainWindow::initBootstrapDataManager()
 {
-   bootstrapDataManager_ = std::make_shared<BootstrapDataManager>(logMgr_->logger(), applicationSettings_, authManager_, ccFileManager_);
+   bootstrapDataManager_ = std::make_shared<BootstrapDataManager>(logMgr_->logger(), applicationSettings_);
    if (bootstrapDataManager_->hasLocalFile()) {
       bootstrapDataManager_->loadFromLocalFile();
    } else {
@@ -2251,7 +2256,7 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
 
    authManager_->initLogin(celerConnection_, tradeSettings_);
 
-   bootstrapDataManager_->setReceivedData(result.bootstrapDataSigned);
+   onBootstrapDataLoaded(result.bootstrapDataSigned);
 
    connect(bsClient_.get(), &BsClient::disconnected, orderListModel_.get(), &OrderListModel::onDisconnected);
    connect(bsClient_.get(), &BsClient::disconnected, this, &BSTerminalMainWindow::onBsConnectionDisconnected);
@@ -2304,7 +2309,7 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
    connect(ui_->widgetChat, &ChatWidget::sendOtcPbMessage, bsClient_.get(), &BsClient::sendPbMessage);
 
    connect(bsClient_.get(), &BsClient::bootstapDataUpdated, this, [this](const std::string& data) {
-      bootstrapDataManager_->setReceivedData(data);
+      onBootstrapDataLoaded(data);
    });
 
    accountEnabled_ = true;
@@ -2474,5 +2479,13 @@ void BSTerminalMainWindow::DisplayCreateTransactionDialog(std::shared_ptr<Create
 
       auto nextDialog = dlg->SwitchMode();
       dlg = nextDialog;
+   }
+}
+
+void BSTerminalMainWindow::onBootstrapDataLoaded(const std::string& data)
+{
+   if (bootstrapDataManager_->setReceivedData(data)) {
+      authManager_->SetLoadedValidationAddressList(bootstrapDataManager_->GetAuthValidationList());
+      ccFileManager_->SetLoadedDefinitions(bootstrapDataManager_->GetCCDefinitions());
    }
 }
