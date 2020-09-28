@@ -247,7 +247,6 @@ private slots:
    void onCelerDisconnected();
    void onCelerConnectionError(int errorCode);
    void showRunInBackgroundMessage();
-   void onCCInfoMissing(BootstrapFileError error);
 
    void onBsConnectionDisconnected();
    void onBsConnectionFailed();

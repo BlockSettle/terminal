@@ -131,15 +131,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    UiUtils::setupIconFont(this);
    NotificationCenter::createInstance(logMgr_->logger(), applicationSettings_, ui_.get(), sysTrayIcon_, this);
 
-   cbApproveChat_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Chat
-      , this, applicationSettings_);
-   cbApproveProxy_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Proxy
-      , this, applicationSettings_);
-   cbApproveCcServer_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::CcServer
-      , this, applicationSettings_);
-   cbApproveExtConn_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::ExtConnector
-      , this, applicationSettings_);
-
    initConnections();
    initArmory();
    initCcClient();
@@ -155,6 +146,15 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    InitAuthManager();
    initUtxoReservationManager();
    initBootstrapDataManager();
+
+   cbApproveChat_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Chat
+      , this, applicationSettings_, bootstrapDataManager_);
+   cbApproveProxy_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Proxy
+      , this, applicationSettings_, bootstrapDataManager_);
+   cbApproveCcServer_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::CcServer
+      , this, applicationSettings_, bootstrapDataManager_);
+   cbApproveExtConn_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::ExtConnector
+      , this, applicationSettings_, bootstrapDataManager_);
 
    statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
       , signContainer_, ui_->statusbar);
@@ -1081,10 +1081,7 @@ void BSTerminalMainWindow::initBootstrapDataManager()
 {
    bootstrapDataManager_ = std::make_shared<BootstrapDataManager>(logMgr_->logger(), applicationSettings_, authManager_, ccFileManager_);
    if (bootstrapDataManager_->hasLocalFile()) {
-      auto result = bootstrapDataManager_->loadSavedData();
-      if (result != BootstrapFileError::NoError) {
-         onCCInfoMissing(result);
-      }
+      bootstrapDataManager_->loadFromLocalFile();
    } else {
       // load from resources
       const QString filePathInResources = applicationSettings_->bootstrapResourceFileName();
@@ -1095,9 +1092,8 @@ void BSTerminalMainWindow::initBootstrapDataManager()
          const std::string bootstrapData = file.readAll().toStdString();
 
          bootstrapDataManager_->setReceivedData(bootstrapData);
-
       } else {
-         logMgr_->logger()->error("[BSTerminalMainWindow::initBootstrapDataManager] failed to locate bootstra file in resources: {}"
+         logMgr_->logger()->error("[BSTerminalMainWindow::initBootstrapDataManager] failed to locate bootstrap file in resources: {}"
                         , filePathInResources.toStdString());
       }
 
@@ -1765,18 +1761,6 @@ void BSTerminalMainWindow::onCCLoaded()
    }
    else {
       deferCCsync_ = true;
-   }
-}
-
-void BSTerminalMainWindow::onCCInfoMissing(BootstrapFileError error)
-{
-   if (error == BootstrapFileError::InvalidSign) {
-      addDeferredDialog([this] {
-         BSMessageBox(BSMessageBox::warning, tr("CC gen")
-            , tr("CC gen file load failed")
-            , tr("Invalid CC gen file sign detected. Please login to download new CC gen file.")
-            , this).exec();
-      });
    }
 }
 
