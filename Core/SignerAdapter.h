@@ -23,6 +23,7 @@ namespace BlockSettle {
       class SignerMessage;
       class SignerMessage_ExtendAddrChain;
       class SignerMessage_SetSettlementId;
+      class SignerMessage_SignTxRequest;
       class SignerMessage_SyncAddresses;
       class SignerMessage_SyncAddressComment;
       class SignerMessage_SyncNewAddresses;
@@ -90,6 +91,8 @@ private:
    bool processGetRootPubKey(const bs::message::Envelope &, const std::string &walletId);
    bool processDelHdRoot(const std::string &walletId);
    bool processDelHdLeaf(const std::string &walletId);
+   bool processSignTx(const bs::message::Envelope&
+      , const BlockSettle::Common::SignerMessage_SignTxRequest&);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

@@ -16,7 +16,7 @@
 #include <QMainWindow>
 #include "Address.h"
 #include "ArmoryConnection.h"
-#include "SignerDefs.h"
+#include "SignContainer.h"
 #include "UiUtils.h"
 
 namespace spdlog {
@@ -64,7 +64,7 @@ namespace bs {
 
             void onHDWallet(const bs::sync::WalletInfo &);
             void onHDWalletDetails(const bs::sync::HDWalletData &);
-            void onWalletsList(const std::vector<bs::sync::HDWalletData>&);
+            void onWalletsList(const std::string &id, const std::vector<bs::sync::HDWalletData>&);
             void onAddresses(const std::vector<bs::sync::Address> &);
             void onAddressComments(const std::string &walletId
                , const std::map<bs::Address, std::string> &);
@@ -76,6 +76,8 @@ namespace bs {
                , const std::vector<bs::TXEntry>&);
 
             void onFeeLevels(const std::map<unsigned int, float>&);
+            void onUTXOs(const std::string& id, const std::string& walletId, const std::vector<UTXO>&);
+            void onSignedTX(const std::string &id, BinaryData signedTX, bs::error::ErrorCode result);
 
          public slots:
             void onReactivate();
@@ -93,9 +95,8 @@ namespace bs {
             void putSetting(int, const QVariant &);
             void createNewWallet();
             void needHDWalletDetails(const std::string &walletId);
-            void needWalletsList(UiUtils::WalletsTypes);
+            void needWalletsList(UiUtils::WalletsTypes, const std::string &id);
             void needWalletBalances(const std::string &walletId);
-            void needSpendableUTXOs(const std::string &walletId);
 
             void needExtAddresses(const std::string &walletId);
             void needIntAddresses(const std::string &walletId);
@@ -109,6 +110,13 @@ namespace bs {
             void needAddressHistory(const bs::Address&);
 
             void needFeeLevels(const std::vector<unsigned int>&);
+            void needUTXOs(const std::string& id, const std::string& walletId
+               , bool confOnly = false, bool swOnly = false);
+
+            void needSignTX(const std::string& id, const bs::core::wallet::TXSignRequest&
+               , bool keepDupRecips = false, SignContainer::TXSignMode mode = SignContainer::TXSignMode::Full);
+            void needBroadcastZC(const std::string& id, const BinaryData&);
+            void needSetTxComment(const std::string& walletId, const BinaryData& txHash, const std::string& comment);
 
          private slots:
             void onSend();

@@ -40,11 +40,24 @@ public:
       , AddressListModel::AddressType addrType = AddressListModel::AddressType::All);
    [[deprecated]] SelectAddressDialog(const std::shared_ptr<bs::sync::hd::Group> &, QWidget* parent = nullptr
       , AddressListModel::AddressType addrType = AddressListModel::AddressType::All);
-   SelectAddressDialog(const AddressListModel::Wallets &, QWidget* parent = nullptr
+   SelectAddressDialog(QWidget* parent
       , AddressListModel::AddressType addrType = AddressListModel::AddressType::All);
    ~SelectAddressDialog() override;
 
    bs::Address getSelectedAddress() const;
+   void setWallets(const AddressListModel::Wallets&);
+
+   void onAddresses(const std::vector<bs::sync::Address>&);
+   void onAddressComments(const std::string& walletId
+      , const std::map<bs::Address, std::string>&);
+   void onAddressBalances(const std::string& walletId
+      , const std::vector<bs::sync::WalletBalanceData::AddressBalance>&);
+
+signals:
+   void needExtAddresses(const std::string& walletId);
+   void needIntAddresses(const std::string& walletId);
+   void needUsedAddresses(const std::string& walletId);
+   void needAddrComments(const std::string& walletId, const std::vector<bs::Address>&);
 
 public slots:
    void onSelectionChanged();

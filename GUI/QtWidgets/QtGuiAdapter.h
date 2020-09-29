@@ -15,7 +15,7 @@
 #include <QObject>
 #include "Address.h"
 #include "ApiAdapter.h"
-#include "SignerDefs.h"
+#include "SignContainer.h"
 #include "ThreadSafeClasses.h"
 #include "UiUtils.h"
 
@@ -31,8 +31,11 @@ namespace BlockSettle {
       class ArmoryMessage_AddressHistory;
       class ArmoryMessage_FeeLevelsResponse;
       class ArmoryMessage_LedgerEntries;
+      class SignerMessage_SignTxResponse;
       class WalletsMessage_TXDetailsResponse;
+      class WalletsMessage_UtxoListResponse;
       class WalletsMessage_WalletBalances;
+      class WalletsMessage_WalletsListResponse;
    }
    namespace Terminal {
       class SettingsMessage_SettingsResponse;
@@ -86,12 +89,14 @@ private:
    bool processLedgerEntries(const BlockSettle::Common::ArmoryMessage_LedgerEntries &);
    bool processAddressHist(const BlockSettle::Common::ArmoryMessage_AddressHistory&);
    bool processFeeLevels(const BlockSettle::Common::ArmoryMessage_FeeLevelsResponse&);
+   bool processWalletsList(const BlockSettle::Common::WalletsMessage_WalletsListResponse&);
+   bool processUTXOs(const BlockSettle::Common::WalletsMessage_UtxoListResponse&);
+   bool processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse&);
 
 private slots:
    void onPutSetting(int idx, const QVariant &value);
    void onNeedHDWalletDetails(const std::string &walletId);
    void onNeedWalletBalances(const std::string &walletId);
-   void onNeedSpendableUTXOs(const std::string &walletId);
    void onNeedExtAddresses(const std::string &walletId);
    void onNeedIntAddresses(const std::string &walletId);
    void onNeedUsedAddresses(const std::string &walletId);
@@ -101,13 +106,20 @@ private slots:
    void onNeedLedgerEntries(const std::string &filter);
    void onNeedTXDetails(const std::vector<bs::sync::TXWallet> &, const bs::Address &);
    void onNeedAddressHistory(const bs::Address&);
-   void onNeedWalletsList(UiUtils::WalletsTypes);
+   void onNeedWalletsList(UiUtils::WalletsTypes, const std::string &id);
    void onNeedFeeLevels(const std::vector<unsigned int>&);
+   void onNeedUTXOs(const std::string& id, const std::string& walletId
+      , bool confOnly, bool swOnly);
+   void onNeedSignTX(const std::string& id, const bs::core::wallet::TXSignRequest&
+      , bool keepDupRecips, SignContainer::TXSignMode);
+   void onNeedBroadcastZC(const std::string& id, const BinaryData&);
+   void onNeedSetTxComment(const std::string& walletId, const BinaryData& txHash
+      , const std::string& comment);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<bs::message::UserTerminal>   userSettings_, userWallets_;
-   std::shared_ptr<bs::message::UserTerminal>   userBlockchain_;
+   std::shared_ptr<bs::message::UserTerminal>   userBlockchain_, userSigner_;
    bs::gui::qt::MainWindow * mainWindow_{ nullptr };
    BSTerminalSplashScreen  * splashScreen_{ nullptr };
 

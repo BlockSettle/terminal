@@ -195,8 +195,8 @@ void StatusBarView::onBlockchainStateChanged(int state, unsigned int blockNum)
 }
 
 void StatusBarView::onXbtBalance(const bs::sync::WalletBalanceData &wbd)
-{
-   xbtBalances_[wbd.id] = wbd.balTotal;
+{  // uppercase eliminates ext-int balance duplication
+   xbtBalances_[QString::fromStdString(wbd.id).toUpper().toStdString()] = wbd.balTotal;
    displayXbtBalance();
 }
 

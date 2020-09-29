@@ -114,7 +114,8 @@ signals:
    void newWalletCreationRequest();
    void needHDWalletDetails(const std::string &walletId);
    void needWalletBalances(const std::string &walletId);
-   void needSpendableUTXOs(const std::string &walletId);
+   void needUTXOs(const std::string& id, const std::string& walletId
+      , bool confOnly = false, bool swOnly = false);
    void needExtAddresses(const std::string &walletId);
    void needIntAddresses(const std::string &walletId);
    void needUsedAddresses(const std::string &walletId);

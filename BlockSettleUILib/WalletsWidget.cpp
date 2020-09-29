@@ -28,7 +28,6 @@
 #include "AssetManager.h"
 #include "BSMessageBox.h"
 #include "NewWalletDialog.h"
-#include "SelectAddressDialog.h"
 #include "SignContainer.h"
 #include "WalletsViewModel.h"
 #include "WalletWarningDialog.h"
@@ -440,6 +439,7 @@ void WalletsWidget::showWalletProperties(const QModelIndex& index)
          rootDlg_ = new RootWalletPropertiesDialog(logger_, hdWallet, walletsModel_, this);
          connect(rootDlg_, &RootWalletPropertiesDialog::needHDWalletDetails, this, &WalletsWidget::needHDWalletDetails);
          connect(rootDlg_, &RootWalletPropertiesDialog::needWalletBalances, this, &WalletsWidget::needWalletBalances);
+         connect(rootDlg_, &RootWalletPropertiesDialog::needUTXOs, this, &WalletsWidget::needUTXOs);
          connect(rootDlg_, &QDialog::finished, [this](int) {
             rootDlg_->deleteLater();
             rootDlg_ = nullptr;

@@ -26,8 +26,8 @@ namespace bs {
       class WalletsManager;
    }
 }
-
 class QNetworkAccessManager;
+class SelectAddressDialog;
 
 class CreateTransactionDialogAdvanced : public CreateTransactionDialog
 {
@@ -90,9 +90,15 @@ public:
 
    bool switchModeRequested() const override;
    std::shared_ptr<CreateTransactionDialog> SwitchMode() override;
+   void onWalletsList(const std::string& id, const std::vector<bs::sync::HDWalletData>&) override;
 
 protected:
    bool eventFilter(QObject *watched, QEvent *) override;
+   void onAddresses(const std::vector<bs::sync::Address>&) override;
+   void onAddressComments(const std::string& walletId
+      , const std::map<bs::Address, std::string>&) override;
+   void onAddressBalances(const std::string& walletId
+      , const std::vector<bs::sync::WalletBalanceData::AddressBalance>&) override;
 
    QComboBox *comboBoxWallets() const override;
    QComboBox *comboBoxFeeSuggestions() const override;
@@ -150,6 +156,7 @@ private slots:
    void onUpdateChangeWidget();
    void onBitPayTxVerified(bool result);
    void onVerifyBitPayUnsignedTx(const std::string& unsignedTx, uint64_t virtSize);
+
 signals:
    void VerifyBitPayUnsignedTx(const std::string& unsignedTx, uint64_t virtSize);
    void BitPayTxVerified(bool result);
@@ -233,6 +240,8 @@ private:
    Bip21::PaymentRequestInfo paymentInfo_;
 
    std::shared_ptr<QNetworkAccessManager> nam_;
+
+   SelectAddressDialog* selChangeAddrDlg_{ nullptr };
 };
 
 #endif // __CREATE_TRANSACTION_DIALOG_ADVANCED_H__

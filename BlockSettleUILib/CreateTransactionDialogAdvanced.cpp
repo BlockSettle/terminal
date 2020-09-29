@@ -726,6 +726,13 @@ QLabel* CreateTransactionDialogAdvanced::changeLabel() const
    return ui_->labelReturnAmount;
 }
 
+void CreateTransactionDialogAdvanced::onWalletsList(const std::string& id
+   , const std::vector<bs::sync::HDWalletData>& wallets)
+{
+   CreateTransactionDialog::onWalletsList(id, wallets);
+   ui_->pushButtonSelectInputs->setEnabled(ui_->comboBoxWallets->count() > 0);
+}
+
 void CreateTransactionDialogAdvanced::onOutputsClicked(const QModelIndex &index)
 {
    if (!index.isValid()) {
@@ -1282,7 +1289,8 @@ void CreateTransactionDialogAdvanced::onCreatePressed()
       return;
    }
 
-   CreateTransaction([this, handle = validityFlag_.handle()](bool result, const std::string &errorMsg, const std::string& unsignedTx, uint64_t virtSize) {
+   CreateTransaction([this, handle = validityFlag_.handle()]
+      (bool result, const std::string &errorMsg, const std::string& unsignedTx, uint64_t virtSize) {
       if (!handle.isValid()) {
          return;
       }
@@ -1529,34 +1537,106 @@ void CreateTransactionDialogAdvanced::onNewAddressSelectedForChange()
    showExistingChangeAddress(false);
 }
 
+void CreateTransactionDialogAdvanced::onAddresses(const std::vector<bs::sync::Address>& addrs)
+{
+   if (selChangeAddrDlg_) {
+      selChangeAddrDlg_->onAddresses(addrs);
+   }
+}
+
+void CreateTransactionDialogAdvanced::onAddressComments(const std::string& walletId
+   , const std::map<bs::Address, std::string>& addrComments)
+{
+   if (selChangeAddrDlg_) {
+      selChangeAddrDlg_->onAddressComments(walletId, addrComments);
+   }
+}
+
+void CreateTransactionDialogAdvanced::onAddressBalances(const std::string& walletId
+   , const std::vector<bs::sync::WalletBalanceData::AddressBalance>& addrBal)
+{
+   if (selChangeAddrDlg_) {
+      selChangeAddrDlg_->onAddressBalances(walletId, addrBal);
+   }
+}
+
 void CreateTransactionDialogAdvanced::onExistingAddressSelectedForChange()
 {
-   if (!transactionData_->getWallet()) {
-      SPDLOG_LOGGER_ERROR(logger_, "wallet now found");
-      return;
-   }
-   const auto hdWallet = walletsManager_->getHDRootForLeaf(transactionData_->getWallet()->walletId());
-   std::shared_ptr<bs::sync::hd::Group> group;
-   if (hdWallet) {
-      group = hdWallet->getGroup(hdWallet->getXBTGroupType());
-   }
+   if (walletsManager_) {
+      if (!transactionData_->getWallet()) {
+         SPDLOG_LOGGER_ERROR(logger_, "wallet not found");
+         return;
+      }
+      const auto hdWallet = walletsManager_->getHDRootForLeaf(transactionData_->getWallet()->walletId());
+      std::shared_ptr<bs::sync::hd::Group> group;
+      if (hdWallet) {
+         group = hdWallet->getGroup(hdWallet->getXBTGroupType());
+      }
 
-   SelectAddressDialog *selectAddressDialog = nullptr;
-   if (group) {
-      selectAddressDialog = new SelectAddressDialog(group, this, AddressListModel::AddressType::Internal);
+      if (group) {
+         selChangeAddrDlg_ = new SelectAddressDialog(group, this, AddressListModel::AddressType::Internal);
+      } else {
+         selChangeAddrDlg_ = new SelectAddressDialog(walletsManager_, transactionData_->getWallet()
+            , this, AddressListModel::AddressType::Internal);
+      }
+
+      if (selChangeAddrDlg_->exec() == QDialog::Accepted) {
+         selectedChangeAddress_ = selChangeAddrDlg_->getSelectedAddress();
+         showExistingChangeAddress(true);
+      } else {
+         if (!selectedChangeAddress_.isValid()) {
+            ui_->radioButtonNewAddrNative->setChecked(true);
+         }
+      }
    }
    else {
-      selectAddressDialog = new SelectAddressDialog(walletsManager_, transactionData_->getWallet()
-         , this, AddressListModel::AddressType::Internal);
-   }
+      selChangeAddrDlg_ = new SelectAddressDialog(this, AddressListModel::AddressType::Internal);
+      connect(selChangeAddrDlg_, &SelectAddressDialog::needExtAddresses, this, &CreateTransactionDialog::needExtAddresses);
+      connect(selChangeAddrDlg_, &SelectAddressDialog::needIntAddresses, this, &CreateTransactionDialog::needIntAddresses);
+      connect(selChangeAddrDlg_, &SelectAddressDialog::needUsedAddresses, this, &CreateTransactionDialog::needUsedAddresses);
+      connect(selChangeAddrDlg_, &SelectAddressDialog::needAddrComments, this, &CreateTransactionDialog::needAddrComments);
 
-   if (selectAddressDialog->exec() == QDialog::Accepted) {
-      selectedChangeAddress_ = selectAddressDialog->getSelectedAddress();
-      showExistingChangeAddress(true);
-   } else {
-      if (!selectedChangeAddress_.isValid()) {
-         ui_->radioButtonNewAddrNative->setChecked(true);
+      std::vector<bs::sync::WalletInfo> wallets;
+      std::unordered_set<std::string> balanceIds;
+      for (const auto& walletId : transactionData_->getWallets()) {
+         const auto& itHdWallet = hdWallets_.find(walletId);
+         if (itHdWallet != hdWallets_.end()) {
+            for (const auto& group : itHdWallet->second.groups) {
+               for (const auto& leaf : group.leaves) {
+                  bs::sync::WalletInfo wi;
+                  wi.format = bs::sync::WalletFormat::Plain;
+                  wi.ids = leaf.ids;
+                  if (leaf.ids.size() == 2) {
+                     balanceIds.insert(leaf.ids.at(1));
+                  }
+                  else {
+                     balanceIds.insert(leaf.ids.at(0));
+                  }
+                  wi.name = leaf.name;
+                  wi.type = bs::core::wallet::Type::Bitcoin;
+                  wi.primary = itHdWallet->second.primary;
+                  wallets.push_back(wi);
+               }
+            }
+         }
       }
+      selChangeAddrDlg_->setWallets(wallets);
+      for (const auto& walletId : balanceIds) {
+         emit needWalletBalances(walletId);
+      }
+
+      if (selChangeAddrDlg_->exec() == QDialog::Accepted) {
+         selectedChangeAddress_ = selChangeAddrDlg_->getSelectedAddress();
+         showExistingChangeAddress(true);
+      } else {
+         if (!selectedChangeAddress_.isValid()) {
+            ui_->radioButtonNewAddrNative->setChecked(true);
+         }
+      }
+   }
+   if (selChangeAddrDlg_) {
+      selChangeAddrDlg_->deleteLater();
+      selChangeAddrDlg_ = nullptr;
    }
 }
 

@@ -10,10 +10,11 @@
 */
 #include "SignerAdapter.h"
 #include <spdlog/spdlog.h>
-#include "ConnectionManager.h"
-#include "TerminalMessage.h"
-#include "HeadlessContainer.h"
 #include "Adapters/SignerClient.h"
+#include "ConnectionManager.h"
+#include "HeadlessContainer.h"
+#include "ProtobufHeadlessUtils.h"
+#include "TerminalMessage.h"
 
 #include "common.pb.h"
 #include "terminal.pb.h"
@@ -119,6 +120,8 @@ bool SignerAdapter::processOwnRequest(const bs::message::Envelope &env
       return processDelHdRoot(request.del_hd_root());
    case SignerMessage::kDelHdLeaf:
       return processDelHdLeaf(request.del_hd_leaf());
+   case SignerMessage::kSignTxRequest:
+      return processSignTx(env, request.sign_tx_request());
    default:
       logger_->warn("[{}] unknown signer request: {}", __func__, request.data_case());
       break;
@@ -609,4 +612,26 @@ bool SignerAdapter::processDelHdRoot(const std::string &walletId)
 bool SignerAdapter::processDelHdLeaf(const std::string &walletId)
 {
    return (signer_->DeleteHDLeaf(walletId) > 0);
+}
+
+bool SignerAdapter::processSignTx(const bs::message::Envelope& env
+   , const SignerMessage_SignTxRequest& request)
+{
+   const auto& cbSigned = [this, env, id=request.id()]
+      (BinaryData signedTX, bs::error::ErrorCode result, const std::string& errorReason)
+   {
+      SignerMessage msg;
+      auto msgResp = msg.mutable_sign_tx_response();
+      msgResp->set_id(id);
+      msgResp->set_signed_tx(signedTX.toBinStr());
+      msgResp->set_error_code((int)result);
+      msgResp->set_error_text(errorReason);
+      Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
+      pushFill(envResp);
+   };
+   const auto& txReq = bs::signer::pbTxRequestToCore(request.tx_request(), logger_);
+   signer_->signTXRequest(txReq, cbSigned
+      , static_cast<SignContainer::TXSignMode>(request.sign_mode())
+      , request.keep_dup_recips());
+   return true;
 }

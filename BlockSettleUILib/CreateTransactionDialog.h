@@ -24,7 +24,7 @@
 #include "Bip21Types.h"
 #include "BSErrorCodeStrings.h"
 #include "CoreWallet.h"
-#include "SignerDefs.h"
+#include "SignContainer.h"
 #include "UtxoReservationToken.h"
 #include "ValidityFlag.h"
 
@@ -77,14 +77,33 @@ public:
    virtual bool switchModeRequested() const= 0;
    virtual std::shared_ptr<CreateTransactionDialog> SwitchMode() = 0;
 
-   void onWalletsList(const std::vector<bs::sync::HDWalletData>&);
+   virtual void onAddresses(const std::vector<bs::sync::Address>&) {}
+   virtual void onAddressComments(const std::string& walletId
+      , const std::map<bs::Address, std::string>&) {}
+   virtual void onAddressBalances(const std::string& walletId
+      , const std::vector<bs::sync::WalletBalanceData::AddressBalance>&) {}
+
+   virtual void onWalletsList(const std::string &id, const std::vector<bs::sync::HDWalletData>&);
    void onFeeLevels(const std::map<unsigned int, float>&);
+   void onUTXOs(const std::string& id, const std::string& walletId, const std::vector<UTXO>&);
+   void onSignedTX(const std::string& id, BinaryData signedTX, bs::error::ErrorCode result);
 
 signals:
    void feeLoadingCompleted(const std::map<unsigned int, float>&);  //deprecated
    void walletChanged();
-   void needWalletsList(UiUtils::WalletsTypes);
+   void needWalletsList(UiUtils::WalletsTypes, const std::string &id);
    void needFeeLevels(const std::vector<unsigned int>&);
+   void needUTXOs(const std::string &id, const std::string& walletId
+      , bool confOnly=false, bool swOnly=false);
+   void needExtAddresses(const std::string& walletId);
+   void needIntAddresses(const std::string& walletId);
+   void needUsedAddresses(const std::string& walletId);
+   void needAddrComments(const std::string& walletId, const std::vector<bs::Address>&);
+   void needWalletBalances(const std::string& walletId);
+   void needSignTX(const std::string& id, const bs::core::wallet::TXSignRequest &
+      , bool keepDupRecips = false, SignContainer::TXSignMode mode = SignContainer::TXSignMode::Full);
+   void needBroadcastZC(const std::string &id, const BinaryData &);
+   void needSetTxComment(const std::string& walletId, const BinaryData& txHash, const std::string &comment);
 
 protected:
    virtual void init();
@@ -134,7 +153,7 @@ protected slots:
    virtual void selectedWalletChanged(int, bool resetInputs = false
       , const std::function<void()> &cbInputsReset = nullptr);
    virtual void onMaxPressed();
-   void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result);
+   void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result); //deprecated
    void updateCreateButtonText();
    void onSignerAuthenticated();
 
@@ -184,6 +203,8 @@ protected:
 
 
    ValidityFlag validityFlag_;
+
+   std::unordered_map<std::string, bs::sync::HDWalletData>  hdWallets_;
 
 private:
    bs::core::wallet::TXSignRequest  txReq_;

@@ -66,7 +66,8 @@ signals:
    void startRescan(std::string walletId);
    void needHDWalletDetails(const std::string &walletId);
    void needWalletBalances(const std::string &walletId);
-   void needSpendableUTXOs(const std::string &walletId);
+   void needUTXOs(const std::string& id, const std::string& walletId
+      , bool confOnly = false, bool swOnly = false);
 
 private slots:
    void onDeleteWallet();

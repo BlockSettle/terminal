@@ -275,26 +275,34 @@ void AddressListModel::onAddressBalances(const std::string &walletId
    lbdSaveBalToPool();
    const auto &itWallet = std::find_if(wallets_.cbegin(), wallets_.cend()
       , [walletId](const bs::sync::WalletInfo &wallet) {
-      return (*wallet.ids.cbegin() == walletId);
+      const auto& itWltId = std::find_if(wallet.ids.cbegin(), wallet.ids.cend()
+         , [walletId](const std::string &curId) {
+            return (curId == walletId);
+         });
+      return (itWltId != wallet.ids.cend());
    });
    if (itWallet == wallets_.cend()) {  // balances arrived before wallet was set
       return;
    }
    int startRow = INT32_MAX, endRow = 0;
+   unsigned int nbFound = 0;
    for (const auto &bal : balances) {
       const auto &itAddr = indexByAddr_.find(bal.address);
       if (itAddr == indexByAddr_.end()) { // wallet was set, but addresses haven't arrived
          lbdSaveBalToPool();
-         return;
+         continue;
       }
+      nbFound++;
       startRow = std::min(startRow, itAddr->second);
       endRow = std::max(endRow, itAddr->second);
       addressRows_[itAddr->second].balance = bal.balTotal;
       addressRows_[itAddr->second].transactionCount = bal.txn;
    }
+   if (!nbFound) {
+      return;
+   }
    for (auto &addrRow : addressRows_) {
-      if ((addrRow.balance > 0) || (addrRow.transactionCount > 0)
-         || (addrRow.walletId.toStdString() != walletId)) {
+      if ((addrRow.balance > 0) || (addrRow.transactionCount > 0)) {
          continue;
       }
       startRow = std::min(startRow, addrRow.addrIndex);

@@ -285,7 +285,7 @@ void RootWalletPropertiesDialog::updateWalletDetails(const bs::sync::WalletInfo 
       ui_->labelAddressesActive->setText(tr("Loading..."));
       ui_->labelUTXOs->setText(tr("Loading..."));
       emit needWalletBalances(*wi.ids.cbegin());
-      emit needSpendableUTXOs(*wi.ids.cbegin());
+      emit needUTXOs("RootWP", *wi.ids.cbegin(), true);
    }
 }
 

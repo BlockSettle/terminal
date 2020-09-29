@@ -199,26 +199,39 @@ void MainWindow::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
    ui_->widgetWallets->onHDWalletDetails(hdWallet);
 }
 
-void MainWindow::onWalletsList(const std::vector<bs::sync::HDWalletData>& wallets)
+void MainWindow::onWalletsList(const std::string &id, const std::vector<bs::sync::HDWalletData>& wallets)
 {
    if (txDlg_) {
-      txDlg_->onWalletsList(wallets);
+      txDlg_->onWalletsList(id, wallets);
    }
 }
 
 void MainWindow::onAddresses(const std::vector<bs::sync::Address> &addrs)
 {
-   ui_->widgetWallets->onAddresses(addrs);
+   if (txDlg_) {
+      txDlg_->onAddresses(addrs);
+   }
+   else {
+      ui_->widgetWallets->onAddresses(addrs);
+   }
 }
 
 void MainWindow::onAddressComments(const std::string &walletId
    , const std::map<bs::Address, std::string> &comments)
 {
-   ui_->widgetWallets->onAddressComments(walletId, comments);
+   if (txDlg_) {
+      txDlg_->onAddressComments(walletId, comments);
+   }
+   else {
+      ui_->widgetWallets->onAddressComments(walletId, comments);
+   }
 }
 
 void MainWindow::onWalletBalance(const bs::sync::WalletBalanceData &wbd)
 {
+   if (txDlg_) {
+      txDlg_->onAddressBalances(wbd.id, wbd.addrBalances);
+   }
    ui_->widgetWallets->onWalletBalance(wbd);
    statusBarView_->onXbtBalance(wbd);
 }
@@ -250,6 +263,22 @@ void MainWindow::onFeeLevels(const std::map<unsigned int, float>& feeLevels)
 {
    if (txDlg_) {
       txDlg_->onFeeLevels(feeLevels);
+   }
+}
+
+void bs::gui::qt::MainWindow::onUTXOs(const std::string& id
+   , const std::string& walletId, const std::vector<UTXO>& utxos)
+{
+   if (txDlg_) {
+      txDlg_->onUTXOs(id, walletId, utxos);
+   }
+}
+
+void bs::gui::qt::MainWindow::onSignedTX(const std::string& id, BinaryData signedTX
+   , bs::error::ErrorCode result)
+{
+   if (txDlg_) {
+      txDlg_->onSignedTX(id, signedTX, result);
    }
 }
 
@@ -591,6 +620,15 @@ void MainWindow::onSend()
    });
    connect(txDlg_, &CreateTransactionDialog::needWalletsList, this, &MainWindow::needWalletsList);
    connect(txDlg_, &CreateTransactionDialog::needFeeLevels, this, &MainWindow::needFeeLevels);
+   connect(txDlg_, &CreateTransactionDialog::needUTXOs, this, &MainWindow::needUTXOs);
+   connect(txDlg_, &CreateTransactionDialog::needExtAddresses, this, &MainWindow::needExtAddresses);
+   connect(txDlg_, &CreateTransactionDialog::needIntAddresses, this, &MainWindow::needIntAddresses);
+   connect(txDlg_, &CreateTransactionDialog::needUsedAddresses, this, &MainWindow::needUsedAddresses);
+   connect(txDlg_, &CreateTransactionDialog::needAddrComments, this, &MainWindow::needAddrComments);
+   connect(txDlg_, &CreateTransactionDialog::needWalletBalances, this, &MainWindow::needWalletBalances);
+   connect(txDlg_, &CreateTransactionDialog::needSignTX, this, &MainWindow::needSignTX);
+   connect(txDlg_, &CreateTransactionDialog::needBroadcastZC, this, &MainWindow::needBroadcastZC);
+   connect(txDlg_, &CreateTransactionDialog::needSetTxComment, this, &MainWindow::needSetTxComment);
 
    txDlg_->initUI();
    if (!selectedWalletId.empty()) {
@@ -993,7 +1031,7 @@ void MainWindow::initWidgets()
 //   connect(ui_->widgetWallets, &WalletsWidget::newWalletCreationRequest, this, &MainWindow::createNewWallet);
    connect(ui_->widgetWallets, &WalletsWidget::needHDWalletDetails, this, &MainWindow::needHDWalletDetails);
    connect(ui_->widgetWallets, &WalletsWidget::needWalletBalances, this, &MainWindow::needWalletBalances);
-   connect(ui_->widgetWallets, &WalletsWidget::needSpendableUTXOs, this, &MainWindow::needSpendableUTXOs);
+   connect(ui_->widgetWallets, &WalletsWidget::needUTXOs, this, &MainWindow::needUTXOs);
    connect(ui_->widgetWallets, &WalletsWidget::needExtAddresses, this, &MainWindow::needExtAddresses);
    connect(ui_->widgetWallets, &WalletsWidget::needIntAddresses, this, &MainWindow::needIntAddresses);
    connect(ui_->widgetWallets, &WalletsWidget::needUsedAddresses, this, &MainWindow::needUsedAddresses);
