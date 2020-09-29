@@ -72,6 +72,7 @@ namespace bs {
             void onLedgerEntries(const std::string &filter, uint32_t totalPages
                , uint32_t curPage, uint32_t curBlock, const std::vector<bs::TXEntry> &);
             void onTXDetails(const std::vector<bs::sync::TXWalletDetails> &);
+            void onNewZCs(const std::vector<bs::sync::TXWalletDetails>&);
             void onAddressHistory(const bs::Address&, uint32_t curBlock
                , const std::vector<bs::TXEntry>&);
 

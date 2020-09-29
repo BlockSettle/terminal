@@ -31,6 +31,7 @@ namespace BlockSettle {
       class ArmoryMessage_AddressHistory;
       class ArmoryMessage_FeeLevelsResponse;
       class ArmoryMessage_LedgerEntries;
+      class ArmoryMessage_ZCReceived;
       class SignerMessage_SignTxResponse;
       class WalletsMessage_TXDetailsResponse;
       class WalletsMessage_UtxoListResponse;
@@ -85,13 +86,14 @@ private:
    void processWalletLoaded(const bs::sync::WalletInfo &);
    bool processWalletBalances(const bs::message::Envelope &
       , const BlockSettle::Common::WalletsMessage_WalletBalances &);
-   bool processTXDetails(const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
+   bool processTXDetails(uint64_t msgId, const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
    bool processLedgerEntries(const BlockSettle::Common::ArmoryMessage_LedgerEntries &);
    bool processAddressHist(const BlockSettle::Common::ArmoryMessage_AddressHistory&);
    bool processFeeLevels(const BlockSettle::Common::ArmoryMessage_FeeLevelsResponse&);
    bool processWalletsList(const BlockSettle::Common::WalletsMessage_WalletsListResponse&);
    bool processUTXOs(const BlockSettle::Common::WalletsMessage_UtxoListResponse&);
    bool processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse&);
+   bool processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived&);
 
 private slots:
    void onPutSetting(int idx, const QVariant &value);
@@ -132,6 +134,7 @@ private:
    bool  walletsReady_{ false };
 
    std::unordered_map<std::string, bs::sync::WalletInfo> hdWallets_;
+   std::set<uint64_t>   newZCs_;
 };
 
 

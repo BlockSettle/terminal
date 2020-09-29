@@ -63,7 +63,7 @@ QString UiUtils::displayDateTime(const QDateTime& datetime)
    return datetime.toString(format);
 }
 
-QString UiUtils::displayDateTime(uint64_t time)
+QString UiUtils::displayDateTime(uint32_t time) // in UnixTime
 {
    return displayDateTime(QDateTime::fromTime_t(time));
 }

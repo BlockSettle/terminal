@@ -83,7 +83,15 @@ public:
       envCopy.sender = parent_->user_;
 
       if (std::dynamic_pointer_cast<bs::message::UserTerminal>(env.receiver)) {
-         return parent_->pushFill(envCopy);
+         if (parent_->pushFill(envCopy)) {
+            if (env.request) {
+               idMap_[envCopy.id] = { env.id, env.sender };
+            }
+            return true;
+         }
+         else {
+            return false;
+         }
       }
       else if (env.receiver->isFallback()) {
          if (env.request) {
@@ -113,7 +121,19 @@ public:
    {
       auto envCopy = env;
       envCopy.id = 0;
-      envCopy.receiver.reset();   // = std::make_shared<bs::message::UserAPI>(-1);
+      envCopy.receiver.reset();
+      if (!env.request) {
+         const auto& itIdMap = idMap_.find(env.id);
+         if (itIdMap != idMap_.end()) {
+            envCopy.id = itIdMap->second.id;
+            envCopy.receiver = itIdMap->second.requester;
+            if (push(envCopy)) {
+               idMap_.erase(itIdMap);
+               return true;
+            }
+            return false;
+         }
+      }
       bool rc = pushFill(envCopy);
       if (rc && env.request) {
          idMap_[envCopy.id] = { env.id, env.sender };

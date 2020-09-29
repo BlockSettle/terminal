@@ -35,6 +35,18 @@ NotificationCenter::NotificationCenter(const std::shared_ptr<spdlog::logger> &lo
    addResponder(std::make_shared<NotificationTrayIconResponder>(logger, mainWinUi, trayIcon, appSettings, this));
 }
 
+NotificationCenter::NotificationCenter(const std::shared_ptr<spdlog::logger>& logger
+   , const Ui::BSTerminalMainWindow* mainWinUi
+   , const std::shared_ptr<QSystemTrayIcon>& trayIcon, QObject* parent)
+   : QObject(parent)
+{
+   qRegisterMetaType<bs::ui::NotifyType>("NotifyType");
+   qRegisterMetaType<bs::ui::NotifyMessage>("NotifyMessage");
+
+   addResponder(std::make_shared<NotificationTabResponder>(mainWinUi, this));
+   addResponder(std::make_shared<NotificationTrayIconResponder>(logger, mainWinUi, trayIcon, this));
+}
+
 void NotificationCenter::createInstance(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<ApplicationSettings> &appSettings
    , const Ui::BSTerminalMainWindow *ui, const std::shared_ptr<QSystemTrayIcon> &trayIcon, QObject *parent)
 {
@@ -75,6 +87,16 @@ NotificationTabResponder::NotificationTabResponder(const Ui::BSTerminalMainWindo
    std::shared_ptr<ApplicationSettings> appSettings, QObject *parent)
    : NotificationResponder(parent), mainWinUi_(mainWinUi), iconDot_(QIcon(QLatin1String(":/ICON_DOT")))
    , appSettings_(appSettings)
+{
+   mainWinUi_->tabWidget->setIconSize(QSize(8, 8));
+   connect(mainWinUi_->tabWidget, &QTabWidget::currentChanged, [this](int index) {
+      mainWinUi_->tabWidget->setTabIcon(index, QIcon());
+   });
+}
+
+NotificationTabResponder::NotificationTabResponder(const Ui::BSTerminalMainWindow* mainWinUi
+   , QObject* parent)
+   : NotificationResponder(parent), mainWinUi_(mainWinUi), iconDot_(QIcon(QLatin1String(":/ICON_DOT")))
 {
    mainWinUi_->tabWidget->setIconSize(QSize(8, 8));
    connect(mainWinUi_->tabWidget, &QTabWidget::currentChanged, [this](int index) {
@@ -142,6 +164,33 @@ NotificationTrayIconResponder::NotificationTrayIconResponder(const std::shared_p
 #endif // BS_USE_DBUS
 }
 
+NotificationTrayIconResponder::NotificationTrayIconResponder(const std::shared_ptr<spdlog::logger>& logger
+   , const Ui::BSTerminalMainWindow* mainWinUi
+   , const std::shared_ptr<QSystemTrayIcon>& trayIcon
+   , QObject* parent)
+   : NotificationResponder(parent)
+   , logger_(logger)
+   , mainWinUi_(mainWinUi)
+   , trayIcon_(trayIcon)
+   , notifMode_(QSystemTray)
+#ifdef BS_USE_DBUS
+   , dbus_(new DBusNotification(tr("BlockSettle Terminal"), this))
+#endif
+{
+   connect(trayIcon_.get(), &QSystemTrayIcon::messageClicked, this, &NotificationTrayIconResponder::messageClicked);
+
+#ifdef BS_USE_DBUS
+   if (dbus_->isValid()) {
+      notifMode_ = Freedesktop;
+
+      disconnect(trayIcon_.get(), &QSystemTrayIcon::messageClicked,
+         this, &NotificationTrayIconResponder::messageClicked);
+      connect(dbus_, &DBusNotification::actionInvoked,
+         this, &NotificationTrayIconResponder::notificationAction);
+   }
+#endif // BS_USE_DBUS
+}
+
 static const QString c_newVersionAction = QLatin1String("BlockSettleNewVersionAction");
 static const QString c_newOkAction = QLatin1String("BlockSettleNotificationActionOk");
 
@@ -167,7 +216,7 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
 
    switch (nt) {
    case bs::ui::NotifyType::BlockchainTX:
-      if ((msg.size() < 2) || appSettings_ ? !appSettings_->get<bool>(ApplicationSettings::notifyOnTX) : true) {
+      if ((msg.size() < 2) || appSettings_ ? !appSettings_->get<bool>(ApplicationSettings::notifyOnTX) : false) {
          return;
       }
       title = msg[0].toString();

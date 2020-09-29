@@ -68,7 +68,7 @@ MainWindow::MainWindow(const std::shared_ptr<spdlog::logger> &logger
 
    setupIcon();
    UiUtils::setupIconFont(this);
-   notifCenter_ = std::make_shared<NotificationCenter>(logger_, nullptr, ui_.get(), sysTrayIcon_, this);
+   notifCenter_ = std::make_shared<NotificationCenter>(logger_, ui_.get(), sysTrayIcon_, this);
 
    statusBarView_ = std::make_shared<StatusBarView>(ui_->statusbar);
 
@@ -252,6 +252,41 @@ void MainWindow::onTXDetails(const std::vector<bs::sync::TXWalletDetails> &txDet
    txModel_->onTXDetails(txDet);
    ui_->widgetWallets->onTXDetails(txDet);
    ui_->widgetExplorer->onTXDetails(txDet);
+}
+
+void bs::gui::qt::MainWindow::onNewZCs(const std::vector<bs::sync::TXWalletDetails>& txDet)
+{
+   QStringList lines;
+   for (const auto& tx : txDet) {
+      lines << tr("Date: %1").arg(UiUtils::displayDateTime(tx.tx.getTxTime()));
+      lines << tr("TX: %1 %2 %3").arg(tr(bs::sync::Transaction::toString(tx.direction)))
+         .arg(QString::fromStdString(tx.amount))
+         .arg(QString::fromStdString(tx.walletSymbol));
+      lines << tr("Wallet: %1").arg(QString::fromStdString(tx.walletName));
+
+      QString mainAddress;
+      switch (tx.outAddresses.size()) {
+      case 0:
+         switch (tx.outputAddresses.size()) {
+         case 1:
+            mainAddress = QString::fromStdString(tx.outputAddresses.at(0).address.display());
+            break;
+         default:
+            mainAddress = tr("%1 output addresses").arg(tx.outputAddresses.size());
+            break;
+         }
+         break;
+      case 1:
+         mainAddress = QString::fromStdString(tx.outAddresses.at(0).display());
+         break;
+      default:
+         mainAddress = tr("%1 output addresses").arg(tx.outAddresses.size());
+         break;
+      }
+      lines << mainAddress << QString();
+   }
+   const auto& title = tr("New blockchain transaction");
+   notifCenter_->enqueue(bs::ui::NotifyType::BlockchainTX, { title, lines.join(tr("\n")) });
 }
 
 void MainWindow::onAddressHistory(const bs::Address& addr, uint32_t curBlock, const std::vector<bs::TXEntry>& entries)

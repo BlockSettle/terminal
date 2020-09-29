@@ -421,6 +421,8 @@ bool QtGuiAdapter::processBlockchain(const Envelope &env)
       return processAddressHist(msg.address_history());
    case ArmoryMessage::kFeeLevelsResponse:
       return processFeeLevels(msg.fee_levels_response());
+   case ArmoryMessage::kZcReceived:
+      return processZC(msg.zc_received());
    default:    break;
    }
    return true;
@@ -517,7 +519,7 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
    case WalletsMessage::kWalletBalances:
       return processWalletBalances(env, msg.wallet_balances());
    case WalletsMessage::kTxDetailsResponse:
-      return processTXDetails(msg.tx_details_response());
+      return processTXDetails(env.id, msg.tx_details_response());
    case WalletsMessage::kWalletsListResponse:
       return processWalletsList(msg.wallets_list_response());
    case WalletsMessage::kUtxos:
@@ -968,13 +970,13 @@ bool QtGuiAdapter::processWalletBalances(const bs::message::Envelope &env
    });
 }
 
-bool QtGuiAdapter::processTXDetails(const WalletsMessage_TXDetailsResponse &response)
+bool QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMessage_TXDetailsResponse &response)
 {
    std::vector<bs::sync::TXWalletDetails> txDetails;
    for (const auto &resp : response.responses()) {
       bs::sync::TXWalletDetails txDet{ BinaryData::fromString(resp.tx_hash()), resp.wallet_id()
          , resp.wallet_name(), static_cast<bs::core::wallet::Type>(resp.wallet_type())
-         , static_cast<bs::sync::Transaction::Direction>(resp.direction())
+         , resp.wallet_symbol(), static_cast<bs::sync::Transaction::Direction>(resp.direction())
          , resp.comment(), resp.valid(), resp.amount() };
 
       const auto &ownTxHash = BinaryData::fromString(resp.tx_hash());
@@ -1028,6 +1030,13 @@ bool QtGuiAdapter::processTXDetails(const WalletsMessage_TXDetailsResponse &resp
       }
       catch (const std::exception &) {}
       txDetails.push_back(txDet);
+   }
+   const auto& itZC = newZCs_.find(msgId);
+   if (itZC != newZCs_.end()) {
+      newZCs_.erase(itZC);
+      return QMetaObject::invokeMethod(mainWindow_, [this, txDetails] {
+         mainWindow_->onNewZCs(txDetails);
+      });
    }
    return QMetaObject::invokeMethod(mainWindow_, [this, txDetails] {
       mainWindow_->onTXDetails(txDetails);
@@ -1149,6 +1158,26 @@ bool QtGuiAdapter::processSignTX(const BlockSettle::Common::SignerMessage_SignTx
       mainWindow_->onSignedTX(response.id(), BinaryData::fromString(response.signed_tx())
          , static_cast<bs::error::ErrorCode>(response.error_code()));
    });
+}
+
+bool QtGuiAdapter::processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived& zcs)
+{
+   WalletsMessage msg;
+   auto msgReq = msg.mutable_tx_details_request();
+   for (const auto& zcEntry : zcs.tx_entries()) {
+      auto txReq = msgReq->add_requests();
+      txReq->set_tx_hash(zcEntry.tx_hash());
+      if (zcEntry.wallet_ids_size() > 0) {
+         txReq->set_wallet_id(zcEntry.wallet_ids(0));
+      }
+      txReq->set_value(zcEntry.value());
+   }
+   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
+   if (!pushFill(env)) {
+      return false;
+   }
+   newZCs_.insert(env.id);
+   return true;
 }
 
 #include "QtGuiAdapter.moc"

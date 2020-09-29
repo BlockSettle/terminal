@@ -102,7 +102,7 @@ namespace UiUtils
    // return only number, product string is not included
    QString displayAmountForProduct(double quantity, const QString& product, bs::network::Asset::Type at);
 
-   QString displayDateTime(uint64_t time);
+   QString displayDateTime(uint32_t time);
    QString displayDateTime(const QDateTime& datetime);
    QString displayTimeMs(const QDateTime& datetime);
 
