@@ -2308,7 +2308,7 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
    connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetChat, &ChatWidget::onProcessOtcPbMessage);
    connect(ui_->widgetChat, &ChatWidget::sendOtcPbMessage, bsClient_.get(), &BsClient::sendPbMessage);
 
-   connect(bsClient_.get(), &BsClient::bootstapDataUpdated, this, [this](const std::string& data) {
+   connect(bsClient_.get(), &BsClient::bootstrapDataUpdated, this, [this](const std::string& data) {
       onBootstrapDataLoaded(data);
    });
 
