@@ -88,7 +88,7 @@ void TransactionDetailsWidget::populateTransactionWidget(const TxHash &rpcTXID
    if (!armoryPtr_) {
       if (rpcTXID.getSize() == 32) {
          curTxHash_ = rpcTXID;
-         emit needTXDetails({ { curTxHash_, {}, 0 } }, {});
+         emit needTXDetails({ { curTxHash_, {}, 0 } }, false, {});
       }
       else {
          Codec_SignerState::SignerState signerState;
@@ -101,7 +101,7 @@ void TransactionDetailsWidget::populateTransactionWidget(const TxHash &rpcTXID
                   throw std::runtime_error("Uninited TX");
                }
                curTxHash_ = tx.getThisHash();
-               emit needTXDetails({ { tx.getThisHash(), {}, 0 } }, {});
+               emit needTXDetails({ { tx.getThisHash(), {}, 0 } }, false, {});
             }
             catch (const std::exception& e) {
                logger_->error("[TransactionDetailsWidget::populateTransactionWidget]"

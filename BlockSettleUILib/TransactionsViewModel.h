@@ -80,6 +80,7 @@ struct TransactionsViewItem
    bool isPayin() const;
 
    bs::Address filterAddress;
+   uint32_t    curBlock{ 0 };
 
 private:
    bool     txHashesReceived{ false };
@@ -102,12 +103,14 @@ public:
    const QList<TXNode *> &children() const { return children_; }
    TXNode *parent() const { return parent_; }
    TXNode *find(const bs::TXEntry &) const;
+   TXNode* find(const BinaryData &txHash) const;
    std::vector<TXNode *> nodesByTxHash(const BinaryData &) const;
 
    void clear(bool del = true);
    void setData(const TransactionsViewItem &data) { *item_ = data; }
    void add(TXNode *child);
    void del(int index);
+   TXNode *take(int index);
    int row() const { return row_; }
    unsigned int level() const;
    QVariant data(int, int) const;
@@ -172,11 +175,12 @@ public:
 
    void onLedgerEntries(const std::string &filter, uint32_t totalPages
       , uint32_t curPage, uint32_t curBlock, const std::vector<bs::TXEntry> &);
+   void onZCsInvalidated(const std::vector<BinaryData>& txHashes);
    void onNewBlock(unsigned int topBlock);
    void onTXDetails(const std::vector<bs::sync::TXWalletDetails> &);
 
 signals:
-   void needTXDetails(const std::vector<bs::sync::TXWallet> &, const bs::Address &);
+   void needTXDetails(const std::vector<bs::sync::TXWallet> &, bool useCache, const bs::Address &);
 
 private slots:
    void updatePage();
@@ -234,7 +238,8 @@ public:
    };
 
 private:
-   std::unique_ptr<TXNode> rootNode_;
+   std::unique_ptr<TXNode>       rootNode_;
+   std::map<BinaryData, TXNode*> invalidatedNodes_;
    TransactionPtr oldestItem_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<AsyncClient::LedgerDelegate> ledgerDelegate_;

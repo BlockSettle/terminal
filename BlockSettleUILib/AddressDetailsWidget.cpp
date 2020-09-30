@@ -559,7 +559,7 @@ void AddressDetailsWidget::onAddressHistory(const bs::Address& addr, uint32_t cu
       onTXDetails({});
    }
    else {
-      emit needTXDetails(txDetRequest, currentAddr_);
+      emit needTXDetails(txDetRequest, false, currentAddr_);
    }
 }
 

@@ -99,7 +99,8 @@ signals:
    void addressClicked(QString addressId);
    void txHashClicked(QString txHash);
    void finished() const;
-   void needTXDetails(const std::vector<bs::sync::TXWallet>&, const bs::Address&);
+   void needTXDetails(const std::vector<bs::sync::TXWallet>&, bool useCache
+      , const bs::Address&);
 
 protected slots:
    void onAddressClicked(QTreeWidgetItem *item, int column);

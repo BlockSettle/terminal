@@ -423,6 +423,8 @@ bool QtGuiAdapter::processBlockchain(const Envelope &env)
       return processFeeLevels(msg.fee_levels_response());
    case ArmoryMessage::kZcReceived:
       return processZC(msg.zc_received());
+   case ArmoryMessage::kZcInvalidated:
+      return processZCInvalidated(msg.zc_invalidated());
    default:    break;
    }
    return true;
@@ -826,7 +828,7 @@ void QtGuiAdapter::onNeedLedgerEntries(const std::string &filter)
 }
 
 void QtGuiAdapter::onNeedTXDetails(const const std::vector<bs::sync::TXWallet> &txWallet
-   , const bs::Address &addr)
+   , bool useCache, const bs::Address &addr)
 {
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_details_request();
@@ -839,6 +841,7 @@ void QtGuiAdapter::onNeedTXDetails(const const std::vector<bs::sync::TXWallet> &
    if (!addr.empty()) {
       msgReq->set_address(addr.display());
    }
+   msgReq->set_use_cache(useCache);
    Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
    pushFill(env);
 }
@@ -1178,6 +1181,18 @@ bool QtGuiAdapter::processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived
    }
    newZCs_.insert(env.id);
    return true;
+}
+
+bool QtGuiAdapter::processZCInvalidated(const ArmoryMessage_ZCInvalidated& zcInv)
+{
+   std::vector<BinaryData> txHashes;
+   txHashes.reserve(zcInv.tx_hashes_size());
+   for (const auto& hashStr : zcInv.tx_hashes()) {
+      txHashes.push_back(BinaryData::fromString(hashStr));
+   }
+   return QMetaObject::invokeMethod(mainWindow_, [this, txHashes] {
+      mainWindow_->onZCsInvalidated(txHashes);
+   });
 }
 
 #include "QtGuiAdapter.moc"

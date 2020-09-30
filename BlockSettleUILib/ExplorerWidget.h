@@ -60,7 +60,7 @@ public:
 
 signals:
    void needAddressHistory(const bs::Address&);
-   void needTXDetails(const std::vector<bs::sync::TXWallet>&, const bs::Address&);
+   void needTXDetails(const std::vector<bs::sync::TXWallet>&, bool useCache, const bs::Address&);
 
 protected slots:
    void onSearchStarted(bool saveToHistory);

@@ -172,13 +172,22 @@ void TXNode::add(TXNode *child)
 
 void TXNode::del(int index)
 {
-   if (index >= children_.size()) {
-      return;
+   auto node = take(index);
+   if (node) {
+      delete node;
    }
-   children_.removeAt(index);
+}
+
+TXNode* TXNode::take(int index)
+{
+   if (index >= children_.size()) {
+      return nullptr;
+   }
+   auto node = children_.takeAt(index);
    for (int i = index; i < children_.size(); ++i) {
       children_[i]->row_--;
    }
+   return node;
 }
 
 void TXNode::forEach(const std::function<void(const TransactionPtr &)> &cb)
@@ -214,6 +223,20 @@ TXNode *TXNode::find(const bs::TXEntry &entry) const
    }
    for (const auto &child : children_) {
       const auto found = child->find(entry);
+      if (found != nullptr) {
+         return found;
+      }
+   }
+   return nullptr;
+}
+
+TXNode* TXNode::find(const BinaryData& txHash) const
+{
+   if (item_ && (item_->txEntry.txHash == txHash)) {
+      return const_cast<TXNode*>(this);
+   }
+   for (const auto& child : children_) {
+      const auto found = child->find(txHash);
       if (found != nullptr) {
          return found;
       }
@@ -1098,6 +1121,9 @@ void TransactionsViewModel::onNewBlock(unsigned int curBlock)
    curBlock_ = curBlock;
 
    for (const auto &node : rootNode_->children()) {
+      if (node->item()->confirmations == 0) {
+         continue;
+      }
       node->item()->confirmations += diff;
       node->item()->txEntry.nbConf += diff;
    }
@@ -1149,23 +1175,60 @@ void TransactionsViewModel::onLedgerEntries(const std::string &, uint32_t
    for (const auto &entry : entries) {
       const auto &walletId = entry.walletIds.empty() ? std::string{} : *(entry.walletIds.cbegin());
       txWallet.push_back({ entry.txHash,  walletId, entry.value });
-   }   //TODO: can be optimized later to retrieve details only for visible rows
-   emit needTXDetails(txWallet, {});
+   }
+   emit needTXDetails(txWallet, true, {});
+}
+
+void TransactionsViewModel::onZCsInvalidated(const std::vector<BinaryData>& txHashes)
+{
+   for (const auto& txHash : txHashes) {
+      const auto node = rootNode_->find(txHash);
+      if (node) {
+         const int row = node->row();
+         beginRemoveRows(QModelIndex(), row, row);
+         auto removedNode = rootNode_->take(row);
+         itemIndex_.erase({ node->item()->txEntry.txHash, node->item()->walletID.toStdString() });
+         endRemoveRows();
+         if (removedNode) {
+            removedNode->item()->curBlock = curBlock_;
+            invalidatedNodes_[txHash] = removedNode;
+         }
+      }
+   }
+   std::vector<bs::sync::TXWallet> txWallet;
+   txWallet.reserve(invalidatedNodes_.size());
+   for (const auto& invNode : invalidatedNodes_) {
+      const auto& entry = invNode.second->item()->txEntry;
+      const auto& walletId = entry.walletIds.empty() ? std::string{} : *(entry.walletIds.cbegin());
+      txWallet.push_back({ entry.txHash,  walletId, entry.value });
+   }
+   emit needTXDetails(txWallet, false, {});
 }
 
 void TransactionsViewModel::onTXDetails(const std::vector<bs::sync::TXWalletDetails> &txDet)
 {
+   std::vector<TXNode*> newNodes;
    for (const auto &tx : txDet) {
+      TransactionPtr item;
+      int row = -1;
       const auto &itIndex = itemIndex_.find({tx.txHash, tx.walletId});
       if (itIndex == itemIndex_.end()) {
-         continue;
+         const auto& itInv = invalidatedNodes_.find(tx.txHash);
+         if (itInv == invalidatedNodes_.end()) {
+            continue;
+         }
+         newNodes.push_back(itInv->second);
+         item = itInv->second->item();
+         invalidatedNodes_.erase(itInv);
       }
-      const int row = itIndex->second;
-      if (row >= rootNode_->nbChildren()) {
-         logger_->warn("[{}] invalid row: {} of {}", __func__, row, rootNode_->nbChildren());
-         continue;
+      else {
+         row = itIndex->second;
+         if (row >= rootNode_->nbChildren()) {
+            logger_->warn("[{}] invalid row: {} of {}", __func__, row, rootNode_->nbChildren());
+            continue;
+         }
+         item = rootNode_->children()[row]->item();
       }
-      const auto &item = rootNode_->children()[row]->item();
       item->walletName = QString::fromStdString(tx.walletName);
       item->direction = tx.direction;
       item->dirStr = QObject::tr(bs::sync::Transaction::toStringDir(tx.direction));
@@ -1187,13 +1250,29 @@ void TransactionsViewModel::onTXDetails(const std::vector<bs::sync::TXWalletDeta
          item->mainAddress = tr("%1 output addresses").arg(tx.outAddresses.size());
          break;
       }
-      emit dataChanged(index(row, static_cast<int>(Columns::Wallet))
-         , index(row, static_cast<int>(Columns::Comment)));
-
       item->tx = tx.tx;
       item->inputAddresses = tx.inputAddresses;
       item->outputAddresses = tx.outputAddresses;
       item->changeAddress = tx.changeAddress;
+      if (row >= 0) {
+         emit dataChanged(index(row, static_cast<int>(Columns::Wallet))
+            , index(row, static_cast<int>(Columns::Comment)));
+      } else {
+         item->confirmations = curBlock_ - item->curBlock + 1;
+         //FIXME: this code doesn't provide proper conf #, even with caching turned off:
+         // curBlock_ + 1 - tx.tx.getTxHeight();
+         item->txEntry.nbConf = item->confirmations;
+      }
+   }
+   if (!newNodes.empty()) {
+      const int startRow = rootNode_->nbChildren();
+      const int endRow = rootNode_->nbChildren() + newNodes.size() - 1;
+      beginInsertRows(QModelIndex(), startRow, endRow);
+      for (const auto& node : newNodes) {
+         itemIndex_[{node->item()->txEntry.txHash, node->item()->walletID.toStdString()}] = rootNode_->nbChildren();
+         rootNode_->add(node);
+      }
+      endInsertRows();
    }
 }
 

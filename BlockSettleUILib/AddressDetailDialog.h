@@ -55,7 +55,8 @@ public:
    void onTXDetails(const std::vector<bs::sync::TXWalletDetails> &);
 
 signals:
-   void needTXDetails(const std::vector<bs::sync::TXWallet> &, const bs::Address &);
+   void needTXDetails(const std::vector<bs::sync::TXWallet> &, bool useCache
+      , const bs::Address &);
 
 private slots:
    void onCopyClicked() const;

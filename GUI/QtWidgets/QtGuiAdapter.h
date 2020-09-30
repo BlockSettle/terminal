@@ -31,6 +31,7 @@ namespace BlockSettle {
       class ArmoryMessage_AddressHistory;
       class ArmoryMessage_FeeLevelsResponse;
       class ArmoryMessage_LedgerEntries;
+      class ArmoryMessage_ZCInvalidated;
       class ArmoryMessage_ZCReceived;
       class SignerMessage_SignTxResponse;
       class WalletsMessage_TXDetailsResponse;
@@ -94,6 +95,7 @@ private:
    bool processUTXOs(const BlockSettle::Common::WalletsMessage_UtxoListResponse&);
    bool processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse&);
    bool processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived&);
+   bool processZCInvalidated(const BlockSettle::Common::ArmoryMessage_ZCInvalidated&);
 
 private slots:
    void onPutSetting(int idx, const QVariant &value);
@@ -106,7 +108,8 @@ private slots:
    void onSetAddrComment(const std::string &walletId, const bs::Address &
       , const std::string &comment);
    void onNeedLedgerEntries(const std::string &filter);
-   void onNeedTXDetails(const std::vector<bs::sync::TXWallet> &, const bs::Address &);
+   void onNeedTXDetails(const std::vector<bs::sync::TXWallet> &, bool useCache
+      , const bs::Address &);
    void onNeedAddressHistory(const bs::Address&);
    void onNeedWalletsList(UiUtils::WalletsTypes, const std::string &id);
    void onNeedFeeLevels(const std::vector<unsigned int>&);

@@ -73,6 +73,7 @@ namespace bs {
                , uint32_t curPage, uint32_t curBlock, const std::vector<bs::TXEntry> &);
             void onTXDetails(const std::vector<bs::sync::TXWalletDetails> &);
             void onNewZCs(const std::vector<bs::sync::TXWalletDetails>&);
+            void onZCsInvalidated(const std::vector<BinaryData>& txHashes);
             void onAddressHistory(const bs::Address&, uint32_t curBlock
                , const std::vector<bs::TXEntry>&);
 
@@ -107,7 +108,8 @@ namespace bs {
                , const std::string &comment);
 
             void needLedgerEntries(const std::string &filter);
-            void needTXDetails(const std::vector<bs::sync::TXWallet>&, const bs::Address& addr = {});
+            void needTXDetails(const std::vector<bs::sync::TXWallet>&
+               , bool useCache=true, const bs::Address& addr = {});
             void needAddressHistory(const bs::Address&);
 
             void needFeeLevels(const std::vector<unsigned int>&);

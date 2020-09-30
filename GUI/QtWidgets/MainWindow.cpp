@@ -258,13 +258,14 @@ void bs::gui::qt::MainWindow::onNewZCs(const std::vector<bs::sync::TXWalletDetai
 {
    QStringList lines;
    for (const auto& tx : txDet) {
-      lines << tr("Date: %1").arg(UiUtils::displayDateTime(tx.tx.getTxTime()));
       lines << tr("TX: %1 %2 %3").arg(tr(bs::sync::Transaction::toString(tx.direction)))
          .arg(QString::fromStdString(tx.amount))
          .arg(QString::fromStdString(tx.walletSymbol));
-      lines << tr("Wallet: %1").arg(QString::fromStdString(tx.walletName));
+      if (!tx.walletName.empty()) {
+         lines << tr("Wallet: %1").arg(QString::fromStdString(tx.walletName));
+      }
 
-      QString mainAddress;
+      QString mainAddress, multipleAddresses = tr("%1 output addresses");
       switch (tx.outAddresses.size()) {
       case 0:
          switch (tx.outputAddresses.size()) {
@@ -272,7 +273,7 @@ void bs::gui::qt::MainWindow::onNewZCs(const std::vector<bs::sync::TXWalletDetai
             mainAddress = QString::fromStdString(tx.outputAddresses.at(0).address.display());
             break;
          default:
-            mainAddress = tr("%1 output addresses").arg(tx.outputAddresses.size());
+            mainAddress = multipleAddresses.arg(tx.outputAddresses.size());
             break;
          }
          break;
@@ -280,13 +281,20 @@ void bs::gui::qt::MainWindow::onNewZCs(const std::vector<bs::sync::TXWalletDetai
          mainAddress = QString::fromStdString(tx.outAddresses.at(0).display());
          break;
       default:
-         mainAddress = tr("%1 output addresses").arg(tx.outAddresses.size());
+         mainAddress = multipleAddresses.arg(tx.outAddresses.size());
          break;
       }
       lines << mainAddress << QString();
    }
    const auto& title = tr("New blockchain transaction");
    notifCenter_->enqueue(bs::ui::NotifyType::BlockchainTX, { title, lines.join(tr("\n")) });
+}
+
+void bs::gui::qt::MainWindow::onZCsInvalidated(const std::vector<BinaryData>& txHashes)
+{
+   if (txModel_) {
+      txModel_->onZCsInvalidated(txHashes);
+   }
 }
 
 void MainWindow::onAddressHistory(const bs::Address& addr, uint32_t curBlock, const std::vector<bs::TXEntry>& entries)
