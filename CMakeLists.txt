@@ -120,6 +120,7 @@ ENDIF(MSVC)
 include(LTO)
 include(CompilerWarnings)
 include(CompilerColorDiagnostics)
+include(LinkerFlags)
 
 IF( WIN32 )
    # output libs to same path as binaries on windows just to make life easier
