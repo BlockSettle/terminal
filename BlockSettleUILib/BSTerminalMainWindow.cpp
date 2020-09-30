@@ -30,6 +30,7 @@
 #include "AutheIDClient.h"
 #include "AutoSignQuoteProvider.h"
 #include "Bip15xDataConnection.h"
+#include "BootstrapDataManager.h"
 #include "BSMarketDataProvider.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
@@ -103,8 +104,11 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    loginButtonText_ = tr("Login");
 
-   armoryServersProvider_= std::make_shared<ArmoryServersProvider>(applicationSettings_);
+   initBootstrapDataManager();
+
+   nextArmoryReconnectAttempt_ = std::chrono::steady_clock::now();
    signersProvider_= std::make_shared<SignersProvider>(applicationSettings_);
+   armoryServersProvider_ = std::make_shared<ArmoryServersProvider>(applicationSettings_, bootstrapDataManager_);
 
    bool licenseAccepted = showStartupDialog();
    if (!licenseAccepted) {
@@ -129,15 +133,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    UiUtils::setupIconFont(this);
    NotificationCenter::createInstance(logMgr_->logger(), applicationSettings_, ui_.get(), sysTrayIcon_, this);
 
-   cbApproveChat_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Chat
-      , this, applicationSettings_);
-   cbApproveProxy_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Proxy
-      , this, applicationSettings_);
-   cbApproveCcServer_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::CcServer
-      , this, applicationSettings_);
-   cbApproveExtConn_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::ExtConnector
-      , this, applicationSettings_);
-
    initConnections();
    initArmory();
    initCcClient();
@@ -152,6 +147,15 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    InitSigningContainer();
    InitAuthManager();
    initUtxoReservationManager();
+
+   cbApproveChat_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Chat
+      , this, applicationSettings_, bootstrapDataManager_);
+   cbApproveProxy_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Proxy
+      , this, applicationSettings_, bootstrapDataManager_);
+   cbApproveCcServer_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::CcServer
+      , this, applicationSettings_, bootstrapDataManager_);
+   cbApproveExtConn_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::ExtConnector
+      , this, applicationSettings_, bootstrapDataManager_);
 
    statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
       , signContainer_, ui_->statusbar);
@@ -492,6 +496,8 @@ void BSTerminalMainWindow::InitAuthManager()
          openAuthManagerDialog();
       }
    });
+
+   authManager_->SetLoadedValidationAddressList(bootstrapDataManager_->GetAuthValidationList());
 }
 
 std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createSigner()
@@ -578,23 +584,29 @@ std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createRemoteSigner(
 std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createLocalSigner()
 {
    QLatin1String localSignerHost("127.0.0.1");
-   QString localSignerPort = applicationSettings_->get<QString>(ApplicationSettings::localSignerPort);
+   QString localSignerPort;
    NetworkType netType = applicationSettings_->get<NetworkType>(ApplicationSettings::netType);
 
-   if (SignerConnectionExists(localSignerHost, localSignerPort)) {
-      BSMessageBox mbox(BSMessageBox::Type::question
-                  , tr("Local Signer Connection")
-                  , tr("Continue with Remote connection in Local GUI mode?")
-                  , tr("The Terminal failed to spawn the headless signer as the program is already running. "
-                       "Would you like to continue with remote connection in Local GUI mode?")
-                  , this);
-      if (mbox.exec() == QDialog::Rejected) {
-         return nullptr;
-      }
+   for (int attempts = 0; attempts < 10; ++attempts) {
+      // https://tools.ietf.org/html/rfc6335
+      // the Dynamic Ports, also known as the Private or Ephemeral Ports,
+      // from 49152-65535 (never assigned)
+      auto port = 49152 + rand() % 16000;
 
-      // Use locally started signer as remote
-      signersProvider_->switchToLocalFullGUI(localSignerHost, localSignerPort);
-      return createRemoteSigner(true);
+      auto portToTest = QString::number(port);
+
+      if (!SignerConnectionExists(localSignerHost, portToTest)) {
+         localSignerPort = portToTest;
+         break;
+      } else {
+         logMgr_->logger()->error("[BSTerminalMainWindow::createLocalSigner] attempt {} : port {} used"
+                        , port);
+      }
+   }
+
+   if (localSignerPort.isEmpty()) {
+      logMgr_->logger()->error("[BSTerminalMainWindow::createLocalSigner] failed to find not busy port");
+      return nullptr;
    }
 
    const bool startLocalSignerProcess = true;
@@ -743,13 +755,10 @@ void BSTerminalMainWindow::InitAssets()
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityDef, assetManager_.get(), &AssetManager::onCCSecurityReceived);
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityInfo, walletsMgr_.get(), &bs::sync::WalletsManager::onCCSecurityInfo);
    connect(ccFileManager_.get(), &CCFileManager::Loaded, this, &BSTerminalMainWindow::onCCLoaded);
-   connect(ccFileManager_.get(), &CCFileManager::LoadingFailed, this, &BSTerminalMainWindow::onCCInfoMissing);
 
    connect(mdCallbacks_.get(), &MDCallbacksQt::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
 
-   if (ccFileManager_->hasLocalFile()) {
-      ccFileManager_->LoadSavedCCDefinitions();
-   }
+   ccFileManager_->SetLoadedDefinitions(bootstrapDataManager_->GetCCDefinitions());
 }
 
 void BSTerminalMainWindow::InitPortfolioView()
@@ -889,6 +898,7 @@ void BSTerminalMainWindow::MainWinACT::onStateChanged(ArmoryState state)
    case ArmoryState::Ready:
       QMetaObject::invokeMethod(parent_, [this] {
          parent_->isArmoryReady_ = true;
+         parent_->armoryReconnectDelay_ = 0;
          parent_->CompleteDBConnection();
          parent_->CompleteUIOnlineView();
          parent_->walletsMgr_->goOnline();
@@ -1014,25 +1024,40 @@ bool BSTerminalMainWindow::isArmoryConnected() const
 
 void BSTerminalMainWindow::ArmoryIsOffline()
 {
-   auto restartDelays = std::vector<int>{ 1, 5, 15, 30, 60 };
-   int restartDelay = *restartDelays.rbegin();
-   if (armoryRestartCount_ < restartDelays.size()) {
-      restartDelay = restartDelays.at(armoryRestartCount_);
-   }
-   armoryRestartCount_ += 1;
-
    logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
+
+   auto now = std::chrono::steady_clock::now();
+   std::chrono::milliseconds nextConnDelay(0);
+   if (now < nextArmoryReconnectAttempt_) {
+      nextConnDelay = std::chrono::duration_cast<std::chrono::milliseconds>(
+         nextArmoryReconnectAttempt_ - now);
+   }
+   if (nextConnDelay != std::chrono::milliseconds::zero()) {
+
+      auto delaySec = std::chrono::duration_cast<std::chrono::seconds>(nextConnDelay);
+      SPDLOG_LOGGER_DEBUG(logMgr_->logger("ui")
+         , "restart armory connection in {} second", nextConnDelay.count());
+
+      QTimer::singleShot(nextConnDelay, this, &BSTerminalMainWindow::ArmoryIsOffline);
+      return;
+   }
+
    if (walletsMgr_) {
       walletsMgr_->unregisterWallets();
    }
    updateControlEnabledState();
+
+   //increase reconnect delay
+   armoryReconnectDelay_ = armoryReconnectDelay_ % 2 ?
+      armoryReconnectDelay_ * 2 : armoryReconnectDelay_ + 1;
+   armoryReconnectDelay_ = std::max(armoryReconnectDelay_, unsigned(60));
+   nextArmoryReconnectAttempt_ =
+      std::chrono::steady_clock::now() + std::chrono::seconds(armoryReconnectDelay_);
+
+   connectArmory();
+
    // XXX: disabled until armory connection is stable in terminal
    // updateLoginActionState();
-
-   SPDLOG_LOGGER_DEBUG(logMgr_->logger("ui"), "restart armory connection in {} second", restartDelay);
-   QTimer::singleShot(std::chrono::seconds(restartDelay), this, [this] {
-      connectArmory();
-   });
 }
 
 void BSTerminalMainWindow::initArmory()
@@ -1054,7 +1079,30 @@ void BSTerminalMainWindow::initCcClient()
 void BSTerminalMainWindow::initUtxoReservationManager()
 {
    utxoReservationMgr_ = std::make_shared<bs::UTXOReservationManager>(
-      walletsMgr_, armory_, logMgr_->logger());
+            walletsMgr_, armory_, logMgr_->logger());
+}
+
+void BSTerminalMainWindow::initBootstrapDataManager()
+{
+   bootstrapDataManager_ = std::make_shared<BootstrapDataManager>(logMgr_->logger(), applicationSettings_);
+   if (bootstrapDataManager_->hasLocalFile()) {
+      bootstrapDataManager_->loadFromLocalFile();
+   } else {
+      // load from resources
+      const QString filePathInResources = applicationSettings_->bootstrapResourceFileName();
+
+      QFile file;
+      file.setFileName(filePathInResources);
+      if (file.open(QIODevice::ReadOnly)) {
+         const std::string bootstrapData = file.readAll().toStdString();
+
+         bootstrapDataManager_->setReceivedData(bootstrapData);
+      } else {
+         logMgr_->logger()->error("[BSTerminalMainWindow::initBootstrapDataManager] failed to locate bootstrap file in resources: {}"
+                        , filePathInResources.toStdString());
+      }
+
+   }
 }
 
 void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const std::string& requestId, const BinaryData &txHash, int errCode
@@ -1113,10 +1161,7 @@ void BSTerminalMainWindow::connectSigner()
       return;
    }
 
-   if (!signContainer_->Start()) {
-      BSMessageBox(BSMessageBox::warning, tr("BlockSettle Signer Connection")
-         , tr("Failed to start signer connection.")).exec();
-   }
+   signContainer_->Start();
 }
 
 bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()> &cb)
@@ -1724,18 +1769,6 @@ void BSTerminalMainWindow::onCCLoaded()
    }
 }
 
-void BSTerminalMainWindow::onCCInfoMissing(CcGenFileError error)
-{
-   if (error == CcGenFileError::InvalidSign) {
-      addDeferredDialog([this] {
-         BSMessageBox(BSMessageBox::warning, tr("CC gen")
-            , tr("CC gen file load failed")
-            , tr("Invalid CC gen file sign detected. Please login to download new CC gen file.")
-            , this).exec();
-      });
-   }
-}
-
 void BSTerminalMainWindow::setupShortcuts()
 {
    auto overviewTabShortcut = new QShortcut(QKeySequence(QStringLiteral("Ctrl+1")), this);
@@ -2185,6 +2218,7 @@ std::shared_ptr<BsClient> BSTerminalMainWindow::createClient()
 
    bs::network::BIP15xParams params;
    params.ephemeralPeers = true;
+   params.authMode = bs::network::BIP15xAuthMode::OneWay;
    const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger, params);
    bip15xTransport->setKeyCb(cbApproveProxy_);
 
@@ -2222,8 +2256,7 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
 
    authManager_->initLogin(celerConnection_, tradeSettings_);
 
-   ccFileManager_->setCcAddressesSigned(result.ccAddressesSigned);
-   authManager_->setAuthAddressesSigned(result.authAddressesSigned);
+   onBootstrapDataLoaded(result.bootstrapDataSigned);
 
    connect(bsClient_.get(), &BsClient::disconnected, orderListModel_.get(), &OrderListModel::onDisconnected);
    connect(bsClient_.get(), &BsClient::disconnected, this, &BSTerminalMainWindow::onBsConnectionDisconnected);
@@ -2275,8 +2308,8 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
    connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetChat, &ChatWidget::onProcessOtcPbMessage);
    connect(ui_->widgetChat, &ChatWidget::sendOtcPbMessage, bsClient_.get(), &BsClient::sendPbMessage);
 
-   connect(bsClient_.get(), &BsClient::ccGenAddrUpdated, this, [this](const BinaryData &ccGenAddrData) {
-      ccFileManager_->setCcAddressesSigned(ccGenAddrData);
+   connect(bsClient_.get(), &BsClient::bootstrapDataUpdated, this, [this](const std::string& data) {
+      onBootstrapDataLoaded(data);
    });
 
    accountEnabled_ = true;
@@ -2446,5 +2479,13 @@ void BSTerminalMainWindow::DisplayCreateTransactionDialog(std::shared_ptr<Create
 
       auto nextDialog = dlg->SwitchMode();
       dlg = nextDialog;
+   }
+}
+
+void BSTerminalMainWindow::onBootstrapDataLoaded(const std::string& data)
+{
+   if (bootstrapDataManager_->setReceivedData(data)) {
+      authManager_->SetLoadedValidationAddressList(bootstrapDataManager_->GetAuthValidationList());
+      ccFileManager_->SetLoadedDefinitions(bootstrapDataManager_->GetCCDefinitions());
    }
 }

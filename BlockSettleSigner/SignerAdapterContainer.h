@@ -108,6 +108,9 @@ public:
 
    bool isWalletOffline(const std::string &id) const override { return (woWallets_.find(id) != woWallets_.end()); }
 
+   void Start(void) {}
+   void Connect(void) {}
+
 private:
    std::shared_ptr<SignerInterfaceListener>  listener_;
    std::unordered_set<std::string>           woWallets_;

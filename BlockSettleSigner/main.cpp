@@ -33,6 +33,7 @@
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "BIP150_151.h"
+#include "AuthorizedPeers.h"
 #include "DispatchQueue.h"
 #include "HeadlessApp.h"
 #include "Settings/HeadlessSettings.h"
@@ -41,6 +42,10 @@
 #include "SignerAdapter.h"
 #include "Settings/SignerSettings.h"
 #include "SystemFileUtils.h"
+#include "BIP15xHelpers.h"
+#include "Bip15xDataConnection.h"
+#include "TransportBIP15x.h"
+#include "TransportBIP15xServer.h"
 
 #include "QMLApp.h"
 #include "QmlBridge.h"
@@ -137,8 +142,19 @@ namespace bs {
          void start()
          {
             queue_->dispatch([this] {
-               appObj_.start();
+               try {
+                  appObj_.start();
+               } catch (...) {
+                  QMetaObject::invokeMethod(qApp, [] {
+                     QApplication::quit();
+                  });
+               }
             });
+         }
+
+         bs::network::BIP15xServerParams getGuiServerParams(void) const
+         {
+            return appObj_.getGuiServerParams();
          }
 
       private:
@@ -275,13 +291,34 @@ static int QMLApp(int argc, char **argv
    engine.rootContext()->setContextProperty(QStringLiteral("fixedFont"), fixedFont);
 
    try {
-      BinaryData srvIDKey(BIP151PUBKEYSIZE);
-      if (!(settings->getSrvIDKeyBin(srvIDKey))) {
-         logger->error("[{}] Unable to obtain server identity key from the "
-            "command line. Functionality may be limited.", __func__);
+      //setup signer's own GUI connection
+      auto guiSrvParams = queue.getGuiServerParams();
+
+      //grab gui server data
+      auto guiPort = guiSrvParams.listenPort_;
+      const auto& guiServPubkey = guiSrvParams.publicKey_;
+
+      //create client data connection for built in GUI client
+      auto adapterConn = SignerAdapter::instantiateAdapterConnection(
+         logger, guiPort, guiServPubkey);
+
+      //give its public key to the server
+      {
+         std::string clientID = "127.0.0.1:" + std::to_string(guiPort);
+
+         auto adapterBip15x = 
+            std::dynamic_pointer_cast<Bip15xDataConnection>(adapterConn);
+         if (adapterBip15x == nullptr) {
+            throw std::runtime_error("unexpected adapter connection type");
+         }
+
+         bs::network::BIP15xPeer peer(clientID, adapterBip15x->getOwnPublicKey());
+         guiSrvParams.addPeer_(peer);
       }
 
-      SignerAdapter adapter(logger, qmlBridge, settings->netType(), settings->signerPort(), &srvIDKey);
+      //finaly, instantiate SignerAdapter with that connection
+      SignerAdapter adapter(
+         logger, qmlBridge, settings->netType(), guiPort, adapterConn);
       adapter.setCloseHeadless(settings->closeHeadless());
 
       QMLAppObj qmlAppObj(&adapter, logger, settings, splashScreen, engine.rootContext());
@@ -371,9 +408,8 @@ int main(int argc, char** argv)
    // Enable terminal key checks if two way auth is enabled (or litegui is used).
    // This also affects GUI connection because the flag works globally for now.
    // So if remote signer has two-way auth disabled GUI connection will be less secure too.
-   const bool twoWayEnabled = settings->twoWaySignerAuth() || (settings->runMode() == bs::signer::RunMode::litegui);
    startupBIP151CTX();
-   startupBIP150CTX(4, !twoWayEnabled);
+   startupBIP150CTX(4);
 
    logger->info("Starting BS Signer...");
    bs::signer::Queue queue(logger, settings);
