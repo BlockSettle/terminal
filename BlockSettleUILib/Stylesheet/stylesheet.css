@@ -810,6 +810,13 @@ QToolButton#deviceDeleteButton {
   min-height: 32px;
 }
 
+QPushButton#pushButtonMDConnection {
+  color: #ffffff;
+  background-color: #247dac;
+  border-color: transparent; }
+QPushButton#pushButtonMDConnection:hover {
+  text-decoration: underline; }
+
 QPushButton:hover, QToolButton:hover, [buttonImportant="true"]:hover, [buttonSuccess="true"]:hover, [buttonWarning="true"]:hover {
   border: 1px solid #5097bd;
   background-color: #5097bd; }
