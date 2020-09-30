@@ -75,7 +75,7 @@ bs::network::BIP15xNewKeyCb PubKeyLoader::getApprovingCallback(const KeyType kt
             }
 
             ImportKeyBox box (BSMessageBox::question
-               , QObject::tr("Import %1 ID key?").arg(serverName(kt))
+               , QObject::tr("Server is using a key that is different from the known BlockSettle signed key. This new key isn't signed. Accept %1 ID key?").arg(serverName(kt))
                , bsMainWindow);
 
             box.setNewKeyFromBinary(newKeyBin);
