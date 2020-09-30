@@ -14,13 +14,15 @@
 #include "ApplicationSettings.h"
 #include "BinaryData.h"
 #include "BIP15xHelpers.h"
+#include "BootstrapDataManager.h"
 
 class QWidget;
 
 class PubKeyLoader
 {
 public:
-   PubKeyLoader(const std::shared_ptr<ApplicationSettings> &);
+   PubKeyLoader(const std::shared_ptr<ApplicationSettings> &
+                , const std::shared_ptr<BootstrapDataManager>& bootstrapDataManager);
    ~PubKeyLoader() noexcept = default;
 
    PubKeyLoader(const PubKeyLoader&) = delete;
@@ -38,10 +40,10 @@ public:
    };
 
    BinaryData loadKey(const KeyType) const;
-   bool saveKey(const KeyType, const BinaryData &);
 
    static bs::network::BIP15xNewKeyCb getApprovingCallback(const KeyType
-      , QWidget *bsMainWindow, const std::shared_ptr<ApplicationSettings> &);
+      , QWidget *bsMainWindow, const std::shared_ptr<ApplicationSettings> &
+      , const std::shared_ptr<BootstrapDataManager>& bootstrapDataManager);
 
    static std::string envNameShort(ApplicationSettings::EnvConfiguration env);
    static std::string serverNameShort(KeyType);
@@ -50,11 +52,11 @@ public:
    static std::string serverHttpsPort();
 
 private:
-   static BinaryData loadKeyFromResource(KeyType, ApplicationSettings::EnvConfiguration);
    static QString serverName(const KeyType);
 
 private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
+   std::shared_ptr<BootstrapDataManager>  bootstrapDataManager_;
 };
 
 #endif // PUB_KEY_LOADER_H

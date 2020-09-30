@@ -102,13 +102,12 @@ int main(int argc, char** argv) {
    logger->info("Starting tracker {}", BS_TRACKER_VERSION);
    logger->flush_on(spdlog::level::debug);
 
-   const bool publicRequester = true;
    btc_ecc_start();
    startupBIP151CTX();
-   startupBIP150CTX(4, publicRequester);
+   startupBIP150CTX(4);
    NetworkConfig::selectNetwork(testnet ? NETWORK_MODE_TESTNET : NETWORK_MODE_MAINNET);
 
-   auto ownKey = bs::network::TransportBIP15xServer::getOwnPubKey(ownKeyPath, ownKeyName);
+   auto ownKey = bs::network::TransportBIP15xServer::getOwnPubKey_FromKeyFile(ownKeyPath, ownKeyName);
    if (ownKey.empty()) {
       SPDLOG_LOGGER_CRITICAL(logger, "can't read own key");
       exit(EXIT_FAILURE);
@@ -127,7 +126,7 @@ int main(int argc, char** argv) {
       return validKey;
    };
 
-   armory->setupConnection(testnet ? NetworkType::TestNet : NetworkType::MainNet, armoryHost, std::to_string(armoryPort), armoryKeyCb);
+   armory->setupConnection(testnet ? NetworkType::TestNet : NetworkType::MainNet, armoryHost, std::to_string(armoryPort), true, armoryKeyCb);
    auto now = std::chrono::steady_clock::now();
    while (std::chrono::steady_clock::now() - now < std::chrono::seconds(60) && armory->state() != ArmoryState::Connected) {
       std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -148,8 +147,10 @@ int main(int argc, char** argv) {
       return {};
    };
    auto wsServer = std::make_unique<WsServerConnection>(logger, WsServerConnectionParams{});
+   const auto ephemeralPeersServer = false; // Required for persistent server's public key
+   const bool oneWayAuthServer = true;
    const auto &transport = std::make_shared<bs::network::TransportBIP15xServer>(logger
-      , cbTrustedClients, ownKeyPath, ownKeyName);
+      , cbTrustedClients, ephemeralPeersServer, oneWayAuthServer, ownKeyPath, ownKeyName);
    auto bipServer = std::make_shared<Bip15xServerConnection>(logger, std::move(wsServer), transport);
 
    auto ccServer = std::make_unique<CcTrackerServer>(logger, armory, bipServer);

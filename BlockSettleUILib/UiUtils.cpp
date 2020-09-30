@@ -620,6 +620,13 @@ QValidator::State UiUtils::ValidateDoubleString(QString &input, int &pos, const 
 
    QString tempCopy = UiUtils::NormalizeString(input);
 
+   QStringList list = tempCopy.split(defaultDecimalsSeparatorChar);
+   if (list.size() == 2 && list[1].length() > decimals && pos == input.length()) {
+      list[1].resize(decimals);
+      input = list[0] + QLatin1Char('.') + list[1];
+      tempCopy = input;
+   }
+
    bool metDecimalSeparator = false;
    int afterDecimal = 0;
 

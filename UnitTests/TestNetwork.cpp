@@ -52,6 +52,13 @@ static bs::network::TransportBIP15xServer::TrustedClientsCallback getEmptyPeersC
    };
 }
 
+static bs::network::TransportBIP15xServer::TrustedClientsCallback constructTrustedPeersCallback(
+   const bs::network::BIP15xPeers& peers)
+{
+   return [peers] () {
+      return peers;
+   };
+}
 
 TEST(TestNetwork, CelerMessageMapper)
 {
@@ -105,7 +112,7 @@ TEST(TestNetwork, PayinsContainer)
 }
 #endif   //0
 
-TEST(TestNetwork, ZMQ_BIP15X)
+TEST(TestNetwork, BIP15X_2Way)
 {
    static std::promise<bool> connectProm;
    static auto connectFut = connectProm.get_future();
@@ -245,8 +252,11 @@ TEST(TestNetwork, ZMQ_BIP15X)
    auto wsConn = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
    const auto clientConn = std::make_unique<Bip15xDataConnection>(logger, std::move(wsConn), clientTransport);
 
+   auto clientKey = getPeerKey("client", clientTransport.get());
+   auto serverTrustedClients = constructTrustedPeersCallback({clientKey});
+
    const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(logger
-      , getEmptyPeersCallback());
+      , serverTrustedClients, bs::network::BIP15xAuthMode::TwoWay);
    auto wsServ = std::make_unique<WsServerConnection>(logger, WsServerConnectionParams{});
    auto serverConn = std::make_unique<Bip15xServerConnection>(
       logger, std::move(wsServ), srvTransport);
@@ -258,7 +268,6 @@ TEST(TestNetwork, ZMQ_BIP15X)
       port = std::to_string((rand() % 50000) + 10000);
    } while (!serverConn->BindConnection(host, port, srvLsn.get()));
 
-   srvTransport->addAuthPeer(getPeerKey("client", clientTransport.get()));
    clientTransport->addAuthPeer(getPeerKey(host, port, srvTransport.get()));
 
    ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
@@ -286,7 +295,188 @@ TEST(TestNetwork, ZMQ_BIP15X)
 //   std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
 }
 
-TEST(TestNetwork, ZMQ_BIP15X_Rekey)
+TEST(TestNetwork, BIP15X_1Way)
+{
+   static std::promise<bool> connectProm;
+   static auto connectFut = connectProm.get_future();
+   static std::promise<bool> clientPktsProm;
+   static auto clientPktsFut = clientPktsProm.get_future();
+   static std::promise<bool> srvPktsProm;
+   static auto srvPktsFut = srvPktsProm.get_future();
+
+   static std::vector<std::string> clientPackets;
+   for (int i = 0; i < 5; ++i) {
+      clientPackets.push_back(CryptoPRNG::generateRandom(23).toBinStr());
+   }
+   clientPackets.push_back(CryptoPRNG::generateRandom(1475).toBinStr());   // max value for fragmentation code to start to fail
+   clientPackets.push_back(CryptoPRNG::generateRandom(102400).toBinStr());   // comment this line out to see if test will pass
+   clientPackets.push_back(CryptoPRNG::generateRandom(2345).toBinStr());   // comment this line out to see if test will pass
+   for (int i = 0; i < 4; ++i) {
+      clientPackets.push_back(CryptoPRNG::generateRandom(230).toBinStr());
+   }
+
+   static std::vector<std::string> srvPackets;
+   uint32_t pktSize = 200;
+   for (int i = 0; i < 12; ++i) {
+      srvPackets.push_back(CryptoPRNG::generateRandom(pktSize).toBinStr());
+      pktSize *= 2;
+   }
+   for (int i = 0; i < 5; ++i) {
+      srvPackets.push_back(CryptoPRNG::generateRandom(230).toBinStr());
+   }
+
+   class ServerConnListener : public ServerConnectionListener
+   {
+   public:
+      ServerConnListener(const std::shared_ptr<spdlog::logger> &logger)
+         : ServerConnectionListener(), logger_(logger) {}
+      ~ServerConnListener() noexcept override = default;
+
+   protected:
+       void OnDataFromClient(const std::string &clientId, const std::string &data) override
+       {
+         logger_->debug("[{}] {} from {} #{}", __func__, data.size()
+            , BinaryData::fromString(clientId).toHexStr(), clientPktCnt_);
+         if (clientPktCnt_ < clientPackets.size()) {
+            const auto &clientPkt = clientPackets.at(clientPktCnt_++);
+            if (clientPkt != data) {
+               packetsMatch_ = false;
+               logger_->error("[{}] packet #{} mismatch ({} [{}] vs [{}])", __func__
+                  , clientPktCnt_ - 1, BinaryData::fromString(clientPkt).toHexStr()
+                  , clientPkt.size(), data.size());
+            }
+         }
+         if (!failed_ && (clientPktCnt_ == clientPackets.size())) {
+            clientPktsProm.set_value(packetsMatch_);
+         }
+      }
+      void onClientError(const std::string &clientId, ClientError error, const Details &details) override
+      {
+         logger_->debug("[{}] {}", __func__, BinaryData::fromString(clientId).toHexStr());
+         if (!failed_) {
+            clientPktsProm.set_value(false);
+            failed_ = true;
+         }
+      }
+      void OnClientConnected(const std::string &clientId, const Details &details) override
+      {
+         logger_->debug("[{}] {}", __func__, BinaryData::fromString(clientId).toHexStr());
+      }
+      void OnClientDisconnected(const std::string &clientId) override {
+         logger_->debug("[{}] {}", __func__, BinaryData::fromString(clientId).toHexStr());
+      }
+
+   private:
+      std::shared_ptr<spdlog::logger>  logger_;
+      bool  failed_ = false;
+      size_t clientPktCnt_ = 0;
+      bool packetsMatch_ = true;
+   };
+
+   class ClientConnListener : public DataConnectionListener
+   {
+   public:
+      ClientConnListener(const std::shared_ptr<spdlog::logger> &logger)
+         : DataConnectionListener(), logger_(logger) {}
+
+      void OnDataReceived(const std::string &data) override
+      {
+         logger_->debug("[{}] {} #{}", __func__, data.size(), srvPktCnt_);
+         if (srvPktCnt_ < srvPackets.size()) {
+            if (srvPackets[srvPktCnt_++] != data) {
+               packetsMatch_ = false;
+               logger_->error("[{}] packet #{} mismatch", __func__, srvPktCnt_ - 1);
+            }
+         }
+         if (!failed_ && (srvPktCnt_ == srvPackets.size())) {
+            srvPktsProm.set_value(packetsMatch_);
+         }
+      }
+      void OnConnected() override
+      {
+         logger_->debug("[{}]", __func__);
+         connectProm.set_value(true);
+         connReported_ = true;
+      }
+      void fail() {
+          if (!connReported_) {
+              connectProm.set_value(false);
+              connReported_ = true;
+          }
+          if (!failed_) {
+              srvPktsProm.set_value(false);
+              failed_ = true;
+          }
+      }
+      void OnDisconnected() override
+      {
+         logger_->debug("[{}]", __func__);
+      }
+      void OnError(DataConnectionError errorCode) override
+      {
+         logger_->debug("[{}] {}", __func__, int(errorCode));
+         fail();
+      }
+
+   private:
+      std::shared_ptr<spdlog::logger>  logger_;
+      bool failed_ = false;
+      bool connReported_ = false;
+      size_t srvPktCnt_ = 0;
+      bool packetsMatch_ = true;
+   };
+
+   const auto &logger = StaticLogger::loggerPtr;
+   const auto srvLsn = std::make_unique<ServerConnListener>(logger);
+   const auto clientLsn = std::make_unique<ClientConnListener>(logger);
+
+   auto testParams = getTestParams();
+   testParams.authMode = bs::network::BIP15xAuthMode::OneWay;
+   const auto &clientTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger
+      , testParams);
+   auto wsConn = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
+   const auto clientConn = std::make_unique<Bip15xDataConnection>(logger, std::move(wsConn), clientTransport);
+
+   const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(logger
+      , getEmptyPeersCallback(), bs::network::BIP15xAuthMode::OneWay);
+   auto wsServ = std::make_unique<WsServerConnection>(logger, WsServerConnectionParams{});
+   auto serverConn = std::make_unique<Bip15xServerConnection>(
+      logger, std::move(wsServ), srvTransport);
+
+   const std::string host = "127.0.0.1";
+   std::string port;
+   do {
+      port = std::to_string((rand() % 50000) + 10000);
+   } while (!serverConn->BindConnection(host, port, srvLsn.get()));
+
+   clientTransport->addAuthPeer(getPeerKey(host, port, srvTransport.get()));
+
+   ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
+   ASSERT_TRUE(connectFut.get());
+
+   StaticLogger::loggerPtr->debug("Start sending client packets");
+   for (const auto &clientPkt : clientPackets) {
+      clientConn->send(clientPkt);
+      if (clientPkt.size() < 123) {
+         StaticLogger::loggerPtr->debug("c::sent {}", BinaryData::fromString(clientPkt).toHexStr());
+      }
+   }
+   EXPECT_TRUE(clientPktsFut.get());
+
+   StaticLogger::loggerPtr->debug("Start sending server packets");
+   for (const auto &srvPkt : srvPackets) {
+      serverConn->SendDataToAllClients(srvPkt);
+      if (srvPkt.size() < 123) {
+         StaticLogger::loggerPtr->debug("s::sent {}", BinaryData::fromString(srvPkt).toHexStr());
+      }
+   }
+   EXPECT_TRUE(srvPktsFut.get());
+
+   ASSERT_TRUE(clientConn->closeConnection());
+//   std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
+}
+
+TEST(TestNetwork, BIP15X_Rekey)
 {
    static std::promise<bool> connectProm1;
    static auto connectFut1 = connectProm1.get_future();
@@ -465,8 +655,12 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
    auto wsConn = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
    const auto clientConn = std::make_unique<Bip15xDataConnection>(StaticLogger::loggerPtr, std::move(wsConn), clientTransport);
 
+   auto clientKey = getPeerKey("client", clientTransport.get());
+   auto serverTrustedClients = constructTrustedPeersCallback({clientKey});
+
    const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-      StaticLogger::loggerPtr, getEmptyPeersCallback());
+      StaticLogger::loggerPtr, serverTrustedClients, bs::network::BIP15xAuthMode::TwoWay);
+   
    auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
    auto serverConn = std::make_unique<Bip15xServerConnection>(
       StaticLogger::loggerPtr, std::move(wsServ), srvTransport);
@@ -478,7 +672,6 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
       port = std::to_string((rand() % 50000) + 10000);
    } while (!serverConn->BindConnection(host, port, srvLsn.get()));
 
-   srvTransport->addAuthPeer(getPeerKey("client", clientTransport.get()));
    clientTransport->addAuthPeer(getPeerKey(host, port, srvTransport.get()));
    ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
    EXPECT_TRUE(connectFut1.get());
@@ -601,7 +794,7 @@ public:
     std::shared_ptr<spdlog::logger>  logger_;
 };
 
-TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
+TEST(TestNetwork, BIP15X_ClientClose)
 {
     static std::vector<std::string> clientPackets;
     for (int i = 0; i < 5; ++i) {
@@ -636,8 +829,10 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
        auto wsConn = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
        const auto clientConn = std::make_unique<Bip15xDataConnection>(StaticLogger::loggerPtr, std::move(wsConn), clientTransport);
 
-        const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-           StaticLogger::loggerPtr, getEmptyPeersCallback());
+       auto clientKey = getPeerKey("client", clientTransport.get());
+       auto serverPeersCb = constructTrustedPeersCallback({clientKey});
+       const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
+           StaticLogger::loggerPtr, serverPeersCb, bs::network::BIP15xAuthMode::TwoWay);
         std::vector<std::string> trustedClients = {
             std::string("test:") + clientTransport->getOwnPubKey().toHexStr() };
         auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
@@ -656,7 +851,6 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
             port = std::to_string((rand() % 50000) + 10000);
         } while (!serverConn->BindConnection(host, port, srvLsn.get()));
 
-        srvTransport->addAuthPeer(getPeerKey("client", clientTransport.get()));
         clientTransport->addAuthPeer(getPeerKey(host, port, srvTransport.get()));
 
         ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
@@ -679,7 +873,7 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
     }
 }
 
-TEST(TestNetwork, ZMQ_BIP15X_ClientReopen)
+TEST(TestNetwork, BIP15X_ClientReopen)
 {
     static std::vector<std::string> clientPackets;
     for (int i = 0; i < 5; ++i) {
@@ -701,8 +895,10 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientReopen)
     auto wsConn = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
     const auto clientConn = std::make_unique<Bip15xDataConnection>(StaticLogger::loggerPtr, std::move(wsConn), clientTransport);
 
+    auto clientKey = getPeerKey("client", clientTransport.get());
+    auto serverPeersCb = constructTrustedPeersCallback({clientKey});
     const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-       StaticLogger::loggerPtr, getEmptyPeersCallback());
+       StaticLogger::loggerPtr, serverPeersCb, bs::network::BIP15xAuthMode::TwoWay);
     std::vector<std::string> trustedClients = {
         std::string("test:") + clientTransport->getOwnPubKey().toHexStr() };
     auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
@@ -758,7 +954,7 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientReopen)
     serverConn.reset();  // This is needed to detach listener before it's destroyed
 }
 
-TEST(TestNetwork, ZMQ_BIP15X_DisconnectCounters)
+TEST(TestNetwork, BIP15X_DisconnectCounters)
 {
    const auto srvLsn = std::make_shared<TstServerListener>(StaticLogger::loggerPtr);
    const auto clientLsn = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
@@ -770,8 +966,10 @@ TEST(TestNetwork, ZMQ_BIP15X_DisconnectCounters)
    std::vector<std::string> trustedClients = {
       std::string("test:") + clientTransport->getOwnPubKey().toHexStr() };
 
+   auto clientKey = getPeerKey("client", clientTransport.get());
+   auto serverPeersCb = constructTrustedPeersCallback({clientKey});
    const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-      StaticLogger::loggerPtr, getEmptyPeersCallback());
+      StaticLogger::loggerPtr, serverPeersCb, bs::network::BIP15xAuthMode::TwoWay);
    auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
    auto serverConn = std::make_unique<Bip15xServerConnection>(
       StaticLogger::loggerPtr, std::move(wsServ), srvTransport);
@@ -782,7 +980,6 @@ TEST(TestNetwork, ZMQ_BIP15X_DisconnectCounters)
       port = std::to_string((rand() % 50000) + 10000);
    } while (!serverConn->BindConnection(host, port, srvLsn.get()));
 
-   srvTransport->addAuthPeer(getPeerKey("client", clientTransport.get()));
    clientTransport->addAuthPeer(getPeerKey(host, port, srvTransport.get()));
 
    ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
@@ -817,7 +1014,7 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_StressTest)
    const auto clientConn = std::make_unique<Bip15xDataConnection>(StaticLogger::loggerPtr, std::move(wsConn), clientTransport);
 
    const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-      StaticLogger::loggerPtr, getEmptyPeersCallback());
+      StaticLogger::loggerPtr, getEmptyPeersCallback(), bs::network::BIP15xAuthMode::TwoWay);
    std::vector<std::string> trustedClients = {
       std::string("test:") + clientTransport->getOwnPubKey().toHexStr() };
    auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
@@ -830,7 +1027,6 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_StressTest)
       port = std::to_string((rand() % 50000) + 10000);
    } while (!serverConn->BindConnection(host, port, srvLsn.get()));
 
-   srvTransport->addAuthPeer(getPeerKey("client", clientTransport.get()));
    clientTransport->addAuthPeer(getPeerKey(host, port, srvTransport.get()));
 
    ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
@@ -849,7 +1045,7 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_StressTest)
    }
 }
 
-TEST(TestNetwork, ZMQ_BIP15X_ClientKey)
+TEST(TestNetwork, BIP15X_ClientKey)
 {
    const auto srvLsn = std::make_shared<TstServerListener>(StaticLogger::loggerPtr);
    const auto clientLsn = std::make_shared<TstClientListener>(StaticLogger::loggerPtr);
@@ -859,8 +1055,10 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientKey)
    auto wsConn = std::make_unique<WsDataConnection>(StaticLogger::loggerPtr, WsDataConnectionParams{});
    const auto clientConn = std::make_unique<Bip15xDataConnection>(StaticLogger::loggerPtr, std::move(wsConn), clientTransport);
 
+   auto clientKey = getPeerKey("client", clientTransport.get());
+   auto serverPeersCb = constructTrustedPeersCallback({clientKey});
    const auto &srvTransport = std::make_shared<bs::network::TransportBIP15xServer>(
-      StaticLogger::loggerPtr, getEmptyPeersCallback());
+      StaticLogger::loggerPtr, serverPeersCb, bs::network::BIP15xAuthMode::TwoWay);
    auto wsServ = std::make_unique<WsServerConnection>(StaticLogger::loggerPtr, WsServerConnectionParams{});
    auto serverConn = std::make_unique<Bip15xServerConnection>(
       StaticLogger::loggerPtr, std::move(wsServ), srvTransport);
@@ -873,7 +1071,6 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientKey)
       port = std::to_string((rand() % 50000) + 10000);
    } while (!serverConn->BindConnection(host, port, srvLsn.get()));
 
-   srvTransport->addAuthPeer(getPeerKey("client", clientTransport.get()));
    clientTransport->addAuthPeer(getPeerKey(host, port, srvTransport.get()));
 
    ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));

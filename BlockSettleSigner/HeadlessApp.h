@@ -26,6 +26,7 @@ namespace bs {
       class WalletsManager;
    }
    namespace network {
+      struct BIP15xServerParams;
       class TransportBIP15xServer;
    }
 }
@@ -43,6 +44,7 @@ class HeadlessContainerListener;
 class HeadlessSettings;
 class ServerConnection;
 class SignerAdapterListener;
+class AuthorizedPeers;
 
 class HeadlessAppObj
 {
@@ -78,6 +80,8 @@ public:
    SecureBinaryData controlPassword() const;
    void setControlPassword(const SecureBinaryData &controlPassword);
    bs::error::ErrorCode changeControlPassword(const SecureBinaryData &controlPasswordOld, const SecureBinaryData &controlPasswordNew);
+
+   bs::network::BIP15xServerParams getGuiServerParams(void) const;
 
 private:
    void startTerminalsProcessing();
