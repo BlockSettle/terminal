@@ -646,16 +646,16 @@ CustomTitleDialogWindow {
                         return;
                     }
 
-                    if (!(primaryWalletExists || chkImportLegacy.checked)) {
-                        cbPrimary.checked = true
-                        tfName.text = qsTr("Primary Wallet");
-                    }
-                    else {
-                        cbPrimary.checked = false
-                        tfName.text = walletsProxy.generateNextWalletName();
-                    }
-
                     if (curPage === 1) {
+                        if (!(primaryWalletExists || chkImportLegacy.checked)) {
+                            cbPrimary.checked = true
+                            cbPrimary.enabled = false
+                            tfName.text = qsTr("Primary Wallet");
+                        } else {
+                            cbPrimary.checked = false
+                            tfName.text = walletsProxy.generateNextWalletName();
+                        }
+
                         curPage = 2
                         tfName.forceActiveFocus()
                         tfName.selectAll()

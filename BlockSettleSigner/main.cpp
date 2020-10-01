@@ -143,7 +143,13 @@ namespace bs {
          void start()
          {
             queue_->dispatch([this] {
-               appObj_.start();
+               try {
+                  appObj_.start();
+               } catch (...) {
+                  QMetaObject::invokeMethod(qApp, [] {
+                     QApplication::quit();
+                  });
+               }
             });
          }
 
