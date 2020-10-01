@@ -129,7 +129,9 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
          armoryServersProvider_->setupServer(armoryServersProvider_->getIndexOfMainNetServer(), false);
          break;
       case ApplicationSettings::EnvConfiguration::Test:
+#ifndef PRODUCTION_BUILD
       case ApplicationSettings::EnvConfiguration::Staging:
+#endif
          armoryServersProvider_->setupServer(armoryServersProvider_->getIndexOfTestNetServer(), false);
          break;
       }
