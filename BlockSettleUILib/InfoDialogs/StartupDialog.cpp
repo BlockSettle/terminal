@@ -88,6 +88,9 @@ void StartupDialog::applySelectedConnectivity()
       ApplicationSettings::EnvConfiguration::Test : ApplicationSettings::EnvConfiguration::Production;
    appSettings_->set(ApplicationSettings::envConfiguration, static_cast<int>(envConfig));
    appSettings_->set(ApplicationSettings::initialized, true);
+   appSettings_->set(ApplicationSettings::netType, static_cast<int>(network));
+
+   appSettings_->selectNetwork();
 }
 
 void StartupDialog::onBack()

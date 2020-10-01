@@ -755,7 +755,6 @@ bool BSTerminalMainWindow::showStartupDialog()
 
    // Need update armory settings if case user selects TestNet
    startupDialog.applySelectedConnectivity();
-   applicationSettings_->selectNetwork();
 
    return true;
 }
