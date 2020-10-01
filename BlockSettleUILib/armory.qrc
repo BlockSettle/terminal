@@ -220,5 +220,6 @@
         <file>resources/api-selected@1.5.png</file>
         <file>resources/bootstrap_files/bootstrap-staging.data</file>
         <file>resources/bootstrap_files/bootstrap-uat.data</file>
+        <file>resources/bootstrap_files/bootstrap-prod.data</file>
     </qresource>
 </RCC>
