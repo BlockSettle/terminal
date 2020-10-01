@@ -108,18 +108,31 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    logMgr_->add(applicationSettings_->GetLogsConfig());
    logMgr_->logger()->debug("Settings loaded from {}", applicationSettings_->GetSettingsPath().toStdString());
 
-   initBootstrapDataManager();
-
-   nextArmoryReconnectAttempt_ = std::chrono::steady_clock::now();
-   signersProvider_= std::make_shared<SignersProvider>(applicationSettings_);
-   armoryServersProvider_ = std::make_shared<ArmoryServersProvider>(applicationSettings_, bootstrapDataManager_);
-
    bool licenseAccepted = showStartupDialog();
    if (!licenseAccepted) {
       QMetaObject::invokeMethod(this, []() {
          qApp->exit(EXIT_FAILURE);
       }, Qt::QueuedConnection);
       return;
+   }
+
+   initBootstrapDataManager();
+
+   nextArmoryReconnectAttempt_ = std::chrono::steady_clock::now();
+   signersProvider_= std::make_shared<SignersProvider>(applicationSettings_);
+   armoryServersProvider_ = std::make_shared<ArmoryServersProvider>(applicationSettings_, bootstrapDataManager_);
+
+   if (applicationSettings_->get<QString>(ApplicationSettings::armoryDbName).isEmpty()) {
+      const auto env = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
+      switch(env) {
+      case ApplicationSettings::EnvConfiguration::Production:
+         armoryServersProvider_->setupServer(armoryServersProvider_->getIndexOfMainNetServer(), false);
+         break;
+      case ApplicationSettings::EnvConfiguration::Test:
+      case ApplicationSettings::EnvConfiguration::Staging:
+         armoryServersProvider_->setupServer(armoryServersProvider_->getIndexOfTestNetServer(), false);
+         break;
+      }
    }
 
    splashScreen.show();
@@ -736,8 +749,7 @@ bool BSTerminalMainWindow::showStartupDialog()
    }
 
    // Need update armory settings if case user selects TestNet
-   startupDialog.applySelectedConnectivity(armoryServersProvider_);
-   applicationSettings_->selectNetwork();
+   startupDialog.applySelectedConnectivity();
 
    return true;
 }
