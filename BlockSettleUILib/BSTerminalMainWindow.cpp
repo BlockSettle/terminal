@@ -139,11 +139,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    connect(ui_->actionQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
 
-   logMgr_ = std::make_shared<bs::LogManager>();
-   logMgr_->add(applicationSettings_->GetLogsConfig());
-
-   logMgr_->logger()->debug("Settings loaded from {}", applicationSettings_->GetSettingsPath().toStdString());
-
    bs::UtxoReservation::init(logMgr_->logger());
 
    setupIcon();
