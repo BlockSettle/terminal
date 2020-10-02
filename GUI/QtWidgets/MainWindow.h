@@ -17,6 +17,7 @@
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "SignContainer.h"
+#include "Settings/SignersProvider.h"
 #include "UiUtils.h"
 
 namespace spdlog {
@@ -34,6 +35,7 @@ namespace bs {
 
 class AboutDialog;
 class AuthAddressDialog;
+class ConfigDialog;
 class CreateTransactionDialog;
 class NotificationCenter;
 class QSystemTrayIcon;
@@ -54,6 +56,7 @@ namespace bs {
             ~MainWindow() override;
 
             void onSetting(int setting, const QVariant &value);
+            void onSettingsState(const ApplicationSettings::State&);
             void onGetGeometry(const QRect &);
             void showStartupDialog(bool showLic);
 
@@ -80,6 +83,8 @@ namespace bs {
             void onFeeLevels(const std::map<unsigned int, float>&);
             void onUTXOs(const std::string& id, const std::string& walletId, const std::vector<UTXO>&);
             void onSignedTX(const std::string &id, BinaryData signedTX, bs::error::ErrorCode result);
+            void onArmoryServers(const QList<ArmoryServer>&, int idxCur, int idxConn);
+            void onSignerSettings(const QList<SignerHost>&, const std::string& ownKey, int idxCur);
 
          public slots:
             void onReactivate();
@@ -94,7 +99,18 @@ namespace bs {
             };*/
 
          signals:
-            void putSetting(int, const QVariant &);
+            void putSetting(ApplicationSettings::Setting, const QVariant &);
+            void resetSettings(const std::vector<ApplicationSettings::Setting> &);
+            void resetSettingsToState(const ApplicationSettings::State&);
+            void needSettingsState();
+            void needArmoryServers();
+            void setArmoryServer(int);
+            void addArmoryServer(const ArmoryServer&);
+            void delArmoryServer(int);
+            void updArmoryServer(int, const ArmoryServer&);
+            void needArmoryReconnect();
+            void needSigners();
+            void setSigner(int);
             void createNewWallet();
             void needHDWalletDetails(const std::string &walletId);
             void needWalletsList(UiUtils::WalletsTypes, const std::string &id);
@@ -202,6 +218,7 @@ namespace bs {
 
             std::shared_ptr<TransactionsViewModel>    txModel_;
             CreateTransactionDialog* txDlg_{ nullptr };
+            ConfigDialog*  cfgDlg_{ nullptr };
 
             //   std::shared_ptr<WalletManagementWizard> walletsWizard_;
 
@@ -209,6 +226,7 @@ namespace bs {
             QString  loginButtonText_;
             QTimer * loginTimer_{};
 
+            bool closeToTray_{ false };
             bool initialWalletCreateDialogShown_ = false;
             bool deferCCsync_ = false;
             bool advTxDlgByDefault_{ false };

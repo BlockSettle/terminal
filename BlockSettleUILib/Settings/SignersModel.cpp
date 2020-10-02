@@ -21,6 +21,10 @@ SignersModel::SignersModel(const std::shared_ptr<SignersProvider>& signersProvid
    connect(signersProvider.get(), &SignersProvider::dataChanged, this, &SignersModel::update);
 }
 
+SignersModel::SignersModel(QObject* parent)
+   : QAbstractTableModel(parent)
+{}
+
 int SignersModel::columnCount(const QModelIndex&) const
 {
    return static_cast<int>(SignersModel::ColumnsCount);
@@ -39,7 +43,8 @@ QVariant SignersModel::data(const QModelIndex &index, int role) const
 
    SignerHost signerHost = signers_.at(index.row());
 
-   int currentServerIndex = signersProvider_->indexOfCurrent();
+   const int currentServerIndex = signersProvider_ ? signersProvider_->indexOfCurrent()
+      : currentServerIndex_;
 
    if (role == Qt::FontRole && index.row() == currentServerIndex) {
 //       QFont font;
@@ -98,6 +103,15 @@ void SignersModel::update()
 void SignersModel::setSingleColumnMode(bool singleColumnMode)
 {
    singleColumnMode_ = singleColumnMode;
+}
+
+void SignersModel::onSignerSettings(const QList<SignerHost>& signers
+   , int idxCur)
+{
+   currentServerIndex_ = idxCur;
+   beginResetModel();
+   signers_ = signers;
+   endResetModel();
 }
 
 void SignersModel::setHighLightSelectedServer(bool highLightSelectedServer)

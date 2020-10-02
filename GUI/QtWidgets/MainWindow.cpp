@@ -118,14 +118,12 @@ void MainWindow::onGetGeometry(const QRect &mainGeom)
       geom.setHeight(std::min(geom.height(), screenHeight));
       geom.moveCenter(screenGeom.center());
    }
+   /*
    const auto screen = qApp->screens()[screenNo];
    const float pixelRatio = screen->devicePixelRatio();
    if (pixelRatio > 1.0) {
-      const float coeff = (float)0.9999;   // some coefficient that prevents oversizing of main window on HiRes display on Windows
-      geom.setWidth(geom.width() * coeff);
-      geom.setHeight(geom.height() * coeff);
-   }
-   setGeometry(geom);
+      //FIXME: re-check on hi-res screen
+   }*/
 #else
    if (QApplication::desktop()->screenNumber(this) == -1) {
       auto currentScreenRect = QApplication::desktop()->screenGeometry(QCursor::pos());
@@ -133,9 +131,11 @@ void MainWindow::onGetGeometry(const QRect &mainGeom)
       geom.setWidth(std::min(geom.width(), static_cast<int>(currentScreenRect.width() * 0.9)));
       geom.setHeight(std::min(geom.height(), static_cast<int>(currentScreenRect.height() * 0.9)));
       geom.moveCenter(currentScreenRect.center());
-      setGeometry(geom);
    }
 #endif   // not Windows
+   QTimer::singleShot(10, [this, geom] {
+      setGeometry(geom);
+   });
 }
 
 void MainWindow::onSetting(int setting, const QVariant &value)
@@ -149,7 +149,23 @@ void MainWindow::onSetting(int setting, const QVariant &value)
       break;
    case ApplicationSettings::AdvancedTxDialogByDefault:
       advTxDlgByDefault_ = value.toBool();
+      break;
+   case ApplicationSettings::closeToTray:
+      closeToTray_ = value.toBool();
+      updateAppearance();
+      break;
    default: break;
+   }
+
+   if (cfgDlg_) {
+      cfgDlg_->onSetting(setting, value);
+   }
+}
+
+void bs::gui::qt::MainWindow::onSettingsState(const ApplicationSettings::State& state)
+{
+   if (cfgDlg_) {
+      cfgDlg_->onSettingsState(state);
    }
 }
 
@@ -325,6 +341,21 @@ void bs::gui::qt::MainWindow::onSignedTX(const std::string& id, BinaryData signe
    }
 }
 
+void bs::gui::qt::MainWindow::onArmoryServers(const QList<ArmoryServer>& servers, int idxCur, int idxConn)
+{
+   if (cfgDlg_) {
+      cfgDlg_->onArmoryServers(servers, idxCur, idxConn);
+   }
+}
+
+void bs::gui::qt::MainWindow::onSignerSettings(const QList<SignerHost>& signers
+   , const std::string& ownKey, int idxCur)
+{
+   if (cfgDlg_) {
+      cfgDlg_->onSignerSettings(signers, ownKey, idxCur);
+   }
+}
+
 void MainWindow::showStartupDialog(bool showLicense)
 {
    StartupDialog startupDialog(showLicense, this);
@@ -493,7 +524,7 @@ void MainWindow::setupInfoWidget()
    });
    connect(ui_->closeBtn, &QPushButton::clicked, this, [this]() {
       ui_->infoWidget->setVisible(false);
-      emit putSetting(static_cast<int>(ApplicationSettings::ShowInfoWidget), false);
+      emit putSetting(ApplicationSettings::ShowInfoWidget, false);
    });
 }
 
@@ -580,12 +611,12 @@ void MainWindow::raiseWindow()
 
 void MainWindow::updateAppearance()
 {
-/*   if (!applicationSettings_->get<bool>(ApplicationSettings::closeToTray) && isHidden()) {
+   if (!closeToTray_ && isHidden()) {
       setWindowState(windowState() & ~Qt::WindowMinimized);
       show();
       raise();
       activateWindow();
-   }*/
+   }
 
    setWindowTitle(tr("BlockSettle Terminal"));
 
@@ -747,15 +778,30 @@ void MainWindow::setupMenu()
 
 void MainWindow::openConfigDialog(bool showInNetworkPage)
 {
-/*   ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, signersProvider_, signContainer_, this);
-   connect(&configDialog, &ConfigDialog::reconnectArmory, this, &BSTerminalMainWindow::onArmoryNeedsReconnect);
+   cfgDlg_ = new ConfigDialog(this);
+   connect(cfgDlg_, &QDialog::finished, [this](int) {
+      cfgDlg_->deleteLater();
+      cfgDlg_ = nullptr;
+   });
+   connect(cfgDlg_, &ConfigDialog::reconnectArmory, this, &MainWindow::needArmoryReconnect);
+   connect(cfgDlg_, &ConfigDialog::putSetting, this, &MainWindow::putSetting);
+   connect(cfgDlg_, &ConfigDialog::resetSettings, this, &MainWindow::resetSettings);
+   connect(cfgDlg_, &ConfigDialog::resetSettingsToState, this, &MainWindow::resetSettingsToState);
+   connect(cfgDlg_, &ConfigDialog::resetSettingsToState, this, &MainWindow::resetSettingsToState);
+   connect(cfgDlg_, &ConfigDialog::setArmoryServer, this, &MainWindow::setArmoryServer);
+   connect(cfgDlg_, &ConfigDialog::addArmoryServer, this, &MainWindow::addArmoryServer);
+   connect(cfgDlg_, &ConfigDialog::delArmoryServer, this, &MainWindow::delArmoryServer);
+   connect(cfgDlg_, &ConfigDialog::updArmoryServer, this, &MainWindow::updArmoryServer);
+   connect(cfgDlg_, &ConfigDialog::setSigner, this, &MainWindow::setSigner);
+
+   emit needSettingsState();
+   emit needArmoryServers();
+   emit needSigners();
 
    if (showInNetworkPage) {
-      configDialog.popupNetworkSettings();
+      cfgDlg_->popupNetworkSettings();
    }
-   configDialog.exec();*/
-
-   updateAppearance();
+   cfgDlg_->exec();
 }
 
 void MainWindow::onLoggedIn()
@@ -939,8 +985,8 @@ void MainWindow::showRunInBackgroundMessage()
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
-   emit putSetting(static_cast<int>(ApplicationSettings::GUI_main_geometry), geometry());
-   emit putSetting(static_cast<int>(ApplicationSettings::GUI_main_tab), ui_->tabWidget->currentIndex());
+   emit putSetting(ApplicationSettings::GUI_main_geometry, geometry());
+   emit putSetting(ApplicationSettings::GUI_main_tab, ui_->tabWidget->currentIndex());
 
 /*   if (applicationSettings_->get<bool>(ApplicationSettings::closeToTray)) {
       hide();

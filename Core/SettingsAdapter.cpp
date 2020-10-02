@@ -9,10 +9,12 @@
 
 */
 #include "SettingsAdapter.h"
+#include <QFile>
 #include <QRect>
 #include <spdlog/spdlog.h>
 #include "ApplicationSettings.h"
 #include "ArmoryServersProvider.h"
+#include "BootstrapDataManager.h"
 #include "Settings/SignersProvider.h"
 #include "LogManager.h"
 #include "PubKeyLoader.h"
@@ -44,7 +46,25 @@ SettingsAdapter::SettingsAdapter(const std::shared_ptr<ApplicationSettings> &set
    appSettings_->selectNetwork();
    logger_->debug("Settings loaded from {}", appSettings_->GetSettingsPath().toStdString());
 
-   armoryServersProvider_ = std::make_shared<ArmoryServersProvider>(settings);
+   bootstrapDataManager_ = std::make_shared<BootstrapDataManager>(logMgr_->logger(), appSettings_);
+   if (bootstrapDataManager_->hasLocalFile()) {
+      bootstrapDataManager_->loadFromLocalFile();
+   } else {
+      // load from resources
+      const QString filePathInResources = appSettings_->bootstrapResourceFileName();
+
+      QFile file;
+      file.setFileName(filePathInResources);
+      if (file.open(QIODevice::ReadOnly)) {
+         const std::string bootstrapData = file.readAll().toStdString();
+         bootstrapDataManager_->setReceivedData(bootstrapData);
+      } else {
+         logger_->error("[SettingsAdapter] failed to locate bootstrap file in resources: {}"
+            , filePathInResources.toStdString());
+      }
+   }
+
+   armoryServersProvider_ = std::make_shared<ArmoryServersProvider>(settings, bootstrapDataManager_);
    signersProvider_ = std::make_shared<SignersProvider>(appSettings_);
 }
 
@@ -63,12 +83,36 @@ bool SettingsAdapter::process(const bs::message::Envelope &env)
          return processPutRequest(msg.put_request());
       case SettingsMessage::kArmoryServer:
          return processArmoryServer(msg.armory_server());
+      case SettingsMessage::kSetArmoryServer:
+         return processSetArmoryServer(env, msg.set_armory_server());
+      case SettingsMessage::kArmoryServersGet:
+         return processGetArmoryServers(env);
+      case SettingsMessage::kAddArmoryServer:
+         return processAddArmoryServer(env, msg.add_armory_server());
+      case SettingsMessage::kDelArmoryServer:
+         return processDelArmoryServer(env, msg.del_armory_server());
+      case SettingsMessage::kUpdArmoryServer:
+         return processUpdArmoryServer(env, msg.upd_armory_server());
       case SettingsMessage::kSignerRequest:
          return processSignerSettings(env);
       case SettingsMessage::kSignerSetKey:
          return processSignerSetKey(msg.signer_set_key());
       case SettingsMessage::kSignerReset:
          return processSignerReset();
+      case SettingsMessage::kSignerServersGet:
+         return processGetSigners(env);
+      case SettingsMessage::kSetSignerServer:
+         return processSetSigner(env, msg.set_signer_server());
+      case SettingsMessage::kAddSignerServer:
+         return processAddSigner(env, msg.add_signer_server());
+      case SettingsMessage::kDelSignerServer:
+         return processDelSigner(env, msg.del_signer_server());
+      case SettingsMessage::kStateGet:
+         return processGetState(env);
+      case SettingsMessage::kReset:
+         return processReset(env, msg.reset());
+      case SettingsMessage::kResetToState:
+         return processResetToState(env, msg.reset_to_state());
       default:
          logger_->warn("[SettingsAdapter::process] unknown data case: {}"
             , msg.data_case());
@@ -113,6 +157,54 @@ bool SettingsAdapter::processRemoteSettings(uint64_t msgId)
       return true;
    }
    return true;
+}
+
+bool SettingsAdapter::processGetState(const bs::message::Envelope& env)
+{
+   SettingsMessage msg;
+   auto msgResp = msg.mutable_state();
+   for (const auto& st : appSettings_->getState()) {
+      auto setResp = msgResp->add_responses();
+      auto setReq = setResp->mutable_request();
+      setReq->set_source(SettingSource_Local);
+      setReq->set_index(static_cast<SettingIndex>(st.first));
+      setFromQVariant(st.second, setReq, setResp);
+   }
+   Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
+   return pushFill(envResp);
+}
+
+bool SettingsAdapter::processReset(const bs::message::Envelope& env
+   , const SettingsMessage_SettingsRequest& request)
+{
+   SettingsMessage msg;
+   auto msgResp = msg.mutable_state();
+   for (const auto& req : request.requests()) {
+      auto setResp = msgResp->add_responses();
+      auto setReq = setResp->mutable_request();
+      setReq->set_source(req.source());
+      setReq->set_index(req.index());
+      const auto& setting = static_cast<ApplicationSettings::Setting>(req.index());
+      appSettings_->reset(setting);
+      const auto& value = appSettings_->get(setting);
+      setFromQVariant(value, setReq, setResp);
+   }
+   Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
+   return pushFill(envResp);
+}
+
+bool SettingsAdapter::processResetToState(const bs::message::Envelope& env
+   , const SettingsMessage_SettingsResponse& request)
+{
+   for (const auto& req : request.responses()) {
+      const auto& value = fromResponse(req);
+      const auto& setting = static_cast<ApplicationSettings::Setting>(req.request().index());
+      appSettings_->set(setting, value);
+   }
+   SettingsMessage msg;
+   *msg.mutable_state() = request;
+   Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
+   return pushFill(envResp);
 }
 
 bool SettingsAdapter::processGetRequest(const bs::message::Envelope &env
@@ -261,7 +353,7 @@ bool SettingsAdapter::processPutRequest(const SettingsMessage_SettingsResponse &
    return true;
 }
 
-bool SettingsAdapter::processArmoryServer(const BlockSettle::Terminal::SettingsMessage_ArmoryServerSet &request)
+bool SettingsAdapter::processArmoryServer(const BlockSettle::Terminal::SettingsMessage_ArmoryServer &request)
 {
    int selIndex = 0;
    for (const auto &server : armoryServersProvider_->servers()) {
@@ -277,6 +369,81 @@ bool SettingsAdapter::processArmoryServer(const BlockSettle::Terminal::SettingsM
    }
    armoryServersProvider_->setupServer(selIndex);
    appSettings_->selectNetwork();
+}
+
+bool SettingsAdapter::processSetArmoryServer(const bs::message::Envelope& env, int index)
+{
+   armoryServersProvider_->setupServer(index);
+   appSettings_->selectNetwork();
+   return processGetArmoryServers(env);
+}
+
+bool SettingsAdapter::processGetArmoryServers(const bs::message::Envelope& env)
+{
+   SettingsMessage msg;
+   auto msgResp = msg.mutable_armory_servers();
+   msgResp->set_idx_current(armoryServersProvider_->indexOfCurrent());
+   msgResp->set_idx_connected(armoryServersProvider_->indexOfConnected());
+   for (const auto& server : armoryServersProvider_->servers()) {
+      auto msgSrv = msgResp->add_servers();
+      msgSrv->set_network_type((int)server.netType);
+      msgSrv->set_server_name(server.name.toStdString());
+      msgSrv->set_server_address(server.armoryDBIp.toStdString());
+      msgSrv->set_server_port(std::to_string(server.armoryDBPort));
+      msgSrv->set_server_key(server.armoryDBKey.toStdString());
+      msgSrv->set_run_locally(server.runLocally);
+      msgSrv->set_one_way_auth(server.oneWayAuth_);
+      msgSrv->set_password(server.password.toBinStr());
+   }
+   bs::message::Envelope envResp{ env.id, user_, env.sender, {}, {}
+      , msg.SerializeAsString() };
+   return pushFill(envResp);
+}
+
+static ArmoryServer fromMessage(const SettingsMessage_ArmoryServer& msg)
+{
+   ArmoryServer result;
+   result.name = QString::fromStdString(msg.server_name());
+   result.netType = static_cast<NetworkType>(msg.network_type());
+   result.armoryDBIp = QString::fromStdString(msg.server_address());
+   result.armoryDBPort = std::stoi(msg.server_port());
+   result.armoryDBKey = QString::fromStdString(msg.server_key());
+   result.password = SecureBinaryData::fromString(msg.password());
+   result.runLocally = msg.run_locally();
+   result.oneWayAuth_ = msg.one_way_auth();
+   return result;
+}
+
+bool SettingsAdapter::processAddArmoryServer(const bs::message::Envelope& env
+   , const SettingsMessage_ArmoryServer& request)
+{
+   const auto& server = fromMessage(request);
+   if (armoryServersProvider_->add(server)) {
+      armoryServersProvider_->setupServer(armoryServersProvider_->indexOf(server));
+   }
+   else {
+      logger_->warn("[{}] failed to add server", __func__);
+   }
+   return processGetArmoryServers(env);
+}
+
+bool SettingsAdapter::processDelArmoryServer(const bs::message::Envelope& env
+   , int index)
+{
+   if (!armoryServersProvider_->remove(index)) {
+      logger_->warn("[{}] failed to remove server #{}", __func__, index);
+   }
+   return processGetArmoryServers(env);
+}
+
+bool SettingsAdapter::processUpdArmoryServer(const bs::message::Envelope& env
+   , const SettingsMessage_ArmoryServerUpdate& request)
+{
+   const auto& server = fromMessage(request.server());
+   if (!armoryServersProvider_->replace(request.index(), server)) {
+      logger_->warn("[{}] failed to update server #{}", __func__, request.index());
+   }
+   return processGetArmoryServers(env);
 }
 
 bool SettingsAdapter::processSignerSettings(const bs::message::Envelope &env)
@@ -300,7 +467,6 @@ bool SettingsAdapter::processSignerSettings(const bs::message::Envelope &env)
       keyVal->set_key(signer.serverId());
       keyVal->set_value(signer.key.toStdString());
    }
-   msgResp->set_local_port(appSettings_->get<std::string>(ApplicationSettings::localSignerPort));
    msgResp->set_home_dir(appSettings_->GetHomeDir().toStdString());
    msgResp->set_auto_sign_spend_limit(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
 
@@ -319,4 +485,159 @@ bool SettingsAdapter::processSignerReset()
 {
    signersProvider_->setupSigner(0, true);
    return true;
+}
+
+bool SettingsAdapter::processGetSigners(const bs::message::Envelope& env)
+{
+   SettingsMessage msg;
+   auto msgResp = msg.mutable_signer_servers();
+   msgResp->set_own_key(signersProvider_->remoteSignerOwnKey().toHexStr());
+   msgResp->set_idx_current(signersProvider_->indexOfCurrent());
+   for (const auto& signer : signersProvider_->signers()) {
+      auto msgSrv = msgResp->add_servers();
+      msgSrv->set_name(signer.name.toStdString());
+      msgSrv->set_host(signer.address.toStdString());
+      msgSrv->set_port(std::to_string(signer.port));
+      msgSrv->set_key(signer.key.toStdString());
+   }
+   bs::message::Envelope envResp{ env.id, user_, env.sender, {}, {}
+      , msg.SerializeAsString() };
+   return pushFill(envResp);
+}
+
+bool SettingsAdapter::processSetSigner(const bs::message::Envelope& env
+   , int index)
+{
+   signersProvider_->setupSigner(index);
+   return processGetSigners(env);
+}
+
+static SignerHost fromMessage(const SettingsMessage_SignerServer& msg)
+{
+   SignerHost result;
+   result.name = QString::fromStdString(msg.name());
+   result.address = QString::fromStdString(msg.host());
+   result.port = std::stoi(msg.port());
+   result.key = QString::fromStdString(msg.key());
+   return result;
+}
+
+bool SettingsAdapter::processAddSigner(const bs::message::Envelope& env
+   , const SettingsMessage_SignerServer& request)
+{
+   const auto& signer = fromMessage(request);
+   signersProvider_->add(signer);
+   signersProvider_->setupSigner(signersProvider_->indexOf(signer));
+   return processGetSigners(env);
+}
+
+bool SettingsAdapter::processDelSigner(const bs::message::Envelope& env
+   , int index)
+{
+   signersProvider_->remove(index);
+   return processGetSigners(env);
+}
+
+
+void bs::message::setFromQVariant(const QVariant& val, SettingRequest* req, SettingResponse* resp)
+{
+   switch (val.type()) {
+   case QVariant::Type::String:
+      req->set_type(SettingType_String);
+      resp->set_s(val.toString().toStdString());
+      break;
+   case QVariant::Type::Int:
+      req->set_type(SettingType_Int);
+      resp->set_i(val.toInt());
+      break;
+   case QVariant::Type::UInt:
+      req->set_type(SettingType_UInt);
+      resp->set_ui(val.toUInt());
+      break;
+   case QVariant::Type::ULongLong:
+   case QVariant::Type::LongLong:
+      req->set_type(SettingType_UInt64);
+      resp->set_ui64(val.toULongLong());
+      break;
+   case QVariant::Type::Double:
+      req->set_type(SettingType_Float);
+      resp->set_f(val.toDouble());
+      break;
+   case QVariant::Type::Bool:
+      req->set_type(SettingType_Bool);
+      resp->set_b(val.toBool());
+      break;
+   case QVariant::Type::Rect:
+      req->set_type(SettingType_Rect);
+      {
+         auto setRect = resp->mutable_rect();
+         setRect->set_left(val.toRect().left());
+         setRect->set_top(val.toRect().top());
+         setRect->set_height(val.toRect().height());
+         setRect->set_width(val.toRect().width());
+      }
+      break;
+   case QVariant::Type::StringList:
+      req->set_type(SettingType_Strings);
+      for (const auto& s : val.toStringList()) {
+         resp->mutable_strings()->add_strings(s.toStdString());
+      }
+      break;
+   case QVariant::Type::Map:
+      req->set_type(SettingType_StrMap);
+      for (const auto& key : val.toMap().keys()) {
+         auto kvData = resp->mutable_key_vals()->add_key_vals();
+         kvData->set_key(key.toStdString());
+         kvData->set_value(val.toMap()[key].toString().toStdString());
+      }
+      break;
+   default: break;   // ignore other types
+   }
+}
+
+QVariant bs::message::fromResponse(const BlockSettle::Terminal::SettingResponse& setting)
+{
+   QVariant value;
+   switch (setting.request().type()) {
+   case SettingType_String:
+      value = QString::fromStdString(setting.s());
+      break;
+   case SettingType_Int:
+      value = setting.i();
+      break;
+   case SettingType_UInt:
+      value = setting.ui();
+      break;
+   case SettingType_UInt64:
+      value = setting.ui64();
+      break;
+   case SettingType_Bool:
+      value = setting.b();
+      break;
+   case SettingType_Float:
+      value = setting.f();
+      break;
+   case SettingType_Rect:
+      value = QRect(setting.rect().left(), setting.rect().top()
+         , setting.rect().width(), setting.rect().height());
+      break;
+   case SettingType_Strings: {
+      QStringList sl;
+      for (const auto& s : setting.strings().strings()) {
+         sl << QString::fromStdString(s);
+      }
+      value = sl;
+   }
+      break;
+   case SettingType_StrMap: {
+      QVariantMap vm;
+      for (const auto& keyVal : setting.key_vals().key_vals()) {
+         vm[QString::fromStdString(keyVal.key())] = QString::fromStdString(keyVal.value());
+      }
+      value = vm;
+   }
+      break;
+   default: break;
+   }
+   return value;
 }

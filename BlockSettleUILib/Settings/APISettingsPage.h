@@ -20,6 +20,7 @@ namespace Ui {
 }
 class AutoRFQ;
 
+//TODO: rework to allow incoming API connections
 class APISettingsPage : public SettingsPage
 {
 public:
@@ -29,6 +30,9 @@ public:
    void display() override;
    void reset() override;
    void apply() override;
+
+private slots:
+   void onApiKeyImport();
 
 private:
    void updateApiKeyStatus();

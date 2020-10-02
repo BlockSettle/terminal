@@ -28,6 +28,7 @@
 #include "BSTerminalSplashScreen.h"
 #include "MainWindow.h"
 #include "ProtobufHeadlessUtils.h"
+#include "SettingsAdapter.h"
 
 #include "common.pb.h"
 #include "terminal.pb.h"
@@ -253,6 +254,14 @@ bool QtGuiAdapter::processSettings(const Envelope &env)
    switch (msg.data_case()) {
    case SettingsMessage::kGetResponse:
       return processSettingsGetResponse(msg.get_response());
+   case SettingsMessage::kSettingsUpdated:
+      return processSettingsGetResponse(msg.settings_updated());
+   case SettingsMessage::kState:
+      return processSettingsState(msg.state());
+   case SettingsMessage::kArmoryServers:
+      return processArmoryServers(msg.armory_servers());
+   case SettingsMessage::kSignerServers:
+      return processSignerServers(msg.signer_servers());
    default: break;
    }
    return true;
@@ -260,6 +269,7 @@ bool QtGuiAdapter::processSettings(const Envelope &env)
 
 bool QtGuiAdapter::processSettingsGetResponse(const SettingsMessage_SettingsResponse &response)
 {
+   std::map<int, QVariant> settings;
    for (const auto &setting : response.responses()) {
       switch (setting.request().index()) {
       case SetIdx_GUI_MainGeom: {
@@ -273,7 +283,7 @@ bool QtGuiAdapter::processSettingsGetResponse(const SettingsMessage_SettingsResp
                ss->setGeometry(splashGeometry);
             });
          }
-         QMetaObject::invokeMethod(splashScreen_, [mw=mainWindow_, mainGeometry] {
+         QMetaObject::invokeMethod(mainWindow_, [mw=mainWindow_, mainGeometry] {
             mw->onGetGeometry(mainGeometry);
          });
       }
@@ -291,61 +301,66 @@ bool QtGuiAdapter::processSettingsGetResponse(const SettingsMessage_SettingsResp
             QMetaObject::invokeMethod(mainWindow_, [mw = mainWindow_, showLicense] {
                mw->showStartupDialog(showLicense);
             });
+            onResetSettings({});
          }
          break;
 
-      default: {
-         int idx = setting.request().index();
-         QVariant value;
-         switch (setting.request().type()) {
-         case SettingType_String:
-            value = QString::fromStdString(setting.s());
-            break;
-         case SettingType_Int:
-            value = setting.i();
-            break;
-         case SettingType_UInt:
-            value = setting.ui();
-            break;
-         case SettingType_UInt64:
-            value = setting.ui64();
-            break;
-         case SettingType_Bool:
-            value = setting.b();
-            break;
-         case SettingType_Float:
-            value = setting.f();
-            break;
-         case SettingType_Rect:
-            value = QRect(setting.rect().left(), setting.rect().top()
-               , setting.rect().width(), setting.rect().height());
-            break;
-         case SettingType_Strings: {
-            QStringList sl;
-            for (const auto &s : setting.strings().strings()) {
-               sl << QString::fromStdString(s);
-            }
-            value = sl;
-         }
-            break;
-         case SettingType_StrMap: {
-            QVariantMap vm;
-            for (const auto &keyVal : setting.key_vals().key_vals()) {
-               vm[QString::fromStdString(keyVal.key())] = QString::fromStdString(keyVal.value());
-            }
-            value = vm;
-         }
-            break;
-         default: break;
-         }
-         QMetaObject::invokeMethod(mainWindow_, [mw = mainWindow_, idx, value] {
-            mw->onSetting(idx, value);
-         });
-      }
+      default:
+         settings[setting.request().index()] = fromResponse(setting);
          break;
       }
    }
+   if (!settings.empty()) {
+      return QMetaObject::invokeMethod(mainWindow_, [mw = mainWindow_, settings] {
+         for (const auto& setting : settings) {
+            mw->onSetting(setting.first, setting.second);
+         }
+      });
+   }
    return true;
+}
+
+bool QtGuiAdapter::processSettingsState(const SettingsMessage_SettingsResponse& response)
+{
+   ApplicationSettings::State state;
+   for (const auto& setting : response.responses()) {
+      state[static_cast<ApplicationSettings::Setting>(setting.request().index())] =
+         fromResponse(setting);
+   }
+   return QMetaObject::invokeMethod(mainWindow_, [mw = mainWindow_, state] {
+      mw->onSettingsState(state);
+   });
+}
+
+bool QtGuiAdapter::processArmoryServers(const SettingsMessage_ArmoryServers& response)
+{
+   QList<ArmoryServer> servers;
+   for (const auto& server : response.servers()) {
+      servers << ArmoryServer{ QString::fromStdString(server.server_name())
+         , static_cast<NetworkType>(server.network_type())
+         , QString::fromStdString(server.server_address())
+         , std::stoi(server.server_port()), QString::fromStdString(server.server_key())
+         , SecureBinaryData::fromString(server.password())
+         , server.run_locally(), server.one_way_auth() };
+   }
+   logger_->debug("[{}] {} servers, cur: {}, conn: {}", __func__, servers.size()
+      , response.idx_current(), response.idx_connected());
+   return QMetaObject::invokeMethod(mainWindow_, [mw = mainWindow_, servers, response] {
+      mw->onArmoryServers(servers, response.idx_current(), response.idx_connected());
+   });
+}
+
+bool QtGuiAdapter::processSignerServers(const SettingsMessage_SignerServers& response)
+{
+   QList<SignerHost> servers;
+   for (const auto& server : response.servers()) {
+      servers << SignerHost{ QString::fromStdString(server.name())
+         , QString::fromStdString(server.host()), std::stoi(server.port())
+         , QString::fromStdString(server.key()) };
+   }
+   return QMetaObject::invokeMethod(mainWindow_, [mw = mainWindow_, servers, response] {
+      mw->onSignerSettings(servers, response.own_key(), response.idx_current());
+   });
 }
 
 bool QtGuiAdapter::processAdminMessage(const Envelope &env)
@@ -654,6 +669,11 @@ void QtGuiAdapter::requestInitialSettings()
    setReq->set_index(SetIdx_AdvancedTXisDefault);
    setReq->set_type(SettingType_Bool);
 
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_CloseToTray);
+   setReq->set_type(SettingType_Bool);
+
    Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
    pushFill(env);
 }
@@ -661,6 +681,17 @@ void QtGuiAdapter::requestInitialSettings()
 void QtGuiAdapter::makeMainWinConnections()
 {
    connect(mainWindow_, &bs::gui::qt::MainWindow::putSetting, this, &QtGuiAdapter::onPutSetting);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::resetSettings, this, &QtGuiAdapter::onResetSettings);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::resetSettingsToState, this, &QtGuiAdapter::onResetSettingsToState);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needSettingsState, this, &QtGuiAdapter::onNeedSettingsState);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needArmoryServers, this, &QtGuiAdapter::onNeedArmoryServers);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::setArmoryServer, this, &QtGuiAdapter::onSetArmoryServer);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::addArmoryServer, this, &QtGuiAdapter::onAddArmoryServer);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::delArmoryServer, this, &QtGuiAdapter::onDelArmoryServer);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::updArmoryServer, this, &QtGuiAdapter::onUpdArmoryServer);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needArmoryReconnect, this, &QtGuiAdapter::onNeedArmoryReconnect);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needSigners, this, &QtGuiAdapter::onNeedSigners);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::setSigner, this, &QtGuiAdapter::onSetSigner);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needHDWalletDetails, this, &QtGuiAdapter::onNeedHDWalletDetails);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needWalletBalances, this, &QtGuiAdapter::onNeedWalletBalances);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needExtAddresses, this, &QtGuiAdapter::onNeedExtAddresses);
@@ -679,7 +710,7 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::needSetTxComment, this, &QtGuiAdapter::onNeedSetTxComment);
 }
 
-void QtGuiAdapter::onPutSetting(int idx, const QVariant &value)
+void QtGuiAdapter::onPutSetting(ApplicationSettings::Setting idx, const QVariant &value)
 {
    SettingsMessage msg;
    auto msgReq = msg.mutable_put_request();
@@ -687,65 +718,109 @@ void QtGuiAdapter::onPutSetting(int idx, const QVariant &value)
    auto setReq = setResp->mutable_request();
    setReq->set_source(SettingSource_Local);
    setReq->set_index(static_cast<SettingIndex>(idx));
-   switch (value.type()) {
-   case QVariant::Type::String:
-      setReq->set_type(SettingType_String);
-      setResp->set_s(value.toString().toStdString());
-      break;
-   case QVariant::Type::Int:
-      setReq->set_type(SettingType_Int);
-      setResp->set_i(value.toInt());
-      break;
-   case QVariant::Type::UInt:
-      setReq->set_type(SettingType_UInt);
-      setResp->set_ui(value.toUInt());
-      break;
-   case QVariant::Type::ULongLong:
-   case QVariant::Type::LongLong:
-      setReq->set_type(SettingType_UInt64);
-      setResp->set_ui64(value.toULongLong());
-      break;
-   case QVariant::Type::Double:
-      setReq->set_type(SettingType_Float);
-      setResp->set_f(value.toDouble());
-      break;
-   case QVariant::Type::Bool:
-      setReq->set_type(SettingType_Bool);
-      setResp->set_b(value.toBool());
-      break;
-   case QVariant::Type::Rect:
-      setReq->set_type(SettingType_Rect);
-      {
-         auto setRect = setResp->mutable_rect();
-         setRect->set_left(value.toRect().left());
-         setRect->set_top(value.toRect().top());
-         setRect->set_height(value.toRect().height());
-         setRect->set_width(value.toRect().width());
-      }
-      break;
-   case QVariant::Type::StringList:
-      setReq->set_type(SettingType_Strings);
-      for (const auto &s : value.toStringList()) {
-         setResp->mutable_strings()->add_strings(s.toStdString());
-      }
-      break;
-   case QVariant::Type::Map:
-      setReq->set_type(SettingType_StrMap);
-      for (const auto &key : value.toMap().keys()) {
-         auto kvData = setResp->mutable_key_vals()->add_key_vals();
-         kvData->set_key(key.toStdString());
-         kvData->set_value(value.toMap()[key].toString().toStdString());
-      }
-      break;
-   }
+   setFromQVariant(value, setReq, setResp);
 
+   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onResetSettings(const std::vector<ApplicationSettings::Setting>& settings)
+{
+   SettingsMessage msg;
+   auto msgResp = msg.mutable_reset();
+   for (const auto& setting : settings) {
+      auto msgReq = msgResp->add_requests();
+      msgReq->set_index(static_cast<SettingIndex>(setting));
+      msgReq->set_source(SettingSource_Local);
+   }
+   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onResetSettingsToState(const ApplicationSettings::State& state)
+{
+   SettingsMessage msg;
+   auto msgResp = msg.mutable_reset_to_state();
+   for (const auto& st : state) {
+      auto setResp = msgResp->add_responses();
+      auto setReq = setResp->mutable_request();
+      setReq->set_source(SettingSource_Local);
+      setReq->set_index(static_cast<SettingIndex>(st.first));
+      setFromQVariant(st.second, setReq, setResp);
+   }
+   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedSettingsState()
+{
+   SettingsMessage msg;
+   msg.mutable_state_get();
+   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedArmoryServers()
+{
+   SettingsMessage msg;
+   msg.mutable_armory_servers_get();
+   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onSetArmoryServer(int index)
+{
+   SettingsMessage msg;
+   msg.set_set_armory_server(index);
+   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onAddArmoryServer(const ArmoryServer& server)
+{
+   SettingsMessage msg;
+   auto msgReq = msg.mutable_add_armory_server();
+   msgReq->set_network_type((int)server.netType);
+   msgReq->set_server_name(server.name.toStdString());
+   msgReq->set_server_address(server.armoryDBIp.toStdString());
+   msgReq->set_server_port(std::to_string(server.armoryDBPort));
+   msgReq->set_server_key(server.armoryDBKey.toStdString());
+   msgReq->set_run_locally(server.runLocally);
+   msgReq->set_one_way_auth(server.oneWayAuth_);
+   msgReq->set_password(server.password.toBinStr());
+   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onDelArmoryServer(int index)
+{
+   SettingsMessage msg;
+   msg.set_del_armory_server(index);
+   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onUpdArmoryServer(int index, const ArmoryServer& server)
+{
+   SettingsMessage msg;
+   auto msgReq = msg.mutable_upd_armory_server();
+   msgReq->set_index(index);
+   auto msgSrv = msgReq->mutable_server();
+   msgSrv->set_network_type((int)server.netType);
+   msgSrv->set_server_name(server.name.toStdString());
+   msgSrv->set_server_address(server.armoryDBIp.toStdString());
+   msgSrv->set_server_port(std::to_string(server.armoryDBPort));
+   msgSrv->set_server_key(server.armoryDBKey.toStdString());
+   msgSrv->set_run_locally(server.runLocally);
+   msgSrv->set_one_way_auth(server.oneWayAuth_);
+   msgSrv->set_password(server.password.toBinStr());
    Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
    pushFill(env);
 }
 
 void QtGuiAdapter::createWallet(bool primary)
 {
-   logger_->debug("[{}]", __func__);
+   logger_->debug("[{}] primary: {}", __func__, primary);
 }
 
 void QtGuiAdapter::onNeedHDWalletDetails(const std::string &walletId)
@@ -929,6 +1004,30 @@ void QtGuiAdapter::onNeedBroadcastZC(const std::string& id, const BinaryData& tx
    msgTx->set_tx(tx.toBinStr());
    //not adding TX hashes atm
    Envelope env{ 0, user_, userBlockchain_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedArmoryReconnect()
+{
+   ArmoryMessage msg;
+   msg.mutable_reconnect();
+   Envelope env{ 0, user_, userBlockchain_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedSigners()
+{
+   SettingsMessage msg;
+   msg.mutable_signer_servers_get();
+   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onSetSigner(int index)
+{
+   SettingsMessage msg;
+   msg.set_set_signer_server(index);
+   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
    pushFill(env);
 }
 

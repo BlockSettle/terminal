@@ -40,7 +40,9 @@ namespace BlockSettle {
       class WalletsMessage_WalletsListResponse;
    }
    namespace Terminal {
+      class SettingsMessage_ArmoryServers;
       class SettingsMessage_SettingsResponse;
+      class SettingsMessage_SignerServers;
    }
 }
 class BSTerminalSplashScreen;
@@ -68,7 +70,10 @@ public:
 
 private:
    bool processSettings(const bs::message::Envelope &);
-   bool processSettingsGetResponse(const BlockSettle::Terminal::SettingsMessage_SettingsResponse &);
+   bool processSettingsGetResponse(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
+   bool processSettingsState(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
+   bool processArmoryServers(const BlockSettle::Terminal::SettingsMessage_ArmoryServers&);
+   bool processSignerServers(const BlockSettle::Terminal::SettingsMessage_SignerServers&);
    bool processAdminMessage(const bs::message::Envelope &);
    bool processBlockchain(const bs::message::Envelope &);
    bool processSigner(const bs::message::Envelope &);
@@ -98,7 +103,18 @@ private:
    bool processZCInvalidated(const BlockSettle::Common::ArmoryMessage_ZCInvalidated&);
 
 private slots:
-   void onPutSetting(int idx, const QVariant &value);
+   void onPutSetting(ApplicationSettings::Setting, const QVariant &value);
+   void onResetSettings(const std::vector<ApplicationSettings::Setting>&);
+   void onResetSettingsToState(const ApplicationSettings::State&);
+   void onNeedSettingsState();
+   void onNeedArmoryServers();
+   void onSetArmoryServer(int);
+   void onAddArmoryServer(const ArmoryServer&);
+   void onDelArmoryServer(int);
+   void onUpdArmoryServer(int, const ArmoryServer&);
+   void onNeedArmoryReconnect();
+   void onNeedSigners();
+   void onSetSigner(int);
    void onNeedHDWalletDetails(const std::string &walletId);
    void onNeedWalletBalances(const std::string &walletId);
    void onNeedExtAddresses(const std::string &walletId);

@@ -174,30 +174,34 @@ bool SignerAdapter::processSignerSettings(const SettingsMessage_SignerServer &re
    curServerId_ = response.id();
    if (response.is_local()) {
       QLatin1String localSignerHost("127.0.0.1");
-      const auto &localSignerPort = QString::fromStdString(response.local_port());
+      QString localSignerPort;
       const auto &netType = static_cast<NetworkType>(response.network_type());
 
-      if (SignerConnectionExists(localSignerHost, localSignerPort)) {
-         logger_->error("[{}] failed to bind on local port {}", __func__, response.local_port());
+      for (int attempts = 0; attempts < 10; ++attempts) {
+         // https://tools.ietf.org/html/rfc6335
+         // the Dynamic Ports, also known as the Private or Ephemeral Ports,
+         // from 49152-65535 (never assigned)
+         auto port = 49152 + rand() % 16000;
+
+         auto portToTest = QString::number(port);
+
+         if (!SignerConnectionExists(localSignerHost, portToTest)) {
+            localSignerPort = portToTest;
+            break;
+         } else {
+            logger_->error("[SignerAdapter::processSignerSettings] attempt {}:"
+               " port {} used", port);
+         }
+      }
+
+      if (localSignerPort.isEmpty()) {
+         logger_->error("[SignerAdapter::processSignerSettings] failed to find not busy port");
          SignerMessage msg;
          auto msgError = msg.mutable_state();
          msgError->set_code((int)SignContainer::SocketFailed);
          msgError->set_text("failed to bind local port");
          Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
          return pushFill(env);
-/*         BSMessageBox mbox(BSMessageBox::Type::question
-            , tr("Local Signer Connection")
-            , tr("Continue with Remote connection in Local GUI mode?")
-            , tr("The Terminal failed to spawn the headless signer as the program is already running. "
-               "Would you like to continue with remote connection in Local GUI mode?")
-            , this);
-         if (mbox.exec() == QDialog::Rejected) {
-            return nullptr;
-         }
-
-         // Use locally started signer as remote
-         signersProvider_->switchToLocalFullGUI(localSignerHost, localSignerPort);
-         return createRemoteSigner(true);*/
       }
 
       const auto &connMgr = std::make_shared<ConnectionManager>(logger_);

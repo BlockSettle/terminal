@@ -15,12 +15,11 @@
 #include "ConfigDialog.h"
 #include "SignersModel.h"
 
-
 namespace Ui {
    class SignerSettingsPage;
-};
-
+}
 class ApplicationSettings;
+class SignerKeysWidget;
 
 
 class SignerSettingsPage : public SettingsPage
@@ -34,11 +33,9 @@ public:
    void reset() override;
    void apply() override;
    void initSettings() override;
-   void init(const std::shared_ptr<ApplicationSettings> &appSettings
-             , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
-             , const std::shared_ptr<SignersProvider> &signersProvider
-             , const std::shared_ptr<SignContainer> &signContainer
-             , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr) override;
+   void init(const ApplicationSettings::State&) override;
+
+   void onSignerSettings(const QList<SignerHost>&, const std::string& ownKey, int idxCur);
 
 private slots:
    void onAsSpendLimitChanged(double);
@@ -46,6 +43,7 @@ private slots:
 
 signals:
    void signersChanged();
+   void setSigner(int);
 
 private:
    void showHost(bool);
@@ -55,8 +53,11 @@ private:
 
 private:
    std::unique_ptr<Ui::SignerSettingsPage> ui_;
-   SignersModel *signersModel_;
-   bool reset_{};
+   SignersModel*     signersModel_{ nullptr };
+   SignerKeysWidget* signerKeysWidget_{ nullptr };
+   QList<SignerHost> signers_;
+   int   curSignerIdx_{ 0 };
+   std::string ownKey_;
 };
 
 #endif // __SIGNER_SETTINGS_PAGE_H__
