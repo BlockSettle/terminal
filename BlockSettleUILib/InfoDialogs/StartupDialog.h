@@ -38,6 +38,7 @@ public:
 
   [[deprecated]] void init(const std::shared_ptr<ApplicationSettings> &appSettings);
   [[deprecated]] void applySelectedConnectivity();
+  NetworkType getSelectedNetworkType() const;
 
 private slots:
   void onBack();
