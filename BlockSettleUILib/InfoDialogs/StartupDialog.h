@@ -14,14 +14,14 @@
 #include <memory>
 #include <QDialog>
 
-#include "BtcDefinitions.h"
 #include "ApplicationSettings.h"
+#include "BtcDefinitions.h"
 
 namespace Ui {
-class StartupDialog;
+   class StartupDialog;
 }
+
 class ApplicationSettings;
-class ArmoryServersProvider;
 
 class StartupDialog : public QDialog
 {
@@ -37,14 +37,13 @@ public:
   ~StartupDialog() override;
 
   [[deprecated]] void init(const std::shared_ptr<ApplicationSettings> &appSettings);
-  [[deprecated]] void applySelectedConnectivity(std::shared_ptr<ArmoryServersProvider> &armoryServersProvider);
-  NetworkType getSelectedNetworkType() const;
+  [[deprecated]] void applySelectedConnectivity();
 
 private slots:
   void onBack();
   void onNext();
   void onConnectivitySelectionChanged();
-  
+
 private:
   void updateStatus();
   void adjustPosition();

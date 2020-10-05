@@ -126,7 +126,8 @@ int main(int argc, char** argv) {
       return validKey;
    };
 
-   armory->setupConnection(testnet ? NetworkType::TestNet : NetworkType::MainNet, armoryHost, std::to_string(armoryPort), true, armoryKeyCb);
+   // Use ownKeyPath as the data dir
+   armory->setupConnection(testnet ? NetworkType::TestNet : NetworkType::MainNet, armoryHost, std::to_string(armoryPort), ownKeyPath, true, armoryKeyCb);
    auto now = std::chrono::steady_clock::now();
    while (std::chrono::steady_clock::now() - now < std::chrono::seconds(60) && armory->state() != ArmoryState::Connected) {
       std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -148,9 +149,8 @@ int main(int argc, char** argv) {
    };
    auto wsServer = std::make_unique<WsServerConnection>(logger, WsServerConnectionParams{});
    const auto ephemeralPeersServer = false; // Required for persistent server's public key
-   const bool oneWayAuthServer = true;
    const auto &transport = std::make_shared<bs::network::TransportBIP15xServer>(logger
-      , cbTrustedClients, ephemeralPeersServer, oneWayAuthServer, ownKeyPath, ownKeyName);
+      , cbTrustedClients, ephemeralPeersServer, bs::network::BIP15xAuthMode::OneWay, ownKeyPath, ownKeyName);
    auto bipServer = std::make_shared<Bip15xServerConnection>(logger, std::move(wsServer), transport);
 
    auto ccServer = std::make_unique<CcTrackerServer>(logger, armory, bipServer);

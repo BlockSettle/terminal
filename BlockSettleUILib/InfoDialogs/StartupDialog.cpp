@@ -80,25 +80,17 @@ NetworkType StartupDialog::getSelectedNetworkType() const
    }
 }
 
-void StartupDialog::applySelectedConnectivity(std::shared_ptr<ArmoryServersProvider> &armoryServersProvider)
+void StartupDialog::applySelectedConnectivity()
 {
    NetworkType network = getSelectedNetworkType();
-
-   auto servers = armoryServersProvider->servers();
-   int selectedIndex = 0;
-   for (; selectedIndex < servers.size(); ++selectedIndex) {
-      auto &server = servers[selectedIndex];
-      if (server.name == QString::fromLatin1(ARMORY_BLOCKSETTLE_NAME) && server.netType == network) {
-         break;
-      }
-   }
-   assert(selectedIndex != servers.size());
-   armoryServersProvider->setupServer(selectedIndex);
 
    ApplicationSettings::EnvConfiguration envConfig = (network == NetworkType::TestNet) ?
       ApplicationSettings::EnvConfiguration::Test : ApplicationSettings::EnvConfiguration::Production;
    appSettings_->set(ApplicationSettings::envConfiguration, static_cast<int>(envConfig));
    appSettings_->set(ApplicationSettings::initialized, true);
+   appSettings_->set(ApplicationSettings::netType, static_cast<int>(network));
+
+   appSettings_->selectNetwork();
 }
 
 void StartupDialog::onBack()

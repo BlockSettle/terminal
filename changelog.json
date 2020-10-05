@@ -1,7 +1,25 @@
 {
-   "latest_version": "0.90.9",
-   "release_date": "01 Sep 2020",
+   "latest_version": "0.91.0",
+   "release_date": "01 Oct 2020",
    "changes": [
+      {
+         "version_string": "0.91.0",
+         "previous_version": "0.90.9",
+         "release_date": "01 Oct 2020",
+         "release_type": "prod",
+         "improvements": [
+            "BitPay and Bip21 support",
+            "Armory connection rework to on side authentication",
+            "All public keys delivered in signed file from proxy"
+         ],
+         "bug_fixes": [
+            "Fiw WS error",
+            "Fix API login",
+            "Fix XBT limits"
+         ],
+         "revision": "2d36fe07e",
+         "common_revision": "f54092f4"
+      },
       {
          "version_string": "0.90.9",
          "previous_version": "0.90.8",
