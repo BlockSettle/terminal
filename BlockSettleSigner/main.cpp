@@ -292,6 +292,7 @@ static int QMLApp(int argc, char **argv
    engine.rootContext()->setContextProperty(QStringLiteral("fixedFont"), fixedFont);
 
    QTimer terminalConnectionTimer;
+   bool terminalConnected = false;
 
    try {
       //setup signer's own GUI connection
@@ -337,9 +338,19 @@ static int QMLApp(int argc, char **argv
          //BST-2786
          terminalConnectionTimer.setInterval(std::chrono::milliseconds{ 5000 });
 
+         // NOTE: SignerAdapter::ready is called multiple times
          QObject::connect(&adapter, SIGNAL(ready()), &terminalConnectionTimer, SLOT(start()));
-         QObject::connect(&adapter, &SignerAdapter::peerConnected, &terminalConnectionTimer, &QTimer::stop);
-         QObject::connect(&terminalConnectionTimer, &QTimer::timeout, &app, &QCoreApplication::quit);
+         QObject::connect(&adapter, &SignerAdapter::peerConnected, [&terminalConnected] {
+            terminalConnected = true;
+         });
+         QObject::connect(&adapter, &SignerAdapter::peerDisconnected, [&terminalConnected] {
+            terminalConnected = false;
+         });
+         QObject::connect(&terminalConnectionTimer, &QTimer::timeout, [&terminalConnected] {
+            if (!terminalConnected) {
+               QCoreApplication::quit();
+            }
+         });
 
          break;
       default:
