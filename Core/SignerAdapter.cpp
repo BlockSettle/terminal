@@ -122,6 +122,9 @@ bool SignerAdapter::processOwnRequest(const bs::message::Envelope &env
       return processDelHdLeaf(request.del_hd_leaf());
    case SignerMessage::kSignTxRequest:
       return processSignTx(env, request.sign_tx_request());
+   case SignerMessage::kSetUserId:
+      return processSetUserId(request.set_user_id().user_id()
+         , request.set_user_id().wallet_id());
    default:
       logger_->warn("[{}] unknown signer request: {}", __func__, request.data_case());
       break;
@@ -638,4 +641,9 @@ bool SignerAdapter::processSignTx(const bs::message::Envelope& env
       , static_cast<SignContainer::TXSignMode>(request.sign_mode())
       , request.keep_dup_recips());
    return true;
+}
+
+bool SignerAdapter::processSetUserId(const std::string& userId, const std::string& walletId)
+{
+   return (signer_->setUserId(BinaryData::fromString(userId), walletId) != 0);
 }

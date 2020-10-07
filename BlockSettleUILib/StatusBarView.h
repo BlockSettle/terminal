@@ -53,9 +53,9 @@ public slots:
    void onArmoryStateChanged(ArmoryState, unsigned int topBlock);
    void onArmoryProgress(BDMPhase, float progress, unsigned int secondsRem);
    void onArmoryError(QString);
-   void onConnectedToServer();
-   void onConnectionClosed();
-   void onConnectionError(int errorCode);
+   void onConnectedToMatching();
+   void onDisconnectedFromMatching();
+   void onMatchingConnError(int errorCode);
    void onContainerAuthorized();
    void onSignerStatusChanged(SignContainer::ConnectionError error, const QString &details);
    void updateBalances();  //deprecated

@@ -42,6 +42,7 @@ namespace BlockSettle {
    namespace Terminal {
       class BsServerMessage_LoginResult;
       class BsServerMessage_StartLoginResult;
+      class MatchingMessage_LoggedIn;
       class SettingsMessage_ArmoryServers;
       class SettingsMessage_SettingsResponse;
       class SettingsMessage_SignerServers;
@@ -108,6 +109,8 @@ private:
    bool processStartLogin(const BlockSettle::Terminal::BsServerMessage_StartLoginResult&);
    bool processLogin(const BlockSettle::Terminal::BsServerMessage_LoginResult&);
 
+   bool processMatching(const bs::message::Envelope&);
+
 private slots:
    void onGetSettings(const std::vector<ApplicationSettings::Setting>&);
    void onPutSetting(ApplicationSettings::Setting, const QVariant &value);
@@ -144,10 +147,13 @@ private slots:
    void onNeedSetTxComment(const std::string& walletId, const BinaryData& txHash
       , const std::string& comment);
    void onNeedOpenBsConnection();
+   void onNeedCloseBsConnection();
    void onNeedStartLogin(const std::string& login);
    void onNeedCancelLogin();
    void onBootstrapDataLoaded(const std::string&);
    void onNeedMatchingLogin(const std::string& mtchLogin, const std::string& bsLogin);
+   void onNeedMatchingLogout();
+   void onNeedSetUserId(const std::string&);
    void onSetRecommendedFeeRate(float);
 
 private:

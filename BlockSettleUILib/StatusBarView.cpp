@@ -89,9 +89,9 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, this, &StatusBarView::onWalletImportFinished);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &StatusBarView::updateBalances);
 
-   connect(celerClient.get(), &CelerClientQt::OnConnectedToServer, this, &StatusBarView::onConnectedToServer);
-   connect(celerClient.get(), &CelerClientQt::OnConnectionClosed, this, &StatusBarView::onConnectionClosed);
-   connect(celerClient.get(), &CelerClientQt::OnConnectionError, this, &StatusBarView::onConnectionError);
+   connect(celerClient.get(), &CelerClientQt::OnConnectedToServer, this, &StatusBarView::onConnectedToMatching);
+   connect(celerClient.get(), &CelerClientQt::OnConnectionClosed, this, &StatusBarView::onDisconnectedFromMatching);
+   connect(celerClient.get(), &CelerClientQt::OnConnectionError, this, &StatusBarView::onMatchingConnError);
 
    // container might be null if user rejects remote signer key
    if (container) {
@@ -102,7 +102,7 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
    }
 
    onArmoryStateChanged(armory_->state(), armory_->topBlock());
-   onConnectionClosed();
+   onDisconnectedFromMatching();
    setBalances();
 
    containerStatusLabel_->setPixmap(iconContainerOffline_);
@@ -166,7 +166,7 @@ StatusBarView::StatusBarView(QStatusBar *parent)
 
    SetLoggedOutStatus();
 
-   onConnectionClosed();
+   onDisconnectedFromMatching();
 
    connectionStatusLabel_->setPixmap(iconContainerOffline_);
    containerStatusLabel_->setPixmap(iconContainerOffline_);
@@ -528,17 +528,17 @@ void StatusBarView::SetCelerConnectingStatus()
    celerConnectionIconLabel_->setPixmap(iconCelerConnecting_);
 }
 
-void StatusBarView::onConnectedToServer()
+void StatusBarView::onConnectedToMatching()
 {
    SetLoggedinStatus();
 }
 
-void StatusBarView::onConnectionClosed()
+void StatusBarView::onDisconnectedFromMatching()
 {
    SetLoggedOutStatus();
 }
 
-void StatusBarView::onConnectionError(int errorCode)
+void StatusBarView::onMatchingConnError(int errorCode)
 {
    switch(errorCode)
    {

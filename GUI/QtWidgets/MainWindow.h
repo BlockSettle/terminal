@@ -16,6 +16,7 @@
 #include <QMainWindow>
 #include "Address.h"
 #include "ArmoryConnection.h"
+#include "BaseCelerClient.h"
 #include "BsClient.h"
 #include "SignContainer.h"
 #include "Settings/SignersProvider.h"
@@ -91,6 +92,9 @@ namespace bs {
             void onLoginStarted(const std::string &login, bool success, const std::string &errMsg);
             void onLoggedIn(const BsClientLoginResult&);
             void onAccountTypeChanged(bs::network::UserType userType, bool enabled);
+            void onMatchingLogin(const std::string& mtchLogin, BaseCelerClient::CelerUserType
+               , const std::string &userId);
+            void onMatchingLogout();
 
          public slots:
             void onReactivate();
@@ -146,9 +150,12 @@ namespace bs {
             void needSetTxComment(const std::string& walletId, const BinaryData& txHash, const std::string& comment);
 
             void needOpenBsConnection();
+            void needCloseBsConnection();
             void needStartLogin(const std::string& login);
             void needCancelLogin();
             void needMatchingLogin(const std::string &mtchLogin, const std::string &bsLogin);
+            void needMatchingLogout();
+            void needSetUserId(const std::string&);
             void setRecommendedFeeRate(float);
 
          private slots:
@@ -181,11 +188,6 @@ namespace bs {
             void changeEvent(QEvent *) override;
 
          private:
-            void onUserLoggedIn();
-            void onUserLoggedOut();
-
-//            void onAccountTypeChanged(bs::network::UserType userType, bool enabled);
-
             void setLoginButtonText(const QString& text);
 
             void setupShortcuts();
@@ -196,7 +198,6 @@ namespace bs {
             void setupTopRightWidget();
 
             void updateAppearance();
-            void updateControlEnabledState();
             void setWidgetsAuthorized(bool);
 
             void initWidgets();

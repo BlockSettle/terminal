@@ -51,9 +51,6 @@ public:
 
    std::unique_ptr<SignerClient> createClient() const;
 
-protected:
-
-
 private:
    void start();
 
@@ -93,6 +90,7 @@ private:
    bool processDelHdLeaf(const std::string &walletId);
    bool processSignTx(const bs::message::Envelope&
       , const BlockSettle::Common::SignerMessage_SignTxRequest&);
+   bool processSetUserId(const std::string& userId, const std::string& walletId);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

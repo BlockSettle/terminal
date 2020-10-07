@@ -241,6 +241,8 @@ bool QtGuiAdapter::process(const Envelope &env)
          return processWallets(env);
       case TerminalUsers::BsServer:
          return processBsServer(env);
+      case TerminalUsers::Matching:
+         return processMatching(env);
       case TerminalUsers::AuthEid:
          return processAuthEid(env);
       case TerminalUsers::OnChainTracker:
@@ -723,9 +725,12 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::needBroadcastZC, this, &QtGuiAdapter::onNeedBroadcastZC);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needSetTxComment, this, &QtGuiAdapter::onNeedSetTxComment);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needOpenBsConnection, this, &QtGuiAdapter::onNeedOpenBsConnection);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needCloseBsConnection, this, &QtGuiAdapter::onNeedCloseBsConnection);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needStartLogin, this, &QtGuiAdapter::onNeedStartLogin);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needCancelLogin, this, &QtGuiAdapter::onNeedCancelLogin);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needMatchingLogin, this, &QtGuiAdapter::onNeedMatchingLogin);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needMatchingLogout, this, &QtGuiAdapter::onNeedMatchingLogout);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needSetUserId, this, &QtGuiAdapter::onNeedSetUserId);
    connect(mainWindow_, &bs::gui::qt::MainWindow::setRecommendedFeeRate, this, &QtGuiAdapter::onSetRecommendedFeeRate);
 }
 
@@ -1083,6 +1088,14 @@ void QtGuiAdapter::onNeedOpenBsConnection()
    pushFill(env);
 }
 
+void QtGuiAdapter::onNeedCloseBsConnection()
+{
+   BsServerMessage msg;
+   msg.mutable_close_connection();
+   Envelope env{ 0, user_, userBS_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
 void QtGuiAdapter::onNeedStartLogin(const std::string& login)
 {
    BsServerMessage msg;
@@ -1114,6 +1127,22 @@ void QtGuiAdapter::onNeedMatchingLogin(const std::string& mtchLogin, const std::
    msgReq->set_matching_login(mtchLogin);
    msgReq->set_terminal_login(bsLogin);
    Envelope env{ 0, user_, userMatch_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedMatchingLogout()
+{
+   MatchingMessage msg;
+   msg.mutable_logout();
+   Envelope env{ 0, user_, userMatch_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedSetUserId(const std::string& userId)
+{
+   WalletsMessage msg;
+   msg.set_set_user_id(userId);
+   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
    pushFill(env);
 }
 
@@ -1419,6 +1448,28 @@ bool QtGuiAdapter::processLogin(const BsServerMessage_LoginResult& response)
    return QMetaObject::invokeMethod(mainWindow_, [this, result] {
       mainWindow_->onLoggedIn(result);
    });
+}
+
+bool QtGuiAdapter::processMatching(const bs::message::Envelope& env)
+{
+   MatchingMessage msg;
+   if (!msg.ParseFromString(env.message)) {
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      return true;
+   }
+   switch (msg.data_case()) {
+   case MatchingMessage::kLoggedIn:
+      return QMetaObject::invokeMethod(mainWindow_, [this, response=msg.logged_in()] {
+         mainWindow_->onMatchingLogin(response.user_name()
+            , static_cast<BaseCelerClient::CelerUserType>(response.user_type()), response.user_id());
+      });
+   case MatchingMessage::kLoggedOut:
+      return QMetaObject::invokeMethod(mainWindow_, [this] {
+         mainWindow_->onMatchingLogout();
+      });
+   default:    break;
+   }
+   return true;
 }
 
 #include "QtGuiAdapter.moc"

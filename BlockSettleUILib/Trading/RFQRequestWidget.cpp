@@ -499,7 +499,7 @@ void RFQRequestWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTe
 
 void RFQRequestWidget::onUserConnected(const bs::network::UserType &ut)
 {
-   if (appSettings_->get<bool>(ApplicationSettings::AutoStartRFQScript)) {
+   if (appSettings_ && appSettings_->get<bool>(ApplicationSettings::AutoStartRFQScript)) {
       QTimer::singleShot(1000, [this] { // add some delay to allow initial sync of data
          ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->start(
             autoSignProvider_->getLastScript());

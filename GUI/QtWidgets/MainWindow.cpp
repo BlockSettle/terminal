@@ -76,18 +76,15 @@ MainWindow::MainWindow(const std::shared_ptr<spdlog::logger> &logger
    setupToolbar();
    setupMenu();
 
-   ui_->widgetTransactions->setEnabled(false);
-
    initChartsView();
 
-//   ui_->tabWidget->setCurrentIndex(settings->get<int>(ApplicationSettings::GUI_main_tab));
-
    updateAppearance();
-//   setWidgetsAuthorized(false);
-
-   updateControlEnabledState();
+   setWidgetsAuthorized(false);
 
    initWidgets();
+
+   ui_->widgetTransactions->setEnabled(false);
+   actSend_->setEnabled(false);
 }
 
 void MainWindow::setWidgetsAuthorized(bool authorized)
@@ -213,6 +210,8 @@ void MainWindow::onNewBlock(int state, unsigned int blockNum)
 void MainWindow::onWalletsReady()
 {
    logger_->debug("[{}]", __func__);
+   ui_->widgetTransactions->setEnabled(true);
+   actSend_->setEnabled(true);
    emit needLedgerEntries({});
 }
 
@@ -547,31 +546,6 @@ void MainWindow::setupInfoWidget()
    });
 }
 
-void MainWindow::updateControlEnabledState()
-{
-/*   if (action_send_) {
-      action_send_->setEnabled(!walletsMgr_->hdWallets().empty()
-         && armory_->isOnline() && signContainer_ && signContainer_->isReady());
-   }*/
-   // Do not allow login until wallets synced (we need to check if user has primary wallet or not).
-   // Should be OK for both local and remote signer.
-//   ui_->pushButtonUser->setEnabled(walletsSynched_ && loginApiKey().empty());
-}
-
-/*void MainWindow::initPortfolioView()
-{
-   portfolioModel_ = std::make_shared<CCPortfolioModel>(walletsMgr_, assetManager_, this);
-   ui_->widgetPortfolio->init(applicationSettings_, mdProvider_, mdCallbacks_
-      , portfolioModel_, signContainer_, armory_, utxoReservationMgr_, logMgr_->logger("ui"), walletsMgr_);
-}
-
-void MainWindow::initWalletsView()
-{
-   ui_->widgetWallets->init(logMgr_->logger("ui"), walletsMgr_, signContainer_
-      , applicationSettings_, connectionManager_, assetManager_, authManager_, armory_);
-   connect(ui_->widgetWallets, &WalletsWidget::newWalletCreationRequest, this, &BSTerminalMainWindow::onInitWalletDialogWasShown);
-}*/
-
 void MainWindow::initChartsView()
 {
 /*   ui_->widgetChart->init(applicationSettings_, mdProvider_, mdCallbacks_
@@ -771,7 +745,7 @@ void MainWindow::setupMenu()
    connect(ui_->actionVideoTutorials, &QAction::triggered, supportDlgCb(1, QObject::tr("Video Tutorials")));
    connect(ui_->actionContact, &QAction::triggered, supportDlgCb(2, QObject::tr("Support")));
 
-   onUserLoggedOut();
+   onMatchingLogout();
 
 #ifndef Q_OS_MAC
    ui_->horizontalFrame->hide();
@@ -918,7 +892,7 @@ void MainWindow::activateClient(const BsClientLoginResult& result)
 
    emit setRecommendedFeeRate(result.feeRatePb);
 //   utxoReservationMgr_->setFeeRatePb(result.feeRatePb);
-//   celerConnection_->LoginToServer(bsClient_.get(), result.celerLogin, email);
+   emit needMatchingLogin(result.celerLogin, result.login);
 
    ui_->widgetWallets->setUsername(currentUserLogin_);
    actLogout_->setVisible(false);
@@ -942,6 +916,30 @@ void MainWindow::onAccountTypeChanged(bs::network::UserType userType, bool enabl
    ui_->widgetChat->setUserType(enabled ? userType : bs::network::UserType::Chat);
 }
 
+void bs::gui::qt::MainWindow::onMatchingLogin(const std::string& mtchLogin
+   , BaseCelerClient::CelerUserType userType, const std::string& userId)
+{
+   emit needSetUserId(userId);
+
+   ui_->actionAccountInformation->setEnabled(true);
+   ui_->actionAuthenticationAddresses->setEnabled(userType != BaseCelerClient::CelerUserType::Market);
+   ui_->actionOneTimePassword->setEnabled(true);
+   ui_->actionEnterColorCoinToken->setEnabled(true);
+
+   ui_->actionDeposits->setEnabled(true);
+   ui_->actionWithdrawalRequest->setEnabled(true);
+   ui_->actionLinkAdditionalBankAccount->setEnabled(true);
+
+   actLogin_->setVisible(false);
+   actLogout_->setVisible(true);
+
+   //   ccFileManager_->ConnectToCelerClient(celerConnection_);
+   ui_->widgetRFQ->onUserConnected(userType);
+   ui_->widgetRFQReply->onUserConnected(userType);
+
+   statusBarView_->onConnectedToMatching();
+}
+
 void bs::gui::qt::MainWindow::onLogoutInitiated()
 {
    ui_->widgetWallets->setUsername(QString());
@@ -958,43 +956,19 @@ void bs::gui::qt::MainWindow::onLogoutInitiated()
    setLoginButtonText(loginButtonText_);
 
    setWidgetsAuthorized(false);
-
-   //   bsClient_.reset();
 }
 
 void MainWindow::onLoggedOut()
 {
-
+   currentUserLogin_.clear();
+   emit needMatchingLogout();
 }
 
-void MainWindow::onUserLoggedIn()
+void MainWindow::onMatchingLogout()
 {
-   ui_->actionAccountInformation->setEnabled(true);
-/*   ui_->actionAuthenticationAddresses->setEnabled(celerConnection_->celerUserType()
-      != BaseCelerClient::CelerUserType::Market);*/
-   ui_->actionOneTimePassword->setEnabled(true);
-   ui_->actionEnterColorCoinToken->setEnabled(true);
+   emit needSetUserId({});
+   emit needCloseBsConnection();
 
-   ui_->actionDeposits->setEnabled(true);
-   ui_->actionWithdrawalRequest->setEnabled(true);
-   ui_->actionLinkAdditionalBankAccount->setEnabled(true);
-
-//   ccFileManager_->ConnectToCelerClient(celerConnection_);
-//   ui_->widgetRFQ->onUserConnected(userType_);
-//   ui_->widgetRFQReply->onUserConnected(userType_);
-
-//   const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
-/*   const auto &deferredDialog = [this, userId] {
-      walletsMgr_->setUserId(userId);
-      promoteToPrimaryIfNeeded();
-   };
-   addDeferredDialog(deferredDialog);*/
-
-   setLoginButtonText(currentUserLogin_);
-}
-
-void MainWindow::onUserLoggedOut()
-{
    ui_->actionAccountInformation->setEnabled(false);
    ui_->actionAuthenticationAddresses->setEnabled(false);
    ui_->actionEnterColorCoinToken->setEnabled(false);
@@ -1004,20 +978,16 @@ void MainWindow::onUserLoggedOut()
    ui_->actionWithdrawalRequest->setEnabled(false);
    ui_->actionLinkAdditionalBankAccount->setEnabled(false);
 
-/*   if (walletsMgr_) {
-      walletsMgr_->setUserId(BinaryData{});
-   }
-   if (authManager_) {
-      authManager_->OnDisconnectedFromCeler();
-   }*/
+   actLogin_->setVisible(true);
+   actLogin_->setEnabled(true);
+   actLogout_->setVisible(false);
 
+   statusBarView_->onDisconnectedFromMatching();
    setLoginButtonText(loginButtonText_);
 }
 
 /*void BSTerminalMainWindow::onCelerConnected()
 {
-   action_login_->setVisible(false);
-   action_logout_->setVisible(true);
 
    onUserLoggedIn();
 }
@@ -1189,7 +1159,10 @@ void MainWindow::initWidgets()
    connect(ui_->widgetExplorer, &ExplorerWidget::needTXDetails, this, &MainWindow::needTXDetails);
 
    initTransactionsView();
-//   InitPortfolioView();
+
+   /*   portfolioModel_ = std::make_shared<CCPortfolioModel>(walletsMgr_, assetManager_, this);
+      ui_->widgetPortfolio->init(applicationSettings_, mdProvider_, mdCallbacks_
+         , portfolioModel_, signContainer_, armory_, utxoReservationMgr_, logMgr_->logger("ui"), walletsMgr_);*/
 
 //   ui_->widgetRFQ->initWidgets(mdProvider_, mdCallbacks_, applicationSettings_);
 

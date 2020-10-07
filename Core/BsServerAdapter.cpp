@@ -31,7 +31,6 @@ BsServerAdapter::BsServerAdapter(const std::shared_ptr<spdlog::logger> &logger)
 {
    connMgr_ = std::make_shared<ConnectionManager>(logger_);
    connMgr_->setCaBundle(bs::caBundlePtr(), bs::caBundleSize());
-   bsClient_ = std::make_unique<BsClient>(logger_, this);
 }
 
 bool BsServerAdapter::process(const bs::message::Envelope &env)
@@ -90,6 +89,9 @@ bool BsServerAdapter::processOwnRequest(const Envelope &env)
    switch (msg.data_case()) {
    case BsServerMessage::kOpenConnection:
       return processOpenConnection();
+   case BsServerMessage::kCloseConnection:
+      bsClient_.reset();
+      break;
    case BsServerMessage::kStartLogin:
       return processStartLogin(msg.start_login());
    case BsServerMessage::kCancelLastLogin:
@@ -98,6 +100,12 @@ bool BsServerAdapter::processOwnRequest(const Envelope &env)
       return processPuBKeyResponse(msg.pub_new_key_response());
    case BsServerMessage::kTimeout:
       return processTimeout(msg.timeout());
+   case BsServerMessage::kSendMatching:
+      if (bsClient_) {
+         bsClient_->celerSend(static_cast<CelerAPI::CelerMessageType>(msg.send_matching().message_type())
+            , msg.send_matching().data());
+      }
+      break;
    default:    break;
    }
    return true;
@@ -148,9 +156,10 @@ bool BsServerAdapter::processTimeout(const std::string& id)
 bool BsServerAdapter::processOpenConnection()
 {
    if (connected_) {
-      logger_->debug("[{}] already connected", __func__);
+      logger_->error("[{}] already connected", __func__);
       return true;
    }
+   bsClient_ = std::make_unique<BsClient>(logger_, this);
    bs::network::BIP15xParams params;
    params.ephemeralPeers = true;
    params.authMode = bs::network::BIP15xAuthMode::OneWay;
@@ -266,6 +275,17 @@ void BsServerAdapter::onGetLoginResultDone(const BsClientLoginResult& result)
    msgTradeSet->set_auth_submit_addr_limit(result.tradeSettings.authSubmitAddressLimit);
    msgTradeSet->set_dealer_auth_submit_addr_limit(result.tradeSettings.dealerAuthSubmitAddressLimit);
    Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(env);
+}
+
+void BsServerAdapter::onCelerRecv(CelerAPI::CelerMessageType messageType, const std::string& data)
+{
+   BsServerMessage msg;
+   auto msgResp = msg.mutable_recv_matching();
+   msgResp->set_message_type((int)messageType);
+   msgResp->set_data(data);
+   Envelope env{ 0, user_, bs::message::UserTerminal::create(bs::message::TerminalUsers::Matching)
+      , {}, {}, msg.SerializeAsString() };   // send directly to matching adapter, not broadcast
    pushFill(env);
 }
 

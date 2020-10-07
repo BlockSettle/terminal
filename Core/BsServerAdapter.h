@@ -54,9 +54,9 @@ private:
    void startTimer(std::chrono::milliseconds timeout, const std::function<void()>&) override;
    void onStartLoginDone(bool success, const std::string& errorMsg) override;
    void onGetLoginResultDone(const BsClientLoginResult& result) override;
-/*   void onAuthorizeDone(AuthorizeError authErr, const std::string& email) override;
+//   void onAuthorizeDone(AuthorizeError authErr, const std::string& email) override;
    void onCelerRecv(CelerAPI::CelerMessageType messageType, const std::string& data) override;
-   void onProcessPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response&) override;*/
+//   void onProcessPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response&) override;
    void Connected() override;
    void Disconnected() override;
    void onConnectionFailed() override;
