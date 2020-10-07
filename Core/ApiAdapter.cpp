@@ -122,7 +122,7 @@ public:
       auto envCopy = env;
       envCopy.id = 0;
       envCopy.receiver.reset();
-      if (!env.request) {
+      if (!env.request && env.receiver) {
          const auto& itIdMap = idMap_.find(env.id);
          if (itIdMap != idMap_.end()) {
             envCopy.id = itIdMap->second.id;
@@ -140,7 +140,6 @@ public:
       }
       return rc;
    }
-
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

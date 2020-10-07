@@ -93,6 +93,7 @@ private:
       , const BlockSettle::Terminal::SettingsMessage_SettingsRequest&);
    bool processResetToState(const bs::message::Envelope&
       , const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
+   bool processBootstrap(const std::string&);
 
 private:
    std::shared_ptr<bs::message::User>  user_, userBC_;

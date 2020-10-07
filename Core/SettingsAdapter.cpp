@@ -57,7 +57,10 @@ SettingsAdapter::SettingsAdapter(const std::shared_ptr<ApplicationSettings> &set
       file.setFileName(filePathInResources);
       if (file.open(QIODevice::ReadOnly)) {
          const std::string bootstrapData = file.readAll().toStdString();
-         bootstrapDataManager_->setReceivedData(bootstrapData);
+         if (!bootstrapDataManager_->setReceivedData(bootstrapData)) {
+            logger_->error("[SettingsAdapter] invalid bootstrap data: {}"
+               , filePathInResources.toStdString());
+         }
       } else {
          logger_->error("[SettingsAdapter] failed to locate bootstrap file in resources: {}"
             , filePathInResources.toStdString());
@@ -113,6 +116,8 @@ bool SettingsAdapter::process(const bs::message::Envelope &env)
          return processReset(env, msg.reset());
       case SettingsMessage::kResetToState:
          return processResetToState(env, msg.reset_to_state());
+      case SettingsMessage::kLoadBootstrap:
+         return processBootstrap(msg.load_bootstrap());
       default:
          logger_->warn("[SettingsAdapter::process] unknown data case: {}"
             , msg.data_case());
@@ -207,6 +212,27 @@ bool SettingsAdapter::processResetToState(const bs::message::Envelope& env
    return pushFill(envResp);
 }
 
+bool SettingsAdapter::processBootstrap(const std::string& bsData)
+{
+   SettingsMessage msg;
+   auto msgResp = msg.mutable_bootstrap();
+   msgResp->set_loaded(bootstrapDataManager_->setReceivedData(bsData));
+   if (msgResp->loaded()) {
+      for (const auto& validationAddr : bootstrapDataManager_->GetAuthValidationList()) {
+         msgResp->add_auth_validations(validationAddr);
+      }
+      for (const auto& ccDef : bootstrapDataManager_->GetCCDefinitions()) {
+         auto msgCcDef = msgResp->add_cc_definitions();
+         msgCcDef->set_security_id(ccDef.securityId);
+         msgCcDef->set_product(ccDef.product);
+         msgCcDef->set_genesis_address(ccDef.genesisAddr.display());
+         msgCcDef->set_lot_size(ccDef.nbSatoshis);
+      }
+   }
+   Envelope envResp{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   return pushFill(envResp);
+}
+
 bool SettingsAdapter::processGetRequest(const bs::message::Envelope &env
    , const SettingsMessage_SettingsRequest &request)
 {
@@ -219,6 +245,20 @@ bool SettingsAdapter::processGetRequest(const bs::message::Envelope &env
       if (req.source() == SettingSource_Local) {
          const auto setting = static_cast<ApplicationSettings::Setting>(req.index());
          switch (req.type()) {
+         case SettingType_Unknown: {
+            const auto& value = appSettings_->get(setting);
+            switch (value.type()) {
+            case QVariant::Type::String:
+               resp->set_s(value.toString().toStdString());
+               resp->mutable_request()->set_type(SettingType_String);
+               break;
+            default: // normally string is used for all unknown values
+               logger_->warn("[{}] {}: unhandled QVariant type: {}", __func__
+                  , (int)setting, (int)value.type());
+               break;
+            }
+         }
+            break;
          case SettingType_String:
             resp->set_s(appSettings_->get<std::string>(setting));
             break;

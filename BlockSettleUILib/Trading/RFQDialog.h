@@ -41,7 +41,7 @@ class ApplicationSettings;
 class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
-class BaseCelerClient;
+class CelerClientQt;
 class CCSettlementTransactionWidget;
 class QuoteProvider;
 class RFQRequestWidget;
@@ -64,7 +64,7 @@ public:
       , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
       , const std::shared_ptr<WalletSignerContainer> &
       , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<BaseCelerClient> &celerClient
+      , const std::shared_ptr<CelerClientQt> &celerClient
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<RfqStorage> &rfqStorage
       , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
@@ -133,7 +133,7 @@ private:
    std::shared_ptr<WalletSignerContainer>       signContainer_;
    std::shared_ptr<AssetManager>                assetMgr_;
    std::shared_ptr<ArmoryConnection>            armory_;
-   std::shared_ptr<BaseCelerClient>             celerClient_;
+   std::shared_ptr<CelerClientQt>               celerClient_;
    std::shared_ptr<ApplicationSettings>         appSettings_;
    std::shared_ptr<RfqStorage>                  rfqStorage_;
    std::shared_ptr<bs::sync::hd::Wallet>        xbtWallet_;

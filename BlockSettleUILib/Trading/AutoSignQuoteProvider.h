@@ -17,7 +17,7 @@
 #include <memory>
 #include "ApplicationSettings.h"
 
-class BaseCelerClient;
+class CelerClientQt;
 class SignContainer;
 class UserScriptRunner;
 class AssetManager;
@@ -43,7 +43,7 @@ public:
       , UserScriptRunner *
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<BaseCelerClient> &
+      , const std::shared_ptr<CelerClientQt> &
       , QObject *parent = nullptr);
 
    bool isScriptLoaded() const { return scriptLoaded_; }
@@ -94,9 +94,9 @@ protected:
    std::shared_ptr<ApplicationSettings>       appSettings_;
    ApplicationSettings::Setting  lastScript_{ ApplicationSettings::_last };
    std::shared_ptr<spdlog::logger>            logger_;
-   std::shared_ptr<SignContainer>             signingContainer_;
-   std::shared_ptr<bs::sync::WalletsManager>  walletsManager_;
-   std::shared_ptr<BaseCelerClient>           celerClient_;
+   std::shared_ptr<SignContainer>            signingContainer_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
+   std::shared_ptr<CelerClientQt>            celerClient_;
    UserScriptRunner *scriptRunner_{};
 
    bs::error::ErrorCode  autoSignState_{ bs::error::ErrorCode::AutoSignDisabled };
@@ -114,7 +114,7 @@ public:
       , UserScriptRunner *
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<BaseCelerClient> &
+      , const std::shared_ptr<CelerClientQt> &
       , QObject *parent = nullptr);
 };
 
@@ -126,7 +126,7 @@ public:
       , UserScriptRunner *
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<BaseCelerClient> &
+      , const std::shared_ptr<CelerClientQt> &
       , QObject *parent = nullptr);
 };
 

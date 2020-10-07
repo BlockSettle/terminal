@@ -34,7 +34,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
    , const std::shared_ptr<WalletSignerContainer> &signContainer
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<BaseCelerClient> &celerClient
+   , const std::shared_ptr<CelerClientQt> &celerClient
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<RfqStorage> &rfqStorage
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet

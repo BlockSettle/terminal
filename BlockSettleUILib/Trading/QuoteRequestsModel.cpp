@@ -26,7 +26,7 @@
 
 
 QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
- , std::shared_ptr<BaseCelerClient> celerClient, std::shared_ptr<ApplicationSettings> appSettings
+ , std::shared_ptr<CelerClientQt> celerClient, std::shared_ptr<ApplicationSettings> appSettings
  , QObject* parent)
    : QAbstractItemModel(parent)
    , secStatsCollector_(statsCollector)
@@ -41,7 +41,7 @@ QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCo
 
    setPriceUpdateInterval(appSettings_->get<int>(ApplicationSettings::PriceUpdateInterval));
 
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed,
+   connect(celerClient_.get(), &CelerClientQt::OnConnectionClosed,
       this, &QuoteRequestsModel::clearModel);
    connect(this, &QuoteRequestsModel::deferredUpdate,
       this, &QuoteRequestsModel::onDeferredUpdate, Qt::QueuedConnection);

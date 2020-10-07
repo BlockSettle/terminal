@@ -462,7 +462,7 @@ public:
    std::shared_ptr<MockAssetManager> assetMgr() { return assetMgr_; }
    std::shared_ptr<BlockchainMonitor> blockMonitor() { return blockMonitor_; }
    std::shared_ptr<ConnectionManager> connectionMgr() { return connMgr_; }
-   std::shared_ptr<BaseCelerClient> celerConnection() { return celerConn_; }
+   std::shared_ptr<CelerClientQt> celerConnection() { return celerConn_; }
    std::shared_ptr<spdlog::logger> logger() { return logger_; }
    std::shared_ptr<bs::core::WalletsManager> walletsMgr() { return walletsMgr_; }
    std::shared_ptr<MarketDataProvider> mdProvider() { return mdProvider_; }
@@ -477,7 +477,7 @@ private:
    std::shared_ptr<ApplicationSettings>  appSettings_;
    std::shared_ptr<MockAssetManager>     assetMgr_;
    std::shared_ptr<BlockchainMonitor>    blockMonitor_;
-   std::shared_ptr<BaseCelerClient>      celerConn_;
+   std::shared_ptr<CelerClientQt>        celerConn_;
    std::shared_ptr<ConnectionManager>    connMgr_;
    std::shared_ptr<MDCallbacksQt>        mdCallbacks_;
    std::shared_ptr<MarketDataProvider>   mdProvider_;

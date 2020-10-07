@@ -40,6 +40,8 @@ namespace BlockSettle {
       class WalletsMessage_WalletsListResponse;
    }
    namespace Terminal {
+      class BsServerMessage_LoginResult;
+      class BsServerMessage_StartLoginResult;
       class SettingsMessage_ArmoryServers;
       class SettingsMessage_SettingsResponse;
       class SettingsMessage_SignerServers;
@@ -102,7 +104,12 @@ private:
    bool processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived&);
    bool processZCInvalidated(const BlockSettle::Common::ArmoryMessage_ZCInvalidated&);
 
+   bool processBsServer(const bs::message::Envelope&);
+   bool processStartLogin(const BlockSettle::Terminal::BsServerMessage_StartLoginResult&);
+   bool processLogin(const BlockSettle::Terminal::BsServerMessage_LoginResult&);
+
 private slots:
+   void onGetSettings(const std::vector<ApplicationSettings::Setting>&);
    void onPutSetting(ApplicationSettings::Setting, const QVariant &value);
    void onResetSettings(const std::vector<ApplicationSettings::Setting>&);
    void onResetSettingsToState(const ApplicationSettings::State&);
@@ -136,11 +143,18 @@ private slots:
    void onNeedBroadcastZC(const std::string& id, const BinaryData&);
    void onNeedSetTxComment(const std::string& walletId, const BinaryData& txHash
       , const std::string& comment);
+   void onNeedOpenBsConnection();
+   void onNeedStartLogin(const std::string& login);
+   void onNeedCancelLogin();
+   void onBootstrapDataLoaded(const std::string&);
+   void onNeedMatchingLogin(const std::string& mtchLogin, const std::string& bsLogin);
+   void onSetRecommendedFeeRate(float);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<bs::message::UserTerminal>   userSettings_, userWallets_;
    std::shared_ptr<bs::message::UserTerminal>   userBlockchain_, userSigner_;
+   std::shared_ptr<bs::message::UserTerminal>   userBS_, userMatch_;
    bs::gui::qt::MainWindow * mainWindow_{ nullptr };
    BSTerminalSplashScreen  * splashScreen_{ nullptr };
 

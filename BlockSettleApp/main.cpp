@@ -311,8 +311,9 @@ int main(int argc, char** argv)
    for (int i = 0; i < argc; ++i) {
       args << QLatin1String(argv[i]);
    }
-
+#ifdef NDEBUG
    try {
+#endif   //NDEBUG
       const auto &settings = std::make_shared<ApplicationSettings>(QLatin1Literal("BlockSettle Terminal")
          , QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
             + QDir::separator() + ApplicationSettings::appSubDir());
@@ -338,13 +339,13 @@ int main(int argc, char** argv)
          , bs::message::UserTerminal::create(bs::message::TerminalUsers::Wallets)
          , signAdapter->createClient()
          , bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain)));
-      inprocBus.addAdapter(std::make_shared<BsServerAdapter>(logMgr->logger()));
+      inprocBus.addAdapter(std::make_shared<BsServerAdapter>(logMgr->logger("bscon")));
 
-      inprocBus.addAdapter(std::make_shared<MatchingAdapter>(logMgr->logger()));
-      inprocBus.addAdapter(std::make_shared<SettlementAdapter>(logMgr->logger()));
-      inprocBus.addAdapter(std::make_shared<MktDataAdapter>(logMgr->logger()));
-      inprocBus.addAdapter(std::make_shared<MDHistAdapter>(logMgr->logger()));
-      inprocBus.addAdapter(std::make_shared<ChatAdapter>(logMgr->logger()));
+      inprocBus.addAdapter(std::make_shared<MatchingAdapter>(logMgr->logger("match")));
+      inprocBus.addAdapter(std::make_shared<SettlementAdapter>(logMgr->logger("settl")));
+      inprocBus.addAdapter(std::make_shared<MktDataAdapter>(logMgr->logger("md")));
+      inprocBus.addAdapter(std::make_shared<MDHistAdapter>(logMgr->logger("mdh")));
+      inprocBus.addAdapter(std::make_shared<ChatAdapter>(logMgr->logger("chat")));
       inprocBus.addAdapter(std::make_shared<BlockchainAdapter>(logMgr->logger()
          , bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain)));
 
@@ -352,6 +353,7 @@ int main(int argc, char** argv)
          logMgr->logger()->error("No runnable adapter found on main inproc bus");
          return EXIT_FAILURE;
       }
+#ifdef NDEBUG
    }
    catch (const std::exception &e) {
       std::cerr << "Failed to start BlockSettle Terminal: " << e.what() << std::endl;
@@ -359,6 +361,7 @@ int main(int argc, char** argv)
          , QObject::tr("Unhandled exception detected: %1").arg(QLatin1String(e.what()))).exec();
       return EXIT_FAILURE;
    }
+#endif   //NDEBUG
 
 //   return GuiApp(argc, argv);
 }

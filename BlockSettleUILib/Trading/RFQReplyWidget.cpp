@@ -127,7 +127,7 @@ void RFQReplyWidget::shortcutActivated(ShortcutType s)
 }
 
 void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<BaseCelerClient>& celerClient
+   , const std::shared_ptr<CelerClientQt>& celerClient
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
    , const std::shared_ptr<QuoteProvider>& quoteProvider
    , const std::shared_ptr<MDCallbacksQt>& mdCallbacks
@@ -223,9 +223,9 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    ui_->treeViewOrders->initWithModel(orderListModel);
 
 
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this
+   connect(celerClient_.get(), &CelerClientQt::OnConnectedToServer, this
       , &RFQReplyWidget::onConnectedToCeler);
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this
+   connect(celerClient_.get(), &CelerClientQt::OnConnectionClosed, this
       , &RFQReplyWidget::onDisconnectedFromCeler);
 
    connect(ui_->widgetQuoteRequests->view(), &TreeViewWithEnterKey::enterKeyPressed

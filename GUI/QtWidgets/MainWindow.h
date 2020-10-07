@@ -16,6 +16,7 @@
 #include <QMainWindow>
 #include "Address.h"
 #include "ArmoryConnection.h"
+#include "BsClient.h"
 #include "SignContainer.h"
 #include "Settings/SignersProvider.h"
 #include "UiUtils.h"
@@ -37,6 +38,7 @@ class AboutDialog;
 class AuthAddressDialog;
 class ConfigDialog;
 class CreateTransactionDialog;
+class LoginWindow;
 class NotificationCenter;
 class QSystemTrayIcon;
 class StatusBarView;
@@ -86,6 +88,10 @@ namespace bs {
             void onArmoryServers(const QList<ArmoryServer>&, int idxCur, int idxConn);
             void onSignerSettings(const QList<SignerHost>&, const std::string& ownKey, int idxCur);
 
+            void onLoginStarted(const std::string &login, bool success, const std::string &errMsg);
+            void onLoggedIn(const BsClientLoginResult&);
+            void onAccountTypeChanged(bs::network::UserType userType, bool enabled);
+
          public slots:
             void onReactivate();
             void raiseWindow();
@@ -99,6 +105,7 @@ namespace bs {
             };*/
 
          signals:
+            void getSettings(const std::vector<ApplicationSettings::Setting> &);
             void putSetting(ApplicationSettings::Setting, const QVariant &);
             void resetSettings(const std::vector<ApplicationSettings::Setting> &);
             void resetSettingsToState(const ApplicationSettings::State&);
@@ -111,6 +118,7 @@ namespace bs {
             void needArmoryReconnect();
             void needSigners();
             void setSigner(int);
+            void bootstrapDataLoaded(const std::string &);
             void createNewWallet();
             void needHDWalletDetails(const std::string &walletId);
             void needWalletsList(UiUtils::WalletsTypes, const std::string &id);
@@ -137,6 +145,12 @@ namespace bs {
             void needBroadcastZC(const std::string& id, const BinaryData&);
             void needSetTxComment(const std::string& walletId, const BinaryData& txHash, const std::string& comment);
 
+            void needOpenBsConnection();
+            void needStartLogin(const std::string& login);
+            void needCancelLogin();
+            void needMatchingLogin(const std::string &mtchLogin, const std::string &bsLogin);
+            void setRecommendedFeeRate(float);
+
          private slots:
             void onSend();
             void onGenerateAddress();
@@ -146,8 +160,8 @@ namespace bs {
          //   void openAccountInfoDialog();
          //   void openCCTokenDialog();
 
-            void onLoggedIn();
-         //   void onLoginProceed(const NetworkSettings &networkSettings);
+            void onLoginInitiated();
+            void onLogoutInitiated();
             void onLoggedOut();
             void onButtonUserClicked();
 
@@ -197,16 +211,18 @@ namespace bs {
             void addDeferredDialog(const std::function<void(void)> &);
             void processDeferredDialogs();
 
+            void activateClient(const BsClientLoginResult&);
+
          private:
             std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
             std::shared_ptr<spdlog::logger>  logger_;
             std::shared_ptr<bs::message::QueueInterface> queue_;
             std::shared_ptr<bs::message::User>  guiUser_, settingsUser_;
 
-            QAction *action_send_{ nullptr };
-            QAction *action_generate_address_{ nullptr };
-            QAction *action_login_{ nullptr };
-            QAction *action_logout_{ nullptr };
+            QAction *actSend_{ nullptr };
+            QAction *actNewAddress_{ nullptr };
+            QAction *actLogin_{ nullptr };
+            QAction *actLogout_{ nullptr };
 
             std::shared_ptr<StatusBarView>            statusBarView_;
             std::shared_ptr<QSystemTrayIcon>          sysTrayIcon_;
@@ -219,10 +235,12 @@ namespace bs {
             std::shared_ptr<TransactionsViewModel>    txModel_;
             CreateTransactionDialog* txDlg_{ nullptr };
             ConfigDialog*  cfgDlg_{ nullptr };
+            LoginWindow* loginDlg_{ nullptr };
 
             //   std::shared_ptr<WalletManagementWizard> walletsWizard_;
 
-            QString currentUserLogin_;
+            bool     accountEnabled_{ false };
+            QString  currentUserLogin_;
             QString  loginButtonText_;
             QTimer * loginTimer_{};
 
@@ -230,6 +248,7 @@ namespace bs {
             bool initialWalletCreateDialogShown_ = false;
             bool deferCCsync_ = false;
             bool advTxDlgByDefault_{ false };
+            ApplicationSettings::EnvConfiguration envConfig_{ ApplicationSettings::EnvConfiguration::Unknown };
 
             std::queue<std::function<void(void)>> deferredDialogs_;
             bool deferredDialogRunning_ = false;

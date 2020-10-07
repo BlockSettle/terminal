@@ -46,7 +46,7 @@ class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class AutoSignScriptProvider;
-class BaseCelerClient;
+class CelerClientQt;
 class DialogManager;
 class MarketDataProvider;
 class MDCallbacksQt;
@@ -68,8 +68,8 @@ public:
       , const std::shared_ptr<MDCallbacksQt> &
       , const std::shared_ptr<ApplicationSettings> &);
 
-   void init(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<BaseCelerClient> &
+   [[deprecated]] void init(const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<CelerClientQt> &
       , const std::shared_ptr<AuthAddressManager> &
       , const std::shared_ptr<QuoteProvider> &
       , const std::shared_ptr<AssetManager> &
@@ -143,7 +143,7 @@ private:
    std::unique_ptr<Ui::RFQRequestWidget> ui_;
 
    std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<BaseCelerClient>        celerClient_;
+   std::shared_ptr<CelerClientQt>      celerClient_;
    std::shared_ptr<QuoteProvider>      quoteProvider_;
    std::shared_ptr<AssetManager>       assetManager_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;

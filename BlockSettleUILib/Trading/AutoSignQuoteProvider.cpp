@@ -26,7 +26,7 @@ AutoSignScriptProvider::AutoSignScriptProvider(const std::shared_ptr<spdlog::log
    , UserScriptRunner *scriptRunner
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<BaseCelerClient> &celerClient
+   , const std::shared_ptr<CelerClientQt> &celerClient
    , QObject *parent)
    : QObject(parent), logger_(logger), scriptRunner_(scriptRunner)
    , appSettings_(appSettings)
@@ -53,8 +53,8 @@ AutoSignScriptProvider::AutoSignScriptProvider(const std::shared_ptr<spdlog::log
 
    onSignerStateUpdated();
 
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this, &AutoSignScriptProvider::onConnectedToCeler);
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &AutoSignScriptProvider::onDisconnectedFromCeler);
+   connect(celerClient_.get(), &CelerClientQt::OnConnectedToServer, this, &AutoSignScriptProvider::onConnectedToCeler);
+   connect(celerClient_.get(), &CelerClientQt::OnConnectionClosed, this, &AutoSignScriptProvider::onDisconnectedFromCeler);
 }
 
 void AutoSignScriptProvider::onSignerStateUpdated()
@@ -255,7 +255,7 @@ AutoSignAQProvider::AutoSignAQProvider(const std::shared_ptr<spdlog::logger> &lo
    , UserScriptRunner *scriptRunner
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<BaseCelerClient> &celerClient
+   , const std::shared_ptr<CelerClientQt> &celerClient
    , QObject *parent)
    : AutoSignScriptProvider(logger, scriptRunner, appSettings, container, celerClient, parent)
 {
@@ -279,7 +279,7 @@ AutoSignRFQProvider::AutoSignRFQProvider(const std::shared_ptr<spdlog::logger> &
    , UserScriptRunner *scriptRunner
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<BaseCelerClient> &celerClient
+   , const std::shared_ptr<CelerClientQt> &celerClient
    , QObject *parent)
    : AutoSignScriptProvider(logger, scriptRunner, appSettings, container, celerClient, parent)
 {

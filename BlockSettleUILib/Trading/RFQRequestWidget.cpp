@@ -208,7 +208,7 @@ void RFQRequestWidget::initWidgets(const std::shared_ptr<MarketDataProvider>& md
 }
 
 void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<BaseCelerClient>& celerClient
+   , const std::shared_ptr<CelerClientQt>& celerClient
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
    , const std::shared_ptr<QuoteProvider> &quoteProvider
    , const std::shared_ptr<AssetManager> &assetManager
@@ -248,8 +248,8 @@ void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
          , { false, QString::fromStdString(quoteId), QString::fromStdString(reason) });
    });
 
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this, &RFQRequestWidget::onConnectedToCeler);
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &RFQRequestWidget::onDisconnectedFromCeler);
+   connect(celerClient_.get(), &CelerClientQt::OnConnectedToServer, this, &RFQRequestWidget::onConnectedToCeler);
+   connect(celerClient_.get(), &CelerClientQt::OnConnectionClosed, this, &RFQRequestWidget::onDisconnectedFromCeler);
 
    connect((RFQScriptRunner *)autoSignProvider_->scriptRunner(), &RFQScriptRunner::sendRFQ
       , ui_->pageRFQTicket, &RFQTicketXBT::onSendRFQ, Qt::QueuedConnection);

@@ -20,19 +20,19 @@ using namespace bs::message;
 
 
 MatchingAdapter::MatchingAdapter(const std::shared_ptr<spdlog::logger> &logger)
-   : QObject(nullptr), logger_(logger)
+   : logger_(logger)
    , user_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Matching))
 {
-   celerConnection_ = std::make_shared<CelerClientProxy>(logger);
+/*   celerConnection_ = std::make_shared<CelerClientProxy>(logger);
    connect(celerConnection_.get(), &BaseCelerClient::OnConnectedToServer, this
       , &MatchingAdapter::onCelerConnected, Qt::QueuedConnection);
    connect(celerConnection_.get(), &BaseCelerClient::OnConnectionClosed, this
       , &MatchingAdapter::onCelerDisconnected, Qt::QueuedConnection);
    connect(celerConnection_.get(), &BaseCelerClient::OnConnectionError, this
-      , &MatchingAdapter::onCelerConnectionError, Qt::QueuedConnection);
+      , &MatchingAdapter::onCelerConnectionError, Qt::QueuedConnection);*/
 }
 
-void MatchingAdapter::onCelerConnected()
+/*void MatchingAdapter::onCelerConnected()
 {
    MatchingMessage msg;
    auto loggedIn = msg.mutable_logged_in();
@@ -61,7 +61,7 @@ void MatchingAdapter::onCelerConnectionError(int errorCode)
    Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
    pushFill(env);
 }
-
+*/
 
 bool MatchingAdapter::process(const bs::message::Envelope &env)
 {
@@ -79,5 +79,24 @@ bool MatchingAdapter::process(const bs::message::Envelope &env)
          pushFill(envBC);
       }
    }
+   else if (env.receiver && (env.receiver->value() == user_->value())) {
+      MatchingMessage msg;
+      if (!msg.ParseFromString(env.message)) {
+         logger_->error("[{}] failed to parse message #{}", __func__, env.id);
+         return true;
+      }
+      switch (msg.data_case()) {
+      case MatchingMessage::kLogin:
+         return processLogin(msg.login());
+      default:
+         logger_->warn("[{}] unknown msg {} #{}", __func__, msg.data_case(), env.id);
+         break;
+      }
+   }
    return true;
+}
+
+bool MatchingAdapter::processLogin(const BlockSettle::Terminal::MatchingMessage_Login&)
+{
+   return false;
 }

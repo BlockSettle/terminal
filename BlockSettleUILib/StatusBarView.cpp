@@ -17,7 +17,8 @@
 
 StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<BaseCelerClient> &celerClient
+   , std::shared_ptr<AssetManager> assetManager
+   , const std::shared_ptr<CelerClientQt> &celerClient
    , const std::shared_ptr<SignContainer> &container, QStatusBar *parent)
    : QObject(nullptr)
    , statusBar_(parent)
@@ -88,9 +89,9 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, this, &StatusBarView::onWalletImportFinished);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &StatusBarView::updateBalances);
 
-   connect(celerClient.get(), &BaseCelerClient::OnConnectedToServer, this, &StatusBarView::onConnectedToServer);
-   connect(celerClient.get(), &BaseCelerClient::OnConnectionClosed, this, &StatusBarView::onConnectionClosed);
-   connect(celerClient.get(), &BaseCelerClient::OnConnectionError, this, &StatusBarView::onConnectionError);
+   connect(celerClient.get(), &CelerClientQt::OnConnectedToServer, this, &StatusBarView::onConnectedToServer);
+   connect(celerClient.get(), &CelerClientQt::OnConnectionClosed, this, &StatusBarView::onConnectionClosed);
+   connect(celerClient.get(), &CelerClientQt::OnConnectionError, this, &StatusBarView::onConnectionError);
 
    // container might be null if user rejects remote signer key
    if (container) {

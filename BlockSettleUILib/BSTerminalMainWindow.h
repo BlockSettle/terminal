@@ -283,8 +283,8 @@ private:
    void restartTerminal();
    void processDeferredDialogs();
 
-   std::shared_ptr<BsClient> createClient();
-   void activateClient(const std::shared_ptr<BsClient> &bsClient
+   std::shared_ptr<BsClientQt> createClient();
+   void activateClient(const std::shared_ptr<BsClientQt> &bsClient
       , const BsClientLoginResult &result, const std::string &email);
    const std::string &loginApiKeyEncrypted() const;
    void initApiKeyLogins();
@@ -307,7 +307,7 @@ private:
    QString autoLoginLastErrorMsg_;
    std::string loginApiKeyEncrypted_;
    QTimer *loginTimer_{};
-   std::shared_ptr<BsClient> autoLoginClient_;
+   std::shared_ptr<BsClientQt> autoLoginClient_;
 
    bool initialWalletCreateDialogShown_ = false;
    bool deferCCsync_ = false;
@@ -345,7 +345,7 @@ private:
    };
    std::unique_ptr<MainWinACT>   act_;
 
-   std::shared_ptr<BsClient> bsClient_;
+   std::shared_ptr<BsClientQt>   bsClient_;
 
    Chat::ChatClientServicePtr chatClientServicePtr_;
 

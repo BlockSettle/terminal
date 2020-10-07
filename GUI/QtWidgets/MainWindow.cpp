@@ -34,6 +34,7 @@
 #include "InfoDialogs/AboutDialog.h"
 #include "InfoDialogs/StartupDialog.h"
 #include "InfoDialogs/SupportDialog.h"
+#include "LoginWindow.h"
 #include "NotificationCenter.h"
 #include "Settings/ConfigDialog.h"
 #include "StatusBarView.h"
@@ -153,6 +154,24 @@ void MainWindow::onSetting(int setting, const QVariant &value)
    case ApplicationSettings::closeToTray:
       closeToTray_ = value.toBool();
       updateAppearance();
+      break;
+   case ApplicationSettings::envConfiguration: {
+      const auto& newEnvCfg = static_cast<ApplicationSettings::EnvConfiguration>(value.toInt());
+      if (envConfig_ != newEnvCfg) {
+         envConfig_ = newEnvCfg;
+         //TODO: maybe initiate relog and Celer/proxy reconnect
+      }
+   }
+      break;
+   case ApplicationSettings::rememberLoginUserName:
+      if (loginDlg_) {
+         loginDlg_->setRememberLogin(value.toBool());
+      }
+      break;
+   case ApplicationSettings::celerUsername:
+      if (loginDlg_) {
+         loginDlg_->setLogin(value.toString());
+      }
       break;
    default: break;
    }
@@ -420,21 +439,21 @@ MainWindow::~MainWindow()
 
 void MainWindow::setupToolbar()
 {
-   action_send_ = new QAction(tr("Send Bitcoin"), this);
-   connect(action_send_, &QAction::triggered, this, &MainWindow::onSend);
+   actSend_ = new QAction(tr("Send Bitcoin"), this);
+   connect(actSend_, &QAction::triggered, this, &MainWindow::onSend);
 
-   action_generate_address_ = new QAction(tr("Generate &Address"), this);
-   connect(action_generate_address_, &QAction::triggered, this, &MainWindow::onGenerateAddress);
+   actNewAddress_ = new QAction(tr("Generate &Address"), this);
+   connect(actNewAddress_, &QAction::triggered, this, &MainWindow::onGenerateAddress);
 
-   action_login_ = new QAction(tr("Login to BlockSettle"), this);
-   connect(action_login_, &QAction::triggered, this, &MainWindow::onLoggedIn);
+   actLogin_ = new QAction(tr("Login to BlockSettle"), this);
+   connect(actLogin_, &QAction::triggered, this, &MainWindow::onLoginInitiated);
 
-   action_logout_ = new QAction(tr("Logout from BlockSettle"), this);
-   connect(action_logout_, &QAction::triggered, this, &MainWindow::onLoggedOut);
+   actLogout_ = new QAction(tr("Logout from BlockSettle"), this);
+   connect(actLogout_, &QAction::triggered, this, &MainWindow::onLogoutInitiated);
 
    setupTopRightWidget();
 
-   action_logout_->setVisible(false);
+   actLogout_->setVisible(false);
 
    connect(ui_->pushButtonUser, &QPushButton::clicked, this, &MainWindow::onButtonUserClicked);
 
@@ -443,8 +462,8 @@ void MainWindow::setupToolbar()
    connect(trayShowAction, &QAction::triggered, this, &QMainWindow::show);
    trayMenu->addSeparator();
 
-   trayMenu->addAction(action_send_);
-   trayMenu->addAction(action_generate_address_);
+   trayMenu->addAction(actSend_);
+   trayMenu->addAction(actNewAddress_);
    trayMenu->addAction(ui_->actionSettings);
 
    trayMenu->addSeparator();
@@ -459,13 +478,13 @@ void MainWindow::setupTopRightWidget()
    toolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
    ui_->tabWidget->setCornerWidget(toolBar, Qt::TopRightCorner);
 
-   toolBar->addAction(action_send_);
-   toolBar->addAction(action_generate_address_);
+   toolBar->addAction(actSend_);
+   toolBar->addAction(actNewAddress_);
 
    for (int i = 0; i < toolBar->children().size(); ++i) {
       auto *toolButton = qobject_cast<QToolButton*>(toolBar->children().at(i));
-      if (toolButton && (toolButton->defaultAction() == action_send_
-         || toolButton->defaultAction() == action_generate_address_)) {
+      if (toolButton && (toolButton->defaultAction() == actSend_
+         || toolButton->defaultAction() == actNewAddress_)) {
          toolButton->setObjectName(QLatin1String("mainToolBarActions"));
       }
    }
@@ -714,14 +733,14 @@ void MainWindow::onSend()
 void MainWindow::setupMenu()
 {
    // menu role erquired for OSX only, to place it to first menu item
-   action_login_->setMenuRole(QAction::ApplicationSpecificRole);
-   action_logout_->setMenuRole(QAction::ApplicationSpecificRole);
+   actLogin_->setMenuRole(QAction::ApplicationSpecificRole);
+   actLogout_->setMenuRole(QAction::ApplicationSpecificRole);
 
 
-   ui_->menuFile->insertAction(ui_->actionSettings, action_login_);
-   ui_->menuFile->insertAction(ui_->actionSettings, action_logout_);
+   ui_->menuFile->insertAction(ui_->actionSettings, actLogin_);
+   ui_->menuFile->insertAction(ui_->actionSettings, actLogout_);
 
-   ui_->menuFile->insertSeparator(action_login_);
+   ui_->menuFile->insertSeparator(actLogin_);
    ui_->menuFile->insertSeparator(ui_->actionSettings);
 
 /*   AboutDialog *aboutDlg = new AboutDialog(applicationSettings_->get<QString>(ApplicationSettings::ChangeLog_Base_Url), this);
@@ -804,64 +823,53 @@ void MainWindow::openConfigDialog(bool showInNetworkPage)
    cfgDlg_->exec();
 }
 
-void MainWindow::onLoggedIn()
+void MainWindow::onLoginInitiated()
 {
-//   onNetworkSettingsRequired(NetworkSettingsClient::Login);
+   if (!actLogin_->isEnabled()) {
+      return;
+   }
+   //TODO: prompt for primary wallet creation if needed
+   emit needOpenBsConnection();
+   loginDlg_ = new LoginWindow(logger_, envConfig_, this);
+   emit getSettings({ ApplicationSettings::rememberLoginUserName, ApplicationSettings::celerUsername });
+   connect(loginDlg_, &QDialog::finished, [this] {
+      loginDlg_->deleteLater();
+      loginDlg_ = nullptr;
+   });
+   connect(loginDlg_, &LoginWindow::putSetting, this, &MainWindow::putSetting);
+   connect(loginDlg_, &LoginWindow::needStartLogin, this, &MainWindow::needStartLogin);
+   connect(loginDlg_, &LoginWindow::needCancelLogin, this, &MainWindow::needCancelLogin);
+
+   loginDlg_->exec();
 }
 
-/*void MainWindow::onLoginProceed(const NetworkSettings &networkSettings)
+void bs::gui::qt::MainWindow::onLoginStarted(const std::string& login, bool success, const std::string& errMsg)
 {
-   auto envType = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get(ApplicationSettings::envConfiguration).toInt());
+   if (loginDlg_) {
+      loginDlg_->onLoginStarted(login, success, errMsg);
+   }
+}
 
-#ifdef PRODUCTION_BUILD
-   if (networkSettings.status == Blocksettle::Communication::GetNetworkSettingsResponse_Status_LIVE_TRADING_COMING_SOON) {
-      BSMessageBox mbox(BSMessageBox::question, tr("Login to BlockSettle"), tr("Live trading is coming soon...")
-                   , tr("In the meantime, you can try p2p trading in our testnet environment. Would you like to do so now?"), this);
-      mbox.setCancelButtonText(tr("Cancel"));
-      mbox.setConfirmButtonText(tr("Yes"));
-      int rc = mbox.exec();
-      if (rc == QDialog::Accepted) {
-         switchToTestEnv();
-         restartTerminal();
-      }
+void MainWindow::onLoggedIn(const BsClientLoginResult& result)
+{
+   if (loginDlg_) {
+      loginDlg_->onLoggedIn(result);
+   }
+   if (result.status != AutheIDClient::ErrorType::NoError) {
+      onLoggedOut();
       return;
    }
-#endif
+   bool isRegistered = (result.userType == bs::network::UserType::Market
+      || result.userType == bs::network::UserType::Trading
+      || result.userType == bs::network::UserType::Dealing);
 
-   if (walletsSynched_ && !walletsMgr_->getPrimaryWallet()) {
-      addDeferredDialog([this] {
-         CreatePrimaryWalletPrompt dlg;
-         int rc = dlg.exec();
-         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
-            ui_->widgetWallets->CreateNewWallet();
-         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
-            ui_->widgetWallets->ImportNewWallet();
-         }
-      });
-      return;
-   }
-
-   auto bsClient = createClient();
-
-   auto logger = logMgr_->logger("proxy");
-   LoginWindow loginDialog(logger, bsClient, applicationSettings_, this);
-
-   int rc = loginDialog.exec();
-   if (rc != QDialog::Accepted && !loginDialog.result()) {
-      return;
-   }
-
-   bool isRegistered = (loginDialog.result()->userType == bs::network::UserType::Market
-      || loginDialog.result()->userType == bs::network::UserType::Trading
-      || loginDialog.result()->userType == bs::network::UserType::Dealing);
-
-   if (!isRegistered && envType == ApplicationSettings::EnvConfiguration::Test) {
-      auto createTestAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlTest);
+   if (!isRegistered && envConfig_ == ApplicationSettings::EnvConfiguration::Test) {
+      auto createTestAccountUrl = tr("async retrieval of GetAccount_UrlTest");
       BSMessageBox dlg(BSMessageBox::info, tr("Create Test Account")
          , tr("Create a BlockSettle test account")
          , tr("<p>Login requires a test account - create one in minutes on test.blocksettle.com</p>"
-              "<p>Once you have registered, return to login in the Terminal.</p>"
-              "<a href=\"%1\"><span style=\"text-decoration: underline;color:%2;\">Create Test Account Now</span></a>")
+            "<p>Once you have registered, return to login in the Terminal.</p>"
+            "<a href=\"%1\"><span style=\"text-decoration: underline;color:%2;\">Create Test Account Now</span></a>")
          .arg(createTestAccountUrl).arg(BSMessageBox::kUrlColor), this);
       dlg.setOkVisible(false);
       dlg.setCancelVisible(true);
@@ -870,13 +878,13 @@ void MainWindow::onLoggedIn()
       return;
    }
 
-   if (!isRegistered && envType == ApplicationSettings::EnvConfiguration::Production) {
-      auto createAccountUrl = applicationSettings_->get<QString>(ApplicationSettings::GetAccount_UrlProd);
+   if (!isRegistered && envConfig_ == ApplicationSettings::EnvConfiguration::Production) {
+      auto createAccountUrl = tr("async retrieval of GetAccount_UrlProd");
       BSMessageBox dlg(BSMessageBox::info, tr("Create Account")
          , tr("Create a BlockSettle account")
          , tr("<p>Login requires an account - create one in minutes on blocksettle.com</p>"
-              "<p>Once you have registered, return to login in the Terminal.</p>"
-              "<a href=\"%1\"><span style=\"text-decoration: underline;color:%2;\">Create Account Now</span></a>")
+            "<p>Once you have registered, return to login in the Terminal.</p>"
+            "<a href=\"%1\"><span style=\"text-decoration: underline;color:%2;\">Create Account Now</span></a>")
          .arg(createAccountUrl).arg(BSMessageBox::kUrlColor), this);
       dlg.setOkVisible(false);
       dlg.setCancelVisible(true);
@@ -885,30 +893,78 @@ void MainWindow::onLoggedIn()
       return;
    }
 
-   networkSettingsReceived(networkSettings, NetworkSettingsClient::MarketData);
+   activateClient(result);
+}
 
-   activateClient(bsClient, *loginDialog.result(), loginDialog.email().toStdString());
-}*/
+void MainWindow::activateClient(const BsClientLoginResult& result)
+{
+   currentUserLogin_ = QString::fromStdString(result.login);
+/*   chatTokenData_ = result.chatTokenData;
+   chatTokenSign_ = result.chatTokenSign;
+   tryLoginIntoChat();
 
-void MainWindow::onLoggedOut()
+   bsClient_ = bsClient;
+   ccFileManager_->setBsClient(bsClient);
+   authAddrDlg_->setBsClient(bsClient);*/
+
+   auto tradeSettings = std::make_shared<bs::TradeSettings>(result.tradeSettings);
+   emit putSetting(ApplicationSettings::SubmittedAddressXbtLimit, static_cast<quint64>(tradeSettings->xbtTier1Limit));
+
+//   authManager_->initLogin(celerConnection_, tradeSettings_);
+   emit bootstrapDataLoaded(result.bootstrapDataSigned);
+
+   setLoginButtonText(currentUserLogin_);
+   setWidgetsAuthorized(true);
+
+   emit setRecommendedFeeRate(result.feeRatePb);
+//   utxoReservationMgr_->setFeeRatePb(result.feeRatePb);
+//   celerConnection_->LoginToServer(bsClient_.get(), result.celerLogin, email);
+
+   ui_->widgetWallets->setUsername(currentUserLogin_);
+   actLogout_->setVisible(false);
+   actLogin_->setEnabled(false);
+
+   // Market data, charts and chat should be available for all Auth eID logins
+//   mdProvider_->SubscribeToMD();
+
+   accountEnabled_ = result.enabled;
+   onAccountTypeChanged(result.userType, result.enabled);
+}
+
+void MainWindow::onAccountTypeChanged(bs::network::UserType userType, bool enabled)
+{
+//   userType_ = userType;
+   if ((accountEnabled_ != enabled) && (userType != bs::network::UserType::Chat)) {
+      notifCenter_->enqueue(enabled ? bs::ui::NotifyType::AccountEnabled
+         : bs::ui::NotifyType::AccountDisabled, {});
+   }
+//   authManager_->setUserType(userType);
+   ui_->widgetChat->setUserType(enabled ? userType : bs::network::UserType::Chat);
+}
+
+void bs::gui::qt::MainWindow::onLogoutInitiated()
 {
    ui_->widgetWallets->setUsername(QString());
-/*   if (chatClientServicePtr_) {
-      chatClientServicePtr_->LogoutFromServer();
-   }*/
+   /*   if (chatClientServicePtr_) {
+         chatClientServicePtr_->LogoutFromServer();
+      }*/
    ui_->widgetChart->disconnect();
+   /*   if (celerConnection_->IsConnected()) {
+         celerConnection_->CloseConnection();
+      }*/
 
-/*   if (celerConnection_->IsConnected()) {
-      celerConnection_->CloseConnection();
-   }*/
-
-//   mdProvider_->UnsubscribeFromMD();
+      //   mdProvider_->UnsubscribeFromMD();
 
    setLoginButtonText(loginButtonText_);
 
    setWidgetsAuthorized(false);
 
-//   bsClient_.reset();
+   //   bsClient_.reset();
+}
+
+void MainWindow::onLoggedOut()
+{
+
 }
 
 void MainWindow::onUserLoggedIn()
@@ -1094,7 +1150,7 @@ void MainWindow::setupShortcuts()
 
 void MainWindow::onButtonUserClicked() {
    if (ui_->pushButtonUser->text() == loginButtonText_) {
-      onLoggedIn();
+      onLoginInitiated();
    } else {
       if (BSMessageBox(BSMessageBox::question, tr("User Logout"), tr("You are about to logout")
          , tr("Do you want to continue?")).exec() == QDialog::Accepted)

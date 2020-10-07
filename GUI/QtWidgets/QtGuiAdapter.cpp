@@ -24,6 +24,7 @@
 #include <spdlog/spdlog.h>
 #include "Address.h"
 #include "AppNap.h"
+#include "BsClient.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
 #include "MainWindow.h"
@@ -40,6 +41,7 @@ using namespace bs::message;
 Q_DECLARE_METATYPE(bs::error::AuthAddressSubmitResult)
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(std::vector<bs::Address>)
+Q_DECLARE_METATYPE(std::vector<ApplicationSettings::Setting>);
 
 #if defined (Q_OS_MAC)
 class MacOsApp : public QApplication
@@ -118,6 +120,8 @@ QtGuiAdapter::QtGuiAdapter(const std::shared_ptr<spdlog::logger> &logger)
    , userWallets_(std::make_shared<UserTerminal>(TerminalUsers::Wallets))
    , userBlockchain_(std::make_shared<UserTerminal>(TerminalUsers::Blockchain))
    , userSigner_(std::make_shared<UserTerminal>(TerminalUsers::Signer))
+   , userBS_(std::make_shared<UserTerminal>(TerminalUsers::BsServer))
+   , userMatch_(std::make_shared<UserTerminal>(TerminalUsers::Matching))
 {}
 
 QtGuiAdapter::~QtGuiAdapter()
@@ -190,6 +194,7 @@ void QtGuiAdapter::run(int &argc, char **argv)
    qRegisterMetaType<QVector<int>>();
    qRegisterMetaType<std::string>();
    qRegisterMetaType<std::vector<bs::Address>>();
+   qRegisterMetaType<std::vector<ApplicationSettings::Setting>>();
 
    QString logoIcon;
    logoIcon = QLatin1String(":/SPLASH_LOGO");
@@ -234,6 +239,8 @@ bool QtGuiAdapter::process(const Envelope &env)
          return processSigner(env);
       case TerminalUsers::Wallets:
          return processWallets(env);
+      case TerminalUsers::BsServer:
+         return processBsServer(env);
       case TerminalUsers::AuthEid:
          return processAuthEid(env);
       case TerminalUsers::OnChainTracker:
@@ -674,12 +681,18 @@ void QtGuiAdapter::requestInitialSettings()
    setReq->set_index(SetIdx_CloseToTray);
    setReq->set_type(SettingType_Bool);
 
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_Environment);
+   setReq->set_type(SettingType_Int);
+
    Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
    pushFill(env);
 }
 
 void QtGuiAdapter::makeMainWinConnections()
 {
+   connect(mainWindow_, &bs::gui::qt::MainWindow::getSettings, this, &QtGuiAdapter::onGetSettings);
    connect(mainWindow_, &bs::gui::qt::MainWindow::putSetting, this, &QtGuiAdapter::onPutSetting);
    connect(mainWindow_, &bs::gui::qt::MainWindow::resetSettings, this, &QtGuiAdapter::onResetSettings);
    connect(mainWindow_, &bs::gui::qt::MainWindow::resetSettingsToState, this, &QtGuiAdapter::onResetSettingsToState);
@@ -692,6 +705,7 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::needArmoryReconnect, this, &QtGuiAdapter::onNeedArmoryReconnect);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needSigners, this, &QtGuiAdapter::onNeedSigners);
    connect(mainWindow_, &bs::gui::qt::MainWindow::setSigner, this, &QtGuiAdapter::onSetSigner);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::bootstrapDataLoaded, this, &QtGuiAdapter::onBootstrapDataLoaded);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needHDWalletDetails, this, &QtGuiAdapter::onNeedHDWalletDetails);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needWalletBalances, this, &QtGuiAdapter::onNeedWalletBalances);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needExtAddresses, this, &QtGuiAdapter::onNeedExtAddresses);
@@ -708,6 +722,24 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::needSignTX, this, &QtGuiAdapter::onNeedSignTX);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needBroadcastZC, this, &QtGuiAdapter::onNeedBroadcastZC);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needSetTxComment, this, &QtGuiAdapter::onNeedSetTxComment);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needOpenBsConnection, this, &QtGuiAdapter::onNeedOpenBsConnection);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needStartLogin, this, &QtGuiAdapter::onNeedStartLogin);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needCancelLogin, this, &QtGuiAdapter::onNeedCancelLogin);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needMatchingLogin, this, &QtGuiAdapter::onNeedMatchingLogin);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::setRecommendedFeeRate, this, &QtGuiAdapter::onSetRecommendedFeeRate);
+}
+
+void QtGuiAdapter::onGetSettings(const std::vector<ApplicationSettings::Setting>& settings)
+{
+   SettingsMessage msg;
+   auto msgReq = msg.mutable_get_request();
+   for (const auto& setting : settings) {
+      auto setReq = msgReq->add_requests();
+      setReq->set_source(SettingSource_Local);
+      setReq->set_index(static_cast<SettingIndex>(setting));
+   }
+   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
 }
 
 void QtGuiAdapter::onPutSetting(ApplicationSettings::Setting idx, const QVariant &value)
@@ -1043,6 +1075,52 @@ void QtGuiAdapter::onNeedSetTxComment(const std::string& walletId, const BinaryD
    pushFill(env);
 }
 
+void QtGuiAdapter::onNeedOpenBsConnection()
+{
+   BsServerMessage msg;
+   msg.mutable_open_connection();
+   Envelope env{ 0, user_, userBS_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedStartLogin(const std::string& login)
+{
+   BsServerMessage msg;
+   msg.set_start_login(login);
+   Envelope env{ 0, user_, userBS_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedCancelLogin()
+{
+   BsServerMessage msg;
+   msg.mutable_cancel_last_login();
+   Envelope env{ 0, user_, userBS_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onBootstrapDataLoaded(const std::string& bsData)
+{
+   SettingsMessage msg;
+   msg.set_load_bootstrap(bsData);
+   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedMatchingLogin(const std::string& mtchLogin, const std::string& bsLogin)
+{
+   MatchingMessage msg;
+   auto msgReq = msg.mutable_login();
+   msgReq->set_matching_login(mtchLogin);
+   msgReq->set_terminal_login(bsLogin);
+   Envelope env{ 0, user_, userMatch_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onSetRecommendedFeeRate(float)
+{
+}
+
 void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
 {
    hdWallets_[*wi.ids.cbegin()] = wi;
@@ -1291,6 +1369,55 @@ bool QtGuiAdapter::processZCInvalidated(const ArmoryMessage_ZCInvalidated& zcInv
    }
    return QMetaObject::invokeMethod(mainWindow_, [this, txHashes] {
       mainWindow_->onZCsInvalidated(txHashes);
+   });
+}
+
+bool QtGuiAdapter::processBsServer(const bs::message::Envelope& env)
+{
+   BsServerMessage msg;
+   if (!msg.ParseFromString(env.message)) {
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      return true;
+   }
+   switch (msg.data_case()) {
+   case BsServerMessage::kStartLoginResult:
+      return processStartLogin(msg.start_login_result());
+   case BsServerMessage::kLoginResult:
+      return processLogin(msg.login_result());
+   default: break;
+   }
+   return true;
+}
+
+bool QtGuiAdapter::processStartLogin(const BsServerMessage_StartLoginResult& response)
+{
+   return QMetaObject::invokeMethod(mainWindow_, [this, response] {
+      mainWindow_->onLoginStarted(response.login(), response.success()
+         , response.error_text());
+   });
+}
+
+bool QtGuiAdapter::processLogin(const BsServerMessage_LoginResult& response)
+{
+   BsClientLoginResult result;
+   result.login = response.login();
+   result.status = static_cast<AutheIDClient::ErrorType>(response.status());
+   result.userType = static_cast<bs::network::UserType>(response.user_type());
+   result.errorMsg = response.error_text();
+   result.celerLogin = response.celer_login();
+   result.chatTokenData = BinaryData::fromString(response.chat_token());
+   result.chatTokenSign = BinaryData::fromString(response.chat_token_signature());
+   result.bootstrapDataSigned = response.bootstrap_signed_data();
+   result.enabled = response.enabled();
+   result.feeRatePb = response.fee_rate();
+   result.tradeSettings.xbtTier1Limit = response.trade_settings().xbt_tier1_limit();
+   result.tradeSettings.xbtPriceBand = response.trade_settings().xbt_price_band();
+   result.tradeSettings.authRequiredSettledTrades = response.trade_settings().auth_reqd_settl_trades();
+   result.tradeSettings.authSubmitAddressLimit = response.trade_settings().auth_submit_addr_limit();
+   result.tradeSettings.dealerAuthSubmitAddressLimit = response.trade_settings().dealer_auth_submit_addr_limit();
+
+   return QMetaObject::invokeMethod(mainWindow_, [this, result] {
+      mainWindow_->onLoggedIn(result);
    });
 }
 

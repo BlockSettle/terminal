@@ -49,10 +49,10 @@ RequestingQuoteWidget::RequestingQuoteWidget(QWidget* parent)
 
 RequestingQuoteWidget::~RequestingQuoteWidget() = default;
 
-void RequestingQuoteWidget::SetCelerClient(std::shared_ptr<BaseCelerClient> celerClient) {
+void RequestingQuoteWidget::SetCelerClient(std::shared_ptr<CelerClientQt> celerClient) {
    celerClient_ = celerClient;
 
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed,
+   connect(celerClient_.get(), &CelerClientQt::OnConnectionClosed,
       this, &RequestingQuoteWidget::onCelerDisconnected);
 }
 
