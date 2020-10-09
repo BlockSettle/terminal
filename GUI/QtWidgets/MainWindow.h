@@ -96,6 +96,9 @@ namespace bs {
                , const std::string &userId);
             void onMatchingLogout();
 
+            void onMDUpdated(bs::network::Asset::Type assetType
+               , const QString& security, const bs::network::MDFields &);
+
          public slots:
             void onReactivate();
             void raiseWindow();
@@ -156,6 +159,7 @@ namespace bs {
             void needMatchingLogin(const std::string &mtchLogin, const std::string &bsLogin);
             void needMatchingLogout();
             void needSetUserId(const std::string&);
+            void needMdConnection(ApplicationSettings::EnvConfiguration);
             void setRecommendedFeeRate(float);
 
          private slots:

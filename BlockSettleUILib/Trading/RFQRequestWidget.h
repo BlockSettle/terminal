@@ -64,7 +64,7 @@ public:
    RFQRequestWidget(QWidget* parent = nullptr);
    ~RFQRequestWidget() override;
 
-   void initWidgets(const std::shared_ptr<MarketDataProvider> &
+   [[deprecated]] void initWidgets(const std::shared_ptr<MarketDataProvider> &
       , const std::shared_ptr<MDCallbacksQt> &
       , const std::shared_ptr<ApplicationSettings> &);
 
@@ -80,11 +80,18 @@ public:
       , const std::shared_ptr<bs::UTXOReservationManager> &
       , OrderListModel *orderListModel);
 
+   void init(const std::shared_ptr<spdlog::logger>&
+      , const std::shared_ptr<DialogManager>&
+      , OrderListModel* orderListModel);
+
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
    void shortcutActivated(ShortcutType s) override;
 
    void setAuthorized(bool authorized);
+
+   void onMDUpdated(bs::network::Asset::Type, const QString& security
+      , const bs::network::MDFields &);
 
 protected:
    void hideEvent(QHideEvent* event) override;

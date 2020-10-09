@@ -161,6 +161,12 @@ void RFQRequestWidget::setAuthorized(bool authorized)
    ui_->widgetMarketData->setAuthorized(authorized);
 }
 
+void RFQRequestWidget::onMDUpdated(bs::network::Asset::Type assetType
+   , const QString& security, const bs::network::MDFields &fields)
+{
+   ui_->widgetMarketData->onMDUpdated(assetType, security, fields);
+}
+
 void RFQRequestWidget::hideEvent(QHideEvent* event)
 {
    ui_->pageRFQTicket->onParentAboutToHide();
@@ -259,6 +265,10 @@ void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
    ui_->pageRFQTicket->disablePanel();
 
    connect(authAddressManager_.get(), &AuthAddressManager::AddressListUpdated, this, &RFQRequestWidget::forceCheckCondition);
+}
+
+void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger>&, const std::shared_ptr<DialogManager>&, OrderListModel* orderListModel)
+{
 }
 
 void RFQRequestWidget::onConnectedToCeler()

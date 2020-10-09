@@ -114,6 +114,12 @@ void PortfolioWidget::setAuthorized(bool authorized)
    ui_->widgetMarketData->setAuthorized(authorized);
 }
 
+void PortfolioWidget::onMDUpdated(bs::network::Asset::Type assetType
+   , const QString& security, const bs::network::MDFields& fields)
+{
+   ui_->widgetMarketData->onMDUpdated(assetType, security, fields);
+}
+
 void PortfolioWidget::showTransactionDetails(const QModelIndex& index)
 {
    if (filter_) {

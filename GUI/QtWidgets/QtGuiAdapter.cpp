@@ -122,6 +122,7 @@ QtGuiAdapter::QtGuiAdapter(const std::shared_ptr<spdlog::logger> &logger)
    , userSigner_(std::make_shared<UserTerminal>(TerminalUsers::Signer))
    , userBS_(std::make_shared<UserTerminal>(TerminalUsers::BsServer))
    , userMatch_(std::make_shared<UserTerminal>(TerminalUsers::Matching))
+   , userMD_(std::make_shared<UserTerminal>(TerminalUsers::MktData))
 {}
 
 QtGuiAdapter::~QtGuiAdapter()
@@ -243,6 +244,8 @@ bool QtGuiAdapter::process(const Envelope &env)
          return processBsServer(env);
       case TerminalUsers::Matching:
          return processMatching(env);
+      case TerminalUsers::MktData:
+         return processMktData(env);
       case TerminalUsers::AuthEid:
          return processAuthEid(env);
       case TerminalUsers::OnChainTracker:
@@ -732,6 +735,7 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::needMatchingLogout, this, &QtGuiAdapter::onNeedMatchingLogout);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needSetUserId, this, &QtGuiAdapter::onNeedSetUserId);
    connect(mainWindow_, &bs::gui::qt::MainWindow::setRecommendedFeeRate, this, &QtGuiAdapter::onSetRecommendedFeeRate);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needMdConnection, this, &QtGuiAdapter::onNeedMdConnection);
 }
 
 void QtGuiAdapter::onGetSettings(const std::vector<ApplicationSettings::Setting>& settings)
@@ -1150,6 +1154,14 @@ void QtGuiAdapter::onSetRecommendedFeeRate(float)
 {
 }
 
+void QtGuiAdapter::onNeedMdConnection(ApplicationSettings::EnvConfiguration ec)
+{
+   MktDataMessage msg;
+   msg.set_start_connection((int)ec);
+   Envelope env{ 0, user_, userMD_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
 void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
 {
    hdWallets_[*wi.ids.cbegin()] = wi;
@@ -1470,6 +1482,38 @@ bool QtGuiAdapter::processMatching(const bs::message::Envelope& env)
    default:    break;
    }
    return true;
+}
+
+bool QtGuiAdapter::processMktData(const bs::message::Envelope& env)
+{
+   MktDataMessage msg;
+   if (!msg.ParseFromString(env.message)) {
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      return true;
+   }
+   switch (msg.data_case()) {
+   case MktDataMessage::kNewSecurity:
+      break;
+   case MktDataMessage::kPriceUpdate:
+      return processMdUpdate(msg.price_update());
+   default: break;
+   }
+   return true;
+}
+
+bool QtGuiAdapter::processMdUpdate(const MktDataMessage_Prices& msg)
+{
+   return QMetaObject::invokeMethod(mainWindow_, [this, msg] {
+      const bs::network::MDFields fields{
+         { bs::network::MDField::PriceBid, msg.bid() },
+         { bs::network::MDField::PriceOffer, msg.ask() },
+         { bs::network::MDField::PriceLast, msg.last() },
+         { bs::network::MDField::DailyVolume, msg.volume() },
+         { bs::network::MDField::MDTimestamp, (double)msg.timestamp() }
+      };
+      mainWindow_->onMDUpdated(static_cast<bs::network::Asset::Type>(msg.security().asset_type())
+         , QString::fromStdString(msg.security().name()), fields);
+   });
 }
 
 #include "QtGuiAdapter.moc"

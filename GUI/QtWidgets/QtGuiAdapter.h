@@ -43,6 +43,7 @@ namespace BlockSettle {
       class BsServerMessage_LoginResult;
       class BsServerMessage_StartLoginResult;
       class MatchingMessage_LoggedIn;
+      class MktDataMessage_Prices;
       class SettingsMessage_ArmoryServers;
       class SettingsMessage_SettingsResponse;
       class SettingsMessage_SignerServers;
@@ -110,6 +111,8 @@ private:
    bool processLogin(const BlockSettle::Terminal::BsServerMessage_LoginResult&);
 
    bool processMatching(const bs::message::Envelope&);
+   bool processMktData(const bs::message::Envelope&);
+   bool processMdUpdate(const BlockSettle::Terminal::MktDataMessage_Prices &);
 
 private slots:
    void onGetSettings(const std::vector<ApplicationSettings::Setting>&);
@@ -155,12 +158,13 @@ private slots:
    void onNeedMatchingLogout();
    void onNeedSetUserId(const std::string&);
    void onSetRecommendedFeeRate(float);
+   void onNeedMdConnection(ApplicationSettings::EnvConfiguration);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<bs::message::UserTerminal>   userSettings_, userWallets_;
    std::shared_ptr<bs::message::UserTerminal>   userBlockchain_, userSigner_;
-   std::shared_ptr<bs::message::UserTerminal>   userBS_, userMatch_;
+   std::shared_ptr<bs::message::UserTerminal>   userBS_, userMatch_, userMD_;
    bs::gui::qt::MainWindow * mainWindow_{ nullptr };
    BSTerminalSplashScreen  * splashScreen_{ nullptr };
 

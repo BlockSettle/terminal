@@ -15,6 +15,7 @@
 #include <QWidget>
 #include <QItemSelection>
 #include "ApplicationSettings.h"
+#include "CommonTypes.h"
 
 
 namespace Ui {
@@ -45,16 +46,19 @@ class MarketDataWidget : public QWidget
 Q_OBJECT
 
 public:
-   MarketDataWidget(QWidget* parent = nullptr );
+   MarketDataWidget(QWidget* parent = nullptr);
    ~MarketDataWidget() override;
 
-   void init(const std::shared_ptr<ApplicationSettings> &appSettings, ApplicationSettings::Setting paramVis
+   [[deprecated]] void init(const std::shared_ptr<ApplicationSettings> &appSettings, ApplicationSettings::Setting paramVis
       , const std::shared_ptr<MarketDataProvider> &, const std::shared_ptr<MDCallbacksQt> &);
 
    TreeViewWithEnterKey* view() const;
 
    void setAuthorized(bool authorized);
    MarketSelectedInfo getCurrentlySelectedInfo() const;
+
+   void onMDUpdated(bs::network::Asset::Type, const QString& security
+      , const bs::network::MDFields&);
 
 signals:
    void CurrencySelected(const MarketSelectedInfo& selectedInfo);
@@ -84,8 +88,8 @@ protected:
 
 private:
    std::unique_ptr<Ui::MarketDataWidget> ui_;
-   MarketDataModel         *              marketDataModel_;
-   MDSortFilterProxyModel  *              mdSortFilterModel_;
+   MarketDataModel* marketDataModel_{ nullptr };
+   MDSortFilterProxyModel* mdSortFilterModel_{ nullptr };
    std::shared_ptr<ApplicationSettings>   appSettings_;
    ApplicationSettings::Setting           settingVisibility_;
    std::shared_ptr<MDHeader>              mdHeader_;

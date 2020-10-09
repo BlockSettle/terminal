@@ -920,6 +920,7 @@ void bs::gui::qt::MainWindow::onMatchingLogin(const std::string& mtchLogin
    , BaseCelerClient::CelerUserType userType, const std::string& userId)
 {
    emit needSetUserId(userId);
+   emit needMdConnection(envConfig_);
 
    ui_->actionAccountInformation->setEnabled(true);
    ui_->actionAuthenticationAddresses->setEnabled(userType != BaseCelerClient::CelerUserType::Market);
@@ -986,21 +987,12 @@ void MainWindow::onMatchingLogout()
    setLoginButtonText(loginButtonText_);
 }
 
-/*void BSTerminalMainWindow::onCelerConnected()
+void MainWindow::onMDUpdated(bs::network::Asset::Type assetType
+   , const QString& security, const bs::network::MDFields &fields)
 {
-
-   onUserLoggedIn();
+   ui_->widgetRFQ->onMDUpdated(assetType, security, fields);
+   ui_->widgetPortfolio->onMDUpdated(assetType, security, fields);
 }
-
-void BSTerminalMainWindow::onCelerDisconnected()
-{
-   action_logout_->setVisible(false);
-   action_login_->setEnabled(true);
-   action_login_->setVisible(true);
-
-   onUserLoggedOut();
-   celerConnection_->CloseConnection();
-}*/
 
 void MainWindow::showRunInBackgroundMessage()
 {

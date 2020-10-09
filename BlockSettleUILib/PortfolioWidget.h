@@ -14,7 +14,7 @@
 #include <QWidget>
 #include <QMenu>
 #include <memory>
-
+#include "CommonTypes.h"
 #include "TransactionsWidgetInterface.h"
 
 namespace spdlog {
@@ -64,6 +64,8 @@ public:
    void shortcutActivated(ShortcutType s) override;
 
    void setAuthorized(bool authorized);
+   void onMDUpdated(bs::network::Asset::Type, const QString& security
+      , const bs::network::MDFields&);
 
 private slots:
    void showTransactionDetails(const QModelIndex& index);

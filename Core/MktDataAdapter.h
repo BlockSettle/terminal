@@ -32,16 +32,32 @@ public:
    }
    std::string name() const override { return "MktData"; }
 
-protected:
+protected:  //MD callbacks override
    void userWantsToConnect() override;
    void waitingForConnectionDetails() override;
 
+   void connected() override;
+   void disconnected() override;
+
+   void onMDUpdate(bs::network::Asset::Type, const std::string&
+      , bs::network::MDFields) override;
+   void onMDSecurityReceived(const std::string&
+      , const bs::network::SecurityDef&) override;
+   void allSecuritiesReceived() override;
+
+   void onNewFXTrade(const bs::network::NewTrade&) override;
+   void onNewXBTTrade(const bs::network::NewTrade&) override;
+   void onNewPMTrade(const bs::network::NewPMTrade&) override;
+
 private:
+   void sendTrade(const bs::network::NewTrade&);
+   bool processStartConnection(int env);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<bs::message::User>     user_;
    std::shared_ptr<BSMarketDataProvider>  mdProvider_;
+   bool connected_{ false };
 };
 
 
