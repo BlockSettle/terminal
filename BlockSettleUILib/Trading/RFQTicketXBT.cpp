@@ -336,6 +336,36 @@ void RFQTicketXBT::fillRecvAddresses()
    }
 }
 
+bool RFQTicketXBT::preSubmitCheck()
+{
+   if (currentGroupType_ == ProductGroupType::XBTGroupType) {
+      const auto qty = getQuantity();
+      const auto& tradeSettings = authAddressManager_->tradeSettings();
+      assert(tradeSettings);
+
+      bool validAmount = false;
+      if (currentProduct_ == UiUtils::XbtCurrency) {
+         validAmount = tradeSettings->xbtTier1Limit > bs::XBTAmount(qty).GetValue();
+      } else {
+         const double indPrice = getIndicativePrice();
+         bs::XBTAmount price(indPrice * (1 + (tradeSettings->xbtPriceBand / 100)));
+         validAmount = price > bs::XBTAmount(qty);
+      }
+
+      if (!validAmount) {
+         auto amountStr = UiUtils::displayQuantity(bs::XBTAmount(tradeSettings->xbtTier1Limit).GetValueBitcoin(), bs::network::XbtCurrency);
+         BSMessageBox(BSMessageBox::info
+            , tr("Notice"), tr("Authentication Address not verified")
+            , tr("Trades above %1 are not permitted for non-verified Authentication Addresses. "
+                 "To verify your Authentication Address, execute three trades below the %2 threshold, "
+                 "and BlockSettle will validate the address during its next cycle.").arg(amountStr).arg(amountStr), this).exec();
+         return false;
+      }
+   }
+
+   return true;
+}
+
 void RFQTicketXBT::showCoinControl()
 {
    const auto xbtWallet = getSendXbtWallet();
@@ -672,17 +702,6 @@ bool RFQTicketXBT::checkAuthAddr(double qty) const
       return false;
    }
 
-   if (currentGroupType_ == ProductGroupType::XBTGroupType){
-      if (currentProduct_ == UiUtils::XbtCurrency) {
-         return tradeSettings->xbtTier1Limit > bs::XBTAmount(qty).GetValue();
-      }
-      else {
-         const double indPrice = getIndicativePrice();
-         bs::XBTAmount price(indPrice * (1 + (tradeSettings->xbtPriceBand / 100)));
-         return price > bs::XBTAmount(qty);
-      }
-   }
-
    return true;
 }
 
@@ -793,6 +812,10 @@ double RFQTicketXBT::getOfferPrice() const
 
 void RFQTicketXBT::submitButtonClicked()
 {
+   if (!preSubmitCheck()) {
+      return;
+   }
+
    auto rfq = std::make_shared<bs::network::RFQ>();
    rfq->side = getSelectedSide();
 
