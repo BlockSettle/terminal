@@ -399,7 +399,7 @@ bool SignerAdapterListener::onSyncHDWallet(const std::string &data, bs::signer::
          auto groupEntry = response.add_groups();
          groupEntry->set_type(static_cast<bs::hd::CoinType>(group->index()));
 
-         for (const auto &leaf : group->getLeaves()) {
+         for (const auto &leaf : group->getAllLeaves()) {
             auto leafEntry = groupEntry->add_leaves();
             leafEntry->set_id(leaf->walletId());
             leafEntry->set_path(leaf->path().toString());
@@ -472,7 +472,7 @@ bool SignerAdapterListener::sendWoWallet(const std::shared_ptr<bs::core::hd::Wal
    for (const auto &group : wallet->getGroups()) {
       auto groupEntry = response.add_groups();
       groupEntry->set_type(group->index());
-      for (const auto &leaf : group->getLeaves()) {
+      for (const auto &leaf : group->getAllLeaves()) {
          auto leafEntry = groupEntry->add_leaves();
          leafEntry->set_id(leaf->walletId());
          leafEntry->set_path(leaf->path().toString());
