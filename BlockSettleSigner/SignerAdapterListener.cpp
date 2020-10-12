@@ -1036,8 +1036,8 @@ bs::error::ErrorCode SignerAdapterListener::verifyOfflineSignRequest(const bs::c
    size_t foundInputCount = 0;
    auto checkAddress = [](const bs::core::WalletsManager::WalletPtr& wallet,
       bs::Address addr) {
-      return wallet->addressType() == addr.getType() ||
-         (addr.getType() == AddressEntryType_P2SH && (wallet->addressType() & addr.getType()));
+      return wallet->defaultAddressType() == addr.getType() ||
+         (addr.getType() == AddressEntryType_P2SH && (wallet->defaultAddressType() & addr.getType()));
    };
 
    for (const auto &walletId : txSignReq.walletIds) { // sync new addresses in all wallets
