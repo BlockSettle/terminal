@@ -135,18 +135,24 @@ TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
                   if (addressWallet) {
                      const auto &rootWallet = walletsManager_->getHDRootForLeaf(addressWallet->walletId());
                      if (rootWallet) {
-                        const auto &xbtLeaves = rootWallet->getGroup(rootWallet->getXBTGroupType())->getLeaves();
+                        auto xbtGroup = rootWallet->getGroup(rootWallet->getXBTGroupType());
                         bool isXbtLeaf = false;
-                        for (const auto &leaf : xbtLeaves) {
-                           if (*leaf == *addressWallet) {
-                              isXbtLeaf = true;
-                              break;
+
+                        if (xbtGroup) {
+                           const auto &xbtLeaves = xbtGroup->getLeaves();
+                           for (const auto &leaf : xbtLeaves) {
+                              if (*leaf == *addressWallet) {
+                                 isXbtLeaf = true;
+                                 break;
+                              }
+                           }
+
+                           if (isXbtLeaf) {
+                              inputWallets.insert(xbtLeaves.cbegin(), xbtLeaves.cend());
                            }
                         }
-                        if (isXbtLeaf) {
-                           inputWallets.insert(xbtLeaves.cbegin(), xbtLeaves.cend());
-                        }
-                        else {
+
+                        if (!isXbtLeaf) {
                            inputWallets.insert(addressWallet);
                         }
                      }
