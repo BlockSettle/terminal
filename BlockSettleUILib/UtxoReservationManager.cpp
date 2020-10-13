@@ -116,7 +116,12 @@ std::vector<UTXO> bs::UTXOReservationManager::getAvailableXbtUTXOs(const HDWalle
    , bs::hd::Purpose purpose) const
 {
    auto hdWallet = walletsManager_->getHDWalletById(walletId);
-   auto leaf = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaf(purpose);
+   auto xbtGroup = hdWallet->getGroup(hdWallet->getXBTGroupType());
+   if (xbtGroup == nullptr) {
+      return {};
+   }
+
+   auto leaf = xbtGroup->getLeaf(purpose);
 
    if (!leaf) {
       return {};
@@ -162,7 +167,7 @@ BTCNumericTypes::balance_type bs::UTXOReservationManager::getAvailableCCUtxoSum(
    if (!ccWallet) {
       return {};
    }
-   
+
    BTCNumericTypes::satoshi_type sum = 0;
    auto const availableUtxos = getAvailableCCUTXOs(ccWallet->walletId());
    for (const auto &utxo : availableUtxos) {
@@ -292,7 +297,13 @@ bool bs::UTXOReservationManager::resetHdWallet(const std::string& hdWalledId)
 void bs::UTXOReservationManager::resetSpendableXbt(const std::shared_ptr<bs::sync::hd::Wallet>& hdWallet)
 {
    assert(hdWallet);
-   auto leaves = hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves();
+
+   auto xbtGroup = hdWallet->getGroup(hdWallet->getXBTGroupType());
+   if (xbtGroup == nullptr) {
+      return ;
+   }
+
+   auto leaves = xbtGroup->getLeaves();
    std::vector<bs::sync::WalletsManager::WalletPtr> wallets;
    for (const auto &leaf : leaves) {
       auto purpose = leaf->purpose();
