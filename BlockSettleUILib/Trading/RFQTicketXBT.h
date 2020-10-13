@@ -178,6 +178,8 @@ private:
 
    void fillRecvAddresses();
 
+   bool preSubmitCheck();
+
    BalanceInfoContainer getBalanceInfo() const;
    QString getProduct() const;
    std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc) const;
