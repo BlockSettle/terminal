@@ -14,7 +14,7 @@
 #include <QObject>
 #include <QStringList>
 #include <QVariant>
-#include "Message/Adapter.h"
+#include "Adapters/OnChainTrackerAdapter.h"
 #include "TerminalMessage.h"
 
 namespace spdlog {
@@ -67,6 +67,8 @@ public:
 
    std::shared_ptr<bs::LogManager> logManager() const { return logMgr_; }
 
+   std::shared_ptr<OnChainExternalPlug> createOnChainPlug() const;
+
 private:
    bool processGetRequest(const bs::message::Envelope &
       , const BlockSettle::Terminal::SettingsMessage_SettingsRequest &);
@@ -93,7 +95,7 @@ private:
       , const BlockSettle::Terminal::SettingsMessage_SettingsRequest&);
    bool processResetToState(const bs::message::Envelope&
       , const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
-   bool processBootstrap(const std::string&);
+   bool processBootstrap(const bs::message::Envelope&, const std::string&);
 
 private:
    std::shared_ptr<bs::message::User>  user_, userBC_;

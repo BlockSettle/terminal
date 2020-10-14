@@ -19,18 +19,19 @@ using namespace BlockSettle::Terminal;
 
 static const std::map<int, std::string> kTerminalUsersMapping = {
    { static_cast<int>(TerminalUsers::BROADCAST), "Broadcast" },
-   { static_cast<int>(TerminalUsers::Signer), "Signer" },
-   { static_cast<int>(TerminalUsers::API), "API" },
+   { static_cast<int>(TerminalUsers::Signer), "Signer  " },
+   { static_cast<int>(TerminalUsers::API), "API     " },
    { static_cast<int>(TerminalUsers::Settings), "Settings" },
    { static_cast<int>(TerminalUsers::BsServer), "BsServer" },
    { static_cast<int>(TerminalUsers::Matching), "Matching" },
-   { static_cast<int>(TerminalUsers::Assets), "Assets" },
+   { static_cast<int>(TerminalUsers::Assets), "Assets  " },
    { static_cast<int>(TerminalUsers::MktData), "MarketData" },
    { static_cast<int>(TerminalUsers::MDHistory), "MDHistory" },
-   { static_cast<int>(TerminalUsers::Blockchain), "Armory" },
+   { static_cast<int>(TerminalUsers::Blockchain), "Blockchain" },
    { static_cast<int>(TerminalUsers::Wallets), "Wallets" },
+   { static_cast<int>(TerminalUsers::OnChainTracker), "OnChainTrk" },
    { static_cast<int>(TerminalUsers::Settlement), "Settlement" },
-   { static_cast<int>(TerminalUsers::Chat), "Chat" }
+   { static_cast<int>(TerminalUsers::Chat), "Chat   " }
 };
 
 std::string UserTerminal::name() const
@@ -45,7 +46,7 @@ TerminalInprocBus::TerminalInprocBus(const std::shared_ptr<spdlog::logger> &logg
    : logger_(logger)
 {  // we can create multiple queues if needed and distribute them on adapters
    queue_ = std::make_shared<Queue>(std::make_shared<Router>(logger), logger
-      , kTerminalUsersMapping);
+      , "Main", kTerminalUsersMapping);
 }
 
 TerminalInprocBus::~TerminalInprocBus()

@@ -502,7 +502,7 @@ void BSTerminalMainWindow::InitAuthManager()
    authManager_ = std::make_shared<AuthAddressManager>(logMgr_->logger(), armory_);
    authManager_->init(applicationSettings_, walletsMgr_, signContainer_);
 
-   connect(authManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked, this, [](const QString &addr, const QString &state) {
+   connect(authManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked, this, [](const QString &addr, int state) {
       NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, state });
    });
    connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, this, [this](const QString &walletId) {

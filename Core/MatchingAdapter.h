@@ -60,6 +60,8 @@ private:
    void connectionError(int errorCode) override;
 
    bool processLogin(const BlockSettle::Terminal::MatchingMessage_Login&);
+   bool processGetSubmittedAuth(const bs::message::Envelope&);
+   bool processSubmitAuth(const bs::message::Envelope&, const std::string& address);
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;

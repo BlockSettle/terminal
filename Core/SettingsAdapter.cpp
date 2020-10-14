@@ -27,6 +27,62 @@ using namespace BlockSettle::Terminal;
 using namespace bs::message;
 
 
+class OnChainPlug : public OnChainExternalPlug
+{
+public:
+   explicit OnChainPlug(const std::shared_ptr<bs::message::QueueInterface>& queue)
+      : OnChainExternalPlug(queue) {}
+
+   bool tryProcess(const bs::message::Envelope& env) override
+   {
+      if (env.sender->isSystem()) {
+         AdministrativeMessage msg;
+         if (!msg.ParseFromString(env.message)) {
+            return false;
+         }
+         if (msg.data_case() == AdministrativeMessage::kStart) {
+            parent_->onStart();
+         }
+         return true;
+      }
+      else if (env.sender->value<bs::message::TerminalUsers>() == bs::message::TerminalUsers::Settings) {
+         SettingsMessage msg;
+         if (!msg.ParseFromString(env.message)) {
+            return true;
+         }
+         switch (msg.data_case()) {
+         case SettingsMessage::kBootstrap:
+            return processBootstrap(msg.bootstrap());
+         default: break;
+         }
+         return true;
+      }
+      return false;
+   }
+
+   void sendAuthValidationListRequest() override
+   {
+      SettingsMessage msg;
+      msg.mutable_get_bootstrap();
+      Envelope env{ 0, user_, bs::message::UserTerminal::create(bs::message::TerminalUsers::Settings)
+         , {}, {}, msg.SerializeAsString() };
+      queue_->pushFill(env);
+   }
+
+private:
+   bool processBootstrap(const SettingsMessage_BootstrapData& response)
+   {
+      std::vector<std::string> bsAddresses;
+      bsAddresses.reserve(response.auth_validations_size());
+      for (const auto& bsAddr : response.auth_validations()) {
+         bsAddresses.push_back(bsAddr);
+      }
+      parent_->onAuthValidationAddresses(bsAddresses);
+      return true;
+   }
+};
+
+
 SettingsAdapter::SettingsAdapter(const std::shared_ptr<ApplicationSettings> &settings
    , const QStringList &appArgs)
    : appSettings_(settings)
@@ -117,7 +173,9 @@ bool SettingsAdapter::process(const bs::message::Envelope &env)
       case SettingsMessage::kResetToState:
          return processResetToState(env, msg.reset_to_state());
       case SettingsMessage::kLoadBootstrap:
-         return processBootstrap(msg.load_bootstrap());
+         return processBootstrap(env, msg.load_bootstrap());
+      case SettingsMessage::kGetBootstrap:
+         return processBootstrap(env, {});
       default:
          logger_->warn("[SettingsAdapter::process] unknown data case: {}"
             , msg.data_case());
@@ -212,12 +270,17 @@ bool SettingsAdapter::processResetToState(const bs::message::Envelope& env
    return pushFill(envResp);
 }
 
-bool SettingsAdapter::processBootstrap(const std::string& bsData)
+bool SettingsAdapter::processBootstrap(const bs::message::Envelope &env
+   , const std::string& bsData)
 {
    SettingsMessage msg;
    auto msgResp = msg.mutable_bootstrap();
-   msgResp->set_loaded(bootstrapDataManager_->setReceivedData(bsData));
-   if (msgResp->loaded()) {
+   bool result = true;
+   if (!bsData.empty()) {
+      result = bootstrapDataManager_->setReceivedData(bsData);
+   }
+   msgResp->set_loaded(result);
+   if (result) {
       for (const auto& validationAddr : bootstrapDataManager_->GetAuthValidationList()) {
          msgResp->add_auth_validations(validationAddr);
       }
@@ -229,8 +292,17 @@ bool SettingsAdapter::processBootstrap(const std::string& bsData)
          msgCcDef->set_lot_size(ccDef.nbSatoshis);
       }
    }
-   Envelope envResp{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   else {
+      logger_->error("[{}] failed to set bootstrap data", __func__);
+   }
+   Envelope envResp{ bsData.empty() ? env.id : 0, user_, bsData.empty() ? env.sender : nullptr
+      , {}, {}, msg.SerializeAsString() };
    return pushFill(envResp);
+}
+
+std::shared_ptr<OnChainExternalPlug> SettingsAdapter::createOnChainPlug() const
+{
+   return std::make_shared<OnChainPlug>(queue_);
 }
 
 bool SettingsAdapter::processGetRequest(const bs::message::Envelope &env
@@ -243,71 +315,80 @@ bool SettingsAdapter::processGetRequest(const bs::message::Envelope &env
       auto resp = msgResp->add_responses();
       resp->set_allocated_request(new SettingRequest(req));
       if (req.source() == SettingSource_Local) {
-         const auto setting = static_cast<ApplicationSettings::Setting>(req.index());
-         switch (req.type()) {
-         case SettingType_Unknown: {
-            const auto& value = appSettings_->get(setting);
-            switch (value.type()) {
-            case QVariant::Type::String:
-               resp->set_s(value.toString().toStdString());
-               resp->mutable_request()->set_type(SettingType_String);
+         switch (req.index()) {
+         case SetIdx_BlockSettleSignAddress:
+            resp->set_s(appSettings_->GetBlocksettleSignAddress());
+            resp->mutable_request()->set_type(SettingType_String);
+            break;
+         default: {
+            const auto setting = static_cast<ApplicationSettings::Setting>(req.index());
+            switch (req.type()) {
+            case SettingType_Unknown: {
+               const auto& value = appSettings_->get(setting);
+               switch (value.type()) {
+               case QVariant::Type::String:
+                  resp->set_s(value.toString().toStdString());
+                  resp->mutable_request()->set_type(SettingType_String);
+                  break;
+               default: // normally string is used for all unknown values
+                  logger_->warn("[{}] {}: unhandled QVariant type: {}", __func__
+                     , (int)setting, (int)value.type());
+                  break;
+               }
+            }
                break;
-            default: // normally string is used for all unknown values
-               logger_->warn("[{}] {}: unhandled QVariant type: {}", __func__
-                  , (int)setting, (int)value.type());
+            case SettingType_String:
+               resp->set_s(appSettings_->get<std::string>(setting));
+               break;
+            case SettingType_Int:
+               resp->set_i(appSettings_->get<int>(setting));
+               break;
+            case SettingType_UInt:
+               resp->set_ui(appSettings_->get<unsigned int>(setting));
+               break;
+            case SettingType_UInt64:
+               resp->set_ui64(appSettings_->get<uint64_t>(setting));
+               break;
+            case SettingType_Bool:
+               resp->set_b(appSettings_->get<bool>(setting));
+               break;
+            case SettingType_Float:
+               resp->set_f(appSettings_->get<double>(setting));
+               break;
+            case SettingType_Rect: {
+               const auto& rect = appSettings_->get<QRect>(setting);
+               auto r = resp->mutable_rect();
+               r->set_left(rect.left());
+               r->set_top(rect.top());
+               r->set_width(rect.width());
+               r->set_height(rect.height());
+            }
+                                 break;
+            case SettingType_Strings: {
+               const auto& strings = appSettings_->get<QStringList>(setting);
+               auto ss = resp->mutable_strings();
+               for (const auto& string : strings) {
+                  ss->add_strings(string.toStdString());
+               }
+            }
+                                    break;
+            case SettingType_StrMap: {
+               const auto& map = appSettings_->get<QVariantMap>(setting);
+               auto keyVals = resp->mutable_key_vals();
+               for (auto it = map.begin(); it != map.end(); it++) {
+                  auto sm = keyVals->add_key_vals();
+                  sm->set_key(it.key().toStdString());
+                  sm->set_value(it.value().toString().toStdString());
+               }
+            }
+                                   break;
+            default:
+               logger_->error("[{}] unknown setting type: {}", __func__, (int)req.type());
+               nbFetched--;
                break;
             }
          }
-            break;
-         case SettingType_String:
-            resp->set_s(appSettings_->get<std::string>(setting));
-            break;
-         case SettingType_Int:
-            resp->set_i(appSettings_->get<int>(setting));
-            break;
-         case SettingType_UInt:
-            resp->set_ui(appSettings_->get<unsigned int>(setting));
-            break;
-         case SettingType_UInt64:
-            resp->set_ui64(appSettings_->get<uint64_t>(setting));
-            break;
-         case SettingType_Bool:
-            resp->set_b(appSettings_->get<bool>(setting));
-            break;
-         case SettingType_Float:
-            resp->set_f(appSettings_->get<double>(setting));
-            break;
-         case SettingType_Rect: {
-            const auto &rect = appSettings_->get<QRect>(setting);
-            auto r = resp->mutable_rect();
-            r->set_left(rect.left());
-            r->set_top(rect.top());
-            r->set_width(rect.width());
-            r->set_height(rect.height());
-         }
-            break;
-         case SettingType_Strings: {
-            const auto &strings = appSettings_->get<QStringList>(setting);
-            auto ss = resp->mutable_strings();
-            for (const auto &string : strings) {
-               ss->add_strings(string.toStdString());
-            }
-         }
-            break;
-         case SettingType_StrMap: {
-            const auto &map = appSettings_->get<QVariantMap>(setting);
-            auto keyVals = resp->mutable_key_vals();
-            for (auto it = map.begin(); it != map.end(); it++) {
-               auto sm = keyVals->add_key_vals();
-               sm->set_key(it.key().toStdString());
-               sm->set_value(it.value().toString().toStdString());
-            }
-         }
-            break;
-         default:
-            logger_->error("[{}] unknown setting type: {}", __func__, (int)req.type());
-            nbFetched--;
-            break;
+                break;
          }
          nbFetched++;
       }

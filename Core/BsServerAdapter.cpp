@@ -106,6 +106,8 @@ bool BsServerAdapter::processOwnRequest(const Envelope &env)
             , msg.send_matching().data());
       }
       break;
+   case BsServerMessage::kSubmitAuthAddress:
+      return processSubmitAuthAddr(env, msg.submit_auth_address());
    default:    break;
    }
    return true;
@@ -212,6 +214,53 @@ bool BsServerAdapter::processCancelLogin()
       return true;
    }
    bsClient_->cancelLogin();
+   return true;
+}
+
+bool BsServerAdapter::processSubmitAuthAddr(const bs::message::Envelope& env
+   , const std::string& addr)
+{
+   const auto& sendReply = [this, env](bs::error::AuthAddressSubmitResult code)
+   {
+      BsServerMessage msg;
+      msg.set_submit_auth_result((int)code);
+      Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
+      pushFill(envResp);
+   };
+   const auto& address = bs::Address::fromAddressString(addr);
+   bsClient_->signAuthAddress(address, [this, address, sendReply](const BsClient::SignResponse& response) {
+      if (response.userCancelled) {
+         logger_->error("[BsServerAdapter::processSubmitAuthAddr] signing auth "
+            "address cancelled: {}", response.errorMsg);
+         sendReply(bs::error::AuthAddressSubmitResult::AuthSignCancelled);
+         return;
+      }
+      if (!response.success) {
+         logger_->error("[BsServerAdapter::processSubmitAuthAddr] signing auth "
+            "address failed: {}", response.errorMsg);
+         sendReply(bs::error::AuthAddressSubmitResult::AuthRequestSignFailed);
+         return;
+      }
+      logger_->debug("[BsServerAdapter::processSubmitAuthAddr] signing auth address succeed");
+
+      bsClient_->confirmAuthAddress(address, [this, address, sendReply](bs::error::AuthAddressSubmitResult submitResult) {
+         sendReply(submitResult);
+         if (submitResult != bs::error::AuthAddressSubmitResult::Success) {
+            logger_->error("[BsServerAdapter::processSubmitAuthAddr] confirming"
+               " auth address failed: {}", static_cast<int>(submitResult));
+         }
+         else {
+            logger_->debug("[BsServerAdapter::processSubmitAuthAddr] confirming"
+               " auth address succeed");
+         }
+
+         AssetsMessage msg;
+         msg.set_submit_auth_address(address.display());
+         Envelope envReq{ 0, user_, UserTerminal::create(TerminalUsers::Assets)
+            , {}, {}, msg.SerializeAsString(), true };
+         pushFill(envReq);
+      });
+   });
    return true;
 }
 

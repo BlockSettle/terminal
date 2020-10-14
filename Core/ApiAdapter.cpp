@@ -36,7 +36,7 @@ public:
    ApiBus(const std::shared_ptr<spdlog::logger> &logger)
    {
       queue_ = std::make_shared<bs::message::Queue>(
-         std::make_shared<ApiRouter>(logger), logger);
+         std::make_shared<ApiRouter>(logger), logger, "API");
    }
 
    ~ApiBus() override
@@ -188,7 +188,9 @@ void ApiAdapter::add(const std::shared_ptr<ApiBusAdapter> &adapter)
          mainLoopAdapter_ = runner;
       }
    }
-   adapter->setUserId(++nextApiUser_);
+   const auto userId = ++nextApiUser_;
+   logger_->debug("[{}] {} has id {}", __func__, adapter->name(), userId);
+   adapter->setUserId(userId);
    apiBus_->addAdapter(adapter);
 }
 

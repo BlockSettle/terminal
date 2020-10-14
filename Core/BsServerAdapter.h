@@ -49,6 +49,7 @@ private:
    bool processOpenConnection();
    bool processStartLogin(const std::string&);
    bool processCancelLogin();
+   bool processSubmitAuthAddr(const bs::message::Envelope&, const std::string &addr);
 
    //BCT callbacks
    void startTimer(std::chrono::milliseconds timeout, const std::function<void()>&) override;

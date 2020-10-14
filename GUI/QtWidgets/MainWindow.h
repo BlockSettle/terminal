@@ -16,6 +16,7 @@
 #include <QMainWindow>
 #include "Address.h"
 #include "ArmoryConnection.h"
+#include "AuthAddress.h"
 #include "BaseCelerClient.h"
 #include "BsClient.h"
 #include "SignContainer.h"
@@ -99,6 +100,10 @@ namespace bs {
             void onMDUpdated(bs::network::Asset::Type assetType
                , const QString& security, const bs::network::MDFields &);
 
+            void onAuthAddresses(const std::vector<bs::Address>&
+               , const std::map<bs::Address, AddressVerificationState> &);
+            void onSubmittedAuthAddresses(const std::vector<bs::Address>&);
+
          public slots:
             void onReactivate();
             void raiseWindow();
@@ -162,11 +167,14 @@ namespace bs {
             void needMdConnection(ApplicationSettings::EnvConfiguration);
             void setRecommendedFeeRate(float);
 
+            void needNewAuthAddress();
+            void needSubmitAuthAddress(const bs::Address&);
+
          private slots:
             void onSend();
             void onGenerateAddress();
 
-         //   void openAuthManagerDialog();
+            void openAuthManagerDialog();
             void openConfigDialog(bool showInNetworkPage = false);
          //   void openAccountInfoDialog();
          //   void openCCTokenDialog();
@@ -235,12 +243,12 @@ namespace bs {
             //   std::shared_ptr<TransactionsViewModel>    transactionsModel_;
             //   std::shared_ptr<CCPortfolioModel>         portfolioModel_;
             //   std::shared_ptr<OrderListModel>           orderListModel_;
-            std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
 
             std::shared_ptr<TransactionsViewModel>    txModel_;
             CreateTransactionDialog* txDlg_{ nullptr };
             ConfigDialog*  cfgDlg_{ nullptr };
             LoginWindow* loginDlg_{ nullptr };
+            AuthAddressDialog* authAddrDlg_{ nullptr };
 
             //   std::shared_ptr<WalletManagementWizard> walletsWizard_;
 

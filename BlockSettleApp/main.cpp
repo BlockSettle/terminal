@@ -35,6 +35,7 @@
 #include "Adapters/OnChainTrackerAdapter.h"
 #include "Adapters/WalletsAdapter.h"
 #include "ApiAdapter.h"
+#include "AssetsAdapter.h"
 #include "BsServerAdapter.h"
 #include "ChatAdapter.h"
 #include "MatchingAdapter.h"
@@ -331,14 +332,16 @@ int main(int argc, char** argv)
       const auto &signAdapter = std::make_shared<SignerAdapter>(logMgr->logger());
       inprocBus.addAdapter(signAdapter);
 
+      const auto& userBlockchain = bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain);
 /*      inprocBus.addAdapter(std::make_shared<AuthEidAdapter>(logMgr->logger()
-         , bs::message::UserTerminal::create(bs::message::TerminalUsers::AuthEid)));
-      inprocBus.addAdapter(std::make_shared<OnChainTrackerAdapter>(logMgr->logger()
-         , bs::message::UserTerminal::create(bs::message::TerminalUsers::OnChainTracker)));*/
+         , bs::message::UserTerminal::create(bs::message::TerminalUsers::AuthEid)));*/
+      inprocBus.addAdapter(std::make_shared<OnChainTrackerAdapter>(logMgr->logger("trk")
+         , bs::message::UserTerminal::create(bs::message::TerminalUsers::OnChainTracker)
+         , userBlockchain, adSettings->createOnChainPlug()));
+      inprocBus.addAdapter(std::make_shared<AssetsAdapter>(logMgr->logger()));
       inprocBus.addAdapter(std::make_shared<WalletsAdapter>(logMgr->logger()
          , bs::message::UserTerminal::create(bs::message::TerminalUsers::Wallets)
-         , signAdapter->createClient()
-         , bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain)));
+         , signAdapter->createClient(), userBlockchain));
       inprocBus.addAdapter(std::make_shared<BsServerAdapter>(logMgr->logger("bscon")));
 
       inprocBus.addAdapter(std::make_shared<MatchingAdapter>(logMgr->logger("match")));
@@ -347,7 +350,7 @@ int main(int argc, char** argv)
       inprocBus.addAdapter(std::make_shared<MDHistAdapter>(logMgr->logger("mdh")));
       inprocBus.addAdapter(std::make_shared<ChatAdapter>(logMgr->logger("chat")));
       inprocBus.addAdapter(std::make_shared<BlockchainAdapter>(logMgr->logger()
-         , bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain)));
+         , userBlockchain));
 
       if (!inprocBus.run(argc, argv)) {
          logMgr->logger()->error("No runnable adapter found on main inproc bus");

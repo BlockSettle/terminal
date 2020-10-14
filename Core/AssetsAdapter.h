@@ -12,12 +12,23 @@
 #define ASSETS_ADAPTER_H
 
 #include "Message/Adapter.h"
+#include "AssetManager.h"
+#include "CCFileManager.h"
 
 namespace spdlog {
    class logger;
 }
+namespace BlockSettle {
+   namespace Terminal {
+      class MatchingMessage_LoggedIn;
+      class MatchingMessage_SubmittedAuthAddresses;
+      class SettingsMessage_BootstrapData;
+      class SettingsMessage_SettingsResponse;
+   }
+}
 
 class AssetsAdapter : public bs::message::Adapter
+   , public AssetCallbackTarget, public CCCallbackTarget
 {
 public:
    AssetsAdapter(const std::shared_ptr<spdlog::logger> &);
@@ -30,11 +41,33 @@ public:
    }
    std::string name() const override { return "Assets"; }
 
-private:
+private:    // AssetMgr callbacks override
+   void onCcPriceChanged(const std::string& currency) override;
+   void onXbtPriceChanged(const std::string& currency) override;
+   void onFxBalanceLoaded() override;
+   void onFxBalanceCleared() override;
+
+   void onBalanceChanged(const std::string& currency) override;
+   void onTotalChanged() override;
+   void onSecuritiesChanged() override;
+
+   //CC callbacks override
+   void onCCSecurityDef(const bs::network::CCSecurityDef& sd) override;
+   void onLoaded() override;
+
+   //internal processing
+   bool processGetSettings(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
+   void onBSSignAddress(const std::string&);
+   bool processBootstrap(const BlockSettle::Terminal::SettingsMessage_BootstrapData&);
+   bool onMatchingLogin(const BlockSettle::Terminal::MatchingMessage_LoggedIn&);
+   bool processSubmittedAuth(const BlockSettle::Terminal::MatchingMessage_SubmittedAuthAddresses&);
+   bool processSubmitAuth(const std::string&);
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::message::User>  user_;
+   std::unique_ptr<AssetManager>       assetMgr_;
+   std::unique_ptr<CCFileManager>      ccFileMgr_;
 };
 
 

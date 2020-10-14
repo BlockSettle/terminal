@@ -33,13 +33,16 @@ namespace BlockSettle {
       class ArmoryMessage_LedgerEntries;
       class ArmoryMessage_ZCInvalidated;
       class ArmoryMessage_ZCReceived;
+      class OnChainTrackMessage_AuthState;
       class SignerMessage_SignTxResponse;
       class WalletsMessage_TXDetailsResponse;
       class WalletsMessage_UtxoListResponse;
       class WalletsMessage_WalletBalances;
+      class WalletsMessage_WalletData;
       class WalletsMessage_WalletsListResponse;
    }
    namespace Terminal {
+      class AssetsMessage_SubmittedAuthAddresses;
       class BsServerMessage_LoginResult;
       class BsServerMessage_StartLoginResult;
       class MatchingMessage_LoggedIn;
@@ -84,6 +87,7 @@ private:
    bool processWallets(const bs::message::Envelope &);
    bool processAuthEid(const bs::message::Envelope &);
    bool processOnChainTrack(const bs::message::Envelope &);
+   bool processAssets(const bs::message::Envelope&);
 
    void requestInitialSettings();
    void updateSplashProgress();
@@ -113,6 +117,9 @@ private:
    bool processMatching(const bs::message::Envelope&);
    bool processMktData(const bs::message::Envelope&);
    bool processMdUpdate(const BlockSettle::Terminal::MktDataMessage_Prices &);
+   bool processAuthWallet(const BlockSettle::Common::WalletsMessage_WalletData&);
+   bool processAuthState(const BlockSettle::Common::OnChainTrackMessage_AuthState&);
+   bool processSubmittedAuthAddrs(const BlockSettle::Terminal::AssetsMessage_SubmittedAuthAddresses&);
 
 private slots:
    void onGetSettings(const std::vector<ApplicationSettings::Setting>&);
@@ -159,12 +166,15 @@ private slots:
    void onNeedSetUserId(const std::string&);
    void onSetRecommendedFeeRate(float);
    void onNeedMdConnection(ApplicationSettings::EnvConfiguration);
+   void onNeedNewAuthAddress();
+   void onNeedSubmitAuthAddress(const bs::Address&);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<bs::message::UserTerminal>   userSettings_, userWallets_;
    std::shared_ptr<bs::message::UserTerminal>   userBlockchain_, userSigner_;
    std::shared_ptr<bs::message::UserTerminal>   userBS_, userMatch_, userMD_;
+   std::shared_ptr<bs::message::UserTerminal>   userTrk_;
    bs::gui::qt::MainWindow * mainWindow_{ nullptr };
    BSTerminalSplashScreen  * splashScreen_{ nullptr };
 

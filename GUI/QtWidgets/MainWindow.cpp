@@ -27,6 +27,7 @@
 #include "ui_BSTerminalMainWindow.h"
 #include "ApiAdapter.h"
 #include "ApplicationSettings.h"
+#include "AuthAddressDialog.h"
 #include "BSMessageBox.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
@@ -735,7 +736,7 @@ void MainWindow::setupMenu()
    };
 
    connect(ui_->actionCreateNewWallet, &QAction::triggered, this, [ww = ui_->widgetWallets]{ ww->onNewWallet(); });
-//   connect(ui_->actionAuthenticationAddresses, &QAction::triggered, this, &MainWindow::openAuthManagerDialog);
+   connect(ui_->actionAuthenticationAddresses, &QAction::triggered, this, &MainWindow::openAuthManagerDialog);
    connect(ui_->actionSettings, &QAction::triggered, this, [=]() { openConfigDialog(); });
 //   connect(ui_->actionAccountInformation, &QAction::triggered, this, &MainWindow::openAccountInfoDialog);
 //   connect(ui_->actionEnterColorCoinToken, &QAction::triggered, this, &MainWindow::openCCTokenDialog);
@@ -767,6 +768,13 @@ void MainWindow::setupMenu()
    ui_->prodEnvSettings->setVisible(false);
    ui_->testEnvSettings->setVisible(false);
 #endif // !PRODUCTION_BUILD
+}
+
+void bs::gui::qt::MainWindow::openAuthManagerDialog()
+{
+   if (authAddrDlg_) {
+      authAddrDlg_->exec();
+   }
 }
 
 void MainWindow::openConfigDialog(bool showInNetworkPage)
@@ -875,11 +883,7 @@ void MainWindow::activateClient(const BsClientLoginResult& result)
    currentUserLogin_ = QString::fromStdString(result.login);
 /*   chatTokenData_ = result.chatTokenData;
    chatTokenSign_ = result.chatTokenSign;
-   tryLoginIntoChat();
-
-   bsClient_ = bsClient;
-   ccFileManager_->setBsClient(bsClient);
-   authAddrDlg_->setBsClient(bsClient);*/
+   tryLoginIntoChat();*/
 
    auto tradeSettings = std::make_shared<bs::TradeSettings>(result.tradeSettings);
    emit putSetting(ApplicationSettings::SubmittedAddressXbtLimit, static_cast<quint64>(tradeSettings->xbtTier1Limit));
@@ -899,10 +903,17 @@ void MainWindow::activateClient(const BsClientLoginResult& result)
    actLogin_->setEnabled(false);
 
    // Market data, charts and chat should be available for all Auth eID logins
-//   mdProvider_->SubscribeToMD();
+   emit needMdConnection(envConfig_);
 
    accountEnabled_ = result.enabled;
    onAccountTypeChanged(result.userType, result.enabled);
+
+   if (!authAddrDlg_) {
+      authAddrDlg_ = new AuthAddressDialog(logger_, this);
+      connect(authAddrDlg_, &AuthAddressDialog::putSetting, this, &MainWindow::putSetting);
+      connect(authAddrDlg_, &AuthAddressDialog::needNewAuthAddress, this, &MainWindow::needNewAuthAddress);
+      connect(authAddrDlg_, &AuthAddressDialog::needSubmitAuthAddress, this, &MainWindow::needSubmitAuthAddress);
+   }
 }
 
 void MainWindow::onAccountTypeChanged(bs::network::UserType userType, bool enabled)
@@ -920,7 +931,6 @@ void bs::gui::qt::MainWindow::onMatchingLogin(const std::string& mtchLogin
    , BaseCelerClient::CelerUserType userType, const std::string& userId)
 {
    emit needSetUserId(userId);
-   emit needMdConnection(envConfig_);
 
    ui_->actionAccountInformation->setEnabled(true);
    ui_->actionAuthenticationAddresses->setEnabled(userType != BaseCelerClient::CelerUserType::Market);
@@ -992,6 +1002,21 @@ void MainWindow::onMDUpdated(bs::network::Asset::Type assetType
 {
    ui_->widgetRFQ->onMDUpdated(assetType, security, fields);
    ui_->widgetPortfolio->onMDUpdated(assetType, security, fields);
+}
+
+void bs::gui::qt::MainWindow::onAuthAddresses(const std::vector<bs::Address> &addrs
+   , const std::map<bs::Address, AddressVerificationState>& states)
+{
+   if (authAddrDlg_) {
+      authAddrDlg_->onAuthAddresses(addrs, states);
+   }
+}
+
+void bs::gui::qt::MainWindow::onSubmittedAuthAddresses(const std::vector<bs::Address>& addrs)
+{
+   if (authAddrDlg_) {
+      authAddrDlg_->onSubmittedAuthAddresses(addrs);
+   }
 }
 
 void MainWindow::showRunInBackgroundMessage()

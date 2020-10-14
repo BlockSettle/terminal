@@ -255,6 +255,7 @@ void SignerAdapter::authLeafAdded(const std::string &walletId)
 
 void SignerAdapter::walletsChanged()
 {
+   logger_->debug("[{}]", __func__);
    SignerMessage msg;
    msg.mutable_wallets_list_updated();
    Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
@@ -280,6 +281,7 @@ void SignerAdapter::walletsReady()
 
 void SignerAdapter::newWalletPrompt()
 {
+   logger_->debug("[{}]", __func__);
    SignerMessage msg;
    msg.mutable_need_new_wallet_prompt();
    Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };

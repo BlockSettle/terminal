@@ -104,6 +104,10 @@ bool MatchingAdapter::process(const bs::message::Envelope &env)
             celerConnection_->CloseConnection();
          }
          break;
+      case MatchingMessage::kGetSubmittedAuthAddresses:
+         return processGetSubmittedAuth(env);
+      case MatchingMessage::kSubmitAuthAddress:
+         return processSubmitAuth(env, msg.submit_auth_address());
       default:
          logger_->warn("[{}] unknown msg {} #{} from {}", __func__, msg.data_case()
             , env.id, env.sender->name());
@@ -115,8 +119,27 @@ bool MatchingAdapter::process(const bs::message::Envelope &env)
 
 bool MatchingAdapter::processLogin(const MatchingMessage_Login& request)
 {
-   logger_->debug("[{}] {}", __func__, request.matching_login());
    return celerConnection_->SendLogin(request.matching_login(), request.terminal_login(), {});
+}
+
+bool MatchingAdapter::processGetSubmittedAuth(const bs::message::Envelope& env)
+{
+   MatchingMessage msg;
+   auto msgResp = msg.mutable_submitted_auth_addresses();
+   for (const auto& addr : celerConnection_->GetSubmittedAuthAddressSet()) {
+      msgResp->add_addresses(addr);
+   }
+   Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
+   return pushFill(envResp);
+}
+
+bool MatchingAdapter::processSubmitAuth(const bs::message::Envelope& env
+   , const std::string& address)
+{
+   auto submittedAddresses = celerConnection_->GetSubmittedAuthAddressSet();
+   submittedAddresses.insert(address);
+   celerConnection_->SetSubmittedAuthAddressSet(submittedAddresses);
+   return processGetSubmittedAuth(env);
 }
 
 

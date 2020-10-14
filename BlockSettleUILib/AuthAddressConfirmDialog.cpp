@@ -59,6 +59,22 @@ AuthAddressConfirmDialog::AuthAddressConfirmDialog(const std::weak_ptr<BsClient>
    progressTimer_.start();
 }
 
+AuthAddressConfirmDialog::AuthAddressConfirmDialog(const bs::Address& address
+   , QWidget* parent)
+   : QDialog(parent)
+   , ui_{ new Ui::AuthAddressConfirmDialog() }
+   , address_{ address }
+{
+   ui_->setupUi(this);
+
+   setWindowTitle(tr("Confirm auth address submission"));
+   ui_->labelDescription->setText(QString::fromStdString(address.display()));
+
+   ui_->pushButtonCancel->setText(tr("Ok"));
+   connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &QDialog::accept);
+//   connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &AuthAddressConfirmDialog::onCancelPressed);
+}
+
 AuthAddressConfirmDialog::~AuthAddressConfirmDialog() = default;
 
 void AuthAddressConfirmDialog::onUiTimerTick()
