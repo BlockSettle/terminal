@@ -96,3 +96,48 @@ bool TerminalInprocBus::run(int &argc, char **argv)
    runnableAdapter_->run(argc, argv);
    return true;
 }
+
+
+//TODO: move to another source file
+using namespace BlockSettle::Terminal;
+bs::network::Quote bs::message::fromMsg(const MatchingMessage_Quote& msg)
+{
+   bs::network::Quote quote;
+   quote.requestId = msg.request_id();
+   quote.quoteId = msg.quote_id();
+   quote.security = msg.security();
+   quote.product = msg.product();
+   quote.price = msg.price();
+   quote.quantity = msg.quantity();
+   quote.side = msg.buy() ? bs::network::Side::Buy : bs::network::Side::Sell;
+   quote.assetType = static_cast<bs::network::Asset::Type>(msg.asset_type());
+   quote.quotingType = static_cast<bs::network::Quote::QuotingType>(msg.quoting_type());
+   quote.requestorAuthPublicKey = msg.req_auth_pub_key();
+   quote.dealerAuthPublicKey = msg.deal_auth_pub_key();
+   quote.settlementId = msg.settlement_id();
+   quote.dealerTransaction = msg.dealer_tx();
+   quote.expirationTime = QDateTime::fromSecsSinceEpoch(msg.expiration_time());
+   quote.timeSkewMs = msg.time_skew_ms();
+   quote.celerTimestamp = msg.timestamp();
+   return quote;
+}
+
+void bs::message::toMsg(const bs::network::Quote& quote, MatchingMessage_Quote* msg)
+{
+   msg->set_request_id(quote.requestId);
+   msg->set_quote_id(quote.quoteId);
+   msg->set_security(quote.security);
+   msg->set_product(quote.product);
+   msg->set_price(quote.price);
+   msg->set_quantity(quote.quantity);
+   msg->set_buy(quote.side == bs::network::Side::Buy);
+   msg->set_asset_type((int)quote.assetType);
+   msg->set_quoting_type((int)quote.quotingType);
+   msg->set_req_auth_pub_key(quote.requestorAuthPublicKey);
+   msg->set_deal_auth_pub_key(quote.dealerAuthPublicKey);
+   msg->set_settlement_id(quote.settlementId);
+   msg->set_dealer_tx(quote.dealerTransaction);
+   msg->set_expiration_time(quote.expirationTime.toSecsSinceEpoch());
+   msg->set_time_skew_ms(quote.timeSkewMs);
+   msg->set_timestamp(quote.celerTimestamp);
+}

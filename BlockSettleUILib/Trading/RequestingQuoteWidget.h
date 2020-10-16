@@ -52,7 +52,7 @@ public slots:
 signals:
    void cancelRFQ();
    void requestTimedOut();
-   void quoteAccepted(const QString &reqId, const bs::network::Quote& quote);
+   void quoteAccepted(const std::string &reqId, const bs::network::Quote& quote);
    void quoteFinished();
    void quoteFailed();
 

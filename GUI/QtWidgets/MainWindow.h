@@ -19,6 +19,7 @@
 #include "AuthAddress.h"
 #include "BaseCelerClient.h"
 #include "BsClient.h"
+#include "CommonTypes.h"
 #include "SignContainer.h"
 #include "Settings/SignersProvider.h"
 #include "UiUtils.h"
@@ -40,8 +41,10 @@ class AboutDialog;
 class AuthAddressDialog;
 class ConfigDialog;
 class CreateTransactionDialog;
+class DialogManager;
 class LoginWindow;
 class NotificationCenter;
+class OrderListModel;
 class QSystemTrayIcon;
 class StatusBarView;
 class TransactionsViewModel;
@@ -99,10 +102,14 @@ namespace bs {
 
             void onMDUpdated(bs::network::Asset::Type assetType
                , const QString& security, const bs::network::MDFields &);
+            void onBalance(const std::string& currency, double balance);
 
             void onAuthAddresses(const std::vector<bs::Address>&
                , const std::map<bs::Address, AddressVerificationState> &);
             void onSubmittedAuthAddresses(const std::vector<bs::Address>&);
+            void onVerifiedAuthAddresses(const std::vector<bs::Address>&);
+
+            void onQuoteReceived(const bs::network::Quote&);
 
          public slots:
             void onReactivate();
@@ -169,6 +176,9 @@ namespace bs {
 
             void needNewAuthAddress();
             void needSubmitAuthAddress(const bs::Address&);
+            void needSubmitRFQ(const bs::network::RFQ&);
+            void needAcceptRFQ(const std::string& id, const bs::network::Quote&);
+            void needCancelRFQ(const std::string& id);
 
          private slots:
             void onSend();
@@ -240,11 +250,12 @@ namespace bs {
             std::shared_ptr<StatusBarView>            statusBarView_;
             std::shared_ptr<QSystemTrayIcon>          sysTrayIcon_;
             std::shared_ptr<NotificationCenter>       notifCenter_;
-            //   std::shared_ptr<TransactionsViewModel>    transactionsModel_;
             //   std::shared_ptr<CCPortfolioModel>         portfolioModel_;
-            //   std::shared_ptr<OrderListModel>           orderListModel_;
 
             std::shared_ptr<TransactionsViewModel>    txModel_;
+            std::shared_ptr<OrderListModel>           orderListModel_;
+
+            std::shared_ptr<DialogManager>   dialogMgr_;
             CreateTransactionDialog* txDlg_{ nullptr };
             ConfigDialog*  cfgDlg_{ nullptr };
             LoginWindow* loginDlg_{ nullptr };

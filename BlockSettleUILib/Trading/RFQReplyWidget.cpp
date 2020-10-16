@@ -232,6 +232,12 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
       , this, &RFQReplyWidget::onEnterKeyPressed);
 }
 
+   void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger>&
+      , const std::shared_ptr<DialogManager>&, OrderListModel* orderListModel)
+   {
+      //TODO
+   }
+
 void RFQReplyWidget::forceCheckCondition()
 {
    const QModelIndex index = ui_->widgetQuoteRequests->view()->selectionModel()->currentIndex();

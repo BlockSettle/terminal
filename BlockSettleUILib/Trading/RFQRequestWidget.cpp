@@ -167,6 +167,52 @@ void RFQRequestWidget::onMDUpdated(bs::network::Asset::Type assetType
    ui_->widgetMarketData->onMDUpdated(assetType, security, fields);
 }
 
+void RFQRequestWidget::onBalance(const std::string& currency, double balance)
+{
+   ui_->pageRFQTicket->onBalance(currency, balance);
+}
+
+void RFQRequestWidget::onMatchingLogin(const std::string& mtchLogin
+   , BaseCelerClient::CelerUserType userType, const std::string& userId)
+{
+   marketDataConnection_.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected,
+      this, &RFQRequestWidget::onCurrencySelected));
+   marketDataConnection_.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::BidClicked,
+      this, &RFQRequestWidget::onBidClicked));
+   marketDataConnection_.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::AskClicked,
+      this, &RFQRequestWidget::onAskClicked));
+   marketDataConnection_.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::MDHeaderClicked,
+      this, &RFQRequestWidget::onDisableSelectedInfo));
+   marketDataConnection_.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::clicked,
+      this, &RFQRequestWidget::onRefreshFocus));
+
+   userType_ = userType;
+   ui_->shieldPage->showShieldSelectTargetTrade();
+   popShield();
+}
+
+void RFQRequestWidget::onMatchingLogout()
+{
+   for (QMetaObject::Connection& conn : marketDataConnection_) {
+      QObject::disconnect(conn);
+   }
+   userType_ = BaseCelerClient::CelerUserType::Undefined;
+   ui_->shieldPage->showShieldLoginToSubmitRequired();
+   popShield();
+}
+
+void RFQRequestWidget::onVerifiedAuthAddresses(const std::vector<bs::Address>&)
+{
+}
+
+void RFQRequestWidget::onQuoteReceived(const bs::network::Quote& quote)
+{
+   const auto& itDlg = dialogs_.find(quote.requestId);
+   if (itDlg != dialogs_.end()) {
+      itDlg->second->onQuoteReceived(quote);
+   }
+}
+
 void RFQRequestWidget::hideEvent(QHideEvent* event)
 {
    ui_->pageRFQTicket->onParentAboutToHide();
@@ -267,21 +313,30 @@ void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
    connect(authAddressManager_.get(), &AuthAddressManager::AddressListUpdated, this, &RFQRequestWidget::forceCheckCondition);
 }
 
-void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger>&, const std::shared_ptr<DialogManager>&, OrderListModel* orderListModel)
+void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger>&logger
+   , const std::shared_ptr<DialogManager>& dialogMgr, OrderListModel* orderListModel)
 {
+   dialogManager_ = dialogMgr;
+   ui_->pageRFQTicket->init(logger);
+
+   ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+   ui_->treeViewOrders->setModel(orderListModel);
+   ui_->treeViewOrders->initWithModel(orderListModel);
+
+   ui_->pageRFQTicket->disablePanel();
 }
 
 void RFQRequestWidget::onConnectedToCeler()
 {
-   marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected,
+   marketDataConnection_.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::CurrencySelected,
                                           this, &RFQRequestWidget::onCurrencySelected));
-   marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::BidClicked,
+   marketDataConnection_.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::BidClicked,
                                           this, &RFQRequestWidget::onBidClicked));
-   marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::AskClicked,
+   marketDataConnection_.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::AskClicked,
                                           this, &RFQRequestWidget::onAskClicked));
-   marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::MDHeaderClicked,
+   marketDataConnection_.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::MDHeaderClicked,
                                           this, &RFQRequestWidget::onDisableSelectedInfo));
-   marketDataConnection.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::clicked,
+   marketDataConnection_.push_back(connect(ui_->widgetMarketData, &MarketDataWidget::clicked,
                                           this, &RFQRequestWidget::onRefreshFocus));
 
    ui_->shieldPage->showShieldSelectTargetTrade();
@@ -290,7 +345,7 @@ void RFQRequestWidget::onConnectedToCeler()
 
 void RFQRequestWidget::onDisconnectedFromCeler()
 {
-   for (QMetaObject::Connection &conn : marketDataConnection) {
+   for (QMetaObject::Connection &conn : marketDataConnection_) {
       QObject::disconnect(conn);
    }
 
@@ -302,22 +357,32 @@ void RFQRequestWidget::onRFQSubmit(const std::string &id, const bs::network::RFQ
    , bs::UtxoReservationToken ccUtxoRes)
 {
    auto authAddr = ui_->pageRFQTicket->selectedAuthAddress();
-
-   auto xbtWallet = ui_->pageRFQTicket->xbtWallet();
+   RFQDialog* dialog = nullptr;
    auto fixedXbtInputs = ui_->pageRFQTicket->fixedXbtInputs();
-
    std::unique_ptr<bs::hd::Purpose> purpose;
-   if (xbtWallet && !xbtWallet->canMixLeaves()) {
-      auto walletType = ui_->pageRFQTicket->xbtWalletType();
-      purpose.reset(new bs::hd::Purpose(UiUtils::getHwWalletPurpose(walletType)));
-   }
 
-   RFQDialog* dialog = new RFQDialog(logger_, id, rfq, quoteProvider_
-      , authAddressManager_, assetManager_, walletsManager_, signingContainer_
-      , armory_, celerClient_, appSettings_, rfqStorage_, xbtWallet
-      , ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, utxoReservationManager_
-      , fixedXbtInputs.inputs, std::move(fixedXbtInputs.utxoRes)
-      , std::move(ccUtxoRes), std::move(purpose), this);
+   if (walletsManager_) {
+      auto xbtWallet = ui_->pageRFQTicket->xbtWallet();
+
+      if (xbtWallet && !xbtWallet->canMixLeaves()) {
+         auto walletType = ui_->pageRFQTicket->xbtWalletType();
+         purpose.reset(new bs::hd::Purpose(UiUtils::getHwWalletPurpose(walletType)));
+      }
+
+      dialog = new RFQDialog(logger_, id, rfq, quoteProvider_
+         , authAddressManager_, assetManager_, walletsManager_, signingContainer_
+         , armory_, celerClient_, appSettings_, rfqStorage_, xbtWallet
+         , ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, utxoReservationManager_
+         , fixedXbtInputs.inputs, std::move(fixedXbtInputs.utxoRes)
+         , std::move(ccUtxoRes), std::move(purpose), this);
+   }
+   else {
+      std::string xbtWalletId;   //TODO - set
+      dialog = new RFQDialog(logger_, id, rfq, xbtWalletId
+         , ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, std::move(fixedXbtInputs.utxoRes)
+         , std::move(ccUtxoRes), std::move(purpose), this);
+      emit needSubmitRFQ(rfq);
+   }
 
    connect(this, &RFQRequestWidget::unsignedPayinRequested, dialog, &RFQDialog::onUnsignedPayinRequested);
    connect(this, &RFQRequestWidget::signedPayoutRequested, dialog, &RFQDialog::onSignedPayoutRequested);
@@ -376,7 +441,7 @@ bool RFQRequestWidget::checkConditions(const MarketSelectedInfo& selectedInfo)
 {
    ui_->stackedWidgetRFQ->setEnabled(true);
    using UserType = CelerClient::CelerUserType;
-   const UserType userType = celerClient_->celerUserType();
+   const UserType userType = celerClient_ ? celerClient_->celerUserType() : userType_;
 
    using GroupType = RFQShieldPage::ProductType;
    const GroupType group = RFQShieldPage::getProductGroup(selectedInfo.productGroup_);
@@ -418,7 +483,6 @@ bool RFQRequestWidget::checkWalletSettings(bs::network::Asset::Type productType,
       popShield();
       return true;
    }
-
    return false;
 }
 
@@ -519,21 +583,39 @@ void RFQRequestWidget::onUserConnected(const bs::network::UserType &ut)
 
 void RFQRequestWidget::onUserDisconnected()
 {
-   ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->suspend();
+   if (autoSignProvider_) {
+      ((RFQScriptRunner*)autoSignProvider_->scriptRunner())->suspend();
+   }
 }
 
-void RFQRequestWidget::onRFQAccepted(const std::string &id)
+void RFQRequestWidget::onRFQAccepted(const std::string &id
+   , const bs::network::Quote& quote)
 {
-   ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->rfqAccepted(id);
+   if (autoSignProvider_) {
+      ((RFQScriptRunner*)autoSignProvider_->scriptRunner())->rfqAccepted(id);
+   }
+   else {
+      emit needAcceptRFQ(id, quote);
+   }
 }
 
 void RFQRequestWidget::onRFQExpired(const std::string &id)
 {
    deleteDialog(id);
-   ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->rfqExpired(id);
+   if (autoSignProvider_) {
+      ((RFQScriptRunner*)autoSignProvider_->scriptRunner())->rfqExpired(id);
+   }
+   else {
+      emit needExpireRFQ(id);
+   }
 }
 
 void RFQRequestWidget::onRFQCancelled(const std::string &id)
 {
-   ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->rfqCancelled(id);
+   if (autoSignProvider_) {
+      ((RFQScriptRunner*)autoSignProvider_->scriptRunner())->rfqCancelled(id);
+   }
+   else {
+      emit needCancelRFQ(id);
+   }
 }

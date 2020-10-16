@@ -33,6 +33,7 @@ namespace BlockSettle {
       class ArmoryMessage_LedgerEntries;
       class ArmoryMessage_ZCInvalidated;
       class ArmoryMessage_ZCReceived;
+      class OnChainTrackMessage_AuthAddresses;
       class OnChainTrackMessage_AuthState;
       class SignerMessage_SignTxResponse;
       class WalletsMessage_TXDetailsResponse;
@@ -42,10 +43,12 @@ namespace BlockSettle {
       class WalletsMessage_WalletsListResponse;
    }
    namespace Terminal {
+      class AssetsMessage_Balance;
       class AssetsMessage_SubmittedAuthAddresses;
       class BsServerMessage_LoginResult;
       class BsServerMessage_StartLoginResult;
       class MatchingMessage_LoggedIn;
+      class MatchingMessage_Quote;
       class MktDataMessage_Prices;
       class SettingsMessage_ArmoryServers;
       class SettingsMessage_SettingsResponse;
@@ -120,6 +123,9 @@ private:
    bool processAuthWallet(const BlockSettle::Common::WalletsMessage_WalletData&);
    bool processAuthState(const BlockSettle::Common::OnChainTrackMessage_AuthState&);
    bool processSubmittedAuthAddrs(const BlockSettle::Terminal::AssetsMessage_SubmittedAuthAddresses&);
+   bool processBalance(const BlockSettle::Terminal::AssetsMessage_Balance&);
+   bool processVerifiedAuthAddrs(const BlockSettle::Common::OnChainTrackMessage_AuthAddresses&);
+   bool processQuote(const BlockSettle::Terminal::MatchingMessage_Quote&);
 
 private slots:
    void onGetSettings(const std::vector<ApplicationSettings::Setting>&);
@@ -168,6 +174,9 @@ private slots:
    void onNeedMdConnection(ApplicationSettings::EnvConfiguration);
    void onNeedNewAuthAddress();
    void onNeedSubmitAuthAddress(const bs::Address&);
+   void onNeedSubmitRFQ(const bs::network::RFQ&);
+   void onNeedAcceptRFQ(const std::string& id, const bs::network::Quote&);
+   void onNeedCancelRFQ(const std::string& id);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

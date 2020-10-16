@@ -360,3 +360,21 @@ void BsServerAdapter::onConnectionFailed()
 {
    Disconnected();
 }
+
+void BsServerAdapter::onBalanceUpdated(const std::string& currency, double balance)
+{
+   BsServerMessage msg;
+   auto msgBal = msg.mutable_balance_updated();
+   msgBal->set_currency(currency);
+   msgBal->set_value(balance);
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(env);
+}
+
+void BsServerAdapter::onTradingStatusChanged(bool tradingEnabled)
+{
+   BsServerMessage msg;
+   msg.set_trading_enabled(tradingEnabled);
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(env);
+}

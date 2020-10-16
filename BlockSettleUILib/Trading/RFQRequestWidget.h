@@ -14,7 +14,7 @@
 #include <QWidget>
 #include <QTimer>
 #include <memory>
-
+#include "BaseCelerClient.h"
 #include "CommonTypes.h"
 #include "MarketDataWidget.h"
 #include "TabWithShortcut.h"
@@ -92,6 +92,14 @@ public:
 
    void onMDUpdated(bs::network::Asset::Type, const QString& security
       , const bs::network::MDFields &);
+   void onBalance(const std::string& currency, double balance);
+
+   void onMatchingLogin(const std::string& mtchLogin, BaseCelerClient::CelerUserType
+      , const std::string& userId);
+   void onMatchingLogout();
+   void onVerifiedAuthAddresses(const std::vector<bs::Address>&);
+
+   void onQuoteReceived(const bs::network::Quote& quote);
 
 protected:
    void hideEvent(QHideEvent* event) override;
@@ -112,6 +120,11 @@ signals:
    void signedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp);
    void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin
       , const BinaryData &payinHash, QDateTime timestamp);
+
+   void needSubmitRFQ(const bs::network::RFQ&);
+   void needAcceptRFQ(const std::string& id, const bs::network::Quote&);
+   void needExpireRFQ(const std::string& id);
+   void needCancelRFQ(const std::string& id);
 
 private:
    void showEditableRFQPage();
@@ -139,7 +152,7 @@ public slots:
 private slots:
    void onConnectedToCeler();
    void onDisconnectedFromCeler();
-   void onRFQAccepted(const std::string &id);
+   void onRFQAccepted(const std::string &id, const bs::network::Quote&);
    void onRFQExpired(const std::string &id);
    void onRFQCancelled(const std::string &id);
 
@@ -165,9 +178,11 @@ private:
 
    std::shared_ptr<RfqStorage> rfqStorage_;
 
-   QList<QMetaObject::Connection>   marketDataConnection;
+   QList<QMetaObject::Connection>   marketDataConnection_;
 
    std::unordered_map<std::string, RFQDialog *> dialogs_;
+
+   BaseCelerClient::CelerUserType   userType_{ BaseCelerClient::CelerUserType::Undefined };
 };
 
 #endif // __RFQ_REQUEST_WIDGET_H__

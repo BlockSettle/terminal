@@ -79,7 +79,8 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
 
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::cancelRFQ, this, &RFQDialog::reject);
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::requestTimedOut, this, &RFQDialog::onTimeout);
-   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteAccepted, this, &RFQDialog::onRFQResponseAccepted, Qt::QueuedConnection);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteAccepted, this
+      , &RFQDialog::onRFQResponseAccepted, Qt::QueuedConnection);
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFinished, this, &RFQDialog::onQuoteFinished);
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFailed, this, &RFQDialog::onQuoteFailed);
 
@@ -95,6 +96,41 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    ui_->pageRequestingQuote->populateDetails(rfq_);
 
    quoteProvider_->SubmitRFQ(rfq_);
+}
+
+RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger>& logger
+   , const std::string& id, const bs::network::RFQ& rfq
+   , const std::string& xbtWalletId, const bs::Address& recvXbtAddrIfSet
+   , const bs::Address& authAddr
+   , bs::UtxoReservationToken fixedXbtUtxoRes
+   , bs::UtxoReservationToken ccUtxoRes
+   , std::unique_ptr<bs::hd::Purpose> purpose
+   , RFQRequestWidget* parent)
+   : QDialog(parent)
+   , ui_(new Ui::RFQDialog())
+   , logger_(logger)
+   , id_(id), rfq_(rfq)
+   , recvXbtAddrIfSet_(recvXbtAddrIfSet)
+   , authAddr_(authAddr)
+   , fixedXbtUtxoRes_(std::move(fixedXbtUtxoRes))
+   , requestWidget_(parent)
+   , ccUtxoRes_(std::move(ccUtxoRes))
+   , walletPurpose_(std::move(purpose))
+{
+   ui_->setupUi(this);
+
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::cancelRFQ, this
+      , &RFQDialog::reject);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::requestTimedOut
+      , this, &RFQDialog::onTimeout);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteAccepted, this
+      , &RFQDialog::onRFQResponseAccepted);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFinished, this
+      , &RFQDialog::onQuoteFinished);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFailed, this
+      , &RFQDialog::onQuoteFailed);
+
+   ui_->pageRequestingQuote->populateDetails(rfq_);
 }
 
 RFQDialog::~RFQDialog() = default;
@@ -122,13 +158,16 @@ void RFQDialog::onOrderFailed(const std::string& quoteId, const std::string& rea
    close();
 }
 
-void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Quote &quote)
+void RFQDialog::onRFQResponseAccepted(const std::string &reqId
+   , const bs::network::Quote &quote)
 {
-   emit accepted(id_);
+   emit accepted(reqId, quote);
    quote_ = quote;
 
    if (rfq_.assetType == bs::network::Asset::SpotFX) {
-      quoteProvider_->AcceptQuoteFX(reqId, quote);
+      if (quoteProvider_) {
+         quoteProvider_->AcceptQuoteFX(QString::fromStdString(reqId), quote);
+      }
    }
    else {
       if (rfq_.assetType == bs::network::Asset::SpotXBT) {
@@ -297,7 +336,12 @@ void RFQDialog::cancel(bool force)
    }
 
    if (cancelOnClose_) {
-      quoteProvider_->CancelQuote(QString::fromStdString(rfq_.requestId));
+      if (quoteProvider_) {
+         quoteProvider_->CancelQuote(QString::fromStdString(rfq_.requestId));
+      }
+      else {
+         emit cancelled(rfq_.requestId);
+      }
    }
    if (force) {
       close();
@@ -313,7 +357,7 @@ void RFQDialog::onTimeout()
 
 void RFQDialog::onQuoteFinished()
 {
-   emit accepted(id_);
+   emit accepted(id_, quote_);
    cancelOnClose_ = false;
    hide();
 }

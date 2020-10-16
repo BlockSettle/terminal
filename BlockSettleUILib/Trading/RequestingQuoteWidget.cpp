@@ -265,7 +265,7 @@ void RequestingQuoteWidget::onAccept()
    }
    ui_->labelTimeLeft->clear();
 
-   emit quoteAccepted(QString::fromStdString(rfq_.requestId), quote_);
+   emit quoteAccepted(rfq_.requestId, quote_);
 }
 
 void RequestingQuoteWidget::SetQuoteDetailsState(QuoteDetailsState state)

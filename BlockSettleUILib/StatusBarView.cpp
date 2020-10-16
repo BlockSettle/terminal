@@ -198,17 +198,45 @@ void StatusBarView::onBlockchainStateChanged(int state, unsigned int blockNum)
 void StatusBarView::onXbtBalance(const bs::sync::WalletBalanceData &wbd)
 {  // uppercase eliminates ext-int balance duplication
    xbtBalances_[QString::fromStdString(wbd.id).toUpper().toStdString()] = wbd.balTotal;
-   displayXbtBalance();
-}
+   if (balanceSymbols_.empty() || (balanceSymbols_[0] != bs::network::XbtCurrency)) {
+      balanceSymbols_.insert(balanceSymbols_.cbegin(), bs::network::XbtCurrency);
+   }
 
-void StatusBarView::displayXbtBalance()
-{
    BTCNumericTypes::balance_type accBalance = 0;
    for (const auto& bal : xbtBalances_) {
       accBalance += bal.second;
    }
-   const auto xbt = UiUtils::displayAmount(accBalance);
-   QString text = tr("   XBT: <b>%1</b> ").arg(xbt);
+   balances_[bs::network::XbtCurrency] = accBalance;
+   displayBalances();
+}
+
+void StatusBarView::displayBalances()
+{
+   QString text;
+   for (const auto& currency : balanceSymbols_) {
+      if (currency == bs::network::XbtCurrency) {
+         QString xbt;
+         switch (armoryConnState_) {
+         case ArmoryState::Ready:
+            xbt = UiUtils::displayAmount(balances_.at(currency));
+            break;
+         case ArmoryState::Scanning:
+         case ArmoryState::Connected:
+            xbt = tr("Loading...");
+            break;
+         case ArmoryState::Closing:
+         case ArmoryState::Offline: [[fallthrough]]
+         default:
+            xbt = tr("...");
+            break;
+         }
+         text += tr("   XBT: <b>%1</b> ").arg(xbt);
+      } else {
+         text += tr("| %1: <b>%2</b> ")
+            .arg(QString::fromStdString(currency))
+            .arg(UiUtils::displayCurrencyAmount(balances_.at(currency)));
+      }
+   }
    balanceLabel_->setText(text);
    progressBar_->setVisible(false);
    estimateLabel_->setVisible(false);
@@ -402,39 +430,7 @@ void StatusBarView::onBalanceUpdated(const std::string &symbol, double balance)
          balanceSymbols_.push_back(symbol);
       }
    }
-
-   QString text;
-   for (const auto &currency : balanceSymbols_) {
-      if (currency == bs::network::XbtCurrency) {
-         QString xbt;
-         switch (armoryConnState_) {
-         case ArmoryState::Ready:
-            xbt = UiUtils::displayAmount(balances_.at(currency));
-            break;
-
-         case ArmoryState::Scanning:
-         case ArmoryState::Connected:
-            xbt = tr("Loading...");
-            break;
-
-         case ArmoryState::Closing:
-         case ArmoryState::Offline:
-            xbt = tr("...");
-            break;
-
-         default:
-            xbt = tr("...");
-         }
-
-         text += tr("   XBT: <b>%1</b> ").arg(xbt);
-      }
-      else {
-         text += tr("| %1: <b>%2</b> ")
-            .arg(QString::fromStdString(currency))
-            .arg(UiUtils::displayCurrencyAmount(balances_.at(currency)));
-      }
-   }
-   balanceLabel_->setText(text);
+   displayBalances();
 }
 
 void StatusBarView::updateConnectionStatusDetails(ArmoryState state, unsigned int topBlock)

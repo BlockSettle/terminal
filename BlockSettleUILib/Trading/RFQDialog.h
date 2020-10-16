@@ -56,7 +56,7 @@ class RFQDialog : public QDialog
 Q_OBJECT
 
 public:
-   RFQDialog(const std::shared_ptr<spdlog::logger> &logger
+   [[deprecated]] RFQDialog(const std::shared_ptr<spdlog::logger> &logger
       , const std::string &id, const bs::network::RFQ& rfq
       , const std::shared_ptr<QuoteProvider>& quoteProvider
       , const std::shared_ptr<AuthAddressManager>& authAddressManager
@@ -76,12 +76,20 @@ public:
       , bs::UtxoReservationToken ccUtxoRes
       , std::unique_ptr<bs::hd::Purpose> purpose
       , RFQRequestWidget* parent = nullptr);
+   RFQDialog(const std::shared_ptr<spdlog::logger>& logger
+      , const std::string& id, const bs::network::RFQ& rfq
+      , const std::string& xbtWalletId, const bs::Address& recvXbtAddrIfSet
+      , const bs::Address& authAddr
+      , bs::UtxoReservationToken fixedXbtUtxoRes
+      , bs::UtxoReservationToken ccUtxoRes
+      , std::unique_ptr<bs::hd::Purpose> purpose
+      , RFQRequestWidget* parent = nullptr);
    ~RFQDialog() override;
 
    void cancel(bool force = true);
 
 signals:
-   void accepted(const std::string &id);
+   void accepted(const std::string &id, const bs::network::Quote&);
    void expired(const std::string &id);
    void cancelled(const std::string &id);
 
@@ -93,6 +101,7 @@ public slots:
    void onSignedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp);
    void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin
       , const BinaryData &payinHash, QDateTime timestamp);
+   void onQuoteReceived(const bs::network::Quote& quote);
 
 private slots:
    bool close();
@@ -100,8 +109,7 @@ private slots:
    void onQuoteFinished();
    void onQuoteFailed();
 
-   void onRFQResponseAccepted(const QString &reqId, const bs::network::Quote& quote);
-   void onQuoteReceived(const bs::network::Quote& quote);
+   void onRFQResponseAccepted(const std::string &reqId, const bs::network::Quote& quote);
    void onOrderFilled(const std::string &quoteId);
    void onOrderFailed(const std::string& quoteId, const std::string& reason);
    void onXBTSettlementAccepted();

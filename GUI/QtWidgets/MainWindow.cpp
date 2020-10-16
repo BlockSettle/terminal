@@ -37,6 +37,7 @@
 #include "InfoDialogs/SupportDialog.h"
 #include "LoginWindow.h"
 #include "NotificationCenter.h"
+#include "OrderListModel.h"
 #include "Settings/ConfigDialog.h"
 #include "StatusBarView.h"
 #include "TabWithShortcut.h"
@@ -189,18 +190,15 @@ void bs::gui::qt::MainWindow::onSettingsState(const ApplicationSettings::State& 
 void MainWindow::onArmoryStateChanged(int state, unsigned int blockNum)
 {
    topBlock_ = blockNum;
-   if (statusBarView_) {
-      statusBarView_->onBlockchainStateChanged(state, blockNum);
-   }
+   statusBarView_->onBlockchainStateChanged(state, blockNum);
    ui_->widgetExplorer->onNewBlock(blockNum);
 }
 
 void MainWindow::onNewBlock(int state, unsigned int blockNum)
 {
    topBlock_ = blockNum;
-   if (statusBarView_) {
-      statusBarView_->onBlockchainStateChanged(state, blockNum);
-   }
+   statusBarView_->onBlockchainStateChanged(state, blockNum);
+
    if (txModel_) {
       txModel_->onNewBlock(blockNum);
    }
@@ -218,10 +216,8 @@ void MainWindow::onWalletsReady()
 
 void MainWindow::onSignerStateChanged(int state, const std::string &details)
 {
-   if (statusBarView_) {
-      statusBarView_->onSignerStatusChanged(static_cast<SignContainer::ConnectionError>(state)
-         , QString::fromStdString(details));
-   }
+   statusBarView_->onSignerStatusChanged(static_cast<SignContainer::ConnectionError>(state)
+      , QString::fromStdString(details));
 }
 
 void MainWindow::onHDWallet(const bs::sync::WalletInfo &wi)
@@ -945,7 +941,7 @@ void bs::gui::qt::MainWindow::onMatchingLogin(const std::string& mtchLogin
    actLogout_->setVisible(true);
 
    //   ccFileManager_->ConnectToCelerClient(celerConnection_);
-   ui_->widgetRFQ->onUserConnected(userType);
+   ui_->widgetRFQ->onMatchingLogin(mtchLogin, userType, userId);
    ui_->widgetRFQReply->onUserConnected(userType);
 
    statusBarView_->onConnectedToMatching();
@@ -995,6 +991,8 @@ void MainWindow::onMatchingLogout()
 
    statusBarView_->onDisconnectedFromMatching();
    setLoginButtonText(loginButtonText_);
+
+   ui_->widgetRFQ->onMatchingLogout();
 }
 
 void MainWindow::onMDUpdated(bs::network::Asset::Type assetType
@@ -1004,7 +1002,13 @@ void MainWindow::onMDUpdated(bs::network::Asset::Type assetType
    ui_->widgetPortfolio->onMDUpdated(assetType, security, fields);
 }
 
-void bs::gui::qt::MainWindow::onAuthAddresses(const std::vector<bs::Address> &addrs
+void bs::gui::qt::MainWindow::onBalance(const std::string& currency, double balance)
+{
+   statusBarView_->onBalanceUpdated(currency, balance);
+   ui_->widgetRFQ->onBalance(currency, balance);
+}
+
+void MainWindow::onAuthAddresses(const std::vector<bs::Address> &addrs
    , const std::map<bs::Address, AddressVerificationState>& states)
 {
    if (authAddrDlg_) {
@@ -1012,11 +1016,21 @@ void bs::gui::qt::MainWindow::onAuthAddresses(const std::vector<bs::Address> &ad
    }
 }
 
-void bs::gui::qt::MainWindow::onSubmittedAuthAddresses(const std::vector<bs::Address>& addrs)
+void MainWindow::onSubmittedAuthAddresses(const std::vector<bs::Address>& addrs)
 {
    if (authAddrDlg_) {
       authAddrDlg_->onSubmittedAuthAddresses(addrs);
    }
+}
+
+void MainWindow::onVerifiedAuthAddresses(const std::vector<bs::Address>& addrs)
+{
+   ui_->widgetRFQ->onVerifiedAuthAddresses(addrs);
+}
+
+void bs::gui::qt::MainWindow::onQuoteReceived(const bs::network::Quote& quote)
+{
+   ui_->widgetRFQ->onQuoteReceived(quote);
 }
 
 void MainWindow::showRunInBackgroundMessage()
@@ -1160,7 +1174,7 @@ void MainWindow::onSignerVisibleChanged()
 void MainWindow::initWidgets()
 {
    ui_->widgetWallets->init(logger_);
-//   connect(ui_->widgetWallets, &WalletsWidget::newWalletCreationRequest, this, &MainWindow::createNewWallet);
+   connect(ui_->widgetWallets, &WalletsWidget::newWalletCreationRequest, this, &MainWindow::createNewWallet);
    connect(ui_->widgetWallets, &WalletsWidget::needHDWalletDetails, this, &MainWindow::needHDWalletDetails);
    connect(ui_->widgetWallets, &WalletsWidget::needWalletBalances, this, &MainWindow::needWalletBalances);
    connect(ui_->widgetWallets, &WalletsWidget::needUTXOs, this, &MainWindow::needUTXOs);
@@ -1181,59 +1195,18 @@ void MainWindow::initWidgets()
       ui_->widgetPortfolio->init(applicationSettings_, mdProvider_, mdCallbacks_
          , portfolioModel_, signContainer_, armory_, utxoReservationMgr_, logMgr_->logger("ui"), walletsMgr_);*/
 
-//   ui_->widgetRFQ->initWidgets(mdProvider_, mdCallbacks_, applicationSettings_);
+   orderListModel_ = std::make_shared<OrderListModel>(this);
+   dialogMgr_ = std::make_shared<DialogManager>(this);
 
-#if 0
-   const auto aqScriptRunner = new AQScriptRunner(quoteProvider, signContainer_
-      , mdCallbacks_, assetManager_, logger);
-   if (!applicationSettings_->get<std::string>(ApplicationSettings::ExtConnName).empty()
-      && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnHost).empty()
-      && !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPort).empty()
-      /*&& !applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPubKey).empty()*/) {
-      ExtConnections extConns;
-/*      bs::network::BIP15xParams params;
-      params.ephemeralPeers = true;
-      params.cookie = bs::network::BIP15xCookie::ReadServer;
-      params.serverPublicKey = BinaryData::CreateFromHex(applicationSettings_->get<std::string>(
-         ApplicationSettings::ExtConnPubKey));
-      const auto &bip15xTransport = std::make_shared<bs::network::TransportBIP15xClient>(logger, params);
-      bip15xTransport->setKeyCb(cbApproveExtConn_);*/
+   ui_->widgetRFQ->init(logger_, dialogMgr_, orderListModel_.get());
+   connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this, &MainWindow::createNewWallet);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::needSubmitRFQ, this, &MainWindow::needSubmitRFQ);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::needAcceptRFQ, this, &MainWindow::needAcceptRFQ);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::needCancelRFQ, this, &MainWindow::needCancelRFQ);
 
-      logger->debug("Setting up ext connection");
-      auto connection = std::make_shared<WsDataConnection>(logger, WsDataConnectionParams{ });
-      //TODO: BIP15x will be superceded with SSL with certificate checking on both ends
-//      auto wsConnection = std::make_unique<WsDataConnection>(logger, WsDataConnectionParams{});
-//      auto connection = std::make_shared<Bip15xDataConnection>(logger, std::move(wsConnection), bip15xTransport);
-      if (connection->openConnection(applicationSettings_->get<std::string>(ApplicationSettings::ExtConnHost)
-         , applicationSettings_->get<std::string>(ApplicationSettings::ExtConnPort)
-         , aqScriptRunner->getExtConnListener().get())) {
-         extConns[applicationSettings_->get<std::string>(ApplicationSettings::ExtConnName)] = connection;
-      }
-      aqScriptRunner->setExtConnections(extConns);
-   }
-
-   autoSignQuoteProvider_ = std::make_shared<AutoSignAQProvider>(logger
-      , aqScriptRunner, applicationSettings_, signContainer_, celerConnection_);
-
-   const auto rfqScriptRunner = new RFQScriptRunner(mdCallbacks_, logger, nullptr);
-   autoSignRFQProvider_ = std::make_shared<AutoSignRFQProvider>(logger
-      , rfqScriptRunner, applicationSettings_, signContainer_, celerConnection_);
-#endif //0
-
-   auto dialogManager = std::make_shared<DialogManager>(this);
-
-/*   ui_->widgetRFQ->init(logger, celerConnection_, authManager_, quoteProvider
-      , assetManager_, dialogManager, signContainer_, armory_, autoSignRFQProvider_
-      , utxoReservationMgr_, orderListModel_.get());
-   ui_->widgetRFQReply->init(logger, celerConnection_, authManager_
-      , quoteProvider, mdCallbacks_, assetManager_, applicationSettings_, dialogManager
-      , signContainer_, armory_, connectionManager_, autoSignQuoteProvider_
-      , utxoReservationMgr_, orderListModel_.get());
-
-   connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this
-      , &BSTerminalMainWindow::onCreatePrimaryWalletRequest);
    connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this
-      , &BSTerminalMainWindow::onCreatePrimaryWalletRequest);*/
+      , &MainWindow::createNewWallet);
+   ui_->widgetRFQReply->init(logger_, dialogMgr_, orderListModel_.get());
 
    connect(ui_->tabWidget, &QTabWidget::tabBarClicked, this,
       [/*requestRFQ = QPointer<RFQRequestWidget>(ui_->widgetRFQ)

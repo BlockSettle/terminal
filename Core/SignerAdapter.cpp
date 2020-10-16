@@ -192,7 +192,7 @@ bool SignerAdapter::processSignerSettings(const SettingsMessage_SignerServer &re
             localSignerPort = portToTest;
             break;
          } else {
-            logger_->error("[SignerAdapter::processSignerSettings] attempt {}:"
+            logger_->debug("[SignerAdapter::processSignerSettings] attempt #{}:"
                " port {} used", port);
          }
       }

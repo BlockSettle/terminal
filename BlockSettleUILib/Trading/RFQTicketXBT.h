@@ -66,14 +66,16 @@ public:
    RFQTicketXBT(QWidget* parent = nullptr);
    ~RFQTicketXBT() override;
 
-   void init(const std::shared_ptr<spdlog::logger> &logger
+   [[deprecated]] void init(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<AuthAddressManager> &
       , const std::shared_ptr<AssetManager> &assetManager
       , const std::shared_ptr<QuoteProvider> &quoteProvider
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::UTXOReservationManager> &);
-   void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
+   [[deprecated]]void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
+
+   void init(const std::shared_ptr<spdlog::logger>&);
 
    void resetTicket();
 
@@ -100,6 +102,7 @@ public:
    UiUtils::WalletsTypes xbtWalletType() const;
 
    void onParentAboutToHide();
+   void onBalance(const std::string& currency, double balance);
 
 public slots:
    void SetProductAndSide(const QString& productGroup, const QString& currencyPair
@@ -270,6 +273,7 @@ private:
    std::vector<std::string>   deferredRFQs_;
 
    std::unordered_map<std::string, bs::network::MDInfo>  mdInfo_;
+   std::unordered_map<std::string, double>   balances_;
 };
 
 #endif // __RFQ_TICKET_XBT_H__

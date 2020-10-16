@@ -20,6 +20,8 @@ namespace spdlog {
 namespace BlockSettle {
    namespace Terminal {
       class MatchingMessage_Login;
+      class MatchingMessage_RFQ;
+      class MatchingMessage_AcceptRFQ;
    }
 }
 
@@ -62,11 +64,28 @@ private:
    bool processLogin(const BlockSettle::Terminal::MatchingMessage_Login&);
    bool processGetSubmittedAuth(const bs::message::Envelope&);
    bool processSubmitAuth(const bs::message::Envelope&, const std::string& address);
+   bool processSendRFQ(const BlockSettle::Terminal::MatchingMessage_RFQ&);
+   bool processAcceptRFQ(const BlockSettle::Terminal::MatchingMessage_AcceptRFQ&);
+
+   std::string getQuoteReqId(const std::string& quoteId) const;
+   void saveQuoteReqId(const std::string& quoteReqId, const std::string& quoteId);
+   void delQuoteReqId(const std::string& quoteReqId);
+   std::string getQuoteRequestCcy(const std::string& id) const;
+   void saveQuoteRequestCcy(const std::string& id, const std::string& ccy);
+   void cleanQuoteRequestCcy(const std::string& id);
+
+   bool onQuoteResponse(const std::string&);
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::message::User>  user_;
    std::unique_ptr<BaseCelerClient>    celerConnection_;
+
+   std::string assignedAccount_;
+   std::unordered_map<std::string, bs::network::RFQ>  submittedRFQs_;
+   std::unordered_map<std::string, std::string>       quoteIdMap_;
+   std::unordered_map<std::string, std::unordered_set<std::string>>  quoteIds_;
+   std::unordered_map<std::string, std::string> quoteCcys_;
 };
 
 

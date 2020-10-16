@@ -57,6 +57,12 @@ OrderListModel::OrderListModel(const std::shared_ptr<AssetManager>& assetManager
    reset();
 }
 
+OrderListModel::OrderListModel(QObject* parent)
+   : QAbstractItemModel(parent)
+{
+   reset();
+}
+
 int OrderListModel::columnCount(const QModelIndex &) const
 {
    return Header::last;

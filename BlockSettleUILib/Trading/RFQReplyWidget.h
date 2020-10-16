@@ -92,7 +92,9 @@ public:
       , const std::shared_ptr<AutoSignScriptProvider> &
       , const std::shared_ptr<bs::UTXOReservationManager> &
       , OrderListModel *orderListModel);
-
+   void init(const std::shared_ptr<spdlog::logger>&
+      , const std::shared_ptr<DialogManager>&
+      , OrderListModel* orderListModel);
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
    void shortcutActivated(ShortcutType s) override;

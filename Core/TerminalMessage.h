@@ -13,6 +13,13 @@
 
 #include "Message/Bus.h"
 #include "Message/Envelope.h"
+#include "CommonTypes.h"
+
+namespace BlockSettle {
+   namespace Terminal {
+      class MatchingMessage_Quote;
+   }
+}
 
 namespace bs {
 
@@ -93,6 +100,10 @@ namespace bs {
          std::shared_ptr<MainLoopRuner>   runnableAdapter_;
       };
 
+
+      //TODO: move to another source file
+      bs::network::Quote fromMsg(const BlockSettle::Terminal::MatchingMessage_Quote&);
+      void toMsg(const bs::network::Quote&, BlockSettle::Terminal::MatchingMessage_Quote*);
    } // namespace message
 } // namespace bs
 

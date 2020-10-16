@@ -47,7 +47,7 @@ private:    // AssetMgr callbacks override
    void onFxBalanceLoaded() override;
    void onFxBalanceCleared() override;
 
-   void onBalanceChanged(const std::string& currency) override;
+   void onBalanceChanged(const std::string& currency, double value) override;
    void onTotalChanged() override;
    void onSecuritiesChanged() override;
 
@@ -62,6 +62,7 @@ private:    // AssetMgr callbacks override
    bool onMatchingLogin(const BlockSettle::Terminal::MatchingMessage_LoggedIn&);
    bool processSubmittedAuth(const BlockSettle::Terminal::MatchingMessage_SubmittedAuthAddresses&);
    bool processSubmitAuth(const std::string&);
+   bool processBalance(const std::string& currency, double);
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;

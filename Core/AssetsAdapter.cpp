@@ -72,6 +72,18 @@ bool AssetsAdapter::process(const bs::message::Envelope &env)
       default: break;
       }
    } 
+   else if (env.sender->value<bs::message::TerminalUsers>() == bs::message::TerminalUsers::BsServer) {
+      BsServerMessage msg;
+      if (!msg.ParseFromString(env.message)) {
+         logger_->error("[{}] failed to parse BS message #{}", __func__, env.id);
+         return true;
+      }
+      switch (msg.data_case()) {
+      case BsServerMessage::kBalanceUpdated:
+         return processBalance(msg.balance_updated().currency(), msg.balance_updated().value());
+      default: break;
+      }
+   }
    else if (env.receiver && (env.receiver->value() == user_->value())) {
       AssetsMessage msg;
       if (!msg.ParseFromString(env.message)) {
@@ -103,7 +115,7 @@ void AssetsAdapter::onFxBalanceCleared()
 {
 }
 
-void AssetsAdapter::onBalanceChanged(const std::string& currency)
+void AssetsAdapter::onBalanceChanged(const std::string& currency, double value)
 {
 }
 
@@ -215,5 +227,15 @@ bool AssetsAdapter::processSubmitAuth(const std::string& address)
    msg.set_submit_auth_address(address);
    Envelope env{ 0, user_, UserTerminal::create(TerminalUsers::Matching)
       , {}, {}, msg.SerializeAsString(), true };
+   return pushFill(env);
+}
+
+bool AssetsAdapter::processBalance(const std::string& currency, double value)
+{
+   AssetsMessage msg;
+   auto msgBal = msg.mutable_balance();
+   msgBal->set_currency(currency);
+   msgBal->set_value(value);
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
    return pushFill(env);
 }

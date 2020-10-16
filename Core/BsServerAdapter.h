@@ -65,9 +65,9 @@ private:
    void onBootstrapDataUpdated(const std::string& data) override;
    void onAccountStateChanged(bs::network::UserType userType, bool enabled) override;
    void onFeeRateReceived(float feeRate) override;
-   void onBalanceLoaded() override;
+   void onBalanceLoaded() override;*/
    void onBalanceUpdated(const std::string& currency, double balance) override;
-   void onTradingStatusChanged(bool tradingEnabled) override;*/
+   void onTradingStatusChanged(bool tradingEnabled) override;
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;

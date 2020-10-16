@@ -86,7 +86,7 @@ private:
    void SetCelerConnectingStatus();
    QWidget *CreateSeparator();
    [[deprecated]] void setBalances();
-   void displayXbtBalance();
+   void displayBalances();
    void updateConnectionStatusDetails(ArmoryState state, unsigned int blockNum);
 
 private:

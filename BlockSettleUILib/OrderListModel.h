@@ -51,7 +51,8 @@ public:
       static QString toString(Index);
    };
 
-   OrderListModel(const std::shared_ptr<AssetManager> &, QObject *parent = nullptr);
+   [[deprecated]] OrderListModel(const std::shared_ptr<AssetManager> &, QObject *parent = nullptr);
+   OrderListModel(QObject* parent = nullptr);
    ~OrderListModel() noexcept override = default;
 
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;

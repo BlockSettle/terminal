@@ -243,13 +243,13 @@ RFQTicketXBT::BalanceInfoContainer RFQTicketXBT::getBalanceInfo() const
          balance.productType = ProductGroupType::CCGroupType;
       } else {
          const double divisor = std::pow(10, UiUtils::GetAmountPrecisionFX());
-         const double intBalance = std::floor((assetManager_ ? assetManager_->getBalance(productToSpend.toStdString()) : 0.0) * divisor);
-         balance.amount = intBalance / divisor;
+         const double bal = assetManager_ ? assetManager_->getBalance(productToSpend.toStdString())
+            : balances_.at(productToSpend.toStdString());
+         balance.amount = std::floor(bal * divisor) / divisor;
          balance.product = productToSpend;
          balance.productType = ProductGroupType::FXGroupType;
       }
    }
-
    return balance;
 }
 
@@ -286,6 +286,11 @@ void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsMana
       // This will update balance after receiving ZC
       updatePanel();
    });
+}
+
+void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger>& logger)
+{
+   logger_ = logger;
 }
 
 void RFQTicketXBT::walletsLoaded()
@@ -709,7 +714,8 @@ void RFQTicketXBT::updateSubmitButton()
 {
    ui_->pushButtonSubmit->setEnabled(false);
 
-   if (!assetManager_) {
+   if (!assetManager_ && signingContainer_) {
+      logger_->debug("[{}] 1", __func__);
       return;
    }
 
@@ -717,6 +723,7 @@ void RFQTicketXBT::updateSubmitButton()
       if (signingContainer_) {
          if (signingContainer_->isOffline()) {
             showHelp(tr("Signer is offline - settlement will not be possible"));
+            logger_->debug("[{}] 2", __func__);
             return;
          }
          else {
@@ -725,16 +732,19 @@ void RFQTicketXBT::updateSubmitButton()
       }
 
       if (getProductToSpend() == UiUtils::XbtCurrency && !getSendXbtWallet()) {
+         logger_->debug("[{}] 3", __func__);
          return;
       }
 
       if (getProductToRecv() == UiUtils::XbtCurrency && !getRecvXbtWallet()) {
+         logger_->debug("[{}] 4", __func__);
          return;
       }
 
       if (currentGroupType_ == ProductGroupType::CCGroupType) {
          auto ccWallet = getCCWallet(getProduct().toStdString());
          if (!ccWallet) {
+            logger_->debug("[{}] 5", __func__);
             return;
          }
       }
@@ -746,15 +756,18 @@ void RFQTicketXBT::updateSubmitButton()
 
    if (!isBalanceOk || !isAuthOk) {
       ui_->labelBalanceValue->setFont(invalidBalanceFont_);
+      logger_->debug("[{}] 6", __func__);
       return;
    }
    ui_->labelBalanceValue->setFont(QFont());
 
    if (qFuzzyIsNull(qty)) {
+      logger_->debug("[{}] 7", __func__);
       return;
    }
 
   if ((currentGroupType_ == ProductGroupType::XBTGroupType) && authKey().empty()) {
+     logger_->debug("[{}] 8", __func__);
      return;
   }
 
@@ -1162,6 +1175,11 @@ UiUtils::WalletsTypes RFQTicketXBT::xbtWalletType() const
 void RFQTicketXBT::onParentAboutToHide()
 {
    fixedXbtInputs_ = {};
+}
+
+void RFQTicketXBT::onBalance(const std::string& currency, double balance)
+{
+   balances_[currency] = balance;
 }
 
 void RFQTicketXBT::enablePanel()

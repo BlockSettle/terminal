@@ -10,13 +10,28 @@
 */
 #include "MatchingAdapter.h"
 #include <spdlog/spdlog.h>
+#include "Celer/CommonCelerUtils.h"
 #include "CelerClientProxy.h"
+#include "CelerCreateOrderSequence.h"
+#include "CelerCreateFxOrderSequence.h"
+#include "CelerGetAssignedAccountsListSequence.h"
+#include "CelerSubmitRFQSequence.h"
+#include "CurrencyPair.h"
+#include "ProtobufUtils.h"
 #include "TerminalMessage.h"
 
 #include "terminal.pb.h"
+#include "DownstreamQuoteProto.pb.h"
+#include "DownstreamOrderProto.pb.h"
+#include "bitcoin/DownstreamBitcoinTransactionSigningProto.pb.h"
 
 using namespace BlockSettle::Terminal;
 using namespace bs::message;
+using namespace com::celertech::marketmerchant::api::enums::orderstatus;
+using namespace com::celertech::marketmerchant::api::enums::producttype::quotenotificationtype;
+using namespace com::celertech::marketmerchant::api::enums::side;
+using namespace com::celertech::marketmerchant::api::order;
+using namespace com::celertech::marketmerchant::api::quote;
 
 
 MatchingAdapter::MatchingAdapter(const std::shared_ptr<spdlog::logger> &logger)
@@ -24,11 +39,15 @@ MatchingAdapter::MatchingAdapter(const std::shared_ptr<spdlog::logger> &logger)
    , user_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Matching))
 {
    celerConnection_ = std::make_unique<ClientCelerConnection>(logger, this, true, true);
+
+   celerConnection_->RegisterHandler(CelerAPI::QuoteDownstreamEventType
+      , [this](const std::string& data) {
+      return onQuoteResponse(data);
+   });
 }
 
 void MatchingAdapter::connectedToServer()
 {
-   logger_->debug("[{}]", __func__);
    MatchingMessage msg;
    auto loggedIn = msg.mutable_logged_in();
    loggedIn->set_user_type(static_cast<int>(celerConnection_->celerUserType()));
@@ -37,12 +56,34 @@ void MatchingAdapter::connectedToServer()
 
    Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
    pushFill(env);
+
+   const auto &cbAccounts = [this](const std::vector<std::string>& accVec)
+   {  // Remove duplicated entries if possible
+      std::set<std::string> accounts(accVec.cbegin(), accVec.cend());
+      if (accounts.size() == 1) {
+         assignedAccount_ = *accounts.cbegin();
+         logger_->debug("[MatchingAdapter] assigned account: {}", assignedAccount_);
+      }
+      else if (accounts.empty()) {
+         logger_->error("[MatchingAdapter::onCelerConnected] no accounts");
+      } else {
+         logger_->error("[MatchingAdapter::onCelerConnected] too many accounts ({})"
+            , accounts.size());
+         for (const auto& account : accounts) {
+            logger_->error("[MatchingAdapter::onCelerConnected] acc: {}", account);
+         }
+      }
+   };
+   if (!celerConnection_->ExecuteSequence(std::make_shared<CelerGetAssignedAccountsListSequence>(
+      logger_, cbAccounts))) {
+      logger_->error("[{}] failed to get accounts", __func__);
+   }
 }
 
 void MatchingAdapter::connectionClosed()
 {
+   assignedAccount_.clear();
    celerConnection_->CloseConnection();
-   logger_->debug("[{}]", __func__);
 
    MatchingMessage msg;
    msg.mutable_logged_out();
@@ -58,7 +99,6 @@ void MatchingAdapter::connectionError(int errorCode)
    Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
    pushFill(env);
 }
-
 
 bool MatchingAdapter::process(const bs::message::Envelope &env)
 {
@@ -108,6 +148,10 @@ bool MatchingAdapter::process(const bs::message::Envelope &env)
          return processGetSubmittedAuth(env);
       case MatchingMessage::kSubmitAuthAddress:
          return processSubmitAuth(env, msg.submit_auth_address());
+      case MatchingMessage::kSendRfq:
+         return processSendRFQ(msg.send_rfq());
+      case MatchingMessage::kAcceptRfq:
+         return processAcceptRFQ(msg.accept_rfq());
       default:
          logger_->warn("[{}] unknown msg {} #{} from {}", __func__, msg.data_case()
             , env.id, env.sender->name());
@@ -119,7 +163,8 @@ bool MatchingAdapter::process(const bs::message::Envelope &env)
 
 bool MatchingAdapter::processLogin(const MatchingMessage_Login& request)
 {
-   return celerConnection_->SendLogin(request.matching_login(), request.terminal_login(), {});
+   return celerConnection_->SendLogin(request.matching_login()
+      , request.terminal_login(), {});
 }
 
 bool MatchingAdapter::processGetSubmittedAuth(const bs::message::Envelope& env)
@@ -140,6 +185,222 @@ bool MatchingAdapter::processSubmitAuth(const bs::message::Envelope& env
    submittedAddresses.insert(address);
    celerConnection_->SetSubmittedAuthAddressSet(submittedAddresses);
    return processGetSubmittedAuth(env);
+}
+
+bool MatchingAdapter::processSendRFQ(const MatchingMessage_RFQ& request)
+{
+   if (assignedAccount_.empty()) {
+      logger_->error("[MatchingAdapter::processSendRFQ] submitting with empty account name");
+   }
+   bs::network::RFQ rfq;
+   rfq.requestId = request.id();
+   rfq.security = request.security();
+   rfq.product = request.product();
+   rfq.assetType = static_cast<bs::network::Asset::Type>(request.asset_type());
+   rfq.side = request.buy() ? bs::network::Side::Buy : bs::network::Side::Sell;
+   rfq.quantity = request.quantity();
+   rfq.requestorAuthPublicKey = request.auth_pub_key();
+   rfq.receiptAddress = request.receipt_address();
+   rfq.coinTxInput = request.coin_tx_input();
+   auto sequence = std::make_shared<CelerSubmitRFQSequence>(assignedAccount_, rfq
+      , logger_, true);
+   if (!celerConnection_->ExecuteSequence(sequence)) {
+      logger_->error("[MatchingAdapter::processSendRFQ] failed to execute CelerSubmitRFQSequence");
+   } else {
+      logger_->debug("[MatchingAdapter::processSendRFQ] RFQ submitted: {}", rfq.requestId);
+      submittedRFQs_[rfq.requestId] = rfq;
+   }
+   return true;
+}
+
+bool MatchingAdapter::processAcceptRFQ(const MatchingMessage_AcceptRFQ& request)
+{
+   if (assignedAccount_.empty()) {
+      logger_->error("[MatchingAdapter::processAcceptRFQ] accepting with empty account name");
+   }
+   const auto& reqId = QString::fromStdString(request.rfq_id());
+   const auto& quote = fromMsg(request.quote());
+   if (quote.assetType == bs::network::Asset::SpotFX) {
+      auto sequence = std::make_shared<CelerCreateFxOrderSequence>(assignedAccount_
+         , reqId, quote, logger_);
+      if (!celerConnection_->ExecuteSequence(sequence)) {
+         logger_->error("[MatchingAdapter::processAcceptRFQ] failed to execute CelerCreateFxOrderSequence");
+      } else {
+         logger_->debug("[MatchingAdapter::processAcceptRFQ] FX Order submitted");
+      }
+   }
+   else {
+      auto sequence = std::make_shared<CelerCreateOrderSequence>(assignedAccount_
+         , reqId, quote, request.payout_tx(), logger_);
+      if (!celerConnection_->ExecuteSequence(sequence)) {
+         logger_->error("[MatchingAdapter::processAcceptRFQ] failed to execute CelerCreateOrderSequence");
+      } else {
+         logger_->debug("[MatchingAdapter::processAcceptRFQ] Order submitted");
+      }
+   }
+   return true;
+}
+
+void MatchingAdapter::saveQuoteReqId(const std::string& quoteReqId, const std::string& quoteId)
+{
+   quoteIdMap_[quoteId] = quoteReqId;
+   quoteIds_[quoteReqId].insert(quoteId);
+}
+
+void MatchingAdapter::delQuoteReqId(const std::string& quoteReqId)
+{
+   const auto& itQuoteId = quoteIds_.find(quoteReqId);
+   if (itQuoteId != quoteIds_.end()) {
+      for (const auto& id : itQuoteId->second) {
+         quoteIdMap_.erase(id);
+      }
+      quoteIds_.erase(itQuoteId);
+   }
+   cleanQuoteRequestCcy(quoteReqId);
+}
+
+std::string MatchingAdapter::getQuoteReqId(const std::string& quoteId) const
+{
+   const auto& itQuoteId = quoteIdMap_.find(quoteId);
+   return (itQuoteId == quoteIdMap_.end()) ? std::string{} : itQuoteId->second;
+}
+
+void MatchingAdapter::saveQuoteRequestCcy(const std::string& id, const std::string& ccy)
+{
+   quoteCcys_.emplace(id, ccy);
+}
+
+void MatchingAdapter::cleanQuoteRequestCcy(const std::string& id)
+{
+   auto it = quoteCcys_.find(id);
+   if (it != quoteCcys_.end()) {
+      quoteCcys_.erase(it);
+   }
+}
+
+std::string MatchingAdapter::getQuoteRequestCcy(const std::string& id) const
+{
+   std::string ccy;
+   auto it = quoteCcys_.find(id);
+   if (it != quoteCcys_.end()) {
+      ccy = it->second;
+   }
+   return ccy;
+}
+
+bool MatchingAdapter::onQuoteResponse(const std::string& data)
+{
+   QuoteDownstreamEvent response;
+
+   if (!response.ParseFromString(data)) {
+      logger_->error("[MatchingAdapter::onQuoteResponse] Failed to parse QuoteDownstreamEvent");
+      return false;
+   }
+   logger_->debug("[MatchingAdapter::onQuoteResponse]: {}", ProtobufUtils::toJsonCompact(response));
+
+   bs::network::Quote quote;
+   quote.quoteId = response.quoteid();
+   quote.requestId = response.quoterequestid();
+   quote.security = response.securitycode();
+   quote.assetType = bs::celer::fromCelerProductType(response.producttype());
+   quote.side = bs::celer::fromCeler(response.side());
+
+   if (quote.assetType == bs::network::Asset::PrivateMarket) {
+      quote.dealerAuthPublicKey = response.dealerreceiptaddress();
+      quote.dealerTransaction = response.dealercointransactioninput();
+   }
+
+   switch (response.quotingtype())
+   {
+   case com::celertech::marketmerchant::api::enums::quotingtype::AUTOMATIC:
+      quote.quotingType = bs::network::Quote::Automatic;
+      break;
+   case com::celertech::marketmerchant::api::enums::quotingtype::MANUAL:
+      quote.quotingType = bs::network::Quote::Manual;
+      break;
+   case com::celertech::marketmerchant::api::enums::quotingtype::DIRECT:
+      quote.quotingType = bs::network::Quote::Direct;
+      break;
+   case com::celertech::marketmerchant::api::enums::quotingtype::INDICATIVE:
+      quote.quotingType = bs::network::Quote::Indicative;
+      break;
+   case com::celertech::marketmerchant::api::enums::quotingtype::TRADEABLE:
+      quote.quotingType = bs::network::Quote::Tradeable;
+      break;
+   default:
+      quote.quotingType = bs::network::Quote::Indicative;
+      break;
+   }
+
+   quote.expirationTime = QDateTime::fromMSecsSinceEpoch(response.validuntiltimeutcinmillis());
+   quote.timeSkewMs = QDateTime::fromMSecsSinceEpoch(response.quotetimestamputcinmillis()).msecsTo(QDateTime::currentDateTime());
+   quote.celerTimestamp = response.quotetimestamputcinmillis();
+
+   logger_->debug("[MatchingAdapter::onQuoteResponse] timeSkew = {}", quote.timeSkewMs);
+   CurrencyPair cp(quote.security);
+
+   const auto itRFQ = submittedRFQs_.find(response.quoterequestid());
+   if (itRFQ == submittedRFQs_.end()) {   // Quote for dealer to indicate GBBO
+      const auto quoteCcy = getQuoteRequestCcy(quote.requestId);
+      if (!quoteCcy.empty()) {
+         double price = 0;
+
+         if ((quote.side == bs::network::Side::Sell) ^ (quoteCcy != cp.NumCurrency())) {
+            price = response.offerpx();
+         } else {
+            price = response.bidpx();
+         }
+
+         const bool own = response.has_quotedbysessionkey() && !response.quotedbysessionkey().empty();
+         MatchingMessage msg;
+         auto msgBest = msg.mutable_best_quoted_price();
+         msgBest->set_quote_req_id(response.quoterequestid());
+         msgBest->set_price(price);
+         msgBest->set_own(own);
+         Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+         pushFill(env);
+      }
+   } else {
+      if (response.legquotegroup_size() != 1) {
+         logger_->error("[MatchingAdapter::onQuoteResponse] invalid leg number: {}\n{}"
+            , response.legquotegroup_size()
+            , ProtobufUtils::toJsonCompact(response));
+         return false;
+      }
+
+      const auto& grp = response.legquotegroup(0);
+
+      if (quote.assetType == bs::network::Asset::SpotXBT) {
+         quote.dealerAuthPublicKey = response.dealerauthenticationaddress();
+         quote.requestorAuthPublicKey = itRFQ->second.requestorAuthPublicKey;
+
+         if (response.has_settlementid() && !response.settlementid().empty()) {
+            quote.settlementId = response.settlementid();
+         }
+
+         quote.dealerTransaction = response.dealertransaction();
+      }
+
+      if ((quote.side == bs::network::Side::Sell) ^ (itRFQ->second.product != cp.NumCurrency())) {
+         quote.price = response.offerpx();
+         quote.quantity = grp.offersize();
+      } else {
+         quote.price = response.bidpx();
+         quote.quantity = grp.bidsize();
+      }
+
+      quote.product = grp.currency();
+
+      if (quote.quotingType == bs::network::Quote::Tradeable) {
+         submittedRFQs_.erase(itRFQ);
+      }
+   }
+   saveQuoteReqId(quote.requestId, quote.quoteId);
+
+   MatchingMessage msg;
+   toMsg(quote, msg.mutable_quote());
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   return pushFill(env);
 }
 
 

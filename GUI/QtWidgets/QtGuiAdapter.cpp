@@ -30,6 +30,7 @@
 #include "MainWindow.h"
 #include "ProtobufHeadlessUtils.h"
 #include "SettingsAdapter.h"
+#include "TradesVerification.h"
 
 #include "common.pb.h"
 #include "terminal.pb.h"
@@ -42,6 +43,7 @@ Q_DECLARE_METATYPE(bs::error::AuthAddressSubmitResult)
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(std::vector<bs::Address>)
 Q_DECLARE_METATYPE(std::vector<ApplicationSettings::Setting>);
+Q_DECLARE_METATYPE(bs::PayoutSignatureType)
 
 #if defined (Q_OS_MAC)
 class MacOsApp : public QApplication
@@ -594,6 +596,8 @@ bool QtGuiAdapter::processOnChainTrack(const Envelope &env)
       break;
    case OnChainTrackMessage::kAuthState:
       return processAuthState(msg.auth_state());
+   case OnChainTrackMessage::kVerifiedAuthAddresses:
+      return processVerifiedAuthAddrs(msg.verified_auth_addresses());
    default:    break;
    }
    return true;
@@ -609,6 +613,8 @@ bool QtGuiAdapter::processAssets(const bs::message::Envelope& env)
    switch (msg.data_case()) {
    case AssetsMessage::kSubmittedAuthAddrs:
       return processSubmittedAuthAddrs(msg.submitted_auth_addrs());
+   case AssetsMessage::kBalance:
+      return processBalance(msg.balance());
    default: break;
    }
    return true;
@@ -760,6 +766,9 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::needMdConnection, this, &QtGuiAdapter::onNeedMdConnection);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needNewAuthAddress, this, &QtGuiAdapter::onNeedNewAuthAddress);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needSubmitAuthAddress, this, &QtGuiAdapter::onNeedSubmitAuthAddress);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needSubmitRFQ, this, &QtGuiAdapter::onNeedSubmitRFQ);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needAcceptRFQ, this, &QtGuiAdapter::onNeedAcceptRFQ);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needCancelRFQ, this, &QtGuiAdapter::onNeedCancelRFQ);
 }
 
 void QtGuiAdapter::onGetSettings(const std::vector<ApplicationSettings::Setting>& settings)
@@ -1199,6 +1208,37 @@ void QtGuiAdapter::onNeedSubmitAuthAddress(const bs::Address& addr)
    pushFill(env);
 }
 
+void QtGuiAdapter::onNeedSubmitRFQ(const bs::network::RFQ& rfq)
+{
+   MatchingMessage msg;
+   auto msgReq = msg.mutable_send_rfq();
+   msgReq->set_id(rfq.requestId);
+   msgReq->set_security(rfq.security);
+   msgReq->set_product(rfq.product);
+   msgReq->set_asset_type((int)rfq.assetType);
+   msgReq->set_buy(rfq.side == bs::network::Side::Buy);
+   msgReq->set_quantity(rfq.quantity);
+   msgReq->set_auth_pub_key(rfq.requestorAuthPublicKey);
+   msgReq->set_receipt_address(rfq.receiptAddress);
+   msgReq->set_coin_tx_input(rfq.coinTxInput);
+   Envelope env{ 0, user_, userMatch_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedAcceptRFQ(const std::string& id, const bs::network::Quote& quote)
+{
+   MatchingMessage msg;
+   auto msgReq = msg.mutable_accept_rfq();
+   msgReq->set_rfq_id(id);
+   toMsg(quote, msgReq->mutable_quote());
+   Envelope env{ 0, user_, userMatch_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedCancelRFQ(const std::string& id)
+{
+}
+
 void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
 {
    hdWallets_[*wi.ids.cbegin()] = wi;
@@ -1516,6 +1556,8 @@ bool QtGuiAdapter::processMatching(const bs::message::Envelope& env)
       return QMetaObject::invokeMethod(mainWindow_, [this] {
          mainWindow_->onMatchingLogout();
       });
+   case MatchingMessage::kQuote:
+      return processQuote(msg.quote());
    default:    break;
    }
    return true;
@@ -1601,6 +1643,35 @@ bool QtGuiAdapter::processSubmittedAuthAddrs(const AssetsMessage_SubmittedAuthAd
    }
    return QMetaObject::invokeMethod(mainWindow_, [this, authAddresses] {
       mainWindow_->onSubmittedAuthAddresses(authAddresses);
+   });
+}
+
+bool QtGuiAdapter::processBalance(const AssetsMessage_Balance& bal)
+{
+   return QMetaObject::invokeMethod(mainWindow_, [this, bal] {
+      mainWindow_->onBalance(bal.currency(), bal.value());
+   });
+}
+
+bool QtGuiAdapter::processVerifiedAuthAddrs(const OnChainTrackMessage_AuthAddresses& addrs)
+{
+   std::vector<bs::Address> authAddresses;
+   authAddresses.reserve(addrs.addresses_size());
+   for (const auto& addr : addrs.addresses()) {
+      try {
+         authAddresses.push_back(bs::Address::fromAddressString(addr));
+      } catch (const std::exception&) {}
+   }
+   return QMetaObject::invokeMethod(mainWindow_, [this, authAddresses] {
+      mainWindow_->onVerifiedAuthAddresses(authAddresses);
+   });
+}
+
+bool QtGuiAdapter::processQuote(const MatchingMessage_Quote& msg)
+{
+   const auto& quote = fromMsg(msg);
+   return QMetaObject::invokeMethod(mainWindow_, [this, quote] {
+      mainWindow_->onQuoteReceived(quote);
    });
 }
 
