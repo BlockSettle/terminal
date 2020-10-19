@@ -14,7 +14,7 @@
 #include <QWidget>
 #include <QTimer>
 #include <memory>
-#include "BaseCelerClient.h"
+#include "Celer/BaseCelerClient.h"
 #include "CommonTypes.h"
 #include "MarketDataWidget.h"
 #include "TabWithShortcut.h"

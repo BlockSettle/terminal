@@ -15,7 +15,7 @@
 #include "ArmoryObject.h"
 #include "ArmorySettings.h"
 #include "AuthAddressManager.h"
-#include "CelerClient.h"
+#include "Celer/CelerClient.h"
 #include "ConnectionManager.h"
 #include "CoreWalletsManager.h"
 #include "MarketDataProvider.h"

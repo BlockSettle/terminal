@@ -12,8 +12,7 @@
 
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
-#include "CelerClient.h"
-#include "CelerSubmitQuoteNotifSequence.h"
+#include "Celer/CelerClient.h"
 #include "Colors.h"
 #include "CommonTypes.h"
 #include "CurrencyPair.h"

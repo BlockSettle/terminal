@@ -16,7 +16,7 @@
 #include "BlockDataManagerConfig.h"
 #include "CurrencyPair.h"
 #include "UiUtils.h"
-#include "CelerClient.h"
+#include "Celer/CelerClient.h"
 
 // XXX [AT] : possible concurent change of states - could lead to multiple signals emited
 // add atomic flag

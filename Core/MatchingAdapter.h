@@ -11,7 +11,7 @@
 #ifndef MATCHING_ADAPTER_H
 #define MATCHING_ADAPTER_H
 
-#include "BaseCelerClient.h"
+#include "Celer/BaseCelerClient.h"
 #include "Message/Adapter.h"
 
 namespace spdlog {

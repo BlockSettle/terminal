@@ -10,12 +10,12 @@
 */
 #include "MatchingAdapter.h"
 #include <spdlog/spdlog.h>
-#include "Celer/CommonCelerUtils.h"
-#include "CelerClientProxy.h"
-#include "CelerCreateOrderSequence.h"
-#include "CelerCreateFxOrderSequence.h"
-#include "CelerGetAssignedAccountsListSequence.h"
-#include "CelerSubmitRFQSequence.h"
+#include "Celer/CommonUtils.h"
+#include "Celer/CelerClientProxy.h"
+#include "Celer/CreateOrderSequence.h"
+#include "Celer/CreateFxOrderSequence.h"
+#include "Celer/GetAssignedAccountsListSequence.h"
+#include "Celer/SubmitRFQSequence.h"
 #include "CurrencyPair.h"
 #include "ProtobufUtils.h"
 #include "TerminalMessage.h"
@@ -74,7 +74,7 @@ void MatchingAdapter::connectedToServer()
          }
       }
    };
-   if (!celerConnection_->ExecuteSequence(std::make_shared<CelerGetAssignedAccountsListSequence>(
+   if (!celerConnection_->ExecuteSequence(std::make_shared<bs::celer::GetAssignedAccountsListSequence>(
       logger_, cbAccounts))) {
       logger_->error("[{}] failed to get accounts", __func__);
    }
@@ -202,7 +202,7 @@ bool MatchingAdapter::processSendRFQ(const MatchingMessage_RFQ& request)
    rfq.requestorAuthPublicKey = request.auth_pub_key();
    rfq.receiptAddress = request.receipt_address();
    rfq.coinTxInput = request.coin_tx_input();
-   auto sequence = std::make_shared<CelerSubmitRFQSequence>(assignedAccount_, rfq
+   auto sequence = std::make_shared<bs::celer::SubmitRFQSequence>(assignedAccount_, rfq
       , logger_, true);
    if (!celerConnection_->ExecuteSequence(sequence)) {
       logger_->error("[MatchingAdapter::processSendRFQ] failed to execute CelerSubmitRFQSequence");
@@ -221,7 +221,7 @@ bool MatchingAdapter::processAcceptRFQ(const MatchingMessage_AcceptRFQ& request)
    const auto& reqId = QString::fromStdString(request.rfq_id());
    const auto& quote = fromMsg(request.quote());
    if (quote.assetType == bs::network::Asset::SpotFX) {
-      auto sequence = std::make_shared<CelerCreateFxOrderSequence>(assignedAccount_
+      auto sequence = std::make_shared<bs::celer::CreateFxOrderSequence>(assignedAccount_
          , reqId, quote, logger_);
       if (!celerConnection_->ExecuteSequence(sequence)) {
          logger_->error("[MatchingAdapter::processAcceptRFQ] failed to execute CelerCreateFxOrderSequence");
@@ -230,7 +230,7 @@ bool MatchingAdapter::processAcceptRFQ(const MatchingMessage_AcceptRFQ& request)
       }
    }
    else {
-      auto sequence = std::make_shared<CelerCreateOrderSequence>(assignedAccount_
+      auto sequence = std::make_shared<bs::celer::CreateOrderSequence>(assignedAccount_
          , reqId, quote, request.payout_tx(), logger_);
       if (!celerConnection_->ExecuteSequence(sequence)) {
          logger_->error("[MatchingAdapter::processAcceptRFQ] failed to execute CelerCreateOrderSequence");

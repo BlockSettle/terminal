@@ -11,7 +11,7 @@
 #include "CelerAccountInfoDialog.h"
 #include "ui_CelerAccountInfoDialog.h"
 
-#include "CelerClient.h"
+#include "Celer/CelerClient.h"
 
 CelerAccountInfoDialog::CelerAccountInfoDialog(std::shared_ptr<BaseCelerClient> celerConnection, QWidget* parent)
  : QDialog(parent)

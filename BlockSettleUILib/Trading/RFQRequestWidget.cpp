@@ -16,7 +16,7 @@
 #include "ApplicationSettings.h"
 #include "AuthAddressManager.h"
 #include "AutoSignQuoteProvider.h"
-#include "CelerClient.h"
+#include "Celer/CelerClient.h"
 #include "CurrencyPair.h"
 #include "DialogManager.h"
 #include "NotificationCenter.h"

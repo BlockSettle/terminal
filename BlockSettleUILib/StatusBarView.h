@@ -19,7 +19,7 @@
 
 #include <memory>
 #include "ArmoryConnection.h"
-#include "CelerClient.h"
+#include "Celer/CelerClient.h"
 #include "CircleProgressBar.h"
 #include "SignContainer.h"
 

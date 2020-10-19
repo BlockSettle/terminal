@@ -20,7 +20,7 @@
 #include "ApplicationSettings.h"
 #include "ArmoryObject.h"
 #include "BsClient.h"
-#include "CelerClientProxy.h"
+#include "Celer/CelerClientProxy.h"
 #include "QWalletInfo.h"
 #include "SignContainer.h"
 #include "WalletSignerContainer.h"

@@ -16,7 +16,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "UserScriptRunner.h"
 
-#include <BaseCelerClient.h>
+#include <Celer/BaseCelerClient.h>
 #include <QCoreApplication>
 #include <QFileInfo>
 #include <QDir>

@@ -272,8 +272,8 @@ BSQuoteReqReply {
             return
         }
         if (isXBT()) {
-            if (quoteReq.quantity > 1.0) {
-                log('XBT amount exceeds limit: ' + quoteReq.quantity)
+            if (hedgeOrderAmount(price) > 1.0) {
+                log('XBT amount exceeds limit: ' + hedgeOrderAmount(price))
                 return
             }
         }
