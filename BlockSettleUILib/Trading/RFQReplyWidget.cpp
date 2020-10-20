@@ -222,7 +222,6 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    ui_->treeViewOrders->setModel(orderListModel);
    ui_->treeViewOrders->initWithModel(orderListModel);
 
-
    connect(celerClient_.get(), &CelerClientQt::OnConnectedToServer, this
       , &RFQReplyWidget::onConnectedToCeler);
    connect(celerClient_.get(), &CelerClientQt::OnConnectionClosed, this
@@ -232,11 +231,22 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
       , this, &RFQReplyWidget::onEnterKeyPressed);
 }
 
-   void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger>&
-      , const std::shared_ptr<DialogManager>&, OrderListModel* orderListModel)
-   {
-      //TODO
-   }
+void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger>& logger
+   , const std::shared_ptr<DialogManager>& dialogMgr, OrderListModel* orderListModel)
+{
+   logger_ = logger;
+   dialogManager_ = dialogMgr;
+
+   connect(ui_->pageRFQReply, &RFQDealerReply::pullQuoteNotif, this
+      , &RFQReplyWidget::onPulled);
+
+   ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+   ui_->treeViewOrders->setModel(orderListModel);
+   ui_->treeViewOrders->initWithModel(orderListModel);
+
+   connect(ui_->widgetQuoteRequests->view(), &TreeViewWithEnterKey::enterKeyPressed
+      , this, &RFQReplyWidget::onEnterKeyPressed);
+}
 
 void RFQReplyWidget::forceCheckCondition()
 {

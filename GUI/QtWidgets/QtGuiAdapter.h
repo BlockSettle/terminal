@@ -46,9 +46,11 @@ namespace BlockSettle {
       class AssetsMessage_Balance;
       class AssetsMessage_SubmittedAuthAddresses;
       class BsServerMessage_LoginResult;
+      class BsServerMessage_Orders;
       class BsServerMessage_StartLoginResult;
       class MatchingMessage_LoggedIn;
       class MatchingMessage_Quote;
+      class MatchingMessage_Order;
       class MktDataMessage_Prices;
       class SettingsMessage_ArmoryServers;
       class SettingsMessage_SettingsResponse;
@@ -126,6 +128,9 @@ private:
    bool processBalance(const BlockSettle::Terminal::AssetsMessage_Balance&);
    bool processVerifiedAuthAddrs(const BlockSettle::Common::OnChainTrackMessage_AuthAddresses&);
    bool processQuote(const BlockSettle::Terminal::MatchingMessage_Quote&);
+   bool processOrder(const BlockSettle::Terminal::MatchingMessage_Order&);
+   bool processOrdersUpdate(const BlockSettle::Terminal::BsServerMessage_Orders&);
+   bool sendPooledOrdersUpdate();
 
 private slots:
    void onGetSettings(const std::vector<ApplicationSettings::Setting>&);
@@ -197,6 +202,10 @@ private:
 
    std::unordered_map<std::string, bs::sync::WalletInfo> hdWallets_;
    std::set<uint64_t>   newZCs_;
+
+   std::unordered_map<std::string, bs::network::Asset::Type>   assetTypes_;
+   bool mdInstrumentsReceived_{ false };
+   std::vector<bs::network::Order>  pooledOrders_;
 };
 
 

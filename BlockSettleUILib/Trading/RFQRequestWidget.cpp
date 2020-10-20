@@ -170,6 +170,7 @@ void RFQRequestWidget::onMDUpdated(bs::network::Asset::Type assetType
 void RFQRequestWidget::onBalance(const std::string& currency, double balance)
 {
    ui_->pageRFQTicket->onBalance(currency, balance);
+   balances_[currency] = balance;
 }
 
 void RFQRequestWidget::onMatchingLogin(const std::string& mtchLogin
@@ -196,6 +197,11 @@ void RFQRequestWidget::onMatchingLogout()
    for (QMetaObject::Connection& conn : marketDataConnection_) {
       QObject::disconnect(conn);
    }
+   for (const auto& dialog : dialogs_) {
+      dialog.second->onMatchingLogout();
+      dialog.second->deleteLater();
+   }
+   dialogs_.clear();
    userType_ = BaseCelerClient::CelerUserType::Undefined;
    ui_->shieldPage->showShieldLoginToSubmitRequired();
    popShield();
@@ -210,6 +216,21 @@ void RFQRequestWidget::onQuoteReceived(const bs::network::Quote& quote)
    const auto& itDlg = dialogs_.find(quote.requestId);
    if (itDlg != dialogs_.end()) {
       itDlg->second->onQuoteReceived(quote);
+   }
+}
+
+void RFQRequestWidget::onOrderReceived(const bs::network::Order& order)
+{
+   for (const auto& dialog : dialogs_) {
+      switch (order.status) {
+      case bs::network::Order::Filled:
+         dialog.second->onOrderFilled(order.quoteId);
+         break;
+      case bs::network::Order::Failed:
+         dialog.second->onOrderFailed(order.quoteId, order.info);
+         break;
+      default:    break;
+      }
    }
 }
 
@@ -316,6 +337,7 @@ void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
 void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger>&logger
    , const std::shared_ptr<DialogManager>& dialogMgr, OrderListModel* orderListModel)
 {
+   logger_ = logger;
    dialogManager_ = dialogMgr;
    ui_->pageRFQTicket->init(logger);
 
@@ -403,6 +425,9 @@ void RFQRequestWidget::onRFQSubmit(const std::string &id, const bs::network::RFQ
       dialogs_[id] = dialog;
    }
    ui_->pageRFQTicket->resetTicket();
+   for (const auto& bal : balances_) {
+      dialog->onBalance(bal.first, bal.second);
+   }
 
    const auto& currentInfo = ui_->widgetMarketData->getCurrentlySelectedInfo();
    ui_->pageRFQTicket->SetProductAndSide(currentInfo.productGroup_
@@ -414,6 +439,7 @@ void RFQRequestWidget::onRFQSubmit(const std::string &id, const bs::network::RFQ
       if (dlg.second->isHidden()) {
          dlg.second->deleteLater();
          closedDialogs.push_back(dlg.first);
+         logger_->debug("[{}] erasing dialog {}", __func__, dlg.first);
       }
    }
    for (const auto &dlg : closedDialogs) {

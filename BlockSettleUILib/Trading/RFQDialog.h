@@ -88,6 +88,9 @@ public:
 
    void cancel(bool force = true);
 
+   void onBalance(const std::string& currency, double balance);
+   void onMatchingLogout();
+
 signals:
    void accepted(const std::string &id, const bs::network::Quote&);
    void expired(const std::string &id);
@@ -102,6 +105,8 @@ public slots:
    void onSignedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin
       , const BinaryData &payinHash, QDateTime timestamp);
    void onQuoteReceived(const bs::network::Quote& quote);
+   void onOrderFilled(const std::string& quoteId);
+   void onOrderFailed(const std::string& quoteId, const std::string& reason);
 
 private slots:
    bool close();
@@ -110,8 +115,6 @@ private slots:
    void onQuoteFailed();
 
    void onRFQResponseAccepted(const std::string &reqId, const bs::network::Quote& quote);
-   void onOrderFilled(const std::string &quoteId);
-   void onOrderFailed(const std::string& quoteId, const std::string& reason);
    void onXBTSettlementAccepted();
 
    void onSignTxRequested(QString orderId, QString reqId, QDateTime timestamp);

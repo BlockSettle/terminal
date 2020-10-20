@@ -336,7 +336,7 @@ static int QMLApp(int argc, char **argv
 
          terminalConnectionTimer.setSingleShot(true);
          //BST-2786
-         terminalConnectionTimer.setInterval(std::chrono::milliseconds{ 5000 });
+         terminalConnectionTimer.setInterval(std::chrono::milliseconds{ /*5*/7000 });  // 5s is too little for some use cases
 
          // NOTE: SignerAdapter::ready is called multiple times
          QObject::connect(&adapter, SIGNAL(ready()), &terminalConnectionTimer, SLOT(start()));

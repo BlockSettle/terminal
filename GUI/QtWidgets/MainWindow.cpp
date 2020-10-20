@@ -945,6 +945,7 @@ void bs::gui::qt::MainWindow::onMatchingLogin(const std::string& mtchLogin
    ui_->widgetRFQReply->onUserConnected(userType);
 
    statusBarView_->onConnectedToMatching();
+   orderListModel_->onMatchingLogin();
 }
 
 void bs::gui::qt::MainWindow::onLogoutInitiated()
@@ -992,6 +993,9 @@ void MainWindow::onMatchingLogout()
    statusBarView_->onDisconnectedFromMatching();
    setLoginButtonText(loginButtonText_);
 
+   if (orderListModel_) {
+      orderListModel_->onMatchingLogout();
+   }
    ui_->widgetRFQ->onMatchingLogout();
 }
 
@@ -1031,6 +1035,16 @@ void MainWindow::onVerifiedAuthAddresses(const std::vector<bs::Address>& addrs)
 void bs::gui::qt::MainWindow::onQuoteReceived(const bs::network::Quote& quote)
 {
    ui_->widgetRFQ->onQuoteReceived(quote);
+}
+
+void bs::gui::qt::MainWindow::onOrderReceived(const bs::network::Order& order)
+{
+   ui_->widgetRFQ->onOrderReceived(order);
+}
+
+void bs::gui::qt::MainWindow::onOrdersUpdate(const std::vector<bs::network::Order>& orders)
+{
+   orderListModel_->onOrdersUpdate(orders);
 }
 
 void MainWindow::showRunInBackgroundMessage()

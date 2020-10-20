@@ -18,6 +18,7 @@
 #include "TerminalMessage.h"
 #include "WsDataConnection.h"
 
+#include "bs_proxy_terminal_pb.pb.h"
 #include "bs_communication.pb.h"
 #include "terminal.pb.h"
 
@@ -264,6 +265,37 @@ bool BsServerAdapter::processSubmitAuthAddr(const bs::message::Envelope& env
    return true;
 }
 
+void BsServerAdapter::processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders& orders)
+{
+   BsServerMessage msg;
+   auto msgOrders = msg.mutable_orders_update();
+   for (const auto& order : orders.orders()) {
+      auto msgOrder = msgOrders->add_orders();
+      switch (order.status()) {
+      case bs::types::ORDER_STATUS_PENDING:
+         msgOrder->set_status((int)bs::network::Order::Pending);
+         break;
+      case bs::types::ORDER_STATUS_FILLED:
+         msgOrder->set_status((int)bs::network::Order::Filled);
+         break;
+      case bs::types::ORDER_STATUS_VOID:
+         msgOrder->set_status((int)bs::network::Order::Failed);
+         break;
+      default:
+         break;
+      }
+      msgOrder->set_status_text(order.status_text());
+      msgOrder->set_product(order.product());
+      msgOrder->set_contra_product(order.product_against());
+      msgOrder->set_buy(order.side() == bs::types::Side::SIDE_BUY);
+      msgOrder->set_quantity(order.quantity());
+      msgOrder->set_price(order.price());
+      msgOrder->set_timestamp(order.timestamp_ms());
+   }
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(env);
+}
+
 void BsServerAdapter::startTimer(std::chrono::milliseconds timeout
    , const std::function<void()>&cb)
 {
@@ -336,6 +368,17 @@ void BsServerAdapter::onCelerRecv(CelerAPI::CelerMessageType messageType, const 
    Envelope env{ 0, user_, bs::message::UserTerminal::create(bs::message::TerminalUsers::Matching)
       , {}, {}, msg.SerializeAsString() };   // send directly to matching adapter, not broadcast
    pushFill(env);
+}
+
+void BsServerAdapter::onProcessPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response& response)
+{
+   switch (response.data_case()) {
+   case Blocksettle::Communication::ProxyTerminalPb::Response::kUpdateOrders:
+      processUpdateOrders(response.update_orders());
+      break;
+   default:
+      break;
+   }
 }
 
 void BsServerAdapter::Connected()

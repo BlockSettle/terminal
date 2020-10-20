@@ -622,14 +622,27 @@ void OrderListModel::reset()
    endResetModel();
 }
 
-void OrderListModel::processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message)
+void OrderListModel::onOrdersUpdate(const std::vector<bs::network::Order>& orders)
 {
+   if (!connected_) {   //FIXME: use BS connection event (currently matching one) to set connected_ flag
+      connected_ = true;
+   }
    // Save latest selected index first
-   resetLatestChangedStatus(message);
+   resetLatestChangedStatus(orders);
    // OrderListModel supposed to work correctly when orders states updated one by one.
    // We don't use this anymore (server sends all active orders every time) so just clear old caches.
    // Remove this if old behavior is needed
    reset();
+
+   for (const auto& order : orders) {
+      onOrderUpdated(order);
+   }
+}
+
+void OrderListModel::processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message)
+{
+   std::vector<bs::network::Order> orders;
+
    // Use some fake orderId so old code works correctly
    int orderId = 0;
 
@@ -671,18 +684,18 @@ void OrderListModel::processUpdateOrders(const Blocksettle::Communication::Proxy
       order.quantity = data.quantity();
       order.security = data.product() + "/" + data.product_against();
       order.price = data.price();
-
-      onOrderUpdated(order);
+      orders.push_back(order);
    }
+   onOrdersUpdate(orders);
 }
 
-void OrderListModel::resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message)
+void OrderListModel::resetLatestChangedStatus(const std::vector<bs::network::Order> &orders)
 {
    latestChangedTimestamp_ = {};
 
-   std::vector<std::pair<int64_t, int>> newOrderStatuses(message.orders_size());
-   for (const auto &data : message.orders()) {
-      newOrderStatuses.push_back({ data.timestamp_ms(), static_cast<int>(data.status()) });
+   std::vector<std::pair<int64_t, int>> newOrderStatuses(orders.size());
+   for (const auto &order : orders) {
+      newOrderStatuses.push_back({ order.dateTime.toMSecsSinceEpoch(), static_cast<int>(order.status) });
    }
    std::sort(newOrderStatuses.begin(), newOrderStatuses.end(), [&](const auto &left, const auto &right) {
       return left.first < right.first;
@@ -702,7 +715,6 @@ void OrderListModel::resetLatestChangedStatus(const Blocksettle::Communication::
          }
       }
    }
-
    sortedPeviousOrderStatuses_ = std::move(newOrderStatuses);
 }
 
@@ -750,4 +762,14 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
    else {
       setOrderStatus(groupItem, found.second, order, true);
    }
+}
+
+void OrderListModel::onMatchingLogin()
+{
+   connected_ = true;
+}
+
+void OrderListModel::onMatchingLogout()
+{
+   connected_ = false;
 }

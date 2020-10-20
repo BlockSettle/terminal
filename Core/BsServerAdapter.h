@@ -19,6 +19,13 @@
 namespace spdlog {
    class logger;
 }
+namespace Blocksettle {
+   namespace Communication {
+      namespace ProxyTerminalPb {
+         class Response_UpdateOrders;
+      }
+   }
+}
 namespace BlockSettle {
    namespace Terminal {
       class SettingsMessage_SettingsResponse;
@@ -50,6 +57,7 @@ private:
    bool processStartLogin(const std::string&);
    bool processCancelLogin();
    bool processSubmitAuthAddr(const bs::message::Envelope&, const std::string &addr);
+   void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders&);
 
    //BCT callbacks
    void startTimer(std::chrono::milliseconds timeout, const std::function<void()>&) override;
@@ -57,7 +65,7 @@ private:
    void onGetLoginResultDone(const BsClientLoginResult& result) override;
 //   void onAuthorizeDone(AuthorizeError authErr, const std::string& email) override;
    void onCelerRecv(CelerAPI::CelerMessageType messageType, const std::string& data) override;
-//   void onProcessPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response&) override;
+   void onProcessPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response&) override;
    void Connected() override;
    void Disconnected() override;
    void onConnectionFailed() override;

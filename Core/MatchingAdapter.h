@@ -75,6 +75,15 @@ private:
    void cleanQuoteRequestCcy(const std::string& id);
 
    bool onQuoteResponse(const std::string&);
+   bool onQuoteReject(const std::string&);
+   bool onOrderReject(const std::string&);
+   bool onBitcoinOrderSnapshot(const std::string&);
+   bool onFxOrderSnapshot(const std::string&);
+   bool onQuoteCancelled(const std::string&);
+   bool onSignTxNotif(const std::string&);
+   bool onQuoteAck(const std::string&);
+   bool onQuoteReqNotification(const std::string&);
+   bool onQuoteNotifCancelled(const std::string&);
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;

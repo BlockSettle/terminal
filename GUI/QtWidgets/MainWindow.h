@@ -110,6 +110,8 @@ namespace bs {
             void onVerifiedAuthAddresses(const std::vector<bs::Address>&);
 
             void onQuoteReceived(const bs::network::Quote&);
+            void onOrderReceived(const bs::network::Order&);
+            void onOrdersUpdate(const std::vector<bs::network::Order>&);
 
          public slots:
             void onReactivate();

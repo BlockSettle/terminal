@@ -49,7 +49,8 @@ RequestingQuoteWidget::RequestingQuoteWidget(QWidget* parent)
 
 RequestingQuoteWidget::~RequestingQuoteWidget() = default;
 
-void RequestingQuoteWidget::SetCelerClient(std::shared_ptr<CelerClientQt> celerClient) {
+void RequestingQuoteWidget::SetCelerClient(std::shared_ptr<CelerClientQt> celerClient)
+{
    celerClient_ = celerClient;
 
    connect(celerClient_.get(), &CelerClientQt::OnConnectionClosed,
@@ -152,8 +153,8 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
 
    timeoutReply_ = quote.expirationTime.addMSecs(quote.timeSkewMs);
 
-   const auto assetType = assetManager_->GetAssetTypeForSecurity(quote.security);
-   ui_->labelQuoteValue->setText(UiUtils::displayPriceForAssetType(quote.price, assetType));
+   ui_->labelQuoteValue->setText(UiUtils::displayPriceForAssetType(quote.price
+      , quote.assetType));
    ui_->labelQuoteValue->show();
 
    if (quote.assetType == bs::network::Asset::SpotFX) {
@@ -182,7 +183,16 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
 
    if (rfq_.side == bs::network::Side::Buy) {
       const auto currency = contrProductString.toStdString();
-      const auto balance = assetManager_->getBalance(currency);
+      double balance = 0;
+      if (assetManager_) {
+         balance = assetManager_->getBalance(currency);
+      }
+      else {
+         try {
+            balance = balances_.at(currency);
+         }
+         catch (const std::exception&) {}
+      }
       balanceOk_ = (value < balance);
       ui_->pushButtonAccept->setEnabled(balanceOk_);
       if (!balanceOk_) {
@@ -252,6 +262,16 @@ void RequestingQuoteWidget::populateDetails(const bs::network::RFQ& rfq)
       break;
    default: break;
    }
+}
+
+void RequestingQuoteWidget::onBalance(const std::string& currency, double balance)
+{
+   balances_[currency] = balance;
+}
+
+void RequestingQuoteWidget::onMatchingLogout()
+{
+   onCancel();
 }
 
 void RequestingQuoteWidget::onAccept()

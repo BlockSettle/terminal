@@ -44,6 +44,42 @@ MatchingAdapter::MatchingAdapter(const std::shared_ptr<spdlog::logger> &logger)
       , [this](const std::string& data) {
       return onQuoteResponse(data);
    });
+   celerConnection_->RegisterHandler(CelerAPI::QuoteRequestRejectDownstreamEventType
+      , [this](const std::string& data) {
+      return onQuoteReject(data);
+   });
+   celerConnection_->RegisterHandler(CelerAPI::CreateOrderRequestRejectDownstreamEventType
+      , [this](const std::string& data) {
+      return onOrderReject(data);
+   });
+   celerConnection_->RegisterHandler(CelerAPI::BitcoinOrderSnapshotDownstreamEventType
+      , [this](const std::string& data) {
+      return onBitcoinOrderSnapshot(data);
+   });
+   celerConnection_->RegisterHandler(CelerAPI::FxOrderSnapshotDownstreamEventType
+      , [this](const std::string& data) {
+      return onFxOrderSnapshot(data);
+   });
+   celerConnection_->RegisterHandler(CelerAPI::QuoteCancelDownstreamEventType
+      , [this](const std::string& data) {
+      return onQuoteCancelled(data);
+   });
+   celerConnection_->RegisterHandler(CelerAPI::SignTransactionNotificationType
+      , [this](const std::string& data) {
+      return onSignTxNotif(data);
+   });
+   celerConnection_->RegisterHandler(CelerAPI::QuoteAckDownstreamEventType
+      , [this](const std::string& data) {
+      return onQuoteAck(data);
+   });
+   celerConnection_->RegisterHandler(CelerAPI::QuoteRequestNotificationType
+      , [this](const std::string& data) {
+      return onQuoteReqNotification(data);
+   });
+   celerConnection_->RegisterHandler(CelerAPI::QuoteCancelNotifReplyType
+      , [this](const std::string& data) {
+      return onQuoteNotifCancelled(data);
+   });
 }
 
 void MatchingAdapter::connectedToServer()
@@ -401,6 +437,79 @@ bool MatchingAdapter::onQuoteResponse(const std::string& data)
    toMsg(quote, msg.mutable_quote());
    Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
    return pushFill(env);
+}
+
+bool MatchingAdapter::onQuoteReject(const std::string&)
+{
+   return false;
+}
+
+bool MatchingAdapter::onOrderReject(const std::string&)
+{
+   return false;
+}
+
+bool MatchingAdapter::onBitcoinOrderSnapshot(const std::string&)
+{
+   return false;
+}
+
+bool MatchingAdapter::onFxOrderSnapshot(const std::string& data)
+{
+   FxOrderSnapshotDownstreamEvent response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[QuoteProvider::onFxOrderSnapshot] Failed to parse FxOrderSnapshotDownstreamEvent");
+      return false;
+   }
+   logger_->debug("[MatchingAdapter::onFxOrderSnapshot] {}", response.DebugString());
+
+   bs::network::Order order;
+   order.exchOrderId = QString::number(response.orderid());
+   order.clOrderId = response.externalclorderid();
+   order.quoteId = response.quoteid();
+   order.dateTime = QDateTime::fromMSecsSinceEpoch(response.createdtimestamputcinmillis());
+   order.security = response.securitycode();
+   order.quantity = response.qty();
+   order.leavesQty = response.leavesqty();
+   order.price = response.price();
+   order.avgPx = response.avgpx();
+   order.product = response.currency();
+   order.side = bs::celer::fromCeler(response.side());
+   order.assetType = bs::network::Asset::SpotFX;
+
+   order.status = bs::celer::mapFxOrderStatus(response.orderstatus());
+   order.info = response.info();
+
+   MatchingMessage msg;
+   toMsg(order, msg.mutable_order());
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   return pushFill(env);
+   return true;
+}
+
+bool MatchingAdapter::onQuoteCancelled(const std::string&)
+{
+   return false;
+}
+
+bool MatchingAdapter::onSignTxNotif(const std::string&)
+{
+   return false;
+}
+
+bool MatchingAdapter::onQuoteAck(const std::string&)
+{
+   return false;
+}
+
+bool MatchingAdapter::onQuoteReqNotification(const std::string&)
+{
+   return false;
+}
+
+bool MatchingAdapter::onQuoteNotifCancelled(const std::string&)
+{
+   return false;
 }
 
 

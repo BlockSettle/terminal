@@ -522,7 +522,6 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
 
    case WalletsMessage::kWalletAddresses: {
       std::vector<bs::sync::Address> addresses;
-      addresses.reserve(msg.wallet_addresses().addresses_size());
       for (const auto &addr : msg.wallet_addresses().addresses()) {
          try {
             addresses.push_back({ std::move(bs::Address::fromAddressString(addr.address()))
@@ -1290,7 +1289,7 @@ bool QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMessage_TXDetai
       }
       for (const auto &addrStr : resp.out_addresses()) {
          try {
-            txDet.outAddresses.emplace_back(std::move(bs::Address::fromAddressString(addrStr)));
+            txDet.outAddresses.push_back(std::move(bs::Address::fromAddressString(addrStr)));
          } catch (const std::exception &e) {
             logger_->warn("[QtGuiAdapter::processTXDetails] out deser error: {}", e.what());
          }
@@ -1344,7 +1343,6 @@ bool QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMessage_TXDetai
 bool QtGuiAdapter::processLedgerEntries(const ArmoryMessage_LedgerEntries &response)
 {
    std::vector<bs::TXEntry> entries;
-   entries.reserve(response.entries_size());
    for (const auto &entry : response.entries()) {
       bs::TXEntry txEntry;
       txEntry.txHash = BinaryData::fromString(entry.tx_hash());
@@ -1364,7 +1362,7 @@ bool QtGuiAdapter::processLedgerEntries(const ArmoryMessage_LedgerEntries &respo
          }
          catch (const std::exception &) {}
       }
-      entries.emplace_back(std::move(txEntry));
+      entries.push_back(std::move(txEntry));
    }
    return QMetaObject::invokeMethod(mainWindow_, [this, entries, filter=response.filter()
       , totPages=response.total_pages(), curPage=response.cur_page()
@@ -1385,7 +1383,6 @@ bool QtGuiAdapter::processAddressHist(const ArmoryMessage_AddressHistory& respon
       return true;
    }
    std::vector<bs::TXEntry> entries;
-   entries.reserve(response.entries_size());
    for (const auto& entry : response.entries()) {
       bs::TXEntry txEntry;
       txEntry.txHash = BinaryData::fromString(entry.tx_hash());
@@ -1405,7 +1402,7 @@ bool QtGuiAdapter::processAddressHist(const ArmoryMessage_AddressHistory& respon
          }
          catch (const std::exception&) {}
       }
-      entries.emplace_back(std::move(txEntry));
+      entries.push_back(std::move(txEntry));
    }
    return QMetaObject::invokeMethod(mainWindow_, [this, entries, addr, curBlock = response.cur_block()] {
          mainWindow_->onAddressHistory(addr, curBlock, entries);
@@ -1426,7 +1423,6 @@ bool QtGuiAdapter::processFeeLevels(const ArmoryMessage_FeeLevelsResponse& respo
 bool QtGuiAdapter::processWalletsList(const WalletsMessage_WalletsListResponse& response)
 {
    std::vector<bs::sync::HDWalletData> wallets;
-   wallets.reserve(response.wallets_size());
    for (const auto& wallet : response.wallets()) {
       wallets.push_back(bs::sync::HDWalletData::fromCommonMessage(wallet));
    }
@@ -1439,11 +1435,10 @@ bool QtGuiAdapter::processWalletsList(const WalletsMessage_WalletsListResponse& 
 bool QtGuiAdapter::processUTXOs(const WalletsMessage_UtxoListResponse& response)
 {
    std::vector<UTXO> utxos;
-   utxos.reserve(response.utxos_size());
    for (const auto& serUtxo : response.utxos()) {
       UTXO utxo;
       utxo.unserialize(BinaryData::fromString(serUtxo));
-      utxos.emplace_back(std::move(utxo));
+      utxos.push_back(std::move(utxo));
    }
    return QMetaObject::invokeMethod(mainWindow_, [this, utxos, response]{
       mainWindow_->onUTXOs(response.id(), response.wallet_id(), utxos);
@@ -1481,7 +1476,6 @@ bool QtGuiAdapter::processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived
 bool QtGuiAdapter::processZCInvalidated(const ArmoryMessage_ZCInvalidated& zcInv)
 {
    std::vector<BinaryData> txHashes;
-   txHashes.reserve(zcInv.tx_hashes_size());
    for (const auto& hashStr : zcInv.tx_hashes()) {
       txHashes.push_back(BinaryData::fromString(hashStr));
    }
@@ -1502,6 +1496,8 @@ bool QtGuiAdapter::processBsServer(const bs::message::Envelope& env)
       return processStartLogin(msg.start_login_result());
    case BsServerMessage::kLoginResult:
       return processLogin(msg.login_result());
+   case BsServerMessage::kOrdersUpdate:
+      return processOrdersUpdate(msg.orders_update());
    default: break;
    }
    return true;
@@ -1558,6 +1554,8 @@ bool QtGuiAdapter::processMatching(const bs::message::Envelope& env)
       });
    case MatchingMessage::kQuote:
       return processQuote(msg.quote());
+   case MatchingMessage::kOrder:
+      return processOrder(msg.order());
    default:    break;
    }
    return true;
@@ -1571,8 +1569,16 @@ bool QtGuiAdapter::processMktData(const bs::message::Envelope& env)
       return true;
    }
    switch (msg.data_case()) {
-   case MktDataMessage::kNewSecurity:
+   case MktDataMessage::kDisconnected:
+      mdInstrumentsReceived_ = false;
       break;
+   case MktDataMessage::kNewSecurity:
+      assetTypes_[msg.new_security().name()] =
+         static_cast<bs::network::Asset::Type>(msg.new_security().asset_type());
+      break;
+   case MktDataMessage::kAllInstrumentsReceived:
+      mdInstrumentsReceived_ = true;
+      return sendPooledOrdersUpdate();
    case MktDataMessage::kPriceUpdate:
       return processMdUpdate(msg.price_update());
    default: break;
@@ -1584,11 +1590,11 @@ bool QtGuiAdapter::processMdUpdate(const MktDataMessage_Prices& msg)
 {
    return QMetaObject::invokeMethod(mainWindow_, [this, msg] {
       const bs::network::MDFields fields{
-         { bs::network::MDField::PriceBid, msg.bid() },
-         { bs::network::MDField::PriceOffer, msg.ask() },
-         { bs::network::MDField::PriceLast, msg.last() },
-         { bs::network::MDField::DailyVolume, msg.volume() },
-         { bs::network::MDField::MDTimestamp, (double)msg.timestamp() }
+         { bs::network::MDField::Type::PriceBid, msg.bid() },
+         { bs::network::MDField::Type::PriceOffer, msg.ask() },
+         { bs::network::MDField::Type::PriceLast, msg.last() },
+         { bs::network::MDField::Type::DailyVolume, msg.volume() },
+         { bs::network::MDField::Type::MDTimestamp, (double)msg.timestamp() }
       };
       mainWindow_->onMDUpdated(static_cast<bs::network::Asset::Type>(msg.security().asset_type())
          , QString::fromStdString(msg.security().name()), fields);
@@ -1598,7 +1604,6 @@ bool QtGuiAdapter::processMdUpdate(const MktDataMessage_Prices& msg)
 bool QtGuiAdapter::processAuthWallet(const WalletsMessage_WalletData& authWallet)
 {
    std::vector<bs::Address> authAddresses;
-   authAddresses.reserve(authWallet.used_addresses_size());
    OnChainTrackMessage msg;
    auto msgReq = msg.mutable_set_auth_addresses();
    msgReq->set_wallet_id(authWallet.wallet_id());
@@ -1634,7 +1639,6 @@ bool QtGuiAdapter::processAuthState(const OnChainTrackMessage_AuthState& authSta
 bool QtGuiAdapter::processSubmittedAuthAddrs(const AssetsMessage_SubmittedAuthAddresses& addrs)
 {
    std::vector<bs::Address> authAddresses;
-   authAddresses.reserve(addrs.addresses_size());
    for (const auto& addr : addrs.addresses()) {
       try {
          authAddresses.push_back(bs::Address::fromAddressString(addr));
@@ -1656,7 +1660,6 @@ bool QtGuiAdapter::processBalance(const AssetsMessage_Balance& bal)
 bool QtGuiAdapter::processVerifiedAuthAddrs(const OnChainTrackMessage_AuthAddresses& addrs)
 {
    std::vector<bs::Address> authAddresses;
-   authAddresses.reserve(addrs.addresses_size());
    for (const auto& addr : addrs.addresses()) {
       try {
          authAddresses.push_back(bs::Address::fromAddressString(addr));
@@ -1672,6 +1675,62 @@ bool QtGuiAdapter::processQuote(const MatchingMessage_Quote& msg)
    const auto& quote = fromMsg(msg);
    return QMetaObject::invokeMethod(mainWindow_, [this, quote] {
       mainWindow_->onQuoteReceived(quote);
+   });
+}
+
+bool QtGuiAdapter::processOrder(const MatchingMessage_Order& msg)
+{
+   const auto& order = fromMsg(msg);
+   return QMetaObject::invokeMethod(mainWindow_, [this, order] {
+      mainWindow_->onOrderReceived(order);
+   });
+}
+
+bool QtGuiAdapter::processOrdersUpdate(const BlockSettle::Terminal::BsServerMessage_Orders& msg)
+{
+   // Use some fake orderId so old code works correctly
+   int orderId = 0;
+   std::vector<bs::network::Order> orders;
+   for (const auto& o : msg.orders()) {
+      bs::network::Order order;
+      order.security = o.product() + "/" + o.contra_product();
+      auto itAsset = assetTypes_.find(order.security);
+      if (itAsset != assetTypes_.end()) {
+         order.assetType = itAsset->second;
+      }
+      else {
+         order.assetType = bs::network::Asset::Undefined;
+      }
+      order.exchOrderId = QString::number(++orderId);
+      order.status = static_cast<bs::network::Order::Status>(o.status());
+      order.side = o.buy() ? bs::network::Side::Buy : bs::network::Side::Sell;
+      order.pendingStatus = o.status_text();
+      order.dateTime = QDateTime::fromMSecsSinceEpoch(o.timestamp());
+      order.product = o.product();
+      order.quantity = o.quantity();
+      order.price = o.price();
+      orders.push_back(order);
+   }
+   pooledOrders_ = std::move(orders);
+   return sendPooledOrdersUpdate();
+}
+
+bool QtGuiAdapter::sendPooledOrdersUpdate()
+{
+   if (!mdInstrumentsReceived_ || pooledOrders_.empty()) {
+      return true;
+   }
+   for (auto& order : pooledOrders_) {
+      if (order.assetType == bs::network::Asset::Undefined) {
+         const auto& itAsset = assetTypes_.find(order.security);
+         if (itAsset != assetTypes_.end()) {
+            order.assetType = itAsset->second;
+         }
+      }
+   }
+   return QMetaObject::invokeMethod(mainWindow_, [this] {
+      mainWindow_->onOrdersUpdate(pooledOrders_);
+      pooledOrders_.clear();
    });
 }
 

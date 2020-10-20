@@ -229,6 +229,9 @@ void RFQTicketXBT::updateBalances()
 RFQTicketXBT::BalanceInfoContainer RFQTicketXBT::getBalanceInfo() const
 {
    BalanceInfoContainer balance;
+   if (!assetManager_ && balances_.empty()) {
+      return balance;
+   }
 
    QString productToSpend = getProductToSpend();
 
@@ -243,11 +246,14 @@ RFQTicketXBT::BalanceInfoContainer RFQTicketXBT::getBalanceInfo() const
          balance.productType = ProductGroupType::CCGroupType;
       } else {
          const double divisor = std::pow(10, UiUtils::GetAmountPrecisionFX());
-         const double bal = assetManager_ ? assetManager_->getBalance(productToSpend.toStdString())
-            : balances_.at(productToSpend.toStdString());
-         balance.amount = std::floor(bal * divisor) / divisor;
-         balance.product = productToSpend;
-         balance.productType = ProductGroupType::FXGroupType;
+         try {
+            const double bal = assetManager_ ? assetManager_->getBalance(productToSpend.toStdString())
+               : balances_.at(productToSpend.toStdString());
+            balance.amount = std::floor(bal * divisor) / divisor;
+            balance.product = productToSpend;
+            balance.productType = ProductGroupType::FXGroupType;
+         }
+         catch (const std::exception &) {}
       }
    }
    return balance;
@@ -925,7 +931,7 @@ void RFQTicketXBT::sendRFQ(const std::string &id)
    auto rfq = itRFQ->second;
 
    if (rfq->requestId.empty()) {
-      rfq->requestId = "blocksettle:" + id;
+      rfq->requestId = id;
    }
 
    if (rfq->assetType == bs::network::Asset::SpotXBT) {
@@ -1180,6 +1186,7 @@ void RFQTicketXBT::onParentAboutToHide()
 void RFQTicketXBT::onBalance(const std::string& currency, double balance)
 {
    balances_[currency] = balance;
+   updateBalances();
 }
 
 void RFQTicketXBT::enablePanel()

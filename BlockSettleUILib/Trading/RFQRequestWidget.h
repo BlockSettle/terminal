@@ -99,7 +99,8 @@ public:
    void onMatchingLogout();
    void onVerifiedAuthAddresses(const std::vector<bs::Address>&);
 
-   void onQuoteReceived(const bs::network::Quote& quote);
+   void onQuoteReceived(const bs::network::Quote&);
+   void onOrderReceived(const bs::network::Order&);
 
 protected:
    void hideEvent(QHideEvent* event) override;
@@ -180,6 +181,7 @@ private:
 
    QList<QMetaObject::Connection>   marketDataConnection_;
 
+   std::unordered_map<std::string, double>      balances_;
    std::unordered_map<std::string, RFQDialog *> dialogs_;
 
    BaseCelerClient::CelerUserType   userType_{ BaseCelerClient::CelerUserType::Undefined };

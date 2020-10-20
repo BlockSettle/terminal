@@ -137,7 +137,10 @@ void MktDataAdapter::onMDSecurityReceived(const std::string& name, const bs::net
 
 void MktDataAdapter::allSecuritiesReceived()
 {
-   logger_->debug("[{}]", __func__);
+   MktDataMessage msg;
+   auto msgBC = msg.mutable_all_instruments_received();
+   Envelope envBC{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(envBC);
 }
 
 void MktDataAdapter::onNewFXTrade(const bs::network::NewTrade& trade)

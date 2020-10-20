@@ -348,6 +348,16 @@ void RFQDialog::cancel(bool force)
    }
 }
 
+void RFQDialog::onBalance(const std::string& currency, double balance)
+{
+   ui_->pageRequestingQuote->onBalance(currency, balance);
+}
+
+void RFQDialog::onMatchingLogout()
+{
+   ui_->pageRequestingQuote->onMatchingLogout();
+}
+
 void RFQDialog::onTimeout()
 {
    emit expired(id_);
@@ -357,7 +367,9 @@ void RFQDialog::onTimeout()
 
 void RFQDialog::onQuoteFinished()
 {
-   emit accepted(id_, quote_);
+   if (quoteProvider_) {
+      emit accepted(id_, quote_);
+   }
    cancelOnClose_ = false;
    hide();
 }

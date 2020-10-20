@@ -32,13 +32,15 @@ public:
    RequestingQuoteWidget(QWidget* parent = nullptr );
    ~RequestingQuoteWidget() override;
 
-   void SetAssetManager(const std::shared_ptr<AssetManager> &assetManager) {
+   [[deprecated]] void SetAssetManager(const std::shared_ptr<AssetManager> &assetManager) {
       assetManager_ = assetManager;
    }
-
-   void SetCelerClient(std::shared_ptr<CelerClientQt> celerClient);
+   [[deprecated]] void SetCelerClient(std::shared_ptr<CelerClientQt> celerClient);
 
    void populateDetails(const bs::network::RFQ& rfq);
+
+   void onBalance(const std::string& currency, double balance);
+   void onMatchingLogout();
 
 public slots:
    void ticker();
@@ -80,6 +82,7 @@ private:
    std::shared_ptr<AssetManager> assetManager_;
    bool                       balanceOk_ = true;
    std::shared_ptr<CelerClientQt>   celerClient_;
+   std::unordered_map<std::string, double>   balances_;
 
 private:
    void setupTimer(Status status, const QDateTime &expTime);

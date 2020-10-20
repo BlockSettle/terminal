@@ -615,7 +615,9 @@ std::shared_ptr<TransactionsViewItem> TransactionsViewModel::createTxItem(const 
    item->txEntry = entry;
    item->displayDateTime = UiUtils::displayDateTime(entry.txTime);
 //   item->filterAddress = filterAddress_;
-   item->walletID = QString::fromStdString(*entry.walletIds.cbegin());
+   if (!entry.walletIds.empty()) {
+      item->walletID = QString::fromStdString(*entry.walletIds.cbegin());
+   }
    item->confirmations = entry.nbConf;
    if (!item->wallets.empty()) {
       item->walletName = QString::fromStdString(item->wallets[0]->name());
@@ -1147,6 +1149,9 @@ void TransactionsViewModel::onLedgerEntries(const std::string &, uint32_t
 
    std::vector<TXNode *> newNodes;
    for (const auto &entry : entries) {
+      if (entry.txHash.empty()) {   // invalid entry
+         continue;
+      }
       const auto &item = createTxItem(entry);
       const auto &itItem = itemIndex_.find({entry.txHash, item->walletID.toStdString()});
       if (itItem == itemIndex_.end()) {

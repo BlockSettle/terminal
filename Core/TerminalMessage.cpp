@@ -141,3 +141,49 @@ void bs::message::toMsg(const bs::network::Quote& quote, MatchingMessage_Quote* 
    msg->set_time_skew_ms(quote.timeSkewMs);
    msg->set_timestamp(quote.celerTimestamp);
 }
+
+bs::network::Order bs::message::fromMsg(const BlockSettle::Terminal::MatchingMessage_Order& msg)
+{
+   bs::network::Order order;
+   order.clOrderId = msg.cl_order_id();
+   order.exchOrderId = QString::fromStdString(msg.exchange_id());
+   order.quoteId = msg.quote_id();
+   order.dateTime = QDateTime::fromMSecsSinceEpoch(msg.timestamp());
+   order.security = msg.security();
+   order.product = msg.product();
+   order.settlementId = msg.settlement_id();
+   order.reqTransaction = msg.requester_tx();
+   order.dealerTransaction = msg.dealer_tx();
+   order.pendingStatus = msg.pending_status();
+   order.quantity = msg.quantity();
+   order.leavesQty = msg.left_qty();
+   order.price = msg.price();
+   order.avgPx = msg.avg_price();
+   order.side = msg.buy() ? bs::network::Side::Buy : bs::network::Side::Sell;
+   order.assetType = static_cast<bs::network::Asset::Type>(msg.asset_type());
+   order.status = static_cast<bs::network::Order::Status>(msg.status());
+   order.info = msg.info();
+   return order;
+}
+
+void bs::message::toMsg(const bs::network::Order& order, MatchingMessage_Order* msg)
+{
+   msg->set_cl_order_id(order.clOrderId);
+   msg->set_exchange_id(order.exchOrderId.toStdString());
+   msg->set_quote_id(order.quoteId);
+   msg->set_timestamp(order.dateTime.toMSecsSinceEpoch());
+   msg->set_security(order.security);
+   msg->set_product(order.product);
+   msg->set_settlement_id(order.settlementId);
+   msg->set_requester_tx(order.reqTransaction);
+   msg->set_dealer_tx(order.dealerTransaction);
+   msg->set_pending_status(order.pendingStatus);
+   msg->set_quantity(order.quantity);
+   msg->set_left_qty(order.leavesQty);
+   msg->set_price(order.price);
+   msg->set_avg_price(order.avgPx);
+   msg->set_buy(order.side == bs::network::Side::Buy);
+   msg->set_asset_type((int)order.assetType);
+   msg->set_status((int)order.status);
+   msg->set_info(order.info);
+}

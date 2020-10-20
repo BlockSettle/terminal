@@ -18,6 +18,7 @@
 namespace BlockSettle {
    namespace Terminal {
       class MatchingMessage_Quote;
+      class MatchingMessage_Order;
    }
 }
 
@@ -104,6 +105,9 @@ namespace bs {
       //TODO: move to another source file
       bs::network::Quote fromMsg(const BlockSettle::Terminal::MatchingMessage_Quote&);
       void toMsg(const bs::network::Quote&, BlockSettle::Terminal::MatchingMessage_Quote*);
+
+      bs::network::Order fromMsg(const BlockSettle::Terminal::MatchingMessage_Order&);
+      void toMsg(const bs::network::Order&, BlockSettle::Terminal::MatchingMessage_Order*);
    } // namespace message
 } // namespace bs
 
