@@ -1194,14 +1194,17 @@ void bs::ui::RFQDealerReply::reserveBestUtxoSetAndSubmit(double quantity, double
       replyRFQ(std::move(utxos));
    };
 
+   // Check amount (required for AQ scripts)
+   auto checkAmount = bs::UTXOReservationManager::CheckAmount::Enabled;
+
    if (!replyData->xbtWallet->canMixLeaves()) {
       auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXbtWallet);
       utxoReservationManager_->getBestXbtUtxoSet(replyData->xbtWallet->walletId(), purpose,
-         xbtQuantity, cbBestUtxoSet, true);
+         xbtQuantity, cbBestUtxoSet, true, checkAmount);
    }
    else {
       utxoReservationManager_->getBestXbtUtxoSet(replyData->xbtWallet->walletId(),
-         xbtQuantity, cbBestUtxoSet, true);
+         xbtQuantity, cbBestUtxoSet, true, checkAmount);
    }
 
 

@@ -1532,6 +1532,10 @@ bs::XBTAmount RFQTicketXBT::getXbtReservationAmountForCc(double quantity, double
 void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::string &id
    , const std::shared_ptr<bs::network::RFQ>& rfq)
 {
+   // Skip UTXO reservations amount checks for buy fiat requests as reserved XBT amount is 20% more than expected from current price.
+   auto checkAmount = (rfq->side == bs::network::Side::Sell && rfq->product != bs::network::XbtCurrency) ?
+       bs::UTXOReservationManager::CheckAmount::Enabled : bs::UTXOReservationManager::CheckAmount::Disabled;
+
    const auto &submitRFQWrapper = [rfqTicket = QPointer<RFQTicketXBT>(this), id, rfq]
    {
       if (!rfqTicket) {
@@ -1539,7 +1543,7 @@ void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::string &id
       }
       rfqTicket->submitRFQCb_(id, *rfq, std::move(rfqTicket->fixedXbtInputs_.utxoRes));
    };
-   auto getWalletAndReserve = [rfqTicket = QPointer<RFQTicketXBT>(this), submitRFQWrapper]
+   auto getWalletAndReserve = [rfqTicket = QPointer<RFQTicketXBT>(this), submitRFQWrapper, checkAmount]
       (BTCNumericTypes::satoshi_type amount, bool partial)
    {
       auto cbBestUtxoSet = [rfqTicket, submitRFQWrapper](bs::FixedXbtInputs&& fixedXbt) {
@@ -1555,12 +1559,12 @@ void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::string &id
          auto purpose = UiUtils::getSelectedHwPurpose(rfqTicket->ui_->comboBoxXBTWalletsSend);
          rfqTicket->utxoReservationManager_->reserveBestXbtUtxoSet(
             hdWallet->walletId(), purpose, amount,
-            partial, std::move(cbBestUtxoSet), true);
+            partial, std::move(cbBestUtxoSet), true, checkAmount);
       }
       else {
          rfqTicket->utxoReservationManager_->reserveBestXbtUtxoSet(
             hdWallet->walletId(), amount,
-            partial, std::move(cbBestUtxoSet), true);
+            partial, std::move(cbBestUtxoSet), true, checkAmount);
       }
    };
 
