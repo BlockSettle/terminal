@@ -33,7 +33,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>Equity Token Issuance</string>
+   <string>Payment request</string>
   </property>
   <property name="sizeGripEnabled">
    <bool>false</bool>
