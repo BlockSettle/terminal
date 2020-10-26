@@ -13,7 +13,6 @@
 
 #include "Message/Bus.h"
 #include "Message/Envelope.h"
-#include "CommonTypes.h"
 
 namespace BlockSettle {
    namespace Terminal {
@@ -101,13 +100,6 @@ namespace bs {
          std::shared_ptr<MainLoopRuner>   runnableAdapter_;
       };
 
-
-      //TODO: move to another source file
-      bs::network::Quote fromMsg(const BlockSettle::Terminal::MatchingMessage_Quote&);
-      void toMsg(const bs::network::Quote&, BlockSettle::Terminal::MatchingMessage_Quote*);
-
-      bs::network::Order fromMsg(const BlockSettle::Terminal::MatchingMessage_Order&);
-      void toMsg(const bs::network::Order&, BlockSettle::Terminal::MatchingMessage_Order*);
    } // namespace message
 } // namespace bs
 

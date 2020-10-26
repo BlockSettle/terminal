@@ -228,6 +228,7 @@ void MainWindow::onHDWallet(const bs::sync::WalletInfo &wi)
 void MainWindow::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
 {
    ui_->widgetWallets->onHDWalletDetails(hdWallet);
+   ui_->widgetRFQ->onHDWallet(hdWallet);
 }
 
 void MainWindow::onWalletsList(const std::string &id, const std::vector<bs::sync::HDWalletData>& wallets)
@@ -235,6 +236,12 @@ void MainWindow::onWalletsList(const std::string &id, const std::vector<bs::sync
    if (txDlg_) {
       txDlg_->onWalletsList(id, wallets);
    }
+}
+
+void bs::gui::qt::MainWindow::onWalletData(const std::string& walletId
+   , const bs::sync::WalletData& wd)
+{
+   ui_->widgetRFQ->onWalletData(walletId, wd);
 }
 
 void MainWindow::onAddresses(const std::vector<bs::sync::Address> &addrs)
@@ -264,6 +271,7 @@ void MainWindow::onWalletBalance(const bs::sync::WalletBalanceData &wbd)
       txDlg_->onAddressBalances(wbd.id, wbd.addrBalances);
    }
    ui_->widgetWallets->onWalletBalance(wbd);
+   ui_->widgetRFQ->onWalletBalance(wbd);
    statusBarView_->onXbtBalance(wbd);
 }
 
@@ -884,11 +892,12 @@ void MainWindow::activateClient(const BsClientLoginResult& result)
    auto tradeSettings = std::make_shared<bs::TradeSettings>(result.tradeSettings);
    emit putSetting(ApplicationSettings::SubmittedAddressXbtLimit, static_cast<quint64>(tradeSettings->xbtTier1Limit));
 
-//   authManager_->initLogin(celerConnection_, tradeSettings_);
    emit bootstrapDataLoaded(result.bootstrapDataSigned);
 
    setLoginButtonText(currentUserLogin_);
    setWidgetsAuthorized(true);
+
+   ui_->widgetRFQ->onTradeSettings(tradeSettings);
 
    emit setRecommendedFeeRate(result.feeRatePb);
 //   utxoReservationMgr_->setFeeRatePb(result.feeRatePb);
@@ -999,6 +1008,11 @@ void MainWindow::onMatchingLogout()
    ui_->widgetRFQ->onMatchingLogout();
 }
 
+void bs::gui::qt::MainWindow::onNewSecurity(const std::string& name, bs::network::Asset::Type at)
+{
+   ui_->widgetRFQ->onNewSecurity(name, at);
+}
+
 void MainWindow::onMDUpdated(bs::network::Asset::Type assetType
    , const QString& security, const bs::network::MDFields &fields)
 {
@@ -1032,19 +1046,36 @@ void MainWindow::onVerifiedAuthAddresses(const std::vector<bs::Address>& addrs)
    ui_->widgetRFQ->onVerifiedAuthAddresses(addrs);
 }
 
-void bs::gui::qt::MainWindow::onQuoteReceived(const bs::network::Quote& quote)
+void MainWindow::onAuthKey(const bs::Address& addr, const BinaryData& authKey)
+{
+   ui_->widgetRFQ->onAuthKey(addr, authKey);
+}
+
+void MainWindow::onQuoteReceived(const bs::network::Quote& quote)
 {
    ui_->widgetRFQ->onQuoteReceived(quote);
 }
 
-void bs::gui::qt::MainWindow::onOrderReceived(const bs::network::Order& order)
+void MainWindow::onQuoteMatched(const std::string& rfqId, const std::string &quoteId)
 {
-   ui_->widgetRFQ->onOrderReceived(order);
+   ui_->widgetRFQ->onQuoteMatched(rfqId, quoteId);
 }
 
-void bs::gui::qt::MainWindow::onOrdersUpdate(const std::vector<bs::network::Order>& orders)
+void MainWindow::onQuoteFailed(const std::string& rfqId, const std::string& quoteId
+   , const std::string &info)
+{
+   ui_->widgetRFQ->onQuoteFailed(rfqId, quoteId, info);
+}
+
+void MainWindow::onOrdersUpdate(const std::vector<bs::network::Order>& orders)
 {
    orderListModel_->onOrdersUpdate(orders);
+}
+
+void MainWindow::onReservedUTXOs(const std::string& resId
+   , const std::string& subId, const std::vector<UTXO>& utxos)
+{
+   ui_->widgetRFQ->onReservedUTXOs(resId, subId, utxos);
 }
 
 void MainWindow::showRunInBackgroundMessage()
@@ -1214,9 +1245,13 @@ void MainWindow::initWidgets()
 
    ui_->widgetRFQ->init(logger_, dialogMgr_, orderListModel_.get());
    connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this, &MainWindow::createNewWallet);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::needWalletData, this, &MainWindow::needWalletData);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::loginRequested, this, &MainWindow::onLoginInitiated);
    connect(ui_->widgetRFQ, &RFQRequestWidget::needSubmitRFQ, this, &MainWindow::needSubmitRFQ);
    connect(ui_->widgetRFQ, &RFQRequestWidget::needAcceptRFQ, this, &MainWindow::needAcceptRFQ);
    connect(ui_->widgetRFQ, &RFQRequestWidget::needCancelRFQ, this, &MainWindow::needCancelRFQ);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::needAuthKey, this, &MainWindow::needAuthKey);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::needReserveUTXOs, this, &MainWindow::needReserveUTXOs);
 
    connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this
       , &MainWindow::createNewWallet);

@@ -36,6 +36,8 @@ namespace BlockSettle {
       class OnChainTrackMessage_AuthAddresses;
       class OnChainTrackMessage_AuthState;
       class SignerMessage_SignTxResponse;
+      class WalletsMessage_AuthKey;
+      class WalletsMessage_ReservedUTXOs;
       class WalletsMessage_TXDetailsResponse;
       class WalletsMessage_UtxoListResponse;
       class WalletsMessage_WalletBalances;
@@ -49,9 +51,11 @@ namespace BlockSettle {
       class BsServerMessage_Orders;
       class BsServerMessage_StartLoginResult;
       class MatchingMessage_LoggedIn;
-      class MatchingMessage_Quote;
+      class Quote;
       class MatchingMessage_Order;
       class MktDataMessage_Prices;
+      class SettlementMessage_FailedQuote;
+      class SettlementMessage_MatchedQuote;
       class SettingsMessage_ArmoryServers;
       class SettingsMessage_SettingsResponse;
       class SettingsMessage_SignerServers;
@@ -103,6 +107,8 @@ private:
    void makeMainWinConnections();
 
    void processWalletLoaded(const bs::sync::WalletInfo &);
+   bool processWalletData(const uint64_t msgId
+      , const BlockSettle::Common::WalletsMessage_WalletData&);
    bool processWalletBalances(const bs::message::Envelope &
       , const BlockSettle::Common::WalletsMessage_WalletBalances &);
    bool processTXDetails(uint64_t msgId, const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
@@ -119,18 +125,23 @@ private:
    bool processStartLogin(const BlockSettle::Terminal::BsServerMessage_StartLoginResult&);
    bool processLogin(const BlockSettle::Terminal::BsServerMessage_LoginResult&);
 
+   bool processSettlement(const bs::message::Envelope&);
    bool processMatching(const bs::message::Envelope&);
    bool processMktData(const bs::message::Envelope&);
+   bool processSecurity(const std::string&, int);
    bool processMdUpdate(const BlockSettle::Terminal::MktDataMessage_Prices &);
    bool processAuthWallet(const BlockSettle::Common::WalletsMessage_WalletData&);
    bool processAuthState(const BlockSettle::Common::OnChainTrackMessage_AuthState&);
    bool processSubmittedAuthAddrs(const BlockSettle::Terminal::AssetsMessage_SubmittedAuthAddresses&);
    bool processBalance(const BlockSettle::Terminal::AssetsMessage_Balance&);
    bool processVerifiedAuthAddrs(const BlockSettle::Common::OnChainTrackMessage_AuthAddresses&);
-   bool processQuote(const BlockSettle::Terminal::MatchingMessage_Quote&);
-   bool processOrder(const BlockSettle::Terminal::MatchingMessage_Order&);
+   bool processAuthKey(const BlockSettle::Common::WalletsMessage_AuthKey&);
+   bool processQuote(const BlockSettle::Terminal::Quote&);
+   bool processMatchedQuote(const BlockSettle::Terminal::SettlementMessage_MatchedQuote&);
+   bool processFailedQuote(const BlockSettle::Terminal::SettlementMessage_FailedQuote&);
    bool processOrdersUpdate(const BlockSettle::Terminal::BsServerMessage_Orders&);
    bool sendPooledOrdersUpdate();
+   bool processReservedUTXOs(const BlockSettle::Common::WalletsMessage_ReservedUTXOs&);
 
 private slots:
    void onGetSettings(const std::vector<ApplicationSettings::Setting>&);
@@ -148,6 +159,7 @@ private slots:
    void onSetSigner(int);
    void onNeedHDWalletDetails(const std::string &walletId);
    void onNeedWalletBalances(const std::string &walletId);
+   void onNeedWalletData(const std::string& walletId);
    void onNeedExtAddresses(const std::string &walletId);
    void onNeedIntAddresses(const std::string &walletId);
    void onNeedUsedAddresses(const std::string &walletId);
@@ -179,15 +191,20 @@ private slots:
    void onNeedMdConnection(ApplicationSettings::EnvConfiguration);
    void onNeedNewAuthAddress();
    void onNeedSubmitAuthAddress(const bs::Address&);
-   void onNeedSubmitRFQ(const bs::network::RFQ&);
+   void onNeedSubmitRFQ(const bs::network::RFQ&, const std::string& reserveId = {});
    void onNeedAcceptRFQ(const std::string& id, const bs::network::Quote&);
    void onNeedCancelRFQ(const std::string& id);
+   void onNeedAuthKey(const bs::Address&);
+   void onNeedReserveUTXOs(const std::string& reserveId, const std::string& subId
+      , uint64_t amount, bool partial = false, const std::vector<UTXO>& utxos = {});
+   void onNeedUnreserveUTXOs(const std::string& reserveId, const std::string& subId);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<bs::message::UserTerminal>   userSettings_, userWallets_;
    std::shared_ptr<bs::message::UserTerminal>   userBlockchain_, userSigner_;
-   std::shared_ptr<bs::message::UserTerminal>   userBS_, userMatch_, userMD_;
+   std::shared_ptr<bs::message::UserTerminal>   userBS_, userMatch_, userSettl_;
+   std::shared_ptr<bs::message::UserTerminal>   userMD_;
    std::shared_ptr<bs::message::UserTerminal>   userTrk_;
    bs::gui::qt::MainWindow * mainWindow_{ nullptr };
    BSTerminalSplashScreen  * splashScreen_{ nullptr };
@@ -200,6 +217,7 @@ private:
    std::string signerDetails_;
    bool  walletsReady_{ false };
 
+   std::map<uint64_t, std::string>  walletGetMap_;
    std::unordered_map<std::string, bs::sync::WalletInfo> hdWallets_;
    std::set<uint64_t>   newZCs_;
 

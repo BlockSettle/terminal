@@ -75,6 +75,7 @@ namespace bs {
             void onHDWallet(const bs::sync::WalletInfo &);
             void onHDWalletDetails(const bs::sync::HDWalletData &);
             void onWalletsList(const std::string &id, const std::vector<bs::sync::HDWalletData>&);
+            void onWalletData(const std::string &walletId, const bs::sync::WalletData&);
             void onAddresses(const std::vector<bs::sync::Address> &);
             void onAddressComments(const std::string &walletId
                , const std::map<bs::Address, std::string> &);
@@ -100,6 +101,7 @@ namespace bs {
                , const std::string &userId);
             void onMatchingLogout();
 
+            void onNewSecurity(const std::string& name, bs::network::Asset::Type);
             void onMDUpdated(bs::network::Asset::Type assetType
                , const QString& security, const bs::network::MDFields &);
             void onBalance(const std::string& currency, double balance);
@@ -108,10 +110,16 @@ namespace bs {
                , const std::map<bs::Address, AddressVerificationState> &);
             void onSubmittedAuthAddresses(const std::vector<bs::Address>&);
             void onVerifiedAuthAddresses(const std::vector<bs::Address>&);
+            void onAuthKey(const bs::Address&, const BinaryData& authKey);
 
             void onQuoteReceived(const bs::network::Quote&);
-            void onOrderReceived(const bs::network::Order&);
+            void onQuoteMatched(const std::string &rfqId, const std::string &quoteId);
+            void onQuoteFailed(const std::string& rfqId, const std::string& quoteId
+               , const std::string &info);
             void onOrdersUpdate(const std::vector<bs::network::Order>&);
+
+            void onReservedUTXOs(const std::string& resId, const std::string& subId
+               , const std::vector<UTXO>&);
 
          public slots:
             void onReactivate();
@@ -144,6 +152,7 @@ namespace bs {
             void needHDWalletDetails(const std::string &walletId);
             void needWalletsList(UiUtils::WalletsTypes, const std::string &id);
             void needWalletBalances(const std::string &walletId);
+            void needWalletData(const std::string& walletId);
 
             void needExtAddresses(const std::string &walletId);
             void needIntAddresses(const std::string &walletId);
@@ -178,9 +187,13 @@ namespace bs {
 
             void needNewAuthAddress();
             void needSubmitAuthAddress(const bs::Address&);
-            void needSubmitRFQ(const bs::network::RFQ&);
+            void needSubmitRFQ(const bs::network::RFQ&, const std::string& reserveId = {});
             void needAcceptRFQ(const std::string& id, const bs::network::Quote&);
             void needCancelRFQ(const std::string& id);
+            void needAuthKey(const bs::Address&);
+            void needReserveUTXOs(const std::string& reserveId, const std::string& subId
+               , uint64_t amount, bool partial = false, const std::vector<UTXO>& utxos = {});
+            void needUnreserveUTXOs(const std::string& reserveId, const std::string& subId);
 
          private slots:
             void onSend();

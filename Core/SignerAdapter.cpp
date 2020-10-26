@@ -125,6 +125,8 @@ bool SignerAdapter::processOwnRequest(const bs::message::Envelope &env
    case SignerMessage::kSetUserId:
       return processSetUserId(request.set_user_id().user_id()
          , request.set_user_id().wallet_id());
+   case SignerMessage::kCreateSettlWallet:
+      return processCreateSettlWallet(env, request.create_settl_wallet());
    default:
       logger_->warn("[{}] unknown signer request: {}", __func__, request.data_case());
       break;
@@ -648,4 +650,26 @@ bool SignerAdapter::processSignTx(const bs::message::Envelope& env
 bool SignerAdapter::processSetUserId(const std::string& userId, const std::string& walletId)
 {
    return (signer_->setUserId(BinaryData::fromString(userId), walletId) != 0);
+}
+
+bool SignerAdapter::processCreateSettlWallet(const bs::message::Envelope& env
+   , const std::string& addrStr)
+{
+   bs::Address authAddr;
+   try {
+      authAddr = bs::Address::fromAddressString(addrStr);
+   }
+   catch (const std::exception& e) {
+      logger_->error("[{}] invalid auth address {}: {}", __func__, addrStr, e.what());
+      return true;
+   }
+   const auto& cb = [this, env](const SecureBinaryData& authPubKey)
+   {
+      SignerMessage msg;
+      msg.set_auth_pubkey(authPubKey.toBinStr());
+      Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
+      pushFill(envResp);
+   };
+   signer_->createSettlementWallet(authAddr, cb);
+   return true;
 }

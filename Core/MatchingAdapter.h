@@ -19,9 +19,9 @@ namespace spdlog {
 }
 namespace BlockSettle {
    namespace Terminal {
+      class AcceptRFQ;
       class MatchingMessage_Login;
-      class MatchingMessage_RFQ;
-      class MatchingMessage_AcceptRFQ;
+      class RFQ;
    }
 }
 
@@ -64,8 +64,9 @@ private:
    bool processLogin(const BlockSettle::Terminal::MatchingMessage_Login&);
    bool processGetSubmittedAuth(const bs::message::Envelope&);
    bool processSubmitAuth(const bs::message::Envelope&, const std::string& address);
-   bool processSendRFQ(const BlockSettle::Terminal::MatchingMessage_RFQ&);
-   bool processAcceptRFQ(const BlockSettle::Terminal::MatchingMessage_AcceptRFQ&);
+   bool processSendRFQ(const BlockSettle::Terminal::RFQ&);
+   bool processAcceptRFQ(const BlockSettle::Terminal::AcceptRFQ&);
+   bool processCancelRFQ(const std::string& rfqId);
 
    std::string getQuoteReqId(const std::string& quoteId) const;
    void saveQuoteReqId(const std::string& quoteReqId, const std::string& quoteId);

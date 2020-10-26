@@ -80,8 +80,6 @@ public:
       , const std::string& id, const bs::network::RFQ& rfq
       , const std::string& xbtWalletId, const bs::Address& recvXbtAddrIfSet
       , const bs::Address& authAddr
-      , bs::UtxoReservationToken fixedXbtUtxoRes
-      , bs::UtxoReservationToken ccUtxoRes
       , std::unique_ptr<bs::hd::Purpose> purpose
       , RFQRequestWidget* parent = nullptr);
    ~RFQDialog() override;

@@ -22,6 +22,7 @@
 #include "ApplicationSettings.h"
 #include "CommonTypes.h"
 #include "HDPath.h"
+#include "SignerDefs.h"
 
 QT_BEGIN_NAMESPACE
 class QAbstractItemModel;
@@ -134,14 +135,18 @@ namespace UiUtils
       All = Full | HardwareSW | WatchOnly,
       All_AllowHwLegacy = All | HardwareAll
    };
-   int fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
+   [[deprecated]] int fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
       , int walletTypes);
+   int fillHDWalletsComboBox(QComboBox* comboBox, const std::vector<bs::sync::HDWalletData>&, int walletTypes);
 
-   void fillAuthAddressesComboBoxWithSubmitted(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager>& authAddressManager);
+   [[deprecated]] void fillAuthAddressesComboBoxWithSubmitted(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager>& authAddressManager);
+   void fillAuthAddressesComboBoxWithSubmitted(QComboBox* comboBox
+      , const std::vector<bs::Address> &, int defaultIdx = 0);
 
-   void fillRecvAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::Wallet>& targetWallet);
-   void fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox
+   [[deprecated]] void fillRecvAddressesComboBox(QComboBox* comboBox, const std::shared_ptr<bs::sync::Wallet>& targetWallet);
+   [[deprecated]] void fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox
       , const std::shared_ptr<bs::sync::hd::Wallet>& targetHDWallet, bool showRegularWalletsOnly);
+   void fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox, const std::vector<bs::sync::WalletData>& wallet);
 
    int selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId, WalletsTypes type = WalletsTypes::None);
    std::string getSelectedWalletId(QComboBox* comboBox);

@@ -11,12 +11,14 @@
 #include "MatchingAdapter.h"
 #include <spdlog/spdlog.h>
 #include "Celer/CommonUtils.h"
+#include "Celer/CancelRFQSequence.h"
 #include "Celer/CelerClientProxy.h"
 #include "Celer/CreateOrderSequence.h"
 #include "Celer/CreateFxOrderSequence.h"
 #include "Celer/GetAssignedAccountsListSequence.h"
 #include "Celer/SubmitRFQSequence.h"
 #include "CurrencyPair.h"
+#include "MessageUtils.h"
 #include "ProtobufUtils.h"
 #include "TerminalMessage.h"
 
@@ -188,6 +190,8 @@ bool MatchingAdapter::process(const bs::message::Envelope &env)
          return processSendRFQ(msg.send_rfq());
       case MatchingMessage::kAcceptRfq:
          return processAcceptRFQ(msg.accept_rfq());
+      case MatchingMessage::kCancelRfq:
+         return processCancelRFQ(msg.cancel_rfq());
       default:
          logger_->warn("[{}] unknown msg {} #{} from {}", __func__, msg.data_case()
             , env.id, env.sender->name());
@@ -223,7 +227,7 @@ bool MatchingAdapter::processSubmitAuth(const bs::message::Envelope& env
    return processGetSubmittedAuth(env);
 }
 
-bool MatchingAdapter::processSendRFQ(const MatchingMessage_RFQ& request)
+bool MatchingAdapter::processSendRFQ(const BlockSettle::Terminal::RFQ& request)
 {
    if (assignedAccount_.empty()) {
       logger_->error("[MatchingAdapter::processSendRFQ] submitting with empty account name");
@@ -249,7 +253,7 @@ bool MatchingAdapter::processSendRFQ(const MatchingMessage_RFQ& request)
    return true;
 }
 
-bool MatchingAdapter::processAcceptRFQ(const MatchingMessage_AcceptRFQ& request)
+bool MatchingAdapter::processAcceptRFQ(const AcceptRFQ& request)
 {
    if (assignedAccount_.empty()) {
       logger_->error("[MatchingAdapter::processAcceptRFQ] accepting with empty account name");
@@ -273,6 +277,19 @@ bool MatchingAdapter::processAcceptRFQ(const MatchingMessage_AcceptRFQ& request)
       } else {
          logger_->debug("[MatchingAdapter::processAcceptRFQ] Order submitted");
       }
+   }
+   return true;
+}
+
+bool MatchingAdapter::processCancelRFQ(const std::string& rfqId)
+{
+   const auto &sequence = std::make_shared<bs::celer::CancelRFQSequence>(
+      QString::fromStdString(rfqId), logger_);
+   if (!celerConnection_->ExecuteSequence(sequence)) {
+      logger_->error("[MatchingAdapter::processCancelRFQ] failed to execute CelerCancelRFQSequence");
+      return false;
+   } else {
+      logger_->debug("[MatchingAdapter::processCancelRFQ] RFQ {} cancelled", rfqId);
    }
    return true;
 }

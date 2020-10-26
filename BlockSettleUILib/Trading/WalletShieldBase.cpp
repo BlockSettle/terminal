@@ -81,7 +81,7 @@ bool WalletShieldBase::checkWalletSettings(WalletShieldBase::ProductType product
    , const QString& product)
 {
    if (!walletsManager_ && !authMgr_) {
-      return true;   // Temporary workaround for new arch - fix later if needed
+      return false;   // Temporary workaround for new arch - fix later if needed
    }
    // No primary wallet
    bool hasFullWallet = false;

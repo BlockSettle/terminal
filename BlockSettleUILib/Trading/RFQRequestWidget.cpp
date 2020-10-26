@@ -56,6 +56,10 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    connect(ui_->shieldPage, &RFQShieldPage::requestPrimaryWalletCreation, this, &RFQRequestWidget::requestPrimaryWalletCreation);
    connect(ui_->shieldPage, &RFQShieldPage::loginRequested, this, &RFQRequestWidget::loginRequested);
 
+   connect(ui_->pageRFQTicket, &RFQTicketXBT::needWalletData, this, &RFQRequestWidget::needWalletData);
+   connect(ui_->pageRFQTicket, &RFQTicketXBT::needAuthKey, this, &RFQRequestWidget::needAuthKey);
+   connect(ui_->pageRFQTicket, &RFQTicketXBT::needReserveUTXOs, this, &RFQRequestWidget::needReserveUTXOs);
+
    ui_->pageRFQTicket->setSubmitRFQ([this]
       (const std::string &id, const bs::network::RFQ& rfq, bs::UtxoReservationToken utxoRes)
    {
@@ -161,6 +165,11 @@ void RFQRequestWidget::setAuthorized(bool authorized)
    ui_->widgetMarketData->setAuthorized(authorized);
 }
 
+void RFQRequestWidget::onNewSecurity(const std::string& name, bs::network::Asset::Type at)
+{
+   ui_->pageRFQTicket->onNewSecurity(name, at);
+}
+
 void RFQRequestWidget::onMDUpdated(bs::network::Asset::Type assetType
    , const QString& security, const bs::network::MDFields &fields)
 {
@@ -171,6 +180,22 @@ void RFQRequestWidget::onBalance(const std::string& currency, double balance)
 {
    ui_->pageRFQTicket->onBalance(currency, balance);
    balances_[currency] = balance;
+}
+
+void RFQRequestWidget::onWalletBalance(const bs::sync::WalletBalanceData& wbd)
+{
+   ui_->pageRFQTicket->onWalletBalance(wbd);
+}
+
+void RFQRequestWidget::onHDWallet(const bs::sync::HDWalletData& wallet)
+{
+   ui_->pageRFQTicket->onHDWallet(wallet);
+}
+
+void RFQRequestWidget::onWalletData(const std::string& walletId
+   , const bs::sync::WalletData& wd)
+{
+   ui_->pageRFQTicket->onWalletData(walletId, wd);
 }
 
 void RFQRequestWidget::onMatchingLogin(const std::string& mtchLogin
@@ -207,8 +232,20 @@ void RFQRequestWidget::onMatchingLogout()
    popShield();
 }
 
-void RFQRequestWidget::onVerifiedAuthAddresses(const std::vector<bs::Address>&)
+void RFQRequestWidget::onVerifiedAuthAddresses(const std::vector<bs::Address>& addrs)
 {
+   ui_->pageRFQTicket->onVerifiedAuthAddresses(addrs);
+   forceCheckCondition();
+}
+
+void RFQRequestWidget::onAuthKey(const bs::Address& addr, const BinaryData& authKey)
+{
+   ui_->pageRFQTicket->onAuthKey(addr, authKey);
+}
+
+void RFQRequestWidget::onTradeSettings(const std::shared_ptr<bs::TradeSettings>& ts)
+{
+   ui_->pageRFQTicket->onTradeSettings(ts);
 }
 
 void RFQRequestWidget::onQuoteReceived(const bs::network::Quote& quote)
@@ -219,19 +256,27 @@ void RFQRequestWidget::onQuoteReceived(const bs::network::Quote& quote)
    }
 }
 
-void RFQRequestWidget::onOrderReceived(const bs::network::Order& order)
+void RFQRequestWidget::onQuoteMatched(const std::string& rfqId, const std::string& quoteId)
 {
-   for (const auto& dialog : dialogs_) {
-      switch (order.status) {
-      case bs::network::Order::Filled:
-         dialog.second->onOrderFilled(order.quoteId);
-         break;
-      case bs::network::Order::Failed:
-         dialog.second->onOrderFailed(order.quoteId, order.info);
-         break;
-      default:    break;
-      }
+   const auto& itDlg = dialogs_.find(rfqId);
+   if (itDlg != dialogs_.end()) {
+      itDlg->second->onOrderFilled(quoteId);
    }
+}
+
+void RFQRequestWidget::onQuoteFailed(const std::string& rfqId
+   , const std::string& quoteId, const std::string &info)
+{
+   const auto& itDlg = dialogs_.find(rfqId);
+   if (itDlg != dialogs_.end()) {
+      itDlg->second->onOrderFailed(quoteId, info);
+   }
+}
+
+void RFQRequestWidget::onReservedUTXOs(const std::string& resId
+   , const std::string& subId, const std::vector<UTXO>& utxos)
+{
+   ui_->pageRFQTicket->onReservedUTXOs(resId, subId, utxos);
 }
 
 void RFQRequestWidget::hideEvent(QHideEvent* event)
@@ -399,10 +444,9 @@ void RFQRequestWidget::onRFQSubmit(const std::string &id, const bs::network::RFQ
          , std::move(ccUtxoRes), std::move(purpose), this);
    }
    else {
-      std::string xbtWalletId;   //TODO - set
+      std::string xbtWalletId;
       dialog = new RFQDialog(logger_, id, rfq, xbtWalletId
-         , ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, std::move(fixedXbtInputs.utxoRes)
-         , std::move(ccUtxoRes), std::move(purpose), this);
+         , ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, std::move(purpose), this);
       emit needSubmitRFQ(rfq);
    }
 
@@ -439,7 +483,6 @@ void RFQRequestWidget::onRFQSubmit(const std::string &id, const bs::network::RFQ
       if (dlg.second->isHidden()) {
          dlg.second->deleteLater();
          closedDialogs.push_back(dlg.first);
-         logger_->debug("[{}] erasing dialog {}", __func__, dlg.first);
       }
    }
    for (const auto &dlg : closedDialogs) {
@@ -514,8 +557,10 @@ bool RFQRequestWidget::checkWalletSettings(bs::network::Asset::Type productType,
 
 void RFQRequestWidget::forceCheckCondition()
 {
-   if (!ui_->widgetMarketData || !celerClient_->IsConnected()) {
-      return;
+   if (celerClient_) {
+      if (!ui_->widgetMarketData || !celerClient_->IsConnected()) {
+         return;
+      }
    }
 
    const auto& currentInfo = ui_->widgetMarketData->getCurrentlySelectedInfo();

@@ -102,8 +102,6 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger>& logger
    , const std::string& id, const bs::network::RFQ& rfq
    , const std::string& xbtWalletId, const bs::Address& recvXbtAddrIfSet
    , const bs::Address& authAddr
-   , bs::UtxoReservationToken fixedXbtUtxoRes
-   , bs::UtxoReservationToken ccUtxoRes
    , std::unique_ptr<bs::hd::Purpose> purpose
    , RFQRequestWidget* parent)
    : QDialog(parent)
@@ -112,9 +110,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger>& logger
    , id_(id), rfq_(rfq)
    , recvXbtAddrIfSet_(recvXbtAddrIfSet)
    , authAddr_(authAddr)
-   , fixedXbtUtxoRes_(std::move(fixedXbtUtxoRes))
    , requestWidget_(parent)
-   , ccUtxoRes_(std::move(ccUtxoRes))
    , walletPurpose_(std::move(purpose))
 {
    ui_->setupUi(this);

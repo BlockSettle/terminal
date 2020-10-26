@@ -11,10 +11,19 @@
 #ifndef SETTLEMENT_ADAPTER_H
 #define SETTLEMENT_ADAPTER_H
 
+#include "CommonTypes.h"
 #include "Message/Adapter.h"
 
 namespace spdlog {
    class logger;
+}
+namespace BlockSettle {
+   namespace Terminal {
+      class AcceptRFQ;
+      class MatchingMessage_Order;
+      class Quote;
+      class SettlementMessage_SendRFQ;
+   }
 }
 
 class SettlementAdapter : public bs::message::Adapter
@@ -31,10 +40,31 @@ public:
    std::string name() const override { return "Settlement"; }
 
 private:
+   bool processMatchingQuote(const BlockSettle::Terminal::Quote&);
+   bool processMatchingOrder(const BlockSettle::Terminal::MatchingMessage_Order&);
+
+   bool processCancelRFQ(const std::string& rfqId);
+   bool processAcceptRFQ(const bs::message::Envelope&
+      , const BlockSettle::Terminal::AcceptRFQ&);
+   bool processSendRFQ(const bs::message::Envelope&
+      , const BlockSettle::Terminal::SettlementMessage_SendRFQ&);
+
+   void unreserve(const std::string& id, const std::string& subId = {});
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<bs::message::User>  user_;
+   std::shared_ptr<bs::message::User>  user_, userMtch_, userWallets_;
+
+   struct Settlement {
+      bs::message::Envelope   env;
+      bool dealer{ false };
+      bs::network::RFQ     rfq;
+      std::string          reserveId;
+      bs::network::Quote   quote;
+   };
+   std::unordered_map<std::string, Settlement>  settlByRfqId_;
+   std::unordered_map<std::string, Settlement>  settlByQuoteId_;
+   std::unordered_map<std::string, Settlement>  settlBySettlId_;
 };
 
 

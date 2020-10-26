@@ -91,6 +91,7 @@ private:
    bool processSignTx(const bs::message::Envelope&
       , const BlockSettle::Common::SignerMessage_SignTxRequest&);
    bool processSetUserId(const std::string& userId, const std::string& walletId);
+   bool processCreateSettlWallet(const bs::message::Envelope&, const std::string &);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
