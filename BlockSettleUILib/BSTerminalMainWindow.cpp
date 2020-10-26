@@ -1200,7 +1200,7 @@ bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()
                " may only have one Primary Wallet. Do you wish to promote '%1'?")
             .arg(QString::fromStdString(wallet->name())), this);
          if (qry.exec() == QDialog::Accepted) {
-            walletsMgr_->PromoteHDWallet(wallet->walletId(), [this, cb](bs::error::ErrorCode result) {
+            walletsMgr_->EnableXBTTradingInWallet(wallet->walletId(), [this, cb](bs::error::ErrorCode result) {
                if (result == bs::error::ErrorCode::NoError) {
                   if (cb) {
                      cb();
@@ -1560,7 +1560,7 @@ void BSTerminalMainWindow::onUserLoggedIn()
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
    const auto &deferredDialog = [this, userId] {
       walletsMgr_->setUserId(userId);
-      promoteToPrimaryIfNeeded();
+      enableTradingIfNeeded();
    };
    addDeferredDialog(deferredDialog);
 
@@ -2075,14 +2075,14 @@ void BSTerminalMainWindow::InitWidgets()
    });
 }
 
-void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
+void BSTerminalMainWindow::enableTradingIfNeeded()
 {
    // Can't proceed without userId
    if (!walletsMgr_->isUserIdSet()) {
       return;
    }
 
-   auto promoteToPrimary = [this](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
+   auto enableTradingFunc = [this](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
       addDeferredDialog([this, wallet] {
          BSMessageBox qry(BSMessageBox::question, tr("Upgrade Wallet"), tr("Enable Trading")
             , tr("BlockSettle requires you to hold sub-wallets with Authentication Addresses to interact with our trading system.<br><br>"
@@ -2092,7 +2092,7 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
             , this);
          qry.enableRichText();
          if (qry.exec() == QDialog::Accepted) {
-            walletsMgr_->PromoteHDWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {
+            walletsMgr_->EnableXBTTradingInWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {
                if (result == bs::error::ErrorCode::NoError) {
                   // If wallet was promoted to primary we could try to get chat keys now
                   tryGetChatKeys();
@@ -2128,18 +2128,8 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
 
    auto primaryWallet = walletsMgr_->getPrimaryWallet();
    if (primaryWallet) {
-      for (const auto &leaf : primaryWallet->getLeaves()) {
-         if (leaf->type() == bs::core::wallet::Type::Settlement) {
-            return;
-         }
-      }
-      promoteToPrimary(primaryWallet);
-      return;
-   }
-   for (const auto &hdWallet : walletsMgr_->hdWallets()) {
-      if (!hdWallet->isOffline() && !hdWallet->isHardwareWallet()) {
-         promoteToPrimary(hdWallet);
-         break;
+      if (!primaryWallet->tradingEnabled()) {
+         enableTradingFunc(primaryWallet);
       }
    }
 }

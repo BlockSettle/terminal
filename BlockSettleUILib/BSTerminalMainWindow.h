@@ -272,7 +272,7 @@ private:
 
    void InitWidgets();
 
-   void promoteToPrimaryIfNeeded();
+   void enableTradingIfNeeded();
 
    void showLegacyWarningIfNeeded();
 
