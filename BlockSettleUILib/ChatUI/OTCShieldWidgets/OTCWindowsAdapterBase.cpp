@@ -259,14 +259,16 @@ void OTCWindowsAdapterBase::submitProposal(QComboBox *walletsCombobox, bs::XBTAm
       cbSuccess();
    };
 
+   auto checkAmount = bs::UTXOReservationManager::CheckAmount::Enabled;
+
    if (!hdWallet->canMixLeaves()) {
       auto purpose = UiUtils::getSelectedHwPurpose(walletsCombobox);
       getUtxoManager()->getBestXbtUtxoSet(hdWallet->walletId(), purpose, amount.GetValue()
-         , std::move(cbUtxoSet), true);
+         , std::move(cbUtxoSet), true, checkAmount);
    }
    else {
       getUtxoManager()->getBestXbtUtxoSet(hdWallet->walletId(), amount.GetValue()
-         , std::move(cbUtxoSet), true);
+         , std::move(cbUtxoSet), true, checkAmount);
    }
 }
 

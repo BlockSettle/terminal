@@ -2132,7 +2132,7 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
    auto primaryWallet = walletsMgr_->getPrimaryWallet();
    if (primaryWallet) {
       for (const auto &leaf : primaryWallet->getLeaves()) {
-         if (leaf->type() == bs::core::wallet::Type::ColorCoin) {
+         if (leaf->type() == bs::core::wallet::Type::Settlement) {
             return;
          }
       }
