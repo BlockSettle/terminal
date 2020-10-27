@@ -672,7 +672,7 @@ void BSTerminalMainWindow::onNeedNewWallet()
    if (!initialWalletCreateDialogShown_) {
       initialWalletCreateDialogShown_ = true;
       const auto &deferredDialog = [this]{
-         createWallet(true);
+         ui_->widgetWallets->onNewWallet();
       };
       addDeferredDialog(deferredDialog);
    }
@@ -1177,54 +1177,42 @@ void BSTerminalMainWindow::connectSigner()
    signContainer_->Start();
 }
 
-bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()> &cb)
+bool BSTerminalMainWindow::createPrimaryWallet()
 {
-   if (primary) {
-      auto primaryWallet = walletsMgr_->getPrimaryWallet();
-      if (primaryWallet) {
-         if (cb) {
-            cb();
-         }
-         return true;
-      }
+   auto primaryWallet = walletsMgr_->getPrimaryWallet();
+   if (primaryWallet) {
+      return true;
+   }
 
-      const auto &hdWallets = walletsMgr_->hdWallets();
-      const auto fullWalletIt = std::find_if(hdWallets.begin(), hdWallets.end(), [](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
-         return !wallet->isHardwareWallet() && !wallet->isOffline();
-      });
-      if (fullWalletIt != hdWallets.end()) {
-         auto wallet = *fullWalletIt;
+
+   for (const auto &wallet : walletsMgr_->hdWallets()) {
+      if (!wallet->isOffline() && !wallet->isHardwareWallet()) {
          BSMessageBox qry(BSMessageBox::question, tr("Promote to primary wallet"), tr("Promote to primary wallet?")
             , tr("To trade through BlockSettle, you are required to have a wallet which"
                " supports the sub-wallets required to interact with the system. Each Terminal"
                " may only have one Primary Wallet. Do you wish to promote '%1'?")
             .arg(QString::fromStdString(wallet->name())), this);
          if (qry.exec() == QDialog::Accepted) {
-            walletsMgr_->EnableXBTTradingInWallet(wallet->walletId(), [this, cb](bs::error::ErrorCode result) {
-               if (result == bs::error::ErrorCode::NoError) {
-                  if (cb) {
-                     cb();
-                  }
-                  // If wallet was promoted to primary we could try to get chat keys now
-                  tryGetChatKeys();
-               }
-            });
+            walletsMgr_->PromoteWalletToPrimary(wallet->walletId());
             return true;
          }
-         return false;
       }
    }
 
-   ui_->widgetWallets->onNewWallet();
-   if (cb) {
-      cb();
+   CreatePrimaryWalletPrompt dlg;
+   int rc = dlg.exec();
+   if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
+      ui_->widgetWallets->CreateNewWallet();
+   } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
+      ui_->widgetWallets->ImportNewWallet();
    }
+
    return true;
 }
 
 void BSTerminalMainWindow::onCreatePrimaryWalletRequest()
 {
-   bool result = createWallet(true);
+   bool result = createPrimaryWallet();
 
    if (!result) {
       // Need to inform UI about rejection
@@ -1264,7 +1252,7 @@ void BSTerminalMainWindow::onSignerConnError(SignContainer::ConnectionError erro
 void BSTerminalMainWindow::onGenerateAddress()
 {
    if (walletsMgr_->hdWallets().empty()) {
-      createWallet(true);
+      createPrimaryWallet();
       return;
    }
 
@@ -1448,9 +1436,6 @@ void BSTerminalMainWindow::openCCTokenDialog()
    if (walletsMgr_->hasPrimaryWallet()) {
       lbdCCTokenDlg();
    }
-   else {
-      createWallet(true, lbdCCTokenDlg);
-   }
 }
 
 void BSTerminalMainWindow::onLogin()
@@ -1462,13 +1447,7 @@ void BSTerminalMainWindow::onLogin()
 
    if (walletsSynched_ && !walletsMgr_->getPrimaryWallet()) {
       addDeferredDialog([this] {
-         CreatePrimaryWalletPrompt dlg;
-         int rc = dlg.exec();
-         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
-            ui_->widgetWallets->CreateNewWallet();
-         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
-            ui_->widgetWallets->ImportNewWallet();
-         }
+         createPrimaryWallet();
       });
       return;
    }

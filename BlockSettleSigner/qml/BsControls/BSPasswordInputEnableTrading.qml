@@ -26,7 +26,7 @@ BSPasswordInput {
     property PasswordDialogData passwordDialogData: PasswordDialogData {}
 
     title: passwordDialogData.Title
-    autheIDSignType: AutheIDClient.PromoteWallet
+    autheIDSignType: AutheIDClient.EnableTrading
 
     CustomHeader {
         text: qsTr("Wallet Details")
