@@ -778,6 +778,12 @@ function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo)
                "passwordDialogData": passwordDialogData
               })
     }
+    else if (passwordDialogData.DialogType === "RequestPasswordForPromoteWallet") {
+        dlg = Qt.createComponent("../BsControls/BSPasswordInputPromoteWallet.qml").createObject(mainWindow
+            , {"walletInfo": walletInfo,
+               "passwordDialogData": passwordDialogData
+              })
+    }
 
     prepareDialog(dlg)
 

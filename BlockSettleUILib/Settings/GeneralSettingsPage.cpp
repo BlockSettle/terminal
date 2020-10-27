@@ -60,7 +60,6 @@ void GeneralSettingsPage::display()
    ui_->detailedSettlementTxDialogByDefaultCheckBox->setChecked(
       appSettings_->get<bool>(ApplicationSettings::DetailedSettlementTxDialogByDefault));
 
-   
    // DetailedSettlementTxDialogByDefault
 
    const auto cfg = appSettings_->GetLogsConfig();
