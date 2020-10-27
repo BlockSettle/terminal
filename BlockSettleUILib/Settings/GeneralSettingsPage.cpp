@@ -69,6 +69,15 @@ void GeneralSettingsPage::display()
    ui_->logLevelMsg->setCurrentIndex(static_cast<int>(cfg.at(1).level));
 
    ui_->warnLabel->hide();
+
+   UiUtils::fillHDWalletsComboBox(ui_->comboBox_defaultWallet, walletsMgr_, static_cast<UiUtils::WalletsTypes>(UiUtils::WalletsTypes::HardwareSW | UiUtils::WalletsTypes::Full));
+
+   const auto walletId = appSettings_->get<std::string>(ApplicationSettings::DefaultXBTTradeWalletId);
+   if (!walletId.empty()) {
+      UiUtils::selectWalletInCombobox(ui_->comboBox_defaultWallet, walletId, static_cast<UiUtils::WalletsTypes>(UiUtils::WalletsTypes::HardwareSW | UiUtils::WalletsTypes::Full));
+   } else {
+      ui_->comboBox_defaultWallet->setCurrentIndex(-1);
+   }
 }
 
 void GeneralSettingsPage::reset()
@@ -76,7 +85,8 @@ void GeneralSettingsPage::reset()
    for (const auto &setting : {ApplicationSettings::launchToTray, ApplicationSettings::minimizeToTray
       , ApplicationSettings::closeToTray, ApplicationSettings::notifyOnTX
       , ApplicationSettings::AdvancedTxDialogByDefault, ApplicationSettings::SubscribeToMDOnStart
-      , ApplicationSettings::logDefault, ApplicationSettings::logMessages}) {
+      , ApplicationSettings::logDefault, ApplicationSettings::logMessages
+      , ApplicationSettings::DefaultXBTTradeWalletId}) {
       appSettings_->reset(setting, false);
    }
    display();
@@ -141,6 +151,9 @@ void GeneralSettingsPage::apply()
 
       appSettings_->set(ApplicationSettings::logMessages, logSettings);
    }
+
+   const auto walletId = UiUtils::getSelectedWalletId(ui_->comboBox_defaultWallet);
+   appSettings_->set(ApplicationSettings::DefaultXBTTradeWalletId, QString::fromStdString(walletId));
 }
 
 void GeneralSettingsPage::onSelectLogFile()
