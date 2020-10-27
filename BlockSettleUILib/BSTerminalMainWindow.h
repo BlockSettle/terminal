@@ -153,7 +153,7 @@ private slots:
    void CompleteUIOnlineView();
    void CompleteDBConnection();
 
-   bool createWallet(bool primary, const std::function<void()> & = nullptr);
+   bool createPrimaryWallet();
    void onCreatePrimaryWalletRequest();
 
    void acceptMDAgreement();
@@ -272,7 +272,7 @@ private:
 
    void InitWidgets();
 
-   void promoteToPrimaryIfNeeded();
+   void enableTradingIfNeeded();
 
    void showLegacyWarningIfNeeded();
 

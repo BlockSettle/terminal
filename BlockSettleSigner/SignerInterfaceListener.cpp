@@ -277,8 +277,11 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
          dialogData->setValue(PasswordDialogData::Title, tr("Revoke Authentication Address"));
          requestPasswordForDialogType(ui::PasswordInputDialogType::RequestPasswordForRevokeAuthAddress, dialogData, walletInfo);
          break;
-      case signer::PromoteHDWallet:
-         requestPasswordForDialogType(ui::PasswordInputDialogType::RequestPasswordForPromoteHDWallet, dialogData, walletInfo);
+      case signer::EnableTrading:
+         requestPasswordForDialogType(ui::PasswordInputDialogType::RequestPasswordForEnableTrading, dialogData, walletInfo);
+         break;
+      case signer::PromoteToPrimary:
+         requestPasswordForDialogType(ui::PasswordInputDialogType::RequestPasswordForPromoteWallet, dialogData, walletInfo);
          break;
       default:
          break;

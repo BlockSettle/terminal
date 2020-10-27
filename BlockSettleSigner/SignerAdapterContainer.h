@@ -77,8 +77,11 @@ public:
       , const std::vector<bs::wallet::PasswordData>& = {}
          , bs::sync::PasswordDialogData = {}, const CreateHDLeafCb & = nullptr) override { return false; }
 
-   bool promoteHDWallet(const std::string &, const BinaryData &
-      , bs::sync::PasswordDialogData = {}, const PromoteHDWalletCb& = nullptr) override { return false; }
+   bool enableTradingInHDWallet(const std::string &, const BinaryData &
+      , bs::sync::PasswordDialogData = {}, const UpdateWalletStructureCB& = nullptr) override { return false; }
+
+   bool promoteWalletToPrimary(const std::string& rootWalletId
+      , bs::sync::PasswordDialogData dialogData = {}, const UpdateWalletStructureCB& cb = nullptr) override { return false; }
 
    bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) override;
    bs::signer::RequestId DeleteHDLeaf(const std::string &) override { return 0; }

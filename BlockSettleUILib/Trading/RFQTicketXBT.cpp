@@ -309,6 +309,15 @@ void RFQTicketXBT::walletsLoaded()
       int sendWalletTypes = (currentGroupType_ == ProductGroupType::CCGroupType) ?
                UiUtils::WalletsTypes::Full : (UiUtils::WalletsTypes::Full | UiUtils::WalletsTypes::HardwareSW);
       UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWalletsSend, walletsManager_, sendWalletTypes);
+
+      const auto walletId = walletsManager_->getDefaultSpendWalletId();
+
+      auto selected = UiUtils::selectWalletInCombobox(ui_->comboBoxXBTWalletsSend, walletId, static_cast<UiUtils::WalletsTypes>(sendWalletTypes));
+      if (selected == -1) {
+         auto primaryWallet = walletsManager_->getPrimaryWallet();
+         assert(primaryWallet != nullptr);
+         UiUtils::selectWalletInCombobox(ui_->comboBoxXBTWalletsSend, primaryWallet->walletId(), static_cast<UiUtils::WalletsTypes>(sendWalletTypes));
+      }
    }
 
    productSelectionChanged();
@@ -968,15 +977,15 @@ void RFQTicketXBT::sendRFQ(const std::string &id)
                            spendVal, ccInputs
                            , { addr, RECIP_GROUP_CHANG_1 } //change to group 1 (cc group)
                            , 0, {}, {}
-                           /* 
+                           /*
                            This cc is created without recipients. Set the assumed recipient count
                            to 1 so the coin selection algo can run, otherwise all presented inputs
-                           will be selected, which is wasteful. 
+                           will be selected, which is wasteful.
 
                            The assumed recipient count isn't relevant to the fee calculation on
                            the cc side of the tx since only the xbt side covers network fees.
                            */
-                           , 1); 
+                           , 1);
 
                         auto resolveCB = [this, id, rfq]
                            (bs::error::ErrorCode result, const Codec_SignerState::SignerState &state)
@@ -987,7 +996,7 @@ void RFQTicketXBT::sendRFQ(const std::string &id)
                               throw std::runtime_error(ss.str());
                            }
 
-                           bs::core::wallet::TXSignRequest req; 
+                           bs::core::wallet::TXSignRequest req;
                            req.armorySigner_.deserializeState(state);
                            auto reservationToken = utxoReservationManager_->makeNewReservation(
                               req.getInputs(nullptr), rfq->requestId);

@@ -76,6 +76,7 @@
         <file>qml/BsControls/BSPasswordInputConfirm.qml</file>
         <file>qml/BsControls/BSPasswordInputToken.qml</file>
         <file>qml/BsControls/BSPasswordInputAuthLeaf.qml</file>
+        <file>qml/BsControls/BSPasswordInputEnableTrading.qml</file>
         <file>qml/BsControls/BSPasswordInputPromoteWallet.qml</file>
         <file>qml/BsControls/BSPasswordInputSettlementLeaf.qml</file>
         <file>qml/StyledControls/CustomLabelCopyableValue.qml</file>
