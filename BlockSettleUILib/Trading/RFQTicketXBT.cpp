@@ -315,8 +315,17 @@ void RFQTicketXBT::walletsLoaded()
       auto selected = UiUtils::selectWalletInCombobox(ui_->comboBoxXBTWalletsSend, walletId, static_cast<UiUtils::WalletsTypes>(sendWalletTypes));
       if (selected == -1) {
          auto primaryWallet = walletsManager_->getPrimaryWallet();
-         assert(primaryWallet != nullptr);
-         UiUtils::selectWalletInCombobox(ui_->comboBoxXBTWalletsSend, primaryWallet->walletId(), static_cast<UiUtils::WalletsTypes>(sendWalletTypes));
+         if (primaryWallet != nullptr) {
+            UiUtils::selectWalletInCombobox(ui_->comboBoxXBTWalletsSend, primaryWallet->walletId(), static_cast<UiUtils::WalletsTypes>(sendWalletTypes));
+         }
+      }
+
+      selected = UiUtils::selectWalletInCombobox(ui_->comboBoxXBTWalletsRecv, walletId, UiUtils::WalletsTypes::All);
+      if (selected == -1) {
+         auto primaryWallet = walletsManager_->getPrimaryWallet();
+         if (primaryWallet != nullptr) {
+            UiUtils::selectWalletInCombobox(ui_->comboBoxXBTWalletsRecv, primaryWallet->walletId(), UiUtils::WalletsTypes::All);
+         }
       }
    }
 

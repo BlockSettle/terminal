@@ -72,11 +72,12 @@ void GeneralSettingsPage::display()
 
    UiUtils::fillHDWalletsComboBox(ui_->comboBox_defaultWallet, walletsMgr_, static_cast<UiUtils::WalletsTypes>(UiUtils::WalletsTypes::HardwareSW | UiUtils::WalletsTypes::Full));
 
-   const auto walletId = appSettings_->get<std::string>(ApplicationSettings::DefaultXBTTradeWalletId);
+   auto walletId = appSettings_->get<std::string>(ApplicationSettings::DefaultXBTTradeWalletId);
    if (!walletId.empty()) {
       UiUtils::selectWalletInCombobox(ui_->comboBox_defaultWallet, walletId, static_cast<UiUtils::WalletsTypes>(UiUtils::WalletsTypes::HardwareSW | UiUtils::WalletsTypes::Full));
    } else {
-      ui_->comboBox_defaultWallet->setCurrentIndex(-1);
+      walletId = UiUtils::getSelectedWalletId(ui_->comboBox_defaultWallet);
+      appSettings_->set(ApplicationSettings::DefaultXBTTradeWalletId, QString::fromStdString(walletId));
    }
 }
 
