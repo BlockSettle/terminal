@@ -150,7 +150,9 @@ void OTCNegotiationResponseWidget::onParentAboutToHide()
 void OTCNegotiationResponseWidget::onSyncInterface()
 {
    int index = UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWallets, getWalletManager(), UiUtils::WalletsTypes::All);
-   ui_->comboBoxXBTWallets->setCurrentIndex(index);
+   const auto walletId = getWalletManager()->getDefaultSpendWalletId();
+   UiUtils::selectWalletInCombobox(ui_->comboBoxXBTWallets, walletId, UiUtils::WalletsTypes::All);
+
    onCurrentWalletChanged();
 
    UiUtils::fillAuthAddressesComboBoxWithSubmitted(ui_->authenticationAddressComboBox, getAuthManager());
