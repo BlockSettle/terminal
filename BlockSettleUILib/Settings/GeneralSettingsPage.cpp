@@ -72,11 +72,20 @@ void GeneralSettingsPage::display()
 
    UiUtils::fillHDWalletsComboBox(ui_->comboBox_defaultWallet, walletsMgr_, static_cast<UiUtils::WalletsTypes>(UiUtils::WalletsTypes::HardwareSW | UiUtils::WalletsTypes::Full));
 
-   const auto walletId = appSettings_->get<std::string>(ApplicationSettings::DefaultXBTTradeWalletId);
+   auto walletId = appSettings_->get<std::string>(ApplicationSettings::DefaultXBTTradeWalletId);
+   bool setFirstWalletAsDefault = false;
    if (!walletId.empty()) {
-      UiUtils::selectWalletInCombobox(ui_->comboBox_defaultWallet, walletId, static_cast<UiUtils::WalletsTypes>(UiUtils::WalletsTypes::HardwareSW | UiUtils::WalletsTypes::Full));
+      int selectedIndex = UiUtils::selectWalletInCombobox(ui_->comboBox_defaultWallet, walletId, static_cast<UiUtils::WalletsTypes>(UiUtils::WalletsTypes::HardwareSW | UiUtils::WalletsTypes::Full));
+      if (selectedIndex == -1) {
+         setFirstWalletAsDefault = true;
+      }
    } else {
-      ui_->comboBox_defaultWallet->setCurrentIndex(-1);
+      setFirstWalletAsDefault = true;
+   }
+
+   if (setFirstWalletAsDefault) {
+      walletId = UiUtils::getSelectedWalletId(ui_->comboBox_defaultWallet);
+      appSettings_->set(ApplicationSettings::DefaultXBTTradeWalletId, QString::fromStdString(walletId));
    }
 }
 

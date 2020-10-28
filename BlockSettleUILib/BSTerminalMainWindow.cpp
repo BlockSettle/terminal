@@ -1666,6 +1666,7 @@ void BSTerminalMainWindow::showZcNotification(const TxInfo &txInfo)
    lines << tr("TX: %1 %2 %3").arg(tr(bs::sync::Transaction::toString(txInfo.direction)))
       .arg(txInfo.wallet->displayTxValue(txInfo.value)).arg(txInfo.wallet->displaySymbol());
    lines << tr("Wallet: %1").arg(QString::fromStdString(txInfo.wallet->name()));
+   lines << (txInfo.tx.isRBF() ? tr("RBF Enabled") : tr("RBF Disabled"));
    lines << txInfo.mainAddress;
 
    const auto &title = tr("New blockchain transaction");
