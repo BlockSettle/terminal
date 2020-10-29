@@ -89,6 +89,8 @@ private:
    void updateProgress(float progress, unsigned secondsRem);
    QString getImportingText() const;
 
+   bool eventFilter(QObject *object, QEvent *event) override;
+
 private:
    QStatusBar     *statusBar_;
 
@@ -118,6 +120,8 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<AssetManager>       assetManager_;
    std::unordered_set<std::string>     importingWallets_;
+
+   std::chrono::steady_clock::time_point timeSinceLastBlock_{std::chrono::steady_clock::now()};
 };
 
 #endif // __STATUS_BAR_VIEW_H__
