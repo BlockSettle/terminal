@@ -168,6 +168,8 @@ private slots:
    void onSyncWallets();
    void onSignerVisibleChanged();
 
+   void onAuthLeafCreated();
+
 private:
    std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
    QAction *action_send_ = nullptr;

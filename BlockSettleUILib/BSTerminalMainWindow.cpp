@@ -494,6 +494,8 @@ void BSTerminalMainWindow::LoadWallets()
       }
    });
 
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::AuthLeafCreated, this, &BSTerminalMainWindow::onAuthLeafCreated);
+
    onSyncWallets();
 }
 
@@ -1294,6 +1296,8 @@ void BSTerminalMainWindow::onSend()
       if (wallet) {
          selectedWalletId = wallet->walletId();
       }
+   } else {
+      selectedWalletId = applicationSettings_->getDefaultWalletId();
    }
 
 
@@ -2077,29 +2081,6 @@ void BSTerminalMainWindow::enableTradingIfNeeded()
                   // If wallet was promoted to primary we could try to get chat keys now
                   tryGetChatKeys();
                   walletsMgr_->setUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
-
-                  auto authWallet = walletsMgr_->getAuthWallet();
-                  if (authWallet != nullptr) {
-                     // check that current wallet has auth address that was submitted at some point
-                     // if there is no such address - display auth address dialog, so user could submit
-                     auto submittedAddresses = celerConnection_->GetSubmittedAuthAddressSet();
-                     auto existingAddresses = authWallet->getUsedAddressList();
-
-                     bool haveSubmittedAddress = false;
-                     for ( const auto& address : existingAddresses) {
-                        if (submittedAddresses.find(address.display()) != submittedAddresses.end()) {
-                           haveSubmittedAddress = true;
-                           break;
-                        }
-                     }
-
-                     if (!haveSubmittedAddress) {
-                        addDeferredDialog([this]()
-                                          {
-                                             openAuthManagerDialog();
-                                          });
-                     }
-                  }
                }
             });
          }
@@ -2470,5 +2451,31 @@ void BSTerminalMainWindow::onBootstrapDataLoaded(const std::string& data)
    if (bootstrapDataManager_->setReceivedData(data)) {
       authManager_->SetLoadedValidationAddressList(bootstrapDataManager_->GetAuthValidationList());
       ccFileManager_->SetLoadedDefinitions(bootstrapDataManager_->GetCCDefinitions());
+   }
+}
+
+void BSTerminalMainWindow::onAuthLeafCreated()
+{
+   auto authWallet = walletsMgr_->getAuthWallet();
+   if (authWallet != nullptr) {
+      // check that current wallet has auth address that was submitted at some point
+      // if there is no such address - display auth address dialog, so user could submit
+      auto submittedAddresses = celerConnection_->GetSubmittedAuthAddressSet();
+      auto existingAddresses = authWallet->getUsedAddressList();
+
+      bool haveSubmittedAddress = false;
+      for ( const auto& address : existingAddresses) {
+         if (submittedAddresses.find(address.display()) != submittedAddresses.end()) {
+            haveSubmittedAddress = true;
+            break;
+         }
+      }
+
+      if (!haveSubmittedAddress) {
+         addDeferredDialog([this]()
+                           {
+                              openAuthManagerDialog();
+                           });
+      }
    }
 }
