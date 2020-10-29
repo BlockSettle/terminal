@@ -244,10 +244,6 @@ void CreateTransactionDialog::loadFees()
       };
       walletsManager_->estimatedFeePerByte(feeLevel.first, cbFee, this);
    }
-/*   const auto &cbFees = [this](const std::map<unsigned int, float> &feeMap) {
-      emit feeLoadingCompleted(feeMap);
-   };
-   walletsManager_->getFeeSchedule(cbFees);*/
 }
 
 void CreateTransactionDialog::onFeeSuggestionsLoaded(const std::map<unsigned int, float> &feeValues)

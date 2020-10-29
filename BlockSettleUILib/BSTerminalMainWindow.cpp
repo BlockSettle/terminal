@@ -1294,6 +1294,8 @@ void BSTerminalMainWindow::onSend()
       if (wallet) {
          selectedWalletId = wallet->walletId();
       }
+   } else {
+      selectedWalletId = applicationSettings_->getDefaultWalletId();
    }
 
 
