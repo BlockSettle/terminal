@@ -60,7 +60,6 @@ void GeneralSettingsPage::display()
    ui_->detailedSettlementTxDialogByDefaultCheckBox->setChecked(
       appSettings_->get<bool>(ApplicationSettings::DetailedSettlementTxDialogByDefault));
 
-   
    // DetailedSettlementTxDialogByDefault
 
    const auto cfg = appSettings_->GetLogsConfig();
@@ -70,6 +69,24 @@ void GeneralSettingsPage::display()
    ui_->logLevelMsg->setCurrentIndex(static_cast<int>(cfg.at(1).level));
 
    ui_->warnLabel->hide();
+
+   UiUtils::fillHDWalletsComboBox(ui_->comboBox_defaultWallet, walletsMgr_, UiUtils::WalletsTypes::All);
+
+   auto walletId = appSettings_->getDefaultWalletId();
+   bool setFirstWalletAsDefault = false;
+   if (!walletId.empty()) {
+      int selectedIndex = UiUtils::selectWalletInCombobox(ui_->comboBox_defaultWallet, walletId, UiUtils::WalletsTypes::All);
+      if (selectedIndex == -1) {
+         setFirstWalletAsDefault = true;
+      }
+   } else {
+      setFirstWalletAsDefault = true;
+   }
+
+   if (setFirstWalletAsDefault) {
+      walletId = UiUtils::getSelectedWalletId(ui_->comboBox_defaultWallet);
+      appSettings_->setDefaultWalletId(walletId);
+   }
 }
 
 void GeneralSettingsPage::reset()
@@ -142,6 +159,9 @@ void GeneralSettingsPage::apply()
 
       appSettings_->set(ApplicationSettings::logMessages, logSettings);
    }
+
+   const auto walletId = UiUtils::getSelectedWalletId(ui_->comboBox_defaultWallet);
+   appSettings_->setDefaultWalletId(walletId);
 }
 
 void GeneralSettingsPage::onSelectLogFile()

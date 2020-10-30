@@ -11,8 +11,6 @@
 #ifndef SIGNER_ADAPTER_H
 #define SIGNER_ADAPTER_H
 
-#include <memory>
-#include <QObject>
 
 #include "BSErrorCode.h"
 #include "CoreWallet.h"
@@ -23,6 +21,9 @@
 
 #include "bs_signer.pb.h"
 
+#include <QObject>
+
+#include <memory>
 
 namespace bs {
    namespace sync {
@@ -160,7 +161,6 @@ private:
    bool closeHeadless_{true};
 
    QString headlessPubKey_;
-
 };
 
 

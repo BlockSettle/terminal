@@ -309,6 +309,24 @@ void RFQTicketXBT::walletsLoaded()
       int sendWalletTypes = (currentGroupType_ == ProductGroupType::CCGroupType) ?
                UiUtils::WalletsTypes::Full : (UiUtils::WalletsTypes::Full | UiUtils::WalletsTypes::HardwareSW);
       UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWalletsSend, walletsManager_, sendWalletTypes);
+
+      const auto walletId = walletsManager_->getDefaultSpendWalletId();
+
+      auto selected = UiUtils::selectWalletInCombobox(ui_->comboBoxXBTWalletsSend, walletId, static_cast<UiUtils::WalletsTypes>(sendWalletTypes));
+      if (selected == -1) {
+         auto primaryWallet = walletsManager_->getPrimaryWallet();
+         if (primaryWallet != nullptr) {
+            UiUtils::selectWalletInCombobox(ui_->comboBoxXBTWalletsSend, primaryWallet->walletId(), static_cast<UiUtils::WalletsTypes>(sendWalletTypes));
+         }
+      }
+
+      selected = UiUtils::selectWalletInCombobox(ui_->comboBoxXBTWalletsRecv, walletId, UiUtils::WalletsTypes::All);
+      if (selected == -1) {
+         auto primaryWallet = walletsManager_->getPrimaryWallet();
+         if (primaryWallet != nullptr) {
+            UiUtils::selectWalletInCombobox(ui_->comboBoxXBTWalletsRecv, primaryWallet->walletId(), UiUtils::WalletsTypes::All);
+         }
+      }
    }
 
    productSelectionChanged();
@@ -334,6 +352,36 @@ void RFQTicketXBT::fillRecvAddresses()
          UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, recvWallet, true);
       }
    }
+}
+
+bool RFQTicketXBT::preSubmitCheck()
+{
+   if (currentGroupType_ == ProductGroupType::XBTGroupType) {
+      const auto qty = getQuantity();
+      const auto& tradeSettings = authAddressManager_->tradeSettings();
+      assert(tradeSettings);
+
+      bool validAmount = false;
+      if (currentProduct_ == UiUtils::XbtCurrency) {
+         validAmount = tradeSettings->xbtTier1Limit > bs::XBTAmount(qty).GetValue();
+      } else {
+         const double indPrice = getIndicativePrice();
+         bs::XBTAmount price(indPrice * (1 + (tradeSettings->xbtPriceBand / 100)));
+         validAmount = price > bs::XBTAmount(qty);
+      }
+
+      if (!validAmount) {
+         auto amountStr = UiUtils::displayQuantity(bs::XBTAmount(tradeSettings->xbtTier1Limit).GetValueBitcoin(), bs::network::XbtCurrency);
+         BSMessageBox(BSMessageBox::info
+            , tr("Notice"), tr("Authentication Address not verified")
+            , tr("Trades above %1 are not permitted for non-verified Authentication Addresses. "
+                 "To verify your Authentication Address, execute three trades below the %2 threshold, "
+                 "and BlockSettle will validate the address during its next cycle.").arg(amountStr).arg(amountStr), this).exec();
+         return false;
+      }
+   }
+
+   return true;
 }
 
 void RFQTicketXBT::showCoinControl()
@@ -672,17 +720,6 @@ bool RFQTicketXBT::checkAuthAddr(double qty) const
       return false;
    }
 
-   if (currentGroupType_ == ProductGroupType::XBTGroupType){
-      if (currentProduct_ == UiUtils::XbtCurrency) {
-         return tradeSettings->xbtTier1Limit > bs::XBTAmount(qty).GetValue();
-      }
-      else {
-         const double indPrice = getIndicativePrice();
-         bs::XBTAmount price(indPrice * (1 + (tradeSettings->xbtPriceBand / 100)));
-         return price > bs::XBTAmount(qty);
-      }
-   }
-
    return true;
 }
 
@@ -793,6 +830,10 @@ double RFQTicketXBT::getOfferPrice() const
 
 void RFQTicketXBT::submitButtonClicked()
 {
+   if (!preSubmitCheck()) {
+      return;
+   }
+
    auto rfq = std::make_shared<bs::network::RFQ>();
    rfq->side = getSelectedSide();
 
@@ -945,15 +986,15 @@ void RFQTicketXBT::sendRFQ(const std::string &id)
                            spendVal, ccInputs
                            , { addr, RECIP_GROUP_CHANG_1 } //change to group 1 (cc group)
                            , 0, {}, {}
-                           /* 
+                           /*
                            This cc is created without recipients. Set the assumed recipient count
                            to 1 so the coin selection algo can run, otherwise all presented inputs
-                           will be selected, which is wasteful. 
+                           will be selected, which is wasteful.
 
                            The assumed recipient count isn't relevant to the fee calculation on
                            the cc side of the tx since only the xbt side covers network fees.
                            */
-                           , 1); 
+                           , 1);
 
                         auto resolveCB = [this, id, rfq]
                            (bs::error::ErrorCode result, const Codec_SignerState::SignerState &state)
@@ -964,7 +1005,7 @@ void RFQTicketXBT::sendRFQ(const std::string &id)
                               throw std::runtime_error(ss.str());
                            }
 
-                           bs::core::wallet::TXSignRequest req; 
+                           bs::core::wallet::TXSignRequest req;
                            req.armorySigner_.deserializeState(state);
                            auto reservationToken = utxoReservationManager_->makeNewReservation(
                               req.getInputs(nullptr), rfq->requestId);
@@ -1509,6 +1550,10 @@ bs::XBTAmount RFQTicketXBT::getXbtReservationAmountForCc(double quantity, double
 void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::string &id
    , const std::shared_ptr<bs::network::RFQ>& rfq)
 {
+   // Skip UTXO reservations amount checks for buy fiat requests as reserved XBT amount is 20% more than expected from current price.
+   auto checkAmount = (rfq->side == bs::network::Side::Sell && rfq->product != bs::network::XbtCurrency) ?
+       bs::UTXOReservationManager::CheckAmount::Enabled : bs::UTXOReservationManager::CheckAmount::Disabled;
+
    const auto &submitRFQWrapper = [rfqTicket = QPointer<RFQTicketXBT>(this), id, rfq]
    {
       if (!rfqTicket) {
@@ -1516,7 +1561,7 @@ void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::string &id
       }
       rfqTicket->submitRFQCb_(id, *rfq, std::move(rfqTicket->fixedXbtInputs_.utxoRes));
    };
-   auto getWalletAndReserve = [rfqTicket = QPointer<RFQTicketXBT>(this), submitRFQWrapper]
+   auto getWalletAndReserve = [rfqTicket = QPointer<RFQTicketXBT>(this), submitRFQWrapper, checkAmount]
       (BTCNumericTypes::satoshi_type amount, bool partial)
    {
       auto cbBestUtxoSet = [rfqTicket, submitRFQWrapper](bs::FixedXbtInputs&& fixedXbt) {
@@ -1532,12 +1577,12 @@ void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::string &id
          auto purpose = UiUtils::getSelectedHwPurpose(rfqTicket->ui_->comboBoxXBTWalletsSend);
          rfqTicket->utxoReservationManager_->reserveBestXbtUtxoSet(
             hdWallet->walletId(), purpose, amount,
-            partial, std::move(cbBestUtxoSet), true);
+            partial, std::move(cbBestUtxoSet), true, checkAmount);
       }
       else {
          rfqTicket->utxoReservationManager_->reserveBestXbtUtxoSet(
             hdWallet->walletId(), amount,
-            partial, std::move(cbBestUtxoSet), true);
+            partial, std::move(cbBestUtxoSet), true, checkAmount);
       }
    };
 

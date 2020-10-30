@@ -8,49 +8,49 @@
 **********************************************************************************
 
 */
-#include <QApplication>
-#include <QIcon>
-#include <QStyleFactory>
-#include <QtPlugin>
-#include <QtGui/QGuiApplication>
-#include <QtQml/QQmlApplicationEngine>
-#include <QtQuickControls2/QQuickStyle>
-#include <QSplashScreen>
-#include <QTimer>
-#include <QFileInfo>
-#include <QStandardPaths>
-#include <QDir>
-#include <QFontDatabase>
-#include <QQmlContext>
-#include <QQuickWindow>
-#include <QtPlatformHeaders/QWindowsWindowFunctions>
-
-#include <btc/ecc.h>
-#include <iostream>
-#include <thread>
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/sinks/stdout_sinks.h>
-
-#include "BIP150_151.h"
+#include "AppNap.h"
 #include "AuthorizedPeers.h"
+#include "BIP150_151.h"
+#include "Bip15xDataConnection.h"
+#include "BIP15xHelpers.h"
 #include "DispatchQueue.h"
 #include "HeadlessApp.h"
-#include "Settings/HeadlessSettings.h"
 #include "LogManager.h"
+#include "QMLApp.h"
+#include "QmlBridge.h"
+#include "Settings/HeadlessSettings.h"
+#include "Settings/SignerSettings.h"
 #include "SignalsHandler.h"
 #include "SignerAdapter.h"
-#include "Settings/SignerSettings.h"
 #include "SystemFileUtils.h"
-#include "BIP15xHelpers.h"
-#include "Bip15xDataConnection.h"
 #include "TransportBIP15x.h"
 #include "TransportBIP15xServer.h"
 
-#include "QMLApp.h"
-#include "QmlBridge.h"
+#include <QApplication>
+#include <QDir>
+#include <QFileInfo>
+#include <QFontDatabase>
+#include <QIcon>
+#include <QQmlContext>
+#include <QQuickWindow>
+#include <QSplashScreen>
+#include <QStandardPaths>
+#include <QStyleFactory>
+#include <QtGui/QGuiApplication>
+#include <QTimer>
+#include <QtPlatformHeaders/QWindowsWindowFunctions>
+#include <QtPlugin>
+#include <QtQml/QQmlApplicationEngine>
+#include <QtQuickControls2/QQuickStyle>
 
-#include "AppNap.h"
+#include <iostream>
+#include <thread>
+
+#include <btc/ecc.h>
+
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/spdlog.h>
 
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(std::vector<BinaryData>)
@@ -290,6 +290,10 @@ static int QMLApp(int argc, char **argv
    const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
    engine.rootContext()->setContextProperty(QStringLiteral("fixedFont"), fixedFont);
 
+   QTimer terminalConnectionTimer;
+   bool terminalConnected = false;
+   bool timerStarted = false;
+
    try {
       //setup signer's own GUI connection
       auto guiSrvParams = queue.getGuiServerParams();
@@ -306,7 +310,7 @@ static int QMLApp(int argc, char **argv
       {
          std::string clientID = "127.0.0.1:" + std::to_string(guiPort);
 
-         auto adapterBip15x = 
+         auto adapterBip15x =
             std::dynamic_pointer_cast<Bip15xDataConnection>(adapterConn);
          if (adapterBip15x == nullptr) {
             throw std::runtime_error("unexpected adapter connection type");
@@ -322,7 +326,6 @@ static int QMLApp(int argc, char **argv
       adapter.setCloseHeadless(settings->closeHeadless());
 
       QMLAppObj qmlAppObj(&adapter, logger, settings, splashScreen, engine.rootContext());
-      QTimer::singleShot(0, &qmlAppObj, &QMLAppObj::Start);
 
       switch (settings->runMode()) {
       case bs::signer::ui::RunMode::fullgui:
@@ -330,6 +333,32 @@ static int QMLApp(int argc, char **argv
          break;
       case bs::signer::ui::RunMode::litegui:
          engine.load(QUrl(QStringLiteral("qrc:/qml/mainLite.qml")));
+
+         terminalConnectionTimer.setSingleShot(true);
+         //BST-2786
+         terminalConnectionTimer.setInterval(std::chrono::milliseconds{ 5000 });
+
+         QObject::connect(&adapter, &SignerAdapter::ready, [&timerStarted, &terminalConnectionTimer]()
+            {
+               if (!timerStarted) {
+                  terminalConnectionTimer.start();
+                  timerStarted = true;
+               }
+            });
+
+
+         QObject::connect(&adapter, &SignerAdapter::peerConnected, [&terminalConnected] {
+            terminalConnected = true;
+         });
+         QObject::connect(&adapter, &SignerAdapter::peerDisconnected, [&terminalConnected] {
+            terminalConnected = false;
+         });
+         QObject::connect(&terminalConnectionTimer, &QTimer::timeout, [&terminalConnected] {
+            if (!terminalConnected) {
+               QCoreApplication::quit();
+            }
+         });
+
          break;
       default:
          return EXIT_FAILURE;
@@ -342,6 +371,8 @@ static int QMLApp(int argc, char **argv
       qmlBridge->setRootQmlObj(engine.rootObjects().at(0));
 
       bs::disableAppNap();
+
+      QTimer::singleShot(0, &qmlAppObj, &QMLAppObj::Start);
 
       QObject::connect(&qmlAppObj, &QMLAppObj::qmlAppStarted, [&queue](){
          queue.start();

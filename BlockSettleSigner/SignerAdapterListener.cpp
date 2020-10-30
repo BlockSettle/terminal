@@ -399,7 +399,7 @@ bool SignerAdapterListener::onSyncHDWallet(const std::string &data, bs::signer::
          auto groupEntry = response.add_groups();
          groupEntry->set_type(static_cast<bs::hd::CoinType>(group->index()));
 
-         for (const auto &leaf : group->getLeaves()) {
+         for (const auto &leaf : group->getAllLeaves()) {
             auto leafEntry = groupEntry->add_leaves();
             leafEntry->set_id(leaf->walletId());
             leafEntry->set_path(leaf->path().toString());
@@ -472,7 +472,7 @@ bool SignerAdapterListener::sendWoWallet(const std::shared_ptr<bs::core::hd::Wal
    for (const auto &group : wallet->getGroups()) {
       auto groupEntry = response.add_groups();
       groupEntry->set_type(group->index());
-      for (const auto &leaf : group->getLeaves()) {
+      for (const auto &leaf : group->getAllLeaves()) {
          auto leafEntry = groupEntry->add_leaves();
          leafEntry->set_id(leaf->walletId());
          leafEntry->set_path(leaf->path().toString());
@@ -1036,8 +1036,8 @@ bs::error::ErrorCode SignerAdapterListener::verifyOfflineSignRequest(const bs::c
    size_t foundInputCount = 0;
    auto checkAddress = [](const bs::core::WalletsManager::WalletPtr& wallet,
       bs::Address addr) {
-      return wallet->addressType() == addr.getType() ||
-         (addr.getType() == AddressEntryType_P2SH && (wallet->addressType() & addr.getType()));
+      return wallet->defaultAddressType() == addr.getType() ||
+         (addr.getType() == AddressEntryType_P2SH && (wallet->defaultAddressType() & addr.getType()));
    };
 
    for (const auto &walletId : txSignReq.walletIds) { // sync new addresses in all wallets

@@ -36,19 +36,8 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<QmlBridge> &qmlBridge
    , const NetworkType netType
    , int signerPort, const BinaryData& inSrvIDKey)
-   : QObject(nullptr)
-   ,logger_(logger)
-   , netType_(netType)
-   , qmlBridge_(qmlBridge)
+   : SignerAdapter(logger, qmlBridge, netType, signerPort, SignerAdapter::instantiateAdapterConnection(logger, signerPort, inSrvIDKey))
 {
-   auto adapterConn = instantiateAdapterConnection(logger, signerPort, inSrvIDKey);
-
-   listener_ = std::make_shared<SignerInterfaceListener>(logger, qmlBridge_, adapterConn, this);
-   if (!adapterConn->openConnection(kLocalAddrV4, std::to_string(signerPort)
-      , listener_.get())) {
-      throw std::runtime_error("adapter connection failed");
-   }
-   signContainer_ = std::make_shared<SignAdapterContainer>(logger_, listener_);
 }
 
 SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger

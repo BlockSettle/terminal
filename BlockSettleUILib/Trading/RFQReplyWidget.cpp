@@ -510,7 +510,11 @@ void RFQReplyWidget::onTransactionError(const std::string &id
       ((AQScriptRunner *)autoSignProvider_->scriptRunner())->cancelled(itReqId->second);
    }
    if (bs::error::ErrorCode::TxCancelled != code) {
-      MessageBoxBroadcastError(error, code, this).exec();
+      // Use QueuedConnection to not start new even loop from SettlementContainer callbacks.
+      // Otherwise SettlementContainer might be already destroyed when this method returns.
+      QMetaObject::invokeMethod(this, [this, error, code] {
+         MessageBoxBroadcastError(error, code, this).exec();
+      }, Qt::QueuedConnection);
    }
 }
 

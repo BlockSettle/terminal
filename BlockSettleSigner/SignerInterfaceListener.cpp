@@ -84,7 +84,7 @@ void SignerInterfaceListener::processData(const std::string &data)
 {
    signer::Packet packet;
    if (!packet.ParseFromString(data)) {
-      logger_->error("[SignerInterfaceListener::{}] failed to parse packet", __func__);
+      logger_->error("[SignerInterfaceListener::processData] failed to parse packet");
       return;
    }
 /*   if (packet.data().empty()) {
@@ -101,7 +101,7 @@ void SignerInterfaceListener::processData(const std::string &data)
       onPeerConnected(packet.data());
       break;
    case signer::PeerDisconnectedType:
-      onPeerConnected(packet.data());
+      onPeerDisconnected(packet.data());
       break;
    case signer::DecryptWalletRequestType:
       onDecryptWalletRequested(packet.data());
@@ -177,7 +177,7 @@ void SignerInterfaceListener::processData(const std::string &data)
       onVerifyOfflineTxRequest(packet.data(), packet.id());
       break;
    default:
-      logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
+      logger_->warn("[SignerInterfaceListener::processData] unknown response type {}", packet.type());
       break;
    }
 }
@@ -192,7 +192,7 @@ void SignerInterfaceListener::onPeerConnected(const std::string &data)
 {
    signer::ClientConnected evt;
    if (!evt.ParseFromString(data)) {
-      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      logger_->error("[SignerInterfaceListener::onPeerConnected] failed to parse");
       return;
    }
    emit parent_->peerConnected(evt.client_id(), evt.ip_address(), evt.public_key());
@@ -202,7 +202,7 @@ void SignerInterfaceListener::onPeerDisconnected(const std::string &data)
 {
    signer::ClientDisconnected evt;
    if (!evt.ParseFromString(data)) {
-      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      logger_->error("[SignerInterfaceListener::onPeerDisconnected] failed to parse");
       return;
    }
    emit parent_->peerDisconnected(evt.client_id());
@@ -219,7 +219,7 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
 
    signer::DecryptWalletRequest request;
    if (!request.ParseFromString(data)) {
-      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      logger_->error("[SignerInterfaceListener::onDecryptWalletRequested] failed to parse");
       return;
    }
 
@@ -277,8 +277,11 @@ void SignerInterfaceListener::onDecryptWalletRequested(const std::string &data)
          dialogData->setValue(PasswordDialogData::Title, tr("Revoke Authentication Address"));
          requestPasswordForDialogType(ui::PasswordInputDialogType::RequestPasswordForRevokeAuthAddress, dialogData, walletInfo);
          break;
-      case signer::PromoteHDWallet:
-         requestPasswordForDialogType(ui::PasswordInputDialogType::RequestPasswordForPromoteHDWallet, dialogData, walletInfo);
+      case signer::EnableTrading:
+         requestPasswordForDialogType(ui::PasswordInputDialogType::RequestPasswordForEnableTrading, dialogData, walletInfo);
+         break;
+      case signer::PromoteToPrimary:
+         requestPasswordForDialogType(ui::PasswordInputDialogType::RequestPasswordForPromoteWallet, dialogData, walletInfo);
          break;
       default:
          break;

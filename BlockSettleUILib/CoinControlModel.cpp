@@ -363,7 +363,7 @@ QVariant CoinControlModel::data(const QModelIndex& index, int role) const
       case ColumnUTXOCount:
          return node->getUtxoCount();
       case ColumnBalance: {
-         const auto amount = (node->getSelectedAmount() <= 0) ? node->getTotalAmount() : node->getSelectedAmount();
+         const auto amount = (node->getSelectionCount() == 0) ? node->getTotalAmount() : node->getSelectedAmount();
          return (wallet_ && wallet_->type() == bs::core::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
       }
       default:

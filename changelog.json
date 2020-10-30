@@ -1,7 +1,23 @@
 {
-   "latest_version": "0.91.0",
-   "release_date": "01 Oct 2020",
+   "latest_version": "0.91.1",
+   "release_date": "30 Oct 2020",
    "changes": [
+      {
+         "version_string": "0.91.1",
+         "previous_version": "0.91.0",
+         "release_date": "30 Oct 2020",
+         "release_type": "prod",
+         "improvements": [
+            "Default spend wallet config",
+            "Armory wallet support",
+            "Bootstrapped signed data for ENVs",
+            "Updates to armory connection",
+            "Bitpay support"
+         ],
+         "bug_fixes": [],
+         "revision": "d93ef62e0",
+         "common_revision": "772fedb1"
+      },
       {
          "version_string": "0.91.0",
          "previous_version": "0.90.9",
