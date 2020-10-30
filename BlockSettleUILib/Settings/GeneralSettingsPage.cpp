@@ -70,12 +70,12 @@ void GeneralSettingsPage::display()
 
    ui_->warnLabel->hide();
 
-   UiUtils::fillHDWalletsComboBox(ui_->comboBox_defaultWallet, walletsMgr_, static_cast<UiUtils::WalletsTypes>(UiUtils::WalletsTypes::HardwareSW | UiUtils::WalletsTypes::Full));
+   UiUtils::fillHDWalletsComboBox(ui_->comboBox_defaultWallet, walletsMgr_, UiUtils::WalletsTypes::All);
 
    auto walletId = appSettings_->getDefaultWalletId();
    bool setFirstWalletAsDefault = false;
    if (!walletId.empty()) {
-      int selectedIndex = UiUtils::selectWalletInCombobox(ui_->comboBox_defaultWallet, walletId, static_cast<UiUtils::WalletsTypes>(UiUtils::WalletsTypes::HardwareSW | UiUtils::WalletsTypes::Full));
+      int selectedIndex = UiUtils::selectWalletInCombobox(ui_->comboBox_defaultWallet, walletId, UiUtils::WalletsTypes::All);
       if (selectedIndex == -1) {
          setFirstWalletAsDefault = true;
       }
