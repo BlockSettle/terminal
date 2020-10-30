@@ -214,7 +214,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
          auto out = tx.getTxOutCopy(i);
          const auto addr = bs::Address::fromTxOut(out);
          const auto wallet = walletsManager_->getWalletByAddress(addr);
-         if (wallet->walletId() == cpfpWallet->walletId()) {
+         if (wallet != nullptr && wallet->walletId() == cpfpWallet->walletId()) {
             if (selInputs->SetUTXOSelection(tx.getThisHash(),
                out.getIndex())) {
                cntOutputs++;
