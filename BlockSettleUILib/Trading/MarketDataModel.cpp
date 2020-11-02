@@ -9,11 +9,12 @@
 
 */
 #include "MarketDataModel.h"
-#include "CommonTypes.h"
-#include "Colors.h"
-#include <QLocale>
 
+#include "Colors.h"
+#include "FuturesDefinitions.h"
 #include "UiUtils.h"
+
+#include <QLocale>
 
 MarketDataModel::MarketDataModel(const QStringList &showSettings, QObject* parent)
    : QStandardItemModel(parent)
@@ -165,7 +166,21 @@ void MarketDataModel::onMDUpdated(bs::network::Asset::Type assetType, const QStr
    }
 
    PriceMap fieldsMap;
-   FieldsToMap(assetType, mdFields, fieldsMap);
+
+   if (assetType == bs::network::Asset::Futures) {
+      const auto& definition = bs::network::getFutureDefinition(security.toStdString());
+
+      if (!definition.isValid()) {
+         return;
+      }
+
+      FieldsToMap(definition.displayAssetType, mdFields, fieldsMap);
+
+   } else {
+      FieldsToMap(assetType, mdFields, fieldsMap);
+   }
+
+
    auto groupItem = getGroup(assetType);
    auto childRow = groupItem->findRowWithText(security);
    const auto timeNow = QDateTime::currentDateTime();

@@ -437,6 +437,7 @@ QString UiUtils::displayPriceForAssetType(double price, bs::network::Asset::Type
    case bs::network::Asset::SpotFX:
       return UiUtils::displayPriceFX(price);
    case bs::network::Asset::SpotXBT:
+   case bs::network::Asset::Futures:
       return UiUtils::displayPriceXBT(price);
    case bs::network::Asset::PrivateMarket:
       return UiUtils::displayPriceCC(price);

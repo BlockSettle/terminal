@@ -159,7 +159,8 @@ private:
       GroupNotSelected,
       FXGroupType,
       XBTGroupType,
-      CCGroupType
+      CCGroupType,
+      FuturesGroupType
    };
 
    struct BalanceInfoContainer

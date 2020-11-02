@@ -11,11 +11,6 @@
 #include "RFQTicketXBT.h"
 #include "ui_RFQTicketXBT.h"
 
-#include <QComboBox>
-#include <QEvent>
-#include <QKeyEvent>
-#include <QLineEdit>
-#include <spdlog/spdlog.h>
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
 #include "BSErrorCodeStrings.h"
@@ -25,22 +20,29 @@
 #include "CoinSelection.h"
 #include "CurrencyPair.h"
 #include "EncryptionUtils.h"
+#include "FuturesDefinitions.h"
 #include "FXAmountValidator.h"
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
+#include "TradeSettings.h"
 #include "TradesUtils.h"
 #include "TxClasses.h"
 #include "UiUtils.h"
+#include "UtxoReservation.h"
+#include "UtxoReservationManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
-#include "UtxoReservationManager.h"
-#include "UtxoReservation.h"
-#include "TradeSettings.h"
+
+#include <QComboBox>
+#include <QEvent>
+#include <QKeyEvent>
+#include <QLineEdit>
+
+#include <spdlog/spdlog.h>
 
 #include <cstdlib>
-
 
 namespace {
    static const QString kEmptyInformationalLabelText = QString::fromStdString("--");
@@ -486,10 +488,20 @@ void RFQTicketXBT::SetCurrencyPair(const QString& currencyPair)
 
       ui_->labelSecurityId->setText(currencyPair);
 
-      CurrencyPair cp(currencyPair.toStdString());
+      const std::string& currencyString = currencyPair.toStdString();
 
-      currentProduct_ = QString::fromStdString(cp.NumCurrency());
-      contraProduct_ = QString::fromStdString(cp.DenomCurrency());
+      const auto futureDefinition = bs::network::getFutureDefinition(currencyString);
+      if (futureDefinition.isValid()) {
+         CurrencyPair cp(futureDefinition.ccyPair);
+
+         currentProduct_ = QString::fromStdString(cp.NumCurrency());
+         contraProduct_ = QString::fromStdString(cp.DenomCurrency());
+      } else {
+         CurrencyPair cp(currencyString);
+
+         currentProduct_ = QString::fromStdString(cp.NumCurrency());
+         contraProduct_ = QString::fromStdString(cp.DenomCurrency());
+      }
 
       ui_->pushButtonNumCcy->setText(currentProduct_);
       ui_->pushButtonNumCcy->setChecked(true);
@@ -1219,6 +1231,8 @@ void RFQTicketXBT::initProductGroupMap()
       , ProductGroupType::XBTGroupType);
    groupNameToType_.emplace(bs::network::Asset::toString(bs::network::Asset::SpotFX)
       , ProductGroupType::FXGroupType);
+   groupNameToType_.emplace(bs::network::Asset::toString(bs::network::Asset::Futures)
+      , ProductGroupType::FuturesGroupType);
 }
 
 RFQTicketXBT::ProductGroupType RFQTicketXBT::getProductGroupType(const QString& productGroup)
