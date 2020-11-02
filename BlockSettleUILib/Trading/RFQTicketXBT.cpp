@@ -890,6 +890,9 @@ void RFQTicketXBT::submitButtonClicked()
    case ProductGroupType::CCGroupType:
       rfq->assetType = bs::network::Asset::PrivateMarket;
       break;
+   case ProductGroupType::FuturesGroupType:
+      rfq->assetType = bs::network::Asset::Futures;
+      break;
    }
 
    const auto &rfqId = CryptoPRNG::generateRandom(8).toHexStr();
