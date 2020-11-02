@@ -702,6 +702,10 @@ bs::Address RFQTicketXBT::recvXbtAddressIfSet() const
 
 bool RFQTicketXBT::checkBalance(double qty) const
 {
+   if (currentGroupType_ == ProductGroupType::FuturesGroupType) {
+      return true;
+   }
+
    const auto balance = getBalanceInfo();
    if (getSelectedSide() == bs::network::Side::Buy) {
       if (currentGroupType_ == ProductGroupType::CCGroupType) {

@@ -155,6 +155,9 @@ WalletShieldBase::ProductType WalletShieldBase::getProductGroup(const QString &p
    else if (productGroup == QLatin1String("Spot FX")) {
       return ProductType::SpotFX;
    }
+   else if (productGroup == QLatin1String("Futures")) {
+      return ProductType::Futures;
+   }
 #ifndef QT_NO_DEBUG
    // You need to add logic for new Product group type
    Q_ASSERT(false);
