@@ -29,6 +29,7 @@
 #include "CurrencyPair.h"
 #include "CustomControls/CustomComboBox.h"
 #include "FastLock.h"
+#include "FuturesDefinitions.h"
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
@@ -184,7 +185,8 @@ void RFQDealerReply::updateRespQuantity()
 void RFQDealerReply::reset()
 {
    payInRecipId_ = UINT_MAX;
-   if (currentQRN_.empty()) {
+   if (currentQRN_.empty()
+      || (currentQRN_.assetType == bs::network::Asset::Type::Undefined)) {
       ui_->labelProductGroup->clear();
       ui_->labelSecurity->clear();
       ui_->labelReqProduct->clear();
@@ -199,15 +201,20 @@ void RFQDealerReply::reset()
       setBalanceOk(true);
    }
    else {
-      CurrencyPair cp(currentQRN_.security);
+      std::string ccyString;
+
+      if (currentQRN_.assetType == bs::network::Asset::Type::Futures) {
+         auto definition = bs::network::getFutureDefinition(currentQRN_.security);
+
+         ccyString = definition.ccyPair;
+      } else {
+         ccyString = currentQRN_.security;
+      }
+
+      CurrencyPair cp(ccyString);
       baseProduct_ = cp.NumCurrency();
       product_ = cp.ContraCurrency(currentQRN_.product);
-
-      const auto assetType = assetManager_->GetAssetTypeForSecurity(currentQRN_.security);
-      if (assetType == bs::network::Asset::Type::Undefined) {
-         logger_->error("[RFQDealerReply::reset] could not get asset type for {}", currentQRN_.security);
-      }
-      const auto priceDecimals = UiUtils::GetPricePrecisionForAssetType(assetType);
+      const auto priceDecimals = UiUtils::GetPricePrecisionForAssetType(currentQRN_.assetType);
       ui_->spinBoxBidPx->setDecimals(priceDecimals);
       ui_->spinBoxOfferPx->setDecimals(priceDecimals);
       ui_->spinBoxBidPx->setSingleStep(std::pow(10, -priceDecimals));
@@ -477,6 +484,10 @@ bool RFQDealerReply::checkBalance() const
       return false;
    }
 
+   if (currentQRN_.assetType == bs::network::Asset::Futures) {
+      return true;
+   }
+
    // #UTXO_MANAGER: Balance check should account for fee?
 
    if ((currentQRN_.side == bs::network::Side::Buy) != (product_ == baseProduct_)) {
@@ -631,7 +642,17 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
    auto replyData = std::make_shared<SubmitQuoteReplyData>();
    replyData->qn = bs::network::QuoteNotification(qrn, authKey_, price, "");
 
-   if (qrn.assetType != bs::network::Asset::SpotFX) {
+   auto quoteAssetType = qrn.assetType;
+   if (quoteAssetType == bs::network::Asset::Futures) {
+      auto definition = bs::network::getFutureDefinition(qrn.security);
+      if (!definition.isValid()) {
+         return;
+      }
+
+      quoteAssetType = definition.settlementAssetType;
+   }
+
+   if (quoteAssetType != bs::network::Asset::SpotFX) {
       replyData->xbtWallet = getSelectedXbtWallet(replyType);
       if (!replyData->xbtWallet) {
          SPDLOG_LOGGER_ERROR(logger_, "can't submit CC/XBT reply without XBT wallet");
@@ -644,7 +665,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
       }
    }
 
-   if (qrn.assetType == bs::network::Asset::SpotXBT) {
+   if (quoteAssetType == bs::network::Asset::SpotXBT) {
       replyData->authAddr = selectedAuthAddress(replyType);
       if (!replyData->authAddr.isValid()) {
          SPDLOG_LOGGER_ERROR(logger_, "can't submit XBT without valid auth address");
@@ -668,7 +689,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
    activeQuoteSubmits_.insert(replyData->qn.quoteRequestId);
    updateSubmitButton();
 
-   switch (qrn.assetType) {
+   switch (quoteAssetType) {
       case bs::network::Asset::SpotFX: {
          submit(price, replyData);
          break;
@@ -723,12 +744,12 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                            //group 1 for cc, group 2 for xbt
                            unsigned spendGroup = isSpendCC ? RECIP_GROUP_SPEND_1 : RECIP_GROUP_SPEND_2;
                            unsigned changGroup = isSpendCC ? RECIP_GROUP_CHANG_1 : RECIP_GROUP_CHANG_2;
-                           
+
                            std::map<unsigned, std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>>> recipientMap;
                            const auto recipient = bs::Address::fromAddressString(qrn.requestorRecvAddress).getRecipient(bs::XBTAmount{ spendVal });
                            std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recVec({recipient});
                            recipientMap.emplace(spendGroup, std::move(recVec));
-                           
+
 
                            Codec_SignerState::SignerState state;
                            state.ParseFromString(BinaryData::CreateFromHex(qrn.requestorAuthPublicKey).toBinStr());
@@ -988,9 +1009,8 @@ void RFQDealerReply::onBestQuotePrice(const QString reqId, double price, bool ow
          auto priceWidget = getActivePriceWidget();
          if (priceWidget && !own) {
             double improvedPrice = price;
-            const auto assetType = assetManager_->GetAssetTypeForSecurity(currentQRN_.security);
-            if (assetType != bs::network::Asset::Type::Undefined) {
-               const auto pip = std::pow(10, -UiUtils::GetPricePrecisionForAssetType(assetType));
+            if (currentQRN_.assetType != bs::network::Asset::Type::Undefined) {
+               const auto pip = std::pow(10, -UiUtils::GetPricePrecisionForAssetType(currentQRN_.assetType));
                if (priceWidget == ui_->spinBoxBidPx) {
                   improvedPrice += pip;
                } else {

@@ -18,6 +18,7 @@
 #include "CommonTypes.h"
 #include "CurrencyPair.h"
 #include "DealerCCSettlementContainer.h"
+#include "FuturesDefinitions.h"
 #include "QuoteRequestsWidget.h"
 #include "SettlementContainer.h"
 #include "UiUtils.h"
@@ -69,7 +70,7 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
             case Qt::DisplayRole : {
                switch(static_cast<Column>(index.column())) {
                   case Column::SecurityID : {
-                     return r->security_;
+                     return r->securityDefinition_;
                   }
 
                   case Column::Product : {
@@ -174,7 +175,7 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
 
             case Qt::TextColorRole: {
                if (secStatsCollector_ && index.column() < static_cast<int>(Column::Status)) {
-                  return secStatsCollector_->getColorFor(r->security_.toStdString());
+                  return secStatsCollector_->getColorFor(r->securityDefinition_.toStdString());
                }
                else {
                   return QVariant();
@@ -870,8 +871,20 @@ void QuoteRequestsModel::insertRfq(Group *group, const bs::network::QuoteReqNoti
    auto itQRN = notifications_.find(qrn.quoteRequestId);
 
    if (itQRN == notifications_.end()) {
-      const auto assetType = assetManager_->GetAssetTypeForSecurity(qrn.security);
-      const CurrencyPair cp(qrn.security);
+
+      std::string quoteCcy;
+
+      if (qrn.assetType == bs::network::Asset::Futures) {
+         const auto definition = bs::network::getFutureDefinition(qrn.security);
+         if (!definition.isValid()) {
+            return;
+         }
+         quoteCcy = definition.ccyPair;
+      } else {
+         quoteCcy = qrn.security;
+      }
+
+      const CurrencyPair cp(quoteCcy);
       const bool isBid = (qrn.side == bs::network::Side::Buy) ^ (cp.NumCurrency() == qrn.product);
       const double indicPrice = isBid ? mdPrices_[qrn.security][Role::BidPrice] :
          mdPrices_[qrn.security][Role::OfferPrice];
@@ -881,13 +894,14 @@ void QuoteRequestsModel::insertRfq(Group *group, const bs::network::QuoteReqNoti
          static_cast<int>(group->rfqs_.size()));
 
       group->rfqs_.push_back(std::unique_ptr<RFQ>(new RFQ(QString::fromStdString(qrn.security),
+         QString::fromStdString(quoteCcy),
          QString::fromStdString(qrn.product),
          tr(bs::network::Side::toString(qrn.side)),
          QString(),
          (qrn.assetType == bs::network::Asset::Type::PrivateMarket) ?
             UiUtils::displayCCAmount(qrn.quantity) : UiUtils::displayQty(qrn.quantity, qrn.product),
          QString(),
-         (!qFuzzyIsNull(indicPrice) ? UiUtils::displayPriceForAssetType(indicPrice, assetType)
+         (!qFuzzyIsNull(indicPrice) ? UiUtils::displayPriceForAssetType(indicPrice, qrn.assetType)
             : QString()),
          QString(),
          {
@@ -898,7 +912,7 @@ void QuoteRequestsModel::insertRfq(Group *group, const bs::network::QuoteReqNoti
          },
          indicPrice, 0.0, 0.0,
          qrn.side,
-         assetType,
+         qrn.assetType,
          qrn.quoteRequestId)));
 
       group->rfqs_.back()->idx_.parent_ = &group->idx_;
@@ -959,7 +973,6 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
    }
 
    const auto collector = std::make_shared<bs::SettlementStatsCollector>(container);
-   const auto assetType = assetManager_->GetAssetTypeForSecurity(container->security());
    const auto amountStr = (container->assetType() == bs::network::Asset::Type::PrivateMarket)
       ? UiUtils::displayCCAmount(container->quantity())
       : UiUtils::displayQty(container->quantity(), container->product());
@@ -968,14 +981,16 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
       static_cast<int>(market->groups_.size() + market->settl_.rfqs_.size()),
       static_cast<int>(market->groups_.size() + market->settl_.rfqs_.size()));
 
+   // settlement containers not ment to be used with futures
    market->settl_.rfqs_.push_back(std::unique_ptr<RFQ>(new RFQ(
+      QString::fromStdString(container->security()),
       QString::fromStdString(container->security()),
       QString::fromStdString(container->product()),
       tr(bs::network::Side::toString(container->side())),
       QString(),
       amountStr,
       QString(),
-      UiUtils::displayPriceForAssetType(container->price(), assetType),
+      UiUtils::displayPriceForAssetType(container->price(), container->assetType()),
       QString(),
       {
          QString(),
@@ -983,7 +998,7 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
       },
       container->price(), 0.0, 0.0,
       container->side(),
-      assetType,
+      container->assetType(),
       container->id())));
 
    market->settl_.rfqs_.back()->idx_.parent_ = &market->idx_;
@@ -1268,10 +1283,13 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
 void QuoteRequestsModel::updatePrices(const QString &security, const bs::network::MDField &pxBid,
    const bs::network::MDField &pxOffer, std::vector<std::pair<QModelIndex, QModelIndex>> *idxs)
 {
-   forEachSecurity(security, [security, pxBid, pxOffer, this, idxs](Group *grp, int index) {
-      const CurrencyPair cp(security.toStdString());
-      const bool isBuy = (grp->rfqs_[static_cast<std::size_t>(index)]->side_ == bs::network::Side::Buy)
-         ^ (cp.NumCurrency() == grp->rfqs_[static_cast<std::size_t>(index)]->product_.toStdString());
+   forEachSecurity(security, [pxBid, pxOffer, this, idxs](Group *grp, int index) {
+
+      const auto& rfqOnIndex = grp->rfqs_[static_cast<std::size_t>(index)];
+
+      const CurrencyPair cp(rfqOnIndex->securityCcyPair_.toStdString());
+      const bool isBuy = (rfqOnIndex->side_ == bs::network::Side::Buy)
+         ^ (cp.NumCurrency() == rfqOnIndex->product_.toStdString());
       double indicPrice = 0;
 
       if (isBuy && (pxBid.type != bs::network::MDField::Unknown)) {
@@ -1281,23 +1299,23 @@ void QuoteRequestsModel::updatePrices(const QString &security, const bs::network
       }
 
       if (indicPrice > 0) {
-         const auto prevPrice = grp->rfqs_[static_cast<std::size_t>(index)]->indicativePx_;
-         const auto assetType = grp->rfqs_[static_cast<std::size_t>(index)]->assetType_;
-         grp->rfqs_[static_cast<std::size_t>(index)]->indicativePxString_ =
+         const auto prevPrice = rfqOnIndex->indicativePx_;
+         const auto assetType = rfqOnIndex->assetType_;
+         rfqOnIndex->indicativePxString_ =
             UiUtils::displayPriceForAssetType(indicPrice, assetType);
-         grp->rfqs_[static_cast<std::size_t>(index)]->indicativePx_ = indicPrice;
+         rfqOnIndex->indicativePx_ = indicPrice;
 
          if (!qFuzzyIsNull(prevPrice)) {
             if (indicPrice > prevPrice) {
-               grp->rfqs_[static_cast<std::size_t>(index)]->indicativePxBrush_ = c_greenColor;
+               rfqOnIndex->indicativePxBrush_ = c_greenColor;
             }
             else if (indicPrice < prevPrice) {
-               grp->rfqs_[static_cast<std::size_t>(index)]->indicativePxBrush_ = c_redColor;
+               rfqOnIndex->indicativePxBrush_ = c_redColor;
             }
          }
 
          const QModelIndex idx = createIndex(index, static_cast<int>(Column::IndicPx),
-            &grp->rfqs_[static_cast<std::size_t>(index)]->idx_);
+            &(rfqOnIndex->idx_));
 
          if (!idxs) {
             emit dataChanged(idx, idx);

@@ -201,7 +201,8 @@ private:
    };
 
    struct RFQ {
-      QString security_;
+      QString securityDefinition_;
+      QString securityCcyPair_;
       QString product_;
       QString sideString_;
       QString party_;
@@ -230,7 +231,8 @@ private:
          , visible_(false)
       {}
 
-      RFQ(const QString &security,
+      RFQ(const QString &securityDefinition,
+         const QString &securityCcyPair,
          const QString &product,
          const QString &sideString,
          const QString &party,
@@ -245,7 +247,8 @@ private:
          bs::network::Side::Type side,
          bs::network::Asset::Type assetType,
          const std::string &reqId)
-         : security_(security)
+         : securityDefinition_(securityDefinition)
+         , securityCcyPair_(securityCcyPair)
          , product_(product)
          , sideString_(sideString)
          , party_(party)

@@ -163,7 +163,7 @@ namespace UiUtils
 
    QString modelPath(const QModelIndex &index, QAbstractItemModel *model);
 
-   extern const QLatin1String XbtCurrency;
+   extern const QString XbtCurrency;
 
    double actualXbtPrice(bs::XBTAmount amount, double price);
 

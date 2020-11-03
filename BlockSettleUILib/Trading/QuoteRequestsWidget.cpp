@@ -152,8 +152,7 @@ void QuoteRequestsWidget::onQuoteReqNotifSelected(const QModelIndex& index)
       bool isBuy = (qrn.side == bs::network::Side::Buy) ^ (cp.NumCurrency() == qrn.product);
       const double quotedPx = sortModel_->data(quoteIndex,
          static_cast<int>(QuoteRequestsModel::Role::QuotedPrice)).toDouble();
-      auto assetType = assetManager_->GetAssetTypeForSecurity(qrn.security);
-      const auto pip = qFuzzyCompare(bestQPx, quotedPx) ? 0.0 : std::pow(10, -UiUtils::GetPricePrecisionForAssetType(assetType));
+      const auto pip = qFuzzyCompare(bestQPx, quotedPx) ? 0.0 : std::pow(10, -UiUtils::GetPricePrecisionForAssetType(qrn.assetType));
       if (isBuy) {
          bidPx = bestQPx + pip;
       }

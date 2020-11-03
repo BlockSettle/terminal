@@ -152,8 +152,7 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
 
    timeoutReply_ = quote.expirationTime.addMSecs(quote.timeSkewMs);
 
-   const auto assetType = assetManager_->GetAssetTypeForSecurity(quote.security);
-   ui_->labelQuoteValue->setText(UiUtils::displayPriceForAssetType(quote.price, assetType));
+   ui_->labelQuoteValue->setText(UiUtils::displayPriceForAssetType(quote.price, quote.assetType));
    ui_->labelQuoteValue->show();
 
    if (quote.assetType == bs::network::Asset::SpotFX) {
