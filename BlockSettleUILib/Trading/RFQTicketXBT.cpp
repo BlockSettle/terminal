@@ -467,12 +467,16 @@ void RFQTicketXBT::SetProductGroup(const QString& productGroup)
       ui_->lineBeforeBalance->setVisible(true);
       ui_->balanceLayout->setVisible(true);
 
-      if (currentGroupType_ != ProductGroupType::FXGroupType) {
-         ui_->groupBoxSettlementInputs->setVisible(true);
-
-         ui_->authAddressLayout->setVisible(currentGroupType_ == ProductGroupType::XBTGroupType);
-      } else {
+      switch (currentGroupType_) {
+      case ProductGroupType::FXGroupType:
+      case ProductGroupType::FuturesGroupType:
          ui_->groupBoxSettlementInputs->setVisible(false);
+         break;
+      case ProductGroupType::XBTGroupType:
+         ui_->authAddressLayout->setVisible(true);
+      case ProductGroupType::CCGroupType:
+         ui_->groupBoxSettlementInputs->setVisible(true);
+         break;
       }
    } else {
       ui_->labelProductGroup->setText(tr("XXX"));

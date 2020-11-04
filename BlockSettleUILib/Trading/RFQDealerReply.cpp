@@ -290,7 +290,8 @@ void RFQDealerReply::updateQuoteReqNotification(const bs::network::QuoteReqNotif
    }
 
    if (qrn.assetType == bs::network::Asset::SpotFX ||
-      qrn.assetType == bs::network::Asset::Undefined) {
+      qrn.assetType == bs::network::Asset::Undefined ||
+      qrn.assetType == bs::network::Asset::Futures) {
          ui_->groupBoxSettlementInputs->hide();
    } else {
       ui_->groupBoxSettlementInputs->show();
