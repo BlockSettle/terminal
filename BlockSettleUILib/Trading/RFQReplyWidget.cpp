@@ -313,7 +313,8 @@ void RFQReplyWidget::onResetCurrentReservation(const std::shared_ptr<SubmitQuote
 void RFQReplyWidget::onOrder(const bs::network::Order &order)
 {
    const auto &quoteReqId = quoteProvider_->getQuoteReqId(order.quoteId);
-   if (order.assetType == bs::network::Asset::SpotFX) {
+   if (order.assetType == bs::network::Asset::SpotFX
+       || order.assetType == bs::network::Asset::Futures) {
       if (order.status == bs::network::Order::Filled) {
          onSettlementComplete(quoteReqId);
          quoteProvider_->delQuoteReqId(quoteReqId);
