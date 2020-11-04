@@ -130,7 +130,8 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
          return false;
       }
 
-      if (quote.assetType == bs::network::Asset::SpotFX) {
+      if (quote.assetType == bs::network::Asset::SpotFX
+         || quote.assetType == bs::network::Asset::Futures) {
          ui_->pushButtonAccept->show();
          setupTimer(Tradeable, quote.expirationTime.addMSecs(quote.timeSkewMs));
       } else {
