@@ -1355,6 +1355,10 @@ void QuoteRequestsModel::clearVisibleFlag(Group *g)
 
 void QuoteRequestsModel::onSecurityMDUpdated(const QString &security, const bs::network::MDFields &mdFields)
 {
+   // NOTE:
+   // there is duplicate for security name for future and XBT product XBT/EUR
+   // but that is fine for price updates, since it goes through all securities in all groups
+
    const auto pxBid = bs::network::MDField::get(mdFields, bs::network::MDField::PriceBid);
    const auto pxOffer = bs::network::MDField::get(mdFields, bs::network::MDField::PriceOffer);
    if (pxBid.type != bs::network::MDField::Unknown) {

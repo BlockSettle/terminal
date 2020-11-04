@@ -189,6 +189,11 @@ void ChartWidget::SendEoDRequest()
 void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString& security,
                               bs::network::MDFields mdFields)
 {
+   if (assetType == bs::network::Asset::Type::Futures) {
+      // ignore futures prices updates
+      return;
+   }
+
    if ((assetType == bs::network::Asset::Undefined) && security.isEmpty()) // Celer disconnected
    {
       isProductListInitialized_ = false;
@@ -386,7 +391,7 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
       maxTimestamp = qMax(maxTimestamp, static_cast<quint64>(candle.timestamp()));
 
       bool isLast = (i == 0);
-      if (candle.timestamp() >= lastCandle_.timestamp() 
+      if (candle.timestamp() >= lastCandle_.timestamp()
          || lastCandle_.timestamp() - candle.timestamp() < IntervalWidth( interval, 1, QDateTime::fromMSecsSinceEpoch(candle.timestamp(), Qt::TimeSpec::UTC))) {
          if (lastCandle_.timestamp() != 0) {
             logger_->error("Invalid distance between candles from mdhs. The last timestamp: {}  new timestamp: {}",
@@ -964,7 +969,7 @@ void ChartWidget::OnResetBtnClick()
 void ChartWidget::resizeEvent(QResizeEvent* event)
 {
    QWidget::resizeEvent(event);
-   QMetaObject::invokeMethod(this, &ChartWidget::UpdatePrintFlag, Qt::QueuedConnection);//UpdatePrintFlag should be called after chart have resized, so we put this method to event loop's queue 
+   QMetaObject::invokeMethod(this, &ChartWidget::UpdatePrintFlag, Qt::QueuedConnection);//UpdatePrintFlag should be called after chart have resized, so we put this method to event loop's queue
 }
 
 quint64 ChartWidget::GetCandleTimestamp(const uint64_t& timestamp, const Interval& interval) const
