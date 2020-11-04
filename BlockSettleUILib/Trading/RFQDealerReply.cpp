@@ -26,10 +26,10 @@
 #include "BSMessageBox.h"
 #include "CoinControlDialog.h"
 #include "CoinControlWidget.h"
+#include "CommonTypes.h"
 #include "CurrencyPair.h"
 #include "CustomControls/CustomComboBox.h"
 #include "FastLock.h"
-#include "FuturesDefinitions.h"
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
@@ -201,17 +201,7 @@ void RFQDealerReply::reset()
       setBalanceOk(true);
    }
    else {
-      std::string ccyString;
-
-      if (currentQRN_.assetType == bs::network::Asset::Type::Futures) {
-         auto definition = bs::network::getFutureDefinition(currentQRN_.security);
-
-         ccyString = definition.ccyPair;
-      } else {
-         ccyString = currentQRN_.security;
-      }
-
-      CurrencyPair cp(ccyString);
+      CurrencyPair cp(currentQRN_.security);
       baseProduct_ = cp.NumCurrency();
       product_ = cp.ContraCurrency(currentQRN_.product);
       const auto priceDecimals = UiUtils::GetPricePrecisionForAssetType(currentQRN_.assetType);
@@ -644,12 +634,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
 
    auto quoteAssetType = qrn.assetType;
    if (quoteAssetType == bs::network::Asset::Futures) {
-      auto definition = bs::network::getFutureDefinition(qrn.security);
-      if (!definition.isValid()) {
-         return;
-      }
-
-      quoteAssetType = definition.settlementAssetType;
+      quoteAssetType = bs::network::Asset::SpotFX;
    }
 
    if (quoteAssetType != bs::network::Asset::SpotFX) {

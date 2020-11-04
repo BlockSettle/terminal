@@ -18,7 +18,6 @@
 #include "CommonTypes.h"
 #include "CurrencyPair.h"
 #include "DealerCCSettlementContainer.h"
-#include "FuturesDefinitions.h"
 #include "QuoteRequestsWidget.h"
 #include "SettlementContainer.h"
 #include "UiUtils.h"
@@ -871,20 +870,7 @@ void QuoteRequestsModel::insertRfq(Group *group, const bs::network::QuoteReqNoti
    auto itQRN = notifications_.find(qrn.quoteRequestId);
 
    if (itQRN == notifications_.end()) {
-
-      std::string quoteCcy;
-
-      if (qrn.assetType == bs::network::Asset::Futures) {
-         const auto definition = bs::network::getFutureDefinition(qrn.security);
-         if (!definition.isValid()) {
-            return;
-         }
-         quoteCcy = definition.ccyPair;
-      } else {
-         quoteCcy = qrn.security;
-      }
-
-      const CurrencyPair cp(quoteCcy);
+      const CurrencyPair cp(qrn.security);
       const bool isBid = (qrn.side == bs::network::Side::Buy) ^ (cp.NumCurrency() == qrn.product);
       const double indicPrice = isBid ? mdPrices_[qrn.security][Role::BidPrice] :
          mdPrices_[qrn.security][Role::OfferPrice];
@@ -894,7 +880,6 @@ void QuoteRequestsModel::insertRfq(Group *group, const bs::network::QuoteReqNoti
          static_cast<int>(group->rfqs_.size()));
 
       group->rfqs_.push_back(std::unique_ptr<RFQ>(new RFQ(QString::fromStdString(qrn.security),
-         QString::fromStdString(quoteCcy),
          QString::fromStdString(qrn.product),
          tr(bs::network::Side::toString(qrn.side)),
          QString(),
@@ -983,7 +968,6 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
 
    // settlement containers not ment to be used with futures
    market->settl_.rfqs_.push_back(std::unique_ptr<RFQ>(new RFQ(
-      QString::fromStdString(container->security()),
       QString::fromStdString(container->security()),
       QString::fromStdString(container->product()),
       tr(bs::network::Side::toString(container->side())),
@@ -1287,7 +1271,7 @@ void QuoteRequestsModel::updatePrices(const QString &security, const bs::network
 
       const auto& rfqOnIndex = grp->rfqs_[static_cast<std::size_t>(index)];
 
-      const CurrencyPair cp(rfqOnIndex->securityCcyPair_.toStdString());
+      const CurrencyPair cp(rfqOnIndex->securityDefinition_.toStdString());
       const bool isBuy = (rfqOnIndex->side_ == bs::network::Side::Buy)
          ^ (cp.NumCurrency() == rfqOnIndex->product_.toStdString());
       double indicPrice = 0;

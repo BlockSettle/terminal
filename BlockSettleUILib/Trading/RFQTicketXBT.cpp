@@ -18,9 +18,9 @@
 #include "CCAmountValidator.h"
 #include "CoinControlDialog.h"
 #include "CoinSelection.h"
+#include "CommonTypes.h"
 #include "CurrencyPair.h"
 #include "EncryptionUtils.h"
-#include "FuturesDefinitions.h"
 #include "FXAmountValidator.h"
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"
@@ -488,20 +488,10 @@ void RFQTicketXBT::SetCurrencyPair(const QString& currencyPair)
 
       ui_->labelSecurityId->setText(currencyPair);
 
-      const std::string& currencyString = currencyPair.toStdString();
+      CurrencyPair cp(currencyPair.toStdString());
 
-      const auto futureDefinition = bs::network::getFutureDefinition(currencyString);
-      if (futureDefinition.isValid()) {
-         CurrencyPair cp(futureDefinition.ccyPair);
-
-         currentProduct_ = QString::fromStdString(cp.NumCurrency());
-         contraProduct_ = QString::fromStdString(cp.DenomCurrency());
-      } else {
-         CurrencyPair cp(currencyString);
-
-         currentProduct_ = QString::fromStdString(cp.NumCurrency());
-         contraProduct_ = QString::fromStdString(cp.DenomCurrency());
-      }
+      currentProduct_ = QString::fromStdString(cp.NumCurrency());
+      contraProduct_ = QString::fromStdString(cp.DenomCurrency());
 
       ui_->pushButtonNumCcy->setText(currentProduct_);
       ui_->pushButtonNumCcy->setChecked(true);

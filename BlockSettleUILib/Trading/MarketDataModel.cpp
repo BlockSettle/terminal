@@ -11,7 +11,7 @@
 #include "MarketDataModel.h"
 
 #include "Colors.h"
-#include "FuturesDefinitions.h"
+#include "CommonTypes.h"
 #include "UiUtils.h"
 
 #include <QLocale>
@@ -168,14 +168,7 @@ void MarketDataModel::onMDUpdated(bs::network::Asset::Type assetType, const QStr
    PriceMap fieldsMap;
 
    if (assetType == bs::network::Asset::Futures) {
-      const auto& definition = bs::network::getFutureDefinition(security.toStdString());
-
-      if (!definition.isValid()) {
-         return;
-      }
-
-      FieldsToMap(definition.displayAssetType, mdFields, fieldsMap);
-
+      FieldsToMap(bs::network::Asset::SpotXBT, mdFields, fieldsMap);
    } else {
       FieldsToMap(assetType, mdFields, fieldsMap);
    }
