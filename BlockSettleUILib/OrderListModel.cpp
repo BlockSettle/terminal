@@ -644,17 +644,7 @@ void OrderListModel::processUpdateOrders(const Blocksettle::Communication::Proxy
             break;
       }
 
-      const bool isXBT = (data.product() == "XBT") || (data.product_against() == "XBT");
-      const bool isCC = (assetManager_->getCCLotSize(data.product())) > 0
-         || (assetManager_->getCCLotSize(data.product_against()) > 0);
-
-      if (isCC) {
-         order.assetType = bs::network::Asset::PrivateMarket;
-      } else if (isXBT) {
-         order.assetType = bs::network::Asset::SpotXBT;
-      } else {
-         order.assetType = bs::network::Asset::SpotFX;
-      }
+      order.assetType = static_cast<bs::network::Asset::Type>(data.trade_type());
 
       orderId += 1;
       order.exchOrderId = QString::number(orderId);
