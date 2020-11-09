@@ -27,7 +27,7 @@ pipeline {
                     steps {
                         sh 'ssh ${MACOS_HOST_USER}@${MACOS_HOST_IP} "rm -rf ~/Workspace/terminal"'
                         sh 'ssh ${MACOS_HOST_USER}@${MACOS_HOST_IP} "cd ~/Workspace ; git clone --single-branch --branch ${TAG} https://github.com/BlockSettle/terminal.git ; cd terminal ; git submodule init ; git submodule update ; cd common ; git submodule init ; git submodule update"'
-                        sh 'ssh ${MACOS_HOST_USER}@${MACOS_HOST_IP} "export PATH=/usr/local/opt/ccache/libexec:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin ; eval \"$(pyenv init -)\"; ccache -s ; cd /Users/${MACOS_HOST_USER}/Workspace/terminal/Deploy/MacOSX ; security unlock-keychain -p ${MAC_CHAIN_PAS} login.keychain ; ./package.sh -production"'
+                        sh 'ssh ${MACOS_HOST_USER}@${MACOS_HOST_IP} "export PATH=/usr/local/opt/ccache/libexec:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin ; eval \'$(pyenv init -)\'; ccache -s ; cd /Users/${MACOS_HOST_USER}/Workspace/terminal/Deploy/MacOSX ; security unlock-keychain -p ${MAC_CHAIN_PAS} login.keychain ; ./package.sh -production"'
                         sh "scp ${MACOS_HOST_USER}@${MACOS_HOST_IP}:~/Workspace/terminal/Deploy/MacOSX/BlockSettle.dmg ${WORKSPACE}/terminal/Deploy/BlockSettle.dmg"
                     }
                 }
