@@ -14,6 +14,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
+#include <QEvent>
 
 StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
@@ -106,6 +107,8 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
    setBalances();
 
    containerStatusLabel_->setPixmap(iconContainerOffline_);
+
+   connectionStatusLabel_->installEventFilter(this);
 }
 
 StatusBarView::StatusBarView(QStatusBar *parent)
@@ -270,6 +273,7 @@ void StatusBarView::onPrepareConnection(NetworkType netType, const std::string &
 void StatusBarView::onNewBlock(unsigned topBlock, unsigned)
 {
    QMetaObject::invokeMethod(this, [this, topBlock] {
+      timeSinceLastBlock_ = std::chrono::steady_clock::now();
       updateConnectionStatusDetails(static_cast<ArmoryState>(armoryState_), topBlock);
    });
 }
@@ -448,9 +452,12 @@ void StatusBarView::updateConnectionStatusDetails(ArmoryState state, unsigned in
          connectionStatusLabel_->setToolTip(tr("Database Offline"));
          break;
 
-      case ArmoryState::Ready:
-         connectionStatusLabel_->setToolTip(tr("Connected to DB (%1 blocks)").arg(topBlock));
+      case ArmoryState::Ready: {
+         auto lastBlockMinutes = (std::chrono::steady_clock::now() - timeSinceLastBlock_) / std::chrono::minutes(1);
+         auto tooltip = tr("Connected to DB (%1 blocks, last block updated %2 minute(s) ago)").arg(armory_->topBlock()).arg(lastBlockMinutes);
+         connectionStatusLabel_->setToolTip(tooltip);
          break;
+      }
 
       case ArmoryState::Error:
          // Do not update error tooltip
@@ -634,4 +641,12 @@ QString StatusBarView::getImportingText() const
       }
       return tr("Rescanning blockchain for wallets %1...").arg(walletNames.join(QLatin1Char(',')));
    }
+}
+
+bool StatusBarView::eventFilter(QObject *object, QEvent *event)
+{
+    if (object == connectionStatusLabel_ && event->type() == QEvent::ToolTip) {
+        updateConnectionStatusDetails(static_cast<ArmoryState>(armoryState_), blockNum_);
+    }
+    return false;
 }

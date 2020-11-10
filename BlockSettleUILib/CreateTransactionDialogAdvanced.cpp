@@ -199,7 +199,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
    }
    allowAutoSelInputs_ = false;
 
-   const auto &cbTXs = [this, tx, txOutIndices]
+   const auto &cbTXs = [this, tx, txOutIndices, cpfpWallet=wallet]
       (const AsyncClient::TxBatchResult &result, std::exception_ptr)
    {  //TODO: handle eptr!=null somehow
       auto selInputs = transactionData_->getSelectedInputs();
@@ -227,7 +227,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
          auto out = tx.getTxOutCopy(i);
          const auto addr = bs::Address::fromTxOut(out);
          const auto wallet = walletsManager_->getWalletByAddress(addr);
-         if (wallet) {
+         if (wallet != nullptr && wallet->walletId() == cpfpWallet->walletId()) {
             if (selInputs->SetUTXOSelection(tx.getThisHash(),
                out.getIndex())) {
                cntOutputs++;

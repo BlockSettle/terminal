@@ -38,7 +38,6 @@
 #include <QStyleFactory>
 #include <QtGui/QGuiApplication>
 #include <QTimer>
-#include <QTimer>
 #include <QtPlatformHeaders/QWindowsWindowFunctions>
 #include <QtPlugin>
 #include <QtQml/QQmlApplicationEngine>
@@ -293,6 +292,7 @@ static int QMLApp(int argc, char **argv
 
    QTimer terminalConnectionTimer;
    bool terminalConnected = false;
+   bool timerStarted = false;
 
    try {
       //setup signer's own GUI connection
@@ -338,8 +338,15 @@ static int QMLApp(int argc, char **argv
          //BST-2786
          terminalConnectionTimer.setInterval(std::chrono::milliseconds{ /*5*/7000 });  // 5s is too little for some use cases
 
-         // NOTE: SignerAdapter::ready is called multiple times
-         QObject::connect(&adapter, SIGNAL(ready()), &terminalConnectionTimer, SLOT(start()));
+         QObject::connect(&adapter, &SignerAdapter::ready, [&timerStarted, &terminalConnectionTimer]()
+            {
+               if (!timerStarted) {
+                  terminalConnectionTimer.start();
+                  timerStarted = true;
+               }
+            });
+
+
          QObject::connect(&adapter, &SignerAdapter::peerConnected, [&terminalConnected] {
             terminalConnected = true;
          });

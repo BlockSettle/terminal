@@ -93,6 +93,8 @@ private:
    void updateProgress(float progress, unsigned secondsRem);
    [[deprecated]] QString getImportingText() const;
 
+   bool eventFilter(QObject *object, QEvent *event) override;
+
 private:
    QStatusBar     *statusBar_;
 
@@ -127,6 +129,8 @@ private:
    std::unordered_map<std::string, BTCNumericTypes::balance_type> xbtBalances_;
    int            armoryState_{ -1 };
    unsigned int   blockNum_{ 0 };
+
+   std::chrono::steady_clock::time_point timeSinceLastBlock_{std::chrono::steady_clock::now()};
 };
 
 #endif // __STATUS_BAR_VIEW_H__

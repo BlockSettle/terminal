@@ -12,6 +12,7 @@ BSConfirmedPasswordInput 1.0 BSConfirmedPasswordInput.qml
 BSPasswordInputToken     1.0 BSPasswordInputToken.qml
 BSPasswordInputAuthLeaf  1.0 BSPasswordInputAuthLeaf.qml
 BSPasswordInputSettlementLeaf 1.0 BSPasswordInputSettlementLeaf.qml
+BSPasswordInputEnableTrading  1.0 BSPasswordInputEnableTrading.qml
 BSPasswordInputPromoteWallet  1.0 BSPasswordInputPromoteWallet.qml
 BSPasswordInputAutoSignDialog 1.0 BSPasswordInputAutoSignDialog.qml
 BSPasswordInputRevokeAuthAddress 1.0 BSPasswordInputRevokeAuthAddress.qml

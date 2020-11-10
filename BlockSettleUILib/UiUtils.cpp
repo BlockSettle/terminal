@@ -189,7 +189,7 @@ int UiUtils::selectWalletInCombobox(QComboBox* comboBox, const std::string& wall
             auto walletType =
                static_cast<UiUtils::WalletsTypes>(comboBox->itemData(i, WalletType).toInt());
 
-            if (type != walletType) {
+            if ((type & walletType) == 0) {
                continue;
             }
          }

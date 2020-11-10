@@ -153,7 +153,7 @@ private slots:
    void CompleteUIOnlineView();
    void CompleteDBConnection();
 
-   bool createWallet(bool primary, const std::function<void()> & = nullptr);
+   bool createPrimaryWallet();
    void onCreatePrimaryWalletRequest();
 
    void acceptMDAgreement();
@@ -167,6 +167,8 @@ private slots:
    void onTabWidgetCurrentChanged(const int &index);
    void onSyncWallets();
    void onSignerVisibleChanged();
+
+   void onAuthLeafCreated();
 
 private:
    std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
@@ -272,7 +274,7 @@ private:
 
    void InitWidgets();
 
-   void promoteToPrimaryIfNeeded();
+   void enableTradingIfNeeded();
 
    void showLegacyWarningIfNeeded();
 

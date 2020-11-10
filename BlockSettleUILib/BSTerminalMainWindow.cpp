@@ -494,6 +494,8 @@ void BSTerminalMainWindow::LoadWallets()
       }
    });
 
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::AuthLeafCreated, this, &BSTerminalMainWindow::onAuthLeafCreated);
+
    onSyncWallets();
 }
 
@@ -672,7 +674,7 @@ void BSTerminalMainWindow::onNeedNewWallet()
    if (!initialWalletCreateDialogShown_) {
       initialWalletCreateDialogShown_ = true;
       const auto &deferredDialog = [this]{
-         createWallet(true);
+         ui_->widgetWallets->onNewWallet();
       };
       addDeferredDialog(deferredDialog);
    }
@@ -1177,54 +1179,42 @@ void BSTerminalMainWindow::connectSigner()
    signContainer_->Start();
 }
 
-bool BSTerminalMainWindow::createWallet(bool primary, const std::function<void()> &cb)
+bool BSTerminalMainWindow::createPrimaryWallet()
 {
-   if (primary) {
-      auto primaryWallet = walletsMgr_->getPrimaryWallet();
-      if (primaryWallet) {
-         if (cb) {
-            cb();
-         }
-         return true;
-      }
+   auto primaryWallet = walletsMgr_->getPrimaryWallet();
+   if (primaryWallet) {
+      return true;
+   }
 
-      const auto &hdWallets = walletsMgr_->hdWallets();
-      const auto fullWalletIt = std::find_if(hdWallets.begin(), hdWallets.end(), [](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
-         return !wallet->isHardwareWallet() && !wallet->isOffline();
-      });
-      if (fullWalletIt != hdWallets.end()) {
-         auto wallet = *fullWalletIt;
+
+   for (const auto &wallet : walletsMgr_->hdWallets()) {
+      if (!wallet->isOffline() && !wallet->isHardwareWallet()) {
          BSMessageBox qry(BSMessageBox::question, tr("Promote to primary wallet"), tr("Promote to primary wallet?")
             , tr("To trade through BlockSettle, you are required to have a wallet which"
                " supports the sub-wallets required to interact with the system. Each Terminal"
                " may only have one Primary Wallet. Do you wish to promote '%1'?")
             .arg(QString::fromStdString(wallet->name())), this);
          if (qry.exec() == QDialog::Accepted) {
-            walletsMgr_->PromoteHDWallet(wallet->walletId(), [this, cb](bs::error::ErrorCode result) {
-               if (result == bs::error::ErrorCode::NoError) {
-                  if (cb) {
-                     cb();
-                  }
-                  // If wallet was promoted to primary we could try to get chat keys now
-                  tryGetChatKeys();
-               }
-            });
+            walletsMgr_->PromoteWalletToPrimary(wallet->walletId());
             return true;
          }
-         return false;
       }
    }
 
-   ui_->widgetWallets->onNewWallet();
-   if (cb) {
-      cb();
+   CreatePrimaryWalletPrompt dlg;
+   int rc = dlg.exec();
+   if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
+      ui_->widgetWallets->CreateNewWallet();
+   } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
+      ui_->widgetWallets->ImportNewWallet();
    }
+
    return true;
 }
 
 void BSTerminalMainWindow::onCreatePrimaryWalletRequest()
 {
-   bool result = createWallet(true);
+   bool result = createPrimaryWallet();
 
    if (!result) {
       // Need to inform UI about rejection
@@ -1264,7 +1254,7 @@ void BSTerminalMainWindow::onSignerConnError(SignContainer::ConnectionError erro
 void BSTerminalMainWindow::onGenerateAddress()
 {
    if (walletsMgr_->hdWallets().empty()) {
-      createWallet(true);
+      createPrimaryWallet();
       return;
    }
 
@@ -1310,6 +1300,8 @@ void BSTerminalMainWindow::onSend()
       if (!wallet.ids.empty()) {
          selectedWalletId = wallet.ids[0];
       }
+   } else {
+      selectedWalletId = applicationSettings_->getDefaultWalletId();
    }
 
    std::shared_ptr<CreateTransactionDialog> dlg;
@@ -1451,9 +1443,6 @@ void BSTerminalMainWindow::openCCTokenDialog()
    if (walletsMgr_->hasPrimaryWallet()) {
       lbdCCTokenDlg();
    }
-   else {
-      createWallet(true, lbdCCTokenDlg);
-   }
 }
 
 void BSTerminalMainWindow::onLogin()
@@ -1465,13 +1454,7 @@ void BSTerminalMainWindow::onLogin()
 
    if (walletsSynched_ && !walletsMgr_->getPrimaryWallet()) {
       addDeferredDialog([this] {
-         CreatePrimaryWalletPrompt dlg;
-         int rc = dlg.exec();
-         if (rc == CreatePrimaryWalletPrompt::CreateWallet) {
-            ui_->widgetWallets->CreateNewWallet();
-         } else if (rc == CreatePrimaryWalletPrompt::ImportWallet) {
-            ui_->widgetWallets->ImportNewWallet();
-         }
+         createPrimaryWallet();
       });
       return;
    }
@@ -1563,7 +1546,7 @@ void BSTerminalMainWindow::onUserLoggedIn()
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
    const auto &deferredDialog = [this, userId] {
       walletsMgr_->setUserId(userId);
-      promoteToPrimaryIfNeeded();
+      enableTradingIfNeeded();
    };
    addDeferredDialog(deferredDialog);
 
@@ -1690,6 +1673,7 @@ void BSTerminalMainWindow::showZcNotification(const TxInfo &txInfo)
    lines << tr("TX: %1 %2 %3").arg(tr(bs::sync::Transaction::toString(txInfo.direction)))
       .arg(txInfo.wallet->displayTxValue(txInfo.value)).arg(txInfo.wallet->displaySymbol());
    lines << tr("Wallet: %1").arg(QString::fromStdString(txInfo.wallet->name()));
+   lines << (txInfo.tx.isRBF() ? tr("RBF Enabled") : tr("RBF Disabled"));
    lines << txInfo.mainAddress;
 
    const auto &title = tr("New blockchain transaction");
@@ -2078,14 +2062,14 @@ void BSTerminalMainWindow::InitWidgets()
    });
 }
 
-void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
+void BSTerminalMainWindow::enableTradingIfNeeded()
 {
    // Can't proceed without userId
    if (!walletsMgr_->isUserIdSet()) {
       return;
    }
 
-   auto promoteToPrimary = [this](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
+   auto enableTradingFunc = [this](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
       addDeferredDialog([this, wallet] {
          BSMessageBox qry(BSMessageBox::question, tr("Upgrade Wallet"), tr("Enable Trading")
             , tr("BlockSettle requires you to hold sub-wallets with Authentication Addresses to interact with our trading system.<br><br>"
@@ -2095,34 +2079,11 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
             , this);
          qry.enableRichText();
          if (qry.exec() == QDialog::Accepted) {
-            walletsMgr_->PromoteHDWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {
+            walletsMgr_->EnableXBTTradingInWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {
                if (result == bs::error::ErrorCode::NoError) {
                   // If wallet was promoted to primary we could try to get chat keys now
                   tryGetChatKeys();
                   walletsMgr_->setUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
-
-                  auto authWallet = walletsMgr_->getAuthWallet();
-                  if (authWallet != nullptr) {
-                     // check that current wallet has auth address that was submitted at some point
-                     // if there is no such address - display auth address dialog, so user could submit
-                     auto submittedAddresses = celerConnection_->GetSubmittedAuthAddressSet();
-                     auto existingAddresses = authWallet->getUsedAddressList();
-
-                     bool haveSubmittedAddress = false;
-                     for ( const auto& address : existingAddresses) {
-                        if (submittedAddresses.find(address.display()) != submittedAddresses.end()) {
-                           haveSubmittedAddress = true;
-                           break;
-                        }
-                     }
-
-                     if (!haveSubmittedAddress) {
-                        addDeferredDialog([this]()
-                                          {
-                                             openAuthManagerDialog();
-                                          });
-                     }
-                  }
                }
             });
          }
@@ -2131,18 +2092,8 @@ void BSTerminalMainWindow::promoteToPrimaryIfNeeded()
 
    auto primaryWallet = walletsMgr_->getPrimaryWallet();
    if (primaryWallet) {
-      for (const auto &leaf : primaryWallet->getLeaves()) {
-         if (leaf->type() == bs::core::wallet::Type::Settlement) {
-            return;
-         }
-      }
-      promoteToPrimary(primaryWallet);
-      return;
-   }
-   for (const auto &hdWallet : walletsMgr_->hdWallets()) {
-      if (!hdWallet->isOffline() && !hdWallet->isHardwareWallet()) {
-         promoteToPrimary(hdWallet);
-         break;
+      if (!primaryWallet->tradingEnabled()) {
+         enableTradingFunc(primaryWallet);
       }
    }
 }
@@ -2503,5 +2454,31 @@ void BSTerminalMainWindow::onBootstrapDataLoaded(const std::string& data)
    if (bootstrapDataManager_->setReceivedData(data)) {
       authManager_->SetLoadedValidationAddressList(bootstrapDataManager_->GetAuthValidationList());
       ccFileManager_->SetLoadedDefinitions(bootstrapDataManager_->GetCCDefinitions());
+   }
+}
+
+void BSTerminalMainWindow::onAuthLeafCreated()
+{
+   auto authWallet = walletsMgr_->getAuthWallet();
+   if (authWallet != nullptr) {
+      // check that current wallet has auth address that was submitted at some point
+      // if there is no such address - display auth address dialog, so user could submit
+      auto submittedAddresses = celerConnection_->GetSubmittedAuthAddressSet();
+      auto existingAddresses = authWallet->getUsedAddressList();
+
+      bool haveSubmittedAddress = false;
+      for ( const auto& address : existingAddresses) {
+         if (submittedAddresses.find(address.display()) != submittedAddresses.end()) {
+            haveSubmittedAddress = true;
+            break;
+         }
+      }
+
+      if (!haveSubmittedAddress) {
+         addDeferredDialog([this]()
+                           {
+                              openAuthManagerDialog();
+                           });
+      }
    }
 }

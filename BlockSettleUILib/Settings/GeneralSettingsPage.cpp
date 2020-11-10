@@ -59,7 +59,7 @@ void GeneralSettingsPage::init(const ApplicationSettings::State& state)
 
 void GeneralSettingsPage::display()
 {
-   if (appSettings_) {
+   if (appSettings_ && walletsMgr_) {
       ui_->checkBoxLaunchToTray->setChecked(appSettings_->get<bool>(ApplicationSettings::launchToTray));
       ui_->checkBoxMinimizeToTray->setChecked(appSettings_->get<bool>(ApplicationSettings::minimizeToTray));
       ui_->checkBoxCloseToTray->setChecked(appSettings_->get<bool>(ApplicationSettings::closeToTray));
@@ -75,6 +75,24 @@ void GeneralSettingsPage::display()
       ui_->logMsgFileName->setText(QString::fromStdString(cfg.at(1).fileName));
       ui_->logLevel->setCurrentIndex(static_cast<int>(cfg.at(0).level));
       ui_->logLevelMsg->setCurrentIndex(static_cast<int>(cfg.at(1).level));
+
+      UiUtils::fillHDWalletsComboBox(ui_->comboBox_defaultWallet, walletsMgr_, UiUtils::WalletsTypes::All);
+
+      auto walletId = appSettings_->getDefaultWalletId();
+      bool setFirstWalletAsDefault = false;
+      if (!walletId.empty()) {
+         int selectedIndex = UiUtils::selectWalletInCombobox(ui_->comboBox_defaultWallet, walletId, UiUtils::WalletsTypes::All);
+         if (selectedIndex == -1) {
+            setFirstWalletAsDefault = true;
+         }
+      } else {
+         setFirstWalletAsDefault = true;
+      }
+
+      if (setFirstWalletAsDefault) {
+         walletId = UiUtils::getSelectedWalletId(ui_->comboBox_defaultWallet);
+         appSettings_->setDefaultWalletId(walletId);
+      }
    }
    else {
       ui_->checkBoxLaunchToTray->setChecked(settings_.at(ApplicationSettings::launchToTray).toBool());
@@ -94,8 +112,9 @@ void GeneralSettingsPage::display()
       ui_->logMsgFileName->setText(QString::fromStdString(cfgMessages.fileName));
       ui_->logLevel->setCurrentIndex(static_cast<int>(cfgLog.level));
       ui_->logLevelMsg->setCurrentIndex(static_cast<int>(cfgMessages.level));
-   }
 
+      //TODO: handle default wallet if needed
+   }
    ui_->warnLabel->hide();
 }
 
@@ -222,6 +241,9 @@ void GeneralSettingsPage::apply()
          emit putSetting(ApplicationSettings::logMessages, logSettings);
       }
    }
+
+   const auto walletId = UiUtils::getSelectedWalletId(ui_->comboBox_defaultWallet);
+   appSettings_->setDefaultWalletId(walletId);
 }
 
 void GeneralSettingsPage::onSelectLogFile()
