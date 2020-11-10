@@ -121,25 +121,55 @@ private:
    };
 
    struct Group {
-      std::deque<std::unique_ptr<Data>> rows_;
-      QString security_;
-      IndexHelper idx_;
+      std::deque<std::unique_ptr<Data>>   rows_;
+      QString                             security_;
+      IndexHelper                         idx_;
 
       Group(const QString &sec, IndexHelper *parent)
          : security_(sec)
          , idx_(parent, this, DataType::Group)
       {
       }
+
+      virtual ~Group() = default;
+
+      virtual void addOrder(const bs::network::Order& order);
+
+      virtual QVariant getQuantity() const;
+      virtual QVariant getQuantityColor() const;
+   protected:
+      void addRow(const bs::network::Order& order);
    };
+
+   struct FuturesGroup : public Group
+   {
+      FuturesGroup(const QString &sec, IndexHelper *parent)
+         : Group(sec, parent)
+      {}
+
+      ~FuturesGroup() override = default;
+
+      void addOrder(const bs::network::Order& order) override;
+
+      QVariant getQuantity() const override;
+      QVariant getQuantityColor() const override;
+
+   private:
+      double quantity_ = 0;
+   };
+
 
    struct Market {
       std::vector<std::unique_ptr<Group>> rows_;
-      QString name_;
-      IndexHelper idx_;
-      QFont font_;
 
-      Market(const QString &name, IndexHelper *parent)
-         : name_(name)
+      bs::network::Asset::Type            assetType_;
+      QString                             name_;
+      IndexHelper                         idx_;
+      QFont                               font_;
+
+      Market(const bs::network::Asset::Type assetType, IndexHelper *parent)
+         : assetType_{assetType}
+         , name_{tr(bs::network::Asset::toString(assetType))}
          , idx_(parent, this, DataType::Market)
       {
          font_.setBold(true);

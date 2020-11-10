@@ -129,6 +129,15 @@ QVariant OrderListModel::data(const QModelIndex &index, int role) const
                case Qt::DisplayRole : {
                   if (index.column() == 0) {
                      return g->security_;
+                  } else if (index.column() == Header::Quantity) {
+                     return g->getQuantity();
+                  } else {
+                     return QVariant();
+                  }
+               }
+               case Qt::ForegroundRole : {
+                  if (index.column() == Header::Quantity) {
+                     return g->getQuantityColor();
                   } else {
                      return QVariant();
                   }
@@ -590,8 +599,7 @@ void OrderListModel::createGroupsIfNeeded(const bs::network::Order &order, Marke
    // Create market if it doesn't exist.
    if (!marketItem) {
       beginInsertRows(sidx, static_cast<int>(sg->rows_.size()), static_cast<int>(sg->rows_.size()));
-      sg->rows_.push_back(make_unique<Market>(
-         tr(bs::network::Asset::toString(order.assetType)), &sg->idx_));
+      sg->rows_.push_back(make_unique<Market>(order.assetType, &sg->idx_));
       marketItem = sg->rows_.back().get();
       endInsertRows();
    }
@@ -600,8 +608,15 @@ void OrderListModel::createGroupsIfNeeded(const bs::network::Order &order, Marke
    if (!groupItem) {
       beginInsertRows(createIndex(findMarket(sg, marketItem), 0, &marketItem->idx_),
          static_cast<int>(marketItem->rows_.size()), static_cast<int>(marketItem->rows_.size()));
-      marketItem->rows_.push_back(make_unique<Group>(
-         QString::fromStdString(order.security), &marketItem->idx_));
+
+      if (getStatusGroup(order) == StatusGroup::UnSettled && order.assetType == bs::network::Asset::Type::Futures) {
+         marketItem->rows_.push_back(make_unique<FuturesGroup>(
+            QString::fromStdString(order.security), &marketItem->idx_));
+      } else {
+         marketItem->rows_.push_back(make_unique<Group>(
+            QString::fromStdString(order.security), &marketItem->idx_));
+      }
+
       groupItem = marketItem->rows_.back().get();
       endInsertRows();
    }
@@ -710,23 +725,7 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
    if (found.second < 0) {
       beginInsertRows(parentIndex, 0, 0);
 
-      // As quantity is now could be negative need to invert value
-      double value = - order.quantity * order.price;
-      if (order.security.substr(0, order.security.find('/')) != order.product) {
-         value = order.quantity / order.price;
-      }
-
-      groupItem->rows_.push_front(make_unique<Data>(
-         UiUtils::displayTimeMs(order.dateTime),
-         QString::fromStdString(order.product),
-         tr(bs::network::Side::toString(order.side)),
-         UiUtils::displayQty(order.quantity, order.security, order.product, order.assetType),
-         UiUtils::displayPriceForAssetType(order.price, order.assetType),
-         UiUtils::displayValue(value, order.security, order.product, order.assetType),
-         QString(),
-         order.exchOrderId,
-         &groupItem->idx_));
-
+      groupItem->addOrder(order);
       setOrderStatus(groupItem, 0, order);
 
       endInsertRows();
@@ -734,4 +733,60 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
    else {
       setOrderStatus(groupItem, found.second, order, true);
    }
+}
+
+
+void OrderListModel::Group::addOrder(const bs::network::Order& order)
+{
+   addRow(order);
+}
+
+QVariant OrderListModel::Group::getQuantity() const
+{
+   return QVariant{};
+}
+
+QVariant OrderListModel::Group::getQuantityColor() const
+{
+   return QVariant{};
+}
+
+void OrderListModel::Group::addRow(const bs::network::Order& order)
+{
+   // As quantity is now could be negative need to invert value
+   double value = - order.quantity * order.price;
+   if (order.security.substr(0, order.security.find('/')) != order.product) {
+      value = order.quantity / order.price;
+   }
+
+   rows_.push_front(make_unique<Data>(
+      UiUtils::displayTimeMs(order.dateTime),
+      QString::fromStdString(order.product),
+      tr(bs::network::Side::toString(order.side)),
+      UiUtils::displayQty(order.quantity, order.security, order.product, order.assetType),
+      UiUtils::displayPriceForAssetType(order.price, order.assetType),
+      UiUtils::displayValue(value, order.security, order.product, order.assetType),
+      QString(),
+      order.exchOrderId,
+      &idx_));
+}
+
+void OrderListModel::FuturesGroup::addOrder(const bs::network::Order& order)
+{
+   quantity_ += order.quantity;
+   addRow(order);
+}
+
+QVariant OrderListModel::FuturesGroup::getQuantity() const
+{
+   return UiUtils::displayAmount(quantity_);
+}
+
+QVariant OrderListModel::FuturesGroup::getQuantityColor() const
+{
+   if (quantity_ < 0) {
+      return kFailedColor;
+   }
+
+   return kSettledColor;
 }
