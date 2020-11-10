@@ -22,7 +22,9 @@ namespace BlockSettle {
    namespace Common {
       class SignerMessage;
       class SignerMessage_ExtendAddrChain;
+      class SignerMessage_GetSettlPayinAddr;
       class SignerMessage_SetSettlementId;
+      class SignerMessage_SignSettlementTx;
       class SignerMessage_SignTxRequest;
       class SignerMessage_SyncAddresses;
       class SignerMessage_SyncAddressComment;
@@ -85,6 +87,8 @@ private:
    bool processSyncTxComment(const BlockSettle::Common::SignerMessage_SyncTxComment &);
    bool processSetSettlId(const bs::message::Envelope &
       , const BlockSettle::Common::SignerMessage_SetSettlementId &);
+   bool processSignSettlementTx(const bs::message::Envelope&
+      , const BlockSettle::Common::SignerMessage_SignSettlementTx&);
    bool processGetRootPubKey(const bs::message::Envelope &, const std::string &walletId);
    bool processDelHdRoot(const std::string &walletId);
    bool processDelHdLeaf(const std::string &walletId);
@@ -92,6 +96,10 @@ private:
       , const BlockSettle::Common::SignerMessage_SignTxRequest&);
    bool processSetUserId(const std::string& userId, const std::string& walletId);
    bool processCreateSettlWallet(const bs::message::Envelope&, const std::string &);
+   bool processGetPayinAddress(const bs::message::Envelope&
+      , const BlockSettle::Common::SignerMessage_GetSettlPayinAddr&);
+   bool processResolvePubSpenders(const bs::message::Envelope&
+      , const bs::core::wallet::TXSignRequest&);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

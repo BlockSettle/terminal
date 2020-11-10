@@ -273,6 +273,29 @@ void RFQRequestWidget::onQuoteFailed(const std::string& rfqId
    }
 }
 
+void RFQRequestWidget::onSettlementPending(const std::string& rfqId
+   , const std::string& quoteId, const BinaryData& settlementId)
+{
+   const auto& itDlg = dialogs_.find(rfqId);
+   if (itDlg != dialogs_.end()) {
+      itDlg->second->onSettlementPending(quoteId, settlementId);
+   }
+   else {
+      logger_->warn("[{}] RFQ dialog for {} not found", __func__, rfqId);
+   }
+}
+
+void RFQRequestWidget::onSettlementComplete(const std::string& rfqId
+   , const std::string& quoteId, const BinaryData& settlementId)
+{
+   const auto& itDlg = dialogs_.find(rfqId);
+   if (itDlg != dialogs_.end()) {
+      itDlg->second->onSettlementComplete();
+   } else {
+      logger_->warn("[{}] RFQ dialog for {} not found", __func__, rfqId);
+   }
+}
+
 void RFQRequestWidget::onReservedUTXOs(const std::string& resId
    , const std::string& subId, const std::vector<UTXO>& utxos)
 {
@@ -447,7 +470,9 @@ void RFQRequestWidget::onRFQSubmit(const std::string &id, const bs::network::RFQ
       std::string xbtWalletId;
       dialog = new RFQDialog(logger_, id, rfq, xbtWalletId
          , ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, std::move(purpose), this);
-      emit needSubmitRFQ(rfq);
+      const std::string reserveId = (rfq.assetType == bs::network::Asset::SpotFX) ?
+         "" : rfq.requestId;
+      emit needSubmitRFQ(rfq, reserveId);
    }
 
    connect(this, &RFQRequestWidget::unsignedPayinRequested, dialog, &RFQDialog::onUnsignedPayinRequested);

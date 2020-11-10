@@ -41,7 +41,7 @@ RequestingQuoteWidget::RequestingQuoteWidget(QWidget* parent)
    ui_->labelHint->clear();
    ui_->labelHint->hide();
 
-   setupTimer(Indicative, QDateTime::currentDateTime().addSecs(30));
+   setupTimer(Indicative, QDateTime::currentDateTime().addSecs(29)); //TODO: receive end time from SettlementAdapter
 
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &RequestingQuoteWidget::onCancel);
    connect(ui_->pushButtonAccept, &QPushButton::clicked, this, &RequestingQuoteWidget::onAccept);

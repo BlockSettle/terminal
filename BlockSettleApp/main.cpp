@@ -333,8 +333,6 @@ int main(int argc, char** argv)
       inprocBus.addAdapter(signAdapter);
 
       const auto& userBlockchain = bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain);
-/*      inprocBus.addAdapter(std::make_shared<AuthEidAdapter>(logMgr->logger()
-         , bs::message::UserTerminal::create(bs::message::TerminalUsers::AuthEid)));*/
       inprocBus.addAdapter(std::make_shared<OnChainTrackerAdapter>(logMgr->logger("trk")
          , bs::message::UserTerminal::create(bs::message::TerminalUsers::OnChainTracker)
          , userBlockchain, adSettings->createOnChainPlug()));

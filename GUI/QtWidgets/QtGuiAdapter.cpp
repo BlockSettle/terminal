@@ -253,8 +253,6 @@ bool QtGuiAdapter::process(const Envelope &env)
          return processMatching(env);
       case TerminalUsers::MktData:
          return processMktData(env);
-      case TerminalUsers::AuthEid:
-         return processAuthEid(env);
       case TerminalUsers::OnChainTracker:
          return processOnChainTrack(env);
       case TerminalUsers::Assets:
@@ -568,23 +566,6 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
       return processAuthKey(msg.auth_key());
    case WalletsMessage::kReservedUtxos:
       return processReservedUTXOs(msg.reserved_utxos());
-   default:    break;
-   }
-   return true;
-}
-
-bool QtGuiAdapter::processAuthEid(const Envelope &env)
-{
-   AuthEidMessage msg;
-   if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
-      return true;
-   }
-   switch (msg.data_case()) {
-   case AuthEidMessage::kLoading:
-      loadingComponents_.insert(env.sender->value());
-      updateSplashProgress();
-      break;
    default:    break;
    }
    return true;
@@ -1205,8 +1186,12 @@ void QtGuiAdapter::onNeedSetUserId(const std::string& userId)
    pushFill(env);
 }
 
-void QtGuiAdapter::onSetRecommendedFeeRate(float)
+void QtGuiAdapter::onSetRecommendedFeeRate(float fee)
 {
+   WalletsMessage msg;
+   msg.set_set_settlement_fee(fee);
+   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
 }
 
 void QtGuiAdapter::onNeedMdConnection(ApplicationSettings::EnvConfiguration ec)
@@ -1618,8 +1603,12 @@ bool QtGuiAdapter::processSettlement(const bs::message::Envelope& env)
       return processQuote(msg.quote());
    case SettlementMessage::kMatchedQuote:
       return processMatchedQuote(msg.matched_quote());
-   case SettlementMessage::kFailedQuote:
-      return processFailedQuote(msg.failed_quote());
+   case SettlementMessage::kFailedSettlement:
+      return processFailedSettl(msg.failed_settlement());
+   case SettlementMessage::kPendingSettlement:
+      return processPendingSettl(msg.pending_settlement());
+   case SettlementMessage::kSettlementComplete:
+      return processSettlComplete(msg.settlement_complete());
    default:    break;
    }
    return true;
@@ -1788,10 +1777,31 @@ bool QtGuiAdapter::processMatchedQuote(const SettlementMessage_MatchedQuote& msg
    });
 }
 
-bool QtGuiAdapter::processFailedQuote(const SettlementMessage_FailedQuote& msg)
+bool QtGuiAdapter::processFailedSettl(const SettlementMessage_FailedSettlement& msg)
 {
    return QMetaObject::invokeMethod(mainWindow_, [this, msg] {
-      mainWindow_->onQuoteFailed(msg.rfq_id(), msg.quote_id(), msg.info());
+      if (!msg.quote_id().empty() && !msg.rfq_id().empty()) {
+         mainWindow_->onQuoteFailed(msg.rfq_id(), msg.quote_id(), msg.info());
+      }
+      else {
+         //TODO: another type of failure
+      }
+   });
+}
+
+bool QtGuiAdapter::processPendingSettl(const SettlementMessage_SettlementIds& msg)
+{
+   return QMetaObject::invokeMethod(mainWindow_, [this, msg] {
+      mainWindow_->onSettlementPending(msg.rfq_id(), msg.quote_id()
+         , BinaryData::fromString(msg.settlement_id()));
+   });
+}
+
+bool QtGuiAdapter::processSettlComplete(const SettlementMessage_SettlementIds& msg)
+{
+   return QMetaObject::invokeMethod(mainWindow_, [this, msg] {
+      mainWindow_->onSettlementComplete(msg.rfq_id(), msg.quote_id()
+         , BinaryData::fromString(msg.settlement_id()));
    });
 }
 

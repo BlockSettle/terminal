@@ -70,7 +70,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       throw std::runtime_error("no wallet");
    }
 
-   auto qn = quoteProvider->getSubmittedXBTQuoteNotification(order.settlementId);
+   auto qn = quoteProvider->getSubmittedXBTQuoteNotification(order.settlementId.toBinStr());
    if (qn.authKey.empty() || qn.reqAuthKey.empty() || qn.settlementId.empty()) {
       throw std::invalid_argument("failed to get submitted QN for " + order.quoteId);
    }

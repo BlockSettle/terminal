@@ -394,10 +394,11 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             box.exec();
          }
       } else {
-         const auto &it = sentXbtReplies_.find(order.settlementId);
+         const auto &it = sentXbtReplies_.find(order.settlementId.toBinStr());
          if (it == sentXbtReplies_.end()) {
             // Looks like this is not error, not sure why we need this
-            SPDLOG_LOGGER_DEBUG(logger_, "haven't seen QuoteNotif with settlId={}", order.settlementId);
+            SPDLOG_LOGGER_DEBUG(logger_, "haven't seen QuoteNotif with settlId={}"
+               , order.settlementId.toBinStr());
             return;
          }
          try {
@@ -462,7 +463,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
          sentCCReplies_.erase(quoteReqId);
          quoteProvider_->delQuoteReqId(quoteReqId);
       }
-      sentXbtReplies_.erase(order.settlementId);
+      sentXbtReplies_.erase(order.settlementId.toBinStr());
    }
 }
 

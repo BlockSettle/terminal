@@ -22,12 +22,16 @@ namespace spdlog {
 namespace Blocksettle {
    namespace Communication {
       namespace ProxyTerminalPb {
+         class Response_SignPayinRequest;
+         class Response_SignPayoutRequest;
          class Response_UpdateOrders;
+         class Response_UnsignedPayinRequest;
       }
    }
 }
 namespace BlockSettle {
    namespace Terminal {
+      class BsServerMessage_XbtTransaction;
       class SettingsMessage_SettingsResponse;
    }
 }
@@ -58,6 +62,13 @@ private:
    bool processCancelLogin();
    bool processSubmitAuthAddr(const bs::message::Envelope&, const std::string &addr);
    void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders&);
+   void processUnsignedPayin(const Blocksettle::Communication::ProxyTerminalPb::Response_UnsignedPayinRequest&);
+   void processSignPayin(const Blocksettle::Communication::ProxyTerminalPb::Response_SignPayinRequest&);
+   void processSignPayout(const Blocksettle::Communication::ProxyTerminalPb::Response_SignPayoutRequest&);
+
+   bool processOutUnsignedPayin(const BlockSettle::Terminal::BsServerMessage_XbtTransaction&);
+   bool processOutSignedPayin(const BlockSettle::Terminal::BsServerMessage_XbtTransaction&);
+   bool processOutSignedPayout(const BlockSettle::Terminal::BsServerMessage_XbtTransaction&);
 
    //BCT callbacks
    void startTimer(std::chrono::milliseconds timeout, const std::function<void()>&) override;

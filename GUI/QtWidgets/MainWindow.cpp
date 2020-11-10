@@ -1067,6 +1067,18 @@ void MainWindow::onQuoteFailed(const std::string& rfqId, const std::string& quot
    ui_->widgetRFQ->onQuoteFailed(rfqId, quoteId, info);
 }
 
+void bs::gui::qt::MainWindow::onSettlementPending(const std::string& rfqId
+   , const std::string& quoteId, const BinaryData& settlementId)
+{
+   ui_->widgetRFQ->onSettlementPending(rfqId, quoteId, settlementId);
+}
+
+void bs::gui::qt::MainWindow::onSettlementComplete(const std::string& rfqId
+   , const std::string& quoteId, const BinaryData& settlementId)
+{
+   ui_->widgetRFQ->onSettlementComplete(rfqId, quoteId, settlementId);
+}
+
 void MainWindow::onOrdersUpdate(const std::vector<bs::network::Order>& orders)
 {
    orderListModel_->onOrdersUpdate(orders);

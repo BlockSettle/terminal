@@ -35,20 +35,19 @@ namespace bs {
          Unknown = 0,
          BROADCAST,
          System,        // Used only as a sender of administrative messages, no adapter registers it
-         Signer,
-         API,
-         Settings,
+         Signer,        // TX signing and core wallets loading
+         API,           // API adapter and bus for API clients
+         Settings,      // All kinds of static data
          BsServer,      // General target/origin of all sorts of BS server messages
-         AuthEid,
-         Matching,      // Alias for Celer or other matching system
-         Assets,        // Alias for Genoa data storage atm
-         MktData,
+         Matching,      // Alias for Celer (or other matching system in the future)
+         Assets,        // Assets manipulation
+         MktData,       // Market data retranslation
          MDHistory,     // Charts data storage
          Blockchain,    // General name for Armory connection
-         Wallets,
+         Wallets,       // Sync wallet routines (loading, balance, UTXO reservation)
          OnChainTracker,// Auth & CC tracker combined in one adapter
-         Settlement,
-         Chat,
+         Settlement,    // All settlements (FX, XBT, CC) for both dealer and requester
+         Chat,          // Chat network routines
          UsersCount
       };
 

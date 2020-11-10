@@ -111,6 +111,10 @@ public:
    void onQuoteMatched(const std::string &rfqId, const std::string& quoteId);
    void onQuoteFailed(const std::string& rfqId, const std::string& quoteId
       , const std::string& info);
+   void onSettlementPending(const std::string& rfqId, const std::string& quoteId
+      , const BinaryData& settlementId);
+   void onSettlementComplete(const std::string& rfqId, const std::string& quoteId
+      , const BinaryData& settlementId);
 
    void onReservedUTXOs(const std::string& resId, const std::string &subId
       , const std::vector<UTXO>&);

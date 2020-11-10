@@ -88,6 +88,8 @@ public:
 
    void onBalance(const std::string& currency, double balance);
    void onMatchingLogout();
+   void onSettlementPending(const std::string& quoteId, const BinaryData& settlementId);
+   void onSettlementComplete();
 
 signals:
    void accepted(const std::string &id, const bs::network::Quote&);

@@ -170,7 +170,7 @@ namespace UiUtils
 
    extern const QLatin1String XbtCurrency;
 
-   double actualXbtPrice(bs::XBTAmount amount, double price);
+   double actualXbtPrice(bs::XBTAmount amount, double price);  // FIXME: shouldn't be in UiUtils
 
    bs::hd::Purpose getHwWalletPurpose(WalletsTypes hwType);
    WalletsTypes getHwWalletType(bs::hd::Purpose purpose);

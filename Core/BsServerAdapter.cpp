@@ -109,6 +109,12 @@ bool BsServerAdapter::processOwnRequest(const Envelope &env)
       break;
    case BsServerMessage::kSubmitAuthAddress:
       return processSubmitAuthAddr(env, msg.submit_auth_address());
+   case BsServerMessage::kSendUnsignedPayin:
+      return processOutUnsignedPayin(msg.send_unsigned_payin());
+   case BsServerMessage::kSendSignedPayin:
+      return processOutSignedPayin(msg.send_signed_payin());
+   case BsServerMessage::kSendSignedPayout:
+      return processOutSignedPayout(msg.send_signed_payout());
    default:    break;
    }
    return true;
@@ -296,6 +302,58 @@ void BsServerAdapter::processUpdateOrders(const Blocksettle::Communication::Prox
    pushFill(env);
 }
 
+void BsServerAdapter::processUnsignedPayin(const Blocksettle::Communication::ProxyTerminalPb::Response_UnsignedPayinRequest& response)
+{
+   BsServerMessage msg;
+   msg.set_unsigned_payin_requested(BinaryData::CreateFromHex(response.settlement_id()).toBinStr());
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(env);
+}
+
+void BsServerAdapter::processSignPayin(const Blocksettle::Communication::ProxyTerminalPb::Response_SignPayinRequest& response)
+{
+   BsServerMessage msg;
+   auto msgBC = msg.mutable_signed_payin_requested();
+   msgBC->set_settlement_id(BinaryData::CreateFromHex(response.settlement_id()).toBinStr());
+   msgBC->set_unsigned_payin(BinaryData::fromString(response.unsigned_payin_data()).toBinStr());
+   msgBC->set_payin_hash(BinaryData::fromString(response.payin_hash()).toBinStr());
+   msgBC->set_timestamp(response.timestamp_ms());
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(env);
+}
+
+void BsServerAdapter::processSignPayout(const Blocksettle::Communication::ProxyTerminalPb::Response_SignPayoutRequest& response)
+{
+   BsServerMessage msg;
+   auto msgBC = msg.mutable_signed_payout_requested();
+   msgBC->set_settlement_id(BinaryData::CreateFromHex(response.settlement_id()).toBinStr());
+   msgBC->set_unsigned_payin(BinaryData::fromString(response.payin_data()).toBinStr());
+   msgBC->set_timestamp(response.timestamp_ms());
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(env);
+}
+
+bool BsServerAdapter::processOutUnsignedPayin(const BsServerMessage_XbtTransaction& request)
+{
+   const auto& settlementId = BinaryData::fromString(request.settlement_id());
+   bsClient_->sendUnsignedPayin(settlementId.toHexStr(), { request.tx() });
+   return true;
+}
+
+bool BsServerAdapter::processOutSignedPayin(const BsServerMessage_XbtTransaction& request)
+{
+   const auto& settlementId = BinaryData::fromString(request.settlement_id());
+   bsClient_->sendSignedPayin(settlementId.toHexStr(), BinaryData::fromString(request.tx()));
+   return true;
+}
+
+bool BsServerAdapter::processOutSignedPayout(const BsServerMessage_XbtTransaction& request)
+{
+   const auto& settlementId = BinaryData::fromString(request.settlement_id());
+   bsClient_->sendSignedPayout(settlementId.toHexStr(), BinaryData::fromString(request.tx()));
+   return true;
+}
+
 void BsServerAdapter::startTimer(std::chrono::milliseconds timeout
    , const std::function<void()>&cb)
 {
@@ -375,6 +433,15 @@ void BsServerAdapter::onProcessPbMessage(const Blocksettle::Communication::Proxy
    switch (response.data_case()) {
    case Blocksettle::Communication::ProxyTerminalPb::Response::kUpdateOrders:
       processUpdateOrders(response.update_orders());
+      break;
+   case Blocksettle::Communication::ProxyTerminalPb::Response::kSendUnsignedPayin:
+      processUnsignedPayin(response.send_unsigned_payin());
+      break;
+   case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayout:
+      processSignPayout(response.sign_payout());
+      break;
+   case Blocksettle::Communication::ProxyTerminalPb::Response::kSignPayin:
+      processSignPayin(response.sign_payin());
       break;
    default:
       break;

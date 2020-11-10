@@ -127,6 +127,13 @@ bool SignerAdapter::processOwnRequest(const bs::message::Envelope &env
          , request.set_user_id().wallet_id());
    case SignerMessage::kCreateSettlWallet:
       return processCreateSettlWallet(env, request.create_settl_wallet());
+   case SignerMessage::kGetSettlPayinAddr:
+      return processGetPayinAddress(env, request.get_settl_payin_addr());
+   case SignerMessage::kResolvePubSpenders:
+      return processResolvePubSpenders(env
+         , bs::signer::pbTxRequestToCore(request.resolve_pub_spenders()));
+   case SignerMessage::kSignSettlementTx:
+      return processSignSettlementTx(env, request.sign_settlement_tx());
    default:
       logger_->warn("[{}] unknown signer request: {}", __func__, request.data_case());
       break;
@@ -590,6 +597,33 @@ bool SignerAdapter::processSetSettlId(const bs::message::Envelope &env
    return true;
 }
 
+bool SignerAdapter::processSignSettlementTx(const bs::message::Envelope& env
+   , const SignerMessage_SignSettlementTx& request)
+{
+   const auto& signCb = [this, env, settlementId=request.settlement_id()]
+      (bs::error::ErrorCode result, const BinaryData& signedTx)
+   {
+      SignerMessage msg;
+      auto msgResp = msg.mutable_sign_tx_response();
+      msgResp->set_id(settlementId);
+      msgResp->set_error_code((int)result);
+      msgResp->set_signed_tx(signedTx.toBinStr());
+      Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
+      pushFill(envResp);
+   };
+
+   const auto& txReq = bs::signer::pbTxRequestToCore(request.tx_request());
+   const bs::sync::PasswordDialogData dlgData(request.details());
+   if (request.contra_auth_pubkey().empty()) {
+      return (signer_->signSettlementTXRequest(txReq, dlgData
+         , SignContainer::TXSignMode::Full, false, signCb) != 0);
+   }
+   const bs::core::wallet::SettlementData sd{
+      BinaryData::fromString(request.settlement_id()),
+      BinaryData::fromString(request.contra_auth_pubkey()), request.own_key_first() };
+   return (signer_->signSettlementPayoutTXRequest(txReq, sd, dlgData, signCb) != 0);
+}
+
 bool SignerAdapter::processGetRootPubKey(const bs::message::Envelope &env
    , const std::string &walletId)
 {
@@ -671,5 +705,42 @@ bool SignerAdapter::processCreateSettlWallet(const bs::message::Envelope& env
       pushFill(envResp);
    };
    signer_->createSettlementWallet(authAddr, cb);
+   return true;
+}
+
+bool SignerAdapter::processGetPayinAddress(const bs::message::Envelope& env
+   , const SignerMessage_GetSettlPayinAddr& request)
+{
+   const auto& cbAddr = [this, env](bool success, const bs::Address& settlAddr)
+   {
+      SignerMessage msg;
+      auto msgResp = msg.mutable_payin_address();
+      msgResp->set_success(success);
+      msgResp->set_address(settlAddr.display());
+      Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
+      pushFill(envResp);
+   };
+   bs::core::wallet::SettlementData settlData{ BinaryData::fromString(request.settlement_id())
+      , BinaryData::fromString(request.contra_auth_pubkey()), request.own_key_first() };
+   signer_->getSettlementPayinAddress(request.wallet_id(), settlData, cbAddr);
+   return true;
+}
+
+bool SignerAdapter::processResolvePubSpenders(const bs::message::Envelope& env
+   , const bs::core::wallet::TXSignRequest& txReq)
+{
+   const auto& cbResolve = [this, env](bs::error::ErrorCode result
+      , const Codec_SignerState::SignerState& state)
+   {
+      SignerMessage msg;
+      auto msgResp = msg.mutable_resolved_spenders();
+      msgResp->set_result((int)result);
+      msgResp->set_signer_state(state.SerializeAsString());
+      Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
+      pushFill(envResp);
+   };
+   if (signer_->resolvePublicSpenders(txReq, cbResolve) == 0) {
+      logger_->error("[{}] failed to send", __func__);
+   }
    return true;
 }

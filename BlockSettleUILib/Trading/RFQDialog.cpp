@@ -166,25 +166,30 @@ void RFQDialog::onRFQResponseAccepted(const std::string &reqId
       }
    }
    else {
-      if (rfq_.assetType == bs::network::Asset::SpotXBT) {
-         curContainer_ = newXBTcontainer();
-      } else {
-         curContainer_ = newCCcontainer();
-      }
+      if (armory_ && walletsManager_) {
+         if (rfq_.assetType == bs::network::Asset::SpotXBT) {
+            curContainer_ = newXBTcontainer();
+         } else {
+            curContainer_ = newCCcontainer();
+         }
 
-      if (curContainer_) {
-         rfqStorage_->addSettlementContainer(curContainer_);
-         curContainer_->activate();
+         if (curContainer_) {
+            rfqStorage_->addSettlementContainer(curContainer_);
+            curContainer_->activate();
 
-         // Do not capture `this` here!
-         auto failedCb = [qId = quote_.quoteId, curContainer = curContainer_.get()]
+            // Do not capture `this` here!
+            auto failedCb = [qId = quote_.quoteId, curContainer = curContainer_.get()]
             (const std::string& quoteId, const std::string& reason)
-         {
-            if (qId == quoteId) {
-               curContainer->cancel();
-            }
-         };
-         connect(quoteProvider_.get(), &QuoteProvider::orderFailed, curContainer_.get(), failedCb);
+            {
+               if (qId == quoteId) {
+                  curContainer->cancel();
+               }
+            };
+            connect(quoteProvider_.get(), &QuoteProvider::orderFailed, curContainer_.get(), failedCb);
+         }
+      }
+      else {
+         logger_->debug("[{}] non-FX", __func__);
       }
    }
 }
@@ -352,6 +357,16 @@ void RFQDialog::onBalance(const std::string& currency, double balance)
 void RFQDialog::onMatchingLogout()
 {
    ui_->pageRequestingQuote->onMatchingLogout();
+}
+
+void RFQDialog::onSettlementPending(const std::string& quoteId, const BinaryData& settlementId)
+{
+   //TODO: update UI state
+}
+
+void RFQDialog::onSettlementComplete()
+{
+   accept();
 }
 
 void RFQDialog::onTimeout()

@@ -466,9 +466,47 @@ bool MatchingAdapter::onOrderReject(const std::string&)
    return false;
 }
 
-bool MatchingAdapter::onBitcoinOrderSnapshot(const std::string&)
+bool MatchingAdapter::onBitcoinOrderSnapshot(const std::string& data)
 {
-   return false;
+   BitcoinOrderSnapshotDownstreamEvent response;
+
+   if (!response.ParseFromString(data)) {
+      logger_->error("[MatchingAdapter::onBitcoinOrderSnapshot] failed to parse");
+      return false;
+   }
+   logger_->debug("[MatchingAdapter::onBitcoinOrderSnapshot] {}", ProtobufUtils::toJsonCompact(response));
+
+   auto orderDate = QDateTime::fromMSecsSinceEpoch(response.createdtimestamputcinmillis());
+   //auto ageSeconds = orderDate.secsTo(QDateTime::currentDateTime());
+
+   bs::network::Order order;
+   order.exchOrderId = QString::number(response.orderid());
+   order.clOrderId = response.externalclorderid();
+   order.quoteId = response.quoteid();
+   order.dateTime = QDateTime::fromMSecsSinceEpoch(response.createdtimestamputcinmillis());
+   order.security = response.securitycode();
+   order.quantity = response.qty();
+   order.price = response.price();
+   order.product = response.currency();
+   order.side = bs::celer::fromCeler(response.side());
+   order.assetType = bs::celer::fromCelerProductType(response.producttype());
+   try {
+      order.settlementId = BinaryData::CreateFromHex(response.settlementid());
+   }
+   catch (const std::exception& e) {
+      logger_->error("[MatchingAdapter::onBitcoinOrderSnapshot] failed to parse settlement id");
+      return false;
+   }
+   order.reqTransaction = response.requestortransaction();
+   order.dealerTransaction = response.dealertransaction();
+
+   order.status = order.status = bs::celer::mapBtcOrderStatus(response.orderstatus());
+   order.pendingStatus = response.info();
+
+   MatchingMessage msg;
+   toMsg(order, msg.mutable_order());
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   return pushFill(env);
 }
 
 bool MatchingAdapter::onFxOrderSnapshot(const std::string& data)
@@ -501,7 +539,6 @@ bool MatchingAdapter::onFxOrderSnapshot(const std::string& data)
    toMsg(order, msg.mutable_order());
    Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
    return pushFill(env);
-   return true;
 }
 
 bool MatchingAdapter::onQuoteCancelled(const std::string&)

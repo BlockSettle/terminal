@@ -69,7 +69,7 @@ public:
    void activate() override;
    void deactivate() override;
 
-   std::string id() const override { return order_.settlementId; }
+   std::string id() const override { return order_.settlementId.toBinStr(); }
    bs::network::Asset::Type assetType() const override { return order_.assetType; }
    std::string security() const override { return order_.security; }
    std::string product() const override { return order_.product; }

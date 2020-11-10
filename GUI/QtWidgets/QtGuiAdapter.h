@@ -54,8 +54,9 @@ namespace BlockSettle {
       class Quote;
       class MatchingMessage_Order;
       class MktDataMessage_Prices;
-      class SettlementMessage_FailedQuote;
+      class SettlementMessage_FailedSettlement;
       class SettlementMessage_MatchedQuote;
+      class SettlementMessage_SettlementIds;
       class SettingsMessage_ArmoryServers;
       class SettingsMessage_SettingsResponse;
       class SettingsMessage_SignerServers;
@@ -94,7 +95,6 @@ private:
    bool processBlockchain(const bs::message::Envelope &);
    bool processSigner(const bs::message::Envelope &);
    bool processWallets(const bs::message::Envelope &);
-   bool processAuthEid(const bs::message::Envelope &);
    bool processOnChainTrack(const bs::message::Envelope &);
    bool processAssets(const bs::message::Envelope&);
 
@@ -138,7 +138,9 @@ private:
    bool processAuthKey(const BlockSettle::Common::WalletsMessage_AuthKey&);
    bool processQuote(const BlockSettle::Terminal::Quote&);
    bool processMatchedQuote(const BlockSettle::Terminal::SettlementMessage_MatchedQuote&);
-   bool processFailedQuote(const BlockSettle::Terminal::SettlementMessage_FailedQuote&);
+   bool processFailedSettl(const BlockSettle::Terminal::SettlementMessage_FailedSettlement&);
+   bool processPendingSettl(const BlockSettle::Terminal::SettlementMessage_SettlementIds&);
+   bool processSettlComplete(const BlockSettle::Terminal::SettlementMessage_SettlementIds&);
    bool processOrdersUpdate(const BlockSettle::Terminal::BsServerMessage_Orders&);
    bool sendPooledOrdersUpdate();
    bool processReservedUTXOs(const BlockSettle::Common::WalletsMessage_ReservedUTXOs&);

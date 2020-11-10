@@ -95,7 +95,7 @@ bs::network::Order bs::message::fromMsg(const BlockSettle::Terminal::MatchingMes
    order.dateTime = QDateTime::fromMSecsSinceEpoch(msg.timestamp());
    order.security = msg.security();
    order.product = msg.product();
-   order.settlementId = msg.settlement_id();
+   order.settlementId = BinaryData::fromString(msg.settlement_id());
    order.reqTransaction = msg.requester_tx();
    order.dealerTransaction = msg.dealer_tx();
    order.pendingStatus = msg.pending_status();
@@ -118,7 +118,7 @@ void bs::message::toMsg(const bs::network::Order& order, MatchingMessage_Order* 
    msg->set_timestamp(order.dateTime.toMSecsSinceEpoch());
    msg->set_security(order.security);
    msg->set_product(order.product);
-   msg->set_settlement_id(order.settlementId);
+   msg->set_settlement_id(order.settlementId.toBinStr());
    msg->set_requester_tx(order.reqTransaction);
    msg->set_dealer_tx(order.dealerTransaction);
    msg->set_pending_status(order.pendingStatus);
