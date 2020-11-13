@@ -449,14 +449,14 @@ void RFQRequestWidget::onRFQSubmit(const std::string &id, const bs::network::RFQ
    auto authAddr = ui_->pageRFQTicket->selectedAuthAddress();
    RFQDialog* dialog = nullptr;
    auto fixedXbtInputs = ui_->pageRFQTicket->fixedXbtInputs();
-   std::unique_ptr<bs::hd::Purpose> purpose;
+   bs::hd::Purpose purpose = bs::hd::Purpose::Unknown;
 
    if (walletsManager_) {
       auto xbtWallet = ui_->pageRFQTicket->xbtWallet();
 
       if (xbtWallet && !xbtWallet->canMixLeaves()) {
          auto walletType = ui_->pageRFQTicket->xbtWalletType();
-         purpose.reset(new bs::hd::Purpose(UiUtils::getHwWalletPurpose(walletType)));
+         purpose = UiUtils::getHwWalletPurpose(walletType);
       }
 
       dialog = new RFQDialog(logger_, id, rfq, quoteProvider_
@@ -464,12 +464,12 @@ void RFQRequestWidget::onRFQSubmit(const std::string &id, const bs::network::RFQ
          , armory_, celerClient_, appSettings_, rfqStorage_, xbtWallet
          , ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, utxoReservationManager_
          , fixedXbtInputs.inputs, std::move(fixedXbtInputs.utxoRes)
-         , std::move(ccUtxoRes), std::move(purpose), this);
+         , std::move(ccUtxoRes), purpose, this);
    }
    else {
       std::string xbtWalletId;
       dialog = new RFQDialog(logger_, id, rfq, xbtWalletId
-         , ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, std::move(purpose), this);
+         , ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, purpose, this);
       const std::string reserveId = (rfq.assetType == bs::network::Asset::SpotFX) ?
          "" : rfq.requestId;
       emit needSubmitRFQ(rfq, reserveId);

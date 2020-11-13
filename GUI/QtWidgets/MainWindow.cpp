@@ -229,6 +229,7 @@ void MainWindow::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
 {
    ui_->widgetWallets->onHDWalletDetails(hdWallet);
    ui_->widgetRFQ->onHDWallet(hdWallet);
+   ui_->widgetRFQReply->onHDWallet(hdWallet);
 }
 
 void MainWindow::onWalletsList(const std::string &id, const std::vector<bs::sync::HDWalletData>& wallets)
@@ -272,6 +273,7 @@ void MainWindow::onWalletBalance(const bs::sync::WalletBalanceData &wbd)
    }
    ui_->widgetWallets->onWalletBalance(wbd);
    ui_->widgetRFQ->onWalletBalance(wbd);
+   ui_->widgetRFQReply->onWalletBalance(wbd);
    statusBarView_->onXbtBalance(wbd);
 }
 
@@ -1006,6 +1008,7 @@ void MainWindow::onMatchingLogout()
       orderListModel_->onMatchingLogout();
    }
    ui_->widgetRFQ->onMatchingLogout();
+   ui_->widgetRFQReply->onMatchingLogout();
 }
 
 void bs::gui::qt::MainWindow::onNewSecurity(const std::string& name, bs::network::Asset::Type at)
@@ -1024,6 +1027,7 @@ void bs::gui::qt::MainWindow::onBalance(const std::string& currency, double bala
 {
    statusBarView_->onBalanceUpdated(currency, balance);
    ui_->widgetRFQ->onBalance(currency, balance);
+   ui_->widgetRFQReply->onBalance(currency, balance);
 }
 
 void MainWindow::onAuthAddresses(const std::vector<bs::Address> &addrs
@@ -1049,6 +1053,7 @@ void MainWindow::onVerifiedAuthAddresses(const std::vector<bs::Address>& addrs)
 void MainWindow::onAuthKey(const bs::Address& addr, const BinaryData& authKey)
 {
    ui_->widgetRFQ->onAuthKey(addr, authKey);
+   ui_->widgetRFQReply->onAuthKey(addr, authKey);
 }
 
 void MainWindow::onQuoteReceived(const bs::network::Quote& quote)
@@ -1077,6 +1082,11 @@ void bs::gui::qt::MainWindow::onSettlementComplete(const std::string& rfqId
    , const std::string& quoteId, const BinaryData& settlementId)
 {
    ui_->widgetRFQ->onSettlementComplete(rfqId, quoteId, settlementId);
+}
+
+void bs::gui::qt::MainWindow::onQuoteReqNotification(const bs::network::QuoteReqNotification& qrn)
+{
+   ui_->widgetRFQReply->onQuoteReqNotification(qrn);
 }
 
 void MainWindow::onOrdersUpdate(const std::vector<bs::network::Order>& orders)
@@ -1267,7 +1277,12 @@ void MainWindow::initWidgets()
 
    connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this
       , &MainWindow::createNewWallet);
-   ui_->widgetRFQReply->init(logger_, dialogMgr_, orderListModel_.get());
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::putSetting, this, &MainWindow::putSetting);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::submitQuote, this, &MainWindow::submitQuote);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::pullQuote, this, &MainWindow::pullQuote);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::needAuthKey, this, &MainWindow::needAuthKey);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::needReserveUTXOs, this, &MainWindow::needReserveUTXOs);
+   ui_->widgetRFQReply->init(logger_, orderListModel_.get());
 
    connect(ui_->tabWidget, &QTabWidget::tabBarClicked, this,
       [/*requestRFQ = QPointer<RFQRequestWidget>(ui_->widgetRFQ)

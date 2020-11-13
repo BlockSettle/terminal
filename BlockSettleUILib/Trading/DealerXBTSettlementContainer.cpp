@@ -42,11 +42,11 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const std::vector<UTXO> &utxosPayinFixed
    , const bs::Address &recvAddr
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , std::unique_ptr<bs::hd::Purpose> walletPurpose
+   , bs::hd::Purpose walletPurpose
    , bs::UtxoReservationToken utxoRes
    , bool expandTxDialogInfo
    , uint64_t tier1XbtLimit )
-   : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose), expandTxDialogInfo)
+   : bs::SettlementContainer(std::move(utxoRes), walletPurpose, expandTxDialogInfo)
    , order_(order)
    , weSellXbt_((order.side == bs::network::Side::Buy) != (order.product == bs::network::XbtCurrency))
    , amount_((order.product != bs::network::XbtCurrency) ? order.quantity / order.price : order.quantity)
@@ -367,8 +367,7 @@ void DealerXBTSettlementContainer::onUnsignedPayinRequested(const std::string& s
 
    const auto xbtGroup = xbtWallet_->getGroup(xbtWallet_->getXBTGroupType());
    if (!xbtWallet_->canMixLeaves()) {
-      assert(walletPurpose_);
-      const auto leaf = xbtGroup->getLeaf(*walletPurpose_);
+      const auto leaf = xbtGroup->getLeaf(walletPurpose_);
       args.inputXbtWallets.push_back(leaf);
    }
    else {
@@ -437,8 +436,7 @@ void DealerXBTSettlementContainer::onSignedPayoutRequested(const std::string& se
 
    const auto xbtGroup = xbtWallet_->getGroup(xbtWallet_->getXBTGroupType());
    if (!xbtWallet_->canMixLeaves()) {
-      assert(walletPurpose_);
-      const auto leaf = xbtGroup->getLeaf(*walletPurpose_);
+      const auto leaf = xbtGroup->getLeaf(walletPurpose_);
       args.outputXbtWallet = leaf;
    }
    else {

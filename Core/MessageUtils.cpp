@@ -131,3 +131,97 @@ void bs::message::toMsg(const bs::network::Order& order, MatchingMessage_Order* 
    msg->set_status((int)order.status);
    msg->set_info(order.info);
 }
+
+
+bs::network::QuoteReqNotification bs::message::fromMsg(const BlockSettle::Terminal::IncomingRFQ& msg)
+{
+   bs::network::QuoteReqNotification result;
+   result.quantity = msg.rfq().quantity();
+   result.quoteRequestId = msg.rfq().id();
+   result.security = msg.rfq().security();
+   result.product = msg.rfq().product();
+   result.requestorAuthPublicKey = msg.rfq().auth_pub_key();
+   result.requestorRecvAddress = msg.rfq().receipt_address();
+   result.side = msg.rfq().buy() ? bs::network::Side::Buy : bs::network::Side::Sell;
+   result.assetType = static_cast<bs::network::Asset::Type>(msg.rfq().asset_type());
+   result.settlementId = msg.settlement_id();
+   result.sessionToken = msg.session_token();
+   result.party = msg.party();
+   result.reason = msg.reason();
+   result.account = msg.account();
+   result.status = static_cast<bs::network::QuoteReqNotification::Status>(msg.status());
+   result.expirationTime = msg.expiration_ms();
+   result.timestamp = msg.timestamp_ms();
+   result.timeSkewMs = msg.time_skew_ms();
+   return result;
+}
+
+void bs::message::toMsg(const bs::network::QuoteReqNotification& qrn
+   , BlockSettle::Terminal::IncomingRFQ* msg)
+{
+   auto msgRFQ = msg->mutable_rfq();
+   msgRFQ->set_quantity(qrn.quantity);
+   msgRFQ->set_id(qrn.quoteRequestId);
+   msgRFQ->set_security(qrn.security);
+   msgRFQ->set_product(qrn.product);
+   msgRFQ->set_auth_pub_key(qrn.requestorAuthPublicKey);
+   msgRFQ->set_receipt_address(qrn.requestorRecvAddress);
+   msgRFQ->set_buy(qrn.side == bs::network::Side::Buy);
+   msgRFQ->set_asset_type((int)qrn.assetType);
+   msg->set_settlement_id(qrn.settlementId);
+   msg->set_session_token(qrn.sessionToken);
+   msg->set_party(qrn.party);
+   msg->set_reason(qrn.reason);
+   msg->set_account(qrn.account);
+   msg->set_status((int)qrn.status);
+   msg->set_expiration_ms(qrn.expirationTime);
+   msg->set_timestamp_ms(qrn.timestamp);
+   msg->set_time_skew_ms(qrn.timeSkewMs);
+}
+
+
+bs::network::QuoteNotification bs::message::fromMsg(const BlockSettle::Terminal::ReplyToRFQ& msg)
+{
+   bs::network::QuoteNotification result;
+   result.authKey = msg.quote().deal_auth_pub_key();
+   result.reqAuthKey = msg.quote().req_auth_pub_key();
+   result.settlementId = msg.quote().settlement_id();
+   result.quoteRequestId = msg.quote().request_id();
+   result.security = msg.quote().security();
+   result.product = msg.quote().product();
+   result.transactionData = msg.quote().dealer_tx();
+   result.assetType = static_cast<bs::network::Asset::Type>(msg.quote().asset_type());
+   result.side = msg.quote().buy() ? bs::network::Side::Buy : bs::network::Side::Sell;
+   result.validityInS = (msg.quote().expiration_time() - msg.quote().timestamp()) / 1000;
+   result.price = msg.quote().price();
+   result.quantity = msg.quote().quantity();
+   result.sessionToken = msg.session_token();
+   result.account = msg.account();
+   result.receiptAddress = msg.dealer_recv_addr();
+   return result;
+}
+
+void bs::message::toMsg(const bs::network::QuoteNotification& qn
+   , BlockSettle::Terminal::ReplyToRFQ* msg)
+{
+   auto msgQuote = msg->mutable_quote();
+   msgQuote->set_deal_auth_pub_key(qn.authKey);
+   msgQuote->set_req_auth_pub_key(qn.reqAuthKey);
+   msgQuote->set_settlement_id(qn.settlementId);
+   msgQuote->set_request_id(qn.quoteRequestId);
+   msgQuote->set_security(qn.security);
+   msgQuote->set_product(qn.product);
+   msgQuote->set_dealer_tx(qn.transactionData);
+   msgQuote->set_asset_type((int)qn.assetType);
+   msgQuote->set_buy(qn.side == bs::network::Side::Buy);
+   msgQuote->set_price(qn.price);
+   msgQuote->set_quantity(qn.quantity);
+   msg->set_session_token(qn.sessionToken);
+   msg->set_account(qn.account);
+   msg->set_dealer_recv_addr(qn.receiptAddress);
+
+   const auto& timeNow = std::chrono::system_clock::now();
+   msgQuote->set_timestamp(std::chrono::duration_cast<std::chrono::milliseconds>(timeNow.time_since_epoch()).count());
+   msgQuote->set_expiration_time(std::chrono::duration_cast<std::chrono::milliseconds>(
+      (timeNow + std::chrono::seconds{qn.validityInS}).time_since_epoch()).count());
+}

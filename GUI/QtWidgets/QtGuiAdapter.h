@@ -52,6 +52,7 @@ namespace BlockSettle {
       class BsServerMessage_StartLoginResult;
       class MatchingMessage_LoggedIn;
       class Quote;
+      class IncomingRFQ;
       class MatchingMessage_Order;
       class MktDataMessage_Prices;
       class SettlementMessage_FailedSettlement;
@@ -141,6 +142,7 @@ private:
    bool processFailedSettl(const BlockSettle::Terminal::SettlementMessage_FailedSettlement&);
    bool processPendingSettl(const BlockSettle::Terminal::SettlementMessage_SettlementIds&);
    bool processSettlComplete(const BlockSettle::Terminal::SettlementMessage_SettlementIds&);
+   bool processQuoteReqNotif(const BlockSettle::Terminal::IncomingRFQ&);
    bool processOrdersUpdate(const BlockSettle::Terminal::BsServerMessage_Orders&);
    bool sendPooledOrdersUpdate();
    bool processReservedUTXOs(const BlockSettle::Common::WalletsMessage_ReservedUTXOs&);
@@ -200,6 +202,9 @@ private slots:
    void onNeedReserveUTXOs(const std::string& reserveId, const std::string& subId
       , uint64_t amount, bool partial = false, const std::vector<UTXO>& utxos = {});
    void onNeedUnreserveUTXOs(const std::string& reserveId, const std::string& subId);
+   void onSubmitQuote(const bs::network::QuoteNotification&);
+   void onPullQuote(const std::string& settlementId, const std::string& reqId
+      , const std::string& reqSessToken);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

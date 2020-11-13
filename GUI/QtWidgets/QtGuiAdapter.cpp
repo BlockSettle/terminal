@@ -762,6 +762,8 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::needAuthKey, this, &QtGuiAdapter::onNeedAuthKey);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needReserveUTXOs, this, &QtGuiAdapter::onNeedReserveUTXOs);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needUnreserveUTXOs, this, &QtGuiAdapter::onNeedUnreserveUTXOs);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::submitQuote, this, &QtGuiAdapter::onSubmitQuote);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::pullQuote, this, &QtGuiAdapter::onPullQuote);
 }
 
 void QtGuiAdapter::onGetSettings(const std::vector<ApplicationSettings::Setting>& settings)
@@ -1276,6 +1278,26 @@ void QtGuiAdapter::onNeedUnreserveUTXOs(const std::string& reserveId
    pushFill(env);
 }
 
+void QtGuiAdapter::onSubmitQuote(const bs::network::QuoteNotification& qn)
+{
+   SettlementMessage msg;
+   toMsg(qn, msg.mutable_reply_to_rfq());
+   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onPullQuote(const std::string& settlementId
+   , const std::string& reqId, const std::string& reqSessToken)
+{
+   SettlementMessage msg;
+   auto msgReq = msg.mutable_pull_rfq_reply();
+   msgReq->set_settlement_id(settlementId);
+   msgReq->set_rfq_id(reqId);
+   msgReq->set_session_token(reqSessToken);
+   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
 void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
 {
    hdWallets_[*wi.ids.cbegin()] = wi;
@@ -1609,6 +1631,8 @@ bool QtGuiAdapter::processSettlement(const bs::message::Envelope& env)
       return processPendingSettl(msg.pending_settlement());
    case SettlementMessage::kSettlementComplete:
       return processSettlComplete(msg.settlement_complete());
+   case SettlementMessage::kQuoteReqNotif:
+      return processQuoteReqNotif(msg.quote_req_notif());
    default:    break;
    }
    return true;
@@ -1802,6 +1826,14 @@ bool QtGuiAdapter::processSettlComplete(const SettlementMessage_SettlementIds& m
    return QMetaObject::invokeMethod(mainWindow_, [this, msg] {
       mainWindow_->onSettlementComplete(msg.rfq_id(), msg.quote_id()
          , BinaryData::fromString(msg.settlement_id()));
+   });
+}
+
+bool QtGuiAdapter::processQuoteReqNotif(const IncomingRFQ& request)
+{
+   const auto& qrn = fromMsg(request);
+   return QMetaObject::invokeMethod(mainWindow_, [this, qrn] {
+      mainWindow_->onQuoteReqNotification(qrn);
    });
 }
 

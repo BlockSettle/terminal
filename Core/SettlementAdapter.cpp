@@ -78,6 +78,8 @@ bool SettlementAdapter::process(const bs::message::Envelope &env)
          return processMatchingQuote(msg.quote());
       case MatchingMessage::kOrder:
          return processMatchingOrder(msg.order());
+      case MatchingMessage::kIncomingRfq:
+         return processMatchingInRFQ(msg.incoming_rfq());
       default: break;
       }
       if (!env.receiver || env.receiver->isBroadcast()) {
@@ -148,6 +150,8 @@ bool SettlementAdapter::process(const bs::message::Envelope &env)
          return processSendRFQ(env, msg.send_rfq());
       case SettlementMessage::kHandshakeTimeout:
          return processHandshakeTimeout(msg.handshake_timeout());
+      case SettlementMessage::kQuoteReqTimeout:
+         return processInRFQTimeout(msg.quote_req_timeout());
       default:
          logger_->warn("[{}] unknown settlement request {}", __func__, msg.data_case());
          break;
@@ -233,6 +237,35 @@ bool SettlementAdapter::processMatchingOrder(const MatchingMessage_Order& respon
    Envelope env{ 0, user_, itSettl->second->env.sender, {}, {}
       , msg.SerializeAsString() };
    return pushFill(env);
+}
+
+bool SettlementAdapter::processMatchingInRFQ(const IncomingRFQ& qrn)
+{
+   SettlementMessage msg;
+   *msg.mutable_quote_req_notif() = qrn;
+   Envelope envBC{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+
+   const auto& rfq = fromMsg(qrn.rfq());
+   const auto& settlement = std::make_shared<Settlement>();
+   settlement->rfq = rfq;
+   settlement->dealer = true;
+   try {
+      settlement->settlementId = BinaryData::CreateFromHex(qrn.settlement_id());
+   }
+   catch (const std::exception&) {
+      logger_->error("[{}] invalid settlement id", __func__);
+   }
+   settlByRfqId_[rfq.requestId] = settlement;
+
+   msg.set_quote_req_timeout(rfq.requestId);
+   const auto& timeNow = std::chrono::system_clock::now();
+   const auto expTime = std::chrono::milliseconds(qrn.expiration_ms()) - timeNow.time_since_epoch();
+   if (expTime.count() < 0) {
+      logger_->error("[{}] outdated expiry {} for {}", __func__, expTime.count(), rfq.requestId);
+      return true;
+   }
+   Envelope envTO{ 0, user_, user_, timeNow, timeNow + expTime, msg.SerializeAsString(), true };
+   return (pushFill(envTO) && pushFill(envBC));
 }
 
 bool SettlementAdapter::processBsUnsignedPayin(const BinaryData& settlementId)
@@ -639,6 +672,16 @@ bool SettlementAdapter::processHandshakeTimeout(const std::string& id)
             , msg.SerializeAsString() };
          return pushFill(env);
       }
+   }
+   return true;
+}
+
+bool SettlementAdapter::processInRFQTimeout(const std::string& id)
+{
+   const auto& itSettl = settlByRfqId_.find(id);
+   if (itSettl != settlByRfqId_.end()) {  // do nothing - just remove unanswered RFQ
+      logger_->debug("[{}] {}", __func__, id);
+      settlByRfqId_.erase(itSettl);
    }
    return true;
 }

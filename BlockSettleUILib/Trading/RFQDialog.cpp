@@ -44,7 +44,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::map<UTXO, std::string> &fixedXbtInputs
    , bs::UtxoReservationToken fixedXbtUtxoRes
    , bs::UtxoReservationToken ccUtxoRes
-   , std::unique_ptr<bs::hd::Purpose> purpose
+   , bs::hd::Purpose purpose
    , RFQRequestWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
@@ -67,7 +67,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , requestWidget_(parent)
    , utxoReservationManager_(utxoReservationManager)
    , ccUtxoRes_(std::move(ccUtxoRes))
-   , walletPurpose_(std::move(purpose))
+   , walletPurpose_(purpose)
 {
    ui_->setupUi(this);
 
@@ -102,7 +102,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger>& logger
    , const std::string& id, const bs::network::RFQ& rfq
    , const std::string& xbtWalletId, const bs::Address& recvXbtAddrIfSet
    , const bs::Address& authAddr
-   , std::unique_ptr<bs::hd::Purpose> purpose
+   , bs::hd::Purpose purpose
    , RFQRequestWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
@@ -111,7 +111,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger>& logger
    , recvXbtAddrIfSet_(recvXbtAddrIfSet)
    , authAddr_(authAddr)
    , requestWidget_(parent)
-   , walletPurpose_(std::move(purpose))
+   , walletPurpose_(purpose)
 {
    ui_->setupUi(this);
 
@@ -223,7 +223,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
       xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
          , authAddressManager_, signContainer_, armory_, xbtWallet_, walletsManager_
          , rfq_, quote_, authAddr_, fixedXbtInputs_, std::move(fixedXbtUtxoRes_), utxoReservationManager_
-         , std::move(walletPurpose_), recvXbtAddrIfSet_, expandTxInfo, tier1XbtLimit);
+         , walletPurpose_, recvXbtAddrIfSet_, expandTxInfo, tier1XbtLimit);
 
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
          , this, &RFQDialog::onXBTSettlementAccepted);
@@ -268,8 +268,9 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
 
    try {
       ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
-         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_,
-         fixedXbtInputs_, utxoReservationManager_, std::move(walletPurpose_), std::move(ccUtxoRes_), expandTxInfo);
+         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_
+         , xbtWallet_, fixedXbtInputs_, utxoReservationManager_, walletPurpose_
+         , std::move(ccUtxoRes_), expandTxInfo);
 
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::txSigned
          , this, &RFQDialog::onCCTxSigned);

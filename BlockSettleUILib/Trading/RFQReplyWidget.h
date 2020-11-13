@@ -17,13 +17,14 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <tuple>
-
+#include "ApplicationSettings.h"
 #include "BSErrorCode.h"
 #include "CoinControlModel.h"
 #include "CommonTypes.h"
+#include "HDPath.h"
+#include "SignerDefs.h"
 #include "TabWithShortcut.h"
 #include "UtxoReservationToken.h"
-#include "HDPath.h"
 
 namespace Ui {
     class RFQReplyWidget;
@@ -49,7 +50,6 @@ class AuthAddressManager;
 class AutoSignScriptProvider;
 class CelerClientQt;
 class ConnectionManager;
-class DialogManager;
 class MDCallbacksQt;
 class OrderListModel;
 class QuoteProvider;
@@ -85,18 +85,24 @@ public:
       , const std::shared_ptr<MDCallbacksQt> &
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<DialogManager> &
       , const std::shared_ptr<WalletSignerContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<ConnectionManager> &
       , const std::shared_ptr<AutoSignScriptProvider> &
       , const std::shared_ptr<bs::UTXOReservationManager> &
       , OrderListModel *orderListModel);
-   void init(const std::shared_ptr<spdlog::logger>&
-      , const std::shared_ptr<DialogManager>&, OrderListModel*);
-   void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
+   void init(const std::shared_ptr<spdlog::logger>&, OrderListModel*);
+   [[deprecated]] void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
    void shortcutActivated(ShortcutType s) override;
+
+   void onMatchingLogout();
+   void onBalance(const std::string& currency, double balance);
+   void onWalletBalance(const bs::sync::WalletBalanceData&);
+   void onHDWallet(const bs::sync::HDWalletData&);
+   void onAuthKey(const bs::Address&, const BinaryData& authKey);
+
+   void onQuoteReqNotification(const bs::network::QuoteReqNotification&);
 
 signals:
    void orderFilled();
@@ -113,6 +119,15 @@ signals:
    void signedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp);
    void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin
       , const BinaryData &payinHash, QDateTime timestamp);
+
+   void submitQuote(const bs::network::QuoteNotification&);
+   void pullQuote(const std::string& settlementId, const std::string& reqId
+      , const std::string& reqSessToken);
+
+   void putSetting(ApplicationSettings::Setting, const QVariant&);
+   void needAuthKey(const bs::Address&);
+   void needReserveUTXOs(const std::string& reserveId, const std::string& subId
+      , uint64_t amount, bool partial = false, const std::vector<UTXO>& utxos = {});
 
 public slots:
    void forceCheckCondition();
@@ -143,7 +158,6 @@ private slots:
 
 private:
    void onResetCurrentReservation(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data);
-   void showSettlementDialog(QDialog *dlg);
    bool checkConditions(const QString& productGroup, const bs::network::QuoteReqNotification& request);
    void popShield();
    void showEditableRFQPage();
@@ -157,9 +171,9 @@ private:
    {
       std::shared_ptr<bs::sync::hd::Wallet> xbtWallet;
       bs::Address authAddr;
-      std::vector<UTXO> utxosPayinFixed;
-      bs::UtxoReservationToken utxoRes;
-      std::unique_ptr<bs::hd::Purpose> walletPurpose;
+      std::vector<UTXO>          utxosPayinFixed;
+      bs::UtxoReservationToken   utxoRes;
+      bs::hd::Purpose            walletPurpose;
    };
 
    struct SentCCReply
@@ -168,7 +182,7 @@ private:
       std::string                         requestorAuthAddress;
       std::shared_ptr<bs::sync::hd::Wallet>  xbtWallet;
       bs::UtxoReservationToken            utxoRes;
-      std::unique_ptr<bs::hd::Purpose> walletPurpose;
+      bs::hd::Purpose                     walletPurpose;
    };
 
 private:
@@ -179,7 +193,6 @@ private:
    std::shared_ptr<AuthAddressManager>    authAddressManager_;
    std::shared_ptr<AssetManager>          assetManager_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<DialogManager>         dialogManager_;
    std::shared_ptr<WalletSignerContainer> signingContainer_;
    std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
@@ -191,6 +204,8 @@ private:
    std::unordered_map<std::string, SentCCReply>    sentCCReplies_;
    std::shared_ptr<bs::SecurityStatsCollector>     statsCollector_;
    std::unordered_map<std::string, std::string>    sentReplyToSettlementsIds_, settlementToReplyIds_;
+
+   bs::network::UserType   userType_{ bs::network::UserType::Undefined };
 };
 
 #endif // __RFQ_REPLY_WIDGET_H__

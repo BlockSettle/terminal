@@ -93,10 +93,12 @@ public:
    };
 
 public:
-   QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &
+   [[deprecated]] QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &
                       , std::shared_ptr<CelerClientQt> celerClient
                       , std::shared_ptr<ApplicationSettings> appSettings
                       , QObject* parent);
+   QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector>&
+      , QObject* parent);
    ~QuoteRequestsModel() override;
 
    QuoteRequestsModel(const QuoteRequestsModel&) = delete;
@@ -104,7 +106,7 @@ public:
    QuoteRequestsModel(QuoteRequestsModel&&) = delete;
    QuoteRequestsModel& operator=(QuoteRequestsModel&&) = delete;
 
-   void SetAssetManager(const std::shared_ptr<AssetManager>& assetManager);
+   [[deprecated]] void SetAssetManager(const std::shared_ptr<AssetManager>& assetManager);
    const bs::network::QuoteReqNotification &getQuoteReqNotification(const std::string &id) const;
    double getPrice(const std::string &security, Role) const;
    QString getMarketSecurity(const QModelIndex &index);

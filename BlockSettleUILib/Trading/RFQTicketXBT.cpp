@@ -1300,8 +1300,8 @@ void RFQTicketXBT::onWalletData(const std::string& walletId, const bs::sync::Wal
 
 void RFQTicketXBT::onAuthKey(const bs::Address& addr, const BinaryData& authKey)
 {
-   logger_->debug("[{}] {} ({} {})", __func__, authKey.toHexStr(), addr.display(), authAddr_.display());
    if (addr == authAddr_) {
+      logger_->debug("[{}] got auth key: {}", __func__, authKey.toHexStr());
       authKey_ = authKey.toHexStr();
       updateSubmitButton();
       sendDeferredRFQs();

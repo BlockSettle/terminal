@@ -28,6 +28,7 @@ namespace BlockSettle {
    namespace Terminal {
       class AcceptRFQ;
       class BsServerMessage_SignXbtHalf;
+      class IncomingRFQ;
       class MatchingMessage_Order;
       class Quote;
       class SettlementMessage_SendRFQ;
@@ -51,6 +52,7 @@ private:
    bool processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived&);
    bool processMatchingQuote(const BlockSettle::Terminal::Quote&);
    bool processMatchingOrder(const BlockSettle::Terminal::MatchingMessage_Order&);
+   bool processMatchingInRFQ(const BlockSettle::Terminal::IncomingRFQ&);
 
    bool processBsUnsignedPayin(const BinaryData& settlementId);
    bool processBsSignPayin(const BlockSettle::Terminal::BsServerMessage_SignXbtHalf&);
@@ -64,6 +66,7 @@ private:
    bool processXbtTx(uint64_t msgId, const BlockSettle::Common::WalletsMessage_XbtTxResponse&);
    bool processSignedTx(uint64_t msgId, const BlockSettle::Common::SignerMessage_SignTxResponse&);
    bool processHandshakeTimeout(const std::string& id);
+   bool processInRFQTimeout(const std::string& id);
 
    void startXbtSettlement(const bs::network::Quote&);
    void startCCSettlement(const bs::network::Quote&);

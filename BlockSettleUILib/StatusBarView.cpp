@@ -454,7 +454,7 @@ void StatusBarView::updateConnectionStatusDetails(ArmoryState state, unsigned in
 
       case ArmoryState::Ready: {
          auto lastBlockMinutes = (std::chrono::steady_clock::now() - timeSinceLastBlock_) / std::chrono::minutes(1);
-         auto tooltip = tr("Connected to DB (%1 blocks, last block updated %2 minute(s) ago)").arg(armory_->topBlock()).arg(lastBlockMinutes);
+         auto tooltip = tr("Connected to DB (%1 blocks, last block updated %2 minute(s) ago)").arg(blockNum_).arg(lastBlockMinutes);
          connectionStatusLabel_->setToolTip(tooltip);
          break;
       }

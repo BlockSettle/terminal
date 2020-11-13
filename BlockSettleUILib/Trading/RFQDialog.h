@@ -74,13 +74,13 @@ public:
       , const std::map<UTXO, std::string> &fixedXbtInputs
       , bs::UtxoReservationToken fixedXbtUtxoRes
       , bs::UtxoReservationToken ccUtxoRes
-      , std::unique_ptr<bs::hd::Purpose> purpose
+      , bs::hd::Purpose purpose
       , RFQRequestWidget* parent = nullptr);
    RFQDialog(const std::shared_ptr<spdlog::logger>& logger
       , const std::string& id, const bs::network::RFQ& rfq
       , const std::string& xbtWalletId, const bs::Address& recvXbtAddrIfSet
       , const bs::Address& authAddr
-      , std::unique_ptr<bs::hd::Purpose> purpose
+      , bs::hd::Purpose purpose
       , RFQRequestWidget* parent = nullptr);
    ~RFQDialog() override;
 
@@ -163,9 +163,9 @@ private:
 
    RFQRequestWidget *requestWidget_{};
 
-   QString           ccOrderId_;
-   bs::UtxoReservationToken ccUtxoRes_;
-   std::unique_ptr<bs::hd::Purpose> walletPurpose_;
+   QString                    ccOrderId_;
+   bs::UtxoReservationToken   ccUtxoRes_;
+   bs::hd::Purpose            walletPurpose_;
 
 };
 

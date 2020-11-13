@@ -38,7 +38,8 @@ using namespace com::celertech::marketmerchant::api::quote;
 
 MatchingAdapter::MatchingAdapter(const std::shared_ptr<spdlog::logger> &logger)
    : logger_(logger)
-   , user_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Matching))
+   , user_(std::make_shared<UserTerminal>(TerminalUsers::Matching))
+   , userSettl_(std::make_shared<UserTerminal>(TerminalUsers::Settlement))
 {
    celerConnection_ = std::make_unique<ClientCelerConnection>(logger, this, true, true);
 
@@ -410,7 +411,7 @@ bool MatchingAdapter::onQuoteResponse(const std::string& data)
          msgBest->set_quote_req_id(response.quoterequestid());
          msgBest->set_price(price);
          msgBest->set_own(own);
-         Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+         Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
          pushFill(env);
       }
    } else {
@@ -452,7 +453,7 @@ bool MatchingAdapter::onQuoteResponse(const std::string& data)
 
    MatchingMessage msg;
    toMsg(quote, msg.mutable_quote());
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
    return pushFill(env);
 }
 
@@ -505,7 +506,7 @@ bool MatchingAdapter::onBitcoinOrderSnapshot(const std::string& data)
 
    MatchingMessage msg;
    toMsg(order, msg.mutable_order());
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
    return pushFill(env);
 }
 
@@ -537,7 +538,7 @@ bool MatchingAdapter::onFxOrderSnapshot(const std::string& data)
 
    MatchingMessage msg;
    toMsg(order, msg.mutable_order());
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
    return pushFill(env);
 }
 
@@ -556,9 +557,81 @@ bool MatchingAdapter::onQuoteAck(const std::string&)
    return false;
 }
 
-bool MatchingAdapter::onQuoteReqNotification(const std::string&)
+bool MatchingAdapter::onQuoteReqNotification(const std::string& data)
 {
-   return false;
+   QuoteRequestNotification response;
+
+   if (!response.ParseFromString(data)) {
+      logger_->error("[MatchingAdapter::onQuoteReqNotification] failed to parse");
+      return false;
+   }
+
+   if (response.quoterequestnotificationgroup_size() < 1) {
+      logger_->error("[MatchingAdapter::onQuoteReqNotification] missing at least 1 QRN group");
+      return false;
+   }  // For SpotFX and SpotXBT there should be only 1 group
+
+   const QuoteRequestNotificationGroup& respgrp = response.quoterequestnotificationgroup(0);
+
+   if (respgrp.quoterequestnotificationleggroup_size() != 1) {
+      logger_->error("[MatchingAdapter::onQuoteReqNotification] wrong leg group size: {}\n{}"
+         , respgrp.quoterequestnotificationleggroup_size()
+         , ProtobufUtils::toJsonCompact(response));
+      return false;
+   }
+
+   const auto& legGroup = respgrp.quoterequestnotificationleggroup(0);
+
+   bs::network::QuoteReqNotification qrn;
+   qrn.quoteRequestId = response.quoterequestid();
+   qrn.security = respgrp.securitycode();
+   qrn.sessionToken = response.requestorsessiontoken();
+   qrn.quantity = legGroup.qty();
+   qrn.product = respgrp.currency();
+   qrn.party = respgrp.partyid();
+   qrn.reason = response.reason();
+   qrn.account = response.account();
+   qrn.expirationTime = response.expiretimeinutcinmillis();
+   qrn.timestamp = response.timestampinutcinmillis();
+   qrn.timeSkewMs = QDateTime::fromMSecsSinceEpoch(qrn.timestamp).msecsTo(QDateTime::currentDateTime());
+
+   qrn.side = bs::celer::fromCeler(legGroup.side());
+   qrn.assetType = bs::celer::fromCelerProductType(respgrp.producttype());
+
+   switch (response.quotenotificationtype()) {
+   case QUOTE_WITHDRAWN:
+      qrn.status = bs::network::QuoteReqNotification::Withdrawn;
+      break;
+   case PENDING_ACKNOWLEDGE:
+      qrn.status = bs::network::QuoteReqNotification::PendingAck;
+      break;
+   default:
+      qrn.status = bs::network::QuoteReqNotification::StatusUndefined;
+      break;
+   }
+
+   if (response.has_settlementid() && !response.settlementid().empty()) {
+      qrn.settlementId = response.settlementid();
+   }
+
+   switch (qrn.assetType) {
+   case bs::network::Asset::SpotXBT:
+      qrn.requestorAuthPublicKey = response.requestorauthenticationaddress();
+      break;
+   case bs::network::Asset::PrivateMarket:
+      qrn.requestorAuthPublicKey = respgrp.requestorcointransactioninput();
+      qrn.requestorRecvAddress = response.requestorreceiptaddress();
+      break;
+   default: break;
+   }
+
+   saveQuoteRequestCcy(qrn.quoteRequestId, qrn.product);
+
+   logger_->debug("[MatchingAdapter::onQuoteReqNotification] {}", ProtobufUtils::toJsonCompact(response));
+   MatchingMessage msg;
+   toMsg(qrn, msg.mutable_incoming_rfq());
+   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
+   return pushFill(env);
 }
 
 bool MatchingAdapter::onQuoteNotifCancelled(const std::string&)
@@ -580,7 +653,7 @@ void ClientCelerConnection::onSendData(CelerAPI::CelerMessageType messageType
    auto msgReq = msg.mutable_send_matching();
    msgReq->set_message_type((int)messageType);
    msgReq->set_data(data);
-   Envelope env{ 0, parent_->user_, bs::message::UserTerminal::create(bs::message::TerminalUsers::BsServer)
+   Envelope env{ 0, parent_->user_, UserTerminal::create(TerminalUsers::BsServer)
       , {}, {}, msg.SerializeAsString(), true };
    parent_->pushFill(env);
 }

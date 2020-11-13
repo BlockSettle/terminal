@@ -2034,7 +2034,7 @@ void BSTerminalMainWindow::InitWidgets()
       , assetManager_, dialogManager, signContainer_, armory_, autoSignRFQProvider_
       , utxoReservationMgr_, orderListModel_.get());
    ui_->widgetRFQReply->init(logger, celerConnection_, authManager_
-      , quoteProvider, mdCallbacks_, assetManager_, applicationSettings_, dialogManager
+      , quoteProvider, mdCallbacks_, assetManager_, applicationSettings_
       , signContainer_, armory_, connectionManager_, autoSignQuoteProvider_
       , utxoReservationMgr_, orderListModel_.get());
 

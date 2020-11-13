@@ -58,9 +58,10 @@ RFQReplyWidget::RFQReplyWidget(QWidget* parent)
 
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::quoteReqNotifStatusChanged, ui_->pageRFQReply
       , &RFQDealerReply::quoteReqNotifStatusChanged, Qt::QueuedConnection);
+   connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::putSetting, this, &RFQReplyWidget::putSetting);
+
    connect(ui_->shieldPage, &RFQShieldPage::requestPrimaryWalletCreation,
       this, &RFQReplyWidget::requestPrimaryWalletCreation);
-
 
    ui_->shieldPage->showShieldLoginToResponseRequired();
    popShield();
@@ -126,6 +127,36 @@ void RFQReplyWidget::shortcutActivated(ShortcutType s)
    }
 }
 
+void RFQReplyWidget::onMatchingLogout()
+{
+   userType_ = bs::network::UserType::Undefined;
+}
+
+void RFQReplyWidget::onBalance(const std::string& currency, double balance)
+{
+   ui_->pageRFQReply->onBalance(currency, balance);
+}
+
+void RFQReplyWidget::onWalletBalance(const bs::sync::WalletBalanceData& wbd)
+{
+   ui_->pageRFQReply->onWalletBalance(wbd);
+}
+
+void RFQReplyWidget::onHDWallet(const bs::sync::HDWalletData& wd)
+{
+   ui_->pageRFQReply->onHDWallet(wd);
+}
+
+void RFQReplyWidget::onAuthKey(const bs::Address& addr, const BinaryData& authKey)
+{
+   ui_->pageRFQReply->onAuthKey(addr, authKey);
+}
+
+void RFQReplyWidget::onQuoteReqNotification(const bs::network::QuoteReqNotification& qrn)
+{
+   ui_->widgetQuoteRequests->onQuoteRequest(qrn);
+}
+
 void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<CelerClientQt>& celerClient
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
@@ -133,7 +164,6 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<MDCallbacksQt>& mdCallbacks
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<DialogManager> &dialogManager
    , const std::shared_ptr<WalletSignerContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<ConnectionManager> &connectionManager
@@ -147,7 +177,6 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    authAddressManager_ = authAddressManager;
    quoteProvider_ = quoteProvider;
    assetManager_ = assetManager;
-   dialogManager_ = dialogManager;
    signingContainer_ = container;
    armory_ = armory;
    appSettings_ = appSettings;
@@ -232,13 +261,17 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
 }
 
 void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger>& logger
-   , const std::shared_ptr<DialogManager>& dialogMgr, OrderListModel* orderListModel)
+   , OrderListModel* orderListModel)
 {
    logger_ = logger;
-   dialogManager_ = dialogMgr;
+   statsCollector_ = std::make_shared<bs::SecurityStatsCollector>(ApplicationSettings::Filter_MD_QN_cnt);
 
-   connect(ui_->pageRFQReply, &RFQDealerReply::pullQuoteNotif, this
-      , &RFQReplyWidget::onPulled);
+   ui_->widgetQuoteRequests->init(logger_, statsCollector_);
+   ui_->pageRFQReply->init(logger);
+
+   connect(ui_->pageRFQReply, &RFQDealerReply::pullQuoteNotif, this, &RFQReplyWidget::onPulled);
+   connect(ui_->pageRFQReply, &RFQDealerReply::needAuthKey, this, &RFQReplyWidget::needAuthKey);
+   connect(ui_->pageRFQReply, &RFQDealerReply::needReserveUTXOs, this, &RFQReplyWidget::needReserveUTXOs);
 
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewOrders->setModel(orderListModel);
@@ -246,6 +279,28 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger>& logger
 
    connect(ui_->widgetQuoteRequests->view(), &TreeViewWithEnterKey::enterKeyPressed
       , this, &RFQReplyWidget::onEnterKeyPressed);
+   connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::Selected, this
+      , &RFQReplyWidget::onSelected);
+
+   ui_->pageRFQReply->setSubmitQuoteNotifCb([this]
+   (const std::shared_ptr<bs::ui::SubmitQuoteReplyData>& data)
+   {
+      statsCollector_->onQuoteSubmitted(data->qn);
+      emit submitQuote(data->qn);
+      ui_->widgetQuoteRequests->onQuoteReqNotifReplied(data->qn);
+      onReplied(data);
+   });
+
+   ui_->pageRFQReply->setGetLastSettlementReply([this]
+      (const std::string& settlementId) -> const std::vector<UTXO>*
+   {
+      auto lastReply = sentXbtReplies_.find(settlementId);
+      if (lastReply == sentXbtReplies_.end()) {
+         return nullptr;
+      }
+
+      return &(lastReply->second.utxosPayinFixed); //FIXME
+   });
 }
 
 void RFQReplyWidget::forceCheckCondition()
@@ -272,7 +327,7 @@ void RFQReplyWidget::onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyDat
          reply.authAddr = data->authAddr;
          reply.utxosPayinFixed = data->fixedXbtInputs;
          reply.utxoRes = std::move(data->utxoRes);
-         reply.walletPurpose = std::move(data->walletPurpose);
+         reply.walletPurpose = data->walletPurpose;
          break;
       }
 
@@ -283,7 +338,7 @@ void RFQReplyWidget::onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyDat
          reply.requestorAuthAddress = data->qn.reqAuthKey;
          reply.utxoRes = std::move(data->utxoRes);
          reply.xbtWallet = data->xbtWallet;
-         reply.walletPurpose = std::move(data->walletPurpose);
+         reply.walletPurpose = data->walletPurpose;
          break;
       }
 
@@ -293,15 +348,22 @@ void RFQReplyWidget::onReplied(const std::shared_ptr<bs::ui::SubmitQuoteReplyDat
    }
 }
 
-void RFQReplyWidget::onPulled(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken)
+void RFQReplyWidget::onPulled(const std::string& settlementId
+   , const std::string& reqId, const std::string& reqSessToken)
 {
    sentXbtReplies_.erase(settlementId);
    sentReplyToSettlementsIds_.erase(reqId);
    settlementToReplyIds_.erase(settlementId);
-   quoteProvider_->CancelQuoteNotif(QString::fromStdString(reqId), QString::fromStdString(reqSessToken));
+   if (quoteProvider_) {
+      quoteProvider_->CancelQuoteNotif(QString::fromStdString(reqId)
+         , QString::fromStdString(reqSessToken));
+   }
+   else {
+      emit pullQuote(settlementId, reqId, reqSessToken);
+   }
 }
 
-void RFQReplyWidget::onUserConnected(const bs::network::UserType &)
+void RFQReplyWidget::onUserConnected(const bs::network::UserType &userType)
 {
    if (appSettings_) {
       const bool autoSigning = appSettings_->get<bool>(ApplicationSettings::AutoSigning);
@@ -309,8 +371,8 @@ void RFQReplyWidget::onUserConnected(const bs::network::UserType &)
 
       ui_->widgetAutoSignQuote->onUserConnected(autoSigning, autoQuoting);
    }
-   else {
-      //TODO: query settings asynchronously
+   else {   //no AQ support in new code
+      userType_ = userType;
    }
 }
 
@@ -364,7 +426,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                , order, quoteReqId, assetManager_->getCCLotSize(order.product)
                , assetManager_->getCCGenesisAddr(order.product), sr.recipientAddress
                , sr.xbtWallet, signingContainer_, armory_, walletsManager_
-               , std::move(sr.walletPurpose), std::move(sr.utxoRes), expandTxInfo);
+               , sr.walletPurpose, std::move(sr.utxoRes), expandTxInfo);
             connect(settlContainer.get(), &DealerCCSettlementContainer::signTxRequest
                , this, &RFQReplyWidget::saveTxData);
             connect(settlContainer.get(), &DealerCCSettlementContainer::error
@@ -412,7 +474,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             const auto settlContainer = std::make_shared<DealerXBTSettlementContainer>(logger_
                , order, walletsManager_, reply.xbtWallet, quoteProvider_, signingContainer_
                , armory_, authAddressManager_, reply.authAddr, reply.utxosPayinFixed
-               , recvXbtAddr, utxoReservationManager_, std::move(reply.walletPurpose)
+               , recvXbtAddr, utxoReservationManager_, reply.walletPurpose
                , std::move(reply.utxoRes), expandTxInfo, tier1XbtLimit);
 
             connect(settlContainer.get(), &DealerXBTSettlementContainer::sendUnsignedPayinToPB
@@ -518,6 +580,7 @@ void RFQReplyWidget::onEnterKeyPressed(const QModelIndex &index)
 void RFQReplyWidget::onSelected(const QString& productGroup, const bs::network::QuoteReqNotification& request, double indicBid, double indicAsk)
 {
    if (!checkConditions(productGroup, request)) {
+      logger_->debug("[{}] checkConditions failed", __func__);
       return;
    }
 
@@ -585,17 +648,8 @@ void RFQReplyWidget::onSignTxRequested(QString orderId, QString reqId, QDateTime
    }
 }
 
-
-void RFQReplyWidget::showSettlementDialog(QDialog *dlg)
-{
-   dlg->setAttribute(Qt::WA_DeleteOnClose);
-
-   dialogManager_->adjustDialogPosition(dlg);
-
-   dlg->show();
-}
-
-bool RFQReplyWidget::checkConditions(const QString& productGroup , const bs::network::QuoteReqNotification& request)
+bool RFQReplyWidget::checkConditions(const QString& productGroup
+   , const bs::network::QuoteReqNotification& request)
 {
    ui_->stackedWidget->setEnabled(true);
 
@@ -605,14 +659,13 @@ bool RFQReplyWidget::checkConditions(const QString& productGroup , const bs::net
       return true;
    }
 
-   using UserType = CelerClient::CelerUserType;
-   const UserType userType = celerClient_->celerUserType();
+   const auto &userType = celerClient_ ? celerClient_->celerUserType() : userType_;
 
    using GroupType = RFQShieldPage::ProductType;
    const GroupType group = RFQShieldPage::getProductGroup(productGroup);
 
    switch (userType) {
-   case UserType::Market: {
+   case bs::network::UserType::Market:
       if (group == GroupType::SpotFX) {
          ui_->shieldPage->showShieldReservedTradingParticipant();
          popShield();
@@ -628,8 +681,7 @@ bool RFQReplyWidget::checkConditions(const QString& productGroup , const bs::net
          return false;
       }
       break;
-   }
-   case UserType::Trading: {
+   case bs::network::UserType::Trading:
       if (group == GroupType::SpotXBT) {
          ui_->shieldPage->showShieldReservedDealingParticipant();
          return false;
@@ -639,19 +691,14 @@ bool RFQReplyWidget::checkConditions(const QString& productGroup , const bs::net
          return false;
       }
       break;
-   }
-   case UserType::Dealing: {
+   case bs::network::UserType::Dealing:
       if ((group == GroupType::SpotXBT || group == GroupType::PrivateMarket) &&
             ui_->shieldPage->checkWalletSettings(group, QString::fromStdString(request.product))) {
          popShield();
          return false;
       }
       break;
-      break;
-   }
-   default: {
-      break;
-   }
+   default: break;
    }
 
    if (ui_->stackedWidget->currentIndex() != static_cast<int>(DealingPages::DealingPage)) {

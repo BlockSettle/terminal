@@ -139,6 +139,62 @@ void QuoteRequestsWidget::init(std::shared_ptr<spdlog::logger> logger
       width);
 }
 
+void QuoteRequestsWidget::init(const std::shared_ptr<spdlog::logger>&logger
+   , const std::shared_ptr<bs::SecurityStatsCollector>& statsCollector)
+{
+   logger_ = logger;
+
+   dropQN_ = false;     //FIXME
+
+   model_ = new QuoteRequestsModel(statsCollector, ui_->treeViewQuoteRequests);
+
+   sortModel_ = new QuoteReqSortModel(model_, this);
+   sortModel_->setSourceModel(model_);
+   sortModel_->showQuoted(true); //FIXME
+
+   ui_->treeViewQuoteRequests->setModel(sortModel_);
+   ui_->treeViewQuoteRequests->setRfqModel(model_);
+   ui_->treeViewQuoteRequests->setSortModel(sortModel_);
+   ui_->treeViewQuoteRequests->header()->setSectionResizeMode(
+      static_cast<int>(QuoteRequestsModel::Column::SecurityID),
+      QHeaderView::ResizeToContents);
+
+   connect(ui_->treeViewQuoteRequests, &QTreeView::collapsed,
+      this, &QuoteRequestsWidget::onCollapsed);
+   connect(ui_->treeViewQuoteRequests, &QTreeView::expanded,
+      this, &QuoteRequestsWidget::onExpanded);
+   connect(model_, &QuoteRequestsModel::quoteReqNotifStatusChanged, [this](const bs::network::QuoteReqNotification& qrn) {
+      emit quoteReqNotifStatusChanged(qrn);
+   });
+   connect(model_, &QAbstractItemModel::rowsInserted, this, &QuoteRequestsWidget::onRowsInserted);
+   connect(model_, &QAbstractItemModel::rowsRemoved, this, &QuoteRequestsWidget::onRowsRemoved);
+   connect(sortModel_, &QSortFilterProxyModel::rowsInserted, this, &QuoteRequestsWidget::onRowsChanged);
+   connect(sortModel_, &QSortFilterProxyModel::rowsRemoved, this, &QuoteRequestsWidget::onRowsChanged);
+
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(
+      static_cast<int>(QuoteRequestsModel::Column::Status), new RequestsProgressDelegate(ui_->treeViewQuoteRequests));
+
+   auto* doNotDrawSelectionDelegate = new DoNotDrawSelectionDelegate(ui_->treeViewQuoteRequests);
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(
+      static_cast<int>(QuoteRequestsModel::Column::QuotedPx),
+      doNotDrawSelectionDelegate);
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(
+      static_cast<int>(QuoteRequestsModel::Column::IndicPx),
+      doNotDrawSelectionDelegate);
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(
+      static_cast<int>(QuoteRequestsModel::Column::BestPx),
+      doNotDrawSelectionDelegate);
+   ui_->treeViewQuoteRequests->setItemDelegateForColumn(
+      static_cast<int>(QuoteRequestsModel::Column::Empty),
+      doNotDrawSelectionDelegate);
+
+   const auto opt = ui_->treeViewQuoteRequests->viewOptions();
+   const int width = opt.fontMetrics.boundingRect(tr("No quote received")).width() + 10;
+   ui_->treeViewQuoteRequests->header()->resizeSection(
+      static_cast<int>(QuoteRequestsModel::Column::Status),
+      width);
+}
+
 void QuoteRequestsWidget::onQuoteReqNotifSelected(const QModelIndex& index)
 {
    const auto quoteIndex = sortModel_->index(index.row(), 0, index.parent());
@@ -349,7 +405,12 @@ void QuoteRequestsWidget::onExpanded(const QModelIndex &index)
 
 void QuoteRequestsWidget::saveCollapsedState()
 {
-   appSettings_->set(ApplicationSettings::Filter_MD_QN, collapsed_);
+   if (appSettings_) {
+      appSettings_->set(ApplicationSettings::Filter_MD_QN, collapsed_);
+   }
+   else {
+      emit putSetting(ApplicationSettings::Filter_MD_QN, collapsed_);
+   }
 }
 
 void QuoteRequestsWidget::expandIfNeeded(const QModelIndex &index)
@@ -361,7 +422,8 @@ void QuoteRequestsWidget::expandIfNeeded(const QModelIndex &index)
       expandIfNeeded(sortModel_->index(i, 0, index));
 }
 
-bs::SecurityStatsCollector::SecurityStatsCollector(const std::shared_ptr<ApplicationSettings> appSettings, ApplicationSettings::Setting param)
+bs::SecurityStatsCollector::SecurityStatsCollector(const std::shared_ptr<ApplicationSettings> appSettings
+   , ApplicationSettings::Setting param)
    : appSettings_(appSettings), param_(param)
 {
    const auto map = appSettings_->get<QVariantMap>(param);
@@ -370,6 +432,17 @@ bs::SecurityStatsCollector::SecurityStatsCollector(const std::shared_ptr<Applica
    }
    connect(appSettings.get(), &ApplicationSettings::settingChanged, this, &bs::SecurityStatsCollector::onSettingChanged);
 
+   gradeColors_ = { QColor(Qt::white), QColor(Qt::lightGray), QColor(Qt::gray), QColor(Qt::darkGray) };
+   gradeBoundary_.resize(gradeColors_.size(), 0);
+
+   timer_.setInterval(60 * 1000);  // once in a minute
+   connect(&timer_, &QTimer::timeout, this, &bs::SecurityStatsCollector::saveState);
+   timer_.start();
+}
+
+bs::SecurityStatsCollector::SecurityStatsCollector(ApplicationSettings::Setting param)
+   : param_(param)
+{
    gradeColors_ = { QColor(Qt::white), QColor(Qt::lightGray), QColor(Qt::gray), QColor(Qt::darkGray) };
    gradeBoundary_.resize(gradeColors_.size(), 0);
 
@@ -387,7 +460,9 @@ void bs::SecurityStatsCollector::saveState()
    for (const auto counter : counters_) {
       map[QString::fromStdString(counter.first)] = counter.second;
    }
-   appSettings_->set(param_, map);
+   if (appSettings_) {
+      appSettings_->set(param_, map);
+   }
    modified_ = false;
 }
 

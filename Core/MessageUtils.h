@@ -19,7 +19,9 @@ namespace BlockSettle {
    namespace Terminal {
       class RFQ;
       class Quote;
+      class IncomingRFQ;
       class MatchingMessage_Order;
+      class ReplyToRFQ;
    }
 }
 
@@ -34,6 +36,12 @@ namespace bs {
 
       bs::network::Order fromMsg(const BlockSettle::Terminal::MatchingMessage_Order&);
       void toMsg(const bs::network::Order&, BlockSettle::Terminal::MatchingMessage_Order*);
+
+      bs::network::QuoteReqNotification fromMsg(const BlockSettle::Terminal::IncomingRFQ&);
+      void toMsg(const bs::network::QuoteReqNotification&, BlockSettle::Terminal::IncomingRFQ*);
+
+      bs::network::QuoteNotification fromMsg(const BlockSettle::Terminal::ReplyToRFQ&);
+      void toMsg(const bs::network::QuoteNotification&, BlockSettle::Terminal::ReplyToRFQ*);
 
    } // namespace message
 } // namespace bs

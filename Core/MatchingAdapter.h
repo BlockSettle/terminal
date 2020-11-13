@@ -88,7 +88,7 @@ private:
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<bs::message::User>  user_;
+   std::shared_ptr<bs::message::User>  user_, userSettl_;
    std::unique_ptr<BaseCelerClient>    celerConnection_;
 
    std::string assignedAccount_;

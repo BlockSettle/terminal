@@ -120,6 +120,7 @@ namespace bs {
                , const BinaryData& settlementId);
             void onSettlementComplete(const std::string& rfqId, const std::string& quoteId
                , const BinaryData& settlementId);
+            void onQuoteReqNotification(const bs::network::QuoteReqNotification&);
             void onOrdersUpdate(const std::vector<bs::network::Order>&);
 
             void onReservedUTXOs(const std::string& resId, const std::string& subId
@@ -198,6 +199,10 @@ namespace bs {
             void needReserveUTXOs(const std::string& reserveId, const std::string& subId
                , uint64_t amount, bool partial = false, const std::vector<UTXO>& utxos = {});
             void needUnreserveUTXOs(const std::string& reserveId, const std::string& subId);
+
+            void submitQuote(const bs::network::QuoteNotification&);
+            void pullQuote(const std::string& settlementId, const std::string& reqId
+               , const std::string& reqSessToken);
 
          private slots:
             void onSend();
