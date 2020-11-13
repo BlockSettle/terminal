@@ -41,6 +41,14 @@ namespace bs {
    }
 }
 
+namespace Blocksettle {
+   namespace Communication {
+      namespace ProxyTerminalPb {
+         class Response;
+      }
+   }
+}
+
 class QLockFile;
 
 struct BsClientLoginResult;
@@ -252,6 +260,7 @@ private slots:
 
    void onBsConnectionDisconnected();
    void onBsConnectionFailed();
+   void onMessageFromPB(const ProxyTerminalPb::Response &response);
 
    void onInitWalletDialogWasShown();
 

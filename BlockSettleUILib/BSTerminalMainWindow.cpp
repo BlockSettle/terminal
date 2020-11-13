@@ -84,6 +84,8 @@
 
 #include "ui_BSTerminalMainWindow.h"
 
+#include "bs_proxy_terminal_pb.pb.h"
+
 namespace {
    const auto kAutoLoginTimer = std::chrono::seconds(10);
 }
@@ -2222,9 +2224,9 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
 
    onBootstrapDataLoaded(result.bootstrapDataSigned);
 
-   connect(bsClient_.get(), &BsClient::disconnected, orderListModel_.get(), &OrderListModel::onDisconnected);
    connect(bsClient_.get(), &BsClient::disconnected, this, &BSTerminalMainWindow::onBsConnectionDisconnected);
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
+   connect(bsClient_.get(), &BsClient::processPbMessage, this, &BSTerminalMainWindow::onMessageFromPB);
 
    // connect to RFQ dialog
    connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetRFQ, &RFQRequestWidget::onMessageFromPB);
@@ -2248,6 +2250,7 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
    connect(ui_->widgetChat, &ChatWidget::emailHashRequested, bsClient_.get(), &BsClient::findEmailHash);
    connect(bsClient_.get(), &BsClient::emailHashReceived, ui_->widgetChat, &ChatWidget::onEmailHashReceived);
 
+   connect(bsClient_.get(), &BsClient::disconnected, orderListModel_.get(), &OrderListModel::onDisconnected);
    connect(bsClient_.get(), &BsClient::processPbMessage, orderListModel_.get(), &OrderListModel::onMessageFromPB);
 
    utxoReservationMgr_->setFeeRatePb(result.feeRatePb);
@@ -2477,5 +2480,24 @@ void BSTerminalMainWindow::onAuthLeafCreated()
                               openAuthManagerDialog();
                            });
       }
+   }
+}
+
+void BSTerminalMainWindow::onMessageFromPB(const ProxyTerminalPb::Response &message)
+{
+   if (message.data_case() == Blocksettle::Communication::ProxyTerminalPb::Response::kDeliveryRequest) {
+      const auto& request = message.delivery_request();
+
+      const int64_t toDeliver = request.to_deliver();
+      QString deliverMessage;
+      const QString header = tr("Trade obligations");
+
+      if (toDeliver < 0) {
+         deliverMessage = tr("You have obligations to deliver %1 XBT in next 24h.").arg(UiUtils::displayAmount(bs::XBTAmount{static_cast<uint64_t>(-toDeliver)}));
+      } else {
+         deliverMessage = tr("You are about to receive %1 XBT. Please make sure to deliver your cash obligations.").arg(UiUtils::displayAmount(bs::XBTAmount{ static_cast<uint64_t>(toDeliver)}));
+      }
+
+      showInfo(header, deliverMessage);
    }
 }
