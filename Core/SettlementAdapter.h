@@ -30,7 +30,10 @@ namespace BlockSettle {
       class BsServerMessage_SignXbtHalf;
       class IncomingRFQ;
       class MatchingMessage_Order;
+      class PullRFQReply;
       class Quote;
+      class QuoteCancelled;
+      class ReplyToRFQ;
       class SettlementMessage_SendRFQ;
    }
 }
@@ -63,8 +66,14 @@ private:
       , const BlockSettle::Terminal::AcceptRFQ&);
    bool processSendRFQ(const bs::message::Envelope&
       , const BlockSettle::Terminal::SettlementMessage_SendRFQ&);
+
+   bool processSubmitQuote(const bs::message::Envelope&, const BlockSettle::Terminal::ReplyToRFQ&);
+   bool processPullQuote(const bs::message::Envelope&, const BlockSettle::Terminal::PullRFQReply&);
+   bool processQuoteCancelled(const BlockSettle::Terminal::QuoteCancelled&);
+
    bool processXbtTx(uint64_t msgId, const BlockSettle::Common::WalletsMessage_XbtTxResponse&);
    bool processSignedTx(uint64_t msgId, const BlockSettle::Common::SignerMessage_SignTxResponse&);
+
    bool processHandshakeTimeout(const std::string& id);
    bool processInRFQTimeout(const std::string& id);
 
@@ -93,6 +102,7 @@ private:
       bs::Address          settlementAddress;
       std::string          txComment;
       bs::Address          recvAddress;
+      bs::Address          dealerRecvAddress;
       bs::Address          ownAuthAddr;
       BinaryData           ownKey;
       BinaryData           counterKey;

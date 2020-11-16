@@ -741,9 +741,9 @@ void QuoteRequestsModel::onAllQuoteNotifCancelled(const QString &reqId)
 void QuoteRequestsModel::onQuoteReqCancelled(const QString &reqId, bool byUser)
 {
    if (!byUser) {
+      onAllQuoteNotifCancelled(reqId);
       return;
    }
-
    setStatus(reqId.toStdString(), bs::network::QuoteReqNotification::Withdrawn);
 }
 

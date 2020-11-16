@@ -97,6 +97,8 @@ public:
    void shortcutActivated(ShortcutType s) override;
 
    void onMatchingLogout();
+   void onMDUpdated(bs::network::Asset::Type, const QString& security
+      , const bs::network::MDFields&);
    void onBalance(const std::string& currency, double balance);
    void onWalletBalance(const bs::sync::WalletBalanceData&);
    void onHDWallet(const bs::sync::HDWalletData&);
@@ -134,12 +136,12 @@ public slots:
 
    void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
    void onUserConnected(const bs::network::UserType &);
+   void onQuoteCancelled(const QString& reqId, bool userCancelled);
+   void onQuoteNotifCancelled(const QString& reqId);
 
 private slots:
    void onOrder(const bs::network::Order &o);
-   void onQuoteCancelled(const QString &reqId, bool userCancelled);
    void onQuoteRejected(const QString &reqId, const QString &reason);
-   void onQuoteNotifCancelled(const QString &reqId);
 
    void saveTxData(QString orderId, std::string txData);
    void onSignTxRequested(QString orderId, QString reqId, QDateTime timestamp);

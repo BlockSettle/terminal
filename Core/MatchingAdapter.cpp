@@ -11,11 +11,13 @@
 #include "MatchingAdapter.h"
 #include <spdlog/spdlog.h>
 #include "Celer/CommonUtils.h"
+#include "Celer/CancelQuoteNotifSequence.h"
 #include "Celer/CancelRFQSequence.h"
 #include "Celer/CelerClientProxy.h"
 #include "Celer/CreateOrderSequence.h"
 #include "Celer/CreateFxOrderSequence.h"
 #include "Celer/GetAssignedAccountsListSequence.h"
+#include "Celer/SubmitQuoteNotifSequence.h"
 #include "Celer/SubmitRFQSequence.h"
 #include "CurrencyPair.h"
 #include "MessageUtils.h"
@@ -83,6 +85,8 @@ MatchingAdapter::MatchingAdapter(const std::shared_ptr<spdlog::logger> &logger)
       , [this](const std::string& data) {
       return onQuoteNotifCancelled(data);
    });
+   celerConnection_->RegisterHandler(CelerAPI::SubLedgerSnapshotDownstreamEventType
+      , [](const std::string&) { return true; });  // remove warning from log
 }
 
 void MatchingAdapter::connectedToServer()
@@ -193,6 +197,10 @@ bool MatchingAdapter::process(const bs::message::Envelope &env)
          return processAcceptRFQ(msg.accept_rfq());
       case MatchingMessage::kCancelRfq:
          return processCancelRFQ(msg.cancel_rfq());
+      case MatchingMessage::kSubmitQuoteNotif:
+         return processSubmitQuote(msg.submit_quote_notif());
+      case MatchingMessage::kPullQuoteNotif:
+         return processPullQuote(msg.pull_quote_notif());
       default:
          logger_->warn("[{}] unknown msg {} #{} from {}", __func__, msg.data_case()
             , env.id, env.sender->name());
@@ -291,6 +299,42 @@ bool MatchingAdapter::processCancelRFQ(const std::string& rfqId)
       return false;
    } else {
       logger_->debug("[MatchingAdapter::processCancelRFQ] RFQ {} cancelled", rfqId);
+   }
+   return true;
+}
+
+bool MatchingAdapter::processSubmitQuote(const ReplyToRFQ& request)
+{
+   if (assignedAccount_.empty()) {
+      logger_->warn("[MatchingAdapter::processSubmitQuote] account name not set");
+   }
+   const auto& qn = fromMsg(request);
+   const auto &sequence = std::make_shared<bs::celer::SubmitQuoteNotifSequence>(assignedAccount_, qn, logger_);
+   if (!celerConnection_->ExecuteSequence(sequence)) {
+      logger_->error("[MatchingAdapter::processSubmitQuote] failed to execute CelerSubmitQuoteNotifSequence");
+   } else {
+      logger_->debug("[MatchingAdapter::processSubmitQuote] QuoteNotification on {} submitted"
+         , qn.quoteRequestId);
+   }
+   return true;
+}
+
+bool MatchingAdapter::processPullQuote(const PullRFQReply& request)
+{
+   std::shared_ptr<bs::celer::CancelQuoteNotifSequence> sequence;
+   try {
+      sequence = std::make_shared<bs::celer::CancelQuoteNotifSequence>(request.rfq_id()
+         , request.session_token(), logger_);
+   }
+   catch (const std::exception& e) {
+      logger_->error("[{}] failed to init: {}", __func__, e.what());
+      return true;
+   }
+   if (!celerConnection_->ExecuteSequence(sequence)) {
+      logger_->error("[MatchingAdapter::processPullQuote] failed to execute CancelQuoteNotifSequence");
+   } else {
+      logger_->debug("[MatchingAdapter::processPullQuote] QuoteNotification on {} pulled"
+         , request.rfq_id());
    }
    return true;
 }
@@ -457,14 +501,43 @@ bool MatchingAdapter::onQuoteResponse(const std::string& data)
    return pushFill(env);
 }
 
-bool MatchingAdapter::onQuoteReject(const std::string&)
+bool MatchingAdapter::onQuoteReject(const std::string& data)
 {
-   return false;
+   QuoteRequestRejectDownstreamEvent response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[MatchingAdapter::onQuoteReject] failed to parse");
+      return false;
+   }
+   logger_->debug("[MatchingAdapter::onQuoteReject] {}", ProtobufUtils::toJsonCompact(response));
+
+   MatchingMessage msg;
+   auto msgReq = msg.mutable_quote_reject();
+   msgReq->set_rfq_id(response.quoterequestid());
+   if (response.quoterequestrejectgroup_size() > 0) {
+      const QuoteRequestRejectGroup& rejGrp = response.quoterequestrejectgroup(0);
+      msgReq->set_reject_text(rejGrp.text());
+   }
+   msgReq->set_reject_code((int)response.quoterequestrejectreason());
+   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
+   return pushFill(env);
 }
 
-bool MatchingAdapter::onOrderReject(const std::string&)
+bool MatchingAdapter::onOrderReject(const std::string& data)
 {
-   return false;
+   CreateOrderRequestRejectDownstreamEvent response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[MatchingAdapter::onQuoteReject] failed to parse");
+      return false;
+   }
+   logger_->debug("[MatchingAdapter::onOrderReject] {}", ProtobufUtils::toJsonCompact(response));
+
+   MatchingMessage msg;
+   auto msgReq = msg.mutable_order_reject();
+   msgReq->set_order_id(response.externalclorderid());
+   msgReq->set_quote_id(response.quoteid());
+   msgReq->set_reject_text(response.rejectreason());
+   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
+   return pushFill(env);
 }
 
 bool MatchingAdapter::onBitcoinOrderSnapshot(const std::string& data)
@@ -542,9 +615,22 @@ bool MatchingAdapter::onFxOrderSnapshot(const std::string& data)
    return pushFill(env);
 }
 
-bool MatchingAdapter::onQuoteCancelled(const std::string&)
+bool MatchingAdapter::onQuoteCancelled(const std::string& data)
 {
-   return false;
+   QuoteCancelDownstreamEvent response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[MatchingAdapter::onQuoteCancelled] failed to parse");
+      return false;
+   }
+   logger_->debug("[MatchingAdapter::onQuoteCancelled] {}", ProtobufUtils::toJsonCompact(response));
+
+   MatchingMessage msg;
+   auto msgData = msg.mutable_quote_cancelled();
+   msgData->set_rfq_id(response.quoterequestid());
+   msgData->set_quote_id(response.quoteid());
+   msgData->set_by_user(response.quotecanceltype() == com::celertech::marketmerchant::api::enums::quotecanceltype::CANCEL_ALL_QUOTES);
+   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
+   return pushFill(env);
 }
 
 bool MatchingAdapter::onSignTxNotif(const std::string&)
@@ -634,9 +720,23 @@ bool MatchingAdapter::onQuoteReqNotification(const std::string& data)
    return pushFill(env);
 }
 
-bool MatchingAdapter::onQuoteNotifCancelled(const std::string&)
+bool MatchingAdapter::onQuoteNotifCancelled(const std::string& data)
 {
-   return false;
+   QuoteCancelDownstreamEvent response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[MatchingAdapter::onQuoteNotifCancelled] failed to parse");
+      return false;
+   }
+   logger_->debug("[MatchingAdapter::onQuoteNotifCancelled] {}", ProtobufUtils::toJsonCompact(response));
+
+   MatchingMessage msg;
+   auto msgReq = msg.mutable_quote_cancelled();
+   msgReq->set_rfq_id(response.quoterequestid());
+   if (response.quotecanceltype() != com::celertech::marketmerchant::api::enums::quotecanceltype::CANCEL_ALL_QUOTES) {
+      msgReq->set_quote_id(response.quoteid());
+   }
+   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
+   return pushFill(env);
 }
 
 

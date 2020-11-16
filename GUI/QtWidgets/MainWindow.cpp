@@ -1020,6 +1020,7 @@ void MainWindow::onMDUpdated(bs::network::Asset::Type assetType
    , const QString& security, const bs::network::MDFields &fields)
 {
    ui_->widgetRFQ->onMDUpdated(assetType, security, fields);
+   ui_->widgetRFQReply->onMDUpdated(assetType, security, fields);
    ui_->widgetPortfolio->onMDUpdated(assetType, security, fields);
 }
 
@@ -1092,6 +1093,12 @@ void bs::gui::qt::MainWindow::onQuoteReqNotification(const bs::network::QuoteReq
 void MainWindow::onOrdersUpdate(const std::vector<bs::network::Order>& orders)
 {
    orderListModel_->onOrdersUpdate(orders);
+}
+
+void bs::gui::qt::MainWindow::onQuoteCancelled(const std::string& rfqId
+   , const std::string& quoteId, bool byUser)
+{
+   ui_->widgetRFQReply->onQuoteCancelled(QString::fromStdString(rfqId), byUser);
 }
 
 void MainWindow::onReservedUTXOs(const std::string& resId

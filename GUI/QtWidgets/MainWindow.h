@@ -122,6 +122,8 @@ namespace bs {
                , const BinaryData& settlementId);
             void onQuoteReqNotification(const bs::network::QuoteReqNotification&);
             void onOrdersUpdate(const std::vector<bs::network::Order>&);
+            void onQuoteCancelled(const std::string& rfqId, const std::string& quoteId
+               , bool byUser);
 
             void onReservedUTXOs(const std::string& resId, const std::string& subId
                , const std::vector<UTXO>&);

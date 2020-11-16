@@ -1324,8 +1324,11 @@ void bs::ui::RFQDealerReply::updateBalanceLabel()
             .arg(QString::fromStdString(currentQRN_.side == bs::network::Side::Buy ? baseProduct_ : product_));
       }
       else {
-         totalBalance = tr("%1 %2").arg(UiUtils::displayCurrencyAmount(balances_.at(product_)))
-            .arg(QString::fromStdString(currentQRN_.side == bs::network::Side::Buy ? baseProduct_ : product_));
+         try {
+            totalBalance = tr("%1 %2").arg(UiUtils::displayCurrencyAmount(balances_.at(product_)))
+               .arg(QString::fromStdString(currentQRN_.side == bs::network::Side::Buy ? baseProduct_ : product_));
+         }
+         catch (const std::exception&) {}
       }
    }
 
@@ -1373,7 +1376,10 @@ bs::XBTAmount RFQDealerReply::getXbtBalance() const
                case bs::hd::CoinType::Bitcoin_test:
                   for (const auto& leaf : group.leaves) {
                      for (const auto& id : leaf.ids) {
-                        balance += balances_.at(id);
+                        try {
+                           balance += balances_.at(id);
+                        }
+                        catch (const std::exception&) {}
                      }
                   }
                   break;

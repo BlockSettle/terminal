@@ -21,7 +21,9 @@ namespace BlockSettle {
    namespace Terminal {
       class AcceptRFQ;
       class MatchingMessage_Login;
+      class PullRFQReply;
       class RFQ;
+      class ReplyToRFQ;
    }
 }
 
@@ -67,6 +69,8 @@ private:
    bool processSendRFQ(const BlockSettle::Terminal::RFQ&);
    bool processAcceptRFQ(const BlockSettle::Terminal::AcceptRFQ&);
    bool processCancelRFQ(const std::string& rfqId);
+   bool processSubmitQuote(const BlockSettle::Terminal::ReplyToRFQ&);
+   bool processPullQuote(const BlockSettle::Terminal::PullRFQReply&);
 
    std::string getQuoteReqId(const std::string& quoteId) const;
    void saveQuoteReqId(const std::string& quoteReqId, const std::string& quoteId);

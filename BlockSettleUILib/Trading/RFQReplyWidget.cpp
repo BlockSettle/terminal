@@ -132,6 +132,13 @@ void RFQReplyWidget::onMatchingLogout()
    userType_ = bs::network::UserType::Undefined;
 }
 
+void RFQReplyWidget::onMDUpdated(bs::network::Asset::Type at, const QString& security
+   , const bs::network::MDFields& fields)
+{
+   ui_->widgetQuoteRequests->onSecurityMDUpdated(at, security, fields);
+   ui_->pageRFQReply->onMDUpdate(at, security, fields);
+}
+
 void RFQReplyWidget::onBalance(const std::string& currency, double balance)
 {
    ui_->pageRFQReply->onBalance(currency, balance);

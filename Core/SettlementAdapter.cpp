@@ -152,6 +152,10 @@ bool SettlementAdapter::process(const bs::message::Envelope &env)
          return processHandshakeTimeout(msg.handshake_timeout());
       case SettlementMessage::kQuoteReqTimeout:
          return processInRFQTimeout(msg.quote_req_timeout());
+      case SettlementMessage::kReplyToRfq:
+         return processSubmitQuote(env, msg.reply_to_rfq());
+      case SettlementMessage::kPullRfqReply:
+         return processPullQuote(env, msg.pull_rfq_reply());
       default:
          logger_->warn("[{}] unknown settlement request {}", __func__, msg.data_case());
          break;
@@ -194,9 +198,13 @@ bool SettlementAdapter::processMatchingQuote(const BlockSettle::Terminal::Quote&
       logger_->error("[{}] unknown settlement for {}", __func__, response.request_id());
       return true;
    }
+   itSettl->second->quote = fromMsg(response);
+   const auto& itQuote = settlByQuoteId_.find(response.quote_id());
+   if (itQuote == settlByQuoteId_.end()) {
+      settlByQuoteId_[response.quote_id()] = itSettl->second;
+   }
    SettlementMessage msg;
-   auto msgResp = msg.mutable_quote();
-   *msgResp = response;
+   *msg.mutable_quote() = response;
    Envelope env{ 0, user_, itSettl->second->env.sender, {}, {}
       , msg.SerializeAsString() };
    return pushFill(env);
@@ -510,6 +518,94 @@ bool SettlementAdapter::processSendRFQ(const bs::message::Envelope& env
    *msgReq = request.rfq();
    Envelope envReq{ 0, user_, userMtch_, {}, {}, msg.SerializeAsString(), true };
    return pushFill(envReq);
+}
+
+bool SettlementAdapter::processSubmitQuote(const bs::message::Envelope& env
+   , const ReplyToRFQ& request)
+{
+   const auto& itSettl = settlByRfqId_.find(request.quote().request_id());
+   if (itSettl == settlByRfqId_.end()) {
+      logger_->error("[{}] RFQ {} not found", __func__, request.quote().request_id());
+      return true;
+   }
+   logger_->debug("[{}] sess token: {}, account: {}, recv addr: {}", __func__
+     , request.session_token(), request.account(), request.dealer_recv_addr());
+   itSettl->second->quote = fromMsg(request.quote());
+   itSettl->second->env = env;
+   if (!request.dealer_recv_addr().empty()) {
+      try {
+         itSettl->second->dealerRecvAddress = bs::Address::fromAddressString(request.dealer_recv_addr());
+      } catch (const std::exception&) {
+         logger_->warn("[{}] invalid dealer recv address {}", __func__, request.dealer_recv_addr());
+      }
+   }
+
+   BinaryData settlementId;
+   try {
+      settlementId = BinaryData::CreateFromHex(itSettl->second->quote.settlementId);
+   }
+   catch (const std::exception&) {
+      logger_->warn("[{}] invalid settlementId format: {}", __func__, itSettl->second->quote.settlementId);
+   }
+   if (!settlementId.empty()) {
+      if (!itSettl->second->settlementId.empty() && (itSettl->second->settlementId != settlementId)) {
+         logger_->error("[{}] settlementId mismatch", __func__);
+         return true;
+      }
+      itSettl->second->settlementId = settlementId;
+      settlBySettlId_[settlementId] = itSettl->second;
+   }
+
+   MatchingMessage msg;
+   *msg.mutable_submit_quote_notif() = request;
+   Envelope envReq{ 0, user_, userMtch_, {}, {}, msg.SerializeAsString(), true };
+   return pushFill(envReq);
+}
+
+bool SettlementAdapter::processPullQuote(const bs::message::Envelope& env
+   , const PullRFQReply& request)
+{
+   const auto& itSettl = settlByRfqId_.find(request.rfq_id());
+   if (itSettl == settlByRfqId_.end()) {
+      logger_->error("[{}] RFQ {} not found", __func__, request.rfq_id());
+      return true;
+   }
+   if (!itSettl->second->env.sender || (itSettl->second->env.sender->value() != env.sender->value())) {
+      logger_->error("[{}] invalid or different sender of quote submit", __func__);
+      return true;
+   }
+
+   const auto& itSettlById = settlBySettlId_.find(itSettl->second->settlementId);
+   if (itSettlById != settlBySettlId_.end()) {
+      unreserve(itSettl->first);
+      settlBySettlId_.erase(itSettlById);
+   }
+
+   MatchingMessage msg;
+   auto msgData = msg.mutable_pull_quote_notif();
+   *msgData = request;
+   Envelope envReq{ 0, user_, userMtch_, {}, {}, msg.SerializeAsString(), true };
+   return pushFill(envReq);
+}
+
+bool SettlementAdapter::processQuoteCancelled(const QuoteCancelled& request)
+{
+   const auto& itRFQ = settlByRfqId_.find(request.rfq_id());
+   if (itRFQ == settlByRfqId_.end()) {
+      logger_->error("[{}] unknown RFQ {}", __func__, request.rfq_id());
+      return true;
+   }
+   const auto& itQuote = settlByQuoteId_.find(request.quote_id());
+   if (itQuote == settlByQuoteId_.end()) {
+      logger_->error("[{}] quote {} not found", __func__, request.quote_id());
+      return true;
+   }
+   settlByQuoteId_.erase(itQuote);
+
+   SettlementMessage msg;
+   *msg.mutable_quote_cancelled() = request;
+   Envelope env{ 0, user_, itRFQ->second->env.sender, {}, {}, msg.SerializeAsString() };
+   return pushFill(env);
 }
 
 bool SettlementAdapter::processXbtTx(uint64_t msgId, const WalletsMessage_XbtTxResponse& response)

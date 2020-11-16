@@ -1633,6 +1633,8 @@ bool QtGuiAdapter::processSettlement(const bs::message::Envelope& env)
       return processSettlComplete(msg.settlement_complete());
    case SettlementMessage::kQuoteReqNotif:
       return processQuoteReqNotif(msg.quote_req_notif());
+   case SettlementMessage::kQuoteCancelled:
+      return processQuoteCancelled(msg.quote_cancelled());
    default:    break;
    }
    return true;
@@ -1882,6 +1884,13 @@ bool QtGuiAdapter::sendPooledOrdersUpdate()
    return QMetaObject::invokeMethod(mainWindow_, [this] {
       mainWindow_->onOrdersUpdate(pooledOrders_);
       pooledOrders_.clear();
+   });
+}
+
+bool QtGuiAdapter::processQuoteCancelled(const QuoteCancelled& msg)
+{
+   return QMetaObject::invokeMethod(mainWindow_, [this, msg]{
+      mainWindow_->onQuoteCancelled(msg.rfq_id(), msg.quote_id(), msg.by_user());
    });
 }
 

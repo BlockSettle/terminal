@@ -375,8 +375,8 @@ void RFQTicketXBT::fillRecvAddresses()
 bool RFQTicketXBT::preSubmitCheck()
 {
    if (currentGroupType_ == ProductGroupType::XBTGroupType) {
-
-      if (authAddressManager_->GetState(authAddr_) == AuthAddressManager::AuthAddressState::Verified) {
+      if ((!authAddressManager_ && !authAddr_.empty())
+         || (authAddressManager_->GetState(authAddr_) == AuthAddressManager::AuthAddressState::Verified)) {
          return true;
       }
 

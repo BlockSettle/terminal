@@ -52,6 +52,7 @@ namespace BlockSettle {
       class BsServerMessage_StartLoginResult;
       class MatchingMessage_LoggedIn;
       class Quote;
+      class QuoteCancelled;
       class IncomingRFQ;
       class MatchingMessage_Order;
       class MktDataMessage_Prices;
@@ -145,6 +146,7 @@ private:
    bool processQuoteReqNotif(const BlockSettle::Terminal::IncomingRFQ&);
    bool processOrdersUpdate(const BlockSettle::Terminal::BsServerMessage_Orders&);
    bool sendPooledOrdersUpdate();
+   bool processQuoteCancelled(const BlockSettle::Terminal::QuoteCancelled&);
    bool processReservedUTXOs(const BlockSettle::Common::WalletsMessage_ReservedUTXOs&);
 
 private slots:
