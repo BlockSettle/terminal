@@ -152,7 +152,7 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::Create
    if (!paymentInfo.requestURL.isEmpty()) {
       dlg->ui_->checkBoxRBF->setChecked(false);
       dlg->ui_->checkBoxRBF->setEnabled(false);
-      dlg->ui_->checkBoxRBF->setToolTip(tr("RBF disabled for BitPay request"));
+      dlg->ui_->checkBoxRBF->setToolTip(tr("RBF disabled for payment request"));
 
       dlg->nam_ = std::make_shared<QNetworkAccessManager>();
    }

@@ -2419,19 +2419,19 @@ void BSTerminalMainWindow::openURIDialog()
       // open create transaction dialog
 
       const auto requestInfo = dlg.getRequestInfo();
-      std::shared_ptr<CreateTransactionDialog> cerateTxDlg;
+      std::shared_ptr<CreateTransactionDialog> createTxDlg;
 
       if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
-         cerateTxDlg = CreateTransactionDialogAdvanced::CreateForPaymentRequest(armory_, walletsMgr_
+         createTxDlg = CreateTransactionDialogAdvanced::CreateForPaymentRequest(armory_, walletsMgr_
             , utxoReservationMgr_, signContainer_, uiLogger, applicationSettings_
             , requestInfo, this);
       } else {
-         cerateTxDlg = CreateTransactionDialogSimple::CreateForPaymentRequest(armory_, walletsMgr_
+         createTxDlg = CreateTransactionDialogSimple::CreateForPaymentRequest(armory_, walletsMgr_
             , utxoReservationMgr_, signContainer_, uiLogger, applicationSettings_
             , requestInfo, this);
       }
 
-      DisplayCreateTransactionDialog(cerateTxDlg);
+      DisplayCreateTransactionDialog(createTxDlg);
    }
 }
 
@@ -2486,18 +2486,57 @@ void BSTerminalMainWindow::onAuthLeafCreated()
 void BSTerminalMainWindow::onMessageFromPB(const ProxyTerminalPb::Response &message)
 {
    if (message.data_case() == Blocksettle::Communication::ProxyTerminalPb::Response::kDeliveryRequest) {
-      const auto& request = message.delivery_request();
+      const auto& request = message.delivery_request();\
+      auto uiLogger = logMgr_->logger("ui");
 
       const int64_t toDeliver = request.to_deliver();
+      bs::Address bsAddress;
+
+      try {
+         bsAddress = bs::Address::fromAddressString(request.bs_address());
+      } catch(...) {
+         uiLogger->error("[BSTerminalMainWindow::onMessageFromPB] could not parse BS address: {}"
+                        , request.bs_address());
+         return;
+      }
+
+
       QString deliverMessage;
       const QString header = tr("Trade obligations");
 
       if (toDeliver < 0) {
-         deliverMessage = tr("You have obligations to deliver %1 XBT in next 24h.").arg(UiUtils::displayAmount(bs::XBTAmount{static_cast<uint64_t>(-toDeliver)}));
+
+         bs::XBTAmount amountToDeliver{static_cast<uint64_t>(-toDeliver)};
+
+         deliverMessage = tr("You have obligations to deliver %1 XBT in next 24h to %2.").arg(UiUtils::displayAmount(amountToDeliver), QString::fromStdString(bsAddress.display()));
+         showInfo(header, deliverMessage);
+
+
+         std::shared_ptr<CreateTransactionDialog> createTxDlg;
+
+         Bip21::PaymentRequestInfo requestInfo;
+
+         requestInfo.address = QString::fromStdString(bsAddress.display());
+         requestInfo.amount = amountToDeliver;
+         requestInfo.message = tr("EURXBT1 delivery");
+         requestInfo.feePerByte = utxoReservationMgr_->feeRatePb();
+         //requestInfo.requestExpireDateTime = ;
+
+         if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
+            createTxDlg = CreateTransactionDialogAdvanced::CreateForPaymentRequest(armory_, walletsMgr_
+               , utxoReservationMgr_, signContainer_, uiLogger, applicationSettings_
+               , requestInfo, this);
+         } else {
+            createTxDlg = CreateTransactionDialogSimple::CreateForPaymentRequest(armory_, walletsMgr_
+               , utxoReservationMgr_, signContainer_, uiLogger, applicationSettings_
+               , requestInfo, this);
+         }
+
+         DisplayCreateTransactionDialog(createTxDlg);
+
       } else {
          deliverMessage = tr("You are about to receive %1 XBT. Please make sure to deliver your cash obligations.").arg(UiUtils::displayAmount(bs::XBTAmount{ static_cast<uint64_t>(toDeliver)}));
+         showInfo(header, deliverMessage);
       }
-
-      showInfo(header, deliverMessage);
    }
 }

@@ -71,7 +71,7 @@ namespace bs {
 
       BTCNumericTypes::satoshi_type getAvailableXbtUtxoSum(const HDWalletId& walletId) const;
       BTCNumericTypes::satoshi_type getAvailableXbtUtxoSum(const HDWalletId& walletId, bs::hd::Purpose purpose) const;
-      
+
       std::vector<UTXO> getAvailableXbtUTXOs(const HDWalletId& walletId) const;
       std::vector<UTXO> getAvailableXbtUTXOs(const HDWalletId& walletId, bs::hd::Purpose purpose) const;
 
@@ -80,7 +80,7 @@ namespace bs {
          std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor, CheckAmount checkAmount);
       void getBestXbtUtxoSet(const HDWalletId& walletId, bs::hd::Purpose purpose, BTCNumericTypes::satoshi_type quantity,
          std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor, CheckAmount checkAmount);
-  
+
       // CC specific implementation
       BTCNumericTypes::balance_type getAvailableCCUtxoSum(const CCProductName& CCProduct) const;
       std::vector<UTXO> getAvailableCCUTXOs(const CCWalletId& walletId) const;
