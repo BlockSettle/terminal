@@ -1,7 +1,20 @@
 {
-   "latest_version": "0.91.1",
-   "release_date": "30 Oct 2020",
+   "latest_version": "0.91.2",
+   "release_date": "17 Nov 2020",
    "changes": [
+      {
+         "version_string": "0.91.2",
+         "previous_version": "0.91.1",
+         "release_date": "17 Nov 2020",
+         "release_type": "prod",
+         "improvements": [
+         ],
+         "bug_fixes": [
+            "Fix XBT limit validation on submitted auth address"
+         ],
+         "revision": "0ba354aa1",
+         "common_revision": "772fedb1"
+      },
       {
          "version_string": "0.91.1",
          "previous_version": "0.91.0",
