@@ -2535,8 +2535,26 @@ void BSTerminalMainWindow::onMessageFromPB(const ProxyTerminalPb::Response &mess
          DisplayCreateTransactionDialog(createTxDlg);
 
       } else {
-         deliverMessage = tr("You are about to receive %1 XBT. Please make sure to deliver your cash obligations.").arg(UiUtils::displayAmount(bs::XBTAmount{ static_cast<uint64_t>(toDeliver)}));
+         deliverMessage = tr("You are about to receive %1 XBT. Please make sure to deliver your cash obligations. Press OK to submit delivery address.").arg(UiUtils::displayAmount(bs::XBTAmount{ static_cast<uint64_t>(toDeliver)}));
          showInfo(header, deliverMessage);
+
+         SendBSDeliveryAddress();
       }
    }
+}
+
+void BSTerminalMainWindow::SendBSDeliveryAddress()
+{
+   const auto wallet = walletsMgr_->getDefaultWallet();
+
+   const auto &cbAddr = [this, wallet](const bs::Address &address) {
+      if (address.isValid()) {
+
+         bsClient_->submitDeliveryAddress(address);
+
+         wallet->setAddressComment(address, "EURXBT1 delivery");
+         wallet->syncAddresses();
+      }
+   };
+   wallet->getNewExtAddress(cbAddr);
 }
