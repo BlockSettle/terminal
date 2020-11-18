@@ -2490,21 +2490,21 @@ void BSTerminalMainWindow::onMessageFromPB(const ProxyTerminalPb::Response &mess
       auto uiLogger = logMgr_->logger("ui");
 
       const int64_t toDeliver = request.to_deliver();
-      bs::Address bsAddress;
-
-      try {
-         bsAddress = bs::Address::fromAddressString(request.bs_address());
-      } catch(...) {
-         uiLogger->error("[BSTerminalMainWindow::onMessageFromPB] could not parse BS address: {}"
-                        , request.bs_address());
-         return;
-      }
-
-
+     
       QString deliverMessage;
       const QString header = tr("Trade obligations");
 
       if (toDeliver < 0) {
+         bs::Address bsAddress;
+
+         try {
+            bsAddress = bs::Address::fromAddressString(request.bs_address());
+         }
+         catch (...) {
+            uiLogger->error("[BSTerminalMainWindow::onMessageFromPB] could not parse BS address: {}"
+               , request.bs_address());
+            return;
+         }
 
          bs::XBTAmount amountToDeliver{static_cast<uint64_t>(-toDeliver)};
 
