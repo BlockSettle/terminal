@@ -217,6 +217,7 @@ bool SettlementAdapter::processMatchingOrder(const MatchingMessage_Order& respon
       logger_->error("[{}] unknown settlement for {}", __func__, response.quote_id());
       return true;
    }
+
    SettlementMessage msg;
    const auto& order = fromMsg(response);
    if (order.status == bs::network::Order::Status::Filled) {
@@ -232,10 +233,25 @@ bool SettlementAdapter::processMatchingOrder(const MatchingMessage_Order& respon
       msgResp->set_info(order.info);
    }
    else if (order.status == bs::network::Order::Status::Pending) {
+      if (itSettl->second->dealer && (itSettl->second->quote.assetType == bs::network::Asset::SpotXBT)
+         && (itSettl->second->quote.quotingType == bs::network::Quote::Tradeable)) {
+         if (((itSettl->second->quote.side == bs::network::Side::Buy) ||
+            (itSettl->second->quote.product != bs::network::XbtCurrency))
+            && itSettl->second->dealerRecvAddress.empty()) {
+            //maybe obtain receiving address here instead of when constructing pay-out in WalletsAdapter
+         }
+         if (startXbtSettlement(itSettl->second->quote)) {
+            logger_->debug("[{}] started XBT settlement on {}", __func__, response.quote_id());
+         } else {
+            return true;
+         }
+      }
       auto msgResp = msg.mutable_pending_settlement();
-      msgResp->set_rfq_id(itSettl->second->rfq.requestId);
-      msgResp->set_quote_id(response.quote_id());
-      msgResp->set_settlement_id(response.settlement_id());
+      auto msgIds = msgResp->mutable_ids();
+      msgIds->set_rfq_id(itSettl->second->rfq.requestId);
+      msgIds->set_quote_id(response.quote_id());
+      msgIds->set_settlement_id(response.settlement_id());
+      msgResp->set_time_left_ms(kHandshakeTimeout.count() * 1000);
    }
    else {
       logger_->debug("[{}] {} unprocessed order status {}", __func__, order.quoteId
@@ -278,13 +294,16 @@ bool SettlementAdapter::processMatchingInRFQ(const IncomingRFQ& qrn)
 
 bool SettlementAdapter::processBsUnsignedPayin(const BinaryData& settlementId)
 {
-   logger_->debug("[{}] {}", __func__, settlementId.toHexStr());
    const auto& itSettl = settlBySettlId_.find(settlementId);
    if (itSettl == settlBySettlId_.end()) {
       logger_->error("[{}] unknown settlement for {}", __func__, settlementId.toHexStr());
       return true;
    }
+   if (itSettl->second->ownAuthAddr.empty() || itSettl->second->counterKey.empty()) {
+      return false;  // postpone processing until auth addresses are set
+   }
 
+   logger_->debug("[{}] {} {}", __func__, settlementId.toHexStr(), itSettl->second->amount.GetValue());
    WalletsMessage msg;
    auto msgReq = msg.mutable_payin_request();
    msgReq->set_own_auth_address(itSettl->second->ownAuthAddr.display());
@@ -305,8 +324,10 @@ bs::sync::PasswordDialogData SettlementAdapter::getDialogData(const QDateTime& t
 {
    bs::sync::PasswordDialogData dialogData;
    dialogData.setValue(bs::sync::PasswordDialogData::SettlementId, settlement.settlementId.toHexStr());
-   dialogData.setValue(bs::sync::PasswordDialogData::DurationLeft, 29 * 1000);   // TODO: take from real timeout from SettlementAdapter
-   dialogData.setValue(bs::sync::PasswordDialogData::DurationTotal, 30 * 1000);  // TODO: same
+   dialogData.setValue(bs::sync::PasswordDialogData::DurationLeft
+      , (int)((kHandshakeTimeout.count() - 1) * 1000));
+   dialogData.setValue(bs::sync::PasswordDialogData::DurationTotal
+      , (int)(kHandshakeTimeout.count() * 1000));
 
    // Set timestamp that will be used by auth eid server to update timers.
    dialogData.setValue(bs::sync::PasswordDialogData::DurationTimestamp, static_cast<int>(timestamp.toSecsSinceEpoch()));
@@ -358,6 +379,7 @@ bs::sync::PasswordDialogData SettlementAdapter::getDialogData(const QDateTime& t
    dialogData.setValue(bs::sync::PasswordDialogData::TxInputProduct, UiUtils::XbtCurrency);
 
    dialogData.setValue(bs::sync::PasswordDialogData::ResponderAuthAddress, settlement.counterAuthAddr.display());
+   dialogData.setValue(bs::sync::PasswordDialogData::IsDealer, settlement.dealer);
 
    return dialogData;
 }
@@ -367,9 +389,10 @@ bs::sync::PasswordDialogData SettlementAdapter::getPayinDialogData(const QDateTi
 {
    auto dlgData = getDialogData(timestamp, settlement);
    dlgData.setValue(bs::sync::PasswordDialogData::ResponderAuthAddressVerified, true); //TODO: put actual value
-   dlgData.setValue(bs::sync::PasswordDialogData::SigningAllowed, true);               //TODO: same here
+   dlgData.setValue(bs::sync::PasswordDialogData::SigningAllowed, true);               //TODO: same value here
 
    dlgData.setValue(bs::sync::PasswordDialogData::Title, QObject::tr("Settlement Pay-In"));
+   dlgData.setValue(bs::sync::PasswordDialogData::SettlementPayInVisible, true);
    return dlgData;
 }
 
@@ -397,7 +420,7 @@ bool SettlementAdapter::processBsSignPayin(const BsServerMessage_SignXbtHalf& re
       return true;
    }
    if (!itSettl->second->payin.isValid()) {
-      logger_->error("[{}] no payin TX for {}", __func__, settlementId.toHexStr());
+      logger_->error("[{}] invalid payin TX for {}", __func__, settlementId.toHexStr());
       unreserve(itSettl->second->rfq.requestId);
       SettlementMessage msg;
       auto msgFail = msg.mutable_failed_settlement();
@@ -421,8 +444,9 @@ bool SettlementAdapter::processBsSignPayin(const BsServerMessage_SignXbtHalf& re
    Envelope env{ 0, user_, userSigner_, {}, {}, msg.SerializeAsString(), true };
    if (pushFill(env)) {
       payinRequests_[env.id] = settlementId;
+      return true;
    }
-   return true;
+   return false;
 }
 
 bool SettlementAdapter::processBsSignPayout(const BsServerMessage_SignXbtHalf& request)
@@ -434,10 +458,12 @@ bool SettlementAdapter::processBsSignPayout(const BsServerMessage_SignXbtHalf& r
       logger_->error("[{}] unknown settlement for {}", __func__, settlementId.toHexStr());
       return true;
    }
-   if (itSettl->second->recvAddress.empty()) {
-      logger_->error("[{}] empty receiving address", __func__);
-      return true;
-   }
+   const bs::Address& recvAddr = itSettl->second->dealer ?
+      itSettl->second->dealerRecvAddress : itSettl->second->recvAddress;
+/*   if (recvAddr.empty()) {
+      logger_->debug("[{}] waiting for own receiving address", __func__);
+      return false;
+   }*/   // recvAddr is now obtained in WalletsAdapter if empty
    WalletsMessage msg;
    auto msgReq = msg.mutable_payout_request();
    msgReq->set_own_auth_address(itSettl->second->ownAuthAddr.display());
@@ -445,7 +471,7 @@ bool SettlementAdapter::processBsSignPayout(const BsServerMessage_SignXbtHalf& r
    msgReq->set_counter_auth_pubkey(itSettl->second->counterKey.toBinStr());
    msgReq->set_amount(itSettl->second->amount.GetValue());
    msgReq->set_payin_hash(request.payin_hash());
-   msgReq->set_recv_address(itSettl->second->recvAddress.display());
+   msgReq->set_recv_address(recvAddr.display());
    Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
    if (pushFill(env)) {
       payoutRequests_[env.id] = settlementId;
@@ -553,6 +579,7 @@ bool SettlementAdapter::processSubmitQuote(const bs::message::Envelope& env
          return true;
       }
       itSettl->second->settlementId = settlementId;
+      itSettl->second->reserveId = itSettl->second->quote.requestId;
       settlBySettlId_[settlementId] = itSettl->second;
    }
 
@@ -652,7 +679,7 @@ bool SettlementAdapter::processXbtTx(uint64_t msgId, const WalletsMessage_XbtTxR
    if (itPayout != payoutRequests_.end()) {
       const auto& itSettl = settlBySettlId_.find(itPayout->second);
       if (itSettl != settlBySettlId_.end()) {
-         logger_->debug("[{}] got payout", __func__);
+         logger_->debug("[{}] got payout {}", __func__, itPayout->second.toHexStr());
          try {
             itSettl->second->settlementAddress = bs::Address::fromAddressString(response.settlement_address());
          } catch (const std::exception&) {
@@ -665,7 +692,7 @@ bool SettlementAdapter::processXbtTx(uint64_t msgId, const WalletsMessage_XbtTxR
          *msgReq->mutable_tx_request() = response.tx_request();
          *msgReq->mutable_details() = dlgData.toProtobufMessage();
          msgReq->set_contra_auth_pubkey(itSettl->second->counterKey.toBinStr());
-         msgReq->set_own_key_first(!itSettl->second->dealer);
+         msgReq->set_own_key_first(true);
          Envelope env{ 0, user_, userSigner_, {}, {}, msg.SerializeAsString(), true };
          if (pushFill(env)) {
             payoutRequests_[env.id] = itPayout->second;
@@ -686,6 +713,7 @@ bool SettlementAdapter::processSignedTx(uint64_t msgId
    , const SignerMessage_SignTxResponse& response)
 {
    const auto& settlementId = BinaryData::fromString(response.id());
+   logger_->debug("[{}] {}", __func__, settlementId.toHexStr());
    const auto& sendSignedTx = [this, response, settlementId](bool payin)
    {
       if (static_cast<bs::error::ErrorCode>(response.error_code()) == bs::error::ErrorCode::TxCancelled) {
@@ -723,7 +751,7 @@ bool SettlementAdapter::processSignedTx(uint64_t msgId
    const auto& itPayout = payoutRequests_.find(msgId);
    if (itPayout != payoutRequests_.end()) {
       if (itPayout->second != settlementId) {
-         logger_->error("[{}] payout settlement id mismatch");
+         logger_->error("[{}] payout settlement id mismatch", __func__);
          payoutRequests_.erase(itPayout);
          return true;   //TODO: decide the consequences of this
       }
@@ -782,7 +810,7 @@ bool SettlementAdapter::processInRFQTimeout(const std::string& id)
    return true;
 }
 
-void SettlementAdapter::startXbtSettlement(const bs::network::Quote& quote)
+bool SettlementAdapter::startXbtSettlement(const bs::network::Quote& quote)
 {
    const auto& sendFailedQuote = [this, quote](const std::string& info)
    {
@@ -800,12 +828,12 @@ void SettlementAdapter::startXbtSettlement(const bs::network::Quote& quote)
    const auto& itSettl = settlByQuoteId_.find(quote.quoteId);
    if (itSettl == settlByQuoteId_.end()) {
       sendFailedQuote("unknown quote id");
-      return;
+      return false;
    }
    if (quote.settlementId.empty()) {
       sendFailedQuote("no settlement id");
       settlByQuoteId_.erase(itSettl);
-      return;
+      return false;
    }
 
    CurrencyPair cp(quote.security);
@@ -832,15 +860,24 @@ void SettlementAdapter::startXbtSettlement(const bs::network::Quote& quote)
    catch (const std::exception&) {
       sendFailedQuote("invalid settlement id format");
       settlByQuoteId_.erase(itSettl);
-      return;
+      return false;
    }
    itSettl->second->settlementId = settlementId;
 
    auto &data = settlBySettlId_[settlementId] = itSettl->second;
    try {
       if (data->dealer) {
-         data->ownKey = BinaryData::CreateFromHex(quote.dealerAuthPublicKey);
-         data->counterKey = BinaryData::CreateFromHex(quote.requestorAuthPublicKey);
+         if (data->ownKey.empty()) {
+            data->ownKey = BinaryData::CreateFromHex(quote.dealerAuthPublicKey);
+         }
+         if (data->counterKey.empty()) {
+            if (quote.requestorAuthPublicKey.empty()) {
+               data->counterKey = BinaryData::CreateFromHex(data->rfq.requestorAuthPublicKey);
+            }
+            else {
+               data->counterKey = BinaryData::CreateFromHex(quote.requestorAuthPublicKey);
+            }
+         }
       } else {
          data->ownKey = BinaryData::CreateFromHex(quote.requestorAuthPublicKey);
          data->counterKey = BinaryData::CreateFromHex(quote.dealerAuthPublicKey);
@@ -852,7 +889,7 @@ void SettlementAdapter::startXbtSettlement(const bs::network::Quote& quote)
       sendFailedQuote("failed to decode data");
       settlBySettlId_.erase(data->settlementId);
       settlByQuoteId_.erase(itSettl);
-      return;
+      return false;
    }
 
    const auto& timeNow = std::chrono::system_clock::now();
@@ -866,13 +903,16 @@ void SettlementAdapter::startXbtSettlement(const bs::network::Quote& quote)
       //TODO: push counterAuthAddr to OnChainTracker for checking
    }
 
-   MatchingMessage msgMtch;
-   auto msgReq = msgMtch.mutable_accept_rfq();
-   msgReq->set_rfq_id(quote.requestId);
-   toMsg(quote, msgReq->mutable_quote());
-   msgReq->set_payout_tx("not used");  // copied from ReqXBTSettlementContainer
-   Envelope envReq{ 0, user_, userMtch_, {}, {}, msgMtch.SerializeAsString(), true };
-   pushFill(envReq);
+   if (!itSettl->second->dealer) {
+      MatchingMessage msgMtch;
+      auto msgReq = msgMtch.mutable_accept_rfq();
+      msgReq->set_rfq_id(quote.requestId);
+      toMsg(quote, msgReq->mutable_quote());
+      msgReq->set_payout_tx("not used");  // copied from ReqXBTSettlementContainer
+      Envelope envReq{ 0, user_, userMtch_, {}, {}, msgMtch.SerializeAsString(), true };
+      return pushFill(envReq);
+   }
+   return true;
 }
 
 void SettlementAdapter::startCCSettlement(const bs::network::Quote&)

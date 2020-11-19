@@ -1815,11 +1815,11 @@ bool QtGuiAdapter::processFailedSettl(const SettlementMessage_FailedSettlement& 
    });
 }
 
-bool QtGuiAdapter::processPendingSettl(const SettlementMessage_SettlementIds& msg)
+bool QtGuiAdapter::processPendingSettl(const SettlementMessage_PendingSettlement& msg)
 {
    return QMetaObject::invokeMethod(mainWindow_, [this, msg] {
-      mainWindow_->onSettlementPending(msg.rfq_id(), msg.quote_id()
-         , BinaryData::fromString(msg.settlement_id()));
+      mainWindow_->onSettlementPending(msg.ids().rfq_id(), msg.ids().quote_id()
+         , BinaryData::fromString(msg.ids().settlement_id()), msg.time_left_ms());
    });
 }
 

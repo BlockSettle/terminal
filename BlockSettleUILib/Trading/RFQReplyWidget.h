@@ -103,8 +103,18 @@ public:
    void onWalletBalance(const bs::sync::WalletBalanceData&);
    void onHDWallet(const bs::sync::HDWalletData&);
    void onAuthKey(const bs::Address&, const BinaryData& authKey);
+   void onVerifiedAuthAddresses(const std::vector<bs::Address>&);
+   void onReservedUTXOs(const std::string& resId, const std::string& subId
+      , const std::vector<UTXO>&);
 
    void onQuoteReqNotification(const bs::network::QuoteReqNotification&);
+   void onQuoteMatched(const std::string& rfqId, const std::string& quoteId);
+   void onQuoteFailed(const std::string& rfqId, const std::string& quoteId
+      , const std::string& info);
+   void onSettlementPending(const std::string& rfqId, const std::string& quoteId
+      , const BinaryData& settlementId, int timeLeftMS);
+   void onSettlementComplete(const std::string& rfqId, const std::string& quoteId
+      , const BinaryData& settlementId);
 
 signals:
    void orderFilled();
@@ -156,7 +166,7 @@ private slots:
 
    void onCancelXBTTrade(const std::string& settlementId);
    void onCancelCCTrade(const std::string& clientOrderId);
-   void onSettlementComplete(const std::string &id);
+   void onCompleteSettlement(const std::string &id);
 
 private:
    void onResetCurrentReservation(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data);
@@ -208,6 +218,7 @@ private:
    std::unordered_map<std::string, std::string>    sentReplyToSettlementsIds_, settlementToReplyIds_;
 
    bs::network::UserType   userType_{ bs::network::UserType::Undefined };
+   std::unordered_map<std::string, bs::network::Asset::Type>   submittedQuote_;
 };
 
 #endif // __RFQ_REPLY_WIDGET_H__

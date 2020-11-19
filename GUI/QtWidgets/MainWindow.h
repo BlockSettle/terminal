@@ -117,7 +117,7 @@ namespace bs {
             void onQuoteFailed(const std::string& rfqId, const std::string& quoteId
                , const std::string &info);
             void onSettlementPending(const std::string& rfqId, const std::string& quoteId
-               , const BinaryData& settlementId);
+               , const BinaryData& settlementId, int timeLeftMS);
             void onSettlementComplete(const std::string& rfqId, const std::string& quoteId
                , const BinaryData& settlementId);
             void onQuoteReqNotification(const bs::network::QuoteReqNotification&);

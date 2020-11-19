@@ -114,6 +114,9 @@ public:
    void addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &);
    bool StartCCSignOnOrder(const QString& orderId, QDateTime timestamp);
 
+   void onSettlementPending(const BinaryData& settlementId, int timeLeftMS);
+   void onSettlementComplete(const BinaryData& settlementId);
+
 public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
@@ -150,6 +153,7 @@ private:
    std::shared_ptr<AssetManager> assetManager_;
    std::unordered_map<std::string, bs::network::QuoteReqNotification>         notifications_;
    std::unordered_map<std::string, std::shared_ptr<bs::SettlementContainer>>  settlContainers_;
+   std::unordered_map<std::string, int>   settlTimeLeft_;
    QTimer      timer_;
    QTimer      priceUpdateTimer_;
    MDPrices    mdPrices_;

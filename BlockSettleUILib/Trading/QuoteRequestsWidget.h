@@ -138,6 +138,11 @@ public:
 
    RFQBlotterTreeView* view() const;
 
+   void onSettlementPending(const std::string& rfqId, const std::string& quoteId
+      , const BinaryData& settlementId, int timeLeftMS);
+   void onSettlementComplete(const std::string& rfqId, const std::string& quoteId
+      , const BinaryData& settlementId);
+
 signals:
    void Selected(const QString& productGroup, const bs::network::QuoteReqNotification& qrc, double indicBid, double indicAsk);
    void quoteReqNotifStatusChanged(const bs::network::QuoteReqNotification &qrn);

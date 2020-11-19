@@ -81,6 +81,7 @@ namespace bs {
          bs::Address authAddr;
          std::vector<UTXO> fixedXbtInputs;
          bs::hd::Purpose   walletPurpose;
+         double   price;
       };
 
       class RFQDealerReply : public QWidget
@@ -126,6 +127,9 @@ namespace bs {
          void onBalance(const std::string& currency, double balance);
          void onWalletBalance(const bs::sync::WalletBalanceData&);
          void onAuthKey(const bs::Address&, const BinaryData& authKey);
+         void onVerifiedAuthAddresses(const std::vector<bs::Address>&);
+         void onReservedUTXOs(const std::string& resId, const std::string& subId
+            , const std::vector<UTXO>&);
 
       signals:
          void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
@@ -259,8 +263,10 @@ namespace bs {
          std::set<std::string> activeQuoteSubmits_;
          std::map<std::string, std::map<std::string, std::array<bs::Address, static_cast<size_t>(AddressType::Max) + 1>>> addresses_;
 
+         int walletFlags_{ 0 };
          std::vector<bs::sync::HDWalletData> wallets_;
          std::unordered_map<std::string, double>   balances_;
+         std::unordered_map<std::string, std::shared_ptr<SubmitQuoteReplyData>>  pendingReservations_;
       };
 
    }  //namespace ui

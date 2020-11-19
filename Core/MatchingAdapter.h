@@ -72,9 +72,6 @@ private:
    bool processSubmitQuote(const BlockSettle::Terminal::ReplyToRFQ&);
    bool processPullQuote(const BlockSettle::Terminal::PullRFQReply&);
 
-   std::string getQuoteReqId(const std::string& quoteId) const;
-   void saveQuoteReqId(const std::string& quoteReqId, const std::string& quoteId);
-   void delQuoteReqId(const std::string& quoteReqId);
    std::string getQuoteRequestCcy(const std::string& id) const;
    void saveQuoteRequestCcy(const std::string& id, const std::string& ccy);
    void cleanQuoteRequestCcy(const std::string& id);
@@ -97,7 +94,6 @@ private:
 
    std::string assignedAccount_;
    std::unordered_map<std::string, bs::network::RFQ>  submittedRFQs_;
-   std::unordered_map<std::string, std::string>       quoteIdMap_;
    std::unordered_map<std::string, std::unordered_set<std::string>>  quoteIds_;
    std::unordered_map<std::string, std::string> quoteCcys_;
 };

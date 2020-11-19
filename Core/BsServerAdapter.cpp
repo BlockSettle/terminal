@@ -28,7 +28,8 @@ using namespace bs::message;
 
 BsServerAdapter::BsServerAdapter(const std::shared_ptr<spdlog::logger> &logger)
    : logger_(logger)
-   , user_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::BsServer))
+   , user_(std::make_shared<UserTerminal>(TerminalUsers::BsServer))
+   , userSettl_(std::make_shared<UserTerminal>(TerminalUsers::Settlement))
 {
    connMgr_ = std::make_shared<ConnectionManager>(logger_);
    connMgr_->setCaBundle(bs::caBundlePtr(), bs::caBundleSize());
@@ -306,7 +307,7 @@ void BsServerAdapter::processUnsignedPayin(const Blocksettle::Communication::Pro
 {
    BsServerMessage msg;
    msg.set_unsigned_payin_requested(BinaryData::CreateFromHex(response.settlement_id()).toBinStr());
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
    pushFill(env);
 }
 
@@ -318,7 +319,7 @@ void BsServerAdapter::processSignPayin(const Blocksettle::Communication::ProxyTe
    msgBC->set_unsigned_payin(BinaryData::fromString(response.unsigned_payin_data()).toBinStr());
    msgBC->set_payin_hash(BinaryData::fromString(response.payin_hash()).toBinStr());
    msgBC->set_timestamp(response.timestamp_ms());
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
    pushFill(env);
 }
 
@@ -327,9 +328,9 @@ void BsServerAdapter::processSignPayout(const Blocksettle::Communication::ProxyT
    BsServerMessage msg;
    auto msgBC = msg.mutable_signed_payout_requested();
    msgBC->set_settlement_id(BinaryData::CreateFromHex(response.settlement_id()).toBinStr());
-   msgBC->set_unsigned_payin(BinaryData::fromString(response.payin_data()).toBinStr());
+   msgBC->set_payin_hash(BinaryData::fromString(response.payin_data()).toBinStr());
    msgBC->set_timestamp(response.timestamp_ms());
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
    pushFill(env);
 }
 

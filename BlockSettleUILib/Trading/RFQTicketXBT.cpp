@@ -1257,7 +1257,9 @@ void RFQTicketXBT::onParentAboutToHide()
 
 void RFQTicketXBT::onVerifiedAuthAddresses(const std::vector<bs::Address>& addrs)
 {
-   logger_->debug("[{}] {} addresses", __func__, addrs.size());
+   if (addrs.empty()) {
+      return;
+   }
    UiUtils::fillAuthAddressesComboBoxWithSubmitted(ui_->authenticationAddressComboBox, addrs);
    onAuthAddrChanged(ui_->authenticationAddressComboBox->currentIndex());
 }
@@ -1301,9 +1303,12 @@ void RFQTicketXBT::onWalletData(const std::string& walletId, const bs::sync::Wal
 void RFQTicketXBT::onAuthKey(const bs::Address& addr, const BinaryData& authKey)
 {
    if (addr == authAddr_) {
-      logger_->debug("[{}] got auth key: {}", __func__, authKey.toHexStr());
-      authKey_ = authKey.toHexStr();
-      updateSubmitButton();
+      const auto& authKeyHex = authKey.toHexStr();
+      if (authKey_ != authKeyHex) {
+         logger_->debug("[{}] got auth key: {}", __func__, authKeyHex);
+         authKey_ = authKeyHex;
+         updateSubmitButton();
+      }
       sendDeferredRFQs();
    }
 }

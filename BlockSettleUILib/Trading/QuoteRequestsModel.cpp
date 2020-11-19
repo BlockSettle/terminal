@@ -603,7 +603,8 @@ void QuoteRequestsModel::SetAssetManager(const std::shared_ptr<AssetManager>& as
    assetManager_ = assetManager;
 }
 
-void QuoteRequestsModel::ticker() {
+void QuoteRequestsModel::ticker()
+{
    std::unordered_set<std::string>  deletedRows;
    const auto timeNow = QDateTime::currentDateTime();
 
@@ -667,12 +668,23 @@ void QuoteRequestsModel::ticker() {
       notifications_.erase(delRow);
    }
 
-   for (const auto &settlContainer : settlContainers_) {
-      forSpecificId(settlContainer.second->id(),
-         [timeLeft = settlContainer.second->timeLeftMs()](Group *grp, int itemIndex) {
-         grp->rfqs_[static_cast<std::size_t>(itemIndex)]->status_.timeleft_ =
-            static_cast<int>(timeLeft);
-      });
+   if (!settlContainers_.empty()) {
+      for (const auto& settlContainer : settlContainers_) {
+         forSpecificId(settlContainer.second->id(),
+            [timeLeft = settlContainer.second->timeLeftMs()](Group* grp, int itemIndex) {
+            grp->rfqs_[static_cast<std::size_t>(itemIndex)]->status_.timeleft_ =
+               static_cast<int>(timeLeft);
+         });
+      }
+   }
+   else {
+      for (const auto& settl : settlTimeLeft_) {
+         forSpecificId(settl.first, [timeLeft = settl.second]
+            (Group* grp, int itemIndex) {
+            grp->rfqs_[static_cast<std::size_t>(itemIndex)]->status_.timeleft_ =
+               static_cast<int>(timeLeft);
+         });
+      }
    }
 
    if (!data_.empty()) {
@@ -937,6 +949,17 @@ bool QuoteRequestsModel::StartCCSignOnOrder(const QString& orderId, QDateTime ti
    }
 
    return false;
+}
+
+void QuoteRequestsModel::onSettlementPending(const BinaryData& settlementId
+   , int timeLeftMS)
+{
+   settlTimeLeft_[settlementId.toHexStr()] = timeLeftMS;
+}
+
+void QuoteRequestsModel::onSettlementComplete(const BinaryData& settlementId)
+{
+   settlTimeLeft_.erase(settlementId.toHexStr());
 }
 
 void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &container)

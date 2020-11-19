@@ -1049,6 +1049,7 @@ void MainWindow::onSubmittedAuthAddresses(const std::vector<bs::Address>& addrs)
 void MainWindow::onVerifiedAuthAddresses(const std::vector<bs::Address>& addrs)
 {
    ui_->widgetRFQ->onVerifiedAuthAddresses(addrs);
+   ui_->widgetRFQReply->onVerifiedAuthAddresses(addrs);
 }
 
 void MainWindow::onAuthKey(const bs::Address& addr, const BinaryData& authKey)
@@ -1065,24 +1066,28 @@ void MainWindow::onQuoteReceived(const bs::network::Quote& quote)
 void MainWindow::onQuoteMatched(const std::string& rfqId, const std::string &quoteId)
 {
    ui_->widgetRFQ->onQuoteMatched(rfqId, quoteId);
+   ui_->widgetRFQReply->onQuoteMatched(rfqId, quoteId);
 }
 
 void MainWindow::onQuoteFailed(const std::string& rfqId, const std::string& quoteId
    , const std::string &info)
 {
    ui_->widgetRFQ->onQuoteFailed(rfqId, quoteId, info);
+   ui_->widgetRFQReply->onQuoteFailed(rfqId, quoteId, info);
 }
 
 void bs::gui::qt::MainWindow::onSettlementPending(const std::string& rfqId
-   , const std::string& quoteId, const BinaryData& settlementId)
+   , const std::string& quoteId, const BinaryData& settlementId, int timeLeftMS)
 {
-   ui_->widgetRFQ->onSettlementPending(rfqId, quoteId, settlementId);
+   ui_->widgetRFQ->onSettlementPending(rfqId, quoteId, settlementId, timeLeftMS);
+   ui_->widgetRFQReply->onSettlementPending(rfqId, quoteId, settlementId, timeLeftMS);
 }
 
 void bs::gui::qt::MainWindow::onSettlementComplete(const std::string& rfqId
    , const std::string& quoteId, const BinaryData& settlementId)
 {
    ui_->widgetRFQ->onSettlementComplete(rfqId, quoteId, settlementId);
+   ui_->widgetRFQReply->onSettlementComplete(rfqId, quoteId, settlementId);
 }
 
 void bs::gui::qt::MainWindow::onQuoteReqNotification(const bs::network::QuoteReqNotification& qrn)
@@ -1105,6 +1110,7 @@ void MainWindow::onReservedUTXOs(const std::string& resId
    , const std::string& subId, const std::vector<UTXO>& utxos)
 {
    ui_->widgetRFQ->onReservedUTXOs(resId, subId, utxos);
+   ui_->widgetRFQReply->onReservedUTXOs(resId, subId, utxos);
 }
 
 void MainWindow::showRunInBackgroundMessage()

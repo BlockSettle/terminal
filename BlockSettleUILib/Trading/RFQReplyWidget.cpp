@@ -159,9 +159,67 @@ void RFQReplyWidget::onAuthKey(const bs::Address& addr, const BinaryData& authKe
    ui_->pageRFQReply->onAuthKey(addr, authKey);
 }
 
+void RFQReplyWidget::onVerifiedAuthAddresses(const std::vector<bs::Address>& addrs)
+{
+   ui_->pageRFQReply->onVerifiedAuthAddresses(addrs);
+}
+
+void RFQReplyWidget::onReservedUTXOs(const std::string& resId
+   , const std::string& subId, const std::vector<UTXO>& utxos)
+{
+   ui_->pageRFQReply->onReservedUTXOs(resId, subId, utxos);
+}
+
 void RFQReplyWidget::onQuoteReqNotification(const bs::network::QuoteReqNotification& qrn)
 {
    ui_->widgetQuoteRequests->onQuoteRequest(qrn);
+}
+
+void RFQReplyWidget::onQuoteMatched(const std::string& rfqId
+   , const std::string& quoteId)
+{
+   logger_->debug("[{}] {}", __func__, rfqId);
+   const auto& itAsset = submittedQuote_.find(rfqId);
+   if (itAsset == submittedQuote_.end()) {
+      logger_->debug("[{}] not our match on {}", __func__, rfqId);
+      return;
+   }
+   if (itAsset->second == bs::network::Asset::SpotFX) {
+      onCompleteSettlement(rfqId);
+   }
+   else if (itAsset->second == bs::network::Asset::SpotXBT) {
+      //TODO
+   }
+   else if (itAsset->second == bs::network::Asset::PrivateMarket) {
+      //TODO
+   }
+   submittedQuote_.erase(itAsset);
+}
+
+void RFQReplyWidget::onQuoteFailed(const std::string& rfqId, const std::string& quoteId
+   , const std::string& info)
+{
+   logger_->debug("[{}] {}", __func__, rfqId);
+}
+
+void RFQReplyWidget::onSettlementPending(const std::string& rfqId
+   , const std::string& quoteId, const BinaryData& settlementId, int timeLeftMS)
+{
+   logger_->debug("[{}] {}", __func__, rfqId);
+   const auto& itAsset = submittedQuote_.find(rfqId);
+   if (itAsset == submittedQuote_.end()) {
+      logger_->debug("[{}] not our settlement on {}", __func__, rfqId);
+      return;
+   }
+   ui_->widgetQuoteRequests->onSettlementPending(rfqId, quoteId, settlementId, timeLeftMS);
+}
+
+void RFQReplyWidget::onSettlementComplete(const std::string& rfqId
+   , const std::string& quoteId, const BinaryData& settlementId)
+{
+   logger_->debug("[{}] {}", __func__, rfqId);
+   ui_->widgetQuoteRequests->onSettlementComplete(rfqId, quoteId, settlementId);
+   onCompleteSettlement(rfqId);
 }
 
 void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
@@ -294,19 +352,8 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger>& logger
    {
       statsCollector_->onQuoteSubmitted(data->qn);
       emit submitQuote(data->qn);
+      submittedQuote_[data->qn.quoteRequestId] = data->qn.assetType;
       ui_->widgetQuoteRequests->onQuoteReqNotifReplied(data->qn);
-      onReplied(data);
-   });
-
-   ui_->pageRFQReply->setGetLastSettlementReply([this]
-      (const std::string& settlementId) -> const std::vector<UTXO>*
-   {
-      auto lastReply = sentXbtReplies_.find(settlementId);
-      if (lastReply == sentXbtReplies_.end()) {
-         return nullptr;
-      }
-
-      return &(lastReply->second.utxosPayinFixed); //FIXME
    });
 }
 
@@ -379,6 +426,7 @@ void RFQReplyWidget::onUserConnected(const bs::network::UserType &userType)
       ui_->widgetAutoSignQuote->onUserConnected(autoSigning, autoQuoting);
    }
    else {   //no AQ support in new code
+      logger_->debug("[{}] user type = {}", __func__, (int)userType);
       userType_ = userType;
    }
 }
@@ -405,7 +453,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
    const auto &quoteReqId = quoteProvider_->getQuoteReqId(order.quoteId);
    if (order.assetType == bs::network::Asset::SpotFX) {
       if (order.status == bs::network::Order::Filled) {
-         onSettlementComplete(quoteReqId);
+         onCompleteSettlement(quoteReqId);
          quoteProvider_->delQuoteReqId(quoteReqId);
       }
       return;
@@ -441,7 +489,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             connect(settlContainer.get(), &DealerCCSettlementContainer::cancelTrade
                , this, &RFQReplyWidget::onCancelCCTrade);
             connect(settlContainer.get(), &DealerCCSettlementContainer::completed
-               , this, &RFQReplyWidget::onSettlementComplete);
+               , this, &RFQReplyWidget::onCompleteSettlement);
 
             // Do not make circular dependency, capture bare pointer
             auto orderUpdatedCb = [settlContainer = settlContainer.get(), quoteId = order.quoteId]
@@ -495,7 +543,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             connect(settlContainer.get(), &DealerXBTSettlementContainer::error
                , this, &RFQReplyWidget::onTransactionError);
             connect(settlContainer.get(), &DealerCCSettlementContainer::completed
-               , this, &RFQReplyWidget::onSettlementComplete);
+               , this, &RFQReplyWidget::onCompleteSettlement);
 
             connect(this, &RFQReplyWidget::unsignedPayinRequested, settlContainer.get()
                , &DealerXBTSettlementContainer::onUnsignedPayinRequested);
@@ -628,8 +676,11 @@ void RFQReplyWidget::onCancelCCTrade(const std::string& clientOrderId)
    emit cancelCCTrade(clientOrderId);
 }
 
-void RFQReplyWidget::onSettlementComplete(const std::string &id)
+void RFQReplyWidget::onCompleteSettlement(const std::string &id)
 {
+   if (!autoSignProvider_) {
+      return;
+   }
    const auto &itReqId = settlementToReplyIds_.find(id);
    if (itReqId == settlementToReplyIds_.end()) {
       ((AQScriptRunner *)autoSignProvider_->scriptRunner())->settled(id);  // FX settlement

@@ -247,6 +247,22 @@ RFQBlotterTreeView* QuoteRequestsWidget::view() const
    return ui_->treeViewQuoteRequests;
 }
 
+void QuoteRequestsWidget::onSettlementPending(const std::string& rfqId
+   , const std::string& quoteId, const BinaryData& settlementId, int timeLeftMS)
+{
+   if (model_) {
+      model_->onSettlementPending(settlementId, timeLeftMS);
+   }
+}
+
+void QuoteRequestsWidget::onSettlementComplete(const std::string& rfqId
+   , const std::string& quoteId, const BinaryData& settlementId)
+{
+   if (model_) {
+      model_->onSettlementComplete(settlementId);
+   }
+}
+
 void QuoteRequestsWidget::onQuoteReqNotifReplied(const bs::network::QuoteNotification &qn)
 {
    if (model_) {

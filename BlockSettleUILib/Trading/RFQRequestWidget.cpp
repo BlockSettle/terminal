@@ -274,14 +274,11 @@ void RFQRequestWidget::onQuoteFailed(const std::string& rfqId
 }
 
 void RFQRequestWidget::onSettlementPending(const std::string& rfqId
-   , const std::string& quoteId, const BinaryData& settlementId)
+   , const std::string& quoteId, const BinaryData& settlementId, int timeLeftMS)
 {
    const auto& itDlg = dialogs_.find(rfqId);
    if (itDlg != dialogs_.end()) {
       itDlg->second->onSettlementPending(quoteId, settlementId);
-   }
-   else {
-      logger_->warn("[{}] RFQ dialog for {} not found", __func__, rfqId);
    }
 }
 

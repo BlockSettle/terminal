@@ -77,7 +77,7 @@ private:
    bool processHandshakeTimeout(const std::string& id);
    bool processInRFQTimeout(const std::string& id);
 
-   void startXbtSettlement(const bs::network::Quote&);
+   bool startXbtSettlement(const bs::network::Quote&);
    void startCCSettlement(const bs::network::Quote&);
    void unreserve(const std::string& id, const std::string& subId = {});
    void cancel(const BinaryData& settlementId);

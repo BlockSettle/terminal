@@ -339,30 +339,6 @@ bool MatchingAdapter::processPullQuote(const PullRFQReply& request)
    return true;
 }
 
-void MatchingAdapter::saveQuoteReqId(const std::string& quoteReqId, const std::string& quoteId)
-{
-   quoteIdMap_[quoteId] = quoteReqId;
-   quoteIds_[quoteReqId].insert(quoteId);
-}
-
-void MatchingAdapter::delQuoteReqId(const std::string& quoteReqId)
-{
-   const auto& itQuoteId = quoteIds_.find(quoteReqId);
-   if (itQuoteId != quoteIds_.end()) {
-      for (const auto& id : itQuoteId->second) {
-         quoteIdMap_.erase(id);
-      }
-      quoteIds_.erase(itQuoteId);
-   }
-   cleanQuoteRequestCcy(quoteReqId);
-}
-
-std::string MatchingAdapter::getQuoteReqId(const std::string& quoteId) const
-{
-   const auto& itQuoteId = quoteIdMap_.find(quoteId);
-   return (itQuoteId == quoteIdMap_.end()) ? std::string{} : itQuoteId->second;
-}
-
 void MatchingAdapter::saveQuoteRequestCcy(const std::string& id, const std::string& ccy)
 {
    quoteCcys_.emplace(id, ccy);
@@ -408,8 +384,7 @@ bool MatchingAdapter::onQuoteResponse(const std::string& data)
       quote.dealerTransaction = response.dealercointransactioninput();
    }
 
-   switch (response.quotingtype())
-   {
+   switch (response.quotingtype()) {
    case com::celertech::marketmerchant::api::enums::quotingtype::AUTOMATIC:
       quote.quotingType = bs::network::Quote::Automatic;
       break;
@@ -437,8 +412,11 @@ bool MatchingAdapter::onQuoteResponse(const std::string& data)
    logger_->debug("[MatchingAdapter::onQuoteResponse] timeSkew = {}", quote.timeSkewMs);
    CurrencyPair cp(quote.security);
 
-   const auto itRFQ = submittedRFQs_.find(response.quoterequestid());
-   if (itRFQ == submittedRFQs_.end()) {   // Quote for dealer to indicate GBBO
+   const auto& grp = response.legquotegroup(0);
+   quote.product = grp.currency();
+
+   const auto& itRFQ = submittedRFQs_.find(response.quoterequestid());
+   if (itRFQ == submittedRFQs_.end()) {   // Quote for dealer to indicate GBBO   //WTF?
       const auto quoteCcy = getQuoteRequestCcy(quote.requestId);
       if (!quoteCcy.empty()) {
          double price = 0;
@@ -458,6 +436,8 @@ bool MatchingAdapter::onQuoteResponse(const std::string& data)
          Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
          pushFill(env);
       }
+      quote.quantity = grp.bidsize();  // equal to offersize/offerpx regardless of side
+      quote.price = response.bidpx();
    } else {
       if (response.legquotegroup_size() != 1) {
          logger_->error("[MatchingAdapter::onQuoteResponse] invalid leg number: {}\n{}"
@@ -466,17 +446,8 @@ bool MatchingAdapter::onQuoteResponse(const std::string& data)
          return false;
       }
 
-      const auto& grp = response.legquotegroup(0);
-
       if (quote.assetType == bs::network::Asset::SpotXBT) {
-         quote.dealerAuthPublicKey = response.dealerauthenticationaddress();
          quote.requestorAuthPublicKey = itRFQ->second.requestorAuthPublicKey;
-
-         if (response.has_settlementid() && !response.settlementid().empty()) {
-            quote.settlementId = response.settlementid();
-         }
-
-         quote.dealerTransaction = response.dealertransaction();
       }
 
       if ((quote.side == bs::network::Side::Sell) ^ (itRFQ->second.product != cp.NumCurrency())) {
@@ -487,14 +458,18 @@ bool MatchingAdapter::onQuoteResponse(const std::string& data)
          quote.quantity = grp.bidsize();
       }
 
-      quote.product = grp.currency();
-
       if (quote.quotingType == bs::network::Quote::Tradeable) {
          submittedRFQs_.erase(itRFQ);
       }
    }
-   saveQuoteReqId(quote.requestId, quote.quoteId);
 
+   if (quote.assetType == bs::network::Asset::SpotXBT) {
+      quote.dealerAuthPublicKey = response.dealerauthenticationaddress();
+      quote.dealerTransaction = response.dealertransaction();
+      if (response.has_settlementid() && !response.settlementid().empty()) {
+         quote.settlementId = response.settlementid();
+      }
+   }
    MatchingMessage msg;
    toMsg(quote, msg.mutable_quote());
    Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
@@ -573,8 +548,7 @@ bool MatchingAdapter::onBitcoinOrderSnapshot(const std::string& data)
    }
    order.reqTransaction = response.requestortransaction();
    order.dealerTransaction = response.dealertransaction();
-
-   order.status = order.status = bs::celer::mapBtcOrderStatus(response.orderstatus());
+   order.status = bs::celer::mapBtcOrderStatus(response.orderstatus());
    order.pendingStatus = response.info();
 
    MatchingMessage msg;

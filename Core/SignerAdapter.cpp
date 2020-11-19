@@ -612,16 +612,20 @@ bool SignerAdapter::processSignSettlementTx(const bs::message::Envelope& env
       pushFill(envResp);
    };
 
-   const auto& txReq = bs::signer::pbTxRequestToCore(request.tx_request());
+   auto txReq = bs::signer::pbTxRequestToCore(request.tx_request(), logger_);
    const bs::sync::PasswordDialogData dlgData(request.details());
    if (request.contra_auth_pubkey().empty()) {
-      return (signer_->signSettlementTXRequest(txReq, dlgData
-         , SignContainer::TXSignMode::Full, false, signCb) != 0);
+      signer_->signSettlementTXRequest(txReq, dlgData
+         , SignContainer::TXSignMode::Full, false, signCb);
    }
-   const bs::core::wallet::SettlementData sd{
-      BinaryData::fromString(request.settlement_id()),
-      BinaryData::fromString(request.contra_auth_pubkey()), request.own_key_first() };
-   return (signer_->signSettlementPayoutTXRequest(txReq, sd, dlgData, signCb) != 0);
+   else {
+      txReq.txHash = txReq.txId();
+      const bs::core::wallet::SettlementData sd{
+         BinaryData::fromString(request.settlement_id()),
+         BinaryData::fromString(request.contra_auth_pubkey()), request.own_key_first() };
+      signer_->signSettlementPayoutTXRequest(txReq, sd, dlgData, signCb);
+   }
+   return true;
 }
 
 bool SignerAdapter::processGetRootPubKey(const bs::message::Envelope &env

@@ -58,6 +58,7 @@ namespace BlockSettle {
       class MktDataMessage_Prices;
       class SettlementMessage_FailedSettlement;
       class SettlementMessage_MatchedQuote;
+      class SettlementMessage_PendingSettlement;
       class SettlementMessage_SettlementIds;
       class SettingsMessage_ArmoryServers;
       class SettingsMessage_SettingsResponse;
@@ -141,7 +142,7 @@ private:
    bool processQuote(const BlockSettle::Terminal::Quote&);
    bool processMatchedQuote(const BlockSettle::Terminal::SettlementMessage_MatchedQuote&);
    bool processFailedSettl(const BlockSettle::Terminal::SettlementMessage_FailedSettlement&);
-   bool processPendingSettl(const BlockSettle::Terminal::SettlementMessage_SettlementIds&);
+   bool processPendingSettl(const BlockSettle::Terminal::SettlementMessage_PendingSettlement&);
    bool processSettlComplete(const BlockSettle::Terminal::SettlementMessage_SettlementIds&);
    bool processQuoteReqNotif(const BlockSettle::Terminal::IncomingRFQ&);
    bool processOrdersUpdate(const BlockSettle::Terminal::BsServerMessage_Orders&);

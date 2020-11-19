@@ -287,11 +287,11 @@ int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox
    const auto b = comboBox->blockSignals(true);
    comboBox->clear();
 
-   auto addRow = [comboBox](const std::string& label, const std::string& walletId, WalletsTypes type) {
+   auto addRow = [comboBox](const std::string& label, const std::string& walletId, WalletsTypes type)
+   {
       if (WalletsTypes::None == type) {
          return;
       }
-
       int i = comboBox->count();
       comboBox->addItem(QString::fromStdString(label));
       comboBox->setItemData(i, QString::fromStdString(walletId), UiUtils::WalletIdRole);
