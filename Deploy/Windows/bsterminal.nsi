@@ -11,6 +11,7 @@ SetCompressor /SOLID lzma
 !define MULTIUSER_EXECUTIONLEVEL Highest
 !define MULTIUSER_INSTALLMODE_COMMANDLINE
 !define MULTIUSER_INSTALLMODE_INSTDIR BlockSettle
+!define MULTIUSER_USE_PROGRAMFILES64
 
 # MUI Symbol Definitions
 !define MUI_ICON bs.ico
@@ -58,7 +59,8 @@ Var StartMenuGroup
 
 # Installer attributes
 OutFile bsterminal_installer.exe
-InstallDir "$PROGRAMFILES64\BlockSettle"
+# No need to set InstallDir here, MultiUser init will set it ($PROGRAMFILES64 for admins, local app data for regular users)
+# InstallDir "$PROGRAMFILES64\BlockSettle"
 CRCCheck on
 XPStyle on
 Icon bs.ico
@@ -243,7 +245,6 @@ Function .onInit
 
     InitPluginsDir
     !insertmacro MULTIUSER_INIT
-    StrCpy $INSTDIR "$PROGRAMFILES64\BlockSettle"
 
 FunctionEnd
 
