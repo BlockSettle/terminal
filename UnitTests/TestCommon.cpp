@@ -124,7 +124,7 @@ TEST(TestCommon, AssetManager)
    EXPECT_EQ(assetMgr.currencies().size(), 3);
    EXPECT_TRUE(assetMgr.hasSecurities());
    EXPECT_EQ(assetMgr.securities().size(), 3);
-   EXPECT_EQ(assetMgr.getBalance("USD"), 2345.67);
+   EXPECT_EQ(assetMgr.getBalance("USD", false, nullptr), 2345.67);
 
    assetMgr.onMDUpdate(bs::network::Asset::SpotXBT, QLatin1String("XBT/USD")
       , { bs::network::MDField{bs::network::MDField::PriceLast, 4321} });

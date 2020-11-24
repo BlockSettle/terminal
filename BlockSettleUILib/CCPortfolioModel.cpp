@@ -763,7 +763,7 @@ void CCPortfolioModel::onFXBalanceLoaded()
    for (const auto& symbolName : currencyList) {
       fxGroup->AddAsset(QString::fromStdString(symbolName));
 
-      const double balance = assetManager_->getBalance(symbolName);
+      const double balance = assetManager_->getBalance(symbolName, false, nullptr);
       const double price = assetManager_->getPrice(symbolName);
 
       auto fxNode = fxGroup->GetFXNode(symbolName);
@@ -794,7 +794,7 @@ void CCPortfolioModel::onXBTPriceChanged(const std::string& currency)
          return;
       }
 
-      const double balance = assetManager_->getBalance(currency);
+      const double balance = assetManager_->getBalance(currency, false, nullptr);
       const double price = assetManager_->getPrice(currency);
       const bool priceChanged = fxNode->SetPrice(price);
       const bool balanceChanged = fxNode->SetFXAmount(balance);
@@ -1003,7 +1003,7 @@ void CCPortfolioModel::updateCCBalance()
       for (const auto &ccName : privateShares) {
          auto ccNode = ccGroup->GetCCNode(ccName);
          if (ccNode != nullptr) {
-            const double balance = assetManager_->getBalance(ccName);
+            const double balance = assetManager_->getBalance(ccName, false, nullptr);
 
             if (ccNode->SetCCAmount(balance)) {
                dataChanged(index(ccNode->getRow(), PortfolioColumns::BalanceColumn, parentIndex)
