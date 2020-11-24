@@ -44,7 +44,6 @@ class QTextEdit;
 class RecipientWidget;
 class SignContainer;
 class TransactionData;
-class TransactionOutputsModel;
 class UsedInputsModel;
 class XbtAmountValidator;
 

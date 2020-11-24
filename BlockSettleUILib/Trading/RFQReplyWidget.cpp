@@ -39,6 +39,8 @@
 
 #include <QDesktopWidget>
 #include <QPushButton>
+#include <QStyledItemDelegate>
+#include <QPainter>
 
 using namespace bs::ui;
 using namespace Blocksettle::Communication;
@@ -222,6 +224,8 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    ui_->treeViewOrders->setModel(orderListModel);
    ui_->treeViewOrders->initWithModel(orderListModel);
 
+   ui_->treeViewOrders->setItemDelegateForColumn(
+      static_cast<int>(OrderListModel::Header::Status), new PushButtonDelegate(ui_->treeViewOrders));
 
    connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this
       , &RFQReplyWidget::onConnectedToCeler);

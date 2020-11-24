@@ -25,6 +25,11 @@
 #include "UtxoReservationToken.h"
 #include "HDPath.h"
 
+#include <QPushButton>
+#include <QStyledItemDelegate>
+#include <QPainter>
+#include <QRect>
+
 namespace Ui {
     class RFQReplyWidget;
 }
@@ -190,6 +195,78 @@ private:
    std::unordered_map<std::string, SentCCReply>    sentCCReplies_;
    std::shared_ptr<bs::SecurityStatsCollector>     statsCollector_;
    std::unordered_map<std::string, std::string>    sentReplyToSettlementsIds_, settlementToReplyIds_;
+};
+
+#include <QDebug>
+
+class PushButtonDelegate : public QStyledItemDelegate
+{
+   Q_OBJECT
+
+public:
+   explicit PushButtonDelegate(QWidget* parent)
+   {
+      button_ = new QPushButton(tr("Submit"), parent);
+      button_->hide();
+   }
+   ~PushButtonDelegate() override = default;
+
+   QSize sizeHint(const QStyleOptionViewItem &option,const QModelIndex &index) const override
+   {
+      auto statusGroupIndex = index;
+      int depth = 0;
+      while (statusGroupIndex.parent().isValid()) {
+         statusGroupIndex = statusGroupIndex.parent();
+         ++depth;
+      }
+
+      if (statusGroupIndex.row() != 2 || depth != 1) {
+         return QStyledItemDelegate::sizeHint(option, index);
+      }
+
+      auto minSizeHint = button_->minimumSizeHint();
+      auto minSize = button_->minimumSize();
+      auto sizeHint = button_->sizeHint();
+
+      return sizeHint;
+   }
+
+   void paint(QPainter* painter, const QStyleOptionViewItem& opt,
+      const QModelIndex& index) const override
+   {
+      auto statusGroupIndex = index;
+      int depth = 0;
+      while (statusGroupIndex.parent().isValid()) {
+         statusGroupIndex = statusGroupIndex.parent();
+         ++depth;
+      }
+
+      if (statusGroupIndex.row() != 2 || depth != 2) {
+         QStyledItemDelegate::paint(painter, opt, index);
+         return;
+      }
+
+      auto minSizeHint = button_->minimumSizeHint();
+      auto rect = opt.rect;
+
+      if (rect.width() < minSizeHint.width()) {
+         rect.setWidth(minSizeHint.width());
+      }
+
+      if (rect.height() < minSizeHint.height()) {
+         rect.setHeight(minSizeHint.height());
+      }
+
+      button_->setGeometry(rect);
+
+      qDebug() << "PushButtonDelegate " << opt.state;
+
+      QPixmap map = button_->grab();
+      painter->drawPixmap(rect.x(), rect.y(), map);
+   }
+
+private:
+   QPushButton *button_;
 };
 
 #endif // __RFQ_REPLY_WIDGET_H__

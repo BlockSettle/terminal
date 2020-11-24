@@ -17,6 +17,7 @@
 namespace Ui {
     class CreateTransactionDialogAdvanced;
 }
+
 namespace bs {
    namespace sync {
       namespace hd {
@@ -26,6 +27,8 @@ namespace bs {
       class WalletsManager;
    }
 }
+
+class TransactionOutputsModel;
 
 class QNetworkAccessManager;
 

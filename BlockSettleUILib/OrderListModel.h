@@ -40,6 +40,7 @@ public:
    struct Header {
       enum Index {
          Time = 0,
+         NameColumn = 0,
          Product,
          Side,
          Quantity,
@@ -137,6 +138,9 @@ private:
 
       virtual QVariant getQuantity() const;
       virtual QVariant getQuantityColor() const;
+
+      virtual QVariant getValue() const;
+      virtual QVariant getValueColor() const;
    protected:
       void addRow(const bs::network::Order& order);
    };
@@ -154,8 +158,26 @@ private:
       QVariant getQuantity() const override;
       QVariant getQuantityColor() const override;
 
-   private:
       double quantity_ = 0;
+      double value_ = 0;
+   };
+
+   struct FuturesDeliveryGroup : public FuturesGroup
+   {
+      FuturesDeliveryGroup(FuturesGroup* source, IndexHelper *parent)
+         : FuturesGroup(source->security_, parent)
+      {
+         quantity_ = source->quantity_;
+         value_ = source->value_;
+      }
+
+      ~FuturesDeliveryGroup() override = default;
+
+      QVariant getQuantity() const override;
+      QVariant getQuantityColor() const override;
+
+      QVariant getValue() const override;
+      QVariant getValueColor() const override;
    };
 
 
@@ -186,7 +208,8 @@ private:
          first = 0,
          UnSettled = first,
          Settled,
-         last
+         PendingSettlements,
+         Undefined
       };
 
       StatusGroup(const QString &name, int row)
@@ -215,10 +238,14 @@ private:
    void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &msg);
    void resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message);
 
-   std::shared_ptr<AssetManager>    assetManager_;
+   void DisplayFuturesDeliveryRow();
+
+private:
+   std::shared_ptr<AssetManager>                      assetManager_;
    std::unordered_map<std::string, StatusGroup::Type> groups_;
-   std::unique_ptr<StatusGroup> unsettled_;
-   std::unique_ptr<StatusGroup> settled_;
+   std::unique_ptr<StatusGroup>                       unsettled_;
+   std::unique_ptr<StatusGroup>                       settled_;
+   std::unique_ptr<StatusGroup>                       pendingFuturesSettlement_;
    QDateTime latestOrderTimestamp_;
 
    std::vector<std::pair<int64_t, int>> sortedPeviousOrderStatuses_{};

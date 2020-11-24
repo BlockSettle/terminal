@@ -26,6 +26,16 @@ namespace {
 
 } // namespace
 
+double getOrderValue(const bs::network::Order& order)
+{
+   double value = - order.quantity * order.price;
+   if (order.security.substr(0, order.security.find('/')) != order.product) {
+      value = order.quantity / order.price;
+   }
+
+   return value;
+}
+
 QString OrderListModel::Header::toString(OrderListModel::Header::Index h)
 {
    switch (h) {
@@ -43,8 +53,9 @@ QString OrderListModel::Header::toString(OrderListModel::Header::Index h)
 QString OrderListModel::StatusGroup::toString(OrderListModel::StatusGroup::Type sg)
 {
    switch (sg) {
-   case StatusGroup::UnSettled:  return tr("UnSettled");
-   case StatusGroup::Settled:    return tr("Settled");
+   case StatusGroup::UnSettled:           return tr("UnSettled");
+   case StatusGroup::Settled:             return tr("Settled");
+   case StatusGroup::PendingSettlements:  return tr("Pending Settlements");
    default:    return tr("Unknown");
    }
 }
@@ -127,18 +138,24 @@ QVariant OrderListModel::data(const QModelIndex &index, int role) const
 
             switch (role) {
                case Qt::DisplayRole : {
-                  if (index.column() == 0) {
+                  switch(index.column()) {
+                  case Header::NameColumn:
                      return g->security_;
-                  } else if (index.column() == Header::Quantity) {
+                  case Header::Quantity:
                      return g->getQuantity();
-                  } else {
+                  case Header::Value:
+                     return g->getValue();
+                  default:
                      return QVariant();
                   }
                }
                case Qt::BackgroundRole: {
-                  if (index.column() == Header::Quantity) {
+                  switch(index.column()) {
+                  case Header::Quantity:
                      return g->getQuantityColor();
-                  } else {
+                  case Header::Value:
+                     return g->getValueColor();
+                  default:
                      return QVariant();
                   }
                }
@@ -153,7 +170,7 @@ QVariant OrderListModel::data(const QModelIndex &index, int role) const
 
             switch (role) {
                case Qt::DisplayRole : {
-                  if (index.column() == 0) {
+                  if (index.column() == Header::NameColumn) {
                      return g->name_;
                   } else {
                      return QVariant();
@@ -174,7 +191,7 @@ QVariant OrderListModel::data(const QModelIndex &index, int role) const
 
             switch (role) {
                case Qt::DisplayRole : {
-                  if (index.column() == 0) {
+                  if (index.column() == Header::NameColumn) {
                      return g->name_;
                   } else {
                      return QVariant();
@@ -240,6 +257,9 @@ QModelIndex OrderListModel::index(int row, int column, const QModelIndex &parent
 
          case StatusGroup::Settled :
             return createIndex(row, column, &settled_->idx_);
+
+         case StatusGroup::PendingSettlements :
+            return createIndex(row, column, &pendingFuturesSettlement_->idx_);
 
          default :
             return QModelIndex();
@@ -313,7 +333,7 @@ int OrderListModel::rowCount(const QModelIndex &parent) const
 {
    if (!parent.isValid()) {
       // Do not show Settled and UnSettled root items if not connected
-      return connected_ ? 2 : 0;
+      return connected_ ? 3 : 0;
    }
 
    auto idx = static_cast<IndexHelper*>(parent.internalPointer());
@@ -453,7 +473,7 @@ OrderListModel::StatusGroup::Type OrderListModel::getStatusGroup(const bs::netwo
          return StatusGroup::Settled;
    }
 
-   return StatusGroup::last;
+   return StatusGroup::Undefined;
 }
 
 std::pair<OrderListModel::Group*, int> OrderListModel::findItem(const bs::network::Order &order)
@@ -599,7 +619,7 @@ void OrderListModel::createGroupsIfNeeded(const bs::network::Order &order, Marke
    // Create market if it doesn't exist.
    if (!marketItem) {
       beginInsertRows(sidx, static_cast<int>(sg->rows_.size()), static_cast<int>(sg->rows_.size()));
-      sg->rows_.push_back(make_unique<Market>(order.assetType, &sg->idx_));
+      sg->rows_.emplace_back(make_unique<Market>(order.assetType, &sg->idx_));
       marketItem = sg->rows_.back().get();
       endInsertRows();
    }
@@ -610,10 +630,10 @@ void OrderListModel::createGroupsIfNeeded(const bs::network::Order &order, Marke
          static_cast<int>(marketItem->rows_.size()), static_cast<int>(marketItem->rows_.size()));
 
       if (getStatusGroup(order) == StatusGroup::UnSettled && order.assetType == bs::network::Asset::Type::Futures) {
-         marketItem->rows_.push_back(make_unique<FuturesGroup>(
+         marketItem->rows_.emplace_back(make_unique<FuturesGroup>(
             QString::fromStdString(order.security), &marketItem->idx_));
       } else {
-         marketItem->rows_.push_back(make_unique<Group>(
+         marketItem->rows_.emplace_back(make_unique<Group>(
             QString::fromStdString(order.security), &marketItem->idx_));
       }
 
@@ -628,6 +648,7 @@ void OrderListModel::reset()
    groups_.clear();
    unsettled_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::UnSettled), 0);
    settled_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::Settled), 1);
+   pendingFuturesSettlement_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::PendingSettlements), 2);
    endResetModel();
 }
 
@@ -673,6 +694,8 @@ void OrderListModel::processUpdateOrders(const Blocksettle::Communication::Proxy
 
       onOrderUpdated(order);
    }
+
+   DisplayFuturesDeliveryRow();
 }
 
 void OrderListModel::resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message)
@@ -681,7 +704,7 @@ void OrderListModel::resetLatestChangedStatus(const Blocksettle::Communication::
 
    std::vector<std::pair<int64_t, int>> newOrderStatuses(message.orders_size());
    for (const auto &data : message.orders()) {
-      newOrderStatuses.push_back({ data.timestamp_ms(), static_cast<int>(data.status()) });
+      newOrderStatuses.emplace_back(decltype(newOrderStatuses)::value_type{ data.timestamp_ms(), static_cast<int>(data.status()) });
    }
    std::sort(newOrderStatuses.begin(), newOrderStatuses.end(), [&](const auto &left, const auto &right) {
       return left.first < right.first;
@@ -712,6 +735,9 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
    Group *groupItem = nullptr;
    Market *marketItem = nullptr;
 
+   // NOTE: because of batch orders update removeRowIfContainerChanged do nothing.
+   // Once batch update removed, that method should also be changed in order to display
+   // futures trades properly. ( Mostly futures group, since it display accumulated value )
    removeRowIfContainerChanged(order, found.second);
 
    findMarketAndGroup(order, marketItem, groupItem);
@@ -751,13 +777,20 @@ QVariant OrderListModel::Group::getQuantityColor() const
    return QVariant{};
 }
 
+QVariant OrderListModel::Group::getValue() const
+{
+   return QVariant{};
+}
+
+QVariant OrderListModel::Group::getValueColor() const
+{
+   return QVariant{};
+}
+
 void OrderListModel::Group::addRow(const bs::network::Order& order)
 {
    // As quantity is now could be negative need to invert value
-   double value = - order.quantity * order.price;
-   if (order.security.substr(0, order.security.find('/')) != order.product) {
-      value = order.quantity / order.price;
-   }
+   double value = getOrderValue(order);
 
    rows_.push_front(make_unique<Data>(
       UiUtils::displayTimeMs(order.dateTime),
@@ -774,6 +807,7 @@ void OrderListModel::Group::addRow(const bs::network::Order& order)
 void OrderListModel::FuturesGroup::addOrder(const bs::network::Order& order)
 {
    quantity_ += order.quantity;
+   value_ += getOrderValue(order);
    addRow(order);
 }
 
@@ -785,6 +819,71 @@ QVariant OrderListModel::FuturesGroup::getQuantity() const
 QVariant OrderListModel::FuturesGroup::getQuantityColor() const
 {
    if (quantity_ < 0) {
+      return kFailedColor;
+   }
+
+   return kSettledColor;
+}
+
+void OrderListModel::DisplayFuturesDeliveryRow()
+{
+   // check if there are pending futures
+   Market *futuresMarket = nullptr;
+
+   for ( const auto& row : unsettled_->rows_) {
+      if (row->assetType_ == bs::network::Asset::Type::Futures) {
+         futuresMarket = row.get();
+         break;
+      }
+   }
+
+   if (futuresMarket  == nullptr) {
+      return;
+   }
+
+   beginInsertRows(createIndex(pendingFuturesSettlement_->row_, 0, &pendingFuturesSettlement_->idx_), static_cast<int>(pendingFuturesSettlement_->rows_.size()), static_cast<int>(pendingFuturesSettlement_->rows_.size()));
+   pendingFuturesSettlement_->rows_.emplace_back(make_unique<Market>(bs::network::Asset::Type::Futures, &pendingFuturesSettlement_->idx_));
+   Market * marketItem = pendingFuturesSettlement_->rows_.back().get();
+   endInsertRows();
+
+   for (const auto& group : futuresMarket->rows_) {
+      FuturesGroup* sourceGroup = dynamic_cast<FuturesGroup*>(group.get());
+
+      if (sourceGroup != nullptr) {
+         beginInsertRows(createIndex(findMarket(pendingFuturesSettlement_.get(), marketItem), 0, &marketItem->idx_),
+            static_cast<int>(marketItem->rows_.size()), static_cast<int>(marketItem->rows_.size()));
+
+         marketItem->rows_.emplace_back(make_unique<FuturesDeliveryGroup>(
+            sourceGroup, &marketItem->idx_));
+
+         endInsertRows();
+      }
+   }
+}
+
+
+QVariant OrderListModel::FuturesDeliveryGroup::getQuantity() const
+{
+   return UiUtils::displayAmount(quantity_);
+}
+
+QVariant OrderListModel::FuturesDeliveryGroup::getQuantityColor() const
+{
+   if (quantity_ < 0) {
+      return kFailedColor;
+   }
+
+   return kSettledColor;
+}
+
+QVariant OrderListModel::FuturesDeliveryGroup::getValue() const
+{
+   return UiUtils::displayCurrencyAmount(value_);
+}
+
+QVariant OrderListModel::FuturesDeliveryGroup::getValueColor() const
+{
+   if (value_ < 0) {
       return kFailedColor;
    }
 

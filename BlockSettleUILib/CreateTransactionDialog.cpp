@@ -34,7 +34,6 @@
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
 #include "TransactionData.h"
-#include "TransactionOutputsModel.h"
 #include "UiUtils.h"
 #include "UsedInputsModel.h"
 #include "UtxoReservationManager.h"
