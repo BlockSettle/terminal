@@ -135,7 +135,7 @@ QVariant OrderListModel::data(const QModelIndex &index, int role) const
                      return QVariant();
                   }
                }
-               case Qt::ForegroundRole : {
+               case Qt::BackgroundRole: {
                   if (index.column() == Header::Quantity) {
                      return g->getQuantityColor();
                   } else {
