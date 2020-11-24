@@ -35,6 +35,7 @@
 #include "Adapters/OnChainTrackerAdapter.h"
 #include "Adapters/WalletsAdapter.h"
 #include "ApiAdapter.h"
+#include "ApiJson.h"
 #include "AssetsAdapter.h"
 #include "BsServerAdapter.h"
 #include "ChatAdapter.h"
@@ -327,6 +328,7 @@ int main(int argc, char** argv)
       const auto &apiAdapter = std::make_shared<ApiAdapter>(logMgr->logger("API"));
       const auto &guiAdapter = std::make_shared<QtGuiAdapter>(logMgr->logger("ui"));
       apiAdapter->add(guiAdapter);
+      apiAdapter->add(std::make_shared<ApiJsonAdapter>(logMgr->logger("json")));
       inprocBus.addAdapter(apiAdapter);
 
       const auto &signAdapter = std::make_shared<SignerAdapter>(logMgr->logger());

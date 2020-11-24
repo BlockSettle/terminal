@@ -86,11 +86,11 @@ void APISettingsPage::display()
    else {
       ui_->toggleAutoSign->setChecked(settings_.at(ApplicationSettings::AutoSigning).toBool());
       ui_->toggleEnableRFQ->setChecked(settings_.at(ApplicationSettings::AutoQouting).toBool());
-      ui_->lineEditConnName->setText(settings_.at(ApplicationSettings::ExtConnName).toString());
-      ui_->lineEditConnHost->setText(settings_.at(ApplicationSettings::ExtConnHost).toString());
+      ui_->lineEditConnName->setEnabled(false);
+      ui_->lineEditConnHost->setEnabled(false);
       ui_->lineEditConnPort->setText(settings_.at(ApplicationSettings::ExtConnPort).toString());
-      ui_->lineEditConnPubKey->setText(settings_.at(ApplicationSettings::ExtConnPubKey).toString());
-      ui_->labelOwnPubKey->setText(settings_.at(ApplicationSettings::ExtConnOwnPubKey).toString());
+      ui_->lineEditConnPubKey->setEnabled(false);
+      ui_->labelOwnPubKey->setEnabled(false);
 
       apiKeyEncrypted_ = settings_.at(ApplicationSettings::LoginApiKey).toString().toStdString();
    }
@@ -116,10 +116,7 @@ void APISettingsPage::apply()
    else {
       emit putSetting(ApplicationSettings::AutoSigning, ui_->toggleAutoSign->isChecked());
       emit putSetting(ApplicationSettings::AutoQouting, ui_->toggleEnableRFQ->isChecked());
-      emit putSetting(ApplicationSettings::ExtConnName, ui_->lineEditConnName->text());
-      emit putSetting(ApplicationSettings::ExtConnHost, ui_->lineEditConnHost->text());
       emit putSetting(ApplicationSettings::ExtConnPort, ui_->lineEditConnPort->text());
-      emit putSetting(ApplicationSettings::ExtConnPubKey, ui_->lineEditConnPubKey->text());
       emit putSetting(ApplicationSettings::LoginApiKey, QString::fromStdString(apiKeyEncrypted_));
    }
 }

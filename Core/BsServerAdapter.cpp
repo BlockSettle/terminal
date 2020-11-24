@@ -205,13 +205,13 @@ bool BsServerAdapter::processStartLogin(const std::string& login)
    if (!connected_) {
       return false;  // wait for connection to complete
    }
-   if (!currentLogin_.empty()) {
-      logger_->warn("[{}] can't start before login {} processing is complete"
-         , __func__, currentLogin_);
-      return false;
+   if (currentLogin_.empty()) {
+      currentLogin_ = login;
+      bsClient_->startLogin(login);
    }
-   currentLogin_ = login;
-   bsClient_->startLogin(login);
+   else {
+      onStartLoginDone(true, {});
+   }
    return true;
 }
 

@@ -39,10 +39,21 @@ namespace bs {
             else if (value() < 0) {
                return "Broadcast";
             }
+            else if (!name_.empty()) {
+               return name_;
+            }
             else {
                return "User#" + std::to_string(value());
             }
          }
+
+         void setName(const std::string& name)
+         {
+            name_ = name;
+         }
+
+      private:
+         std::string name_;
       };
    }
 }
@@ -61,6 +72,7 @@ public:
    void setUserId(const bs::message::UserValue userVal)
    {
       user_ = std::make_shared<bs::message::UserAPI>(userVal);
+      user_->setName(name());
    }
 
 protected:

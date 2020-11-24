@@ -18,6 +18,7 @@
 #include "Settings/SignersProvider.h"
 #include "LogManager.h"
 #include "PubKeyLoader.h"
+#include "WsConnection.h"
 
 #include "common.pb.h"
 #include "terminal.pb.h"
@@ -176,6 +177,10 @@ bool SettingsAdapter::process(const bs::message::Envelope &env)
          return processBootstrap(env, msg.load_bootstrap());
       case SettingsMessage::kGetBootstrap:
          return processBootstrap(env, {});
+      case SettingsMessage::kApiPrivkey:
+         return processApiPrivKey(env);
+      case SettingsMessage::kApiClientKeys:
+         return processApiClientsList(env);
       default:
          logger_->warn("[SettingsAdapter::process] unknown data case: {}"
             , msg.data_case());
@@ -297,6 +302,79 @@ bool SettingsAdapter::processBootstrap(const bs::message::Envelope &env
    }
    Envelope envResp{ bsData.empty() ? env.id : 0, user_, bsData.empty() ? env.sender : nullptr
       , {}, {}, msg.SerializeAsString() };
+   return pushFill(envResp);
+}
+
+static bs::network::ws::PrivateKey readOrCreatePrivateKey(const std::string& filename)
+{
+   bs::network::ws::PrivateKey result;
+   std::ifstream privKeyReader(filename, std::ios::binary);
+   if (privKeyReader.is_open()) {
+      std::string str;
+      str.assign(std::istreambuf_iterator<char>(privKeyReader)
+         , std::istreambuf_iterator<char>());
+      result.reserve(str.size());
+      std::for_each(str.cbegin(), str.cend(), [&result](char c) {
+         result.push_back(c);
+      });
+   }
+   if (result.empty()) {
+      result = bs::network::ws::generatePrivKey();
+      std::ofstream privKeyWriter(filename, std::ios::out | std::ios::binary);
+      privKeyWriter.write((char*)&result[0], result.size());
+      const auto& pubKey = bs::network::ws::publicKey(result);
+      std::ofstream pubKeyWriter(filename + ".pub", std::ios::out | std::ios::binary);
+      pubKeyWriter << pubKey;
+   }
+   return result;
+}
+
+bool SettingsAdapter::processApiPrivKey(const bs::message::Envelope& env)
+{  //FIXME: should be re-implemented to avoid storing plain private key in a file on disk
+   const auto &apiKeyFN = appSettings_->AppendToWritableDir(
+      QString::fromStdString("apiPrivKey")).toStdString();
+   const auto &apiPrivKey = readOrCreatePrivateKey(apiKeyFN);
+   SettingsMessage msg;
+   SecureBinaryData privKey(apiPrivKey.data(), apiPrivKey.size());
+   msg.set_api_privkey(privKey.toBinStr());
+   Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
+   return pushFill(envResp);
+}
+
+static std::set<std::string> readClientKeys(const std::string& filename)
+{
+   std::ifstream in(filename);
+   if (!in.is_open()) {
+      return {};
+   }
+   std::set<std::string> result;
+   std::string str;
+   while (std::getline(in, str)) {
+      if (str.empty()) {
+         continue;
+      }
+      try {
+         const auto& pubKey = BinaryData::CreateFromHex(str).toBinStr();
+         result.insert(pubKey);
+      } catch (const std::exception&) {}   // ignore invalid keys for now
+   }
+   return result;
+}
+
+bool SettingsAdapter::processApiClientsList(const bs::message::Envelope& env)
+{
+   const auto& apiKeysFN = appSettings_->AppendToWritableDir(
+      QString::fromStdString("apiClientPubKeys")).toStdString();
+   const auto& clientKeys = readClientKeys(apiKeysFN);
+   if (clientKeys.empty()) {
+      logger_->debug("[{}] no API client keys found", __func__);
+   }
+   SettingsMessage msg;
+   const auto msgResp = msg.mutable_api_client_keys();
+   for (const auto& clientKey : clientKeys) {
+      msgResp->add_pub_keys(clientKey);
+   }
+   Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
    return pushFill(envResp);
 }
 

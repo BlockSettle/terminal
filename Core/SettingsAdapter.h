@@ -96,6 +96,8 @@ private:
    bool processResetToState(const bs::message::Envelope&
       , const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
    bool processBootstrap(const bs::message::Envelope&, const std::string&);
+   bool processApiPrivKey(const bs::message::Envelope&);
+   bool processApiClientsList(const bs::message::Envelope&);
 
 private:
    std::shared_ptr<bs::message::User>  user_, userBC_;
