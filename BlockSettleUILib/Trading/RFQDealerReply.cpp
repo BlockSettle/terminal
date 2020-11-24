@@ -482,18 +482,22 @@ bool RFQDealerReply::checkBalance() const
    if ((currentQRN_.side == bs::network::Side::Buy) != (product_ == baseProduct_)) {
       const auto amount = getAmount();
       if (currentQRN_.assetType == bs::network::Asset::SpotXBT) {
-         return amount <= getXbtBalance().GetValueBitcoin();
+         return amount <= getXbtBalance(bs::UTXOReservationManager::kIncludeZcDealerSpotXbt).GetValueBitcoin();
       } else if (currentQRN_.assetType == bs::network::Asset::PrivateMarket) {
          return amount <= getPrivateMarketCoinBalance();
       }
       const auto product = (product_ == baseProduct_) ? product_ : currentQRN_.product;
-      return assetManager_->checkBalance(product, amount);
+      return assetManager_->checkBalance(product, amount, false);
    } else if ((currentQRN_.side == bs::network::Side::Buy) && (product_ == baseProduct_)) {
-      return assetManager_->checkBalance(currentQRN_.product, currentQRN_.quantity);
+      const bool includeZc =
+         (currentQRN_.assetType == bs::network::Asset::SpotXBT)
+            ? bs::UTXOReservationManager::kIncludeZcDealerSpotXbt
+            : bs::UTXOReservationManager::kIncludeZcDealerCc;
+      return assetManager_->checkBalance(currentQRN_.product, currentQRN_.quantity, includeZc);
    }
 
    if (currentQRN_.assetType == bs::network::Asset::PrivateMarket) {
-      return currentQRN_.quantity * getPrice() <= getXbtBalance().GetValueBitcoin();
+      return currentQRN_.quantity * getPrice() <= getXbtBalance(bs::UTXOReservationManager::kIncludeZcDealerCc).GetValueBitcoin();
    }
 
    const double value = getValue();
@@ -503,9 +507,9 @@ bool RFQDealerReply::checkBalance() const
    const bool isXbt = (currentQRN_.assetType == bs::network::Asset::PrivateMarket) ||
       ((currentQRN_.assetType == bs::network::Asset::SpotXBT) && (product_ == baseProduct_));
    if (isXbt) {
-      return value <= getXbtBalance().GetValueBitcoin();
+      return value <= getXbtBalance(bs::UTXOReservationManager::kIncludeZcDealerSpotXbt).GetValueBitcoin();
    }
-   return assetManager_->checkBalance(product_, value);
+   return assetManager_->checkBalance(product_, value, false);
 }
 
 void RFQDealerReply::walletSelected(int index)
@@ -800,11 +804,11 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
                   if (!replyData->xbtWallet->canMixLeaves()) {
                      auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXbtWallet);
                      utxos = utxoReservationManager_->getAvailableXbtUTXOs(
-                        replyData->xbtWallet->walletId(), purpose);
+                        replyData->xbtWallet->walletId(), purpose, bs::UTXOReservationManager::kIncludeZcDealerCc);
                   }
                   else {
                      utxos = utxoReservationManager_->getAvailableXbtUTXOs(
-                        replyData->xbtWallet->walletId());
+                        replyData->xbtWallet->walletId(), bs::UTXOReservationManager::kIncludeZcDealerCc);
                   }
                   auto fixedUtxo = utxoReservationManager_->convertUtxoToPartialFixedInput(replyData->xbtWallet->walletId(), utxos);
                   inputsCb(fixedUtxo.inputs);
@@ -910,10 +914,10 @@ void RFQDealerReply::showCoinControl()
    std::vector<UTXO> allUTXOs;
    if (!xbtWallet->canMixLeaves()) {
       auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXbtWallet);
-      allUTXOs = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId(), purpose);
+      allUTXOs = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId(), purpose, bs::UTXOReservationManager::kIncludeZcDealerSpotXbt);
    }
    else {
-      allUTXOs = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId());
+      allUTXOs = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId(), bs::UTXOReservationManager::kIncludeZcDealerSpotXbt);
    }
 
    ui_->toolButtonXBTInputsSend->setEnabled(true);
@@ -1014,10 +1018,10 @@ void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, dou
    if (qrn.assetType == bs::network::Asset::Type::SpotXBT) {
       if (qrn.side == bs::network::Side::Sell && qrn.product == bs::network::XbtCurrency) {
          CurrencyPair currencyPair(qrn.security);
-         ok = assetManager_->checkBalance(currencyPair.ContraCurrency(qrn.product), qrn.quantity * price);
+         ok = assetManager_->checkBalance(currencyPair.ContraCurrency(qrn.product), qrn.quantity * price, bs::UTXOReservationManager::kIncludeZcDealerSpotXbt);
       }
       else if (qrn.side == bs::network::Side::Buy && qrn.product != bs::network::XbtCurrency) {
-         ok = assetManager_->checkBalance(qrn.product, qrn.quantity);
+         ok = assetManager_->checkBalance(qrn.product, qrn.quantity, bs::UTXOReservationManager::kIncludeZcDealerSpotXbt);
       }
    }
    else if (qrn.assetType == bs::network::Asset::Type::SpotFX) {
@@ -1031,10 +1035,10 @@ void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, dou
          else {
             quantity *= price;
          }
-         ok = assetManager_->checkBalance(currencyPair.ContraCurrency(qrn.product), quantity);
+         ok = assetManager_->checkBalance(currencyPair.ContraCurrency(qrn.product), quantity, false);
       }
       else {
-         ok = assetManager_->checkBalance(qrn.product, qrn.quantity);
+         ok = assetManager_->checkBalance(qrn.product, qrn.quantity, false);
       }
    }
 
@@ -1203,8 +1207,12 @@ void bs::ui::RFQDealerReply::reserveBestUtxoSetAndSubmit(double quantity, double
          xbtQuantity, cbBestUtxoSet, true, checkAmount);
    }
    else {
+      const bool includeZc =
+         (replyData->qn.assetType == bs::network::Asset::SpotXBT)
+            ? bs::UTXOReservationManager::kIncludeZcDealerSpotXbt
+            : bs::UTXOReservationManager::kIncludeZcDealerCc;
       utxoReservationManager_->getBestXbtUtxoSet(replyData->xbtWallet->walletId(),
-         xbtQuantity, cbBestUtxoSet, true, checkAmount);
+         xbtQuantity, cbBestUtxoSet, true, checkAmount, includeZc);
    }
 
 
@@ -1251,9 +1259,14 @@ void bs::ui::RFQDealerReply::updateBalanceLabel()
 {
    QString totalBalance = kNoBalanceAvailable;
 
+   const bool includeZc =
+      (currentQRN_.assetType == bs::network::Asset::SpotXBT)
+         ? bs::UTXOReservationManager::kIncludeZcDealerSpotXbt
+         : bs::UTXOReservationManager::kIncludeZcDealerCc;
+
    if (isXbtSpend()) {
       totalBalance = tr("%1 %2")
-         .arg(UiUtils::displayAmount(getXbtBalance().GetValueBitcoin()))
+         .arg(UiUtils::displayAmount(getXbtBalance(includeZc).GetValueBitcoin()))
          .arg(QString::fromStdString(bs::network::XbtCurrency));
    } else if ((currentQRN_.side == bs::network::Side::Buy) && (currentQRN_.assetType == bs::network::Asset::PrivateMarket)) {
       totalBalance = tr("%1 %2")
@@ -1262,7 +1275,7 @@ void bs::ui::RFQDealerReply::updateBalanceLabel()
    } else {
       if (assetManager_) {
          totalBalance = tr("%1 %2")
-            .arg(UiUtils::displayCurrencyAmount(assetManager_->getBalance(product_)))
+            .arg(UiUtils::displayCurrencyAmount(assetManager_->getBalance(product_, includeZc, nullptr)))
             .arg(QString::fromStdString(currentQRN_.side == bs::network::Side::Buy ? baseProduct_ : product_));
       }
    }
@@ -1271,7 +1284,7 @@ void bs::ui::RFQDealerReply::updateBalanceLabel()
    ui_->cashBalanceLabel->setText(selectedXbtInputs_.empty() ? kAvailableBalance : kReservedBalance);
 }
 
-bs::XBTAmount RFQDealerReply::getXbtBalance() const
+bs::XBTAmount RFQDealerReply::getXbtBalance(bool includeZc) const
 {
    const auto fixedInputs = selectedXbtInputs(ReplyType::Manual);
    if (!fixedInputs.empty()) {
@@ -1290,11 +1303,11 @@ bs::XBTAmount RFQDealerReply::getXbtBalance() const
    if (!xbtWallet->canMixLeaves()) {
       auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXbtWallet);
       return bs::XBTAmount(utxoReservationManager_->getAvailableXbtUtxoSum(
-         xbtWallet->walletId(), purpose));
+         xbtWallet->walletId(), purpose, includeZc));
    }
    else {
       return bs::XBTAmount(utxoReservationManager_->getAvailableXbtUtxoSum(
-         xbtWallet->walletId()));
+         xbtWallet->walletId(), includeZc));
    }
 }
 

@@ -16,9 +16,10 @@
 #include "CurrencyPair.h"
 #include "NotificationCenter.h"
 #include "QuoteProvider.h"
+#include "RFQBlotterTreeView.h"
 #include "SettlementContainer.h"
 #include "UiUtils.h"
-#include "RFQBlotterTreeView.h"
+#include "UtxoReservationManager.h"
 
 #include <QStyle>
 #include <QStyleOptionProgressBar>
@@ -240,14 +241,19 @@ void QuoteRequestsWidget::onSecurityMDUpdated(bs::network::Asset::Type assetType
 
 void QuoteRequestsWidget::onQuoteRequest(const bs::network::QuoteReqNotification &qrn)
 {
+   const bool includeZc =
+      (qrn.assetType == bs::network::Asset::SpotXBT)
+         ? bs::UTXOReservationManager::kIncludeZcDealerSpotXbt
+         : bs::UTXOReservationManager::kIncludeZcDealerCc;
+
    if (dropQN_) {
       bool checkResult = true;
       if (qrn.side == bs::network::Side::Buy) {
-         checkResult = assetManager_->checkBalance(qrn.product, qrn.quantity);
+         checkResult = assetManager_->checkBalance(qrn.product, qrn.quantity, includeZc);
       }
       else {
          CurrencyPair cp(qrn.security);
-         checkResult = assetManager_->checkBalance(cp.ContraCurrency(qrn.product), 0.01);
+         checkResult = assetManager_->checkBalance(cp.ContraCurrency(qrn.product), 0.01, includeZc);
       }
       if (!checkResult) {
          return;

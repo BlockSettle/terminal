@@ -286,7 +286,7 @@ void StatusBarView::setBalances()
    for (const auto& currency : assetManager_->currencies()) {
       text += tr("| %1: <b>%2</b> ")
          .arg(QString::fromStdString(currency))
-         .arg(UiUtils::displayCurrencyAmount(assetManager_->getBalance(currency)));
+         .arg(UiUtils::displayCurrencyAmount(assetManager_->getBalance(currency, false, nullptr)));
    }
 
    balanceLabel_->setText(text);

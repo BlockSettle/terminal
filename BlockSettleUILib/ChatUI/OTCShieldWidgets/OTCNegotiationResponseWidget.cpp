@@ -187,7 +187,7 @@ void OTCNegotiationResponseWidget::onChanged()
    }
    else if (receivedOffer_.ourSide == bs::network::otc::Side::Buy
       && price * quantity
-      > getAssetManager()->getBalance(buyProduct_.toStdString())) {
+      > getAssetManager()->getBalance(buyProduct_.toStdString(), bs::UTXOReservationManager::kIncludeZcOtc, nullptr)) {
       activateAcceptButton = false;
    }
 

@@ -9,10 +9,12 @@
 
 */
 #include "CreateOTCResponseWidget.h"
+
+#include "AssetManager.h"
 #include "UiUtils.h"
+#include "UtxoReservationManager.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ui_CreateOTCResponseWidget.h"
-#include "AssetManager.h"
 
 using namespace bs::network;
 
@@ -84,7 +86,7 @@ void CreateOTCResponseWidget::updateAcceptButton()
    bool isEnabled = ui_->widgetAmountRange->GetUpperValue() != 0 && ui_->widgetPriceRange->GetUpperValue() != 0;
 
    const auto totalXBTBalance = getWalletManager()->getTotalBalance();
-   const auto totalEurBalance = getAssetManager()->getBalance(buyProduct_.toStdString());
+   const auto totalEurBalance = getAssetManager()->getBalance(buyProduct_.toStdString(), bs::UTXOReservationManager::kIncludeZcOtc, nullptr);
 
    switch (ourSide_)
    {

@@ -46,7 +46,7 @@ void MockAssetManager::init()
    securitiesReceived_ = true;
 }
 
-double MockAssetManager::getBalance(const std::string& currency, const std::shared_ptr<bs::sync::Wallet> &) const
+double MockAssetManager::getBalance(const std::string& currency, bool includeZc, const std::shared_ptr<bs::sync::Wallet> &) const
 {
    auto it = balances_.find(currency);
    if (it != balances_.end()) {

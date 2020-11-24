@@ -18,6 +18,7 @@
 #include "TradesUtils.h"
 #include "UiUtils.h"
 #include "UtxoReservationManager.h"
+#include "UtxoReservationManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ui_OTCNegotiationRequestWidget.h"
@@ -159,7 +160,7 @@ void OTCNegotiationRequestWidget::onUpdateBalances()
    // #new_logic : fix me when different products security will be available
    if (ui_->pushButtonBuy->isChecked()) {
       totalBalance = tr("%1 %2")
-         .arg(UiUtils::displayCurrencyAmount(getAssetManager()->getBalance(buyProduct_.toStdString())))
+         .arg(UiUtils::displayCurrencyAmount(getAssetManager()->getBalance(buyProduct_.toStdString(), bs::UTXOReservationManager::kIncludeZcOtc, nullptr)))
          .arg(buyProduct_);
       ui_->quantitySpinBox->setMaximum(std::numeric_limits<double>::max());
    }
@@ -276,7 +277,7 @@ void OTCNegotiationRequestWidget::onChanged()
 
    if (ui_->pushButtonBuy->isChecked()) {
       ui_->quantitySpinBox->setMaximum(
-         getAssetManager()->getBalance(buyProduct_.toStdString()) / ui_->priceSpinBox->value());
+         getAssetManager()->getBalance(buyProduct_.toStdString(), bs::UTXOReservationManager::kIncludeZcOtc, nullptr) / ui_->priceSpinBox->value());
    }
 
    ui_->pushButtonAcceptRequest->setEnabled(true);
@@ -341,10 +342,10 @@ void OTCNegotiationRequestWidget::onMaxQuantityClicked()
    if (utxos.empty()) {
       if (!hdWallet->canMixLeaves()) {
          auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWallets);
-         utxos = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId(), purpose);
+         utxos = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId(), purpose, bs::UTXOReservationManager::kIncludeZcOtc);
       }
       else {
-         utxos = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId());
+         utxos = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId(), bs::UTXOReservationManager::kIncludeZcOtc);
       }
    }
 
