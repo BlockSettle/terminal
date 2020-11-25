@@ -26,7 +26,7 @@ namespace Blocksettle {
       namespace ProxyTerminalPb {
          class Response;
          class Response_DeliveryObligationsRequest;
-         class Response_UpdateOrders;
+         class Response_UpdateOrdersAndObligations;
       }
    }
 }
@@ -253,8 +253,8 @@ private:
    void createGroupsIfNeeded(const bs::network::Order &order, Market *&market, Group *&group);
 
    void reset();
-   void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &msg);
-   void resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message);
+   void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations &msg);
+   void resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations &message);
 
    void DisplayFuturesDeliveryRow(const Blocksettle::Communication::ProxyTerminalPb::Response_DeliveryObligationsRequest &obligation);
 

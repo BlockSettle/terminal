@@ -384,8 +384,8 @@ void OrderListModel::onMessageFromPB(const Blocksettle::Communication::ProxyTerm
    connected_ = true;
 
    switch (response.data_case()) {
-      case Blocksettle::Communication::ProxyTerminalPb::Response::kUpdateOrders:
-         processUpdateOrders(response.update_orders());
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kUpdateOrdersObligations:
+         processUpdateOrders(response.update_orders_obligations());
          break;
       default:
          break;
@@ -656,7 +656,7 @@ void OrderListModel::reset()
    endResetModel();
 }
 
-void OrderListModel::processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message)
+void OrderListModel::processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations &message)
 {
    // Save latest selected index first
    resetLatestChangedStatus(message);
@@ -702,7 +702,7 @@ void OrderListModel::processUpdateOrders(const Blocksettle::Communication::Proxy
    DisplayFuturesDeliveryRow(message.obligation());
 }
 
-void OrderListModel::resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message)
+void OrderListModel::resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations &message)
 {
    latestChangedTimestamp_ = {};
 
