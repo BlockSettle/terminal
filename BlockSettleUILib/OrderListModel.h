@@ -172,14 +172,7 @@ private:
 
    struct FuturesDeliveryGroup : public Group
    {
-      FuturesDeliveryGroup(const QString &sec, IndexHelper *parent, double quantity, double price)
-         : Group(sec, parent)
-      {
-         quantity_ = quantity;
-         price_ = price;
-
-         value_ = quantity_ * price_;
-      }
+      FuturesDeliveryGroup(const QString &sec, IndexHelper *parent, int64_t quantity, double price);
 
       ~FuturesDeliveryGroup() override = default;
 
@@ -196,6 +189,8 @@ private:
       double quantity_ = 0;
       double value_ = 0;
       double price_ = 0;
+
+      bs::XBTAmount toDeliver;
    };
 
 

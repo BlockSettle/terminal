@@ -153,6 +153,20 @@ QVariant OrderListModel::data(const QModelIndex &index, int role) const
                      return QVariant();
                   }
                }
+
+               case Qt::TextAlignmentRole : {
+                  switch (index.column()) {
+                     case Header::Quantity :
+                     case Header::Price :
+                     case Header::Value :
+                        return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
+                     case Header::Status:
+                        return static_cast<int>(Qt::AlignLeft | Qt::AlignVCenter);
+                     default :
+                        return QVariant();
+                  }
+               }
+
                case Qt::BackgroundRole: {
                   switch(index.column()) {
                   case Header::Quantity:
@@ -867,11 +881,24 @@ void OrderListModel::DisplayFuturesDeliveryRow(const Blocksettle::Communication:
    beginInsertRows(createIndex(findMarket(pendingFuturesSettlement_.get(), marketItem), 0, &marketItem->idx_),
       static_cast<int>(marketItem->rows_.size()), static_cast<int>(marketItem->rows_.size()));
 
-   marketItem->rows_.emplace_back(make_unique<FuturesDeliveryGroup>(QStringLiteral("XBT/EUR"), &marketItem->idx_, obligation.to_deliver(), obligation.price()));
+   marketItem->rows_.emplace_back(make_unique<FuturesDeliveryGroup>(QStringLiteral("XBT/EUR")
+      , &marketItem->idx_, obligation.to_deliver(), obligation.price()));
 
    endInsertRows();
 }
 
+OrderListModel::FuturesDeliveryGroup::FuturesDeliveryGroup(const QString &sec, IndexHelper *parent, int64_t quantity, double price)
+   : Group(sec, parent)
+{
+   quantity_ = static_cast<double>(quantity) / BTCNumericTypes::BalanceDivider;
+   price_ = price;
+
+   value_ = -quantity_ * price_;
+
+   if (quantity < 0) {
+      toDeliver = bs::XBTAmount{ static_cast<BTCNumericTypes::satoshi_type>(-quantity) };
+   }
+}
 
 QVariant OrderListModel::FuturesDeliveryGroup::getQuantity() const
 {
