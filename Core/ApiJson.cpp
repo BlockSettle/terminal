@@ -89,7 +89,8 @@ static std::shared_ptr<UserTerminal> mapUser(const EnvelopeIn::MessageCase& user
       { EnvelopeIn::kWallets, UserTerminal::create(TerminalUsers::Wallets) },
       { EnvelopeIn::kOnChainTracker, UserTerminal::create(TerminalUsers::OnChainTracker) },
       { EnvelopeIn::kSettlement, UserTerminal::create(TerminalUsers::Settlement) },
-      { EnvelopeIn::kChat, UserTerminal::create(TerminalUsers::Chat) }
+      { EnvelopeIn::kChat, UserTerminal::create(TerminalUsers::Chat) },
+      { EnvelopeIn::kBsServer, UserTerminal::create(TerminalUsers::BsServer) }
    };
    try {
       return usersMap.at(user);
@@ -548,6 +549,9 @@ bool ApiJsonAdapter::sendReplyToClient(uint64_t msgId
       break;
    case TerminalUsers::Chat:
       targetMsg = envOut.mutable_chat();
+      break;
+   case TerminalUsers::BsServer:
+      targetMsg = envOut.mutable_bs_server();
       break;
    default:
       logger_->warn("[{}] unhandled sender {}", __func__, sender->value());
