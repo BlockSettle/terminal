@@ -76,6 +76,8 @@ private:
    std::set<std::string>   clientPubKeys_;
    std::set<std::string>   connectedClients_;
 
+   std::string loggedInUser_;
+   bool        matchingConnected_{ false };
    int         armoryState_{ -1 };
    uint32_t    blockNum_{ 0 };
    int         signerState_{ -1 };

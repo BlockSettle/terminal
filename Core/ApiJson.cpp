@@ -105,14 +105,15 @@ void ApiJsonAdapter::OnDataFromClient(const std::string& clientId
    const auto& sendErrorReply = [this, clientId]
       (const std::string& id, const std::string& errorMsg)
    {
-      ErrorResponse msg;
+      EnvelopeOut env;
       if (!id.empty()) {
-         msg.set_id(id);
+         env.set_id(id);
       }
+      auto msg = env.mutable_error();
       if (!errorMsg.empty()) {
-         msg.set_error_text(errorMsg);
+         msg->set_error_text(errorMsg);
       }
-      const auto& jsonData = toJsonCompact(msg);
+      const auto& jsonData = toJsonCompact(env);
       if (!connection_->SendDataToClient(clientId, jsonData)) {
          logger_->error("[ApiJsonAdapter::OnDataFromClient::sendErrorReply] failed to send");
       }
@@ -144,12 +145,15 @@ void ApiJsonAdapter::OnClientConnected(const std::string& clientId
    connectedClients_.insert(clientId);
    logger_->info("[{}] {} (total {}) connected from {}", __func__, bs::toHex(clientId)
       , connectedClients_.size(), details.at(Detail::IpAddr));
-   ConnectedResponse msg;
-   msg.set_wallets_ready(walletsReady_);
-   msg.set_blockchain_state(armoryState_);
-   msg.set_top_block(blockNum_);
-   msg.set_signer_state(signerState_);
-   const auto& jsonData = toJsonCompact(msg);
+   EnvelopeOut env;
+   auto msg = env.mutable_connected();
+   msg->set_wallets_ready(walletsReady_);
+   msg->set_logged_user(loggedInUser_);
+   msg->set_matching_connected(matchingConnected_);
+   msg->set_blockchain_state(armoryState_);
+   msg->set_top_block(blockNum_);
+   msg->set_signer_state(signerState_);
+   const auto& jsonData = toJsonCompact(env);
    if (!connection_->SendDataToClient(clientId, jsonData)) {
       logger_->error("[ApiJsonAdapter::OnClientConnected] failed to send");
    }
@@ -404,9 +408,16 @@ bool ApiJsonAdapter::processBsServer(const bs::message::Envelope& env)
       return true;
    }
    switch (msg.data_case()) {
-   case BsServerMessage::kStartLoginResult: [[fallthrough]]
-   case BsServerMessage::kLoginResult:
+   case BsServerMessage::kStartLoginResult:
       sendReplyToClient(0, msg, env.sender); // multicast login results to all connected clients
+      break;
+   case BsServerMessage::kLoginResult:
+      loggedInUser_ = msg.login_result().login();
+      sendReplyToClient(0, msg, env.sender); // multicast login results to all connected clients
+      break;
+   case BsServerMessage::kDisconnected:
+      loggedInUser_.clear();
+      sendReplyToClient(0, msg, env.sender);
       break;
    case BsServerMessage::kOrdersUpdate:
       sendReplyToClient(env.id, msg, env.sender);
@@ -448,8 +459,13 @@ bool ApiJsonAdapter::processMatching(const bs::message::Envelope& env)
       return true;
    }
    switch (msg.data_case()) {
-   case MatchingMessage::kLoggedIn: [[fallthrough]]
+   case MatchingMessage::kLoggedIn:
+      matchingConnected_ = true;
+      sendReplyToClient(0, msg, env.sender);
+      break;
    case MatchingMessage::kLoggedOut:
+      matchingConnected_ = false;
+      loggedInUser_.clear();
       sendReplyToClient(0, msg, env.sender);
       break;
    default:    break;
