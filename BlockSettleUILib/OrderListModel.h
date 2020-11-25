@@ -53,6 +53,16 @@ public:
       static QString toString(Index);
    };
 
+   struct DeliveryObligationData
+   {
+      std::string       bsAddress;
+      bs::XBTAmount     deliveryAmount;
+
+      bool isValid() const {
+         return !bsAddress.empty();
+      }
+   };
+
    OrderListModel(const std::shared_ptr<AssetManager> &, QObject *parent = nullptr);
    ~OrderListModel() noexcept override = default;
 
@@ -63,6 +73,10 @@ public:
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
    QVariant headerData(int section, Qt::Orientation orientation,
                        int role = Qt::DisplayRole) const override;
+
+   bool DeliveryRequired(const QModelIndex &index);
+
+   DeliveryObligationData getDeliveryObligationData(const QModelIndex &index) const;
 public slots:
    void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
    void onDisconnected();
@@ -172,7 +186,7 @@ private:
 
    struct FuturesDeliveryGroup : public Group
    {
-      FuturesDeliveryGroup(const QString &sec, IndexHelper *parent, int64_t quantity, double price);
+      FuturesDeliveryGroup(const QString &sec, IndexHelper *parent, int64_t quantity, double price, const std::string& bsAddress);
 
       ~FuturesDeliveryGroup() override = default;
 
@@ -185,12 +199,17 @@ private:
       QVariant getPrice() const override;
       QVariant getStatus() const override;
 
+      bool deliveryRequired() const;
+
+      DeliveryObligationData getDeliveryObligationData() const;
+
    private:
       double quantity_ = 0;
       double value_ = 0;
       double price_ = 0;
 
-      bs::XBTAmount toDeliver;
+      bs::XBTAmount  toDeliver_;
+      std::string    bsAddress_;
    };
 
 
@@ -252,6 +271,9 @@ private:
    void resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations &message);
 
    void DisplayFuturesDeliveryRow(const Blocksettle::Communication::ProxyTerminalPb::Response_DeliveryObligationsRequest &obligation);
+
+   bool isFutureDeliveryIndex(const QModelIndex &index) const;
+   FuturesDeliveryGroup* GetFuturesDeliveryGroup(const QModelIndex &index) const;
 
 private:
    std::shared_ptr<AssetManager>                      assetManager_;

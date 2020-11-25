@@ -118,6 +118,8 @@ signals:
    void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin
       , const BinaryData &payinHash, QDateTime timestamp);
 
+   void CreateObligationDeliveryTX(const QModelIndex& index);
+
 public slots:
    void forceCheckCondition();
 
@@ -144,6 +146,8 @@ private slots:
    void onCancelXBTTrade(const std::string& settlementId);
    void onCancelCCTrade(const std::string& clientOrderId);
    void onSettlementComplete(const std::string &id);
+
+   void onOrderClicked(const QModelIndex &index);
 
 private:
    void onResetCurrentReservation(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data);
@@ -190,6 +194,7 @@ private:
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<AutoSignScriptProvider>      autoSignProvider_;
    std::shared_ptr<bs::UTXOReservationManager>  utxoReservationManager_;
+   OrderListModel*                              orderListModel_;
 
    std::unordered_map<std::string, SentXbtReply>   sentXbtReplies_;
    std::unordered_map<std::string, SentCCReply>    sentCCReplies_;

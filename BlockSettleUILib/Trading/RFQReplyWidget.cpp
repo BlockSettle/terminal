@@ -156,6 +156,7 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    connectionManager_ = connectionManager;
    autoSignProvider_ = autoSignProvider;
    utxoReservationManager_ = utxoReservationManager;
+   orderListModel_ = orderListModel;
 
    statsCollector_ = std::make_shared<bs::SecurityStatsCollector>(appSettings
       , ApplicationSettings::Filter_MD_QN_cnt);
@@ -223,6 +224,8 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewOrders->setModel(orderListModel);
    ui_->treeViewOrders->initWithModel(orderListModel);
+
+   connect(ui_->treeViewOrders, &QTreeView::clicked, this, &RFQReplyWidget::onOrderClicked);
 
    // ui_->treeViewOrders->setItemDelegateForColumn(
    //    static_cast<int>(OrderListModel::Header::Status), new PushButtonDelegate(ui_->treeViewOrders));
@@ -707,4 +710,15 @@ void RFQReplyWidget::onMessageFromPB(const ProxyTerminalPb::Response &response)
          break;
    }
    // if not processed - not RFQ releated message. not error
+}
+
+void RFQReplyWidget::onOrderClicked(const QModelIndex &index)
+{
+   if (!index.isValid()) {
+      return;
+   }
+
+   if (orderListModel_->DeliveryRequired(index)) {
+      emit CreateObligationDeliveryTX(index);
+   }
 }

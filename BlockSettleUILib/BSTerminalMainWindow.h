@@ -178,6 +178,8 @@ private slots:
 
    void onAuthLeafCreated();
 
+   void onDeliverFutureObligations(const QModelIndex& index);
+
 private:
    std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
    QAction *action_send_ = nullptr;

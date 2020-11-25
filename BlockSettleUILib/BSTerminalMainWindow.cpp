@@ -2044,6 +2044,11 @@ void BSTerminalMainWindow::InitWidgets()
    connect(ui_->widgetRFQ, &RFQRequestWidget::loginRequested, this
       , &BSTerminalMainWindow::onLogin);
 
+   connect(ui_->widgetRFQ, &RFQRequestWidget::CreateObligationDeliveryTX, this
+      , &BSTerminalMainWindow::onDeliverFutureObligations);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::CreateObligationDeliveryTX, this
+      , &BSTerminalMainWindow::onDeliverFutureObligations);
+
    connect(ui_->tabWidget, &QTabWidget::tabBarClicked, this,
       [requestRFQ = QPointer<RFQRequestWidget>(ui_->widgetRFQ)
          , replyRFQ = QPointer<RFQReplyWidget>(ui_->widgetRFQReply)
@@ -2503,4 +2508,46 @@ void BSTerminalMainWindow::SendBSDeliveryAddress()
    } else {
       bsClient_->submitDeliveryAddress(existingAddresses[0]);
    }
+}
+
+void BSTerminalMainWindow::onDeliverFutureObligations(const QModelIndex& index)
+{
+   auto deliveryObligationData = orderListModel_->getDeliveryObligationData(index);
+   if (!deliveryObligationData.isValid()) {
+      return;
+   }
+
+   auto uiLogger = logMgr_->logger("ui");
+   bs::Address bsAddress;
+
+   try {
+      bsAddress = bs::Address::fromAddressString(deliveryObligationData.bsAddress);
+   }
+   catch (...) {
+      uiLogger->error("[BSTerminalMainWindow::onDeliverFutureObligations] could not parse BS address: {}"
+         , deliveryObligationData.bsAddress);
+      return;
+   }
+
+   std::shared_ptr<CreateTransactionDialog> createTxDlg;
+
+   Bip21::PaymentRequestInfo requestInfo;
+
+   requestInfo.address = QString::fromStdString(deliveryObligationData.bsAddress);
+   requestInfo.amount = deliveryObligationData.deliveryAmount;
+   requestInfo.message = tr("EURXBT1 delivery");
+   requestInfo.feePerByte = utxoReservationMgr_->feeRatePb();
+   //requestInfo.requestExpireDateTime = ;
+
+   if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
+      createTxDlg = CreateTransactionDialogAdvanced::CreateForPaymentRequest(armory_, walletsMgr_
+         , utxoReservationMgr_, signContainer_, uiLogger, applicationSettings_
+         , requestInfo, this);
+   } else {
+      createTxDlg = CreateTransactionDialogSimple::CreateForPaymentRequest(armory_, walletsMgr_
+         , utxoReservationMgr_, signContainer_, uiLogger, applicationSettings_
+         , requestInfo, this);
+   }
+
+   DisplayCreateTransactionDialog(createTxDlg);
 }

@@ -229,6 +229,7 @@ void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
    armory_ = armory;
    autoSignProvider_ = autoSignProvider;
    utxoReservationManager_ = utxoReservationManager;
+   orderListModel_ = orderListModel;
 
    if (walletsManager_) {
       autoSignProvider_->scriptRunner()->setWalletsManager(walletsManager_);
@@ -240,6 +241,9 @@ void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewOrders->setModel(orderListModel);
    ui_->treeViewOrders->initWithModel(orderListModel);
+
+   connect(ui_->treeViewOrders, &QTreeView::clicked, this, &RFQRequestWidget::onOrderClicked);
+
    connect(quoteProvider_.get(), &QuoteProvider::quoteOrderFilled, [](const std::string &quoteId) {
       NotificationCenter::notify(bs::ui::NotifyType::CelerOrder, {true, QString::fromStdString(quoteId)});
    });
@@ -526,4 +530,15 @@ void RFQRequestWidget::onRFQExpired(const std::string &id)
 void RFQRequestWidget::onRFQCancelled(const std::string &id)
 {
    ((RFQScriptRunner *)autoSignProvider_->scriptRunner())->rfqCancelled(id);
+}
+
+void RFQRequestWidget::onOrderClicked(const QModelIndex &index)
+{
+   if (!index.isValid()) {
+      return;
+   }
+
+   if (orderListModel_->DeliveryRequired(index)) {
+      emit CreateObligationDeliveryTX(index);
+   }
 }

@@ -106,6 +106,8 @@ signals:
    void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin
       , const BinaryData &payinHash, QDateTime timestamp);
 
+   void CreateObligationDeliveryTX(const QModelIndex& index);
+
 private:
    void showEditableRFQPage();
    void popShield();
@@ -136,6 +138,8 @@ private slots:
    void onRFQExpired(const std::string &id);
    void onRFQCancelled(const std::string &id);
 
+   void onOrderClicked(const QModelIndex &index);
+
 public slots:
    void forceCheckCondition();
 
@@ -148,6 +152,7 @@ private:
    std::shared_ptr<AssetManager>       assetManager_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;
    std::shared_ptr<DialogManager>      dialogManager_;
+   OrderListModel*                     orderListModel_;
 
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<WalletSignerContainer>    signingContainer_;

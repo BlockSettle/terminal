@@ -882,21 +882,24 @@ void OrderListModel::DisplayFuturesDeliveryRow(const Blocksettle::Communication:
       static_cast<int>(marketItem->rows_.size()), static_cast<int>(marketItem->rows_.size()));
 
    marketItem->rows_.emplace_back(make_unique<FuturesDeliveryGroup>(QStringLiteral("XBT/EUR")
-      , &marketItem->idx_, obligation.to_deliver(), obligation.price()));
+      , &marketItem->idx_, obligation.to_deliver(), obligation.price(), obligation.bs_address()));
 
    endInsertRows();
 }
 
-OrderListModel::FuturesDeliveryGroup::FuturesDeliveryGroup(const QString &sec, IndexHelper *parent, int64_t quantity, double price)
+OrderListModel::FuturesDeliveryGroup::FuturesDeliveryGroup(const QString &sec, IndexHelper *parent
+                                                           , int64_t quantity, double price
+                                                           , const std::string& bsAddress)
    : Group(sec, parent)
 {
    quantity_ = static_cast<double>(quantity) / BTCNumericTypes::BalanceDivider;
    price_ = price;
+   bsAddress_ = bsAddress;
 
    value_ = -quantity_ * price_;
 
    if (quantity < 0) {
-      toDeliver = bs::XBTAmount{ static_cast<BTCNumericTypes::satoshi_type>(-quantity) };
+      toDeliver_ = bs::XBTAmount{ static_cast<BTCNumericTypes::satoshi_type>(-quantity) };
    }
 }
 
@@ -940,4 +943,76 @@ QVariant OrderListModel::FuturesDeliveryGroup::getStatus() const
    }
 
    return QVariant{};
+}
+
+bool OrderListModel::FuturesDeliveryGroup::deliveryRequired() const
+{
+   return toDeliver_.GetValue() != 0;
+}
+
+OrderListModel::DeliveryObligationData OrderListModel::FuturesDeliveryGroup::getDeliveryObligationData() const
+{
+   return DeliveryObligationData{bsAddress_, toDeliver_};
+}
+
+bool OrderListModel::DeliveryRequired(const QModelIndex &index)
+{
+   if (!isFutureDeliveryIndex(index)) {
+      return false;
+   }
+
+   auto futuresDelivery = GetFuturesDeliveryGroup(index);
+   if (futuresDelivery == nullptr) {
+      return false;
+   }
+
+   return futuresDelivery->deliveryRequired();
+}
+
+bool OrderListModel::isFutureDeliveryIndex(const QModelIndex &index) const
+{
+   if (!index.isValid()) {
+      return false;
+   }
+
+   if (index.column() != Header::Status) {
+      return false;
+   }
+
+   {
+      auto statusGroupIndex = index;
+      int depth = 0;
+      while (statusGroupIndex.parent().isValid()) {
+         statusGroupIndex = statusGroupIndex.parent();
+         ++depth;
+      }
+
+      if (statusGroupIndex.row() != 2 || depth != 2) {
+         return false;
+      }
+   }
+
+   return true;
+}
+
+OrderListModel::FuturesDeliveryGroup* OrderListModel::GetFuturesDeliveryGroup(const QModelIndex &index) const
+{
+   auto marketIndex = index.parent();
+   Market* market = pendingFuturesSettlement_->rows_[marketIndex.row()].get();
+
+   return dynamic_cast<FuturesDeliveryGroup*>(market->rows_[index.row()].get());
+}
+
+OrderListModel::DeliveryObligationData OrderListModel::getDeliveryObligationData(const QModelIndex &index) const
+{
+   if (!isFutureDeliveryIndex(index)) {
+      return DeliveryObligationData{};
+   }
+
+   auto futuresDelivery = GetFuturesDeliveryGroup(index);
+   if (futuresDelivery == nullptr) {
+      return DeliveryObligationData{};
+   }
+
+   return futuresDelivery->getDeliveryObligationData();
 }
