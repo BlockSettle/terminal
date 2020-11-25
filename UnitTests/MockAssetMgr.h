@@ -36,7 +36,7 @@ public:
    void init() override;
 
    std::vector<std::string> privateShares(bool forceExt) override;
-   double getBalance(const std::string& currency, const std::shared_ptr<bs::sync::Wallet> &wallet = nullptr) const override;
+   double getBalance(const std::string& currency, bool includeZc = false, const std::shared_ptr<bs::sync::Wallet> &wallet = nullptr) const override;
 };
 
 #endif // __MOCK_ASSET_MGR_H__

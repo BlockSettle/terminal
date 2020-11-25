@@ -228,7 +228,7 @@ namespace bs {
             , AddressType type, std::function<void(bs::Address)> cb);
          void setBalanceOk(bool ok);
          bool checkBalance() const;
-         XBTAmount getXbtBalance() const;
+         XBTAmount getXbtBalance(bool includeZc) const;
          BTCNumericTypes::balance_type getPrivateMarketCoinBalance() const;
          QDoubleSpinBox *getActivePriceWidget() const;
          void updateUiWalletFor(const bs::network::QuoteReqNotification &qrn);

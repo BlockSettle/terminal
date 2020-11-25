@@ -47,6 +47,19 @@ namespace bs {
          Disabled,
       };
 
+      enum class UtxoType {
+         Normal,
+         Zc,
+      };
+
+      using UtxoItemMap = std::map<UTXO, std::pair<std::string, UtxoType>>;
+
+      const static bool kIncludeZcRequestor = false;
+      const static bool kIncludeZcDealerSpotXbt = true;
+      const static bool kIncludeZcDealerCc = false;
+      const static bool kIncludeZcOtc = false;
+      const static bool kIncludeZcOther = false;
+
       UTXOReservationManager(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager, const std::shared_ptr<ArmoryObject>& armory,
          const std::shared_ptr<spdlog::logger>& logger, QObject* parent = nullptr);
       ~UTXOReservationManager() override;
@@ -64,20 +77,20 @@ namespace bs {
       // Xbt specific implementation, each function defined two times
       // 1 - for hd wallet, and 2 - for hd leaf(wallet_id + purpose) which is needed for hw wallet
       void reserveBestXbtUtxoSet(const HDWalletId& walletId, BTCNumericTypes::satoshi_type quantity, bool partial,
-         std::function<void(FixedXbtInputs&&)>&& cb, bool checkPbFeeFloor, CheckAmount checkAmount);
+         std::function<void(FixedXbtInputs&&)>&& cb, bool checkPbFeeFloor, CheckAmount checkAmount, bool includeZc);
       void reserveBestXbtUtxoSet(const HDWalletId& walletId, bs::hd::Purpose purpose,
          BTCNumericTypes::satoshi_type quantity, bool partial,
          std::function<void(FixedXbtInputs&&)>&& cb, bool checkPbFeeFloor, CheckAmount checkAmount);
 
-      BTCNumericTypes::satoshi_type getAvailableXbtUtxoSum(const HDWalletId& walletId) const;
-      BTCNumericTypes::satoshi_type getAvailableXbtUtxoSum(const HDWalletId& walletId, bs::hd::Purpose purpose) const;
+      BTCNumericTypes::satoshi_type getAvailableXbtUtxoSum(const HDWalletId& walletId, bool includeZc) const;
+      BTCNumericTypes::satoshi_type getAvailableXbtUtxoSum(const HDWalletId& walletId, bs::hd::Purpose purpose, bool includeZc) const;
 
-      std::vector<UTXO> getAvailableXbtUTXOs(const HDWalletId& walletId) const;
-      std::vector<UTXO> getAvailableXbtUTXOs(const HDWalletId& walletId, bs::hd::Purpose purpose) const;
+      std::vector<UTXO> getAvailableXbtUTXOs(const HDWalletId& walletId, bool includeZc) const;
+      std::vector<UTXO> getAvailableXbtUTXOs(const HDWalletId& walletId, bs::hd::Purpose purpose, bool includeZc) const;
 
       // If checkAmount is enabled but there are not enough UTXOs then callback will not be called
       void getBestXbtUtxoSet(const HDWalletId& walletId, BTCNumericTypes::satoshi_type quantity,
-         std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor, CheckAmount checkAmount);
+         std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor, CheckAmount checkAmount, bool includeZc);
       void getBestXbtUtxoSet(const HDWalletId& walletId, bs::hd::Purpose purpose, BTCNumericTypes::satoshi_type quantity,
          std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor, CheckAmount checkAmount);
 
@@ -115,8 +128,7 @@ namespace bs {
 
    private:
       struct XBTUtxoContainer {
-         std::vector<UTXO> availableUtxo_;
-         std::map<UTXO, std::string> utxosLookup_;
+         UtxoItemMap utxosLookup_;
       };
 
       std::unordered_map<HDWalletId, XBTUtxoContainer> availableXbtUTXOs_;

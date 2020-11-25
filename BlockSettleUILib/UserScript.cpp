@@ -9,20 +9,21 @@
 
 */
 #include "UserScript.h"
+
+#include <algorithm>
 #include <spdlog/logger.h>
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QQmlComponent>
 #include <QQmlContext>
+
 #include "AssetManager.h"
 #include "CurrencyPair.h"
 #include "DataConnection.h"
 #include "MDCallbacksQt.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWalletsManager.h"
-
-#include <algorithm>
-
+#include "UtxoReservationManager.h"
 
 UserScript::UserScript(const std::shared_ptr<spdlog::logger> &logger,
    const std::shared_ptr<MDCallbacksQt> &mdCallbacks, const ExtConnections &extConns
@@ -337,7 +338,7 @@ QString BSQuoteReqReply::product()
 
 double BSQuoteReqReply::accountBalance(const QString &product)
 {
-   return assetManager_->getBalance(product.toStdString());
+   return assetManager_->getBalance(product.toStdString(), bs::UTXOReservationManager::kIncludeZcRequestor, nullptr);
 }
 
 bool BSQuoteReqReply::sendExtConn(const QString &name, const QString &type

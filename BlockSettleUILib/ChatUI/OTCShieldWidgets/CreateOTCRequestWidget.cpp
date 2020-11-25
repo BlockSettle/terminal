@@ -10,10 +10,11 @@
 */
 #include "CreateOTCRequestWidget.h"
 
-#include "OtcTypes.h"
-#include "Wallets/SyncWalletsManager.h"
-#include "UiUtils.h"
 #include "AssetManager.h"
+#include "OtcTypes.h"
+#include "UiUtils.h"
+#include "UtxoReservationManager.h"
+#include "Wallets/SyncWalletsManager.h"
 #include "ui_CreateOTCRequestWidget.h"
 
 #include <QComboBox>
@@ -74,7 +75,7 @@ void CreateOTCRequestWidget::onUpdateBalances()
 {
    QString totalBalance;
    if (ui_->pushButtonBuy->isChecked()) {
-      const auto totalAssetBalance = getAssetManager()->getBalance(buyProduct_.toStdString());
+      const auto totalAssetBalance = getAssetManager()->getBalance(buyProduct_.toStdString(), bs::UTXOReservationManager::kIncludeZcOtc, nullptr);
 
       totalBalance = tr("%1 %2")
          .arg(UiUtils::displayCurrencyAmount(totalAssetBalance))

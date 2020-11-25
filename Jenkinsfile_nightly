@@ -38,10 +38,10 @@ pipeline {
                         expression { params.OS == 'MacOS' || params.OS == 'All' }
                     }
                     steps {
-                        sh 'ssh admin@${MACOS_HOST_IP} "rm -rf ~/Workspace/terminal"'
-                        sh 'ssh admin@${MACOS_HOST_IP} "cd ~/Workspace ; git clone --single-branch --branch bs_dev git@github.com:BlockSettle/terminal.git ; cd terminal ; git submodule init ; git submodule update ; cd common; git checkout bs_dev ; git pull ; git submodule init ; git submodule update"'
-                        sh 'ssh admin@${MACOS_HOST_IP} "export PATH=/usr/local/opt/ccache/libexec:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin ; ccache -s ; cd /Users/admin/Workspace/terminal/Deploy/MacOSX ; security unlock-keychain -p ${MAC_CHAIN_PAS} login.keychain ; ./package.sh"'
-                        sh "scp admin@${MACOS_HOST_IP}:~/Workspace/terminal/Deploy/MacOSX/BlockSettle.dmg ${WORKSPACE}/terminal/Deploy/BlockSettle.dmg"
+                        sh 'ssh ${MACOS_HOST_USER}@${MACOS_HOST_IP} "rm -rf ~/Workspace/terminal"'
+                        sh 'ssh ${MACOS_HOST_USER}@${MACOS_HOST_IP} "mkdir -p ~/Workspace; cd ~/Workspace ; git clone --single-branch --branch bs_dev https://github.com/BlockSettle/terminal.git ; cd terminal ; git submodule init ; git submodule update ; cd common; git checkout bs_dev ; git pull ; git submodule init ; git submodule update"'
+                        sh 'ssh ${MACOS_HOST_USER}@${MACOS_HOST_IP} "export PATH=/Users/${MACOS_HOST_USER}/.pyenv/shims:/usr/local/opt/ccache/libexec:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin; ccache -s ; cd /Users/${MACOS_HOST_USER}/Workspace/terminal/Deploy/MacOSX ; security unlock-keychain -p ${MAC_CHAIN_PAS} login.keychain ; ./package.sh"'
+                        sh "scp ${MACOS_HOST_USER}@${MACOS_HOST_IP}:~/Workspace/terminal/Deploy/MacOSX/BlockSettle.dmg ${WORKSPACE}/terminal/Deploy/BlockSettle.dmg"
                     }
                 }
                 stage('Build Windows app') {
