@@ -25,6 +25,7 @@ namespace Blocksettle {
    namespace Communication {
       namespace ProxyTerminalPb {
          class Response;
+         class Response_DeliveryObligationsRequest;
          class Response_UpdateOrders;
       }
    }
@@ -141,6 +142,9 @@ private:
 
       virtual QVariant getValue() const;
       virtual QVariant getValueColor() const;
+      virtual QVariant getPrice() const;
+
+      virtual QVariant getStatus() const;
    protected:
       void addRow(const bs::network::Order& order);
    };
@@ -158,17 +162,23 @@ private:
       QVariant getQuantity() const override;
       QVariant getQuantityColor() const override;
 
+      QVariant getValue() const override;
+      QVariant getValueColor() const override;
+
+   private:
       double quantity_ = 0;
       double value_ = 0;
    };
 
-   struct FuturesDeliveryGroup : public FuturesGroup
+   struct FuturesDeliveryGroup : public Group
    {
-      FuturesDeliveryGroup(FuturesGroup* source, IndexHelper *parent)
-         : FuturesGroup(source->security_, parent)
+      FuturesDeliveryGroup(const QString &sec, IndexHelper *parent, double quantity, double price)
+         : Group(sec, parent)
       {
-         quantity_ = source->quantity_;
-         value_ = source->value_;
+         quantity_ = quantity;
+         price_ = price;
+
+         value_ = quantity_ * price_;
       }
 
       ~FuturesDeliveryGroup() override = default;
@@ -178,6 +188,14 @@ private:
 
       QVariant getValue() const override;
       QVariant getValueColor() const override;
+
+      QVariant getPrice() const override;
+      QVariant getStatus() const override;
+
+   private:
+      double quantity_ = 0;
+      double value_ = 0;
+      double price_ = 0;
    };
 
 
@@ -238,7 +256,7 @@ private:
    void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &msg);
    void resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message);
 
-   void DisplayFuturesDeliveryRow();
+   void DisplayFuturesDeliveryRow(const Blocksettle::Communication::ProxyTerminalPb::Response_DeliveryObligationsRequest &obligation);
 
 private:
    std::shared_ptr<AssetManager>                      assetManager_;

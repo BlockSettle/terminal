@@ -2226,7 +2226,6 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
 
    connect(bsClient_.get(), &BsClient::disconnected, this, &BSTerminalMainWindow::onBsConnectionDisconnected);
    connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
-   connect(bsClient_.get(), &BsClient::processPbMessage, this, &BSTerminalMainWindow::onMessageFromPB);
 
    // connect to RFQ dialog
    connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetRFQ, &RFQRequestWidget::onMessageFromPB);
@@ -2483,66 +2482,7 @@ void BSTerminalMainWindow::onAuthLeafCreated()
    }
 }
 
-void BSTerminalMainWindow::onMessageFromPB(const ProxyTerminalPb::Response &message)
-{
-   if (message.data_case() == Blocksettle::Communication::ProxyTerminalPb::Response::kDeliveryRequest) {
-      const auto& request = message.delivery_request();\
-      auto uiLogger = logMgr_->logger("ui");
-
-      const int64_t toDeliver = request.to_deliver();
-     
-      QString deliverMessage;
-      const QString header = tr("Trade obligations");
-
-      if (toDeliver < 0) {
-         bs::Address bsAddress;
-
-         try {
-            bsAddress = bs::Address::fromAddressString(request.bs_address());
-         }
-         catch (...) {
-            uiLogger->error("[BSTerminalMainWindow::onMessageFromPB] could not parse BS address: {}"
-               , request.bs_address());
-            return;
-         }
-
-         bs::XBTAmount amountToDeliver{static_cast<uint64_t>(-toDeliver)};
-
-         deliverMessage = tr("You have obligations to deliver %1 XBT in next 24h to %2.").arg(UiUtils::displayAmount(amountToDeliver), QString::fromStdString(bsAddress.display()));
-         showInfo(header, deliverMessage);
-
-
-         std::shared_ptr<CreateTransactionDialog> createTxDlg;
-
-         Bip21::PaymentRequestInfo requestInfo;
-
-         requestInfo.address = QString::fromStdString(bsAddress.display());
-         requestInfo.amount = amountToDeliver;
-         requestInfo.message = tr("EURXBT1 delivery");
-         requestInfo.feePerByte = utxoReservationMgr_->feeRatePb();
-         //requestInfo.requestExpireDateTime = ;
-
-         if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
-            createTxDlg = CreateTransactionDialogAdvanced::CreateForPaymentRequest(armory_, walletsMgr_
-               , utxoReservationMgr_, signContainer_, uiLogger, applicationSettings_
-               , requestInfo, this);
-         } else {
-            createTxDlg = CreateTransactionDialogSimple::CreateForPaymentRequest(armory_, walletsMgr_
-               , utxoReservationMgr_, signContainer_, uiLogger, applicationSettings_
-               , requestInfo, this);
-         }
-
-         DisplayCreateTransactionDialog(createTxDlg);
-
-      } else {
-         deliverMessage = tr("You are about to receive %1 XBT. Please make sure to deliver your cash obligations. Press OK to submit delivery address.").arg(UiUtils::displayAmount(bs::XBTAmount{ static_cast<uint64_t>(toDeliver)}));
-         showInfo(header, deliverMessage);
-
-         SendBSDeliveryAddress();
-      }
-   }
-}
-
+// NOT USED NOW. Keep until next iteration.
 void BSTerminalMainWindow::SendBSDeliveryAddress()
 {
    const auto wallet = walletsMgr_->getDefaultWallet();
@@ -2556,5 +2496,11 @@ void BSTerminalMainWindow::SendBSDeliveryAddress()
          wallet->syncAddresses();
       }
    };
-   wallet->getNewExtAddress(cbAddr);
+
+   auto existingAddresses = wallet->getExtAddressList();
+   if (existingAddresses.empty()) {
+      wallet->getNewExtAddress(cbAddr);
+   } else {
+      bsClient_->submitDeliveryAddress(existingAddresses[0]);
+   }
 }

@@ -260,7 +260,6 @@ private slots:
 
    void onBsConnectionDisconnected();
    void onBsConnectionFailed();
-   void onMessageFromPB(const ProxyTerminalPb::Response &response);
 
    void onInitWalletDialogWasShown();
 

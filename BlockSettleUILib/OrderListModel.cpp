@@ -145,6 +145,10 @@ QVariant OrderListModel::data(const QModelIndex &index, int role) const
                      return g->getQuantity();
                   case Header::Value:
                      return g->getValue();
+                  case Header::Price:
+                     return g->getPrice();
+                  case Header::Status:
+                     return g->getStatus();
                   default:
                      return QVariant();
                   }
@@ -695,7 +699,7 @@ void OrderListModel::processUpdateOrders(const Blocksettle::Communication::Proxy
       onOrderUpdated(order);
    }
 
-   DisplayFuturesDeliveryRow();
+   DisplayFuturesDeliveryRow(message.obligation());
 }
 
 void OrderListModel::resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message)
@@ -787,6 +791,16 @@ QVariant OrderListModel::Group::getValueColor() const
    return QVariant{};
 }
 
+QVariant OrderListModel::Group::getPrice() const
+{
+   return QVariant{};
+}
+
+QVariant OrderListModel::Group::getStatus() const
+{
+   return QVariant{};
+}
+
 void OrderListModel::Group::addRow(const bs::network::Order& order)
 {
    // As quantity is now could be negative need to invert value
@@ -825,19 +839,23 @@ QVariant OrderListModel::FuturesGroup::getQuantityColor() const
    return kSettledColor;
 }
 
-void OrderListModel::DisplayFuturesDeliveryRow()
+QVariant OrderListModel::FuturesGroup::getValue() const
 {
-   // check if there are pending futures
-   Market *futuresMarket = nullptr;
+   return UiUtils::displayCurrencyAmount(value_);
+}
 
-   for ( const auto& row : unsettled_->rows_) {
-      if (row->assetType_ == bs::network::Asset::Type::Futures) {
-         futuresMarket = row.get();
-         break;
-      }
+QVariant OrderListModel::FuturesGroup::getValueColor() const
+{
+   if (value_ < 0) {
+      return kFailedColor;
    }
 
-   if (futuresMarket  == nullptr) {
+   return kSettledColor;
+}
+
+void OrderListModel::DisplayFuturesDeliveryRow(const Blocksettle::Communication::ProxyTerminalPb::Response_DeliveryObligationsRequest &obligation)
+{
+   if (obligation.to_deliver() == 0) {
       return;
    }
 
@@ -846,19 +864,12 @@ void OrderListModel::DisplayFuturesDeliveryRow()
    Market * marketItem = pendingFuturesSettlement_->rows_.back().get();
    endInsertRows();
 
-   for (const auto& group : futuresMarket->rows_) {
-      FuturesGroup* sourceGroup = dynamic_cast<FuturesGroup*>(group.get());
+   beginInsertRows(createIndex(findMarket(pendingFuturesSettlement_.get(), marketItem), 0, &marketItem->idx_),
+      static_cast<int>(marketItem->rows_.size()), static_cast<int>(marketItem->rows_.size()));
 
-      if (sourceGroup != nullptr) {
-         beginInsertRows(createIndex(findMarket(pendingFuturesSettlement_.get(), marketItem), 0, &marketItem->idx_),
-            static_cast<int>(marketItem->rows_.size()), static_cast<int>(marketItem->rows_.size()));
+   marketItem->rows_.emplace_back(make_unique<FuturesDeliveryGroup>(QStringLiteral("XBT/EUR"), &marketItem->idx_, obligation.to_deliver(), obligation.price()));
 
-         marketItem->rows_.emplace_back(make_unique<FuturesDeliveryGroup>(
-            sourceGroup, &marketItem->idx_));
-
-         endInsertRows();
-      }
-   }
+   endInsertRows();
 }
 
 
@@ -888,4 +899,18 @@ QVariant OrderListModel::FuturesDeliveryGroup::getValueColor() const
    }
 
    return kSettledColor;
+}
+
+QVariant OrderListModel::FuturesDeliveryGroup::getPrice() const
+{
+   return UiUtils::displayPriceXBT(price_);
+}
+
+QVariant OrderListModel::FuturesDeliveryGroup::getStatus() const
+{
+   if (quantity_ < 0) {
+      return tr("Create TX");
+   }
+
+   return QVariant{};
 }
