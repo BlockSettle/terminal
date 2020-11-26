@@ -2487,29 +2487,6 @@ void BSTerminalMainWindow::onAuthLeafCreated()
    }
 }
 
-// NOT USED NOW. Keep until next iteration.
-void BSTerminalMainWindow::SendBSDeliveryAddress()
-{
-   const auto wallet = walletsMgr_->getDefaultWallet();
-
-   const auto &cbAddr = [this, wallet](const bs::Address &address) {
-      if (address.isValid()) {
-
-         bsClient_->submitDeliveryAddress(address);
-
-         wallet->setAddressComment(address, "EURXBT1 delivery");
-         wallet->syncAddresses();
-      }
-   };
-
-   auto existingAddresses = wallet->getExtAddressList();
-   if (existingAddresses.empty()) {
-      wallet->getNewExtAddress(cbAddr);
-   } else {
-      bsClient_->submitDeliveryAddress(existingAddresses[0]);
-   }
-}
-
 void BSTerminalMainWindow::onDeliverFutureObligations(const QModelIndex& index)
 {
    auto deliveryObligationData = orderListModel_->getDeliveryObligationData(index);

@@ -306,8 +306,6 @@ private:
 
    void onBootstrapDataLoaded(const std::string& data);
 
-   void SendBSDeliveryAddress();
-
 private:
    enum class ChatInitState
    {
