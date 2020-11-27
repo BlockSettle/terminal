@@ -130,10 +130,47 @@ void ApiJsonAdapter::OnDataFromClient(const std::string& clientId
    case EnvelopeIn::kSigner:
       serMsg = jsonMsg.signer().SerializeAsString();
       break;
-      //TODO: case other users
-   default: break;
+   case EnvelopeIn::kMatching:
+      serMsg = jsonMsg.matching().SerializeAsString();
+      break;
+   case EnvelopeIn::kAssets:
+      serMsg = jsonMsg.assets().SerializeAsString();
+      break;
+   case EnvelopeIn::kMarketData:
+      serMsg = jsonMsg.market_data().SerializeAsString();
+      break;
+   case EnvelopeIn::kMdHist:
+      serMsg = jsonMsg.md_hist().SerializeAsString();
+      break;
+   case EnvelopeIn::kBlockchain:
+      serMsg = jsonMsg.blockchain().SerializeAsString();
+      break;
+   case EnvelopeIn::kWallets:
+      serMsg = jsonMsg.wallets().SerializeAsString();
+      break;
+   case EnvelopeIn::kOnChainTracker:
+      serMsg = jsonMsg.on_chain_tracker().SerializeAsString();
+      break;
+   case EnvelopeIn::kSettlement:
+      serMsg = jsonMsg.settlement().SerializeAsString();
+      break;
+   case EnvelopeIn::kChat:
+      serMsg = jsonMsg.chat().SerializeAsString();
+      break;
+   case EnvelopeIn::kBsServer:
+      serMsg = jsonMsg.bs_server().SerializeAsString();
+      break;
+   default:
+      logger_->warn("[{}] unknown message for {}", __func__, jsonMsg.message_case());
+      break;
    }
-   Envelope env{ 0, user_, mapUser(jsonMsg.message_case()), {}, {}, serMsg, true };
+   const auto& user = mapUser(jsonMsg.message_case());
+   if (!user) {
+      logger_->error("[{}] failed to map user from {}", __func__
+         , jsonMsg.message_case());
+      return;
+   }
+   Envelope env{ 0, user_, user, {}, {}, serMsg, true };
    if (!pushFill(env)) {
       sendErrorReply(jsonMsg.id(), "internal error");
    }
@@ -339,7 +376,9 @@ bool ApiJsonAdapter::processWallets(const Envelope &env)
    case WalletsMessage::kAuthWallet: [[fallthrough]]
    case WalletsMessage::kAuthKey: [[fallthrough]]
    case WalletsMessage::kReservedUtxos:
-      sendReplyToClient(env.id, msg, env.sender);
+      if (hasRequest(env.id)) {
+         sendReplyToClient(env.id, msg, env.sender);
+      }
       break;
    default:    break;
    }
@@ -356,7 +395,9 @@ bool ApiJsonAdapter::processOnChainTrack(const Envelope &env)
    switch (msg.data_case()) {
    case OnChainTrackMessage::kAuthState: [[fallthrough]]
    case OnChainTrackMessage::kVerifiedAuthAddresses:
-      sendReplyToClient(env.id, msg, env.sender);
+      if (hasRequest(env.id)) {
+         sendReplyToClient(env.id, msg, env.sender);
+      }
       break;
    default:    break;
    }
@@ -371,9 +412,13 @@ bool ApiJsonAdapter::processAssets(const bs::message::Envelope& env)
       return true;
    }
    switch (msg.data_case()) {
-   case AssetsMessage::kSubmittedAuthAddrs: [[fallthrough]]
+   case AssetsMessage::kSubmittedAuthAddrs:
+      if (hasRequest(env.id)) {
+         sendReplyToClient(env.id, msg, env.sender);
+      }
+      break;
    case AssetsMessage::kBalance:
-      sendReplyToClient(env.id, msg, env.sender);
+      sendReplyToClient(0, msg, env.sender);
       break;
    default: break;
    }
@@ -409,8 +454,9 @@ bool ApiJsonAdapter::processBsServer(const bs::message::Envelope& env)
       return true;
    }
    switch (msg.data_case()) {
-   case BsServerMessage::kStartLoginResult:
-      sendReplyToClient(0, msg, env.sender); // multicast login results to all connected clients
+   case BsServerMessage::kStartLoginResult: [[fallback]]
+   case BsServerMessage::kOrdersUpdate:
+      sendReplyToClient(0, msg, env.sender); // multicast to all connected clients
       break;
    case BsServerMessage::kLoginResult:
       loggedInUser_ = msg.login_result().login();
@@ -419,9 +465,6 @@ bool ApiJsonAdapter::processBsServer(const bs::message::Envelope& env)
    case BsServerMessage::kDisconnected:
       loggedInUser_.clear();
       sendReplyToClient(0, msg, env.sender);
-      break;
-   case BsServerMessage::kOrdersUpdate:
-      sendReplyToClient(env.id, msg, env.sender);
       break;
    default: break;
    }
