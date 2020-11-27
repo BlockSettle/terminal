@@ -661,7 +661,8 @@ void BSTerminalMainWindow::SignerReady()
 
    LoadWallets();
 
-   walletsMgr_->setUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
+   // XXXAUTH
+   //walletsMgr_->setUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
 
    if (deferCCsync_) {
       signContainer_->syncCCNames(walletsMgr_->ccResolver()->securities());
@@ -1542,12 +1543,13 @@ void BSTerminalMainWindow::onUserLoggedIn()
    ui_->widgetRFQ->onUserConnected(userType_);
    ui_->widgetRFQReply->onUserConnected(userType_);
 
-   const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
-   const auto &deferredDialog = [this, userId] {
-      walletsMgr_->setUserId(userId);
-      enableTradingIfNeeded();
-   };
-   addDeferredDialog(deferredDialog);
+   // XXXAUTH
+   //const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
+   //const auto &deferredDialog = [this, userId] {
+   //   walletsMgr_->setUserId(userId);
+   //   enableTradingIfNeeded();
+   //};
+   //addDeferredDialog(deferredDialog);
 
    setLoginButtonText(currentUserLogin_);
 }
@@ -1563,9 +1565,6 @@ void BSTerminalMainWindow::onUserLoggedOut()
    ui_->actionWithdrawalRequest->setEnabled(false);
    ui_->actionLinkAdditionalBankAccount->setEnabled(false);
 
-   if (walletsMgr_) {
-      walletsMgr_->setUserId(BinaryData{});
-   }
    if (authManager_) {
       authManager_->OnDisconnectedFromCeler();
    }
@@ -2068,11 +2067,6 @@ void BSTerminalMainWindow::InitWidgets()
 
 void BSTerminalMainWindow::enableTradingIfNeeded()
 {
-   // Can't proceed without userId
-   if (!walletsMgr_->isUserIdSet()) {
-      return;
-   }
-
    auto enableTradingFunc = [this](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
       addDeferredDialog([this, wallet] {
          BSMessageBox qry(BSMessageBox::question, tr("Upgrade Wallet"), tr("Enable Trading")
@@ -2087,7 +2081,8 @@ void BSTerminalMainWindow::enableTradingIfNeeded()
                if (result == bs::error::ErrorCode::NoError) {
                   // If wallet was promoted to primary we could try to get chat keys now
                   tryGetChatKeys();
-                  walletsMgr_->setUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
+                  // XXXAUTH
+                  //walletsMgr_->setUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
                }
             });
          }

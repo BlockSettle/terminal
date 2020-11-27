@@ -70,14 +70,13 @@ public:
    bs::signer::RequestId updateDialogData(const bs::sync::PasswordDialogData &, uint32_t = 0) override { return 0; }
    bs::signer::RequestId CancelSignTx(const BinaryData &tx) override { return 0; }
 
-   bs::signer::RequestId setUserId(const BinaryData &, const std::string &) override { return 0; }
    bs::signer::RequestId syncCCNames(const std::vector<std::string> &) override { return 0; }
 
    bool createHDLeaf(const std::string&, const bs::hd::Path&
       , const std::vector<bs::wallet::PasswordData>& = {}
          , bs::sync::PasswordDialogData = {}, const CreateHDLeafCb & = nullptr) override { return false; }
 
-   bool enableTradingInHDWallet(const std::string &, const BinaryData &
+   bool enableTradingInHDWallet(const std::string &
       , bs::sync::PasswordDialogData = {}, const UpdateWalletStructureCB& = nullptr) override { return false; }
 
    bool promoteWalletToPrimary(const std::string& rootWalletId
