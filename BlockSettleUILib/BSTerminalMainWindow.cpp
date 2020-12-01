@@ -509,11 +509,6 @@ void BSTerminalMainWindow::InitAuthManager()
    connect(authManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked, this, [](const QString &addr, const QString &state) {
       NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, state });
    });
-   connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, this, [this](const QString &walletId) {
-      if (authAddrDlg_ && walletId.isEmpty()) {
-         openAuthManagerDialog();
-      }
-   });
 
    authManager_->SetLoadedValidationAddressList(bootstrapDataManager_->GetAuthValidationList());
 }
@@ -1390,7 +1385,14 @@ void BSTerminalMainWindow::setupMenu()
 
 void BSTerminalMainWindow::openAuthManagerDialog()
 {
-   authAddrDlg_->exec();
+   if (bsClient_ == nullptr) {
+      return;
+   }
+
+   auto authAddrDlg = std::make_shared<AuthAddressDialog>(logMgr_->logger(), authManager_
+      , applicationSettings_, this);
+   authAddrDlg->setBsClient(bsClient_);
+   authAddrDlg->exec();
 }
 
 void BSTerminalMainWindow::openConfigDialog(bool showInNetworkPage)
@@ -1945,9 +1947,6 @@ void BSTerminalMainWindow::onSignerVisibleChanged()
 
 void BSTerminalMainWindow::InitWidgets()
 {
-   authAddrDlg_ = std::make_shared<AuthAddressDialog>(logMgr_->logger(), authManager_
-      , assetManager_, applicationSettings_, this);
-
    InitWalletsView();
    InitPortfolioView();
 
@@ -2215,7 +2214,6 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
 
    bsClient_ = bsClient;
    ccFileManager_->setBsClient(bsClient);
-   authAddrDlg_->setBsClient(bsClient);
 
    tradeSettings_ = std::make_shared<bs::TradeSettings>(result.tradeSettings);
    applicationSettings_->set(ApplicationSettings::SubmittedAddressXbtLimit, static_cast<quint64>(tradeSettings_->xbtTier1Limit));

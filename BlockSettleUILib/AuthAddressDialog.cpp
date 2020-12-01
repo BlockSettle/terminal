@@ -19,7 +19,6 @@
 #include <QEvent>
 
 #include "ApplicationSettings.h"
-#include "AssetManager.h"
 #include "AuthAddressConfirmDialog.h"
 #include "AuthAddressManager.h"
 #include "AuthAddressViewModel.h"
@@ -29,13 +28,11 @@
 
 AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
-   , const std::shared_ptr<AssetManager> &assetMgr
    , const std::shared_ptr<ApplicationSettings> &settings, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::AuthAddressDialog())
    , logger_(logger)
    , authAddressManager_(authAddressManager)
-   , assetManager_(assetMgr)
    , settings_(settings)
 {
    ui_->setupUi(this);

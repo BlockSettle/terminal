@@ -129,7 +129,8 @@ bool WalletShieldBase::checkWalletSettings(WalletShieldBase::ProductType product
       else {
          showShield(shieldCreateAuthLeaf, shieldButtonCreate);
          setShieldButtonAction([this]() {
-            walletsManager_->createAuthLeaf(nullptr);
+            // XXXAUTH
+            // it should ask and create primary wallet
          });
          return true;
       }

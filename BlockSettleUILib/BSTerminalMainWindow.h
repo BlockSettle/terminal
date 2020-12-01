@@ -57,7 +57,6 @@ struct NetworkSettings;
 class AboutDialog;
 class ArmoryServersProvider;
 class AssetManager;
-class AuthAddressDialog;
 class AuthAddressManager;
 class AutheIDClient;
 class AutoSignScriptProvider;
@@ -207,7 +206,6 @@ private:
    std::shared_ptr<AssetManager>             assetManager_;
    std::shared_ptr<CCFileManager>            ccFileManager_;
    std::shared_ptr<BootstrapDataManager>     bootstrapDataManager_;
-   std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
    std::shared_ptr<WalletSignerContainer>    signContainer_;
    std::shared_ptr<AutoSignScriptProvider>   autoSignQuoteProvider_;
    std::shared_ptr<AutoSignScriptProvider>   autoSignRFQProvider_;

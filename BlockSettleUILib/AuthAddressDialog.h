@@ -21,7 +21,6 @@
 #include <QDialog>
 #include <QPointer>
 
-class AssetManager;
 class AuthAdressControlProxyModel;
 class QItemSelection;
 
@@ -45,7 +44,6 @@ Q_OBJECT
 public:
    AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<AuthAddressManager>& authAddressManager
-      , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<ApplicationSettings> &, QWidget* parent = nullptr);
    ~AuthAddressDialog() override;
 
@@ -93,7 +91,6 @@ private:
    std::unique_ptr<Ui::AuthAddressDialog> ui_;
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<AuthAddressManager>    authAddressManager_;
-   std::shared_ptr<AssetManager>          assetManager_;
    std::shared_ptr<ApplicationSettings>   settings_;
    QPointer<AuthAdressControlProxyModel>  model_;
    bs::Address                            defaultAddr_;
