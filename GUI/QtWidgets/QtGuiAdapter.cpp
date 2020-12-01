@@ -727,7 +727,6 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::needArmoryReconnect, this, &QtGuiAdapter::onNeedArmoryReconnect);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needSigners, this, &QtGuiAdapter::onNeedSigners);
    connect(mainWindow_, &bs::gui::qt::MainWindow::setSigner, this, &QtGuiAdapter::onSetSigner);
-   connect(mainWindow_, &bs::gui::qt::MainWindow::bootstrapDataLoaded, this, &QtGuiAdapter::onBootstrapDataLoaded);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needHDWalletDetails, this, &QtGuiAdapter::onNeedHDWalletDetails);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needWalletData, this, &QtGuiAdapter::onNeedWalletData);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needWalletBalances, this, &QtGuiAdapter::onNeedWalletBalances);
@@ -749,10 +748,7 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::needCloseBsConnection, this, &QtGuiAdapter::onNeedCloseBsConnection);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needStartLogin, this, &QtGuiAdapter::onNeedStartLogin);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needCancelLogin, this, &QtGuiAdapter::onNeedCancelLogin);
-   connect(mainWindow_, &bs::gui::qt::MainWindow::needMatchingLogin, this, &QtGuiAdapter::onNeedMatchingLogin);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needMatchingLogout, this, &QtGuiAdapter::onNeedMatchingLogout);
-   connect(mainWindow_, &bs::gui::qt::MainWindow::needSetUserId, this, &QtGuiAdapter::onNeedSetUserId);
-   connect(mainWindow_, &bs::gui::qt::MainWindow::setRecommendedFeeRate, this, &QtGuiAdapter::onSetRecommendedFeeRate);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needMdConnection, this, &QtGuiAdapter::onNeedMdConnection);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needNewAuthAddress, this, &QtGuiAdapter::onNeedNewAuthAddress);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needSubmitAuthAddress, this, &QtGuiAdapter::onNeedSubmitAuthAddress);
@@ -1154,45 +1150,11 @@ void QtGuiAdapter::onNeedCancelLogin()
    pushFill(env);
 }
 
-void QtGuiAdapter::onBootstrapDataLoaded(const std::string& bsData)
-{
-   SettingsMessage msg;
-   msg.set_load_bootstrap(bsData);
-   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
-}
-
-void QtGuiAdapter::onNeedMatchingLogin(const std::string& mtchLogin, const std::string& bsLogin)
-{
-   MatchingMessage msg;
-   auto msgReq = msg.mutable_login();
-   msgReq->set_matching_login(mtchLogin);
-   msgReq->set_terminal_login(bsLogin);
-   Envelope env{ 0, user_, userMatch_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
-}
-
 void QtGuiAdapter::onNeedMatchingLogout()
 {
    MatchingMessage msg;
    msg.mutable_logout();
    Envelope env{ 0, user_, userMatch_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
-}
-
-void QtGuiAdapter::onNeedSetUserId(const std::string& userId)
-{
-   WalletsMessage msg;
-   msg.set_set_user_id(userId);
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
-}
-
-void QtGuiAdapter::onSetRecommendedFeeRate(float fee)
-{
-   WalletsMessage msg;
-   msg.set_set_settlement_fee(fee);
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
    pushFill(env);
 }
 
@@ -1711,18 +1673,12 @@ bool QtGuiAdapter::processMdUpdate(const MktDataMessage_Prices& msg)
 bool QtGuiAdapter::processAuthWallet(const WalletsMessage_WalletData& authWallet)
 {
    std::vector<bs::Address> authAddresses;
-   OnChainTrackMessage msg;
-   auto msgReq = msg.mutable_set_auth_addresses();
-   msgReq->set_wallet_id(authWallet.wallet_id());
    for (const auto& addr : authWallet.used_addresses()) {
-      msgReq->add_addresses(addr.address());
       try {
          authAddresses.push_back(bs::Address::fromAddressString(addr.address()));
       }
       catch (const std::exception&) {}
    }
-   Envelope env{ 0, user_, userTrk_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
    return QMetaObject::invokeMethod(mainWindow_, [this, authAddresses] {
       mainWindow_->onAuthAddresses(authAddresses, {});
    });

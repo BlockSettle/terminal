@@ -363,6 +363,7 @@ bool ApiJsonAdapter::processWallets(const Envelope &env)
    }
    switch (msg.data_case()) {
    case WalletsMessage::kWalletLoaded: [[fallthrough]]
+   case WalletsMessage::kAuthWallet: [[fallthrough]]
    case WalletsMessage::kHdWallet:
       sendReplyToClient(0, msg, env.sender);
       break;
@@ -373,7 +374,6 @@ bool ApiJsonAdapter::processWallets(const Envelope &env)
    case WalletsMessage::kTxDetailsResponse: [[fallthrough]]
    case WalletsMessage::kWalletsListResponse: [[fallthrough]]
    case WalletsMessage::kUtxos: [[fallthrough]]
-   case WalletsMessage::kAuthWallet: [[fallthrough]]
    case WalletsMessage::kAuthKey: [[fallthrough]]
    case WalletsMessage::kReservedUtxos:
       if (hasRequest(env.id)) {
@@ -395,9 +395,7 @@ bool ApiJsonAdapter::processOnChainTrack(const Envelope &env)
    switch (msg.data_case()) {
    case OnChainTrackMessage::kAuthState: [[fallthrough]]
    case OnChainTrackMessage::kVerifiedAuthAddresses:
-      if (hasRequest(env.id)) {
-         sendReplyToClient(env.id, msg, env.sender);
-      }
+      sendReplyToClient(0, msg, env.sender);
       break;
    default:    break;
    }
@@ -479,16 +477,14 @@ bool ApiJsonAdapter::processSettlement(const bs::message::Envelope& env)
       return true;
    }
    switch (msg.data_case()) {
-   case SettlementMessage::kQuoteReqNotif:
-      sendReplyToClient(0, msg, env.sender);
-      break;
    case SettlementMessage::kQuote: [[fallthrough]]
    case SettlementMessage::kMatchedQuote: [[fallthrough]]
    case SettlementMessage::kFailedSettlement: [[fallthrough]]
    case SettlementMessage::kPendingSettlement: [[fallthrough]]
    case SettlementMessage::kSettlementComplete: [[fallthrough]]
-   case SettlementMessage::kQuoteCancelled:
-      sendReplyToClient(env.id, msg, env.sender);
+   case SettlementMessage::kQuoteCancelled: [[fallthrough]]
+   case SettlementMessage::kQuoteReqNotif:
+      sendReplyToClient(0, msg, env.sender);
       break;
    default:    break;
    }
@@ -634,7 +630,7 @@ void ApiJsonAdapter::processGCtimeout()
    for (const auto& req : requests_) {
       if ((timeNow - req.second.timestamp) > kRequestTimeout) {
          if (!req.second.replied) {
-            logger_->info("[{}] request #{}/{} from {} was never replied", __func__
+            logger_->debug("[{}] request #{}/{} from {} was never replied", __func__
                , req.first, req.second.requestId, bs::toHex(req.second.clientId));
          }
          deleteRequests.push_back(req.first);

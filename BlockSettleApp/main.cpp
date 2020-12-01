@@ -335,13 +335,13 @@ int main(int argc, char** argv)
       inprocBus.addAdapter(signAdapter);
 
       const auto& userBlockchain = bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain);
+      const auto& userWallets = bs::message::UserTerminal::create(bs::message::TerminalUsers::Wallets);
       inprocBus.addAdapter(std::make_shared<OnChainTrackerAdapter>(logMgr->logger("trk")
          , bs::message::UserTerminal::create(bs::message::TerminalUsers::OnChainTracker)
-         , userBlockchain, adSettings->createOnChainPlug()));
+         , userBlockchain, userWallets, adSettings->createOnChainPlug()));
       inprocBus.addAdapter(std::make_shared<AssetsAdapter>(logMgr->logger()));
       inprocBus.addAdapter(std::make_shared<WalletsAdapter>(logMgr->logger()
-         , bs::message::UserTerminal::create(bs::message::TerminalUsers::Wallets)
-         , signAdapter->createClient(), userBlockchain));
+         , userWallets, signAdapter->createClient(), userBlockchain));
       inprocBus.addAdapter(std::make_shared<BsServerAdapter>(logMgr->logger("bscon")));
 
       inprocBus.addAdapter(std::make_shared<MatchingAdapter>(logMgr->logger("match")));

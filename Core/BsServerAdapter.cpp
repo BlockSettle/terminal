@@ -22,6 +22,7 @@
 #include "bs_communication.pb.h"
 #include "terminal.pb.h"
 
+using namespace BlockSettle::Common;
 using namespace BlockSettle::Terminal;
 using namespace bs::message;
 
@@ -30,6 +31,9 @@ BsServerAdapter::BsServerAdapter(const std::shared_ptr<spdlog::logger> &logger)
    : logger_(logger)
    , user_(std::make_shared<UserTerminal>(TerminalUsers::BsServer))
    , userSettl_(std::make_shared<UserTerminal>(TerminalUsers::Settlement))
+   , userMtch_(std::make_shared<UserTerminal>(TerminalUsers::Matching))
+   , userSettings_(std::make_shared<UserTerminal>(TerminalUsers::Settings))
+   , userWallets_(std::make_shared<UserTerminal>(TerminalUsers::Wallets))
 {
    connMgr_ = std::make_shared<ConnectionManager>(logger_);
    connMgr_->setCaBundle(bs::caBundlePtr(), bs::caBundleSize());
@@ -398,7 +402,6 @@ void BsServerAdapter::onGetLoginResultDone(const BsClientLoginResult& result)
    BsServerMessage msg;
    auto msgResp = msg.mutable_login_result();
    msgResp->set_login(currentLogin_);
-   currentLogin_.clear();
    msgResp->set_status((int)result.status);
    msgResp->set_user_type((int)result.userType);
    msgResp->set_error_text(result.errorMsg);
@@ -416,6 +419,26 @@ void BsServerAdapter::onGetLoginResultDone(const BsClientLoginResult& result)
    msgTradeSet->set_dealer_auth_submit_addr_limit(result.tradeSettings.dealerAuthSubmitAddressLimit);
    Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
    pushFill(env);
+
+   SettingsMessage msgSet;
+   msgSet.set_load_bootstrap(result.bootstrapDataSigned);
+   Envelope envSet{ 0, user_, userSettings_, {}, {}, msgSet.SerializeAsString(), true };
+   pushFill(envSet);
+
+   MatchingMessage msgMtch;
+   auto msgReq = msgMtch.mutable_login();
+   msgReq->set_matching_login(result.celerLogin);
+   msgReq->set_terminal_login(currentLogin_);
+   Envelope envMtch{ 0, user_, userMtch_, {}, {}, msgMtch.SerializeAsString(), true };
+   pushFill(envMtch);
+
+   WalletsMessage msgWlt;
+   msgWlt.set_set_settlement_fee(result.feeRatePb);
+   Envelope envWlt{ 0, user_, userWallets_, {}, {}, msgWlt.SerializeAsString(), true };
+   pushFill(envWlt);
+
+   //TODO: send chat login
+   currentLogin_.clear();
 }
 
 void BsServerAdapter::onCelerRecv(CelerAPI::CelerMessageType messageType, const std::string& data)
@@ -424,8 +447,7 @@ void BsServerAdapter::onCelerRecv(CelerAPI::CelerMessageType messageType, const 
    auto msgResp = msg.mutable_recv_matching();
    msgResp->set_message_type((int)messageType);
    msgResp->set_data(data);
-   Envelope env{ 0, user_, bs::message::UserTerminal::create(bs::message::TerminalUsers::Matching)
-      , {}, {}, msg.SerializeAsString() };   // send directly to matching adapter, not broadcast
+   Envelope env{ 0, user_, userMtch_, {}, {}, msg.SerializeAsString() };
    pushFill(env);
 }
 

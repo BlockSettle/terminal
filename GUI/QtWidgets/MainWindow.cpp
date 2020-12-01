@@ -887,23 +887,15 @@ void MainWindow::onLoggedIn(const BsClientLoginResult& result)
 void MainWindow::activateClient(const BsClientLoginResult& result)
 {
    currentUserLogin_ = QString::fromStdString(result.login);
-/*   chatTokenData_ = result.chatTokenData;
-   chatTokenSign_ = result.chatTokenSign;
-   tryLoginIntoChat();*/
 
    auto tradeSettings = std::make_shared<bs::TradeSettings>(result.tradeSettings);
-   emit putSetting(ApplicationSettings::SubmittedAddressXbtLimit, static_cast<quint64>(tradeSettings->xbtTier1Limit));
-
-   emit bootstrapDataLoaded(result.bootstrapDataSigned);
+   emit putSetting(ApplicationSettings::SubmittedAddressXbtLimit
+      , static_cast<quint64>(tradeSettings->xbtTier1Limit));
 
    setLoginButtonText(currentUserLogin_);
    setWidgetsAuthorized(true);
 
    ui_->widgetRFQ->onTradeSettings(tradeSettings);
-
-   emit setRecommendedFeeRate(result.feeRatePb);
-//   utxoReservationMgr_->setFeeRatePb(result.feeRatePb);
-   emit needMatchingLogin(result.celerLogin, result.login);
 
    ui_->widgetWallets->setUsername(currentUserLogin_);
    actLogout_->setVisible(false);
@@ -930,15 +922,12 @@ void MainWindow::onAccountTypeChanged(bs::network::UserType userType, bool enabl
       notifCenter_->enqueue(enabled ? bs::ui::NotifyType::AccountEnabled
          : bs::ui::NotifyType::AccountDisabled, {});
    }
-//   authManager_->setUserType(userType);
    ui_->widgetChat->setUserType(enabled ? userType : bs::network::UserType::Chat);
 }
 
 void bs::gui::qt::MainWindow::onMatchingLogin(const std::string& mtchLogin
    , BaseCelerClient::CelerUserType userType, const std::string& userId)
 {
-   emit needSetUserId(userId);
-
    ui_->actionAccountInformation->setEnabled(true);
    ui_->actionAuthenticationAddresses->setEnabled(userType != BaseCelerClient::CelerUserType::Market);
    ui_->actionOneTimePassword->setEnabled(true);
@@ -985,7 +974,6 @@ void MainWindow::onLoggedOut()
 
 void MainWindow::onMatchingLogout()
 {
-   emit needSetUserId({});
    emit needCloseBsConnection();
 
    ui_->actionAccountInformation->setEnabled(false);

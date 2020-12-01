@@ -190,11 +190,7 @@ private slots:
    void onNeedCloseBsConnection();
    void onNeedStartLogin(const std::string& login);
    void onNeedCancelLogin();
-   void onBootstrapDataLoaded(const std::string&);
-   void onNeedMatchingLogin(const std::string& mtchLogin, const std::string& bsLogin);
    void onNeedMatchingLogout();
-   void onNeedSetUserId(const std::string&);
-   void onSetRecommendedFeeRate(float);
    void onNeedMdConnection(ApplicationSettings::EnvConfiguration);
    void onNeedNewAuthAddress();
    void onNeedSubmitAuthAddress(const bs::Address&);
@@ -214,8 +210,7 @@ private:
    std::shared_ptr<bs::message::UserTerminal>   userSettings_, userWallets_;
    std::shared_ptr<bs::message::UserTerminal>   userBlockchain_, userSigner_;
    std::shared_ptr<bs::message::UserTerminal>   userBS_, userMatch_, userSettl_;
-   std::shared_ptr<bs::message::UserTerminal>   userMD_;
-   std::shared_ptr<bs::message::UserTerminal>   userTrk_;
+   std::shared_ptr<bs::message::UserTerminal>   userMD_, userTrk_;
    bs::gui::qt::MainWindow * mainWindow_{ nullptr };
    BSTerminalSplashScreen  * splashScreen_{ nullptr };
 

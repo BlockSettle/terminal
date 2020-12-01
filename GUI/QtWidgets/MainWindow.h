@@ -154,7 +154,6 @@ namespace bs {
             void needArmoryReconnect();
             void needSigners();
             void setSigner(int);
-            void bootstrapDataLoaded(const std::string &);
             void createNewWallet();
             void needHDWalletDetails(const std::string &walletId);
             void needWalletsList(UiUtils::WalletsTypes, const std::string &id);
@@ -186,11 +185,8 @@ namespace bs {
             void needCloseBsConnection();
             void needStartLogin(const std::string& login);
             void needCancelLogin();
-            void needMatchingLogin(const std::string &mtchLogin, const std::string &bsLogin);
             void needMatchingLogout();
-            void needSetUserId(const std::string&);
             void needMdConnection(ApplicationSettings::EnvConfiguration);
-            void setRecommendedFeeRate(float);
 
             void needNewAuthAddress();
             void needSubmitAuthAddress(const bs::Address&);

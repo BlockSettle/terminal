@@ -90,7 +90,8 @@ private:
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<bs::message::User>  user_, userSettl_;
+   std::shared_ptr<bs::message::User>  user_, userSettl_, userSettings_;
+   std::shared_ptr<bs::message::User>  userMtch_, userWallets_;
    std::shared_ptr<ConnectionManager>  connMgr_;
    std::unique_ptr<BsClient>           bsClient_;
    ApplicationSettings::EnvConfiguration  envConfig_{ ApplicationSettings::EnvConfiguration::Unknown };

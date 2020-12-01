@@ -29,6 +29,7 @@
 #include "DownstreamOrderProto.pb.h"
 #include "bitcoin/DownstreamBitcoinTransactionSigningProto.pb.h"
 
+using namespace BlockSettle::Common;
 using namespace BlockSettle::Terminal;
 using namespace bs::message;
 using namespace com::celertech::marketmerchant::api::enums::orderstatus;
@@ -42,6 +43,7 @@ MatchingAdapter::MatchingAdapter(const std::shared_ptr<spdlog::logger> &logger)
    : logger_(logger)
    , user_(std::make_shared<UserTerminal>(TerminalUsers::Matching))
    , userSettl_(std::make_shared<UserTerminal>(TerminalUsers::Settlement))
+   , userWallets_(std::make_shared<UserTerminal>(TerminalUsers::Wallets))
 {
    celerConnection_ = std::make_unique<ClientCelerConnection>(logger, this, true, true);
 
@@ -91,14 +93,16 @@ MatchingAdapter::MatchingAdapter(const std::shared_ptr<spdlog::logger> &logger)
 
 void MatchingAdapter::connectedToServer()
 {
+   logger_->debug("[{}]", __func__);
    MatchingMessage msg;
    auto loggedIn = msg.mutable_logged_in();
    loggedIn->set_user_type(static_cast<int>(celerConnection_->celerUserType()));
    loggedIn->set_user_id(celerConnection_->userId());
    loggedIn->set_user_name(celerConnection_->userName());
-
    Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
    pushFill(env);
+
+   sendSetUserId(celerConnection_->userId());
 
    const auto &cbAccounts = [this](const std::vector<std::string>& accVec)
    {  // Remove duplicated entries if possible
@@ -125,6 +129,8 @@ void MatchingAdapter::connectedToServer()
 
 void MatchingAdapter::connectionClosed()
 {
+   sendSetUserId({});
+
    assignedAccount_.clear();
    celerConnection_->CloseConnection();
 
@@ -159,7 +165,7 @@ bool MatchingAdapter::process(const bs::message::Envelope &env)
          pushFill(envBC);
       }
    }
-   else if (env.sender->value<bs::message::TerminalUsers>() == bs::message::TerminalUsers::BsServer) {
+   else if (!env.request && (env.sender->value<bs::message::TerminalUsers>() == bs::message::TerminalUsers::BsServer)) {
       BsServerMessage msg;
       if (!msg.ParseFromString(env.message)) {
          logger_->error("[{}] failed to parse BsServer message #{}", __func__, env.id);
@@ -350,6 +356,15 @@ void MatchingAdapter::cleanQuoteRequestCcy(const std::string& id)
    if (it != quoteCcys_.end()) {
       quoteCcys_.erase(it);
    }
+}
+
+void MatchingAdapter::sendSetUserId(const std::string& userId)
+{
+   logger_->debug("[{}] setting userId {}", __func__, userId);
+   WalletsMessage msg;
+   msg.set_set_user_id(celerConnection_->userId());
+   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
 }
 
 std::string MatchingAdapter::getQuoteRequestCcy(const std::string& id) const

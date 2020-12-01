@@ -76,6 +76,8 @@ private:
    void saveQuoteRequestCcy(const std::string& id, const std::string& ccy);
    void cleanQuoteRequestCcy(const std::string& id);
 
+   void sendSetUserId(const std::string &userId);
+
    bool onQuoteResponse(const std::string&);
    bool onQuoteReject(const std::string&);
    bool onOrderReject(const std::string&);
@@ -89,7 +91,7 @@ private:
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<bs::message::User>  user_, userSettl_;
+   std::shared_ptr<bs::message::User>  user_, userSettl_, userWallets_;
    std::unique_ptr<BaseCelerClient>    celerConnection_;
 
    std::string assignedAccount_;
