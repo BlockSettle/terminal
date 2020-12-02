@@ -772,12 +772,6 @@ function createPasswordDialogForType(jsCallback, passwordDialogData, walletInfo)
                "passwordDialogData": passwordDialogData
               })
     }
-    else if (passwordDialogData.DialogType === "RequestPasswordForEnableTrading") {
-        dlg = Qt.createComponent("../BsControls/BSPasswordInputEnableTrading.qml").createObject(mainWindow
-            , {"walletInfo": walletInfo,
-               "passwordDialogData": passwordDialogData
-              })
-    }
     else if (passwordDialogData.DialogType === "RequestPasswordForPromoteWallet") {
         dlg = Qt.createComponent("../BsControls/BSPasswordInputPromoteWallet.qml").createObject(mainWindow
             , {"walletInfo": walletInfo,

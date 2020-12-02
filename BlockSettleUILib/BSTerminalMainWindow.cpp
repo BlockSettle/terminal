@@ -1545,14 +1545,6 @@ void BSTerminalMainWindow::onUserLoggedIn()
    ui_->widgetRFQ->onUserConnected(userType_);
    ui_->widgetRFQReply->onUserConnected(userType_);
 
-   // XXXAUTH
-   //const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
-   //const auto &deferredDialog = [this, userId] {
-   //   walletsMgr_->setUserId(userId);
-   //   enableTradingIfNeeded();
-   //};
-   //addDeferredDialog(deferredDialog);
-
    setLoginButtonText(currentUserLogin_);
 }
 
@@ -2062,38 +2054,6 @@ void BSTerminalMainWindow::InitWidgets()
          replyRFQ->forceCheckCondition();
       }
    });
-}
-
-void BSTerminalMainWindow::enableTradingIfNeeded()
-{
-   auto enableTradingFunc = [this](const std::shared_ptr<bs::sync::hd::Wallet> &wallet) {
-      addDeferredDialog([this, wallet] {
-         BSMessageBox qry(BSMessageBox::question, tr("Upgrade Wallet"), tr("Enable Trading")
-            , tr("BlockSettle requires you to hold sub-wallets with Authentication Addresses to interact with our trading system.<br><br>"
-                  "You will be able to trade up to %1 bitcoin per trade once your Authentication Address has been submitted.<br><br>"
-                  "After %2 trades your Authentication Address will be verified and your trading limit removed.<br><br>"
-                  "Do you wish to enable XBT trading?").arg(bs::XBTAmount(tradeSettings_->xbtTier1Limit).GetValueBitcoin()).arg(tradeSettings_->authRequiredSettledTrades)
-            , this);
-         qry.enableRichText();
-         if (qry.exec() == QDialog::Accepted) {
-            walletsMgr_->EnableXBTTradingInWallet(wallet->walletId(), [this](bs::error::ErrorCode result) {
-               if (result == bs::error::ErrorCode::NoError) {
-                  // If wallet was promoted to primary we could try to get chat keys now
-                  tryGetChatKeys();
-                  // XXXAUTH
-                  //walletsMgr_->setUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
-               }
-            });
-         }
-      });
-   };
-
-   auto primaryWallet = walletsMgr_->getPrimaryWallet();
-   if (primaryWallet) {
-      if (!primaryWallet->tradingEnabled()) {
-         enableTradingFunc(primaryWallet);
-      }
-   }
 }
 
 void BSTerminalMainWindow::showLegacyWarningIfNeeded()

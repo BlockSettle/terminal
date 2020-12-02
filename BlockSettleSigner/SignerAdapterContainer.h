@@ -76,9 +76,6 @@ public:
       , const std::vector<bs::wallet::PasswordData>& = {}
          , bs::sync::PasswordDialogData = {}, const CreateHDLeafCb & = nullptr) override { return false; }
 
-   bool enableTradingInHDWallet(const std::string &
-      , bs::sync::PasswordDialogData = {}, const UpdateWalletStructureCB& = nullptr) override { return false; }
-
    bool promoteWalletToPrimary(const std::string& rootWalletId
       , bs::sync::PasswordDialogData dialogData = {}, const UpdateWalletStructureCB& cb = nullptr) override { return false; }
 

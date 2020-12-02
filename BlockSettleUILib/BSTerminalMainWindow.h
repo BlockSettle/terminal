@@ -282,8 +282,6 @@ private:
 
    void InitWidgets();
 
-   void enableTradingIfNeeded();
-
    void showLegacyWarningIfNeeded();
 
    void promptSwitchEnv(bool prod);
