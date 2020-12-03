@@ -49,6 +49,9 @@ public:
       , const std::shared_ptr<AssetManager> &assetManager
       , const std::shared_ptr<QuoteProvider> &quoteProvider);
 
+signals:
+   void sendFutureRequestToPB(const bs::network::FutureRequest &details);
+
 public slots:
    void setType(bs::network::Asset::Type type);
    void SetProductAndSide(const QString& productGroup, const QString& currencyPair
@@ -72,6 +75,7 @@ private:
 
    bs::network::Side::Type getSelectedSide() const;
    QString getProduct() const;
+   double getQuantity() const;
 
    void resetTicket();
    void productSelectionChanged();

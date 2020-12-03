@@ -69,8 +69,7 @@ void FuturesTicket::resetTicket()
    currentBidPrice_ = kEmptyInformationalLabelText;
    currentOfferPrice_ = kEmptyInformationalLabelText;
 
-   ui_->lineEditAmount->setValidator(nullptr);
-   ui_->lineEditAmount->setEnabled(false);
+   ui_->lineEditAmount->setValidator(xbtAmountValidator_);
    ui_->lineEditAmount->clear();
 }
 
@@ -165,6 +164,15 @@ QString FuturesTicket::getProduct() const
    return currentProduct_;
 }
 
+double FuturesTicket::getQuantity() const
+{
+   const CustomDoubleValidator *validator = dynamic_cast<const CustomDoubleValidator*>(ui_->lineEditAmount->validator());
+   if (validator == nullptr) {
+      return 0;
+   }
+   return validator->GetValue(ui_->lineEditAmount->text());
+}
+
 void FuturesTicket::productSelectionChanged()
 {
    const auto &mdInfo = mdInfo_[type_][security_.toStdString()];
@@ -193,6 +201,33 @@ bool FuturesTicket::eventFilter(QObject *watched, QEvent *evt)
 
 void FuturesTicket::submitButtonClicked()
 {
+   const auto &mdInfo = mdInfo_[type_][security_.toStdString()];
+   auto side = getSelectedSide();
+   double price = 0;
+   switch (side) {
+      case bs::network::Side::Buy:
+         price = mdInfo.askPrice;
+         break;
+      case bs::network::Side::Sell:
+         price = mdInfo.bidPrice;
+         break;
+      default:
+         break;
+   }
+   double amount = getQuantity();
+
+   if (price == 0 || amount == 0) {
+      return;
+   }
+
+   bs::network::FutureRequest request;
+   request.side = side;
+   request.price = price;
+   request.amount = bs::XBTAmount(amount);
+
+   emit sendFutureRequestToPB(request);
+
+   ui_->lineEditAmount->clear();
 }
 
 void FuturesTicket::onMDUpdate(bs::network::Asset::Type type, const QString &security, bs::network::MDFields mdFields)
