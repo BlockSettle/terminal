@@ -250,6 +250,7 @@
         </property>
         <widget class="RFQShieldPage" name="shieldPage"/>
         <widget class="RFQTicketXBT" name="pageRFQTicket"/>
+        <widget class="FuturesTicket" name="pageFutures"/>
        </widget>
       </item>
      </layout>
@@ -279,6 +280,12 @@
    <class>RFQTicketXBT</class>
    <extends>QWidget</extends>
    <header>RFQTicketXBT.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>FuturesTicket</class>
+   <extends>QWidget</extends>
+   <header>FuturesTicket.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

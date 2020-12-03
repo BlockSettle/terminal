@@ -110,6 +110,7 @@ signals:
 
 private:
    void showEditableRFQPage();
+   void showFuturesPage();
    void popShield();
 
    bool checkConditions(const MarketSelectedInfo& productGroup);
