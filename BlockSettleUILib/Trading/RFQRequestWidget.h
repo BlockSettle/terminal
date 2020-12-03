@@ -110,6 +110,7 @@ signals:
 
 private:
    void showEditableRFQPage();
+   void showFuturesPage(bs::network::Asset::Type type);
    void popShield();
 
    bool checkConditions(const MarketSelectedInfo& productGroup);
