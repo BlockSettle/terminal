@@ -158,6 +158,9 @@ WalletShieldBase::ProductType WalletShieldBase::getProductGroup(const QString &p
    else if (productGroup == QLatin1String("1day Deliverable")) {
       return ProductType::Futures;
    }
+   else if (productGroup == QLatin1String("1day Cash Settled")) {
+      return ProductType::CashSettledFutures;
+   }
 #ifndef QT_NO_DEBUG
    // You need to add logic for new Product group type
    Q_ASSERT(false);
