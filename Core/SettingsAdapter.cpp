@@ -499,7 +499,7 @@ bool SettingsAdapter::processPutRequest(const SettingsMessage_SettingsResponse &
             appSettings_->set(setting, req.ui());
             break;
          case SettingType_UInt64:
-            appSettings_->set(setting, req.ui64());
+            appSettings_->set(setting, quint64(req.ui64()));
             break;
          case SettingType_Bool:
             appSettings_->set(setting, req.b());
@@ -808,7 +808,7 @@ QVariant bs::message::fromResponse(const BlockSettle::Terminal::SettingResponse&
       value = setting.ui();
       break;
    case SettingType_UInt64:
-      value = setting.ui64();
+      value = quint64(setting.ui64());
       break;
    case SettingType_Bool:
       value = setting.b();
