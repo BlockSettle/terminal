@@ -21,6 +21,7 @@ namespace spdlog {
 namespace BlockSettle {
    namespace Common {
       class SignerMessage;
+      class SignerMessage_AutoSign;
       class SignerMessage_ExtendAddrChain;
       class SignerMessage_GetSettlPayinAddr;
       class SignerMessage_SetSettlementId;
@@ -64,6 +65,8 @@ private:
    void onReady() override;
    void walletsReady() override;
    void newWalletPrompt() override;
+   void autoSignStateChanged(bs::error::ErrorCode
+      , const std::string& walletId) override;
    void windowIsVisible(bool) override;
 
    bool processOwnRequest(const bs::message::Envelope &
@@ -100,6 +103,8 @@ private:
       , const BlockSettle::Common::SignerMessage_GetSettlPayinAddr&);
    bool processResolvePubSpenders(const bs::message::Envelope&
       , const bs::core::wallet::TXSignRequest&);
+   bool processAutoSignRequest(const bs::message::Envelope&
+      , const BlockSettle::Common::SignerMessage_AutoSign&);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
@@ -111,6 +116,7 @@ private:
    std::string    connKey_;
 
    std::map<uint64_t, std::shared_ptr<bs::message::User>>   requests_;
+   std::unordered_map<std::string, bs::message::Envelope>   autoSignRequests_;
 };
 
 

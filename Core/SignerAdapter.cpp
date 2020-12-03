@@ -134,6 +134,8 @@ bool SignerAdapter::processOwnRequest(const bs::message::Envelope &env
          , bs::signer::pbTxRequestToCore(request.resolve_pub_spenders()));
    case SignerMessage::kSignSettlementTx:
       return processSignSettlementTx(env, request.sign_settlement_tx());
+   case SignerMessage::kAutoSign:
+      return processAutoSignRequest(env, request.auto_sign());
    default:
       logger_->warn("[{}] unknown signer request: {}", __func__, request.data_case());
       break;
@@ -295,6 +297,35 @@ void SignerAdapter::newWalletPrompt()
    msg.mutable_need_new_wallet_prompt();
    Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
    pushFill(env);
+}
+
+void SignerAdapter::autoSignStateChanged(bs::error::ErrorCode code
+   , const std::string& walletId)
+{
+   const auto& itAS = autoSignRequests_.find(walletId);
+   if (itAS == autoSignRequests_.end()) {
+      logger_->warn("[{}] no request found for {}", __func__, walletId);
+      return;
+   }
+   bool enabled = false;
+   if (code == bs::error::ErrorCode::NoError) {
+      enabled = true;
+   }
+   else if (code == bs::error::ErrorCode::AutoSignDisabled) {
+      enabled = false;
+   }
+   else {
+      logger_->error("[{}] auto sign {} error code: {}", __func__, walletId
+         , (int)code);
+   }
+   SignerMessage msg;
+   auto msgResp = msg.mutable_auto_sign();
+   msgResp->set_wallet_id(walletId);
+   msgResp->set_enable(enabled);
+   Envelope envResp{ itAS->second.id, user_, itAS->second.sender, {}, {}
+      , msg.SerializeAsString() };
+   pushFill(envResp);
+   autoSignRequests_.erase(itAS);
 }
 
 void SignerAdapter::windowIsVisible(bool flag)
@@ -747,4 +778,15 @@ bool SignerAdapter::processResolvePubSpenders(const bs::message::Envelope& env
       logger_->error("[{}] failed to send", __func__);
    }
    return true;
+}
+
+bool SignerAdapter::processAutoSignRequest(const bs::message::Envelope& env
+   , const SignerMessage_AutoSign& request)
+{
+   autoSignRequests_[request.wallet_id()] = env;
+   QVariantMap data;
+   data[QLatin1String("rootId")] = QString::fromStdString(request.wallet_id());
+   data[QLatin1String("enable")] = request.enable();
+   return (signer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ActivateAutoSign
+      , data) != 0);
 }

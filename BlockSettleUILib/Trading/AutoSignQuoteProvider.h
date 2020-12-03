@@ -39,7 +39,7 @@ class AutoSignScriptProvider : public QObject
 {
    Q_OBJECT
 public:
-   explicit AutoSignScriptProvider(const std::shared_ptr<spdlog::logger> &
+   [[deprecated]] explicit AutoSignScriptProvider(const std::shared_ptr<spdlog::logger> &
       , UserScriptRunner *
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<SignContainer> &
