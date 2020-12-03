@@ -977,7 +977,7 @@ void QtGuiAdapter::onNeedLedgerEntries(const std::string &filter)
    pushFill(env);
 }
 
-void QtGuiAdapter::onNeedTXDetails(const const std::vector<bs::sync::TXWallet> &txWallet
+void QtGuiAdapter::onNeedTXDetails(const std::vector<bs::sync::TXWallet> &txWallet
    , bool useCache, const bs::Address &addr)
 {
    WalletsMessage msg;

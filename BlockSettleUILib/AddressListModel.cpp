@@ -565,7 +565,7 @@ QVariant AddressListModel::data(const QModelIndex& index, int role) const
          return row.transactionCount;
 
       case BalanceRole:
-         return row.balance;
+         return qint64(row.balance);
 
       case Qt::ToolTipRole:
          if ((index.column() == ColumnComment) && row.isMultiLineComment()) {
