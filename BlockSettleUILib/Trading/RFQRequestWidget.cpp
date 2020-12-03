@@ -388,7 +388,7 @@ bool RFQRequestWidget::checkConditions(const MarketSelectedInfo& selectedInfo)
    using GroupType = RFQShieldPage::ProductType;
    const GroupType group = RFQShieldPage::getProductGroup(selectedInfo.productGroup_);
 
-   if (group == GroupType::Futures || group == GroupType::CashSettledFutures) {
+   if (group == GroupType::CashSettledFutures) {
       showFuturesPage(group);
       return true;
    }
