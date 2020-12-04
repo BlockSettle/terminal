@@ -28,6 +28,7 @@
 #include <QDebug>
 #include <QDir>
 #include <QStandardPaths>
+#include <QThread>
 #include <spdlog/spdlog.h>
 #include <btc/ecc.h>
 
