@@ -136,7 +136,7 @@ void ReqCCSettlementContainer::activate()
    if (side() == bs::network::Side::Buy) {
       double balance = 0;
       for (const auto &leaf : xbtWallet_->getGroup(xbtWallet_->getXBTGroupType())->getLeaves()) {
-         balance += assetMgr_->getBalance(bs::network::XbtCurrency, leaf);
+         balance += assetMgr_->getBalance(bs::network::XbtCurrency, bs::UTXOReservationManager::kIncludeZcRequestor, leaf);
       }
       if (amount() > balance) {
          emit paymentVerified(false, tr("Insufficient XBT balance in signing wallet"));
@@ -283,10 +283,10 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
          if (manualXbtInputs_.empty()) {
             std::vector<UTXO> utxos;
             if (!xbtWallet_->canMixLeaves()) {
-               utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId(), walletPurpose_);
+               utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId(), walletPurpose_, bs::UTXOReservationManager::kIncludeZcRequestor);
             }
             else {
-               utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId());
+               utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId(), bs::UTXOReservationManager::kIncludeZcRequestor);
             }
 
             auto fixedUtxo = utxoReservationManager_->convertUtxoToPartialFixedInput(xbtWallet_->walletId(), utxos);

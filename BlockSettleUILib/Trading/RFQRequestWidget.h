@@ -147,7 +147,7 @@ signals:
    void needAuthKey(const bs::Address&);
 
    void needReserveUTXOs(const std::string& reserveId, const std::string& subId
-      , uint64_t amount, bool partial = false, const std::vector<UTXO>& utxos = {});
+      , uint64_t amount, bool withZC = false, const std::vector<UTXO>& utxos = {});
 
 private:
    void showEditableRFQPage();

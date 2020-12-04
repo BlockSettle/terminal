@@ -14,9 +14,10 @@
 
 #include "AssetManager.h"
 #include "BlockDataManagerConfig.h"
+#include "Celer/CelerClient.h"
 #include "CurrencyPair.h"
 #include "UiUtils.h"
-#include "Celer/CelerClient.h"
+#include "UtxoReservationManager.h"
 
 // XXX [AT] : possible concurent change of states - could lead to multiple signals emited
 // add atomic flag
@@ -185,7 +186,7 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
       const auto currency = contrProductString.toStdString();
       double balance = 0;
       if (assetManager_) {
-         balance = assetManager_->getBalance(currency);
+         balance = assetManager_->getBalance(currency, bs::UTXOReservationManager::kIncludeZcRequestor, nullptr);
       }
       else {
          try {

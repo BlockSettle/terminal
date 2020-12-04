@@ -115,7 +115,7 @@ void AssetsAdapter::onFxBalanceCleared()
 {
 }
 
-void AssetsAdapter::onBalanceChanged(const std::string& currency, double value)
+void AssetsAdapter::onBalanceChanged(const std::string& currency)
 {
 }
 

@@ -195,7 +195,7 @@ namespace bs {
             void needCancelRFQ(const std::string& id);
             void needAuthKey(const bs::Address&);
             void needReserveUTXOs(const std::string& reserveId, const std::string& subId
-               , uint64_t amount, bool partial = false, const std::vector<UTXO>& utxos = {});
+               , uint64_t amount, bool withZC = false, const std::vector<UTXO>& utxos = {});
             void needUnreserveUTXOs(const std::string& reserveId, const std::string& subId);
 
             void submitQuote(const bs::network::QuoteNotification&);

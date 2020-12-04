@@ -131,10 +131,10 @@ void OTCWindowsAdapterBase::showXBTInputs(QComboBox *walletsCombobox)
    std::vector<UTXO> allUTXOs;
    if (!hdWallet->canMixLeaves()) {
       auto purpose = UiUtils::getSelectedHwPurpose(walletsCombobox);
-      allUTXOs = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId(), purpose);
+      allUTXOs = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId(), purpose, bs::UTXOReservationManager::kIncludeZcOtc);
    }
    else {
-      allUTXOs = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId());
+      allUTXOs = getUtxoManager()->getAvailableXbtUTXOs(hdWallet->walletId(), bs::UTXOReservationManager::kIncludeZcOtc);
    }
 
    auto inputs = std::make_shared<SelectedTransactionInputs>(allUTXOs);
@@ -218,10 +218,10 @@ BTCNumericTypes::balance_type OTCWindowsAdapterBase::getXBTSpendableBalanceFromC
       BTCNumericTypes::satoshi_type sum = 0;
       if (!hdWallet->canMixLeaves()) {
          auto purpose = UiUtils::getSelectedHwPurpose(walletsCombobox);
-         sum = getUtxoManager()->getAvailableXbtUtxoSum(hdWallet->walletId(), purpose);
+         sum = getUtxoManager()->getAvailableXbtUtxoSum(hdWallet->walletId(), purpose, bs::UTXOReservationManager::kIncludeZcOtc);
       }
       else {
-         sum = getUtxoManager()->getAvailableXbtUtxoSum(hdWallet->walletId());
+         sum = getUtxoManager()->getAvailableXbtUtxoSum(hdWallet->walletId(), bs::UTXOReservationManager::kIncludeZcOtc);
       }
 
       return bs::XBTAmount(sum).GetValueBitcoin();
@@ -268,7 +268,7 @@ void OTCWindowsAdapterBase::submitProposal(QComboBox *walletsCombobox, bs::XBTAm
    }
    else {
       getUtxoManager()->getBestXbtUtxoSet(hdWallet->walletId(), amount.GetValue()
-         , std::move(cbUtxoSet), true, checkAmount);
+         , std::move(cbUtxoSet), true, checkAmount, bs::UTXOReservationManager::kIncludeZcOtc);
    }
 }
 

@@ -1212,7 +1212,7 @@ void QtGuiAdapter::onNeedAuthKey(const bs::Address& addr)
 }
 
 void QtGuiAdapter::onNeedReserveUTXOs(const std::string& reserveId
-   , const std::string& subId, uint64_t amount, bool partial
+   , const std::string& subId, uint64_t amount, bool withZC
    , const std::vector<UTXO>& utxos)
 {
    logger_->debug("[{}] {}/{} {}", __func__, reserveId, subId, amount);
@@ -1221,7 +1221,7 @@ void QtGuiAdapter::onNeedReserveUTXOs(const std::string& reserveId
    msgReq->set_id(reserveId);
    msgReq->set_sub_id(subId);
    msgReq->set_amount(amount);
-   msgReq->set_partial(partial);
+   msgReq->set_use_zc(withZC);
    for (const auto& utxo : utxos) {
       msgReq->add_utxos(utxo.serialize().toBinStr());
    }

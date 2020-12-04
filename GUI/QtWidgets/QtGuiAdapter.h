@@ -199,7 +199,7 @@ private slots:
    void onNeedCancelRFQ(const std::string& id);
    void onNeedAuthKey(const bs::Address&);
    void onNeedReserveUTXOs(const std::string& reserveId, const std::string& subId
-      , uint64_t amount, bool partial = false, const std::vector<UTXO>& utxos = {});
+      , uint64_t amount, bool withZC = false, const std::vector<UTXO>& utxos = {});
    void onNeedUnreserveUTXOs(const std::string& reserveId, const std::string& subId);
    void onSubmitQuote(const bs::network::QuoteNotification&);
    void onPullQuote(const std::string& settlementId, const std::string& reqId

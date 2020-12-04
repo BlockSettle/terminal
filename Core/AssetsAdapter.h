@@ -47,7 +47,7 @@ private:    // AssetMgr callbacks override
    void onFxBalanceLoaded() override;
    void onFxBalanceCleared() override;
 
-   void onBalanceChanged(const std::string& currency, double value) override;
+   void onBalanceChanged(const std::string& currency) override;
    void onTotalChanged() override;
    void onSecuritiesChanged() override;
 

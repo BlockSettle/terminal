@@ -135,7 +135,7 @@ namespace bs {
          void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
          void needAuthKey(const bs::Address&);
          void needReserveUTXOs(const std::string& reserveId, const std::string& subId
-            , uint64_t amount, bool partial = false, const std::vector<UTXO>& utxos = {});
+            , uint64_t amount, bool withZC = false, const std::vector<UTXO>& utxos = {});
 
       public slots:
          void setQuoteReqNotification(const network::QuoteReqNotification &, double indicBid, double indicAsk);
@@ -242,7 +242,7 @@ namespace bs {
             , AddressType type, std::function<void(bs::Address)> cb);
          void setBalanceOk(bool ok);
          bool checkBalance() const;
-         XBTAmount getXbtBalance() const;
+         XBTAmount getXbtBalance(bool includeZc) const;
          BTCNumericTypes::balance_type getPrivateMarketCoinBalance() const;
          QDoubleSpinBox *getActivePriceWidget() const;
          void updateUiWalletFor(const bs::network::QuoteReqNotification &qrn);

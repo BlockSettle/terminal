@@ -249,7 +249,8 @@ RFQTicketXBT::BalanceInfoContainer RFQTicketXBT::getBalanceInfo() const
       } else {
          const double divisor = std::pow(10, UiUtils::GetAmountPrecisionFX());
          try {
-            const double bal = assetManager_ ? assetManager_->getBalance(productToSpend.toStdString())
+            const double bal = assetManager_ ?
+               assetManager_->getBalance(productToSpend.toStdString(), bs::UTXOReservationManager::kIncludeZcRequestor, nullptr)
                : balances_.at(productToSpend.toStdString());
             balance.amount = std::floor(bal * divisor) / divisor;
             balance.product = productToSpend;
@@ -423,10 +424,10 @@ void RFQTicketXBT::showCoinControl()
    std::vector<UTXO> utxos;
    if (!xbtWallet->canMixLeaves()) {
       auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWalletsSend);
-      utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId(), purpose);
+      utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId(), purpose, bs::UTXOReservationManager::kIncludeZcRequestor);
    }
    else {
-      utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId());
+      utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId(), bs::UTXOReservationManager::kIncludeZcRequestor);
    }
 
    ui_->toolButtonXBTInputsSend->setEnabled(true);
@@ -1409,10 +1410,10 @@ void RFQTicketXBT::onMaxClicked()
          else {
             if (!xbtWallet->canMixLeaves()) {
                auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWalletsSend);
-               utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId(), purpose);
+               utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId(), purpose, bs::UTXOReservationManager::kIncludeZcRequestor);
             }
             else {
-               utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId());
+               utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet->walletId(), bs::UTXOReservationManager::kIncludeZcRequestor);
             }
          }
 
@@ -1709,10 +1710,10 @@ bs::XBTAmount RFQTicketXBT::getXbtBalance() const
       if (!xbtWallet->canMixLeaves()) {
          auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWalletsSend);
          return bs::XBTAmount(utxoReservationManager_->getAvailableXbtUtxoSum(
-            xbtWallet->walletId(), purpose));
+            xbtWallet->walletId(), purpose, bs::UTXOReservationManager::kIncludeZcRequestor));
       } else {
          return bs::XBTAmount(utxoReservationManager_->getAvailableXbtUtxoSum(
-            xbtWallet->walletId()));
+            xbtWallet->walletId(), bs::UTXOReservationManager::kIncludeZcRequestor));
       }
    }
    else {
@@ -1799,7 +1800,7 @@ void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::string &id
          } else {
             rfqTicket->utxoReservationManager_->reserveBestXbtUtxoSet(
                hdWallet->walletId(), amount,
-               partial, std::move(cbBestUtxoSet), true, checkAmount);
+               partial, std::move(cbBestUtxoSet), true, checkAmount, bs::UTXOReservationManager::kIncludeZcRequestor);
          }
       };
 

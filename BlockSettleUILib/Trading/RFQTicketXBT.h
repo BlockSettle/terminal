@@ -118,7 +118,7 @@ signals:
    void needWalletData(const std::string& walletId);
    void needAuthKey(const bs::Address&);
    void needReserveUTXOs(const std::string& reserveId, const std::string& walletId
-      , uint64_t amount, bool partial = false, const std::vector<UTXO>& utxos = {});
+      , uint64_t amount, bool withZC = false, const std::vector<UTXO>& utxos = {});
 
 public slots:
    void SetProductAndSide(const QString& productGroup, const QString& currencyPair
