@@ -98,6 +98,8 @@ signals:
    void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
    void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 
+   void sendFutureRequestToPB(const bs::network::FutureRequest &details);
+
    void cancelXBTTrade(const std::string& settlementId);
    void cancelCCTrade(const std::string& orderId);
 
@@ -110,6 +112,7 @@ signals:
 
 private:
    void showEditableRFQPage();
+   void showFuturesPage(bs::network::Asset::Type type);
    void popShield();
 
    bool checkConditions(const MarketSelectedInfo& productGroup);

@@ -40,7 +40,8 @@ namespace  {
    enum class RFQPages : int
    {
       ShieldPage = 0,
-      EditableRFQPage
+      EditableRFQPage,
+      Futures,
    };
 }
 
@@ -187,6 +188,13 @@ void RFQRequestWidget::showEditableRFQPage()
    ui_->stackedWidgetRFQ->setCurrentIndex(static_cast<int>(RFQPages::EditableRFQPage));
 }
 
+void RFQRequestWidget::showFuturesPage(bs::network::Asset::Type type)
+{
+   ui_->stackedWidgetRFQ->setEnabled(true);
+   ui_->stackedWidgetRFQ->setCurrentIndex(static_cast<int>(RFQPages::Futures));
+   ui_->pageFutures->setType(type);
+}
+
 void RFQRequestWidget::popShield()
 {
    ui_->stackedWidgetRFQ->setEnabled(true);
@@ -205,6 +213,7 @@ void RFQRequestWidget::initWidgets(const std::shared_ptr<MarketDataProvider>& md
       , mdProvider, mdCallbacks);
 
    connect(mdCallbacks.get(), &MDCallbacksQt::MDUpdate, ui_->pageRFQTicket, &RFQTicketXBT::onMDUpdate);
+   connect(mdCallbacks.get(), &MDCallbacksQt::MDUpdate, ui_->pageFutures, &FuturesTicket::onMDUpdate);
 }
 
 void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
@@ -237,6 +246,7 @@ void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
 
    ui_->pageRFQTicket->init(logger, authAddressManager, assetManager,
       quoteProvider, container, armory, utxoReservationManager);
+   ui_->pageFutures->init(logger, authAddressManager, assetManager, quoteProvider);
 
    ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->treeViewOrders->setModel(orderListModel);
@@ -263,6 +273,8 @@ void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
    ui_->pageRFQTicket->disablePanel();
 
    connect(authAddressManager_.get(), &AuthAddressManager::AddressListUpdated, this, &RFQRequestWidget::forceCheckCondition);
+
+   connect(ui_->pageFutures, &FuturesTicket::sendFutureRequestToPB, this, &RFQRequestWidget::sendFutureRequestToPB);
 }
 
 void RFQRequestWidget::onConnectedToCeler()
@@ -337,6 +349,9 @@ void RFQRequestWidget::onRFQSubmit(const std::string &id, const bs::network::RFQ
    ui_->pageRFQTicket->SetProductAndSide(currentInfo.productGroup_
       , currentInfo.currencyPair_, currentInfo.bidPrice_, currentInfo.offerPrice_
       , bs::network::Side::Undefined);
+   ui_->pageFutures->SetProductAndSide(currentInfo.productGroup_
+      , currentInfo.currencyPair_, currentInfo.bidPrice_, currentInfo.offerPrice_
+      , bs::network::Side::Undefined);
 
    std::vector<std::string> closedDialogs;
    for (const auto &dlg : dialogs_) {
@@ -374,6 +389,11 @@ bool RFQRequestWidget::checkConditions(const MarketSelectedInfo& selectedInfo)
 
    using GroupType = RFQShieldPage::ProductType;
    const GroupType group = RFQShieldPage::getProductGroup(selectedInfo.productGroup_);
+
+   if (group == GroupType::CashSettledFutures) {
+      showFuturesPage(group);
+      return true;
+   }
 
    switch (userType) {
    case UserType::Market: {
@@ -436,6 +456,8 @@ void RFQRequestWidget::onCurrencySelected(const MarketSelectedInfo& selectedInfo
    }
    ui_->pageRFQTicket->setSecurityId(selectedInfo.productGroup_
       , selectedInfo.currencyPair_, selectedInfo.bidPrice_, selectedInfo.offerPrice_);
+   ui_->pageFutures->setSecurityId(selectedInfo.productGroup_
+      , selectedInfo.currencyPair_, selectedInfo.bidPrice_, selectedInfo.offerPrice_);
 }
 
 void RFQRequestWidget::onBidClicked(const MarketSelectedInfo& selectedInfo)
@@ -445,6 +467,8 @@ void RFQRequestWidget::onBidClicked(const MarketSelectedInfo& selectedInfo)
    }
    ui_->pageRFQTicket->setSecuritySell(selectedInfo.productGroup_
       , selectedInfo.currencyPair_, selectedInfo.bidPrice_, selectedInfo.offerPrice_);
+   ui_->pageFutures->setSecuritySell(selectedInfo.productGroup_
+      , selectedInfo.currencyPair_, selectedInfo.bidPrice_, selectedInfo.offerPrice_);
 }
 
 void RFQRequestWidget::onAskClicked(const MarketSelectedInfo& selectedInfo)
@@ -453,6 +477,8 @@ void RFQRequestWidget::onAskClicked(const MarketSelectedInfo& selectedInfo)
       return;
    }
    ui_->pageRFQTicket->setSecurityBuy(selectedInfo.productGroup_
+      , selectedInfo.currencyPair_, selectedInfo.bidPrice_, selectedInfo.offerPrice_);
+   ui_->pageFutures->setSecurityBuy(selectedInfo.productGroup_
       , selectedInfo.currencyPair_, selectedInfo.bidPrice_, selectedInfo.offerPrice_);
 }
 
