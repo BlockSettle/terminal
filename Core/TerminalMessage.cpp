@@ -19,6 +19,7 @@ using namespace BlockSettle::Terminal;
 
 static const std::map<int, std::string> kTerminalUsersMapping = {
    { static_cast<int>(TerminalUsers::BROADCAST), "Broadcast" },
+   { static_cast<int>(TerminalUsers::System), "System  " },
    { static_cast<int>(TerminalUsers::Signer), "Signer  " },
    { static_cast<int>(TerminalUsers::API), "API     " },
    { static_cast<int>(TerminalUsers::Settings), "Settings" },

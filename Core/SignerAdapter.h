@@ -42,7 +42,8 @@ class WalletSignerContainer;
 class SignerAdapter : public bs::message::Adapter, public HeadlessCallbackTarget
 {
 public:
-   SignerAdapter(const std::shared_ptr<spdlog::logger> &);
+   SignerAdapter(const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<WalletSignerContainer> &signer = nullptr);
    ~SignerAdapter() override = default;
 
    bool process(const bs::message::Envelope &) override;

@@ -88,7 +88,6 @@ SettingsAdapter::SettingsAdapter(const std::shared_ptr<ApplicationSettings> &set
    , const QStringList &appArgs)
    : appSettings_(settings)
    , user_(std::make_shared<UserTerminal>(TerminalUsers::Settings))
-   , userBC_(std::make_shared<UserTerminal>(TerminalUsers::BROADCAST))
 {
    if (!appSettings_->LoadApplicationSettings(appArgs)) {
       throw std::runtime_error("failed to load settings");
@@ -545,7 +544,7 @@ bool SettingsAdapter::processPutRequest(const SettingsMessage_SettingsResponse &
    if (nbUpdates) {
       SettingsMessage msg;
       *(msg.mutable_settings_updated()) = request;
-      bs::message::Envelope env{ 0, user_, userBC_, bs::message::TimeStamp{}
+      bs::message::Envelope env{ 0, user_, nullptr, bs::message::TimeStamp{}
          , bs::message::TimeStamp{}, msg.SerializeAsString() };
       return pushFill(env);
    }

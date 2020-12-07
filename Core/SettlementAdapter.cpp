@@ -534,7 +534,8 @@ bool SettlementAdapter::processSendRFQ(const bs::message::Envelope& env
    const auto& rfq = fromMsg(request.rfq());
    const auto &settlement = std::make_shared<Settlement>(Settlement{ env
       , false, rfq, request.reserve_id() });
-   if (rfq.side == bs::network::Side::Buy) {
+   if ((rfq.assetType != bs::network::Asset::SpotFX) &&
+      (rfq.side == bs::network::Side::Buy)) {
       settlement->recvAddress = bs::Address::fromAddressString(rfq.receiptAddress);
    }
    settlByRfqId_[rfq.requestId] = settlement;

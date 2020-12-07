@@ -100,7 +100,7 @@ private:
    bool processApiClientsList(const bs::message::Envelope&);
 
 private:
-   std::shared_ptr<bs::message::User>  user_, userBC_;
+   std::shared_ptr<bs::message::User>  user_;
    std::shared_ptr<bs::LogManager>     logMgr_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<ApplicationSettings>   appSettings_;

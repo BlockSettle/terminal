@@ -96,9 +96,9 @@ void TestEnv::shutdown()
 void TestEnv::requireArmory()
 {
    //init armorydb
-   if (armoryInstance_ != nullptr)
+   if (armoryInstance_ != nullptr) {
       return;
-
+   }
    armoryInstance_ = std::make_shared<ArmoryInstance>();
 
    auto armoryConnection = std::make_shared<TestArmoryConnection>(
@@ -114,7 +114,7 @@ void TestEnv::requireArmory()
    auto keyCb = [](const BinaryData&, const std::string&)->bool
    {
       return true;
-   };   
+   };
    armoryConnection->setupConnection(settings, keyCb);
    armoryConnection_ = armoryConnection;
 

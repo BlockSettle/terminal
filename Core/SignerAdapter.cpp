@@ -24,8 +24,9 @@ using namespace BlockSettle::Terminal;
 using namespace bs::message;
 
 
-SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger)
-   : logger_(logger)
+SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<WalletSignerContainer>& signer)
+   : logger_(logger), signer_(signer)
    , user_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Signer))
 {}
 
@@ -85,6 +86,12 @@ bool SignerAdapter::process(const bs::message::Envelope &env)
 
 void SignerAdapter::start()
 {
+   if (signer_) {
+      sendComponentLoading();
+      onReady();
+      walletsReady();
+      return;
+   }
    SettingsMessage msg;
    msg.mutable_signer_request();
    bs::message::Envelope env{ 0, user_, UserTerminal::create(TerminalUsers::Settings)

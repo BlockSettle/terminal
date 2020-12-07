@@ -456,22 +456,22 @@ public:
 
    void shutdown(void);
 
-   std::shared_ptr<ApplicationSettings> appSettings() { return appSettings_; }
+   [[deprecated]] std::shared_ptr<ApplicationSettings> appSettings() { return appSettings_; }
    std::shared_ptr<TestArmoryConnection> armoryConnection() { return armoryConnection_; }
    std::shared_ptr<ArmoryInstance> armoryInstance() { return armoryInstance_; }
-   std::shared_ptr<MockAssetManager> assetMgr() { return assetMgr_; }
+   [[deprecated]] std::shared_ptr<MockAssetManager> assetMgr() { return assetMgr_; }
    std::shared_ptr<BlockchainMonitor> blockMonitor() { return blockMonitor_; }
-   std::shared_ptr<ConnectionManager> connectionMgr() { return connMgr_; }
-   std::shared_ptr<CelerClientQt> celerConnection() { return celerConn_; }
+   [[deprecated]] std::shared_ptr<ConnectionManager> connectionMgr() { return connMgr_; }
+   [[deprecated]] std::shared_ptr<CelerClientQt> celerConnection() { return celerConn_; }
    std::shared_ptr<spdlog::logger> logger() { return logger_; }
    std::shared_ptr<bs::core::WalletsManager> walletsMgr() { return walletsMgr_; }
-   std::shared_ptr<MarketDataProvider> mdProvider() { return mdProvider_; }
-   std::shared_ptr<MDCallbacksQt> mdCallbacks() { return mdCallbacks_; }
-   std::shared_ptr<QuoteProvider> quoteProvider() { return quoteProvider_; }
+   [[deprecated]] std::shared_ptr<MarketDataProvider> mdProvider() { return mdProvider_; }
+   [[deprecated]] std::shared_ptr<MDCallbacksQt> mdCallbacks() { return mdCallbacks_; }
+   [[deprecated]] std::shared_ptr<QuoteProvider> quoteProvider() { return quoteProvider_; }
 
    void requireArmory();
-   void requireAssets();
-   void requireConnections();
+   [[deprecated]] void requireAssets();
+   [[deprecated]] void requireConnections();
 
 private:
    std::shared_ptr<ApplicationSettings>  appSettings_;
