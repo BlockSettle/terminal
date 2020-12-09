@@ -312,14 +312,14 @@ bool ApiJsonAdapter::processBlockchain(const Envelope &env)
          walletsReady_ = true;
       }
       break;
-   case ArmoryMessage::kLedgerEntries: [[fallthrough]]
-   case ArmoryMessage::kAddressHistory: [[fallthrough]]
+   case ArmoryMessage::kLedgerEntries: [[fallthrough]];
+   case ArmoryMessage::kAddressHistory: [[fallthrough]];
    case ArmoryMessage::kFeeLevelsResponse:
       if (hasRequest(env.id)) {
          sendReplyToClient(env.id, msg, env.sender);
       }
       break;
-   case ArmoryMessage::kZcReceived: [[fallthrough]]
+   case ArmoryMessage::kZcReceived: [[fallthrough]];
    case ArmoryMessage::kZcInvalidated:
       sendReplyToClient(0, msg, env.sender);
       break;
@@ -362,19 +362,19 @@ bool ApiJsonAdapter::processWallets(const Envelope &env)
       return true;
    }
    switch (msg.data_case()) {
-   case WalletsMessage::kWalletLoaded: [[fallthrough]]
-   case WalletsMessage::kAuthWallet: [[fallthrough]]
+   case WalletsMessage::kWalletLoaded: [[fallthrough]];
+   case WalletsMessage::kAuthWallet: [[fallthrough]];
    case WalletsMessage::kHdWallet:
       sendReplyToClient(0, msg, env.sender);
       break;
-   case WalletsMessage::kWalletAddresses: [[fallthrough]]
-   case WalletsMessage::kAddrComments: [[fallthrough]]
-   case WalletsMessage::kWalletData: [[fallthrough]]
-   case WalletsMessage::kWalletBalances: [[fallthrough]]
-   case WalletsMessage::kTxDetailsResponse: [[fallthrough]]
-   case WalletsMessage::kWalletsListResponse: [[fallthrough]]
-   case WalletsMessage::kUtxos: [[fallthrough]]
-   case WalletsMessage::kAuthKey: [[fallthrough]]
+   case WalletsMessage::kWalletAddresses: [[fallthrough]];
+   case WalletsMessage::kAddrComments: [[fallthrough]];
+   case WalletsMessage::kWalletData: [[fallthrough]];
+   case WalletsMessage::kWalletBalances: [[fallthrough]];
+   case WalletsMessage::kTxDetailsResponse: [[fallthrough]];
+   case WalletsMessage::kWalletsListResponse: [[fallthrough]];
+   case WalletsMessage::kUtxos: [[fallthrough]];
+   case WalletsMessage::kAuthKey: [[fallthrough]];
    case WalletsMessage::kReservedUtxos:
       if (hasRequest(env.id)) {
          sendReplyToClient(env.id, msg, env.sender);
@@ -393,7 +393,7 @@ bool ApiJsonAdapter::processOnChainTrack(const Envelope &env)
       return true;
    }
    switch (msg.data_case()) {
-   case OnChainTrackMessage::kAuthState: [[fallthrough]]
+   case OnChainTrackMessage::kAuthState: [[fallthrough]];
    case OnChainTrackMessage::kVerifiedAuthAddresses:
       sendReplyToClient(0, msg, env.sender);
       break;
@@ -477,12 +477,12 @@ bool ApiJsonAdapter::processSettlement(const bs::message::Envelope& env)
       return true;
    }
    switch (msg.data_case()) {
-   case SettlementMessage::kQuote: [[fallthrough]]
-   case SettlementMessage::kMatchedQuote: [[fallthrough]]
-   case SettlementMessage::kFailedSettlement: [[fallthrough]]
-   case SettlementMessage::kPendingSettlement: [[fallthrough]]
-   case SettlementMessage::kSettlementComplete: [[fallthrough]]
-   case SettlementMessage::kQuoteCancelled: [[fallthrough]]
+   case SettlementMessage::kQuote: [[fallthrough]];
+   case SettlementMessage::kMatchedQuote: [[fallthrough]];
+   case SettlementMessage::kFailedSettlement: [[fallthrough]];
+   case SettlementMessage::kPendingSettlement: [[fallthrough]];
+   case SettlementMessage::kSettlementComplete: [[fallthrough]];
+   case SettlementMessage::kQuoteCancelled: [[fallthrough]];
    case SettlementMessage::kQuoteReqNotif:
       sendReplyToClient(0, msg, env.sender);
       break;
@@ -521,9 +521,9 @@ bool ApiJsonAdapter::processMktData(const bs::message::Envelope& env)
       return true;
    }
    switch (msg.data_case()) {
-   case MktDataMessage::kDisconnected: [[fallthrough]]
-   case MktDataMessage::kNewSecurity: [[fallthrough]]
-   case MktDataMessage::kAllInstrumentsReceived: [[fallthrough]]
+   case MktDataMessage::kDisconnected: [[fallthrough]];
+   case MktDataMessage::kNewSecurity: [[fallthrough]];
+   case MktDataMessage::kAllInstrumentsReceived: [[fallthrough]];
    case MktDataMessage::kPriceUpdate:
       sendReplyToClient(0, msg, env.sender);
       break;
