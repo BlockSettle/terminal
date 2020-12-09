@@ -233,7 +233,7 @@ bool SettlementAdapter::processMatchingOrder(const MatchingMessage_Order& respon
       msgResp->set_info(order.info);
    }
    else if (order.status == bs::network::Order::Status::Pending) {
-      if (itSettl->second->dealer && (itSettl->second->quote.assetType == bs::network::Asset::SpotXBT)
+      if (/*itSettl->second->dealer &&*/ (itSettl->second->quote.assetType == bs::network::Asset::SpotXBT)
          && (itSettl->second->quote.quotingType == bs::network::Quote::Tradeable)) {
          if (((itSettl->second->quote.side == bs::network::Side::Buy) ||
             (itSettl->second->quote.product != bs::network::XbtCurrency))
@@ -760,10 +760,10 @@ bool SettlementAdapter::processSignedTx(uint64_t msgId
          const Tx tx(BinaryData::fromString(response.signed_tx()));
          pendingZCs_[tx.getThisHash()] = itPayout->second;
       }
-      catch (const std::exception&) {
-         logger_->error("[{}] invalid signed payout TX", __func__);
-         payoutRequests_.erase(itPayout);
+      catch (const std::exception& e) {
+         logger_->error("[{}] invalid signed payout TX: {}", __func__, e.what());
          cancel(itPayout->second);
+         payoutRequests_.erase(itPayout);
          return true;
       }
       const auto& itSettl = settlBySettlId_.find(itPayout->second);

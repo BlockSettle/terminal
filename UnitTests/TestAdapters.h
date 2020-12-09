@@ -13,11 +13,15 @@ namespace spdlog {
 }
 namespace BlockSettle {
    namespace Terminal {
+      class BsServerMessage;
+      class BsServerMessage_SignXbtHalf;
+      class BsServerMessage_XbtTransaction;
       class MatchingMessage;
       class RFQ;
       class ReplyToRFQ;
    }
 }
+struct ArmoryInstance;
 
 class TestSupervisor : public bs::message::Adapter
 {
@@ -57,18 +61,20 @@ class MatchingMock : public bs::message::Adapter
 {
 public:
    MatchingMock(const std::shared_ptr<spdlog::logger>& logger
-      , const std::string& name, const std::string& email);
+      , const std::string& name, const std::string& email
+      , const std::shared_ptr<ArmoryInstance> &);  // for pushing ZCs (mocking PB)
 
    bool process(const bs::message::Envelope&) override;
 
    bs::message::Adapter::Users supportedReceivers() const override
    {
-      return { user_ };
+      return { user_, userBS_ };
    }
    std::string name() const override { return "Match" + name_; }
 
    void link(const std::shared_ptr<MatchingMock>&);
-   bool inject(const BlockSettle::Terminal::MatchingMessage&, const std::string &email);
+   bool inject(const BlockSettle::Terminal::MatchingMessage&, const std::string& email);
+   bool inject(const BlockSettle::Terminal::BsServerMessage&, const std::string& email);
 
 private:
    bool sendIncomingRFQ(const BlockSettle::Terminal::RFQ&, const std::string &email);
@@ -77,17 +83,30 @@ private:
    bool sendPendingOrder(const std::string& rfqId);
    bool sendFilledOrder(const std::string& rfqId);
 
+   bool sendUnsignedPayinRequest(const std::string& settlIdBin);
+   bool sendSignedPayinRequest(const BlockSettle::Terminal::BsServerMessage_SignXbtHalf&);
+   bool sendSignedPayoutRequest(const BlockSettle::Terminal::BsServerMessage_SignXbtHalf&);
+   bool processUnsignedPayin(const BlockSettle::Terminal::BsServerMessage_XbtTransaction&);
+   bool processSignedTX(const BlockSettle::Terminal::BsServerMessage_XbtTransaction&
+      , bool payin, bool recurse = false);
+
 private:
    std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<bs::message::User>  user_, userSettl_;
+   std::shared_ptr<bs::message::User>  user_, userBS_, userSettl_;
    std::string name_, email_;
+   std::shared_ptr<ArmoryInstance>  armoryInst_;
 
    std::set<std::shared_ptr<MatchingMock>>   siblings_;
 
    struct Match {
       std::string sesToken;
+      std::string reqAuthPubKey;
       bs::network::Quote   quote;
       bs::network::Order   order;
+      BinaryData  signedPayin;
+      BinaryData  signedPayout;
+
+      bool isSellXBT() const;
    };
    std::unordered_map<std::string, Match> matches_;
 };

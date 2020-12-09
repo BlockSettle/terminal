@@ -416,6 +416,7 @@ struct ArmoryInstance
 
    void setReorgBranchPoint(const BinaryData&);
    BinaryData getCurrentTopBlockHash(void) const;
+   uint32_t getCurrentTopBlock(void) const;
 };
 
 class TestArmoryConnection : public ArmoryObject
@@ -469,7 +470,7 @@ public:
    [[deprecated]] std::shared_ptr<MDCallbacksQt> mdCallbacks() { return mdCallbacks_; }
    [[deprecated]] std::shared_ptr<QuoteProvider> quoteProvider() { return quoteProvider_; }
 
-   void requireArmory();
+   void requireArmory(bool waitForReady = true);
    [[deprecated]] void requireAssets();
    [[deprecated]] void requireConnections();
 

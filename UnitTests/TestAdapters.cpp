@@ -1,12 +1,18 @@
 #include "TestAdapters.h"
+#include <QDateTime>
 #include <spdlog/spdlog.h>
 #include "MessageUtils.h"
+#include "ProtobufHeadlessUtils.h"
 #include "TestEnv.h"
+
+#include "common.pb.h"
+#include "headless.pb.h"
 #include "terminal.pb.h"
 
 //#define MSG_DEBUGGING   // comment this out if msg id debug output is not needed
 
 using namespace bs::message;
+using namespace BlockSettle::Common;
 using namespace BlockSettle::Terminal;
 
 constexpr auto kExpirationTimeout = std::chrono::seconds{ 5 };
@@ -101,9 +107,12 @@ void TestSupervisor::unwaitFor(const uint32_t seqNo)
 
 
 MatchingMock::MatchingMock(const std::shared_ptr<spdlog::logger>& logger
-   , const std::string& name, const std::string &email)
+   , const std::string& name, const std::string &email
+   , const std::shared_ptr<ArmoryInstance>& armoryInst)
    : logger_(logger), name_(name), email_(email)
+   , armoryInst_(armoryInst)
    , user_(UserTerminal::create(TerminalUsers::Matching))
+   , userBS_(UserTerminal::create(TerminalUsers::BsServer))
    , userSettl_(UserTerminal::create(TerminalUsers::Settlement))
 {}
 
@@ -122,7 +131,7 @@ bool MatchingMock::process(const bs::message::Envelope& env)
             //TODO: send result back to requester
          }
          else {
-            matches_[msg.send_rfq().id()] = {};
+            matches_[msg.send_rfq().id()] = { {}, msg.send_rfq().auth_pub_key() };
             for (const auto& sibling : siblings_) {
                sibling->inject(msg, email_);
             }
@@ -140,10 +149,10 @@ bool MatchingMock::process(const bs::message::Envelope& env)
                break;
             }
             quote.set_quote_id(CryptoPRNG::generateRandom(6).toHexStr());
+            quote.set_quoting_type((int)bs::network::Quote::Tradeable);
             auto msgCopy = msg;
             *msgCopy.mutable_submit_quote_notif()->mutable_quote() = quote;
             itMatch->second.quote = fromMsg(msgCopy.submit_quote_notif().quote());
-            logger_->debug("[{}] quoteId = {}", __func__, itMatch->second.quote.quoteId);
             for (const auto& sibling : siblings_) {
                sibling->inject(msgCopy, email_);
             }
@@ -182,13 +191,31 @@ bool MatchingMock::process(const bs::message::Envelope& env)
             logger_->warn("[{}] not our RFQ {}", __func__, msg.accept_rfq().rfq_id());
             break;
          }
-         sendFilledOrder(itMatch->first);
-         matches_.erase(itMatch);
-         for (const auto& sibling : siblings_) {
-            sibling->inject(msg, email_);
+         if (itMatch->second.quote.assetType == bs::network::Asset::SpotFX) {
+            sendFilledOrder(itMatch->first);
+            matches_.erase(itMatch);
+            for (const auto& sibling : siblings_) {
+               sibling->inject(msg, email_);
+            }
          }
       }
          break;
+      default: break;
+      }
+   }
+   if (env.receiver && env.request && (env.receiver->value() == userBS_->value())) {
+      BsServerMessage msg;
+      if (!msg.ParseFromString(env.message)) {
+         logger_->error("[{}] failed to parse own request #{}", __func__, env.id);
+         return true;
+      }
+      switch (msg.data_case()) {
+      case BsServerMessage::kSendUnsignedPayin:
+         return processUnsignedPayin(msg.send_unsigned_payin());
+      case BsServerMessage::kSendSignedPayin:
+         return processSignedTX(msg.send_signed_payin(), true, true);
+      case BsServerMessage::kSendSignedPayout:
+         return processSignedTX(msg.send_signed_payout(), false, true);
       default: break;
       }
    }
@@ -233,6 +260,24 @@ bool MatchingMock::inject(const MatchingMessage& msg, const std::string &email)
    return true;
 }
 
+bool MatchingMock::inject(const BsServerMessage& msg, const std::string& email)
+{
+   switch (msg.data_case()) {
+   case BsServerMessage::kUnsignedPayinRequested:
+      return sendUnsignedPayinRequest(msg.unsigned_payin_requested());
+   case BsServerMessage::kSignedPayoutRequested:
+      return sendSignedPayoutRequest(msg.signed_payout_requested());
+   case BsServerMessage::kSignedPayinRequested:
+      return sendSignedPayinRequest(msg.signed_payin_requested());
+   case BsServerMessage::kSendSignedPayin:
+      return processSignedTX(msg.send_signed_payin(), true);
+   case BsServerMessage::kSendSignedPayout:
+      return processSignedTX(msg.send_signed_payout(), false);
+   default: break;
+   }
+   return true;
+}
+
 bool MatchingMock::sendIncomingRFQ(const RFQ& rfq, const std::string &email)
 {
    MatchingMessage msg;
@@ -262,6 +307,7 @@ bool MatchingMock::sendQuoteReply(const ReplyToRFQ& reply, const std::string& em
       return true;
    }
    itMatch->second.quote = fromMsg(reply.quote());
+   itMatch->second.quote.requestorAuthPublicKey = itMatch->second.reqAuthPubKey;
    itMatch->second.sesToken = reply.session_token();
    return sendQuote(itMatch->second.quote);
 }
@@ -306,6 +352,21 @@ bool MatchingMock::sendPendingOrder(const std::string& rfqId)
    for (const auto& sibling : siblings_) {
       sibling->inject(msg, email_);
    }
+
+   if (itMatch->second.quote.assetType == bs::network::Asset::SpotXBT) {
+      const auto& settlementId = BinaryData::CreateFromHex(itMatch->second.quote.settlementId);
+      BsServerMessage msgBS;
+      msgBS.set_unsigned_payin_requested(settlementId.toBinStr());
+      if (itMatch->second.isSellXBT()) {
+         for (const auto& sibling : siblings_) {
+            sibling->inject(msgBS, email_);
+         }
+      }
+      else {
+         Envelope envBS{ 0, userBS_, userSettl_, {}, {}, msgBS.SerializeAsString() };
+         pushFill(envBS);
+      }
+   }
    return true;
 }
 
@@ -319,5 +380,134 @@ bool MatchingMock::sendFilledOrder(const std::string& rfqId)
    MatchingMessage msg;
    toMsg(itMatch->second.order, msg.mutable_order());
    Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   return pushFill(env);
+}
+
+bool MatchingMock::sendUnsignedPayinRequest(const std::string& settlIdBin)
+{
+   const auto& settlIdHex = BinaryData::fromString(settlIdBin).toHexStr();
+   const auto& itMatch = std::find_if(matches_.cbegin(), matches_.cend()
+      , [settlIdHex](const std::pair<std::string, Match>& match) {
+      return (match.second.quote.settlementId == settlIdHex);
+   });
+   if (itMatch == matches_.end()) {
+      logger_->warn("[{}] can't find match with settlement id {}", __func__, settlIdHex);
+      return true;
+   }
+   BsServerMessage msgBS;
+   msgBS.set_unsigned_payin_requested(settlIdBin);
+   Envelope env{ 0, userBS_, userSettl_, {}, {}, msgBS.SerializeAsString() };
+   return pushFill(env);
+}
+
+bool MatchingMock::sendSignedPayinRequest(const BsServerMessage_SignXbtHalf& request)
+{
+   const auto& settlIdHex = BinaryData::fromString(request.settlement_id()).toHexStr();
+   const auto& itMatch = std::find_if(matches_.cbegin(), matches_.cend()
+      , [settlIdHex](const std::pair<std::string, Match>& match) {
+      return (match.second.quote.settlementId == settlIdHex);
+   });
+   if (itMatch == matches_.end()) {
+      logger_->warn("[{}] can't find match with settlement id {}", __func__, settlIdHex);
+      return true;
+   }
+   BsServerMessage msgBS;
+   *msgBS.mutable_signed_payin_requested() = request;
+   Envelope env{ 0, userBS_, userSettl_, {}, {}, msgBS.SerializeAsString() };
+   return pushFill(env);
+}
+
+bool MatchingMock::sendSignedPayoutRequest(const BsServerMessage_SignXbtHalf& request)
+{
+   const auto& settlIdHex = BinaryData::fromString(request.settlement_id()).toHexStr();
+   const auto& itMatch = std::find_if(matches_.cbegin(), matches_.cend()
+      , [settlIdHex](const std::pair<std::string, Match>& match) {
+      return (match.second.quote.settlementId == settlIdHex);
+   });
+   if (itMatch == matches_.end()) {
+      logger_->warn("[{}] can't find match with settlement id {}", __func__, settlIdHex);
+      return true;
+   }
+   BsServerMessage msgBS;
+   *msgBS.mutable_signed_payout_requested() = request;
+   Envelope env{ 0, userBS_, userSettl_, {}, {}, msgBS.SerializeAsString() };
+   return pushFill(env);
+}
+
+bool MatchingMock::processUnsignedPayin(const BsServerMessage_XbtTransaction& response)
+{
+   Codec_SignerState::SignerState signerState;
+   if (!signerState.ParseFromString(response.tx())) {
+      logger_->error("[{}] failed to parse SignerState", __func__);
+      return true;   //TODO: send settlement failure?
+   }
+   bs::core::wallet::TXSignRequest txReq;
+   txReq.armorySigner_.deserializeState(signerState);
+   const auto& payinHash = txReq.txId();
+   if (payinHash.empty()) {
+      logger_->error("[{}] invalid payin hash", __func__);
+      return true;   //TODO: send settlement failure?
+   }
+   BsServerMessage msg;
+   auto msgReq = msg.mutable_signed_payout_requested();
+   msgReq->set_settlement_id(response.settlement_id());
+   msgReq->set_payin_hash(payinHash.toBinStr());
+   for (const auto& sibling : siblings_) {
+      sibling->inject(msg, email_);
+   }
+   msgReq = msg.mutable_signed_payin_requested();
+   msgReq->set_settlement_id(response.settlement_id());
+   msgReq->set_unsigned_payin(response.tx());
+   msgReq->set_payin_hash(payinHash.toBinStr());
+   const auto curTime = QDateTime::currentDateTime();
+   msgReq->set_timestamp(curTime.toMSecsSinceEpoch());
+   Envelope env{ 0, userBS_, userSettl_, {}, {}, msg.SerializeAsString() };
+   return pushFill(env);
+}
+
+bool MatchingMock::processSignedTX(const BsServerMessage_XbtTransaction& response
+   , bool payin, bool recurse)
+{
+   const auto& settlIdHex = BinaryData::fromString(response.settlement_id()).toHexStr();
+   const auto &itMatch = std::find_if(matches_.begin(), matches_.end()
+      , [settlIdHex](const std::pair<std::string, Match> &match) {
+      return (match.second.quote.settlementId == settlIdHex);
+   });
+   if (itMatch == matches_.end()) {
+      logger_->warn("[{}] unknown settlement id {}", __func__, settlIdHex);
+      return true;
+   }
+   {
+      const auto& tx = BinaryData::fromString(response.tx());
+      if (payin) {
+         itMatch->second.signedPayin = tx;
+      } else {
+         itMatch->second.signedPayout = tx;
+      }
+   }
+   if (!itMatch->second.signedPayin.empty() && !itMatch->second.signedPayout.empty()) {
+      armoryInst_->pushZC(itMatch->second.signedPayin);
+      armoryInst_->pushZC(itMatch->second.signedPayout);
+
+      //TODO: monitor new blocks and provide gradual order status update on each conf
+      sendFilledOrder(itMatch->first);
+   }
+   else if (recurse) {
+      BsServerMessage msg;
+      if (payin) {
+         *msg.mutable_send_signed_payin() = response;
+      } else {
+         *msg.mutable_send_signed_payout() = response;
+      }
+      for (const auto& sibling : siblings_) {
+         sibling->inject(msg, email_);
+      }
+   }
+   return true;
+}
+
+bool MatchingMock::Match::isSellXBT() const
+{
+   return ((quote.side == bs::network::Side::Buy)
+      || (quote.product != bs::network::XbtCurrency));
 }

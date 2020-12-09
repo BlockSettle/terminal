@@ -208,7 +208,6 @@ MockTerminal::MockTerminal(const std::shared_ptr<spdlog::logger>& logger
    bus_->addAdapter(std::make_shared<SettingsMockAdapter>(logger));
    bus_->addAdapter(signAdapter);
    //TODO: add TrackerMockAdapter
-   //TODO: add BsMockAdapter
    bus_->addAdapter(std::make_shared<WalletsAdapter>(logger_
       , userWallets, signAdapter->createClient(), userBlockchain));
    bus_->addAdapter(std::make_shared<SettlementAdapter>(logger));

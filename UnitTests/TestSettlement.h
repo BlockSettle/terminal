@@ -68,11 +68,12 @@ protected:
    std::vector<std::shared_ptr<WalletSignerContainer>>      inprocSigner_;
    std::vector<bs::Address>      authAddrs_;
    std::vector<SecureBinaryData> authKeys_;
-   std::vector<bs::Address>      fundAddrs_;
+   std::vector<bs::Address>      fundAddrs_, recvAddrs_, changeAddrs_;
    std::map<bs::Address, std::shared_ptr<bs::core::hd::Leaf>>  settlLeafMap_;
 
    const std::string fxSecurity_{ "EUR/USD" };
    const std::string fxProduct_{ "EUR" };
+   const std::string xbtSecurity_{ "XBT/EUR" };
 
 private:
    QMutex            mtxWalletId_;

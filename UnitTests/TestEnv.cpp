@@ -28,7 +28,6 @@
 #include <QDebug>
 #include <QDir>
 #include <QStandardPaths>
-#include <QThread>
 #include <spdlog/spdlog.h>
 #include <btc/ecc.h>
 
@@ -93,7 +92,7 @@ void TestEnv::shutdown()
    ACTqueue::notifQueue_.clear();
 }
 
-void TestEnv::requireArmory()
+void TestEnv::requireArmory(bool waitForReady)
 {
    //init armorydb
    if (armoryInstance_ != nullptr) {
@@ -122,14 +121,21 @@ void TestEnv::requireArmory()
 
    qDebug() << "Waiting for ArmoryDB connection...";
    while (armoryConnection_->state() != ArmoryState::Connected) {
-      QThread::msleep(1);
+      std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
    }
-   qDebug() << "Armory connected - waiting for ready state...";
+   if (waitForReady) {
+      qDebug() << "Armory connected - waiting for ready state...";
+   }
+   else {
+      qDebug() << "Armory connected - go online";
+   }
    armoryConnection_->goOnline();
-   while (armoryConnection_->state() != ArmoryState::Ready) {
-      QThread::msleep(1);
+   if (waitForReady) {
+      while (armoryConnection_->state() != ArmoryState::Ready) {
+         std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
+      }
+      logger_->debug("Armory is ready - continue execution");
    }
-   logger_->debug("Armory is ready - continue execution");
 }
 
 void TestEnv::requireAssets()
@@ -281,19 +287,28 @@ void ArmoryInstance::pushZC(const BinaryData& zc, unsigned int blocksUntilMined,
 void ArmoryInstance::setReorgBranchPoint(const BinaryData& hash)
 {
    auto headerPtr = theBDMt_->bdm()->blockchain()->getHeaderByHash(hash);
-   if (headerPtr == nullptr)
+   if (headerPtr == nullptr) {
       throw std::runtime_error("null header ptr");
-
+   }
    nodePtr_->setReorgBranchPoint(headerPtr);
 }
 
 BinaryData ArmoryInstance::getCurrentTopBlockHash() const
 {
    auto headerPtr = theBDMt_->bdm()->blockchain()->top();
-   if (headerPtr == nullptr)
+   if (headerPtr == nullptr) {
       throw std::runtime_error("null header ptr");
-
+   }
    return headerPtr->getThisHash();
+}
+
+uint32_t ArmoryInstance::getCurrentTopBlock(void) const
+{
+   auto headerPtr = theBDMt_->bdm()->blockchain()->top();
+   if (headerPtr == nullptr) {
+      throw std::runtime_error("null header ptr");
+   }
+   return headerPtr->getBlockHeight();
 }
 
 ////
