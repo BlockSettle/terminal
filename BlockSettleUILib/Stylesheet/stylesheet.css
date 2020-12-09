@@ -1696,3 +1696,7 @@ QDialog#LoginWindow QWidget#widgetSignup[testEnv="true"] {
     color: #5097bd;
     text-decoration: underline;
     text-transform: none;}
+
+#labelFuturePrice[selectedLine="true"] {
+  color: #ffffff;
+}

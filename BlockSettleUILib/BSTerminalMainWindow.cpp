@@ -2259,6 +2259,8 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
    connect(bsClient_.get(), &BsClient::disconnected, orderListModel_.get(), &OrderListModel::onDisconnected);
    connect(bsClient_.get(), &BsClient::processPbMessage, orderListModel_.get(), &OrderListModel::onMessageFromPB);
 
+   connect(bsClient_.get(), &BsClient::processPbMessage, assetManager_.get(), &AssetManager::onMessageFromPB);
+
    utxoReservationMgr_->setFeeRatePb(result.feeRatePb);
    connect(bsClient_.get(), &BsClient::feeRateReceived, this, [this] (float feeRate) {
       utxoReservationMgr_->setFeeRatePb(feeRate);

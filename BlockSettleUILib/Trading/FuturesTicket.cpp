@@ -21,6 +21,7 @@
 
 #include <QEvent>
 #include <QKeyEvent>
+#include <QStyle>
 
 #include <spdlog/spdlog.h>
 
@@ -33,6 +34,29 @@ namespace {
       }
       return UiUtils::displayPriceForAssetType(price, at);
    }
+
+   const auto kAmounts = std::vector<double>{1., 5., 10., 25.};
+
+   const auto kLabelCount = kAmounts.size() + 1;
+
+   std::string getLabel(size_t i)
+   {
+      if (i < kAmounts.size()) {
+         return fmt::format("{:0.2f}", kAmounts.at(i));
+      } else {
+         return fmt::format(">{:0.2f}", kAmounts.back());
+      }
+   }
+
+   size_t getSelectedLine(double amount) {
+      for (size_t i = 0; i < kAmounts.size(); ++i) {
+         if (amount < kAmounts[i]) {
+            return i;
+         }
+      }
+      return kAmounts.size();
+   }
+
 }
 
 
@@ -42,20 +66,38 @@ FuturesTicket::FuturesTicket(QWidget* parent)
 {
    ui_->setupUi(this);
 
-   invalidBalanceFont_ = ui_->labelBalanceValue->font();
-   invalidBalanceFont_.setStrikeOut(true);
-
    xbtAmountValidator_ = new XbtAmountValidator(this);
 
    ui_->lineEditAmount->installEventFilter(this);
 
-   connect(ui_->pushButtonSell, &QPushButton::clicked, this, &FuturesTicket::onSellSelected);
-   connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &FuturesTicket::onBuySelected);
+   connect(ui_->pushButtonBuy, &QPushButton::clicked, this, [this] {
+      submit(bs::network::Side::Buy);
+   });
+   connect(ui_->pushButtonSell, &QPushButton::clicked, this, [this] {
+      submit(bs::network::Side::Sell);
+   });
+   connect(ui_->lineEditAmount, &QLineEdit::textEdited, this, &FuturesTicket::onAmountEdited);
+   connect(ui_->pushButtonClose, &QPushButton::clicked, this, &FuturesTicket::onCloseAll);
 
-   connect(ui_->pushButtonSubmit, &QPushButton::clicked, this, &FuturesTicket::submitButtonClicked);
-   //connect(ui_->lineEditAmount, &QLineEdit::textEdited, this, &FuturesTicket::onAmountEdited);
+   auto pricesLayout = new QGridLayout(ui_->widgetPrices);
+   pricesLayout->setSpacing(0);
+   pricesLayout->setContentsMargins(0, 0, 0, 0);
 
-   //disablePanel();
+   labels_.resize(kLabelCount);
+   for (size_t i = 0; i < kLabelCount; ++i) {
+      auto label = new QLabel(this);
+      label->setText(QString::fromStdString(getLabel(i)));
+      pricesLayout->addWidget(label, int(i), 0, Qt::AlignCenter);
+      for (size_t j = 0; j < 2; ++j) {
+         auto label = new QLabel(this);
+         label->setObjectName(QStringLiteral("labelFuturePrice"));
+         pricesLayout->addWidget(label, int(i), int(j + 1), Qt::AlignCenter);
+         labels_[i][j] = label;
+      }
+   }
+
+   ui_->helpLabel->hide();
+   ui_->toolButtonMax->hide();
 }
 
 FuturesTicket::~FuturesTicket() = default;
@@ -64,10 +106,6 @@ void FuturesTicket::resetTicket()
 {
    ui_->labelProductGroup->setText(kEmptyInformationalLabelText);
    ui_->labelSecurityId->setText(kEmptyInformationalLabelText);
-   ui_->labelIndicativePrice->setText(kEmptyInformationalLabelText);
-
-   currentBidPrice_ = kEmptyInformationalLabelText;
-   currentOfferPrice_ = kEmptyInformationalLabelText;
 
    ui_->lineEditAmount->setValidator(xbtAmountValidator_);
    ui_->lineEditAmount->clear();
@@ -82,7 +120,10 @@ void FuturesTicket::init(const std::shared_ptr<spdlog::logger> &logger
    authAddressManager_ = authAddressManager;
    assetManager_ = assetManager;
 
-   updateSubmitButton();
+   connect(assetManager_.get(), &AssetManager::netDeliverableBalanceChanged, this, &FuturesTicket::updatePanel);
+   connect(assetManager_.get(), &AssetManager::balanceChanged, this, &FuturesTicket::updatePanel);
+
+   updatePanel();
 }
 
 void FuturesTicket::setType(bs::network::Asset::Type type)
@@ -96,17 +137,8 @@ void FuturesTicket::SetCurrencyPair(const QString& currencyPair)
 
    CurrencyPair cp(currencyPair.toStdString());
 
-   currentProduct_ = QString::fromStdString(cp.NumCurrency());
-   contraProduct_ = QString::fromStdString(cp.DenomCurrency());
+   currentProduct_ = cp.NumCurrency() == bs::network::XbtCurrency ? cp.DenomCurrency() : cp.NumCurrency();
    security_ = currencyPair;
-
-   ui_->pushButtonNumCcy->setText(currentProduct_);
-   ui_->pushButtonNumCcy->setChecked(true);
-
-   ui_->pushButtonDenomCcy->setText(contraProduct_);
-   ui_->pushButtonDenomCcy->setChecked(false);
-
-   ui_->pushButtonDenomCcy->setEnabled(false);
 }
 
 void FuturesTicket::SetProductAndSide(const QString& productGroup, const QString& currencyPair
@@ -118,18 +150,15 @@ void FuturesTicket::SetProductAndSide(const QString& productGroup, const QString
       return;
    }
 
-   //SetProductGroup(productGroup);
+   ui_->labelProductGroup->setText(productGroup);
    SetCurrencyPair(currencyPair);
    //SetCurrentIndicativePrices(bidPrice, offerPrice);
 
-  if (side == bs::network::Side::Type::Undefined) {
-     side = bs::network::Side::Buy;
-  }
+   if (side == bs::network::Side::Type::Undefined) {
+      side = bs::network::Side::Buy;
+   }
 
-  ui_->pushButtonSell->setChecked(side == bs::network::Side::Sell);
-  ui_->pushButtonBuy->setChecked(side == bs::network::Side::Buy);
-
-  productSelectionChanged();
+   productSelectionChanged();
 }
 
 void FuturesTicket::setSecurityId(const QString& productGroup, const QString& currencyPair
@@ -150,16 +179,7 @@ void FuturesTicket::setSecuritySell(const QString& productGroup, const QString& 
    SetProductAndSide(productGroup, currencyPair, bidPrice, offerPrice, bs::network::Side::Sell);
 }
 
-bs::network::Side::Type FuturesTicket::getSelectedSide() const
-{
-   if (ui_->pushButtonSell->isChecked()) {
-      return bs::network::Side::Sell;
-   }
-
-   return bs::network::Side::Buy;
-}
-
-QString FuturesTicket::getProduct() const
+std::string FuturesTicket::getProduct() const
 {
    return currentProduct_;
 }
@@ -180,29 +200,80 @@ void FuturesTicket::productSelectionChanged()
    const auto bidPrice = formatPrice(mdInfo.bidPrice, type_);
    const auto askPrice = formatPrice(mdInfo.askPrice, type_);
 
-   ui_->labelBid->setText(bidPrice);
-   ui_->labelAsk->setText(askPrice);
+   for (auto &labelPair : labels_) {
+      labelPair[0]->setText(bidPrice);
+      labelPair[1]->setText(askPrice);
+   }
+
+   updatePanel();
 }
 
-void FuturesTicket::updateSubmitButton()
+void FuturesTicket::updatePanel()
 {
+   const double balance = assetManager_ ?
+      assetManager_->getBalance(currentProduct_, false, nullptr) : 0.0;
+   auto amountString = UiUtils::displayCurrencyAmount(balance);
+   QString text = tr("%1 %2").arg(amountString).arg(QString::fromStdString(currentProduct_));
+   ui_->labelBalanceValue->setText(text);
+
+   ui_->labelFutureBalanceValue->setText(UiUtils::displayAmount(assetManager_->netDeliverableBalanceXbt()));
+
+   double qty = getQuantity();
+   size_t selectedLine = getSelectedLine(qty);
+
+   const auto selectedProperyName = "selectedLine";
+   for (size_t lineIndex = 0; lineIndex < kLabelCount; ++lineIndex) {
+      const auto &labelsLine = labels_.at(lineIndex);
+      for (size_t labelIndex = 0; labelIndex < labelsLine.size(); ++labelIndex) {
+         auto label = labelsLine.at(labelIndex);
+         bool isSelectedOld = label->property(selectedProperyName).toBool();
+         bool isSelectedNew = lineIndex == selectedLine && qty > 0;
+         if (isSelectedNew != isSelectedOld) {
+            label->setProperty(selectedProperyName, isSelectedNew);
+            label->style()->unpolish(label);
+            label->style()->polish(label);
+            label->update();
+         }
+      }
+   }
+}
+
+void FuturesTicket::onCloseAll()
+{
+   auto netBalance = assetManager_->netDeliverableBalanceXbt();
+   auto amount = bs::XBTAmount(static_cast<uint64_t>(std::abs(netBalance)));
+   auto side = netBalance < 0 ? bs::network::Side::Buy : bs::network::Side::Sell;
+   sendRequest(side, amount);
 }
 
 bool FuturesTicket::eventFilter(QObject *watched, QEvent *evt)
 {
    if (evt->type() == QEvent::KeyPress) {
-      auto keyID = static_cast<QKeyEvent *>(evt)->key();
-      if (ui_->pushButtonSubmit->isEnabled() && ((keyID == Qt::Key_Return) || (keyID == Qt::Key_Enter))) {
-         submitButtonClicked();
-      }
+//      auto keyID = static_cast<QKeyEvent *>(evt)->key();
+//      if (ui_->pushButtonSubmit->isEnabled() && ((keyID == Qt::Key_Return) || (keyID == Qt::Key_Enter))) {
+//         submitButtonClicked();
+//      }
    }
    return QWidget::eventFilter(watched, evt);
 }
 
-void FuturesTicket::submitButtonClicked()
+void FuturesTicket::submit(bs::network::Side::Type side)
 {
+   double amount = getQuantity();
+   if (amount == 0) {
+      return;
+   }
+   sendRequest(side, bs::XBTAmount(amount));
+   ui_->lineEditAmount->clear();
+}
+
+void FuturesTicket::sendRequest(bs::network::Side::Type side, bs::XBTAmount amount)
+{
+   if (amount.GetValue() == 0) {
+      return;
+   }
+   // TODO: Select price depending on amount
    const auto &mdInfo = mdInfo_[type_][security_.toStdString()];
-   auto side = getSelectedSide();
    double price = 0;
    switch (side) {
       case bs::network::Side::Buy:
@@ -214,20 +285,16 @@ void FuturesTicket::submitButtonClicked()
       default:
          break;
    }
-   double amount = getQuantity();
-
-   if (price == 0 || amount == 0) {
+   if (price == 0) {
       return;
    }
 
    bs::network::FutureRequest request;
    request.side = side;
    request.price = price;
-   request.amount = bs::XBTAmount(amount);
+   request.amount = amount;
 
    emit sendFutureRequestToPB(request);
-
-   ui_->lineEditAmount->clear();
 }
 
 void FuturesTicket::onMDUpdate(bs::network::Asset::Type type, const QString &security, bs::network::MDFields mdFields)
@@ -240,16 +307,7 @@ void FuturesTicket::onMDUpdate(bs::network::Asset::Type type, const QString &sec
    }
 }
 
-void FuturesTicket::onSellSelected()
+void FuturesTicket::onAmountEdited(const QString &)
 {
-   ui_->pushButtonSell->setChecked(true);
-   ui_->pushButtonBuy->setChecked(false);
-   productSelectionChanged();
-}
-
-void FuturesTicket::onBuySelected()
-{
-   ui_->pushButtonSell->setChecked(false);
-   ui_->pushButtonBuy->setChecked(true);
-   productSelectionChanged();
+   updatePanel();
 }
