@@ -51,7 +51,7 @@ protected:
    void SetUp() override;
    void TearDown() override;
 
-   void mineBlocks(unsigned count);
+   void mineBlocks(unsigned count, bool wait = true);
    void sendTo(uint64_t value, bs::Address& addr);
 
 public:

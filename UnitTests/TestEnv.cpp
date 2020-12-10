@@ -84,8 +84,8 @@ void TestEnv::shutdown()
 
    walletsMgr_ = nullptr;
 
-   armoryInstance_ = nullptr;
-   armoryConnection_ = nullptr;
+   armoryInstance_.reset();
+   armoryConnection_.reset();
 
    QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)).removeRecursively();
 
@@ -96,6 +96,7 @@ void TestEnv::requireArmory(bool waitForReady)
 {
    //init armorydb
    if (armoryInstance_ != nullptr) {
+      armoryInstance_->init();
       return;
    }
    armoryInstance_ = std::make_shared<ArmoryInstance>();
@@ -161,6 +162,11 @@ void TestEnv::requireConnections()
 ///////////////////////////////////////////////////////////////////////////////
 ArmoryInstance::ArmoryInstance()
    : blkdir_("./blkfiletest"), homedir_("./fakehomedir"), ldbdir_("./ldbtestdir")
+{
+   init();
+}
+
+void ArmoryInstance::init()
 {
    //setup armory folders
    SystemFileUtils::rmDir(blkdir_);
@@ -247,15 +253,18 @@ ArmoryInstance::ArmoryInstance()
 }
 
 ////
-ArmoryInstance::~ArmoryInstance()
+void ArmoryInstance::shutdown()
 {
+   if (!theBDMt_) {
+      return;
+   }
    //shutdown server
    auto&& bdvObj2 = AsyncClient::BlockDataViewer::getNewBDV("127.0.0.1"
       , config_.listenPort_, BlockDataManagerConfig::getDataDir()
       , [](const std::set<BinaryData> &) { return SecureBinaryData{}; }
       , BlockDataManagerConfig::ephemeralPeers_, true, nullptr);
-   auto&& serverPubkey = WebSocketServer::getPublicKey();
-   bdvObj2->addPublicKey(serverPubkey);
+//   auto&& serverPubkey = WebSocketServer::getPublicKey(); // sometimes crash here
+//   bdvObj2->addPublicKey(serverPubkey);
    bdvObj2->connectToRemote();
 
    bdvObj2->shutdown(config_.cookie_);
@@ -310,6 +319,7 @@ uint32_t ArmoryInstance::getCurrentTopBlock(void) const
    }
    return headerPtr->getBlockHeight();
 }
+
 
 ////
 SingleUTWalletACT::~SingleUTWalletACT()

@@ -29,14 +29,16 @@ using namespace BlockSettle::Terminal;
 constexpr auto kFutureWaitTimeout = std::chrono::seconds(5);
 constexpr auto kLongWaitTimeout = std::chrono::seconds(15);
 
-void TestSettlement::mineBlocks(unsigned count)
+void TestSettlement::mineBlocks(unsigned count, bool wait)
 {
 //   auto curHeight = envPtr_->armoryConnection()->topBlock();
    auto curHeight = envPtr_->armoryInstance()->getCurrentTopBlock();
    Recipient_P2PKH coinbaseRecipient(coinbaseScrAddr_, 50 * COIN);
    auto&& cbMap = envPtr_->armoryInstance()->mineNewBlock(&coinbaseRecipient, count);
    coinbaseHashes_.insert(cbMap.begin(), cbMap.end());
-//   envPtr_->blockMonitor()->waitForNewBlocks(curHeight + count);   // doesn't work if armoryConnection is not ready
+   if (wait) { // don't use if armoryConnection is not ready
+      envPtr_->blockMonitor()->waitForNewBlocks(curHeight + count);
+   }
 }
 
 void TestSettlement::sendTo(uint64_t value, bs::Address& addr)
@@ -68,9 +70,6 @@ void TestSettlement::sendTo(uint64_t value, bs::Address& addr)
 }
 
 TestSettlement::TestSettlement()
-{}
-
-void TestSettlement::SetUp()
 {
    passphrase_ = SecureBinaryData::fromString("pass");
    coinbasePubKey_ = CryptoECDSA().ComputePublicKey(coinbasePrivKey_, true);
@@ -81,8 +80,11 @@ void TestSettlement::SetUp()
    envPtr_ = std::make_shared<TestEnv>(StaticLogger::loggerPtr);
    envPtr_->requireArmory(false);
 
-   mineBlocks(101);
+   mineBlocks(101, false);
+}
 
+void TestSettlement::SetUp()
+{
    const auto logger = envPtr_->logger();
    const auto amount = initialTransferAmount_ * COIN;
 
@@ -161,7 +163,9 @@ void TestSettlement::TearDown()
 }
 
 TestSettlement::~TestSettlement()
-{}
+{
+   envPtr_->armoryInstance()->shutdown();
+}
 
 TEST_F(TestSettlement, Initial_balances)
 {

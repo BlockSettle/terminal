@@ -409,7 +409,7 @@ struct ArmoryInstance
    LMDBBlockDatabase* iface_;
 
    ArmoryInstance();
-   ~ArmoryInstance(void);
+   ~ArmoryInstance(void) { shutdown(); }
 
    std::map<unsigned, BinaryData> mineNewBlock(ArmorySigner::ScriptRecipient*, unsigned);
    void pushZC(const BinaryData &, unsigned int blocksUntilMined = 0, bool stage = false);
@@ -417,6 +417,9 @@ struct ArmoryInstance
    void setReorgBranchPoint(const BinaryData&);
    BinaryData getCurrentTopBlockHash(void) const;
    uint32_t getCurrentTopBlock(void) const;
+
+   void init();
+   void shutdown();
 };
 
 class TestArmoryConnection : public ArmoryObject
