@@ -68,6 +68,7 @@ signals:
    void needWalletBalances(const std::string &walletId);
    void needUTXOs(const std::string& id, const std::string& walletId
       , bool confOnly = false, bool swOnly = false);
+   void needWalletDialog(bs::signer::ui::GeneralDialogType, const std::string& rootId);
 
 private slots:
    void onDeleteWallet();

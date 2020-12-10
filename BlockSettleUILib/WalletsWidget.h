@@ -125,6 +125,7 @@ signals:
    void needLedgerEntries(const std::string &filter);
    void needTXDetails(const std::vector<bs::sync::TXWallet> &, bool useCache
       , const bs::Address &);
+   void needWalletDialog(bs::signer::ui::GeneralDialogType, const std::string& rootId);
 
 private slots:
    void showWalletProperties(const QModelIndex& index);

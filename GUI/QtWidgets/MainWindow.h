@@ -159,6 +159,7 @@ namespace bs {
             void needWalletsList(UiUtils::WalletsTypes, const std::string &id);
             void needWalletBalances(const std::string &walletId);
             void needWalletData(const std::string& walletId);
+            void needWalletDialog(bs::signer::ui::GeneralDialogType, const std::string& rootId);
 
             void needExtAddresses(const std::string &walletId);
             void needIntAddresses(const std::string &walletId);

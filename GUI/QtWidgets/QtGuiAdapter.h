@@ -204,6 +204,7 @@ private slots:
    void onSubmitQuote(const bs::network::QuoteNotification&);
    void onPullQuote(const std::string& settlementId, const std::string& reqId
       , const std::string& reqSessToken);
+   void onNeedWalletDialog(bs::signer::ui::GeneralDialogType, const std::string& rootId);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

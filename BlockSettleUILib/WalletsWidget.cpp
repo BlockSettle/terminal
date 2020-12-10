@@ -440,6 +440,7 @@ void WalletsWidget::showWalletProperties(const QModelIndex& index)
          connect(rootDlg_, &RootWalletPropertiesDialog::needHDWalletDetails, this, &WalletsWidget::needHDWalletDetails);
          connect(rootDlg_, &RootWalletPropertiesDialog::needWalletBalances, this, &WalletsWidget::needWalletBalances);
          connect(rootDlg_, &RootWalletPropertiesDialog::needUTXOs, this, &WalletsWidget::needUTXOs);
+         connect(rootDlg_, &RootWalletPropertiesDialog::needWalletDialog, this, &WalletsWidget::needWalletDialog);
          connect(rootDlg_, &QDialog::finished, [this](int) {
             rootDlg_->deleteLater();
             rootDlg_ = nullptr;

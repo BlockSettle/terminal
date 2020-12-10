@@ -1253,6 +1253,7 @@ void MainWindow::initWidgets()
    connect(ui_->widgetWallets, &WalletsWidget::setAddrComment, this, &MainWindow::setAddrComment);
    connect(ui_->widgetWallets, &WalletsWidget::needLedgerEntries, this, &MainWindow::needLedgerEntries);
    connect(ui_->widgetWallets, &WalletsWidget::needTXDetails, this, &MainWindow::needTXDetails);
+   connect(ui_->widgetWallets, &WalletsWidget::needWalletDialog, this, &MainWindow::needWalletDialog);
 
    connect(ui_->widgetExplorer, &ExplorerWidget::needAddressHistory, this, &MainWindow::needAddressHistory);
    connect(ui_->widgetExplorer, &ExplorerWidget::needTXDetails, this, &MainWindow::needTXDetails);

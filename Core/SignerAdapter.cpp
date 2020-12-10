@@ -143,6 +143,8 @@ bool SignerAdapter::processOwnRequest(const bs::message::Envelope &env
       return processSignSettlementTx(env, request.sign_settlement_tx());
    case SignerMessage::kAutoSign:
       return processAutoSignRequest(env, request.auto_sign());
+   case SignerMessage::kDialogRequest:
+      return processDialogRequest(env, request.dialog_request());
    default:
       logger_->warn("[{}] unknown signer request: {}", __func__, request.data_case());
       break;
@@ -796,4 +798,15 @@ bool SignerAdapter::processAutoSignRequest(const bs::message::Envelope& env
    data[QLatin1String("enable")] = request.enable();
    return (signer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ActivateAutoSign
       , data) != 0);
+}
+
+bool SignerAdapter::processDialogRequest(const bs::message::Envelope&
+   , const SignerMessage_DialogRequest& request)
+{
+   const auto& dlgType = static_cast<bs::signer::ui::GeneralDialogType>(request.dialog_type());
+   QVariantMap data;
+   for (const auto& d : request.data()) {
+      data[QString::fromStdString(d.key())] = QString::fromStdString(d.value());
+   }
+   return (signer_->customDialogRequest(dlgType, data) != 0);
 }

@@ -760,6 +760,7 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::needUnreserveUTXOs, this, &QtGuiAdapter::onNeedUnreserveUTXOs);
    connect(mainWindow_, &bs::gui::qt::MainWindow::submitQuote, this, &QtGuiAdapter::onSubmitQuote);
    connect(mainWindow_, &bs::gui::qt::MainWindow::pullQuote, this, &QtGuiAdapter::onPullQuote);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needWalletDialog, this, &QtGuiAdapter::onNeedWalletDialog);
 }
 
 void QtGuiAdapter::onGetSettings(const std::vector<ApplicationSettings::Setting>& settings)
@@ -1257,6 +1258,19 @@ void QtGuiAdapter::onPullQuote(const std::string& settlementId
    msgReq->set_rfq_id(reqId);
    msgReq->set_session_token(reqSessToken);
    Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
+void QtGuiAdapter::onNeedWalletDialog(bs::signer::ui::GeneralDialogType dlgType
+   , const std::string& rootId)
+{
+   SignerMessage msg;
+   auto msgReq = msg.mutable_dialog_request();
+   msgReq->set_dialog_type((int)dlgType);
+   auto msgData = msgReq->add_data();
+   msgData->set_key("rootId");
+   msgData->set_value(rootId);
+   Envelope env{ 0, user_, userSigner_, {}, {}, msg.SerializeAsString(), true };
    pushFill(env);
 }
 

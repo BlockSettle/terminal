@@ -163,23 +163,41 @@ RootWalletPropertiesDialog::~RootWalletPropertiesDialog() = default;
 
 void RootWalletPropertiesDialog::onDeleteWallet()
 {
-   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::DeleteWallet
-                                                             , {{ QLatin1String("rootId"), walletInfo_.rootId() }});
-   close();
+   if (signingContainer_) {
+      signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::DeleteWallet
+         , { { QLatin1String("rootId"), walletInfo_.rootId() } });
+      close();
+   }
+   else {
+      emit needWalletDialog(bs::signer::ui::GeneralDialogType::DeleteWallet
+         , walletInfo_.rootId().toStdString());
+   }
 }
 
 void RootWalletPropertiesDialog::onBackupWallet()
 {
-   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::BackupWallet
-                                                             , {{ QLatin1String("rootId"), walletInfo_.rootId() }});
-   close();
+   if (signingContainer_) {
+      signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::BackupWallet
+         , { { QLatin1String("rootId"), walletInfo_.rootId() } });
+      close();
+   }
+   else {
+      emit needWalletDialog(bs::signer::ui::GeneralDialogType::BackupWallet
+         , walletInfo_.rootId().toStdString());
+   }
 }
 
 void RootWalletPropertiesDialog::onChangePassword()
 {
-   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ManageWallet
-                                                             , {{ QLatin1String("rootId"), walletInfo_.rootId() }});
-   close();
+   if (signingContainer_) {
+      signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ManageWallet
+         , { { QLatin1String("rootId"), walletInfo_.rootId() } });
+      close();
+   }
+   else {
+      emit needWalletDialog(bs::signer::ui::GeneralDialogType::ManageWallet
+         , walletInfo_.rootId().toStdString());
+   }
 }
 
 static inline QString encTypeToString(bs::wallet::EncryptionType enc)

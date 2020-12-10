@@ -22,6 +22,7 @@ namespace BlockSettle {
    namespace Common {
       class SignerMessage;
       class SignerMessage_AutoSign;
+      class SignerMessage_DialogRequest;
       class SignerMessage_ExtendAddrChain;
       class SignerMessage_GetSettlPayinAddr;
       class SignerMessage_SetSettlementId;
@@ -106,6 +107,8 @@ private:
       , const bs::core::wallet::TXSignRequest&);
    bool processAutoSignRequest(const bs::message::Envelope&
       , const BlockSettle::Common::SignerMessage_AutoSign&);
+   bool processDialogRequest(const bs::message::Envelope&
+      , const BlockSettle::Common::SignerMessage_DialogRequest&);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
