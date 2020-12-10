@@ -37,6 +37,7 @@ namespace Blocksettle {
    namespace Communication {
       namespace ProxyTerminalPb {
          class Response;
+         class Response_FutureResponse;
       }
    }
 }
@@ -122,6 +123,7 @@ private:
       , bs::UtxoReservationToken ccUtxoRes);
    void onRFQCancel(const std::string &rfqId);
    void deleteDialog(const std::string &rfqId);
+   void processFutureResponse(const Blocksettle::Communication::ProxyTerminalPb::Response_FutureResponse &msg);
 
 public slots:
    void onCurrencySelected(const MarketSelectedInfo& selectedInfo);

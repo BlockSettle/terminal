@@ -34,6 +34,7 @@ namespace Ui {
 class AssetManager;
 class QuoteProvider;
 class XbtAmountValidator;
+class QLabel;
 
 
 class FuturesTicket : public QWidget
@@ -67,21 +68,20 @@ public slots:
    void onMDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
 
 private slots:
-   void onSellSelected();
-   void onBuySelected();
+   void onAmountEdited(const QString &);
+   void updatePanel();
+   void onCloseAll();
 
 private:
    bool eventFilter(QObject *watched, QEvent *evt) override;
 
-   bs::network::Side::Type getSelectedSide() const;
-   QString getProduct() const;
+   std::string getProduct() const;
    double getQuantity() const;
 
    void resetTicket();
    void productSelectionChanged();
-   void updateSubmitButton();
-   void updateBalances();
-   void submitButtonClicked();
+   void submit(bs::network::Side::Type side);
+   void sendRequest(bs::network::Side::Type side, bs::XBTAmount amount);
 
    std::unique_ptr<Ui::FuturesTicket> ui_;
 
@@ -89,19 +89,15 @@ private:
    std::shared_ptr<AssetManager>       assetManager_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;
 
-   QFont    invalidBalanceFont_;
-
    XbtAmountValidator *xbtAmountValidator_{};
 
    bs::network::Asset::Type type_{};
-   QString currentProduct_;
-   QString contraProduct_;
+   std::string currentProduct_;
    QString security_;
 
-   QString currentBidPrice_;
-   QString currentOfferPrice_;
-
    std::map<bs::network::Asset::Type, std::unordered_map<std::string, bs::network::MDInfo>> mdInfo_;
+
+   std::vector<std::array<QLabel*, 2>> labels_;
 };
 
 #endif // FUTURES_TICKET_H

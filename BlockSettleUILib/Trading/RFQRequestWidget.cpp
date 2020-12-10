@@ -16,21 +16,22 @@
 #include "ApplicationSettings.h"
 #include "AuthAddressManager.h"
 #include "AutoSignQuoteProvider.h"
+#include "BSMessageBox.h"
 #include "CelerClient.h"
 #include "CurrencyPair.h"
 #include "DialogManager.h"
+#include "MDCallbacksQt.h"
 #include "NotificationCenter.h"
 #include "OrderListModel.h"
 #include "OrdersView.h"
 #include "QuoteProvider.h"
 #include "RFQDialog.h"
 #include "RfqStorage.h"
-#include "WalletSignerContainer.h"
-#include "Wallets/SyncWalletsManager.h"
-#include "Wallets/SyncHDWallet.h"
 #include "UserScriptRunner.h"
 #include "UtxoReservationManager.h"
-#include "MDCallbacksQt.h"
+#include "WalletSignerContainer.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 
 #include "bs_proxy_terminal_pb.pb.h"
 
@@ -381,6 +382,21 @@ void RFQRequestWidget::deleteDialog(const std::string &rfqId)
    dialogs_.erase(itDlg);
 }
 
+void RFQRequestWidget::processFutureResponse(const ProxyTerminalPb::Response_FutureResponse &msg)
+{
+   QMetaObject::invokeMethod(this, [this, msg] {
+      if (!msg.success()) {
+         BSMessageBox errorMessage(BSMessageBox::critical, tr("Error")
+            , tr("Request failed: %1").arg(QString::fromStdString(msg.error_msg())), this);
+         errorMessage.exec();
+         return;
+      }
+      auto details = tr("Price: %1").arg(UiUtils::displayPriceXBT(msg.price()));
+      BSMessageBox errorMessage(BSMessageBox::info, tr("Success"), tr("Order succeed"), details, this);
+      errorMessage.exec();
+   });
+}
+
 bool RFQRequestWidget::checkConditions(const MarketSelectedInfo& selectedInfo)
 {
    ui_->stackedWidgetRFQ->setEnabled(true);
@@ -518,6 +534,11 @@ void RFQRequestWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTe
          // unsigned_payin_data - serialized payin. binary
          emit signedPayinRequested(command.settlement_id(), BinaryData::fromString(command.unsigned_payin_data())
             , BinaryData::fromString(command.payin_hash()), timestamp);
+         break;
+      }
+
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kFutureResponse: {
+         processFutureResponse(response.future_response());
          break;
       }
 
