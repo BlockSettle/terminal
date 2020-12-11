@@ -15,6 +15,7 @@
 #include <memory>
 #include "BinaryData.h"
 #include "SignerDefs.h"
+#include "SignerUiDefs.h"
 #include "QWalletInfo.h"
 
 namespace Ui {

@@ -17,6 +17,7 @@
 #include <QItemSelection>
 #include "Address.h"
 #include "SignerDefs.h"
+#include "SignerUiDefs.h"
 #include "TabWithShortcut.h"
 #include "BSErrorCode.h"
 #include "BSErrorCodeStrings.h"
