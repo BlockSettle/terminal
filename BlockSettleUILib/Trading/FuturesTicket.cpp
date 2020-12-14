@@ -28,6 +28,9 @@
 namespace {
    const QString kEmptyInformationalLabelText = QStringLiteral("--");
 
+   const auto kInfValueStr = QStringLiteral("inf");
+   const auto kInfValueAmount = bs::XBTAmount(std::numeric_limits<BTCNumericTypes::satoshi_type>::max());
+
    QString formatPrice(double price, bs::network::Asset::Type at) {
       if (price == 0) {
          return kEmptyInformationalLabelText;
@@ -46,6 +49,13 @@ namespace {
       } else {
          return fmt::format(">{:0.2f}", kAmounts.back());
       }
+   }
+
+   bs::XBTAmount getAmount(size_t i) {
+      if (i >= kAmounts.size()) {
+         return kInfValueAmount;
+      }
+      return bs::XBTAmount(kAmounts[i]);
    }
 
    size_t getSelectedLine(double amount) {
@@ -195,14 +205,20 @@ double FuturesTicket::getQuantity() const
 
 void FuturesTicket::productSelectionChanged()
 {
-   const auto &mdInfo = mdInfo_[type_][security_.toStdString()];
+   const auto &mdInfos = mdInfo_[type_][security_.toStdString()];
 
-   const auto bidPrice = formatPrice(mdInfo.bidPrice, type_);
-   const auto askPrice = formatPrice(mdInfo.askPrice, type_);
-
-   for (auto &labelPair : labels_) {
-      labelPair[0]->setText(bidPrice);
-      labelPair[1]->setText(askPrice);
+   for (size_t labelIndex = 0; labelIndex < labels_.size(); ++labelIndex) {
+      auto labelPair = labels_[labelIndex];
+      auto mdInfoIt = mdInfos.find(getAmount(labelIndex));
+      if (mdInfoIt != mdInfos.end()) {
+         const auto bidPrice = formatPrice(mdInfoIt->second.bidPrice, type_);
+         const auto askPrice = formatPrice(mdInfoIt->second.askPrice, type_);
+         labelPair[0]->setText(bidPrice);
+         labelPair[1]->setText(askPrice);
+      } else {
+         labelPair[0]->setText(kEmptyInformationalLabelText);
+         labelPair[1]->setText(kEmptyInformationalLabelText);
+      }
    }
 
    updatePanel();
@@ -272,8 +288,16 @@ void FuturesTicket::sendRequest(bs::network::Side::Type side, bs::XBTAmount amou
    if (amount.GetValue() == 0) {
       return;
    }
-   // TODO: Select price depending on amount
-   const auto &mdInfo = mdInfo_[type_][security_.toStdString()];
+
+   const auto &mdInfos = mdInfo_[type_][security_.toStdString()];
+   // Use upper_bound to get correct category
+   const auto mdInfoIt = mdInfos.upper_bound(amount);
+   if (mdInfoIt == mdInfos.end()) {
+      SPDLOG_LOGGER_ERROR(logger_, "can't find correct MD category");
+      return;
+   }
+   const auto &mdInfo = mdInfoIt->second;
+
    double price = 0;
    switch (side) {
       case bs::network::Side::Buy:
@@ -299,8 +323,18 @@ void FuturesTicket::sendRequest(bs::network::Side::Type side, bs::XBTAmount amou
 
 void FuturesTicket::onMDUpdate(bs::network::Asset::Type type, const QString &security, bs::network::MDFields mdFields)
 {
-   auto &mdInfo = mdInfo_[type][security.toStdString()];
-   mdInfo.merge(bs::network::MDField::get(mdFields));
+   auto &mdInfos = mdInfo_[type][security.toStdString()];
+   mdInfos.clear();
+   for (const auto &field : mdFields) {
+      bs::XBTAmount amount;
+      if (field.levelQuantity == kInfValueStr) {
+         amount = kInfValueAmount;
+      } else {
+         amount = bs::XBTAmount(field.levelQuantity.toDouble());
+      }
+      auto &mdInfo = mdInfos[amount];
+      mdInfo.merge(bs::network::MDField::get(mdFields));
+   }
 
    if (type == type_) {
       productSelectionChanged();
