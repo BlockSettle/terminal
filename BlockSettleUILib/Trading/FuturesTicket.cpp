@@ -323,6 +323,10 @@ void FuturesTicket::sendRequest(bs::network::Side::Type side, bs::XBTAmount amou
 
 void FuturesTicket::onMDUpdate(bs::network::Asset::Type type, const QString &security, bs::network::MDFields mdFields)
 {
+   if (type != bs::network::Asset::Futures && type != bs::network::Asset::CashSettledFutures) {
+      return;
+   }
+
    auto &mdInfos = mdInfo_[type][security.toStdString()];
    mdInfos.clear();
    for (const auto &field : mdFields) {
@@ -330,10 +334,22 @@ void FuturesTicket::onMDUpdate(bs::network::Asset::Type type, const QString &sec
       if (field.levelQuantity == kInfValueStr) {
          amount = kInfValueAmount;
       } else {
+         double dValue = field.levelQuantity.toDouble();
          amount = bs::XBTAmount(field.levelQuantity.toDouble());
       }
       auto &mdInfo = mdInfos[amount];
-      mdInfo.merge(bs::network::MDField::get(mdFields));
+
+      switch (field.type) {
+      case bs::network::MDField::PriceBid:
+         mdInfo.bidPrice = field.value;
+         break;
+      case bs::network::MDField::PriceOffer:
+         mdInfo.askPrice = field.value;
+         break;
+      case bs::network::MDField::PriceLast:
+         mdInfo.lastPrice = field.value;
+         break;
+      }
    }
 
    if (type == type_) {

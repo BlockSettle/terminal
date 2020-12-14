@@ -90,7 +90,7 @@ private:
       QList<QToggleItem *> row;
    };
    typedef std::map<MarketDataModel::MarketDataColumns, PriceUpdate> PriceByCol;
-   typedef std::map<QString, PriceByCol>     PriceUpdates;
+   typedef std::map<QString, PriceByCol>                             PriceUpdates;
 
    std::set<QString>    instrVisible_;
    PriceUpdates         priceUpdates_;
