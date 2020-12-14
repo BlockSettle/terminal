@@ -47,7 +47,7 @@ public:
    bs::Address getSelectedAddress() const;
    void setWallets(const AddressListModel::Wallets&);
 
-   void onAddresses(const std::vector<bs::sync::Address>&);
+   void onAddresses(const std::string& walletId, const std::vector<bs::sync::Address>&);
    void onAddressComments(const std::string& walletId
       , const std::map<bs::Address, std::string>&);
    void onAddressBalances(const std::string& walletId

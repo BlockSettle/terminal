@@ -199,12 +199,26 @@ void AddressListModel::updateWallet(const bs::sync::WalletInfo &wallet)
    }
 }
 
-void AddressListModel::onAddresses(const std::vector<bs::sync::Address> &addrs)
+void AddressListModel::onAddresses(const std::string &
+   , const std::vector<bs::sync::Address> &addrs)
 {
+   if (addrs.empty()) { //TODO: check against walletId (first arg)
+      return;
+   }
    std::string mainWalletId;
+   std::vector<bs::sync::Address> newAddrs;
+   for (const auto& addr : addrs) {
+      const auto& itAddr = std::find_if(addressRows_.cbegin(), addressRows_.cend()
+         , [addr](const AddressRow& row) {
+         return (addr.address == row.address);
+      });
+      if (itAddr == addressRows_.end()) {
+         newAddrs.push_back(addr);
+      }
+   }
    beginInsertRows(QModelIndex(), addressRows_.size()
-      , addressRows_.size() + addrs.size() - 1);
-   for (const auto &addr : addrs) {
+      , addressRows_.size() + newAddrs.size() - 1);
+   for (const auto &addr : newAddrs) {
       const auto &itWallet = std::find_if(wallets_.cbegin(), wallets_.cend()
          , [walletId = addr.walletId](const bs::sync::WalletInfo &wi){
          for (const auto &id : wi.ids) {
@@ -240,13 +254,13 @@ void AddressListModel::onAddresses(const std::vector<bs::sync::Address> &addrs)
 
    std::vector<bs::Address> addrsReq;
    addrsReq.reserve(addrs.size());
-   for (const auto &addr : addrs) {
+   for (const auto &addr : newAddrs) {
       addrsReq.push_back(addr.address);
    }
    emit needAddrComments(mainWalletId, addrsReq);
 }
 
-void AddressListModel::onAddressComments(const std::string &walletId
+void AddressListModel::onAddressComments(const std::string &
    , const std::map<bs::Address, std::string> &comments)
 {
    for (const auto &comm : comments) {

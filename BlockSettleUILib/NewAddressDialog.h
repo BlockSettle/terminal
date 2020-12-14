@@ -24,7 +24,7 @@ namespace bs {
       class Wallet;
    }
 }
-
+class QPushButton;
 
 class NewAddressDialog : public QDialog
 {
@@ -35,6 +35,8 @@ public:
       , QWidget* parent = nullptr);
    NewAddressDialog(const bs::sync::WalletInfo &, QWidget* parent = nullptr);
    ~NewAddressDialog() override;
+
+   void onAddresses(const std::string& walletId, const std::vector<bs::sync::Address>&);
 
 protected:
    void showEvent(QShowEvent* event) override;
@@ -49,7 +51,10 @@ private:
 
 private:
    std::unique_ptr<Ui::NewAddressDialog>  ui_;
-   std::shared_ptr<bs::sync::Wallet>      wallet_;
+   [[deprecated]] std::shared_ptr<bs::sync::Wallet>      wallet_;
+   QPushButton* copyButton_{ nullptr };
+   QPushButton* closeButton_{ nullptr };
+   std::string    walletId_;
    bs::Address    address_;
 };
 

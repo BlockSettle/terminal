@@ -167,6 +167,7 @@ private slots:
    void onNeedHDWalletDetails(const std::string &walletId);
    void onNeedWalletBalances(const std::string &walletId);
    void onNeedWalletData(const std::string& walletId);
+   void onCreateExtAddress(const std::string& walletId);
    void onNeedExtAddresses(const std::string &walletId);
    void onNeedIntAddresses(const std::string &walletId);
    void onNeedUsedAddresses(const std::string &walletId);

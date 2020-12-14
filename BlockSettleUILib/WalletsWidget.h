@@ -48,6 +48,7 @@ class AuthAddressManager;
 class ConnectionManager;
 class QAction;
 class QMenu;
+class NewAddressDialog;
 class RootWalletPropertiesDialog;
 class SignContainer;
 class WalletNode;
@@ -86,7 +87,8 @@ public:
    void onNewBlock(unsigned int blockNum);
    void onHDWallet(const bs::sync::WalletInfo &);
    void onHDWalletDetails(const bs::sync::HDWalletData &);
-   void onAddresses(const std::vector<bs::sync::Address> &);
+   void onGenerateAddress(bool isActive);
+   void onAddresses(const std::string& walletId, const std::vector<bs::sync::Address> &);
    void onAddressComments(const std::string &walletId
       , const std::map<bs::Address, std::string> &);
    void onWalletBalance(const bs::sync::WalletBalanceData &);
@@ -126,7 +128,9 @@ signals:
    void needLedgerEntries(const std::string &filter);
    void needTXDetails(const std::vector<bs::sync::TXWallet> &, bool useCache
       , const bs::Address &);
-   void needWalletDialog(bs::signer::ui::GeneralDialogType, const std::string& rootId);
+   void needWalletDialog(bs::signer::ui::GeneralDialogType
+      , const std::string& rootId = {});
+   void createExtAddress(const std::string& walletId);
 
 private slots:
    void showWalletProperties(const QModelIndex& index);
@@ -165,12 +169,16 @@ private:
    AddressListModel        *  addressModel_;
    AddressSortFilterModel  *  addressSortFilterModel_;
    RootWalletPropertiesDialog *  rootDlg_{ nullptr };
+   NewAddressDialog* newAddrDlg_{ nullptr };
    QAction  *  actCopyAddr_ = nullptr;
    QAction  *  actEditComment_ = nullptr;
    QAction  *  actRevokeSettl_ = nullptr;
    //QAction  *  actDeleteWallet_ = nullptr;
    bs::Address curAddress_;
-   std::shared_ptr<bs::sync::Wallet>   curWallet_;
+   [[deprecated]] std::shared_ptr<bs::sync::Wallet>   curWallet_;
+   std::set<bs::sync::WalletInfo>   wallets_;
+   std::unordered_map<std::string, bs::sync::HDWalletData>        walletDetails_;
+   std::unordered_map<std::string, bs::sync::WalletBalanceData>   walletBalances_;
    std::string    curWalletId_;
    std::string    curComment_;
    unsigned int   revokeReqId_ = 0;

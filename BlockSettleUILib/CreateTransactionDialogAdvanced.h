@@ -94,7 +94,7 @@ public:
 
 protected:
    bool eventFilter(QObject *watched, QEvent *) override;
-   void onAddresses(const std::vector<bs::sync::Address>&) override;
+   void onAddresses(const std::string& walletId, const std::vector<bs::sync::Address>&) override;
    void onAddressComments(const std::string& walletId
       , const std::map<bs::Address, std::string>&) override;
    void onAddressBalances(const std::string& walletId

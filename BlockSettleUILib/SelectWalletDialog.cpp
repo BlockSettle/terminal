@@ -20,7 +20,6 @@ SelectWalletDialog::SelectWalletDialog(const std::shared_ptr<bs::sync::WalletsMa
    , const std::string &selWalletId, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::SelectWalletDialog)
-   , walletsManager_(walletsManager)
 {
    ui_->setupUi(this);
 
@@ -46,6 +45,29 @@ SelectWalletDialog::SelectWalletDialog(const std::shared_ptr<bs::sync::WalletsMa
    ui_->treeViewWallets->expandAll();
 }
 
+SelectWalletDialog::SelectWalletDialog(const std::string& selWalletId, QWidget* parent)
+   : QDialog(parent)
+   , ui_(new Ui::SelectWalletDialog)
+{
+   ui_->setupUi(this);
+
+   ui_->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Select"));
+
+   walletsModel_ = new WalletsViewModel(selWalletId, ui_->treeViewWallets, true);
+   walletsModel_->setBitcoinLeafSelectionMode();
+   ui_->treeViewWallets->setModel(walletsModel_);
+   ui_->treeViewWallets->setItemsExpandable(true);
+   ui_->treeViewWallets->setRootIsDecorated(true);
+
+   connect(ui_->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged
+      , this, &SelectWalletDialog::onSelectionChanged);
+   connect(ui_->treeViewWallets, &QTreeView::doubleClicked
+      , this, &SelectWalletDialog::onDoubleClicked);
+
+   connect(ui_->buttonBox, &QDialogButtonBox::accepted, this, &SelectWalletDialog::accept);
+   connect(ui_->buttonBox, &QDialogButtonBox::rejected, this, &SelectWalletDialog::reject);
+}
+
 SelectWalletDialog::~SelectWalletDialog() = default;
 
 void SelectWalletDialog::onSelectionChanged()
@@ -55,7 +77,7 @@ void SelectWalletDialog::onSelectionChanged()
       selectedWallet_ = *walletsModel_->getWallet(selectedRows[0]).ids.cbegin();
    }
    else {
-      selectedWallet_ = nullptr;
+      selectedWallet_.clear();
    }
    walletsModel_->setSelectedWallet(selectedWallet_);
 
@@ -66,6 +88,24 @@ void SelectWalletDialog::onSelectionChanged()
 std::string SelectWalletDialog::getSelectedWallet() const
 {
    return selectedWallet_;
+}
+
+void SelectWalletDialog::onHDWallet(const bs::sync::WalletInfo& wi)
+{
+   walletsModel_->onHDWallet(wi);
+}
+
+void SelectWalletDialog::onHDWalletDetails(const bs::sync::HDWalletData& hdw)
+{
+   walletsModel_->onHDWalletDetails(hdw);
+   ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+   onSelectionChanged();
+   ui_->treeViewWallets->expandAll();
+}
+
+void SelectWalletDialog::onWalletBalances(const bs::sync::WalletBalanceData& wbd)
+{
+   walletsModel_->onWalletBalances(wbd);
 }
 
 void SelectWalletDialog::onDoubleClicked(const QModelIndex& index)

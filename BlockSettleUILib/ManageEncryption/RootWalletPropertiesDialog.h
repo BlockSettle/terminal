@@ -59,8 +59,8 @@ public:
       , QWidget* parent = nullptr);
    ~RootWalletPropertiesDialog() override;
 
-   void onHDWalletDetails();
-   void onWalletBalances();
+   void onHDWalletDetails(const bs::sync::HDWalletData&);
+   void onWalletBalances(const bs::sync::WalletBalanceData&);
    void onSpendableUTXOs();
 
 signals:

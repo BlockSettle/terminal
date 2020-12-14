@@ -245,13 +245,14 @@ void bs::gui::qt::MainWindow::onWalletData(const std::string& walletId
    ui_->widgetRFQ->onWalletData(walletId, wd);
 }
 
-void MainWindow::onAddresses(const std::vector<bs::sync::Address> &addrs)
+void MainWindow::onAddresses(const std::string& walletId
+   , const std::vector<bs::sync::Address> &addrs)
 {
    if (txDlg_) {
-      txDlg_->onAddresses(addrs);
+      txDlg_->onAddresses(walletId, addrs);
    }
    else {
-      ui_->widgetWallets->onAddresses(addrs);
+      ui_->widgetWallets->onAddresses(walletId, addrs);
    }
 }
 
@@ -638,36 +639,7 @@ void MainWindow::updateAppearance()
 
 void MainWindow::onGenerateAddress()
 {
-/*   if (walletsMgr_->hdWallets().empty()) {
-      createWallet(true);
-      return;
-   }
-
-   const auto defWallet = walletsMgr_->getDefaultWallet();
-   std::string selWalletId = defWallet ? defWallet->walletId() : std::string{};
-
-   if (ui_->tabWidget->currentWidget() == ui_->widgetWallets) {
-      auto wallets = ui_->widgetWallets->getSelectedWallets();
-      if (!wallets.empty()) {
-         selWalletId = wallets[0]->walletId();
-      } else {
-         wallets = ui_->widgetWallets->getFirstWallets();
-
-         if (!wallets.empty()) {
-            selWalletId = wallets[0]->walletId();
-         }
-      }
-   }
-   SelectWalletDialog selectWalletDialog(walletsMgr_, selWalletId, this);
-   selectWalletDialog.exec();
-
-   if (selectWalletDialog.result() == QDialog::Rejected) {
-      return;
-   }
-
-   NewAddressDialog newAddressDialog(selectWalletDialog.getSelectedWallet(), this);
-   newAddressDialog.exec();
-   */
+   ui_->widgetWallets->onGenerateAddress(ui_->tabWidget->currentWidget() == ui_->widgetWallets);
 }
 
 void MainWindow::onSend()
@@ -1254,6 +1226,7 @@ void MainWindow::initWidgets()
    connect(ui_->widgetWallets, &WalletsWidget::needLedgerEntries, this, &MainWindow::needLedgerEntries);
    connect(ui_->widgetWallets, &WalletsWidget::needTXDetails, this, &MainWindow::needTXDetails);
    connect(ui_->widgetWallets, &WalletsWidget::needWalletDialog, this, &MainWindow::needWalletDialog);
+   connect(ui_->widgetWallets, &WalletsWidget::createExtAddress, this, &MainWindow::createExtAddress);
 
    connect(ui_->widgetExplorer, &ExplorerWidget::needAddressHistory, this, &MainWindow::needAddressHistory);
    connect(ui_->widgetExplorer, &ExplorerWidget::needTXDetails, this, &MainWindow::needTXDetails);

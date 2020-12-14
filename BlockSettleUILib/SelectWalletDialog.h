@@ -13,6 +13,7 @@
 
 #include <QDialog>
 #include <memory>
+#include "SignerDefs.h"
 
 namespace Ui {
     class SelectWalletDialog;
@@ -32,10 +33,16 @@ class SelectWalletDialog : public QDialog
 Q_OBJECT
 
 public:
-   SelectWalletDialog(const std::shared_ptr<bs::sync::WalletsManager> &, const std::string &selWalletId, QWidget* parent = nullptr);
+   [[deprecated]] SelectWalletDialog(const std::shared_ptr<bs::sync::WalletsManager> &
+      , const std::string &selWalletId, QWidget* parent = nullptr);
+   SelectWalletDialog(const std::string& selWalletId, QWidget* parent = nullptr);
    ~SelectWalletDialog() override;
 
    std::string getSelectedWallet() const;
+
+   void onHDWallet(const bs::sync::WalletInfo&);
+   void onHDWalletDetails(const bs::sync::HDWalletData&);
+   void onWalletBalances(const bs::sync::WalletBalanceData&);
 
 public slots:
    void onSelectionChanged();
@@ -43,9 +50,8 @@ public slots:
 
 private:
    std::unique_ptr<Ui::SelectWalletDialog> ui_;
-   WalletsViewModel  *              walletsModel_;
-   std::string    selectedWallet_;
-   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
+   WalletsViewModel  *walletsModel_;
+   std::string       selectedWallet_;
 };
 
 #endif // __SELECT_WALLET_DIALOG_H__

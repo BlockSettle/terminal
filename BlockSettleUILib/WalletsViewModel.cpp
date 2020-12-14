@@ -659,10 +659,16 @@ void WalletsViewModel::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
       default: break;
       }
       if (!groupNode) {
-         beginInsertRows(createIndex(node->row(), 0, static_cast<void*>(node))
-            , node->nbChildren(), node->nbChildren());
+         const auto& nbChildren = node->nbChildren();
          groupNode = hdNode->addGroup(groupType, group.name, group.description);
-         endInsertRows();
+         if (groupNode) {
+            beginInsertRows(createIndex(node->row(), 0, static_cast<void*>(node))
+               , nbChildren, nbChildren);
+            endInsertRows();
+         }
+      }
+      if (!groupNode) {
+         continue;
       }
       for (const auto &leaf : group.leaves) {
          const auto &leafNode = groupNode->findByWalletId(*leaf.ids.cbegin());

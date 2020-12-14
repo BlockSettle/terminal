@@ -307,7 +307,7 @@ void RootWalletPropertiesDialog::updateWalletDetails(const bs::sync::WalletInfo 
    }
 }
 
-void RootWalletPropertiesDialog::onHDWalletDetails()
+void RootWalletPropertiesDialog::onHDWalletDetails(const bs::sync::HDWalletData& hdWallet)
 {
    unsigned int nbTotalAddresses = 0;
 /*   for (const auto &leaf : wallet->getLeaves()) {
@@ -326,7 +326,7 @@ void RootWalletPropertiesDialog::onSpendableUTXOs()
 //   ui_->labelUTXOs->setText(QString::number(sizeUTXOs));
 }
 
-void RootWalletPropertiesDialog::onWalletBalances()
+void RootWalletPropertiesDialog::onWalletBalances(const bs::sync::WalletBalanceData&)
 {
 //   ui_->labelAddressesUsed->setText(QString::number(wallet->getUsedAddressCount()));
 //   ui_->labelAddressesActive->setText(QString::number(activeAddrCnt));

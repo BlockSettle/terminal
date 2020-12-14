@@ -100,7 +100,7 @@ public:
    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
    void setWallets(const Wallets &, bool force, bool filterBtcOnly);
-   void onAddresses(const std::vector<bs::sync::Address> &);
+   void onAddresses(const std::string &walletId, const std::vector<bs::sync::Address> &);
    void onAddressComments(const std::string &walletId
       , const std::map<bs::Address, std::string> &);
    void onAddressBalances(const std::string &walletId

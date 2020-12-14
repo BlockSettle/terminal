@@ -71,9 +71,10 @@ void SelectAddressDialog::setWallets(const AddressListModel::Wallets& wallets)
    onSelectionChanged();
 }
 
-void SelectAddressDialog::onAddresses(const std::vector<bs::sync::Address>& addrs)
+void SelectAddressDialog::onAddresses(const std::string& walletId
+   , const std::vector<bs::sync::Address>& addrs)
 {
-   model_->onAddresses(addrs);
+   model_->onAddresses(walletId, addrs);
 }
 
 void SelectAddressDialog::onAddressComments(const std::string& walletId

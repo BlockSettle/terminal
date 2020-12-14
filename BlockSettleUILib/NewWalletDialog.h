@@ -26,7 +26,9 @@ class NewWalletDialog : public QDialog
    Q_OBJECT
 
 public:
-   NewWalletDialog(bool noWalletsFound, const std::shared_ptr<ApplicationSettings>& appSettings, QWidget *parent = nullptr);
+   [[deprecated]] NewWalletDialog(bool noWalletsFound
+      , const std::shared_ptr<ApplicationSettings>&, QWidget *parent = nullptr);
+   NewWalletDialog(bool noWalletsFound, QWidget* parent = nullptr);
    ~NewWalletDialog() override;
 
    enum Result
@@ -37,9 +39,11 @@ public:
       ImportHw,
    };
 
+private slots:
+   void onLinkActivated(const QString&);
+
 private:
    std::unique_ptr<Ui::NewWalletDialog> ui_;
-
 };
 
 #endif // __NEW_WALLET_DIALOG_H__

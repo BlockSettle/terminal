@@ -27,7 +27,9 @@
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
 #include "BSMessageBox.h"
+#include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
+#include "SelectWalletDialog.h"
 #include "SignContainer.h"
 #include "WalletsViewModel.h"
 #include "WalletWarningDialog.h"
@@ -300,7 +302,8 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    ui_->treeViewAddresses->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
    updateAddresses();
-   connect(ui_->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &WalletsWidget::updateAddresses);
+   connect(ui_->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged
+      , this, &WalletsWidget::updateAddresses);
    connect(walletsModel_, &WalletsViewModel::updateAddresses, this, &WalletsWidget::updateAddresses);
    if (walletsManager_) {
       connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &WalletsWidget::onWalletBalanceChanged, Qt::QueuedConnection);
@@ -353,13 +356,15 @@ void WalletsWidget::onNewBlock(unsigned int blockNum)
 
 void WalletsWidget::onHDWallet(const bs::sync::WalletInfo &wi)
 {
+   wallets_.insert(wi);
    walletsModel_->onHDWallet(wi);
 }
 
 void WalletsWidget::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
 {
+   walletDetails_[hdWallet.id] = hdWallet;
    if (rootDlg_) {
-      //TODO: pass wallet details to currently running root wallet dialog
+      rootDlg_->onHDWalletDetails(hdWallet);
    }
    walletsModel_->onHDWalletDetails(hdWallet);
 
@@ -373,9 +378,85 @@ void WalletsWidget::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
    //TODO: keep wallets treeView selection
 }
 
-void WalletsWidget::onAddresses(const std::vector<bs::sync::Address> &addrs)
+void WalletsWidget::onGenerateAddress(bool isActive)
 {
-   addressModel_->onAddresses(addrs);
+   if (wallets_.empty()) {
+      //TODO: invoke wallet create dialog
+      return;
+   }
+
+   std::string selWalletId = curWalletId_;
+   if (!isActive || selWalletId.empty()) {
+      SelectWalletDialog selectWalletDialog(curWalletId_, this);
+      for (const auto& wallet : wallets_) {
+         selectWalletDialog.onHDWallet(wallet);
+      }
+      for (const auto& wallet : walletDetails_) {
+         selectWalletDialog.onHDWalletDetails(wallet.second);
+      }
+      for (const auto& bal : walletBalances_) {
+         selectWalletDialog.onWalletBalances(bal.second);
+      }
+      selectWalletDialog.exec();
+
+      if (selectWalletDialog.result() == QDialog::Rejected) {
+         return;
+      }
+      else {
+         selWalletId = selectWalletDialog.getSelectedWallet();
+      }
+   }
+   bs::sync::WalletInfo selWalletInfo;
+   auto itWallet = walletDetails_.find(selWalletId);
+   if (itWallet == walletDetails_.end()) {
+      const auto& findLeaf = [selWalletId, wallets = walletDetails_]() -> bs::sync::WalletInfo
+      {
+         for (const auto& hdWallet : wallets) {
+            for (const auto& grp : hdWallet.second.groups) {
+               for (const auto& leaf : grp.leaves) {
+                  for (const auto& id : leaf.ids) {
+                     if (id == selWalletId) {
+                        bs::sync::WalletInfo wi;
+                        wi.name = leaf.name;
+                        wi.ids = leaf.ids;
+                        return wi;
+                     }
+                  }
+               }
+            }
+         }
+         return {};
+      };
+      selWalletInfo = findLeaf();
+      if (selWalletInfo.ids.empty()) {
+         logger_->error("[{}] no leaf found for {}", __func__, selWalletId);
+         return;
+      }
+   }
+   else {
+      selWalletInfo.name = itWallet->second.name;
+   }
+
+   if (newAddrDlg_) {
+      logger_->error("[{}] new address dialog already created", __func__);
+      return;
+   }
+   newAddrDlg_ = new NewAddressDialog(selWalletInfo, this);
+   emit createExtAddress(selWalletId);
+   connect(newAddrDlg_, &QDialog::finished, [this](int) {
+      newAddrDlg_->deleteLater();
+      newAddrDlg_ = nullptr;
+   });
+   newAddrDlg_->exec();
+}
+
+void WalletsWidget::onAddresses(const std::string &walletId
+   , const std::vector<bs::sync::Address> &addrs)
+{
+   if (newAddrDlg_) {
+      newAddrDlg_->onAddresses(walletId, addrs);
+   }
+   addressModel_->onAddresses(walletId, addrs);
 }
 
 void WalletsWidget::onLedgerEntries(const std::string &filter, uint32_t totalPages
@@ -402,8 +483,9 @@ void WalletsWidget::onAddressComments(const std::string &walletId
 
 void WalletsWidget::onWalletBalance(const bs::sync::WalletBalanceData &wbd)
 {
+   walletBalances_[wbd.id] = wbd;
    if (rootDlg_) {
-      //TODO: pass data to root wallet dialog
+      rootDlg_->onWalletBalances(wbd);
    }
    walletsModel_->onWalletBalances(wbd);
    addressModel_->onAddressBalances(wbd.id, wbd.addrBalances);
@@ -445,8 +527,7 @@ void WalletsWidget::showWalletProperties(const QModelIndex& index)
             rootDlg_->deleteLater();
             rootDlg_ = nullptr;
          });
-         rootDlg_->setModal(true);
-         rootDlg_->show();
+         rootDlg_->exec();
       }
    }
 }
@@ -591,7 +672,13 @@ void WalletsWidget::updateAddresses()
    if (ui_->treeViewWallets->selectionModel()->hasSelection()) {
       prevSelectedWalletRow_ = ui_->treeViewWallets->selectionModel()->selectedIndexes().first().row();
    }
-   
+
+   if (selectedWallets.size() == 1) {
+      curWalletId_ = *selectedWallets.at(0).ids.cbegin();
+   }
+   else {
+      curWalletId_.clear();
+   }
    prevSelectedWallets_ = selectedWallets;
 
    if (!applyPreviousSelection()) {
@@ -699,17 +786,12 @@ void WalletsWidget::onWalletBalanceChanged(std::string walletId)
 
 void WalletsWidget::onNewWallet()
 {
-   if (!signingContainer_) {
-      showError(tr("Signer not created (yet)"));
-      return;
-   }
-   if (!signingContainer_->isOffline()) {
-      NewWalletDialog newWalletDialog(false, appSettings_, this);
-      emit newWalletCreationRequest();
+   emit newWalletCreationRequest();
+   if (signingContainer_) {
+      if (!signingContainer_->isOffline()) {
+         NewWalletDialog newWalletDialog(false, appSettings_, this);
 
-      int rc = newWalletDialog.exec();
-
-      switch (rc) {
+         switch (newWalletDialog.exec()) {
          case NewWalletDialog::CreateNew:
             CreateNewWallet();
             break;
@@ -721,25 +803,60 @@ void WalletsWidget::onNewWallet()
             break;
          case NewWalletDialog::Cancel:
             break;
+         }
+      } else {
+         ImportNewWallet();
       }
-   } else {
-      ImportNewWallet();
+   }
+   else {
+      NewWalletDialog newWalletDialog(false, this);
+      switch (newWalletDialog.exec()) {
+      case NewWalletDialog::CreateNew:
+         CreateNewWallet();
+         break;
+      case NewWalletDialog::ImportExisting:
+         ImportNewWallet();
+         break;
+      case NewWalletDialog::ImportHw:
+         ImportHwWallet();
+         break;
+      case NewWalletDialog::Cancel:
+         break;
+      default:
+         showError(tr("Unknown new wallet choice"));
+         break;
+      }
    }
 }
 
 void WalletsWidget::CreateNewWallet()
 {
-   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::CreateWallet);
+   if (signingContainer_) {
+      signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::CreateWallet);
+   }
+   else {
+      emit needWalletDialog(bs::signer::ui::GeneralDialogType::CreateWallet);
+   }
 }
 
 void WalletsWidget::ImportNewWallet()
 {
-   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ImportWallet);
+   if (signingContainer_) {
+      signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ImportWallet);
+   }
+   else {
+      emit needWalletDialog(bs::signer::ui::GeneralDialogType::ImportWallet);
+   }
 }
 
 void WalletsWidget::ImportHwWallet()
 {
-   signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ImportHwWallet);
+   if (signingContainer_) {
+      signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ImportHwWallet);
+   }
+   else {
+      emit needWalletDialog(bs::signer::ui::GeneralDialogType::ImportHwWallet);
+   }
 }
 
 void WalletsWidget::shortcutActivated(ShortcutType s)

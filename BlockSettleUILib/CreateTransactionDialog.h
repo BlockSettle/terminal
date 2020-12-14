@@ -77,7 +77,7 @@ public:
    virtual bool switchModeRequested() const= 0;
    virtual std::shared_ptr<CreateTransactionDialog> SwitchMode() = 0;
 
-   virtual void onAddresses(const std::vector<bs::sync::Address>&) {}
+   virtual void onAddresses(const std::string &walletId, const std::vector<bs::sync::Address>&) {}
    virtual void onAddressComments(const std::string& walletId
       , const std::map<bs::Address, std::string>&) {}
    virtual void onAddressBalances(const std::string& walletId

@@ -76,7 +76,7 @@ namespace bs {
             void onHDWalletDetails(const bs::sync::HDWalletData &);
             void onWalletsList(const std::string &id, const std::vector<bs::sync::HDWalletData>&);
             void onWalletData(const std::string &walletId, const bs::sync::WalletData&);
-            void onAddresses(const std::vector<bs::sync::Address> &);
+            void onAddresses(const std::string& walletId, const std::vector<bs::sync::Address> &);
             void onAddressComments(const std::string &walletId
                , const std::map<bs::Address, std::string> &);
             void onWalletBalance(const bs::sync::WalletBalanceData &);
@@ -161,6 +161,7 @@ namespace bs {
             void needWalletData(const std::string& walletId);
             void needWalletDialog(bs::signer::ui::GeneralDialogType, const std::string& rootId);
 
+            void createExtAddress(const std::string& walletId);
             void needExtAddresses(const std::string &walletId);
             void needIntAddresses(const std::string &walletId);
             void needUsedAddresses(const std::string &walletId);

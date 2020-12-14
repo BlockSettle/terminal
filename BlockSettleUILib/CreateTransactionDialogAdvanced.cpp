@@ -1537,10 +1537,11 @@ void CreateTransactionDialogAdvanced::onNewAddressSelectedForChange()
    showExistingChangeAddress(false);
 }
 
-void CreateTransactionDialogAdvanced::onAddresses(const std::vector<bs::sync::Address>& addrs)
+void CreateTransactionDialogAdvanced::onAddresses(const std::string &walletId
+   , const std::vector<bs::sync::Address>& addrs)
 {
    if (selChangeAddrDlg_) {
-      selChangeAddrDlg_->onAddresses(addrs);
+      selChangeAddrDlg_->onAddresses(walletId, addrs);
    }
 }
 

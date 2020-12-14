@@ -531,8 +531,8 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
          }
          catch (const std::exception &) {}
       }
-      QMetaObject::invokeMethod(mainWindow_, [this, addresses] {
-         mainWindow_->onAddresses(addresses);
+      QMetaObject::invokeMethod(mainWindow_, [this, addresses, walletId=msg.wallet_addresses().wallet_id()] {
+         mainWindow_->onAddresses(walletId, addresses);
       });
    }
       break;
@@ -730,6 +730,7 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::needHDWalletDetails, this, &QtGuiAdapter::onNeedHDWalletDetails);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needWalletData, this, &QtGuiAdapter::onNeedWalletData);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needWalletBalances, this, &QtGuiAdapter::onNeedWalletBalances);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::createExtAddress, this, &QtGuiAdapter::onCreateExtAddress);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needExtAddresses, this, &QtGuiAdapter::onNeedExtAddresses);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needIntAddresses, this, &QtGuiAdapter::onNeedIntAddresses);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needUsedAddresses, this, &QtGuiAdapter::onNeedUsedAddresses);
@@ -914,6 +915,14 @@ void QtGuiAdapter::onNeedWalletData(const std::string& walletId)
    if (pushFill(env)) {
       walletGetMap_[env.id] = walletId;
    }
+}
+
+void QtGuiAdapter::onCreateExtAddress(const std::string& walletId)
+{
+   WalletsMessage msg;
+   msg.set_create_ext_address(walletId);
+   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
 }
 
 void QtGuiAdapter::onNeedExtAddresses(const std::string &walletId)
@@ -1267,9 +1276,11 @@ void QtGuiAdapter::onNeedWalletDialog(bs::signer::ui::GeneralDialogType dlgType
    SignerMessage msg;
    auto msgReq = msg.mutable_dialog_request();
    msgReq->set_dialog_type((int)dlgType);
-   auto msgData = msgReq->add_data();
-   msgData->set_key("rootId");
-   msgData->set_value(rootId);
+   if (!rootId.empty()) {
+      auto msgData = msgReq->add_data();
+      msgData->set_key("rootId");
+      msgData->set_value(rootId);
+   }
    Envelope env{ 0, user_, userSigner_, {}, {}, msg.SerializeAsString(), true };
    pushFill(env);
 }
