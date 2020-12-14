@@ -327,10 +327,10 @@ void FuturesTicket::onMDUpdate(bs::network::Asset::Type type, const QString &sec
    mdInfos.clear();
    for (const auto &field : mdFields) {
       bs::XBTAmount amount;
-      if (field.desc == kInfValueStr) {
+      if (field.levelQuantity == kInfValueStr) {
          amount = kInfValueAmount;
       } else {
-         amount = bs::XBTAmount(field.desc.toDouble());
+         amount = bs::XBTAmount(field.levelQuantity.toDouble());
       }
       auto &mdInfo = mdInfos[amount];
       mdInfo.merge(bs::network::MDField::get(mdFields));
