@@ -95,7 +95,7 @@ private:
    std::string currentProduct_;
    QString security_;
 
-   std::map<bs::network::Asset::Type, std::unordered_map<std::string, bs::network::MDInfo>> mdInfo_;
+   std::map<bs::network::Asset::Type, std::unordered_map<std::string, std::map<bs::XBTAmount, bs::network::MDInfo>>> mdInfo_;
 
    std::vector<std::array<QLabel*, 2>> labels_;
 };
