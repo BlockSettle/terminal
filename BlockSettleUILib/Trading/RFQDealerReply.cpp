@@ -291,7 +291,7 @@ void RFQDealerReply::updateQuoteReqNotification(const bs::network::QuoteReqNotif
 
    if (qrn.assetType == bs::network::Asset::SpotFX ||
       qrn.assetType == bs::network::Asset::Undefined ||
-      qrn.assetType == bs::network::Asset::Futures) {
+      qrn.assetType == bs::network::Asset::DeliverableFutures) {
          ui_->groupBoxSettlementInputs->hide();
    } else {
       ui_->groupBoxSettlementInputs->show();
@@ -475,7 +475,7 @@ bool RFQDealerReply::checkBalance() const
       return false;
    }
 
-   if (currentQRN_.assetType == bs::network::Asset::Futures) {
+   if (currentQRN_.assetType == bs::network::Asset::DeliverableFutures) {
       return true;
    }
 
@@ -638,7 +638,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn, d
    replyData->qn = bs::network::QuoteNotification(qrn, authKey_, price, "");
 
    auto quoteAssetType = qrn.assetType;
-   if (quoteAssetType == bs::network::Asset::Futures) {
+   if (quoteAssetType == bs::network::Asset::DeliverableFutures) {
       quoteAssetType = bs::network::Asset::SpotFX;
    }
 

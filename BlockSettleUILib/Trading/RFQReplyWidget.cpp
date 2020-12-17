@@ -321,7 +321,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
 {
    const auto &quoteReqId = quoteProvider_->getQuoteReqId(order.quoteId);
    if (order.assetType == bs::network::Asset::SpotFX
-       || order.assetType == bs::network::Asset::Futures) {
+       || order.assetType == bs::network::Asset::DeliverableFutures) {
       if (order.status == bs::network::Order::Filled) {
          onSettlementComplete(quoteReqId);
          quoteProvider_->delQuoteReqId(quoteReqId);

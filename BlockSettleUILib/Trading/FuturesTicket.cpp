@@ -323,7 +323,7 @@ void FuturesTicket::sendRequest(bs::network::Side::Type side, bs::XBTAmount amou
 
 void FuturesTicket::onMDUpdate(bs::network::Asset::Type type, const QString &security, bs::network::MDFields mdFields)
 {
-   if (type != bs::network::Asset::Futures && type != bs::network::Asset::CashSettledFutures) {
+   if (!bs::network::Asset::isFuturesType(type)) {
       return;
    }
 

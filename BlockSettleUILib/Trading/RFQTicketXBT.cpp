@@ -891,7 +891,7 @@ void RFQTicketXBT::submitButtonClicked()
       rfq->assetType = bs::network::Asset::PrivateMarket;
       break;
    case ProductGroupType::FuturesGroupType:
-      rfq->assetType = bs::network::Asset::Futures;
+      rfq->assetType = bs::network::Asset::DeliverableFutures;
       break;
    }
 
@@ -1238,7 +1238,7 @@ void RFQTicketXBT::initProductGroupMap()
       , ProductGroupType::XBTGroupType);
    groupNameToType_.emplace(bs::network::Asset::toString(bs::network::Asset::SpotFX)
       , ProductGroupType::FXGroupType);
-   groupNameToType_.emplace(bs::network::Asset::toString(bs::network::Asset::Futures)
+   groupNameToType_.emplace(bs::network::Asset::toString(bs::network::Asset::DeliverableFutures)
       , ProductGroupType::FuturesGroupType);
 }
 
