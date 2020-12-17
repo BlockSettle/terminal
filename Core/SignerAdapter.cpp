@@ -436,11 +436,7 @@ bool SignerAdapter::processSyncAddresses(const bs::message::Envelope &env
    };
    std::set<BinaryData> addrSet;
    for (const auto &addr : request.addresses()) {
-      try {
-         const auto &address = bs::Address::fromAddressString(addr);
-         addrSet.insert(address.prefixed());
-      }
-      catch (const std::exception &) {}
+      addrSet.insert(BinaryData::fromString(addr));
    }
    signer_->syncAddressBatch(request.wallet_id(), addrSet, cb);
    return true;

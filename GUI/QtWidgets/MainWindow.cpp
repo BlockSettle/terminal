@@ -225,6 +225,11 @@ void MainWindow::onHDWallet(const bs::sync::WalletInfo &wi)
    ui_->widgetWallets->onHDWallet(wi);
 }
 
+void bs::gui::qt::MainWindow::onWalletDeleted(const bs::sync::WalletInfo& wi)
+{
+   ui_->widgetWallets->onWalletDeleted(wi);
+}
+
 void MainWindow::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
 {
    ui_->widgetWallets->onHDWalletDetails(hdWallet);

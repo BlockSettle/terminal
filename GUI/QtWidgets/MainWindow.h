@@ -73,6 +73,7 @@ namespace bs {
             void onWalletsReady();
 
             void onHDWallet(const bs::sync::WalletInfo &);
+            void onWalletDeleted(const bs::sync::WalletInfo&);
             void onHDWalletDetails(const bs::sync::HDWalletData &);
             void onWalletsList(const std::string &id, const std::vector<bs::sync::HDWalletData>&);
             void onWalletData(const std::string &walletId, const bs::sync::WalletData&);

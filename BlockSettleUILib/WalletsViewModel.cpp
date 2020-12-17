@@ -21,6 +21,21 @@
 #include "Wallets/SyncWalletsManager.h"
 
 
+void WalletNode::remove(WalletNode* child)
+{
+   bool found = false;
+   for (auto& c : children_) {
+      if (!found && (child->id() == c->id())) {
+         found = true;
+         continue;
+      }
+      if (found) {
+         c->incRow(-1);
+      }
+   }
+   children_.removeOne(child);
+}
+
 void WalletNode::replace(WalletNode *child)
 {
    for (auto &c : children_) {
@@ -617,6 +632,16 @@ void WalletsViewModel::onHDWallet(const bs::sync::WalletInfo &wi)
       endInsertRows();
    }
    emit needHDWalletDetails(*wi.ids.cbegin());
+}
+
+void WalletsViewModel::onWalletDeleted(const bs::sync::WalletInfo& wi)
+{
+   const auto& wallet = rootNode_->findByWalletId(*wi.ids.cbegin());
+   if (wallet) {
+      beginRemoveRows(QModelIndex(), wallet->row(), wallet->row());
+      rootNode_->remove(wallet);
+      endRemoveRows();
+   }
 }
 
 void WalletsViewModel::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)

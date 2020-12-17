@@ -360,6 +360,12 @@ void WalletsWidget::onHDWallet(const bs::sync::WalletInfo &wi)
    walletsModel_->onHDWallet(wi);
 }
 
+void WalletsWidget::onWalletDeleted(const bs::sync::WalletInfo& wi)
+{
+   walletsModel_->onWalletDeleted(wi);
+   wallets_.erase(wi);
+}
+
 void WalletsWidget::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
 {
    walletDetails_[hdWallet.id] = hdWallet;
@@ -991,14 +997,3 @@ void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::
       BSMessageBox(BSMessageBox::critical, title, tr("Failed to send transaction to mempool")).exec();
    }
 }
-
-   // Not used
-//void WalletsWidget::onDeleteWallet()
-//{
-//   const auto action = qobject_cast<QAction *>(sender());
-//   const auto walletId = action ? action->data().toString() : QString();
-//   if (walletId.isEmpty()) {
-//      BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to delete wallet"), this).exec();
-//      return;
-//   }
-//}

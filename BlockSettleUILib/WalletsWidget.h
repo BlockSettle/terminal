@@ -86,6 +86,7 @@ public:
 
    void onNewBlock(unsigned int blockNum);
    void onHDWallet(const bs::sync::WalletInfo &);
+   void onWalletDeleted(const bs::sync::WalletInfo&);
    void onHDWalletDetails(const bs::sync::HDWalletData &);
    void onGenerateAddress(bool isActive);
    void onAddresses(const std::string& walletId, const std::vector<bs::sync::Address> &);

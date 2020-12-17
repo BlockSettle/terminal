@@ -522,6 +522,14 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
    }
       break;
 
+   case WalletsMessage::kWalletDeleted: {
+      const auto& wi = bs::sync::WalletInfo::fromCommonMsg(msg.wallet_deleted());
+      QMetaObject::invokeMethod(mainWindow_, [this, wi]{
+         mainWindow_->onWalletDeleted(wi);
+      });
+   }
+      break;
+
    case WalletsMessage::kWalletAddresses: {
       std::vector<bs::sync::Address> addresses;
       for (const auto &addr : msg.wallet_addresses().addresses()) {

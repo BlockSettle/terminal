@@ -62,6 +62,7 @@ public:
    virtual std::string id() const { return {}; }
 
    void add(WalletNode *child) { children_.append(child); }
+   void remove(WalletNode* child);
    void replace(WalletNode *child);
    void clear();
    int nbChildren() const { return children_.count(); }
@@ -69,6 +70,7 @@ public:
    WalletNode *parent() const { return parent_; }
    WalletNode *child(int index) const;
    int row() const { return row_; }
+   void incRow(int increment = 1) { row_ += increment; }
    const std::string &name() const { return name_; }
    Type type() const { return type_; }
    State state() const { return state_; }
@@ -112,6 +114,7 @@ public:
 
    [[deprecated]] void LoadWallets(bool keepSelection = false);
    void onHDWallet(const bs::sync::WalletInfo &);
+   void onWalletDeleted(const bs::sync::WalletInfo&);
    void onHDWalletDetails(const bs::sync::HDWalletData &);
    void onWalletBalances(const bs::sync::WalletBalanceData &);
 
