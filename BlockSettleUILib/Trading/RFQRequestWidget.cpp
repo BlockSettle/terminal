@@ -403,17 +403,17 @@ bool RFQRequestWidget::checkConditions(const MarketSelectedInfo& selectedInfo)
    using UserType = CelerClient::CelerUserType;
    const UserType userType = celerClient_->celerUserType();
 
-   using GroupType = RFQShieldPage::ProductType;
-   const GroupType group = RFQShieldPage::getProductGroup(selectedInfo.productGroup_);
+   const auto group = RFQShieldPage::getProductGroup(selectedInfo.productGroup_);
 
-   if (group == GroupType::CashSettledFutures) {
+   if (group == WalletShieldBase::ProductType::CashSettledFutures
+      || group == WalletShieldBase::ProductType::DeliverableFutures) {
       showFuturesPage(group);
       return true;
    }
 
    switch (userType) {
    case UserType::Market: {
-      if (group == GroupType::SpotFX || group == GroupType::SpotXBT) {
+      if (group == WalletShieldBase::ProductType::SpotFX || group == WalletShieldBase::ProductType::SpotXBT) {
          ui_->shieldPage->showShieldReservedTradingParticipant();
          popShield();
          return false;
@@ -424,7 +424,7 @@ bool RFQRequestWidget::checkConditions(const MarketSelectedInfo& selectedInfo)
    }
    case UserType::Dealing:
    case UserType::Trading: {
-      if ((group == GroupType::SpotXBT || group == GroupType::PrivateMarket) &&
+      if ((group == WalletShieldBase::ProductType::SpotXBT || group == WalletShieldBase::ProductType::PrivateMarket) &&
          checkWalletSettings(group, selectedInfo)) {
          return false;
       }

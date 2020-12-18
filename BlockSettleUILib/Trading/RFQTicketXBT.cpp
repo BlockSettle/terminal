@@ -475,7 +475,6 @@ void RFQTicketXBT::SetProductGroup(const QString& productGroup)
 
       switch (currentGroupType_) {
       case ProductGroupType::FXGroupType:
-      case ProductGroupType::FuturesGroupType:
          ui_->groupBoxSettlementInputs->setVisible(false);
          break;
       case ProductGroupType::XBTGroupType:
@@ -702,10 +701,6 @@ bs::Address RFQTicketXBT::recvXbtAddressIfSet() const
 
 bool RFQTicketXBT::checkBalance(double qty) const
 {
-   if (currentGroupType_ == ProductGroupType::FuturesGroupType) {
-      return true;
-   }
-
    const auto balance = getBalanceInfo();
    if (getSelectedSide() == bs::network::Side::Buy) {
       if (currentGroupType_ == ProductGroupType::CCGroupType) {
@@ -889,9 +884,6 @@ void RFQTicketXBT::submitButtonClicked()
       break;
    case ProductGroupType::CCGroupType:
       rfq->assetType = bs::network::Asset::PrivateMarket;
-      break;
-   case ProductGroupType::FuturesGroupType:
-      rfq->assetType = bs::network::Asset::DeliverableFutures;
       break;
    }
 
@@ -1238,8 +1230,6 @@ void RFQTicketXBT::initProductGroupMap()
       , ProductGroupType::XBTGroupType);
    groupNameToType_.emplace(bs::network::Asset::toString(bs::network::Asset::SpotFX)
       , ProductGroupType::FXGroupType);
-   groupNameToType_.emplace(bs::network::Asset::toString(bs::network::Asset::DeliverableFutures)
-      , ProductGroupType::FuturesGroupType);
 }
 
 RFQTicketXBT::ProductGroupType RFQTicketXBT::getProductGroupType(const QString& productGroup)
