@@ -39,17 +39,7 @@ public:
        QValidator(parent),
        wordSize_(4),
        numWords_(9),
-       hasChecksum_(true),
-       codec_(std::make_shared<EasyCoDec>())
-   {}
-
-   EasyEncValidator(const std::shared_ptr<EasyCoDec> &codec, QObject *parent = nullptr
-      , size_t numWords = 8, bool hasChecksum = false, size_t wordSize = 4)
-      : QValidator(parent)
-      , wordSize_(wordSize)
-      , numWords_(numWords)
-      , hasChecksum_(hasChecksum)
-      , codec_(codec)
+       hasChecksum_(true)
    {}
 
    State validate(QString &input, int &pos) const override;
@@ -67,7 +57,6 @@ public:
    QString getName() const;
    void setName(const QString &getName);
 
-
    size_t getWordSize() const;
    size_t getNumWords() const;
 
@@ -78,7 +67,6 @@ private:
    const size_t   wordSize_;
    const size_t   numWords_;
    const bool     hasChecksum_;
-   std::shared_ptr<EasyCoDec> codec_;
    mutable QString statusMsg_;
    QString name_ = QString::fromStdString("Line");
 

@@ -19,7 +19,7 @@
 #include <QVariant>
 
 #include <spdlog/spdlog.h>
-
+#include "ArmoryBackups.h"
 #include "CoreHDWallet.h"
 #include "PaperBackupWriter.h"
 #include "SignerAdapter.h"
@@ -289,7 +289,13 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
          if (!wallet) {
             throw std::runtime_error("failed to find wallet with id " + walletId.toStdString());
          }
-         seedData = bs::core::wallet::Seed(chainCode, wallet->networkType()).toEasyCodeChecksum();
+         const auto& encoded = ArmoryBackups::BackupEasy16::encode(chainCode
+            , ArmoryBackups::BackupType::BIP32_Seed_Structured);
+         if (encoded.size() != 2) {
+            throw std::runtime_error("failed to encode easy16");
+         }
+         seedData.part1 = encoded.at(0);
+         seedData.part2 = encoded.at(1);
          privKeyString = privKey.toBinStr();
       } catch (const std::exception &e) {
          logger_->error("[WalletsProxy] failed to encode private key: {}", e.what());

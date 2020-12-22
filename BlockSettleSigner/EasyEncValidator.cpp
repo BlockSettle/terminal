@@ -25,19 +25,19 @@ QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
    QString tmpInput = input.trimmed().toLower().remove(QChar::Space);
    QString newInput;
    int newPos = 0;
-   const auto &allowedChars = codec_->allowedChars();
+//   const auto &allowedChars = codec_->allowedChars();
    for (int i = 0; i < tmpInput.length(); i++) {
       if ( i && i % wordSize_ == 0) {
          newInput.append(QChar::Space);
          ++newPos;
       }
       const char c = tmpInput.at(i).toLatin1();
-      if ((allowedChars.find(c) == allowedChars.end())) {
+/*      if ((allowedChars.find(c) == allowedChars.end())) {
          input = newInput;
          pos = newPos;
          setStatusMsg(invalidMsgTmpl_.arg(name_));
          return QValidator::State::Invalid;
-      }
+      }*/   //TODO: revisit this with known dictionary of allowed chars from Armory easy16 encoder
       newInput.append(QChar::fromLatin1(c));
       ++newPos;
    }
