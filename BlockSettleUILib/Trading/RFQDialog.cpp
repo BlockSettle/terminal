@@ -106,7 +106,7 @@ void RFQDialog::onOrderFilled(const std::string &quoteId)
    }
 
    if (rfq_.assetType == bs::network::Asset::SpotFX
-       || rfq_.assetType == bs::network::Asset::Futures) {
+       || rfq_.assetType == bs::network::Asset::DeliverableFutures) {
       ui_->pageRequestingQuote->onOrderFilled(quoteId);
    }
 }
@@ -118,7 +118,7 @@ void RFQDialog::onOrderFailed(const std::string& quoteId, const std::string& rea
    }
 
    if (rfq_.assetType == bs::network::Asset::SpotFX
-       || rfq_.assetType == bs::network::Asset::Futures) {
+       || rfq_.assetType == bs::network::Asset::DeliverableFutures) {
       ui_->pageRequestingQuote->onOrderFailed(quoteId, reason);
    }
    close();
@@ -130,7 +130,7 @@ void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Q
    quote_ = quote;
 
    if (rfq_.assetType == bs::network::Asset::SpotFX
-       || rfq_.assetType == bs::network::Asset::Futures) {
+       || rfq_.assetType == bs::network::Asset::DeliverableFutures) {
       quoteProvider_->AcceptQuoteFX(reqId, quote);
    }
    else {

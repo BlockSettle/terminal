@@ -647,7 +647,7 @@ void OrderListModel::createGroupsIfNeeded(const bs::network::Order &order, Marke
       beginInsertRows(createIndex(findMarket(sg, marketItem), 0, &marketItem->idx_),
          static_cast<int>(marketItem->rows_.size()), static_cast<int>(marketItem->rows_.size()));
 
-      if (getStatusGroup(order) == StatusGroup::UnSettled && order.assetType == bs::network::Asset::Type::Futures) {
+      if (getStatusGroup(order) == StatusGroup::UnSettled && bs::network::Asset::isFuturesType(order.assetType)) {
          marketItem->rows_.emplace_back(make_unique<FuturesGroup>(
             QString::fromStdString(order.security), &marketItem->idx_));
       } else {
@@ -874,7 +874,7 @@ void OrderListModel::DisplayFuturesDeliveryRow(const Blocksettle::Communication:
    }
 
    beginInsertRows(createIndex(pendingFuturesSettlement_->row_, 0, &pendingFuturesSettlement_->idx_), static_cast<int>(pendingFuturesSettlement_->rows_.size()), static_cast<int>(pendingFuturesSettlement_->rows_.size()));
-   pendingFuturesSettlement_->rows_.emplace_back(make_unique<Market>(bs::network::Asset::Type::Futures, &pendingFuturesSettlement_->idx_));
+   pendingFuturesSettlement_->rows_.emplace_back(make_unique<Market>(bs::network::Asset::Type::DeliverableFutures, &pendingFuturesSettlement_->idx_));
    Market * marketItem = pendingFuturesSettlement_->rows_.back().get();
    endInsertRows();
 

@@ -168,7 +168,7 @@ double MarketData::ask(const QString &sec) const
 void MarketData::onMDUpdated(bs::network::Asset::Type assetType, const QString &security,
    bs::network::MDFields data)
 {
-   if (assetType == bs::network::Asset::Type::Futures) {
+   if (bs::network::Asset::isFuturesType(assetType)) {
       // ignore futures prices updates
       return;
    }

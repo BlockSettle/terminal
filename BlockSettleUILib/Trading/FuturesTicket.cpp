@@ -139,6 +139,9 @@ void FuturesTicket::init(const std::shared_ptr<spdlog::logger> &logger
 void FuturesTicket::setType(bs::network::Asset::Type type)
 {
    type_ = type;
+
+   ui_->pushButtonBuy->setEnabled(type == bs::network::Asset::CashSettledFutures);
+   ui_->pushButtonSell->setEnabled(type == bs::network::Asset::CashSettledFutures);
 }
 
 void FuturesTicket::SetCurrencyPair(const QString& currencyPair)
@@ -323,7 +326,7 @@ void FuturesTicket::sendRequest(bs::network::Side::Type side, bs::XBTAmount amou
 
 void FuturesTicket::onMDUpdate(bs::network::Asset::Type type, const QString &security, bs::network::MDFields mdFields)
 {
-   if (type != bs::network::Asset::Futures && type != bs::network::Asset::CashSettledFutures) {
+   if (!bs::network::Asset::isFuturesType(type)) {
       return;
    }
 

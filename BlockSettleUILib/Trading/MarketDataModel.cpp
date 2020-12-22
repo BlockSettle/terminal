@@ -167,8 +167,7 @@ void MarketDataModel::onMDUpdated(bs::network::Asset::Type assetType, const QStr
 
    PriceMap fieldsMap;
 
-   if (assetType == bs::network::Asset::Futures ||
-       assetType == bs::network::Asset::CashSettledFutures) {
+   if (bs::network::Asset::isFuturesType(assetType)) {
       FieldsToMap(bs::network::Asset::SpotXBT, mdFields, fieldsMap);
    } else {
       FieldsToMap(assetType, mdFields, fieldsMap);

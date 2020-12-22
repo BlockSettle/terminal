@@ -155,10 +155,10 @@ WalletShieldBase::ProductType WalletShieldBase::getProductGroup(const QString &p
    else if (productGroup == QLatin1String("Spot FX")) {
       return ProductType::SpotFX;
    }
-   else if (productGroup == QLatin1String("1day Deliverable")) {
-      return ProductType::Futures;
+   else if (productGroup == QLatin1String("XBT 1-day deliverable")) {
+      return ProductType::DeliverableFutures;
    }
-   else if (productGroup == QLatin1String("1day Cash Settled")) {
+   else if (productGroup == QLatin1String("XBT 1-day rolling")) {
       return ProductType::CashSettledFutures;
    }
 #ifndef QT_NO_DEBUG

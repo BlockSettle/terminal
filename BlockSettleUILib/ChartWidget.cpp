@@ -189,7 +189,7 @@ void ChartWidget::SendEoDRequest()
 void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString& security,
                               bs::network::MDFields mdFields)
 {
-   if (assetType == bs::network::Asset::Type::Futures) {
+   if (bs::network::Asset::isFuturesType(assetType)) {
       // ignore futures prices updates
       return;
    }
