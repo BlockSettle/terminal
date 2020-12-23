@@ -140,8 +140,8 @@ void FuturesTicket::setType(bs::network::Asset::Type type)
 {
    type_ = type;
 
-   ui_->pushButtonBuy->setEnabled(type == bs::network::Asset::CashSettledFutures);
-   ui_->pushButtonSell->setEnabled(type == bs::network::Asset::CashSettledFutures);
+   ui_->pushButtonBuy->setEnabled(bs::network::Asset::isFuturesType(type));
+   ui_->pushButtonSell->setEnabled(bs::network::Asset::isFuturesType(type));
 }
 
 void FuturesTicket::SetCurrencyPair(const QString& currencyPair)
@@ -320,6 +320,7 @@ void FuturesTicket::sendRequest(bs::network::Side::Type side, bs::XBTAmount amou
    request.side = side;
    request.price = price;
    request.amount = amount;
+   request.type = type_;
 
    emit sendFutureRequestToPB(request);
 }
