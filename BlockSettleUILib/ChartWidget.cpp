@@ -1071,10 +1071,18 @@ void ChartWidget::OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oldRange)
 QString ChartWidget::ProductTypeToString(TradeHistoryTradeType type)
 {
    switch (type) {
-   case FXTradeType: return QStringLiteral("FX");
-   case XBTTradeType: return QStringLiteral("XBT");
-   case PMTradeType: return QStringLiteral("PM");
-   default: return QStringLiteral("");
+   case FXTradeType:
+      return QStringLiteral("FX");
+   case XBTTradeType:
+      return QStringLiteral("XBT");
+   case PMTradeType:
+      return QStringLiteral("PM");
+   case OneDayDeliverableTradeType:
+      return QString::fromStdString(bs::network::Asset::toString(bs::network::Asset::DeliverableFutures));
+   case OneDayCashSettledTradeType:
+      return QString::fromStdString(bs::network::Asset::toString(bs::network::Asset::CashSettledFutures));
+   default:
+      return QStringLiteral("");
    }
 }
 
