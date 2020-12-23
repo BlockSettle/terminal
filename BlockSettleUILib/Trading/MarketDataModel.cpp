@@ -42,13 +42,13 @@ QString MarketDataModel::columnName(MarketDataColumns col) const
 {
    switch (col)
    {
-   case MarketDataColumns::Product:    return tr("Security");
-   case MarketDataColumns::BidPrice:   return tr("Bid");
-   case MarketDataColumns::OfferPrice: return tr("Ask");
-   case MarketDataColumns::LastPrice:  return tr("Last");
-   case MarketDataColumns::DailyVol:   return tr("24h Volume");
-   case MarketDataColumns::EmptyColumn: return QString();
-   default:          return tr("Unknown");
+   case MarketDataColumns::Product:       return tr("Security");
+   case MarketDataColumns::BidPrice:      return tr("Bid");
+   case MarketDataColumns::OfferPrice:    return tr("Ask");
+   case MarketDataColumns::LastPrice:     return tr("Last");
+   case MarketDataColumns::DailyVol:      return tr("24h Volume");
+   case MarketDataColumns::EmptyColumn:   return QString();
+   default:                               return tr("Unknown");
    }
 }
 
@@ -145,6 +145,34 @@ static void FieldsToMap(bs::network::Asset::Type at, const bs::network::MDFields
    }
 }
 
+static void FutureFieldsToMap(bs::network::Asset::Type at, const bs::network::MDFields &fields, PriceMap &map)
+{
+   for (const auto &field : fields) {
+      switch (field.type) {
+      case bs::network::MDField::PriceBid:
+         if (field.isIndicativeForFutures()) {
+            map[MarketDataModel::MarketDataColumns::BidPrice] = { UiUtils::displayPriceForAssetType(field.value, at), UiUtils::truncatePriceForAsset(field.value, at) };
+         }
+         break;
+      case bs::network::MDField::PriceOffer:
+         if (field.isIndicativeForFutures()) {
+            map[MarketDataModel::MarketDataColumns::OfferPrice] = { UiUtils::displayPriceForAssetType(field.value, at), UiUtils::truncatePriceForAsset(field.value, at) };
+         }
+         break;
+      case bs::network::MDField::PriceLast:
+         map[MarketDataModel::MarketDataColumns::LastPrice] = { UiUtils::displayPriceForAssetType(field.value, at), UiUtils::truncatePriceForAsset(field.value, at) };
+         break;
+      case bs::network::MDField::DailyVolume:
+         map[MarketDataModel::MarketDataColumns::DailyVol] = { getVolumeString(field.value, at), field.value };
+         break;
+      case bs::network::MDField::Reject:
+         map[MarketDataModel::MarketDataColumns::ColumnsCount] = { field.levelQuantity, 0 };
+         break;
+      default:  break;
+      }
+   }
+}
+
 bool MarketDataModel::isVisible(const QString &id) const
 {
    if (instrVisible_.empty()) {
@@ -168,7 +196,7 @@ void MarketDataModel::onMDUpdated(bs::network::Asset::Type assetType, const QStr
    PriceMap fieldsMap;
 
    if (bs::network::Asset::isFuturesType(assetType)) {
-      FieldsToMap(bs::network::Asset::SpotXBT, mdFields, fieldsMap);
+      FutureFieldsToMap(bs::network::Asset::SpotXBT, mdFields, fieldsMap);
    } else {
       FieldsToMap(assetType, mdFields, fieldsMap);
    }

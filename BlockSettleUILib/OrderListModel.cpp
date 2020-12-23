@@ -647,7 +647,7 @@ void OrderListModel::createGroupsIfNeeded(const bs::network::Order &order, Marke
       beginInsertRows(createIndex(findMarket(sg, marketItem), 0, &marketItem->idx_),
          static_cast<int>(marketItem->rows_.size()), static_cast<int>(marketItem->rows_.size()));
 
-      if (getStatusGroup(order) == StatusGroup::UnSettled && bs::network::Asset::isFuturesType(order.assetType)) {
+      if (bs::network::Asset::isFuturesType(order.assetType)) {
          marketItem->rows_.emplace_back(make_unique<FuturesGroup>(
             QString::fromStdString(order.security), &marketItem->idx_));
       } else {

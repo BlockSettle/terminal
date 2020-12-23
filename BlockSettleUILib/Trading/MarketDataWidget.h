@@ -111,7 +111,7 @@ protected:
       QHeaderView::paintSection(painter, rect, logIndex);
       painter->restore();
 
-      if (logIndex == 0) { 
+      if (logIndex == 0) {
          QStyleOptionButton option;
          const QSize ch = checkboxSizeHint();
          option.rect = QRect(2, (height() - ch.height()) / 2, ch.width(), ch.height());
