@@ -225,6 +225,10 @@ void FuturesTicket::productSelectionChanged()
    }
 
    updatePanel();
+
+   if (ui_->lineEditAmount->isEnabled()) {
+      ui_->lineEditAmount->setFocus();
+   }
 }
 
 void FuturesTicket::updatePanel()
