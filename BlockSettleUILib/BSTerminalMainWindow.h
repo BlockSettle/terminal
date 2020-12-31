@@ -45,6 +45,7 @@ namespace Blocksettle {
    namespace Communication {
       namespace ProxyTerminalPb {
          class Response;
+         class Response_DeliveryAddress;
       }
    }
 }
@@ -244,6 +245,7 @@ private slots:
    void onGenerateAddress();
 
    void openAuthManagerDialog();
+   void onSetDeliveryAddr();
    void openConfigDialog(bool showInNetworkPage = false);
    void openAccountInfoDialog();
    void openCCTokenDialog();
@@ -264,6 +266,8 @@ private slots:
    void onBsConnectionFailed();
 
    void onInitWalletDialogWasShown();
+
+   void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
 
 protected:
    void closeEvent(QCloseEvent* event) override;
@@ -305,6 +309,8 @@ private:
    void DisplayCreateTransactionDialog(std::shared_ptr<CreateTransactionDialog> dlg);
 
    void onBootstrapDataLoaded(const std::string& data);
+
+   void processSetDeliveryAddr(const Blocksettle::Communication::ProxyTerminalPb::Response_DeliveryAddress &resp);
 
 private:
    enum class ChatInitState
