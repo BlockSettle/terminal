@@ -233,10 +233,12 @@ void FuturesTicket::productSelectionChanged()
 
 void FuturesTicket::updatePanel()
 {
+   // currentProduct_ will be set to EURP or EURD, query EUR instead
+   auto currentProduct = "EUR";
    const double balance = assetManager_ ?
-      assetManager_->getBalance(currentProduct_, false, nullptr) : 0.0;
+      assetManager_->getBalance(currentProduct, false, nullptr) : 0.0;
    auto amountString = UiUtils::displayCurrencyAmount(balance);
-   QString text = tr("%1 %2").arg(amountString).arg(QString::fromStdString(currentProduct_));
+   QString text = tr("%1 %2").arg(amountString).arg(QString::fromStdString(currentProduct));
    ui_->labelBalanceValue->setText(text);
 
    ui_->labelFutureBalanceValue->setText(UiUtils::displayAmount(assetManager_->netDeliverableBalanceXbt()));

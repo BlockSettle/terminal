@@ -14,6 +14,7 @@
 #include <QCloseEvent>
 #include <QGuiApplication>
 #include <QIcon>
+#include <QInputDialog>
 #include <QShortcut>
 #include <QStringList>
 #include <QSystemTrayIcon>
@@ -225,6 +226,17 @@ void BSTerminalMainWindow::onBsConnectionFailed()
 void BSTerminalMainWindow::onInitWalletDialogWasShown()
 {
    initialWalletCreateDialogShown_ = true;
+}
+
+void BSTerminalMainWindow::onMessageFromPB(const ProxyTerminalPb::Response &response)
+{
+   switch (response.data_case()) {
+      case ProxyTerminalPb::Response::kDeliveryAddress:
+         processSetDeliveryAddr(response.delivery_address());
+         break;
+      default:
+         break;
+   }
 }
 
 void BSTerminalMainWindow::setWidgetsAuthorized(bool authorized)
@@ -1354,6 +1366,7 @@ void BSTerminalMainWindow::setupMenu()
    connect(ui_->actionCreateNewWallet, &QAction::triggered, this, [ww = ui_->widgetWallets]{ ww->onNewWallet(); });
    connect(ui_->actionOpenURI, &QAction::triggered, this, [this]{ openURIDialog(); });
    connect(ui_->actionAuthenticationAddresses, &QAction::triggered, this, &BSTerminalMainWindow::openAuthManagerDialog);
+   connect(ui_->actionSetDeliveryAddress, &QAction::triggered, this, &BSTerminalMainWindow::onSetDeliveryAddr);
    connect(ui_->actionSettings, &QAction::triggered, this, [=]() { openConfigDialog(); });
    connect(ui_->actionAccountInformation, &QAction::triggered, this, &BSTerminalMainWindow::openAccountInfoDialog);
    connect(ui_->actionEnterColorCoinToken, &QAction::triggered, this, &BSTerminalMainWindow::openCCTokenDialog);
@@ -1390,6 +1403,27 @@ void BSTerminalMainWindow::setupMenu()
 void BSTerminalMainWindow::openAuthManagerDialog()
 {
    authAddrDlg_->exec();
+}
+
+void BSTerminalMainWindow::onSetDeliveryAddr()
+{
+   auto addr = QInputDialog::getText(this, tr("Delivery Address"), tr("Address")).toStdString();
+   if (addr.empty()) {
+      return;
+   }
+   try {
+      bs::Address::fromAddressString(addr);
+   } catch (const std::exception &e) {
+      BSMessageBox(BSMessageBox::critical, tr("Delivery Address")
+         , tr("Error: %1").arg(QString::fromStdString(e.what()))).exec();
+      return;
+   }
+   if (!bsClient_) {
+      BSMessageBox(BSMessageBox::critical, tr("Delivery Address")
+         , tr("Connection closed")).exec();
+      return;
+   }
+   bsClient_->setFuturesDeliveryAddr(addr);
 }
 
 void BSTerminalMainWindow::openConfigDialog(bool showInNetworkPage)
@@ -1531,6 +1565,8 @@ void BSTerminalMainWindow::onUserLoggedIn()
    ui_->actionAccountInformation->setEnabled(true);
    ui_->actionAuthenticationAddresses->setEnabled(celerConnection_->celerUserType()
       != BaseCelerClient::CelerUserType::Market);
+   ui_->actionSetDeliveryAddress->setEnabled(celerConnection_->celerUserType()
+      != BaseCelerClient::CelerUserType::Market);
    ui_->actionOneTimePassword->setEnabled(true);
    ui_->actionEnterColorCoinToken->setEnabled(true);
 
@@ -1556,6 +1592,7 @@ void BSTerminalMainWindow::onUserLoggedOut()
 {
    ui_->actionAccountInformation->setEnabled(false);
    ui_->actionAuthenticationAddresses->setEnabled(false);
+   ui_->actionSetDeliveryAddress->setEnabled(false);
    ui_->actionEnterColorCoinToken->setEnabled(false);
    ui_->actionOneTimePassword->setEnabled(false);
 
@@ -2234,6 +2271,7 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
 
    // connect to RFQ dialog
    connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetRFQ, &RFQRequestWidget::onMessageFromPB);
+   connect(bsClient_.get(), &BsClient::processPbMessage, this, &BSTerminalMainWindow::onMessageFromPB);
    connect(bsClient_.get(), &BsClient::disconnected, ui_->widgetRFQ, &RFQRequestWidget::onUserDisconnected);
    connect(ui_->widgetRFQ, &RFQRequestWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClient::sendUnsignedPayin);
    connect(ui_->widgetRFQ, &RFQRequestWidget::sendSignedPayinToPB, bsClient_.get(), &BsClient::sendSignedPayin);
@@ -2463,6 +2501,21 @@ void BSTerminalMainWindow::onBootstrapDataLoaded(const std::string& data)
       authManager_->SetLoadedValidationAddressList(bootstrapDataManager_->GetAuthValidationList());
       ccFileManager_->SetLoadedDefinitions(bootstrapDataManager_->GetCCDefinitions());
    }
+}
+
+void BSTerminalMainWindow::processSetDeliveryAddr(const ProxyTerminalPb::Response_DeliveryAddress &resp)
+{
+   if (!resp.success()) {
+      addDeferredDialog([this, errorMsg = resp.error_msg()] {
+         BSMessageBox(BSMessageBox::critical, tr("Delivery Address")
+         , tr("Error: %1").arg(QString::fromStdString(errorMsg)), this).exec();
+      });
+      return;
+   }
+   addDeferredDialog([this] {
+      BSMessageBox(BSMessageBox::info, tr("Delivery Address")
+      , tr("Address submitted"), this).exec();
+   });
 }
 
 void BSTerminalMainWindow::onAuthLeafCreated()
