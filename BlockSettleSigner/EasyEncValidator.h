@@ -56,7 +56,6 @@ public:
    QString getName() const;
    void setName(const QString &getName);
 
-
    size_t getWordSize() const;
    size_t getNumWords() const;
 

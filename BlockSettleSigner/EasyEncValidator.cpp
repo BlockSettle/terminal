@@ -37,7 +37,7 @@ QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
          pos = newPos;
          setStatusMsg(invalidMsgTmpl_.arg(name_));
          return QValidator::State::Invalid;
-      }*/
+      }*/   //TODO: revisit this with known dictionary of allowed chars from Armory easy16 encoder
       newInput.append(QChar::fromLatin1(c));
       ++newPos;
    }

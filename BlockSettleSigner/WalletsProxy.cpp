@@ -289,14 +289,14 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
          if (!wallet) {
             throw std::runtime_error("failed to find wallet with id " + walletId.toStdString());
          }
-         privKeyString = privKey.toBinStr();
-         const auto &easy16data = ArmoryBackups::BackupEasy16::encode(chainCode
-            , (uint8_t)ArmoryBackups::BackupType::BIP32_Seed_Structured);
-         if (easy16data.size() != 2) {
-            throw std::runtime_error("failed to encode wallet " + walletId.toStdString() + " seed");
+         const auto& encoded = ArmoryBackups::BackupEasy16::encode(chainCode
+            , ArmoryBackups::BackupType::BIP32_Seed_Structured);
+         if (encoded.size() != 2) {
+            throw std::runtime_error("failed to encode easy16");
          }
-         seedData.part1 = easy16data.at(0);
-         seedData.part2 = easy16data.at(1);
+         seedData.part1 = encoded.at(0);
+         seedData.part2 = encoded.at(1);
+         privKeyString = privKey.toBinStr();
       } catch (const std::exception &e) {
          logger_->error("[WalletsProxy] failed to encode private key: {}", e.what());
          const auto errText = tr("Failed to encode private key for wallet %1").arg(walletId);
