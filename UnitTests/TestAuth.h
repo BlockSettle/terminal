@@ -36,6 +36,7 @@ namespace bs {
       class Wallet;
    }
 }
+class QtHCT;
 
 ////////////////////////////////////////////////////////////////////////////////
 class TestValidationACT : public ValidationAddressACT
@@ -124,6 +125,7 @@ protected:
    std::shared_ptr<bs::core::Wallet>   xbtSignWallet_;
    std::shared_ptr<bs::sync::Wallet>   xbtWallet_;
    std::shared_ptr<bs::sync::WalletsManager> syncMgr_;
+   std::shared_ptr<QtHCT>  hct_;
    bs::Address    recvAddr_;
    std::shared_ptr<TestEnv> envPtr_;
 

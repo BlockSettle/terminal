@@ -17,6 +17,7 @@
 #include "QmlBridge.h"
 #include "QmlFactory.h"
 #include "QPasswordData.h"
+#include "HeadlessContainer.h"
 #include "SignerDefs.h"
 
 #include "bs_signer.pb.h"
@@ -45,7 +46,7 @@ class SignAdapterContainer;
 class SignerInterfaceListener;
 class DataConnection;
 
-class SignerAdapter : public QObject
+class SignerAdapter : public QtHCT
 {
    Q_OBJECT
    friend class SignerInterfaceListener;

@@ -33,7 +33,7 @@ class ArmoryConnection;
 class ApplicationSettings;
 class AssetManager;
 class CurrentWalletFilter;
-class SignContainer;
+class HeadlessContainer;
 class WalletsViewModel;
 class ConnectionManager;
 
@@ -47,7 +47,7 @@ public:
       , const std::shared_ptr<bs::sync::hd::Wallet> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<HeadlessContainer> &
       , WalletsViewModel *walletsModel
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<ConnectionManager> &
@@ -72,7 +72,7 @@ private:
    std::shared_ptr<bs::sync::hd::Wallet>        wallet_;
    std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;
    bs::hd::WalletInfo                  walletInfo_;
-   std::shared_ptr<SignContainer>      signingContainer_;
+   std::shared_ptr<HeadlessContainer>  signingContainer_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>  connectionManager_;
    std::shared_ptr<AssetManager>       assetMgr_;

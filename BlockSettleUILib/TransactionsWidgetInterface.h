@@ -29,8 +29,8 @@ namespace bs {
 }
 class ApplicationSettings;
 class ArmoryConnection;
+class HeadlessContainer;
 class TransactionsViewModel;
-class WalletSignerContainer;
 
 class TransactionsWidgetInterface : public TabWithShortcut {
    Q_OBJECT
@@ -41,7 +41,7 @@ public:
    void init(const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<WalletSignerContainer> &
+      , const std::shared_ptr<HeadlessContainer> &
       , const std::shared_ptr<ApplicationSettings>&
       , const std::shared_ptr<spdlog::logger> &);
 
@@ -54,7 +54,7 @@ protected slots:
 protected:
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<WalletSignerContainer> signContainer_;
+   std::shared_ptr<HeadlessContainer>     signContainer_;
    std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
    std::shared_ptr<ApplicationSettings>   appSettings_;

@@ -12,8 +12,8 @@
 
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
-#include "CelerClient.h"
-#include "CelerSubmitQuoteNotifSequence.h"
+#include "Celer/CelerClient.h"
+#include "Celer/SubmitQuoteNotifSequence.h"
 #include "Colors.h"
 #include "CommonTypes.h"
 #include "CurrencyPair.h"
@@ -26,7 +26,8 @@
 
 
 QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
- , std::shared_ptr<BaseCelerClient> celerClient, std::shared_ptr<ApplicationSettings> appSettings
+   , const std::shared_ptr<CelerClientQt> &celerClient
+   , const std::shared_ptr<ApplicationSettings> &appSettings
  , QObject* parent)
    : QAbstractItemModel(parent)
    , secStatsCollector_(statsCollector)
@@ -41,7 +42,7 @@ QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCo
 
    setPriceUpdateInterval(appSettings_->get<int>(ApplicationSettings::PriceUpdateInterval));
 
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed,
+   connect(celerClient_.get(), &CelerClientQt::OnConnectionClosed,
       this, &QuoteRequestsModel::clearModel);
    connect(this, &QuoteRequestsModel::deferredUpdate,
       this, &QuoteRequestsModel::onDeferredUpdate, Qt::QueuedConnection);
@@ -612,7 +613,7 @@ void QuoteRequestsModel::ticker() {
    pendingDeleteIds_.clear();
 
    for (auto qrn : notifications_) {
-      const auto timeDiff = timeNow.msecsTo(qrn.second.expirationTime.addMSecs(qrn.second.timeSkewMs));
+      const auto timeDiff = timeNow.msecsTo(QDateTime::fromMSecsSinceEpoch(qrn.second.expirationTime + qrn.second.timeSkewMs));
       if ((timeDiff < 0) || (qrn.second.status == bs::network::QuoteReqNotification::Withdrawn)) {
          forSpecificId(qrn.second.quoteRequestId, [this](Group *grp, int itemIndex) {
             const auto row = findGroup(&grp->idx_);
@@ -795,13 +796,12 @@ void QuoteRequestsModel::onQuoteReqNotifReplied(const bs::network::QuoteNotifica
       g = group;
 
       const auto assetType = group->rfqs_[static_cast<std::size_t>(i)]->assetType_;
-      const double quotedPrice = (qn.side == bs::network::Side::Buy) ? qn.bidPx : qn.offerPx;
 
       group->rfqs_[static_cast<std::size_t>(i)]->quotedPriceString_ =
-         UiUtils::displayPriceForAssetType(quotedPrice, assetType);
-      group->rfqs_[static_cast<std::size_t>(i)]->quotedPrice_ = quotedPrice;
+         UiUtils::displayPriceForAssetType(qn.price, assetType);
+      group->rfqs_[static_cast<std::size_t>(i)]->quotedPrice_ = qn.price;
       group->rfqs_[static_cast<std::size_t>(i)]->quotedPriceBrush_ =
-         colorForQuotedPrice(quotedPrice, group->rfqs_[static_cast<std::size_t>(i)]->bestQuotedPx_);
+         colorForQuotedPrice(qn.price, group->rfqs_[static_cast<std::size_t>(i)]->bestQuotedPx_);
    });
 
    if (withdrawn) {

@@ -12,6 +12,7 @@
 
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
+#include "HeadlessContainer.h"
 #include "InprocSigner.h"
 #include "SettableField.h"
 #include "StringUtils.h"
@@ -34,6 +35,7 @@ namespace {
    const auto kSettlementId = std::string("dc26c004d7b24f71cd5b348a254c292777586f5d9d00f60ac65dd7d5b06d0c2b");
 
 } // namespace
+class QtHCT;
 
 class TestPeer
 {
@@ -79,7 +81,9 @@ public:
 
       walletsMgr_->addWallet(wallet_);
 
-      signer_ = std::make_shared<InprocSigner>(walletsMgr_, env.logger(), "", NetworkType::TestNet);
+      hct_ = std::make_shared<QtHCT>(nullptr);
+      signer_ = std::make_shared<InprocSigner>(walletsMgr_, env.logger()
+         , hct_.get(), "", NetworkType::TestNet);
       signer_->Start();
 
       syncWalletMgr_ = std::make_shared<bs::sync::WalletsManager>(env.logger()
@@ -111,6 +115,7 @@ public:
    std::shared_ptr<bs::core::WalletsManager> walletsMgr_;
    std::shared_ptr<bs::sync::WalletsManager> syncWalletMgr_;
    std::shared_ptr<InprocSigner> signer_;
+   std::shared_ptr<QtHCT>        hct_;
    std::shared_ptr<OtcClient> otc_;
    bs::Address authAddress_;
    bs::Address nativeAddr_;

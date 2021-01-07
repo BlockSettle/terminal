@@ -65,7 +65,7 @@ private slots:
    void setDefaultAddress();
 
    void onModelReset();
-   void onAddressStateChanged(const QString &addr, const QString &state);
+   void onAddressStateChanged(const QString &addr, int state);
 
    void onAuthMgrError(const QString &details);
    void onAuthMgrInfo(const QString &text);

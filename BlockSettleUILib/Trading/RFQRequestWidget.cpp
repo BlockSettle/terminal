@@ -17,9 +17,10 @@
 #include "AuthAddressManager.h"
 #include "AutoSignQuoteProvider.h"
 #include "BSMessageBox.h"
-#include "CelerClient.h"
+#include "Celer/CelerClient.h"
 #include "CurrencyPair.h"
 #include "DialogManager.h"
+#include "HeadlessContainer.h"
 #include "MDCallbacksQt.h"
 #include "NotificationCenter.h"
 #include "OrderListModel.h"
@@ -29,7 +30,6 @@
 #include "RfqStorage.h"
 #include "UserScriptRunner.h"
 #include "UtxoReservationManager.h"
-#include "WalletSignerContainer.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -37,6 +37,7 @@
 
 #include "ui_RFQRequestWidget.h"
 
+using namespace Blocksettle::Communication;
 namespace  {
    enum class RFQPages : int
    {
@@ -218,12 +219,12 @@ void RFQRequestWidget::initWidgets(const std::shared_ptr<MarketDataProvider>& md
 }
 
 void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<BaseCelerClient>& celerClient
+   , const std::shared_ptr<CelerClientQt>& celerClient
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
    , const std::shared_ptr<QuoteProvider> &quoteProvider
    , const std::shared_ptr<AssetManager> &assetManager
    , const std::shared_ptr<DialogManager> &dialogManager
-   , const std::shared_ptr<WalletSignerContainer> &container
+   , const std::shared_ptr<HeadlessContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<AutoSignScriptProvider> &autoSignProvider
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
@@ -263,8 +264,8 @@ void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
          , { false, QString::fromStdString(quoteId), QString::fromStdString(reason) });
    });
 
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this, &RFQRequestWidget::onConnectedToCeler);
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &RFQRequestWidget::onDisconnectedFromCeler);
+   connect(celerClient_.get(), &CelerClientQt::OnConnectedToServer, this, &RFQRequestWidget::onConnectedToCeler);
+   connect(celerClient_.get(), &CelerClientQt::OnConnectionClosed, this, &RFQRequestWidget::onDisconnectedFromCeler);
 
    connect((RFQScriptRunner *)autoSignProvider_->scriptRunner(), &RFQScriptRunner::sendRFQ
       , ui_->pageRFQTicket, &RFQTicketXBT::onSendRFQ, Qt::QueuedConnection);

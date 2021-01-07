@@ -27,9 +27,9 @@
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
 #include "BSMessageBox.h"
+#include "HeadlessContainer.h"
 #include "NewWalletDialog.h"
 #include "SelectAddressDialog.h"
-#include "SignContainer.h"
 #include "WalletsViewModel.h"
 #include "WalletWarningDialog.h"
 #include "Wallets/SyncHDWallet.h"
@@ -178,7 +178,7 @@ WalletsWidget::~WalletsWidget() = default;
 
 void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::sync::WalletsManager> &manager
-   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<HeadlessContainer> &container
    , const std::shared_ptr<ApplicationSettings> &applicationSettings
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<AssetManager> &assetMgr
@@ -196,7 +196,10 @@ void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger
 
    // signingContainer_ might be null if user rejects remote signer key
    if (signingContainer_) {
-      connect(signingContainer_.get(), &SignContainer::TXSigned, this, &WalletsWidget::onTXSigned);
+      const auto hct = dynamic_cast<QtHCT*>(signingContainer_->cbTarget());
+      if (hct) {
+         connect(hct, &QtHCT::TXSigned, this, &WalletsWidget::onTXSigned);
+      }
    }
 
    const auto &defWallet = walletsManager_->getDefaultWallet();

@@ -13,6 +13,7 @@
 #include "ApplicationSettings.h"
 #include "BSMessageBox.h"
 #include "CreateTransactionDialogAdvanced.h"
+#include "HeadlessContainer.h"
 #include "PasswordDialogDataWrapper.h"
 #include "TradesUtils.h"
 #include "TransactionsViewModel.h"
@@ -52,7 +53,7 @@ TransactionsWidgetInterface::TransactionsWidgetInterface(QWidget *parent)
 void TransactionsWidgetInterface::init(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , const std::shared_ptr<WalletSignerContainer> &signContainer
+   , const std::shared_ptr<HeadlessContainer> &signContainer
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<spdlog::logger> &logger)
 
@@ -64,7 +65,10 @@ void TransactionsWidgetInterface::init(const std::shared_ptr<bs::sync::WalletsMa
    appSettings_ = appSettings;
    logger_ = logger;
 
-   connect(signContainer_.get(), &SignContainer::TXSigned, this, &TransactionsWidgetInterface::onTXSigned);
+   const auto hct = dynamic_cast<QtHCT*>(signContainer_ ? signContainer_->cbTarget() : nullptr);
+   if (hct) {
+      connect(hct, &QtHCT::TXSigned, this, &TransactionsWidgetInterface::onTXSigned);
+   }
 }
 
 void TransactionsWidgetInterface::onRevokeSettlement()

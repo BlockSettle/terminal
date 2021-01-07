@@ -52,13 +52,13 @@ class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class AutoSignScriptProvider;
-class BaseCelerClient;
+class CelerClientQt;
 class ConnectionManager;
 class DialogManager;
+class HeadlessContainer;
 class MDCallbacksQt;
 class OrderListModel;
 class QuoteProvider;
-class WalletSignerContainer;
 
 namespace Blocksettle {
    namespace Communication {
@@ -84,14 +84,14 @@ public:
    ~RFQReplyWidget() override;
 
    void init(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<BaseCelerClient> &
+      , const std::shared_ptr<CelerClientQt> &
       , const std::shared_ptr<AuthAddressManager> &
       , const std::shared_ptr<QuoteProvider> &
       , const std::shared_ptr<MDCallbacksQt> &
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<DialogManager> &
-      , const std::shared_ptr<WalletSignerContainer> &
+      , const std::shared_ptr<HeadlessContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<ConnectionManager> &
       , const std::shared_ptr<AutoSignScriptProvider> &
@@ -182,13 +182,13 @@ private:
 private:
    std::unique_ptr<Ui::RFQReplyWidget>    ui_;
    std::shared_ptr<spdlog::logger>        logger_;
-   std::shared_ptr<BaseCelerClient>       celerClient_;
+   std::shared_ptr<CelerClientQt>         celerClient_;
    std::shared_ptr<QuoteProvider>         quoteProvider_;
    std::shared_ptr<AuthAddressManager>    authAddressManager_;
    std::shared_ptr<AssetManager>          assetManager_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<DialogManager>         dialogManager_;
-   std::shared_ptr<WalletSignerContainer> signingContainer_;
+   std::shared_ptr<HeadlessContainer>     signingContainer_;
    std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>     connectionManager_;

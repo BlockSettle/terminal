@@ -280,7 +280,7 @@ TransactionsWidget::~TransactionsWidget() = default;
 void TransactionsWidget::init(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
                               , const std::shared_ptr<ArmoryConnection> &armory
                               , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-                              , const std::shared_ptr<WalletSignerContainer> &signContainer
+                              , const std::shared_ptr<HeadlessContainer> &signContainer
                               , const std::shared_ptr<ApplicationSettings> &appSettings
                               , const std::shared_ptr<spdlog::logger> &logger)
 

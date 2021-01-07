@@ -29,7 +29,6 @@ namespace bs {
 }
 
 class TransactionOutputsModel;
-
 class QNetworkAccessManager;
 
 class CreateTransactionDialogAdvanced : public CreateTransactionDialog
@@ -41,7 +40,7 @@ public:
         const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer>&
+      , const std::shared_ptr<HeadlessContainer>&
       , const std::shared_ptr<spdlog::logger>&
       , const std::shared_ptr<ApplicationSettings> &
       , const Tx &
@@ -51,7 +50,7 @@ public:
         const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager>&
       , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer>&
+      , const std::shared_ptr<HeadlessContainer>&
       , const std::shared_ptr<bs::sync::Wallet>&
       , const std::shared_ptr<spdlog::logger>&
       , const std::shared_ptr<ApplicationSettings> &
@@ -62,7 +61,7 @@ public:
         const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer>&
+      , const std::shared_ptr<HeadlessContainer>&
       , const std::shared_ptr<spdlog::logger>&
       , const std::shared_ptr<ApplicationSettings> &
       , const Bip21::PaymentRequestInfo& paymentInfo
@@ -72,7 +71,7 @@ public:
    CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<HeadlessContainer> &
       , bool loadFeeSuggestions
       , const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> &applicationSettings

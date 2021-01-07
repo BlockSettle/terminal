@@ -10,6 +10,7 @@
 */
 #include "StatusBarView.h"
 #include "AssetManager.h"
+#include "HeadlessContainer.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -18,8 +19,9 @@
 
 StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<BaseCelerClient> &celerClient
-   , const std::shared_ptr<SignContainer> &container, QStatusBar *parent)
+   , std::shared_ptr<AssetManager> assetManager
+   , const std::shared_ptr<CelerClientQt> &celerClient
+   , const std::shared_ptr<HeadlessContainer> &container, QStatusBar *parent)
    : QObject(nullptr)
    , statusBar_(parent)
    , iconSize_(16, 16)
@@ -89,16 +91,19 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, this, &StatusBarView::onWalletImportFinished);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &StatusBarView::updateBalances);
 
-   connect(celerClient.get(), &BaseCelerClient::OnConnectedToServer, this, &StatusBarView::onConnectedToServer);
-   connect(celerClient.get(), &BaseCelerClient::OnConnectionClosed, this, &StatusBarView::onConnectionClosed);
-   connect(celerClient.get(), &BaseCelerClient::OnConnectionError, this, &StatusBarView::onConnectionError);
+   connect(celerClient.get(), &CelerClientQt::OnConnectedToServer, this, &StatusBarView::onConnectedToServer);
+   connect(celerClient.get(), &CelerClientQt::OnConnectionClosed, this, &StatusBarView::onConnectionClosed);
+   connect(celerClient.get(), &CelerClientQt::OnConnectionError, this, &StatusBarView::onConnectionError);
 
    // container might be null if user rejects remote signer key
    if (container) {
-      // connected are not used here because we wait for authenticated signal instead
-      // disconnected are not used here because onContainerError should be always called
-      connect(container.get(), &SignContainer::authenticated, this, &StatusBarView::onContainerAuthorized);
-      connect(container.get(), &SignContainer::connectionError, this, &StatusBarView::onContainerError);
+      const auto hct = dynamic_cast<QtHCT*>(container->cbTarget());
+      if (hct) {
+         // connected are not used here because we wait for authenticated signal instead
+         // disconnected are not used here because onContainerError should be always called
+         connect(hct, &QtHCT::authenticated, this, &StatusBarView::onContainerAuthorized);
+         connect(hct, &QtHCT::connectionError, this, &StatusBarView::onContainerError);
+      }
    }
 
    onArmoryStateChanged(armory_->state());

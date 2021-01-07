@@ -87,6 +87,7 @@
 
 #include "bs_proxy_terminal_pb.pb.h"
 
+using namespace Blocksettle::Communication;
 namespace {
    const auto kAutoLoginTimer = std::chrono::seconds(10);
 }
@@ -228,7 +229,7 @@ void BSTerminalMainWindow::onInitWalletDialogWasShown()
    initialWalletCreateDialogShown_ = true;
 }
 
-void BSTerminalMainWindow::onMessageFromPB(const ProxyTerminalPb::Response &response)
+void BSTerminalMainWindow::onMessageFromPB(const ProxyTerminalPb::Response& response)
 {
    switch (response.data_case()) {
       case ProxyTerminalPb::Response::kDeliveryAddress:
@@ -451,9 +452,9 @@ void BSTerminalMainWindow::initConnections()
    connectionManager_->setCaBundle(bs::caBundlePtr(), bs::caBundleSize());
 
    celerConnection_ = std::make_shared<CelerClientProxy>(logMgr_->logger());
-   connect(celerConnection_.get(), &BaseCelerClient::OnConnectedToServer, this, &BSTerminalMainWindow::onCelerConnected);
-   connect(celerConnection_.get(), &BaseCelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
-   connect(celerConnection_.get(), &BaseCelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
+   connect(celerConnection_.get(), &CelerClientQt::OnConnectedToServer, this, &BSTerminalMainWindow::onCelerConnected);
+   connect(celerConnection_.get(), &CelerClientQt::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
+   connect(celerConnection_.get(), &CelerClientQt::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
 
    mdCallbacks_ = std::make_shared<MDCallbacksQt>();
    mdProvider_ = std::make_shared<BSMarketDataProvider>(connectionManager_
@@ -518,8 +519,9 @@ void BSTerminalMainWindow::InitAuthManager()
    authManager_ = std::make_shared<AuthAddressManager>(logMgr_->logger(), armory_);
    authManager_->init(applicationSettings_, walletsMgr_, signContainer_);
 
-   connect(authManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked, this, [](const QString &addr, const QString &state) {
-      NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, state });
+   connect(authManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked, this
+      , [](const QString &addr, int state) {      //FIXME: state should be converted to a real string
+      NotificationCenter::notify(bs::ui::NotifyType::AuthAddress, { addr, QString::number(state) });
    });
    connect(authManager_.get(), &AuthAddressManager::AuthWalletCreated, this, [this](const QString &walletId) {
       if (authAddrDlg_ && walletId.isEmpty()) {
@@ -585,10 +587,11 @@ std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createRemoteSigner(
       addDeferredDialog(deferredDialog);
    };
 
+   const auto hct = new QtHCT(this);
    QString resultHost = signerHost.address;
    const auto remoteSigner = std::make_shared<RemoteSigner>(logMgr_->logger()
       , resultHost, resultPort, netType, connectionManager_
-      , SignContainer::OpMode::Remote, false
+      , hct, SignContainer::OpMode::Remote, false
       , signersProvider_->remoteSignerKeysDir(), signersProvider_->remoteSignerKeysFile(), ourNewKeyCB);
 
    bs::network::BIP15xPeers peers;
@@ -639,30 +642,36 @@ std::shared_ptr<WalletSignerContainer> BSTerminalMainWindow::createLocalSigner()
       return nullptr;
    }
 
+   const auto hct = new QtHCT(this);
    const bool startLocalSignerProcess = true;
    return std::make_shared<LocalSigner>(logMgr_->logger()
       , applicationSettings_->GetHomeDir(), netType
       , localSignerPort, connectionManager_
-      , startLocalSignerProcess, "", ""
+      , hct, startLocalSignerProcess, "", ""
       , applicationSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
 }
 
 bool BSTerminalMainWindow::InitSigningContainer()
 {
-   signContainer_ = createSigner();
-
+   signContainer_ = std::dynamic_pointer_cast<HeadlessContainer>(createSigner());
    if (!signContainer_) {
       showError(tr("BlockSettle Signer"), tr("BlockSettle Signer creation failure"));
       return false;
    }
-   connect(signContainer_.get(), &SignContainer::connectionError, this, &BSTerminalMainWindow::onSignerConnError, Qt::QueuedConnection);
-   connect(signContainer_.get(), &SignContainer::disconnected, this, &BSTerminalMainWindow::updateControlEnabledState, Qt::QueuedConnection);
+   const auto hct = dynamic_cast<QtHCT*>(signContainer_->cbTarget());
+   if (!hct) {
+      showError(tr("BlockSettle Signer"), tr("BlockSettle Signer improper creation"));
+      return false;
+   }
+
+   connect(hct, &QtHCT::connectionError, this, &BSTerminalMainWindow::onSignerConnError, Qt::QueuedConnection);
+   connect(hct, &QtHCT::disconnected, this, &BSTerminalMainWindow::updateControlEnabledState, Qt::QueuedConnection);
 
    walletsMgr_->setSignContainer(signContainer_);
-   connect(signContainer_.get(), &WalletSignerContainer::ready, this, &BSTerminalMainWindow::SignerReady, Qt::QueuedConnection);
-   connect(signContainer_.get(), &WalletSignerContainer::needNewWalletPrompt, this, &BSTerminalMainWindow::onNeedNewWallet, Qt::QueuedConnection);
-   connect(signContainer_.get(), &WalletSignerContainer::walletsReadyToSync, this, &BSTerminalMainWindow::onSyncWallets, Qt::QueuedConnection);
-   connect(signContainer_.get(), &WalletSignerContainer::windowVisibilityChanged, this, &BSTerminalMainWindow::onSignerVisibleChanged, Qt::QueuedConnection);
+   connect(hct, &QtHCT::ready, this, &BSTerminalMainWindow::SignerReady, Qt::QueuedConnection);
+   connect(hct, &QtHCT::needNewWalletPrompt, this, &BSTerminalMainWindow::onNeedNewWallet, Qt::QueuedConnection);
+   connect(hct, &QtHCT::walletsReadyToSync, this, &BSTerminalMainWindow::onSyncWallets, Qt::QueuedConnection);
+   connect(hct, &QtHCT::windowVisibilityChanged, this, &BSTerminalMainWindow::onSignerVisibleChanged, Qt::QueuedConnection);
 
    return true;
 }
@@ -2219,10 +2228,10 @@ void BSTerminalMainWindow::processDeferredDialogs()
    deferredDialogRunning_ = false;
 }
 
-std::shared_ptr<BsClient> BSTerminalMainWindow::createClient()
+std::shared_ptr<BsClientQt> BSTerminalMainWindow::createClient()
 {
    auto logger = logMgr_->logger("proxy");
-   auto bsClient = std::make_shared<BsClient>(logger);
+   auto bsClient = std::make_shared<BsClientQt>(logger);
 
    bs::network::BIP15xParams params;
    params.ephemeralPeers = true;
@@ -2240,13 +2249,13 @@ std::shared_ptr<BsClient> BSTerminalMainWindow::createClient()
    bsClient->setConnection(std::move(connection));
 
    // Must be connected before loginDialog.exec call (balances could be received before loginDialog.exec returns)!
-   connect(bsClient.get(), &BsClient::balanceLoaded, assetManager_.get(), &AssetManager::fxBalanceLoaded);
-   connect(bsClient.get(), &BsClient::balanceUpdated, assetManager_.get(), &AssetManager::onAccountBalanceLoaded);
+   connect(bsClient.get(), &BsClientQt::balanceLoaded, assetManager_.get(), &AssetManager::fxBalanceLoaded);
+   connect(bsClient.get(), &BsClientQt::balanceUpdated, assetManager_.get(), &AssetManager::onAccountBalanceLoaded);
 
    return bsClient;
 }
 
-void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsClient
+void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClientQt> &bsClient
    , const BsClientLoginResult &result, const std::string &email)
 {
    currentUserLogin_ = QString::fromStdString(email);
@@ -2266,41 +2275,41 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
 
    onBootstrapDataLoaded(result.bootstrapDataSigned);
 
-   connect(bsClient_.get(), &BsClient::disconnected, this, &BSTerminalMainWindow::onBsConnectionDisconnected);
-   connect(bsClient_.get(), &BsClient::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
+   connect(bsClient_.get(), &BsClientQt::disconnected, this, &BSTerminalMainWindow::onBsConnectionDisconnected);
+   connect(bsClient_.get(), &BsClientQt::connectionFailed, this, &BSTerminalMainWindow::onBsConnectionFailed);
 
    // connect to RFQ dialog
-   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetRFQ, &RFQRequestWidget::onMessageFromPB);
-   connect(bsClient_.get(), &BsClient::processPbMessage, this, &BSTerminalMainWindow::onMessageFromPB);
-   connect(bsClient_.get(), &BsClient::disconnected, ui_->widgetRFQ, &RFQRequestWidget::onUserDisconnected);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClient::sendUnsignedPayin);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::sendSignedPayinToPB, bsClient_.get(), &BsClient::sendSignedPayin);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::sendSignedPayoutToPB, bsClient_.get(), &BsClient::sendSignedPayout);
+   connect(bsClient_.get(), &BsClientQt::processPbMessage, ui_->widgetRFQ, &RFQRequestWidget::onMessageFromPB);
+   connect(bsClient_.get(), &BsClientQt::processPbMessage, this, &BSTerminalMainWindow::onMessageFromPB);
+   connect(bsClient_.get(), &BsClientQt::disconnected, ui_->widgetRFQ, &RFQRequestWidget::onUserDisconnected);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClientQt::sendUnsignedPayin);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::sendSignedPayinToPB, bsClient_.get(), &BsClientQt::sendSignedPayin);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::sendSignedPayoutToPB, bsClient_.get(), &BsClientQt::sendSignedPayout);
 
-   connect(ui_->widgetRFQ, &RFQRequestWidget::cancelXBTTrade, bsClient_.get(), &BsClient::sendCancelOnXBTTrade);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::cancelCCTrade, bsClient_.get(), &BsClient::sendCancelOnCCTrade);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::cancelXBTTrade, bsClient_.get(), &BsClientQt::sendCancelOnXBTTrade);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::cancelCCTrade, bsClient_.get(), &BsClientQt::sendCancelOnCCTrade);
 
-   connect(ui_->widgetRFQ, &RFQRequestWidget::sendFutureRequestToPB, bsClient_.get(), &BsClient::sendFutureRequest);
+   connect(ui_->widgetRFQ, &RFQRequestWidget::sendFutureRequestToPB, bsClient_.get(), &BsClientQt::sendFutureRequest);
 
    // connect to quote dialog
-   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetRFQReply, &RFQReplyWidget::onMessageFromPB);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClient::sendUnsignedPayin);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayinToPB, bsClient_.get(), &BsClient::sendSignedPayin);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayoutToPB, bsClient_.get(), &BsClient::sendSignedPayout);
+   connect(bsClient_.get(), &BsClientQt::processPbMessage, ui_->widgetRFQReply, &RFQReplyWidget::onMessageFromPB);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendUnsignedPayinToPB, bsClient_.get(), &BsClientQt::sendUnsignedPayin);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayinToPB, bsClient_.get(), &BsClientQt::sendSignedPayin);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::sendSignedPayoutToPB, bsClient_.get(), &BsClientQt::sendSignedPayout);
 
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::cancelXBTTrade, bsClient_.get(), &BsClient::sendCancelOnXBTTrade);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::cancelCCTrade, bsClient_.get(), &BsClient::sendCancelOnCCTrade);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::cancelXBTTrade, bsClient_.get(), &BsClientQt::sendCancelOnXBTTrade);
+   connect(ui_->widgetRFQReply, &RFQReplyWidget::cancelCCTrade, bsClient_.get(), &BsClientQt::sendCancelOnCCTrade);
 
-   connect(ui_->widgetChat, &ChatWidget::emailHashRequested, bsClient_.get(), &BsClient::findEmailHash);
-   connect(bsClient_.get(), &BsClient::emailHashReceived, ui_->widgetChat, &ChatWidget::onEmailHashReceived);
+   connect(ui_->widgetChat, &ChatWidget::emailHashRequested, bsClient_.get(), &BsClientQt::findEmailHash);
+   connect(bsClient_.get(), &BsClientQt::emailHashReceived, ui_->widgetChat, &ChatWidget::onEmailHashReceived);
 
-   connect(bsClient_.get(), &BsClient::disconnected, orderListModel_.get(), &OrderListModel::onDisconnected);
-   connect(bsClient_.get(), &BsClient::processPbMessage, orderListModel_.get(), &OrderListModel::onMessageFromPB);
+   connect(bsClient_.get(), &BsClientQt::disconnected, orderListModel_.get(), &OrderListModel::onDisconnected);
+   connect(bsClient_.get(), &BsClientQt::processPbMessage, orderListModel_.get(), &OrderListModel::onMessageFromPB);
 
-   connect(bsClient_.get(), &BsClient::processPbMessage, assetManager_.get(), &AssetManager::onMessageFromPB);
+   connect(bsClient_.get(), &BsClientQt::processPbMessage, assetManager_.get(), &AssetManager::onMessageFromPB);
 
    utxoReservationMgr_->setFeeRatePb(result.feeRatePb);
-   connect(bsClient_.get(), &BsClient::feeRateReceived, this, [this] (float feeRate) {
+   connect(bsClient_.get(), &BsClientQt::feeRateReceived, this, [this] (float feeRate) {
       utxoReservationMgr_->setFeeRatePb(feeRate);
    });
 
@@ -2318,20 +2327,20 @@ void BSTerminalMainWindow::activateClient(const std::shared_ptr<BsClient> &bsCli
    // Market data, charts and chat should be available for all Auth eID logins
    mdProvider_->SubscribeToMD();
 
-   connect(bsClient_.get(), &BsClient::processPbMessage, ui_->widgetChat, &ChatWidget::onProcessOtcPbMessage);
-   connect(ui_->widgetChat, &ChatWidget::sendOtcPbMessage, bsClient_.get(), &BsClient::sendPbMessage);
+   connect(bsClient_.get(), &BsClientQt::processPbMessage, ui_->widgetChat, &ChatWidget::onProcessOtcPbMessage);
+   connect(ui_->widgetChat, &ChatWidget::sendOtcPbMessage, bsClient_.get(), &BsClientQt::sendPbMessage);
 
-   connect(bsClient_.get(), &BsClient::bootstrapDataUpdated, this, [this](const std::string& data) {
+   connect(bsClient_.get(), &BsClientQt::bootstrapDataUpdated, this, [this](const std::string& data) {
       onBootstrapDataLoaded(data);
    });
 
    accountEnabled_ = true;
    onAccountTypeChanged(result.userType, result.enabled);
-   connect(bsClient_.get(), &BsClient::accountStateChanged, this, [this](bs::network::UserType userType, bool enabled) {
+   connect(bsClient_.get(), &BsClientQt::accountStateChanged, this, [this](bs::network::UserType userType, bool enabled) {
       onAccountTypeChanged(userType, enabled);
    });
 
-   connect(bsClient_.get(), &BsClient::tradingStatusChanged, this, [](bool tradingEnabled) {
+   connect(bsClient_.get(), &BsClientQt::tradingStatusChanged, this, [](bool tradingEnabled) {
       NotificationCenter::notify(tradingEnabled ? bs::ui::NotifyType::TradingEnabledOnPB : bs::ui::NotifyType::TradingDisabledOnPB, {});
    });
 }
@@ -2380,18 +2389,18 @@ void BSTerminalMainWindow::tryLoginUsingApiKey()
       }
    };
 
-   connect(autoLoginClient_.get(), &BsClient::connected, this, [this, logger, apiKeyErrorCb] {
-      connect(autoLoginClient_.get(), &BsClient::authorizeDone, this, [this, logger, apiKeyErrorCb]
-            (BsClient::AuthorizeError error, const std::string &email) {
-         if (error != BsClient::AuthorizeError::NoError) {
+   connect(autoLoginClient_.get(), &BsClientQt::connected, this, [this, logger, apiKeyErrorCb] {
+      connect(autoLoginClient_.get(), &BsClientQt::authorizeDone, this, [this, logger, apiKeyErrorCb]
+            (BsClientQt::AuthorizeError error, const std::string &email) {
+         if (error != BsClientQt::AuthorizeError::NoError) {
             switch (error) {
-               case BsClient::AuthorizeError::UnknownIpAddr:
+               case BsClientQt::AuthorizeError::UnknownIpAddr:
                   apiKeyErrorCb(AutoLoginState::Failed, tr("Unexpected IP address"));
                   break;
-               case BsClient::AuthorizeError::UnknownApiKey:
+               case BsClientQt::AuthorizeError::UnknownApiKey:
                   apiKeyErrorCb(AutoLoginState::Failed, tr("API key not found"));
                   break;
-               case BsClient::AuthorizeError::Timeout:
+               case BsClientQt::AuthorizeError::Timeout:
                   apiKeyErrorCb(AutoLoginState::Idle, tr("Request timeout"));
                   break;
                default:
@@ -2401,7 +2410,7 @@ void BSTerminalMainWindow::tryLoginUsingApiKey()
             return;
          }
 
-         connect(autoLoginClient_.get(), &BsClient::getLoginResultDone, this, [this, logger, email, apiKeyErrorCb]
+         connect(autoLoginClient_.get(), &BsClientQt::getLoginResultDone, this, [this, logger, email, apiKeyErrorCb]
                (const BsClientLoginResult &result) {
             if (result.status != AutheIDClient::NoError) {
                apiKeyErrorCb(AutoLoginState::Idle, tr("Login failed"));
@@ -2433,10 +2442,10 @@ void BSTerminalMainWindow::tryLoginUsingApiKey()
       });
    });
 
-   connect(autoLoginClient_.get(), &BsClient::disconnected, this, [logger, apiKeyErrorCb] {
+   connect(autoLoginClient_.get(), &BsClientQt::disconnected, this, [logger, apiKeyErrorCb] {
       apiKeyErrorCb(AutoLoginState::Idle, tr("Proxy disconnected"));
    });
-   connect(autoLoginClient_.get(), &BsClient::connectionFailed, this, [logger, apiKeyErrorCb] {
+   connect(autoLoginClient_.get(), &BsClientQt::connectionFailed, this, [logger, apiKeyErrorCb] {
       apiKeyErrorCb(AutoLoginState::Idle, tr("Proxy connection failed"));
    });
 

@@ -41,6 +41,7 @@ namespace bs {
       class WalletsManager;
    }
 }
+class QtHCT;
 
 class TestSettlement : public ::testing::Test
 {
@@ -68,6 +69,7 @@ protected:
    std::vector<std::shared_ptr<bs::core::hd::Wallet>> hdWallet_;
    std::vector<std::shared_ptr<bs::core::hd::Leaf>>   authWallet_;
    std::shared_ptr<bs::core::WalletsManager>          walletsMgr_;
+   std::shared_ptr<QtHCT>                             hct_;
    std::shared_ptr<bs::sync::WalletsManager>          syncMgr_;
    std::vector<std::shared_ptr<bs::core::Wallet>>     xbtWallet_;
    std::vector<bs::Address>      authAddrs_;

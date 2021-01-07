@@ -20,7 +20,7 @@
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
 #include "BSMessageBox.h"
-#include "SignContainer.h"
+#include "HeadlessContainer.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -57,7 +57,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
    , const std::shared_ptr<bs::sync::hd::Wallet> &wallet
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<HeadlessContainer> &container
    , WalletsViewModel *walletsModel
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<ConnectionManager> &connectionManager
@@ -109,8 +109,10 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
          ui_->backupButton->setEnabled(false);
          ui_->manageEncryptionButton->setEnabled(false);
       }
-      connect(signingContainer_.get(), &SignContainer::QWalletInfo, this, &RootWalletPropertiesDialog::onHDWalletInfo);
-
+      const auto hct = dynamic_cast<QtHCT*>(signingContainer_->cbTarget());
+      if (hct) {
+         connect(hct, &QtHCT::QWalletInfo, this, &RootWalletPropertiesDialog::onHDWalletInfo);
+      }
       infoReqId_ = signingContainer_->GetInfo(wallet_->walletId());
    }
 

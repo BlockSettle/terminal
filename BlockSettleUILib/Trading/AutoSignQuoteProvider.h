@@ -17,8 +17,8 @@
 #include <memory>
 #include "ApplicationSettings.h"
 
-class BaseCelerClient;
-class SignContainer;
+class CelerClientQt;
+class HeadlessContainer;
 class UserScriptRunner;
 class AssetManager;
 class QuoteProvider;
@@ -42,8 +42,8 @@ public:
    explicit AutoSignScriptProvider(const std::shared_ptr<spdlog::logger> &
       , UserScriptRunner *
       , const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<BaseCelerClient> &
+      , const std::shared_ptr<HeadlessContainer> &
+      , const std::shared_ptr<CelerClientQt> &
       , QObject *parent = nullptr);
 
    bool isScriptLoaded() const { return scriptLoaded_; }
@@ -93,10 +93,10 @@ signals:
 protected:
    std::shared_ptr<ApplicationSettings>       appSettings_;
    ApplicationSettings::Setting  lastScript_{ ApplicationSettings::_last };
-   std::shared_ptr<spdlog::logger>            logger_;
-   std::shared_ptr<SignContainer>             signingContainer_;
-   std::shared_ptr<bs::sync::WalletsManager>  walletsManager_;
-   std::shared_ptr<BaseCelerClient>           celerClient_;
+   std::shared_ptr<spdlog::logger>           logger_;
+   std::shared_ptr<HeadlessContainer>        signingContainer_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
+   std::shared_ptr<CelerClientQt>            celerClient_;
    UserScriptRunner *scriptRunner_{};
 
    bs::error::ErrorCode  autoSignState_{ bs::error::ErrorCode::AutoSignDisabled };
@@ -113,8 +113,8 @@ public:
    explicit AutoSignAQProvider(const std::shared_ptr<spdlog::logger> &
       , UserScriptRunner *
       , const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<BaseCelerClient> &
+      , const std::shared_ptr<HeadlessContainer> &
+      , const std::shared_ptr<CelerClientQt> &
       , QObject *parent = nullptr);
 };
 
@@ -125,8 +125,8 @@ public:
    explicit AutoSignRFQProvider(const std::shared_ptr<spdlog::logger> &
       , UserScriptRunner *
       , const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<BaseCelerClient> &
+      , const std::shared_ptr<HeadlessContainer> &
+      , const std::shared_ptr<CelerClientQt> &
       , QObject *parent = nullptr);
 };
 

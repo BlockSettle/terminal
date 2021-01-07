@@ -14,7 +14,7 @@
 
 #include "AssetManager.h"
 #include "BlockDataManagerConfig.h"
-#include "CelerClient.h"
+#include "Celer/CelerClient.h"
 #include "CurrencyPair.h"
 #include "UiUtils.h"
 #include "UtxoReservationManager.h"
@@ -50,10 +50,11 @@ RequestingQuoteWidget::RequestingQuoteWidget(QWidget* parent)
 
 RequestingQuoteWidget::~RequestingQuoteWidget() = default;
 
-void RequestingQuoteWidget::SetCelerClient(std::shared_ptr<BaseCelerClient> celerClient) {
+void RequestingQuoteWidget::SetCelerClient(const std::shared_ptr<CelerClientQt> &celerClient)
+{
    celerClient_ = celerClient;
 
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed,
+   connect(celerClient_.get(), &CelerClientQt::OnConnectionClosed,
       this, &RequestingQuoteWidget::onCelerDisconnected);
 }
 

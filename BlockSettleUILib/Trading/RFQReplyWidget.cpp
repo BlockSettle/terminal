@@ -15,19 +15,19 @@
 #include "AuthAddressManager.h"
 #include "AutoSignQuoteProvider.h"
 #include "BSMessageBox.h"
-#include "CelerClient.h"
-#include "CelerSubmitQuoteNotifSequence.h"
+#include "Celer/CelerClient.h"
+#include "Celer/SubmitQuoteNotifSequence.h"
 #include "CustomControls/CustomDoubleSpinBox.h"
 #include "DealerCCSettlementContainer.h"
 #include "DealerXBTSettlementContainer.h"
 #include "DialogManager.h"
+#include "HeadlessContainer.h"
 #include "MDCallbacksQt.h"
 #include "OrderListModel.h"
 #include "OrdersView.h"
 #include "QuoteProvider.h"
 #include "RFQBlotterTreeView.h"
 #include "SelectedTransactionInputs.h"
-#include "WalletSignerContainer.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "UserScriptRunner.h"
@@ -129,14 +129,14 @@ void RFQReplyWidget::shortcutActivated(ShortcutType s)
 }
 
 void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<BaseCelerClient>& celerClient
+   , const std::shared_ptr<CelerClientQt>& celerClient
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
    , const std::shared_ptr<QuoteProvider>& quoteProvider
    , const std::shared_ptr<MDCallbacksQt>& mdCallbacks
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<DialogManager> &dialogManager
-   , const std::shared_ptr<WalletSignerContainer> &container
+   , const std::shared_ptr<HeadlessContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<AutoSignScriptProvider> &autoSignProvider
@@ -230,9 +230,9 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    // ui_->treeViewOrders->setItemDelegateForColumn(
    //    static_cast<int>(OrderListModel::Header::Status), new PushButtonDelegate(ui_->treeViewOrders));
 
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this
+   connect(celerClient_.get(), &CelerClientQt::OnConnectedToServer, this
       , &RFQReplyWidget::onConnectedToCeler);
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this
+   connect(celerClient_.get(), &CelerClientQt::OnConnectionClosed, this
       , &RFQReplyWidget::onDisconnectedFromCeler);
 
    connect(ui_->widgetQuoteRequests->view(), &TreeViewWithEnterKey::enterKeyPressed
@@ -381,10 +381,11 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             box.exec();
          }
       } else {
-         const auto &it = sentXbtReplies_.find(order.settlementId);
+         const auto &it = sentXbtReplies_.find(order.settlementId.toHexStr());
          if (it == sentXbtReplies_.end()) {
             // Looks like this is not error, not sure why we need this
-            SPDLOG_LOGGER_DEBUG(logger_, "haven't seen QuoteNotif with settlId={}", order.settlementId);
+            SPDLOG_LOGGER_DEBUG(logger_, "haven't seen QuoteNotif with settlId={}"
+               , order.settlementId.toHexStr());
             return;
          }
          try {
@@ -449,7 +450,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
          sentCCReplies_.erase(quoteReqId);
          quoteProvider_->delQuoteReqId(quoteReqId);
       }
-      sentXbtReplies_.erase(order.settlementId);
+      sentXbtReplies_.erase(order.settlementId.toHexStr());
    }
 }
 

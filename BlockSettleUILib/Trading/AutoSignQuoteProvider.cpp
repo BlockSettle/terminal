@@ -10,13 +10,13 @@
 */
 #include "AutoSignQuoteProvider.h"
 
-#include "SignContainer.h"
+#include "HeadlessContainer.h"
 #include "WalletManager.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "UserScriptRunner.h"
 
-#include <BaseCelerClient.h>
+#include <Celer/CelerClient.h>
 #include <QCoreApplication>
 #include <QFileInfo>
 #include <QDir>
@@ -25,8 +25,8 @@
 AutoSignScriptProvider::AutoSignScriptProvider(const std::shared_ptr<spdlog::logger> &logger
    , UserScriptRunner *scriptRunner
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<BaseCelerClient> &celerClient
+   , const std::shared_ptr<HeadlessContainer> &container
+   , const std::shared_ptr<CelerClientQt> &celerClient
    , QObject *parent)
    : QObject(parent), logger_(logger), scriptRunner_(scriptRunner)
    , appSettings_(appSettings)
@@ -40,12 +40,12 @@ AutoSignScriptProvider::AutoSignScriptProvider(const std::shared_ptr<spdlog::log
    }
 
    if (signingContainer_) {
-      connect(signingContainer_.get(), &SignContainer::ready, this
-         , &AutoSignScriptProvider::onSignerStateUpdated, Qt::QueuedConnection);
-      connect(signingContainer_.get(), &SignContainer::disconnected, this
-         , &AutoSignScriptProvider::onSignerStateUpdated, Qt::QueuedConnection);
-      connect(signingContainer_.get(), &SignContainer::AutoSignStateChanged, this
-         , &AutoSignScriptProvider::onAutoSignStateChanged);
+      const auto hct = dynamic_cast<QtHCT*>(signingContainer_->cbTarget());
+      if (hct) {
+         connect(hct, &QtHCT::ready, this, &AutoSignScriptProvider::onSignerStateUpdated, Qt::QueuedConnection);
+         connect(hct, &QtHCT::disconnected, this, &AutoSignScriptProvider::onSignerStateUpdated, Qt::QueuedConnection);
+         connect(hct, &QtHCT::AutoSignStateChanged, this, &AutoSignScriptProvider::onAutoSignStateChanged);
+      }
    }
 
    connect(scriptRunner_, &UserScriptRunner::scriptLoaded, this, &AutoSignScriptProvider::onScriptLoaded);
@@ -53,8 +53,8 @@ AutoSignScriptProvider::AutoSignScriptProvider(const std::shared_ptr<spdlog::log
 
    onSignerStateUpdated();
 
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectedToServer, this, &AutoSignScriptProvider::onConnectedToCeler);
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed, this, &AutoSignScriptProvider::onDisconnectedFromCeler);
+   connect(celerClient_.get(), &CelerClientQt::OnConnectedToServer, this, &AutoSignScriptProvider::onConnectedToCeler);
+   connect(celerClient_.get(), &CelerClientQt::OnConnectionClosed, this, &AutoSignScriptProvider::onDisconnectedFromCeler);
 }
 
 void AutoSignScriptProvider::onSignerStateUpdated()
@@ -254,8 +254,8 @@ void AutoSignScriptProvider::setLastDir(const QString &path)
 AutoSignAQProvider::AutoSignAQProvider(const std::shared_ptr<spdlog::logger> &logger
    , UserScriptRunner *scriptRunner
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<BaseCelerClient> &celerClient
+   , const std::shared_ptr<HeadlessContainer> &container
+   , const std::shared_ptr<CelerClientQt> &celerClient
    , QObject *parent)
    : AutoSignScriptProvider(logger, scriptRunner, appSettings, container, celerClient, parent)
 {
@@ -278,8 +278,8 @@ AutoSignAQProvider::AutoSignAQProvider(const std::shared_ptr<spdlog::logger> &lo
 AutoSignRFQProvider::AutoSignRFQProvider(const std::shared_ptr<spdlog::logger> &logger
    , UserScriptRunner *scriptRunner
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<BaseCelerClient> &celerClient
+   , const std::shared_ptr<HeadlessContainer> &container
+   , const std::shared_ptr<CelerClientQt> &celerClient
    , QObject *parent)
    : AutoSignScriptProvider(logger, scriptRunner, appSettings, container, celerClient, parent)
 {

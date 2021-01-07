@@ -35,9 +35,9 @@ class QAction;
 class ApplicationSettings;
 class ArmoryConnection;
 class CCPortfolioModel;
+class HeadlessContainer;
 class MarketDataProvider;
 class MDCallbacksQt;
-class WalletSignerContainer;
 class TransactionsViewModel;
 class UnconfirmedTransactionFilter;
 
@@ -55,7 +55,7 @@ public:
       , const std::shared_ptr<MarketDataProvider> &
       , const std::shared_ptr<MDCallbacksQt> &
       , const std::shared_ptr<CCPortfolioModel> &
-      , const std::shared_ptr<WalletSignerContainer> &
+      , const std::shared_ptr<HeadlessContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
       , const std::shared_ptr<spdlog::logger> &

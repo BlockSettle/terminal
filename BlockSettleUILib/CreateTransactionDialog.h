@@ -35,6 +35,7 @@ namespace bs {
 }
 class ApplicationSettings;
 class ArmoryConnection;
+class HeadlessContainer;
 class QCheckBox;
 class QComboBox;
 class QLabel;
@@ -42,7 +43,6 @@ class QLineEdit;
 class QPushButton;
 class QTextEdit;
 class RecipientWidget;
-class SignContainer;
 class TransactionData;
 class UsedInputsModel;
 class XbtAmountValidator;
@@ -60,7 +60,7 @@ public:
    CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<HeadlessContainer> &
       , bool loadFeeSuggestions, const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
       , bs::UtxoReservationToken utxoReservation
@@ -144,7 +144,7 @@ private:
 protected:
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<SignContainer>   signContainer_;
+   std::shared_ptr<HeadlessContainer>  signContainer_;
    std::shared_ptr<TransactionData> transactionData_;
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<ApplicationSettings> applicationSettings_;

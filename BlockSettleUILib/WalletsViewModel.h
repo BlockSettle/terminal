@@ -29,7 +29,7 @@ namespace bs {
       class WalletsManager;
    }
 }
-class SignContainer;
+class HeadlessContainer;
 class WalletsViewModel;
 
 
@@ -94,7 +94,7 @@ class WalletsViewModel : public QAbstractItemModel
 Q_OBJECT
 public:
    WalletsViewModel(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager, const std::string &defaultWalletId
-      , const std::shared_ptr<SignContainer> &sc = nullptr, QObject *parent = nullptr, bool showOnlyRegular = false);
+      , const std::shared_ptr<HeadlessContainer> &sc = nullptr, QObject *parent = nullptr, bool showOnlyRegular = false);
    ~WalletsViewModel() noexcept override = default;
 
    WalletsViewModel(const WalletsViewModel&) = delete;
@@ -161,7 +161,7 @@ public:
 
 private:
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<SignContainer>   signContainer_;
+   std::shared_ptr<HeadlessContainer>     signContainer_;
    std::shared_ptr<bs::sync::Wallet>      selectedWallet_;
    std::shared_ptr<WalletNode>      rootNode_;
    std::string       defaultWalletId_;

@@ -15,6 +15,7 @@
 
 #include "AssetManager.h"
 #include "BSMessageBox.h"
+#include "HeadlessContainer.h"
 #include "QuoteProvider.h"
 #include "RFQRequestWidget.h"
 #include "ReqCCSettlementContainer.h"
@@ -22,7 +23,6 @@
 #include "RfqStorage.h"
 #include "UiUtils.h"
 #include "UtxoReservationManager.h"
-#include "WalletSignerContainer.h"
 #include "Wallets/SyncHDWallet.h"
 
 
@@ -32,9 +32,9 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AuthAddressManager>& authAddressManager
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , const std::shared_ptr<WalletSignerContainer> &signContainer
+   , const std::shared_ptr<HeadlessContainer> &signContainer
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<BaseCelerClient> &celerClient
+   , const std::shared_ptr<CelerClientQt> &celerClient
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<RfqStorage> &rfqStorage
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet

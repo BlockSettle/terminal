@@ -52,7 +52,8 @@ AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logg
    connect(model_, &AuthAdressControlProxyModel::modelReset, this, &AuthAddressDialog::onModelReset);
    connect(originModel, &AuthAddressViewModel::updateSelectionAfterReset, this, &AuthAddressDialog::onUpdateSelection);
 
-   connect(authAddressManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked, this, &AuthAddressDialog::onAddressStateChanged, Qt::QueuedConnection);
+   connect(authAddressManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked
+      , this, &AuthAddressDialog::onAddressStateChanged, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Error, this, &AuthAddressDialog::onAuthMgrError, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Info, this, &AuthAddressDialog::onAuthMgrInfo, Qt::QueuedConnection);
 
@@ -234,14 +235,15 @@ void AuthAddressDialog::copySelectedToClipboard()
 }
 
 
-void AuthAddressDialog::onAddressStateChanged(const QString &addr, const QString &state)
+void AuthAddressDialog::onAddressStateChanged(const QString &addr, int st)
 {
-   if (state == QStringLiteral("Verified")) {
+   const auto& state = static_cast<AuthCallbackTarget::AuthAddressState>(st);
+   if (state == AuthCallbackTarget::AuthAddressState::Verified) {
       BSMessageBox(BSMessageBox::success, tr("Authentication Address")
          , tr("Authentication Address verified")
          , tr("You may now place orders in the Spot XBT product group.")
          ).exec();
-   } else if (state == QStringLiteral("Revoked")) {
+   } else if (state == AuthCallbackTarget::AuthAddressState::Revoked) {
       BSMessageBox(BSMessageBox::warning, tr("Authentication Address")
          , tr("Authentication Address revoked")
          , tr("Authentication Address %1 was revoked and could not be used for Spot XBT trading.").arg(addr)).exec();

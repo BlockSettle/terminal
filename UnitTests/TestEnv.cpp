@@ -15,7 +15,7 @@
 #include "ArmoryObject.h"
 #include "ArmorySettings.h"
 #include "AuthAddressManager.h"
-#include "CelerClient.h"
+#include "Celer/CelerClient.h"
 #include "ConnectionManager.h"
 #include "CoreWalletsManager.h"
 #include "MarketDataProvider.h"
@@ -121,12 +121,12 @@ void TestEnv::requireArmory()
 
    qDebug() << "Waiting for ArmoryDB connection...";
    while (armoryConnection_->state() != ArmoryState::Connected) {
-      QThread::msleep(1);
+      std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
    }
    qDebug() << "Armory connected - waiting for ready state...";
    armoryConnection_->goOnline();
    while (armoryConnection_->state() != ArmoryState::Ready) {
-      QThread::msleep(1);
+      std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
    }
    logger_->debug("Armory is ready - continue execution");
 }
