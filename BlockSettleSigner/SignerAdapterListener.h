@@ -37,7 +37,7 @@ namespace bs {
 namespace Blocksettle {
    namespace Communication {
       namespace signer {
-         enum ControlPasswordStatus;
+         enum ControlPasswordStatus : int;
       }
    }
 }
