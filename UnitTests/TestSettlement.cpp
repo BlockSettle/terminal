@@ -185,7 +185,7 @@ TEST_F(TestSettlement, Initial_balances)
    {
       return [walletId](const bs::message::Envelope& env)
       {
-         if (env.request || env.receiver ||
+         if (env.request ||
             (env.sender->value<TerminalUsers>() != TerminalUsers::Wallets)) {
             return false;
          }
