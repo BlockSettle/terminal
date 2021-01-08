@@ -67,15 +67,6 @@ public:
    RFQTicketXBT(QWidget* parent = nullptr);
    ~RFQTicketXBT() override;
 
-   [[deprecated]] void init(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<AuthAddressManager> &
-      , const std::shared_ptr<AssetManager> &assetManager
-      , const std::shared_ptr<QuoteProvider> &quoteProvider
-      , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &);
-   [[deprecated]]void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
-
    void init(const std::shared_ptr<spdlog::logger>&);
 
    void resetTicket();

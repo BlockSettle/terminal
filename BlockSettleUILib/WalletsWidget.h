@@ -62,15 +62,6 @@ public:
    WalletsWidget(QWidget* parent = nullptr );
    ~WalletsWidget() override;
 
-   [[deprecated]] void init(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<ConnectionManager> &connectionManager
-      , const std::shared_ptr<AssetManager> &
-      , const std::shared_ptr<AuthAddressManager> &
-      , const std::shared_ptr<ArmoryConnection> &);
-
    void init(const std::shared_ptr<spdlog::logger> &logger);
 
    void setUsername(const QString& username);

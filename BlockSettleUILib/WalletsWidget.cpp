@@ -177,50 +177,6 @@ WalletsWidget::WalletsWidget(QWidget* parent)
 
 WalletsWidget::~WalletsWidget() = default;
 
-void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<bs::sync::WalletsManager> &manager
-   , const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<ApplicationSettings> &applicationSettings
-   , const std::shared_ptr<ConnectionManager> &connectionManager
-   , const std::shared_ptr<AssetManager> &assetMgr
-   , const std::shared_ptr<AuthAddressManager> &authMgr
-   , const std::shared_ptr<ArmoryConnection> &armory)
-{
-   logger_ = logger;
-   walletsManager_ = manager;
-   signingContainer_ = container;
-   appSettings_ = applicationSettings;
-   assetManager_ = assetMgr;
-   authMgr_ = authMgr;
-   armory_ = armory;
-   connectionManager_ = connectionManager;
-
-   // signingContainer_ might be null if user rejects remote signer key
-   if (signingContainer_) {
-      connect(signingContainer_.get(), &SignContainer::TXSigned, this, &WalletsWidget::onTXSigned);
-   }
-
-   const auto &defWallet = walletsManager_->getDefaultWallet();
-   InitWalletsView(defWallet ? defWallet->walletId() : std::string{});
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, [this] { walletsModel_->LoadWallets(); });
-
-   auto filter = appSettings_->get<int>(ApplicationSettings::WalletFiltering);
-
-   ui_->pushButtonEmpty->setChecked(filter & AddressSortFilterModel::HideEmpty);
-   ui_->pushButtonInternal->setChecked(filter & AddressSortFilterModel::HideInternal);
-   ui_->pushButtonExternal->setChecked(filter & AddressSortFilterModel::HideExternal);
-   ui_->pushButtonUsed->setChecked(filter & AddressSortFilterModel::HideUsedEmpty);
-
-   updateAddressFilters(filter);
-
-   for (auto button : {ui_->pushButtonEmpty, ui_->pushButtonInternal,
-      ui_->pushButtonExternal, ui_->pushButtonUsed}) {
-         connect(button, &QPushButton::toggled, this, &WalletsWidget::onFilterSettingsChanged);
-   }
-
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &WalletsWidget::onWalletsSynchronized, Qt::QueuedConnection);
-}
-
 void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger)
 {
    logger_ = logger;
@@ -252,12 +208,7 @@ void WalletsWidget::setUsername(const QString& username)
 
 void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
 {
-   if (walletsManager_ && signingContainer_) {
-      walletsModel_ = new WalletsViewModel(walletsManager_, defaultWalletId, signingContainer_, ui_->treeViewWallets);
-   }
-   else {
-      walletsModel_ = new WalletsViewModel(defaultWalletId, ui_->treeViewWallets);
-   }
+   walletsModel_ = new WalletsViewModel(defaultWalletId, ui_->treeViewWallets);
    connect(walletsModel_, &WalletsViewModel::needHDWalletDetails, this, &WalletsWidget::needHDWalletDetails);
    connect(walletsModel_, &WalletsViewModel::needWalletBalances, this, &WalletsWidget::needWalletBalances);
 
@@ -519,22 +470,16 @@ void WalletsWidget::showWalletProperties(const QModelIndex& index)
 
    const auto &hdWallet = node->hdWallet();
    if (!(*hdWallet.ids.cbegin()).empty()) {
-      if (walletsManager_ && armory_ && signingContainer_ && appSettings_ && connectionManager_ && assetManager_) {
-         RootWalletPropertiesDialog(logger_, hdWallet, walletsManager_, armory_, signingContainer_
-            , walletsModel_, appSettings_, connectionManager_, assetManager_, this).exec();
-      }
-      else {
-         rootDlg_ = new RootWalletPropertiesDialog(logger_, hdWallet, walletsModel_, this);
-         connect(rootDlg_, &RootWalletPropertiesDialog::needHDWalletDetails, this, &WalletsWidget::needHDWalletDetails);
-         connect(rootDlg_, &RootWalletPropertiesDialog::needWalletBalances, this, &WalletsWidget::needWalletBalances);
-         connect(rootDlg_, &RootWalletPropertiesDialog::needUTXOs, this, &WalletsWidget::needUTXOs);
-         connect(rootDlg_, &RootWalletPropertiesDialog::needWalletDialog, this, &WalletsWidget::needWalletDialog);
-         connect(rootDlg_, &QDialog::finished, [this](int) {
-            rootDlg_->deleteLater();
-            rootDlg_ = nullptr;
-         });
-         rootDlg_->exec();
-      }
+      rootDlg_ = new RootWalletPropertiesDialog(logger_, hdWallet, walletsModel_, this);
+      connect(rootDlg_, &RootWalletPropertiesDialog::needHDWalletDetails, this, &WalletsWidget::needHDWalletDetails);
+      connect(rootDlg_, &RootWalletPropertiesDialog::needWalletBalances, this, &WalletsWidget::needWalletBalances);
+      connect(rootDlg_, &RootWalletPropertiesDialog::needUTXOs, this, &WalletsWidget::needUTXOs);
+      connect(rootDlg_, &RootWalletPropertiesDialog::needWalletDialog, this, &WalletsWidget::needWalletDialog);
+      connect(rootDlg_, &QDialog::finished, [this](int) {
+         rootDlg_->deleteLater();
+         rootDlg_ = nullptr;
+      });
+      rootDlg_->exec();
    }
 }
 

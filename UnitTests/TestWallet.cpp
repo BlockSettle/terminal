@@ -47,7 +47,7 @@ unit tests to add:
 ***/
 
 ////////////////////////////////////////////////////////////////////////////////
-class TestWallet : public ::testing::Test
+class TestWallet : public ::testing::Test, public SignerCallbackTarget
 {
    void SetUp()
    {
@@ -190,7 +190,7 @@ TEST_F(TestWallet, BIP84_primary)
    }
 
    auto inprocSigner = std::make_shared<InprocSigner>(
-      envPtr_->walletsMgr(), envPtr_->logger(), "", NetworkType::TestNet);
+      envPtr_->walletsMgr(), envPtr_->logger(), this, "", NetworkType::TestNet);
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -602,7 +602,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       }
 
       //create sync manager
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, this, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -704,7 +704,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
          filename, NetworkType::TestNet, "", ctrlPass, envPtr_->logger());
 
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, this, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -807,7 +807,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       EXPECT_EQ(walletPtr->isWatchingOnly(), true);
 
       //create sync manager
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, this, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1337,7 +1337,7 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
       }
 
       //create sync manager
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, this, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1801,7 +1801,7 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    envPtr_->requireArmory();
    ASSERT_NE(envPtr_->armoryConnection(), nullptr);
 
-   auto inprocSigner = std::make_shared<InprocSigner>(coreWallet, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(coreWallet, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());

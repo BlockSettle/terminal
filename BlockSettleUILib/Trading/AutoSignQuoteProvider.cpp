@@ -39,14 +39,14 @@ AutoSignScriptProvider::AutoSignScriptProvider(const std::shared_ptr<spdlog::log
       scriptRunner_->setWalletsManager(walletsManager_);
    }
 
-   if (signingContainer_) {
+/*   if (signingContainer_) {
       connect(signingContainer_.get(), &SignContainer::ready, this
          , &AutoSignScriptProvider::onSignerStateUpdated, Qt::QueuedConnection);
       connect(signingContainer_.get(), &SignContainer::disconnected, this
          , &AutoSignScriptProvider::onSignerStateUpdated, Qt::QueuedConnection);
       connect(signingContainer_.get(), &SignContainer::AutoSignStateChanged, this
          , &AutoSignScriptProvider::onAutoSignStateChanged);
-   }
+   }*/
 
    connect(scriptRunner_, &UserScriptRunner::scriptLoaded, this, &AutoSignScriptProvider::onScriptLoaded);
    connect(scriptRunner_, &UserScriptRunner::failedToLoad, this, &AutoSignScriptProvider::onScriptFailed);

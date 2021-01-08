@@ -97,7 +97,7 @@ void PortfolioWidget::init(const std::shared_ptr<ApplicationSettings> &appSettin
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
 {
-   TransactionsWidgetInterface::init(walletsMgr, armory, utxoReservationManager, container, appSettings, logger);
+   //FIXME: TransactionsWidgetInterface::init(walletsMgr, armory, utxoReservationManager, container, appSettings, logger);
 
    ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ_Portfolio
       , mdProvider, mdCallbacks);

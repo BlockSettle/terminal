@@ -348,32 +348,6 @@ WalletGroupNode *WalletRootNode::addGroup(bs::core::wallet::Type type
 }
 
 
-WalletsViewModel::WalletsViewModel(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , const std::string &defaultWalletId, const std::shared_ptr<SignContainer> &container
-   , QObject* parent, bool showOnlyRegular)
-   : QAbstractItemModel(parent)
-   , walletsManager_(walletsManager)
-   , signContainer_(container)
-   , defaultWalletId_(defaultWalletId)
-   , showRegularWallets_(showOnlyRegular)
-{
-   rootNode_ = std::make_shared<WalletNode>(this, WalletNode::Type::Root);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::blockchainEvent, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::invalidatedZCs, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::newWalletAdded, this, &WalletsViewModel::onNewWalletAdded);
-
-   if (signContainer_) {
-      connect(signContainer_.get(), &SignContainer::QWalletInfo, this, &WalletsViewModel::onWalletInfo);
-      connect(signContainer_.get(), &SignContainer::Error, this, &WalletsViewModel::onHDWalletError);
-      connect(signContainer_.get(), &SignContainer::authenticated, this, &WalletsViewModel::onSignerAuthenticated);
-      connect(signContainer_.get(), &SignContainer::ready, this, &WalletsViewModel::onWalletChanged);
-   }
-}
-
 WalletsViewModel::WalletsViewModel(const std::string &defaultWalletId
    , QObject* parent, bool showOnlyRegular)
    : QAbstractItemModel(parent)

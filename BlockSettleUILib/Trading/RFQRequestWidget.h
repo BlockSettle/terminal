@@ -66,27 +66,9 @@ public:
    RFQRequestWidget(QWidget* parent = nullptr);
    ~RFQRequestWidget() override;
 
-   [[deprecated]] void initWidgets(const std::shared_ptr<MarketDataProvider> &
-      , const std::shared_ptr<MDCallbacksQt> &
-      , const std::shared_ptr<ApplicationSettings> &);
-
-   [[deprecated]] void init(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<CelerClientQt> &
-      , const std::shared_ptr<AuthAddressManager> &
-      , const std::shared_ptr<QuoteProvider> &
-      , const std::shared_ptr<AssetManager> &
-      , const std::shared_ptr<DialogManager> &
-      , const std::shared_ptr<WalletSignerContainer> &
-      , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<AutoSignScriptProvider> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &
-      , OrderListModel *orderListModel);
-
    void init(const std::shared_ptr<spdlog::logger>&
       , const std::shared_ptr<DialogManager>&
       , OrderListModel* orderListModel);
-
-   void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
    void shortcutActivated(ShortcutType s) override;
 

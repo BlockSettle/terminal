@@ -28,6 +28,7 @@
 #include "CacheFile.h"
 #include "CurrencyPair.h"
 #include "EasyCoDec.h"
+#include "HeadlessContainer.h"
 #include "InprocSigner.h"
 #include "MarketDataProvider.h"
 #include "MDCallbacksQt.h"
@@ -96,7 +97,9 @@ TEST(TestCommon, AssetManager)
    TestEnv env(StaticLogger::loggerPtr);
    env.requireAssets();
 
-   auto inprocSigner = std::make_shared<InprocSigner>(env.walletsMgr(), StaticLogger::loggerPtr, "", NetworkType::TestNet);
+   auto hct = new QtHCT(nullptr);
+   auto inprocSigner = std::make_shared<InprocSigner>(env.walletsMgr()
+      , StaticLogger::loggerPtr, hct, "", NetworkType::TestNet);
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(StaticLogger::loggerPtr
       , env.appSettings(), env.armoryConnection());
@@ -134,6 +137,7 @@ TEST(TestCommon, AssetManager)
    assetMgr.onMDUpdate(bs::network::Asset::PrivateMarket, QLatin1String("BLK/XBT")
       , { bs::network::MDField{bs::network::MDField::PriceLast, 0.023} });
    EXPECT_EQ(assetMgr.getPrice("BLK"), 0.023);
+   delete hct;
 }
 
 TEST(TestCommon, UtxoReservation)

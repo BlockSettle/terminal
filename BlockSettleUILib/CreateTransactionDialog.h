@@ -59,14 +59,6 @@ class CreateTransactionDialog : public QDialog
 Q_OBJECT
 
 public:
-   [[deprecated]] CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer> &
-      , bool loadFeeSuggestions, const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
-      , bs::UtxoReservationToken utxoReservation
-      , QWidget* parent);
    CreateTransactionDialog(bool loadFeeSuggestions, uint32_t topBlock
       , const std::shared_ptr<spdlog::logger>&, QWidget* parent);
    ~CreateTransactionDialog() noexcept override;

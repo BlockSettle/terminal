@@ -277,22 +277,6 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
 
 TransactionsWidget::~TransactionsWidget() = default;
 
-void TransactionsWidget::init(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-                              , const std::shared_ptr<ArmoryConnection> &armory
-                              , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-                              , const std::shared_ptr<WalletSignerContainer> &signContainer
-                              , const std::shared_ptr<ApplicationSettings> &appSettings
-                              , const std::shared_ptr<spdlog::logger> &logger)
-
-{
-   TransactionsWidgetInterface::init(walletsMgr, armory, utxoReservationManager, signContainer, appSettings, logger);
-
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &TransactionsWidget::walletsChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, [this](std::string) { walletsChanged(); });
-
-   scheduleDateFilterCheck();
-}
-
 void TransactionsWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<TransactionsViewModel> &model)
 {

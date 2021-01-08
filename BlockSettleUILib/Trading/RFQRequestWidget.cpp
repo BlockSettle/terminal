@@ -78,27 +78,6 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
 
 RFQRequestWidget::~RFQRequestWidget() = default;
 
-void RFQRequestWidget::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
-{
-   if (walletsManager_ == nullptr) {
-      walletsManager_ = walletsManager;
-      ui_->pageRFQTicket->setWalletsManager(walletsManager);
-      ui_->shieldPage->init(walletsManager, authAddressManager_, appSettings_);
-
-      if (autoSignProvider_) {
-         autoSignProvider_->scriptRunner()->setWalletsManager(walletsManager_);
-      }
-
-      // Do not listen for walletChanged (too verbose and resets UI too often) and walletsReady (to late and resets UI after startup unexpectedly)
-      connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &RFQRequestWidget::forceCheckCondition);
-      connect(walletsManager_.get(), &bs::sync::WalletsManager::AuthLeafCreated, this, &RFQRequestWidget::forceCheckCondition);
-      connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &RFQRequestWidget::forceCheckCondition);
-      connect(walletsManager_.get(), &bs::sync::WalletsManager::walletAdded, this, &RFQRequestWidget::forceCheckCondition);
-      connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &RFQRequestWidget::forceCheckCondition);
-      connect(walletsManager_.get(), &bs::sync::WalletsManager::walletPromotedToPrimary, this, &RFQRequestWidget::forceCheckCondition);
-   }
-}
-
 void RFQRequestWidget::shortcutActivated(ShortcutType s)
 {
    switch (s) {
@@ -332,71 +311,6 @@ void RFQRequestWidget::popShield()
    ui_->stackedWidgetRFQ->setCurrentIndex(static_cast<int>(RFQPages::ShieldPage));
    ui_->pageRFQTicket->disablePanel();
    ui_->widgetMarketData->view()->setFocus();
-}
-
-void RFQRequestWidget::initWidgets(const std::shared_ptr<MarketDataProvider>& mdProvider
-   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
-   , const std::shared_ptr<ApplicationSettings> &appSettings)
-{
-   appSettings_ = appSettings;
-   ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ
-      , mdProvider, mdCallbacks);
-
-   connect(mdCallbacks.get(), &MDCallbacksQt::MDUpdate, ui_->pageRFQTicket, &RFQTicketXBT::onMDUpdate);
-}
-
-void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<CelerClientQt>& celerClient
-   , const std::shared_ptr<AuthAddressManager> &authAddressManager
-   , const std::shared_ptr<QuoteProvider> &quoteProvider
-   , const std::shared_ptr<AssetManager> &assetManager
-   , const std::shared_ptr<DialogManager> &dialogManager
-   , const std::shared_ptr<WalletSignerContainer> &container
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<AutoSignScriptProvider> &autoSignProvider
-   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , OrderListModel *orderListModel)
-{
-   logger_ = logger;
-   celerClient_ = celerClient;
-   authAddressManager_ = authAddressManager;
-   quoteProvider_ = quoteProvider;
-   assetManager_ = assetManager;
-   dialogManager_ = dialogManager;
-   signingContainer_ = container;
-   armory_ = armory;
-   autoSignProvider_ = autoSignProvider;
-   utxoReservationManager_ = utxoReservationManager;
-
-   if (walletsManager_) {
-      autoSignProvider_->scriptRunner()->setWalletsManager(walletsManager_);
-   }
-
-   ui_->pageRFQTicket->init(logger, authAddressManager, assetManager,
-      quoteProvider, container, armory, utxoReservationManager);
-
-   ui_->treeViewOrders->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-   ui_->treeViewOrders->setModel(orderListModel);
-   ui_->treeViewOrders->initWithModel(orderListModel);
-   connect(quoteProvider_.get(), &QuoteProvider::quoteOrderFilled, [](const std::string &quoteId) {
-      NotificationCenter::notify(bs::ui::NotifyType::CelerOrder, {true, QString::fromStdString(quoteId)});
-   });
-   connect(quoteProvider_.get(), &QuoteProvider::orderFailed, [](const std::string &quoteId, const std::string &reason) {
-      NotificationCenter::notify(bs::ui::NotifyType::CelerOrder
-         , { false, QString::fromStdString(quoteId), QString::fromStdString(reason) });
-   });
-
-   connect(celerClient_.get(), &CelerClientQt::OnConnectedToServer, this, &RFQRequestWidget::onConnectedToCeler);
-   connect(celerClient_.get(), &CelerClientQt::OnConnectionClosed, this, &RFQRequestWidget::onDisconnectedFromCeler);
-
-   connect((RFQScriptRunner *)autoSignProvider_->scriptRunner(), &RFQScriptRunner::sendRFQ
-      , ui_->pageRFQTicket, &RFQTicketXBT::onSendRFQ, Qt::QueuedConnection);
-   connect((RFQScriptRunner *)autoSignProvider_->scriptRunner(), &RFQScriptRunner::cancelRFQ
-      , ui_->pageRFQTicket, &RFQTicketXBT::onCancelRFQ, Qt::QueuedConnection);
-
-   ui_->pageRFQTicket->disablePanel();
-
-   connect(authAddressManager_.get(), &AuthAddressManager::AddressListUpdated, this, &RFQRequestWidget::forceCheckCondition);
 }
 
 void RFQRequestWidget::init(const std::shared_ptr<spdlog::logger>&logger

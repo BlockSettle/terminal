@@ -142,7 +142,7 @@ void TestSettlement::SetUp()
       hdWallet_.push_back(hdWallet);
 
       inprocSigner_.push_back(std::make_shared<InprocSigner>(
-         walletsMgr_.at(i), logger, "", NetworkType::TestNet
+         walletsMgr_.at(i), logger, this, "", NetworkType::TestNet
          , [this, hdWallet](const std::string&) {
          return std::make_unique<bs::core::WalletPasswordScoped>(hdWallet, passphrase_);
       }));

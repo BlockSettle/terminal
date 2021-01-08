@@ -234,7 +234,7 @@ OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
    , applicationSettings_(applicationSettings)
    , params_(std::move(params))
 {
-   connect(signContainer.get(), &SignContainer::TXSigned, this, &OtcClient::onTxSigned);
+//   connect(signContainer.get(), &SignContainer::TXSigned, this, &OtcClient::onTxSigned);
 }
 
 OtcClient::~OtcClient() = default;

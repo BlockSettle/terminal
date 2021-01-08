@@ -34,48 +34,20 @@ class CreateTransactionDialogAdvanced : public CreateTransactionDialog
 Q_OBJECT
 
 public:
-   static std::shared_ptr<CreateTransactionDialogAdvanced>  CreateForRBF(
-        const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer>&
-      , const std::shared_ptr<spdlog::logger>&
-      , const std::shared_ptr<ApplicationSettings> &
-      , const Tx &
+   static std::shared_ptr<CreateTransactionDialogAdvanced>  CreateForRBF(uint32_t topBlock
+      , const std::shared_ptr<spdlog::logger>&, const Tx &
       , QWidget* parent = nullptr);
 
-   static std::shared_ptr<CreateTransactionDialogAdvanced>  CreateForCPFP(
-        const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager>&
-      , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer>&
-      , const std::shared_ptr<bs::sync::Wallet>&
-      , const std::shared_ptr<spdlog::logger>&
-      , const std::shared_ptr<ApplicationSettings> &
-      , const Tx &
-      , QWidget* parent = nullptr);
+   static std::shared_ptr<CreateTransactionDialogAdvanced>  CreateForCPFP(uint32_t topBlock
+      , const std::string& walletId, const std::shared_ptr<spdlog::logger>&
+      , const Tx &, QWidget* parent = nullptr);
 
-   static std::shared_ptr<CreateTransactionDialog> CreateForPaymentRequest(
-        const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer>&
+   static std::shared_ptr<CreateTransactionDialog> CreateForPaymentRequest(uint32_t topBlock
       , const std::shared_ptr<spdlog::logger>&
-      , const std::shared_ptr<ApplicationSettings> &
       , const Bip21::PaymentRequestInfo& paymentInfo
       , QWidget* parent = nullptr);
 
 public:
-   [[deprecated]] CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer> &
-      , bool loadFeeSuggestions
-      , const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
-      , const std::shared_ptr<TransactionData> &
-      , bs::UtxoReservationToken utxoReservation
-      , QWidget* parent = nullptr);
    CreateTransactionDialogAdvanced(bool loadFeeSuggestions, uint32_t topBlock
       , const std::shared_ptr<spdlog::logger>&
       , const std::shared_ptr<TransactionData>&

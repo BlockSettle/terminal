@@ -21,12 +21,12 @@ namespace spdlog {
    class logger;
 }
 
-class SignAdapterContainer : public WalletSignerContainer
+class SignAdapterContainer : public WalletSignerContainer, public SignerCallbackTarget
 {
 public:
    SignAdapterContainer(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<SignerInterfaceListener> &lsn)
-      : WalletSignerContainer(logger, OpMode::LocalInproc), listener_(lsn)
+      : WalletSignerContainer(logger, this, OpMode::LocalInproc), listener_(lsn)
    {}
    ~SignAdapterContainer() noexcept override = default;
 

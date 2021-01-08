@@ -250,7 +250,7 @@ void TestAuth::SetUp()
    }
 
    //setup sync manager
-   auto inprocSigner = std::make_shared<InprocSigner>(priWallet_, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(priWallet_, this, envPtr_->logger());
    inprocSigner->Start();
    syncMgr_ = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger(),
       envPtr_->appSettings(), envPtr_->armoryConnection());

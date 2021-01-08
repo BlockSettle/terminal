@@ -93,8 +93,6 @@ class WalletsViewModel : public QAbstractItemModel
 {
 Q_OBJECT
 public:
-   [[deprecated]] WalletsViewModel(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager, const std::string &defaultWalletId
-      , const std::shared_ptr<SignContainer> &sc = nullptr, QObject *parent = nullptr, bool showOnlyRegular = false);
    WalletsViewModel(const std::string &defaultWalletId, QObject *parent = nullptr, bool showOnlyRegular = false);
    ~WalletsViewModel() noexcept override = default;
 

@@ -43,27 +43,6 @@
 static const float kDustFeePerByte = 3.0;
 
 
-CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<SignContainer> &container
-      , bool loadFeeSuggestions
-      , const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
-      , const std::shared_ptr<TransactionData> &txData
-      , bs::UtxoReservationToken utxoReservation
-      , QWidget* parent)
-   : CreateTransactionDialog(armory, walletManager, utxoReservationManager, container, loadFeeSuggestions,
-      logger, applicationSettings, std::move(utxoReservation), parent)
-   , ui_(new Ui::CreateTransactionDialogAdvanced)
-{
-   transactionData_ = txData;
-   selectedChangeAddress_ = bs::Address{};
-
-   ui_->setupUi(this);
-   initUI();
-}
-
 CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(bool loadFeeSuggestions
    , uint32_t topBlock, const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<TransactionData>& txData, bs::UtxoReservationToken utxoReservation
@@ -80,17 +59,11 @@ CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(bool loadFeeSug
 CreateTransactionDialogAdvanced::~CreateTransactionDialogAdvanced() = default;
 
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced::CreateForRBF(
-        const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<SignContainer>& container
-      , const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
-      , const Tx &tx
-      , QWidget* parent)
+      uint32_t topBlock, const std::shared_ptr<spdlog::logger>& logger
+      , const Tx &tx, QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
-      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, bs::UtxoReservationToken(), parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(topBlock, false
+      , logger, nullptr, bs::UtxoReservationToken(), parent);
 
    dlg->setWindowTitle(tr("Replace-By-Fee"));
 
@@ -106,40 +79,28 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
 }
 
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced::CreateForCPFP(
-        const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<SignContainer>& container
-      , const std::shared_ptr<bs::sync::Wallet>& wallet
+        uint32_t topBlock, const std::string& walletId
       , const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
-      , const Tx &tx
-      , QWidget* parent)
+      , const Tx &tx, QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
-      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, bs::UtxoReservationToken(), parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(topBlock, false
+      , logger, nullptr, bs::UtxoReservationToken(), parent);
 
    dlg->setWindowTitle(tr("Child-Pays-For-Parent"));
    dlg->ui_->pushButtonImport->setEnabled(false);
    dlg->ui_->pushButtonShowSimple->setEnabled(false);
 
-   dlg->setCPFPinputs(tx, wallet);
+   //FIXME: dlg->setCPFPinputs(tx, wallet);
    dlg->isCPFP_ = true;
    return dlg;
 }
 
 std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::CreateForPaymentRequest(
-        const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<bs::sync::WalletsManager> &walletManager
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<SignContainer>& container
-      , const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> & applicationSettings
-      , const Bip21::PaymentRequestInfo& paymentInfo
-      , QWidget* parent)
+        uint32_t topBlock, const std::shared_ptr<spdlog::logger>& logger
+      , const Bip21::PaymentRequestInfo& paymentInfo, QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
-      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, bs::UtxoReservationToken(), parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(topBlock, false
+      , logger, nullptr, bs::UtxoReservationToken(), parent);
 
    dlg->ui_->pushButtonImport->setEnabled(false);
    dlg->ui_->pushButtonShowSimple->setEnabled(CreateTransactionDialog::canUseSimpleMode(paymentInfo));
@@ -1858,13 +1819,12 @@ bool CreateTransactionDialogAdvanced::switchModeRequested() const
 std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::SwitchMode()
 {
    if (!paymentInfo_.address.isEmpty()) {
-      return CreateTransactionDialogSimple::CreateForPaymentRequest(armory_, walletsManager_
-         , utxoReservationManager_, signContainer_, logger_, applicationSettings_, paymentInfo_, parentWidget());
+      return CreateTransactionDialogSimple::CreateForPaymentRequest(topBlock_
+         , logger_, paymentInfo_, parentWidget());
    }
 
-   auto simpleDialog = std::make_shared<CreateTransactionDialogSimple>(armory_
-      , walletsManager_, utxoReservationManager_, signContainer_
-      , logger_, applicationSettings_, parentWidget());
+   auto simpleDialog = std::make_shared<CreateTransactionDialogSimple>(topBlock_
+      , logger_, parentWidget());
 
    simpleDialog->SelectWallet(UiUtils::getSelectedWalletId(ui_->comboBoxWallets),
       UiUtils::getSelectedWalletType(ui_->comboBoxWallets));

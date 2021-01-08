@@ -47,12 +47,6 @@ public:
    TransactionsWidget(QWidget* parent = nullptr );
    ~TransactionsWidget() override;
 
-   [[deprecated]] void init(const std::shared_ptr<bs::sync::WalletsManager> &
-             , const std::shared_ptr<ArmoryConnection> &
-             , const std::shared_ptr<bs::UTXOReservationManager> &
-             , const std::shared_ptr<WalletSignerContainer> &
-             , const std::shared_ptr<ApplicationSettings>&
-             , const std::shared_ptr<spdlog::logger> &);
    void init(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<TransactionsViewModel> &);
    [[deprecated]] void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel> &);

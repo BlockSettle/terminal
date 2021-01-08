@@ -33,8 +33,6 @@ class SelectWalletDialog : public QDialog
 Q_OBJECT
 
 public:
-   [[deprecated]] SelectWalletDialog(const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::string &selWalletId, QWidget* parent = nullptr);
    SelectWalletDialog(const std::string& selWalletId, QWidget* parent = nullptr);
    ~SelectWalletDialog() override;
 

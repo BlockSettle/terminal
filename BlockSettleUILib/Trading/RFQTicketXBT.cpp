@@ -120,31 +120,6 @@ bs::FixedXbtInputs RFQTicketXBT::fixedXbtInputs()
    return std::move(fixedXbtInputs_);
 }
 
-void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<AuthAddressManager> &authAddressManager
-   , const std::shared_ptr<AssetManager>& assetManager
-   , const std::shared_ptr<QuoteProvider> &quoteProvider
-   , const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager)
-{
-   logger_ = logger;
-   authAddressManager_ = authAddressManager;
-   assetManager_ = assetManager;
-   signingContainer_ = container;
-   armory_ = armory;
-   utxoReservationManager_ = utxoReservationManager;
-   tradeSettings_ = authAddressManager_->tradeSettings();
-
-   if (signingContainer_) {
-      connect(signingContainer_.get(), &SignContainer::ready, this, &RFQTicketXBT::onSignerReady);
-   }
-   connect(utxoReservationManager_.get(), &bs::UTXOReservationManager::availableUtxoChanged,
-      this, &RFQTicketXBT::onUTXOReservationChanged);
-
-   updateSubmitButton();
-}
-
 std::shared_ptr<bs::sync::Wallet> RFQTicketXBT::getCCWallet(const std::string &cc) const
 {
    if (walletsManager_) {
@@ -265,36 +240,6 @@ RFQTicketXBT::BalanceInfoContainer RFQTicketXBT::getBalanceInfo() const
 QString RFQTicketXBT::getProduct() const
 {
    return currentProduct_;
-}
-
-void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
-{
-   walletsManager_ = walletsManager;
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &RFQTicketXBT::walletsLoaded);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletAdded, this, &RFQTicketXBT::walletsLoaded);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &RFQTicketXBT::walletsLoaded);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::settlementLeavesLoaded, this, &RFQTicketXBT::onSettlLeavesLoaded);
-
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &RFQTicketXBT::onHDLeafCreated);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreateFailed, this, &RFQTicketXBT::onCreateHDWalletError);
-
-   walletsLoaded();
-
-   auto updateAuthAddresses = [this] {
-      UiUtils::fillAuthAddressesComboBoxWithSubmitted(ui_->authenticationAddressComboBox, authAddressManager_);
-      onAuthAddrChanged(ui_->authenticationAddressComboBox->currentIndex());
-      authAddr_ = authAddressManager_->getDefault();
-      if (authKey_.empty()) {
-         onSettlLeavesLoaded(0);
-      }
-   };
-   updateAuthAddresses();
-   connect(authAddressManager_.get(), &AuthAddressManager::AddressListUpdated, this, updateAuthAddresses);
-
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, [this] {
-      // This will update balance after receiving ZC
-      updatePanel();
-   });
 }
 
 void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger>& logger)

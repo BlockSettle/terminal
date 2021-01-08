@@ -35,7 +35,7 @@ namespace {
 
 } // namespace
 
-class TestPeer
+class TestPeer : public SignerCallbackTarget
 {
 public:
    void init(TestEnv &env, const std::string &name)
@@ -79,7 +79,8 @@ public:
 
       walletsMgr_->addWallet(wallet_);
 
-      signer_ = std::make_shared<InprocSigner>(walletsMgr_, env.logger(), "", NetworkType::TestNet);
+      signer_ = std::make_shared<InprocSigner>(walletsMgr_, env.logger(), this
+         , "", NetworkType::TestNet);
       signer_->Start();
 
       syncWalletMgr_ = std::make_shared<bs::sync::WalletsManager>(env.logger()

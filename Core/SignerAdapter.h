@@ -40,7 +40,7 @@ namespace BlockSettle {
 class SignerClient;
 class WalletSignerContainer;
 
-class SignerAdapter : public bs::message::Adapter, public HeadlessCallbackTarget
+class SignerAdapter : public bs::message::Adapter, public SignerCallbackTarget
 {
 public:
    SignerAdapter(const std::shared_ptr<spdlog::logger> &

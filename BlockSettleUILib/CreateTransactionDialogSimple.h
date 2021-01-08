@@ -25,28 +25,12 @@ class CreateTransactionDialogSimple : public CreateTransactionDialog
 Q_OBJECT
 
 public:
-   [[deprecated]] static std::shared_ptr<CreateTransactionDialog> CreateForPaymentRequest(
-        const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer>&
-      , const std::shared_ptr<spdlog::logger>&
-      , const std::shared_ptr<ApplicationSettings> &
-      , const Bip21::PaymentRequestInfo& paymentInfo
-      , QWidget* parent = nullptr);
    static std::shared_ptr<CreateTransactionDialog> CreateForPaymentRequest(
-      const std::shared_ptr<spdlog::logger>&
+      uint32_t topBlock, const std::shared_ptr<spdlog::logger>&
       , const Bip21::PaymentRequestInfo& paymentInfo
       , QWidget* parent = nullptr);
 
 public:
-   [[deprecated]] CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<spdlog::logger>&
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
-      , QWidget* parent = nullptr);
    CreateTransactionDialogSimple(uint32_t topBlock, const std::shared_ptr<spdlog::logger>&
       , QWidget* parent = nullptr);
    ~CreateTransactionDialogSimple() override;

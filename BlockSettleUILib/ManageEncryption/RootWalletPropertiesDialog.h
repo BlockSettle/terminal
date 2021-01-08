@@ -45,15 +45,6 @@ class RootWalletPropertiesDialog : public QDialog
 Q_OBJECT
 
 public:
-   [[deprecated]] RootWalletPropertiesDialog(const std::shared_ptr<spdlog::logger> &logger
-      , const bs::sync::WalletInfo &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<SignContainer> &
-      , WalletsViewModel *walletsModel
-      , const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<ConnectionManager> &
-      , const std::shared_ptr<AssetManager> &, QWidget* parent = nullptr);
    RootWalletPropertiesDialog(const std::shared_ptr<spdlog::logger> &logger
       , const bs::sync::WalletInfo &, WalletsViewModel *walletsModel
       , QWidget* parent = nullptr);

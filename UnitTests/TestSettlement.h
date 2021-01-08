@@ -19,6 +19,7 @@
 #include <QMutex>
 #include "Address.h"
 #include "BlockchainMonitor.h"
+#include "SignContainer.h"
 #include "TestEnv.h"
 
 
@@ -42,7 +43,7 @@ namespace bs {
    }
 }
 
-class TestSettlement : public ::testing::Test
+class TestSettlement : public ::testing::Test, public SignerCallbackTarget
 {
 protected:
    TestSettlement();

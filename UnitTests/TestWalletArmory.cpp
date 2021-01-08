@@ -28,7 +28,7 @@
 #include "Wallets/SyncWalletsManager.h"
 
 
-class TestWalletWithArmory : public ::testing::Test
+class TestWalletWithArmory : public ::testing::Test, public SignerCallbackTarget
 {
 protected:
    void SetUp()
@@ -69,7 +69,7 @@ public:
 
 TEST_F(TestWalletWithArmory, AddressChainExtension)
 {
-   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -247,7 +247,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
    std::vector<bs::Address> intVec;
 
    {
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -453,7 +453,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       }
 
       //sync with db
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -584,7 +584,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
          filename, NetworkType::TestNet);
 
       //resync address chain use, it should not disrupt current state
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
       syncMgr->setSignContainer(inprocSigner);
@@ -673,7 +673,7 @@ TEST_F(TestWalletWithArmory, Comments)
    auto changeAddr = leafPtr_->getNewChangeAddress();
    ASSERT_FALSE(changeAddr.empty());
 
-   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -737,7 +737,7 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    const auto changeAddr = leafPtr_->getNewChangeAddress();
    EXPECT_EQ(leafPtr_->getUsedAddressCount(), 3);
 
-   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -930,7 +930,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    const auto changeAddr = leafPtr_->getNewChangeAddress();
    EXPECT_EQ(leafPtr_->getUsedAddressCount(), 4);
 
-   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1074,7 +1074,7 @@ TEST_F(TestWalletWithArmory, SignSettlement)
    }
 
    /*sync the wallet and connect to db*/
-   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1186,7 +1186,7 @@ TEST_F(TestWalletWithArmory, SignSettlement)
 
 TEST_F(TestWalletWithArmory, GlobalDelegateConf)
 {
-   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1375,7 +1375,7 @@ TEST_F(TestWalletWithArmory, CallbackReturnTxCrash)
    auto addr = leafPtr_->getNewExtAddress();
    ASSERT_FALSE(addr.empty());
 
-   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1415,7 +1415,7 @@ TEST_F(TestWalletWithArmory, PushZC_retry)
    prefixed.append(CryptoPRNG::generateRandom(20));
    auto otherAddr = bs::Address::fromHash(prefixed);
 
-   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
