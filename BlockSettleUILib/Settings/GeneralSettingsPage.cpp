@@ -153,6 +153,8 @@ static inline QString logLevel(int level)
 
 void GeneralSettingsPage::apply()
 {
+   const auto walletId = UiUtils::getSelectedWalletId(ui_->comboBox_defaultWallet);
+
    if (appSettings_) {
       appSettings_->set(ApplicationSettings::launchToTray, ui_->checkBoxLaunchToTray->isChecked());
       appSettings_->set(ApplicationSettings::minimizeToTray, ui_->checkBoxMinimizeToTray->isChecked());
@@ -198,6 +200,7 @@ void GeneralSettingsPage::apply()
 
          appSettings_->set(ApplicationSettings::logMessages, logSettings);
       }
+      appSettings_->setDefaultWalletId(walletId);
    }
    else {   // don't update local settings_ yet - the update will arrive explicitly
       emit putSetting(ApplicationSettings::launchToTray, ui_->checkBoxLaunchToTray->isChecked());
@@ -208,6 +211,10 @@ void GeneralSettingsPage::apply()
       emit putSetting(ApplicationSettings::SubscribeToMDOnStart, ui_->subscribeToMdOnStartCheckBox->isChecked());
       emit putSetting(ApplicationSettings::DetailedSettlementTxDialogByDefault
          , ui_->detailedSettlementTxDialogByDefaultCheckBox->isChecked());
+
+      const auto netType = static_cast<NetworkType>(settings_.at(ApplicationSettings::netType).toInt());
+      emit putSetting((netType == NetworkType::TestNet) ? ApplicationSettings::DefaultXBTTradeWalletIdTestnet
+         : ApplicationSettings::DefaultXBTTradeWalletIdMainnet, QString::fromStdString(walletId));
 
       const auto cfgLog = ApplicationSettings::parseLogConfig(settings_.at(
          ApplicationSettings::logDefault).toStringList());
@@ -241,9 +248,6 @@ void GeneralSettingsPage::apply()
          emit putSetting(ApplicationSettings::logMessages, logSettings);
       }
    }
-
-   const auto walletId = UiUtils::getSelectedWalletId(ui_->comboBox_defaultWallet);
-   appSettings_->setDefaultWalletId(walletId);
 }
 
 void GeneralSettingsPage::onSelectLogFile()
