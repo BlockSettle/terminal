@@ -396,7 +396,7 @@ void RFQRequestWidget::processFutureResponse(const ProxyTerminalPb::Response_Fut
       auto sideStr = msg.side() == bs::types::Side::SIDE_SELL ? tr("Sell") : tr("Buy");
       auto amountStr = UiUtils::displayAmount(msg.amount());
       auto priceStr = UiUtils::displayPriceXBT(msg.price());
-      auto details = tr("Product: %1\nSide: Buy / Sell\nVolume: Amount\nPrice: Price")
+      auto details = tr("Product: %1\nSide: %2\nVolume: %3\nPrice: %4")
          .arg(productStr).arg(sideStr).arg(amountStr).arg(priceStr);
       BSMessageBox errorMessage(BSMessageBox::info, tr("Order message"), tr("Order confirmation"), details, this);
       errorMessage.exec();

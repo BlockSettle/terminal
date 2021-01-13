@@ -235,6 +235,9 @@ void BSTerminalMainWindow::onMessageFromPB(const ProxyTerminalPb::Response& resp
       case ProxyTerminalPb::Response::kDeliveryAddress:
          processSetDeliveryAddr(response.delivery_address());
          break;
+      case ProxyTerminalPb::Response::kDeliveryObligationUpdate:
+         processDeliveryObligationUpdate(response.delivery_obligation_update());
+         break;
       default:
          break;
    }
@@ -2525,6 +2528,28 @@ void BSTerminalMainWindow::processSetDeliveryAddr(const ProxyTerminalPb::Respons
       BSMessageBox(BSMessageBox::info, tr("Delivery Address")
       , tr("Address submitted"), this).exec();
    });
+}
+
+void BSTerminalMainWindow::processDeliveryObligationUpdate(const ProxyTerminalPb::Response_DeliveryObligationsRequest &resp)
+{
+   auto amountStr = UiUtils::displayAmount(resp.to_deliver());
+   switch (resp.status()) {
+      case ProxyTerminalPb::Response_DeliveryObligationsRequest::PENDING:
+         addDeferredDialog([this, amountStr] {
+            auto details = tr("Volume: %1").arg(amountStr);
+            BSMessageBox errorMessage(BSMessageBox::info, tr("Delivery"), tr("Delivery requested"), details, this);
+         });
+         break;
+      case ProxyTerminalPb::Response_DeliveryObligationsRequest::DELIVERED:
+         addDeferredDialog([this, amountStr] {
+            auto details = tr("Volume: %1").arg(amountStr);
+            BSMessageBox errorMessage(BSMessageBox::info, tr("Delivery"), tr("Delivery detected"), details, this);
+         });
+         break;
+      default:
+         SPDLOG_LOGGER_ERROR(logMgr_->logger(), "unexpected DeliveryObligationsRequest status");
+         break;
+   }
 }
 
 void BSTerminalMainWindow::onAuthLeafCreated()
