@@ -387,13 +387,18 @@ void RFQRequestWidget::processFutureResponse(const ProxyTerminalPb::Response_Fut
 {
    QMetaObject::invokeMethod(this, [this, msg] {
       if (!msg.success()) {
-         BSMessageBox errorMessage(BSMessageBox::critical, tr("Error")
-            , tr("Request failed: %1").arg(QString::fromStdString(msg.error_msg())), this);
+         BSMessageBox errorMessage(BSMessageBox::critical, tr("Order message")
+            , tr("Trade rejected"), QString::fromStdString(msg.error_msg()), this);
          errorMessage.exec();
          return;
       }
-      auto details = tr("Price: %1").arg(UiUtils::displayPriceXBT(msg.price()));
-      BSMessageBox errorMessage(BSMessageBox::info, tr("Success"), tr("Order succeed"), details, this);
+      auto productStr = QString::fromStdString(msg.product());
+      auto sideStr = msg.side() == bs::types::Side::SIDE_SELL ? tr("Sell") : tr("Buy");
+      auto amountStr = UiUtils::displayAmount(msg.amount());
+      auto priceStr = UiUtils::displayPriceXBT(msg.price());
+      auto details = tr("Product: %1\nSide: Buy / Sell\nVolume: Amount\nPrice: Price")
+         .arg(productStr).arg(sideStr).arg(amountStr).arg(priceStr);
+      BSMessageBox errorMessage(BSMessageBox::info, tr("Order message"), tr("Order confirmation"), details, this);
       errorMessage.exec();
    });
 }

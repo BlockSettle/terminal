@@ -233,15 +233,32 @@ void FuturesTicket::productSelectionChanged()
 
 void FuturesTicket::updatePanel()
 {
-   // currentProduct_ will be set to EURP or EURD, query EUR instead
-   auto currentProduct = "EUR";
+   // currentProduct_ will be set to EURP or EURD
    const double balance = assetManager_ ?
-      assetManager_->getBalance(currentProduct, false, nullptr) : 0.0;
+      assetManager_->getBalance(currentProduct_, false, nullptr) : 0.0;
+   auto currentProduct = "EUR";
    auto amountString = UiUtils::displayCurrencyAmount(balance);
    QString text = tr("%1 %2").arg(amountString).arg(QString::fromStdString(currentProduct));
    ui_->labelBalanceValue->setText(text);
 
-   ui_->labelFutureBalanceValue->setText(UiUtils::displayAmount(assetManager_->netDeliverableBalanceXbt()));
+   int64_t futuresXbtAmount = currentProduct_ == "EURD" ?
+      assetManager_->futuresXbtAmountDeliverable() : assetManager_->futuresXbtAmountCashSettled();
+   ui_->labelFutureBalanceValue->setText(UiUtils::displayAmount(futuresXbtAmount));
+   double futuresBalance = currentProduct_ == "EURD" ?
+      assetManager_->futuresBalanceDeliverable() : assetManager_->futuresBalanceCashSettled();
+   const auto &mdInfos = mdInfo_[type_][security_.toStdString()];
+   // TODO: Use current price from the server
+   double currentPrice = 0;
+   for (const auto &item : mdInfos) {
+      if (item.second.askPrice != 0 && item.second.bidPrice != 0) {
+         currentPrice = (item.second.askPrice + item.second.bidPrice) / 2;
+         break;
+      }
+   };
+   double profitLoss = assetManager_->profitLoss(futuresXbtAmount, futuresBalance, currentPrice);
+   auto profitLossString = UiUtils::displayCurrencyAmount(profitLoss);
+   QString profitLossText = tr("%1 %2").arg(profitLossString).arg(QString::fromStdString(currentProduct));
+   ui_->labelProfitLoss->setText(profitLossText);
 
    double qty = getQuantity();
    size_t selectedLine = getSelectedLine(qty);
@@ -265,7 +282,8 @@ void FuturesTicket::updatePanel()
 
 void FuturesTicket::onCloseAll()
 {
-   auto netBalance = assetManager_->netDeliverableBalanceXbt();
+   int64_t netBalance = currentProduct_ == "EURD" ?
+      assetManager_->futuresXbtAmountDeliverable() : assetManager_->futuresXbtAmountCashSettled();
    auto amount = bs::XBTAmount(static_cast<uint64_t>(std::abs(netBalance)));
    auto side = netBalance < 0 ? bs::network::Side::Buy : bs::network::Side::Sell;
    sendRequest(side, amount);
@@ -344,7 +362,6 @@ void FuturesTicket::onMDUpdate(bs::network::Asset::Type type, const QString &sec
       if (field.levelQuantity == kInfValueStr) {
          amount = kInfValueAmount;
       } else {
-         double dValue = field.levelQuantity.toDouble();
          amount = bs::XBTAmount(field.levelQuantity.toDouble());
       }
       auto &mdInfo = mdInfos[amount];
