@@ -311,6 +311,7 @@ private:
    void onBootstrapDataLoaded(const std::string& data);
 
    void processSetDeliveryAddr(const Blocksettle::Communication::ProxyTerminalPb::Response_DeliveryAddress &resp);
+   void processDeliveryObligationUpdate(const Blocksettle::Communication::ProxyTerminalPb::Response_DeliveryObligationsRequest &resp);
 
 private:
    enum class ChatInitState
