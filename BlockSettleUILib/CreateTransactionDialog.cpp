@@ -438,15 +438,19 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
 void CreateTransactionDialog::startBroadcasting()
 {
    broadcasting_ = true;
-   pushButtonCreate()->setEnabled(false);
-   pushButtonCreate()->setText(tr("Waiting for TX signing..."));
+   QMetaObject::invokeMethod(this, [this] {
+      pushButtonCreate()->setEnabled(false);
+      pushButtonCreate()->setText(tr("Waiting for TX signing..."));
+   });
 }
 
 void CreateTransactionDialog::stopBroadcasting()
 {
    broadcasting_ = false;
-   pushButtonCreate()->setEnabled(true);
-   updateCreateButtonText();
+   QMetaObject::invokeMethod(this, [this] {
+      pushButtonCreate()->setEnabled(true);
+      updateCreateButtonText();
+   });
 }
 
 bool CreateTransactionDialog::BroadcastImportedTx()
