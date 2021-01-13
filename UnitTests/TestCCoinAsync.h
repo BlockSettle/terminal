@@ -40,6 +40,7 @@ namespace bs {
       class WalletsManager;
    }
 }
+class QtHCT;
 
 
 class AsyncCCT : public ColoredCoinTrackerAsync
@@ -83,6 +84,7 @@ public:
    std::vector<std::shared_ptr<bs::sync::hd::Leaf>>   userWallets_;
 
    std::shared_ptr<bs::sync::WalletsManager> syncMgr_;
+   std::shared_ptr<QtHCT>  hct_;
 
    bs::Address              genesisAddr_;
    bs::Address              revocationAddr_;

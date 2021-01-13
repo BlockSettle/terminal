@@ -56,7 +56,7 @@ const size_t kTransactionWeightLimit = 400000;
 CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions
+   , const std::shared_ptr<HeadlessContainer> &container, bool loadFeeSuggestions
    , const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ApplicationSettings> &applicationSettings
    , bs::UtxoReservationToken utxoReservation
@@ -116,9 +116,12 @@ void CreateTransactionDialog::init()
    connect(comboBoxWallets(), SIGNAL(currentIndexChanged(int)), this, SLOT(selectedWalletChanged(int)));
 
    if (signContainer_) {
-      connect(signContainer_.get(), &SignContainer::TXSigned, this, &CreateTransactionDialog::onTXSigned);
-      connect(signContainer_.get(), &SignContainer::disconnected, this, &CreateTransactionDialog::updateCreateButtonText);
-      connect(signContainer_.get(), &SignContainer::authenticated, this, &CreateTransactionDialog::onSignerAuthenticated);
+      const auto hct = dynamic_cast<QtHCT*>(signContainer_->cbTarget());
+      if (hct) {
+         connect(hct, &QtHCT::TXSigned, this, &CreateTransactionDialog::onTXSigned);
+         connect(hct, &QtHCT::disconnected, this, &CreateTransactionDialog::updateCreateButtonText);
+         connect(hct, &QtHCT::authenticated, this, &CreateTransactionDialog::onSignerAuthenticated);
+      }
    }
    updateCreateButtonText();
    lineEditAddress()->setFocus();
@@ -435,15 +438,19 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
 void CreateTransactionDialog::startBroadcasting()
 {
    broadcasting_ = true;
-   pushButtonCreate()->setEnabled(false);
-   pushButtonCreate()->setText(tr("Waiting for TX signing..."));
+   QMetaObject::invokeMethod(this, [this] {
+      pushButtonCreate()->setEnabled(false);
+      pushButtonCreate()->setText(tr("Waiting for TX signing..."));
+   });
 }
 
 void CreateTransactionDialog::stopBroadcasting()
 {
    broadcasting_ = false;
-   pushButtonCreate()->setEnabled(true);
-   updateCreateButtonText();
+   QMetaObject::invokeMethod(this, [this] {
+      pushButtonCreate()->setEnabled(true);
+      updateCreateButtonText();
+   });
 }
 
 bool CreateTransactionDialog::BroadcastImportedTx()

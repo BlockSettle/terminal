@@ -36,6 +36,7 @@
 #include "bs_signer.pb.h"
 
 using namespace bs::error;
+using namespace Blocksettle::Communication;
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<HeadlessSettings> &params, const std::shared_ptr<DispatchQueue> &queue)

@@ -16,7 +16,7 @@
 #include <QVariant>
 #include <QStandardPaths>
 #include <QApplication>
-#include "CelerClientConnection.h"
+#include "Celer/ClientConnection.h"
 #include "DataConnection.h"
 #include "HeadlessApp.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -426,10 +426,10 @@ void SignerInterfaceListener::onSyncHDWallet(const std::string &data, bs::signer
       std::vector<bs::sync::HDWalletData::Leaf> leaves;
       for (int j = 0; j < group.leaves_size(); ++j) {
          const auto leaf = group.leaves(j);
-         leaves.push_back({ leaf.id(), bs::hd::Path::fromString(leaf.path())
-            , false, BinaryData::fromString(leaf.extra_data()) });
+         leaves.push_back({ {leaf.id()}, bs::hd::Path::fromString(leaf.path())
+            , "", "" , false, BinaryData::fromString(leaf.extra_data()) });
       }
-      result.groups.push_back({ static_cast<bs::hd::CoinType>(group.type()), leaves });
+      result.groups.push_back({ static_cast<bs::hd::CoinType>(group.type()), "", "", leaves });
    }
    itCb->second(result);
    cbHDWalletData_.erase(itCb);

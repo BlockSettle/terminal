@@ -13,12 +13,12 @@
 #include "AuthAddressManager.h"
 #include "CheckRecipSigner.h"
 #include "CurrencyPair.h"
+#include "HeadlessContainer.h"
 #include "QuoteProvider.h"
 #include "TradesUtils.h"
 #include "TradesVerification.h"
 #include "UiUtils.h"
 #include "UtxoReservationManager.h"
-#include "WalletSignerContainer.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -35,7 +35,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::shared_ptr<QuoteProvider> &quoteProvider
-   , const std::shared_ptr<WalletSignerContainer> &container
+   , const std::shared_ptr<HeadlessContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<AuthAddressManager> &authAddrMgr
    , const bs::Address &authAddr
@@ -70,7 +70,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       throw std::runtime_error("no wallet");
    }
 
-   auto qn = quoteProvider->getSubmittedXBTQuoteNotification(order.settlementId);
+   auto qn = quoteProvider->getSubmittedXBTQuoteNotification(order.settlementId.toHexStr());
    if (qn.authKey.empty() || qn.reqAuthKey.empty() || qn.settlementId.empty()) {
       throw std::invalid_argument("failed to get submitted QN for " + order.quoteId);
    }
@@ -98,7 +98,10 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       throw std::runtime_error("can't register settlement wallet in armory");
    }
 
-   connect(signContainer_.get(), &SignContainer::TXSigned, this, &DealerXBTSettlementContainer::onTXSigned);
+   const auto hct = dynamic_cast<QtHCT*>(signContainer_ ? signContainer_->cbTarget() : nullptr);
+   if (hct) {
+      connect(hct, &QtHCT::TXSigned, this, &DealerXBTSettlementContainer::onTXSigned);
+   }
 }
 
 bool DealerXBTSettlementContainer::cancel()

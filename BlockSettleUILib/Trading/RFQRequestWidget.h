@@ -47,15 +47,15 @@ class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class AutoSignScriptProvider;
-class BaseCelerClient;
+class CelerClientQt;
 class DialogManager;
+class HeadlessContainer;
 class MarketDataProvider;
 class MDCallbacksQt;
 class OrderListModel;
 class QuoteProvider;
 class RFQDialog;
 class RfqStorage;
-class WalletSignerContainer;
 
 class RFQRequestWidget : public TabWithShortcut
 {
@@ -70,12 +70,12 @@ public:
       , const std::shared_ptr<ApplicationSettings> &);
 
    void init(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<BaseCelerClient> &
+      , const std::shared_ptr<CelerClientQt> &
       , const std::shared_ptr<AuthAddressManager> &
       , const std::shared_ptr<QuoteProvider> &
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<DialogManager> &
-      , const std::shared_ptr<WalletSignerContainer> &
+      , const std::shared_ptr<HeadlessContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<AutoSignScriptProvider> &
       , const std::shared_ptr<bs::UTXOReservationManager> &
@@ -152,7 +152,7 @@ private:
    std::unique_ptr<Ui::RFQRequestWidget> ui_;
 
    std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<BaseCelerClient>        celerClient_;
+   std::shared_ptr<CelerClientQt>      celerClient_;
    std::shared_ptr<QuoteProvider>      quoteProvider_;
    std::shared_ptr<AssetManager>       assetManager_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;
@@ -160,7 +160,7 @@ private:
    OrderListModel*                     orderListModel_;
 
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<WalletSignerContainer>    signingContainer_;
+   std::shared_ptr<HeadlessContainer>  signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::shared_ptr<AutoSignScriptProvider>      autoSignProvider_;

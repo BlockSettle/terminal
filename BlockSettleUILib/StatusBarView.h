@@ -19,7 +19,7 @@
 
 #include <memory>
 #include "ArmoryConnection.h"
-#include "CelerClient.h"
+#include "Celer/CelerClient.h"
 #include "CircleProgressBar.h"
 #include "SignContainer.h"
 
@@ -29,7 +29,7 @@ namespace bs {
    }
 }
 class AssetManager;
-class SignContainer;
+class HeadlessContainer;
 
 class StatusBarView  : public QObject, public ArmoryCallbackTarget
 {
@@ -37,8 +37,9 @@ class StatusBarView  : public QObject, public ArmoryCallbackTarget
 public:
    StatusBarView(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
-      , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<BaseCelerClient> &
-      , const std::shared_ptr<SignContainer> &, QStatusBar *parent);
+      , std::shared_ptr<AssetManager> assetManager
+      , const std::shared_ptr<CelerClientQt> &
+      , const std::shared_ptr<HeadlessContainer> &, QStatusBar *parent);
    ~StatusBarView() noexcept override;
 
    StatusBarView(const StatusBarView&) = delete;

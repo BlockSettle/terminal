@@ -27,7 +27,7 @@ struct BsClientLoginResult;
 struct NetworkSettings;
 
 class ApplicationSettings;
-class BsClient;
+class BsClientQt;
 
 class LoginWindow : public QDialog
 {
@@ -35,7 +35,7 @@ Q_OBJECT
 
 public:
    LoginWindow(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<BsClient> &bsClient
+      , const std::shared_ptr<BsClientQt> &bsClient
       , std::shared_ptr<ApplicationSettings> &settings
       , QWidget* parent = nullptr);
    ~LoginWindow() override;
@@ -71,8 +71,8 @@ private:
    State       state_{State::Idle};
    QTimer      timer_;
    float       timeLeft_{};
-   std::shared_ptr<BsClient>   bsClient_;
-   std::unique_ptr<BsClientLoginResult> result_;
+   std::shared_ptr<BsClientQt>            bsClient_;
+   std::unique_ptr<BsClientLoginResult>   result_;
 };
 
 #endif // __LOGIN_WINDOW_H__

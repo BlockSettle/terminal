@@ -17,9 +17,9 @@
 #include "BSMessageBox.h"
 #include "CoinControlDialog.h"
 #include "CreateTransactionDialogSimple.h"
+#include "HeadlessContainer.h"
 #include "SelectAddressDialog.h"
 #include "SelectedTransactionInputs.h"
-#include "SignContainer.h"
 #include "TransactionData.h"
 #include "TransactionOutputsModel.h"
 #include "UiUtils.h"
@@ -46,7 +46,7 @@ static const float kDustFeePerByte = 3.0;
 CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<SignContainer> &container
+      , const std::shared_ptr<HeadlessContainer> &container
       , bool loadFeeSuggestions
       , const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
@@ -70,7 +70,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
         const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<SignContainer>& container
+      , const std::shared_ptr<HeadlessContainer>& container
       , const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
       , const Tx &tx
@@ -96,7 +96,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
         const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<SignContainer>& container
+      , const std::shared_ptr<HeadlessContainer>& container
       , const std::shared_ptr<bs::sync::Wallet>& wallet
       , const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
@@ -119,7 +119,7 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::Create
         const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<bs::sync::WalletsManager> &walletManager
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<SignContainer>& container
+      , const std::shared_ptr<HeadlessContainer>& container
       , const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings> & applicationSettings
       , const Bip21::PaymentRequestInfo& paymentInfo

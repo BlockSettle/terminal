@@ -22,7 +22,7 @@ namespace Ui {
     class RequestingQuoteWidget;
 }
 class AssetManager;
-class BaseCelerClient;
+class CelerClientQt;
 
 class RequestingQuoteWidget : public QWidget
 {
@@ -36,7 +36,7 @@ public:
       assetManager_ = assetManager;
    }
 
-   void SetCelerClient(std::shared_ptr<BaseCelerClient> celerClient);
+   void SetCelerClient(const std::shared_ptr<CelerClientQt> &celerClient);
 
    void populateDetails(const bs::network::RFQ& rfq);
 
@@ -79,7 +79,7 @@ private:
    bs::network::Quote         quote_;
    std::shared_ptr<AssetManager> assetManager_;
    bool                       balanceOk_ = true;
-   std::shared_ptr<BaseCelerClient>                    celerClient_;
+   std::shared_ptr<CelerClientQt>   celerClient_;
 
 private:
    void setupTimer(Status status, const QDateTime &expTime);

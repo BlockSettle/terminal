@@ -25,8 +25,8 @@ class SignAdapterContainer : public WalletSignerContainer
 {
 public:
    SignAdapterContainer(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<SignerInterfaceListener> &lsn)
-      : WalletSignerContainer(logger, OpMode::LocalInproc), listener_(lsn)
+      , SignerCallbackTarget *sct, const std::shared_ptr<SignerInterfaceListener> &lsn)
+      : WalletSignerContainer(logger, sct, OpMode::LocalInproc), listener_(lsn)
    {}
    ~SignAdapterContainer() noexcept override = default;
 
@@ -34,6 +34,10 @@ public:
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
       , const SecureBinaryData &password);
 
+   void signTXRequest(const bs::core::wallet::TXSignRequest&
+      , const std::function<void(const BinaryData& signedTX, bs::error::ErrorCode
+         , const std::string& errorReason)>&
+      , TXSignMode mode = TXSignMode::Full, bool keepDuplicatedRecipients = false) override {}
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
       , TXSignMode = TXSignMode::Full, bool = false) override
    { return 0; }
@@ -98,8 +102,8 @@ public:
       const std::set<BinaryData>&, std::function<void(bs::sync::SyncState)>) override {}
    void extendAddressChain(const std::string&, unsigned, bool,
       const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) override {}
-   void syncNewAddresses(const std::string &, const std::vector<std::string> &
-      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool = true) override {}
+   void syncNewAddresses(const std::string& walletId, const std::vector<std::string>&
+      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>>&)>&) override {}
    void getChatNode(const std::string &walletID, const std::function<void(const BIP32_Node &)> &) override {}
    void setSettlAuthAddr(const std::string &walletId, const BinaryData &, const bs::Address &addr) override {}
    void getSettlAuthAddr(const std::string &walletId, const BinaryData &

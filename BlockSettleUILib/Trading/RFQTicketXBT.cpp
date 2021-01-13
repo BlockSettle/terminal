@@ -22,9 +22,9 @@
 #include "CurrencyPair.h"
 #include "EncryptionUtils.h"
 #include "FXAmountValidator.h"
+#include "HeadlessContainer.h"
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"
-#include "SignContainer.h"
 #include "TradeSettings.h"
 #include "TradesUtils.h"
 #include "TxClasses.h"
@@ -125,7 +125,7 @@ void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AuthAddressManager> &authAddressManager
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<QuoteProvider> &quoteProvider
-   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<HeadlessContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager)
 {
@@ -137,7 +137,10 @@ void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger
    utxoReservationManager_ = utxoReservationManager;
 
    if (signingContainer_) {
-      connect(signingContainer_.get(), &SignContainer::ready, this, &RFQTicketXBT::onSignerReady);
+      const auto hct = dynamic_cast<QtHCT*>(signingContainer_->cbTarget());
+      if (hct) {
+         connect(hct, &QtHCT::ready, this, &RFQTicketXBT::onSignerReady);
+      }
    }
    connect(utxoReservationManager_.get(), &bs::UTXOReservationManager::availableUtxoChanged,
       this, &RFQTicketXBT::onUTXOReservationChanged);

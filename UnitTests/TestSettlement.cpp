@@ -18,6 +18,7 @@
 #include "ApplicationSettings.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
+#include "HeadlessContainer.h"
 #include "InprocSigner.h"
 #include "TestEnv.h"
 #include "TransactionData.h"
@@ -138,8 +139,9 @@ void TestSettlement::SetUp()
       hdWallet_.push_back(hdWallet);
    }
 
+   hct_ = std::make_shared<QtHCT>(nullptr);
    auto inprocSigner = std::make_shared<InprocSigner>(
-      walletsMgr_, logger, "", NetworkType::TestNet);
+      walletsMgr_, logger, hct_.get(), "", NetworkType::TestNet);
    inprocSigner->Start();
    syncMgr_ = std::make_shared<bs::sync::WalletsManager>(logger
       , envPtr_->appSettings(), envPtr_->armoryConnection());

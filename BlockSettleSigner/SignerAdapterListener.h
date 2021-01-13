@@ -34,12 +34,20 @@ namespace bs {
       class TransportBIP15xServer;
    }
 }
+namespace Blocksettle {
+   namespace Communication {
+      namespace signer {
+         enum ControlPasswordStatus : int;
+      }
+   }
+}
 class DispatchQueue;
 class HeadlessAppObj;
 class HeadlessContainerCallbacks;
 class HeadlessContainerCallbacksImpl;
 class HeadlessSettings;
 class ServerConnection;
+
 
 class SignerAdapterListener : public ServerConnectionListener
 {
@@ -54,7 +62,7 @@ public:
 
    // Sent to GUI status update message
    void sendStatusUpdate();
-   void sendControlPasswordStatusUpdate(signer::ControlPasswordStatus status);
+   void sendControlPasswordStatusUpdate(Blocksettle::Communication::signer::ControlPasswordStatus status);
 
    void resetConnection();
 

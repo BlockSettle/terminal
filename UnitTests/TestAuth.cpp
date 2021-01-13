@@ -58,6 +58,7 @@ check unflagged return
 #include "CheckRecipSigner.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
+#include "HeadlessContainer.h"
 #include "InprocSigner.h"
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
@@ -250,7 +251,8 @@ void TestAuth::SetUp()
    }
 
    //setup sync manager
-   auto inprocSigner = std::make_shared<InprocSigner>(priWallet_, envPtr_->logger());
+   hct_ = std::make_shared<QtHCT>(nullptr);
+   auto inprocSigner = std::make_shared<InprocSigner>(priWallet_, hct_.get(), envPtr_->logger());
    inprocSigner->Start();
    syncMgr_ = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger(),
       envPtr_->appSettings(), envPtr_->armoryConnection());

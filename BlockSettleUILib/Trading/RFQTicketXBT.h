@@ -52,9 +52,9 @@ class AssetManager;
 class AuthAddressManager;
 class CCAmountValidator;
 class FXAmountValidator;
+class HeadlessContainer;
 class QuoteProvider;
 class SelectedTransactionInputs;
-class SignContainer;
 class XbtAmountValidator;
 
 
@@ -70,7 +70,7 @@ public:
       , const std::shared_ptr<AuthAddressManager> &
       , const std::shared_ptr<AssetManager> &assetManager
       , const std::shared_ptr<QuoteProvider> &quoteProvider
-      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<HeadlessContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::UTXOReservationManager> &);
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
@@ -232,7 +232,7 @@ private:
    std::shared_ptr<AuthAddressManager> authAddressManager_;
 
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<SignContainer>      signingContainer_;
+   std::shared_ptr<HeadlessContainer>  signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<bs::UTXOReservationManager>  utxoReservationManager_;
 

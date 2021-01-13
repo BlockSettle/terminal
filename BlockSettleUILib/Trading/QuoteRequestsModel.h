@@ -34,8 +34,8 @@ namespace bs {
    class SettlementContainer;
 }
 class AssetManager;
-class BaseCelerClient;
 class ApplicationSettings;
+class CelerClientQt;
 
 class QuoteRequestsModel : public QAbstractItemModel
 {
@@ -94,8 +94,8 @@ public:
 
 public:
    QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &
-                      , std::shared_ptr<BaseCelerClient> celerClient
-                      , std::shared_ptr<ApplicationSettings> appSettings
+                      , const std::shared_ptr<CelerClientQt>&
+                      , const std::shared_ptr<ApplicationSettings>&
                       , QObject* parent);
    ~QuoteRequestsModel() override;
 
@@ -153,7 +153,7 @@ private:
    MDPrices    mdPrices_;
    const QString groupNameSettlements_ = tr("Settlements");
    std::shared_ptr<bs::SecurityStatsCollector> secStatsCollector_;
-   std::shared_ptr<BaseCelerClient>     celerClient_;
+   std::shared_ptr<CelerClientQt>       celerClient_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::unordered_set<std::string>  pendingDeleteIds_;
    int priceUpdateInterval_;

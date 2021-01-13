@@ -19,6 +19,7 @@
 #include "CoreHDWallet.h"
 #include "CoreWallet.h"
 #include "CoreWalletsManager.h"
+#include "HeadlessContainer.h"
 #include "InprocSigner.h"
 #include "SystemFileUtils.h"
 #include "TestEnv.h"
@@ -189,8 +190,9 @@ TEST_F(TestWallet, BIP84_primary)
       EXPECT_EQ(leafCC->name(), "84'/16979'/7568'"); //16979 == 0x4253
    }
 
+   auto hct = new QtHCT(nullptr);
    auto inprocSigner = std::make_shared<InprocSigner>(
-      envPtr_->walletsMgr(), envPtr_->logger(), "", NetworkType::TestNet);
+      envPtr_->walletsMgr(), envPtr_->logger(), hct, "", NetworkType::TestNet);
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -202,6 +204,7 @@ TEST_F(TestWallet, BIP84_primary)
 
    EXPECT_TRUE(envPtr_->walletsMgr()->deleteWalletFile(wallet));
    EXPECT_EQ(envPtr_->walletsMgr()->getPrimaryWallet(), nullptr);
+   delete hct;
 }
 
 TEST_F(TestWallet, BIP84_address)
@@ -602,7 +605,8 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       }
 
       //create sync manager
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
+      auto hct = new QtHCT(nullptr);
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, hct, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -697,6 +701,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
    
       //shut it all down
       filename = walletPtr->getFileName();
+      delete hct;
    }
 
    {
@@ -704,7 +709,8 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
          filename, NetworkType::TestNet, "", ctrlPass, envPtr_->logger());
 
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
+      auto hct = new QtHCT(nullptr);
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, hct, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -796,6 +802,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       filename = WOcopy->getFileName();
 
       //scope out to clean up prior to WO testing
+      delete hct;
    }
 
    //load WO, perform checks one last time
@@ -807,7 +814,8 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       EXPECT_EQ(walletPtr->isWatchingOnly(), true);
 
       //create sync manager
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
+      auto hct = new QtHCT(nullptr);
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, hct, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -843,6 +851,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       EXPECT_EQ(originalSet.size(), 12);
       EXPECT_EQ(originalSet.size(), loadedSet.size());
       EXPECT_EQ(originalSet, loadedSet);
+      delete hct;
    }
 }
 
@@ -1337,7 +1346,8 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
       }
 
       //create sync manager
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
+      auto hct = new QtHCT(nullptr);
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, hct, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1477,6 +1487,7 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
          auto addr_hash = BtcUtils::getHash160(addr_node.getPublicKey());
          EXPECT_EQ(addr_hash, intAddrVec[i].unprefixed());
       }
+      delete hct;
    }
 }
 
@@ -1801,7 +1812,8 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    envPtr_->requireArmory();
    ASSERT_NE(envPtr_->armoryConnection(), nullptr);
 
-   auto inprocSigner = std::make_shared<InprocSigner>(coreWallet, envPtr_->logger());
+   auto hct = new QtHCT(nullptr);
+   auto inprocSigner = std::make_shared<InprocSigner>(coreWallet, hct, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1873,6 +1885,7 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    catch (const std::exception &e) {
       ASSERT_FALSE(true) << e.what();
    }
+   delete hct;
 }
 
 TEST_F(TestWallet, ChangePassword)
@@ -1935,7 +1948,6 @@ TEST_F(TestWallet, ChangeControlPassword)
 
    const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("Sample test seed")
       , NetworkType::TestNet };
-
 
    {
       auto wallet = std::make_shared<bs::core::hd::Wallet>(

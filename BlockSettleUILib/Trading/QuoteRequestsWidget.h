@@ -109,11 +109,10 @@ protected:
 
 
 class AssetManager;
-class BaseCelerClient;
+class CelerClientQt;
 class QuoteRequestsModel;
 class QuoteReqSortModel;
 class RFQBlotterTreeView;
-class BaseCelerClient;
 
 class QuoteRequestsWidget : public QWidget
 {
@@ -126,7 +125,7 @@ public:
    void init(std::shared_ptr<spdlog::logger> logger, const std::shared_ptr<QuoteProvider> &quoteProvider
       , const std::shared_ptr<AssetManager>& assetManager, const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
       , const std::shared_ptr<ApplicationSettings> &appSettings
-      , std::shared_ptr<BaseCelerClient> celerClient);
+      , std::shared_ptr<CelerClientQt> celerClient);
 
    void addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &);
    bool StartCCSignOnOrder(const QString& orderId, QDateTime timestamp);

@@ -14,7 +14,7 @@
 #include <QTreeView>
 #include <QSortFilterProxyModel>
 
-#include "SignContainer.h"
+#include "HeadlessContainer.h"
 #include "UiUtils.h"
 #include "ValidityFlag.h"
 #include "Wallets/SyncHDWallet.h"
@@ -290,7 +290,7 @@ void WalletRootNode::addGroups(const std::vector<std::shared_ptr<bs::sync::hd::G
 
 
 WalletsViewModel::WalletsViewModel(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , const std::string &defaultWalletId, const std::shared_ptr<SignContainer> &container
+   , const std::string &defaultWalletId, const std::shared_ptr<HeadlessContainer> &container
    , QObject* parent, bool showOnlyRegular)
    : QAbstractItemModel(parent)
    , walletsManager_(walletsManager)
@@ -308,10 +308,13 @@ WalletsViewModel::WalletsViewModel(const std::shared_ptr<bs::sync::WalletsManage
    connect(walletsManager_.get(), &bs::sync::WalletsManager::newWalletAdded, this, &WalletsViewModel::onNewWalletAdded);
 
    if (signContainer_) {
-      connect(signContainer_.get(), &SignContainer::QWalletInfo, this, &WalletsViewModel::onWalletInfo);
-      connect(signContainer_.get(), &SignContainer::Error, this, &WalletsViewModel::onHDWalletError);
-      connect(signContainer_.get(), &SignContainer::authenticated, this, &WalletsViewModel::onSignerAuthenticated);
-      connect(signContainer_.get(), &SignContainer::ready, this, &WalletsViewModel::onWalletChanged);
+      const auto hct = dynamic_cast<QtHCT*>(signContainer_->cbTarget());
+      if (hct) {
+         connect(hct, &QtHCT::QWalletInfo, this, &WalletsViewModel::onWalletInfo);
+         connect(hct, &QtHCT::Error, this, &WalletsViewModel::onHDWalletError);
+         connect(hct, &QtHCT::authenticated, this, &WalletsViewModel::onSignerAuthenticated);
+         connect(hct, &QtHCT::ready, this, &WalletsViewModel::onWalletChanged);
+      }
    }
 }
 

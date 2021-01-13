@@ -12,7 +12,7 @@
 #include <spdlog/spdlog.h>
 #include "AssetManager.h"
 #include "CheckRecipSigner.h"
-#include "SignContainer.h"
+#include "HeadlessContainer.h"
 #include "TradesUtils.h"
 #include "TransactionData.h"
 #include "Wallets/SyncHDWallet.h"
@@ -25,7 +25,7 @@
 using namespace bs::sync;
 
 ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<HeadlessContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<AssetManager> &assetMgr
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
@@ -76,7 +76,10 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
       throw std::logic_error("can't find CC wallet");
    }
 
-   connect(signingContainer_.get(), &SignContainer::QWalletInfo, this, &ReqCCSettlementContainer::onWalletInfo);
+   const auto hct = dynamic_cast<QtHCT*>(signingContainer_ ? signingContainer_->cbTarget() : nullptr);
+   if (hct) {
+      connect(hct, &QtHCT::QWalletInfo, this, &ReqCCSettlementContainer::onWalletInfo);
+   }
    connect(this, &ReqCCSettlementContainer::genAddressVerified, this
       , &ReqCCSettlementContainer::onGenAddressVerified, Qt::QueuedConnection);
 

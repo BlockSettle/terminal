@@ -29,7 +29,7 @@ public:
         const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer>&
+      , const std::shared_ptr<HeadlessContainer>&
       , const std::shared_ptr<spdlog::logger>&
       , const std::shared_ptr<ApplicationSettings> &
       , const Bip21::PaymentRequestInfo& paymentInfo
@@ -39,7 +39,7 @@ public:
    CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<HeadlessContainer> &
       , const std::shared_ptr<spdlog::logger>&
       , const std::shared_ptr<ApplicationSettings> &applicationSettings
       , QWidget* parent = nullptr);

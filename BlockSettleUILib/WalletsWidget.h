@@ -43,9 +43,9 @@ class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class ConnectionManager;
+class HeadlessContainer;
 class QAction;
 class QMenu;
-class SignContainer;
 class WalletNode;
 class WalletsViewModel;
 
@@ -59,7 +59,7 @@ public:
 
    void init(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<HeadlessContainer> &
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<ConnectionManager> &connectionManager
       , const std::shared_ptr<AssetManager> &
@@ -124,7 +124,7 @@ private:
 
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<SignContainer>   signingContainer_;
+   std::shared_ptr<HeadlessContainer>     signingContainer_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<AssetManager>          assetManager_;

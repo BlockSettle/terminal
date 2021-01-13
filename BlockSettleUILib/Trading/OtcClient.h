@@ -200,7 +200,7 @@ private:
    std::shared_ptr<spdlog::logger> logger_;
 
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
-   std::shared_ptr<ArmoryConnection> armory_;
+   std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<WalletSignerContainer> signContainer_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;
    std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;

@@ -25,7 +25,7 @@
 CreateTransactionDialogSimple::CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<HeadlessContainer> &container
    , const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ApplicationSettings> &applicationSettings
    , QWidget* parent)
@@ -300,7 +300,7 @@ void CreateTransactionDialogSimple::preSetValue(const bs::XBTAmount& value)
 std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::CreateForPaymentRequest(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<HeadlessContainer> &container
    , const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ApplicationSettings> &applicationSettings
    , const Bip21::PaymentRequestInfo& paymentInfo

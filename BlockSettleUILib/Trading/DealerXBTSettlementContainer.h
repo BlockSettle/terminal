@@ -37,8 +37,8 @@ namespace bs {
 }
 class ArmoryConnection;
 class AuthAddressManager;
+class HeadlessContainer;
 class QuoteProvider;
-class WalletSignerContainer;
 
 
 class DealerXBTSettlementContainer : public bs::SettlementContainer
@@ -51,7 +51,7 @@ public:
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
       , const std::shared_ptr<QuoteProvider> &
-      , const std::shared_ptr<WalletSignerContainer> &
+      , const std::shared_ptr<HeadlessContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<AuthAddressManager> &authAddrMgr
       , const bs::Address &authAddr
@@ -69,7 +69,7 @@ public:
    void activate() override;
    void deactivate() override;
 
-   std::string id() const override { return order_.settlementId; }
+   std::string id() const override { return order_.settlementId.toHexStr(); }
    bs::network::Asset::Type assetType() const override { return order_.assetType; }
    std::string security() const override { return order_.security; }
    std::string product() const override { return order_.product; }
@@ -115,7 +115,7 @@ private:
    std::shared_ptr<bs::sync::WalletsManager>    walletsMgr_;
    std::shared_ptr<bs::sync::hd::Wallet>        xbtWallet_;
    std::shared_ptr<AddressVerificator>          addrVerificator_;
-   std::shared_ptr<WalletSignerContainer>       signContainer_;
+   std::shared_ptr<HeadlessContainer>           signContainer_;
    std::shared_ptr<AuthAddressManager>          authAddrMgr_;
    std::shared_ptr<bs::UTXOReservationManager>  utxoReservationManager_;
 

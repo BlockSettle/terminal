@@ -33,10 +33,10 @@ namespace bs {
 }
 class ApplicationSettings;
 class ArmoryConnection;
+class HeadlessContainer;
 class TransactionsProxy;
 class TransactionsViewModel;
 class TransactionsSortFilterModel;
-class WalletSignerContainer;
 
 
 class TransactionsWidget : public TransactionsWidgetInterface
@@ -50,7 +50,7 @@ public:
    void init(const std::shared_ptr<bs::sync::WalletsManager> &
              , const std::shared_ptr<ArmoryConnection> &
              , const std::shared_ptr<bs::UTXOReservationManager> &
-             , const std::shared_ptr<WalletSignerContainer> &
+             , const std::shared_ptr<HeadlessContainer> &
              , const std::shared_ptr<ApplicationSettings>&
              , const std::shared_ptr<spdlog::logger> &);
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel> &);

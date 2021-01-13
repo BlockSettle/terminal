@@ -1124,7 +1124,8 @@ void bs::ui::RFQDealerReply::onUTXOReservationChanged(const std::string& walletI
 
 void bs::ui::RFQDealerReply::submit(double price, const std::shared_ptr<SubmitQuoteReplyData>& replyData)
 {
-   SPDLOG_LOGGER_DEBUG(logger_, "submitted quote reply on {}: {}/{}", replyData->qn.quoteRequestId, replyData->qn.bidPx, replyData->qn.offerPx);
+   SPDLOG_LOGGER_DEBUG(logger_, "submitted quote reply on {}: {}"
+      , replyData->qn.quoteRequestId, replyData->qn.price);
    sentNotifs_[replyData->qn.quoteRequestId] = price;
    submitQuoteNotifCb_(replyData);
    activeQuoteSubmits_.erase(replyData->qn.quoteRequestId);

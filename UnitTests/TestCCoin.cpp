@@ -15,6 +15,7 @@
 #include "CheckRecipSigner.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
+#include "HeadlessContainer.h"
 #include "InprocSigner.h"
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
@@ -89,7 +90,9 @@ void TestCCoin::SetUp()
       }
    }
 
-   auto inprocSigner = std::make_shared<InprocSigner>(envPtr_->walletsMgr(), envPtr_->logger(), "", NetworkType::TestNet);
+   hct_ = std::make_shared<QtHCT>(nullptr);
+   auto inprocSigner = std::make_shared<InprocSigner>(envPtr_->walletsMgr()
+      , envPtr_->logger(), hct_.get(), "", NetworkType::TestNet);
    inprocSigner->Start();
    syncMgr_ = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger(), envPtr_->appSettings(), envPtr_->armoryConnection());
    syncMgr_->setSignContainer(inprocSigner);

@@ -40,6 +40,7 @@ namespace bs {
       class WalletsManager;
    }
 }
+class QtHCT;
 
 struct CCoinSpender
 {
@@ -165,6 +166,7 @@ public:
 
    std::shared_ptr<bs::sync::WalletsManager> syncMgr_;
    std::vector<UnitTestLocalACT*> localACTs_;
+   std::shared_ptr<QtHCT>        hct_;
 
    bs::Address              genesisAddr_;
    bs::Address              revocationAddr_;

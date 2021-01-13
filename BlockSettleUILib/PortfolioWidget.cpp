@@ -91,7 +91,7 @@ void PortfolioWidget::init(const std::shared_ptr<ApplicationSettings> &appSettin
    , const std::shared_ptr<MarketDataProvider> &mdProvider
    , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
    , const std::shared_ptr<CCPortfolioModel> &model
-   , const std::shared_ptr<WalletSignerContainer> &container
+   , const std::shared_ptr<HeadlessContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
    , const std::shared_ptr<spdlog::logger> &logger
