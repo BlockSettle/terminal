@@ -238,9 +238,9 @@ private:
 
       enum Type {
          first = 0,
-         UnSettled = first,
+         PendingSettlements = first,
+         UnSettled,
          Settled,
-         PendingSettlements,
          Undefined
       };
 

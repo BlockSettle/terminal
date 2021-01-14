@@ -664,9 +664,9 @@ void OrderListModel::reset()
 {
    beginResetModel();
    groups_.clear();
-   unsettled_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::UnSettled), 0);
-   settled_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::Settled), 1);
-   pendingFuturesSettlement_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::PendingSettlements), 2);
+   pendingFuturesSettlement_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::PendingSettlements), 0);
+   unsettled_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::UnSettled), 1);
+   settled_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::Settled), 2);
    endResetModel();
 }
 
