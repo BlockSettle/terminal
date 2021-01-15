@@ -971,11 +971,7 @@ bool OrderListModel::DeliveryRequired(const QModelIndex &index)
 
 bool OrderListModel::isFutureDeliveryIndex(const QModelIndex &index) const
 {
-   if (!index.isValid()) {
-      return false;
-   }
-
-   if (index.column() != Header::Status) {
+   if (!index.isValid() || index.column() != Header::Status || !pendingFuturesSettlement_) {
       return false;
    }
 
@@ -987,7 +983,7 @@ bool OrderListModel::isFutureDeliveryIndex(const QModelIndex &index) const
          ++depth;
       }
 
-      if (statusGroupIndex.row() != 2 || depth != 2) {
+      if (statusGroupIndex.row() != pendingFuturesSettlement_->row_ || depth != 2) {
          return false;
       }
    }
