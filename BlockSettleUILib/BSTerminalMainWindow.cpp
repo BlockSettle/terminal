@@ -2537,13 +2537,13 @@ void BSTerminalMainWindow::processDeliveryObligationUpdate(const ProxyTerminalPb
       case ProxyTerminalPb::Response_DeliveryObligationsRequest::PENDING:
          addDeferredDialog([this, amountStr] {
             auto details = tr("Volume: %1").arg(amountStr);
-            BSMessageBox errorMessage(BSMessageBox::info, tr("Delivery"), tr("Delivery requested"), details, this);
+            BSMessageBox(BSMessageBox::info, tr("Delivery"), tr("Delivery requested"), details, this).exec();
          });
          break;
       case ProxyTerminalPb::Response_DeliveryObligationsRequest::DELIVERED:
          addDeferredDialog([this, amountStr] {
             auto details = tr("Volume: %1").arg(amountStr);
-            BSMessageBox errorMessage(BSMessageBox::info, tr("Delivery"), tr("Delivery detected"), details, this);
+            BSMessageBox(BSMessageBox::info, tr("Delivery"), tr("Delivery detected"), details, this).exec();
          });
          break;
       default:
