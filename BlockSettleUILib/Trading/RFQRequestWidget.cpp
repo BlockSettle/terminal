@@ -392,11 +392,11 @@ void RFQRequestWidget::processFutureResponse(const ProxyTerminalPb::Response_Fut
          errorMessage.exec();
          return;
       }
-      auto productStr = QString::fromStdString(msg.product());
+      auto productStr = QString::fromStdString(msg.product().empty() ? "<Unknown>" : msg.product());
       auto sideStr = msg.side() == bs::types::Side::SIDE_SELL ? tr("Sell") : tr("Buy");
       auto amountStr = UiUtils::displayAmount(msg.amount());
       auto priceStr = UiUtils::displayPriceXBT(msg.price());
-      auto details = tr("Product: %1\nSide: %2\nVolume: %3\nPrice: %4")
+      auto details = tr("Product:\t%1\nSide:\t%2\nVolume:\t%3\nPrice:\t%4")
          .arg(productStr).arg(sideStr).arg(amountStr).arg(priceStr);
       BSMessageBox errorMessage(BSMessageBox::info, tr("Order message"), tr("Order confirmation"), details, this);
       errorMessage.exec();
