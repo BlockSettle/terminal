@@ -178,9 +178,6 @@ void TransactionsWidgetInterface::onRevokeSettlement()
    if (txItem->initialized) {
       cbDialog(txItem);
    }
-   else {
-      TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
-   }
 }
 
 void TransactionsWidgetInterface::onCreateRBFDialog()
@@ -205,9 +202,6 @@ void TransactionsWidgetInterface::onCreateRBFDialog()
 
    if (txItem->initialized) {
       cbDialog(txItem);
-   }
-   else {
-      TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
    }
 }
 
@@ -240,9 +234,6 @@ void TransactionsWidgetInterface::onCreateCPFPDialog()
 
    if (txItem->initialized) {
       cbDialog(txItem);
-   }
-   else {
-      TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
    }
 }
 

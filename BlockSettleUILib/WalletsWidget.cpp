@@ -498,8 +498,8 @@ void WalletsWidget::showAddressProperties(const QModelIndex& index)
       const auto address = (addrIndex < addresses.size()) ? addresses[addrIndex] : bs::Address();
 
       wallet->onBalanceAvailable([this, address, wallet] {
-         auto dialog = new AddressDetailDialog(address, wallet, walletsManager_, armory_, logger_, this);
-         QMetaObject::invokeMethod(this, [dialog] { dialog->exec(); });
+//FIXME:         auto dialog = new AddressDetailDialog(address, wallet, walletsManager_, armory_, logger_, this);
+//         QMetaObject::invokeMethod(this, [dialog] { dialog->exec(); });
       });
    }
    else {

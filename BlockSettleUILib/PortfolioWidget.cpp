@@ -130,8 +130,8 @@ void PortfolioWidget::showTransactionDetails(const QModelIndex& index)
          return;
       }
 
-      TransactionDetailDialog transactionDetailDialog(txItem, walletsManager_, armory_, this);
-      transactionDetailDialog.exec();
+//FIXME:      TransactionDetailDialog transactionDetailDialog(txItem, walletsManager_, armory_, this);
+//      transactionDetailDialog.exec();
    }
 }
 
@@ -167,7 +167,7 @@ void PortfolioWidget::showContextMenu(const QPoint &point)
 
    if (txNode->item()->isPayin()) {
       actionRevoke_->setData(sourceIndex);
-      actionRevoke_->setEnabled(model_->isTxRevocable(txNode->item()->tx));
+//      actionRevoke_->setEnabled(model_->isTxRevocable(txNode->item()->tx));
       contextMenu_.addAction(actionRevoke_);
    }
    else {

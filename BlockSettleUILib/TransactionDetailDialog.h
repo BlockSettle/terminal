@@ -42,8 +42,6 @@ class TransactionDetailDialog : public QDialog
 Q_OBJECT
 
 public:
-   [[deprecated]] TransactionDetailDialog(const TransactionPtr &tvi, const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<ArmoryConnection> &, QWidget* parent = nullptr);
    TransactionDetailDialog(const TransactionPtr &, QWidget* parent = nullptr);
    ~TransactionDetailDialog() override;
    virtual QSize minimumSizeHint() const override;

@@ -228,6 +228,9 @@ void AddressListModel::onAddresses(const std::string &
          }
          return false;
       });
+      if (itWallet == wallets_.cend()) {
+         return;
+      }
       auto row = createRow(addr.address, *itWallet);
       row.index = QString::fromStdString(addr.index);
       row.addrIndex = addressRows_.size();

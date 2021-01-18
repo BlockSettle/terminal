@@ -225,7 +225,7 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
             if (txNode->item()->isPayin()) {
                contextMenu_.addAction(actionRevoke_);
                actionRevoke_->setData(sourceIndex);
-               actionRevoke_->setEnabled(model_->isTxRevocable(txNode->item()->tx));
+//               actionRevoke_->setEnabled(model_->isTxRevocable(txNode->item()->tx));
             }
             else {
                actionRevoke_->setData(-1);
@@ -520,17 +520,11 @@ void TransactionsWidget::showTransactionDetails(const QModelIndex& index)
       return;
    }
 
-   if (walletsManager_ && armory_) {
-      TransactionDetailDialog transactionDetailDialog(txItem, walletsManager_, armory_, this);
-      transactionDetailDialog.exec();
-   }
-   else {
-      auto txDetailDialog = new TransactionDetailDialog(txItem, this);
-      connect(txDetailDialog, &QDialog::finished, [txDetailDialog](int) {
-         txDetailDialog->deleteLater();
-      });
-      txDetailDialog->show();
-   }
+   auto txDetailDialog = new TransactionDetailDialog(txItem, this);
+   connect(txDetailDialog, &QDialog::finished, [txDetailDialog](int) {
+      txDetailDialog->deleteLater();
+   });
+   txDetailDialog->show();
 }
 
 void TransactionsWidget::updateResultCount()

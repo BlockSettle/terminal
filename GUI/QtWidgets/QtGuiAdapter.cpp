@@ -449,6 +449,7 @@ bool QtGuiAdapter::processBlockchain(const Envelope &env)
             mainWindow_->onWalletsReady();
          });
       }
+      break;
    case ArmoryMessage::kLedgerEntries:
       return processLedgerEntries(msg.ledger_entries());
    case ArmoryMessage::kAddressHistory:

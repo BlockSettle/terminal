@@ -20,7 +20,6 @@
 #include <QMetaType>
 #include <QTimer>
 #include <atomic>
-#include "ArmoryConnection.h"
 #include "AsyncClient.h"
 #include "SignerDefs.h"
 
@@ -69,9 +68,6 @@ struct TransactionsViewItem
    BinaryData  groupId;
 
    bool isSet() const { return (!txEntry.txHash.empty() && !walletID.isEmpty()); }
-   static void initialize(const TransactionPtr &item, ArmoryConnection *
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , std::function<void(const TransactionPtr &)>);
    void calcAmount(const std::shared_ptr<bs::sync::WalletsManager> &);
    bool containsInputsFrom(const Tx &tx) const;
 
@@ -133,21 +129,10 @@ Q_DECLARE_METATYPE(TransactionsViewItem)
 Q_DECLARE_METATYPE(TransactionItems)
 
 
-class TransactionsViewModel : public QAbstractItemModel, public ArmoryCallbackTarget
+class TransactionsViewModel : public QAbstractItemModel
 {
 Q_OBJECT
 public:
-   [[deprecated]] TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
-                          , const std::shared_ptr<bs::sync::WalletsManager> &
-                          , const std::shared_ptr<AsyncClient::LedgerDelegate> &
-                          , const std::shared_ptr<spdlog::logger> &
-                          , const std::shared_ptr<bs::sync::Wallet> &defWlt
-                          , const bs::Address &filterAddress = bs::Address()
-                          , QObject* parent = nullptr);
-   [[deprecated]] TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
-                          , const std::shared_ptr<bs::sync::WalletsManager> &
-                          , const std::shared_ptr<spdlog::logger> &
-                          , QObject* parent = nullptr);
    TransactionsViewModel(const std::shared_ptr<spdlog::logger> &, QObject* parent = nullptr);
    ~TransactionsViewModel() noexcept override;
 
@@ -156,7 +141,6 @@ public:
    TransactionsViewModel(TransactionsViewModel&&) = delete;
    TransactionsViewModel& operator = (TransactionsViewModel&&) = delete;
 
-   void loadAllWallets(bool onNewBlock=false);
    size_t itemsCount() const { return rootNode_->nbChildren(); }
 
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -171,7 +155,6 @@ public:
    TransactionPtr getItem(const QModelIndex &) const;
    TransactionPtr getOldestItem() const { return oldestItem_; }
    TXNode *getNode(const QModelIndex &) const;
-   bool isTxRevocable(const Tx& tx);
 
    void onLedgerEntries(const std::string &filter, uint32_t totalPages
       , uint32_t curPage, uint32_t curBlock, const std::vector<bs::TXEntry> &);
@@ -192,21 +175,7 @@ private slots:
    void onRefreshTxValidity();
 
 private:
-   [[deprecated]] void onNewBlock(unsigned int height, unsigned int branchHgt) override;
-   [[deprecated]] void onStateChanged(ArmoryState) override;
-   [[deprecated]] void onZCReceived(const std::string& requestId, const std::vector<bs::TXEntry> &) override;
-   [[deprecated]] void onZCInvalidated(const std::set<BinaryData> &ids) override;
-
-   [[deprecated]] void init();
    void clear();
-   [[deprecated]] void loadLedgerEntries(bool onNewBlock=false);
-   [[deprecated]] void ledgerToTxData(const std::map<int, std::vector<bs::TXEntry>> &rawData
-      , bool onNewBlock=false);
-   std::pair<size_t, size_t> updateTransactionsPage(const std::vector<bs::TXEntry> &);
-   void updateBlockHeight(const std::vector<std::shared_ptr<TransactionsViewItem>> &);
-   void updateTransactionDetails(const TransactionPtr &item
-      , const std::function<void(const TransactionPtr &)> &cb);
-   [[deprecated]] std::shared_ptr<TransactionsViewItem> itemFromTransaction(const bs::TXEntry &);
    std::shared_ptr<TransactionsViewItem> createTxItem(const bs::TXEntry &);
 
 signals:
@@ -242,8 +211,6 @@ private:
    std::map<BinaryData, TXNode*> invalidatedNodes_;
    TransactionPtr oldestItem_;
    std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<AsyncClient::LedgerDelegate> ledgerDelegate_;
-   std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;
    mutable QMutex                      updateMutex_;
    std::shared_ptr<bs::sync::Wallet>   defaultWallet_;
    std::atomic_bool  signalOnEndLoading_{ false };
