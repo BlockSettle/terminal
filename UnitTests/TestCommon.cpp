@@ -30,8 +30,9 @@
 #include "EasyCoDec.h"
 #include "HeadlessContainer.h"
 #include "InprocSigner.h"
-#include "MarketDataProvider.h"
 #include "MDCallbacksQt.h"
+#include "MarketDataProvider.h"
+#include "PriceAmount.h"
 #include "TestEnv.h"
 #include "WalletUtils.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -397,4 +398,28 @@ TEST(TestCommon, XBTAmount)
    // This will also check +/- operators
    auto diff1 = bs::XBTAmount((xbt1 + bs::XBTAmount(uint64_t(1))).GetValueBitcoin()) - xbt1;
    EXPECT_EQ(diff1, 1);
+}
+
+TEST(TestCommon, PriceAmount)
+{
+   EXPECT_EQ(bs::CentAmount(0.0).to_string(), "0.00");
+   EXPECT_EQ(bs::CentAmount(0.1).to_string(), "0.10");
+   EXPECT_EQ(bs::CentAmount(-0.1).to_string(), "-0.10");
+   EXPECT_EQ(bs::CentAmount(0.19).to_string(), "0.19");
+   EXPECT_EQ(bs::CentAmount(-0.19).to_string(), "-0.19");
+
+   EXPECT_EQ(bs::CentAmount(0.129).to_string(), "0.12");
+   EXPECT_EQ(bs::CentAmount(0.1299999).to_string(), "0.12");
+   EXPECT_EQ(bs::CentAmount(0.13).to_string(), "0.13");
+   EXPECT_EQ(bs::CentAmount(-0.129).to_string(), "-0.12");
+   EXPECT_EQ(bs::CentAmount(-0.1299999).to_string(), "-0.12");
+   EXPECT_EQ(bs::CentAmount(-0.13).to_string(), "-0.13");
+
+   EXPECT_EQ(bs::CentAmount(-0.0001).to_string(), "0.00");
+   EXPECT_EQ(bs::CentAmount(0.0001).to_string(), "0.00");
+
+   EXPECT_EQ(bs::CentAmount(12345.0001).to_string(), "12345.00");
+   EXPECT_EQ(bs::CentAmount(-12345.0001).to_string(), "-12345.00");
+   EXPECT_EQ(bs::CentAmount(0.12345).to_string(), "0.12");
+   EXPECT_EQ(bs::CentAmount(-0.12345).to_string(), "0.12");
 }
