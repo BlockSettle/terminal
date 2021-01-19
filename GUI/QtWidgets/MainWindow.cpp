@@ -223,6 +223,7 @@ void MainWindow::onSignerStateChanged(int state, const std::string &details)
 void MainWindow::onHDWallet(const bs::sync::WalletInfo &wi)
 {
    ui_->widgetWallets->onHDWallet(wi);
+   ui_->widgetPortfolio->onHDWallet(wi);
 }
 
 void bs::gui::qt::MainWindow::onWalletDeleted(const bs::sync::WalletInfo& wi)
@@ -233,6 +234,7 @@ void bs::gui::qt::MainWindow::onWalletDeleted(const bs::sync::WalletInfo& wi)
 void MainWindow::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
 {
    ui_->widgetWallets->onHDWalletDetails(hdWallet);
+   ui_->widgetPortfolio->onHDWalletDetails(hdWallet);
    ui_->widgetRFQ->onHDWallet(hdWallet);
    ui_->widgetRFQReply->onHDWallet(hdWallet);
 }
@@ -278,6 +280,7 @@ void MainWindow::onWalletBalance(const bs::sync::WalletBalanceData &wbd)
       txDlg_->onAddressBalances(wbd.id, wbd.addrBalances);
    }
    ui_->widgetWallets->onWalletBalance(wbd);
+   ui_->widgetPortfolio->onWalletBalance(wbd);
    ui_->widgetRFQ->onWalletBalance(wbd);
    ui_->widgetRFQReply->onWalletBalance(wbd);
    statusBarView_->onXbtBalance(wbd);
@@ -992,6 +995,7 @@ void MainWindow::onMDUpdated(bs::network::Asset::Type assetType
 void bs::gui::qt::MainWindow::onBalance(const std::string& currency, double balance)
 {
    statusBarView_->onBalanceUpdated(currency, balance);
+   ui_->widgetPortfolio->onBalance(currency, balance);
    ui_->widgetRFQ->onBalance(currency, balance);
    ui_->widgetRFQReply->onBalance(currency, balance);
 }
@@ -1238,9 +1242,7 @@ void MainWindow::initWidgets()
 
    initTransactionsView();
 
-   /*   portfolioModel_ = std::make_shared<CCPortfolioModel>(walletsMgr_, assetManager_, this);
-      ui_->widgetPortfolio->init(applicationSettings_, mdProvider_, mdCallbacks_
-         , portfolioModel_, signContainer_, armory_, utxoReservationMgr_, logMgr_->logger("ui"), walletsMgr_);*/
+   ui_->widgetPortfolio->init(logger_);
 
    orderListModel_ = std::make_shared<OrderListModel>(this);
    dialogMgr_ = std::make_shared<DialogManager>(this);

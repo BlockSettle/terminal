@@ -275,8 +275,6 @@ namespace bs {
             std::shared_ptr<StatusBarView>            statusBarView_;
             std::shared_ptr<QSystemTrayIcon>          sysTrayIcon_;
             std::shared_ptr<NotificationCenter>       notifCenter_;
-            //   std::shared_ptr<CCPortfolioModel>         portfolioModel_;
-
             std::shared_ptr<TransactionsViewModel>    txModel_;
             std::shared_ptr<OrderListModel>           orderListModel_;
 
