@@ -2535,21 +2535,80 @@ void BSTerminalMainWindow::processDeliveryObligationUpdate(const ProxyTerminalPb
    auto amountStr = UiUtils::displayAmount(resp.to_deliver());
    switch (resp.status()) {
       case ProxyTerminalPb::Response_DeliveryObligationsRequest::PENDING:
-         addDeferredDialog([this, amountStr] {
-            auto details = tr("Volume: %1").arg(amountStr);
-            BSMessageBox(BSMessageBox::info, tr("Delivery"), tr("Delivery requested"), details, this).exec();
-         });
+         if (autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError) {  // auto-sign enabled
+            autoSignDeliveryObligation(resp);
+         }
+         else {
+            addDeferredDialog([this, amountStr] {
+               auto details = tr("Volume: %1").arg(amountStr);
+               BSMessageBox(BSMessageBox::info, tr("Delivery"), tr("Delivery requested"), details, this).exec();
+            });
+         }
          break;
       case ProxyTerminalPb::Response_DeliveryObligationsRequest::DELIVERED:
-         addDeferredDialog([this, amountStr] {
-            auto details = tr("Volume: %1").arg(amountStr);
-            BSMessageBox(BSMessageBox::info, tr("Delivery"), tr("Delivery detected"), details, this).exec();
-         });
+         logMgr_->logger("")->debug("[{}] obligation {} delivered", __func__, resp.id());
+         if (autoSignQuoteProvider_->autoSignState() != bs::error::ErrorCode::NoError) {  // auto-sign disabled
+            addDeferredDialog([this, amountStr] {
+               auto details = tr("Volume: %1").arg(amountStr);
+               BSMessageBox(BSMessageBox::info, tr("Delivery"), tr("Delivery detected"), details, this).exec();
+            });
+         }
          break;
       default:
-         SPDLOG_LOGGER_ERROR(logMgr_->logger(), "unexpected DeliveryObligationsRequest status");
+         SPDLOG_LOGGER_ERROR(logMgr_->logger(), "unexpected DeliveryObligationsRequest status {}", resp.status());
          break;
    }
+}
+
+#include "TransactionData.h"
+void BSTerminalMainWindow::autoSignDeliveryObligation(const ProxyTerminalPb::Response_DeliveryObligationsRequest& request)
+{
+   const auto& cbInputs = [this, request](bs::FixedXbtInputs&& inputs)
+   {
+      std::vector<UTXO> utxos;
+      for (const auto& input : inputs.inputs) {
+         utxos.push_back(input.first);
+      }
+
+      const auto& bsAddress = bs::Address::fromAddressString(request.bs_address());
+      const auto& recip = bsAddress.getRecipient(bs::XBTAmount{ (uint64_t)std::abs(request.to_deliver()) });
+
+      const auto& defWallet = walletsMgr_->getDefaultWallet();
+      if (!defWallet) {
+         logMgr_->logger()->error("[BSTerminalMainWindow::autoSignDeliveryObligation] no default wallet");
+         return;
+      }
+      const int idx = std::rand() % defWallet->getIntAddressCount();
+      const auto changeAddr = defWallet->getIntAddressList()[idx];
+      uint64_t fee = 321 * utxoReservationMgr_->feeRatePb();
+      auto txReq = defWallet->createTXRequest(utxos, { recip }, true, fee, false, changeAddr);
+      if (!txReq.isValid()) {
+         logMgr_->logger()->error("[BSTerminalMainWindow::autoSignDeliveryObligation] invalid TX request");
+         return;
+      }
+      fee = txReq.estimateTxVirtSize() * utxoReservationMgr_->feeRatePb();
+      if (!fee) {
+         logMgr_->logger()->error("[BSTerminalMainWindow::autoSignDeliveryObligation] invalid fee");
+         return;
+      }
+      txReq = defWallet->createTXRequest(utxos, { recip }, true, fee, false, changeAddr);
+
+      const auto& cbSigned = [this](const BinaryData& signedTX, bs::error::ErrorCode
+         , const std::string& errorReason)
+      {
+         const auto &pushId = armory_->pushZC(signedTX);
+         if (pushId.empty()) {
+            logMgr_->logger()->error("[BSTerminalMainWindow::autoSignDeliveryObligation] failed to push ZC");
+         }
+         else {
+            logMgr_->logger()->debug("[BSTerminalMainWindow::autoSignDeliveryObligation] ZC pushed, id={}", pushId);
+         }
+      };
+      signContainer_->signTXRequest(txReq, cbSigned, SignContainer::TXSignMode::AutoSign);
+   };
+   utxoReservationMgr_->reserveBestXbtUtxoSet(walletsMgr_->getPrimaryWallet()->walletId()
+      , std::abs(request.to_deliver()) + (uint64_t)(utxoReservationMgr_->feeRatePb() * 321)
+      , false, cbInputs, false, bs::UTXOReservationManager::CheckAmount::Enabled, true);
 }
 
 void BSTerminalMainWindow::onAuthLeafCreated()
@@ -2580,6 +2639,9 @@ void BSTerminalMainWindow::onAuthLeafCreated()
 
 void BSTerminalMainWindow::onDeliverFutureObligations(const QModelIndex& index)
 {
+   if (autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError) {
+      return;  // don't invoke manual create TX dialog if auto-sign is enabled
+   }
    auto deliveryObligationData = orderListModel_->getDeliveryObligationData(index);
    if (!deliveryObligationData.isValid()) {
       return;
