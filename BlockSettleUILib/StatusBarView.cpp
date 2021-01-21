@@ -289,9 +289,11 @@ void StatusBarView::setBalances()
    QString text = tr("   XBT: <b>%1</b> ").arg(xbt);
 
    for (const auto& currency : assetManager_->currencies()) {
-      text += tr("| %1: <b>%2</b> ")
-         .arg(QString::fromStdString(currency))
-         .arg(UiUtils::displayCurrencyAmount(assetManager_->getBalance(currency, false, nullptr)));
+      if (currency != "EURP" && currency != "EURD") {
+         text += tr("| %1: <b>%2</b> ")
+            .arg(QString::fromStdString(currency))
+            .arg(UiUtils::displayCurrencyAmount(assetManager_->getBalance(currency, false, nullptr)));
+      }
    }
 
    balanceLabel_->setText(text);

@@ -234,12 +234,17 @@ void FuturesTicket::productSelectionChanged()
 void FuturesTicket::updatePanel()
 {
    // currentProduct_ will be set to EURP or EURD
-   const double balance = assetManager_ ?
+   const double balanceIm = assetManager_ ?
       assetManager_->getBalance(currentProduct_, false, nullptr) : 0.0;
    auto currentProduct = "EUR";
-   auto amountString = UiUtils::displayCurrencyAmount(balance);
-   QString text = tr("%1 %2").arg(amountString).arg(QString::fromStdString(currentProduct));
-   ui_->labelBalanceValue->setText(text);
+   const double balanceReal = assetManager_ ?
+      assetManager_->getBalance(currentProduct, false, nullptr) : 0.0;
+   auto amountStringIm = UiUtils::displayCurrencyAmount(balanceIm);
+   auto amountStringReal = UiUtils::displayCurrencyAmount(balanceReal);
+   QString textIm = tr("%1 %2").arg(amountStringIm).arg(QString::fromStdString(currentProduct));
+   QString textReal = tr("%1 %2").arg(amountStringReal).arg(QString::fromStdString(currentProduct));
+   ui_->labelInitialMargin->setText(textIm);
+   ui_->labelBalanceValue->setText(textReal);
 
    int64_t futuresXbtAmount = currentProduct_ == "EURD" ?
       assetManager_->futuresXbtAmountDeliverable() : assetManager_->futuresXbtAmountCashSettled();
@@ -254,7 +259,13 @@ void FuturesTicket::updatePanel()
          currentPrice = (item.second.askPrice + item.second.bidPrice) / 2;
          break;
       }
-   };
+   }
+   ui_->labelFutureBalanceValue->setProperty("positiveColor", futuresXbtAmount > 0);
+   ui_->labelFutureBalanceValue->setProperty("negativeColor", futuresXbtAmount < 0);
+   ui_->labelFutureBalanceValue->style()->unpolish(ui_->labelFutureBalanceValue);
+   ui_->labelFutureBalanceValue->style()->polish(ui_->labelFutureBalanceValue);
+   ui_->labelFutureBalanceValue->update();
+
    double profitLoss = assetManager_->profitLoss(futuresXbtAmount, futuresBalance, currentPrice);
    auto profitLossString = UiUtils::displayCurrencyAmount(profitLoss);
    QString profitLossText = tr("%1 %2").arg(profitLossString).arg(QString::fromStdString(currentProduct));
