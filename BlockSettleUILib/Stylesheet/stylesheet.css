@@ -1700,3 +1700,9 @@ QDialog#LoginWindow QWidget#widgetSignup[testEnv="true"] {
 #labelFuturePrice[selectedLine="true"] {
   color: #ffffff;
 }
+#labelFutureBalanceValue[positiveColor="true"] {
+  color: #22C064;
+}
+#labelFutureBalanceValue[negativeColor="true"] {
+  color: #EC0A35;
+}
