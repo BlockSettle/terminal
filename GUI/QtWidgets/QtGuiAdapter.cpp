@@ -1668,9 +1668,11 @@ bool QtGuiAdapter::processMktData(const bs::message::Envelope& env)
       return true;
    }
    switch (msg.data_case()) {
+   case MktDataMessage::kConnected:
+      return QMetaObject::invokeMethod(mainWindow_, [this] { mainWindow_->onMDConnected(); });
    case MktDataMessage::kDisconnected:
       mdInstrumentsReceived_ = false;
-      break;
+      return QMetaObject::invokeMethod(mainWindow_, [this] { mainWindow_->onMDDisconnected(); });
    case MktDataMessage::kNewSecurity:
       return processSecurity(msg.new_security().name(), msg.new_security().asset_type());
    case MktDataMessage::kAllInstrumentsReceived:
@@ -1685,8 +1687,11 @@ bool QtGuiAdapter::processMktData(const bs::message::Envelope& env)
 
 bool QtGuiAdapter::processSecurity(const std::string& name, int assetType)
 {
-   assetTypes_[name] = static_cast<bs::network::Asset::Type>(assetType);
-   return true;
+   const auto &at = static_cast<bs::network::Asset::Type>(assetType);
+   assetTypes_[name] = at;
+   return QMetaObject::invokeMethod(mainWindow_, [this, name, at] {
+      mainWindow_->onNewSecurity(name, at);
+   });
 }
 
 bool QtGuiAdapter::processMdUpdate(const MktDataMessage_Prices& msg)

@@ -160,6 +160,7 @@ void MainWindow::onSetting(int setting, const QVariant &value)
          envConfig_ = newEnvCfg;
          //TODO: maybe initiate relog and Celer/proxy reconnect
       }
+      ui_->widgetPortfolio->onEnvConfig(value.toInt());
    }
       break;
    case ApplicationSettings::rememberLoginUserName:
@@ -979,6 +980,16 @@ void MainWindow::onMatchingLogout()
    ui_->widgetRFQReply->onMatchingLogout();
 }
 
+void bs::gui::qt::MainWindow::onMDConnected()
+{
+   ui_->widgetPortfolio->onMDConnected();
+}
+
+void bs::gui::qt::MainWindow::onMDDisconnected()
+{
+   ui_->widgetPortfolio->onMDDisconnected();
+}
+
 void bs::gui::qt::MainWindow::onNewSecurity(const std::string& name, bs::network::Asset::Type at)
 {
    ui_->widgetRFQ->onNewSecurity(name, at);
@@ -1243,6 +1254,8 @@ void MainWindow::initWidgets()
    initTransactionsView();
 
    ui_->widgetPortfolio->init(logger_);
+   connect(ui_->widgetPortfolio, &PortfolioWidget::needMdConnection, this, &MainWindow::needMdConnection);
+   connect(ui_->widgetPortfolio, &PortfolioWidget::needMdDisconnect, this, &MainWindow::needMdDisconnect);
 
    orderListModel_ = std::make_shared<OrderListModel>(this);
    dialogMgr_ = std::make_shared<DialogManager>(this);

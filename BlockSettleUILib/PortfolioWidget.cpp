@@ -70,6 +70,9 @@ PortfolioWidget::PortfolioWidget(QWidget* parent)
    connect(ui_->treeViewUnconfirmedTransactions, &QTreeView::customContextMenuRequested, this, &PortfolioWidget::showContextMenu);
    connect(ui_->treeViewUnconfirmedTransactions, &QTreeView::activated, this, &PortfolioWidget::showTransactionDetails);
    ui_->treeViewUnconfirmedTransactions->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
+   connect(ui_->widgetMarketData, &MarketDataWidget::needMdConnection, this, &PortfolioWidget::needMdConnection);
+   connect(ui_->widgetMarketData, &MarketDataWidget::needMdDisconnect, this, &PortfolioWidget::needMdDisconnect);
 }
 
 PortfolioWidget::~PortfolioWidget() = default;
@@ -102,6 +105,16 @@ void PortfolioWidget::shortcutActivated(ShortcutType s)
 void PortfolioWidget::setAuthorized(bool authorized)
 {
    ui_->widgetMarketData->setAuthorized(authorized);
+}
+
+void PortfolioWidget::onMDConnected()
+{
+   ui_->widgetMarketData->onMDConnected();
+}
+
+void PortfolioWidget::onMDDisconnected()
+{
+   ui_->widgetMarketData->onMDDisconnected();
 }
 
 void PortfolioWidget::onMDUpdated(bs::network::Asset::Type assetType
@@ -177,6 +190,11 @@ void PortfolioWidget::onBalance(const std::string& currency, double balance)
 {
    portfolioModel_->onBalance(currency, balance);
    ui_->widgetCCProtfolio->onBalance(currency, balance);
+}
+
+void PortfolioWidget::onEnvConfig(int value)
+{
+   ui_->widgetMarketData->onEnvConfig(value);
 }
 
 void PortfolioWidget::showTransactionDetails(const QModelIndex& index)

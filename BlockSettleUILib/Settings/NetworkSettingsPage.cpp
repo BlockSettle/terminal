@@ -182,12 +182,12 @@ void NetworkSettingsPage::displayArmorySettings()
    }
    else {
       selectedServerIndex = armorySrvCurrent_;
-      if (selectedServerIndex >= armoryServers_.size()) {
+      if ((selectedServerIndex >= armoryServers_.size()) || (selectedServerIndex < 0)) {
          return;
       }
       selectedServer = armoryServers_.at(selectedServerIndex);
       connectedServerIndex = armorySrvConnected_;
-      if (connectedServerIndex >= armoryServers_.size()) {
+      if ((connectedServerIndex >= armoryServers_.size()) || (connectedServerIndex < 0)) {
          return;
       }
       connectedServerSettings = armoryServers_.at(connectedServerIndex);

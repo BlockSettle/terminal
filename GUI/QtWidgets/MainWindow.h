@@ -102,6 +102,8 @@ namespace bs {
                , const std::string &userId);
             void onMatchingLogout();
 
+            void onMDConnected();
+            void onMDDisconnected();
             void onNewSecurity(const std::string& name, bs::network::Asset::Type);
             void onMDUpdated(bs::network::Asset::Type assetType
                , const QString& security, const bs::network::MDFields &);
@@ -190,6 +192,7 @@ namespace bs {
             void needCancelLogin();
             void needMatchingLogout();
             void needMdConnection(ApplicationSettings::EnvConfiguration);
+            void needMdDisconnect();
 
             void needNewAuthAddress();
             void needSubmitAuthAddress(const bs::Address&);

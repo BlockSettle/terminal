@@ -170,10 +170,23 @@ void MarketDataWidget::OnMDDisconnected()
 
 void MarketDataWidget::ChangeMDSubscriptionState()
 {
-   if (mdProvider_->IsConnectionActive()) {
-      mdProvider_->DisconnectFromMDSource();
-   } else {
-      mdProvider_->SubscribeToMD();
+   if (mdProvider_) {
+      if (mdProvider_->IsConnectionActive()) {
+         mdProvider_->DisconnectFromMDSource();
+      } else {
+         mdProvider_->SubscribeToMD();
+      }
+   }
+   else {
+      if (envConf_ == ApplicationSettings::EnvConfiguration::Unknown) {
+         return;  // pop up error?
+      }
+      if (connected_) {
+         emit needMdDisconnect();
+      }
+      else {
+         emit needMdConnection(envConf_);
+      }
    }
 }
 
@@ -217,10 +230,27 @@ MarketSelectedInfo MarketDataWidget::getCurrentlySelectedInfo() const
    return getRowInfo(index);
 }
 
+void MarketDataWidget::onMDConnected()
+{
+   connected_ = true;
+   OnMDConnected();
+}
+
+void MarketDataWidget::onMDDisconnected()
+{
+   connected_ = false;
+   OnMDDisconnected();
+}
+
 void MarketDataWidget::onMDUpdated(bs::network::Asset::Type assetType
    , const QString& security, const bs::network::MDFields& fields)
 {
    marketDataModel_->onMDUpdated(assetType, security, fields);
+}
+
+void MarketDataWidget::onEnvConfig(int value)
+{
+   envConf_ = static_cast<ApplicationSettings::EnvConfiguration>(value);
 }
 
 void MarketDataWidget::onMDRejected(const std::string &security, const std::string &reason)
