@@ -312,6 +312,7 @@ private:
 
    void processSetDeliveryAddr(const Blocksettle::Communication::ProxyTerminalPb::Response_DeliveryAddress &resp);
    void processDeliveryObligationUpdate(const Blocksettle::Communication::ProxyTerminalPb::Response_DeliveryObligationsRequest &resp);
+   void autoSignDeliveryObligation(const Blocksettle::Communication::ProxyTerminalPb::Response_DeliveryObligationsRequest&);
 
 private:
    enum class ChatInitState
