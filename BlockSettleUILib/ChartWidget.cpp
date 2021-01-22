@@ -364,6 +364,9 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
       logger_->error("Empty data received from mdhs.");
       return;
    }
+   if (!candlesticksChart_ || !volumeChart_) {
+      return;
+   }
 
    OhlcResponse response;
    if (!response.ParseFromString(data)) {
@@ -459,6 +462,9 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
 void ChartWidget::ProcessEodResponse(const std::string& data)
 {
+   if (!candlesticksChart_ || !volumeChart_) {
+      return;
+   }
    eodRequestSent_ = false;
    EodPrice eodPrice;
    eodPrice.ParseFromString(data);
@@ -489,6 +495,9 @@ double ChartWidget::CountOffsetFromRightBorder()
 
 void ChartWidget::CheckToAddNewCandle(qint64 stamp)
 {
+   if (!candlesticksChart_ || !volumeChart_) {
+      return;
+   }
    if (stamp <= newestCandleTimestamp_ + IntervalWidth(dateRange_.checkedId()) || !volumeChart_->data()->size()) {
       return;
    }
@@ -526,6 +535,9 @@ void ChartWidget::DrawCrossfire(QMouseEvent* event)
 
 void ChartWidget::UpdatePrintFlag()
 {
+   if (!candlesticksChart_ || !volumeChart_) {
+      return;
+   }
    if (candlesticksChart_->data()->isEmpty()) {
       lastPrintFlag_->setVisible(false);
       return;
@@ -567,6 +579,9 @@ bool ChartWidget::needLoadNewData(const QCPRange& range, const QSharedPointer<QC
 
 void ChartWidget::LoadAdditionalPoints(const QCPRange& range)
 {
+   if (!candlesticksChart_ || !volumeChart_) {
+      return;
+   }
    const auto data = candlesticksChart_->data();
    if (needLoadNewData(range, data)) {
       if (qFuzzyCompare(prevRequestStamp, data->constBegin()->key)) {
@@ -716,6 +731,9 @@ QString ChartWidget::GetFormattedStamp(double timestamp)
 
 void ChartWidget::UpdateOHLCInfo(double width, double timestamp)
 {
+   if (!candlesticksChart_ || !volumeChart_) {
+      return;
+   }
    auto ohlcValue = *candlesticksChart_->data()->findBegin(timestamp + width / 2);
    auto volumeValue = *volumeChart_->data()->findBegin(timestamp + width / 2);
    //ohlcValue.close >= ohlcValue.open ? c_greenColor : c_redColor
