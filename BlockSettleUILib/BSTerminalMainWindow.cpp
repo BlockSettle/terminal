@@ -2535,7 +2535,7 @@ void BSTerminalMainWindow::processDeliveryObligationUpdate(const ProxyTerminalPb
    auto amountStr = UiUtils::displayAmount(resp.to_deliver());
    switch (resp.status()) {
       case ProxyTerminalPb::Response_DeliveryObligationsRequest::PENDING:
-         if (autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError) {  // auto-sign enabled
+         if (canSendObligationTX()) {
             autoSignDeliveryObligation(resp);
          }
          else {
@@ -2547,7 +2547,7 @@ void BSTerminalMainWindow::processDeliveryObligationUpdate(const ProxyTerminalPb
          break;
       case ProxyTerminalPb::Response_DeliveryObligationsRequest::DELIVERED:
          logMgr_->logger("")->debug("[{}] obligation {} delivered", __func__, resp.id());
-         if (autoSignQuoteProvider_->autoSignState() != bs::error::ErrorCode::NoError) {  // auto-sign disabled
+         if (!canSendObligationTX()) {
             addDeferredDialog([this, amountStr] {
                auto details = tr("Volume: %1").arg(amountStr);
                BSMessageBox(BSMessageBox::info, tr("Delivery"), tr("Delivery detected"), details, this).exec();
@@ -2560,7 +2560,6 @@ void BSTerminalMainWindow::processDeliveryObligationUpdate(const ProxyTerminalPb
    }
 }
 
-#include "TransactionData.h"
 void BSTerminalMainWindow::autoSignDeliveryObligation(const ProxyTerminalPb::Response_DeliveryObligationsRequest& request)
 {
    const auto& cbInputs = [this, request](bs::FixedXbtInputs&& inputs)
@@ -2593,9 +2592,26 @@ void BSTerminalMainWindow::autoSignDeliveryObligation(const ProxyTerminalPb::Res
       }
       txReq = defWallet->createTXRequest(utxos, { recip }, true, fee, false, changeAddr);
 
-      const auto& cbSigned = [this](const BinaryData& signedTX, bs::error::ErrorCode
-         , const std::string& errorReason)
+      const auto& cbSigned = [this, defWallet](const BinaryData& signedTX
+         , bs::error::ErrorCode errCode, const std::string& errorReason)
       {
+         if (errCode == bs::error::ErrorCode::NoError) {
+            try {
+               const Tx tx(signedTX);
+               signContainer_->syncTxComment(defWallet->walletId(), tx.getThisHash()
+                  , "EURD1 delivery"); //TODO: change to non-hardcoded comment if needed
+            }
+            catch (const std::exception &e) {
+               logMgr_->logger()->error("[BSTerminalMainWindow::autoSignDeliveryObligation]"
+                  " failed to deser TX: {}", e.what());
+               return;
+            }
+         }
+         else {
+            logMgr_->logger()->error("[BSTerminalMainWindow::autoSignDeliveryObligation]"
+               " failed to sign: {}", errorReason);
+            return;
+         }
          const auto &pushId = armory_->pushZC(signedTX);
          if (pushId.empty()) {
             logMgr_->logger()->error("[BSTerminalMainWindow::autoSignDeliveryObligation] failed to push ZC");
@@ -2604,11 +2620,31 @@ void BSTerminalMainWindow::autoSignDeliveryObligation(const ProxyTerminalPb::Res
             logMgr_->logger()->debug("[BSTerminalMainWindow::autoSignDeliveryObligation] ZC pushed, id={}", pushId);
          }
       };
-      signContainer_->signTXRequest(txReq, cbSigned, SignContainer::TXSignMode::AutoSign);
+      signContainer_->signTXRequest(txReq, cbSigned
+         , (autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError)
+         ? SignContainer::TXSignMode::AutoSign : SignContainer::TXSignMode::Full);
    };
    utxoReservationMgr_->reserveBestXbtUtxoSet(walletsMgr_->getPrimaryWallet()->walletId()
       , std::abs(request.to_deliver()) + (uint64_t)(utxoReservationMgr_->feeRatePb() * 321)
       , false, cbInputs, false, bs::UTXOReservationManager::CheckAmount::Enabled, true);
+}
+
+bool BSTerminalMainWindow::canSendObligationTX() const
+{
+   if (autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError) {
+      return true;
+   }
+   const auto& priWallet = walletsMgr_->getPrimaryWallet();
+   if (!priWallet) {
+      logMgr_->logger()->debug("[{}] no primary wallet", __func__);
+      return false;
+   }
+   const auto& encTypes = priWallet->encryptionTypes();
+   if ((priWallet->encryptionRank().n == 1) && !encTypes.empty()
+      && (encTypes[0] == bs::wallet::EncryptionType::Auth)) {
+      return true;   // also auto-send from 1-of-1 Auth eID encrypted wallet
+   }
+   return false;
 }
 
 void BSTerminalMainWindow::onAuthLeafCreated()
@@ -2639,7 +2675,7 @@ void BSTerminalMainWindow::onAuthLeafCreated()
 
 void BSTerminalMainWindow::onDeliverFutureObligations(const QModelIndex& index)
 {
-   if (autoSignQuoteProvider_->autoSignState() == bs::error::ErrorCode::NoError) {
+   if (canSendObligationTX()) {
       return;  // don't invoke manual create TX dialog if auto-sign is enabled
    }
    auto deliveryObligationData = orderListModel_->getDeliveryObligationData(index);

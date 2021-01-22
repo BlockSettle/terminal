@@ -147,6 +147,8 @@ private:
 
    void openURIDialog();
 
+   bool canSendObligationTX() const;
+
 signals:
    void armoryServerPromptResultReady();
 
