@@ -2640,7 +2640,7 @@ bool BSTerminalMainWindow::canSendObligationTX() const
       return false;
    }
    const auto& encTypes = priWallet->encryptionTypes();
-   if (/*(priWallet->encryptionRank().n == 1) &&*/ !encTypes.empty()
+   if ((priWallet->encryptionRank().n == 1) && !encTypes.empty()
       && (encTypes[0] == bs::wallet::EncryptionType::Auth)) {
       return true;   // also auto-send from 1-of-1 Auth eID encrypted wallet
    }
