@@ -216,6 +216,7 @@ private:
    bs::gui::qt::MainWindow * mainWindow_{ nullptr };
    BSTerminalSplashScreen  * splashScreen_{ nullptr };
 
+   std::recursive_mutex mutex_;
    std::set<int>  createdComponents_;
    std::set<int>  loadingComponents_;
    int         armoryState_{ -1 };

@@ -14,6 +14,7 @@
 #include "FutureValue.h"
 #include "HeadlessContainer.h"
 #include "Message/Adapter.h"
+#include "ThreadSafeContainers.h"
 
 namespace spdlog {
    class logger;
@@ -119,7 +120,7 @@ private:
    std::string    curServerId_;
    std::string    connKey_;
 
-   std::map<uint64_t, std::shared_ptr<bs::message::User>>   requests_;
+   bs::ThreadSafeMap<uint64_t, std::shared_ptr<bs::message::User>>   requests_;
    std::unordered_map<std::string, bs::message::Envelope>   autoSignRequests_;
 };
 

@@ -207,8 +207,11 @@ void QtGuiAdapter::run(int &argc, char **argv)
 
    QPixmap splashLogo(logoIcon);
    const int splashScreenWidth = 400;
-   splashScreen_ = new BSTerminalSplashScreen(splashLogo.scaledToWidth(splashScreenWidth
-      , Qt::SmoothTransformation));
+   {
+      std::lock_guard<std::recursive_mutex> lock(mutex_);
+      splashScreen_ = new BSTerminalSplashScreen(splashLogo.scaledToWidth(splashScreenWidth
+         , Qt::SmoothTransformation));
+   }
    updateSplashProgress();
    splashScreen_->show();
 
@@ -400,9 +403,11 @@ bool QtGuiAdapter::processAdminMessage(const Envelope &env)
          break;
       }
       break;
-   case AdministrativeMessage::kComponentLoading:
+   case AdministrativeMessage::kComponentLoading: {
+      std::lock_guard<std::recursive_mutex> lock(mutex_);
       loadingComponents_.insert(msg.component_loading());
       break;
+   }
    default: break;
    }
    updateSplashProgress();
@@ -639,6 +644,7 @@ void QtGuiAdapter::updateStates()
 
 void QtGuiAdapter::updateSplashProgress()
 {
+   std::lock_guard<std::recursive_mutex> lock(mutex_);
    if (!splashScreen_ || createdComponents_.empty()) {
       return;
    }
