@@ -186,7 +186,10 @@ private:
 
    struct FuturesDeliveryGroup : public Group
    {
-      FuturesDeliveryGroup(const QString &sec, IndexHelper *parent, int64_t quantity, double price, const std::string& bsAddress);
+      FuturesDeliveryGroup(const QString &sec, IndexHelper *parent
+                           , int64_t quantity, double price
+                           , const std::string& bsAddress
+                           , const bool delivered);
 
       ~FuturesDeliveryGroup() override = default;
 
@@ -210,6 +213,8 @@ private:
 
       bs::XBTAmount  toDeliver_;
       std::string    bsAddress_;
+
+      bool           delivered_;
    };
 
 

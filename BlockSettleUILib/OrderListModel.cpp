@@ -882,14 +882,16 @@ void OrderListModel::DisplayFuturesDeliveryRow(const Blocksettle::Communication:
       static_cast<int>(marketItem->rows_.size()), static_cast<int>(marketItem->rows_.size()));
 
    marketItem->rows_.emplace_back(make_unique<FuturesDeliveryGroup>(QStringLiteral("XBT/EUR")
-      , &marketItem->idx_, obligation.to_deliver(), obligation.price(), obligation.bs_address()));
+      , &marketItem->idx_, obligation.to_deliver(), obligation.price(), obligation.bs_address()
+      , obligation.status() == Blocksettle::Communication::ProxyTerminalPb::Response::DeliveryObligationsRequest::DELIVERED));
 
    endInsertRows();
 }
 
 OrderListModel::FuturesDeliveryGroup::FuturesDeliveryGroup(const QString &sec, IndexHelper *parent
                                                            , int64_t quantity, double price
-                                                           , const std::string& bsAddress)
+                                                           , const std::string& bsAddress
+                                                           , const bool delivered)
    : Group(sec, parent)
 {
    quantity_ = static_cast<double>(quantity) / BTCNumericTypes::BalanceDivider;
@@ -901,6 +903,8 @@ OrderListModel::FuturesDeliveryGroup::FuturesDeliveryGroup(const QString &sec, I
    if (quantity < 0) {
       toDeliver_ = bs::XBTAmount{ static_cast<BTCNumericTypes::satoshi_type>(-quantity) };
    }
+
+   delivered_ = delivered;
 }
 
 QVariant OrderListModel::FuturesDeliveryGroup::getQuantity() const
@@ -939,6 +943,9 @@ QVariant OrderListModel::FuturesDeliveryGroup::getPrice() const
 QVariant OrderListModel::FuturesDeliveryGroup::getStatus() const
 {
    if (quantity_ < 0) {
+      if (delivered_) {
+         return tr("Delivered");
+      }
       return tr("Create TX");
    }
 
@@ -947,7 +954,7 @@ QVariant OrderListModel::FuturesDeliveryGroup::getStatus() const
 
 bool OrderListModel::FuturesDeliveryGroup::deliveryRequired() const
 {
-   return toDeliver_.GetValue() != 0;
+   return toDeliver_.GetValue() != 0 && !delivered_;
 }
 
 OrderListModel::DeliveryObligationData OrderListModel::FuturesDeliveryGroup::getDeliveryObligationData() const
