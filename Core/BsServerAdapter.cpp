@@ -154,6 +154,7 @@ bool BsServerAdapter::processPuBKeyResponse(bool allowed)
    }
    futPuBkey_->setValue(allowed);
    futPuBkey_.reset();
+   return true;
 }
 
 bool BsServerAdapter::processTimeout(const std::string& id)
@@ -165,6 +166,7 @@ bool BsServerAdapter::processTimeout(const std::string& id)
    }
    itTO->second();
    timeouts_.erase(itTO);
+   return true;
 }
 
 bool BsServerAdapter::processOpenConnection()
