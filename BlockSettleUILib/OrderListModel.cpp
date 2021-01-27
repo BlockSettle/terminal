@@ -672,14 +672,21 @@ void OrderListModel::reset()
 
 void OrderListModel::processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations &message)
 {
-   // Save latest selected index first
-   resetLatestChangedStatus(message);
-   // OrderListModel supposed to work correctly when orders states updated one by one.
-   // We don't use this anymore (server sends all active orders every time) so just clear old caches.
-   // Remove this if old behavior is needed
-   reset();
-   // Use some fake orderId so old code works correctly
-   int orderId = 0;
+   std::set<std::string> newIds;
+   for (const auto &data : message.orders()) {
+      newIds.insert(data.id());
+   }
+   bool orderRemoved = false;
+   for (const auto &knownId : knownIds_) {
+      if (newIds.find(knownId) == newIds.end()) {
+         orderRemoved = true;
+         break;
+      }
+   }
+   knownIds_ = std::move(newIds);
+   if (orderRemoved) {
+      reset();
+   }
 
    for (const auto &data : message.orders()) {
       bs::network::Order order;
@@ -700,8 +707,7 @@ void OrderListModel::processUpdateOrders(const Blocksettle::Communication::Proxy
 
       order.assetType = static_cast<bs::network::Asset::Type>(data.trade_type());
 
-      orderId += 1;
-      order.exchOrderId = QString::number(orderId);
+      order.exchOrderId = QString::fromStdString(data.id());
       order.side = bs::network::Side::Type(data.side());
       order.pendingStatus = data.status_text();
       order.dateTime = QDateTime::fromMSecsSinceEpoch(data.timestamp_ms());

@@ -291,6 +291,8 @@ private:
    std::vector<std::pair<int64_t, int>> sortedPeviousOrderStatuses_{};
    QDateTime latestChangedTimestamp_;
 
+   std::set<std::string> knownIds_;
+
    bool connected_{};
 };
 
