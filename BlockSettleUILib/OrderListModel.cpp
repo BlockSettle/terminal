@@ -24,6 +24,37 @@ namespace {
    const auto kSettledColor = QColor{0x22, 0xC0, 0x64};
    const auto kFailedColor = QColor{0xEC, 0x0A, 0x35};
 
+   bs::network::Order convertOrder(const bs::types::Order &data) {
+      bs::network::Order order;
+
+      switch (data.status()) {
+         case bs::types::ORDER_STATUS_PENDING:
+            order.status = bs::network::Order::Pending;
+            break;
+         case bs::types::ORDER_STATUS_FILLED:
+            order.status = bs::network::Order::Filled;
+            break;
+         case bs::types::ORDER_STATUS_VOID:
+            order.status = bs::network::Order::Failed;
+            break;
+         default:
+            break;
+      }
+
+      order.assetType = static_cast<bs::network::Asset::Type>(data.trade_type());
+
+      order.exchOrderId = QString::fromStdString(data.id());
+      order.side = bs::network::Side::Type(data.side());
+      order.pendingStatus = data.status_text();
+      order.dateTime = QDateTime::fromMSecsSinceEpoch(data.timestamp_ms());
+      order.product = data.product();
+      order.quantity = data.quantity();
+      order.security = data.product() + "/" + data.product_against();
+      order.price = data.price();
+
+      return order;
+   }
+
 } // namespace
 
 double getOrderValue(const bs::network::Order& order)
@@ -401,6 +432,9 @@ void OrderListModel::onMessageFromPB(const Blocksettle::Communication::ProxyTerm
       case Blocksettle::Communication::ProxyTerminalPb::Response::kUpdateOrdersObligations:
          processUpdateOrders(response.update_orders_obligations());
          break;
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kUpdateOrder:
+         processUpdateOrder(response.update_order());
+         break;
       default:
          break;
    }
@@ -672,54 +706,33 @@ void OrderListModel::reset()
 
 void OrderListModel::processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations &message)
 {
-   std::set<std::string> newIds;
-   for (const auto &data : message.orders()) {
-      newIds.insert(data.id());
-   }
-   bool orderRemoved = false;
-   for (const auto &knownId : knownIds_) {
-      if (newIds.find(knownId) == newIds.end()) {
-         orderRemoved = true;
-         break;
-      }
-   }
-   knownIds_ = std::move(newIds);
-   if (orderRemoved) {
-      reset();
-   }
+   reset();
 
    for (const auto &data : message.orders()) {
-      bs::network::Order order;
-
-      switch (data.status()) {
-         case bs::types::ORDER_STATUS_PENDING:
-            order.status = bs::network::Order::Pending;
-            break;
-         case bs::types::ORDER_STATUS_FILLED:
-            order.status = bs::network::Order::Filled;
-            break;
-         case bs::types::ORDER_STATUS_VOID:
-            order.status = bs::network::Order::Failed;
-            break;
-         default:
-            break;
-      }
-
-      order.assetType = static_cast<bs::network::Asset::Type>(data.trade_type());
-
-      order.exchOrderId = QString::fromStdString(data.id());
-      order.side = bs::network::Side::Type(data.side());
-      order.pendingStatus = data.status_text();
-      order.dateTime = QDateTime::fromMSecsSinceEpoch(data.timestamp_ms());
-      order.product = data.product();
-      order.quantity = data.quantity();
-      order.security = data.product() + "/" + data.product_against();
-      order.price = data.price();
-
+      auto order = convertOrder(data);
       onOrderUpdated(order);
    }
 
    DisplayFuturesDeliveryRow(message.obligation());
+}
+
+void OrderListModel::processUpdateOrder(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrder &msg)
+{
+   auto order = convertOrder(msg.order());
+   switch (msg.action()) {
+      case bs::types::ACTION_CREATED:
+      case bs::types::ACTION_UPDATED: {
+         onOrderUpdated(order);
+         break;
+      }
+      case bs::types::ACTION_REMOVED: {
+         auto found = findItem(order);
+         removeRowIfContainerChanged(order, found.second);
+         break;
+      }
+      default:
+         break;
+   }
 }
 
 void OrderListModel::resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations &message)

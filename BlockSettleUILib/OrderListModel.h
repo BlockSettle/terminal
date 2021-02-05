@@ -27,6 +27,7 @@ namespace Blocksettle {
          class Response;
          class Response_DeliveryObligationsRequest;
          class Response_UpdateOrdersAndObligations;
+         class Response_UpdateOrder;
       }
    }
 }
@@ -273,6 +274,7 @@ private:
 
    void reset();
    void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations &msg);
+   void processUpdateOrder(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrder &msg);
    void resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations &message);
 
    void DisplayFuturesDeliveryRow(const Blocksettle::Communication::ProxyTerminalPb::Response_DeliveryObligationsRequest &obligation);
@@ -290,8 +292,6 @@ private:
 
    std::vector<std::pair<int64_t, int>> sortedPeviousOrderStatuses_{};
    QDateTime latestChangedTimestamp_;
-
-   std::set<std::string> knownIds_;
 
    bool connected_{};
 };
