@@ -10,14 +10,14 @@ FILE(GLOB HEADERS
 )
 
 FILE(GLOB UI_FILES
-   ${BLOCKSETTLE_UI_INCLUDE_DIR}/*.ui
-   ${BLOCKSETTLE_UI_INCLUDE_DIR}/CustomControls/*.ui
+   ${BLOCKSETTLE_UI_INCLUDE_DIR}/BSTerminalMainWindow.ui
+#   ${BLOCKSETTLE_UI_INCLUDE_DIR}/CustomControls/*.ui
    ${BLOCKSETTLE_UI_INCLUDE_DIR}/InfoDialogs/*.ui
-   ${BLOCKSETTLE_UI_INCLUDE_DIR}/ManageEncryption/*.ui
-   ${BLOCKSETTLE_UI_INCLUDE_DIR}/Settings/*.ui
-   ${BLOCKSETTLE_UI_INCLUDE_DIR}/Trading/*.ui
+#   ${BLOCKSETTLE_UI_INCLUDE_DIR}/ManageEncryption/*.ui
+#   ${BLOCKSETTLE_UI_INCLUDE_DIR}/Settings/*.ui
+#   ${BLOCKSETTLE_UI_INCLUDE_DIR}/Trading/*.ui
    ${BLOCKSETTLE_UI_INCLUDE_DIR}/ChatUI/*.ui
-   ${BLOCKSETTLE_UI_INCLUDE_DIR}/ChatUI/OTCShieldWidgets/*.ui
+#   ${BLOCKSETTLE_UI_INCLUDE_DIR}/ChatUI/OTCShieldWidgets/*.ui
 )
 
 INCLUDE_DIRECTORIES(../../BlockSettleUILib)
