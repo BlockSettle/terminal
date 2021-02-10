@@ -73,18 +73,22 @@ void OrdersView::onSelectRow(const QPersistentModelIndex &row)
    scrollTo(row, QAbstractItemView::EnsureVisible);
 }
 
-void OrdersView::onRowsInserted(const QModelIndex &parent, int first, int)
+void OrdersView::onRowsInserted(const QModelIndex &parent, int first, int last)
 {
    if (!parent.isValid()) {
       return;
    }
 
-   if (!collapsed_.contains(UiUtils::modelPath(parent, model_))) {
-      expand(parent);
-   }
-   else {
-      setHasNewItemFlag(parent, true);
-   }
+    if (!collapsed_.contains(UiUtils::modelPath(parent, model_))) {
+       auto topLevelIndex = parent;
+       while (topLevelIndex.isValid()) {
+          expand(topLevelIndex);
+          topLevelIndex = topLevelIndex.parent();
+       }
+    }
+    else {
+       setHasNewItemFlag(parent, true);
+    }
 
    if (selectionModel()->hasSelection()) {
       scrollTo(selectionModel()->selectedIndexes().at(0), QAbstractItemView::EnsureVisible);
