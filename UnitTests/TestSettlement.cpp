@@ -10,6 +10,7 @@
 */
 #include "TestSettlement.h"
 #include <spdlog/spdlog.h>
+#include "CoreHDLeaf.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
 #include "InprocSigner.h"
@@ -17,6 +18,11 @@
 #include "MockTerminal.h"
 #include "TestAdapters.h"
 #include "TestEnv.h"
+#include "TradesUtils.h"
+#include "TradesVerification.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 
 #include "common.pb.h"
 #include "terminal.pb.h"
@@ -102,7 +108,7 @@ void TestSettlement::SetUp()
       auto grp = hdWallet->createGroup(hdWallet->getXBTGroupType());
       {
          const bs::core::WalletPasswordScoped lock(hdWallet, passphrase_);
-         leaf = grp->createLeaf(AddressEntryType_P2SH, 0);
+         leaf = grp->createLeaf(AddressEntryType_P2WPKH, 0);
       }
 
       addr = leaf->getNewExtAddress();
@@ -785,4 +791,145 @@ TEST_F(TestSettlement, SpotXBT_buy)
    };
    fut = sup2->waitFor(settlementComplete);
    ASSERT_EQ(fut.wait_for(kLongWaitTimeout), std::future_status::ready);
+}
+
+TEST_F(TestSettlement, easy_XBT)
+{
+   StaticLogger::loggerPtr->debug("[{}] start", __func__);
+   ASSERT_GE(xbtWallet_.size(), 2);
+   ASSERT_GE(hdWallet_.size(), 2);
+
+   const auto& addr1 = authAddrs_.at(0);
+   const auto& pubKey1 = authKeys_.at(0);
+   ASSERT_FALSE(addr1.empty());
+   ASSERT_FALSE(pubKey1.empty());
+
+   const auto& addr2 = xbtWallet_.at(1)->getNewExtAddress();
+   auto pubKey2 = xbtWallet_.at(1)->getPublicKeyFor(addr2);
+   ASSERT_FALSE(addr2.empty());
+   ASSERT_FALSE(pubKey2.empty());
+   ASSERT_NE(addr1, addr2);
+   ASSERT_NE(pubKey1, pubKey2);
+
+   //settlement address construction
+   const auto& settlementId = CryptoPRNG::generateRandom(32);
+   const auto& dealSettlLeaf = std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(
+      hdWallet_.at(0)->createSettlementLeaf(addr1));
+   ASSERT_NE(dealSettlLeaf, nullptr);
+   const auto& dealSettlIndex = dealSettlLeaf->addSettlementID(settlementId);
+   EXPECT_FALSE(dealSettlLeaf->getNewExtAddress().empty());
+   const auto& index1 = dealSettlLeaf->getIndexForSettlementID(settlementId);
+   EXPECT_EQ(dealSettlIndex, index1);
+   const auto& dealerAsset = dealSettlLeaf->getAssetForId(index1);
+   ASSERT_NE(dealerAsset, nullptr);
+   const auto& asset1 = std::make_shared<AssetEntry_Single>(0, BinaryData()
+      , dealerAsset->getPubKey(), nullptr);
+   /*auto dealerPubKey = CryptoECDSA::PubKeyScalarMultiply(pubKey1, settlementId);
+   const auto& asset1 = std::make_shared<AssetEntry_Single>(0, BinaryData()
+      , dealerPubKey, nullptr);*/
+   ASSERT_NE(asset1, nullptr);
+
+   const auto& asset2 = std::make_shared<AssetEntry_Single>(0, BinaryData(), pubKey2, nullptr);
+   ASSERT_NE(asset2, nullptr);
+
+   std::map<BinaryData, std::shared_ptr<AssetEntry>> assetMap;
+   assetMap.insert({ READHEX("00"), asset1 });
+   assetMap.insert({ READHEX("01"), asset2 });
+
+   auto assetMultiSig = std::make_shared<AssetEntry_Multisig>(0, BinaryData()
+      , assetMap, 1, 2);
+   auto addrMultiSig = std::make_shared<AddressEntry_Multisig>(assetMultiSig, true);
+   const auto &addrP2sh = std::make_shared<AddressEntry_P2SH>(addrMultiSig);
+   ASSERT_NE(addrP2sh, nullptr);
+   StaticLogger::loggerPtr->debug("[{}] settlement address: {}", __func__, addrP2sh->getAddress());
+   const auto& settlementAddr = bs::Address::fromAddressEntry(*addrP2sh);
+   EXPECT_EQ(settlementAddr.display(), addrP2sh->getAddress());
+
+   //pay-in construction
+   auto syncMgr1 = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
+      , envPtr_->appSettings(), envPtr_->armoryConnection());
+   syncMgr1->setSignContainer(inprocSigner_.at(0));
+   syncMgr1->syncWallets();
+   auto syncHdWallet1 = syncMgr1->getHDWalletById(hdWallet_.at(0)->walletId());
+   ASSERT_NE(syncHdWallet1, nullptr);
+   syncHdWallet1->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+   auto regIDs = syncHdWallet1->registerWallet(envPtr_->armoryConnection());
+   UnitTestWalletACT::waitOnRefresh(regIDs);
+
+   auto syncMgr2 = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
+      , envPtr_->appSettings(), envPtr_->armoryConnection());
+   syncMgr2->setSignContainer(inprocSigner_.at(1));
+   syncMgr2->syncWallets();
+   auto syncHdWallet2 = syncMgr2->getHDWalletById(hdWallet_.at(1)->walletId());
+   ASSERT_NE(syncHdWallet2, nullptr);
+   syncHdWallet2->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+   regIDs = syncHdWallet2->registerWallet(envPtr_->armoryConnection());
+   UnitTestWalletACT::waitOnRefresh(regIDs);
+
+   auto promPtr = std::make_shared<std::promise<std::vector<UTXO>>>();
+   auto fut = promPtr->get_future();
+   auto cbTxOutList = [promPtr](const std::vector<UTXO> &inputs)
+   {
+      promPtr->set_value(inputs);
+   };
+   ASSERT_TRUE(envPtr_->armoryConnection()->getSpendableTxOutListForValue(
+      { xbtWallet_.at(0)->walletId() }, UINT64_MAX, cbTxOutList));
+   const auto &inputs = fut.get();
+   ASSERT_FALSE(inputs.empty());
+   EXPECT_EQ(inputs.size(), 1);
+
+   const uint64_t fee = 234;
+   const uint64_t amount = 1234567;
+   const auto& changeAddr1 = xbtWallet_.at(0)->getNewIntAddress();
+   const auto& recip = settlementAddr.getRecipient(bs::XBTAmount{ amount });
+   auto txPayinReq = bs::sync::wallet::createTXRequest({ xbtWallet_.at(0)->walletId() }
+      , inputs, { recip }, true, changeAddr1, xbtWallet_.at(0)->getAddressIndex(changeAddr1), fee);
+
+   txPayinReq.resolveSpenders(xbtWallet_.at(0)->getPublicResolver());
+   const auto &payinU = bs::TradesVerification::verifyUnsignedPayin(txPayinReq.serializeState()
+      , fee / txPayinReq.estimateTxVirtSize(), settlementAddr.display(), amount);
+   EXPECT_TRUE(payinU->success) << payinU->errorMsg;
+
+   BinaryData txData;
+   {
+      const bs::core::WalletPasswordScoped lock(hdWallet_.at(0), passphrase_);
+      txData = xbtWallet_.at(0)->signTXRequest(txPayinReq);
+   }
+   ASSERT_FALSE(txData.empty());
+   ASSERT_FALSE(envPtr_->armoryConnection()->pushZC(txData).empty());
+   const Tx txPayin(txData);
+   ASSERT_TRUE(txPayin.isInitialized());
+
+   const auto& payinS = bs::TradesVerification::verifySignedPayin(txData, txPayin.getThisHash(), inputs);
+   EXPECT_TRUE(payinS->success) << payinS->errorMsg;
+
+   //pay-out construction
+   ASSERT_GE(xbtWallet_.at(1)->getExtAddressCount(), 1);
+   const auto recvAddr = xbtWallet_.at(1)->getExtAddressList().at(0);
+   const auto &addrSingle = std::make_shared<AddressEntry_P2WPKH>(asset2);
+   const auto &addrP2shSingle = std::make_shared<AddressEntry_P2SH>(addrSingle);
+   const auto& payoutUtxo = UTXO(amount, UINT32_MAX, UINT32_MAX, 0
+      , txPayin.getThisHash(), addrP2shSingle->getPreimage());
+   const auto& txPayoutReq = bs::tradeutils::createPayoutTXRequest(payoutUtxo
+      , recvAddr, 1.23, envPtr_->armoryConnection()->topBlock());
+   ASSERT_TRUE(txPayoutReq.isValid());
+
+   {
+      const bs::core::WalletPasswordScoped lock(hdWallet_.at(1), passphrase_);
+      txData = xbtWallet_.at(1)->signTXRequest(txPayoutReq);
+   }
+   ASSERT_FALSE(txData.empty());
+   ASSERT_FALSE(envPtr_->armoryConnection()->pushZC(txData).empty());
+   const Tx txPayout(txData);
+   ASSERT_TRUE(txPayout.isInitialized());
+
+   bs::tradeutils::PayoutVerifyArgs verifyPayout { txData, settlementAddr
+      , txPayin.getThisHash(), bs::XBTAmount{amount}, payoutUtxo };
+   const auto& payoutVerif = bs::tradeutils::verifySignedPayout(verifyPayout);
+   ASSERT_TRUE(payoutVerif.success) << payoutVerif.errorMsg;
+
+   const auto& payoutS = bs::TradesVerification::verifySignedPayout(txData
+      , pubKey2.toHexStr(), dealerAsset->getPubKey()->getCompressedKey().toHexStr()
+      , txPayin.getThisHash(), amount, 1.23, {}, settlementAddr.display(), payoutUtxo);
+   EXPECT_TRUE(payoutS->success) << payoutS->errorMsg;
 }

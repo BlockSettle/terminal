@@ -30,7 +30,7 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
-#define UNITTEST_DB_PORT 59095
+#define UNITTEST_DB_PORT 49095
 
 struct StaticLogger
 {
