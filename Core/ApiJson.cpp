@@ -618,7 +618,7 @@ bool ApiJsonAdapter::sendReplyToClient(uint64_t msgId
 
 void ApiJsonAdapter::sendGCtimeout()
 {
-   const auto& timeNow = std::chrono::system_clock::now();
+   const auto& timeNow = bs::message::bus_clock::now();
    Envelope env{ 0, user_, user_, timeNow, timeNow + kRequestTimeout, "GC" };
    pushFill(env);
 }
