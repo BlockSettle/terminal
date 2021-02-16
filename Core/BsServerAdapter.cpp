@@ -371,7 +371,7 @@ void BsServerAdapter::startTimer(std::chrono::milliseconds timeout
    const auto& toKey = CryptoPRNG::generateRandom(4).toHexStr();
    timeouts_[toKey] = cb;
    msg.set_timeout(toKey);
-   const auto& timeNow = std::chrono::system_clock::now();
+   const auto& timeNow = bs::message::bus_clock::now();
    Envelope env{ 0, user_, user_, timeNow, timeNow + timeout, msg.SerializeAsString(), true };
    pushFill(env);
 }

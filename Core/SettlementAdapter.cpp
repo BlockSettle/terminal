@@ -282,7 +282,7 @@ bool SettlementAdapter::processMatchingInRFQ(const IncomingRFQ& qrn)
    settlByRfqId_[rfq.requestId] = settlement;
 
    msg.set_quote_req_timeout(rfq.requestId);
-   const auto& timeNow = std::chrono::system_clock::now();
+   const auto& timeNow = bs::message::bus_clock::now();
    const auto expTime = std::chrono::milliseconds(qrn.expiration_ms()) - timeNow.time_since_epoch();
    if (expTime.count() < 0) {
       logger_->error("[{}] outdated expiry {} for {}", __func__, expTime.count(), rfq.requestId);
@@ -893,7 +893,7 @@ bool SettlementAdapter::startXbtSettlement(const bs::network::Quote& quote)
       return false;
    }
 
-   const auto& timeNow = std::chrono::system_clock::now();
+   const auto& timeNow = bs::message::bus_clock::now();
    SettlementMessage msg;
    msg.set_handshake_timeout(settlementId.toBinStr());
    Envelope env{ 0, user_, user_, timeNow, timeNow + kHandshakeTimeout

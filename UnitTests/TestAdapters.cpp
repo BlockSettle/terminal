@@ -156,7 +156,7 @@ bool MatchingMock::process(const bs::message::Envelope& env)
             for (const auto& sibling : siblings_) {
                sibling->inject(msgCopy, email_);
             }
-            const auto& timeNow = std::chrono::system_clock::now();
+            const auto& timeNow = bs::message::bus_clock::now();
             Envelope envTO{ 0, user_, user_, timeNow, timeNow + kExpirationTimeout
                , quote.quote_id() };   //FIXME: put actual quote's expirationTime
             pushFill(envTO);
