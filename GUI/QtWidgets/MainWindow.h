@@ -111,6 +111,7 @@ namespace bs {
 
             void onAuthAddresses(const std::vector<bs::Address>&
                , const std::map<bs::Address, AddressVerificationState> &);
+            void onAddrWhitelisted(const std::map<bs::Address, AddressVerificationState>&);
             void onSubmittedAuthAddresses(const std::vector<bs::Address>&);
             void onVerifiedAuthAddresses(const std::vector<bs::Address>&);
             void onAuthKey(const bs::Address&, const BinaryData& authKey);
@@ -196,6 +197,8 @@ namespace bs {
 
             void needNewAuthAddress();
             void needSubmitAuthAddress(const bs::Address&);
+            void setDefaultAuthAddress(const bs::Address&);
+            void needWhitelistAddress(const bs::Address&);
             void needSubmitRFQ(const bs::network::RFQ&, const std::string& reserveId = {});
             void needAcceptRFQ(const std::string& id, const bs::network::Quote&);
             void needCancelRFQ(const std::string& id);

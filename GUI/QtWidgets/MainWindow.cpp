@@ -884,6 +884,7 @@ void MainWindow::activateClient(const BsClientLoginResult& result)
 
    // Market data, charts and chat should be available for all Auth eID logins
    emit needMdConnection(envConfig_);
+   emit needWhitelistAddress({});   // implies request of all whitelisted addresses from proxy
 
    accountEnabled_ = result.enabled;
    onAccountTypeChanged(result.userType, result.enabled);
@@ -893,6 +894,7 @@ void MainWindow::activateClient(const BsClientLoginResult& result)
       connect(authAddrDlg_, &AuthAddressDialog::putSetting, this, &MainWindow::putSetting);
       connect(authAddrDlg_, &AuthAddressDialog::needNewAuthAddress, this, &MainWindow::needNewAuthAddress);
       connect(authAddrDlg_, &AuthAddressDialog::needSubmitAuthAddress, this, &MainWindow::needSubmitAuthAddress);
+      connect(authAddrDlg_, &AuthAddressDialog::needWhitelistAddress, this, &MainWindow::needWhitelistAddress);
    }
 }
 
@@ -932,19 +934,22 @@ void bs::gui::qt::MainWindow::onMatchingLogin(const std::string& mtchLogin
 void bs::gui::qt::MainWindow::onLogoutInitiated()
 {
    ui_->widgetWallets->setUsername(QString());
-   /*   if (chatClientServicePtr_) {
-         chatClientServicePtr_->LogoutFromServer();
-      }*/
+/*   if (chatClientServicePtr_) {
+      chatClientServicePtr_->LogoutFromServer();
+   }*/
    ui_->widgetChart->disconnect();
-   /*   if (celerConnection_->IsConnected()) {
-         celerConnection_->CloseConnection();
-      }*/
+/*   if (celerConnection_->IsConnected()) {
+      celerConnection_->CloseConnection();
+   }*/
 
-      //   mdProvider_->UnsubscribeFromMD();
+//   mdProvider_->UnsubscribeFromMD();
 
    setLoginButtonText(loginButtonText_);
 
    setWidgetsAuthorized(false);
+
+   delete authAddrDlg_;
+   authAddrDlg_ = nullptr;
 }
 
 void MainWindow::onLoggedOut()
@@ -978,6 +983,7 @@ void MainWindow::onMatchingLogout()
    }
    ui_->widgetRFQ->onMatchingLogout();
    ui_->widgetRFQReply->onMatchingLogout();
+   ui_->widgetWallets->onMatchingLogout();
 }
 
 void bs::gui::qt::MainWindow::onMDConnected()
@@ -1017,6 +1023,15 @@ void MainWindow::onAuthAddresses(const std::vector<bs::Address> &addrs
    if (authAddrDlg_) {
       authAddrDlg_->onAuthAddresses(addrs, states);
    }
+}
+
+void bs::gui::qt::MainWindow::onAddrWhitelisted(const std::map<bs::Address, AddressVerificationState>& addrs)
+{
+   if (authAddrDlg_ && !addrs.empty()) {
+      authAddrDlg_->onAddrWhitelisted(addrs);
+   }
+   ui_->widgetWallets->onAddrWhitelisted(addrs);
+   ui_->widgetRFQ->onAddrWhitelisted(addrs); // only requester can use whitelisted addresses as auth ones
 }
 
 void MainWindow::onSubmittedAuthAddresses(const std::vector<bs::Address>& addrs)
@@ -1247,6 +1262,7 @@ void MainWindow::initWidgets()
    connect(ui_->widgetWallets, &WalletsWidget::needTXDetails, this, &MainWindow::needTXDetails);
    connect(ui_->widgetWallets, &WalletsWidget::needWalletDialog, this, &MainWindow::needWalletDialog);
    connect(ui_->widgetWallets, &WalletsWidget::createExtAddress, this, &MainWindow::createExtAddress);
+   connect(ui_->widgetWallets, &WalletsWidget::needWhitelistAddress, this, &MainWindow::needWhitelistAddress);
 
    connect(ui_->widgetExplorer, &ExplorerWidget::needAddressHistory, this, &MainWindow::needAddressHistory);
    connect(ui_->widgetExplorer, &ExplorerWidget::needTXDetails, this, &MainWindow::needTXDetails);

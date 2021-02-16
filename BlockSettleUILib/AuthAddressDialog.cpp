@@ -27,42 +27,6 @@
 #include "UiUtils.h"
 
 
-AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<AuthAddressManager> &authAddressManager
-   , const std::shared_ptr<AssetManager> &assetMgr
-   , const std::shared_ptr<ApplicationSettings> &settings, QWidget* parent)
-   : QDialog(parent)
-   , ui_(new Ui::AuthAddressDialog())
-   , logger_(logger)
-   , authAddressManager_(authAddressManager)
-   , assetManager_(assetMgr)
-   , settings_(settings)
-{
-   ui_->setupUi(this);
-
-   authModel_ = new AuthAddressViewModel(authAddressManager_, ui_->treeViewAuthAdress);
-   model_ = new AuthAdressControlProxyModel(authModel_, this);
-   model_->setVisibleRowsCount(settings_->get<int>(ApplicationSettings::numberOfAuthAddressVisible));
-   ui_->treeViewAuthAdress->setModel(model_);
-   ui_->treeViewAuthAdress->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-   ui_->treeViewAuthAdress->installEventFilter(this);
-
-   connect(ui_->treeViewAuthAdress->selectionModel(), &QItemSelectionModel::selectionChanged
-      , this, &AuthAddressDialog::adressSelected);
-   connect(model_, &AuthAdressControlProxyModel::modelReset, this, &AuthAddressDialog::onModelReset);
-   connect(authModel_, &AuthAddressViewModel::updateSelectionAfterReset, this, &AuthAddressDialog::onUpdateSelection);
-
-   connect(authAddressManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked
-      , this, &AuthAddressDialog::onAddrVerifiedOrRevoked, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::Error, this, &AuthAddressDialog::onAuthMgrError, Qt::QueuedConnection);
-   connect(authAddressManager_.get(), &AuthAddressManager::Info, this, &AuthAddressDialog::onAuthMgrInfo, Qt::QueuedConnection);
-
-   connect(ui_->pushButtonCreate, &QPushButton::clicked, this, &AuthAddressDialog::createAddress);
-   connect(ui_->pushButtonRevoke, &QPushButton::clicked, this, &AuthAddressDialog::revokeSelectedAddress);
-   connect(ui_->pushButtonSubmit, &QPushButton::clicked, this, &AuthAddressDialog::submitSelectedAddress);
-   connect(ui_->pushButtonDefault, &QPushButton::clicked, this, &AuthAddressDialog::setDefaultAddress);
-}
-
 AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger>& logger
    , QWidget* parent)
    : QDialog(parent)
@@ -131,12 +95,6 @@ bool AuthAddressDialog::eventFilter(QObject* sender, QEvent* event)
 void AuthAddressDialog::showEvent(QShowEvent *evt)
 {
    if (defaultAddr_.empty()) {
-      if (authAddressManager_) {
-         defaultAddr_ = authAddressManager_->getDefault();
-         if (defaultAddr_.empty() && authAddressManager_->GetAddressCount()) {
-            defaultAddr_ = authAddressManager_->GetAddress(0);
-         }
-      }
       authModel_->setDefaultAddr(defaultAddr_);
    }
 
@@ -169,6 +127,7 @@ bool AuthAddressDialog::unsubmittedExist() const
 
 void AuthAddressDialog::updateUnsubmittedState()
 {
+#if 0
    if (authAddressManager_) {
       for (size_t i = 0; i < authAddressManager_->GetAddressCount(); i++) {
          const auto authAddr = authAddressManager_->GetAddress(i);
@@ -187,6 +146,7 @@ void AuthAddressDialog::updateUnsubmittedState()
          }
       }
    }
+#endif   //0
 }
 
 void AuthAddressDialog::onAuthMgrError(const QString &details)
@@ -230,15 +190,15 @@ void AuthAddressDialog::setAddressToVerify(const QString &addr)
    }
 }
 
-void AuthAddressDialog::setBsClient(const std::weak_ptr<BsClient>& bsClient)
-{
-   bsClient_ = bsClient;
-}
-
 void AuthAddressDialog::onAuthAddresses(const std::vector<bs::Address>& addrs
    , const std::map<bs::Address, AddressVerificationState>& states)
 {
    authModel_->onAuthAddresses(addrs, states);
+}
+
+void AuthAddressDialog::onAddrWhitelisted(const std::map<bs::Address, AddressVerificationState>& addrs)
+{
+   authModel_->onAddrWhitelisted(addrs);
 }
 
 void AuthAddressDialog::onSubmittedAuthAddresses(const std::vector<bs::Address>& addrs)
@@ -321,35 +281,16 @@ bs::Address AuthAddressDialog::GetSelectedAddress() const
 
 void AuthAddressDialog::createAddress()
 {
-   if (authAddressManager_) {
-      if (authAddressManager_->GetAddressCount() > model_->getVisibleRowsCount()) {
-         // We already have address but they is no visible in view
-         model_->increaseVisibleRowsCountByOne();
-         saveAddressesNumber();
-         onModelReset();
-         return;
-      }
-
-      if (!authAddressManager_->CreateNewAuthAddress()) {
-         showError(tr("Failed to create new address"), tr("Auth wallet error"));
-      } else {
-         ui_->pushButtonCreate->setEnabled(false);
-         model_->increaseVisibleRowsCountByOne();
-         saveAddressesNumber();
-      }
-   }
-   else {
 /*      if (nbAddresses > model_->getVisibleRowsCount()) {
          model_->increaseVisibleRowsCountByOne();
          saveAddressesNumber();
          onModelReset();
          return;
       }*/
-      emit needNewAuthAddress();
-      ui_->pushButtonCreate->setEnabled(false);
-      model_->increaseVisibleRowsCountByOne();
-      saveAddressesNumber();
-   }
+   emit needNewAuthAddress();
+   ui_->pushButtonCreate->setEnabled(false);
+   model_->increaseVisibleRowsCountByOne();
+   saveAddressesNumber();
 }
 
 void AuthAddressDialog::revokeSelectedAddress()
@@ -367,7 +308,7 @@ void AuthAddressDialog::revokeSelectedAddress()
          .arg(QString::fromStdString(selectedAddress.display()))
       , this);
    if (revokeQ.exec() == QDialog::Accepted) {
-      authAddressManager_->RevokeAddress(selectedAddress);
+      //TODO: reimplement if needed: authAddressManager_->RevokeAddress(selectedAddress);
    }
 }
 
@@ -381,36 +322,9 @@ void AuthAddressDialog::submitSelectedAddress()
       return;
    }
 
-   if (authAddressManager_) {
-      const auto state = authAddressManager_->GetState(selectedAddress);
-      if (state != AuthAddressManager::AuthAddressState::NotSubmitted) {
-         SPDLOG_LOGGER_ERROR(logger_, "refuse to submit address in state: {}", (int)state);
-         return;
-      }
-
-      auto bsClient = bsClient_.lock();
-
-      if (!bsClient) {
-         SPDLOG_LOGGER_ERROR(logger_, "bsClient_ in not set");
-         return;
-      }
-
-      setLastSubmittedAddress(selectedAddress);
-
-      AuthAddressConfirmDialog confirmDlg{ bsClient_, lastSubmittedAddress_, authAddressManager_, settings_, this };
-      auto result = confirmDlg.exec();
-
-      setLastSubmittedAddress({});
-
-      if (result == QDialog::Accepted) {
-         accept();
-      }
-   }
-   else {
-      auto confirmDlg = new AuthAddressConfirmDialog(selectedAddress, this);
-      if (confirmDlg->exec() == QDialog::Accepted) {
-         emit needSubmitAuthAddress(selectedAddress);
-      }
+   auto confirmDlg = new AuthAddressConfirmDialog(selectedAddress, this);
+   if (confirmDlg->exec() == QDialog::Accepted) {
+      emit needSubmitAuthAddress(selectedAddress);
    }
 }
 
@@ -420,7 +334,7 @@ void AuthAddressDialog::setDefaultAddress()
    if (!selectedAddress.empty()) {
       defaultAddr_ = selectedAddress;
       authModel_->setDefaultAddr(defaultAddr_);
-      authAddressManager_->setDefault(defaultAddr_);
+      emit setDefaultAuthAddress(defaultAddr_);
       resizeTreeViewColumns();
    }
 }
@@ -435,7 +349,7 @@ void AuthAddressDialog::onModelReset()
 void AuthAddressDialog::saveAddressesNumber()
 {
    const int newNumber = std::max(1, model_->rowCount());
-   const int oldNumber = settings_ ? settings_->get<int>(ApplicationSettings::numberOfAuthAddressVisible) : 10;   //FIXME
+   const int oldNumber = 10;   //FIXME: read actual value from settings
    if (newNumber == oldNumber) {
       return; // nothing to save
    }
@@ -444,13 +358,7 @@ void AuthAddressDialog::saveAddressesNumber()
       emit onUpdateSelection(model_->rowCount() - 1);
    }
 
-   if (settings_) {
-      settings_->set(ApplicationSettings::numberOfAuthAddressVisible, newNumber);
-      settings_->SaveSettings();
-   }
-   else {
-      emit putSetting(ApplicationSettings::numberOfAuthAddressVisible, newNumber);
-   }
+   emit putSetting(ApplicationSettings::numberOfAuthAddressVisible, newNumber);
 
    if (model_->isEmpty()) {
       model_->setVisibleRowsCount(1);
@@ -471,47 +379,17 @@ void AuthAddressDialog::updateEnabledStates()
    if (selectionModel->hasSelection()) {
       const auto address = model_->getAddress(selectionModel->selectedRows()[0]);
 
-      const bool allowSubmit = authAddressManager_ ? authAddressManager_->UserCanSubmitAuthAddress() : true;
-
-      if (authAddressManager_) {
-         switch (authAddressManager_->GetState(address)) {
-         case AuthAddressManager::AuthAddressState::NotSubmitted:
-            ui_->pushButtonRevoke->setEnabled(false);
-            ui_->pushButtonSubmit->setEnabled(lastSubmittedAddress_.empty() && allowSubmit);
-            ui_->pushButtonDefault->setEnabled(false);
-            break;
-         case AuthAddressManager::AuthAddressState::Submitted:
-         case AuthAddressManager::AuthAddressState::Tainted:
-         case AuthAddressManager::AuthAddressState::Verifying:
-         case AuthAddressManager::AuthAddressState::Revoked:
-         case AuthAddressManager::AuthAddressState::RevokedByBS:
-         case AuthAddressManager::AuthAddressState::Invalid:
-            ui_->pushButtonRevoke->setEnabled(false);
-            ui_->pushButtonSubmit->setEnabled(false);
-            ui_->pushButtonDefault->setEnabled(false);
-            break;
-         case AuthAddressManager::AuthAddressState::Verified:
-            ui_->pushButtonRevoke->setEnabled(authAddressManager_->readyError() == AuthAddressManager::ReadyError::NoError);
-            ui_->pushButtonSubmit->setEnabled(false);
-            ui_->pushButtonDefault->setEnabled(address != defaultAddr_);
-            break;
-         default:
-            break;
-         }
-      }
-      else {
-         switch (authModel_->getState(address)) {
-         case AddressVerificationState::Verified:
-            ui_->pushButtonRevoke->setEnabled(true);
-            ui_->pushButtonSubmit->setEnabled(false);
-            ui_->pushButtonDefault->setEnabled(address != defaultAddr_);
-            break;
-         default:
-            ui_->pushButtonRevoke->setEnabled(false);
-            ui_->pushButtonSubmit->setEnabled(authModel_->canSubmit(address));
-            ui_->pushButtonDefault->setEnabled(false);
-            break;
-         }
+      switch (authModel_->getState(address)) {
+      case AddressVerificationState::Verified:
+         ui_->pushButtonRevoke->setEnabled(true);
+         ui_->pushButtonSubmit->setEnabled(false);
+         ui_->pushButtonDefault->setEnabled(address != defaultAddr_);
+         break;
+      default:
+         ui_->pushButtonRevoke->setEnabled(false);
+         ui_->pushButtonSubmit->setEnabled(authModel_->canSubmit(address));
+         ui_->pushButtonDefault->setEnabled(false);
+         break;
       }
    }
    else {

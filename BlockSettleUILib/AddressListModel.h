@@ -41,7 +41,7 @@ public:
       QString  comment;
       QString  displayedAddress;
       QString  walletName;
-      QString  walletId;
+      std::string walletId;
       QString  index;
       int      addrIndex = 0;
       bs::core::wallet::Type wltType = bs::core::wallet::Type::Unknown;

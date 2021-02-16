@@ -123,6 +123,8 @@ bool SignerAdapter::processOwnRequest(const bs::message::Envelope &env
       return processSetSettlId(env, request.set_settl_id());
    case SignerMessage::kGetRootPubkey:
       return processGetRootPubKey(env, request.get_root_pubkey());
+   case SignerMessage::kGetAddrPubkey:
+      return processGetAddrPubKey(env, request.get_addr_pubkey());
    case SignerMessage::kDelHdRoot:
       return processDelHdRoot(request.del_hd_root());
    case SignerMessage::kDelHdLeaf:
@@ -609,14 +611,16 @@ bool SignerAdapter::processSetSettlId(const bs::message::Envelope &env
    , const SignerMessage_SetSettlementId &request)
 {
    requests_.put(env.id, env.sender);
-   const auto &cb = [this, msgId=env.id](bool result)
+   const auto &cb = [this, msgId=env.id](bool result, const SecureBinaryData &pubKey)
    {
       auto sender = requests_.take(msgId);
       if (!sender) {
          return;
       }
       SignerMessage msg;
-      msg.set_settl_id_set(result);
+      auto msgResp = msg.mutable_settl_id_set();
+      msgResp->set_success(result);
+      msgResp->set_public_key(pubKey.toBinStr());
       Envelope envResp{ msgId, user_, sender, {}, {}, msg.SerializeAsString() };
       pushFill(envResp);
    };
@@ -677,6 +681,30 @@ bool SignerAdapter::processGetRootPubKey(const bs::message::Envelope &env
       pushFill(envResp);
    };
    signer_->getRootPubkey(walletId, cb);
+   return true;
+}
+
+bool SignerAdapter::processGetAddrPubKey(const bs::message::Envelope& env
+   , const SignerMessage_AddressPubKey& request)
+{
+   requests_.put(env.id, env.sender);
+   const auto& cb = [this, msgId = env.id, request]
+      (const SecureBinaryData& key)
+   {
+      auto sender = requests_.take(msgId);
+      if (!sender) {
+         return;
+      }
+      SignerMessage msg;
+      auto msgResp = msg.mutable_addr_pubkey();
+      msgResp->set_wallet_id(request.wallet_id());
+      msgResp->set_address(request.address());
+      msgResp->set_pub_key(key.toBinStr());
+
+      Envelope envResp{ msgId, user_, sender, {}, {}, msg.SerializeAsString() };
+      pushFill(envResp);
+   };
+   signer_->getAddressPubkey(request.wallet_id(), request.address(), cb);
    return true;
 }
 

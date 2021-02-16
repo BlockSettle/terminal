@@ -44,11 +44,13 @@ public:
    void createSettlementWallet(const bs::Address &
       , const std::function<void(const SecureBinaryData &)> &) override {}
    void setSettlementID(const std::string &, const SecureBinaryData &
-      , const std::function<void(bool)> &) override {}
+      , const std::function<void(bool, const SecureBinaryData&)> &) override {}
    void getSettlementPayinAddress(const std::string &,
       const bs::core::wallet::SettlementData &, const std::function<void(bool, bs::Address)> &) override {}
    void getRootPubkey(const std::string&
       , const std::function<void(bool, const SecureBinaryData &)> &) override {}
+   void getAddressPubkey(const std::string&, const std::string&
+      , const std::function<void(const SecureBinaryData&)>&) override {}
 
    bs::signer::RequestId signSettlementTXRequest(const bs::core::wallet::TXSignRequest &
       , const bs::sync::PasswordDialogData &

@@ -777,6 +777,7 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::submitQuote, this, &QtGuiAdapter::onSubmitQuote);
    connect(mainWindow_, &bs::gui::qt::MainWindow::pullQuote, this, &QtGuiAdapter::onPullQuote);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needWalletDialog, this, &QtGuiAdapter::onNeedWalletDialog);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needWhitelistAddress, this, &QtGuiAdapter::onNeedWhitelistAddr);
 }
 
 void QtGuiAdapter::onGetSettings(const std::vector<ApplicationSettings::Setting>& settings)
@@ -1300,6 +1301,14 @@ void QtGuiAdapter::onNeedWalletDialog(bs::signer::ui::GeneralDialogType dlgType
    pushFill(env);
 }
 
+void QtGuiAdapter::onNeedWhitelistAddr(const bs::Address& addr)
+{
+   BsServerMessage msg;
+   msg.set_whitelist_address(addr.display());
+   Envelope env{ 0, user_, userBS_, {}, {}, msg.SerializeAsString(), true };
+   pushFill(env);
+}
+
 void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
 {
    hdWallets_[*wi.ids.cbegin()] = wi;
@@ -1578,6 +1587,8 @@ bool QtGuiAdapter::processBsServer(const bs::message::Envelope& env)
       return processLogin(msg.login_result());
    case BsServerMessage::kOrdersUpdate:
       return processOrdersUpdate(msg.orders_update());
+   case BsServerMessage::kWhitelistAddressesResult:
+      return processWhitelistAddrs(msg.whitelist_addresses_result());
    default: break;
    }
    return true;
@@ -1905,6 +1916,21 @@ bool QtGuiAdapter::processReservedUTXOs(const WalletsMessage_ReservedUTXOs& resp
    }
    return QMetaObject::invokeMethod(mainWindow_, [this, response, utxos] {
       mainWindow_->onReservedUTXOs(response.id(), response.sub_id(), utxos);
+   });
+}
+
+bool QtGuiAdapter::processWhitelistAddrs(const BsServerMessage_WhitelistAddrs& response)
+{
+   std::map<bs::Address, AddressVerificationState> result;
+   for (const auto& addr : response.addresses()) {
+      try {
+         const auto& address = bs::Address::fromAddressString(addr.address());
+         result[address] = static_cast<AddressVerificationState>(addr.status());
+      }
+      catch (const std::exception&) {}
+   }
+   return QMetaObject::invokeMethod(mainWindow_, [this, result] {
+      mainWindow_->onAddrWhitelisted(result);
    });
 }
 

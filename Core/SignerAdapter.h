@@ -22,6 +22,7 @@ namespace spdlog {
 namespace BlockSettle {
    namespace Common {
       class SignerMessage;
+      class SignerMessage_AddressPubKey;
       class SignerMessage_AutoSign;
       class SignerMessage_DialogRequest;
       class SignerMessage_ExtendAddrChain;
@@ -96,6 +97,8 @@ private:
    bool processSignSettlementTx(const bs::message::Envelope&
       , const BlockSettle::Common::SignerMessage_SignSettlementTx&);
    bool processGetRootPubKey(const bs::message::Envelope &, const std::string &walletId);
+   bool processGetAddrPubKey(const bs::message::Envelope&
+      , const BlockSettle::Common::SignerMessage_AddressPubKey&);
    bool processDelHdRoot(const std::string &walletId);
    bool processDelHdLeaf(const std::string &walletId);
    bool processSignTx(const bs::message::Envelope&

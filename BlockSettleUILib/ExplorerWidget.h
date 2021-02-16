@@ -37,11 +37,6 @@ public:
     ExplorerWidget(QWidget *parent = nullptr);
     ~ExplorerWidget() override;
 
-   [[deprecated]] void init(const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<CCFileManager> &
-      , const std::shared_ptr<AuthAddressManager> &);
    void init(const std::shared_ptr<spdlog::logger>&);
    void shortcutActivated(ShortcutType s) override;
 
@@ -83,7 +78,6 @@ private:
    std::unique_ptr<Ui::ExplorerWidget> ui_;
    std::unique_ptr<QTimer>             expTimer_;
    std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<AuthAddressManager> authMgr_;
    std::vector<std::string>            searchHistory_;
    int                                 searchHistoryPosition_{-1};
 };

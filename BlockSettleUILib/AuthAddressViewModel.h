@@ -25,7 +25,6 @@ class AuthAddressViewModel : public QAbstractItemModel
 {
    Q_OBJECT
 public:
-   [[deprecated]] AuthAddressViewModel(const std::shared_ptr<AuthAddressManager>& authManager, QObject *parent = nullptr);
    AuthAddressViewModel(QObject* parent = nullptr);
    ~AuthAddressViewModel() noexcept override;
 
@@ -42,6 +41,7 @@ public:
    void onAuthAddresses(const std::vector<bs::Address>&
       , const std::map<bs::Address, AddressVerificationState>&);
    void onSubmittedAuthAddresses(const std::vector<bs::Address>&);
+   void onAddrWhitelisted(const std::map<bs::Address, AddressVerificationState>&);
 
    bool canSubmit(const bs::Address&) const;
    AddressVerificationState getState(const bs::Address&) const;

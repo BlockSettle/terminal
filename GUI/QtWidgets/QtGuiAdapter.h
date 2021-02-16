@@ -50,6 +50,7 @@ namespace BlockSettle {
       class BsServerMessage_LoginResult;
       class BsServerMessage_Orders;
       class BsServerMessage_StartLoginResult;
+      class BsServerMessage_WhitelistAddrs;
       class MatchingMessage_LoggedIn;
       class Quote;
       class QuoteCancelled;
@@ -149,6 +150,7 @@ private:
    bool sendPooledOrdersUpdate();
    bool processQuoteCancelled(const BlockSettle::Terminal::QuoteCancelled&);
    bool processReservedUTXOs(const BlockSettle::Common::WalletsMessage_ReservedUTXOs&);
+   bool processWhitelistAddrs(const BlockSettle::Terminal::BsServerMessage_WhitelistAddrs&);
 
 private slots:
    void onGetSettings(const std::vector<ApplicationSettings::Setting>&);
@@ -206,6 +208,7 @@ private slots:
    void onPullQuote(const std::string& settlementId, const std::string& reqId
       , const std::string& reqSessToken);
    void onNeedWalletDialog(bs::signer::ui::GeneralDialogType, const std::string& rootId);
+   void onNeedWhitelistAddr(const bs::Address&);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

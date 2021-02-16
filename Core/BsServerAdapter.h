@@ -87,6 +87,7 @@ private:
    void onBalanceLoaded() override;*/
    void onBalanceUpdated(const std::string& currency, double balance) override;
    void onTradingStatusChanged(bool tradingEnabled) override;
+   void onAddrWhitelisted(const std::map<bs::Address, AddressVerificationState>&) override;
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;

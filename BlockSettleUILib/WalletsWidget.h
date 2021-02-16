@@ -16,6 +16,8 @@
 #include <QWidget>
 #include <QItemSelection>
 #include "Address.h"
+#include "AuthAddress.h"
+#include "BsClient.h"
 #include "SignerDefs.h"
 #include "SignerUiDefs.h"
 #include "TabWithShortcut.h"
@@ -75,6 +77,8 @@ public:
    void ImportNewWallet();
    void ImportHwWallet();
 
+   void onMatchingLogout() { loggedIn_ = false; }
+
    void onNewBlock(unsigned int blockNum);
    void onHDWallet(const bs::sync::WalletInfo &);
    void onWalletDeleted(const bs::sync::WalletInfo&);
@@ -83,6 +87,7 @@ public:
    void onAddresses(const std::string& walletId, const std::vector<bs::sync::Address> &);
    void onAddressComments(const std::string &walletId
       , const std::map<bs::Address, std::string> &);
+   void onAddrWhitelisted(const std::map<bs::Address, AddressVerificationState>&);
    void onWalletBalance(const bs::sync::WalletBalanceData &);
    void onLedgerEntries(const std::string &filter, uint32_t totalPages
       , uint32_t curPage, uint32_t curBlock, const std::vector<bs::TXEntry> &);
@@ -117,6 +122,7 @@ signals:
    void needAddrComments(const std::string &walletId, const std::vector<bs::Address> &);
    void setAddrComment(const std::string &walletId, const bs::Address &
       , const std::string &comment);
+   void needWhitelistAddress(const bs::Address&);
    void needLedgerEntries(const std::string &filter);
    void needTXDetails(const std::vector<bs::sync::TXWallet> &, bool useCache
       , const bs::Address &);
@@ -134,6 +140,7 @@ private slots:
    void onCopyAddress();
    void onEditAddrComment();
    void onRevokeSettlement();
+   void onWhitelistAddr();
    void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result);
    //void onDeleteWallet();
    void onFilterSettingsChanged();
@@ -165,12 +172,13 @@ private:
    QAction  *  actCopyAddr_ = nullptr;
    QAction  *  actEditComment_ = nullptr;
    QAction  *  actRevokeSettl_ = nullptr;
+   QAction* actWhitelistAddr_ = nullptr;
    //QAction  *  actDeleteWallet_ = nullptr;
    bs::Address curAddress_;
    [[deprecated]] std::shared_ptr<bs::sync::Wallet>   curWallet_;
    std::set<bs::sync::WalletInfo>   wallets_;
-   std::unordered_map<std::string, bs::sync::HDWalletData>        walletDetails_;
-   std::unordered_map<std::string, bs::sync::WalletBalanceData>   walletBalances_;
+   std::map<std::string, bs::sync::HDWalletData>      walletDetails_;
+   std::map<std::string, bs::sync::WalletBalanceData> walletBalances_;
    std::string    curWalletId_;
    std::string    curComment_;
    unsigned int   revokeReqId_ = 0;
@@ -180,7 +188,9 @@ private:
    int prevSelectedAddressRow_{-1};
    QPoint walletsScrollPos_;
    QPoint addressesScrollPos_;
-   std::unordered_map<std::string, AddressDetailDialog *>   addrDetDialogs_;
+   std::map<std::string, AddressDetailDialog *>    addrDetDialogs_;
+   std::map<bs::Address, AddressVerificationState> whitelistedAddrs_;
+   bool  loggedIn_{ false };
 };
 
 #endif // __WALLETS_WIDGET_H__

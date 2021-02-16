@@ -44,24 +44,22 @@ class AuthAddressDialog : public QDialog
 Q_OBJECT
 
 public:
-   [[deprecated]] AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<AuthAddressManager>& authAddressManager
-      , const std::shared_ptr<AssetManager> &
-      , const std::shared_ptr<ApplicationSettings> &, QWidget* parent = nullptr);
    AuthAddressDialog(const std::shared_ptr<spdlog::logger>&, QWidget* parent = nullptr);
    ~AuthAddressDialog() override;
 
    void setAddressToVerify(const QString &addr);
-   void setBsClient(const std::weak_ptr<BsClient>& bsClient);
 
    void onAuthAddresses(const std::vector<bs::Address>&
       , const std::map<bs::Address, AddressVerificationState>&);
+   void onAddrWhitelisted(const std::map<bs::Address, AddressVerificationState>&);
    void onSubmittedAuthAddresses(const std::vector<bs::Address>&);
 
 signals:
    void askForConfirmation(const QString &address, double txAmount);
    void needNewAuthAddress();
    void needSubmitAuthAddress(const bs::Address&);
+   void setDefaultAuthAddress(const bs::Address&);
+   void needWhitelistAddress(const bs::Address&);
    void putSetting(ApplicationSettings::Setting, const QVariant&);
 
 private slots:
@@ -101,13 +99,9 @@ private:
 private:
    std::unique_ptr<Ui::AuthAddressDialog> ui_;
    std::shared_ptr<spdlog::logger>        logger_;
-   std::shared_ptr<AuthAddressManager>    authAddressManager_;
-   std::shared_ptr<AssetManager>          assetManager_;
-   std::shared_ptr<ApplicationSettings>   settings_;
    AuthAddressViewModel* authModel_{ nullptr };
    QPointer<AuthAdressControlProxyModel>  model_;
    bs::Address                            defaultAddr_;
-   std::weak_ptr<BsClient>                bsClient_;
    ValidityFlag                           validityFlag_;
 
    bs::Address                            lastSubmittedAddress_{};

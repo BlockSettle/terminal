@@ -42,10 +42,6 @@ public:
    explicit AddressDetailsWidget(QWidget *parent = nullptr);
    ~AddressDetailsWidget() override;
 
-   [[deprecated]] void init(const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<spdlog::logger> &inLogger
-      , const std::shared_ptr<bs::sync::CCDataResolver> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &);
    void init(const std::shared_ptr<spdlog::logger>& inLogger);
 
    void setQueryAddr(const bs::Address& inAddrVal);
@@ -78,16 +74,10 @@ signals:
 
 private slots:
    void onTxClicked(QTreeWidgetItem *item, int column);
-   void OnRefresh(std::vector<BinaryData> ids, bool online);   //deprecated
    void updateFields();
 
 private:
    void setConfirmationColor(QTreeWidgetItem *item);
-   [[deprecated]] void getTxData(const std::shared_ptr<AsyncClient::LedgerDelegate> &);
-   [[deprecated]] void refresh(const std::shared_ptr<bs::sync::PlainWallet> &);
-   [[deprecated]] void loadTransactions();
-   [[deprecated]] void searchForCC();
-   [[deprecated]] void searchForAuth();
 
 private:
    // NB: Right now, the code is slightly inefficient. There are two maps with
@@ -120,38 +110,14 @@ private:
    std::string    currentAddrStr_;
    std::int64_t totalSpent_{};
    std::int64_t totalReceived_{};
-   std::unordered_map<std::string, std::shared_ptr<bs::sync::PlainWallet>> dummyWallets_;
-   AsyncClient::TxBatchResult txMap_; // A wallet's Tx hash / Tx map.
    std::map<BinaryData, bs::TXEntry> txEntryHashSet_; // A wallet's Tx hash / Tx entry map.
 
-   std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<bs::sync::CCDataResolver> ccResolver_;
-   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    CcData ccFound_;
-   std::shared_ptr<AddressVerificator> addrVerify_;
    std::map<bs::Address, AddressVerificationState> authAddrStates_;
    std::unordered_set<std::string>     bsAuthAddrs_;
    bool isAuthAddr_{false};
    uint32_t topBlock_{ 0 };
-
-   std::mutex mutex_;
-
-   class AddrDetailsACT : public ArmoryCallbackTarget
-   {
-   public:
-      AddrDetailsACT(AddressDetailsWidget *parent)
-         : parent_(parent) {}
-      ~AddrDetailsACT() override { cleanup(); }
-      void onRefresh(const std::vector<BinaryData> &ids, bool online) override {
-         QMetaObject::invokeMethod(parent_, [this, ids, online] {
-            parent_->OnRefresh(ids, online);
-         });
-      }
-   private:
-      AddressDetailsWidget *parent_;
-   };
-   std::unique_ptr<AddrDetailsACT>  act_;
 };
 
 #endif // ADDRESSDETAILSWIDGET_H

@@ -159,7 +159,7 @@ void AddressListModel::updateWallet(const bs::sync::WalletInfo &wallet)
    if (wallet.type == bs::core::wallet::Type::Authentication) {
       const auto addr = bs::Address();
       auto row = createRow(addr, wallet);
-      row.walletId = QString::fromStdString(*wallet.ids.cbegin());
+      row.walletId = *wallet.ids.cbegin();
       beginInsertRows(QModelIndex(), addressRows_.size(), addressRows_.size());
       addressRows_.emplace_back(std::move(row));
       endInsertRows();
@@ -234,7 +234,7 @@ void AddressListModel::onAddresses(const std::string &
       auto row = createRow(addr.address, *itWallet);
       row.index = QString::fromStdString(addr.index);
       row.addrIndex = addressRows_.size();
-      row.walletId = QString::fromStdString(addr.walletId);
+      row.walletId = addr.walletId;
       if (mainWalletId.empty()) {
          mainWalletId = *(*itWallet).ids.cbegin();
       }
@@ -548,7 +548,7 @@ QVariant AddressListModel::data(const QModelIndex& index, int role) const
          return dataForRow(row, index.column());
 
       case WalletIdRole:
-         return row.walletId;
+         return QString::fromStdString(row.walletId);
 
       case AddrIndexRole:
          return static_cast<unsigned int>(row.addrIndex);
@@ -568,7 +568,7 @@ QVariant AddressListModel::data(const QModelIndex& index, int role) const
       case WalletTypeRole:
          for (const auto &wallet : wallets_) {
             for (const auto &id : wallet.ids) {
-               if (id == row.walletId.toStdString()) {
+               if (id == row.walletId) {
                   return static_cast<int>(wallet.type);
                }
             }

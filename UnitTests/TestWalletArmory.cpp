@@ -1111,7 +1111,7 @@ TEST_F(TestWalletWithArmory, SignSettlement)
    //set a settlemend id
    auto promSettlId = std::make_shared<std::promise<bool>>();
    auto futSettlId = promSettlId->get_future();
-   const auto &cbSettlId = [promSettlId](bool result) {
+   const auto &cbSettlId = [promSettlId](bool result, const SecureBinaryData&) {
       promSettlId->set_value(result);
    };
    syncLeafPtr->setSettlementID(settlementIDs[0], cbSettlId);

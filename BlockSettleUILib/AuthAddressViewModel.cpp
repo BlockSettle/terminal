@@ -14,15 +14,6 @@
 #include "EncryptionUtils.h"
 
 
-AuthAddressViewModel::AuthAddressViewModel(const std::shared_ptr<AuthAddressManager>& authManager, QObject *parent)
-   : QAbstractItemModel(parent)
-   , authManager_(authManager)
-   , defaultAddr_(authManager->getDefault())
-{
-   connect(authManager_.get(), &AuthAddressManager::AddressListUpdated, this, &AuthAddressViewModel::onAddressListUpdated, Qt::QueuedConnection);
-   connect(authManager_.get(), &AuthAddressManager::AuthWalletChanged, this, &AuthAddressViewModel::onAddressListUpdated, Qt::QueuedConnection);
-}
-
 AuthAddressViewModel::AuthAddressViewModel(QObject* parent)
    : QAbstractItemModel(parent)
 {}
@@ -51,51 +42,30 @@ QVariant AuthAddressViewModel::data(const QModelIndex &index, int role) const
       switch(static_cast<AuthAddressViewColumns>(index.column())) {
       case AuthAddressViewColumns::ColumnName:
          return QString::fromStdString(address.display());
-      case AuthAddressViewColumns::ColumnState:
-         if (authManager_) {
-            switch (authManager_->GetState(address)) {
-            case AuthAddressManager::AuthAddressState::Unknown:
-               return tr("Loading state...");
-            case AuthAddressManager::AuthAddressState::NotSubmitted:
-               return tr("Not Submitted");
-            case AuthAddressManager::AuthAddressState::Submitted:
+      case AuthAddressViewColumns::ColumnState: {
+         const auto& itState = states_.find(address);
+         if (itState == states_.end()) {
+            return tr("Loading state...");
+         }
+         switch (itState->second) {
+         case AddressVerificationState::Verified:
+            return tr("Verified");
+         case AddressVerificationState::Revoked:
+            return tr("Revoked");
+         case AddressVerificationState::Virgin:
+            if (submittedAddresses_.find(address) != submittedAddresses_.end()) {
                return tr("Submitted");
-            case AuthAddressManager::AuthAddressState::Tainted:
-               return tr("Not Submitted");
-            case AuthAddressManager::AuthAddressState::Verifying:
-               return tr("Verification pending");
-            case AuthAddressManager::AuthAddressState::Verified:
-               return tr("Verified");
-            case AuthAddressManager::AuthAddressState::Revoked:
-               return tr("Revoked");
-            case AuthAddressManager::AuthAddressState::RevokedByBS:
-               return tr("Invalidated by BS");
-            case AuthAddressManager::AuthAddressState::Invalid:
-               return tr("State loading failed");
+            } else {
+               return tr("Not submitted");
             }
+         case AddressVerificationState::Verifying:
+            return tr("Verifying");
+         case AddressVerificationState::Whitelisted:
+            return tr("Whitelisted");
+         default: return tr("Unknown %1").arg((int)itState->second);
          }
-         else {
-            const auto& itState = states_.find(address);
-            if (itState == states_.end()) {
-               return tr("Loading state...");
-            }
-            switch (itState->second) {
-            case AddressVerificationState::Verified:
-               return tr("Verified");
-            case AddressVerificationState::Revoked:
-               return tr("Revoked");
-            case AddressVerificationState::Virgin:
-               if (submittedAddresses_.find(address) != submittedAddresses_.end()) {
-                  return tr("Submitted");
-               }
-               else {
-                  return tr("Not submitted");
-               }
-            case AddressVerificationState::Verifying:
-               return tr("Verifying");
-            default: return tr("Unknown %1").arg((int)itState->second);
-            }
-         }
+         break;
+      }
       default:
          return {};
       }
@@ -185,11 +155,13 @@ void AuthAddressViewModel::setDefaultAddr(const bs::Address &addr)
 void AuthAddressViewModel::onAuthAddresses(const std::vector<bs::Address>&addrs
    , const std::map<bs::Address, AddressVerificationState>& states)
 {
-   if (!addrs.empty()) {
-      beginResetModel();
-      addresses_ = addrs;
-      endResetModel();
+   if (addrs.empty()) {
+      return;
    }
+   beginInsertRows({}, addresses_.size(), addresses_.size() + addrs.size() - 1);
+   addresses_.insert(addresses_.cend(), addrs.cbegin(), addrs.cend());
+   endInsertRows();
+
    if (!states.empty()) {
       for (const auto& state : states) {
          states_[state.first] = state.second;
@@ -201,6 +173,19 @@ void AuthAddressViewModel::onAuthAddresses(const std::vector<bs::Address>&addrs
 void AuthAddressViewModel::onSubmittedAuthAddresses(const std::vector<bs::Address>& addrs)
 {
    submittedAddresses_.insert(addrs.cbegin(), addrs.cend());
+}
+
+void AuthAddressViewModel::onAddrWhitelisted(const std::map<bs::Address, AddressVerificationState>& addrs)
+{
+   if (addrs.empty()) {
+      return;
+   }
+   beginInsertRows({}, addresses_.size(), addresses_.size() + addrs.size() - 1);
+   for (const auto& addr : addrs) {
+      addresses_.push_back(addr.first);
+      states_[addr.first] = addr.second;
+   }
+   endInsertRows();
 }
 
 bool AuthAddressViewModel::canSubmit(const bs::Address& addr) const

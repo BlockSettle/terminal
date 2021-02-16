@@ -296,9 +296,11 @@ public:
    WalletGroupNode(WalletsViewModel *vm, const bs::sync::WalletInfo &hdWallet
       , const std::string &name, const std::string &desc, WalletNode::Type type
       , int row, WalletNode *parent)
-      : WalletRootNode(vm, hdWallet, name, desc, type, row, parent) {}
+      : WalletRootNode(vm, hdWallet, name, desc, type, row, parent)
+   {}
 
-   void setState(State state) override {
+   void setState(State state) override
+   {
       for (auto child : children_) {
          child->setState(state);
       }
@@ -306,7 +308,8 @@ public:
 
    std::vector<bs::sync::WalletInfo> wallets() const override { return wallets_; }
 
-   void addLeaf(const bs::sync::WalletInfo &leaf, const std::shared_ptr<bs::sync::hd::Leaf> &wallet) {
+   void addLeaf(const bs::sync::WalletInfo &leaf, const std::shared_ptr<bs::sync::hd::Leaf> &wallet)
+   {
       if (viewModel_->showRegularWallets() && (leaf.type != bs::core::wallet::Type::Bitcoin
          || leaf.purpose == bs::hd::Purpose::NonSegWit)) {
          return;
@@ -318,7 +321,8 @@ public:
       wallets_.push_back(leaf);
    }
 
-   void addLeaf(const bs::sync::HDWalletData::Leaf &leaf, bs::core::wallet::Type type) {
+   void addLeaf(const bs::sync::HDWalletData::Leaf &leaf, bs::core::wallet::Type type)
+   {
       if (viewModel_->showRegularWallets() && (type != bs::core::wallet::Type::Bitcoin
          || leaf.path.get(-2) == bs::hd::Purpose::NonSegWit)) {
          return;
@@ -329,6 +333,7 @@ public:
       wi.name = leaf.name;
       wi.description = leaf.description;
       wi.purpose = static_cast<bs::hd::Purpose>(leaf.path.get(-2));
+      wi.type = type;
       const auto leafNode = new WalletLeafNode(viewModel_, wi, hdWallet_, nbChildren(), this);
       add(leafNode);
       wallets_.push_back(wi);

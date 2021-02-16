@@ -163,6 +163,9 @@ WalletsWidget::WalletsWidget(QWidget* parent)
    actRevokeSettl_ = new QAction(tr("&Revoke Settlement"));
    connect(actRevokeSettl_, &QAction::triggered, this, &WalletsWidget::onRevokeSettlement);
 
+   actWhitelistAddr_ = new QAction(tr("&White list as auth"));
+   connect(actWhitelistAddr_, &QAction::triggered, this, &WalletsWidget::onWhitelistAddr);
+
 //   actDeleteWallet_ = new QAction(tr("&Delete Permanently"));
 //   connect(actDeleteWallet_, &QAction::triggered, this, &WalletsWidget::onDeleteWallet);
 
@@ -203,6 +206,7 @@ void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger)
 
 void WalletsWidget::setUsername(const QString& username)
 {
+   loggedIn_ = true;
    username_ = username;
 }
 
@@ -438,6 +442,13 @@ void WalletsWidget::onAddressComments(const std::string &walletId
    addressModel_->onAddressComments(walletId, comments);
 }
 
+void WalletsWidget::onAddrWhitelisted(const std::map<bs::Address, AddressVerificationState>& addrs)
+{
+   for (const auto& addr : addrs) {
+      whitelistedAddrs_[addr.first] = addr.second; // merge instead of replace
+   }
+}
+
 void WalletsWidget::onWalletBalance(const bs::sync::WalletBalanceData &wbd)
 {
    walletBalances_[wbd.id] = wbd;
@@ -533,40 +544,13 @@ void WalletsWidget::onAddressContextMenu(const QPoint &p)
    const auto index = addressSortFilterModel_->mapToSource(ui_->treeViewAddresses->indexAt(p));
    const auto addressIndex = addressModel_->index(index.row(), static_cast<int>(AddressListModel::ColumnAddress));
    try {
-      curAddress_ = bs::Address::fromAddressString(addressModel_->data(addressIndex, AddressListModel::Role::AddressRole).toString().toStdString());
+      curAddress_ = bs::Address::fromAddressString(addressModel_->data(addressIndex
+         , AddressListModel::Role::AddressRole).toString().toStdString());
    }
    catch (const std::exception &) {
+      logger_->error("[{}] invalid address {}", __func__, addressModel_->data(addressIndex
+         , AddressListModel::Role::AddressRole).toString().toStdString());
       curAddress_.clear();
-      return;
-   }
-   if (walletsManager_) {
-      curWallet_ = walletsManager_->getWalletByAddress(curAddress_);
-
-      if (!curWallet_) {
-         logger_->warn("Failed to find wallet for address {}", curAddress_.display());
-         return;
-      }
-      auto contextMenu = new QMenu(this);
-
-      if ((curWallet_->type() == bs::core::wallet::Type::Bitcoin) || (getSelectedWallets().size() == 1)) {
-         contextMenu->addAction(actCopyAddr_);
-      }
-      contextMenu->addAction(actEditComment_);
-
-      const auto &cbAddrBalance = [this, p, contextMenu](std::vector<uint64_t> balances)
-      {
-         if (/*(curWallet_ == walletsManager_->getSettlementWallet()) &&*/ walletsManager_->getAuthWallet()
-            /*&& (curWallet_->getAddrTxN(curAddress_) == 1)*/ && balances[0]) {
-            contextMenu->addAction(actRevokeSettl_);
-         }
-         emit showContextMenu(contextMenu, ui_->treeViewAddresses->mapToGlobal(p));
-      };
-
-      auto balanceVec = curWallet_->getAddrBalance(curAddress_);
-      if (balanceVec.size() == 0)
-         emit showContextMenu(contextMenu, ui_->treeViewAddresses->mapToGlobal(p));
-      else
-         cbAddrBalance(balanceVec);
       return;
    }
 
@@ -576,13 +560,19 @@ void WalletsWidget::onAddressContextMenu(const QPoint &p)
       return;
    }
    curComment_ = addressModel_->data(addressIndex, AddressListModel::Role::AddressCommentRole).toString().toStdString();
+   const bool isXbtWallet = (static_cast<bs::core::wallet::Type>(addressModel_->data(addressIndex
+      , AddressListModel::Role::WalletTypeRole).toInt()) == bs::core::wallet::Type::Bitcoin);
+
    auto contextMenu = new QMenu(this);
 
-   if ((static_cast<bs::core::wallet::Type>(addressModel_->data(addressIndex, AddressListModel::Role::WalletTypeRole).toInt())
-      == bs::core::wallet::Type::Bitcoin) || (getSelectedWallets().size() == 1)) {
+   if (isXbtWallet || (getSelectedWallets().size() == 1)) {
       contextMenu->addAction(actCopyAddr_);
    }
    contextMenu->addAction(actEditComment_);
+
+   if (isXbtWallet && loggedIn_ && (whitelistedAddrs_.find(curAddress_) == whitelistedAddrs_.end())) {
+      contextMenu->addAction(actWhitelistAddr_);
+   }
 
    const auto &cbAddrBalance = [this, p, contextMenu](std::vector<uint64_t> balances)
    {
@@ -921,6 +911,11 @@ void WalletsWidget::onEditAddrComment()
 void WalletsWidget::onRevokeSettlement()
 {
    BSMessageBox(BSMessageBox::info, tr("Settlement Revoke"), tr("Doesn't work currently"), this).exec();
+}
+
+void WalletsWidget::onWhitelistAddr()
+{
+   emit needWhitelistAddress(curAddress_);
 }
 
 void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result)

@@ -30,32 +30,18 @@ class QPushButton;
 class QLineEdit;
 QT_END_NAMESPACE
 
+namespace bs {
+   struct TradeSettings;
+}
 namespace spdlog {
    class logger;
 }
 namespace Ui {
     class RFQTicketXBT;
 }
-namespace bs {
-   namespace sync {
-      namespace hd {
-         class Leaf;
-         class Wallet;
-      }
-      class Wallet;
-      class WalletsManager;
-   }
-   struct TradeSettings;
-   class UTXOReservationManager;
-}
-class ArmoryConnection;
-class AssetManager;
-class AuthAddressManager;
 class CCAmountValidator;
 class FXAmountValidator;
-class QuoteProvider;
 class SelectedTransactionInputs;
-class SignContainer;
 class XbtAmountValidator;
 
 
@@ -90,7 +76,6 @@ public:
    using CancelRFQCb = std::function<void(const std::string &id)>;
    void setCancelRFQ(CancelRFQCb);
 
-   std::shared_ptr<bs::sync::hd::Wallet> xbtWallet() const;
    UiUtils::WalletsTypes xbtWalletType() const;
 
    void onParentAboutToHide();
@@ -132,8 +117,6 @@ public slots:
 
 private slots:
    void updateBalances();
-   void onSignerReady();   //deprecated
-   void walletsLoaded();   //deprecated
 
    void onNumCcySelected();
    void onDenomCcySelected();
@@ -157,7 +140,6 @@ private slots:
    void onCreateWalletClicked();
 
    void onAuthAddrChanged(int);
-   void onSettlLeavesLoaded(unsigned int);   //deprecated
 
    void onUTXOReservationChanged(const std::string& walletId);
 
@@ -193,7 +175,6 @@ private:
 
    BalanceInfoContainer getBalanceInfo() const;
    QString getProduct() const;
-   [[deprecated]] std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc) const;
    bool checkBalance(double qty) const;
    bool checkAuthAddr() const;
    bs::network::Side::Type getSelectedSide() const;
@@ -224,8 +205,6 @@ private:
 
    void productSelectionChanged();
 
-   [[deprecated]] std::shared_ptr<bs::sync::hd::Wallet> getSendXbtWallet() const;
-   [[deprecated]] std::shared_ptr<bs::sync::hd::Wallet> getRecvXbtWallet() const;
    std::string getXbtLeafId(const std::string& hdWalletId) const;
    bool hasSendXbtWallet() const;
    bool hasRecvXbtWallet() const;
@@ -233,7 +212,7 @@ private:
    bs::XBTAmount getXbtBalance() const;
    QString getProductToSpend() const;
    QString getProductToRecv() const;
-   bs::XBTAmount expectedXbtAmountMin() const;
+   //bs::XBTAmount expectedXbtAmountMin() const;
    bs::XBTAmount getXbtReservationAmountForCc(double quantity, double offerPrice) const;
 
    void reserveBestUtxoSetAndSubmit(const std::string &id
@@ -245,13 +224,6 @@ private:
    std::unique_ptr<Ui::RFQTicketXBT> ui_;
 
    std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<AssetManager>       assetManager_;
-   std::shared_ptr<AuthAddressManager> authAddressManager_;
-
-   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<SignContainer>      signingContainer_;
-   std::shared_ptr<ArmoryConnection>   armory_;
-   std::shared_ptr<bs::UTXOReservationManager>  utxoReservationManager_;
 
    mutable bs::Address authAddr_;
    mutable std::string authKey_;
@@ -291,6 +263,7 @@ private:
    std::unordered_map<std::string, double>   balances_;
    std::vector<bs::sync::HDWalletData>       wallets_;
    std::shared_ptr<bs::TradeSettings>        tradeSettings_;
+   std::set<bs::Address>   authAddrs_;
 };
 
 #endif // __RFQ_TICKET_XBT_H__

@@ -14,6 +14,7 @@
 #include <QWidget>
 #include <QTimer>
 #include <memory>
+#include "AuthAddress.h"
 #include "Celer/BaseCelerClient.h"
 #include "CommonTypes.h"
 #include "MarketDataWidget.h"
@@ -86,6 +87,7 @@ public:
       , const std::string& userId);
    void onMatchingLogout();
    void onVerifiedAuthAddresses(const std::vector<bs::Address>&);
+   void onAddrWhitelisted(const std::map<bs::Address, AddressVerificationState>&);
    void onAuthKey(const bs::Address&, const BinaryData& authKey);
    void onTradeSettings(const std::shared_ptr<bs::TradeSettings>&);
 

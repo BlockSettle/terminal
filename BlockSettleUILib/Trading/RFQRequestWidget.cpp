@@ -217,6 +217,16 @@ void RFQRequestWidget::onVerifiedAuthAddresses(const std::vector<bs::Address>& a
    forceCheckCondition();
 }
 
+void RFQRequestWidget::onAddrWhitelisted(const std::map<bs::Address, AddressVerificationState>& addrs)
+{
+   std::vector<bs::Address> authAddrs;
+   for (const auto& addr : addrs) {
+      authAddrs.push_back(addr.first);
+   }
+   ui_->pageRFQTicket->onVerifiedAuthAddresses(authAddrs);
+   forceCheckCondition();
+}
+
 void RFQRequestWidget::onAuthKey(const bs::Address& addr, const BinaryData& authKey)
 {
    ui_->pageRFQTicket->onAuthKey(addr, authKey);
@@ -362,29 +372,12 @@ void RFQRequestWidget::onRFQSubmit(const std::string &id, const bs::network::RFQ
    auto fixedXbtInputs = ui_->pageRFQTicket->fixedXbtInputs();
    bs::hd::Purpose purpose = bs::hd::Purpose::Unknown;
 
-   if (walletsManager_) {
-      auto xbtWallet = ui_->pageRFQTicket->xbtWallet();
-
-      if (xbtWallet && !xbtWallet->canMixLeaves()) {
-         auto walletType = ui_->pageRFQTicket->xbtWalletType();
-         purpose = UiUtils::getHwWalletPurpose(walletType);
-      }
-
-      dialog = new RFQDialog(logger_, id, rfq, quoteProvider_
-         , authAddressManager_, assetManager_, walletsManager_, signingContainer_
-         , armory_, celerClient_, appSettings_, rfqStorage_, xbtWallet
-         , ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, utxoReservationManager_
-         , fixedXbtInputs.inputs, std::move(fixedXbtInputs.utxoRes)
-         , std::move(ccUtxoRes), purpose, this);
-   }
-   else {
-      std::string xbtWalletId;
-      dialog = new RFQDialog(logger_, id, rfq, xbtWalletId
-         , ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, purpose, this);
-      const std::string reserveId = (rfq.assetType == bs::network::Asset::SpotFX) ?
-         "" : rfq.requestId;
-      emit needSubmitRFQ(rfq, reserveId);
-   }
+   std::string xbtWalletId;
+   dialog = new RFQDialog(logger_, id, rfq, xbtWalletId
+      , ui_->pageRFQTicket->recvXbtAddressIfSet(), authAddr, purpose, this);
+   const std::string reserveId = (rfq.assetType == bs::network::Asset::SpotFX) ?
+      "" : rfq.requestId;
+   emit needSubmitRFQ(rfq, reserveId);
 
    connect(this, &RFQRequestWidget::unsignedPayinRequested, dialog, &RFQDialog::onUnsignedPayinRequested);
    connect(this, &RFQRequestWidget::signedPayoutRequested, dialog, &RFQDialog::onSignedPayoutRequested);

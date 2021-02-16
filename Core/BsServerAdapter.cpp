@@ -120,6 +120,9 @@ bool BsServerAdapter::processOwnRequest(const Envelope &env)
       return processOutSignedPayin(msg.send_signed_payin());
    case BsServerMessage::kSendSignedPayout:
       return processOutSignedPayout(msg.send_signed_payout());
+   case BsServerMessage::kWhitelistAddress:
+      bsClient_->whitelistAddress(msg.whitelist_address());
+      break;
    default:    break;
    }
    return true;
@@ -510,6 +513,19 @@ void BsServerAdapter::onTradingStatusChanged(bool tradingEnabled)
 {
    BsServerMessage msg;
    msg.set_trading_enabled(tradingEnabled);
+   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   pushFill(env);
+}
+
+void BsServerAdapter::onAddrWhitelisted(const std::map<bs::Address, AddressVerificationState>& addrs)
+{
+   BsServerMessage msg;
+   auto msgResp = msg.mutable_whitelist_addresses_result();
+   for (const auto& addr : addrs) {
+      auto msgAddr = msgResp->add_addresses();
+      msgAddr->set_address(addr.first.display());
+      msgAddr->set_status((int)addr.second);
+   }
    Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
    pushFill(env);
 }
