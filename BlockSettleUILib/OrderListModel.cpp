@@ -584,12 +584,12 @@ std::pair<OrderListModel::Group*, int> OrderListModel::findItem(const bs::networ
 }
 
 void OrderListModel::removeRowIfContainerChanged(const bs::network::Order &order,
-   int &oldOrderRow)
+   int &oldOrderRow, bool force)
 {
    // Remove row if container (settled/unsettled) changed.
    auto git = groups_.find(order.exchOrderId.toStdString());
 
-   if (git != groups_.end() && git->second != getStatusGroup(order) && oldOrderRow >= 0) {
+   if (git != groups_.end() && (git->second != getStatusGroup(order) || force) && oldOrderRow >= 0) {
       StatusGroup *tmpsg = (git->second == StatusGroup::UnSettled ? unsettled_.get() :
          settled_.get());
 
@@ -727,7 +727,7 @@ void OrderListModel::processUpdateOrder(const Blocksettle::Communication::ProxyT
       }
       case bs::types::ACTION_REMOVED: {
          auto found = findItem(order);
-         removeRowIfContainerChanged(order, found.second);
+         removeRowIfContainerChanged(order, found.second, true);
          break;
       }
       default:
@@ -772,10 +772,7 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
    Group *groupItem = nullptr;
    Market *marketItem = nullptr;
 
-   // NOTE: because of batch orders update removeRowIfContainerChanged do nothing.
-   // Once batch update removed, that method should also be changed in order to display
-   // futures trades properly. ( Mostly futures group, since it display accumulated value )
-   removeRowIfContainerChanged(order, found.second);
+   removeRowIfContainerChanged(order, found.second, false);
 
    findMarketAndGroup(order, marketItem, groupItem);
 
