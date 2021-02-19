@@ -137,7 +137,7 @@ static void FieldsToMap(bs::network::Asset::Type at, const bs::network::MDFields
          map[MarketDataModel::MarketDataColumns::DailyVol] = { getVolumeString(field.value, at), field.value };
          break;
       case bs::network::MDField::Reject:
-         map[MarketDataModel::MarketDataColumns::ColumnsCount] = { field.desc, 0 };
+         map[MarketDataModel::MarketDataColumns::ColumnsCount] = { field.levelQuantity, 0 };
          break;
       default:  break;
       }

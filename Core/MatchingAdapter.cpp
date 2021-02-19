@@ -664,8 +664,8 @@ bool MatchingAdapter::onQuoteReqNotification(const std::string& data)
    qrn.quantity = legGroup.qty();
    qrn.product = respgrp.currency();
    qrn.party = respgrp.partyid();
-   qrn.reason = response.reason();
-   qrn.account = response.account();
+   //qrn.reason = response.reason();
+   //qrn.account = response.account();
    qrn.expirationTime = response.expiretimeinutcinmillis();
    qrn.timestamp = response.timestampinutcinmillis();
    qrn.timeSkewMs = QDateTime::fromMSecsSinceEpoch(qrn.timestamp).msecsTo(QDateTime::currentDateTime());
