@@ -252,6 +252,7 @@ void CreateTransactionDialog::onWalletsList(const std::string &id, const std::ve
       }
    }
    comboBox->setCurrentIndex(selected);
+   selectedWalletChanged(selected);
 }
 
 void CreateTransactionDialog::onFeeLevels(const std::map<unsigned int, float>& feeLevels)
@@ -403,7 +404,7 @@ void CreateTransactionDialog::onUTXOs(const std::string& id
    if (id != "CreateTX") {
       return;
    }
-   logger_->debug("[{}] {}", __func__, walletId);
+   //logger_->debug("[{}] {}", __func__, walletId);
    transactionData_->setUTXOs({ walletId }, topBlock_, utxos);
 }
 

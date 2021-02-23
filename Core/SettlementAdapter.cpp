@@ -14,6 +14,7 @@
 #include "CurrencyPair.h"
 #include "MessageUtils.h"
 #include "ProtobufHeadlessUtils.h"
+#include "SignContainer.h"
 #include "TerminalMessage.h"
 #include "UiUtils.h" // only for actualXbtPrice() and displayPriceXBT()
 
@@ -114,6 +115,8 @@ bool SettlementAdapter::process(const bs::message::Envelope &env)
       switch (msg.data_case()) {
       case WalletsMessage::kXbtTxResponse:
          return processXbtTx(env.id, msg.xbt_tx_response());
+      case WalletsMessage::kWalletAddresses:
+         return processNewAddr(env.id, msg.wallet_addresses());
       default: break;
       }
       if (!env.receiver || env.receiver->isBroadcast()) {
@@ -534,17 +537,40 @@ bool SettlementAdapter::processSendRFQ(const bs::message::Envelope& env
    const auto& rfq = fromMsg(request.rfq());
    const auto &settlement = std::make_shared<Settlement>(Settlement{ env
       , false, rfq, request.reserve_id() });
+   const auto& proceedSendRFQ = [this, settlement, request, rfq](const bs::Address& recvAddr)
+   {
+      settlement->recvAddress = recvAddr;
+      settlByRfqId_[rfq.requestId] = settlement;
+
+      MatchingMessage msg;
+      auto msgReq = msg.mutable_send_rfq();
+      *msgReq = request.rfq();
+      if (request.rfq().receipt_address().empty() && !recvAddr.empty()) {
+         msgReq->set_receipt_address(recvAddr.display());
+      }
+      Envelope envReq{ 0, user_, userMtch_, {}, {}, msg.SerializeAsString(), true };
+      pushFill(envReq);
+   };
+
    if ((rfq.assetType != bs::network::Asset::SpotFX) &&
       (rfq.side == bs::network::Side::Buy)) {
-      settlement->recvAddress = bs::Address::fromAddressString(rfq.receiptAddress);
+      if (rfq.receiptAddress.empty()) {
+         WalletsMessage msg;
+         msg.set_create_ext_address("");
+         auto envReq = Envelope{ 0, user_, userWallets_, {}, {}
+            , msg.SerializeAsString(), true };
+         if (pushFill(envReq)) {
+            addrRequests_[envReq.id] = proceedSendRFQ;
+         }
+      }
+      else {
+         proceedSendRFQ(bs::Address::fromAddressString(rfq.receiptAddress));
+      }
    }
-   settlByRfqId_[rfq.requestId] = settlement;
-
-   MatchingMessage msg;
-   auto msgReq = msg.mutable_send_rfq();
-   *msgReq = request.rfq();
-   Envelope envReq{ 0, user_, userMtch_, {}, {}, msg.SerializeAsString(), true };
-   return pushFill(envReq);
+   else {
+      proceedSendRFQ({});
+   }
+   return true;
 }
 
 bool SettlementAdapter::processSubmitQuote(const bs::message::Envelope& env
@@ -686,14 +712,21 @@ bool SettlementAdapter::processXbtTx(uint64_t msgId, const WalletsMessage_XbtTxR
          } catch (const std::exception&) {
             logger_->error("[{}] invalid settlement address", __func__);
          }
-         auto dlgData = getPayoutDialogData(QDateTime::currentDateTime(), *itSettl->second);
          SignerMessage msg;
-         auto msgReq = msg.mutable_sign_settlement_tx();
-         msgReq->set_settlement_id(itPayout->second.toBinStr());
-         *msgReq->mutable_tx_request() = response.tx_request();
-         *msgReq->mutable_details() = dlgData.toProtobufMessage();
-         msgReq->set_contra_auth_pubkey(itSettl->second->counterKey.toBinStr());
-         msgReq->set_own_key_first(true);
+         if (itSettl->second->dealer) {
+            auto dlgData = getPayoutDialogData(QDateTime::currentDateTime(), *itSettl->second);
+            auto msgReq = msg.mutable_sign_settlement_tx();
+            msgReq->set_settlement_id(itPayout->second.toBinStr());
+            *msgReq->mutable_tx_request() = response.tx_request();
+            *msgReq->mutable_details() = dlgData.toProtobufMessage();
+            msgReq->set_contra_auth_pubkey(itSettl->second->counterKey.toBinStr());
+            msgReq->set_own_key_first(true);
+         }
+         else {
+            auto msgReq = msg.mutable_sign_tx_request();
+            msgReq->set_sign_mode((int)SignContainer::TXSignMode::Full);
+            *msgReq->mutable_tx_request() = response.tx_request();
+         }
          Envelope env{ 0, user_, userSigner_, {}, {}, msg.SerializeAsString(), true };
          if (pushFill(env)) {
             payoutRequests_[env.id] = itPayout->second;
@@ -707,6 +740,27 @@ bool SettlementAdapter::processXbtTx(uint64_t msgId, const WalletsMessage_XbtTxR
       return true;
    }
    logger_->error("[{}] unknown XBT TX response #{}", __func__, msgId);
+   return true;
+}
+
+bool SettlementAdapter::processNewAddr(uint64_t msgId, const WalletsMessage_WalletAddresses& response)
+{
+   const auto& itReq = addrRequests_.find(msgId);
+   if (itReq == addrRequests_.end()) {
+      return true;
+   }
+   const auto& addrData = response.addresses().rbegin();
+   bs::Address address;
+   try {
+      address = bs::Address::fromAddressString(addrData->address());
+   }
+   catch (const std::exception&) {
+      logger_->error("[{}] invalid address {}", __func__, addrData->address());
+      addrRequests_.erase(itReq);
+      return true;
+   }
+   itReq->second(address);
+   addrRequests_.erase(itReq);
    return true;
 }
 

@@ -1071,6 +1071,7 @@ void QtGuiAdapter::onNeedFeeLevels(const std::vector<unsigned int>& levels)
 
 void QtGuiAdapter::onNeedUTXOs(const std::string& id, const std::string& walletId, bool confOnly, bool swOnly)
 {
+   logger_->debug("[{}] {} {}", __func__, id, walletId);
    WalletsMessage msg;
    auto msgReq = msg.mutable_get_utxos();
    msgReq->set_id(id);

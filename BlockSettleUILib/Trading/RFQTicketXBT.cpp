@@ -1444,6 +1444,7 @@ void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::string &id
    else {
       if ((rfq->side == bs::network::Side::Sell && rfq->product != bs::network::XbtCurrency) ||
          (rfq->side == bs::network::Side::Buy && rfq->product == bs::network::XbtCurrency)) {
+         rfq->receiptAddress = recvXbtAddressIfSet().display();
          submitRFQCb_(id, *rfq, {}); // already reserved
          pendingRFQs_.erase(id);
       }

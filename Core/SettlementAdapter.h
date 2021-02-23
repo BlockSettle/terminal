@@ -23,6 +23,7 @@ namespace BlockSettle {
    namespace Common {
       class ArmoryMessage_ZCReceived;
       class SignerMessage_SignTxResponse;
+      class WalletsMessage_WalletAddresses;
       class WalletsMessage_XbtTxResponse;
    }
    namespace Terminal {
@@ -72,6 +73,7 @@ private:
    bool processQuoteCancelled(const BlockSettle::Terminal::QuoteCancelled&);
 
    bool processXbtTx(uint64_t msgId, const BlockSettle::Common::WalletsMessage_XbtTxResponse&);
+   bool processNewAddr(uint64_t msgId, const BlockSettle::Common::WalletsMessage_WalletAddresses&);
    bool processSignedTx(uint64_t msgId, const BlockSettle::Common::SignerMessage_SignTxResponse&);
 
    bool processHandshakeTimeout(const std::string& id);
@@ -107,6 +109,7 @@ private:
       BinaryData           ownKey;
       BinaryData           counterKey;
       bs::Address          counterAuthAddr;
+      std::string          authWalletId;  // for requester only and easy XBT settlement
       bs::core::wallet::TXSignRequest  payin;
       bool  otc{ false };
       bool  handshakeComplete{ false };
@@ -118,6 +121,7 @@ private:
 
    std::map<uint64_t, BinaryData>   payinRequests_;
    std::map<uint64_t, BinaryData>   payoutRequests_;
+   std::map<uint64_t, std::function<void(const bs::Address&)>> addrRequests_;
 
 private:
    bs::sync::PasswordDialogData getDialogData(const QDateTime& timestamp
@@ -127,6 +131,5 @@ private:
    bs::sync::PasswordDialogData getPayoutDialogData(const QDateTime& timestamp
       , const Settlement&) const;
 };
-
 
 #endif	// SETTLEMENT_ADAPTER_H
