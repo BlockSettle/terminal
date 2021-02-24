@@ -113,6 +113,7 @@ private:
       bs::core::wallet::TXSignRequest  payin;
       bool  otc{ false };
       bool  handshakeComplete{ false };
+      bool  settlementStarted{ false };
    };
    std::unordered_map<std::string, std::shared_ptr<Settlement>>   settlByRfqId_;
    std::unordered_map<std::string, std::shared_ptr<Settlement>>   settlByQuoteId_;

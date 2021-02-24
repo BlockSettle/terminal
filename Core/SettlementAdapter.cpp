@@ -243,7 +243,8 @@ bool SettlementAdapter::processMatchingOrder(const MatchingMessage_Order& respon
             && itSettl->second->dealerRecvAddress.empty()) {
             //maybe obtain receiving address here instead of when constructing pay-out in WalletsAdapter
          }
-         if (startXbtSettlement(itSettl->second->quote)) {
+         if (!itSettl->second->settlementStarted && startXbtSettlement(itSettl->second->quote)) {
+            itSettl->second->settlementStarted = true;
             logger_->debug("[{}] started XBT settlement on {}", __func__, response.quote_id());
          } else {
             return true;
@@ -489,6 +490,7 @@ bool SettlementAdapter::processCancelRFQ(const std::string& rfqId)
       logger_->error("[{}] unknown settlement for {}", __func__, rfqId);
       return true;
    }
+   logger_->debug("[{}] {}", __func__, rfqId);
    settlByRfqId_.erase(itSettl);
    unreserve(rfqId);
    MatchingMessage msg;
@@ -505,30 +507,37 @@ bool SettlementAdapter::processAcceptRFQ(const bs::message::Envelope& env
       logger_->error("[{}] unknown settlement for {}", __func__, request.rfq_id());
       return true;
    }
+   logger_->debug("[{}] {}", __func__, request.rfq_id());
    itSettl->second->env = env;
    const auto& quote = fromMsg(request.quote());
    itSettl->second->quote = quote;
    settlByQuoteId_[request.quote().quote_id()] = itSettl->second;
    settlByRfqId_.erase(itSettl);
 
-   if (quote.assetType == bs::network::Asset::SpotFX) {
+   switch (quote.assetType) {
+   case bs::network::Asset::SpotFX: {
       MatchingMessage msg;
       auto msgReq = msg.mutable_accept_rfq();
       *msgReq = request;
       Envelope envReq{ 0, user_, userMtch_, {}, {}, msg.SerializeAsString(), true };
       return pushFill(envReq);
    }
-   switch (quote.assetType) {
    case bs::network::Asset::SpotXBT:
-      startXbtSettlement(quote);
+      if (!itSettl->second->settlementStarted && startXbtSettlement(quote)) {
+         itSettl->second->settlementStarted = true;
+      }
       break;
    case bs::network::Asset::PrivateMarket:
-      startCCSettlement(quote);
+      if (!itSettl->second->settlementStarted) {
+         startCCSettlement(quote);
+         itSettl->second->settlementStarted = true;
+      }
       break;
    default:
       logger_->error("[{}] unknown asset type {}", __func__, (int)quote.assetType);
       break;
    }
+   return true;
 }
 
 bool SettlementAdapter::processSendRFQ(const bs::message::Envelope& env
