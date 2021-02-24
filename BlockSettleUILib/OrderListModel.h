@@ -268,7 +268,7 @@ private:
    std::pair<Group*, int> findItem(const bs::network::Order &order);
    void setOrderStatus(Group *group, int index, const bs::network::Order& order,
       bool emitUpdate = false);
-   void removeRowIfContainerChanged(const bs::network::Order &order, int &oldOrderRow);
+   void removeRowIfContainerChanged(const bs::network::Order &order, int &oldOrderRow, bool force);
    void findMarketAndGroup(const bs::network::Order &order, Market *&market, Group *&group);
    void createGroupsIfNeeded(const bs::network::Order &order, Market *&market, Group *&group);
 
