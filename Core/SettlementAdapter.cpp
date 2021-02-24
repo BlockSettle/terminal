@@ -508,11 +508,12 @@ bool SettlementAdapter::processAcceptRFQ(const bs::message::Envelope& env
       return true;
    }
    logger_->debug("[{}] {}", __func__, request.rfq_id());
+   const auto& settlData = itSettl->second;
+   settlByRfqId_.erase(itSettl);
    itSettl->second->env = env;
    const auto& quote = fromMsg(request.quote());
    itSettl->second->quote = quote;
-   settlByQuoteId_[request.quote().quote_id()] = itSettl->second;
-   settlByRfqId_.erase(itSettl);
+   settlByQuoteId_[request.quote().quote_id()] = settlData;
 
    switch (quote.assetType) {
    case bs::network::Asset::SpotFX: {
@@ -523,14 +524,14 @@ bool SettlementAdapter::processAcceptRFQ(const bs::message::Envelope& env
       return pushFill(envReq);
    }
    case bs::network::Asset::SpotXBT:
-      if (!itSettl->second->settlementStarted && startXbtSettlement(quote)) {
-         itSettl->second->settlementStarted = true;
+      if (!settlData->settlementStarted && startXbtSettlement(quote)) {
+         settlData->settlementStarted = true;
       }
       break;
    case bs::network::Asset::PrivateMarket:
-      if (!itSettl->second->settlementStarted) {
+      if (!settlData->settlementStarted) {
          startCCSettlement(quote);
-         itSettl->second->settlementStarted = true;
+         settlData->settlementStarted = true;
       }
       break;
    default:
