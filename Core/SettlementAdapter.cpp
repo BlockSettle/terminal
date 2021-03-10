@@ -683,8 +683,9 @@ bool SettlementAdapter::processXbtTx(uint64_t msgId, const WalletsMessage_XbtTxR
             try {
                itSettl->second->settlementAddress = bs::Address::fromAddressString(response.settlement_address());
             }
-            catch (const std::exception&) {
-               logger_->error("[{}] invalid settlement address", __func__);
+            catch (const std::exception& e) {
+               logger_->error("[{}] invalid settlement address {}: {}", __func__
+                  , response.settlement_address(), e.what());
             }
             BsServerMessage msg;
             auto msgReq = msg.mutable_send_unsigned_payin();
@@ -719,8 +720,9 @@ bool SettlementAdapter::processXbtTx(uint64_t msgId, const WalletsMessage_XbtTxR
          logger_->debug("[{}] got payout {}", __func__, itPayout->second.toHexStr());
          try {
             itSettl->second->settlementAddress = bs::Address::fromAddressString(response.settlement_address());
-         } catch (const std::exception&) {
-            logger_->error("[{}] invalid settlement address", __func__);
+         } catch (const std::exception& e) {
+            logger_->error("[{}] invalid settlement address {}: {}", __func__
+               , response.settlement_address(), e.what());
          }
          SignerMessage msg;
          if (itSettl->second->dealer) {
