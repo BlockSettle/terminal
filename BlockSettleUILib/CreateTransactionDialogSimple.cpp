@@ -332,6 +332,10 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::CreateFo
       dlg->ui_->textEditComment->setText(paymentInfo.label);
    }
 
+   dlg->ui_->checkBoxRBF->setChecked(false);
+   dlg->ui_->checkBoxRBF->setEnabled(false);
+   dlg->ui_->checkBoxRBF->setToolTip(tr("RBF disabled for payment request"));
+
    dlg->paymentInfo_ = paymentInfo;
 
    return dlg;
