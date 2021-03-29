@@ -82,7 +82,7 @@ TEST_F(TestWallet, BIP84_derivation)
 
    {
       const bs::core::WalletPasswordScoped lock(wallet, passphrase);
-      wallet->createStructure();
+      wallet->createStructure(false);
       ASSERT_NE(wallet->getGroup(wallet->getXBTGroupType()), nullptr);
    }
 
@@ -1333,7 +1333,7 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
 
       {
          const bs::core::WalletPasswordScoped lock(walletPtr, passphrase);
-         walletPtr->createStructure(10);
+         walletPtr->createStructure(false, 10);
       }
 
       //create sync manager
