@@ -16,7 +16,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "UserScriptRunner.h"
 
-#include <Celer/CelerClient.h>
+#include <Celer/BaseCelerClient.h>
 #include <QCoreApplication>
 #include <QFileInfo>
 #include <QDir>
@@ -25,7 +25,7 @@
 AutoSignScriptProvider::AutoSignScriptProvider(const std::shared_ptr<spdlog::logger> &logger
    , UserScriptRunner *scriptRunner
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<HeadlessContainer> &container
+   , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<CelerClientQt> &celerClient
    , QObject *parent)
    : QObject(parent), logger_(logger), scriptRunner_(scriptRunner)
@@ -37,15 +37,6 @@ AutoSignScriptProvider::AutoSignScriptProvider(const std::shared_ptr<spdlog::log
 
    if (walletsManager_) {
       scriptRunner_->setWalletsManager(walletsManager_);
-   }
-
-   if (signingContainer_) {
-      const auto hct = dynamic_cast<QtHCT*>(signingContainer_->cbTarget());
-      if (hct) {
-         connect(hct, &QtHCT::ready, this, &AutoSignScriptProvider::onSignerStateUpdated, Qt::QueuedConnection);
-         connect(hct, &QtHCT::disconnected, this, &AutoSignScriptProvider::onSignerStateUpdated, Qt::QueuedConnection);
-         connect(hct, &QtHCT::AutoSignStateChanged, this, &AutoSignScriptProvider::onAutoSignStateChanged);
-      }
    }
 
    connect(scriptRunner_, &UserScriptRunner::scriptLoaded, this, &AutoSignScriptProvider::onScriptLoaded);
@@ -254,7 +245,7 @@ void AutoSignScriptProvider::setLastDir(const QString &path)
 AutoSignAQProvider::AutoSignAQProvider(const std::shared_ptr<spdlog::logger> &logger
    , UserScriptRunner *scriptRunner
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<HeadlessContainer> &container
+   , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<CelerClientQt> &celerClient
    , QObject *parent)
    : AutoSignScriptProvider(logger, scriptRunner, appSettings, container, celerClient, parent)
@@ -278,7 +269,7 @@ AutoSignAQProvider::AutoSignAQProvider(const std::shared_ptr<spdlog::logger> &lo
 AutoSignRFQProvider::AutoSignRFQProvider(const std::shared_ptr<spdlog::logger> &logger
    , UserScriptRunner *scriptRunner
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<HeadlessContainer> &container
+   , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<CelerClientQt> &celerClient
    , QObject *parent)
    : AutoSignScriptProvider(logger, scriptRunner, appSettings, container, celerClient, parent)

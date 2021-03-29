@@ -19,6 +19,7 @@
 #include <QMutex>
 #include "Address.h"
 #include "BlockchainMonitor.h"
+#include "SignContainer.h"
 #include "TestEnv.h"
 
 #include "AuthAddressLogic.h"
@@ -105,7 +106,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class TestAuth : public ::testing::Test
+class TestAuth : public ::testing::Test, public SignerCallbackTarget
 {
 protected:
    void SetUp() override;

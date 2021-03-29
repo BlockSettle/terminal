@@ -77,8 +77,12 @@ void WalletShieldBase::setTabType(QString&& tabType)
    tabType_ = std::move(tabType);
 }
 
-bool WalletShieldBase::checkWalletSettings(WalletShieldBase::ProductType productType, const QString& product)
+bool WalletShieldBase::checkWalletSettings(WalletShieldBase::ProductType productType
+   , const QString& product)
 {
+   if (!walletsManager_ && !authMgr_) {
+      return false;   // Temporary workaround for new arch - fix later if needed
+   }
    // No primary wallet
    bool hasFullWallet = false;
    if (walletsManager_) {

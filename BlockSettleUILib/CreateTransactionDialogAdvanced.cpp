@@ -43,41 +43,27 @@
 static const float kDustFeePerByte = 3.0;
 
 
-CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<HeadlessContainer> &container
-      , bool loadFeeSuggestions
-      , const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
-      , const std::shared_ptr<TransactionData> &txData
-      , bs::UtxoReservationToken utxoReservation
-      , QWidget* parent)
-   : CreateTransactionDialog(armory, walletManager, utxoReservationManager, container, loadFeeSuggestions,
-      logger, applicationSettings, std::move(utxoReservation), parent)
- , ui_(new Ui::CreateTransactionDialogAdvanced)
+CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(bool loadFeeSuggestions
+   , uint32_t topBlock, const std::shared_ptr<spdlog::logger>& logger
+   , const std::shared_ptr<TransactionData>& txData, bs::UtxoReservationToken utxoReservation
+   , QWidget* parent)
+   : CreateTransactionDialog(loadFeeSuggestions, topBlock, logger, parent)
+   , ui_(new Ui::CreateTransactionDialogAdvanced)
 {
    transactionData_ = txData;
    selectedChangeAddress_ = bs::Address{};
 
    ui_->setupUi(this);
-   initUI();
 }
 
 CreateTransactionDialogAdvanced::~CreateTransactionDialogAdvanced() = default;
 
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced::CreateForRBF(
-        const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<HeadlessContainer>& container
-      , const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
-      , const Tx &tx
-      , QWidget* parent)
+      uint32_t topBlock, const std::shared_ptr<spdlog::logger>& logger
+      , const Tx &tx, QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
-      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, bs::UtxoReservationToken(), parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(topBlock, false
+      , logger, nullptr, bs::UtxoReservationToken(), parent);
 
    dlg->setWindowTitle(tr("Replace-By-Fee"));
 
@@ -93,40 +79,28 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
 }
 
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced::CreateForCPFP(
-        const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<HeadlessContainer>& container
-      , const std::shared_ptr<bs::sync::Wallet>& wallet
+        uint32_t topBlock, const std::string& walletId
       , const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
-      , const Tx &tx
-      , QWidget* parent)
+      , const Tx &tx, QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
-      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, bs::UtxoReservationToken(), parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(topBlock, false
+      , logger, nullptr, bs::UtxoReservationToken(), parent);
 
    dlg->setWindowTitle(tr("Child-Pays-For-Parent"));
    dlg->ui_->pushButtonImport->setEnabled(false);
    dlg->ui_->pushButtonShowSimple->setEnabled(false);
 
-   dlg->setCPFPinputs(tx, wallet);
+   //FIXME: dlg->setCPFPinputs(tx, wallet);
    dlg->isCPFP_ = true;
    return dlg;
 }
 
 std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::CreateForPaymentRequest(
-        const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<bs::sync::WalletsManager> &walletManager
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<HeadlessContainer>& container
-      , const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> & applicationSettings
-      , const Bip21::PaymentRequestInfo& paymentInfo
-      , QWidget* parent)
+        uint32_t topBlock, const std::shared_ptr<spdlog::logger>& logger
+      , const Bip21::PaymentRequestInfo& paymentInfo, QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
-      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, bs::UtxoReservationToken(), parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(topBlock, false
+      , logger, nullptr, bs::UtxoReservationToken(), parent);
 
    dlg->ui_->pushButtonImport->setEnabled(false);
    dlg->ui_->pushButtonShowSimple->setEnabled(CreateTransactionDialog::canUseSimpleMode(paymentInfo));
@@ -713,6 +687,13 @@ QLabel* CreateTransactionDialogAdvanced::changeLabel() const
    return ui_->labelReturnAmount;
 }
 
+void CreateTransactionDialogAdvanced::onWalletsList(const std::string& id
+   , const std::vector<bs::sync::HDWalletData>& wallets)
+{
+   CreateTransactionDialog::onWalletsList(id, wallets);
+   ui_->pushButtonSelectInputs->setEnabled(ui_->comboBoxWallets->count() > 0);
+}
+
 void CreateTransactionDialogAdvanced::onOutputsClicked(const QModelIndex &index)
 {
    if (!index.isValid()) {
@@ -1269,7 +1250,8 @@ void CreateTransactionDialogAdvanced::onCreatePressed()
       return;
    }
 
-   CreateTransaction([this, handle = validityFlag_.handle()](bool result, const std::string &errorMsg, const std::string& unsignedTx, uint64_t virtSize) {
+   CreateTransaction([this, handle = validityFlag_.handle()]
+      (bool result, const std::string &errorMsg, const std::string& unsignedTx, uint64_t virtSize) {
       if (!handle.isValid()) {
          return;
       }
@@ -1516,34 +1498,107 @@ void CreateTransactionDialogAdvanced::onNewAddressSelectedForChange()
    showExistingChangeAddress(false);
 }
 
+void CreateTransactionDialogAdvanced::onAddresses(const std::string &walletId
+   , const std::vector<bs::sync::Address>& addrs)
+{
+   if (selChangeAddrDlg_) {
+      selChangeAddrDlg_->onAddresses(walletId, addrs);
+   }
+}
+
+void CreateTransactionDialogAdvanced::onAddressComments(const std::string& walletId
+   , const std::map<bs::Address, std::string>& addrComments)
+{
+   if (selChangeAddrDlg_) {
+      selChangeAddrDlg_->onAddressComments(walletId, addrComments);
+   }
+}
+
+void CreateTransactionDialogAdvanced::onAddressBalances(const std::string& walletId
+   , const std::vector<bs::sync::WalletBalanceData::AddressBalance>& addrBal)
+{
+   if (selChangeAddrDlg_) {
+      selChangeAddrDlg_->onAddressBalances(walletId, addrBal);
+   }
+}
+
 void CreateTransactionDialogAdvanced::onExistingAddressSelectedForChange()
 {
-   if (!transactionData_->getWallet()) {
-      SPDLOG_LOGGER_ERROR(logger_, "wallet now found");
-      return;
-   }
-   const auto hdWallet = walletsManager_->getHDRootForLeaf(transactionData_->getWallet()->walletId());
-   std::shared_ptr<bs::sync::hd::Group> group;
-   if (hdWallet) {
-      group = hdWallet->getGroup(hdWallet->getXBTGroupType());
-   }
+   if (walletsManager_) {
+      if (!transactionData_->getWallet()) {
+         SPDLOG_LOGGER_ERROR(logger_, "wallet not found");
+         return;
+      }
+      const auto hdWallet = walletsManager_->getHDRootForLeaf(transactionData_->getWallet()->walletId());
+      std::shared_ptr<bs::sync::hd::Group> group;
+      if (hdWallet) {
+         group = hdWallet->getGroup(hdWallet->getXBTGroupType());
+      }
 
-   SelectAddressDialog *selectAddressDialog = nullptr;
-   if (group) {
-      selectAddressDialog = new SelectAddressDialog(group, this, AddressListModel::AddressType::Internal);
+      if (group) {
+         selChangeAddrDlg_ = new SelectAddressDialog(group, this, AddressListModel::AddressType::Internal);
+      } else {
+         selChangeAddrDlg_ = new SelectAddressDialog(walletsManager_, transactionData_->getWallet()
+            , this, AddressListModel::AddressType::Internal);
+      }
+
+      if (selChangeAddrDlg_->exec() == QDialog::Accepted) {
+         selectedChangeAddress_ = selChangeAddrDlg_->getSelectedAddress();
+         showExistingChangeAddress(true);
+      } else {
+         if (!selectedChangeAddress_.isValid()) {
+            ui_->radioButtonNewAddrNative->setChecked(true);
+         }
+      }
    }
    else {
-      selectAddressDialog = new SelectAddressDialog(walletsManager_, transactionData_->getWallet()
-         , this, AddressListModel::AddressType::Internal);
-   }
+      selChangeAddrDlg_ = new SelectAddressDialog(this, AddressListModel::AddressType::Internal);
+      connect(selChangeAddrDlg_, &SelectAddressDialog::needExtAddresses, this, &CreateTransactionDialog::needExtAddresses);
+      connect(selChangeAddrDlg_, &SelectAddressDialog::needIntAddresses, this, &CreateTransactionDialog::needIntAddresses);
+      connect(selChangeAddrDlg_, &SelectAddressDialog::needUsedAddresses, this, &CreateTransactionDialog::needUsedAddresses);
+      connect(selChangeAddrDlg_, &SelectAddressDialog::needAddrComments, this, &CreateTransactionDialog::needAddrComments);
 
-   if (selectAddressDialog->exec() == QDialog::Accepted) {
-      selectedChangeAddress_ = selectAddressDialog->getSelectedAddress();
-      showExistingChangeAddress(true);
-   } else {
-      if (!selectedChangeAddress_.isValid()) {
-         ui_->radioButtonNewAddrNative->setChecked(true);
+      std::vector<bs::sync::WalletInfo> wallets;
+      std::unordered_set<std::string> balanceIds;
+      for (const auto& walletId : transactionData_->getWallets()) {
+         const auto& itHdWallet = hdWallets_.find(walletId);
+         if (itHdWallet != hdWallets_.end()) {
+            for (const auto& group : itHdWallet->second.groups) {
+               for (const auto& leaf : group.leaves) {
+                  bs::sync::WalletInfo wi;
+                  wi.format = bs::sync::WalletFormat::Plain;
+                  wi.ids = leaf.ids;
+                  if (leaf.ids.size() == 2) {
+                     balanceIds.insert(leaf.ids.at(1));
+                  }
+                  else {
+                     balanceIds.insert(leaf.ids.at(0));
+                  }
+                  wi.name = leaf.name;
+                  wi.type = bs::core::wallet::Type::Bitcoin;
+                  wi.primary = itHdWallet->second.primary;
+                  wallets.push_back(wi);
+               }
+            }
+         }
       }
+      selChangeAddrDlg_->setWallets(wallets);
+      for (const auto& walletId : balanceIds) {
+         emit needWalletBalances(walletId);
+      }
+
+      if (selChangeAddrDlg_->exec() == QDialog::Accepted) {
+         selectedChangeAddress_ = selChangeAddrDlg_->getSelectedAddress();
+         showExistingChangeAddress(true);
+      } else {
+         if (!selectedChangeAddress_.isValid()) {
+            ui_->radioButtonNewAddrNative->setChecked(true);
+         }
+      }
+   }
+   if (selChangeAddrDlg_) {
+      selChangeAddrDlg_->deleteLater();
+      selChangeAddrDlg_ = nullptr;
    }
 }
 
@@ -1764,13 +1819,12 @@ bool CreateTransactionDialogAdvanced::switchModeRequested() const
 std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::SwitchMode()
 {
    if (!paymentInfo_.address.isEmpty()) {
-      return CreateTransactionDialogSimple::CreateForPaymentRequest(armory_, walletsManager_
-         , utxoReservationManager_, signContainer_, logger_, applicationSettings_, paymentInfo_, parentWidget());
+      return CreateTransactionDialogSimple::CreateForPaymentRequest(topBlock_
+         , logger_, paymentInfo_, parentWidget());
    }
 
-   auto simpleDialog = std::make_shared<CreateTransactionDialogSimple>(armory_
-      , walletsManager_, utxoReservationManager_, signContainer_
-      , logger_, applicationSettings_, parentWidget());
+   auto simpleDialog = std::make_shared<CreateTransactionDialogSimple>(topBlock_
+      , logger_, parentWidget());
 
    simpleDialog->SelectWallet(UiUtils::getSelectedWalletId(ui_->comboBoxWallets),
       UiUtils::getSelectedWalletType(ui_->comboBoxWallets));

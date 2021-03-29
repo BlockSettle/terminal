@@ -21,6 +21,31 @@
 #include "Wallets/SyncWalletsManager.h"
 
 
+void WalletNode::remove(WalletNode* child)
+{
+   bool found = false;
+   for (auto& c : children_) {
+      if (!found && (child->id() == c->id())) {
+         found = true;
+         continue;
+      }
+      if (found) {
+         c->incRow(-1);
+      }
+   }
+   children_.removeOne(child);
+}
+
+void WalletNode::replace(WalletNode *child)
+{
+   for (auto &c : children_) {
+      if (child->id() == c->id()) {
+         c = child;
+         break;
+      }
+   }
+}
+
 void WalletNode::clear()
 {
    qDeleteAll(children_);
@@ -34,7 +59,7 @@ WalletNode *WalletNode::child(int index) const
 
 WalletNode *WalletNode::findByWalletId(const std::string &walletId)
 {
-   if ((type() == Type::Leaf) && (wallets()[0] != nullptr) && (wallets()[0]->walletId() == walletId)) {
+   if (id() == walletId) {
       return this;
    }
    for (const auto &child : children_) {
@@ -46,10 +71,11 @@ WalletNode *WalletNode::findByWalletId(const std::string &walletId)
    return nullptr;
 }
 
+class WalletGroupNode;
 class WalletRootNode : public WalletNode
 {
 public:
-   WalletRootNode(WalletsViewModel *vm, const std::shared_ptr<bs::sync::hd::Wallet> &wallet
+   WalletRootNode(WalletsViewModel *vm, const bs::sync::WalletInfo &wallet
       , const std::string &name, const std::string &desc, WalletNode::Type type, int row
       , WalletNode *parent, BTCNumericTypes::balance_type balTotal = 0
       , BTCNumericTypes::balance_type balUnconf = 0, BTCNumericTypes::balance_type balSpend = 0
@@ -104,7 +130,7 @@ public:
    }
 
    std::string id() const override {
-      return (hdWallet_ ? hdWallet_->walletId() : std::string{});
+      return (!hdWallet_.ids.empty() ? hdWallet_.ids[0] : std::string{});
    }
 
    void setState(State state) override {
@@ -114,15 +140,16 @@ public:
       }
    }
 
-   void addGroups(const std::vector<std::shared_ptr<bs::sync::hd::Group>> &groups);
+//   void addGroups(const std::vector<std::shared_ptr<bs::sync::hd::Group>> &groups);
+   WalletGroupNode *addGroup(bs::core::wallet::Type, const std::string &name, const std::string &desc);
 
-   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const override
+   std::vector<bs::sync::WalletInfo> wallets() const override
    {
-      std::vector<std::shared_ptr<bs::sync::Wallet>> ret = wallets_;
+      decltype(wallets_) ret = wallets_;
 
-      for (const auto * g : qAsConst(children_)) {
+      for (const auto *g : qAsConst(children_)) {
          const auto tmp = g->wallets();
-         ret.insert(ret.end(), tmp.cbegin(), tmp.cend());
+         ret.insert(ret.cend(), tmp.cbegin(), tmp.cend());
       }
 
       return ret;
@@ -131,16 +158,8 @@ public:
    BTCNumericTypes::balance_type getBalanceUnconf() const { return balUnconf_; }
    BTCNumericTypes::balance_type getBalanceSpend() const { return balSpend_; }
    size_t getNbUsedAddresses() const { return nbAddr_; }
-   std::shared_ptr<bs::sync::hd::Wallet> hdWallet() const override { return hdWallet_; }
+   bs::sync::WalletInfo hdWallet() const override { return hdWallet_; }
 
-protected:
-   std::string desc_;
-   std::atomic<BTCNumericTypes::balance_type> balTotal_, balUnconf_, balSpend_;
-   size_t      nbAddr_;
-   std::shared_ptr<bs::sync::hd::Wallet>           hdWallet_;
-   std::vector<std::shared_ptr<bs::sync::Wallet>>  wallets_;
-
-protected:
    void updateCounters(WalletRootNode *node) {
       if (!node) {
          return;
@@ -159,6 +178,14 @@ protected:
       }
    }
 
+protected:
+   std::string desc_;
+   std::atomic<BTCNumericTypes::balance_type> balTotal_, balUnconf_, balSpend_;
+   size_t      nbAddr_;
+   bs::sync::WalletInfo hdWallet_;
+   std::vector<bs::sync::WalletInfo> wallets_;
+
+protected:
    QString displayAmountOrLoading(BTCNumericTypes::balance_type balance) const {
       if (balance < 0) {
          return QObject::tr("Loading...");
@@ -207,12 +234,16 @@ protected:
 class WalletLeafNode : public WalletRootNode
 {
 public:
-   WalletLeafNode(WalletsViewModel *vm, const std::shared_ptr<bs::sync::Wallet> &wallet
-      , const std::shared_ptr<bs::sync::hd::Wallet> &rootWallet, int row, WalletNode *parent)
-      : WalletRootNode(vm, rootWallet, wallet->shortName(), wallet->description(), Type::Leaf, row, parent
-         , 0, 0, 0, wallet->getUsedAddressCount())
+   WalletLeafNode(WalletsViewModel *vm, const bs::sync::WalletInfo &wallet
+      , const bs::sync::WalletInfo &rootWallet, int row, WalletNode *parent)
+      : WalletRootNode(vm, rootWallet, wallet.name, wallet.description, Type::Leaf, row, parent
+         , 0, 0, 0, 0)
       , wallet_(wallet)
+   {}
+
+   void setBalances(const std::shared_ptr<bs::sync::Wallet> &wallet)
    {
+      nbAddr_ = wallet->getUsedAddressCount();
       wallet->onBalanceAvailable([this, wallet, handle = validityFlag_.handle()]() mutable {
          ValidityGuard lock(handle);
          if (!handle.isValid()) {
@@ -224,15 +255,28 @@ public:
       });
    }
 
-   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const override { return {wallet_}; }
+   void setBalances(size_t nbAddr, BTCNumericTypes::balance_type total
+      , BTCNumericTypes::balance_type spendable, BTCNumericTypes::balance_type unconfirmed)
+   {
+      nbAddr_ = nbAddr;
+      balTotal_ = total;
+      balSpend_ = spendable;
+      balUnconf_ = unconfirmed;
+   }
 
-   std::string id() const override {
-      return wallet_->walletId();
+   std::vector<bs::sync::WalletInfo> wallets() const override
+   {
+      return { wallet_ };
+   }
+
+   std::string id() const override
+   {
+      return *wallet_.ids.cbegin();
    }
 
    QVariant data(int col, int role) const override {
       if (role == Qt::FontRole) {
-         if (wallet_ == viewModel_->selectedWallet()) {
+         if (*wallet_.ids.cbegin() == viewModel_->selectedWallet()) {
             QFont font;
             font.setUnderline(true);
             return font;
@@ -242,14 +286,14 @@ public:
    }
 
 private:
-   std::shared_ptr<bs::sync::Wallet> wallet_;
+   bs::sync::WalletInfo wallet_;
    ValidityFlag validityFlag_;
 };
 
 class WalletGroupNode : public WalletRootNode
 {
 public:
-   WalletGroupNode(WalletsViewModel *vm, const std::shared_ptr<bs::sync::hd::Wallet> &hdWallet
+   WalletGroupNode(WalletsViewModel *vm, const bs::sync::WalletInfo &hdWallet
       , const std::string &name, const std::string &desc, WalletNode::Type type
       , int row, WalletNode *parent)
       : WalletRootNode(vm, hdWallet, name, desc, type, row, parent) {}
@@ -260,62 +304,57 @@ public:
       }
    }
 
-   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const override { return wallets_; }
+   std::vector<bs::sync::WalletInfo> wallets() const override { return wallets_; }
 
-   void addLeaves(const std::vector<std::shared_ptr<bs::sync::hd::Leaf>> &leaves) {
-      for (const auto &leaf : leaves) {
-         if (viewModel_->showRegularWallets() && (leaf->type() != bs::core::wallet::Type::Bitcoin || leaf->purpose() == bs::hd::Purpose::NonSegWit)) {
-            continue;
-         }
-         const auto leafNode = new WalletLeafNode(viewModel_, leaf, hdWallet_, nbChildren(), this);
-         add(leafNode);
-         updateCounters(leafNode);
-         wallets_.push_back(leaf);
+   void addLeaf(const bs::sync::WalletInfo &leaf, const std::shared_ptr<bs::sync::hd::Leaf> &wallet) {
+      if (viewModel_->showRegularWallets() && (leaf.type != bs::core::wallet::Type::Bitcoin
+         || leaf.purpose == bs::hd::Purpose::NonSegWit)) {
+         return;
       }
+      const auto leafNode = new WalletLeafNode(viewModel_, leaf, hdWallet_, nbChildren(), this);
+      leafNode->setBalances(wallet);
+      add(leafNode);
+      updateCounters(leafNode);
+      wallets_.push_back(leaf);
+   }
+
+   void addLeaf(const bs::sync::HDWalletData::Leaf &leaf, bs::core::wallet::Type type) {
+      if (viewModel_->showRegularWallets() && (type != bs::core::wallet::Type::Bitcoin
+         || leaf.path.get(-2) == bs::hd::Purpose::NonSegWit)) {
+         return;
+      }
+      bs::sync::WalletInfo wi;
+      wi.format = bs::sync::WalletFormat::Plain;
+      wi.ids = leaf.ids;
+      wi.name = leaf.name;
+      wi.description = leaf.description;
+      wi.purpose = static_cast<bs::hd::Purpose>(leaf.path.get(-2));
+      const auto leafNode = new WalletLeafNode(viewModel_, wi, hdWallet_, nbChildren(), this);
+      add(leafNode);
+      wallets_.push_back(wi);
    }
 };
 
-void WalletRootNode::addGroups(const std::vector<std::shared_ptr<bs::sync::hd::Group>> &groups)
+WalletGroupNode *WalletRootNode::addGroup(bs::core::wallet::Type type
+   , const std::string &name, const std::string &desc)
 {
-   for (const auto &group : groups) {
-      if (viewModel_->showRegularWallets() && (group->type() != bs::core::wallet::Type::Bitcoin)) {
-         continue;
-      }
-      const auto groupNode = new WalletGroupNode(viewModel_, hdWallet_, group->name(), group->description()
-         , getNodeType(group->type()), nbChildren(), this);
-      add(groupNode);
-      groupNode->addLeaves(group->getLeaves());
+   if (viewModel_->showRegularWallets() && (type != bs::core::wallet::Type::Bitcoin)) {
+      return nullptr;
    }
+   const auto groupNode = new WalletGroupNode(viewModel_, hdWallet_, name, desc
+      , getNodeType(type), nbChildren(), this);
+   add(groupNode);
+   return groupNode;
 }
 
 
-WalletsViewModel::WalletsViewModel(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , const std::string &defaultWalletId, const std::shared_ptr<HeadlessContainer> &container
+WalletsViewModel::WalletsViewModel(const std::string &defaultWalletId
    , QObject* parent, bool showOnlyRegular)
    : QAbstractItemModel(parent)
-   , walletsManager_(walletsManager)
-   , signContainer_(container)
    , defaultWalletId_(defaultWalletId)
    , showRegularWallets_(showOnlyRegular)
 {
    rootNode_ = std::make_shared<WalletNode>(this, WalletNode::Type::Root);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::blockchainEvent, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::invalidatedZCs, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::newWalletAdded, this, &WalletsViewModel::onNewWalletAdded);
-
-   if (signContainer_) {
-      const auto hct = dynamic_cast<QtHCT*>(signContainer_->cbTarget());
-      if (hct) {
-         connect(hct, &QtHCT::QWalletInfo, this, &WalletsViewModel::onWalletInfo);
-         connect(hct, &QtHCT::Error, this, &WalletsViewModel::onHDWalletError);
-         connect(hct, &QtHCT::authenticated, this, &WalletsViewModel::onSignerAuthenticated);
-         connect(hct, &QtHCT::ready, this, &WalletsViewModel::onWalletChanged);
-      }
-   }
 }
 
 WalletNode *WalletsViewModel::getNode(const QModelIndex &index) const
@@ -336,7 +375,7 @@ int WalletsViewModel::rowCount(const QModelIndex &parent) const
    return getNode(parent)->nbChildren();
 }
 
-std::vector<std::shared_ptr<bs::sync::Wallet>> WalletsViewModel::getWallets(const QModelIndex &index) const
+std::vector<bs::sync::WalletInfo> WalletsViewModel::getWallets(const QModelIndex &index) const
 {
    const auto node = getNode(index);
    if (node == nullptr) {
@@ -345,13 +384,13 @@ std::vector<std::shared_ptr<bs::sync::Wallet>> WalletsViewModel::getWallets(cons
    return node->wallets();
 }
 
-std::shared_ptr<bs::sync::Wallet> WalletsViewModel::getWallet(const QModelIndex &index) const
+bs::sync::WalletInfo WalletsViewModel::getWallet(const QModelIndex &index) const
 {
    const auto &wallets = getWallets(index);
    if (wallets.size() == 1) {
       return wallets[0];
    }
-   return nullptr;
+   return {};
 }
 
 QVariant WalletsViewModel::data(const QModelIndex &index, int role) const
@@ -536,16 +575,129 @@ void WalletsViewModel::onSignerAuthenticated()
          continue;
       }
       const auto walletId = hdWallet->walletId();
-      hdInfoReqIds_[signContainer_->GetInfo(walletId)] = walletId;
+      //TODO: hdInfoReqIds_[signContainer_->GetInfo(walletId)] = walletId;
    }
 }
 
 void WalletsViewModel::onNewWalletAdded(const std::string &walletId)
 {
-   if (!signContainer_) {
+   //TODO:hdInfoReqIds_[signContainer_->GetInfo(walletId)] = walletId;
+}
+
+void WalletsViewModel::onHDWallet(const bs::sync::WalletInfo &wi)
+{
+   const auto &wallet = rootNode_->findByWalletId(*wi.ids.cbegin());
+   int row = wallet ? wallet->row() : rootNode_->nbChildren();
+   const auto hdNode = new WalletRootNode(this, wi, wi.name, wi.description
+      , wi.primary ? WalletNode::Type::WalletPrimary : WalletNode::Type::WalletRegular
+      , row, rootNode_.get());
+   if (wallet) {
+      rootNode_->replace(hdNode);
+      emit dataChanged(createIndex(row, 0, static_cast<void*>(rootNode_.get()))
+         , createIndex(row, (int)WalletColumns::ColumnCount - 1, static_cast<void*>(rootNode_.get())));
+   }
+   else {
+      beginInsertRows(QModelIndex()
+         , rootNode_->nbChildren(), rootNode_->nbChildren());
+      rootNode_->add(hdNode);
+      endInsertRows();
+   }
+   emit needHDWalletDetails(*wi.ids.cbegin());
+}
+
+void WalletsViewModel::onWalletDeleted(const bs::sync::WalletInfo& wi)
+{
+   const auto& wallet = rootNode_->findByWalletId(*wi.ids.cbegin());
+   if (wallet) {
+      beginRemoveRows(QModelIndex(), wallet->row(), wallet->row());
+      rootNode_->remove(wallet);
+      endRemoveRows();
+   }
+}
+
+void WalletsViewModel::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
+{
+   WalletNode *node{ nullptr };
+   for (int i = 0; i < rootNode_->nbChildren(); ++i) {
+      if (rootNode_->child(i)->id() == hdWallet.id) {
+         node = rootNode_->child(i);
+         break;
+      }
+   }
+   const auto &hdNode = dynamic_cast<WalletRootNode *>(node);
+   if (!node || !hdNode) {
       return;
    }
-   hdInfoReqIds_[signContainer_->GetInfo(walletId)] = walletId;
+   for (const auto &group : hdWallet.groups) {
+      if (group.type == bs::hd::CoinType::BlockSettle_Settlement) {
+         continue;
+      }
+      WalletGroupNode *groupNode{ nullptr };
+      for (int i = 0; i < node->nbChildren(); ++i) {
+         const auto &child = node->child(i);
+         if (child->name() == group.name) {
+            groupNode = dynamic_cast<WalletGroupNode *>(child);
+            break;
+         }
+      }
+      bs::core::wallet::Type groupType{ bs::core::wallet::Type::Unknown };
+      switch (group.type) {
+      case bs::hd::CoinType::Bitcoin_main:
+      case bs::hd::CoinType::Bitcoin_test:
+         groupType = bs::core::wallet::Type::Bitcoin;
+         break;
+      case bs::hd::CoinType::BlockSettle_Auth:
+         groupType = bs::core::wallet::Type::Authentication;
+         break;
+      case bs::hd::CoinType::BlockSettle_CC:
+         groupType = bs::core::wallet::Type::ColorCoin;
+         break;
+      default: break;
+      }
+      if (!groupNode) {
+         const auto& nbChildren = node->nbChildren();
+         groupNode = hdNode->addGroup(groupType, group.name, group.description);
+         if (groupNode) {
+            beginInsertRows(createIndex(node->row(), 0, static_cast<void*>(node))
+               , nbChildren, nbChildren);
+            endInsertRows();
+         }
+      }
+      if (!groupNode) {
+         continue;
+      }
+      for (const auto &leaf : group.leaves) {
+         const auto &leafNode = groupNode->findByWalletId(*leaf.ids.cbegin());
+         if (!leafNode) {
+            beginInsertRows(createIndex(groupNode->row(), 0, static_cast<void*>(groupNode))
+               , groupNode->nbChildren(), groupNode->nbChildren());
+            groupNode->addLeaf(leaf, groupType);
+            endInsertRows();
+         }
+         emit needWalletBalances(*leaf.ids.cbegin());
+      }
+   }
+}
+
+void WalletsViewModel::onWalletBalances(const bs::sync::WalletBalanceData &wbd)
+{
+   auto node = rootNode_->findByWalletId(wbd.id);
+   auto leafNode = dynamic_cast<WalletLeafNode *>(node);
+   if (!node || !leafNode) {
+      return;
+   }
+   leafNode->setBalances(wbd.nbAddresses, wbd.balTotal, wbd.balSpendable, wbd.balUnconfirmed);
+   node = leafNode->parent();
+   emit dataChanged(createIndex(leafNode->row(), (int)WalletColumns::ColumnSpendableBalance, static_cast<void*>(node))
+      , createIndex(leafNode->row(), (int)WalletColumns::ColumnNbAddresses, static_cast<void*>(node)));
+
+   auto groupNode = dynamic_cast<WalletGroupNode *>(node);
+   if (!groupNode) {
+      return;
+   }
+   groupNode->updateCounters(leafNode);
+   emit dataChanged(createIndex(groupNode->row(), (int)WalletColumns::ColumnSpendableBalance, static_cast<void*>(groupNode->parent()))
+      , createIndex(leafNode->row(), (int)WalletColumns::ColumnNbAddresses, static_cast<void*>(groupNode->parent())));
 }
 
 void WalletsViewModel::LoadWallets(bool keepSelection)
@@ -562,7 +714,7 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
          if (node != nullptr) {
             const auto &wallets = node->wallets();
             if (wallets.size() == 1) {
-               selectedWalletId = wallets[0]->walletId();
+               selectedWalletId = *wallets[0].ids.cbegin();
             }
          }
       }
@@ -574,22 +726,25 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
       if (!hdWallet) {
          continue;
       }
-      const auto hdNode = new WalletRootNode(this, hdWallet, hdWallet->name(), hdWallet->description()
+      const auto hdNode = new WalletRootNode(this, bs::sync::WalletInfo::fromWallet(hdWallet)
+         , hdWallet->name(), hdWallet->description()
          , getHDWalletType(hdWallet, walletsManager_), rootNode_->nbChildren(), rootNode_.get());
       rootNode_->add(hdNode);
 
       // filter groups
       // don't display Settlement
-      auto groups = hdWallet->getGroups();
-      std::vector<std::shared_ptr<bs::sync::hd::Group>> filteredGroups;
-
-      std::copy_if(groups.begin(), groups.end(), std::back_inserter(filteredGroups),
-         [](const std::shared_ptr<bs::sync::hd::Group>& item)
-         { return item->type() != bs::core::wallet::Type::Settlement; }
-      );
-
-      hdNode->addGroups(filteredGroups);
-      if (signContainer_) {
+      for (const auto &group : hdWallet->getGroups()) {
+         if (group->type() == bs::core::wallet::Type::Settlement) {
+            continue;
+         }
+         auto groupNode = hdNode->addGroup(group->type(), group->name(), group->description());
+         if (groupNode) {
+            for (const auto &leaf : group->getLeaves()) {
+               groupNode->addLeaf(bs::sync::WalletInfo::fromLeaf(leaf), leaf);
+            }
+         }
+      }
+      /*TODO: if (signContainer_) {
          if (signContainer_->isOffline()) {
             hdNode->setState(WalletNode::State::Offline);
          }
@@ -604,7 +759,7 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
          } else {
             hdNode->setState(WalletNode::State::Full);
          }
-      }
+      }*/
    }
 
 /*   const auto stmtWallet = walletsManager_->getSettlementWallet();

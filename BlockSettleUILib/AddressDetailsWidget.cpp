@@ -63,6 +63,11 @@ void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory
    act_->init(armory_.get());
 }
 
+void AddressDetailsWidget::init(const std::shared_ptr<spdlog::logger> &logger)
+{
+   logger_ = logger;
+}
+
 void AddressDetailsWidget::setBSAuthAddrs(const std::unordered_set<std::string> &bsAuthAddrs)
 {
    if (bsAuthAddrs.empty()) {
@@ -93,13 +98,19 @@ void AddressDetailsWidget::setQueryAddr(const bs::Address &inAddrVal)
    // Armory can't directly take an address and return all the required data.
    // Work around this by creating a dummy wallet, adding the explorer address,
    // registering the wallet, and getting the required data.
-   const auto walletId = CryptoPRNG::generateRandom(8).toHexStr();
-   const auto dummyWallet = std::make_shared<bs::sync::PlainWallet>(walletId
-      , "temporary", "Dummy explorer wallet", nullptr, logger_);
-   dummyWallet->addAddress(inAddrVal, {}, false);
-   const auto regIds = dummyWallet->registerWallet(armory_, true);
-   for (const auto &regId : regIds) {
-      dummyWallets_[regId] = dummyWallet;
+   if (armory_) {
+      const auto walletId = CryptoPRNG::generateRandom(8).toHexStr();
+      const auto dummyWallet = std::make_shared<bs::sync::PlainWallet>(walletId
+         , "temporary", "Dummy explorer wallet", nullptr, logger_);
+      dummyWallet->addAddress(inAddrVal, {}, false);
+      const auto regIds = dummyWallet->registerWallet(armory_, true);
+      for (const auto& regId : regIds) {
+         dummyWallets_[regId] = dummyWallet;
+      }
+   }
+   else {
+      ui_->addressId->setText(QString::fromStdString(currentAddrStr_));
+      emit needAddressHistory(inAddrVal);
    }
    updateFields();
 }
@@ -518,4 +529,116 @@ void AddressDetailsWidget::clear()
    ui_->transactionCount->setText(loading);
    ui_->totalReceived->setText(loading);
    ui_->totalSent->setText(loading);
+}
+
+void AddressDetailsWidget::onNewBlock(unsigned int blockNum)
+{
+   topBlock_ = blockNum;
+   //TODO: update conf counts
+}
+
+void AddressDetailsWidget::onAddressHistory(const bs::Address& addr, uint32_t curBlock, const std::vector<bs::TXEntry>& entries)
+{
+   if (addr != currentAddr_) {
+      return;  // address has probably changed
+   }
+   topBlock_ = curBlock;
+   txEntryHashSet_.clear();
+
+   // Get the hash and TXEntry object for each relevant Tx hash.
+   std::vector<bs::sync::TXWallet> txDetRequest;
+   for (const auto& entry : entries) {
+      const auto& itTX = txMap_.find(entry.txHash);
+      if (itTX == txMap_.end()) {
+         txDetRequest.push_back({ entry.txHash, {}, entry.value });
+         txEntryHashSet_[entry.txHash] = entry;
+      }
+   }
+   if (txDetRequest.empty()) {
+      SPDLOG_LOGGER_INFO(logger_, "address {} participates in no TXs", currentAddrStr_);
+      onTXDetails({});
+   }
+   else {
+      emit needTXDetails(txDetRequest, false, currentAddr_);
+   }
+}
+
+void AddressDetailsWidget::onTXDetails(const std::vector<bs::sync::TXWalletDetails>& txDet)
+{
+   for (const auto& tx : txDet) {
+      if (txEntryHashSet_.find(tx.txHash) == txEntryHashSet_.end()) {
+         return;    // not our TX details
+      }
+   }
+   CustomTreeWidget* tree = ui_->treeAddressTransactions;
+   tree->clear();
+
+   unsigned int totCount = 0;
+
+   // Go through each TXEntry object and calculate all required UI data.
+   for (const auto& tx : txDet) {
+      QTreeWidgetItem* item = new QTreeWidgetItem(tree);
+      // Get fees & fee/byte by looping through the prev Tx set and calculating.
+      uint64_t fees = 0;
+      for (const auto& inAddr : tx.inputAddresses) {
+         fees += inAddr.value;
+      }
+      for (const auto& outAddr : tx.outputAddresses) {
+         fees -= outAddr.value;
+      }
+      double feePerByte = (double)fees / (double)tx.tx.getTxWeight();
+
+      const auto& itEntry = txEntryHashSet_.find(tx.txHash);
+      if (itEntry == txEntryHashSet_.end()) {
+         logger_->error("[{}] can't find TXEntry for {}", __func__, tx.txHash.toHexStr(true));
+         continue;
+      }
+
+      // Populate the transaction entries.
+      item->setText(colDate,
+         UiUtils::displayDateTime(QDateTime::fromTime_t(itEntry->second.txTime)));
+      item->setText(colTxId, // Flip Armory's TXID byte order: internal -> RPC
+         QString::fromStdString(tx.txHash.toHexStr(true)));
+      item->setData(colConfs, Qt::DisplayRole, itEntry->second.nbConf);
+      item->setText(colInputsNum, QString::number(tx.tx.getNumTxIn()));
+      item->setText(colOutputsNum, QString::number(tx.tx.getNumTxOut()));
+      item->setText(colFees, UiUtils::displayAmount(fees));
+      item->setText(colFeePerByte, QString::number(std::nearbyint(feePerByte)));
+      item->setText(colTxSize, QString::number(tx.tx.getSize()));
+
+      item->setText(colOutputAmt, UiUtils::displayAmount(itEntry->second.value));
+      item->setTextAlignment(colOutputAmt, Qt::AlignRight);
+
+      QFont font = item->font(colOutputAmt);
+      font.setBold(true);
+      item->setFont(colOutputAmt, font);
+
+      if (!tx.isValid) {
+         // Mark invalid transactions
+         item->setTextColor(colOutputAmt, Qt::red);
+      }
+
+      // Check the total received or sent.
+      if (itEntry->second.value > 0) {
+         totalReceived_ += itEntry->second.value;
+      }
+      else {
+         totalSpent_ -= itEntry->second.value; // Negative, so fake that out.
+      }
+      totCount++;
+
+      setConfirmationColor(item);
+      tree->addTopLevelItem(item);
+   }
+
+   ui_->totalReceived->setText(UiUtils::displayAmount(totalReceived_));
+   ui_->totalSent->setText(UiUtils::displayAmount(totalSpent_));
+   ui_->balance->setText(UiUtils::displayAmount(totalReceived_ - totalSpent_));
+
+   emit finished();
+
+   // Set up the display for total rcv'd/spent.
+   ui_->transactionCount->setText(QString::number(totCount));
+
+   tree->resizeColumns();
 }

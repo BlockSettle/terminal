@@ -11,7 +11,7 @@
 #ifndef __OTC_SHIELD_H__
 #define __OTC_SHIELD_H__
 
-#include "WalletShieldBase.h"
+#include "Trading/WalletShieldBase.h"
 
 class OTCShield : public WalletShieldBase
 {

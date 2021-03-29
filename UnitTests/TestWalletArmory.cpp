@@ -29,7 +29,7 @@
 #include "Wallets/SyncWalletsManager.h"
 
 
-class TestWalletWithArmory : public ::testing::Test
+class TestWalletWithArmory : public ::testing::Test, public SignerCallbackTarget
 {
 protected:
    void SetUp()
@@ -70,8 +70,7 @@ public:
 
 TEST_F(TestWalletWithArmory, AddressChainExtension)
 {
-   auto hct = new QtHCT(nullptr);
-   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, hct, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -240,7 +239,6 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    //check balance
    balances = syncLeaf->getAddrBalance(addrVec[11]);
    EXPECT_EQ(balances[0], 25 * COIN);
-   delete hct;
 }
 
 TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
@@ -250,8 +248,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
    std::vector<bs::Address> intVec;
 
    {
-      auto hct = new QtHCT(nullptr);
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, hct, envPtr_->logger());
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -438,7 +435,6 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       leafPtr_.reset();
       walletPtr_->eraseFile();
       walletPtr_.reset();
-      delete hct;
    }
 
    std::string filename;
@@ -458,8 +454,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       }
 
       //sync with db
-      auto hct = new QtHCT(nullptr);
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, hct, envPtr_->logger());
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -567,7 +562,6 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       EXPECT_EQ(syncLeaf->getIntAddressCount(), 47);
 
       filename = walletPtr_->getFileName();
-      delete hct;
    }
 
    /*
@@ -591,8 +585,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
          filename, NetworkType::TestNet);
 
       //resync address chain use, it should not disrupt current state
-      auto hct = new QtHCT(nullptr);
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, hct, envPtr_->logger());
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
       syncMgr->setSignContainer(inprocSigner);
@@ -667,7 +660,6 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
 
       //check address list matches
       EXPECT_EQ(extAddrList, extVec);
-      delete hct;
    }
 }
 
@@ -682,8 +674,7 @@ TEST_F(TestWalletWithArmory, Comments)
    auto changeAddr = leafPtr_->getNewChangeAddress();
    ASSERT_FALSE(changeAddr.empty());
 
-   auto hct = new QtHCT(nullptr);
-   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, hct, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -738,7 +729,6 @@ TEST_F(TestWalletWithArmory, Comments)
    Tx tx(txData);
    EXPECT_TRUE(tx.isInitialized());
    EXPECT_EQ(leafPtr_->getTransactionComment(tx.getThisHash()), txComment);
-   delete hct;
 }
 
 TEST_F(TestWalletWithArmory, ZCBalance)
@@ -748,8 +738,7 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    const auto changeAddr = leafPtr_->getNewChangeAddress();
    EXPECT_EQ(leafPtr_->getUsedAddressCount(), 3);
 
-   auto hct = new QtHCT(nullptr);
-   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, hct, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -932,7 +921,6 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    EXPECT_EQ(syncLeaf->getSpendableBalance(),
       double(300 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider - syncLeaf->getUnconfirmedBalance());
    EXPECT_EQ(syncLeaf->getUnconfirmedBalance(), 0);
-   delete hct;
 }
 
 TEST_F(TestWalletWithArmory, SimpleTX_bech32)
@@ -943,8 +931,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    const auto changeAddr = leafPtr_->getNewChangeAddress();
    EXPECT_EQ(leafPtr_->getUsedAddressCount(), 4);
 
-   auto hct = new QtHCT(nullptr);
-   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, hct, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1049,7 +1036,6 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
 
    auto&& zcVec2 = UnitTestWalletACT::waitOnZC();
    EXPECT_EQ(zcVec2[0].txHash, txObj2.getThisHash());
-   delete hct;
 }
 
 TEST_F(TestWalletWithArmory, SignSettlement)
@@ -1089,8 +1075,7 @@ TEST_F(TestWalletWithArmory, SignSettlement)
    }
 
    /*sync the wallet and connect to db*/
-   auto hct = new QtHCT(nullptr);
-   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, hct, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1198,13 +1183,11 @@ TEST_F(TestWalletWithArmory, SignSettlement)
             break;
       }
    }
-   delete hct;
 }
 
 TEST_F(TestWalletWithArmory, GlobalDelegateConf)
 {
-   auto hct = new QtHCT(nullptr);
-   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, hct, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1386,7 +1369,6 @@ TEST_F(TestWalletWithArmory, GlobalDelegateConf)
    ASSERT_FALSE(ledgerEntries->empty());
    EXPECT_EQ(ledgerEntries->size(), 9);   // we have one additional TX on addr at mining
    EXPECT_EQ(envPtr_->armoryConnection()->getConfirmationsNumber((*ledgerEntries)[1].getBlockNum()), 1);
-   delete hct;
 }
 
 TEST_F(TestWalletWithArmory, CallbackReturnTxCrash)
@@ -1394,8 +1376,7 @@ TEST_F(TestWalletWithArmory, CallbackReturnTxCrash)
    auto addr = leafPtr_->getNewExtAddress();
    ASSERT_FALSE(addr.empty());
 
-   auto hct = new QtHCT(nullptr);
-   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, hct, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1420,7 +1401,6 @@ TEST_F(TestWalletWithArmory, CallbackReturnTxCrash)
       promSync->set_value(true);
    }, true);
    futSync.wait();
-   delete hct;
 }
 
 TEST_F(TestWalletWithArmory, PushZC_retry)
@@ -1436,8 +1416,7 @@ TEST_F(TestWalletWithArmory, PushZC_retry)
    prefixed.append(CryptoPRNG::generateRandom(20));
    auto otherAddr = bs::Address::fromHash(prefixed);
 
-   auto hct = new QtHCT(nullptr);
-   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, hct, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1510,5 +1489,4 @@ TEST_F(TestWalletWithArmory, PushZC_retry)
 
    const auto &zcId = envPtr_->armoryConnection()->pushZC(txSigned);
    EXPECT_EQ(UnitTestWalletACT::waitOnBroadcastError(zcId), -27); // Already-in-chain
-   delete hct;
 }

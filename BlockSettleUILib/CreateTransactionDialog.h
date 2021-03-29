@@ -24,6 +24,7 @@
 #include "Bip21Types.h"
 #include "BSErrorCodeStrings.h"
 #include "CoreWallet.h"
+#include "SignContainer.h"
 #include "UtxoReservationToken.h"
 #include "ValidityFlag.h"
 
@@ -57,20 +58,43 @@ class CreateTransactionDialog : public QDialog
 Q_OBJECT
 
 public:
-   CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<HeadlessContainer> &
-      , bool loadFeeSuggestions, const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
-      , bs::UtxoReservationToken utxoReservation
-      , QWidget* parent);
+   CreateTransactionDialog(bool loadFeeSuggestions, uint32_t topBlock
+      , const std::shared_ptr<spdlog::logger>&, QWidget* parent);
    ~CreateTransactionDialog() noexcept override;
 
    int SelectWallet(const std::string& walletId, UiUtils::WalletsTypes type);
 
+   virtual void initUI() = 0;
    virtual bool switchModeRequested() const= 0;
    virtual std::shared_ptr<CreateTransactionDialog> SwitchMode() = 0;
+
+   virtual void onAddresses(const std::string &walletId, const std::vector<bs::sync::Address>&) {}
+   virtual void onAddressComments(const std::string& walletId
+      , const std::map<bs::Address, std::string>&) {}
+   virtual void onAddressBalances(const std::string& walletId
+      , const std::vector<bs::sync::WalletBalanceData::AddressBalance>&) {}
+
+   virtual void onWalletsList(const std::string &id, const std::vector<bs::sync::HDWalletData>&);
+   void onFeeLevels(const std::map<unsigned int, float>&);
+   void onUTXOs(const std::string& id, const std::string& walletId, const std::vector<UTXO>&);
+   void onSignedTX(const std::string& id, BinaryData signedTX, bs::error::ErrorCode result);
+
+signals:
+   void feeLoadingCompleted(const std::map<unsigned int, float>&);  //deprecated
+   void walletChanged();
+   void needWalletsList(UiUtils::WalletsTypes, const std::string &id);
+   void needFeeLevels(const std::vector<unsigned int>&);
+   void needUTXOs(const std::string &id, const std::string& walletId
+      , bool confOnly=false, bool swOnly=false);
+   void needExtAddresses(const std::string& walletId);
+   void needIntAddresses(const std::string& walletId);
+   void needUsedAddresses(const std::string& walletId);
+   void needAddrComments(const std::string& walletId, const std::vector<bs::Address>&);
+   void needWalletBalances(const std::string& walletId);
+   void needSignTX(const std::string& id, const bs::core::wallet::TXSignRequest &
+      , bool keepDupRecips = false, SignContainer::TXSignMode mode = SignContainer::TXSignMode::Full);
+   void needBroadcastZC(const std::string &id, const BinaryData &);
+   void needSetTxComment(const std::string& walletId, const BinaryData& txHash, const std::string &comment);
 
 protected:
    virtual void init();
@@ -114,17 +138,13 @@ protected:
 
    void showError(const QString &text, const QString &detailedText);
 
-signals:
-   void feeLoadingCompleted(const std::map<unsigned int, float> &);
-   void walletChanged();
-
 protected slots:
    virtual void onFeeSuggestionsLoaded(const std::map<unsigned int, float> &);
    virtual void feeSelectionChanged(int);
    virtual void selectedWalletChanged(int, bool resetInputs = false
       , const std::function<void()> &cbInputsReset = nullptr);
    virtual void onMaxPressed();
-   void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result);
+   void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result); //deprecated
    void updateCreateButtonText();
    void onSignerAuthenticated();
 
@@ -150,6 +170,7 @@ protected:
    std::shared_ptr<ApplicationSettings> applicationSettings_;
    std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
    bs::UtxoReservationToken utxoRes_;
+   uint32_t topBlock_;
 
    XbtAmountValidator * xbtValidator_ = nullptr;
 
@@ -173,6 +194,8 @@ protected:
 
 
    ValidityFlag validityFlag_;
+
+   std::unordered_map<std::string, bs::sync::HDWalletData>  hdWallets_;
 
 private:
    bs::core::wallet::TXSignRequest  txReq_;

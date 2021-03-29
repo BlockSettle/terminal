@@ -52,7 +52,9 @@ namespace bs {
    {
       Q_OBJECT
    public:
-      SecurityStatsCollector(const std::shared_ptr<ApplicationSettings>, ApplicationSettings::Setting param);
+      [[deprecated]] SecurityStatsCollector(const std::shared_ptr<ApplicationSettings>
+         , ApplicationSettings::Setting param);
+      SecurityStatsCollector(ApplicationSettings::Setting param);
 
       QColor getColorFor(const std::string &key) const override;
       unsigned int getGradeFor(const std::string &key) const override;
@@ -122,21 +124,31 @@ public:
    QuoteRequestsWidget(QWidget* parent = nullptr);
    ~QuoteRequestsWidget() override;
 
-   void init(std::shared_ptr<spdlog::logger> logger, const std::shared_ptr<QuoteProvider> &quoteProvider
-      , const std::shared_ptr<AssetManager>& assetManager, const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
+   [[deprecated]] void init(std::shared_ptr<spdlog::logger> logger, const std::shared_ptr<QuoteProvider> &quoteProvider
+      , const std::shared_ptr<AssetManager>& assetManager
+      , const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , std::shared_ptr<CelerClientQt> celerClient);
+   void init(const std::shared_ptr<spdlog::logger>&
+      , const std::shared_ptr<bs::SecurityStatsCollector>& statsCollector);
 
-   void addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &);
+   [[deprecated]] void addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &);
    bool StartCCSignOnOrder(const QString& orderId, QDateTime timestamp);
 
    RFQBlotterTreeView* view() const;
 
+   void onSettlementPending(const std::string& rfqId, const std::string& quoteId
+      , const BinaryData& settlementId, int timeLeftMS);
+   void onSettlementComplete(const std::string& rfqId, const std::string& quoteId
+      , const BinaryData& settlementId);
+
 signals:
    void Selected(const QString& productGroup, const bs::network::QuoteReqNotification& qrc, double indicBid, double indicAsk);
    void quoteReqNotifStatusChanged(const bs::network::QuoteReqNotification &qrn);
+   void putSetting(ApplicationSettings::Setting, const QVariant&);
 
 public slots:
+   void onQuoteRequest(const bs::network::QuoteReqNotification& qrn);
    void onQuoteReqNotifReplied(const bs::network::QuoteNotification &);
    void onQuoteReqNotifSelected(const QModelIndex& index);
    void onQuoteNotifCancelled(const QString &reqId);
@@ -148,7 +160,6 @@ public slots:
 
 private slots:
    void onSettingChanged(int setting, QVariant val);
-   void onQuoteRequest(const bs::network::QuoteReqNotification &qrn);
    void onRowsChanged();
    void onRowsInserted(const QModelIndex &parent, int first, int last);
    void onRowsRemoved(const QModelIndex &parent, int first, int last);   

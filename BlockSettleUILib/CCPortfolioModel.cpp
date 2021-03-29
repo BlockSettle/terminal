@@ -417,8 +417,8 @@ public:
 class CCAssetGroupNode : public AssetGroupNode
 {
 public:
-   CCAssetGroupNode(const QString& xbtGroupName, AssetNode* parent)
-    : AssetGroupNode(xbtGroupName, parent)
+   CCAssetGroupNode(const QString& groupName, AssetNode* parent)
+    : AssetGroupNode(groupName, parent)
    {}
    ~CCAssetGroupNode() noexcept override = default;
 
@@ -452,8 +452,8 @@ public:
 class FXAssetGroupNode : public AssetGroupNode
 {
 public:
-   FXAssetGroupNode(const QString& xbtGroupName, AssetNode* parent)
-    : AssetGroupNode(xbtGroupName, parent)
+   FXAssetGroupNode(const QString& groupName, AssetNode* parent)
+    : AssetGroupNode(groupName, parent)
    {}
    ~FXAssetGroupNode() noexcept override = default;
 
@@ -604,6 +604,12 @@ CCPortfolioModel::CCPortfolioModel(const std::shared_ptr<bs::sync::WalletsManage
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &CCPortfolioModel::updateXBTBalance);
 }
 
+CCPortfolioModel::CCPortfolioModel(QObject* parent)
+   : QAbstractItemModel(parent)
+{
+   root_ = std::make_shared<RootAssetGroupNode>(tr("XBT"), tr("Private Shares"), tr("Cash"));
+}
+
 int CCPortfolioModel::columnCount(const QModelIndex & parent) const
 {
    return PortfolioColumns::PortfolioColumnsCount;
@@ -736,6 +742,89 @@ std::shared_ptr<AssetManager> CCPortfolioModel::assetManager()
 std::shared_ptr<bs::sync::WalletsManager> CCPortfolioModel::walletsManager()
 {
    return walletsManager_;
+}
+
+void CCPortfolioModel::onHDWallet(const bs::sync::WalletInfo& wi)
+{
+   if (!root_->HaveXBTGroup()) {
+      beginInsertRows({}, rowCount({}), rowCount({}));
+      root_->GetXBTGroup();
+      endInsertRows();
+   }
+   const auto& xbtGroup = root_->GetXBTGroup();
+   const auto &displayedWallets = xbtGroup->GetWalletIds();
+   const auto& walletId = *wi.ids.cbegin();
+   if (displayedWallets.find(walletId) != displayedWallets.end()) {
+      return;
+   }
+   beginInsertRows(createIndex(xbtGroup->getRow(), 0, static_cast<void*>(xbtGroup))
+      , displayedWallets.size(), displayedWallets.size());
+   xbtGroup->AddAsset(QString::fromStdString(wi.name), QString::fromStdString(walletId));
+   endInsertRows();
+}
+
+void CCPortfolioModel::onHDWalletDetails(const bs::sync::HDWalletData& wd)
+{
+   for (const auto& group : wd.groups) {
+      if ((group.type != bs::hd::CoinType::Bitcoin_main) && (group.type != bs::hd::CoinType::Bitcoin_test)) {
+         continue;
+      }
+      for (const auto& leaf : group.leaves) {
+         for (const auto& id : leaf.ids) {
+            leafIdToRootId_[id] = wd.id;
+         }
+      }
+   }
+}
+
+void CCPortfolioModel::onWalletBalance(const bs::sync::WalletBalanceData& wbd)
+{
+   leafBalances_[wbd.id] = wbd.balTotal;
+   const auto& itId = leafIdToRootId_.find(wbd.id);
+   if (itId != leafIdToRootId_.end()) {
+      updateWalletBalance(itId->second);
+   }
+}
+
+void CCPortfolioModel::onBalance(const std::string& currency, double balance)
+{
+   const auto& fxGroup = root_->GetFXGroup();
+   auto fxNode = fxGroup->GetFXNode(currency);
+   if (!fxNode) {  // insert under root
+      beginInsertRows(QModelIndex{}, fxGroup->getRow(), fxGroup->getRow());
+      fxGroup->AddAsset(QString::fromStdString(currency));
+      fxNode = fxGroup->GetFXNode(currency);
+      fxNode->SetFXAmount(balance);
+      endInsertRows();
+   }
+   else {
+      fxNode->SetFXAmount(balance);
+      dataChanged(index(fxGroup->getRow(), PortfolioColumns::XBTValueColumn)
+         , index(fxGroup->getRow(), PortfolioColumns::XBTValueColumn)
+         , { Qt::DisplayRole });
+
+      const auto &parentIndex = createIndex(fxGroup->getRow(), 0, static_cast<void*>(fxGroup));
+      dataChanged(index(fxNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
+         , index(fxNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
+         , { Qt::DisplayRole });
+   }
+}
+
+void CCPortfolioModel::onPriceChanged(const std::string& currency, double price)
+{
+   const auto& fxGroup = root_->GetFXGroup();
+   const auto &fxNode = fxGroup->GetFXNode(currency);
+
+   if (fxNode && fxNode->SetPrice(price)) {
+      dataChanged(index(fxGroup->getRow(), PortfolioColumns::XBTValueColumn)
+         , index(fxGroup->getRow(), PortfolioColumns::XBTValueColumn)
+         , { Qt::DisplayRole });
+
+      const auto& parentIndex = createIndex(fxGroup->getRow(), 0, static_cast<void*>(fxGroup));
+      dataChanged(index(fxNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
+         , index(fxNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
+         , { Qt::DisplayRole });
+   }
 }
 
 bool CCPortfolioModel::hasChildren(const QModelIndex& parentIndex) const
@@ -1020,5 +1109,33 @@ void CCPortfolioModel::updateCCBalance()
             , index(ccGroup->getRow(), PortfolioColumns::XBTValueColumn)
             , {Qt::DisplayRole});
       }
+   }
+}
+
+void CCPortfolioModel::updateWalletBalance(const std::string& walletId)
+{
+   const auto& xbtGroup = root_->GetXBTGroup();
+   const auto& parentIndex = createIndex(xbtGroup->getRow(), 0, static_cast<void*>(xbtGroup));
+
+   const auto xbtNode = xbtGroup->GetXBTNode(walletId);
+   if (!xbtNode) {
+      return;
+   }
+   double balTotal = 0;
+   for (const auto& idMap : leafIdToRootId_) {
+      if (idMap.second == walletId) {
+         try {
+            balTotal += leafBalances_.at(idMap.first);
+         }
+         catch (const std::exception&) {}
+      }
+   }
+   if (xbtNode->SetXBTAmount(balTotal)) {
+      dataChanged(index(xbtNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
+         , index(xbtNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
+         , { Qt::DisplayRole });
+      dataChanged(index(xbtGroup->getRow(), PortfolioColumns::XBTValueColumn)
+         , index(xbtGroup->getRow(), PortfolioColumns::XBTValueColumn)
+         , { Qt::DisplayRole });
    }
 }

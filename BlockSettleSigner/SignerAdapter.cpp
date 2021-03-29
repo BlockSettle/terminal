@@ -52,7 +52,7 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
       , listener_.get())) {
       throw std::runtime_error("adapter connection failed");
    }
-   signContainer_ = std::make_shared<SignAdapterContainer>(logger_, this, listener_);
+   signContainer_ = std::make_shared<SignAdapterContainer>(logger_, listener_);
 }
 
 std::shared_ptr<DataConnection> SignerAdapter::instantiateAdapterConnection(

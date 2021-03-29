@@ -14,9 +14,10 @@
 #include <QWidget>
 #include <QTimer>
 #include <memory>
-
+#include "Celer/BaseCelerClient.h"
 #include "CommonTypes.h"
 #include "MarketDataWidget.h"
+#include "SignerDefs.h"
 #include "TabWithShortcut.h"
 #include "UtxoReservationToken.h"
 
@@ -30,6 +31,7 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
+   struct TradeSettings;
    class UTXOReservationManager;
 }
 
@@ -65,27 +67,40 @@ public:
    RFQRequestWidget(QWidget* parent = nullptr);
    ~RFQRequestWidget() override;
 
-   void initWidgets(const std::shared_ptr<MarketDataProvider> &
-      , const std::shared_ptr<MDCallbacksQt> &
-      , const std::shared_ptr<ApplicationSettings> &);
-
-   void init(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<CelerClientQt> &
-      , const std::shared_ptr<AuthAddressManager> &
-      , const std::shared_ptr<QuoteProvider> &
-      , const std::shared_ptr<AssetManager> &
-      , const std::shared_ptr<DialogManager> &
-      , const std::shared_ptr<HeadlessContainer> &
-      , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<AutoSignScriptProvider> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &
-      , OrderListModel *orderListModel);
-
-   void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
+   void init(const std::shared_ptr<spdlog::logger>&
+      , const std::shared_ptr<DialogManager>&
+      , OrderListModel* orderListModel);
 
    void shortcutActivated(ShortcutType s) override;
 
    void setAuthorized(bool authorized);
+
+   void onNewSecurity(const std::string& name, bs::network::Asset::Type);
+   void onMDUpdated(bs::network::Asset::Type, const QString& security
+      , const bs::network::MDFields &);
+   void onBalance(const std::string& currency, double balance);
+   void onWalletBalance(const bs::sync::WalletBalanceData&);
+   void onHDWallet(const bs::sync::HDWalletData&);
+   void onWalletData(const std::string& walletId, const bs::sync::WalletData&);
+
+   void onMatchingLogin(const std::string& mtchLogin, BaseCelerClient::CelerUserType
+      , const std::string& userId);
+   void onMatchingLogout();
+   void onVerifiedAuthAddresses(const std::vector<bs::Address>&);
+   void onAuthKey(const bs::Address&, const BinaryData& authKey);
+   void onTradeSettings(const std::shared_ptr<bs::TradeSettings>&);
+
+   void onQuoteReceived(const bs::network::Quote&);
+   void onQuoteMatched(const std::string &rfqId, const std::string& quoteId);
+   void onQuoteFailed(const std::string& rfqId, const std::string& quoteId
+      , const std::string& info);
+   void onSettlementPending(const std::string& rfqId, const std::string& quoteId
+      , const BinaryData& settlementId, int timeLeftMS);
+   void onSettlementComplete(const std::string& rfqId, const std::string& quoteId
+      , const BinaryData& settlementId);
+
+   void onReservedUTXOs(const std::string& resId, const std::string &subId
+      , const std::vector<UTXO>&);
 
 protected:
    void hideEvent(QHideEvent* event) override;
@@ -111,6 +126,16 @@ signals:
 
    void CreateObligationDeliveryTX(const QModelIndex& index);
 
+   void needWalletData(const std::string& walletId);
+   void needSubmitRFQ(const bs::network::RFQ&, const std::string& reserveId = {});
+   void needAcceptRFQ(const std::string& id, const bs::network::Quote&);
+   void needExpireRFQ(const std::string& id);
+   void needCancelRFQ(const std::string& id);
+   void needAuthKey(const bs::Address&);
+
+   void needReserveUTXOs(const std::string& reserveId, const std::string& subId
+      , uint64_t amount, bool withZC = false, const std::vector<UTXO>& utxos = {});
+
 private:
    void showEditableRFQPage();
    void showFuturesPage(bs::network::Asset::Type type);
@@ -132,14 +157,14 @@ public slots:
    void onDisableSelectedInfo();
    void onRefreshFocus();
 
-   void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
+   void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response); //deprecated
    void onUserConnected(const bs::network::UserType &);
    void onUserDisconnected();
 
 private slots:
    void onConnectedToCeler();
    void onDisconnectedFromCeler();
-   void onRFQAccepted(const std::string &id);
+   void onRFQAccepted(const std::string &id, const bs::network::Quote&);
    void onRFQExpired(const std::string &id);
    void onRFQCancelled(const std::string &id);
 
@@ -168,9 +193,12 @@ private:
 
    std::shared_ptr<RfqStorage> rfqStorage_;
 
-   QList<QMetaObject::Connection>   marketDataConnection;
+   QList<QMetaObject::Connection>   marketDataConnection_;
 
+   std::unordered_map<std::string, double>      balances_;
    std::unordered_map<std::string, RFQDialog *> dialogs_;
+
+   BaseCelerClient::CelerUserType   userType_{ BaseCelerClient::CelerUserType::Undefined };
 };
 
 #endif // __RFQ_REQUEST_WIDGET_H__

@@ -50,25 +50,9 @@ TransactionsWidgetInterface::TransactionsWidgetInterface(QWidget *parent)
    connect(actionCPFP_, &QAction::triggered, this, &TransactionsWidgetInterface::onCreateCPFPDialog);
 }
 
-void TransactionsWidgetInterface::init(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , const std::shared_ptr<HeadlessContainer> &signContainer
-   , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<spdlog::logger> &logger)
-
+void TransactionsWidgetInterface::init(const std::shared_ptr<spdlog::logger> &logger)
 {
-   walletsManager_ = walletsMgr;
-   armory_ = armory;
-   utxoReservationManager_ = utxoReservationManager;
-   signContainer_ = signContainer;
-   appSettings_ = appSettings;
    logger_ = logger;
-
-   const auto hct = dynamic_cast<QtHCT*>(signContainer_ ? signContainer_->cbTarget() : nullptr);
-   if (hct) {
-      connect(hct, &QtHCT::TXSigned, this, &TransactionsWidgetInterface::onTXSigned);
-   }
 }
 
 void TransactionsWidgetInterface::onRevokeSettlement()
@@ -195,9 +179,6 @@ void TransactionsWidgetInterface::onRevokeSettlement()
    if (txItem->initialized) {
       cbDialog(txItem);
    }
-   else {
-      TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
-   }
 }
 
 void TransactionsWidgetInterface::onCreateRBFDialog()
@@ -210,10 +191,9 @@ void TransactionsWidgetInterface::onCreateRBFDialog()
 
    const auto &cbDialog = [this](const TransactionPtr &txItem) {
       try {
-         auto dlg = CreateTransactionDialogAdvanced::CreateForRBF(armory_
-            , walletsManager_, utxoReservationManager_, signContainer_, logger_, appSettings_, txItem->tx
-            , this);
-         dlg->exec();
+         //FIXME: auto dlg = CreateTransactionDialogAdvanced::CreateForRBF(topBlock_
+         //   , logger_, txItem->tx, this);
+         //dlg->exec();
       }
       catch (const std::exception &e) {
          BSMessageBox(BSMessageBox::critical, tr("RBF Transaction"), tr("Failed to create RBF transaction")
@@ -223,9 +203,6 @@ void TransactionsWidgetInterface::onCreateRBFDialog()
 
    if (txItem->initialized) {
       cbDialog(txItem);
-   }
-   else {
-      TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
    }
 }
 
@@ -246,10 +223,9 @@ void TransactionsWidgetInterface::onCreateCPFPDialog()
                break;
             }
          }
-         auto dlg = CreateTransactionDialogAdvanced::CreateForCPFP(armory_
-            , walletsManager_, utxoReservationManager_, signContainer_, wallet, logger_, appSettings_
-            , txItem->tx, this);
-         dlg->exec();
+         //FIXME: auto dlg = CreateTransactionDialogAdvanced::CreateForCPFP(topBlock_
+         //   , logger_, , txItem->tx, this);
+         //dlg->exec();
       }
       catch (const std::exception &e) {
          BSMessageBox(BSMessageBox::critical, tr("CPFP Transaction"), tr("Failed to create CPFP transaction")
@@ -259,9 +235,6 @@ void TransactionsWidgetInterface::onCreateCPFPDialog()
 
    if (txItem->initialized) {
       cbDialog(txItem);
-   }
-   else {
-      TransactionsViewItem::initialize(txItem, armory_.get(), walletsManager_, cbDialog);
    }
 }
 

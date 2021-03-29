@@ -11,6 +11,7 @@
 #ifndef __AUTH_ADDRESS_DIALOG_H__
 #define __AUTH_ADDRESS_DIALOG_H__
 
+#include "ApplicationSettings.h"
 #include "AuthAddressManager.h"
 #include "BinaryData.h"
 #include "BsClient.h"
@@ -28,14 +29,14 @@ class QItemSelection;
 namespace Ui {
     class AuthAddressDialog;
 }
-
 namespace bs {
    struct TradeSettings;
 }
-
 namespace spdlog {
    class logger;
 }
+class AuthAddressViewModel;
+class AuthAddressConfirmDialog;
 
 
 class AuthAddressDialog : public QDialog
@@ -43,17 +44,25 @@ class AuthAddressDialog : public QDialog
 Q_OBJECT
 
 public:
-   AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logger
+   [[deprecated]] AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<AuthAddressManager>& authAddressManager
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<ApplicationSettings> &, QWidget* parent = nullptr);
+   AuthAddressDialog(const std::shared_ptr<spdlog::logger>&, QWidget* parent = nullptr);
    ~AuthAddressDialog() override;
 
    void setAddressToVerify(const QString &addr);
    void setBsClient(const std::weak_ptr<BsClient>& bsClient);
 
+   void onAuthAddresses(const std::vector<bs::Address>&
+      , const std::map<bs::Address, AddressVerificationState>&);
+   void onSubmittedAuthAddresses(const std::vector<bs::Address>&);
+
 signals:
    void askForConfirmation(const QString &address, double txAmount);
+   void needNewAuthAddress();
+   void needSubmitAuthAddress(const bs::Address&);
+   void putSetting(ApplicationSettings::Setting, const QVariant&);
 
 private slots:
    void resizeTreeViewColumns();
@@ -95,6 +104,7 @@ private:
    std::shared_ptr<AuthAddressManager>    authAddressManager_;
    std::shared_ptr<AssetManager>          assetManager_;
    std::shared_ptr<ApplicationSettings>   settings_;
+   AuthAddressViewModel* authModel_{ nullptr };
    QPointer<AuthAdressControlProxyModel>  model_;
    bs::Address                            defaultAddr_;
    std::weak_ptr<BsClient>                bsClient_;

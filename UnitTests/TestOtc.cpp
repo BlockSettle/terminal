@@ -37,7 +37,7 @@ namespace {
 } // namespace
 class QtHCT;
 
-class TestPeer
+class TestPeer : public SignerCallbackTarget
 {
 public:
    void init(TestEnv &env, const std::string &name)
@@ -81,9 +81,8 @@ public:
 
       walletsMgr_->addWallet(wallet_);
 
-      hct_ = std::make_shared<QtHCT>(nullptr);
-      signer_ = std::make_shared<InprocSigner>(walletsMgr_, env.logger()
-         , hct_.get(), "", NetworkType::TestNet);
+      signer_ = std::make_shared<InprocSigner>(walletsMgr_, env.logger(), this
+         , "", NetworkType::TestNet);
       signer_->Start();
 
       syncWalletMgr_ = std::make_shared<bs::sync::WalletsManager>(env.logger()

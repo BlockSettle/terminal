@@ -16,7 +16,6 @@
 #include <QColor>
 
 #include "CommonTypes.h"
-
 #include <memory>
 #include <vector>
 #include <deque>
@@ -64,7 +63,8 @@ public:
       }
    };
 
-   OrderListModel(const std::shared_ptr<AssetManager> &, QObject *parent = nullptr);
+   [[deprecated]] OrderListModel(const std::shared_ptr<AssetManager> &, QObject *parent = nullptr);
+   OrderListModel(QObject* parent = nullptr);
    ~OrderListModel() noexcept override = default;
 
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -78,6 +78,11 @@ public:
    bool DeliveryRequired(const QModelIndex &index);
 
    DeliveryObligationData getDeliveryObligationData(const QModelIndex &index) const;
+
+   void onOrdersUpdate(const std::vector<bs::network::Order> &);
+   void onMatchingLogin();
+   void onMatchingLogout();
+
 public slots:
    void onMessageFromPB(const Blocksettle::Communication::ProxyTerminalPb::Response &response);
    void onDisconnected();
@@ -103,8 +108,7 @@ private:
          : parent_(parent)
          , data_(data)
          , type_(type)
-      {
-      }
+      {}
    };
 
    struct Data {
@@ -254,15 +258,13 @@ private:
          : name_(name)
          , idx_(nullptr, this, DataType::StatusGroup)
          , row_(row)
-      {
-      }
+      {}
 
       static QString toString(Type);
    };
 
    static StatusGroup::Type getStatusGroup(const bs::network::Order &);
 
-   void onOrderUpdated(const bs::network::Order &);
    int findGroup(Market *market, Group *group) const;
    int findMarket(StatusGroup *statusGroup, Market *market) const;
    std::pair<Group*, int> findItem(const bs::network::Order &order);
@@ -273,11 +275,12 @@ private:
    void createGroupsIfNeeded(const bs::network::Order &order, Market *&market, Group *&group);
 
    void reset();
-   void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations &msg);
-   void processUpdateOrder(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrder &msg);
    void resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations &message);
 
    void DisplayFuturesDeliveryRow(const Blocksettle::Communication::ProxyTerminalPb::Response_DeliveryObligationsRequest &obligation);
+   [[deprecated]] void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations&);
+   [[deprecated]] void processUpdateOrder(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrder&);
+   void onOrderUpdated(const bs::network::Order&);
 
    bool isFutureDeliveryIndex(const QModelIndex &index) const;
    FuturesDeliveryGroup* GetFuturesDeliveryGroup(const QModelIndex &index) const;

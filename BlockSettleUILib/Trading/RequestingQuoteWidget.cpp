@@ -42,7 +42,7 @@ RequestingQuoteWidget::RequestingQuoteWidget(QWidget* parent)
    ui_->labelHint->clear();
    ui_->labelHint->hide();
 
-   setupTimer(Indicative, QDateTime::currentDateTime().addSecs(30));
+   setupTimer(Indicative, QDateTime::currentDateTime().addSecs(29)); //TODO: receive end time from SettlementAdapter
 
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &RequestingQuoteWidget::onCancel);
    connect(ui_->pushButtonAccept, &QPushButton::clicked, this, &RequestingQuoteWidget::onAccept);
@@ -155,7 +155,8 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
 
    timeoutReply_ = quote.expirationTime.addMSecs(quote.timeSkewMs);
 
-   ui_->labelQuoteValue->setText(UiUtils::displayPriceForAssetType(quote.price, quote.assetType));
+   ui_->labelQuoteValue->setText(UiUtils::displayPriceForAssetType(quote.price
+      , quote.assetType));
    ui_->labelQuoteValue->show();
 
    if (quote.assetType == bs::network::Asset::SpotFX) {
@@ -184,7 +185,16 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
 
    if (rfq_.side == bs::network::Side::Buy) {
       const auto currency = contrProductString.toStdString();
-      const auto balance = assetManager_->getBalance(currency, bs::UTXOReservationManager::kIncludeZcRequestor, nullptr);
+      double balance = 0;
+      if (assetManager_) {
+         balance = assetManager_->getBalance(currency, bs::UTXOReservationManager::kIncludeZcRequestor, nullptr);
+      }
+      else {
+         try {
+            balance = balances_.at(currency);
+         }
+         catch (const std::exception&) {}
+      }
       balanceOk_ = (value < balance);
       ui_->pushButtonAccept->setEnabled(balanceOk_);
       if (!balanceOk_) {
@@ -256,6 +266,16 @@ void RequestingQuoteWidget::populateDetails(const bs::network::RFQ& rfq)
    }
 }
 
+void RequestingQuoteWidget::onBalance(const std::string& currency, double balance)
+{
+   balances_[currency] = balance;
+}
+
+void RequestingQuoteWidget::onMatchingLogout()
+{
+   onCancel();
+}
+
 void RequestingQuoteWidget::onAccept()
 {
    requestTimer_.stop();
@@ -267,7 +287,7 @@ void RequestingQuoteWidget::onAccept()
    }
    ui_->labelTimeLeft->clear();
 
-   emit quoteAccepted(QString::fromStdString(rfq_.requestId), quote_);
+   emit quoteAccepted(rfq_.requestId, quote_);
 }
 
 void RequestingQuoteWidget::SetQuoteDetailsState(QuoteDetailsState state)

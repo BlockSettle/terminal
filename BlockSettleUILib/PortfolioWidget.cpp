@@ -15,8 +15,10 @@
 #include <QClipboard>
 #include <spdlog/spdlog.h>
 #include "ApplicationSettings.h"
-#include "CreateTransactionDialogAdvanced.h"
 #include "BSMessageBox.h"
+#include "CCPortfolioModel.h"
+#include "CreateTransactionDialogAdvanced.h"
+#include "CurrencyPair.h"
 #include "TransactionDetailDialog.h"
 #include "TransactionsViewModel.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -68,6 +70,9 @@ PortfolioWidget::PortfolioWidget(QWidget* parent)
    connect(ui_->treeViewUnconfirmedTransactions, &QTreeView::customContextMenuRequested, this, &PortfolioWidget::showContextMenu);
    connect(ui_->treeViewUnconfirmedTransactions, &QTreeView::activated, this, &PortfolioWidget::showTransactionDetails);
    ui_->treeViewUnconfirmedTransactions->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
+   connect(ui_->widgetMarketData, &MarketDataWidget::needMdConnection, this, &PortfolioWidget::needMdConnection);
+   connect(ui_->widgetMarketData, &MarketDataWidget::needMdDisconnect, this, &PortfolioWidget::needMdDisconnect);
 }
 
 PortfolioWidget::~PortfolioWidget() = default;
@@ -87,31 +92,109 @@ void PortfolioWidget::SetTransactionsModel(const std::shared_ptr<TransactionsVie
       static_cast<int>(TransactionsViewModel::Columns::TxHash));
 }
 
-void PortfolioWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<MarketDataProvider> &mdProvider
-   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
-   , const std::shared_ptr<CCPortfolioModel> &model
-   , const std::shared_ptr<HeadlessContainer> &container
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
+void PortfolioWidget::init(const std::shared_ptr<spdlog::logger>& logger)
 {
-   TransactionsWidgetInterface::init(walletsMgr, armory, utxoReservationManager, container, appSettings, logger);
-
-   ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ_Portfolio
-      , mdProvider, mdCallbacks);
-   ui_->widgetCCProtfolio->SetPortfolioModel(model);
+   logger_ = logger;
+   portfolioModel_ = std::make_shared<CCPortfolioModel>(this);
+   ui_->widgetCCProtfolio->SetPortfolioModel(portfolioModel_);
 }
 
 void PortfolioWidget::shortcutActivated(ShortcutType s)
-{
-
-}
+{}
 
 void PortfolioWidget::setAuthorized(bool authorized)
 {
    ui_->widgetMarketData->setAuthorized(authorized);
+}
+
+void PortfolioWidget::onMDConnected()
+{
+   ui_->widgetMarketData->onMDConnected();
+}
+
+void PortfolioWidget::onMDDisconnected()
+{
+   ui_->widgetMarketData->onMDDisconnected();
+}
+
+void PortfolioWidget::onMDUpdated(bs::network::Asset::Type assetType
+   , const QString& security, const bs::network::MDFields& fields)
+{
+   ui_->widgetMarketData->onMDUpdated(assetType, security, fields);
+
+   if ((assetType == bs::network::Asset::Undefined) || security.isEmpty()) {
+      return;
+   }
+   double lastPx = 0;
+   double bidPrice = 0;
+
+   double productPrice = 0;
+   CurrencyPair cp(security.toStdString());
+   std::string ccy;
+
+   switch (assetType) {
+   case bs::network::Asset::PrivateMarket:
+      ccy = cp.NumCurrency();
+      break;
+   case bs::network::Asset::SpotXBT:
+      ccy = cp.DenomCurrency();
+      break;
+   default:
+      return;
+   }
+
+   if (ccy.empty()) {
+      return;
+   }
+
+   for (const auto& field : fields) {
+      if (field.type == bs::network::MDField::PriceLast) {
+         lastPx = field.value;
+         break;
+      } else  if (field.type == bs::network::MDField::PriceBid) {
+         bidPrice = field.value;
+      }
+   }
+
+   productPrice = (lastPx > 0) ? lastPx : bidPrice;
+
+   if (productPrice > 0) {
+      if (ccy == cp.DenomCurrency()) {
+         productPrice = 1 / productPrice;
+      }
+      portfolioModel_->onPriceChanged(ccy, productPrice);
+      ui_->widgetCCProtfolio->onPriceChanged(ccy, productPrice);
+      if (ccy == "EUR") {
+         ui_->widgetCCProtfolio->onBasePriceChanged(ccy, 1/productPrice);
+      }
+   }
+}
+
+void PortfolioWidget::onHDWallet(const bs::sync::WalletInfo& wi)
+{
+   portfolioModel_->onHDWallet(wi);
+}
+
+void PortfolioWidget::onHDWalletDetails(const bs::sync::HDWalletData& wd)
+{
+   portfolioModel_->onHDWalletDetails(wd);
+}
+
+void PortfolioWidget::onWalletBalance(const bs::sync::WalletBalanceData& wbd)
+{
+   portfolioModel_->onWalletBalance(wbd);
+   ui_->widgetCCProtfolio->onWalletBalance(wbd);
+}
+
+void PortfolioWidget::onBalance(const std::string& currency, double balance)
+{
+   portfolioModel_->onBalance(currency, balance);
+   ui_->widgetCCProtfolio->onBalance(currency, balance);
+}
+
+void PortfolioWidget::onEnvConfig(int value)
+{
+   ui_->widgetMarketData->onEnvConfig(value);
 }
 
 void PortfolioWidget::showTransactionDetails(const QModelIndex& index)
@@ -124,8 +207,11 @@ void PortfolioWidget::showTransactionDetails(const QModelIndex& index)
          return;
       }
 
-      TransactionDetailDialog transactionDetailDialog(txItem, walletsManager_, armory_, this);
-      transactionDetailDialog.exec();
+      auto txDetailDialog = new TransactionDetailDialog(txItem, this);
+      connect(txDetailDialog, &QDialog::finished, [txDetailDialog](int) {
+         txDetailDialog->deleteLater();
+      });
+      txDetailDialog->show();
    }
 }
 
@@ -161,7 +247,7 @@ void PortfolioWidget::showContextMenu(const QPoint &point)
 
    if (txNode->item()->isPayin()) {
       actionRevoke_->setData(sourceIndex);
-      actionRevoke_->setEnabled(model_->isTxRevocable(txNode->item()->tx));
+//      actionRevoke_->setEnabled(model_->isTxRevocable(txNode->item()->tx));
       contextMenu_.addAction(actionRevoke_);
    }
    else {
@@ -181,7 +267,5 @@ void PortfolioWidget::showContextMenu(const QPoint &point)
       contextMenu_.exec(ui_->treeViewUnconfirmedTransactions->mapToGlobal(point));
    }
 }
-
-
 
 #include "PortfolioWidget.moc"

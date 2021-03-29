@@ -26,22 +26,12 @@ Q_OBJECT
 
 public:
    static std::shared_ptr<CreateTransactionDialog> CreateForPaymentRequest(
-        const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<HeadlessContainer>&
-      , const std::shared_ptr<spdlog::logger>&
-      , const std::shared_ptr<ApplicationSettings> &
+      uint32_t topBlock, const std::shared_ptr<spdlog::logger>&
       , const Bip21::PaymentRequestInfo& paymentInfo
       , QWidget* parent = nullptr);
 
 public:
-   CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<HeadlessContainer> &
-      , const std::shared_ptr<spdlog::logger>&
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
+   CreateTransactionDialogSimple(uint32_t topBlock, const std::shared_ptr<spdlog::logger>&
       , QWidget* parent = nullptr);
    ~CreateTransactionDialogSimple() override;
 
@@ -51,7 +41,6 @@ public:
    void preSetAddress(const QString& address);
    void preSetValue(const double value);
    void preSetValue(const bs::XBTAmount& value);
-
 
 protected:
    QComboBox * comboBoxWallets() const override;
@@ -88,7 +77,7 @@ private slots:
    void onImportPressed();
 
 private:
-   void initUI();
+   void initUI() override;
 
    std::unique_ptr<Ui::CreateTransactionDialogSimple> ui_;
    unsigned int   recipientId_ = 0;

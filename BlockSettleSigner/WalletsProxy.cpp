@@ -19,11 +19,10 @@
 #include <QVariant>
 
 #include <spdlog/spdlog.h>
-
+#include "ArmoryBackups.h"
 #include "CoreHDWallet.h"
 #include "PaperBackupWriter.h"
 #include "SignerAdapter.h"
-#include "SignerAdapterContainer.h"
 #include "TXInfo.h"
 #include "UiUtils.h"
 #include "WalletBackupFile.h"
@@ -289,7 +288,13 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
          if (!wallet) {
             throw std::runtime_error("failed to find wallet with id " + walletId.toStdString());
          }
-         seedData = bs::core::wallet::Seed(chainCode, wallet->networkType()).toEasyCodeChecksum();
+         const auto& encoded = ArmoryBackups::BackupEasy16::encode(chainCode
+            , ArmoryBackups::BackupType::BIP32_Seed_Structured);
+         if (encoded.size() != 2) {
+            throw std::runtime_error("failed to encode easy16");
+         }
+         seedData.part1 = encoded.at(0);
+         seedData.part2 = encoded.at(1);
          privKeyString = privKey.toBinStr();
       } catch (const std::exception &e) {
          logger_->error("[WalletsProxy] failed to encode private key: {}", e.what());
@@ -598,6 +603,7 @@ void WalletsProxy::deleteWallet(const QString &walletId, const QJSValue &jsCallb
 
 std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getWoSyncWallet(const bs::sync::WatchingOnlyWallet &wo) const
 {
+#if 0 //FIXME: unknown sync::hd::Wallet constructor
    try {
       auto result = std::make_shared<bs::sync::hd::Wallet>(wo, signContainer().get(), logger_);
       result->setWCT(walletsMgr_.get());
@@ -611,6 +617,7 @@ std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getWoSyncWallet(const bs::sy
    } catch (const std::exception &e) {
       logger_->error("[WalletsProxy] WO-wallet creation failed: {}", e.what());
    }
+#endif   //0
    return nullptr;
 }
 

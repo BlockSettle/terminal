@@ -17,11 +17,17 @@
 #include "ServerConnectionListener.h"
 #include "BSErrorCode.h"
 
-#include "bs_signer.pb.h"
-#include "headless.pb.h"
 
 namespace spdlog {
    class logger;
+}
+namespace Blocksettle {
+   namespace Communication {
+      namespace signer {
+         enum ControlPasswordStatus : int;
+         enum PacketType : int;
+      }
+   }
 }
 namespace bs {
    namespace core {
@@ -62,7 +68,7 @@ public:
 
    // Sent to GUI status update message
    void sendStatusUpdate();
-   void sendControlPasswordStatusUpdate(Blocksettle::Communication::signer::ControlPasswordStatus status);
+   void sendControlPasswordStatusUpdate(const Blocksettle::Communication::signer::ControlPasswordStatus &);
 
    void resetConnection();
 

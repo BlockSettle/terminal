@@ -84,20 +84,21 @@ void TestEnv::shutdown()
 
    walletsMgr_ = nullptr;
 
-   armoryInstance_ = nullptr;
-   armoryConnection_ = nullptr;
+   armoryInstance_.reset();
+   armoryConnection_.reset();
 
    QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)).removeRecursively();
 
    ACTqueue::notifQueue_.clear();
 }
 
-void TestEnv::requireArmory()
+void TestEnv::requireArmory(bool waitForReady)
 {
    //init armorydb
-   if (armoryInstance_ != nullptr)
+   if (armoryInstance_ != nullptr) {
+      armoryInstance_->init();
       return;
-
+   }
    armoryInstance_ = std::make_shared<ArmoryInstance>();
 
    auto armoryConnection = std::make_shared<TestArmoryConnection>(
@@ -113,7 +114,7 @@ void TestEnv::requireArmory()
    auto keyCb = [](const BinaryData&, const std::string&)->bool
    {
       return true;
-   };   
+   };
    armoryConnection->setupConnection(settings, keyCb);
    armoryConnection_ = armoryConnection;
 
@@ -123,12 +124,19 @@ void TestEnv::requireArmory()
    while (armoryConnection_->state() != ArmoryState::Connected) {
       std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
    }
-   qDebug() << "Armory connected - waiting for ready state...";
-   armoryConnection_->goOnline();
-   while (armoryConnection_->state() != ArmoryState::Ready) {
-      std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
+   if (waitForReady) {
+      qDebug() << "Armory connected - waiting for ready state...";
    }
-   logger_->debug("Armory is ready - continue execution");
+   else {
+      qDebug() << "Armory connected - go online";
+   }
+   armoryConnection_->goOnline();
+   if (waitForReady) {
+      while (armoryConnection_->state() != ArmoryState::Ready) {
+         std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
+      }
+      logger_->debug("Armory is ready - continue execution");
+   }
 }
 
 void TestEnv::requireAssets()
@@ -154,6 +162,11 @@ void TestEnv::requireConnections()
 ///////////////////////////////////////////////////////////////////////////////
 ArmoryInstance::ArmoryInstance()
    : blkdir_("./blkfiletest"), homedir_("./fakehomedir"), ldbdir_("./ldbtestdir")
+{
+   init();
+}
+
+void ArmoryInstance::init()
 {
    //setup armory folders
    SystemFileUtils::rmDir(blkdir_);
@@ -240,15 +253,18 @@ ArmoryInstance::ArmoryInstance()
 }
 
 ////
-ArmoryInstance::~ArmoryInstance()
+void ArmoryInstance::shutdown()
 {
+   if (!theBDMt_) {
+      return;
+   }
    //shutdown server
    auto&& bdvObj2 = AsyncClient::BlockDataViewer::getNewBDV("127.0.0.1"
       , config_.listenPort_, BlockDataManagerConfig::getDataDir()
       , [](const std::set<BinaryData> &) { return SecureBinaryData{}; }
       , BlockDataManagerConfig::ephemeralPeers_, true, nullptr);
-   auto&& serverPubkey = WebSocketServer::getPublicKey();
-   bdvObj2->addPublicKey(serverPubkey);
+//   auto&& serverPubkey = WebSocketServer::getPublicKey(); // sometimes crash here
+//   bdvObj2->addPublicKey(serverPubkey);
    bdvObj2->connectToRemote();
 
    bdvObj2->shutdown(config_.cookie_);
@@ -280,20 +296,30 @@ void ArmoryInstance::pushZC(const BinaryData& zc, unsigned int blocksUntilMined,
 void ArmoryInstance::setReorgBranchPoint(const BinaryData& hash)
 {
    auto headerPtr = theBDMt_->bdm()->blockchain()->getHeaderByHash(hash);
-   if (headerPtr == nullptr)
+   if (headerPtr == nullptr) {
       throw std::runtime_error("null header ptr");
-
+   }
    nodePtr_->setReorgBranchPoint(headerPtr);
 }
 
 BinaryData ArmoryInstance::getCurrentTopBlockHash() const
 {
    auto headerPtr = theBDMt_->bdm()->blockchain()->top();
-   if (headerPtr == nullptr)
+   if (headerPtr == nullptr) {
       throw std::runtime_error("null header ptr");
-
+   }
    return headerPtr->getThisHash();
 }
+
+uint32_t ArmoryInstance::getCurrentTopBlock(void) const
+{
+   auto headerPtr = theBDMt_->bdm()->blockchain()->top();
+   if (headerPtr == nullptr) {
+      throw std::runtime_error("null header ptr");
+   }
+   return headerPtr->getBlockHeight();
+}
+
 
 ////
 SingleUTWalletACT::~SingleUTWalletACT()

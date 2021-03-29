@@ -47,7 +47,7 @@ public:
       , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
       , const std::map<UTXO, std::string> &manualXbtInputs
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , std::unique_ptr<bs::hd::Purpose> walletPurpose
+      , bs::hd::Purpose walletPurpose
       , bs::UtxoReservationToken utxoRes
       , bool expandTxDialogInfo);
    ~ReqCCSettlementContainer() override;

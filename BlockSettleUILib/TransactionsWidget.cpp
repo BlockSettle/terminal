@@ -225,7 +225,7 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
             if (txNode->item()->isPayin()) {
                contextMenu_.addAction(actionRevoke_);
                actionRevoke_->setData(sourceIndex);
-               actionRevoke_->setEnabled(model_->isTxRevocable(txNode->item()->tx));
+//               actionRevoke_->setEnabled(model_->isTxRevocable(txNode->item()->tx));
             }
             else {
                actionRevoke_->setData(-1);
@@ -277,20 +277,41 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
 
 TransactionsWidget::~TransactionsWidget() = default;
 
-void TransactionsWidget::init(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-                              , const std::shared_ptr<ArmoryConnection> &armory
-                              , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-                              , const std::shared_ptr<HeadlessContainer> &signContainer
-                              , const std::shared_ptr<ApplicationSettings> &appSettings
-                              , const std::shared_ptr<spdlog::logger> &logger)
-
+void TransactionsWidget::init(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<TransactionsViewModel> &model)
 {
-   TransactionsWidgetInterface::init(walletsMgr, armory, utxoReservationManager, signContainer, appSettings, logger);
-
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &TransactionsWidget::walletsChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, [this](std::string) { walletsChanged(); });
-
+   TransactionsWidgetInterface::init(logger);
    scheduleDateFilterCheck();
+
+   model_ = model;
+   connect(model_.get(), &TransactionsViewModel::dataLoaded, this, &TransactionsWidget::onDataLoaded, Qt::QueuedConnection);
+   connect(model_.get(), &TransactionsViewModel::initProgress, this, &TransactionsWidget::onProgressInited);
+   connect(model_.get(), &TransactionsViewModel::updateProgress, this, &TransactionsWidget::onProgressUpdated);
+
+   sortFilterModel_ = new TransactionsSortFilterModel(appSettings_, this);
+   sortFilterModel_->setSourceModel(model.get());
+   sortFilterModel_->setDynamicSortFilter(true);
+
+   connect(sortFilterModel_, &TransactionsSortFilterModel::rowsInserted, this, &TransactionsWidget::updateResultCount);
+   connect(sortFilterModel_, &TransactionsSortFilterModel::rowsRemoved, this, &TransactionsWidget::updateResultCount);
+   connect(sortFilterModel_, &TransactionsSortFilterModel::modelReset, this, &TransactionsWidget::updateResultCount);
+
+   auto updateDateTimes = [this]() {
+      sortFilterModel_->updateDates(ui_->dateEditStart->date(), ui_->dateEditEnd->date());
+   };
+   connect(ui_->dateEditStart, &QDateTimeEdit::dateTimeChanged, updateDateTimes);
+   connect(ui_->dateEditEnd, &QDateTimeEdit::dateTimeChanged, updateDateTimes);
+
+   connect(ui_->searchField, &QLineEdit::textChanged, [=](const QString& text) {
+      sortFilterModel_->updateFilters(sortFilterModel_->walletIds, text, sortFilterModel_->transactionDirection);
+   });
+
+   ui_->treeViewTransactions->setSortingEnabled(true);
+   ui_->treeViewTransactions->setModel(sortFilterModel_);
+   ui_->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::TxHash));
+
+   ui_->treeViewTransactions->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date), Qt::DescendingOrder);
+   ui_->treeViewTransactions->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Status), Qt::AscendingOrder);
 }
 
 void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<TransactionsViewModel>& model)
@@ -401,9 +422,12 @@ void TransactionsWidget::walletsChanged()
    QStringList walletIds;
    int direction;
 
-   const auto varList = appSettings_->get(ApplicationSettings::TransactionFilter).toList();
-   walletIds = varList.first().toStringList();
-   direction = varList.last().toInt();
+   const auto varList = appSettings_ ? appSettings_->get(ApplicationSettings::TransactionFilter).toList()
+      : QVariantList{};
+   if (!varList.empty()) {
+      walletIds = varList.first().toStringList();
+      direction = varList.last().toInt();
+   }
 
    int currentIndex = -1;
    int primaryWalletIndex = 0;
@@ -462,7 +486,7 @@ void TransactionsWidget::walletsChanged()
    } else {
       if (walletIds.contains(c_allWalletsId)) {
          ui_->walletBox->setCurrentIndex(0);
-      } else {
+      } else if (walletsManager_) {
          const auto primaryWallet = walletsManager_->getPrimaryWallet();
 
          if (primaryWallet) {
@@ -496,8 +520,11 @@ void TransactionsWidget::showTransactionDetails(const QModelIndex& index)
       return;
    }
 
-   TransactionDetailDialog transactionDetailDialog(txItem, walletsManager_, armory_, this);
-   transactionDetailDialog.exec();
+   auto txDetailDialog = new TransactionDetailDialog(txItem, this);
+   connect(txDetailDialog, &QDialog::finished, [txDetailDialog](int) {
+      txDetailDialog->deleteLater();
+   });
+   txDetailDialog->show();
 }
 
 void TransactionsWidget::updateResultCount()

@@ -64,7 +64,40 @@ NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::sync::Wallet> &wall
    }
 }
 
+NewAddressDialog::NewAddressDialog(const bs::sync::WalletInfo &wallet
+   , QWidget* parent)
+   : QDialog(parent)
+   , ui_(new Ui::NewAddressDialog())
+   , walletId_(*wallet.ids.cbegin())
+{
+   ui_->setupUi(this);
+   ui_->labelWallet->setText(QString::fromStdString(wallet.name));
+
+   copyButton_ = ui_->buttonBox->addButton(tr("Copy to clipboard"), QDialogButtonBox::ActionRole);
+   connect(copyButton_, &QPushButton::clicked, this, &NewAddressDialog::copyToClipboard);
+   connect(ui_->pushButtonCopyToClipboard, &QPushButton::clicked, this, &NewAddressDialog::copyToClipboard);
+
+   closeButton_ = ui_->buttonBox->button(QDialogButtonBox::StandardButton::Close);
+   if (closeButton_) {
+      connect(closeButton_, &QPushButton::clicked, this, &NewAddressDialog::onClose);
+   }
+   copyButton_->setEnabled(false);
+   closeButton_->setEnabled(false);
+}
+
 NewAddressDialog::~NewAddressDialog() = default;
+
+void NewAddressDialog::onAddresses(const std::string &walletId
+   , const std::vector<bs::sync::Address>& addrs)
+{
+   if (walletId != walletId_) {
+      return;  // not our addresses
+   }
+   address_ = addrs.rbegin()->address; // get last address
+   closeButton_->setEnabled(true);
+   copyButton_->setEnabled(!address_.empty());
+   displayAddress();
+}
 
 void NewAddressDialog::displayAddress()
 {

@@ -14,6 +14,8 @@
 #include <QDialog>
 #include <memory>
 #include "BinaryData.h"
+#include "SignerDefs.h"
+#include "SignerUiDefs.h"
 #include "QWalletInfo.h"
 
 namespace Ui {
@@ -44,15 +46,21 @@ Q_OBJECT
 
 public:
    RootWalletPropertiesDialog(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<bs::sync::hd::Wallet> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<HeadlessContainer> &
-      , WalletsViewModel *walletsModel
-      , const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<ConnectionManager> &
-      , const std::shared_ptr<AssetManager> &, QWidget* parent = nullptr);
+      , const bs::sync::WalletInfo &, WalletsViewModel *walletsModel
+      , QWidget* parent = nullptr);
    ~RootWalletPropertiesDialog() override;
+
+   void onHDWalletDetails(const bs::sync::HDWalletData&);
+   void onWalletBalances(const bs::sync::WalletBalanceData&);
+   void onSpendableUTXOs();
+
+signals:
+   void startRescan(std::string walletId);
+   void needHDWalletDetails(const std::string &walletId);
+   void needWalletBalances(const std::string &walletId);
+   void needUTXOs(const std::string& id, const std::string& walletId
+      , bool confOnly = false, bool swOnly = false);
+   void needWalletDialog(bs::signer::ui::GeneralDialogType, const std::string& rootId);
 
 private slots:
    void onDeleteWallet();
@@ -64,12 +72,11 @@ private slots:
    void onModelReset();
 
 private:
-   void updateWalletDetails(const std::shared_ptr<bs::sync::hd::Wallet> &);
-   void updateWalletDetails(const std::shared_ptr<bs::sync::Wallet> &);
+   void updateWalletDetails(const bs::sync::WalletInfo &);
 
 private:
    std::unique_ptr<Ui::WalletPropertiesDialog>  ui_;
-   std::shared_ptr<bs::sync::hd::Wallet>        wallet_;
+   bs::sync::WalletInfo    wallet_;
    std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;
    bs::hd::WalletInfo                  walletInfo_;
    std::shared_ptr<HeadlessContainer>  signingContainer_;

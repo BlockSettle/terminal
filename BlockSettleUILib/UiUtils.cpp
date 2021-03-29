@@ -64,7 +64,7 @@ QString UiUtils::displayDateTime(const QDateTime& datetime)
    return datetime.toString(format);
 }
 
-QString UiUtils::displayDateTime(uint64_t time)
+QString UiUtils::displayDateTime(uint32_t time) // in UnixTime
 {
    return displayDateTime(QDateTime::fromTime_t(time));
 }
@@ -281,6 +281,73 @@ int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs
    return selected;
 }
 
+int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox
+   , const std::vector<bs::sync::HDWalletData>& wallets, int walletTypes)
+{
+   int selected = 0;
+   const auto b = comboBox->blockSignals(true);
+   comboBox->clear();
+
+   auto addRow = [comboBox](const std::string& label, const std::string& walletId, WalletsTypes type)
+   {
+      if (WalletsTypes::None == type) {
+         return;
+      }
+      int i = comboBox->count();
+      comboBox->addItem(QString::fromStdString(label));
+      comboBox->setItemData(i, QString::fromStdString(walletId), UiUtils::WalletIdRole);
+      comboBox->setItemData(i, QVariant::fromValue(static_cast<int>(type)), UiUtils::WalletType);
+   };
+
+   for (const auto& hdWallet : wallets) {
+      if (hdWallet.primary) {
+         selected = comboBox->count();
+      }
+
+      WalletsTypes type = WalletsTypes::None;
+      // HW wallets marked as offline too, make sure to check that first
+/*      if (!hdWallet->canMixLeaves()) {
+
+         if (hdWallet->isHardwareOfflineWallet() && !(walletTypes & WalletsTypes::WatchOnly)) {
+            continue;
+         }
+
+         for (auto const& leaf : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
+            std::string label = hdWallet->name();
+            type = WalletsTypes::None;
+
+            auto purpose = leaf->purpose();
+            if (purpose == bs::hd::Purpose::Native &&
+               (walletTypes & WalletsTypes::HardwareNativeSW)) {
+               label += " Native";
+               type = WalletsTypes::HardwareNativeSW;
+            } else if (purpose == bs::hd::Purpose::Nested &&
+               (walletTypes & WalletsTypes::HardwareNestedSW)) {
+               label += " Nested";
+               type = WalletsTypes::HardwareNestedSW;
+            } else if (purpose == bs::hd::Purpose::NonSegWit &&
+               (walletTypes & WalletsTypes::HardwareLegacy) && leaf->getTotalBalance() > 0) {
+               label += " Legacy";
+               type = WalletsTypes::HardwareLegacy;
+            }
+            addRow(label, hdWallet->walletId(), type);
+         }
+         continue;
+      }*/   //TODO
+
+      if (hdWallet.offline) {
+         type = (walletTypes & WalletsTypes::WatchOnly) ? WalletsTypes::WatchOnly : WalletsTypes::None;
+      } else if (walletTypes & WalletsTypes::Full) {
+         type = WalletsTypes::Full;
+      }
+
+      addRow(hdWallet.name, hdWallet.id, type);
+   }
+   comboBox->blockSignals(b);
+   comboBox->setCurrentIndex(selected);
+   return selected;
+}
+
 void UiUtils::fillAuthAddressesComboBoxWithSubmitted(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager> &authAddressManager)
 {
    comboBox->clear();
@@ -293,6 +360,23 @@ void UiUtils::fillAuthAddressesComboBoxWithSubmitted(QComboBox* comboBox, const 
       comboBox->blockSignals(b);
       QMetaObject::invokeMethod(comboBox, "setCurrentIndex", Q_ARG(int, authAddressManager->getDefaultIndex()));
       comboBox->setEnabled(true);
+   } else {
+      comboBox->setEnabled(false);
+   }
+}
+
+void UiUtils::fillAuthAddressesComboBoxWithSubmitted(QComboBox* comboBox
+   , const std::vector<bs::Address>& addrs, int defaultIdx)
+{
+   const auto b = comboBox->blockSignals(true);
+   comboBox->clear();
+   if (!addrs.empty()) {
+      for (const auto& address : addrs) {
+         comboBox->addItem(QString::fromStdString(address.display()));
+      }
+      comboBox->setEnabled(true);
+      comboBox->blockSignals(b);
+      comboBox->setCurrentIndex(defaultIdx);
    } else {
       comboBox->setEnabled(false);
    }
@@ -332,6 +416,20 @@ void UiUtils::fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox
       }
    }
 
+   comboBox->setEnabled(true);
+   comboBox->setCurrentIndex(0);
+}
+
+void UiUtils::fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox
+   , const std::vector<bs::sync::WalletData>& wallets)
+{
+   comboBox->clear();
+   comboBox->addItem(QObject::tr("Auto Create"));
+   for (const auto& wd : wallets) {
+      for (auto addr : wd.addresses) {
+         comboBox->addItem(QString::fromStdString(addr.address.display()));
+      }
+   }
    comboBox->setEnabled(true);
    comboBox->setCurrentIndex(0);
 }

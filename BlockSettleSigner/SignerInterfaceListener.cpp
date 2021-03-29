@@ -23,7 +23,6 @@
 #include "ZmqContext.h"
 
 #include "SignerInterfaceListener.h"
-#include "SignerAdapterContainer.h"
 #include <memory>
 
 using namespace bs::sync;
@@ -421,15 +420,15 @@ void SignerInterfaceListener::onSyncHDWallet(const std::string &data, bs::signer
       return;
    }
    bs::sync::HDWalletData result;
-   for (int i = 0; i < response.groups_size(); ++i) {
-      const auto group = response.groups(i);
+   for (const auto &group : response.groups()) {
       std::vector<bs::sync::HDWalletData::Leaf> leaves;
-      for (int j = 0; j < group.leaves_size(); ++j) {
-         const auto leaf = group.leaves(j);
+      for (const auto &leaf : group.leaves()) {
          leaves.push_back({ {leaf.id()}, bs::hd::Path::fromString(leaf.path())
-            , "", "" , false, BinaryData::fromString(leaf.extra_data()) });
+            , std::string{}, std::string{}, false
+            , BinaryData::fromString(leaf.extra_data()) });
       }
-      result.groups.push_back({ static_cast<bs::hd::CoinType>(group.type()), "", "", leaves });
+      result.groups.push_back({ static_cast<bs::hd::CoinType>(group.type())
+         , std::string{}, std::string{}, leaves });
    }
    itCb->second(result);
    cbHDWalletData_.erase(itCb);

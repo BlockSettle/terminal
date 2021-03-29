@@ -22,18 +22,12 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
 
-CreateTransactionDialogSimple::CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
-   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , const std::shared_ptr<HeadlessContainer> &container
-   , const std::shared_ptr<spdlog::logger>& logger
-   , const std::shared_ptr<ApplicationSettings> &applicationSettings
-   , QWidget* parent)
-   : CreateTransactionDialog(armory, walletManager, utxoReservationManager, container, true, logger, applicationSettings, {}, parent)
+CreateTransactionDialogSimple::CreateTransactionDialogSimple(uint32_t topBlock
+   , const std::shared_ptr<spdlog::logger>& logger, QWidget* parent)
+   : CreateTransactionDialog(true, topBlock, logger, parent)
    , ui_(new Ui::CreateTransactionDialogSimple)
 {
    ui_->setupUi(this);
-   initUI();
 }
 
 CreateTransactionDialogSimple::~CreateTransactionDialogSimple() = default;
@@ -231,12 +225,12 @@ bool CreateTransactionDialogSimple::switchModeRequested() const
 std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::SwitchMode()
 {
    if (!paymentInfo_.address.isEmpty()) {
-      return CreateTransactionDialogAdvanced::CreateForPaymentRequest(armory_, walletsManager_
-         , utxoReservationManager_, signContainer_, logger_, applicationSettings_, paymentInfo_, parentWidget());
+      return CreateTransactionDialogAdvanced::CreateForPaymentRequest(topBlock_
+         , logger_, paymentInfo_, parentWidget());
    }
 
-   auto advancedDialog = std::make_shared<CreateTransactionDialogAdvanced>(armory_, walletsManager_
-      , utxoReservationManager_, signContainer_, true, logger_, applicationSettings_, transactionData_, std::move(utxoRes_), parentWidget());
+   auto advancedDialog = std::make_shared<CreateTransactionDialogAdvanced>(topBlock_
+      , true, logger_, transactionData_, std::move(utxoRes_), parentWidget());
 
    if (!offlineTransactions_.empty()) {
       advancedDialog->SetImportedTransactions(offlineTransactions_);
@@ -297,22 +291,18 @@ void CreateTransactionDialogSimple::preSetValue(const bs::XBTAmount& value)
    ui_->lineEditAmount->setText(UiUtils::displayAmount(value));
 }
 
-std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::CreateForPaymentRequest(const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
-   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , const std::shared_ptr<HeadlessContainer> &container
+std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::CreateForPaymentRequest(uint32_t topBlock
    , const std::shared_ptr<spdlog::logger>& logger
-   , const std::shared_ptr<ApplicationSettings> &applicationSettings
    , const Bip21::PaymentRequestInfo& paymentInfo
    , QWidget* parent)
 {
    if (!canUseSimpleMode(paymentInfo)) {
-      return CreateTransactionDialogAdvanced::CreateForPaymentRequest(armory, walletManager
-         , utxoReservationManager, container, logger, applicationSettings, paymentInfo, parent);
+      return CreateTransactionDialogAdvanced::CreateForPaymentRequest(topBlock
+         , logger, paymentInfo, parent);
    }
 
-   auto dlg = std::make_shared<CreateTransactionDialogSimple>(armory, walletManager
-      , utxoReservationManager, container, logger, applicationSettings, parent);
+   auto dlg = std::make_shared<CreateTransactionDialogSimple>(topBlock, logger
+      , parent);
 
    // set address and lock
    dlg->preSetAddress(paymentInfo.address);

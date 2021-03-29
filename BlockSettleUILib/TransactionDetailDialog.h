@@ -42,8 +42,7 @@ class TransactionDetailDialog : public QDialog
 Q_OBJECT
 
 public:
-   TransactionDetailDialog(const TransactionPtr &tvi, const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<ArmoryConnection> &, QWidget* parent = nullptr);
+   TransactionDetailDialog(const TransactionPtr &, QWidget* parent = nullptr);
    ~TransactionDetailDialog() override;
    virtual QSize minimumSizeHint() const override;
    QSize minimumSize() const;
@@ -53,10 +52,14 @@ public:
 
 private:
    using WalletsSet = std::set<std::shared_ptr<bs::sync::Wallet>>;
-   void addAddress(TxOut out, bool isOutput
+   [[deprecated]] void addAddress(TxOut out, bool isOutput
       , const BinaryData& txHash, const WalletsSet &inputWallets
       , const std::vector<TxOut> &allOutputs = {});
-   QString getScriptType(const TxOut &);
+   [[deprecated]] QString getScriptType(const TxOut &);
+   void addInputAddress(const bs::sync::AddressDetails &);
+   void addOutputAddress(const bs::sync::AddressDetails &);
+   void addChangeAddress(const bs::sync::AddressDetails &);
+   QString getScriptType(TXOUT_SCRIPT_TYPE);
 
 private:
    std::unique_ptr<Ui::TransactionDetailDialog> ui_;

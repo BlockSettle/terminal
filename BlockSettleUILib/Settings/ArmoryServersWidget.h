@@ -11,6 +11,7 @@
 #ifndef ARMORYSERVERSWIDGET_H
 #define ARMORYSERVERSWIDGET_H
 
+#include <QItemSelectionModel>
 #include <QWidget>
 #include <ApplicationSettings.h>
 
@@ -26,14 +27,17 @@ class ArmoryServersWidget : public QWidget
    Q_OBJECT
 
 public:
-   explicit ArmoryServersWidget(const std::shared_ptr<ArmoryServersProvider>& armoryServersProvider
+   [[deprecated]] explicit ArmoryServersWidget(const std::shared_ptr<ArmoryServersProvider>& armoryServersProvider
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , QWidget *parent = nullptr);
+   explicit ArmoryServersWidget(QWidget* parent = nullptr);
    ~ArmoryServersWidget();
 
    void setRowSelected(int row);
 
    bool isExpanded() const;
+
+   void onArmoryServers(const QList<ArmoryServer>&, int idxCur, int idxConn);
 
 public slots:
    void onAddServer();
@@ -46,9 +50,17 @@ public slots:
    void onExpandToggled();
    void onFormChanged();
 
+private slots:
+   void onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
+   void onCurIndexChanged(int index);
+
 signals:
    void reconnectArmory();
    void needClose();
+   void setServer(int);
+   void addServer(const ArmoryServer&);
+   void delServer(int);
+   void updServer(int, const ArmoryServer&);
 
 private:
    void setupServerFromSelected(bool needUpdate);
@@ -62,7 +74,8 @@ private:
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
    std::shared_ptr<ApplicationSettings> appSettings_;
 
-   ArmoryServersViewModel *armoryServersModel_;
+   ArmoryServersViewModel* armoryServersModel_{ nullptr };
+   QList<ArmoryServer>  servers_;
    bool isStartupDialog_ = false;
    bool isExpanded_ = true;
 };

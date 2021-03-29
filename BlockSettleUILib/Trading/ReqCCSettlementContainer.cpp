@@ -34,10 +34,10 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::map<UTXO, std::string> &manualXbtInputs
    , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , std::unique_ptr<bs::hd::Purpose> walletPurpose
+   , bs::hd::Purpose walletPurpose
    , bs::UtxoReservationToken utxoRes
    , bool expandTxDialogInfo)
-   : bs::SettlementContainer(std::move(utxoRes), std::move(walletPurpose), expandTxDialogInfo)
+   : bs::SettlementContainer(std::move(utxoRes), walletPurpose, expandTxDialogInfo)
    , logger_(logger)
    , signingContainer_(container)
    , xbtWallet_(xbtWallet)
@@ -76,10 +76,6 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
       throw std::logic_error("can't find CC wallet");
    }
 
-   const auto hct = dynamic_cast<QtHCT*>(signingContainer_ ? signingContainer_->cbTarget() : nullptr);
-   if (hct) {
-      connect(hct, &QtHCT::QWalletInfo, this, &ReqCCSettlementContainer::onWalletInfo);
-   }
    connect(this, &ReqCCSettlementContainer::genAddressVerified, this
       , &ReqCCSettlementContainer::onGenAddressVerified, Qt::QueuedConnection);
 
@@ -286,8 +282,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
          if (manualXbtInputs_.empty()) {
             std::vector<UTXO> utxos;
             if (!xbtWallet_->canMixLeaves()) {
-               assert(walletPurpose_);
-               utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId(), *walletPurpose_, bs::UTXOReservationManager::kIncludeZcRequestor);
+               utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId(), walletPurpose_, bs::UTXOReservationManager::kIncludeZcRequestor);
             }
             else {
                utxos = utxoReservationManager_->getAvailableXbtUTXOs(xbtWallet_->walletId(), bs::UTXOReservationManager::kIncludeZcRequestor);

@@ -18,7 +18,7 @@
 #include "ApplicationSettings.h"
 
 class CelerClientQt;
-class HeadlessContainer;
+class SignContainer;
 class UserScriptRunner;
 class AssetManager;
 class QuoteProvider;
@@ -39,10 +39,10 @@ class AutoSignScriptProvider : public QObject
 {
    Q_OBJECT
 public:
-   explicit AutoSignScriptProvider(const std::shared_ptr<spdlog::logger> &
+   [[deprecated]] explicit AutoSignScriptProvider(const std::shared_ptr<spdlog::logger> &
       , UserScriptRunner *
       , const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<HeadlessContainer> &
+      , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<CelerClientQt> &
       , QObject *parent = nullptr);
 
@@ -91,10 +91,10 @@ signals:
    void scriptLoadedChanged();
 
 protected:
-   std::shared_ptr<ApplicationSettings>       appSettings_;
+   std::shared_ptr<ApplicationSettings>      appSettings_;
    ApplicationSettings::Setting  lastScript_{ ApplicationSettings::_last };
    std::shared_ptr<spdlog::logger>           logger_;
-   std::shared_ptr<HeadlessContainer>        signingContainer_;
+   std::shared_ptr<SignContainer>            signingContainer_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<CelerClientQt>            celerClient_;
    UserScriptRunner *scriptRunner_{};
@@ -113,7 +113,7 @@ public:
    explicit AutoSignAQProvider(const std::shared_ptr<spdlog::logger> &
       , UserScriptRunner *
       , const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<HeadlessContainer> &
+      , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<CelerClientQt> &
       , QObject *parent = nullptr);
 };
@@ -125,7 +125,7 @@ public:
    explicit AutoSignRFQProvider(const std::shared_ptr<spdlog::logger> &
       , UserScriptRunner *
       , const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<HeadlessContainer> &
+      , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<CelerClientQt> &
       , QObject *parent = nullptr);
 };

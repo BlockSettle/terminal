@@ -13,8 +13,8 @@
 
 #include "Bip15xDataConnection.h"
 #include "Bip15xServerConnection.h"
-#include "Celer/MessageMapper.h"
 #include "Celer/CommonUtils.h"
+#include "Celer/MessageMapper.h"
 #include "CommonTypes.h"
 #include "IdStringGenerator.h"
 #include "QuoteProvider.h"

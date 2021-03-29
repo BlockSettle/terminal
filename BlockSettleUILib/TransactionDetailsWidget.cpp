@@ -70,6 +70,11 @@ void TransactionDetailsWidget::init(
    act_->init(armoryPtr_.get());
 }
 
+void TransactionDetailsWidget::init(const std::shared_ptr<spdlog::logger> &logger)
+{
+   logger_ = logger;
+}
+
 // This function uses getTxByHash() to retrieve info about transaction. The
 // incoming TXID must be in RPC order, not internal order.
 void TransactionDetailsWidget::populateTransactionWidget(const TxHash &rpcTXID
@@ -79,6 +84,38 @@ void TransactionDetailsWidget::populateTransactionWidget(const TxHash &rpcTXID
    if (firstPass) {
       clear();
    }
+
+   if (!armoryPtr_) {
+      if (rpcTXID.getSize() == 32) {
+         curTxHash_ = rpcTXID;
+         emit needTXDetails({ { curTxHash_, {}, 0 } }, false, {});
+      }
+      else {
+         Codec_SignerState::SignerState signerState;
+         if (signerState.ParseFromString(rpcTXID.toBinStr(true))) {
+            Signer signer(signerState);
+            const auto& serTx = signer.serializeUnsignedTx(true);
+            try {
+               const Tx tx(serTx);
+               if (!tx.isInitialized()) {
+                  throw std::runtime_error("Uninited TX");
+               }
+               curTxHash_ = tx.getThisHash();
+               emit needTXDetails({ { tx.getThisHash(), {}, 0 } }, false, {});
+            }
+            catch (const std::exception& e) {
+               logger_->error("[TransactionDetailsWidget::populateTransactionWidget]"
+                  " {}", e.what());
+            }
+         }
+         else {
+            logger_->error("[TransactionDetailsWidget::populateTransactionWidget]"
+               " failed to decode signer state");
+         }
+      }
+      return;
+   }
+
    // get the transaction data from armory
    const auto txidStr = rpcTXID.getRPCTXID();
    const auto cbTX = [this, txidStr](const Tx &tx) {
@@ -96,10 +133,6 @@ void TransactionDetailsWidget::populateTransactionWidget(const TxHash &rpcTXID
 
    if (firstPass || !curTx_.isInitialized() || (curTx_.getThisHash() != rpcTXID)) {
       if (rpcTXID.getSize() == 32) {
-         if (!armoryPtr_) {
-            logger_->error("[TransactionDetailsWidget::populateTransactionWidget] Armory is not inited");
-            return;
-         }
          if (!armoryPtr_->getTxByHash(rpcTXID, cbTX, false)) {
             if (logger_) {
                logger_->error("[TransactionDetailsWidget::populateTransactionWidget]"
@@ -133,6 +166,105 @@ void TransactionDetailsWidget::populateTransactionWidget(const TxHash &rpcTXID
    else {
       cbTX(curTx_);
    }
+}
+
+void TransactionDetailsWidget::onTXDetails(const std::vector<bs::sync::TXWalletDetails> &txDet)
+{
+   if ((txDet.size() > 1) || (!txDet.empty() && (txDet[0].txHash != curTxHash_))) {
+      logger_->debug("[{}] not our TX details", __func__);
+      return;  // not our data
+   }
+   if (!txDet.empty()) {
+      curTx_ = txDet[0].tx;
+   }
+   if (!curTx_.isInitialized()) {
+      ui_->tranID->setText(tr("Loading..."));
+      return;
+   }
+   ui_->tranID->setText(QString::fromStdString(curTx_.getThisHash().toHexStr(true)));
+   emit finished();
+
+   const auto txHeight = curTx_.getTxHeight();
+   ui_->nbConf->setVisible(txHeight != UINT32_MAX);
+   ui_->labelNbConf->setVisible(txHeight != UINT32_MAX);
+   const uint32_t nbConf = topBlock_ ? topBlock_ + 1 - txHeight : 0;
+   ui_->nbConf->setText(QString::number(nbConf));
+
+   if (txDet.empty()) {
+      return;
+   }
+   // Get fees & fee/byte by looping through the prev Tx set and calculating.
+   uint64_t totIn = 0;
+   for (const auto& inAddr : txDet[0].inputAddresses) {
+      totIn += inAddr.value;
+   }
+
+   uint64_t fees = totIn - curTx_.getSumOfOutputs();
+   float feePerByte = (float)fees / (float)curTx_.getTxWeight();
+   ui_->tranInput->setText(UiUtils::displayAmount(totIn));
+   ui_->tranFees->setText(UiUtils::displayAmount(fees));
+   ui_->tranFeePerByte->setText(QString::number(nearbyint(feePerByte)));
+   ui_->tranNumInputs->setText(QString::number(curTx_.getNumTxIn()));
+   ui_->tranNumOutputs->setText(QString::number(curTx_.getNumTxOut()));
+   ui_->tranOutput->setText(UiUtils::displayAmount(curTx_.getSumOfOutputs()));
+   ui_->tranSize->setText(QString::number(curTx_.getTxWeight()));
+
+   ui_->treeInput->clear();
+   ui_->treeOutput->clear();
+
+   std::map<BinaryData, unsigned int> hashCounts;
+   for (const auto &inAddr : txDet[0].inputAddresses) {
+      hashCounts[inAddr.outHash]++;
+   }
+
+   // here's the code to add data to the Input tree.
+   for (const auto& inAddr : txDet[0].inputAddresses) {
+      QString addrStr;
+      const QString walletName = QString::fromStdString(inAddr.walletName);
+
+      // For now, don't display any data if the TxOut is non-std. Displaying a
+      // hex version of the script is one thing that could be done. This needs
+      // to be discussed before implementing. Non-std could mean many things.
+      if (inAddr.type == TXOUT_SCRIPT_NONSTANDARD) {
+         addrStr = tr("<Non-Standard>");
+      }
+      else {
+         addrStr = QString::fromStdString(inAddr.address.display());
+      }
+
+      // create a top level item using type, address, amount, wallet values
+      addItem(ui_->treeInput, addrStr, inAddr.value, walletName, inAddr.outHash
+         , (hashCounts[inAddr.outHash] > 1) ? inAddr.outIndex : -1);
+   }
+
+   std::vector<bs::sync::AddressDetails> outputAddresses = txDet[0].outputAddresses;
+   if (!txDet[0].changeAddress.address.empty()) {
+      outputAddresses.push_back(txDet[0].changeAddress);
+   }
+   for (const auto &outAddr : outputAddresses) {
+      QString addrStr;
+      QString walletName;
+
+      // For now, don't display any data if the TxOut is OP_RETURN or non-std.
+      // Displaying a hex version of the script is one thing that could be done.
+      // This needs to be discussed before implementing. OP_RETURN isn't too bad
+      // (80 bytes max) but non-std could mean just about anything.
+      if (outAddr.type == TXOUT_SCRIPT_OPRETURN) {
+         addrStr = tr("<OP_RETURN>");
+      }
+      else if (outAddr.type == TXOUT_SCRIPT_NONSTANDARD) {
+         addrStr = tr("<Non-Standard>");
+      }
+      else {
+         walletName = QString::fromStdString(outAddr.walletName);
+         addrStr = QString::fromStdString(outAddr.address.display());
+      }
+
+      addItem(ui_->treeOutput, addrStr, outAddr.value, walletName, outAddr.outHash);
+   }
+
+   ui_->treeInput->resizeColumns();
+   ui_->treeOutput->resizeColumns();
 }
 
 // Used in callback to process the Tx object returned by Armory.
@@ -221,8 +353,13 @@ void TransactionDetailsWidget::setTxGUIValues()
    loadInputs();
 }
 
-void TransactionDetailsWidget::onNewBlock(unsigned int)
+void TransactionDetailsWidget::onNewBlock(unsigned int curBlock)
 {
+   if (!armoryPtr_) {
+      topBlock_ = curBlock;
+      onTXDetails({});
+      return;
+   }
    if (curTx_.isInitialized()) {
       populateTransactionWidget(curTx_.getThisHash(), false);
    }
@@ -439,6 +576,7 @@ void TransactionDetailsWidget::clear()
 {
    prevTxMap_.clear();
    curTx_ = Tx();
+   curTxHash_.clear();
 
    ui_->tranID->clear();
    ui_->tranNumInputs->clear();

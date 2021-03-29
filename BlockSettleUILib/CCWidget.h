@@ -13,6 +13,7 @@
 
 #include <QWidget>
 #include <memory>
+#include "SignerDefs.h"
 
 namespace Ui {
     class CCWidget;
@@ -31,13 +32,26 @@ public:
 
    void SetPortfolioModel(const std::shared_ptr<CCPortfolioModel>& model);
 
+   void onWalletBalance(const bs::sync::WalletBalanceData&);
+   void onPriceChanged(const std::string& currency, double price);
+   void onBasePriceChanged(const std::string &currency, double price);
+   void onBalance(const std::string& currency, double balance);
+
 private slots:
    void updateTotalAssets();
    void onRowsInserted(const QModelIndex &parent, int first, int last);
 
 private:
-   std::shared_ptr<AssetManager> assetManager_;
+   void updateTotalBalances();
+
+private:
+   [[deprecated]] std::shared_ptr<AssetManager> assetManager_;
    std::unique_ptr<Ui::CCWidget> ui_;
+   std::map<std::string, double> walletBalance_;
+   std::map<std::string, double> fxBalance_;
+   std::map<std::string, double> fxPrices_;
+   std::string baseCur_;
+   double      basePrice_{ 0 };
 };
 
 #endif // __CC_WIDGET_H__

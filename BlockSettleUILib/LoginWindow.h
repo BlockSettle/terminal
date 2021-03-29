@@ -14,6 +14,7 @@
 #include <QTimer>
 #include <QDialog>
 #include <memory>
+#include "ApplicationSettings.h"
 #include "AutheIDClient.h"
 
 namespace Ui {
@@ -34,10 +35,12 @@ class LoginWindow : public QDialog
 Q_OBJECT
 
 public:
-   LoginWindow(const std::shared_ptr<spdlog::logger> &logger
+   [[deprecated]] LoginWindow(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<BsClientQt> &bsClient
       , std::shared_ptr<ApplicationSettings> &settings
       , QWidget* parent = nullptr);
+   LoginWindow(const std::shared_ptr<spdlog::logger>& logger
+      , ApplicationSettings::EnvConfiguration, QWidget* parent = nullptr);
    ~LoginWindow() override;
 
    enum State {
@@ -46,11 +49,21 @@ public:
    };
 
    QString email() const;
-   BsClientLoginResult *result() const { return result_.get(); }
+   [[deprecated]] BsClientLoginResult *result() const { return result_.get(); }
+
+   void setLogin(const QString&);
+   void setRememberLogin(bool);
+   void onLoginStarted(const std::string& login, bool success, const std::string& errMsg);
+   void onLoggedIn(const BsClientLoginResult&);
+
+signals:
+   void putSetting(ApplicationSettings::Setting, const QVariant&);
+   void needStartLogin(const std::string& login);
+   void needCancelLogin();
 
 private slots:
    void onStartLoginDone(bool success, const std::string &errorMsg);
-   void onGetLoginResultDone(const BsClientLoginResult &result);
+   void onGetLoginResultDone(const BsClientLoginResult &result);  //deprecated
    void onTextChanged();
    void onAuthPressed();
    void onTimer();

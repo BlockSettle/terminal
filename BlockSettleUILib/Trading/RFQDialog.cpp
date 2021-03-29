@@ -44,7 +44,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::map<UTXO, std::string> &fixedXbtInputs
    , bs::UtxoReservationToken fixedXbtUtxoRes
    , bs::UtxoReservationToken ccUtxoRes
-   , std::unique_ptr<bs::hd::Purpose> purpose
+   , bs::hd::Purpose purpose
    , RFQRequestWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
@@ -67,7 +67,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , requestWidget_(parent)
    , utxoReservationManager_(utxoReservationManager)
    , ccUtxoRes_(std::move(ccUtxoRes))
-   , walletPurpose_(std::move(purpose))
+   , walletPurpose_(purpose)
 {
    ui_->setupUi(this);
 
@@ -79,7 +79,8 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
 
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::cancelRFQ, this, &RFQDialog::reject);
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::requestTimedOut, this, &RFQDialog::onTimeout);
-   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteAccepted, this, &RFQDialog::onRFQResponseAccepted, Qt::QueuedConnection);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteAccepted, this
+      , &RFQDialog::onRFQResponseAccepted, Qt::QueuedConnection);
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFinished, this, &RFQDialog::onQuoteFinished);
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFailed, this, &RFQDialog::onQuoteFailed);
 
@@ -95,6 +96,37 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    ui_->pageRequestingQuote->populateDetails(rfq_);
 
    quoteProvider_->SubmitRFQ(rfq_);
+}
+
+RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger>& logger
+   , const std::string& id, const bs::network::RFQ& rfq
+   , const std::string& xbtWalletId, const bs::Address& recvXbtAddrIfSet
+   , const bs::Address& authAddr
+   , bs::hd::Purpose purpose
+   , RFQRequestWidget* parent)
+   : QDialog(parent)
+   , ui_(new Ui::RFQDialog())
+   , logger_(logger)
+   , id_(id), rfq_(rfq)
+   , recvXbtAddrIfSet_(recvXbtAddrIfSet)
+   , authAddr_(authAddr)
+   , requestWidget_(parent)
+   , walletPurpose_(purpose)
+{
+   ui_->setupUi(this);
+
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::cancelRFQ, this
+      , &RFQDialog::reject);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::requestTimedOut
+      , this, &RFQDialog::onTimeout);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteAccepted, this
+      , &RFQDialog::onRFQResponseAccepted);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFinished, this
+      , &RFQDialog::onQuoteFinished);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFailed, this
+      , &RFQDialog::onQuoteFailed);
+
+   ui_->pageRequestingQuote->populateDetails(rfq_);
 }
 
 RFQDialog::~RFQDialog() = default;
@@ -124,35 +156,42 @@ void RFQDialog::onOrderFailed(const std::string& quoteId, const std::string& rea
    close();
 }
 
-void RFQDialog::onRFQResponseAccepted(const QString &reqId, const bs::network::Quote &quote)
+void RFQDialog::onRFQResponseAccepted(const std::string &reqId
+   , const bs::network::Quote &quote)
 {
-   emit accepted(id_);
+   emit accepted(reqId, quote);
    quote_ = quote;
 
-   if (rfq_.assetType == bs::network::Asset::SpotFX
-       || rfq_.assetType == bs::network::Asset::DeliverableFutures) {
-      quoteProvider_->AcceptQuoteFX(reqId, quote);
+   if (rfq_.assetType == bs::network::Asset::SpotFX) {
+      if (quoteProvider_) {
+         quoteProvider_->AcceptQuoteFX(QString::fromStdString(reqId), quote);
+      }
    }
    else {
-      if (rfq_.assetType == bs::network::Asset::SpotXBT) {
-         curContainer_ = newXBTcontainer();
-      } else {
-         curContainer_ = newCCcontainer();
-      }
+      if (armory_ && walletsManager_) {
+         if (rfq_.assetType == bs::network::Asset::SpotXBT) {
+            curContainer_ = newXBTcontainer();
+         } else {
+            curContainer_ = newCCcontainer();
+         }
 
-      if (curContainer_) {
-         rfqStorage_->addSettlementContainer(curContainer_);
-         curContainer_->activate();
+         if (curContainer_) {
+            rfqStorage_->addSettlementContainer(curContainer_);
+            curContainer_->activate();
 
-         // Do not capture `this` here!
-         auto failedCb = [qId = quote_.quoteId, curContainer = curContainer_.get()]
+            // Do not capture `this` here!
+            auto failedCb = [qId = quote_.quoteId, curContainer = curContainer_.get()]
             (const std::string& quoteId, const std::string& reason)
-         {
-            if (qId == quoteId) {
-               curContainer->cancel();
-            }
-         };
-         connect(quoteProvider_.get(), &QuoteProvider::orderFailed, curContainer_.get(), failedCb);
+            {
+               if (qId == quoteId) {
+                  curContainer->cancel();
+               }
+            };
+            connect(quoteProvider_.get(), &QuoteProvider::orderFailed, curContainer_.get(), failedCb);
+         }
+      }
+      else {
+         logger_->debug("[{}] non-FX", __func__);
       }
    }
 }
@@ -186,7 +225,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
       xbtSettlContainer_ = std::make_shared<ReqXBTSettlementContainer>(logger_
          , authAddressManager_, signContainer_, armory_, xbtWallet_, walletsManager_
          , rfq_, quote_, authAddr_, fixedXbtInputs_, std::move(fixedXbtUtxoRes_), utxoReservationManager_
-         , std::move(walletPurpose_), recvXbtAddrIfSet_, expandTxInfo, tier1XbtLimit);
+         , walletPurpose_, recvXbtAddrIfSet_, expandTxInfo, tier1XbtLimit);
 
       connect(xbtSettlContainer_.get(), &ReqXBTSettlementContainer::settlementAccepted
          , this, &RFQDialog::onXBTSettlementAccepted);
@@ -231,8 +270,9 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
 
    try {
       ccSettlContainer_ = std::make_shared<ReqCCSettlementContainer>(logger_
-         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_, xbtWallet_,
-         fixedXbtInputs_, utxoReservationManager_, std::move(walletPurpose_), std::move(ccUtxoRes_), expandTxInfo);
+         , signContainer_, armory_, assetMgr_, walletsManager_, rfq_, quote_
+         , xbtWallet_, fixedXbtInputs_, utxoReservationManager_, walletPurpose_
+         , std::move(ccUtxoRes_), expandTxInfo);
 
       connect(ccSettlContainer_.get(), &ReqCCSettlementContainer::txSigned
          , this, &RFQDialog::onCCTxSigned);
@@ -300,11 +340,36 @@ void RFQDialog::cancel(bool force)
    }
 
    if (cancelOnClose_) {
-      quoteProvider_->CancelQuote(QString::fromStdString(rfq_.requestId));
+      if (quoteProvider_) {
+         quoteProvider_->CancelQuote(QString::fromStdString(rfq_.requestId));
+      }
+      else {
+         emit cancelled(rfq_.requestId);
+      }
    }
    if (force) {
       close();
    }
+}
+
+void RFQDialog::onBalance(const std::string& currency, double balance)
+{
+   ui_->pageRequestingQuote->onBalance(currency, balance);
+}
+
+void RFQDialog::onMatchingLogout()
+{
+   ui_->pageRequestingQuote->onMatchingLogout();
+}
+
+void RFQDialog::onSettlementPending(const std::string& quoteId, const BinaryData& settlementId)
+{
+   //TODO: update UI state
+}
+
+void RFQDialog::onSettlementComplete()
+{
+   accept();
 }
 
 void RFQDialog::onTimeout()
@@ -316,7 +381,9 @@ void RFQDialog::onTimeout()
 
 void RFQDialog::onQuoteFinished()
 {
-   emit accepted(id_);
+   if (quoteProvider_) {
+      emit accepted(id_, quote_);
+   }
    cancelOnClose_ = false;
    hide();
 }

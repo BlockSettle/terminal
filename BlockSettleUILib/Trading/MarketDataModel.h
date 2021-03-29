@@ -61,7 +61,8 @@ public:
    QStringList getVisibilitySettings() const;
 
 public slots:
-   void onMDUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
+   void onMDUpdated(bs::network::Asset::Type, const QString &security
+      , const bs::network::MDFields &);
    void onVisibilityToggled(bool filtered);
 
 signals:

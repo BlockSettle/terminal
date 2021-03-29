@@ -58,7 +58,7 @@ public:
       , const std::vector<UTXO> &utxosPayinFixed
       , const bs::Address &recvAddr
       , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , std::unique_ptr<bs::hd::Purpose> walletPurpose
+      , bs::hd::Purpose walletPurpose
       , bs::UtxoReservationToken utxoRes
       , bool expandTxDialogInfo
       , uint64_t tier1XbtLimit);
@@ -69,7 +69,7 @@ public:
    void activate() override;
    void deactivate() override;
 
-   std::string id() const override { return order_.settlementId.toHexStr(); }
+   std::string id() const override { return order_.settlementId.toBinStr(); }
    bs::network::Asset::Type assetType() const override { return order_.assetType; }
    std::string security() const override { return order_.security; }
    std::string product() const override { return order_.product; }

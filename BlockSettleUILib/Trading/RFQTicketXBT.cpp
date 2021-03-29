@@ -85,7 +85,8 @@ RFQTicketXBT::RFQTicketXBT(QWidget* parent)
 
    connect(ui_->lineEditAmount, &QLineEdit::textEdited, this, &RFQTicketXBT::onAmountEdited);
 
-   connect(ui_->authenticationAddressComboBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &RFQTicketXBT::onAuthAddrChanged);
+   connect(ui_->authenticationAddressComboBox, qOverload<int>(&QComboBox::currentIndexChanged)
+      , this, &RFQTicketXBT::onAuthAddrChanged);
 
    ui_->comboBoxXBTWalletsRecv->setEnabled(false);
    ui_->comboBoxXBTWalletsSend->setEnabled(false);
@@ -119,33 +120,6 @@ void RFQTicketXBT::resetTicket()
 bs::FixedXbtInputs RFQTicketXBT::fixedXbtInputs()
 {
    return std::move(fixedXbtInputs_);
-}
-
-void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<AuthAddressManager> &authAddressManager
-   , const std::shared_ptr<AssetManager>& assetManager
-   , const std::shared_ptr<QuoteProvider> &quoteProvider
-   , const std::shared_ptr<HeadlessContainer> &container
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager)
-{
-   logger_ = logger;
-   authAddressManager_ = authAddressManager;
-   assetManager_ = assetManager;
-   signingContainer_ = container;
-   armory_ = armory;
-   utxoReservationManager_ = utxoReservationManager;
-
-   if (signingContainer_) {
-      const auto hct = dynamic_cast<QtHCT*>(signingContainer_->cbTarget());
-      if (hct) {
-         connect(hct, &QtHCT::ready, this, &RFQTicketXBT::onSignerReady);
-      }
-   }
-   connect(utxoReservationManager_.get(), &bs::UTXOReservationManager::availableUtxoChanged,
-      this, &RFQTicketXBT::onUTXOReservationChanged);
-
-   updateSubmitButton();
 }
 
 std::shared_ptr<bs::sync::Wallet> RFQTicketXBT::getCCWallet(const std::string &cc) const
@@ -234,6 +208,9 @@ void RFQTicketXBT::updateBalances()
 RFQTicketXBT::BalanceInfoContainer RFQTicketXBT::getBalanceInfo() const
 {
    BalanceInfoContainer balance;
+   if (!assetManager_ && balances_.empty()) {
+      return balance;
+   }
 
    QString productToSpend = getProductToSpend();
 
@@ -248,14 +225,17 @@ RFQTicketXBT::BalanceInfoContainer RFQTicketXBT::getBalanceInfo() const
          balance.productType = ProductGroupType::CCGroupType;
       } else {
          const double divisor = std::pow(10, UiUtils::GetAmountPrecisionFX());
-         const double intBalance = std::floor((assetManager_ ?
-            assetManager_->getBalance(productToSpend.toStdString(), bs::UTXOReservationManager::kIncludeZcRequestor, nullptr) : 0.0) * divisor);
-         balance.amount = intBalance / divisor;
-         balance.product = productToSpend;
-         balance.productType = ProductGroupType::FXGroupType;
+         try {
+            const double bal = assetManager_ ?
+               assetManager_->getBalance(productToSpend.toStdString(), bs::UTXOReservationManager::kIncludeZcRequestor, nullptr)
+               : balances_.at(productToSpend.toStdString());
+            balance.amount = std::floor(bal * divisor) / divisor;
+            balance.product = productToSpend;
+            balance.productType = ProductGroupType::FXGroupType;
+         }
+         catch (const std::exception &) {}
       }
    }
-
    return balance;
 }
 
@@ -264,34 +244,9 @@ QString RFQTicketXBT::getProduct() const
    return currentProduct_;
 }
 
-void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
+void RFQTicketXBT::init(const std::shared_ptr<spdlog::logger>& logger)
 {
-   walletsManager_ = walletsManager;
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &RFQTicketXBT::walletsLoaded);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletAdded, this, &RFQTicketXBT::walletsLoaded);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &RFQTicketXBT::walletsLoaded);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::settlementLeavesLoaded, this, &RFQTicketXBT::onSettlLeavesLoaded);
-
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreated, this, &RFQTicketXBT::onHDLeafCreated);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::CCLeafCreateFailed, this, &RFQTicketXBT::onCreateHDWalletError);
-
-   walletsLoaded();
-
-   auto updateAuthAddresses = [this] {
-      UiUtils::fillAuthAddressesComboBoxWithSubmitted(ui_->authenticationAddressComboBox, authAddressManager_);
-      onAuthAddrChanged(ui_->authenticationAddressComboBox->currentIndex());
-      authAddr_ = authAddressManager_->getDefault();
-      if (authKey_.empty()) {
-         onSettlLeavesLoaded(0);
-      }
-   };
-   updateAuthAddresses();
-   connect(authAddressManager_.get(), &AuthAddressManager::AddressListUpdated, this, updateAuthAddresses);
-
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, [this] {
-      // This will update balance after receiving ZC
-      updatePanel();
-   });
+   logger_ = logger;
 }
 
 void RFQTicketXBT::walletsLoaded()
@@ -347,42 +302,47 @@ void RFQTicketXBT::onSignerReady()
 
 void RFQTicketXBT::fillRecvAddresses()
 {
-   auto recvWallet = getRecvXbtWallet();
-   if (recvWallet) {
-      if (!recvWallet->canMixLeaves()) {
-         auto xbtGroup = recvWallet->getGroup(recvWallet->getXBTGroupType());
-         auto purpose =  UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWalletsRecv);
-         UiUtils::fillRecvAddressesComboBox(ui_->receivingAddressComboBox, { xbtGroup->getLeaf(purpose) });
+   if (walletsManager_) {
+      auto recvWallet = getRecvXbtWallet();
+      if (recvWallet) {
+         if (!recvWallet->canMixLeaves()) {
+            auto xbtGroup = recvWallet->getGroup(recvWallet->getXBTGroupType());
+            auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWalletsRecv);
+            UiUtils::fillRecvAddressesComboBox(ui_->receivingAddressComboBox, { xbtGroup->getLeaf(purpose) });
+         } else {
+            UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, recvWallet, true);
+         }
       }
-      else {
-         UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, recvWallet, true);
-      }
+   }
+   else {
+      const auto& walletId = ui_->comboBoxXBTWalletsRecv->currentData(UiUtils::WalletIdRole).toString().toStdString();
+      emit needWalletData(walletId);
    }
 }
 
 bool RFQTicketXBT::preSubmitCheck()
 {
    if (currentGroupType_ == ProductGroupType::XBTGroupType) {
-
-      if (authAddressManager_->GetState(authAddr_) == AuthAddressManager::AuthAddressState::Verified) {
+      if ((!authAddressManager_ && !authAddr_.empty())
+         || (authAddressManager_->GetState(authAddr_) == AuthAddressManager::AuthAddressState::Verified)) {
          return true;
       }
 
       const auto qty = getQuantity();
-      const auto& tradeSettings = authAddressManager_->tradeSettings();
-      assert(tradeSettings);
+      assert(tradeSettings_);
 
       bool validAmount = false;
       if (currentProduct_ == UiUtils::XbtCurrency) {
-         validAmount = tradeSettings->xbtTier1Limit > bs::XBTAmount(qty).GetValue();
+         validAmount = tradeSettings_->xbtTier1Limit > bs::XBTAmount(qty).GetValue();
       } else {
          const double indPrice = getIndicativePrice();
-         bs::XBTAmount price(indPrice * (1 + (tradeSettings->xbtPriceBand / 100)));
+         bs::XBTAmount price(indPrice * (1.0 + (tradeSettings_->xbtPriceBand / 100.0)));
          validAmount = price > bs::XBTAmount(qty);
       }
 
       if (!validAmount) {
-         auto amountStr = UiUtils::displayQuantity(bs::XBTAmount(tradeSettings->xbtTier1Limit).GetValueBitcoin(), bs::network::XbtCurrency);
+         auto amountStr = UiUtils::displayQuantity(bs::XBTAmount(tradeSettings_->xbtTier1Limit).GetValueBitcoin()
+            , bs::network::XbtCurrency);
          BSMessageBox(BSMessageBox::info
             , tr("Notice"), tr("Authentication Address not verified")
             , tr("Trades above %1 are not permitted for non-verified Authentication Addresses. "
@@ -569,22 +529,30 @@ bs::network::Side::Type RFQTicketXBT::getSelectedSide() const
    return bs::network::Side::Buy;
 }
 
-void RFQTicketXBT::onSettlLeavesLoaded(unsigned int)
+void RFQTicketXBT::sendDeferredRFQs()
 {
+   if (authKey_.empty() || deferredRFQs_.empty()) {
+      return;
+   }
    decltype(deferredRFQs_) tmpRFQs;
    tmpRFQs.swap(deferredRFQs_);
-   logger_->debug("[RFQTicketXBT::onSettlLeavesLoaded] sending {} deferred RFQ[s]", tmpRFQs.size());
+   logger_->debug("[RFQTicketXBT::sendDeferredRFQs] {} RFQ[s]", tmpRFQs.size());
 
+   for (const auto& id : tmpRFQs) {
+      sendRFQ(id);
+   }
+}
+
+void RFQTicketXBT::onSettlLeavesLoaded(unsigned int)
+{
    if (authKey_.empty()) {
       if (authAddr_.empty()) {
          logger_->warn("[RFQTicketXBT::onSettlLeavesLoaded] no default auth address");
          return;
       }
-      const auto &cbPubKey = [this, tmpRFQs](const SecureBinaryData &pubKey) {
+      const auto &cbPubKey = [this](const SecureBinaryData &pubKey) {
          authKey_ = pubKey.toHexStr();
-         for (const auto &id : tmpRFQs) {
-            sendRFQ(id);
-         }
+         sendDeferredRFQs();
       };
       const auto settlLeaf = walletsManager_->getSettlementLeaf(authAddr_);
       if (!settlLeaf) {
@@ -595,9 +563,7 @@ void RFQTicketXBT::onSettlLeavesLoaded(unsigned int)
       settlLeaf->getRootPubkey(cbPubKey);
    }
    else {
-      for (const auto &id : tmpRFQs) {
-         sendRFQ(id);
-      }
+      sendDeferredRFQs();
    }
 }
 
@@ -615,19 +581,23 @@ void RFQTicketXBT::onAuthAddrChanged(int index)
 
    authAddr_ = bs::Address::fromAddressString(addressString);
 
-   authKey_.clear();
-   const auto settlLeaf = walletsManager_->getSettlementLeaf(authAddr_);
+   if (walletsManager_) {
+      authKey_.clear();
+      const auto settlLeaf = walletsManager_->getSettlementLeaf(authAddr_);
 
-   const auto &cbPubKey = [this](const SecureBinaryData &pubKey) {
-      authKey_ = pubKey.toHexStr();
-      QMetaObject::invokeMethod(this, &RFQTicketXBT::updateSubmitButton);
-   };
+      const auto& cbPubKey = [this](const SecureBinaryData& pubKey) {
+         authKey_ = pubKey.toHexStr();
+         QMetaObject::invokeMethod(this, &RFQTicketXBT::updateSubmitButton);
+      };
 
-   if (settlLeaf) {
-      settlLeaf->getRootPubkey(cbPubKey);
+      if (settlLeaf) {
+         settlLeaf->getRootPubkey(cbPubKey);
+      } else {
+         walletsManager_->createSettlementLeaf(authAddr_, cbPubKey);
+      }
    }
    else {
-      walletsManager_->createSettlementLeaf(authAddr_, cbPubKey);
+      emit needAuthKey(authAddr_);
    }
 }
 
@@ -716,7 +686,7 @@ bool RFQTicketXBT::checkBalance(double qty) const
    }
 }
 
-bool RFQTicketXBT::checkAuthAddr(double qty) const
+bool RFQTicketXBT::checkAuthAddr() const
 {
    if (!ui_->authenticationAddressComboBox->isVisible()) {
       return true;
@@ -725,13 +695,19 @@ bool RFQTicketXBT::checkAuthAddr(double qty) const
       return false;
    }
 
-   if (authAddressManager_->GetState(authAddr_) == AuthAddressManager::AuthAddressState::Verified) {
-      return true;
-   }
+   if (authAddressManager_) {
+      if (authAddressManager_->GetState(authAddr_) == AuthAddressManager::AuthAddressState::Verified) {
+         return true;
+      }
 
-   const auto& tradeSettings = authAddressManager_->tradeSettings();
-   if (!tradeSettings) {
-      return false;
+      const auto& tradeSettings = authAddressManager_->tradeSettings();
+      if (!tradeSettings) {
+         return false;
+      }
+   }
+   else {
+      //TODO: implement more thorough checking if needed
+      return (!authAddr_.empty());
    }
 
    return true;
@@ -741,7 +717,7 @@ void RFQTicketXBT::updateSubmitButton()
 {
    ui_->pushButtonSubmit->setEnabled(false);
 
-   if (!assetManager_) {
+   if (!assetManager_ && signingContainer_) {
       return;
    }
 
@@ -756,35 +732,52 @@ void RFQTicketXBT::updateSubmitButton()
          }
       }
 
-      if (getProductToSpend() == UiUtils::XbtCurrency && !getSendXbtWallet()) {
-         return;
+      if (getProductToSpend() == UiUtils::XbtCurrency) {
+         if (walletsManager_ && !getSendXbtWallet()) {
+            return;
+         }
+         else if (!hasSendXbtWallet()) {
+            return;
+         }
       }
 
-      if (getProductToRecv() == UiUtils::XbtCurrency && !getRecvXbtWallet()) {
-         return;
+      if (getProductToRecv() == UiUtils::XbtCurrency) {
+         if (walletsManager_ && !getRecvXbtWallet()) {
+            return;
+         }
+         else if (!hasRecvXbtWallet()) {
+            return;
+         }
       }
 
       if (currentGroupType_ == ProductGroupType::CCGroupType) {
-         auto ccWallet = getCCWallet(getProduct().toStdString());
-         if (!ccWallet) {
-            return;
+         if (walletsManager_) {
+            auto ccWallet = getCCWallet(getProduct().toStdString());
+            if (!ccWallet) {
+               return;
+            }
+         }
+         else {
+            if (!hasCCWallet()) {
+               return;
+            }
          }
       }
    }
 
    const double qty = getQuantity();
+   if (qFuzzyIsNull(qty)) {
+      return;
+   }
+
    const bool isBalanceOk = checkBalance(qty);
-   const bool isAuthOk = checkAuthAddr(qty);
+   const bool isAuthOk = checkAuthAddr();
 
    if (!isBalanceOk || !isAuthOk) {
       ui_->labelBalanceValue->setFont(invalidBalanceFont_);
       return;
    }
    ui_->labelBalanceValue->setFont(QFont());
-
-   if (qFuzzyIsNull(qty)) {
-      return;
-   }
 
   if ((currentGroupType_ == ProductGroupType::XBTGroupType) && authKey().empty()) {
      return;
@@ -866,12 +859,14 @@ void RFQTicketXBT::submitButtonClicked()
    }
 
    if (currentGroupType_ == ProductGroupType::XBTGroupType) {
-      auto minXbtAmount = bs::tradeutils::minXbtAmount(utxoReservationManager_->feeRatePb());
-      if (expectedXbtAmountMin().GetValue() < minXbtAmount.GetValue()) {
-         auto minAmountStr = UiUtils::displayQuantity(minXbtAmount.GetValueBitcoin(), bs::network::XbtCurrency);
-         BSMessageBox(BSMessageBox::critical, tr("Spot XBT"), tr("Invalid amount")
-            , tr("Expected bitcoin amount will not cover network fee.\nMinimum amount: %1").arg(minAmountStr), this).exec();
-         return;
+      if (utxoReservationManager_) {
+         auto minXbtAmount = bs::tradeutils::minXbtAmount(utxoReservationManager_->feeRatePb());
+         if (expectedXbtAmountMin().GetValue() < minXbtAmount.GetValue()) {
+            auto minAmountStr = UiUtils::displayQuantity(minXbtAmount.GetValueBitcoin(), bs::network::XbtCurrency);
+            BSMessageBox(BSMessageBox::critical, tr("Spot XBT"), tr("Invalid amount")
+               , tr("Expected bitcoin amount will not cover network fee.\nMinimum amount: %1").arg(minAmountStr), this).exec();
+            return;
+         }
       }
    }
 
@@ -908,7 +903,18 @@ void RFQTicketXBT::onSendRFQ(const std::string &id, const QString &symbol, doubl
    rfq->security = symbol.toStdString();
    rfq->product = cp.NumCurrency();
    rfq->quantity = amount;
-   rfq->assetType = assetManager_->GetAssetTypeForSecurity(rfq->security);
+   if (assetManager_) {
+      rfq->assetType = assetManager_->GetAssetTypeForSecurity(rfq->security);
+   }
+   else {
+      try {
+         rfq->assetType = assetTypes_.at(rfq->security);
+      }
+      catch (const std::exception&) {
+         logger_->error("[{}] no asset type found for {}", __func__, rfq->security);
+         return;
+      }
+   }
 
    if (rfq->security.empty() || rfq->product.empty() || qFuzzyIsNull(rfq->quantity)) {
       return;
@@ -917,14 +923,18 @@ void RFQTicketXBT::onSendRFQ(const std::string &id, const QString &symbol, doubl
    pendingRFQs_[id] = rfq;
 
    if (rfq->assetType == bs::network::Asset::SpotXBT) {
-      authAddr_ = authAddressManager_->getDefault();
+      if (authAddressManager_) {
+         authAddr_ = authAddressManager_->getDefault();
+      }
       if (authAddr_.empty()) {
          deferredRFQs_.push_back(id);
          return;
       }
-      if (!walletsManager_->getSettlementLeaf(authAddr_)) {
-         deferredRFQs_.push_back(id);
-         return;
+      if (walletsManager_) {
+         if (!walletsManager_->getSettlementLeaf(authAddr_)) {
+            deferredRFQs_.push_back(id);
+            return;
+         }
       }
    }
 
@@ -938,13 +948,12 @@ void RFQTicketXBT::sendRFQ(const std::string &id)
       logger_->error("[RFQTicketXBT::onSendRFQ] RFQ with id {} not found", id);
       return;
    }
-
    logger_->debug("[RFQTicketXBT::sendRFQ] sending RFQ {}", id);
 
    auto rfq = itRFQ->second;
 
    if (rfq->requestId.empty()) {
-      rfq->requestId = "blocksettle:" + id;
+      rfq->requestId = id;
    }
 
    if (rfq->assetType == bs::network::Asset::SpotXBT) {
@@ -1083,6 +1092,7 @@ void RFQTicketXBT::sendRFQ(const std::string &id)
    }
 
    submitRFQCb_(id, *rfq, bs::UtxoReservationToken{});
+   pendingRFQs_.erase(itRFQ);
 }
 
 void RFQTicketXBT::onCancelRFQ(const std::string &id)
@@ -1194,6 +1204,87 @@ UiUtils::WalletsTypes RFQTicketXBT::xbtWalletType() const
 void RFQTicketXBT::onParentAboutToHide()
 {
    fixedXbtInputs_ = {};
+}
+
+void RFQTicketXBT::onVerifiedAuthAddresses(const std::vector<bs::Address>& addrs)
+{
+   if (addrs.empty()) {
+      return;
+   }
+   UiUtils::fillAuthAddressesComboBoxWithSubmitted(ui_->authenticationAddressComboBox, addrs);
+   onAuthAddrChanged(ui_->authenticationAddressComboBox->currentIndex());
+}
+
+void RFQTicketXBT::onBalance(const std::string& currency, double balance)
+{
+   balances_[currency] = balance;
+   updateBalances();
+}
+
+void RFQTicketXBT::onWalletBalance(const bs::sync::WalletBalanceData& wbd)
+{
+   balances_[wbd.id] = wbd.balSpendable;
+   updateBalances();
+}
+
+void RFQTicketXBT::onHDWallet(const bs::sync::HDWalletData& wallet)
+{
+   const auto &it = std::find_if(wallets_.cbegin(), wallets_.cend()
+      , [wallet](const bs::sync::HDWalletData &w) { return (wallet.id == w.id); });
+   if (it == wallets_.end()) {
+      wallets_.push_back(wallet);
+   }
+   else {
+      wallets_.emplace(it, wallet);
+   }
+   UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWalletsRecv, wallets_, UiUtils::WalletsTypes::All);
+   // CC does not support to send from hardware wallets
+   int sendWalletTypes = (currentGroupType_ == ProductGroupType::CCGroupType) ?
+      UiUtils::WalletsTypes::Full : (UiUtils::WalletsTypes::Full | UiUtils::WalletsTypes::HardwareSW);
+   UiUtils::fillHDWalletsComboBox(ui_->comboBoxXBTWalletsSend, wallets_, sendWalletTypes);
+}
+
+void RFQTicketXBT::onWalletData(const std::string& walletId, const bs::sync::WalletData& wd)
+{
+   if (ui_->comboBoxXBTWalletsRecv->currentData(UiUtils::WalletIdRole).toString().toStdString() == walletId) {
+      UiUtils::fillRecvAddressesComboBoxHDWallet(ui_->receivingAddressComboBox, { wd });
+   }
+}
+
+void RFQTicketXBT::onAuthKey(const bs::Address& addr, const BinaryData& authKey)
+{
+   if (addr == authAddr_) {
+      const auto& authKeyHex = authKey.toHexStr();
+      if (authKey_ != authKeyHex) {
+         logger_->debug("[{}] got auth key: {}", __func__, authKeyHex);
+         authKey_ = authKeyHex;
+         updateSubmitButton();
+      }
+      sendDeferredRFQs();
+   }
+}
+
+void RFQTicketXBT::onTradeSettings(const std::shared_ptr<bs::TradeSettings>& ts)
+{
+   tradeSettings_ = ts;
+}
+
+void RFQTicketXBT::onReservedUTXOs(const std::string& resId
+   , const std::string& subId, const std::vector<UTXO>& utxos)
+{
+   const auto& it = pendingRFQs_.find(resId);
+   if (it == pendingRFQs_.end()) {
+      return;
+   }
+   logger_->debug("[{}] sending RFQ {} after {} UTXOs reservation", __func__
+      , resId, utxos.size());
+   if (utxos.empty()) {
+      logger_->error("[{}] failed to reserve {}/{}", resId, subId);
+   }
+   else {
+      submitRFQCb_(resId, *it->second, {});
+   }
+   pendingRFQs_.erase(it);
 }
 
 void RFQTicketXBT::enablePanel()
@@ -1424,9 +1515,14 @@ void RFQTicketXBT::productSelectionChanged()
       ui_->lineEditAmount->setValidator(fxAmountValidator_);
       ui_->lineEditAmount->setEnabled(true);
    } else {
-      bool canTradeXBT = (armory_->state() == ArmoryState::Ready)
-         && signingContainer_
-         && !signingContainer_->isOffline();
+      bool canTradeXBT = false;
+      if (armory_ && signingContainer_) {
+         canTradeXBT = (armory_->state() == ArmoryState::Ready)
+            && !signingContainer_->isOffline();
+      }
+      else {
+         canTradeXBT = true;
+      }
 
       ui_->lineEditAmount->setEnabled(canTradeXBT);
       ui_->toolButtonMax->setEnabled(canTradeXBT);
@@ -1501,6 +1597,49 @@ std::shared_ptr<bs::sync::hd::Wallet> RFQTicketXBT::getRecvXbtWallet() const
    return wallet;
 }
 
+std::string RFQTicketXBT::getXbtLeafId(const std::string& hdWalletId) const
+{
+   const auto& it = std::find_if(wallets_.cbegin(), wallets_.cend()
+      , [hdWalletId](const bs::sync::HDWalletData& wd) { return (wd.id == hdWalletId); });
+   if (it == wallets_.end()) {
+      for (const auto& wallet : wallets_) {
+         for (const auto& group : wallet.groups) {
+            if ((group.type != bs::hd::CoinType::Bitcoin_main) && (group.type != bs::hd::Bitcoin_test)) {
+               continue;
+            }
+            for (const auto& leaf : group.leaves) {
+               if (std::find_if(leaf.ids.cbegin(), leaf.ids.cend()
+                  , [hdWalletId](const std::string& id) { return (id == hdWalletId); })
+                  != leaf.ids.end()) {
+                  return hdWalletId;
+               }
+            }
+         }
+      }
+      return {};
+   }
+   for (const auto& group : it->groups) {
+      if ((group.type != bs::hd::CoinType::Bitcoin_main) && (group.type != bs::hd::Bitcoin_test)) {
+         continue;
+      }
+      if (!group.leaves.empty()) {
+         const auto& leaf = *group.leaves.cbegin();
+         return *leaf.ids.cbegin();
+      }
+   }
+   return {};
+}
+
+bool RFQTicketXBT::hasSendXbtWallet() const
+{
+   return !wallets_.empty();  //TODO: implement more thorough checking
+}
+
+bool RFQTicketXBT::hasRecvXbtWallet() const
+{
+   return !wallets_.empty();  //TODO: implement more thorough checking
+}
+
 bs::XBTAmount RFQTicketXBT::getXbtBalance() const
 {
    const auto &fixedInputs = fixedXbtInputs_.inputs;
@@ -1512,19 +1651,34 @@ bs::XBTAmount RFQTicketXBT::getXbtBalance() const
       return bs::XBTAmount(sum);
    }
 
-   auto xbtWallet = getSendXbtWallet();
-   if (!xbtWallet) {
-      return bs::XBTAmount(0.0);
-   }
+   if (walletsManager_) {
+      auto xbtWallet = getSendXbtWallet();
+      if (!xbtWallet) {
+         return bs::XBTAmount(0.0);
+      }
 
-   if (!xbtWallet->canMixLeaves()) {
-      auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWalletsSend);
-      return bs::XBTAmount(utxoReservationManager_->getAvailableXbtUtxoSum(
-         xbtWallet->walletId(), purpose, bs::UTXOReservationManager::kIncludeZcRequestor));
+      if (!xbtWallet->canMixLeaves()) {
+         auto purpose = UiUtils::getSelectedHwPurpose(ui_->comboBoxXBTWalletsSend);
+         return bs::XBTAmount(utxoReservationManager_->getAvailableXbtUtxoSum(
+            xbtWallet->walletId(), purpose, bs::UTXOReservationManager::kIncludeZcRequestor));
+      } else {
+         return bs::XBTAmount(utxoReservationManager_->getAvailableXbtUtxoSum(
+            xbtWallet->walletId(), bs::UTXOReservationManager::kIncludeZcRequestor));
+      }
    }
    else {
-      return bs::XBTAmount(utxoReservationManager_->getAvailableXbtUtxoSum(
-         xbtWallet->walletId(), bs::UTXOReservationManager::kIncludeZcRequestor));
+      const auto &walletId = ui_->comboBoxXBTWalletsSend->currentData(UiUtils::WalletIdRole).toString().toStdString();
+      const auto& xbtLeafId = getXbtLeafId(walletId);
+      if (xbtLeafId.empty()) {
+         return bs::XBTAmount(0.0); //TODO: use default XBT leaf
+      }
+      try {
+         return bs::XBTAmount(balances_.at(xbtLeafId));
+      }
+      catch (const std::exception&) {
+         logger_->error("[{}] balance for leaf {} not found", __func__, xbtLeafId);
+         return bs::XBTAmount(0.0);
+      }
    }
 }
 
@@ -1564,72 +1718,89 @@ bs::XBTAmount RFQTicketXBT::getXbtReservationAmountForCc(double quantity, double
 void RFQTicketXBT::reserveBestUtxoSetAndSubmit(const std::string &id
    , const std::shared_ptr<bs::network::RFQ>& rfq)
 {
-   // Skip UTXO reservations amount checks for buy fiat requests as reserved XBT amount is 20% more than expected from current price.
-   auto checkAmount = (rfq->side == bs::network::Side::Sell && rfq->product != bs::network::XbtCurrency) ?
-       bs::UTXOReservationManager::CheckAmount::Enabled : bs::UTXOReservationManager::CheckAmount::Disabled;
+   if (walletsManager_) {
+      // Skip UTXO reservations amount checks for buy fiat requests as reserved XBT amount is 20% more than expected from current price.
+      auto checkAmount = (rfq->side == bs::network::Side::Sell && rfq->product != bs::network::XbtCurrency) ?
+          bs::UTXOReservationManager::CheckAmount::Enabled : bs::UTXOReservationManager::CheckAmount::Disabled;
 
-   const auto &submitRFQWrapper = [rfqTicket = QPointer<RFQTicketXBT>(this), id, rfq]
-   {
-      if (!rfqTicket) {
-         return;
-      }
-      rfqTicket->submitRFQCb_(id, *rfq, std::move(rfqTicket->fixedXbtInputs_.utxoRes));
-   };
-   auto getWalletAndReserve = [rfqTicket = QPointer<RFQTicketXBT>(this), submitRFQWrapper, checkAmount]
-      (BTCNumericTypes::satoshi_type amount, bool partial)
-   {
-      auto cbBestUtxoSet = [rfqTicket, submitRFQWrapper](bs::FixedXbtInputs&& fixedXbt) {
+      const auto &submitRFQWrapper = [rfqTicket = QPointer<RFQTicketXBT>(this), id, rfq]
+      {
          if (!rfqTicket) {
             return;
          }
-         rfqTicket->fixedXbtInputs_ = std::move(fixedXbt);
-         submitRFQWrapper();
+         rfqTicket->submitRFQCb_(id, *rfq, std::move(rfqTicket->fixedXbtInputs_.utxoRes));
+      };
+      auto getWalletAndReserve = [rfqTicket = QPointer<RFQTicketXBT>(this), submitRFQWrapper, checkAmount]
+         (BTCNumericTypes::satoshi_type amount, bool partial)
+      {
+         auto cbBestUtxoSet = [rfqTicket, submitRFQWrapper](bs::FixedXbtInputs&& fixedXbt) {
+            if (!rfqTicket) {
+               return;
+            }
+            rfqTicket->fixedXbtInputs_ = std::move(fixedXbt);
+            submitRFQWrapper();
+         };
+
+         auto hdWallet = rfqTicket->getSendXbtWallet();
+         if (!hdWallet->canMixLeaves()) {
+            auto purpose = UiUtils::getSelectedHwPurpose(rfqTicket->ui_->comboBoxXBTWalletsSend);
+            rfqTicket->utxoReservationManager_->reserveBestXbtUtxoSet(
+               hdWallet->walletId(), purpose, amount,
+               partial, std::move(cbBestUtxoSet), true, checkAmount);
+         } else {
+            rfqTicket->utxoReservationManager_->reserveBestXbtUtxoSet(
+               hdWallet->walletId(), amount,
+               partial, std::move(cbBestUtxoSet), true, checkAmount, bs::UTXOReservationManager::kIncludeZcRequestor);
+         }
       };
 
-      auto hdWallet = rfqTicket->getSendXbtWallet();
-      if (!hdWallet->canMixLeaves()) {
-         auto purpose = UiUtils::getSelectedHwPurpose(rfqTicket->ui_->comboBoxXBTWalletsSend);
-         rfqTicket->utxoReservationManager_->reserveBestXbtUtxoSet(
-            hdWallet->walletId(), purpose, amount,
-            partial, std::move(cbBestUtxoSet), true, checkAmount);
+      if (!fixedXbtInputs_.inputs.empty()) {
+         submitRFQWrapper();
+         return; // already reserved by user
+      }
+
+      auto quantity = bs::XBTAmount(rfq->quantity).GetValue();
+      if (rfq->side == bs::network::Side::Buy) {
+         if (rfq->assetType == bs::network::Asset::PrivateMarket) {
+            quantity *= bs::XBTAmount(getOfferPrice()).GetValue();
+         } else if (rfq->assetType == bs::network::Asset::SpotXBT) {
+            quantity /= getOfferPrice();
+         }
+      }
+
+      const bool partial = rfq->assetType == bs::network::Asset::PrivateMarket;
+      getWalletAndReserve(quantity, partial);
+   }
+   else {
+      const auto& walletId = ui_->comboBoxXBTWalletsSend->currentData(UiUtils::WalletIdRole).toString().toStdString();
+      if (rfq->assetType == bs::network::Asset::PrivateMarket
+         && rfq->side == bs::network::Side::Buy) {
+         auto maxXbtQuantity = getXbtReservationAmountForCc(rfq->quantity, getOfferPrice()).GetValue();
+         emit needReserveUTXOs(id, walletId, maxXbtQuantity, true);
       }
       else {
-         rfqTicket->utxoReservationManager_->reserveBestXbtUtxoSet(
-            hdWallet->walletId(), amount,
-            partial, std::move(cbBestUtxoSet), true, checkAmount, bs::UTXOReservationManager::kIncludeZcRequestor);
-      }
-   };
+         if ((rfq->side == bs::network::Side::Sell && rfq->product != bs::network::XbtCurrency) ||
+            (rfq->side == bs::network::Side::Buy && rfq->product == bs::network::XbtCurrency)) {
+            submitRFQCb_(id, *rfq, {}); // already reserved
+            pendingRFQs_.erase(id);
+         }
+         else if (!fixedXbtInputs_.inputs.empty()) {
+            submitRFQCb_(id, *rfq, {}); // already reserved
+            pendingRFQs_.erase(id);
+         }
 
-   if (rfq->assetType == bs::network::Asset::PrivateMarket
-       && rfq->side == bs::network::Side::Buy) {
-      auto maxXbtQuantity = getXbtReservationAmountForCc(rfq->quantity, getOfferPrice()).GetValue();
-      getWalletAndReserve(maxXbtQuantity, true);
-      return;
-   }
-
-   if ((rfq->side == bs::network::Side::Sell && rfq->product != bs::network::XbtCurrency) ||
-      (rfq->side == bs::network::Side::Buy && rfq->product == bs::network::XbtCurrency)) {
-      submitRFQWrapper();
-      return; // Nothing to reserve
-   }
-
-   if (!fixedXbtInputs_.inputs.empty()) {
-      submitRFQWrapper();
-      return; // already reserved by user
-   }
-
-   auto quantity = bs::XBTAmount(rfq->quantity).GetValue();
-   if (rfq->side == bs::network::Side::Buy) {
-      if (rfq->assetType == bs::network::Asset::PrivateMarket) {
-         quantity *= bs::XBTAmount(getOfferPrice()).GetValue();
-      }
-      else if (rfq->assetType == bs::network::Asset::SpotXBT) {
-         quantity /= getOfferPrice();
+         auto quantity = bs::XBTAmount(rfq->quantity).GetValue();
+         if (rfq->side == bs::network::Side::Buy) {
+            if (rfq->assetType == bs::network::Asset::PrivateMarket) {
+               quantity *= bs::XBTAmount(getOfferPrice()).GetValue();
+            } else if (rfq->assetType == bs::network::Asset::SpotXBT) {
+               quantity /= getOfferPrice();
+            }
+         }
+         const bool partial = rfq->assetType == bs::network::Asset::PrivateMarket;
+         emit needReserveUTXOs(id, walletId, quantity, partial);
       }
    }
-
-   const bool partial = rfq->assetType == bs::network::Asset::PrivateMarket;
-   getWalletAndReserve(quantity, partial);
 }
 
 void RFQTicketXBT::onCreateWalletClicked()

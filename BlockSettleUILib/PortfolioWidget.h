@@ -14,7 +14,9 @@
 #include <QWidget>
 #include <QMenu>
 #include <memory>
-
+#include "ApplicationSettings.h"
+#include "CommonTypes.h"
+#include "SignerDefs.h"
 #include "TransactionsWidgetInterface.h"
 
 namespace spdlog {
@@ -49,21 +51,25 @@ public:
    PortfolioWidget(QWidget* parent = nullptr );
    ~PortfolioWidget() override;
 
+   void init(const std::shared_ptr<spdlog::logger>&);
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel>& model);
 
-   void init(const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<MarketDataProvider> &
-      , const std::shared_ptr<MDCallbacksQt> &
-      , const std::shared_ptr<CCPortfolioModel> &
-      , const std::shared_ptr<HeadlessContainer> &
-      , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &);
-
    void shortcutActivated(ShortcutType s) override;
-
    void setAuthorized(bool authorized);
+
+   void onMDConnected();
+   void onMDDisconnected();
+   void onMDUpdated(bs::network::Asset::Type, const QString& security
+      , const bs::network::MDFields&);
+   void onHDWallet(const bs::sync::WalletInfo&);
+   void onHDWalletDetails(const bs::sync::HDWalletData&);
+   void onWalletBalance(const bs::sync::WalletBalanceData&);
+   void onBalance(const std::string& currency, double balance);
+   void onEnvConfig(int);
+
+signals:
+   void needMdConnection(ApplicationSettings::EnvConfiguration);
+   void needMdDisconnect();
 
 private slots:
    void showTransactionDetails(const QModelIndex& index);
@@ -72,6 +78,7 @@ private slots:
 private:
    std::unique_ptr<Ui::PortfolioWidget> ui_;
    UnconfirmedTransactionFilter* filter_;
+   std::shared_ptr<CCPortfolioModel>   portfolioModel_;
 };
 
 #endif // __PORFOLIO_WIDGET_H__

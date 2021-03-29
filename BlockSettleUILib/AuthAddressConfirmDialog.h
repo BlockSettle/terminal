@@ -31,17 +31,19 @@ class AuthAddressConfirmDialog : public QDialog
 Q_OBJECT
 
 public:
-   AuthAddressConfirmDialog(const std::weak_ptr<BsClient> &bsClient,
+   [[deprecated]] AuthAddressConfirmDialog(const std::weak_ptr<BsClient> &bsClient,
       const bs::Address& address,
       const std::shared_ptr<AuthAddressManager>& authManager,
       const std::shared_ptr<ApplicationSettings> &settings,
       QWidget* parent = nullptr);
+   AuthAddressConfirmDialog(const bs::Address& address, QWidget* parent = nullptr);
    ~AuthAddressConfirmDialog() override;
 
 private slots:
    void onUiTimerTick();
    void onCancelPressed();
 
+public slots:
    void onError(const QString &errorText);
    void onAuthAddressSubmitError(const QString &address, const bs::error::AuthAddressSubmitResult statusCode);
    void onAuthAddressSubmitSuccess(const QString &address);

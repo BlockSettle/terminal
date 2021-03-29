@@ -17,7 +17,6 @@
 #include "bs_proxy_terminal_pb.pb.h"
 
 namespace {
-
    const auto kNewOrderColor = QColor{0xFF, 0x7F, 0};
    const auto kPendingColor = QColor{0x63, 0xB0, 0xB2};
    const auto kRevokedColor = QColor{0xf6, 0xa7, 0x24};
@@ -54,8 +53,10 @@ namespace {
 
       return order;
    }
-
 } // namespace
+
+using namespace Blocksettle::Communication;
+
 
 double getOrderValue(const bs::network::Order& order)
 {
@@ -95,6 +96,12 @@ QString OrderListModel::StatusGroup::toString(OrderListModel::StatusGroup::Type 
 OrderListModel::OrderListModel(const std::shared_ptr<AssetManager>& assetManager, QObject* parent)
    : QAbstractItemModel(parent)
    , assetManager_(assetManager)
+{
+   reset();
+}
+
+OrderListModel::OrderListModel(QObject* parent)
+   : QAbstractItemModel(parent)
 {
    reset();
 }
@@ -704,16 +711,26 @@ void OrderListModel::reset()
    endResetModel();
 }
 
-void OrderListModel::processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations &message)
+void OrderListModel::onOrdersUpdate(const std::vector<bs::network::Order>& orders)
 {
+   if (!connected_) {   //FIXME: use BS connection event (currently matching one) to set connected_ flag
+      connected_ = true;
+   }
+   // Save latest selected index first
+   //FIXME: resetLatestChangedStatus(orders);
+   // OrderListModel supposed to work correctly when orders states updated one by one.
+   // We don't use this anymore (server sends all active orders every time) so just clear old caches.
+   // Remove this if old behavior is needed
    reset();
 
-   for (const auto &data : message.orders()) {
-      auto order = convertOrder(data);
+   for (const auto& order : orders) {
       onOrderUpdated(order);
    }
+}
 
-   DisplayFuturesDeliveryRow(message.obligation());
+void OrderListModel::processUpdateOrders(const ProxyTerminalPb::Response_UpdateOrdersAndObligations&)
+{
+   reset();
 }
 
 void OrderListModel::processUpdateOrder(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrder &msg)
@@ -732,7 +749,9 @@ void OrderListModel::processUpdateOrder(const Blocksettle::Communication::ProxyT
       }
       default:
          break;
+
    }
+   //onOrdersUpdate(orders);
 }
 
 void OrderListModel::resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations &message)
@@ -761,7 +780,6 @@ void OrderListModel::resetLatestChangedStatus(const Blocksettle::Communication::
          }
       }
    }
-
    sortedPeviousOrderStatuses_ = std::move(newOrderStatuses);
 }
 
@@ -1022,7 +1040,7 @@ OrderListModel::FuturesDeliveryGroup* OrderListModel::GetFuturesDeliveryGroup(co
    return dynamic_cast<FuturesDeliveryGroup*>(market->rows_[index.row()].get());
 }
 
-OrderListModel::DeliveryObligationData OrderListModel::getDeliveryObligationData(const QModelIndex &index) const
+OrderListModel::DeliveryObligationData OrderListModel::getDeliveryObligationData(const QModelIndex& index) const
 {
    if (!isFutureDeliveryIndex(index)) {
       return DeliveryObligationData{};
@@ -1034,4 +1052,14 @@ OrderListModel::DeliveryObligationData OrderListModel::getDeliveryObligationData
    }
 
    return futuresDelivery->getDeliveryObligationData();
+}
+
+void OrderListModel::onMatchingLogin()
+{
+   connected_ = true;
+}
+
+void OrderListModel::onMatchingLogout()
+{
+   connected_ = false;
 }

@@ -90,9 +90,8 @@ void TestCCoin::SetUp()
       }
    }
 
-   hct_ = std::make_shared<QtHCT>(nullptr);
    auto inprocSigner = std::make_shared<InprocSigner>(envPtr_->walletsMgr()
-      , envPtr_->logger(), hct_.get(), "", NetworkType::TestNet);
+      , envPtr_->logger(), this, "", NetworkType::TestNet);
    inprocSigner->Start();
    syncMgr_ = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger(), envPtr_->appSettings(), envPtr_->armoryConnection());
    syncMgr_->setSignContainer(inprocSigner);
