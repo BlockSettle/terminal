@@ -1339,7 +1339,7 @@ bool QtGuiAdapter::processWalletBalances(const bs::message::Envelope &env
    wbd.nbAddresses = response.nb_addresses();
    for (const auto &addrBal : response.address_balances()) {
       wbd.addrBalances.push_back({ BinaryData::fromString(addrBal.address())
-         , addrBal.txn(), addrBal.total_balance(), addrBal.spendable_balance()
+         , addrBal.tx_count(), addrBal.total_balance(), addrBal.spendable_balance()
          , addrBal.unconfirmed_balance() });
    }
    return QMetaObject::invokeMethod(mainWindow_, [this, wbd] {
