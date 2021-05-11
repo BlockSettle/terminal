@@ -48,7 +48,7 @@ void MockTerminalBus::addAdapter(const std::shared_ptr<Adapter>& adapter)
    for (const auto& user : adapter->supportedReceivers()) {
       AdministrativeMessage msg;
       msg.set_component_created(user->value());
-      bs::message::Envelope env{ 0, adminUser, {}, {}, {}, msg.SerializeAsString() };
+      bs::message::Envelope env{ adminUser, {}, msg.SerializeAsString() };
       queue_->pushFill(env);
    }
 }
@@ -58,7 +58,7 @@ void MockTerminalBus::start()
    static const auto& adminUser = UserTerminal::create(TerminalUsers::System);
    AdministrativeMessage msg;
    msg.mutable_start();
-   bs::message::Envelope env{ 0, adminUser, {}, {}, {}, msg.SerializeAsString() };
+   bs::message::Envelope env{ adminUser, {}, msg.SerializeAsString() };
    queue_->pushFill(env);
 }
 
@@ -76,12 +76,46 @@ public:
    {}
    ~SettingsMockAdapter() override = default;
 
+   bool processBroadcast(const bs::message::Envelope& env) override
+   {
+      if (env.sender->value<TerminalUsers>() == TerminalUsers::Blockchain) {
+         ArmoryMessage msg;
+         if (!msg.ParseFromString(env.message)) {
+            logger_->error("[{}] failed to parse armory msg #{}", __func__, env.id());
+            return false;
+         }
+         if (msg.data_case() == ArmoryMessage::kSettingsRequest) {
+            ArmoryMessage msgReply;
+            auto msgResp = msgReply.mutable_settings_response();
+            ArmorySettings armorySettings;
+            armorySettings.name = QLatin1Literal("test");
+            armorySettings.netType = NetworkType::TestNet;
+            armorySettings.armoryDBIp = QLatin1String("127.0.0.1");
+            armorySettings.armoryDBPort = 82;
+            msgResp->set_socket_type(armorySettings.socketType);
+            msgResp->set_network_type((int)armorySettings.netType);
+            msgResp->set_host(armorySettings.armoryDBIp.toStdString());
+            msgResp->set_port(std::to_string(armorySettings.armoryDBPort));
+            msgResp->set_bip15x_key(armorySettings.armoryDBKey.toStdString());
+            msgResp->set_run_locally(armorySettings.runLocally);
+            msgResp->set_data_dir(armorySettings.dataDir.toStdString());
+            msgResp->set_executable_path(armorySettings.armoryExecutablePath.toStdString());
+            msgResp->set_bitcoin_dir(armorySettings.bitcoinBlocksDir.toStdString());
+            msgResp->set_db_dir(armorySettings.dbDir.toStdString());
+            Envelope envResp{ user_, env.sender, msgReply.SerializeAsString(), env.id() };
+            pushFill(envResp);
+            return true;
+         }
+      }
+      return false;
+   }
+
    bool process(const bs::message::Envelope& env) override
    {
-      if (env.receiver && (env.receiver->value<TerminalUsers>() == TerminalUsers::Settings)) {
+      if (env.receiver->value<TerminalUsers>() == TerminalUsers::Settings) {
          SettingsMessage msg;
          if (!msg.ParseFromString(env.message)) {
-            logger_->error("[{}] failed to parse settings msg #{}", __func__, env.id);
+            logger_->error("[{}] failed to parse settings msg #{}", __func__, env.id());
             return true;
          }
          switch (msg.data_case()) {
@@ -110,40 +144,15 @@ public:
          case SettingsMessage::kApiClientKeys:     break;
          default: break;
          }
-      } else if (env.sender->value<TerminalUsers>() == TerminalUsers::Blockchain) {
-         ArmoryMessage msg;
-         if (!msg.ParseFromString(env.message)) {
-            logger_->error("[{}] failed to parse armory msg #{}", __func__, env.id);
-            return true;
-         }
-         if (msg.data_case() == ArmoryMessage::kSettingsRequest) {
-            ArmoryMessage msgReply;
-            auto msgResp = msgReply.mutable_settings_response();
-            ArmorySettings armorySettings;
-            armorySettings.name = QLatin1Literal("test");
-            armorySettings.netType = NetworkType::TestNet;
-            armorySettings.armoryDBIp = QLatin1String("127.0.0.1");
-            armorySettings.armoryDBPort = 82;
-            msgResp->set_socket_type(armorySettings.socketType);
-            msgResp->set_network_type((int)armorySettings.netType);
-            msgResp->set_host(armorySettings.armoryDBIp.toStdString());
-            msgResp->set_port(std::to_string(armorySettings.armoryDBPort));
-            msgResp->set_bip15x_key(armorySettings.armoryDBKey.toStdString());
-            msgResp->set_run_locally(armorySettings.runLocally);
-            msgResp->set_data_dir(armorySettings.dataDir.toStdString());
-            msgResp->set_executable_path(armorySettings.armoryExecutablePath.toStdString());
-            msgResp->set_bitcoin_dir(armorySettings.bitcoinBlocksDir.toStdString());
-            msgResp->set_db_dir(armorySettings.dbDir.toStdString());
-            Envelope envResp{ env.id, user_, env.sender, {}, {}, msgReply.SerializeAsString() };
-            pushFill(envResp);
-         }
       }
       return true;
    }
 
-   bs::message::Adapter::Users supportedReceivers() const override {
+   bs::message::Adapter::Users supportedReceivers() const override
+   {
       return { user_ };
    }
+
    std::string name() const override { return "Settings"; }
 
 //   std::shared_ptr<OnChainExternalPlug> createOnChainPlug() const;
@@ -168,8 +177,8 @@ private:
          }
       }
       if (msgResp->responses_size()) {
-         bs::message::Envelope envResp{ env.id, user_, env.sender, {}, {}
-            , msg.SerializeAsString() };
+         bs::message::Envelope envResp{ user_, env.sender, msg.SerializeAsString()
+            , env.id() };
          return pushFill(envResp);
       }
       return true;
@@ -187,7 +196,9 @@ public:
    ApiMockAdapter() {}
    ~ApiMockAdapter() override = default;
 
-   bool process(const bs::message::Envelope& env) override { return true; }
+   bool process(const bs::message::Envelope&) override { return true; }
+   bool processBroadcast(const bs::message::Envelope&) override { return false; }
+
    bs::message::Adapter::Users supportedReceivers() const override {
       return { UserTerminal::create(TerminalUsers::API) };
    }

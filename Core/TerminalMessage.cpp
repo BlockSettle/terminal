@@ -12,10 +12,10 @@
 #include "TerminalMessage.h"
 #include "Message/Adapter.h"
 
-#include "terminal.pb.h"
+#include "common.pb.h"
 
 using namespace bs::message;
-using namespace BlockSettle::Terminal;
+using namespace BlockSettle::Common;
 
 static const std::map<int, std::string> kTerminalUsersMapping = {
    { static_cast<int>(TerminalUsers::BROADCAST), "Broadcast" },
@@ -68,7 +68,7 @@ void TerminalInprocBus::addAdapter(const std::shared_ptr<Adapter> &adapter)
    for (const auto &user : adapter->supportedReceivers()) {
       AdministrativeMessage msg;
       msg.set_component_created(user->value());
-      bs::message::Envelope env{ 0, adminUser, {}, {}, {}, msg.SerializeAsString() };
+      bs::message::Envelope env{ adminUser, {}, msg.SerializeAsString() };
       queue_->pushFill(env);
    }
 }
@@ -78,7 +78,7 @@ void TerminalInprocBus::start()
    static const auto &adminUser = UserTerminal::create(TerminalUsers::System);
    AdministrativeMessage msg;
    msg.mutable_start();
-   bs::message::Envelope env{ 0, adminUser, {}, {}, {}, msg.SerializeAsString() };
+   bs::message::Envelope env{ adminUser, {}, msg.SerializeAsString() };
    queue_->pushFill(env);
 }
 

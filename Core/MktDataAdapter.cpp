@@ -16,8 +16,10 @@
 #include "SslCaBundle.h"
 #include "TerminalMessage.h"
 
+#include "common.pb.h"
 #include "terminal.pb.h"
 
+using namespace BlockSettle::Common;
 using namespace BlockSettle::Terminal;
 using namespace bs::message;
 
@@ -34,24 +36,10 @@ MktDataAdapter::MktDataAdapter(const std::shared_ptr<spdlog::logger> &logger)
 
 bool MktDataAdapter::process(const bs::message::Envelope &env)
 {
-   if (env.sender->isSystem()) {
-      AdministrativeMessage msg;
-      if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse administrative message #{}", __func__, env.id);
-         return true;
-      }
-      if (msg.data_case() == AdministrativeMessage::kStart) {
-         AdministrativeMessage admMsg;
-         admMsg.set_component_loading(user_->value());
-         Envelope envBC{ 0, UserTerminal::create(TerminalUsers::System), nullptr
-            , {}, {}, admMsg.SerializeAsString() };
-         pushFill(envBC);
-      }
-   }
-   else if (env.receiver && (env.receiver->value() == user_->value())) {
+   if (env.receiver->value() == user_->value()) {
       MktDataMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse own request #{}", __func__, env.id);
+         logger_->error("[{}] failed to parse own request #{}", __func__, env.id());
          return true;
       }
       switch (msg.data_case()) {
@@ -63,6 +51,26 @@ bool MktDataAdapter::process(const bs::message::Envelope &env)
       }
    }
    return true;
+}
+
+bool MktDataAdapter::processBroadcast(const bs::message::Envelope& env)
+{
+   if (env.sender->isSystem()) {
+      AdministrativeMessage msg;
+      if (!msg.ParseFromString(env.message)) {
+         logger_->error("[{}] failed to parse administrative message #{}", __func__, env.id());
+         return false;
+      }
+      if (msg.data_case() == AdministrativeMessage::kStart) {
+         AdministrativeMessage admMsg;
+         admMsg.set_component_loading(user_->value());
+         Envelope envBC{ UserTerminal::create(TerminalUsers::System), nullptr
+            , admMsg.SerializeAsString() };
+         pushFill(envBC);
+         return true;
+      }
+   }
+   return false;
 }
 
 void MktDataAdapter::userWantsToConnect()
@@ -80,7 +88,7 @@ void MktDataAdapter::connected()
    connected_ = true;
    MktDataMessage msg;
    msg.mutable_connected();
-   Envelope envBC{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   Envelope envBC{ user_, nullptr, msg.SerializeAsString() };
    pushFill(envBC);
 }
 
@@ -89,7 +97,7 @@ void MktDataAdapter::disconnected()
    connected_ = false;
    MktDataMessage msg;
    msg.mutable_disconnected();
-   Envelope envBC{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   Envelope envBC{ user_, nullptr, msg.SerializeAsString() };
    pushFill(envBC);
 }
 
@@ -121,7 +129,8 @@ void MktDataAdapter::onMDUpdate(bs::network::Asset::Type at, const std::string& 
       default: break;
       }
    }
-   Envelope envBC{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   Envelope envBC{ user_, nullptr, msg.SerializeAsString()
+      , (SeqId)EnvelopeFlags::GlobalBroadcast };
    pushFill(envBC);
 }
 
@@ -131,7 +140,7 @@ void MktDataAdapter::onMDSecurityReceived(const std::string& name, const bs::net
    auto msgBC = msg.mutable_new_security();
    msgBC->set_name(name);
    msgBC->set_asset_type((int)sd.assetType);
-   Envelope envBC{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   Envelope envBC{ user_, nullptr, msg.SerializeAsString() };
    pushFill(envBC);
 }
 
@@ -139,7 +148,7 @@ void MktDataAdapter::allSecuritiesReceived()
 {
    MktDataMessage msg;
    auto msgBC = msg.mutable_all_instruments_received();
-   Envelope envBC{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   Envelope envBC{ user_, nullptr, msg.SerializeAsString() };
    pushFill(envBC);
 }
 
@@ -161,7 +170,8 @@ void MktDataAdapter::onNewPMTrade(const bs::network::NewPMTrade& trade)
    msgTrade->set_price(trade.price);
    msgTrade->set_amount(trade.amount);
    msgTrade->set_timestamp(trade.timestamp);
-   Envelope envBC{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   Envelope envBC{ user_, nullptr, msg.SerializeAsString()
+      , (SeqId)EnvelopeFlags::GlobalBroadcast };
    pushFill(envBC);
 }
 
@@ -173,7 +183,8 @@ void MktDataAdapter::sendTrade(const bs::network::NewTrade& trade)
    msgTrade->set_price(trade.price);
    msgTrade->set_amount(trade.amount);
    msgTrade->set_timestamp(trade.timestamp);
-   Envelope envBC{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   Envelope envBC{ user_, nullptr, msg.SerializeAsString()
+      , (SeqId)EnvelopeFlags::GlobalBroadcast };
    pushFill(envBC);
 }
 

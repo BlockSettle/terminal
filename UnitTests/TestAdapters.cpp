@@ -61,13 +61,13 @@ bool TestSupervisor::process(const Envelope &env)
    return true;
 }
 
-uint64_t TestSupervisor::send(bs::message::TerminalUsers sender, bs::message::TerminalUsers receiver
-   , const std::string &message, bool request)
+bs::message::SeqId TestSupervisor::send(bs::message::TerminalUsers sender, bs::message::TerminalUsers receiver
+   , const std::string &message, bs::message::SeqId respId)
 {
-   Envelope env{ 0, UserTerminal::create(sender), UserTerminal::create(receiver)
-      , {}, {}, message, request };
+   Envelope env{ UserTerminal::create(sender), UserTerminal::create(receiver)
+      , message, respId };
    pushFill(env);
-   return env.id;
+   return env.id();
 }
 
 std::future<std::vector<bs::message::Envelope>> TestSupervisor::waitFor(const FilterCb &cb
@@ -118,10 +118,10 @@ MatchingMock::MatchingMock(const std::shared_ptr<spdlog::logger>& logger
 
 bool MatchingMock::process(const bs::message::Envelope& env)
 {
-   if (env.receiver && env.request && (env.receiver->value() == user_->value())) {
+   if (!env.responseId && (env.receiver->value() == user_->value())) {
       MatchingMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse own request #{}", __func__, env.id);
+         logger_->error("[{}] failed to parse own request #{}", __func__, env.id());
          return true;
       }
       switch (msg.data_case()) {
@@ -157,13 +157,14 @@ bool MatchingMock::process(const bs::message::Envelope& env)
                sibling->inject(msgCopy, email_);
             }
             const auto& timeNow = bs::message::bus_clock::now();
-            Envelope envTO{ 0, user_, user_, timeNow, timeNow + kExpirationTimeout
+            Envelope envTO{ user_, user_, timeNow + kExpirationTimeout
                , quote.quote_id() };   //FIXME: put actual quote's expirationTime
             pushFill(envTO);
 
             MatchingMessage msgSettl;
             toMsg(itMatch->second.quote, msgSettl.mutable_quote());
-            Envelope envSettl{ 0, user_, userSettl_, {}, {}, msgSettl.SerializeAsString() };
+            Envelope envSettl{ user_, userSettl_, msgSettl.SerializeAsString()
+               , (bs::message::SeqId)bs::message::EnvelopeFlags::Response };
             pushFill(envSettl);
          }
          break;
@@ -178,7 +179,8 @@ bool MatchingMock::process(const bs::message::Envelope& env)
                else {
                   match.second.order = fromMsg(msg.order());
                }
-               Envelope envSettl{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
+               Envelope envSettl{ user_, userSettl_, msg.SerializeAsString()
+                  , (bs::message::SeqId)bs::message::EnvelopeFlags::Response };
                return pushFill(envSettl);
             }
          }
@@ -203,10 +205,10 @@ bool MatchingMock::process(const bs::message::Envelope& env)
       default: break;
       }
    }
-   if (env.receiver && env.request && (env.receiver->value() == userBS_->value())) {
+   if (!env.responseId && (env.receiver->value() == userBS_->value())) {
       BsServerMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse own request #{}", __func__, env.id);
+         logger_->error("[{}] failed to parse own request #{}", __func__, env.id());
          return true;
       }
       switch (msg.data_case()) {
@@ -219,7 +221,7 @@ bool MatchingMock::process(const bs::message::Envelope& env)
       default: break;
       }
    }
-   else if (env.receiver && (env.receiver->value() == env.sender->value())
+   else if (env.receiver->value() == env.sender->value()
       && (env.sender->value() == user_->value())) {   //own to self
       for (const auto& match : matches_) {
          if (match.second.quote.quoteId == env.message) {
@@ -228,6 +230,11 @@ bool MatchingMock::process(const bs::message::Envelope& env)
       }
    }
    return true;
+}
+
+bool MatchingMock::processBroadcast(const bs::message::Envelope&)
+{
+   return false;
 }
 
 void MatchingMock::link(const std::shared_ptr<MatchingMock>& sibling)
@@ -249,7 +256,8 @@ bool MatchingMock::inject(const MatchingMessage& msg, const std::string &email)
       for (auto& match : matches_) {
          if (match.second.quote.quoteId == msg.order().quote_id()) {
             match.second.order = fromMsg(msg.order());
-            Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
+            Envelope env{ user_, userSettl_, msg.SerializeAsString()
+               , (bs::message::SeqId)bs::message::EnvelopeFlags::Response };
             return pushFill(env);
          }
       }
@@ -295,7 +303,8 @@ bool MatchingMock::sendIncomingRFQ(const RFQ& rfq, const std::string &email)
    msgInRFQ->set_expiration_ms(std::chrono::duration_cast<std::chrono::milliseconds>(
       (timeNow + kExpirationTimeout).time_since_epoch()).count());
    matches_[rfq.id()] = std::move(match);
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
+   Envelope env{ user_, userSettl_, msg.SerializeAsString()
+      , (bs::message::SeqId)bs::message::EnvelopeFlags::Response };
    return pushFill(env);
 }
 
@@ -316,7 +325,8 @@ bool MatchingMock::sendQuote(const bs::network::Quote& quote)
 {
    MatchingMessage msg;
    toMsg(quote, msg.mutable_quote());
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
+   Envelope env{ user_, userSettl_, msg.SerializeAsString()
+      , (bs::message::SeqId)bs::message::EnvelopeFlags::Response };
    return pushFill(env);
 }
 
@@ -344,7 +354,8 @@ bool MatchingMock::sendPendingOrder(const std::string& rfqId)
    itMatch->second.order = order;
    MatchingMessage msg;
    toMsg(order, msg.mutable_order());
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
+   Envelope env{ user_, userSettl_, msg.SerializeAsString()
+      , (bs::message::SeqId)bs::message::EnvelopeFlags::Response };
    pushFill(env);
 
    order.side = bs::network::Side::invert(order.side);
@@ -363,7 +374,8 @@ bool MatchingMock::sendPendingOrder(const std::string& rfqId)
          }
       }
       else {
-         Envelope envBS{ 0, userBS_, userSettl_, {}, {}, msgBS.SerializeAsString() };
+         Envelope envBS{ userBS_, userSettl_, msgBS.SerializeAsString()
+            , (bs::message::SeqId)bs::message::EnvelopeFlags::Response };
          pushFill(envBS);
       }
    }
@@ -379,7 +391,8 @@ bool MatchingMock::sendFilledOrder(const std::string& rfqId)
    itMatch->second.order.status = bs::network::Order::Filled;
    MatchingMessage msg;
    toMsg(itMatch->second.order, msg.mutable_order());
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
+   Envelope env{ user_, userSettl_, msg.SerializeAsString()
+      , (bs::message::SeqId)bs::message::EnvelopeFlags::Response };
    return pushFill(env);
 }
 
@@ -396,7 +409,8 @@ bool MatchingMock::sendUnsignedPayinRequest(const std::string& settlIdBin)
    }
    BsServerMessage msgBS;
    msgBS.set_unsigned_payin_requested(settlIdBin);
-   Envelope env{ 0, userBS_, userSettl_, {}, {}, msgBS.SerializeAsString() };
+   Envelope env{ userBS_, userSettl_, msgBS.SerializeAsString()
+      , (bs::message::SeqId)bs::message::EnvelopeFlags::Response };
    return pushFill(env);
 }
 
@@ -413,7 +427,8 @@ bool MatchingMock::sendSignedPayinRequest(const BsServerMessage_SignXbtHalf& req
    }
    BsServerMessage msgBS;
    *msgBS.mutable_signed_payin_requested() = request;
-   Envelope env{ 0, userBS_, userSettl_, {}, {}, msgBS.SerializeAsString() };
+   Envelope env{ userBS_, userSettl_, msgBS.SerializeAsString()
+      , (bs::message::SeqId)bs::message::EnvelopeFlags::Response };
    return pushFill(env);
 }
 
@@ -430,7 +445,8 @@ bool MatchingMock::sendSignedPayoutRequest(const BsServerMessage_SignXbtHalf& re
    }
    BsServerMessage msgBS;
    *msgBS.mutable_signed_payout_requested() = request;
-   Envelope env{ 0, userBS_, userSettl_, {}, {}, msgBS.SerializeAsString() };
+   Envelope env{ userBS_, userSettl_, msgBS.SerializeAsString()
+      , (bs::message::SeqId)bs::message::EnvelopeFlags::Response };
    return pushFill(env);
 }
 
@@ -461,7 +477,8 @@ bool MatchingMock::processUnsignedPayin(const BsServerMessage_XbtTransaction& re
    msgReq->set_payin_hash(payinHash.toBinStr());
    const auto curTime = QDateTime::currentDateTime();
    msgReq->set_timestamp(curTime.toMSecsSinceEpoch());
-   Envelope env{ 0, userBS_, userSettl_, {}, {}, msg.SerializeAsString() };
+   Envelope env{ userBS_, userSettl_, msg.SerializeAsString()
+      , (bs::message::SeqId)bs::message::EnvelopeFlags::Response };
    return pushFill(env);
 }
 

@@ -12,9 +12,9 @@
 #include <spdlog/spdlog.h>
 #include "TerminalMessage.h"
 
-#include "terminal.pb.h"
+#include "common.pb.h"
 
-using namespace BlockSettle::Terminal;
+using namespace BlockSettle::Common;
 using namespace bs::message;
 
 
@@ -25,19 +25,25 @@ ChatAdapter::ChatAdapter(const std::shared_ptr<spdlog::logger> &logger)
 
 bool ChatAdapter::process(const bs::message::Envelope &env)
 {
+   return true;
+}
+
+bool ChatAdapter::processBroadcast(const bs::message::Envelope& env)
+{
    if (env.sender->isSystem()) {
       AdministrativeMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse administrative message #{}", __func__, env.id);
-         return true;
+         logger_->error("[{}] failed to parse administrative message #{}", __func__, env.id());
+         return false;
       }
       if (msg.data_case() == AdministrativeMessage::kStart) {
          AdministrativeMessage admMsg;
          admMsg.set_component_loading(user_->value());
-         Envelope envBC{ 0, UserTerminal::create(TerminalUsers::System), nullptr
-            , {}, {}, admMsg.SerializeAsString() };
+         Envelope envBC{ UserTerminal::create(TerminalUsers::System), nullptr
+            , admMsg.SerializeAsString() };
          pushFill(envBC);
+         return true;
       }
    }
-   return true;
+   return false;
 }

@@ -73,19 +73,21 @@ public:
    }
    std::string name() const override { return "APIbusGW"; }
 
+   bool processBroadcast(const bs::message::Envelope& env) override
+   {
+      return false;   // ignore unsolicited broadcasts
+   }
+
    bool process(const bs::message::Envelope &env) override
    {
-      if (!env.receiver) {
-         return true;   // ignore unsolicited broadcasts
-      }
       auto envCopy = env;
-      envCopy.id = 0;
+      envCopy.setId(0);
       envCopy.sender = parent_->user_;
 
       if (std::dynamic_pointer_cast<bs::message::UserTerminal>(env.receiver)) {
          if (parent_->pushFill(envCopy)) {
-            if (env.request) {
-               idMap_[envCopy.id] = { env.id, env.sender };
+            if (!env.responseId) {
+               idMap_[envCopy.id()] = { env.id(), env.sender };
             }
             return true;
          }
@@ -94,21 +96,21 @@ public:
          }
       }
       else if (env.receiver->isFallback()) {
-         if (env.request) {
+         if (!env.responseId) {
             envCopy.receiver = userTermBroadcast_;
             return parent_->pushFill(envCopy);
          }
          else {
-            const auto &itId = idMap_.find(env.id);
+            const auto &itId = idMap_.find(env.responseId);
             if (itId == idMap_.end()) {
                envCopy.receiver = userTermBroadcast_;
                return parent_->pushFill(envCopy);
             }
             else {
-               envCopy.id = itId->second.id;
+               envCopy.responseId = itId->second.id;
                envCopy.receiver = itId->second.requester;
                if (parent_->push(envCopy)) {
-                  idMap_.erase(env.id);
+                  idMap_.erase(env.responseId);
                }
                return true;
             }
@@ -120,12 +122,12 @@ public:
    bool pushToApiBus(const bs::message::Envelope &env)
    {
       auto envCopy = env;
-      envCopy.id = 0;
+      envCopy.setId(0);
       envCopy.receiver.reset();
-      if (!env.request && env.receiver) {
-         const auto& itIdMap = idMap_.find(env.id);
+      if (env.responseId && env.receiver) {
+         const auto& itIdMap = idMap_.find(env.responseId);
          if (itIdMap != idMap_.end()) {
-            envCopy.id = itIdMap->second.id;
+            envCopy.responseId = itIdMap->second.id;
             envCopy.receiver = itIdMap->second.requester;
             if (push(envCopy)) {
                idMap_.erase(itIdMap);
@@ -135,8 +137,8 @@ public:
          }
       }
       bool rc = pushFill(envCopy);
-      if (rc && env.request) {
-         idMap_[envCopy.id] = { env.id, env.sender };
+      if (rc && !env.responseId) {
+         idMap_[envCopy.id()] = { env.id(), env.sender };
       }
       return rc;
    }

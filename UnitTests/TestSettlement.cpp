@@ -185,7 +185,7 @@ TEST_F(TestSettlement, Initial_balances)
    {
       return [walletId](const bs::message::Envelope& env)
       {
-         if (env.request ||
+         if (!env.responseId ||
             (env.sender->value<TerminalUsers>() != TerminalUsers::Wallets)) {
             return false;
          }
@@ -499,7 +499,7 @@ TEST_F(TestSettlement, SpotXBT_sell)
    {
       return [walletId](const bs::message::Envelope& env)
       {
-         if (env.request || env.receiver ||
+         if (!env.responseId || env.receiver ||
             (env.sender->value<TerminalUsers>() != TerminalUsers::Wallets)) {
             return false;
          }
@@ -656,7 +656,7 @@ TEST_F(TestSettlement, SpotXBT_buy)
    {
       return [walletId](const bs::message::Envelope& env)
       {
-         if (env.request || env.receiver ||
+         if (!env.responseId || env.receiver ||
             (env.sender->value<TerminalUsers>() != TerminalUsers::Wallets)) {
             return false;
          }
