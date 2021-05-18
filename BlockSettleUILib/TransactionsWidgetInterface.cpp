@@ -156,7 +156,7 @@ void TransactionsWidgetInterface::onRevokeSettlement()
          const auto &txOut = txItem->tx.getTxOutCopy(i);
          const auto &addr = bs::Address::fromTxOut(txOut);
          if (addr.getType() == AddressEntryType_P2WSH) {
-            args->amount = bs::XBTAmount{ txOut.getValue() };
+            args->amount = bs::XBTAmount{ (int64_t)txOut.getValue() };
             break;
          }
       }

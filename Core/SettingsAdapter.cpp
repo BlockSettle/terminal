@@ -65,8 +65,8 @@ public:
    {
       SettingsMessage msg;
       msg.mutable_get_bootstrap();
-      Envelope env{ user_, bs::message::UserTerminal::create(bs::message::TerminalUsers::Settings)
-         , msg.SerializeAsString() };
+      auto env = Envelope::makeRequest(user_, UserTerminal::create(TerminalUsers::Settings)
+         , msg.SerializeAsString());
       queue_->pushFill(env);
    }
 
@@ -213,8 +213,7 @@ bool SettingsAdapter::processBroadcast(const bs::message::Envelope& env)
          msgResp->set_bitcoin_dir(armorySettings.bitcoinBlocksDir.toStdString());
          msgResp->set_db_dir(armorySettings.dbDir.toStdString());
          msgResp->set_cache_file_name(appSettings_->get<std::string>(ApplicationSettings::txCacheFileName));
-         Envelope envResp{ user_, env.sender, msgReply.SerializeAsString(), env.id() };
-         pushFill(envResp);
+         pushResponse(user_, env, msgReply.SerializeAsString());
          return true;
       }
    }
@@ -243,8 +242,7 @@ bool SettingsAdapter::processGetState(const bs::message::Envelope& env)
       setReq->set_index(static_cast<SettingIndex>(st.first));
       setFromQVariant(st.second, setReq, setResp);
    }
-   Envelope envResp{ user_, env.sender, msg.SerializeAsString(), env.id() };
-   return pushFill(envResp);
+   return pushResponse(user_, env, msg.SerializeAsString());
 }
 
 bool SettingsAdapter::processReset(const bs::message::Envelope& env
@@ -262,8 +260,7 @@ bool SettingsAdapter::processReset(const bs::message::Envelope& env
       const auto& value = appSettings_->get(setting);
       setFromQVariant(value, setReq, setResp);
    }
-   Envelope envResp{ user_, env.sender, msg.SerializeAsString(), env.id() };
-   return pushFill(envResp);
+   return pushResponse(user_, env, msg.SerializeAsString());
 }
 
 bool SettingsAdapter::processResetToState(const bs::message::Envelope& env
@@ -276,8 +273,7 @@ bool SettingsAdapter::processResetToState(const bs::message::Envelope& env
    }
    SettingsMessage msg;
    *msg.mutable_state() = request;
-   Envelope envResp{ user_, env.sender, msg.SerializeAsString(), env.id() };
-   return pushFill(envResp);
+   return pushResponse(user_, env, msg.SerializeAsString());
 }
 
 bool SettingsAdapter::processBootstrap(const bs::message::Envelope &env
@@ -305,9 +301,8 @@ bool SettingsAdapter::processBootstrap(const bs::message::Envelope &env
    else {
       logger_->error("[{}] failed to set bootstrap data", __func__);
    }
-   Envelope envResp{ user_, bsData.empty() ? env.sender : nullptr
-      , msg.SerializeAsString(), bsData.empty() ? env.id() : 0 };
-   return pushFill(envResp);
+   return pushResponse(user_, bsData.empty() ? env.sender : nullptr
+      , msg.SerializeAsString(), bsData.empty() ? env.foreignId() : 0);
 }
 
 static bs::network::ws::PrivateKey readOrCreatePrivateKey(const std::string& filename)
@@ -342,8 +337,7 @@ bool SettingsAdapter::processApiPrivKey(const bs::message::Envelope& env)
    SettingsMessage msg;
    SecureBinaryData privKey(apiPrivKey.data(), apiPrivKey.size());
    msg.set_api_privkey(privKey.toBinStr());
-   Envelope envResp{ user_, env.sender, msg.SerializeAsString(), env.id() };
-   return pushFill(envResp);
+   return pushResponse(user_, env, msg.SerializeAsString());
 }
 
 static std::set<std::string> readClientKeys(const std::string& filename)
@@ -379,8 +373,7 @@ bool SettingsAdapter::processApiClientsList(const bs::message::Envelope& env)
    for (const auto& clientKey : clientKeys) {
       msgResp->add_pub_keys(clientKey);
    }
-   Envelope envResp{ user_, env.sender, msg.SerializeAsString(), env.id() };
-   return pushFill(envResp);
+   return pushResponse(user_, env, msg.SerializeAsString());
 }
 
 std::shared_ptr<OnChainExternalPlug> SettingsAdapter::createOnChainPlug() const
@@ -480,9 +473,7 @@ bool SettingsAdapter::processGetRequest(const bs::message::Envelope &env
       }
    }
    if (nbFetched > 0) {
-      bs::message::Envelope envResp{ user_, env.sender, msg.SerializeAsString()
-         , env.id() };
-      return pushFill(envResp);
+      return pushResponse(user_, env, msg.SerializeAsString());
    }
    return true;
 }
@@ -550,8 +541,7 @@ bool SettingsAdapter::processPutRequest(const SettingsMessage_SettingsResponse &
    if (nbUpdates) {
       SettingsMessage msg;
       *(msg.mutable_settings_updated()) = request;
-      bs::message::Envelope env{ user_, nullptr, msg.SerializeAsString() };
-      return pushFill(env);
+      return pushBroadcast(user_, msg.SerializeAsString());
    }
    return true;
 }
@@ -598,9 +588,7 @@ bool SettingsAdapter::processGetArmoryServers(const bs::message::Envelope& env)
       msgSrv->set_one_way_auth(server.oneWayAuth_);
       msgSrv->set_password(server.password.toBinStr());
    }
-   bs::message::Envelope envResp{ user_, env.sender, msg.SerializeAsString()
-      , env.id() };
-   return pushFill(envResp);
+   return pushResponse(user_, env, msg.SerializeAsString());
 }
 
 static ArmoryServer fromMessage(const SettingsMessage_ArmoryServer& msg)
@@ -673,9 +661,7 @@ bool SettingsAdapter::processSignerSettings(const bs::message::Envelope &env)
    msgResp->set_home_dir(appSettings_->GetHomeDir().toStdString());
    msgResp->set_auto_sign_spend_limit(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
 
-   bs::message::Envelope envResp{ user_, env.sender, msg.SerializeAsString()
-      , env.id() };
-   return pushFill(envResp);
+   return pushResponse(user_, env, msg.SerializeAsString());
 }
 
 bool SettingsAdapter::processSignerSetKey(const SettingsMessage_SignerSetKey &request)
@@ -703,9 +689,7 @@ bool SettingsAdapter::processGetSigners(const bs::message::Envelope& env)
       msgSrv->set_port(std::to_string(signer.port));
       msgSrv->set_key(signer.key.toStdString());
    }
-   bs::message::Envelope envResp{ user_, env.sender, msg.SerializeAsString()
-      , env.id() };
-   return pushFill(envResp);
+   return pushResponse(user_, env, msg.SerializeAsString());
 }
 
 bool SettingsAdapter::processSetSigner(const bs::message::Envelope& env

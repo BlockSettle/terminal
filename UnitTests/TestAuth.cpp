@@ -127,7 +127,7 @@ BinaryData TestAuth::sendTo(uint64_t value, bs::Address& addr)
 
    signer.addSpender(spendPtr);
 
-   signer.addRecipient(addr.getRecipient(bs::XBTAmount{value}));
+   signer.addRecipient(addr.getRecipient(bs::XBTAmount{(int64_t)value}));
    signer.setFeed(coinbaseFeed_);
 
    //sign & send

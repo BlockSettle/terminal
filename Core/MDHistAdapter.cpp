@@ -39,9 +39,8 @@ bool MDHistAdapter::processBroadcast(const bs::message::Envelope& env)
       if (msg.data_case() == AdministrativeMessage::kStart) {
          AdministrativeMessage admMsg;
          admMsg.set_component_loading(user_->value());
-         Envelope envBC{ UserTerminal::create(TerminalUsers::System), nullptr
-            , admMsg.SerializeAsString() };
-         pushFill(envBC);
+         pushBroadcast(UserTerminal::create(TerminalUsers::System)
+            , admMsg.SerializeAsString());
       }
    }
    return false;

@@ -48,7 +48,7 @@ void MockTerminalBus::addAdapter(const std::shared_ptr<Adapter>& adapter)
    for (const auto& user : adapter->supportedReceivers()) {
       AdministrativeMessage msg;
       msg.set_component_created(user->value());
-      bs::message::Envelope env{ adminUser, {}, msg.SerializeAsString() };
+      auto env = bs::message::Envelope::makeBroadcast(adminUser, msg.SerializeAsString());
       queue_->pushFill(env);
    }
 }
@@ -58,7 +58,7 @@ void MockTerminalBus::start()
    static const auto& adminUser = UserTerminal::create(TerminalUsers::System);
    AdministrativeMessage msg;
    msg.mutable_start();
-   bs::message::Envelope env{ adminUser, {}, msg.SerializeAsString() };
+   auto env = bs::message::Envelope::makeBroadcast(adminUser, msg.SerializeAsString());
    queue_->pushFill(env);
 }
 
@@ -102,8 +102,7 @@ public:
             msgResp->set_executable_path(armorySettings.armoryExecutablePath.toStdString());
             msgResp->set_bitcoin_dir(armorySettings.bitcoinBlocksDir.toStdString());
             msgResp->set_db_dir(armorySettings.dbDir.toStdString());
-            Envelope envResp{ user_, env.sender, msgReply.SerializeAsString(), env.id() };
-            pushFill(envResp);
+            pushResponse(user_, env, msgReply.SerializeAsString());
             return true;
          }
       }
@@ -177,9 +176,7 @@ private:
          }
       }
       if (msgResp->responses_size()) {
-         bs::message::Envelope envResp{ user_, env.sender, msg.SerializeAsString()
-            , env.id() };
-         return pushFill(envResp);
+         return pushResponse(user_, env, msg.SerializeAsString());
       }
       return true;
    }

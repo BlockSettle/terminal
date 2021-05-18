@@ -64,9 +64,8 @@ bool MktDataAdapter::processBroadcast(const bs::message::Envelope& env)
       if (msg.data_case() == AdministrativeMessage::kStart) {
          AdministrativeMessage admMsg;
          admMsg.set_component_loading(user_->value());
-         Envelope envBC{ UserTerminal::create(TerminalUsers::System), nullptr
-            , admMsg.SerializeAsString() };
-         pushFill(envBC);
+         pushBroadcast(UserTerminal::create(TerminalUsers::System)
+            , admMsg.SerializeAsString());
          return true;
       }
    }
@@ -88,8 +87,7 @@ void MktDataAdapter::connected()
    connected_ = true;
    MktDataMessage msg;
    msg.mutable_connected();
-   Envelope envBC{ user_, nullptr, msg.SerializeAsString() };
-   pushFill(envBC);
+   pushBroadcast(user_, msg.SerializeAsString());
 }
 
 void MktDataAdapter::disconnected()
@@ -97,8 +95,7 @@ void MktDataAdapter::disconnected()
    connected_ = false;
    MktDataMessage msg;
    msg.mutable_disconnected();
-   Envelope envBC{ user_, nullptr, msg.SerializeAsString() };
-   pushFill(envBC);
+   pushBroadcast(user_, msg.SerializeAsString());
 }
 
 void MktDataAdapter::onMDUpdate(bs::network::Asset::Type at, const std::string& name
@@ -129,9 +126,7 @@ void MktDataAdapter::onMDUpdate(bs::network::Asset::Type at, const std::string& 
       default: break;
       }
    }
-   Envelope envBC{ user_, nullptr, msg.SerializeAsString()
-      , (SeqId)EnvelopeFlags::GlobalBroadcast };
-   pushFill(envBC);
+   pushBroadcast(user_, msg.SerializeAsString(), true);
 }
 
 void MktDataAdapter::onMDSecurityReceived(const std::string& name, const bs::network::SecurityDef& sd)
@@ -140,16 +135,14 @@ void MktDataAdapter::onMDSecurityReceived(const std::string& name, const bs::net
    auto msgBC = msg.mutable_new_security();
    msgBC->set_name(name);
    msgBC->set_asset_type((int)sd.assetType);
-   Envelope envBC{ user_, nullptr, msg.SerializeAsString() };
-   pushFill(envBC);
+   pushBroadcast(user_, msg.SerializeAsString());
 }
 
 void MktDataAdapter::allSecuritiesReceived()
 {
    MktDataMessage msg;
    auto msgBC = msg.mutable_all_instruments_received();
-   Envelope envBC{ user_, nullptr, msg.SerializeAsString() };
-   pushFill(envBC);
+   pushBroadcast(user_, msg.SerializeAsString());
 }
 
 void MktDataAdapter::onNewFXTrade(const bs::network::NewTrade& trade)
@@ -170,9 +163,7 @@ void MktDataAdapter::onNewPMTrade(const bs::network::NewPMTrade& trade)
    msgTrade->set_price(trade.price);
    msgTrade->set_amount(trade.amount);
    msgTrade->set_timestamp(trade.timestamp);
-   Envelope envBC{ user_, nullptr, msg.SerializeAsString()
-      , (SeqId)EnvelopeFlags::GlobalBroadcast };
-   pushFill(envBC);
+   pushBroadcast(user_, msg.SerializeAsString(), true);
 }
 
 void MktDataAdapter::sendTrade(const bs::network::NewTrade& trade)
@@ -183,9 +174,7 @@ void MktDataAdapter::sendTrade(const bs::network::NewTrade& trade)
    msgTrade->set_price(trade.price);
    msgTrade->set_amount(trade.amount);
    msgTrade->set_timestamp(trade.timestamp);
-   Envelope envBC{ user_, nullptr, msg.SerializeAsString()
-      , (SeqId)EnvelopeFlags::GlobalBroadcast };
-   pushFill(envBC);
+   pushBroadcast(user_, msg.SerializeAsString(), true);
 }
 
 bool MktDataAdapter::processStartConnection(int e)

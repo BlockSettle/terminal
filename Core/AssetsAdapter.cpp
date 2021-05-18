@@ -84,9 +84,8 @@ bool AssetsAdapter::processBroadcast(const bs::message::Envelope& env)
          auto setReq = msgReq->add_requests();
          setReq->set_source(SettingSource_Local);
          setReq->set_index(SetIdx_BlockSettleSignAddress);
-         Envelope envReq{ user_, UserTerminal::create(TerminalUsers::Settings)
-            , msgSet.SerializeAsString() };
-         pushFill(envReq);
+         pushRequest(user_, UserTerminal::create(TerminalUsers::Settings)
+            , msgSet.SerializeAsString());
       }
    }
    else if (env.sender->value<bs::message::TerminalUsers>() == bs::message::TerminalUsers::Matching) {
@@ -152,8 +151,7 @@ void AssetsAdapter::onCCSecurityDef(const bs::network::CCSecurityDef& sd)
    msgCC->set_product(sd.product);
    msgCC->set_genesis_address(sd.genesisAddr.display());
    msgCC->set_lot_size(sd.nbSatoshis);
-   Envelope env{ user_, nullptr, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString());
 }
 
 void AssetsAdapter::onLoaded()
@@ -161,14 +159,12 @@ void AssetsAdapter::onLoaded()
    logger_->debug("[AssetsAdapter::onLoaded]");
    AdministrativeMessage admMsg;
    admMsg.set_component_loading(user_->value());
-   Envelope envBC{ UserTerminal::create(TerminalUsers::System), nullptr
-      , admMsg.SerializeAsString() };
-   pushFill(envBC);
+   pushBroadcast(UserTerminal::create(TerminalUsers::System)
+      , admMsg.SerializeAsString());
 
    AssetsMessage msg;
    msg.mutable_loaded();
-   Envelope env{ user_, nullptr, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString());
 }
 
 bool AssetsAdapter::processGetSettings(const SettingsMessage_SettingsResponse& response)
@@ -190,9 +186,8 @@ void AssetsAdapter::onBSSignAddress(const std::string& address)
 
    SettingsMessage msgSet;
    auto msgReq = msgSet.mutable_get_bootstrap();
-   Envelope envReq{ user_, UserTerminal::create(TerminalUsers::Settings)
-      , msgSet.SerializeAsString() };
-   pushFill(envReq);
+   pushRequest(user_, UserTerminal::create(TerminalUsers::Settings)
+      , msgSet.SerializeAsString());
 }
 
 bool AssetsAdapter::processBootstrap(const SettingsMessage_BootstrapData& response)
@@ -222,9 +217,8 @@ bool AssetsAdapter::onMatchingLogin(const MatchingMessage_LoggedIn&)
 {
    MatchingMessage msg;
    msg.mutable_get_submitted_auth_addresses();
-   Envelope env{ user_, UserTerminal::create(TerminalUsers::Matching)
-      , msg.SerializeAsString() };
-   return pushFill(env);
+   return pushRequest(user_, UserTerminal::create(TerminalUsers::Matching)
+      , msg.SerializeAsString());
 }
 
 bool AssetsAdapter::processSubmittedAuth(const MatchingMessage_SubmittedAuthAddresses& response)
@@ -234,17 +228,15 @@ bool AssetsAdapter::processSubmittedAuth(const MatchingMessage_SubmittedAuthAddr
    for (const auto& addr : response.addresses()) {
       msgBC->add_addresses(addr);
    }
-   Envelope env{ user_, nullptr, msg.SerializeAsString() };
-   return pushFill(env);
+   return pushBroadcast(user_, msg.SerializeAsString());
 }
 
 bool AssetsAdapter::processSubmitAuth(const std::string& address)
 {  // currently using Celer storage for this, but this might changed at some point
    MatchingMessage msg;
    msg.set_submit_auth_address(address);
-   Envelope env{ user_, UserTerminal::create(TerminalUsers::Matching)
-      , msg.SerializeAsString() };
-   return pushFill(env);
+   return pushRequest(user_, UserTerminal::create(TerminalUsers::Matching)
+      , msg.SerializeAsString());
 }
 
 bool AssetsAdapter::processBalance(const std::string& currency, double value)
@@ -253,6 +245,5 @@ bool AssetsAdapter::processBalance(const std::string& currency, double value)
    auto msgBal = msg.mutable_balance();
    msgBal->set_currency(currency);
    msgBal->set_value(value);
-   Envelope env{ user_, nullptr, msg.SerializeAsString() };
-   return pushFill(env);
+   return pushBroadcast(user_, msg.SerializeAsString());
 }

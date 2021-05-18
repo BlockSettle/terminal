@@ -273,7 +273,7 @@ public:
    void mineNewBlocks(const bs::Address &dst, unsigned count)
    {
       auto curHeight = env_->armoryConnection()->topBlock();
-      auto addrRecip = dst.getRecipient(bs::XBTAmount{uint64_t(1 * COIN)});
+      auto addrRecip = dst.getRecipient(bs::XBTAmount{int64_t(1 * COIN)});
       env_->armoryInstance()->mineNewBlock(addrRecip.get(), count);
       env_->blockMonitor()->waitForNewBlocks(curHeight + count);
    }

@@ -198,11 +198,11 @@ void ApiJsonAdapter::OnDataFromClient(const std::string& clientId
          , jsonMsg.message_case());
       return;
    }
-   Envelope env{ user_, user, serMsg };
-   if (!pushFill(env)) {
+   const auto msgId = pushRequest(user_, user, serMsg);
+   if (!msgId) {
       sendErrorReply(jsonMsg.id(), "internal error");
    }
-   requests_[env.id()] = { clientId, jsonMsg.id(), std::chrono::system_clock::now() };
+   requests_[msgId] = { clientId, jsonMsg.id(), std::chrono::system_clock::now() };
 }
 
 void ApiJsonAdapter::OnClientConnected(const std::string& clientId
@@ -343,8 +343,8 @@ bool ApiJsonAdapter::processBlockchain(const Envelope &env)
    case ArmoryMessage::kLedgerEntries: [[fallthrough]];
    case ArmoryMessage::kAddressHistory: [[fallthrough]];
    case ArmoryMessage::kFeeLevelsResponse:
-      if (hasRequest(env.responseId)) {
-         sendReplyToClient(env.responseId, msg, env.sender);
+      if (hasRequest(env.responseId())) {
+         sendReplyToClient(env.responseId(), msg, env.sender);
       }
       break;
    case ArmoryMessage::kZcReceived: [[fallthrough]];
@@ -375,7 +375,7 @@ bool ApiJsonAdapter::processSigner(const Envelope &env)
    case SignerMessage::kNeedNewWalletPrompt:
       break;
    case SignerMessage::kSignTxResponse:
-      sendReplyToClient(env.responseId, msg, env.sender);
+      sendReplyToClient(env.responseId(), msg, env.sender);
       break;
    default:    break;
    }
@@ -404,8 +404,8 @@ bool ApiJsonAdapter::processWallets(const Envelope &env)
    case WalletsMessage::kUtxos: [[fallthrough]];
    case WalletsMessage::kAuthKey: [[fallthrough]];
    case WalletsMessage::kReservedUtxos:
-      if (hasRequest(env.responseId)) {
-         sendReplyToClient(env.responseId, msg, env.sender);
+      if (hasRequest(env.responseId())) {
+         sendReplyToClient(env.responseId(), msg, env.sender);
       }
       break;
    default:    break;
@@ -439,8 +439,8 @@ bool ApiJsonAdapter::processAssets(const bs::message::Envelope& env)
    }
    switch (msg.data_case()) {
    case AssetsMessage::kSubmittedAuthAddrs:
-      if (hasRequest(env.responseId)) {
-         sendReplyToClient(env.responseId, msg, env.sender);
+      if (hasRequest(env.responseId())) {
+         sendReplyToClient(env.responseId(), msg, env.sender);
       }
       break;
    case AssetsMessage::kBalance:
@@ -456,20 +456,17 @@ void ApiJsonAdapter::processStart()
    logger_->debug("[ApiJsonAdapter::processStart]");
    SettingsMessage msg;
    msg.set_api_privkey("");
-   Envelope envReq1{ user_, userSettings_, msg.SerializeAsString() };
-   pushFill(envReq1);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 
    msg.mutable_api_client_keys();
-   Envelope envReq2{ user_, userSettings_, msg.SerializeAsString() };
-   pushFill(envReq2);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 
    auto msgReq = msg.mutable_get_request();
    auto setReq = msgReq->add_requests();
    setReq->set_source(SettingSource_Local);
    setReq->set_index(SetIdx_ExtConnPort);
    setReq->set_type(SettingType_String);
-   Envelope envReq3{ user_, userSettings_, msg.SerializeAsString() };
-   pushFill(envReq3);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
 bool ApiJsonAdapter::processBsServer(const bs::message::Envelope& env)
@@ -647,8 +644,7 @@ bool ApiJsonAdapter::sendReplyToClient(uint64_t msgId
 void ApiJsonAdapter::sendGCtimeout()
 {
    const auto& timeNow = bs::message::bus_clock::now();
-   Envelope env{ user_, user_, timeNow + kRequestTimeout, "GC" };
-   pushFill(env);
+   pushRequest(user_, user_, "GC", timeNow + kRequestTimeout);
 }
 
 void ApiJsonAdapter::processGCtimeout()

@@ -775,7 +775,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
          }
 
          const bool isSpendCC = qrn.side == bs::network::Side::Buy;
-         uint64_t spendVal;
+         int64_t spendVal = 0;
          if (isSpendCC) {
             spendVal = static_cast<uint64_t>(qrn.quantity * assetManager_->getCCLotSize(qrn.product));
          } else {
@@ -813,7 +813,8 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
                            unsigned changGroup = isSpendCC ? RECIP_GROUP_CHANG_1 : RECIP_GROUP_CHANG_2;
                            
                            std::map<unsigned, std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>>> recipientMap;
-                           const auto recipient = bs::Address::fromAddressString(qrn.requestorRecvAddress).getRecipient(bs::XBTAmount{ spendVal });
+                           const auto recipient = bs::Address::fromAddressString(qrn.requestorRecvAddress)
+                              .getRecipient(bs::XBTAmount{ spendVal });
                            std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recVec({recipient});
                            recipientMap.emplace(spendGroup, std::move(recVec));
                            
@@ -1431,7 +1432,7 @@ bs::XBTAmount RFQDealerReply::getXbtBalance(bool includeZc) const
 {
    const auto fixedInputs = selectedXbtInputs(ReplyType::Manual);
    if (!fixedInputs.empty()) {
-      uint64_t sum = 0;
+      int64_t sum = 0;
       for (const auto &utxo : fixedInputs) {
          sum += utxo.getValue();
       }

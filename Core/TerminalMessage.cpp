@@ -68,7 +68,7 @@ void TerminalInprocBus::addAdapter(const std::shared_ptr<Adapter> &adapter)
    for (const auto &user : adapter->supportedReceivers()) {
       AdministrativeMessage msg;
       msg.set_component_created(user->value());
-      bs::message::Envelope env{ adminUser, {}, msg.SerializeAsString() };
+      auto env = bs::message::Envelope::makeBroadcast(adminUser, msg.SerializeAsString());
       queue_->pushFill(env);
    }
 }
@@ -78,7 +78,7 @@ void TerminalInprocBus::start()
    static const auto &adminUser = UserTerminal::create(TerminalUsers::System);
    AdministrativeMessage msg;
    msg.mutable_start();
-   bs::message::Envelope env{ adminUser, {}, msg.SerializeAsString() };
+   auto env = bs::message::Envelope::makeBroadcast(adminUser, msg.SerializeAsString());
    queue_->pushFill(env);
 }
 

@@ -413,7 +413,7 @@ void MainWindow::showStartupDialog(bool showLicense)
    msgArmory->set_network_type(static_cast<int>(netType));
    msgArmory->set_server_name(ARMORY_BLOCKSETTLE_NAME);
 
-   bs::message::Envelope env{ guiUser_, settingsUser_, msg.SerializeAsString() };
+   auto env = bs::message::Envelope::makeRequest(guiUser_, settingsUser_, msg.SerializeAsString());
    queue_->pushFill(env);
 
    msg.Clear();
@@ -432,7 +432,7 @@ void MainWindow::showStartupDialog(bool showLicense)
    req->set_type(SettingType_Bool);
    msgPut->set_b(true);
 
-   env = bs::message::Envelope{ guiUser_, settingsUser_, msg.SerializeAsString() };
+   env = bs::message::Envelope::makeRequest(guiUser_, settingsUser_, msg.SerializeAsString());
    queue_->pushFill(env);
 }
 

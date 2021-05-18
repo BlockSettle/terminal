@@ -86,7 +86,7 @@ public:
 
       if (std::dynamic_pointer_cast<bs::message::UserTerminal>(env.receiver)) {
          if (parent_->pushFill(envCopy)) {
-            if (!env.responseId) {
+            if (env.isRequest()) {
                idMap_[envCopy.id()] = { env.id(), env.sender };
             }
             return true;
@@ -96,21 +96,23 @@ public:
          }
       }
       else if (env.receiver->isFallback()) {
-         if (!env.responseId) {
+         if (env.isRequest()) {
             envCopy.receiver = userTermBroadcast_;
             return parent_->pushFill(envCopy);
          }
          else {
-            const auto &itId = idMap_.find(env.responseId);
+            const auto &itId = idMap_.find(env.responseId());
             if (itId == idMap_.end()) {
                envCopy.receiver = userTermBroadcast_;
                return parent_->pushFill(envCopy);
             }
             else {
-               envCopy.responseId = itId->second.id;
-               envCopy.receiver = itId->second.requester;
-               if (parent_->push(envCopy)) {
-                  idMap_.erase(env.responseId);
+               envCopy = bs::message::Envelope::makeResponse(parent_->user_
+                  , itId->second.requester, env.message, itId->second.id);
+               envCopy.setForeignId(env.foreignId());
+               envCopy.executeAt = env.executeAt;
+               if (parent_->pushFill(envCopy)) {
+                  idMap_.erase(env.responseId());
                }
                return true;
             }
@@ -124,12 +126,15 @@ public:
       auto envCopy = env;
       envCopy.setId(0);
       envCopy.receiver.reset();
-      if (env.responseId && env.receiver) {
-         const auto& itIdMap = idMap_.find(env.responseId);
+      if (!env.isRequest() && env.receiver) {
+         const auto& itIdMap = idMap_.find(env.responseId());
          if (itIdMap != idMap_.end()) {
-            envCopy.responseId = itIdMap->second.id;
-            envCopy.receiver = itIdMap->second.requester;
-            if (push(envCopy)) {
+            envCopy = bs::message::Envelope::makeResponse(env.sender
+               , itIdMap->second.requester, env.message, itIdMap->second.id);
+            envCopy.setForeignId(env.foreignId());
+            envCopy.executeAt = env.executeAt;
+
+            if (pushFill(envCopy)) {
                idMap_.erase(itIdMap);
                return true;
             }
@@ -137,7 +142,7 @@ public:
          }
       }
       bool rc = pushFill(envCopy);
-      if (rc && !env.responseId) {
+      if (rc && env.isRequest()) {
          idMap_[envCopy.id()] = { env.id(), env.sender };
       }
       return rc;
