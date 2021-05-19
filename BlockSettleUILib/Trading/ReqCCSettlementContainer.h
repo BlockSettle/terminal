@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -30,7 +30,7 @@ namespace bs {
 }
 class ArmoryConnection;
 class AssetManager;
-class SignContainer;
+class HeadlessContainer;
 
 
 class ReqCCSettlementContainer : public bs::SettlementContainer
@@ -38,7 +38,7 @@ class ReqCCSettlementContainer : public bs::SettlementContainer
    Q_OBJECT
 public:
    ReqCCSettlementContainer(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<HeadlessContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
@@ -100,7 +100,7 @@ private:
 
 private:
    std::shared_ptr<spdlog::logger>           logger_;
-   std::shared_ptr<SignContainer>            signingContainer_;
+   std::shared_ptr<HeadlessContainer>        signingContainer_;
    std::shared_ptr<bs::sync::hd::Wallet>     xbtWallet_;
    std::vector<std::shared_ptr<bs::sync::Wallet>> xbtLeaves_;
    std::shared_ptr<bs::sync::Wallet>         ccWallet_;

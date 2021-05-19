@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -11,11 +11,6 @@
 #include "RFQTicketXBT.h"
 #include "ui_RFQTicketXBT.h"
 
-#include <QComboBox>
-#include <QEvent>
-#include <QKeyEvent>
-#include <QLineEdit>
-#include <spdlog/spdlog.h>
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
 #include "BSErrorCodeStrings.h"
@@ -23,24 +18,31 @@
 #include "CCAmountValidator.h"
 #include "CoinControlDialog.h"
 #include "CoinSelection.h"
+#include "CommonTypes.h"
 #include "CurrencyPair.h"
 #include "EncryptionUtils.h"
 #include "FXAmountValidator.h"
+#include "HeadlessContainer.h"
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"
-#include "SignContainer.h"
+#include "TradeSettings.h"
 #include "TradesUtils.h"
 #include "TxClasses.h"
 #include "UiUtils.h"
+#include "UtxoReservation.h"
+#include "UtxoReservationManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
-#include "UtxoReservationManager.h"
-#include "UtxoReservation.h"
-#include "TradeSettings.h"
+
+#include <QComboBox>
+#include <QEvent>
+#include <QKeyEvent>
+#include <QLineEdit>
+
+#include <spdlog/spdlog.h>
 
 #include <cstdlib>
-
 
 namespace {
    static const QString kEmptyInformationalLabelText = QString::fromStdString("--");
@@ -434,12 +436,15 @@ void RFQTicketXBT::SetProductGroup(const QString& productGroup)
       ui_->lineBeforeBalance->setVisible(true);
       ui_->balanceLayout->setVisible(true);
 
-      if (currentGroupType_ != ProductGroupType::FXGroupType) {
-         ui_->groupBoxSettlementInputs->setVisible(true);
-
-         ui_->authAddressLayout->setVisible(currentGroupType_ == ProductGroupType::XBTGroupType);
-      } else {
+      switch (currentGroupType_) {
+      case ProductGroupType::FXGroupType:
          ui_->groupBoxSettlementInputs->setVisible(false);
+         break;
+      case ProductGroupType::XBTGroupType:
+         ui_->authAddressLayout->setVisible(true);
+      case ProductGroupType::CCGroupType:
+         ui_->groupBoxSettlementInputs->setVisible(true);
+         break;
       }
    } else {
       ui_->labelProductGroup->setText(tr("XXX"));

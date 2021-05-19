@@ -165,9 +165,14 @@ double MarketData::ask(const QString &sec) const
    }
 }
 
-void MarketData::onMDUpdated(bs::network::Asset::Type, const QString &security,
+void MarketData::onMDUpdated(bs::network::Asset::Type assetType, const QString &security,
    bs::network::MDFields data)
 {
+   if (bs::network::Asset::isFuturesType(assetType)) {
+      // ignore futures prices updates
+      return;
+   }
+
    for (const auto &field : data) {
       data_[security][field.type] = field.value;
    }

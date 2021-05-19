@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -50,7 +50,7 @@ RequestingQuoteWidget::RequestingQuoteWidget(QWidget* parent)
 
 RequestingQuoteWidget::~RequestingQuoteWidget() = default;
 
-void RequestingQuoteWidget::SetCelerClient(std::shared_ptr<CelerClientQt> celerClient)
+void RequestingQuoteWidget::SetCelerClient(const std::shared_ptr<CelerClientQt> &celerClient)
 {
    celerClient_ = celerClient;
 
@@ -132,7 +132,8 @@ bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
          return false;
       }
 
-      if (quote.assetType == bs::network::Asset::SpotFX) {
+      if (quote.assetType == bs::network::Asset::SpotFX
+         || quote.assetType == bs::network::Asset::DeliverableFutures) {
          ui_->pushButtonAccept->show();
          setupTimer(Tradeable, quote.expirationTime.addMSecs(quote.timeSkewMs));
       } else {

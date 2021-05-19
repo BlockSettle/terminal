@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -53,9 +53,9 @@ class AssetManager;
 class AuthAddressManager;
 class CCAmountValidator;
 class FXAmountValidator;
+class HeadlessContainer;
 class QuoteProvider;
 class SelectedTransactionInputs;
-class SignContainer;
 class XbtAmountValidator;
 
 
@@ -249,7 +249,7 @@ private:
    std::shared_ptr<AuthAddressManager> authAddressManager_;
 
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<SignContainer>      signingContainer_;
+   std::shared_ptr<HeadlessContainer>  signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<bs::UTXOReservationManager>  utxoReservationManager_;
 

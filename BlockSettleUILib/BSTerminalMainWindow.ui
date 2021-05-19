@@ -561,6 +561,7 @@
     </property>
     <addaction name="actionAccountInformation"/>
     <addaction name="actionAuthenticationAddresses"/>
+    <addaction name="actionSetDeliveryAddress"/>
     <addaction name="actionEnterColorCoinToken"/>
    </widget>
    <widget class="QMenu" name="menu_Help">
@@ -920,6 +921,11 @@
    </property>
    <property name="toolTip">
     <string>Open bitcoin URI or payment request</string>
+   </property>
+  </action>
+  <action name="actionSetDeliveryAddress">
+   <property name="text">
+    <string>Set Delivery Address</string>
    </property>
   </action>
  </widget>

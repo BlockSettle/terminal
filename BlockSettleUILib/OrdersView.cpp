@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -73,18 +73,22 @@ void OrdersView::onSelectRow(const QPersistentModelIndex &row)
    scrollTo(row, QAbstractItemView::EnsureVisible);
 }
 
-void OrdersView::onRowsInserted(const QModelIndex &parent, int first, int)
+void OrdersView::onRowsInserted(const QModelIndex &parent, int first, int last)
 {
    if (!parent.isValid()) {
       return;
    }
 
-   if (!collapsed_.contains(UiUtils::modelPath(parent, model_))) {
-      expand(parent);
-   }
-   else {
-      setHasNewItemFlag(parent, true);
-   }
+    if (!collapsed_.contains(UiUtils::modelPath(parent, model_))) {
+       auto topLevelIndex = parent;
+       while (topLevelIndex.isValid()) {
+          expand(topLevelIndex);
+          topLevelIndex = topLevelIndex.parent();
+       }
+    }
+    else {
+       setHasNewItemFlag(parent, true);
+    }
 
    if (selectionModel()->hasSelection()) {
       scrollTo(selectionModel()->selectedIndexes().at(0), QAbstractItemView::EnsureVisible);

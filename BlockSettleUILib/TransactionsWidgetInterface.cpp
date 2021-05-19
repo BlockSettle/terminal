@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2020 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -13,6 +13,7 @@
 #include "ApplicationSettings.h"
 #include "BSMessageBox.h"
 #include "CreateTransactionDialogAdvanced.h"
+#include "HeadlessContainer.h"
 #include "PasswordDialogDataWrapper.h"
 #include "TradesUtils.h"
 #include "TransactionsViewModel.h"

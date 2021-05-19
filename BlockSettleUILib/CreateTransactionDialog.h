@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -36,6 +36,7 @@ namespace bs {
 }
 class ApplicationSettings;
 class ArmoryConnection;
+class HeadlessContainer;
 class QCheckBox;
 class QComboBox;
 class QLabel;
@@ -43,9 +44,7 @@ class QLineEdit;
 class QPushButton;
 class QTextEdit;
 class RecipientWidget;
-class SignContainer;
 class TransactionData;
-class TransactionOutputsModel;
 class UsedInputsModel;
 class XbtAmountValidator;
 
@@ -165,7 +164,7 @@ private:
 protected:
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<SignContainer>   signContainer_;
+   std::shared_ptr<HeadlessContainer>  signContainer_;
    std::shared_ptr<TransactionData> transactionData_;
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<ApplicationSettings> applicationSettings_;

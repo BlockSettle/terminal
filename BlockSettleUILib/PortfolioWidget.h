@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -37,9 +37,9 @@ class QAction;
 class ApplicationSettings;
 class ArmoryConnection;
 class CCPortfolioModel;
+class HeadlessContainer;
 class MarketDataProvider;
 class MDCallbacksQt;
-class WalletSignerContainer;
 class TransactionsViewModel;
 class UnconfirmedTransactionFilter;
 

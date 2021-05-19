@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -16,31 +16,34 @@
 #include "ApplicationSettings.h"
 #include "AuthAddressManager.h"
 #include "AutoSignQuoteProvider.h"
+#include "BSMessageBox.h"
 #include "Celer/CelerClient.h"
 #include "CurrencyPair.h"
 #include "DialogManager.h"
+#include "HeadlessContainer.h"
+#include "MDCallbacksQt.h"
 #include "NotificationCenter.h"
 #include "OrderListModel.h"
 #include "OrdersView.h"
 #include "QuoteProvider.h"
 #include "RFQDialog.h"
 #include "RfqStorage.h"
-#include "WalletSignerContainer.h"
-#include "Wallets/SyncWalletsManager.h"
-#include "Wallets/SyncHDWallet.h"
 #include "UserScriptRunner.h"
 #include "UtxoReservationManager.h"
-#include "MDCallbacksQt.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 
 #include "bs_proxy_terminal_pb.pb.h"
 
 #include "ui_RFQRequestWidget.h"
 
+using namespace Blocksettle::Communication;
 namespace  {
    enum class RFQPages : int
    {
       ShieldPage = 0,
-      EditableRFQPage
+      EditableRFQPage,
+      Futures,
    };
 }
 
@@ -304,6 +307,13 @@ void RFQRequestWidget::showEditableRFQPage()
    ui_->stackedWidgetRFQ->setCurrentIndex(static_cast<int>(RFQPages::EditableRFQPage));
 }
 
+void RFQRequestWidget::showFuturesPage(bs::network::Asset::Type type)
+{
+   ui_->stackedWidgetRFQ->setEnabled(true);
+   ui_->stackedWidgetRFQ->setCurrentIndex(static_cast<int>(RFQPages::Futures));
+   ui_->pageFutures->setType(type);
+}
+
 void RFQRequestWidget::popShield()
 {
    ui_->stackedWidgetRFQ->setEnabled(true);
@@ -413,6 +423,9 @@ void RFQRequestWidget::onRFQSubmit(const std::string &id, const bs::network::RFQ
    ui_->pageRFQTicket->SetProductAndSide(currentInfo.productGroup_
       , currentInfo.currencyPair_, currentInfo.bidPrice_, currentInfo.offerPrice_
       , bs::network::Side::Undefined);
+   ui_->pageFutures->SetProductAndSide(currentInfo.productGroup_
+      , currentInfo.currencyPair_, currentInfo.bidPrice_, currentInfo.offerPrice_
+      , bs::network::Side::Undefined);
 
    std::vector<std::string> closedDialogs;
    for (const auto &dlg : dialogs_) {
@@ -442,18 +455,43 @@ void RFQRequestWidget::deleteDialog(const std::string &rfqId)
    dialogs_.erase(itDlg);
 }
 
+void RFQRequestWidget::processFutureResponse(const ProxyTerminalPb::Response_FutureResponse &msg)
+{
+   QMetaObject::invokeMethod(this, [this, msg] {
+      if (!msg.success()) {
+         BSMessageBox errorMessage(BSMessageBox::critical, tr("Order message")
+            , tr("Trade rejected"), QString::fromStdString(msg.error_msg()), this);
+         errorMessage.exec();
+         return;
+      }
+      auto productStr = QString::fromStdString(msg.product().empty() ? "<Unknown>" : msg.product());
+      auto sideStr = msg.side() == bs::types::Side::SIDE_SELL ? tr("Sell") : tr("Buy");
+      auto amountStr = UiUtils::displayAmount(msg.amount());
+      auto priceStr = UiUtils::displayPriceXBT(msg.price());
+      auto details = tr("Product:\t%1\nSide:\t%2\nVolume:\t%3\nPrice:\t%4")
+         .arg(productStr).arg(sideStr).arg(amountStr).arg(priceStr);
+      BSMessageBox errorMessage(BSMessageBox::info, tr("Order message"), tr("Order confirmation"), details, this);
+      errorMessage.exec();
+   });
+}
+
 bool RFQRequestWidget::checkConditions(const MarketSelectedInfo& selectedInfo)
 {
    ui_->stackedWidgetRFQ->setEnabled(true);
    using UserType = CelerClient::CelerUserType;
    const UserType userType = celerClient_ ? celerClient_->celerUserType() : userType_;
 
-   using GroupType = RFQShieldPage::ProductType;
-   const GroupType group = RFQShieldPage::getProductGroup(selectedInfo.productGroup_);
+   const auto group = RFQShieldPage::getProductGroup(selectedInfo.productGroup_);
+
+   if (group == WalletShieldBase::ProductType::CashSettledFutures
+      || group == WalletShieldBase::ProductType::DeliverableFutures) {
+      showFuturesPage(group);
+      return true;
+   }
 
    switch (userType) {
    case UserType::Market: {
-      if (group == GroupType::SpotFX || group == GroupType::SpotXBT) {
+      if (group == WalletShieldBase::ProductType::SpotFX || group == WalletShieldBase::ProductType::SpotXBT) {
          ui_->shieldPage->showShieldReservedTradingParticipant();
          popShield();
          return false;
@@ -464,7 +502,7 @@ bool RFQRequestWidget::checkConditions(const MarketSelectedInfo& selectedInfo)
    }
    case UserType::Dealing:
    case UserType::Trading: {
-      if ((group == GroupType::SpotXBT || group == GroupType::PrivateMarket) &&
+      if ((group == WalletShieldBase::ProductType::SpotXBT || group == WalletShieldBase::ProductType::PrivateMarket) &&
          checkWalletSettings(group, selectedInfo)) {
          return false;
       }
@@ -513,6 +551,8 @@ void RFQRequestWidget::onCurrencySelected(const MarketSelectedInfo& selectedInfo
    }
    ui_->pageRFQTicket->setSecurityId(selectedInfo.productGroup_
       , selectedInfo.currencyPair_, selectedInfo.bidPrice_, selectedInfo.offerPrice_);
+   ui_->pageFutures->setSecurityId(selectedInfo.productGroup_
+      , selectedInfo.currencyPair_, selectedInfo.bidPrice_, selectedInfo.offerPrice_);
 }
 
 void RFQRequestWidget::onBidClicked(const MarketSelectedInfo& selectedInfo)
@@ -522,6 +562,8 @@ void RFQRequestWidget::onBidClicked(const MarketSelectedInfo& selectedInfo)
    }
    ui_->pageRFQTicket->setSecuritySell(selectedInfo.productGroup_
       , selectedInfo.currencyPair_, selectedInfo.bidPrice_, selectedInfo.offerPrice_);
+   ui_->pageFutures->setSecuritySell(selectedInfo.productGroup_
+      , selectedInfo.currencyPair_, selectedInfo.bidPrice_, selectedInfo.offerPrice_);
 }
 
 void RFQRequestWidget::onAskClicked(const MarketSelectedInfo& selectedInfo)
@@ -530,6 +572,8 @@ void RFQRequestWidget::onAskClicked(const MarketSelectedInfo& selectedInfo)
       return;
    }
    ui_->pageRFQTicket->setSecurityBuy(selectedInfo.productGroup_
+      , selectedInfo.currencyPair_, selectedInfo.bidPrice_, selectedInfo.offerPrice_);
+   ui_->pageFutures->setSecurityBuy(selectedInfo.productGroup_
       , selectedInfo.currencyPair_, selectedInfo.bidPrice_, selectedInfo.offerPrice_);
 }
 
@@ -569,6 +613,11 @@ void RFQRequestWidget::onMessageFromPB(const Blocksettle::Communication::ProxyTe
          // unsigned_payin_data - serialized payin. binary
          emit signedPayinRequested(command.settlement_id(), BinaryData::fromString(command.unsigned_payin_data())
             , BinaryData::fromString(command.payin_hash()), timestamp);
+         break;
+      }
+
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kFutureResponse: {
+         processFutureResponse(response.future_response());
          break;
       }
 
@@ -624,5 +673,16 @@ void RFQRequestWidget::onRFQCancelled(const std::string &id)
    }
    else {
       emit needCancelRFQ(id);
+   }
+}
+
+void RFQRequestWidget::onOrderClicked(const QModelIndex &index)
+{
+   if (!index.isValid()) {
+      return;
+   }
+
+   if (orderListModel_->DeliveryRequired(index)) {
+      emit CreateObligationDeliveryTX(index);
    }
 }

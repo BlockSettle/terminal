@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -41,6 +41,7 @@ namespace bs {
       class WalletsManager;
    }
 }
+class QtHCT;
 
 struct CCoinSpender
 {
@@ -166,6 +167,7 @@ public:
 
    std::shared_ptr<bs::sync::WalletsManager> syncMgr_;
    std::vector<UnitTestLocalACT*> localACTs_;
+   std::shared_ptr<QtHCT>        hct_;
 
    bs::Address              genesisAddr_;
    bs::Address              revocationAddr_;

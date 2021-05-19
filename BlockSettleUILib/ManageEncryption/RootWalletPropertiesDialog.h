@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -35,7 +35,7 @@ class ArmoryConnection;
 class ApplicationSettings;
 class AssetManager;
 class CurrentWalletFilter;
-class SignContainer;
+class HeadlessContainer;
 class WalletsViewModel;
 class ConnectionManager;
 
@@ -79,7 +79,7 @@ private:
    bs::sync::WalletInfo    wallet_;
    std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;
    bs::hd::WalletInfo                  walletInfo_;
-   std::shared_ptr<SignContainer>      signingContainer_;
+   std::shared_ptr<HeadlessContainer>  signingContainer_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>  connectionManager_;
    std::shared_ptr<AssetManager>       assetMgr_;

@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -43,12 +43,12 @@ class AssetManager;
 class AuthAddressManager;
 class CelerClientQt;
 class CCSettlementTransactionWidget;
+class HeadlessContainer;
 class QuoteProvider;
 class RFQRequestWidget;
 class ReqCCSettlementContainer;
 class ReqXBTSettlementContainer;
 class RfqStorage;
-class WalletSignerContainer;
 class XBTSettlementTransactionWidget;
 
 class RFQDialog : public QDialog
@@ -62,7 +62,7 @@ public:
       , const std::shared_ptr<AuthAddressManager>& authAddressManager
       , const std::shared_ptr<AssetManager>& assetManager
       , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-      , const std::shared_ptr<WalletSignerContainer> &
+      , const std::shared_ptr<HeadlessContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<CelerClientQt> &celerClient
       , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -141,7 +141,7 @@ private:
    std::shared_ptr<QuoteProvider>               quoteProvider_;
    std::shared_ptr<AuthAddressManager>          authAddressManager_;
    std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;
-   std::shared_ptr<WalletSignerContainer>       signContainer_;
+   std::shared_ptr<HeadlessContainer>           signContainer_;
    std::shared_ptr<AssetManager>                assetMgr_;
    std::shared_ptr<ArmoryConnection>            armory_;
    std::shared_ptr<CelerClientQt>               celerClient_;

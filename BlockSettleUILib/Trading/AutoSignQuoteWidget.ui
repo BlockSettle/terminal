@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+***********************************************************************************
+* Copyright (C) 2019 - 2021, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+-->
 <ui version="4.0">
  <class>AutoSignQuoteWidget</class>
  <widget class="QWidget" name="AutoSignQuoteWidget">

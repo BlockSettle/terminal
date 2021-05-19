@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -12,6 +12,7 @@
 
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
+#include "HeadlessContainer.h"
 #include "InprocSigner.h"
 #include "SettableField.h"
 #include "StringUtils.h"
@@ -34,6 +35,7 @@ namespace {
    const auto kSettlementId = std::string("dc26c004d7b24f71cd5b348a254c292777586f5d9d00f60ac65dd7d5b06d0c2b");
 
 } // namespace
+class QtHCT;
 
 class TestPeer : public SignerCallbackTarget
 {
@@ -112,6 +114,7 @@ public:
    std::shared_ptr<bs::core::WalletsManager> walletsMgr_;
    std::shared_ptr<bs::sync::WalletsManager> syncWalletMgr_;
    std::shared_ptr<InprocSigner> signer_;
+   std::shared_ptr<QtHCT>        hct_;
    std::shared_ptr<OtcClient> otc_;
    bs::Address authAddress_;
    bs::Address nativeAddr_;

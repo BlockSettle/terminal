@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2020 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -84,7 +84,7 @@ namespace bs {
 
       BTCNumericTypes::satoshi_type getAvailableXbtUtxoSum(const HDWalletId& walletId, bool includeZc) const;
       BTCNumericTypes::satoshi_type getAvailableXbtUtxoSum(const HDWalletId& walletId, bs::hd::Purpose purpose, bool includeZc) const;
-      
+
       std::vector<UTXO> getAvailableXbtUTXOs(const HDWalletId& walletId, bool includeZc) const;
       std::vector<UTXO> getAvailableXbtUTXOs(const HDWalletId& walletId, bs::hd::Purpose purpose, bool includeZc) const;
 
@@ -93,7 +93,7 @@ namespace bs {
          std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor, CheckAmount checkAmount, bool includeZc);
       void getBestXbtUtxoSet(const HDWalletId& walletId, bs::hd::Purpose purpose, BTCNumericTypes::satoshi_type quantity,
          std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor, CheckAmount checkAmount);
-  
+
       // CC specific implementation
       BTCNumericTypes::balance_type getAvailableCCUtxoSum(const CCProductName& CCProduct) const;
       std::vector<UTXO> getAvailableCCUTXOs(const CCWalletId& walletId) const;

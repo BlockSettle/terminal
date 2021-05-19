@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -44,9 +44,7 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<QmlBridge> &qmlBridge
    , const NetworkType netType, int signerPort
    , std::shared_ptr<DataConnection> adapterConn)
-   : QObject(nullptr)
-   ,logger_(logger)
-   , netType_(netType)
+   : QtHCT(nullptr), logger_(logger), netType_(netType)
    , qmlBridge_(qmlBridge)
 {
    listener_ = std::make_shared<SignerInterfaceListener>(logger, qmlBridge_, adapterConn, this);

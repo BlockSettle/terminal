@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -91,7 +91,7 @@ private:
       QList<QToggleItem *> row;
    };
    typedef std::map<MarketDataModel::MarketDataColumns, PriceUpdate> PriceByCol;
-   typedef std::map<QString, PriceByCol>     PriceUpdates;
+   typedef std::map<QString, PriceByCol>                             PriceUpdates;
 
    std::set<QString>    instrVisible_;
    PriceUpdates         priceUpdates_;

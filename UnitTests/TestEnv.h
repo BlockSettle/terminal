@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -46,7 +46,7 @@ class ApplicationSettings;
 class ArmoryConnection;
 class AuthAddressManager;
 class BlockchainMonitor;
-class CelerClient;
+class CelerClientQt;
 class ConnectionManager;
 class MarketDataProvider;
 class MDCallbacksQt;

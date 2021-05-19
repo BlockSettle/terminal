@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -53,7 +53,7 @@ AuthAddressDialog::AuthAddressDialog(const std::shared_ptr<spdlog::logger> &logg
    connect(authModel_, &AuthAddressViewModel::updateSelectionAfterReset, this, &AuthAddressDialog::onUpdateSelection);
 
    connect(authAddressManager_.get(), &AuthAddressManager::AddrVerifiedOrRevoked
-      , this, &AuthAddressDialog::onAddrVerifiedOrRevoked, Qt::QueuedConnection);
+      , this, &AuthAddressDialog::onAddressStateChanged, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Error, this, &AuthAddressDialog::onAuthMgrError, Qt::QueuedConnection);
    connect(authAddressManager_.get(), &AuthAddressManager::Info, this, &AuthAddressDialog::onAuthMgrInfo, Qt::QueuedConnection);
 
@@ -277,7 +277,7 @@ void AuthAddressDialog::copySelectedToClipboard()
 }
 
 
-void AuthAddressDialog::onAddrVerifiedOrRevoked(const QString &addr, int st)
+void AuthAddressDialog::onAddressStateChanged(const QString &addr, int st)
 {
    const auto state = static_cast<AuthCallbackTarget::AuthAddressState>(st);
    if (state == AuthCallbackTarget::AuthAddressState::Verified) {

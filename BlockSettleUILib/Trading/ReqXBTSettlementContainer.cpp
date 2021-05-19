@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -18,8 +18,8 @@
 #include "AuthAddressManager.h"
 #include "CheckRecipSigner.h"
 #include "CurrencyPair.h"
+#include "HeadlessContainer.h"
 #include "QuoteProvider.h"
-#include "WalletSignerContainer.h"
 #include "TradesUtils.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
@@ -34,7 +34,7 @@ Q_DECLARE_METATYPE(AddressVerificationState)
 
 ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AuthAddressManager> &authAddrMgr
-   , const std::shared_ptr<WalletSignerContainer> &signContainer
+   , const std::shared_ptr<HeadlessContainer> &signContainer
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
@@ -66,8 +66,6 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    assert(authAddr.isValid());
 
    qRegisterMetaType<AddressVerificationState>();
-
-//   connect(signContainer_.get(), &SignContainer::TXSigned, this, &ReqXBTSettlementContainer::onTXSigned);
 
    connect(this, &ReqXBTSettlementContainer::timerExpired, this, &ReqXBTSettlementContainer::onTimerExpired);
 

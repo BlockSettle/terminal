@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -25,6 +25,11 @@
 #include "SignerDefs.h"
 #include "TabWithShortcut.h"
 #include "UtxoReservationToken.h"
+
+#include <QPushButton>
+#include <QStyledItemDelegate>
+#include <QPainter>
+#include <QRect>
 
 namespace Ui {
     class RFQReplyWidget;
@@ -53,7 +58,6 @@ class ConnectionManager;
 class MDCallbacksQt;
 class OrderListModel;
 class QuoteProvider;
-class WalletSignerContainer;
 
 namespace Blocksettle {
    namespace Communication {
@@ -132,6 +136,8 @@ signals:
    void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin
       , const BinaryData &payinHash, QDateTime timestamp);
 
+   void CreateObligationDeliveryTX(const QModelIndex& index);
+
    void submitQuote(const bs::network::QuoteNotification&);
    void pullQuote(const std::string& settlementId, const std::string& reqId
       , const std::string& reqSessToken);
@@ -167,6 +173,8 @@ private slots:
    void onCancelXBTTrade(const std::string& settlementId);
    void onCancelCCTrade(const std::string& clientOrderId);
    void onCompleteSettlement(const std::string &id);
+
+   void onOrderClicked(const QModelIndex &index);
 
 private:
    void onResetCurrentReservation(const std::shared_ptr<bs::ui::SubmitQuoteReplyData> &data);
@@ -211,6 +219,7 @@ private:
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<AutoSignScriptProvider>      autoSignProvider_;
    std::shared_ptr<bs::UTXOReservationManager>  utxoReservationManager_;
+   OrderListModel*                              orderListModel_;
 
    std::unordered_map<std::string, SentXbtReply>   sentXbtReplies_;
    std::unordered_map<std::string, SentCCReply>    sentCCReplies_;
@@ -219,6 +228,78 @@ private:
 
    bs::network::UserType   userType_{ bs::network::UserType::Undefined };
    std::unordered_map<std::string, bs::network::Asset::Type>   submittedQuote_;
+};
+
+#include <QDebug>
+
+class PushButtonDelegate : public QStyledItemDelegate
+{
+   Q_OBJECT
+
+public:
+   explicit PushButtonDelegate(QWidget* parent)
+   {
+      button_ = new QPushButton(tr("Submit"), parent);
+      button_->hide();
+   }
+   ~PushButtonDelegate() override = default;
+
+   QSize sizeHint(const QStyleOptionViewItem &option,const QModelIndex &index) const override
+   {
+      auto statusGroupIndex = index;
+      int depth = 0;
+      while (statusGroupIndex.parent().isValid()) {
+         statusGroupIndex = statusGroupIndex.parent();
+         ++depth;
+      }
+
+      if (statusGroupIndex.row() != 2 || depth != 1) {
+         return QStyledItemDelegate::sizeHint(option, index);
+      }
+
+      auto minSizeHint = button_->minimumSizeHint();
+      auto minSize = button_->minimumSize();
+      auto sizeHint = button_->sizeHint();
+
+      return sizeHint;
+   }
+
+   void paint(QPainter* painter, const QStyleOptionViewItem& opt,
+      const QModelIndex& index) const override
+   {
+      auto statusGroupIndex = index;
+      int depth = 0;
+      while (statusGroupIndex.parent().isValid()) {
+         statusGroupIndex = statusGroupIndex.parent();
+         ++depth;
+      }
+
+      if (statusGroupIndex.row() != 2 || depth != 2) {
+         QStyledItemDelegate::paint(painter, opt, index);
+         return;
+      }
+
+      auto minSizeHint = button_->minimumSizeHint();
+      auto rect = opt.rect;
+
+      if (rect.width() < minSizeHint.width()) {
+         rect.setWidth(minSizeHint.width());
+      }
+
+      if (rect.height() < minSizeHint.height()) {
+         rect.setHeight(minSizeHint.height());
+      }
+
+      button_->setGeometry(rect);
+
+      qDebug() << "PushButtonDelegate " << opt.state;
+
+      QPixmap map = button_->grab();
+      painter->drawPixmap(rect.x(), rect.y(), map);
+   }
+
+private:
+   QPushButton *button_;
 };
 
 #endif // __RFQ_REPLY_WIDGET_H__

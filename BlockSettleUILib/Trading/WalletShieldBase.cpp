@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -158,6 +158,12 @@ WalletShieldBase::ProductType WalletShieldBase::getProductGroup(const QString &p
    }
    else if (productGroup == QLatin1String("Spot FX")) {
       return ProductType::SpotFX;
+   }
+   else if (productGroup == QLatin1String("XBT 1-day deliverable")) {
+      return ProductType::DeliverableFutures;
+   }
+   else if (productGroup == QLatin1String("XBT 1-day rolling")) {
+      return ProductType::CashSettledFutures;
    }
 #ifndef QT_NO_DEBUG
    // You need to add logic for new Product group type

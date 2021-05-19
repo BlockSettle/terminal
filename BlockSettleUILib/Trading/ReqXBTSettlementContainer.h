@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -33,7 +33,7 @@ namespace bs {
 class AddressVerificator;
 class ArmoryConnection;
 class AuthAddressManager;
-class WalletSignerContainer;
+class HeadlessContainer;
 class QuoteProvider;
 
 
@@ -43,7 +43,7 @@ class ReqXBTSettlementContainer : public bs::SettlementContainer
 public:
    ReqXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<AuthAddressManager> &
-      , const std::shared_ptr<WalletSignerContainer> &
+      , const std::shared_ptr<HeadlessContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
       , const std::shared_ptr<bs::sync::WalletsManager> &
@@ -107,7 +107,7 @@ private:
    std::shared_ptr<spdlog::logger>           logger_;
    std::shared_ptr<AuthAddressManager>       authAddrMgr_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
-   std::shared_ptr<WalletSignerContainer>    signContainer_;
+   std::shared_ptr<HeadlessContainer>        signContainer_;
    std::shared_ptr<ArmoryConnection>         armory_;
    std::shared_ptr<bs::sync::hd::Wallet>     xbtWallet_;
    std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;

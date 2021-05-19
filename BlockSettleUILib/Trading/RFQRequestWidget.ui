@@ -249,28 +249,8 @@
          <number>0</number>
         </property>
         <widget class="RFQShieldPage" name="shieldPage"/>
-        <widget class="QWidget" name="pageRFQ">
-         <layout class="QVBoxLayout" name="verticalLayout_5">
-          <property name="spacing">
-           <number>0</number>
-          </property>
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <item>
-           <widget class="RFQTicketXBT" name="pageRFQTicket" native="true"/>
-          </item>
-         </layout>
-        </widget>
+        <widget class="RFQTicketXBT" name="pageRFQTicket"/>
+        <widget class="FuturesTicket" name="pageFutures"/>
        </widget>
       </item>
      </layout>
@@ -300,6 +280,12 @@
    <class>RFQTicketXBT</class>
    <extends>QWidget</extends>
    <header>RFQTicketXBT.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>FuturesTicket</class>
+   <extends>QWidget</extends>
+   <header>FuturesTicket.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

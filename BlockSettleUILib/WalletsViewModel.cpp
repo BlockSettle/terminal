@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -14,7 +14,7 @@
 #include <QTreeView>
 #include <QSortFilterProxyModel>
 
-#include "SignContainer.h"
+#include "HeadlessContainer.h"
 #include "UiUtils.h"
 #include "ValidityFlag.h"
 #include "Wallets/SyncHDWallet.h"
@@ -575,16 +575,13 @@ void WalletsViewModel::onSignerAuthenticated()
          continue;
       }
       const auto walletId = hdWallet->walletId();
-      hdInfoReqIds_[signContainer_->GetInfo(walletId)] = walletId;
+      //TODO: hdInfoReqIds_[signContainer_->GetInfo(walletId)] = walletId;
    }
 }
 
 void WalletsViewModel::onNewWalletAdded(const std::string &walletId)
 {
-   if (!signContainer_) {
-      return;
-   }
-   hdInfoReqIds_[signContainer_->GetInfo(walletId)] = walletId;
+   //TODO:hdInfoReqIds_[signContainer_->GetInfo(walletId)] = walletId;
 }
 
 void WalletsViewModel::onHDWallet(const bs::sync::WalletInfo &wi)
@@ -747,7 +744,7 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
             }
          }
       }
-      if (signContainer_) {
+      /*TODO: if (signContainer_) {
          if (signContainer_->isOffline()) {
             hdNode->setState(WalletNode::State::Offline);
          }
@@ -762,7 +759,7 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
          } else {
             hdNode->setState(WalletNode::State::Full);
          }
-      }
+      }*/
    }
 
 /*   const auto stmtWallet = walletsManager_->getSettlementWallet();

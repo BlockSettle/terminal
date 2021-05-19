@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -19,6 +19,7 @@
 #include "CoreHDWallet.h"
 #include "CoreWallet.h"
 #include "CoreWalletsManager.h"
+#include "HeadlessContainer.h"
 #include "InprocSigner.h"
 #include "SystemFileUtils.h"
 #include "TestEnv.h"
@@ -189,8 +190,8 @@ TEST_F(TestWallet, BIP84_primary)
       EXPECT_EQ(leafCC->name(), "84'/16979'/7568'"); //16979 == 0x4253
    }
 
-   auto inprocSigner = std::make_shared<InprocSigner>(
-      envPtr_->walletsMgr(), envPtr_->logger(), this, "", NetworkType::TestNet);
+   auto inprocSigner = std::make_shared<InprocSigner>(envPtr_->walletsMgr()
+      , envPtr_->logger(), this, "", NetworkType::TestNet);
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1935,7 +1936,6 @@ TEST_F(TestWallet, ChangeControlPassword)
 
    const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("Sample test seed")
       , NetworkType::TestNet };
-
 
    {
       auto wallet = std::make_shared<bs::core::hd::Wallet>(

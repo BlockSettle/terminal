@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -39,6 +39,7 @@ namespace Blocksettle {
    namespace Communication {
       namespace ProxyTerminalPb {
          class Response;
+         class Response_FutureResponse;
       }
    }
 }
@@ -50,13 +51,13 @@ class AuthAddressManager;
 class AutoSignScriptProvider;
 class CelerClientQt;
 class DialogManager;
+class HeadlessContainer;
 class MarketDataProvider;
 class MDCallbacksQt;
 class OrderListModel;
 class QuoteProvider;
 class RFQDialog;
 class RfqStorage;
-class WalletSignerContainer;
 
 class RFQRequestWidget : public TabWithShortcut
 {
@@ -113,6 +114,8 @@ signals:
    void sendSignedPayinToPB(const std::string& settlementId, const BinaryData& signedPayin);
    void sendSignedPayoutToPB(const std::string& settlementId, const BinaryData& signedPayout);
 
+   void sendFutureRequestToPB(const bs::network::FutureRequest &details);
+
    void cancelXBTTrade(const std::string& settlementId);
    void cancelCCTrade(const std::string& orderId);
 
@@ -120,6 +123,8 @@ signals:
    void signedPayoutRequested(const std::string& settlementId, const BinaryData& payinHash, QDateTime timestamp);
    void signedPayinRequested(const std::string& settlementId, const BinaryData& unsignedPayin
       , const BinaryData &payinHash, QDateTime timestamp);
+
+   void CreateObligationDeliveryTX(const QModelIndex& index);
 
    void needWalletData(const std::string& walletId);
    void needSubmitRFQ(const bs::network::RFQ&, const std::string& reserveId = {});
@@ -133,6 +138,7 @@ signals:
 
 private:
    void showEditableRFQPage();
+   void showFuturesPage(bs::network::Asset::Type type);
    void popShield();
 
    bool checkConditions(const MarketSelectedInfo& productGroup);
@@ -142,6 +148,7 @@ private:
       , bs::UtxoReservationToken ccUtxoRes);
    void onRFQCancel(const std::string &rfqId);
    void deleteDialog(const std::string &rfqId);
+   void processFutureResponse(const Blocksettle::Communication::ProxyTerminalPb::Response_FutureResponse &msg);
 
 public slots:
    void onCurrencySelected(const MarketSelectedInfo& selectedInfo);
@@ -161,6 +168,8 @@ private slots:
    void onRFQExpired(const std::string &id);
    void onRFQCancelled(const std::string &id);
 
+   void onOrderClicked(const QModelIndex &index);
+
 public slots:
    void forceCheckCondition();
 
@@ -173,9 +182,10 @@ private:
    std::shared_ptr<AssetManager>       assetManager_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;
    std::shared_ptr<DialogManager>      dialogManager_;
+   OrderListModel*                     orderListModel_;
 
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<WalletSignerContainer>    signingContainer_;
+   std::shared_ptr<HeadlessContainer>  signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::shared_ptr<AutoSignScriptProvider>      autoSignProvider_;

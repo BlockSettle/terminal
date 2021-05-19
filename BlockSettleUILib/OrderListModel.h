@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -24,7 +24,9 @@ namespace Blocksettle {
    namespace Communication {
       namespace ProxyTerminalPb {
          class Response;
-         class Response_UpdateOrders;
+         class Response_DeliveryObligationsRequest;
+         class Response_UpdateOrdersAndObligations;
+         class Response_UpdateOrder;
       }
    }
 }
@@ -39,6 +41,7 @@ public:
    struct Header {
       enum Index {
          Time = 0,
+         NameColumn = 0,
          Product,
          Side,
          Quantity,
@@ -48,6 +51,16 @@ public:
          last
       };
       static QString toString(Index);
+   };
+
+   struct DeliveryObligationData
+   {
+      std::string       bsAddress;
+      bs::XBTAmount     deliveryAmount;
+
+      bool isValid() const {
+         return !bsAddress.empty();
+      }
    };
 
    [[deprecated]] OrderListModel(const std::shared_ptr<AssetManager> &, QObject *parent = nullptr);
@@ -61,6 +74,10 @@ public:
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
    QVariant headerData(int section, Qt::Orientation orientation,
                        int role = Qt::DisplayRole) const override;
+
+   bool DeliveryRequired(const QModelIndex &index);
+
+   DeliveryObligationData getDeliveryObligationData(const QModelIndex &index) const;
 
    void onOrdersUpdate(const std::vector<bs::network::Order> &);
    void onMatchingLogin();
@@ -125,25 +142,98 @@ private:
    };
 
    struct Group {
-      std::deque<std::unique_ptr<Data>> rows_;
-      QString security_;
-      IndexHelper idx_;
+      std::deque<std::unique_ptr<Data>>   rows_;
+      QString                             security_;
+      IndexHelper                         idx_;
 
       Group(const QString &sec, IndexHelper *parent)
          : security_(sec)
          , idx_(parent, this, DataType::Group)
       {
       }
+
+      virtual ~Group() = default;
+
+      virtual void addOrder(const bs::network::Order& order);
+
+      virtual QVariant getQuantity() const;
+      virtual QVariant getQuantityColor() const;
+
+      virtual QVariant getValue() const;
+      virtual QVariant getValueColor() const;
+      virtual QVariant getPrice() const;
+
+      virtual QVariant getStatus() const;
+   protected:
+      void addRow(const bs::network::Order& order);
    };
+
+   struct FuturesGroup : public Group
+   {
+      FuturesGroup(const QString &sec, IndexHelper *parent)
+         : Group(sec, parent)
+      {}
+
+      ~FuturesGroup() override = default;
+
+      void addOrder(const bs::network::Order& order) override;
+
+      QVariant getQuantity() const override;
+      QVariant getQuantityColor() const override;
+
+      QVariant getValue() const override;
+      QVariant getValueColor() const override;
+
+   private:
+      double quantity_ = 0;
+      double value_ = 0;
+   };
+
+   struct FuturesDeliveryGroup : public Group
+   {
+      FuturesDeliveryGroup(const QString &sec, IndexHelper *parent
+                           , int64_t quantity, double price
+                           , const std::string& bsAddress
+                           , const bool delivered);
+
+      ~FuturesDeliveryGroup() override = default;
+
+      QVariant getQuantity() const override;
+      QVariant getQuantityColor() const override;
+
+      QVariant getValue() const override;
+      QVariant getValueColor() const override;
+
+      QVariant getPrice() const override;
+      QVariant getStatus() const override;
+
+      bool deliveryRequired() const;
+
+      DeliveryObligationData getDeliveryObligationData() const;
+
+   private:
+      double quantity_ = 0;
+      double value_ = 0;
+      double price_ = 0;
+
+      bs::XBTAmount  toDeliver_;
+      std::string    bsAddress_;
+
+      bool           delivered_;
+   };
+
 
    struct Market {
       std::vector<std::unique_ptr<Group>> rows_;
-      QString name_;
-      IndexHelper idx_;
-      QFont font_;
 
-      Market(const QString &name, IndexHelper *parent)
-         : name_(name)
+      bs::network::Asset::Type            assetType_;
+      QString                             name_;
+      IndexHelper                         idx_;
+      QFont                               font_;
+
+      Market(const bs::network::Asset::Type assetType, IndexHelper *parent)
+         : assetType_{assetType}
+         , name_{tr(bs::network::Asset::toString(assetType))}
          , idx_(parent, this, DataType::Market)
       {
          font_.setBold(true);
@@ -158,9 +248,10 @@ private:
 
       enum Type {
          first = 0,
-         UnSettled = first,
+         PendingSettlements = first,
+         UnSettled,
          Settled,
-         last
+         Undefined
       };
 
       StatusGroup(const QString &name, int row)
@@ -179,19 +270,27 @@ private:
    std::pair<Group*, int> findItem(const bs::network::Order &order);
    void setOrderStatus(Group *group, int index, const bs::network::Order& order,
       bool emitUpdate = false);
-   void removeRowIfContainerChanged(const bs::network::Order &order, int &oldOrderRow);
+   void removeRowIfContainerChanged(const bs::network::Order &order, int &oldOrderRow, bool force);
    void findMarketAndGroup(const bs::network::Order &order, Market *&market, Group *&group);
    void createGroupsIfNeeded(const bs::network::Order &order, Market *&market, Group *&group);
 
    void reset();
-   [[deprecated]] void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &msg);
-   void resetLatestChangedStatus(const std::vector<bs::network::Order>&);
+   void resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations &message);
+
+   void DisplayFuturesDeliveryRow(const Blocksettle::Communication::ProxyTerminalPb::Response_DeliveryObligationsRequest &obligation);
+   [[deprecated]] void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations&);
+   [[deprecated]] void processUpdateOrder(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrder&);
    void onOrderUpdated(const bs::network::Order&);
 
-   std::shared_ptr<AssetManager>    assetManager_;
+   bool isFutureDeliveryIndex(const QModelIndex &index) const;
+   FuturesDeliveryGroup* GetFuturesDeliveryGroup(const QModelIndex &index) const;
+
+private:
+   std::shared_ptr<AssetManager>                      assetManager_;
    std::unordered_map<std::string, StatusGroup::Type> groups_;
-   std::unique_ptr<StatusGroup> unsettled_;
-   std::unique_ptr<StatusGroup> settled_;
+   std::unique_ptr<StatusGroup>                       unsettled_;
+   std::unique_ptr<StatusGroup>                       settled_;
+   std::unique_ptr<StatusGroup>                       pendingFuturesSettlement_;
    QDateTime latestOrderTimestamp_;
 
    std::vector<std::pair<int64_t, int>> sortedPeviousOrderStatuses_{};

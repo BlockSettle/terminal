@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -13,6 +13,7 @@
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
 #include "Celer/CelerClient.h"
+#include "Celer/SubmitQuoteNotifSequence.h"
 #include "Colors.h"
 #include "CommonTypes.h"
 #include "CurrencyPair.h"
@@ -84,7 +85,7 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
             case Qt::DisplayRole : {
                switch(static_cast<Column>(index.column())) {
                   case Column::SecurityID : {
-                     return r->security_;
+                     return r->securityDefinition_;
                   }
 
                   case Column::Product : {
@@ -189,7 +190,7 @@ QVariant QuoteRequestsModel::data(const QModelIndex &index, int role) const
 
             case Qt::TextColorRole: {
                if (secStatsCollector_ && index.column() < static_cast<int>(Column::Status)) {
-                  return secStatsCollector_->getColorFor(r->security_.toStdString());
+                  return secStatsCollector_->getColorFor(r->securityDefinition_.toStdString());
                }
                else {
                   return QVariant();
@@ -987,7 +988,6 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
    }
 
    const auto collector = std::make_shared<bs::SettlementStatsCollector>(container);
-   const auto assetType = assetManager_->GetAssetTypeForSecurity(container->security());
    const auto amountStr = (container->assetType() == bs::network::Asset::Type::PrivateMarket)
       ? UiUtils::displayCCAmount(container->quantity())
       : UiUtils::displayQty(container->quantity(), container->product());
@@ -996,6 +996,7 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
       static_cast<int>(market->groups_.size() + market->settl_.rfqs_.size()),
       static_cast<int>(market->groups_.size() + market->settl_.rfqs_.size()));
 
+   // settlement containers not ment to be used with futures
    market->settl_.rfqs_.push_back(std::unique_ptr<RFQ>(new RFQ(
       QString::fromStdString(container->security()),
       QString::fromStdString(container->product()),
@@ -1003,7 +1004,7 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
       QString(),
       amountStr,
       QString(),
-      UiUtils::displayPriceForAssetType(container->price(), assetType),
+      UiUtils::displayPriceForAssetType(container->price(), container->assetType()),
       QString(),
       {
          QString(),
@@ -1011,7 +1012,7 @@ void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::Settle
       },
       container->price(), 0.0, 0.0,
       container->side(),
-      assetType,
+      container->assetType(),
       container->id())));
 
    market->settl_.rfqs_.back()->idx_.parent_ = &market->idx_;
@@ -1296,10 +1297,13 @@ void QuoteRequestsModel::setStatus(const std::string &reqId, bs::network::QuoteR
 void QuoteRequestsModel::updatePrices(const QString &security, const bs::network::MDField &pxBid,
    const bs::network::MDField &pxOffer, std::vector<std::pair<QModelIndex, QModelIndex>> *idxs)
 {
-   forEachSecurity(security, [security, pxBid, pxOffer, this, idxs](Group *grp, int index) {
-      const CurrencyPair cp(security.toStdString());
-      const bool isBuy = (grp->rfqs_[static_cast<std::size_t>(index)]->side_ == bs::network::Side::Buy)
-         ^ (cp.NumCurrency() == grp->rfqs_[static_cast<std::size_t>(index)]->product_.toStdString());
+   forEachSecurity(security, [pxBid, pxOffer, this, idxs](Group *grp, int index) {
+
+      const auto& rfqOnIndex = grp->rfqs_[static_cast<std::size_t>(index)];
+
+      const CurrencyPair cp(rfqOnIndex->securityDefinition_.toStdString());
+      const bool isBuy = (rfqOnIndex->side_ == bs::network::Side::Buy)
+         ^ (cp.NumCurrency() == rfqOnIndex->product_.toStdString());
       double indicPrice = 0;
 
       if (isBuy && (pxBid.type != bs::network::MDField::Unknown)) {
@@ -1309,23 +1313,23 @@ void QuoteRequestsModel::updatePrices(const QString &security, const bs::network
       }
 
       if (indicPrice > 0) {
-         const auto prevPrice = grp->rfqs_[static_cast<std::size_t>(index)]->indicativePx_;
-         const auto assetType = grp->rfqs_[static_cast<std::size_t>(index)]->assetType_;
-         grp->rfqs_[static_cast<std::size_t>(index)]->indicativePxString_ =
+         const auto prevPrice = rfqOnIndex->indicativePx_;
+         const auto assetType = rfqOnIndex->assetType_;
+         rfqOnIndex->indicativePxString_ =
             UiUtils::displayPriceForAssetType(indicPrice, assetType);
-         grp->rfqs_[static_cast<std::size_t>(index)]->indicativePx_ = indicPrice;
+         rfqOnIndex->indicativePx_ = indicPrice;
 
          if (!qFuzzyIsNull(prevPrice)) {
             if (indicPrice > prevPrice) {
-               grp->rfqs_[static_cast<std::size_t>(index)]->indicativePxBrush_ = c_greenColor;
+               rfqOnIndex->indicativePxBrush_ = c_greenColor;
             }
             else if (indicPrice < prevPrice) {
-               grp->rfqs_[static_cast<std::size_t>(index)]->indicativePxBrush_ = c_redColor;
+               rfqOnIndex->indicativePxBrush_ = c_redColor;
             }
          }
 
          const QModelIndex idx = createIndex(index, static_cast<int>(Column::IndicPx),
-            &grp->rfqs_[static_cast<std::size_t>(index)]->idx_);
+            &(rfqOnIndex->idx_));
 
          if (!idxs) {
             emit dataChanged(idx, idx);
@@ -1381,6 +1385,10 @@ void QuoteRequestsModel::clearVisibleFlag(Group *g)
 
 void QuoteRequestsModel::onSecurityMDUpdated(const QString &security, const bs::network::MDFields &mdFields)
 {
+   // NOTE:
+   // there is duplicate for security name for future and XBT product XBT/EUR
+   // but that is fine for price updates, since it goes through all securities in all groups
+
    const auto pxBid = bs::network::MDField::get(mdFields, bs::network::MDField::PriceBid);
    const auto pxOffer = bs::network::MDField::get(mdFields, bs::network::MDField::PriceOffer);
    if (pxBid.type != bs::network::MDField::Unknown) {

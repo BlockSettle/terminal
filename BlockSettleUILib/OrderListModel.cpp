@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -17,14 +17,56 @@
 #include "bs_proxy_terminal_pb.pb.h"
 
 namespace {
-
    const auto kNewOrderColor = QColor{0xFF, 0x7F, 0};
    const auto kPendingColor = QColor{0x63, 0xB0, 0xB2};
    const auto kRevokedColor = QColor{0xf6, 0xa7, 0x24};
    const auto kSettledColor = QColor{0x22, 0xC0, 0x64};
    const auto kFailedColor = QColor{0xEC, 0x0A, 0x35};
 
+   bs::network::Order convertOrder(const bs::types::Order &data) {
+      bs::network::Order order;
+
+      switch (data.status()) {
+         case bs::types::ORDER_STATUS_PENDING:
+            order.status = bs::network::Order::Pending;
+            break;
+         case bs::types::ORDER_STATUS_FILLED:
+            order.status = bs::network::Order::Filled;
+            break;
+         case bs::types::ORDER_STATUS_VOID:
+            order.status = bs::network::Order::Failed;
+            break;
+         default:
+            break;
+      }
+
+      order.assetType = static_cast<bs::network::Asset::Type>(data.trade_type());
+
+      order.exchOrderId = QString::fromStdString(data.id());
+      order.side = bs::network::Side::Type(data.side());
+      order.pendingStatus = data.status_text();
+      order.dateTime = QDateTime::fromMSecsSinceEpoch(data.timestamp_ms());
+      order.product = data.product();
+      order.quantity = data.quantity();
+      order.security = data.product() + "/" + data.product_against();
+      order.price = data.price();
+
+      return order;
+   }
 } // namespace
+
+using namespace Blocksettle::Communication;
+
+
+double getOrderValue(const bs::network::Order& order)
+{
+   double value = - order.quantity * order.price;
+   if (order.security.substr(0, order.security.find('/')) != order.product) {
+      value = order.quantity / order.price;
+   }
+
+   return value;
+}
 
 QString OrderListModel::Header::toString(OrderListModel::Header::Index h)
 {
@@ -43,8 +85,9 @@ QString OrderListModel::Header::toString(OrderListModel::Header::Index h)
 QString OrderListModel::StatusGroup::toString(OrderListModel::StatusGroup::Type sg)
 {
    switch (sg) {
-   case StatusGroup::UnSettled:  return tr("UnSettled");
-   case StatusGroup::Settled:    return tr("Settled");
+   case StatusGroup::UnSettled:           return tr("UnSettled");
+   case StatusGroup::Settled:             return tr("Settled");
+   case StatusGroup::PendingSettlements:  return tr("Pending Settlements");
    default:    return tr("Unknown");
    }
 }
@@ -133,9 +176,42 @@ QVariant OrderListModel::data(const QModelIndex &index, int role) const
 
             switch (role) {
                case Qt::DisplayRole : {
-                  if (index.column() == 0) {
+                  switch(index.column()) {
+                  case Header::NameColumn:
                      return g->security_;
-                  } else {
+                  case Header::Quantity:
+                     return g->getQuantity();
+                  case Header::Value:
+                     return g->getValue();
+                  case Header::Price:
+                     return g->getPrice();
+                  case Header::Status:
+                     return g->getStatus();
+                  default:
+                     return QVariant();
+                  }
+               }
+
+               case Qt::TextAlignmentRole : {
+                  switch (index.column()) {
+                     case Header::Quantity :
+                     case Header::Price :
+                     case Header::Value :
+                        return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
+                     case Header::Status:
+                        return static_cast<int>(Qt::AlignLeft | Qt::AlignVCenter);
+                     default :
+                        return QVariant();
+                  }
+               }
+
+               case Qt::BackgroundRole: {
+                  switch(index.column()) {
+                  case Header::Quantity:
+                     return g->getQuantityColor();
+                  case Header::Value:
+                     return g->getValueColor();
+                  default:
                      return QVariant();
                   }
                }
@@ -150,7 +226,7 @@ QVariant OrderListModel::data(const QModelIndex &index, int role) const
 
             switch (role) {
                case Qt::DisplayRole : {
-                  if (index.column() == 0) {
+                  if (index.column() == Header::NameColumn) {
                      return g->name_;
                   } else {
                      return QVariant();
@@ -171,7 +247,7 @@ QVariant OrderListModel::data(const QModelIndex &index, int role) const
 
             switch (role) {
                case Qt::DisplayRole : {
-                  if (index.column() == 0) {
+                  if (index.column() == Header::NameColumn) {
                      return g->name_;
                   } else {
                      return QVariant();
@@ -237,6 +313,9 @@ QModelIndex OrderListModel::index(int row, int column, const QModelIndex &parent
 
          case StatusGroup::Settled :
             return createIndex(row, column, &settled_->idx_);
+
+         case StatusGroup::PendingSettlements :
+            return createIndex(row, column, &pendingFuturesSettlement_->idx_);
 
          default :
             return QModelIndex();
@@ -310,7 +389,7 @@ int OrderListModel::rowCount(const QModelIndex &parent) const
 {
    if (!parent.isValid()) {
       // Do not show Settled and UnSettled root items if not connected
-      return connected_ ? 2 : 0;
+      return connected_ ? 3 : 0;
    }
 
    auto idx = static_cast<IndexHelper*>(parent.internalPointer());
@@ -357,8 +436,11 @@ void OrderListModel::onMessageFromPB(const Blocksettle::Communication::ProxyTerm
    connected_ = true;
 
    switch (response.data_case()) {
-      case Blocksettle::Communication::ProxyTerminalPb::Response::kUpdateOrders:
-         processUpdateOrders(response.update_orders());
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kUpdateOrdersObligations:
+         processUpdateOrders(response.update_orders_obligations());
+         break;
+      case Blocksettle::Communication::ProxyTerminalPb::Response::kUpdateOrder:
+         processUpdateOrder(response.update_order());
          break;
       default:
          break;
@@ -450,7 +532,7 @@ OrderListModel::StatusGroup::Type OrderListModel::getStatusGroup(const bs::netwo
          return StatusGroup::Settled;
    }
 
-   return StatusGroup::last;
+   return StatusGroup::Undefined;
 }
 
 std::pair<OrderListModel::Group*, int> OrderListModel::findItem(const bs::network::Order &order)
@@ -509,12 +591,12 @@ std::pair<OrderListModel::Group*, int> OrderListModel::findItem(const bs::networ
 }
 
 void OrderListModel::removeRowIfContainerChanged(const bs::network::Order &order,
-   int &oldOrderRow)
+   int &oldOrderRow, bool force)
 {
    // Remove row if container (settled/unsettled) changed.
    auto git = groups_.find(order.exchOrderId.toStdString());
 
-   if (git != groups_.end() && git->second != getStatusGroup(order) && oldOrderRow >= 0) {
+   if (git != groups_.end() && (git->second != getStatusGroup(order) || force) && oldOrderRow >= 0) {
       StatusGroup *tmpsg = (git->second == StatusGroup::UnSettled ? unsettled_.get() :
          settled_.get());
 
@@ -596,8 +678,7 @@ void OrderListModel::createGroupsIfNeeded(const bs::network::Order &order, Marke
    // Create market if it doesn't exist.
    if (!marketItem) {
       beginInsertRows(sidx, static_cast<int>(sg->rows_.size()), static_cast<int>(sg->rows_.size()));
-      sg->rows_.push_back(make_unique<Market>(
-         tr(bs::network::Asset::toString(order.assetType)), &sg->idx_));
+      sg->rows_.emplace_back(make_unique<Market>(order.assetType, &sg->idx_));
       marketItem = sg->rows_.back().get();
       endInsertRows();
    }
@@ -606,8 +687,15 @@ void OrderListModel::createGroupsIfNeeded(const bs::network::Order &order, Marke
    if (!groupItem) {
       beginInsertRows(createIndex(findMarket(sg, marketItem), 0, &marketItem->idx_),
          static_cast<int>(marketItem->rows_.size()), static_cast<int>(marketItem->rows_.size()));
-      marketItem->rows_.push_back(make_unique<Group>(
-         QString::fromStdString(order.security), &marketItem->idx_));
+
+      if (bs::network::Asset::isFuturesType(order.assetType)) {
+         marketItem->rows_.emplace_back(make_unique<FuturesGroup>(
+            QString::fromStdString(order.security), &marketItem->idx_));
+      } else {
+         marketItem->rows_.emplace_back(make_unique<Group>(
+            QString::fromStdString(order.security), &marketItem->idx_));
+      }
+
       groupItem = marketItem->rows_.back().get();
       endInsertRows();
    }
@@ -617,8 +705,9 @@ void OrderListModel::reset()
 {
    beginResetModel();
    groups_.clear();
-   unsettled_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::UnSettled), 0);
-   settled_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::Settled), 1);
+   pendingFuturesSettlement_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::PendingSettlements), 0);
+   unsettled_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::UnSettled), 1);
+   settled_ = std::make_unique<StatusGroup>(StatusGroup::toString(StatusGroup::Settled), 2);
    endResetModel();
 }
 
@@ -628,7 +717,7 @@ void OrderListModel::onOrdersUpdate(const std::vector<bs::network::Order>& order
       connected_ = true;
    }
    // Save latest selected index first
-   resetLatestChangedStatus(orders);
+   //FIXME: resetLatestChangedStatus(orders);
    // OrderListModel supposed to work correctly when orders states updated one by one.
    // We don't use this anymore (server sends all active orders every time) so just clear old caches.
    // Remove this if old behavior is needed
@@ -639,63 +728,39 @@ void OrderListModel::onOrdersUpdate(const std::vector<bs::network::Order>& order
    }
 }
 
-void OrderListModel::processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders &message)
+void OrderListModel::processUpdateOrders(const ProxyTerminalPb::Response_UpdateOrdersAndObligations&)
 {
-   std::vector<bs::network::Order> orders;
-
-   // Use some fake orderId so old code works correctly
-   int orderId = 0;
-
-   for (const auto &data : message.orders()) {
-      bs::network::Order order;
-
-      switch (data.status()) {
-         case bs::types::ORDER_STATUS_PENDING:
-            order.status = bs::network::Order::Pending;
-            break;
-         case bs::types::ORDER_STATUS_FILLED:
-            order.status = bs::network::Order::Filled;
-            break;
-         case bs::types::ORDER_STATUS_VOID:
-            order.status = bs::network::Order::Failed;
-            break;
-         default:
-            break;
-      }
-
-      const bool isXBT = (data.product() == "XBT") || (data.product_against() == "XBT");
-      const bool isCC = (assetManager_->getCCLotSize(data.product())) > 0
-         || (assetManager_->getCCLotSize(data.product_against()) > 0);
-
-      if (isCC) {
-         order.assetType = bs::network::Asset::PrivateMarket;
-      } else if (isXBT) {
-         order.assetType = bs::network::Asset::SpotXBT;
-      } else {
-         order.assetType = bs::network::Asset::SpotFX;
-      }
-
-      orderId += 1;
-      order.exchOrderId = QString::number(orderId);
-      order.side = bs::network::Side::Type(data.side());
-      order.pendingStatus = data.status_text();
-      order.dateTime = QDateTime::fromMSecsSinceEpoch(data.timestamp_ms());
-      order.product = data.product();
-      order.quantity = data.quantity();
-      order.security = data.product() + "/" + data.product_against();
-      order.price = data.price();
-      orders.push_back(order);
-   }
-   onOrdersUpdate(orders);
+   reset();
 }
 
-void OrderListModel::resetLatestChangedStatus(const std::vector<bs::network::Order> &orders)
+void OrderListModel::processUpdateOrder(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrder &msg)
+{
+   auto order = convertOrder(msg.order());
+   switch (msg.action()) {
+      case bs::types::ACTION_CREATED:
+      case bs::types::ACTION_UPDATED: {
+         onOrderUpdated(order);
+         break;
+      }
+      case bs::types::ACTION_REMOVED: {
+         auto found = findItem(order);
+         removeRowIfContainerChanged(order, found.second, true);
+         break;
+      }
+      default:
+         break;
+
+   }
+   //onOrdersUpdate(orders);
+}
+
+void OrderListModel::resetLatestChangedStatus(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrdersAndObligations &message)
 {
    latestChangedTimestamp_ = {};
 
-   std::vector<std::pair<int64_t, int>> newOrderStatuses(orders.size());
-   for (const auto &order : orders) {
-      newOrderStatuses.push_back({ order.dateTime.toMSecsSinceEpoch(), static_cast<int>(order.status) });
+   std::vector<std::pair<int64_t, int>> newOrderStatuses(message.orders_size());
+   for (const auto &data : message.orders()) {
+      newOrderStatuses.emplace_back(decltype(newOrderStatuses)::value_type{ data.timestamp_ms(), static_cast<int>(data.status()) });
    }
    std::sort(newOrderStatuses.begin(), newOrderStatuses.end(), [&](const auto &left, const auto &right) {
       return left.first < right.first;
@@ -725,7 +790,7 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
    Group *groupItem = nullptr;
    Market *marketItem = nullptr;
 
-   removeRowIfContainerChanged(order, found.second);
+   removeRowIfContainerChanged(order, found.second, false);
 
    findMarketAndGroup(order, marketItem, groupItem);
 
@@ -738,23 +803,7 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
    if (found.second < 0) {
       beginInsertRows(parentIndex, 0, 0);
 
-      // As quantity is now could be negative need to invert value
-      double value = - order.quantity * order.price;
-      if (order.security.substr(0, order.security.find('/')) != order.product) {
-         value = order.quantity / order.price;
-      }
-
-      groupItem->rows_.push_front(make_unique<Data>(
-         UiUtils::displayTimeMs(order.dateTime),
-         QString::fromStdString(order.product),
-         tr(bs::network::Side::toString(order.side)),
-         UiUtils::displayQty(order.quantity, order.security, order.product, order.assetType),
-         UiUtils::displayPriceForAssetType(order.price, order.assetType),
-         UiUtils::displayValue(value, order.security, order.product, order.assetType),
-         QString(),
-         order.exchOrderId,
-         &groupItem->idx_));
-
+      groupItem->addOrder(order);
       setOrderStatus(groupItem, 0, order);
 
       endInsertRows();
@@ -762,6 +811,247 @@ void OrderListModel::onOrderUpdated(const bs::network::Order& order)
    else {
       setOrderStatus(groupItem, found.second, order, true);
    }
+}
+
+
+void OrderListModel::Group::addOrder(const bs::network::Order& order)
+{
+   addRow(order);
+}
+
+QVariant OrderListModel::Group::getQuantity() const
+{
+   return QVariant{};
+}
+
+QVariant OrderListModel::Group::getQuantityColor() const
+{
+   return QVariant{};
+}
+
+QVariant OrderListModel::Group::getValue() const
+{
+   return QVariant{};
+}
+
+QVariant OrderListModel::Group::getValueColor() const
+{
+   return QVariant{};
+}
+
+QVariant OrderListModel::Group::getPrice() const
+{
+   return QVariant{};
+}
+
+QVariant OrderListModel::Group::getStatus() const
+{
+   return QVariant{};
+}
+
+void OrderListModel::Group::addRow(const bs::network::Order& order)
+{
+   // As quantity is now could be negative need to invert value
+   double value = getOrderValue(order);
+
+   rows_.push_front(make_unique<Data>(
+      UiUtils::displayTimeMs(order.dateTime),
+      QString::fromStdString(order.product),
+      tr(bs::network::Side::toString(order.side)),
+      UiUtils::displayQty(order.quantity, order.security, order.product, order.assetType),
+      UiUtils::displayPriceForAssetType(order.price, order.assetType),
+      UiUtils::displayValue(value, order.security, order.product, order.assetType),
+      QString(),
+      order.exchOrderId,
+      &idx_));
+}
+
+void OrderListModel::FuturesGroup::addOrder(const bs::network::Order& order)
+{
+   quantity_ += order.quantity;
+   value_ += getOrderValue(order);
+   addRow(order);
+}
+
+QVariant OrderListModel::FuturesGroup::getQuantity() const
+{
+   return UiUtils::displayAmount(quantity_);
+}
+
+QVariant OrderListModel::FuturesGroup::getQuantityColor() const
+{
+   if (quantity_ < 0) {
+      return kFailedColor;
+   }
+
+   return kSettledColor;
+}
+
+QVariant OrderListModel::FuturesGroup::getValue() const
+{
+   return UiUtils::displayCurrencyAmount(value_);
+}
+
+QVariant OrderListModel::FuturesGroup::getValueColor() const
+{
+   if (value_ < 0) {
+      return kFailedColor;
+   }
+
+   return kSettledColor;
+}
+
+void OrderListModel::DisplayFuturesDeliveryRow(const Blocksettle::Communication::ProxyTerminalPb::Response_DeliveryObligationsRequest &obligation)
+{
+   if (obligation.to_deliver() == 0) {
+      return;
+   }
+
+   beginInsertRows(createIndex(pendingFuturesSettlement_->row_, 0, &pendingFuturesSettlement_->idx_), static_cast<int>(pendingFuturesSettlement_->rows_.size()), static_cast<int>(pendingFuturesSettlement_->rows_.size()));
+   pendingFuturesSettlement_->rows_.emplace_back(make_unique<Market>(bs::network::Asset::Type::DeliverableFutures, &pendingFuturesSettlement_->idx_));
+   Market * marketItem = pendingFuturesSettlement_->rows_.back().get();
+   endInsertRows();
+
+   beginInsertRows(createIndex(findMarket(pendingFuturesSettlement_.get(), marketItem), 0, &marketItem->idx_),
+      static_cast<int>(marketItem->rows_.size()), static_cast<int>(marketItem->rows_.size()));
+
+   marketItem->rows_.emplace_back(make_unique<FuturesDeliveryGroup>(QStringLiteral("XBT/EUR")
+      , &marketItem->idx_, obligation.to_deliver(), obligation.price(), obligation.bs_address()
+      , obligation.status() == Blocksettle::Communication::ProxyTerminalPb::Response::DeliveryObligationsRequest::DELIVERED));
+
+   endInsertRows();
+}
+
+OrderListModel::FuturesDeliveryGroup::FuturesDeliveryGroup(const QString &sec, IndexHelper *parent
+                                                           , int64_t quantity, double price
+                                                           , const std::string& bsAddress
+                                                           , const bool delivered)
+   : Group(sec, parent)
+{
+   quantity_ = static_cast<double>(quantity) / BTCNumericTypes::BalanceDivider;
+   price_ = price;
+   bsAddress_ = bsAddress;
+
+   value_ = -quantity_ * price_;
+
+   if (quantity < 0) {
+      toDeliver_ = bs::XBTAmount{ static_cast<BTCNumericTypes::satoshi_type>(-quantity) };
+   }
+
+   delivered_ = delivered;
+}
+
+QVariant OrderListModel::FuturesDeliveryGroup::getQuantity() const
+{
+   return UiUtils::displayAmount(quantity_);
+}
+
+QVariant OrderListModel::FuturesDeliveryGroup::getQuantityColor() const
+{
+   if (quantity_ < 0) {
+      return kFailedColor;
+   }
+
+   return kSettledColor;
+}
+
+QVariant OrderListModel::FuturesDeliveryGroup::getValue() const
+{
+   return UiUtils::displayCurrencyAmount(value_);
+}
+
+QVariant OrderListModel::FuturesDeliveryGroup::getValueColor() const
+{
+   if (value_ < 0) {
+      return kFailedColor;
+   }
+
+   return kSettledColor;
+}
+
+QVariant OrderListModel::FuturesDeliveryGroup::getPrice() const
+{
+   return UiUtils::displayPriceXBT(price_);
+}
+
+QVariant OrderListModel::FuturesDeliveryGroup::getStatus() const
+{
+   if (quantity_ < 0) {
+      if (delivered_) {
+         return tr("Delivered");
+      }
+      return tr("Create TX");
+   }
+
+   return QVariant{};
+}
+
+bool OrderListModel::FuturesDeliveryGroup::deliveryRequired() const
+{
+   return toDeliver_.GetValue() != 0 && !delivered_;
+}
+
+OrderListModel::DeliveryObligationData OrderListModel::FuturesDeliveryGroup::getDeliveryObligationData() const
+{
+   return DeliveryObligationData{bsAddress_, toDeliver_};
+}
+
+bool OrderListModel::DeliveryRequired(const QModelIndex &index)
+{
+   if (!isFutureDeliveryIndex(index)) {
+      return false;
+   }
+
+   auto futuresDelivery = GetFuturesDeliveryGroup(index);
+   if (futuresDelivery == nullptr) {
+      return false;
+   }
+
+   return futuresDelivery->deliveryRequired();
+}
+
+bool OrderListModel::isFutureDeliveryIndex(const QModelIndex &index) const
+{
+   if (!index.isValid() || index.column() != Header::Status || !pendingFuturesSettlement_) {
+      return false;
+   }
+
+   {
+      auto statusGroupIndex = index;
+      int depth = 0;
+      while (statusGroupIndex.parent().isValid()) {
+         statusGroupIndex = statusGroupIndex.parent();
+         ++depth;
+      }
+
+      if (statusGroupIndex.row() != pendingFuturesSettlement_->row_ || depth != 2) {
+         return false;
+      }
+   }
+
+   return true;
+}
+
+OrderListModel::FuturesDeliveryGroup* OrderListModel::GetFuturesDeliveryGroup(const QModelIndex &index) const
+{
+   auto marketIndex = index.parent();
+   Market* market = pendingFuturesSettlement_->rows_[marketIndex.row()].get();
+
+   return dynamic_cast<FuturesDeliveryGroup*>(market->rows_[index.row()].get());
+}
+
+OrderListModel::DeliveryObligationData OrderListModel::getDeliveryObligationData(const QModelIndex& index) const
+{
+   if (!isFutureDeliveryIndex(index)) {
+      return DeliveryObligationData{};
+   }
+
+   auto futuresDelivery = GetFuturesDeliveryGroup(index);
+   if (futuresDelivery == nullptr) {
+      return DeliveryObligationData{};
+   }
+
+   return futuresDelivery->getDeliveryObligationData();
 }
 
 void OrderListModel::onMatchingLogin()

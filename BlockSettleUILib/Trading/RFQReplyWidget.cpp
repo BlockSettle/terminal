@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -19,15 +19,14 @@
 #include "Celer/SubmitQuoteNotifSequence.h"
 #include "CustomControls/CustomDoubleSpinBox.h"
 #include "DealerCCSettlementContainer.h"
-#include "DealerXBTSettlementContainer.h"
 #include "DialogManager.h"
+#include "HeadlessContainer.h"
 #include "MDCallbacksQt.h"
 #include "OrderListModel.h"
 #include "OrdersView.h"
 #include "QuoteProvider.h"
 #include "RFQBlotterTreeView.h"
 #include "SelectedTransactionInputs.h"
-#include "WalletSignerContainer.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "UserScriptRunner.h"
@@ -39,6 +38,8 @@
 
 #include <QDesktopWidget>
 #include <QPushButton>
+#include <QStyledItemDelegate>
+#include <QPainter>
 
 using namespace bs::ui;
 using namespace Blocksettle::Communication;
@@ -248,6 +249,7 @@ void RFQReplyWidget::init(const std::shared_ptr<spdlog::logger> &logger
    connectionManager_ = connectionManager;
    autoSignProvider_ = autoSignProvider;
    utxoReservationManager_ = utxoReservationManager;
+   orderListModel_ = orderListModel;
 
    statsCollector_ = std::make_shared<bs::SecurityStatsCollector>(appSettings
       , ApplicationSettings::Filter_MD_QN_cnt);
@@ -451,7 +453,8 @@ void RFQReplyWidget::onResetCurrentReservation(const std::shared_ptr<SubmitQuote
 void RFQReplyWidget::onOrder(const bs::network::Order &order)
 {
    const auto &quoteReqId = quoteProvider_->getQuoteReqId(order.quoteId);
-   if (order.assetType == bs::network::Asset::SpotFX) {
+   if (order.assetType == bs::network::Asset::SpotFX
+       || order.assetType == bs::network::Asset::DeliverableFutures) {
       if (order.status == bs::network::Order::Filled) {
          onCompleteSettlement(quoteReqId);
          quoteProvider_->delQuoteReqId(quoteReqId);
@@ -523,6 +526,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             // Dealers can't select receiving address, use new
             const auto recvXbtAddr = bs::Address();
 
+#if 0 //TODO: use new arch settlement signals instead of settlement container
             const auto tier1XbtLimit = appSettings_->get<uint64_t>(
                ApplicationSettings::SubmittedAddressXbtLimit);
 
@@ -565,7 +569,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             ui_->widgetQuoteRequests->addSettlementContainer(settlContainer);
 
             settlContainer->activate();
-
+#endif   //0
          } catch (const std::exception &e) {
             SPDLOG_LOGGER_ERROR(logger_, "settlement failed: {}", e.what());
             BSMessageBox box(BSMessageBox::critical, tr("Settlement error")
@@ -829,4 +833,15 @@ void RFQReplyWidget::onMessageFromPB(const ProxyTerminalPb::Response &response)
          break;
    }
    // if not processed - not RFQ releated message. not error
+}
+
+void RFQReplyWidget::onOrderClicked(const QModelIndex &index)
+{
+   if (!index.isValid()) {
+      return;
+   }
+
+   if (orderListModel_->DeliveryRequired(index)) {
+      emit CreateObligationDeliveryTX(index);
+   }
 }

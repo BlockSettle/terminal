@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -321,6 +321,10 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::CreateFo
    } else if (!paymentInfo.label.isEmpty()) {
       dlg->ui_->textEditComment->setText(paymentInfo.label);
    }
+
+   dlg->ui_->checkBoxRBF->setChecked(false);
+   dlg->ui_->checkBoxRBF->setEnabled(false);
+   dlg->ui_->checkBoxRBF->setToolTip(tr("RBF disabled for payment request"));
 
    dlg->paymentInfo_ = paymentInfo;
 

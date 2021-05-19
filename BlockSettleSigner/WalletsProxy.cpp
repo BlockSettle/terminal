@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -23,7 +23,6 @@
 #include "CoreHDWallet.h"
 #include "PaperBackupWriter.h"
 #include "SignerAdapter.h"
-#include "SignerAdapterContainer.h"
 #include "TXInfo.h"
 #include "UiUtils.h"
 #include "WalletBackupFile.h"
@@ -604,6 +603,7 @@ void WalletsProxy::deleteWallet(const QString &walletId, const QJSValue &jsCallb
 
 std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getWoSyncWallet(const bs::sync::WatchingOnlyWallet &wo) const
 {
+#if 0 //FIXME: unknown sync::hd::Wallet constructor
    try {
       auto result = std::make_shared<bs::sync::hd::Wallet>(wo, signContainer().get(), logger_);
       result->setWCT(walletsMgr_.get());
@@ -617,6 +617,7 @@ std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getWoSyncWallet(const bs::sy
    } catch (const std::exception &e) {
       logger_->error("[WalletsProxy] WO-wallet creation failed: {}", e.what());
    }
+#endif   //0
    return nullptr;
 }
 

@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -15,6 +15,7 @@
 
 #include "AssetManager.h"
 #include "BSMessageBox.h"
+#include "HeadlessContainer.h"
 #include "QuoteProvider.h"
 #include "RFQRequestWidget.h"
 #include "ReqCCSettlementContainer.h"
@@ -22,7 +23,6 @@
 #include "RfqStorage.h"
 #include "UiUtils.h"
 #include "UtxoReservationManager.h"
-#include "WalletSignerContainer.h"
 #include "Wallets/SyncHDWallet.h"
 
 
@@ -32,7 +32,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AuthAddressManager>& authAddressManager
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , const std::shared_ptr<WalletSignerContainer> &signContainer
+   , const std::shared_ptr<HeadlessContainer> &signContainer
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<CelerClientQt> &celerClient
    , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -137,7 +137,8 @@ void RFQDialog::onOrderFilled(const std::string &quoteId)
       return;
    }
 
-   if (rfq_.assetType == bs::network::Asset::SpotFX) {
+   if (rfq_.assetType == bs::network::Asset::SpotFX
+       || rfq_.assetType == bs::network::Asset::DeliverableFutures) {
       ui_->pageRequestingQuote->onOrderFilled(quoteId);
    }
 }
@@ -148,7 +149,8 @@ void RFQDialog::onOrderFailed(const std::string& quoteId, const std::string& rea
       return;
    }
 
-   if (rfq_.assetType == bs::network::Asset::SpotFX) {
+   if (rfq_.assetType == bs::network::Asset::SpotFX
+       || rfq_.assetType == bs::network::Asset::DeliverableFutures) {
       ui_->pageRequestingQuote->onOrderFailed(quoteId, reason);
    }
    close();
