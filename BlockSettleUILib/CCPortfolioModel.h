@@ -13,6 +13,7 @@
 
 #include <memory>
 #include <QAbstractItemModel>
+#include "SignerDefs.h"
 
 namespace bs {
    namespace sync {
@@ -27,9 +28,10 @@ class RootAssetGroupNode;
 class CCPortfolioModel : public QAbstractItemModel
 {
 public:
-   CCPortfolioModel(const std::shared_ptr<bs::sync::WalletsManager> &
+   [[deprecated]] CCPortfolioModel(const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<AssetManager>& assetManager
       , QObject *parent = nullptr);
+   CCPortfolioModel(QObject* parent = nullptr);
    ~CCPortfolioModel() noexcept override = default;
 
    CCPortfolioModel(const CCPortfolioModel&) = delete;
@@ -38,8 +40,14 @@ public:
    CCPortfolioModel(CCPortfolioModel&&) = delete;
    CCPortfolioModel& operator = (CCPortfolioModel&&) = delete;
 
-   std::shared_ptr<AssetManager> assetManager();
-   std::shared_ptr<bs::sync::WalletsManager> walletsManager();
+   [[deprecated]] std::shared_ptr<AssetManager> assetManager();
+   [[deprecated]] std::shared_ptr<bs::sync::WalletsManager> walletsManager();
+
+   void onHDWallet(const bs::sync::WalletInfo&);
+   void onHDWalletDetails(const bs::sync::HDWalletData&);
+   void onWalletBalance(const bs::sync::WalletBalanceData&);
+   void onBalance(const std::string& currency, double balance);
+   void onPriceChanged(const std::string& currency, double price);
 
 private:
    enum PortfolioColumns
@@ -65,25 +73,30 @@ public:
    bool hasChildren(const QModelIndex& parent = QModelIndex()) const override;
 
 private slots:
-   void onFXBalanceLoaded();
-   void onFXBalanceCleared();
+   void onFXBalanceLoaded();  // deprecated
+   void onFXBalanceCleared(); // deprecated
 
-   void onFXBalanceChanged(const std::string& currency);
+   void onFXBalanceChanged(const std::string& currency); // deprecated
 
-   void onXBTPriceChanged(const std::string& currency);
-   void onCCPriceChanged(const std::string& currency);
+   void onXBTPriceChanged(const std::string& currency);  //deprecated
+   void onCCPriceChanged(const std::string& currency);   // deprecated
 
-   void reloadXBTWalletsList();
-   void updateXBTBalance();
+   void reloadXBTWalletsList();  // deprecated
+   void updateXBTBalance();   // deprecated
 
-   void reloadCCWallets();
-   void updateCCBalance();
+   void reloadCCWallets(); // deprecated
+   void updateCCBalance(); // deprecated
 
 private:
-   std::shared_ptr<AssetManager>             assetManager_;
-   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
+   void updateWalletBalance(const std::string& walletId);
+
+private:
+   [[deprecated]] std::shared_ptr<AssetManager> assetManager_;
+   [[deprecated]] std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
 
    std::shared_ptr<RootAssetGroupNode> root_ = nullptr;
+   std::map<std::string, std::string>  leafIdToRootId_;
+   std::map<std::string, double>       leafBalances_;
 };
 
 #endif // __CC_PORTFOLIO_MODEL__

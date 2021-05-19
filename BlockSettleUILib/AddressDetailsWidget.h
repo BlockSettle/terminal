@@ -14,6 +14,7 @@
 #include "Address.h"
 #include "AuthAddress.h"
 #include "ArmoryConnection.h"
+#include "SignerDefs.h"
 
 #include <QWidget>
 #include <QItemSelection>
@@ -41,13 +42,20 @@ public:
    explicit AddressDetailsWidget(QWidget *parent = nullptr);
    ~AddressDetailsWidget() override;
 
-   void init(const std::shared_ptr<ArmoryConnection> &armory
+   [[deprecated]] void init(const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<spdlog::logger> &inLogger
       , const std::shared_ptr<bs::sync::CCDataResolver> &
       , const std::shared_ptr<bs::sync::WalletsManager> &);
+   void init(const std::shared_ptr<spdlog::logger>& inLogger);
+
    void setQueryAddr(const bs::Address& inAddrVal);
    void setBSAuthAddrs(const std::unordered_set<std::string> &bsAuthAddrs);
    void clear();
+
+   void onNewBlock(unsigned int blockNum);
+   void onAddressHistory(const bs::Address&, uint32_t curBlock
+      , const std::vector<bs::TXEntry>&);
+   void onTXDetails(const std::vector<bs::sync::TXWalletDetails>&);
 
    enum AddressTreeColumns {
       colDate,
@@ -64,19 +72,22 @@ public:
 signals:
    void transactionClicked(QString txId);
    void finished() const;
+   void needAddressHistory(const bs::Address&);
+   void needTXDetails(const std::vector<bs::sync::TXWallet>&, bool useCache
+      , const bs::Address &);
 
 private slots:
    void onTxClicked(QTreeWidgetItem *item, int column);
-   void OnRefresh(std::vector<BinaryData> ids, bool online);
+   void OnRefresh(std::vector<BinaryData> ids, bool online);   //deprecated
    void updateFields();
 
 private:
    void setConfirmationColor(QTreeWidgetItem *item);
-   void getTxData(const std::shared_ptr<AsyncClient::LedgerDelegate> &);
-   void refresh(const std::shared_ptr<bs::sync::PlainWallet> &);
-   void loadTransactions();
-   void searchForCC();
-   void searchForAuth();
+   [[deprecated]] void getTxData(const std::shared_ptr<AsyncClient::LedgerDelegate> &);
+   [[deprecated]] void refresh(const std::shared_ptr<bs::sync::PlainWallet> &);
+   [[deprecated]] void loadTransactions();
+   [[deprecated]] void searchForCC();
+   [[deprecated]] void searchForAuth();
 
 private:
    // NB: Right now, the code is slightly inefficient. There are two maps with
@@ -122,6 +133,7 @@ private:
    std::map<bs::Address, AddressVerificationState> authAddrStates_;
    std::unordered_set<std::string>     bsAuthAddrs_;
    bool isAuthAddr_{false};
+   uint32_t topBlock_{ 0 };
 
    std::mutex mutex_;
 

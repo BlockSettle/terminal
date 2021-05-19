@@ -339,7 +339,8 @@ void AQScriptHandler::aqTick()
       if (!qr)  continue;
       auto itQRN = aqQuoteReqs_.find(qr->requestId().toStdString());
       if (itQRN == aqQuoteReqs_.end())  continue;
-      const auto timeDiff = timeNow.msecsTo(itQRN->second.expirationTime.addMSecs(itQRN->second.timeSkewMs));
+      const auto& expTime = QDateTime::fromMSecsSinceEpoch(itQRN->second.expirationTime);
+      const auto timeDiff = timeNow.msecsTo(expTime.addMSecs(itQRN->second.timeSkewMs));
       if (timeDiff <= 0) {
          expiredEntries << qr->requestId();
       }

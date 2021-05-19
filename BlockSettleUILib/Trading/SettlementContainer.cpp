@@ -21,10 +21,10 @@ namespace {
 } // namespace
 
 SettlementContainer::SettlementContainer(UtxoReservationToken utxoRes
-   , std::unique_ptr<bs::hd::Purpose> walletPurpose, bool expandTxDialogInfo)
+   , bs::hd::Purpose walletPurpose, bool expandTxDialogInfo)
    : QObject(nullptr)
    , utxoRes_(std::move(utxoRes))
-   , walletPurpose_(std::move(walletPurpose))
+   , walletPurpose_(walletPurpose)
    , expandTxDialogInfo_(expandTxDialogInfo)
 {}
 

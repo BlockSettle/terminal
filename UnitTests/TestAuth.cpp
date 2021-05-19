@@ -127,7 +127,7 @@ BinaryData TestAuth::sendTo(uint64_t value, bs::Address& addr)
 
    signer.addSpender(spendPtr);
 
-   signer.addRecipient(addr.getRecipient(bs::XBTAmount{value}));
+   signer.addRecipient(addr.getRecipient(bs::XBTAmount{(int64_t)value}));
    signer.setFeed(coinbaseFeed_);
 
    //sign & send
@@ -250,7 +250,7 @@ void TestAuth::SetUp()
    }
 
    //setup sync manager
-   auto inprocSigner = std::make_shared<InprocSigner>(priWallet_, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(priWallet_, this, envPtr_->logger());
    inprocSigner->Start();
    syncMgr_ = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger(),
       envPtr_->appSettings(), envPtr_->armoryConnection());

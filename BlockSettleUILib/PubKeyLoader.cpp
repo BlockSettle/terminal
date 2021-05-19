@@ -10,9 +10,9 @@
 */
 #include "PubKeyLoader.h"
 #include <QFile>
+#include <spdlog/fmt/fmt.h>
 #include "BSMessageBox.h"
 #include "ImportKeyBox.h"
-#include "BSTerminalMainWindow.h"
 #include "FutureValue.h"
 
 PubKeyLoader::PubKeyLoader(const std::shared_ptr<ApplicationSettings> &appSettings
@@ -88,10 +88,10 @@ bs::network::BIP15xNewKeyCb PubKeyLoader::getApprovingCallback(const KeyType kt
          });
       };
 
-      BSTerminalMainWindow *mw = qobject_cast<BSTerminalMainWindow *>(bsMainWindow);
+/*      BSTerminalMainWindow *mw = qobject_cast<BSTerminalMainWindow *>(bsMainWindow);
       if (mw) {
          mw->addDeferredDialog(deferredDialog);
-      }
+      }*/
    };
 }
 

@@ -36,7 +36,7 @@ public:
 
    void setRfqModel(QuoteRequestsModel *model);
    void setSortModel(QuoteReqSortModel *model);
-   void setAppSettings(std::shared_ptr<ApplicationSettings> appSettings);
+   [[deprecated]] void setAppSettings(std::shared_ptr<ApplicationSettings> appSettings);
 
    void setLimit(ApplicationSettings::Setting s, int limit);
 

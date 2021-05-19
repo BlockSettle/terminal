@@ -34,8 +34,8 @@ namespace bs {
    class SettlementContainer;
 }
 class AssetManager;
-class BaseCelerClient;
 class ApplicationSettings;
+class CelerClientQt;
 
 class QuoteRequestsModel : public QAbstractItemModel
 {
@@ -93,10 +93,12 @@ public:
    };
 
 public:
-   QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &
-                      , std::shared_ptr<BaseCelerClient> celerClient
+   [[deprecated]] QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &
+                      , std::shared_ptr<CelerClientQt> celerClient
                       , std::shared_ptr<ApplicationSettings> appSettings
                       , QObject* parent);
+   QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector>&
+      , QObject* parent);
    ~QuoteRequestsModel() override;
 
    QuoteRequestsModel(const QuoteRequestsModel&) = delete;
@@ -104,13 +106,16 @@ public:
    QuoteRequestsModel(QuoteRequestsModel&&) = delete;
    QuoteRequestsModel& operator=(QuoteRequestsModel&&) = delete;
 
-   void SetAssetManager(const std::shared_ptr<AssetManager>& assetManager);
+   [[deprecated]] void SetAssetManager(const std::shared_ptr<AssetManager>& assetManager);
    const bs::network::QuoteReqNotification &getQuoteReqNotification(const std::string &id) const;
    double getPrice(const std::string &security, Role) const;
    QString getMarketSecurity(const QModelIndex &index);
 
    void addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &);
    bool StartCCSignOnOrder(const QString& orderId, QDateTime timestamp);
+
+   void onSettlementPending(const BinaryData& settlementId, int timeLeftMS);
+   void onSettlementComplete(const BinaryData& settlementId);
 
 public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -148,12 +153,13 @@ private:
    std::shared_ptr<AssetManager> assetManager_;
    std::unordered_map<std::string, bs::network::QuoteReqNotification>         notifications_;
    std::unordered_map<std::string, std::shared_ptr<bs::SettlementContainer>>  settlContainers_;
+   std::unordered_map<std::string, int>   settlTimeLeft_;
    QTimer      timer_;
    QTimer      priceUpdateTimer_;
    MDPrices    mdPrices_;
    const QString groupNameSettlements_ = tr("Settlements");
    std::shared_ptr<bs::SecurityStatsCollector> secStatsCollector_;
-   std::shared_ptr<BaseCelerClient>     celerClient_;
+   std::shared_ptr<CelerClientQt>      celerClient_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::unordered_set<std::string>  pendingDeleteIds_;
    int priceUpdateInterval_;

@@ -77,9 +77,11 @@ namespace bs {
          bs::network::QuoteNotification qn;
          bs::UtxoReservationToken utxoRes;
          std::shared_ptr<bs::sync::hd::Wallet> xbtWallet;
+         std::string xbtWalletId;
          bs::Address authAddr;
          std::vector<UTXO> fixedXbtInputs;
-         std::unique_ptr<bs::hd::Purpose> walletPurpose;
+         bs::hd::Purpose   walletPurpose;
+         double   price;
       };
 
       class RFQDealerReply : public QWidget
@@ -90,7 +92,7 @@ namespace bs {
          RFQDealerReply(QWidget* parent = nullptr);
          ~RFQDealerReply() override;
 
-         void init(const std::shared_ptr<spdlog::logger> logger
+         [[deprecated]] void init(const std::shared_ptr<spdlog::logger> logger
             , const std::shared_ptr<AuthAddressManager> &
             , const std::shared_ptr<AssetManager>& assetManager
             , const std::shared_ptr<QuoteProvider>& quoteProvider
@@ -100,8 +102,9 @@ namespace bs {
             , const std::shared_ptr<ArmoryConnection> &
             , const std::shared_ptr<AutoSignScriptProvider> &autoSignQuoteProvider
             , const std::shared_ptr<bs::UTXOReservationManager>& utxoReservationManager);
+         void init(const std::shared_ptr<spdlog::logger>&);
 
-         void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
+         [[deprecated]] void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
          CustomDoubleSpinBox* bidSpinBox() const;
          CustomDoubleSpinBox* offerSpinBox() const;
@@ -120,8 +123,19 @@ namespace bs {
 
          void onParentAboutToHide();
 
+         void onHDWallet(const bs::sync::HDWalletData&);
+         void onBalance(const std::string& currency, double balance);
+         void onWalletBalance(const bs::sync::WalletBalanceData&);
+         void onAuthKey(const bs::Address&, const BinaryData& authKey);
+         void onVerifiedAuthAddresses(const std::vector<bs::Address>&);
+         void onReservedUTXOs(const std::string& resId, const std::string& subId
+            , const std::vector<UTXO>&);
+
       signals:
          void pullQuoteNotif(const std::string& settlementId, const std::string& reqId, const std::string& reqSessToken);
+         void needAuthKey(const bs::Address&);
+         void needReserveUTXOs(const std::string& reserveId, const std::string& subId
+            , uint64_t amount, bool withZC = false, const std::vector<UTXO>& utxos = {});
 
       public slots:
          void setQuoteReqNotification(const network::QuoteReqNotification &, double indicBid, double indicAsk);
@@ -202,7 +216,7 @@ namespace bs {
          enum class ReplyType
          {
             Manual,
-            Script,
+            Script,  //obsoleted, as we won't support scripting in the GUI
          };
 
          enum class AddressType
@@ -222,9 +236,9 @@ namespace bs {
          double getPrice() const;
          double getValue() const;
          double getAmount() const;
-         std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc) const;
-         std::shared_ptr<bs::sync::Wallet> getCCWallet(const bs::network::QuoteReqNotification &qrn) const;
-         void getAddress(const std::string &quoteRequestId, const std::shared_ptr<bs::sync::Wallet> &wallet
+         [[deprecated]] std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc) const;
+         [[deprecated]] std::shared_ptr<bs::sync::Wallet> getCCWallet(const bs::network::QuoteReqNotification &qrn) const;
+         [[deprecated]] void getAddress(const std::string &quoteRequestId, const std::shared_ptr<bs::sync::Wallet> &wallet
             , AddressType type, std::function<void(bs::Address)> cb);
          void setBalanceOk(bool ok);
          bool checkBalance() const;
@@ -236,7 +250,8 @@ namespace bs {
          void submitReply(const network::QuoteReqNotification &qrn, double price, ReplyType replyType);
          void updateWalletsList(int walletsFlags);
          bool isXbtSpend() const;
-         std::shared_ptr<bs::sync::hd::Wallet> getSelectedXbtWallet(ReplyType replyType) const;
+         std::string getSelectedXbtWalletId(ReplyType replyType) const;
+         [[deprecated]] std::shared_ptr<bs::sync::hd::Wallet> getSelectedXbtWallet(ReplyType replyType) const;
          bs::Address selectedAuthAddress(ReplyType replyType) const;
          std::vector<UTXO> selectedXbtInputs(ReplyType replyType) const;
          void submit(double price, const std::shared_ptr<SubmitQuoteReplyData>& replyData);
@@ -247,6 +262,11 @@ namespace bs {
 
          std::set<std::string> activeQuoteSubmits_;
          std::map<std::string, std::map<std::string, std::array<bs::Address, static_cast<size_t>(AddressType::Max) + 1>>> addresses_;
+
+         int walletFlags_{ 0 };
+         std::vector<bs::sync::HDWalletData> wallets_;
+         std::unordered_map<std::string, double>   balances_;
+         std::unordered_map<std::string, std::shared_ptr<SubmitQuoteReplyData>>  pendingReservations_;
       };
 
    }  //namespace ui

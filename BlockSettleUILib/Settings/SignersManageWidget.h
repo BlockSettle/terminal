@@ -11,6 +11,7 @@
 #ifndef SIGNERS_MANAGE_WIDGET_H
 #define SIGNERS_MANAGE_WIDGET_H
 
+#include <QItemSelectionModel>
 #include <QWidget>
 #include <ApplicationSettings.h>
 
@@ -25,11 +26,14 @@ class SignerKeysWidget : public QWidget
    Q_OBJECT
 
 public:
-   explicit SignerKeysWidget(const std::shared_ptr<SignersProvider> &signersProvider
+   [[deprecated]] explicit SignerKeysWidget(const std::shared_ptr<SignersProvider> &signersProvider
       , const std::shared_ptr<ApplicationSettings> &appSettings, QWidget *parent = nullptr);
+   explicit SignerKeysWidget(QWidget* parent = nullptr);
    ~SignerKeysWidget();
 
    void setRowSelected(int row);
+
+   void onSignerSettings(const QList<SignerHost>&, int idxCur);
 
 public slots:
    void onAddSignerKey();
@@ -41,6 +45,12 @@ public slots:
 
 signals:
    void needClose();
+   void addSigner(const SignerHost&);
+   void delSigner(int);
+   void updSigner(int, const SignerHost&);
+
+private slots:
+   void onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
 
 private:
    void setupSignerFromSelected(bool needUpdate);
@@ -53,8 +63,9 @@ private:
    std::unique_ptr<Ui::SignerKeysWidget> ui_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::shared_ptr<SignersProvider> signersProvider_;
+   QList<SignerHost> signers_;
 
-   SignersModel *signersModel_;
+   SignersModel* signersModel_{ nullptr };
 };
 
 #endif // SIGNERS_MANAGE_WIDGET_H

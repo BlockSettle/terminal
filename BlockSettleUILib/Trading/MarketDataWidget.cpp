@@ -34,6 +34,36 @@ MarketDataWidget::MarketDataWidget(QWidget* parent)
    , mdSortFilterModel_(nullptr)
 {
    ui_->setupUi(this);
+
+   marketDataModel_ = new MarketDataModel({}, ui_->treeViewMarketData);
+   mdSortFilterModel_ = new MDSortFilterProxyModel(ui_->treeViewMarketData);
+   mdSortFilterModel_->setSourceModel(marketDataModel_);
+
+   ui_->treeViewMarketData->setModel(mdSortFilterModel_);
+   ui_->treeViewMarketData->setSortingEnabled(true);
+
+   ui_->treeViewMarketData->setHeader(mdHeader_.get());
+   ui_->treeViewMarketData->header()->setSortIndicator(static_cast<int>(MarketDataModel::MarketDataColumns::First)
+      , Qt::AscendingOrder);
+   ui_->treeViewMarketData->header()->resizeSection(static_cast<int>(MarketDataModel::MarketDataColumns::EmptyColumn)
+      , EMPTY_COLUMN_WIDTH);
+
+   connect(marketDataModel_, &QAbstractItemModel::rowsInserted, [this]() {
+      if (mdHeader_ != nullptr) {
+         mdHeader_->setEnabled(true);
+      }
+   });
+   connect(mdSortFilterModel_, &QAbstractItemModel::rowsInserted, this, &MarketDataWidget::resizeAndExpand);
+   connect(marketDataModel_, &MarketDataModel::needResize, this, &MarketDataWidget::resizeAndExpand);
+
+   connect(ui_->treeViewMarketData, &QTreeView::clicked, this, &MarketDataWidget::clicked);
+   connect(ui_->treeViewMarketData->selectionModel(), &QItemSelectionModel::currentChanged
+      , this, &MarketDataWidget::onSelectionChanged);
+
+   connect(ui_->pushButtonMDConnection, &QPushButton::clicked, this
+      , &MarketDataWidget::ChangeMDSubscriptionState);
+
+   ui_->pushButtonMDConnection->setText(tr("Subscribe"));
 }
 
 MarketDataWidget::~MarketDataWidget()
@@ -50,6 +80,12 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
       settingVisibility_ = param;
       visSettings = appSettings->get<QStringList>(settingVisibility_);
       appSettings_ = appSettings;
+   }
+   if (marketDataModel_) {
+      marketDataModel_->deleteLater();
+   }
+   if (mdSortFilterModel_) {
+      mdSortFilterModel_->deleteLater();
    }
    marketDataModel_ = new MarketDataModel(visSettings, ui_->treeViewMarketData);
    mdSortFilterModel_ = new MDSortFilterProxyModel(ui_->treeViewMarketData);
@@ -134,10 +170,23 @@ void MarketDataWidget::OnMDDisconnected()
 
 void MarketDataWidget::ChangeMDSubscriptionState()
 {
-   if (mdProvider_->IsConnectionActive()) {
-      mdProvider_->DisconnectFromMDSource();
-   } else {
-      mdProvider_->SubscribeToMD();
+   if (mdProvider_) {
+      if (mdProvider_->IsConnectionActive()) {
+         mdProvider_->DisconnectFromMDSource();
+      } else {
+         mdProvider_->SubscribeToMD();
+      }
+   }
+   else {
+      if (envConf_ == ApplicationSettings::EnvConfiguration::Unknown) {
+         return;  // pop up error?
+      }
+      if (connected_) {
+         emit needMdDisconnect();
+      }
+      else {
+         emit needMdConnection(envConf_);
+      }
    }
 }
 
@@ -179,6 +228,29 @@ MarketSelectedInfo MarketDataWidget::getCurrentlySelectedInfo() const
 
    const QModelIndex index = ui_->treeViewMarketData->selectionModel()->currentIndex();
    return getRowInfo(index);
+}
+
+void MarketDataWidget::onMDConnected()
+{
+   connected_ = true;
+   OnMDConnected();
+}
+
+void MarketDataWidget::onMDDisconnected()
+{
+   connected_ = false;
+   OnMDDisconnected();
+}
+
+void MarketDataWidget::onMDUpdated(bs::network::Asset::Type assetType
+   , const QString& security, const bs::network::MDFields& fields)
+{
+   marketDataModel_->onMDUpdated(assetType, security, fields);
+}
+
+void MarketDataWidget::onEnvConfig(int value)
+{
+   envConf_ = static_cast<ApplicationSettings::EnvConfiguration>(value);
 }
 
 void MarketDataWidget::onMDRejected(const std::string &security, const std::string &reason)

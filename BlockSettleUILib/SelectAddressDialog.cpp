@@ -38,14 +38,68 @@ SelectAddressDialog::SelectAddressDialog(const std::shared_ptr<bs::sync::hd::Gro
    init();
 }
 
+SelectAddressDialog::SelectAddressDialog(QWidget* parent
+   , AddressListModel::AddressType addrType)
+   : QDialog(parent)
+   , ui_(new Ui::SelectAddressDialog)
+   , addrType_(addrType)
+{
+   ui_->setupUi(this);
+
+   model_ = std::make_unique<AddressListModel>(ui_->treeView, addrType);
+   connect(model_.get(), &AddressListModel::needExtAddresses, this, &SelectAddressDialog::needExtAddresses);
+   connect(model_.get(), &AddressListModel::needIntAddresses, this, &SelectAddressDialog::needIntAddresses);
+   connect(model_.get(), &AddressListModel::needUsedAddresses, this, &SelectAddressDialog::needUsedAddresses);
+   connect(model_.get(), &AddressListModel::needAddrComments, this, &SelectAddressDialog::needAddrComments);
+
+   ui_->treeView->setModel(model_.get());
+
+   ui_->treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
+   connect(ui_->treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &SelectAddressDialog::onSelectionChanged);
+   connect(ui_->treeView, &QTreeView::doubleClicked, this, &SelectAddressDialog::onDoubleClicked);
+
+   connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &SelectAddressDialog::reject);
+   connect(ui_->pushButtonSelect, &QPushButton::clicked, this, &SelectAddressDialog::accept);
+}
+
 SelectAddressDialog::~SelectAddressDialog() = default;
+
+void SelectAddressDialog::setWallets(const AddressListModel::Wallets& wallets)
+{
+   model_->setWallets(wallets, false, false);
+   onSelectionChanged();
+}
+
+void SelectAddressDialog::onAddresses(const std::string& walletId
+   , const std::vector<bs::sync::Address>& addrs)
+{
+   model_->onAddresses(walletId, addrs);
+}
+
+void SelectAddressDialog::onAddressComments(const std::string& walletId
+   , const std::map<bs::Address, std::string>& addrComments)
+{
+   model_->onAddressComments(walletId, addrComments);
+}
+
+void SelectAddressDialog::onAddressBalances(const std::string& walletId
+   , const std::vector<bs::sync::WalletBalanceData::AddressBalance>& addrBal)
+{
+   model_->onAddressBalances(walletId, addrBal);
+}
 
 void SelectAddressDialog::init()
 {
    ui_->setupUi(this);
 
    model_ = std::make_unique<AddressListModel>(walletsMgr_, ui_->treeView, addrType_);
-   model_->setWallets(wallets_, false, false);
+   std::vector<bs::sync::WalletInfo> walletsInfo;
+   for (const auto &wallet : wallets_) {
+      const auto leaf = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(wallet);
+      walletsInfo.push_back(bs::sync::WalletInfo::fromLeaf(leaf));
+   }
+   model_->setWallets(walletsInfo, false, false);
    ui_->treeView->setModel(model_.get());
 
    ui_->treeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);

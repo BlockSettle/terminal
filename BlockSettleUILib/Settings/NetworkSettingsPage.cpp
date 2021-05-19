@@ -53,27 +53,43 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
       // workaround here - wrap widget by QDialog
       // TODO: fix stylesheet to support popup widgets
 
-      QDialog *d = new QDialog(this);
-      QVBoxLayout *l = new QVBoxLayout(d);
-      l->setContentsMargins(0,0,0,0);
-      d->setLayout(l);
-      d->setWindowTitle(tr("BlockSettleDB connection"));
-      d->resize(847, 593);
+      QDialog *dlg = new QDialog(this);
+      QVBoxLayout *layout = new QVBoxLayout(dlg);
+      layout->setContentsMargins(0,0,0,0);
+      dlg->setLayout(layout);
+      dlg->setWindowTitle(tr("BlockSettleDB connection"));
+      dlg->resize(847, 593);  //FIXME: use custom dialog from resources
 
-      ArmoryServersWidget *armoryServersWidget = new ArmoryServersWidget(armoryServersProvider_, appSettings_, this);
+      armoryServersWidget_ =  appSettings_
+         ? new ArmoryServersWidget(armoryServersProvider_, appSettings_, this)
+         : new ArmoryServersWidget(this);
 
 //      armoryServersWidget->setWindowModality(Qt::ApplicationModal);
 //      armoryServersWidget->setWindowFlags(Qt::Dialog);
-      l->addWidget(armoryServersWidget);
+      layout->addWidget(armoryServersWidget_);
 
-      connect(armoryServersWidget, &ArmoryServersWidget::reconnectArmory, this, [this](){
+      connect(dlg, &QDialog::finished, [this] {
+         armoryServersWidget_->deleteLater();
+         armoryServersWidget_ = nullptr;
+      });
+      connect(armoryServersWidget_, &ArmoryServersWidget::reconnectArmory, this, [this](){
          emit reconnectArmory();
       });
-      connect(armoryServersWidget, &ArmoryServersWidget::needClose, this, [d](){
-         d->reject();
+      connect(armoryServersWidget_, &ArmoryServersWidget::addServer, this
+         , &NetworkSettingsPage::addArmoryServer);
+      connect(armoryServersWidget_, &ArmoryServersWidget::setServer, this
+         , &NetworkSettingsPage::setArmoryServer);
+      connect(armoryServersWidget_, &ArmoryServersWidget::delServer, this
+         , &NetworkSettingsPage::delArmoryServer);
+      connect(armoryServersWidget_, &ArmoryServersWidget::updServer, this
+         , &NetworkSettingsPage::updArmoryServer);
+      connect(armoryServersWidget_, &ArmoryServersWidget::needClose, this, [dlg](){
+         dlg->reject();
       });
 
-      d->exec();
+      armoryServersWidget_->onArmoryServers(armoryServers_, armorySrvCurrent_
+         , armorySrvConnected_);
+      dlg->exec();
       emit armoryServerChanged();
       // Switch env if needed
       onArmorySelected(ui_->comboBoxArmoryServer->currentIndex());
@@ -101,14 +117,42 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
    });
 }
 
+void NetworkSettingsPage::init(const ApplicationSettings::State& state)
+{
+   if (state.find(ApplicationSettings::envConfiguration) == state.end()) {
+      return;  // not our snapshot
+   }
+   SettingsPage::init(state);
+}
+
+void NetworkSettingsPage::onArmoryServers(const QList<ArmoryServer>& servers
+   , int idxCur, int idxConn)
+{
+   armoryServers_ = servers;
+   armorySrvCurrent_ = idxCur;
+   armorySrvConnected_ = idxConn;
+   if (armoryServerModel_) {
+      armoryServerModel_->onArmoryServers(servers, idxCur, idxConn);
+   }
+   if (armoryServersWidget_) {
+      armoryServersWidget_->onArmoryServers(servers, idxCur, idxConn);
+   }
+   displayArmorySettings();
+}
+
 void NetworkSettingsPage::initSettings()
 {
-   armoryServerModel_ = new ArmoryServersViewModel(armoryServersProvider_);
+   if (armoryServersProvider_) {
+      armoryServerModel_ = new ArmoryServersViewModel(armoryServersProvider_);
+      connect(armoryServersProvider_.get(), &ArmoryServersProvider::dataChanged, this, &NetworkSettingsPage::displayArmorySettings);
+   }
+   else {
+      armoryServerModel_ = new ArmoryServersViewModel(this);
+   }
    armoryServerModel_->setSingleColumnMode(true);
    armoryServerModel_->setHighLightSelectedServer(false);
    ui_->comboBoxArmoryServer->setModel(armoryServerModel_);
 
-   connect(armoryServersProvider_.get(), &ArmoryServersProvider::dataChanged, this, &NetworkSettingsPage::displayArmorySettings);
    connect(ui_->comboBoxEnvironment, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &NetworkSettingsPage::onEnvSelected);
    connect(ui_->comboBoxArmoryServer, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &NetworkSettingsPage::onArmorySelected);
 }
@@ -125,19 +169,32 @@ void NetworkSettingsPage::display()
 
 void NetworkSettingsPage::displayArmorySettings()
 {
-   // set index of selected server
-   ArmoryServer selectedServer = armoryServersProvider_->getArmorySettings();
-   int selectedServerIndex = armoryServersProvider_->indexOfCurrent();
-
-   // Prevent NetworkSettingsPage::onArmorySelected call
-   auto oldBlock = ui_->comboBoxArmoryServer->blockSignals(true);
+   ArmoryServer selectedServer;
+   int selectedServerIndex = 0;
+   ArmoryServer connectedServerSettings;
+   int connectedServerIndex = 0;
+   if (armoryServersProvider_) {
+      // set index of selected server
+      selectedServer = armoryServersProvider_->getArmorySettings();
+      selectedServerIndex = armoryServersProvider_->indexOfCurrent();
+      connectedServerSettings = armoryServersProvider_->connectedArmorySettings();
+      connectedServerIndex = armoryServersProvider_->indexOfConnected();
+   }
+   else {
+      selectedServerIndex = armorySrvCurrent_;
+      if ((selectedServerIndex >= armoryServers_.size()) || (selectedServerIndex < 0)) {
+         return;
+      }
+      selectedServer = armoryServers_.at(selectedServerIndex);
+      connectedServerIndex = armorySrvConnected_;
+      if ((connectedServerIndex >= armoryServers_.size()) || (connectedServerIndex < 0)) {
+         return;
+      }
+      connectedServerSettings = armoryServers_.at(connectedServerIndex);
+   }
    ui_->comboBoxArmoryServer->setCurrentIndex(selectedServerIndex);
-   ui_->comboBoxArmoryServer->blockSignals(oldBlock);
 
    // display info of connected server
-   ArmorySettings connectedServerSettings = armoryServersProvider_->connectedArmorySettings();
-   int connectedServerIndex = armoryServersProvider_->indexOfConnected();
-
    ui_->labelArmoryServerNetwork->setText(connectedServerSettings.netType == NetworkType::MainNet ? tr("MainNet") : tr("TestNet"));
    ui_->labelArmoryServerAddress->setText(connectedServerSettings.armoryDBIp);
    ui_->labelArmoryServerPort->setText(QString::number(connectedServerSettings.armoryDBPort));
@@ -155,7 +212,13 @@ void NetworkSettingsPage::displayArmorySettings()
 
 void NetworkSettingsPage::displayEnvironmentSettings()
 {
-   auto env = appSettings_->get<int>(ApplicationSettings::envConfiguration);
+   int env = 0;
+   if (appSettings_) {
+      env = appSettings_->get<int>(ApplicationSettings::envConfiguration);
+   }
+   else {
+      env = settings_.at(ApplicationSettings::envConfiguration).toInt();
+   }
    ui_->comboBoxEnvironment->setCurrentIndex(env);
    onEnvSelected(env);
 }
@@ -169,67 +232,80 @@ void NetworkSettingsPage::applyLocalSignerNetOption()
 
 void NetworkSettingsPage::reset()
 {
-   for (const auto &setting : {
-        ApplicationSettings::runArmoryLocally,
-        ApplicationSettings::netType,
-        ApplicationSettings::envConfiguration,
-        ApplicationSettings::armoryDbIp,
-        ApplicationSettings::armoryDbPort}) {
-      appSettings_->reset(setting, false);
+   const std::vector<ApplicationSettings::Setting> resetList{
+      ApplicationSettings::runArmoryLocally, ApplicationSettings::netType
+      , ApplicationSettings::envConfiguration, ApplicationSettings::armoryDbIp
+      , ApplicationSettings::armoryDbPort
+   };
+   if (appSettings_) {
+      for (const auto& setting : resetList) {
+         appSettings_->reset(setting, false);
+      }
+      display();
    }
-   display();
+   else {
+      emit resetSettings(resetList);
+   }
 }
 
 void NetworkSettingsPage::apply()
 {
-   armoryServersProvider_->setupServer(ui_->comboBoxArmoryServer->currentIndex());
+   if (armoryServersProvider_ && appSettings_ && signersProvider_) {
+      armoryServersProvider_->setupServer(ui_->comboBoxArmoryServer->currentIndex());
 
-   appSettings_->set(ApplicationSettings::envConfiguration, ui_->comboBoxEnvironment->currentIndex());
+      appSettings_->set(ApplicationSettings::envConfiguration, ui_->comboBoxEnvironment->currentIndex());
 
-   if (signersProvider_->currentSignerIsLocal()) {
-      applyLocalSignerNetOption();
+      if (signersProvider_->currentSignerIsLocal()) {
+         applyLocalSignerNetOption();
+      }
+   }
+   else {
+      emit setArmoryServer(ui_->comboBoxArmoryServer->currentIndex());
+      emit putSetting(ApplicationSettings::envConfiguration, ui_->comboBoxEnvironment->currentIndex());
    }
 }
 
 void NetworkSettingsPage::onEnvSelected(int envIndex)
 {
-   auto env = ApplicationSettings::EnvConfiguration(envIndex);
-
    if (disableSettingUpdate_) {
       return;
    }
-
-   auto armoryServers = armoryServersProvider_->servers();
-   auto armoryIndex = ui_->comboBoxArmoryServer->currentIndex();
+   const auto env = ApplicationSettings::EnvConfiguration(envIndex);
+   const int armoryIndex = ui_->comboBoxArmoryServer->currentIndex();
+   int serverIndex = armoryIndex;
+   const auto &armoryServers = armoryServersProvider_ ? armoryServersProvider_->servers()
+      : armoryServers_;
    if (armoryIndex < 0 || armoryIndex >= armoryServers.count()) {
       return;
    }
    auto armoryServer = armoryServers[armoryIndex];
-
    if ((armoryServer.netType == NetworkType::MainNet) != (env == ApplicationSettings::EnvConfiguration::Production)) {
       if (env == ApplicationSettings::EnvConfiguration::Production) {
-         ui_->comboBoxArmoryServer->setCurrentIndex(armoryServersProvider_->getIndexOfMainNetServer());
-      }
-      else {
-         ui_->comboBoxArmoryServer->setCurrentIndex(armoryServersProvider_->getIndexOfTestNetServer());
+         serverIndex = ArmoryServersProvider::getIndexOfMainNetServer();
+      } else {
+         serverIndex = ArmoryServersProvider::getIndexOfTestNetServer();
       }
    }
+   ui_->comboBoxArmoryServer->setCurrentIndex(serverIndex);
 }
 
 void NetworkSettingsPage::onArmorySelected(int armoryIndex)
 {
-   auto armoryServers = armoryServersProvider_->servers();
+   int envIndex = ui_->comboBoxEnvironment->currentIndex();
+   auto armoryServers = armoryServersProvider_ ? armoryServersProvider_->servers()
+      : armoryServers_;
    if (armoryIndex < 0 || armoryIndex >= armoryServers.count()) {
       return;
    }
    auto armoryServer = armoryServers[armoryIndex];
-   auto envSelected = static_cast<ApplicationSettings::EnvConfiguration>(ui_->comboBoxEnvironment->currentIndex());
+   const auto envSelected = static_cast<ApplicationSettings::EnvConfiguration>(ui_->comboBoxEnvironment->currentIndex());
 
    if ((armoryServer.netType == NetworkType::MainNet) != (envSelected == ApplicationSettings::EnvConfiguration::Production)) {
       if (armoryServer.netType == NetworkType::MainNet) {
-         ui_->comboBoxEnvironment->setCurrentIndex(static_cast<int>(ApplicationSettings::EnvConfiguration::Production));
+         envIndex = static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
       } else {
-         ui_->comboBoxEnvironment->setCurrentIndex(static_cast<int>(ApplicationSettings::EnvConfiguration::Test));
+         envIndex = static_cast<int>(ApplicationSettings::EnvConfiguration::Test);
       }
    }
+   ui_->comboBoxEnvironment->setCurrentIndex(envIndex);
 }

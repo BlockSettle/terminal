@@ -491,7 +491,7 @@ TEST(TestAddress, FromRecipient)
    {
       //p2pkh
       auto addr = bs::Address::fromPubKey(pubkey, AddressEntryType_P2PKH);
-      auto recipient = addr.getRecipient(bs::XBTAmount((uint64_t)COIN));
+      auto recipient = addr.getRecipient(bs::XBTAmount((int64_t)COIN));
       auto addrFromRecipient = bs::Address::fromRecipient(recipient);
 
       EXPECT_EQ(addrFromRecipient.unprefixed(), addr.unprefixed());
@@ -503,7 +503,7 @@ TEST(TestAddress, FromRecipient)
    {
       //p2wpkh
       auto addr = bs::Address::fromPubKey(pubkey, AddressEntryType_P2WPKH);
-      auto recipient = addr.getRecipient(bs::XBTAmount((uint64_t)COIN));
+      auto recipient = addr.getRecipient(bs::XBTAmount((int64_t)COIN));
       auto addrFromRecipient = bs::Address::fromRecipient(recipient);
 
       EXPECT_EQ(addrFromRecipient.unprefixed(), addr.unprefixed());
@@ -518,7 +518,7 @@ TEST(TestAddress, FromRecipient)
       prefixed.append(AddressEntry::getPrefixByte(AddressEntryType_P2SH));
       prefixed.append(CryptoPRNG::generateRandom(20));
       auto addr = bs::Address::fromHash(prefixed);
-      auto recipient = addr.getRecipient(bs::XBTAmount((uint64_t)COIN));
+      auto recipient = addr.getRecipient(bs::XBTAmount((int64_t)COIN));
       auto addrFromRecipient = bs::Address::fromRecipient(recipient);
 
       EXPECT_EQ(addrFromRecipient.unprefixed(), addr.unprefixed());
@@ -531,7 +531,7 @@ TEST(TestAddress, FromRecipient)
       //p2sh - p2pk
       auto addr = bs::Address::fromPubKey(pubkey,
          AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2PK));
-      auto recipient = addr.getRecipient(bs::XBTAmount((uint64_t)COIN));
+      auto recipient = addr.getRecipient(bs::XBTAmount((int64_t)COIN));
       auto addrFromRecipient = bs::Address::fromRecipient(recipient);
 
       EXPECT_EQ(addrFromRecipient.unprefixed(), addr.unprefixed());
@@ -544,7 +544,7 @@ TEST(TestAddress, FromRecipient)
       //p2sh - p2pkh
       auto addr = bs::Address::fromPubKey(pubkey,
          AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2PKH));
-      auto recipient = addr.getRecipient(bs::XBTAmount((uint64_t)COIN));
+      auto recipient = addr.getRecipient(bs::XBTAmount((int64_t)COIN));
       auto addrFromRecipient = bs::Address::fromRecipient(recipient);
 
       EXPECT_EQ(addrFromRecipient.unprefixed(), addr.unprefixed());
@@ -557,7 +557,7 @@ TEST(TestAddress, FromRecipient)
       //p2sh - p2wpkh
       auto addr = bs::Address::fromPubKey(pubkey,
          AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
-      auto recipient = addr.getRecipient(bs::XBTAmount((uint64_t)COIN));
+      auto recipient = addr.getRecipient(bs::XBTAmount((int64_t)COIN));
       auto addrFromRecipient = bs::Address::fromRecipient(recipient);
 
       EXPECT_EQ(addrFromRecipient.unprefixed(), addr.unprefixed());
@@ -580,7 +580,7 @@ TEST(TestAddress, FromRecipient)
 
       //p2wsh | multisig
       auto addr = bs::Address::fromMultisigScript(msScript, AddressEntryType_P2WSH);
-      auto recipient = addr.getRecipient(bs::XBTAmount((uint64_t)COIN));
+      auto recipient = addr.getRecipient(bs::XBTAmount((int64_t)COIN));
       auto addrFromRecipient = bs::Address::fromRecipient(recipient);
 
       EXPECT_EQ(addrFromRecipient.unprefixed(), addr.unprefixed());

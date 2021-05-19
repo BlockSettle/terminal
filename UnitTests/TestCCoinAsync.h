@@ -18,8 +18,9 @@
 
 #include "Address.h"
 #include "BlockchainMonitor.h"
-#include "TestEnv.h"
 #include "CCLogicAsync.h"
+#include "SignContainer.h"
+#include "TestEnv.h"
 
 namespace bs {
    namespace core {
@@ -68,7 +69,7 @@ public:
 };
 
 
-class TestCCoinAsync : public ::testing::Test
+class TestCCoinAsync : public ::testing::Test, public SignerCallbackTarget
 {
 public:
    using UTXOs = std::vector<UTXO>;

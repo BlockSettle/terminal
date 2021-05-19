@@ -35,29 +35,44 @@ class SelectAddressDialog : public QDialog
 Q_OBJECT
 
 public:
-   SelectAddressDialog(const std::shared_ptr<bs::sync::WalletsManager> &
+   [[deprecated]] SelectAddressDialog(const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<bs::sync::Wallet> &, QWidget* parent = nullptr
       , AddressListModel::AddressType addrType = AddressListModel::AddressType::All);
-   SelectAddressDialog(const std::shared_ptr<bs::sync::hd::Group> &, QWidget* parent = nullptr
+   [[deprecated]] SelectAddressDialog(const std::shared_ptr<bs::sync::hd::Group> &, QWidget* parent = nullptr
+      , AddressListModel::AddressType addrType = AddressListModel::AddressType::All);
+   SelectAddressDialog(QWidget* parent
       , AddressListModel::AddressType addrType = AddressListModel::AddressType::All);
    ~SelectAddressDialog() override;
 
    bs::Address getSelectedAddress() const;
+   void setWallets(const AddressListModel::Wallets&);
+
+   void onAddresses(const std::string& walletId, const std::vector<bs::sync::Address>&);
+   void onAddressComments(const std::string& walletId
+      , const std::map<bs::Address, std::string>&);
+   void onAddressBalances(const std::string& walletId
+      , const std::vector<bs::sync::WalletBalanceData::AddressBalance>&);
+
+signals:
+   void needExtAddresses(const std::string& walletId);
+   void needIntAddresses(const std::string& walletId);
+   void needUsedAddresses(const std::string& walletId);
+   void needAddrComments(const std::string& walletId, const std::vector<bs::Address>&);
 
 public slots:
    void onSelectionChanged();
    void onDoubleClicked(const QModelIndex& index);
 
 private:
-   void init();
+   [[deprecated]] void init();
    bs::Address getAddress(const QModelIndex& index) const;
 
 private:
    std::unique_ptr<Ui::SelectAddressDialog>  ui_;
-   std::vector<std::shared_ptr<bs::sync::Wallet>>  wallets_;
-   std::shared_ptr<bs::sync::WalletsManager>       walletsMgr_;
-   const AddressListModel::AddressType             addrType_;
-   std::unique_ptr<AddressListModel>               model_;
+   [[deprecated]] std::vector<std::shared_ptr<bs::sync::Wallet>>  wallets_;
+   [[deprecated]] std::shared_ptr<bs::sync::WalletsManager>       walletsMgr_;
+   [[deprecated]] const AddressListModel::AddressType             addrType_;
+   std::unique_ptr<AddressListModel>         model_;
    bs::Address                   selectedAddr_;
 };
 

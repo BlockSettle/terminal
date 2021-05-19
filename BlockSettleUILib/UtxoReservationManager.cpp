@@ -234,7 +234,7 @@ void bs::UTXOReservationManager::getBestXbtUtxoSet(const HDWalletId& walletId, b
 
 BTCNumericTypes::balance_type bs::UTXOReservationManager::getAvailableCCUtxoSum(const CCProductName& CCProduct) const
 {
-   const auto& ccWallet = walletsManager_->getCCWallet(CCProduct);
+   const auto& ccWallet = walletsManager_ ? walletsManager_->getCCWallet(CCProduct) : nullptr;
    if (!ccWallet) {
       return {};
    }

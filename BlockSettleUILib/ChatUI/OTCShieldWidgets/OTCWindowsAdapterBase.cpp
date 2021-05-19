@@ -228,7 +228,7 @@ BTCNumericTypes::balance_type OTCWindowsAdapterBase::getXBTSpendableBalanceFromC
    }
    else {
       for (const auto &utxo : selectedUTXO_) {
-         totalBalance += bs::XBTAmount(utxo.getValue()).GetValueBitcoin();
+         totalBalance += bs::XBTAmount((int64_t)utxo.getValue()).GetValueBitcoin();
       }
    }
 

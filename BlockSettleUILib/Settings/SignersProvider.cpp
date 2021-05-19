@@ -259,8 +259,9 @@ void SignersProvider::setupSigner(int index, bool needUpdate)
    if (index >= 0 && index < signerList.size()) {
       appSettings_->set(ApplicationSettings::signerIndex, index);
 
-      if (needUpdate)
+      if (needUpdate) {
          emit dataChanged();
+      }
    }
 }
 

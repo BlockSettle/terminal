@@ -234,7 +234,7 @@ OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
    , applicationSettings_(applicationSettings)
    , params_(std::move(params))
 {
-   connect(signContainer.get(), &SignContainer::TXSigned, this, &OtcClient::onTxSigned);
+//   connect(signContainer.get(), &SignContainer::TXSigned, this, &OtcClient::onTxSigned);
 }
 
 OtcClient::~OtcClient() = default;
@@ -1809,7 +1809,7 @@ void OtcClient::updatePublicLists()
 
 void OtcClient::initTradesArgs(bs::tradeutils::Args &args, const PeerPtr &peer, const std::string &settlementId)
 {
-   args.amount = bs::XBTAmount(static_cast<uint64_t>(peer->offer.amount));
+   args.amount = bs::XBTAmount(static_cast<int64_t>(peer->offer.amount));
    args.settlementId = BinaryData::CreateFromHex(settlementId);
    args.walletsMgr = walletsMgr_;
    args.ourAuthAddress = bs::Address::fromAddressString(peer->offer.authAddress);

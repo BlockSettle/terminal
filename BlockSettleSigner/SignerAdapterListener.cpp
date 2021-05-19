@@ -26,6 +26,9 @@
 #include "StringUtils.h"
 #include "SystemFileUtils.h"
 
+#include "bs_signer.pb.h"
+#include "headless.pb.h"
+
 using namespace Blocksettle::Communication;
 
 class HeadlessContainerCallbacksImpl : public HeadlessContainerCallbacks
@@ -298,7 +301,7 @@ void SignerAdapterListener::sendStatusUpdate()
    callbacks_->ccNamesReceived(!walletsMgr_->ccLeaves().empty());
 }
 
-void SignerAdapterListener::sendControlPasswordStatusUpdate(signer::ControlPasswordStatus status)
+void SignerAdapterListener::sendControlPasswordStatusUpdate(const signer::ControlPasswordStatus &status)
 {
    signer::UpdateControlPasswordStatus evt;
    evt.set_controlpasswordstatus(status);

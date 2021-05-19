@@ -14,6 +14,7 @@
 #include "ArmoryConnection.h"
 #include "BinaryData.h"
 #include "CCFileManager.h"
+#include "SignerDefs.h"
 #include "TxClasses.h"
 
 #include <QMap>
@@ -74,10 +75,11 @@ public:
    explicit TransactionDetailsWidget(QWidget *parent = nullptr);
    ~TransactionDetailsWidget() override;
 
-   void init(const std::shared_ptr<ArmoryConnection> &
+   [[deprecated]] void init(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<bs::sync::CCDataResolver> &);
+   void init(const std::shared_ptr<spdlog::logger>&);
 
    void populateTransactionWidget(const TxHash &rpcTXID,
       const bool& firstPass = true);
@@ -88,14 +90,20 @@ public:
       colWallet
     };
 
+    void onTXDetails(const std::vector<bs::sync::TXWalletDetails>&);
+
+public slots:
+   void onNewBlock(unsigned int blockNum);
+
 signals:
    void addressClicked(QString addressId);
    void txHashClicked(QString txHash);
    void finished() const;
+   void needTXDetails(const std::vector<bs::sync::TXWallet>&, bool useCache
+      , const bs::Address&);
 
 protected slots:
    void onAddressClicked(QTreeWidgetItem *item, int column);
-   void onNewBlock(unsigned int);
 
 protected:
    void loadTreeIn(CustomTreeWidget *tree);
@@ -108,7 +116,7 @@ private:
    void updateCCInputs();
    void checkTxForCC(const Tx &, QTreeWidget *);
 
-   void processTxData(const Tx &tx);
+   [[deprecated]] void processTxData(const Tx &tx);
 
    void addItem(QTreeWidget *tree, const QString &address, const uint64_t amount
       , const QString &wallet, const BinaryData &txHash, const int txIndex = -1);
@@ -123,6 +131,8 @@ private:
    std::shared_ptr<bs::sync::CCDataResolver> ccResolver_;
 
    Tx curTx_; // The Tx being analyzed in the widget.
+   BinaryData  curTxHash_;
+   uint32_t    topBlock_{ 0 };
 
    // Data captured from Armory callbacks.
    AsyncClient::TxBatchResult prevTxMap_; // Prev Tx hash / Prev Tx map.

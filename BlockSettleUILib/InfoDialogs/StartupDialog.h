@@ -36,8 +36,9 @@ public:
   explicit StartupDialog(bool showLicense, QWidget *parent = nullptr);
   ~StartupDialog() override;
 
-  void init(const std::shared_ptr<ApplicationSettings> &appSettings);
-  void applySelectedConnectivity();
+  [[deprecated]] void init(const std::shared_ptr<ApplicationSettings> &appSettings);
+  [[deprecated]] void applySelectedConnectivity();
+  NetworkType getSelectedNetworkType() const;
 
 private slots:
   void onBack();
@@ -48,13 +49,12 @@ private:
   void updateStatus();
   void adjustPosition();
   void setupConnectivityList();
-  NetworkType getSelectedNetworkType() const;
 
 private:
   std::unique_ptr<Ui::StartupDialog> ui_;
   bool showLicense_;
 
-  std::shared_ptr<ApplicationSettings>   appSettings_;
+  std::shared_ptr<ApplicationSettings>   appSettings_;   //obsolete
 };
 
 #endif // __STARTUPDIALOG_H__

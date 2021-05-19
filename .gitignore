@@ -126,3 +126,4 @@ build_terminal/
 generated_proto/
 terminal.*/
 BlockSettleHW/ledger/hidapi/*
+GUI/QtWidgets/ui/*

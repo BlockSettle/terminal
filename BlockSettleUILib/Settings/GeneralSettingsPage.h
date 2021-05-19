@@ -28,6 +28,7 @@ public:
    GeneralSettingsPage(QWidget* parent = nullptr);
    ~GeneralSettingsPage() override;
 
+   void init(const ApplicationSettings::State&) override;
    void display() override;
    void reset() override;
    void apply() override;
@@ -39,7 +40,7 @@ private slots:
    void onLogLevelChanged(int);
 
 private:
-   void checkSettings();
+   void checkLogSettings();
 
 signals:
    void requestDataEncryption();

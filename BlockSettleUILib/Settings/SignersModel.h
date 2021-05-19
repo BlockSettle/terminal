@@ -21,8 +21,9 @@
 class SignersModel : public QAbstractTableModel
 {
 public:
-   SignersModel(const std::shared_ptr<SignersProvider> &signersProvider
-                          , QObject *parent = nullptr);
+   [[deprecated]] SignersModel(const std::shared_ptr<SignersProvider> &signersProvider
+      , QObject *parent = nullptr);
+   SignersModel(QObject* parent = nullptr);
    ~SignersModel() noexcept = default;
 
    SignersModel(const SignersModel&) = delete;
@@ -40,12 +41,15 @@ public:
    void setHighLightSelectedServer(bool highLightSelectedServer);
    void setSingleColumnMode(bool singleColumnMode);
 
+   void onSignerSettings(const QList<SignerHost> &, int idxCur);
+
 public slots:
    void update();
 
 private:
    std::shared_ptr<SignersProvider> signersProvider_;
    QList<SignerHost> signers_;
+   int currentServerIndex_{ 0 };
 
    bool highLightSelectedServer_ = true;
    bool singleColumnMode_ = false;

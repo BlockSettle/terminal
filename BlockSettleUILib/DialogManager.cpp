@@ -23,8 +23,7 @@ namespace {
 
 DialogManager::DialogManager(const QWidget *mainWindow)
    : mainWindow_(mainWindow)
-{
-}
+{}
 
 void DialogManager::adjustDialogPosition(QDialog *dlg)
 {

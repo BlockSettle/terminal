@@ -137,7 +137,7 @@ static void FieldsToMap(bs::network::Asset::Type at, const bs::network::MDFields
          map[MarketDataModel::MarketDataColumns::DailyVol] = { getVolumeString(field.value, at), field.value };
          break;
       case bs::network::MDField::Reject:
-         map[MarketDataModel::MarketDataColumns::ColumnsCount] = { field.desc, 0 };
+         map[MarketDataModel::MarketDataColumns::ColumnsCount] = { field.levelQuantity, 0 };
          break;
       default:  break;
       }
@@ -156,7 +156,8 @@ bool MarketDataModel::isVisible(const QString &id) const
    return false;
 }
 
-void MarketDataModel::onMDUpdated(bs::network::Asset::Type assetType, const QString &security, bs::network::MDFields mdFields)
+void MarketDataModel::onMDUpdated(bs::network::Asset::Type assetType
+   , const QString &security, const bs::network::MDFields &mdFields)
 {
    if ((assetType == bs::network::Asset::Undefined) && security.isEmpty()) {  // Celer disconnected
       priceUpdates_.clear();

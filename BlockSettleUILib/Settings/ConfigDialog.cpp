@@ -27,14 +27,14 @@
 
 SettingsPage::SettingsPage(QWidget *parent)
    : QWidget(parent)
-{
-}
+{}
 
 void SettingsPage::init(const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
    , const std::shared_ptr<SignersProvider> &signersProvider
    , const std::shared_ptr<SignContainer> &signContainer
-   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr) {
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
+{
    appSettings_ = appSettings;
    armoryServersProvider_ = armoryServersProvider;
    signersProvider_ = signersProvider;
@@ -42,6 +42,18 @@ void SettingsPage::init(const std::shared_ptr<ApplicationSettings> &appSettings
    walletsMgr_ = walletsMgr;
    initSettings();
    display();
+}
+
+void SettingsPage::init(const ApplicationSettings::State& state)
+{
+   settings_ = state;
+   initSettings();
+   display();
+}
+
+void SettingsPage::onSetting(int setting, const QVariant& value)
+{
+   settings_[static_cast<ApplicationSettings::Setting>(setting)] = value;
 }
 
 
@@ -71,7 +83,7 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
 
    for (const auto &page : pages_) {
       page->init(appSettings_, armoryServersProvider_, signersProvider_, signContainer_, walletsMgr);
-      connect(page, &SettingsPage::illformedSettings, this, &ConfigDialog::illformedSettings);
+      connect(page, &SettingsPage::illformedSettings, this, &ConfigDialog::onIllformedSettings);
    }
 
    ui_->listWidget->setCurrentRow(0);
@@ -113,7 +125,65 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
    });
 }
 
+ConfigDialog::ConfigDialog(QWidget* parent)
+   : QDialog(parent)
+   , ui_(new Ui::ConfigDialog)
+{
+   ui_->setupUi(this);
+
+   pages_ = { ui_->pageGeneral, ui_->pageNetwork, ui_->pageSigner, ui_->pageDealing
+      , ui_->pageAPI };
+
+   for (const auto& page : pages_) {
+      connect(page, &SettingsPage::illformedSettings, this, &ConfigDialog::onIllformedSettings);
+      connect(page, &SettingsPage::putSetting, this, &ConfigDialog::putSetting);
+      connect(page, &SettingsPage::resetSettings, this, &ConfigDialog::resetSettings);
+   }
+   connect(ui_->pageNetwork, &NetworkSettingsPage::reconnectArmory, this, &ConfigDialog::reconnectArmory);
+   connect(ui_->pageNetwork, &NetworkSettingsPage::setArmoryServer, this, &ConfigDialog::setArmoryServer);
+   connect(ui_->pageNetwork, &NetworkSettingsPage::addArmoryServer, this, &ConfigDialog::addArmoryServer);
+   connect(ui_->pageNetwork, &NetworkSettingsPage::delArmoryServer, this, &ConfigDialog::delArmoryServer);
+   connect(ui_->pageNetwork, &NetworkSettingsPage::updArmoryServer, this, &ConfigDialog::updArmoryServer);
+   connect(ui_->pageSigner, &SignerSettingsPage::setSigner, this, &ConfigDialog::setSigner);
+
+   ui_->listWidget->setCurrentRow(0);
+   ui_->stackedWidget->setCurrentIndex(0);
+
+   connect(ui_->listWidget, &QListWidget::currentRowChanged, this, &ConfigDialog::onSelectionChanged);
+   connect(ui_->pushButtonSetDefault, &QPushButton::clicked, this, &ConfigDialog::onDisplayDefault);
+   connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &ConfigDialog::reject);
+   connect(ui_->pushButtonOk, &QPushButton::clicked, this, &ConfigDialog::onAcceptSettings);
+}
+
 ConfigDialog::~ConfigDialog() = default;
+
+void ConfigDialog::onSettingsState(const ApplicationSettings::State& state)
+{
+   if (prevState_.empty()) {
+      prevState_ = state;
+   }
+   for (const auto& page : pages_) {
+      page->init(state);
+   }
+}
+
+void ConfigDialog::onSetting(int setting, const QVariant& value)
+{
+   for (const auto& page : pages_) {
+      page->onSetting(setting, value);
+   }
+}
+
+void ConfigDialog::onArmoryServers(const QList<ArmoryServer>& servers, int idxCur, int idxConn)
+{
+   ui_->pageNetwork->onArmoryServers(servers, idxCur, idxConn);
+}
+
+void ConfigDialog::onSignerSettings(const QList<SignerHost>& signers
+   , const std::string& ownKey, int idxCur)
+{
+   ui_->pageSigner->onSignerSettings(signers, ownKey, idxCur);
+}
 
 void ConfigDialog::popupNetworkSettings()
 {
@@ -201,8 +271,9 @@ void ConfigDialog::onAcceptSettings()
    for (const auto &page : pages_) {
       page->apply();
    }
-
-   appSettings_->SaveSettings();
+   if (appSettings_) {
+      appSettings_->SaveSettings();
+   }
    accept();
 }
 
@@ -211,13 +282,18 @@ void ConfigDialog::onSelectionChanged(int currentRow)
    ui_->stackedWidget->setCurrentIndex(currentRow);
 }
 
-void ConfigDialog::illformedSettings(bool illformed)
+void ConfigDialog::onIllformedSettings(bool illformed)
 {
    ui_->pushButtonOk->setEnabled(!illformed);
 }
 
 void ConfigDialog::reject()
 {
-   appSettings_->setState(prevState_);
+   if (appSettings_) {
+      appSettings_->setState(prevState_);
+   }
+   else {
+      emit resetSettingsToState(prevState_);
+   }
    QDialog::reject();
 }

@@ -20,14 +20,18 @@ namespace Ui {
 
 class ApplicationSettings;
 class ArmoryServersViewModel;
+class ArmoryServersWidget;
 
 class NetworkSettingsPage : public SettingsPage
 {
    Q_OBJECT
-
 public:
    NetworkSettingsPage(QWidget* parent = nullptr);
    ~NetworkSettingsPage() override;
+
+   void init(const ApplicationSettings::State&) override;
+
+   void onArmoryServers(const QList<ArmoryServer>&, int idxCur, int idxConn);
 
 public slots:
    void initSettings() override;
@@ -38,6 +42,10 @@ public slots:
 signals:
    void reconnectArmory();
    void armoryServerChanged();
+   void setArmoryServer(int);
+   void addArmoryServer(const ArmoryServer&);
+   void delArmoryServer(int);
+   void updArmoryServer(int, const ArmoryServer&);
 
 private slots:
    void onEnvSelected(int index);
@@ -50,8 +58,12 @@ private:
 
 private:
    std::unique_ptr<Ui::NetworkSettingsPage> ui_;
-   ArmoryServersViewModel *armoryServerModel_;
+   ArmoryServersViewModel* armoryServerModel_{ nullptr };
+   ArmoryServersWidget* armoryServersWidget_{ nullptr };
    bool disableSettingUpdate_{true};
+   QList<ArmoryServer>  armoryServers_;
+   int   armorySrvCurrent_{ 0 };
+   int   armorySrvConnected_{ 0 };
 };
 
 #endif // __NETWORK_SETTINGS_PAGE_H__

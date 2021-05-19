@@ -37,7 +37,7 @@ public:
 
    void setShieldButtonAction(std::function<void(void)>&& action, bool oneShot = true);
 
-   void init(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
+   [[deprecated]] void init(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
       , const std::shared_ptr<AuthAddressManager> &authMgr
       , const std::shared_ptr<ApplicationSettings> &appSettings);
 

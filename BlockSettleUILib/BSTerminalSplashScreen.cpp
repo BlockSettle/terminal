@@ -40,11 +40,11 @@ BSTerminalSplashScreen::~BSTerminalSplashScreen() = default;
 void BSTerminalSplashScreen::SetTipText(const QString& tip)
 {
    progress_->setFormat(tip + QString::fromStdString(" %p%"));
-   QApplication::processEvents();
+//   QApplication::processEvents();
 }
 
 void BSTerminalSplashScreen::SetProgress(int progressValue)
 {
    progress_->setValue(progressValue);
-   QApplication::processEvents();
+//   QApplication::processEvents();
 }

@@ -15,13 +15,13 @@
 #include <QWidget>
 #include <QItemSelection>
 #include "ApplicationSettings.h"
+#include "CommonTypes.h"
 
 
 namespace Ui {
     class MarketDataWidget;
 };
 
-class ApplicationSettings;
 class MarketDataModel;
 class MarketDataProvider;
 class MDCallbacksQt;
@@ -45,10 +45,10 @@ class MarketDataWidget : public QWidget
 Q_OBJECT
 
 public:
-   MarketDataWidget(QWidget* parent = nullptr );
+   MarketDataWidget(QWidget* parent = nullptr);
    ~MarketDataWidget() override;
 
-   void init(const std::shared_ptr<ApplicationSettings> &appSettings, ApplicationSettings::Setting paramVis
+   [[deprecated]] void init(const std::shared_ptr<ApplicationSettings> &appSettings, ApplicationSettings::Setting paramVis
       , const std::shared_ptr<MarketDataProvider> &, const std::shared_ptr<MDCallbacksQt> &);
 
    TreeViewWithEnterKey* view() const;
@@ -56,12 +56,20 @@ public:
    void setAuthorized(bool authorized);
    MarketSelectedInfo getCurrentlySelectedInfo() const;
 
+   void onMDConnected();
+   void onMDDisconnected();
+   void onMDUpdated(bs::network::Asset::Type, const QString& security
+      , const bs::network::MDFields&);
+   void onEnvConfig(int);
+
 signals:
    void CurrencySelected(const MarketSelectedInfo& selectedInfo);
    void AskClicked(const MarketSelectedInfo& selectedInfo);
    void BidClicked(const MarketSelectedInfo& selectedInfo);
    void MDHeaderClicked();
    void clicked();
+   void needMdConnection(ApplicationSettings::EnvConfiguration);
+   void needMdDisconnect();
 
 private slots:
    void resizeAndExpand();
@@ -84,14 +92,16 @@ protected:
 
 private:
    std::unique_ptr<Ui::MarketDataWidget> ui_;
-   MarketDataModel         *              marketDataModel_;
-   MDSortFilterProxyModel  *              mdSortFilterModel_;
+   MarketDataModel* marketDataModel_{ nullptr };
+   MDSortFilterProxyModel* mdSortFilterModel_{ nullptr };
    std::shared_ptr<ApplicationSettings>   appSettings_;
    ApplicationSettings::Setting           settingVisibility_;
    std::shared_ptr<MDHeader>              mdHeader_;
    bool  filteredView_ = true;
    std::shared_ptr<MarketDataProvider>    mdProvider_;
-   bool authorized_{ false };
+   bool  authorized_{ false };
+   bool  connected_{ false };
+   ApplicationSettings::EnvConfiguration  envConf_{ ApplicationSettings::EnvConfiguration::Unknown };
 };
 
 #include <QPainter>

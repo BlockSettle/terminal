@@ -35,7 +35,7 @@ namespace {
 
 } // namespace
 
-class TestPeer
+class TestPeer : public SignerCallbackTarget
 {
 public:
    void init(TestEnv &env, const std::string &name)
@@ -79,7 +79,8 @@ public:
 
       walletsMgr_->addWallet(wallet_);
 
-      signer_ = std::make_shared<InprocSigner>(walletsMgr_, env.logger(), "", NetworkType::TestNet);
+      signer_ = std::make_shared<InprocSigner>(walletsMgr_, env.logger(), this
+         , "", NetworkType::TestNet);
       signer_->Start();
 
       syncWalletMgr_ = std::make_shared<bs::sync::WalletsManager>(env.logger()
@@ -272,7 +273,7 @@ public:
    void mineNewBlocks(const bs::Address &dst, unsigned count)
    {
       auto curHeight = env_->armoryConnection()->topBlock();
-      auto addrRecip = dst.getRecipient(bs::XBTAmount{uint64_t(1 * COIN)});
+      auto addrRecip = dst.getRecipient(bs::XBTAmount{int64_t(1 * COIN)});
       env_->armoryInstance()->mineNewBlock(addrRecip.get(), count);
       env_->blockMonitor()->waitForNewBlocks(curHeight + count);
    }

@@ -23,6 +23,10 @@ AuthAddressViewModel::AuthAddressViewModel(const std::shared_ptr<AuthAddressMana
    connect(authManager_.get(), &AuthAddressManager::AuthWalletChanged, this, &AuthAddressViewModel::onAddressListUpdated, Qt::QueuedConnection);
 }
 
+AuthAddressViewModel::AuthAddressViewModel(QObject* parent)
+   : QAbstractItemModel(parent)
+{}
+
 AuthAddressViewModel::~AuthAddressViewModel() noexcept = default;
 
 int AuthAddressViewModel::columnCount(const QModelIndex&) const
@@ -48,25 +52,49 @@ QVariant AuthAddressViewModel::data(const QModelIndex &index, int role) const
       case AuthAddressViewColumns::ColumnName:
          return QString::fromStdString(address.display());
       case AuthAddressViewColumns::ColumnState:
-         switch (authManager_->GetState(address)) {
-         case AuthAddressManager::AuthAddressState::Unknown:
-            return tr("Loading state...");
-         case AuthAddressManager::AuthAddressState::NotSubmitted:
-            return tr("Not Submitted");
-         case AuthAddressManager::AuthAddressState::Submitted:
-            return tr("Submitted");
-         case AuthAddressManager::AuthAddressState::Tainted:
-            return tr("Not Submitted");
-         case AuthAddressManager::AuthAddressState::Verifying:
-            return tr("Verification pending");
-         case AuthAddressManager::AuthAddressState::Verified:
-            return tr("Verified");
-         case AuthAddressManager::AuthAddressState::Revoked:
-            return tr("Revoked");
-         case AuthAddressManager::AuthAddressState::RevokedByBS:
-            return tr("Invalidated by BS");
-         case AuthAddressManager::AuthAddressState::Invalid:
-            return tr("State loading failed");
+         if (authManager_) {
+            switch (authManager_->GetState(address)) {
+            case AuthAddressManager::AuthAddressState::Unknown:
+               return tr("Loading state...");
+            case AuthAddressManager::AuthAddressState::NotSubmitted:
+               return tr("Not Submitted");
+            case AuthAddressManager::AuthAddressState::Submitted:
+               return tr("Submitted");
+            case AuthAddressManager::AuthAddressState::Tainted:
+               return tr("Not Submitted");
+            case AuthAddressManager::AuthAddressState::Verifying:
+               return tr("Verification pending");
+            case AuthAddressManager::AuthAddressState::Verified:
+               return tr("Verified");
+            case AuthAddressManager::AuthAddressState::Revoked:
+               return tr("Revoked");
+            case AuthAddressManager::AuthAddressState::RevokedByBS:
+               return tr("Invalidated by BS");
+            case AuthAddressManager::AuthAddressState::Invalid:
+               return tr("State loading failed");
+            }
+         }
+         else {
+            const auto& itState = states_.find(address);
+            if (itState == states_.end()) {
+               return tr("Loading state...");
+            }
+            switch (itState->second) {
+            case AddressVerificationState::Verified:
+               return tr("Verified");
+            case AddressVerificationState::Revoked:
+               return tr("Revoked");
+            case AddressVerificationState::Virgin:
+               if (submittedAddresses_.find(address) != submittedAddresses_.end()) {
+                  return tr("Submitted");
+               }
+               else {
+                  return tr("Not submitted");
+               }
+            case AddressVerificationState::Verifying:
+               return tr("Verifying");
+            default: return tr("Unknown %1").arg((int)itState->second);
+            }
          }
       default:
          return {};
@@ -133,9 +161,14 @@ bool AuthAddressViewModel::isAddressNotSubmitted(int row) const
    }
 
    const auto& address = addresses_[row];
-   const auto addrState = authManager_->GetState(address);
-   return addrState == AuthAddressManager::AuthAddressState::NotSubmitted ||
-      addrState == AuthAddressManager::AuthAddressState::Tainted;
+   if (authManager_) {
+      const auto addrState = authManager_->GetState(address);
+      return addrState == AuthAddressManager::AuthAddressState::NotSubmitted ||
+         addrState == AuthAddressManager::AuthAddressState::Tainted;
+   }
+   else {
+      return (submittedAddresses_.find(address) == submittedAddresses_.end());
+   }
 }
 
 void AuthAddressViewModel::setDefaultAddr(const bs::Address &addr)
@@ -146,6 +179,46 @@ void AuthAddressViewModel::setDefaultAddr(const bs::Address &addr)
          emit dataChanged(index(i, 0), index(i, 0), { Qt::FontRole });
          return;
       }
+   }
+}
+
+void AuthAddressViewModel::onAuthAddresses(const std::vector<bs::Address>&addrs
+   , const std::map<bs::Address, AddressVerificationState>& states)
+{
+   if (!addrs.empty()) {
+      beginResetModel();
+      addresses_ = addrs;
+      endResetModel();
+   }
+   if (!states.empty()) {
+      for (const auto& state : states) {
+         states_[state.first] = state.second;
+      }
+      emit dataChanged(index(0, 0), index(addresses_.size() - 1, 0));
+   }
+}
+
+void AuthAddressViewModel::onSubmittedAuthAddresses(const std::vector<bs::Address>& addrs)
+{
+   submittedAddresses_.insert(addrs.cbegin(), addrs.cend());
+}
+
+bool AuthAddressViewModel::canSubmit(const bs::Address& addr) const
+{
+   const auto& itState = states_.find(addr);
+   if ((itState == states_.end()) || (itState->second != AddressVerificationState::Virgin)) {
+      return false;
+   }
+   return (submittedAddresses_.find(addr) == submittedAddresses_.end());
+}
+
+AddressVerificationState AuthAddressViewModel::getState(const bs::Address& addr) const
+{
+   try {
+      return states_.at(addr);
+   }
+   catch (const std::exception&) {
+      return AddressVerificationState::VerificationFailed;
    }
 }
 
@@ -204,11 +277,6 @@ void AuthAdressControlProxyModel::increaseVisibleRowsCountByOne()
 int AuthAdressControlProxyModel::getVisibleRowsCount() const
 {
    return visibleRowsCount_;
-}
-
-void AuthAdressControlProxyModel::setDefaultAddr(const bs::Address &addr)
-{
-   sourceModel_->setDefaultAddr(addr);
 }
 
 bs::Address AuthAdressControlProxyModel::getAddress(const QModelIndex& index) const

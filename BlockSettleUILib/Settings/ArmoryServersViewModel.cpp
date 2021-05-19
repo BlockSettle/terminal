@@ -23,6 +23,10 @@ ArmoryServersViewModel::ArmoryServersViewModel(const std::shared_ptr<ArmoryServe
    connect(serversProvider.get(), &ArmoryServersProvider::dataChanged, this, &ArmoryServersViewModel::update);
 }
 
+ArmoryServersViewModel::ArmoryServersViewModel(QObject* parent)
+   : QAbstractTableModel(parent)
+{}
+
 int ArmoryServersViewModel::columnCount(const QModelIndex&) const
 {
    return static_cast<int>(ArmoryServersViewModel::ColumnsCount);
@@ -37,7 +41,7 @@ QVariant ArmoryServersViewModel::data(const QModelIndex &index, int role) const
 {
    if (index.row() >= servers_.size()) return QVariant();
    ArmoryServer server = servers_.at(index.row());
-   int currentServerIndex = serversProvider_->indexOfCurrent();
+   const int currentServerIndex = serversProvider_ ? serversProvider_->indexOfCurrent() : currentServerIndex_;
    QString serverNetType = (server.netType == NetworkType::MainNet ? tr("MainNet") : tr("TestNet"));
 
    if (role == Qt::FontRole && index.row() == currentServerIndex) {
@@ -110,9 +114,16 @@ void ArmoryServersViewModel::setSingleColumnMode(bool singleColumnMode)
    singleColumnMode_ = singleColumnMode;
 }
 
+void ArmoryServersViewModel::onArmoryServers(const QList<ArmoryServer>& servers
+   , int idxCur, int idxConn)
+{
+   currentServerIndex_ = idxCur;
+   beginResetModel();
+   servers_ = servers;
+   endResetModel();
+}
+
 void ArmoryServersViewModel::setHighLightSelectedServer(bool highLightSelectedServer)
 {
    highLightSelectedServer_ = highLightSelectedServer;
 }
-
-

@@ -25,7 +25,8 @@ class AuthAddressViewModel : public QAbstractItemModel
 {
    Q_OBJECT
 public:
-   AuthAddressViewModel(const std::shared_ptr<AuthAddressManager>& authManager, QObject *parent = nullptr);
+   [[deprecated]] AuthAddressViewModel(const std::shared_ptr<AuthAddressManager>& authManager, QObject *parent = nullptr);
+   AuthAddressViewModel(QObject* parent = nullptr);
    ~AuthAddressViewModel() noexcept override;
 
    AuthAddressViewModel(const AuthAddressViewModel&) = delete;
@@ -37,6 +38,13 @@ public:
    bs::Address getAddress(const QModelIndex& index) const;
    bool isAddressNotSubmitted(int row) const;
    void setDefaultAddr(const bs::Address &addr);
+
+   void onAuthAddresses(const std::vector<bs::Address>&
+      , const std::map<bs::Address, AddressVerificationState>&);
+   void onSubmittedAuthAddresses(const std::vector<bs::Address>&);
+
+   bool canSubmit(const bs::Address&) const;
+   AddressVerificationState getState(const bs::Address&) const;
 
 public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -64,7 +72,9 @@ private:
       ColumnsCount
    };
    bs::Address  defaultAddr_;
-   std::vector<bs::Address> addresses_;
+   std::vector<bs::Address>   addresses_;
+   std::set<bs::Address>      submittedAddresses_;
+   std::map<bs::Address, AddressVerificationState> states_;
 };
 
 class AuthAdressControlProxyModel : public QSortFilterProxyModel {
@@ -76,7 +86,6 @@ public:
    void increaseVisibleRowsCountByOne();
    int getVisibleRowsCount() const;
 
-   void setDefaultAddr(const bs::Address &addr);
    bs::Address getAddress(const QModelIndex& index) const;
    bool isEmpty() const;
 

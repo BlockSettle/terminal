@@ -12,8 +12,7 @@
 
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
-#include "CelerClient.h"
-#include "CelerSubmitQuoteNotifSequence.h"
+#include "Celer/CelerClient.h"
 #include "Colors.h"
 #include "CommonTypes.h"
 #include "CurrencyPair.h"
@@ -26,7 +25,7 @@
 
 
 QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector> &statsCollector
- , std::shared_ptr<BaseCelerClient> celerClient, std::shared_ptr<ApplicationSettings> appSettings
+ , std::shared_ptr<CelerClientQt> celerClient, std::shared_ptr<ApplicationSettings> appSettings
  , QObject* parent)
    : QAbstractItemModel(parent)
    , secStatsCollector_(statsCollector)
@@ -41,8 +40,24 @@ QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCo
 
    setPriceUpdateInterval(appSettings_->get<int>(ApplicationSettings::PriceUpdateInterval));
 
-   connect(celerClient_.get(), &BaseCelerClient::OnConnectionClosed,
+   connect(celerClient_.get(), &CelerClientQt::OnConnectionClosed,
       this, &QuoteRequestsModel::clearModel);
+   connect(this, &QuoteRequestsModel::deferredUpdate,
+      this, &QuoteRequestsModel::onDeferredUpdate, Qt::QueuedConnection);
+}
+
+QuoteRequestsModel::QuoteRequestsModel(const std::shared_ptr<bs::SecurityStatsCollector>& statsCollector
+   , QObject* parent)
+   : QAbstractItemModel(parent), secStatsCollector_(statsCollector)
+{
+   timer_.setInterval(500);
+   connect(&timer_, &QTimer::timeout, this, &QuoteRequestsModel::ticker);
+   timer_.start();
+
+   connect(&priceUpdateTimer_, &QTimer::timeout, this, &QuoteRequestsModel::onPriceUpdateTimer);
+
+   setPriceUpdateInterval(-1);   //FIXME
+
    connect(this, &QuoteRequestsModel::deferredUpdate,
       this, &QuoteRequestsModel::onDeferredUpdate, Qt::QueuedConnection);
 }
@@ -588,7 +603,8 @@ void QuoteRequestsModel::SetAssetManager(const std::shared_ptr<AssetManager>& as
    assetManager_ = assetManager;
 }
 
-void QuoteRequestsModel::ticker() {
+void QuoteRequestsModel::ticker()
+{
    std::unordered_set<std::string>  deletedRows;
    const auto timeNow = QDateTime::currentDateTime();
 
@@ -612,7 +628,8 @@ void QuoteRequestsModel::ticker() {
    pendingDeleteIds_.clear();
 
    for (auto qrn : notifications_) {
-      const auto timeDiff = timeNow.msecsTo(qrn.second.expirationTime.addMSecs(qrn.second.timeSkewMs));
+      const auto& expTime = QDateTime::fromMSecsSinceEpoch(qrn.second.expirationTime);
+      const auto timeDiff = timeNow.msecsTo(expTime.addMSecs(qrn.second.timeSkewMs));
       if ((timeDiff < 0) || (qrn.second.status == bs::network::QuoteReqNotification::Withdrawn)) {
          forSpecificId(qrn.second.quoteRequestId, [this](Group *grp, int itemIndex) {
             const auto row = findGroup(&grp->idx_);
@@ -651,12 +668,23 @@ void QuoteRequestsModel::ticker() {
       notifications_.erase(delRow);
    }
 
-   for (const auto &settlContainer : settlContainers_) {
-      forSpecificId(settlContainer.second->id(),
-         [timeLeft = settlContainer.second->timeLeftMs()](Group *grp, int itemIndex) {
-         grp->rfqs_[static_cast<std::size_t>(itemIndex)]->status_.timeleft_ =
-            static_cast<int>(timeLeft);
-      });
+   if (!settlContainers_.empty()) {
+      for (const auto& settlContainer : settlContainers_) {
+         forSpecificId(settlContainer.second->id(),
+            [timeLeft = settlContainer.second->timeLeftMs()](Group* grp, int itemIndex) {
+            grp->rfqs_[static_cast<std::size_t>(itemIndex)]->status_.timeleft_ =
+               static_cast<int>(timeLeft);
+         });
+      }
+   }
+   else {
+      for (const auto& settl : settlTimeLeft_) {
+         forSpecificId(settl.first, [timeLeft = settl.second]
+            (Group* grp, int itemIndex) {
+            grp->rfqs_[static_cast<std::size_t>(itemIndex)]->status_.timeleft_ =
+               static_cast<int>(timeLeft);
+         });
+      }
    }
 
    if (!data_.empty()) {
@@ -725,9 +753,9 @@ void QuoteRequestsModel::onAllQuoteNotifCancelled(const QString &reqId)
 void QuoteRequestsModel::onQuoteReqCancelled(const QString &reqId, bool byUser)
 {
    if (!byUser) {
+      onAllQuoteNotifCancelled(reqId);
       return;
    }
-
    setStatus(reqId.toStdString(), bs::network::QuoteReqNotification::Withdrawn);
 }
 
@@ -795,13 +823,12 @@ void QuoteRequestsModel::onQuoteReqNotifReplied(const bs::network::QuoteNotifica
       g = group;
 
       const auto assetType = group->rfqs_[static_cast<std::size_t>(i)]->assetType_;
-      const double quotedPrice = (qn.side == bs::network::Side::Buy) ? qn.bidPx : qn.offerPx;
 
       group->rfqs_[static_cast<std::size_t>(i)]->quotedPriceString_ =
-         UiUtils::displayPriceForAssetType(quotedPrice, assetType);
-      group->rfqs_[static_cast<std::size_t>(i)]->quotedPrice_ = quotedPrice;
+         UiUtils::displayPriceForAssetType(qn.price, assetType);
+      group->rfqs_[static_cast<std::size_t>(i)]->quotedPrice_ = qn.price;
       group->rfqs_[static_cast<std::size_t>(i)]->quotedPriceBrush_ =
-         colorForQuotedPrice(quotedPrice, group->rfqs_[static_cast<std::size_t>(i)]->bestQuotedPx_);
+         colorForQuotedPrice(qn.price, group->rfqs_[static_cast<std::size_t>(i)]->bestQuotedPx_);
    });
 
    if (withdrawn) {
@@ -841,7 +868,7 @@ void QuoteRequestsModel::onQuoteReqNotifReceived(const bs::network::QuoteReqNoti
       beginInsertRows(QModelIndex(), static_cast<int>(data_.size()),
          static_cast<int>(data_.size()));
       data_.push_back(std::unique_ptr<Market>(new Market(marketName,
-         appSettings_->get<int>(UiUtils::limitRfqSetting(qrn.assetType)))));
+         appSettings_ ? appSettings_->get<int>(UiUtils::limitRfqSetting(qrn.assetType)) : 5)));
       market = data_.back().get();
       endInsertRows();
    }
@@ -870,7 +897,6 @@ void QuoteRequestsModel::insertRfq(Group *group, const bs::network::QuoteReqNoti
    auto itQRN = notifications_.find(qrn.quoteRequestId);
 
    if (itQRN == notifications_.end()) {
-      const auto assetType = assetManager_->GetAssetTypeForSecurity(qrn.security);
       const CurrencyPair cp(qrn.security);
       const bool isBid = (qrn.side == bs::network::Side::Buy) ^ (cp.NumCurrency() == qrn.product);
       const double indicPrice = isBid ? mdPrices_[qrn.security][Role::BidPrice] :
@@ -881,25 +907,16 @@ void QuoteRequestsModel::insertRfq(Group *group, const bs::network::QuoteReqNoti
          static_cast<int>(group->rfqs_.size()));
 
       group->rfqs_.push_back(std::unique_ptr<RFQ>(new RFQ(QString::fromStdString(qrn.security),
-         QString::fromStdString(qrn.product),
-         tr(bs::network::Side::toString(qrn.side)),
-         QString(),
-         (qrn.assetType == bs::network::Asset::Type::PrivateMarket) ?
-            UiUtils::displayCCAmount(qrn.quantity) : UiUtils::displayQty(qrn.quantity, qrn.product),
-         QString(),
-         (!qFuzzyIsNull(indicPrice) ? UiUtils::displayPriceForAssetType(indicPrice, assetType)
-            : QString()),
-         QString(),
-         {
-            quoteReqStatusDesc(qrn.status),
+         QString::fromStdString(qrn.product), tr(bs::network::Side::toString(qrn.side))
+         , QString(), (qrn.assetType == bs::network::Asset::Type::PrivateMarket) ?
+            UiUtils::displayCCAmount(qrn.quantity) : UiUtils::displayQty(qrn.quantity, qrn.product)
+         , QString(), !qFuzzyIsNull(indicPrice)
+            ? UiUtils::displayPriceForAssetType(indicPrice, qrn.assetType) : QString()
+         , QString(), { quoteReqStatusDesc(qrn.status),
             ((qrn.status == bs::network::QuoteReqNotification::Status::PendingAck)
                || (qrn.status == bs::network::QuoteReqNotification::Status::Replied)),
-           30000
-         },
-         indicPrice, 0.0, 0.0,
-         qrn.side,
-         assetType,
-         qrn.quoteRequestId)));
+           30000 }
+         , indicPrice, 0.0, 0.0, qrn.side, qrn.assetType, qrn.quoteRequestId)));
 
       group->rfqs_.back()->idx_.parent_ = &group->idx_;
 
@@ -932,6 +949,17 @@ bool QuoteRequestsModel::StartCCSignOnOrder(const QString& orderId, QDateTime ti
    }
 
    return false;
+}
+
+void QuoteRequestsModel::onSettlementPending(const BinaryData& settlementId
+   , int timeLeftMS)
+{
+   settlTimeLeft_[settlementId.toHexStr()] = timeLeftMS;
+}
+
+void QuoteRequestsModel::onSettlementComplete(const BinaryData& settlementId)
+{
+   settlTimeLeft_.erase(settlementId.toHexStr());
 }
 
 void QuoteRequestsModel::addSettlementContainer(const std::shared_ptr<bs::SettlementContainer> &container)

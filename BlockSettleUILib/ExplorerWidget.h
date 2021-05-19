@@ -13,6 +13,7 @@
 
 #include "TabWithShortcut.h"
 #include "ArmoryConnection.h"
+#include "SignerDefs.h"
 
 #include <QWidget>
 #include <memory>
@@ -36,11 +37,12 @@ public:
     ExplorerWidget(QWidget *parent = nullptr);
     ~ExplorerWidget() override;
 
-   void init(const std::shared_ptr<ArmoryConnection> &armory
+   [[deprecated]] void init(const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<CCFileManager> &
       , const std::shared_ptr<AuthAddressManager> &);
+   void init(const std::shared_ptr<spdlog::logger>&);
    void shortcutActivated(ShortcutType s) override;
 
    enum Page {
@@ -50,6 +52,15 @@ public:
    };
 
    void mousePressEvent(QMouseEvent *event) override;
+
+   void onNewBlock(unsigned int blockNum);
+   void onAddressHistory(const bs::Address&, uint32_t curBlock
+      , const std::vector<bs::TXEntry>&);
+   void onTXDetails(const std::vector<bs::sync::TXWalletDetails>&);
+
+signals:
+   void needAddressHistory(const bs::Address&);
+   void needTXDetails(const std::vector<bs::sync::TXWallet>&, bool useCache, const bs::Address&);
 
 protected slots:
    void onSearchStarted(bool saveToHistory);

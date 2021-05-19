@@ -28,6 +28,7 @@ public:
    DealingSettingsPage(QWidget* parent = nullptr);
    ~DealingSettingsPage() override;
 
+   void init(const ApplicationSettings::State&) override;
    void display() override;
    void reset() override;
    void apply() override;
