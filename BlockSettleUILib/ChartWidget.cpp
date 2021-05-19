@@ -176,7 +176,7 @@ void ChartWidget::SendEoDRequest()
    ohlcRequest.set_product(getCurrentProductName().toStdString());
    ohlcRequest.set_interval(static_cast<Interval>(dateRange_.checkedId()));
    ohlcRequest.set_count(1);
-   ohlcRequest.set_lesser_then(-1);
+   ohlcRequest.set_lesser_than(-1);
 
    MarketDataHistoryRequest request;
    request.set_request_type(MarketDataHistoryMessageType::EoDPriceType);
@@ -275,7 +275,7 @@ void ChartWidget::UpdateChart(const int& interval)
    ohlcRequest.set_product(product.toStdString());
    ohlcRequest.set_interval(static_cast<Interval>(interval));
    ohlcRequest.set_count(requestLimit);
-   ohlcRequest.set_lesser_then(-1);
+   ohlcRequest.set_lesser_than(-1);
 
    MarketDataHistoryRequest request;
    request.set_request_type(MarketDataHistoryMessageType::OhlcHistoryType);
@@ -597,7 +597,7 @@ void ChartWidget::LoadAdditionalPoints(const QCPRange& range)
       ohlcRequest.set_product(product.toStdString());
       ohlcRequest.set_interval(static_cast<Interval>(dateRange_.checkedId()));
       ohlcRequest.set_count(requestLimit);
-      ohlcRequest.set_lesser_then(data->constBegin()->key * 1000);
+      ohlcRequest.set_lesser_than(data->constBegin()->key * 1000);
 
       prevRequestStamp = data->constBegin()->key;
 

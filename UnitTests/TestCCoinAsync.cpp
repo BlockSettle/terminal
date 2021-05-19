@@ -246,7 +246,7 @@ BinaryData TestCCoinAsync::FundFromCoinbase(
       throw std::runtime_error("Not enough cb coins! Mine more blocks!");
 
    for (auto && addr : addresses) {
-      signer.addRecipient(addr.getRecipient(bs::XBTAmount{ valuePerOne }));
+      signer.addRecipient(addr.getRecipient(bs::XBTAmount{ (int64_t)valuePerOne }));
    }
    signer.setFeed(coinbaseFeed_);
 
@@ -277,7 +277,7 @@ BinaryData TestCCoinAsync::SimpleSendMany(const bs::Address & fromAddress, const
       {
          std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recipients;
          for(const auto & addr : toAddresses) {
-            recipients.push_back(addr.getRecipient(bs::XBTAmount{ valuePerOne }));
+            recipients.push_back(addr.getRecipient(bs::XBTAmount{ (int64_t)valuePerOne }));
          }
 
          const uint64_t requiredValue = valuePerOne * toAddresses.size();
@@ -348,15 +348,15 @@ Tx TestCCoinAsync::CreateCJtx(
    }
 
    //CC recipients
-   cjSigner.addRecipient(structB.ccAddr_.getRecipient(bs::XBTAmount{ structB.ccValue_ }));
+   cjSigner.addRecipient(structB.ccAddr_.getRecipient(bs::XBTAmount{ (int64_t)structB.ccValue_ }));
    if(ccValue - structB.ccValue_ > 0)
-      cjSigner.addRecipient(structA.ccAddr_.getRecipient(bs::XBTAmount{ ccValue - structB.ccValue_ }));
+      cjSigner.addRecipient(structA.ccAddr_.getRecipient(bs::XBTAmount{ (int64_t)(ccValue - structB.ccValue_) }));
 
    //XBT recipients
-   cjSigner.addRecipient(structA.xbtAddr_.getRecipient(bs::XBTAmount{ structA.xbtValue_ }));
+   cjSigner.addRecipient(structA.xbtAddr_.getRecipient(bs::XBTAmount{ (int64_t)structA.xbtValue_ }));
 
    if(xbtValue - structA.xbtValue_ - fee > 0)
-      cjSigner.addRecipient(structB.xbtAddr_.getRecipient(bs::XBTAmount{ xbtValue - structA.xbtValue_ - fee }));
+      cjSigner.addRecipient(structB.xbtAddr_.getRecipient(bs::XBTAmount{ (int64_t)(xbtValue - structA.xbtValue_ - fee) }));
 
    {
       auto leaf = envPtr_->walletsMgr()->getHDRootForLeaf(sellerSignWallet->walletId());
@@ -1030,7 +1030,7 @@ TEST_F(TestCCoinAsync, ZeroConfChain)
    {
       Signer signer;
       signer.addSpender(spender);
-      signer.addRecipient(addr.getRecipient(bs::XBTAmount{ value }));
+      signer.addRecipient(addr.getRecipient(bs::XBTAmount{ (int64_t)value }));
 
       auto script = spender->getOutputScript();
       auto changeAddr = BtcUtils::getScrAddrForScript(script);
@@ -1174,7 +1174,7 @@ TEST_F(TestCCoinAsync, Reorg)
       for (auto& recipient : recipients)
       {
          total += recipient.second;
-         signer.addRecipient(recipient.first.getRecipient(bs::XBTAmount{ recipient.second }));
+         signer.addRecipient(recipient.first.getRecipient(bs::XBTAmount{ (int64_t)recipient.second }));
       }
 
       if (total > spender->getValue())

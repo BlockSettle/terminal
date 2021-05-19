@@ -38,7 +38,13 @@ class TestSupervisor : public bs::message::Adapter
 public:
    TestSupervisor(const std::string& name) : name_(name)
    {}
+
    bool process(const bs::message::Envelope &) override;
+
+   bool processBroadcast(const bs::message::Envelope& env) override
+   {
+      return process(env);
+   }
 
    bs::message::Adapter::Users supportedReceivers() const override
    {
@@ -46,8 +52,8 @@ public:
    }
    std::string name() const override { return "sup" + name_; }
 
-   uint64_t send(bs::message::TerminalUsers sender, bs::message::TerminalUsers receiver
-      , const std::string &message, bool request = false);
+   bs::message::SeqId send(bs::message::TerminalUsers sender, bs::message::TerminalUsers receiver
+      , const std::string &message, bs::message::SeqId respId = 0);
    bool push(const bs::message::Envelope &env) { return bs::message::Adapter::push(env); }
    bool pushFill(bs::message::Envelope &env) { return bs::message::Adapter::pushFill(env); }
 
@@ -75,6 +81,7 @@ public:
       , const std::shared_ptr<ArmoryInstance> &);  // for pushing ZCs (mocking PB)
 
    bool process(const bs::message::Envelope&) override;
+   bool processBroadcast(const bs::message::Envelope&) override;
 
    bs::message::Adapter::Users supportedReceivers() const override
    {

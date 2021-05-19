@@ -89,6 +89,11 @@ public:
 
    bool process(const bs::message::Envelope &) override;
 
+   bool processBroadcast(const bs::message::Envelope& env) override
+   {
+      return process(env);
+   }
+
    std::set<std::shared_ptr<bs::message::User>> supportedReceivers() const override {
       return { user_ };
    }

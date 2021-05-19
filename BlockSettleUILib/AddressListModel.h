@@ -125,7 +125,7 @@ private:
    std::map<BinaryData, int>  indexByAddr_;
 
    struct AddrBalance {
-      uint64_t    balance;
+      BTCNumericTypes::satoshi_type balance;
       uint32_t    txn;
    };
    std::unordered_map<std::string, std::map<BinaryData, AddrBalance>>   pooledBalances_;

@@ -124,7 +124,7 @@ namespace UiUtils {
 
    QString displayAmount(const bs::XBTAmount &amount)
    {
-      if (!amount.isValid()) {
+      if (amount.isZero()) {
          return CommonUiUtilsText::tr("Loading...");
       }
       return UnifyValueString(QLocale().toString(amountToBtc(amount.GetValue())

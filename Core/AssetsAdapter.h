@@ -35,6 +35,7 @@ public:
    ~AssetsAdapter() override = default;
 
    bool process(const bs::message::Envelope &) override;
+   bool processBroadcast(const bs::message::Envelope&) override;
 
    std::set<std::shared_ptr<bs::message::User>> supportedReceivers() const override {
       return { user_ };

@@ -38,39 +38,10 @@ SettlementAdapter::SettlementAdapter(const std::shared_ptr<spdlog::logger> &logg
 
 bool SettlementAdapter::process(const bs::message::Envelope &env)
 {
-   if (env.sender->isSystem()) {
-      AdministrativeMessage msg;
-      if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse administrative message #{}", __func__, env.id);
-         return true;
-      }
-      if (msg.data_case() == AdministrativeMessage::kStart) {
-         AdministrativeMessage admMsg;
-         admMsg.set_component_loading(user_->value());
-         Envelope envBC{ 0, UserTerminal::create(TerminalUsers::System), nullptr
-            , {}, {}, admMsg.SerializeAsString() };
-         pushFill(envBC);
-      }
-   }
-   else if (env.sender->value<TerminalUsers>() == TerminalUsers::Blockchain) {
-      ArmoryMessage msg;
-      if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse armory msg #{}", __func__, env.id);
-         return true;
-      }
-      switch (msg.data_case()) {
-      case ArmoryMessage::kZcReceived:
-         return processZC(msg.zc_received());
-      default: break;
-      }
-      if (!env.receiver || env.receiver->isBroadcast()) {
-         return false;
-      }
-   } 
-   else if (env.sender->value() == userMtch_->value()) {
+   if (env.sender->value() == userMtch_->value()) {
       MatchingMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse matching msg #{}", __func__, env.id);
+         logger_->error("[{}] failed to parse matching msg #{}", __func__, env.id());
          return true;
       }
       switch (msg.data_case()) {
@@ -89,7 +60,7 @@ bool SettlementAdapter::process(const bs::message::Envelope &env)
    else if (env.sender->value() == userBS_->value()) {
       BsServerMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse BS msg #{}", __func__, env.id);
+         logger_->error("[{}] failed to parse BS msg #{}", __func__, env.id());
          return true;
       }
       switch (msg.data_case()) {
@@ -108,12 +79,12 @@ bool SettlementAdapter::process(const bs::message::Envelope &env)
    else if (env.sender->value() == userWallets_->value()) {
       WalletsMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse wallets msg #{}", __func__, env.id);
+         logger_->error("[{}] failed to parse wallets msg #{}", __func__, env.id());
          return true;
       }
       switch (msg.data_case()) {
       case WalletsMessage::kXbtTxResponse:
-         return processXbtTx(env.id, msg.xbt_tx_response());
+         return processXbtTx(env.responseId(), msg.xbt_tx_response());
       default: break;
       }
       if (!env.receiver || env.receiver->isBroadcast()) {
@@ -123,22 +94,22 @@ bool SettlementAdapter::process(const bs::message::Envelope &env)
    else if (env.sender->value() == userSigner_->value()) {
       SignerMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse signer msg #{}", __func__, env.id);
+         logger_->error("[{}] failed to parse signer msg #{}", __func__, env.id());
          return true;
       }
       switch (msg.data_case()) {
       case SignerMessage::kSignTxResponse:
-         return processSignedTx(env.id, msg.sign_tx_response());
+         return processSignedTx(env.responseId(), msg.sign_tx_response());
       default: break;
       }
       if (!env.receiver || env.receiver->isBroadcast()) {
          return false;
       }
    }
-   else if (env.receiver && (env.receiver->value() == user_->value())) {
+   else if (env.receiver->value() == user_->value()) {
       SettlementMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse own request #{}", __func__, env.id);
+         logger_->error("[{}] failed to parse own request #{}", __func__, env.id());
          return true;
       }
       switch (msg.data_case()) {
@@ -164,6 +135,39 @@ bool SettlementAdapter::process(const bs::message::Envelope &env)
    return true;
 }
 
+bool SettlementAdapter::processBroadcast(const bs::message::Envelope& env)
+{
+   if (env.sender->isSystem()) {
+      AdministrativeMessage msg;
+      if (!msg.ParseFromString(env.message)) {
+         logger_->error("[{}] failed to parse administrative message #{}"
+            , __func__, env.id());
+         return false;
+      }
+      if (msg.data_case() == AdministrativeMessage::kStart) {
+         AdministrativeMessage admMsg;
+         admMsg.set_component_loading(user_->value());
+         pushBroadcast(UserTerminal::create(TerminalUsers::System)
+            , admMsg.SerializeAsString());
+         return true;
+      }
+   }
+   else if (env.sender->value<TerminalUsers>() == TerminalUsers::Blockchain) {
+      ArmoryMessage msg;
+      if (!msg.ParseFromString(env.message)) {
+         logger_->error("[{}] failed to parse armory msg #{}", __func__, env.id());
+         return false;
+      }
+      switch (msg.data_case()) {
+      case ArmoryMessage::kZcReceived:
+         processZC(msg.zc_received());
+         return true;
+      default: break;
+      }
+   }
+   return false;
+}
+
 bool SettlementAdapter::processZC(const ArmoryMessage_ZCReceived& zcData)
 {
    for (const auto& zcEntry : zcData.tx_entries()) {
@@ -184,8 +188,7 @@ bool SettlementAdapter::processZC(const ArmoryMessage_ZCReceived& zcData)
       msgResponse->set_rfq_id(itSettl->second->rfq.requestId);
       msgResponse->set_quote_id(itSettl->second->quote.quoteId);
       msgResponse->set_settlement_id(settlementId.toBinStr());
-      Envelope env{ 0, user_, itSettl->second->env.sender, {}, {}, msg.SerializeAsString() };
-      pushFill(env);
+      pushResponse(user_, itSettl->second->env.sender, msg.SerializeAsString());
       close(settlementId);
    }
    return true;
@@ -205,9 +208,7 @@ bool SettlementAdapter::processMatchingQuote(const BlockSettle::Terminal::Quote&
    }
    SettlementMessage msg;
    *msg.mutable_quote() = response;
-   Envelope env{ 0, user_, itSettl->second->env.sender, {}, {}
-      , msg.SerializeAsString() };
-   return pushFill(env);
+   return pushResponse(user_, itSettl->second->env.sender, msg.SerializeAsString());
 }
 
 bool SettlementAdapter::processMatchingOrder(const MatchingMessage_Order& response)
@@ -258,16 +259,13 @@ bool SettlementAdapter::processMatchingOrder(const MatchingMessage_Order& respon
          , (int)order.status);
       return true;
    }
-   Envelope env{ 0, user_, itSettl->second->env.sender, {}, {}
-      , msg.SerializeAsString() };
-   return pushFill(env);
+   return pushResponse(user_, itSettl->second->env.sender, msg.SerializeAsString());
 }
 
 bool SettlementAdapter::processMatchingInRFQ(const IncomingRFQ& qrn)
 {
-   SettlementMessage msg;
-   *msg.mutable_quote_req_notif() = qrn;
-   Envelope envBC{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
+   SettlementMessage msgBC;
+   *msgBC.mutable_quote_req_notif() = qrn;
 
    const auto& rfq = fromMsg(qrn.rfq());
    const auto& settlement = std::make_shared<Settlement>();
@@ -281,6 +279,7 @@ bool SettlementAdapter::processMatchingInRFQ(const IncomingRFQ& qrn)
    }
    settlByRfqId_[rfq.requestId] = settlement;
 
+   SettlementMessage msg;
    msg.set_quote_req_timeout(rfq.requestId);
    const auto& timeNow = bs::message::bus_clock::now();
    const auto expTime = std::chrono::milliseconds(qrn.expiration_ms()) - timeNow.time_since_epoch();
@@ -288,8 +287,8 @@ bool SettlementAdapter::processMatchingInRFQ(const IncomingRFQ& qrn)
       logger_->error("[{}] outdated expiry {} for {}", __func__, expTime.count(), rfq.requestId);
       return true;
    }
-   Envelope envTO{ 0, user_, user_, timeNow, timeNow + expTime, msg.SerializeAsString(), true };
-   return (pushFill(envTO) && pushFill(envBC));
+   return (pushRequest(user_, user_, msg.SerializeAsString(), timeNow + expTime)
+      && pushBroadcast(user_, msgBC.SerializeAsString()));
 }
 
 bool SettlementAdapter::processBsUnsignedPayin(const BinaryData& settlementId)
@@ -312,9 +311,9 @@ bool SettlementAdapter::processBsUnsignedPayin(const BinaryData& settlementId)
    msgReq->set_settlement_id(settlementId.toBinStr());
    msgReq->set_reserve_id(itSettl->second->reserveId);
    msgReq->set_amount(itSettl->second->amount.GetValue());
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   if (pushFill(env)) {
-      payinRequests_[env.id] = settlementId;
+   const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
+   if (msgId) {
+      payinRequests_[msgId] = settlementId;
    }
    return true;
 }
@@ -426,8 +425,7 @@ bool SettlementAdapter::processBsSignPayin(const BsServerMessage_SignXbtHalf& re
       auto msgFail = msg.mutable_failed_settlement();
       msgFail->set_settlement_id(settlementId.toBinStr());
       msgFail->set_info("invalid handshake flow");
-      Envelope env{ 0, user_, itSettl->second->env.sender, {}, {}, msg.SerializeAsString() };
-      pushFill(env);
+      pushResponse(user_, itSettl->second->env.sender, msg.SerializeAsString());
       settlByQuoteId_.erase(itSettl->second->quote.quoteId);
       settlBySettlId_.erase(itSettl);
       return true;
@@ -441,9 +439,9 @@ bool SettlementAdapter::processBsSignPayin(const BsServerMessage_SignXbtHalf& re
    msgReq->set_settlement_id(settlementId.toBinStr());
    *msgReq->mutable_tx_request() = bs::signer::coreTxRequestToPb(itSettl->second->payin);
    *msgReq->mutable_details() = dlgData.toProtobufMessage();
-   Envelope env{ 0, user_, userSigner_, {}, {}, msg.SerializeAsString(), true };
-   if (pushFill(env)) {
-      payinRequests_[env.id] = settlementId;
+   const auto msgId = pushRequest(user_, userSigner_, msg.SerializeAsString());
+   if (msgId) {
+      payinRequests_[msgId] = settlementId;
       return true;
    }
    return false;
@@ -472,9 +470,9 @@ bool SettlementAdapter::processBsSignPayout(const BsServerMessage_SignXbtHalf& r
    msgReq->set_amount(itSettl->second->amount.GetValue());
    msgReq->set_payin_hash(request.payin_hash());
    msgReq->set_recv_address(recvAddr.display());
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   if (pushFill(env)) {
-      payoutRequests_[env.id] = settlementId;
+   const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
+   if (msgId) {
+      payoutRequests_[msgId] = settlementId;
    }
    return true;
 }
@@ -490,8 +488,7 @@ bool SettlementAdapter::processCancelRFQ(const std::string& rfqId)
    unreserve(rfqId);
    MatchingMessage msg;
    msg.set_cancel_rfq(rfqId);
-   Envelope envReq{ 0, user_, userMtch_, {}, {}, msg.SerializeAsString(), true };
-   return pushFill(envReq);
+   return pushRequest(user_, userMtch_, msg.SerializeAsString());
 }
 
 bool SettlementAdapter::processAcceptRFQ(const bs::message::Envelope& env
@@ -512,8 +509,7 @@ bool SettlementAdapter::processAcceptRFQ(const bs::message::Envelope& env
       MatchingMessage msg;
       auto msgReq = msg.mutable_accept_rfq();
       *msgReq = request;
-      Envelope envReq{ 0, user_, userMtch_, {}, {}, msg.SerializeAsString(), true };
-      return pushFill(envReq);
+      return pushRequest(user_, userMtch_, msg.SerializeAsString());
    }
    switch (quote.assetType) {
    case bs::network::Asset::SpotXBT:
@@ -543,8 +539,7 @@ bool SettlementAdapter::processSendRFQ(const bs::message::Envelope& env
    MatchingMessage msg;
    auto msgReq = msg.mutable_send_rfq();
    *msgReq = request.rfq();
-   Envelope envReq{ 0, user_, userMtch_, {}, {}, msg.SerializeAsString(), true };
-   return pushFill(envReq);
+   return pushRequest(user_, userMtch_, msg.SerializeAsString());
 }
 
 bool SettlementAdapter::processSubmitQuote(const bs::message::Envelope& env
@@ -586,8 +581,7 @@ bool SettlementAdapter::processSubmitQuote(const bs::message::Envelope& env
 
    MatchingMessage msg;
    *msg.mutable_submit_quote_notif() = request;
-   Envelope envReq{ 0, user_, userMtch_, {}, {}, msg.SerializeAsString(), true };
-   return pushFill(envReq);
+   return pushRequest(user_, userMtch_, msg.SerializeAsString());
 }
 
 bool SettlementAdapter::processPullQuote(const bs::message::Envelope& env
@@ -612,8 +606,7 @@ bool SettlementAdapter::processPullQuote(const bs::message::Envelope& env
    MatchingMessage msg;
    auto msgData = msg.mutable_pull_quote_notif();
    *msgData = request;
-   Envelope envReq{ 0, user_, userMtch_, {}, {}, msg.SerializeAsString(), true };
-   return pushFill(envReq);
+   return pushRequest(user_, userMtch_, msg.SerializeAsString());
 }
 
 bool SettlementAdapter::processQuoteCancelled(const QuoteCancelled& request)
@@ -632,8 +625,7 @@ bool SettlementAdapter::processQuoteCancelled(const QuoteCancelled& request)
 
    SettlementMessage msg;
    *msg.mutable_quote_cancelled() = request;
-   Envelope env{ 0, user_, itRFQ->second->env.sender, {}, {}, msg.SerializeAsString() };
-   return pushFill(env);
+   return pushResponse(user_, itRFQ->second->env.sender, msg.SerializeAsString());
 }
 
 bool SettlementAdapter::processXbtTx(uint64_t msgId, const WalletsMessage_XbtTxResponse& response)
@@ -654,8 +646,7 @@ bool SettlementAdapter::processXbtTx(uint64_t msgId, const WalletsMessage_XbtTxR
             auto msgReq = msg.mutable_send_unsigned_payin();
             msgReq->set_settlement_id(itPayin->second.toBinStr());
             msgReq->set_tx(itSettl->second->payin.serializeState().SerializeAsString());
-            Envelope env{ 0, user_, userBS_, {}, {}, msg.SerializeAsString(), true };
-            pushFill(env);
+            pushRequest(user_, userBS_, msg.SerializeAsString());
          }
          else {
             SettlementMessage msg;
@@ -663,9 +654,7 @@ bool SettlementAdapter::processXbtTx(uint64_t msgId, const WalletsMessage_XbtTxR
             msgResp->set_rfq_id(itSettl->second->rfq.requestId);
             msgResp->set_settlement_id(itPayin->second.toBinStr());
             msgResp->set_info(response.error_text());
-            Envelope env{ 0, user_, itSettl->second->env.sender, {}, {}
-               , msg.SerializeAsString() };
-            pushFill(env);
+            pushResponse(user_, itSettl->second->env.sender, msg.SerializeAsString());
             cancel(itPayin->second);
          }
       }
@@ -694,9 +683,9 @@ bool SettlementAdapter::processXbtTx(uint64_t msgId, const WalletsMessage_XbtTxR
          *msgReq->mutable_details() = dlgData.toProtobufMessage();
          msgReq->set_contra_auth_pubkey(itSettl->second->counterKey.toBinStr());
          msgReq->set_own_key_first(true);
-         Envelope env{ 0, user_, userSigner_, {}, {}, msg.SerializeAsString(), true };
-         if (pushFill(env)) {
-            payoutRequests_[env.id] = itPayout->second;
+         const auto msgId = pushRequest(user_, userSigner_, msg.SerializeAsString());
+         if (msgId) {
+            payoutRequests_[msgId] = itPayout->second;
          }
       }
       else {
@@ -725,9 +714,9 @@ bool SettlementAdapter::processSignedTx(uint64_t msgId
       auto msgReq = payin ? msg.mutable_send_signed_payin() : msg.mutable_send_signed_payout();
       msgReq->set_settlement_id(settlementId.toBinStr());
       msgReq->set_tx(response.signed_tx());
-      Envelope env{ 0, user_, userBS_, {}, {}, msg.SerializeAsString(), true };
-      logger_->debug("[SettlementAdapter::processSignedTx::sendSignedTX] {}", BinaryData::fromString(response.signed_tx()).toHexStr());
-      pushFill(env);
+      logger_->debug("[SettlementAdapter::processSignedTx::sendSignedTX] {}"
+         , BinaryData::fromString(response.signed_tx()).toHexStr());
+      pushRequest(user_, userBS_, msg.SerializeAsString());
    };
    const auto& itPayin = payinRequests_.find(msgId);
    if (itPayin != payinRequests_.end()) {
@@ -793,9 +782,7 @@ bool SettlementAdapter::processHandshakeTimeout(const std::string& id)
          auto msgFail = msg.mutable_failed_settlement();
          msgFail->set_settlement_id(settlementId.toBinStr());
          msgFail->set_info("handshake timeout");
-         Envelope env{ 0, user_, itSettl->second->env.sender, {}, {}
-            , msg.SerializeAsString() };
-         return pushFill(env);
+         return pushResponse(user_, itSettl->second->env.sender, msg.SerializeAsString());
       }
    }
    return true;
@@ -823,8 +810,7 @@ bool SettlementAdapter::startXbtSettlement(const bs::network::Quote& quote)
       msgResp->set_rfq_id(quote.requestId);
       msgResp->set_quote_id(quote.quoteId);
       msgResp->set_info(info);
-      Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-      pushFill(env);
+      pushBroadcast(user_, msg.SerializeAsString());
    };
    const auto& itSettl = settlByQuoteId_.find(quote.quoteId);
    if (itSettl == settlByQuoteId_.end()) {
@@ -896,9 +882,7 @@ bool SettlementAdapter::startXbtSettlement(const bs::network::Quote& quote)
    const auto& timeNow = bs::message::bus_clock::now();
    SettlementMessage msg;
    msg.set_handshake_timeout(settlementId.toBinStr());
-   Envelope env{ 0, user_, user_, timeNow, timeNow + kHandshakeTimeout
-      , msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, user_, msg.SerializeAsString(), timeNow + kHandshakeTimeout);
 
    if (data->dealerAddrValidationReqd) {
       //TODO: push counterAuthAddr to OnChainTracker for checking
@@ -910,8 +894,7 @@ bool SettlementAdapter::startXbtSettlement(const bs::network::Quote& quote)
       msgReq->set_rfq_id(quote.requestId);
       toMsg(quote, msgReq->mutable_quote());
       msgReq->set_payout_tx("not used");  // copied from ReqXBTSettlementContainer
-      Envelope envReq{ 0, user_, userMtch_, {}, {}, msgMtch.SerializeAsString(), true };
-      return pushFill(envReq);
+      return pushRequest(user_, userMtch_, msgMtch.SerializeAsString());
    }
    return true;
 }
@@ -926,8 +909,7 @@ void SettlementAdapter::unreserve(const std::string& id, const std::string &subI
    auto msgReq = msg.mutable_unreserve_utxos();
    msgReq->set_id(id);
    msgReq->set_sub_id(subId);
-   Envelope envReq{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(envReq);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void SettlementAdapter::close(const BinaryData& settlementId)
@@ -952,6 +934,5 @@ void SettlementAdapter::cancel(const BinaryData& settlementId)
    close(settlementId);
    SettlementMessage msg;
    msg.set_settlement_cancelled(settlementId.toBinStr());
-   Envelope env{ 0, user_, sender, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushResponse(user_, sender, msg.SerializeAsString());
 }

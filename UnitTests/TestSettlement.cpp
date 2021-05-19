@@ -62,7 +62,7 @@ void TestSettlement::sendTo(uint64_t value, bs::Address& addr)
 
    signer.addSpender(spendPtr);
 
-   signer.addRecipient(addr.getRecipient(bs::XBTAmount{ value }));
+   signer.addRecipient(addr.getRecipient(bs::XBTAmount{ (int64_t)value }));
    signer.setFeed(coinbaseFeed_);
 
    //sign & send
@@ -186,7 +186,7 @@ TEST_F(TestSettlement, Initial_balances)
    {
       return [walletId](const bs::message::Envelope& env)
       {
-         if (env.request ||
+         if (env.isRequest() ||
             (env.sender->value<TerminalUsers>() != TerminalUsers::Wallets)) {
             return false;
          }
@@ -500,7 +500,7 @@ TEST_F(TestSettlement, SpotXBT_sell)
    {
       return [walletId](const bs::message::Envelope& env)
       {
-         if (env.request || env.receiver ||
+         if (env.isRequest() || env.receiver ||
             (env.sender->value<TerminalUsers>() != TerminalUsers::Wallets)) {
             return false;
          }
@@ -657,7 +657,7 @@ TEST_F(TestSettlement, SpotXBT_buy)
    {
       return [walletId](const bs::message::Envelope& env)
       {
-         if (env.request || env.receiver ||
+         if (env.isRequest() || env.receiver ||
             (env.sender->value<TerminalUsers>() != TerminalUsers::Wallets)) {
             return false;
          }

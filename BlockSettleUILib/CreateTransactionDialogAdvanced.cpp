@@ -351,7 +351,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
                   for (size_t i = 0; i < tx.getNumTxOut(); i++) {
                      TxOut out = tx.getTxOutCopy(i);
                      const auto addr = bs::Address::fromTxOut(out);
-                     bs::XBTAmount amount{out.getValue()};
+                     bs::XBTAmount amount{(int64_t)out.getValue()};
 
                      const auto wallet = walletsManager_->getWalletByAddress(addr);
                      if (wallet) {
@@ -1397,7 +1397,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                thisPtr->SetFixedChangeAddress(QString::fromStdString(addr.display()));
             }
             else {
-               recipients.push_back({ addr, bs::XBTAmount{out.getValue()}, false });
+               recipients.push_back({ addr, bs::XBTAmount{(int64_t)out.getValue()}, false });
             }
             totalVal -= out.getValue();
          }
@@ -1451,7 +1451,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       thisPtr->ui_->labelBal->hide();
 
       const auto summary = thisPtr->transactionData_->GetTransactionSummary();
-      importedTxTotalFee_ = bs::XBTAmount(tx.fee);
+      importedTxTotalFee_ = bs::XBTAmount((int64_t)tx.fee);
 
       if (tx.change.value) {
          SetFixedChangeAddress(QString::fromStdString(tx.change.address.display()));
@@ -1463,7 +1463,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       for (unsigned i=0; i<tx.armorySigner_.getTxOutCount(); i++) {
          auto recip = tx.armorySigner_.getRecipient(i);
          const auto addr = bs::Address::fromRecipient(recip);
-         recipients.push_back({ addr, bs::XBTAmount{recip->getValue()}, false });
+         recipients.push_back({ addr, bs::XBTAmount{(int64_t)recip->getValue()}, false });
       }
       AddRecipients(recipients);
 

@@ -341,7 +341,7 @@ bool RFQTicketXBT::preSubmitCheck()
       }
 
       if (!validAmount) {
-         auto amountStr = UiUtils::displayQuantity(bs::XBTAmount(tradeSettings_->xbtTier1Limit).GetValueBitcoin()
+         auto amountStr = UiUtils::displayQuantity(bs::XBTAmount((int64_t)tradeSettings_->xbtTier1Limit).GetValueBitcoin()
             , bs::network::XbtCurrency);
          BSMessageBox(BSMessageBox::info
             , tr("Notice"), tr("Authentication Address not verified")
@@ -1644,7 +1644,7 @@ bs::XBTAmount RFQTicketXBT::getXbtBalance() const
 {
    const auto &fixedInputs = fixedXbtInputs_.inputs;
    if (!fixedXbtInputs_.inputs.empty()) {
-      uint64_t sum = 0;
+      int64_t sum = 0;
       for (const auto &utxo : fixedInputs) {
          sum += utxo.first.getValue();
       }

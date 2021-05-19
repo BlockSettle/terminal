@@ -83,7 +83,7 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    comment_ = fmt::format("{} {} @ {}", bs::network::Side::toString(side)
       , quote_.security, UiUtils::displayPriceXBT(actualXbtPrice).toStdString());
 
-   dealerAddressValidationRequired_ = xbtAmount > bs::XBTAmount(tier1XbtLimit);
+   dealerAddressValidationRequired_ = xbtAmount > bs::XBTAmount((int64_t)tier1XbtLimit);
 }
 
 ReqXBTSettlementContainer::~ReqXBTSettlementContainer() = default;

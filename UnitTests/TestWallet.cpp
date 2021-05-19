@@ -1834,7 +1834,7 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    unsigned blockCount = 6;
 
    auto curHeight = envPtr_->armoryConnection()->topBlock();
-   auto addrRecip = address.getRecipient(bs::XBTAmount{ (uint64_t)(50 * COIN) });
+   auto addrRecip = address.getRecipient(bs::XBTAmount{ (int64_t)(50 * COIN) });
    armoryInstance->mineNewBlock(addrRecip.get(), blockCount);
    auto newTop = UnitTestWalletACT::waitOnNewBlock();
    ASSERT_EQ(curHeight + blockCount, newTop);

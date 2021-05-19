@@ -76,7 +76,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    }
 
    const auto xbtAmount = bs::XBTAmount(amount_);
-   requesterAddressShouldBeVerified_ = xbtAmount > bs::XBTAmount(tier1XbtLimit);
+   requesterAddressShouldBeVerified_ = xbtAmount > bs::XBTAmount((int64_t)tier1XbtLimit);
 
    // BST-2545: Use price as it see Genoa (and it computes it as ROUNDED_CCY / XBT)
    const auto actualXbtPrice = UiUtils::actualXbtPrice(xbtAmount, price());

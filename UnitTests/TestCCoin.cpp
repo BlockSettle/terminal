@@ -246,7 +246,7 @@ BinaryData TestCCoin::FundFromCoinbase(
       throw std::runtime_error("Not enough cb coins! Mine more blocks!");
 
    for (auto && addr : addresses) {
-      signer.addRecipient(addr.getRecipient(bs::XBTAmount{ valuePerOne }));
+      signer.addRecipient(addr.getRecipient(bs::XBTAmount{ (int64_t)valuePerOne }));
    }
    signer.setFeed(coinbaseFeed_);
 
@@ -260,7 +260,8 @@ BinaryData TestCCoin::FundFromCoinbase(
    return signer.getTxId();
 }
 
-BinaryData TestCCoin::SimpleSendMany(const bs::Address & fromAddress, const std::vector<bs::Address> & toAddresses, const uint64_t & valuePerOne)
+BinaryData TestCCoin::SimpleSendMany(const bs::Address & fromAddress
+   , const std::vector<bs::Address> & toAddresses, const uint64_t & valuePerOne)
 {
    auto promPtr = std::make_shared<std::promise<BinaryData>>();
    auto fut = promPtr->get_future();
@@ -277,7 +278,7 @@ BinaryData TestCCoin::SimpleSendMany(const bs::Address & fromAddress, const std:
       {
          std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recipients;
          for(const auto & addr : toAddresses) {
-            recipients.push_back(addr.getRecipient(bs::XBTAmount{ valuePerOne }));
+            recipients.push_back(addr.getRecipient(bs::XBTAmount{ (int64_t)valuePerOne }));
          }
 
          const uint64_t requiredValue = valuePerOne * toAddresses.size();
@@ -372,7 +373,7 @@ Tx TestCCoin::CreateCJtx(
    }
 
    //CC recipients
-   cjSigner.addRecipient(structB.ccAddr_.getRecipient(bs::XBTAmount{ structB.ccValue_ }));
+   cjSigner.addRecipient(structB.ccAddr_.getRecipient(bs::XBTAmount{ (int64_t)structB.ccValue_ }));
    const bs::Address ccChange = structA.ccChange.empty() ? structA.ccAddr_ : structA.ccChange;
   
    if (ccValue < structB.ccValue_)
@@ -385,14 +386,14 @@ Tx TestCCoin::CreateCJtx(
          auto factor = changeVal / ccLotSize_;
          changeVal = ccLotSize_ * factor;
       }
-      cjSigner.addRecipient(ccChange.getRecipient(bs::XBTAmount{ changeVal }));
+      cjSigner.addRecipient(ccChange.getRecipient(bs::XBTAmount{ (int64_t)changeVal }));
    }
 
    //XBT recipients
-   cjSigner.addRecipient(structA.xbtAddr_.getRecipient(bs::XBTAmount{ structA.xbtValue_ }));
+   cjSigner.addRecipient(structA.xbtAddr_.getRecipient(bs::XBTAmount{ (int64_t)structA.xbtValue_ }));
 
    if(xbtValue - structA.xbtValue_ - fee > 0)
-      cjSigner.addRecipient(structB.xbtAddr_.getRecipient(bs::XBTAmount{ xbtValue - structA.xbtValue_ - fee }));
+      cjSigner.addRecipient(structB.xbtAddr_.getRecipient(bs::XBTAmount{ (int64_t)(xbtValue - structA.xbtValue_ - fee) }));
 
    //grab unsigned tx if applicable
    Tx unsignedTx;
@@ -2361,7 +2362,7 @@ TEST_F(TestCCoin, ZeroConfChain)
    {      
       Signer signer;
       signer.addSpender(spender);
-      signer.addRecipient(addr.getRecipient(bs::XBTAmount{ value }));
+      signer.addRecipient(addr.getRecipient(bs::XBTAmount{ (int64_t)value }));
       
       auto script = spender->getOutputScript();
       auto changeAddr = BtcUtils::getScrAddrForScript(script);
@@ -2484,7 +2485,7 @@ TEST_F(TestCCoin, Reorg)
       for (auto& recipient : recipients)
       {
          total += recipient.second;
-         signer.addRecipient(recipient.first.getRecipient(bs::XBTAmount{ recipient.second }));
+         signer.addRecipient(recipient.first.getRecipient(bs::XBTAmount{ (int64_t)recipient.second }));
       }
 
       if (total > spender->getValue())
@@ -2846,7 +2847,7 @@ TEST_F(TestCCoin, Reorg_WithACT)
       for (auto& recipient : recipients)
       {
          total += recipient.second;
-         signer.addRecipient(recipient.first.getRecipient(bs::XBTAmount{ recipient.second }));
+         signer.addRecipient(recipient.first.getRecipient(bs::XBTAmount{ (int64_t)recipient.second }));
       }
 
       if (total > spender->getValue())
@@ -3153,12 +3154,12 @@ TEST_F(TestCCoin, DestroyCC)
       }
       
       //recipients
-      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(uint64_t(25 * COIN))));
-      signer.addRecipient(userFundAddresses_[7].getRecipient(bs::XBTAmount(uint64_t(20 * COIN))));
+      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(int64_t(25 * COIN))));
+      signer.addRecipient(userFundAddresses_[7].getRecipient(bs::XBTAmount(int64_t(20 * COIN))));
 
-      signer.addRecipient(userCCAddresses_[3].getRecipient(bs::XBTAmount(100 * ccLotSize_)));
-      signer.addRecipient(userCCAddresses_[4].getRecipient(bs::XBTAmount(120 * ccLotSize_)));
-      signer.addRecipient(userCCAddresses_[5].getRecipient(bs::XBTAmount(70 * ccLotSize_)));
+      signer.addRecipient(userCCAddresses_[3].getRecipient(bs::XBTAmount((int64_t)100 * ccLotSize_)));
+      signer.addRecipient(userCCAddresses_[4].getRecipient(bs::XBTAmount((int64_t)120 * ccLotSize_)));
+      signer.addRecipient(userCCAddresses_[5].getRecipient(bs::XBTAmount((int64_t)70 * ccLotSize_)));
 
       //signing
       for (auto& utxo : utxoVec) {
@@ -3237,7 +3238,7 @@ TEST_F(TestCCoin, TxCandidateParsing)
       signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos1.back()));
 
       signer.addRecipient(userCCAddresses_[3].getRecipient(bs::XBTAmount(100 * ccLotSize_)));
-      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(uint64_t(50 * COIN))));
+      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(int64_t(50 * COIN))));
 
       auto unsignedTxRaw = signer.serializeUnsignedTx();
       Tx txUnsigned(unsignedTxRaw);
@@ -3274,7 +3275,7 @@ TEST_F(TestCCoin, TxCandidateParsing)
       signer.addSpender(std::make_shared<ScriptSpender>(ccUtxos3.back()));
 
       signer.addRecipient(userCCAddresses_[3].getRecipient(bs::XBTAmount(200 * ccLotSize_)));
-      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(uint64_t(50 * COIN))));
+      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(int64_t(50 * COIN))));
 
       auto unsignedTxRaw = signer.serializeUnsignedTx();
       Tx txUnsigned(unsignedTxRaw);
@@ -3311,7 +3312,7 @@ TEST_F(TestCCoin, TxCandidateParsing)
       signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos3.back()));
 
       signer.addRecipient(userCCAddresses_[3].getRecipient(bs::XBTAmount(100 * ccLotSize_)));
-      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(uint64_t(120 * COIN))));
+      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(int64_t(120 * COIN))));
 
       auto unsignedTxRaw = signer.serializeUnsignedTx();
       Tx txUnsigned(unsignedTxRaw);
@@ -3376,7 +3377,7 @@ TEST_F(TestCCoin, TxCandidateParsing)
       signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos2.back()));
       signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos3.back()));
 
-      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(uint64_t(149 * COIN))));
+      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(int64_t(149 * COIN))));
 
       auto unsignedTxRaw = signer.serializeUnsignedTx();
       Tx txUnsigned(unsignedTxRaw);
@@ -3403,8 +3404,8 @@ TEST_F(TestCCoin, TxCandidateParsing)
       signer.addRecipient(userCCAddresses_[4].getRecipient(bs::XBTAmount(120 * ccLotSize_)));
       signer.addRecipient(userCCAddresses_[5].getRecipient(bs::XBTAmount(50 * ccLotSize_)));
 
-      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(uint64_t(70 * COIN))));
-      signer.addRecipient(userFundAddresses_[7].getRecipient(bs::XBTAmount(uint64_t(30 * COIN))));
+      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(int64_t(70 * COIN))));
+      signer.addRecipient(userFundAddresses_[7].getRecipient(bs::XBTAmount(int64_t(30 * COIN))));
 
       auto unsignedTxRaw = signer.serializeUnsignedTx();
       Tx txUnsigned(unsignedTxRaw);
@@ -3546,8 +3547,8 @@ TEST_F(TestCCoin, TxCandidateParsing)
       signer.addRecipient(userCCAddresses_[4].getRecipient(bs::XBTAmount(210 * ccLotSize_)));
       signer.addRecipient(userCCAddresses_[5].getRecipient(bs::XBTAmount(70 * ccLotSize_)));
 
-      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(uint64_t(70 * COIN))));
-      signer.addRecipient(userFundAddresses_[7].getRecipient(bs::XBTAmount(uint64_t(20 * COIN))));
+      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(int64_t(70 * COIN))));
+      signer.addRecipient(userFundAddresses_[7].getRecipient(bs::XBTAmount(int64_t(20 * COIN))));
 
       auto unsignedTxRaw = signer.serializeUnsignedTx();
       Tx txUnsigned(unsignedTxRaw);
@@ -3597,8 +3598,8 @@ TEST_F(TestCCoin, TxCandidateParsing)
       signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos1.back()));
       signer.addSpender(std::make_shared<ScriptSpender>(xbtUtxos2.back()));
 
-      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(uint64_t(70 * COIN))));
-      signer.addRecipient(userFundAddresses_[7].getRecipient(bs::XBTAmount(uint64_t(20 * COIN))));
+      signer.addRecipient(userFundAddresses_[6].getRecipient(bs::XBTAmount(int64_t(70 * COIN))));
+      signer.addRecipient(userFundAddresses_[7].getRecipient(bs::XBTAmount(int64_t(20 * COIN))));
 
       signer.addRecipient(userCCAddresses_[3].getRecipient(bs::XBTAmount(100 * ccLotSize_)));
       signer.addRecipient(userCCAddresses_[4].getRecipient(bs::XBTAmount(120 * ccLotSize_)));

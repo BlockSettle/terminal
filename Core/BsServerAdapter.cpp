@@ -41,35 +41,39 @@ BsServerAdapter::BsServerAdapter(const std::shared_ptr<spdlog::logger> &logger)
 
 bool BsServerAdapter::process(const bs::message::Envelope &env)
 {
-   if (env.sender->isSystem()) {
-      AdministrativeMessage msg;
-      if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse administrative message #{}", __func__, env.id);
-         return true;
-      }
-      switch (msg.data_case()) {
-      case AdministrativeMessage::kStart:
-         start();
-         break;
-      case AdministrativeMessage::kRestart:
-         start();
-         break;
-      }
-   }
-   else if (env.sender->value<TerminalUsers>() == TerminalUsers::Settings) {
+   if (env.sender->value<TerminalUsers>() == TerminalUsers::Settings) {
       SettingsMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse settings message #{}", __func__, env.id);
+         logger_->error("[{}] failed to parse settings message #{}", __func__, env.id());
          return true;
       }
       if (msg.data_case() == SettingsMessage::kGetResponse) {
          return processLocalSettings(msg.get_response());
       }
    }
-   else if (env.receiver && (env.receiver->value() == user_->value())) {
+   else if (env.receiver->value() == user_->value()) {
       return processOwnRequest(env);
    }
    return true;
+}
+
+bool BsServerAdapter::processBroadcast(const bs::message::Envelope& env)
+{
+   if (env.sender->isSystem()) {
+      AdministrativeMessage msg;
+      if (!msg.ParseFromString(env.message)) {
+         logger_->error("[{}] failed to parse administrative message #{}", __func__, env.id());
+         return false;
+      }
+      switch (msg.data_case()) {
+      case AdministrativeMessage::kStart:
+      case AdministrativeMessage::kRestart:
+         start();
+         return true;
+      default: break;
+      }
+   }
+   return false;
 }
 
 void BsServerAdapter::start()
@@ -80,16 +84,15 @@ void BsServerAdapter::start()
    req->set_source(SettingSource_Local);
    req->set_type(SettingType_Int);
    req->set_index(SetIdx_Environment);
-   Envelope envReq{ 0, user_, UserTerminal::create(TerminalUsers::Settings)
-      , {}, {}, msg.SerializeAsString() };
-   pushFill(envReq);
+   pushRequest(user_, UserTerminal::create(TerminalUsers::Settings)
+      , msg.SerializeAsString());
 }
 
 bool BsServerAdapter::processOwnRequest(const Envelope &env)
 {
    BsServerMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse own request #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse own request #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
@@ -134,9 +137,8 @@ bool BsServerAdapter::processLocalSettings(const SettingsMessage_SettingsRespons
          {
             AdministrativeMessage admMsg;
             admMsg.set_component_loading(user_->value());
-            Envelope envBC{ 0, UserTerminal::create(TerminalUsers::System), nullptr
-               , {}, {}, admMsg.SerializeAsString() };
-            pushFill(envBC);
+            pushBroadcast(UserTerminal::create(TerminalUsers::System)
+               , admMsg.SerializeAsString());
          }
          break;
 
@@ -190,8 +192,7 @@ bool BsServerAdapter::processOpenConnection()
       msgReq->set_old_key(oldKey);
       msgReq->set_new_key(newKey);
       msgReq->set_server_id(srvAddrPort);
-      Envelope envBC{ 0, user_, nullptr, {}, {}, msg.SerializeAsString(), true };
-      pushFill(envBC);
+      pushBroadcast(user_, msg.SerializeAsString(), true);
    });
 
    auto wsConnection = std::make_unique<WsDataConnection>(logger_, WsDataConnectionParams{});
@@ -238,8 +239,7 @@ bool BsServerAdapter::processSubmitAuthAddr(const bs::message::Envelope& env
    {
       BsServerMessage msg;
       msg.set_submit_auth_result((int)code);
-      Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
-      pushFill(envResp);
+      pushResponse(user_, env, msg.SerializeAsString());
    };
    const auto& address = bs::Address::fromAddressString(addr);
    bsClient_->signAuthAddress(address, [this, address, sendReply](const BsClient::SignResponse& response) {
@@ -270,9 +270,8 @@ bool BsServerAdapter::processSubmitAuthAddr(const bs::message::Envelope& env
 
          AssetsMessage msg;
          msg.set_submit_auth_address(address.display());
-         Envelope envReq{ 0, user_, UserTerminal::create(TerminalUsers::Assets)
-            , {}, {}, msg.SerializeAsString(), true };
-         pushFill(envReq);
+         pushRequest(user_, UserTerminal::create(TerminalUsers::Assets)
+            , msg.SerializeAsString());
       });
    });
    return true;
@@ -305,16 +304,14 @@ void BsServerAdapter::processUpdateOrders(const Blocksettle::Communication::Prox
       msgOrder->set_price(order.price());
       msgOrder->set_timestamp(order.timestamp_ms());
    }
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString());
 }
 
 void BsServerAdapter::processUnsignedPayin(const Blocksettle::Communication::ProxyTerminalPb::Response_UnsignedPayinRequest& response)
 {
    BsServerMessage msg;
    msg.set_unsigned_payin_requested(BinaryData::CreateFromHex(response.settlement_id()).toBinStr());
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushResponse(user_, userSettl_, msg.SerializeAsString());
 }
 
 void BsServerAdapter::processSignPayin(const Blocksettle::Communication::ProxyTerminalPb::Response_SignPayinRequest& response)
@@ -325,8 +322,7 @@ void BsServerAdapter::processSignPayin(const Blocksettle::Communication::ProxyTe
    msgBC->set_unsigned_payin(BinaryData::fromString(response.unsigned_payin_data()).toBinStr());
    msgBC->set_payin_hash(BinaryData::fromString(response.payin_hash()).toBinStr());
    msgBC->set_timestamp(response.timestamp_ms());
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushResponse(user_, userSettl_, msg.SerializeAsString());
 }
 
 void BsServerAdapter::processSignPayout(const Blocksettle::Communication::ProxyTerminalPb::Response_SignPayoutRequest& response)
@@ -336,8 +332,7 @@ void BsServerAdapter::processSignPayout(const Blocksettle::Communication::ProxyT
    msgBC->set_settlement_id(BinaryData::CreateFromHex(response.settlement_id()).toBinStr());
    msgBC->set_payin_hash(BinaryData::fromString(response.payin_data()).toBinStr());
    msgBC->set_timestamp(response.timestamp_ms());
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushResponse(user_, userSettl_, msg.SerializeAsString());
 }
 
 bool BsServerAdapter::processOutUnsignedPayin(const BsServerMessage_XbtTransaction& request)
@@ -369,8 +364,7 @@ void BsServerAdapter::startTimer(std::chrono::milliseconds timeout
    timeouts_[toKey] = cb;
    msg.set_timeout(toKey);
    const auto& timeNow = bs::message::bus_clock::now();
-   Envelope env{ 0, user_, user_, timeNow, timeNow + timeout, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, user_, msg.SerializeAsString(), timeNow + timeout);
 }
 
 void BsServerAdapter::onStartLoginDone(bool success, const std::string& errorMsg)
@@ -384,8 +378,7 @@ void BsServerAdapter::onStartLoginDone(bool success, const std::string& errorMsg
    msgResp->set_login(currentLogin_);
    msgResp->set_success(success);
    msgResp->set_error_text(errorMsg);
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString());
 
    if (success) {
       bsClient_->getLoginResult();
@@ -419,38 +412,34 @@ void BsServerAdapter::onGetLoginResultDone(const BsClientLoginResult& result)
    msgTradeSet->set_auth_reqd_settl_trades(result.tradeSettings.authRequiredSettledTrades);
    msgTradeSet->set_auth_submit_addr_limit(result.tradeSettings.authSubmitAddressLimit);
    msgTradeSet->set_dealer_auth_submit_addr_limit(result.tradeSettings.dealerAuthSubmitAddressLimit);
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString());
 
    SettingsMessage msgSet;
    msgSet.set_load_bootstrap(result.bootstrapDataSigned);
-   Envelope envSet{ 0, user_, userSettings_, {}, {}, msgSet.SerializeAsString(), true };
-   pushFill(envSet);
+   pushRequest(user_, userSettings_, msgSet.SerializeAsString());
 
    MatchingMessage msgMtch;
    auto msgReq = msgMtch.mutable_login();
    msgReq->set_matching_login(result.celerLogin);
    msgReq->set_terminal_login(currentLogin_);
-   Envelope envMtch{ 0, user_, userMtch_, {}, {}, msgMtch.SerializeAsString(), true };
-   pushFill(envMtch);
+   pushRequest(user_, userMtch_, msgMtch.SerializeAsString());
 
    WalletsMessage msgWlt;
    msgWlt.set_set_settlement_fee(result.feeRatePb);
-   Envelope envWlt{ 0, user_, userWallets_, {}, {}, msgWlt.SerializeAsString(), true };
-   pushFill(envWlt);
+   pushRequest(user_, userWallets_, msgWlt.SerializeAsString());
 
    //TODO: send chat login
    currentLogin_.clear();
 }
 
-void BsServerAdapter::onCelerRecv(CelerAPI::CelerMessageType messageType, const std::string& data)
+void BsServerAdapter::onCelerRecv(CelerAPI::CelerMessageType messageType
+   , const std::string& data)
 {
    BsServerMessage msg;
    auto msgResp = msg.mutable_recv_matching();
    msgResp->set_message_type((int)messageType);
    msgResp->set_data(data);
-   Envelope env{ 0, user_, userMtch_, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushResponse(user_, userMtch_, msg.SerializeAsString());
 }
 
 void BsServerAdapter::onProcessPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response& response)
@@ -478,8 +467,7 @@ void BsServerAdapter::Connected()
    connected_ = true;
    BsServerMessage msg;
    msg.mutable_connected();
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString());
 }
 
 void BsServerAdapter::Disconnected()
@@ -487,8 +475,7 @@ void BsServerAdapter::Disconnected()
    connected_ = false;
    BsServerMessage msg;
    msg.mutable_disconnected();
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString());
 }
 
 void BsServerAdapter::onConnectionFailed()
@@ -502,14 +489,12 @@ void BsServerAdapter::onBalanceUpdated(const std::string& currency, double balan
    auto msgBal = msg.mutable_balance_updated();
    msgBal->set_currency(currency);
    msgBal->set_value(balance);
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString());
 }
 
 void BsServerAdapter::onTradingStatusChanged(bool tradingEnabled)
 {
    BsServerMessage msg;
    msg.set_trading_enabled(tradingEnabled);
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString());
 }

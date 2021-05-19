@@ -39,24 +39,10 @@ std::unique_ptr<SignerClient> SignerAdapter::createClient() const
 
 bool SignerAdapter::process(const bs::message::Envelope &env)
 {
-   if (env.sender->value<TerminalUsers>() == TerminalUsers::System) {
-      AdministrativeMessage msg;
-      if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse administrative msg #{}", __func__, env.id);
-         return true;
-      }
-      switch (msg.data_case()) {
-      case AdministrativeMessage::kStart:
-      case AdministrativeMessage::kRestart:
-         start();
-         break;
-      default: break;
-      }
-   }
-   else if (env.sender->value<TerminalUsers>() == TerminalUsers::Settings) {
+   if (env.sender->value<TerminalUsers>() == TerminalUsers::Settings) {
       SettingsMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse settings msg #{}", __func__, env.id);
+         logger_->error("[{}] failed to parse settings msg #{}", __func__, env.id());
          return true;
       }
       switch (msg.data_case()) {
@@ -64,13 +50,13 @@ bool SignerAdapter::process(const bs::message::Envelope &env)
          return processSignerSettings(msg.signer_response());
       }
    }
-   else if (env.receiver && (env.receiver->value<TerminalUsers>() == TerminalUsers::Signer)) {
+   else if (env.receiver->value<TerminalUsers>() == TerminalUsers::Signer) {
       SignerMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse own msg #{}", __func__, env.id);
+         logger_->error("[{}] failed to parse own msg #{}", __func__, env.id());
          return true;
       }
-      if (env.request) {
+      if (env.isRequest()) {
          return processOwnRequest(env, msg);
       }
       else {
@@ -84,6 +70,25 @@ bool SignerAdapter::process(const bs::message::Envelope &env)
    return true;
 }
 
+bool SignerAdapter::processBroadcast(const bs::message::Envelope& env)
+{
+   if (env.sender->value<TerminalUsers>() == TerminalUsers::System) {
+      AdministrativeMessage msg;
+      if (!msg.ParseFromString(env.message)) {
+         logger_->error("[{}] failed to parse administrative msg #{}", __func__, env.id());
+         return true;
+      }
+      switch (msg.data_case()) {
+      case AdministrativeMessage::kStart:
+      case AdministrativeMessage::kRestart:
+         start();
+         return true;
+      default: break;
+      }
+   }
+   return false;
+}
+
 void SignerAdapter::start()
 {
    if (signer_) {
@@ -94,9 +99,8 @@ void SignerAdapter::start()
    }
    SettingsMessage msg;
    msg.mutable_signer_request();
-   bs::message::Envelope env{ 0, user_, UserTerminal::create(TerminalUsers::Settings)
-      , {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, UserTerminal::create(TerminalUsers::Settings)
+      , msg.SerializeAsString());
 }
 
 bool SignerAdapter::processOwnRequest(const bs::message::Envelope &env
@@ -169,9 +173,7 @@ std::shared_ptr<WalletSignerContainer> SignerAdapter::makeRemoteSigner(
       msgReq->set_old_key(oldKey);
       msgReq->set_new_key(newKey);
       msgReq->set_server_id(srvAddrPort);
-      bs::message::Envelope env{ 0, user_, nullptr, {}, {}
-         , msg.SerializeAsString(), true };
-      pushFill(env);
+      pushBroadcast(user_, msg.SerializeAsString(), true);
    };
 
    auto remoteSigner = std::make_shared<RemoteSigner>(logger_
@@ -223,8 +225,7 @@ bool SignerAdapter::processSignerSettings(const SettingsMessage_SignerServer &re
          auto msgError = msg.mutable_state();
          msgError->set_code((int)SignContainer::SocketFailed);
          msgError->set_text("failed to bind local port");
-         Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-         return pushFill(env);
+         return pushBroadcast(user_, msg.SerializeAsString(), true);
       }
 
       const auto &connMgr = std::make_shared<ConnectionManager>(logger_);
@@ -251,8 +252,7 @@ void SignerAdapter::connError(SignContainer::ConnectionError errCode, const QStr
    auto msgErr = msg.mutable_state();
    msgErr->set_code((int)errCode);
    msgErr->set_text(errMsg.toStdString());
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString(), true);
 }
 
 void SignerAdapter::connTorn()
@@ -261,16 +261,14 @@ void SignerAdapter::connTorn()
    auto msgState = msg.mutable_state();
    msgState->set_code((int)SignContainer::ConnectionError::SignerGoesOffline);
    msgState->set_text("disconnected");
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString(), true);
 }
 
 void SignerAdapter::authLeafAdded(const std::string &walletId)
 {
    SignerMessage msg;
    msg.set_auth_leaf_added(walletId);
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString(), true);
 }
 
 void SignerAdapter::walletsChanged()
@@ -278,8 +276,7 @@ void SignerAdapter::walletsChanged()
    logger_->debug("[{}]", __func__);
    SignerMessage msg;
    msg.mutable_wallets_list_updated();
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString(), true);
 }
 
 void SignerAdapter::onReady()
@@ -287,16 +284,14 @@ void SignerAdapter::onReady()
    SignerMessage msg;
    auto msgState = msg.mutable_state();
    msgState->set_code((int)SignContainer::Ready);
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString(), true);
 }
 
 void SignerAdapter::walletsReady()
 {
    SignerMessage msg;
    msg.mutable_wallets_ready_to_sync();
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString(), true);
 }
 
 void SignerAdapter::newWalletPrompt()
@@ -304,8 +299,7 @@ void SignerAdapter::newWalletPrompt()
    logger_->debug("[{}]", __func__);
    SignerMessage msg;
    msg.mutable_need_new_wallet_prompt();
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString(), true);
 }
 
 void SignerAdapter::autoSignStateChanged(bs::error::ErrorCode code
@@ -331,9 +325,7 @@ void SignerAdapter::autoSignStateChanged(bs::error::ErrorCode code
    auto msgResp = msg.mutable_auto_sign();
    msgResp->set_wallet_id(walletId);
    msgResp->set_enable(enabled);
-   Envelope envResp{ itAS->second.id, user_, itAS->second.sender, {}, {}
-      , msg.SerializeAsString() };
-   pushFill(envResp);
+   pushResponse(user_, itAS->second, msg.SerializeAsString());
    autoSignRequests_.erase(itAS);
 }
 
@@ -341,8 +333,7 @@ void SignerAdapter::windowIsVisible(bool flag)
 {
    SignerMessage msg;
    msg.set_window_visible_changed(flag);
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString(), true);
 }
 
 bool SignerAdapter::sendComponentLoading()
@@ -350,8 +341,7 @@ bool SignerAdapter::sendComponentLoading()
    static const auto &adminUser = UserTerminal::create(TerminalUsers::System);
    AdministrativeMessage msg;
    msg.set_component_loading(user_->value());
-   Envelope env{ 0, adminUser, nullptr, {}, {}, msg.SerializeAsString() };
-   return pushFill(env);
+   return pushBroadcast(adminUser, msg.SerializeAsString());
 }
 
 bool SignerAdapter::processNewKeyResponse(bool acceptNewKey)
@@ -366,9 +356,8 @@ bool SignerAdapter::processNewKeyResponse(bool acceptNewKey)
       auto msgReq = msg.mutable_signer_set_key();
       msgReq->set_server_id(curServerId_);
       msgReq->set_new_key(connKey_);
-      bs::message::Envelope env{ 0, user_, UserTerminal::create(TerminalUsers::Settings)
-         , {}, {}, msg.SerializeAsString(), true };
-      pushFill(env);
+      pushRequest(user_, UserTerminal::create(TerminalUsers::Settings)
+         , msg.SerializeAsString());
    }
    connFuture_.reset();
    return true;
@@ -376,8 +365,8 @@ bool SignerAdapter::processNewKeyResponse(bool acceptNewKey)
 
 bool SignerAdapter::processStartWalletSync(const bs::message::Envelope &env)
 {
-   requests_.put(env.id, env.sender);
-   const auto &cbWallets = [this, msgId=env.id]
+   requests_.put(env.foreignId(), env.sender);
+   const auto &cbWallets = [this, msgId=env.foreignId()]
       (const std::vector<bs::sync::WalletInfo> &wi)
    {
       auto sender = requests_.take(msgId);
@@ -406,8 +395,7 @@ bool SignerAdapter::processStartWalletSync(const bs::message::Envelope &env)
          keyRank->set_m(entry.encryptionRank.m);
          keyRank->set_n(entry.encryptionRank.n);
       }
-      Envelope envResp{ msgId, user_, sender, {}, {}, msg.SerializeAsString() };
-      pushFill(envResp);
+      pushResponse(user_, sender, msg.SerializeAsString(), msgId);
    };
    signer_->syncWalletInfo(cbWallets);
    return true;
@@ -416,8 +404,8 @@ bool SignerAdapter::processStartWalletSync(const bs::message::Envelope &env)
 bool SignerAdapter::processSyncAddresses(const bs::message::Envelope &env
    , const SignerMessage_SyncAddresses &request)
 {
-   requests_.put(env.id, env.sender);
-   const auto &cb = [this, msgId = env.id, walletId = request.wallet_id()]
+   requests_.put(env.foreignId(), env.sender);
+   const auto &cb = [this, msgId = env.foreignId(), walletId = request.wallet_id()]
       (bs::sync::SyncState st)
    {
       auto sender = requests_.take(msgId);
@@ -429,8 +417,7 @@ bool SignerAdapter::processSyncAddresses(const bs::message::Envelope &env
       msgResp->set_wallet_id(walletId);
       msgResp->set_status(static_cast<int>(st));
 
-      Envelope envResp{ msgId, user_, sender, {}, {}, msg.SerializeAsString() };
-      pushFill(envResp);
+      pushResponse(user_, sender, msg.SerializeAsString(), msgId);
    };
    std::set<BinaryData> addrSet;
    for (const auto &addr : request.addresses()) {
@@ -443,10 +430,10 @@ bool SignerAdapter::processSyncAddresses(const bs::message::Envelope &env
 bool SignerAdapter::processSyncNewAddresses(const bs::message::Envelope &env
    , const SignerMessage_SyncNewAddresses &request)
 {
-   requests_.put(env.id, env.sender);
+   requests_.put(env.foreignId(), env.sender);
    if (request.single()) {
-      const auto &cb = [this, msgId = env.id, walletId = request.wallet_id()]
-      (const bs::Address &addr)
+      const auto &cb = [this, msgId = env.foreignId(), walletId = request.wallet_id()]
+         (const bs::Address &addr)
       {
          auto sender = requests_.take(msgId);
          if (!sender) {
@@ -457,8 +444,7 @@ bool SignerAdapter::processSyncNewAddresses(const bs::message::Envelope &env
          msgResp->set_wallet_id(walletId);
          msgResp->add_addresses()->set_address(addr.display());
 
-         Envelope envResp{ msgId, user_, sender, {}, {}, msg.SerializeAsString() };
-         pushFill(envResp);
+         pushResponse(user_, sender, msg.SerializeAsString(), msgId);
       };
       if (request.indices_size() != 1) {
          logger_->error("[{}] not a single new address request", __func__);
@@ -467,7 +453,7 @@ bool SignerAdapter::processSyncNewAddresses(const bs::message::Envelope &env
       signer_->syncNewAddress(request.wallet_id(), request.indices(0), cb);
    }
    else {
-      const auto &cb = [this, msgId=env.id, walletId = request.wallet_id()]
+      const auto &cb = [this, msgId=env.foreignId(), walletId = request.wallet_id()]
          (const std::vector<std::pair<bs::Address, std::string>> &addrIdxPairs)
       {
          auto sender = requests_.take(msgId);
@@ -482,9 +468,7 @@ bool SignerAdapter::processSyncNewAddresses(const bs::message::Envelope &env
             msgPair->set_address(aiPair.first.display());
             msgPair->set_index(aiPair.second);
          }
-
-         Envelope envResp{ msgId, user_, sender, {}, {}, msg.SerializeAsString() };
-         pushFill(envResp);
+         pushResponse(user_, sender, msg.SerializeAsString(), msgId);
       };
       std::vector<std::string> indices;
       indices.reserve(request.indices_size());
@@ -499,8 +483,8 @@ bool SignerAdapter::processSyncNewAddresses(const bs::message::Envelope &env
 bool SignerAdapter::processExtendAddrChain(const bs::message::Envelope &env
    , const SignerMessage_ExtendAddrChain &request)
 {
-   requests_.put(env.id, env.sender);
-   const auto &cb = [this, msgId = env.id, walletId = request.wallet_id()]
+   requests_.put(env.foreignId(), env.sender);
+   const auto &cb = [this, msgId = env.foreignId(), walletId = request.wallet_id()]
       (const std::vector<std::pair<bs::Address, std::string>> &addrIdxPairs)
    {
       auto sender = requests_.take(msgId);
@@ -515,9 +499,7 @@ bool SignerAdapter::processExtendAddrChain(const bs::message::Envelope &env
          msgPair->set_address(aiPair.first.display());
          msgPair->set_index(aiPair.second);
       }
-
-      Envelope envResp{ msgId, user_, sender, {}, {}, msg.SerializeAsString() };
-      pushFill(envResp);
+      pushResponse(user_, sender, msg.SerializeAsString(), msgId);
    };
    signer_->extendAddressChain(request.wallet_id(), request.count(), request.ext_int(), cb);
    return true;
@@ -526,8 +508,8 @@ bool SignerAdapter::processExtendAddrChain(const bs::message::Envelope &env
 bool SignerAdapter::processSyncWallet(const bs::message::Envelope &env
    , const std::string &walletId)
 {
-   requests_.put(env.id, env.sender);
-   const auto &cb = [this, msgId=env.id, walletId]
+   requests_.put(env.foreignId(), env.sender);
+   const auto &cb = [this, msgId=env.foreignId(), walletId]
       (bs::sync::WalletData data)
    {
       auto sender = requests_.take(msgId);
@@ -557,9 +539,7 @@ bool SignerAdapter::processSyncWallet(const bs::message::Envelope &env
          msgTxCom->set_tx_hash(txCom.txHash.toBinStr());
          msgTxCom->set_comment(txCom.comment);
       }
-
-      Envelope envResp{ msgId, user_, sender, {}, {}, msg.SerializeAsString() };
-      pushFill(envResp);
+      pushResponse(user_, sender, msg.SerializeAsString(), msgId);
    };
    signer_->syncWallet(walletId, cb);
    return true;
@@ -568,8 +548,8 @@ bool SignerAdapter::processSyncWallet(const bs::message::Envelope &env
 bool SignerAdapter::processSyncHdWallet(const bs::message::Envelope &env
    , const std::string &walletId)
 {
-   requests_.put(env.id, env.sender);
-   const auto &cb = [this, msgId = env.id, walletId]
+   requests_.put(env.foreignId(), env.sender);
+   const auto &cb = [this, msgId = env.foreignId(), walletId]
       (bs::sync::HDWalletData data)
    {
       auto sender = requests_.take(msgId);
@@ -581,8 +561,7 @@ bool SignerAdapter::processSyncHdWallet(const bs::message::Envelope &env
       *msgResp = data.toCommonMessage();
       msgResp->set_wallet_id(walletId);
 
-      Envelope envResp{ msgId, user_, sender, {}, {}, msg.SerializeAsString() };
-      pushFill(envResp);
+      pushResponse(user_, sender, msg.SerializeAsString(), msgId);
    };
    signer_->syncHDWallet(walletId, cb);
    return true;
@@ -608,8 +587,8 @@ bool SignerAdapter::processSyncTxComment(const SignerMessage_SyncTxComment &requ
 bool SignerAdapter::processSetSettlId(const bs::message::Envelope &env
    , const SignerMessage_SetSettlementId &request)
 {
-   requests_.put(env.id, env.sender);
-   const auto &cb = [this, msgId=env.id](bool result)
+   requests_.put(env.foreignId(), env.sender);
+   const auto &cb = [this, msgId=env.foreignId()](bool result)
    {
       auto sender = requests_.take(msgId);
       if (!sender) {
@@ -617,8 +596,7 @@ bool SignerAdapter::processSetSettlId(const bs::message::Envelope &env
       }
       SignerMessage msg;
       msg.set_settl_id_set(result);
-      Envelope envResp{ msgId, user_, sender, {}, {}, msg.SerializeAsString() };
-      pushFill(envResp);
+      pushResponse(user_, sender, msg.SerializeAsString(), msgId);
    };
    signer_->setSettlementID(request.wallet_id()
       , BinaryData::fromString(request.settlement_id()), cb);
@@ -636,8 +614,7 @@ bool SignerAdapter::processSignSettlementTx(const bs::message::Envelope& env
       msgResp->set_id(settlementId);
       msgResp->set_error_code((int)result);
       msgResp->set_signed_tx(signedTx.toBinStr());
-      Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
-      pushFill(envResp);
+      pushResponse(user_, env, msg.SerializeAsString());
    };
 
    auto txReq = bs::signer::pbTxRequestToCore(request.tx_request(), logger_);
@@ -659,8 +636,8 @@ bool SignerAdapter::processSignSettlementTx(const bs::message::Envelope& env
 bool SignerAdapter::processGetRootPubKey(const bs::message::Envelope &env
    , const std::string &walletId)
 {
-   requests_.put(env.id, env.sender);
-   const auto &cb = [this, msgId=env.id, walletId]
+   requests_.put(env.foreignId(), env.sender);
+   const auto &cb = [this, msgId=env.foreignId(), walletId]
       (bool result, const SecureBinaryData &key)
    {
       auto sender = requests_.take(msgId);
@@ -673,8 +650,7 @@ bool SignerAdapter::processGetRootPubKey(const bs::message::Envelope &env
       msgResp->set_pub_key(key.toBinStr());
       msgResp->set_success(result);
 
-      Envelope envResp{ msgId, user_, sender, {}, {}, msg.SerializeAsString() };
-      pushFill(envResp);
+      pushResponse(user_, sender, msg.SerializeAsString(), msgId);
    };
    signer_->getRootPubkey(walletId, cb);
    return true;
@@ -702,8 +678,7 @@ bool SignerAdapter::processSignTx(const bs::message::Envelope& env
       msgResp->set_signed_tx(signedTX.toBinStr());
       msgResp->set_error_code((int)result);
       msgResp->set_error_text(errorReason);
-      Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
-      pushFill(envResp);
+      pushResponse(user_, env, msg.SerializeAsString());
    };
    const auto& txReq = bs::signer::pbTxRequestToCore(request.tx_request(), logger_);
    signer_->signTXRequest(txReq, cbSigned
@@ -732,8 +707,7 @@ bool SignerAdapter::processCreateSettlWallet(const bs::message::Envelope& env
    {
       SignerMessage msg;
       msg.set_auth_pubkey(authPubKey.toBinStr());
-      Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
-      pushFill(envResp);
+      pushResponse(user_, env, msg.SerializeAsString());
    };
    signer_->createSettlementWallet(authAddr, cb);
    return true;
@@ -748,8 +722,7 @@ bool SignerAdapter::processGetPayinAddress(const bs::message::Envelope& env
       auto msgResp = msg.mutable_payin_address();
       msgResp->set_success(success);
       msgResp->set_address(settlAddr.display());
-      Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
-      pushFill(envResp);
+      pushResponse(user_, env, msg.SerializeAsString());
    };
    bs::core::wallet::SettlementData settlData{ BinaryData::fromString(request.settlement_id())
       , BinaryData::fromString(request.contra_auth_pubkey()), request.own_key_first() };
@@ -767,8 +740,7 @@ bool SignerAdapter::processResolvePubSpenders(const bs::message::Envelope& env
       auto msgResp = msg.mutable_resolved_spenders();
       msgResp->set_result((int)result);
       msgResp->set_signer_state(state.SerializeAsString());
-      Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
-      pushFill(envResp);
+      pushResponse(user_, env, msg.SerializeAsString());
    };
    if (signer_->resolvePublicSpenders(txReq, cbResolve) == 0) {
       logger_->error("[{}] failed to send", __func__);

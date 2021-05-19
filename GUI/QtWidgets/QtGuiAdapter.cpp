@@ -238,8 +238,6 @@ bool QtGuiAdapter::process(const Envelope &env)
 {
    if (std::dynamic_pointer_cast<UserTerminal>(env.sender)) {
       switch (env.sender->value<bs::message::TerminalUsers>()) {
-      case TerminalUsers::System:
-         return processAdminMessage(env);
       case TerminalUsers::Settings:
          return processSettings(env);
       case TerminalUsers::Blockchain:
@@ -266,11 +264,43 @@ bool QtGuiAdapter::process(const Envelope &env)
    return true;
 }
 
+bool QtGuiAdapter::processBroadcast(const bs::message::Envelope& env)
+{
+   if (std::dynamic_pointer_cast<UserTerminal>(env.sender)) {
+      switch (env.sender->value<bs::message::TerminalUsers>()) {
+      case TerminalUsers::System:
+         return processAdminMessage(env);
+      case TerminalUsers::Settings:
+         return processSettings(env);
+      case TerminalUsers::Blockchain:
+         return processBlockchain(env);
+      case TerminalUsers::Signer:
+         return processSigner(env);
+      case TerminalUsers::Wallets:
+         return processWallets(env);
+      case TerminalUsers::BsServer:
+         return processBsServer(env);
+      case TerminalUsers::Settlement:
+         return processSettlement(env);
+      case TerminalUsers::Matching:
+         return processMatching(env);
+      case TerminalUsers::MktData:
+         return processMktData(env);
+      case TerminalUsers::OnChainTracker:
+         return processOnChainTrack(env);
+      case TerminalUsers::Assets:
+         return processAssets(env);
+      default:    break;
+      }
+   }
+   return false;
+}
+
 bool QtGuiAdapter::processSettings(const Envelope &env)
 {
    SettingsMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse settings msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse settings msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
@@ -389,7 +419,7 @@ bool QtGuiAdapter::processAdminMessage(const Envelope &env)
 {
    AdministrativeMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse admin msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse admin msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
@@ -419,7 +449,7 @@ bool QtGuiAdapter::processBlockchain(const Envelope &env)
    ArmoryMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[QtGuiAdapter::processBlockchain] failed to parse msg #{}"
-         , env.id);
+         , env.id());
       if (!env.receiver) {
          logger_->debug("[{}] no receiver", __func__);
       }
@@ -475,7 +505,7 @@ bool QtGuiAdapter::processSigner(const Envelope &env)
    SignerMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[QtGuiAdapter::processSigner] failed to parse msg #{}"
-         , env.id);
+         , env.id());
       if (!env.receiver) {
          logger_->debug("[{}] no receiver", __func__);
       }
@@ -505,7 +535,7 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
 {
    WalletsMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
@@ -565,11 +595,11 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
    }
       break;
    case WalletsMessage::kWalletData:
-      return processWalletData(env.id, msg.wallet_data());
+      return processWalletData(env.responseId(), msg.wallet_data());
    case WalletsMessage::kWalletBalances:
       return processWalletBalances(env, msg.wallet_balances());
    case WalletsMessage::kTxDetailsResponse:
-      return processTXDetails(env.id, msg.tx_details_response());
+      return processTXDetails(env.responseId(), msg.tx_details_response());
    case WalletsMessage::kWalletsListResponse:
       return processWalletsList(msg.wallets_list_response());
    case WalletsMessage::kUtxos:
@@ -589,7 +619,7 @@ bool QtGuiAdapter::processOnChainTrack(const Envelope &env)
 {
    OnChainTrackMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
@@ -610,7 +640,7 @@ bool QtGuiAdapter::processAssets(const bs::message::Envelope& env)
 {
    AssetsMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
@@ -723,8 +753,7 @@ void QtGuiAdapter::requestInitialSettings()
    setReq->set_index(SetIdx_Environment);
    setReq->set_type(SettingType_Int);
 
-   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::makeMainWinConnections()
@@ -788,8 +817,7 @@ void QtGuiAdapter::onGetSettings(const std::vector<ApplicationSettings::Setting>
       setReq->set_source(SettingSource_Local);
       setReq->set_index(static_cast<SettingIndex>(setting));
    }
-   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onPutSetting(ApplicationSettings::Setting idx, const QVariant &value)
@@ -802,8 +830,7 @@ void QtGuiAdapter::onPutSetting(ApplicationSettings::Setting idx, const QVariant
    setReq->set_index(static_cast<SettingIndex>(idx));
    setFromQVariant(value, setReq, setResp);
 
-   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onResetSettings(const std::vector<ApplicationSettings::Setting>& settings)
@@ -815,8 +842,7 @@ void QtGuiAdapter::onResetSettings(const std::vector<ApplicationSettings::Settin
       msgReq->set_index(static_cast<SettingIndex>(setting));
       msgReq->set_source(SettingSource_Local);
    }
-   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onResetSettingsToState(const ApplicationSettings::State& state)
@@ -830,32 +856,28 @@ void QtGuiAdapter::onResetSettingsToState(const ApplicationSettings::State& stat
       setReq->set_index(static_cast<SettingIndex>(st.first));
       setFromQVariant(st.second, setReq, setResp);
    }
-   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedSettingsState()
 {
    SettingsMessage msg;
    msg.mutable_state_get();
-   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedArmoryServers()
 {
    SettingsMessage msg;
    msg.mutable_armory_servers_get();
-   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onSetArmoryServer(int index)
 {
    SettingsMessage msg;
    msg.set_set_armory_server(index);
-   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onAddArmoryServer(const ArmoryServer& server)
@@ -870,16 +892,14 @@ void QtGuiAdapter::onAddArmoryServer(const ArmoryServer& server)
    msgReq->set_run_locally(server.runLocally);
    msgReq->set_one_way_auth(server.oneWayAuth_);
    msgReq->set_password(server.password.toBinStr());
-   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onDelArmoryServer(int index)
 {
    SettingsMessage msg;
    msg.set_del_armory_server(index);
-   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onUpdArmoryServer(int index, const ArmoryServer& server)
@@ -896,8 +916,7 @@ void QtGuiAdapter::onUpdArmoryServer(int index, const ArmoryServer& server)
    msgSrv->set_run_locally(server.runLocally);
    msgSrv->set_one_way_auth(server.oneWayAuth_);
    msgSrv->set_password(server.password.toBinStr());
-   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::createWallet(bool primary)
@@ -909,8 +928,7 @@ void QtGuiAdapter::onNeedHDWalletDetails(const std::string &walletId)
 {
    WalletsMessage msg;
    msg.set_hd_wallet_get(walletId);
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedWalletBalances(const std::string &walletId)
@@ -918,17 +936,16 @@ void QtGuiAdapter::onNeedWalletBalances(const std::string &walletId)
    logger_->debug("[{}] {}", __func__, walletId);
    WalletsMessage msg;
    msg.set_get_wallet_balances(walletId);
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedWalletData(const std::string& walletId)
 {
    WalletsMessage msg;
    msg.set_wallet_get(walletId);
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   if (pushFill(env)) {
-      walletGetMap_[env.id] = walletId;
+   const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
+   if (msgId) {
+      walletGetMap_[msgId] = walletId;
    }
 }
 
@@ -936,8 +953,7 @@ void QtGuiAdapter::onCreateExtAddress(const std::string& walletId)
 {
    WalletsMessage msg;
    msg.set_create_ext_address(walletId);
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedExtAddresses(const std::string &walletId)
@@ -945,8 +961,7 @@ void QtGuiAdapter::onNeedExtAddresses(const std::string &walletId)
    logger_->debug("[{}] {}", __func__, walletId);
    WalletsMessage msg;
    msg.set_get_ext_addresses(walletId);
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedIntAddresses(const std::string &walletId)
@@ -954,8 +969,7 @@ void QtGuiAdapter::onNeedIntAddresses(const std::string &walletId)
    logger_->debug("[{}] {}", __func__, walletId);
    WalletsMessage msg;
    msg.set_get_int_addresses(walletId);
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedUsedAddresses(const std::string &walletId)
@@ -963,8 +977,7 @@ void QtGuiAdapter::onNeedUsedAddresses(const std::string &walletId)
    logger_->debug("[{}] {}", __func__, walletId);
    WalletsMessage msg;
    msg.set_get_used_addresses(walletId);
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedAddrComments(const std::string &walletId
@@ -977,8 +990,7 @@ void QtGuiAdapter::onNeedAddrComments(const std::string &walletId
       auto addrReq = msgReq->add_addresses();
       addrReq->set_address(addr.display());
    }
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onSetAddrComment(const std::string &walletId, const bs::Address &addr
@@ -990,16 +1002,14 @@ void QtGuiAdapter::onSetAddrComment(const std::string &walletId, const bs::Addre
    auto msgComm = msgReq->add_comments();
    msgComm->set_address(addr.display());
    msgComm->set_comment(comment);
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedLedgerEntries(const std::string &filter)
 {
    ArmoryMessage msg;
    msg.set_get_ledger_entries(filter);
-   Envelope env{ 0, user_, userBlockchain_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userBlockchain_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedTXDetails(const std::vector<bs::sync::TXWallet> &txWallet
@@ -1017,8 +1027,7 @@ void QtGuiAdapter::onNeedTXDetails(const std::vector<bs::sync::TXWallet> &txWall
       msgReq->set_address(addr.display());
    }
    msgReq->set_use_cache(useCache);
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedAddressHistory(const bs::Address& addr)
@@ -1026,8 +1035,7 @@ void QtGuiAdapter::onNeedAddressHistory(const bs::Address& addr)
    logger_->debug("[{}] {}", __func__, addr.display());
    ArmoryMessage msg;
    msg.set_get_address_history(addr.display());
-   Envelope env{ 0, user_, userBlockchain_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userBlockchain_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedWalletsList(UiUtils::WalletsTypes wt, const std::string &id)
@@ -1053,8 +1061,7 @@ void QtGuiAdapter::onNeedWalletsList(UiUtils::WalletsTypes wt, const std::string
       msgReq->set_nested_sw(true);
       msgReq->set_hardware(true);
    }
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedFeeLevels(const std::vector<unsigned int>& levels)
@@ -1064,8 +1071,7 @@ void QtGuiAdapter::onNeedFeeLevels(const std::vector<unsigned int>& levels)
    for (const auto& level : levels) {
       msgReq->add_levels(level);
    }
-   Envelope env{ 0, user_, userBlockchain_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userBlockchain_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedUTXOs(const std::string& id, const std::string& walletId, bool confOnly, bool swOnly)
@@ -1076,8 +1082,7 @@ void QtGuiAdapter::onNeedUTXOs(const std::string& id, const std::string& walletI
    msgReq->set_wallet_id(walletId);
    msgReq->set_confirmed_only(confOnly);
    msgReq->set_segwit_only(swOnly);
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedSignTX(const std::string& id
@@ -1091,8 +1096,7 @@ void QtGuiAdapter::onNeedSignTX(const std::string& id
    *msgReq->mutable_tx_request() = bs::signer::coreTxRequestToPb(txReq, keepDupRecips);
    msgReq->set_sign_mode((int)mode);
    msgReq->set_keep_dup_recips(keepDupRecips);
-   Envelope env{ 0, user_, userSigner_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSigner_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedBroadcastZC(const std::string& id, const BinaryData& tx)
@@ -1103,32 +1107,28 @@ void QtGuiAdapter::onNeedBroadcastZC(const std::string& id, const BinaryData& tx
    auto msgTx = msgReq->add_txs_to_push();
    msgTx->set_tx(tx.toBinStr());
    //not adding TX hashes atm
-   Envelope env{ 0, user_, userBlockchain_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userBlockchain_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedArmoryReconnect()
 {
    ArmoryMessage msg;
    msg.mutable_reconnect();
-   Envelope env{ 0, user_, userBlockchain_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userBlockchain_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedSigners()
 {
    SettingsMessage msg;
    msg.mutable_signer_servers_get();
-   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onSetSigner(int index)
 {
    SettingsMessage msg;
    msg.set_set_signer_server(index);
-   Envelope env{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedSetTxComment(const std::string& walletId, const BinaryData& txHash, const std::string& comment)
@@ -1139,56 +1139,49 @@ void QtGuiAdapter::onNeedSetTxComment(const std::string& walletId, const BinaryD
    msgReq->set_wallet_id(walletId);
    msgReq->set_tx_hash(txHash.toBinStr());
    msgReq->set_comment(comment);
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedOpenBsConnection()
 {
    BsServerMessage msg;
    msg.mutable_open_connection();
-   Envelope env{ 0, user_, userBS_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userBS_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedCloseBsConnection()
 {
    BsServerMessage msg;
    msg.mutable_close_connection();
-   Envelope env{ 0, user_, userBS_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userBS_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedStartLogin(const std::string& login)
 {
    BsServerMessage msg;
    msg.set_start_login(login);
-   Envelope env{ 0, user_, userBS_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userBS_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedCancelLogin()
 {
    BsServerMessage msg;
    msg.mutable_cancel_last_login();
-   Envelope env{ 0, user_, userBS_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userBS_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedMatchingLogout()
 {
    MatchingMessage msg;
    msg.mutable_logout();
-   Envelope env{ 0, user_, userMatch_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userMatch_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedMdConnection(ApplicationSettings::EnvConfiguration ec)
 {
    MktDataMessage msg;
    msg.set_start_connection((int)ec);
-   Envelope env{ 0, user_, userMD_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userMD_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedNewAuthAddress()
@@ -1200,8 +1193,7 @@ void QtGuiAdapter::onNeedSubmitAuthAddress(const bs::Address& addr)
 {
    BsServerMessage msg;
    msg.set_submit_auth_address(addr.display());
-   Envelope env{ 0, user_, userBS_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userBS_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedSubmitRFQ(const bs::network::RFQ& rfq, const std::string& reserveId)
@@ -1210,8 +1202,7 @@ void QtGuiAdapter::onNeedSubmitRFQ(const bs::network::RFQ& rfq, const std::strin
    auto msgReq = msg.mutable_send_rfq();
    toMsg(rfq, msgReq->mutable_rfq());
    msgReq->set_reserve_id(reserveId);
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettl_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedAcceptRFQ(const std::string& id, const bs::network::Quote& quote)
@@ -1220,20 +1211,19 @@ void QtGuiAdapter::onNeedAcceptRFQ(const std::string& id, const bs::network::Quo
    auto msgReq = msg.mutable_accept_rfq();
    msgReq->set_rfq_id(id);
    toMsg(quote, msgReq->mutable_quote());
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettl_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedCancelRFQ(const std::string& id)
 {
+   //TODO
 }
 
 void QtGuiAdapter::onNeedAuthKey(const bs::Address& addr)
 {
    WalletsMessage msg;
    msg.set_get_auth_key(addr.display());
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedReserveUTXOs(const std::string& reserveId
@@ -1250,8 +1240,7 @@ void QtGuiAdapter::onNeedReserveUTXOs(const std::string& reserveId
    for (const auto& utxo : utxos) {
       msgReq->add_utxos(utxo.serialize().toBinStr());
    }
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedUnreserveUTXOs(const std::string& reserveId
@@ -1261,16 +1250,14 @@ void QtGuiAdapter::onNeedUnreserveUTXOs(const std::string& reserveId
    auto msgReq = msg.mutable_unreserve_utxos();
    msgReq->set_id(reserveId);
    msgReq->set_sub_id(subId);
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onSubmitQuote(const bs::network::QuoteNotification& qn)
 {
    SettlementMessage msg;
    toMsg(qn, msg.mutable_reply_to_rfq());
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettl_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onPullQuote(const std::string& settlementId
@@ -1281,8 +1268,7 @@ void QtGuiAdapter::onPullQuote(const std::string& settlementId
    msgReq->set_settlement_id(settlementId);
    msgReq->set_rfq_id(reqId);
    msgReq->set_session_token(reqSessToken);
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSettl_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedWalletDialog(bs::signer::ui::GeneralDialogType dlgType
@@ -1296,8 +1282,7 @@ void QtGuiAdapter::onNeedWalletDialog(bs::signer::ui::GeneralDialogType dlgType
       msgData->set_key("rootId");
       msgData->set_value(rootId);
    }
-   Envelope env{ 0, user_, userSigner_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userSigner_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
@@ -1339,8 +1324,8 @@ bool QtGuiAdapter::processWalletBalances(const bs::message::Envelope &env
    wbd.nbAddresses = response.nb_addresses();
    for (const auto &addrBal : response.address_balances()) {
       wbd.addrBalances.push_back({ BinaryData::fromString(addrBal.address())
-         , addrBal.tx_count(), addrBal.total_balance(), addrBal.spendable_balance()
-         , addrBal.unconfirmed_balance() });
+         , addrBal.tx_count(), (int64_t)addrBal.total_balance(), (int64_t)addrBal.spendable_balance()
+         , (int64_t)addrBal.unconfirmed_balance() });
    }
    return QMetaObject::invokeMethod(mainWindow_, [this, wbd] {
       mainWindow_->onWalletBalance(wbd);
@@ -1545,11 +1530,11 @@ bool QtGuiAdapter::processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived
       }
       txReq->set_value(zcEntry.value());
    }
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   if (!pushFill(env)) {
+   const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
+   if (!msgId) {
       return false;
    }
-   newZCs_.insert(env.id);
+   newZCs_.insert(msgId);
    return true;
 }
 
@@ -1568,7 +1553,7 @@ bool QtGuiAdapter::processBsServer(const bs::message::Envelope& env)
 {
    BsServerMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
@@ -1619,7 +1604,7 @@ bool QtGuiAdapter::processSettlement(const bs::message::Envelope& env)
 {
    SettlementMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
@@ -1646,7 +1631,7 @@ bool QtGuiAdapter::processMatching(const bs::message::Envelope& env)
 {
    MatchingMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
@@ -1670,7 +1655,7 @@ bool QtGuiAdapter::processMktData(const bs::message::Envelope& env)
 {
    MktDataMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {

@@ -208,7 +208,7 @@ void ReqCCSettlementContainer::deactivate()
 bool ReqCCSettlementContainer::createCCUnsignedTXdata()
 {
    if (side() == bs::network::Side::Sell) {
-      const uint64_t spendVal = quantity() * assetMgr_->getCCLotSize(product());
+      const int64_t spendVal = quantity() * assetMgr_->getCCLotSize(product());
       logger_->debug("[{}] sell amount={}, spend value = {}", __func__, quantity(), spendVal);
       ccTxData_.walletIds = { ccWallet_->walletId() };
       ccTxData_.armorySigner_.deserializeState(dealerTx_);
@@ -232,7 +232,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
    else {
       const auto &cbFee = [this](float feePerByteArmory) {
          auto feePerByte = std::max(feePerByteArmory, utxoReservationManager_->feeRatePb());
-         const uint64_t spendVal = bs::XBTAmount(amount()).GetValue();
+         const int64_t spendVal = bs::XBTAmount(amount()).GetValue();
          auto inputsCb = [this, feePerByte, spendVal](const std::map<UTXO, std::string> &xbtInputs, bool useAllInputs = false) {
             auto changeAddrCb = [this, feePerByte, xbtInputs, spendVal, useAllInputs](const bs::Address &changeAddr) {
                try {

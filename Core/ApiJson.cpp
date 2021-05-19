@@ -39,8 +39,6 @@ bool ApiJsonAdapter::process(const Envelope &env)
 {
    if (std::dynamic_pointer_cast<UserTerminal>(env.sender)) {
       switch (env.sender->value<bs::message::TerminalUsers>()) {
-      case TerminalUsers::System:
-         return processAdminMessage(env);
       case TerminalUsers::Settings:
          return processSettings(env);
       case TerminalUsers::Blockchain:
@@ -71,10 +69,40 @@ bool ApiJsonAdapter::process(const Envelope &env)
       }
    }
    else {
-      logger_->warn("[{}] non-terminal #{} user {}", __func__, env.id
+      logger_->warn("[{}] non-terminal #{} user {}", __func__, env.id()
          , env.sender->name());
    }
    return true;
+}
+
+bool ApiJsonAdapter::processBroadcast(const bs::message::Envelope& env)
+{
+   if (std::dynamic_pointer_cast<UserTerminal>(env.sender)) {
+      switch (env.sender->value<bs::message::TerminalUsers>()) {
+      case TerminalUsers::System:
+         return processAdminMessage(env);
+      case TerminalUsers::Blockchain:
+         return processBlockchain(env);
+      case TerminalUsers::Signer:
+         return processSigner(env);
+      case TerminalUsers::Wallets:
+         return processWallets(env);
+      case TerminalUsers::BsServer:
+         return processBsServer(env);
+      case TerminalUsers::Settlement:
+         return processSettlement(env);
+      case TerminalUsers::Matching:
+         return processMatching(env);
+      case TerminalUsers::MktData:
+         return processMktData(env);
+      case TerminalUsers::OnChainTracker:
+         return processOnChainTrack(env);
+      case TerminalUsers::Assets:
+         return processAssets(env);
+      default:    break;
+      }
+   }
+   return false;
 }
 
 static std::shared_ptr<UserTerminal> mapUser(const EnvelopeIn::MessageCase& user)
@@ -170,11 +198,11 @@ void ApiJsonAdapter::OnDataFromClient(const std::string& clientId
          , jsonMsg.message_case());
       return;
    }
-   Envelope env{ 0, user_, user, {}, {}, serMsg, true };
-   if (!pushFill(env)) {
+   const auto msgId = pushRequest(user_, user, serMsg);
+   if (!msgId) {
       sendErrorReply(jsonMsg.id(), "internal error");
    }
-   requests_[env.id] = { clientId, jsonMsg.id(), std::chrono::system_clock::now() };
+   requests_[msgId] = { clientId, jsonMsg.id(), std::chrono::system_clock::now() };
 }
 
 void ApiJsonAdapter::OnClientConnected(const std::string& clientId
@@ -211,7 +239,7 @@ bool ApiJsonAdapter::processSettings(const Envelope &env)
 {
    SettingsMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse settings msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse settings msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
@@ -274,8 +302,8 @@ bool ApiJsonAdapter::processAdminMessage(const Envelope &env)
 {
    AdministrativeMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse admin msg #{}", __func__, env.id);
-      return true;
+      logger_->error("[{}] failed to parse admin msg #{}", __func__, env.id());
+      return false;
    }
    switch (msg.data_case()) {
    case AdministrativeMessage::kStart:
@@ -291,7 +319,7 @@ bool ApiJsonAdapter::processBlockchain(const Envelope &env)
    ArmoryMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[QtGuiAdapter::processBlockchain] failed to parse msg #{}"
-         , env.id);
+         , env.id());
       if (!env.receiver) {
          logger_->debug("[{}] no receiver", __func__);
       }
@@ -315,8 +343,8 @@ bool ApiJsonAdapter::processBlockchain(const Envelope &env)
    case ArmoryMessage::kLedgerEntries: [[fallthrough]];
    case ArmoryMessage::kAddressHistory: [[fallthrough]];
    case ArmoryMessage::kFeeLevelsResponse:
-      if (hasRequest(env.id)) {
-         sendReplyToClient(env.id, msg, env.sender);
+      if (hasRequest(env.responseId())) {
+         sendReplyToClient(env.responseId(), msg, env.sender);
       }
       break;
    case ArmoryMessage::kZcReceived: [[fallthrough]];
@@ -333,7 +361,7 @@ bool ApiJsonAdapter::processSigner(const Envelope &env)
    SignerMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[QtGuiAdapter::processSigner] failed to parse msg #{}"
-         , env.id);
+         , env.id());
       if (!env.receiver) {
          logger_->debug("[{}] no receiver", __func__);
       }
@@ -347,7 +375,7 @@ bool ApiJsonAdapter::processSigner(const Envelope &env)
    case SignerMessage::kNeedNewWalletPrompt:
       break;
    case SignerMessage::kSignTxResponse:
-      sendReplyToClient(env.id, msg, env.sender);
+      sendReplyToClient(env.responseId(), msg, env.sender);
       break;
    default:    break;
    }
@@ -358,7 +386,7 @@ bool ApiJsonAdapter::processWallets(const Envelope &env)
 {
    WalletsMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
@@ -376,8 +404,8 @@ bool ApiJsonAdapter::processWallets(const Envelope &env)
    case WalletsMessage::kUtxos: [[fallthrough]];
    case WalletsMessage::kAuthKey: [[fallthrough]];
    case WalletsMessage::kReservedUtxos:
-      if (hasRequest(env.id)) {
-         sendReplyToClient(env.id, msg, env.sender);
+      if (hasRequest(env.responseId())) {
+         sendReplyToClient(env.responseId(), msg, env.sender);
       }
       break;
    default:    break;
@@ -389,11 +417,11 @@ bool ApiJsonAdapter::processOnChainTrack(const Envelope &env)
 {
    OnChainTrackMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
-   case OnChainTrackMessage::kAuthState: [[fallthrough]];
+   case OnChainTrackMessage::kAuthState:
    case OnChainTrackMessage::kVerifiedAuthAddresses:
       sendReplyToClient(0, msg, env.sender);
       break;
@@ -406,13 +434,13 @@ bool ApiJsonAdapter::processAssets(const bs::message::Envelope& env)
 {
    AssetsMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
    case AssetsMessage::kSubmittedAuthAddrs:
-      if (hasRequest(env.id)) {
-         sendReplyToClient(env.id, msg, env.sender);
+      if (hasRequest(env.responseId())) {
+         sendReplyToClient(env.responseId(), msg, env.sender);
       }
       break;
    case AssetsMessage::kBalance:
@@ -425,34 +453,31 @@ bool ApiJsonAdapter::processAssets(const bs::message::Envelope& env)
 
 void ApiJsonAdapter::processStart()
 {
-   logger_->debug("[{}]", __func__);
+   logger_->debug("[ApiJsonAdapter::processStart]");
    SettingsMessage msg;
    msg.set_api_privkey("");
-   Envelope envReq1{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(envReq1);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 
    msg.mutable_api_client_keys();
-   Envelope envReq2{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(envReq2);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 
    auto msgReq = msg.mutable_get_request();
    auto setReq = msgReq->add_requests();
    setReq->set_source(SettingSource_Local);
    setReq->set_index(SetIdx_ExtConnPort);
    setReq->set_type(SettingType_String);
-   Envelope envReq3{ 0, user_, userSettings_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(envReq3);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
 bool ApiJsonAdapter::processBsServer(const bs::message::Envelope& env)
 {
    BsServerMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
-   case BsServerMessage::kStartLoginResult: [[fallback]]
+   case BsServerMessage::kStartLoginResult:
    case BsServerMessage::kOrdersUpdate:
       sendReplyToClient(0, msg, env.sender); // multicast to all connected clients
       break;
@@ -473,16 +498,16 @@ bool ApiJsonAdapter::processSettlement(const bs::message::Envelope& env)
 {
    SettlementMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
-   case SettlementMessage::kQuote: [[fallthrough]];
-   case SettlementMessage::kMatchedQuote: [[fallthrough]];
-   case SettlementMessage::kFailedSettlement: [[fallthrough]];
-   case SettlementMessage::kPendingSettlement: [[fallthrough]];
-   case SettlementMessage::kSettlementComplete: [[fallthrough]];
-   case SettlementMessage::kQuoteCancelled: [[fallthrough]];
+   case SettlementMessage::kQuote:
+   case SettlementMessage::kMatchedQuote:
+   case SettlementMessage::kFailedSettlement:
+   case SettlementMessage::kPendingSettlement:
+   case SettlementMessage::kSettlementComplete:
+   case SettlementMessage::kQuoteCancelled:
    case SettlementMessage::kQuoteReqNotif:
       sendReplyToClient(0, msg, env.sender);
       break;
@@ -495,7 +520,7 @@ bool ApiJsonAdapter::processMatching(const bs::message::Envelope& env)
 {
    MatchingMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
@@ -517,13 +542,13 @@ bool ApiJsonAdapter::processMktData(const bs::message::Envelope& env)
 {
    MktDataMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id);
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
       return true;
    }
    switch (msg.data_case()) {
-   case MktDataMessage::kDisconnected: [[fallthrough]];
-   case MktDataMessage::kNewSecurity: [[fallthrough]];
-   case MktDataMessage::kAllInstrumentsReceived: [[fallthrough]];
+   case MktDataMessage::kDisconnected:
+   case MktDataMessage::kNewSecurity:
+   case MktDataMessage::kAllInstrumentsReceived:
    case MktDataMessage::kPriceUpdate:
       sendReplyToClient(0, msg, env.sender);
       break;
@@ -619,8 +644,7 @@ bool ApiJsonAdapter::sendReplyToClient(uint64_t msgId
 void ApiJsonAdapter::sendGCtimeout()
 {
    const auto& timeNow = bs::message::bus_clock::now();
-   Envelope env{ 0, user_, user_, timeNow, timeNow + kRequestTimeout, "GC" };
-   pushFill(env);
+   pushRequest(user_, user_, "GC", timeNow + kRequestTimeout);
 }
 
 void ApiJsonAdapter::processGCtimeout()

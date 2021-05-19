@@ -396,7 +396,7 @@ TEST(TestCommon, XBTAmount)
    auto xbt1 = bs::XBTAmount(double(21*1000*1000));
    // Check that converting to double and back some big amount dooes not loose minimum difference (1 satoshi)
    // This will also check +/- operators
-   auto diff1 = bs::XBTAmount((xbt1 + bs::XBTAmount(uint64_t(1))).GetValueBitcoin()) - xbt1;
+   auto diff1 = bs::XBTAmount((xbt1 + bs::XBTAmount(int64_t(1))).GetValueBitcoin()) - xbt1;
    EXPECT_EQ(diff1, 1);
 }
 

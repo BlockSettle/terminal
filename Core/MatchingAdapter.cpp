@@ -93,14 +93,13 @@ MatchingAdapter::MatchingAdapter(const std::shared_ptr<spdlog::logger> &logger)
 
 void MatchingAdapter::connectedToServer()
 {
-   logger_->debug("[{}]", __func__);
+   logger_->debug("[MatchingAdapter::connectedToServer]");
    MatchingMessage msg;
    auto loggedIn = msg.mutable_logged_in();
    loggedIn->set_user_type(static_cast<int>(celerConnection_->celerUserType()));
    loggedIn->set_user_id(celerConnection_->userId());
    loggedIn->set_user_name(celerConnection_->userName());
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString());
 
    sendSetUserId(celerConnection_->userId());
 
@@ -136,39 +135,23 @@ void MatchingAdapter::connectionClosed()
 
    MatchingMessage msg;
    msg.mutable_logged_out();
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString());
 }
 
 void MatchingAdapter::connectionError(int errorCode)
 {
-   logger_->debug("[{}] {}", __func__, errorCode);
+   logger_->debug("[MatchingAdapter::connectionError] {}", errorCode);
    MatchingMessage msg;
    msg.set_connection_error(errorCode);
-   Envelope env{ 0, user_, nullptr, {}, {}, msg.SerializeAsString() };
-   pushFill(env);
+   pushBroadcast(user_, msg.SerializeAsString());
 }
 
 bool MatchingAdapter::process(const bs::message::Envelope &env)
 {
-   if (env.sender->isSystem()) {
-      AdministrativeMessage msg;
-      if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse administrative message #{}", __func__, env.id);
-         return true;
-      }
-      if (msg.data_case() == AdministrativeMessage::kStart) {
-         AdministrativeMessage admMsg;
-         admMsg.set_component_loading(user_->value());
-         Envelope envBC{ 0, UserTerminal::create(TerminalUsers::System), nullptr
-            , {}, {}, admMsg.SerializeAsString() };
-         pushFill(envBC);
-      }
-   }
-   else if (!env.request && (env.sender->value<bs::message::TerminalUsers>() == bs::message::TerminalUsers::BsServer)) {
+   if (!env.isRequest() && (env.sender->value<bs::message::TerminalUsers>() == bs::message::TerminalUsers::BsServer)) {
       BsServerMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse BsServer message #{}", __func__, env.id);
+         logger_->error("[{}] failed to parse BsServer message #{}", __func__, env.id());
          return true;
       }
       switch (msg.data_case()) {
@@ -179,10 +162,10 @@ bool MatchingAdapter::process(const bs::message::Envelope &env)
       default: break;
       }
    }
-   else if (env.receiver && (env.receiver->value() == user_->value())) {
+   else if (env.receiver->value() == user_->value()) {
       MatchingMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse message #{}", __func__, env.id);
+         logger_->error("[{}] failed to parse message #{}", __func__, env.id());
          return true;
       }
       switch (msg.data_case()) {
@@ -208,12 +191,31 @@ bool MatchingAdapter::process(const bs::message::Envelope &env)
       case MatchingMessage::kPullQuoteNotif:
          return processPullQuote(msg.pull_quote_notif());
       default:
-         logger_->warn("[{}] unknown msg {} #{} from {}", __func__, msg.data_case()
-            , env.id, env.sender->name());
+         logger_->warn("[MatchingAdapter::process] unknown msg {} #{} from {}"
+            , msg.data_case(), env.id(), env.sender->name());
          break;
       }
    }
    return true;
+}
+
+bool MatchingAdapter::processBroadcast(const bs::message::Envelope& env)
+{
+   if (env.sender->isSystem()) {
+      AdministrativeMessage msg;
+      if (!msg.ParseFromString(env.message)) {
+         logger_->error("[{}] failed to parse administrative message #{}", __func__, env.id());
+         return false;
+      }
+      if (msg.data_case() == AdministrativeMessage::kStart) {
+         AdministrativeMessage admMsg;
+         admMsg.set_component_loading(user_->value());
+         pushBroadcast(UserTerminal::create(TerminalUsers::System)
+            , admMsg.SerializeAsString());
+         return true;
+      }
+   }
+   return false;
 }
 
 bool MatchingAdapter::processLogin(const MatchingMessage_Login& request)
@@ -229,8 +231,7 @@ bool MatchingAdapter::processGetSubmittedAuth(const bs::message::Envelope& env)
    for (const auto& addr : celerConnection_->GetSubmittedAuthAddressSet()) {
       msgResp->add_addresses(addr);
    }
-   Envelope envResp{ env.id, user_, env.sender, {}, {}, msg.SerializeAsString() };
-   return pushFill(envResp);
+   return pushResponse(user_, env, msg.SerializeAsString());
 }
 
 bool MatchingAdapter::processSubmitAuth(const bs::message::Envelope& env
@@ -363,8 +364,7 @@ void MatchingAdapter::sendSetUserId(const std::string& userId)
    logger_->debug("[{}] setting userId {}", __func__, userId);
    WalletsMessage msg;
    msg.set_set_user_id(celerConnection_->userId());
-   Envelope env{ 0, user_, userWallets_, {}, {}, msg.SerializeAsString(), true };
-   pushFill(env);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 std::string MatchingAdapter::getQuoteRequestCcy(const std::string& id) const
@@ -448,8 +448,7 @@ bool MatchingAdapter::onQuoteResponse(const std::string& data)
          msgBest->set_quote_req_id(response.quoterequestid());
          msgBest->set_price(price);
          msgBest->set_own(own);
-         Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
-         pushFill(env);
+         pushRequest(user_, userSettl_, msg.SerializeAsString());
       }
       quote.quantity = grp.bidsize();  // equal to offersize/offerpx regardless of side
       quote.price = response.bidpx();
@@ -487,8 +486,7 @@ bool MatchingAdapter::onQuoteResponse(const std::string& data)
    }
    MatchingMessage msg;
    toMsg(quote, msg.mutable_quote());
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
-   return pushFill(env);
+   return pushResponse(user_, userSettl_, msg.SerializeAsString());
 }
 
 bool MatchingAdapter::onQuoteReject(const std::string& data)
@@ -508,8 +506,7 @@ bool MatchingAdapter::onQuoteReject(const std::string& data)
       msgReq->set_reject_text(rejGrp.text());
    }
    msgReq->set_reject_code((int)response.quoterequestrejectreason());
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
-   return pushFill(env);
+   return pushResponse(user_, userSettl_, msg.SerializeAsString());
 }
 
 bool MatchingAdapter::onOrderReject(const std::string& data)
@@ -526,8 +523,7 @@ bool MatchingAdapter::onOrderReject(const std::string& data)
    msgReq->set_order_id(response.externalclorderid());
    msgReq->set_quote_id(response.quoteid());
    msgReq->set_reject_text(response.rejectreason());
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
-   return pushFill(env);
+   return pushResponse(user_, userSettl_, msg.SerializeAsString());
 }
 
 bool MatchingAdapter::onBitcoinOrderSnapshot(const std::string& data)
@@ -568,8 +564,7 @@ bool MatchingAdapter::onBitcoinOrderSnapshot(const std::string& data)
 
    MatchingMessage msg;
    toMsg(order, msg.mutable_order());
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
-   return pushFill(env);
+   return pushResponse(user_, userSettl_, msg.SerializeAsString());
 }
 
 bool MatchingAdapter::onFxOrderSnapshot(const std::string& data)
@@ -600,8 +595,7 @@ bool MatchingAdapter::onFxOrderSnapshot(const std::string& data)
 
    MatchingMessage msg;
    toMsg(order, msg.mutable_order());
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
-   return pushFill(env);
+   return pushResponse(user_, userSettl_, msg.SerializeAsString());
 }
 
 bool MatchingAdapter::onQuoteCancelled(const std::string& data)
@@ -617,9 +611,9 @@ bool MatchingAdapter::onQuoteCancelled(const std::string& data)
    auto msgData = msg.mutable_quote_cancelled();
    msgData->set_rfq_id(response.quoterequestid());
    msgData->set_quote_id(response.quoteid());
-   msgData->set_by_user(response.quotecanceltype() == com::celertech::marketmerchant::api::enums::quotecanceltype::CANCEL_ALL_QUOTES);
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
-   return pushFill(env);
+   msgData->set_by_user(response.quotecanceltype() ==
+      com::celertech::marketmerchant::api::enums::quotecanceltype::CANCEL_ALL_QUOTES);
+   return pushResponse(user_, userSettl_, msg.SerializeAsString());
 }
 
 bool MatchingAdapter::onSignTxNotif(const std::string&)
@@ -705,8 +699,7 @@ bool MatchingAdapter::onQuoteReqNotification(const std::string& data)
    logger_->debug("[MatchingAdapter::onQuoteReqNotification] {}", ProtobufUtils::toJsonCompact(response));
    MatchingMessage msg;
    toMsg(qrn, msg.mutable_incoming_rfq());
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
-   return pushFill(env);
+   return pushResponse(user_, userSettl_, msg.SerializeAsString());
 }
 
 bool MatchingAdapter::onQuoteNotifCancelled(const std::string& data)
@@ -724,8 +717,7 @@ bool MatchingAdapter::onQuoteNotifCancelled(const std::string& data)
    if (response.quotecanceltype() != com::celertech::marketmerchant::api::enums::quotecanceltype::CANCEL_ALL_QUOTES) {
       msgReq->set_quote_id(response.quoteid());
    }
-   Envelope env{ 0, user_, userSettl_, {}, {}, msg.SerializeAsString() };
-   return pushFill(env);
+   return pushResponse(user_, userSettl_, msg.SerializeAsString());
 }
 
 
@@ -742,7 +734,7 @@ void ClientCelerConnection::onSendData(CelerAPI::CelerMessageType messageType
    auto msgReq = msg.mutable_send_matching();
    msgReq->set_message_type((int)messageType);
    msgReq->set_data(data);
-   Envelope env{ 0, parent_->user_, UserTerminal::create(TerminalUsers::BsServer)
-      , {}, {}, msg.SerializeAsString(), true };
+   auto env = Envelope::makeRequest(parent_->user_, UserTerminal::create(TerminalUsers::BsServer)
+      , msg.SerializeAsString());
    parent_->pushFill(env);
 }
