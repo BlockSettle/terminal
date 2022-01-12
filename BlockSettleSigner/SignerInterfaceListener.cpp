@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -23,7 +23,6 @@
 #include "ZmqContext.h"
 
 #include "SignerInterfaceListener.h"
-#include "SignerAdapterContainer.h"
 #include <memory>
 
 using namespace bs::sync;

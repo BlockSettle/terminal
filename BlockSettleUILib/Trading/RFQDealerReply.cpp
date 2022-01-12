@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -26,6 +26,7 @@
 #include "BSMessageBox.h"
 #include "CoinControlDialog.h"
 #include "CoinControlWidget.h"
+#include "CommonTypes.h"
 #include "CurrencyPair.h"
 #include "CustomControls/CustomComboBox.h"
 #include "FastLock.h"
@@ -189,7 +190,8 @@ void RFQDealerReply::updateRespQuantity()
 void RFQDealerReply::reset()
 {
    payInRecipId_ = UINT_MAX;
-   if (currentQRN_.empty()) {
+   if (currentQRN_.empty()
+      || (currentQRN_.assetType == bs::network::Asset::Type::Undefined)) {
       ui_->labelProductGroup->clear();
       ui_->labelSecurity->clear();
       ui_->labelReqProduct->clear();
@@ -300,7 +302,8 @@ void RFQDealerReply::updateQuoteReqNotification(const bs::network::QuoteReqNotif
    }
 
    if (qrn.assetType == bs::network::Asset::SpotFX ||
-      qrn.assetType == bs::network::Asset::Undefined) {
+      qrn.assetType == bs::network::Asset::Undefined ||
+      qrn.assetType == bs::network::Asset::DeliverableFutures) {
          ui_->groupBoxSettlementInputs->hide();
    } else {
       ui_->groupBoxSettlementInputs->show();
@@ -494,6 +497,10 @@ bool RFQDealerReply::checkBalance() const
 {
    if (!assetManager_) {
       return false;
+   }
+
+   if (currentQRN_.assetType == bs::network::Asset::DeliverableFutures) {
+      return true;
    }
 
    // #UTXO_MANAGER: Balance check should account for fee?
@@ -709,7 +716,11 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
    auto replyData = std::make_shared<SubmitQuoteReplyData>();
    replyData->qn = bs::network::QuoteNotification(qrn, authKey_, price, "");
 
-   if (qrn.assetType != bs::network::Asset::SpotFX) {
+   auto quoteAssetType = qrn.assetType;
+   if (quoteAssetType == bs::network::Asset::DeliverableFutures) {
+      quoteAssetType = bs::network::Asset::SpotFX;
+   }
+   if (quoteAssetType != bs::network::Asset::SpotFX) {
       if (walletsManager_) {
          replyData->xbtWallet = getSelectedXbtWallet(replyType);
          if (!replyData->xbtWallet) {
@@ -725,7 +736,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
       }
    }
 
-   if (qrn.assetType == bs::network::Asset::SpotXBT) {
+   if (quoteAssetType == bs::network::Asset::SpotXBT) {
       replyData->authAddr = selectedAuthAddress(replyType);
       if (!replyData->authAddr.isValid()) {
          SPDLOG_LOGGER_ERROR(logger_, "can't submit XBT without valid auth address");
@@ -756,7 +767,7 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
    activeQuoteSubmits_.insert(replyData->qn.quoteRequestId);
    updateSubmitButton();
 
-   switch (qrn.assetType) {
+   switch (quoteAssetType) {
       case bs::network::Asset::SpotFX: {
          submit(price, replyData);
          break;
@@ -811,13 +822,13 @@ void RFQDealerReply::submitReply(const bs::network::QuoteReqNotification &qrn
                            //group 1 for cc, group 2 for xbt
                            unsigned spendGroup = isSpendCC ? RECIP_GROUP_SPEND_1 : RECIP_GROUP_SPEND_2;
                            unsigned changGroup = isSpendCC ? RECIP_GROUP_CHANG_1 : RECIP_GROUP_CHANG_2;
-                           
+
                            std::map<unsigned, std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>>> recipientMap;
                            const auto recipient = bs::Address::fromAddressString(qrn.requestorRecvAddress)
                               .getRecipient(bs::XBTAmount{ spendVal });
                            std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recVec({recipient});
                            recipientMap.emplace(spendGroup, std::move(recVec));
-                           
+
 
                            Codec_SignerState::SignerState state;
                            state.ParseFromString(BinaryData::CreateFromHex(qrn.requestorAuthPublicKey).toBinStr());
@@ -1097,9 +1108,8 @@ void RFQDealerReply::onBestQuotePrice(const QString reqId, double price, bool ow
          auto priceWidget = getActivePriceWidget();
          if (priceWidget && !own) {
             double improvedPrice = price;
-            const auto assetType = assetManager_->GetAssetTypeForSecurity(currentQRN_.security);
-            if (assetType != bs::network::Asset::Type::Undefined) {
-               const auto pip = std::pow(10, -UiUtils::GetPricePrecisionForAssetType(assetType));
+            if (currentQRN_.assetType != bs::network::Asset::Type::Undefined) {
+               const auto pip = std::pow(10, -UiUtils::GetPricePrecisionForAssetType(currentQRN_.assetType));
                if (priceWidget == ui_->spinBoxBidPx) {
                   improvedPrice += pip;
                } else {

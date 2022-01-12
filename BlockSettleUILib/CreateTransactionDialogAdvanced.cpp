@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -17,9 +17,9 @@
 #include "BSMessageBox.h"
 #include "CoinControlDialog.h"
 #include "CreateTransactionDialogSimple.h"
+#include "HeadlessContainer.h"
 #include "SelectAddressDialog.h"
 #include "SelectedTransactionInputs.h"
-#include "SignContainer.h"
 #include "TransactionData.h"
 #include "TransactionOutputsModel.h"
 #include "UiUtils.h"
@@ -126,7 +126,7 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::Create
    if (!paymentInfo.requestURL.isEmpty()) {
       dlg->ui_->checkBoxRBF->setChecked(false);
       dlg->ui_->checkBoxRBF->setEnabled(false);
-      dlg->ui_->checkBoxRBF->setToolTip(tr("RBF disabled for BitPay request"));
+      dlg->ui_->checkBoxRBF->setToolTip(tr("RBF disabled for payment request"));
 
       dlg->nam_ = std::make_shared<QNetworkAccessManager>();
    }

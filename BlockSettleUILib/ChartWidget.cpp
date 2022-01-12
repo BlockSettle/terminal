@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -189,6 +189,11 @@ void ChartWidget::SendEoDRequest()
 void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString& security,
                               bs::network::MDFields mdFields)
 {
+   if (bs::network::Asset::isFuturesType(assetType)) {
+      // ignore futures prices updates
+      return;
+   }
+
    if ((assetType == bs::network::Asset::Undefined) && security.isEmpty()) // Celer disconnected
    {
       isProductListInitialized_ = false;
@@ -389,7 +394,7 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
       maxTimestamp = qMax(maxTimestamp, static_cast<quint64>(candle.timestamp()));
 
       bool isLast = (i == 0);
-      if (candle.timestamp() >= lastCandle_.timestamp() 
+      if (candle.timestamp() >= lastCandle_.timestamp()
          || lastCandle_.timestamp() - candle.timestamp() < IntervalWidth( interval, 1, QDateTime::fromMSecsSinceEpoch(candle.timestamp(), Qt::TimeSpec::UTC))) {
          if (lastCandle_.timestamp() != 0) {
             logger_->error("Invalid distance between candles from mdhs. The last timestamp: {}  new timestamp: {}",
@@ -982,7 +987,7 @@ void ChartWidget::OnResetBtnClick()
 void ChartWidget::resizeEvent(QResizeEvent* event)
 {
    QWidget::resizeEvent(event);
-   QMetaObject::invokeMethod(this, &ChartWidget::UpdatePrintFlag, Qt::QueuedConnection);//UpdatePrintFlag should be called after chart have resized, so we put this method to event loop's queue 
+   QMetaObject::invokeMethod(this, &ChartWidget::UpdatePrintFlag, Qt::QueuedConnection);//UpdatePrintFlag should be called after chart have resized, so we put this method to event loop's queue
 }
 
 quint64 ChartWidget::GetCandleTimestamp(const uint64_t& timestamp, const Interval& interval) const
@@ -1084,10 +1089,18 @@ void ChartWidget::OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oldRange)
 QString ChartWidget::ProductTypeToString(TradeHistoryTradeType type)
 {
    switch (type) {
-   case FXTradeType: return QStringLiteral("FX");
-   case XBTTradeType: return QStringLiteral("XBT");
-   case PMTradeType: return QStringLiteral("PM");
-   default: return QStringLiteral("");
+   case FXTradeType:
+      return QStringLiteral("FX");
+   case XBTTradeType:
+      return QStringLiteral("XBT");
+   case PMTradeType:
+      return QStringLiteral("PM");
+   case OneDayDeliverableTradeType:
+      return QString::fromStdString(bs::network::Asset::toString(bs::network::Asset::DeliverableFutures));
+   case OneDayCashSettledTradeType:
+      return QString::fromStdString(bs::network::Asset::toString(bs::network::Asset::CashSettledFutures));
+   default:
+      return QStringLiteral("");
    }
 }
 

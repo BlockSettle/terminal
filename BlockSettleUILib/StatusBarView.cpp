@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -10,6 +10,7 @@
 */
 #include "StatusBarView.h"
 #include "AssetManager.h"
+#include "HeadlessContainer.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -228,7 +229,7 @@ void StatusBarView::displayBalances()
             xbt = tr("Loading...");
             break;
          case ArmoryState::Closing:
-         case ArmoryState::Offline: [[fallthrough]]
+         case ArmoryState::Offline:
          default:
             xbt = tr("...");
             break;
@@ -414,9 +415,11 @@ void StatusBarView::setBalances()
    QString text = tr("   XBT: <b>%1</b> ").arg(xbt);
 
    for (const auto& currency : assetManager_->currencies()) {
-      text += tr("| %1: <b>%2</b> ")
-         .arg(QString::fromStdString(currency))
-         .arg(UiUtils::displayCurrencyAmount(assetManager_->getBalance(currency, false, nullptr)));
+      if (currency != "EURP" && currency != "EURD") {
+         text += tr("| %1: <b>%2</b> ")
+            .arg(QString::fromStdString(currency))
+            .arg(UiUtils::displayCurrencyAmount(assetManager_->getBalance(currency, false, nullptr)));
+      }
    }
 
    balanceLabel_->setText(text);

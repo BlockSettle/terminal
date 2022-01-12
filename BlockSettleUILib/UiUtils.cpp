@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -42,7 +42,8 @@ template <typename T> bool contains(const std::vector<T>& v, const T& value)
    return std::find(v.begin(), v.end(), value) != v.end();
 }
 
-const QLatin1String UiUtils::XbtCurrency = QLatin1String("XBT");
+static const std::string XbtCurrencyString = "XBT";
+const QString UiUtils::XbtCurrency = QString::fromStdString(XbtCurrencyString);
 
 void UiUtils::SetupLocale()
 {
@@ -517,12 +518,14 @@ double UiUtils::truncatePriceForAsset(double price, bs::network::Asset::Type at)
       multiplier = 10000;
       break;
    case bs::network::Asset::SpotXBT:
+   case bs::network::Asset::DeliverableFutures:
       multiplier = 100;
       break;
    case bs::network::Asset::PrivateMarket:
       multiplier = 1000000;
       break;
    default:
+      assert(false);
       return 0;
    }
 
@@ -535,9 +538,14 @@ QString UiUtils::displayPriceForAssetType(double price, bs::network::Asset::Type
    case bs::network::Asset::SpotFX:
       return UiUtils::displayPriceFX(price);
    case bs::network::Asset::SpotXBT:
+   case bs::network::Asset::DeliverableFutures:
+   case bs::network::Asset::CashSettledFutures:
       return UiUtils::displayPriceXBT(price);
    case bs::network::Asset::PrivateMarket:
       return UiUtils::displayPriceCC(price);
+   default:
+      assert(false);
+      break;
    }
 
    return QString();
@@ -564,9 +572,14 @@ int UiUtils::GetPricePrecisionForAssetType(const bs::network::Asset::Type& asset
    case bs::network::Asset::SpotFX:
       return GetPricePrecisionFX();
    case bs::network::Asset::SpotXBT:
+   case bs::network::Asset::DeliverableFutures:
+   case bs::network::Asset::CashSettledFutures:
       return GetPricePrecisionXBT();
    case bs::network::Asset::PrivateMarket:
       return GetPricePrecisionCC();
+   default:
+      assert(false);
+      break;
    }
 
    // Allow entering floating point numbers if the asset type was detected as Undefined
@@ -594,9 +607,12 @@ static void getPrecsFor(const std::string &security, const std::string &product,
       valuePrec = UiUtils::GetAmountPrecisionFX();
       break;
    case bs::network::Asset::Type::SpotXBT:
+   case bs::network::Asset::Type::DeliverableFutures:
+   case bs::network::Asset::Type::CashSettledFutures:
       qtyPrec = UiUtils::GetAmountPrecisionXBT();
       valuePrec = UiUtils::GetAmountPrecisionFX();
-      if (security.substr(0, security.find('/')) != product) {
+
+      if (product != XbtCurrencyString) {
          std::swap(qtyPrec, valuePrec);
       }
       break;
@@ -604,6 +620,9 @@ static void getPrecsFor(const std::string &security, const std::string &product,
       qtyPrec = UiUtils::GetAmountPrecisionCC();
       // special case. display value for XBT with 6 decimals
       valuePrec = 6;
+      break;
+   default:
+      assert(false);
       break;
    }
 }
@@ -788,7 +807,11 @@ ApplicationSettings::Setting UiUtils::limitRfqSetting(bs::network::Asset::Type t
       case bs::network::Asset::PrivateMarket :
          return ApplicationSettings::PmRfqLimit;
 
+      case bs::network::Asset::DeliverableFutures :
+         return ApplicationSettings::FuturesLimit;
+
       default :
+         assert(false);
          return ApplicationSettings::FxRfqLimit;
    }
 }
@@ -802,7 +825,10 @@ ApplicationSettings::Setting UiUtils::limitRfqSetting(const QString &name)
    } else if (name ==
          QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::PrivateMarket))) {
             return ApplicationSettings::PmRfqLimit;
+   } else if (name == QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::DeliverableFutures))) {
+      return ApplicationSettings::FuturesLimit;
    } else {
+      assert(false);
       return ApplicationSettings::FxRfqLimit;
    }
 }
@@ -819,7 +845,11 @@ QString UiUtils::marketNameForLimit(ApplicationSettings::Setting s)
       case ApplicationSettings::PmRfqLimit :
          return QObject::tr(bs::network::Asset::toString(bs::network::Asset::PrivateMarket));
 
+      case ApplicationSettings::FuturesLimit :
+         return QObject::tr(bs::network::Asset::toString(bs::network::Asset::DeliverableFutures));
+
       default :
+         assert(false);
          return QString();
    }
 }

@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -168,7 +168,7 @@ namespace UiUtils
 
    QString modelPath(const QModelIndex &index, QAbstractItemModel *model);
 
-   extern const QLatin1String XbtCurrency;
+   extern const QString XbtCurrency;
 
    double actualXbtPrice(bs::XBTAmount amount, double price);  // FIXME: shouldn't be in UiUtils
 

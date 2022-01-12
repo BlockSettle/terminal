@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -20,7 +20,7 @@
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
 #include "BSMessageBox.h"
-#include "SignContainer.h"
+#include "HeadlessContainer.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"

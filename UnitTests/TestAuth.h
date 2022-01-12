@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -37,6 +37,7 @@ namespace bs {
       class Wallet;
    }
 }
+class QtHCT;
 
 ////////////////////////////////////////////////////////////////////////////////
 class TestValidationACT : public ValidationAddressACT
@@ -125,6 +126,7 @@ protected:
    std::shared_ptr<bs::core::Wallet>   xbtSignWallet_;
    std::shared_ptr<bs::sync::Wallet>   xbtWallet_;
    std::shared_ptr<bs::sync::WalletsManager> syncMgr_;
+   std::shared_ptr<QtHCT>  hct_;
    bs::Address    recvAddr_;
    std::shared_ptr<TestEnv> envPtr_;
 

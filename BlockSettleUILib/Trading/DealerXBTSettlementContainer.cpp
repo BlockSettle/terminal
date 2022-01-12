@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -13,12 +13,12 @@
 #include "AuthAddressManager.h"
 #include "CheckRecipSigner.h"
 #include "CurrencyPair.h"
+#include "HeadlessContainer.h"
 #include "QuoteProvider.h"
 #include "TradesUtils.h"
 #include "TradesVerification.h"
 #include "UiUtils.h"
 #include "UtxoReservationManager.h"
-#include "WalletSignerContainer.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -35,7 +35,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<bs::sync::hd::Wallet> &xbtWallet
    , const std::shared_ptr<QuoteProvider> &quoteProvider
-   , const std::shared_ptr<WalletSignerContainer> &container
+   , const std::shared_ptr<HeadlessContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<AuthAddressManager> &authAddrMgr
    , const bs::Address &authAddr
@@ -97,8 +97,6 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    if (!settlWallet_) {
       throw std::runtime_error("can't register settlement wallet in armory");
    }
-
-//   connect(signContainer_.get(), &SignContainer::TXSigned, this, &DealerXBTSettlementContainer::onTXSigned);
 }
 
 bool DealerXBTSettlementContainer::cancel()

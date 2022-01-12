@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -159,7 +159,7 @@ private:
    MDPrices    mdPrices_;
    const QString groupNameSettlements_ = tr("Settlements");
    std::shared_ptr<bs::SecurityStatsCollector> secStatsCollector_;
-   std::shared_ptr<CelerClientQt>      celerClient_;
+   std::shared_ptr<CelerClientQt>       celerClient_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::unordered_set<std::string>  pendingDeleteIds_;
    int priceUpdateInterval_;
@@ -207,7 +207,7 @@ private:
    };
 
    struct RFQ {
-      QString security_;
+      QString securityDefinition_;
       QString product_;
       QString sideString_;
       QString party_;
@@ -236,7 +236,7 @@ private:
          , visible_(false)
       {}
 
-      RFQ(const QString &security,
+      RFQ(const QString &securityDefinition,
          const QString &product,
          const QString &sideString,
          const QString &party,
@@ -251,7 +251,7 @@ private:
          bs::network::Side::Type side,
          bs::network::Asset::Type assetType,
          const std::string &reqId)
-         : security_(security)
+         : securityDefinition_(securityDefinition)
          , product_(product)
          , sideString_(sideString)
          , party_(party)

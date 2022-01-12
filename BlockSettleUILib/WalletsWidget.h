@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -46,6 +46,7 @@ class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class ConnectionManager;
+class HeadlessContainer;
 class QAction;
 class QMenu;
 class NewAddressDialog;
@@ -151,7 +152,7 @@ private:
 
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<SignContainer>   signingContainer_;
+   std::shared_ptr<HeadlessContainer>     signingContainer_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<AssetManager>          assetManager_;

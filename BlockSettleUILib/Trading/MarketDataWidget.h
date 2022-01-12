@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -121,7 +121,7 @@ protected:
       QHeaderView::paintSection(painter, rect, logIndex);
       painter->restore();
 
-      if (logIndex == 0) { 
+      if (logIndex == 0) {
          QStyleOptionButton option;
          const QSize ch = checkboxSizeHint();
          option.rect = QRect(2, (height() - ch.height()) / 2, ch.width(), ch.height());

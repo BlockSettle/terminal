@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -10,7 +10,7 @@
 */
 #include "AutoSignQuoteProvider.h"
 
-#include "SignContainer.h"
+#include "HeadlessContainer.h"
 #include "WalletManager.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"
@@ -38,15 +38,6 @@ AutoSignScriptProvider::AutoSignScriptProvider(const std::shared_ptr<spdlog::log
    if (walletsManager_) {
       scriptRunner_->setWalletsManager(walletsManager_);
    }
-
-/*   if (signingContainer_) {
-      connect(signingContainer_.get(), &SignContainer::ready, this
-         , &AutoSignScriptProvider::onSignerStateUpdated, Qt::QueuedConnection);
-      connect(signingContainer_.get(), &SignContainer::disconnected, this
-         , &AutoSignScriptProvider::onSignerStateUpdated, Qt::QueuedConnection);
-      connect(signingContainer_.get(), &SignContainer::AutoSignStateChanged, this
-         , &AutoSignScriptProvider::onAutoSignStateChanged);
-   }*/
 
    connect(scriptRunner_, &UserScriptRunner::scriptLoaded, this, &AutoSignScriptProvider::onScriptLoaded);
    connect(scriptRunner_, &UserScriptRunner::failedToLoad, this, &AutoSignScriptProvider::onScriptFailed);

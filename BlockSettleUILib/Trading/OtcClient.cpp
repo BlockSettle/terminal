@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -233,9 +233,7 @@ OtcClient::OtcClient(const std::shared_ptr<spdlog::logger> &logger
    , utxoReservationManager_(utxoReservationManager)
    , applicationSettings_(applicationSettings)
    , params_(std::move(params))
-{
-//   connect(signContainer.get(), &SignContainer::TXSigned, this, &OtcClient::onTxSigned);
-}
+{}
 
 OtcClient::~OtcClient() = default;
 

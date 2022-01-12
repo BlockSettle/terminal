@@ -1,7 +1,7 @@
 #
 #
 # ***********************************************************************************
-# * Copyright (C) 2011 - 2020, BlockSettle AB
+# * Copyright (C) 2018 - 2021, BlockSettle AB
 # * Distributed under the GNU Affero General Public License (AGPL v3)
 # * See LICENSE or http://www.gnu.org/licenses/agpl.html
 # *
@@ -334,6 +334,10 @@ INCLUDE_DIRECTORIES( ${QRENCODE_INCLUDE_DIR} )
 # add SPDLOG
 SET(SPDLOG_INCLUDE_DIR ${THIRD_PARTY_COMMON_DIR}/SPDLog/include)
 INCLUDE_DIRECTORIES( ${SPDLOG_INCLUDE_DIR} )
+
+# add JSON
+SET(JSON_INCLUDE_DIR ${THIRD_PARTY_COMMON_DIR}/JSON/single_include)
+INCLUDE_DIRECTORIES( ${JSON_INCLUDE_DIR} )
 
 # setup libbtc
 SET(LIBBTC_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/libbtc)
