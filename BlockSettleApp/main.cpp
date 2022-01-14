@@ -10,6 +10,7 @@
 */
 #include <QApplication>
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
 #include <QScreen>
@@ -30,13 +31,8 @@
 #include "ApiJson.h"
 #include "AssetsAdapter.h"
 #include "BsServerAdapter.h"
-#include "ChatAdapter.h"
-#include "MatchingAdapter.h"
-#include "MDHistAdapter.h"
-#include "MktDataAdapter.h"
 #include "QtGuiAdapter.h"
 #include "SettingsAdapter.h"
-#include "SettlementAdapter.h"
 #include "SignerAdapter.h"
 
 #include "btc/ecc.h"
@@ -68,7 +64,6 @@ Q_DECLARE_METATYPE(ArmorySettings)
 Q_DECLARE_METATYPE(AsyncClient::LedgerDelegate)
 Q_DECLARE_METATYPE(BinaryData)
 Q_DECLARE_METATYPE(bs::error::AuthAddressSubmitResult);
-Q_DECLARE_METATYPE(CelerAPI::CelerMessageType);
 Q_DECLARE_METATYPE(SecureBinaryData)
 Q_DECLARE_METATYPE(std::shared_ptr<std::promise<bool>>)
 Q_DECLARE_METATYPE(std::string)
@@ -119,12 +114,11 @@ static void checkStyleSheet(QApplication &app)
 
    QFileInfo info = QFileInfo(QLatin1String(styleSheetFileName));
 
-   static QDateTime lastTimestamp = info.lastModified();
+   static auto lastTimestamp = info.lastModified();
 
    if (lastTimestamp == info.lastModified()) {
       return;
    }
-
    lastTimestamp = info.lastModified();
 
    QFile stylesheetFile(styleSheetFileName);
@@ -192,11 +186,11 @@ int main(int argc, char** argv)
          , userWallets, signAdapter->createClient(), userBlockchain));
       inprocBus.addAdapter(std::make_shared<BsServerAdapter>(logMgr->logger("bscon")));
 
-      inprocBus.addAdapter(std::make_shared<MatchingAdapter>(logMgr->logger("match")));
-      inprocBus.addAdapter(std::make_shared<SettlementAdapter>(logMgr->logger("settl")));
-      inprocBus.addAdapter(std::make_shared<MktDataAdapter>(logMgr->logger("md")));
-      inprocBus.addAdapter(std::make_shared<MDHistAdapter>(logMgr->logger("mdh")));
-      inprocBus.addAdapter(std::make_shared<ChatAdapter>(logMgr->logger("chat")));
+      //inprocBus.addAdapter(std::make_shared<MatchingAdapter>(logMgr->logger("match")));
+      //inprocBus.addAdapter(std::make_shared<SettlementAdapter>(logMgr->logger("settl")));
+      //inprocBus.addAdapter(std::make_shared<MktDataAdapter>(logMgr->logger("md")));
+      //inprocBus.addAdapter(std::make_shared<MDHistAdapter>(logMgr->logger("mdh")));
+      //inprocBus.addAdapter(std::make_shared<ChatAdapter>(logMgr->logger("chat")));
       inprocBus.addAdapter(std::make_shared<BlockchainAdapter>(logMgr->logger()
          , userBlockchain));
 

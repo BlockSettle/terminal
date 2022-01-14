@@ -87,7 +87,7 @@ public:
       if (std::dynamic_pointer_cast<bs::message::UserTerminal>(env.receiver)) {
          if (parent_->pushFill(envCopy)) {
             if (env.isRequest()) {
-               idMap_[envCopy.id()] = { env.id(), env.sender };
+               idMap_[envCopy.foreignId()] = { env.foreignId(), env.sender };
             }
             return true;
          }
@@ -143,7 +143,7 @@ public:
       }
       bool rc = pushFill(envCopy);
       if (rc && env.isRequest()) {
-         idMap_[envCopy.id()] = { env.id(), env.sender };
+         idMap_[envCopy.foreignId()] = { env.foreignId(), env.sender };
       }
       return rc;
    }

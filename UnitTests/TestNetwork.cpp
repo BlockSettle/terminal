@@ -13,11 +13,8 @@
 
 #include "Bip15xDataConnection.h"
 #include "Bip15xServerConnection.h"
-#include "Celer/CommonUtils.h"
-#include "Celer/MessageMapper.h"
 #include "CommonTypes.h"
 #include "IdStringGenerator.h"
-#include "QuoteProvider.h"
 #include "ServerConnection.h"
 #include "TestEnv.h"
 #include "TransportBIP15x.h"
@@ -61,6 +58,7 @@ static bs::network::TransportBIP15xServer::TrustedClientsCallback constructTrust
    };
 }
 
+#if 0
 TEST(TestNetwork, CelerMessageMapper)
 {
    for (int i = CelerAPI::CelerMessageTypeFirst; i < CelerAPI::CelerMessageTypeLast; i++) {
@@ -87,6 +85,7 @@ TEST(TestNetwork, Types)
       EXPECT_EQ(bs::celer::fromCelerProductType(celerProdType), t) << "Asset type " << bs::network::Asset::toString(t);
    }
 }
+#endif   //0
 
 TEST(TestNetwork, IdString)
 {

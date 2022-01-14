@@ -126,7 +126,7 @@ public:
       signer::DecryptWalletRequest request;
       request.set_dialogtype(dialogType);
       *(request.mutable_signtxrequest()) = bs::signer::coreTxRequestToPb(txReq);
-      *(request.mutable_passworddialogdata()) = dialogData;
+      *(request.mutable_passworddialogdata()) = dialogData.data();
 
       owner_->sendData(signer::DecryptWalletRequestType, request.SerializeAsString());
    }
@@ -134,7 +134,7 @@ public:
    void updateDialogData(const Internal::PasswordDialogDataWrapper &dialogData) override
    {
       headless::UpdateDialogDataRequest request;
-      *request.mutable_passworddialogdata() = dialogData;
+      *request.mutable_passworddialogdata() = dialogData.data();
       owner_->sendData(signer::UpdateDialogDataType, request.SerializeAsString());
    }
 

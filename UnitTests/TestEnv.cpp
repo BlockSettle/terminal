@@ -15,12 +15,10 @@
 #include "ArmoryObject.h"
 #include "ArmorySettings.h"
 #include "AuthAddressManager.h"
-#include "Celer/CelerClient.h"
 #include "ConnectionManager.h"
 #include "CoreWalletsManager.h"
 #include "MarketDataProvider.h"
 #include "MDCallbacksQt.h"
-#include "QuoteProvider.h"
 #include "SystemFileUtils.h"
 #include "UiUtils.h"
 
@@ -75,8 +73,6 @@ void TestEnv::shutdown()
    }
 
    mdProvider_ = nullptr;
-   quoteProvider_ = nullptr;
-   celerConn_ = nullptr;
 
    assetMgr_ = nullptr;
    connMgr_ = nullptr;
@@ -148,7 +144,6 @@ void TestEnv::requireAssets()
 
    mdCallbacks_ = std::make_shared<MDCallbacksQt>();
    mdProvider_ = std::make_shared<MarketDataProvider>(logger_, mdCallbacks_.get());
-   quoteProvider_ = std::make_shared<QuoteProvider>(assetMgr_, logger_);
 }
 
 void TestEnv::requireConnections()
@@ -156,7 +151,6 @@ void TestEnv::requireConnections()
    requireArmory();
 
    connMgr_ = std::make_shared<ConnectionManager>(logger_);
-   celerConn_ = std::make_shared<CelerClient>(connMgr_);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

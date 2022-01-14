@@ -31,7 +31,7 @@ bool AssetsAdapter::process(const bs::message::Envelope &env)
    if (env.sender->value<bs::message::TerminalUsers>() == bs::message::TerminalUsers::Settings) {
       SettingsMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse settings message #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse settings message #{}", __func__, env.foreignId());
          return true;
       }
       switch (msg.data_case()) {
@@ -45,7 +45,7 @@ bool AssetsAdapter::process(const bs::message::Envelope &env)
    else if (env.sender->value<bs::message::TerminalUsers>() == bs::message::TerminalUsers::Matching) {
       MatchingMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse matching message #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse matching message #{}", __func__, env.foreignId());
          return true;
       }
       switch (msg.data_case()) {
@@ -57,7 +57,7 @@ bool AssetsAdapter::process(const bs::message::Envelope &env)
    else if (env.receiver->value() == user_->value()) {
       AssetsMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse own message #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse own message #{}", __func__, env.foreignId());
          return true;
       }
       switch (msg.data_case()) {
@@ -75,7 +75,7 @@ bool AssetsAdapter::processBroadcast(const bs::message::Envelope& env)
       AdministrativeMessage msg;
       if (!msg.ParseFromString(env.message)) {
          logger_->error("[{}] failed to parse administrative message #{}"
-            , __func__, env.id());
+            , __func__, env.foreignId());
          return false;
       }
       if (msg.data_case() == AdministrativeMessage::kStart) {
@@ -91,7 +91,7 @@ bool AssetsAdapter::processBroadcast(const bs::message::Envelope& env)
    else if (env.sender->value<bs::message::TerminalUsers>() == bs::message::TerminalUsers::Matching) {
       MatchingMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse matching message #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse matching message #{}", __func__, env.foreignId());
          return false;
       }
       switch (msg.data_case()) {
@@ -103,7 +103,7 @@ bool AssetsAdapter::processBroadcast(const bs::message::Envelope& env)
    else if (env.sender->value<bs::message::TerminalUsers>() == bs::message::TerminalUsers::BsServer) {
       BsServerMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse BS message #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse BS message #{}", __func__, env.foreignId());
          return false;
       }
       switch (msg.data_case()) {

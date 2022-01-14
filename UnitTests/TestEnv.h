@@ -466,12 +466,10 @@ public:
    [[deprecated]] std::shared_ptr<MockAssetManager> assetMgr() { return assetMgr_; }
    std::shared_ptr<BlockchainMonitor> blockMonitor() { return blockMonitor_; }
    [[deprecated]] std::shared_ptr<ConnectionManager> connectionMgr() { return connMgr_; }
-   [[deprecated]] std::shared_ptr<CelerClientQt> celerConnection() { return celerConn_; }
    std::shared_ptr<spdlog::logger> logger() { return logger_; }
    std::shared_ptr<bs::core::WalletsManager> walletsMgr() { return walletsMgr_; }
    [[deprecated]] std::shared_ptr<MarketDataProvider> mdProvider() { return mdProvider_; }
    [[deprecated]] std::shared_ptr<MDCallbacksQt> mdCallbacks() { return mdCallbacks_; }
-   [[deprecated]] std::shared_ptr<QuoteProvider> quoteProvider() { return quoteProvider_; }
 
    void requireArmory(bool waitForReady = true);
    [[deprecated]] void requireAssets();
@@ -481,11 +479,9 @@ private:
    std::shared_ptr<ApplicationSettings>  appSettings_;
    std::shared_ptr<MockAssetManager>     assetMgr_;
    std::shared_ptr<BlockchainMonitor>    blockMonitor_;
-   std::shared_ptr<CelerClientQt>        celerConn_;
    std::shared_ptr<ConnectionManager>    connMgr_;
    std::shared_ptr<MDCallbacksQt>        mdCallbacks_;
    std::shared_ptr<MarketDataProvider>   mdProvider_;
-   std::shared_ptr<QuoteProvider>        quoteProvider_;
    std::shared_ptr<bs::core::WalletsManager>       walletsMgr_;
    std::shared_ptr<spdlog::logger>       logger_;
    std::shared_ptr<TestArmoryConnection> armoryConnection_;

@@ -14,12 +14,10 @@
 #include <QObject>
 #include <QQmlEngine>
 #include <QQuickWindow>
-
+#include "BSErrorCode.h"
 #include "QSeed.h"
 #include "QPasswordData.h"
-#include "AuthProxy.h"
-
-#include "BSErrorCode.h"
+#include "QWalletInfo.h"
 
 #include "bs_signer.pb.h"
 
@@ -29,6 +27,8 @@ namespace bs {
       class WalletsManager;
    }
 }
+class ApplicationSettings;
+class ConnectionManager;
 
 class ControlPasswordStatus : public QObject
 {
@@ -55,8 +55,8 @@ class QmlFactory : public QObject
    Q_PROPERTY(QString headlessPubKey READ headlessPubKey WRITE setHeadlessPubKey NOTIFY headlessPubKeyChanged)
 
 public:
-   QmlFactory(const std::shared_ptr<ApplicationSettings> &settings
-      , const std::shared_ptr<ConnectionManager> &connectionManager
+   QmlFactory(const std::shared_ptr<ApplicationSettings> &
+      , const std::shared_ptr<ConnectionManager> &
       , const std::shared_ptr<spdlog::logger> &logger
       , QObject *parent = nullptr);
    ~QmlFactory() override = default;
@@ -122,25 +122,6 @@ public:
    }
    Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo(int index) const;
    Q_INVOKABLE bs::hd::WalletInfo *createWalletInfoFromDigitalBackup(const QString &filename) const;
-
-   // Auth
-   // used for signing
-   Q_INVOKABLE AuthSignWalletObject *createAutheIDSignObject(AutheIDClient::RequestType requestType
-      , bs::hd::WalletInfo *walletInfo, const QString &authEidMessage
-      , int expiration = AutheIDClient::kDefaultExpiration, int timestamp = 0);
-
-   // used for add eID
-   Q_INVOKABLE AuthSignWalletObject *createActivateEidObject(const QString &walletId
-      , const QString &authEidMessage, QJSValue callback);
-
-   // used for add new eID device
-   Q_INVOKABLE AuthSignWalletObject *createAddEidObject(bs::hd::WalletInfo *walletInfo
-      , const QString &authEidMessage, QJSValue callback);
-
-   // used for remove eID device
-   // index: is encKeys index which should be deleted
-   Q_INVOKABLE AuthSignWalletObject *createRemoveEidObject(int index
-      , bs::hd::WalletInfo *walletInfo, const QString &authEidMessage);
 
    QString headlessPubKey() const;
 

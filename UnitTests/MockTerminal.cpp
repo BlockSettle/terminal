@@ -14,7 +14,6 @@
 #include "ArmorySettings.h"
 #include "Message/Adapter.h"
 #include "SettingsAdapter.h"
-#include "SettlementAdapter.h"
 #include "SignerAdapter.h"
 #include "TerminalMessage.h"
 #include "TestEnv.h"
@@ -81,7 +80,7 @@ public:
       if (env.sender->value<TerminalUsers>() == TerminalUsers::Blockchain) {
          ArmoryMessage msg;
          if (!msg.ParseFromString(env.message)) {
-            logger_->error("[{}] failed to parse armory msg #{}", __func__, env.id());
+            logger_->error("[{}] failed to parse armory msg #{}", __func__, env.foreignId());
             return false;
          }
          if (msg.data_case() == ArmoryMessage::kSettingsRequest) {
@@ -114,7 +113,7 @@ public:
       if (env.receiver->value<TerminalUsers>() == TerminalUsers::Settings) {
          SettingsMessage msg;
          if (!msg.ParseFromString(env.message)) {
-            logger_->error("[{}] failed to parse settings msg #{}", __func__, env.id());
+            logger_->error("[{}] failed to parse settings msg #{}", __func__, env.foreignId());
             return true;
          }
          switch (msg.data_case()) {
@@ -218,7 +217,7 @@ MockTerminal::MockTerminal(const std::shared_ptr<spdlog::logger>& logger
    //TODO: add TrackerMockAdapter
    bus_->addAdapter(std::make_shared<WalletsAdapter>(logger_
       , userWallets, signAdapter->createClient(), userBlockchain));
-   bus_->addAdapter(std::make_shared<SettlementAdapter>(logger));
+   //bus_->addAdapter(std::make_shared<SettlementAdapter>(logger));
    bus_->addAdapter(std::make_shared<BlockchainAdapter>(logger, userBlockchain
       , armory));
 }

@@ -21,8 +21,6 @@
 #include "CustomControls/CustomDoubleSpinBox.h"
 #include "CustomControls/CustomDoubleValidator.h"
 #include "InprocSigner.h"
-#include "Trading/RequestingQuoteWidget.h"
-#include "Trading/RFQTicketXBT.h"
 #include "TestEnv.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"

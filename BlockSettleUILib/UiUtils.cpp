@@ -122,6 +122,14 @@ namespace UiUtils {
       return UnifyValueString(QLocale().toString(amountToBtc(value), 'f', GetAmountPrecisionXBT()));
    }
 
+   template <> QString displayAmount(int value)
+   {
+      if (value == INT_MAX) {
+         return CommonUiUtilsText::tr("Loading...");
+      }
+      return UnifyValueString(QLocale().toString(amountToBtc(value), 'f', GetAmountPrecisionXBT()));
+   }
+
    QString displayAmount(const bs::XBTAmount &amount)
    {
       if (amount.isZero()) {
@@ -518,7 +526,7 @@ double UiUtils::truncatePriceForAsset(double price, bs::network::Asset::Type at)
       multiplier = 10000;
       break;
    case bs::network::Asset::SpotXBT:
-   case bs::network::Asset::DeliverableFutures:
+   case bs::network::Asset::Future:
       multiplier = 100;
       break;
    case bs::network::Asset::PrivateMarket:
@@ -538,8 +546,7 @@ QString UiUtils::displayPriceForAssetType(double price, bs::network::Asset::Type
    case bs::network::Asset::SpotFX:
       return UiUtils::displayPriceFX(price);
    case bs::network::Asset::SpotXBT:
-   case bs::network::Asset::DeliverableFutures:
-   case bs::network::Asset::CashSettledFutures:
+   case bs::network::Asset::Future:
       return UiUtils::displayPriceXBT(price);
    case bs::network::Asset::PrivateMarket:
       return UiUtils::displayPriceCC(price);
@@ -572,8 +579,7 @@ int UiUtils::GetPricePrecisionForAssetType(const bs::network::Asset::Type& asset
    case bs::network::Asset::SpotFX:
       return GetPricePrecisionFX();
    case bs::network::Asset::SpotXBT:
-   case bs::network::Asset::DeliverableFutures:
-   case bs::network::Asset::CashSettledFutures:
+   case bs::network::Asset::Future:
       return GetPricePrecisionXBT();
    case bs::network::Asset::PrivateMarket:
       return GetPricePrecisionCC();
@@ -607,8 +613,7 @@ static void getPrecsFor(const std::string &security, const std::string &product,
       valuePrec = UiUtils::GetAmountPrecisionFX();
       break;
    case bs::network::Asset::Type::SpotXBT:
-   case bs::network::Asset::Type::DeliverableFutures:
-   case bs::network::Asset::Type::CashSettledFutures:
+   case bs::network::Asset::Type::Future:
       qtyPrec = UiUtils::GetAmountPrecisionXBT();
       valuePrec = UiUtils::GetAmountPrecisionFX();
 
@@ -807,7 +812,7 @@ ApplicationSettings::Setting UiUtils::limitRfqSetting(bs::network::Asset::Type t
       case bs::network::Asset::PrivateMarket :
          return ApplicationSettings::PmRfqLimit;
 
-      case bs::network::Asset::DeliverableFutures :
+      case bs::network::Asset::Future :
          return ApplicationSettings::FuturesLimit;
 
       default :
@@ -825,7 +830,7 @@ ApplicationSettings::Setting UiUtils::limitRfqSetting(const QString &name)
    } else if (name ==
          QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::PrivateMarket))) {
             return ApplicationSettings::PmRfqLimit;
-   } else if (name == QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::DeliverableFutures))) {
+   } else if (name == QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::Future))) {
       return ApplicationSettings::FuturesLimit;
    } else {
       assert(false);
@@ -846,7 +851,7 @@ QString UiUtils::marketNameForLimit(ApplicationSettings::Setting s)
          return QObject::tr(bs::network::Asset::toString(bs::network::Asset::PrivateMarket));
 
       case ApplicationSettings::FuturesLimit :
-         return QObject::tr(bs::network::Asset::toString(bs::network::Asset::DeliverableFutures));
+         return QObject::tr(bs::network::Asset::toString(bs::network::Asset::Future));
 
       default :
          assert(false);

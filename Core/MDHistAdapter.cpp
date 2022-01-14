@@ -33,7 +33,7 @@ bool MDHistAdapter::processBroadcast(const bs::message::Envelope& env)
    if (env.sender->isSystem()) {
       AdministrativeMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse administrative message #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse administrative message #{}", __func__, env.foreignId());
          return false;
       }
       if (msg.data_case() == AdministrativeMessage::kStart) {

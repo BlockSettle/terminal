@@ -55,21 +55,12 @@ public:
    void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel>& model);
 
    void shortcutActivated(ShortcutType s) override;
-   void setAuthorized(bool authorized);
 
-   void onMDConnected();
-   void onMDDisconnected();
-   void onMDUpdated(bs::network::Asset::Type, const QString& security
-      , const bs::network::MDFields&);
    void onHDWallet(const bs::sync::WalletInfo&);
    void onHDWalletDetails(const bs::sync::HDWalletData&);
    void onWalletBalance(const bs::sync::WalletBalanceData&);
    void onBalance(const std::string& currency, double balance);
    void onEnvConfig(int);
-
-signals:
-   void needMdConnection(ApplicationSettings::EnvConfiguration);
-   void needMdDisconnect();
 
 private slots:
    void showTransactionDetails(const QModelIndex& index);

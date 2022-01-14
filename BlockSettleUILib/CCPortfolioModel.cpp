@@ -734,16 +734,6 @@ int CCPortfolioModel::rowCount(const QModelIndex & parentIndex) const
    return getNodeByIndex(parentIndex)->childrenCount();
 }
 
-std::shared_ptr<AssetManager> CCPortfolioModel::assetManager()
-{
-   return assetManager_;
-}
-
-std::shared_ptr<bs::sync::WalletsManager> CCPortfolioModel::walletsManager()
-{
-   return walletsManager_;
-}
-
 void CCPortfolioModel::onHDWallet(const bs::sync::WalletInfo& wi)
 {
    if (!root_->HaveXBTGroup()) {
@@ -804,23 +794,6 @@ void CCPortfolioModel::onBalance(const std::string& currency, double balance)
          , { Qt::DisplayRole });
 
       const auto &parentIndex = createIndex(fxGroup->getRow(), 0, static_cast<void*>(fxGroup));
-      dataChanged(index(fxNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
-         , index(fxNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
-         , { Qt::DisplayRole });
-   }
-}
-
-void CCPortfolioModel::onPriceChanged(const std::string& currency, double price)
-{
-   const auto& fxGroup = root_->GetFXGroup();
-   const auto &fxNode = fxGroup->GetFXNode(currency);
-
-   if (fxNode && fxNode->SetPrice(price)) {
-      dataChanged(index(fxGroup->getRow(), PortfolioColumns::XBTValueColumn)
-         , index(fxGroup->getRow(), PortfolioColumns::XBTValueColumn)
-         , { Qt::DisplayRole });
-
-      const auto& parentIndex = createIndex(fxGroup->getRow(), 0, static_cast<void*>(fxGroup));
       dataChanged(index(fxNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
          , index(fxNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
          , { Qt::DisplayRole });

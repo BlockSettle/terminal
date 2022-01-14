@@ -42,7 +42,7 @@ bool SignerAdapter::process(const bs::message::Envelope &env)
    if (env.sender->value<TerminalUsers>() == TerminalUsers::Settings) {
       SettingsMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse settings msg #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse settings msg #{}", __func__, env.foreignId());
          return true;
       }
       switch (msg.data_case()) {
@@ -53,7 +53,7 @@ bool SignerAdapter::process(const bs::message::Envelope &env)
    else if (env.receiver->value<TerminalUsers>() == TerminalUsers::Signer) {
       SignerMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse own msg #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse own msg #{}", __func__, env.foreignId());
          return true;
       }
       if (env.isRequest()) {
@@ -75,7 +75,7 @@ bool SignerAdapter::processBroadcast(const bs::message::Envelope& env)
    if (env.sender->value<TerminalUsers>() == TerminalUsers::System) {
       AdministrativeMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse administrative msg #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse administrative msg #{}", __func__, env.foreignId());
          return true;
       }
       switch (msg.data_case()) {

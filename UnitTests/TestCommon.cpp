@@ -108,7 +108,7 @@ TEST(TestCommon, AssetManager)
    syncMgr->syncWallets();
 
    const auto &mdCallbacks = env.mdCallbacks();
-   AssetManager assetMgr(StaticLogger::loggerPtr, syncMgr, mdCallbacks, env.celerConnection());
+   AssetManager assetMgr(StaticLogger::loggerPtr, nullptr); //FIXME: pass AssetMgrCT as a second arg, if needed
    assetMgr.connect(mdCallbacks.get(), &MDCallbacksQt::MDSecurityReceived, &assetMgr, &AssetManager::onMDSecurityReceived);
    assetMgr.connect(mdCallbacks.get(), &MDCallbacksQt::MDSecuritiesReceived, &assetMgr, &AssetManager::onMDSecuritiesReceived);
 

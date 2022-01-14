@@ -12,7 +12,6 @@
 #define BS_SERVER_ADAPTER_H
 
 #include "ApplicationSettings.h"
-#include "BsClient.h"
 #include "FutureValue.h"
 #include "Message/Adapter.h"
 
@@ -38,7 +37,7 @@ namespace BlockSettle {
 class ConnectionManager;
 class RequestReplyCommand;
 
-class BsServerAdapter : public bs::message::Adapter, public BsClientCallbackTarget
+class BsServerAdapter : public bs::message::Adapter
 {
 public:
    BsServerAdapter(const std::shared_ptr<spdlog::logger> &);
@@ -61,40 +60,21 @@ private:
    bool processOpenConnection();
    bool processStartLogin(const std::string&);
    bool processCancelLogin();
-   bool processSubmitAuthAddr(const bs::message::Envelope&, const std::string &addr);
-   void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders&);
-   void processUnsignedPayin(const Blocksettle::Communication::ProxyTerminalPb::Response_UnsignedPayinRequest&);
-   void processSignPayin(const Blocksettle::Communication::ProxyTerminalPb::Response_SignPayinRequest&);
-   void processSignPayout(const Blocksettle::Communication::ProxyTerminalPb::Response_SignPayoutRequest&);
+   //bool processSubmitAuthAddr(const bs::message::Envelope&, const std::string &addr);
+   //void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders&);
+   //void processUnsignedPayin(const Blocksettle::Communication::ProxyTerminalPb::Response_UnsignedPayinRequest&);
+   //void processSignPayin(const Blocksettle::Communication::ProxyTerminalPb::Response_SignPayinRequest&);
+   //void processSignPayout(const Blocksettle::Communication::ProxyTerminalPb::Response_SignPayoutRequest&);
 
-   bool processOutUnsignedPayin(const BlockSettle::Terminal::BsServerMessage_XbtTransaction&);
-   bool processOutSignedPayin(const BlockSettle::Terminal::BsServerMessage_XbtTransaction&);
-   bool processOutSignedPayout(const BlockSettle::Terminal::BsServerMessage_XbtTransaction&);
-
-   //BCT callbacks
-   void startTimer(std::chrono::milliseconds timeout, const std::function<void()>&) override;
-   void onStartLoginDone(bool success, const std::string& errorMsg) override;
-   void onGetLoginResultDone(const BsClientLoginResult& result) override;
-//   void onAuthorizeDone(AuthorizeError authErr, const std::string& email) override;
-   void onCelerRecv(CelerAPI::CelerMessageType messageType, const std::string& data) override;
-   void onProcessPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response&) override;
-   void Connected() override;
-   void Disconnected() override;
-   void onConnectionFailed() override;
-/*   void onEmailHashReceived(const std::string& email, const std::string& hash) override;
-   void onBootstrapDataUpdated(const std::string& data) override;
-   void onAccountStateChanged(bs::network::UserType userType, bool enabled) override;
-   void onFeeRateReceived(float feeRate) override;
-   void onBalanceLoaded() override;*/
-   void onBalanceUpdated(const std::string& currency, double balance) override;
-   void onTradingStatusChanged(bool tradingEnabled) override;
+   //bool processOutUnsignedPayin(const BlockSettle::Terminal::BsServerMessage_XbtTransaction&);
+   //bool processOutSignedPayin(const BlockSettle::Terminal::BsServerMessage_XbtTransaction&);
+   //bool processOutSignedPayout(const BlockSettle::Terminal::BsServerMessage_XbtTransaction&);
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::message::User>  user_, userSettl_, userSettings_;
    std::shared_ptr<bs::message::User>  userMtch_, userWallets_;
    std::shared_ptr<ConnectionManager>  connMgr_;
-   std::unique_ptr<BsClient>           bsClient_;
    ApplicationSettings::EnvConfiguration  envConfig_{ ApplicationSettings::EnvConfiguration::Unknown };
    bool  connected_{ false };
    std::string currentLogin_;

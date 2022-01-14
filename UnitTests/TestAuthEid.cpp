@@ -12,7 +12,7 @@
 #include <google/protobuf/util/json_util.h>
 #include "BtcUtils.h"
 #include "bs_communication.pb.h"
-#include "AutheIDClient.h"
+//#include "AutheIDClient.h"
 
 namespace {
 
@@ -32,6 +32,7 @@ namespace {
 
 }
 
+#if 0
 TEST(TestAuthEid, VerifySignature)
 {
    auto testResult = R"(
@@ -101,3 +102,4 @@ TEST(TestAuthEid, VerifySignature)
    result = AutheIDClient::verifySignature(signResultInvalid, AuthEidEnv::Prod);
    EXPECT_TRUE(!result.valid);
 }
+#endif   //0

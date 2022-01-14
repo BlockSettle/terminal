@@ -416,18 +416,11 @@ ELSE ( UNIX )
    SET( PROTO_LIB ${PROTOBUF_LIBRARIES} )
 ENDIF ( UNIX )
 
-# autheid helper sources
-INCLUDE_DIRECTORIES( ${TERMINAL_GUI_ROOT}/AuthAPI/utils/cpp )
-SET( AUTHEID_UTILS ${TERMINAL_GUI_ROOT}/AuthAPI/utils/cpp/autheid_utils.cpp )
-
-
 SET( PROTO_ROOT_DIR ${TERMINAL_GUI_ROOT} )
 SET( PATH_TO_GENERATED ${TERMINAL_GUI_ROOT}/generated_proto )
 FILE( MAKE_DIRECTORY ${PATH_TO_GENERATED} )
 
-SET( AUTH_PROTO_LIB_NAME               AuthAPI )
 SET( BS_PROTO_LIB_NAME                 BsProtoLib )
-SET( CELER_PROTO_LIB_NAME              CelerProtoLib )
 SET( BLOCKSETTLE_APP_NAME              blocksettle )
 SET( SIGNER_APP_NAME                   blocksettle_signer )
 SET( TERMINAL_CORE_NAME                TerminalCore )
@@ -874,8 +867,6 @@ ENDIF()
 
 
 ADD_SUBDIRECTORY( common/Blocksettle_proto )
-ADD_SUBDIRECTORY( Celer )
-ADD_SUBDIRECTORY( AuthAPI )
 
 ADD_SUBDIRECTORY(Core)
 ADD_SUBDIRECTORY(GUI)

@@ -98,49 +98,11 @@ bs::hd::WalletInfo *QmlFactory::createWalletInfo(int index) const
    return wi;
 }
 
-WalletInfo *QmlFactory::createWalletInfoFromDigitalBackup(const QString &filename) const {
+bs::hd::WalletInfo* QmlFactory::createWalletInfoFromDigitalBackup(const QString& filename) const
+{
    auto wi = new bs::hd::WalletInfo(bs::hd::WalletInfo::fromDigitalBackup(filename));
    QQmlEngine::setObjectOwnership(wi, QQmlEngine::JavaScriptOwnership);
    return wi;
-}
-
-AuthSignWalletObject *QmlFactory::createAutheIDSignObject(AutheIDClient::RequestType requestType
-   , WalletInfo *walletInfo, const QString &authEidMessage, int expiration, int timestamp)
-{
-   logger_->debug("[QmlFactory] signing {}", walletInfo->walletId().toStdString());
-   AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, settings_, connectionManager_);
-   authObject->connectToServer();
-   authObject->signWallet(requestType, walletInfo, authEidMessage, expiration, timestamp);
-   QQmlEngine::setObjectOwnership(authObject, QQmlEngine::JavaScriptOwnership);
-   return authObject;
-}
-
-AuthSignWalletObject *QmlFactory::createActivateEidObject(const QString &walletId, const QString &authEidMessage, QJSValue callback)
-{
-   AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, settings_, connectionManager_);
-   authObject->connectToServer();
-   authObject->activateWallet(walletId, authEidMessage, callback);
-   QQmlEngine::setObjectOwnership(authObject, QQmlEngine::JavaScriptOwnership);
-   return authObject;
-}
-
-AuthSignWalletObject *QmlFactory::createAddEidObject(WalletInfo *walletInfo, const QString &authEidMessage, QJSValue callback)
-{
-   AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, settings_, connectionManager_);
-   authObject->connectToServer();
-   authObject->addDevice(walletInfo->walletId(), authEidMessage, callback, walletInfo->email());
-   QQmlEngine::setObjectOwnership(authObject, QQmlEngine::JavaScriptOwnership);
-   return authObject;
-}
-
-AuthSignWalletObject *QmlFactory::createRemoveEidObject(int index, WalletInfo *walletInfo, const QString &authEidMessage)
-{
-   logger_->debug("[QmlFactory] remove device for {}, device index: {}", walletInfo->walletId().toStdString(), index);
-   AuthSignWalletObject *authObject = new AuthSignWalletObject(logger_, settings_, connectionManager_);
-   authObject->connectToServer();
-   authObject->removeDevice(index, walletInfo, authEidMessage);
-   QQmlEngine::setObjectOwnership(authObject, QQmlEngine::JavaScriptOwnership);
-   return authObject;
 }
 
 void QmlFactory::setClipboard(const QString &text) const

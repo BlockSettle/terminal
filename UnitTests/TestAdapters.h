@@ -54,7 +54,6 @@ public:
 
    bs::message::SeqId send(bs::message::TerminalUsers sender, bs::message::TerminalUsers receiver
       , const std::string &message, bs::message::SeqId respId = 0);
-   bool push(const bs::message::Envelope &env) { return bs::message::Adapter::push(env); }
    bool pushFill(bs::message::Envelope &env) { return bs::message::Adapter::pushFill(env); }
 
    using FilterCb = std::function<bool(const bs::message::Envelope &)>;

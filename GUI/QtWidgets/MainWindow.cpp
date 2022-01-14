@@ -12,6 +12,7 @@
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDesktopServices>
+#include <QDesktopWidget>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QMenu>
@@ -27,7 +28,6 @@
 #include "ui_BSTerminalMainWindow.h"
 #include "ApiAdapter.h"
 #include "ApplicationSettings.h"
-#include "AuthAddressDialog.h"
 #include "BSMessageBox.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
@@ -37,7 +37,6 @@
 #include "InfoDialogs/SupportDialog.h"
 #include "LoginWindow.h"
 #include "NotificationCenter.h"
-#include "OrderListModel.h"
 #include "Settings/ConfigDialog.h"
 #include "StatusBarView.h"
 #include "TabWithShortcut.h"
@@ -92,9 +91,7 @@ MainWindow::MainWindow(const std::shared_ptr<spdlog::logger> &logger
 void MainWindow::setWidgetsAuthorized(bool authorized)
 {
    // Update authorized state for some widgets
-   ui_->widgetPortfolio->setAuthorized(authorized);
-   ui_->widgetRFQ->setAuthorized(authorized);
-   ui_->widgetChart->setAuthorized(authorized);
+   //ui_->widgetPortfolio->setAuthorized(authorized);
 }
 
 void MainWindow::onGetGeometry(const QRect &mainGeom)
@@ -164,14 +161,7 @@ void MainWindow::onSetting(int setting, const QVariant &value)
    }
       break;
    case ApplicationSettings::rememberLoginUserName:
-      if (loginDlg_) {
-         loginDlg_->setRememberLogin(value.toBool());
-      }
-      break;
    case ApplicationSettings::celerUsername:
-      if (loginDlg_) {
-         loginDlg_->setLogin(value.toString());
-      }
       break;
    default: break;
    }
@@ -236,8 +226,6 @@ void MainWindow::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
 {
    ui_->widgetWallets->onHDWalletDetails(hdWallet);
    ui_->widgetPortfolio->onHDWalletDetails(hdWallet);
-   ui_->widgetRFQ->onHDWallet(hdWallet);
-   ui_->widgetRFQReply->onHDWallet(hdWallet);
 }
 
 void MainWindow::onWalletsList(const std::string &id, const std::vector<bs::sync::HDWalletData>& wallets)
@@ -250,7 +238,7 @@ void MainWindow::onWalletsList(const std::string &id, const std::vector<bs::sync
 void bs::gui::qt::MainWindow::onWalletData(const std::string& walletId
    , const bs::sync::WalletData& wd)
 {
-   ui_->widgetRFQ->onWalletData(walletId, wd);
+   //ui_->widgetRFQ->onWalletData(walletId, wd);
 }
 
 void MainWindow::onAddresses(const std::string& walletId
@@ -282,8 +270,6 @@ void MainWindow::onWalletBalance(const bs::sync::WalletBalanceData &wbd)
    }
    ui_->widgetWallets->onWalletBalance(wbd);
    ui_->widgetPortfolio->onWalletBalance(wbd);
-   ui_->widgetRFQ->onWalletBalance(wbd);
-   ui_->widgetRFQReply->onWalletBalance(wbd);
    statusBarView_->onXbtBalance(wbd);
 }
 
@@ -721,7 +707,7 @@ void MainWindow::setupMenu()
    };
 
    connect(ui_->actionCreateNewWallet, &QAction::triggered, this, [ww = ui_->widgetWallets]{ ww->onNewWallet(); });
-   connect(ui_->actionAuthenticationAddresses, &QAction::triggered, this, &MainWindow::openAuthManagerDialog);
+//   connect(ui_->actionAuthenticationAddresses, &QAction::triggered, this, &MainWindow::openAuthManagerDialog);
    connect(ui_->actionSettings, &QAction::triggered, this, [=]() { openConfigDialog(); });
 //   connect(ui_->actionAccountInformation, &QAction::triggered, this, &MainWindow::openAccountInfoDialog);
 //   connect(ui_->actionEnterColorCoinToken, &QAction::triggered, this, &MainWindow::openCCTokenDialog);
@@ -731,7 +717,7 @@ void MainWindow::setupMenu()
    connect(ui_->actionVideoTutorials, &QAction::triggered, supportDlgCb(1, QObject::tr("Video Tutorials")));
    connect(ui_->actionContact, &QAction::triggered, supportDlgCb(2, QObject::tr("Support")));
 
-   onMatchingLogout();
+   //onMatchingLogout();
 
 #ifndef Q_OS_MAC
    ui_->horizontalFrame->hide();
@@ -753,13 +739,6 @@ void MainWindow::setupMenu()
    ui_->prodEnvSettings->setVisible(false);
    ui_->testEnvSettings->setVisible(false);
 #endif // !PRODUCTION_BUILD
-}
-
-void bs::gui::qt::MainWindow::openAuthManagerDialog()
-{
-   if (authAddrDlg_) {
-      authAddrDlg_->exec();
-   }
 }
 
 void MainWindow::openConfigDialog(bool showInNetworkPage)
@@ -795,103 +774,11 @@ void MainWindow::onLoginInitiated()
    if (!actLogin_->isEnabled()) {
       return;
    }
-   //TODO: prompt for primary wallet creation if needed
    emit needOpenBsConnection();
-   loginDlg_ = new LoginWindow(logger_, envConfig_, this);
-   emit getSettings({ ApplicationSettings::rememberLoginUserName, ApplicationSettings::celerUsername });
-   connect(loginDlg_, &QDialog::finished, [this] {
-      loginDlg_->deleteLater();
-      loginDlg_ = nullptr;
-   });
-   connect(loginDlg_, &LoginWindow::putSetting, this, &MainWindow::putSetting);
-   connect(loginDlg_, &LoginWindow::needStartLogin, this, &MainWindow::needStartLogin);
-   connect(loginDlg_, &LoginWindow::needCancelLogin, this, &MainWindow::needCancelLogin);
-
-   loginDlg_->exec();
 }
 
 void bs::gui::qt::MainWindow::onLoginStarted(const std::string& login, bool success, const std::string& errMsg)
 {
-   if (loginDlg_) {
-      loginDlg_->onLoginStarted(login, success, errMsg);
-   }
-}
-
-void MainWindow::onLoggedIn(const BsClientLoginResult& result)
-{
-   if (loginDlg_) {
-      loginDlg_->onLoggedIn(result);
-   }
-   if (result.status != AutheIDClient::ErrorType::NoError) {
-      onLoggedOut();
-      return;
-   }
-   bool isRegistered = (result.userType == bs::network::UserType::Market
-      || result.userType == bs::network::UserType::Trading
-      || result.userType == bs::network::UserType::Dealing);
-
-   if (!isRegistered && envConfig_ == ApplicationSettings::EnvConfiguration::Test) {
-      auto createTestAccountUrl = tr("async retrieval of GetAccount_UrlTest");
-      BSMessageBox dlg(BSMessageBox::info, tr("Create Test Account")
-         , tr("Create a BlockSettle test account")
-         , tr("<p>Login requires a test account - create one in minutes on test.blocksettle.com</p>"
-            "<p>Once you have registered, return to login in the Terminal.</p>"
-            "<a href=\"%1\"><span style=\"text-decoration: underline;color:%2;\">Create Test Account Now</span></a>")
-         .arg(createTestAccountUrl).arg(BSMessageBox::kUrlColor), this);
-      dlg.setOkVisible(false);
-      dlg.setCancelVisible(true);
-      dlg.enableRichText();
-      dlg.exec();
-      return;
-   }
-
-   if (!isRegistered && envConfig_ == ApplicationSettings::EnvConfiguration::Production) {
-      auto createAccountUrl = tr("async retrieval of GetAccount_UrlProd");
-      BSMessageBox dlg(BSMessageBox::info, tr("Create Account")
-         , tr("Create a BlockSettle account")
-         , tr("<p>Login requires an account - create one in minutes on blocksettle.com</p>"
-            "<p>Once you have registered, return to login in the Terminal.</p>"
-            "<a href=\"%1\"><span style=\"text-decoration: underline;color:%2;\">Create Account Now</span></a>")
-         .arg(createAccountUrl).arg(BSMessageBox::kUrlColor), this);
-      dlg.setOkVisible(false);
-      dlg.setCancelVisible(true);
-      dlg.enableRichText();
-      dlg.exec();
-      return;
-   }
-
-   activateClient(result);
-}
-
-void MainWindow::activateClient(const BsClientLoginResult& result)
-{
-   currentUserLogin_ = QString::fromStdString(result.login);
-
-   auto tradeSettings = std::make_shared<bs::TradeSettings>(result.tradeSettings);
-   emit putSetting(ApplicationSettings::SubmittedAddressXbtLimit
-      , static_cast<quint64>(tradeSettings->xbtTier1Limit));
-
-   setLoginButtonText(currentUserLogin_);
-   setWidgetsAuthorized(true);
-
-   ui_->widgetRFQ->onTradeSettings(tradeSettings);
-
-   ui_->widgetWallets->setUsername(currentUserLogin_);
-   actLogout_->setVisible(false);
-   actLogin_->setEnabled(false);
-
-   // Market data, charts and chat should be available for all Auth eID logins
-   emit needMdConnection(envConfig_);
-
-   accountEnabled_ = result.enabled;
-   onAccountTypeChanged(result.userType, result.enabled);
-
-   if (!authAddrDlg_) {
-      authAddrDlg_ = new AuthAddressDialog(logger_, this);
-      connect(authAddrDlg_, &AuthAddressDialog::putSetting, this, &MainWindow::putSetting);
-      connect(authAddrDlg_, &AuthAddressDialog::needNewAuthAddress, this, &MainWindow::needNewAuthAddress);
-      connect(authAddrDlg_, &AuthAddressDialog::needSubmitAuthAddress, this, &MainWindow::needSubmitAuthAddress);
-   }
 }
 
 void MainWindow::onAccountTypeChanged(bs::network::UserType userType, bool enabled)
@@ -901,44 +788,12 @@ void MainWindow::onAccountTypeChanged(bs::network::UserType userType, bool enabl
       notifCenter_->enqueue(enabled ? bs::ui::NotifyType::AccountEnabled
          : bs::ui::NotifyType::AccountDisabled, {});
    }
-   ui_->widgetChat->setUserType(enabled ? userType : bs::network::UserType::Chat);
-}
-
-void bs::gui::qt::MainWindow::onMatchingLogin(const std::string& mtchLogin
-   , BaseCelerClient::CelerUserType userType, const std::string& userId)
-{
-   ui_->actionAccountInformation->setEnabled(true);
-   ui_->actionAuthenticationAddresses->setEnabled(userType != BaseCelerClient::CelerUserType::Market);
-   ui_->actionOneTimePassword->setEnabled(true);
-   ui_->actionEnterColorCoinToken->setEnabled(true);
-
-   ui_->actionDeposits->setEnabled(true);
-   ui_->actionWithdrawalRequest->setEnabled(true);
-   ui_->actionLinkAdditionalBankAccount->setEnabled(true);
-
-   actLogin_->setVisible(false);
-   actLogout_->setVisible(true);
-
-   //   ccFileManager_->ConnectToCelerClient(celerConnection_);
-   ui_->widgetRFQ->onMatchingLogin(mtchLogin, userType, userId);
-   ui_->widgetRFQReply->onUserConnected(userType);
-
-   statusBarView_->onConnectedToMatching();
-   orderListModel_->onMatchingLogin();
 }
 
 void bs::gui::qt::MainWindow::onLogoutInitiated()
 {
    ui_->widgetWallets->setUsername(QString());
-   /*   if (chatClientServicePtr_) {
-         chatClientServicePtr_->LogoutFromServer();
-      }*/
-   ui_->widgetChart->disconnect();
-   /*   if (celerConnection_->IsConnected()) {
-         celerConnection_->CloseConnection();
-      }*/
-
-      //   mdProvider_->UnsubscribeFromMD();
+//   mdProvider_->UnsubscribeFromMD();
 
    setLoginButtonText(loginButtonText_);
 
@@ -951,145 +806,21 @@ void MainWindow::onLoggedOut()
    emit needMatchingLogout();
 }
 
-void MainWindow::onMatchingLogout()
-{
-   emit needCloseBsConnection();
-
-   ui_->actionAccountInformation->setEnabled(false);
-   ui_->actionAuthenticationAddresses->setEnabled(false);
-   ui_->actionEnterColorCoinToken->setEnabled(false);
-   ui_->actionOneTimePassword->setEnabled(false);
-
-   ui_->actionDeposits->setEnabled(false);
-   ui_->actionWithdrawalRequest->setEnabled(false);
-   ui_->actionLinkAdditionalBankAccount->setEnabled(false);
-
-   actLogin_->setVisible(true);
-   actLogin_->setEnabled(true);
-   actLogout_->setVisible(false);
-
-   statusBarView_->onDisconnectedFromMatching();
-   setLoginButtonText(loginButtonText_);
-
-   if (orderListModel_) {
-      orderListModel_->onMatchingLogout();
-   }
-   ui_->widgetRFQ->onMatchingLogout();
-   ui_->widgetRFQReply->onMatchingLogout();
-}
-
-void bs::gui::qt::MainWindow::onMDConnected()
-{
-   ui_->widgetPortfolio->onMDConnected();
-}
-
-void bs::gui::qt::MainWindow::onMDDisconnected()
-{
-   ui_->widgetPortfolio->onMDDisconnected();
-}
-
-void bs::gui::qt::MainWindow::onNewSecurity(const std::string& name, bs::network::Asset::Type at)
-{
-   ui_->widgetRFQ->onNewSecurity(name, at);
-}
-
 void MainWindow::onMDUpdated(bs::network::Asset::Type assetType
    , const QString& security, const bs::network::MDFields &fields)
 {
-   ui_->widgetRFQ->onMDUpdated(assetType, security, fields);
-   ui_->widgetRFQReply->onMDUpdated(assetType, security, fields);
-   ui_->widgetPortfolio->onMDUpdated(assetType, security, fields);
+   //ui_->widgetPortfolio->onMDUpdated(assetType, security, fields);
 }
 
 void bs::gui::qt::MainWindow::onBalance(const std::string& currency, double balance)
 {
    statusBarView_->onBalanceUpdated(currency, balance);
    ui_->widgetPortfolio->onBalance(currency, balance);
-   ui_->widgetRFQ->onBalance(currency, balance);
-   ui_->widgetRFQReply->onBalance(currency, balance);
-}
-
-void MainWindow::onAuthAddresses(const std::vector<bs::Address> &addrs
-   , const std::map<bs::Address, AddressVerificationState>& states)
-{
-   if (authAddrDlg_) {
-      authAddrDlg_->onAuthAddresses(addrs, states);
-   }
-}
-
-void MainWindow::onSubmittedAuthAddresses(const std::vector<bs::Address>& addrs)
-{
-   if (authAddrDlg_) {
-      authAddrDlg_->onSubmittedAuthAddresses(addrs);
-   }
-}
-
-void MainWindow::onVerifiedAuthAddresses(const std::vector<bs::Address>& addrs)
-{
-   ui_->widgetRFQ->onVerifiedAuthAddresses(addrs);
-   ui_->widgetRFQReply->onVerifiedAuthAddresses(addrs);
-}
-
-void MainWindow::onAuthKey(const bs::Address& addr, const BinaryData& authKey)
-{
-   ui_->widgetRFQ->onAuthKey(addr, authKey);
-   ui_->widgetRFQReply->onAuthKey(addr, authKey);
-}
-
-void MainWindow::onQuoteReceived(const bs::network::Quote& quote)
-{
-   ui_->widgetRFQ->onQuoteReceived(quote);
-}
-
-void MainWindow::onQuoteMatched(const std::string& rfqId, const std::string &quoteId)
-{
-   ui_->widgetRFQ->onQuoteMatched(rfqId, quoteId);
-   ui_->widgetRFQReply->onQuoteMatched(rfqId, quoteId);
-}
-
-void MainWindow::onQuoteFailed(const std::string& rfqId, const std::string& quoteId
-   , const std::string &info)
-{
-   ui_->widgetRFQ->onQuoteFailed(rfqId, quoteId, info);
-   ui_->widgetRFQReply->onQuoteFailed(rfqId, quoteId, info);
-}
-
-void bs::gui::qt::MainWindow::onSettlementPending(const std::string& rfqId
-   , const std::string& quoteId, const BinaryData& settlementId, int timeLeftMS)
-{
-   ui_->widgetRFQ->onSettlementPending(rfqId, quoteId, settlementId, timeLeftMS);
-   ui_->widgetRFQReply->onSettlementPending(rfqId, quoteId, settlementId, timeLeftMS);
-}
-
-void bs::gui::qt::MainWindow::onSettlementComplete(const std::string& rfqId
-   , const std::string& quoteId, const BinaryData& settlementId)
-{
-   ui_->widgetRFQ->onSettlementComplete(rfqId, quoteId, settlementId);
-   ui_->widgetRFQReply->onSettlementComplete(rfqId, quoteId, settlementId);
-}
-
-void bs::gui::qt::MainWindow::onQuoteReqNotification(const bs::network::QuoteReqNotification& qrn)
-{
-   ui_->widgetRFQReply->onQuoteReqNotification(qrn);
-}
-
-void MainWindow::onOrdersUpdate(const std::vector<bs::network::Order>& orders)
-{
-   orderListModel_->onOrdersUpdate(orders);
-}
-
-void bs::gui::qt::MainWindow::onQuoteCancelled(const std::string& rfqId
-   , const std::string& quoteId, bool byUser)
-{
-   ui_->widgetRFQReply->onQuoteCancelled(QString::fromStdString(rfqId), byUser);
 }
 
 void MainWindow::onReservedUTXOs(const std::string& resId
    , const std::string& subId, const std::vector<UTXO>& utxos)
-{
-   ui_->widgetRFQ->onReservedUTXOs(resId, subId, utxos);
-   ui_->widgetRFQReply->onReservedUTXOs(resId, subId, utxos);
-}
+{}
 
 void MainWindow::showRunInBackgroundMessage()
 {
@@ -1252,46 +983,11 @@ void MainWindow::initWidgets()
    initTransactionsView();
 
    ui_->widgetPortfolio->init(logger_);
-   connect(ui_->widgetPortfolio, &PortfolioWidget::needMdConnection, this, &MainWindow::needMdConnection);
-   connect(ui_->widgetPortfolio, &PortfolioWidget::needMdDisconnect, this, &MainWindow::needMdDisconnect);
+   //connect(ui_->widgetPortfolio, &PortfolioWidget::needMdConnection, this, &MainWindow::needMdConnection);
+   //connect(ui_->widgetPortfolio, &PortfolioWidget::needMdDisconnect, this, &MainWindow::needMdDisconnect);
 
-   orderListModel_ = std::make_shared<OrderListModel>(this);
+   //orderListModel_ = std::make_shared<OrderListModel>(this);
    dialogMgr_ = std::make_shared<DialogManager>(this);
-
-   ui_->widgetRFQ->init(logger_, dialogMgr_, orderListModel_.get());
-   connect(ui_->widgetRFQ, &RFQRequestWidget::requestPrimaryWalletCreation, this, &MainWindow::createNewWallet);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::needWalletData, this, &MainWindow::needWalletData);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::loginRequested, this, &MainWindow::onLoginInitiated);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::needSubmitRFQ, this, &MainWindow::needSubmitRFQ);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::needAcceptRFQ, this, &MainWindow::needAcceptRFQ);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::needCancelRFQ, this, &MainWindow::needCancelRFQ);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::needAuthKey, this, &MainWindow::needAuthKey);
-   connect(ui_->widgetRFQ, &RFQRequestWidget::needReserveUTXOs, this, &MainWindow::needReserveUTXOs);
-
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::requestPrimaryWalletCreation, this
-      , &MainWindow::createNewWallet);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::putSetting, this, &MainWindow::putSetting);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::submitQuote, this, &MainWindow::submitQuote);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::pullQuote, this, &MainWindow::pullQuote);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::needAuthKey, this, &MainWindow::needAuthKey);
-   connect(ui_->widgetRFQReply, &RFQReplyWidget::needReserveUTXOs, this, &MainWindow::needReserveUTXOs);
-   ui_->widgetRFQReply->init(logger_, orderListModel_.get());
-
-   connect(ui_->tabWidget, &QTabWidget::tabBarClicked, this,
-      [/*requestRFQ = QPointer<RFQRequestWidget>(ui_->widgetRFQ)
-         , replyRFQ = QPointer<RFQReplyWidget>(ui_->widgetRFQReply)
-         ,*/ tabWidget = QPointer<QTabWidget>(ui_->tabWidget)] (int index)
-   {
-      if (!tabWidget) {
-         return;
-      }
-/*      if (requestRFQ && requestRFQ == tabWidget->widget(index)) {
-         requestRFQ->forceCheckCondition();
-      }
-      if (replyRFQ && replyRFQ == tabWidget->widget(index)) {
-         replyRFQ->forceCheckCondition();
-      }*/
-   });
 }
 
 void MainWindow::promptSwitchEnv(bool prod)

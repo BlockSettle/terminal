@@ -17,8 +17,6 @@
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "AuthAddress.h"
-#include "BsClient.h"
-#include "Celer/BaseCelerClient.h"
 #include "CommonTypes.h"
 #include "SignContainer.h"
 #include "Settings/SignersProvider.h"
@@ -96,37 +94,26 @@ namespace bs {
             void onSignerSettings(const QList<SignerHost>&, const std::string& ownKey, int idxCur);
 
             void onLoginStarted(const std::string &login, bool success, const std::string &errMsg);
-            void onLoggedIn(const BsClientLoginResult&);
+            //void onLoggedIn(const BsClientLoginResult&);
             void onAccountTypeChanged(bs::network::UserType userType, bool enabled);
-            void onMatchingLogin(const std::string& mtchLogin, BaseCelerClient::CelerUserType
-               , const std::string &userId);
-            void onMatchingLogout();
+            //void onMatchingLogin(const std::string& mtchLogin, BaseCelerClient::CelerUserType
+            //   , const std::string &userId);
+            //void onMatchingLogout();
 
-            void onMDConnected();
-            void onMDDisconnected();
-            void onNewSecurity(const std::string& name, bs::network::Asset::Type);
+            //void onMDConnected();
+            //void onMDDisconnected();
+            //void onNewSecurity(const std::string& name, bs::network::Asset::Type);
             void onMDUpdated(bs::network::Asset::Type assetType
                , const QString& security, const bs::network::MDFields &);
             void onBalance(const std::string& currency, double balance);
 
-            void onAuthAddresses(const std::vector<bs::Address>&
-               , const std::map<bs::Address, AddressVerificationState> &);
-            void onSubmittedAuthAddresses(const std::vector<bs::Address>&);
-            void onVerifiedAuthAddresses(const std::vector<bs::Address>&);
-            void onAuthKey(const bs::Address&, const BinaryData& authKey);
+            //void onAuthKey(const bs::Address&, const BinaryData& authKey);
 
-            void onQuoteReceived(const bs::network::Quote&);
-            void onQuoteMatched(const std::string &rfqId, const std::string &quoteId);
-            void onQuoteFailed(const std::string& rfqId, const std::string& quoteId
-               , const std::string &info);
-            void onSettlementPending(const std::string& rfqId, const std::string& quoteId
-               , const BinaryData& settlementId, int timeLeftMS);
-            void onSettlementComplete(const std::string& rfqId, const std::string& quoteId
-               , const BinaryData& settlementId);
-            void onQuoteReqNotification(const bs::network::QuoteReqNotification&);
-            void onOrdersUpdate(const std::vector<bs::network::Order>&);
-            void onQuoteCancelled(const std::string& rfqId, const std::string& quoteId
-               , bool byUser);
+            //void onSettlementPending(const std::string& rfqId, const std::string& quoteId
+            //   , const BinaryData& settlementId, int timeLeftMS);
+            //void onSettlementComplete(const std::string& rfqId, const std::string& quoteId
+            //   , const BinaryData& settlementId);
+            //void onOrdersUpdate(const std::vector<bs::network::Order>&);
 
             void onReservedUTXOs(const std::string& resId, const std::string& subId
                , const std::vector<UTXO>&);
@@ -134,14 +121,6 @@ namespace bs {
          public slots:
             void onReactivate();
             void raiseWindow();
-
-/*         private:
-            enum class AutoLoginState
-            {
-               Idle,
-               Connecting,
-               Connected,
-            };*/
 
          signals:
             void getSettings(const std::vector<ApplicationSettings::Setting> &);
@@ -194,28 +173,16 @@ namespace bs {
             void needMdConnection(ApplicationSettings::EnvConfiguration);
             void needMdDisconnect();
 
-            void needNewAuthAddress();
-            void needSubmitAuthAddress(const bs::Address&);
-            void needSubmitRFQ(const bs::network::RFQ&, const std::string& reserveId = {});
-            void needAcceptRFQ(const std::string& id, const bs::network::Quote&);
-            void needCancelRFQ(const std::string& id);
             void needAuthKey(const bs::Address&);
             void needReserveUTXOs(const std::string& reserveId, const std::string& subId
                , uint64_t amount, bool withZC = false, const std::vector<UTXO>& utxos = {});
             void needUnreserveUTXOs(const std::string& reserveId, const std::string& subId);
 
-            void submitQuote(const bs::network::QuoteNotification&);
-            void pullQuote(const std::string& settlementId, const std::string& reqId
-               , const std::string& reqSessToken);
-
          private slots:
             void onSend();
             void onGenerateAddress();
 
-            void openAuthManagerDialog();
             void openConfigDialog(bool showInNetworkPage = false);
-         //   void openAccountInfoDialog();
-         //   void openCCTokenDialog();
 
             void onLoginInitiated();
             void onLogoutInitiated();
@@ -262,7 +229,7 @@ namespace bs {
             void addDeferredDialog(const std::function<void(void)> &);
             void processDeferredDialogs();
 
-            void activateClient(const BsClientLoginResult&);
+            //void activateClient(const BsClientLoginResult&);
 
          private:
             std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
@@ -279,13 +246,11 @@ namespace bs {
             std::shared_ptr<QSystemTrayIcon>          sysTrayIcon_;
             std::shared_ptr<NotificationCenter>       notifCenter_;
             std::shared_ptr<TransactionsViewModel>    txModel_;
-            std::shared_ptr<OrderListModel>           orderListModel_;
+            //std::shared_ptr<OrderListModel>           orderListModel_;
 
             std::shared_ptr<DialogManager>   dialogMgr_;
             CreateTransactionDialog* txDlg_{ nullptr };
             ConfigDialog*  cfgDlg_{ nullptr };
-            LoginWindow* loginDlg_{ nullptr };
-            AuthAddressDialog* authAddrDlg_{ nullptr };
 
             //   std::shared_ptr<WalletManagementWizard> walletsWizard_;
 

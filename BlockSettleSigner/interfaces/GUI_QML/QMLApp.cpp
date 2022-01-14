@@ -9,8 +9,6 @@
 
 */
 #include "ApplicationSettings.h"
-#include "AutheIDClient.h"
-#include "AuthProxy.h"
 #include "ConnectionManager.h"
 #include "CoreWalletsManager.h"
 #include "EasyEncValidator.h"
@@ -214,23 +212,18 @@ void QMLAppObj::registerQtTypes()
    qRegisterMetaType<QJSValueList>("QJSValueList");
 
    qRegisterMetaType<bs::core::wallet::TXSignRequest>();
-   qRegisterMetaType<AutheIDClient::RequestType>("AutheIDClient::RequestType");
    qRegisterMetaType<bs::wallet::EncryptionType>("EncryptionType");
    qRegisterMetaType<bs::wallet::QSeed>("QSeed");
-   qRegisterMetaType<AuthSignWalletObject>("AuthSignWalletObject");
 
    qmlRegisterUncreatableType<QmlWalletsViewModel>("com.blocksettle.WalletsViewModel", 1, 0,
       "WalletsModel", QStringLiteral("Cannot create a WalletsViewModel instance"));
    qmlRegisterUncreatableType<WalletsProxy>("com.blocksettle.WalletsProxy", 1, 0,
       "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
-   qmlRegisterUncreatableType<AutheIDClient>("com.blocksettle.AutheIDClient", 1, 0,
-      "AutheIDClient", QStringLiteral("Cannot create a AutheIDClient instance"));
    qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
       "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
    qmlRegisterUncreatableType<HwDeviceManager>("com.blocksettle.HwDeviceManager", 1, 0,
       "HwDeviceManager", QStringLiteral("Cannot create a HwDeviceManager instance"));
 
-   qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
    qmlRegisterType<bs::wallet::TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
    qmlRegisterType<bs::sync::PasswordDialogData>("com.blocksettle.PasswordDialogData", 1, 0, "PasswordDialogData");
    qmlRegisterType<QmlPdfBackup>("com.blocksettle.QmlPdfBackup", 1, 0, "QmlPdfBackup");

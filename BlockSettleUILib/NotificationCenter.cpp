@@ -106,10 +106,6 @@ NotificationTabResponder::NotificationTabResponder(const Ui::BSTerminalMainWindo
 
 void NotificationTabResponder::respond(bs::ui::NotifyType nt, bs::ui::NotifyMessage msg)
 {
-   if (nt == bs::ui::NotifyType::UpdateUnreadMessage) {
-      return;
-   }
-
    const auto tabAction = getTabActionFor(nt, msg);
    if ((tabAction.index >= 0) && (mainWinUi_->tabWidget->currentIndex() != tabAction.index)) {
       mainWinUi_->tabWidget->setTabIcon(tabAction.index,
@@ -120,16 +116,8 @@ void NotificationTabResponder::respond(bs::ui::NotifyType nt, bs::ui::NotifyMess
 NotificationTabResponder::TabAction NotificationTabResponder::getTabActionFor(bs::ui::NotifyType nt, bs::ui::NotifyMessage msg) const
 {
    switch (nt) {
-   case bs::ui::NotifyType::DealerQuotes:
-      if (msg.empty()) {
-         return { -1, false, false };
-      }
-      return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetRFQReply), (msg[0].toInt() > 0),
-         appSettings_ ? !appSettings_->get<bool>(ApplicationSettings::DisableBlueDotOnTabOfRfqBlotter) : true};
-
    case bs::ui::NotifyType::BlockchainTX:
       return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetTransactions), true, true };
-
    default: break;
    }
    return { -1, false, false };
@@ -200,19 +188,6 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
    QString title, text, userId;
    int msecs = 10000;
    newVersionMessage_ = false;
-   newChatMessage_ = false;
-   newChatId_ = QString();
-
-   const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
-   const bool isChatTabActive = mainWinUi_->tabWidget->currentIndex() == chatIndex && QApplication::activeWindow();
-   auto updateChatIconAndCheckChatTab = [&]() -> bool {
-      if (isChatTabActive) {
-         mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
-      } else {
-         mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon(QLatin1String(":/ICON_DOT")));
-      }
-      return isChatTabActive;
-   };
 
    switch (nt) {
    case bs::ui::NotifyType::BlockchainTX:
@@ -221,29 +196,6 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       }
       title = msg[0].toString();
       text = msg[1].toString();
-      break;
-
-   case bs::ui::NotifyType::CelerOrder:
-      if (msg.size() < 2) {
-         return;
-      }
-      if (msg[0].toBool()) {
-         title = tr("Order Filled");
-         text = tr("Trade order %1 has been filled by the matching system").arg(msg[1].toString());
-      }
-      else {
-         title = tr("Order Failed");
-         text = tr("Order %1 was rejected with reason: %2").arg(msg[1].toString()).arg(msg[2].toString());
-         icon = QSystemTrayIcon::Warning;
-      }
-      break;
-
-   case bs::ui::NotifyType::AuthAddress:
-      if (msg.size() < 2) {
-         return;
-      }
-      title = tr("Authentication Address %1").arg(msg[1].toString());
-      text = msg[0].toString();
       break;
 
    case bs::ui::NotifyType::BroadcastError:
@@ -263,47 +215,6 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       text = tr("Click this message to download it from BlockSettle's official site");
       msecs = 30000;
       newVersionMessage_ = true;
-      break;
-
-   case bs::ui::NotifyType::UpdateUnreadMessage: {
-      if (msg.size() != 4) {
-         return;
-      }
-
-      const bool forceNotification = msg[3].toBool();
-      if (updateChatIconAndCheckChatTab() && !forceNotification) {
-         return;
-      }
-
-      title = msg[0].toString();
-      text = msg[1].toString();
-      userId = msg[2].toString();
-
-      if (title.isEmpty() || text.isEmpty() || userId.isEmpty()) {
-         return;
-      }
-
-      newChatMessage_ = true;
-      newChatId_ = userId;
-      break;
-   }
-   case bs::ui::NotifyType::FriendRequest:
-      if (updateChatIconAndCheckChatTab() || msg.size() != 1) {
-         return;
-      }
-
-      title = tr("New contact request");
-      text = tr("%1 would like to add you as a contact").arg(msg[0].toString());
-      break;
-
-   case bs::ui::NotifyType::OTCOrderError:
-      if (msg.size() != 1) {
-         return;
-      }
-
-      title = tr("OTC Failed");
-      text = msg[0].toString();
-      icon = QSystemTrayIcon::Warning;
       break;
 
    case bs::ui::NotifyType::BitcoinCoreOnline:
@@ -338,16 +249,6 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       text = tr("Your account has now been activated again. We thank you for your patience and apologise for any inconvenience. "
                 "If you have any questions, don't hesitate to contact our Support team through the Client Portal.");
       icon = QSystemTrayIcon::Information;
-      break;
-   case bs::ui::NotifyType::TradingEnabledOnPB:
-      icon = QSystemTrayIcon::Information;
-      title = tr("System status");
-      text = tr("Order entry has resumed");
-      break;
-   case bs::ui::NotifyType::TradingDisabledOnPB:
-      icon = QSystemTrayIcon::Information;
-      title = tr("System status");
-      text = tr("Order entry has been temporarily suspended");
       break;
 
    default: return;
@@ -397,19 +298,6 @@ void NotificationTrayIconResponder::messageClicked()
       BSMessageBox mb(BSMessageBox::warning, title, tr("Shell execution is not supported on this platform, yet"));
       mb.exec();
 #endif
-   }
-   else if (newChatMessage_) {
-      if (!newChatId_.isNull() && globalInstance != nullptr) {
-         const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
-         mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
-         mainWinUi_->tabWidget->setCurrentWidget(mainWinUi_->widgetChat);
-         auto window = mainWinUi_->tabWidget->window();
-         if (window) {
-            QMetaObject::invokeMethod(window, "raiseWindow", Qt::DirectConnection);
-         }
-         auto signal = QMetaMethod::fromSignal(&NotificationCenter::newChatMessageClick);
-         signal.invoke(globalInstance.get(), Q_ARG(QString, newChatId_));
-      }
    }
 }
 

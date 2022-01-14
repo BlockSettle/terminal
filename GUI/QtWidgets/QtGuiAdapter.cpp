@@ -8,6 +8,7 @@
 **********************************************************************************
 
 */
+#include "CommonTypes.h"
 #include "QtGuiAdapter.h"
 #include <QApplication>
 #include <QDateTime>
@@ -22,9 +23,7 @@
 #include <QThread>
 #include <QTimer>
 #include <spdlog/spdlog.h>
-#include "Address.h"
 #include "AppNap.h"
-#include "BsClient.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
 #include "MainWindow.h"
@@ -40,11 +39,19 @@ using namespace BlockSettle::Common;
 using namespace BlockSettle::Terminal;
 using namespace bs::message;
 
+#if 0
 Q_DECLARE_METATYPE(bs::error::AuthAddressSubmitResult)
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(std::vector<bs::Address>)
 Q_DECLARE_METATYPE(std::vector<ApplicationSettings::Setting>);
 Q_DECLARE_METATYPE(bs::PayoutSignatureType)
+Q_DECLARE_METATYPE(bs::network::Asset::Type)
+Q_DECLARE_METATYPE(bs::network::MDField)
+Q_DECLARE_METATYPE(bs::network::MDFields)
+Q_DECLARE_METATYPE(bs::network::SecurityDef)
+Q_DECLARE_METATYPE(bs::network::CCSecurityDef)
+Q_DECLARE_METATYPE(bs::PayoutSignatureType)
+#endif
 
 #if defined (Q_OS_MAC)
 class MacOsApp : public QApplication
@@ -196,11 +203,24 @@ void QtGuiAdapter::run(int &argc, char **argv)
       return;
    }
 
+#if 0
    qRegisterMetaType<bs::error::AuthAddressSubmitResult>();
    qRegisterMetaType<QVector<int>>();
    qRegisterMetaType<std::string>();
    qRegisterMetaType<std::vector<bs::Address>>();
    qRegisterMetaType<std::vector<ApplicationSettings::Setting>>();
+   qRegisterMetaType<bs::network::Asset::Type>("AssetType");
+   qRegisterMetaType<bs::network::Quote>("Quote");
+   qRegisterMetaType<bs::network::Order>("Order");
+   qRegisterMetaType<bs::network::SecurityDef>("SecurityDef");
+   qRegisterMetaType<bs::network::MDField>("MDField");
+   qRegisterMetaType<bs::network::MDFields>("MDFields");
+   qRegisterMetaType<bs::network::CCSecurityDef>("CCSecurityDef");
+   qRegisterMetaType<bs::network::NewTrade>("NewTrade");
+   qRegisterMetaType<bs::network::NewPMTrade>("NewPMTrade");
+   qRegisterMetaType<bs::network::UnsignedPayinData>();
+   qRegisterMetaType<bs::PayoutSignatureType>();
+#endif
 
    QString logoIcon;
    logoIcon = QLatin1String(":/SPLASH_LOGO");
@@ -248,8 +268,6 @@ bool QtGuiAdapter::process(const Envelope &env)
          return processWallets(env);
       case TerminalUsers::BsServer:
          return processBsServer(env);
-      case TerminalUsers::Settlement:
-         return processSettlement(env);
       case TerminalUsers::Matching:
          return processMatching(env);
       case TerminalUsers::MktData:
@@ -280,8 +298,6 @@ bool QtGuiAdapter::processBroadcast(const bs::message::Envelope& env)
          return processWallets(env);
       case TerminalUsers::BsServer:
          return processBsServer(env);
-      case TerminalUsers::Settlement:
-         return processSettlement(env);
       case TerminalUsers::Matching:
          return processMatching(env);
       case TerminalUsers::MktData:
@@ -300,7 +316,7 @@ bool QtGuiAdapter::processSettings(const Envelope &env)
 {
    SettingsMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse settings msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse settings msg #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {
@@ -419,7 +435,7 @@ bool QtGuiAdapter::processAdminMessage(const Envelope &env)
 {
    AdministrativeMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse admin msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse admin msg #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {
@@ -449,7 +465,7 @@ bool QtGuiAdapter::processBlockchain(const Envelope &env)
    ArmoryMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[QtGuiAdapter::processBlockchain] failed to parse msg #{}"
-         , env.id());
+         , env.foreignId());
       if (!env.receiver) {
          logger_->debug("[{}] no receiver", __func__);
       }
@@ -505,7 +521,7 @@ bool QtGuiAdapter::processSigner(const Envelope &env)
    SignerMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[QtGuiAdapter::processSigner] failed to parse msg #{}"
-         , env.id());
+         , env.foreignId());
       if (!env.receiver) {
          logger_->debug("[{}] no receiver", __func__);
       }
@@ -535,7 +551,7 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
 {
    WalletsMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {
@@ -606,8 +622,6 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
       return processUTXOs(msg.utxos());
    case WalletsMessage::kAuthWallet:
       return processAuthWallet(msg.auth_wallet());
-   case WalletsMessage::kAuthKey:
-      return processAuthKey(msg.auth_key());
    case WalletsMessage::kReservedUtxos:
       return processReservedUTXOs(msg.reserved_utxos());
    default:    break;
@@ -619,7 +633,7 @@ bool QtGuiAdapter::processOnChainTrack(const Envelope &env)
 {
    OnChainTrackMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {
@@ -629,8 +643,6 @@ bool QtGuiAdapter::processOnChainTrack(const Envelope &env)
       break;
    case OnChainTrackMessage::kAuthState:
       return processAuthState(msg.auth_state());
-   case OnChainTrackMessage::kVerifiedAuthAddresses:
-      return processVerifiedAuthAddrs(msg.verified_auth_addresses());
    default:    break;
    }
    return true;
@@ -640,12 +652,10 @@ bool QtGuiAdapter::processAssets(const bs::message::Envelope& env)
 {
    AssetsMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {
-   case AssetsMessage::kSubmittedAuthAddrs:
-      return processSubmittedAuthAddrs(msg.submitted_auth_addrs());
    case AssetsMessage::kBalance:
       return processBalance(msg.balance());
    default: break;
@@ -795,16 +805,9 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::needCancelLogin, this, &QtGuiAdapter::onNeedCancelLogin);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needMatchingLogout, this, &QtGuiAdapter::onNeedMatchingLogout);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needMdConnection, this, &QtGuiAdapter::onNeedMdConnection);
-   connect(mainWindow_, &bs::gui::qt::MainWindow::needNewAuthAddress, this, &QtGuiAdapter::onNeedNewAuthAddress);
-   connect(mainWindow_, &bs::gui::qt::MainWindow::needSubmitAuthAddress, this, &QtGuiAdapter::onNeedSubmitAuthAddress);
-   connect(mainWindow_, &bs::gui::qt::MainWindow::needSubmitRFQ, this, &QtGuiAdapter::onNeedSubmitRFQ);
-   connect(mainWindow_, &bs::gui::qt::MainWindow::needAcceptRFQ, this, &QtGuiAdapter::onNeedAcceptRFQ);
-   connect(mainWindow_, &bs::gui::qt::MainWindow::needCancelRFQ, this, &QtGuiAdapter::onNeedCancelRFQ);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needAuthKey, this, &QtGuiAdapter::onNeedAuthKey);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needReserveUTXOs, this, &QtGuiAdapter::onNeedReserveUTXOs);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needUnreserveUTXOs, this, &QtGuiAdapter::onNeedUnreserveUTXOs);
-   connect(mainWindow_, &bs::gui::qt::MainWindow::submitQuote, this, &QtGuiAdapter::onSubmitQuote);
-   connect(mainWindow_, &bs::gui::qt::MainWindow::pullQuote, this, &QtGuiAdapter::onPullQuote);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needWalletDialog, this, &QtGuiAdapter::onNeedWalletDialog);
 }
 
@@ -1184,41 +1187,6 @@ void QtGuiAdapter::onNeedMdConnection(ApplicationSettings::EnvConfiguration ec)
    pushRequest(user_, userMD_, msg.SerializeAsString());
 }
 
-void QtGuiAdapter::onNeedNewAuthAddress()
-{
-   //TODO
-}
-
-void QtGuiAdapter::onNeedSubmitAuthAddress(const bs::Address& addr)
-{
-   BsServerMessage msg;
-   msg.set_submit_auth_address(addr.display());
-   pushRequest(user_, userBS_, msg.SerializeAsString());
-}
-
-void QtGuiAdapter::onNeedSubmitRFQ(const bs::network::RFQ& rfq, const std::string& reserveId)
-{
-   SettlementMessage msg;
-   auto msgReq = msg.mutable_send_rfq();
-   toMsg(rfq, msgReq->mutable_rfq());
-   msgReq->set_reserve_id(reserveId);
-   pushRequest(user_, userSettl_, msg.SerializeAsString());
-}
-
-void QtGuiAdapter::onNeedAcceptRFQ(const std::string& id, const bs::network::Quote& quote)
-{
-   SettlementMessage msg;
-   auto msgReq = msg.mutable_accept_rfq();
-   msgReq->set_rfq_id(id);
-   toMsg(quote, msgReq->mutable_quote());
-   pushRequest(user_, userSettl_, msg.SerializeAsString());
-}
-
-void QtGuiAdapter::onNeedCancelRFQ(const std::string& id)
-{
-   //TODO
-}
-
 void QtGuiAdapter::onNeedAuthKey(const bs::Address& addr)
 {
    WalletsMessage msg;
@@ -1251,24 +1219,6 @@ void QtGuiAdapter::onNeedUnreserveUTXOs(const std::string& reserveId
    msgReq->set_id(reserveId);
    msgReq->set_sub_id(subId);
    pushRequest(user_, userWallets_, msg.SerializeAsString());
-}
-
-void QtGuiAdapter::onSubmitQuote(const bs::network::QuoteNotification& qn)
-{
-   SettlementMessage msg;
-   toMsg(qn, msg.mutable_reply_to_rfq());
-   pushRequest(user_, userSettl_, msg.SerializeAsString());
-}
-
-void QtGuiAdapter::onPullQuote(const std::string& settlementId
-   , const std::string& reqId, const std::string& reqSessToken)
-{
-   SettlementMessage msg;
-   auto msgReq = msg.mutable_pull_rfq_reply();
-   msgReq->set_settlement_id(settlementId);
-   msgReq->set_rfq_id(reqId);
-   msgReq->set_session_token(reqSessToken);
-   pushRequest(user_, userSettl_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedWalletDialog(bs::signer::ui::GeneralDialogType dlgType
@@ -1553,7 +1503,7 @@ bool QtGuiAdapter::processBsServer(const bs::message::Envelope& env)
 {
    BsServerMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {
@@ -1561,8 +1511,6 @@ bool QtGuiAdapter::processBsServer(const bs::message::Envelope& env)
       return processStartLogin(msg.start_login_result());
    case BsServerMessage::kLoginResult:
       return processLogin(msg.login_result());
-   case BsServerMessage::kOrdersUpdate:
-      return processOrdersUpdate(msg.orders_update());
    default: break;
    }
    return true;
@@ -1578,7 +1526,7 @@ bool QtGuiAdapter::processStartLogin(const BsServerMessage_StartLoginResult& res
 
 bool QtGuiAdapter::processLogin(const BsServerMessage_LoginResult& response)
 {
-   BsClientLoginResult result;
+#if 0
    result.login = response.login();
    result.status = static_cast<AutheIDClient::ErrorType>(response.status());
    result.userType = static_cast<bs::network::UserType>(response.user_type());
@@ -1598,51 +1546,29 @@ bool QtGuiAdapter::processLogin(const BsServerMessage_LoginResult& response)
    return QMetaObject::invokeMethod(mainWindow_, [this, result] {
       mainWindow_->onLoggedIn(result);
    });
-}
-
-bool QtGuiAdapter::processSettlement(const bs::message::Envelope& env)
-{
-   SettlementMessage msg;
-   if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
-      return true;
-   }
-   switch (msg.data_case()) {
-   case SettlementMessage::kQuote:
-      return processQuote(msg.quote());
-   case SettlementMessage::kMatchedQuote:
-      return processMatchedQuote(msg.matched_quote());
-   case SettlementMessage::kFailedSettlement:
-      return processFailedSettl(msg.failed_settlement());
-   case SettlementMessage::kPendingSettlement:
-      return processPendingSettl(msg.pending_settlement());
-   case SettlementMessage::kSettlementComplete:
-      return processSettlComplete(msg.settlement_complete());
-   case SettlementMessage::kQuoteReqNotif:
-      return processQuoteReqNotif(msg.quote_req_notif());
-   case SettlementMessage::kQuoteCancelled:
-      return processQuoteCancelled(msg.quote_cancelled());
-   default:    break;
-   }
+#else
    return true;
+#endif 0
 }
 
 bool QtGuiAdapter::processMatching(const bs::message::Envelope& env)
 {
    MatchingMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {
    case MatchingMessage::kLoggedIn:
+#if 0
       return QMetaObject::invokeMethod(mainWindow_, [this, response=msg.logged_in()] {
          mainWindow_->onMatchingLogin(response.user_name()
             , static_cast<BaseCelerClient::CelerUserType>(response.user_type()), response.user_id());
       });
+#endif
    case MatchingMessage::kLoggedOut:
       return QMetaObject::invokeMethod(mainWindow_, [this] {
-         mainWindow_->onMatchingLogout();
+         //mainWindow_->onMatchingLogout();
       });
 /*   case MatchingMessage::kQuoteNotif:
       return processQuoteNotif(msg.quote_notif());*/
@@ -1655,20 +1581,21 @@ bool QtGuiAdapter::processMktData(const bs::message::Envelope& env)
 {
    MktDataMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {
    case MktDataMessage::kConnected:
-      return QMetaObject::invokeMethod(mainWindow_, [this] { mainWindow_->onMDConnected(); });
+      //return QMetaObject::invokeMethod(mainWindow_, [this] { mainWindow_->onMDConnected(); });
    case MktDataMessage::kDisconnected:
       mdInstrumentsReceived_ = false;
-      return QMetaObject::invokeMethod(mainWindow_, [this] { mainWindow_->onMDDisconnected(); });
+      //return QMetaObject::invokeMethod(mainWindow_, [this] { mainWindow_->onMDDisconnected(); });
+      return true;
    case MktDataMessage::kNewSecurity:
       return processSecurity(msg.new_security().name(), msg.new_security().asset_type());
    case MktDataMessage::kAllInstrumentsReceived:
       mdInstrumentsReceived_ = true;
-      return sendPooledOrdersUpdate();
+      return true;   // sendPooledOrdersUpdate();
    case MktDataMessage::kPriceUpdate:
       return processMdUpdate(msg.price_update());
    default: break;
@@ -1680,9 +1607,7 @@ bool QtGuiAdapter::processSecurity(const std::string& name, int assetType)
 {
    const auto &at = static_cast<bs::network::Asset::Type>(assetType);
    assetTypes_[name] = at;
-   return QMetaObject::invokeMethod(mainWindow_, [this, name, at] {
-      mainWindow_->onNewSecurity(name, at);
-   });
+   return true;
 }
 
 bool QtGuiAdapter::processMdUpdate(const MktDataMessage_Prices& msg)
@@ -1710,7 +1635,7 @@ bool QtGuiAdapter::processAuthWallet(const WalletsMessage_WalletData& authWallet
       catch (const std::exception&) {}
    }
    return QMetaObject::invokeMethod(mainWindow_, [this, authAddresses] {
-      mainWindow_->onAuthAddresses(authAddresses, {});
+      //mainWindow_->onAuthAddresses(authAddresses, {});
    });
 }
 
@@ -1725,21 +1650,7 @@ bool QtGuiAdapter::processAuthState(const OnChainTrackMessage_AuthState& authSta
    }
    const auto& state = static_cast<AddressVerificationState>(authState.state());
    return QMetaObject::invokeMethod(mainWindow_, [this, addr, state] {
-      mainWindow_->onAuthAddresses({},  { {addr, state } });
-   });
-}
-
-bool QtGuiAdapter::processSubmittedAuthAddrs(const AssetsMessage_SubmittedAuthAddresses& addrs)
-{
-   std::vector<bs::Address> authAddresses;
-   for (const auto& addr : addrs.addresses()) {
-      try {
-         authAddresses.push_back(bs::Address::fromAddressString(addr));
-      }
-      catch (const std::exception&) {}
-   }
-   return QMetaObject::invokeMethod(mainWindow_, [this, authAddresses] {
-      mainWindow_->onSubmittedAuthAddresses(authAddresses);
+      //mainWindow_->onAuthAddresses({},  { {addr, state } });
    });
 }
 
@@ -1747,136 +1658,6 @@ bool QtGuiAdapter::processBalance(const AssetsMessage_Balance& bal)
 {
    return QMetaObject::invokeMethod(mainWindow_, [this, bal] {
       mainWindow_->onBalance(bal.currency(), bal.value());
-   });
-}
-
-bool QtGuiAdapter::processVerifiedAuthAddrs(const OnChainTrackMessage_AuthAddresses& addrs)
-{
-   std::vector<bs::Address> authAddresses;
-   for (const auto& addr : addrs.addresses()) {
-      try {
-         authAddresses.push_back(bs::Address::fromAddressString(addr));
-      } catch (const std::exception&) {}
-   }
-   return QMetaObject::invokeMethod(mainWindow_, [this, authAddresses] {
-      mainWindow_->onVerifiedAuthAddresses(authAddresses);
-   });
-}
-
-bool QtGuiAdapter::processAuthKey(const WalletsMessage_AuthKey& response)
-{
-   return QMetaObject::invokeMethod(mainWindow_, [this, response] {
-      try {
-         mainWindow_->onAuthKey(bs::Address::fromAddressString(response.auth_address())
-            , BinaryData::fromString(response.auth_key()));
-      }
-      catch (const std::exception&) {}
-   });
-}
-
-bool QtGuiAdapter::processQuote(const BlockSettle::Terminal::Quote& msg)
-{
-   const auto& quote = fromMsg(msg);
-   return QMetaObject::invokeMethod(mainWindow_, [this, quote] {
-      mainWindow_->onQuoteReceived(quote);
-   });
-}
-
-bool QtGuiAdapter::processMatchedQuote(const SettlementMessage_MatchedQuote& msg)
-{
-   return QMetaObject::invokeMethod(mainWindow_, [this, msg] {
-      mainWindow_->onQuoteMatched(msg.rfq_id(), msg.quote_id());
-   });
-}
-
-bool QtGuiAdapter::processFailedSettl(const SettlementMessage_FailedSettlement& msg)
-{
-   return QMetaObject::invokeMethod(mainWindow_, [this, msg] {
-      if (!msg.quote_id().empty() && !msg.rfq_id().empty()) {
-         mainWindow_->onQuoteFailed(msg.rfq_id(), msg.quote_id(), msg.info());
-      }
-      else {
-         //TODO: another type of failure
-      }
-   });
-}
-
-bool QtGuiAdapter::processPendingSettl(const SettlementMessage_PendingSettlement& msg)
-{
-   return QMetaObject::invokeMethod(mainWindow_, [this, msg] {
-      mainWindow_->onSettlementPending(msg.ids().rfq_id(), msg.ids().quote_id()
-         , BinaryData::fromString(msg.ids().settlement_id()), msg.time_left_ms());
-   });
-}
-
-bool QtGuiAdapter::processSettlComplete(const SettlementMessage_SettlementIds& msg)
-{
-   return QMetaObject::invokeMethod(mainWindow_, [this, msg] {
-      mainWindow_->onSettlementComplete(msg.rfq_id(), msg.quote_id()
-         , BinaryData::fromString(msg.settlement_id()));
-   });
-}
-
-bool QtGuiAdapter::processQuoteReqNotif(const IncomingRFQ& request)
-{
-   const auto& qrn = fromMsg(request);
-   return QMetaObject::invokeMethod(mainWindow_, [this, qrn] {
-      mainWindow_->onQuoteReqNotification(qrn);
-   });
-}
-
-bool QtGuiAdapter::processOrdersUpdate(const BlockSettle::Terminal::BsServerMessage_Orders& msg)
-{
-   // Use some fake orderId so old code works correctly
-   int orderId = 0;
-   std::vector<bs::network::Order> orders;
-   for (const auto& o : msg.orders()) {
-      bs::network::Order order;
-      order.security = o.product() + "/" + o.contra_product();
-      auto itAsset = assetTypes_.find(order.security);
-      if (itAsset != assetTypes_.end()) {
-         order.assetType = itAsset->second;
-      }
-      else {
-         order.assetType = bs::network::Asset::Undefined;
-      }
-      order.exchOrderId = QString::number(++orderId);
-      order.status = static_cast<bs::network::Order::Status>(o.status());
-      order.side = o.buy() ? bs::network::Side::Buy : bs::network::Side::Sell;
-      order.pendingStatus = o.status_text();
-      order.dateTime = QDateTime::fromMSecsSinceEpoch(o.timestamp());
-      order.product = o.product();
-      order.quantity = o.quantity();
-      order.price = o.price();
-      orders.push_back(order);
-   }
-   pooledOrders_ = std::move(orders);
-   return sendPooledOrdersUpdate();
-}
-
-bool QtGuiAdapter::sendPooledOrdersUpdate()
-{
-   if (!mdInstrumentsReceived_ || pooledOrders_.empty()) {
-      return true;
-   }
-   for (auto& order : pooledOrders_) {
-      if (order.assetType == bs::network::Asset::Undefined) {
-         const auto& itAsset = assetTypes_.find(order.security);
-         if (itAsset != assetTypes_.end()) {
-            order.assetType = itAsset->second;
-         }
-      }
-   }
-   return QMetaObject::invokeMethod(mainWindow_, [this] {
-      mainWindow_->onOrdersUpdate(pooledOrders_);
-      pooledOrders_.clear();
-   });
-}
-
-bool QtGuiAdapter::processQuoteCancelled(const QuoteCancelled& msg)
-{
-   return QMetaObject::invokeMethod(mainWindow_, [this, msg]{
-      mainWindow_->onQuoteCancelled(msg.rfq_id(), msg.quote_id(), msg.by_user());
    });
 }
 

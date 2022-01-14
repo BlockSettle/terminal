@@ -16,7 +16,6 @@
 #include <QVariant>
 #include <QStandardPaths>
 #include <QApplication>
-#include "Celer/ClientConnection.h"
 #include "DataConnection.h"
 #include "HeadlessApp.h"
 #include "Wallets/SyncWalletsManager.h"

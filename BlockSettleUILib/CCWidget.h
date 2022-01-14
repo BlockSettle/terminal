@@ -45,7 +45,6 @@ private:
    void updateTotalBalances();
 
 private:
-   [[deprecated]] std::shared_ptr<AssetManager> assetManager_;
    std::unique_ptr<Ui::CCWidget> ui_;
    std::map<std::string, double> walletBalance_;
    std::map<std::string, double> fxBalance_;

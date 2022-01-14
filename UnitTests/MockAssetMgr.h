@@ -32,7 +32,7 @@ class MockAssetManager : public AssetManager
 
 public:
    MockAssetManager(const std::shared_ptr<spdlog::logger>& logger)
-      : AssetManager(logger, nullptr, nullptr, nullptr) {}
+      : AssetManager(logger, nullptr) {}
    void init() override;
 
    std::vector<std::string> privateShares(bool forceExt) override;

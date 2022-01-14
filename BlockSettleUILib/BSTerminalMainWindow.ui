@@ -488,16 +488,6 @@
         <string>OVERVIEW</string>
        </attribute>
       </widget>
-      <widget class="RFQRequestWidget" name="widgetRFQ">
-       <attribute name="title">
-        <string>TRADE</string>
-       </attribute>
-      </widget>
-      <widget class="RFQReplyWidget" name="widgetRFQReply">
-       <attribute name="title">
-        <string>DEALING</string>
-       </attribute>
-      </widget>
       <widget class="WalletsWidget" name="widgetWallets">
        <attribute name="title">
         <string>WALLETS</string>
@@ -517,16 +507,6 @@
       <widget class="ExplorerWidget" name="widgetExplorer">
        <attribute name="title">
         <string>EXPLORER</string>
-       </attribute>
-      </widget>
-      <widget class="ChartWidget" name="widgetChart">
-       <attribute name="title">
-        <string>CHARTS</string>
-       </attribute>
-      </widget>
-      <widget class="ChatWidget" name="widgetChat">
-       <attribute name="title">
-        <string>OTC CHAT</string>
        </attribute>
       </widget>
      </widget>
@@ -949,38 +929,13 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>RFQRequestWidget</class>
-   <extends>QWidget</extends>
-   <header>Trading/RFQRequestWidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>RFQReplyWidget</class>
-   <extends>QWidget</extends>
-   <header>Trading/RFQReplyWidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>ExplorerWidget</class>
    <extends>QWidget</extends>
    <header>ExplorerWidget.h</header>
    <container>1</container>
   </customwidget>
-  <customwidget>
-   <class>ChartWidget</class>
-   <extends>QWidget</extends>
-   <header>ChartWidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ChatWidget</class>
-   <extends>QWidget</extends>
-   <header>ChatUI/ChatWidget.h</header>
-   <container>1</container>
-  </customwidget>
  </customwidgets>
  <resources>
-  <include location="armory.qrc"/>
   <include location="armory.qrc"/>
  </resources>
  <connections/>

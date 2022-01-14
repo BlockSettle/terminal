@@ -132,7 +132,7 @@ bool SettingsAdapter::process(const bs::message::Envelope &env)
    if (env.receiver->value<TerminalUsers>() == TerminalUsers::Settings) {
       SettingsMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse settings msg #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse settings msg #{}", __func__, env.foreignId());
          return true;
       }
       switch (msg.data_case()) {
@@ -194,7 +194,7 @@ bool SettingsAdapter::processBroadcast(const bs::message::Envelope& env)
    if (env.sender->value<TerminalUsers>() == TerminalUsers::Blockchain) {
       ArmoryMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse armory msg #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse armory msg #{}", __func__, env.foreignId());
          return false;
       }
       if (msg.data_case() == ArmoryMessage::kSettingsRequest) {

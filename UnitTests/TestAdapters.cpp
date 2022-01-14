@@ -129,7 +129,7 @@ bool MatchingMock::process(const bs::message::Envelope& env)
    if (env.isRequest() && (env.receiver->value() == user_->value())) {
       MatchingMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse own request #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse own request #{}", __func__, env.foreignId());
          return true;
       }
       switch (msg.data_case()) {
@@ -211,7 +211,7 @@ bool MatchingMock::process(const bs::message::Envelope& env)
    if (env.isRequest() && (env.receiver->value() == userBS_->value())) {
       BsServerMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse own request #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse own request #{}", __func__, env.foreignId());
          return true;
       }
       switch (msg.data_case()) {
@@ -336,9 +336,9 @@ bool MatchingMock::sendPendingOrder(const std::string& rfqId)
    }
    bs::network::Order order;
    order.clOrderId = CryptoPRNG::generateRandom(7).toHexStr();
-   order.exchOrderId = QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr());
+   order.exchOrderId = CryptoPRNG::generateRandom(8).toHexStr();
    order.quoteId = itMatch->second.quote.quoteId;
-   order.dateTime = QDateTime::currentDateTime();
+   order.dateTime = std::chrono::system_clock::now();
    order.security = itMatch->second.quote.security;
    order.product = itMatch->second.quote.product;
    order.settlementId = BinaryData::CreateFromHex(itMatch->second.quote.settlementId);

@@ -18,7 +18,6 @@
 #include "WalletSignerContainer.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "autheid_utils.h"
 
 #include "ui_ConfigDialog.h"
 
@@ -208,38 +207,14 @@ void ConfigDialog::encryptData(const std::shared_ptr<bs::sync::WalletsManager> &
    , const SecureBinaryData &data
    , const ConfigDialog::EncryptCb &cb)
 {
-   getChatPrivKey(walletsMgr, signContainer, [data, cb](EncryptError error, const SecureBinaryData &privKey) {
-      if (error != EncryptError::NoError) {
-         cb(error, {});
-         return;
-      }
-      auto pubKey = autheid::getPublicKey(autheid::PrivateKey(privKey.getPtr(), privKey.getPtr() + privKey.getSize()));
-      auto encrypted = autheid::encryptData(data.getPtr(), data.getSize(), pubKey);
-      if (encrypted.empty()) {
-         cb(EncryptError::EncryptError, {});
-         return;
-      }
-      cb(EncryptError::NoError, SecureBinaryData(encrypted.data(), encrypted.size()));
-   });
+   cb(EncryptError::NoEncryptionKey, {});
 }
 
 void ConfigDialog::decryptData(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<SignContainer> &signContainer
    , const SecureBinaryData &data, const ConfigDialog::EncryptCb &cb)
 {
-   getChatPrivKey(walletsMgr, signContainer, [data, cb](EncryptError error, const SecureBinaryData &privKey) {
-      if (error != EncryptError::NoError) {
-         cb(error, {});
-         return;
-      }
-      auto privKeyCopy = autheid::PrivateKey(privKey.getPtr(), privKey.getPtr() + privKey.getSize());
-      auto decrypted = autheid::decryptData(data.getPtr(), data.getSize(), privKeyCopy);
-      if (decrypted.empty()) {
-         cb(EncryptError::EncryptError, {});
-         return;
-      }
-      cb(EncryptError::NoError, SecureBinaryData(decrypted.data(), decrypted.size()));
-   });
+   cb(EncryptError::NoEncryptionKey, {});
 }
 
 void ConfigDialog::getChatPrivKey(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
