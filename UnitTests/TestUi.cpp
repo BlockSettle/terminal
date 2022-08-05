@@ -20,7 +20,7 @@
 #include "CoreWalletsManager.h"
 #include "CustomControls/CustomDoubleSpinBox.h"
 #include "CustomControls/CustomDoubleValidator.h"
-#include "InprocSigner.h"
+#include "Wallets/InprocSigner.h"
 #include "TestEnv.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"

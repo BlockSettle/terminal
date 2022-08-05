@@ -13,7 +13,7 @@
 
 #include <QDialog>
 #include <memory>
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 
 namespace Ui {
     class SelectWalletDialog;

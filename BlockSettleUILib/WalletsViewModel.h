@@ -17,8 +17,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include "QWalletInfo.h"
-#include "SignerDefs.h"
+#include "Wallets/QWalletInfo.h"
+#include "Wallets/SignerDefs.h"
 
 
 namespace bs {
@@ -108,7 +108,6 @@ public:
 
    std::string selectedWallet() const { return selectedWalletId_; }
    bool showRegularWallets() const { return showRegularWallets_; }
-   std::shared_ptr<bs::sync::Wallet> getAuthWallet() const;
 
    [[deprecated]] void LoadWallets(bool keepSelection = false);
    void onHDWallet(const bs::sync::WalletInfo &);

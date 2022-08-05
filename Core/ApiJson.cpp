@@ -390,7 +390,6 @@ bool ApiJsonAdapter::processWallets(const Envelope &env)
    }
    switch (msg.data_case()) {
    case WalletsMessage::kWalletLoaded:
-   case WalletsMessage::kAuthWallet:
    case WalletsMessage::kHdWallet:
       sendReplyToClient(0, msg, env.sender);
       break;
@@ -401,7 +400,6 @@ bool ApiJsonAdapter::processWallets(const Envelope &env)
    case WalletsMessage::kTxDetailsResponse:
    case WalletsMessage::kWalletsListResponse:
    case WalletsMessage::kUtxos:
-   case WalletsMessage::kAuthKey:
    case WalletsMessage::kReservedUtxos:
       if (hasRequest(env.responseId())) {
          sendReplyToClient(env.responseId(), msg, env.sender);

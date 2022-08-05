@@ -28,62 +28,6 @@ using namespace BlockSettle::Terminal;
 using namespace bs::message;
 
 
-class OnChainPlug : public OnChainExternalPlug
-{
-public:
-   explicit OnChainPlug(const std::shared_ptr<bs::message::QueueInterface>& queue)
-      : OnChainExternalPlug(queue) {}
-
-   bool tryProcess(const bs::message::Envelope& env) override
-   {
-      if (env.sender->isSystem()) {
-         AdministrativeMessage msg;
-         if (!msg.ParseFromString(env.message)) {
-            return false;
-         }
-         if (msg.data_case() == AdministrativeMessage::kStart) {
-            parent_->onStart();
-         }
-         return true;
-      }
-      else if (env.sender->value<bs::message::TerminalUsers>() == bs::message::TerminalUsers::Settings) {
-         SettingsMessage msg;
-         if (!msg.ParseFromString(env.message)) {
-            return true;
-         }
-         switch (msg.data_case()) {
-         case SettingsMessage::kBootstrap:
-            return processBootstrap(msg.bootstrap());
-         default: break;
-         }
-         return true;
-      }
-      return false;
-   }
-
-   void sendAuthValidationListRequest() override
-   {
-      SettingsMessage msg;
-      msg.mutable_get_bootstrap();
-      auto env = Envelope::makeRequest(user_, UserTerminal::create(TerminalUsers::Settings)
-         , msg.SerializeAsString());
-      queue_->pushFill(env);
-   }
-
-private:
-   bool processBootstrap(const SettingsMessage_BootstrapData& response)
-   {
-      std::vector<std::string> bsAddresses;
-      bsAddresses.reserve(response.auth_validations_size());
-      for (const auto& bsAddr : response.auth_validations()) {
-         bsAddresses.push_back(bsAddr);
-      }
-      parent_->onAuthValidationAddresses(bsAddresses);
-      return true;
-   }
-};
-
-
 SettingsAdapter::SettingsAdapter(const std::shared_ptr<ApplicationSettings> &settings
    , const QStringList &appArgs)
    : appSettings_(settings)
@@ -374,11 +318,6 @@ bool SettingsAdapter::processApiClientsList(const bs::message::Envelope& env)
       msgResp->add_pub_keys(clientKey);
    }
    return pushResponse(user_, env, msg.SerializeAsString());
-}
-
-std::shared_ptr<OnChainExternalPlug> SettingsAdapter::createOnChainPlug() const
-{
-   return std::make_shared<OnChainPlug>(queue_);
 }
 
 bool SettingsAdapter::processGetRequest(const bs::message::Envelope &env

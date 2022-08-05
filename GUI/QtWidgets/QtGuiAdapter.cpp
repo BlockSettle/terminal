@@ -28,7 +28,7 @@
 #include "BSTerminalSplashScreen.h"
 #include "MainWindow.h"
 #include "MessageUtils.h"
-#include "ProtobufHeadlessUtils.h"
+#include "Wallets/ProtobufHeadlessUtils.h"
 #include "SettingsAdapter.h"
 #include "TradesVerification.h"
 
@@ -584,6 +584,7 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
 
    case WalletsMessage::kWalletAddresses: {
       std::vector<bs::sync::Address> addresses;
+      logger_->debug("[kWalletAddresses] #{}", env.responseId());
       for (const auto &addr : msg.wallet_addresses().addresses()) {
          try {
             addresses.push_back({ std::move(bs::Address::fromAddressString(addr.address()))
@@ -591,7 +592,16 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
          }
          catch (const std::exception &) {}
       }
-      QMetaObject::invokeMethod(mainWindow_, [this, addresses, walletId=msg.wallet_addresses().wallet_id()] {
+      const auto& walletId = msg.wallet_addresses().wallet_id();
+      auto itReq = needChangeAddrReqs_.find(env.responseId());
+      if (itReq != needChangeAddrReqs_.end()) {
+         QMetaObject::invokeMethod(mainWindow_, [this, addresses, walletId]{
+            mainWindow_->onChangeAddress(walletId, addresses.cbegin()->address);
+         });
+         needChangeAddrReqs_.erase(itReq);
+         break;
+      }
+      QMetaObject::invokeMethod(mainWindow_, [this, addresses, walletId] {
          mainWindow_->onAddresses(walletId, addresses);
       });
    }
@@ -620,8 +630,6 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
       return processWalletsList(msg.wallets_list_response());
    case WalletsMessage::kUtxos:
       return processUTXOs(msg.utxos());
-   case WalletsMessage::kAuthWallet:
-      return processAuthWallet(msg.auth_wallet());
    case WalletsMessage::kReservedUtxos:
       return processReservedUTXOs(msg.reserved_utxos());
    default:    break;
@@ -641,8 +649,6 @@ bool QtGuiAdapter::processOnChainTrack(const Envelope &env)
       loadingComponents_.insert(env.sender->value());
       updateSplashProgress();
       break;
-   case OnChainTrackMessage::kAuthState:
-      return processAuthState(msg.auth_state());
    default:    break;
    }
    return true;
@@ -787,6 +793,7 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::createExtAddress, this, &QtGuiAdapter::onCreateExtAddress);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needExtAddresses, this, &QtGuiAdapter::onNeedExtAddresses);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needIntAddresses, this, &QtGuiAdapter::onNeedIntAddresses);
+   connect(mainWindow_, &bs::gui::qt::MainWindow::needChangeAddress, this, &QtGuiAdapter::onNeedChangeAddress);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needUsedAddresses, this, &QtGuiAdapter::onNeedUsedAddresses);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needAddrComments, this, &QtGuiAdapter::onNeedAddrComments);
    connect(mainWindow_, &bs::gui::qt::MainWindow::setAddrComment, this, &QtGuiAdapter::onSetAddrComment);
@@ -805,7 +812,6 @@ void QtGuiAdapter::makeMainWinConnections()
    connect(mainWindow_, &bs::gui::qt::MainWindow::needCancelLogin, this, &QtGuiAdapter::onNeedCancelLogin);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needMatchingLogout, this, &QtGuiAdapter::onNeedMatchingLogout);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needMdConnection, this, &QtGuiAdapter::onNeedMdConnection);
-   connect(mainWindow_, &bs::gui::qt::MainWindow::needAuthKey, this, &QtGuiAdapter::onNeedAuthKey);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needReserveUTXOs, this, &QtGuiAdapter::onNeedReserveUTXOs);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needUnreserveUTXOs, this, &QtGuiAdapter::onNeedUnreserveUTXOs);
    connect(mainWindow_, &bs::gui::qt::MainWindow::needWalletDialog, this, &QtGuiAdapter::onNeedWalletDialog);
@@ -975,6 +981,15 @@ void QtGuiAdapter::onNeedIntAddresses(const std::string &walletId)
    pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
+void QtGuiAdapter::onNeedChangeAddress(const std::string& walletId)
+{
+   WalletsMessage msg;
+   msg.set_get_change_addr(walletId);
+   const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
+   needChangeAddrReqs_.insert(msgId);
+   logger_->debug("[{}] {} #{}", __func__, walletId, msgId);
+}
+
 void QtGuiAdapter::onNeedUsedAddresses(const std::string &walletId)
 {
    logger_->debug("[{}] {}", __func__, walletId);
@@ -1022,6 +1037,7 @@ void QtGuiAdapter::onNeedTXDetails(const std::vector<bs::sync::TXWallet> &txWall
    auto msgReq = msg.mutable_tx_details_request();
    for (const auto &txw : txWallet) {
       auto request = msgReq->add_requests();
+      logger_->debug("[{}] {}", __func__, txw.txHash.toHexStr());
       request->set_tx_hash(txw.txHash.toBinStr());
       request->set_wallet_id(txw.walletId);
       request->set_value(txw.value);
@@ -1090,15 +1106,15 @@ void QtGuiAdapter::onNeedUTXOs(const std::string& id, const std::string& walletI
 
 void QtGuiAdapter::onNeedSignTX(const std::string& id
    , const bs::core::wallet::TXSignRequest& txReq, bool keepDupRecips
-   , SignContainer::TXSignMode mode)
+   , SignContainer::TXSignMode mode, const SecureBinaryData& passphrase)
 {
-   logger_->debug("[{}] {}", __func__, id);
    SignerMessage msg;
    auto msgReq = msg.mutable_sign_tx_request();
    msgReq->set_id(id);
    *msgReq->mutable_tx_request() = bs::signer::coreTxRequestToPb(txReq, keepDupRecips);
    msgReq->set_sign_mode((int)mode);
    msgReq->set_keep_dup_recips(keepDupRecips);
+   msgReq->set_passphrase(passphrase.toBinStr());
    pushRequest(user_, userSigner_, msg.SerializeAsString());
 }
 
@@ -1187,13 +1203,6 @@ void QtGuiAdapter::onNeedMdConnection(ApplicationSettings::EnvConfiguration ec)
    pushRequest(user_, userMD_, msg.SerializeAsString());
 }
 
-void QtGuiAdapter::onNeedAuthKey(const bs::Address& addr)
-{
-   WalletsMessage msg;
-   msg.set_get_auth_key(addr.display());
-   pushRequest(user_, userWallets_, msg.SerializeAsString());
-}
-
 void QtGuiAdapter::onNeedReserveUTXOs(const std::string& reserveId
    , const std::string& subId, uint64_t amount, bool withZC
    , const std::vector<UTXO>& utxos)
@@ -1224,15 +1233,28 @@ void QtGuiAdapter::onNeedUnreserveUTXOs(const std::string& reserveId
 void QtGuiAdapter::onNeedWalletDialog(bs::signer::ui::GeneralDialogType dlgType
    , const std::string& rootId)
 {
-   SignerMessage msg;
-   auto msgReq = msg.mutable_dialog_request();
-   msgReq->set_dialog_type((int)dlgType);
-   if (!rootId.empty()) {
-      auto msgData = msgReq->add_data();
-      msgData->set_key("rootId");
-      msgData->set_value(rootId);
+   switch (dlgType) {
+   case bs::signer::ui::GeneralDialogType::CreateWallet:
+      if (mainWindow_) {
+         QMetaObject::invokeMethod(mainWindow_, [this, rootId] {
+            const auto& seedData = mainWindow_->getWalletSeed(rootId);
+            if (!seedData.empty()) {
+               SignerMessage msg;
+               auto msgReq = msg.mutable_create_wallet();
+               msgReq->set_name(seedData.name);
+               msgReq->set_description(seedData.description);
+               msgReq->set_xpriv_key(seedData.xpriv);
+               msgReq->set_seed(seedData.seed.toBinStr());
+               msgReq->set_password(seedData.password.toBinStr());
+               pushRequest(user_, userSigner_, msg.SerializeAsString());
+            }
+         });
+      }
+      break;
+   default:
+      logger_->debug("[{}] {} ({})", __func__, (int)dlgType, rootId);
+      break;
    }
-   pushRequest(user_, userSigner_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
@@ -1263,7 +1285,7 @@ bool QtGuiAdapter::processWalletData(uint64_t msgId
    return false;
 }
 
-bool QtGuiAdapter::processWalletBalances(const bs::message::Envelope &env
+bool QtGuiAdapter::processWalletBalances(const bs::message::Envelope &
    , const WalletsMessage_WalletBalances &response)
 {
    bs::sync::WalletBalanceData wbd;
@@ -1290,6 +1312,9 @@ bool QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMessage_TXDetai
          , resp.wallet_name(), static_cast<bs::core::wallet::Type>(resp.wallet_type())
          , resp.wallet_symbol(), static_cast<bs::sync::Transaction::Direction>(resp.direction())
          , resp.comment(), resp.valid(), resp.amount() };
+      if (!response.error_msg().empty()) {
+         txDet.comment = response.error_msg();
+      }
 
       const auto &ownTxHash = BinaryData::fromString(resp.tx_hash());
       try {
@@ -1341,7 +1366,12 @@ bool QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMessage_TXDetai
             , resp.change_address().out_index() };
       }
       catch (const std::exception &) {}
-      txDetails.push_back(txDet);
+      txDetails.emplace_back(std::move(txDet));
+   }
+   if (!response.responses_size() && !response.error_msg().empty()) {
+      bs::sync::TXWalletDetails txDet;
+      txDet.comment = response.error_msg();
+      txDetails.emplace_back(std::move(txDet));
    }
    const auto& itZC = newZCs_.find(msgId);
    if (itZC != newZCs_.end()) {
@@ -1622,35 +1652,6 @@ bool QtGuiAdapter::processMdUpdate(const MktDataMessage_Prices& msg)
       };
       mainWindow_->onMDUpdated(static_cast<bs::network::Asset::Type>(msg.security().asset_type())
          , QString::fromStdString(msg.security().name()), fields);
-   });
-}
-
-bool QtGuiAdapter::processAuthWallet(const WalletsMessage_WalletData& authWallet)
-{
-   std::vector<bs::Address> authAddresses;
-   for (const auto& addr : authWallet.used_addresses()) {
-      try {
-         authAddresses.push_back(bs::Address::fromAddressString(addr.address()));
-      }
-      catch (const std::exception&) {}
-   }
-   return QMetaObject::invokeMethod(mainWindow_, [this, authAddresses] {
-      //mainWindow_->onAuthAddresses(authAddresses, {});
-   });
-}
-
-bool QtGuiAdapter::processAuthState(const OnChainTrackMessage_AuthState& authState)
-{
-   bs::Address addr;
-   try {
-      addr = bs::Address::fromAddressString(authState.address());
-   }
-   catch (const std::exception&) {
-      return true;
-   }
-   const auto& state = static_cast<AddressVerificationState>(authState.state());
-   return QMetaObject::invokeMethod(mainWindow_, [this, addr, state] {
-      //mainWindow_->onAuthAddresses({},  { {addr, state } });
    });
 }
 

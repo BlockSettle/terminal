@@ -20,7 +20,7 @@
 #include "BSMessageBox.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "PasswordDialogDataWrapper.h"
-#include "TradesUtils.h"
+#include "Wallets/TradesUtils.h"
 #include "TransactionsViewModel.h"
 #include "TransactionDetailDialog.h"
 #include "Wallets/SyncHDWallet.h"

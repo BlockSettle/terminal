@@ -12,9 +12,10 @@
 #include "TestEnv.h"
 
 #include "ApplicationSettings.h"
-#include "ArmoryObject.h"
+#include "ArmoryConfig.h"
+#include "AuthorizedPeers.h"
+#include "Wallets/ArmoryObject.h"
 #include "ArmorySettings.h"
-#include "AuthAddressManager.h"
 #include "ConnectionManager.h"
 #include "CoreWalletsManager.h"
 #include "MarketDataProvider.h"
@@ -29,6 +30,9 @@
 #include <spdlog/spdlog.h>
 #include <btc/ecc.h>
 
+using namespace Armory::Signer;
+using namespace Armory::Wallets;
+
 const BinaryData testnetGenesisBlock = READHEX("0100000000000000000000000000000000000\
 000000000000000000000000000000000003ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51\
 323a9fb8aa4b1e5e4adae5494dffff001d1aa4ae18010100000001000000000000000000000000000\
@@ -39,7 +43,7 @@ e64206261696c6f757420666f722062616e6b73ffffffff0100f2052a01000000434104678afdb0f
 112de5c384df7ba0b8d578a4c702b6bf11d5fac00000000");
 
 std::shared_ptr<spdlog::logger> StaticLogger::loggerPtr = nullptr;
-ArmoryThreading::TimedQueue<std::shared_ptr<DBNotificationStruct>> ACTqueue::notifQueue_;
+Armory::Threading::TimedQueue<std::shared_ptr<DBNotificationStruct>> ACTqueue::notifQueue_;
 
 TestEnv::TestEnv(const std::shared_ptr<spdlog::logger> &logger)
 {
@@ -172,11 +176,9 @@ void ArmoryInstance::init()
    SystemFileUtils::mkPath(ldbdir_);
 
    //setup env
-   NetworkConfig::selectNetwork(NETWORK_MODE_TESTNET);
-   BlockDataManagerConfig::setServiceType(SERVICE_WEBSOCKET);
-   BlockDataManagerConfig::setDbType(ARMORY_DB_SUPER);
-   BlockDataManagerConfig::setOperationMode(OPERATION_UNITTEST);
-   auto& magicBytes = NetworkConfig::getMagicBytes();
+   Armory::Config::NetworkSettings::selectNetwork(Armory::Config::NETWORK_MODE_TESTNET);
+   Armory::Config::DBSettings::setServiceType(SERVICE_WEBSOCKET);
+   auto& magicBytes = Armory::Config::BitcoinSettings::getMagicBytes();
 
    //create block file with testnet genesis block
    auto blk0dat = BtcUtils::getBlkFilename(blkdir_, 0);
@@ -194,21 +196,17 @@ void ArmoryInstance::init()
    fs.close();
 
    //setup config
-   config_.blkFileLocation_ = blkdir_;
-   config_.dbDir_ = ldbdir_;
-   config_.threadCount_ = 3;
-   config_.dataDir_ = homedir_;
-   config_.ephemeralPeers_ = false;
-
    port_ = UNITTEST_DB_PORT;
-   std::stringstream port_ss;
-   port_ss << port_;
-   config_.listenPort_ = port_ss.str();
 
    //setup bip151 context
    startupBIP150CTX(4);
 
-   const auto lbdEmptyPassphrase = [](const std::set<BinaryData> &) {
+   std::vector<std::string> args{ "--db-type=DB_SUPER", "--public"
+      , "--satoshi-datadir=" + blkdir_, "--dbdir=" + ldbdir_, "--datadir=" + homedir_
+      , "--thread-count=3", "--listen-port=" + std::to_string(port_) };
+   Armory::Config::parseArgs(args, Armory::Config::ProcessType::DB);
+
+   const auto lbdEmptyPassphrase = [](const std::set<Armory::Wallets::EncryptionKeyId>&) {
       return SecureBinaryData{};
    };
 
@@ -220,53 +218,57 @@ void ArmoryInstance::init()
    auto& clientPubkey = clientPeers.getOwnPublicKey();
 
    std::stringstream serverAddr;
-   serverAddr << "127.0.0.1:" << config_.listenPort_;
+   serverAddr << "127.0.0.1:" << port_;
    clientPeers.addPeer(serverPubkey, serverAddr.str());
    serverPeers.addPeer(clientPubkey, "127.0.0.1");
 
-   //init bdm
-   nodePtr_ =
-      std::make_shared<NodeUnitTest>(*(unsigned int*)magicBytes.getPtr(), false);
-   const auto watchNode = std::make_shared<NodeUnitTest>(0, true);
-   config_.bitcoinNodes_ = { nodePtr_, watchNode };
-   config_.rpcNode_ = std::make_shared<NodeRPC_UnitTest>(nodePtr_, watchNode);
+   //init bdm & network nodes
+   nodePtr_ = std::dynamic_pointer_cast<NodeUnitTest>(
+      Armory::Config::NetworkSettings::bitcoinNodes().first);
 
-   theBDMt_ = new BlockDataManagerThread(config_);
+   nodePtr_ = std::dynamic_pointer_cast<NodeUnitTest>(
+      Armory::Config::NetworkSettings::bitcoinNodes().first);
+
+   rpcNode_ = std::dynamic_pointer_cast<NodeRPC_UnitTest>(
+      Armory::Config::NetworkSettings::rpcNode());
+
+   theBDMt_ = new BlockDataManagerThread();
    iface_ = theBDMt_->bdm()->getIFace();
 
-   auto nodePtr = std::dynamic_pointer_cast<NodeUnitTest>(nodePtr_);
-   nodePtr->setBlockchain(theBDMt_->bdm()->blockchain());
-   nodePtr->setBlockFiles(theBDMt_->bdm()->blockFiles());
+   nodePtr_->setBlockchain(theBDMt_->bdm()->blockchain());
+   nodePtr_->setBlockFiles(theBDMt_->bdm()->blockFiles());
    nodePtr_->setIface(iface_);
 
-   theBDMt_->start(config_.initMode_);
+   theBDMt_->start(INIT_RESUME);
 
-   WebSocketServer::initAuthPeers(lbdEmptyPassphrase);
    //start server
+   WebSocketServer::initAuthPeers(lbdEmptyPassphrase);
    WebSocketServer::start(theBDMt_, true);
 }
 
 ////
 void ArmoryInstance::shutdown()
 {
-   if (!theBDMt_) {
+   if (theBDMt_ == nullptr) {
       return;
    }
+
    //shutdown server
-   auto&& bdvObj2 = AsyncClient::BlockDataViewer::getNewBDV("127.0.0.1"
-      , config_.listenPort_, BlockDataManagerConfig::getDataDir()
-      , [](const std::set<BinaryData> &) { return SecureBinaryData{}; }
-      , BlockDataManagerConfig::ephemeralPeers_, true, nullptr);
-//   auto&& serverPubkey = WebSocketServer::getPublicKey(); // sometimes crash here
-//   bdvObj2->addPublicKey(serverPubkey);
+   auto&& bdvObj2 = AsyncClient::BlockDataViewer::getNewBDV(
+      "127.0.0.1", std::to_string(port_), Armory::Config::getDataDir()
+      , [](const std::set<Armory::Wallets::EncryptionKeyId>&) { return SecureBinaryData{}; }
+   , Armory::Config::NetworkSettings::ephemeralPeers(), true, nullptr);
+   auto&& serverPubkey = WebSocketServer::getPublicKey();
+   bdvObj2->addPublicKey(serverPubkey);
    bdvObj2->connectToRemote();
 
-   bdvObj2->shutdown(config_.cookie_);
+   bdvObj2->shutdown(Armory::Config::NetworkSettings::cookie());
    WebSocketServer::waitOnShutdown();
 
    //shutdown bdm
    delete theBDMt_;
    theBDMt_ = nullptr;
+   nodePtr_ = nullptr;
 
    //clean up dirs
    SystemFileUtils::rmDir(blkdir_);
@@ -275,7 +277,7 @@ void ArmoryInstance::shutdown()
 }
 
 std::map<unsigned, BinaryData> ArmoryInstance::mineNewBlock(
-   ArmorySigner::ScriptRecipient* rec, unsigned count)
+   ScriptRecipient* rec, unsigned count)
 {
    return nodePtr_->mineNewBlock(theBDMt_->bdm(), count, rec);
 }
@@ -372,7 +374,7 @@ std::vector<bs::TXEntry> UnitTestWalletACT::waitOnZC(bool soft)
          }
          return notif->zc_;
       }
-      catch (const ArmoryThreading::StackTimedOutException &) {
+      catch (const Armory::Threading::StackTimedOutException &) {
          return {};
       }
    }
@@ -390,7 +392,7 @@ int UnitTestWalletACT::waitOnBroadcastError(const std::string &reqId)
       }
       return notif->errCode_;
    }
-   catch (const ArmoryThreading::StackTimedOutException &) {
+   catch (const Armory::Threading::StackTimedOutException &) {
       return 0;
    }
 }

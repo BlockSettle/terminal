@@ -19,14 +19,14 @@
 #include "QmlFactory.h"
 #include "QMLStatusUpdater.h"
 #include "QmlWalletsViewModel.h"
-#include "QPasswordData.h"
-#include "QSeed.h"
-#include "QWalletInfo.h"
+#include "Wallets/QPasswordData.h"
+#include "Wallets/QSeed.h"
+#include "Wallets/QWalletInfo.h"
 #include "SignerAdapter.h"
 #include "Settings/SignerSettings.h"
 #include "SignerVersion.h"
-#include "SignerUiDefs.h"
-#include "SignContainer.h"
+#include "Wallets/SignerUiDefs.h"
+#include "Wallets/SignContainer.h"
 #include "TXInfo.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -111,21 +111,19 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
       }
    });
 
-   if (params->runMode() != bs::signer::ui::RunMode::litegui) {
-      trayIconOptional_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
-      connect(trayIconOptional_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
-      connect(trayIconOptional_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
+   trayIconOptional_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
+   connect(trayIconOptional_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
+   connect(trayIconOptional_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
 
 #ifdef BS_USE_DBUS
-      if (dbus_->isValid()) {
-         notifMode_ = Freedesktop;
+   if (dbus_->isValid()) {
+      notifMode_ = Freedesktop;
 
-         QObject::disconnect(trayIconOptional_, &QSystemTrayIcon::messageClicked,
-            this, &QMLAppObj::onSysTrayMsgClicked);
-         connect(dbus_, &DBusNotification::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
-      }
-#endif // BS_USE_DBUS
+      QObject::disconnect(trayIconOptional_, &QSystemTrayIcon::messageClicked,
+         this, &QMLAppObj::onSysTrayMsgClicked);
+      connect(dbus_, &DBusNotification::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
    }
+#endif // BS_USE_DBUS
 
    if (adapter) {
       settingsConnections();

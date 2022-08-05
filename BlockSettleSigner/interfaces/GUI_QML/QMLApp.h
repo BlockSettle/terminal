@@ -15,7 +15,7 @@
 #include <unordered_set>
 #include <QObject>
 #include <QSystemTrayIcon>
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 
 namespace bs {
    namespace wallet {

@@ -184,19 +184,7 @@ void TransactionDetailDialog::addAddress(TxOut out    // can't use const ref due
       walletName = QString::fromStdString(addressWallet->name());
    }
    else {
-      bool isCCaddress = false;
-      if (ccLeaf_) {
-         if (walletsManager_->isValidCCOutpoint(ccLeaf_->shortName(), txHash, out.getIndex(), out.getValue())) {
-            isCCaddress = true;
-         }
-      }
-      if (isCCaddress) {
-         valueStr += ccLeaf_->displayTxValue(int64_t(out.getValue()));
-         walletName = QString::fromStdString(ccLeaf_->shortName());
-      }
-      else {
-         valueStr += UiUtils::displayAmount(out.getValue());
-      }
+      valueStr += UiUtils::displayAmount(out.getValue());
    }
    QStringList items;
    items << addressType;

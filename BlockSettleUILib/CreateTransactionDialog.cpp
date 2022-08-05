@@ -30,10 +30,10 @@
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "BSMessageBox.h"
-#include "OfflineSigner.h"
-#include "SelectedTransactionInputs.h"
-#include "SignContainer.h"
-#include "TransactionData.h"
+#include "Wallets/OfflineSigner.h"
+#include "Wallets/SelectedTransactionInputs.h"
+#include "Wallets/SignContainer.h"
+#include "Wallets/TransactionData.h"
 #include "UiUtils.h"
 #include "UsedInputsModel.h"
 #include "UtxoReservationManager.h"
@@ -113,22 +113,9 @@ void CreateTransactionDialog::updateCreateButtonText()
 {
    if (HaveSignedImportedTransaction()) {
       pushButtonCreate()->setText(tr("Broadcast"));
-      if (signContainer_->isOffline()) {
-         pushButtonCreate()->setEnabled(false);
-      }
       return;
    }
-   const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
-
-   if (walletsManager_) {
-      auto walletPtr = walletsManager_->getHDWalletById(walletId);
-      if (walletPtr && !walletPtr->isHardwareWallet() && (signContainer_->isOffline()
-         || signContainer_->isWalletOffline(walletId))) {
-         pushButtonCreate()->setText(tr("Export"));
-      } else {
-         selectedWalletChanged(-1);
-      }
-   }
+   const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets(), comboBoxWallets()->currentIndex());
 }
 
 void CreateTransactionDialog::onSignerAuthenticated()
@@ -156,8 +143,8 @@ void CreateTransactionDialog::reject()
          return;
       }
 
-      if (txReq_.isValid() && signContainer_) {
-         signContainer_->CancelSignTx(BinaryData::fromString(txReq_.serializeState().SerializeAsString()));
+      if (txReq_.isValid()) {
+         //FIXME: cancelSignTx(txReq_.serializeState().SerializeAsString());
       }
    }
 
@@ -176,31 +163,18 @@ int CreateTransactionDialog::SelectWallet(const std::string& walletId, UiUtils::
    auto index = UiUtils::selectWalletInCombobox(comboBoxWallets(), walletId
       , static_cast<UiUtils::WalletsTypes>(type));
    if (index < 0) {
-      if (walletsManager_) {
-         const auto rootWallet = walletsManager_->getHDRootForLeaf(walletId);
-         if (rootWallet) {
-            index = UiUtils::selectWalletInCombobox(comboBoxWallets(), rootWallet->walletId());
-         }
-      }
-      else {
-         //TODO: select root wallet if needed
-      }
+      //TODO: select root wallet if needed
    }
    return index;
 }
 
 void CreateTransactionDialog::populateWalletsList()
 {
-   if (walletsManager_) {
-      int index = UiUtils::fillHDWalletsComboBox(comboBoxWallets(), walletsManager_, UiUtils::WalletsTypes::All_AllowHwLegacy);
-      selectedWalletChanged(index);
-   }
-   else {
-      emit needWalletsList(UiUtils::WalletsTypes::All_AllowHwLegacy, "CreateTX");
-   }
+   emit needWalletsList(UiUtils::WalletsTypes::All_AllowHwLegacy, "CreateTX");
 }
 
-void CreateTransactionDialog::onWalletsList(const std::string &id, const std::vector<bs::sync::HDWalletData>& hdWallets)
+void CreateTransactionDialog::onWalletsList(const std::string &id
+   , const std::vector<bs::sync::HDWalletData>& hdWallets)
 {
    if (id != "CreateTX") {
       return;
@@ -209,13 +183,17 @@ void CreateTransactionDialog::onWalletsList(const std::string &id, const std::ve
    auto comboBox = comboBoxWallets();
    comboBox->clear();
 
-   const auto &addRow = [comboBox]
+   const auto &addRow = [comboBox, this]
       (const std::string& label, const std::string& walletId, UiUtils::WalletsTypes type)
    {
+      bool blocked = comboBox->blockSignals(true);
       int i = comboBox->count();
+      logger_->debug("[CreateTransactionDialog::onWalletsList::addRow] #{}: {}", i, walletId);
       comboBox->addItem(QString::fromStdString(label));
       comboBox->setItemData(i, QString::fromStdString(walletId), UiUtils::WalletIdRole);
       comboBox->setItemData(i, QVariant::fromValue(static_cast<int>(type)), UiUtils::WalletType);
+      logger_->debug("[CreateTransactionDialog::onWalletsList::addRow] {} #{} get: {}", i, (void*)comboBox, comboBox->itemData(i, UiUtils::WalletIdRole).toString().toStdString());
+      comboBox->blockSignals(blocked);
    };
 
    hdWallets_.clear();
@@ -251,6 +229,7 @@ void CreateTransactionDialog::onWalletsList(const std::string &id, const std::ve
       }
    }
    comboBox->setCurrentIndex(selected);
+   selectedWalletChanged(selected, true);
 }
 
 void CreateTransactionDialog::onFeeLevels(const std::map<unsigned int, float>& feeLevels)
@@ -279,46 +258,12 @@ void CreateTransactionDialog::populateFeeList()
    comboBoxFeeSuggestions()->setCurrentIndex(0);
    comboBoxFeeSuggestions()->setEnabled(false);
 
-   if (walletsManager_) {
-      connect(this, &CreateTransactionDialog::feeLoadingCompleted
-         , this, &CreateTransactionDialog::onFeeSuggestionsLoaded
-         , Qt::QueuedConnection);
-
-      loadFees();
+   std::vector<unsigned int> feeLevels;
+   feeLevels.reserve(kFeeLevels.size());
+   for (const auto& level : kFeeLevels) {
+      feeLevels.push_back(level.first);
    }
-   else {
-      std::vector<unsigned int> feeLevels;
-      feeLevels.reserve(kFeeLevels.size());
-      for (const auto& level : kFeeLevels) {
-         feeLevels.push_back(level.first);
-      }
-      emit needFeeLevels(feeLevels);
-   }
-}
-
-void CreateTransactionDialog::loadFees()
-{
-   struct Result {
-      std::map<unsigned int, float> values;
-      std::set<unsigned int>  levels;
-   };
-   auto result = std::make_shared<Result>();
-
-   for (const auto &feeLevel : kFeeLevels) {
-      result->levels.insert(feeLevel.first);
-   }
-   for (const auto &feeLevel : kFeeLevels) {
-      const auto &cbFee = [this, result, level=feeLevel.first](float fee) {
-         result->levels.erase(level);
-         if (fee < std::numeric_limits<float>::infinity()) {
-            result->values[level] = fee;
-         }
-         if (result->levels.empty()) {
-            emit feeLoadingCompleted(result->values);
-         }
-      };
-      walletsManager_->estimatedFeePerByte(feeLevel.first, cbFee, this);
-   }
+   emit needFeeLevels(feeLevels);
 }
 
 void CreateTransactionDialog::onFeeSuggestionsLoaded(const std::map<unsigned int, float> &feeValues)
@@ -348,50 +293,20 @@ void CreateTransactionDialog::feeSelectionChanged(int currentIndex)
    transactionData_->setFeePerByte(comboBoxFeeSuggestions()->itemData(currentIndex).toFloat());
 }
 
-void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const std::function<void()> &cbInputsReset)
+void CreateTransactionDialog::selectedWalletChanged(int index, bool resetInputs, const std::function<void()> &cbInputsReset)
 {
    if (!comboBoxWallets()->count()) {
       pushButtonCreate()->setText(tr("No wallets"));
       return;
    }
-   const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
-   if (walletsManager_) {
-      const auto rootWallet = walletsManager_->getHDWalletById(walletId);
-      if (!rootWallet) {
-         logger_->error("[{}] wallet with id {} not found", __func__, walletId);
-         return;
-      }
-      if (!rootWallet->isHardwareWallet() && (signContainer_->isWalletOffline(rootWallet->walletId())
-         || !rootWallet || signContainer_->isWalletOffline(rootWallet->walletId()))) {
-         pushButtonCreate()->setText(tr("Export"));
-      } else {
-         pushButtonCreate()->setText(tr("Broadcast"));
-      }
-
-      auto group = rootWallet->getGroup(rootWallet->getXBTGroupType());
-      const bool isHardware = rootWallet->isHardwareWallet() || rootWallet->isHardwareOfflineWallet();
-      bs::hd::Purpose hwPurpose;
-      if (isHardware) {
-         hwPurpose = UiUtils::getSelectedHwPurpose(comboBoxWallets());
-      }
-
-      if (transactionData_->getGroup() != group || isHardware || resetInputs) {
-         if (isHardware) {
-            transactionData_->setWallet(group->getLeaf(hwPurpose), armory_->topBlock()
-               , resetInputs, cbInputsReset);
-         } else {
-            transactionData_->setGroup(group, armory_->topBlock(), false
-               , resetInputs, cbInputsReset);
-         }
-      }
+   const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets(), index);
+   if (walletId.empty()) {
+      logger_->debug("[{}] no walletId from #{} of {}", __func__, index, (void*)comboBoxWallets());
+      return;
    }
-   else {
-      if (walletId.empty()) {
-         return;
-      }
-      pushButtonCreate()->setText(tr("Broadcast"));
-      emit needUTXOs("CreateTX", walletId);
-   }
+   //emit needWalletBalances(walletId);
+   pushButtonCreate()->setText(tr("Broadcast"));
+   emit needUTXOs("CreateTX", walletId);
 
    emit walletChanged();
 }
@@ -444,6 +359,36 @@ void CreateTransactionDialog::onTransactionUpdated()
    }
 
    pushButtonCreate()->setEnabled(transactionData_->IsTransactionValid());
+}
+
+void CreateTransactionDialog::onAddressBalances(const std::string& walletId
+   , const std::vector<bs::sync::WalletBalanceData::AddressBalance>& balances)
+{
+   auto& summary = transactionData_->GetTransactionSummary();
+   for (const auto& bal : balances) {
+      summary.availableBalance += bal.balTotal / BTCNumericTypes::BalanceDivider;
+   }
+   logger_->debug("[{}] balance {}", __func__, summary.availableBalance);
+   onTransactionUpdated();
+}
+
+void CreateTransactionDialog::getChangeAddress(AddressCb cb)
+{
+   if (transactionData_->GetTransactionSummary().hasChange) {
+      changeAddrCb_ = std::move(cb);
+      emit needChangeAddress(*transactionData_->getWallets().cbegin());
+      return;
+   }
+   cb({});
+}
+
+void CreateTransactionDialog::onChangeAddress(const std::string& /*walletId*/
+   , const bs::Address& addr)
+{
+   if (changeAddrCb_) {
+      changeAddrCb_(addr);
+      changeAddrCb_ = nullptr;
+   }
 }
 
 void CreateTransactionDialog::onMaxPressed()
@@ -558,23 +503,19 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
    }
 
    if (result == bs::error::ErrorCode::NoError) {
-      if (!armory_->broadcastZC(signedTX).empty()) {
-         if (!textEditComment()->document()->isEmpty()) {
-            const auto &comment = textEditComment()->document()->toPlainText().toStdString();
-            transactionData_->getWallet()->setTransactionComment(signedTX, comment);
-         }
-         accept();
-         return;
+      //TODO: broadcast signedTX
+      if (!textEditComment()->document()->isEmpty()) {
+         const auto &comment = textEditComment()->document()->toPlainText().toStdString();
+         //FIXME: transactionData_->getWallet()->setTransactionComment(signedTX, comment);
       }
-
-      detailedText = tr("Failed to communicate to BlockSettleDB to broadcast transaction. Maybe BlockSettleDB is offline");
+      //accept();
+      return;
    }
    else {
       detailedText = bs::error::ErrorCodeToString(result);
    }
 
    MessageBoxBroadcastError(detailedText, result, this).exec();
-
    stopBroadcasting();
 }
 
@@ -602,13 +543,12 @@ bool CreateTransactionDialog::BroadcastImportedTx()
       return false;
    }
    startBroadcasting();
-   if (!armory_->broadcastZC(importedSignedTX_).empty()) {
-      if (!textEditComment()->document()->isEmpty()) {
-         const auto &comment = textEditComment()->document()->toPlainText().toStdString();
-         transactionData_->getWallet()->setTransactionComment(importedSignedTX_, comment);
-      }
-      return true;
+   //TODO: broadcast importedSignedTX_
+   if (!textEditComment()->document()->isEmpty()) {
+      const auto &comment = textEditComment()->document()->toPlainText().toStdString();
+      //transactionData_->getWallet()->setTransactionComment(importedSignedTX_, comment);
    }
+   //return and accept if broadcast was successful
    importedSignedTX_.clear();
    stopBroadcasting();
    BSMessageBox(BSMessageBox::critical, tr("Transaction broadcast"), tr("Failed to broadcast imported transaction"), this).exec();
@@ -617,7 +557,8 @@ bool CreateTransactionDialog::BroadcastImportedTx()
 
 void CreateTransactionDialog::CreateTransaction(const CreateTransactionCb &cb)
 {
-   if (signContainer_ && walletsManager_) {  // old code
+#if 0
+   if (walletsManager_) {  // old code
 /*      BSMessageBox(BSMessageBox::critical, tr("Error")
          , tr("Signer is invalid - unable to send transaction"), this).exec();
       return;*/
@@ -692,8 +633,10 @@ void CreateTransactionDialog::CreateTransaction(const CreateTransactionCb &cb)
       });
       return;
    }
+#endif   //0
 
    getChangeAddress([this, cb](const bs::Address &changeAddress) {
+      logger_->debug("[CreateTransactionDialog::CreateTransaction] change addr: {}", changeAddress.display());
       try {
          txReq_ = transactionData_->createTXRequest(checkBoxRBF()->checkState() == Qt::Checked, changeAddress);
 
@@ -706,7 +649,8 @@ void CreateTransactionDialog::CreateTransaction(const CreateTransactionCb &cb)
          }
          //TODO: implement supporting TXs collection
 
-         const auto serializedUnsigned = txReq_.armorySigner_.serializeUnsignedTx().toHexStr();
+         //const auto serializedUnsigned = txReq_.armorySigner_.serializeUnsignedTx().toHexStr();
+         const auto serializedUnsigned = txReq_.armorySigner_.toPSBT().toHexStr();
          const auto estimatedSize = txReq_.estimateTxVirtSize();
          cb(true, "", serializedUnsigned, estimatedSize);
       } catch (const std::exception& e) {
@@ -774,56 +718,14 @@ bool CreateTransactionDialog::createTransactionImpl()
          txReq_.txHash = txReq_.txId();
       }
 
-      if (walletsManager_ && signContainer_) {
-         const auto hdWallet = walletsManager_->getHDWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
-         if (hdWallet->isOffline() && !hdWallet->isHardwareWallet()) {
-            QString offlineFilePath;
-            QString signerOfflineDir = applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
-
-            const qint64 timestamp = QDateTime::currentDateTime().toSecsSinceEpoch();
-            const std::string fileName = fmt::format("{}_{}.bin", hdWallet->walletId(), timestamp);
-
-            QString defaultFilePath = QDir(signerOfflineDir).filePath(QString::fromStdString(fileName));
-            offlineFilePath = QFileDialog::getSaveFileName(this, tr("Save Offline TX as...")
-               , defaultFilePath, tr("TX files (*.bin);; All files (*)"));
-
-            if (offlineFilePath.isEmpty()) {
-               return true;
-            }
-
-            QFileInfo exportFileIndo(offlineFilePath);
-            QString newSignerOfflineDir = exportFileIndo.absoluteDir().path();
-            if (signerOfflineDir != newSignerOfflineDir) {
-               applicationSettings_->set(ApplicationSettings::signerOfflineDir, newSignerOfflineDir);
-            }
-            if (exportFileIndo.suffix() != QLatin1String("bin")) {
-               offlineFilePath += QLatin1String(".bin");
-            }
-
-            bs::error::ErrorCode result = bs::core::wallet::ExportTxToFile(txReq_, offlineFilePath);
-            if (result == bs::error::ErrorCode::NoError) {
-               BSMessageBox(BSMessageBox::info, tr("Offline Transaction")
-                  , tr("Request was successfully exported")
-                  , tr("Saved to %1").arg(offlineFilePath), this).exec();
-               return false; // export was success so we could close the dialog
-            } else {
-               BSMessageBox(BSMessageBox::warning, tr("Offline Transaction")
-                  , tr("Failed to save offline Tx request")
-                  , tr("Filename: %1").arg(offlineFilePath), this).exec();
-            }
-         } else {
-            startBroadcasting();
-            pendingTXSignId_ = signContainer_->signTXRequest(txReq_, SignContainer::TXSignMode::Full, true);
-            if (!pendingTXSignId_) {
-               throw std::logic_error("Signer failed to send request");
-            }
-         }
+      //TODO: add implementation for HW wallets (if needed)
+      startBroadcasting();
+      SecureBinaryData passphrase;
+      if (lineEditPassphrase()) {
+         passphrase = SecureBinaryData::fromString(lineEditPassphrase()->text().toStdString());
       }
-      else {
-         //TODO: add implementation for HW wallets
-         startBroadcasting();
-         emit needSignTX("CreateTX", txReq_, true);
-      }
+      emit needSignTX("CreateTX", txReq_, true, SignContainer::TXSignMode::Full
+         , passphrase);
       return true;
    }
    catch (const std::runtime_error &e) {
@@ -845,7 +747,7 @@ bool CreateTransactionDialog::createTransactionImpl()
 
 std::vector<bs::core::wallet::TXSignRequest> CreateTransactionDialog::ImportTransactions()
 {
-   QString signerOfflineDir = applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
+   QString signerOfflineDir = {};   // applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
 
    const QString reqFile = QFileDialog::getOpenFileName(this, tr("Select Transaction file"), signerOfflineDir
       , tr("TX files (*.bin);; All files (*)"));
@@ -854,10 +756,7 @@ std::vector<bs::core::wallet::TXSignRequest> CreateTransactionDialog::ImportTran
    }
 
    // Update latest used directory if needed
-   QString newSignerOfflineDir = QFileInfo(reqFile).absoluteDir().path();
-   if (signerOfflineDir != newSignerOfflineDir) {
-      applicationSettings_->set(ApplicationSettings::signerOfflineDir, newSignerOfflineDir);
-   }
+   //QString newSignerOfflineDir = QFileInfo(reqFile).absoluteDir().path();
 
    const auto title = tr("Transaction file");
    QFile f(reqFile);
@@ -880,17 +779,6 @@ std::vector<bs::core::wallet::TXSignRequest> CreateTransactionDialog::ImportTran
    auto transactions = bs::core::wallet::ParseOfflineTXFile(data);
    if (transactions.size() != 1) {
       showError(title, tr("Invalid file %1 format").arg(reqFile));
-      return {};
-   }
-
-   const auto envConf = static_cast<ApplicationSettings::EnvConfiguration>(applicationSettings_->get<int>(ApplicationSettings::envConfiguration));
-   const bool isProd = (envConf == ApplicationSettings::EnvConfiguration::Production);
-   const bool isTest = (envConf == ApplicationSettings::EnvConfiguration::Test);
-   if ((isProd || isTest) && !transactions.at(0).allowBroadcasts) {
-      BSMessageBox errorMessage(BSMessageBox::warning, tr("Warning"), tr("Import failure")
-         , tr("You are trying to import a settlement transaction into a BlockSettle Terminal. "
-              "Settlement transactions must be imported into a BlockSettle Signer if signed offline."), this);
-      errorMessage.exec();
       return {};
    }
 

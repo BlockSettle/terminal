@@ -26,6 +26,7 @@
 #include <gtest/gtest.h>
 
 #include "TestEnv.h"
+#include "ArmoryConfig.h"
 #include "BinaryData.h"
 
 #include <spdlog/spdlog.h>
@@ -109,8 +110,7 @@ int main(int argc, char** argv)
    qRegisterMetaType<BinaryData>();
 
    //::testing::AddGlobalTestEnvironment(new TestEnv(logger));
-
-   NetworkConfig::selectNetwork(NETWORK_MODE_TESTNET);
+   Armory::Config::NetworkSettings::selectNetwork(Armory::Config::NETWORK_MODE_TESTNET);
 
    QTimer::singleShot(0, [] {
       rc = RUN_ALL_TESTS();

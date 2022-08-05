@@ -18,8 +18,8 @@
 
 #include "Address.h"
 #include "BlockchainMonitor.h"
-#include "ColoredCoinLogic.h"
-#include "SignContainer.h"
+//#include "ColoredCoinLogic.h"
+#include "Wallets/SignContainer.h"
 #include "TestEnv.h"
 
 namespace bs {
@@ -53,6 +53,7 @@ struct CCoinSpender
    uint64_t xbtValue_ = 0;
 };
 
+#if 0 // no CC tests since all CC code is turned off
 class ColoredCoinTestACT : public ColoredCoinACT
 {
 private:
@@ -228,5 +229,6 @@ public:
    void zcUpdate(std::shared_ptr<ColoredCoinTrackerClient_UT>);
    void reorg(std::shared_ptr<ColoredCoinTrackerClient_UT>);
 };
+#endif
 
 #endif // __TEST_CCOIN_H__

@@ -12,7 +12,7 @@
 #include <QDateTime>
 #include <spdlog/spdlog.h>
 #include "MessageUtils.h"
-#include "ProtobufHeadlessUtils.h"
+#include "Wallets/ProtobufHeadlessUtils.h"
 #include "TestEnv.h"
 
 #include "common.pb.h"

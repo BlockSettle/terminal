@@ -10,9 +10,9 @@
 */
 #include <spdlog/spdlog.h>
 #include <fstream>
-
+#include "ArmoryConfig.h"
 #include "BIP150_151.h"
-#include "BlockDataManagerConfig.h"
+#include "BTCNumericTypes.h"
 #include "BtcUtils.h"
 #include "cxxopts.hpp"
 #include "HeadlessSettings.h"
@@ -61,7 +61,6 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
    std::string walletsDir;
 
    cxxopts::Options options("BlockSettle Signer", "Headless Signer process");
-   std::string guiMode;
    options.add_options()
       ("h,help", "Print help")
       ("a,listen", "IP address to listen on"
@@ -80,8 +79,6 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
          , cxxopts::value<bool>()->default_value("true"))
       ("auto_sign_spend_limit", "Spend limit expressed in XBT for auto-sign operations"
          , cxxopts::value<double>(autoSignSpendLimit))
-      ("g,guimode", "GUI run mode"
-         , cxxopts::value<std::string>(guiMode)->default_value("fullgui"))
       ;
 
    try {
@@ -130,20 +127,10 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
       exit(0);
    }
 
-   if (guiMode == "litegui") {
-      runMode_ = bs::signer::RunMode::litegui;
-   }
-   else if (guiMode == "fullgui") {
-      runMode_ = bs::signer::RunMode::fullgui;
-   }
-   else if (guiMode == "headless") {
-      runMode_ = bs::signer::RunMode::headless;
-   }
-
    if (testNet()) {
-      NetworkConfig::selectNetwork(NETWORK_MODE_TESTNET);
+      Armory::Config::NetworkSettings::selectNetwork(Armory::Config::NETWORK_MODE_TESTNET);
    } else {
-      NetworkConfig::selectNetwork(NETWORK_MODE_MAINNET);
+      Armory::Config::NetworkSettings::selectNetwork(Armory::Config::NETWORK_MODE_MAINNET);
    }
    return true;
 }

@@ -53,7 +53,7 @@ std::vector<bs::TXEntry> BlockchainMonitor::waitForZC()
          auto zcVec = zcQueue_.pop_front();
          return zcVec;
       }
-      catch (ArmoryThreading::IsEmpty&)
+      catch (Armory::Threading::IsEmpty&)
       {}
 
       std::this_thread::sleep_for(std::chrono::milliseconds{10});

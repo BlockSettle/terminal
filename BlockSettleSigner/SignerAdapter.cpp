@@ -14,7 +14,7 @@
 #include <QFile>
 
 #include "Bip15xDataConnection.h"
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 #include "SignerAdapterContainer.h"
 #include "SignerInterfaceListener.h"
 #include "SystemFileUtils.h"

@@ -199,7 +199,7 @@ void AddressListModel::updateWallet(const bs::sync::WalletInfo &wallet)
    }
 }
 
-void AddressListModel::onAddresses(const std::string &
+void AddressListModel::onAddresses(const std::string &/*walletId*/
    , const std::vector<bs::sync::Address> &addrs)
 {
    if (addrs.empty()) { //TODO: check against walletId (first arg)
@@ -216,8 +216,11 @@ void AddressListModel::onAddresses(const std::string &
          newAddrs.push_back(addr);
       }
    }
+   if (newAddrs.empty()) {
+      return;
+   }
    beginInsertRows(QModelIndex(), addressRows_.size()
-      , addressRows_.size() + newAddrs.size() - 1);
+      , addressRows_.size() + newAddrs.size() -1);
    for (const auto &addr : newAddrs) {
       const auto &itWallet = std::find_if(wallets_.cbegin(), wallets_.cend()
          , [walletId = addr.walletId](const bs::sync::WalletInfo &wi){

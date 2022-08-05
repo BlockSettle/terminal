@@ -16,7 +16,7 @@
 #include "Address.h"
 #include "AsyncClient.h"
 #include "CoreWallet.h"
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 
 namespace spdlog {
    class logger;

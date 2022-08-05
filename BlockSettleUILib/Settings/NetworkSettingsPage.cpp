@@ -19,7 +19,7 @@
 #include "ApplicationSettings.h"
 #include "ArmoryServersWidget.h"
 #include "WebSocketClient.h"
-#include "HeadlessContainer.h"
+#include "Wallets/HeadlessContainer.h"
 #include "ArmoryServersViewModel.h"
 #include "Settings/SignerSettings.h"
 #include "SignersProvider.h"

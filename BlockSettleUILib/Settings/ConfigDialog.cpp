@@ -15,7 +15,7 @@
 #include "GeneralSettingsPage.h"
 #include "NetworkSettingsPage.h"
 #include "SignersProvider.h"
-#include "WalletSignerContainer.h"
+#include "Wallets/WalletSignerContainer.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -215,25 +215,6 @@ void ConfigDialog::decryptData(const std::shared_ptr<bs::sync::WalletsManager> &
    , const SecureBinaryData &data, const ConfigDialog::EncryptCb &cb)
 {
    cb(EncryptError::NoEncryptionKey, {});
-}
-
-void ConfigDialog::getChatPrivKey(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-   , const std::shared_ptr<SignContainer> &signContainer
-   , const ConfigDialog::EncryptCb &cb)
-{
-   const auto &primaryWallet = walletsMgr->getPrimaryWallet();
-   if (!primaryWallet) {
-      cb(EncryptError::NoPrimaryWallet, {});
-      return;
-   }
-   auto walletSigner = std::dynamic_pointer_cast<WalletSignerContainer>(signContainer);
-   walletSigner->getChatNode(primaryWallet->walletId(), [cb](const BIP32_Node &node) {
-      if (node.getPrivateKey().empty()) {
-         cb(EncryptError::NoEncryptionKey, {});
-         return;
-      }
-      cb(EncryptError::NoError, node.getPrivateKey());
-   });
 }
 
 void ConfigDialog::onDisplayDefault()

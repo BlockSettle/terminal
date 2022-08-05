@@ -15,14 +15,15 @@
 #include "CheckRecipSigner.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
-#include "HeadlessContainer.h"
-#include "InprocSigner.h"
+#include "Wallets/HeadlessContainer.h"
+#include "Wallets/InprocSigner.h"
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
 using namespace ArmorySigner;
 
+#if 0 // CC code turned off
 TestCCoin::TestCCoin()
 {}
 
@@ -3649,6 +3650,7 @@ TEST_F(TestCCoin, processZC_whileMined)
    // While obtaining ZCs in processZcBatch, one of the transactions got mined
    ASSERT_TRUE(false) << "Forcefully fails - to be implemented (see comments in source code)";
 }
+#endif   //0
 
 //TODO:
 //over assign cc

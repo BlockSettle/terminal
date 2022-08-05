@@ -18,8 +18,8 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDLeaf.h"
-#include "TradesUtils.h"
-#include "ArmoryObject.h"
+#include "Wallets/TradesUtils.h"
+#include "Wallets/ArmoryObject.h"
 #include "WalletUtils.h"
 
 using namespace bs;
@@ -232,36 +232,6 @@ void bs::UTXOReservationManager::getBestXbtUtxoSet(const HDWalletId& walletId, b
    getBestXbtFromUtxos(walletUtxos, quantity, std::move(cb), checkPbFeeFloor, checkAmount);
 }
 
-BTCNumericTypes::balance_type bs::UTXOReservationManager::getAvailableCCUtxoSum(const CCProductName& CCProduct) const
-{
-   const auto& ccWallet = walletsManager_ ? walletsManager_->getCCWallet(CCProduct) : nullptr;
-   if (!ccWallet) {
-      return {};
-   }
-
-   BTCNumericTypes::satoshi_type sum = 0;
-   auto const availableUtxos = getAvailableCCUTXOs(ccWallet->walletId());
-   for (const auto &utxo : availableUtxos) {
-      sum += utxo.getValue();
-   }
-
-   return ccWallet->getTxBalance(sum);
-}
-
-std::vector<UTXO> bs::UTXOReservationManager::getAvailableCCUTXOs(const CCWalletId& walletId) const
-{
-   std::vector<UTXO> utxos;
-   auto const availableUtxos = availableCCUTXOs_.find(walletId);
-   if (availableUtxos == availableCCUTXOs_.end()) {
-      return {};
-   }
-
-   utxos = availableUtxos->second;
-   std::vector<UTXO> filtered;
-   UtxoReservation::instance()->filter(utxos, filtered);
-   return utxos;
-}
-
 bs::FixedXbtInputs UTXOReservationManager::convertUtxoToFixedInput(const HDWalletId& walletId, const std::vector<UTXO>& utxos)
 {
    FixedXbtInputs fixedXbtInputs;
@@ -471,7 +441,7 @@ void bs::UTXOReservationManager::getBestXbtFromUtxos(const std::vector<UTXO> &in
       QMetaObject::invokeMethod(mgr, [mgr, quantity, inputUtxo
          , fee, utxos = std::move(utxos), cb = std::move(cbCopy), checkPbFeeFloor, checkAmount]() mutable
       {
-         float feePerByte = ArmoryConnection::toFeePerByte(fee);
+         float feePerByte = BTCNumericTypes::toFeePerByte(fee);
          if (checkPbFeeFloor) {
             feePerByte = std::max(mgr->feeRatePb(), feePerByte);
          }

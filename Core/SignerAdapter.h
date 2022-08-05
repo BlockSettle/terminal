@@ -11,18 +11,25 @@
 #ifndef SIGNER_ADAPTER_H
 #define SIGNER_ADAPTER_H
 
+#include "BtcDefinitions.h"
 #include "FutureValue.h"
-#include "HeadlessContainer.h"
+#include "Wallets/HeadlessContainer.h"
 #include "Message/Adapter.h"
 #include "ThreadSafeContainers.h"
 
 namespace spdlog {
    class logger;
 }
+namespace bs {
+   namespace core {
+      class WalletsManager;
+   }
+}
 namespace BlockSettle {
    namespace Common {
       class SignerMessage;
       class SignerMessage_AutoSign;
+      class SignerMessage_CreateWalletRequest;
       class SignerMessage_DialogRequest;
       class SignerMessage_ExtendAddrChain;
       class SignerMessage_GetSettlPayinAddr;
@@ -62,23 +69,17 @@ private:
    void start();
 
    // HCT overrides
-   void connError(SignContainer::ConnectionError, const QString &) override;
-   void connTorn() override;
-   void authLeafAdded(const std::string &walletId) override;
    void walletsChanged() override;
    void onReady() override;
    void walletsReady() override;
    void newWalletPrompt() override;
    void autoSignStateChanged(bs::error::ErrorCode
       , const std::string& walletId) override;
-   void windowIsVisible(bool) override;
 
    bool processOwnRequest(const bs::message::Envelope &
       , const BlockSettle::Common::SignerMessage &);
    bool processSignerSettings(const BlockSettle::Terminal::SettingsMessage_SignerServer &);
    bool processNewKeyResponse(bool);
-   std::shared_ptr<WalletSignerContainer> makeRemoteSigner(
-      const BlockSettle::Terminal::SettingsMessage_SignerServer &);
    bool sendComponentLoading();
 
    bool processStartWalletSync(const bs::message::Envelope &);
@@ -92,30 +93,27 @@ private:
    bool processSyncHdWallet(const bs::message::Envelope &, const std::string &walletId);
    bool processSyncAddrComment(const BlockSettle::Common::SignerMessage_SyncAddressComment &);
    bool processSyncTxComment(const BlockSettle::Common::SignerMessage_SyncTxComment &);
-   bool processSetSettlId(const bs::message::Envelope &
-      , const BlockSettle::Common::SignerMessage_SetSettlementId &);
-   bool processSignSettlementTx(const bs::message::Envelope&
-      , const BlockSettle::Common::SignerMessage_SignSettlementTx&);
    bool processGetRootPubKey(const bs::message::Envelope &, const std::string &walletId);
    bool processDelHdRoot(const std::string &walletId);
    bool processDelHdLeaf(const std::string &walletId);
    bool processSignTx(const bs::message::Envelope&
       , const BlockSettle::Common::SignerMessage_SignTxRequest&);
-   bool processSetUserId(const std::string& userId, const std::string& walletId);
-   bool processCreateSettlWallet(const bs::message::Envelope&, const std::string &);
-   bool processGetPayinAddress(const bs::message::Envelope&
-      , const BlockSettle::Common::SignerMessage_GetSettlPayinAddr&);
    bool processResolvePubSpenders(const bs::message::Envelope&
       , const bs::core::wallet::TXSignRequest&);
    bool processAutoSignRequest(const bs::message::Envelope&
       , const BlockSettle::Common::SignerMessage_AutoSign&);
    bool processDialogRequest(const bs::message::Envelope&
       , const BlockSettle::Common::SignerMessage_DialogRequest&);
+   bool processCreateWallet(const bs::message::Envelope&
+      , const BlockSettle::Common::SignerMessage_CreateWalletRequest&);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<bs::message::User>     user_;
-   std::shared_ptr<WalletSignerContainer> signer_;
+   NetworkType netType_{NetworkType::Invalid};
+   std::string walletsDir_;
+   std::shared_ptr<bs::core::WalletsManager> walletsMgr_;
+   std::shared_ptr<WalletSignerContainer>    signer_;
 
    std::shared_ptr<FutureValue<bool>>  connFuture_;
    std::string    curServerId_;
@@ -123,6 +121,7 @@ private:
 
    bs::ThreadSafeMap<uint64_t, std::shared_ptr<bs::message::User>>   requests_;
    std::unordered_map<std::string, bs::message::Envelope>   autoSignRequests_;
+   SecureBinaryData passphrase_;
 };
 
 

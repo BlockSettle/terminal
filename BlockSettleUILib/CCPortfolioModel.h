@@ -13,7 +13,7 @@
 
 #include <memory>
 #include <QAbstractItemModel>
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 
 namespace bs {
    namespace sync {

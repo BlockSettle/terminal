@@ -13,7 +13,7 @@
 
 #include "TabWithShortcut.h"
 #include "ArmoryConnection.h"
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 
 #include <QWidget>
 #include <memory>
@@ -37,11 +37,6 @@ public:
     ExplorerWidget(QWidget *parent = nullptr);
     ~ExplorerWidget() override;
 
-   [[deprecated]] void init(const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<CCFileManager> &
-      , const std::shared_ptr<AuthAddressManager> &);
    void init(const std::shared_ptr<spdlog::logger>&);
    void shortcutActivated(ShortcutType s) override;
 

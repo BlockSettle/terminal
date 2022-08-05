@@ -14,7 +14,7 @@
 #include "Address.h"
 #include "AuthAddress.h"
 #include "ArmoryConnection.h"
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 
 #include <QWidget>
 #include <QItemSelection>
@@ -42,14 +42,9 @@ public:
    explicit AddressDetailsWidget(QWidget *parent = nullptr);
    ~AddressDetailsWidget() override;
 
-   [[deprecated]] void init(const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<spdlog::logger> &inLogger
-      , const std::shared_ptr<bs::sync::CCDataResolver> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &);
    void init(const std::shared_ptr<spdlog::logger>& inLogger);
 
    void setQueryAddr(const bs::Address& inAddrVal);
-   void setBSAuthAddrs(const std::unordered_set<std::string> &bsAuthAddrs);
    void clear();
 
    void onNewBlock(unsigned int blockNum);
@@ -86,8 +81,6 @@ private:
    [[deprecated]] void getTxData(const std::shared_ptr<AsyncClient::LedgerDelegate> &);
    [[deprecated]] void refresh(const std::shared_ptr<bs::sync::PlainWallet> &);
    [[deprecated]] void loadTransactions();
-   [[deprecated]] void searchForCC();
-   [[deprecated]] void searchForAuth();
 
 private:
    // NB: Right now, the code is slightly inefficient. There are two maps with
@@ -124,15 +117,8 @@ private:
    AsyncClient::TxBatchResult txMap_; // A wallet's Tx hash / Tx map.
    std::map<BinaryData, bs::TXEntry> txEntryHashSet_; // A wallet's Tx hash / Tx entry map.
 
-   std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<bs::sync::CCDataResolver> ccResolver_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
-   CcData ccFound_;
-   std::shared_ptr<AddressVerificator> addrVerify_;
-   std::map<bs::Address, AddressVerificationState> authAddrStates_;
-   std::unordered_set<std::string>     bsAuthAddrs_;
-   bool isAuthAddr_{false};
    uint32_t topBlock_{ 0 };
 
    std::mutex mutex_;

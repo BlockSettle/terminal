@@ -15,9 +15,9 @@
 #include <QQmlEngine>
 #include <QQuickWindow>
 #include "BSErrorCode.h"
-#include "QSeed.h"
-#include "QPasswordData.h"
-#include "QWalletInfo.h"
+#include "Wallets/QSeed.h"
+#include "Wallets/QPasswordData.h"
+#include "Wallets/QWalletInfo.h"
 
 #include "bs_signer.pb.h"
 

@@ -14,7 +14,7 @@
 #include <QObject>
 #include <QStringList>
 #include <QVariant>
-#include "Adapters/OnChainTrackerAdapter.h"
+#include "Message/Adapter.h"
 #include "TerminalMessage.h"
 
 namespace spdlog {
@@ -67,8 +67,6 @@ public:
    std::string name() const override { return "Settings"; }
 
    std::shared_ptr<bs::LogManager> logManager() const { return logMgr_; }
-
-   std::shared_ptr<OnChainExternalPlug> createOnChainPlug() const;
 
 private:
    bool processGetRequest(const bs::message::Envelope &

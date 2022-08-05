@@ -10,7 +10,7 @@
 */
 #include "StatusBarView.h"
 #include "AssetManager.h"
-#include "HeadlessContainer.h"
+#include "Wallets/HeadlessContainer.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"

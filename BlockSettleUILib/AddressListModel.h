@@ -15,7 +15,7 @@
 #include <memory>
 #include <QAbstractTableModel>
 #include "CoreWallet.h"
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 #include "ValidityFlag.h"
 
 namespace bs {

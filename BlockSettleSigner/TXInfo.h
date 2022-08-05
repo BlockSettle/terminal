@@ -12,7 +12,7 @@
 #define __TX_INFO_H__
 
 #include "CoreWallet.h"
-#include "ProtobufHeadlessUtils.h"
+#include "Wallets/ProtobufHeadlessUtils.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"
 
@@ -89,8 +89,6 @@ public:
    double inputAmountFull() const;
    double outputAmountFull() const;
 
-   Q_INVOKABLE double amountCCReceived(const QString &cc) const;
-   Q_INVOKABLE double amountCCSent() const;
    Q_INVOKABLE double amountXBTReceived() const;
 
    Q_INVOKABLE bool saveToFile(const QString &fileName) const;

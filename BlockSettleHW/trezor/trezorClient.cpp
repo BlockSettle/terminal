@@ -306,15 +306,17 @@ void TrezorClient::post(QByteArray&& urlMethod, std::function<void(QNetworkReply
       request.setHeader(QNetworkRequest::ContentTypeHeader, { QByteArray("application/x-www-form-urlencoded") });
    }
 
-   QNetworkReply *reply = connectionManager_->GetNAM()->post(request, input);
-   auto connection = connect(reply, &QNetworkReply::finished, this, [cbCopy = cb, repCopy = reply, sender = QPointer<TrezorClient>(this)]{
-      if (!sender) {
-         return; // TREZOR client already destroyed
-      }
+   QNetworkReply *reply = QNetworkAccessManager().post(request, input);
+   auto connection = connect(reply, &QNetworkReply::finished, this
+      , [cbCopy = cb, repCopy = reply, sender = QPointer<TrezorClient>(this)]
+      {
+         if (!sender) {
+            return; // TREZOR client already destroyed
+         }
 
-      cbCopy(repCopy);
-      repCopy->deleteLater();
-   });
+         cbCopy(repCopy);
+         repCopy->deleteLater();
+      });
 
    // Timeout
    if (timeout) {
@@ -325,7 +327,6 @@ void TrezorClient::post(QByteArray&& urlMethod, std::function<void(QNetworkReply
          replyCopy->abort();
       });
    }
-
 }
 
 void TrezorClient::cleanDeviceData()

@@ -37,8 +37,6 @@ bool AssetsAdapter::process(const bs::message::Envelope &env)
       switch (msg.data_case()) {
       case SettingsMessage::kGetResponse:
          return processGetSettings(msg.get_response());
-      case SettingsMessage::kBootstrap:
-         return processBootstrap(msg.bootstrap());
       default: break;
       }
    }
@@ -143,73 +141,13 @@ void AssetsAdapter::onSecuritiesChanged()
 {
 }
 
-void AssetsAdapter::onCCSecurityDef(const bs::network::CCSecurityDef& sd)
-{
-   AssetsMessage msg;
-   auto msgCC = msg.mutable_cc_definition();
-   msgCC->set_security_id(sd.securityId);
-   msgCC->set_product(sd.product);
-   msgCC->set_genesis_address(sd.genesisAddr.display());
-   msgCC->set_lot_size(sd.nbSatoshis);
-   pushBroadcast(user_, msg.SerializeAsString());
-}
-
-void AssetsAdapter::onLoaded()
-{
-   logger_->debug("[AssetsAdapter::onLoaded]");
-   AdministrativeMessage admMsg;
-   admMsg.set_component_loading(user_->value());
-   pushBroadcast(UserTerminal::create(TerminalUsers::System)
-      , admMsg.SerializeAsString());
-
-   AssetsMessage msg;
-   msg.mutable_loaded();
-   pushBroadcast(user_, msg.SerializeAsString());
-}
-
 bool AssetsAdapter::processGetSettings(const SettingsMessage_SettingsResponse& response)
 {
    for (const auto& setting : response.responses()) {
       switch (setting.request().index()) {
-      case SetIdx_BlockSettleSignAddress:
-         onBSSignAddress(setting.s());
-         break;
       default: break;
       }
    }
-   return true;
-}
-
-void AssetsAdapter::onBSSignAddress(const std::string& address)
-{
-   ccFileMgr_ = std::make_unique<CCFileManager>(logger_, this, address);
-
-   SettingsMessage msgSet;
-   auto msgReq = msgSet.mutable_get_bootstrap();
-   pushRequest(user_, UserTerminal::create(TerminalUsers::Settings)
-      , msgSet.SerializeAsString());
-}
-
-bool AssetsAdapter::processBootstrap(const SettingsMessage_BootstrapData& response)
-{
-   if (!ccFileMgr_) {
-      logger_->debug("[{}] CC file manager is not ready, yet", __func__);
-      return false;
-   }
-   logger_->debug("[{}]", __func__);
-   std::vector<bs::network::CCSecurityDef> ccDefs;
-   ccDefs.reserve(response.cc_definitions_size());
-   for (const auto& ccDef : response.cc_definitions()) {
-      try {
-         ccDefs.push_back({ ccDef.security_id(), ccDef.product()
-            , bs::Address::fromAddressString(ccDef.genesis_address())
-            , ccDef.lot_size() });
-      }
-      catch (const std::exception& e) {
-         logger_->error("[{}] failed to decode CC definition: {}", __func__, e.what());
-      }
-   }
-   ccFileMgr_->SetLoadedDefinitions(ccDefs);
    return true;
 }
 

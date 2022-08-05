@@ -41,7 +41,6 @@ public:
    void init(const std::shared_ptr<spdlog::logger> &);
 
 protected slots:
-   void onRevokeSettlement();
    void onCreateRBFDialog();
    void onCreateCPFPDialog();
    void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode, std::string error);

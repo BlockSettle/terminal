@@ -23,9 +23,7 @@
 #include "BSTerminalSplashScreen.h"
 #include "EncryptionUtils.h"
 
-#include "Adapters/AuthEidAdapter.h"
 #include "Adapters/BlockchainAdapter.h"
-#include "Adapters/OnChainTrackerAdapter.h"
 #include "Adapters/WalletsAdapter.h"
 #include "ApiAdapter.h"
 #include "ApiJson.h"
@@ -35,7 +33,6 @@
 #include "SettingsAdapter.h"
 #include "SignerAdapter.h"
 
-#include "btc/ecc.h"
 #include <spdlog/sinks/daily_file_sink.h>
 
 //#include "AppNap.h"
@@ -55,10 +52,8 @@ Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
 Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
 #endif // USE_QXcbIntegrationPlugin
 
-#ifdef STATIC_BUILD
 Q_IMPORT_PLUGIN(QSQLiteDriverPlugin)
 Q_IMPORT_PLUGIN(QICOPlugin)
-#endif // STATIC_BUILD
 
 Q_DECLARE_METATYPE(ArmorySettings)
 Q_DECLARE_METATYPE(AsyncClient::LedgerDelegate)
@@ -147,7 +142,7 @@ int main(int argc, char** argv)
    // Initialize libbtc, BIP 150, and BIP 151. 150 uses the proprietary "public"
    // Armory setting designed to allow the ArmoryDB server to not have to verify
    // clients. Prevents us from having to import tons of keys into the server.
-   btc_ecc_start();
+   CryptoECDSA::setupContext();
    startupBIP151CTX();
    startupBIP150CTX(4);
 
@@ -178,9 +173,6 @@ int main(int argc, char** argv)
 
       const auto& userBlockchain = bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain);
       const auto& userWallets = bs::message::UserTerminal::create(bs::message::TerminalUsers::Wallets);
-      inprocBus.addAdapter(std::make_shared<OnChainTrackerAdapter>(logMgr->logger("trk")
-         , bs::message::UserTerminal::create(bs::message::TerminalUsers::OnChainTracker)
-         , userBlockchain, userWallets, adSettings->createOnChainPlug()));
       inprocBus.addAdapter(std::make_shared<AssetsAdapter>(logMgr->logger()));
       inprocBus.addAdapter(std::make_shared<WalletsAdapter>(logMgr->logger()
          , userWallets, signAdapter->createClient(), userBlockchain));

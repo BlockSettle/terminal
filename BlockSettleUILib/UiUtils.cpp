@@ -11,14 +11,12 @@
 #include "UiUtils.h"
 
 #include "ApplicationSettings.h"
-#include "AuthAddressManager.h"
 #include "BinaryData.h"
-#include "BlockDataManagerConfig.h"
 #include "BTCNumericTypes.h"
 #include "BtcUtils.h"
 #include "CoinControlModel.h"
 #include "CustomControls/QtAwesome.h"
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 #include "TxClasses.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -356,23 +354,6 @@ int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox
    return selected;
 }
 
-void UiUtils::fillAuthAddressesComboBoxWithSubmitted(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager> &authAddressManager)
-{
-   comboBox->clear();
-   const auto &addrList = authAddressManager->GetSubmittedAddressList();
-   if (!addrList.empty()) {
-      const auto b = comboBox->blockSignals(true);
-      for (const auto &address : addrList) {
-         comboBox->addItem(QString::fromStdString(address.display()));
-      }
-      comboBox->blockSignals(b);
-      QMetaObject::invokeMethod(comboBox, "setCurrentIndex", Q_ARG(int, authAddressManager->getDefaultIndex()));
-      comboBox->setEnabled(true);
-   } else {
-      comboBox->setEnabled(false);
-   }
-}
-
 void UiUtils::fillAuthAddressesComboBoxWithSubmitted(QComboBox* comboBox
    , const std::vector<bs::Address>& addrs, int defaultIdx)
 {
@@ -667,9 +648,10 @@ QString UiUtils::displayShortAddress(const QString &addr, const uint maxLength)
 }
 
 
-std::string UiUtils::getSelectedWalletId(QComboBox* comboBox)
+std::string UiUtils::getSelectedWalletId(QComboBox* comboBox, int index)
 {
-   return comboBox->currentData(WalletIdRole).toString().toStdString();
+   return comboBox->itemData(index, WalletIdRole).toString().toStdString();
+   //return comboBox->currentData().toString().toStdString();
 }
 
 UiUtils::WalletsTypes UiUtils::getSelectedWalletType(QComboBox* comboBox)

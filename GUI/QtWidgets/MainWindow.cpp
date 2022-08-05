@@ -339,6 +339,15 @@ void MainWindow::onAddressHistory(const bs::Address& addr, uint32_t curBlock, co
    ui_->widgetExplorer->onAddressHistory(addr, curBlock, entries);
 }
 
+void bs::gui::qt::MainWindow::onChangeAddress(const std::string& walletId
+   , const bs::Address& addr)
+{
+   logger_->debug("[{}] {} {}", __func__, walletId, addr.display());
+   if (txDlg_) {
+      txDlg_->onChangeAddress(walletId, addr);
+   }
+}
+
 void MainWindow::onFeeLevels(const std::map<unsigned int, float>& feeLevels)
 {
    if (txDlg_) {
@@ -668,6 +677,7 @@ void MainWindow::onSend()
    connect(txDlg_, &CreateTransactionDialog::needSignTX, this, &MainWindow::needSignTX);
    connect(txDlg_, &CreateTransactionDialog::needBroadcastZC, this, &MainWindow::needBroadcastZC);
    connect(txDlg_, &CreateTransactionDialog::needSetTxComment, this, &MainWindow::needSetTxComment);
+   connect(txDlg_, &CreateTransactionDialog::needChangeAddress, this, &MainWindow::needChangeAddress);
 
    txDlg_->initUI();
    if (!selectedWalletId.empty()) {
@@ -821,6 +831,17 @@ void bs::gui::qt::MainWindow::onBalance(const std::string& currency, double bala
 void MainWindow::onReservedUTXOs(const std::string& resId
    , const std::string& subId, const std::vector<UTXO>& utxos)
 {}
+
+bs::gui::WalletSeedData MainWindow::getWalletSeed(const std::string& rootId) const
+{
+   auto seedDialog = new bs::gui::qt::SeedDialog(rootId, (QWidget*)this);
+   const int rc = seedDialog->exec();
+   seedDialog->deleteLater();
+   if (rc == QDialog::Accepted) {
+      return seedDialog->getData();
+   }
+   return {};
+}
 
 void MainWindow::showRunInBackgroundMessage()
 {

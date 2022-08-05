@@ -13,7 +13,7 @@
 
 #include <QWidget>
 #include <memory>
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 
 namespace Ui {
     class CCWidget;

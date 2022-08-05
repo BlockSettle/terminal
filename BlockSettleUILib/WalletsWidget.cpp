@@ -27,11 +27,11 @@
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
 #include "BSMessageBox.h"
-#include "HeadlessContainer.h"
+#include "Wallets/HeadlessContainer.h"
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
 #include "SelectWalletDialog.h"
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 #include "WalletsViewModel.h"
 #include "WalletWarningDialog.h"
 #include "Wallets/SyncHDWallet.h"
@@ -39,7 +39,7 @@
 #include "TreeViewWithEnterKey.h"
 #include "ManageEncryption/RootWalletPropertiesDialog.h"
 
-#include "SignerUiDefs.h"
+#include "Wallets/SignerUiDefs.h"
 
 class AddressSortFilterModel : public QSortFilterProxyModel
 {
@@ -161,9 +161,6 @@ WalletsWidget::WalletsWidget(QWidget* parent)
    actEditComment_ = new QAction(tr("&Edit Comment"));
    connect(actEditComment_, &QAction::triggered, this, &WalletsWidget::onEditAddrComment);
 
-   actRevokeSettl_ = new QAction(tr("&Revoke Settlement"));
-   connect(actRevokeSettl_, &QAction::triggered, this, &WalletsWidget::onRevokeSettlement);
-
 //   actDeleteWallet_ = new QAction(tr("&Delete Permanently"));
 //   connect(actDeleteWallet_, &QAction::triggered, this, &WalletsWidget::onDeleteWallet);
 
@@ -221,7 +218,7 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    ui_->treeViewWallets->setExpandsOnDoubleClick(false);
    // show the column as per BST-1520
    //ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnID));
-   if (walletsManager_ && signingContainer_) {
+   if (walletsManager_) {
       walletsModel_->LoadWallets();
    }
 
@@ -554,20 +551,7 @@ void WalletsWidget::onAddressContextMenu(const QPoint &p)
       }
       contextMenu->addAction(actEditComment_);
 
-      const auto &cbAddrBalance = [this, p, contextMenu](std::vector<uint64_t> balances)
-      {
-         if (/*(curWallet_ == walletsManager_->getSettlementWallet()) &&*/ walletsManager_->getAuthWallet()
-            /*&& (curWallet_->getAddrTxN(curAddress_) == 1)*/ && balances[0]) {
-            contextMenu->addAction(actRevokeSettl_);
-         }
-         emit showContextMenu(contextMenu, ui_->treeViewAddresses->mapToGlobal(p));
-      };
-
-      auto balanceVec = curWallet_->getAddrBalance(curAddress_);
-      if (balanceVec.size() == 0)
-         emit showContextMenu(contextMenu, ui_->treeViewAddresses->mapToGlobal(p));
-      else
-         cbAddrBalance(balanceVec);
+      emit showContextMenu(contextMenu, ui_->treeViewAddresses->mapToGlobal(p));
       return;
    }
 
@@ -585,15 +569,6 @@ void WalletsWidget::onAddressContextMenu(const QPoint &p)
    }
    contextMenu->addAction(actEditComment_);
 
-   const auto &cbAddrBalance = [this, p, contextMenu](std::vector<uint64_t> balances)
-   {
-      if (/*walletsManager_->getAuthWallet() && balances[0]*/false) {   //FIXME
-         contextMenu->addAction(actRevokeSettl_);
-      }
-      emit showContextMenu(contextMenu, ui_->treeViewAddresses->mapToGlobal(p));
-   };
-
-   //TODO: get address balance and add revoke action if needed
    contextMenu ->exec(ui_->treeViewAddresses->mapToGlobal(p));
 }
 
@@ -739,76 +714,38 @@ void WalletsWidget::onWalletBalanceChanged(std::string walletId)
 void WalletsWidget::onNewWallet()
 {
    emit newWalletCreationRequest();
-   if (signingContainer_) {
-      if (!signingContainer_->isOffline()) {
-         NewWalletDialog newWalletDialog(false, appSettings_, this);
-
-         switch (newWalletDialog.exec()) {
-         case NewWalletDialog::CreateNew:
-            CreateNewWallet();
-            break;
-         case NewWalletDialog::ImportExisting:
-            ImportNewWallet();
-            break;
-         case NewWalletDialog::ImportHw:
-            ImportHwWallet();
-            break;
-         case NewWalletDialog::Cancel:
-            break;
-         }
-      } else {
-         ImportNewWallet();
-      }
-   }
-   else {
-      NewWalletDialog newWalletDialog(false, this);
-      switch (newWalletDialog.exec()) {
-      case NewWalletDialog::CreateNew:
-         CreateNewWallet();
-         break;
-      case NewWalletDialog::ImportExisting:
-         ImportNewWallet();
-         break;
-      case NewWalletDialog::ImportHw:
-         ImportHwWallet();
-         break;
-      case NewWalletDialog::Cancel:
-         break;
-      default:
-         showError(tr("Unknown new wallet choice"));
-         break;
-      }
+   NewWalletDialog newWalletDialog(false, this);
+   switch (newWalletDialog.exec()) {
+   case NewWalletDialog::CreateNew:
+      CreateNewWallet();
+      break;
+   case NewWalletDialog::ImportExisting:
+      ImportNewWallet();
+      break;
+   case NewWalletDialog::ImportHw:
+      ImportHwWallet();
+      break;
+   case NewWalletDialog::Cancel:
+      break;
+   default:
+      showError(tr("Unknown new wallet choice"));
+      break;
    }
 }
 
 void WalletsWidget::CreateNewWallet()
 {
-   if (signingContainer_) {
-      signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::CreateWallet);
-   }
-   else {
-      emit needWalletDialog(bs::signer::ui::GeneralDialogType::CreateWallet);
-   }
+   emit needWalletDialog(bs::signer::ui::GeneralDialogType::CreateWallet);
 }
 
 void WalletsWidget::ImportNewWallet()
 {
-   if (signingContainer_) {
-      signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ImportWallet);
-   }
-   else {
-      emit needWalletDialog(bs::signer::ui::GeneralDialogType::ImportWallet);
-   }
+   emit needWalletDialog(bs::signer::ui::GeneralDialogType::ImportWallet);
 }
 
 void WalletsWidget::ImportHwWallet()
 {
-   if (signingContainer_) {
-      signingContainer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ImportHwWallet);
-   }
-   else {
-      emit needWalletDialog(bs::signer::ui::GeneralDialogType::ImportHwWallet);
-   }
+   emit needWalletDialog(bs::signer::ui::GeneralDialogType::ImportHwWallet);
 }
 
 void WalletsWidget::shortcutActivated(ShortcutType s)
@@ -832,9 +769,9 @@ void WalletsWidget::shortcutActivated(ShortcutType s)
 void WalletsWidget::onFilterSettingsChanged()
 {
    auto filterSettings = getUIFilterSettings();
-
-   appSettings_->set(ApplicationSettings::WalletFiltering, filterSettings);
-
+   if (appSettings_) {
+      appSettings_->set(ApplicationSettings::WalletFiltering, filterSettings);
+   }
    updateAddressFilters(filterSettings);
 }
 
@@ -917,11 +854,6 @@ void WalletsWidget::onEditAddrComment()
          emit setAddrComment(curWalletId_, curAddress_, comment.toStdString());
       }
    }
-}
-
-void WalletsWidget::onRevokeSettlement()
-{
-   BSMessageBox(BSMessageBox::info, tr("Settlement Revoke"), tr("Doesn't work currently"), this).exec();
 }
 
 void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result)

@@ -98,7 +98,7 @@ protected:
    virtual QLabel *changeLabel() const override;
 
    void onTransactionUpdated() override;
-   void getChangeAddress(AddressCb cb) const override;
+   void getChangeAddress(AddressCb cb) override;
 
    bool HaveSignedImportedTransaction() const override;
 
@@ -129,12 +129,6 @@ private slots:
    void onOutputsClicked(const QModelIndex &index);
    void onSimpleDialogRequested();
    void onUpdateChangeWidget();
-   void onBitPayTxVerified(bool result);
-   void onVerifyBitPayUnsignedTx(const std::string& unsignedTx, uint64_t virtSize);
-
-signals:
-   void VerifyBitPayUnsignedTx(const std::string& unsignedTx, uint64_t virtSize);
-   void BitPayTxVerified(bool result);
 
 private:
    void clear() override;

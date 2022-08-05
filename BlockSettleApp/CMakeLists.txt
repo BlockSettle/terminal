@@ -54,7 +54,6 @@ TARGET_LINK_LIBRARIES( ${BLOCKSETTLE_APP_NAME}
    ${CPP_WALLET_LIB_NAME}
    ${CRYPTO_LIB_NAME}
    ${BOTAN_LIB}
-   ${ZMQ_LIB}
    ${QRENCODE_LIB}
    ${QT_LINUX_LIBS}
    ${WS_LIB}
@@ -62,6 +61,8 @@ TARGET_LINK_LIBRARIES( ${BLOCKSETTLE_APP_NAME}
    Qt5::Core
    Qt5::Widgets
    Qt5::Gui
+   Qt5::QSQLiteDriverPlugin
+   Qt5::Sql
    Qt5::Network
    Qt5::PrintSupport
    Qt5::Core

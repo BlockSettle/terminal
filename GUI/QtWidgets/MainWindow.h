@@ -18,7 +18,8 @@
 #include "ArmoryConnection.h"
 #include "AuthAddress.h"
 #include "CommonTypes.h"
-#include "SignContainer.h"
+#include "SeedDialog.h"
+#include "Wallets/SignContainer.h"
 #include "Settings/SignersProvider.h"
 #include "UiUtils.h"
 
@@ -86,6 +87,7 @@ namespace bs {
             void onZCsInvalidated(const std::vector<BinaryData>& txHashes);
             void onAddressHistory(const bs::Address&, uint32_t curBlock
                , const std::vector<bs::TXEntry>&);
+            void onChangeAddress(const std::string& walletId, const bs::Address&);
 
             void onFeeLevels(const std::map<unsigned int, float>&);
             void onUTXOs(const std::string& id, const std::string& walletId, const std::vector<UTXO>&);
@@ -118,6 +120,8 @@ namespace bs {
             void onReservedUTXOs(const std::string& resId, const std::string& subId
                , const std::vector<UTXO>&);
 
+            bs::gui::WalletSeedData getWalletSeed(const std::string& rootId) const;
+
          public slots:
             void onReactivate();
             void raiseWindow();
@@ -145,6 +149,7 @@ namespace bs {
 
             void createExtAddress(const std::string& walletId);
             void needExtAddresses(const std::string &walletId);
+            void needChangeAddress(const std::string& walletId);
             void needIntAddresses(const std::string &walletId);
             void needUsedAddresses(const std::string &walletId);
             void needAddrComments(const std::string &walletId, const std::vector<bs::Address> &);
@@ -161,7 +166,8 @@ namespace bs {
                , bool confOnly = false, bool swOnly = false);
 
             void needSignTX(const std::string& id, const bs::core::wallet::TXSignRequest&
-               , bool keepDupRecips = false, SignContainer::TXSignMode mode = SignContainer::TXSignMode::Full);
+               , bool keepDupRecips = false, SignContainer::TXSignMode mode = SignContainer::TXSignMode::Full
+               , const SecureBinaryData& passphrase = {});
             void needBroadcastZC(const std::string& id, const BinaryData&);
             void needSetTxComment(const std::string& walletId, const BinaryData& txHash, const std::string& comment);
 
@@ -173,7 +179,6 @@ namespace bs {
             void needMdConnection(ApplicationSettings::EnvConfiguration);
             void needMdDisconnect();
 
-            void needAuthKey(const bs::Address&);
             void needReserveUTXOs(const std::string& reserveId, const std::string& subId
                , uint64_t amount, bool withZC = false, const std::vector<UTXO>& utxos = {});
             void needUnreserveUTXOs(const std::string& reserveId, const std::string& subId);

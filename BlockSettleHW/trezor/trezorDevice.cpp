@@ -12,7 +12,7 @@
 #include "trezorClient.h"
 #include "ConnectionManager.h"
 #include "headless.pb.h"
-#include "ProtobufHeadlessUtils.h"
+#include "Wallets/ProtobufHeadlessUtils.h"
 #include "CoreWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"

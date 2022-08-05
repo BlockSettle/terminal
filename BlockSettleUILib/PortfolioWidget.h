@@ -16,7 +16,7 @@
 #include <memory>
 #include "ApplicationSettings.h"
 #include "CommonTypes.h"
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 #include "TransactionsWidgetInterface.h"
 
 namespace spdlog {

@@ -20,7 +20,7 @@
 #include <memory>
 #include "ArmoryConnection.h"
 #include "CircleProgressBar.h"
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 
 namespace bs {
    namespace sync {

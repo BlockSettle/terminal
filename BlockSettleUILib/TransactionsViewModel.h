@@ -21,7 +21,7 @@
 #include <QTimer>
 #include <atomic>
 #include "AsyncClient.h"
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 
 namespace spdlog {
    class logger;

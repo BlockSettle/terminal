@@ -67,7 +67,6 @@ private:
    QTreeWidgetItem   *itemSender_ = nullptr;
    QTreeWidgetItem   *itemReceiver_ = nullptr;
    ValidityFlag validityFlag_;
-   std::shared_ptr<bs::sync::hd::CCLeaf>  ccLeaf_;
 };
 
 #endif // __TRANSACTION_DETAIL_DIALOG_H__

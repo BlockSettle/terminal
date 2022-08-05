@@ -11,11 +11,10 @@
 #ifndef __TEST_ENV_H__
 #define __TEST_ENV_H__
 
-#include "ArmoryObject.h"
-#include "AuthAddressLogic.h"
+#include "ArmoryConfig.h"
+#include "Wallets/ArmoryObject.h"
 #include "BDM_mainthread.h"
 #include "BlockchainMonitor.h"
-#include "BlockDataManagerConfig.h"
 #include "gtest/NodeUnitTest.h"
 #include "MockAssetMgr.h"
 #include "Server.h"
@@ -29,6 +28,8 @@
 #include <btc/ecc.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
+
+using namespace Armory::Signer;
 
 #define UNITTEST_DB_PORT 59095
 
@@ -56,7 +57,7 @@ namespace ArmorySigner {
    class BIP32_AssetPath;
 };
 
-class ResolverOneAddress : public ArmorySigner::ResolverFeed
+class ResolverOneAddress : public Armory::Signer::ResolverFeed
 {
 private:
    SecureBinaryData privKey_;
@@ -87,18 +88,11 @@ public:
       return privKey_;
    }
 
-   void setBip32PathForPubkey(const BinaryData &, const ArmorySigner::BIP32_AssetPath&) override
-   {
-      throw std::runtime_error("not implemented");
-   }
-
-   ArmorySigner::BIP32_AssetPath resolveBip32PathForPubkey(const BinaryData&) override
-   {
-      throw std::runtime_error("not implemented");
-   }
+   void setBip32PathForPubkey(const BinaryData&, const BIP32_AssetPath&) override {}
+   BIP32_AssetPath resolveBip32PathForPubkey(const BinaryData&) override { return { {}, {}, {}, nullptr }; }
 };
 
-class ResolverManyAddresses : public ArmorySigner::ResolverFeed
+class ResolverManyAddresses : public Armory::Signer::ResolverFeed
 {
 private:
    std::map<BinaryData, SecureBinaryData> hashToPubKey_;
@@ -134,20 +128,13 @@ public:
       return iter->second;
    }
 
-   void setBip32PathForPubkey(const BinaryData &, const ArmorySigner::BIP32_AssetPath&) override
-   {
-      throw std::runtime_error("not implemented");
-   }
-
-   ArmorySigner::BIP32_AssetPath resolveBip32PathForPubkey(const BinaryData&) override
-   {
-      throw std::runtime_error("not implemented");
-   }
+   void setBip32PathForPubkey(const BinaryData&, const BIP32_AssetPath&) override {}
+   BIP32_AssetPath resolveBip32PathForPubkey(const BinaryData&) override { return { {}, {}, {}, nullptr }; }
 };
 
 
 struct ACTqueue {
-   static ArmoryThreading::TimedQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
+   static Armory::Threading::TimedQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
 };
 
 class SingleUTWalletACT : public ArmoryCallbackTarget
@@ -282,7 +269,7 @@ public:
 
 struct UnitTestLocalACT : public bs::sync::WalletACT
 {
-   ArmoryThreading::BlockingQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
+   Armory::Threading::BlockingQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
 
 public:
    UnitTestLocalACT(ArmoryConnection *armory, bs::sync::Wallet *leaf) :
@@ -401,9 +388,8 @@ struct ArmoryInstance
    const std::string ldbdir_;
    int port_;
 
-   std::shared_ptr<NodeUnitTest> nodePtr_;
-
-   BlockDataManagerConfig config_;
+   std::shared_ptr<NodeUnitTest>       nodePtr_;
+   std::shared_ptr<NodeRPC_UnitTest>   rpcNode_;
 
    BlockDataManagerThread* theBDMt_;
    LMDBBlockDatabase* iface_;
@@ -411,7 +397,7 @@ struct ArmoryInstance
    ArmoryInstance();
    ~ArmoryInstance(void) { shutdown(); }
 
-   std::map<unsigned, BinaryData> mineNewBlock(ArmorySigner::ScriptRecipient*, unsigned);
+   std::map<unsigned, BinaryData> mineNewBlock(Armory::Signer::ScriptRecipient*, unsigned);
    void pushZC(const BinaryData &, unsigned int blocksUntilMined = 0, bool stage = false);
 
    void setReorgBranchPoint(const BinaryData&);

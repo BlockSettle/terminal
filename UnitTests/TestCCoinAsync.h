@@ -18,8 +18,7 @@
 
 #include "Address.h"
 #include "BlockchainMonitor.h"
-#include "CCLogicAsync.h"
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 #include "TestEnv.h"
 
 namespace bs {
@@ -43,7 +42,7 @@ namespace bs {
 }
 class QtHCT;
 
-
+#if 0 // CC code turned off
 class AsyncCCT : public ColoredCoinTrackerAsync
 {
 public:
@@ -179,5 +178,5 @@ public:
 private:
    std::map<std::string, std::function<void()>> refreshCb_;
 };
-
+#endif   //0
 #endif // TEST_CCOIN_ASYNC_H

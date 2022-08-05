@@ -14,7 +14,7 @@
 #include <QTreeView>
 #include <QSortFilterProxyModel>
 
-#include "HeadlessContainer.h"
+#include "Wallets/HeadlessContainer.h"
 #include "UiUtils.h"
 #include "ValidityFlag.h"
 #include "Wallets/SyncHDWallet.h"
@@ -515,11 +515,6 @@ Qt::ItemFlags WalletsViewModel::flags(const QModelIndex &index) const
       }
    }
    return flags;
-}
-
-std::shared_ptr<bs::sync::Wallet> WalletsViewModel::getAuthWallet() const
-{
-   return walletsManager_->getAuthWallet();
 }
 
 static WalletNode::Type getHDWalletType(const std::shared_ptr<bs::sync::hd::Wallet> &hdWallet

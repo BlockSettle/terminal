@@ -17,7 +17,7 @@
 #include "ApiAdapter.h"
 #include "ServerConnection.h"
 #include "ServerConnectionListener.h"
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 #include "WsConnection.h"
 
 namespace BlockSettle {

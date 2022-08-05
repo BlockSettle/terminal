@@ -28,8 +28,8 @@
 #include "CacheFile.h"
 #include "CurrencyPair.h"
 #include "EasyCoDec.h"
-#include "HeadlessContainer.h"
-#include "InprocSigner.h"
+#include "Wallets/HeadlessContainer.h"
+#include "Wallets/InprocSigner.h"
 #include "MDCallbacksQt.h"
 #include "MarketDataProvider.h"
 #include "PriceAmount.h"
@@ -320,6 +320,8 @@ TEST(TestCommon, BotanSerpent)
 }
 
 #include "AssetEncryption.h"
+using namespace Armory::Wallets::Encryption;
+
 TEST(TestCommon, BotanSerpent_KDF_Romix)
 {
    Botan::AutoSeeded_RNG rng;

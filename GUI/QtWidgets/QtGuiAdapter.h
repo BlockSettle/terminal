@@ -15,7 +15,7 @@
 #include <QObject>
 #include "Address.h"
 #include "ApiAdapter.h"
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 #include "ThreadSafeClasses.h"
 #include "UiUtils.h"
 
@@ -68,8 +68,6 @@ namespace BlockSettle {
 class BSTerminalSplashScreen;
 class GuiThread;
 
-
-using GuiQueue = ArmoryThreading::TimedQueue<bs::message::Envelope>;
 
 class QtGuiAdapter : public QObject, public ApiBusAdapter, public bs::MainLoopRuner
 {
@@ -133,8 +131,6 @@ private:
    bool processMktData(const bs::message::Envelope&);
    bool processSecurity(const std::string&, int);
    bool processMdUpdate(const BlockSettle::Terminal::MktDataMessage_Prices &);
-   bool processAuthWallet(const BlockSettle::Common::WalletsMessage_WalletData&);
-   bool processAuthState(const BlockSettle::Common::OnChainTrackMessage_AuthState&);
    bool processBalance(const BlockSettle::Terminal::AssetsMessage_Balance&);
    bool processReservedUTXOs(const BlockSettle::Common::WalletsMessage_ReservedUTXOs&);
 
@@ -158,6 +154,7 @@ private slots:
    void onCreateExtAddress(const std::string& walletId);
    void onNeedExtAddresses(const std::string &walletId);
    void onNeedIntAddresses(const std::string &walletId);
+   void onNeedChangeAddress(const std::string& walletId);
    void onNeedUsedAddresses(const std::string &walletId);
    void onNeedAddrComments(const std::string &walletId, const std::vector<bs::Address> &);
    void onSetAddrComment(const std::string &walletId, const bs::Address &
@@ -171,7 +168,7 @@ private slots:
    void onNeedUTXOs(const std::string& id, const std::string& walletId
       , bool confOnly, bool swOnly);
    void onNeedSignTX(const std::string& id, const bs::core::wallet::TXSignRequest&
-      , bool keepDupRecips, SignContainer::TXSignMode);
+      , bool keepDupRecips, SignContainer::TXSignMode, const SecureBinaryData& passphrase);
    void onNeedBroadcastZC(const std::string& id, const BinaryData&);
    void onNeedSetTxComment(const std::string& walletId, const BinaryData& txHash
       , const std::string& comment);
@@ -181,7 +178,6 @@ private slots:
    void onNeedCancelLogin();
    void onNeedMatchingLogout();
    void onNeedMdConnection(ApplicationSettings::EnvConfiguration);
-   void onNeedAuthKey(const bs::Address&);
    void onNeedReserveUTXOs(const std::string& reserveId, const std::string& subId
       , uint64_t amount, bool withZC = false, const std::vector<UTXO>& utxos = {});
    void onNeedUnreserveUTXOs(const std::string& reserveId, const std::string& subId);
@@ -211,6 +207,8 @@ private:
 
    std::unordered_map<std::string, bs::network::Asset::Type>   assetTypes_;
    bool mdInstrumentsReceived_{ false };
+
+   std::set<bs::message::SeqId>  needChangeAddrReqs_;
 };
 
 

@@ -46,8 +46,7 @@ std::string UserTerminal::name() const
 TerminalInprocBus::TerminalInprocBus(const std::shared_ptr<spdlog::logger> &logger)
    : logger_(logger)
 {  // we can create multiple queues if needed and distribute them on adapters
-   queue_ = std::make_shared<Queue>(std::make_shared<Router>(logger), logger
-      , "Main", kTerminalUsersMapping);
+   queue_ = std::make_shared<Queue>(std::make_shared<Router>(logger), logger, "Main");
 }
 
 TerminalInprocBus::~TerminalInprocBus()

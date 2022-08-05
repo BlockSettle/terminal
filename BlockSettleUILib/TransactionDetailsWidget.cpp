@@ -20,7 +20,7 @@
 #include <memory>
 #include <QToolTip>
 
-using namespace ArmorySigner;
+using namespace Armory::Signer;
 
 Q_DECLARE_METATYPE(Tx);
 
@@ -54,21 +54,6 @@ TransactionDetailsWidget::TransactionDetailsWidget(QWidget *parent) :
 }
 
 TransactionDetailsWidget::~TransactionDetailsWidget() = default;
-
-// Initialize the widget and related widgets (block, address, Tx)
-void TransactionDetailsWidget::init(
-   const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<spdlog::logger> &inLogger
-   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-   , const std::shared_ptr<bs::sync::CCDataResolver> &resolver)
-{
-   armoryPtr_ = armory;
-   logger_ = inLogger;
-   walletsMgr_ = walletsMgr;
-   ccResolver_ = resolver;
-   act_ = make_unique<TxDetailsACT>(this);
-   act_->init(armoryPtr_.get());
-}
 
 void TransactionDetailsWidget::init(const std::shared_ptr<spdlog::logger> &logger)
 {
@@ -170,13 +155,18 @@ void TransactionDetailsWidget::populateTransactionWidget(const TxHash &rpcTXID
 
 void TransactionDetailsWidget::onTXDetails(const std::vector<bs::sync::TXWalletDetails> &txDet)
 {
-   if ((txDet.size() > 1) || (!txDet.empty() && (txDet[0].txHash != curTxHash_))) {
+   if (txDet.empty()) {
+      return;
+   }
+   if ((txDet.size() > 1) || (!txDet.empty() && !txDet[0].txHash.empty() && (txDet[0].txHash != curTxHash_))) {
       logger_->debug("[{}] not our TX details", __func__);
       return;  // not our data
    }
-   if (!txDet.empty()) {
-      curTx_ = txDet[0].tx;
+   if ((txDet[0].txHash.empty() || !txDet[0].tx.getSize()) && !txDet[0].comment.empty()) {
+      ui_->tranID->setText(QString::fromStdString(txDet[0].comment));
+      return;
    }
+   curTx_ = txDet[0].tx;
    if (!curTx_.isInitialized()) {
       ui_->tranID->setText(tr("Loading..."));
       return;
@@ -372,54 +362,6 @@ void TransactionDetailsWidget::loadInputs()
    loadTreeOut(ui_->treeOutput);
 }
 
-void TransactionDetailsWidget::updateTreeCC(QTreeWidget *tree
-   , const std::string &cc, uint64_t lotSize)
-{
-   for (int i = 0; i < tree->topLevelItemCount(); ++i) {
-      auto item = tree->topLevelItem(i);
-      const uint64_t amt = item->data(1, Qt::UserRole).toULongLong();
-      if (amt && ((amt % lotSize) == 0)) {
-         item->setData(1, Qt::DisplayRole, QString::number(amt / lotSize));
-         const auto addrWallet = item->data(2, Qt::DisplayRole).toString();
-         if (addrWallet.isEmpty()) {
-            item->setData(2, Qt::DisplayRole, QString::fromStdString(cc));
-         }
-         for (int j = 0; j < item->childCount(); ++j) {
-            auto outItem = item->child(j);
-            const uint64_t outAmt = outItem->data(1, Qt::UserRole).toULongLong();
-            outItem->setData(1, Qt::DisplayRole, QString::number(outAmt / lotSize));
-            outItem->setData(2, Qt::DisplayRole, QString::fromStdString(cc));
-         }
-      }
-   }
-}
-
-void TransactionDetailsWidget::checkTxForCC(const Tx &tx, QTreeWidget *treeWidget)
-{
-   for (const auto &cc : ccResolver_->securities()) {
-      const auto &genesisAddr = ccResolver_->genesisAddrFor(cc);
-      auto txChecker = std::make_shared<bs::TxAddressChecker>(genesisAddr, armoryPtr_);
-      const auto &cbHasGA = [this, txChecker, treeWidget, cc](bool found) {
-         if (!found) {
-            return;
-         }
-         QMetaObject::invokeMethod(this, [this, treeWidget, cc] {
-            updateTreeCC(treeWidget, cc, ccResolver_->lotSizeFor(cc));
-         });
-      };
-      txChecker->containsInputAddress(tx, cbHasGA, ccResolver_->lotSizeFor(cc));
-   }
-}
-
-void TransactionDetailsWidget::updateCCInputs()
-{
-   for (int i = 0; i < curTx_.getNumTxIn(); ++i) {
-      const OutPoint op = curTx_.getTxInCopy(i).getOutPoint();
-      const auto &prevTx = prevTxMap_[op.getTxHash()];
-      checkTxForCC(*prevTx, ui_->treeInput);
-   }
-}
-
 // Input widget population.
 void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
 {
@@ -463,8 +405,6 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
          , (hashCounts[intPrevTXID] > 1) ? op.getTxOutIndex() : -1);
    }
    tree->resizeColumns();
-
-   updateCCInputs();
 }
 
 // Output widget population.
@@ -499,8 +439,6 @@ void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree)
       // add the item to the tree
    }
    tree->resizeColumns();
-
-   checkTxForCC(curTx_, ui_->treeOutput);
 }
 
 void TransactionDetailsWidget::addItem(QTreeWidget *tree, const QString &address
