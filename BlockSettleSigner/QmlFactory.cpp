@@ -47,9 +47,13 @@ void QmlFactory::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManage
 bs::wallet::QSeed* QmlFactory::createSeedFromMnemonic(const QString &key, bool isTestNet)
 {
    auto networkType = isTestNet ? bs::wallet::QSeed::QNetworkType::TestNet : bs::wallet::QSeed::QNetworkType::MainNet;
+#if 0
    auto seed = new bs::wallet::QSeed(bs::wallet::QSeed::fromMnemonicWordList(key, networkType, bip39Dictionaries()));
    QQmlEngine::setObjectOwnership(seed, QQmlEngine::JavaScriptOwnership);
    return seed;
+#else
+   return nullptr;
+#endif
 }
 
 WalletInfo *QmlFactory::createWalletInfo() const{

@@ -35,6 +35,7 @@
 #include "InfoDialogs/AboutDialog.h"
 #include "InfoDialogs/StartupDialog.h"
 #include "InfoDialogs/SupportDialog.h"
+#include "ImportWalletDialog.h"
 #include "LoginWindow.h"
 #include "NotificationCenter.h"
 #include "Settings/ConfigDialog.h"
@@ -835,6 +836,17 @@ void MainWindow::onReservedUTXOs(const std::string& resId
 bs::gui::WalletSeedData MainWindow::getWalletSeed(const std::string& rootId) const
 {
    auto seedDialog = new bs::gui::qt::SeedDialog(rootId, (QWidget*)this);
+   const int rc = seedDialog->exec();
+   seedDialog->deleteLater();
+   if (rc == QDialog::Accepted) {
+      return seedDialog->getData();
+   }
+   return {};
+}
+
+bs::gui::WalletSeedData MainWindow::importWallet(const std::string& rootId) const
+{
+   auto seedDialog = new bs::gui::qt::ImportWalletDialog(rootId, (QWidget*)this);
    const int rc = seedDialog->exec();
    seedDialog->deleteLater();
    if (rc == QDialog::Accepted) {

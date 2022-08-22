@@ -8,56 +8,29 @@
 **********************************************************************************
 
 */
-#ifndef __SEED_DIALOG_H__
-#define __SEED_DIALOG_H__
+#ifndef __IMPORT_WALLET_DIALOG_H__
+#define __IMPORT_WALLET_DIALOG_H__
 
 #include <QDialog>
 #include <memory>
+#include "SeedDialog.h"
 #include "SecureBinaryData.h"
-
-namespace Ui {
-   class SeedDialog;
-}
-namespace bs {
-   namespace sync {
-      class Wallet;
-   }
-}
-class QPushButton;
 
 namespace bs {
    namespace gui {
-      struct WalletSeedData
-      {
-         std::string name;
-         std::string description;
-         SecureBinaryData  password;
-         SecureBinaryData  seed;
-         std::string xpriv;
-
-         bool empty() const
-         {
-            return (name.empty() || (seed.empty() && xpriv.empty()));
-         }
-      };
-
       namespace qt {
-         class SeedDialog : public QDialog
+         class ImportWalletDialog : public QDialog
          {
             Q_OBJECT
 
          public:
-            SeedDialog(const std::string& rootId, QWidget* parent = nullptr);
-            ~SeedDialog() override;
+            ImportWalletDialog(const std::string& rootId, QWidget* parent = nullptr);
+            ~ImportWalletDialog() override;
 
             WalletSeedData getData() const { return data_; }
 
-         protected:
-            void showEvent(QShowEvent* event) override;
-
          private slots:
             void onClose();
-            void generateSeed();
             void onDataAvail();
             void onPasswordEdited();
             void on12WordsChanged();
@@ -72,4 +45,4 @@ namespace bs {
    }
 }
 
-#endif // __SEED_DIALOG_H__
+#endif // __IMPORT_WALLET_DIALOG_H__

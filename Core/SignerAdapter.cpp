@@ -134,6 +134,8 @@ bool SignerAdapter::processOwnRequest(const bs::message::Envelope &env
       return processDialogRequest(env, request.dialog_request());
    case SignerMessage::kCreateWallet:
       return processCreateWallet(env, request.create_wallet());
+   case SignerMessage::kImportWallet:
+      return processCreateWallet(env, request.import_wallet());
    default:
       logger_->warn("[{}] unknown signer request: {}", __func__, request.data_case());
       break;

@@ -64,10 +64,7 @@ class ApiBusGateway;
 class ApiBusAdapter : public bs::message::Adapter
 {
 public:
-   std::set<std::shared_ptr<bs::message::User>> supportedReceivers() const override
-   {
-      return { user_ };
-   }
+   Users supportedReceivers() const override { return { user_ }; }
 
    void setUserId(const bs::message::UserValue userVal)
    {
@@ -94,9 +91,7 @@ public:
       return process(env);
    }
 
-   std::set<std::shared_ptr<bs::message::User>> supportedReceivers() const override {
-      return { user_ };
-   }
+   Users supportedReceivers() const override { return { user_ }; }
    std::string name() const override { return "API"; }
 
    void add(const std::shared_ptr<ApiBusAdapter> &);

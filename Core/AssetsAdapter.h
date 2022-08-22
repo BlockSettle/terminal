@@ -36,9 +36,7 @@ public:
    bool process(const bs::message::Envelope &) override;
    bool processBroadcast(const bs::message::Envelope&) override;
 
-   std::set<std::shared_ptr<bs::message::User>> supportedReceivers() const override {
-      return { user_ };
-   }
+   Users supportedReceivers() const override { return { user_ }; }
    std::string name() const override { return "Assets"; }
 
 private:    // AssetMgr callbacks override

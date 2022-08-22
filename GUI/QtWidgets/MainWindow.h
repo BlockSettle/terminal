@@ -121,6 +121,7 @@ namespace bs {
                , const std::vector<UTXO>&);
 
             bs::gui::WalletSeedData getWalletSeed(const std::string& rootId) const;
+            bs::gui::WalletSeedData importWallet(const std::string& rootId) const;
 
          public slots:
             void onReactivate();

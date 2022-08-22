@@ -67,10 +67,7 @@ public:
       , userTermBroadcast_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::BROADCAST))
    {}
 
-   std::set<std::shared_ptr<bs::message::User>> supportedReceivers() const override
-   {
-      return { user_ };
-   }
+   Users supportedReceivers() const override { return { user_ }; }
    std::string name() const override { return "APIbusGW"; }
 
    bool processBroadcast(const bs::message::Envelope& env) override

@@ -1251,6 +1251,23 @@ void QtGuiAdapter::onNeedWalletDialog(bs::signer::ui::GeneralDialogType dlgType
          });
       }
       break;
+   case bs::signer::ui::GeneralDialogType::ImportWallet:
+      if (mainWindow_) {
+         QMetaObject::invokeMethod(mainWindow_, [this, rootId] {
+            const auto& seedData = mainWindow_->importWallet(rootId);
+            if (!seedData.empty()) {
+               SignerMessage msg;
+               auto msgReq = msg.mutable_import_wallet();
+               msgReq->set_name(seedData.name);
+               msgReq->set_description(seedData.description);
+               msgReq->set_xpriv_key(seedData.xpriv);
+               msgReq->set_seed(seedData.seed.toBinStr());
+               msgReq->set_password(seedData.password.toBinStr());
+               pushRequest(user_, userSigner_, msg.SerializeAsString());
+            }
+         });
+      }
+      break;
    default:
       logger_->debug("[{}] {} ({})", __func__, (int)dlgType, rootId);
       break;
