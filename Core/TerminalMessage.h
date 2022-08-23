@@ -86,17 +86,21 @@ namespace bs {
          ~TerminalInprocBus() override;
 
          void addAdapter(const std::shared_ptr<Adapter> &) override;
+         void addAdapterWithQueue(const std::shared_ptr<Adapter>&
+            , const std::string& qName);
 
          void shutdown();
          bool run(int &argc, char **argv);
 
       private:
          void start();
+         void sendLoading(const std::shared_ptr<Adapter>&, const std::shared_ptr<Queue>&);
 
       private:
          std::shared_ptr<spdlog::logger>  logger_;
-         std::shared_ptr<Queue>  queue_;
+         std::map<std::string, std::shared_ptr<Queue>>   queues_;
          std::shared_ptr<MainLoopRuner>   runnableAdapter_;
+         std::shared_ptr<RelayAdapter>    relayAdapter_;
       };
 
    } // namespace message

@@ -235,7 +235,9 @@ void QtGuiAdapter::run(int &argc, char **argv)
    updateSplashProgress();
    splashScreen_->show();
 
+   logger_->debug("[QtGuiAdapter::run] creating main window");
    mainWindow_ = new bs::gui::qt::MainWindow(logger_, queue_, user_);
+   logger_->debug("[QtGuiAdapter::run] start main window connections");
    makeMainWinConnections();
    updateStates();
 

@@ -164,18 +164,19 @@ int main(int argc, char** argv)
 
       const auto &apiAdapter = std::make_shared<ApiAdapter>(logMgr->logger("API"));
       const auto &guiAdapter = std::make_shared<QtGuiAdapter>(logMgr->logger("ui"));
+      //const auto& guiAdapter = std::make_shared<QtQuickAdapter>(logMgr->logger("ui"));
       apiAdapter->add(guiAdapter);
       apiAdapter->add(std::make_shared<ApiJsonAdapter>(logMgr->logger("json")));
       inprocBus.addAdapter(apiAdapter);
 
       const auto &signAdapter = std::make_shared<SignerAdapter>(logMgr->logger());
-      inprocBus.addAdapter(signAdapter);
+      inprocBus.addAdapterWithQueue(signAdapter, "signer");
 
       const auto& userBlockchain = bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain);
       const auto& userWallets = bs::message::UserTerminal::create(bs::message::TerminalUsers::Wallets);
       inprocBus.addAdapter(std::make_shared<AssetsAdapter>(logMgr->logger()));
-      inprocBus.addAdapter(std::make_shared<WalletsAdapter>(logMgr->logger()
-         , userWallets, signAdapter->createClient(), userBlockchain));
+      inprocBus.addAdapterWithQueue(std::make_shared<WalletsAdapter>(logMgr->logger()
+         , userWallets, signAdapter->createClient(), userBlockchain), "wallets");
       inprocBus.addAdapter(std::make_shared<BsServerAdapter>(logMgr->logger("bscon")));
 
       //inprocBus.addAdapter(std::make_shared<MatchingAdapter>(logMgr->logger("match")));
@@ -183,8 +184,8 @@ int main(int argc, char** argv)
       //inprocBus.addAdapter(std::make_shared<MktDataAdapter>(logMgr->logger("md")));
       //inprocBus.addAdapter(std::make_shared<MDHistAdapter>(logMgr->logger("mdh")));
       //inprocBus.addAdapter(std::make_shared<ChatAdapter>(logMgr->logger("chat")));
-      inprocBus.addAdapter(std::make_shared<BlockchainAdapter>(logMgr->logger()
-         , userBlockchain));
+      inprocBus.addAdapterWithQueue(std::make_shared<BlockchainAdapter>(logMgr->logger()
+         , userBlockchain), "blkchain_conn");
 
       if (!inprocBus.run(argc, argv)) {
          logMgr->logger()->error("No runnable adapter found on main inproc bus");

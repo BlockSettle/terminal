@@ -77,7 +77,7 @@ protected:
 };
 
 
-class ApiAdapter : public bs::message::Adapter, public bs::MainLoopRuner
+class ApiAdapter : public bs::message::RelayAdapter, public bs::MainLoopRuner
 {
    friend class ApiBusGateway;
 public:
@@ -85,13 +85,9 @@ public:
    ~ApiAdapter() override = default;
 
    bool process(const bs::message::Envelope &) override;
+   bool processBroadcast(const bs::message::Envelope& env) override;
 
-   bool processBroadcast(const bs::message::Envelope& env) override
-   {
-      return process(env);
-   }
-
-   Users supportedReceivers() const override { return { user_ }; }
+   Users supportedReceivers() const override { return { user_, fallbackUser_ }; }
    std::string name() const override { return "API"; }
 
    void add(const std::shared_ptr<ApiBusAdapter> &);
@@ -106,6 +102,5 @@ private:
 
    bs::message::UserValue  nextApiUser_{ 0 };
 };
-
 
 #endif	// API_ADAPTER_H
