@@ -544,6 +544,23 @@ bool QtGuiAdapter::processSigner(const Envelope &env)
       break;
    case SignerMessage::kSignTxResponse:
       return processSignTX(msg.sign_tx_response());
+   case SignerMessage::kWalletDeleted:
+      if (mainWindow_) {
+         const auto& itWallet = hdWallets_.find(msg.wallet_deleted());
+         QMetaObject::invokeMethod(mainWindow_, [this, itWallet, rootId=msg.wallet_deleted()] {
+            bs::sync::WalletInfo wi;
+            if (itWallet == hdWallets_.end()) {
+               wi.ids.push_back(rootId);
+            } else {
+               wi = itWallet->second;
+            }
+            mainWindow_->onWalletDeleted(wi);
+            if (itWallet != hdWallets_.end()) {
+               hdWallets_.erase(itWallet);
+            }
+         });
+      }
+      break;
    default:    break;
    }
    return true;
@@ -1265,6 +1282,19 @@ void QtGuiAdapter::onNeedWalletDialog(bs::signer::ui::GeneralDialogType dlgType
                msgReq->set_xpriv_key(seedData.xpriv);
                msgReq->set_seed(seedData.seed.toBinStr());
                msgReq->set_password(seedData.password.toBinStr());
+               pushRequest(user_, userSigner_, msg.SerializeAsString());
+            }
+         });
+      }
+      break;
+   case bs::signer::ui::GeneralDialogType::DeleteWallet:
+      if (mainWindow_) {
+         const auto& itWallet = hdWallets_.find(rootId);
+         const std::string walletName = (itWallet == hdWallets_.end()) ? "" : itWallet->second.name;
+         QMetaObject::invokeMethod(mainWindow_, [this, rootId, walletName] {
+            if (mainWindow_->deleteWallet(rootId, walletName)) {
+               SignerMessage msg;
+               msg.set_delete_wallet(rootId);
                pushRequest(user_, userSigner_, msg.SerializeAsString());
             }
          });

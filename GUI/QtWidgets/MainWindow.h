@@ -122,6 +122,7 @@ namespace bs {
 
             bs::gui::WalletSeedData getWalletSeed(const std::string& rootId) const;
             bs::gui::WalletSeedData importWallet(const std::string& rootId) const;
+            bool deleteWallet(const std::string& rootId, const std::string& name) const;
 
          public slots:
             void onReactivate();

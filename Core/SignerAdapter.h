@@ -104,6 +104,7 @@ private:
       , const BlockSettle::Common::SignerMessage_DialogRequest&);
    bool processCreateWallet(const bs::message::Envelope&
       , const BlockSettle::Common::SignerMessage_CreateWalletRequest&);
+   bool processDeleteWallet(const bs::message::Envelope&, const std::string& rootId);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

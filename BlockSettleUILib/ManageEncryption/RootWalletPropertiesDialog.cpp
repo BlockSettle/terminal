@@ -262,6 +262,13 @@ void RootWalletPropertiesDialog::onSpendableUTXOs()
 //   ui_->labelUTXOs->setText(QString::number(sizeUTXOs));
 }
 
+void RootWalletPropertiesDialog::walletDeleted(const std::string& rootId)
+{
+   if (walletInfo_.rootId().toStdString() == rootId) {
+      close();
+   }
+}
+
 void RootWalletPropertiesDialog::onWalletBalances(const bs::sync::WalletBalanceData&)
 {
 //   ui_->labelAddressesUsed->setText(QString::number(wallet->getUsedAddressCount()));

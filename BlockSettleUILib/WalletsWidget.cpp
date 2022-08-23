@@ -311,6 +311,9 @@ void WalletsWidget::onHDWallet(const bs::sync::WalletInfo &wi)
 
 void WalletsWidget::onWalletDeleted(const bs::sync::WalletInfo& wi)
 {
+   if (rootDlg_) {
+      rootDlg_->walletDeleted(*wi.ids.cbegin());
+   }
    walletsModel_->onWalletDeleted(wi);
    wallets_.erase(wi);
 }

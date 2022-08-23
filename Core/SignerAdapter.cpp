@@ -136,6 +136,8 @@ bool SignerAdapter::processOwnRequest(const bs::message::Envelope &env
       return processCreateWallet(env, request.create_wallet());
    case SignerMessage::kImportWallet:
       return processCreateWallet(env, request.import_wallet());
+   case SignerMessage::kDeleteWallet:
+      return processDeleteWallet(env, request.delete_wallet());
    default:
       logger_->warn("[{}] unknown signer request: {}", __func__, request.data_case());
       break;
@@ -588,6 +590,21 @@ bool SignerAdapter::processCreateWallet(const bs::message::Envelope& env
    catch (const std::exception& e) {
       logger_->error("[{}] failed to create wallet: {}", __func__, e.what());
       msgResp->set_error_msg(e.what());
+   }
+   pushResponse(user_, env, msg.SerializeAsString());
+   return true;
+}
+
+bool SignerAdapter::processDeleteWallet(const bs::message::Envelope& env
+   , const std::string& rootId)
+{
+   SignerMessage msg;
+   const auto& hdWallet = walletsMgr_->getHDWalletById(rootId);
+   if (walletsMgr_->deleteWalletFile(hdWallet)) {
+      msg.set_wallet_deleted(rootId);
+   }
+   else {
+      msg.set_wallet_deleted("");
    }
    pushResponse(user_, env, msg.SerializeAsString());
    return true;

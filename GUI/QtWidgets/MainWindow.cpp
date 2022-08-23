@@ -855,6 +855,17 @@ bs::gui::WalletSeedData MainWindow::importWallet(const std::string& rootId) cons
    return {};
 }
 
+bool bs::gui::qt::MainWindow::deleteWallet(const std::string& rootId, const std::string& name) const
+{
+   BSMessageBox mBox(BSMessageBox::question, tr("Wallet delete")
+      , tr("Are you sure you want to delete wallet %1 with id %2?")
+      .arg(QString::fromStdString(name)).arg(QString::fromStdString(rootId))
+      , (QWidget*)this);
+   mBox.setConfirmButtonText(tr("Yes"));
+   mBox.setCancelButtonText(tr("No"));
+   return (mBox.exec() == QDialog::Accepted);
+}
+
 void MainWindow::showRunInBackgroundMessage()
 {
    sysTrayIcon_->showMessage(tr("BlockSettle is running")
