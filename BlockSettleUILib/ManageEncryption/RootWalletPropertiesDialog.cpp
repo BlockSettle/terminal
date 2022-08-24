@@ -151,8 +151,7 @@ static inline QString encTypeToString(bs::wallet::EncryptionType enc)
       case bs::wallet::EncryptionType::Hardware :
          return QObject::tr("Hardware Security Module");
    };
-
-   //no default entry in switch statment nor default return value
+   return QObject::tr("Unknown");
 }
 
 void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, const bs::hd::WalletInfo &walletInfo)

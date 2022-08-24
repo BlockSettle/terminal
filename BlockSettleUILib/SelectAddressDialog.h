@@ -35,11 +35,6 @@ class SelectAddressDialog : public QDialog
 Q_OBJECT
 
 public:
-   [[deprecated]] SelectAddressDialog(const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::sync::Wallet> &, QWidget* parent = nullptr
-      , AddressListModel::AddressType addrType = AddressListModel::AddressType::All);
-   [[deprecated]] SelectAddressDialog(const std::shared_ptr<bs::sync::hd::Group> &, QWidget* parent = nullptr
-      , AddressListModel::AddressType addrType = AddressListModel::AddressType::All);
    SelectAddressDialog(QWidget* parent
       , AddressListModel::AddressType addrType = AddressListModel::AddressType::All);
    ~SelectAddressDialog() override;
@@ -64,7 +59,6 @@ public slots:
    void onDoubleClicked(const QModelIndex& index);
 
 private:
-   [[deprecated]] void init();
    bs::Address getAddress(const QModelIndex& index) const;
 
 private:

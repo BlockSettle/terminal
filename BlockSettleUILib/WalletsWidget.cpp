@@ -218,9 +218,6 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    ui_->treeViewWallets->setExpandsOnDoubleClick(false);
    // show the column as per BST-1520
    //ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnID));
-   if (walletsManager_) {
-      walletsModel_->LoadWallets();
-   }
 
    connect(ui_->walletPropertiesButton, &QPushButton::clicked, this, &WalletsWidget::showSelectedWalletProperties);
    connect(ui_->createWalletButton, &QPushButton::clicked, this, &WalletsWidget::onNewWallet);
@@ -234,7 +231,7 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
 
    // No need to connect to wallet manager in AddressListModel explicitly in this case
    // so just put nullptr pointer in function
-   addressModel_ = new AddressListModel(nullptr, this);
+   addressModel_ = new AddressListModel(this);
    connect(addressModel_, &AddressListModel::needExtAddresses, this, &WalletsWidget::needExtAddresses);
    connect(addressModel_, &AddressListModel::needIntAddresses, this, &WalletsWidget::needIntAddresses);
    connect(addressModel_, &AddressListModel::needUsedAddresses, this, &WalletsWidget::needUsedAddresses);
