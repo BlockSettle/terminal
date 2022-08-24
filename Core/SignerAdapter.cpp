@@ -600,7 +600,7 @@ bool SignerAdapter::processDeleteWallet(const bs::message::Envelope& env
 {
    SignerMessage msg;
    const auto& hdWallet = walletsMgr_->getHDWalletById(rootId);
-   if (walletsMgr_->deleteWalletFile(hdWallet)) {
+   if (hdWallet && walletsMgr_->deleteWalletFile(hdWallet)) {
       msg.set_wallet_deleted(rootId);
    }
    else {
