@@ -272,10 +272,10 @@ unsigned int TXNode::level() const
 TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<spdlog::logger> &logger
    , QObject* parent)
    : QAbstractItemModel(parent), logger_(logger)
-   , allWallets_(true), filterAddress_()
+   , filterAddress_{}
 {
    stopped_ = std::make_shared<std::atomic_bool>(false);
-   rootNode_.reset(new TXNode);
+   rootNode_ = std::make_unique<TXNode>();
 }
 
 TransactionsViewModel::~TransactionsViewModel() noexcept
@@ -388,24 +388,6 @@ QVariant TransactionsViewModel::headerData(int section, Qt::Orientation orientat
    return QVariant();
 }
 
-void TransactionsViewModel::refresh()
-{
-   updatePage();
-}
-
-void TransactionsViewModel::onWalletDeleted(std::string)
-{
-   clear();
-   updatePage();
-}
-
-void TransactionsViewModel::updatePage()
-{
-   if (allWallets_) {
-//      loadAllWallets();
-   }
-}
-
 void TransactionsViewModel::clear()
 {
    *stopped_ = true;
@@ -513,7 +495,7 @@ void TransactionsViewModel::onDelRows(std::vector<int> rows)
 {        // optimize for contiguous ranges, if needed
    std::sort(rows.begin(), rows.end());
    int rowCnt = rowCount();
-   QMutexLocker locker(&updateMutex_);
+   //QMutexLocker locker(&updateMutex_);
    for (int i = 0; i < rows.size(); ++i) {
       const int row = rows[i] - i;  // special hack for correcting row index after previous row deletion
       if ((row < 0) || row >= rowCnt) {
@@ -522,6 +504,19 @@ void TransactionsViewModel::onDelRows(std::vector<int> rows)
 
       beginRemoveRows(QModelIndex(), row, row);
       rootNode_->del(row);
+      auto itIndex = itemIndex_.begin();
+      while (itIndex != itemIndex_.end()) {
+         if (itIndex->second < row) {
+            itIndex++;
+            continue;
+         }
+         if (itIndex->second == row) {
+            itIndex = itemIndex_.erase(itIndex);
+            continue;
+         }
+         itIndex->second--;
+         itIndex++;
+      }
       endRemoveRows();
       rowCnt--;
    }
@@ -701,6 +696,24 @@ void TransactionsViewModel::onTXDetails(const std::vector<bs::sync::TXWalletDeta
       }
       endInsertRows();
    }
+}
+
+size_t TransactionsViewModel::removeEntriesFor(const bs::sync::HDWalletData& wallet)
+{
+   std::vector<int> delRows;
+   for (const auto& group : wallet.groups) {
+      for (const auto& leaf : group.leaves) {
+         for (const auto& id : leaf.ids) {
+            for (const auto& index : itemIndex_) {
+               if (index.first.walletId == id) {
+                  delRows.push_back(index.second);
+               }
+            }
+         }
+      }
+   }
+   onDelRows(delRows);
+   return delRows.size();
 }
 
 

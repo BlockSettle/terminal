@@ -75,6 +75,7 @@ public:
    virtual void onChangeAddress(const std::string& walletId, const bs::Address&);
 
    virtual void onWalletsList(const std::string &id, const std::vector<bs::sync::HDWalletData>&);
+   virtual void onWalletDeleted(const bs::sync::WalletInfo&);
    void onFeeLevels(const std::map<unsigned int, float>&);
    void onUTXOs(const std::string& id, const std::string& walletId, const std::vector<UTXO>&);
    void onSignedTX(const std::string& id, BinaryData signedTX, bs::error::ErrorCode result);
@@ -152,13 +153,13 @@ protected slots:
 
 protected:
    void populateFeeList();
+   void populateWalletsList();
 
    bool createTransactionImpl();
 
    static bool canUseSimpleMode(const Bip21::PaymentRequestInfo& paymentInfo);
 
 private:
-   void populateWalletsList();
    void startBroadcasting();
    void stopBroadcasting();
 

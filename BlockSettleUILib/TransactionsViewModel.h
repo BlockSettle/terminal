@@ -161,14 +161,12 @@ public:
    void onZCsInvalidated(const std::vector<BinaryData>& txHashes);
    void onNewBlock(unsigned int topBlock);
    void onTXDetails(const std::vector<bs::sync::TXWalletDetails> &);
+   size_t removeEntriesFor(const bs::sync::HDWalletData&);
 
 signals:
    void needTXDetails(const std::vector<bs::sync::TXWallet> &, bool useCache, const bs::Address &);
 
 private slots:
-   void updatePage();
-   void refresh();
-   void onWalletDeleted(std::string walletId);
    void onNewItems(const std::vector<TXNode *> &);
    void onDelRows(std::vector<int> rows);
    void onItemConfirmed(const TransactionPtr);
@@ -214,7 +212,6 @@ private:
    mutable QMutex                      updateMutex_;
    std::shared_ptr<bs::sync::Wallet>   defaultWallet_;
    std::atomic_bool  signalOnEndLoading_{ false };
-   const bool        allWallets_;
    std::shared_ptr<std::atomic_bool>  stopped_;
    std::atomic_bool  initialLoadCompleted_{ true };
 

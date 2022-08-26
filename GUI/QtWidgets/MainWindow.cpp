@@ -221,12 +221,17 @@ void MainWindow::onHDWallet(const bs::sync::WalletInfo &wi)
 void bs::gui::qt::MainWindow::onWalletDeleted(const bs::sync::WalletInfo& wi)
 {
    ui_->widgetWallets->onWalletDeleted(wi);
+   if (txDlg_) {
+      txDlg_->onWalletDeleted(wi);
+   }
+   ui_->widgetTransactions->onWalletDeleted(wi);
 }
 
 void MainWindow::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
 {
    ui_->widgetWallets->onHDWalletDetails(hdWallet);
    ui_->widgetPortfolio->onHDWalletDetails(hdWallet);
+   ui_->widgetTransactions->onHDWalletDetails(hdWallet);
 }
 
 void MainWindow::onWalletsList(const std::string &id, const std::vector<bs::sync::HDWalletData>& wallets)

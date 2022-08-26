@@ -18,6 +18,7 @@
 #include "BinaryData.h"
 #include "BSErrorCode.h"
 #include "TransactionsWidgetInterface.h"
+#include "Wallets/SignerDefs.h"
 
 namespace spdlog {
    class logger;
@@ -49,9 +50,11 @@ public:
 
    void init(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<TransactionsViewModel> &);
-   [[deprecated]] void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel> &);
 
    void shortcutActivated(ShortcutType s) override;
+
+   void onHDWalletDetails(const bs::sync::HDWalletData&);
+   void onWalletDeleted(const bs::sync::WalletInfo&);
 
 private slots:
    void showTransactionDetails(const QModelIndex& index);
@@ -66,9 +69,9 @@ private slots:
 private:
    void scheduleDateFilterCheck();
    std::unique_ptr<Ui::TransactionsWidget> ui_;
+   std::unordered_map<std::string, bs::sync::HDWalletData>   wallets_;
 
    TransactionsSortFilterModel         *  sortFilterModel_;
-   
 };
 
 

@@ -603,7 +603,6 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
 
    case WalletsMessage::kWalletAddresses: {
       std::vector<bs::sync::Address> addresses;
-      logger_->debug("[kWalletAddresses] #{}", env.responseId());
       for (const auto &addr : msg.wallet_addresses().addresses()) {
          try {
             addresses.push_back({ std::move(bs::Address::fromAddressString(addr.address()))
@@ -651,6 +650,11 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
       return processUTXOs(msg.utxos());
    case WalletsMessage::kReservedUtxos:
       return processReservedUTXOs(msg.reserved_utxos());
+   case WalletsMessage::kWalletChanged:
+      if (walletsReady_) {
+         onNeedLedgerEntries({});
+      }
+      break;
    default:    break;
    }
    return true;
@@ -1056,7 +1060,7 @@ void QtGuiAdapter::onNeedTXDetails(const std::vector<bs::sync::TXWallet> &txWall
    auto msgReq = msg.mutable_tx_details_request();
    for (const auto &txw : txWallet) {
       auto request = msgReq->add_requests();
-      logger_->debug("[{}] {}", __func__, txw.txHash.toHexStr());
+      //logger_->debug("[{}] {}", __func__, txw.txHash.toHexStr());
       request->set_tx_hash(txw.txHash.toBinStr());
       request->set_wallet_id(txw.walletId);
       request->set_value(txw.value);
