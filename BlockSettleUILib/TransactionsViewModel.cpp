@@ -604,16 +604,20 @@ void TransactionsViewModel::onLedgerEntries(const std::string &, uint32_t
 void TransactionsViewModel::onZCsInvalidated(const std::vector<BinaryData>& txHashes)
 {
    for (const auto& txHash : txHashes) {
-      const auto node = rootNode_->find(txHash);
-      if (node) {
+      for (const auto& node : rootNode_->nodesByTxHash(txHash)) {
          const int row = node->row();
          beginRemoveRows(QModelIndex(), row, row);
          auto removedNode = rootNode_->take(row);
          itemIndex_.erase({ node->item()->txEntry.txHash, node->item()->walletID.toStdString() });
+         for (auto& idx : itemIndex_) {
+            if (idx.second > row) {
+               idx.second--;
+            }
+         }
          endRemoveRows();
          if (removedNode) {
             removedNode->item()->curBlock = curBlock_;
-            invalidatedNodes_[txHash] = removedNode;
+            invalidatedNodes_[{ txHash, node->item()->walletID.toStdString() }] = removedNode;
          }
       }
    }
@@ -635,12 +639,13 @@ void TransactionsViewModel::onTXDetails(const std::vector<bs::sync::TXWalletDeta
       int row = -1;
       const auto &itIndex = itemIndex_.find({tx.txHash, tx.walletId});
       if (itIndex == itemIndex_.end()) {
-         const auto& itInv = invalidatedNodes_.find(tx.txHash);
+         const auto& itInv = invalidatedNodes_.find({ tx.txHash, tx.walletId });
          if (itInv == invalidatedNodes_.end()) {
             continue;
          }
-         newNodes.push_back(itInv->second);
-         item = itInv->second->item();
+         const auto& invNode = itInv->second;
+         newNodes.push_back(invNode);
+         item = invNode->item();
          invalidatedNodes_.erase(itInv);
       }
       else {

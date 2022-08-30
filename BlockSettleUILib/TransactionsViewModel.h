@@ -206,7 +206,6 @@ public:
 
 private:
    std::unique_ptr<TXNode>       rootNode_;
-   std::map<BinaryData, TXNode*> invalidatedNodes_;
    TransactionPtr oldestItem_;
    std::shared_ptr<spdlog::logger>     logger_;
    mutable QMutex                      updateMutex_;
@@ -229,7 +228,8 @@ private:
          return ((txHash == other.txHash) && (walletId == other.walletId));
       }
    };
-   std::map<ItemKey, int>  itemIndex_;
+   std::map<ItemKey, int>     itemIndex_;
+   std::map<ItemKey, TXNode*> invalidatedNodes_;
 
    // If set, amount field will show only related address balance changes
    // (without fees because fees are related to transaction, not address).

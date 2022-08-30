@@ -503,8 +503,6 @@ bool QtGuiAdapter::processBlockchain(const Envelope &env)
          });
       }
       break;
-   case ArmoryMessage::kLedgerEntries:
-      return processLedgerEntries(msg.ledger_entries());
    case ArmoryMessage::kAddressHistory:
       return processAddressHist(msg.address_history());
    case ArmoryMessage::kFeeLevelsResponse:
@@ -655,6 +653,8 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
          onNeedLedgerEntries({});
       }
       break;
+   case WalletsMessage::kLedgerEntries:
+      return processLedgerEntries(msg.ledger_entries());
    default:    break;
    }
    return true;
@@ -1048,9 +1048,9 @@ void QtGuiAdapter::onSetAddrComment(const std::string &walletId, const bs::Addre
 
 void QtGuiAdapter::onNeedLedgerEntries(const std::string &filter)
 {
-   ArmoryMessage msg;
+   WalletsMessage msg;
    msg.set_get_ledger_entries(filter);
-   pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedTXDetails(const std::vector<bs::sync::TXWallet> &txWallet
@@ -1438,7 +1438,7 @@ bool QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMessage_TXDetai
    });
 }
 
-bool QtGuiAdapter::processLedgerEntries(const ArmoryMessage_LedgerEntries &response)
+bool QtGuiAdapter::processLedgerEntries(const LedgerEntries &response)
 {
    std::vector<bs::TXEntry> entries;
    for (const auto &entry : response.entries()) {

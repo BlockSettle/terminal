@@ -30,9 +30,9 @@ namespace BlockSettle {
    namespace Common {
       class ArmoryMessage_AddressHistory;
       class ArmoryMessage_FeeLevelsResponse;
-      class ArmoryMessage_LedgerEntries;
       class ArmoryMessage_ZCInvalidated;
       class ArmoryMessage_ZCReceived;
+      class LedgerEntries;
       class OnChainTrackMessage_AuthAddresses;
       class OnChainTrackMessage_AuthState;
       class SignerMessage_SignTxResponse;
@@ -112,7 +112,7 @@ private:
    bool processWalletBalances(const bs::message::Envelope &
       , const BlockSettle::Common::WalletsMessage_WalletBalances &);
    bool processTXDetails(uint64_t msgId, const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
-   bool processLedgerEntries(const BlockSettle::Common::ArmoryMessage_LedgerEntries &);
+   bool processLedgerEntries(const BlockSettle::Common::LedgerEntries &);
    bool processAddressHist(const BlockSettle::Common::ArmoryMessage_AddressHistory&);
    bool processFeeLevels(const BlockSettle::Common::ArmoryMessage_FeeLevelsResponse&);
    bool processWalletsList(const BlockSettle::Common::WalletsMessage_WalletsListResponse&);
