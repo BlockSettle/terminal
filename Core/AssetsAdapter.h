@@ -33,7 +33,7 @@ public:
    AssetsAdapter(const std::shared_ptr<spdlog::logger> &);
    ~AssetsAdapter() override = default;
 
-   bool process(const bs::message::Envelope &) override;
+   bs::message::ProcessingResult process(const bs::message::Envelope &) override;
    bool processBroadcast(const bs::message::Envelope&) override;
 
    Users supportedReceivers() const override { return { user_ }; }
@@ -50,17 +50,16 @@ private:    // AssetMgr callbacks override
    void onSecuritiesChanged() override;
 
    //internal processing
-   bool processGetSettings(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
+   bs::message::ProcessingResult processGetSettings(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
    bool onMatchingLogin(const BlockSettle::Terminal::MatchingMessage_LoggedIn&);
-   bool processSubmittedAuth(const BlockSettle::Terminal::MatchingMessage_SubmittedAuthAddresses&);
-   bool processSubmitAuth(const std::string&);
-   bool processBalance(const std::string& currency, double);
+   bs::message::ProcessingResult processSubmittedAuth(const BlockSettle::Terminal::MatchingMessage_SubmittedAuthAddresses&);
+   bs::message::ProcessingResult processSubmitAuth(const std::string&);
+   bs::message::ProcessingResult processBalance(const std::string& currency, double);
 
 private:
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::message::User>  user_;
    std::unique_ptr<AssetManager>       assetMgr_;
 };
-
 
 #endif	// ASSETS_ADAPTER_H

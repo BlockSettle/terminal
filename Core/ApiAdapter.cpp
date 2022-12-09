@@ -11,6 +11,7 @@
 #include "ApiAdapter.h"
 #include <spdlog/spdlog.h>
 
+using namespace bs::message;
 
 class ApiRouter : public bs::message::Router
 {
@@ -75,7 +76,7 @@ public:
       return false;   // ignore unsolicited broadcasts
    }
 
-   bool process(const bs::message::Envelope &env) override
+   ProcessingResult process(const bs::message::Envelope &env) override
    {
       auto envCopy = env;
       envCopy.setId(0);
@@ -87,23 +88,25 @@ public:
                std::unique_lock<std::mutex> lock(mtxIdMap_);
                idMap_[envCopy.foreignId()] = { env.foreignId(), env.sender };
             }
-            return true;
+            return ProcessingResult::Success;
          }
          else {
-            return false;
+            return ProcessingResult::Retry;
          }
       }
       else if (env.receiver->isFallback()) {
          if (env.isRequest()) {
             envCopy.receiver = userTermBroadcast_;
-            return parent_->pushFill(envCopy);
+            return parent_->pushFill(envCopy) ? ProcessingResult::Success
+               : ProcessingResult::Retry;
          }
          else {
             std::unique_lock<std::mutex> lock(mtxIdMap_);
             const auto &itId = idMap_.find(env.responseId());
             if (itId == idMap_.end()) {
                envCopy.receiver = userTermBroadcast_;
-               return parent_->pushFill(envCopy);
+               return parent_->pushFill(envCopy) ? ProcessingResult::Success
+                  : ProcessingResult::Retry;
             }
             else {
                envCopy = bs::message::Envelope::makeResponse(parent_->user_
@@ -113,14 +116,14 @@ public:
                if (parent_->pushFill(envCopy)) {
                   idMap_.erase(env.responseId());
                }
-               return true;
+               return ProcessingResult::Success;
             }
          }
       }
-      return true;
+      return ProcessingResult::Success;
    }
 
-   bool pushToApiBus(const bs::message::Envelope &env)
+   ProcessingResult pushToApiBus(const bs::message::Envelope &env)
    {
       auto envCopy = env;
       envCopy.setId(0);
@@ -136,17 +139,17 @@ public:
 
             if (pushFill(envCopy)) {
                idMap_.erase(itIdMap);
-               return true;
+               return ProcessingResult::Success;
             }
-            return false;
+            return ProcessingResult::Retry;
          }
       }
-      bool rc = pushFill(envCopy);
+      const bool rc = pushFill(envCopy);
       if (rc && env.isRequest()) {
          std::unique_lock<std::mutex> lock(mtxIdMap_);
          idMap_[envCopy.foreignId()] = { env.foreignId(), env.sender };
       }
-      return rc;
+      return rc ? ProcessingResult::Success : ProcessingResult::Retry;
    }
 
 private:
@@ -204,19 +207,28 @@ void ApiAdapter::add(const std::shared_ptr<ApiBusAdapter> &adapter)
    apiBus_->addAdapter(adapter);
 }
 
-bool ApiAdapter::process(const bs::message::Envelope &env)
+ProcessingResult ApiAdapter::process(const bs::message::Envelope &env)
 {
-   RelayAdapter::process(env);
+   const auto rc = RelayAdapter::process(env);
    if (env.receiver->value() == user_->value()) {
       return gwAdapter_->pushToApiBus(env);
    }
-   return true;
+   return rc;
 }
 
 bool ApiAdapter::processBroadcast(const bs::message::Envelope& env)
 {
    if (RelayAdapter::processBroadcast(env)) {
-      return gwAdapter_->pushToApiBus(env);
+      gwAdapter_->pushToApiBus(env);
+      return true;
    }
    return false;
+}
+
+bool ApiBusAdapter::pushFill(bs::message::Envelope& env)
+{
+   if (!queue_) {
+      return false;
+   }
+   return queue_->pushFill(env);
 }

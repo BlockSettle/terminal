@@ -55,7 +55,7 @@ public:
       , const std::shared_ptr<WalletSignerContainer> &signer = nullptr);
    ~SignerAdapter() override = default;
 
-   bool process(const bs::message::Envelope &) override;
+   bs::message::ProcessingResult process(const bs::message::Envelope &) override;
    bool processBroadcast(const bs::message::Envelope&) override;
 
    Users supportedReceivers() const override { return { user_ }; }
@@ -74,37 +74,37 @@ private:
    void autoSignStateChanged(bs::error::ErrorCode
       , const std::string& walletId) override;
 
-   bool processOwnRequest(const bs::message::Envelope &
+   bs::message::ProcessingResult processOwnRequest(const bs::message::Envelope &
       , const BlockSettle::Common::SignerMessage &);
-   bool processSignerSettings(const BlockSettle::Terminal::SettingsMessage_SignerServer &);
-   bool processNewKeyResponse(bool);
+   bs::message::ProcessingResult processSignerSettings(const BlockSettle::Terminal::SettingsMessage_SignerServer &);
+   bs::message::ProcessingResult processNewKeyResponse(bool);
    bool sendComponentLoading();
 
-   bool processStartWalletSync(const bs::message::Envelope &);
-   bool processSyncAddresses(const bs::message::Envelope &
+   bs::message::ProcessingResult processStartWalletSync(const bs::message::Envelope &);
+   bs::message::ProcessingResult processSyncAddresses(const bs::message::Envelope &
       , const BlockSettle::Common::SignerMessage_SyncAddresses &);
-   bool processSyncNewAddresses(const bs::message::Envelope &
+   bs::message::ProcessingResult processSyncNewAddresses(const bs::message::Envelope &
       , const BlockSettle::Common::SignerMessage_SyncNewAddresses &);
-   bool processExtendAddrChain(const bs::message::Envelope &
+   bs::message::ProcessingResult processExtendAddrChain(const bs::message::Envelope &
       , const BlockSettle::Common::SignerMessage_ExtendAddrChain &);
-   bool processSyncWallet(const bs::message::Envelope &, const std::string &walletId);
-   bool processSyncHdWallet(const bs::message::Envelope &, const std::string &walletId);
-   bool processSyncAddrComment(const BlockSettle::Common::SignerMessage_SyncAddressComment &);
-   bool processSyncTxComment(const BlockSettle::Common::SignerMessage_SyncTxComment &);
-   bool processGetRootPubKey(const bs::message::Envelope &, const std::string &walletId);
-   bool processDelHdRoot(const std::string &walletId);
-   bool processDelHdLeaf(const std::string &walletId);
-   bool processSignTx(const bs::message::Envelope&
+   bs::message::ProcessingResult processSyncWallet(const bs::message::Envelope &, const std::string &walletId);
+   bs::message::ProcessingResult processSyncHdWallet(const bs::message::Envelope &, const std::string &walletId);
+   bs::message::ProcessingResult processSyncAddrComment(const BlockSettle::Common::SignerMessage_SyncAddressComment &);
+   bs::message::ProcessingResult processSyncTxComment(const BlockSettle::Common::SignerMessage_SyncTxComment &);
+   bs::message::ProcessingResult processGetRootPubKey(const bs::message::Envelope &, const std::string &walletId);
+   bs::message::ProcessingResult processDelHdRoot(const std::string &walletId);
+   bs::message::ProcessingResult processDelHdLeaf(const std::string &walletId);
+   bs::message::ProcessingResult processSignTx(const bs::message::Envelope&
       , const BlockSettle::Common::SignerMessage_SignTxRequest&);
-   bool processResolvePubSpenders(const bs::message::Envelope&
+   bs::message::ProcessingResult processResolvePubSpenders(const bs::message::Envelope&
       , const bs::core::wallet::TXSignRequest&);
-   bool processAutoSignRequest(const bs::message::Envelope&
+   bs::message::ProcessingResult processAutoSignRequest(const bs::message::Envelope&
       , const BlockSettle::Common::SignerMessage_AutoSign&);
-   bool processDialogRequest(const bs::message::Envelope&
+   bs::message::ProcessingResult processDialogRequest(const bs::message::Envelope&
       , const BlockSettle::Common::SignerMessage_DialogRequest&);
-   bool processCreateWallet(const bs::message::Envelope&, bool rescan
+   bs::message::ProcessingResult processCreateWallet(const bs::message::Envelope&, bool rescan
       , const BlockSettle::Common::SignerMessage_CreateWalletRequest&);
-   bool processDeleteWallet(const bs::message::Envelope&, const std::string& rootId);
+   bs::message::ProcessingResult processDeleteWallet(const bs::message::Envelope&, const std::string& rootId);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
@@ -122,6 +122,5 @@ private:
    std::unordered_map<std::string, bs::message::Envelope>   autoSignRequests_;
    SecureBinaryData passphrase_;
 };
-
 
 #endif	// SIGNER_ADAPTER_H

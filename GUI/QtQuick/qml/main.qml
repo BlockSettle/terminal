@@ -9,7 +9,7 @@
 
 */
 import QtQuick 2
-import QtQuick.Controls 2
+import QtQuick.Controls 2.9
 import QtQuick.Layouts 1.3
 import QtQuick.Window 2
 import "StyledControls" 1
@@ -24,8 +24,8 @@ import "js/helper.js" as JsHelper
 
 ApplicationWindow {
     id: mainWindow
-    width: 800
-    height: 600
+    minimumWidth: 1024
+    minimumHeight: 800
 
     visible: false
     title: qsTr("BlockSettle Terminal")
@@ -52,9 +52,9 @@ ApplicationWindow {
     }
 
     // attached to use from c++
-    function messageBoxCritical(title, text, details) {
+/*    function messageBoxCritical(title, text, details) {
         return JsHelper.messageBoxCritical(title, text, details)
-    }
+    }*/
 
     InfoBanner {
         id: ibSuccess
@@ -64,6 +64,144 @@ ApplicationWindow {
         id: ibFailure
         bgColor: "darkred"
     }
+    InfoBanner {
+        id: ibInfo
+        bgColor: "darkgrey"
+    }
+
+    StackView {
+        id: stack
+        initialItem: swipeView
+        anchors.fill: parent
+    }
+
+    SendPage {
+        id: sendPage
+        visible: false
+    }
+
+    ReceivePage {
+        id: receivePage
+        visible: false
+    }
+
+    SettingsPage {
+        id: settingsPage
+        visible: false
+    }
+
+    header: Column {
+        height: 50
+        width: parent.width
+
+        RowLayout {
+            height: 50
+            width: parent.width
+
+            Image {
+                source: "qrc:/images/bs_logo.png"
+                horizontalAlignment: Qt.AlignLeft
+                verticalAlignment: Qt.AlignTop
+                Layout.fillHeight: true
+            }
+
+            Image {
+                id: imgArmoryStatus
+                source: "qrc:/images/bitcoin-disabled.png"
+                verticalAlignment: Qt.AlignVCenter
+            }
+
+            Label {
+                Layout.fillWidth: true
+            }
+
+            ToolButton {
+                id: btnSend
+                text: qsTr("Send")
+                icon.source: "qrc:/images/send_icon.png"
+                font.pointSize: 16
+                Layout.fillHeight: true
+                enabled: false
+                onClicked: {
+                    stack.push(sendPage)
+                    //sendPage.visible = true
+                }
+            }
+            ToolButton {
+                id: btnReceive
+                text: qsTr("Receive")
+                icon.source: "qrc:/images/receive_icon.png"
+                font.pointSize: 16
+                Layout.fillHeight: true
+                onClicked: {
+                    stack.push(receivePage)
+                }
+            }
+            ToolButton {
+                id: btnSettings
+                text: qsTr("Settings")
+                icon.source: "qrc:/images/settings_icon.png"
+                font.pointSize: 16
+                Layout.fillHeight: true
+                onClicked: {
+                    stack.push(settingsPage)
+                }
+            }
+        }
+
+        Rectangle {
+            width: parent.width
+            height: 1
+        }
+    }
+
+    SwipeView {
+        anchors.fill: parent
+        id: swipeView
+        currentIndex: tabBar.currentIndex
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+
+        OverviewPage {
+            id: overviewPage
+        }
+
+        TransactionsPage {
+            id: transactionsPage
+        }
+
+        ExplorerPage {
+            id: explorerPage
+        }
+    }
+
+    footer: TabBar {
+        id: tabBar
+        currentIndex: swipeView.currentIndex
+        spacing: 5
+        Layout.fillWidth: false
+        background: Rectangle {
+            color: "transparent"
+        }
+
+        CustomTabButton {
+            id: btnOverview
+            text: qsTr("Overview")
+            icon.source: "qrc:/images/overview_icon.png"
+        }
+        CustomTabButton {
+            id: btnTransactions
+            text: qsTr("Transactions")
+            icon.source: "qrc:/images/transactions_icon.png"
+        }
+
+        CustomTabButton {
+            id: btnExplorer
+            text: qsTr("Explorer")
+            icon.source: "qrc:/images/explorer_icon.png"
+        }
+    }
+
 
 /*    function raiseWindow() {
         JsHelper.raiseWindow(mainWindow)

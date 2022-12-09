@@ -2,7 +2,27 @@
     <qresource prefix="/">
         <file alias="FULL_BS_LOGO">images/full_logo.png</file>
         <file>images/bs_logo.png</file>
+        <file>images/bitcoin-test-net.png</file>
+        <file>images/bitcoin-main-net.png</file>
+        <file>images/bitcoin-disabled.png</file>
+        <file>images/send_icon.png</file>
+        <file>images/receive_icon.png</file>
+        <file>images/settings_icon.png</file>
+        <file>images/overview_icon.png</file>
+        <file>images/transactions_icon.png</file>
+        <file>images/explorer_icon.png</file>
         <file>qml/main.qml</file>
+        <file>qml/OverviewPage.qml</file>
+        <file>qml/TransactionsPage.qml</file>
+        <file>qml/ExplorerPage.qml</file>
+        <file>qml/SendPage.qml</file>
+        <file>qml/ReceivePage.qml</file>
+        <file>qml/SettingsPage.qml</file>
+        <file>qml/CreateNewWallet.qml</file>
+        <file>qml/SeedPhrase.qml</file>
+        <file>qml/ImportSeedPhrase.qml</file>
+        <file>qml/VerifySeedPhrase.qml</file>
+        <file>qml/WalletNamePass.qml</file>
         <file>qml/InfoBanner.qml</file>
         <file>qml/InfoBannerComponent.qml</file>
         <file>qml/InfoBar.qml</file>

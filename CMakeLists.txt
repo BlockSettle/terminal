@@ -49,6 +49,9 @@ add_definitions(-DNOMINMAX)
 # Force Armory to ignore Crypto++ and use libbtc instead.
 add_definitions(-DLIBBTC_ONLY)
 
+add_definitions(-DQT_IS_AVAILABLE)
+add_definitions(-DQT_UI_IS_AVAILABLE)
+
 IF (APPLE)
    add_definitions(-DMDB_USE_POSIX_SEM=1)
 ENDIF(APPLE)

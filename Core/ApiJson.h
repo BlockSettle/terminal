@@ -32,7 +32,7 @@ public:
    ApiJsonAdapter(const std::shared_ptr<spdlog::logger> &);
    ~ApiJsonAdapter() override = default;
 
-   bool process(const bs::message::Envelope &) override;
+   bs::message::ProcessingResult process(const bs::message::Envelope &) override;
    bool processBroadcast(const bs::message::Envelope&) override;
 
    Users supportedReceivers() const override { return { user_ }; }
@@ -44,19 +44,19 @@ protected:  // ServerConnectionListener overrides
    void OnClientDisconnected(const std::string& clientId) override;
 
 private:
-   bool processSettings(const bs::message::Envelope &);
-   bool processSettingsGetResponse(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
+   bs::message::ProcessingResult processSettings(const bs::message::Envelope &);
+   bs::message::ProcessingResult processSettingsGetResponse(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
 
-   bool processAdminMessage(const bs::message::Envelope &);
-   bool processAssets(const bs::message::Envelope&);
-   bool processBlockchain(const bs::message::Envelope&);
-   bool processBsServer(const bs::message::Envelope&);
-   bool processMatching(const bs::message::Envelope&);
-   bool processMktData(const bs::message::Envelope&);
-   bool processOnChainTrack(const bs::message::Envelope&);
-   bool processSettlement(const bs::message::Envelope&);
-   bool processSigner(const bs::message::Envelope&);
-   bool processWallets(const bs::message::Envelope&);
+   bs::message::ProcessingResult processAdminMessage(const bs::message::Envelope &);
+   bs::message::ProcessingResult processAssets(const bs::message::Envelope&);
+   bs::message::ProcessingResult processBlockchain(const bs::message::Envelope&);
+   bs::message::ProcessingResult processBsServer(const bs::message::Envelope&);
+   bs::message::ProcessingResult processMatching(const bs::message::Envelope&);
+   bs::message::ProcessingResult processMktData(const bs::message::Envelope&);
+   bs::message::ProcessingResult processOnChainTrack(const bs::message::Envelope&);
+   bs::message::ProcessingResult processSettlement(const bs::message::Envelope&);
+   bs::message::ProcessingResult processSigner(const bs::message::Envelope&);
+   bs::message::ProcessingResult processWallets(const bs::message::Envelope&);
 
    void processStart();
 

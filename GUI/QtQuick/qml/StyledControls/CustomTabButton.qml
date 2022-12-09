@@ -10,23 +10,39 @@
 */
 import QtQuick 2.9
 import QtQuick.Controls 2.3
+import QtQuick.Layouts 1.3
 import "../BsStyles"
 
 TabButton {
     id: control
     text: parent.text
+    icon.source: parent.icon.source
     property alias cText: text_
+    property alias cIcon: image_
     focusPolicy: Qt.NoFocus
 
-    contentItem: Text {
+    contentItem: RowLayout {
+        width: parent.width
+        height: parent.height
+    
+    Image {
+        id: image_
+        source: control.icon.source
+        horizontalAlignment: Qt.AlignVCenter
+        verticalAlignment: Qt.AlignVCenter
+        Layout.fillHeight: true
+    }
+
+    Text {
         id: text_
         text: control.text
         font.capitalization: Font.AllUppercase
         font.pointSize: 10
         color: control.checked ? (control.down ? BSStyle.textPressedColor : BSStyle.textColor) : BSStyle.buttonsUncheckedColor
         elide: Text.ElideRight
-        horizontalAlignment: Text.AlignHCenter
+        horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
+    }
     }
 
     background: Rectangle {

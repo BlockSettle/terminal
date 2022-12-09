@@ -58,7 +58,7 @@ public:
       , const QStringList &appArgs);
    ~SettingsAdapter() override = default;
 
-   bool process(const bs::message::Envelope &) override;
+   bs::message::ProcessingResult process(const bs::message::Envelope &) override;
    bool processBroadcast(const bs::message::Envelope&) override;
 
    Users supportedReceivers() const override { return { user_ }; }
@@ -68,34 +68,34 @@ public:
    std::string guiMode() const;
 
 private:
-   bool processGetRequest(const bs::message::Envelope &
+   bs::message::ProcessingResult processGetRequest(const bs::message::Envelope &
       , const BlockSettle::Terminal::SettingsMessage_SettingsRequest &);
-   bool processPutRequest(const BlockSettle::Terminal::SettingsMessage_SettingsResponse &);
-   bool processArmoryServer(const BlockSettle::Terminal::SettingsMessage_ArmoryServer &);
-   bool processSetArmoryServer(const bs::message::Envelope&, int index);
-   bool processGetArmoryServers(const bs::message::Envelope&);
-   bool processAddArmoryServer(const bs::message::Envelope&
+   bs::message::ProcessingResult processPutRequest(const BlockSettle::Terminal::SettingsMessage_SettingsResponse &);
+   bs::message::ProcessingResult processArmoryServer(const BlockSettle::Terminal::SettingsMessage_ArmoryServer &);
+   bs::message::ProcessingResult processSetArmoryServer(const bs::message::Envelope&, int index);
+   bs::message::ProcessingResult processGetArmoryServers(const bs::message::Envelope&);
+   bs::message::ProcessingResult processAddArmoryServer(const bs::message::Envelope&
       , const BlockSettle::Terminal::SettingsMessage_ArmoryServer&);
-   bool processDelArmoryServer(const bs::message::Envelope&, int index);
-   bool processUpdArmoryServer(const bs::message::Envelope&
+   bs::message::ProcessingResult processDelArmoryServer(const bs::message::Envelope&, int index);
+   bs::message::ProcessingResult processUpdArmoryServer(const bs::message::Envelope&
       , const BlockSettle::Terminal::SettingsMessage_ArmoryServerUpdate&);
-   bool processSignerSettings(const bs::message::Envelope &);
-   bool processSignerSetKey(const BlockSettle::Terminal::SettingsMessage_SignerSetKey &);
-   bool processSignerReset();
-   bool processGetSigners(const bs::message::Envelope&);
-   bool processSetSigner(const bs::message::Envelope&, int);
-   bool processAddSigner(const bs::message::Envelope&
+   bs::message::ProcessingResult processSignerSettings(const bs::message::Envelope &);
+   bs::message::ProcessingResult processSignerSetKey(const BlockSettle::Terminal::SettingsMessage_SignerSetKey &);
+   bs::message::ProcessingResult processSignerReset();
+   bs::message::ProcessingResult processGetSigners(const bs::message::Envelope&);
+   bs::message::ProcessingResult processSetSigner(const bs::message::Envelope&, int);
+   bs::message::ProcessingResult processAddSigner(const bs::message::Envelope&
       , const BlockSettle::Terminal::SettingsMessage_SignerServer&);
-   bool processDelSigner(const bs::message::Envelope&, int);
-   bool processRemoteSettings(uint64_t msgId);
-   bool processGetState(const bs::message::Envelope&);
-   bool processReset(const bs::message::Envelope&
+   bs::message::ProcessingResult processDelSigner(const bs::message::Envelope&, int);
+   bs::message::ProcessingResult processRemoteSettings(uint64_t msgId);
+   bs::message::ProcessingResult processGetState(const bs::message::Envelope&);
+   bs::message::ProcessingResult processReset(const bs::message::Envelope&
       , const BlockSettle::Terminal::SettingsMessage_SettingsRequest&);
-   bool processResetToState(const bs::message::Envelope&
+   bs::message::ProcessingResult processResetToState(const bs::message::Envelope&
       , const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
-   bool processBootstrap(const bs::message::Envelope&, const std::string&);
-   bool processApiPrivKey(const bs::message::Envelope&);
-   bool processApiClientsList(const bs::message::Envelope&);
+   bs::message::ProcessingResult processBootstrap(const bs::message::Envelope&, const std::string&);
+   bs::message::ProcessingResult processApiPrivKey(const bs::message::Envelope&);
+   bs::message::ProcessingResult processApiClientsList(const bs::message::Envelope&);
 
 private:
    std::shared_ptr<bs::message::User>  user_;

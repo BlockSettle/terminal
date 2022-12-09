@@ -39,16 +39,16 @@ public:
    TestSupervisor(const std::string& name) : name_(name)
    {}
 
-   bool process(const bs::message::Envelope &) override;
+   bs::message::ProcessingResult process(const bs::message::Envelope &) override;
 
    bool processBroadcast(const bs::message::Envelope& env) override
    {
-      return process(env);
+      return (process(env) != bs::message::ProcessingResult::Ignored);
    }
 
    bs::message::Adapter::Users supportedReceivers() const override
    {
-      return { std::make_shared<bs::message::UserSupervisor>() };
+      return { std::make_shared<bs::message::UserSystem>() };
    }
    std::string name() const override { return "sup" + name_; }
 
@@ -79,7 +79,7 @@ public:
       , const std::string& name, const std::string& email
       , const std::shared_ptr<ArmoryInstance> &);  // for pushing ZCs (mocking PB)
 
-   bool process(const bs::message::Envelope&) override;
+   bs::message::ProcessingResult process(const bs::message::Envelope&) override;
    bool processBroadcast(const bs::message::Envelope&) override;
 
    bs::message::Adapter::Users supportedReceivers() const override

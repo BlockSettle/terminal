@@ -23,9 +23,9 @@ MDHistAdapter::MDHistAdapter(const std::shared_ptr<spdlog::logger> &logger)
    , user_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::MDHistory))
 {}
 
-bool MDHistAdapter::process(const bs::message::Envelope &env)
+ProcessingResult MDHistAdapter::process(const bs::message::Envelope &)
 {
-   return true;
+   return ProcessingResult::Ignored;
 }
 
 bool MDHistAdapter::processBroadcast(const bs::message::Envelope& env)

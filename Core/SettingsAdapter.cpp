@@ -72,13 +72,13 @@ SettingsAdapter::SettingsAdapter(const std::shared_ptr<ApplicationSettings> &set
    signersProvider_ = std::make_shared<SignersProvider>(appSettings_);
 }
 
-bool SettingsAdapter::process(const bs::message::Envelope &env)
+ProcessingResult SettingsAdapter::process(const bs::message::Envelope &env)
 {
    if (env.receiver->value<TerminalUsers>() == TerminalUsers::Settings) {
       SettingsMessage msg;
       if (!msg.ParseFromString(env.message)) {
          logger_->error("[{}] failed to parse settings msg #{}", __func__, env.foreignId());
-         return true;
+         return ProcessingResult::Error;
       }
       switch (msg.data_case()) {
       case SettingsMessage::kGetRequest:
@@ -131,7 +131,7 @@ bool SettingsAdapter::process(const bs::message::Envelope &env)
          break;
       }
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
 bool SettingsAdapter::processBroadcast(const bs::message::Envelope& env)
@@ -165,18 +165,18 @@ bool SettingsAdapter::processBroadcast(const bs::message::Envelope& env)
    return false;
 }
 
-bool SettingsAdapter::processRemoteSettings(uint64_t msgId)
+ProcessingResult SettingsAdapter::processRemoteSettings(uint64_t msgId)
 {
    const auto &itReq = remoteSetReqs_.find(msgId);
    if (itReq == remoteSetReqs_.end()) {
       logger_->error("[{}] failed to find remote settings request #{}", __func__
          , msgId);
-      return true;
+      return ProcessingResult::Error;
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
-bool SettingsAdapter::processGetState(const bs::message::Envelope& env)
+ProcessingResult SettingsAdapter::processGetState(const bs::message::Envelope& env)
 {
    SettingsMessage msg;
    auto msgResp = msg.mutable_state();
@@ -187,10 +187,11 @@ bool SettingsAdapter::processGetState(const bs::message::Envelope& env)
       setReq->set_index(static_cast<SettingIndex>(st.first));
       setFromQVariant(st.second, setReq, setResp);
    }
-   return pushResponse(user_, env, msg.SerializeAsString());
+   pushResponse(user_, env, msg.SerializeAsString());
+   return ProcessingResult::Success;
 }
 
-bool SettingsAdapter::processReset(const bs::message::Envelope& env
+ProcessingResult SettingsAdapter::processReset(const bs::message::Envelope& env
    , const SettingsMessage_SettingsRequest& request)
 {
    SettingsMessage msg;
@@ -205,10 +206,11 @@ bool SettingsAdapter::processReset(const bs::message::Envelope& env
       const auto& value = appSettings_->get(setting);
       setFromQVariant(value, setReq, setResp);
    }
-   return pushResponse(user_, env, msg.SerializeAsString());
+   pushResponse(user_, env, msg.SerializeAsString());
+   return ProcessingResult::Success;
 }
 
-bool SettingsAdapter::processResetToState(const bs::message::Envelope& env
+ProcessingResult SettingsAdapter::processResetToState(const bs::message::Envelope& env
    , const SettingsMessage_SettingsResponse& request)
 {
    for (const auto& req : request.responses()) {
@@ -218,10 +220,11 @@ bool SettingsAdapter::processResetToState(const bs::message::Envelope& env
    }
    SettingsMessage msg;
    *msg.mutable_state() = request;
-   return pushResponse(user_, env, msg.SerializeAsString());
+   pushResponse(user_, env, msg.SerializeAsString());
+   return ProcessingResult::Success;
 }
 
-bool SettingsAdapter::processBootstrap(const bs::message::Envelope &env
+ProcessingResult SettingsAdapter::processBootstrap(const bs::message::Envelope &env
    , const std::string& bsData)
 {
    SettingsMessage msg;
@@ -246,8 +249,9 @@ bool SettingsAdapter::processBootstrap(const bs::message::Envelope &env
    else {
       logger_->error("[{}] failed to set bootstrap data", __func__);
    }
-   return pushResponse(user_, bsData.empty() ? env.sender : nullptr
+   pushResponse(user_, bsData.empty() ? env.sender : nullptr
       , msg.SerializeAsString(), bsData.empty() ? env.foreignId() : 0);
+   return ProcessingResult::Success;
 }
 
 static bs::network::ws::PrivateKey readOrCreatePrivateKey(const std::string& filename)
@@ -274,7 +278,7 @@ static bs::network::ws::PrivateKey readOrCreatePrivateKey(const std::string& fil
    return result;
 }
 
-bool SettingsAdapter::processApiPrivKey(const bs::message::Envelope& env)
+ProcessingResult SettingsAdapter::processApiPrivKey(const bs::message::Envelope& env)
 {  //FIXME: should be re-implemented to avoid storing plain private key in a file on disk
    const auto &apiKeyFN = appSettings_->AppendToWritableDir(
       QString::fromStdString("apiPrivKey")).toStdString();
@@ -282,7 +286,8 @@ bool SettingsAdapter::processApiPrivKey(const bs::message::Envelope& env)
    SettingsMessage msg;
    SecureBinaryData privKey(apiPrivKey.data(), apiPrivKey.size());
    msg.set_api_privkey(privKey.toBinStr());
-   return pushResponse(user_, env, msg.SerializeAsString());
+   pushResponse(user_, env, msg.SerializeAsString());
+   return ProcessingResult::Success;
 }
 
 static std::set<std::string> readClientKeys(const std::string& filename)
@@ -305,7 +310,7 @@ static std::set<std::string> readClientKeys(const std::string& filename)
    return result;
 }
 
-bool SettingsAdapter::processApiClientsList(const bs::message::Envelope& env)
+ProcessingResult SettingsAdapter::processApiClientsList(const bs::message::Envelope& env)
 {
    const auto& apiKeysFN = appSettings_->AppendToWritableDir(
       QString::fromStdString("apiClientPubKeys")).toStdString();
@@ -318,7 +323,8 @@ bool SettingsAdapter::processApiClientsList(const bs::message::Envelope& env)
    for (const auto& clientKey : clientKeys) {
       msgResp->add_pub_keys(clientKey);
    }
-   return pushResponse(user_, env, msg.SerializeAsString());
+   pushResponse(user_, env, msg.SerializeAsString());
+   return ProcessingResult::Success;
 }
 
 std::string SettingsAdapter::guiMode() const
@@ -329,7 +335,7 @@ std::string SettingsAdapter::guiMode() const
    return appSettings_->guiMode().toStdString();
 }
 
-bool SettingsAdapter::processGetRequest(const bs::message::Envelope &env
+ProcessingResult SettingsAdapter::processGetRequest(const bs::message::Envelope &env
    , const SettingsMessage_SettingsRequest &request)
 {
    unsigned int nbFetched = 0;
@@ -421,12 +427,13 @@ bool SettingsAdapter::processGetRequest(const bs::message::Envelope &env
       }
    }
    if (nbFetched > 0) {
-      return pushResponse(user_, env, msg.SerializeAsString());
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Success;
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
-bool SettingsAdapter::processPutRequest(const SettingsMessage_SettingsResponse &request)
+ProcessingResult SettingsAdapter::processPutRequest(const SettingsMessage_SettingsResponse &request)
 {
    unsigned int nbUpdates = 0;
    for (const auto &req : request.responses()) {
@@ -489,12 +496,13 @@ bool SettingsAdapter::processPutRequest(const SettingsMessage_SettingsResponse &
    if (nbUpdates) {
       SettingsMessage msg;
       *(msg.mutable_settings_updated()) = request;
-      return pushBroadcast(user_, msg.SerializeAsString());
+      pushBroadcast(user_, msg.SerializeAsString());
+      return ProcessingResult::Success;
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
-bool SettingsAdapter::processArmoryServer(const BlockSettle::Terminal::SettingsMessage_ArmoryServer &request)
+ProcessingResult SettingsAdapter::processArmoryServer(const BlockSettle::Terminal::SettingsMessage_ArmoryServer &request)
 {
    int selIndex = 0;
    for (const auto &server : armoryServersProvider_->servers()) {
@@ -506,20 +514,20 @@ bool SettingsAdapter::processArmoryServer(const BlockSettle::Terminal::SettingsM
    }
    if (selIndex >= armoryServersProvider_->servers().size()) {
       logger_->error("[{}] failed to find Armory server {}", __func__, request.server_name());
-      return true;
+      return ProcessingResult::Success;
    }
    armoryServersProvider_->setupServer(selIndex);
    appSettings_->selectNetwork();
 }
 
-bool SettingsAdapter::processSetArmoryServer(const bs::message::Envelope& env, int index)
+ProcessingResult SettingsAdapter::processSetArmoryServer(const bs::message::Envelope& env, int index)
 {
    armoryServersProvider_->setupServer(index);
    appSettings_->selectNetwork();
    return processGetArmoryServers(env);
 }
 
-bool SettingsAdapter::processGetArmoryServers(const bs::message::Envelope& env)
+ProcessingResult SettingsAdapter::processGetArmoryServers(const bs::message::Envelope& env)
 {
    SettingsMessage msg;
    auto msgResp = msg.mutable_armory_servers();
@@ -536,7 +544,8 @@ bool SettingsAdapter::processGetArmoryServers(const bs::message::Envelope& env)
       msgSrv->set_one_way_auth(server.oneWayAuth_);
       msgSrv->set_password(server.password.toBinStr());
    }
-   return pushResponse(user_, env, msg.SerializeAsString());
+   pushResponse(user_, env, msg.SerializeAsString());
+   return ProcessingResult::Success;
 }
 
 static ArmoryServer fromMessage(const SettingsMessage_ArmoryServer& msg)
@@ -553,7 +562,7 @@ static ArmoryServer fromMessage(const SettingsMessage_ArmoryServer& msg)
    return result;
 }
 
-bool SettingsAdapter::processAddArmoryServer(const bs::message::Envelope& env
+ProcessingResult SettingsAdapter::processAddArmoryServer(const bs::message::Envelope& env
    , const SettingsMessage_ArmoryServer& request)
 {
    const auto& server = fromMessage(request);
@@ -566,7 +575,7 @@ bool SettingsAdapter::processAddArmoryServer(const bs::message::Envelope& env
    return processGetArmoryServers(env);
 }
 
-bool SettingsAdapter::processDelArmoryServer(const bs::message::Envelope& env
+ProcessingResult SettingsAdapter::processDelArmoryServer(const bs::message::Envelope& env
    , int index)
 {
    if (!armoryServersProvider_->remove(index)) {
@@ -575,7 +584,7 @@ bool SettingsAdapter::processDelArmoryServer(const bs::message::Envelope& env
    return processGetArmoryServers(env);
 }
 
-bool SettingsAdapter::processUpdArmoryServer(const bs::message::Envelope& env
+ProcessingResult SettingsAdapter::processUpdArmoryServer(const bs::message::Envelope& env
    , const SettingsMessage_ArmoryServerUpdate& request)
 {
    const auto& server = fromMessage(request.server());
@@ -585,7 +594,7 @@ bool SettingsAdapter::processUpdArmoryServer(const bs::message::Envelope& env
    return processGetArmoryServers(env);
 }
 
-bool SettingsAdapter::processSignerSettings(const bs::message::Envelope &env)
+ProcessingResult SettingsAdapter::processSignerSettings(const bs::message::Envelope &env)
 {
    SettingsMessage msg;
    auto msgResp = msg.mutable_signer_response();
@@ -609,22 +618,23 @@ bool SettingsAdapter::processSignerSettings(const bs::message::Envelope &env)
    msgResp->set_home_dir(appSettings_->GetHomeDir().toStdString());
    msgResp->set_auto_sign_spend_limit(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
 
-   return pushResponse(user_, env, msg.SerializeAsString());
+   pushResponse(user_, env, msg.SerializeAsString());
+   return ProcessingResult::Success;
 }
 
-bool SettingsAdapter::processSignerSetKey(const SettingsMessage_SignerSetKey &request)
+ProcessingResult SettingsAdapter::processSignerSetKey(const SettingsMessage_SignerSetKey &request)
 {
    signersProvider_->addKey(request.server_id(), request.new_key());
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool SettingsAdapter::processSignerReset()
+ProcessingResult SettingsAdapter::processSignerReset()
 {
    signersProvider_->setupSigner(0, true);
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool SettingsAdapter::processGetSigners(const bs::message::Envelope& env)
+ProcessingResult SettingsAdapter::processGetSigners(const bs::message::Envelope& env)
 {
    SettingsMessage msg;
    auto msgResp = msg.mutable_signer_servers();
@@ -637,10 +647,11 @@ bool SettingsAdapter::processGetSigners(const bs::message::Envelope& env)
       msgSrv->set_port(std::to_string(signer.port));
       msgSrv->set_key(signer.key.toStdString());
    }
-   return pushResponse(user_, env, msg.SerializeAsString());
+   pushResponse(user_, env, msg.SerializeAsString());
+   return ProcessingResult::Success;
 }
 
-bool SettingsAdapter::processSetSigner(const bs::message::Envelope& env
+ProcessingResult SettingsAdapter::processSetSigner(const bs::message::Envelope& env
    , int index)
 {
    signersProvider_->setupSigner(index);
@@ -657,7 +668,7 @@ static SignerHost fromMessage(const SettingsMessage_SignerServer& msg)
    return result;
 }
 
-bool SettingsAdapter::processAddSigner(const bs::message::Envelope& env
+ProcessingResult SettingsAdapter::processAddSigner(const bs::message::Envelope& env
    , const SettingsMessage_SignerServer& request)
 {
    const auto& signer = fromMessage(request);
@@ -666,7 +677,7 @@ bool SettingsAdapter::processAddSigner(const bs::message::Envelope& env
    return processGetSigners(env);
 }
 
-bool SettingsAdapter::processDelSigner(const bs::message::Envelope& env
+ProcessingResult SettingsAdapter::processDelSigner(const bs::message::Envelope& env
    , int index)
 {
    signersProvider_->remove(index);

@@ -77,7 +77,7 @@ public:
    QtGuiAdapter(const std::shared_ptr<spdlog::logger> &);
    ~QtGuiAdapter() override;
 
-   bool process(const bs::message::Envelope &) override;
+   bs::message::ProcessingResult process(const bs::message::Envelope &) override;
    bool processBroadcast(const bs::message::Envelope&) override;
 
    Users supportedReceivers() const override { return { user_ }; }
@@ -86,16 +86,16 @@ public:
    void run(int &argc, char **argv) override;
 
 private:
-   bool processSettings(const bs::message::Envelope &);
-   bool processSettingsGetResponse(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
-   bool processSettingsState(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
-   bool processArmoryServers(const BlockSettle::Terminal::SettingsMessage_ArmoryServers&);
-   bool processAdminMessage(const bs::message::Envelope &);
-   bool processBlockchain(const bs::message::Envelope &);
-   bool processSigner(const bs::message::Envelope &);
-   bool processWallets(const bs::message::Envelope &);
-   bool processOnChainTrack(const bs::message::Envelope &);
-   bool processAssets(const bs::message::Envelope&);
+   bs::message::ProcessingResult processSettings(const bs::message::Envelope &);
+   bs::message::ProcessingResult processSettingsGetResponse(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
+   bs::message::ProcessingResult processSettingsState(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
+   bs::message::ProcessingResult processArmoryServers(const BlockSettle::Terminal::SettingsMessage_ArmoryServers&);
+   bs::message::ProcessingResult processAdminMessage(const bs::message::Envelope &);
+   bs::message::ProcessingResult processBlockchain(const bs::message::Envelope &);
+   bs::message::ProcessingResult processSigner(const bs::message::Envelope &);
+   bs::message::ProcessingResult processWallets(const bs::message::Envelope &);
+   bs::message::ProcessingResult processOnChainTrack(const bs::message::Envelope &);
+   bs::message::ProcessingResult processAssets(const bs::message::Envelope&);
 
    void requestInitialSettings();
    void updateSplashProgress();
@@ -106,30 +106,30 @@ private:
    void makeMainWinConnections();
 
    void processWalletLoaded(const bs::sync::WalletInfo &);
-   bool processWalletData(const uint64_t msgId
+   bs::message::ProcessingResult processWalletData(const uint64_t msgId
       , const BlockSettle::Common::WalletsMessage_WalletData&);
-   bool processWalletBalances(const bs::message::Envelope &
+   bs::message::ProcessingResult processWalletBalances(const bs::message::Envelope &
       , const BlockSettle::Common::WalletsMessage_WalletBalances &);
-   bool processTXDetails(uint64_t msgId, const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
-   bool processLedgerEntries(const BlockSettle::Common::LedgerEntries &);
-   bool processAddressHist(const BlockSettle::Common::ArmoryMessage_AddressHistory&);
-   bool processFeeLevels(const BlockSettle::Common::ArmoryMessage_FeeLevelsResponse&);
-   bool processWalletsList(const BlockSettle::Common::WalletsMessage_WalletsListResponse&);
-   bool processUTXOs(const BlockSettle::Common::WalletsMessage_UtxoListResponse&);
-   bool processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse&);
-   bool processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived&);
-   bool processZCInvalidated(const BlockSettle::Common::ArmoryMessage_ZCInvalidated&);
+   bs::message::ProcessingResult processTXDetails(uint64_t msgId, const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
+   bs::message::ProcessingResult processLedgerEntries(const BlockSettle::Common::LedgerEntries &);
+   bs::message::ProcessingResult processAddressHist(const BlockSettle::Common::ArmoryMessage_AddressHistory&);
+   bs::message::ProcessingResult processFeeLevels(const BlockSettle::Common::ArmoryMessage_FeeLevelsResponse&);
+   bs::message::ProcessingResult processWalletsList(const BlockSettle::Common::WalletsMessage_WalletsListResponse&);
+   bs::message::ProcessingResult processUTXOs(const BlockSettle::Common::WalletsMessage_UtxoListResponse&);
+   bs::message::ProcessingResult processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse&);
+   bs::message::ProcessingResult processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived&);
+   bs::message::ProcessingResult processZCInvalidated(const BlockSettle::Common::ArmoryMessage_ZCInvalidated&);
 
-   bool processBsServer(const bs::message::Envelope&);
-   bool processStartLogin(const BlockSettle::Terminal::BsServerMessage_StartLoginResult&);
-   bool processLogin(const BlockSettle::Terminal::BsServerMessage_LoginResult&);
+   bs::message::ProcessingResult processBsServer(const bs::message::Envelope&);
+   bs::message::ProcessingResult processStartLogin(const BlockSettle::Terminal::BsServerMessage_StartLoginResult&);
+   bs::message::ProcessingResult processLogin(const BlockSettle::Terminal::BsServerMessage_LoginResult&);
 
-   bool processMatching(const bs::message::Envelope&);
-   bool processMktData(const bs::message::Envelope&);
-   bool processSecurity(const std::string&, int);
-   bool processMdUpdate(const BlockSettle::Terminal::MktDataMessage_Prices &);
-   bool processBalance(const BlockSettle::Terminal::AssetsMessage_Balance&);
-   bool processReservedUTXOs(const BlockSettle::Common::WalletsMessage_ReservedUTXOs&);
+   bs::message::ProcessingResult processMatching(const bs::message::Envelope&);
+   bs::message::ProcessingResult processMktData(const bs::message::Envelope&);
+   bs::message::ProcessingResult processSecurity(const std::string&, int);
+   bs::message::ProcessingResult processMdUpdate(const BlockSettle::Terminal::MktDataMessage_Prices &);
+   bs::message::ProcessingResult processBalance(const BlockSettle::Terminal::AssetsMessage_Balance&);
+   bs::message::ProcessingResult processReservedUTXOs(const BlockSettle::Common::WalletsMessage_ReservedUTXOs&);
 
 private slots:
    void onGetSettings(const std::vector<ApplicationSettings::Setting>&);

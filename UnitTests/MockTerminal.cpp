@@ -108,13 +108,13 @@ public:
       return false;
    }
 
-   bool process(const bs::message::Envelope& env) override
+   ProcessingResult process(const bs::message::Envelope& env) override
    {
       if (env.receiver->value<TerminalUsers>() == TerminalUsers::Settings) {
          SettingsMessage msg;
          if (!msg.ParseFromString(env.message)) {
             logger_->error("[{}] failed to parse settings msg #{}", __func__, env.foreignId());
-            return true;
+            return ProcessingResult::Error;
          }
          switch (msg.data_case()) {
          case SettingsMessage::kGetRequest:
@@ -143,7 +143,7 @@ public:
          default: break;
          }
       }
-      return true;
+      return ProcessingResult::Ignored;
    }
 
    bs::message::Adapter::Users supportedReceivers() const override
@@ -156,7 +156,7 @@ public:
 //   std::shared_ptr<OnChainExternalPlug> createOnChainPlug() const;
 
 private:
-   bool processGetRequest(const bs::message::Envelope& env
+   ProcessingResult processGetRequest(const bs::message::Envelope& env
       , const BlockSettle::Terminal::SettingsMessage_SettingsRequest& request)
    {
       SettingsMessage msg;
@@ -175,9 +175,9 @@ private:
          }
       }
       if (msgResp->responses_size()) {
-         return pushResponse(user_, env, msg.SerializeAsString());
+         pushResponse(user_, env, msg.SerializeAsString());
       }
-      return true;
+      return ProcessingResult::Success;
    }
 
 private:
@@ -192,7 +192,7 @@ public:
    ApiMockAdapter() {}
    ~ApiMockAdapter() override = default;
 
-   bool process(const bs::message::Envelope&) override { return true; }
+   ProcessingResult process(const bs::message::Envelope&) override { return ProcessingResult::Ignored; }
    bool processBroadcast(const bs::message::Envelope&) override { return false; }
 
    bs::message::Adapter::Users supportedReceivers() const override {

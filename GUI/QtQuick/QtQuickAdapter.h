@@ -14,9 +14,11 @@
 #include <set>
 #include <QObject>
 #include "Address.h"
+#include "AddressListModel.h"
 #include "ApiAdapter.h"
 #include "Wallets/SignContainer.h"
 #include "ThreadSafeClasses.h"
+#include "TxListModel.h"
 #include "UiUtils.h"
 
 namespace bs {
@@ -65,8 +67,10 @@ namespace BlockSettle {
       class SettingsMessage_SignerServers;
    }
 }
-
 class BSTerminalSplashScreen;
+class QQmlContext;
+class QmlWalletsList;
+
 
 class QtQuickAdapter : public QObject, public ApiBusAdapter, public bs::MainLoopRuner
 {
@@ -76,7 +80,7 @@ public:
    QtQuickAdapter(const std::shared_ptr<spdlog::logger> &);
    ~QtQuickAdapter() override;
 
-   bool process(const bs::message::Envelope &) override;
+   bs::message::ProcessingResult process(const bs::message::Envelope &) override;
    bool processBroadcast(const bs::message::Envelope&) override;
 
    Users supportedReceivers() const override { return { user_ }; }
@@ -84,15 +88,55 @@ public:
 
    void run(int &argc, char **argv) override;
 
+   Q_PROPERTY(QStringList walletsList READ walletsList NOTIFY walletsListChanged)
+   QStringList walletsList() const { return walletsList_; }
+   Q_PROPERTY(QStringList txWalletsList READ txWalletsList NOTIFY walletsListChanged)
+   QStringList txWalletsList() const;
+   Q_PROPERTY(QStringList txTypesList READ txTypesList)
+   QStringList txTypesList() const { return txTypes_; }
+
+   Q_PROPERTY(QString confirmedBalance READ confirmedBalance NOTIFY walletBalanceChanged)
+   QString confirmedBalance() const { return QString::number(confWalletBalance_, 'f', 8); }
+   Q_PROPERTY(QString unconfirmedBalance READ unconfirmedBalance NOTIFY walletBalanceChanged)
+   QString unconfirmedBalance() const { return QString::number(unconfWalletBalance_, 'f', 8); }
+   Q_PROPERTY(QString totalBalance READ totalBalance NOTIFY walletBalanceChanged)
+   QString totalBalance() const { return QString::number(totalWalletBalance_, 'f', 8); }
+   Q_PROPERTY(quint32 nbUsedWalletAddresses READ nbUsedWalletAddresses NOTIFY walletBalanceChanged)
+   quint32 nbUsedWalletAddresses() const { return nbUsedWalletAddresses_; }
+
+   Q_PROPERTY(quint32 nbTransactions READ nbTransactions NOTIFY nbTransactionsChanged)
+   quint32 nbTransactions() const { return nbTransactions_; }
+
+   Q_PROPERTY(QString generatedAddress READ generatedAddress NOTIFY addressGenerated)
+   QString generatedAddress() const { return QString::fromStdString(generatedAddress_.display()); }
+
+   Q_INVOKABLE QStringList newSeedPhrase();
+   Q_INVOKABLE void copySeedToClipboard(const QStringList&);
+   Q_INVOKABLE void createWallet(const QString& name, const QStringList& seed
+      , const QString& password);
+   Q_INVOKABLE void importWallet(const QString& name, const QStringList& seed
+      , const QString& password);
+   Q_INVOKABLE void generateNewAddress(int walletIndex, bool isNative);
+   Q_INVOKABLE void copyAddressToClipboard(const QString& addr);
+
+signals:
+   void walletsListChanged();
+   void walletBalanceChanged();
+   void nbTransactionsChanged();
+   void addressGenerated();
+
+private slots:
+   void walletSelected(int);
+
 private:
-   bool processSettings(const bs::message::Envelope &);
-   bool processSettingsGetResponse(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
-   bool processSettingsState(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
-   bool processArmoryServers(const BlockSettle::Terminal::SettingsMessage_ArmoryServers&);
-   bool processAdminMessage(const bs::message::Envelope &);
-   bool processBlockchain(const bs::message::Envelope &);
-   bool processSigner(const bs::message::Envelope &);
-   bool processWallets(const bs::message::Envelope &);
+   bs::message::ProcessingResult processSettings(const bs::message::Envelope &);
+   bs::message::ProcessingResult processSettingsGetResponse(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
+   bs::message::ProcessingResult processSettingsState(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
+   bs::message::ProcessingResult processArmoryServers(const BlockSettle::Terminal::SettingsMessage_ArmoryServers&);
+   bs::message::ProcessingResult processAdminMessage(const bs::message::Envelope &);
+   bs::message::ProcessingResult processBlockchain(const bs::message::Envelope &);
+   bs::message::ProcessingResult processSigner(const bs::message::Envelope &);
+   bs::message::ProcessingResult processWallets(const bs::message::Envelope &);
 
    void requestInitialSettings();
    void updateSplashProgress();
@@ -100,27 +144,29 @@ private:
    void updateStates();
 
    void createWallet(bool primary);
+   std::string hdWalletIdByIndex(int);
 
    void processWalletLoaded(const bs::sync::WalletInfo &);
-   bool processWalletData(const uint64_t msgId
+   bs::message::ProcessingResult processWalletData(const uint64_t msgId
       , const BlockSettle::Common::WalletsMessage_WalletData&);
-   bool processWalletBalances(const bs::message::Envelope &
-      , const BlockSettle::Common::WalletsMessage_WalletBalances &);
-   bool processTXDetails(uint64_t msgId, const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
-   bool processLedgerEntries(const BlockSettle::Common::LedgerEntries &);
-   bool processAddressHist(const BlockSettle::Common::ArmoryMessage_AddressHistory&);
-   bool processFeeLevels(const BlockSettle::Common::ArmoryMessage_FeeLevelsResponse&);
-   bool processWalletsList(const BlockSettle::Common::WalletsMessage_WalletsListResponse&);
-   bool processUTXOs(const BlockSettle::Common::WalletsMessage_UtxoListResponse&);
-   bool processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse&);
-   bool processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived&);
-   bool processZCInvalidated(const BlockSettle::Common::ArmoryMessage_ZCInvalidated&);
-   bool processReservedUTXOs(const BlockSettle::Common::WalletsMessage_ReservedUTXOs&);
+   bs::message::ProcessingResult processWalletBalances(const BlockSettle::Common::WalletsMessage_WalletBalances &);
+   bs::message::ProcessingResult processTXDetails(uint64_t msgId, const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
+   bs::message::ProcessingResult processLedgerEntries(const BlockSettle::Common::LedgerEntries &);
+   bs::message::ProcessingResult processAddressHist(const BlockSettle::Common::ArmoryMessage_AddressHistory&);
+   bs::message::ProcessingResult processFeeLevels(const BlockSettle::Common::ArmoryMessage_FeeLevelsResponse&);
+   bs::message::ProcessingResult processWalletsList(const BlockSettle::Common::WalletsMessage_WalletsListResponse&);
+   bs::message::ProcessingResult processUTXOs(const BlockSettle::Common::WalletsMessage_UtxoListResponse&);
+   bs::message::ProcessingResult processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse&);
+   bs::message::ProcessingResult processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived&);
+   bs::message::ProcessingResult processZCInvalidated(const BlockSettle::Common::ArmoryMessage_ZCInvalidated&);
+   bs::message::ProcessingResult processReservedUTXOs(const BlockSettle::Common::WalletsMessage_ReservedUTXOs&);
+   void processWalletAddresses(const std::vector<bs::sync::Address>&);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
    BSTerminalSplashScreen* splashScreen_{ nullptr };
    QObject* rootObj_{ nullptr };
+   QQmlContext* rootCtxt_{nullptr};
    std::shared_ptr<bs::message::UserTerminal>   userSettings_, userWallets_;
    std::shared_ptr<bs::message::UserTerminal>   userBlockchain_, userSigner_;
    bool loadingDone_{ false };
@@ -134,13 +180,21 @@ private:
    std::string signerDetails_;
    bool  walletsReady_{ false };
 
-   std::map<uint64_t, std::string>  walletGetMap_;
    std::unordered_map<std::string, bs::sync::WalletInfo> hdWallets_;
+   std::unordered_map<std::string, std::string> walletNames_;
+   std::map<bs::message::SeqId, std::string> walletInfoReq_;
+   std::map<bs::Address, std::string>  addrComments_;
    std::set<uint64_t>   newZCs_;
 
-   std::unordered_map<std::string, bs::network::Asset::Type>   assetTypes_;
-   std::set<bs::message::SeqId>  needChangeAddrReqs_;
+   QStringList walletsList_;
+   const QStringList txTypes_;
+   unsigned nbUsedWalletAddresses_{ 0 };
+   double confWalletBalance_{ 0 }, unconfWalletBalance_{ 0 }, totalWalletBalance_{ 0 };
+   unsigned nbTransactions_{ 0 };
+   QmlAddressListModel* addrModel_{ nullptr };
+   TxListModel* pendingTxModel_{ nullptr };
+   TxListModel* txModel_{ nullptr };
+   bs::Address generatedAddress_;
 };
-
 
 #endif	// QT_QUICK_ADAPTER_H
