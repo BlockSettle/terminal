@@ -308,7 +308,7 @@ void NotificationTrayIconResponder::notificationAction(const QString &action)
       newVersionMessage_ = true;
       messageClicked();
    } else if (action == c_newOkAction) {
-      newChatMessage_ = true;
+//      newChatMessage_ = true;
       messageClicked();
    }
 }

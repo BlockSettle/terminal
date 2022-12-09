@@ -100,7 +100,7 @@ namespace bs {
          std::shared_ptr<spdlog::logger>  logger_;
          std::map<std::string, std::shared_ptr<Queue>>   queues_;
          std::shared_ptr<MainLoopRuner>   runnableAdapter_;
-         std::shared_ptr<RelayAdapter>    relayAdapter_;
+         std::shared_ptr<Adapter>         relayAdapter_;
       };
 
    } // namespace message

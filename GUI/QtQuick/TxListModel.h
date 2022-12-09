@@ -11,6 +11,7 @@
 #ifndef TX_LIST_MODEL_H
 #define TX_LIST_MODEL_H
 
+#include <memory>
 #include <QAbstractTableModel>
 #include <QObject>
 #include <QVariant>
