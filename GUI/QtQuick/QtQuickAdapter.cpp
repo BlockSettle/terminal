@@ -31,6 +31,7 @@
 #include "bip39/bip39.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
+#include "QTXSignRequest.h"
 #include "Wallets/ProtobufHeadlessUtils.h"
 #include "SettingsAdapter.h"
 
@@ -175,6 +176,9 @@ void QtQuickAdapter::run(int &argc, char **argv)
    });
 
    logger_->debug("[QtGuiAdapter::run] creating QML app");
+   qmlRegisterInterface<QTXSignRequest>("QTXSignRequest");
+   qmlRegisterInterface<QUTXO>("QUTXO");
+
    QQmlApplicationEngine engine;
    QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);
    rootCtxt_ = engine.rootContext();
@@ -206,6 +210,10 @@ void QtQuickAdapter::run(int &argc, char **argv)
       QObject::connect((QObject*)comboWalletsList, SIGNAL(activated(int)), this, SLOT(walletSelected(int)));
    }
    comboWalletsList = rootObj_->findChild<QQuickItem*>(QLatin1Literal("receiveWalletsComboBox"));
+   if (comboWalletsList) {
+      QObject::connect((QObject*)comboWalletsList, SIGNAL(activated(int)), this, SLOT(walletSelected(int)));
+   }
+   comboWalletsList = rootObj_->findChild<QQuickItem*>(QLatin1Literal("sendWalletsComboBox"));
    if (comboWalletsList) {
       QObject::connect((QObject*)comboWalletsList, SIGNAL(activated(int)), this, SLOT(walletSelected(int)));
    }
@@ -552,6 +560,8 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
       break;
    case WalletsMessage::kLedgerEntries:
       return processLedgerEntries(msg.ledger_entries());
+   case WalletsMessage::kTxResponse:
+      return processTxResponse(env.responseId(), msg.tx_response());
    default: return ProcessingResult::Ignored;
    }
    return ProcessingResult::Success;
@@ -762,7 +772,7 @@ ProcessingResult QtQuickAdapter::processWalletBalances(const WalletsMessage_Wall
    return ProcessingResult::Success;
 }
 
-ProcessingResult QtQuickAdapter::processTXDetails(uint64_t msgId
+ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
    , const WalletsMessage_TXDetailsResponse &response)
 {
    std::vector<bs::sync::TXWalletDetails> txDetails;
@@ -973,6 +983,25 @@ void QtQuickAdapter::copyAddressToClipboard(const QString& addr)
    emit addressGenerated();
 }
 
+QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex
+   , const QString& recvAddr, double amount, double fee, const QString& comment)
+{
+   WalletsMessage msg;
+   auto msgReq = msg.mutable_tx_request();
+   msgReq->set_hd_wallet_id(hdWalletIdByIndex(walletIndex));
+   auto msgOut = msgReq->add_outputs();
+   msgOut->set_address(recvAddr.toStdString());
+   msgOut->set_amount(amount);
+   msgReq->set_fee_per_byte(fee);
+   if (!comment.isEmpty()) {
+      msgReq->set_comment(comment.toStdString());
+   }
+   const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
+   const auto txReq = new QTXSignRequest(this);
+   txReqs_[msgId] = txReq;
+   return txReq;
+}
+
 ProcessingResult QtQuickAdapter::processAddressHist(const ArmoryMessage_AddressHistory& response)
 {
    bs::Address addr;
@@ -1045,7 +1074,16 @@ ProcessingResult QtQuickAdapter::processUTXOs(const WalletsMessage_UtxoListRespo
 
 ProcessingResult QtQuickAdapter::processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse& response)
 {
-   //TODO
+   const auto& signedTX = BinaryData::fromString(response.signed_tx());
+   logger_->debug("[{}] signed TX size: {}", __func__, signedTX.getSize());
+
+   ArmoryMessage msg;
+   auto msgReq = msg.mutable_tx_push();
+   //msgReq->set_push_id(id);
+   auto msgTx = msgReq->add_txs_to_push();
+   msgTx->set_tx(response.signed_tx());
+   //not adding TX hashes atm
+   pushRequest(user_, userBlockchain_, msg.SerializeAsString());
    return ProcessingResult::Success;
 }
 
@@ -1099,4 +1137,41 @@ void QtQuickAdapter::processWalletAddresses(const std::vector<bs::sync::Address>
       , QString::fromStdString(lastAddr.index) });
    generatedAddress_ = lastAddr.address;
    emit addressGenerated();
+}
+
+bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::SeqId msgId
+   , const WalletsMessage_TxResponse& response)
+{
+   const auto& itReq = txReqs_.find(msgId);
+   if (itReq == txReqs_.end()) {
+      logger_->error("[{}] unknown request #{}", __func__, msgId);
+      return bs::message::ProcessingResult::Error;
+   }
+   auto qReq = itReq->second;
+   txReqs_.erase(itReq);
+   if (!response.error_text().empty()) {
+      logger_->error("[{}] {}", __func__, response.error_text());
+      qReq->setError(QString::fromStdString(response.error_text()));
+      return bs::message::ProcessingResult::Success;
+   }
+   const auto txReq = bs::signer::pbTxRequestToCore(response.tx_sign_request(), logger_);
+   qReq->setTxSignReq(txReq);
+   return bs::message::ProcessingResult::Success;
+}
+
+void QtQuickAdapter::signAndBroadcast(QTXSignRequest* txReq, const QString& password)
+{
+   if (!txReq) {
+      logger_->error("[{}] no TX request passed", __func__);
+      return;
+   }
+   const auto& txSignReq = txReq->txReq();
+   SignerMessage msg;
+   auto msgReq = msg.mutable_sign_tx_request();
+   //msgReq->set_id(id);
+   *msgReq->mutable_tx_request() = bs::signer::coreTxRequestToPb(txSignReq);
+   msgReq->set_sign_mode((int)SignContainer::TXSignMode::Full);
+   //msgReq->set_keep_dup_recips(keepDupRecips);
+   msgReq->set_passphrase(password.toStdString());
+   pushRequest(user_, userSigner_, msg.SerializeAsString());
 }

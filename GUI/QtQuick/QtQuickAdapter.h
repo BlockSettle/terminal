@@ -41,6 +41,7 @@ namespace BlockSettle {
       class WalletsMessage_AuthKey;
       class WalletsMessage_ReservedUTXOs;
       class WalletsMessage_TXDetailsResponse;
+      class WalletsMessage_TxResponse;
       class WalletsMessage_UtxoListResponse;
       class WalletsMessage_WalletBalances;
       class WalletsMessage_WalletData;
@@ -70,7 +71,7 @@ namespace BlockSettle {
 class BSTerminalSplashScreen;
 class QQmlContext;
 class QmlWalletsList;
-
+class QTXSignRequest;
 
 class QtQuickAdapter : public QObject, public ApiBusAdapter, public bs::MainLoopRuner
 {
@@ -119,6 +120,10 @@ public:
    Q_INVOKABLE void generateNewAddress(int walletIndex, bool isNative);
    Q_INVOKABLE void copyAddressToClipboard(const QString& addr);
 
+   Q_INVOKABLE QTXSignRequest* createTXSignRequest(int walletIndex, const QString& recvAddr
+      , double amount, double fee, const QString& comment);
+   Q_INVOKABLE void signAndBroadcast(QTXSignRequest*, const QString& password);
+
 signals:
    void walletsListChanged();
    void walletBalanceChanged();
@@ -150,7 +155,7 @@ private:
    bs::message::ProcessingResult processWalletData(const uint64_t msgId
       , const BlockSettle::Common::WalletsMessage_WalletData&);
    bs::message::ProcessingResult processWalletBalances(const BlockSettle::Common::WalletsMessage_WalletBalances &);
-   bs::message::ProcessingResult processTXDetails(uint64_t msgId, const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
+   bs::message::ProcessingResult processTXDetails(bs::message::SeqId, const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
    bs::message::ProcessingResult processLedgerEntries(const BlockSettle::Common::LedgerEntries &);
    bs::message::ProcessingResult processAddressHist(const BlockSettle::Common::ArmoryMessage_AddressHistory&);
    bs::message::ProcessingResult processFeeLevels(const BlockSettle::Common::ArmoryMessage_FeeLevelsResponse&);
@@ -161,6 +166,8 @@ private:
    bs::message::ProcessingResult processZCInvalidated(const BlockSettle::Common::ArmoryMessage_ZCInvalidated&);
    bs::message::ProcessingResult processReservedUTXOs(const BlockSettle::Common::WalletsMessage_ReservedUTXOs&);
    void processWalletAddresses(const std::vector<bs::sync::Address>&);
+   bs::message::ProcessingResult processTxResponse(bs::message::SeqId
+      , const BlockSettle::Common::WalletsMessage_TxResponse&);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
@@ -195,6 +202,8 @@ private:
    TxListModel* pendingTxModel_{ nullptr };
    TxListModel* txModel_{ nullptr };
    bs::Address generatedAddress_;
+
+   std::map<bs::message::SeqId, QTXSignRequest*> txReqs_;
 };
 
 #endif	// QT_QUICK_ADAPTER_H

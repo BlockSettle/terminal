@@ -23,6 +23,7 @@
         <file>qml/ImportSeedPhrase.qml</file>
         <file>qml/VerifySeedPhrase.qml</file>
         <file>qml/WalletNamePass.qml</file>
+        <file>qml/VerifyTX.qml</file>
         <file>qml/InfoBanner.qml</file>
         <file>qml/InfoBannerComponent.qml</file>
         <file>qml/InfoBar.qml</file>

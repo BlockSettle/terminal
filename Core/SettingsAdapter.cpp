@@ -518,6 +518,7 @@ ProcessingResult SettingsAdapter::processArmoryServer(const BlockSettle::Termina
    }
    armoryServersProvider_->setupServer(selIndex);
    appSettings_->selectNetwork();
+   return ProcessingResult::Success;
 }
 
 ProcessingResult SettingsAdapter::processSetArmoryServer(const bs::message::Envelope& env, int index)

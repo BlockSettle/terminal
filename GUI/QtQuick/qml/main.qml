@@ -121,10 +121,9 @@ ApplicationWindow {
                 icon.source: "qrc:/images/send_icon.png"
                 font.pointSize: 16
                 Layout.fillHeight: true
-                enabled: false
+                enabled: !bsApp.walletsList.empty
                 onClicked: {
                     stack.push(sendPage)
-                    //sendPage.visible = true
                 }
             }
             ToolButton {
@@ -133,6 +132,7 @@ ApplicationWindow {
                 icon.source: "qrc:/images/receive_icon.png"
                 font.pointSize: 16
                 Layout.fillHeight: true
+                enabled: !bsApp.walletsList.empty
                 onClicked: {
                     stack.push(receivePage)
                 }
