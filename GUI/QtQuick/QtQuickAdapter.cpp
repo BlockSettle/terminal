@@ -329,7 +329,11 @@ ProcessingResult QtQuickAdapter::processSettingsGetResponse(const SettingsMessag
       }
    }
    if (!settings.empty()) {
-      //TODO: propagate settings to GUI
+      for (const auto& setting : settings) {
+         logger_->debug("[{}] {} = {}", __func__, setting.first, setting.second.toString().toStdString());
+         settingsCache_[static_cast<ApplicationSettings::Setting>(setting.first)] = setting.second;
+      }
+      emit settingChanged();
    }
    return ProcessingResult::Success;
 }
@@ -660,23 +664,33 @@ void QtQuickAdapter::requestInitialSettings()
 
    setReq = msgReq->add_requests();
    setReq->set_source(SettingSource_Local);
-   setReq->set_index(SetIdx_ShowInfoWidget);
-   setReq->set_type(SettingType_Bool);
-
-   setReq = msgReq->add_requests();
-   setReq->set_source(SettingSource_Local);
    setReq->set_index(SetIdx_AdvancedTXisDefault);
    setReq->set_type(SettingType_Bool);
 
    setReq = msgReq->add_requests();
    setReq->set_source(SettingSource_Local);
-   setReq->set_index(SetIdx_CloseToTray);
-   setReq->set_type(SettingType_Bool);
+   setReq->set_index(SetIdx_LogDefault);
+   setReq->set_type(SettingType_Strings);
+
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_LogMessages);
+   setReq->set_type(SettingType_Strings);
 
    setReq = msgReq->add_requests();
    setReq->set_source(SettingSource_Local);
    setReq->set_index(SetIdx_Environment);
    setReq->set_type(SettingType_Int);
+
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_ArmoryDbIP);
+   setReq->set_type(SettingType_String);
+
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_ArmoryDbPort);
+   setReq->set_type(SettingType_String);
 
    pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
@@ -906,6 +920,11 @@ ProcessingResult QtQuickAdapter::processLedgerEntries(const LedgerEntries &respo
    nbTransactions_ = entries.size();
    emit nbTransactionsChanged();
    return ProcessingResult::Success;
+}
+
+QStringList QtQuickAdapter::settingEnvironments() const
+{
+   return { tr("Main"), tr("Test") };
 }
 
 QStringList QtQuickAdapter::newSeedPhrase()
@@ -1157,6 +1176,52 @@ bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::Seq
    const auto txReq = bs::signer::pbTxRequestToCore(response.tx_sign_request(), logger_);
    qReq->setTxSignReq(txReq);
    return bs::message::ProcessingResult::Success;
+}
+
+QVariant QtQuickAdapter::getSetting(ApplicationSettings::Setting s) const
+{
+   try {
+      return settingsCache_.at(s);
+   }
+   catch (const std::exception&) {}
+   return {};
+}
+
+QString QtQuickAdapter::getSettingStringAt(ApplicationSettings::Setting s, int idx)
+{
+   const auto& list = getSetting(s).toStringList();
+   if ((idx >= 0) && (idx < list.size())) {
+      return list.at(idx);
+   }
+   return {};
+}
+
+void QtQuickAdapter::setSetting(ApplicationSettings::Setting s, const QVariant& val)
+{
+   if (settingsCache_.empty()) {
+      return;
+   }
+   try {
+      if (settingsCache_.at(s) == val) {
+         return;
+      }
+   }
+   catch (const std::exception&) {}
+   logger_->debug("[{}] {} = {}", __func__, (int)s, val.toString().toStdString());
+   settingsCache_[s] = val;
+   SettingsMessage msg;
+   auto msgReq = msg.mutable_put_request();
+   auto setResp = msgReq->add_responses();
+   auto setReq = setResp->mutable_request();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(static_cast<SettingIndex>(s));
+   setFromQVariant(val, setReq, setResp);
+
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
+}
+
+void QtQuickAdapter::resetArmoryConnection()
+{
 }
 
 void QtQuickAdapter::signAndBroadcast(QTXSignRequest* txReq, const QString& password)

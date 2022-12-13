@@ -16,6 +16,7 @@
 #include "Address.h"
 #include "AddressListModel.h"
 #include "ApiAdapter.h"
+#include "ApplicationSettings.h"
 #include "Wallets/SignContainer.h"
 #include "ThreadSafeClasses.h"
 #include "TxListModel.h"
@@ -111,6 +112,35 @@ public:
    Q_PROPERTY(QString generatedAddress READ generatedAddress NOTIFY addressGenerated)
    QString generatedAddress() const { return QString::fromStdString(generatedAddress_.display()); }
 
+   // Settings properties
+   Q_PROPERTY(QString settingLogFile READ settingLogFile WRITE setLogFile NOTIFY settingChanged)
+   QString settingLogFile() { return getSettingStringAt(ApplicationSettings::Setting::logDefault, 0); }
+   void setLogFile(const QString& str) { setSetting(ApplicationSettings::Setting::logDefault, str); }
+
+   Q_PROPERTY(QString settingMsgLogFile READ settingMsgLogFile WRITE setMsgLogFile NOTIFY settingChanged)
+   QString settingMsgLogFile() { return getSettingStringAt(ApplicationSettings::Setting::logMessages, 0); }
+   void setMsgLogFile(const QString& str) { setSetting(ApplicationSettings::Setting::logMessages, str); }
+
+   Q_PROPERTY(bool settingAdvancedTX READ settingAdvancedTX WRITE setAdvancedTX NOTIFY settingChanged)
+   bool settingAdvancedTX() { return getSetting(ApplicationSettings::Setting::AdvancedTxDialogByDefault).toBool(); }
+   void setAdvancedTX(bool b) { setSetting(ApplicationSettings::Setting::AdvancedTxDialogByDefault, b); }
+
+   Q_PROPERTY(int settingEnvironment READ settingEnvironment WRITE setEnvironment NOTIFY settingChanged)
+   int settingEnvironment() { return getSetting(ApplicationSettings::Setting::envConfiguration).toInt(); }
+   void setEnvironment(int i) { setSetting(ApplicationSettings::Setting::envConfiguration, i); }
+
+   Q_PROPERTY(QStringList settingEnvironments READ settingEnvironments)
+   QStringList settingEnvironments() const;
+
+   Q_PROPERTY(QString settingArmoryHost READ settingArmoryHost WRITE setArmoryHost NOTIFY settingChanged)
+   QString settingArmoryHost() const { return getSetting(ApplicationSettings::Setting::armoryDbIp).toString(); }
+   void setArmoryHost(const QString& str) { setSetting(ApplicationSettings::Setting::armoryDbIp, str); }
+
+   Q_PROPERTY(QString settingArmoryPort READ settingArmoryPort WRITE setArmoryPort NOTIFY settingChanged)
+   QString settingArmoryPort() const { return getSetting(ApplicationSettings::Setting::armoryDbPort).toString(); }
+   void setArmoryPort(const QString& str) { setSetting(ApplicationSettings::Setting::armoryDbPort, str); }
+
+   // QML-invokable methods
    Q_INVOKABLE QStringList newSeedPhrase();
    Q_INVOKABLE void copySeedToClipboard(const QStringList&);
    Q_INVOKABLE void createWallet(const QString& name, const QStringList& seed
@@ -129,6 +159,7 @@ signals:
    void walletBalanceChanged();
    void nbTransactionsChanged();
    void addressGenerated();
+   void settingChanged();
 
 private slots:
    void walletSelected(int);
@@ -169,6 +200,11 @@ private:
    bs::message::ProcessingResult processTxResponse(bs::message::SeqId
       , const BlockSettle::Common::WalletsMessage_TxResponse&);
 
+   QVariant getSetting(ApplicationSettings::Setting) const;
+   QString getSettingStringAt(ApplicationSettings::Setting, int idx);
+   void setSetting(ApplicationSettings::Setting, const QVariant&);
+   void resetArmoryConnection();
+
 private:
    std::shared_ptr<spdlog::logger>        logger_;
    BSTerminalSplashScreen* splashScreen_{ nullptr };
@@ -204,6 +240,7 @@ private:
    bs::Address generatedAddress_;
 
    std::map<bs::message::SeqId, QTXSignRequest*> txReqs_;
+   std::map<ApplicationSettings::Setting, QVariant>   settingsCache_;
 };
 
 #endif	// QT_QUICK_ADAPTER_H
