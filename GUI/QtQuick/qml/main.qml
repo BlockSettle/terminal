@@ -107,7 +107,7 @@ ApplicationWindow {
 
             Image {
                 id: imgArmoryStatus
-                source: "qrc:/images/bitcoin-disabled.png"
+                source: (bsApp.armoryState == 7) ? "qrc:/images/bitcoin-test-net.png" : "qrc:/images/bitcoin-disabled.png"
                 verticalAlignment: Qt.AlignVCenter
             }
 

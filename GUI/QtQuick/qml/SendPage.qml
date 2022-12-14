@@ -137,10 +137,16 @@ Item {
         TextEdit {
             id: txComment
             width: 900
-            height: 64
+            height: 84
+            color: 'lightgrey'
+            verticalAlignment: TextEdit.AlignVCenter
+            font.pointSize: 12
             Text {
                 text: qsTr("Comment")
                 color: 'darkgrey'
+                anchors.left: parent
+                anchors.top: parent
+                font.pointSize: 10
             }
         }
 

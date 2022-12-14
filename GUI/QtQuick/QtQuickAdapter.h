@@ -140,6 +140,9 @@ public:
    QString settingArmoryPort() const { return getSetting(ApplicationSettings::Setting::armoryDbPort).toString(); }
    void setArmoryPort(const QString& str) { setSetting(ApplicationSettings::Setting::armoryDbPort, str); }
 
+   Q_PROPERTY(int armoryState READ armoryState NOTIFY armoryStateChanged)
+   int armoryState() const { return armoryState_; }
+
    // QML-invokable methods
    Q_INVOKABLE QStringList newSeedPhrase();
    Q_INVOKABLE void copySeedToClipboard(const QStringList&);
@@ -160,6 +163,7 @@ signals:
    void nbTransactionsChanged();
    void addressGenerated();
    void settingChanged();
+   void armoryStateChanged();
 
 private slots:
    void walletSelected(int);
