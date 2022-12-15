@@ -22,22 +22,148 @@ import "BsStyles"
 Item {
     id: send
 
+    VerifyTX {
+        id: verifySignTX
+        visible: false
+    }
+
     Column {
-        spacing: 50
+        spacing: 23
         anchors.fill: parent
 
-        Button {
-            icon.source: "qrc:/images/send_icon.png"
-            onClicked: {
-                stack.pop()
+        Row {
+            Button {
+                icon.source: "qrc:/images/send_icon.png"
+                onClicked: {
+                    stack.pop()
+                }
+            }
+            Text {
+                text: qsTr("<font color=\"white\">Send Bitcoin</font>")
+                font.pointSize: 14
+            }
+            Button {
+                width: 300
+                text: qsTr("Advanced")
+                font.pointSize: 14
             }
         }
-        Text {
-            text: qsTr("<font color=\"cyan\">Send page</font>")
-            font.pointSize: 23
+
+        TextInput {
+            id: recvAddress
+            width: 500
+            height: 32
+            color: 'lightgrey'
+            font.pointSize: 14
+            horizontalAlignment: TextEdit.AlignHCenter
+            verticalAlignment: TextEdit.AlignVCenter
+            Text {
+                text: qsTr("Receiver address")
+                font.pointSize: 6
+                color: 'darkgrey'
+                anchors.left: parent
+                anchors.top: parent
+            }
         }
-        Image {
-            source: "qrc:/images/bs_logo.png"
+
+        Row {
+            TextInput {
+                id: amount
+                width: 500
+                height: 32
+                color: 'lightgrey'
+                font.pointSize: 14
+                horizontalAlignment: TextEdit.AlignHCenter
+                verticalAlignment: TextEdit.AlignVCenter
+                Text {
+                    text: qsTr("Amount")
+                    font.pointSize: 6
+                    color: 'darkgrey'
+                    anchors.left: parent
+                    anchors.top: parent
+                }
+                Text {
+                    text: qsTr("BTC")
+                    font.pointSize: 10
+                    color: 'darkgrey'
+                    anchors.right: parent
+                    anchors.horizontalCenter: parent
+                }
+            }
+            Button {
+                text: qsTr("MAX")
+                font.pointSize: 14
+            }
+        }
+        Row {
+            spacing: 23
+            ComboBox {
+                id: sendWalletsComboBox
+                objectName: "sendWalletsComboBox"
+                model: bsApp.walletsList
+                currentIndex: walletsComboBox.currentIndex
+                font.pointSize: 14
+                enabled: (bsApp.walletsList.length > 1)
+                width: 350
+            }
+            Label {
+                text: qsTr("<font color=\"white\">%1 BTC</font>").arg(bsApp.totalBalance)
+                font.pointSize: 14
+            }
+            TextInput {
+                id: fees
+                width: 500
+                height: 32
+                color: 'lightgrey'
+                font.pointSize: 14
+                horizontalAlignment: TextEdit.AlignHCenter
+                verticalAlignment: TextEdit.AlignVCenter
+                Text {
+                    text: qsTr("Fee Suggestions")
+                    font.pointSize: 6
+                    color: 'darkgrey'
+                    anchors.left: parent
+                    anchors.top: parent
+                }
+                Text {
+                    text: qsTr("s/b")
+                    font.pointSize: 10
+                    color: 'darkgrey'
+                    anchors.right: parent
+                    anchors.horizontalCenter: parent
+                }
+            }
+        }
+        TextEdit {
+            id: txComment
+            width: 900
+            height: 84
+            color: 'lightgrey'
+            verticalAlignment: TextEdit.AlignVCenter
+            font.pointSize: 12
+            Text {
+                text: qsTr("Comment")
+                color: 'darkgrey'
+                anchors.left: parent
+                anchors.top: parent
+                font.pointSize: 10
+            }
+        }
+
+        Button {
+            width: 900
+            text: qsTr("Continue")
+            font.pointSize: 14
+            enabled: recvAddress.text.length && (parseFloat(amount.text) >= 0.00001)
+                && (parseFloat(fees.text) >= 1.0)
+
+            onClicked: {
+                verifySignTX.txSignRequest = bsApp.createTXSignRequest(
+                            sendWalletsComboBox.currentIndex, recvAddress.text,
+                            parseFloat(amount.text), parseFloat(fees.text),
+                            txComment.text)
+                stack.push(verifySignTX)
+            }
         }
     }
 }

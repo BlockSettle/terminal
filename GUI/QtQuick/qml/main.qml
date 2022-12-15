@@ -122,16 +122,23 @@ ApplicationWindow {
                 enabled: false
                 text: qsTr("Send")
                 icon.source: "qrc:/images/send_icon.png"
+                font.pointSize: 16
+                Layout.fillHeight: true
+                enabled: !bsApp.walletsList.empty
                 onClicked: {
                     topMenuBtnClicked(btnSend)
                     stack.push(sendPage)
-                    //sendPage.visible = true
                 }
             }
             CustomTitleToolButton {
                 id: btnReceive
                 text: qsTr("Receive")
                 icon.source: "qrc:/images/receive_icon.png"
+
+                font.pointSize: 16
+                Layout.fillHeight: true
+                enabled: !bsApp.walletsList.empty
+
                 onClicked: {
                     topMenuBtnClicked(btnReceive)
                     stack.push(receivePage)

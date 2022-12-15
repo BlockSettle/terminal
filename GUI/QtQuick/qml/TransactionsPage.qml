@@ -88,16 +88,16 @@ Item {
             ScrollIndicator.vertical: ScrollIndicator { }
             model: txListModel
             delegate: Rectangle {
-                implicitWidth: 125
+                implicitWidth: 125 * colWidth
                 implicitHeight: 20
                 border.color: "black"
                 border.width: 1
                 clip: true
                 color: heading ? 'black' : 'darkslategrey'
                 Text {
-                    text: tabledata
+                    text: tableData
                     font.pointSize: heading ? 8 : 10
-                    color: heading ? 'darkgrey' : 'lightgrey'
+                    color: dataColor
                     anchors.centerIn: parent
                 }
             }

@@ -149,6 +149,18 @@ Item {
                     anchors.centerIn: parent
                 }
             }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    //if ((addressListModel.column === 0) && (addressListModel.row > 0)) {
+                        bsApp.copyAddressToClipboard("row: " + model.row)
+                        //ibInfo.displayMessage(qsTr("address copied"))
+                    //}
+                }
+                onDoubleClicked: {
+                    //TODO: show address details
+                }
+            }
         }
 
         Label {
@@ -165,15 +177,15 @@ Item {
             ScrollIndicator.vertical: ScrollIndicator { }
             model: pendingTxListModel
             delegate: Rectangle {
-                implicitWidth: 125
+                implicitWidth: 125 * colWidth
                 implicitHeight: 20
                 border.color: "black"
                 border.width: 1
                 color: heading ? 'black' : 'darkslategrey'
                 Text {
-                    text: tabledata
+                    text: tableData
                     font.pointSize: heading ? 8 : 10
-                    color: heading ? 'darkgrey' : 'lightgrey'
+                    color: dataColor
                     anchors.centerIn: parent
                 }
             }
