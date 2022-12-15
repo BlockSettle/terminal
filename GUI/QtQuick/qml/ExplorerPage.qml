@@ -8,9 +8,9 @@
 **********************************************************************************
 
 */
-import QtQuick 2
-import QtQuick.Controls 2.9
-import QtQuick.Layouts 1.3
+import QtQuick 2.12
+import QtQuick.Controls 2.12
+import QtQuick.Layouts 1.12
 import QtQml.Models 2
 
 import "StyledControls"
@@ -21,10 +21,307 @@ import "BsStyles"
 
 Item {
     id: explorer
+    property bool isAddressSearch: true
+    property bool isTXSearch
 
     Column {
-        spacing: 50
+        spacing: 32
         anchors.fill: parent
 
+        TextInput {
+            id: txSearchBox
+            width: 900
+            height: 32
+            color: 'lightgrey'
+            font.pointSize: 14
+            Text {
+                text: qsTr("Search for transaction or address")
+                color: 'darkgrey'
+                visible: !txSearchBox.text && !txSearchBox.activeFocus
+            }
+        }
+
+        Column {
+            visible: isAddressSearch
+            Row {
+                spacing: 16
+                Label {
+                    text: qsTr("<font color=\"white\">Address</font>")
+                    font.pointSize: 14
+                }
+                Label {
+                    text: "address"
+                    color: 'lightgrey'
+                    font.pointSize: 12
+                }
+                Button {
+                    text: qsTr("Copy")
+                    font.pointSize: 12
+                    onClicked: {
+                    }
+                }
+            }
+            Row {
+                spacing: 12
+                Column {
+                    Label {
+                        text: qsTr("<font color=\"gray\">Transactions count</font>")
+                        font.pointSize: 8
+                    }
+                    Label {
+                        text: qsTr("<font color=\"white\">4</font>")
+                        font.pointSize: 12
+                    }
+                }
+                Column {
+                    Label {
+                        text: qsTr("<font color=\"gray\">Balance (BTC)</font>")
+                        font.pointSize: 8
+                    }
+                    Label {
+                        text: qsTr("<font color=\"white\">0.0099889</font>")
+                        font.pointSize: 12
+                    }
+                }
+                Column {
+                    Label {
+                        text: qsTr("<font color=\"gray\">Total Received (BTC)</font>")
+                        font.pointSize: 8
+                    }
+                    Label {
+                        text: qsTr("<font color=\"white\">0.0099889</font>")
+                        font.pointSize: 12
+                    }
+                }
+                Column {
+                    Label {
+                        text: qsTr("<font color=\"gray\">Total Sent (BTC)</font>")
+                        font.pointSize: 8
+                    }
+                    Label {
+                        text: qsTr("<font color=\"white\">0.0099889</font>")
+                        font.pointSize: 12
+                    }
+                }
+            }
+            Label {
+                text: qsTr("<font color=\"white\">Transactions</font>")
+                font.pointSize: 14
+            }
+            TableView {
+                width: 1000
+                height: 300
+                columnSpacing: 1
+                rowSpacing: 1
+                clip: true
+                ScrollIndicator.horizontal: ScrollIndicator { }
+                ScrollIndicator.vertical: ScrollIndicator { }
+                model: addressListModel
+                delegate: Rectangle {
+                    implicitWidth: firstcol ? 550 : 150
+                    implicitHeight: 20
+                    border.color: "black"
+                    border.width: 1
+                    color: heading ? 'black' : 'darkslategrey'
+                    Text {
+                        text: tabledata
+                        font.pointSize: heading ? 8 : 10
+                        color: heading ? 'darkgrey' : 'lightgrey'
+                        anchors.centerIn: parent
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            if (!heading && (model.column === 1)) {
+                                isAddressSearch = false
+                                isTXSearch = true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Column {
+            visible: isTXSearch
+            Row {
+                spacing: 16
+                Label {
+                    text: qsTr("<font color=\"white\">Transaction ID</font>")
+                    font.pointSize: 14
+                }
+                Label {
+                    text: "transaction id"
+                    color: 'lightgrey'
+                    font.pointSize: 12
+                }
+                Button {
+                    text: qsTr("Copy")
+                    font.pointSize: 12
+                    onClicked: {
+                    }
+                }
+            }
+            Row {
+                spacing: 12
+                Column {
+                    Label {
+                        text: qsTr("<font color=\"gray\">Confirmations</font>")
+                        font.pointSize: 8
+                    }
+                    Label {
+                        text: qsTr("<font color=\"green\">283</font>")
+                        font.pointSize: 12
+                    }
+                }
+                Column {
+                    Label {
+                        text: qsTr("<font color=\"gray\">Inputs</font>")
+                        font.pointSize: 8
+                    }
+                    Label {
+                        text: qsTr("<font color=\"white\">1</font>")
+                        font.pointSize: 12
+                    }
+                }
+                Column {
+                    Label {
+                        text: qsTr("<font color=\"gray\">Outputs</font>")
+                        font.pointSize: 8
+                    }
+                    Label {
+                        text: qsTr("<font color=\"white\">2</font>")
+                        font.pointSize: 12
+                    }
+                }
+                Column {
+                    Label {
+                        text: qsTr("<font color=\"gray\">Input Amount (BTC)</font>")
+                        font.pointSize: 8
+                    }
+                    Label {
+                        text: qsTr("<font color=\"white\">0.01959741</font>")
+                        font.pointSize: 12
+                    }
+                }
+                Column {
+                    Label {
+                        text: qsTr("<font color=\"gray\">Output Amount (BTC)</font>")
+                        font.pointSize: 8
+                    }
+                    Label {
+                        text: qsTr("<font color=\"white\">0.01959741</font>")
+                        font.pointSize: 12
+                    }
+                }
+                Column {
+                    Label {
+                        text: qsTr("<font color=\"gray\">Fees (BTC)</font>")
+                        font.pointSize: 8
+                    }
+                    Label {
+                        text: qsTr("<font color=\"white\">0.00000146</font>")
+                        font.pointSize: 12
+                    }
+                }
+                Column {
+                    Label {
+                        text: qsTr("<font color=\"gray\">Fee per byte (s/b)</font>")
+                        font.pointSize: 8
+                    }
+                    Label {
+                        text: qsTr("<font color=\"white\">1</font>")
+                        font.pointSize: 12
+                    }
+                }
+                Column {
+                    Label {
+                        text: qsTr("<font color=\"gray\">Size (virtual bytes)</font>")
+                        font.pointSize: 8
+                    }
+                    Label {
+                        text: qsTr("<font color=\"white\">141</font>")
+                        font.pointSize: 12
+                    }
+                }
+            }
+            Row {
+                spacing: 32
+                Column {
+                    Label {
+                        text: qsTr("<font color=\"white\">Input</font>")
+                        font.pointSize: 14
+                    }
+                    TableView {
+                        width: 500
+                        height: 300
+                        columnSpacing: 1
+                        rowSpacing: 1
+                        clip: true
+                        ScrollIndicator.horizontal: ScrollIndicator { }
+                        ScrollIndicator.vertical: ScrollIndicator { }
+                        model: addressListModel
+                        delegate: Rectangle {
+                            implicitWidth: 120
+                            implicitHeight: 40
+                            border.color: "black"
+                            border.width: 1
+                            color: heading ? 'black' : 'darkslategrey'
+                            Text {
+                                text: tabledata
+                                font.pointSize: heading ? 8 : 10
+                                color: heading ? 'darkgrey' : 'lightgrey'
+                                anchors.centerIn: parent
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    if (!heading && (model.column === 0)) {
+                                        isTXSearch = false
+                                        isAddressSearch = true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Column {
+                    Label {
+                        text: qsTr("<font color=\"white\">Output</font>")
+                        font.pointSize: 14
+                    }
+                    TableView {
+                        width: 500
+                        height: 300
+                        columnSpacing: 1
+                        rowSpacing: 1
+                        clip: true
+                        ScrollIndicator.horizontal: ScrollIndicator { }
+                        ScrollIndicator.vertical: ScrollIndicator { }
+                        model: addressListModel
+                        delegate: Rectangle {
+                            implicitWidth: 120
+                            implicitHeight: 40
+                            border.color: "black"
+                            border.width: 1
+                            color: heading ? 'black' : 'darkslategrey'
+                            Text {
+                                text: tabledata
+                                font.pointSize: heading ? 8 : 10
+                                color: heading ? 'darkgrey' : 'lightgrey'
+                                anchors.centerIn: parent
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    if (!heading && (model.column === 0)) {
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

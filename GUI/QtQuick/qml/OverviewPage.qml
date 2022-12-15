@@ -136,7 +136,7 @@ Item {
             height: 300
             columnSpacing: 1
             rowSpacing: 1
-            clip: false
+            clip: true
             ScrollIndicator.horizontal: ScrollIndicator { }
             ScrollIndicator.vertical: ScrollIndicator { }
             model: addressListModel

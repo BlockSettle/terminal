@@ -19,6 +19,7 @@ namespace {
       {TxListModel::HeadingRole, "heading"},
       {TxListModel::ColorRole, "dataColor"},
       {TxListModel::WidthRole, "colWidth"},
+      {TxListModel::TxIdRole, "txId"},
    };
 }
 
@@ -168,6 +169,15 @@ QString TxListModel::txFlag(int row) const
    return {};
 }
 
+QString TxListModel::txId(int row) const
+{
+   const auto& itTxDet = txDetails_.find(row);
+   if (itTxDet != txDetails_.end()) {
+      return QString::fromStdString(itTxDet->second.txHash.toHexStr(true));
+   }
+   return {};
+}
+
 QVariant TxListModel::data(const QModelIndex& index, int role) const
 {
    if (index.column() >= header_.size()) {
@@ -182,6 +192,8 @@ QVariant TxListModel::data(const QModelIndex& index, int role) const
       return dataColor(index.row(), index.column());
    case WidthRole:
       return colWidth(index.column());
+   case TxIdRole:
+      return txId(index.row() - 1);
    default: break;
    }
    return QVariant();

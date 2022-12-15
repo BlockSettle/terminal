@@ -27,7 +27,8 @@ class TxListModel : public QAbstractTableModel
 {
    Q_OBJECT
 public:
-   enum TableRoles { TableDataRole = Qt::UserRole + 1, HeadingRole, ColorRole, WidthRole };
+   enum TableRoles { TableDataRole = Qt::UserRole + 1, HeadingRole, ColorRole
+      , WidthRole, TxIdRole };
    TxListModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
 
    int rowCount(const QModelIndex & = QModelIndex()) const override;
@@ -51,6 +52,7 @@ private:
    QString walletNameById(const std::string&) const;
    QString txType(int row) const;
    QString txFlag(int row) const;
+   QString txId(int row) const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

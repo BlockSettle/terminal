@@ -100,6 +100,20 @@ Item {
                     color: dataColor
                     anchors.centerIn: parent
                 }
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        if (!heading) {
+                            bsApp.copyAddressToClipboard(txId)
+                            ibInfo.displayMessage(qsTr("TX id %1 copied to clipboard").arg(txId))
+                        }
+                    }
+                    onDoubleClicked: {
+                        if (!heading) {
+                            //TODO: show TX details
+                        }
+                    }
+                }
             }
         }
     }
