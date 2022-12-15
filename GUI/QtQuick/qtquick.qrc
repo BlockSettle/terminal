@@ -13,6 +13,7 @@
         <file>images/explorer_icon.png</file>
         <file>qml/main.qml</file>
         <file>qml/OverviewPage.qml</file>
+        <file>qml/AddressDetails.qml</file>
         <file>qml/TransactionsPage.qml</file>
         <file>qml/ExplorerPage.qml</file>
         <file>qml/SendPage.qml</file>

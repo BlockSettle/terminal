@@ -26,6 +26,10 @@ Item {
         id: createNewWalletPage
         visible: false
     }
+    AddressDetails {
+        id: addressDetails
+        visible: false
+    }
 
     Column {
         spacing: 23
@@ -148,17 +152,17 @@ Item {
                     color: heading ? 'darkgrey' : 'lightgrey'
                     anchors.centerIn: parent
                 }
-            }
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    //if ((addressListModel.column === 0) && (addressListModel.row > 0)) {
-                        bsApp.copyAddressToClipboard("row: " + model.row)
-                        //ibInfo.displayMessage(qsTr("address copied"))
-                    //}
-                }
-                onDoubleClicked: {
-                    //TODO: show address details
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        if (!heading && (model.column === 0)) {
+                            bsApp.copyAddressToClipboard(tabledata)
+                            ibInfo.displayMessage(qsTr("address %1 copied to clipboard").arg(tabledata))
+                        }
+                    }
+                    onDoubleClicked: {
+                        stack.push(addressDetails)
+                    }
                 }
             }
         }

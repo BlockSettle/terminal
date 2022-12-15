@@ -26,15 +26,5 @@ Item {
         spacing: 50
         anchors.fill: parent
 
-        Text {
-            text: " "
-        }
-        Text {
-            text: qsTr("<font color=\"white\">Explorer page</font>")
-            font.pointSize: 23
-        }
-        Image {
-            source: "qrc:/images/bs_logo.png"
-        }
     }
 }

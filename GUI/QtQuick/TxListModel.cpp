@@ -58,7 +58,7 @@ QString TxListModel::getData(int row, int col) const
       }
       return QString::fromStdString(address.display());
    }
-   case 4: return QString::number(entry.value / BTCNumericTypes::BalanceDivider, 'f', 8);
+   case 4: return QString::number(std::abs(entry.value) / BTCNumericTypes::BalanceDivider, 'f', 8);
    case 5: return QString::number(entry.nbConf);
    case 6: return txFlag(row - 1);
    case 7: {
@@ -78,8 +78,8 @@ QColor TxListModel::dataColor(int row, int col) const
    if (row == 0) {
       return QColorConstants::DarkGray;
    }
+   const auto& entry = data_.at(row - 1);
    if (col == 5) {
-      const auto& entry = data_.at(row - 1);
       switch (entry.nbConf) {
       case 0:  return QColorConstants::Red;
       case 1:
@@ -90,7 +90,25 @@ QColor TxListModel::dataColor(int row, int col) const
       default: return QColorConstants::Green;
       }
    }
-   else if ((col == 2) || (col == 6)) {
+   else if (col == 2) {
+      const auto& itTxDet = txDetails_.find(row - 1);
+      if (itTxDet != txDetails_.end()) {
+         switch (itTxDet->second.direction) {
+         case bs::sync::Transaction::Direction::Received:   return QColorConstants::Green;
+         case bs::sync::Transaction::Direction::Sent:       return QColorConstants::Red;
+         case bs::sync::Transaction::Direction::Internal:   return QColorConstants::Cyan;
+         default: break;
+         }
+      }
+      return QColorConstants::DarkGray;
+   }
+   else if (col == 4) {
+      if (entry.value < 0) {
+         return qRgb(208, 192, 192);
+      }
+      return qRgb(192, 208, 192);
+   }
+   else if (col == 6) {
       return QColorConstants::DarkGray;
    }
    return QColorConstants::LightGray;
@@ -199,6 +217,7 @@ void TxListModel::clear()
 {
    beginResetModel();
    data_.clear();
+   txDetails_.clear();
    endResetModel();
 }
 

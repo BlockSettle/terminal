@@ -110,7 +110,7 @@ ApplicationWindow {
 
             Image {
                 id: imgArmoryStatus
-                source: "qrc:/images/conn_ind.png"
+                source: (bsApp.armoryState === 7) ? "qrc:/images/conn_ind.png" : "qrc:/images/conn_inactive.png"
             }
 
             Label {
@@ -119,12 +119,11 @@ ApplicationWindow {
 
             CustomTitleToolButton {
                 id: btnSend
-                enabled: false
+                enabled: !bsApp.walletsList.empty
                 text: qsTr("Send")
                 icon.source: "qrc:/images/send_icon.png"
                 font.pointSize: 16
                 Layout.fillHeight: true
-                enabled: !bsApp.walletsList.empty
                 onClicked: {
                     topMenuBtnClicked(btnSend)
                     stack.push(sendPage)
