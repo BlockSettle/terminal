@@ -26,6 +26,7 @@ QtObject {
     readonly property color textColor: "white"
     readonly property color textPressedColor: "#3a8ab4"
     readonly property color disabledHeaderColor: "#909090"
+    readonly property color titleTextColor: "#7A88B0"
 
     readonly property color labelsTextColor: "#939393"
     readonly property color labelsTextDisabledColor: "#454E53"
@@ -73,4 +74,6 @@ QtObject {
     readonly property color testnetColor: "#22c064"
     readonly property color mainnetTextColor: "white"
     readonly property color testnetTextColor: "black"
+
+    readonly property color selectedColor: "white"
 }

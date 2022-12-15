@@ -45,5 +45,13 @@
         <file>qml/StyledControls/qmldir</file>
         <file>qml/BsStyles/BSStyle.qml</file>
         <file>qml/BsStyles/qmldir</file>
+        <file>qml/StyledControls/CustomTitleToolButton.qml</file>
+        <file>images/logo.png</file>
+        <file>images/conn_ind.png</file>
+        <file>images/plugins_icon.png</file>
+        <file>images/overview_icon_not_choosed.png</file>
+        <file>images/plugins_icon_unchoosed.png</file>
+        <file>images/transactions_icon_unchoosed.png</file>
+        <file>images/explorer_icon_unchoosed.png</file>
     </qresource>
 </RCC>

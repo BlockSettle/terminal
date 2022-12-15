@@ -8,55 +8,70 @@
 **********************************************************************************
 
 */
-import QtQuick 2.9
-import QtQuick.Controls 2.3
+import QtQuick 2.12
+import QtQuick.Controls 2.4
 import QtQuick.Layouts 1.3
 import "../BsStyles"
 
 TabButton {
     id: control
-    text: parent.text
-    icon.source: parent.icon.source
-    property alias cText: text_
-    property alias cIcon: image_
+
+    width: 94
+    height: parent.height
+
     focusPolicy: Qt.NoFocus
 
-    contentItem: RowLayout {
-        width: parent.width
-        height: parent.height
-    
-    Image {
-        id: image_
-        source: control.icon.source
-        horizontalAlignment: Qt.AlignVCenter
-        verticalAlignment: Qt.AlignVCenter
-        Layout.fillHeight: true
+    font.pixelSize: 10
+    font.family: "Roboto"
+    font.weight: Font.Medium
+
+    property url selectedIcon_;
+    property url nonSelectedIcon_;
+
+    contentItem: ColumnLayout {
+        width: control.width
+        height: control.height
+        spacing : 4
+
+        Image {
+            id: image_
+
+            width: 24
+            height: 24
+            Layout.alignment : Qt.AlignTop | Qt.AlignHCenter
+            Layout.topMargin : 10
+
+            source: control.checked? selectedIcon_ :nonSelectedIcon_
+            sourceSize: Qt.size(parent.width, parent.height)
+
+            smooth: true
+        }
+
+        Text {
+            id: text_
+
+            Layout.alignment : Qt.AlignBottom | Qt.AlignHCenter
+            Layout.bottomMargin : 5
+
+            text: control.text
+            font: control.font
+            color: !control.enabled ? BSStyle.disabledTextColor :
+                              (control.down ? BSStyle.textPressedColor :
+                              (control.checked? BSStyle.selectedColor : BSStyle.titleTextColor))
+        }
     }
 
-    Text {
-        id: text_
-        text: control.text
-        font.capitalization: Font.AllUppercase
-        font.pointSize: 10
-        color: control.checked ? (control.down ? BSStyle.textPressedColor : BSStyle.textColor) : BSStyle.buttonsUncheckedColor
-        elide: Text.ElideRight
-        horizontalAlignment: Text.AlignLeft
-        verticalAlignment: Text.AlignVCenter
-    }
-    }
 
     background: Rectangle {
-        implicitWidth: 100
-        implicitHeight: 50
-        opacity: enabled ? 1 : 0.3
-        color: control.checked ? (control.down ? BSStyle.backgroundPressedColor : BSStyle.backgroundColor) : "0f1f24"
+        implicitWidth: parent.width
+        implicitHeight: parent.height
+        color: "transparent"
+    }
 
-        Rectangle {
-            width: parent.width
-            height: 2
-            color: control.checked ? (control.down ? BSStyle.textPressedColor : BSStyle.buttonsPrimaryMainColor) : "transparent"
-            anchors.top: parent.top
-        }
+    function setIcons(selectedIcon: url, nonselectedIcon: url)
+    {
+        selectedIcon_ = selectedIcon;
+        nonSelectedIcon_ = nonselectedIcon;
     }
 }
 

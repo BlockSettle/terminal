@@ -34,9 +34,6 @@ ApplicationWindow {
     readonly property int resizeAnimationDuration: 25
 
     Component.onCompleted: {
-        mainWindow.flags = Qt.CustomizeWindowHint | Qt.MSWindowsFixedSizeDialogHint |
-                Qt.Dialog | Qt.WindowSystemMenuHint |
-                Qt.WindowTitleHint | Qt.WindowCloseButtonHint
         hide()
 //        qmlFactory.installEventFilterToObj(mainWindow)
 //        qmlFactory.applyWindowFix(mainWindow)
@@ -91,59 +88,61 @@ ApplicationWindow {
     }
 
     header: Column {
-        height: 50
+        height: 57
         width: parent.width
+        spacing: 0
 
         RowLayout {
-            height: 50
+            height: 56
             width: parent.width
+            spacing: 0
 
             Image {
-                source: "qrc:/images/bs_logo.png"
-                horizontalAlignment: Qt.AlignLeft
-                verticalAlignment: Qt.AlignTop
-                Layout.fillHeight: true
+                width: 129
+                height: 24
+                source: "qrc:/images/logo.png"
+                Layout.leftMargin : 18
+            }
+
+            Label {
+                width: 13
             }
 
             Image {
                 id: imgArmoryStatus
-                source: "qrc:/images/bitcoin-disabled.png"
-                verticalAlignment: Qt.AlignVCenter
+                source: "qrc:/images/conn_ind.png"
             }
 
             Label {
                 Layout.fillWidth: true
             }
 
-            ToolButton {
+            CustomTitleToolButton {
                 id: btnSend
+                enabled: false
                 text: qsTr("Send")
                 icon.source: "qrc:/images/send_icon.png"
-                font.pointSize: 16
-                Layout.fillHeight: true
-                enabled: false
                 onClicked: {
+                    topMenuBtnClicked(btnSend)
                     stack.push(sendPage)
                     //sendPage.visible = true
                 }
             }
-            ToolButton {
+            CustomTitleToolButton {
                 id: btnReceive
                 text: qsTr("Receive")
                 icon.source: "qrc:/images/receive_icon.png"
-                font.pointSize: 16
-                Layout.fillHeight: true
                 onClicked: {
+                    topMenuBtnClicked(btnReceive)
                     stack.push(receivePage)
                 }
             }
-            ToolButton {
+            CustomTitleToolButton {
                 id: btnSettings
                 text: qsTr("Settings")
                 icon.source: "qrc:/images/settings_icon.png"
-                font.pointSize: 16
-                Layout.fillHeight: true
                 onClicked: {
+                    topMenuBtnClicked(btnSettings)
                     stack.push(settingsPage)
                 }
             }
@@ -152,6 +151,7 @@ ApplicationWindow {
         Rectangle {
             width: parent.width
             height: 1
+            color: "#3C435A"
         }
     }
 
@@ -175,31 +175,75 @@ ApplicationWindow {
         }
     }
 
-    footer: TabBar {
-        id: tabBar
-        currentIndex: swipeView.currentIndex
-        spacing: 5
-        Layout.fillWidth: false
-        background: Rectangle {
-            color: "transparent"
-        }
+    footer: Rectangle {
+        height: 56
+        width: parent.width
+        color :"#191E2A"
 
-        CustomTabButton {
-            id: btnOverview
-            text: qsTr("Overview")
-            icon.source: "qrc:/images/overview_icon.png"
-        }
-        CustomTabButton {
-            id: btnTransactions
-            text: qsTr("Transactions")
-            icon.source: "qrc:/images/transactions_icon.png"
-        }
+        RowLayout {
+            spacing: 0
+            anchors.fill: parent
 
-        CustomTabButton {
-            id: btnExplorer
-            text: qsTr("Explorer")
-            icon.source: "qrc:/images/explorer_icon.png"
+            Label {
+                Layout.fillWidth: true
+            }
+
+            TabBar {
+                id: tabBar
+                currentIndex: swipeView.currentIndex
+                padding: 0
+                spacing: 0
+                Layout.fillWidth: false
+
+                background: Rectangle {
+                    color: "transparent"
+                }
+
+                CustomTabButton {
+                    id: btnOverview
+                    text: qsTr("Overview")
+                    Component.onCompleted: {
+                        btnOverview.setIcons ("qrc:/images/overview_icon.png", "qrc:/images/overview_icon_not_choosed.png")
+                    }
+                }
+                CustomTabButton {
+                    id: btnTransactions
+                    text: qsTr("Transactions")
+                    Component.onCompleted: {
+                        btnTransactions.setIcons ("qrc:/images/transactions_icon.png", "qrc:/images/transactions_icon_unchoosed.png")
+                    }
+                }
+
+                CustomTabButton {
+                    id: btnExplorer
+                    text: qsTr("Explorer")
+                    Component.onCompleted: {
+                        btnExplorer.setIcons ("qrc:/images/explorer_icon.png", "qrc:/images/explorer_icon_unchoosed.png")
+                    }
+                }
+
+                CustomTabButton {
+                    id: btnPlugins
+                    text: qsTr("Plugins")
+                    Component.onCompleted: {
+                        btnPlugins.setIcons ("qrc:/images/plugins_icon.png", "qrc:/images/plugins_icon_unchoosed.png")
+                    }
+                }
+            }
+
+            Label {
+                Layout.fillWidth: true
+            }
         }
+    }
+
+    function topMenuBtnClicked(clickedBtn)
+    {
+        btnSend.select(false)
+        btnReceive.select(false)
+        btnSettings.select(false)
+
+        clickedBtn.select(true)
     }
 
 
