@@ -17,6 +17,7 @@
         <file>qml/TransactionsPage.qml</file>
         <file>qml/ExplorerPage.qml</file>
         <file>qml/SendPage.qml</file>
+        <file>qml/SendAdvanced.qml</file>
         <file>qml/ReceivePage.qml</file>
         <file>qml/SettingsPage.qml</file>
         <file>qml/CreateNewWallet.qml</file>
@@ -25,6 +26,7 @@
         <file>qml/VerifySeedPhrase.qml</file>
         <file>qml/WalletNamePass.qml</file>
         <file>qml/VerifyTX.qml</file>
+        <file>qml/VerifyAdvancedTX.qml</file>
         <file>qml/InfoBanner.qml</file>
         <file>qml/InfoBannerComponent.qml</file>
         <file>qml/InfoBar.qml</file>

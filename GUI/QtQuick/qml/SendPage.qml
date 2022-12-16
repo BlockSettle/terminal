@@ -26,6 +26,10 @@ Item {
         id: verifySignTX
         visible: false
     }
+    SendAdvanced {
+        id: advancedCreateTX
+        visible: false
+    }
 
     Column {
         spacing: 23
@@ -46,6 +50,13 @@ Item {
                 width: 300
                 text: qsTr("Advanced")
                 font.pointSize: 14
+                onClicked: {
+                    advancedCreateTX.recvAddress = recvAddress.text
+                    advancedCreateTX.walletIdx = sendWalletsComboBox.currentIndex
+                    advancedCreateTX.sendAmount = amount.text
+                    advancedCreateTX.comment = txComment.text
+                    stack.push(advancedCreateTX)
+                }
             }
         }
 
