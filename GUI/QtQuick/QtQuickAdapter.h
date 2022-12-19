@@ -156,6 +156,7 @@ public:
    Q_INVOKABLE QTXSignRequest* createTXSignRequest(int walletIndex, const QString& recvAddr
       , double amount, double fee, const QString& comment);
    Q_INVOKABLE void signAndBroadcast(QTXSignRequest*, const QString& password);
+   Q_INVOKABLE int startSearch(const QString&);
 
 signals:
    void walletsListChanged();
@@ -241,6 +242,7 @@ private:
    QmlAddressListModel* addrModel_{ nullptr };
    TxListModel* pendingTxModel_{ nullptr };
    TxListModel* txModel_{ nullptr };
+   TxListForAddr* expTxByAddrModel_{ nullptr };
    bs::Address generatedAddress_;
 
    std::map<bs::message::SeqId, QTXSignRequest*> txReqs_;

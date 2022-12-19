@@ -105,6 +105,7 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    addrModel_ = new QmlAddressListModel(logger, this);
    pendingTxModel_ = new TxListModel(logger, this);
    txModel_ = new TxListModel(logger, this);
+   expTxByAddrModel_ = new TxListForAddr(logger, this);
 }
 
 QtQuickAdapter::~QtQuickAdapter()
@@ -188,6 +189,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
    rootCtxt_->setContextProperty(QLatin1Literal("addressListModel"), addrModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("pendingTxListModel"), pendingTxModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("txListModel"), txModel_);
+   rootCtxt_->setContextProperty(QLatin1Literal("txListByAddrModel"), expTxByAddrModel_);
 
    engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
    if (engine.rootObjects().empty()) {
@@ -418,11 +420,13 @@ ProcessingResult QtQuickAdapter::processBlockchain(const Envelope &env)
       logger_->debug("[{}] current block: {}", __func__, blockNum_);
       pendingTxModel_->setCurrentBlock(blockNum_);
       txModel_->setCurrentBlock(blockNum_);
+      expTxByAddrModel_->setCurrentBlock(blockNum_);
       break;
    case ArmoryMessage::kNewBlock:
       blockNum_ = msg.new_block().top_block();
       pendingTxModel_->setCurrentBlock(blockNum_);
       txModel_->setCurrentBlock(blockNum_);
+      expTxByAddrModel_->setCurrentBlock(blockNum_);
       break;
    case ArmoryMessage::kWalletRegistered:
       if (msg.wallet_registered().success() && msg.wallet_registered().wallet_id().empty()) {
@@ -640,6 +644,9 @@ void QtQuickAdapter::splashProgressCompleted()
          logger_->error("[QtQuickAdapter::splashProgressCompleted] no main window found");
       }
       QTimer::singleShot(100, [this] {
+         if (!splashScreen_) {
+            return;
+         }
          splashScreen_->hide();
          splashScreen_->deleteLater();
          splashScreen_ = nullptr;
@@ -1052,7 +1059,7 @@ ProcessingResult QtQuickAdapter::processAddressHist(const ArmoryMessage_AddressH
       }
       entries.push_back(std::move(txEntry));
    }
-   //TODO
+   expTxByAddrModel_->addRows(entries);
    return ProcessingResult::Success;
 }
 
@@ -1259,4 +1266,30 @@ void QtQuickAdapter::signAndBroadcast(QTXSignRequest* txReq, const QString& pass
    //msgReq->set_keep_dup_recips(keepDupRecips);
    msgReq->set_passphrase(password.toStdString());
    pushRequest(user_, userSigner_, msg.SerializeAsString());
+}
+
+int QtQuickAdapter::startSearch(const QString& s)
+{
+   const auto& trimmed = s.trimmed().toStdString();
+   bs::Address address;
+   try {
+      address = bs::Address::fromAddressString(trimmed);
+      if (address.isValid()) {
+         expTxByAddrModel_->clear();
+         ArmoryMessage msg;
+         msg.set_get_address_history(address.display());
+         pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+         return 1;
+      }
+   }
+   catch (const std::exception&) {}
+
+   if (trimmed.length() == 64) { // potential TX hash in hex
+      const auto& txId = BinaryData::CreateFromHex(trimmed);
+      if (txId.getSize() == 32) {   // valid TXid
+         //TODO: send request to BA
+         return 2;
+      }
+   }
+   return 0;
 }

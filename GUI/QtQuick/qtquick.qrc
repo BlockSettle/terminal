@@ -16,6 +16,9 @@
         <file>qml/AddressDetails.qml</file>
         <file>qml/TransactionsPage.qml</file>
         <file>qml/ExplorerPage.qml</file>
+        <file>qml/ExplorerEmpty.qml</file>
+        <file>qml/ExplorerAddress.qml</file>
+        <file>qml/ExplorerTX.qml</file>
         <file>qml/SendPage.qml</file>
         <file>qml/SendAdvanced.qml</file>
         <file>qml/ReceivePage.qml</file>

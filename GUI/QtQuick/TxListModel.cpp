@@ -14,12 +14,18 @@
 #include "StringUtils.h"
 
 namespace {
-   static const QHash<int, QByteArray> kRoles{
+   static const QHash<int, QByteArray> kTxListRoles{
       {TxListModel::TableDataRole, "tableData"},
       {TxListModel::HeadingRole, "heading"},
       {TxListModel::ColorRole, "dataColor"},
       {TxListModel::WidthRole, "colWidth"},
       {TxListModel::TxIdRole, "txId"},
+   };
+   static const QHash<int, QByteArray> kTxListForAddrRoles{
+      {TxListForAddr::TableDataRole, "tableData"},
+      {TxListForAddr::HeadingRole, "heading"},
+      {TxListForAddr::ColorRole, "dataColor"},
+      {TxListForAddr::WidthRole, "colWidth"},
    };
 }
 
@@ -201,7 +207,7 @@ QVariant TxListModel::data(const QModelIndex& index, int role) const
 
 QHash<int, QByteArray> TxListModel::roleNames() const
 {
-   return kRoles;
+   return kTxListRoles;
 }
 
 void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
@@ -317,4 +323,254 @@ void TxListModel::setCurrentBlock(uint32_t nbBlock)
       entry.nbConf += diff;
    }
    emit dataChanged(createIndex(1, 5), createIndex(data_.size(), 5));
+}
+
+
+TxListForAddr::TxListForAddr(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
+   : QAbstractTableModel(parent), logger_(logger)
+   , header_{ tr("Date"), tr("Transaction ID"), tr("#Conf"), tr("#Ins"), tr("#Outs"), tr("Amount (BTC)")
+      , tr("Fees (BTC)"), tr("fpb"), tr("VSize (B)") }
+{}
+
+int TxListForAddr::rowCount(const QModelIndex&) const
+{
+   return data_.size() + 1;
+}
+
+int TxListForAddr::columnCount(const QModelIndex&) const
+{
+   return header_.size();
+}
+
+static QString displayNb(int nb)
+{
+   if (nb < 0) {
+      return QObject::tr("...");
+   }
+   return QString::number(nb);
+}
+
+static QString displayBTC(double btc, int precision = 8)
+{
+   if (btc < 0) {
+      return QObject::tr("...");
+   }
+   return QString::number(btc, 'f', precision);
+}
+
+QString TxListForAddr::getData(int row, int col) const
+{
+   if (row > data_.size()) {
+      return {};
+   }
+   if (row == 0) {
+      return header_.at(col);
+   }
+   const auto& entry = data_.at(row - 1);
+   const auto totFees = totalFees(row - 1);
+   switch (col) {
+   case 0:  return QDateTime::fromSecsSinceEpoch(entry.txTime).toString();
+   case 1:  return txId(row - 1);
+   case 2:  return QString::number(entry.nbConf);
+   case 3:  return displayNb(nbInputs(row - 1));
+   case 4:  return displayNb(nbOutputs(row - 1));
+   case 5:  return QString::number(entry.value / BTCNumericTypes::BalanceDivider, 'f', 8);
+   case 6:  return displayBTC(totFees / BTCNumericTypes::BalanceDivider);
+   case 7:  return (totFees < 0) ? tr("...") : displayBTC(totFees / (double)txSize(row - 1), 1);
+   case 8:  return displayNb(txSize(row - 1));
+   default: break;
+   }
+   return {};
+}
+
+int TxListForAddr::nbInputs(int row) const
+{
+   const auto& itTxDet = txs_.find(row);
+   if (itTxDet != txs_.end()) {
+      return itTxDet->second.getNumTxIn();
+   }
+   return -1;
+}
+
+int TxListForAddr::nbOutputs(int row) const
+{
+   const auto& itTxDet = txs_.find(row);
+   if (itTxDet != txs_.end()) {
+      return itTxDet->second.getNumTxOut();
+   }
+   return -1;
+}
+
+int TxListForAddr::txSize(int row) const
+{
+   const auto& itTxDet = txs_.find(row);
+   if (itTxDet != txs_.end()) {
+      return itTxDet->second.getTxWeight();
+   }
+   return -1;
+}
+
+int64_t TxListForAddr::totalFees(int row) const
+{
+   const auto& itTxDet = txs_.find(row);
+   if (itTxDet != txs_.end()) {
+      return itTxDet->second.getNumTxOut();
+   }
+   return -1;
+}
+
+QColor TxListForAddr::dataColor(int row, int col) const
+{
+   if (row == 0) {
+      return QColorConstants::DarkGray;
+   }
+   const auto& entry = data_.at(row - 1);
+   if (col == 2) {
+      switch (entry.nbConf) {
+      case 0:  return QColorConstants::Red;
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+      case 5:  return QColorConstants::Yellow;
+      default: return QColorConstants::Green;
+      }
+   }
+   return QColorConstants::LightGray;
+}
+
+float TxListForAddr::colWidth(int col) const
+{  // width ratio, sum should give columnCount() as a result
+   switch (col) {
+   case 0:  return 1.5;
+   case 1:  return 4.0;
+   case 2:  return 0.5;
+   case 3:  return 0.4;
+   case 4:  return 0.4;
+   case 5:  return 0.8;
+   case 6:  return 0.8;
+   case 7:  return 0.3;
+   case 8:  return 0.3;
+   default: break;
+   }
+   return 1.0;
+}
+
+QString TxListForAddr::txId(int row) const
+{
+   try {
+      return QString::fromStdString(data_.at(row).txHash.toHexStr(true));
+   }
+   catch (const std::exception&) {}
+   return {};
+}
+
+QVariant TxListForAddr::data(const QModelIndex& index, int role) const
+{
+   if (index.column() >= header_.size()) {
+      return {};
+   }
+   switch (role) {
+   case TableDataRole:
+      return getData(index.row(), index.column());
+   case HeadingRole:
+      return (index.row() == 0);
+   case ColorRole:
+      return dataColor(index.row(), index.column());
+   case WidthRole:
+      return colWidth(index.column());
+   default: break;
+   }
+   return QVariant();
+}
+
+QHash<int, QByteArray> TxListForAddr::roleNames() const
+{
+   return kTxListForAddrRoles;
+}
+
+void TxListForAddr::addRows(const std::vector<bs::TXEntry>& entries)
+{
+   beginInsertRows(QModelIndex(), rowCount(), rowCount() + entries.size() - 1);
+   data_.insert(data_.end(), entries.cbegin(), entries.cend());
+   endInsertRows();
+   emit changed();
+}
+
+void TxListForAddr::clear()
+{
+   beginResetModel();
+   data_.clear();
+   txs_.clear();
+   endResetModel();
+   emit changed();
+}
+
+void TxListForAddr::setDetails(const std::vector<Tx>& txs)
+{
+   int rowStart = 0, rowEnd = 0;
+   for (const auto& tx : txs) {
+      for (int i = 0; i < data_.size(); ++i) {
+         const auto& entry = data_.at(i);
+         if (entry.txHash == tx.getThisHash()) {
+            if (!rowStart) {
+               rowStart = i + 1;
+            }
+            if (rowEnd <= i) {
+               rowEnd = i + 1;
+            }
+         }
+      }
+   }
+   if (rowStart && rowEnd) {
+      emit dataChanged(createIndex(rowStart, 3), createIndex(rowEnd, 8));
+   }
+}
+
+void TxListForAddr::setCurrentBlock(uint32_t nbBlock)
+{
+   if (!nbBlock) {
+      return;
+   }
+   if (!curBlock_) {
+      curBlock_ = nbBlock;
+      return;
+   }
+   const int diff = nbBlock - curBlock_;
+   curBlock_ = nbBlock;
+   for (auto& entry : data_) {
+      entry.nbConf += diff;
+   }
+   emit dataChanged(createIndex(1, 2), createIndex(data_.size(), 2));
+}
+
+QString TxListForAddr::totalReceived() const
+{
+   int64_t result = 0;
+   for (const auto& entry : data_) {
+      if (entry.value > 0) {
+         result += entry.value;
+      }
+   }
+   return displayBTC(result / BTCNumericTypes::BalanceDivider);
+}
+
+QString TxListForAddr::totalSent() const
+{
+   int64_t result = 0;
+   for (const auto& entry : data_) {
+      if (entry.value < 0) {
+         result += entry.value;
+      }
+   }
+   return displayBTC(std::abs(result) / BTCNumericTypes::BalanceDivider);
+}
+
+QString TxListForAddr::balance() const
+{
+   int64_t result = 0;
+   for (const auto& entry : data_) {
+      result += entry.value;
+   }
+   return displayBTC(result / BTCNumericTypes::BalanceDivider);
 }
