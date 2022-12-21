@@ -82,6 +82,7 @@ public:
    void addRows(const std::vector<bs::TXEntry>&);
    void clear();
    void setDetails(const std::vector<Tx>&);
+   void setInputs(const std::vector<Tx>&);
    void setCurrentBlock(uint32_t);
 
    Q_PROPERTY(QString totalReceived READ totalReceived NOTIFY changed)
@@ -111,7 +112,80 @@ private:
    const QStringList header_;
    std::vector<bs::TXEntry> data_;
    std::map<int, Tx> txs_;
+   std::map<BinaryData, Tx>   inputs_;
    uint32_t curBlock_;
+};
+
+
+class TxInOutModel : public QAbstractTableModel
+{
+   Q_OBJECT
+public:
+   enum TableRoles {
+      TableDataRole = Qt::UserRole + 1, HeadingRole, ColorRole, WidthRole, AddressRole
+   };
+   TxInOutModel(const std::vector<bs::sync::AddressDetails>& data, QObject* parent = nullptr);
+
+   int rowCount(const QModelIndex & = QModelIndex()) const override;
+   int columnCount(const QModelIndex & = QModelIndex()) const override;
+   QVariant data(const QModelIndex& index, int role) const override;
+   QHash<int, QByteArray> roleNames() const override;
+
+private:
+   QString getData(int row, int col) const;
+   QColor dataColor(int row, int col) const;
+   float colWidth(int col) const;
+
+private:
+   const QStringList header_;
+   const std::vector<bs::sync::AddressDetails> data_;
+};
+
+class QTxDetails : public QObject
+{
+   Q_OBJECT
+public:
+   QTxDetails(const BinaryData& txHash, QObject* parent = nullptr)
+      : QObject(parent), txHash_(txHash)
+   {}
+
+   void setDetails(const bs::sync::TXWalletDetails&);
+   void setCurBlock(uint32_t);
+
+   Q_PROPERTY(QString txId READ txId NOTIFY updated)
+   QString txId() const { return QString::fromStdString(txHash_.toHexStr(true)); }
+   Q_PROPERTY(QString virtSize READ virtSize NOTIFY updated)
+   QString virtSize() const;
+   Q_PROPERTY(QString nbConf READ nbConf NOTIFY newBlock)
+   QString nbConf() const;
+   Q_PROPERTY(QString nbInputs READ nbInputs NOTIFY updated)
+   QString nbInputs() const;
+   Q_PROPERTY(QString nbOutputs READ nbOutputs NOTIFY updated)
+   QString nbOutputs() const;
+   Q_PROPERTY(QString inputAmount READ inputAmount NOTIFY updated)
+   QString inputAmount() const;
+   Q_PROPERTY(QString outputAmount READ outputAmount NOTIFY updated)
+   QString outputAmount() const;
+   Q_PROPERTY(QString fee READ fee NOTIFY updated)
+   QString fee() const;
+   Q_PROPERTY(QString feePerByte READ feePerByte NOTIFY updated)
+   QString feePerByte() const;
+
+   Q_PROPERTY(TxInOutModel* inputs READ inputs NOTIFY updated)
+   TxInOutModel* inputs() const { return inputsModel_; }
+   Q_PROPERTY(TxInOutModel* outputs READ outputs NOTIFY updated)
+   TxInOutModel* outputs() const { return outputsModel_; }
+
+signals:
+   void updated();
+   void newBlock();
+
+private:
+   const BinaryData txHash_;
+   bs::sync::TXWalletDetails details_;
+   TxInOutModel* inputsModel_{ nullptr };
+   TxInOutModel* outputsModel_{ nullptr };
+   uint32_t curBlock_{ 0 };
 };
 
 #endif	// TX_LIST_MODEL_H

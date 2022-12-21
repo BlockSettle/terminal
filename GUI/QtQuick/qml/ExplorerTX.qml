@@ -20,7 +20,13 @@ import "BsStyles"
 //import "js/helper.js" as JsHelper
 
 Item {
-    property var txId
+    property var tx
+    property var expAddress
+
+    Component.onCompleted: {
+        expAddress = Qt.createComponent("ExplorerAddress.qml")
+        expAddress.visible = false
+    }
 
     Column {
         spacing: 23
@@ -38,7 +44,7 @@ Item {
                 font.pointSize: 14
             }
             Label {
-                text: txId
+                text: tx ? tx.txId : qsTr("Unknown")
                 color: 'lightgrey'
                 font.pointSize: 12
             }
@@ -46,7 +52,7 @@ Item {
                 text: qsTr("Copy")
                 font.pointSize: 12
                 onClicked: {
-                    bsApp.copyAddressToClipboard(txId)
+                    bsApp.copyAddressToClipboard(tx.txId)
                 }
             }
         }
@@ -58,7 +64,7 @@ Item {
                     font.pointSize: 8
                 }
                 Label {
-                    text: qsTr("<font color=\"green\">283</font>")
+                    text: qsTr("<font color=\"green\">%1</font>").arg(tx.nbConf)
                     font.pointSize: 12
                 }
             }
@@ -68,7 +74,7 @@ Item {
                     font.pointSize: 8
                 }
                 Label {
-                    text: qsTr("<font color=\"white\">1</font>")
+                    text: qsTr("<font color=\"white\">%1</font>").arg(tx.nbInputs)
                     font.pointSize: 12
                 }
             }
@@ -78,7 +84,7 @@ Item {
                     font.pointSize: 8
                 }
                 Label {
-                    text: qsTr("<font color=\"white\">2</font>")
+                    text: qsTr("<font color=\"white\">%1</font>").arg(tx.nbOutputs)
                     font.pointSize: 12
                 }
             }
@@ -88,7 +94,7 @@ Item {
                     font.pointSize: 8
                 }
                 Label {
-                    text: qsTr("<font color=\"white\">0.01959741</font>")
+                    text: qsTr("<font color=\"white\">%1</font>").arg(tx.inputAmount)
                     font.pointSize: 12
                 }
             }
@@ -98,7 +104,7 @@ Item {
                     font.pointSize: 8
                 }
                 Label {
-                    text: qsTr("<font color=\"white\">0.01959741</font>")
+                    text: qsTr("<font color=\"white\">%1</font>").arg(tx.outputAmount)
                     font.pointSize: 12
                 }
             }
@@ -108,7 +114,7 @@ Item {
                     font.pointSize: 8
                 }
                 Label {
-                    text: qsTr("<font color=\"white\">0.00000146</font>")
+                    text: qsTr("<font color=\"white\">%1</font>").arg(tx.fee)
                     font.pointSize: 12
                 }
             }
@@ -118,7 +124,7 @@ Item {
                     font.pointSize: 8
                 }
                 Label {
-                    text: qsTr("<font color=\"white\">1</font>")
+                    text: qsTr("<font color=\"white\">%1</font>").arg(tx.feePerByte)
                     font.pointSize: 12
                 }
             }
@@ -128,7 +134,7 @@ Item {
                     font.pointSize: 8
                 }
                 Label {
-                    text: qsTr("<font color=\"white\">141</font>")
+                    text: qsTr("<font color=\"white\">%1</font>").arg(tx.virtSize)
                     font.pointSize: 12
                 }
             }
@@ -140,6 +146,7 @@ Item {
                     text: qsTr("<font color=\"white\">Input</font>")
                     font.pointSize: 14
                 }
+
                 TableView {
                     width: 500
                     height: 300
@@ -148,25 +155,26 @@ Item {
                     clip: true
                     ScrollIndicator.horizontal: ScrollIndicator { }
                     ScrollIndicator.vertical: ScrollIndicator { }
-                    model: addressListModel
+                    model: tx ? tx.inputs : addressListModel
                     delegate: Rectangle {
-                        implicitWidth: 120
-                        implicitHeight: 40
+                        implicitWidth: 125 * colWidth
+                        implicitHeight: 20
                         border.color: "black"
                         border.width: 1
                         color: heading ? 'black' : 'darkslategrey'
                         Text {
-                            text: tabledata
+                            text: tableData
                             font.pointSize: heading ? 8 : 10
-                            color: heading ? 'darkgrey' : 'lightgrey'
+                            color: dataColor
                             anchors.centerIn: parent
                         }
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
-                                if (!heading && (model.column === 0)) {
-                                    isTXSearch = false
-                                    isAddressSearch = true
+                                if (!heading && (model.column === 1)) {
+                                    expAddress.address = address
+                                    bsApp.startSearch(address)
+                                    explorerStack.push(expAddress)
                                 }
                             }
                         }
@@ -186,23 +194,27 @@ Item {
                     clip: true
                     ScrollIndicator.horizontal: ScrollIndicator { }
                     ScrollIndicator.vertical: ScrollIndicator { }
-                    model: addressListModel
+                    model: tx ? tx.outputs : addressListModel
                     delegate: Rectangle {
-                        implicitWidth: 120
-                        implicitHeight: 40
+                        implicitWidth: 125 * colWidth
+                        implicitHeight: 20
                         border.color: "black"
                         border.width: 1
                         color: heading ? 'black' : 'darkslategrey'
                         Text {
-                            text: tabledata
+                            text: tableData
                             font.pointSize: heading ? 8 : 10
-                            color: heading ? 'darkgrey' : 'lightgrey'
+                            color: dataColor
                             anchors.centerIn: parent
                         }
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
-                                if (!heading && (model.column === 0)) {
+                                if (!heading && (model.column === 1)) {
+                                    visible = false
+                                    expAddress.address = address
+                                    bsApp.startSearch(address)
+                                    explorerStack.push(expAddress)
                                 }
                             }
                         }

@@ -36,6 +36,9 @@ Item {
         id: explorerTX
         visible: false
     }
+//    ExplorerLoader {
+//        id: explorerTX
+//    }
 
     Column {
         spacing: 32
@@ -61,6 +64,7 @@ Item {
                         explorerStack.push(explorerAddress)
                     }
                     else if (rc === 2) {    // TXid entered
+                        explorerTX.tx = bsApp.getTXDetails(expSearchBox.text)
                         explorerStack.push(explorerTX)
                     }
                 }
@@ -70,7 +74,7 @@ Item {
                 Text {
                     text: qsTr("Search for transaction or address")
                     color: 'darkgrey'
-                    visible: !txSearchBox.text && !txSearchBox.activeFocus
+                    visible: !expSearchBox.text && !expSearchBox.activeFocus
                 }
             }
             Button {
