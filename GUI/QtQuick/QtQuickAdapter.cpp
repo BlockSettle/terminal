@@ -32,6 +32,7 @@
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
 #include "QTXSignRequest.h"
+#include "TxOutputsModel.h"
 #include "Wallets/ProtobufHeadlessUtils.h"
 #include "SettingsAdapter.h"
 
@@ -106,6 +107,8 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    pendingTxModel_ = new TxListModel(logger, this);
    txModel_ = new TxListModel(logger, this);
    expTxByAddrModel_ = new TxListForAddr(logger, this);
+   txOutputsModel_ = new TxOutputsModel(logger, this);
+   txInputsModel_ = new TxInputsModel(logger, txOutputsModel_, this);
 }
 
 QtQuickAdapter::~QtQuickAdapter()
@@ -177,8 +180,10 @@ void QtQuickAdapter::run(int &argc, char **argv)
    });
 
    logger_->debug("[QtGuiAdapter::run] creating QML app");
+   qmlRegisterInterface<QObjectList>("QObjectList");
    qmlRegisterInterface<QTXSignRequest>("QTXSignRequest");
    qmlRegisterInterface<QUTXO>("QUTXO");
+   qmlRegisterInterface<QUTXOList>("QUTXOList");
    qmlRegisterInterface<QTxDetails>("QTxDetails");
 
    QQmlApplicationEngine engine;
@@ -191,6 +196,8 @@ void QtQuickAdapter::run(int &argc, char **argv)
    rootCtxt_->setContextProperty(QLatin1Literal("pendingTxListModel"), pendingTxModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("txListModel"), txModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("txListByAddrModel"), expTxByAddrModel_);
+   rootCtxt_->setContextProperty(QLatin1Literal("txInputsModel"), txInputsModel_);
+   rootCtxt_->setContextProperty(QLatin1Literal("txOutputsModel"), txOutputsModel_);
 
    engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
    if (engine.rootObjects().empty()) {
@@ -1021,8 +1028,8 @@ void QtQuickAdapter::copyAddressToClipboard(const QString& addr)
    }
 }
 
-QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex
-   , const QString& recvAddr, double amount, double fee, const QString& comment)
+QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QString& recvAddr
+   , double amount, double fee, const QString& comment, QUTXOList* utxos)
 {
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_request();
@@ -1034,10 +1041,25 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex
    if (!comment.isEmpty()) {
       msgReq->set_comment(comment.toStdString());
    }
+   if (utxos) {
+      for (const auto& qUtxo : utxos->data()) {
+         msgReq->add_utxos(qUtxo->utxo().serialize().toBinStr());
+      }
+   }
    const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
    const auto txReq = new QTXSignRequest(this);
    txReqs_[msgId] = txReq;
    return txReq;
+}
+
+void QtQuickAdapter::getUTXOsForWallet(int walletIndex)
+{
+   logger_->debug("[{}] #{}", __func__, walletIndex);
+   txInputsModel_->clear();
+   WalletsMessage msg;
+   auto msgReq = msg.mutable_get_utxos();
+   msgReq->set_wallet_id(hdWalletIdByIndex(walletIndex));
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 QTxDetails* QtQuickAdapter::getTXDetails(const QString& txHash)
@@ -1128,7 +1150,7 @@ ProcessingResult QtQuickAdapter::processUTXOs(const WalletsMessage_UtxoListRespo
       utxo.unserialize(BinaryData::fromString(serUtxo));
       utxos.push_back(std::move(utxo));
    }
-   //TODO
+   txInputsModel_->addUTXOs(utxos);
    return ProcessingResult::Success;
 }
 

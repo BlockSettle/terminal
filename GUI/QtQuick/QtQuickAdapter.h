@@ -19,6 +19,7 @@
 #include "ApplicationSettings.h"
 #include "Wallets/SignContainer.h"
 #include "ThreadSafeClasses.h"
+#include "TxInputsModel.h"
 #include "TxListModel.h"
 #include "UiUtils.h"
 
@@ -75,6 +76,8 @@ class QQmlContext;
 class QmlWalletsList;
 class QTxDetails;
 class QTXSignRequest;
+class TxInputsModel;
+class TxOutputsModel;
 
 class QtQuickAdapter : public QObject, public ApiBusAdapter, public bs::MainLoopRuner
 {
@@ -156,7 +159,8 @@ public:
    Q_INVOKABLE void copyAddressToClipboard(const QString& addr);
 
    Q_INVOKABLE QTXSignRequest* createTXSignRequest(int walletIndex, const QString& recvAddr
-      , double amount, double fee, const QString& comment);
+      , double amount, double fee, const QString& comment = {}, QUTXOList* utxos = nullptr);
+   Q_INVOKABLE void getUTXOsForWallet(int walletIndex);
    Q_INVOKABLE void signAndBroadcast(QTXSignRequest*, const QString& password);
    Q_INVOKABLE int startSearch(const QString&);
    Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash);
@@ -247,6 +251,8 @@ private:
    TxListModel* pendingTxModel_{ nullptr };
    TxListModel* txModel_{ nullptr };
    TxListForAddr* expTxByAddrModel_{ nullptr };
+   TxInputsModel* txInputsModel_{ nullptr };
+   TxOutputsModel* txOutputsModel_{ nullptr };
    bs::Address generatedAddress_;
 
    std::map<bs::message::SeqId, QTXSignRequest*> txReqs_;

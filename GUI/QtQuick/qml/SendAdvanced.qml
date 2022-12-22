@@ -20,10 +20,10 @@ import "BsStyles"
 //import "js/helper.js" as JsHelper
 
 Item {
-    property var recvAddress
+    property var recvAddress: ""
     property int walletIdx
-    property var sendAmount
-    property var comment
+    property var sendAmount: ""
+    property var comment: ""
     id: send
 
     VerifyAdvancedTX {
@@ -60,12 +60,14 @@ Item {
                 Row {
                     ComboBox {
                         id: sendWalletsComboBox
-                        objectName: "sendWalletsComboBox"
                         model: bsApp.walletsList
                         currentIndex: walletIdx
                         font.pointSize: 12
                         enabled: (bsApp.walletsList.length > 1)
                         width: 350
+                        onCurrentIndexChanged: {
+                            bsApp.getUTXOsForWallet(sendWalletsComboBox.currentIndex)
+                        }
                     }
                     Label {
                         text: qsTr("<font color=\"darkgrey\">%1 BTC</font>").arg(bsApp.totalBalance)
@@ -76,6 +78,7 @@ Item {
                     id: fees
                     width: 400
                     height: 32
+                    text: txInputsModel.fee
                     color: 'lightgrey'
                     font.pointSize: 14
                     horizontalAlignment: TextEdit.AlignHCenter
@@ -94,6 +97,9 @@ Item {
                         anchors.right: parent
                         anchors.horizontalCenter: parent
                     }
+                    onAccepted: {
+                        txInputsModel.fee = text
+                    }
                 }
                 Row {
                     spacing: 23
@@ -107,16 +113,16 @@ Item {
                         text: qsTr("<font color=\"cyan\">Select Inputs</font>")
                     }
                     Label {
-                        text: qsTr("<font color=\"darkgrey\">#Tx: 0</font>")
+                        text: qsTr("<font color=\"darkgrey\">#Tx: %1</font>").arg(txInputsModel.nbTx)
                         font.pointSize: 10
                     }
                     Label {
-                        text: qsTr("<font color=\"darkgrey\">Balance (BTC): %1</font>").arg(bsApp.totalBalance)
+                        text: qsTr("<font color=\"darkgrey\">Balance (BTC): %1</font>").arg(txInputsModel.balance)
                         font.pointSize: 10
                     }
                 }
                 TableView {
-                    width: 480
+                    width: 500
                     height: 250
                     columnSpacing: 1
                     rowSpacing: 1
@@ -124,24 +130,29 @@ Item {
                     clip: true
                     ScrollIndicator.horizontal: ScrollIndicator { }
                     ScrollIndicator.vertical: ScrollIndicator { }
-                    model: addressListModel
+                    model: txInputsModel
                     delegate: Rectangle {
-                        implicitWidth: 120
+                        implicitWidth: 100 * colWidth
                         implicitHeight: 20
                         border.color: "black"
                         border.width: 1
-                        color: heading ? 'black' : 'darkslategrey'
+                        color: bgColor
                         Text {
-                            text: tabledata
+                            text: tableData ? tableData : ""
                             font.pointSize: heading ? 8 : 10
-                            color: heading ? 'darkgrey' : 'lightgrey'
+                            color: dataColor
                             anchors.centerIn: parent
                         }
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
                                 if (!heading) {
-                                    //TODO: select
+                                    if (model.column === 0) {
+                                        txInputsModel.toggleSelection(model.row)
+                                    }
+                                    else if (model.column === 1) {
+                                        txInputsModel.toggle(model.row)
+                                    }
                                 }
                             }
                         }
@@ -164,7 +175,7 @@ Item {
                     }
                 }
                 TextInput {
-                    id: outAddr0
+                    id: outAddr
                     width: 400
                     height: 32
                     text: recvAddress
@@ -182,7 +193,7 @@ Item {
                 }
                 Row {
                     TextInput {
-                        id: amount0
+                        id: amount
                         width: 400
                         height: 32
                         text: sendAmount
@@ -218,18 +229,26 @@ Item {
                     clip: true
                     ScrollIndicator.horizontal: ScrollIndicator { }
                     ScrollIndicator.vertical: ScrollIndicator { }
-                    model: addressListModel
+                    model: txOutputsModel
                     delegate: Rectangle {
-                        implicitWidth: 120
+                        implicitWidth: 160 * colWidth
                         implicitHeight: 20
                         border.color: "black"
                         border.width: 1
                         color: heading ? 'black' : 'darkslategrey'
                         Text {
-                            text: tabledata
+                            text: tableData ? tableData : ""
                             font.pointSize: heading ? 8 : 10
-                            color: heading ? 'darkgrey' : 'lightgrey'
+                            color: dataColor
                             anchors.centerIn: parent
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                if (!heading && (model.column === 2)) {
+                                    txOutputsModel.delOutput(model.row)
+                                }
+                            }
                         }
                     }
                 }
@@ -265,7 +284,7 @@ Item {
                 verifySignTX.txSignRequest = bsApp.createTXSignRequest(
                             sendWalletsComboBox.currentIndex, recvAddress.text,
                             parseFloat(amount.text), parseFloat(fees.text),
-                            txComment.text)
+                            txComment.text, txInputsModel.getSelection())
                 stack.push(verifySignTX)
             }
         }
