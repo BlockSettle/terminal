@@ -27,6 +27,13 @@ namespace {
       {TxListForAddr::ColorRole, "dataColor"},
       {TxListForAddr::WidthRole, "colWidth"},
    };
+   static const QHash<int, QByteArray> kTxInOutRoles{
+      {TxInOutModel::TableDataRole, "tableData"},
+      {TxInOutModel::HeadingRole, "heading"},
+      {TxInOutModel::ColorRole, "dataColor"},
+      {TxInOutModel::WidthRole, "colWidth"},
+      {TxInOutModel::AddressRole, "address"},
+   };
 }
 
 TxListModel::TxListModel(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
@@ -414,7 +421,22 @@ int64_t TxListForAddr::totalFees(int row) const
 {
    const auto& itTxDet = txs_.find(row);
    if (itTxDet != txs_.end()) {
-      return itTxDet->second.getNumTxOut();
+      int64_t txValue = 0;
+      for (int i = 0; i < itTxDet->second.getNumTxIn(); ++i) {
+         const auto& in = itTxDet->second.getTxInCopy(i);
+         const OutPoint op = in.getOutPoint();
+         const auto& itInput = inputs_.find(op.getTxHash());
+         if (itInput == inputs_.end()) {
+            return -1;
+         }
+         const auto& prevOut = itInput->second.getTxOutCopy(op.getTxOutIndex());
+         txValue += prevOut.getValue();
+      }
+      for (int i = 0; i < itTxDet->second.getNumTxOut(); ++i) {
+         const auto& out = itTxDet->second.getTxOutCopy(i);
+         txValue -= out.getValue();
+      }
+      return txValue;
    }
    return -1;
 }
@@ -442,15 +464,15 @@ QColor TxListForAddr::dataColor(int row, int col) const
 float TxListForAddr::colWidth(int col) const
 {  // width ratio, sum should give columnCount() as a result
    switch (col) {
-   case 0:  return 1.5;
-   case 1:  return 4.0;
+   case 0:  return 1.6;
+   case 1:  return 3.7;
    case 2:  return 0.5;
    case 3:  return 0.4;
    case 4:  return 0.4;
    case 5:  return 0.8;
    case 6:  return 0.8;
-   case 7:  return 0.3;
-   case 8:  return 0.3;
+   case 7:  return 0.4;
+   case 8:  return 0.4;
    default: break;
    }
    return 1.0;
@@ -513,6 +535,7 @@ void TxListForAddr::setDetails(const std::vector<Tx>& txs)
       for (int i = 0; i < data_.size(); ++i) {
          const auto& entry = data_.at(i);
          if (entry.txHash == tx.getThisHash()) {
+            txs_[i] = tx;
             if (!rowStart) {
                rowStart = i + 1;
             }
@@ -525,6 +548,14 @@ void TxListForAddr::setDetails(const std::vector<Tx>& txs)
    if (rowStart && rowEnd) {
       emit dataChanged(createIndex(rowStart, 3), createIndex(rowEnd, 8));
    }
+}
+
+void TxListForAddr::setInputs(const std::vector<Tx>& txs)
+{
+   for (const auto& tx : txs) {
+      inputs_[tx.getThisHash()] = tx;
+   }
+   emit dataChanged(createIndex(1, 6), createIndex(data_.size(), 7));
 }
 
 void TxListForAddr::setCurrentBlock(uint32_t nbBlock)
@@ -573,4 +604,199 @@ QString TxListForAddr::balance() const
       result += entry.value;
    }
    return displayBTC(result / BTCNumericTypes::BalanceDivider);
+}
+
+
+void QTxDetails::setDetails(const bs::sync::TXWalletDetails& details)
+{
+   details_ = details;
+   QMetaObject::invokeMethod(this, [this] {
+      inputsModel_ = new TxInOutModel(details_.inputAddresses, this);
+      outputsModel_ = new TxInOutModel(details_.outputAddresses, this);
+      emit updated();
+   });
+}
+
+void QTxDetails::setCurBlock(uint32_t curBlock)
+{
+   if (curBlock_ != curBlock) {
+      curBlock_ = curBlock;
+      QMetaObject::invokeMethod(this, [this] {
+         emit newBlock();
+      });
+   }
+}
+
+QString QTxDetails::virtSize() const
+{
+   return displayNb(details_.tx.getTxWeight());
+}
+
+QString QTxDetails::nbConf() const
+{
+   const int txHeight = details_.tx.getTxHeight();
+   return displayNb((txHeight > 0) ? curBlock_ - txHeight + 1 : txHeight);
+}
+
+QString QTxDetails::nbInputs() const
+{
+   return displayNb(details_.tx.getNumTxIn());
+}
+
+QString QTxDetails::nbOutputs() const
+{
+   return displayNb(details_.tx.getNumTxOut());
+}
+
+QString QTxDetails::inputAmount() const
+{
+   uint64_t amount = 0;
+   for (const auto& in : details_.inputAddresses) {
+      amount += in.value;
+   }
+   return displayBTC(amount / BTCNumericTypes::BalanceDivider);
+}
+
+QString QTxDetails::outputAmount() const
+{
+   uint64_t amount = 0;
+   for (const auto& out : details_.outputAddresses) {
+      amount += out.value;
+   }
+   return displayBTC(amount / BTCNumericTypes::BalanceDivider);
+}
+
+QString QTxDetails::fee() const
+{
+   int64_t amount = 0;
+   for (const auto& in : details_.inputAddresses) {
+      amount += in.value;
+   }
+   for (const auto& out : details_.outputAddresses) {
+      amount -= out.value;
+   }
+   return displayBTC(amount / BTCNumericTypes::BalanceDivider);
+}
+
+QString QTxDetails::feePerByte() const
+{
+   int64_t amount = 0;
+   for (const auto& in : details_.inputAddresses) {
+      amount += in.value;
+   }
+   for (const auto& out : details_.outputAddresses) {
+      amount -= out.value;
+   }
+   int txWeight = details_.tx.getTxWeight();
+   if (!txWeight) {
+      txWeight = -1;
+   }
+   return displayBTC(amount / txWeight, 1);
+}
+
+TxInOutModel::TxInOutModel(const std::vector<bs::sync::AddressDetails>& data, QObject* parent)
+   : QAbstractTableModel(parent), data_(data)
+   , header_{ {}, tr("Address"), tr("Amount"), tr("Wallet") }
+{}
+
+int TxInOutModel::rowCount(const QModelIndex&) const
+{
+   return data_.size() * 2 + 1;
+}
+
+int TxInOutModel::columnCount(const QModelIndex&) const
+{
+   return header_.size();
+}
+
+QVariant TxInOutModel::data(const QModelIndex& index, int role) const
+{
+   if (index.column() >= header_.size()) {
+      return {};
+   }
+   switch (role) {
+   case TableDataRole:
+      return getData(index.row(), index.column());
+   case HeadingRole:
+      return (index.row() == 0);
+   case ColorRole:
+      return dataColor(index.row(), index.column());
+   case WidthRole:
+      return colWidth(index.column());
+   case AddressRole:
+      try {
+         return QString::fromStdString(data_.at((index.row() - 1) / 2).address.display());
+      }
+      catch (const std::exception&) { return {}; }
+   default: break;
+   }
+   return {};
+}
+
+QHash<int, QByteArray> TxInOutModel::roleNames() const
+{
+   return kTxInOutRoles;
+}
+
+QString TxInOutModel::getData(int row, int col) const
+{
+   if (row > (data_.size() * 2)) {
+      return {};
+   }
+   if (row == 0) {
+      return header_.at(col);
+   }
+   try {
+      switch (col) {
+      case 0:
+         if ((row % 2) == 1) {
+            return tr("Ad.:");
+         }
+         else {
+            return tr("Tx.:");
+         }
+      case 1:
+         if ((row % 2) == 1) {
+            return QString::fromStdString(data_.at((row - 1) / 2).address.display());
+         }
+         else {
+            return QString::fromStdString(data_.at((row - 1) / 2).outHash.toHexStr(true));
+         }
+      case 2:
+         if ((row % 2) == 1) {
+            return QString::fromStdString(data_.at((row - 1) / 2).valueStr);
+         }
+         break;
+      case 3:
+         if ((row % 2) == 1) {
+            return QString::fromStdString(data_.at((row - 1) / 2).walletName);
+         }
+         break;
+      default: break;
+      }
+   }
+   catch (const std::exception&) {
+      return {};
+   }
+   return {};
+}
+
+QColor TxInOutModel::dataColor(int row, int col) const
+{
+   if ((row == 0) || (col == 0)) {
+      return QColorConstants::DarkGray;
+   }
+   return QColorConstants::LightGray;
+}
+
+float TxInOutModel::colWidth(int col) const
+{
+   switch (col) {
+   case 0:  return 0.3;
+   case 1:  return 2.5;
+   case 2:  return 0.6;
+   case 3:  return 0.6;
+   default: break;
+   }
+   return 1.0;
 }

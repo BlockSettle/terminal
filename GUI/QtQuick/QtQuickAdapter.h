@@ -19,6 +19,7 @@
 #include "ApplicationSettings.h"
 #include "Wallets/SignContainer.h"
 #include "ThreadSafeClasses.h"
+#include "TxInputsModel.h"
 #include "TxListModel.h"
 #include "UiUtils.h"
 
@@ -33,6 +34,7 @@ namespace BlockSettle {
    namespace Common {
       class ArmoryMessage_AddressHistory;
       class ArmoryMessage_FeeLevelsResponse;
+      class ArmoryMessage_Transactions;
       class ArmoryMessage_ZCInvalidated;
       class ArmoryMessage_ZCReceived;
       class LedgerEntries;
@@ -72,7 +74,10 @@ namespace BlockSettle {
 class BSTerminalSplashScreen;
 class QQmlContext;
 class QmlWalletsList;
+class QTxDetails;
 class QTXSignRequest;
+class TxInputsModel;
+class TxOutputsModel;
 
 class QtQuickAdapter : public QObject, public ApiBusAdapter, public bs::MainLoopRuner
 {
@@ -154,9 +159,11 @@ public:
    Q_INVOKABLE void copyAddressToClipboard(const QString& addr);
 
    Q_INVOKABLE QTXSignRequest* createTXSignRequest(int walletIndex, const QString& recvAddr
-      , double amount, double fee, const QString& comment);
+      , double amount, double fee, const QString& comment = {}, QUTXOList* utxos = nullptr);
+   Q_INVOKABLE void getUTXOsForWallet(int walletIndex);
    Q_INVOKABLE void signAndBroadcast(QTXSignRequest*, const QString& password);
    Q_INVOKABLE int startSearch(const QString&);
+   Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash);
 
 signals:
    void walletsListChanged();
@@ -188,7 +195,7 @@ private:
    std::string hdWalletIdByIndex(int);
 
    void processWalletLoaded(const bs::sync::WalletInfo &);
-   bs::message::ProcessingResult processWalletData(const uint64_t msgId
+   bs::message::ProcessingResult processWalletData(const bs::message::SeqId
       , const BlockSettle::Common::WalletsMessage_WalletData&);
    bs::message::ProcessingResult processWalletBalances(const BlockSettle::Common::WalletsMessage_WalletBalances &);
    bs::message::ProcessingResult processTXDetails(bs::message::SeqId, const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
@@ -200,6 +207,7 @@ private:
    bs::message::ProcessingResult processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse&);
    bs::message::ProcessingResult processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived&);
    bs::message::ProcessingResult processZCInvalidated(const BlockSettle::Common::ArmoryMessage_ZCInvalidated&);
+   bs::message::ProcessingResult processTransactions(bs::message::SeqId, const BlockSettle::Common::ArmoryMessage_Transactions&);
    bs::message::ProcessingResult processReservedUTXOs(const BlockSettle::Common::WalletsMessage_ReservedUTXOs&);
    void processWalletAddresses(const std::vector<bs::sync::Address>&);
    bs::message::ProcessingResult processTxResponse(bs::message::SeqId
@@ -243,10 +251,14 @@ private:
    TxListModel* pendingTxModel_{ nullptr };
    TxListModel* txModel_{ nullptr };
    TxListForAddr* expTxByAddrModel_{ nullptr };
+   TxInputsModel* txInputsModel_{ nullptr };
+   TxOutputsModel* txOutputsModel_{ nullptr };
    bs::Address generatedAddress_;
 
    std::map<bs::message::SeqId, QTXSignRequest*> txReqs_;
+   std::map<bs::message::SeqId, QTxDetails*> txDetailReqs_;
    std::map<ApplicationSettings::Setting, QVariant>   settingsCache_;
+   std::set<bs::message::SeqId>  expTxAddrReqs_, expTxAddrInReqs_;
 };
 
 #endif	// QT_QUICK_ADAPTER_H

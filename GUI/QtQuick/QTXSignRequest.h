@@ -63,17 +63,4 @@ private:
    QString  error_;
 };
 
-
-class QUTXO : public QObject
-{
-   Q_OBJECT
-public:
-   QUTXO(const UTXO& utxo, QObject* parent = nullptr)
-      : QObject(parent), utxo_(utxo) {}
-   UTXO utxo() const { return utxo_; }
-
-private:
-   const UTXO utxo_;
-};
-
 #endif	// Q_TX_SIGN_REQUEST_H

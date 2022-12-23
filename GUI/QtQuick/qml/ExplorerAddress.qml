@@ -97,6 +97,7 @@ Item {
             text: qsTr("<font color=\"white\">Transactions</font>")
             font.pointSize: 14
         }
+
         TableView {
             width: 1008
             height: 450
@@ -123,8 +124,7 @@ Item {
                     anchors.fill: parent
                     onClicked: {
                         if (!heading && (model.column === 1)) {
-                            explorerTX.txId = tableData
-                            bsApp.startSearch(explorerTX.txId)
+                            explorerTX.tx = bsApp.getTXDetails(tableData)
                             explorerStack.push(explorerTX)
                         }
                     }

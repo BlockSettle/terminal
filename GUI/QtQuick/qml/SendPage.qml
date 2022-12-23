@@ -51,9 +51,17 @@ Item {
                 text: qsTr("Advanced")
                 font.pointSize: 14
                 onClicked: {
-                    advancedCreateTX.recvAddress = recvAddress.text
+                    bsApp.getUTXOsForWallet(sendWalletsComboBox.currentIndex)
+                    txOutputsModel.clearOutputs()
+                    var outAmount = parseFloat(amount.text)
+                    if ((outAmount >= 0.0000001) && (recvAddress.text.length)) {
+                        txOutputsModel.addOutput(recvAddress.text, outAmount)
+                        txInputsModel.getSelection()
+                        advancedCreateTX.recvAddress = recvAddress.text
+                        advancedCreateTX.sendAmount = amount.text
+                    }
+                    txInputsModel.fee = fees.text
                     advancedCreateTX.walletIdx = sendWalletsComboBox.currentIndex
-                    advancedCreateTX.sendAmount = amount.text
                     advancedCreateTX.comment = txComment.text
                     stack.push(advancedCreateTX)
                 }
@@ -110,7 +118,6 @@ Item {
             spacing: 23
             ComboBox {
                 id: sendWalletsComboBox
-                objectName: "sendWalletsComboBox"
                 model: bsApp.walletsList
                 currentIndex: walletsComboBox.currentIndex
                 font.pointSize: 14

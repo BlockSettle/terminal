@@ -32,6 +32,7 @@
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
 #include "QTXSignRequest.h"
+#include "TxOutputsModel.h"
 #include "Wallets/ProtobufHeadlessUtils.h"
 #include "SettingsAdapter.h"
 
@@ -106,6 +107,8 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    pendingTxModel_ = new TxListModel(logger, this);
    txModel_ = new TxListModel(logger, this);
    expTxByAddrModel_ = new TxListForAddr(logger, this);
+   txOutputsModel_ = new TxOutputsModel(logger, this);
+   txInputsModel_ = new TxInputsModel(logger, txOutputsModel_, this);
 }
 
 QtQuickAdapter::~QtQuickAdapter()
@@ -177,8 +180,11 @@ void QtQuickAdapter::run(int &argc, char **argv)
    });
 
    logger_->debug("[QtGuiAdapter::run] creating QML app");
+   qmlRegisterInterface<QObjectList>("QObjectList");
    qmlRegisterInterface<QTXSignRequest>("QTXSignRequest");
    qmlRegisterInterface<QUTXO>("QUTXO");
+   qmlRegisterInterface<QUTXOList>("QUTXOList");
+   qmlRegisterInterface<QTxDetails>("QTxDetails");
 
    QQmlApplicationEngine engine;
    QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);
@@ -190,6 +196,8 @@ void QtQuickAdapter::run(int &argc, char **argv)
    rootCtxt_->setContextProperty(QLatin1Literal("pendingTxListModel"), pendingTxModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("txListModel"), txModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("txListByAddrModel"), expTxByAddrModel_);
+   rootCtxt_->setContextProperty(QLatin1Literal("txInputsModel"), txInputsModel_);
+   rootCtxt_->setContextProperty(QLatin1Literal("txOutputsModel"), txOutputsModel_);
 
    engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
    if (engine.rootObjects().empty()) {
@@ -444,6 +452,8 @@ ProcessingResult QtQuickAdapter::processBlockchain(const Envelope &env)
       return processZC(msg.zc_received());
    case ArmoryMessage::kZcInvalidated:
       return processZCInvalidated(msg.zc_invalidated());
+   case ArmoryMessage::kTransactions:
+      return processTransactions(env.responseId(), msg.transactions());
    default: return ProcessingResult::Ignored;
    }
    return ProcessingResult::Success;
@@ -758,7 +768,7 @@ void QtQuickAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
    });
 }
 
-ProcessingResult QtQuickAdapter::processWalletData(uint64_t msgId
+ProcessingResult QtQuickAdapter::processWalletData(bs::message::SeqId msgId
    , const WalletsMessage_WalletData& response)
 {
    const auto& itReq = walletInfoReq_.find(msgId);
@@ -825,6 +835,7 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
             Tx tx(BinaryData::fromString(resp.tx()));
             if (tx.isInitialized()) {
                txDet.tx = std::move(tx);
+               txDet.tx.setTxHeight(resp.tx_height());
             }
          }
       } catch (const std::exception &e) {
@@ -869,8 +880,17 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
             , resp.change_address().out_index() };
       }
       catch (const std::exception &) {}
-      pendingTxModel_->setDetails(txDet);
-      txModel_->setDetails(txDet);
+
+      const auto& itTxDet = txDetailReqs_.find(msgId);
+      if (itTxDet == txDetailReqs_.end()) {
+         pendingTxModel_->setDetails(txDet);
+         txModel_->setDetails(txDet);
+      }
+      else {
+         itTxDet->second->setDetails(txDet); // shouldn't be more than one entry
+         itTxDet->second->setCurBlock(blockNum_);
+         txDetailReqs_.erase(itTxDet);
+      }
    }
 
    const auto& itZC = newZCs_.find(msgId);
@@ -1008,8 +1028,8 @@ void QtQuickAdapter::copyAddressToClipboard(const QString& addr)
    }
 }
 
-QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex
-   , const QString& recvAddr, double amount, double fee, const QString& comment)
+QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QString& recvAddr
+   , double amount, double fee, const QString& comment, QUTXOList* utxos)
 {
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_request();
@@ -1021,10 +1041,42 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex
    if (!comment.isEmpty()) {
       msgReq->set_comment(comment.toStdString());
    }
+   if (utxos) {
+      for (const auto& qUtxo : utxos->data()) {
+         msgReq->add_utxos(qUtxo->utxo().serialize().toBinStr());
+      }
+   }
    const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
    const auto txReq = new QTXSignRequest(this);
    txReqs_[msgId] = txReq;
    return txReq;
+}
+
+void QtQuickAdapter::getUTXOsForWallet(int walletIndex)
+{
+   logger_->debug("[{}] #{}", __func__, walletIndex);
+   txInputsModel_->clear();
+   WalletsMessage msg;
+   auto msgReq = msg.mutable_get_utxos();
+   msgReq->set_wallet_id(hdWalletIdByIndex(walletIndex));
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
+}
+
+QTxDetails* QtQuickAdapter::getTXDetails(const QString& txHash)
+{
+   auto txBinHash = BinaryData::CreateFromHex(txHash.trimmed().toStdString());
+   txBinHash.swapEndian();
+   if (txBinHash.getSize() != 32) {
+      return new QTxDetails({}, this);
+   }
+   WalletsMessage msg;
+   auto msgReq = msg.mutable_tx_details_request();
+   auto txReq = msgReq->add_requests();
+   txReq->set_tx_hash(txBinHash.toBinStr());
+   const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
+   const auto txDet = new QTxDetails(txBinHash, this);
+   txDetailReqs_[msgId] = txDet;
+   return txDet;
 }
 
 ProcessingResult QtQuickAdapter::processAddressHist(const ArmoryMessage_AddressHistory& response)
@@ -1037,8 +1089,11 @@ ProcessingResult QtQuickAdapter::processAddressHist(const ArmoryMessage_AddressH
       logger_->error("[{}] invalid address: {}", __func__, e.what());
       return ProcessingResult::Error;
    }
+   ArmoryMessage msg;
+   auto msgReq = msg.mutable_get_txs_by_hash();
    std::vector<bs::TXEntry> entries;
    for (const auto& entry : response.entries()) {
+      msgReq->add_tx_hashes(entry.tx_hash());
       bs::TXEntry txEntry;
       txEntry.txHash = BinaryData::fromString(entry.tx_hash());
       txEntry.value = entry.value();
@@ -1060,6 +1115,8 @@ ProcessingResult QtQuickAdapter::processAddressHist(const ArmoryMessage_AddressH
       entries.push_back(std::move(txEntry));
    }
    expTxByAddrModel_->addRows(entries);
+   const auto msgId = pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+   expTxAddrReqs_.insert(msgId);
    return ProcessingResult::Success;
 }
 
@@ -1093,7 +1150,7 @@ ProcessingResult QtQuickAdapter::processUTXOs(const WalletsMessage_UtxoListRespo
       utxo.unserialize(BinaryData::fromString(serUtxo));
       utxos.push_back(std::move(utxo));
    }
-   //TODO
+   txInputsModel_->addUTXOs(utxos);
    return ProcessingResult::Success;
 }
 
@@ -1158,6 +1215,41 @@ ProcessingResult QtQuickAdapter::processZCInvalidated(const ArmoryMessage_ZCInva
    }
    //TODO
    return ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult QtQuickAdapter::processTransactions(bs::message::SeqId msgId
+   , const ArmoryMessage_Transactions& response)
+{
+   std::vector<Tx> result;
+   std::set<BinaryData> inHashes;
+   for (const auto& txData : response.transactions()) {
+      Tx tx(BinaryData::fromString(txData.tx()));
+      tx.setTxHeight(txData.height());
+      for (int i = 0; i < tx.getNumTxIn(); ++i) {
+         const auto& in = tx.getTxInCopy(i);
+         const OutPoint op = in.getOutPoint();
+         inHashes.insert(op.getTxHash());
+      }
+      result.emplace_back(std::move(tx));
+   }
+   const auto& itExpTxAddr = expTxAddrReqs_.find(msgId);
+   if (itExpTxAddr != expTxAddrReqs_.end()) {
+      ArmoryMessage msg;
+      auto msgReq = msg.mutable_get_txs_by_hash();
+      for (const auto& inHash : inHashes) {
+         msgReq->add_tx_hashes(inHash.toBinStr());
+      }
+      expTxAddrReqs_.erase(itExpTxAddr);
+      expTxByAddrModel_->setDetails(result);
+      const auto msgIdReq = pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+      expTxAddrInReqs_.insert(msgIdReq);
+   }
+   const auto& itExpTxAddrIn = expTxAddrInReqs_.find(msgId);
+   if (itExpTxAddrIn != expTxAddrInReqs_.end()) {
+      expTxAddrInReqs_.erase(itExpTxAddrIn);
+      expTxByAddrModel_->setInputs(result);
+   }
+   return bs::message::ProcessingResult::Success;
 }
 
 ProcessingResult QtQuickAdapter::processReservedUTXOs(const WalletsMessage_ReservedUTXOs& response)
@@ -1287,7 +1379,6 @@ int QtQuickAdapter::startSearch(const QString& s)
    if (trimmed.length() == 64) { // potential TX hash in hex
       const auto& txId = BinaryData::CreateFromHex(trimmed);
       if (txId.getSize() == 32) {   // valid TXid
-         //TODO: send request to BA
          return 2;
       }
    }
