@@ -18,6 +18,7 @@
 #include <QVariant>
 #include "Address.h"
 #include "BinaryData.h"
+#include "ScriptRecipient.h"
 #include "TxClasses.h"
 
 namespace spdlog {
@@ -38,6 +39,7 @@ public:
    QHash<int, QByteArray> roleNames() const override;
 
    double totalAmount() const;
+   std::vector<std::shared_ptr<Armory::Signer::ScriptRecipient>> recipients() const;
 
    Q_INVOKABLE void addOutput(const QString& address, double amount);
    Q_INVOKABLE void delOutput(int row);

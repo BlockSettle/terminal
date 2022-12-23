@@ -12,6 +12,7 @@
 #include <spdlog/spdlog.h>
 #include "Address.h"
 #include "BTCNumericTypes.h"
+#include "CoinSelection.h"
 #include "TxOutputsModel.h"
 
 namespace {
@@ -102,6 +103,10 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
       catch (const std::exception&) {
          continue;
       }
+   }
+   if (collectUTXOsForAmount_ > 0) {
+      collectUTXOsFor(collectUTXOsForAmount_);
+      collectUTXOsForAmount_ = 0;
    }
 }
 
@@ -233,16 +238,11 @@ QUTXOList* TxInputsModel::getSelection()
       if (it != preSelected_.end()) {
          return new QUTXOList(it->second, (QObject*)this);
       }
-      std::vector<UTXO> allUTXOs;
-      for (const auto& byAddr : utxos_) {
-         allUTXOs.insert(allUTXOs.cend(), byAddr.second.cbegin(), byAddr.second.cend());
+      if (utxos_.empty()) {
+         collectUTXOsForAmount_ = amount;
+         return nullptr;
       }
-      //TODO: select and save
-      nbTx_ = result.size();
-      selectedBalance_ = 0;
-      for (const auto& qUtxo : result) {
-         selectedBalance_ += qUtxo->utxo().getValue();
-      }
+      result = collectUTXOsFor(amount);
       preSelected_[(int)std::floor(amount * BTCNumericTypes::BalanceDivider)] = result;
    }
    else {
@@ -275,10 +275,39 @@ QUTXOList* TxInputsModel::getSelection()
             nbTx_ = result.size();
             preSelected_[0] = result;
          }
+         emit selectionChanged();
       }
    }
-   emit selectionChanged();
    return new QUTXOList(result, (QObject*)this);
+}
+
+QList<QUTXO*> TxInputsModel::collectUTXOsFor(double amount)
+{
+   QList<QUTXO*> result;
+   std::vector<UTXO> allUTXOs;
+   for (const auto& byAddr : utxos_) {
+      allUTXOs.insert(allUTXOs.cend(), byAddr.second.cbegin(), byAddr.second.cend());
+   }
+   bs::Address::decorateUTXOs(allUTXOs);
+   const auto& recipients = outsModel_->recipients();
+   std::map<unsigned, std::vector<std::shared_ptr<Armory::Signer::ScriptRecipient>>> recipientsMap;
+   for (unsigned i = 0; i < recipients.size(); ++i) {
+      recipientsMap[i] = { recipients.at(i) };
+   }
+   float feePerByte = fee_.isEmpty() ? 1.0 : std::stof(fee_.toStdString());
+   auto payment = Armory::CoinSelection::PaymentStruct(recipientsMap, 0, feePerByte, 0);
+   Armory::CoinSelection::CoinSelection coinSelection([allUTXOs](uint64_t) { return allUTXOs; }
+   , std::vector<AddressBookEntry>{}, UINT64_MAX, topBlock_);
+   const auto selection = coinSelection.getUtxoSelectionForRecipients(payment, allUTXOs);
+
+   selectedBalance_ = 0;
+   for (const auto& utxo : selection.utxoVec_) {
+      selectedBalance_ += utxo.getValue();
+      result.push_back(new QUTXO(utxo, (QObject*)this));
+   }
+   nbTx_ = result.size();
+   emit selectionChanged();
+   return result;
 }
 
 QVariant TxInputsModel::getData(int row, int col) const

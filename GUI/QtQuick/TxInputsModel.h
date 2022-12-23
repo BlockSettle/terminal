@@ -66,6 +66,7 @@ public:
 
    void clear();
    void addUTXOs(const std::vector<UTXO>&);
+   void setTopBlock(uint32_t topBlock) { topBlock_ = topBlock; }
 
    Q_PROPERTY(int nbTx READ nbTx NOTIFY selectionChanged)
    int nbTx() const { return nbTx_; }
@@ -89,6 +90,7 @@ private:
    QColor dataColor(int row, int col) const;
    QColor bgColor(int row) const;
    float colWidth(int col) const;
+   QList<QUTXO*> collectUTXOsFor(double amount);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
@@ -108,6 +110,8 @@ private:
    int nbTx_{ 0 };
    uint64_t  selectedBalance_{ 0 };
    QString fee_;
+   uint32_t topBlock_{ 0 };
+   double collectUTXOsForAmount_{ 0 };
 };
 
 #endif	// TX_INPUTS_MODEL_H

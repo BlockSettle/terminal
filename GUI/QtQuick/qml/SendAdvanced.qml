@@ -171,6 +171,12 @@ Item {
                         text: "+"
                         font.pointSize: 14
                         onClicked: {
+                            var outAmount = parseFloat(amount.text)
+                            if (recvAddress.text.length && (outAmount > 0)) {
+                                txOutputs.addOutput(recvAddress.text, outAmount)
+                                recvAddress.text = ""
+                                amount.text = ""
+                            }
                         }
                     }
                 }
@@ -214,6 +220,14 @@ Item {
                             color: 'darkgrey'
                             anchors.right: parent
                             anchors.horizontalCenter: parent
+                        }
+                        onAccepted: {
+                            var outAmount = parseFloat(text)
+                            if (recvAddress.text.length && (outAmount > 0)) {
+                                txOutputs.addOutput(recvAddress.text, outAmount)
+                                recvAddress.text = ""
+                                amount.text = ""
+                            }
                         }
                     }
                     Button {
@@ -282,9 +296,9 @@ Item {
 
             onClicked: {
                 verifySignTX.txSignRequest = bsApp.createTXSignRequest(
-                            sendWalletsComboBox.currentIndex, recvAddress.text,
-                            parseFloat(amount.text), parseFloat(fees.text),
-                            txComment.text, txInputsModel.getSelection())
+                            sendWalletsComboBox.currentIndex, "", 0,
+                            parseFloat(fees.text), txComment.text,
+                            txInputsModel.getSelection())
                 stack.push(verifySignTX)
             }
         }

@@ -53,6 +53,8 @@ Item {
                 onClicked: {
                     bsApp.getUTXOsForWallet(sendWalletsComboBox.currentIndex)
                     txOutputsModel.clearOutputs()
+                    txInputsModel.fee = fees.text
+                    advancedCreateTX.walletIdx = sendWalletsComboBox.currentIndex
                     var outAmount = parseFloat(amount.text)
                     if ((outAmount >= 0.0000001) && (recvAddress.text.length)) {
                         txOutputsModel.addOutput(recvAddress.text, outAmount)
@@ -60,8 +62,6 @@ Item {
                         advancedCreateTX.recvAddress = recvAddress.text
                         advancedCreateTX.sendAmount = amount.text
                     }
-                    txInputsModel.fee = fees.text
-                    advancedCreateTX.walletIdx = sendWalletsComboBox.currentIndex
                     advancedCreateTX.comment = txComment.text
                     stack.push(advancedCreateTX)
                 }

@@ -67,6 +67,15 @@ double TxOutputsModel::totalAmount() const
    return result;
 }
 
+std::vector<std::shared_ptr<Armory::Signer::ScriptRecipient>> TxOutputsModel::recipients() const
+{
+   std::vector<std::shared_ptr<Armory::Signer::ScriptRecipient>> result;
+   for (const auto& entry : data_) {
+      result.emplace_back(entry.address.getRecipient(bs::XBTAmount(entry.amount)));
+   }
+   return result;
+}
+
 void TxOutputsModel::clearOutputs()
 {
    beginResetModel();
