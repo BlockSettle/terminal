@@ -60,5 +60,12 @@
         <file>images/plugins_icon_unchoosed.png</file>
         <file>images/transactions_icon_unchoosed.png</file>
         <file>images/explorer_icon_unchoosed.png</file>
+        <file>qml/TermsAndConditions.qml</file>
+        <file>TermsAndConditions.txt</file>
+        <file>images/close_button.png</file>
+        <file>qml/CreateWallet.qml</file>
+        <file>qml/StyledControls/CustomTitleLabel.qml</file>
+        <file>images/wallet icon.png</file>
+        <file>qml/StartCreateWallet.qml</file>
     </qresource>
 </RCC>

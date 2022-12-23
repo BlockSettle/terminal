@@ -22,10 +22,13 @@ import "BsStyles"
 Item {
     id: overview
 
+    signal newWalletClicked();
+
     CreateNewWallet {
         id: createNewWalletPage
         visible: false
     }
+
     AddressDetails {
         id: addressDetails
         visible: false
@@ -98,6 +101,7 @@ Item {
                 font.pointSize: 10
                 onClicked: {
                     stack.push(createNewWalletPage)
+                    newWalletClicked()
                 }
             }
         }

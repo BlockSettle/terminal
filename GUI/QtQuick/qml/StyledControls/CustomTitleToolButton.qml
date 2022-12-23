@@ -40,7 +40,7 @@ ToolButton {
         id: btn_background
         clip: true
         color: !control.enabled ? BSStyle.disabledColor :
-                (control._isPressed ? BSStyle.buttonsPressedColor :
+                (control.down ? BSStyle.buttonsPressedColor :
                 (control.hovered ? BSStyle.buttonsHoveredColor : BSStyle.buttonsMainColor))
         Rectangle {
             color: 'transparent'

@@ -24,8 +24,8 @@ import "js/helper.js" as JsHelper
 
 ApplicationWindow {
     id: mainWindow
-    minimumWidth: 1024
-    minimumHeight: 800
+    minimumWidth: 1200
+    minimumHeight: 900
 
     visible: false
     title: qsTr("BlockSettle Terminal")
@@ -37,6 +37,11 @@ ApplicationWindow {
         hide()
 //        qmlFactory.installEventFilterToObj(mainWindow)
 //        qmlFactory.applyWindowFix(mainWindow)
+    }
+
+    CreateWallet {
+        id: createWallet
+        visible: false
     }
 
     color: BSStyle.backgroundColor
@@ -170,6 +175,11 @@ ApplicationWindow {
 
         OverviewPage {
             id: overviewPage
+            onNewWalletClicked: {
+                createWallet.show()
+                createWallet.raise()
+                createWallet.requestActivate()
+            }
         }
 
         TransactionsPage {

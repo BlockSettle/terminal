@@ -14,81 +14,29 @@ import "../BsStyles"
 
 Button {
     id: control
-    property bool capitalize: true
-    property bool primary: false
-    text: parent.text
-    leftPadding: 15
-    rightPadding: 15
-    anchors.margins: 5
+    property bool preferred: false
 
     contentItem: Text {
         text: control.text
-        opacity: enabled ? 1.0 : 0.3
-        color: BSStyle.textColor
-        font.capitalization: capitalize ? Font.AllUppercase : Font.MixedCase
-        font.pixelSize: 11
+        font.pixelSize: 16
+        font.family: "Roboto"
+        font.weight: Font.Bold
+        color: "#FFFFFF"
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
     }
-
     background: Rectangle {
-        id: rect
-        implicitWidth: 110
-        implicitHeight: 35
-        opacity: primary ? 1 : (control.enabled ? 1 : 0.3)
-        border.color: BSStyle.buttonsBorderColor
-        color: primary ? BSStyle.buttonsPrimaryMainColor : (control.highlighted ? BSStyle.buttonsPrimaryMainColor : BSStyle.buttonsMainColor)
-        border.width: primary ? 0 : 1
+        implicitWidth: control.width
+        implicitHeight: 50
+        color: preferred ? (!control.enabled ? BSStyle.disabledColor :
+                (control.down ? BSStyle.buttonsPreferredPressedColor :
+                (control.hovered ? BSStyle.buttonsPreferredHoveredColor : BSStyle.buttonsPreferredColor))):
+                (!control.enabled ? BSStyle.disabledColor :
+                (control.down ? BSStyle.buttonsStandardPressedColor :
+                (control.hovered ? BSStyle.buttonsStandardHoveredColor : BSStyle.buttonsStandardColor)))
+
+        radius: 14
     }
-
-    states: [
-        State {
-            name: ""
-            PropertyChanges {
-                target: rect
-                opacity: primary ? 1 : (control.enabled ? 1 : 0.3)
-                color: primary ? BSStyle.buttonsPrimaryMainColor : (control.highlighted ? BSStyle.buttonsPrimaryMainColor : BSStyle.buttonsMainColor)
-            }
-        },
-        State {
-            name: "pressed"
-            when: control.pressed
-            PropertyChanges {
-                target: rect
-                opacity: primary ? 0.7 : (control.enabled ? 1 : 0.3)
-                color: primary ? BSStyle.buttonsPrimaryMainColor : (control.highlighted ? BSStyle.buttonsPrimaryPressedColor : BSStyle.buttonsPressedColor)
-            }
-        },
-        State {
-            name: "hovered"
-            when: control.hovered
-            PropertyChanges {
-                target: rect
-                opacity: primary ? 0.85 : (control.enabled ? 1 : 0.3)
-                color: primary ? BSStyle.buttonsPrimaryMainColor : (control.highlighted ? BSStyle.buttonsPrimaryHoveredColor : BSStyle.buttonsHoveredColor)
-            }
-        },
-        State {
-            name: "disabled"
-            when: !control.enabled
-            PropertyChanges {
-                target: rect
-                opacity: primary ? 0.3 : (control.enabled ? 1 : 0.3)
-                color: primary ? BSStyle.buttonsPrimaryMainColor : "gray"
-            }
-        }
-    ]
-
-    transitions: [
-        Transition {
-            from: ""; to: "hovered"
-            ColorAnimation { duration: 100 }
-        },
-        Transition {
-            from: "*"; to: "pressed"
-            ColorAnimation { duration: 10 }
-        }
-    ]
 }
 
