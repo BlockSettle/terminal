@@ -10,6 +10,11 @@ import "BsStyles"
 ColumnLayout  {
 
     id: layout
+
+    signal sig_create_new()
+    signal sig_import_wallet()
+    signal sig_hardware_wallet()
+
     height: 481
     width: 580
     spacing: 0
@@ -67,6 +72,9 @@ ColumnLayout  {
             Component.onCompleted: {
                 hardware_but.preferred = false
             }
+            onClicked: {
+                sig_hardware_wallet()
+            }
         }
 
         CustomButton {
@@ -76,6 +84,9 @@ ColumnLayout  {
 
             Component.onCompleted: {
                 import_but.preferred = false
+            }
+            onClicked: {
+                sig_import_wallet()
             }
         }
 
@@ -87,7 +98,9 @@ ColumnLayout  {
             Component.onCompleted: {
                 create_but.preferred = true
             }
+            onClicked: {
+                sig_create_new()
+            }
         }
-
     }
 }

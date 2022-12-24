@@ -30,7 +30,6 @@ Window {
         radius: 16
         height: stack_create_wallet.height + 40
         width: stack_create_wallet.width
-        //anchors.fill: parent
         border.color : "#3C435A"
         border.width : 1
 
@@ -50,6 +49,26 @@ Window {
                 onClicked: {
                    root.close()
                    stack_create_wallet.pop(null)
+                }
+            }
+        }
+
+        Image {
+            id: back_arrow_button
+            visible: !(terms_conditions.visible || start_create.visible)
+
+            anchors.top: parent.top
+            anchors.topMargin: 24
+            anchors.left: parent.left
+            anchors.leftMargin: 24
+
+            source: "qrc:/images/back_arrow.png"
+            width: 20
+            height: 16
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                   stack_create_wallet.pop()
                 }
             }
         }
@@ -112,7 +131,17 @@ Window {
         StartCreateWallet {
             id: start_create
             visible: false
+            onSig_create_new: {
+                wallet_seed.phrase = bsApp.newSeedPhrase()
+                stack_create_wallet.push(wallet_seed)
+            }
         }
+
+        WalletSeed {
+            id: wallet_seed
+            visible: false
+        }
+
     }
 }
 

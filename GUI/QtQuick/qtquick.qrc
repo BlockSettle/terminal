@@ -68,5 +68,9 @@
         <file>qml/StyledControls/CustomTitleLabel.qml</file>
         <file>images/wallet icon.png</file>
         <file>qml/StartCreateWallet.qml</file>
+        <file>images/back_arrow.png</file>
+        <file>qml/WalletSeed.qml</file>
+        <file>qml/StyledControls/CustomSeedLabel.qml</file>
+        <file>images/copy_seed.png</file>
     </qresource>
 </RCC>

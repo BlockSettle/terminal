@@ -16,7 +16,16 @@ Button {
     id: control
     property bool preferred: false
 
-    contentItem: Text {
+    font.pixelSize: 16
+    font.family: "Roboto"
+    font.weight: Font.Bold
+    palette.buttonText: "#FFFFFF"
+
+    icon.color: "transparent"
+    icon.width: 24
+    icon.height: 24
+
+    /*contentItem: Text {
         text: control.text
         font.pixelSize: 16
         font.family: "Roboto"
@@ -25,7 +34,8 @@ Button {
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
-    }
+    }*/
+
     background: Rectangle {
         implicitWidth: control.width
         implicitHeight: 50
