@@ -190,6 +190,7 @@ private:
    void updateSplashProgress();
    void splashProgressCompleted();
    void updateStates();
+   void setTopBlock(uint32_t);
 
    void createWallet(bool primary);
    std::string hdWalletIdByIndex(int);

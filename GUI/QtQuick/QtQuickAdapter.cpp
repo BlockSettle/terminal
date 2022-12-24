@@ -423,18 +423,11 @@ ProcessingResult QtQuickAdapter::processBlockchain(const Envelope &env)
       break;
    case ArmoryMessage::kStateChanged:
       armoryState_ = msg.state_changed().state();
-      blockNum_ = msg.state_changed().top_block();
+      setTopBlock(msg.state_changed().top_block());
       emit armoryStateChanged();
-      logger_->debug("[{}] current block: {}", __func__, blockNum_);
-      pendingTxModel_->setCurrentBlock(blockNum_);
-      txModel_->setCurrentBlock(blockNum_);
-      expTxByAddrModel_->setCurrentBlock(blockNum_);
       break;
    case ArmoryMessage::kNewBlock:
-      blockNum_ = msg.new_block().top_block();
-      pendingTxModel_->setCurrentBlock(blockNum_);
-      txModel_->setCurrentBlock(blockNum_);
-      expTxByAddrModel_->setCurrentBlock(blockNum_);
+      setTopBlock(msg.new_block().top_block());
       break;
    case ArmoryMessage::kWalletRegistered:
       if (msg.wallet_registered().success() && msg.wallet_registered().wallet_id().empty()) {
@@ -592,6 +585,15 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
 void QtQuickAdapter::updateStates()
 {
    //TODO
+}
+
+void QtQuickAdapter::setTopBlock(uint32_t topBlock)
+{
+   blockNum_ = topBlock;
+   pendingTxModel_->setCurrentBlock(blockNum_);
+   txModel_->setCurrentBlock(blockNum_);
+   expTxByAddrModel_->setCurrentBlock(blockNum_);
+   txInputsModel_->setTopBlock(topBlock);
 }
 
 //#define DEBUG_LOADING_PROGRESS
@@ -1034,9 +1036,25 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStri
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_request();
    msgReq->set_hd_wallet_id(hdWalletIdByIndex(walletIndex));
-   auto msgOut = msgReq->add_outputs();
-   msgOut->set_address(recvAddr.toStdString());
-   msgOut->set_amount(amount);
+   if (!recvAddr.isEmpty() && (amount > 0)) {
+      auto msgOut = msgReq->add_outputs();
+      msgOut->set_address(recvAddr.toStdString());
+      msgOut->set_amount(amount);
+   }
+   else {
+      const auto& recipients = txOutputsModel_->recipients();
+      for (const auto& recip : recipients) {
+         try {
+            const auto& addr = bs::Address::fromRecipient(recip);
+            auto msgOut = msgReq->add_outputs();
+            msgOut->set_address(addr.display());
+            msgOut->set_amount(recip->getValue() / BTCNumericTypes::BalanceDivider);
+         }
+         catch (const std::exception& e) {
+            logger_->error("[{}] {}", __func__, e.what());
+         }
+      }
+   }
    msgReq->set_fee_per_byte(fee);
    if (!comment.isEmpty()) {
       msgReq->set_comment(comment.toStdString());
