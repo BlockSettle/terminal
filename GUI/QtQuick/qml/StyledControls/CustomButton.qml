@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2022, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -24,17 +24,6 @@ Button {
     icon.color: "transparent"
     icon.width: 24
     icon.height: 24
-
-    /*contentItem: Text {
-        text: control.text
-        font.pixelSize: 16
-        font.family: "Roboto"
-        font.weight: Font.Bold
-        color: "#FFFFFF"
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        elide: Text.ElideRight
-    }*/
 
     background: Rectangle {
         implicitWidth: control.width

@@ -60,7 +60,6 @@ ColumnLayout  {
             readOnly: true
 
             background: Rectangle {
-                anchors.fill: parent
                 color: "transparent"
                 radius: 4
             }
