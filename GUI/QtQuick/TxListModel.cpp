@@ -247,8 +247,13 @@ void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
 void TxListModel::prependRow(const bs::TXEntry& entry)
 {
    logger_->debug("[{}::{}] prepending entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
+   decltype(txDetails_) prevDet;
    beginInsertRows(QModelIndex(), 1, 1);
    data_.insert(data_.cbegin(), entry);
+   txDetails_.swap(prevDet);
+   for (auto txDet : prevDet) {
+      txDetails_[txDet.first + 1] = std::move(txDet.second);
+   }
    endInsertRows();
    emit nbTxChanged();
 }

@@ -194,7 +194,7 @@ private:
    void processWalletLoaded(const bs::sync::WalletInfo &);
    bs::message::ProcessingResult processWalletData(const bs::message::SeqId
       , const BlockSettle::Common::WalletsMessage_WalletData&);
-   bs::message::ProcessingResult processWalletBalances(const BlockSettle::Common::WalletsMessage_WalletBalances &);
+   bs::message::ProcessingResult processWalletBalances(bs::message::SeqId, const BlockSettle::Common::WalletsMessage_WalletBalances &);
    bs::message::ProcessingResult processTXDetails(bs::message::SeqId, const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
    bs::message::ProcessingResult processLedgerEntries(const BlockSettle::Common::LedgerEntries &);
    bs::message::ProcessingResult processAddressHist(const BlockSettle::Common::ArmoryMessage_AddressHistory&);
@@ -242,6 +242,7 @@ private:
    const QStringList txTypes_;
    unsigned nbUsedWalletAddresses_{ 0 };
    double confWalletBalance_{ 0 }, unconfWalletBalance_{ 0 }, totalWalletBalance_{ 0 };
+   int curWalletIndex_{ 0 };
    QmlAddressListModel* addrModel_{ nullptr };
    TxListModel* pendingTxModel_{ nullptr };
    TxListModel* txModel_{ nullptr };

@@ -554,10 +554,7 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
    case WalletsMessage::kWalletData:
       return processWalletData(env.responseId(), msg.wallet_data());
    case WalletsMessage::kWalletBalances:
-      if (env.responseId()) {
-         return processWalletBalances(msg.wallet_balances());
-      }
-      break;
+      return processWalletBalances(env.responseId(), msg.wallet_balances());
    case WalletsMessage::kTxDetailsResponse:
       return processTXDetails(env.responseId(), msg.tx_details_response());
    case WalletsMessage::kWalletsListResponse:
@@ -741,6 +738,7 @@ std::string QtQuickAdapter::hdWalletIdByIndex(int index)
 
 void QtQuickAdapter::walletSelected(int index)
 {
+   curWalletIndex_ = index;
    const auto& walletName = walletsList_.at(index).toStdString();
    const auto& walletId = hdWalletIdByIndex(index);
    confWalletBalance_ = unconfWalletBalance_ = totalWalletBalance_ = 0;
@@ -798,13 +796,18 @@ ProcessingResult QtQuickAdapter::processWalletData(bs::message::SeqId msgId
    return ProcessingResult::Success;
 }
 
-ProcessingResult QtQuickAdapter::processWalletBalances(const WalletsMessage_WalletBalances &response)
+ProcessingResult QtQuickAdapter::processWalletBalances(bs::message::SeqId responseId
+   , const WalletsMessage_WalletBalances &response)
 {
    //logger_->debug("[{}] {}", __func__, response.DebugString());
-   totalWalletBalance_ += response.total_balance();
-   confWalletBalance_ += response.spendable_balance();
-   unconfWalletBalance_ += response.unconfirmed_balance();
-   nbUsedWalletAddresses_ += response.nb_addresses();
+   if (response.wallet_id() != hdWalletIdByIndex(curWalletIndex_)) {
+      return ProcessingResult::Ignored;
+   }
+   totalWalletBalance_ = response.total_balance();
+   confWalletBalance_ = response.spendable_balance();
+   unconfWalletBalance_ = response.unconfirmed_balance();
+   nbUsedWalletAddresses_ = response.nb_addresses();
+
    for (const auto& addrBal : response.address_balances()) {
       addrModel_->updateRow(BinaryData::fromString(addrBal.address()), addrBal.total_balance(), addrBal.tx_count());
    }
