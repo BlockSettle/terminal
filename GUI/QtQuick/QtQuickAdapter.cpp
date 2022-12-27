@@ -815,8 +815,9 @@ ProcessingResult QtQuickAdapter::processWalletBalances(const WalletsMessage_Wall
 ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
    , const WalletsMessage_TXDetailsResponse &response)
 {
+   //logger_->debug("[{}] {}", __func__, response.DebugString());
    for (const auto &resp : response.responses()) {
-      bs::sync::TXWalletDetails txDet{ BinaryData::fromString(resp.tx_hash()), resp.wallet_id()
+      bs::sync::TXWalletDetails txDet{ BinaryData::fromString(resp.tx_hash()), resp.hd_wallet_id()
          , resp.wallet_name(), static_cast<bs::core::wallet::Type>(resp.wallet_type())
          , resp.wallet_symbol(), static_cast<bs::sync::Transaction::Direction>(resp.direction())
          , resp.comment(), resp.valid(), resp.amount() };
@@ -827,9 +828,6 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
          pendingTxModel_->setTxComment(resp.tx_hash(), txDet.comment);
          txModel_->setTxComment(resp.tx_hash(), txDet.comment);
       }
-      //logger_->debug("[{}] {} = {}", __func__, resp.wallet_id(), resp.wallet_name());
-      pendingTxModel_->setWalletName(resp.wallet_id(), resp.wallet_name());
-      txModel_->setWalletName(resp.wallet_id(), resp.wallet_name());
 
       const auto &ownTxHash = BinaryData::fromString(resp.tx_hash());
       try {
@@ -882,6 +880,15 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
             , resp.change_address().out_index() };
       }
       catch (const std::exception &) {}
+      for (const auto& addr : resp.own_addresses()) {
+         try {
+            txDet.ownAddresses.push_back(bs::Address::fromAddressString(addr));
+         }
+         catch (const std::exception&) {}
+      }
+      for (const auto& walletId : resp.wallet_ids()) {
+         txDet.walletIds.insert(walletId);
+      }
 
       const auto& itTxDet = txDetailReqs_.find(msgId);
       if (itTxDet == txDetailReqs_.end()) {
@@ -894,17 +901,12 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
          txDetailReqs_.erase(itTxDet);
       }
    }
-
-   const auto& itZC = newZCs_.find(msgId);
-   if (itZC != newZCs_.end()) {
-      newZCs_.erase(itZC);
-      //TODO
-   }
    return ProcessingResult::Success;
 }
 
 ProcessingResult QtQuickAdapter::processLedgerEntries(const LedgerEntries &response)
 {
+   //logger_->debug("[{}] {}", __func__, response.DebugString());
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_details_request();
    std::vector<bs::TXEntry> entries;
@@ -922,9 +924,7 @@ ProcessingResult QtQuickAdapter::processLedgerEntries(const LedgerEntries &respo
       txEntry.isChainedZC = entry.chained_zc();
       txEntry.nbConf = entry.nb_conf();
       for (const auto &walletId : entry.wallet_ids()) {
-         if (txReq->wallet_id().empty()) {
-            txReq->set_wallet_id(walletId);
-         }
+         txReq->add_wallet_ids(walletId);
          txEntry.walletIds.insert(walletId);
       }
       for (const auto &addrStr : entry.addresses()) {
@@ -942,8 +942,6 @@ ProcessingResult QtQuickAdapter::processLedgerEntries(const LedgerEntries &respo
       }
    }
    txModel_->addRows(entries);
-   nbTransactions_ = entries.size();
-   emit nbTransactionsChanged();
    pushRequest(user_, userWallets_, msg.SerializeAsString());
    return ProcessingResult::Success;
 }
@@ -1189,13 +1187,14 @@ ProcessingResult QtQuickAdapter::processSignTX(const BlockSettle::Common::Signer
 
 ProcessingResult QtQuickAdapter::processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived& zcs)
 {
+   logger_->debug("[{}] {}", __func__, zcs.DebugString());
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_details_request();
    for (const auto& zcEntry : zcs.tx_entries()) {
       auto txReq = msgReq->add_requests();
       txReq->set_tx_hash(zcEntry.tx_hash());
-      if (zcEntry.wallet_ids_size() > 0) {
-         txReq->set_wallet_id(zcEntry.wallet_ids(0));
+      for (const auto& walletId : zcEntry.wallet_ids()) {
+         txReq->add_wallet_ids(walletId);
       }
       txReq->set_value(zcEntry.value());
 
@@ -1220,8 +1219,7 @@ ProcessingResult QtQuickAdapter::processZC(const BlockSettle::Common::ArmoryMess
       pendingTxModel_->prependRow(txEntry);
       txModel_->prependRow(txEntry);
    }
-   const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
-   newZCs_.insert(msgId);
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
    return ProcessingResult::Success;
 }
 

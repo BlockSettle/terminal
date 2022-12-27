@@ -63,7 +63,7 @@ QString TxListModel::getData(int row, int col) const
    const auto& entry = data_.at(row - 1);
    switch (col) {
    case 0:  return QDateTime::fromSecsSinceEpoch(entry.txTime).toString();
-   case 1:  return walletNameById(*entry.walletIds.cbegin());
+   case 1:  return walletName(row - 1);
    case 2:  return txType(row - 1);
    case 3: {
       bs::Address address;
@@ -143,17 +143,13 @@ float TxListModel::colWidth(int col) const
    return 1.0;
 }
 
-QString TxListModel::walletNameById(const std::string& walletId) const
+QString TxListModel::walletName(int row) const
 {
-   auto itName = walletNames_.find(walletId);
-   if (itName != walletNames_.end()) {
-      return QString::fromStdString(itName->second);
+   const auto& itTxDet = txDetails_.find(row);
+   if (itTxDet != txDetails_.end()) {
+      return QString::fromStdString(itTxDet->second.walletName);
    }
-   itName = walletNames_.find(bs::toLower(walletId));
-   if (itName != walletNames_.end()) {
-      return QString::fromStdString(itName->second);
-   }
-   return QString::fromStdString(walletId);
+   return {};
 }
 
 QString TxListModel::txType(int row) const
@@ -219,23 +215,68 @@ QHash<int, QByteArray> TxListModel::roleNames() const
 
 void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
 {
-   beginInsertRows(QModelIndex(), rowCount(), rowCount() + entries.size() - 1);
-   data_.insert(data_.end(), entries.cbegin(), entries.cend());
-   endInsertRows();
+   std::vector<bs::TXEntry> newEntries;
+   for (const auto& entry : entries) {
+      int row = 0;
+      for (int i = 0; i < data_.size(); ++i) {
+         const auto& de = data_.at(i);
+         if ((entry.txHash == de.txHash) && (de.walletIds == entry.walletIds)) {
+            data_[i].txTime = entry.txTime;
+            data_[i].recvTime = entry.recvTime;
+            row = i + 1;
+            break;
+         }
+      }
+      if (row) {
+         logger_->debug("[{}::{}] updating entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
+         emit dataChanged(createIndex(row, 0), createIndex(row, 0));
+      }
+      else {
+         logger_->debug("[{}::{}] adding entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
+         newEntries.push_back(entry);
+      }
+   }
+   if (!newEntries.empty()) {
+      beginInsertRows(QModelIndex(), rowCount(), rowCount() + newEntries.size() - 1);
+      data_.insert(data_.end(), newEntries.cbegin(), newEntries.cend());
+      endInsertRows();
+      emit nbTxChanged();
+   }
 }
 
 void TxListModel::prependRow(const bs::TXEntry& entry)
 {
+   logger_->debug("[{}::{}] prepending entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
    beginInsertRows(QModelIndex(), 1, 1);
    data_.insert(data_.cbegin(), entry);
    endInsertRows();
+   emit nbTxChanged();
 }
 
 void TxListModel::addRow(const bs::TXEntry& entry)
 {
-   beginInsertRows(QModelIndex(), rowCount(), rowCount());
-   data_.push_back(entry);
-   endInsertRows();
+   int row = 0;
+   for (int i = 0; i < data_.size(); ++i) {
+      const auto& de = data_.at(i);
+      if ((entry.txHash == de.txHash) && (de.walletIds == entry.walletIds)) {
+         data_[i].txTime = entry.txTime;
+         data_[i].recvTime = entry.recvTime;
+         row = i + 1;
+         break;
+      }
+   }
+
+   if (row) {
+      logger_->debug("[{}::{}] updating entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
+      emit dataChanged(createIndex(row, 0), createIndex(row, 0));
+   }
+   else {
+      logger_->debug("[{}::{}] adding entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
+      beginInsertRows(QModelIndex(), rowCount(), rowCount());
+      data_.push_back(entry);
+      endInsertRows();
+      emit nbTxChanged();
+   }
 }
 
 void TxListModel::clear()
@@ -244,6 +285,7 @@ void TxListModel::clear()
    data_.clear();
    txDetails_.clear();
    endResetModel();
+   emit nbTxChanged();
 }
 
 void TxListModel::setTxComment(const std::string& txHash, const std::string& comment)
@@ -264,54 +306,24 @@ void TxListModel::setTxComment(const std::string& txHash, const std::string& com
    }
 }
 
-void TxListModel::setWalletName(const std::string& walletId, const std::string& walletName)
-{
-   const auto& [it, inserted] = walletNames_.insert({ walletId, walletName });
-   if (inserted) {
-      int rowFirst = 0, rowLast = 0;
-      for (int i = 0; i < data_.size(); ++i) {
-         const auto& entry = data_.at(i);
-         if (entry.walletIds.empty()) {
-            continue;
-         }
-         const auto& entryWalletId = bs::toLower(*entry.walletIds.cbegin());
-         if (bs::toLower(walletId) == entryWalletId) {
-            if (!rowFirst) {
-               rowFirst = i + 1;
-            }
-            rowLast = i + 1;
-         }
-      }
-      if (rowFirst && rowLast) {
-         emit dataChanged(createIndex(rowFirst, 1), createIndex(rowLast, 1));
-      }
-      //logger_->debug("[{}] found rows {}-{} for {} = {}", __func__, rowFirst, rowLast, walletId, walletName);
-   }
-}
-
 void TxListModel::setDetails(const bs::sync::TXWalletDetails& txDet)
 {
    int row = 0;
    for (int i = 0; i < data_.size(); ++i) {
       const auto& entry = data_.at(i);
-      if (entry.txHash == txDet.txHash) {
-         for (const auto& walletId : entry.walletIds) {
-            if (bs::toLower(walletId) == bs::toLower(txDet.walletId)) {
-               txDetails_[i] = txDet;
-               row = i + 1;
-               break;
-            }
-         }
-         if (row) {
-            break;
-         }
+      if ((entry.txHash == txDet.txHash) && (txDet.walletIds == entry.walletIds)) {
+         txDetails_[i] = txDet;
+         data_[i].addresses = txDet.ownAddresses;
+         row = i + 1;
+         break;
       }
    }
    if (row) {
-      emit dataChanged(createIndex(row, 2), createIndex(row, 6));
+      //logger_->debug("[{}] {} {} found at row {}", __func__, txDet.txHash.toHexStr(), txDet.hdWalletId, row);
+      emit dataChanged(createIndex(row, 1), createIndex(row, 6));
    }
    else {
-      //logger_->debug("[{}] {} {} not found", __func__, txDet.txHash.toHexStr(), txDet.walletId);
+      //logger_->debug("[{}] {} {} not found", __func__, txDet.txHash.toHexStr(), txDet.hdWalletId);
    }
 }
 

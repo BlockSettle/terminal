@@ -30,7 +30,7 @@ Item {
             spacing: 15
 
             Label {
-                text: qsTr("<font color=\"white\">Transactions list (%1)</font>").arg(bsApp.nbTransactions)
+                text: qsTr("<font color=\"white\">Transactions list (%1)</font>").arg(txListModel.nbTx)
                 font.pointSize: 14
             }
             Item {  // spacer item

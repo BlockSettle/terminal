@@ -1018,7 +1018,9 @@ void QtGuiAdapter::onNeedTXDetails(const std::vector<bs::sync::TXWallet> &txWall
       auto request = msgReq->add_requests();
       //logger_->debug("[{}] {}", __func__, txw.txHash.toHexStr());
       request->set_tx_hash(txw.txHash.toBinStr());
-      request->set_wallet_id(txw.walletId);
+      for (const auto& walletId : txw.walletIds) {
+         request->add_wallet_ids(walletId);
+      }
       request->set_value(txw.value);
    }
    if (!addr.empty()) {
@@ -1317,7 +1319,7 @@ ProcessingResult QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMes
 {
    std::vector<bs::sync::TXWalletDetails> txDetails;
    for (const auto &resp : response.responses()) {
-      bs::sync::TXWalletDetails txDet{ BinaryData::fromString(resp.tx_hash()), resp.wallet_id()
+      bs::sync::TXWalletDetails txDet{ BinaryData::fromString(resp.tx_hash()), resp.hd_wallet_id()
          , resp.wallet_name(), static_cast<bs::core::wallet::Type>(resp.wallet_type())
          , resp.wallet_symbol(), static_cast<bs::sync::Transaction::Direction>(resp.direction())
          , resp.comment(), resp.valid(), resp.amount() };
@@ -1522,8 +1524,8 @@ ProcessingResult QtGuiAdapter::processZC(const BlockSettle::Common::ArmoryMessag
    for (const auto& zcEntry : zcs.tx_entries()) {
       auto txReq = msgReq->add_requests();
       txReq->set_tx_hash(zcEntry.tx_hash());
-      if (zcEntry.wallet_ids_size() > 0) {
-         txReq->set_wallet_id(zcEntry.wallet_ids(0));
+      for (const auto& walletId : zcEntry.wallet_ids()) {
+         txReq->add_wallet_ids(walletId);
       }
       txReq->set_value(zcEntry.value());
    }

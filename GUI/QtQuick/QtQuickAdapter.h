@@ -111,9 +111,6 @@ public:
    Q_PROPERTY(quint32 nbUsedWalletAddresses READ nbUsedWalletAddresses NOTIFY walletBalanceChanged)
    quint32 nbUsedWalletAddresses() const { return nbUsedWalletAddresses_; }
 
-   Q_PROPERTY(quint32 nbTransactions READ nbTransactions NOTIFY nbTransactionsChanged)
-   quint32 nbTransactions() const { return nbTransactions_; }
-
    Q_PROPERTY(QString generatedAddress READ generatedAddress NOTIFY addressGenerated)
    QString generatedAddress() const { return QString::fromStdString(generatedAddress_.display()); }
 
@@ -168,7 +165,6 @@ public:
 signals:
    void walletsListChanged();
    void walletBalanceChanged();
-   void nbTransactionsChanged();
    void addressGenerated();
    void settingChanged();
    void armoryStateChanged();
@@ -241,13 +237,11 @@ private:
    std::unordered_map<std::string, std::string> walletNames_;
    std::map<bs::message::SeqId, std::string> walletInfoReq_;
    std::map<bs::Address, std::string>  addrComments_;
-   std::set<uint64_t>   newZCs_;
 
    QStringList walletsList_;
    const QStringList txTypes_;
    unsigned nbUsedWalletAddresses_{ 0 };
    double confWalletBalance_{ 0 }, unconfWalletBalance_{ 0 }, totalWalletBalance_{ 0 };
-   unsigned nbTransactions_{ 0 };
    QmlAddressListModel* addrModel_{ nullptr };
    TxListModel* pendingTxModel_{ nullptr };
    TxListModel* txModel_{ nullptr };

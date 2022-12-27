@@ -36,20 +36,25 @@ public:
    QVariant data(const QModelIndex& index, int role) const override;
    QHash<int, QByteArray> roleNames() const override;
 
+   Q_PROPERTY(int nbTx READ nbTx NOTIFY nbTxChanged);
+   int nbTx() const { return data_.size(); }
+
    void prependRow(const bs::TXEntry&);
    void addRow(const bs::TXEntry&);
    void addRows(const std::vector<bs::TXEntry>&);
    void clear();
    void setTxComment(const std::string& txHash, const std::string& comment);
-   void setWalletName(const std::string& walletId, const std::string& walletName);
    void setDetails(const bs::sync::TXWalletDetails&);
    void setCurrentBlock(uint32_t);
+
+signals:
+   void nbTxChanged();
 
 private:
    QString getData(int row, int col) const;
    QColor dataColor(int row, int col) const;
    float colWidth(int col) const;
-   QString walletNameById(const std::string&) const;
+   QString walletName(int row) const;
    QString txType(int row) const;
    QString txFlag(int row) const;
    QString txId(int row) const;
@@ -59,7 +64,6 @@ private:
    const QStringList header_;
    std::vector<bs::TXEntry> data_;
    std::unordered_map<std::string, std::string> txComments_;
-   std::unordered_map<std::string, std::string> walletNames_;
    std::map<int, bs::sync::TXWalletDetails>  txDetails_;
    uint32_t curBlock_;
 };
