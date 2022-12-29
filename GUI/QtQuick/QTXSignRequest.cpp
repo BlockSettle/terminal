@@ -52,7 +52,8 @@ QString QTXSignRequest::outputAmount() const
    if (!txReq_.isValid()) {
       return {};
    }
-   return QString::number(txReq_.amountSent([](const bs::Address&) { return true; }) / BTCNumericTypes::BalanceDivider
+   return QString::number(txReq_.amountReceived([changeAddr = txReq_.change.address]
+      (const bs::Address& addr) { return (addr != changeAddr); }) / BTCNumericTypes::BalanceDivider
       , 'f', 8);
 }
 
@@ -61,7 +62,7 @@ QString QTXSignRequest::inputAmount() const
    if (!txReq_.isValid()) {
       return {};
    }
-   return QString::number(txReq_.amountReceived([](const bs::Address&) { return true; }) / BTCNumericTypes::BalanceDivider
+   return QString::number(txReq_.armorySigner_.getTotalInputsValue() / BTCNumericTypes::BalanceDivider
       , 'f', 8);
 }
 

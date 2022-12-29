@@ -228,11 +228,11 @@ void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
          }
       }
       if (row) {
-         logger_->debug("[{}::{}] updating entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
+         //logger_->debug("[{}::{}] updating entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
          emit dataChanged(createIndex(row, 0), createIndex(row, 0));
       }
       else {
-         logger_->debug("[{}::{}] adding entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
+         //logger_->debug("[{}::{}] adding entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
          newEntries.push_back(entry);
       }
    }
@@ -246,7 +246,7 @@ void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
 
 void TxListModel::prependRow(const bs::TXEntry& entry)
 {
-   logger_->debug("[{}::{}] prepending entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
+   //logger_->debug("[{}::{}] prepending entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
    decltype(txDetails_) prevDet;
    beginInsertRows(QModelIndex(), 1, 1);
    data_.insert(data_.cbegin(), entry);
@@ -272,11 +272,11 @@ void TxListModel::addRow(const bs::TXEntry& entry)
    }
 
    if (row) {
-      logger_->debug("[{}::{}] updating entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
+      //logger_->debug("[{}::{}] updating entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
       emit dataChanged(createIndex(row, 0), createIndex(row, 0));
    }
    else {
-      logger_->debug("[{}::{}] adding entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
+      //logger_->debug("[{}::{}] adding entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
       beginInsertRows(QModelIndex(), rowCount(), rowCount());
       data_.push_back(entry);
       endInsertRows();
