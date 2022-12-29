@@ -72,5 +72,8 @@
         <file>qml/WalletSeed.qml</file>
         <file>qml/StyledControls/CustomSeedLabel.qml</file>
         <file>images/copy_seed.png</file>
+        <file>qml/WalletSeedVerify.qml</file>
+        <file>qml/StyledControls/CustomSeedTextInput.qml</file>
+        <file>images/warning_icon.png</file>
     </qresource>
 </RCC>

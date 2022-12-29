@@ -11,6 +11,8 @@ ColumnLayout  {
 
     id: layout
 
+    signal sig_continue()
+
     property var phrase
 
     height: 481
@@ -82,6 +84,10 @@ ColumnLayout  {
 
             Component.onCompleted: {
                 continue_but.preferred = true
+            }
+
+            onClicked: {
+                layout.sig_continue()
             }
         }
 
