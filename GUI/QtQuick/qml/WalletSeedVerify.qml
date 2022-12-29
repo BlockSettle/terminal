@@ -13,6 +13,7 @@ ColumnLayout  {
 
     property var phrase
     signal sig_verified()
+    signal sig_skipped()
 
     property var indexes: [  "1",  "6",  "8", "11"]
 
@@ -88,12 +89,16 @@ ColumnLayout  {
         Layout.bottomMargin: 40
 
         CustomButton {
-            id: copy_seed_but
+            id: skip_but
             text: qsTr("Skip")
             width: 261
 
             Component.onCompleted: {
-                copy_seed_but.preferred = false
+                skip_but.preferred = false
+            }
+
+            onClicked: {
+                layout.sig_skipped()
             }
         }
 

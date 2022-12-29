@@ -75,5 +75,6 @@
         <file>qml/WalletSeedVerify.qml</file>
         <file>qml/StyledControls/CustomSeedTextInput.qml</file>
         <file>images/warning_icon.png</file>
+        <file>qml/WalletSeedSkipAccept.qml</file>
     </qresource>
 </RCC>

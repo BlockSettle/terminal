@@ -158,6 +158,19 @@ Window {
             onSig_verified: {
                 console.log("onSig_verified");
             }
+            onSig_skipped: {
+                stack_create_wallet.push(wallet_seed_accept)
+            }
+        }
+
+        WalletSeedSkipAccept {
+            id: wallet_seed_accept
+            visible: false
+            onSig_skip: {
+            }
+            onSig_not_skip: {
+                stack_create_wallet.pop()
+            }
         }
 
     }
