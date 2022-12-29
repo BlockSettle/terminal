@@ -7,6 +7,9 @@ import "BsStyles"
 
 Window {
     id: root
+
+    property var phrase
+
     visible: true
     flags: Qt.WindowCloseButtonHint | Qt.FramelessWindowHint | Qt.Dialog
 
@@ -25,6 +28,8 @@ Window {
 
     Rectangle {
         id: rect
+
+        property var phrase
         color: "#191E2A"
         opacity: 1
         radius: 16
@@ -132,7 +137,7 @@ Window {
             id: start_create
             visible: false
             onSig_create_new: {
-                wallet_seed.phrase = bsApp.newSeedPhrase()
+                root.phrase = bsApp.newSeedPhrase()
                 stack_create_wallet.push(wallet_seed)
             }
         }
@@ -140,6 +145,19 @@ Window {
         WalletSeed {
             id: wallet_seed
             visible: false
+            phrase: root.phrase
+            onSig_continue: {
+                stack_create_wallet.push(wallet_seed_verify)
+            }
+        }
+
+        WalletSeedVerify {
+            id: wallet_seed_verify
+            visible: false
+            phrase: root.phrase
+            onSig_verified: {
+                console.log("onSig_verified");
+            }
         }
 
     }

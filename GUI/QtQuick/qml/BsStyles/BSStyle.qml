@@ -19,6 +19,7 @@ QtObject {
     readonly property color backgroundModalColor: "#737373"
     readonly property color backgroundModeLessColor: "#939393"
 
+    readonly property color disabledColor: "#22293B"
     readonly property color disabledTextColor: "#71787f"
     readonly property color disabledBgColor: "#31383f"
 

@@ -19,7 +19,8 @@ Button {
     font.pixelSize: 16
     font.family: "Roboto"
     font.weight: Font.Bold
-    palette.buttonText: "#FFFFFF"
+    palette.buttonText: enabled ? "#FFFFFF" : "#020817"
+
 
     icon.color: "transparent"
     icon.width: 24
