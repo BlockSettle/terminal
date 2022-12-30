@@ -44,13 +44,13 @@ ColumnLayout  {
         model: indexes
         delegate: CustomSeedTextInput {
             width: 530
-            serial_num: layout.indexes[index]
+            title_text: layout.indexes[index]
             isValid: list.isValid
             onTextChanged : {
                 list.isComplete = true
                 for (var i = 0; i < list.count; i++)
                 {
-                    if(list.itemAtIndex(i).seed_text === "")
+                    if(list.itemAtIndex(i).input_text === "")
                     {
                         list.isComplete = false
                         break
@@ -116,10 +116,7 @@ ColumnLayout  {
                 list.isValid = true
                 for (var i = 0; i < list.count; i++)
                 {
-                    console.log("layout.indexes[i] - " + layout.indexes[i])
-                    console.log("layout.phrase[layout.indexes[i]]) - " + layout.phrase[layout.indexes[i]] - 1)
-                    console.log("list.itemAtIndex(i).seed_text - " + list.itemAtIndex(i).seed_text)
-                    if(list.itemAtIndex(i).seed_text !== layout.phrase[layout.indexes[i] - 1])
+                    if(list.itemAtIndex(i).input_text !== layout.phrase[layout.indexes[i] - 1])
                     {
                         list.isValid = false
                         break
@@ -127,7 +124,6 @@ ColumnLayout  {
                 }
                 if (list.isValid)
                 {
-                    console.log("layout.verified")
                     layout.sig_verified()
                 }
             }

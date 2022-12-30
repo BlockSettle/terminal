@@ -156,7 +156,7 @@ Window {
             visible: false
             phrase: root.phrase
             onSig_verified: {
-                console.log("onSig_verified");
+                stack_create_wallet.push(confirm_password)
             }
             onSig_skipped: {
                 stack_create_wallet.push(wallet_seed_accept)
@@ -167,9 +167,19 @@ Window {
             id: wallet_seed_accept
             visible: false
             onSig_skip: {
+                stack_create_wallet.push(confirm_password)
             }
             onSig_not_skip: {
                 stack_create_wallet.pop()
+            }
+        }
+
+        ConfirmPassword {
+            id: confirm_password
+            visible: false
+            onSig_confirm: {
+                root.close()
+                stack_create_wallet.pop(null)
             }
         }
 

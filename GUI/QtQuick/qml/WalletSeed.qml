@@ -31,7 +31,7 @@ ColumnLayout  {
         Layout.alignment: Qt.AlignCenter
         Layout.topMargin: 16
         Layout.preferredHeight : 16
-        text: "Write down and store your 12 word seed someplace safe and offline"
+        text: qsTr("Write down and store your 12 word seed someplace safe and offline")
         color: "#E2E7FF"
         font.pixelSize: 14
         font.family: "Roboto"
