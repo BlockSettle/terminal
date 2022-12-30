@@ -741,6 +741,24 @@ std::string QtQuickAdapter::hdWalletIdByIndex(int index)
    return walletId;
 }
 
+std::string QtQuickAdapter::generateWalletName() const
+{
+   int index = walletNames_.size();
+   std::string name;
+   bool nameExists = true;
+   while (nameExists) {
+      name = "wallet" + std::to_string(++index);
+      nameExists = false;
+      for (const auto& w : walletNames_) {
+         if (w.second == name) {
+            nameExists = true;
+            break;
+         }
+      }
+   }
+   return name;
+}
+
 void QtQuickAdapter::walletSelected(int index)
 {
    curWalletIndex_ = index;
@@ -983,14 +1001,15 @@ void QtQuickAdapter::copySeedToClipboard(const QStringList& seed)
 void QtQuickAdapter::createWallet(const QString& name, const QStringList& seed
    , const QString& password)
 {
-   logger_->debug("[{}] {}", __func__, name.toStdString());
+   const auto walletName = name.isEmpty() ? generateWalletName() : name.toStdString();
+   logger_->debug("[{}] {}", __func__, walletName);
    BIP39::word_list words;
    for (const auto& w : seed) {
       words.add(w.toStdString());
    }
    SignerMessage msg;
    auto msgReq = msg.mutable_create_wallet();
-   msgReq->set_name(name.toStdString());
+   msgReq->set_name(walletName);
    //msgReq->set_xpriv_key(seedData.xpriv);
    const auto binSeed = BIP39::seed_from_mnemonic(words);
    msgReq->set_seed(binSeed.toBinStr());
@@ -1001,14 +1020,15 @@ void QtQuickAdapter::createWallet(const QString& name, const QStringList& seed
 void QtQuickAdapter::importWallet(const QString& name, const QStringList& seed
    , const QString& password)
 {
-   logger_->debug("[{}] {}", __func__, name.toStdString());
+   const auto walletName = name.isEmpty() ? generateWalletName() : name.toStdString();
+   logger_->debug("[{}] {}", __func__, walletName);
    BIP39::word_list words;
    for (const auto& w : seed) {
       words.add(w.toStdString());
    }
    SignerMessage msg;
    auto msgReq = msg.mutable_import_wallet();
-   msgReq->set_name(name.toStdString());
+   msgReq->set_name(walletName);
    //msgReq->set_description(seedData.description);
    //msgReq->set_xpriv_key(seedData.xpriv);
    const auto binSeed = BIP39::seed_from_mnemonic(words);

@@ -194,6 +194,7 @@ private:
 
    void createWallet(bool primary);
    std::string hdWalletIdByIndex(int);
+   std::string generateWalletName() const;
 
    void processWalletLoaded(const bs::sync::WalletInfo &);
    bs::message::ProcessingResult processWalletData(const bs::message::SeqId
