@@ -142,6 +142,10 @@ public:
    QString settingArmoryPort() const { return getSetting(ApplicationSettings::Setting::armoryDbPort).toString(); }
    void setArmoryPort(const QString& str) { setSetting(ApplicationSettings::Setting::armoryDbPort, str); }
 
+   Q_PROPERTY(bool settingActivated READ settingActivated WRITE setActivated NOTIFY settingChanged)
+   bool settingActivated() const { return getSetting(ApplicationSettings::Setting::initialized).toBool(); }
+   void setActivated(bool b) { setSetting(ApplicationSettings::Setting::initialized, b); }
+
    Q_PROPERTY(int armoryState READ armoryState NOTIFY armoryStateChanged)
    int armoryState() const { return armoryState_; }
 
