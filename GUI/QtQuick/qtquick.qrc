@@ -79,5 +79,7 @@
         <file>images/Eye_icon _unvisible.png</file>
         <file>images/Eye_icon _visible.png</file>
         <file>qml/ConfirmPassword.qml</file>
+        <file>images/USB_icon_conn.png</file>
+        <file>images/USB_icon_disconn.png</file>
     </qresource>
 </RCC>

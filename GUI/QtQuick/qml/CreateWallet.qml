@@ -80,7 +80,7 @@ Window {
 
         StackView {
             id: stack_create_wallet
-            initialItem: terms_conditions
+            initialItem: bsApp.settingActivated? start_create : terms_conditions
 
             anchors.top: close_button.bottom
             anchors.topMargin: 0
@@ -147,6 +147,7 @@ Window {
             visible: false
             phrase: root.phrase
             onSig_continue: {
+                wallet_seed_verify.createRandomIndexes()
                 stack_create_wallet.push(wallet_seed_verify)
             }
         }

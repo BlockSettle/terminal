@@ -186,6 +186,9 @@ void QtQuickAdapter::run(int &argc, char **argv)
    qmlRegisterInterface<QUTXOList>("QUTXOList");
    qmlRegisterInterface<QTxDetails>("QTxDetails");
 
+   //need to read files in qml
+   qputenv("QML_XHR_ALLOW_FILE_READ", QByteArray("1"));
+
    QQmlApplicationEngine engine;
    QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);
    rootCtxt_ = engine.rootContext();

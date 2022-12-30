@@ -6,7 +6,6 @@ import QtQuick.Layouts 1.15
 import "StyledControls"
 import "BsStyles"
 
-
 ColumnLayout  {
 
     id: layout
@@ -15,7 +14,7 @@ ColumnLayout  {
     signal sig_verified()
     signal sig_skipped()
 
-    property var indexes: [  "1",  "6",  "8", "11"]
+    property var indexes: []
 
     height: 521
     width: 580
@@ -41,7 +40,7 @@ ColumnLayout  {
         property var isValid: true
         property var isComplete: false
 
-        model: indexes
+        //model: layout.indexes
         delegate: CustomSeedTextInput {
             width: 530
             title_text: layout.indexes[index]
@@ -131,5 +130,27 @@ ColumnLayout  {
         }
 
    }
-}
 
+   function createRandomIndexes() {
+        var idx = []
+        while(idx.length < 4)
+        {
+            var r = Math.floor(Math.random() * 12) + 1;
+            if(idx.indexOf(r) === -1) idx.push(r);
+        }
+        for(var i_ord = 0; i_ord < 4; i_ord++)
+        {
+            for(var i = 0; i < 3 - i_ord; i++)
+            {
+                if(idx[i] > idx[i+1])
+                {
+                    var temp = idx[i]
+                    idx[i] = idx[i+1]
+                    idx[i+1] = temp
+                }
+            }
+        }
+        layout.indexes = idx
+        list.model = idx
+   }
+}

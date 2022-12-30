@@ -104,6 +104,7 @@ ColumnLayout  {
         onClicked: {
             if(password.input_text === confirm_password.input_text)
             {
+                bsApp.createWallet("", phrase, password.input_text)
                 layout.sig_confirm()
                 password.isValid = true
                 confirm_password.isValid = true

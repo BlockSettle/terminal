@@ -19,6 +19,17 @@ ColumnLayout  {
 
     spacing: 0
 
+    Component.onCompleted: {
+        var xhr = new XMLHttpRequest;
+        xhr.open("GET", "qrc:/TermsAndConditions.txt");
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                edit.text = xhr.responseText;
+            }
+        };
+        xhr.send();
+    }
+
     CustomTitleLabel {
         id: title
         Layout.alignment: Qt.AlignLeft
@@ -89,6 +100,7 @@ ColumnLayout  {
         }
         onClicked: {
             sig_continue()
+            bsApp.settingActivated = true
         }
     }
 
