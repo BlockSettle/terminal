@@ -6,55 +6,58 @@ import QtQuick.Layouts 1.15
 import "StyledControls"
 import "BsStyles"
 
-
 ColumnLayout  {
 
     id: layout
 
-    signal sig_continue()
+    signal sig_skip()
+    signal sig_not_skip()
 
-    property var phrase
-
-    height: 481
+    height: 521
     width: 580
+
     spacing: 0
 
     CustomTitleLabel {
         id: title
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : title.height
-        text: "Create new wallet"
+        text: "Verify your seed"
+    }
+
+    Image {
+        id: warning_icon
+
+        Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
+        Layout.topMargin: 24
+        Layout.preferredHeight : 44
+        Layout.preferredWidth : 44
+
+        source: "qrc:/images/warning_icon.png"
+        width: 44
+        height: 44
     }
 
     Label {
-        id: subtitle
-        Layout.alignment: Qt.AlignCenter
+        id: warning_description
+
+        text: "Are you sure you want to skip the seed verifying?"
+
+        Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
+
         Layout.topMargin: 16
         Layout.preferredHeight : 16
-        text: qsTr("Write down and store your 12 word seed someplace safe and offline")
+
         color: "#E2E7FF"
         font.pixelSize: 14
         font.family: "Roboto"
         font.weight: Font.Normal
     }
 
-    GridView {
-        id: grid
-
-        Layout.fillHeight: true
+    Label {
+        id: spacer
         Layout.fillWidth: true
-        Layout.leftMargin: 25
-        Layout.topMargin: 32
-
-        cellHeight : 56
-        cellWidth : 180
-
-        model: phrase
-        delegate: CustomSeedLabel {
-            seed_text: modelData
-            serial_num: index + 1
-        }
-
+        Layout.fillHeight: true
     }
 
     RowLayout {
@@ -63,31 +66,33 @@ ColumnLayout  {
 
         Layout.leftMargin: 24
         Layout.bottomMargin: 40
+        Layout.alignment: Qt.AlignLeft | Qt.AlignBottom
 
         CustomButton {
-            id: copy_seed_but
-            text: qsTr("Copy Seed")
+            id: skip_but
+            text: qsTr("Yes, Skip")
             width: 261
 
             Component.onCompleted: {
-                copy_seed_but.preferred = false
+                skip_but.preferred = false
             }
+
             onClicked: {
-                bsApp.copySeedToClipboard(phrase)
+                sig_skip()
             }
         }
 
         CustomButton {
-            id: continue_but
-            text: qsTr("Continue")
+            id: no_but
+            text: qsTr("No")
             width: 261
 
             Component.onCompleted: {
-                continue_but.preferred = true
+                no_but.preferred = true
             }
 
             onClicked: {
-                layout.sig_continue()
+                sig_not_skip()
             }
         }
 
