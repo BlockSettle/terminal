@@ -484,6 +484,7 @@ IF(WIN32)
             ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugind.lib
             ${QT5_QML_ROOT}/QtQuick/Controls/qtquickcontrolsplugind.lib
             ${QT5_QML_ROOT}/QtQuick/Controls.2/qtquickcontrols2plugind.lib
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/dialogplugind.lib
             ${QT5_QML_ROOT}/QtQuick/Layouts/qquicklayoutsplugind.lib
             ${QT5_QML_ROOT}/QtQuick/Templates.2/qtquicktemplates2plugind.lib
             ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugind.lib
@@ -534,6 +535,7 @@ IF(WIN32)
             ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugin.lib
             ${QT5_QML_ROOT}/QtQuick/Controls/qtquickcontrolsplugin.lib
             ${QT5_QML_ROOT}/QtQuick/Controls.2/qtquickcontrols2plugin.lib
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/dialogplugin.lib
             ${QT5_QML_ROOT}/QtQuick/Layouts/qquicklayoutsplugin.lib
             ${QT5_QML_ROOT}/QtQuick/Templates.2/qtquicktemplates2plugin.lib
             ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugin.lib
@@ -615,6 +617,7 @@ ELSE(WIN32)
             ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin_debug.a
             ${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin_debug.a
             ${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin_debug.a
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin_debug.lib
             ${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin_debug.a
             ${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin_debug.a
             ${QT5_QML_ROOT}/QtQuick/Window.2/libwindowplugin_debug.a
@@ -652,6 +655,7 @@ ELSE(WIN32)
             ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin.a
             ${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin.a
             ${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin.a
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin.a
             ${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin.a
             ${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin.a
             ${QT5_QML_ROOT}/QtQuick/Window.2/libwindowplugin.a
@@ -743,6 +747,7 @@ ELSE(WIN32)
             ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin.a
             ${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin.a
             ${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin.a
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin.a
             ${QT5_QML_ROOT}/QtQuick/PrivateWidgets/libwidgetsplugin.a
             ${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin.a
             ${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin.a

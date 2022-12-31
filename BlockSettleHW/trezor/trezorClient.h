@@ -18,15 +18,16 @@
 #include <QPointer>
 #include <QNetworkReply>
 
-class ConnectionManager;
-class QNetworkRequest;
-class TrezorDevice;
-
+namespace spdlog {
+   class logger;
+}
 namespace bs {
    namespace sync {
       class WalletsManager;
    }
 }
+class QNetworkRequest;
+class TrezorDevice;
 
 class TrezorClient : public QObject
 {
@@ -34,8 +35,8 @@ class TrezorClient : public QObject
 
 public:
 
-   TrezorClient(const std::shared_ptr<ConnectionManager>& connectionManager_,
-      std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet, QObject* parent = nullptr);
+   TrezorClient(const std::shared_ptr<spdlog::logger>&,
+      std::shared_ptr<bs::sync::WalletsManager>, bool testNet, QObject* parent = nullptr);
    ~TrezorClient() override = default;
 
    QByteArray getSessionId();
@@ -69,7 +70,7 @@ signals:
    void onRequestPinMatrix();
 
 private:
-   std::shared_ptr<ConnectionManager> connectionManager_;
+   std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<bs::sync::WalletsManager> walletManager_;
 
    const QByteArray trezorEndPoint_ = "http://127.0.0.1:21325";

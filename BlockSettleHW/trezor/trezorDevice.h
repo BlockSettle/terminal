@@ -17,18 +17,15 @@
 #include <QNetworkReply>
 #include <QPointer>
 
-
 // Trezor interface (source - https://github.com/trezor/trezor-common/tree/master/protob)
+#include "trezor/generated_proto/messages.pb.h"
 #include "trezor/generated_proto/messages-management.pb.h"
 #include "trezor/generated_proto/messages-common.pb.h"
 #include "trezor/generated_proto/messages-bitcoin.pb.h"
-#include "trezor/generated_proto/messages.pb.h"
 
-
-class ConnectionManager;
-class QNetworkRequest;
-class TrezorClient;
-
+namespace spdlog {
+   class logger;
+}
 namespace bs {
    namespace core {
       namespace wallet {
@@ -39,20 +36,21 @@ namespace bs {
       class WalletsManager;
    }
 }
+class QNetworkRequest;
+class TrezorClient;
 
 class TrezorDevice : public HwDeviceInterface
 {
    Q_OBJECT
 
 public:
-   TrezorDevice(const std::shared_ptr<ConnectionManager> &
-      , std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet
+   TrezorDevice(const std::shared_ptr<spdlog::logger> &
+      , std::shared_ptr<bs::sync::WalletsManager>, bool testNet
       , const QPointer<TrezorClient> &, QObject* parent = nullptr);
    ~TrezorDevice() override;
 
    DeviceKey key() const override;
    DeviceType type() const override;
-
 
    // lifecycle
    void init(AsyncCallBack&& cb = nullptr) override;
@@ -102,8 +100,8 @@ private:
    bool isFirmwareSupported() const;
    std::string firmwareSupportedVersion() const;
 
-   std::shared_ptr<ConnectionManager> connectionManager_{};
-   std::shared_ptr<bs::sync::WalletsManager> walletManager_{};
+   std::shared_ptr<spdlog::logger>  logger_;
+   std::shared_ptr<bs::sync::WalletsManager> walletManager_;
 
    QPointer<TrezorClient> client_{};
    hw::trezor::messages::management::Features features_{};
