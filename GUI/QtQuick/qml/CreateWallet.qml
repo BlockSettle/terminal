@@ -140,6 +140,12 @@ Window {
                 root.phrase = bsApp.newSeedPhrase()
                 stack_create_wallet.push(wallet_seed)
             }
+            onSig_import_wallet: {
+                stack_create_wallet.push(import_hardware)
+            }
+            onSig_hardware_wallet: {
+                stack_create_wallet.push(import_watching_wallet)
+            }
         }
 
         WalletSeed {
@@ -184,6 +190,23 @@ Window {
             }
         }
 
+        ImportHardware {
+            id: import_hardware
+            visible: false
+            onSig_import: {
+                root.close()
+                stack_create_wallet.pop(null)
+            }
+        }
+
+        ImportWatchingWallet {
+            id: import_watching_wallet
+            visible: false
+            onSig_import: {
+                root.close()
+                stack_create_wallet.pop(null)
+            }
+        }
     }
 }
 

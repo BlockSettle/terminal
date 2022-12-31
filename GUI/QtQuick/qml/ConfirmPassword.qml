@@ -26,21 +26,6 @@ ColumnLayout  {
         text: qsTr("Set password")
     }
 
-    /*CustomTextInput {
-        id: wallet_name
-
-        Layout.alignment: Qt.AlignCenter
-        Layout.preferredHeight : 70
-        Layout.preferredWidth: 532
-        Layout.topMargin: 32
-
-        input_topMargin: 35
-        title_leftMargin: 16
-        title_topMargin: 16
-
-        title_text: qsTr("Wallet name")
-    }*/
-
     CustomTextInput {
         id: password
 
