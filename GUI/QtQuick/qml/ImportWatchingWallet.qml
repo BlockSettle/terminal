@@ -28,14 +28,21 @@ ColumnLayout  {
     }
 
     CustomTextSwitch {
+        id: type_switch
+
         Layout.alignment: Qt.AlignCenter
         Layout.topMargin: 24
 
         onSig_full_changed: (isFull) => {
             if (isFull === true)
             {
+                type_switch.isFullChoosed = false
                 layout.sig_full()
             }
+        }
+
+        Component.onCompleted: {
+            type_switch.isFullChoosed = false
         }
     }
 
