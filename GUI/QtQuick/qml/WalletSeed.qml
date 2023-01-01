@@ -54,7 +54,6 @@ ColumnLayout  {
             seed_text: modelData
             serial_num: index + 1
         }
-
     }
 
     RowLayout {

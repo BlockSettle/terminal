@@ -174,6 +174,7 @@ ApplicationWindow {
         OverviewPage {
             id: overviewPage
             onNewWalletClicked: {
+                createWallet.init()
                 createWallet.show()
                 createWallet.raise()
                 createWallet.requestActivate()

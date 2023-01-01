@@ -88,5 +88,6 @@
         <file>qml/ImportWatchingWallet.qml</file>
         <file>images/folder_icon.png</file>
         <file>images/File.png</file>
+        <file>qml/ImportWallet.qml</file>
     </qresource>
 </RCC>

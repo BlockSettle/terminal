@@ -80,7 +80,8 @@ Window {
 
         StackView {
             id: stack_create_wallet
-            initialItem: bsApp.settingActivated? start_create : terms_conditions
+
+            initialItem: terms_conditions
 
             anchors.top: close_button.bottom
             anchors.topMargin: 0
@@ -123,13 +124,19 @@ Window {
                     duration: 200
                 }
             }
+
+            replaceEnter: Transition {
+            }
+
+            replaceExit: Transition {
+            }
         }
 
         TermsAndConditions {
             id: terms_conditions
             visible: false
             onSig_continue: {
-                stack_create_wallet.push(start_create)
+                stack_create_wallet.replace(start_create)
             }
         }
 
@@ -141,10 +148,10 @@ Window {
                 stack_create_wallet.push(wallet_seed)
             }
             onSig_import_wallet: {
-                stack_create_wallet.push(import_hardware)
+                stack_create_wallet.push(import_wallet)
             }
             onSig_hardware_wallet: {
-                stack_create_wallet.push(import_watching_wallet)
+                stack_create_wallet.push(import_hardware)
             }
         }
 
@@ -206,6 +213,30 @@ Window {
                 root.close()
                 stack_create_wallet.pop(null)
             }
+            onSig_full: {
+                stack_create_wallet.replace(import_wallet)
+            }
+        }
+
+        ImportWallet {
+            id: import_wallet
+            visible: false
+            onSig_import: {
+                stack_create_wallet.push(confirm_password)
+                root.phrase = import_wallet.phrase
+            }
+            onSig_only_watching: {
+                stack_create_wallet.replace(import_watching_wallet)
+            }
+        }
+    }
+
+    function init() {
+        //bsApp.settingActivated = true
+        if (bsApp.settingActivated === true)
+        {
+            stack_create_wallet.pop()
+            stack_create_wallet.replace(start_create)
         }
     }
 }

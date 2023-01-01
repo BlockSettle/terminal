@@ -100,7 +100,7 @@ Item {
                 text: qsTr("Create new wallet")
                 font.pointSize: 10
                 onClicked: {
-                    stack.push(createNewWalletPage)
+                    //stack.push(createNewWalletPage)
                     newWalletClicked()
                 }
             }

@@ -99,8 +99,8 @@ ColumnLayout  {
             continue_but.preferred = true
         }
         onClicked: {
-            sig_continue()
             bsApp.settingActivated = true
+            sig_continue()
         }
     }
 
