@@ -334,7 +334,7 @@ ProcessingResult QtQuickAdapter::processSettingsGetResponse(const SettingsMessag
 #endif // _WIN32
             //onResetSettings({});
          }
-         break;
+         [[fallthrough]];
 
       default:
          settings[setting.request().index()] = fromResponse(setting);
