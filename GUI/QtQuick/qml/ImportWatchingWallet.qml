@@ -2,6 +2,8 @@ import QtQuick 2.12
 import QtQuick.Window 2.12
 import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.15
+import QtQuick.Dialogs 1.3
+
 
 import "StyledControls"
 import "BsStyles"
@@ -56,7 +58,7 @@ ColumnLayout  {
         Layout.preferredHeight: 282
         height: 282
 
-        source: layout.isFileChoosen ? "qrc:/images/file_drop.png" : "qrc:/images/wallet_file.png"
+        source: "qrc:/images/file_drop.png"
 
         Image {
             id: file_icon
@@ -117,18 +119,20 @@ ColumnLayout  {
             font.weight: Font.Normal
         }
 
-        /*FileDialog  {
+        FileDialog  {
             id: fileDialog
             visible: false
             onAccepted: {
-                label_file.text = fileDialog.fileUrl
+                label_file.text = basename(fileDialog.fileUrl.toString())
+                layout.isFileChoosen = true
+                dashed_border.source = "qrc:/images/wallet_file.png"
             }
-        }*/
+        }
 
         MouseArea {
             anchors.fill: parent
             onClicked: {
-                //fileDialog.visible = true
+                fileDialog.visible = true
             }
         }
 
@@ -155,4 +159,10 @@ ColumnLayout  {
         Layout.fillHeight: true
         Layout.fillWidth: true
     }
+
+    function basename(str)
+    {
+        return (str.slice(str.lastIndexOf("/")+1))
+    }
+
 }
