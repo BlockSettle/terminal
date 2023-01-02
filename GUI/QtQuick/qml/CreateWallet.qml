@@ -232,7 +232,6 @@ Window {
     }
 
     function init() {
-        //bsApp.settingActivated = true
         if (bsApp.settingActivated === true)
         {
             stack_create_wallet.pop()
