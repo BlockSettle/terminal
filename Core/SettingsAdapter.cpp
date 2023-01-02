@@ -41,9 +41,6 @@ SettingsAdapter::SettingsAdapter(const std::shared_ptr<ApplicationSettings> &set
    logMgr_->add(appSettings_->GetLogsConfig());
    logger_ = logMgr_->logger();
 
-   if (!appSettings_->get<bool>(ApplicationSettings::initialized)) {
-      appSettings_->SetDefaultSettings(true);
-   }
    appSettings_->selectNetwork();
    logger_->debug("Settings loaded from {}", appSettings_->GetSettingsPath().toStdString());
 

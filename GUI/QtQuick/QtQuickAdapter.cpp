@@ -715,11 +715,6 @@ void QtQuickAdapter::requestInitialSettings()
    setReq->set_index(SetIdx_ArmoryDbPort);
    setReq->set_type(SettingType_String);
 
-   setReq = msgReq->add_requests();
-   setReq->set_source(SettingSource_Local);
-   setReq->set_index(SetIdx_Initialized);
-   setReq->set_type(SettingType_Bool);
-
    pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
