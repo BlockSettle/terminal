@@ -975,6 +975,16 @@ QStringList QtQuickAdapter::settingEnvironments() const
    return { tr("Main"), tr("Test") };
 }
 
+HwDeviceModel* QtQuickAdapter::devices()
+{
+    return nullptr;
+}
+
+bool QtQuickAdapter::scanningDevices() const
+{
+    return false;
+}
+
 QStringList QtQuickAdapter::newSeedPhrase()
 {
    auto seed = CryptoPRNG::generateRandom(16);

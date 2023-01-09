@@ -26,7 +26,8 @@ void writeVarInt(QByteArray &output, size_t size) {
    }
 }
 
-bool checkLedgerDevice(hid_device_info* info) {
+bool checkLedgerDevice(hid_device_info* info)
+{
    if (!info) {
       return false;
    }

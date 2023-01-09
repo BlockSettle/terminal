@@ -45,6 +45,7 @@ ELSE()
 ENDIF()
 
 add_definitions(-DNOMINMAX)
+add_definitions(-DCURL_STATICLIB)
 
 # Force Armory to ignore Crypto++ and use libbtc instead.
 add_definitions(-DLIBBTC_ONLY)
@@ -355,6 +356,25 @@ FIND_LIBRARY( MPIR_LIB NAMES ${MPIR_LIB_NAME} PATHS ${MPIR_LIB_DIR} NO_DEFAULT_P
 IF( NOT MPIR_LIB)
    MESSAGE( FATAL_ERROR "Could not find MPIR lib in ${MPIR_LIB_DIR}")
 ENDIF()
+
+
+SET(CURL_ROOT        ${THIRD_PARTY_COMMON_DIR}/curl)
+SET(CURL_INCLUDE_DIR ${CURL_ROOT}/include)
+
+set(CURL_LIBRARY "-lcurl")
+find_package(CURL REQUIRED)
+
+IF (WIN32)
+   SET(CURL_LIB_NAME libcurl-d.lib libcurl.lib)
+ELSE(WIN32)
+   SET(CURL_LIB_NAME libcurl-d.a libcurl.a curl-d curl)
+ENDIF(WIN32)
+
+FIND_LIBRARY( CURL_LIB NAMES ${CURL_LIB_NAME} PATHS ${CURL_ROOT}/lib NO_DEFAULT_PATH )
+IF( NOT CURL_LIB)
+   MESSAGE( FATAL_ERROR "Could not find curl lib in ${CURL_ROOT}/lib")
+ENDIF()
+
 
 IF(BUILD_TESTS)
    SET(GTEST_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/Gtest)
@@ -854,10 +874,9 @@ ADD_SUBDIRECTORY(common/WalletsLib)
 ADD_SUBDIRECTORY(common/cppForSwig)
 ADD_SUBDIRECTORY(common/CommonLib)
 ADD_SUBDIRECTORY(CommonUI)
-#ADD_SUBDIRECTORY(BlockSettleHW)
+ADD_SUBDIRECTORY(BlockSettleHW)
 
 ADD_SUBDIRECTORY(BlockSettleApp)
-#ADD_SUBDIRECTORY(BlockSettleSigner)
 
 IF(BUILD_TESTS)
    ADD_SUBDIRECTORY(UnitTests)

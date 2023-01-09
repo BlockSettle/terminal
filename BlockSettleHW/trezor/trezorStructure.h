@@ -11,26 +11,50 @@
 #ifndef TREZORSTRUCTURE_H
 #define TREZORSTRUCTURE_H
 
-#include "hwcommonstructure.h"
+#include <string>
 
-enum class State {
-   None = 0,
-   Init,
-   Enumerated,
-   Acquired,
-   Released
-};
+namespace bs {
+   namespace hww {
+      namespace trezor {
 
-struct MessageData
-{
-   int msg_type_ = -1;
-   int length_ = -1;
-   std::string message_;
-};
+         struct DeviceData
+         {
+            std::string path;
+            std::string vendor;
+            std::string product;
+            std::string sessionId;
+            std::string debug;
+            std::string debugSession;
+         };
 
-namespace HWInfoStatus {
-   const QString kRequestPassphrase = QObject::tr("Please enter the trezor passphrase");
-   const QString kRequestPin = QObject::tr("Please enter the pin from device");
-}
+         enum class State {
+            None = 0,
+            Init,
+            Enumerated,
+            Acquired,
+            Released
+         };
+
+         struct MessageData
+         {
+            int type = -1;
+            int length = -1;
+            std::string message;
+         };
+
+         enum class InfoStatus {
+            Unknown,
+            RequestPassphrase,
+            RequestPIN
+         };
+
+      }  //trezor
+   }  //hw
+}     //bs
+
+//namespace HWInfoStatus {
+   //const QString kRequestPassphrase = QObject::tr("Please enter the trezor passphrase");
+   //const QString kRequestPin = QObject::tr("Please enter the pin from device");
+//}
 
 #endif // TREZORSTRUCTURE_H

@@ -12,8 +12,7 @@
 
 HwDeviceModel::HwDeviceModel(QObject *parent /*= nullptr*/)
    : QAbstractItemModel(parent)
-{
-}
+{}
 
 QVariant HwDeviceModel::data(const QModelIndex& index, int role /*= Qt::DisplayRole*/) const
 {
@@ -22,11 +21,14 @@ QVariant HwDeviceModel::data(const QModelIndex& index, int role /*= Qt::DisplayR
    }
 
    const int row = index.row();
+#ifdef BUILD_HW_WALLETS
    if (row < 0 || row > devices_.size()) {
       assert(false);
       return {};
    }
+#endif
 
+#ifdef BUILD_HW_WALLETS
    switch (static_cast<HwDeviceRoles>(role))
    {
    case HwDeviceRoles::DeviceId:
@@ -42,7 +44,7 @@ QVariant HwDeviceModel::data(const QModelIndex& index, int role /*= Qt::DisplayR
    default:
       break;
    }
-
+#endif
    return {};
 }
 
@@ -66,7 +68,11 @@ QModelIndex HwDeviceModel::parent(const QModelIndex& index) const
 
 int HwDeviceModel::rowCount(const QModelIndex& parent /*= QModelIndex()*/) const
 {
+#ifdef BUILD_HW_WALLETS
    return devices_.size();
+#else
+   return 0;
+#endif
 }
 
 int HwDeviceModel::columnCount(const QModelIndex& parent /*= QModelIndex()*/) const
@@ -74,6 +80,7 @@ int HwDeviceModel::columnCount(const QModelIndex& parent /*= QModelIndex()*/) co
    return 1;
 }
 
+#ifdef BUILD_HW_WALLETS
 void HwDeviceModel::resetModel(QVector<DeviceKey>&& deviceKeys)
 {
    beginResetModel();
@@ -101,9 +108,11 @@ int HwDeviceModel::getDeviceIndex(DeviceKey key)
 
    return -1;
 }
+#endif
 
 int HwDeviceModel::toppestImport() const
 {
+#ifdef BUILD_HW_WALLETS
    if (devices_.empty()) {
       return -1;
    }
@@ -113,7 +122,7 @@ int HwDeviceModel::toppestImport() const
          return i;
       }
    }
-
+#endif
    return -1;
 }
 

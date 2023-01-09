@@ -11,97 +11,123 @@
 #ifndef HWDEVICESCANNER_H
 #define HWDEVICESCANNER_H
 
-#include "hwcommonstructure.h"
-#include "hwdevicemodel.h"
-#include "SecureBinaryData.h"
 #include <memory>
+#include "HDPath.h"
+#include "hwdeviceinterface.h"
+#include "Message/Adapter.h"
+#include "ledger/ledgerClient.h"
+#include "trezor/trezorClient.h"
+#include "SecureBinaryData.h"
 
-#include <QObject>
-#include <QVector>
-#include <QStringListModel>
 
-class HwDeviceInterface;
-class TrezorClient;
-class LedgerClient;
-class ConnectionManager;
-namespace bs {
-   namespace sync {
-      class WalletsManager;
+namespace spdlog {
+   class logger;
+}
+namespace BlockSettle {
+   namespace Common {
+      class HDWalletData;
    }
 }
 
+namespace bs {
+   namespace hww {
 
-class HwDeviceManager : public QObject
-{
-   Q_OBJECT
-   Q_PROPERTY(HwDeviceModel* devices READ devices NOTIFY devicesChanged)
-   Q_PROPERTY(bool isScanning READ isScanning NOTIFY isScanningChanged)
+      // There is no way to determinate difference between ledger devices
+      // so we use vendor name for identification
+      const std::string kDeviceLedgerId = "Ledger";
 
-public:
-   HwDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager,
-      std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet, QObject* parent = nullptr);
-    ~HwDeviceManager() override;
+      struct DeviceCallbacks
+      {
+         virtual void publicKeyReady(void* walletInfo) = 0;
+         virtual void requestPinMatrix(const DeviceKey&) = 0;
+         virtual void requestHWPass(const DeviceKey&, bool allowedOnDevice) = 0;
 
-   /// Property
-   HwDeviceModel* devices();
-   bool isScanning() const;
+         virtual void deviceNotFound(const std::string& deviceId) = 0;
+         virtual void deviceReady(const std::string& deviceId) = 0;
+         virtual void deviceTxStatusChanged(const std::string& status) = 0;
 
-   // Actions from UI
-   Q_INVOKABLE void scanDevices();
-   Q_INVOKABLE void requestPublicKey(int deviceIndex);
-   Q_INVOKABLE void setMatrixPin(int deviceIndex, QString pin);
-   Q_INVOKABLE void setPassphrase(int deviceIndex, QString passphrase, bool enterOnDevice);
-   Q_INVOKABLE void cancel(int deviceIndex);
-   Q_INVOKABLE void prepareHwDeviceForSign(QString walletId);
-   Q_INVOKABLE void signTX(QVariant reqTX);
-   Q_INVOKABLE void releaseDevices();
-   Q_INVOKABLE void hwOperationDone();
+         virtual void txSigned(const SecureBinaryData& signData) = 0;
+         virtual void scanningDone() = 0;
+         virtual void operationFailed(const std::string& deviceId, const std::string& reason) = 0;
+         virtual void cancelledOnDevice() = 0;
+         virtual void invalidPin() = 0;
+      };
 
-   // Info asked from UI
-   Q_INVOKABLE bool awaitingUserAction(int deviceIndex);
-   Q_INVOKABLE QString lastDeviceError();
+      class DeviceManager : public bs::message::Adapter, public DeviceCallbacks
+      {
+      public:
+         DeviceManager(const std::shared_ptr<spdlog::logger>&);
+         ~DeviceManager() override;
 
-signals:
-   void devicesChanged();
-   void publicKeyReady(QVariant walletInfo);
-   void requestPinMatrix(int deviceIndex);
-   void requestHWPass(int deviceIndex, bool allowedOnDevice);
+         bs::message::ProcessingResult process(const bs::message::Envelope&) override;
+         bool processBroadcast(const bs::message::Envelope&) override;
 
-   void deviceNotFound(QString deviceId);
-   void deviceReady(QString deviceId);
-   void deviceTxStatusChanged(QString status);
+         Users supportedReceivers() const override { return { user_ }; }
+         std::string name() const override { return "HWWallets"; }
 
-   void txSigned(SecureBinaryData signData);
-   void isScanningChanged();
-   void operationFailed(QString reason);
-   void cancelledOnDevice();
-   void invalidPin();
+      private: // signals
+         void publicKeyReady(void* walletInfo) override;
+         void requestPinMatrix(const DeviceKey&) override;
+         void requestHWPass(const DeviceKey&, bool allowedOnDevice) override;
 
-protected slots:
-   void onRequestPinMatrix();
-   void onRequestHWPass(bool allowedOnDevice);
+         void deviceNotFound(const std::string& deviceId) override;
+         void deviceReady(const std::string& deviceId) override;
+         void deviceTxStatusChanged(const std::string& status) override;
 
-private:
-   void setScanningFlag(bool isScanning);
-   void releaseConnection(AsyncCallBack&& cb = nullptr);
-   void scanningDone(bool initDevices = true);
-   void connectDevice(QPointer<HwDeviceInterface> device);
+         void txSigned(const SecureBinaryData& signData) override;
+         void scanningDone() override;
+         void operationFailed(const std::string& deviceId, const std::string& reason) override;
+         void cancelledOnDevice() override;
+         void invalidPin() override;
 
-   QPointer<HwDeviceInterface> getDevice(DeviceKey key);
+         //former invokables:
+         void scanDevices();
+         void requestPublicKey(const DeviceKey&);
+         void setMatrixPin(const DeviceKey&, const std::string& pin);
+         void setPassphrase(const DeviceKey&, const std::string& passphrase
+            , bool enterOnDevice);
+         void cancel(const DeviceKey&);
+         bs::message::ProcessingResult prepareDeviceForSign(bs::message::SeqId
+            , const BlockSettle::Common::HDWalletData&);
+         void signTX(const DeviceKey&, const bs::core::wallet::TXSignRequest& reqTX);
+         void releaseDevices();
+         //void hwOperationDone();
+         bool awaitingUserAction(const DeviceKey&);
 
-   std::shared_ptr<spdlog::logger> logger_;
+         void setScanningFlag(unsigned nbLeft);
+         void releaseConnection();
+         void scanningDone(bool initDevices = true);
 
-public:
-   std::unique_ptr<TrezorClient> trezorClient_;
-   std::unique_ptr<LedgerClient> ledgerClient_;
-   std::shared_ptr<bs::sync::WalletsManager> walletManager_;
+         std::shared_ptr<DeviceInterface> getDevice(const DeviceKey& key) const;
 
-   HwDeviceModel* model_;
-   bool testNet_{};
-   bool isScanning_{};
-   bool isSigning_{};
-   QString lastOperationError_;
-   QString lastUsedTrezorWallet_;
-};
+         void start();
+         bs::message::ProcessingResult processPrepareDeviceForSign(const bs::message::Envelope&
+            , const std::string& walletId);
+         bs::message::ProcessingResult processOwnRequest(const bs::message::Envelope&);
+         bs::message::ProcessingResult processWallet(const bs::message::Envelope&);
+
+      private:
+         std::shared_ptr<spdlog::logger> logger_;
+         std::unique_ptr<TrezorClient> trezorClient_;
+         std::unique_ptr<LedgerClient> ledgerClient_;
+         std::shared_ptr<bs::message::User>  user_, userWallets_;
+
+         bool testNet_{};
+         unsigned nbScanning_{};
+         bool isSigning_{};
+         std::string lastOperationError_;
+         std::string lastUsedTrezorWallet_;
+         unsigned nbWaitScanReplies_{ 0 };
+
+         std::map<bs::message::SeqId, std::pair<std::string, bs::message::Envelope>>   prepareDeviceReq_;   //value: walletId
+      };
+
+      bs::hd::Path getDerivationPath(bool testNet, bs::hd::Purpose element);
+      bool isNestedSegwit(const bs::hd::Path& path);
+      bool isNativeSegwit(const bs::hd::Path& path);
+      bool isNonSegwit(const bs::hd::Path& path);
+
+   }  //hw
+}  //bs
 
 #endif // HWDEVICESCANNER_H

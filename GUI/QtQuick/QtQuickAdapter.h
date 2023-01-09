@@ -17,11 +17,12 @@
 #include "AddressListModel.h"
 #include "ApiAdapter.h"
 #include "ApplicationSettings.h"
-#include "Wallets/SignContainer.h"
+#include "hwdevicemodel.h"
 #include "ThreadSafeClasses.h"
 #include "TxInputsModel.h"
 #include "TxListModel.h"
 #include "UiUtils.h"
+#include "Wallets/SignContainer.h"
 
 namespace bs {
    namespace gui {
@@ -149,6 +150,11 @@ public:
    Q_PROPERTY(int armoryState READ armoryState NOTIFY armoryStateChanged)
    int armoryState() const { return armoryState_; }
 
+   Q_PROPERTY(HwDeviceModel* devices READ devices NOTIFY devicesChanged)
+   HwDeviceModel* devices();
+   Q_PROPERTY(bool scanningDevices READ scanningDevices NOTIFY scanningChanged)
+   bool scanningDevices() const;
+
    // QML-invokable methods
    Q_INVOKABLE QStringList newSeedPhrase();
    Q_INVOKABLE void copySeedToClipboard(const QStringList&);
@@ -172,6 +178,8 @@ signals:
    void addressGenerated();
    void settingChanged();
    void armoryStateChanged();
+   void devicesChanged();
+   void scanningChanged();
 
 private slots:
    void walletSelected(int);

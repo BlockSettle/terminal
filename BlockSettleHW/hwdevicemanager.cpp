@@ -9,96 +9,106 @@
 
 */
 #include "hwdevicemanager.h"
-#include "trezor/trezorClient.h"
+#include <spdlog/spdlog.h>
 #include "trezor/trezorDevice.h"
-#include "ledger/ledgerClient.h"
 #include "ledger/ledgerDevice.h"
-#include "ConnectionManager.h"
+#include "TerminalMessage.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/ProtobufHeadlessUtils.h"
 
-using namespace Armory::Signer;
+#include "common.pb.h"
+#include "hardware_wallet.pb.h"
 
-HwDeviceManager::HwDeviceManager(const std::shared_ptr<ConnectionManager>& connectionManager, std::shared_ptr<bs::sync::WalletsManager> walletManager,
-   bool testNet, QObject* parent /*= nullptr*/)
-   : QObject(parent)
-   , logger_(connectionManager->GetLogger())
-   , testNet_(testNet)
+//using namespace Armory::Signer;
+using namespace bs::hww;
+using namespace BlockSettle::Common;
+
+DeviceManager::DeviceManager(const std::shared_ptr<spdlog::logger>& logger)
+   : logger_(logger), testNet_(true)
+   , user_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::HWWallets))
+   , userWallets_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Wallets))
 {
-   walletManager_ = walletManager;
-   trezorClient_ = std::make_unique<TrezorClient>(connectionManager, walletManager, testNet, this);
-   ledgerClient_ = std::make_unique<LedgerClient>(logger_, walletManager, testNet);
-
-   model_ = new HwDeviceModel(this);
+   trezorClient_ = std::make_unique<TrezorClient>(logger_, testNet_, this);
+   ledgerClient_ = std::make_unique<LedgerClient>(logger_, testNet_, this);
 }
 
-HwDeviceManager::~HwDeviceManager()
+DeviceManager::~DeviceManager()
 {
-   releaseConnection(nullptr);
-};
+   releaseConnection();
+}
 
-void HwDeviceManager::scanDevices()
+bs::message::ProcessingResult DeviceManager::process(const bs::message::Envelope& env)
 {
-   if (isScanning_) {
-      return;
+   if (env.isRequest()) {
+      return processOwnRequest(env);
    }
-
-   setScanningFlag(true);
-
-   auto doneScanning = [this, expectedClients = 2, finished = std::make_shared<int>(0)]() {
-      ++(*finished);
-
-      if (*finished == expectedClients) {
-         scanningDone();
+   else {
+      switch (env.sender->value<bs::message::TerminalUsers>()) {
+      case bs::message::TerminalUsers::Wallets:
+         return processWallet(env);
+      default: break;
       }
-   };
-
-   ledgerClient_->scanDevices(doneScanning);
-   releaseConnection([this, doneScanning] {
-      trezorClient_->initConnection(true, [this, doneScanning]() {
-         doneScanning();
-      });
-   });
+   }
+   return bs::message::ProcessingResult::Ignored;
 }
 
-void HwDeviceManager::requestPublicKey(int deviceIndex)
+bool DeviceManager::processBroadcast(const bs::message::Envelope& env)
 {
-   auto device = getDevice(model_->getDevice(deviceIndex));
-   if (!device) {
+   if (env.sender->isSystem()) {
+      AdministrativeMessage msg;
+      if (msg.ParseFromString(env.message)) {
+         if (msg.data_case() == AdministrativeMessage::kStart) {
+            start();
+            return true;
+         }
+      }
+   }
+   return false;
+}
+
+void DeviceManager::scanDevices()
+{
+   if (nbScanning_ > 0) {
       return;
    }
 
-   device->getPublicKey([this](QVariant&& data) {
-      emit publicKeyReady(data);
-   });
-
-   connectDevice(device);
+   setScanningFlag(2);
+   ledgerClient_->scanDevices();
+   trezorClient_->listDevices();
 }
 
-void HwDeviceManager::setMatrixPin(int deviceIndex, QString pin)
+void DeviceManager::requestPublicKey(const DeviceKey& key)
 {
-   auto device = getDevice(model_->getDevice(deviceIndex));
+   auto device = getDevice(key);
    if (!device) {
       return;
    }
-
-   device->setMatrixPin(pin.toStdString());
+   device->getPublicKey();
 }
 
-void HwDeviceManager::setPassphrase(int deviceIndex, QString passphrase, bool enterOnDevice)
+void DeviceManager::setMatrixPin(const DeviceKey& key, const std::string& pin)
 {
-   auto device = getDevice(model_->getDevice(deviceIndex));
+   auto device = getDevice(key);
    if (!device) {
       return;
    }
-
-   device->setPassword(passphrase.toStdString(), enterOnDevice);
+   device->setMatrixPin(SecureBinaryData::fromString(pin));
 }
 
-void HwDeviceManager::cancel(int deviceIndex)
+void DeviceManager::setPassphrase(const DeviceKey& key, const std::string& passphrase
+   , bool enterOnDevice)
 {
-   auto device = getDevice(model_->getDevice(deviceIndex));
+   auto device = getDevice(key);
+   if (!device) {
+      return;
+   }
+   device->setPassword(SecureBinaryData::fromString(passphrase), enterOnDevice);
+}
+
+void DeviceManager::cancel(const DeviceKey& key)
+{
+   auto device = getDevice(key);
    if (!device) {
       return;
    }
@@ -106,60 +116,92 @@ void HwDeviceManager::cancel(int deviceIndex)
    device->cancel();
 }
 
-void HwDeviceManager::prepareHwDeviceForSign(QString walletId)
+void bs::hww::DeviceManager::start()
 {
-   auto hdWallet = walletManager_->getHDWalletById(walletId.toStdString());
-   assert(hdWallet->isHardwareWallet());
-   auto encKeys = hdWallet->encryptionKeys();
-   bs::wallet::HardwareEncKey hwEncType(encKeys[0]);
+}
+
+bs::message::ProcessingResult DeviceManager::processPrepareDeviceForSign(const bs::message::Envelope& env
+   , const std::string& walletId)
+{
+   WalletsMessage msg;
+   msg.set_hd_wallet_get(walletId);
+   const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
+   prepareDeviceReq_[msgId] = {walletId, env};
+   return bs::message::ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult bs::hww::DeviceManager::processOwnRequest(const bs::message::Envelope&)
+{
+   return bs::message::ProcessingResult();
+}
+
+bs::message::ProcessingResult bs::hww::DeviceManager::processWallet(const bs::message::Envelope& env)
+{
+   WalletsMessage msg;
+   if (!msg.ParseFromString(env.message)) {
+      logger_->error("[hww::DeviceManager::processWallet] failed to parse #{}"
+         , env.foreignId());
+      return bs::message::ProcessingResult::Error;
+   }
+   switch (msg.data_case()) {
+   case WalletsMessage::kHdWallet:
+      return prepareDeviceForSign(env.responseId(), msg.hd_wallet());
+   }
+   return bs::message::ProcessingResult::Ignored;
+}
+
+bs::message::ProcessingResult DeviceManager::prepareDeviceForSign(bs::message::SeqId msgId
+   , const HDWalletData& hdWallet)
+{
+   const auto& itWallet = prepareDeviceReq_.find(msgId);
+   if (itWallet == prepareDeviceReq_.end()) {
+      logger_->warn("[{}] unknown response #{}", __func__, msgId);
+      return bs::message::ProcessingResult::Error;
+   }
+   prepareDeviceReq_.erase(itWallet);
+   if (!hdWallet.is_hardware() || !hdWallet.encryption_keys_size()) {
+      logger_->error("[{}] wallet {} is not suitable", __func__, hdWallet.wallet_id());
+      return bs::message::ProcessingResult::Error;
+
+   }
+   bs::wallet::HardwareEncKey hwEncType(BinaryData::fromString(hdWallet.encryption_keys(0)));
 
    if (bs::wallet::HardwareEncKey::WalletType::Ledger == hwEncType.deviceType()) {
-      ledgerClient_->scanDevices([caller = QPointer<HwDeviceManager>(this), walletId]() {
-         if (!caller) {
-            return;
-         }
+      ledgerClient_->scanDevices();
+      const auto& devices = ledgerClient_->deviceKeys();
+      if (devices.empty()) {
+         lastOperationError_ = ledgerClient_->lastScanError();
+         deviceNotFound(kDeviceLedgerId);
+         return bs::message::ProcessingResult::Error;
+      }
 
-         auto devices = caller->ledgerClient_->deviceKeys();
-         if (devices.empty()) {
-            caller->lastOperationError_ = caller->ledgerClient_->lastScanError();
-            caller->deviceNotFound(QString::fromStdString(kDeviceLedgerId));
-            return;
+      bool found = false;
+      DeviceKey deviceKey;
+      for (const auto& key : devices) {
+         if (key.walletId == hdWallet.wallet_id()) {
+            deviceKey = key;
+            found = true;
+            break;
          }
-
-         bool found = false;
-         DeviceKey deviceKey;
-         for (auto Key : devices) {
-            if (Key.walletId_ == walletId) {
-               deviceKey = Key;
-               found = true;
-               break;
-            }
+      }
+      if (!found) {
+         if (!devices.empty()) {
+            lastOperationError_ = getDevice(devices.front())->lastError();
          }
-
-         if (!found) {
-            if (!devices.isEmpty()) {
-               caller->lastOperationError_ = caller->getDevice(devices.front())->lastError();
-            }
-
-            caller->deviceNotFound(QString::fromStdString(kDeviceLedgerId));
-         }  
-         else {
-            caller->model_->resetModel({ std::move(deviceKey) });
-            caller->deviceReady(QString::fromStdString(kDeviceLedgerId));
-         }
-      });
+         deviceNotFound(kDeviceLedgerId);
+      }  
+      else {
+         deviceReady(kDeviceLedgerId);
+      }
    }
    else if (bs::wallet::HardwareEncKey::WalletType::Trezor == hwEncType.deviceType()) {
       auto deviceId = hwEncType.deviceId();
-      const bool cleanPrevSession = (lastUsedTrezorWallet_ != walletId);
-      trezorClient_->initConnection(QString::fromStdString(deviceId), cleanPrevSession, [this](QVariant&& deviceId) {
+      const bool cleanPrevSession = (lastUsedTrezorWallet_ != hdWallet.wallet_id());
+      {
          DeviceKey deviceKey;
-
-         const auto id = deviceId.toString();
-
          bool found = false;
          for (auto key : trezorClient_->deviceKeys()) {
-            if (key.deviceId_ == id) {
+            if (key.id == deviceId) {
                found = true;
                deviceKey = key;
                break;
@@ -167,229 +209,173 @@ void HwDeviceManager::prepareHwDeviceForSign(QString walletId)
          }
 
          if (!found) {
-            emit deviceNotFound(id);
+            deviceNotFound(deviceId);
          }
          else {
-            model_->resetModel({ std::move(deviceKey) });
-            emit deviceReady(id);
-         }
-      });
-      lastUsedTrezorWallet_ = walletId;
-   }
-}
-
-void HwDeviceManager::signTX(QVariant reqTX)
-{
-   auto device = getDevice(model_->getDevice(0));
-   if (!device) {
-      return;
-   }
-
-   Blocksettle::Communication::headless::SignTxRequest pbSignReq;
-   bool rc = pbSignReq.ParseFromString(reqTX.toByteArray().toStdString());
-   if (!rc) {
-      SPDLOG_LOGGER_ERROR(logger_, "parse TX failed");
-      emit operationFailed(tr("Invalid sign request"));
-      return;
-   }
-
-   auto signReq = bs::signer::pbTxRequestToCore(pbSignReq);
-   auto cbSigned = [this, signReq, device](QVariant&& data) {
-      assert(data.canConvert<HWSignedTx>());
-      auto tx = data.value<HWSignedTx>();
-
-      if (device->key().type_ == DeviceType::HWTrezor) {
-         // According to architecture, Trezor allow us to sign tx with incorrect 
-         // passphrase, so let's check that the final tx is correct. In Ledger case
-         // this situation is impossible, since the wallets with different passphrase will be treated
-         // as different devices, which will be verified in sign part.
-         try {
-            std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;
-            for (unsigned i=0; i<signReq.armorySigner_.getTxInCount(); i++) {
-               const auto& utxo = signReq.armorySigner_.getSpender(i)->getUtxo();
-               auto& idMap = utxoMap[utxo.getTxHash()];
-               idMap.emplace(utxo.getTxOutIndex(), utxo);
-            }
-            unsigned flags = SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_SEGWIT | SCRIPT_VERIFY_P2SH_SHA256;
-            bool validSign = Signer::verify(SecureBinaryData::fromString(tx.signedTx)
-               , utxoMap, flags, true).isValid();
-            if (!validSign) {
-               SPDLOG_LOGGER_ERROR(logger_, "sign verification failed");
-               releaseConnection();
-               emit operationFailed(tr("Signing failed. Please ensure you type the correct passphrase."));
-               return;
-            }
-         }
-         catch (const std::exception &e) {
-            SPDLOG_LOGGER_ERROR(logger_, "sign verification failed: {}", e.what());
-            releaseConnection();
-            emit operationFailed(tr("Signing failed. Please ensure you type the correct passphrase."));
-            return;
+            deviceReady(deviceId);
          }
       }
-      txSigned({ BinaryData::fromString(tx.signedTx) });
-   };
-
-   device->signTX(signReq, std::move(cbSigned));
-
-   connectDevice(qobject_cast<HwDeviceInterface*>(device));
-
-   // tx specific connections
-   connect(device, &HwDeviceInterface::deviceTxStatusChanged,
-      this, &HwDeviceManager::deviceTxStatusChanged, Qt::UniqueConnection);
-   connect(device, &HwDeviceInterface::cancelledOnDevice,
-      this, &HwDeviceManager::cancelledOnDevice, Qt::UniqueConnection);
-   connect(device, &HwDeviceInterface::operationFailed,
-      this, &HwDeviceManager::deviceTxStatusChanged, Qt::UniqueConnection);
-   connect(device, &HwDeviceInterface::invalidPin,
-      this, &HwDeviceManager::invalidPin, Qt::UniqueConnection);
-   connect(device, &HwDeviceInterface::requestForRescan,
-      this, [this]() {
-      auto deviceInfo = model_->getDevice(0);
-      lastOperationError_ = getDevice(deviceInfo)->lastError();
-      emit deviceNotFound(deviceInfo.deviceId_);
-   }, Qt::UniqueConnection);
+      lastUsedTrezorWallet_ = hdWallet.wallet_id();
+   }
 }
 
-void HwDeviceManager::releaseDevices()
+void DeviceManager::signTX(const DeviceKey& key, const bs::core::wallet::TXSignRequest& signReq)
+{
+   auto device = getDevice(key);
+   if (!device) {
+      deviceNotFound(key.id);
+      return;
+   }
+   device->signTX(signReq);
+}
+
+void DeviceManager::releaseDevices()
 {
    releaseConnection();
 }
 
-void HwDeviceManager::hwOperationDone()
+bool DeviceManager::awaitingUserAction(const DeviceKey& key)
 {
-   model_->resetModel({});
-}
-
-bool HwDeviceManager::awaitingUserAction(int deviceIndex)
-{
-   if (model_->rowCount() <= deviceIndex) {
-      return false;
-   }
-
-   auto device = getDevice(model_->getDevice(deviceIndex));
+   const auto& device = getDevice(key);
    return device && device->isBlocked();
 }
 
-QString HwDeviceManager::lastDeviceError()
+void DeviceManager::releaseConnection()
 {
-   return lastOperationError_;
+   trezorClient_->releaseConnection();
 }
 
-void HwDeviceManager::releaseConnection(AsyncCallBack&& cb/*= nullptr*/)
+void DeviceManager::scanningDone(bool initDevices)
 {
-   for (int i = 0; i < model_->rowCount(); ++i) {
-      auto device = getDevice(model_->getDevice(i));
-      if (device) {
-         trezorClient_->initConnection(true, [this, cbCopy = std::move(cb)] {
-            trezorClient_->releaseConnection([this, cb = std::move(cbCopy)]() {
-               if (cb) {
-                  cb();
-               }
-            });
-         });
-         model_->resetModel({});
-         return;
-      }
-   }
-
-   if (cb) {
-      cb();
-   }
-}
-
-void HwDeviceManager::scanningDone(bool initDevices /* = true */)
-{
-   setScanningFlag(false);
-   auto allDevices = ledgerClient_->deviceKeys();
-   allDevices.append(trezorClient_->deviceKeys());
-   model_->resetModel(std::move(allDevices));
-   emit devicesChanged();
+   const auto& ledgerKeys = ledgerClient_->deviceKeys();
+   auto allDevices = ledgerKeys;
+   const auto& trezorKeys = trezorClient_->deviceKeys();
+   allDevices.insert(allDevices.end(), trezorKeys.cbegin(), trezorKeys.cend());
 
    if (!initDevices) {
+      //TODO: send response with all devices
       return;
    }
-
-   for (const auto& key : trezorClient_->deviceKeys()) {
-      auto device = trezorClient_->getTrezorDevice(key.deviceId_);
+   for (const auto& key : ledgerKeys) {
+      auto device = ledgerClient_->getDevice(key.id);
       if (!device->inited()) {
-         connectDevice(qobject_cast<HwDeviceInterface*>(device));
-         device->retrieveXPubRoot([caller = QPointer<HwDeviceManager>(this)]() {
-            if (!caller) {
-               return;
-            }
-
-            caller->scanningDone(false);
-         });
+         device->init();
+      }
+   }
+   for (const auto& key : trezorKeys) {
+      auto device = trezorClient_->getDevice(key.id);
+      if (!device->inited()) {
+         device->retrieveXPubRoot();
       }
    }
 }
 
-void HwDeviceManager::connectDevice(QPointer<HwDeviceInterface> device)
+std::shared_ptr<DeviceInterface> DeviceManager::getDevice(const DeviceKey& key) const
 {
-   connect(device, &HwDeviceInterface::requestPinMatrix,
-      this, &HwDeviceManager::onRequestPinMatrix, Qt::UniqueConnection);
-   connect(device, &HwDeviceInterface::requestHWPass,
-      this, &HwDeviceManager::onRequestHWPass, Qt::UniqueConnection);
-   connect(device, &HwDeviceInterface::operationFailed,
-      this, &HwDeviceManager::operationFailed, Qt::UniqueConnection);
-}
-
-QPointer<HwDeviceInterface> HwDeviceManager::getDevice(DeviceKey key)
-{
-   switch (key.type_)
+   switch (key.type)
    {
    case DeviceType::HWTrezor:
-      return static_cast<QPointer<HwDeviceInterface>>(trezorClient_->getTrezorDevice(key.deviceId_));
-      break;
+      return trezorClient_->getDevice(key.id);
    case DeviceType::HWLedger:
-      return static_cast<QPointer<HwDeviceInterface>>(ledgerClient_->getDevice(key.deviceId_));
-      break;
+      return ledgerClient_->getDevice(key.id);
    default:
       // Add new device type
       assert(false);
       break;
    }
-
    return nullptr;
 }
 
-void HwDeviceManager::onRequestPinMatrix()
+void DeviceManager::setScanningFlag(unsigned nbLeft)
 {
-   auto sender = qobject_cast<HwDeviceInterface *>(QObject::sender());
-   int index = model_->getDeviceIndex(sender->key());
-
-   if (index >= 0) {
-      emit requestPinMatrix(index);
-   }
-}
-
-void HwDeviceManager::onRequestHWPass(bool allowedOnDevice)
-{
-   auto sender = qobject_cast<HwDeviceInterface *>(QObject::sender());
-   int index = model_->getDeviceIndex(sender->key());
-
-   if (index >= 0) {
-      emit requestHWPass(index, allowedOnDevice);
-   }
-}
-
-void HwDeviceManager::setScanningFlag(bool isScanning)
-{
-   if (isScanning_ == isScanning) {
+   if (nbScanning_ == nbLeft) {
       return;
    }
+   nbScanning_ = nbLeft;
 
-   isScanning_ = isScanning;
-   emit isScanningChanged();
+   if (nbLeft == 0) {
+      scanningDone(false);
+   }
 }
 
-HwDeviceModel* HwDeviceManager::devices()
+void DeviceManager::publicKeyReady(void* walletInfo)
 {
-   return model_;
 }
 
-bool HwDeviceManager::isScanning() const
+void DeviceManager::requestPinMatrix(const DeviceKey&)
 {
-   return isScanning_;
 }
+
+void DeviceManager::requestHWPass(const DeviceKey&, bool allowedOnDevice)
+{
+}
+
+void DeviceManager::deviceNotFound(const std::string& deviceId)
+{
+}
+
+void DeviceManager::deviceReady(const std::string& deviceId)
+{
+}
+
+void DeviceManager::deviceTxStatusChanged(const std::string& status)
+{
+}
+
+void DeviceManager::txSigned(const SecureBinaryData& signData)
+{
+}
+
+void DeviceManager::scanningDone()
+{
+   if (nbScanning_ == 0) {
+      logger_->error("[DeviceManager::scanningDone] more scanning done events than expected");
+      return;
+   }
+   if (--nbScanning_ == 0) {
+      logger_->debug("[DeviceManager::scanningDone] all devices scanned");
+      scanningDone(false);
+   }
+}
+
+void DeviceManager::operationFailed(const std::string& deviceId, const std::string& reason)
+{
+}
+
+void DeviceManager::cancelledOnDevice()
+{
+}
+
+void DeviceManager::invalidPin()
+{
+}
+
+using namespace bs::hd;
+
+namespace bs {
+   namespace hww {
+      Path getDerivationPath(bool testNet, Purpose element)
+      {
+         Path path;
+         path.append(hardFlag | element);
+         path.append(testNet ? CoinType::Bitcoin_test : CoinType::Bitcoin_main);
+         path.append(hardFlag);
+         return path;
+      }
+
+      bool isNestedSegwit(const bs::hd::Path& path)
+      {
+         return path.get(0) == (bs::hd::Purpose::Nested | bs::hd::hardFlag);
+      }
+
+      bool isNativeSegwit(const bs::hd::Path& path)
+      {
+         return path.get(0) == (bs::hd::Purpose::Native | bs::hd::hardFlag);
+      }
+
+      bool isNonSegwit(const bs::hd::Path& path)
+      {
+         return path.get(0) == (bs::hd::Purpose::NonSegWit | bs::hd::hardFlag);
+      }
+   }  //hww
+}     //bs

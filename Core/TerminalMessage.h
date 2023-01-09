@@ -48,6 +48,7 @@ namespace bs {
          OnChainTracker,// Auth & CC tracker combined in one adapter
          Settlement,    // All settlements (FX, XBT, CC) for both dealer and requester
          Chat,          // Chat network routines
+         HWWallets,     // Hardware wallets device manager
          UsersCount
       };
 

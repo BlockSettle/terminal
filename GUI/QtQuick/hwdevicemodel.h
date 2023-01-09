@@ -38,9 +38,11 @@ public:
 
    QHash<int, QByteArray> roleNames() const override;
 
+#ifdef BUILD_HW_WALLETS
    void resetModel(QVector<DeviceKey>&& deviceKey);
    DeviceKey getDevice(int index);
    int getDeviceIndex(DeviceKey key);
+#endif
 
    Q_INVOKABLE int toppestImport() const;
 
@@ -48,7 +50,9 @@ signals:
    void toppestImportChanged();
 
 private:
+#ifdef BUILD_HW_WALLETS
    QVector<DeviceKey> devices_;
+#endif
 };
 
 Q_DECLARE_METATYPE(HwDeviceModel*)

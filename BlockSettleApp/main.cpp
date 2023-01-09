@@ -214,7 +214,7 @@ int main(int argc, char** argv)
       //inprocBus.addAdapter(std::make_shared<MDHistAdapter>(logMgr->logger("mdh")));
       //inprocBus.addAdapter(std::make_shared<ChatAdapter>(logMgr->logger("chat")));
       inprocBus.addAdapterWithQueue(std::make_shared<BlockchainAdapter>(logMgr->logger()
-         , userBlockchain), /*"blkchain_conn"*/"signer");
+         , userBlockchain), "signer");
 
       if (!inprocBus.run(argc, argv)) {
          logMgr->logger()->error("No runnable adapter found on main inproc bus");

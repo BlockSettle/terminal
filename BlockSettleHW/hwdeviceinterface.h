@@ -11,10 +11,9 @@
 #ifndef HWDEVICEABSTRACT_H
 #define HWDEVICEABSTRACT_H
 
-#include "hwcommonstructure.h"
-#include <QObject>
-#include <QNetworkReply>
-#include <QPointer>
+#include <string>
+#include "CoreWallet.h"
+#include "SecureBinaryData.h"
 
 namespace bs {
    namespace core {
@@ -24,56 +23,71 @@ namespace bs {
    }
 }
 
-class HwDeviceInterface : public QObject
-{
-   Q_OBJECT
+namespace bs {
+   namespace hww {
+      enum class DeviceType {
+         Unknown,
+         HWLedger,
+         HWTrezor
+      };
 
-public:
-   HwDeviceInterface(QObject* parent = nullptr)
-      : QObject(parent) {}
-   ~HwDeviceInterface() override = default;
+      struct DeviceKey
+      {
+         std::string label;
+         std::string id;
+         std::string vendor;
+         std::string walletId;
+         std::string status;
 
-   virtual DeviceKey key() const = 0;
-   virtual DeviceType type() const = 0;
+         DeviceType type{ DeviceType::Unknown };
+      };
 
-   // lifecycle
-   virtual void init(AsyncCallBack&& cb = nullptr) = 0;
-   virtual void cancel() = 0;
-   virtual void clearSession(AsyncCallBack&& cb = nullptr) = 0;
+      class DeviceInterface
+      {
+      public:
+         virtual DeviceKey key() const = 0;
+         virtual DeviceType type() const = 0;
 
-   // operation
-   virtual void getPublicKey(AsyncCallBackCall&& cb = nullptr) = 0;
-   virtual void signTX(const bs::core::wallet::TXSignRequest& reqTX, AsyncCallBackCall&& cb = nullptr) = 0;
-   virtual void retrieveXPubRoot(AsyncCallBack&& cb) = 0;
+         // lifecycle
+         virtual void init() = 0;
+         virtual void cancel() = 0;
+         virtual void clearSession() = 0;
 
-   // Management
-   virtual void setMatrixPin(const std::string& pin) {};
-   virtual void setPassword(const std::string& password, bool enterOnDevice) {};
+         // operation
+         virtual void getPublicKey() = 0;
+         virtual void signTX(const bs::core::wallet::TXSignRequest& reqTX) = 0;
+         virtual void retrieveXPubRoot() = 0;
 
-   // State
-   virtual bool isBlocked() = 0;
-   virtual QString lastError() { return {}; };
+         // Management
+         virtual void setMatrixPin(const SecureBinaryData& pin) {};
+         virtual void setPassword(const SecureBinaryData& password, bool enterOnDevice) {};
 
-   // xpub root
-   bool inited() {
-      return !xpubRoot_.empty();
-   }
+         // State
+         virtual bool isBlocked() const = 0;
+         virtual std::string lastError() const { return {}; };
 
-signals:
-   // operation result informing
-   void publicKeyReady();
-   void deviceTxStatusChanged(QString status);
-   void operationFailed(QString reason);
-   void requestForRescan();
+         virtual bool inited()
+         {
+            return !xpubRoot_.empty();
+         }
 
-   // Management
-   void requestPinMatrix();
-   void requestHWPass(bool allowedOnDevice);
-   void cancelledOnDevice();
-   void invalidPin();
+         // operation result informing
+         virtual void publicKeyReady() = 0;
+         virtual void deviceTxStatusChanged(const std::string& status) = 0;
+         virtual void operationFailed(const std::string& reason) = 0;
+         virtual void requestForRescan() = 0;
 
-protected:
-   std::string xpubRoot_;
-};
+         // Management
+         virtual void requestPinMatrix() = 0;
+         virtual void requestHWPass(bool allowedOnDevice) = 0;
+         virtual void cancelledOnDevice() = 0;
+         virtual void invalidPin() = 0;
+
+      protected:
+         BinaryData xpubRoot_;
+      };
+
+   }  //hw
+}  //bs
 
 #endif // HWDEVICEABSTRACT_H

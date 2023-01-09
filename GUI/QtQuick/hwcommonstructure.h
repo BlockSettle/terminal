@@ -17,41 +17,7 @@
 #include <string>
 #include <QObject>
 #include "CoreWallet.h"
-#include "HDPath.h"
 
-using AsyncCallBack = std::function<void()>;
-using AsyncCallBackCall = std::function<void(QVariant&&)>;
-
-// There is no way to determinate difference between ledger devices
-// so we use vendor name for identification
-const std::string kDeviceLedgerId = "Ledger";
-
-struct DeviceData
-{
-   QByteArray path_ = {};
-   QByteArray vendor_ = {};
-   QByteArray product_ = {};
-   QByteArray sessionId_ = {};
-   QByteArray debug_ = {};
-   QByteArray debugSession_ = {};
-};
-
-enum class DeviceType {
-   None = 0,
-   HWLedger,
-   HWTrezor
-};
-
-struct DeviceKey
-{
-   QString deviceLabel_;
-   QString deviceId_;
-   QString vendor_;
-   QString walletId_;
-   QString status_;
-
-   DeviceType type_ = DeviceType::None;
-};
 
 class HwWalletWrapper {
    Q_GADGET
@@ -79,11 +45,6 @@ struct HWSignedTx {
    std::string signedTx;
 };
 Q_DECLARE_METATYPE(HWSignedTx)
-
-bs::hd::Path getDerivationPath(bool testNet, bs::hd::Purpose element);
-bool isNestedSegwit(const bs::hd::Path& path);
-bool isNativeSegwit(const bs::hd::Path& path);
-bool isNonSegwit(const bs::hd::Path& path);
 
 namespace HWInfoStatus {
    const QString kPressButton = QObject::tr("Confirm transaction output(s) on your device");
