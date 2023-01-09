@@ -86,13 +86,18 @@ ColumnLayout  {
         Component.onCompleted: {
             confirm_but.preferred = true
         }
-        onClicked: {
+
+        function click_enter() {
+            if (!confirm_but.enabled) return
+
             if(password.input_text === confirm_password.input_text)
             {
                 bsApp.createWallet("", phrase, password.input_text)
                 layout.sig_confirm()
                 password.isValid = true
                 confirm_password.isValid = true
+                password.input_text = ""
+                confirm_password.input_text = ""
             }
             else
             {
@@ -100,5 +105,18 @@ ColumnLayout  {
                 confirm_password.isValid = false
             }
         }
+
+        onClicked: {
+            click_enter()
+        }
     }
+
+    Keys.onEnterPressed: {
+        confirm_but.click_enter()
+    }
+
+    Keys.onReturnPressed: {
+        confirm_but.click_enter()
+    }
+
 }

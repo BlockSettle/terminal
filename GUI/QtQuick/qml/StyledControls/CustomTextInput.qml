@@ -22,6 +22,8 @@ Rectangle {
     property alias title_leftMargin: title.anchors.leftMargin
     property alias title_topMargin: title.anchors.topMargin
 
+    property alias input_item: input
+
     property bool isValid: true
     property bool isPassword: false
     property bool isHiddenText: false
