@@ -93,6 +93,8 @@ ColumnLayout  {
                 layout.sig_confirm()
                 password.isValid = true
                 confirm_password.isValid = true
+                password.input_text = ""
+                confirm_password.input_text = ""
             }
             else
             {

@@ -51,7 +51,8 @@ ColumnLayout  {
     Text {
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : 16
-        text: "<p style=\"color:#7A88B0; font-family: \'Roboto\'; font-size:14px; font-weight:400\">Need help? Please consult our <a href=\"https://blocksettle.com/faq\">Getting Started Guides</a></p>"
+        text: "<p style=\"color:\'#7A88B0\'; font-family: \'Roboto\'; font-size:14px; font-weight:400\">Need help? Please consult our <a href=\"https://blocksettle.com/faq\">Getting Started Guides</a></p>"
+        color: "#7A88B0"
         onLinkActivated: Qt.openUrlExternally(link)
     }
 
