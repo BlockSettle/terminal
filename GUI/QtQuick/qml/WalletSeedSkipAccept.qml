@@ -41,7 +41,7 @@ ColumnLayout  {
     Label {
         id: warning_description
 
-        text: "Are you sure you want to skip the seed verifying?"
+        text: qsTr("Are you sure you do not want to verify your seed?")
 
         Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
 
@@ -78,7 +78,7 @@ ColumnLayout  {
             }
 
             onClicked: {
-                sig_skip()
+                layout.sig_skip()
             }
         }
 
@@ -91,10 +91,24 @@ ColumnLayout  {
                 no_but.preferred = true
             }
 
+            function click_enter() {
+                if (!no_but.enabled) return
+``
+                layout.sig_not_skip()
+            }
+
             onClicked: {
-                sig_not_skip()
+                click_enter()
             }
         }
 
    }
+
+    Keys.onEnterPressed: {
+        no_but.click_enter()
+    }
+
+    Keys.onReturnPressed: {
+        no_but.click_enter()
+    }
 }

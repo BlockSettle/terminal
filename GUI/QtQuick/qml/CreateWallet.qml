@@ -126,9 +126,21 @@ Window {
             }
 
             replaceEnter: Transition {
+                PropertyAnimation {
+                    property: "opacity"
+                    from: 0
+                    to:1
+                    duration: 10
+                }
             }
 
             replaceExit: Transition {
+                PropertyAnimation {
+                    property: "opacity"
+                    from: 1
+                    to:0
+                    duration: 10
+                }
             }
         }
 
@@ -160,7 +172,7 @@ Window {
             visible: false
             phrase: root.phrase
             onSig_continue: {
-                wallet_seed_verify.createRandomIndexes()
+                wallet_seed_verify.init()
                 stack_create_wallet.push(wallet_seed_verify)
             }
         }
@@ -181,7 +193,7 @@ Window {
             id: wallet_seed_accept
             visible: false
             onSig_skip: {
-                stack_create_wallet.push(confirm_password)
+                stack_create_wallet.replace(confirm_password)
             }
             onSig_not_skip: {
                 stack_create_wallet.pop()
@@ -235,7 +247,7 @@ Window {
         if (bsApp.settingActivated === true)
         {
             stack_create_wallet.pop()
-            stack_create_wallet.replace(start_create)
+            stack_create_wallet.replace(start_create, StackView.Immediate)
         }
     }
 }

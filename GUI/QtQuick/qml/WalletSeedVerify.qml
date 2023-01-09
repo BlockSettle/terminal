@@ -44,6 +44,7 @@ ColumnLayout  {
         delegate: CustomSeedTextInput {
             width: 530
             title_text: layout.indexes[index]
+            //focus: list.currentIndex === index
             isValid: list.isValid
             onTextChanged : {
                 list.isComplete = true
@@ -56,6 +57,9 @@ ColumnLayout  {
                     }
                 }
             }
+
+            //KeyNavigation.tab: list.currentIndex = index<layout.indexes.length-1 ? index + 1 : 0
+            //KeyNavigation.tab: list.itemAtIndex(index+1).input_item
         }
 
     }
@@ -111,7 +115,9 @@ ColumnLayout  {
                 continue_but.preferred = true
             }
 
-            onClicked: {
+            function click_enter() {
+                if (!continue_but.enabled) return
+
                 list.isValid = true
                 for (var i = 0; i < list.count; i++)
                 {
@@ -127,9 +133,21 @@ ColumnLayout  {
                 }
             }
 
+            onClicked: {
+                click_enter()
+            }
+
         }
 
    }
+
+    Keys.onEnterPressed: {
+        continue_but.click_enter()
+    }
+
+    Keys.onReturnPressed: {
+        continue_but.click_enter()
+    }
 
    function createRandomIndexes() {
         var idx = []
@@ -152,5 +170,11 @@ ColumnLayout  {
         }
         layout.indexes = idx
         list.model = idx
+   }
+
+   function init()
+   {
+       createRandomIndexes()
+       list.currentIndex = 0
    }
 }

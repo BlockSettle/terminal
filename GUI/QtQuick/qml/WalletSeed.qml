@@ -88,6 +88,13 @@ ColumnLayout  {
             onClicked: {
                 layout.sig_continue()
             }
+
+            Keys.onPressed: (event)=> {
+                if (event.key === Qt.Key_Enter)
+                {
+                    state = layout.sig_continue()
+                }
+            }
         }
 
    }
