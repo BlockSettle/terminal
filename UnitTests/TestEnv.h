@@ -416,9 +416,8 @@ public:
    TestArmoryConnection(
       std::shared_ptr<ArmoryInstance> armoryInstance,
       const std::shared_ptr<spdlog::logger> &loggerRef,
-      const std::string &txCacheFN, 
-      bool cbInMainThread = true) :
-      ArmoryObject(loggerRef, txCacheFN, cbInMainThread)
+      const std::string &txCacheFN) :
+      ArmoryObject(loggerRef, txCacheFN)
       , armoryInstance_(armoryInstance)
    {}
 

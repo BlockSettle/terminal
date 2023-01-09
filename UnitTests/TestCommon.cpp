@@ -28,6 +28,7 @@
 #include "CacheFile.h"
 #include "CurrencyPair.h"
 #include "EasyCoDec.h"
+#include "Message/Worker.h"
 #include "Wallets/HeadlessContainer.h"
 #include "Wallets/InprocSigner.h"
 #include "MDCallbacksQt.h"
@@ -424,4 +425,145 @@ TEST(TestCommon, PriceAmount)
    EXPECT_EQ(bs::CentAmount(-12345.0001).to_string(), "-12345.00");
    EXPECT_EQ(bs::CentAmount(0.12345).to_string(), "0.12");
    EXPECT_EQ(bs::CentAmount(-0.12345).to_string(), "0.12");
+}
+
+TEST(TestCommon, Workers)
+{
+   struct DataIn1 : public bs::InData
+   {
+      ~DataIn1() override = default;
+      std::string message;
+   };
+   struct DataOut1 : public bs::OutData
+   {
+      ~DataOut1() override = default;
+      std::string message;
+   };
+   struct DataIn2 : public bs::InData
+   {
+      ~DataIn2() override = default;
+      std::string message;
+   };
+   struct DataOut2 : public bs::OutData
+   {
+      ~DataOut2() override = default;
+      std::string message;
+   };
+
+   class Handler1 : public bs::HandlerImpl<DataIn1, DataOut1>
+   {
+   protected:
+      std::shared_ptr<DataOut1> processData(const std::shared_ptr<DataIn1>& in) override
+      {
+         DataOut1 out;
+         out.message = in->message;
+         for (auto& c : out.message) {
+            c = std::tolower(c);
+         }
+         out.message = "h1: " + out.message;
+         return std::make_shared<DataOut1>(out);
+      }
+   };
+
+   class Handler2 : public bs::HandlerImpl<DataIn2, DataOut2>
+   {
+   protected:
+      std::shared_ptr<DataOut2> processData(const std::shared_ptr<DataIn2>& in) override
+      {
+         DataOut2 out;
+         out.message = in->message;
+         for (auto& c : out.message) {
+            c = std::toupper(c);
+         }
+         out.message = "h2: " + out.message;
+         return std::make_shared<DataOut2>(out);
+      }
+   };
+
+   class TestWorkerMgr : public bs::WorkerPool
+   {
+   public:
+      TestWorkerMgr() : bs::WorkerPool() {}
+
+      void test1()
+      {
+         DataIn1 data;
+         data.message = "TEST1 message";
+         const auto& inData = std::make_shared<DataIn1>(data);
+
+         const auto& cb = [](const std::shared_ptr<bs::OutData>& result)
+         {
+            auto data = std::static_pointer_cast<DataOut1>(result);
+            StaticLogger::loggerPtr->debug("[TestWorkerMgr::test1] {}", data ? data->message : "null");
+            ASSERT_NE(data, nullptr);
+            EXPECT_EQ(data->message, "h1: test1 message");
+         };
+         processQueued(inData, cb);
+      }
+
+      void test2()
+      {
+         DataIn2 data;
+         data.message = "TEST2 message";
+         const auto& inData = std::make_shared<DataIn2>(data);
+
+         const auto& cb = [](const std::shared_ptr<bs::OutData>& result)
+         {
+            auto data = std::static_pointer_cast<DataOut2>(result);
+            StaticLogger::loggerPtr->debug("[TestWorkerMgr::test2] {}", data ? data->message : "null");
+            ASSERT_NE(data, nullptr);
+            EXPECT_EQ(data->message, "h2: TEST2 MESSAGE");
+         };
+         processQueued(inData, cb);
+      }
+
+      void testNested()
+      {
+         DataIn1 data1;
+         data1.message = "NESTED message";
+         const auto& inData1 = std::make_shared<DataIn1>(data1);
+
+         const auto& cb1 = [](const std::shared_ptr<bs::OutData>& result)
+         {
+            auto data = std::static_pointer_cast<DataOut1>(result);
+            StaticLogger::loggerPtr->debug("[TestWorkerMgr::nested1] {}", data ? data->message : "null");
+            ASSERT_NE(data, nullptr);
+            EXPECT_EQ(data->message, "h1: nested message");
+         };
+
+         DataIn2 data2;
+         data2.message = "NORMAL message";
+         const auto& inData2 = std::make_shared<DataIn2>(data2);
+
+         const auto& cb2 = [this, cb1, inData1]
+            (const std::shared_ptr<bs::OutData>& result)
+         {
+            auto data = std::static_pointer_cast<DataOut2>(result);
+            StaticLogger::loggerPtr->debug("[TestWorkerMgr::nested2] {}", data ? data->message : "null");
+            ASSERT_NE(data, nullptr);
+            EXPECT_EQ(data->message, "h2: NORMAL MESSAGE");
+            processQueued(inData1, cb1);
+         };
+         processQueued(inData2, cb2);
+      }
+
+   protected:
+      std::shared_ptr<bs::Worker> worker(const std::shared_ptr<bs::InData>&) override
+      {
+         const std::vector<std::shared_ptr<bs::Handler>> handlers{
+            std::make_shared<Handler1>(), std::make_shared<Handler2>() };
+         return std::make_shared<bs::WorkerImpl>(handlers);
+      }
+   };
+
+   TestWorkerMgr wm;
+   for (int i = 0; i < 5; ++i) {
+      wm.test1();
+      wm.test2();
+      wm.testNested();
+   }
+   StaticLogger::loggerPtr->debug("{} thread[s] used", wm.nbThreads());
+   while (!wm.finished()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
+   }
 }

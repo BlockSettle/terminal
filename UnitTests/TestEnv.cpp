@@ -102,7 +102,7 @@ void TestEnv::requireArmory(bool waitForReady)
    armoryInstance_ = std::make_shared<ArmoryInstance>();
 
    auto armoryConnection = std::make_shared<TestArmoryConnection>(
-      armoryInstance_, logger_, "", false);
+      armoryInstance_, logger_, "");
    ArmorySettings settings;
    settings.runLocally = false;
    settings.socketType = appSettings()->GetArmorySocketType();
@@ -111,28 +111,25 @@ void TestEnv::requireArmory(bool waitForReady)
    settings.armoryDBPort = armoryInstance_->port_;
    settings.dataDir = QLatin1String("armory_regtest_db");
 
-   auto keyCb = [](const BinaryData&, const std::string&)->bool
+   const auto& keyCb = [](const BinaryData&, const std::string&)->bool
    {
       return true;
    };
-   armoryConnection->setupConnection(settings, keyCb);
-   armoryConnection_ = armoryConnection;
+   const auto& cbConnected = [this, armoryConnection, waitForReady]
+   {
+      armoryConnection_ = armoryConnection;
+      blockMonitor_ = std::make_shared<BlockchainMonitor>(armoryConnection_);
+      armoryConnection_->goOnline();
+   };
+   const auto& cbConnFailed = []
+   {
+      ASSERT_TRUE(false) << "ArmoryDB connection failed";
+   };
+   armoryConnection->setupConnection(settings, cbConnected, cbConnFailed, keyCb);
 
-   blockMonitor_ = std::make_shared<BlockchainMonitor>(armoryConnection_);
-
-   qDebug() << "Waiting for ArmoryDB connection...";
-   while (armoryConnection_->state() != ArmoryState::Connected) {
-      std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
-   }
    if (waitForReady) {
-      qDebug() << "Armory connected - waiting for ready state...";
-   }
-   else {
-      qDebug() << "Armory connected - go online";
-   }
-   armoryConnection_->goOnline();
-   if (waitForReady) {
-      while (armoryConnection_->state() != ArmoryState::Ready) {
+      qDebug() << "Waiting for ArmoryDB connection...";
+      while (armoryConnection->state() != ArmoryState::Ready) {
          std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
       }
       logger_->debug("Armory is ready - continue execution");
