@@ -12,6 +12,7 @@ import QtQuick 2.12
 import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.12
 import QtQml.Models 2
+import QtQuick.Dialogs 1.3
 
 import "StyledControls"
 import "BsStyles"
@@ -21,6 +22,24 @@ import "BsStyles"
 
 Item {
     id: transactions
+
+    FileDialog  {
+        id: fileDialogCSV
+        visible: false
+        title: qsTr("Choose CSV file name")
+        folder: shortcuts.home
+        defaultSuffix: "csv"
+        selectExisting: false
+        onAccepted: {
+            var csvFile = fileUrl.toString()
+            if (txListModel.exportCSVto(csvFile)) {
+                ibInfo.displayMessage(qsTr("TX list CSV saved to %1").arg(csvFile))
+            }
+            else {
+                ibFailure.displayMessage(qsTr("Failed to save CSV to %1").arg(csvFile))
+            }
+        }
+    }
 
     Column {
         spacing: 23
@@ -75,6 +94,9 @@ Item {
             Button {
                 text: qsTr("CSV download")
                 font.pointSize: 8
+                onClicked: {
+                    fileDialogCSV.visible = true
+                }
             }
         }
 

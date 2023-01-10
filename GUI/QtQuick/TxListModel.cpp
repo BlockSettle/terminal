@@ -9,6 +9,7 @@
 
 */
 #include "TxListModel.h"
+#include <fstream>
 #include <QDateTime>
 #include <spdlog/spdlog.h>
 #include "StringUtils.h"
@@ -347,6 +348,34 @@ void TxListModel::setCurrentBlock(uint32_t nbBlock)
       entry.nbConf += diff;
    }
    emit dataChanged(createIndex(1, 5), createIndex(data_.size(), 5));
+}
+
+bool TxListModel::exportCSVto(const QString& filename)
+{
+   const std::string& prefix = "file:///";
+   std::string fileName = filename.toStdString();
+   const auto itPrefix = fileName.find(prefix);
+   if (itPrefix != std::string::npos) {
+      fileName.replace(itPrefix, prefix.size(), "");
+   }
+   logger_->debug("[{}] {}", __func__, fileName);
+   std::ofstream fstrm(fileName);
+   if (!fstrm.is_open()) {
+      return false;
+   }
+   fstrm << "sep=;\nTimestamp;Wallet;Type;Address;TxId;Amount;Comment\n";
+   for (int i = 1; i < rowCount(); ++i) {
+      const auto& entry = data_.at(i - 1);
+      std::time_t txTime = entry.txTime;
+      fstrm << "\"" << std::put_time(std::localtime(&txTime), "%Y-%m-%d %X") << "\";"
+         << "\"" << getData(i, 1).toUtf8().toStdString() << "\";"
+         << getData(i, 2).toStdString() << ";"
+         << getData(i, 3).toStdString() << ";"
+         << txId(i - 1).toStdString() << ";"
+         << fmt::format("{:.8f}", entry.value / BTCNumericTypes::BalanceDivider) << ";"
+         << "\"" << getData(i, 7).toStdString() << "\"\n";
+   }
+   return true;
 }
 
 

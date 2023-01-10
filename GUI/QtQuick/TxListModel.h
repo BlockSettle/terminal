@@ -39,6 +39,8 @@ public:
    Q_PROPERTY(int nbTx READ nbTx NOTIFY nbTxChanged);
    int nbTx() const { return data_.size(); }
 
+   Q_INVOKABLE bool exportCSVto(const QString&);
+
    void prependRow(const bs::TXEntry&);
    void addRow(const bs::TXEntry&);
    void addRows(const std::vector<bs::TXEntry>&);
