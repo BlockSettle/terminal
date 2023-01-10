@@ -105,6 +105,7 @@ namespace bs {
             , const std::string& walletId);
          bs::message::ProcessingResult processOwnRequest(const bs::message::Envelope&);
          bs::message::ProcessingResult processWallet(const bs::message::Envelope&);
+         bs::message::ProcessingResult processSettings(const bs::message::Envelope&);
 
       private:
          std::shared_ptr<spdlog::logger> logger_;
@@ -112,7 +113,7 @@ namespace bs {
          std::unique_ptr<LedgerClient> ledgerClient_;
          std::shared_ptr<bs::message::User>  user_, userWallets_;
 
-         bool testNet_{};
+         bool testNet_{false};
          unsigned nbScanning_{};
          bool isSigning_{};
          std::string lastOperationError_;

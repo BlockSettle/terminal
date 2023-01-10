@@ -29,6 +29,7 @@
 #include "ApiJson.h"
 #include "AssetsAdapter.h"
 #include "BsServerAdapter.h"
+#include "hwdevicemanager.h"
 #include "QtGuiAdapter.h"
 #include "QtQuickAdapter.h"
 #include "SettingsAdapter.h"
@@ -207,6 +208,8 @@ int main(int argc, char** argv)
       //inprocBus.addAdapter(std::make_shared<AssetsAdapter>(logMgr->logger()));
       inprocBus.addAdapterWithQueue(std::make_shared<WalletsAdapter>(logMgr->logger()
          , userWallets, signAdapter->createClient(), userBlockchain), "wallets");
+      inprocBus.addAdapterWithQueue(std::make_shared<bs::hww::DeviceManager>(
+         logMgr->logger()), "wallets");
       inprocBus.addAdapter(std::make_shared<BsServerAdapter>(logMgr->logger("bscon")));
       //inprocBus.addAdapter(std::make_shared<MatchingAdapter>(logMgr->logger("match")));
       //inprocBus.addAdapter(std::make_shared<SettlementAdapter>(logMgr->logger("settl")));

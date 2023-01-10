@@ -19,19 +19,18 @@
 
 #include "common.pb.h"
 #include "hardware_wallet.pb.h"
+#include "terminal.pb.h"
 
 //using namespace Armory::Signer;
 using namespace bs::hww;
 using namespace BlockSettle::Common;
+using namespace BlockSettle::Terminal;
 
 DeviceManager::DeviceManager(const std::shared_ptr<spdlog::logger>& logger)
-   : logger_(logger), testNet_(true)
+   : logger_(logger)
    , user_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::HWWallets))
    , userWallets_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Wallets))
-{
-   trezorClient_ = std::make_unique<TrezorClient>(logger_, testNet_, this);
-   ledgerClient_ = std::make_unique<LedgerClient>(logger_, testNet_, this);
-}
+{}
 
 DeviceManager::~DeviceManager()
 {
@@ -45,6 +44,8 @@ bs::message::ProcessingResult DeviceManager::process(const bs::message::Envelope
    }
    else {
       switch (env.sender->value<bs::message::TerminalUsers>()) {
+      case bs::message::TerminalUsers::Settings:
+         return processSettings(env);
       case bs::message::TerminalUsers::Wallets:
          return processWallet(env);
       default: break;
@@ -116,8 +117,18 @@ void DeviceManager::cancel(const DeviceKey& key)
    device->cancel();
 }
 
-void bs::hww::DeviceManager::start()
+void DeviceManager::start()
 {
+   logger_->debug("[hww::DeviceManager::start]");
+   SettingsMessage msg;
+   auto msgReq = msg.mutable_get_request();
+   auto setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_NetType);
+   setReq->set_type(SettingType_Int);
+
+   pushRequest(user_, std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Settings)
+      , msg.SerializeAsString());
 }
 
 bs::message::ProcessingResult DeviceManager::processPrepareDeviceForSign(const bs::message::Envelope& env
@@ -130,12 +141,15 @@ bs::message::ProcessingResult DeviceManager::processPrepareDeviceForSign(const b
    return bs::message::ProcessingResult::Success;
 }
 
-bs::message::ProcessingResult bs::hww::DeviceManager::processOwnRequest(const bs::message::Envelope&)
+bs::message::ProcessingResult DeviceManager::processOwnRequest(const bs::message::Envelope& env)
 {
-   return bs::message::ProcessingResult();
+   if (!trezorClient_ || !ledgerClient_) {
+      return bs::message::ProcessingResult::Retry;
+   }
+   return bs::message::ProcessingResult::Ignored;
 }
 
-bs::message::ProcessingResult bs::hww::DeviceManager::processWallet(const bs::message::Envelope& env)
+bs::message::ProcessingResult DeviceManager::processWallet(const bs::message::Envelope& env)
 {
    WalletsMessage msg;
    if (!msg.ParseFromString(env.message)) {
@@ -146,6 +160,28 @@ bs::message::ProcessingResult bs::hww::DeviceManager::processWallet(const bs::me
    switch (msg.data_case()) {
    case WalletsMessage::kHdWallet:
       return prepareDeviceForSign(env.responseId(), msg.hd_wallet());
+   }
+   return bs::message::ProcessingResult::Ignored;
+}
+
+bs::message::ProcessingResult DeviceManager::processSettings(const bs::message::Envelope& env)
+{
+   SettingsMessage msg;
+   if (!msg.ParseFromString(env.message)) {
+      logger_->error("[hww::DeviceManager::processSettings] failed to parse #{}"
+         , env.foreignId());
+      return bs::message::ProcessingResult::Error;
+   }
+   if (msg.data_case() == SettingsMessage::kGetResponse) {
+      for (const auto& setting : msg.get_response().responses()) {
+         if (setting.request().index() == SetIdx_NetType) {
+            testNet_ = (static_cast<NetworkType>(setting.i()) == NetworkType::TestNet);
+            logger_->debug("[hww::DeviceManager::processSettings] testnet={}", testNet_);
+            trezorClient_ = std::make_unique<TrezorClient>(logger_, testNet_, this);
+            ledgerClient_ = std::make_unique<LedgerClient>(logger_, testNet_, this);
+            return bs::message::ProcessingResult::Success;
+         }
+      }
    }
    return bs::message::ProcessingResult::Ignored;
 }
@@ -242,7 +278,9 @@ bool DeviceManager::awaitingUserAction(const DeviceKey& key)
 
 void DeviceManager::releaseConnection()
 {
-   trezorClient_->releaseConnection();
+   if (trezorClient_) {
+      trezorClient_->releaseConnection();
+   }
 }
 
 void DeviceManager::scanningDone(bool initDevices)
