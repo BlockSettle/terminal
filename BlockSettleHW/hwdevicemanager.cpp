@@ -323,12 +323,13 @@ void DeviceManager::devicesResponse()
 
 void DeviceManager::scanningDone(bool initDevices)
 {
+   logger_->debug("[{}] init:{}", __func__, initDevices);
    const auto& ledgerKeys = ledgerClient_->deviceKeys();
    devices_ = ledgerKeys;
    const auto& trezorKeys = trezorClient_->deviceKeys();
    devices_.insert(devices_.end(), trezorKeys.cbegin(), trezorKeys.cend());
 
-   if (!initDevices) {
+   if (!initDevices || devices_.empty()) {
       devicesResponse();
       return;
    }
