@@ -51,6 +51,9 @@ namespace BlockSettle {
       class WalletsMessage_WalletData;
       class WalletsMessage_WalletsListResponse;
    }
+   namespace HW {
+      class DeviceMgrMessage_Devices;
+   }
    namespace Terminal {
       class AssetsMessage_Balance;
       class AssetsMessage_SubmittedAuthAddresses;
@@ -73,6 +76,7 @@ namespace BlockSettle {
    }
 }
 class BSTerminalSplashScreen;
+class HwDeviceModel;
 class QQmlContext;
 class QmlWalletsList;
 class QTxDetails;
@@ -171,6 +175,9 @@ public:
    Q_INVOKABLE void signAndBroadcast(QTXSignRequest*, const QString& password);
    Q_INVOKABLE int startSearch(const QString&);
    Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash);
+   Q_INVOKABLE void pollHWWallets();
+   Q_INVOKABLE void stopHWWalletsPolling();
+   Q_INVOKABLE void importHWWallet(int deviceIndex);
 
 signals:
    void walletsListChanged();
@@ -193,6 +200,7 @@ private:
    bs::message::ProcessingResult processBlockchain(const bs::message::Envelope &);
    bs::message::ProcessingResult processSigner(const bs::message::Envelope &);
    bs::message::ProcessingResult processWallets(const bs::message::Envelope &);
+   bs::message::ProcessingResult processHWW(const bs::message::Envelope&);
 
    void requestInitialSettings();
    void updateSplashProgress();
@@ -223,6 +231,8 @@ private:
    bs::message::ProcessingResult processTxResponse(bs::message::SeqId
       , const BlockSettle::Common::WalletsMessage_TxResponse&);
 
+   bs::message::ProcessingResult processHWDevices(const BlockSettle::HW::DeviceMgrMessage_Devices&);
+
    QVariant getSetting(ApplicationSettings::Setting) const;
    QString getSettingStringAt(ApplicationSettings::Setting, int idx);
    void setSetting(ApplicationSettings::Setting, const QVariant&);
@@ -235,6 +245,7 @@ private:
    QQmlContext* rootCtxt_{nullptr};
    std::shared_ptr<bs::message::UserTerminal>   userSettings_, userWallets_;
    std::shared_ptr<bs::message::UserTerminal>   userBlockchain_, userSigner_;
+   std::shared_ptr<bs::message::UserTerminal>   userHWW_;
    bool loadingDone_{ false };
 
    std::recursive_mutex mutex_;
@@ -262,7 +273,9 @@ private:
    TxListForAddr* expTxByAddrModel_{ nullptr };
    TxInputsModel* txInputsModel_{ nullptr };
    TxOutputsModel* txOutputsModel_{ nullptr };
+   HwDeviceModel* hwDeviceModel_{ nullptr };
    bs::Address generatedAddress_;
+   bool hwDevicesPolling_{ false };
 
    std::map<bs::message::SeqId, QTXSignRequest*> txReqs_;
    std::map<bs::message::SeqId, QTxDetails*> txDetailReqs_;

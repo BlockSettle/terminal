@@ -12,6 +12,7 @@
 #define HWDEVICEMODEL_H
 
 #include <QAbstractItemModel>
+#include "hwdeviceinterface.h"
 #include "hwcommonstructure.h"
 
 enum HwDeviceRoles {
@@ -25,7 +26,7 @@ enum HwDeviceRoles {
 class HwDeviceModel : public QAbstractItemModel 
 {
    Q_OBJECT
-   Q_PROPERTY(int toppestImport READ toppestImport NOTIFY toppestImportChanged)
+   Q_PROPERTY(int selDevice READ selDevice NOTIFY selected)
 public:
    HwDeviceModel(QObject *parent = nullptr);
    ~HwDeviceModel() override = default;
@@ -38,21 +39,21 @@ public:
 
    QHash<int, QByteArray> roleNames() const override;
 
-#ifdef BUILD_HW_WALLETS
-   void resetModel(QVector<DeviceKey>&& deviceKey);
-   DeviceKey getDevice(int index);
-   int getDeviceIndex(DeviceKey key);
-#endif
-
-   Q_INVOKABLE int toppestImport() const;
+   void setDevices(const std::vector<bs::hww::DeviceKey>&);
+   void setLoaded(const std::string& walletId);
+   bs::hww::DeviceKey getDevice(int index);
+   int getDeviceIndex(bs::hww::DeviceKey key);
+   void findNewDevice();
 
 signals:
-   void toppestImportChanged();
+   void selected();
 
 private:
-#ifdef BUILD_HW_WALLETS
-   QVector<DeviceKey> devices_;
-#endif
+   int selDevice() const;
+
+private:
+   std::vector<bs::hww::DeviceKey>  devices_;
+   std::vector<bool>                loaded_;
 };
 
 Q_DECLARE_METATYPE(HwDeviceModel*)

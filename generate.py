@@ -39,7 +39,6 @@ from build_scripts.qt_settings                  import QtSettings
 from build_scripts.settings                     import Settings
 from build_scripts.spdlog_settings              import SpdlogSettings
 from build_scripts.trezor_common_settings       import TrezorCommonSettings
-from build_scripts.websockets_settings          import WebsocketsSettings
 from build_scripts.zeromq_settings              import ZeroMQSettings
 from build_scripts.curl_settings                import CurlSettings
 
@@ -67,7 +66,6 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
       MPIRSettings(project_settings),
       LibBTC(project_settings),                             # static
       LibChaCha20Poly1305Settings(project_settings),        # static
-      WebsocketsSettings(project_settings),
       BotanSettings(project_settings),
       QtSettings(project_settings),
       HidapiSettings(project_settings),

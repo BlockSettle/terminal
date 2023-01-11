@@ -27,6 +27,9 @@ namespace BlockSettle {
    namespace Common {
       class HDWalletData;
    }
+   namespace HW {
+      class DeviceKey;
+   }
 }
 
 namespace bs {
@@ -38,7 +41,8 @@ namespace bs {
 
       struct DeviceCallbacks
       {
-         virtual void publicKeyReady(void* walletInfo) = 0;
+         virtual void publicKeyReady(const std::string& devId, const std::string& walletId) = 0;
+         virtual void walletInfoReady(const DeviceKey&, const bs::core::wallet::HwWalletInfo&) = 0;
          virtual void requestPinMatrix(const DeviceKey&) = 0;
          virtual void requestHWPass(const DeviceKey&, bool allowedOnDevice) = 0;
 
@@ -66,7 +70,8 @@ namespace bs {
          std::string name() const override { return "HWWallets"; }
 
       private: // signals
-         void publicKeyReady(void* walletInfo) override;
+         void publicKeyReady(const std::string& devId, const std::string& walletId) override;
+         void walletInfoReady(const DeviceKey&, const bs::core::wallet::HwWalletInfo&) override;
          void requestPinMatrix(const DeviceKey&) override;
          void requestHWPass(const DeviceKey&, bool allowedOnDevice) override;
 
@@ -81,8 +86,7 @@ namespace bs {
          void invalidPin() override;
 
          //former invokables:
-         void scanDevices();
-         void requestPublicKey(const DeviceKey&);
+         void scanDevices(const bs::message::Envelope&);
          void setMatrixPin(const DeviceKey&, const std::string& pin);
          void setPassphrase(const DeviceKey&, const std::string& passphrase
             , bool enterOnDevice);
@@ -107,11 +111,16 @@ namespace bs {
          bs::message::ProcessingResult processWallet(const bs::message::Envelope&);
          bs::message::ProcessingResult processSettings(const bs::message::Envelope&);
 
+         void devicesResponse();
+         bs::message::ProcessingResult processImport(const bs::message::Envelope&
+            , const BlockSettle::HW::DeviceKey&);
+
       private:
          std::shared_ptr<spdlog::logger> logger_;
          std::unique_ptr<TrezorClient> trezorClient_;
          std::unique_ptr<LedgerClient> ledgerClient_;
          std::shared_ptr<bs::message::User>  user_, userWallets_;
+         std::vector<DeviceKey>  devices_;
 
          bool testNet_{false};
          unsigned nbScanning_{};
@@ -119,6 +128,7 @@ namespace bs {
          std::string lastOperationError_;
          std::string lastUsedTrezorWallet_;
          unsigned nbWaitScanReplies_{ 0 };
+         bs::message::Envelope   envReqScan_;
 
          std::map<bs::message::SeqId, std::pair<std::string, bs::message::Envelope>>   prepareDeviceReq_;   //value: walletId
       };

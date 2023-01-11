@@ -37,8 +37,10 @@
 #include "SettingsAdapter.h"
 
 #include "common.pb.h"
+#include "hardware_wallet.pb.h"
 #include "terminal.pb.h"
 
+using namespace BlockSettle;
 using namespace BlockSettle::Common;
 using namespace BlockSettle::Terminal;
 using namespace bs::message;
@@ -100,6 +102,7 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    , userWallets_(std::make_shared<UserTerminal>(TerminalUsers::Wallets))
    , userBlockchain_(std::make_shared<UserTerminal>(TerminalUsers::Blockchain))
    , userSigner_(std::make_shared<UserTerminal>(TerminalUsers::Signer))
+   , userHWW_(bs::message::UserTerminal::create(bs::message::TerminalUsers::HWWallets))
    , txTypes_({ tr("All transactions") })
 {
    staticLogger = logger;
@@ -109,6 +112,7 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    expTxByAddrModel_ = new TxListForAddr(logger, this);
    txOutputsModel_ = new TxOutputsModel(logger, this);
    txInputsModel_ = new TxInputsModel(logger, txOutputsModel_, this);
+   hwDeviceModel_ = new HwDeviceModel(this);
 }
 
 QtQuickAdapter::~QtQuickAdapter()
@@ -201,6 +205,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
    rootCtxt_->setContextProperty(QLatin1Literal("txListByAddrModel"), expTxByAddrModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("txInputsModel"), txInputsModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("txOutputsModel"), txOutputsModel_);
+   rootCtxt_->setContextProperty(QLatin1Literal("hwDeviceModel"), hwDeviceModel_);
 
    engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
    if (engine.rootObjects().empty()) {
@@ -257,6 +262,8 @@ ProcessingResult QtQuickAdapter::process(const Envelope &env)
          return processSigner(env);
       case TerminalUsers::Wallets:
          return processWallets(env);
+      case TerminalUsers::HWWallets:
+         return processHWW(env);
       default:    break;
       }
    }
@@ -582,6 +589,21 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
    return ProcessingResult::Success;
 }
 
+bs::message::ProcessingResult QtQuickAdapter::processHWW(const bs::message::Envelope& env)
+{
+   HW::DeviceMgrMessage msg;
+   if (!msg.ParseFromString(env.message)) {
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
+      return ProcessingResult::Error;
+   }
+   switch (msg.data_case()) {
+   case HW::DeviceMgrMessage::kAvailableDevices:
+      return processHWDevices(msg.available_devices());
+   default: break;
+   }
+   return bs::message::ProcessingResult::Ignored;
+}
+
 void QtQuickAdapter::updateStates()
 {
    //TODO
@@ -778,8 +800,10 @@ void QtQuickAdapter::walletSelected(int index)
 void QtQuickAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
 {
    const bool isInitialLoad = hdWallets_.empty();
-   hdWallets_[*wi.ids.cbegin()] = wi;
-   logger_->debug("[QtQuickAdapter::processWalletLoaded] {}", wi.name);
+   const auto& walletId = *wi.ids.cbegin();
+   hdWallets_[walletId] = wi;
+   hwDeviceModel_->setLoaded(walletId);
+   logger_->debug("[QtQuickAdapter::processWalletLoaded] {} {}", wi.name, walletId);
    QMetaObject::invokeMethod(this, [this, isInitialLoad, walletName = QString::fromStdString(wi.name)] {
       walletsList_.push_back(walletName);
       if (isInitialLoad) {
@@ -1131,6 +1155,36 @@ QTxDetails* QtQuickAdapter::getTXDetails(const QString& txHash)
    return txDet;
 }
 
+void QtQuickAdapter::pollHWWallets()
+{
+   hwDevicesPolling_ = true;
+   HW::DeviceMgrMessage msg;
+   msg.mutable_startscan();
+   pushRequest(user_, userHWW_, msg.SerializeAsString());
+}
+
+void QtQuickAdapter::stopHWWalletsPolling()
+{
+   hwDevicesPolling_ = false;
+}
+
+void QtQuickAdapter::importHWWallet(int deviceIndex)
+{
+   const auto& devKey = hwDeviceModel_->getDevice(deviceIndex);
+   if (devKey.id.empty()) {
+      return;
+   }
+   HW::DeviceMgrMessage msg;
+   auto msgReq = msg.mutable_import_device();
+   msgReq->set_label(devKey.label);
+   msgReq->set_id(devKey.id);
+   msgReq->set_vendor(devKey.vendor);
+   msgReq->set_wallet_id(devKey.walletId);
+   msgReq->set_status(devKey.status);
+   msgReq->set_type((int)devKey.type);
+   pushRequest(user_, userHWW_, msg.SerializeAsString());
+}
+
 ProcessingResult QtQuickAdapter::processAddressHist(const ArmoryMessage_AddressHistory& response)
 {
    bs::Address addr;
@@ -1346,6 +1400,29 @@ bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::Seq
    }
    const auto txReq = bs::signer::pbTxRequestToCore(response.tx_sign_request(), logger_);
    qReq->setTxSignReq(txReq);
+   return bs::message::ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult QtQuickAdapter::processHWDevices(const HW::DeviceMgrMessage_Devices& response)
+{
+   std::vector<bs::hww::DeviceKey> devices;
+   for (const auto& key : response.device_keys()) {
+      devices.push_back({ key.label(), key.id(), key.vendor(), key.wallet_id()
+         , key.status(), static_cast<bs::hww::DeviceType>(key.type())});
+   }
+   hwDeviceModel_->setDevices(devices);
+   if (devices.empty() && hwDevicesPolling_) {
+      HW::DeviceMgrMessage msg;
+      msg.mutable_startscan();
+      pushRequest(user_, userHWW_, msg.SerializeAsString()
+         , bs::message::bus_clock::now() + std::chrono::seconds{ 1 });
+   }
+   else {
+      for (const auto& hdWallet : hdWallets_) {
+         hwDeviceModel_->setLoaded(hdWallet.first);
+      }
+      hwDeviceModel_->findNewDevice();
+   }
    return bs::message::ProcessingResult::Success;
 }
 

@@ -38,7 +38,6 @@ namespace bs {
          std::string vendor;
          std::string walletId;
          std::string status;
-
          DeviceType type{ DeviceType::Unknown };
       };
 
@@ -54,7 +53,7 @@ namespace bs {
          virtual void clearSession() = 0;
 
          // operation
-         virtual void getPublicKey() = 0;
+         virtual void getPublicKeys() = 0;
          virtual void signTX(const bs::core::wallet::TXSignRequest& reqTX) = 0;
          virtual void retrieveXPubRoot() = 0;
 

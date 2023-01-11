@@ -149,14 +149,8 @@ DeviceKey LedgerDevice::key() const
       walletId = bs::core::wallet::computeID(xpubRoot_).toBinStr();
    }
 
-   return {
-      hidDeviceInfo_.product,
-      hidDeviceInfo_.manufacturer,
-      hidDeviceInfo_.manufacturer,
-      walletId,
-      {},
-      DeviceType::HWLedger
-   };
+   return { hidDeviceInfo_.product, hidDeviceInfo_.serialNumber
+      , hidDeviceInfo_.manufacturer, walletId, {}, DeviceType::HWLedger };
 }
 
 DeviceType LedgerDevice::type() const
@@ -344,7 +338,7 @@ BIP32_Node GetPubKeyHandler::retrievePublicKeyFromPath(const bs::hd::Path& deriv
    return getPublicKeyApdu(derivationPath, parent);
 }
 
-void LedgerDevice::getPublicKey()
+void LedgerDevice::getPublicKeys()
 {
    auto deviceKey = key();
    auto walletInfo = std::make_shared<bs::core::wallet::HwWalletInfo>();
@@ -353,8 +347,7 @@ void LedgerDevice::getPublicKey()
    walletInfo->label = deviceKey.label;
    walletInfo->deviceId = {};
 
-   logger_->debug("[LedgerDevice::getPublicKey] start retrieve root xpub key");
-
+   logger_->debug("[LedgerDevice::getPublicKeys] start retrieving device keys");
    auto inData = std::make_shared<PubKeyIn>();
    inData->paths.push_back({ { bs::hd::hardFlag } });
    inData->paths.push_back(getDerivationPath(testNet_, bs::hd::Nested));
@@ -366,7 +359,7 @@ void LedgerDevice::getPublicKey()
       const auto& result = std::static_pointer_cast<PubKeyOut>(data);
 
       if (result->pubKeys.size() != 4) {
-         logger_->error("[LedgerDevice::getPublicKey] invalid amount of public "
+         logger_->error("[LedgerDevice::getPublicKeys] invalid amount of public "
             "keys: {}", result->pubKeys.size());
          operationFailed("invalid amount of public keys: " + std::to_string(result->pubKeys.size()));
          return;
@@ -376,9 +369,8 @@ void LedgerDevice::getPublicKey()
          walletInfo->xpubRoot = pubKey.getBase58().toBinStr();
       }
       catch (const std::exception& e) {
-         logger_->error("[LedgerDevice::getPublicKey] cannot retrieve root xpub key: {}", e.what());
-         //error(Ledger::INTERNAL_ERROR);
-         operationFailed("internal error");
+         logger_->error("[LedgerDevice::getPublicKeys] cannot retrieve root xpub key: {}", e.what());
+         handleError(Ledger::INTERNAL_ERROR);
          return;
       }
 
@@ -387,8 +379,8 @@ void LedgerDevice::getPublicKey()
          walletInfo->xpubNestedSegwit = pubKey.getBase58().toBinStr();
       }
       catch (const std::exception& e) {
-         logger_->error("[LedgerDevice::getPublicKey] cannot retrieve nested segwit xpub key: {}", e.what());
-         //emit error(Ledger::INTERNAL_ERROR);
+         logger_->error("[LedgerDevice::getPublicKeys] cannot retrieve nested segwit xpub key: {}", e.what());
+         handleError(Ledger::INTERNAL_ERROR);
          return;
       }
 
@@ -397,8 +389,8 @@ void LedgerDevice::getPublicKey()
          walletInfo->xpubNativeSegwit = pubKey.getBase58().toBinStr();
       }
       catch (const std::exception& e) {
-         logger_->error("[LedgerDevice::getPublicKey] cannot retrieve native segwit xpub key: {}", e.what());
-         //emit error(Ledger::INTERNAL_ERROR);
+         logger_->error("[LedgerDevice::getPublicKeys] cannot retrieve native segwit xpub key: {}", e.what());
+         handleError(Ledger::INTERNAL_ERROR);
          return;
       }
 
@@ -407,8 +399,8 @@ void LedgerDevice::getPublicKey()
          walletInfo->xpubLegacy = pubKey.getBase58().toBinStr();
       }
       catch (const std::exception& e) {
-         logger_->error("[LedgerDevice::getPublicKey] cannot retrieve legacy xpub key: {}", e.what());
-         //emit error(Ledger::INTERNAL_ERROR);
+         logger_->error("[LedgerDevice::getPublicKeys] cannot retrieve legacy xpub key: {}", e.what());
+         handleError(Ledger::INTERNAL_ERROR);
          return;
       }
 
@@ -418,14 +410,14 @@ void LedgerDevice::getPublicKey()
             !info.xpubNativeSegwit.empty() && !info.xpubLegacy.empty();
       };
       if (!isValid(*walletInfo)) {
-         logger_->error("[LedgerDevice::getPublicKey] wallet info is invalid");
-         //emit error(Ledger::INTERNAL_ERROR);
+         logger_->error("[LedgerDevice::getPublicKeys] wallet info is invalid");
+         handleError(Ledger::INTERNAL_ERROR);
          return;
       }
       else {
-         logger_->debug("[LedgerDevice::getPublicKey] operation succeeded");
+         logger_->debug("[LedgerDevice::getPublicKeys] operation succeeded");
       }
-      //TODO: invoke callback with walletInfo
+      cb_->walletInfoReady(key(), *walletInfo);
    };
    processQueued(inData, cb);
 }
@@ -515,6 +507,9 @@ void bs::hww::LedgerDevice::retrieveXPubRoot()
       const auto& pubKey = result->pubKeys.at(0);
       if (xpubRoot_.empty()) {
          xpubRoot_ = pubKey.getPublicKey();
+         const auto& devKey = key();
+         cb_->publicKeyReady(devKey.id, devKey.walletId);
+         return;
       }
       try {
          walletInfo->xpubRoot = pubKey.getBase58().toBinStr();
@@ -544,7 +539,7 @@ std::shared_ptr<bs::Worker> bs::hww::LedgerDevice::worker(const std::shared_ptr<
 
 void LedgerDevice::handleError(int32_t errorCode)
 {
-   QString error;
+   std::string error;
    switch (errorCode)
    {
    case Ledger::SW_NO_ENVIRONMENT:
@@ -557,19 +552,19 @@ void LedgerDevice::handleError(int32_t errorCode)
       break;
    case Ledger::NO_DEVICE:
       requestForRescan();
-      error = HWInfoStatus::kErrorNoDevice;
+      error = HWInfoStatus::kErrorNoDevice.toStdString();
       break;
    case Ledger::SW_RECONNECT_DEVICE:
       requestForRescan();
-      error = HWInfoStatus::kErrorReconnectDevice;
+      error = HWInfoStatus::kErrorReconnectDevice.toStdString();
       break;
    case Ledger::NO_INPUTDATA:
    default:
-      error = HWInfoStatus::kErrorInternalError;
+      error = HWInfoStatus::kErrorInternalError.toStdString();
       break;
    }
-//   lastError_ = error;
-//   operationFailed(error);
+   lastError_ = error;
+   operationFailed(error);
 }
 
 #if 0 // DO NOT DELETE JUST FOR HISTORICAL REFFERENCE

@@ -197,7 +197,7 @@ struct TXOut : public bs::OutData
    std::string signedTX;
 };
 
-void TrezorDevice::getPublicKey()
+void TrezorDevice::getPublicKeys()
 {
    awaitingWalletInfo_ = {};
    // General data
@@ -208,9 +208,9 @@ void TrezorDevice::getPublicKey()
    awaitingWalletInfo_.xpubRoot = xpubRoot_.toBinStr();
 
    if (!isFirmwareSupported()) {
-      logger_->warn("[TrezorDevice::getPublicKey] unsupported firmware. {}"
+      logger_->warn("[TrezorDevice::getPublicKeys] unsupported firmware. {}"
          , firmwareSupportedVersion());
-      //TODO: invoke callback
+      cb_->walletInfoReady(key(), awaitingWalletInfo_);
       return;
    }
 
@@ -218,18 +218,18 @@ void TrezorDevice::getPublicKey()
    {
       const auto& reply = std::dynamic_pointer_cast<XPubOut>(data);
       if (!reply) {
-         logger_->error("[TrezorDevice::getPublicKey::legacy] invalid callback data");
+         logger_->error("[TrezorDevice::getPublicKeys::legacy] invalid callback data");
          return;
       }
       awaitingWalletInfo_.xpubLegacy = reply->xpub;
-      //TODO: invoke callback
+      cb_->walletInfoReady(key(), awaitingWalletInfo_);
    };
 
    const auto& cbNested = [this](const std::shared_ptr<bs::OutData>& data)
    {
       const auto& reply = std::dynamic_pointer_cast<XPubOut>(data);
       if (!reply) {
-         logger_->error("[TrezorDevice::getPublicKey::nested] invalid callback data");
+         logger_->error("[TrezorDevice::getPublicKeys::nested] invalid callback data");
          return;
       }
       awaitingWalletInfo_.xpubNestedSegwit = reply->xpub;
@@ -239,13 +239,13 @@ void TrezorDevice::getPublicKey()
    {
       const auto& reply = std::dynamic_pointer_cast<XPubOut>(data);
       if (!reply) {
-         logger_->error("[TrezorDevice::getPublicKey::native] invalid callback data");
+         logger_->error("[TrezorDevice::getPublicKeys::native] invalid callback data");
          return;
       }
       awaitingWalletInfo_.xpubNativeSegwit = reply->xpub;
    };
 
-   logger_->debug("[TrezorDevice::getPublicKey] start public keys from device {}"
+   logger_->debug("[TrezorDevice::getPublicKeys] start public keys from device {}"
       , features_->label());
    bitcoin::GetPublicKey message;
    for (const uint32_t add : getDerivationPath(testNet_, bs::hd::Purpose::Native)) {
@@ -371,6 +371,8 @@ void TrezorDevice::retrieveXPubRoot()
          return;
       }
       xpubRoot_ = BinaryData::fromString(reply->xpub);
+      const auto& devKey = key();
+      cb_->publicKeyReady(devKey.id, devKey.walletId);
    };
    makeCall(message, saveXpubRoot);
 }

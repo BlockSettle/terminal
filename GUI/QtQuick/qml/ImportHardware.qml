@@ -67,7 +67,7 @@ ColumnLayout  {
         Layout.leftMargin: 25
         Layout.bottomMargin: 40
         width: 530
-        enabled: layout.isConnected
+        enabled: layout.isConnected && (hwDeviceModel.selDevice >= 0)
 
         Component.onCompleted: {
             confirm_but.preferred = true

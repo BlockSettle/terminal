@@ -259,8 +259,7 @@ if (UNIX)
     ENDIF()
 endif (UNIX)
 
-
-# setup libwebsockets
+# use only existing lws temporarily, don't try to build it (build fails on Windows)
 SET(WS_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/libwebsockets)
 SET(WS_LIB_DIR ${WS_PACKAGE_ROOT}/lib)
 SET(WS_INCLUDE_DIR ${WS_PACKAGE_ROOT}/include)
@@ -828,11 +827,6 @@ IF(BSTERMINAL_SHARED_LIBS)
       STRING(REPLACE ".lib" ".dll" QRENCODE_LIB_DLL ${QRENCODE_LIB})
       add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
          COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${QRENCODE_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${QRENCODE_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
-
-      # websockets
-      STRING(REPLACE ".lib" ".dll" WS_LIB_DLL ${WS_LIB})
-      add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
-         COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${WS_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${WS_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
 
       string(REGEX REPLACE "([0-9])\.([0-9])\.([0-9]\.*)" "\\1;\\2" VERSION_MATCHES ${OPENSSL_VERSION})
       list(GET VERSION_MATCHES 0 version_major)

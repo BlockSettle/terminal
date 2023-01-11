@@ -62,7 +62,7 @@ namespace bs {
          void releaseConnection();
 
          // operation
-         void getPublicKey() override;
+         void getPublicKeys() override;
          void signTX(const bs::core::wallet::TXSignRequest& reqTX) override;
          void retrieveXPubRoot() override;
 

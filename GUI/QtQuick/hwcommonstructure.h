@@ -19,7 +19,8 @@
 #include "CoreWallet.h"
 
 
-class HwWalletWrapper {
+class HwWalletWrapper
+{
    Q_GADGET
 public:
    bs::core::wallet::HwWalletInfo info_;
@@ -41,10 +42,6 @@ public:
 };
 Q_DECLARE_METATYPE(HwWalletWrapper)
 
-struct HWSignedTx {
-   std::string signedTx;
-};
-Q_DECLARE_METATYPE(HWSignedTx)
 
 namespace HWInfoStatus {
    const QString kPressButton = QObject::tr("Confirm transaction output(s) on your device");

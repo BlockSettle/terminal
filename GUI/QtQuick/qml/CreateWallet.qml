@@ -163,6 +163,7 @@ Window {
                 stack_create_wallet.push(import_wallet)
             }
             onSig_hardware_wallet: {
+                bsApp.pollHWWallets()
                 stack_create_wallet.push(import_hardware)
             }
         }
@@ -213,8 +214,14 @@ Window {
             id: import_hardware
             visible: false
             onSig_import: {
+                bsApp.importHWWallet(hwDeviceModel.selDevice)
                 root.close()
                 stack_create_wallet.pop(null)
+            }
+            onVisibleChanged: {
+                if (!visible) {
+                    bsApp.stopHWWalletsPolling()
+                }
             }
         }
 

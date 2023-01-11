@@ -19,32 +19,27 @@ QVariant HwDeviceModel::data(const QModelIndex& index, int role /*= Qt::DisplayR
    if (!index.isValid()) {
       return {};
    }
-
    const int row = index.row();
-#ifdef BUILD_HW_WALLETS
-   if (row < 0 || row > devices_.size()) {
+   if (row < 0 || row >= devices_.size()) {
       assert(false);
       return {};
    }
-#endif
 
-#ifdef BUILD_HW_WALLETS
    switch (static_cast<HwDeviceRoles>(role))
    {
    case HwDeviceRoles::DeviceId:
-      return devices_[row].deviceId_;
+      return QString::fromStdString(devices_.at(row).id);
    case HwDeviceRoles::Label:
-      return devices_[row].deviceLabel_;
+      return QString::fromStdString(devices_.at(row).label);
    case HwDeviceRoles::Vendor:
-      return devices_[row].vendor_;
+      return QString::fromStdString(devices_.at(row).vendor);
    case HwDeviceRoles::PairedWallet:
-         return devices_[row].walletId_;
+         return QString::fromStdString(devices_.at(row).walletId);
    case HwDeviceRoles::Status:
-      return devices_[row].status_;
+      return QString::fromStdString(devices_.at(row).status);
    default:
       break;
    }
-#endif
    return {};
 }
 
@@ -66,64 +61,68 @@ QModelIndex HwDeviceModel::parent(const QModelIndex& index) const
    return {};
 }
 
-int HwDeviceModel::rowCount(const QModelIndex& parent /*= QModelIndex()*/) const
+int HwDeviceModel::rowCount(const QModelIndex&) const
 {
-#ifdef BUILD_HW_WALLETS
    return devices_.size();
-#else
-   return 0;
-#endif
 }
 
-int HwDeviceModel::columnCount(const QModelIndex& parent /*= QModelIndex()*/) const
+int HwDeviceModel::columnCount(const QModelIndex&) const
 {
    return 1;
 }
 
-#ifdef BUILD_HW_WALLETS
-void HwDeviceModel::resetModel(QVector<DeviceKey>&& deviceKeys)
+void HwDeviceModel::setDevices(const std::vector<bs::hww::DeviceKey>& deviceKeys)
 {
    beginResetModel();
-   devices_ = std::move(deviceKeys);
+   loaded_.clear();
+   loaded_.resize(deviceKeys.size(), false);
+   devices_ = deviceKeys;
    endResetModel();
-   emit toppestImportChanged();
 }
 
-DeviceKey HwDeviceModel::getDevice(int index)
+bs::hww::DeviceKey HwDeviceModel::getDevice(int index)
 {
-   if (index < 0 || index > devices_.size()) {
+   if (index < 0 || index >= devices_.size()) {
       return {};
    }
-
-   return devices_[index];
+   return devices_.at(index);
 }
 
-int HwDeviceModel::getDeviceIndex(DeviceKey key)
+int HwDeviceModel::getDeviceIndex(bs::hww::DeviceKey key)
 {
    for (int i = 0; i < devices_.size(); ++i) {
-      if (devices_[i].deviceId_ == key.deviceId_) {
+      if (devices_.at(i).id == key.id) {
          return i;
       }
    }
-
    return -1;
 }
-#endif
 
-int HwDeviceModel::toppestImport() const
+void HwDeviceModel::setLoaded(const std::string& walletId)
 {
-#ifdef BUILD_HW_WALLETS
-   if (devices_.empty()) {
-      return -1;
-   }
-
    for (int i = 0; i < devices_.size(); ++i) {
-      if (devices_[i].status_.isEmpty() && devices_[i].walletId_.isEmpty()) {
+      const auto& device = devices_.at(i);
+      if (device.walletId == walletId) {
+         loaded_[i] = true;
+      }
+   }
+}
+
+int HwDeviceModel::selDevice() const
+{
+   for (int i = 0; i < loaded_.size(); ++i) {
+      if (!loaded_.at(i)) {
          return i;
       }
    }
-#endif
    return -1;
+}
+
+void HwDeviceModel::findNewDevice()
+{
+   if (selDevice() >= 0) {
+      emit selected();
+   }
 }
 
 QHash<int, QByteArray> HwDeviceModel::roleNames() const

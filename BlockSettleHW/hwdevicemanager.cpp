@@ -25,6 +25,7 @@
 using namespace bs::hww;
 using namespace BlockSettle::Common;
 using namespace BlockSettle::Terminal;
+using namespace BlockSettle;
 
 DeviceManager::DeviceManager(const std::shared_ptr<spdlog::logger>& logger)
    : logger_(logger)
@@ -68,24 +69,16 @@ bool DeviceManager::processBroadcast(const bs::message::Envelope& env)
    return false;
 }
 
-void DeviceManager::scanDevices()
+void DeviceManager::scanDevices(const bs::message::Envelope& env)
 {
    if (nbScanning_ > 0) {
       return;
    }
-
-   setScanningFlag(2);
+   envReqScan_ = env;
+   devices_.clear();
+   nbScanning_ = 2;  // # of callbacks to receive
    ledgerClient_->scanDevices();
    trezorClient_->listDevices();
-}
-
-void DeviceManager::requestPublicKey(const DeviceKey& key)
-{
-   auto device = getDevice(key);
-   if (!device) {
-      return;
-   }
-   device->getPublicKey();
 }
 
 void DeviceManager::setMatrixPin(const DeviceKey& key, const std::string& pin)
@@ -113,7 +106,6 @@ void DeviceManager::cancel(const DeviceKey& key)
    if (!device) {
       return;
    }
-
    device->cancel();
 }
 
@@ -145,6 +137,20 @@ bs::message::ProcessingResult DeviceManager::processOwnRequest(const bs::message
 {
    if (!trezorClient_ || !ledgerClient_) {
       return bs::message::ProcessingResult::Retry;
+   }
+   HW::DeviceMgrMessage msg;
+   if (!msg.ParseFromString(env.message)) {
+      logger_->error("[hww::DeviceManager::processOwnRequest] failed to parse #{}"
+         , env.foreignId());
+      return bs::message::ProcessingResult::Error;
+   }
+   switch (msg.data_case()) {
+   case HW::DeviceMgrMessage::kStartScan:
+      scanDevices(env);
+      return bs::message::ProcessingResult::Success;
+   case HW::DeviceMgrMessage::kImportDevice:
+      return processImport(env, msg.import_device());
+   default: break;
    }
    return bs::message::ProcessingResult::Ignored;
 }
@@ -184,6 +190,21 @@ bs::message::ProcessingResult DeviceManager::processSettings(const bs::message::
       }
    }
    return bs::message::ProcessingResult::Ignored;
+}
+
+bs::message::ProcessingResult DeviceManager::processImport(const bs::message::Envelope& env
+   , const HW::DeviceKey& key)
+{
+   const DeviceKey devKey{ key.label(), key.id(), key.vendor(), key.wallet_id()
+         , key.status(), static_cast<bs::hww::DeviceType>(key.type()) };
+   const auto& device = getDevice(devKey);
+   if (!device) {
+      logger_->error("[hww::DeviceManager::processImport] no device found for id {}"
+         , devKey.id);
+      return bs::message::ProcessingResult::Error;
+   }
+   device->getPublicKeys();
+   return bs::message::ProcessingResult::Success;
 }
 
 bs::message::ProcessingResult DeviceManager::prepareDeviceForSign(bs::message::SeqId msgId
@@ -283,15 +304,32 @@ void DeviceManager::releaseConnection()
    }
 }
 
+void DeviceManager::devicesResponse()
+{
+   HW::DeviceMgrMessage msg;
+   auto msgResp = msg.mutable_available_devices();
+   for (const auto& key : devices_) {
+      auto msgKey = msgResp->add_device_keys();
+      msgKey->set_label(key.label);
+      msgKey->set_id(key.id);
+      msgKey->set_vendor(key.vendor);
+      msgKey->set_wallet_id(key.walletId);
+      msgKey->set_status(key.status);
+      msgKey->set_type((int)key.type);
+   }
+   pushResponse(user_, envReqScan_, msg.SerializeAsString());
+   envReqScan_ = {};
+}
+
 void DeviceManager::scanningDone(bool initDevices)
 {
    const auto& ledgerKeys = ledgerClient_->deviceKeys();
-   auto allDevices = ledgerKeys;
+   devices_ = ledgerKeys;
    const auto& trezorKeys = trezorClient_->deviceKeys();
-   allDevices.insert(allDevices.end(), trezorKeys.cbegin(), trezorKeys.cend());
+   devices_.insert(devices_.end(), trezorKeys.cbegin(), trezorKeys.cend());
 
    if (!initDevices) {
-      //TODO: send response with all devices
+      devicesResponse();
       return;
    }
    for (const auto& key : ledgerKeys) {
@@ -324,20 +362,29 @@ std::shared_ptr<DeviceInterface> DeviceManager::getDevice(const DeviceKey& key) 
    return nullptr;
 }
 
-void DeviceManager::setScanningFlag(unsigned nbLeft)
+void DeviceManager::publicKeyReady(const std::string& devId, const std::string& walletId)
 {
-   if (nbScanning_ == nbLeft) {
-      return;
+   size_t nbCompleted = 0;
+   for (int i = 0; i < devices_.size(); ++i) {
+      if (devices_[i].id == devId) {
+         devices_[i].walletId = walletId;
+         nbCompleted++;
+      }
+      else if (!devices_.at(i).walletId.empty()) {
+         nbCompleted++;
+      }
    }
-   nbScanning_ = nbLeft;
-
-   if (nbLeft == 0) {
-      scanningDone(false);
+   if (nbCompleted >= devices_.size()) {
+      devicesResponse();
    }
 }
 
-void DeviceManager::publicKeyReady(void* walletInfo)
+void bs::hww::DeviceManager::walletInfoReady(const DeviceKey& key
+   , const bs::core::wallet::HwWalletInfo& walletInfo)
 {
+   logger_->debug("[hww::DeviceManager::walletInfoReady] importing device {} "
+      "(not implemented)", key.id);
+   //TODO: send request to WA
 }
 
 void DeviceManager::requestPinMatrix(const DeviceKey&)
@@ -372,7 +419,7 @@ void DeviceManager::scanningDone()
    }
    if (--nbScanning_ == 0) {
       logger_->debug("[DeviceManager::scanningDone] all devices scanned");
-      scanningDone(false);
+      scanningDone(true);
    }
 }
 

@@ -48,7 +48,7 @@ namespace bs {
          void cancel() override { WorkerPool::cancel(); }
 
          // operation
-         void getPublicKey() override;
+         void getPublicKeys() override;
          void signTX(const bs::core::wallet::TXSignRequest& reqTX) override;
          void retrieveXPubRoot() override;
 

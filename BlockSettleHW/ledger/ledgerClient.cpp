@@ -94,9 +94,5 @@ void LedgerClient::scanDevices()
    }
    hid_exit();
 
-   // Init first one
-   /*if (!availableDevices_.empty()) {
-      availableDevices_.at(0)->init();
-   }*/
    cb_->scanningDone();
 }
