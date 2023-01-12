@@ -83,8 +83,10 @@ QtObject {
     readonly property color buttonsStandardColor: "#3C435A"
     readonly property color buttonsStandardPressedColor: "#55000000"
     readonly property color buttonsStandardHoveredColor: "#22000000"
+    readonly property color buttonsStandardBorderColor: "#45A6FF"
 
     readonly property color buttonsPreferredColor: "#45A6FF"
     readonly property color buttonsPreferredPressedColor: "#55000000"
     readonly property color buttonsPreferredHoveredColor: "#22000000"
+    readonly property color buttonsPreferredBorderColor: "#E2E7FF"
 }

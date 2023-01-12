@@ -79,7 +79,17 @@ ColumnLayout  {
             confirm_but.preferred = true
         }
         function click_enter() {
+            if (!confirm_but.enabled) return
+
             sig_import()
         }
+    }
+
+    Keys.onEnterPressed: {
+         confirm_but.click_enter()
+    }
+
+    Keys.onReturnPressed: {
+         confirm_but.click_enter()
     }
 }

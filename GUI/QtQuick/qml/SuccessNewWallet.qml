@@ -1,0 +1,81 @@
+import QtQuick 2.12
+import QtQuick.Window 2.12
+import QtQuick.Controls 2.12
+import QtQuick.Layouts 1.15
+
+import "StyledControls"
+import "BsStyles"
+
+ColumnLayout  {
+
+    id: layout
+
+    signal sig_finish()
+
+    height: 481
+    width: 580
+    spacing: 0
+
+    CustomTitleLabel {
+        id: title
+        Layout.alignment: Qt.AlignCenter
+        Layout.preferredHeight : title.height
+        text: "Success"
+    }
+
+
+    Image {
+        id: wallet_icon
+
+        Layout.topMargin: 48
+        Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
+        Layout.preferredHeight : 120
+        Layout.preferredWidth : 120
+
+        source: "qrc:/images/success.png"
+        width: 120
+        height: 120
+    }
+
+
+    Label {
+        Layout.topMargin: 48
+        Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
+        text: "Your wallet has successfully been created"
+        font.pixelSize: 16
+        font.family: "Roboto"
+        font.weight: Font.Medium
+        color: "#E2E7FF"
+    }
+
+    Label {
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+    }
+
+    CustomButton {
+        id: finish_but
+
+        width: 530
+
+        Layout.bottomMargin: 40
+        Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
+
+        text: qsTr("Finish")
+
+        Component.onCompleted: {
+            finish_but.preferred = true
+        }
+        function click_enter() {
+            sig_finish()
+        }
+    }
+
+    Keys.onEnterPressed: {
+         finish_but.click_enter()
+    }
+
+    Keys.onReturnPressed: {
+         finish_but.click_enter()
+    }
+}

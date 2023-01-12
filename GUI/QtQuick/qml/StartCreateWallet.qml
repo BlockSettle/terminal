@@ -107,4 +107,9 @@ ColumnLayout  {
             }
         }
     }
+
+    function init()
+    {
+        create_but.forceActiveFocus()
+    }
 }

@@ -108,5 +108,14 @@ ColumnLayout  {
         Layout.fillWidth: true
         height: 24
     }
+
+
+    Keys.onEnterPressed: {
+         continue_but.click_enter()
+    }
+
+    Keys.onReturnPressed: {
+         continue_but.click_enter()
+    }
 }
 

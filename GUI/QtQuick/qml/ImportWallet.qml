@@ -171,6 +171,8 @@ ColumnLayout  {
             import_but.preferred = true
         }
         function click_enter() {
+            if (!import_but.enabled) return
+
             for (var i=0; i<grid.count; i++)
             {
                 layout.phrase.push(grid.itemAtIndex(i).input_text)
@@ -179,4 +181,16 @@ ColumnLayout  {
         }
     }
 
+    Keys.onEnterPressed: {
+         import_but.click_enter()
+    }
+
+    Keys.onReturnPressed: {
+         import_but.click_enter()
+    }
+
+    function init()
+    {
+        grid.itemAtIndex(0).setActiveFocus()
+    }
 }

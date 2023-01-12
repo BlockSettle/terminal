@@ -91,6 +91,10 @@ ColumnLayout  {
             }
 
         }
+    }
 
-   }
+    function init()
+    {
+        continue_but.forceActiveFocus()
+    }
 }

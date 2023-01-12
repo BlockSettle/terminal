@@ -96,6 +96,10 @@ ColumnLayout  {
             }
 
         }
-
    }
+
+    function init()
+    {
+        skip_but.forceActiveFocus()
+    }
 }

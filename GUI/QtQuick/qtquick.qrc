@@ -89,5 +89,7 @@
         <file>images/folder_icon.png</file>
         <file>images/File.png</file>
         <file>qml/ImportWallet.qml</file>
+        <file>images/success.png</file>
+        <file>qml/SuccessNewWallet.qml</file>
     </qresource>
 </RCC>

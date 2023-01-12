@@ -33,12 +33,15 @@ Button {
         implicitHeight: 50
         color: preferred ? (!control.enabled ? BSStyle.disabledColor :
                 (control.down ? BSStyle.buttonsPreferredPressedColor :
-                ((control.hovered || control.activeFocus) ? BSStyle.buttonsPreferredHoveredColor : BSStyle.buttonsPreferredColor))):
+                (control.hovered ? BSStyle.buttonsPreferredHoveredColor : BSStyle.buttonsPreferredColor))):
                 (!control.enabled ? BSStyle.disabledColor :
                 (control.down ? BSStyle.buttonsStandardPressedColor :
                 (control.hovered ? BSStyle.buttonsStandardHoveredColor : BSStyle.buttonsStandardColor)))
 
         radius: 14
+
+        border.color: preferred ? BSStyle.buttonsPreferredBorderColor : BSStyle.buttonsStandardBorderColor
+        border.width: control.activeFocus? 1 : 0
 
     }
 
