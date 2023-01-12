@@ -19,6 +19,9 @@ Window {
     minimumHeight: rect.height
     minimumWidth: rect.width
 
+    height: rect.height
+    width: rect.width
+
     objectName: "create_wallet"
 
     color: "transparent"
@@ -88,6 +91,7 @@ Window {
 
             implicitHeight: currentItem.height
             implicitWidth: currentItem.width
+
 
             pushEnter: Transition {
                 PropertyAnimation {
