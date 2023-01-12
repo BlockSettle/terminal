@@ -64,15 +64,21 @@ ColumnLayout  {
     CustomButton {
         id: confirm_but
         text: qsTr("Import")
-        Layout.leftMargin: 25
+
+        //Layout.leftMargin: 25
+        //Layout.bottomMargin: 40
+
+        //Layout.leftMargin: 24
         Layout.bottomMargin: 40
+        Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
+
         width: 530
         enabled: layout.isConnected
 
         Component.onCompleted: {
             confirm_but.preferred = true
         }
-        onClicked: {
+        function click_enter() {
             sig_import()
         }
     }

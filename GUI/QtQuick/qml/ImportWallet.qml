@@ -170,7 +170,7 @@ ColumnLayout  {
         Component.onCompleted: {
             import_but.preferred = true
         }
-        onClicked: {
+        function click_enter() {
             for (var i=0; i<grid.count; i++)
             {
                 layout.phrase.push(grid.itemAtIndex(i).input_text)

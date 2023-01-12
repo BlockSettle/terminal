@@ -16,6 +16,8 @@ Button {
     id: control
     property bool preferred: false
 
+    activeFocusOnTab: true
+
     font.pixelSize: 16
     font.family: "Roboto"
     font.weight: Font.Bold
@@ -31,12 +33,25 @@ Button {
         implicitHeight: 50
         color: preferred ? (!control.enabled ? BSStyle.disabledColor :
                 (control.down ? BSStyle.buttonsPreferredPressedColor :
-                (control.hovered ? BSStyle.buttonsPreferredHoveredColor : BSStyle.buttonsPreferredColor))):
+                ((control.hovered || control.activeFocus) ? BSStyle.buttonsPreferredHoveredColor : BSStyle.buttonsPreferredColor))):
                 (!control.enabled ? BSStyle.disabledColor :
                 (control.down ? BSStyle.buttonsStandardPressedColor :
                 (control.hovered ? BSStyle.buttonsStandardHoveredColor : BSStyle.buttonsStandardColor)))
 
         radius: 14
+
     }
+
+    Keys.onEnterPressed: {
+         click_enter()
+    }
+
+    Keys.onReturnPressed: {
+         click_enter()
+    }
+
+     onClicked: {
+         click_enter()
+     }
 }
 

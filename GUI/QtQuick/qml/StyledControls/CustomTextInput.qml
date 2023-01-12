@@ -35,7 +35,7 @@ Rectangle {
     opacity: 1
     radius: 14
 
-    border.color: isValid ? (input.focus ? "#45A6FF" : "#3C435A") : "#EB6060"
+    border.color: isValid ? (input.activeFocus ? "#45A6FF" : "#3C435A") : "#EB6060"
     border.width: 1
 
     Label {
@@ -54,16 +54,16 @@ Rectangle {
     TextInput {
         id: input
 
+        focus: true
+        activeFocusOnTab: true
+
         anchors.top: rect.top
-        //anchors.topMargin: (rect.height - 19)/2
         anchors.left: rect.left
         anchors.leftMargin: title.anchors.leftMargin
         width: rect.width - 2*title.anchors.leftMargin
         height: 19
 
         echoMode: isHiddenText? TextInput.Password : TextInput.Normal
-        //placeholderText: isPassword? qsTr("Password") : ""
-        //placeholderTextColor: "#32394F"
 
         font.pixelSize: 16
         font.family: "Roboto"
@@ -74,8 +74,8 @@ Rectangle {
         onTextChanged : {
             rect.textChanged()
         }
-    }
 
+    }
 
     Image {
         id: eye_icon
@@ -95,7 +95,6 @@ Rectangle {
             anchors.fill: parent
             onClicked: {
                 isHiddenText = !isHiddenText
-                console.log("isHiddenText = " + isHiddenText)
             }
         }
     }
@@ -107,5 +106,9 @@ Rectangle {
             input.forceActiveFocus()
             mouse.accepted = false
         }
+    }
+
+    function setActiveFocus() {
+        input.forceActiveFocus()
     }
 }

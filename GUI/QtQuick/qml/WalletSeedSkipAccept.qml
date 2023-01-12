@@ -13,7 +13,7 @@ ColumnLayout  {
     signal sig_skip()
     signal sig_not_skip()
 
-    height: 521
+    height: 481
     width: 580
 
     spacing: 0
@@ -64,9 +64,9 @@ ColumnLayout  {
         id: row
         spacing: 10
 
-        Layout.leftMargin: 24
+        //Layout.leftMargin: 24
         Layout.bottomMargin: 40
-        Layout.alignment: Qt.AlignLeft | Qt.AlignBottom
+        Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         CustomButton {
             id: skip_but
@@ -77,7 +77,7 @@ ColumnLayout  {
                 skip_but.preferred = false
             }
 
-            onClicked: {
+            function click_enter() {
                 layout.sig_skip()
             }
         }
@@ -92,23 +92,10 @@ ColumnLayout  {
             }
 
             function click_enter() {
-                if (!no_but.enabled) return
-``
                 layout.sig_not_skip()
             }
 
-            onClicked: {
-                click_enter()
-            }
         }
 
    }
-
-    Keys.onEnterPressed: {
-        no_but.click_enter()
-    }
-
-    Keys.onReturnPressed: {
-        no_but.click_enter()
-    }
 }

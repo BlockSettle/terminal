@@ -60,8 +60,9 @@ ColumnLayout  {
         id: row
         spacing: 10
 
-        Layout.leftMargin: 24
+        //Layout.leftMargin: 24
         Layout.bottomMargin: 40
+        Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         CustomButton {
             id: copy_seed_but
@@ -71,7 +72,7 @@ ColumnLayout  {
             Component.onCompleted: {
                 copy_seed_but.preferred = false
             }
-            onClicked: {
+            function click_enter() {
                 bsApp.copySeedToClipboard(phrase)
             }
         }
@@ -85,16 +86,10 @@ ColumnLayout  {
                 continue_but.preferred = true
             }
 
-            onClicked: {
+            function click_enter() {
                 layout.sig_continue()
             }
 
-            Keys.onPressed: (event)=> {
-                if (event.key === Qt.Key_Enter)
-                {
-                    state = layout.sig_continue()
-                }
-            }
         }
 
    }

@@ -98,7 +98,7 @@ ColumnLayout  {
         Component.onCompleted: {
             continue_but.preferred = true
         }
-        onClicked: {
+        function click_enter() {
             bsApp.settingActivated = true
             sig_continue()
         }

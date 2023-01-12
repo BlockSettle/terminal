@@ -149,7 +149,8 @@ ColumnLayout  {
         Component.onCompleted: {
             import_but.preferred = true
         }
-        onClicked: {
+
+        function click_enter() {
             layout.sig_import()
         }
     }

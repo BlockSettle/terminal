@@ -172,8 +172,8 @@ Window {
             visible: false
             phrase: root.phrase
             onSig_continue: {
-                wallet_seed_verify.init()
                 stack_create_wallet.push(wallet_seed_verify)
+                wallet_seed_verify.init()
             }
         }
 

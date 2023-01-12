@@ -16,7 +16,7 @@ ColumnLayout  {
 
     property var indexes: []
 
-    height: 521
+    height: 481
     width: 580
 
     spacing: 0
@@ -40,11 +40,11 @@ ColumnLayout  {
         property var isValid: true
         property var isComplete: false
 
-        //model: layout.indexes
         delegate: CustomSeedTextInput {
+            id: _delegate
+
             width: 530
             title_text: layout.indexes[index]
-            //focus: list.currentIndex === index
             isValid: list.isValid
             onTextChanged : {
                 list.isComplete = true
@@ -57,9 +57,6 @@ ColumnLayout  {
                     }
                 }
             }
-
-            //KeyNavigation.tab: list.currentIndex = index<layout.indexes.length-1 ? index + 1 : 0
-            //KeyNavigation.tab: list.itemAtIndex(index+1).input_item
         }
 
     }
@@ -88,8 +85,9 @@ ColumnLayout  {
         id: row
         spacing: 10
 
-        Layout.leftMargin: 24
+        //Layout.leftMargin: 24
         Layout.bottomMargin: 40
+        Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         CustomButton {
             id: skip_but
@@ -100,7 +98,7 @@ ColumnLayout  {
                 skip_but.preferred = false
             }
 
-            onClicked: {
+            function click_enter() {
                 layout.sig_skipped()
             }
         }
@@ -109,6 +107,7 @@ ColumnLayout  {
             id: continue_but
             text: qsTr("Continue")
             width: 261
+
             enabled: list.isComplete
 
             Component.onCompleted: {
@@ -133,21 +132,9 @@ ColumnLayout  {
                 }
             }
 
-            onClicked: {
-                click_enter()
-            }
-
         }
 
    }
-
-    Keys.onEnterPressed: {
-        continue_but.click_enter()
-    }
-
-    Keys.onReturnPressed: {
-        continue_but.click_enter()
-    }
 
    function createRandomIndexes() {
         var idx = []
@@ -175,6 +162,7 @@ ColumnLayout  {
    function init()
    {
        createRandomIndexes()
-       list.currentIndex = 0
+       list.itemAtIndex(0).setActiveFocus()
    }
 }
+

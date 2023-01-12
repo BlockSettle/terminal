@@ -58,23 +58,25 @@ ColumnLayout  {
 
     Label {
         Layout.fillWidth: true
-        height: 196
+        Layout.fillHeight: true
     }
 
     RowLayout {
         id: row
         spacing: 10
 
+        Layout.bottomMargin: 40
+        Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
+
         CustomButton {
             id: hardware_but
             text: qsTr("Hardware Wallet")
-            Layout.leftMargin: 25
             width: 170
 
             Component.onCompleted: {
                 hardware_but.preferred = false
             }
-            onClicked: {
+            function click_enter() {
                 sig_hardware_wallet()
             }
         }
@@ -87,7 +89,7 @@ ColumnLayout  {
             Component.onCompleted: {
                 import_but.preferred = false
             }
-            onClicked: {
+            function click_enter() {
                 sig_import_wallet()
             }
         }
@@ -100,7 +102,7 @@ ColumnLayout  {
             Component.onCompleted: {
                 create_but.preferred = true
             }
-            onClicked: {
+            function click_enter() {
                 sig_create_new()
             }
         }
