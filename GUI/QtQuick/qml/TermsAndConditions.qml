@@ -111,11 +111,11 @@ ColumnLayout  {
 
 
     Keys.onEnterPressed: {
-         continue_but.click_enter()
+        continue_but.click_enter()
     }
 
     Keys.onReturnPressed: {
-         continue_but.click_enter()
+        continue_but.click_enter()
     }
 }
 

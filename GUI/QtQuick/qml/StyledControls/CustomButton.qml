@@ -46,15 +46,15 @@ Button {
     }
 
     Keys.onEnterPressed: {
-         click_enter()
+        click_enter()
     }
 
     Keys.onReturnPressed: {
-         click_enter()
+        click_enter()
     }
 
      onClicked: {
-         click_enter()
+        click_enter()
      }
 }
 

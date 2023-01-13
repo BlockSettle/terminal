@@ -72,10 +72,10 @@ ColumnLayout  {
     }
 
     Keys.onEnterPressed: {
-         finish_but.click_enter()
+        finish_but.click_enter()
     }
 
     Keys.onReturnPressed: {
-         finish_but.click_enter()
+        finish_but.click_enter()
     }
 }

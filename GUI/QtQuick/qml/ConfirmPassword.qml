@@ -112,11 +112,11 @@ ColumnLayout  {
     }
 
     Keys.onEnterPressed: {
-         confirm_but.click_enter()
+        confirm_but.click_enter()
     }
 
     Keys.onReturnPressed: {
-         confirm_but.click_enter()
+        confirm_but.click_enter()
     }
 
     function init()
