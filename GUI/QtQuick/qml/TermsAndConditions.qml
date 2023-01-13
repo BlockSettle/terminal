@@ -98,7 +98,7 @@ ColumnLayout  {
         Component.onCompleted: {
             continue_but.preferred = true
         }
-        onClicked: {
+        function click_enter() {
             bsApp.settingActivated = true
             sig_continue()
         }
@@ -107,6 +107,15 @@ ColumnLayout  {
     Label {
         Layout.fillWidth: true
         height: 24
+    }
+
+
+    Keys.onEnterPressed: {
+        continue_but.click_enter()
+    }
+
+    Keys.onReturnPressed: {
+        continue_but.click_enter()
     }
 }
 

@@ -149,9 +149,21 @@ ColumnLayout  {
         Component.onCompleted: {
             import_but.preferred = true
         }
-        onClicked: {
+
+        function click_enter() {
+            if (!import_but.enabled) return
+
             layout.sig_import()
         }
+    }
+
+
+    Keys.onEnterPressed: {
+         import_but.click_enter()
+    }
+
+    Keys.onReturnPressed: {
+         import_but.click_enter()
     }
 
     Label {

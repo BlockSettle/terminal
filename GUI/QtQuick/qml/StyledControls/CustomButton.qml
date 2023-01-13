@@ -16,6 +16,8 @@ Button {
     id: control
     property bool preferred: false
 
+    activeFocusOnTab: true
+
     font.pixelSize: 16
     font.family: "Roboto"
     font.weight: Font.Bold
@@ -37,6 +39,22 @@ Button {
                 (control.hovered ? BSStyle.buttonsStandardHoveredColor : BSStyle.buttonsStandardColor)))
 
         radius: 14
+
+        border.color: preferred ? BSStyle.buttonsPreferredBorderColor : BSStyle.buttonsStandardBorderColor
+        border.width: control.activeFocus? 1 : 0
+
     }
+
+    Keys.onEnterPressed: {
+        click_enter()
+    }
+
+    Keys.onReturnPressed: {
+        click_enter()
+    }
+
+     onClicked: {
+        click_enter()
+     }
 }
 

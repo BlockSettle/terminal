@@ -19,6 +19,9 @@ Window {
     minimumHeight: rect.height
     minimumWidth: rect.width
 
+    height: rect.height
+    width: rect.width
+
     objectName: "create_wallet"
 
     color: "transparent"
@@ -89,6 +92,7 @@ Window {
             implicitHeight: currentItem.height
             implicitWidth: currentItem.width
 
+
             pushEnter: Transition {
                 PropertyAnimation {
                     property: "opacity"
@@ -149,6 +153,7 @@ Window {
             visible: false
             onSig_continue: {
                 stack_create_wallet.replace(start_create)
+                start_create.init()
             }
         }
 
@@ -158,9 +163,11 @@ Window {
             onSig_create_new: {
                 root.phrase = bsApp.newSeedPhrase()
                 stack_create_wallet.push(wallet_seed)
+                wallet_seed.init()
             }
             onSig_import_wallet: {
                 stack_create_wallet.push(import_wallet)
+                import_wallet.init()
             }
             onSig_hardware_wallet: {
                 bsApp.pollHWWallets()
@@ -173,8 +180,8 @@ Window {
             visible: false
             phrase: root.phrase
             onSig_continue: {
-                wallet_seed_verify.init()
                 stack_create_wallet.push(wallet_seed_verify)
+                wallet_seed_verify.init()
             }
         }
 
@@ -184,9 +191,11 @@ Window {
             phrase: root.phrase
             onSig_verified: {
                 stack_create_wallet.push(confirm_password)
+                confirm_password.init()
             }
             onSig_skipped: {
                 stack_create_wallet.push(wallet_seed_accept)
+                wallet_seed_accept.init()
             }
         }
 
@@ -195,6 +204,7 @@ Window {
             visible: false
             onSig_skip: {
                 stack_create_wallet.replace(confirm_password)
+                confirm_password.init()
             }
             onSig_not_skip: {
                 stack_create_wallet.pop()
@@ -205,8 +215,8 @@ Window {
             id: confirm_password
             visible: false
             onSig_confirm: {
-                root.close()
-                stack_create_wallet.pop(null)
+                back_arrow_button.visible = false
+                stack_create_wallet.push(success_wallet)
             }
         }
 
@@ -234,6 +244,7 @@ Window {
             }
             onSig_full: {
                 stack_create_wallet.replace(import_wallet)
+                import_wallet.init()
             }
         }
 
@@ -242,10 +253,21 @@ Window {
             visible: false
             onSig_import: {
                 stack_create_wallet.push(confirm_password)
+                confirm_password.init()
                 root.phrase = import_wallet.phrase
             }
             onSig_only_watching: {
                 stack_create_wallet.replace(import_watching_wallet)
+            }
+        }
+
+        SuccessNewWallet {
+            id: success_wallet
+            visible: false
+            onSig_finish: {
+                back_arrow_button.visible = true
+                root.close()
+                stack_create_wallet.pop(null)
             }
         }
     }
@@ -255,6 +277,7 @@ Window {
         {
             stack_create_wallet.pop()
             stack_create_wallet.replace(start_create, StackView.Immediate)
+            start_create.init()
         }
     }
 }

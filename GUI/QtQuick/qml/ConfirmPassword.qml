@@ -76,11 +76,15 @@ ColumnLayout  {
     CustomButton {
         id: confirm_but
         text: qsTr("Confirm")
-        Layout.leftMargin: 25
+        //Layout.leftMargin: 25
+        //Layout.bottomMargin: 40
+
+        //Layout.leftMargin: 24
         Layout.bottomMargin: 40
+        Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
+
         width: 530
-        enabled: (wallet_name.input_text !== "")
-                 && (password.input_text !== "")
+        enabled: (password.input_text !== "")
                  && (confirm_password.input_text !== "")
 
         Component.onCompleted: {
@@ -105,10 +109,6 @@ ColumnLayout  {
                 confirm_password.isValid = false
             }
         }
-
-        onClicked: {
-            click_enter()
-        }
     }
 
     Keys.onEnterPressed: {
@@ -119,4 +119,8 @@ ColumnLayout  {
         confirm_but.click_enter()
     }
 
+    function init()
+    {
+        password.setActiveFocus()
+    }
 }
