@@ -161,6 +161,7 @@ public:
 
    // QML-invokable methods
    Q_INVOKABLE QStringList newSeedPhrase();
+   Q_INVOKABLE QStringList completeBIP39dic(const QString& prefix);
    Q_INVOKABLE void copySeedToClipboard(const QStringList&);
    Q_INVOKABLE void createWallet(const QString& name, const QStringList& seed
       , const QString& password);

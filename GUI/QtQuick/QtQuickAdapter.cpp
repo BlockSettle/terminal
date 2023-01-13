@@ -21,6 +21,7 @@
 #include <QLockFile>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickImageProvider>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QPalette>
@@ -94,6 +95,22 @@ static void checkStyleSheet(QApplication& app)
 
    app.setStyleSheet(QString::fromLatin1(stylesheetFile.readAll()));
 }
+
+class QRImageProvider : public QQuickImageProvider
+{
+public:
+   QRImageProvider() : QQuickImageProvider(QQuickImageProvider::Pixmap)
+   {}
+
+   QPixmap requestPixmap(const QString& id, QSize* size, const QSize& requestedSize) override
+   {
+      const int sz = std::max(requestedSize.width(), requestedSize.height());
+      if (size) {
+         *size = QSize(sz, sz);
+      }
+      return UiUtils::getQRCode(id, sz);
+   }
+};
 
 
 QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
@@ -206,6 +223,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
    rootCtxt_->setContextProperty(QLatin1Literal("txInputsModel"), txInputsModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("txOutputsModel"), txOutputsModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("hwDeviceModel"), hwDeviceModel_);
+   engine.addImageProvider(QLatin1Literal("QR"), new QRImageProvider);
 
    engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
    if (engine.rootObjects().empty()) {
@@ -1020,6 +1038,32 @@ QStringList QtQuickAdapter::newSeedPhrase()
    QStringList result;
    for (const auto& word : words) {
       result.append(QString::fromStdString(word));
+   }
+   return result;
+}
+
+QStringList QtQuickAdapter::completeBIP39dic(const QString& pfx)
+{
+   const auto& prefix = pfx.toLower().toStdString();
+   if (prefix.empty()) {
+      return {};
+   }
+   QStringList result;
+   for (int i = 0; i < BIP39::NUM_BIP39_WORDS; ++i) {
+      const auto& word = BIP39::get_word(i);
+      bool prefixMatched = true;
+      for (int j = 0; j < std::min(prefix.length(), word.length()); ++j) {
+         if (word.at(j) != prefix.at(j)) {
+            prefixMatched = false;
+            break;
+         }
+      }
+      if (prefixMatched) {
+         result.append(QString::fromStdString(word));
+      }
+      if (result.size() >= 5) {
+         break;
+      }
    }
    return result;
 }
