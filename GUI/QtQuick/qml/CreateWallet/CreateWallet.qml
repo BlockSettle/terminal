@@ -83,7 +83,6 @@ CustomPopup {
         id: confirm_password
         visible: false
         onSig_confirm: {
-            back_arrow_button.visible = false
             _stack_view.push(success_wallet)
         }
     }
