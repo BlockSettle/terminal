@@ -23,6 +23,7 @@ Item {
     id: overview
 
     signal newWalletClicked();
+    signal curWalletIndexChanged(index : int)
 
     CreateNewWallet {
         id: createNewWalletPage
@@ -46,6 +47,14 @@ Item {
                 objectName: "walletsComboBox"
                 model: bsApp.walletsList
                 font.pointSize: 12
+
+                Component.onCompleted: {
+                    curWalletIndexChanged(0)
+                }
+
+                onActivated: (ind) => {
+                    curWalletIndexChanged(ind)
+                }
             }
             Column {
                 Label {

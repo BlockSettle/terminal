@@ -71,7 +71,6 @@
         <file>images/back_arrow.png</file>
         <file>qml/WalletSeed.qml</file>
         <file>qml/StyledControls/CustomSeedLabel.qml</file>
-        <file>images/copy_seed.png</file>
         <file>qml/WalletSeedVerify.qml</file>
         <file>qml/StyledControls/CustomSeedTextInput.qml</file>
         <file>images/warning_icon.png</file>
@@ -91,5 +90,10 @@
         <file>qml/ImportWallet.qml</file>
         <file>images/success.png</file>
         <file>qml/SuccessNewWallet.qml</file>
+        <file>qml/StyledControls/CustomPopup.qml</file>
+        <file>qml/Receive/ReceiveQrCode.qml</file>
+        <file>images/copy_icon.png</file>
+        <file>qml/Receive/qmldir</file>
+        <file>qml/Receive/ReceivePopup.qml</file>
     </qresource>
 </RCC>

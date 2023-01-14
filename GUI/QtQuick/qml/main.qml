@@ -12,15 +12,10 @@ import QtQuick 2
 import QtQuick.Controls 2.9
 import QtQuick.Layouts 1.3
 import QtQuick.Window 2
+
 import "StyledControls" 1
 import "BsStyles" 1
-//import Qt.labs.settings 1.0
-
-/*
-import "BsControls"
-import "BsDialogs"
-import "js/helper.js" as JsHelper
-*/
+import "Receive"  1
 
 ApplicationWindow {
     id: mainWindow
@@ -31,6 +26,7 @@ ApplicationWindow {
     title: qsTr("BlockSettle Terminal")
 
     property var currentDialog: ({})
+    property int currentWalletIndex
     readonly property int resizeAnimationDuration: 25
 
     Component.onCompleted: {
@@ -40,7 +36,12 @@ ApplicationWindow {
     }
 
     CreateWallet {
-        id: createWallet
+        id: create_wallet
+        visible: false
+    }
+
+    ReceivePopup {
+        id: receive_popup
         visible: false
     }
 
@@ -145,7 +146,11 @@ ApplicationWindow {
 
                 onClicked: {
                     topMenuBtnClicked(btnReceive)
-                    stack.push(receivePage)
+                    //stack.push(receivePage)
+                    bsApp.generateNewAddress(currentWalletIndex, true)
+                    receive_popup.show()
+                    receive_popup.raise()
+                    receive_popup.requestActivate()
                 }
             }
             CustomTitleToolButton {
@@ -174,10 +179,14 @@ ApplicationWindow {
         OverviewPage {
             id: overviewPage
             onNewWalletClicked: {
-                createWallet.init()
-                createWallet.show()
-                createWallet.raise()
-                createWallet.requestActivate()
+                create_wallet.init()
+                create_wallet.show()
+                create_wallet.raise()
+                create_wallet.requestActivate()
+            }
+
+            onCurWalletIndexChanged: (ind) => {
+                currentWalletIndex = ind
             }
         }
 
