@@ -43,7 +43,7 @@ ColumnLayout  {
         Layout.alignment: Qt.AlignCenter
         Layout.topMargin: 6
         Layout.preferredHeight : 16
-        text: bsApp.walletsList[currentWalletIndex]
+        text: bsApp.walletsList[currentWalletIndex] + " / Native SegWit"
         color: "#E2E7FF"
         font.pixelSize: 14
         font.family: "Roboto"
