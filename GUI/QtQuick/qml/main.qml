@@ -16,6 +16,7 @@ import QtQuick.Window 2
 import "StyledControls" 1
 import "BsStyles" 1
 import "Receive"  1
+import "CreateWallet"  1
 
 ApplicationWindow {
     id: mainWindow

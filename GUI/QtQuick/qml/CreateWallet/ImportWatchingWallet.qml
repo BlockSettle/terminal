@@ -5,8 +5,8 @@ import QtQuick.Layouts 1.15
 import QtQuick.Dialogs 1.3
 
 
-import "StyledControls"
-import "BsStyles"
+import "../BsStyles"
+import "../StyledControls"
 
 ColumnLayout  {
 

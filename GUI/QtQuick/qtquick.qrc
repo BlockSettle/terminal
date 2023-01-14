@@ -61,39 +61,40 @@
         <file>images/plugins_icon_unchoosed.png</file>
         <file>images/transactions_icon_unchoosed.png</file>
         <file>images/explorer_icon_unchoosed.png</file>
-        <file>qml/TermsAndConditions.qml</file>
         <file>TermsAndConditions.txt</file>
         <file>images/close_button.png</file>
-        <file>qml/CreateWallet.qml</file>
         <file>qml/StyledControls/CustomTitleLabel.qml</file>
         <file>images/wallet icon.png</file>
-        <file>qml/StartCreateWallet.qml</file>
         <file>images/back_arrow.png</file>
-        <file>qml/WalletSeed.qml</file>
         <file>qml/StyledControls/CustomSeedLabel.qml</file>
-        <file>qml/WalletSeedVerify.qml</file>
         <file>qml/StyledControls/CustomSeedTextInput.qml</file>
         <file>images/warning_icon.png</file>
-        <file>qml/WalletSeedSkipAccept.qml</file>
         <file>images/Eye_icon _unvisible.png</file>
         <file>images/Eye_icon _visible.png</file>
-        <file>qml/ConfirmPassword.qml</file>
         <file>images/USB_icon_conn.png</file>
         <file>images/USB_icon_disconn.png</file>
-        <file>qml/ImportHardware.qml</file>
         <file>qml/StyledControls/CustomTextSwitch.qml</file>
         <file>images/wallet_file.png</file>
         <file>images/file_drop.png</file>
-        <file>qml/ImportWatchingWallet.qml</file>
         <file>images/folder_icon.png</file>
         <file>images/File.png</file>
-        <file>qml/ImportWallet.qml</file>
         <file>images/success.png</file>
-        <file>qml/SuccessNewWallet.qml</file>
         <file>qml/StyledControls/CustomPopup.qml</file>
         <file>qml/Receive/ReceiveQrCode.qml</file>
         <file>images/copy_icon.png</file>
         <file>qml/Receive/qmldir</file>
         <file>qml/Receive/ReceivePopup.qml</file>
+        <file>qml/CreateWallet/ConfirmPassword.qml</file>
+        <file>qml/CreateWallet/CreateWallet.qml</file>
+        <file>qml/CreateWallet/ImportHardware.qml</file>
+        <file>qml/CreateWallet/ImportWallet.qml</file>
+        <file>qml/CreateWallet/ImportWatchingWallet.qml</file>
+        <file>qml/CreateWallet/qmldir</file>
+        <file>qml/CreateWallet/StartCreateWallet.qml</file>
+        <file>qml/CreateWallet/SuccessNewWallet.qml</file>
+        <file>qml/CreateWallet/TermsAndConditions.qml</file>
+        <file>qml/CreateWallet/WalletSeed.qml</file>
+        <file>qml/CreateWallet/WalletSeedSkipAccept.qml</file>
+        <file>qml/CreateWallet/WalletSeedVerify.qml</file>
     </qresource>
 </RCC>
