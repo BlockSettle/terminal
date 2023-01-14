@@ -132,7 +132,6 @@ CustomPopup {
         id: success_wallet
         visible: false
         onSig_finish: {
-            set_visible_arrow(true)
             root.close()
             _stack_view.pop(null)
         }
