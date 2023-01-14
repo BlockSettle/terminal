@@ -59,7 +59,9 @@ ColumnLayout  {
         Layout.preferredHeight : 214
         Layout.preferredWidth : 214
 
-        source: "qrc:/images/success.png"
+        source: "image://QR/" + bsApp.generatedAddress
+        sourceSize.width: 214
+        sourceSize.height: 214
         width: 214
         height: 214
     }
