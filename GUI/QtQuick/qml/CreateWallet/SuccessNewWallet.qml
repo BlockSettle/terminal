@@ -27,7 +27,7 @@ ColumnLayout  {
     Image {
         id: wallet_icon
 
-        Layout.topMargin: 48
+        Layout.topMargin: 24
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
         Layout.preferredHeight : 120
         Layout.preferredWidth : 120
@@ -39,12 +39,12 @@ ColumnLayout  {
 
 
     Label {
-        Layout.topMargin: 48
+        Layout.topMargin: 16
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
         text: "Your wallet has successfully been created"
-        font.pixelSize: 16
+        font.pixelSize: 14
         font.family: "Roboto"
-        font.weight: Font.Medium
+        font.weight: Font.Normal
         color: "#E2E7FF"
     }
 

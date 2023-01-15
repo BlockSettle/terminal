@@ -19,7 +19,7 @@ QtObject {
     readonly property color backgroundModalColor: "#737373"
     readonly property color backgroundModeLessColor: "#939393"
 
-    readonly property color disabledColor: "#22293B"
+
     readonly property color disabledTextColor: "#71787f"
     readonly property color disabledBgColor: "#31383f"
 
@@ -81,12 +81,17 @@ QtObject {
 
     //new properties
     readonly property color buttonsStandardColor: "#3C435A"
-    readonly property color buttonsStandardPressedColor: "#55000000"
-    readonly property color buttonsStandardHoveredColor: "#22000000"
-    readonly property color buttonsStandardBorderColor: "#45A6FF"
+    readonly property color buttonsStandardPressedColor: "#232734"
+    readonly property color buttonsStandardHoveredColor: "#2E3343"
+    readonly property color buttonsStandardBorderColor: "#FFFFFF"
 
     readonly property color buttonsPreferredColor: "#45A6FF"
-    readonly property color buttonsPreferredPressedColor: "#55000000"
-    readonly property color buttonsPreferredHoveredColor: "#22000000"
-    readonly property color buttonsPreferredBorderColor: "#E2E7FF"
+    readonly property color buttonsPreferredPressedColor: "#0077E4"
+    readonly property color buttonsPreferredHoveredColor: "#0085FF"
+    readonly property color buttonsPreferredBorderColor: "#FFFFFF"
+
+    readonly property color buttonsTextColor: "#FFFFFF"
+    readonly property color buttonsDisabledTextColor: "#1C2130"
+
+    readonly property color buttonsDisabledColor: "#32394F"
 }
