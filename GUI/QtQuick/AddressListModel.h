@@ -14,6 +14,7 @@
 #include <QAbstractTableModel>
 #include <QObject>
 #include <QVariant>
+#include "Address.h"
 #include "BinaryData.h"
 
 namespace spdlog {
@@ -32,18 +33,23 @@ public:
    QVariant data(const QModelIndex& index, int role) const override;
    QHash<int, QByteArray> roleNames() const override;
 
-   void addRow(const QVector<QString>&);
+   void addRow(const std::string& walletId, const QVector<QString>&);
+   void addRows(const std::string& walletId, const QVector<QVector<QString>>&);
    void updateRow(const BinaryData& addr, uint64_t bal, uint32_t nbTx);
-   void clear();
+   void reset(const std::string& expectedWalletId);
 
 private:
-   QVector<QVector<QString>> table;
+   std::shared_ptr<spdlog::logger>  logger_;
+   const QStringList          header_;
+   QVector<QVector<QString>>  table_;
+   std::vector<bs::Address>   addresses_;
 
    struct PendingBalance {
       uint64_t    balance{ 0 };
       uint32_t    nbTx{ 0 };
    };
    std::map<BinaryData, PendingBalance> pendingBalances_;
+   std::string expectedWalletId_;
 };
 
 #endif	// ADDRESS_LIST_MODEL_H

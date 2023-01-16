@@ -83,6 +83,7 @@ class QTxDetails;
 class QTXSignRequest;
 class TxInputsModel;
 class TxOutputsModel;
+class WalletBalancesModel;
 
 class QtQuickAdapter : public QObject, public ApiBusAdapter, public bs::MainLoopRuner
 {
@@ -100,21 +101,10 @@ public:
 
    void run(int &argc, char **argv) override;
 
-   Q_PROPERTY(QStringList walletsList READ walletsList NOTIFY walletsListChanged)
-   QStringList walletsList() const { return walletsList_; }
    Q_PROPERTY(QStringList txWalletsList READ txWalletsList NOTIFY walletsListChanged)
    QStringList txWalletsList() const;
    Q_PROPERTY(QStringList txTypesList READ txTypesList)
    QStringList txTypesList() const { return txTypes_; }
-
-   Q_PROPERTY(QString confirmedBalance READ confirmedBalance NOTIFY walletBalanceChanged)
-   QString confirmedBalance() const { return QString::number(confWalletBalance_, 'f', 8); }
-   Q_PROPERTY(QString unconfirmedBalance READ unconfirmedBalance NOTIFY walletBalanceChanged)
-   QString unconfirmedBalance() const { return QString::number(unconfWalletBalance_, 'f', 8); }
-   Q_PROPERTY(QString totalBalance READ totalBalance NOTIFY walletBalanceChanged)
-   QString totalBalance() const { return QString::number(totalWalletBalance_, 'f', 8); }
-   Q_PROPERTY(quint32 nbUsedWalletAddresses READ nbUsedWalletAddresses NOTIFY walletBalanceChanged)
-   quint32 nbUsedWalletAddresses() const { return nbUsedWalletAddresses_; }
 
    Q_PROPERTY(QString generatedAddress READ generatedAddress NOTIFY addressGenerated)
    QString generatedAddress() const { return QString::fromStdString(generatedAddress_.display()); }
@@ -228,7 +218,7 @@ private:
    bs::message::ProcessingResult processZCInvalidated(const BlockSettle::Common::ArmoryMessage_ZCInvalidated&);
    bs::message::ProcessingResult processTransactions(bs::message::SeqId, const BlockSettle::Common::ArmoryMessage_Transactions&);
    bs::message::ProcessingResult processReservedUTXOs(const BlockSettle::Common::WalletsMessage_ReservedUTXOs&);
-   void processWalletAddresses(const std::vector<bs::sync::Address>&);
+   void processWalletAddresses(const std::string& walletId, const std::vector<bs::sync::Address>&);
    bs::message::ProcessingResult processTxResponse(bs::message::SeqId
       , const BlockSettle::Common::WalletsMessage_TxResponse&);
 
@@ -263,11 +253,7 @@ private:
    std::map<bs::message::SeqId, std::string> walletInfoReq_;
    std::map<bs::Address, std::string>  addrComments_;
 
-   QStringList walletsList_;
    const QStringList txTypes_;
-   unsigned nbUsedWalletAddresses_{ 0 };
-   double confWalletBalance_{ 0 }, unconfWalletBalance_{ 0 }, totalWalletBalance_{ 0 };
-   int curWalletIndex_{ 0 };
    QmlAddressListModel* addrModel_{ nullptr };
    TxListModel* pendingTxModel_{ nullptr };
    TxListModel* txModel_{ nullptr };
@@ -275,6 +261,7 @@ private:
    TxInputsModel* txInputsModel_{ nullptr };
    TxOutputsModel* txOutputsModel_{ nullptr };
    HwDeviceModel* hwDeviceModel_{ nullptr };
+   WalletBalancesModel* walletBalances_{ nullptr };
    bs::Address generatedAddress_;
    bool hwDevicesPolling_{ false };
 

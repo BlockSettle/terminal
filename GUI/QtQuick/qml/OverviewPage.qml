@@ -18,6 +18,7 @@ import "BsStyles"
 //import "BsControls"
 //import "BsDialogs"
 //import "js/helper.js" as JsHelper
+import wallet.balance 1.0
 
 Item {
     id: overview
@@ -45,7 +46,9 @@ Item {
             ComboBox {
                 id: walletsComboBox
                 objectName: "walletsComboBox"
-                model: bsApp.walletsList
+                model: walletBalances
+                textRole: "name"
+                valueRole: "name"
                 font.pointSize: 12
 
                 Component.onCompleted: {
@@ -62,7 +65,9 @@ Item {
                     font.pointSize: 8
                 }
                 Label {
-                    text: qsTr("<font color=\"white\">%1 BTC</font>").arg(bsApp.confirmedBalance)
+                    text: qsTr("<font color=\"white\">%1 BTC</font>")
+                        .arg(walletBalances.data(walletBalances.index(walletsComboBox.currentIndex, 0)
+                            , WalletBalance.ConfirmedRole))
                     font.pointSize: 12
                 }
             }
@@ -72,7 +77,9 @@ Item {
                     font.pointSize: 8
                 }
                 Label {
-                    text: qsTr("<font color=\"white\">%1 BTC</font>").arg(bsApp.unconfirmedBalance)
+                    text: qsTr("<font color=\"white\">%1 BTC</font>")
+                        .arg(walletBalances.data(walletBalances.index(walletsComboBox.currentIndex, 0)
+                            , WalletBalance.UnconfirmedRole))
                     font.pointSize: 12
                 }
             }
@@ -82,7 +89,9 @@ Item {
                     font.pointSize: 8
                 }
                 Label {
-                    text: qsTr("<font color=\"white\">%1 BTC</font>").arg(bsApp.totalBalance)
+                    text: qsTr("<font color=\"white\">%1 BTC</font>")
+                        .arg(walletBalances.data(walletBalances.index(walletsComboBox.currentIndex, 0)
+                            , WalletBalance.TotalRole))
                     font.pointSize: 12
                 }
             }
@@ -92,7 +101,9 @@ Item {
                     font.pointSize: 8
                 }
                 Label {
-                    text: qsTr("<font color=\"white\">%1</font>").arg(bsApp.nbUsedWalletAddresses)
+                    text: qsTr("<font color=\"white\">%1</font>")
+                        .arg(walletBalances.data(walletBalances.index(walletsComboBox.currentIndex, 0)
+                            , WalletBalance.NbAddrRole))
                     font.pointSize: 12
                 }
             }

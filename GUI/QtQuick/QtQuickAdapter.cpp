@@ -34,8 +34,9 @@
 #include "BSTerminalSplashScreen.h"
 #include "QTXSignRequest.h"
 #include "TxOutputsModel.h"
-#include "Wallets/ProtobufHeadlessUtils.h"
 #include "SettingsAdapter.h"
+#include "Wallets/ProtobufHeadlessUtils.h"
+#include "WalletBalancesModel.h"
 
 #include "common.pb.h"
 #include "hardware_wallet.pb.h"
@@ -130,6 +131,7 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    txOutputsModel_ = new TxOutputsModel(logger, this);
    txInputsModel_ = new TxInputsModel(logger, txOutputsModel_, this);
    hwDeviceModel_ = new HwDeviceModel(this);
+   walletBalances_ = new WalletBalancesModel(logger, this);
 }
 
 QtQuickAdapter::~QtQuickAdapter()
@@ -206,6 +208,8 @@ void QtQuickAdapter::run(int &argc, char **argv)
    qmlRegisterInterface<QUTXO>("QUTXO");
    qmlRegisterInterface<QUTXOList>("QUTXOList");
    qmlRegisterInterface<QTxDetails>("QTxDetails");
+   qmlRegisterUncreatableMetaObject(WalletBalance::staticMetaObject, "wallet.balance"
+      , 1, 0, "WalletBalance", tr("Error: only enums"));
 
    //need to read files in qml
    qputenv("QML_XHR_ALLOW_FILE_READ", QByteArray("1"));
@@ -223,6 +227,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
    rootCtxt_->setContextProperty(QLatin1Literal("txInputsModel"), txInputsModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("txOutputsModel"), txOutputsModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("hwDeviceModel"), hwDeviceModel_);
+   rootCtxt_->setContextProperty(QLatin1Literal("walletBalances"), walletBalances_);
    engine.addImageProvider(QLatin1Literal("QR"), new QRImageProvider);
 
    engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
@@ -264,7 +269,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
 QStringList QtQuickAdapter::txWalletsList() const
 {
    QStringList result = { tr("All wallets") };
-   result.append(walletsList_);
+   result.append(walletBalances_->wallets());
    return result;
 }
 
@@ -515,7 +520,7 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
       }
       break;
    case SignerMessage::kCreatedWallet:
-      walletsList_.clear();
+      walletBalances_->clear();
       logger_->debug("[{}] wallet {} created: {}", __func__    //TODO: show something in the GUI if needed
          , msg.created_wallet().wallet_id(), msg.created_wallet().error_msg());
       break;
@@ -564,7 +569,7 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
          }
          catch (const std::exception &) {}
       }
-      processWalletAddresses(addresses);
+      processWalletAddresses(msg.wallet_addresses().wallet_id(), addresses);
    }
       break;
 
@@ -765,18 +770,17 @@ void QtQuickAdapter::createWallet(bool primary)
 
 std::string QtQuickAdapter::hdWalletIdByIndex(int index)
 {
-   if ((index < 0) || (index >= walletsList_.size())) {
+   const auto& walletsList = walletBalances_->wallets();
+   if ((index < 0) || (index >= walletsList.size())) {
       return {};
    }
-   const auto& walletName = walletsList_.at(index).toStdString();
-   std::string walletId;
+   const auto& walletName = walletsList.at(index).toStdString();
    for (const auto& wallet : hdWallets_) {
       if (wallet.second.name == walletName) {
-         walletId = wallet.first;
-         break;
+         return wallet.first;
       }
    }
-   return walletId;
+   return {};
 }
 
 std::string QtQuickAdapter::generateWalletName() const
@@ -799,20 +803,14 @@ std::string QtQuickAdapter::generateWalletName() const
 
 void QtQuickAdapter::walletSelected(int index)
 {
-   curWalletIndex_ = index;
-   const auto& walletName = walletsList_.at(index).toStdString();
+   const auto& walletName = walletBalances_->wallets().at(index).toStdString();
    const auto& walletId = hdWalletIdByIndex(index);
-   confWalletBalance_ = unconfWalletBalance_ = totalWalletBalance_ = 0;
-   nbUsedWalletAddresses_ = 0;
-   WalletsMessage msg;
-   msg.set_get_wallet_balances(walletId);
-   pushRequest(user_, userWallets_, msg.SerializeAsString(), {}, 10, std::chrono::milliseconds{500});
 
-   addrModel_->clear();
+   addrModel_->reset(walletId);
+   WalletsMessage msg;
    msg.set_wallet_get(walletId);
    const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
    walletInfoReq_[msgId] = walletName;
-   walletNames_[walletId] = walletName;
 }
 
 void QtQuickAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
@@ -822,13 +820,20 @@ void QtQuickAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
    hdWallets_[walletId] = wi;
    hwDeviceModel_->setLoaded(walletId);
    logger_->debug("[QtQuickAdapter::processWalletLoaded] {} {}", wi.name, walletId);
-   QMetaObject::invokeMethod(this, [this, isInitialLoad, walletName = QString::fromStdString(wi.name)] {
-      walletsList_.push_back(walletName);
+   QMetaObject::invokeMethod(this, [this, isInitialLoad, walletId, walletName = wi.name] {
+      walletBalances_->addWallet({ walletId, walletName });
       if (isInitialLoad) {
+         auto comboWalletsList = rootObj_->findChild<QQuickItem*>(QLatin1Literal("walletsComboBox"));
+         comboWalletsList->setProperty("currentIndex", 0);
          walletSelected(0);
       }
       emit walletsListChanged();
    });
+
+   WalletsMessage msg;
+   msg.set_get_wallet_balances(walletId);
+   pushRequest(user_, userWallets_, msg.SerializeAsString(), {}, 10
+      , std::chrono::milliseconds{ 500 });
 }
 
 ProcessingResult QtQuickAdapter::processWalletData(bs::message::SeqId msgId
@@ -852,10 +857,12 @@ ProcessingResult QtQuickAdapter::processWalletData(bs::message::SeqId msgId
       }
       walletInfoReq_.erase(itReq);
    }
+   QVector<QVector<QString>> addresses;
    for (const auto& addr : response.used_addresses()) {
-      addrModel_->addRow({ QString::fromStdString(addr.address()), {}, {}
-         , QString::fromStdString(addr.comment().empty() ? addr.index() : addr.comment()) });
+      addresses.append({ QString::fromStdString(addr.address())
+      , QString::fromStdString(addr.comment().empty() ? addr.index() : addr.comment()) });
    }
+   addrModel_->addRows(response.wallet_id(), addresses);
    return ProcessingResult::Success;
 }
 
@@ -863,13 +870,9 @@ ProcessingResult QtQuickAdapter::processWalletBalances(bs::message::SeqId respon
    , const WalletsMessage_WalletBalances &response)
 {
    //logger_->debug("[{}] {}", __func__, response.DebugString());
-   if (response.wallet_id() != hdWalletIdByIndex(curWalletIndex_)) {
-      return ProcessingResult::Ignored;
-   }
-   totalWalletBalance_ = response.total_balance();
-   confWalletBalance_ = response.spendable_balance();
-   unconfWalletBalance_ = response.unconfirmed_balance();
-   nbUsedWalletAddresses_ = response.nb_addresses();
+   const WalletBalancesModel::Balance bal{ response.spendable_balance(), response.unconfirmed_balance()
+      , response.total_balance(), response.nb_addresses() };
+   walletBalances_->setWalletBalance(response.wallet_id(), bal);
 
    for (const auto& addrBal : response.address_balances()) {
       addrModel_->updateRow(BinaryData::fromString(addrBal.address()), addrBal.total_balance(), addrBal.tx_count());
@@ -1283,10 +1286,10 @@ ProcessingResult QtQuickAdapter::processFeeLevels(const ArmoryMessage_FeeLevelsR
 ProcessingResult QtQuickAdapter::processWalletsList(const WalletsMessage_WalletsListResponse& response)
 {
    logger_->debug("[QtQuickAdapter::processWalletsList] {}", response.DebugString());
-   walletsList_.clear();
+   walletBalances_->clear();
    for (const auto& wallet : response.wallets()) {
       const auto& hdWallet = bs::sync::HDWalletData::fromCommonMessage(wallet);
-      walletsList_.push_back(QString::fromStdString(hdWallet.name));
+      walletBalances_->addWallet({hdWallet.id, hdWallet.name});
    }
    emit walletsListChanged();
    return ProcessingResult::Success;
@@ -1414,14 +1417,15 @@ ProcessingResult QtQuickAdapter::processReservedUTXOs(const WalletsMessage_Reser
    return ProcessingResult::Success;
 }
 
-void QtQuickAdapter::processWalletAddresses(const std::vector<bs::sync::Address>& addresses)
+void QtQuickAdapter::processWalletAddresses(const std::string& walletId
+   , const std::vector<bs::sync::Address>& addresses)
 {
    if (addresses.empty()) {
       return;
    }
    const auto lastAddr = addresses.at(addresses.size() - 1);
    logger_->debug("[{}] last address: {}", __func__, lastAddr.address.display());
-   addrModel_->addRow({ QString::fromStdString(lastAddr.address.display()), {}, {}
+   addrModel_->addRow(walletId, { QString::fromStdString(lastAddr.address.display())
       , QString::fromStdString(lastAddr.index) });
    generatedAddress_ = lastAddr.address;
    emit addressGenerated();

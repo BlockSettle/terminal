@@ -9,7 +9,7 @@
 
 */
 #include "AddressListModel.h"
-#include "Address.h"
+#include <spdlog/spdlog.h>
 #include "BTCNumericTypes.h"
 
 namespace {
@@ -20,30 +20,45 @@ namespace {
    };
 }
 
-QmlAddressListModel::QmlAddressListModel(const std::shared_ptr<spdlog::logger>&, QObject* parent)
-   : QAbstractTableModel(parent)
-{
-   table.append({tr("Address"), tr("Balance (BTC)"), tr("#Tx"), tr("Comment")});
-}
+QmlAddressListModel::QmlAddressListModel(const std::shared_ptr<spdlog::logger>& logger
+   , QObject* parent)
+   : QAbstractTableModel(parent), logger_(logger)
+   , header_({ tr("Address"), tr("Balance (BTC)"), tr("#Tx"), tr("Comment") })
+{}
 
 int QmlAddressListModel::rowCount(const QModelIndex &) const
 {
-   return table.size();
+   return table_.size() + 1;
 }
 
 int QmlAddressListModel::columnCount(const QModelIndex &) const
 {
-   return 4;
+   return header_.size();
 }
 
 QVariant QmlAddressListModel::data(const QModelIndex& index, int role) const
 {
-   if (index.column() > 3) {
-      return {};
-   }
    switch (role) {
    case TableDataRole:
-      return table.at(index.row()).at(index.column());
+      if (index.row() == 0) {
+         return header_.at(index.column());
+      }
+      else {
+         const int row = index.row() - 1;
+         try {
+            switch (index.column()) {
+            case 0:  return table_.at(row).at(0);
+            case 1:  return QString::number(pendingBalances_.at(addresses_.at(row).id()).balance / BTCNumericTypes::BalanceDivider, 'f', 8);
+            case 2:  return QString::number(pendingBalances_.at(addresses_.at(row).id()).nbTx);
+            case 3:  return table_.at(row).at(1);
+            default: return QString{};
+            }
+         }
+         catch (const std::exception&) {
+            return QString{};
+         }
+      }
+   break;
    case HeadingRole:
       return (index.row() == 0);
    case FirstColRole:
@@ -58,55 +73,63 @@ QHash<int, QByteArray> QmlAddressListModel::roleNames() const
    return kRoles;
 }
 
-void QmlAddressListModel::addRow(const QVector<QString>& row)
+void QmlAddressListModel::addRow(const std::string& walletId, const QVector<QString>& row)
 {
-   beginInsertRows(QModelIndex(), rowCount(), rowCount());
+   if (walletId != expectedWalletId_) {
+      logger_->warn("[QmlAddressListModel::addRow] wallet {} not expected ({})", walletId, expectedWalletId_);
+      return;
+   }
    try {
-      const auto& addr = bs::Address::fromAddressString(row.at(0).toStdString());
-      const auto& itAddr = pendingBalances_.find(addr.id());
-      if (itAddr != pendingBalances_.end()) {
-         auto rowCopy = row;
-         rowCopy[1] = QString::number(itAddr->second.balance / BTCNumericTypes::BalanceDivider, 'f', 8);
-         rowCopy[2] = QString::number(itAddr->second.nbTx);
-         pendingBalances_.erase(itAddr);
-         table.append(rowCopy);
-      }
-      else {
-         table.append(row);
-      }
+      addresses_.push_back(bs::Address::fromAddressString(row.at(0).toStdString()));
    }
    catch (const std::exception&) {
-      table.append(row);
+      addresses_.push_back(bs::Address{});
    }
+   beginInsertRows(QModelIndex(), rowCount(), rowCount());
+   table_.append(row);
+   endInsertRows();
+}
+
+void QmlAddressListModel::addRows(const std::string& walletId, const QVector<QVector<QString>>& rows)
+{
+   if (walletId != expectedWalletId_) {
+      logger_->warn("[QmlAddressListModel::addRows] wallet {} not expected ({})", walletId, expectedWalletId_);
+      return;
+   }
+   if (rows.empty()) {
+      return;
+   }
+   for (const auto& row : rows) {
+      try {
+         addresses_.push_back(bs::Address::fromAddressString(row.at(0).toStdString()));
+      }
+      catch (const std::exception&) {
+         addresses_.push_back(bs::Address{});
+      }
+   }
+   beginInsertRows(QModelIndex(), rowCount(), rowCount() + rows.size() - 1);
+   table_.append(rows);
    endInsertRows();
 }
 
 void QmlAddressListModel::updateRow(const BinaryData& addrPubKey, uint64_t bal, uint32_t nbTx)
 {
-   bool updated = false;
-   for (int i = 1; i < table.size(); ++ i) {
-      auto& row = table[i];
-      try {
-         const auto& addr = bs::Address::fromAddressString(row.at(0).toStdString());
-         if (addr.id() == addrPubKey) {
-            row[1] = QString::number(bal / BTCNumericTypes::BalanceDivider, 'f', 8);
-            row[2] = QString::number(nbTx);
-            emit dataChanged(createIndex(i, 1), createIndex(i, 2));
-            updated = true;
-            break;
-         }
+   pendingBalances_[addrPubKey] = { bal, nbTx };
+   for (int i = 0; i < table_.size(); ++i) {
+      const auto& addr = addresses_.at(i);
+      //logger_->debug("[QmlAddressListModel::updateRow] {} {} {}", addr.display(), bal, nbTx);
+      if (addr.id() == addrPubKey) {
+         emit dataChanged(createIndex(i + 1, 1), createIndex(i + 1, 2));
+         break;
       }
-      catch (const std::exception&) {}
-   }
-   if (!updated) {
-      pendingBalances_[addrPubKey] = { bal, nbTx };
    }
 }
 
-void QmlAddressListModel::clear()
+void QmlAddressListModel::reset(const std::string& expectedWalletId)
 {
-   pendingBalances_.clear();
+   expectedWalletId_ = expectedWalletId;
    beginResetModel();
-   table.remove(1, table.size() - 1);
+   addresses_.clear();
+   table_.clear();
    endResetModel();
 }
