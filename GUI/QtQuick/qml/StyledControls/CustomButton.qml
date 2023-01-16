@@ -21,7 +21,7 @@ Button {
     font.pixelSize: 16
     font.family: "Roboto"
     font.weight: Font.Bold
-    palette.buttonText: enabled ? "#FFFFFF" : "#020817"
+    palette.buttonText: enabled ? BSStyle.buttonsTextColor : BSStyle.buttonsDisabledTextColor
 
 
     icon.color: "transparent"
@@ -31,7 +31,7 @@ Button {
     background: Rectangle {
         implicitWidth: control.width
         implicitHeight: 50
-        color: preferred ? (!control.enabled ? BSStyle.disabledColor :
+        color: preferred ? (!control.enabled ? BSStyle.buttonsDisabledColor :
                 (control.down ? BSStyle.buttonsPreferredPressedColor :
                 (control.hovered ? BSStyle.buttonsPreferredHoveredColor : BSStyle.buttonsPreferredColor))):
                 (!control.enabled ? BSStyle.disabledColor :
