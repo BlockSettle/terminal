@@ -32,6 +32,7 @@
 #include "bip39/bip39.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
+#include "FeeSuggModel.h"
 #include "QTXSignRequest.h"
 #include "TxOutputsModel.h"
 #include "SettingsAdapter.h"
@@ -132,6 +133,7 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    txInputsModel_ = new TxInputsModel(logger, txOutputsModel_, this);
    hwDeviceModel_ = new HwDeviceModel(this);
    walletBalances_ = new WalletBalancesModel(logger, this);
+   feeSuggModel_ = new FeeSuggestionModel(logger, this);
 }
 
 QtQuickAdapter::~QtQuickAdapter()
@@ -228,6 +230,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
    rootCtxt_->setContextProperty(QLatin1Literal("txOutputsModel"), txOutputsModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("hwDeviceModel"), hwDeviceModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("walletBalances"), walletBalances_);
+   rootCtxt_->setContextProperty(QLatin1Literal("feeSuggestions"), feeSuggModel_);
    engine.addImageProvider(QLatin1Literal("QR"), new QRImageProvider);
 
    engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
@@ -1135,6 +1138,16 @@ void QtQuickAdapter::copyAddressToClipboard(const QString& addr)
    }
 }
 
+void QtQuickAdapter::requestFeeSuggestions()
+{
+   ArmoryMessage msg;
+   auto msgReq = msg.mutable_fee_levels_request();
+   for (const auto& feeLevel : FeeSuggestionModel::feeLevels()) {
+      msgReq->add_levels(feeLevel.first);
+   }
+   pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+}
+
 QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QString& recvAddr
    , double amount, double fee, const QString& comment, QUTXOList* utxos)
 {
@@ -1275,11 +1288,11 @@ ProcessingResult QtQuickAdapter::processAddressHist(const ArmoryMessage_AddressH
 
 ProcessingResult QtQuickAdapter::processFeeLevels(const ArmoryMessage_FeeLevelsResponse& response)
 {
-   std::map<unsigned int, float> feeLevels;
+   std::map<uint32_t, float> feeLevels;
    for (const auto& pair : response.fee_levels()) {
       feeLevels[pair.level()] = pair.fee();
    }
-   //TODO
+   feeSuggModel_->addRows(feeLevels);
    return ProcessingResult::Success;
 }
 

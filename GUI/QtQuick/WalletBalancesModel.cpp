@@ -39,7 +39,6 @@ QVariant WalletBalancesModel::data(const QModelIndex& index, int role) const
    if (index.row() < 0) {
       return {};
    }
-   logger_->debug("[WalletBalancesModel::data] #{} {}", index.row(), role);
    FieldFunc ff{ nullptr };
    switch (role) {
    case WalletBalance::NameRole:
@@ -90,7 +89,7 @@ void WalletBalancesModel::addWallet(const const Wallet& wallet)
          return;
       }
    }
-   logger_->debug("[WalletBalancesModel::addWallet] adding #{}: {}", rowCount(), wallet.walletName);
+   //logger_->debug("[WalletBalancesModel::addWallet] adding #{}: {}", rowCount(), wallet.walletName);
    beginInsertRows(QModelIndex(), rowCount(), rowCount());
    wallets_.push_back(wallet);
    endInsertRows();

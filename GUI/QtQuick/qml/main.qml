@@ -132,6 +132,7 @@ ApplicationWindow {
                 font.pointSize: 16
                 Layout.fillHeight: true
                 onClicked: {
+                    bsApp.requestFeeSuggestions()
                     topMenuBtnClicked(btnSend)
                     stack.push(sendPage)
                 }

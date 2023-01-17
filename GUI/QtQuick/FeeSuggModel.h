@@ -11,6 +11,7 @@
 #ifndef FEE_SUGG_MODEL_H
 #define FEE_SUGG_MODEL_H
 
+#include <map>
 #include <QAbstractTableModel>
 #include <QObject>
 #include <QVariant>
@@ -32,12 +33,13 @@ public:
    QVariant data(const QModelIndex& index, int role) const override;
    QHash<int, QByteArray> roleNames() const override;
 
+   static std::map<uint32_t, QString> feeLevels();
    struct FeeSuggestion {
       uint32_t nbBlocks;
-      unsigned minutes;
-      uint64_t satoshis;
+      QString  estTime;
+      float    satoshis;
    };
-   void addRow(const FeeSuggestion&);
+   void addRows(const std::map<uint32_t, float>&);
    void clear();
 
 private:
