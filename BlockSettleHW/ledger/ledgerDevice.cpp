@@ -341,7 +341,7 @@ BIP32_Node GetPubKeyHandler::retrievePublicKeyFromPath(const bs::hd::Path& deriv
 void LedgerDevice::getPublicKeys()
 {
    auto deviceKey = key();
-   auto walletInfo = std::make_shared<bs::core::wallet::HwWalletInfo>();
+   auto walletInfo = std::make_shared<bs::core::HwWalletInfo>();
    walletInfo->type = bs::wallet::HardwareEncKey::WalletType::Ledger;
    walletInfo->vendor = deviceKey.vendor;
    walletInfo->label = deviceKey.label;
@@ -404,7 +404,7 @@ void LedgerDevice::getPublicKeys()
          return;
       }
 
-      const auto& isValid = [](const bs::core::wallet::HwWalletInfo& info)
+      const auto& isValid = [](const bs::core::HwWalletInfo& info)
       {
          return !info.xpubRoot.empty() && !info.xpubNestedSegwit.empty() &&
             !info.xpubNativeSegwit.empty() && !info.xpubLegacy.empty();
@@ -485,7 +485,7 @@ void LedgerDevice::signTX(const bs::core::wallet::TXSignRequest& coreReq)
 void bs::hww::LedgerDevice::retrieveXPubRoot()
 {
    auto deviceKey = key();
-   auto walletInfo = std::make_shared<bs::core::wallet::HwWalletInfo>();
+   auto walletInfo = std::make_shared<bs::core::HwWalletInfo>();
    walletInfo->type = bs::wallet::HardwareEncKey::WalletType::Ledger;
    walletInfo->vendor = deviceKey.vendor;
    walletInfo->label = deviceKey.label;

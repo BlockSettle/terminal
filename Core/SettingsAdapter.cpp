@@ -613,7 +613,7 @@ ProcessingResult SettingsAdapter::processSignerSettings(const bs::message::Envel
       keyVal->set_key(signer.serverId());
       keyVal->set_value(signer.key.toStdString());
    }
-   msgResp->set_home_dir(appSettings_->GetHomeDir().toStdString());
+   msgResp->set_home_dir(appSettings_->GetHomeDir().toUtf8().toStdString());
    msgResp->set_auto_sign_spend_limit(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
 
    pushResponse(user_, env, msg.SerializeAsString());

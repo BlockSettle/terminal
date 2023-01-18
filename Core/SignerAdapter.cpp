@@ -138,6 +138,8 @@ ProcessingResult SignerAdapter::processOwnRequest(const bs::message::Envelope &e
       return processCreateWallet(env, true, request.import_wallet());
    case SignerMessage::kDeleteWallet:
       return processDeleteWallet(env, request.delete_wallet());
+   case SignerMessage::kImportHwWallet:
+      return processImportHwWallet(env, request.import_hw_wallet());
    default:
       logger_->warn("[{}] unknown signer request: {}", __func__, request.data_case());
       break;
@@ -598,6 +600,30 @@ ProcessingResult SignerAdapter::processCreateWallet(const bs::message::Envelope&
    }
    pushResponse(user_, env, msg.SerializeAsString());
    return ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult SignerAdapter::processImportHwWallet(const bs::message::Envelope& env
+   , const BlockSettle::Common::SignerMessage_ImportHWWallet& request)
+{
+   const bs::core::HwWalletInfo hwwInfo{ static_cast<bs::wallet::HardwareEncKey::WalletType>(request.type())
+      , request.vendor(), request.label(), request.device_id(), request.xpub_root()
+      , request.xpub_nested_segwit(), request.xpub_native_segwit(), request.xpub_legacy() };
+   SignerMessage msg;
+   auto msgResp = msg.mutable_created_wallet();
+   try {
+      const auto& hwWallet = std::make_shared<bs::core::hd::Wallet>(netType_
+         , hwwInfo, walletsDir_ + "/bs_hw_<wallet_id>.lmdb", logger_);
+      walletsMgr_->addWallet(hwWallet);
+      msgResp->set_wallet_id(hwWallet->walletId());
+      walletsChanged(true);
+      logger_->debug("[{}] wallet {} created", __func__, hwWallet->walletId());
+   }
+   catch (const std::exception& e) {
+      logger_->error("[{}] failed to create HW wallet: {}", __func__, e.what());
+      msgResp->set_error_msg(e.what());
+   }
+   pushResponse(user_, env, msg.SerializeAsString());
+   return bs::message::ProcessingResult::Success;
 }
 
 ProcessingResult SignerAdapter::processDeleteWallet(const bs::message::Envelope& env

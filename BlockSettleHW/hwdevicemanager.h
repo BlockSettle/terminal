@@ -42,7 +42,7 @@ namespace bs {
       struct DeviceCallbacks
       {
          virtual void publicKeyReady(const std::string& devId, const std::string& walletId) = 0;
-         virtual void walletInfoReady(const DeviceKey&, const bs::core::wallet::HwWalletInfo&) = 0;
+         virtual void walletInfoReady(const DeviceKey&, const bs::core::HwWalletInfo&) = 0;
          virtual void requestPinMatrix(const DeviceKey&) = 0;
          virtual void requestHWPass(const DeviceKey&, bool allowedOnDevice) = 0;
 
@@ -71,7 +71,7 @@ namespace bs {
 
       private: // signals
          void publicKeyReady(const std::string& devId, const std::string& walletId) override;
-         void walletInfoReady(const DeviceKey&, const bs::core::wallet::HwWalletInfo&) override;
+         void walletInfoReady(const DeviceKey&, const bs::core::HwWalletInfo&) override;
          void requestPinMatrix(const DeviceKey&) override;
          void requestHWPass(const DeviceKey&, bool allowedOnDevice) override;
 
@@ -119,7 +119,7 @@ namespace bs {
          std::shared_ptr<spdlog::logger> logger_;
          std::unique_ptr<TrezorClient> trezorClient_;
          std::unique_ptr<LedgerClient> ledgerClient_;
-         std::shared_ptr<bs::message::User>  user_, userWallets_;
+         std::shared_ptr<bs::message::User>  user_, userWallets_, userSigner_;
          std::vector<DeviceKey>  devices_;
 
          bool testNet_{false};

@@ -119,7 +119,7 @@ namespace bs {
          std::shared_ptr<::hw::trezor::messages::management::Features> features_{};
 
          std::unique_ptr<bs::core::wallet::TXSignRequest> currentTxSignReq_;
-         bs::core::wallet::HwWalletInfo   awaitingWalletInfo_;
+         bs::core::HwWalletInfo  awaitingWalletInfo_;
          std::string awaitingSignedTX_;
          bool txSignedByUser_{ false };
       };

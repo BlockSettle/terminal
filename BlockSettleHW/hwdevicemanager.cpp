@@ -31,6 +31,7 @@ DeviceManager::DeviceManager(const std::shared_ptr<spdlog::logger>& logger)
    : logger_(logger)
    , user_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::HWWallets))
    , userWallets_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Wallets))
+   , userSigner_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Signer))
 {}
 
 DeviceManager::~DeviceManager()
@@ -381,11 +382,25 @@ void DeviceManager::publicKeyReady(const std::string& devId, const std::string& 
 }
 
 void bs::hww::DeviceManager::walletInfoReady(const DeviceKey& key
-   , const bs::core::wallet::HwWalletInfo& walletInfo)
+   , const bs::core::HwWalletInfo& walletInfo)
 {
-   logger_->debug("[hww::DeviceManager::walletInfoReady] importing device {} "
-      "(not implemented)", key.id);
-   //TODO: send request to WA
+   if (walletInfo.xpubRoot.empty()) {
+      logger_->error("[{}] failed to obtain wallet public keys for {}", key.id);
+      return;
+   }
+   logger_->debug("[hww::DeviceManager::walletInfoReady] importing device {}", key.id);
+
+   SignerMessage msg;
+   auto msgReq = msg.mutable_import_hw_wallet();
+   msgReq->set_type((int)walletInfo.type);
+   msgReq->set_vendor(walletInfo.vendor);
+   msgReq->set_label(walletInfo.label);
+   msgReq->set_device_id(walletInfo.deviceId);
+   msgReq->set_xpub_root(walletInfo.xpubRoot);
+   msgReq->set_xpub_nested_segwit(walletInfo.xpubNestedSegwit);
+   msgReq->set_xpub_native_segwit(walletInfo.xpubNativeSegwit);
+   msgReq->set_xpub_legacy(walletInfo.xpubLegacy);
+   pushRequest(user_, userSigner_, msg.SerializeAsString());
 }
 
 void DeviceManager::requestPinMatrix(const DeviceKey&)
