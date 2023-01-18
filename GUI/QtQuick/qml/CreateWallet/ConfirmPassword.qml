@@ -12,10 +12,8 @@ ColumnLayout  {
 
     signal sig_confirm()
 
-    height: 481
+    height: 485
     width: 580
-    implicitHeight: 481
-    implicitWidth: 580
 
     spacing: 0
 
@@ -98,10 +96,7 @@ ColumnLayout  {
             {
                 bsApp.createWallet("", phrase, password.input_text)
                 layout.sig_confirm()
-                password.isValid = true
-                confirm_password.isValid = true
-                password.input_text = ""
-                confirm_password.input_text = ""
+                clear()
             }
             else
             {
@@ -121,6 +116,15 @@ ColumnLayout  {
 
     function init()
     {
+        clear()
         password.setActiveFocus()
+    }
+
+    function clear()
+    {
+        password.isValid = true
+        confirm_password.isValid = true
+        password.input_text = ""
+        confirm_password.input_text = ""
     }
 }

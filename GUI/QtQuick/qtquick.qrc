@@ -96,5 +96,17 @@
         <file>qml/CreateWallet/WalletSeed.qml</file>
         <file>qml/CreateWallet/WalletSeedSkipAccept.qml</file>
         <file>qml/CreateWallet/WalletSeedVerify.qml</file>
+        <file>qml/StyledControls/CustomCompleterWidget.qml</file>
+        <file>images/advanced_icon.png</file>
+        <file>qml/StyledControls/CustomContextMenu.qml</file>
+        <file>qml/StyledControls/CustomDialogWindow.qml</file>
+        <file>qml/StyledControls/CustomLabelCopyableValue.qml</file>
+        <file>qml/StyledControls/CustomPasswordTextInput.qml</file>
+        <file>qml/StyledControls/CustomTextEdit.qml</file>
+        <file>qml/StyledControls/CustomTitleDialogWindow.qml</file>
+        <file>qml/StyledControls/CustomTitleDialogWindowWithExpander.qml</file>
+        <file>qml/Send/qmldir</file>
+        <file>qml/Send/SendPopup.qml</file>
+        <file>qml/Send/SimpleDetails.qml</file>
     </qresource>
 </RCC>

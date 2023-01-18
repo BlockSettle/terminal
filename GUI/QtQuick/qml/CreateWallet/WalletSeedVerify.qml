@@ -15,7 +15,7 @@ ColumnLayout  {
 
     property var indexes: []
 
-    height: 481
+    height: 485
     width: 580
 
     spacing: 0

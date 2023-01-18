@@ -9,13 +9,15 @@ import "../StyledControls"
 CustomPopup {
     id: root
 
-    objectName: "receive_popup"
+    objectName: "send_popup"
 
-    _stack_view.initialItem: receive_qr_code
-    _arrow_but_visibility: !receive_qr_code.visible
+    navig_bar_width: 30
 
-    ReceiveQrCode {
-        id: receive_qr_code
+    _stack_view.initialItem: simple_details
+    _arrow_but_visibility: !simple_details.visible
+
+    SimpleDetails {
+        id: simple_details
         visible: false
     }
 }

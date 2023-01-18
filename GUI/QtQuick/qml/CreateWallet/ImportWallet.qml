@@ -27,7 +27,7 @@ ColumnLayout  {
                                  "17", "18", "19", "20",
                                  "21", "22", "23", "24"]
 
-    height: radbut_12.checked ? 511 : 735
+    height: radbut_12.checked ? 515 : 739
     width: 580
 
     spacing: 0
@@ -139,10 +139,14 @@ ColumnLayout  {
         cellHeight : 56
         cellWidth : 180
 
-        property var isComplete: false
+        property bool isComplete: false
 
         model: radbut_12.checked ? layout.grid_model_12 : layout.grid_model_24
         delegate: CustomSeedTextInput {
+            id: _delega
+
+            property var _component
+
             width: 170
             title_text: modelData
             onTextChanged : {
@@ -154,6 +158,32 @@ ColumnLayout  {
                         grid.isComplete = false
                         break
                     }
+                }
+
+                if(_delega.input_text.length && _delega.completer === null)
+                {
+                    _component = Qt.createComponent("CustomCompleterWidget.qml");
+                    if (_component.status === Component.Ready)
+                        finishCreation();
+                    else
+                        _component.statusChanged.connect(finishCreation);
+                }
+            }
+
+            function finishCreation() {
+                if (_component.status === Component.Ready) {
+                    _delega.completer = completer.createObject(mainWindow, {x: _delega.x, y: _delega.y});
+                    _delega.completer.completer_vars = bsApp.completeBIP39dic(_delega.input_text)
+                    if (_delega.completer === null) {
+                        // Error Handling
+                        console.debug("Error creating completer");
+                    }
+                    else {
+                        console.debug("Success creating completer");
+                    }
+                } else if (_component.status === Component.Error) {
+                    // Error Handling
+                    console.debug("Error loading component:", component.errorString());
                 }
             }
         }
@@ -178,6 +208,7 @@ ColumnLayout  {
                 layout.phrase.push(grid.itemAtIndex(i).input_text)
             }
             layout.sig_import()
+            clear()
         }
     }
 
@@ -191,6 +222,15 @@ ColumnLayout  {
 
     function init()
     {
+        clear()
         grid.itemAtIndex(0).setActiveFocus()
+    }
+
+    function clear()
+    {
+        for (var i=0; i<grid.count; i++)
+        {
+            grid.itemAtIndex(i).input_text = ""
+        }
     }
 }

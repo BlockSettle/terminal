@@ -17,7 +17,7 @@ ColumnLayout  {
 
     property bool isFileChoosen: false
 
-    height: 511
+    height: 515
     width: 580
 
     spacing: 0

@@ -55,7 +55,7 @@ QtObject {
     readonly property color switchCheckedColor: "#247dac"
     readonly property color switchOrangeColor: "#f6a724"
     readonly property color switchUncheckedColor: "#b1b8bf"
-    readonly property color switchDisabledBgColor: disabledColor
+    //readonly property color switchDisabledBgColor: disabledColor
     readonly property color switchDisabledColor: disabledTextColor
 
     readonly property color dialogHeaderColor: "#0A1619"
@@ -67,8 +67,7 @@ QtObject {
     readonly property color comboBoxBgColor: "transparent"
     readonly property color comboBoxItemBgColor: "#17262b"
     readonly property color comboBoxItemBgHighlightedColor: "#27363b"
-    readonly property color comboBoxItemTextColor: textColor
-    readonly property color comboBoxItemTextHighlightedColor: textColor
+
 
     readonly property color mainnetColor: "#fe9727"
     readonly property color testnetColor: "#22c064"
@@ -94,4 +93,9 @@ QtObject {
     readonly property color buttonsDisabledTextColor: "#1C2130"
 
     readonly property color buttonsDisabledColor: "#32394F"
+
+    readonly property color comboBoxItemTextColor: "#020817"
+    readonly property color comboBoxItemTextHighlightedColor: "#45A6FF"
+    readonly property color comboBoxItemTextCurrentColor: "#7A88B0"
+    readonly property color comboBoxItemHighlightedColor: "#45A6FF"
 }

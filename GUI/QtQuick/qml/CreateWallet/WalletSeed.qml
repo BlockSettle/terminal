@@ -14,7 +14,7 @@ ColumnLayout  {
 
     property var phrase
 
-    height: 481
+    height: 485
     width: 580
     spacing: 0
 

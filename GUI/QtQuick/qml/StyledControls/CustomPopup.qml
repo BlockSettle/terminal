@@ -9,7 +9,7 @@ Window {
 
     property var phrase
 
-    property int navig_bar_width: 40
+    property int navig_bar_width: 36
     property alias _stack_view: stack_create_wallet
     property alias _arrow_but_visibility: back_arrow_button.visible
 

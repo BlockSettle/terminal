@@ -15,7 +15,7 @@ ColumnLayout  {
     signal sig_import_wallet()
     signal sig_hardware_wallet()
 
-    height: 481
+    height: 485
     width: 580
     spacing: 0
 

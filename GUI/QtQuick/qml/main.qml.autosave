@@ -348,4 +348,16 @@ ApplicationWindow {
         property: "y"
         duration: resizeAnimationDuration
     }
+
+
+    //global functions
+    function getWalletData (index: int, role: string)
+    {
+        return walletBalances.data(walletBalances.index(index, 0), role)
+    }
+    
+    function getFeeSuggData (index: int, role: string)
+    {
+        return walletBalances.data(walletBalances.index(index, 0), role)
+    }    
 }
