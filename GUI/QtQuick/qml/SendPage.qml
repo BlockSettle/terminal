@@ -18,6 +18,7 @@ import "BsStyles"
 //import "BsControls"
 //import "BsDialogs"
 //import "js/helper.js" as JsHelper
+import wallet.balance 1.0
 
 Item {
     id: send
@@ -118,18 +119,30 @@ Item {
             spacing: 23
             ComboBox {
                 id: sendWalletsComboBox
-                model: bsApp.walletsList
+                model: walletBalances
+                textRole: "name"
+                valueRole: "name"
                 currentIndex: walletsComboBox.currentIndex
                 font.pointSize: 14
                 enabled: (bsApp.walletsList.length > 1)
                 width: 350
             }
             Label {
-                text: qsTr("<font color=\"white\">%1 BTC</font>").arg(bsApp.totalBalance)
+                text: qsTr("<font color=\"white\">%1 BTC</font>").arg(walletBalances.data(
+                    walletBalances.index(sendWalletsComboBox, 0), WalletBalance.TotalRole))
                 font.pointSize: 14
             }
-            TextInput {
+            ComboBox {
                 id: fees
+                model: feeSuggestions
+                font.pointSize: 14
+                textRole: "text"
+                valueRole: "value"
+                width: 500
+                editable: true
+            }
+/*            TextInput {
+                id: fees_
                 width: 500
                 height: 32
                 color: 'lightgrey'
@@ -150,7 +163,7 @@ Item {
                     anchors.right: parent
                     anchors.horizontalCenter: parent
                 }
-            }
+            }*/
         }
         TextEdit {
             id: txComment

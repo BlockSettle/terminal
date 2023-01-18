@@ -76,6 +76,7 @@ namespace BlockSettle {
    }
 }
 class BSTerminalSplashScreen;
+class FeeSuggestionModel;
 class HwDeviceModel;
 class QQmlContext;
 class QmlWalletsList;
@@ -160,6 +161,7 @@ public:
    Q_INVOKABLE void generateNewAddress(int walletIndex, bool isNative);
    Q_INVOKABLE void copyAddressToClipboard(const QString& addr);
 
+   Q_INVOKABLE void requestFeeSuggestions();
    Q_INVOKABLE QTXSignRequest* createTXSignRequest(int walletIndex, const QString& recvAddr
       , double amount, double fee, const QString& comment = {}, QUTXOList* utxos = nullptr);
    Q_INVOKABLE void getUTXOsForWallet(int walletIndex);
@@ -262,6 +264,7 @@ private:
    TxOutputsModel* txOutputsModel_{ nullptr };
    HwDeviceModel* hwDeviceModel_{ nullptr };
    WalletBalancesModel* walletBalances_{ nullptr };
+   FeeSuggestionModel* feeSuggModel_{ nullptr };
    bs::Address generatedAddress_;
    bool hwDevicesPolling_{ false };
 

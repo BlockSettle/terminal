@@ -39,12 +39,12 @@ QVariant FeeSuggestionModel::data(const QModelIndex& index, int role) const
 {
    switch (role) {
    case TextRole:
-      return tr("%1 blocks (%2 minutes): %3 s/b").arg(data_.at(index.row()).nbBlocks)
-         .arg(data_.at(index.row()).minutes).arg(data_.at(index.row()).satoshis);
+      return tr("%1 blocks (%2): %3 s/b").arg(data_.at(index.row()).nbBlocks)
+         .arg(data_.at(index.row()).estTime).arg(QString::number(data_.at(index.row()).satoshis, 'f', 1));
    case BlocksRole:
       return data_.at(index.row()).nbBlocks;
    case TimeRole:
-      return data_.at(index.row()).minutes;
+      return data_.at(index.row()).estTime;
    case ValueRole:
       return data_.at(index.row()).satoshis;
    default: break;
@@ -57,10 +57,42 @@ QHash<int, QByteArray> FeeSuggestionModel::roleNames() const
    return kRoles;
 }
 
-void FeeSuggestionModel::addRow(const FeeSuggestion& row)
+std::map<uint32_t, QString> FeeSuggestionModel::feeLevels()
 {
-   beginInsertRows(QModelIndex(), rowCount(), rowCount());
-   data_.push_back(row);
+   return {
+         { 2, tr("20 minutes")},
+         { 4, tr("40 minutes")},
+         { 6, tr("60 minutes")},
+         { 12, tr("2 hours")},
+         { 24, tr("4 hours")},
+         { 48, tr("8 hours")},
+         { 144, tr("24 hours")},
+         { 504, tr("3 days")},
+         { 1008, tr("7 days")}
+   };
+}
+
+void FeeSuggestionModel::addRows(const std::map<uint32_t, float>& feeLevels)
+{
+   if (feeLevels.empty()) {
+      return;
+   }
+   const auto& levelMapping = FeeSuggestionModel::feeLevels();
+   decltype(data_) newRows;
+   for (const auto& feeLevel : feeLevels) {
+      QString estTime;
+      const auto& itLevel = levelMapping.find(feeLevel.first);
+      if (itLevel == levelMapping.end()) {
+         estTime = tr("%1 minutes").arg(feeLevel.first * 10);
+      }
+      else {
+         estTime = itLevel->second;
+      }
+      FeeSuggestion row{ feeLevel.first, std::move(estTime), feeLevel.second };
+      newRows.emplace_back(std::move(row));
+   }
+   beginInsertRows(QModelIndex(), rowCount(), rowCount() + newRows.size() - 1);
+   data_.insert(data_.cend(), newRows.begin(), newRows.end());
    endInsertRows();
 }
 
