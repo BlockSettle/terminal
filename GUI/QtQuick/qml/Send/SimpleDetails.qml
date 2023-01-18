@@ -179,10 +179,14 @@ ColumnLayout  {
 
             model: walletBalances
 
+            currentIndex: 0
+
             //aliases
             title_text: qsTr("From Wallet")
-            details_text: walletBalances.data(walletBalances.index(currentIndex, 0), WalletBalance.TotalRole)
-            input_text: walletBalances.data(walletBalances.index(currentIndex, 0), WalletBalance.NameRole)
+            details_text: getWalletData(currentIndex, WalletBalance.TotalRole)
+            input_text: getWalletData(currentIndex, WalletBalance.NameRole)
+            //details_text: walletBalances.data(walletBalances.index(currentIndex, 0), WalletBalance.TotalRole)
+            //input_text: walletBalances.data(walletBalances.index(currentIndex, 0), WalletBalance.NameRole)
             delega_role: "name"
         }
 
