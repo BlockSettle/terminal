@@ -821,13 +821,15 @@ void QtQuickAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
    const bool isInitialLoad = hdWallets_.empty();
    const auto& walletId = *wi.ids.cbegin();
    hdWallets_[walletId] = wi;
-   hwDeviceModel_->setLoaded(walletId);
    logger_->debug("[QtQuickAdapter::processWalletLoaded] {} {}", wi.name, walletId);
    QMetaObject::invokeMethod(this, [this, isInitialLoad, walletId, walletName = wi.name] {
+      hwDeviceModel_->setLoaded(walletId);
       walletBalances_->addWallet({ walletId, walletName });
       if (isInitialLoad) {
          auto comboWalletsList = rootObj_->findChild<QQuickItem*>(QLatin1Literal("walletsComboBox"));
-         comboWalletsList->setProperty("currentIndex", 0);
+         if (comboWalletsList) {
+            comboWalletsList->setProperty("currentIndex", 0);
+         }
          walletSelected(0);
       }
       emit walletsListChanged();
