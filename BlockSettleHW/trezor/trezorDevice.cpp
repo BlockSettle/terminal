@@ -348,7 +348,7 @@ void TrezorDevice::signTX(const bs::core::wallet::TXSignRequest &reqTX)
          operationFailed("Signing failed. Please ensure you typed the correct passphrase.");
          return;
       }
-      cb_->txSigned(SecureBinaryData::fromString(reply->signedTX));
+      cb_->txSigned(key(), SecureBinaryData::fromString(reply->signedTX));
    };
    makeCall(message, cb);
 }

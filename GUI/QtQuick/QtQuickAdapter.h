@@ -53,6 +53,7 @@ namespace BlockSettle {
    }
    namespace HW {
       class DeviceMgrMessage_Devices;
+      class DeviceMgrMessage_SignTxResponse;
    }
    namespace Terminal {
       class AssetsMessage_Balance;
@@ -225,11 +226,11 @@ private:
       , const BlockSettle::Common::WalletsMessage_TxResponse&);
 
    bs::message::ProcessingResult processHWDevices(const BlockSettle::HW::DeviceMgrMessage_Devices&);
+   bs::message::ProcessingResult processHWSignedTX(const BlockSettle::HW::DeviceMgrMessage_SignTxResponse&);
 
    QVariant getSetting(ApplicationSettings::Setting) const;
    QString getSettingStringAt(ApplicationSettings::Setting, int idx);
    void setSetting(ApplicationSettings::Setting, const QVariant&);
-   void resetArmoryConnection();
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

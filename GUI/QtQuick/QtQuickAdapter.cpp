@@ -625,6 +625,8 @@ bs::message::ProcessingResult QtQuickAdapter::processHWW(const bs::message::Enve
    switch (msg.data_case()) {
    case HW::DeviceMgrMessage::kAvailableDevices:
       return processHWDevices(msg.available_devices());
+   case HW::DeviceMgrMessage::kSignedTx:
+      return processHWSignedTX(msg.signed_tx());
    default: break;
    }
    return bs::message::ProcessingResult::Ignored;
@@ -1507,6 +1509,16 @@ QString QtQuickAdapter::getSettingStringAt(ApplicationSettings::Setting s, int i
    return {};
 }
 
+bs::message::ProcessingResult QtQuickAdapter::processHWSignedTX(const HW::DeviceMgrMessage_SignTxResponse& response)
+{
+   ArmoryMessage msg;
+   auto msgReq = msg.mutable_tx_push();
+   auto msgTx = msgReq->add_txs_to_push();
+   msgTx->set_tx(response.signed_tx());
+   pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+   return ProcessingResult::Success;
+}
+
 void QtQuickAdapter::setSetting(ApplicationSettings::Setting s, const QVariant& val)
 {
    if (settingsCache_.empty()) {
@@ -1531,10 +1543,6 @@ void QtQuickAdapter::setSetting(ApplicationSettings::Setting s, const QVariant& 
    pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
-void QtQuickAdapter::resetArmoryConnection()
-{
-}
-
 void QtQuickAdapter::signAndBroadcast(QTXSignRequest* txReq, const QString& password)
 {
    if (!txReq) {
@@ -1542,14 +1550,46 @@ void QtQuickAdapter::signAndBroadcast(QTXSignRequest* txReq, const QString& pass
       return;
    }
    const auto& txSignReq = txReq->txReq();
-   SignerMessage msg;
-   auto msgReq = msg.mutable_sign_tx_request();
-   //msgReq->set_id(id);
-   *msgReq->mutable_tx_request() = bs::signer::coreTxRequestToPb(txSignReq);
-   msgReq->set_sign_mode((int)SignContainer::TXSignMode::Full);
-   //msgReq->set_keep_dup_recips(keepDupRecips);
-   msgReq->set_passphrase(password.toStdString());
-   pushRequest(user_, userSigner_, msg.SerializeAsString());
+   bool needHWSign = false;
+   for (const auto& walletId : txSignReq.walletIds) {
+      try {
+         if (hdWallets_.at(walletId).isHardware) {
+            needHWSign = true;
+            break;
+         }
+      }
+      catch (const std::exception&) {}
+   }
+   if (needHWSign) {
+      unsigned nbNonHW = 0;
+      for (const auto& walletId : txSignReq.walletIds) {
+         try {
+            if (!hdWallets_.at(walletId).isHardware) {
+               logger_->warn("[{}] can't mix HW and non-HW wallets now "
+                  "(non-HW wallet {})", __func__, walletId);
+               nbNonHW++;
+            }
+         }
+         catch (const std::exception&) {}
+      }
+      if (nbNonHW > 0) {
+         logger_->error("[{}] {} non-HW wallet[s] in sign request", __func__, nbNonHW);
+         return;
+      }
+      HW::DeviceMgrMessage msg;
+      *msg.mutable_sign_tx() = bs::signer::coreTxRequestToPb(txSignReq);
+      pushRequest(user_, userHWW_, msg.SerializeAsString());
+   }
+   else {
+      SignerMessage msg;
+      auto msgReq = msg.mutable_sign_tx_request();
+      //msgReq->set_id(id);
+      *msgReq->mutable_tx_request() = bs::signer::coreTxRequestToPb(txSignReq);
+      msgReq->set_sign_mode((int)SignContainer::TXSignMode::Full);
+      //msgReq->set_keep_dup_recips(keepDupRecips);
+      msgReq->set_passphrase(password.toStdString());
+      pushRequest(user_, userSigner_, msg.SerializeAsString());
+   }
 }
 
 int QtQuickAdapter::startSearch(const QString& s)

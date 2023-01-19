@@ -465,7 +465,7 @@ void LedgerDevice::signTX(const bs::core::wallet::TXSignRequest& coreReq)
          operationFailed("invalid data");
          return;
       }
-      cb_->txSigned(reply->serInputSigs);
+      cb_->txSigned(key(), reply->serInputSigs);
    };
    auto inData = std::make_shared<SignTXIn>();
    inData->key = key();
@@ -931,6 +931,7 @@ void SignTXHandler::sendTxSigningResult(const std::shared_ptr<SignTXOut>& outDat
    bw.put_var_int(responseSigned.size());
    for (const auto& signedInput : responseSigned) {
       bw.put_uint32_t(signedInput.first);
+      bw.put_var_int(signedInput.second.size());
       bw.put_BinaryData(BinaryData::fromString(signedInput.second.toStdString()));
    }
    outData->serInputSigs = bw.getData();

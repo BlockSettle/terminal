@@ -526,10 +526,39 @@ ProcessingResult SignerAdapter::processSignTx(const bs::message::Envelope& env
       pushResponse(user_, env, msg.SerializeAsString());
    };
    const auto& txReq = bs::signer::pbTxRequestToCore(request.tx_request(), logger_);
-   passphrase_ = SecureBinaryData::fromString(request.passphrase());
-   signer_->signTXRequest(txReq, cbSigned
-      , static_cast<SignContainer::TXSignMode>(request.sign_mode())
-      , request.keep_dup_recips());
+   bs::core::WalletsManager::HDWalletPtr hdWallet;
+   if ((txReq.walletIds.size() == 1)) {
+      hdWallet = walletsMgr_->getHDWalletById(txReq.walletIds.at(0));
+      if (hdWallet) {
+         if (!hdWallet->isHardwareWallet()) {
+            hdWallet.reset();
+         }
+      }
+      else {
+         logger_->error("[{}] failed to get HD wallet by {}", __func__, txReq.walletIds.at(0));
+      }
+   }
+   if (hdWallet) {
+      const auto& signData = SecureBinaryData::fromString(request.passphrase());
+      hdWallet->pushPasswordPrompt([signData]() { return signData; });
+      SignerMessage msg;
+      auto msgResp = msg.mutable_sign_tx_response();
+      try {
+         const auto& signedTX = hdWallet->signTXRequestWithWallet(txReq);
+         msgResp->set_signed_tx(signedTX.toBinStr());
+      }
+      catch (const std::exception& e) {
+         msgResp->set_error_text(e.what());
+      }
+      hdWallet->popPasswordPrompt();
+      pushResponse(user_, env, msg.SerializeAsString());
+   }
+   else {
+      passphrase_ = SecureBinaryData::fromString(request.passphrase());
+      signer_->signTXRequest(txReq, cbSigned
+         , static_cast<SignContainer::TXSignMode>(request.sign_mode())
+         , request.keep_dup_recips());
+   }
    return ProcessingResult::Success;
 }
 
