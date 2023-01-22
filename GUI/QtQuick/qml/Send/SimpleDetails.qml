@@ -15,7 +15,7 @@ ColumnLayout  {
     signal sig_continue()
 
     height: 554
-    width: 580
+    width: 600
     spacing: 0
 
     RowLayout {
@@ -59,7 +59,7 @@ ColumnLayout  {
         CustomTitleLabel {
             id: title
 
-            Layout.leftMargin: 94
+            Layout.leftMargin: 104
             Layout.alignment: Qt.AlignLeft | Qt.AlingVCenter
 
             text: qsTr("Send Bitcoin")
@@ -78,7 +78,7 @@ ColumnLayout  {
 
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : 70
-        Layout.preferredWidth: 532
+        Layout.preferredWidth: 552
         Layout.topMargin: 23
 
         //aliases
@@ -113,7 +113,7 @@ ColumnLayout  {
 
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : 70
-        Layout.preferredWidth: 532
+        Layout.preferredWidth: 552
         Layout.topMargin: 10
 
         //aliases
@@ -174,20 +174,17 @@ ColumnLayout  {
             Layout.leftMargin: 24
             Layout.alignment: Qt.AlignLeft | Qt.AlingVCenter
 
-            width: 261
+            width: 271
             height: 70
 
             model: walletBalances
 
-            currentIndex: 0
-
             //aliases
             title_text: qsTr("From Wallet")
             details_text: getWalletData(currentIndex, WalletBalance.TotalRole)
-            input_text: getWalletData(currentIndex, WalletBalance.NameRole)
-            //details_text: walletBalances.data(walletBalances.index(currentIndex, 0), WalletBalance.TotalRole)
-            //input_text: walletBalances.data(walletBalances.index(currentIndex, 0), WalletBalance.NameRole)
-            delega_role: "name"
+
+            textRole: "name"
+            valueRole: "name"
         }
 
         Label {
@@ -203,13 +200,16 @@ ColumnLayout  {
             Layout.rightMargin: 24
             Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
 
-            model: ["2 blocks (20 minutes): 1 s/b", "3 blocks (30 minutes): 2 s/b"]
+            model: feeSuggestions
+
             //aliases
             title_text: qsTr("Fee Suggestions")
 
-            width: 261
+            width: 271
             height: 70
 
+            textRole: "text"
+            valueRole: "value"
         }
     }
 
@@ -219,7 +219,7 @@ ColumnLayout  {
 
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : 90
-        Layout.preferredWidth: 532
+        Layout.preferredWidth: 552
         Layout.topMargin: 10
 
         //aliases
@@ -237,7 +237,7 @@ ColumnLayout  {
     CustomButton {
         id: continue_but
 
-        width: 532
+        width: 552
 
         Layout.bottomMargin: 40
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter

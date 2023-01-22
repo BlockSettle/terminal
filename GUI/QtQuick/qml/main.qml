@@ -359,6 +359,6 @@ ApplicationWindow {
 
     function getFeeSuggData (index: int, role: string)
     {
-        return walletBalances.data(walletBalances.index(index, 0), role)
+        return feeSuggestions.data(feeSuggestions.index(index, 0), role)
     }
 }

@@ -15,11 +15,10 @@ import "../BsStyles"
 ComboBox {
     id: control
 
-    property alias input_text: input.text
     property alias title_text: title.text
-    property alias details_text: details.text
+    property alias details_text: details.text 
 
-    property string delega_role: "modelData"
+    activeFocusOnTab: true
 
     leftPadding: 16
     rightPadding: 36
@@ -67,7 +66,6 @@ ComboBox {
             id: input
 
             focus: true
-            activeFocusOnTab: true
 
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 0
@@ -83,7 +81,7 @@ ComboBox {
 
             color: "#FFFFFF"
 
-            //text: control.displayText
+            text: control.currentText
             clip: true
         }
     }
@@ -114,7 +112,8 @@ ComboBox {
             context.lineTo(width, 0)
             context.lineTo(width / 2, height)
             context.closePath()
-            context.fillStyle = "#DCE2FF"
+            context.fillStyle = control.popup.visible ? BSStyle.comboBoxIndicatorColor
+                                                      : BSStyle.comboBoxPopupedIndicatorColor
             context.fill()
         }
     }
@@ -125,7 +124,9 @@ ComboBox {
         opacity: 1
         radius: 14
 
-        border.color: input.activeFocus ? "#45A6FF" : "#3C435A"
+        border.color: control.popup.visible ? BSStyle.comboBoxPopupedBorderColor :
+                      (control.hovered ? BSStyle.comboBoxHoveredBorderColor :
+                      (control.activeFocus ? BSStyle.comboBoxFocusedBorderColor : BSStyle.comboBoxBorderColor))
         border.width: 1
 
         implicitWidth: control.width
@@ -145,7 +146,9 @@ ComboBox {
 
         contentItem: Text {
 
-            text: model[delega_role]
+            text: control.textRole
+                ? (Array.isArray(control.model) ? modelData[control.textRole] : model[control.textRole])
+                : modelData
             color: menuItem.highlighted ? BSStyle.comboBoxItemTextHighlightedColor : ( menuItem.currented ? BSStyle.comboBoxItemTextCurrentColor : BSStyle.comboBoxItemTextColor)
             font.pixelSize: 16
             font.family: "Roboto"
@@ -178,6 +181,7 @@ ComboBox {
             clip: true
             implicitHeight: contentHeight
             model: control.popup.visible ? control.delegateModel : null
+            //model: control.delegateModel
             currentIndex: control.highlightedIndex
 
             ScrollIndicator.vertical: ScrollIndicator { }

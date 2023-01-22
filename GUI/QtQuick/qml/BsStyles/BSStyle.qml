@@ -98,4 +98,12 @@ QtObject {
     readonly property color comboBoxItemTextHighlightedColor: "#45A6FF"
     readonly property color comboBoxItemTextCurrentColor: "#7A88B0"
     readonly property color comboBoxItemHighlightedColor: "#45A6FF"
+
+    readonly property color comboBoxBorderColor: "#3C435A"
+    readonly property color comboBoxHoveredBorderColor: "#7A88B0"
+    readonly property color comboBoxFocusedBorderColor: "#FFFFFF"
+    readonly property color comboBoxPopupedBorderColor: "#45A6FF"
+
+    readonly property color comboBoxIndicatorColor: "#DCE2FF"
+    readonly property color comboBoxPopupedIndicatorColor: "#45A6FF"
 }
