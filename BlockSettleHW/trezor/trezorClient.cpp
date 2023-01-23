@@ -200,7 +200,8 @@ void TrezorClient::acquireDevice(const trezor::DeviceData& devData, bool init)
 
 
 namespace {
-   static const std::string kBlockSettleOrigin{ "Origin: https://blocksettle.trezor.io;" };
+   //static const std::string kBlockSettleOrigin{ "Origin: https://blocksettle.trezor.io" };
+   static const std::string kBlockSettleOrigin{ "Origin: https://localhost" };
 }
 
 static size_t writeToString(void* ptr, size_t size, size_t count, std::string* stream)

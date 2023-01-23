@@ -1103,6 +1103,7 @@ void QtQuickAdapter::createWallet(const QString& name, const QStringList& seed
    msgReq->set_seed(binSeed.toBinStr());
    msgReq->set_password(password.toStdString());
    pushRequest(user_, userSigner_, msg.SerializeAsString());
+   walletBalances_->clear();
 }
 
 void QtQuickAdapter::importWallet(const QString& name, const QStringList& seed
@@ -1123,6 +1124,7 @@ void QtQuickAdapter::importWallet(const QString& name, const QStringList& seed
    msgReq->set_seed(binSeed.toBinStr());
    msgReq->set_password(password.toStdString());
    pushRequest(user_, userSigner_, msg.SerializeAsString());
+   walletBalances_->clear();
 }
 
 void QtQuickAdapter::generateNewAddress(int walletIndex, bool isNative)
