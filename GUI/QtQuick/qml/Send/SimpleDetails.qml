@@ -12,7 +12,7 @@ ColumnLayout  {
 
     id: layout
 
-    signal sig_continue()
+    signal sig_continue(signature: var)
 
     height: 554
     width: 600
@@ -120,7 +120,7 @@ ColumnLayout  {
         title_text: qsTr("Amount")
         input_text: "0"
 
-        input_validator: DoubleValidator{bottom: 0; notation :DoubleValidator.StandardNotation;}
+        input_validator: DoubleValidator{bottom: 0;  decimals: 20;  notation :DoubleValidator.StandardNotation;}
 
         CustomButton {
 
@@ -249,7 +249,10 @@ ColumnLayout  {
         }
 
         function click_enter() {
-            layout.sig_continue()
+            layout.sig_continue( bsApp.createTXSignRequest(
+                            from_wallet_combo.currentIndex, rec_addr_input.text,
+                            parseFloat(from_wallet_combo.details_text), parseFloat(fee_suggest_combo.currentValue),
+                            comment_input.text))
         }
 
     }

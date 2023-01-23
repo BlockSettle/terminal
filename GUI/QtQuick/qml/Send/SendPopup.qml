@@ -19,5 +19,9 @@ CustomPopup {
     SimpleDetails {
         id: simple_details
         visible: false
+
+        onSig_continue: (signature) => {
+            console.log(signature)
+        }
     }
 }
