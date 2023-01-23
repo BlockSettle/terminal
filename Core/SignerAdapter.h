@@ -33,6 +33,7 @@ namespace BlockSettle {
       class SignerMessage_DialogRequest;
       class SignerMessage_ExtendAddrChain;
       class SignerMessage_GetSettlPayinAddr;
+      class SignerMessage_ImportHWWallet;
       class SignerMessage_SetSettlementId;
       class SignerMessage_SignSettlementTx;
       class SignerMessage_SignTxRequest;
@@ -104,6 +105,8 @@ private:
       , const BlockSettle::Common::SignerMessage_DialogRequest&);
    bs::message::ProcessingResult processCreateWallet(const bs::message::Envelope&, bool rescan
       , const BlockSettle::Common::SignerMessage_CreateWalletRequest&);
+   bs::message::ProcessingResult processImportHwWallet(const bs::message::Envelope&
+      , const BlockSettle::Common::SignerMessage_ImportHWWallet&);
    bs::message::ProcessingResult processDeleteWallet(const bs::message::Envelope&, const std::string& rootId);
 
 private:

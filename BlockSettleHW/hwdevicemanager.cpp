@@ -31,6 +31,7 @@ DeviceManager::DeviceManager(const std::shared_ptr<spdlog::logger>& logger)
    : logger_(logger)
    , user_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::HWWallets))
    , userWallets_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Wallets))
+   , userSigner_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Signer))
 {}
 
 DeviceManager::~DeviceManager()
@@ -49,6 +50,8 @@ bs::message::ProcessingResult DeviceManager::process(const bs::message::Envelope
          return processSettings(env);
       case bs::message::TerminalUsers::Wallets:
          return processWallet(env);
+      case bs::message::TerminalUsers::Signer:
+         return processSigner(env);
       default: break;
       }
    }
@@ -150,6 +153,8 @@ bs::message::ProcessingResult DeviceManager::processOwnRequest(const bs::message
       return bs::message::ProcessingResult::Success;
    case HW::DeviceMgrMessage::kImportDevice:
       return processImport(env, msg.import_device());
+   case HW::DeviceMgrMessage::kSignTx:
+      return processSignTX(env, msg.sign_tx());
    default: break;
    }
    return bs::message::ProcessingResult::Ignored;
@@ -192,6 +197,22 @@ bs::message::ProcessingResult DeviceManager::processSettings(const bs::message::
    return bs::message::ProcessingResult::Ignored;
 }
 
+bs::message::ProcessingResult DeviceManager::processSigner(const bs::message::Envelope& env)
+{
+   SignerMessage msg;
+   if (!msg.ParseFromString(env.message)) {
+      logger_->error("[hww::DeviceManager::processSigner] failed to parse #{}"
+         , env.foreignId());
+      return bs::message::ProcessingResult::Error;
+   }
+   switch (msg.data_case()) {
+   case SignerMessage::kSignTxResponse:
+      return processSignTxResponse(msg.sign_tx_response());
+   default: break;
+   }
+   return bs::message::ProcessingResult::Ignored;
+}
+
 bs::message::ProcessingResult DeviceManager::processImport(const bs::message::Envelope& env
    , const HW::DeviceKey& key)
 {
@@ -204,6 +225,76 @@ bs::message::ProcessingResult DeviceManager::processImport(const bs::message::En
       return bs::message::ProcessingResult::Error;
    }
    device->getPublicKeys();
+   return bs::message::ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult bs::hww::DeviceManager::processSignTX(const bs::message::Envelope& env
+   , const Blocksettle::Communication::headless::SignTxRequest& request)
+{
+   HW::DeviceMgrMessage msg;
+   auto msgResp = msg.mutable_signed_tx();
+   if (envReqSign_.sender || txSignReq_.isValid()) {
+      logger_->error("[{}] another sign request is already in progress", __func__);
+      msgResp->set_error_msg("another sign request is already in progress");
+      pushResponse(user_, env, msg.SerializeAsString());
+      return bs::message::ProcessingResult::Error;
+   }
+   const auto& txSignReq = bs::signer::pbTxRequestToCore(request);
+   if (!txSignReq.isValid() || (txSignReq.walletIds.size() != 1)) {
+      logger_->error("[{}] invalid TX sign request (nb wallets: {})", __func__
+         , txSignReq.walletIds.size());
+      msgResp->set_error_msg("invalid TX sign request");
+      pushResponse(user_, env, msg.SerializeAsString());
+      return bs::message::ProcessingResult::Error;
+   }
+   envReqSign_ = env;
+   txSignReq_ = txSignReq;
+   DeviceKey foundDevice;
+   for (const auto& device : devices_) {
+      if (device.walletId == txSignReq.walletIds.at(0)) {
+         foundDevice = device;
+         break;
+      }
+   }
+   if (foundDevice.id.empty()) {
+      logger_->info("[{}] device for {} not found - obtaining the list", __func__
+         , txSignReq.walletIds.at(0));
+      scanDevices({});
+   }
+   else {
+      signTxWithDevice(foundDevice);
+   }
+   return bs::message::ProcessingResult::Success;
+}
+
+void DeviceManager::signTxWithDevice(const DeviceKey& key)
+{
+   const auto& device = getDevice(key);
+   if (!device) {
+      HW::DeviceMgrMessage msg;
+      auto msgResp = msg.mutable_signed_tx();
+      msgResp->set_error_msg("failed to get device for key " + key.id);
+      pushResponse(user_, envReqSign_, msg.SerializeAsString());
+      envReqSign_ = {};
+      txSignReq_ = {};
+      return;
+   }
+   device->signTX(txSignReq_);
+}
+
+bs::message::ProcessingResult DeviceManager::processSignTxResponse(const SignerMessage_SignTxResponse& response)
+{
+   if (response.signed_tx().empty() && !response.error_text().empty()) {
+      operationFailed({}, response.error_text());
+   }
+   else {
+      HW::DeviceMgrMessage msg;
+      auto msgResp = msg.mutable_signed_tx();
+      msgResp->set_signed_tx(response.signed_tx());
+      pushResponse(user_, envReqSign_, msg.SerializeAsString());
+      envReqSign_ = {};
+      txSignReq_ = {};
+   }
    return bs::message::ProcessingResult::Success;
 }
 
@@ -330,8 +421,10 @@ void DeviceManager::scanningDone(bool initDevices)
    devices_.insert(devices_.end(), trezorKeys.cbegin(), trezorKeys.cend());
 
    if (!initDevices || devices_.empty()) {
-      devicesResponse();
-      return;
+      if (envReqScan_.sender) {
+         devicesResponse();
+         return;
+      }
    }
    for (const auto& key : ledgerKeys) {
       auto device = ledgerClient_->getDevice(key.id);
@@ -376,16 +469,40 @@ void DeviceManager::publicKeyReady(const std::string& devId, const std::string& 
       }
    }
    if (nbCompleted >= devices_.size()) {
-      devicesResponse();
+      if (envReqScan_.sender) {
+         devicesResponse();
+      }
+      else if (envReqScan_.sender && txSignReq_.isValid()) {
+         for (const auto& device : devices_) {
+            if (device.walletId == txSignReq_.walletIds.at(0)) {
+               signTxWithDevice(device);
+               break;
+            }
+         }
+      }
    }
 }
 
 void bs::hww::DeviceManager::walletInfoReady(const DeviceKey& key
-   , const bs::core::wallet::HwWalletInfo& walletInfo)
+   , const bs::core::HwWalletInfo& walletInfo)
 {
-   logger_->debug("[hww::DeviceManager::walletInfoReady] importing device {} "
-      "(not implemented)", key.id);
-   //TODO: send request to WA
+   if (walletInfo.xpubRoot.empty()) {
+      logger_->error("[{}] failed to obtain wallet public keys for {}", key.id);
+      return;
+   }
+   logger_->debug("[hww::DeviceManager::walletInfoReady] importing device {}", key.id);
+
+   SignerMessage msg;
+   auto msgReq = msg.mutable_import_hw_wallet();
+   msgReq->set_type((int)walletInfo.type);
+   msgReq->set_vendor(walletInfo.vendor);
+   msgReq->set_label(walletInfo.label);
+   msgReq->set_device_id(walletInfo.deviceId);
+   msgReq->set_xpub_root(walletInfo.xpubRoot);
+   msgReq->set_xpub_nested_segwit(walletInfo.xpubNestedSegwit);
+   msgReq->set_xpub_native_segwit(walletInfo.xpubNativeSegwit);
+   msgReq->set_xpub_legacy(walletInfo.xpubLegacy);
+   pushRequest(user_, userSigner_, msg.SerializeAsString());
 }
 
 void DeviceManager::requestPinMatrix(const DeviceKey&)
@@ -406,10 +523,26 @@ void DeviceManager::deviceReady(const std::string& deviceId)
 
 void DeviceManager::deviceTxStatusChanged(const std::string& status)
 {
+   logger_->debug("[{}] {}", __func__, status);
 }
 
-void DeviceManager::txSigned(const SecureBinaryData& signData)
+void DeviceManager::txSigned(const DeviceKey& device, const SecureBinaryData& signData)
 {
+   if (device.type != DeviceType::HWLedger) {
+      HW::DeviceMgrMessage msg;
+      auto msgResp = msg.mutable_signed_tx();
+      msgResp->set_signed_tx(signData.toBinStr());
+      pushResponse(user_, envReqSign_, msg.SerializeAsString());
+      envReqSign_ = {};
+      txSignReq_ = {};
+   }
+   else {
+      SignerMessage msg;
+      auto msgReq = msg.mutable_sign_tx_request();
+      *msgReq->mutable_tx_request() = bs::signer::coreTxRequestToPb(txSignReq_);
+      msgReq->set_passphrase(signData.toBinStr());
+      pushRequest(user_, userSigner_, msg.SerializeAsString());
+   }
 }
 
 void DeviceManager::scanningDone()
@@ -426,6 +559,14 @@ void DeviceManager::scanningDone()
 
 void DeviceManager::operationFailed(const std::string& deviceId, const std::string& reason)
 {
+   if (envReqSign_.sender) {
+      HW::DeviceMgrMessage msg;
+      auto msgResp = msg.mutable_signed_tx();
+      msgResp->set_error_msg(reason);
+      pushResponse(user_, envReqSign_, msg.SerializeAsString());
+      envReqSign_ = {};
+      txSignReq_ = {};
+   }
 }
 
 void DeviceManager::cancelledOnDevice()

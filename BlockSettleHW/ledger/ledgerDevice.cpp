@@ -341,7 +341,7 @@ BIP32_Node GetPubKeyHandler::retrievePublicKeyFromPath(const bs::hd::Path& deriv
 void LedgerDevice::getPublicKeys()
 {
    auto deviceKey = key();
-   auto walletInfo = std::make_shared<bs::core::wallet::HwWalletInfo>();
+   auto walletInfo = std::make_shared<bs::core::HwWalletInfo>();
    walletInfo->type = bs::wallet::HardwareEncKey::WalletType::Ledger;
    walletInfo->vendor = deviceKey.vendor;
    walletInfo->label = deviceKey.label;
@@ -404,7 +404,7 @@ void LedgerDevice::getPublicKeys()
          return;
       }
 
-      const auto& isValid = [](const bs::core::wallet::HwWalletInfo& info)
+      const auto& isValid = [](const bs::core::HwWalletInfo& info)
       {
          return !info.xpubRoot.empty() && !info.xpubNestedSegwit.empty() &&
             !info.xpubNativeSegwit.empty() && !info.xpubLegacy.empty();
@@ -465,7 +465,7 @@ void LedgerDevice::signTX(const bs::core::wallet::TXSignRequest& coreReq)
          operationFailed("invalid data");
          return;
       }
-      cb_->txSigned(reply->serInputSigs);
+      cb_->txSigned(key(), reply->serInputSigs);
    };
    auto inData = std::make_shared<SignTXIn>();
    inData->key = key();
@@ -485,7 +485,7 @@ void LedgerDevice::signTX(const bs::core::wallet::TXSignRequest& coreReq)
 void bs::hww::LedgerDevice::retrieveXPubRoot()
 {
    auto deviceKey = key();
-   auto walletInfo = std::make_shared<bs::core::wallet::HwWalletInfo>();
+   auto walletInfo = std::make_shared<bs::core::HwWalletInfo>();
    walletInfo->type = bs::wallet::HardwareEncKey::WalletType::Ledger;
    walletInfo->vendor = deviceKey.vendor;
    walletInfo->label = deviceKey.label;
@@ -931,6 +931,7 @@ void SignTXHandler::sendTxSigningResult(const std::shared_ptr<SignTXOut>& outDat
    bw.put_var_int(responseSigned.size());
    for (const auto& signedInput : responseSigned) {
       bw.put_uint32_t(signedInput.first);
+      bw.put_var_int(signedInput.second.size());
       bw.put_BinaryData(BinaryData::fromString(signedInput.second.toStdString()));
    }
    outData->serInputSigs = bw.getData();

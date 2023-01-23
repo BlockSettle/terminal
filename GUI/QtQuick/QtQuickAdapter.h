@@ -53,6 +53,7 @@ namespace BlockSettle {
    }
    namespace HW {
       class DeviceMgrMessage_Devices;
+      class DeviceMgrMessage_SignTxResponse;
    }
    namespace Terminal {
       class AssetsMessage_Balance;
@@ -158,6 +159,9 @@ public:
       , const QString& password);
    Q_INVOKABLE void importWallet(const QString& name, const QStringList& seed
       , const QString& password);
+   Q_INVOKABLE void pollHWWallets();
+   Q_INVOKABLE void stopHWWalletsPolling();
+   Q_INVOKABLE void importHWWallet(int deviceIndex);
    Q_INVOKABLE void generateNewAddress(int walletIndex, bool isNative);
    Q_INVOKABLE void copyAddressToClipboard(const QString& addr);
 
@@ -168,9 +172,6 @@ public:
    Q_INVOKABLE void signAndBroadcast(QTXSignRequest*, const QString& password);
    Q_INVOKABLE int startSearch(const QString&);
    Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash);
-   Q_INVOKABLE void pollHWWallets();
-   Q_INVOKABLE void stopHWWalletsPolling();
-   Q_INVOKABLE void importHWWallet(int deviceIndex);
 
 signals:
    void walletsListChanged();
@@ -225,11 +226,11 @@ private:
       , const BlockSettle::Common::WalletsMessage_TxResponse&);
 
    bs::message::ProcessingResult processHWDevices(const BlockSettle::HW::DeviceMgrMessage_Devices&);
+   bs::message::ProcessingResult processHWSignedTX(const BlockSettle::HW::DeviceMgrMessage_SignTxResponse&);
 
    QVariant getSetting(ApplicationSettings::Setting) const;
    QString getSettingStringAt(ApplicationSettings::Setting, int idx);
    void setSetting(ApplicationSettings::Setting, const QVariant&);
-   void resetArmoryConnection();
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

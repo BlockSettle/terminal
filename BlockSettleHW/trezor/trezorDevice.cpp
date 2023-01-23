@@ -87,7 +87,7 @@ namespace {
       return output;
    }
 
-   static const std::string kTesNetCoin = "Testnet";
+   static const std::string kTestNetCoin = "Testnet";
 }
 
 TrezorDevice::TrezorDevice(const std::shared_ptr<spdlog::logger> &logger
@@ -120,7 +120,7 @@ void TrezorDevice::releaseConnection()
       const auto& reply = std::static_pointer_cast<TrezorPostOut>(data);
       if (!reply || !reply->error.empty()) {
          logger_->error("[TrezorDevice::releaseConnection] network error: {}"
-            , reply ? reply->error : "<empty>");
+            , (reply && !reply->error.empty()) ? reply->error : "<empty>");
          return;
       }
 
@@ -162,7 +162,7 @@ void TrezorDevice::init()
    {
       const auto& reply = std::static_pointer_cast<TrezorPostOut>(data);
       if (!reply || !reply->error.empty()) {
-         logger_->error("[TrezorDevice::makeCall] network error: {}", reply ? reply->error : "<empty>");
+         logger_->error("[TrezorDevice::makeCall] network error: {}", (reply && !reply->error.empty()) ? reply->error : "<empty>");
          //emit operationFailed(QLatin1String("Network error"));
          reset();
          return;
@@ -252,7 +252,7 @@ void TrezorDevice::getPublicKeys()
       message.add_address_n(add);
    }
    if (testNet_) {
-      message.set_coin_name(kTesNetCoin);
+      message.set_coin_name(kTestNetCoin);
    }
    makeCall(message, cbNative);
 
@@ -314,7 +314,7 @@ void TrezorDevice::signTX(const bs::core::wallet::TXSignRequest &reqTX)
    message.set_inputs_count(currentTxSignReq_->armorySigner_.getTxInCount());
    message.set_outputs_count(currentTxSignReq_->armorySigner_.getTxOutCount());
    if (testNet_) {
-      message.set_coin_name(kTesNetCoin);
+      message.set_coin_name(kTestNetCoin);
    }
    const auto& cb = [this, reqTX](const std::shared_ptr<bs::OutData>& data)
    {
@@ -348,7 +348,7 @@ void TrezorDevice::signTX(const bs::core::wallet::TXSignRequest &reqTX)
          operationFailed("Signing failed. Please ensure you typed the correct passphrase.");
          return;
       }
-      cb_->txSigned(SecureBinaryData::fromString(reply->signedTX));
+      cb_->txSigned(key(), SecureBinaryData::fromString(reply->signedTX));
    };
    makeCall(message, cb);
 }
@@ -360,7 +360,7 @@ void TrezorDevice::retrieveXPubRoot()
    bitcoin::GetPublicKey message;
    message.add_address_n(bs::hd::hardFlag);
    if (testNet_) {
-      message.set_coin_name(kTesNetCoin);
+      message.set_coin_name(kTestNetCoin);
    }
 
    const auto& saveXpubRoot = [this](const std::shared_ptr<bs::OutData>& data)
@@ -387,7 +387,8 @@ void TrezorDevice::makeCall(const google::protobuf::Message &msg
    {
       const auto& reply = std::static_pointer_cast<TrezorPostOut>(data);
       if (!reply || !reply->error.empty()) {
-         logger_->error("[TrezorDevice::makeCall] network error: {}", reply ? reply->error : "<empty>");
+         logger_->error("[TrezorDevice::makeCall] network error: {}"
+            , (reply && !reply->error.empty()) ? reply->error : "<empty>");
          //emit operationFailed(QLatin1String("Network error"));
          reset();
          return;

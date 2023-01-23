@@ -77,22 +77,25 @@ std::string LedgerClient::lastScanError() const
 void LedgerClient::scanDevices()
 {
    availableDevices_.clear();
+   logger_->debug("[LedgerClient::scanDevices] start HID enumeration");
 
    hid_device_info* info = hid_enumerate(0, 0);
    for (; info; info = info->next) {
+      logger_->debug("[{}] found: vendor {0:x}, product {0:x} ({}), iface: {0:x}, serial: {}", __func__
+         , info->vendor_id, info->product_id, (char*)info->product_string
+         , info->interface_number, (char*)info->serial_number);
       if (checkLedgerDevice(info)) {
          auto device = std::make_shared<LedgerDevice>(fromHidOriginal(info), testNet_, logger_, cb_, hidLock_);
          availableDevices_.push_back({ device });
       }
    }
+   hid_exit();
 
    if (availableDevices_.empty()) {
-      logger_->error("[LedgerClient::scanDevices] no ledger device available");
+      logger_->info("[LedgerClient::scanDevices] no ledger devices available");
    }
    else {
       logger_->info("[LedgerClient::scanDevices] found {} device[s]", availableDevices_.size());
    }
-   hid_exit();
-
    cb_->scanningDone();
 }

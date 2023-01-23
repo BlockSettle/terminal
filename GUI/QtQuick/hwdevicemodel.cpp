@@ -78,6 +78,7 @@ void HwDeviceModel::setDevices(const std::vector<bs::hww::DeviceKey>& deviceKeys
    loaded_.resize(deviceKeys.size(), false);
    devices_ = deviceKeys;
    endResetModel();
+   emit dataSet();
 }
 
 bs::hww::DeviceKey HwDeviceModel::getDevice(int index)
@@ -106,6 +107,7 @@ void HwDeviceModel::setLoaded(const std::string& walletId)
          loaded_[i] = true;
       }
    }
+   emit dataSet();
 }
 
 int HwDeviceModel::selDevice() const

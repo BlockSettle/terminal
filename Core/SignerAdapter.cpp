@@ -138,6 +138,8 @@ ProcessingResult SignerAdapter::processOwnRequest(const bs::message::Envelope &e
       return processCreateWallet(env, true, request.import_wallet());
    case SignerMessage::kDeleteWallet:
       return processDeleteWallet(env, request.delete_wallet());
+   case SignerMessage::kImportHwWallet:
+      return processImportHwWallet(env, request.import_hw_wallet());
    default:
       logger_->warn("[{}] unknown signer request: {}", __func__, request.data_case());
       break;
@@ -524,10 +526,39 @@ ProcessingResult SignerAdapter::processSignTx(const bs::message::Envelope& env
       pushResponse(user_, env, msg.SerializeAsString());
    };
    const auto& txReq = bs::signer::pbTxRequestToCore(request.tx_request(), logger_);
-   passphrase_ = SecureBinaryData::fromString(request.passphrase());
-   signer_->signTXRequest(txReq, cbSigned
-      , static_cast<SignContainer::TXSignMode>(request.sign_mode())
-      , request.keep_dup_recips());
+   bs::core::WalletsManager::HDWalletPtr hdWallet;
+   if ((txReq.walletIds.size() == 1)) {
+      hdWallet = walletsMgr_->getHDWalletById(txReq.walletIds.at(0));
+      if (hdWallet) {
+         if (!hdWallet->isHardwareWallet()) {
+            hdWallet.reset();
+         }
+      }
+      else {
+         logger_->error("[{}] failed to get HD wallet by {}", __func__, txReq.walletIds.at(0));
+      }
+   }
+   if (hdWallet) {
+      const auto& signData = SecureBinaryData::fromString(request.passphrase());
+      hdWallet->pushPasswordPrompt([signData]() { return signData; });
+      SignerMessage msg;
+      auto msgResp = msg.mutable_sign_tx_response();
+      try {
+         const auto& signedTX = hdWallet->signTXRequestWithWallet(txReq);
+         msgResp->set_signed_tx(signedTX.toBinStr());
+      }
+      catch (const std::exception& e) {
+         msgResp->set_error_text(e.what());
+      }
+      hdWallet->popPasswordPrompt();
+      pushResponse(user_, env, msg.SerializeAsString());
+   }
+   else {
+      passphrase_ = SecureBinaryData::fromString(request.passphrase());
+      signer_->signTXRequest(txReq, cbSigned
+         , static_cast<SignContainer::TXSignMode>(request.sign_mode())
+         , request.keep_dup_recips());
+   }
    return ProcessingResult::Success;
 }
 
@@ -598,6 +629,30 @@ ProcessingResult SignerAdapter::processCreateWallet(const bs::message::Envelope&
    }
    pushResponse(user_, env, msg.SerializeAsString());
    return ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult SignerAdapter::processImportHwWallet(const bs::message::Envelope& env
+   , const BlockSettle::Common::SignerMessage_ImportHWWallet& request)
+{
+   const bs::core::HwWalletInfo hwwInfo{ static_cast<bs::wallet::HardwareEncKey::WalletType>(request.type())
+      , request.vendor(), request.label(), request.device_id(), request.xpub_root()
+      , request.xpub_nested_segwit(), request.xpub_native_segwit(), request.xpub_legacy() };
+   SignerMessage msg;
+   auto msgResp = msg.mutable_created_wallet();
+   try {
+      const auto& hwWallet = std::make_shared<bs::core::hd::Wallet>(netType_
+         , hwwInfo, walletsDir_ + "/bs_hw_<wallet_id>.lmdb", logger_);
+      walletsMgr_->addWallet(hwWallet);
+      msgResp->set_wallet_id(hwWallet->walletId());
+      walletsChanged(true);
+      logger_->debug("[{}] wallet {} created", __func__, hwWallet->walletId());
+   }
+   catch (const std::exception& e) {
+      logger_->error("[{}] failed to create HW wallet: {}", __func__, e.what());
+      msgResp->set_error_msg(e.what());
+   }
+   pushResponse(user_, env, msg.SerializeAsString());
+   return bs::message::ProcessingResult::Success;
 }
 
 ProcessingResult SignerAdapter::processDeleteWallet(const bs::message::Envelope& env

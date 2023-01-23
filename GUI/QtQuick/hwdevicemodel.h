@@ -27,6 +27,9 @@ class HwDeviceModel : public QAbstractItemModel
 {
    Q_OBJECT
    Q_PROPERTY(int selDevice READ selDevice NOTIFY selected)
+   Q_PROPERTY(bool empty READ empty NOTIFY dataSet)
+   bool empty() const { return devices_.empty(); }
+
 public:
    HwDeviceModel(QObject *parent = nullptr);
    ~HwDeviceModel() override = default;
@@ -47,6 +50,7 @@ public:
 
 signals:
    void selected();
+   void dataSet();
 
 private:
    int selDevice() const;

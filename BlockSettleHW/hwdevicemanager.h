@@ -26,9 +26,17 @@ namespace spdlog {
 namespace BlockSettle {
    namespace Common {
       class HDWalletData;
+      class SignerMessage_SignTxResponse;
    }
    namespace HW {
       class DeviceKey;
+   }
+}
+namespace Blocksettle {
+   namespace Communication {
+      namespace headless {
+         class SignTxRequest;
+      }
    }
 }
 
@@ -42,7 +50,7 @@ namespace bs {
       struct DeviceCallbacks
       {
          virtual void publicKeyReady(const std::string& devId, const std::string& walletId) = 0;
-         virtual void walletInfoReady(const DeviceKey&, const bs::core::wallet::HwWalletInfo&) = 0;
+         virtual void walletInfoReady(const DeviceKey&, const bs::core::HwWalletInfo&) = 0;
          virtual void requestPinMatrix(const DeviceKey&) = 0;
          virtual void requestHWPass(const DeviceKey&, bool allowedOnDevice) = 0;
 
@@ -50,7 +58,7 @@ namespace bs {
          virtual void deviceReady(const std::string& deviceId) = 0;
          virtual void deviceTxStatusChanged(const std::string& status) = 0;
 
-         virtual void txSigned(const SecureBinaryData& signData) = 0;
+         virtual void txSigned(const DeviceKey&, const SecureBinaryData& signData) = 0;
          virtual void scanningDone() = 0;
          virtual void operationFailed(const std::string& deviceId, const std::string& reason) = 0;
          virtual void cancelledOnDevice() = 0;
@@ -71,7 +79,7 @@ namespace bs {
 
       private: // signals
          void publicKeyReady(const std::string& devId, const std::string& walletId) override;
-         void walletInfoReady(const DeviceKey&, const bs::core::wallet::HwWalletInfo&) override;
+         void walletInfoReady(const DeviceKey&, const bs::core::HwWalletInfo&) override;
          void requestPinMatrix(const DeviceKey&) override;
          void requestHWPass(const DeviceKey&, bool allowedOnDevice) override;
 
@@ -79,7 +87,7 @@ namespace bs {
          void deviceReady(const std::string& deviceId) override;
          void deviceTxStatusChanged(const std::string& status) override;
 
-         void txSigned(const SecureBinaryData& signData) override;
+         void txSigned(const DeviceKey&, const SecureBinaryData& signData) override;
          void scanningDone() override;
          void operationFailed(const std::string& deviceId, const std::string& reason) override;
          void cancelledOnDevice() override;
@@ -110,16 +118,21 @@ namespace bs {
          bs::message::ProcessingResult processOwnRequest(const bs::message::Envelope&);
          bs::message::ProcessingResult processWallet(const bs::message::Envelope&);
          bs::message::ProcessingResult processSettings(const bs::message::Envelope&);
+         bs::message::ProcessingResult processSigner(const bs::message::Envelope&);
 
          void devicesResponse();
          bs::message::ProcessingResult processImport(const bs::message::Envelope&
             , const BlockSettle::HW::DeviceKey&);
+         bs::message::ProcessingResult processSignTX(const bs::message::Envelope&
+            , const Blocksettle::Communication::headless::SignTxRequest&);
+         void signTxWithDevice(const DeviceKey&);
+         bs::message::ProcessingResult processSignTxResponse(const BlockSettle::Common::SignerMessage_SignTxResponse&);
 
       private:
          std::shared_ptr<spdlog::logger> logger_;
          std::unique_ptr<TrezorClient> trezorClient_;
          std::unique_ptr<LedgerClient> ledgerClient_;
-         std::shared_ptr<bs::message::User>  user_, userWallets_;
+         std::shared_ptr<bs::message::User>  user_, userWallets_, userSigner_;
          std::vector<DeviceKey>  devices_;
 
          bool testNet_{false};
@@ -128,7 +141,8 @@ namespace bs {
          std::string lastOperationError_;
          std::string lastUsedTrezorWallet_;
          unsigned nbWaitScanReplies_{ 0 };
-         bs::message::Envelope   envReqScan_;
+         bs::message::Envelope   envReqScan_, envReqSign_;
+         bs::core::wallet::TXSignRequest txSignReq_;
 
          std::map<bs::message::SeqId, std::pair<std::string, bs::message::Envelope>>   prepareDeviceReq_;   //value: walletId
       };

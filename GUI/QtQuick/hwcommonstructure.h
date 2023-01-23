@@ -19,30 +19,6 @@
 #include "CoreWallet.h"
 
 
-class HwWalletWrapper
-{
-   Q_GADGET
-public:
-   bs::core::wallet::HwWalletInfo info_;
-   Q_INVOKABLE QString walletName() {
-      return QString::fromStdString(info_.label);
-   }
-   Q_INVOKABLE QString walletDesc() {
-      return QString::fromStdString(info_.vendor);
-   }
-   bool isValid() {
-      return !info_.xpubRoot.empty() &&
-         !info_.xpubNestedSegwit.empty() &&
-         !info_.xpubNativeSegwit.empty() &&
-         !info_.xpubLegacy.empty();
-   }
-
-   bool isFirmwareSupported_{true};
-   std::string firmwareSupportedMsg_;
-};
-Q_DECLARE_METATYPE(HwWalletWrapper)
-
-
 namespace HWInfoStatus {
    const QString kPressButton = QObject::tr("Confirm transaction output(s) on your device");
    const QString kTransaction = QObject::tr("Loading transaction to your device....");

@@ -43,6 +43,7 @@ ColumnLayout  {
 
     Label {
         id: subtitle
+        visible: hwDeviceModel.empty
         Layout.alignment: Qt.AlignCenter
         Layout.topMargin: 16
         Layout.preferredHeight : 16
@@ -51,6 +52,36 @@ ColumnLayout  {
         font.pixelSize: 14
         font.family: "Roboto"
         font.weight: Font.Normal
+    }
+    TableView {
+        visible: !hwDeviceModel.empty
+        width: 800
+        height: 200
+        columnSpacing: 1
+        rowSpacing: 1
+        clip: true
+        ScrollIndicator.horizontal: ScrollIndicator { }
+        ScrollIndicator.vertical: ScrollIndicator { }
+        model: hwDeviceModel
+        delegate: Rectangle {
+            implicitWidth: 750
+            implicitHeight: 20
+            border.color: "black"
+            border.width: 1
+            color: 'darkslategrey'
+            Text {
+                text: label
+                font.pointSize: 12
+                color: heading ? 'darkgrey' : 'lightgrey'
+                anchors.centerIn: parent
+            }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    //TODO: select device
+                }
+            }
+        }
     }
 
     Label {
