@@ -28,8 +28,9 @@ void TrezorClient::initConnection()
    const auto& cb = [this](const std::shared_ptr<bs::OutData>& data)
    {
       const auto& reply = std::static_pointer_cast<TrezorPostOut>(data);
-      if (!reply || !reply->error.empty()) {
-         logger_->error("[TrezorClient::initConnection] network error: {}", reply ? reply->error : "<empty>");
+      if (!reply || !reply->error.empty() || reply->response.empty()) {
+         logger_->error("[TrezorClient::initConnection] network error: {}"
+            , (reply && !reply->error.empty()) ? reply->error : "<empty>");
          return;
       }
       nlohmann::json response;
@@ -37,7 +38,8 @@ void TrezorClient::initConnection()
          response = nlohmann::json::parse(reply->response);
       }
       catch (const nlohmann::json::exception& e) {
-         logger_->error("[TrezorClient::acquireDevice] failed to parse '{}': {}", reply->response, e.what());
+         logger_->error("[TrezorClient::initConnection] failed to parse '{}': {}"
+            , reply->response, e.what());
          return;
       }
 
@@ -94,8 +96,9 @@ void TrezorClient::listDevices()
    const auto& cb = [this](const std::shared_ptr<bs::OutData>& data)
    {
       const auto& reply = std::static_pointer_cast<TrezorPostOut>(data);
-      if (!reply || !reply->error.empty()) {
-         logger_->error("[TrezorClient::listDevices] network error: {}", reply ? reply->error : "<empty>");
+      if (!reply || !reply->error.empty() || reply->response.empty()) {
+         logger_->error("[TrezorClient::listDevices] network error: {}"
+            , (reply && !reply->error.empty()) ? reply->error : "<empty>");
          cb_->scanningDone();
          return;
       }
@@ -104,7 +107,7 @@ void TrezorClient::listDevices()
          response = nlohmann::json::parse(reply->response);
       }
       catch (const nlohmann::json::exception& e) {
-         logger_->error("[TrezorClient::acquireDevice] failed to parse '{}': {}", reply->response, e.what());
+         logger_->error("[TrezorClient::listDevices] failed to parse '{}': {}", reply->response, e.what());
          cb_->scanningDone();
          return;
       }
@@ -153,8 +156,9 @@ void TrezorClient::acquireDevice(const trezor::DeviceData& devData, bool init)
          }
       };
       const auto& reply = std::static_pointer_cast<TrezorPostOut>(data);
-      if (!reply || !reply->error.empty()) {
-         logger_->error("[TrezorClient::acquireDevice] network error: {}", reply ? reply->error : "<empty>");
+      if (!reply || !reply->error.empty() || reply->response.empty()) {
+         logger_->error("[TrezorClient::acquireDevice] network error: {}"
+            , (reply && !reply->error.empty()) ? reply->error : "<empty>");
          scanDone();
          return;
       }
@@ -196,7 +200,7 @@ void TrezorClient::acquireDevice(const trezor::DeviceData& devData, bool init)
 
 
 namespace {
-   static const std::string kBlockSettleOrigin{ "Origin: https://blocksettle.trezor.io" };
+   static const std::string kBlockSettleOrigin{ "Origin: https://blocksettle.trezor.io;" };
 }
 
 static size_t writeToString(void* ptr, size_t size, size_t count, std::string* stream)
@@ -232,6 +236,7 @@ std::shared_ptr<TrezorPostOut> bs::hww::TrezorPostHandler::processData(const std
       return result;
    }
    const std::string url{ baseURL_ + inData->path };
+   logger_->debug("[{}] request: '{}' to {}", __func__, inData->input, url);
    curl_easy_setopt(curl_, CURLOPT_URL, url.c_str());
    if (!inData->input.empty()) {
       curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, inData->input.data());
@@ -251,6 +256,7 @@ std::shared_ptr<TrezorPostOut> bs::hww::TrezorPostHandler::processData(const std
       result->error = fmt::format("failed to post to {}: {}", url, res);
       return result;
    }
+   logger_->debug("[{}] response: {}", __func__, response);
    result->response = std::move(response);
    return result;
 }

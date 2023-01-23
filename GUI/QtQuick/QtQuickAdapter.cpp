@@ -808,14 +808,16 @@ std::string QtQuickAdapter::generateWalletName() const
 
 void QtQuickAdapter::walletSelected(int index)
 {
-   const auto& walletName = walletBalances_->wallets().at(index).toStdString();
-   const auto& walletId = hdWalletIdByIndex(index);
+   QMetaObject::invokeMethod(this, [this, index] {
+      const auto& walletName = walletBalances_->wallets().at(index).toStdString();
+      const auto& walletId = hdWalletIdByIndex(index);
 
-   addrModel_->reset(walletId);
-   WalletsMessage msg;
-   msg.set_wallet_get(walletId);
-   const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
-   walletInfoReq_[msgId] = walletName;
+      addrModel_->reset(walletId);
+      WalletsMessage msg;
+      msg.set_wallet_get(walletId);
+      const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
+      walletInfoReq_[msgId] = walletName;
+   });
 }
 
 void QtQuickAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
