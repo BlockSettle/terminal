@@ -140,7 +140,7 @@ ApplicationWindow {
                 onClicked: {
                     bsApp.requestFeeSuggestions()
                     topMenuBtnClicked(btnSend)
-                    stack.push(sendPage)
+                    //stack.push(sendPage)
                     send_popup.show()
                     send_popup.raise()
                     send_popup.requestActivate()
