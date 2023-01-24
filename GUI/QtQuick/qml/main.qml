@@ -45,11 +45,17 @@ ApplicationWindow {
     ReceivePopup {
         id: receive_popup
         visible: false
+        onClosing: {
+            btnReceive.select(false)
+        }
     }
 
     SendPopup {
         id: send_popup
         visible: false
+        onClosing: {
+            btnSend.select(false)
+        }
     }
 
     color: BSStyle.backgroundColor
