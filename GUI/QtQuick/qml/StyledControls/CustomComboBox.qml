@@ -14,96 +14,182 @@ import "../BsStyles"
 
 ComboBox {
     id: control
-    spacing: 3
-    rightPadding: 30 // workaround to decrease width of TextInput
-    property alias maximumLength: input.maximumLength
 
-    contentItem: TextInput {
-        id: input
-        text: control.displayText
-        font: control.font
-        color: { control.enabled ? BSStyle.comboBoxItemTextHighlightedColor : BSStyle.disabledTextColor }
-        leftPadding: 7
-        rightPadding: control.indicator.width + control.spacing
-        verticalAlignment: Text.AlignVCenter
-        clip: true
-        readOnly: !editable
-        validator: control.validator
+    property alias title_text: title.text
+    property alias details_text: details.text 
+
+    activeFocusOnTab: true
+
+    leftPadding: 16
+    rightPadding: 36
+    topPadding: 16
+    bottomPadding: 16
+
+    contentItem: Rectangle {
+
+        id: input_rect
+
+
+        color: "transparent"
+
+        Label {
+            id: title
+
+            anchors.top: parent.top
+            anchors.topMargin: 0
+            anchors.left: parent.left
+            anchors.leftMargin: 0
+
+            font.pixelSize: 13
+            font.family: "Roboto"
+            font.weight: Font.Normal
+
+            color: "#7A88B0"
+        }
+
+        Label {
+            id: details
+
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 1
+            anchors.right: parent.right
+            anchors.rightMargin: 0
+
+            font.pixelSize: 13
+            font.family: "Roboto"
+            font.weight: Font.Normal
+
+            color: "#7A88B0"
+        }
+
+        Label {
+            id: input
+
+            focus: true
+
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 0
+            anchors.left: parent.left
+            anchors.leftMargin: 0
+
+            width: details.text.length ? parent.width - details.width - 16 : parent.width
+            height: 19
+
+            font.pixelSize: 16
+            font.family: "Roboto"
+            font.weight: Font.Normal
+
+            color: "#FFFFFF"
+
+            text: control.currentText
+            clip: true
+        }
     }
 
     indicator: Canvas {
+
         id: canvas
-        x: control.width - width
+
+        x: control.width - width - 17
         y: control.topPadding + (control.availableHeight - height) / 2
-        width: 30
-        height: 8
+        width: 9
+        height: 6
+
         contextType: "2d"
 
         Connections {
+
             target: control
-            onPressedChanged: canvas.requestPaint()
+            function onPressedChanged() {
+                canvas.requestPaint()
+            }
         }
 
         onPaint: {
-            context.reset();
-            context.moveTo(0, 0);
-            context.lineTo(8,8);
-            context.lineTo(16, 0);
-            context.lineTo(15, 0);
-            context.lineTo(8,7);
-            context.lineTo(1, 0);
-            context.closePath();
-            context.fillStyle = BSStyle.comboBoxItemTextHighlightedColor;
-            context.fill();
+
+            context.reset()
+            context.moveTo(0, 0)
+            context.lineTo(width, 0)
+            context.lineTo(width / 2, height)
+            context.closePath()
+            context.fillStyle = control.popup.visible ? BSStyle.comboBoxIndicatorColor
+                                                      : BSStyle.comboBoxPopupedIndicatorColor
+            context.fill()
         }
     }
 
     background: Rectangle {
-        implicitWidth: 120
-        color: { control.enabled ?  BSStyle.comboBoxBgColor :  BSStyle.disabledBgColor }
-        implicitHeight: 25
-        border.color: { control.enabled ? BSStyle.inputsBorderColor : BSStyle.disabledColor }
-        border.width: control.visualFocus ? 2 : 1
-        radius: 2
+
+        color: "#020817"
+        opacity: 1
+        radius: 14
+
+        border.color: control.popup.visible ? BSStyle.comboBoxPopupedBorderColor :
+                      (control.hovered ? BSStyle.comboBoxHoveredBorderColor :
+                      (control.activeFocus ? BSStyle.comboBoxFocusedBorderColor : BSStyle.comboBoxBorderColor))
+        border.width: 1
+
+        implicitWidth: control.width
+        implicitHeight: control.height
     }
 
     delegate: ItemDelegate {
-        width: control.width
+
         id: menuItem
 
+        width: control.width - 12
+        height: 27
+
+        leftPadding: 6
+        topPadding: 4
+        bottomPadding: 4
+
         contentItem: Text {
-            text: modelData
-            color: menuItem.highlighted ? BSStyle.comboBoxItemTextColor : BSStyle.comboBoxItemTextHighlightedColor
-            font: control.font
+
+            text: control.textRole
+                ? (Array.isArray(control.model) ? modelData[control.textRole] : model[control.textRole])
+                : modelData
+            color: menuItem.highlighted ? BSStyle.comboBoxItemTextHighlightedColor : ( menuItem.currented ? BSStyle.comboBoxItemTextCurrentColor : BSStyle.comboBoxItemTextColor)
+            font.pixelSize: 16
+            font.family: "Roboto"
+            font.weight: Font.Normal
+
             elide: Text.ElideNone
             verticalAlignment: Text.AlignVCenter
         }
+
         highlighted: control.highlightedIndex === index
+        property bool currented: control.currentIndex === index
 
         background: Rectangle {
-            color: menuItem.highlighted ? BSStyle.comboBoxItemBgHighlightedColor : BSStyle.comboBoxItemBgColor
+            color: menuItem.highlighted ? BSStyle.comboBoxItemHighlightedColor : "transparent"
+            opacity: menuItem.highlighted ? 0.2 : 1
+            radius: 14
         }
     }
 
     popup: Popup {
+        id: _popup
+
         y: control.height - 1
         width: control.width
-        implicitHeight: contentItem.implicitHeight
-        padding: 1
+        padding: 6
 
         contentItem: ListView {
+            id: popup_item
+
             clip: true
             implicitHeight: contentHeight
             model: control.popup.visible ? control.delegateModel : null
+            //model: control.delegateModel
             currentIndex: control.highlightedIndex
 
             ScrollIndicator.vertical: ScrollIndicator { }
         }
 
         background: Rectangle {
-            color: BSStyle.comboBoxItemBgColor
-            border.color: BSStyle.inputsBorderColor
-            radius: 0
+            color: "#FFFFFF"
+            radius: 14
         }
     }
 }

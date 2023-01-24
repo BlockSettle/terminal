@@ -13,7 +13,7 @@ ColumnLayout  {
     signal sig_skip()
     signal sig_not_skip()
 
-    height: 481
+    height: 485
     width: 580
 
     spacing: 0

@@ -25,25 +25,17 @@ Rectangle {
     property alias input_text: input.text
     property alias horizontalAlignment: input.horizontalAlignment
     property alias input_topMargin: input.anchors.topMargin
-    property alias input_validator: input.validator
-
-
-    property alias input_item: input
-
-    property bool isValid: true
-    property bool isPassword: false
-    property bool isHiddenText: false
-
-    property var completer: null
 
     signal textChanged()
+    signal tabNavigated()
+    signal backTabNavigated()
 
 
     color: "#020817"
     opacity: 1
     radius: 14
 
-    border.color: isValid ? (input.activeFocus ? "#45A6FF" : "#3C435A") : "#EB6060"
+    border.color: input.activeFocus ? "#45A6FF" : "#3C435A"
     border.width: 1
 
     Label {
@@ -61,7 +53,7 @@ Rectangle {
         color: "#7A88B0"
     }
 
-    TextInput {
+    TextEdit {
         id: input
 
         focus: true
@@ -72,41 +64,32 @@ Rectangle {
         anchors.left: rect.left
         anchors.leftMargin: title.anchors.leftMargin
         width: rect.width - 2*title.anchors.leftMargin
-        height: 19
-
-        echoMode: isHiddenText? TextInput.Password : TextInput.Normal
+        height: 39
 
         font.pixelSize: 16
         font.family: "Roboto"
         font.weight: Font.Normal
 
+        wrapMode : TextEdit.Wrap
+
         color: "#E2E7FF"
 
         onTextChanged : {
             rect.textChanged()
+
+            var pos = input.positionAt(1, input.height + 1);
+            if(input.length >= pos)
+            {
+                input.remove(pos, input.length);
+            }
         }
 
-    }
+        Keys.onTabPressed: {
+            tabNavigated()
+        }
 
-    Image {
-        id: eye_icon
-
-        visible: isPassword
-
-        anchors.top: rect.top
-        anchors.topMargin: 23
-        anchors.right: rect.right
-        anchors.rightMargin: 23
-
-        source: isHiddenText? "qrc:/images/Eye_icon _unvisible.png" : "qrc:/images/Eye_icon _visible.png"
-        width: 24
-        height: 24
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: {
-                isHiddenText = !isHiddenText
-            }
+        Keys.onBacktabPressed: {
+            backTabNavigated()
         }
     }
 

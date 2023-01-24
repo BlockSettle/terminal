@@ -13,8 +13,15 @@ import QtQuick.Controls 2.3
 import "../BsStyles"
 
 Button {
+
     id: control
+
+    height: 50
+
     property bool preferred: false
+
+    //aliases
+    property alias back_radius: back.radius
 
     activeFocusOnTab: true
 
@@ -29,12 +36,16 @@ Button {
     icon.height: 24
 
     background: Rectangle {
+
+        id: back
+
         implicitWidth: control.width
-        implicitHeight: 50
+        implicitHeight: control.height
+
         color: preferred ? (!control.enabled ? BSStyle.buttonsDisabledColor :
                 (control.down ? BSStyle.buttonsPreferredPressedColor :
                 (control.hovered ? BSStyle.buttonsPreferredHoveredColor : BSStyle.buttonsPreferredColor))):
-                (!control.enabled ? BSStyle.disabledColor :
+                (!control.enabled ? BSStyle.buttonsDisabledColor :
                 (control.down ? BSStyle.buttonsStandardPressedColor :
                 (control.hovered ? BSStyle.buttonsStandardHoveredColor : BSStyle.buttonsStandardColor)))
 

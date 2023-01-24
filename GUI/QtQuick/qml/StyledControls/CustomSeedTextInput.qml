@@ -18,4 +18,5 @@ CustomTextInput {
     input_topMargin: 13
     title_leftMargin: 10
     title_topMargin: 8
+    title_font_size: 12
 }

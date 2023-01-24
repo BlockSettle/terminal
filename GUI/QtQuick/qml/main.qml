@@ -16,6 +16,7 @@ import QtQuick.Window 2
 import "StyledControls" 1
 import "BsStyles" 1
 import "Receive"  1
+import "Send"  1
 import "CreateWallet"  1
 
 ApplicationWindow {
@@ -27,7 +28,7 @@ ApplicationWindow {
     title: qsTr("BlockSettle Terminal")
 
     property var currentDialog: ({})
-    property int currentWalletIndex
+    property int overviewWalletIndex
     readonly property int resizeAnimationDuration: 25
 
     Component.onCompleted: {
@@ -44,6 +45,17 @@ ApplicationWindow {
     ReceivePopup {
         id: receive_popup
         visible: false
+        onClosing: {
+            btnReceive.select(false)
+        }
+    }
+
+    SendPopup {
+        id: send_popup
+        visible: false
+        onClosing: {
+            btnSend.select(false)
+        }
     }
 
     color: BSStyle.backgroundColor
@@ -134,7 +146,10 @@ ApplicationWindow {
                 onClicked: {
                     bsApp.requestFeeSuggestions()
                     topMenuBtnClicked(btnSend)
-                    stack.push(sendPage)
+                    //stack.push(sendPage)
+                    send_popup.show()
+                    send_popup.raise()
+                    send_popup.requestActivate()
                 }
             }
             CustomTitleToolButton {
@@ -149,7 +164,7 @@ ApplicationWindow {
                 onClicked: {
                     topMenuBtnClicked(btnReceive)
                     //stack.push(receivePage)
-                    bsApp.generateNewAddress(currentWalletIndex, true)
+                    bsApp.generateNewAddress(overviewWalletIndex, true)
                     receive_popup.show()
                     receive_popup.raise()
                     receive_popup.requestActivate()
@@ -188,7 +203,7 @@ ApplicationWindow {
             }
 
             onCurWalletIndexChanged: (ind) => {
-                currentWalletIndex = ind
+                overviewWalletIndex = ind
             }
         }
 
@@ -339,5 +354,17 @@ ApplicationWindow {
         target: mainWindow
         property: "y"
         duration: resizeAnimationDuration
+    }
+
+
+    //global functions
+    function getWalletData (index: int, role: string)
+    {
+        return walletBalances.data(walletBalances.index(index, 0), role)
+    }
+
+    function getFeeSuggData (index: int, role: string)
+    {
+        return feeSuggestions.data(feeSuggestions.index(index, 0), role)
     }
 }

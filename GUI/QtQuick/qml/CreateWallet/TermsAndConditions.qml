@@ -12,10 +12,8 @@ ColumnLayout  {
 
     signal sig_continue()
 
-    height: 481
+    height: 485
     width: 580
-    implicitHeight: 481
-    implicitWidth: 580
 
     spacing: 0
 

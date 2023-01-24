@@ -13,7 +13,7 @@ ColumnLayout  {
 
     signal sig_finish()
 
-    height: 544
+    height: 549
     width: 580
     spacing: 0
 
@@ -43,7 +43,7 @@ ColumnLayout  {
         Layout.alignment: Qt.AlignCenter
         Layout.topMargin: 6
         Layout.preferredHeight : 16
-        text: bsApp.walletsList[currentWalletIndex] + " / Native SegWit"
+        text: bsApp.walletsList[overviewWalletIndex] + " / Native SegWit"
         color: "#E2E7FF"
         font.pixelSize: 14
         font.family: "Roboto"

@@ -9,9 +9,7 @@ import "../StyledControls"
 CustomPopup {
     id: root
 
-    property var phrase
-
-    objectName: "create_wallet"
+    objectName: "receive_popup"
 
     _stack_view.initialItem: receive_qr_code
     _arrow_but_visibility: !receive_qr_code.visible

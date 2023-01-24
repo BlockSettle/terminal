@@ -127,3 +127,13 @@ generated_proto/
 terminal.*/
 BlockSettleHW/ledger/hidapi/*
 GUI/QtWidgets/ui/*
+
+*.autosave
+
+# dvajdual test environment
+GUI/QtQuick/main.cpp
+GUI/QtQuick/qml/main_test.qml
+GUI/QtQuick/qml.qrc
+GUI/QtQuick/qml_test.pro
+GUI/QtQuick/qml_test.pro.user
+
