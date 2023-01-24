@@ -185,10 +185,13 @@ Item {
             width: 900
             text: qsTr("Continue")
             font.pointSize: 14
-            enabled: recvAddress.text.length && (parseFloat(amount.text) >= 0.00001)
-                && (parseFloat(fees.text) >= 1.0)
+//            enabled: recvAddress.text.length && (parseFloat(amount.text) >= 0.00001)
+//                && (parseFloat(fees.text) >= 1.0)
 
             onClicked: {
+                console.log("fees.text = " + parseFloat(fees.text))
+                console.log("amount.text = " + parseFloat(amount.text))
+                console.log("recvAddress.text.length = " + recvAddress.text.length)
                 verifySignTX.txSignRequest = bsApp.createTXSignRequest(
                             sendWalletsComboBox.currentIndex, recvAddress.text,
                             parseFloat(amount.text), parseFloat(fees.text),

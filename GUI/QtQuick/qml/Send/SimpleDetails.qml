@@ -120,7 +120,9 @@ ColumnLayout  {
         title_text: qsTr("Amount")
         input_text: "0"
 
-        input_validator: DoubleValidator{bottom: 0;  decimals: 20;  notation :DoubleValidator.StandardNotation;}
+        input_validator: DoubleValidator{bottom: 0; top: from_wallet_combo.currentIndex ? getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole) : 0;
+            decimals: 20;
+            notation :DoubleValidator.StandardNotation; locale: "en_US";}
 
         CustomButton {
 
@@ -140,7 +142,7 @@ ColumnLayout  {
             font.pixelSize: 12
 
             function click_enter() {
-                console.log ("MAX clicked")
+                amount_input.input_text = getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole)
             }
         }
 
@@ -250,9 +252,9 @@ ColumnLayout  {
 
         function click_enter() {
             layout.sig_continue( bsApp.createTXSignRequest(
-                            from_wallet_combo.currentIndex, rec_addr_input.text,
-                            parseFloat(from_wallet_combo.details_text), parseFloat(fee_suggest_combo.currentValue),
-                            comment_input.text))
+                            from_wallet_combo.currentIndex, rec_addr_input.input_text,
+                            parseFloat(amount_input.input_text), parseFloat(fee_suggest_combo.currentValue),
+                            comment_input.input_text))
         }
 
     }

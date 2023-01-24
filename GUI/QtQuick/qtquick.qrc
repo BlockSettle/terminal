@@ -108,5 +108,6 @@
         <file>qml/Send/qmldir</file>
         <file>qml/Send/SendPopup.qml</file>
         <file>qml/Send/SimpleDetails.qml</file>
+        <file>qml/Send/SignTransaction.qml</file>
     </qresource>
 </RCC>

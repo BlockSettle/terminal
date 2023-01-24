@@ -21,7 +21,24 @@ CustomPopup {
         visible: false
 
         onSig_continue: (signature) => {
-            console.log(signature)
+            sign_trans.init()
+            sign_trans.txSignRequest = signature
+            _stack_view.push(sign_trans)
+        }
+    }
+
+    SignTransaction {
+        id: sign_trans
+        visible: false
+
+        onSig_broadcast:  {
+            root.close()
+            _stack_view.pop(null)
+        }
+
+        onSig_time_finished:  {
+            root.close()
+            _stack_view.pop(null)
         }
     }
 }
