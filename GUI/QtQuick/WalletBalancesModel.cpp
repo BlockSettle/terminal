@@ -27,7 +27,8 @@ namespace {
 
 WalletBalancesModel::WalletBalancesModel(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
    : QAbstractTableModel(parent), logger_(logger)
-{}
+{
+}
 
 int WalletBalancesModel::rowCount(const QModelIndex &) const
 {
@@ -93,6 +94,8 @@ void WalletBalancesModel::addWallet(const const Wallet& wallet)
    beginInsertRows(QModelIndex(), rowCount(), rowCount());
    wallets_.push_back(wallet);
    endInsertRows();
+
+   emit rowCountChanged();
 }
 
 QStringList WalletBalancesModel::wallets() const
@@ -110,6 +113,8 @@ void WalletBalancesModel::clear()
    wallets_.clear();
    balances_.clear();
    endResetModel();
+
+   emit rowCountChanged();
 }
 
 void WalletBalancesModel::setWalletBalance(const std::string& walletId, const Balance& bal)
