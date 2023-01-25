@@ -235,7 +235,6 @@ ColumnLayout  {
             target:feeSuggestions
             function onRowCountChanged ()
             {
-                //fee_suggest_combo.model = feeSuggestions
                 fee_suggest_combo.currentIndex = 0
             }
         }
