@@ -25,10 +25,7 @@ namespace {
 
 FeeSuggestionModel::FeeSuggestionModel(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
    : QAbstractTableModel(parent), logger_(logger)
-{
-   //connect(this, &FeeSuggestionModel::rowsInserted, this, &FeeSuggestionModel::rowCountChanged);
-   //connect(this, &FeeSuggestionModel::rowsRemoved, this, &FeeSuggestionModel::rowCountChanged);
-}
+{}
 
 int FeeSuggestionModel::rowCount(const QModelIndex &) const
 {

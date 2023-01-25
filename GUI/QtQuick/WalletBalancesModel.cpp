@@ -27,8 +27,7 @@ namespace {
 
 WalletBalancesModel::WalletBalancesModel(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
    : QAbstractTableModel(parent), logger_(logger)
-{
-}
+{}
 
 int WalletBalancesModel::rowCount(const QModelIndex &) const
 {
