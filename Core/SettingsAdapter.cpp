@@ -592,6 +592,18 @@ ProcessingResult SettingsAdapter::processUpdArmoryServer(const bs::message::Enve
    return processGetArmoryServers(env);
 }
 
+#include <QTextCodec>
+static std::string convertPathname(const QString& pathname)
+{
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+   const QByteArray baFilename = QTextCodec::codecForLocale()->fromUnicode(pathname);
+#else
+   auto fromUtf16 = QStringEncoder(QStringEncoder::System);
+   const QByteArray baFilename = fromUtf16(mFileName);
+#endif
+   return baFilename.toStdString();
+}
+
 ProcessingResult SettingsAdapter::processSignerSettings(const bs::message::Envelope &env)
 {
    SettingsMessage msg;
@@ -613,7 +625,7 @@ ProcessingResult SettingsAdapter::processSignerSettings(const bs::message::Envel
       keyVal->set_key(signer.serverId());
       keyVal->set_value(signer.key.toStdString());
    }
-   msgResp->set_home_dir(appSettings_->GetHomeDir().toUtf8().toStdString());
+   msgResp->set_home_dir(convertPathname(appSettings_->GetHomeDir()));
    msgResp->set_auto_sign_spend_limit(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
 
    pushResponse(user_, env, msg.SerializeAsString());

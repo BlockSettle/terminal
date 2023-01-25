@@ -200,8 +200,7 @@ void TrezorClient::acquireDevice(const trezor::DeviceData& devData, bool init)
 
 
 namespace {
-   //static const std::string kBlockSettleOrigin{ "Origin: https://blocksettle.trezor.io" };
-   static const std::string kBlockSettleOrigin{ "Origin: https://localhost" };
+   static const std::string kBlockSettleOrigin{ "Origin: https://blocksettle.trezor.io" };
 }
 
 static size_t writeToString(void* ptr, size_t size, size_t count, std::string* stream)
@@ -219,8 +218,9 @@ TrezorPostHandler::TrezorPostHandler(const std::shared_ptr<spdlog::logger>& logg
    curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, writeToString);
 
    curlHeaders_ = curl_slist_append(curlHeaders_, kBlockSettleOrigin.c_str());
-   curlHeaders_ = curl_slist_append(curlHeaders_, "content-type: application/x-www-form-urlencoded;");
+   //curlHeaders_ = curl_slist_append(curlHeaders_, "content-type: application/x-www-form-urlencoded;");
    curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, curlHeaders_);
+   curl_easy_setopt(curl_, CURLOPT_POST, 1);
 }
 
 bs::hww::TrezorPostHandler::~TrezorPostHandler()

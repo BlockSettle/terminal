@@ -1146,9 +1146,23 @@ void QtQuickAdapter::copyAddressToClipboard(const QString& addr)
    }
 }
 
+
 QString QtQuickAdapter::pasteTextFromClipboard()
 {
     return QGuiApplication::clipboard()->text();
+}
+
+bool QtQuickAdapter::validateAddress(const QString& addr)
+{
+   const auto& addrStr = addr.toStdString();
+   try {
+      bs::Address::fromAddressString(addrStr);
+   }
+   catch (const std::exception& e) {
+      logger_->warn("[{}] invalid address {}: {}", __func__, addrStr, e.what());
+      return false;
+   }
+   return true;
 }
 
 void QtQuickAdapter::requestFeeSuggestions()
