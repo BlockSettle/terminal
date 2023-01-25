@@ -1146,6 +1146,11 @@ void QtQuickAdapter::copyAddressToClipboard(const QString& addr)
    }
 }
 
+QString QtQuickAdapter::pasteTextFromClipboard()
+{
+    return QGuiApplication::clipboard()->text();
+}
+
 void QtQuickAdapter::requestFeeSuggestions()
 {
    ArmoryMessage msg;

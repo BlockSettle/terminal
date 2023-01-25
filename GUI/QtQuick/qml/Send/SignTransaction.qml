@@ -414,6 +414,7 @@ ColumnLayout  {
     {
         password.input_text = ""
         time_progress = 120
+        broadcast_but.forceActiveFocus()
     }
 
 }

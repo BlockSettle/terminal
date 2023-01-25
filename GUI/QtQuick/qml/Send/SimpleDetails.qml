@@ -101,7 +101,7 @@ ColumnLayout  {
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                    console.log("paste clicked")
+                    rec_addr_input.input_text = bsApp.pasteTextFromClipboard()
                 }
             }
         }
@@ -266,6 +266,11 @@ ColumnLayout  {
 
     Keys.onReturnPressed: {
         continue_but.click_enter()
+    }
+
+    function init()
+    {
+        rec_addr_input.setActiveFocus()
     }
 }
 
