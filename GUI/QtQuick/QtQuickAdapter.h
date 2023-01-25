@@ -164,6 +164,7 @@ public:
    Q_INVOKABLE void importHWWallet(int deviceIndex);
    Q_INVOKABLE void generateNewAddress(int walletIndex, bool isNative);
    Q_INVOKABLE void copyAddressToClipboard(const QString& addr);
+   Q_INVOKABLE bool validateAddress(const QString& addr);
 
    Q_INVOKABLE void requestFeeSuggestions();
    Q_INVOKABLE QTXSignRequest* createTXSignRequest(int walletIndex, const QString& recvAddr
