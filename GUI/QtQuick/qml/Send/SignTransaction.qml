@@ -395,6 +395,8 @@ ColumnLayout  {
     }
 
     Timer {
+        id: timer
+
         interval: 1000
         running: true
         repeat: true
@@ -414,7 +416,8 @@ ColumnLayout  {
     {
         password.input_text = ""
         time_progress = 120
-        broadcast_but.forceActiveFocus()
+        password.setActiveFocus()
+        timer.running = true
     }
 
 }

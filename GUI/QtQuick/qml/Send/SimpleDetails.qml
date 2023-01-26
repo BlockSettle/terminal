@@ -127,9 +127,13 @@ ColumnLayout  {
         title_text: qsTr("Amount")
         input_text: "0"
 
-        input_validator: DoubleValidator{bottom: 0; top: from_wallet_combo.currentIndex ? getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole) : 0;
-            decimals: 20;
-            notation :DoubleValidator.StandardNotation; locale: "en_US";}
+        input_validator: DoubleValidator{
+            bottom: 0
+            top: (from_wallet_combo.currentIndex >= 0) ?
+                     getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole) : 0
+            notation :DoubleValidator.StandardNotation
+            locale: "en_US"
+        }
 
         CustomButton {
 
@@ -167,6 +171,7 @@ ColumnLayout  {
             font.weight: Font.Normal
             color: "#7A88B0"
         }
+
     }
 
     RowLayout {
@@ -194,14 +199,26 @@ ColumnLayout  {
 
             textRole: "name"
             valueRole: "name"
-        }
 
-        Connections
-        {
-            target:walletBalances
-            function onRowCountChanged ()
+            Connections
             {
-                from_wallet_combo.currentIndex = 0
+                target:walletBalances
+                function onRowCountChanged ()
+                {
+                    from_wallet_combo.currentIndex = overviewWalletIndex
+                }
+            }
+
+            onActivated: {
+                //I dont understand why but acceptableInput dont work...
+                var amount_max = getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole)
+                var cur_value = parseFloat(amount_input.input_text)
+                var bottom = amount_input.input_validator.bottom
+                var top = amount_input.input_validator.top
+                if(cur_value < bottom || cur_value > top)
+                {
+                    amount_input.input_text = amount_max
+                }
             }
         }
 
@@ -228,14 +245,14 @@ ColumnLayout  {
 
             textRole: "text"
             valueRole: "value"
-        }
 
-        Connections
-        {
-            target:feeSuggestions
-            function onRowCountChanged ()
+            Connections
             {
-                fee_suggest_combo.currentIndex = 0
+                target:feeSuggestions
+                function onRowCountChanged ()
+                {
+                    fee_suggest_combo.currentIndex = 0
+                }
             }
         }
 
@@ -300,6 +317,17 @@ ColumnLayout  {
     function init()
     {
         rec_addr_input.setActiveFocus()
+
+        //we need set first time currentIndex to 0
+        //only after we will have signal rowchanged
+        if (fee_suggest_combo.currentIndex >= 0)
+            fee_suggest_combo.currentIndex = 0
+        if (from_wallet_combo.currentIndex >= 0)
+            from_wallet_combo.currentIndex = overviewWalletIndex
+
+        amount_input.input_text = "0"
+        comment_input.input_text = ""
+        rec_addr_input.input_text = ""
     }
 }
 
