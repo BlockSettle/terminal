@@ -43,9 +43,9 @@ This section is for those who are interested in running Terminal application for
 The BlockSettle terminal is available for download for Microsoft Windows 7 and Above, which meets the following minimum system requirements. To get started visit our [Download](http://blocksettle.com/downloads/terminal) Page, and download the windows or macOS binary file that matches your operating system.
 
 ### Operating System Requirements.
-- Linux - [Ubuntu](https://www.ubuntu.com/) (16.04 LTS/18.04 LTS/18.10/19.04)
+- Linux - [Ubuntu](https://www.ubuntu.com/) (20.04 LTS/22.04 LTS)
 - [macOS](https://www.apple.com/macos/) (10.12 or higher)
-- [Windows](https://www.microsoft.com/en-us/windows) (Windows 7 or higher)
+- [Windows](https://www.microsoft.com/en-us/windows) (Windows 10 or higher)
 
 ### Hardware Requirements.
 * Dual Core CPU
@@ -112,15 +112,14 @@ For access to trade our FX and XBT products please upgrade your account to Tradi
 
  4. Check your home directory for spaces, which aren't allowed. For example, `C:\Satoshi Nakamoto` won't work. (`C:\Satoshi` would be okay.) If your home directory has a space in it, add the `DEV_3RD_ROOT` environment variable to Windows, as seen in the ["Terminal prerequisites"](#terminal-prerequisites) section.
 
- 5. Click the Start button and select the `x64 Native Tools Command Prompt for VS 2017` program. You may have to type the name until the option appears. It is *critical* that you type `x64` and *not* `x86`.
+ 5. Click the Start button and select the `x64 Native Tools Command Prompt for VS 2022` program. You may have to type the name until the option appears. It is *critical* that you type `x64` and *not* `x86`.
 
 ## Ubuntu
- 1. Open Software Updates -> Ubuntu Software. Set the "Source Code" checkbox (required for `qt5-default`).
+ Execute the following commands:
 
- 2. Execute the following commands.
-
-		sudo apt install python-pip cmake libmysqlclient-dev autoconf libtool yasm nasm g++
-		sudo apt build-dep qt5-default
+	sudo apt install python-pip cmake libmysqlclient-dev autoconf libtool yasm nasm libgmp3-dev libdouble-conversion-dev
+	sudo apt install qttools5-dev-tools libfreetype-dev libfontconfig-dev libcups2-dev xcb
+	sudo apt install libx11-xcb-dev libxcb-xkb-dev libxcb-xinput-dev libxcb-sync-dev libxcb-render-util0-dev libxcb-xfixes0-dev libxcb-xinerama0-dev libxcb-randr0-dev libxcb-image0-dev libxcb-keysyms1-dev libxcb-icccm4-dev libxcb-glx0-dev libxkbcommon-x11-dev
 
 ### MacOS
  1. Get an Apple developer account (free), log in, and download the latest version of `Command Line Tools for Xcode`. As an alternative, install the latest version of [Xcode](https://itunes.apple.com/us/app/xcode/id497799835) and download `Command Line Tools` via Xcode. Either choice will be updated via the App Store.
