@@ -21,9 +21,9 @@ CustomPopup {
         visible: false
 
         onSig_continue: (signature) => {
-            sign_trans.init()
             sign_trans.txSignRequest = signature
             _stack_view.push(sign_trans)
+            sign_trans.init()
         }
     }
 

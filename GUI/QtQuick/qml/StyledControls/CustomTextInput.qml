@@ -84,6 +84,10 @@ Rectangle {
 
         onTextChanged : {
             rect.textChanged()
+            if(!acceptableInput)
+            {
+                input.text = input.text.substring(0, input.text.length - 1)
+            }
         }
 
     }
