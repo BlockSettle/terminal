@@ -101,8 +101,15 @@ ColumnLayout  {
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                    console.log("paste clicked")
+                    rec_addr_input.input_text = bsApp.pasteTextFromClipboard()
                 }
+            }
+        }
+
+        onTextChanged : {
+            if (rec_addr_input.input_text.length)
+            {
+                rec_addr_input.isValid = bsApp.validateAddress(rec_addr_input.input_text)
             }
         }
     }
@@ -189,6 +196,15 @@ ColumnLayout  {
             valueRole: "name"
         }
 
+        Connections
+        {
+            target:walletBalances
+            function onRowCountChanged ()
+            {
+                from_wallet_combo.currentIndex = 0
+            }
+        }
+
         Label {
             Layout.fillWidth: true
             Layout.preferredHeight: 70
@@ -213,6 +229,16 @@ ColumnLayout  {
             textRole: "text"
             valueRole: "value"
         }
+
+        Connections
+        {
+            target:feeSuggestions
+            function onRowCountChanged ()
+            {
+                fee_suggest_combo.currentIndex = 0
+            }
+        }
+
     }
 
     CustomTextEdit {
@@ -238,6 +264,9 @@ ColumnLayout  {
 
     CustomButton {
         id: continue_but
+
+        enabled: rec_addr_input.isValid && rec_addr_input.input_text.length
+                 && parseFloat(amount_input.input_text) !== 0
 
         width: 552
 
@@ -266,6 +295,11 @@ ColumnLayout  {
 
     Keys.onReturnPressed: {
         continue_but.click_enter()
+    }
+
+    function init()
+    {
+        rec_addr_input.setActiveFocus()
     }
 }
 

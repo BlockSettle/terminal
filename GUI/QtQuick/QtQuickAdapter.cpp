@@ -1146,6 +1146,12 @@ void QtQuickAdapter::copyAddressToClipboard(const QString& addr)
    }
 }
 
+
+QString QtQuickAdapter::pasteTextFromClipboard()
+{
+    return QGuiApplication::clipboard()->text();
+}
+
 bool QtQuickAdapter::validateAddress(const QString& addr)
 {
    const auto& addrStr = addr.toStdString();

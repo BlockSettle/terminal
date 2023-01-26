@@ -93,6 +93,8 @@ void WalletBalancesModel::addWallet(const const Wallet& wallet)
    beginInsertRows(QModelIndex(), rowCount(), rowCount());
    wallets_.push_back(wallet);
    endInsertRows();
+
+   emit rowCountChanged();
 }
 
 QStringList WalletBalancesModel::wallets() const
@@ -110,6 +112,8 @@ void WalletBalancesModel::clear()
    wallets_.clear();
    balances_.clear();
    endResetModel();
+
+   emit rowCountChanged();
 }
 
 void WalletBalancesModel::setWalletBalance(const std::string& walletId, const Balance& bal)

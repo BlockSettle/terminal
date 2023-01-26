@@ -109,5 +109,6 @@
         <file>qml/Send/SendPopup.qml</file>
         <file>qml/Send/SimpleDetails.qml</file>
         <file>qml/Send/SignTransaction.qml</file>
+        <file>images/paste_icon.png</file>
     </qresource>
 </RCC>

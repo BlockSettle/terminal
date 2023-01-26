@@ -12,6 +12,8 @@
 #include "Address.h"
 #include "BTCNumericTypes.h"
 
+#include <QDebug>
+
 namespace {
    static const QHash<int, QByteArray> kRoles{
       {FeeSuggestionModel::TextRole, "text"},
@@ -94,6 +96,7 @@ void FeeSuggestionModel::addRows(const std::map<uint32_t, float>& feeLevels)
    beginInsertRows(QModelIndex(), rowCount(), rowCount() + newRows.size() - 1);
    data_.insert(data_.cend(), newRows.begin(), newRows.end());
    endInsertRows();
+   emit rowCountChanged();
 }
 
 void FeeSuggestionModel::clear()
@@ -101,4 +104,5 @@ void FeeSuggestionModel::clear()
    beginResetModel();
    data_.clear();
    endResetModel();
+   emit rowCountChanged();
 }

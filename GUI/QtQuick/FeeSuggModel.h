@@ -24,6 +24,8 @@ namespace spdlog {
 class FeeSuggestionModel : public QAbstractTableModel
 {
    Q_OBJECT
+
+   Q_PROPERTY(int rowCount READ rowCount NOTIFY rowCountChanged)
 public:
    enum TableRoles { TextRole = Qt::DisplayRole, BlocksRole = Qt::UserRole, TimeRole, ValueRole };
    FeeSuggestionModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
@@ -45,6 +47,9 @@ public:
 private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::vector<FeeSuggestion> data_;
+
+signals:
+   void rowCountChanged();
 };
 
 #endif	// FEE_SUGG_MODEL_H

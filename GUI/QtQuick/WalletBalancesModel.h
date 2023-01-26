@@ -37,6 +37,8 @@ namespace WalletBalance {
 class WalletBalancesModel : public QAbstractTableModel
 {
    Q_OBJECT
+
+   Q_PROPERTY(int rowCount READ rowCount NOTIFY rowCountChanged)
 public:
 
    WalletBalancesModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
@@ -70,6 +72,9 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::vector<Wallet>  wallets_;
    std::unordered_map<std::string, Balance>  balances_;  //key: walletId
+
+signals:
+   void rowCountChanged();
 };
 
 #endif	// WALLET_BALANCES_MODEL_H

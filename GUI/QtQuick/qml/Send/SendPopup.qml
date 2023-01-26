@@ -41,4 +41,8 @@ CustomPopup {
             _stack_view.pop(null)
         }
     }
+
+    function init() {
+        simple_details.init()
+    }
 }
