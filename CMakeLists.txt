@@ -345,13 +345,14 @@ SET(MPIR_LIB_DIR ${MPIR_PACKAGE_ROOT}/lib)
 IF (WIN32)
    SET(MPIR_LIB_NAME mpir)
 ELSE(WIN32)
+#   SET(MPIR_LIB_DIR ${MPIR_PACKAGE_ROOT}/lib)
    IF(BSTERMINAL_SHARED_LIBS)
       SET(MPIR_LIB_NAME libgmp.so)
    ELSE()
       SET(MPIR_LIB_NAME libgmp.a)
    ENDIF()
 ENDIF(WIN32)
-FIND_LIBRARY( MPIR_LIB NAMES ${MPIR_LIB_NAME} PATHS ${MPIR_LIB_DIR} NO_DEFAULT_PATH )
+FIND_LIBRARY(MPIR_LIB NAMES ${MPIR_LIB_NAME} PATHS ${MPIR_LIB_DIR})
 IF( NOT MPIR_LIB)
    MESSAGE( FATAL_ERROR "Could not find MPIR lib in ${MPIR_LIB_DIR}")
 ENDIF()
@@ -718,8 +719,8 @@ ELSE(WIN32)
             libQt5ThemeSupport.a
             libQt5EventDispatcherSupport.a
             libQt5FontDatabaseSupport.a
-            libQt5LinuxAccessibilitySupport.a
-            libQt5AccessibilitySupport.a
+#            libQt5LinuxAccessibilitySupport.a
+#            libQt5AccessibilitySupport.a
             libQt5EdidSupport.a )
 
          LIST(APPEND QT_LINUX_LIBS

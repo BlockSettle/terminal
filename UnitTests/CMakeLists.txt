@@ -43,6 +43,7 @@ LIST (APPEND SOURCES
    ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/txio.cpp
    ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/ZeroConf.cpp
    ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/gtest/NodeUnitTest.cpp
+   ${TERMINAL_GUI_ROOT}/common/WalletsLib/WalletBackupFile.cpp
    )
 
 INCLUDE_DIRECTORIES( ${BLOCKSETTLE_UI_INCLUDE_DIR} )

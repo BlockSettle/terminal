@@ -81,7 +81,7 @@ QHash<int, QByteArray> WalletBalancesModel::roleNames() const
    return kWalletBalanceRoles;
 }
 
-void WalletBalancesModel::addWallet(const const Wallet& wallet)
+void WalletBalancesModel::addWallet(const Wallet& wallet)
 {
    for (int i = 0; i < wallets_.size(); ++i) {
       const auto& w = wallets_.at(i);

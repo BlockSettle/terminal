@@ -41,6 +41,7 @@ from build_scripts.spdlog_settings              import SpdlogSettings
 from build_scripts.trezor_common_settings       import TrezorCommonSettings
 from build_scripts.zeromq_settings              import ZeroMQSettings
 from build_scripts.curl_settings                import CurlSettings
+from build_scripts.websockets_settings          import WebsocketsSettings
 
 def generate_project(build_mode, link_mode, build_production, hide_warnings, cmake_flags, build_tests, build_tracker):
    project_settings = Settings(build_mode, link_mode)
@@ -63,7 +64,6 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
       SpdlogSettings(project_settings),
       ZeroMQSettings(project_settings),
       LibQREncode(project_settings),
-      MPIRSettings(project_settings),
       LibBTC(project_settings),                             # static
       LibChaCha20Poly1305Settings(project_settings),        # static
       BotanSettings(project_settings),
@@ -72,8 +72,12 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
       LibusbSettings(project_settings),
       TrezorCommonSettings(project_settings),
       BipProtocolsSettings(project_settings),
-      NLohmanJson(project_settings)
+      NLohmanJson(project_settings),
+      WebsocketsSettings(project_settings)
    ]
+
+   if project_settings._is_windows:
+      required_3rdparty.append(MPIRSettings(project_settings))
 
    if build_tests:
       required_3rdparty.append(GtestSettings(project_settings))
