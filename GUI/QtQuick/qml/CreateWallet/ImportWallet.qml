@@ -145,47 +145,101 @@ ColumnLayout  {
         delegate: CustomSeedTextInput {
             id: _delega
 
-            property var _component
+            property bool isAccepted: false
 
             width: 170
             title_text: modelData
             onTextChanged : {
                 grid.isComplete = true
+
                 for (var i = 0; i < grid.count; i++)
                 {
-                    if(grid.itemAtIndex(i).input_text === "")
+                    if(grid.itemAtIndex(i).input_text === "" || !grid.itemAtIndex(i).isAccepted)
                     {
                         grid.isComplete = false
                         break
                     }
                 }
-
-                if(_delega.input_text.length && _delega.completer === null)
+                if(input_text.length <= 1)
                 {
-                    _component = Qt.createComponent("CustomCompleterWidget.qml");
-                    if (_component.status === Component.Ready)
-                        finishCreation();
+                    comp_popup.close()
+                    _delega.isAccepted = false
+                }
+                else
+                {
+                    if (!comp_popup.visible)
+                    {
+                        comp_popup.x = _delega.x
+                        comp_popup.y = _delega.y + _delega.height
+                        comp_popup.width = _delega.width
+
+                        comp_popup.open()
+                    }
+
+                    var _comp_vars = bsApp.completeBIP39dic(input_text)
+
+                     _delega.isValid = true
+                    comp_popup.not_valid_word = false
+
+                    if (_comp_vars.length === 1)
+                    {
+                        if (!_delega.isAccepted)
+                        {
+                            completer_accepted()
+                        }
+                    }
                     else
-                        _component.statusChanged.connect(finishCreation);
+                    {
+                        _delega.isAccepted = false
+                        if (_comp_vars.length === 0)
+                        {
+                            _delega.isValid = false
+                            comp_popup.not_valid_word = true
+                            _comp_vars = ["Not a valid word"]
+                        }
+
+                        comp_popup.comp_vars = _comp_vars
+                    }
                 }
             }
 
-            function finishCreation() {
-                if (_component.status === Component.Ready) {
-                    _delega.completer = completer.createObject(mainWindow, {x: _delega.x, y: _delega.y});
-                    _delega.completer.completer_vars = bsApp.completeBIP39dic(_delega.input_text)
-                    if (_delega.completer === null) {
-                        // Error Handling
-                        console.debug("Error creating completer");
+            onActiveFocusChanged: {
+                if(!_delega.activeFocus)
+                    comp_popup.close()
+            }
+
+            Keys.onDownPressed: comp_popup.current_increment()
+
+            Keys.onUpPressed: comp_popup.current_decrement()
+
+            function completer_accepted()
+            {
+
+                if (comp_popup.visible)
+                {
+                    if (_delega.isValid)
+                    {
+                        input_text = comp_popup.comp_vars[comp_popup.current_index]
+                        _delega.isAccepted = true
                     }
-                    else {
-                        console.debug("Success creating completer");
-                    }
-                } else if (_component.status === Component.Error) {
-                    // Error Handling
-                    console.debug("Error loading component:", component.errorString());
+                    comp_popup.close()
+                    if(index < grid.count - 1)
+                        grid.itemAtIndex(index+1).setActiveFocus()
+                    else
+                        nextItemInFocusChain().forceActiveFocus()
                 }
             }
+
+            Keys.onEnterPressed: completer_accepted()
+
+            Keys.onReturnPressed: completer_accepted()
+
+        }
+
+        CustomCompleterPopup {
+            id: comp_popup
+
+            visible: false
         }
     }
 

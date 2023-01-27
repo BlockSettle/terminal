@@ -96,7 +96,6 @@
         <file>qml/CreateWallet/WalletSeed.qml</file>
         <file>qml/CreateWallet/WalletSeedSkipAccept.qml</file>
         <file>qml/CreateWallet/WalletSeedVerify.qml</file>
-        <file>qml/StyledControls/CustomCompleterWidget.qml</file>
         <file>images/advanced_icon.png</file>
         <file>qml/StyledControls/CustomContextMenu.qml</file>
         <file>qml/StyledControls/CustomDialogWindow.qml</file>
@@ -110,5 +109,6 @@
         <file>qml/Send/SimpleDetails.qml</file>
         <file>qml/Send/SignTransaction.qml</file>
         <file>images/paste_icon.png</file>
+        <file>qml/StyledControls/CustomCompleterPopup.qml</file>
     </qresource>
 </RCC>
