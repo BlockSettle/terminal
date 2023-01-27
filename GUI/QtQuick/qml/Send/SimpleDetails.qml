@@ -130,7 +130,7 @@ ColumnLayout  {
         input_validator: DoubleValidator{
             bottom: 0
             top: (from_wallet_combo.currentIndex >= 0) ?
-                     getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole) : 0
+                     parseFloat(getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole)) : 0
             notation :DoubleValidator.StandardNotation
             locale: "en_US"
         }
