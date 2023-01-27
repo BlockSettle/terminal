@@ -22,10 +22,12 @@ Popup {
 
     property var comp_vars
     property bool not_valid_word: false
+    property int index
     property alias current_index: comp_list.currentIndex
 
+    signal compChoosed ()
+
     padding: 6
-    focus: false
 
     contentItem: ListView {
         id: comp_list
@@ -68,8 +70,14 @@ Popup {
 
             MouseArea {
                 anchors.fill: parent
+                hoverEnabled: true
+                onPositionChanged:  {
+                    if (containsMouse)
+                        comp_list.currentIndex = index
+                }
                 onClicked: {
                     comp_list.currentIndex = index
+                    compChoosed()
                 }
             }
         }

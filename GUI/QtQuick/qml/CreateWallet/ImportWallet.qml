@@ -172,6 +172,7 @@ ColumnLayout  {
                         comp_popup.x = _delega.x
                         comp_popup.y = _delega.y + _delega.height
                         comp_popup.width = _delega.width
+                        comp_popup.index = index
 
                         comp_popup.open()
                     }
@@ -183,6 +184,7 @@ ColumnLayout  {
 
                     if (_comp_vars.length === 1)
                     {
+                        comp_popup.comp_vars = _comp_vars
                         if (!_delega.isAccepted)
                         {
                             completer_accepted()
@@ -196,6 +198,7 @@ ColumnLayout  {
                             _delega.isValid = false
                             comp_popup.not_valid_word = true
                             _comp_vars = ["Not a valid word"]
+                            console.log("comp_popup.not_valid_word === true")
                         }
 
                         comp_popup.comp_vars = _comp_vars
@@ -205,7 +208,7 @@ ColumnLayout  {
 
             onActiveFocusChanged: {
                 if(!_delega.activeFocus)
-                    comp_popup.close()
+                    completer_accepted()
             }
 
             Keys.onDownPressed: comp_popup.current_increment()
@@ -215,7 +218,7 @@ ColumnLayout  {
             function completer_accepted()
             {
 
-                if (comp_popup.visible)
+                if (comp_popup.visible && comp_popup.index === index)
                 {
                     if (_delega.isValid)
                     {
@@ -223,6 +226,7 @@ ColumnLayout  {
                         _delega.isAccepted = true
                     }
                     comp_popup.close()
+                    comp_popup.comp_vars = []
                     if(index < grid.count - 1)
                         grid.itemAtIndex(index+1).setActiveFocus()
                     else
@@ -240,6 +244,10 @@ ColumnLayout  {
             id: comp_popup
 
             visible: false
+
+            onCompChoosed: {
+                grid.itemAtIndex(comp_popup.index).completer_accepted()
+            }
         }
     }
 
