@@ -84,12 +84,8 @@ Rectangle {
 
         color: "#E2E7FF"
 
-        onTextChanged : {
+        onTextEdited : {
             rect.textChanged()
-            if(!acceptableInput)
-            {
-                input.text = input.text.substring(0, input.text.length - 1)
-            }
         }
 
         onEditingFinished : {

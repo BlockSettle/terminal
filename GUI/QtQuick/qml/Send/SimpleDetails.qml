@@ -102,6 +102,7 @@ ColumnLayout  {
                 anchors.fill: parent
                 onClicked: {
                     rec_addr_input.input_text = bsApp.pasteTextFromClipboard()
+                    amount_input.setActiveFocus()
                 }
             }
         }
@@ -125,14 +126,52 @@ ColumnLayout  {
 
         //aliases
         title_text: qsTr("Amount")
-        input_text: "0"
 
-        input_validator: DoubleValidator{
-            bottom: 0
-            top: (from_wallet_combo.currentIndex >= 0) ?
-                     parseFloat(getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole)) : 0
-            notation :DoubleValidator.StandardNotation
-            locale: "en_US"
+//                input_validator: DoubleValidator{
+//                    bottom: 0
+//                    top: (from_wallet_combo.currentIndex >= 0) ?
+//                             parseFloat(getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole)) : 0
+//                    notation :DoubleValidator.StandardNotation
+//                }
+
+        //visual studio crashes when there is input_validator
+        //and we change text inside of onTextChanged
+        //it is why I have realized my validator inside of onTextChanged
+        property string prev_text : ""
+        onTextChanged : {
+
+            amount_input.input_text = amount_input.input_text.replace(",", ".")
+
+            if (amount_input.input_text.startsWith("0")
+                && !amount_input.input_text.startsWith("0.")
+                && amount_input.input_text.length > 1)
+            {
+                amount_input.input_text = "0."
+                        + amount_input.input_text.substring(1, amount_input.input_text.length)
+            }
+            try {
+                var input_number =  Number.fromLocaleString(Qt.locale("en_US"), amount_input.input_text)
+            }
+            catch (error)
+            {
+                amount_input.input_text = prev_text
+                return
+            }
+            console.log("start amount test")
+            console.log("amout text - " + amount_input.input_text)
+            console.log("amout number - " + input_number)
+            console.log("prev_textr - " + prev_text)
+
+            var max_value = (from_wallet_combo.currentIndex >= 0) ?
+                        parseFloat(getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole)) : 0
+            console.log("max_value - " + max_value)
+            if (input_number < 0 || input_number>max_value)
+            {
+                amount_input.input_text = prev_text
+                return
+            }
+
+            prev_text = amount_input.input_text
         }
 
         CustomButton {
@@ -283,7 +322,7 @@ ColumnLayout  {
         id: continue_but
 
         enabled: rec_addr_input.isValid && rec_addr_input.input_text.length
-                 && parseFloat(amount_input.input_text) !== 0
+                 && parseFloat(amount_input.input_text) !== 0 && amount_input.input_text.length
 
         width: 552
 
@@ -325,7 +364,7 @@ ColumnLayout  {
         if (from_wallet_combo.currentIndex >= 0)
             from_wallet_combo.currentIndex = overviewWalletIndex
 
-        amount_input.input_text = "0"
+        amount_input.input_text = ""
         comment_input.input_text = ""
         rec_addr_input.input_text = ""
     }

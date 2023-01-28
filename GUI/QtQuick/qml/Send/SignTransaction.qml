@@ -377,7 +377,7 @@ ColumnLayout  {
         enabled: password.input_text.length
 
         Component.onCompleted: {
-            broadcast_but.preferred = false
+            broadcast_but.preferred = true
         }
         function click_enter() {
             bsApp.signAndBroadcast(txSignRequest, password.input_text)
