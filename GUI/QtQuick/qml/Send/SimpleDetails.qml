@@ -107,7 +107,7 @@ ColumnLayout  {
             }
         }
 
-        onTextChanged : {
+        onTextEdited : {
             if (rec_addr_input.input_text.length)
             {
                 rec_addr_input.isValid = bsApp.validateAddress(rec_addr_input.input_text)
@@ -135,10 +135,10 @@ ColumnLayout  {
 //                }
 
         //visual studio crashes when there is input_validator
-        //and we change text inside of onTextChanged
-        //it is why I have realized my validator inside of onTextChanged
+        //and we change text inside of onTextEdited
+        //it is why I have realized my validator inside of onTextEdited
         property string prev_text : ""
-        onTextChanged : {
+        onTextEdited : {
 
             amount_input.input_text = amount_input.input_text.replace(",", ".")
 
@@ -157,14 +157,10 @@ ColumnLayout  {
                 amount_input.input_text = prev_text
                 return
             }
-            console.log("start amount test")
-            console.log("amout text - " + amount_input.input_text)
-            console.log("amout number - " + input_number)
-            console.log("prev_textr - " + prev_text)
 
             var max_value = (from_wallet_combo.currentIndex >= 0) ?
                         parseFloat(getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole)) : 0
-            console.log("max_value - " + max_value)
+
             if (input_number < 0 || input_number>max_value)
             {
                 amount_input.input_text = prev_text

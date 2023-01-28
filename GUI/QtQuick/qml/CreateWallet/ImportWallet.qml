@@ -149,7 +149,7 @@ ColumnLayout  {
 
             width: 170
             title_text: modelData
-            onTextChanged : {
+            onTextEdited : {
                 grid.isComplete = true
 
                 for (var i = 0; i < grid.count; i++)
