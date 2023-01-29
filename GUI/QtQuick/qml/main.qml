@@ -18,6 +18,7 @@ import "BsStyles" 1
 import "Receive"  1
 import "Send"  1
 import "CreateWallet"  1
+import "Pin"  1
 
 ApplicationWindow {
     id: mainWindow
@@ -55,6 +56,23 @@ ApplicationWindow {
         visible: false
         onClosing: {
             btnSend.select(false)
+        }
+    }
+
+    PinEntriesPopup {
+        id: pin_popup
+        visible: false
+    }
+
+    Connections
+    {
+        target:bsApp
+        function onInvokePINentry ()
+        {
+            pin_popup.init()
+            pin_popup.show()
+            pin_popup.raise()
+            pin_popup.requestActivate()
         }
     }
 
