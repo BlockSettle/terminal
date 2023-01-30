@@ -316,7 +316,7 @@ ColumnLayout  {
 
         visible: !grid.isValid
 
-        text:  "Words are not valid"
+        text:  qsTr("Words are not valid")
 
         Layout.bottomMargin: 24
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
