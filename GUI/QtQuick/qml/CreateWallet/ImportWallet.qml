@@ -304,6 +304,7 @@ ColumnLayout  {
                 if(!text.length)
                 {
                     grid.hasEmptyWords = true
+                    break
                 }
             }
         }
@@ -315,7 +316,7 @@ ColumnLayout  {
 
         visible: !grid.isValid
 
-        text: "Not a valid words"
+        text:  "Words are not valid"
 
         Layout.bottomMargin: 24
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter

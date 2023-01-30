@@ -134,7 +134,7 @@ ColumnLayout  {
 //                    notation :DoubleValidator.StandardNotation
 //                }
 
-        //visual studio crashes when there is input_validator
+        //app (if was launched from visual studio) crashes when there is input_validator
         //and we change text inside of onTextEdited
         //it is why I have realized my validator inside of onTextEdited
         property string prev_text : ""
