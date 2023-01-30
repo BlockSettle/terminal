@@ -6,13 +6,14 @@ import QtQuick.Layouts 1.15
 import "../BsStyles"
 import "../StyledControls"
 
-import wallet.balance 1.0
+//import wallet.balance 1.0
 
 ColumnLayout  {
 
     id: layout
 
     signal sig_continue(signature: var)
+    signal sig_advanced()
 
     height: 554
     width: 600
@@ -29,13 +30,14 @@ ColumnLayout  {
             Layout.leftMargin: 24
             Layout.alignment: Qt.AlignLeft | Qt.AlingVCenter
 
-            enabled: false
             activeFocusOnTab: true
 
             font.pixelSize: 13
             font.family: "Roboto"
             font.weight: Font.Normal
             palette.buttonText: "#7A88B0"
+
+            text: qsTr("Advanced")
 
 
             icon.color: "transparent"
@@ -53,6 +55,10 @@ ColumnLayout  {
                 border.color: "#3C435A"
                 border.width: 1
 
+            }
+
+            onClicked: {
+               layout.sig_advanced()
             }
         }
 

@@ -64,8 +64,8 @@ Button {
         click_enter()
     }
 
-     onClicked: {
+    onClicked: {
         click_enter()
-     }
+    }
 }
 

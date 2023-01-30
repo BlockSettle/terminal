@@ -14,7 +14,7 @@ CustomPopup {
     navig_bar_width: 30
 
     _stack_view.initialItem: simple_details
-    _arrow_but_visibility: !simple_details.visible
+    _arrow_but_visibility: !simple_details.visible && !advanced_details.visible
 
     SimpleDetails {
         id: simple_details
@@ -24,6 +24,11 @@ CustomPopup {
             sign_trans.txSignRequest = signature
             _stack_view.push(sign_trans)
             sign_trans.init()
+        }
+
+        onSig_advanced: {
+            _stack_view.replace(advanced_details)
+            advanced_details.init()
         }
     }
 
@@ -39,6 +44,19 @@ CustomPopup {
         onSig_time_finished:  {
             root.close()
             _stack_view.pop(null)
+        }
+    }
+
+    AdvancedDetails {
+        id: advanced_details
+        visible: false
+
+        onSig_continue: (signature) => {
+        }
+
+        onSig_simple: {
+            _stack_view.replace(simple_details)
+            simple_details.init()
         }
     }
 
