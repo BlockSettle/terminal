@@ -33,7 +33,7 @@ Rectangle {
 
     property var completer: null
 
-    signal textChanged()
+    signal textEdited()
     signal editingFinished()
     signal activeFocusChanged()
 
@@ -81,12 +81,8 @@ Rectangle {
 
         color: "#E2E7FF"
 
-        onTextChanged : {
-            rect.textChanged()
-            if(!acceptableInput)
-            {
-                input.text = input.text.substring(0, input.text.length - 1)
-            }
+        onTextEdited : {
+            rect.textEdited()
         }
 
         onEditingFinished : {

@@ -45,7 +45,7 @@ ColumnLayout  {
             width: 530
             title_text: layout.indexes[index]
             isValid: list.isValid
-            onTextChanged : {
+            onTextEdited : {
                 list.isComplete = true
                 for (var i = 0; i < list.count; i++)
                 {
