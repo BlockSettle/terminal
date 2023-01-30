@@ -163,7 +163,12 @@ Window {
 
             function click_enter() {
                 if (!accept_but.enabled) return
-                bsApp.setHWpin(input.text)
+                var res = ""
+                for (var i = 0; i < grid.count; i++)
+                {
+                    res += grid.itemAtIndex(i).text
+                }
+                bsApp.setHWpin(res)
                 root.close()
             }
         }
