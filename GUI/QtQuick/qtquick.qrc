@@ -114,3 +114,4 @@
         <file>qml/Pin/PinEntriesPopup.qml</file>
         <file>qml/Pin/qmldir</file>
     </qresource>
+</RCC>
