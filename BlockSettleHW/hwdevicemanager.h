@@ -30,6 +30,8 @@ namespace BlockSettle {
    }
    namespace HW {
       class DeviceKey;
+      class DeviceMgrMessage_SetPassword;
+      class DeviceMgrMessage_SetPIN;
    }
 }
 namespace Blocksettle {
@@ -127,6 +129,8 @@ namespace bs {
             , const Blocksettle::Communication::headless::SignTxRequest&);
          void signTxWithDevice(const DeviceKey&);
          bs::message::ProcessingResult processSignTxResponse(const BlockSettle::Common::SignerMessage_SignTxResponse&);
+         bs::message::ProcessingResult processSetPIN(const BlockSettle::HW::DeviceMgrMessage_SetPIN&);
+         bs::message::ProcessingResult processSetPassword(const BlockSettle::HW::DeviceMgrMessage_SetPassword&);
 
       private:
          std::shared_ptr<spdlog::logger> logger_;
@@ -146,6 +150,9 @@ namespace bs {
 
          std::map<bs::message::SeqId, std::pair<std::string, bs::message::Envelope>>   prepareDeviceReq_;   //value: walletId
       };
+
+      void deviceKeyToMsg(const DeviceKey&, BlockSettle::HW::DeviceKey*);
+      DeviceKey fromMsg(const BlockSettle::HW::DeviceKey&);
 
       bs::hd::Path getDerivationPath(bool testNet, bs::hd::Purpose element);
       bool isNestedSegwit(const bs::hd::Path& path);

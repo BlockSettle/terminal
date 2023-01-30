@@ -163,10 +163,7 @@ Window {
 
             function click_enter() {
                 if (!accept_but.enabled) return
-
-                //TODO: check that password correct
-                //and fill in grid.isValid
-
+                bsApp.setHWpin(input.text)
                 root.close()
             }
         }

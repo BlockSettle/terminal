@@ -39,6 +39,7 @@ namespace bs {
          ~TrezorPostOut() override = default;
          std::string    response;
          std::string    error;
+         bool           timedOut{ false };
       };
 
       class TrezorPostHandler : public bs::HandlerImpl<TrezorPostIn, TrezorPostOut>

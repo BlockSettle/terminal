@@ -20,10 +20,10 @@ namespace bs {
          struct DeviceData
          {
             std::string path;
-            std::string vendor;
-            std::string product;
+            int         vendor;
+            int         product;
             std::string sessionId;
-            std::string debug;
+            bool        debug{ false };
             std::string debugSession;
          };
 

@@ -23,6 +23,7 @@ FILE(GLOB SOURCES
    trezor/*.cpp
    ledger/*.cpp
    ledger/hidapi/*.c
+   jade/*.cpp
 )
 
 FILE(GLOB HEADERS
@@ -30,6 +31,7 @@ FILE(GLOB HEADERS
    trezor/*.h
    ledger/*.h
    ledger/hidapi/*.h
+   jade/*.h
 )
 
 INCLUDE_DIRECTORIES( ${WALLET_LIB_INCLUDE_DIR} )
