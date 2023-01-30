@@ -28,7 +28,8 @@ namespace bs {
       enum class DeviceType {
          Unknown,
          HWLedger,
-         HWTrezor
+         HWTrezor,
+         HWJade
       };
 
       struct DeviceKey
@@ -77,8 +78,6 @@ namespace bs {
          virtual void requestForRescan() = 0;
 
          // Management
-         virtual void requestPinMatrix() = 0;
-         virtual void requestHWPass(bool allowedOnDevice) = 0;
          virtual void cancelledOnDevice() = 0;
          virtual void invalidPin() = 0;
 

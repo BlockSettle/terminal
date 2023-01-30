@@ -161,6 +161,7 @@ public:
       , const QString& password);
    Q_INVOKABLE void pollHWWallets();
    Q_INVOKABLE void stopHWWalletsPolling();
+   Q_INVOKABLE void setHWpin(const QString&);
    Q_INVOKABLE void importHWWallet(int deviceIndex);
    Q_INVOKABLE void generateNewAddress(int walletIndex, bool isNative);
    Q_INVOKABLE void copyAddressToClipboard(const QString& addr);
@@ -183,6 +184,8 @@ signals:
    void armoryStateChanged();
    void devicesChanged();
    void scanningChanged();
+   void invokePINentry();
+   void invokePasswordEntry(bool);
 
 private slots:
    void walletSelected(int);
@@ -270,6 +273,7 @@ private:
    FeeSuggestionModel* feeSuggModel_{ nullptr };
    bs::Address generatedAddress_;
    bool hwDevicesPolling_{ false };
+   bs::hww::DeviceKey curAuthDevice_{};
 
    std::map<bs::message::SeqId, QTXSignRequest*> txReqs_;
    std::map<bs::message::SeqId, QTxDetails*> txDetailReqs_;

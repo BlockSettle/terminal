@@ -52,10 +52,9 @@ std::vector<DeviceKey> LedgerClient::deviceKeys() const
    std::vector<DeviceKey> keys;
    keys.reserve(availableDevices_.size());
    for (const auto device : availableDevices_) {
-      if (device->inited()) {
-         keys.push_back(device->key());
-      }
+      keys.push_back(device->key());
    }
+   logger_->debug("[{}] {} keys", __func__, keys.size());
    return keys;
 }
 
@@ -81,12 +80,15 @@ void LedgerClient::scanDevices()
 
    hid_device_info* info = hid_enumerate(0, 0);
    for (; info; info = info->next) {
-      logger_->debug("[{}] found: vendor {0:x}, product {0:x} ({}), iface: {0:x}, serial: {}", __func__
-         , info->vendor_id, info->product_id, (char*)info->product_string
-         , info->interface_number, (char*)info->serial_number);
+      logger_->debug("[{}] found: vendor {}, product {} ({}), serial {}, iface {}"
+         , __func__, info->vendor_id, info->product_id
+         , QString::fromWCharArray(info->product_string).toStdString()
+         , QString::fromWCharArray(info->serial_number).toStdString()
+         , info->interface_number);
       if (checkLedgerDevice(info)) {
-         auto device = std::make_shared<LedgerDevice>(fromHidOriginal(info), testNet_, logger_, cb_, hidLock_);
-         availableDevices_.push_back({ device });
+         const auto& device = std::make_shared<LedgerDevice>(fromHidOriginal(info)
+            , testNet_, logger_, cb_, hidLock_);
+         availableDevices_.push_back(device);
       }
    }
    hid_exit();

@@ -378,10 +378,15 @@ void TrezorDevice::retrieveXPubRoot()
 }
 
 void TrezorDevice::makeCall(const google::protobuf::Message &msg
-   , const bs::WorkerPool::callback& cb)
+   , const bs::WorkerPool::callback& callback)
 {
    if (state_ == trezor::State::None) {
       init();
+   }
+   auto cb = callback;
+   if ((cb == nullptr) && (awaitingCallbacks_.empty())) {
+      cb = awaitingCallbacks_.front();
+      awaitingCallbacks_.pop_front();
    }
    const auto& cbWrap = [this, cb](const std::shared_ptr<bs::OutData>& data)
    {
@@ -461,7 +466,9 @@ void TrezorDevice::handleMessage(const trezor::MessageData& data, const bs::Work
       {
          common::PinMatrixRequest request;
          if (parseResponse(request, data)) {
-            requestPinMatrix();
+            if (cb_) {
+               cb_->requestPinMatrix(key());
+            }
             sendTxMessage(/*HWInfoStatus::kRequestPin*/"enter pin");
          }
       }
@@ -470,7 +477,10 @@ void TrezorDevice::handleMessage(const trezor::MessageData& data, const bs::Work
       {
          common::PassphraseRequest request;
          if (parseResponse(request, data)) {
-            requestHWPass(hasCapability(management::Features_Capability_Capability_PassphraseEntry));
+            if (cb_) {
+               cb_->requestHWPass(key(), 
+                  hasCapability(management::Features_Capability_Capability_PassphraseEntry));
+            }
             sendTxMessage(/*HWInfoStatus::kRequestPassphrase*/"enter passphrase");
          }
       }
@@ -508,9 +518,10 @@ void TrezorDevice::handleMessage(const trezor::MessageData& data, const bs::Work
       break;
    }
    if (cb) {
-      const auto& noData = std::make_shared<NoDataOut>();
+/*      const auto& noData = std::make_shared<NoDataOut>();
       noData->msgType = static_cast<MessageType>(data.type);
-      cb(noData);
+      cb(noData);*/
+      awaitingCallbacks_.push_back(cb);
    }
 }
 
