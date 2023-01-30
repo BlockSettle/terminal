@@ -1605,6 +1605,7 @@ void QtQuickAdapter::signAndBroadcast(QTXSignRequest* txReq, const QString& pass
       catch (const std::exception&) {}
    }
    if (needHWSign) {
+      pollHWWallets();
       unsigned nbNonHW = 0;
       for (const auto& walletId : txSignReq.walletIds) {
          try {
