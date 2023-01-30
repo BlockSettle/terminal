@@ -27,16 +27,13 @@ Rectangle {
     property alias input_topMargin: input.anchors.topMargin
     property alias input_validator: input.validator
 
-
-    property alias input_item: input
-
     property bool isValid: true
     property bool isPassword: false
     property bool isHiddenText: false
 
     property var completer: null
 
-    signal textChanged()
+    signal textEdited()
     signal editingFinished()
     signal activeFocusChanged()
 
@@ -84,12 +81,8 @@ Rectangle {
 
         color: "#E2E7FF"
 
-        onTextChanged : {
-            rect.textChanged()
-            if(!acceptableInput)
-            {
-                input.text = input.text.substring(0, input.text.length - 1)
-            }
+        onTextEdited : {
+            rect.textEdited()
         }
 
         onEditingFinished : {

@@ -27,7 +27,7 @@ ColumnLayout  {
                                  "17", "18", "19", "20",
                                  "21", "22", "23", "24"]
 
-    height: radbut_12.checked ? 515 : 739
+    height: radbut_12.checked ? 555 : 779
     width: 580
 
     spacing: 0
@@ -139,7 +139,8 @@ ColumnLayout  {
         cellHeight : 56
         cellWidth : 180
 
-        property bool isComplete: false
+        property bool isValid: true
+        property bool hasEmptyWords: true
 
         model: radbut_12.checked ? layout.grid_model_12 : layout.grid_model_24
         delegate: CustomSeedTextInput {
@@ -149,17 +150,27 @@ ColumnLayout  {
 
             width: 170
             title_text: modelData
-            onTextChanged : {
-                grid.isComplete = true
+            onTextEdited : {
+                show_fill_in_completer()
+            }
 
-                for (var i = 0; i < grid.count; i++)
-                {
-                    if(grid.itemAtIndex(i).input_text === "" || !grid.itemAtIndex(i).isAccepted)
-                    {
-                        grid.isComplete = false
-                        break
-                    }
-                }
+            onActiveFocusChanged: {
+                if(_delega.activeFocus)
+                    show_fill_in_completer()
+            }
+
+            onEditingFinished: {
+                completer_accepted()
+                check_input()
+                grid.validate()
+            }
+
+            Keys.onDownPressed: comp_popup.current_increment()
+
+            Keys.onUpPressed: comp_popup.current_decrement()
+
+            function show_fill_in_completer()
+            {
                 if(input_text.length <= 1)
                 {
                     comp_popup.close()
@@ -188,6 +199,7 @@ ColumnLayout  {
                         if (!_delega.isAccepted)
                         {
                             completer_accepted()
+                            change_focus()
                         }
                     }
                     else
@@ -198,46 +210,66 @@ ColumnLayout  {
                             _delega.isValid = false
                             comp_popup.not_valid_word = true
                             _comp_vars = ["Not a valid word"]
-                            console.log("comp_popup.not_valid_word === true")
                         }
 
                         comp_popup.comp_vars = _comp_vars
                     }
                 }
+
+                grid.validate()
+                grid.check_empty_words()
             }
-
-            onActiveFocusChanged: {
-                if(!_delega.activeFocus)
-                    completer_accepted()
-            }
-
-            Keys.onDownPressed: comp_popup.current_increment()
-
-            Keys.onUpPressed: comp_popup.current_decrement()
 
             function completer_accepted()
             {
-
                 if (comp_popup.visible && comp_popup.index === index)
                 {
                     if (_delega.isValid)
                     {
                         input_text = comp_popup.comp_vars[comp_popup.current_index]
                         _delega.isAccepted = true
+                        _delega.isValid = true
+
+                        grid.validate()
                     }
                     comp_popup.close()
                     comp_popup.comp_vars = []
-                    if(index < grid.count - 1)
-                        grid.itemAtIndex(index+1).setActiveFocus()
-                    else
-                        nextItemInFocusChain().forceActiveFocus()
+                    comp_popup.not_valid_word = false
                 }
             }
 
-            Keys.onEnterPressed: completer_accepted()
+            function change_focus()
+            {
+                if(index < grid.count - 1)
+                    grid.itemAtIndex(index+1).setActiveFocus()
+                else
+                    import_but.forceActiveFocus()
+            }
 
-            Keys.onReturnPressed: completer_accepted()
+            function check_input()
+            {
+                _delega.isValid = false
 
+                var _comp_vars = bsApp.completeBIP39dic(input_text)
+                for(var i=0; i<_comp_vars.length; i++)
+                {
+                    if (input_text === _comp_vars[i])
+                    {
+                        _delega.isValid = true
+                        break
+                    }
+                }
+
+                return _delega.isValid
+            }
+
+            Keys.onEnterPressed: {
+                change_focus()
+            }
+
+            Keys.onReturnPressed: {
+                change_focus()
+            }
         }
 
         CustomCompleterPopup {
@@ -249,6 +281,54 @@ ColumnLayout  {
                 grid.itemAtIndex(comp_popup.index).completer_accepted()
             }
         }
+
+        function validate()
+        {
+            grid.isValid = true
+            for (var i = 0; i < grid.count; i++)
+            {
+                if(!grid.itemAtIndex(i).isValid)
+                {
+                    grid.isValid = false
+                    break
+                }
+            }
+        }
+
+        function check_empty_words()
+        {
+            grid.hasEmptyWords = false
+            for (var i = 0; i < grid.count; i++)
+            {
+                var text = grid.itemAtIndex(i).input_text
+                if(!text.length)
+                {
+                    grid.hasEmptyWords = true
+                    break
+                }
+            }
+        }
+    }
+
+
+    Label {
+        id: error_description
+
+        visible: !grid.isValid
+
+        text:  qsTr("Words are not valid")
+
+        Layout.bottomMargin: 24
+        Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
+        Layout.preferredHeight : 16
+
+        height: 16
+        width: 136
+
+        color: "#EB6060"
+        font.pixelSize: 14
+        font.family: "Roboto"
+        font.weight: Font.Normal
     }
 
     CustomButton {
@@ -256,8 +336,9 @@ ColumnLayout  {
         text: qsTr("Import")
         Layout.leftMargin: 25
         Layout.bottomMargin: 40
+
         width: 530
-        enabled: grid.isComplete
+        enabled: !grid.hasEmptyWords
 
         Component.onCompleted: {
             import_but.preferred = true
@@ -265,6 +346,15 @@ ColumnLayout  {
         function click_enter() {
             if (!import_but.enabled) return
 
+            for (var i = 0; i < grid.count; i++)
+            {
+                grid.itemAtIndex(i).check_input()
+            }
+
+            if (!grid.isValid)
+                return
+
+            //Success!!!
             for (var i=0; i<grid.count; i++)
             {
                 layout.phrase.push(grid.itemAtIndex(i).input_text)
@@ -292,7 +382,11 @@ ColumnLayout  {
     {
         for (var i=0; i<grid.count; i++)
         {
+            grid.itemAtIndex(i).isValid = true
+            grid.itemAtIndex(i).isAccepted = false
             grid.itemAtIndex(i).input_text = ""
         }
+        grid.isValid = true
+        grid.hasEmptyWords = true
     }
 }
