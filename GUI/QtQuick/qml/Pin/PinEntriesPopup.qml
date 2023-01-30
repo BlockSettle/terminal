@@ -11,7 +11,7 @@ Window {
 
     visible: true
     flags: Qt.WindowCloseButtonHint | Qt.FramelessWindowHint | Qt.Dialog
-    modality: Qt.WindowModality
+    modality: Qt.WindowModal
 
     maximumHeight: rect.height
     maximumWidth: rect.width
@@ -27,8 +27,10 @@ Window {
     x: mainWindow.x + (mainWindow.width - width)/2
     y: mainWindow.y + 28
 
-    property var placeholders: ["?", "?", "?", "?", "?",
-                                "?", "?", "?", "?"]
+    property var numbers: [ "7", "8", "9",
+                            "4", "5", "6",
+                            "1", "2", "3"]
+    property string output
 
     Rectangle {
         id: rect
@@ -36,10 +38,30 @@ Window {
         color: "#191E2A"
         opacity: 1
         radius: 16
-        height: 580
+        height: 610
         width: 430
         border.color : "#3C435A"
         border.width : 1
+
+        Image {
+            id: close_button
+
+            anchors.top: parent.top
+            anchors.topMargin: 24
+            anchors.right: parent.right
+            anchors.rightMargin: 24
+
+            source: "qrc:/images/close_button.png"
+            width: 16
+            height: 16
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                   output = ""
+                   root.close()
+                }
+            }
+        }
 
         CustomTitleLabel {
             id: title
@@ -48,7 +70,7 @@ Window {
             anchors.top: parent.top
             anchors.topMargin: 36
 
-            text: qsTr("PIN")
+            text: qsTr("Enter PIN")
         }
 
         Item {
@@ -66,59 +88,45 @@ Window {
                 id: grid
 
                 property bool isComplete: false
-                property bool isValid: false
 
                 anchors.fill: parent
 
                 cellHeight : 110
                 cellWidth : 130
 
-                model: placeholders
+                model: numbers
 
-                delegate: TextField {
+                interactive: false
+
+                delegate: Button {
                     id: input
-
-                    focus: true
-                    activeFocusOnTab: true
-
-                    placeholderText: qsTr("?")
-                    horizontalAlignment: TextInput.AlignHCenter
 
                     height: 100
                     width: 120
 
-                    color: "#E2E7FF"
                     font.pixelSize: 20
                     font.family: "Roboto"
                     font.weight: Font.Normal
+                    palette.buttonText: BSStyle.buttonsTextColor
 
-                    validator: IntValidator {
-                        bottom: 0
-                        top: 9
-                    }
+                    text: String.fromCodePoint(0x2022)
 
                     background: Rectangle {
                         implicitWidth: 100
-                        implicitHeight: 100
+                        implicitHeight: 120
 
-                        color: "#020817"
-                        opacity: 1
+                        color: input.down ? BSStyle.buttonsStandardPressedColor :
+                               (input.hovered ? BSStyle.buttonsStandardHoveredColor : BSStyle.buttonsStandardColor)
+
                         radius: 14
 
-                        border.color: grid.isValid ? (input.activeFocus ? "#45A6FF" : "#3C435A") : "#EB6060"
-                        border.width: 1
+                        border.color: BSStyle.buttonsStandardBorderColor
+                        border.width: input.down? 1 : 0
                     }
 
-                    onTextEdited: {
-                        grid.isComplete = true
-                        for (var i = 0; i < grid.count; i++)
-                        {
-                            if (!grid.itemAtIndex(i).text.length)
-                            {
-                                grid.isComplete = false
-                                break
-                            }
-                        }
+                    onClicked: {
+                        output += numbers[index]
+                        pin_field.text += String.fromCodePoint(0x2022)
                     }
                 }
 
@@ -126,23 +134,46 @@ Window {
         }
 
 
-        Label {
-            id: error_description
+        TextField {
+            id: pin_field
 
-            visible: !grid.isValid
-
-            text: qsTr("PIN is wrong")
-
-            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.left: parent.left
+            anchors.leftMargin: 25
             anchors.top: grid_item.bottom
             anchors.topMargin: 24
 
-            height: 16
-
-            color: "#EB6060"
-            font.pixelSize: 14
+            font.pixelSize: 20
             font.family: "Roboto"
             font.weight: Font.Normal
+            color: BSStyle.buttonsTextColor
+
+            leftPadding: 14
+            rightPadding: 14
+
+            readOnly: true
+
+            background: Rectangle {
+                implicitWidth: 380
+                implicitHeight: 46
+                color: "#020817"
+                radius: 14
+            }
+
+            Image {
+                id: clear_button
+
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.right: parent.right
+                anchors.rightMargin: 24
+
+                source: "qrc:/images/close_button.png"
+                width: 16
+                height: 16
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: clean()
+                }
+            }
         }
 
         CustomButton {
@@ -155,34 +186,36 @@ Window {
 
             width: 380
 
-            enabled: grid.isComplete
-
             Component.onCompleted: {
                 accept_but.preferred = true
             }
 
             function click_enter() {
                 if (!accept_but.enabled) return
-                var res = ""
-                for (var i = 0; i < grid.count; i++)
-                {
-                    res += grid.itemAtIndex(i).text
-                }
-                bsApp.setHWpin(res)
+
+                bsApp.setHWpin(output)
+                clean()
                 root.close()
             }
         }
 
+        Keys.onEnterPressed: {
+            accept_but.click_enter()
+        }
+
+        Keys.onReturnPressed: {
+            accept_but.click_enter()
+        }
 
     }
 
     function init() {
-        grid.isComplete = false
-        grid.isValid = true
-
-        for (var i = 0; i < grid.count; i++)
-        {
-            grid.itemAtIndex(i).text = ""
-        }
+        clean()
     }
+
+    function clean() {
+        output = ""
+        pin_field.text = ""
+    }
+
 }
