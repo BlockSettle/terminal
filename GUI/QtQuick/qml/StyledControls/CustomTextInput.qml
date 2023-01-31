@@ -27,9 +27,6 @@ Rectangle {
     property alias input_topMargin: input.anchors.topMargin
     property alias input_validator: input.validator
 
-
-    property alias input_item: input
-
     property bool isValid: true
     property bool isPassword: false
     property bool isHiddenText: false

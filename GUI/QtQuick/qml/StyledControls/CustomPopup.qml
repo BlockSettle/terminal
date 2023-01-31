@@ -7,14 +7,13 @@ import QtQuick.Layouts 1.15
 Window {
     id: root
 
-    property var phrase
-
     property int navig_bar_width: 36
     property alias _stack_view: stack_create_wallet
     property alias _arrow_but_visibility: back_arrow_button.visible
 
     visible: true
     flags: Qt.WindowCloseButtonHint | Qt.FramelessWindowHint | Qt.Dialog
+    modality: Qt.WindowModal
 
     maximumHeight: rect.height
     maximumWidth: rect.width

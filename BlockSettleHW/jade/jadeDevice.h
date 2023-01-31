@@ -1,20 +1,19 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2020 - 2021, BlockSettle AB
+* Copyright (C) 2023, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
 **********************************************************************************
 
 */
-#ifndef TREZORDEVICE_H
-#define TREZORDEVICE_H
+#ifndef JADE_DEVICE_H
+#define JADE_DEVICE_H
 
 #include "Message/Worker.h"
-#include "trezorStructure.h"
 #include "hwdeviceinterface.h"
-#include "trezorClient.h"
+#include "jadeClient.h"
 
 namespace spdlog {
    class logger;
@@ -26,30 +25,16 @@ namespace bs {
       }
    }
 }
-namespace hw {
-   namespace trezor {
-      namespace messages {
-         namespace bitcoin {
-            class TxRequest;
-         }
-         namespace management {
-            class Features;
-            enum Features_Capability: int;
-         }
-         enum MessageType: int;
-      }
-   }
-}
 
 namespace bs {
    namespace hww {
 
-      class TrezorDevice : public DeviceInterface, protected WorkerPool
+      class JadeDevice : public DeviceInterface, protected WorkerPool
       {
       public:
-         TrezorDevice(const std::shared_ptr<spdlog::logger>&, const trezor::DeviceData&
+         JadeDevice(const std::shared_ptr<spdlog::logger>&
             , bool testNet, DeviceCallbacks*, const std::string& endpoint);
-         ~TrezorDevice() override;
+         ~JadeDevice() override;
 
          trezor::DeviceData data() const { return data_; }
          DeviceKey key() const override;
@@ -77,7 +62,7 @@ namespace bs {
          }
 
       protected:
-         std::shared_ptr<Worker> worker(const std::shared_ptr<InData>&) override final;
+         //std::shared_ptr<Worker> worker(const std::shared_ptr<InData>&) override final;
 
          // operation result informing
          void publicKeyReady() override {}   //TODO: implement
@@ -90,22 +75,7 @@ namespace bs {
          void invalidPin() override {}    //TODO: implement
 
       private:
-         void makeCall(const google::protobuf::Message&, const bs::WorkerPool::callback& cb = nullptr);
-         void handleMessage(const trezor::MessageData&, const bs::WorkerPool::callback& cb = nullptr);
-         bool parseResponse(google::protobuf::Message&, const trezor::MessageData&);
-
          void reset();
-
-         void handleTxRequest(const trezor::MessageData&, const bs::WorkerPool::callback& cb);
-         void sendTxMessage(const std::string& status);
-
-         // Returns previous Tx for legacy inputs
-         // Trezor could request non-existing hash if wrong passphrase entered
-         Tx prevTx(const ::hw::trezor::messages::bitcoin::TxRequest& txRequest);
-
-         bool hasCapability(const ::hw::trezor::messages::management::Features_Capability&) const;
-         bool isFirmwareSupported() const;
-         std::string firmwareSupportedVersion() const;
 
       private:
          std::shared_ptr<spdlog::logger>  logger_;
@@ -113,16 +83,10 @@ namespace bs {
          const bool        testNet_;
          DeviceCallbacks*  cb_{ nullptr };
          const std::string endpoint_;
-         trezor::State     state_{ trezor::State::None };
-         std::shared_ptr<::hw::trezor::messages::management::Features> features_{};
-
-         std::unique_ptr<bs::core::wallet::TXSignRequest> currentTxSignReq_;
          bs::core::HwWalletInfo  awaitingWalletInfo_;
          std::string awaitingSignedTX_;
-         std::deque<bs::WorkerPool::callback> awaitingCallbacks_;
-         bool txSignedByUser_{ false };
       };
 
    }  //hw
 }     //bs
-#endif // TREZORDEVICE_H
+#endif // JADE_DEVICE_H

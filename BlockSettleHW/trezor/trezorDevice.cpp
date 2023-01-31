@@ -155,6 +155,10 @@ DeviceType TrezorDevice::type() const
 
 void TrezorDevice::init()
 {
+   if (state_ == trezor::State::Init) {
+      logger_->debug("[TrezorDevice::init] already inited");
+      return;
+   }
    logger_->debug("[TrezorDevice::init] start");
    management::Initialize message;
    message.set_session_id(data_.sessionId);
@@ -170,8 +174,6 @@ void TrezorDevice::init()
       state_ = trezor::State::Init;
       const auto& msg = unpackMessage(QByteArray::fromStdString(reply->response));
       handleMessage(msg);
-
-      retrieveXPubRoot();
    };
    auto inData = std::make_shared<TrezorPostIn>();
    inData->path = "/call/" + data_.sessionId;
@@ -291,7 +293,7 @@ void TrezorDevice::setPassword(const SecureBinaryData& password, bool enterOnDev
 
 void TrezorDevice::cancel()
 {
-   logger_->debug("[TrezorDevice] cancel previous operation");
+   logger_->debug("[TrezorDevice::cancel]");
    management::Cancel message;
    makeCall(message);
    sendTxMessage(/*HWInfoStatus::kCancelledByUser*/"cancelled by user");
@@ -299,11 +301,10 @@ void TrezorDevice::cancel()
 
 void TrezorDevice::clearSession()
 {
-   logger_->debug("[TrezorDevice] cancel previous operation");
-   management::/*ClearSession*/EndSession message;
+   logger_->debug("[TrezorDevice::clearSession]");
+   management::EndSession message;
    makeCall(message);
 }
-
 
 void TrezorDevice::signTX(const bs::core::wallet::TXSignRequest &reqTX)
 {
@@ -370,6 +371,7 @@ void TrezorDevice::retrieveXPubRoot()
          logger_->error("[TrezorDevice::retrieveXPubRoot] invalid callback data");
          return;
       }
+      logger_->debug("[TrezorDevice::retrieveXPubRoot] {}: {}", features_->label(), reply->xpub);
       xpubRoot_ = BinaryData::fromString(reply->xpub);
       const auto& devKey = key();
       cb_->publicKeyReady(devKey.id, devKey.walletId);
@@ -378,10 +380,16 @@ void TrezorDevice::retrieveXPubRoot()
 }
 
 void TrezorDevice::makeCall(const google::protobuf::Message &msg
-   , const bs::WorkerPool::callback& cb)
+   , const bs::WorkerPool::callback& callback)
 {
    if (state_ == trezor::State::None) {
+      logger_->debug("[{}] re-initing device", __func__);
       init();
+   }
+   auto cb = callback;
+   if ((cb == nullptr) && (awaitingCallbacks_.empty())) {
+      cb = awaitingCallbacks_.front();
+      awaitingCallbacks_.pop_front();
    }
    const auto& cbWrap = [this, cb](const std::shared_ptr<bs::OutData>& data)
    {
@@ -438,9 +446,13 @@ void TrezorDevice::handleMessage(const trezor::MessageData& data, const bs::Work
    case MessageType_Features:
       {
          if (parseResponse(*features_, data)) {
-            logger_->debug("[TrezorDevice] handleMessage Features, model: '{}' - {}.{}.{}"
+            logger_->debug("[TrezorDevice::handleMessage] features: model '{}' v{}.{}.{}"
                , features_->model(), features_->major_version(), features_->minor_version(), features_->patch_version());
             // + getJSONReadableMessage(features_)); 
+            retrieveXPubRoot();
+         }
+         else {
+            logger_->error("[TrezorDevice::handleMessage] failed to parse features response");
          }
       }
    break;
@@ -448,8 +460,7 @@ void TrezorDevice::handleMessage(const trezor::MessageData& data, const bs::Work
       {
          common::ButtonRequest request;
          if (parseResponse(request, data)) {
-            logger_->debug("[TrezorDevice] handleMessage ButtonRequest "
-             + getJSONReadableMessage(request));
+            logger_->debug("[TrezorDevice::handleMessage] ButtonRequest {}", getJSONReadableMessage(request));
          }
          common::ButtonAck response;
          makeCall(response);
@@ -461,7 +472,9 @@ void TrezorDevice::handleMessage(const trezor::MessageData& data, const bs::Work
       {
          common::PinMatrixRequest request;
          if (parseResponse(request, data)) {
-            requestPinMatrix();
+            if (cb_) {
+               cb_->requestPinMatrix(key());
+            }
             sendTxMessage(/*HWInfoStatus::kRequestPin*/"enter pin");
          }
       }
@@ -470,7 +483,10 @@ void TrezorDevice::handleMessage(const trezor::MessageData& data, const bs::Work
       {
          common::PassphraseRequest request;
          if (parseResponse(request, data)) {
-            requestHWPass(hasCapability(management::Features_Capability_Capability_PassphraseEntry));
+            if (cb_) {
+               cb_->requestHWPass(key(), 
+                  hasCapability(management::Features_Capability_Capability_PassphraseEntry));
+            }
             sendTxMessage(/*HWInfoStatus::kRequestPassphrase*/"enter passphrase");
          }
       }
@@ -508,9 +524,10 @@ void TrezorDevice::handleMessage(const trezor::MessageData& data, const bs::Work
       break;
    }
    if (cb) {
-      const auto& noData = std::make_shared<NoDataOut>();
+/*      const auto& noData = std::make_shared<NoDataOut>();
       noData->msgType = static_cast<MessageType>(data.type);
-      cb(noData);
+      cb(noData);*/
+      awaitingCallbacks_.push_back(cb);
    }
 }
 

@@ -69,8 +69,6 @@ namespace bs {
          void operationFailed(const std::string& reason) override {} //TODO: implement
 
          // Management
-         void requestPinMatrix() override {} //TODO: implement
-         void requestHWPass(bool allowedOnDevice) override {} //TODO: implement
          void cancelledOnDevice() override {}   //TODO: implement
          void invalidPin() override {}    //TODO: implement
 

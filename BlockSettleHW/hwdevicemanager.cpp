@@ -155,6 +155,12 @@ bs::message::ProcessingResult DeviceManager::processOwnRequest(const bs::message
       return processImport(env, msg.import_device());
    case HW::DeviceMgrMessage::kSignTx:
       return processSignTX(env, msg.sign_tx());
+   case HW::DeviceMgrMessage::kSetPin:
+      return processSetPIN(msg.set_pin());
+   case HW::DeviceMgrMessage::kSetPassword:
+      return processSetPassword(msg.set_password());
+   case HW::DeviceMgrMessage::kPrepareWalletForTxSign:
+      return processPrepareDeviceForSign(env, msg.prepare_wallet_for_tx_sign());
    default: break;
    }
    return bs::message::ProcessingResult::Ignored;
@@ -216,8 +222,7 @@ bs::message::ProcessingResult DeviceManager::processSigner(const bs::message::En
 bs::message::ProcessingResult DeviceManager::processImport(const bs::message::Envelope& env
    , const HW::DeviceKey& key)
 {
-   const DeviceKey devKey{ key.label(), key.id(), key.vendor(), key.wallet_id()
-         , key.status(), static_cast<bs::hww::DeviceType>(key.type()) };
+   const DeviceKey devKey{ fromMsg(key) };
    const auto& device = getDevice(devKey);
    if (!device) {
       logger_->error("[hww::DeviceManager::processImport] no device found for id {}"
@@ -295,6 +300,31 @@ bs::message::ProcessingResult DeviceManager::processSignTxResponse(const SignerM
       envReqSign_ = {};
       txSignReq_ = {};
    }
+   return bs::message::ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult DeviceManager::processSetPIN(const HW::DeviceMgrMessage_SetPIN& request)
+{
+   const auto& key = fromMsg(request.key());
+   const auto& device = getDevice(key);
+   if (!device) {
+      logger_->error("[{}] unknown device {}", __func__, key.id);
+      return bs::message::ProcessingResult::Error;
+   }
+   device->setMatrixPin(SecureBinaryData::fromString(request.pin()));
+   return bs::message::ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult DeviceManager::processSetPassword(const HW::DeviceMgrMessage_SetPassword& request)
+{
+   const auto& key = fromMsg(request.key());
+   const auto& device = getDevice(key);
+   if (!device) {
+      logger_->error("[{}] unknown device {}", __func__, key.id);
+      return bs::message::ProcessingResult::Error;
+   }
+   device->setPassword(SecureBinaryData::fromString(request.password())
+      , request.set_on_device());
    return bs::message::ProcessingResult::Success;
 }
 
@@ -400,31 +430,31 @@ void DeviceManager::devicesResponse()
    HW::DeviceMgrMessage msg;
    auto msgResp = msg.mutable_available_devices();
    for (const auto& key : devices_) {
-      auto msgKey = msgResp->add_device_keys();
-      msgKey->set_label(key.label);
-      msgKey->set_id(key.id);
-      msgKey->set_vendor(key.vendor);
-      msgKey->set_wallet_id(key.walletId);
-      msgKey->set_status(key.status);
-      msgKey->set_type((int)key.type);
+      deviceKeyToMsg(key, msgResp->add_device_keys());
    }
+   logger_->debug("[{}] {}", __func__, msg.DebugString());
    pushResponse(user_, envReqScan_, msg.SerializeAsString());
    envReqScan_ = {};
 }
 
 void DeviceManager::scanningDone(bool initDevices)
 {
-   logger_->debug("[{}] init:{}", __func__, initDevices);
-   const auto& ledgerKeys = ledgerClient_->deviceKeys();
+   const auto ledgerKeys = ledgerClient_->deviceKeys();
    devices_ = ledgerKeys;
-   const auto& trezorKeys = trezorClient_->deviceKeys();
+   const auto trezorKeys = trezorClient_->deviceKeys();
    devices_.insert(devices_.end(), trezorKeys.cbegin(), trezorKeys.cend());
 
+   for (const auto& device : devices_) {
+      logger_->debug("[{}] found: {} {} {}", __func__, device.id, device.label, device.vendor);
+   }
    if (!initDevices || devices_.empty()) {
+      if (devices_.empty()) {
+         logger_->info("[{}] no devices scanned", __func__);
+      }
       if (envReqScan_.sender) {
          devicesResponse();
-         return;
       }
+      return;
    }
    for (const auto& key : ledgerKeys) {
       auto device = ledgerClient_->getDevice(key.id);
@@ -435,7 +465,7 @@ void DeviceManager::scanningDone(bool initDevices)
    for (const auto& key : trezorKeys) {
       auto device = trezorClient_->getDevice(key.id);
       if (!device->inited()) {
-         device->retrieveXPubRoot();
+         device->init();
       }
    }
 }
@@ -458,6 +488,7 @@ std::shared_ptr<DeviceInterface> DeviceManager::getDevice(const DeviceKey& key) 
 
 void DeviceManager::publicKeyReady(const std::string& devId, const std::string& walletId)
 {
+   logger_->debug("[{}] walletId = {} for {}", __func__, walletId, devId);
    size_t nbCompleted = 0;
    for (int i = 0; i < devices_.size(); ++i) {
       if (devices_[i].id == devId) {
@@ -469,6 +500,7 @@ void DeviceManager::publicKeyReady(const std::string& devId, const std::string& 
       }
    }
    if (nbCompleted >= devices_.size()) {
+      logger_->debug("[{}] all public keys retrieved", __func__);
       if (envReqScan_.sender) {
          devicesResponse();
       }
@@ -505,12 +537,22 @@ void bs::hww::DeviceManager::walletInfoReady(const DeviceKey& key
    pushRequest(user_, userSigner_, msg.SerializeAsString());
 }
 
-void DeviceManager::requestPinMatrix(const DeviceKey&)
+void DeviceManager::requestPinMatrix(const DeviceKey& key)
 {
+   logger_->debug("[{}] {}", __func__, key.id);
+   HW::DeviceMgrMessage msg;
+   deviceKeyToMsg(key, msg.mutable_request_pin());
+   pushBroadcast(user_, msg.SerializeAsString());
 }
 
-void DeviceManager::requestHWPass(const DeviceKey&, bool allowedOnDevice)
+void DeviceManager::requestHWPass(const DeviceKey& key, bool allowedOnDevice)
 {
+   logger_->debug("[{}] {}", __func__, key.id);
+   HW::DeviceMgrMessage msg;
+   auto msgReq = msg.mutable_password_request();
+   deviceKeyToMsg(key, msgReq->mutable_key());
+   msgReq->set_allowed_on_device(allowedOnDevice);
+   pushBroadcast(user_, msg.SerializeAsString());
 }
 
 void DeviceManager::deviceNotFound(const std::string& deviceId)
@@ -581,6 +623,21 @@ using namespace bs::hd;
 
 namespace bs {
    namespace hww {
+      void deviceKeyToMsg(const DeviceKey& key, HW::DeviceKey* msgKey)
+      {
+         msgKey->set_label(key.label);
+         msgKey->set_id(key.id);
+         msgKey->set_vendor(key.vendor);
+         msgKey->set_wallet_id(key.walletId);
+         msgKey->set_status(key.status);
+         msgKey->set_type((int)key.type);
+      }
+      bs::hww::DeviceKey fromMsg(const BlockSettle::HW::DeviceKey& msg)
+      {
+         return { msg.label(), msg.id(), msg.vendor(), msg.wallet_id()
+            , msg.status(), static_cast<bs::hww::DeviceType>(msg.type()) };
+      }
+
       Path getDerivationPath(bool testNet, Purpose element)
       {
          Path path;

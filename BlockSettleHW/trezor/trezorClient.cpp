@@ -68,6 +68,7 @@ std::vector<DeviceKey> TrezorClient::deviceKeys() const
    for (const auto& dev : devices_) {
       result.push_back(dev->key());
    }
+   logger_->debug("[TrezorClient::deviceKeys] {} key[s]", result.size());
    return result;
 }
 
@@ -97,8 +98,13 @@ void TrezorClient::listDevices()
    {
       const auto& reply = std::static_pointer_cast<TrezorPostOut>(data);
       if (!reply || !reply->error.empty() || reply->response.empty()) {
-         logger_->error("[TrezorClient::listDevices] network error: {}"
-            , (reply && !reply->error.empty()) ? reply->error : "<empty>");
+         if (!reply) {
+            logger_->error("[TrezorClient::listDevices] invalid reply type");
+         }
+         else {
+            logger_->error("[TrezorClient::listDevices] network error: {}"
+               , !reply->error.empty() ? reply->error : "<empty>");
+         }
          cb_->scanningDone();
          return;
       }
@@ -107,26 +113,34 @@ void TrezorClient::listDevices()
          response = nlohmann::json::parse(reply->response);
       }
       catch (const nlohmann::json::exception& e) {
-         logger_->error("[TrezorClient::listDevices] failed to parse '{}': {}", reply->response, e.what());
+         logger_->error("[TrezorClient::listDevices] failed to parse '{}': {}"
+            , reply->response, e.what());
          cb_->scanningDone();
          return;
       }
 
       std::vector<trezor::DeviceData> trezorDevices;
       for (const auto& device : response) {
+         const auto& session = device["session"].is_null() ? "null"
+            : device["session"].get<std::string>();
+         const auto& debugSession = device["debugSession"].is_null() ? "null"
+            : device["debugSession"].get<std::string>();
          trezorDevices.push_back({device["path"].get<std::string>()
-            , device["vendor"].get<std::string>(), device["product"].get<std::string>()
-            , device["session"].get<std::string>(), device["debug"].get<std::string>()
-            , device["debugSession"].get<std::string>() });
+            , device["vendor"].get<int>(), device["product"].get<int>()
+            , session, device["debug"].get<bool>(), debugSession });
       }
       logger_->info("[TrezorClient::listDevices] enumeration finished, #devices: {}"
          , trezorDevices.size());
-
       state_ = trezor::State::Enumerated;
 
       nbDevices_ = trezorDevices.size();
-      for (const auto& dev : trezorDevices) {
-         acquireDevice(dev);
+      if (nbDevices_ == 0) {
+         cb_->scanningDone();
+      }
+      else {
+         for (const auto& dev : trezorDevices) {
+            acquireDevice(dev);
+         }
       }
    };
    logger_->info("[TrezorClient::listDevices]");
@@ -172,10 +186,11 @@ void TrezorClient::acquireDevice(const trezor::DeviceData& devData, bool init)
          return;
       }
 
-      trezor::DeviceData devData;
-      devData.sessionId = response["session"].get<std::string>();
+      auto devDataCopy = devData;
+      devDataCopy.sessionId = response["session"].is_null() ? "null"
+         : response["session"].get<std::string>();
 
-      if (devData.sessionId.empty() || devData.sessionId == prevSessionId) {
+      if (devDataCopy.sessionId.empty() || devDataCopy.sessionId == prevSessionId) {
          logger_->error("[TrezorClient::acquireDevice] cannot acquire device");
          scanDone();
          return;
@@ -185,10 +200,10 @@ void TrezorClient::acquireDevice(const trezor::DeviceData& devData, bool init)
          "connection id: {}, new connection id: {}", prevSessionId, devData.sessionId);
 
       state_ = trezor::State::Acquired;
-      //emit deviceReady();
-      const auto& newDevice = std::make_shared<TrezorDevice>(logger_, devData
+      const auto& newDevice = std::make_shared<TrezorDevice>(logger_, devDataCopy
          , testNet_, cb_, trezorEndPoint_);
       if (init) {
+         logger_->debug("[TrezorClient::acquireDevice] init {} from acquire", devData.path);
          newDevice->init();
       }
       devices_.push_back(newDevice);
@@ -243,7 +258,7 @@ std::shared_ptr<TrezorPostOut> bs::hww::TrezorPostHandler::processData(const std
       curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, inData->input.data());
    }
    if (inData->timeout) {
-      curl_easy_setopt(curl_, CURLOPT_TIMEOUT_MS, 2000L);
+      curl_easy_setopt(curl_, CURLOPT_TIMEOUT_MS, 3000L);
    }
    else {
       curl_easy_setopt(curl_, CURLOPT_TIMEOUT, 0L);
@@ -255,9 +270,10 @@ std::shared_ptr<TrezorPostOut> bs::hww::TrezorPostHandler::processData(const std
    const auto res = curl_easy_perform(curl_);
    if (res != CURLE_OK) {
       result->error = fmt::format("failed to post to {}: {}", url, res);
+      result->timedOut = (res == CURLE_OPERATION_TIMEDOUT);
       return result;
    }
-   logger_->debug("[{}] response: {}", __func__, response);
-   result->response = std::move(response);
+   result->response = response;
+   logger_->debug("[{}] response: {}", __func__, result->response);
    return result;
 }

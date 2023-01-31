@@ -110,5 +110,7 @@
         <file>qml/Send/SignTransaction.qml</file>
         <file>images/paste_icon.png</file>
         <file>qml/StyledControls/CustomCompleterPopup.qml</file>
+        <file>qml/Pin/PinEntriesPopup.qml</file>
+        <file>qml/Pin/qmldir</file>
     </qresource>
 </RCC>

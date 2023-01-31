@@ -33,6 +33,7 @@
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
 #include "FeeSuggModel.h"
+#include "hwdevicemanager.h"
 #include "QTXSignRequest.h"
 #include "TxOutputsModel.h"
 #include "SettingsAdapter.h"
@@ -310,6 +311,8 @@ bool QtQuickAdapter::processBroadcast(const bs::message::Envelope& env)
          return (processSigner(env) != ProcessingResult::Ignored);
       case TerminalUsers::Wallets:
          return (processWallets(env) != ProcessingResult::Ignored);
+      case TerminalUsers::HWWallets:
+         return (processHWW(env) != ProcessingResult::Ignored);
       default:    break;
       }
    }
@@ -627,6 +630,15 @@ bs::message::ProcessingResult QtQuickAdapter::processHWW(const bs::message::Enve
       return processHWDevices(msg.available_devices());
    case HW::DeviceMgrMessage::kSignedTx:
       return processHWSignedTX(msg.signed_tx());
+   case HW::DeviceMgrMessage::kRequestPin:
+      curAuthDevice_ = bs::hww::fromMsg(msg.request_pin());
+      QMetaObject::invokeMethod(this, [this] { emit invokePINentry(); });
+      return bs::message::ProcessingResult::Success;
+   case HW::DeviceMgrMessage::kPasswordRequest:
+      curAuthDevice_ = bs::hww::fromMsg(msg.password_request().key());
+      QMetaObject::invokeMethod(this, [this, onDevice=msg.password_request().allowed_on_device()]
+         { emit invokePasswordEntry(QString::fromStdString(curAuthDevice_.label), onDevice); });
+      return bs::message::ProcessingResult::Success;
    default: break;
    }
    return bs::message::ProcessingResult::Ignored;
@@ -1255,6 +1267,39 @@ void QtQuickAdapter::stopHWWalletsPolling()
    hwDevicesPolling_ = false;
 }
 
+void QtQuickAdapter::setHWpin(const QString& pin)
+{
+   if (curAuthDevice_.id.empty()) {
+      logger_->error("[{}] no device requested PIN", __func__);
+      return;
+   }
+   HW::DeviceMgrMessage msg;
+   auto msgReq = msg.mutable_set_pin();
+   bs::hww::deviceKeyToMsg(curAuthDevice_, msgReq->mutable_key());
+   msgReq->set_pin(pin.toStdString());
+   pushRequest(user_, userHWW_, msg.SerializeAsString());
+   curAuthDevice_ = {};
+}
+
+void QtQuickAdapter::setHWpassword(const QString& password)
+{
+   if (curAuthDevice_.id.empty()) {
+      logger_->error("[{}] no device requested passphrase", __func__);
+      return;
+   }
+   HW::DeviceMgrMessage msg;
+   auto msgReq = msg.mutable_set_password();
+   bs::hww::deviceKeyToMsg(curAuthDevice_, msgReq->mutable_key());
+   if (password.isEmpty()) {
+      msgReq->set_set_on_device(true);
+   }
+   else {
+      msgReq->set_password(password.toStdString());
+   }
+   pushRequest(user_, userHWW_, msg.SerializeAsString());
+   curAuthDevice_ = {};
+}
+
 void QtQuickAdapter::importHWWallet(int deviceIndex)
 {
    const auto& devKey = hwDeviceModel_->getDevice(deviceIndex);
@@ -1262,13 +1307,7 @@ void QtQuickAdapter::importHWWallet(int deviceIndex)
       return;
    }
    HW::DeviceMgrMessage msg;
-   auto msgReq = msg.mutable_import_device();
-   msgReq->set_label(devKey.label);
-   msgReq->set_id(devKey.id);
-   msgReq->set_vendor(devKey.vendor);
-   msgReq->set_wallet_id(devKey.walletId);
-   msgReq->set_status(devKey.status);
-   msgReq->set_type((int)devKey.type);
+   bs::hww::deviceKeyToMsg(devKey, msg.mutable_import_device());
    pushRequest(user_, userHWW_, msg.SerializeAsString());
 }
 
@@ -1493,10 +1532,10 @@ bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::Seq
 
 bs::message::ProcessingResult QtQuickAdapter::processHWDevices(const HW::DeviceMgrMessage_Devices& response)
 {
+   logger_->debug("[{}] {}", __func__, response.DebugString());
    std::vector<bs::hww::DeviceKey> devices;
    for (const auto& key : response.device_keys()) {
-      devices.push_back({ key.label(), key.id(), key.vendor(), key.wallet_id()
-         , key.status(), static_cast<bs::hww::DeviceType>(key.type())});
+      devices.push_back(bs::hww::fromMsg(key));
    }
    hwDeviceModel_->setDevices(devices);
    if (devices.empty() && hwDevicesPolling_) {
@@ -1506,6 +1545,7 @@ bs::message::ProcessingResult QtQuickAdapter::processHWDevices(const HW::DeviceM
          , bs::message::bus_clock::now() + std::chrono::seconds{ 1 });
    }
    else {
+      hwDevicesPolling_ = false;
       for (const auto& hdWallet : hdWallets_) {
          hwDeviceModel_->setLoaded(hdWallet.first);
       }
@@ -1578,7 +1618,9 @@ void QtQuickAdapter::signAndBroadcast(QTXSignRequest* txReq, const QString& pass
       try {
          if (hdWallets_.at(walletId).isHardware) {
             needHWSign = true;
-            break;
+            HW::DeviceMgrMessage msg;
+            msg.set_prepare_wallet_for_tx_sign(walletId);
+            pushRequest(user_, userHWW_, msg.SerializeAsString());
          }
       }
       catch (const std::exception&) {}
