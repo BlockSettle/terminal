@@ -316,7 +316,7 @@ ColumnLayout  {
 
         visible: !grid.isValid
 
-        text:  qsTr("Words are not valid")
+        text:  qsTr("Invalid seed")
 
         Layout.bottomMargin: 24
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
