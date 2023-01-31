@@ -159,6 +159,8 @@ bs::message::ProcessingResult DeviceManager::processOwnRequest(const bs::message
       return processSetPIN(msg.set_pin());
    case HW::DeviceMgrMessage::kSetPassword:
       return processSetPassword(msg.set_password());
+   case HW::DeviceMgrMessage::kPrepareWalletForTxSign:
+      return processPrepareDeviceForSign(env, msg.prepare_wallet_for_tx_sign());
    default: break;
    }
    return bs::message::ProcessingResult::Ignored;
@@ -463,7 +465,7 @@ void DeviceManager::scanningDone(bool initDevices)
    for (const auto& key : trezorKeys) {
       auto device = trezorClient_->getDevice(key.id);
       if (!device->inited()) {
-         device->retrieveXPubRoot();
+         device->init();
       }
    }
 }

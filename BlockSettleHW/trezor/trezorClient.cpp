@@ -68,6 +68,7 @@ std::vector<DeviceKey> TrezorClient::deviceKeys() const
    for (const auto& dev : devices_) {
       result.push_back(dev->key());
    }
+   logger_->debug("[TrezorClient::deviceKeys] {} key[s]", result.size());
    return result;
 }
 
@@ -185,11 +186,11 @@ void TrezorClient::acquireDevice(const trezor::DeviceData& devData, bool init)
          return;
       }
 
-      trezor::DeviceData devData;
-      devData.sessionId = response["session"].is_null() ? "null"
+      auto devDataCopy = devData;
+      devDataCopy.sessionId = response["session"].is_null() ? "null"
          : response["session"].get<std::string>();
 
-      if (devData.sessionId.empty() || devData.sessionId == prevSessionId) {
+      if (devDataCopy.sessionId.empty() || devDataCopy.sessionId == prevSessionId) {
          logger_->error("[TrezorClient::acquireDevice] cannot acquire device");
          scanDone();
          return;
@@ -199,10 +200,10 @@ void TrezorClient::acquireDevice(const trezor::DeviceData& devData, bool init)
          "connection id: {}, new connection id: {}", prevSessionId, devData.sessionId);
 
       state_ = trezor::State::Acquired;
-      //emit deviceReady();
-      const auto& newDevice = std::make_shared<TrezorDevice>(logger_, devData
+      const auto& newDevice = std::make_shared<TrezorDevice>(logger_, devDataCopy
          , testNet_, cb_, trezorEndPoint_);
       if (init) {
+         logger_->debug("[TrezorClient::acquireDevice] init {} from acquire", devData.path);
          newDevice->init();
       }
       devices_.push_back(newDevice);
