@@ -248,9 +248,9 @@ void QtQuickAdapter::run(int &argc, char **argv)
    //need to read files in qml
    qputenv("QML_XHR_ALLOW_FILE_READ", QByteArray("1"));
 
-   QQmlApplicationEngine engine;
+   engine_ = std::make_unique<QQmlApplicationEngine>();
    QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);
-   rootCtxt_ = engine.rootContext();
+   rootCtxt_ = engine_->rootContext();
    const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
    rootCtxt_->setContextProperty(QStringLiteral("fixedFont"), fixedFont);
    rootCtxt_->setContextProperty(QLatin1Literal("bsApp"), this);
@@ -263,17 +263,17 @@ void QtQuickAdapter::run(int &argc, char **argv)
    rootCtxt_->setContextProperty(QLatin1Literal("hwDeviceModel"), hwDeviceModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("walletBalances"), walletBalances_);
    rootCtxt_->setContextProperty(QLatin1Literal("feeSuggestions"), feeSuggModel_);
-   engine.addImageProvider(QLatin1Literal("QR"), new QRImageProvider);
+   engine_->addImageProvider(QLatin1Literal("QR"), new QRImageProvider);
 
-   engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
-   if (engine.rootObjects().empty()) {
+   engine_->load(QUrl(QStringLiteral("qrc:/qml/Debug/main_debug.qml")));
+   if (engine_->rootObjects().empty()) {
       BSMessageBox box(BSMessageBox::critical, app.tr("BlockSettle Terminal")
          , app.tr("Failed to load QML GUI"), app.tr("See log for details"));
       box.exec();
       return;
    }
 
-   rootObj_ = engine.rootObjects().at(0);
+   rootObj_ = engine_->rootObjects().at(0);
    if (loadingDone_) {
       auto window = qobject_cast<QQuickWindow*>(rootObj_);
       if (window) {
@@ -1824,4 +1824,27 @@ int QtQuickAdapter::viewWalletSeedAuth(const QString& walletId, const QString& p
 int QtQuickAdapter::deleteWallet(const QString& walletId, const QString& password)
 {
    return 0;
+}
+
+void QtQuickAdapter::clearCache()
+{
+   engine_->clearComponentCache();
+}
+
+void QtQuickAdapter::reconnectSignals()
+{
+   rootObj_ = engine_->rootObjects().at(0);
+
+   auto comboWalletsList = rootObj_->findChild<QQuickItem*>(QLatin1Literal("walletsComboBox"));
+   if (comboWalletsList) {
+      QObject::connect((QObject*)comboWalletsList, SIGNAL(activated(int)), this, SLOT(walletSelected(int)));
+   }
+   comboWalletsList = rootObj_->findChild<QQuickItem*>(QLatin1Literal("receiveWalletsComboBox"));
+   if (comboWalletsList) {
+      QObject::connect((QObject*)comboWalletsList, SIGNAL(activated(int)), this, SLOT(walletSelected(int)));
+   }
+   comboWalletsList = rootObj_->findChild<QQuickItem*>(QLatin1Literal("sendWalletsComboBox"));
+   if (comboWalletsList) {
+      QObject::connect((QObject*)comboWalletsList, SIGNAL(activated(int)), this, SLOT(walletSelected(int)));
+   }
 }
