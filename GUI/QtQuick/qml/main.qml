@@ -74,6 +74,10 @@ ApplicationWindow {
             pin_popup.raise()
             pin_popup.requestActivate()
         }
+        function onShowError(text)
+        {
+           ibFailure.displayMessage(text)
+        }
     }
 
     color: BSStyle.backgroundColor

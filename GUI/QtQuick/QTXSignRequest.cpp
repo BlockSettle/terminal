@@ -71,7 +71,7 @@ QString QTXSignRequest::returnAmount() const
    if (!txReq_.isValid()) {
       return {};
    }
-   return QString::number(txReq_.changeAmount([](const bs::Address&) { return true; }) / BTCNumericTypes::BalanceDivider
+   return QString::number(txReq_.changeAmount() / BTCNumericTypes::BalanceDivider
       , 'f', 8);
 }
 

@@ -486,6 +486,12 @@ ProcessingResult QtQuickAdapter::processBlockchain(const Envelope &env)
       return processZCInvalidated(msg.zc_invalidated());
    case ArmoryMessage::kTransactions:
       return processTransactions(env.responseId(), msg.transactions());
+   case ArmoryMessage::kTxPushResult:
+      if (msg.tx_push_result().result() != ArmoryMessage::PushTxSuccess) {
+         emit showError(tr("TX broadcast failed: %1")
+            .arg(QString::fromStdString(msg.tx_push_result().error_message())));
+      }
+      break;
    default: return ProcessingResult::Ignored;
    }
    return ProcessingResult::Success;
@@ -890,7 +896,7 @@ ProcessingResult QtQuickAdapter::processWalletData(bs::message::SeqId msgId
 ProcessingResult QtQuickAdapter::processWalletBalances(bs::message::SeqId responseId
    , const WalletsMessage_WalletBalances &response)
 {
-   //logger_->debug("[{}] {}", __func__, response.DebugString());
+   logger_->debug("[{}] {}", __func__, response.DebugString());
    const WalletBalancesModel::Balance bal{ response.spendable_balance(), response.unconfirmed_balance()
       , response.total_balance(), response.nb_addresses() };
    walletBalances_->setWalletBalance(response.wallet_id(), bal);
@@ -1193,7 +1199,7 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStri
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_request();
    msgReq->set_hd_wallet_id(hdWalletIdByIndex(walletIndex));
-   if (!recvAddr.isEmpty() && (amount > 0)) {
+   if (!recvAddr.isEmpty()) {
       auto msgOut = msgReq->add_outputs();
       msgOut->set_address(recvAddr.toStdString());
       msgOut->set_amount(amount);
@@ -1388,16 +1394,21 @@ ProcessingResult QtQuickAdapter::processUTXOs(const WalletsMessage_UtxoListRespo
 
 ProcessingResult QtQuickAdapter::processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse& response)
 {
-   const auto& signedTX = BinaryData::fromString(response.signed_tx());
-   logger_->debug("[{}] signed TX size: {}", __func__, signedTX.getSize());
-
-   ArmoryMessage msg;
-   auto msgReq = msg.mutable_tx_push();
-   //msgReq->set_push_id(id);
-   auto msgTx = msgReq->add_txs_to_push();
-   msgTx->set_tx(response.signed_tx());
-   //not adding TX hashes atm
-   pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+   if (!response.signed_tx().empty()) {
+      const auto& signedTX = BinaryData::fromString(response.signed_tx());
+      logger_->debug("[{}] signed TX size: {}", __func__, signedTX.getSize());
+      ArmoryMessage msg;
+      auto msgReq = msg.mutable_tx_push();
+      //msgReq->set_push_id(id);
+      auto msgTx = msgReq->add_txs_to_push();
+      msgTx->set_tx(response.signed_tx());
+      //not adding TX hashes atm
+      pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+   }
+   else {
+      emit showError(tr("TX sign failed, error %1: %2").arg(response.error_code())
+         .arg(QString::fromStdString(response.error_text())));
+   }
    return ProcessingResult::Success;
 }
 
@@ -1513,6 +1524,7 @@ void QtQuickAdapter::processWalletAddresses(const std::string& walletId
 bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::SeqId msgId
    , const WalletsMessage_TxResponse& response)
 {
+//   logger_->debug("[{}] {}", __func__, response.DebugString());
    const auto& itReq = txReqs_.find(msgId);
    if (itReq == txReqs_.end()) {
       logger_->error("[{}] unknown request #{}", __func__, msgId);
@@ -1574,11 +1586,16 @@ QString QtQuickAdapter::getSettingStringAt(ApplicationSettings::Setting s, int i
 
 bs::message::ProcessingResult QtQuickAdapter::processHWSignedTX(const HW::DeviceMgrMessage_SignTxResponse& response)
 {
-   ArmoryMessage msg;
-   auto msgReq = msg.mutable_tx_push();
-   auto msgTx = msgReq->add_txs_to_push();
-   msgTx->set_tx(response.signed_tx());
-   pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+   if (!response.signed_tx().empty()) {
+      ArmoryMessage msg;
+      auto msgReq = msg.mutable_tx_push();
+      auto msgTx = msgReq->add_txs_to_push();
+      msgTx->set_tx(response.signed_tx());
+      pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+   }
+   else {
+      emit showError(QString::fromStdString(response.error_msg()));
+   }
    return ProcessingResult::Success;
 }
 
