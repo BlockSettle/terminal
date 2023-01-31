@@ -18,6 +18,8 @@ ColumnLayout  {
     width: 600
     spacing: 0
 
+    property var tempRequest: null
+
     RowLayout {
 
         Layout.fillWidth: true
@@ -166,11 +168,9 @@ ColumnLayout  {
                 amount_input.input_text = prev_text
                 return
             }
+            var fpb = parseFloat(fee_suggest_combo.currentValue)
 
-            var max_value = (from_wallet_combo.currentIndex >= 0) ?
-                        parseFloat(getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole)) : 0
-
-            if (input_number < 0 || input_number>max_value)
+            if (input_number < 0 || ((tempRequest != null) && (input_number > tempRequest.maxAmount)))
             {
                 amount_input.input_text = prev_text
                 return
@@ -195,9 +195,12 @@ ColumnLayout  {
 
             text: qsTr("MAX")
             font.pixelSize: 12
+            enabled: (tempRequest != null)
 
             function click_enter() {
-                amount_input.input_text = getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole)
+                if (tempRequest != null) {
+                    amount_input.input_text = tempRequest.maxAmount
+                }
             }
         }
 

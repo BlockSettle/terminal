@@ -53,6 +53,7 @@ public:
    QString errorText() const { return error_; }
    Q_PROPERTY(bool isValid READ isValid NOTIFY txSignReqChanged)
    bool isValid() const { return (error_.isEmpty() && txReq_.isValid()); }
+   Q_PROPERTY(QString maxAmount READ outputAmount NOTIFY txSignReqChanged)
 
 signals:
    void txSignReqChanged();

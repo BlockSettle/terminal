@@ -187,6 +187,7 @@ signals:
    void scanningChanged();
    void invokePINentry();
    void invokePasswordEntry(const QString& devName, bool acceptOnDevice);
+   void showError(const QString&);
 
 private slots:
    void walletSelected(int);
