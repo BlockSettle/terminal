@@ -6,7 +6,7 @@ import QtQuick.Layouts 1.15
 import "../BsStyles"
 import "../StyledControls"
 
-//import wallet.balance 1.0
+import wallet.balance 1.0
 
 ColumnLayout  {
 
@@ -113,7 +113,7 @@ ColumnLayout  {
             }
         }
 
-        onTextEdited : {
+        onTextChanged : {
             if (rec_addr_input.input_text.length)
             {
                 rec_addr_input.isValid = bsApp.validateAddress(rec_addr_input.input_text)

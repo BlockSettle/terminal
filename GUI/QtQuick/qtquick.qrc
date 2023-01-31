@@ -113,5 +113,6 @@
         <file>qml/Send/AdvancedDetails.qml</file>
         <file>qml/Pin/PinEntriesPopup.qml</file>
         <file>qml/Pin/qmldir</file>
+        <file>images/plus.png</file>
     </qresource>
 </RCC>

@@ -34,6 +34,7 @@ Rectangle {
     property var completer: null
 
     signal textEdited()
+    signal textChanged()
     signal editingFinished()
     signal activeFocusChanged()
 
@@ -83,6 +84,10 @@ Rectangle {
 
         onTextEdited : {
             rect.textEdited()
+        }
+
+        onTextChanged : {
+            rect.textChanged()
         }
 
         onEditingFinished : {
