@@ -288,7 +288,6 @@ ApplicationWindow {
         clickedBtn.select(true)
     }
 
-
 /*    function raiseWindow() {
         JsHelper.raiseWindow(mainWindow)
     }
@@ -367,5 +366,51 @@ ApplicationWindow {
     function getFeeSuggData (index: int, role: string)
     {
         return feeSuggestions.data(feeSuggestions.index(index, 0), role)
+    }
+
+
+    Dialog {
+        id: errorDialog
+
+        x: mainWindow.x + (mainWindow.width - width)/2
+        y: mainWindow.y + (mainWindow.height - height)/2
+        width: 100
+        height: 50
+
+        title: "Error"
+
+        modal: true
+        standardButtons: Dialog.Ok
+
+        contentItem: Label {
+            id: errorLabel
+
+            color: "#E2E7FF"
+            font.pixelSize: 20
+            font.family: "Roboto"
+            font.weight: Font.Medium
+
+            text: "Test Description"
+
+            horizontalAlignment: Text.AlignHCenter
+        }
+
+
+        background: Rectangle {
+            color: "#191E2A"
+            radius: 14
+        }
+
+        visible: true
+    }
+
+    Connections
+    {
+        target:bsApp
+        function onShowError (message)
+        {
+            errorLabel.text = message
+            errorDialog.open()
+        }
     }
 }
