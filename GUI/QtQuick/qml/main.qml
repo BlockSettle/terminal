@@ -387,39 +387,9 @@ ApplicationWindow {
     }
 
 
-    Dialog {
-        id: errorDialog
+    CustomMessageDialog {
+        id: error_dialog
 
-        x: mainWindow.x + (mainWindow.width - width)/2
-        y: mainWindow.y + (mainWindow.height - height)/2
-        width: 100
-        height: 50
-
-        title: "Error"
-
-        modal: true
-        standardButtons: Dialog.Ok
-
-        contentItem: Label {
-            id: errorLabel
-
-            color: "#E2E7FF"
-            font.pixelSize: 20
-            font.family: "Roboto"
-            font.weight: Font.Medium
-
-            text: "Test Description"
-
-            horizontalAlignment: Text.AlignHCenter
-        }
-
-
-        background: Rectangle {
-            color: "#191E2A"
-            radius: 14
-        }
-
-        visible: true
     }
 
     Connections
@@ -427,8 +397,8 @@ ApplicationWindow {
         target:bsApp
         function onShowError (message)
         {
-            errorLabel.text = message
-            errorDialog.open()
+            error_dialog.error = message
+            error_dialog.open()
         }
     }
 }
