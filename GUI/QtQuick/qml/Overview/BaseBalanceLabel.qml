@@ -10,23 +10,23 @@
 */
 import QtQuick 2.15
 
+import "../BsStyles"
+
 Rectangle {
     id: control
 
-    property string label_text: "Confirmed balance"
-    property color label_text_color: "#7A88B0"
+    property string label_text
     property int label_text_font_size: 12
 
-    property string label_value: "0.00999889"
-    property color label_value_color: "#E2E7FF"
+    property string label_value
     property int label_value_font_size: 13
 
-    property string value_suffix: "BTC"
+    property string value_suffix
     property int left_text_padding: 10
 
     width: 120
     height: 53
-    color: "#191E2A"
+    color: "transparent"
 
     Column {
         anchors.verticalCenter: parent.verticalCenter
@@ -36,7 +36,7 @@ Rectangle {
             text: control.label_text
             leftPadding: control.left_text_padding
 
-            color: control.label_text_color
+            color: BSStyle.titleTextColor
             font.pixelSize: control.label_text_font_size
         }
 
@@ -44,7 +44,7 @@ Rectangle {
             text: control.label_value + " " + control.value_suffix
             leftPadding: control.left_text_padding
 
-            color: control.label_value_color
+            color: BSStyle.balanceValueTextColor
             font.weight: Font.Medium
             font.pixelSize: control.label_value_font_size
         }

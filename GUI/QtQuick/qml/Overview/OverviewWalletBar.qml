@@ -12,13 +12,14 @@ import QtQuick 2.15
 import wallet.balance 1.0
 
 import "." as OverviewControls
+import "../StyledControls" as Controls
 
 Rectangle {
     id: control
 
     width: 1200
     height: 100
-    color: "#191E2A"
+    color: "transparent"
 
     signal requestWalletProperties()
     signal createNewWallet()
@@ -28,9 +29,12 @@ Rectangle {
         anchors.fill:parent
         spacing: 20
 
-        OverviewControls.BaseCombobox {
+        Controls.CustomComboBox {
             id: wallet_selection_combobox
             anchors.verticalCenter: parent.verticalCenter
+
+            width: 263
+            height: 53
 
             objectName: "walletsComboBox"
             model: walletBalances
@@ -42,8 +46,8 @@ Rectangle {
             }
 
             onActivated: (ind) => {
-                             control.walletIndexChanged(ind)
-                         }
+                control.walletIndexChanged(ind)
+            }
         }
 
         OverviewControls.BalanceBar {
@@ -51,11 +55,11 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
 
             confirmed_balance_value: walletBalances.data(walletBalances.index(wallet_selection_combobox.currentIndex, 0),
-                                                         WalletBalance.ConfirmedRole).toFixed(5)
+                                                         WalletBalance.ConfirmedRole)
             uncorfirmed_balance_value: walletBalances.data(walletBalances.index(wallet_selection_combobox.currentIndex, 0),
-                                                           WalletBalance.UnconfirmedRole).toFixed(5)
+                                                           WalletBalance.UnconfirmedRole)
             total_balance_value: walletBalances.data(walletBalances.index(wallet_selection_combobox.currentIndex, 0),
-                                                     WalletBalance.TotalRole).toFixed(5)
+                                                     WalletBalance.TotalRole)
             used_addresses_value: walletBalances.data(walletBalances.index(wallet_selection_combobox.currentIndex, 0),
                                                 WalletBalance.NbAddrRole)
         }
@@ -66,12 +70,12 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: parent.right
 
-        OverviewControls.BaseWalletButton {
+        Controls.CustomButton2 {
             text: "Wallet properties"
             onClicked: control.requestWalletProperties()
         }
 
-        OverviewControls.BaseWalletButton {
+        Controls.CustomButton2 {
             text: "Create new wallet"
             onClicked: control.createNewWallet()
         }

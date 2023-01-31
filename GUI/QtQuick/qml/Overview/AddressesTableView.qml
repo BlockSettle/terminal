@@ -12,6 +12,8 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 
+import "../BsStyles"
+
 TableView {
     id: component
     width: 1200
@@ -26,16 +28,8 @@ TableView {
 
     property bool has_copy: true
 
-    property color text_header_color: "#7A88B0"
     property int text_header_size: 10
-
-    property color cell_text_color: "#FFFFFF"
     property int cell_text_size: 11
-
-    property color separator_color: "#3C435A"
-    property color cell_background_color: "#333C435A"
-    property color selected_cell_background_color: "#22293B"
-    property color header_background_color: "#333C435A"
 
     property var columnWidths: [350, 100, 120, 100]
     columnWidthProvider: function (column) {
@@ -52,7 +46,7 @@ TableView {
 
     delegate: Rectangle {
         implicitHeight: 34
-        color: row === 0 ? component.header_background_color : (row === selected_row_index ? component.selected_cell_background_color : component.cell_background_color)
+        color: row === 0 ? BSStyle.tableCellBackgroundColor : (row === selected_row_index ? BSStyle.tableCellSelectedBackgroundColor : BSStyle.tableCellBackgroundColor)
 
         Row {
             anchors.fill: parent
@@ -61,7 +55,7 @@ TableView {
                 id: internal_text
                 text: tableData
 
-                color: row === 0 ? component.text_header_color : component.cell_text_color
+                color: row === 0 ? BSStyle.titleTextColor : BSStyle.textColor
                 font.family: "Roboto"
                 font.weight: Font.Normal
                 font.pixelSize: row === 0 ? component.text_header_size : component.cell_text_size
@@ -84,7 +78,7 @@ TableView {
                     ToolTip {
                         id: tool_tip
                         timeout: 1000
-                        text: "Copied"
+                        text: qsTr("Copied")
 
                         font.pixelSize: 10
                         font.family: "Roboto"
@@ -93,12 +87,12 @@ TableView {
                         contentItem: Text {
                             text: tool_tip.text
                             font: tool_tip.font
-                            color: "#FFFFFF"
+                            color: BSStyle.textColor
                         }
 
                         background: Rectangle {
-                            color: "#191E2A"
-                            border.color: "#3C435A"
+                            color: BSStyle.buttonsStandardColor
+                            border.color: BSStyle.buttonsStandardColor
                             border.width: 1
                             radius: 14
                         }
@@ -115,7 +109,7 @@ TableView {
         Rectangle {
             height: 1
             width: parent.width
-            color: component.separator_color
+            color: BSStyle.tableSeparatorColor
 
             anchors.bottom: parent.bottom
         }

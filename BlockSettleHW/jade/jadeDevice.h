@@ -79,7 +79,7 @@ namespace bs {
 
       private:
          std::shared_ptr<spdlog::logger>  logger_;
-         const trezor::DeviceData data_;
+         const trezor::DeviceData data_{};
          const bool        testNet_;
          DeviceCallbacks*  cb_{ nullptr };
          const std::string endpoint_;

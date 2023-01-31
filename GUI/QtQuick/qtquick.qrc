@@ -112,13 +112,10 @@
         <file>qml/StyledControls/CustomCompleterPopup.qml</file>
         <file>qml/Pin/PinEntriesPopup.qml</file>
         <file>qml/Pin/qmldir</file>
-        <file>images/clear.png</file>
-
+        <file>qml/StyledControls/CustomButton2.qml</file>
         <file>qml/Overview/AddressesTableView.qml</file>
         <file>qml/Overview/BalanceBar.qml</file>
         <file>qml/Overview/BaseBalanceLabel.qml</file>
-        <file>qml/Overview/BaseCombobox.qml</file>
-        <file>qml/Overview/BaseWalletButton.qml</file>
         <file>qml/Overview/OverviewPanel.qml</file>
         <file>qml/Overview/OverviewWalletBar.qml</file>
         <file>images/overview/copy_button.svg</file>

@@ -106,4 +106,12 @@ QtObject {
 
     readonly property color comboBoxIndicatorColor: "#DCE2FF"
     readonly property color comboBoxPopupedIndicatorColor: "#45A6FF"
+
+    readonly property color tableSeparatorColor: "#3C435A"
+    readonly property color tableCellBackgroundColor: "transparent"
+    readonly property color tableCellSelectedBackgroundColor: "#22293B"
+
+    readonly property color balanceValueTextColor: "#E2E7FF"
+    readonly property color addressesPanelBackgroundColor: "#333C435A"
+
 }

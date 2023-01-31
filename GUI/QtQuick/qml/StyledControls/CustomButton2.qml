@@ -11,13 +11,13 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.3
 
+import "../BsStyles"
+
 Button {
     id: control
 
-    property color background_color: "#32394F"
-    property color background_border_color: "white"
+    property color background_color: BSStyle.buttonsDisabledColor
     property int background_radius: 14
-    property int background_border_size: 0
 
     text: "Wallet properties"
 
@@ -32,14 +32,13 @@ Button {
         color: control.background_color
         radius: control.background_radius
 
-        border.width: control.background_border_size
-        border.color: control.background_border_color
+        border.width: 0
     }
 
     contentItem: Text {
         text: control.text
         font: control.font
-        color: "#FFFFFF"
+        color: BSStyle.textColor
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
     }

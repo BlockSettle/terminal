@@ -10,6 +10,7 @@
 */
 import QtQuick 2.15
 
+import "../BsStyles"
 import "." as OverviewControls
 
 Rectangle {
@@ -17,7 +18,7 @@ Rectangle {
 
     width: 1200
     height: 788
-    color: "#191E2A"
+    color: "transparent"
 
     signal copyWallet(var id)
     signal requestWalletProperties()
@@ -45,9 +46,9 @@ Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
 
             radius: 16
-            color: "#333C435A"
+            color: BSStyle.addressesPanelBackgroundColor
             border.width: 1
-            border.color: "#3C435A"
+            border.color: BSStyle.tableSeparatorColor
 
             Column {
                 anchors.fill: parent
@@ -55,8 +56,8 @@ Rectangle {
                 spacing: 10
 
                 Text {
-                    text: "Addresses"
-                    color: "#FFFFFF"
+                    text: qsTr("Addresses")
+                    color: BSStyle.textColor
                     font.pixelSize: 19
                     font.family: "Roboto"
                     font.weight: Font.DemiBold
@@ -66,9 +67,6 @@ Rectangle {
                 OverviewControls.AddressesTableView {
                     width: parent.width
                     height: parent.height - 40
-
-                    header_background_color: "transparent"
-                    cell_background_color: "transparent"
 
                     model: addressListModel
 
@@ -88,8 +86,8 @@ Rectangle {
                 spacing: 10
 
                 Text {
-                    text: "Non-settled Transactions"
-                    color: "#FFFFFF"
+                    text: qsTr("Non-settled Transactions")
+                    color: BSStyle.textColor
                     font.pixelSize: 19
                     font.family: "Roboto"
                     font.weight: Font.DemiBold
@@ -101,8 +99,6 @@ Rectangle {
                     height: parent.height - 40
 
                     has_copy: false
-                    header_background_color: "transparent"
-                    cell_background_color: "transparent"
 
                     columnWidths: [150, 150, 150, 150, 150, 150, 150, 150]
                     model: pendingTxListModel
