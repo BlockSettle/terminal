@@ -119,7 +119,12 @@ ColumnLayout  {
             {
                 rec_addr_input.isValid = bsApp.validateAddress(rec_addr_input.input_text)
                 if (rec_addr_input.isValid)
+                {
+                    var fpb = parseFloat(fee_suggest_combo.currentValue)
+                    tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                                , rec_addr_input.input_text, 0, (fpb > 0) ? fpb : 1.0)
                     amount_input.setActiveFocus()
+                }
             }
             else
                 rec_addr_input.isValid = true
