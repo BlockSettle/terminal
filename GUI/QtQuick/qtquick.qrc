@@ -112,6 +112,5 @@
         <file>qml/StyledControls/CustomCompleterPopup.qml</file>
         <file>qml/Pin/PinEntriesPopup.qml</file>
         <file>qml/Pin/qmldir</file>
-        <file>images/clear.png</file>
     </qresource>
 </RCC>
