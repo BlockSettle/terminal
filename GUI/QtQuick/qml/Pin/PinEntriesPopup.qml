@@ -57,7 +57,7 @@ Window {
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                   output = ""
+                   root.clean()
                    root.close()
                 }
             }
