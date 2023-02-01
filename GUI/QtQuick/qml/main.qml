@@ -64,6 +64,11 @@ ApplicationWindow {
         visible: false
     }
 
+    PasswordEntryPopup {
+        id: password_popup
+        visible: false
+    }
+
     Connections
     {
         target:bsApp
@@ -74,6 +79,17 @@ ApplicationWindow {
             pin_popup.raise()
             pin_popup.requestActivate()
         }
+
+        function onInvokePasswordEntry(devName, acceptOnDevice)
+        {
+            password_popup.device_name = devName
+            password_popup.accept_on_device = acceptOnDevice
+            password_popup.init()
+            password_popup.show()
+            password_popup.raise()
+            password_popup.requestActivate()
+        }
+
         function onShowError(text)
         {
            ibFailure.displayMessage(text)
@@ -390,4 +406,5 @@ ApplicationWindow {
     {
         return feeSuggestions.data(feeSuggestions.index(index, 0), role)
     }
+
 }

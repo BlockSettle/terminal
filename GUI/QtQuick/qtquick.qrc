@@ -112,5 +112,6 @@
         <file>qml/StyledControls/CustomCompleterPopup.qml</file>
         <file>qml/Pin/PinEntriesPopup.qml</file>
         <file>qml/Pin/qmldir</file>
+        <file>qml/Pin/PasswordEntryPopup.qml</file>
     </qresource>
 </RCC>
