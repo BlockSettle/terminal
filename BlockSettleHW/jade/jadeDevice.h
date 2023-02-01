@@ -36,7 +36,6 @@ namespace bs {
             , bool testNet, DeviceCallbacks*, const std::string& endpoint);
          ~JadeDevice() override;
 
-         trezor::DeviceData data() const { return data_; }
          DeviceKey key() const override;
          DeviceType type() const override;
 
@@ -79,7 +78,6 @@ namespace bs {
 
       private:
          std::shared_ptr<spdlog::logger>  logger_;
-         const trezor::DeviceData data_;
          const bool        testNet_;
          DeviceCallbacks*  cb_{ nullptr };
          const std::string endpoint_;
