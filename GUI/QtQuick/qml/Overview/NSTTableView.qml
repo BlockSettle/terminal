@@ -24,12 +24,10 @@ TableView {
     clip: true
     boundsBehavior: Flickable.StopAtBounds
 
-    signal copyRequested(var id)
-
     property int text_header_size: 10
-    property int cell_text_size: 11
+    property int cell_text_size: 10
 
-    property var columnWidths: [350, 100, 120, 100]
+    property var columnWidths: [100, 120, 100, 300, 120, 80, 80, 100]
     columnWidthProvider: function (column) {
         return (column === (columnWidths.length
                             - 1)) ? Math.max(
@@ -51,58 +49,19 @@ TableView {
 
             Text {
                 id: internal_text
-                text: tableData
-                height: parent.height
+                anchors.fill: parent
                 wrapMode: Text.Wrap
                 verticalAlignment: Text.AlignVCenter
+                text: tableData
+                clip: true
 
-                color: row === 0 ? BSStyle.titleTextColor : BSStyle.textColor
+                color: dataColor
                 font.family: "Roboto"
                 font.weight: Font.Normal
                 font.pixelSize: row === 0 ? component.text_header_size : component.cell_text_size
 
                 leftPadding: 10
-            }
 
-            Image {
-                id: copy_icon
-                width: 24
-                height: 24
-                visible: column === 0 && row == selected_row_index
-                anchors.verticalCenter: parent.verticalCenter
-                source: "qrc:/images/overview/copy_button.svg"
-
-                MouseArea {
-                    anchors.fill: parent
-
-                    ToolTip {
-                        id: tool_tip
-                        timeout: 1000
-                        text: qsTr("Copied")
-
-                        font.pixelSize: 10
-                        font.family: "Roboto"
-                        font.weight: Font.Normal
-
-                        contentItem: Text {
-                            text: tool_tip.text
-                            font: tool_tip.font
-                            color: BSStyle.textColor
-                        }
-
-                        background: Rectangle {
-                            color: BSStyle.buttonsStandardColor
-                            border.color: BSStyle.buttonsStandardColor
-                            border.width: 1
-                            radius: 14
-                        }
-                    }
-
-                    onClicked: {
-                        component.copyRequested(tableData)
-                        tool_tip.visible = true
-                    }
-                }
             }
         }
 
