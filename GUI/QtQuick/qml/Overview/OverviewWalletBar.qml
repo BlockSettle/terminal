@@ -70,12 +70,12 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: parent.right
 
-        Controls.CustomButton2 {
+        Controls.CustomMediumButton {
             text: "Wallet properties"
             onClicked: control.requestWalletProperties()
         }
 
-        Controls.CustomButton2 {
+        Controls.CustomMediumButton {
             text: "Create new wallet"
             onClicked: control.createNewWallet()
         }
