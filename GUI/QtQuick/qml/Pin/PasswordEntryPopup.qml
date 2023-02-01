@@ -98,9 +98,11 @@ Window {
             anchors.right: parent.right
             anchors.rightMargin: 20
 
+            horizontalAlignment: Text.AlignRight
+
             text: device_name
 
-            color: "#45A6FF"
+            color: "#E2E7FF"
 
             font.pixelSize: 16
             font.family: "Roboto"
