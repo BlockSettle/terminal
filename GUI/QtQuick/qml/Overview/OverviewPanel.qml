@@ -94,13 +94,9 @@ Rectangle {
                     
                 }
 
-                OverviewControls.AddressesTableView {
+                OverviewControls.NSTTableView {
                     width: parent.width
                     height: parent.height - 40
-
-                    has_copy: false
-
-                    columnWidths: [150, 150, 150, 150, 150, 150, 150, 150]
                     model: pendingTxListModel
                 }
             }

@@ -114,6 +114,7 @@
         <file>qml/Pin/qmldir</file>
         <file>qml/StyledControls/CustomButton2.qml</file>
         <file>qml/Overview/AddressesTableView.qml</file>
+        <file>qml/Overview/NSTTableView.qml</file>
         <file>qml/Overview/BalanceBar.qml</file>
         <file>qml/Overview/BaseBalanceLabel.qml</file>
         <file>qml/Overview/OverviewPanel.qml</file>
