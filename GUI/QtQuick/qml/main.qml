@@ -64,6 +64,16 @@ ApplicationWindow {
         visible: false
     }
 
+    PasswordEntryPopup {
+        id: password_popup
+        visible: false
+    }
+
+    CustomMessageDialog {
+        id: error_dialog
+        visible: false
+    }
+
     Connections
     {
         target:bsApp
@@ -74,9 +84,22 @@ ApplicationWindow {
             pin_popup.raise()
             pin_popup.requestActivate()
         }
+
+        function onInvokePasswordEntry(devName, acceptOnDevice)
+        {
+            password_popup.device_name = devName
+            password_popup.accept_on_device = acceptOnDevice
+            password_popup.init()
+            password_popup.show()
+            password_popup.raise()
+            password_popup.requestActivate()
+        }
+
         function onShowError(text)
         {
-           ibFailure.displayMessage(text)
+            //ibFailure.displayMessage(text)
+            error_dialog.error = text
+            error_dialog.open()
         }
     }
 
@@ -388,21 +411,5 @@ ApplicationWindow {
     function getFeeSuggData (index: int, role: string)
     {
         return feeSuggestions.data(feeSuggestions.index(index, 0), role)
-    }
-
-
-    CustomMessageDialog {
-        id: error_dialog
-
-    }
-
-    Connections
-    {
-        target:bsApp
-        function onShowError (message)
-        {
-            error_dialog.error = message
-            error_dialog.open()
-        }
     }
 }
