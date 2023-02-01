@@ -112,6 +112,7 @@
         <file>qml/StyledControls/CustomCompleterPopup.qml</file>
         <file>qml/Pin/PinEntriesPopup.qml</file>
         <file>qml/Pin/qmldir</file>
+        <file>qml/StyledControls/CustomMessageDialog.qml</file>
         <file>qml/StyledControls/CustomButton2.qml</file>
         <file>qml/Overview/AddressesTableView.qml</file>
         <file>qml/Overview/NSTTableView.qml</file>
