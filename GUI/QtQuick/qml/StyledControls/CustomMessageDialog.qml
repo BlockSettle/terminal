@@ -40,37 +40,37 @@ Window {
         border.width : 1
 
         Label {
-                id: tytleLabel
+            id: tytleLabel
 
-                anchors.top: rect.top
-                anchors.topMargin: 8
-                anchors.horizontalCenter: rect.horizontalCenter
+            anchors.top: rect.top
+            anchors.topMargin: 8
+            anchors.horizontalCenter: rect.horizontalCenter
 
-                color: "#E2E7FF"
-                font.pixelSize: 20
-                font.family: "Roboto"
-                font.weight: Font.Medium
+            color: "#E2E7FF"
+            font.pixelSize: 20
+            font.family: "Roboto"
+            font.weight: Font.Medium
 
-                text: "Error"
+            text: "Error"
 
-                horizontalAlignment: Text.AlignHCenter
+            horizontalAlignment: Text.AlignHCenter
          }
 
         Label {
-                id: errorLabel
+            id: errorLabel
 
-                anchors.bottom: ok_but.top
-                anchors.bottomMargin: 70
-                anchors.horizontalCenter: rect.horizontalCenter
+            anchors.bottom: ok_but.top
+            anchors.bottomMargin: 70
+            anchors.horizontalCenter: rect.horizontalCenter
 
-                color: "#E2E7FF"
-                font.pixelSize: 16
-                font.family: "Roboto"
-                font.weight: Font.Medium
+            color: "#E2E7FF"
+            font.pixelSize: 16
+            font.family: "Roboto"
+            font.weight: Font.Medium
 
-                text: "Test Description"
+            text: "Test Description"
 
-                horizontalAlignment: Text.AlignHCenter
+            horizontalAlignment: Text.AlignHCenter
          }
 
         CustomButton {
