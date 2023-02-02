@@ -1,0 +1,4 @@
+module Settings
+
+SettingsPopup         1.0 SettingsPopup.qml
+SettingsMenu          1.0 SettingsMenu.qml

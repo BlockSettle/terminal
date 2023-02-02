@@ -94,10 +94,6 @@ ColumnLayout  {
         id: confirm_but
         text: qsTr("Import")
 
-        //Layout.leftMargin: 25
-        //Layout.bottomMargin: 40
-
-        //Layout.leftMargin: 24
         Layout.bottomMargin: 40
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
