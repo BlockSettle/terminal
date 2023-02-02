@@ -54,7 +54,7 @@ std::vector<DeviceKey> LedgerClient::deviceKeys() const
    for (const auto device : availableDevices_) {
       keys.push_back(device->key());
    }
-   logger_->debug("[{}] {} keys", __func__, keys.size());
+   logger_->debug("[LedgerClient::deviceKeys] {} key[s]", keys.size());
    return keys;
 }
 

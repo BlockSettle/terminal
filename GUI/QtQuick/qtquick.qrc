@@ -38,6 +38,7 @@
         <file>qml/StyledControls/CustomButtonBar.qml</file>
         <file>qml/StyledControls/CustomCheckBox.qml</file>
         <file>qml/StyledControls/CustomComboBox.qml</file>
+        <file>qml/StyledControls/CustomSmallComboBox.qml</file>
         <file>qml/StyledControls/CustomContainer.qml</file>
         <file>qml/StyledControls/CustomDialog.qml</file>
         <file>qml/StyledControls/CustomHeader.qml</file>
@@ -81,7 +82,7 @@
         <file>images/success.png</file>
         <file>qml/StyledControls/CustomPopup.qml</file>
         <file>qml/Receive/ReceiveQrCode.qml</file>
-        <file>images/copy_icon.png</file>
+        <file>images/copy_icon.svg</file>
         <file>qml/Receive/qmldir</file>
         <file>qml/Receive/ReceivePopup.qml</file>
         <file>qml/CreateWallet/ConfirmPassword.qml</file>
@@ -113,6 +114,39 @@
         <file>qml/Send/AdvancedDetails.qml</file>
         <file>qml/Pin/PinEntriesPopup.qml</file>
         <file>qml/Pin/qmldir</file>
-        <file>images/plus.png</file>
+        <file>qml/StyledControls/CustomMessageDialog.qml</file>
+        <file>qml/StyledControls/CustomMediumButton.qml</file>
+        <file>qml/Overview/AddressesTableView.qml</file>
+        <file>qml/Overview/BalanceBar.qml</file>
+        <file>qml/Overview/BaseBalanceLabel.qml</file>
+        <file>qml/Overview/OverviewPanel.qml</file>
+        <file>qml/Overview/OverviewWalletBar.qml</file>
+        <file>qml/Pin/PasswordEntryPopup.qml</file>
+        <file>images/about.png</file>
+        <file>images/arrow.png</file>
+        <file>images/general.png</file>
+        <file>images/network.png</file>
+        <file>images/notification_critical.png</file>
+        <file>images/notification_info.png</file>
+        <file>images/notification_question.png</file>
+        <file>images/notification_success.png</file>
+        <file>images/notification_warning.png</file>
+        <file>images/delete.svg</file>
+        <file>images/plus.svg</file>
+        <file>qml/Settings/qmldir</file>
+        <file>qml/Settings/SettingsMenu.qml</file>
+        <file>qml/Settings/SettingsNetwork.qml</file>
+        <file>qml/Settings/SettingsPopup.qml</file>
+        <file>qml/StyledControls/CustomListItem.qml</file>
+        <file>qml/StyledControls/CustomListRadioButton.qml</file>
+        <file>qml/Settings/SettingsGeneral.qml</file>
+        <file>images/combobox_open_button.svg</file>
+        <file>qml/Transactions/TransactionsTableView.qml</file>
+        <file>qml/StyledControls/CustomSmallButton.qml</file>
+        <file>qml/StyledControls/CustomButtonRightIcon.qml</file>
+        <file>qml/StyledControls/CustomButtonLeftIcon.qml</file>
+        <file>images/calendar_icon.svg</file>
+        <file>images/download_icon.svg</file>
+        <file>images/search_icon.svg</file>
     </qresource>
 </RCC>

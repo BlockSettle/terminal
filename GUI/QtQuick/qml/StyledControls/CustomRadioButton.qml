@@ -15,7 +15,7 @@ import "../BsStyles"
 
 RadioButton {
     id: control
-    text: qsTr("RadioButton")
+
     checked: true
 
     indicator: Rectangle {

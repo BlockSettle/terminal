@@ -91,7 +91,7 @@ ColumnLayout  {
 
         text: qsTr("Copy to clipboard")
 
-        icon.source: "qrc:/images/copy_icon.png"
+        icon.source: "qrc:/images/copy_icon.svg"
         icon.width: 24
         icon.height: 24
         icon.color: "#FFFFFF"

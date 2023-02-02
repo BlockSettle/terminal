@@ -486,6 +486,12 @@ ProcessingResult QtQuickAdapter::processBlockchain(const Envelope &env)
       return processZCInvalidated(msg.zc_invalidated());
    case ArmoryMessage::kTransactions:
       return processTransactions(env.responseId(), msg.transactions());
+   case ArmoryMessage::kTxPushResult:
+      if (msg.tx_push_result().result() != ArmoryMessage::PushTxSuccess) {
+         emit showError(tr("TX broadcast failed: %1")
+            .arg(QString::fromStdString(msg.tx_push_result().error_message())));
+      }
+      break;
    default: return ProcessingResult::Ignored;
    }
    return ProcessingResult::Success;
@@ -637,7 +643,7 @@ bs::message::ProcessingResult QtQuickAdapter::processHWW(const bs::message::Enve
    case HW::DeviceMgrMessage::kPasswordRequest:
       curAuthDevice_ = bs::hww::fromMsg(msg.password_request().key());
       QMetaObject::invokeMethod(this, [this, onDevice=msg.password_request().allowed_on_device()]
-         { emit invokePasswordEntry(onDevice); });
+         { emit invokePasswordEntry(QString::fromStdString(curAuthDevice_.label), onDevice); });
       return bs::message::ProcessingResult::Success;
    default: break;
    }
@@ -890,7 +896,7 @@ ProcessingResult QtQuickAdapter::processWalletData(bs::message::SeqId msgId
 ProcessingResult QtQuickAdapter::processWalletBalances(bs::message::SeqId responseId
    , const WalletsMessage_WalletBalances &response)
 {
-   //logger_->debug("[{}] {}", __func__, response.DebugString());
+   logger_->debug("[{}] {}", __func__, response.DebugString());
    const WalletBalancesModel::Balance bal{ response.spendable_balance(), response.unconfirmed_balance()
       , response.total_balance(), response.nb_addresses() };
    walletBalances_->setWalletBalance(response.wallet_id(), bal);
@@ -1193,7 +1199,7 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStri
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_request();
    msgReq->set_hd_wallet_id(hdWalletIdByIndex(walletIndex));
-   if (!recvAddr.isEmpty() && (amount > 0)) {
+   if (!recvAddr.isEmpty()) {
       auto msgOut = msgReq->add_outputs();
       msgOut->set_address(recvAddr.toStdString());
       msgOut->set_amount(amount);
@@ -1277,6 +1283,25 @@ void QtQuickAdapter::setHWpin(const QString& pin)
    auto msgReq = msg.mutable_set_pin();
    bs::hww::deviceKeyToMsg(curAuthDevice_, msgReq->mutable_key());
    msgReq->set_pin(pin.toStdString());
+   pushRequest(user_, userHWW_, msg.SerializeAsString());
+   curAuthDevice_ = {};
+}
+
+void QtQuickAdapter::setHWpassword(const QString& password)
+{
+   if (curAuthDevice_.id.empty()) {
+      logger_->error("[{}] no device requested passphrase", __func__);
+      return;
+   }
+   HW::DeviceMgrMessage msg;
+   auto msgReq = msg.mutable_set_password();
+   bs::hww::deviceKeyToMsg(curAuthDevice_, msgReq->mutable_key());
+   if (password.isEmpty()) {
+      msgReq->set_set_on_device(true);
+   }
+   else {
+      msgReq->set_password(password.toStdString());
+   }
    pushRequest(user_, userHWW_, msg.SerializeAsString());
    curAuthDevice_ = {};
 }
@@ -1369,16 +1394,21 @@ ProcessingResult QtQuickAdapter::processUTXOs(const WalletsMessage_UtxoListRespo
 
 ProcessingResult QtQuickAdapter::processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse& response)
 {
-   const auto& signedTX = BinaryData::fromString(response.signed_tx());
-   logger_->debug("[{}] signed TX size: {}", __func__, signedTX.getSize());
-
-   ArmoryMessage msg;
-   auto msgReq = msg.mutable_tx_push();
-   //msgReq->set_push_id(id);
-   auto msgTx = msgReq->add_txs_to_push();
-   msgTx->set_tx(response.signed_tx());
-   //not adding TX hashes atm
-   pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+   if (!response.signed_tx().empty()) {
+      const auto& signedTX = BinaryData::fromString(response.signed_tx());
+      logger_->debug("[{}] signed TX size: {}", __func__, signedTX.getSize());
+      ArmoryMessage msg;
+      auto msgReq = msg.mutable_tx_push();
+      //msgReq->set_push_id(id);
+      auto msgTx = msgReq->add_txs_to_push();
+      msgTx->set_tx(response.signed_tx());
+      //not adding TX hashes atm
+      pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+   }
+   else {
+      emit showError(tr("TX sign failed, error %1: %2").arg(response.error_code())
+         .arg(QString::fromStdString(response.error_text())));
+   }
    return ProcessingResult::Success;
 }
 
@@ -1494,6 +1524,7 @@ void QtQuickAdapter::processWalletAddresses(const std::string& walletId
 bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::SeqId msgId
    , const WalletsMessage_TxResponse& response)
 {
+//   logger_->debug("[{}] {}", __func__, response.DebugString());
    const auto& itReq = txReqs_.find(msgId);
    if (itReq == txReqs_.end()) {
       logger_->error("[{}] unknown request #{}", __func__, msgId);
@@ -1555,11 +1586,16 @@ QString QtQuickAdapter::getSettingStringAt(ApplicationSettings::Setting s, int i
 
 bs::message::ProcessingResult QtQuickAdapter::processHWSignedTX(const HW::DeviceMgrMessage_SignTxResponse& response)
 {
-   ArmoryMessage msg;
-   auto msgReq = msg.mutable_tx_push();
-   auto msgTx = msgReq->add_txs_to_push();
-   msgTx->set_tx(response.signed_tx());
-   pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+   if (!response.signed_tx().empty()) {
+      ArmoryMessage msg;
+      auto msgReq = msg.mutable_tx_push();
+      auto msgTx = msgReq->add_txs_to_push();
+      msgTx->set_tx(response.signed_tx());
+      pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+   }
+   else {
+      emit showError(QString::fromStdString(response.error_msg()));
+   }
    return ProcessingResult::Success;
 }
 
@@ -1599,13 +1635,14 @@ void QtQuickAdapter::signAndBroadcast(QTXSignRequest* txReq, const QString& pass
       try {
          if (hdWallets_.at(walletId).isHardware) {
             needHWSign = true;
-            break;
+            HW::DeviceMgrMessage msg;
+            msg.set_prepare_wallet_for_tx_sign(walletId);
+            pushRequest(user_, userHWW_, msg.SerializeAsString());
          }
       }
       catch (const std::exception&) {}
    }
    if (needHWSign) {
-      pollHWWallets();
       unsigned nbNonHW = 0;
       for (const auto& walletId : txSignReq.walletIds) {
          try {

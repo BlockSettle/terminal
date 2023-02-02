@@ -14,7 +14,7 @@
 
 namespace {
    static const QHash<int, QByteArray> kRoles{
-      {QmlAddressListModel::TableDataRole, "tabledata"},
+      {QmlAddressListModel::TableDataRole, "tableData"},
       {QmlAddressListModel::HeadingRole, "heading"},
       {QmlAddressListModel::FirstColRole, "firstcol"}
    };

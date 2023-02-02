@@ -412,7 +412,7 @@ ColumnLayout  {
                     Layout.topMargin: 16
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
-                    icon.source: "qrc:/images/plus.png"
+                    icon.source: "qrc:/images/plus.svg"
                     icon.color: include_output_but.enabled ? "#45A6FF" : "#020817"
 
                     width: 504

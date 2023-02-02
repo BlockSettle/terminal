@@ -19,6 +19,7 @@ import "Receive"  1
 import "Send"  1
 import "CreateWallet"  1
 import "Pin"  1
+import "Settings"  1
 
 ApplicationWindow {
     id: mainWindow
@@ -59,8 +60,26 @@ ApplicationWindow {
         }
     }
 
+    SettingsPopup {
+        id: settings_popup
+        visible: false
+        onClosing: {
+            btnSettings.select(false)
+        }
+    }
+
     PinEntriesPopup {
         id: pin_popup
+        visible: false
+    }
+
+    PasswordEntryPopup {
+        id: password_popup
+        visible: false
+    }
+
+    CustomMessageDialog {
+        id: error_dialog
         visible: false
     }
 
@@ -73,6 +92,23 @@ ApplicationWindow {
             pin_popup.show()
             pin_popup.raise()
             pin_popup.requestActivate()
+        }
+
+        function onInvokePasswordEntry(devName, acceptOnDevice)
+        {
+            password_popup.device_name = devName
+            password_popup.accept_on_device = acceptOnDevice
+            password_popup.init()
+            password_popup.show()
+            password_popup.raise()
+            password_popup.requestActivate()
+        }
+
+        function onShowError(text)
+        {
+            //ibFailure.displayMessage(text)
+            error_dialog.error = text
+            error_dialog.open()
         }
     }
 
@@ -195,7 +231,10 @@ ApplicationWindow {
                 icon.source: "qrc:/images/settings_icon.png"
                 onClicked: {
                     topMenuBtnClicked(btnSettings)
-                    stack.push(settingsPage)
+                    //stack.push(settingsPage)
+                    settings_popup.show()
+                    settings_popup.raise()
+                    settings_popup.requestActivate()
                 }
             }
         }
@@ -305,7 +344,6 @@ ApplicationWindow {
 
         clickedBtn.select(true)
     }
-
 
 /*    function raiseWindow() {
         JsHelper.raiseWindow(mainWindow)

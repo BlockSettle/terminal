@@ -16,6 +16,7 @@ import QtQuick.Dialogs 1.3
 
 import "StyledControls"
 import "BsStyles"
+import "Transactions" as Transactions
 //import "BsControls"
 //import "BsDialogs"
 //import "js/helper.js" as JsHelper
@@ -44,99 +45,103 @@ Item {
     Column {
         spacing: 23
         anchors.fill: parent
+        anchors.margins: 18
 
         Row {
+            width: parent.width
+            height: 45
             spacing: 15
 
             Label {
-                text: qsTr("<font color=\"white\">Transactions list (%1)</font>").arg(txListModel.nbTx)
-                font.pointSize: 14
+                text: qsTr("Transactions list")
+                font.pixelSize: 20
+                font.weight: Font.Bold
+                color: BSStyle.textColor
+
+                anchors.verticalCenter: parent.verticalCenter
             }
-            Item {  // spacer item
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                Rectangle { anchors.fill: parent; color: "#ffaaaa" }
-            }
-            ComboBox {
-                id: txWalletsComboBox
-                objectName: "txWalletsComboBox"
-                model: bsApp.txWalletsList
-                font.pointSize: 8
-            }
-            ComboBox {
-                id: txTypesComboBox
-                objectName: "txTypesComboBox"
-                model: bsApp.txTypesList
-                font.pointSize: 8
-            }
-            Button {
-                text: qsTr("From")
-                font.pointSize: 8
-            }
-            Label {
-                text: qsTr("<font color=\"darkgrey\">-</font>")
-                font.pointSize: 12
-            }
-            Button {
-                text: qsTr("To")
-                font.pointSize: 8
-            }
-            TextEdit {
-                id: txSearchBox
-                width: 75
-                height: 32
-                Text {
-                    text: qsTr("Search")
-                    color: 'darkgrey'
-                    visible: !txSearchBox.text && !txSearchBox.activeFocus
+
+            Row 
+            {
+                spacing: 8
+                height: parent.height
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+
+                CustomSmallComboBox {
+                    id: txWalletsComboBox
+                    objectName: "txWalletsComboBox"
+                    model: bsApp.txWalletsList
+                    font.pointSize: 8
+
+                    width: 124
+                    height: 29
+
+                    anchors.verticalCenter: parent.verticalCenter
                 }
-            }
-            Button {
-                text: qsTr("CSV download")
-                font.pointSize: 8
-                onClicked: {
-                    fileDialogCSV.visible = true
+
+                CustomSmallComboBox {
+                    id: txTypesComboBox
+                    objectName: "txTypesComboBox"
+                    model: bsApp.txTypesList
+                    font.pointSize: 8
+
+                    width: 124
+                    height: 29
+
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+
+                Row {
+                    spacing: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    
+                    CustomButtonLeftIcon {
+                        text: qsTr("From")
+                        font.pointSize: 8
+
+                        custom_icon.source: "qrc:/images/calendar_icon.svg"
+
+                    }
+
+                    Rectangle {
+                        height: 1
+                        width: 8
+                        color: BSStyle.tableSeparatorColor
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    CustomButtonLeftIcon {
+                        text: qsTr("To")
+                        font.pointSize: 8
+
+                        custom_icon.source: "qrc:/images/calendar_icon.svg"
+                    }
+                }
+
+                CustomButtonRightIcon {
+                    text: qsTr("CSV download")
+                    font.pointSize: 8
+
+                    custom_icon.source: "qrc:/images/download_icon.svg"
+                    custom_icon.width: 10
+                    custom_icon.height: 10
+
+                    onClicked: {
+                        fileDialogCSV.visible = true
+                    }
+                    anchors.verticalCenter: parent.verticalCenter
                 }
             }
         }
 
-        TableView {
-            width: 1000
+        Transactions.TransactionsTableView {
+            width: parent.width
             height: 600
-            columnSpacing: 1
-            rowSpacing: 1
-            clip: true
-            ScrollIndicator.horizontal: ScrollIndicator { }
-            ScrollIndicator.vertical: ScrollIndicator { }
             model: txListModel
-            delegate: Rectangle {
-                implicitWidth: 125 * colWidth
-                implicitHeight: 20
-                border.color: "black"
-                border.width: 1
-                clip: true
-                color: heading ? 'black' : 'darkslategrey'
-                Text {
-                    text: tableData
-                    font.pointSize: heading ? 8 : 10
-                    color: dataColor
-                    anchors.centerIn: parent
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: {
-                        if (!heading) {
-                            bsApp.copyAddressToClipboard(txId)
-                            ibInfo.displayMessage(qsTr("TX id %1 copied to clipboard").arg(txId))
-                        }
-                    }
-                    onDoubleClicked: {
-                        if (!heading) {
-                            //TODO: show TX details
-                        }
-                    }
-                }
-            }
+
+            onCopyRequested: bsApp.copyAddressToClipboard(id)
         }
     }
 }

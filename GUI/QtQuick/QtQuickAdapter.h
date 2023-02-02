@@ -162,6 +162,7 @@ public:
    Q_INVOKABLE void pollHWWallets();
    Q_INVOKABLE void stopHWWalletsPolling();
    Q_INVOKABLE void setHWpin(const QString&);
+   Q_INVOKABLE void setHWpassword(const QString&);
    Q_INVOKABLE void importHWWallet(int deviceIndex);
    Q_INVOKABLE void generateNewAddress(int walletIndex, bool isNative);
    Q_INVOKABLE void copyAddressToClipboard(const QString& addr);
@@ -185,7 +186,8 @@ signals:
    void devicesChanged();
    void scanningChanged();
    void invokePINentry();
-   void invokePasswordEntry(bool);
+   void invokePasswordEntry(const QString& devName, bool acceptOnDevice);
+   void showError(const QString&);
 
 private slots:
    void walletSelected(int);

@@ -16,7 +16,9 @@ ComboBox {
     id: control
 
     property alias title_text: title.text
-    property alias details_text: details.text 
+    property alias details_text: details.text
+    property int fontSize: 16
+    property color fontColor: "#FFFFFF"
 
     activeFocusOnTab: true
 
@@ -75,11 +77,11 @@ ComboBox {
             width: details.text.length ? parent.width - details.width - 16 : parent.width
             height: 19
 
-            font.pixelSize: 16
+            font.pixelSize: control.fontSize
             font.family: "Roboto"
             font.weight: Font.Normal
 
-            color: "#FFFFFF"
+            color: control.fontColor
 
             text: control.currentText
             clip: true
@@ -150,7 +152,7 @@ ComboBox {
                 ? (Array.isArray(control.model) ? modelData[control.textRole] : model[control.textRole])
                 : modelData
             color: menuItem.highlighted ? BSStyle.comboBoxItemTextHighlightedColor : ( menuItem.currented ? BSStyle.comboBoxItemTextCurrentColor : BSStyle.comboBoxItemTextColor)
-            font.pixelSize: 16
+            font.pixelSize: control.fontSize
             font.family: "Roboto"
             font.weight: Font.Normal
 
