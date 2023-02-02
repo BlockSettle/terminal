@@ -40,7 +40,7 @@ ColumnLayout  {
         //aliases
         icon_source: "qrc:/images/general.png"
         icon_add_source: "qrc:/images/arrow.png"
-        tytle_text: "General"
+        title_text: "General"
 
         onClicked: sig_general()
     }
@@ -57,7 +57,7 @@ ColumnLayout  {
         //aliases
         icon_source: "qrc:/images/network.png"
         icon_add_source: "qrc:/images/arrow.png"
-        tytle_text: "Network"
+        title_text: "Network"
 
         onClicked: sig_network()
     }
@@ -74,7 +74,7 @@ ColumnLayout  {
         //aliases
         icon_source: "qrc:/images/about.png"
         icon_add_source: "qrc:/images/arrow.png"
-        tytle_text: "About"
+        title_text: "About"
 
         onClicked: sig_about()
     }

@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2022, BlockSettle AB
+* Copyright (C) 2018 - 2023, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -25,7 +25,7 @@ Rectangle {
     //usually we dont need only if custom margin and size
     property alias _icon: icon
     property alias icon_add_source: icon_add.source
-    property alias tytle_text: tytle.text
+    property alias title_text: title.text
 
     signal clicked_add()
     signal clicked()
@@ -54,7 +54,7 @@ Rectangle {
     }
 
     Label {
-        id: tytle
+        id: title
 
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: icon.right

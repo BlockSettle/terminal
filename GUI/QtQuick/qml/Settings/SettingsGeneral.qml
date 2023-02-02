@@ -63,7 +63,7 @@ ColumnLayout  {
         Layout.topMargin: 24
         Layout.leftMargin: 24
 
-        text: "Advanced TX dialog by default"
+        text: qsTr("Advanced TX dialog by default")
 
         spacing: 6
         font.pixelSize: 13
