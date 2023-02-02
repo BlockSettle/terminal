@@ -12,6 +12,7 @@ import QtQuick 2.15
 
 import "../BsStyles"
 import "." as OverviewControls
+import "../Transactions"
 
 Rectangle {
     id: control
@@ -94,7 +95,7 @@ Rectangle {
                     
                 }
 
-                OverviewControls.NSTTableView {
+                TransactionsTableView {
                     width: parent.width
                     height: parent.height - 40
                     model: pendingTxListModel

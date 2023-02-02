@@ -13,33 +13,26 @@ import QtQuick.Controls 2.3
 
 import "../BsStyles"
 
-Button {
+CustomSmallButton {
     id: control
 
-    property color background_color: BSStyle.buttonsDisabledColor
-    property int background_radius: 14
+    property alias custom_icon: icon_item
 
-    text: "Wallet properties"
-
-    width: 136
-    height: 36
-
-    font.pixelSize: 12
-    font.family: "Roboto"
-    font.weight: Font.Normal
-
-    background: Rectangle {
-        color: control.background_color
-        radius: control.background_radius
-
-        border.width: 0
+    Image {
+        id: icon_item
+        width: 10
+        height: 10
+        anchors.left: parent.left
+        anchors.leftMargin: 14
+        anchors.verticalCenter: parent.verticalCenter
     }
 
     contentItem: Text {
         text: control.text
         font: control.font
-        color: BSStyle.textColor
-        horizontalAlignment: Text.AlignHCenter
+        color: BSStyle.titleTextColor
         verticalAlignment: Text.AlignVCenter
+
+        leftPadding: icon_item.width + 10
     }
 }

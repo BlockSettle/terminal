@@ -24,6 +24,9 @@ TableView {
     clip: true
     boundsBehavior: Flickable.StopAtBounds
 
+    ScrollBar.horizontal: ScrollBar { }
+    ScrollBar.vertical: ScrollBar { }
+
     signal copyRequested(var id)
 
     property int text_header_size: 10
@@ -70,7 +73,7 @@ TableView {
                 height: 24
                 visible: column === 0 && row == selected_row_index
                 anchors.verticalCenter: parent.verticalCenter
-                source: "qrc:/images/overview/copy_button.svg"
+                source: "qrc:/images/copy_icon.svg"
 
                 MouseArea {
                     anchors.fill: parent
