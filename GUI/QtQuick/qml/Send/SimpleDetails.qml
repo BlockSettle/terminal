@@ -104,22 +104,30 @@ ColumnLayout  {
                 anchors.fill: parent
                 onClicked: {
                     rec_addr_input.input_text = bsApp.pasteTextFromClipboard()
-                    amount_input.setActiveFocus()
+                    rec_addr_input.validate()
                 }
             }
         }
 
         onTextEdited : {
+            rec_addr_input.validate()
+        }
+
+        function validate()
+        {
             if (rec_addr_input.input_text.length)
             {
                 rec_addr_input.isValid = bsApp.validateAddress(rec_addr_input.input_text)
-
-                if (rec_addr_input.isValid) {
+                if (rec_addr_input.isValid)
+                {
                     var fpb = parseFloat(fee_suggest_combo.currentValue)
                     tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
                                 , rec_addr_input.input_text, 0, (fpb > 0) ? fpb : 1.0)
+                    amount_input.setActiveFocus()
                 }
             }
+            else
+                rec_addr_input.isValid = true
         }
     }
 

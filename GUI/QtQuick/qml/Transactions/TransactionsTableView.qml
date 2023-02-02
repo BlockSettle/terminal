@@ -24,10 +24,15 @@ TableView {
     clip: true
     boundsBehavior: Flickable.StopAtBounds
 
-    property int text_header_size: 10
-    property int cell_text_size: 10
+    ScrollBar.horizontal: ScrollBar { }
+    ScrollBar.vertical: ScrollBar { }
 
-    property var columnWidths: [100, 120, 100, 300, 120, 80, 80, 100]
+    signal copyRequested(var id)
+
+    property int text_header_size: 11
+    property int cell_text_size: 12
+
+    property var columnWidths: [150, 120, 100, 350, 120, 80, 80, 80]    
     columnWidthProvider: function (column) {
         return (column === (columnWidths.length
                             - 1)) ? Math.max(
@@ -49,10 +54,10 @@ TableView {
 
             Text {
                 id: internal_text
+                text: tableData
                 anchors.fill: parent
                 wrapMode: Text.Wrap
                 verticalAlignment: Text.AlignVCenter
-                text: tableData
                 clip: true
 
                 color: dataColor
@@ -61,7 +66,48 @@ TableView {
                 font.pixelSize: row === 0 ? component.text_header_size : component.cell_text_size
 
                 leftPadding: 10
+            }
 
+            Image {
+                id: copy_icon
+                x: internal_text.contentWidth + copy_icon.width / 2
+                width: 24
+                height: 24
+                visible: column === 3 && row == selected_row_index
+                anchors.verticalCenter: parent.verticalCenter
+                source: "qrc:/images/copy_icon.svg"
+
+                MouseArea {
+                    anchors.fill: parent
+
+                    ToolTip {
+                        id: tool_tip
+                        timeout: 1000
+                        text: qsTr("Copied")
+
+                        font.pixelSize: 10
+                        font.family: "Roboto"
+                        font.weight: Font.Normal
+
+                        contentItem: Text {
+                            text: tool_tip.text
+                            font: tool_tip.font
+                            color: BSStyle.textColor
+                        }
+
+                        background: Rectangle {
+                            color: BSStyle.buttonsStandardColor
+                            border.color: BSStyle.buttonsStandardColor
+                            border.width: 1
+                            radius: 14
+                        }
+                    }
+
+                    onClicked: {
+                        component.copyRequested(tableData)
+                        tool_tip.visible = true
+                    }
+                }
             }
         }
 

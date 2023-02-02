@@ -78,6 +78,11 @@ ApplicationWindow {
         visible: false
     }
 
+    CustomMessageDialog {
+        id: error_dialog
+        visible: false
+    }
+
     Connections
     {
         target:bsApp
@@ -101,7 +106,9 @@ ApplicationWindow {
 
         function onShowError(text)
         {
-           ibFailure.displayMessage(text)
+            //ibFailure.displayMessage(text)
+            error_dialog.error = text
+            error_dialog.open()
         }
     }
 
@@ -338,7 +345,6 @@ ApplicationWindow {
         clickedBtn.select(true)
     }
 
-
 /*    function raiseWindow() {
         JsHelper.raiseWindow(mainWindow)
     }
@@ -418,5 +424,4 @@ ApplicationWindow {
     {
         return feeSuggestions.data(feeSuggestions.index(index, 0), role)
     }
-
 }
