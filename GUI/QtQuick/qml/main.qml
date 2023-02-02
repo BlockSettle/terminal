@@ -19,6 +19,7 @@ import "Receive"  1
 import "Send"  1
 import "CreateWallet"  1
 import "Pin"  1
+import "Settings"  1
 
 ApplicationWindow {
     id: mainWindow
@@ -56,6 +57,14 @@ ApplicationWindow {
         visible: false
         onClosing: {
             btnSend.select(false)
+        }
+    }
+
+    SettingsPopup {
+        id: settings_popup
+        visible: false
+        onClosing: {
+            btnSettings.select(false)
         }
     }
 
@@ -215,7 +224,10 @@ ApplicationWindow {
                 icon.source: "qrc:/images/settings_icon.png"
                 onClicked: {
                     topMenuBtnClicked(btnSettings)
-                    stack.push(settingsPage)
+                    //stack.push(settingsPage)
+                    settings_popup.show()
+                    settings_popup.raise()
+                    settings_popup.requestActivate()
                 }
             }
         }
