@@ -36,21 +36,11 @@ CustomPopup {
     SettingsGeneral {
         id: settings_general
         visible: false
-
-        onSig_save: {
-            root.close()
-            _stack_view.pop(null)
-        }
     }
 
     SettingsNetwork {
         id: settings_network
         visible: false
-
-        onSig_save: {
-            root.close()
-            _stack_view.pop(null)
-        }
     }
 
     function init() {
