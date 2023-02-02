@@ -29,6 +29,8 @@ ColumnLayout  {
     CustomTextInput {
         id: host
 
+        input_validator: RegExpValidator { regExp: /(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}(,(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3})*/ }
+
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : 70
         Layout.preferredWidth: 532
@@ -43,6 +45,8 @@ ColumnLayout  {
 
     CustomTextInput {
         id: port
+
+        input_validator: IntValidator {bottom: 0; top: 65536;}
 
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : 70
