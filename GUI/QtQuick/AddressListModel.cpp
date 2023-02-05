@@ -11,12 +11,14 @@
 #include "AddressListModel.h"
 #include <spdlog/spdlog.h>
 #include "BTCNumericTypes.h"
+#include "ColorScheme.h"
 
 namespace {
    static const QHash<int, QByteArray> kRoles{
       {QmlAddressListModel::TableDataRole, "tableData"},
       {QmlAddressListModel::HeadingRole, "heading"},
-      {QmlAddressListModel::FirstColRole, "firstcol"}
+      {QmlAddressListModel::FirstColRole, "firstcol"},
+      {QmlAddressListModel::ColorRole, "dataColor"}
    };
 }
 
@@ -63,6 +65,13 @@ QVariant QmlAddressListModel::data(const QModelIndex& index, int role) const
       return (index.row() == 0);
    case FirstColRole:
       return (index.column() == 0);
+   case ColorRole:
+      if (index.row() == 0) {
+         return ColorScheme::tableHeaderColor;
+      }
+      else {
+         return QColorConstants::White;
+      }
    default: break;
    }
    return QVariant();

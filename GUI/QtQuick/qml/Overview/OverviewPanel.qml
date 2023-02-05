@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2023, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -11,8 +11,8 @@
 import QtQuick 2.15
 
 import "../BsStyles"
+import "../StyledControls"
 import "." as OverviewControls
-import "../Transactions"
 
 Rectangle {
     id: control
@@ -21,7 +21,6 @@ Rectangle {
     height: 788
     color: "transparent"
 
-    signal copyWallet(var id)
     signal requestWalletProperties()
     signal createNewWallet()
     signal walletIndexChanged(index : int)
@@ -65,13 +64,15 @@ Rectangle {
                     
                 }
 
-                OverviewControls.AddressesTableView {
+                CustomTableView {
                     width: parent.width
                     height: parent.height - 40
 
                     model: addressListModel
+                    copy_button_column_index: 0
 
-                    onCopyRequested: control.copyWallet(id)
+                    columnWidths: [0.52, 0.15, 0.18, 0.15]
+                    onCopyRequested: bsApp.copyAddressToClipboard(id)
                 }
             }
         }
@@ -95,10 +96,14 @@ Rectangle {
                     
                 }
 
-                TransactionsTableView {
+                CustomTableView {
                     width: parent.width
                     height: parent.height - 40
                     model: pendingTxListModel
+
+                    copy_button_column_index: 3
+                    columnWidths: [0.12, 0.1, 0.08, 0.3, 0.1, 0.1, 0.1, 0.1]
+                    onCopyRequested: bsApp.copyAddressToClipboard(id)
                 }
             }
         }

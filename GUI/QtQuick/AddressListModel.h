@@ -14,6 +14,7 @@
 #include <QAbstractTableModel>
 #include <QObject>
 #include <QVariant>
+#include <QColor>
 #include "Address.h"
 #include "BinaryData.h"
 
@@ -25,7 +26,7 @@ class QmlAddressListModel : public QAbstractTableModel
 {
    Q_OBJECT
 public:
-   enum TableRoles { TableDataRole = Qt::UserRole + 1, HeadingRole, FirstColRole };
+   enum TableRoles { TableDataRole = Qt::UserRole + 1, HeadingRole, FirstColRole, ColorRole };
    QmlAddressListModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
 
    int rowCount(const QModelIndex & = QModelIndex()) const override;

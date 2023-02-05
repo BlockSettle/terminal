@@ -1674,6 +1674,27 @@ void QtQuickAdapter::signAndBroadcast(QTXSignRequest* txReq, const QString& pass
    }
 }
 
+int QtQuickAdapter::getAddressType(const QString& s)
+{
+   const auto& trimmed = s.trimmed().toStdString();
+   bs::Address address;
+   try {
+      address = bs::Address::fromAddressString(trimmed);
+      if (address.isValid()) {
+         return 1;
+      }
+   }
+   catch (const std::exception&) {}
+
+   if (trimmed.length() == 64) { // potential TX hash in hex
+      const auto& txId = BinaryData::CreateFromHex(trimmed);
+      if (txId.getSize() == 32) {   // valid TXid
+         return 2;
+      }
+   }
+   return 0;
+}
+
 int QtQuickAdapter::startSearch(const QString& s)
 {
    const auto& trimmed = s.trimmed().toStdString();
@@ -1689,12 +1710,5 @@ int QtQuickAdapter::startSearch(const QString& s)
       }
    }
    catch (const std::exception&) {}
-
-   if (trimmed.length() == 64) { // potential TX hash in hex
-      const auto& txId = BinaryData::CreateFromHex(trimmed);
-      if (txId.getSize() == 32) {   // valid TXid
-         return 2;
-      }
-   }
    return 0;
 }
