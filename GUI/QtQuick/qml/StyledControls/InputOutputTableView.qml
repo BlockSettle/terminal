@@ -81,7 +81,7 @@ CustomTableView {
 
                     Text {
                         id: address_label_item
-                        text: "Ad.:"
+                        text: qsTr("Ad.:")
                         color: BSStyle.titleTextColor
                         font.family: "Roboto"
                         font.weight: Font.Normal
@@ -103,7 +103,7 @@ CustomTableView {
 
                     Text {
                         id: transaction_label_item
-                        text: "Tx.:"
+                        text: qsTr("Tx.:")
                         color: BSStyle.titleTextColor
                         font.family: "Roboto"
                         font.weight: Font.Normal

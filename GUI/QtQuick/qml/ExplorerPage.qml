@@ -133,7 +133,7 @@ Item {
                         }
 
                         function openSearchResult() {
-                            var rc = bsApp.getAddressType(expSearchBox.text)
+                            var rc = bsApp.getSearchInputType(expSearchBox.text)
                             if (rc === 0) {
                                 ibFailure.displayMessage(qsTr("Unknown type of search key"))
                             }
