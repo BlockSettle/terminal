@@ -326,6 +326,7 @@ ColumnLayout  {
         title_leftMargin: 16
         title_topMargin: 16
 
+        visible: !txSignRequest.isHWW
         title_text: qsTr("Password")
 
         Component.onCompleted: {
@@ -374,7 +375,7 @@ ColumnLayout  {
         Layout.bottomMargin: 40
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
-        enabled: password.input_text.length
+        enabled: (txSignRequest.isHWW && txSignRequest.isHWWready) || password.input_text.length
 
         Component.onCompleted: {
             broadcast_but.preferred = true

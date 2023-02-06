@@ -51,7 +51,7 @@ namespace bs {
 
       struct DeviceCallbacks
       {
-         virtual void publicKeyReady(const std::string& devId, const std::string& walletId) = 0;
+         virtual void publicKeyReady(const DeviceKey&) = 0;
          virtual void walletInfoReady(const DeviceKey&, const bs::core::HwWalletInfo&) = 0;
          virtual void requestPinMatrix(const DeviceKey&) = 0;
          virtual void requestHWPass(const DeviceKey&, bool allowedOnDevice) = 0;
@@ -80,7 +80,7 @@ namespace bs {
          std::string name() const override { return "HWWallets"; }
 
       private: // signals
-         void publicKeyReady(const std::string& devId, const std::string& walletId) override;
+         void publicKeyReady(const DeviceKey&) override;
          void walletInfoReady(const DeviceKey&, const bs::core::HwWalletInfo&) override;
          void requestPinMatrix(const DeviceKey&) override;
          void requestHWPass(const DeviceKey&, bool allowedOnDevice) override;
@@ -140,7 +140,7 @@ namespace bs {
          std::vector<DeviceKey>  devices_;
 
          bool testNet_{false};
-         unsigned nbScanning_{};
+         int   nbScanning_{0};
          bool isSigning_{};
          std::string lastOperationError_;
          std::string lastUsedTrezorWallet_;

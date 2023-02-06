@@ -150,7 +150,7 @@ DeviceKey LedgerDevice::key() const
    }
 
    return { hidDeviceInfo_.product, hidDeviceInfo_.serialNumber
-      , hidDeviceInfo_.manufacturer, walletId, {}, DeviceType::HWLedger };
+      , hidDeviceInfo_.manufacturer, walletId, DeviceType::HWLedger };
 }
 
 DeviceType LedgerDevice::type() const
@@ -508,7 +508,7 @@ void bs::hww::LedgerDevice::retrieveXPubRoot()
       if (xpubRoot_.empty()) {
          xpubRoot_ = pubKey.getPublicKey();
          const auto& devKey = key();
-         cb_->publicKeyReady(devKey.id, devKey.walletId);
+         cb_->publicKeyReady(devKey);
          return;
       }
       try {

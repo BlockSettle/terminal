@@ -634,14 +634,16 @@ ProcessingResult SignerAdapter::processCreateWallet(const bs::message::Envelope&
 bs::message::ProcessingResult SignerAdapter::processImportHwWallet(const bs::message::Envelope& env
    , const BlockSettle::Common::SignerMessage_ImportHWWallet& request)
 {
+   logger_->debug("[{}] {}", __func__, request.DebugString());
    const bs::core::HwWalletInfo hwwInfo{ static_cast<bs::wallet::HardwareEncKey::WalletType>(request.type())
       , request.vendor(), request.label(), request.device_id(), request.xpub_root()
       , request.xpub_nested_segwit(), request.xpub_native_segwit(), request.xpub_legacy() };
    SignerMessage msg;
    auto msgResp = msg.mutable_created_wallet();
    try {
+      logger_->debug("[{}] label: {}, vendor: {}", __func__, hwwInfo.label, hwwInfo.vendor);
       const auto& hwWallet = std::make_shared<bs::core::hd::Wallet>(netType_
-         , hwwInfo, walletsDir_ + "/bs_hw_<wallet_id>.lmdb", logger_);
+         , hwwInfo, walletsDir_, logger_);
       walletsMgr_->addWallet(hwWallet);
       msgResp->set_wallet_id(hwWallet->walletId());
       walletsChanged(true);

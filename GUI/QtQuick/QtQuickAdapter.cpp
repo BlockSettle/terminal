@@ -132,7 +132,7 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    expTxByAddrModel_ = new TxListForAddr(logger, this);
    txOutputsModel_ = new TxOutputsModel(logger, this);
    txInputsModel_ = new TxInputsModel(logger, txOutputsModel_, this);
-   hwDeviceModel_ = new HwDeviceModel(this);
+   hwDeviceModel_ = new HwDeviceModel(logger, this);
    walletBalances_ = new WalletBalancesModel(logger, this);
    feeSuggModel_ = new FeeSuggestionModel(logger, this);
 }
@@ -645,6 +645,8 @@ bs::message::ProcessingResult QtQuickAdapter::processHWW(const bs::message::Enve
       QMetaObject::invokeMethod(this, [this, onDevice=msg.password_request().allowed_on_device()]
          { emit invokePasswordEntry(QString::fromStdString(curAuthDevice_.label), onDevice); });
       return bs::message::ProcessingResult::Success;
+   case HW::DeviceMgrMessage::kDeviceReady:
+      return processHWWready(msg.device_ready());
    default: break;
    }
    return bs::message::ProcessingResult::Ignored;
@@ -1229,7 +1231,7 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStri
    }
    const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
    const auto txReq = new QTXSignRequest(this);
-   txReqs_[msgId] = txReq;
+   txReqs_[msgId] = { txReq, (amount == 0) };
    return txReq;
 }
 
@@ -1248,6 +1250,7 @@ QTxDetails* QtQuickAdapter::getTXDetails(const QString& txHash)
    auto txBinHash = BinaryData::CreateFromHex(txHash.trimmed().toStdString());
    txBinHash.swapEndian();
    if (txBinHash.getSize() != 32) {
+      logger_->warn("[{}] invalid TX hash size {}", __func__, txBinHash.getSize());
       return new QTxDetails({}, this);
    }
    WalletsMessage msg;
@@ -1308,8 +1311,8 @@ void QtQuickAdapter::setHWpassword(const QString& password)
 
 void QtQuickAdapter::importHWWallet(int deviceIndex)
 {
-   const auto& devKey = hwDeviceModel_->getDevice(deviceIndex);
-   if (devKey.id.empty()) {
+   auto devKey = hwDeviceModel_->getDevice(deviceIndex);
+   if (devKey.id.empty() && (deviceIndex >= 0)) {
       return;
    }
    HW::DeviceMgrMessage msg;
@@ -1513,9 +1516,16 @@ void QtQuickAdapter::processWalletAddresses(const std::string& walletId
    if (addresses.empty()) {
       return;
    }
+   auto hdWalletId = walletId;
+   for (const auto& hdWallet : hdWallets_) {
+      if (hdWallet.second.hasLeaf(walletId)) {
+         hdWalletId = hdWallet.first;
+         break;
+      }
+   }
    const auto lastAddr = addresses.at(addresses.size() - 1);
-   logger_->debug("[{}] last address: {}", __func__, lastAddr.address.display());
-   addrModel_->addRow(walletId, { QString::fromStdString(lastAddr.address.display())
+   logger_->debug("[{}] {} last address: {}", __func__, hdWalletId, lastAddr.address.display());
+   addrModel_->addRow(hdWalletId, { QString::fromStdString(lastAddr.address.display())
       , QString::fromStdString(lastAddr.index) });
    generatedAddress_ = lastAddr.address;
    emit addressGenerated();
@@ -1524,27 +1534,56 @@ void QtQuickAdapter::processWalletAddresses(const std::string& walletId
 bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::SeqId msgId
    , const WalletsMessage_TxResponse& response)
 {
-//   logger_->debug("[{}] {}", __func__, response.DebugString());
+   logger_->debug("[{}] {}", __func__, response.DebugString());
    const auto& itReq = txReqs_.find(msgId);
    if (itReq == txReqs_.end()) {
       logger_->error("[{}] unknown request #{}", __func__, msgId);
       return bs::message::ProcessingResult::Error;
    }
-   auto qReq = itReq->second;
+   auto qReq = itReq->second.first;
+   const bool noReqAmount = itReq->second.second;
    txReqs_.erase(itReq);
    if (!response.error_text().empty()) {
       logger_->error("[{}] {}", __func__, response.error_text());
       qReq->setError(QString::fromStdString(response.error_text()));
       return bs::message::ProcessingResult::Success;
    }
-   const auto txReq = bs::signer::pbTxRequestToCore(response.tx_sign_request(), logger_);
+   auto txReq = bs::signer::pbTxRequestToCore(response.tx_sign_request(), logger_);
+
+   std::unordered_set<std::string> hdWalletIds;
+   for (const auto& walletId : txReq.walletIds) {
+      for (const auto& hdWallet : hdWallets_) {
+         if (hdWallet.second.hasLeaf(walletId)) {
+            hdWalletIds.insert(hdWallet.first);
+         }
+      }
+   }
+   logger_->debug("[{}] {} HD walletId[s]", __func__, hdWalletIds.size());
+   txReq.walletIds.clear();
+   for (const auto& walletId : hdWalletIds) {
+      txReq.walletIds.push_back(walletId);
+      try {
+         if (hdWallets_.at(walletId).isHardware) {
+            qReq->setHWW(true);
+            logger_->debug("[{}] noReqAmt: {} for {}", __func__, noReqAmount, walletId);
+            if (!noReqAmount) {
+               HW::DeviceMgrMessage msg;
+               msg.set_prepare_wallet_for_tx_sign(walletId);
+               pushRequest(user_, userHWW_, msg.SerializeAsString());
+               hwwReady_[walletId] = qReq;
+            }
+         }
+      }
+      catch (const std::exception&) {
+         logger_->error("[{}] unknown walletId {}", __func__, walletId);
+      }
+   }
    qReq->setTxSignReq(txReq);
    return bs::message::ProcessingResult::Success;
 }
 
 bs::message::ProcessingResult QtQuickAdapter::processHWDevices(const HW::DeviceMgrMessage_Devices& response)
 {
-   logger_->debug("[{}] {}", __func__, response.DebugString());
    std::vector<bs::hww::DeviceKey> devices;
    for (const auto& key : response.device_keys()) {
       devices.push_back(bs::hww::fromMsg(key));
@@ -1563,6 +1602,18 @@ bs::message::ProcessingResult QtQuickAdapter::processHWDevices(const HW::DeviceM
       }
       hwDeviceModel_->findNewDevice();
    }
+   return bs::message::ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult QtQuickAdapter::processHWWready(const std::string& walletId)
+{
+   logger_->debug("[{}] wallet {}", __func__, walletId);
+   const auto& it = hwwReady_.find(walletId);
+   if (it == hwwReady_.end()) {
+      return bs::message::ProcessingResult::Ignored;
+   }
+   it->second->setHWWready();
+   hwwReady_.erase(it);
    return bs::message::ProcessingResult::Success;
 }
 
@@ -1629,35 +1680,9 @@ void QtQuickAdapter::signAndBroadcast(QTXSignRequest* txReq, const QString& pass
       logger_->error("[{}] no TX request passed", __func__);
       return;
    }
-   const auto& txSignReq = txReq->txReq();
-   bool needHWSign = false;
-   for (const auto& walletId : txSignReq.walletIds) {
-      try {
-         if (hdWallets_.at(walletId).isHardware) {
-            needHWSign = true;
-            HW::DeviceMgrMessage msg;
-            msg.set_prepare_wallet_for_tx_sign(walletId);
-            pushRequest(user_, userHWW_, msg.SerializeAsString());
-         }
-      }
-      catch (const std::exception&) {}
-   }
-   if (needHWSign) {
-      unsigned nbNonHW = 0;
-      for (const auto& walletId : txSignReq.walletIds) {
-         try {
-            if (!hdWallets_.at(walletId).isHardware) {
-               logger_->warn("[{}] can't mix HW and non-HW wallets now "
-                  "(non-HW wallet {})", __func__, walletId);
-               nbNonHW++;
-            }
-         }
-         catch (const std::exception&) {}
-      }
-      if (nbNonHW > 0) {
-         logger_->error("[{}] {} non-HW wallet[s] in sign request", __func__, nbNonHW);
-         return;
-      }
+   auto txSignReq = txReq->txReq();
+   logger_->debug("[{}] HW sign: {}", __func__, txReq->isHWW());
+   if (txReq->isHWW()) {
       HW::DeviceMgrMessage msg;
       *msg.mutable_sign_tx() = bs::signer::coreTxRequestToPb(txSignReq);
       pushRequest(user_, userHWW_, msg.SerializeAsString());

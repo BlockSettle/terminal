@@ -72,7 +72,7 @@ ColumnLayout  {
             Text {
                 text: label
                 font.pointSize: 12
-                color: heading ? 'darkgrey' : 'lightgrey'
+                color: 'lightgrey'
                 anchors.centerIn: parent
             }
             MouseArea {
@@ -98,7 +98,7 @@ ColumnLayout  {
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         width: 530
-        enabled: layout.isConnected && (hwDeviceModel.selDevice >= 0)
+        enabled: /*layout.isConnected &&*/ (hwDeviceModel.selDevice >= 0)
 
         Component.onCompleted: {
             confirm_but.preferred = true

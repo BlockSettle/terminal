@@ -69,6 +69,13 @@ bool DeviceManager::processBroadcast(const bs::message::Envelope& env)
          }
       }
    }
+   switch (env.sender->value<bs::message::TerminalUsers>()) {
+   case bs::message::TerminalUsers::Wallets:
+      return (processWallet(env) != bs::message::ProcessingResult::Ignored);
+   case bs::message::TerminalUsers::Signer:
+      return (processSigner(env) != bs::message::ProcessingResult::Ignored);
+   default: break;
+   }
    return false;
 }
 
@@ -129,6 +136,7 @@ void DeviceManager::start()
 bs::message::ProcessingResult DeviceManager::processPrepareDeviceForSign(const bs::message::Envelope& env
    , const std::string& walletId)
 {
+   logger_->debug("[{}] {}", __func__, walletId);
    WalletsMessage msg;
    msg.set_hd_wallet_get(walletId);
    const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
@@ -222,12 +230,27 @@ bs::message::ProcessingResult DeviceManager::processSigner(const bs::message::En
 bs::message::ProcessingResult DeviceManager::processImport(const bs::message::Envelope& env
    , const HW::DeviceKey& key)
 {
-   const DeviceKey devKey{ fromMsg(key) };
+   DeviceKey devKey{ fromMsg(key) };
+   if (devKey.type == DeviceType::Unknown) {
+      devKey.type = DeviceType::HWTrezor;
+   }
    const auto& device = getDevice(devKey);
    if (!device) {
-      logger_->error("[hww::DeviceManager::processImport] no device found for id {}"
+      devKey.id = "C23C03585A8E444C242A70C4";
+      devKey.label = "BlockSettleTest";
+      devKey.vendor = "trezor.io";
+      devKey.walletId = "2xSX1rAcN";
+      bs::core::HwWalletInfo wltInfo{ bs::wallet::HardwareEncKey::WalletType::Trezor
+         , devKey.vendor, devKey.label, devKey.id };
+      wltInfo.xpubRoot = "tpubD8JgFtY4RtgMN1ba5HLyJnkZizAggcspF6A4cqykeBEdf7z922uS9JdMK3CXwTNorLM3Rq19r4qYY3MCD38BRdSwipAjQ2G9uK2iUwXbn8Q";
+      wltInfo.xpubNativeSegwit = "tpubDDSj2fiYBbr6pNzRfPddHhaQN96cfqhJxNLtixXLP1arWRGZspMSX9yoqSXzvCdG9F9giaXzkj4VMCam2FZsWYYX9Yy5RFVGUrzPGS5xKkA";
+      wltInfo.xpubNestedSegwit = "tpubDDjriaSUoYgTyky2bypKVFkktRDUufKkJUgEsCgHyTo8NpfdMyAW2w3ByHNY4Dgrmq6z45rSuPikrmBLhaM5sXxS1cHnHNzuTQyZxE2AbFq";
+      wltInfo.xpubLegacy = "tpubDCdDNLh6H5vqcSAAXKh5MSPLp8Jvt6eoxwFrNRBf8erJ46DPmcZB2FgDPbWcAq5WiLPE9qw5DWBWRWAikSpiZ25YNumeu2sew9FMzFNxLoD";
+      walletInfoReady(devKey, wltInfo);
+      return bs::message::ProcessingResult::Success;
+      /*logger_->error("[hww::DeviceManager::processImport] no device found for id {}"
          , devKey.id);
-      return bs::message::ProcessingResult::Error;
+      return bs::message::ProcessingResult::Error;*/  //TODO: uncomment after debugging is done
    }
    device->getPublicKeys();
    return bs::message::ProcessingResult::Success;
@@ -236,6 +259,7 @@ bs::message::ProcessingResult DeviceManager::processImport(const bs::message::En
 bs::message::ProcessingResult bs::hww::DeviceManager::processSignTX(const bs::message::Envelope& env
    , const Blocksettle::Communication::headless::SignTxRequest& request)
 {
+   logger_->debug("[{}] {}", __func__, request.DebugString());
    HW::DeviceMgrMessage msg;
    auto msgResp = msg.mutable_signed_tx();
    if (envReqSign_.sender || txSignReq_.isValid()) {
@@ -262,13 +286,11 @@ bs::message::ProcessingResult bs::hww::DeviceManager::processSignTX(const bs::me
       }
    }
    if (foundDevice.id.empty()) {
-      logger_->info("[{}] device for {} not found - obtaining the list", __func__
-         , txSignReq.walletIds.at(0));
-      scanDevices({});
+      logger_->info("[{}] device for {} is not ready", __func__, txSignReq.walletIds.at(0));
+      operationFailed({}, "not ready for TX signing");
+      return bs::message::ProcessingResult::Error;
    }
-   else {
-      signTxWithDevice(foundDevice);
-   }
+   signTxWithDevice(foundDevice);
    return bs::message::ProcessingResult::Success;
 }
 
@@ -340,10 +362,30 @@ bs::message::ProcessingResult DeviceManager::prepareDeviceForSign(bs::message::S
    if (!hdWallet.is_hardware() || !hdWallet.encryption_keys_size()) {
       logger_->error("[{}] wallet {} is not suitable", __func__, hdWallet.wallet_id());
       return bs::message::ProcessingResult::Error;
+   }
 
+   bool isDeviceReady = false;
+   DeviceKey deviceKey{};
+   for (const auto& device : devices_) {
+      if (device.walletId == hdWallet.wallet_id()) {
+         isDeviceReady = true;
+         deviceKey = device;
+         break;
+      }
+   }
+   const auto& walletReady = [this](const std::string& walletId)
+   {
+      HW::DeviceMgrMessage msg;
+      msg.set_device_ready(walletId);
+      pushBroadcast(user_, msg.SerializeAsString());
+   };
+   if (isDeviceReady) {
+      logger_->debug("[{}] device {}/{} was ready", __func__, deviceKey.id, deviceKey.walletId);
+      walletReady(deviceKey.walletId);
+      return bs::message::ProcessingResult::Success;
    }
    bs::wallet::HardwareEncKey hwEncType(BinaryData::fromString(hdWallet.encryption_keys(0)));
-
+   logger_->debug("[{}] [re]scanning devices of type {}", __func__, (int)hwEncType.deviceType());
    if (bs::wallet::HardwareEncKey::WalletType::Ledger == hwEncType.deviceType()) {
       ledgerClient_->scanDevices();
       const auto& devices = ledgerClient_->deviceKeys();
@@ -354,7 +396,6 @@ bs::message::ProcessingResult DeviceManager::prepareDeviceForSign(bs::message::S
       }
 
       bool found = false;
-      DeviceKey deviceKey;
       for (const auto& key : devices) {
          if (key.walletId == hdWallet.wallet_id()) {
             deviceKey = key;
@@ -370,31 +411,13 @@ bs::message::ProcessingResult DeviceManager::prepareDeviceForSign(bs::message::S
       }  
       else {
          deviceReady(kDeviceLedgerId);
+         walletReady(deviceKey.walletId);
       }
    }
    else if (bs::wallet::HardwareEncKey::WalletType::Trezor == hwEncType.deviceType()) {
-      auto deviceId = hwEncType.deviceId();
-      const bool cleanPrevSession = (lastUsedTrezorWallet_ != hdWallet.wallet_id());
-      {
-         DeviceKey deviceKey;
-         bool found = false;
-         for (auto key : trezorClient_->deviceKeys()) {
-            if (key.id == deviceId) {
-               found = true;
-               deviceKey = key;
-               break;
-            }
-         }
-
-         if (!found) {
-            deviceNotFound(deviceId);
-         }
-         else {
-            deviceReady(deviceId);
-         }
-      }
-      lastUsedTrezorWallet_ = hdWallet.wallet_id();
+      trezorClient_->listDevices();
    }
+   return bs::message::ProcessingResult::Success;
 }
 
 void DeviceManager::signTX(const DeviceKey& key, const bs::core::wallet::TXSignRequest& signReq)
@@ -486,18 +509,29 @@ std::shared_ptr<DeviceInterface> DeviceManager::getDevice(const DeviceKey& key) 
    return nullptr;
 }
 
-void DeviceManager::publicKeyReady(const std::string& devId, const std::string& walletId)
+void DeviceManager::publicKeyReady(const DeviceKey& devKey)
 {
-   logger_->debug("[{}] walletId = {} for {}", __func__, walletId, devId);
+   logger_->debug("[{}] walletId = {} for {}", __func__, devKey.walletId, devKey.id);
+   {
+      HW::DeviceMgrMessage msg;
+      msg.set_device_ready(devKey.walletId);
+      pushBroadcast(user_, msg.SerializeAsString());
+   }
    size_t nbCompleted = 0;
-   for (int i = 0; i < devices_.size(); ++i) {
-      if (devices_[i].id == devId) {
-         devices_[i].walletId = walletId;
+   bool foundDevice = false;
+   for (auto& device : devices_) {
+      if (device.id == devKey.id) {
+         device.walletId = devKey.walletId;
+         nbCompleted++;
+         foundDevice = true;
+      }
+      else if (!device.walletId.empty()) {
          nbCompleted++;
       }
-      else if (!devices_.at(i).walletId.empty()) {
-         nbCompleted++;
-      }
+   }
+   if (!foundDevice) {
+      devices_.push_back(devKey);
+      nbCompleted++;
    }
    if (nbCompleted >= devices_.size()) {
       logger_->debug("[{}] all public keys retrieved", __func__);
@@ -593,7 +627,7 @@ void DeviceManager::scanningDone()
       logger_->error("[DeviceManager::scanningDone] more scanning done events than expected");
       return;
    }
-   if (--nbScanning_ == 0) {
+   if (--nbScanning_ <= 0) {
       logger_->debug("[DeviceManager::scanningDone] all devices scanned");
       scanningDone(true);
    }
@@ -629,13 +663,12 @@ namespace bs {
          msgKey->set_id(key.id);
          msgKey->set_vendor(key.vendor);
          msgKey->set_wallet_id(key.walletId);
-         msgKey->set_status(key.status);
          msgKey->set_type((int)key.type);
       }
       bs::hww::DeviceKey fromMsg(const BlockSettle::HW::DeviceKey& msg)
       {
          return { msg.label(), msg.id(), msg.vendor(), msg.wallet_id()
-            , msg.status(), static_cast<bs::hww::DeviceType>(msg.type()) };
+            , static_cast<bs::hww::DeviceType>(msg.type()) };
       }
 
       Path getDerivationPath(bool testNet, Purpose element)

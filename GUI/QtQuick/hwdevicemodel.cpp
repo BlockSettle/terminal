@@ -9,9 +9,11 @@
 
 */
 #include "hwdevicemodel.h"
+#include <spdlog/spdlog.h>
 
-HwDeviceModel::HwDeviceModel(QObject *parent /*= nullptr*/)
-   : QAbstractItemModel(parent)
+HwDeviceModel::HwDeviceModel(const std::shared_ptr<spdlog::logger>& logger
+   , QObject *parent /*= nullptr*/)
+   : QAbstractItemModel(parent), logger_(logger)
 {}
 
 QVariant HwDeviceModel::data(const QModelIndex& index, int role /*= Qt::DisplayRole*/) const
@@ -36,7 +38,7 @@ QVariant HwDeviceModel::data(const QModelIndex& index, int role /*= Qt::DisplayR
    case HwDeviceRoles::PairedWallet:
          return QString::fromStdString(devices_.at(row).walletId);
    case HwDeviceRoles::Status:
-      return QString::fromStdString(devices_.at(row).status);
+      //return QString::fromStdString(devices_.at(row).status);
    default:
       break;
    }
@@ -101,9 +103,11 @@ int HwDeviceModel::getDeviceIndex(bs::hww::DeviceKey key)
 
 void HwDeviceModel::setLoaded(const std::string& walletId)
 {
+   logger_->debug("[{}] {}", __func__, walletId);
    for (int i = 0; i < devices_.size(); ++i) {
       const auto& device = devices_.at(i);
       if (device.walletId == walletId) {
+         logger_->debug("[{}] index={}", __func__, i);
          loaded_[i] = true;
       }
    }
@@ -112,8 +116,13 @@ void HwDeviceModel::setLoaded(const std::string& walletId)
 
 int HwDeviceModel::selDevice() const
 {
-   for (int i = 0; i < loaded_.size(); ++i) {
+   logger_->debug("[{}] {} devices, {} loaded", __func__, devices_.size(), loaded_.size());
+   if (loaded_.empty() && !devices_.empty()) {
+      return 0;
+   }
+   for (int i = 0; i < devices_.size(); ++i) {
       if (!loaded_.at(i)) {
+         logger_->debug("[{}] selected {}", __func__, i);
          return i;
       }
    }

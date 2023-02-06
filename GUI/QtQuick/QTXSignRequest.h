@@ -35,6 +35,19 @@ public:
    void setTxSignReq(const bs::core::wallet::TXSignRequest&);
    void setError(const QString&);
 
+   void setHWW(bool hww)
+   {
+      if (isHWW_ != hww) {
+         isHWW_ = hww;
+         emit hwwChanged();
+      }
+   }
+   void setHWWready()
+   {
+      isHWWready_ = true;
+      emit hwwReady();
+   }
+
    Q_PROPERTY(QStringList outputAddresses READ outputAddresses NOTIFY txSignReqChanged)
    QStringList outputAddresses() const;
    Q_PROPERTY(QString outputAmount READ outputAmount NOTIFY txSignReqChanged)
@@ -54,14 +67,22 @@ public:
    Q_PROPERTY(bool isValid READ isValid NOTIFY txSignReqChanged)
    bool isValid() const { return (error_.isEmpty() && txReq_.isValid()); }
    Q_PROPERTY(QString maxAmount READ outputAmount NOTIFY txSignReqChanged)
+   Q_PROPERTY(bool isHWW READ isHWW NOTIFY hwwChanged)
+   bool isHWW() const { return isHWW_; }
+   Q_PROPERTY(bool isHWWready READ isHWWready NOTIFY hwwReady)
+   bool isHWWready() const { return isHWWready_; }
 
 signals:
    void txSignReqChanged();
+   void hwwChanged();
+   void hwwReady();
    void error();
 
 private:
    bs::core::wallet::TXSignRequest txReq_{};
    QString  error_;
+   bool  isHWW_{ false };
+   bool  isHWWready_{ false };
 };
 
 #endif	// Q_TX_SIGN_REQUEST_H

@@ -15,6 +15,10 @@
 #include "hwdeviceinterface.h"
 #include "hwcommonstructure.h"
 
+namespace spdlog {
+   class logger;
+}
+
 enum HwDeviceRoles {
    DeviceId = Qt::UserRole + 1,
    Label,
@@ -31,7 +35,7 @@ class HwDeviceModel : public QAbstractItemModel
    bool empty() const { return devices_.empty(); }
 
 public:
-   HwDeviceModel(QObject *parent = nullptr);
+   HwDeviceModel(const std::shared_ptr<spdlog::logger>&, QObject *parent = nullptr);
    ~HwDeviceModel() override = default;
 
    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
@@ -56,6 +60,7 @@ private:
    int selDevice() const;
 
 private:
+   std::shared_ptr<spdlog::logger>  logger_;
    std::vector<bs::hww::DeviceKey>  devices_;
    std::vector<bool>                loaded_;
 };

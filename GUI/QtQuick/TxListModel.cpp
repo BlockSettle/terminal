@@ -558,9 +558,11 @@ QHash<int, QByteArray> TxListForAddr::roleNames() const
 
 void TxListForAddr::addRows(const std::vector<bs::TXEntry>& entries)
 {
-   beginInsertRows(QModelIndex(), rowCount(), rowCount() + entries.size() - 1);
-   data_.insert(data_.end(), entries.cbegin(), entries.cend());
-   endInsertRows();
+   if (!entries.empty()) {
+      beginInsertRows(QModelIndex(), rowCount(), rowCount() + entries.size() - 1);
+      data_.insert(data_.end(), entries.cbegin(), entries.cend());
+      endInsertRows();
+   }
    emit changed();
 }
 
@@ -655,6 +657,9 @@ QString TxListForAddr::balance() const
 void QTxDetails::setDetails(const bs::sync::TXWalletDetails& details)
 {
    details_ = details;
+   if (details.changeAddress.address.isValid()) {
+      details_.outputAddresses.push_back(details.changeAddress);
+   }
    QMetaObject::invokeMethod(this, [this] {
       inputsModel_ = new TxInOutModel(details_.inputAddresses, this);
       outputsModel_ = new TxInOutModel(details_.outputAddresses, this);
