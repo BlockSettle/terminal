@@ -139,6 +139,7 @@ Item {
                             }
                             else if (rc === 1) {    // address entered
                                 explorerAddress.address = expSearchBox.text
+                                bsApp.startAddressSearch(explorerAddress.address)
                                 explorerStack.replace(explorerAddress)
                             }
                             else if (rc === 2) {    // TXid entered

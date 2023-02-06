@@ -32,12 +32,6 @@ Item {
         anchors.bottomMargin: 18
         anchors.fill: parent
 
-        onVisibleChanged: {
-            if (visible) {
-                bsApp.startSearch(address)
-            }
-        }
-
         Row {
             spacing: 16
 

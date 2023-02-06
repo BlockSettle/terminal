@@ -1690,15 +1690,10 @@ int QtQuickAdapter::getSearchInputType(const QString& s)
    return 0;
 }
 
-void QtQuickAdapter::startSearch(const QString& s)
+void QtQuickAdapter::startAddressSearch(const QString& s)
 {
-   try {
-      if (validateAddress(s)) {
-         expTxByAddrModel_->clear();
-         ArmoryMessage msg;
-         msg.set_get_address_history(s.trimmed().toStdString());
-         pushRequest(user_, userBlockchain_, msg.SerializeAsString());
-      }
-   }
-   catch (const std::exception&) {}
+      expTxByAddrModel_->clear();
+      ArmoryMessage msg;
+      msg.set_get_address_history(s.trimmed().toStdString());
+      pushRequest(user_, userBlockchain_, msg.SerializeAsString());
 }

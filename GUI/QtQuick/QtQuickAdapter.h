@@ -175,7 +175,7 @@ public:
    Q_INVOKABLE void getUTXOsForWallet(int walletIndex);
    Q_INVOKABLE void signAndBroadcast(QTXSignRequest*, const QString& password);
    Q_INVOKABLE int getSearchInputType(const QString&);
-   Q_INVOKABLE void startSearch(const QString&);
+   Q_INVOKABLE void startAddressSearch(const QString&);
    Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash);
 
 signals:
