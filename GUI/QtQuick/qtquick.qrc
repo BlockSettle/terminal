@@ -115,7 +115,6 @@
         <file>qml/Pin/qmldir</file>
         <file>qml/StyledControls/CustomMessageDialog.qml</file>
         <file>qml/StyledControls/CustomMediumButton.qml</file>
-        <file>qml/Overview/AddressesTableView.qml</file>
         <file>qml/Overview/BalanceBar.qml</file>
         <file>qml/Overview/BaseBalanceLabel.qml</file>
         <file>qml/Overview/OverviewPanel.qml</file>
@@ -140,12 +139,17 @@
         <file>qml/StyledControls/CustomListRadioButton.qml</file>
         <file>qml/Settings/SettingsGeneral.qml</file>
         <file>images/combobox_open_button.svg</file>
-        <file>qml/Transactions/TransactionsTableView.qml</file>
+        <file>qml/StyledControls/CustomTableView.qml</file>
         <file>qml/StyledControls/CustomSmallButton.qml</file>
         <file>qml/StyledControls/CustomButtonRightIcon.qml</file>
         <file>qml/StyledControls/CustomButtonLeftIcon.qml</file>
         <file>images/calendar_icon.svg</file>
         <file>images/download_icon.svg</file>
         <file>images/search_icon.svg</file>
+        <file>images/logo_no_text.svg</file>
+        <file>qml/StyledControls/CopyIconButton.qml</file>
+        <file>qml/StyledControls/InputOutputTableView.qml</file>
+        <file>images/down_arrow.svg</file>
+        <file>images/up_arrow.svg</file>
     </qresource>
 </RCC>

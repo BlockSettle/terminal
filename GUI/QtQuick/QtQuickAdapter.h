@@ -174,7 +174,8 @@ public:
       , double amount, double fee, const QString& comment = {}, QUTXOList* utxos = nullptr);
    Q_INVOKABLE void getUTXOsForWallet(int walletIndex);
    Q_INVOKABLE void signAndBroadcast(QTXSignRequest*, const QString& password);
-   Q_INVOKABLE int startSearch(const QString&);
+   Q_INVOKABLE int getSearchInputType(const QString&);
+   Q_INVOKABLE void startAddressSearch(const QString&);
    Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash);
 
 signals:

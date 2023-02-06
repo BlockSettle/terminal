@@ -37,9 +37,9 @@ Button {
     contentItem: Text {
         text: control.text
         font: control.font
+        anchors.fill: parent
         color: BSStyle.titleTextColor
         verticalAlignment: Text.AlignVCenter
-
-        leftPadding: 4
+        horizontalAlignment: Text.AlignHCenter
     }
 }

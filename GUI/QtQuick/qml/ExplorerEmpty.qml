@@ -13,33 +13,27 @@ import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.12
 import QtQml.Models 2
 
-import "StyledControls"
 import "BsStyles"
-//import "BsControls"
-//import "BsDialogs"
-//import "js/helper.js" as JsHelper
 
 Item {
+    anchors.fill: parent
+    anchors.topMargin: 226
+
     Column {
-        spacing: 32
-        anchors.fill: parent
+        spacing: 24
+        anchors.horizontalCenter: parent.horizontalCenter
 
-        Label {
-            text: " "
-            font.pointSize: 50
-            height: 50
-        }
         Image {
-            width: 150
-            height: 150
-            source: "qrc:/images/logo.png"
-            Layout.topMargin: 150
-            //Layout.horizontalCenter: parent
+            width: 57
+            height: 72
+            source: "qrc:/images/logo_no_text.svg"
+            anchors.horizontalCenter: parent.horizontalCenter
         }
         Label {
-            text: qsTr("<font color=\"darkgrey\">Provides you with a convenient, powerful, yet simple tool to read<BR> transaction and address data from the bitcoin network</font>")
-            font.pointSize: 12
+            text: qsTr("Provides you with a convenient, powerful, yet simple tool to read\n transaction and address data from the bitcoin network")
+            font.pixelSize: 16
+            color: BSStyle.titleTextColor
+            horizontalAlignment: Text.AlignHCenter
         }
-
     }
 }

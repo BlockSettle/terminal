@@ -16,7 +16,6 @@ import QtQuick.Dialogs 1.3
 
 import "StyledControls"
 import "BsStyles"
-import "Transactions" as Transactions
 //import "BsControls"
 //import "BsDialogs"
 //import "js/helper.js" as JsHelper
@@ -48,6 +47,7 @@ Item {
         anchors.margins: 18
 
         Row {
+            id: transaction_header_menu
             width: parent.width
             height: 45
             spacing: 15
@@ -136,11 +136,13 @@ Item {
             }
         }
 
-        Transactions.TransactionsTableView {
+        CustomTableView {
             width: parent.width
-            height: 600
+            height: parent.height - transaction_header_menu.height
             model: txListModel
 
+            copy_button_column_index: 3
+            columnWidths: [0.12, 0.1, 0.08, 0.3, 0.1, 0.1, 0.1, 0.1]    
             onCopyRequested: bsApp.copyAddressToClipboard(id)
         }
     }

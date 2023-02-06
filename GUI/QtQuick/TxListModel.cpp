@@ -13,6 +13,7 @@
 #include <QDateTime>
 #include <spdlog/spdlog.h>
 #include "StringUtils.h"
+#include "ColorScheme.h"
 
 namespace {
    static const QHash<int, QByteArray> kTxListRoles{
@@ -35,6 +36,8 @@ namespace {
       {TxInOutModel::WidthRole, "colWidth"},
       {TxInOutModel::AddressRole, "address"},
    };
+
+   static const QString dateTimeFormat = QString::fromStdString("yyyy-MM-dd hh:mm:ss");
 }
 
 TxListModel::TxListModel(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
@@ -63,7 +66,7 @@ QString TxListModel::getData(int row, int col) const
    }
    const auto& entry = data_.at(row - 1);
    switch (col) {
-   case 0:  return QDateTime::fromSecsSinceEpoch(entry.txTime).toString();
+   case 0:  return QDateTime::fromSecsSinceEpoch(entry.txTime).toString(dateTimeFormat);
    case 1:  return walletName(row - 1);
    case 2:  return txType(row - 1);
    case 3: {
@@ -91,7 +94,7 @@ QString TxListModel::getData(int row, int col) const
 QColor TxListModel::dataColor(int row, int col) const
 {
    if (row == 0) {
-      return QColorConstants::DarkGray;
+      return ColorScheme::tableHeaderColor;
    }
    const auto& entry = data_.at(row - 1);
    if (col == 5) {
@@ -115,18 +118,14 @@ QColor TxListModel::dataColor(int row, int col) const
          default: break;
          }
       }
-      return QColorConstants::DarkGray;
+      return QColorConstants::White;
    }
    else if (col == 4) {
       if (entry.value < 0) {
          return qRgb(208, 192, 192);
       }
-      return qRgb(192, 208, 192);
    }
-   else if (col == 6) {
-      return QColorConstants::DarkGray;
-   }
-   return QColorConstants::LightGray;
+   return QColorConstants::White;
 }
 
 float TxListModel::colWidth(int col) const
@@ -422,7 +421,7 @@ QString TxListForAddr::getData(int row, int col) const
    const auto& entry = data_.at(row - 1);
    const auto totFees = totalFees(row - 1);
    switch (col) {
-   case 0:  return QDateTime::fromSecsSinceEpoch(entry.txTime).toString();
+   case 0:  return QDateTime::fromSecsSinceEpoch(entry.txTime).toString(dateTimeFormat);
    case 1:  return txId(row - 1);
    case 2:  return QString::number(entry.nbConf);
    case 3:  return displayNb(nbInputs(row - 1));
@@ -490,7 +489,7 @@ int64_t TxListForAddr::totalFees(int row) const
 QColor TxListForAddr::dataColor(int row, int col) const
 {
    if (row == 0) {
-      return QColorConstants::DarkGray;
+      return ColorScheme::tableHeaderColor;
    }
    const auto& entry = data_.at(row - 1);
    if (col == 2) {
@@ -504,7 +503,7 @@ QColor TxListForAddr::dataColor(int row, int col) const
       default: return QColorConstants::Green;
       }
    }
-   return QColorConstants::LightGray;
+   return QColorConstants::White;
 }
 
 float TxListForAddr::colWidth(int col) const
@@ -742,12 +741,12 @@ QString QTxDetails::feePerByte() const
 
 TxInOutModel::TxInOutModel(const std::vector<bs::sync::AddressDetails>& data, QObject* parent)
    : QAbstractTableModel(parent), data_(data)
-   , header_{ {}, tr("Address"), tr("Amount"), tr("Wallet") }
+   , header_{ tr("Address"), tr("Amount"), tr("Wallet") }
 {}
 
 int TxInOutModel::rowCount(const QModelIndex&) const
 {
-   return data_.size() * 2 + 1;
+   return data_.size() + 1;
 }
 
 int TxInOutModel::columnCount(const QModelIndex&) const
@@ -771,7 +770,7 @@ QVariant TxInOutModel::data(const QModelIndex& index, int role) const
       return colWidth(index.column());
    case AddressRole:
       try {
-         return QString::fromStdString(data_.at((index.row() - 1) / 2).address.display());
+         return QString::fromStdString(data_.at(index.row() - 1).address.display());
       }
       catch (const std::exception&) { return {}; }
    default: break;
@@ -786,7 +785,7 @@ QHash<int, QByteArray> TxInOutModel::roleNames() const
 
 QString TxInOutModel::getData(int row, int col) const
 {
-   if (row > (data_.size() * 2)) {
+   if (row > data_.size()) {
       return {};
    }
    if (row == 0) {
@@ -795,29 +794,11 @@ QString TxInOutModel::getData(int row, int col) const
    try {
       switch (col) {
       case 0:
-         if ((row % 2) == 1) {
-            return tr("Ad.:");
-         }
-         else {
-            return tr("Tx.:");
-         }
+         return QString::fromStdString(data_.at(row - 1).outHash.toHexStr(true));
       case 1:
-         if ((row % 2) == 1) {
-            return QString::fromStdString(data_.at((row - 1) / 2).address.display());
-         }
-         else {
-            return QString::fromStdString(data_.at((row - 1) / 2).outHash.toHexStr(true));
-         }
+         return QString::fromStdString(data_.at(row - 1).valueStr);
       case 2:
-         if ((row % 2) == 1) {
-            return QString::fromStdString(data_.at((row - 1) / 2).valueStr);
-         }
-         break;
-      case 3:
-         if ((row % 2) == 1) {
-            return QString::fromStdString(data_.at((row - 1) / 2).walletName);
-         }
-         break;
+         return QString::fromStdString(data_.at(row - 1).walletName);
       default: break;
       }
    }
@@ -830,9 +811,9 @@ QString TxInOutModel::getData(int row, int col) const
 QColor TxInOutModel::dataColor(int row, int col) const
 {
    if ((row == 0) || (col == 0)) {
-      return QColorConstants::DarkGray;
+      return ColorScheme::tableHeaderColor;
    }
-   return QColorConstants::LightGray;
+   return QColorConstants::White;
 }
 
 float TxInOutModel::colWidth(int col) const

@@ -20,8 +20,10 @@ import "BsStyles"
 //import "js/helper.js" as JsHelper
 
 Item {
-    property var searchStack: []
+    
+    property int historyIndex: -1
     property var searchHist: []
+    
     id: explorer
 
     ExplorerEmpty {
@@ -31,98 +33,188 @@ Item {
     ExplorerAddress {
         id: explorerAddress
         visible: false
+        onRequestPageChange: (text) => { expSearchBox.requestSearchText(text) }
     }
     ExplorerTX {
         id: explorerTX
         visible: false
+        onRequestPageChange: (text) => { expSearchBox.requestSearchText(text) }
     }
 //    ExplorerLoader {
 //        id: explorerTX
 //    }
 
     Column {
-        spacing: 32
         anchors.fill: parent
+        spacing: 0
 
-        Row {
-            id: textInput
-            TextInput {
-                id: expSearchBox
-                width: 900
-                height: 32
-                color: 'lightgrey'
-                font.pointSize: 14
+        Rectangle {
+            id: explorer_menu_row
+            height: 100
+            width: parent.width
 
-                function textEntered() {
-                    var rc = bsApp.startSearch(expSearchBox.text)
-                    searchStack.push(expSearchBox.text)
-                    if (rc === 0) {
-                        ibFailure.displayMessage(qsTr("Unknown type of search key"))
+            color: "transparent"
+
+            Rectangle {
+                anchors.bottomMargin: 24
+                anchors.topMargin: 24
+                anchors.leftMargin: 18
+                anchors.rightMargin: 18
+                anchors.fill: parent
+                anchors.centerIn: parent
+
+                radius: 14
+                color: "#020817"
+
+                border.width: 1
+                border.color: BSStyle.comboBoxBorderColor
+
+                Row {
+                    spacing: 20
+                    anchors.fill: parent
+                    anchors.leftMargin: 18
+
+                    Image {
+                        id: search_icon
+                        width: 24
+                        height: 24
+                        source: "qrc:/images/search_icon.svg"
+                        anchors.verticalCenter: parent.verticalCenter
                     }
-                    else if (rc === 1) {    // address entered
-                        explorerAddress.address = expSearchBox.text
-                        explorerStack.push(explorerAddress)
-                    }
-                    else if (rc === 2) {    // TXid entered
-                        explorerTX.tx = bsApp.getTXDetails(expSearchBox.text)
-                        explorerStack.push(explorerTX)
+
+                    TextInput {
+                        id: expSearchBox
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 900
+                        clip: true
+                        color: 'lightgrey'
+                        font.pixelSize: 16
+
+                        function resetSearch() {
+                            searchHist = []
+                            historyIndex = -1
+                            expSearchBox.clear()
+                            explorerStack.replace(explorerEmpty)
+                        }
+
+                        function prev() {
+                            if (historyIndex >= 0) {
+                                historyIndex--;
+                                if (historyIndex >= 0) {
+                                    expSearchBox.text = searchHist[historyIndex]
+                                    openSearchResult()
+                                }
+                                else {
+                                    expSearchBox.clear()
+                                    explorerStack.replace(explorerEmpty)
+                                }
+                            }
+                        }
+
+                        function next() {
+                            if (historyIndex < (searchHist.length - 1)) {
+                                historyIndex++;
+                                expSearchBox.text = searchHist[historyIndex]
+                                openSearchResult()
+                            }
+                        }
+
+                        function requestSearch() {
+                            if (historyIndex >= 0)
+                                searchHist = searchHist.slice(0, historyIndex + 1)
+                            searchHist.push(expSearchBox.text)
+                            historyIndex++;
+                            openSearchResult()
+                        }
+
+                        function requestSearchText(newText) {
+                            expSearchBox.text = newText
+                            requestSearch()
+                        }
+
+                        function openSearchResult() {
+                            var rc = bsApp.getSearchInputType(expSearchBox.text)
+                            if (rc === 0) {
+                                ibFailure.displayMessage(qsTr("Unknown type of search key"))
+                            }
+                            else if (rc === 1) {    // address entered
+                                explorerAddress.address = expSearchBox.text
+                                bsApp.startAddressSearch(explorerAddress.address)
+                                explorerStack.replace(explorerAddress)
+                            }
+                            else if (rc === 2) {    // TXid entered
+                                explorerTX.tx = bsApp.getTXDetails(expSearchBox.text)
+                                explorerStack.replace(explorerTX)
+                            }
+                        }
+
+                        onAccepted: requestSearch()
+
+                        Text {
+                            text: qsTr("Search for transaction or address")
+                            font.pixelSize: 16
+                            color: BSStyle.titleTextColor
+                            anchors.fill: parent
+                            visible: !expSearchBox.text && !expSearchBox.activeFocus
+                            verticalAlignment: Text.AlignVCenter
+                        }
                     }
                 }
 
-                onAccepted: textEntered()
+                Row {
+                    id: right_buttons_menu
+                    spacing: 8
+                    anchors.rightMargin: 11
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    
+                    Image {
+                        width: 24
+                        height: 24
+                        source: "qrc:/images/paste_icon.png"
+                        anchors.verticalCenter: parent.verticalCenter
 
-                Text {
-                    text: qsTr("Search for transaction or address")
-                    color: 'darkgrey'
-                    visible: !expSearchBox.text && !expSearchBox.activeFocus
-                }
-            }
-            Button {
-                text: qsTr("<")
-                font.pointSize: 14
-                width: 50
-                enabled: (explorerStack.depth > 1)
-                onClicked: {
-                    explorerStack.pop()
-                    searchHist.push(searchStack[searchStack.length - 1])
-                    searchStack.pop
-                    if (searchStack.length > 0) {
-                        expSearchBox.text = searchStack[searchStack.length - 1]
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                expSearchBox.clear()
+                                expSearchBox.paste()
+                                expSearchBox.requestSearch()
+                            }
+                        }
+                    } 
+
+                    CustomSmallButton {
+                        text: qsTr("<")
+                        width: 29
+                        height: 29
+                        enabled: historyIndex >= 0
+                        onClicked: expSearchBox.prev()
                     }
-                    expSearchBox.text = ""
-                }
-            }
-            Button {
-                text: qsTr(">")
-                font.pointSize: 14
-                width: 50
-                enabled: true   //(searchHist.length > 0)
-                onClicked: {
-                    expSearchBox.text = searchHist[searchHist.length - 1]
-                    expSearchBox.textEntered()
-                    searchHist.pop
+
+                    CustomSmallButton {
+                        text: qsTr(">")
+                        width: 29
+                        height: 29
+                        enabled: historyIndex < (searchHist.length - 1)
+                        onClicked: expSearchBox.next()
+                    }
+
+                    CustomSmallButton {
+                        text: qsTr("Reset")
+                        width: 68
+                        height: 29
+                        onClicked: expSearchBox.resetSearch()
+                    }
                 }
             }
         }
 
-        Item {
-            Rectangle {
-                anchors.top: parent.top + 100
-                anchors.bottom: parent.bottom
-                anchors.left: parent.left
-                anchors.right: parent.right
-                //clip: true
-                StackView {
-                    id: explorerStack
-                    anchors.fill: parent
-                    initialItem: explorerEmpty
-                    //anchors.top: parent.top + 100
-                    //anchors.bottom: parent.bottom
-                    //anchors.left: parent.left
-                    //anchors.right: parent.right
-                    //clip: true
-                }
-            }
+        StackView {
+            id: explorerStack
+            width: parent.width
+            height: parent.height - explorer_menu_row.height
+            initialItem: explorerEmpty
         }
     }
 }

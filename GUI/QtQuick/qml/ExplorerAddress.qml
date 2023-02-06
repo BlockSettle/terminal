@@ -15,6 +15,7 @@ import QtQml.Models 2
 
 import "StyledControls"
 import "BsStyles"
+import "Overview"
 //import "BsControls"
 //import "BsDialogs"
 //import "js/helper.js" as JsHelper
@@ -22,113 +23,128 @@ import "BsStyles"
 Item {
     property var address
 
+    signal requestPageChange(var text)
+
     Column {
         spacing: 23
+        anchors.leftMargin: 18
+        anchors.rightMargin: 18
+        anchors.bottomMargin: 18
         anchors.fill: parent
 
-        Label {
-            text: " "
-            font.pointSize: 50
-            height: 50
-        }
         Row {
             spacing: 16
+
             Label {
-                text: qsTr("<font color=\"white\">Address</font>")
-                font.pointSize: 14
+                text: qsTr("Address")
+                color: BSStyle.textColor
+                font.pixelSize: 20
+                font.weight: Font.Bold
+                anchors.bottom: parent.bottom
             }
             Label {
+                id: address_label
                 text: address
-                color: 'lightgrey'
-                font.pointSize: 12
+                color: BSStyle.textColor
+                font.pixelSize: 14
+                anchors.bottom: parent.bottom
             }
-            Button {
-                text: qsTr("Copy")
-                font.pointSize: 12
-                onClicked: {
-                    bsApp.copyAddressToClipboard(address)
-                }
+            
+            CopyIconButton {
+                anchors.left: address.right
+                onCopy: bsApp.copyAddressToClipboard(address)
             }
-        }
-        Row {
-            spacing: 12
-            Column {
-                Label {
-                    text: qsTr("<font color=\"gray\">Transactions count</font>")
-                    font.pointSize: 8
-                }
-                Label {
-                    text: qsTr("<font color=\"white\">%1</font>").arg(txListByAddrModel.nbTx)
-                    font.pointSize: 12
-                }
-            }
-            Column {
-                Label {
-                    text: qsTr("<font color=\"gray\">Balance (BTC)</font>")
-                    font.pointSize: 8
-                }
-                Label {
-                    text: qsTr("<font color=\"white\">%1</font>").arg(txListByAddrModel.balance)
-                    font.pointSize: 12
-                }
-            }
-            Column {
-                Label {
-                    text: qsTr("<font color=\"gray\">Total Received (BTC)</font>")
-                    font.pointSize: 8
-                }
-                Label {
-                    text: qsTr("<font color=\"white\">%1</font>").arg(txListByAddrModel.totalReceived)
-                    font.pointSize: 12
-                }
-            }
-            Column {
-                Label {
-                    text: qsTr("<font color=\"gray\">Total Sent (BTC)</font>")
-                    font.pointSize: 8
-                }
-                Label {
-                    text: qsTr("<font color=\"white\">%1</font>").arg(txListByAddrModel.totalSent)
-                    font.pointSize: 12
-                }
-            }
-        }
-        Label {
-            text: qsTr("<font color=\"white\">Transactions</font>")
-            font.pointSize: 14
         }
 
-        TableView {
-            width: 1008
-            height: 450
-            columnSpacing: 1
-            rowSpacing: 1
-            clip: true
-            ScrollIndicator.horizontal: ScrollIndicator { }
-            ScrollIndicator.vertical: ScrollIndicator { }
+        Rectangle {
+            width: parent.width
+            height: 60
+            anchors.bottomMargin: 24
+            anchors.topMargin: 24
+            anchors.leftMargin: 18
+            anchors.rightMargin: 18
+
+            radius: 14
+            color: BSStyle.addressesPanelBackgroundColor
+
+            border.width: 1
+            border.color: BSStyle.comboBoxBorderColor
+
+            Row {
+                anchors.fill: parent
+                anchors.verticalCenter: parent.verticalCenter
+
+                BaseBalanceLabel {
+                    width: 130
+                    label_text: qsTr("Transaction count")
+                    label_value: txListByAddrModel.nbTx
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Rectangle {
+                    width: 1
+                    height: 36
+                    color: BSStyle.tableSeparatorColor
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                BaseBalanceLabel {
+                    width: 130
+                    label_text: qsTr("Balance (BTC)")
+                    label_value: txListByAddrModel.balance
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Rectangle {
+                    width: 1
+                    height: 36
+                    color: BSStyle.tableSeparatorColor
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                BaseBalanceLabel {
+                    width: 150
+                    label_text: qsTr("Total Received (BTC)")
+                    label_value: txListByAddrModel.totalReceived
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Rectangle {
+                    width: 1
+                    height: 36
+                    color: BSStyle.tableSeparatorColor
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                BaseBalanceLabel {
+                    width: 130
+                    label_text: qsTr("Total Sent (BTC)")
+                    label_value: txListByAddrModel.totalSent
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+        }
+
+        Label {
+            text: qsTr("Transactions")
+            color: BSStyle.textColor
+            font.pixelSize: 20
+            font.weight: Font.Bold
+        }
+
+        CustomTableView {
+            width: parent.width
+            height: 500
             model: txListByAddrModel
-            delegate: Rectangle {
-                implicitWidth: 112 * colWidth
-                implicitHeight: 20
-                border.color: "black"
-                border.width: 1
-                color: heading ? 'black' : 'darkslategrey'
-                clip: true
-                Text {
-                    text: tableData
-                    font.pointSize: heading ? 8 : 10
-                    color: dataColor
-                    anchors.centerIn: parent
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: {
-                        if (!heading && (model.column === 1)) {
-                            explorerTX.tx = bsApp.getTXDetails(tableData)
-                            explorerStack.push(explorerTX)
-                        }
-                    }
-                }
+
+            copy_button_column_index: 1
+            columnWidths: [0.12, 0.46, 0.05, 0.04, 0.04, 0.08, 0.08, 0.07, 0.06]    
+            onCopyRequested: bsApp.copyAddressToClipboard(id)
+
+            // TODO: change constant 257 with C++ defined enum
+            onCellClicked: (row, column, data) => {
+                var tx_id = column === 1 ? data : model.data(model.index(row, 1), 257)
+                requestPageChange(tx_id)
             }
         }
     }

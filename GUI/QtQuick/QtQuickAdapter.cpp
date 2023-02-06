@@ -1674,21 +1674,12 @@ void QtQuickAdapter::signAndBroadcast(QTXSignRequest* txReq, const QString& pass
    }
 }
 
-int QtQuickAdapter::startSearch(const QString& s)
+int QtQuickAdapter::getSearchInputType(const QString& s)
 {
    const auto& trimmed = s.trimmed().toStdString();
-   bs::Address address;
-   try {
-      address = bs::Address::fromAddressString(trimmed);
-      if (address.isValid()) {
-         expTxByAddrModel_->clear();
-         ArmoryMessage msg;
-         msg.set_get_address_history(address.display());
-         pushRequest(user_, userBlockchain_, msg.SerializeAsString());
-         return 1;
-      }
+   if (validateAddress(s)) {
+      return 1;
    }
-   catch (const std::exception&) {}
 
    if (trimmed.length() == 64) { // potential TX hash in hex
       const auto& txId = BinaryData::CreateFromHex(trimmed);
@@ -1697,4 +1688,12 @@ int QtQuickAdapter::startSearch(const QString& s)
       }
    }
    return 0;
+}
+
+void QtQuickAdapter::startAddressSearch(const QString& s)
+{
+      expTxByAddrModel_->clear();
+      ArmoryMessage msg;
+      msg.set_get_address_history(s.trimmed().toStdString());
+      pushRequest(user_, userBlockchain_, msg.SerializeAsString());
 }
