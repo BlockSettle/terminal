@@ -174,7 +174,8 @@ public:
       , double amount, double fee, const QString& comment = {}, QUTXOList* utxos = nullptr);
    Q_INVOKABLE void getUTXOsForWallet(int walletIndex);
    Q_INVOKABLE void signAndBroadcast(QTXSignRequest*, const QString& password);
-   Q_INVOKABLE int startSearch(const QString&);
+   Q_INVOKABLE int getSearchInputType(const QString&);
+   Q_INVOKABLE void startAddressSearch(const QString&);
    Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash);
 
 signals:
@@ -233,6 +234,7 @@ private:
       , const BlockSettle::Common::WalletsMessage_TxResponse&);
 
    bs::message::ProcessingResult processHWDevices(const BlockSettle::HW::DeviceMgrMessage_Devices&);
+   bs::message::ProcessingResult processHWWready(const std::string& walletId);
    bs::message::ProcessingResult processHWSignedTX(const BlockSettle::HW::DeviceMgrMessage_SignTxResponse&);
 
    QVariant getSetting(ApplicationSettings::Setting) const;
@@ -277,8 +279,9 @@ private:
    bool hwDevicesPolling_{ false };
    bs::hww::DeviceKey curAuthDevice_{};
 
-   std::map<bs::message::SeqId, QTXSignRequest*> txReqs_;
-   std::map<bs::message::SeqId, QTxDetails*> txDetailReqs_;
+   std::map<bs::message::SeqId, std::pair<QTXSignRequest*, bool>> txReqs_;
+   std::unordered_map<std::string, QTXSignRequest*>   hwwReady_;
+   std::map<bs::message::SeqId, QTxDetails*>          txDetailReqs_;
    std::map<ApplicationSettings::Setting, QVariant>   settingsCache_;
    std::set<bs::message::SeqId>  expTxAddrReqs_, expTxAddrInReqs_;
 };

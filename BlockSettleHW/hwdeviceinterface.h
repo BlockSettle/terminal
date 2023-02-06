@@ -38,7 +38,6 @@ namespace bs {
          std::string id;
          std::string vendor;
          std::string walletId;
-         std::string status;
          DeviceType type{ DeviceType::Unknown };
       };
 

@@ -38,6 +38,7 @@ CustomPopup {
             import_wallet.init()
         }
         onSig_hardware_wallet: {
+            //bsApp.importHWWallet(-1)    //debugging wallet import
             bsApp.pollHWWallets()
             _stack_view.push(import_hardware)
         }

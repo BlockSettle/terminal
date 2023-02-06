@@ -115,5 +115,4 @@ QtObject {
     readonly property color addressesPanelBackgroundColor: "#333C435A"
 
     readonly property color listItemBorderColor: "#3C435A"
-
 }

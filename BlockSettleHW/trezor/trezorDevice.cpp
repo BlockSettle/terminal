@@ -137,15 +137,11 @@ void TrezorDevice::releaseConnection()
 DeviceKey TrezorDevice::key() const
 {
    std::string walletId;
-   std::string status;
    if (!xpubRoot_.empty()) {
       walletId = bs::core::wallet::computeID(xpubRoot_).toBinStr();
    }
-   else {
-      status = "not inited";
-   }
    return { features_->label(), features_->device_id(), features_->vendor()
-      , walletId, status, type() };
+      , walletId, type() };
 }
 
 DeviceType TrezorDevice::type() const
@@ -171,7 +167,6 @@ void TrezorDevice::init()
          reset();
          return;
       }
-      state_ = trezor::State::Init;
       const auto& msg = unpackMessage(QByteArray::fromStdString(reply->response));
       handleMessage(msg);
    };
@@ -351,6 +346,7 @@ void TrezorDevice::signTX(const bs::core::wallet::TXSignRequest &reqTX)
       }
       cb_->txSigned(key(), SecureBinaryData::fromString(reply->signedTX));
    };
+   logger_->debug("[{}] {}", __func__, message.DebugString());
    makeCall(message, cb);
 }
 
@@ -374,7 +370,7 @@ void TrezorDevice::retrieveXPubRoot()
       logger_->debug("[TrezorDevice::retrieveXPubRoot] {}: {}", features_->label(), reply->xpub);
       xpubRoot_ = BinaryData::fromString(reply->xpub);
       const auto& devKey = key();
-      cb_->publicKeyReady(devKey.id, devKey.walletId);
+      cb_->publicKeyReady(devKey);
    };
    makeCall(message, saveXpubRoot);
 }
@@ -382,12 +378,12 @@ void TrezorDevice::retrieveXPubRoot()
 void TrezorDevice::makeCall(const google::protobuf::Message &msg
    , const bs::WorkerPool::callback& callback)
 {
-   if (state_ == trezor::State::None) {
+   if (state_ != trezor::State::Init) {
       logger_->debug("[{}] re-initing device", __func__);
       init();
    }
    auto cb = callback;
-   if ((cb == nullptr) && (awaitingCallbacks_.empty())) {
+   if ((cb == nullptr) && !awaitingCallbacks_.empty()) {
       cb = awaitingCallbacks_.front();
       awaitingCallbacks_.pop_front();
    }
@@ -396,7 +392,7 @@ void TrezorDevice::makeCall(const google::protobuf::Message &msg
       const auto& reply = std::static_pointer_cast<TrezorPostOut>(data);
       if (!reply || !reply->error.empty()) {
          logger_->error("[TrezorDevice::makeCall] network error: {}"
-            , (reply && !reply->error.empty()) ? reply->error : "<empty>");
+            , (reply && !reply->error.empty()) ? reply->error : (data ? "<empty>" : "<null>"));
          //emit operationFailed(QLatin1String("Network error"));
          reset();
          return;
@@ -446,10 +442,14 @@ void TrezorDevice::handleMessage(const trezor::MessageData& data, const bs::Work
    case MessageType_Features:
       {
          if (parseResponse(*features_, data)) {
+            state_ = trezor::State::Init;
             logger_->debug("[TrezorDevice::handleMessage] features: model '{}' v{}.{}.{}"
                , features_->model(), features_->major_version(), features_->minor_version(), features_->patch_version());
             // + getJSONReadableMessage(features_)); 
             retrieveXPubRoot();
+            if (cb_) {
+               cb_->scanningDone();
+            }
          }
          else {
             logger_->error("[TrezorDevice::handleMessage] failed to parse features response");
@@ -463,11 +463,11 @@ void TrezorDevice::handleMessage(const trezor::MessageData& data, const bs::Work
             logger_->debug("[TrezorDevice::handleMessage] ButtonRequest {}", getJSONReadableMessage(request));
          }
          common::ButtonAck response;
-         makeCall(response);
+         makeCall(response, cb);
          sendTxMessage(/*HWInfoStatus::kPressButton*/"press the button");
          txSignedByUser_ = true;
       }
-      break;
+      return;
    case MessageType_PinMatrixRequest:
       {
          common::PinMatrixRequest request;
@@ -495,13 +495,19 @@ void TrezorDevice::handleMessage(const trezor::MessageData& data, const bs::Work
       {
          bitcoin::PublicKey publicKey;
          if (parseResponse(publicKey, data)) {
-            logger_->debug("[TrezorDevice::handleMessage] PublicKey: {}"
+            logger_->debug("[TrezorDevice::handleMessage] public key: {}"
                , getJSONReadableMessage(publicKey));
          }
-         if (cb) {
+         auto callback = cb;
+         if (!callback && !awaitingCallbacks_.empty()) {
+            logger_->debug("[TrezorDevice::handleMessage::PublicKey] retrieving pooled callback");
+            callback = awaitingCallbacks_.front();
+            awaitingCallbacks_.pop_front();
+         }
+         if (callback) {
             const auto& outData = std::make_shared<XPubOut>();
             outData->xpub = publicKey.xpub();
-            cb(outData);
+            callback(outData);
             return;
          }
       }
@@ -558,8 +564,7 @@ void TrezorDevice::handleTxRequest(const trezor::MessageData& data
    assert(currentTxSignReq_);
    bitcoin::TxRequest txRequest;
    if (parseResponse(txRequest, data)) {
-      logger_->debug("[TrezorDevice] handleMessage TxRequest "
-         + getJSONReadableMessage(txRequest));
+      logger_->debug("[TrezorDevice::handleTxRequest] {}", getJSONReadableMessage(txRequest));
    }
 
    if (txRequest.has_serialized() && txRequest.serialized().has_serialized_tx()) {
@@ -583,10 +588,9 @@ void TrezorDevice::handleTxRequest(const trezor::MessageData& data
             input->set_script_sig(txIn.getScript().toBinStr());
          }
 
-         logger_->debug("[TrezorDevice] handleTxRequest TXINPUT for prev hash"
-             + getJSONReadableMessage(txAck));
-
-         makeCall(txAck);
+         logger_->debug("[TrezorDevice::handleTxRequest] TXINPUT for prev hash: {}"
+            , getJSONReadableMessage(txAck));
+         makeCall(txAck, cb);
          break;
       }
 
@@ -594,15 +598,19 @@ void TrezorDevice::handleTxRequest(const trezor::MessageData& data
       bitcoin::TxAck_TransactionType_TxInputType *input = type->add_inputs();
 
       const int index = txRequest.details().request_index();
+      logger_->debug("[TrezorDevice::handleTxRequest] TXINPUT index={}, txInCount={}"
+         , index, currentTxSignReq_->armorySigner_.getTxInCount());
       assert(index >= 0 && index < currentTxSignReq_->armorySigner_.getTxInCount());
       auto spender = currentTxSignReq_->armorySigner_.getSpender(index);
       auto utxo = spender->getUtxo();
 
       auto address = bs::Address::fromUTXO(utxo);
       const auto purp = bs::hd::purpose(address.getType());
+      logger_->debug("[TrezorDevice::handleTxRequest] TXINPUT address {}", address.display());
 
       auto bip32Paths = spender->getBip32Paths();
       if (bip32Paths.size() != 1) {
+         logger_->error("[TrezorDevice::handleTxRequest] TXINPUT {} BIP32 paths", bip32Paths.size());
          throw std::logic_error("unexpected pubkey count for spender");
       }
       const auto& path = bip32Paths.begin()->second.getDerivationPathFromSeed();
@@ -633,13 +641,11 @@ void TrezorDevice::handleTxRequest(const trezor::MessageData& data
       if (currentTxSignReq_->RBF) {
          input->set_sequence(UINT32_MAX - 2);
       }
-
       txAck.set_allocated_tx(type);
 
-      logger_->debug("[TrezorDevice] handleTxRequest TXINPUT"
-          + getJSONReadableMessage(txAck));
-
-      makeCall(txAck);
+      logger_->debug("[TrezorDevice::handleTxRequest] TXINPUT response {}"
+         , getJSONReadableMessage(txAck));
+      makeCall(txAck, cb);
    }
    break;
    case bitcoin::TxRequest_RequestType_TXOUTPUT:
@@ -654,10 +660,10 @@ void TrezorDevice::handleTxRequest(const trezor::MessageData& data
             binOutput->set_script_pubkey(txOut.getScript().toBinStr());
          }
 
-         logger_->debug("[TrezorDevice] handleTxRequest TXOUTPUT for prev hash"
-             + getJSONReadableMessage(txAck));
+         logger_->debug("[TrezorDevice::handleTxRequest] TXOUTPUT for prev hash: {}"
+             , getJSONReadableMessage(txAck));
 
-         makeCall(txAck);
+         makeCall(txAck, cb);
          break;
       }
 
@@ -671,7 +677,6 @@ void TrezorDevice::handleTxRequest(const trezor::MessageData& data
       if (currentTxSignReq_->change.address != address) { // general output
          output->set_address(address.display());
          output->set_amount(bsOutput->getValue());
-         //output->set_script_type(bitcoin::TxAck_TransactionType_TxOutputType_OutputScriptType_PAYTOADDRESS);
          output->set_script_type(bitcoin::PAYTOADDRESS);
       } else {
          const auto &change = currentTxSignReq_->change;
@@ -680,7 +685,9 @@ void TrezorDevice::handleTxRequest(const trezor::MessageData& data
          const auto purp = bs::hd::purpose(change.address.getType());
 
          if (change.index.empty()) {
-            throw std::logic_error(fmt::format("can't find change address index for '{}'", change.address.display()));
+            const auto& errorMsg = fmt::format("can't find change address index for '{}'", change.address.display());
+            logger_->error("[TrezorDevice::handleTxRequest::TXOUTPUT] {}", errorMsg);
+            throw std::logic_error(errorMsg);
          }
 
          auto path = getDerivationPath(testNet_, purp);
@@ -700,17 +707,17 @@ void TrezorDevice::handleTxRequest(const trezor::MessageData& data
          else if (changeType == AddressEntryType_P2PKH) {
             scriptType = bitcoin::PAYTOADDRESS;
          } else {
-            throw std::runtime_error(fmt::format("unexpected changeType: {}", static_cast<int>(changeType)));
+            const auto& errorMsg = fmt::format("unexpected change type: {}", (int)changeType);
+            logger_->error("[TrezorDevice::handleTxRequest::TXOUTPUT] {}", errorMsg);
+            throw std::runtime_error(errorMsg);
          }
-
          output->set_script_type(scriptType);
       }
 
       txAck.set_allocated_tx(type);
-      logger_->debug("[TrezorDevice] handleTxRequest TXOUTPUT"
-         + getJSONReadableMessage(txAck));
-
-      makeCall(txAck);
+      logger_->debug("[TrezorDevice::handleTxRequest] TXOUTPUT response: {}"
+         , getJSONReadableMessage(txAck));
+      makeCall(txAck, cb);
    }
    break;
    case bitcoin::TxRequest_RequestType_TXMETA:
@@ -725,11 +732,8 @@ void TrezorDevice::handleTxRequest(const trezor::MessageData& data
          data->set_inputs_cnt(tx.getNumTxIn());
          data->set_outputs_cnt(tx.getNumTxOut());
       }
-
-      logger_->debug("[TrezorDevice] handleTxRequest TXMETA"
-         + getJSONReadableMessage(txAck));
-
-      makeCall(txAck);
+      logger_->debug("[TrezorDevice::handleTxRequest] TXMETA response: {}", getJSONReadableMessage(txAck));
+      makeCall(txAck, cb);
    }
    break;
    case bitcoin::TxRequest_RequestType_TXFINISHED:
@@ -744,6 +748,8 @@ void TrezorDevice::handleTxRequest(const trezor::MessageData& data
    }
    break;
    default:
+      logger_->error("[TrezorDevice::handleTxRequest] unhandled request type {}"
+         , txRequest.request_type());
       break;
    }
 }

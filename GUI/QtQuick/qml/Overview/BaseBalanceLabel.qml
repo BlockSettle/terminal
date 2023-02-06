@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2023, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -19,7 +19,8 @@ Rectangle {
     property int label_text_font_size: 12
 
     property string label_value
-    property int label_value_font_size: 13
+    property int label_value_font_size: 14
+    property color label_value_color: BSStyle.balanceValueTextColor
 
     property string value_suffix
     property int left_text_padding: 10
@@ -44,8 +45,8 @@ Rectangle {
             text: control.label_value + " " + control.value_suffix
             leftPadding: control.left_text_padding
 
-            color: BSStyle.balanceValueTextColor
-            font.weight: Font.Medium
+            color: control.label_value_color
+            font.weight: Font.DemiBold
             font.pixelSize: control.label_value_font_size
         }
     }

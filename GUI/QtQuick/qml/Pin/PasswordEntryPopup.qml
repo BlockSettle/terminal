@@ -116,7 +116,7 @@ Window {
             anchors.topMargin: 48
             anchors.horizontalCenter: parent.horizontalCenter
 
-            visible: !root.accept_on_device
+            //visible: !root.accept_on_device   //always visible now - password can be empty in all cases
 
             height : 70
             width: 390
@@ -160,7 +160,7 @@ Window {
                 text: qsTr("Accept")
                 width: 190
 
-                enabled: accept_on_device || password.input_text.length
+                //enabled: accept_on_device || password.input_text.length   //always accept now
 
                 Component.onCompleted: {
                     accept_but.preferred = true

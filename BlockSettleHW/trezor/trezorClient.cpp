@@ -159,21 +159,11 @@ void TrezorClient::acquireDevice(const trezor::DeviceData& devData, bool init)
    auto acquireCallback = [this, prevSessionId, devData, init]
       (const std::shared_ptr<bs::OutData>& data)
    {
-      if (nbDevices_ == 0) {
-         cb_->scanningDone();
-      }
       --nbDevices_;
-      const auto& scanDone = [this]
-      {
-         if (nbDevices_ == 0) {
-            cb_->scanningDone();
-         }
-      };
       const auto& reply = std::static_pointer_cast<TrezorPostOut>(data);
       if (!reply || !reply->error.empty() || reply->response.empty()) {
          logger_->error("[TrezorClient::acquireDevice] network error: {}"
             , (reply && !reply->error.empty()) ? reply->error : "<empty>");
-         scanDone();
          return;
       }
       nlohmann::json response;
@@ -182,7 +172,6 @@ void TrezorClient::acquireDevice(const trezor::DeviceData& devData, bool init)
       }
       catch (const nlohmann::json::exception& e) {
          logger_->error("[TrezorClient::acquireDevice] failed to parse '{}': {}", reply->response, e.what());
-         scanDone();
          return;
       }
 
@@ -192,7 +181,6 @@ void TrezorClient::acquireDevice(const trezor::DeviceData& devData, bool init)
 
       if (devDataCopy.sessionId.empty() || devDataCopy.sessionId == prevSessionId) {
          logger_->error("[TrezorClient::acquireDevice] cannot acquire device");
-         scanDone();
          return;
       }
 
@@ -202,12 +190,8 @@ void TrezorClient::acquireDevice(const trezor::DeviceData& devData, bool init)
       state_ = trezor::State::Acquired;
       const auto& newDevice = std::make_shared<TrezorDevice>(logger_, devDataCopy
          , testNet_, cb_, trezorEndPoint_);
-      if (init) {
-         logger_->debug("[TrezorClient::acquireDevice] init {} from acquire", devData.path);
-         newDevice->init();
-      }
+      newDevice->init();
       devices_.push_back(newDevice);
-      scanDone();
    };
    logger_->info("[TrezorClient::acquireDevice] old session id: {}", prevSessionId);
    processQueued(inData, acquireCallback);
