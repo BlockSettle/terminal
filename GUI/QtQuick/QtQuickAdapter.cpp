@@ -1690,7 +1690,7 @@ int QtQuickAdapter::getSearchInputType(const QString& s)
    return 0;
 }
 
-int QtQuickAdapter::startSearch(const QString& s)
+void QtQuickAdapter::startSearch(const QString& s)
 {
    try {
       if (validateAddress(s)) {
