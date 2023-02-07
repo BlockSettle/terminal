@@ -21,6 +21,7 @@ Rectangle {
     property string label_value
     property int label_value_font_size: 14
     property color label_value_color: BSStyle.balanceValueTextColor
+    property int label_value_font_weight: Font.DemiBold
 
     property string value_suffix
     property int left_text_padding: 10
@@ -46,7 +47,7 @@ Rectangle {
             leftPadding: control.left_text_padding
 
             color: control.label_value_color
-            font.weight: Font.DemiBold
+            font.weight: control.label_value_font_weight
             font.pixelSize: control.label_value_font_size
         }
     }

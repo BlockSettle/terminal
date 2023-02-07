@@ -25,7 +25,7 @@ namespace {
 QmlAddressListModel::QmlAddressListModel(const std::shared_ptr<spdlog::logger>& logger
    , QObject* parent)
    : QAbstractTableModel(parent), logger_(logger)
-   , header_({ tr("Address"), tr("Balance (BTC)"), tr("#Tx"), tr("Comment") })
+   , header_({ tr("Address"), tr("#Tx"), tr("Balance (BTC)"), tr("Comment") })
 {}
 
 int QmlAddressListModel::rowCount(const QModelIndex &) const

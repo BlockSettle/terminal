@@ -41,6 +41,8 @@ TableView {
 
     property int selected_row_index: -1
 
+    onWidthChanged: component.forceLayout()
+
     delegate: Rectangle {
         implicitHeight: 34
         color: row === 0 ? BSStyle.tableCellBackgroundColor : (row === selected_row_index ? BSStyle.tableCellSelectedBackgroundColor : BSStyle.tableCellBackgroundColor)

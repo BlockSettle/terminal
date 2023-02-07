@@ -26,7 +26,8 @@ Rectangle {
     signal walletIndexChanged(index : int)
 
     Column {
-        anchors.margins: 20
+        anchors.leftMargin: 18
+        anchors.rightMargin: 18
         anchors.fill: parent
         spacing: 0
 
@@ -41,7 +42,7 @@ Rectangle {
         }
 
         Rectangle {
-            height: (parent.height - overview_panel.height) * 0.6
+            height: (parent.height - overview_panel.height) * 0.65
             width: parent.width
             anchors.horizontalCenter: parent.horizontalCenter
 
@@ -71,7 +72,7 @@ Rectangle {
                     model: addressListModel
                     copy_button_column_index: 0
 
-                    columnWidths: [0.52, 0.15, 0.18, 0.15]
+                    columnWidths: [0.35, 0.15, 0.1, 0.4]
                     onCopyRequested: bsApp.copyAddressToClipboard(id)
                 }
             }
@@ -80,7 +81,7 @@ Rectangle {
         Rectangle {
             color: "transparent"
             width: parent.width
-            height: (parent.height - overview_panel.height) * 0.4
+            height: (parent.height - overview_panel.height) * 0.35
 
             Column {
                 anchors.fill: parent
