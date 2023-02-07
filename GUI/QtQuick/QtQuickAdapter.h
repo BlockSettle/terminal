@@ -170,8 +170,8 @@ public:
    Q_INVOKABLE bool validateAddress(const QString& addr);
 
    Q_INVOKABLE void requestFeeSuggestions();
-   Q_INVOKABLE QTXSignRequest* createTXSignRequest(int walletIndex, const QString& recvAddr
-      , double amount, double fee, const QString& comment = {}, QUTXOList* utxos = nullptr);
+   Q_INVOKABLE QTXSignRequest* createTXSignRequest(int walletIndex, const QStringList& recvAddrs
+      , const QList<double>& recvAmounts, double fee, const QString& comment = {}, QUTXOList* utxos = nullptr);
    Q_INVOKABLE void getUTXOsForWallet(int walletIndex);
    Q_INVOKABLE void signAndBroadcast(QTXSignRequest*, const QString& password);
    Q_INVOKABLE int getSearchInputType(const QString&);

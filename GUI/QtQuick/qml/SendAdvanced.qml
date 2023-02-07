@@ -296,7 +296,7 @@ Item {
 
             onClicked: {
                 verifySignTX.txSignRequest = bsApp.createTXSignRequest(
-                            sendWalletsComboBox.currentIndex, "", 0,
+                            sendWalletsComboBox.currentIndex, [], [],
                             parseFloat(fees.text), txComment.text,
                             txInputsModel.getSelection())
                 stack.push(verifySignTX)
