@@ -42,9 +42,11 @@ Item {
     }
 
     Column {
-        spacing: 23
+        spacing: 18
         anchors.fill: parent
-        anchors.margins: 18
+        anchors.topMargin: 14
+        anchors.leftMargin: 18
+        anchors.rightMargin: 18
 
         Row {
             id: transaction_header_menu
@@ -54,8 +56,8 @@ Item {
 
             Label {
                 text: qsTr("Transactions list")
-                font.pixelSize: 20
-                font.weight: Font.Bold
+                font.pixelSize: 19
+                font.weight: Font.DemiBold
                 color: BSStyle.textColor
 
                 anchors.verticalCenter: parent.verticalCenter
