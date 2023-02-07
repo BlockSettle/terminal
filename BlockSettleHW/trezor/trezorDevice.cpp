@@ -162,8 +162,9 @@ void TrezorDevice::init()
    {
       const auto& reply = std::static_pointer_cast<TrezorPostOut>(data);
       if (!reply || !reply->error.empty()) {
-         logger_->error("[TrezorDevice::makeCall] network error: {}", (reply && !reply->error.empty()) ? reply->error : "<empty>");
-         //emit operationFailed(QLatin1String("Network error"));
+         logger_->error("[TrezorDevice::makeCall] comm error: {}", (reply && !reply->error.empty()) ? reply->error : "<empty>");
+         operationFailed("comm error");
+         cancel();
          reset();
          return;
       }
@@ -301,10 +302,31 @@ void TrezorDevice::clearSession()
    makeCall(message);
 }
 
+void TrezorDevice::setSupportingTX(const Tx& tx)
+{
+   if (!currentTxSignReq_) {
+      logger_->warn("[{}] no current sign TX operation in progress", __func__);
+      return;
+   }
+   currentTxSignReq_->armorySigner_.addSupportingTx(tx);
+   logger_->debug("[{}] added supporting TX {}", __func__, tx.getThisHash().toHexStr(true));
+}
+
 void TrezorDevice::signTX(const bs::core::wallet::TXSignRequest &reqTX)
 {
-   currentTxSignReq_.reset(new bs::core::wallet::TXSignRequest(reqTX));
-   logger_->debug("[TrezorDevice::signTX] specify init data to {}", features_->label());
+   currentTxSignReq_ = std::make_unique<bs::core::wallet::TXSignRequest>(reqTX);
+   logger_->debug("[TrezorDevice::signTX] {}", features_->label());
+
+   std::set<BinaryData> txHashes;
+   for (uint32_t i = 0; i < currentTxSignReq_->armorySigner_.getTxInCount(); ++i) {
+      const auto& spender = currentTxSignReq_->armorySigner_.getSpender(i);
+      if (!spender) {
+         logger_->warn("[{}] no spender at {}", __func__, i);
+         continue;
+      }
+      txHashes.insert(spender->getUtxo().getTxHash());
+   }
+   cb_->needSupportingTXs(key(), txHashes);
 
    bitcoin::SignTx message;
    message.set_inputs_count(currentTxSignReq_->armorySigner_.getTxInCount());
@@ -393,7 +415,8 @@ void TrezorDevice::makeCall(const google::protobuf::Message &msg
       if (!reply || !reply->error.empty()) {
          logger_->error("[TrezorDevice::makeCall] network error: {}"
             , (reply && !reply->error.empty()) ? reply->error : (data ? "<empty>" : "<null>"));
-         //emit operationFailed(QLatin1String("Network error"));
+         operationFailed("comm error");
+         cancel();
          reset();
          return;
       }
@@ -556,6 +579,7 @@ void TrezorDevice::reset()
    currentTxSignReq_.reset();
    awaitingSignedTX_.clear();
    awaitingWalletInfo_ = {};
+   awaitingCallbacks_.clear();
 }
 
 void TrezorDevice::handleTxRequest(const trezor::MessageData& data
@@ -725,15 +749,32 @@ void TrezorDevice::handleTxRequest(const trezor::MessageData& data
       // Return previous tx details for legacy inputs
       // See https://wiki.trezor.io/Developers_guide:Message_Workflows
       auto tx = prevTx(txRequest);
+#ifdef TREZOR_NEW_STYLE_TXMETA
+      bitcoin::TxAckPrevMeta msg;
+      auto msgTX = msg.mutable_tx();
+#else
       auto data = txAck.mutable_tx();
+#endif
       if (tx.isInitialized()) {
+#ifdef TREZOR_NEW_STYLE_TXMETA
+         msgTX->set_version(tx.getVersion());
+         msgTX->set_lock_time(tx.getLockTime());
+         msgTX->set_inputs_count(tx.getNumTxIn());
+         msgTX->set_outputs_count(tx.getNumTxOut());
+#else
          data->set_version(tx.getVersion());
          data->set_lock_time(tx.getLockTime());
          data->set_inputs_cnt(tx.getNumTxIn());
          data->set_outputs_cnt(tx.getNumTxOut());
+#endif
       }
+#ifdef TREZOR_NEW_STYLE_TXMETA
+      logger_->debug("[TrezorDevice::handleTxRequest] TXMETA response: {}", getJSONReadableMessage(msg));
+      makeCall(msg, cb);
+#else
       logger_->debug("[TrezorDevice::handleTxRequest] TXMETA response: {}", getJSONReadableMessage(txAck));
       makeCall(txAck, cb);
+#endif
    }
    break;
    case bitcoin::TxRequest_RequestType_TXFINISHED:

@@ -242,10 +242,10 @@ std::shared_ptr<TrezorPostOut> bs::hww::TrezorPostHandler::processData(const std
       curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, inData->input.data());
    }
    if (inData->timeout) {
-      curl_easy_setopt(curl_, CURLOPT_TIMEOUT_MS, 3000L);
+      curl_easy_setopt(curl_, CURLOPT_TIMEOUT_MS, 10000L);
    }
    else {
-      curl_easy_setopt(curl_, CURLOPT_TIMEOUT, 0L);
+      curl_easy_setopt(curl_, CURLOPT_TIMEOUT, 120000L);
    }
 
    std::string response;

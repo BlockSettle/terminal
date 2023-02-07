@@ -25,6 +25,7 @@ namespace spdlog {
 }
 namespace BlockSettle {
    namespace Common {
+      class ArmoryMessage_Transactions;
       class HDWalletData;
       class SignerMessage_SignTxResponse;
    }
@@ -60,6 +61,8 @@ namespace bs {
          virtual void deviceReady(const std::string& deviceId) = 0;
          virtual void deviceTxStatusChanged(const std::string& status) = 0;
 
+         virtual void needSupportingTXs(const DeviceKey&, const std::set<BinaryData>& txHashes) = 0;
+
          virtual void txSigned(const DeviceKey&, const SecureBinaryData& signData) = 0;
          virtual void scanningDone() = 0;
          virtual void operationFailed(const std::string& deviceId, const std::string& reason) = 0;
@@ -88,7 +91,7 @@ namespace bs {
          void deviceNotFound(const std::string& deviceId) override;
          void deviceReady(const std::string& deviceId) override;
          void deviceTxStatusChanged(const std::string& status) override;
-
+         void needSupportingTXs(const DeviceKey&, const std::set<BinaryData>& txHashes) override;
          void txSigned(const DeviceKey&, const SecureBinaryData& signData) override;
          void scanningDone() override;
          void operationFailed(const std::string& deviceId, const std::string& reason) override;
@@ -108,7 +111,6 @@ namespace bs {
          //void hwOperationDone();
          bool awaitingUserAction(const DeviceKey&);
 
-         void setScanningFlag(unsigned nbLeft);
          void releaseConnection();
          void scanningDone(bool initDevices = true);
 
@@ -121,6 +123,10 @@ namespace bs {
          bs::message::ProcessingResult processWallet(const bs::message::Envelope&);
          bs::message::ProcessingResult processSettings(const bs::message::Envelope&);
          bs::message::ProcessingResult processSigner(const bs::message::Envelope&);
+         bs::message::ProcessingResult processBlockchain(const bs::message::Envelope&);
+
+         bs::message::ProcessingResult processTransactions(const bs::message::SeqId
+            , const BlockSettle::Common::ArmoryMessage_Transactions&);
 
          void devicesResponse();
          bs::message::ProcessingResult processImport(const bs::message::Envelope&
@@ -136,7 +142,7 @@ namespace bs {
          std::shared_ptr<spdlog::logger> logger_;
          std::unique_ptr<TrezorClient> trezorClient_;
          std::unique_ptr<LedgerClient> ledgerClient_;
-         std::shared_ptr<bs::message::User>  user_, userWallets_, userSigner_;
+         std::shared_ptr<bs::message::User>  user_, userWallets_, userSigner_, userBlockchain_;
          std::vector<DeviceKey>  devices_;
 
          bool testNet_{false};
@@ -149,6 +155,7 @@ namespace bs {
          bs::core::wallet::TXSignRequest txSignReq_;
 
          std::map<bs::message::SeqId, std::pair<std::string, bs::message::Envelope>>   prepareDeviceReq_;   //value: walletId
+         std::map<bs::message::SeqId, DeviceKey>   supportingTxReq_;
       };
 
       void deviceKeyToMsg(const DeviceKey&, BlockSettle::HW::DeviceKey*);

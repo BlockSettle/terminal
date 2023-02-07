@@ -58,8 +58,10 @@ namespace bs {
          virtual void retrieveXPubRoot() = 0;
 
          // Management
-         virtual void setMatrixPin(const SecureBinaryData& pin) {};
-         virtual void setPassword(const SecureBinaryData& password, bool enterOnDevice) {};
+         virtual void setMatrixPin(const SecureBinaryData& pin) {}
+         virtual void setPassword(const SecureBinaryData& password, bool enterOnDevice) {}
+
+         virtual void setSupportingTX(const Tx&) {}
 
          // State
          virtual bool isBlocked() const = 0;
