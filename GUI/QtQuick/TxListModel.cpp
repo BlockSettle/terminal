@@ -744,6 +744,12 @@ QString QTxDetails::feePerByte() const
    return displayBTC(amount / txWeight, 1);
 }
 
+
+int QTxDetails::height() const
+{
+    return details_.tx.getTxHeight();
+}
+
 TxInOutModel::TxInOutModel(const std::vector<bs::sync::AddressDetails>& data, QObject* parent)
    : QAbstractTableModel(parent), data_(data)
    , header_{ tr("Address"), tr("Amount"), tr("Wallet") }
@@ -815,7 +821,7 @@ QString TxInOutModel::getData(int row, int col) const
 
 QColor TxInOutModel::dataColor(int row, int col) const
 {
-   if ((row == 0) || (col == 0)) {
+   if (row == 0) {
       return ColorScheme::tableHeaderColor;
    }
    return QColorConstants::White;

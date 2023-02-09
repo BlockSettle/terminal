@@ -26,7 +26,7 @@ class QmlAddressListModel : public QAbstractTableModel
 {
    Q_OBJECT
 public:
-   enum TableRoles { TableDataRole = Qt::UserRole + 1, HeadingRole, FirstColRole, ColorRole };
+   enum TableRoles { TableDataRole = Qt::UserRole + 1, HeadingRole, FirstColRole, ColorRole, AddressTypeRole };
    QmlAddressListModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
 
    int rowCount(const QModelIndex & = QModelIndex()) const override;

@@ -115,4 +115,11 @@ QtObject {
     readonly property color addressesPanelBackgroundColor: "#333C435A"
 
     readonly property color listItemBorderColor: "#3C435A"
+
+    readonly property color popupBackgroundColor: "#191E2A"
+    readonly property color popupBorderColor: "#3C435A"
+
+    readonly property color transactionConfirmationZero: "red"
+    readonly property color transactionConfirmationLow: "yellow"
+    readonly property color transactionConfirmationHigh: "#67D2A3"
 }
