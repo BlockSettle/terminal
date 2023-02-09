@@ -152,5 +152,9 @@
         <file>qml/StyledControls/InputOutputTableView.qml</file>
         <file>images/down_arrow.svg</file>
         <file>images/up_arrow.svg</file>
+        <file>qml/Send/WalletsComboBox.qml</file>
+        <file>qml/Send/AmountInput.qml</file>
+        <file>qml/Send/FeeSuggestComboBox.qml</file>
+        <file>qml/Send/RecvAddrTextInput.qml</file>
     </qresource>
 </RCC>

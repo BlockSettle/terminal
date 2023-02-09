@@ -6,7 +6,7 @@ import QtQuick.Layouts 1.15
 import "../BsStyles"
 import "../StyledControls"
 
-import wallet.balance 1.0
+//import wallet.balance 1.0
 
 ColumnLayout  {
 

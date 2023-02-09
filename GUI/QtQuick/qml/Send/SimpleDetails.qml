@@ -6,7 +6,7 @@ import QtQuick.Layouts 1.15
 import "../BsStyles"
 import "../StyledControls"
 
-import wallet.balance 1.0
+//import wallet.balance 1.0
 
 ColumnLayout  {
 
@@ -19,7 +19,7 @@ ColumnLayout  {
     width: 600
     spacing: 0
 
-    property var tempRequest: null
+    property var tempRequest: rec_addr_input._tempRequest
 
     RowLayout {
 
@@ -80,7 +80,7 @@ ColumnLayout  {
 
     }
 
-    CustomTextInput {
+    RecvAddrTextInput {
 
         id: rec_addr_input
 
@@ -89,147 +89,29 @@ ColumnLayout  {
         Layout.preferredWidth: 552
         Layout.topMargin: 23
 
-        //aliases
-        title_text: qsTr("Receiver address")
+        wallets_current_index: from_wallet_combo.currentIndex
 
-        Image {
-            id: paste_but
-
-            z: 1
-
-            anchors.top: rec_addr_input.top
-            anchors.topMargin: 23
-            anchors.right: rec_addr_input.right
-            anchors.rightMargin: 23
-
-            source: "qrc:/images/paste_icon.png"
-            width: 24
-            height: 24
-
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    rec_addr_input.input_text = bsApp.pasteTextFromClipboard()
-                    rec_addr_input.validate()
-                }
-            }
+        onFocus_next: {
+            amount_input.setActiveFocus()
         }
 
-        onTextEdited : {
-            rec_addr_input.validate()
-        }
-
-        function validate()
-        {
-            if (rec_addr_input.input_text.length)
-            {
-                rec_addr_input.isValid = bsApp.validateAddress(rec_addr_input.input_text)
-                if (rec_addr_input.isValid)
-                {
-                    var fpb = parseFloat(fee_suggest_combo.currentValue)
-                    tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
-                                , rec_addr_input.input_text, 0, (fpb > 0) ? fpb : 1.0)
-                    amount_input.setActiveFocus()
-                }
-            }
-            else
-                rec_addr_input.isValid = true
+        function createTempRequest() {
+            var fpb = parseFloat(fee_suggest_combo.currentValue)
+            return bsApp.createTXSignRequest(wallets_current_index
+                                             , rec_addr_input.input_text, 0, (fpb > 0) ? fpb : 1.0)
         }
     }
 
-    CustomTextInput {
+    AmountInput {
 
         id: amount_input
+
+        _tempRequest: tempRequest
 
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : 70
         Layout.preferredWidth: 552
         Layout.topMargin: 10
-
-        //aliases
-        title_text: qsTr("Amount")
-
-//                input_validator: DoubleValidator{
-//                    bottom: 0
-//                    top: (from_wallet_combo.currentIndex >= 0) ?
-//                             parseFloat(getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole)) : 0
-//                    notation :DoubleValidator.StandardNotation
-//                }
-
-        //app (if was launched from visual studio) crashes when there is input_validator
-        //and we change text inside of onTextEdited
-        //it is why I have realized my validator inside of onTextEdited
-        property string prev_text : ""
-        onTextEdited : {
-
-            amount_input.input_text = amount_input.input_text.replace(",", ".")
-
-            if (amount_input.input_text.startsWith("0")
-                && !amount_input.input_text.startsWith("0.")
-                && amount_input.input_text.length > 1)
-            {
-                amount_input.input_text = "0."
-                        + amount_input.input_text.substring(1, amount_input.input_text.length)
-            }
-            try {
-                var input_number =  Number.fromLocaleString(Qt.locale("en_US"), amount_input.input_text)
-            }
-            catch (error)
-            {
-                amount_input.input_text = prev_text
-                return
-            }
-            var fpb = parseFloat(fee_suggest_combo.currentValue)
-
-            if (input_number < 0 || ((tempRequest != null) && (input_number > tempRequest.maxAmount)))
-            {
-                amount_input.input_text = prev_text
-                return
-            }
-
-            prev_text = amount_input.input_text
-        }
-
-        CustomButton {
-
-            id: max_but
-
-            z: 1
-
-            width: 55
-            height: 28
-            back_radius: 37
-
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.right: parent.right
-            anchors.rightMargin: 23
-
-            text: qsTr("MAX")
-            font.pixelSize: 12
-            enabled: (tempRequest != null)
-
-            function click_enter() {
-                if (tempRequest != null) {
-                    amount_input.input_text = tempRequest.maxAmount
-                }
-            }
-        }
-
-        Label {
-
-            id: currency
-
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.right: max_but.left
-            anchors.rightMargin: 16
-
-            text: "BTC"
-            font.pixelSize: 14
-            font.family: "Roboto"
-            font.weight: Font.Normal
-            color: "#7A88B0"
-        }
-
     }
 
     RowLayout {
@@ -238,8 +120,7 @@ ColumnLayout  {
         Layout.preferredHeight : 70
         Layout.topMargin: 10
 
-
-        CustomComboBox {
+        WalletsComboBox {
 
             id: from_wallet_combo
 
@@ -247,32 +128,13 @@ ColumnLayout  {
             Layout.alignment: Qt.AlignLeft | Qt.AlingVCenter
 
             width: 271
-            height: 70
-
-            model: walletBalances
-
-            //aliases
-            title_text: qsTr("From Wallet")
-            details_text: getWalletData(currentIndex, WalletBalance.TotalRole)
-
-            textRole: "name"
-            valueRole: "name"
-
-            Connections
-            {
-                target:walletBalances
-                function onRowCountChanged ()
-                {
-                    from_wallet_combo.currentIndex = overviewWalletIndex
-                }
-            }
 
             onActivated: {
                 //I dont understand why but acceptableInput dont work...
                 var amount_max = getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole)
                 var cur_value = parseFloat(amount_input.input_text)
-                var bottom = amount_input.input_validator.bottom
-                var top = amount_input.input_validator.top
+                var bottom = 0
+                var top = tempRequest.maxAmount
                 if(cur_value < bottom || cur_value > top)
                 {
                     amount_input.input_text = amount_max
@@ -285,35 +147,15 @@ ColumnLayout  {
             Layout.preferredHeight: 70
         }
 
-
-        CustomComboBox {
+        FeeSuggestComboBox {
 
             id: fee_suggest_combo
 
             Layout.rightMargin: 24
             Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
 
-            model: feeSuggestions
-
-            //aliases
-            title_text: qsTr("Fee Suggestions")
-
             width: 271
-            height: 70
-
-            textRole: "text"
-            valueRole: "value"
-
-            Connections
-            {
-                target:feeSuggestions
-                function onRowCountChanged ()
-                {
-                    fee_suggest_combo.currentIndex = 0
-                }
-            }
         }
-
     }
 
     CustomTextEdit {

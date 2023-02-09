@@ -4,3 +4,7 @@ SendPopup             1.0 SendPopup.qml
 SimpleDetails         1.0 SimpleDetails.qml
 SignTransaction       1.0 SignTransaction.qml
 AdvancedDetails       1.0 AdvancedDetails.qml
+AmountInput           1.0 AmountInput.qml
+FeeSuggestComboBox    1.0 FeeSuggestComboBox.qml
+RecvAddrTextInput     1.0 RecvAddrTextInput.qml
+WalletsComboBox       1.0 WalletsComboBox.qml
