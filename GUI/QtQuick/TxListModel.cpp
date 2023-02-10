@@ -99,21 +99,21 @@ QColor TxListModel::dataColor(int row, int col) const
    const auto& entry = data_.at(row - 1);
    if (col == 5) {
       switch (entry.nbConf) {
-      case 0:  return QColorConstants::Red;
+      case 0:  return ColorScheme::transactionConfirmationZero;
       case 1:
       case 2:
       case 3:
       case 4:
       case 5:  return QColorConstants::Yellow;
-      default: return QColorConstants::Green;
+      default: return ColorScheme::transactionConfirmationHigh;
       }
    }
    else if (col == 2) {
       const auto& itTxDet = txDetails_.find(row - 1);
       if (itTxDet != txDetails_.end()) {
          switch (itTxDet->second.direction) {
-         case bs::sync::Transaction::Direction::Received:   return QColorConstants::Green;
-         case bs::sync::Transaction::Direction::Sent:       return QColorConstants::Red;
+         case bs::sync::Transaction::Direction::Received:   return ColorScheme::transactionConfirmationHigh;
+         case bs::sync::Transaction::Direction::Sent:       return ColorScheme::transactionConfirmationZero;
          case bs::sync::Transaction::Direction::Internal:   return QColorConstants::Cyan;
          default: break;
          }
@@ -494,13 +494,13 @@ QColor TxListForAddr::dataColor(int row, int col) const
    const auto& entry = data_.at(row - 1);
    if (col == 2) {
       switch (entry.nbConf) {
-      case 0:  return QColorConstants::Red;
+      case 0:  return ColorScheme::transactionConfirmationZero;
       case 1:
       case 2:
       case 3:
       case 4:
       case 5:  return QColorConstants::Yellow;
-      default: return QColorConstants::Green;
+      default: return ColorScheme::transactionConfirmationHigh;
       }
    }
    return QColorConstants::White;
