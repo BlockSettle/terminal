@@ -39,6 +39,8 @@
 #include "SettingsAdapter.h"
 #include "Wallets/ProtobufHeadlessUtils.h"
 #include "WalletBalancesModel.h"
+#include "TransactionFilterModel.h"
+#include "TransactionForAddressFilterModel.h"
 
 #include "common.pb.h"
 #include "hardware_wallet.pb.h"
@@ -213,6 +215,8 @@ void QtQuickAdapter::run(int &argc, char **argv)
    qmlRegisterInterface<QTxDetails>("QTxDetails");
    qmlRegisterUncreatableMetaObject(WalletBalance::staticMetaObject, "wallet.balance"
       , 1, 0, "WalletBalance", tr("Error: only enums"));
+    qmlRegisterType<TransactionFilterModel>("terminal.models", 1, 0, "TransactionFilterModel");
+    qmlRegisterType<TransactionForAddressFilterModel>("terminal.models", 1, 0, "TransactionForAddressFilterModel");
 
    //need to read files in qml
    qputenv("QML_XHR_ALLOW_FILE_READ", QByteArray("1"));
@@ -889,7 +893,8 @@ ProcessingResult QtQuickAdapter::processWalletData(bs::message::SeqId msgId
    QVector<QVector<QString>> addresses;
    for (const auto& addr : response.used_addresses()) {
       addresses.append({ QString::fromStdString(addr.address())
-      , QString::fromStdString(addr.comment().empty() ? addr.index() : addr.comment()) });
+         , QString::fromStdString(addr.comment())
+         , QString::fromStdString(addr.index()) });
    }
    addrModel_->addRows(response.wallet_id(), addresses);
    return ProcessingResult::Success;
@@ -1547,6 +1552,7 @@ void QtQuickAdapter::processWalletAddresses(const std::string& walletId
    const auto lastAddr = addresses.at(addresses.size() - 1);
    logger_->debug("[{}] {} last address: {}", __func__, hdWalletId, lastAddr.address.display());
    addrModel_->addRow(hdWalletId, { QString::fromStdString(lastAddr.address.display())
+      , QString()
       , QString::fromStdString(lastAddr.index) });
    generatedAddress_ = lastAddr.address;
    emit addressGenerated();

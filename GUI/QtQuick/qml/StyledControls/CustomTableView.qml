@@ -65,8 +65,16 @@ TableView {
                 }
             }
 
-            onClicked: component.cellClicked(row, column, tableData)
-            onDoubleClicked: component.cellDoubleClicked(row, column, tableData)
+            onClicked: {
+                if (row !== 0) {
+                    component.cellClicked(row, column, tableData)
+                }
+            }
+            onDoubleClicked: {
+                if (row !== 0) {
+                    omponent.cellDoubleClicked(row, column, tableData)
+                }
+            } 
         }
 
         Row {

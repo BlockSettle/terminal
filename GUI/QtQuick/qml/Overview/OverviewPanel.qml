@@ -24,6 +24,7 @@ Rectangle {
     signal requestWalletProperties()
     signal createNewWallet()
     signal walletIndexChanged(index : int)
+    signal openAddressDetails(var address, var transactions, var balance, var comment, var type, var wallet)
 
     Column {
         anchors.leftMargin: 18
@@ -74,6 +75,15 @@ Rectangle {
 
                     columnWidths: [0.35, 0.15, 0.1, 0.4]
                     onCopyRequested: bsApp.copyAddressToClipboard(id)
+                    onCellClicked: (row, column, data) => {
+                        const address = (column === 0) ? data : model.data(model.index(row, 0), 257)
+                        const transactions = model.data(model.index(row, 1), 257)
+                        const balance = model.data(model.index(row, 2), 257)
+                        const comment = model.data(model.index(row, 3), 257)
+                        const type = model.data(model.index(row, 0), 261)
+
+                        openAddressDetails(address, transactions, balance, comment, type, overview_panel.currentWallet)
+                    }
                 }
             }
         }

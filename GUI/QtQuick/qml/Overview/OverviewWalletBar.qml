@@ -21,6 +21,8 @@ Rectangle {
     height: 100
     color: "transparent"
 
+    property alias currentWallet: wallet_selection_combobox.currentValue
+
     signal requestWalletProperties()
     signal createNewWallet()
     signal walletIndexChanged(index : int)
