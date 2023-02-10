@@ -16,11 +16,11 @@
 namespace
 {
    static const QHash<int, QByteArray> kRoles{
-       {QmlAddressListModel::TableDataRole, "tableData"},
-       {QmlAddressListModel::HeadingRole, "heading"},
-       {QmlAddressListModel::FirstColRole, "firstcol"},
-       {QmlAddressListModel::ColorRole, "dataColor"},
-       {QmlAddressListModel::AddressTypeRole, "addressType"} };
+      {QmlAddressListModel::TableDataRole, "tableData"},
+      {QmlAddressListModel::HeadingRole, "heading"},
+      {QmlAddressListModel::FirstColRole, "firstcol"},
+      {QmlAddressListModel::ColorRole, "dataColor"},
+      {QmlAddressListModel::AddressTypeRole, "addressType"} };
 }
 
 QmlAddressListModel::QmlAddressListModel(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
