@@ -747,7 +747,7 @@ QString QTxDetails::feePerByte() const
 
 qint32 QTxDetails::height() const
 {
-    return details_.tx.getTxHeight();
+   return details_.tx.getTxHeight();
 }
 
 TxInOutModel::TxInOutModel(const std::vector<bs::sync::AddressDetails>& data, QObject* parent)

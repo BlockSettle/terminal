@@ -16,15 +16,15 @@
 namespace
 {
    static const QHash<int, QByteArray> kRoles{
-       {QmlAddressListModel::TableDataRole, "tableData"},
-       {QmlAddressListModel::HeadingRole, "heading"},
-       {QmlAddressListModel::FirstColRole, "firstcol"},
-       {QmlAddressListModel::ColorRole, "dataColor"},
-       {QmlAddressListModel::AddressTypeRole, "addressType"}};
+      {QmlAddressListModel::TableDataRole, "tableData"},
+      {QmlAddressListModel::HeadingRole, "heading"},
+      {QmlAddressListModel::FirstColRole, "firstcol"},
+      {QmlAddressListModel::ColorRole, "dataColor"},
+      {QmlAddressListModel::AddressTypeRole, "addressType"}};
 }
 
 QmlAddressListModel::QmlAddressListModel(const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
-    : QAbstractTableModel(parent), logger_(logger), header_({tr("Address"), tr("#Tx"), tr("Balance (BTC)"), tr("Comment")})
+   : QAbstractTableModel(parent), logger_(logger), header_({tr("Address"), tr("#Tx"), tr("Balance (BTC)"), tr("Comment")})
 {
 }
 
@@ -45,13 +45,15 @@ QVariant QmlAddressListModel::data(const QModelIndex &index, int role) const
       switch (role)
       {
       case TableDataRole:
-         if (index.row() == 0) {
+         if (index.row() == 0)
+         {
             return header_.at(index.column());
          }
          else
          {
             const int row = index.row() - 1;
-            switch (index.column()) {
+            switch (index.column())
+            {
             case 0: return table_.at(row).at(0);
             case 1: return QString::number(pendingBalances_.at(addresses_.at(row).id()).nbTx);
             case 2: return QString::number(pendingBalances_.at(addresses_.at(row).id()).balance / BTCNumericTypes::BalanceDivider, 'f', 8);
@@ -63,10 +65,12 @@ QVariant QmlAddressListModel::data(const QModelIndex &index, int role) const
       case HeadingRole: return (index.row() == 0);
       case FirstColRole: return (index.column() == 0);
       case ColorRole:
-         if (index.row() == 0) {
+         if (index.row() == 0)
+         {
             return ColorScheme::tableHeaderColor;
          }
-         else {
+         else
+         {
             return QColorConstants::White;
          }
       case AddressTypeRole: return table_.at(index.row() - 1).at(2);

@@ -15,28 +15,28 @@
 
 class TransactionFilterModel : public QSortFilterProxyModel
 {
-    Q_OBJECT
-    Q_PROPERTY(QString walletName READ walletName WRITE setWalletName NOTIFY changed)
-    Q_PROPERTY(QString transactionType READ transactionType WRITE setTransactionType NOTIFY changed)
+   Q_OBJECT
+   Q_PROPERTY(QString walletName READ walletName WRITE setWalletName NOTIFY changed)
+   Q_PROPERTY(QString transactionType READ transactionType WRITE setTransactionType NOTIFY changed)
 
 public:
-    TransactionFilterModel(QObject *parent = nullptr);
+   TransactionFilterModel(QObject *parent = nullptr);
 
-    const QString &walletName() const;
-    void setWalletName(const QString &);
-    const QString &transactionType() const;
-    void setTransactionType(const QString &);
+   const QString &walletName() const;
+   void setWalletName(const QString &);
+   const QString &transactionType() const;
+   void setTransactionType(const QString &);
 
 signals:
-    void changed();
+   void changed();
 
 protected:
-    bool filterAcceptsRow(int source_row,
-                          const QModelIndex &source_parent) const override;
+   bool filterAcceptsRow(int source_row,
+                         const QModelIndex &source_parent) const override;
 
 private:
-    QString walletName_;
-    QString transactionType_;
+   QString walletName_;
+   QString transactionType_;
 };
 
 #endif // TRANSACTION_FILTER_MODEL_H
