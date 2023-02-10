@@ -745,7 +745,7 @@ QString QTxDetails::feePerByte() const
 }
 
 
-qint32 QTxDetails::height() const
+quint32 QTxDetails::height() const
 {
    return details_.tx.getTxHeight();
 }

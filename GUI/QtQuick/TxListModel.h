@@ -176,8 +176,8 @@ public:
    QString fee() const;
    Q_PROPERTY(QString feePerByte READ feePerByte NOTIFY updated)
    QString feePerByte() const;
-   Q_PROPERTY(qint32 height READ height NOTIFY updated)
-   qint32 height() const;
+   Q_PROPERTY(quint32 height READ height NOTIFY updated)
+   quint32 height() const;
 
    Q_PROPERTY(TxInOutModel* inputs READ inputs NOTIFY updated)
    TxInOutModel* inputs() const { return inputsModel_; }
