@@ -13,55 +13,59 @@
 #include <QDebug>
 
 TransactionFilterModel::TransactionFilterModel(QObject *parent)
-    : QSortFilterProxyModel(parent)
+   : QSortFilterProxyModel(parent)
 {
-    connect(this, &TransactionFilterModel::changed, this, &TransactionFilterModel::invalidate);
+   connect(this, &TransactionFilterModel::changed, this, &TransactionFilterModel::invalidate);
 }
 
 bool TransactionFilterModel::filterAcceptsRow(int source_row,
-                                              const QModelIndex &source_parent) const
+    const QModelIndex &source_parent) const
 {
-    if (source_row == 0) {
-        return true;
-    }
+   if (source_row == 0)
+   {
+      return true;
+   }
 
-    const auto walletNameIndex = sourceModel()->index(source_row, 1);
-    const auto transactionTypeIndex = sourceModel()->index(source_row, 2);
+   const auto walletNameIndex = sourceModel()->index(source_row, 1);
+   const auto transactionTypeIndex = sourceModel()->index(source_row, 2);
 
+   if (!walletName_.isEmpty())
+   {
+      if (sourceModel()->data(walletNameIndex, TxListModel::TableRoles::TableDataRole) != walletName_)
+      {
+         return false;
+      }
+   }
 
-    if (!walletName_.isEmpty()) {
-        if (sourceModel()->data(walletNameIndex, TxListModel::TableRoles::TableDataRole) != walletName_) {
-            return false;
-        }
-    }
-    
-    if (!transactionType_.isEmpty()) {
-        if (sourceModel()->data(transactionTypeIndex, TxListModel::TableRoles::TableDataRole) != transactionType_) {
-            return false;
-        }
-    }
+   if (!transactionType_.isEmpty())
+   {
+      if (sourceModel()->data(transactionTypeIndex, TxListModel::TableRoles::TableDataRole) != transactionType_)
+      {
+         return false;
+      }
+   }
 
-    return true;
+   return true;
 }
 
 const QString &TransactionFilterModel::walletName() const
 {
-    return walletName_;
+   return walletName_;
 }
 
 void TransactionFilterModel::setWalletName(const QString &name)
 {
-    walletName_ = name;
-    emit changed();
+   walletName_ = name;
+   emit changed();
 }
 
 const QString &TransactionFilterModel::transactionType() const
 {
-    return transactionType_;
+   return transactionType_;
 }
 
 void TransactionFilterModel::setTransactionType(const QString &type)
 {
-    transactionType_ = type;
-    emit changed();
+   transactionType_ = type;
+   emit changed();
 }

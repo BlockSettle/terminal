@@ -89,7 +89,7 @@ CustomTableView {
                         leftPadding: 10
                     }
                     Text {
-                        text: address
+                        text: tableData
                         width: parent.width - fontMetrics.advanceWidth(address_label_item.text) - 10
                         color: BSStyle.textColor
                         font.family: "Roboto"
@@ -111,7 +111,7 @@ CustomTableView {
                         leftPadding: 10
                     }
                     Text {
-                        text: tableData
+                        text: txHash
                         width: parent.width - fontMetrics.advanceWidth(transaction_label_item.text) - 10
                         color: BSStyle.textColor
                         font.family: "Roboto"

@@ -274,7 +274,7 @@ Item {
 
                         // TODO: change constant 261 with C++ defined enum
                         onCellClicked: (row, column, data) => {
-                            var address = model.data(model.index(row, 0), 261)
+                            var address = model.data(model.index(row, 0), 257)
                             requestPageChange(address)
                         }
                     }

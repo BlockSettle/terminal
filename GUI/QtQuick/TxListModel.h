@@ -128,7 +128,7 @@ class TxInOutModel : public QAbstractTableModel
    Q_OBJECT
 public:
    enum TableRoles {
-      TableDataRole = Qt::UserRole + 1, HeadingRole, ColorRole, WidthRole, AddressRole
+      TableDataRole = Qt::UserRole + 1, HeadingRole, ColorRole, WidthRole, TxHashRole
    };
    TxInOutModel(const std::vector<bs::sync::AddressDetails>& data, QObject* parent = nullptr);
 
@@ -176,8 +176,8 @@ public:
    QString fee() const;
    Q_PROPERTY(QString feePerByte READ feePerByte NOTIFY updated)
    QString feePerByte() const;
-   Q_PROPERTY(int height READ height NOTIFY updated)
-   int height() const;
+   Q_PROPERTY(qint32 height READ height NOTIFY updated)
+   qint32 height() const;
 
    Q_PROPERTY(TxInOutModel* inputs READ inputs NOTIFY updated)
    TxInOutModel* inputs() const { return inputsModel_; }

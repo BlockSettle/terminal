@@ -15,26 +15,26 @@
 
 class TransactionForAddressFilterModel : public QSortFilterProxyModel
 {
-    Q_OBJECT
-    Q_PROPERTY(bool positive READ positive WRITE set_positive NOTIFY changed)
+   Q_OBJECT
+   Q_PROPERTY(bool positive READ positive WRITE set_positive NOTIFY changed)
 
 public:
-    TransactionForAddressFilterModel(QObject *parent = nullptr);
+   TransactionForAddressFilterModel(QObject *parent = nullptr);
 
-    bool positive() const;
-    void set_positive(bool value);
+   bool positive() const;
+   void set_positive(bool value);
 
 signals:
-    void changed();
+   void changed();
 
 protected:
-    bool filterAcceptsRow(int source_row,
-                          const QModelIndex &source_parent) const override;
-    bool filterAcceptsColumn(int source_column,
-                          const QModelIndex &source_parent) const override;
+   bool filterAcceptsRow(int source_row,
+                         const QModelIndex &source_parent) const override;
+   bool filterAcceptsColumn(int source_column,
+                            const QModelIndex &source_parent) const override;
 
 private:
-    bool positive_ {false};
+   bool positive_{false};
 };
 
 #endif // TRANSACTION_FOR_ADDRESS_FILTER_MODEL_H

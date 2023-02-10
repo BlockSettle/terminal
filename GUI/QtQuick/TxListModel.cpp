@@ -34,7 +34,7 @@ namespace {
       {TxInOutModel::HeadingRole, "heading"},
       {TxInOutModel::ColorRole, "dataColor"},
       {TxInOutModel::WidthRole, "colWidth"},
-      {TxInOutModel::AddressRole, "address"},
+      {TxInOutModel::TxHashRole, "txHash"},
    };
 
    static const QString dateTimeFormat = QString::fromStdString("yyyy-MM-dd hh:mm:ss");
@@ -745,7 +745,7 @@ QString QTxDetails::feePerByte() const
 }
 
 
-int QTxDetails::height() const
+qint32 QTxDetails::height() const
 {
     return details_.tx.getTxHeight();
 }
@@ -779,9 +779,9 @@ QVariant TxInOutModel::data(const QModelIndex& index, int role) const
       return dataColor(index.row(), index.column());
    case WidthRole:
       return colWidth(index.column());
-   case AddressRole:
+   case TxHashRole:
       try {
-         return QString::fromStdString(data_.at(index.row() - 1).address.display());
+         return QString::fromStdString(data_.at(index.row() - 1).outHash.toHexStr(true));
       }
       catch (const std::exception&) { return {}; }
    default: break;
@@ -804,12 +804,9 @@ QString TxInOutModel::getData(int row, int col) const
    }
    try {
       switch (col) {
-      case 0:
-         return QString::fromStdString(data_.at(row - 1).outHash.toHexStr(true));
-      case 1:
-         return QString::fromStdString(data_.at(row - 1).valueStr);
-      case 2:
-         return QString::fromStdString(data_.at(row - 1).walletName);
+      case 0: return QString::fromStdString(data_.at(row - 1).address.display());
+      case 1: return QString::fromStdString(data_.at(row - 1).valueStr);
+      case 2: return QString::fromStdString(data_.at(row - 1).walletName);
       default: break;
       }
    }

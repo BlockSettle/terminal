@@ -230,11 +230,18 @@ Popup {
                     font.pixelSize: 14
                     width: 170
                 }
-                Label {
-                    text: transaction_details.address
-                    color: BSStyle.textColor
-                    font.family: "Roboto"
-                    font.pixelSize: 14
+                Row {
+                    Text {
+                        text: transaction_details.address
+                        color: BSStyle.textColor
+                        font.family: "Roboto"
+                        font.pixelSize: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    CopyIconButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        onCopy: bsApp.copyAddressToClipboard(tx.txId)
+                    }
                 }
 
                 Text {
@@ -256,7 +263,7 @@ Popup {
                 spacing: 8
 
                 Label {
-                    text: qsTr("Sender addresses")
+                    text: qsTr("Input addresses")
                     color: BSStyle.textColor
                     font.pixelSize: 19
                     font.weight: Font.Medium
@@ -295,7 +302,7 @@ Popup {
                 spacing: 8
 
                 Label {
-                    text: qsTr("Receiver addresses")
+                    text: qsTr("Output addresses")
                     color: BSStyle.textColor
                     font.pixelSize: 19
                     font.weight: Font.Medium
