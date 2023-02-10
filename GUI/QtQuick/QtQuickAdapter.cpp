@@ -1552,7 +1552,7 @@ void QtQuickAdapter::processWalletAddresses(const std::string& walletId
    const auto lastAddr = addresses.at(addresses.size() - 1);
    logger_->debug("[{}] {} last address: {}", __func__, hdWalletId, lastAddr.address.display());
    addrModel_->addRow(hdWalletId, { QString::fromStdString(lastAddr.address.display())
-      , QString::fromStdString(lastAddr.index)
+      , QString()
       , QString::fromStdString(lastAddr.index) });
    generatedAddress_ = lastAddr.address;
    emit addressGenerated();
