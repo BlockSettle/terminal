@@ -16,29 +16,29 @@
 namespace
 {
    static const QHash<int, QByteArray> kRoles{
-      {QmlAddressListModel::TableDataRole, "tableData"},
-      {QmlAddressListModel::HeadingRole, "heading"},
-      {QmlAddressListModel::FirstColRole, "firstcol"},
-      {QmlAddressListModel::ColorRole, "dataColor"},
-      {QmlAddressListModel::AddressTypeRole, "addressType"}};
+       {QmlAddressListModel::TableDataRole, "tableData"},
+       {QmlAddressListModel::HeadingRole, "heading"},
+       {QmlAddressListModel::FirstColRole, "firstcol"},
+       {QmlAddressListModel::ColorRole, "dataColor"},
+       {QmlAddressListModel::AddressTypeRole, "addressType"} };
 }
 
-QmlAddressListModel::QmlAddressListModel(const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
-   : QAbstractTableModel(parent), logger_(logger), header_({tr("Address"), tr("#Tx"), tr("Balance (BTC)"), tr("Comment")})
+QmlAddressListModel::QmlAddressListModel(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
+   : QAbstractTableModel(parent), logger_(logger), header_({ tr("Address"), tr("#Tx"), tr("Balance (BTC)"), tr("Comment") })
 {
 }
 
-int QmlAddressListModel::rowCount(const QModelIndex &) const
+int QmlAddressListModel::rowCount(const QModelIndex&) const
 {
    return table_.size() + 1;
 }
 
-int QmlAddressListModel::columnCount(const QModelIndex &) const
+int QmlAddressListModel::columnCount(const QModelIndex&) const
 {
    return header_.size();
 }
 
-QVariant QmlAddressListModel::data(const QModelIndex &index, int role) const
+QVariant QmlAddressListModel::data(const QModelIndex& index, int role) const
 {
    try
    {
@@ -77,7 +77,7 @@ QVariant QmlAddressListModel::data(const QModelIndex &index, int role) const
       default: break;
       }
    }
-   catch (const std::exception &)
+   catch (const std::exception&)
    {
       return QString{};
    }
@@ -89,7 +89,7 @@ QHash<int, QByteArray> QmlAddressListModel::roleNames() const
    return kRoles;
 }
 
-void QmlAddressListModel::addRow(const std::string &walletId, const QVector<QString> &row)
+void QmlAddressListModel::addRow(const std::string& walletId, const QVector<QString>& row)
 {
    if (walletId != expectedWalletId_)
    {
@@ -100,7 +100,7 @@ void QmlAddressListModel::addRow(const std::string &walletId, const QVector<QStr
    {
       addresses_.push_back(bs::Address::fromAddressString(row.at(0).toStdString()));
    }
-   catch (const std::exception &)
+   catch (const std::exception&)
    {
       addresses_.push_back(bs::Address{});
    }
@@ -109,7 +109,7 @@ void QmlAddressListModel::addRow(const std::string &walletId, const QVector<QStr
    endInsertRows();
 }
 
-void QmlAddressListModel::addRows(const std::string &walletId, const QVector<QVector<QString>> &rows)
+void QmlAddressListModel::addRows(const std::string& walletId, const QVector<QVector<QString>>& rows)
 {
    if (walletId != expectedWalletId_)
    {
@@ -120,13 +120,13 @@ void QmlAddressListModel::addRows(const std::string &walletId, const QVector<QVe
    {
       return;
    }
-   for (const auto &row : rows)
+   for (const auto& row : rows)
    {
       try
       {
          addresses_.push_back(bs::Address::fromAddressString(row.at(0).toStdString()));
       }
-      catch (const std::exception &)
+      catch (const std::exception&)
       {
          addresses_.push_back(bs::Address{});
       }
@@ -136,12 +136,12 @@ void QmlAddressListModel::addRows(const std::string &walletId, const QVector<QVe
    endInsertRows();
 }
 
-void QmlAddressListModel::updateRow(const BinaryData &addrPubKey, uint64_t bal, uint32_t nbTx)
+void QmlAddressListModel::updateRow(const BinaryData& addrPubKey, uint64_t bal, uint32_t nbTx)
 {
-   pendingBalances_[addrPubKey] = {bal, nbTx};
+   pendingBalances_[addrPubKey] = { bal, nbTx };
    for (int i = 0; i < table_.size(); ++i)
    {
-      const auto &addr = addresses_.at(i);
+      const auto& addr = addresses_.at(i);
       // logger_->debug("[QmlAddressListModel::updateRow] {} {} {}", addr.display(), bal, nbTx);
       if (addr.id() == addrPubKey)
       {
@@ -151,7 +151,7 @@ void QmlAddressListModel::updateRow(const BinaryData &addrPubKey, uint64_t bal, 
    }
 }
 
-void QmlAddressListModel::reset(const std::string &expectedWalletId)
+void QmlAddressListModel::reset(const std::string& expectedWalletId)
 {
    expectedWalletId_ = expectedWalletId;
    beginResetModel();

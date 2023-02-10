@@ -12,14 +12,14 @@
 #include "TxListModel.h"
 #include <QDebug>
 
-TransactionFilterModel::TransactionFilterModel(QObject *parent)
+TransactionFilterModel::TransactionFilterModel(QObject* parent)
    : QSortFilterProxyModel(parent)
 {
    connect(this, &TransactionFilterModel::changed, this, &TransactionFilterModel::invalidate);
 }
 
 bool TransactionFilterModel::filterAcceptsRow(int source_row,
-    const QModelIndex &source_parent) const
+   const QModelIndex& source_parent) const
 {
    if (source_row == 0)
    {
@@ -48,23 +48,23 @@ bool TransactionFilterModel::filterAcceptsRow(int source_row,
    return true;
 }
 
-const QString &TransactionFilterModel::walletName() const
+const QString& TransactionFilterModel::walletName() const
 {
    return walletName_;
 }
 
-void TransactionFilterModel::setWalletName(const QString &name)
+void TransactionFilterModel::setWalletName(const QString& name)
 {
    walletName_ = name;
    emit changed();
 }
 
-const QString &TransactionFilterModel::transactionType() const
+const QString& TransactionFilterModel::transactionType() const
 {
    return transactionType_;
 }
 
-void TransactionFilterModel::setTransactionType(const QString &type)
+void TransactionFilterModel::setTransactionType(const QString& type)
 {
    transactionType_ = type;
    emit changed();
