@@ -42,7 +42,6 @@ QVariant WalletBalancesModel::data(const QModelIndex& index, int role) const
    FieldFunc ff{ nullptr };
    switch (role) {
    case WalletBalance::NameRole:
-      logger_->debug("[WalletBalancesModel::data] name: {}", wallets_.at(index.row()).walletName);
       return QString::fromStdString(wallets_.at(index.row()).walletName);
    case WalletBalance::IdRole:
       return QString::fromStdString(wallets_.at(index.row()).walletId);

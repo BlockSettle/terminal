@@ -95,6 +95,7 @@ ColumnLayout  {
             amount_input.setActiveFocus()
         }
 
+
         function createTempRequest() {
             var fpb = parseFloat(fee_suggest_combo.currentValue)
             return bsApp.createTXSignRequest(wallets_current_index
@@ -138,6 +139,12 @@ ColumnLayout  {
                 if(cur_value < bottom || cur_value > top)
                 {
                     amount_input.input_text = amount_max
+                }
+
+                if (rec_addr_input.isValid) {
+                    var fpb = parseFloat(fee_suggest_combo.currentValue)
+                    tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                                , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
                 }
             }
         }
@@ -197,12 +204,10 @@ ColumnLayout  {
         }
 
         function click_enter() {
-            layout.sig_continue( bsApp.createTXSignRequest(
-                            from_wallet_combo.currentIndex, rec_addr_input.input_text,
-                            parseFloat(amount_input.input_text), parseFloat(fee_suggest_combo.currentValue),
-                            comment_input.input_text))
+            layout.sig_continue( bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                , [rec_addr_input.input_text], [parseFloat(amount_input.input_text)]
+                , parseFloat(fee_suggest_combo.currentValue), comment_input.input_text))
         }
-
     }
 
 

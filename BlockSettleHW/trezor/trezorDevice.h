@@ -66,6 +66,8 @@ namespace bs {
          void signTX(const bs::core::wallet::TXSignRequest& reqTX) override;
          void retrieveXPubRoot() override;
 
+         void setSupportingTX(const Tx&) override;
+
          // Management
          void setMatrixPin(const SecureBinaryData& pin) override;
          void setPassword(const SecureBinaryData& password, bool enterOnDevice) override;

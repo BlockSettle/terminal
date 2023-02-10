@@ -193,8 +193,8 @@ Item {
                 console.log("amount.text = " + parseFloat(amount.text))
                 console.log("recvAddress.text.length = " + recvAddress.text.length)
                 verifySignTX.txSignRequest = bsApp.createTXSignRequest(
-                            sendWalletsComboBox.currentIndex, recvAddress.text,
-                            parseFloat(amount.text), /*parseFloat(fees.text)*/1.0,
+                            sendWalletsComboBox.currentIndex, [recvAddress.text],
+                            [parseFloat(amount.text)], parseFloat(fees.text),
                             txComment.text)
                 stack.push(verifySignTX)
             }

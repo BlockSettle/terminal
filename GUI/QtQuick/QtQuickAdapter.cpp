@@ -898,7 +898,7 @@ ProcessingResult QtQuickAdapter::processWalletData(bs::message::SeqId msgId
 ProcessingResult QtQuickAdapter::processWalletBalances(bs::message::SeqId responseId
    , const WalletsMessage_WalletBalances &response)
 {
-   logger_->debug("[{}] {}", __func__, response.DebugString());
+   //logger_->debug("[{}] {}", __func__, response.DebugString());
    const WalletBalancesModel::Balance bal{ response.spendable_balance(), response.unconfirmed_balance()
       , response.total_balance(), response.nb_addresses() };
    walletBalances_->setWalletBalance(response.wallet_id(), bal);
@@ -1195,29 +1195,50 @@ void QtQuickAdapter::requestFeeSuggestions()
    pushRequest(user_, userBlockchain_, msg.SerializeAsString());
 }
 
-QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QString& recvAddr
-   , double amount, double fee, const QString& comment, QUTXOList* utxos)
+QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStringList& recvAddrs
+   , const QList<double>& recvAmounts, double fee, const QString& comment, QUTXOList* utxos)
 {
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_request();
    msgReq->set_hd_wallet_id(hdWalletIdByIndex(walletIndex));
-   if (!recvAddr.isEmpty()) {
-      auto msgOut = msgReq->add_outputs();
-      msgOut->set_address(recvAddr.toStdString());
-      msgOut->set_amount(amount);
-   }
-   else {
+   bool isMaxAmount = false;
+   if (recvAddrs.isEmpty()) {
       const auto& recipients = txOutputsModel_->recipients();
       for (const auto& recip : recipients) {
          try {
             const auto& addr = bs::Address::fromRecipient(recip);
             auto msgOut = msgReq->add_outputs();
             msgOut->set_address(addr.display());
-            msgOut->set_amount(recip->getValue() / BTCNumericTypes::BalanceDivider);
+            if (recip->getValue()) {
+               msgOut->set_amount(recip->getValue() / BTCNumericTypes::BalanceDivider);
+            }
+            else {
+               isMaxAmount = true;
+            }
          }
          catch (const std::exception& e) {
-            logger_->error("[{}] {}", __func__, e.what());
+            logger_->error("[{}] recipient {}", __func__, e.what());
          }
+      }
+   }
+   else {
+      int idx = 0;
+      for (const auto& recvAddr : recvAddrs) {
+         try {
+            const auto& addr = bs::Address::fromAddressString(recvAddr.toStdString());
+            auto msgOut = msgReq->add_outputs();
+            msgOut->set_address(addr.display());
+            if (recvAmounts.size() > idx) {
+               msgOut->set_amount(recvAmounts.at(idx));
+            }
+            else {
+               isMaxAmount = true;
+            }
+         }
+         catch (const std::exception& e) {
+            logger_->error("[{}] recvAddr {}", __func__, e.what());
+         }
+         idx++;
       }
    }
    msgReq->set_fee_per_byte(fee);
@@ -1231,7 +1252,7 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStri
    }
    const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
    const auto txReq = new QTXSignRequest(this);
-   txReqs_[msgId] = { txReq, (amount == 0) };
+   txReqs_[msgId] = { txReq, isMaxAmount };
    return txReq;
 }
 
@@ -1417,7 +1438,7 @@ ProcessingResult QtQuickAdapter::processSignTX(const BlockSettle::Common::Signer
 
 ProcessingResult QtQuickAdapter::processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived& zcs)
 {
-   logger_->debug("[{}] {}", __func__, zcs.DebugString());
+   //logger_->debug("[{}] {}", __func__, zcs.DebugString());
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_details_request();
    for (const auto& zcEntry : zcs.tx_entries()) {

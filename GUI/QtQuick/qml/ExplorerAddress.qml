@@ -26,7 +26,7 @@ Item {
     signal requestPageChange(var text)
 
     Column {
-        spacing: 23
+        spacing: 20
         anchors.leftMargin: 18
         anchors.rightMargin: 18
         anchors.bottomMargin: 18
@@ -60,7 +60,7 @@ Item {
             width: parent.width
             height: 60
             anchors.bottomMargin: 24
-            anchors.topMargin: 24
+            anchors.topMargin: 18
             anchors.leftMargin: 18
             anchors.rightMargin: 18
 

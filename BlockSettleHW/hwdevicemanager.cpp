@@ -32,6 +32,7 @@ DeviceManager::DeviceManager(const std::shared_ptr<spdlog::logger>& logger)
    , user_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::HWWallets))
    , userWallets_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Wallets))
    , userSigner_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Signer))
+   , userBlockchain_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Blockchain))
 {}
 
 DeviceManager::~DeviceManager()
@@ -52,6 +53,8 @@ bs::message::ProcessingResult DeviceManager::process(const bs::message::Envelope
          return processWallet(env);
       case bs::message::TerminalUsers::Signer:
          return processSigner(env);
+      case bs::message::TerminalUsers::Blockchain:
+         return processBlockchain(env);
       default: break;
       }
    }
@@ -225,6 +228,48 @@ bs::message::ProcessingResult DeviceManager::processSigner(const bs::message::En
    default: break;
    }
    return bs::message::ProcessingResult::Ignored;
+}
+
+bs::message::ProcessingResult bs::hww::DeviceManager::processBlockchain(const bs::message::Envelope& env)
+{
+   ArmoryMessage msg;
+   if (!msg.ParseFromString(env.message)) {
+      logger_->error("[hww::DeviceManager::processBlockchain] failed to parse #{}"
+         , env.foreignId());
+      return bs::message::ProcessingResult::Error;
+   }
+   switch (msg.data_case()) {
+   case ArmoryMessage::kTransactions:
+      return processTransactions(env.responseId(), msg.transactions());
+   default: break;
+   }
+   return bs::message::ProcessingResult::Ignored;
+}
+
+bs::message::ProcessingResult bs::hww::DeviceManager::processTransactions(const bs::message::SeqId msgId
+   , const ArmoryMessage_Transactions& transactions)
+{
+   const auto& itReq = supportingTxReq_.find(msgId);
+   if (itReq == supportingTxReq_.end()) {
+      logger_->warn("[{}] unknown response #{}", __func__, msgId);
+      return bs::message::ProcessingResult::Error;
+   }
+   const auto& device = getDevice(itReq->second);
+   supportingTxReq_.erase(itReq);
+   if (!device) {
+      logger_->warn("[{}] device not found", __func__);
+      return bs::message::ProcessingResult::Error;
+   }
+   for (const auto& txData : transactions.transactions()) {
+      Tx tx(BinaryData::fromString(txData.tx()));
+      if (!tx.isInitialized()) {
+         logger_->warn("[{}] invalid TX at {}", __func__, txData.height());
+         continue;
+      }
+      tx.setTxHeight(txData.height());
+      device->setSupportingTX(tx);
+   }
+   return bs::message::ProcessingResult::Success;
 }
 
 bs::message::ProcessingResult DeviceManager::processImport(const bs::message::Envelope& env
@@ -591,15 +636,34 @@ void DeviceManager::requestHWPass(const DeviceKey& key, bool allowedOnDevice)
 
 void DeviceManager::deviceNotFound(const std::string& deviceId)
 {
+   logger_->debug("[{}] {}", __func__, deviceId);
 }
 
 void DeviceManager::deviceReady(const std::string& deviceId)
 {
+   logger_->debug("[{}] {}", __func__, deviceId);
 }
 
 void DeviceManager::deviceTxStatusChanged(const std::string& status)
 {
    logger_->debug("[{}] {}", __func__, status);
+}
+
+void bs::hww::DeviceManager::needSupportingTXs(const DeviceKey& key
+   , const std::set<BinaryData>& txHashes)
+{
+   if (txHashes.empty()) {
+      logger_->warn("[{}] no TX hashes from {}", __func__, key.label);
+      return;
+   }
+   ArmoryMessage msg;
+   auto msgReq = msg.mutable_get_txs_by_hash();
+   for (const auto& txHash : txHashes) {
+      msgReq->add_tx_hashes(txHash.toBinStr());
+   }
+   msgReq->set_disable_cache(true);
+   const auto msgId = pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+   supportingTxReq_[msgId] = key;
 }
 
 void DeviceManager::txSigned(const DeviceKey& device, const SecureBinaryData& signData)
