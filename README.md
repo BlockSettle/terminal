@@ -118,7 +118,7 @@ For access to trade our FX and XBT products please upgrade your account to Tradi
  Execute the following commands:
 
 	sudo apt install python-pip cmake libmysqlclient-dev autoconf libtool yasm nasm libgmp3-dev libdouble-conversion-dev
-	sudo apt install qttools5-dev-tools libfreetype-dev libfontconfig-dev libcups2-dev xcb
+	sudo apt install qttools5-dev-tools libfreetype-dev libfontconfig-dev libcups2-dev xcb libudev-dev libxi-dev libsm-dev libxrender-dev libdbus-1-dev
 	sudo apt install libx11-xcb-dev libxcb-xkb-dev libxcb-xinput-dev libxcb-sync-dev libxcb-render-util0-dev libxcb-xfixes0-dev libxcb-xinerama0-dev libxcb-randr0-dev libxcb-image0-dev libxcb-keysyms1-dev libxcb-icccm4-dev libxcb-glx0-dev libxkbcommon-x11-dev
 
 ### MacOS
