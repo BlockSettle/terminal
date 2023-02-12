@@ -9,7 +9,6 @@ Image {
 
     signal copy();
 
-    x: internal_text.contentWidth + copy_icon.width / 2
     width: 24
     height: 24
     anchors.verticalCenter: parent.verticalCenter

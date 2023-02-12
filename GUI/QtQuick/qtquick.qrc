@@ -130,7 +130,6 @@
         <file>images/notification_question.png</file>
         <file>images/notification_success.png</file>
         <file>images/notification_warning.png</file>
-        <file>images/delete.svg</file>
         <file>images/plus.svg</file>
         <file>qml/Settings/qmldir</file>
         <file>qml/Settings/SettingsMenu.qml</file>
@@ -156,5 +155,8 @@
         <file>qml/Send/AmountInput.qml</file>
         <file>qml/Send/FeeSuggestComboBox.qml</file>
         <file>qml/Send/RecvAddrTextInput.qml</file>
+        <file>qml/StyledControls/DeleteIconButton.qml</file>
+        <file>images/delete.png</file>
+        <file>images/delete.svg</file>
     </qresource>
 </RCC>

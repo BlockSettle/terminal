@@ -6,7 +6,7 @@ import QtQuick.Layouts 1.15
 import "../BsStyles"
 import "../StyledControls"
 
-//import wallet.balance 1.0
+import wallet.balance 1.0
 
 ColumnLayout  {
 
@@ -19,7 +19,7 @@ ColumnLayout  {
     width: 600
     spacing: 0
 
-    property var tempRequest: rec_addr_input._tempRequest
+    property var tempRequest: null
 
     RowLayout {
 
@@ -98,16 +98,14 @@ ColumnLayout  {
 
         function createTempRequest() {
             var fpb = parseFloat(fee_suggest_combo.currentValue)
-            return bsApp.createTXSignRequest(wallets_current_index
-                                             , rec_addr_input.input_text, 0, (fpb > 0) ? fpb : 1.0)
+            tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                        , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
         }
     }
 
     AmountInput {
 
         id: amount_input
-
-        _tempRequest: tempRequest
 
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : 70

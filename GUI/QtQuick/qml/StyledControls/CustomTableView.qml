@@ -27,14 +27,19 @@ TableView {
     ScrollBar.vertical: ScrollBar { }
 
     signal copyRequested(var id)
-    signal cellClicked(var row, var column, var data)
-    signal cellDoubleClicked(var row, var column, var data)
+    signal deleteRequested(int id)
+    signal cellClicked(int row, int column, var data)
+    signal cellDoubleClicked(int row, int column, var data)
 
-    property int text_header_size: 11
+    property int text_header_size: 11    
     property int cell_text_size: 12
     property int copy_button_column_index: 0
+    property int delete_button_column_index: -1
 
-    property var columnWidths
+    property int left_first_header_padding: 10
+    property int left_text_padding: 10
+
+    property var columnWidths:  ({})
     columnWidthProvider: function (column) {
         return columnWidths[column] * component.width
     }
@@ -75,6 +80,9 @@ TableView {
 
             Text {
                 id: internal_text
+
+                visible: column !== component.delete_button_column_index
+
                 text: tableData
                 height: parent.height
                 verticalAlignment: Text.AlignVCenter
@@ -85,7 +93,15 @@ TableView {
                 font.weight: Font.Normal
                 font.pixelSize: row === 0 ? component.text_header_size : component.cell_text_size
 
-                leftPadding: 10
+                leftPadding: (row === 0 && column === 0)
+                             ? left_first_header_padding : left_text_padding
+            }
+
+            DeleteIconButton {
+                id: delete_icon
+                x: 0
+                visible: column === component.delete_button_column_index && row > 0
+                onDeleteRequested: component.deleteRequested(row)
             }
 
             CopyIconButton {

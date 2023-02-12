@@ -18,7 +18,6 @@ CustomTextInput {
 
     id: rec_addr_input
 
-    property var _tempRequest: null
     property string fee_current_value
     property int wallets_current_index
 
@@ -61,7 +60,7 @@ CustomTextInput {
             rec_addr_input.isValid = bsApp.validateAddress(rec_addr_input.input_text)
             if (rec_addr_input.isValid)
             {
-                _tempRequest = createTempRequest()
+                createTempRequest()
                 focus_next()
             }
         }

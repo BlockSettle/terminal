@@ -1,12 +1,13 @@
 import QtQuick 2.12
 import QtQuick.Window 2.12
 import QtQuick.Controls 2.12
+import QtQuick.Controls 1.4
 import QtQuick.Layouts 1.15
 
 import "../BsStyles"
 import "../StyledControls"
 
-//import wallet.balance 1.0
+import wallet.balance 1.0
 
 ColumnLayout  {
 
@@ -18,6 +19,8 @@ ColumnLayout  {
     height: 748
     width: 1132
     spacing: 0
+
+    property var tempRequest: null
 
     RowLayout {
 
@@ -125,7 +128,7 @@ ColumnLayout  {
                     font.weight: Font.Medium
                 }
 
-                CustomComboBox {
+                WalletsComboBox {
 
                     id: from_wallet_combo
 
@@ -136,38 +139,26 @@ ColumnLayout  {
                     width: 504
                     height: 70
 
-                    model: walletBalances
-
-                    //aliases
-                    title_text: qsTr("From Wallet")
-                    details_text: getWalletData(currentIndex, WalletBalance.TotalRole)
-
-                    textRole: "name"
-                    valueRole: "name"
-
-                    Connections
-                    {
-                        target:walletBalances
-                        function onRowCountChanged ()
-                        {
-                            from_wallet_combo.currentIndex = overviewWalletIndex
-                        }
-                    }
-
                     onActivated: {
                         //I dont understand why but acceptableInput dont work...
                         var amount_max = getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole)
                         var cur_value = parseFloat(amount_input.input_text)
-                        var bottom = amount_input.input_validator.bottom
-                        var top = amount_input.input_validator.top
+                        var bottom = 0
+                        var top = tempRequest.maxAmount
                         if(cur_value < bottom || cur_value > top)
                         {
                             amount_input.input_text = amount_max
                         }
+
+                        if (rec_addr_input.isValid) {
+                            var fpb = parseFloat(fee_suggest_combo.currentValue)
+                            tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                                        , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
+                        }
                     }
                 }
 
-                CustomComboBox {
+                FeeSuggestComboBox {
 
                     id: fee_suggest_combo
 
@@ -178,23 +169,12 @@ ColumnLayout  {
                     width: 504
                     height: 70
 
-                    model: feeSuggestions
-
-                    //aliases
-                    title_text: qsTr("Fee Suggestions")
-
-                    textRole: "text"
-                    valueRole: "value"
-
-                    Connections
-                    {
-                        target:feeSuggestions
-                        function onRowCountChanged ()
-                        {
-                            fee_suggest_combo.currentIndex = 0
-                        }
+                    onCurrentIndexChanged: {
+                        bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
+                        txOutputsModel.clearOutputs()
                     }
                 }
+
 
                 Rectangle {
 
@@ -252,7 +232,7 @@ ColumnLayout  {
                     font.weight: Font.Medium
                 }
 
-                CustomTextInput {
+                RecvAddrTextInput {
 
                     id: rec_addr_input
 
@@ -263,41 +243,21 @@ ColumnLayout  {
                     width: 504
                     height: 70
 
-                    //aliases
-                    title_text: qsTr("Receiver address")
+                    wallets_current_index: from_wallet_combo.currentIndex
 
-                    Image {
-                        id: paste_but
-
-                        z: 1
-
-                        anchors.top: rec_addr_input.top
-                        anchors.topMargin: 23
-                        anchors.right: rec_addr_input.right
-                        anchors.rightMargin: 23
-
-                        source: "qrc:/images/paste_icon.png"
-                        width: 24
-                        height: 24
-
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: {
-                                rec_addr_input.input_text = bsApp.pasteTextFromClipboard()
-                                amount_input.setActiveFocus()
-                            }
-                        }
+                    onFocus_next: {
+                        amount_input.setActiveFocus()
                     }
 
-                    onTextChanged : {
-                        if (rec_addr_input.input_text.length)
-                        {
-                            rec_addr_input.isValid = bsApp.validateAddress(rec_addr_input.input_text)
-                        }
+
+                    function createTempRequest() {
+                        var fpb = parseFloat(fee_suggest_combo.currentValue)
+                        tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                                    , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
                     }
                 }
 
-                CustomTextInput {
+                AmountInput {
 
                     id: amount_input
 
@@ -307,83 +267,6 @@ ColumnLayout  {
 
                     width: 504
                     height: 70
-
-                    //aliases
-                    title_text: qsTr("Amount")
-
-                    //app (if was launched from visual studio) crashes when there is input_validator
-                    //and we change text inside of onTextEdited
-                    //it is why I have realized my validator inside of onTextEdited
-                    property string prev_text : ""
-                    onTextEdited : {
-
-                        amount_input.input_text = amount_input.input_text.replace(",", ".")
-
-                        if (amount_input.input_text.startsWith("0")
-                            && !amount_input.input_text.startsWith("0.")
-                            && amount_input.input_text.length > 1)
-                        {
-                            amount_input.input_text = "0."
-                                    + amount_input.input_text.substring(1, amount_input.input_text.length)
-                        }
-                        try {
-                            var input_number =  Number.fromLocaleString(Qt.locale("en_US"), amount_input.input_text)
-                        }
-                        catch (error)
-                        {
-                            amount_input.input_text = prev_text
-                            return
-                        }
-
-                        var max_value = (from_wallet_combo.currentIndex >= 0) ?
-                                    parseFloat(getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole)) : 0
-
-                        if (input_number < 0 || input_number>max_value)
-                        {
-                            amount_input.input_text = prev_text
-                            return
-                        }
-
-                        prev_text = amount_input.input_text
-                    }
-
-                    CustomButton {
-
-                        id: max_but
-
-                        z: 1
-
-                        width: 55
-                        height: 28
-                        back_radius: 37
-
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.right: parent.right
-                        anchors.rightMargin: 23
-
-                        text: qsTr("MAX")
-                        font.pixelSize: 12
-
-                        function click_enter() {
-                            amount_input.input_text = getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole)
-                        }
-                    }
-
-                    Label {
-
-                        id: currency
-
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.right: max_but.left
-                        anchors.rightMargin: 16
-
-                        text: "BTC"
-                        font.pixelSize: 14
-                        font.family: "Roboto"
-                        font.weight: Font.Normal
-                        color: "#7A88B0"
-                    }
-
                 }
 
                 CustomTextEdit {
@@ -412,18 +295,22 @@ ColumnLayout  {
                     Layout.topMargin: 16
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
+                    enabled: rec_addr_input.isValid && rec_addr_input.input_text.length
+                             && parseFloat(amount_input.input_text) !== 0 && amount_input.input_text.length
+
                     icon.source: "qrc:/images/plus.svg"
-                    icon.color: include_output_but.enabled ? "#45A6FF" : "#020817"
+                    icon.color: include_output_but.enabled ? "#45A6FF" : BSStyle.buttonsDisabledTextColor
 
                     width: 504
 
                     Component.onCompleted: {
-                        confirm_but.preferred = false
+                        include_output_but.preferred = false
                     }
 
                     function click_enter() {
-                        if (!confirm_but.enabled) return
+                        if (!include_output_but.enabled) return
 
+                        txOutputsModel.addOutput(rec_addr_input.input_text, amount_input.input_text)
                     }
                 }
 
@@ -438,10 +325,42 @@ ColumnLayout  {
                     color: "#3C435A"
                 }
 
-                Label {
+                CustomTableView {
+
                     Layout.fillWidth: true
                     Layout.fillHeight : true
+                    Layout.leftMargin: 16
+                    Layout.rightMargin: 16
+
+                    model: txOutputsModel
+                    columnWidths: [0.744, 0.20, 0.056]
+
+                    text_header_size: 12
+                    cell_text_size: 13
+                    copy_button_column_index: -1
+                    delete_button_column_index: 2
+                    left_first_header_padding: 0
+
+                    onDeleteRequested: (row) =>
+                    {
+                        txOutputsModel.delOutput(row)
+                    }
                 }
+
+                TreeView {
+                    TableViewColumn {
+                        title: "Name"
+                        role: "fileName"
+                        width: 300
+                    }
+                    TableViewColumn {
+                        title: "Permissions"
+                        role: "filePermissions"
+                        width: 100
+                    }
+                    model: fileSystemModel
+                }
+
             }
         }
     }
@@ -478,5 +397,20 @@ ColumnLayout  {
 
     function init()
     {
+        rec_addr_input.setActiveFocus()
+
+        //we need set first time currentIndex to 0
+        //only after we will have signal rowchanged
+        if (fee_suggest_combo.currentIndex >= 0)
+            fee_suggest_combo.currentIndex = 0
+        if (from_wallet_combo.currentIndex >= 0)
+            from_wallet_combo.currentIndex = overviewWalletIndex
+
+        amount_input.input_text = ""
+        comment_input.input_text = ""
+        rec_addr_input.input_text = ""
+
+        bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
+        txOutputsModel.clearOutputs()
     }
 }

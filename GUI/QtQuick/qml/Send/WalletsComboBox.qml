@@ -14,7 +14,7 @@ import QtQuick.Controls 2.3
 import "../BsStyles"
 import "../StyledControls"
 
-//import wallet.balance 1.0
+import wallet.balance 1.0
 
 CustomComboBox {
 
