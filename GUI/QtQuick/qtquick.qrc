@@ -63,7 +63,7 @@
         <file>images/transactions_icon_unchoosed.png</file>
         <file>images/explorer_icon_unchoosed.png</file>
         <file>TermsAndConditions.txt</file>
-        <file>images/close_button.png</file>
+        <file>images/close_button.svg</file>
         <file>qml/StyledControls/CustomTitleLabel.qml</file>
         <file>images/wallet icon.png</file>
         <file>images/back_arrow.png</file>
@@ -158,5 +158,7 @@
         <file>qml/StyledControls/DeleteIconButton.qml</file>
         <file>images/delete.png</file>
         <file>images/delete.svg</file>
+        <file>qml/TransactionDetails.qml</file>
+        <file>qml/StyledControls/CloseIconButton.qml</file>
     </qresource>
 </RCC>

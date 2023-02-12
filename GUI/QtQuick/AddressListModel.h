@@ -18,15 +18,23 @@
 #include "Address.h"
 #include "BinaryData.h"
 
-namespace spdlog {
+namespace spdlog
+{
    class logger;
 }
 
-class QmlAddressListModel : public QAbstractTableModel
+class QmlAddressListModel: public QAbstractTableModel
 {
    Q_OBJECT
 public:
-   enum TableRoles { TableDataRole = Qt::UserRole + 1, HeadingRole, FirstColRole, ColorRole };
+   enum TableRoles
+   {
+      TableDataRole = Qt::UserRole + 1,
+      HeadingRole,
+      FirstColRole,
+      ColorRole,
+      AddressTypeRole
+   };
    QmlAddressListModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
 
    int rowCount(const QModelIndex & = QModelIndex()) const override;
@@ -40,17 +48,18 @@ public:
    void reset(const std::string& expectedWalletId);
 
 private:
-   std::shared_ptr<spdlog::logger>  logger_;
-   const QStringList          header_;
-   QVector<QVector<QString>>  table_;
-   std::vector<bs::Address>   addresses_;
+   std::shared_ptr<spdlog::logger> logger_;
+   const QStringList header_;
+   QVector<QVector<QString>> table_;
+   std::vector<bs::Address> addresses_;
 
-   struct PendingBalance {
-      uint64_t    balance{ 0 };
-      uint32_t    nbTx{ 0 };
+   struct PendingBalance
+   {
+      uint64_t balance{ 0 };
+      uint32_t nbTx{ 0 };
    };
    std::map<BinaryData, PendingBalance> pendingBalances_;
    std::string expectedWalletId_;
 };
 
-#endif	// ADDRESS_LIST_MODEL_H
+#endif // ADDRESS_LIST_MODEL_H

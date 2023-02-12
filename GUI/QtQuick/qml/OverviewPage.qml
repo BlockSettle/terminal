@@ -43,5 +43,15 @@ Item {
         onRequestWalletProperties: console.log("Nothing to do")
         onCreateNewWallet: overview.newWalletClicked()
         onWalletIndexChanged: overview.curWalletIndexChanged(index)
+        onOpenAddressDetails: (address, transactions, balance, comment, type, wallet) => {
+            addressDetails.address = address
+            addressDetails.transactions = transactions
+            addressDetails.balance = balance
+            addressDetails.comment = comment
+            addressDetails.type = type
+            addressDetails.wallet = wallet
+            bsApp.startAddressSearch(address)
+            addressDetails.open()
+        }
     }
 }
