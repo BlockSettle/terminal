@@ -661,8 +661,8 @@ void QTxDetails::setDetails(const bs::sync::TXWalletDetails& details)
       details_.outputAddresses.push_back(details.changeAddress);
    }
    QMetaObject::invokeMethod(this, [this] {
-      inputsModel_ = new TxInOutModel(details_.inputAddresses, this);
-      outputsModel_ = new TxInOutModel(details_.outputAddresses, this);
+      inputsModel_ = new TxInOutModel(details_.inputAddresses, tr("Input"), this);
+      outputsModel_ = new TxInOutModel(details_.outputAddresses, tr("Output"), this);
       emit updated();
    });
 }
@@ -750,9 +750,11 @@ quint32 QTxDetails::height() const
    return details_.tx.getTxHeight();
 }
 
-TxInOutModel::TxInOutModel(const std::vector<bs::sync::AddressDetails>& data, QObject* parent)
-   : QAbstractTableModel(parent), data_(data)
-   , header_{ tr("Address"), tr("Amount"), tr("Wallet") }
+TxInOutModel::TxInOutModel(const std::vector<bs::sync::AddressDetails>& data, const QString& type, QObject* parent)
+   : QAbstractTableModel(parent)
+   , data_(data)
+   , type_(type)
+   , header_{ tr("Type"), tr("Address"), tr("Amount"), tr("Wallet") }
 {}
 
 int TxInOutModel::rowCount(const QModelIndex&) const
@@ -804,9 +806,10 @@ QString TxInOutModel::getData(int row, int col) const
    }
    try {
       switch (col) {
-      case 0: return QString::fromStdString(data_.at(row - 1).address.display());
-      case 1: return QString::fromStdString(data_.at(row - 1).valueStr);
-      case 2: return QString::fromStdString(data_.at(row - 1).walletName);
+      case 0: return type_;
+      case 1: return QString::fromStdString(data_.at(row - 1).address.display());
+      case 2: return QString::fromStdString(data_.at(row - 1).valueStr);
+      case 3: return QString::fromStdString(data_.at(row - 1).walletName);
       default: break;
       }
    }

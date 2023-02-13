@@ -53,8 +53,8 @@ QVariant QmlAddressListModel::data(const QModelIndex& index, int role) const
             switch (index.column())
             {
             case 0: return table_.at(row).at(0);
-            case 1: return QString::number(pendingBalances_.at(addresses_.at(row).id()).nbTx);
-            case 2: return QString::number(pendingBalances_.at(addresses_.at(row).id()).balance / BTCNumericTypes::BalanceDivider, 'f', 8);
+            case 1: return QString::number(getTransactionCount(addresses_.at(row).id()));
+            case 2: return QString::number(getAddressBalance(addresses_.at(row).id()), 'f', 8);
             case 3: return table_.at(row).at(1);
             default: return QString{};
             }
@@ -154,4 +154,21 @@ void QmlAddressListModel::reset(const std::string& expectedWalletId)
    addresses_.clear();
    table_.clear();
    endResetModel();
+}
+
+
+quint32 QmlAddressListModel::getTransactionCount(const BinaryData& address) const
+{
+   if (pendingBalances_.count(address) > 0) {
+      return pendingBalances_.at(address).nbTx;
+   }
+   return 0;
+}
+
+float QmlAddressListModel::getAddressBalance(const BinaryData& address) const
+{
+   if (pendingBalances_.count(address) > 0) {
+      return pendingBalances_.at(address).balance / BTCNumericTypes::BalanceDivider;
+   }
+   return 0;
 }

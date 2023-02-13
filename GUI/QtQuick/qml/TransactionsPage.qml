@@ -23,6 +23,9 @@ import "BsStyles"
 Item {
     id: transactions
 
+    width: 1200
+    height: 788
+
     TransactionDetails {
         id: transactionDetails
         visible: false

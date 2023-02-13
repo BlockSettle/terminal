@@ -130,7 +130,7 @@ public:
    enum TableRoles {
       TableDataRole = Qt::UserRole + 1, HeadingRole, ColorRole, WidthRole, TxHashRole
    };
-   TxInOutModel(const std::vector<bs::sync::AddressDetails>& data, QObject* parent = nullptr);
+   TxInOutModel(const std::vector<bs::sync::AddressDetails>& data, const QString& type, QObject* parent = nullptr);
 
    int rowCount(const QModelIndex & = QModelIndex()) const override;
    int columnCount(const QModelIndex & = QModelIndex()) const override;
@@ -143,6 +143,7 @@ private:
    float colWidth(int col) const;
 
 private:
+   const QString type_;
    const QStringList header_;
    const std::vector<bs::sync::AddressDetails> data_;
 };

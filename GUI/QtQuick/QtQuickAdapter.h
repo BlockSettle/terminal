@@ -24,6 +24,7 @@
 #include "TxListModel.h"
 #include "UiUtils.h"
 #include "Wallets/SignContainer.h"
+#include "viewmodels/WalletPropertiesVM.h"
 
 namespace bs {
    namespace gui {
@@ -151,6 +152,9 @@ public:
    HwDeviceModel* devices();
    Q_PROPERTY(bool scanningDevices READ scanningDevices NOTIFY scanningChanged)
    bool scanningDevices() const;
+
+   Q_PROPERTY(qtquick_gui::WalletPropertiesVM* walletProperitesVM READ walletProperitesVM CONSTANT)
+   qtquick_gui::WalletPropertiesVM* walletProperitesVM() const;
 
    // QML-invokable methods
    Q_INVOKABLE QStringList newSeedPhrase();
@@ -286,6 +290,8 @@ private:
    std::map<bs::message::SeqId, QTxDetails*>          txDetailReqs_;
    std::map<ApplicationSettings::Setting, QVariant>   settingsCache_;
    std::set<bs::message::SeqId>  expTxAddrReqs_, expTxAddrInReqs_;
+
+   std::unique_ptr<qtquick_gui::WalletPropertiesVM> walletPropertiesVM_;
 };
 
 #endif	// QT_QUICK_ADAPTER_H

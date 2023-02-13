@@ -49,6 +49,10 @@ public:
    void reset(const std::string& expectedWalletId);
 
 private:
+   quint32 getTransactionCount(const BinaryData& address) const;
+   float getAddressBalance(const BinaryData& address) const;
+
+private:
    std::shared_ptr<spdlog::logger> logger_;
    const QStringList header_;
    QVector<QVector<QString>> table_;

@@ -55,7 +55,7 @@ CustomTableView {
 
             Text {
                 id: internal_text
-                visible: column !== 0 || row === 0
+                visible: column !== 1 || row === 0
                 text: tableData
                 height: parent.height
                 verticalAlignment: row === 0 ? Text.AlignVCenter : Text.AlignTop
@@ -72,7 +72,7 @@ CustomTableView {
 
             Column {
                 spacing: 8
-                visible: column === 0 && row !== 0
+                visible: column === 1 && row !== 0
                 width: parent.width
                 anchors.centerIn: parent
 

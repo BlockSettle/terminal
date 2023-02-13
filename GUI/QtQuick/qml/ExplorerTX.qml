@@ -222,7 +222,7 @@ Item {
                         height: parent.height - 20
                         model: tx.inputs
                         copy_button_column_index: -1
-                        columnWidths: [0.7, 0.2, 0.1]
+                        columnWidths: [0.0, 0.7, 0.2, 0.1]
                         onCopyRequested: bsApp.copyAddressToClipboard(id)
 
                         // TODO: change constant 261 with C++ defined enum
@@ -269,7 +269,7 @@ Item {
                         height: parent.height - 20
                         model: tx.outputs
                         copy_button_column_index: -1
-                        columnWidths: [0.7, 0.2, 0.1]
+                        columnWidths: [0.0, 0.7, 0.2, 0.1]
                         onCopyRequested: bsApp.copyAddressToClipboard(id)
 
                         // TODO: change constant 257 with C++ defined enum

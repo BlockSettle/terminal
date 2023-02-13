@@ -137,8 +137,21 @@ Popup {
                     width: 170
                 }
                 Text {
+                    function define_color(value) {
+                        if (value === 'Sent') {
+                            return BSStyle.transactionTypeSent
+                        }
+                        else if (value === 'Received') {
+                            return BSStyle.transactionTypeRecevied
+                        }
+                        else if (value === 'Internal') {
+                            return BSStyle.transactionTypeInternal
+                        }
+                        return 'white'
+                    }
+
                     text: transaction_details.txType
-                    color: BSStyle.textColor
+                    color: define_color(transaction_details.txType)
                     font.family: "Roboto"
                     font.pixelSize: 14
                 }
@@ -292,8 +305,8 @@ Popup {
                     anchors.centerIn: parent
                     model: tx.inputs
 
-                    copy_button_column_index: 0
-                    columnWidths: [0.7, 0.2, 0.1]
+                    copy_button_column_index: 1
+                    columnWidths: [0.1, 0.5, 0.2, 0.2]
                     onCopyRequested: bsApp.copyAddressToClipboard(id)
                 }
             }
@@ -331,8 +344,8 @@ Popup {
                     anchors.centerIn: parent
                     model: tx.outputs
 
-                    copy_button_column_index: 0
-                    columnWidths: [0.7, 0.2, 0.1]
+                    copy_button_column_index: 1
+                    columnWidths: [0.1, 0.5, 0.2, 0.2]
                     onCopyRequested: bsApp.copyAddressToClipboard(id)
                 }
             }
