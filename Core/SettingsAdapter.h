@@ -61,12 +61,11 @@ public:
    bool process(const bs::message::Envelope &) override;
    bool processBroadcast(const bs::message::Envelope&) override;
 
-   std::set<std::shared_ptr<bs::message::User>> supportedReceivers() const override {
-      return { user_ };
-   }
+   Users supportedReceivers() const override { return { user_ }; }
    std::string name() const override { return "Settings"; }
 
    std::shared_ptr<bs::LogManager> logManager() const { return logMgr_; }
+   std::string guiMode() const;
 
 private:
    bool processGetRequest(const bs::message::Envelope &

@@ -16,28 +16,6 @@
 #include "Wallets/SyncWalletsManager.h"
 
 
-SelectAddressDialog::SelectAddressDialog(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , const std::shared_ptr<bs::sync::Wallet>& wallet
-   , QWidget* parent, AddressListModel::AddressType addrType)
-   : QDialog(parent)
-   , ui_(new Ui::SelectAddressDialog)
-   , wallets_({ wallet })
-   , walletsMgr_(walletsManager)
-   , addrType_(addrType)
-{
-   init();
-}
-
-SelectAddressDialog::SelectAddressDialog(const std::shared_ptr<bs::sync::hd::Group> &group
-   , QWidget* parent, AddressListModel::AddressType addrType)
-   : QDialog(parent)
-   , ui_(new Ui::SelectAddressDialog)
-   , wallets_(group->getAllLeaves())
-   , addrType_(addrType)
-{
-   init();
-}
-
 SelectAddressDialog::SelectAddressDialog(QWidget* parent
    , AddressListModel::AddressType addrType)
    : QDialog(parent)
@@ -89,6 +67,7 @@ void SelectAddressDialog::onAddressBalances(const std::string& walletId
    model_->onAddressBalances(walletId, addrBal);
 }
 
+#if 0
 void SelectAddressDialog::init()
 {
    ui_->setupUi(this);
@@ -112,6 +91,7 @@ void SelectAddressDialog::init()
 
    onSelectionChanged();
 }
+#endif   //0
 
 bs::Address SelectAddressDialog::getAddress(const QModelIndex& index) const
 {

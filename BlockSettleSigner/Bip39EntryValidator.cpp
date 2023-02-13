@@ -9,7 +9,6 @@
 
 */
 #include "Bip39EntryValidator.h"
-#include "Bip39.h"
 #include "QmlFactory.h"
 
 Bip39EntryValidator::Bip39EntryValidator(QObject *parent)
@@ -33,10 +32,11 @@ QValidator::State Bip39EntryValidator::validate(QString &input, int &pos) const
       return State::Intermediate;
    }
 
+#if 0 //FIXME: use another BIP39 implementation
    if (!validateMnemonic(input.toStdString(), dictionaries_)) {
       return State::Invalid;
    }
-
+#endif
    return State::Acceptable;
 }
 

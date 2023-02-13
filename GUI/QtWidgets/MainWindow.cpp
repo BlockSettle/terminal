@@ -35,6 +35,7 @@
 #include "InfoDialogs/AboutDialog.h"
 #include "InfoDialogs/StartupDialog.h"
 #include "InfoDialogs/SupportDialog.h"
+#include "ImportWalletDialog.h"
 #include "LoginWindow.h"
 #include "NotificationCenter.h"
 #include "Settings/ConfigDialog.h"
@@ -220,12 +221,17 @@ void MainWindow::onHDWallet(const bs::sync::WalletInfo &wi)
 void bs::gui::qt::MainWindow::onWalletDeleted(const bs::sync::WalletInfo& wi)
 {
    ui_->widgetWallets->onWalletDeleted(wi);
+   if (txDlg_) {
+      txDlg_->onWalletDeleted(wi);
+   }
+   ui_->widgetTransactions->onWalletDeleted(wi);
 }
 
 void MainWindow::onHDWalletDetails(const bs::sync::HDWalletData &hdWallet)
 {
    ui_->widgetWallets->onHDWalletDetails(hdWallet);
    ui_->widgetPortfolio->onHDWalletDetails(hdWallet);
+   ui_->widgetTransactions->onHDWalletDetails(hdWallet);
 }
 
 void MainWindow::onWalletsList(const std::string &id, const std::vector<bs::sync::HDWalletData>& wallets)
@@ -841,6 +847,28 @@ bs::gui::WalletSeedData MainWindow::getWalletSeed(const std::string& rootId) con
       return seedDialog->getData();
    }
    return {};
+}
+
+bs::gui::WalletSeedData MainWindow::importWallet(const std::string& rootId) const
+{
+   auto seedDialog = new bs::gui::qt::ImportWalletDialog(rootId, (QWidget*)this);
+   const int rc = seedDialog->exec();
+   seedDialog->deleteLater();
+   if (rc == QDialog::Accepted) {
+      return seedDialog->getData();
+   }
+   return {};
+}
+
+bool bs::gui::qt::MainWindow::deleteWallet(const std::string& rootId, const std::string& name) const
+{
+   BSMessageBox mBox(BSMessageBox::question, tr("Wallet delete")
+      , tr("Are you sure you want to delete wallet %1 with id %2?")
+      .arg(QString::fromStdString(name)).arg(QString::fromStdString(rootId))
+      , (QWidget*)this);
+   mBox.setConfirmButtonText(tr("Yes"));
+   mBox.setCancelButtonText(tr("No"));
+   return (mBox.exec() == QDialog::Accepted);
 }
 
 void MainWindow::showRunInBackgroundMessage()

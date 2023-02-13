@@ -58,9 +58,7 @@ public:
    bool process(const bs::message::Envelope &) override;
    bool processBroadcast(const bs::message::Envelope&) override;
 
-   std::set<std::shared_ptr<bs::message::User>> supportedReceivers() const override {
-      return { user_ };
-   }
+   Users supportedReceivers() const override { return { user_ }; }
    std::string name() const override { return "Signer"; }
 
    std::unique_ptr<SignerClient> createClient() const;
@@ -69,7 +67,7 @@ private:
    void start();
 
    // HCT overrides
-   void walletsChanged() override;
+   void walletsChanged(bool rescan = false) override;
    void onReady() override;
    void walletsReady() override;
    void newWalletPrompt() override;
@@ -104,8 +102,9 @@ private:
       , const BlockSettle::Common::SignerMessage_AutoSign&);
    bool processDialogRequest(const bs::message::Envelope&
       , const BlockSettle::Common::SignerMessage_DialogRequest&);
-   bool processCreateWallet(const bs::message::Envelope&
+   bool processCreateWallet(const bs::message::Envelope&, bool rescan
       , const BlockSettle::Common::SignerMessage_CreateWalletRequest&);
+   bool processDeleteWallet(const bs::message::Envelope&, const std::string& rootId);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

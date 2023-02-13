@@ -60,6 +60,7 @@ namespace bs {
             void generateSeed();
             void onDataAvail();
             void onPasswordEdited();
+            void on12WordsChanged();
 
          private:
             std::unique_ptr<Ui::SeedDialog>  ui_;

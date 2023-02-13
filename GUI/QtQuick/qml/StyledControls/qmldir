@@ -1,0 +1,23 @@
+module CustomControls
+
+CustomButton             1.0 CustomButton.qml
+CustomButtonBar          1.0 CustomButtonBar.qml
+CustomCheckBox           1.0 CustomCheckBox.qml
+CustomComboBox           1.0 CustomComboBox.qml
+CustomContainer          1.0 CustomContainer.qml
+CustomDialogWindow       1.0 CustomDialogWindow.qml
+CustomDialog             1.0 CustomDialog.qml
+CustomHeader             1.0 CustomHeader.qml
+CustomHeaderPanel        1.0 CustomHeaderPanel.qml
+CustomLabel              1.0 CustomLabel.qml
+CustomLabelValue         1.0 CustomLabelValue.qml
+CustomLabelCopyableValue 1.0 CustomLabelCopyableValue.qml
+CustomProgressBar        1.0 CustomProgressBar.qml
+CustomRadioButton        1.0 CustomRadioButton.qml
+CustomSwitch             1.0 CustomSwitch.qml
+CustomTabButton          1.0 CustomTabButton.qml
+CustomTextArea           1.0 CustomTextArea.qml
+CustomTextInput          1.0 CustomTextInput.qml
+CustomPasswordTextInput  1.0 CustomPasswordTextInput.qml
+CustomTitleDialogWindow  1.0 CustomTitleDialogWindow.qml
+CustomTitleDialogWindowWithExpander 1.0 CustomTitleDialogWindowWithExpander.qml

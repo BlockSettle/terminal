@@ -74,7 +74,12 @@ public:
    const std::string &name() const { return name_; }
    Type type() const { return type_; }
    State state() const { return state_; }
+   
    virtual void setState(State state) { state_ = state; }
+   virtual BTCNumericTypes::balance_type getBalanceTotal() const { return 0; }
+   virtual BTCNumericTypes::balance_type getBalanceUnconf() const { return 0; }
+   virtual BTCNumericTypes::balance_type getBalanceSpend() const { return 0; }
+   virtual size_t getNbUsedAddresses() const { return 0; }
 
    WalletNode *findByWalletId(const std::string &walletId);
 
@@ -109,7 +114,6 @@ public:
    std::string selectedWallet() const { return selectedWalletId_; }
    bool showRegularWallets() const { return showRegularWallets_; }
 
-   [[deprecated]] void LoadWallets(bool keepSelection = false);
    void onHDWallet(const bs::sync::WalletInfo &);
    void onWalletDeleted(const bs::sync::WalletInfo&);
    void onHDWalletDetails(const bs::sync::HDWalletData &);
@@ -134,7 +138,6 @@ signals:
    void needWalletBalances(const std::string &walletId);
 
 private slots:
-   void onWalletChanged();
    void onNewWalletAdded(const std::string &walletId);
    void onWalletInfo(unsigned int id, bs::hd::WalletInfo);
    void onHDWalletError(unsigned int id, std::string err);
