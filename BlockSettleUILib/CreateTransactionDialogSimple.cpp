@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -16,24 +16,18 @@
 #include "ArmoryConnection.h"
 #include "BSMessageBox.h"
 #include "CreateTransactionDialogAdvanced.h"
-#include "SignContainer.h"
-#include "TransactionData.h"
+#include "Wallets/SignContainer.h"
+#include "Wallets/TransactionData.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
 
-CreateTransactionDialogSimple::CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
-   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<spdlog::logger>& logger
-   , const std::shared_ptr<ApplicationSettings> &applicationSettings
-   , QWidget* parent)
-   : CreateTransactionDialog(armory, walletManager, utxoReservationManager, container, true, logger, applicationSettings, {}, parent)
+CreateTransactionDialogSimple::CreateTransactionDialogSimple(uint32_t topBlock
+   , const std::shared_ptr<spdlog::logger>& logger, QWidget* parent)
+   : CreateTransactionDialog(true, topBlock, logger, parent)
    , ui_(new Ui::CreateTransactionDialogSimple)
 {
    ui_->setupUi(this);
-   initUI();
 }
 
 CreateTransactionDialogSimple::~CreateTransactionDialogSimple() = default;
@@ -52,6 +46,7 @@ void CreateTransactionDialogSimple::initUI()
    connect(ui_->pushButtonImport, &QPushButton::clicked, this, &CreateTransactionDialogSimple::onImportPressed);
 
    connect(ui_->pushButtonShowAdvanced, &QPushButton::clicked, this, &CreateTransactionDialogSimple::showAdvanced);
+   connect(ui_->lineEditPassphrase, &QLineEdit::textChanged, this, &CreateTransactionDialogSimple::onPassphraseChanged);
 }
 
 QComboBox *CreateTransactionDialogSimple::comboBoxWallets() const
@@ -159,6 +154,13 @@ void CreateTransactionDialogSimple::onXBTAmountChanged(const QString &text)
    transactionData_->UpdateRecipientAmount(recipientId_, value);
 }
 
+void CreateTransactionDialogSimple::onPassphraseChanged(const QString& text)
+{
+   if (!text.isEmpty()) {
+      ui_->labelPassphraseHint->clear();
+   }
+}
+
 void CreateTransactionDialogSimple::onMaxPressed()
 {
    transactionData_->UpdateRecipientAmount(recipientId_, {}, false);
@@ -186,19 +188,13 @@ void CreateTransactionDialogSimple::showAdvanced()
    accept();
 }
 
-void CreateTransactionDialogSimple::getChangeAddress(AddressCb cb) const
-{
-   if (transactionData_->GetTransactionSummary().hasChange) {
-      transactionData_->getWallet()->getNewChangeAddress([cb = std::move(cb)](const bs::Address &addr) {
-         cb(addr);
-      });
-      return;
-   }
-   cb({});
-}
-
 void CreateTransactionDialogSimple::createTransaction()
 {
+   if (ui_->lineEditPassphrase->text().isEmpty()) {
+      ui_->lineEditPassphrase->setFocus();
+      ui_->labelPassphraseHint->setText(tr("Enter wallet password"));
+      return;
+   }
    if (!importedSignedTX_.empty()) {
       if (BroadcastImportedTx()) {
          accept();
@@ -231,18 +227,18 @@ bool CreateTransactionDialogSimple::switchModeRequested() const
 std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::SwitchMode()
 {
    if (!paymentInfo_.address.isEmpty()) {
-      return CreateTransactionDialogAdvanced::CreateForPaymentRequest(armory_, walletsManager_
-         , utxoReservationManager_, signContainer_, logger_, applicationSettings_, paymentInfo_, parentWidget());
+      return CreateTransactionDialogAdvanced::CreateForPaymentRequest(topBlock_
+         , logger_, paymentInfo_, parentWidget());
    }
 
-   auto advancedDialog = std::make_shared<CreateTransactionDialogAdvanced>(armory_, walletsManager_
-      , utxoReservationManager_, signContainer_, true, logger_, applicationSettings_, transactionData_, std::move(utxoRes_), parentWidget());
+   auto advancedDialog = std::make_shared<CreateTransactionDialogAdvanced>(topBlock_
+      , true, logger_, transactionData_, std::move(utxoRes_), parentWidget());
 
    if (!offlineTransactions_.empty()) {
       advancedDialog->SetImportedTransactions(offlineTransactions_);
    } else {
       // select wallet
-      advancedDialog->SelectWallet(UiUtils::getSelectedWalletId(ui_->comboBoxWallets),
+      advancedDialog->SelectWallet(UiUtils::getSelectedWalletId(ui_->comboBoxWallets, ui_->comboBoxWallets->currentIndex()),
          UiUtils::getSelectedWalletType(ui_->comboBoxWallets));
 
       // set inputs and amounts
@@ -281,6 +277,11 @@ QLabel* CreateTransactionDialogSimple::labelTxOutputs() const
    return ui_->labelTXOutputs;
 }
 
+QLineEdit* CreateTransactionDialogSimple::lineEditPassphrase() const
+{
+   return ui_->lineEditPassphrase;
+}
+
 void CreateTransactionDialogSimple::preSetAddress(const QString& address)
 {
    ui_->lineEditAddress->setText(address);
@@ -297,22 +298,18 @@ void CreateTransactionDialogSimple::preSetValue(const bs::XBTAmount& value)
    ui_->lineEditAmount->setText(UiUtils::displayAmount(value));
 }
 
-std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::CreateForPaymentRequest(const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
-   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , const std::shared_ptr<SignContainer> &container
+std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::CreateForPaymentRequest(uint32_t topBlock
    , const std::shared_ptr<spdlog::logger>& logger
-   , const std::shared_ptr<ApplicationSettings> &applicationSettings
    , const Bip21::PaymentRequestInfo& paymentInfo
    , QWidget* parent)
 {
    if (!canUseSimpleMode(paymentInfo)) {
-      return CreateTransactionDialogAdvanced::CreateForPaymentRequest(armory, walletManager
-         , utxoReservationManager, container, logger, applicationSettings, paymentInfo, parent);
+      return CreateTransactionDialogAdvanced::CreateForPaymentRequest(topBlock
+         , logger, paymentInfo, parent);
    }
 
-   auto dlg = std::make_shared<CreateTransactionDialogSimple>(armory, walletManager
-      , utxoReservationManager, container, logger, applicationSettings, parent);
+   auto dlg = std::make_shared<CreateTransactionDialogSimple>(topBlock, logger
+      , parent);
 
    // set address and lock
    dlg->preSetAddress(paymentInfo.address);
@@ -331,6 +328,10 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::CreateFo
    } else if (!paymentInfo.label.isEmpty()) {
       dlg->ui_->textEditComment->setText(paymentInfo.label);
    }
+
+   dlg->ui_->checkBoxRBF->setChecked(false);
+   dlg->ui_->checkBoxRBF->setEnabled(false);
+   dlg->ui_->checkBoxRBF->setToolTip(tr("RBF disabled for payment request"));
 
    dlg->paymentInfo_ = paymentInfo;
 

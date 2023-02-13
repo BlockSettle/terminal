@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -13,7 +13,7 @@
 
 #include <QObject>
 #include "DataConnectionListener.h"
-#include "SignerUiDefs.h"
+#include "Wallets/SignerUiDefs.h"
 #include "TXInfo.h"
 
 #include "bs_signer.pb.h"

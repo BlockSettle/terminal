@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -28,9 +28,11 @@
 #include "CacheFile.h"
 #include "CurrencyPair.h"
 #include "EasyCoDec.h"
-#include "InprocSigner.h"
-#include "MarketDataProvider.h"
+#include "Wallets/HeadlessContainer.h"
+#include "Wallets/InprocSigner.h"
 #include "MDCallbacksQt.h"
+#include "MarketDataProvider.h"
+#include "PriceAmount.h"
 #include "TestEnv.h"
 #include "WalletUtils.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -96,7 +98,9 @@ TEST(TestCommon, AssetManager)
    TestEnv env(StaticLogger::loggerPtr);
    env.requireAssets();
 
-   auto inprocSigner = std::make_shared<InprocSigner>(env.walletsMgr(), StaticLogger::loggerPtr, "", NetworkType::TestNet);
+   auto hct = new QtHCT(nullptr);
+   auto inprocSigner = std::make_shared<InprocSigner>(env.walletsMgr()
+      , StaticLogger::loggerPtr, hct, "", NetworkType::TestNet);
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(StaticLogger::loggerPtr
       , env.appSettings(), env.armoryConnection());
@@ -104,7 +108,7 @@ TEST(TestCommon, AssetManager)
    syncMgr->syncWallets();
 
    const auto &mdCallbacks = env.mdCallbacks();
-   AssetManager assetMgr(StaticLogger::loggerPtr, syncMgr, mdCallbacks, env.celerConnection());
+   AssetManager assetMgr(StaticLogger::loggerPtr, nullptr); //FIXME: pass AssetMgrCT as a second arg, if needed
    assetMgr.connect(mdCallbacks.get(), &MDCallbacksQt::MDSecurityReceived, &assetMgr, &AssetManager::onMDSecurityReceived);
    assetMgr.connect(mdCallbacks.get(), &MDCallbacksQt::MDSecuritiesReceived, &assetMgr, &AssetManager::onMDSecuritiesReceived);
 
@@ -134,6 +138,7 @@ TEST(TestCommon, AssetManager)
    assetMgr.onMDUpdate(bs::network::Asset::PrivateMarket, QLatin1String("BLK/XBT")
       , { bs::network::MDField{bs::network::MDField::PriceLast, 0.023} });
    EXPECT_EQ(assetMgr.getPrice("BLK"), 0.023);
+   delete hct;
 }
 
 TEST(TestCommon, UtxoReservation)
@@ -315,6 +320,8 @@ TEST(TestCommon, BotanSerpent)
 }
 
 #include "AssetEncryption.h"
+using namespace Armory::Wallets::Encryption;
+
 TEST(TestCommon, BotanSerpent_KDF_Romix)
 {
    Botan::AutoSeeded_RNG rng;
@@ -391,6 +398,30 @@ TEST(TestCommon, XBTAmount)
    auto xbt1 = bs::XBTAmount(double(21*1000*1000));
    // Check that converting to double and back some big amount dooes not loose minimum difference (1 satoshi)
    // This will also check +/- operators
-   auto diff1 = bs::XBTAmount((xbt1 + bs::XBTAmount(uint64_t(1))).GetValueBitcoin()) - xbt1;
+   auto diff1 = bs::XBTAmount((xbt1 + bs::XBTAmount(int64_t(1))).GetValueBitcoin()) - xbt1;
    EXPECT_EQ(diff1, 1);
+}
+
+TEST(TestCommon, PriceAmount)
+{
+   EXPECT_EQ(bs::CentAmount(0.0).to_string(), "0.00");
+   EXPECT_EQ(bs::CentAmount(0.1).to_string(), "0.10");
+   EXPECT_EQ(bs::CentAmount(-0.1).to_string(), "-0.10");
+   EXPECT_EQ(bs::CentAmount(0.19).to_string(), "0.19");
+   EXPECT_EQ(bs::CentAmount(-0.19).to_string(), "-0.19");
+
+   EXPECT_EQ(bs::CentAmount(0.129).to_string(), "0.12");
+   EXPECT_EQ(bs::CentAmount(0.1299999).to_string(), "0.12");
+   EXPECT_EQ(bs::CentAmount(0.13).to_string(), "0.13");
+   EXPECT_EQ(bs::CentAmount(-0.129).to_string(), "-0.12");
+   EXPECT_EQ(bs::CentAmount(-0.1299999).to_string(), "-0.12");
+   EXPECT_EQ(bs::CentAmount(-0.13).to_string(), "-0.13");
+
+   EXPECT_EQ(bs::CentAmount(-0.0001).to_string(), "0.00");
+   EXPECT_EQ(bs::CentAmount(0.0001).to_string(), "0.00");
+
+   EXPECT_EQ(bs::CentAmount(12345.0001).to_string(), "12345.00");
+   EXPECT_EQ(bs::CentAmount(-12345.0001).to_string(), "-12345.00");
+   EXPECT_EQ(bs::CentAmount(0.12345).to_string(), "0.12");
+   EXPECT_EQ(bs::CentAmount(-0.12345).to_string(), "0.12");
 }

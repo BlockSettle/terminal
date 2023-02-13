@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -13,14 +13,13 @@
 
 #include "Address.h"
 #include "ArmoryConnection.h"
-#include "BitPayRequests.h"
 #include "BSMessageBox.h"
 #include "CoinControlDialog.h"
 #include "CreateTransactionDialogSimple.h"
+#include "Wallets/HeadlessContainer.h"
 #include "SelectAddressDialog.h"
-#include "SelectedTransactionInputs.h"
-#include "SignContainer.h"
-#include "TransactionData.h"
+#include "Wallets/SelectedTransactionInputs.h"
+#include "Wallets/TransactionData.h"
 #include "TransactionOutputsModel.h"
 #include "UiUtils.h"
 #include "UsedInputsModel.h"
@@ -43,41 +42,27 @@
 static const float kDustFeePerByte = 3.0;
 
 
-CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<SignContainer> &container
-      , bool loadFeeSuggestions
-      , const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
-      , const std::shared_ptr<TransactionData> &txData
-      , bs::UtxoReservationToken utxoReservation
-      , QWidget* parent)
-   : CreateTransactionDialog(armory, walletManager, utxoReservationManager, container, loadFeeSuggestions,
-      logger, applicationSettings, std::move(utxoReservation), parent)
- , ui_(new Ui::CreateTransactionDialogAdvanced)
+CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(bool loadFeeSuggestions
+   , uint32_t topBlock, const std::shared_ptr<spdlog::logger>& logger
+   , const std::shared_ptr<TransactionData>& txData, bs::UtxoReservationToken utxoReservation
+   , QWidget* parent)
+   : CreateTransactionDialog(loadFeeSuggestions, topBlock, logger, parent)
+   , ui_(new Ui::CreateTransactionDialogAdvanced)
 {
    transactionData_ = txData;
    selectedChangeAddress_ = bs::Address{};
 
    ui_->setupUi(this);
-   initUI();
 }
 
 CreateTransactionDialogAdvanced::~CreateTransactionDialogAdvanced() = default;
 
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced::CreateForRBF(
-        const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<SignContainer>& container
-      , const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
-      , const Tx &tx
-      , QWidget* parent)
+      uint32_t topBlock, const std::shared_ptr<spdlog::logger>& logger
+      , const Tx &tx, QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
-      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, bs::UtxoReservationToken(), parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(topBlock, false
+      , logger, nullptr, bs::UtxoReservationToken(), parent);
 
    dlg->setWindowTitle(tr("Replace-By-Fee"));
 
@@ -93,40 +78,28 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
 }
 
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced::CreateForCPFP(
-        const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<SignContainer>& container
-      , const std::shared_ptr<bs::sync::Wallet>& wallet
+        uint32_t topBlock, const std::string& walletId
       , const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
-      , const Tx &tx
-      , QWidget* parent)
+      , const Tx &tx, QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
-      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, bs::UtxoReservationToken(), parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(topBlock, false
+      , logger, nullptr, bs::UtxoReservationToken(), parent);
 
    dlg->setWindowTitle(tr("Child-Pays-For-Parent"));
    dlg->ui_->pushButtonImport->setEnabled(false);
    dlg->ui_->pushButtonShowSimple->setEnabled(false);
 
-   dlg->setCPFPinputs(tx, wallet);
+   //FIXME: dlg->setCPFPinputs(tx, wallet);
    dlg->isCPFP_ = true;
    return dlg;
 }
 
 std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::CreateForPaymentRequest(
-        const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<bs::sync::WalletsManager> &walletManager
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<SignContainer>& container
-      , const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> & applicationSettings
-      , const Bip21::PaymentRequestInfo& paymentInfo
-      , QWidget* parent)
+        uint32_t topBlock, const std::shared_ptr<spdlog::logger>& logger
+      , const Bip21::PaymentRequestInfo& paymentInfo, QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
-      , walletManager, utxoReservationManager, container, false, logger, applicationSettings, nullptr, bs::UtxoReservationToken(), parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(topBlock, false
+      , logger, nullptr, bs::UtxoReservationToken(), parent);
 
    dlg->ui_->pushButtonImport->setEnabled(false);
    dlg->ui_->pushButtonShowSimple->setEnabled(CreateTransactionDialog::canUseSimpleMode(paymentInfo));
@@ -152,7 +125,7 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::Create
    if (!paymentInfo.requestURL.isEmpty()) {
       dlg->ui_->checkBoxRBF->setChecked(false);
       dlg->ui_->checkBoxRBF->setEnabled(false);
-      dlg->ui_->checkBoxRBF->setToolTip(tr("RBF disabled for BitPay request"));
+      dlg->ui_->checkBoxRBF->setToolTip(tr("RBF disabled for payment request"));
 
       dlg->nam_ = std::make_shared<QNetworkAccessManager>();
    }
@@ -167,10 +140,6 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::Create
    }
 
    dlg->validateAddOutputButton();
-
-   connect(dlg.get(), &CreateTransactionDialogAdvanced::VerifyBitPayUnsignedTx, dlg.get(), &CreateTransactionDialogAdvanced::onVerifyBitPayUnsignedTx);
-   connect(dlg.get(), &CreateTransactionDialogAdvanced::BitPayTxVerified, dlg.get(), &CreateTransactionDialogAdvanced::onBitPayTxVerified);
-
    return dlg;
 }
 
@@ -213,6 +182,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
       for (size_t i = 0; i < tx.getNumTxOut(); i++) {
          auto out = tx.getTxOutCopy(i);
          const auto addr = bs::Address::fromTxOut(out);
+#if 0
          const auto wallet = walletsManager_->getWalletByAddress(addr);
          if (wallet != nullptr && wallet->walletId() == cpfpWallet->walletId()) {
             if (selInputs->SetUTXOSelection(tx.getThisHash(),
@@ -220,6 +190,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
                cntOutputs++;
             }
          }
+#endif
          origFee -= out.getValue();
       }
 
@@ -256,11 +227,11 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
          SetMinimumFee(originalFee_ + addedFee_, advisedFeePerByte_);
          onTransactionUpdated();
       };
-      walletsManager_->estimatedFeePerByte(2, cbFee, this);
+      //walletsManager_->estimatedFeePerByte(2, cbFee, this);
    };
 
    SetFixedWallet(wallet->walletId(), [this, txHashSet, cbTXs] {
-      armory_->getTXsByHash(txHashSet, cbTXs, true);
+      //armory_->getTXsByHash(txHashSet, cbTXs, true);
    });
 }
 
@@ -300,6 +271,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
             totalVal += prevOut.getValue();
 
             const auto addr = bs::Address::fromTxOut(prevOut);
+#if 0
             const auto wallet = walletsManager_->getWalletByAddress(addr);
             if (wallet) {
                const auto group = walletsManager_->getGroupByWalletId(wallet->walletId());
@@ -317,6 +289,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
                inputWallets.insert(wallet);
                utxoSelected.push_back({ txHash, txOutIdx });
             }
+#endif
          }
       }
 
@@ -377,13 +350,15 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
                   for (size_t i = 0; i < tx.getNumTxOut(); i++) {
                      TxOut out = tx.getTxOutCopy(i);
                      const auto addr = bs::Address::fromTxOut(out);
-                     bs::XBTAmount amount{out.getValue()};
-
+                     bs::XBTAmount amount{(int64_t)out.getValue()};
+#if 0
                      const auto wallet = walletsManager_->getWalletByAddress(addr);
                      if (wallet) {
                         ownOutputs.push_back({ addr, amount
                            , bs::hd::Path::fromString(wallet->getAddressIndex(addr)) });
-                     } else {
+                     } else
+#endif
+                     {
                         AddRecipient({ addr, amount});
                      }
                      totalVal -= out.getValue();
@@ -473,8 +448,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
          wallet->getRBFTxOutList(cbRBFUtxos);
       }
    };
-
-   armory_->getTXsByHash(txHashSet, cbTXs, true);
+   //armory_->getTXsByHash(txHashSet, cbTXs, true);
 }
 
 void CreateTransactionDialogAdvanced::onUpdateChangeWidget()
@@ -711,6 +685,13 @@ QLabel* CreateTransactionDialogAdvanced::feePerByteLabel() const
 QLabel* CreateTransactionDialogAdvanced::changeLabel() const
 {
    return ui_->labelReturnAmount;
+}
+
+void CreateTransactionDialogAdvanced::onWalletsList(const std::string& id
+   , const std::vector<bs::sync::HDWalletData>& wallets)
+{
+   CreateTransactionDialog::onWalletsList(id, wallets);
+   ui_->pushButtonSelectInputs->setEnabled(ui_->comboBoxWallets->count() > 0);
 }
 
 void CreateTransactionDialogAdvanced::onOutputsClicked(const QModelIndex &index)
@@ -1203,7 +1184,7 @@ void CreateTransactionDialogAdvanced::feeSelectionChanged(int currentIndex)
    setTxFees();
 }
 
-void CreateTransactionDialogAdvanced::getChangeAddress(AddressCb cb) const
+void CreateTransactionDialogAdvanced::getChangeAddress(AddressCb cb)
 {
    if (transactionData_->GetTransactionSummary().hasChange) {
       if (changeAddressFixed_) {
@@ -1212,6 +1193,7 @@ void CreateTransactionDialogAdvanced::getChangeAddress(AddressCb cb) const
       }
       else if (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()
          || ui_->radioButtonNewAddrLegacy->isChecked()) {
+#if 0
          const auto group = transactionData_->getGroup();
          std::shared_ptr<bs::sync::Wallet> wallet;
          if (group) {
@@ -1223,7 +1205,6 @@ void CreateTransactionDialogAdvanced::getChangeAddress(AddressCb cb) const
          if (!wallet) {
             wallet = transactionData_->getWallet();
          }
-
          const auto &cbAddr = [this, cb = std::move(cb), wallet, handle = validityFlag_.handle()](const bs::Address &addr) {
             if (!handle.isValid()) {
                return;
@@ -1232,10 +1213,12 @@ void CreateTransactionDialogAdvanced::getChangeAddress(AddressCb cb) const
                , addr.display());
             wallet->setAddressComment(addr
                , bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::ChangeAddress));
-            transactionData_->getWallet()->syncAddresses();
+            //FIXME: transactionData_->getWallet()->syncAddresses();
             cb(addr);
          };
          wallet->getNewChangeAddress(cbAddr);
+#endif   //0
+         CreateTransactionDialog::getChangeAddress(cb);
          return;
       } else {
          cb(selectedChangeAddress_);
@@ -1269,7 +1252,8 @@ void CreateTransactionDialogAdvanced::onCreatePressed()
       return;
    }
 
-   CreateTransaction([this, handle = validityFlag_.handle()](bool result, const std::string &errorMsg, const std::string& unsignedTx, uint64_t virtSize) {
+   CreateTransaction([this, handle = validityFlag_.handle()]
+      (bool result, const std::string &errorMsg, const std::string& unsignedTx, uint64_t virtSize) {
       if (!handle.isValid()) {
          return;
       }
@@ -1278,12 +1262,7 @@ void CreateTransactionDialogAdvanced::onCreatePressed()
             , tr("Transaction error"), QString::fromStdString(errorMsg)).exec();
          reject();
       }
-
-      if (!paymentInfo_.requestURL.isEmpty()) {
-         emit VerifyBitPayUnsignedTx(unsignedTx, virtSize);
-      } else {
-         createTransactionImpl();
-      }
+      createTransactionImpl();
    });
 }
 
@@ -1375,10 +1354,12 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                utxos.push_back(utxo);
                totalVal += prevOut.getValue();
                if (!wallet) {
+#if 0
                   const auto &addrWallet = thisPtr->walletsManager_->getWalletByAddress(addr);
                   if (addrWallet) {
                      wallet = addrWallet;
                   }
+#endif
                }
             }
          }
@@ -1415,7 +1396,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                thisPtr->SetFixedChangeAddress(QString::fromStdString(addr.display()));
             }
             else {
-               recipients.push_back({ addr, bs::XBTAmount{out.getValue()}, false });
+               recipients.push_back({ addr, bs::XBTAmount{(int64_t)out.getValue()}, false });
             }
             totalVal -= out.getValue();
          }
@@ -1425,7 +1406,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
             thisPtr->AddRecipients(recipients);
          }
       };
-      armory_->getTXsByHash(txHashSet, cbTXs, true);
+      //armory_->getTXsByHash(txHashSet, cbTXs, true);
    }
    else { // unsigned TX
       importedSignedTX_.clear();
@@ -1438,12 +1419,14 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       std::string selectedWalletId;
       unsigned int foundWallets = 0;
       for (const auto &walletId : tx.walletIds) {
+#if 0
          if (thisPtr->walletsManager_->getWalletById(walletId)) {
             if (selectedWalletId.empty()) {
                selectedWalletId = walletId;
             }
             foundWallets++;
          }
+#endif
       }
 
       ui_->textEditComment->insertPlainText(QString::fromStdString(tx.comment));
@@ -1469,7 +1452,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       thisPtr->ui_->labelBal->hide();
 
       const auto summary = thisPtr->transactionData_->GetTransactionSummary();
-      importedTxTotalFee_ = bs::XBTAmount(tx.fee);
+      importedTxTotalFee_ = bs::XBTAmount((int64_t)tx.fee);
 
       if (tx.change.value) {
          SetFixedChangeAddress(QString::fromStdString(tx.change.address.display()));
@@ -1481,11 +1464,11 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       for (unsigned i=0; i<tx.armorySigner_.getTxOutCount(); i++) {
          auto recip = tx.armorySigner_.getRecipient(i);
          const auto addr = bs::Address::fromRecipient(recip);
-         recipients.push_back({ addr, bs::XBTAmount{recip->getValue()}, false });
+         recipients.push_back({ addr, bs::XBTAmount{(int64_t)recip->getValue()}, false });
       }
       AddRecipients(recipients);
 
-      broadcasting_ = signContainer_->isOffline() || !tx.isValid() || (foundWallets < tx.walletIds.size());
+      broadcasting_ = !tx.isValid() || (foundWallets < tx.walletIds.size());
    }
 
    ui_->checkBoxRBF->setChecked(tx.RBF);
@@ -1516,39 +1499,84 @@ void CreateTransactionDialogAdvanced::onNewAddressSelectedForChange()
    showExistingChangeAddress(false);
 }
 
+void CreateTransactionDialogAdvanced::onAddresses(const std::string &walletId
+   , const std::vector<bs::sync::Address>& addrs)
+{
+   if (selChangeAddrDlg_) {
+      selChangeAddrDlg_->onAddresses(walletId, addrs);
+   }
+}
+
+void CreateTransactionDialogAdvanced::onAddressComments(const std::string& walletId
+   , const std::map<bs::Address, std::string>& addrComments)
+{
+   if (selChangeAddrDlg_) {
+      selChangeAddrDlg_->onAddressComments(walletId, addrComments);
+   }
+}
+
+void CreateTransactionDialogAdvanced::onAddressBalances(const std::string& walletId
+   , const std::vector<bs::sync::WalletBalanceData::AddressBalance>& addrBal)
+{
+   if (selChangeAddrDlg_) {
+      selChangeAddrDlg_->onAddressBalances(walletId, addrBal);
+   }
+}
+
 void CreateTransactionDialogAdvanced::onExistingAddressSelectedForChange()
 {
-   if (!transactionData_->getWallet()) {
-      SPDLOG_LOGGER_ERROR(logger_, "wallet now found");
-      return;
+   selChangeAddrDlg_ = new SelectAddressDialog(this, AddressListModel::AddressType::Internal);
+   connect(selChangeAddrDlg_, &SelectAddressDialog::needExtAddresses, this, &CreateTransactionDialog::needExtAddresses);
+   connect(selChangeAddrDlg_, &SelectAddressDialog::needIntAddresses, this, &CreateTransactionDialog::needIntAddresses);
+   connect(selChangeAddrDlg_, &SelectAddressDialog::needUsedAddresses, this, &CreateTransactionDialog::needUsedAddresses);
+   connect(selChangeAddrDlg_, &SelectAddressDialog::needAddrComments, this, &CreateTransactionDialog::needAddrComments);
+
+   std::vector<bs::sync::WalletInfo> wallets;
+   std::unordered_set<std::string> balanceIds;
+   for (const auto& walletId : transactionData_->getWallets()) {
+      const auto& itHdWallet = hdWallets_.find(walletId);
+      if (itHdWallet != hdWallets_.end()) {
+         for (const auto& group : itHdWallet->second.groups) {
+            for (const auto& leaf : group.leaves) {
+               bs::sync::WalletInfo wi;
+               wi.format = bs::sync::WalletFormat::Plain;
+               wi.ids = leaf.ids;
+               if (leaf.ids.size() == 2) {
+                  balanceIds.insert(leaf.ids.at(1));
+               }
+               else {
+                  balanceIds.insert(leaf.ids.at(0));
+               }
+               wi.name = leaf.name;
+               wi.type = bs::core::wallet::Type::Bitcoin;
+               wi.primary = itHdWallet->second.primary;
+               wallets.push_back(wi);
+            }
+         }
+      }
    }
-   const auto hdWallet = walletsManager_->getHDRootForLeaf(transactionData_->getWallet()->walletId());
-   std::shared_ptr<bs::sync::hd::Group> group;
-   if (hdWallet) {
-      group = hdWallet->getGroup(hdWallet->getXBTGroupType());
+   selChangeAddrDlg_->setWallets(wallets);
+   for (const auto& walletId : balanceIds) {
+      emit needWalletBalances(walletId);
    }
 
-   SelectAddressDialog *selectAddressDialog = nullptr;
-   if (group) {
-      selectAddressDialog = new SelectAddressDialog(group, this, AddressListModel::AddressType::Internal);
-   }
-   else {
-      selectAddressDialog = new SelectAddressDialog(walletsManager_, transactionData_->getWallet()
-         , this, AddressListModel::AddressType::Internal);
-   }
-
-   if (selectAddressDialog->exec() == QDialog::Accepted) {
-      selectedChangeAddress_ = selectAddressDialog->getSelectedAddress();
+   if (selChangeAddrDlg_->exec() == QDialog::Accepted) {
+      selectedChangeAddress_ = selChangeAddrDlg_->getSelectedAddress();
       showExistingChangeAddress(true);
    } else {
       if (!selectedChangeAddress_.isValid()) {
          ui_->radioButtonNewAddrNative->setChecked(true);
       }
    }
+   if (selChangeAddrDlg_) {
+      selChangeAddrDlg_->deleteLater();
+      selChangeAddrDlg_ = nullptr;
+   }
 }
 
 void CreateTransactionDialogAdvanced::SetFixedWallet(const std::string& walletId, const std::function<void()> &cbInputsReset)
 {
+#if 0
    auto hdWallet = walletsManager_->getHDWalletById(walletId);
    auto walletType = UiUtils::WalletsTypes::None;
    if (!hdWallet) {
@@ -1564,6 +1592,9 @@ void CreateTransactionDialogAdvanced::SetFixedWallet(const std::string& walletId
    }
 
    const int idx = hdWallet ? SelectWallet(hdWallet->walletId(), walletType) : -1;
+#else
+   const int idx = -1;
+#endif
    selectedWalletChanged(idx, true, cbInputsReset);
    ui_->comboBoxWallets->setEnabled(false);
 }
@@ -1578,7 +1609,7 @@ void CreateTransactionDialogAdvanced::setFixedGroupInputs(const std::shared_ptr<
    SelectWallet(leaves.front()->walletId(), UiUtils::WalletsTypes::None);
    ui_->comboBoxWallets->setEnabled(false);
    disableInputSelection();
-   transactionData_->setGroupAndInputs(group, inputs, armory_->topBlock());
+   transactionData_->setGroupAndInputs(group, inputs, topBlock_);
 }
 
 void CreateTransactionDialogAdvanced::disableOutputsEditing()
@@ -1764,15 +1795,14 @@ bool CreateTransactionDialogAdvanced::switchModeRequested() const
 std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::SwitchMode()
 {
    if (!paymentInfo_.address.isEmpty()) {
-      return CreateTransactionDialogSimple::CreateForPaymentRequest(armory_, walletsManager_
-         , utxoReservationManager_, signContainer_, logger_, applicationSettings_, paymentInfo_, parentWidget());
+      return CreateTransactionDialogSimple::CreateForPaymentRequest(topBlock_
+         , logger_, paymentInfo_, parentWidget());
    }
 
-   auto simpleDialog = std::make_shared<CreateTransactionDialogSimple>(armory_
-      , walletsManager_, utxoReservationManager_, signContainer_
-      , logger_, applicationSettings_, parentWidget());
+   auto simpleDialog = std::make_shared<CreateTransactionDialogSimple>(topBlock_
+      , logger_, parentWidget());
 
-   simpleDialog->SelectWallet(UiUtils::getSelectedWalletId(ui_->comboBoxWallets),
+   simpleDialog->SelectWallet(UiUtils::getSelectedWalletId(ui_->comboBoxWallets, ui_->comboBoxWallets->currentIndex()),
       UiUtils::getSelectedWalletType(ui_->comboBoxWallets));
 
    const auto recipientIdList = transactionData_->allRecipientIds();
@@ -1799,32 +1829,6 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogAdvanced::Switch
    }
 
    return simpleDialog;
-}
-
-void CreateTransactionDialogAdvanced::onVerifyBitPayUnsignedTx(const std::string& unsignedTx, uint64_t virtSize)
-{
-   // send request
-   QNetworkRequest request = BitPay::getBTCPaymentVerificationRequest(paymentInfo_.requestURL);
-   QNetworkReply *reply = nam_->post(request, BitPay::getBTCPaymentVerificationPayload(unsignedTx, virtSize));
-
-   connect(reply, &QNetworkReply::finished, this, [this, reply] {
-      if (reply->error() == QNetworkReply::NoError) {
-         emit BitPayTxVerified(true);
-         return;
-      }
-
-      emit BitPayTxVerified(false);
-   });
-
-   connect(reply, &QNetworkReply::finished, reply, &QNetworkReply::deleteLater);
-   connect(this, &QDialog::finished, reply, &QNetworkReply::abort);
-}
-
-void CreateTransactionDialogAdvanced::onBitPayTxVerified(bool result)
-{
-   if (result) {
-      createTransactionImpl();
-   }
 }
 
 void CreateTransactionDialogAdvanced::validateAmountLine()

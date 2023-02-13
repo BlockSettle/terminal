@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -26,22 +26,12 @@ Q_OBJECT
 
 public:
    static std::shared_ptr<CreateTransactionDialog> CreateForPaymentRequest(
-        const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer>&
-      , const std::shared_ptr<spdlog::logger>&
-      , const std::shared_ptr<ApplicationSettings> &
+      uint32_t topBlock, const std::shared_ptr<spdlog::logger>&
       , const Bip21::PaymentRequestInfo& paymentInfo
       , QWidget* parent = nullptr);
 
 public:
-   CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-      , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<spdlog::logger>&
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
+   CreateTransactionDialogSimple(uint32_t topBlock, const std::shared_ptr<spdlog::logger>&
       , QWidget* parent = nullptr);
    ~CreateTransactionDialogSimple() override;
 
@@ -51,7 +41,6 @@ public:
    void preSetAddress(const QString& address);
    void preSetValue(const double value);
    void preSetValue(const bs::XBTAmount& value);
-
 
 protected:
    QComboBox * comboBoxWallets() const override;
@@ -73,8 +62,7 @@ protected:
    QLabel *changeLabel() const override;
    QLabel* labelTXAmount() const override;
    QLabel* labelTxOutputs() const override;
-
-   void getChangeAddress(AddressCb cb) const override;
+   QLineEdit* lineEditPassphrase() const override;
 
 protected slots:
    void onMaxPressed() override;
@@ -84,11 +72,12 @@ private slots:
    void showAdvanced();
    void onAddressTextChanged(const QString &address);
    void onXBTAmountChanged(const QString& text);
+   void onPassphraseChanged(const QString& text);
    void createTransaction();
    void onImportPressed();
 
 private:
-   void initUI();
+   void initUI() override;
 
    std::unique_ptr<Ui::CreateTransactionDialogSimple> ui_;
    unsigned int   recipientId_ = 0;

@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -13,15 +13,21 @@
 
 #include <memory>
 #include "CoreWallet.h"
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 #include "ServerConnectionListener.h"
 #include "BSErrorCode.h"
 
-#include "bs_signer.pb.h"
-#include "headless.pb.h"
 
 namespace spdlog {
    class logger;
+}
+namespace Blocksettle {
+   namespace Communication {
+      namespace signer {
+         enum ControlPasswordStatus : int;
+         enum PacketType : int;
+      }
+   }
 }
 namespace bs {
    namespace core {
@@ -34,12 +40,20 @@ namespace bs {
       class TransportBIP15xServer;
    }
 }
+namespace Blocksettle {
+   namespace Communication {
+      namespace signer {
+         enum ControlPasswordStatus : int;
+      }
+   }
+}
 class DispatchQueue;
 class HeadlessAppObj;
 class HeadlessContainerCallbacks;
 class HeadlessContainerCallbacksImpl;
 class HeadlessSettings;
 class ServerConnection;
+
 
 class SignerAdapterListener : public ServerConnectionListener
 {
@@ -54,7 +68,7 @@ public:
 
    // Sent to GUI status update message
    void sendStatusUpdate();
-   void sendControlPasswordStatusUpdate(signer::ControlPasswordStatus status);
+   void sendControlPasswordStatusUpdate(const Blocksettle::Communication::signer::ControlPasswordStatus &);
 
    void resetConnection();
 
@@ -95,7 +109,6 @@ protected:
    bool onSyncSettings(const std::string &data);
    bool onControlPasswordReceived(const std::string &data);
    bool onChangeControlPassword(const std::string &data, bs::signer::RequestId);
-   bool onWindowsStatus(const std::string &data, bs::signer::RequestId);
    bool onVerifyOfflineTx(const std::string &data, bs::signer::RequestId);
 
    void shutdownIfNeeded();

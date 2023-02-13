@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -18,8 +18,9 @@
 
 #include "Address.h"
 #include "BlockchainMonitor.h"
+//#include "ColoredCoinLogic.h"
+#include "Wallets/SignContainer.h"
 #include "TestEnv.h"
-#include "ColoredCoinLogic.h"
 
 namespace bs {
    namespace core {
@@ -40,6 +41,7 @@ namespace bs {
       class WalletsManager;
    }
 }
+class QtHCT;
 
 struct CCoinSpender
 {
@@ -51,6 +53,7 @@ struct CCoinSpender
    uint64_t xbtValue_ = 0;
 };
 
+#if 0 // no CC tests since all CC code is turned off
 class ColoredCoinTestACT : public ColoredCoinACT
 {
 private:
@@ -149,12 +152,12 @@ public:
    }
 };
 
-class TestCCoin : public ::testing::Test
+class TestCCoin : public ::testing::Test, public SignerCallbackTarget
 {
 public:
    using UTXOs = std::vector<UTXO>;
 
-   const uint64_t ccLotSize_ = 307;
+   const int64_t ccLotSize_ = 307;
    size_t usersCount_ = 20;
 
 
@@ -165,6 +168,7 @@ public:
 
    std::shared_ptr<bs::sync::WalletsManager> syncMgr_;
    std::vector<UnitTestLocalACT*> localACTs_;
+   std::shared_ptr<QtHCT>        hct_;
 
    bs::Address              genesisAddr_;
    bs::Address              revocationAddr_;
@@ -225,5 +229,6 @@ public:
    void zcUpdate(std::shared_ptr<ColoredCoinTrackerClient_UT>);
    void reorg(std::shared_ptr<ColoredCoinTrackerClient_UT>);
 };
+#endif
 
 #endif // __TEST_CCOIN_H__

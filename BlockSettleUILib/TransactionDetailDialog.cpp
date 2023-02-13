@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -28,217 +28,73 @@
 #include <limits>
 
 
-TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &tvi
-   , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , const std::shared_ptr<ArmoryConnection> &armory, QWidget* parent)
- : QDialog(parent)
- , ui_(new Ui::TransactionDetailDialog())
- , walletsManager_(walletsManager)
+TransactionDetailDialog::TransactionDetailDialog(const TransactionPtr &txi
+   , QWidget* parent)
+   : QDialog(parent)
+   , ui_(new Ui::TransactionDetailDialog())
 {
    ui_->setupUi(this);
    itemSender_ = new QTreeWidgetItem(QStringList(tr("Sender")));
    itemReceiver_ = new QTreeWidgetItem(QStringList(tr("Receiver")));
 
-   const auto &cbInit = [this, armory, handle = validityFlag_.handle()](const TransactionPtr &item) mutable {
-      ValidityGuard guard(handle);
-      if (!handle.isValid()) {
-         return;
+   ui_->labelAmount->setText(txi->amountStr);
+   ui_->labelDirection->setText(tr(bs::sync::Transaction::toString(txi->direction)));
+   ui_->labelAddress->setText(txi->mainAddress);
+
+   if (txi->confirmations > 0) {
+      ui_->labelHeight->setText(QString::number(txi->txEntry.blockNum));
+   } else {
+      if (txi->txEntry.isRBF) {
+         ui_->labelFlag->setText(tr("RBF eligible"));
+      } else if (txi->isCPFP) {
+         ui_->labelFlag->setText(tr("CPFP eligible"));
       }
-      ui_->labelAmount->setText(item->amountStr);
-      ui_->labelDirection->setText(tr(bs::sync::Transaction::toString(item->direction)));
-      ui_->labelAddress->setText(item->mainAddress);
+   }
 
-      if (item->confirmations > 0) {
-         ui_->labelHeight->setText(QString::number(item->txEntry.blockNum));
-      }
-      else {
-         if (item->txEntry.isRBF) {
-            ui_->labelFlag->setText(tr("RBF eligible"));
-         } else if (item->isCPFP) {
-            ui_->labelFlag->setText(tr("CPFP eligible"));
-         }
-      }
+   ui_->treeAddresses->addTopLevelItem(itemSender_);
+   ui_->treeAddresses->addTopLevelItem(itemReceiver_);
+   ui_->labelComment->setText(txi->comment);
 
-      if (item->tx.isInitialized()) {
-         ui_->labelSize->setText(QString::number(item->tx.getTxWeight()));
+   if (txi->tx.isInitialized()) {
+      ui_->labelSize->setText(QString::number(txi->tx.getTxWeight()));
+   }
 
-         std::set<BinaryData> txHashSet;
-         std::map<BinaryData, std::set<uint32_t>> txOutIndices;
+   int64_t value = 0;
+   for (const auto &addrDet : txi->inputAddresses) {
+      addInputAddress(addrDet);
+      value += addrDet.value;
+   }
+   if (!txi->changeAddress.address.empty()) {
+      addChangeAddress(txi->changeAddress);
+      value -= txi->changeAddress.value;
+   }
+   for (const auto &addrDet : txi->outputAddresses) {
+      addOutputAddress(addrDet);
+      value -= addrDet.value;
+   }
 
-         for (size_t i = 0; i < item->tx.getNumTxIn(); ++i) {
-            TxIn in = item->tx.getTxInCopy(i);
-            OutPoint op = in.getOutPoint();
-            txHashSet.insert(op.getTxHash());
-            txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
-         }
+   ui_->labelFee->setText(UiUtils::displayAmount(value));
+   ui_->labelSb->setText(
+      QString::number((float)value / (float)txi->tx.getTxWeight()));
 
-         auto cbTXs = [this, item, txOutIndices, handle]
-            (const AsyncClient::TxBatchResult &txs, std::exception_ptr exPtr) mutable
-         {
-            ValidityGuard guard(handle);
-            if (!handle.isValid()) {
-               return;
-            }
+   for (int i = 0; i < ui_->treeAddresses->columnCount(); ++i) {
+      ui_->treeAddresses->resizeColumnToContents(i);
+      ui_->treeAddresses->setColumnWidth(i,
+         ui_->treeAddresses->columnWidth(i) + extraTreeWidgetColumnMargin);
+   }
 
-            if (exPtr != nullptr) {
-               ui_->labelComment->setText(tr("Failed to get TX details"));
-            }
+   ui_->treeAddresses->expandItem(itemSender_);
+   ui_->treeAddresses->expandItem(itemReceiver_);
+   adjustSize();
 
-            ui_->treeAddresses->addTopLevelItem(itemSender_);
-            ui_->treeAddresses->addTopLevelItem(itemReceiver_);
+   ui_->labelConfirmations->setText(QString::number(txi->confirmations));
 
-            for (const auto &wallet : item->wallets) {
-               if (wallet->type() == bs::core::wallet::Type::ColorCoin) {
-                  ccLeaf_ = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(wallet);
-                  break;
-               }
-            }
+   const bool bigEndianHash = true;
+   ui_->labelHash->setText(QString::fromStdString(txi->txEntry.txHash.toHexStr(bigEndianHash)));
+   ui_->labelTime->setText(UiUtils::displayDateTime(QDateTime::fromTime_t(txi->txEntry.txTime)));
 
-            if (!ccLeaf_) {
-               for (size_t i = 0; i < item->tx.getNumTxOut(); ++i) {
-                  const TxOut out = item->tx.getTxOutCopy(i);
-                  const auto txType = out.getScriptType();
-                  if (txType == TXOUT_SCRIPT_OPRETURN || txType == TXOUT_SCRIPT_NONSTANDARD) {
-                     continue;
-                  }
-                  const auto addr = bs::Address::fromTxOut(out);
-                  const auto addressWallet = walletsManager_->getWalletByAddress(addr);
-                  if (addressWallet && (addressWallet->type() == bs::core::wallet::Type::ColorCoin)) {
-                     ccLeaf_ = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(addressWallet);
-                     break;
-                  }
-               }
-            }
-            if (ccLeaf_) {
-               ui_->labelFlag->setText(tr("CC: %1").arg(ccLeaf_->displaySymbol()));
-            }
+   ui_->labelWalletName->setText(txi->walletName.isEmpty() ? tr("Unknown") : txi->walletName);
 
-            uint64_t value = 0;
-            bool initialized = true;
-
-            std::set<bs::sync::WalletsManager::WalletPtr> inputWallets;
-
-            const bool isInternalTx = item->direction == bs::sync::Transaction::Internal;
-            for (const auto &prevTx : txs) {
-               if (!prevTx.second || !prevTx.second->isInitialized()) {
-                  continue;
-               }
-               const auto &itTxOut = txOutIndices.find(prevTx.first);
-               if (itTxOut == txOutIndices.end()) {
-                  continue;
-               }
-               for (const auto &txOutIdx : itTxOut->second) {
-                  TxOut prevOut = prevTx.second->getTxOutCopy(txOutIdx);
-                  value += prevOut.getValue();
-                  const auto addr = bs::Address::fromTxOut(prevOut);
-                  const auto addressWallet = walletsManager_->getWalletByAddress(addr);
-                  if (addressWallet) {
-                     const auto &rootWallet = walletsManager_->getHDRootForLeaf(addressWallet->walletId());
-                     if (rootWallet) {
-                        auto xbtGroup = rootWallet->getGroup(rootWallet->getXBTGroupType());
-                        bool isXbtLeaf = false;
-
-                        if (xbtGroup) {
-                           const auto &xbtLeaves = xbtGroup->getLeaves();
-                           for (const auto &leaf : xbtLeaves) {
-                              if (*leaf == *addressWallet) {
-                                 isXbtLeaf = true;
-                                 break;
-                              }
-                           }
-
-                           if (isXbtLeaf) {
-                              inputWallets.insert(xbtLeaves.cbegin(), xbtLeaves.cend());
-                           }
-                        }
-
-                        if (!isXbtLeaf) {
-                           inputWallets.insert(addressWallet);
-                        }
-                     }
-                     else {
-                        inputWallets.insert(addressWallet);
-                     }
-                     if (!ccLeaf_ && (addressWallet->type() == bs::core::wallet::Type::ColorCoin)) {
-                        ccLeaf_ = std::dynamic_pointer_cast<bs::sync::hd::CCLeaf>(addressWallet);
-                     }
-                  }
-                  addAddress(prevOut, false, prevTx.first, {});
-               }
-            }
-
-            std::vector<TxOut> allOutputs;
-            for (size_t i = 0; i < item->tx.getNumTxOut(); ++i) {
-               const TxOut out = item->tx.getTxOutCopy(i);
-               value -= out.getValue();
-               allOutputs.push_back(out);
-            }
-
-            for (size_t i = 0; i < item->tx.getNumTxOut(); ++i) {
-               const TxOut out = item->tx.getTxOutCopy(i);
-               addAddress(out, true, item->tx.getThisHash(), inputWallets
-                  , allOutputs);
-            }
-
-            if (!item->wallets.empty()) {
-               std::string comment;
-               for (const auto &wallet : item->wallets) {
-                  comment = wallet->getTransactionComment(item->tx.getThisHash());
-                  if (!comment.empty()) {
-                     break;
-                  }
-               }
-               ui_->labelComment->setText(QString::fromStdString(comment));
-            }
-
-            if (initialized) {
-               ui_->labelFee->setText(UiUtils::displayAmount(value));
-               ui_->labelSb->setText(
-                  QString::number((float)value / (float)item->tx.getTxWeight()));
-            }
-
-            ui_->treeAddresses->expandItem(itemSender_);
-            ui_->treeAddresses->expandItem(itemReceiver_);
-
-            for (int i = 0; i < ui_->treeAddresses->columnCount(); ++i) {
-               ui_->treeAddresses->resizeColumnToContents(i);
-               ui_->treeAddresses->setColumnWidth(i,
-                  ui_->treeAddresses->columnWidth(i) + extraTreeWidgetColumnMargin);
-            }
-            adjustSize();
-         };
-         if (txHashSet.empty()) {
-            cbTXs({}, nullptr);
-         }
-         else {
-            armory->getTXsByHash(txHashSet, cbTXs, true);
-         }
-      }
-
-      ui_->labelConfirmations->setText(QString::number(item->confirmations));
-   };
-   TransactionsViewItem::initialize(tvi, armory.get(), walletsManager, cbInit);
-
-   bool bigEndianHash = true;
-   ui_->labelHash->setText(QString::fromStdString(tvi->txEntry.txHash.toHexStr(bigEndianHash)));
-   ui_->labelTime->setText(UiUtils::displayDateTime(QDateTime::fromTime_t(tvi->txEntry.txTime)));
-
-   ui_->labelWalletName->setText(tvi->walletName.isEmpty() ? tr("Unknown") : tvi->walletName);
-
-   /* disabled the context menu for copy to clipboard functionality, it can be removed later
-   ui_->treeAddresses->setContextMenuPolicy(Qt::CustomContextMenu);
-   connect(ui_->treeAddresses, &QTreeView::customContextMenuRequested, [=](const QPoint& p) {
-      const auto address = ui_->treeAddresses->itemAt(p)->data(0, Qt::UserRole).toString();
-
-      if (!address.isEmpty()) {
-         QMenu* menu = new QMenu(this);
-         QAction* copyAction = menu->addAction(tr("&Copy Address"));
-         connect(copyAction, &QAction::triggered, [=]() {
-            qApp->clipboard()->setText(address);
-         });
-         menu->popup(ui_->treeAddresses->mapToGlobal(p));
-      }
-   });*/
    // allow address column to be copied to clipboard with right click
    ui_->treeAddresses->copyToClipboardColumns_.append(2);
 
@@ -328,19 +184,7 @@ void TransactionDetailDialog::addAddress(TxOut out    // can't use const ref due
       walletName = QString::fromStdString(addressWallet->name());
    }
    else {
-      bool isCCaddress = false;
-      if (ccLeaf_) {
-         if (walletsManager_->isValidCCOutpoint(ccLeaf_->shortName(), txHash, out.getIndex(), out.getValue())) {
-            isCCaddress = true;
-         }
-      }
-      if (isCCaddress) {
-         valueStr += ccLeaf_->displayTxValue(int64_t(out.getValue()));
-         walletName = QString::fromStdString(ccLeaf_->shortName());
-      }
-      else {
-         valueStr += UiUtils::displayAmount(out.getValue());
-      }
+      valueStr += UiUtils::displayAmount(out.getValue());
    }
    QStringList items;
    items << addressType;
@@ -363,6 +207,66 @@ void TransactionDetailDialog::addAddress(TxOut out    // can't use const ref due
    item->addChild(txItem);
 }
 
+void TransactionDetailDialog::addInputAddress(const bs::sync::AddressDetails &addrDet)
+{
+   const auto &addressType = tr("Input");
+   const auto &displayedAddress = QString::fromStdString(addrDet.address.display());
+   const auto &valueStr = QString::fromStdString(addrDet.valueStr);
+   QStringList items;
+   items << addressType << valueStr << displayedAddress << QString::fromStdString(addrDet.walletName);
+
+   auto item = new QTreeWidgetItem(items);
+   item->setData(0, Qt::UserRole, displayedAddress);
+   item->setData(1, Qt::UserRole, (qulonglong)addrDet.value);
+   itemSender_->addChild(item);
+   const auto &txHashStr = QString::fromStdString(fmt::format("{}/{}"
+      , addrDet.outHash.toHexStr(true), addrDet.outIndex));
+   auto txItem = new QTreeWidgetItem(QStringList() << getScriptType(addrDet.type)
+      << QString::number(addrDet.value) << txHashStr);
+   txItem->setData(0, Qt::UserRole, txHashStr);
+   item->addChild(txItem);
+}
+
+void TransactionDetailDialog::addChangeAddress(const bs::sync::AddressDetails &addrDet)
+{
+   const auto &addressType = tr("Change");
+   const auto &displayedAddress = QString::fromStdString(addrDet.address.display());
+   const auto &valueStr = QString::fromStdString(addrDet.valueStr);
+   QStringList items;
+   items << addressType << valueStr << displayedAddress << QString::fromStdString(addrDet.walletName);
+
+   auto item = new QTreeWidgetItem(items);
+   item->setData(0, Qt::UserRole, displayedAddress);
+   item->setData(1, Qt::UserRole, (qulonglong)addrDet.value);
+   itemSender_->addChild(item);
+   const auto &txHashStr = QString::fromStdString(fmt::format("{}/{}"
+      , addrDet.outHash.toHexStr(true), addrDet.outIndex));
+   auto txItem = new QTreeWidgetItem(QStringList() << getScriptType(addrDet.type)
+      << QString::number(addrDet.value) << txHashStr);
+   txItem->setData(0, Qt::UserRole, txHashStr);
+   item->addChild(txItem);
+}
+
+void TransactionDetailDialog::addOutputAddress(const bs::sync::AddressDetails &addrDet)
+{
+   const auto &addressType = tr("Output");
+   const auto &displayedAddress = QString::fromStdString(addrDet.address.display());
+   const auto &valueStr = QString::fromStdString(addrDet.valueStr);
+   QStringList items;
+   items << addressType << valueStr << displayedAddress << QString::fromStdString(addrDet.walletName);
+
+   auto item = new QTreeWidgetItem(items);
+   item->setData(0, Qt::UserRole, displayedAddress);
+   item->setData(1, Qt::UserRole, (qulonglong)addrDet.value);
+   itemReceiver_->addChild(item);
+   const auto &txHashStr = QString::fromStdString(fmt::format("{}/{}"
+      , addrDet.outHash.toHexStr(true), addrDet.outIndex));
+   auto txItem = new QTreeWidgetItem(QStringList() << getScriptType(addrDet.type)
+      << QString::number(addrDet.value) << txHashStr);
+   txItem->setData(0, Qt::UserRole, txHashStr);
+   item->addChild(txItem);
+}
+
 QString TransactionDetailDialog::getScriptType(const TxOut &out)
 {
    switch (out.getScriptType()) {
@@ -375,6 +279,22 @@ QString TransactionDetailDialog::getScriptType(const TxOut &out)
       case TXOUT_SCRIPT_P2WPKH:        return tr("p2wpkh");
       case TXOUT_SCRIPT_P2WSH:         return tr("p2wsh");
       case TXOUT_SCRIPT_OPRETURN:      return tr("op-return");
+   }
+   return tr("unknown");
+}
+
+QString TransactionDetailDialog::getScriptType(TXOUT_SCRIPT_TYPE scrType)
+{
+   switch (scrType) {
+   case TXOUT_SCRIPT_STDHASH160:    return tr("hash160");
+   case TXOUT_SCRIPT_STDPUBKEY65:   return tr("pubkey65");
+   case TXOUT_SCRIPT_STDPUBKEY33:   return tr("pubkey33");
+   case TXOUT_SCRIPT_MULTISIG:      return tr("multisig");
+   case TXOUT_SCRIPT_P2SH:          return tr("p2sh");
+   case TXOUT_SCRIPT_NONSTANDARD:   return tr("non-std");
+   case TXOUT_SCRIPT_P2WPKH:        return tr("p2wpkh");
+   case TXOUT_SCRIPT_P2WSH:         return tr("p2wsh");
+   case TXOUT_SCRIPT_OPRETURN:      return tr("op-return");
    }
    return tr("unknown");
 }

@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -13,11 +13,10 @@
 #include <QDataStream>
 #include <QFile>
 #include <QStandardPaths>
-#include "CelerClientConnection.h"
 #include "DataConnection.h"
 #include "DataConnectionListener.h"
 #include "HeadlessApp.h"
-#include "ProtobufHeadlessUtils.h"
+#include "Wallets/ProtobufHeadlessUtils.h"
 #include "SignerInterfaceListener.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -48,7 +47,7 @@ void SignAdapterContainer::syncWalletInfo(const std::function<void(std::vector<b
       woWallets_.clear();
       for (const auto &wallet : wi) {
          if (wallet.watchOnly && (wallet.format == bs::sync::WalletFormat::HD)) {
-            woWallets_.insert(wallet.id);
+            woWallets_.insert(*wallet.ids.cbegin());
          }
       }
       if (cb) {

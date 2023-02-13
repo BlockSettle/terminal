@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2020 - 2020, BlockSettle AB
+* Copyright (C) 2020 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -99,7 +99,7 @@ namespace  {
       std::shared_ptr<spdlog::logger>  logger_;
       std::promise<std::string> connected_;
       std::promise<std::string> disconnected_;
-      ArmoryThreading::TimedQueue<std::pair<std::string, std::string>> data_;
+      Armory::Threading::TimedQueue<std::pair<std::string, std::string>> data_;
    };
 
    class TestClientConnListener : public DataConnectionListener
@@ -132,7 +132,7 @@ namespace  {
       std::shared_ptr<spdlog::logger>  logger_;
       std::promise<void> connected_;
       std::promise<void> disconnected_;
-      ArmoryThreading::TimedQueue<std::string> data_;
+      Armory::Threading::TimedQueue<std::string> data_;
       std::promise<DataConnectionError> error_;
    };
 
@@ -162,7 +162,7 @@ namespace  {
    const auto kDefaultTimeout = 10000ms;
 
    template<class T>
-   T getFeature(ArmoryThreading::TimedQueue<T> &data, std::chrono::milliseconds timeout = kDefaultTimeout)
+   T getFeature(Armory::Threading::TimedQueue<T> &data, std::chrono::milliseconds timeout = kDefaultTimeout)
    {
       return data.pop_front(timeout);
    }
@@ -357,7 +357,7 @@ TEST_F(TestWebSocket, BrokenData)
 
    auto packet = CryptoPRNG::generateRandom(rand() % 10000).toBinStr();
    ASSERT_TRUE(client_->send(packet));
-   ASSERT_THROW(getFeature(serverListener_->data_, 100ms), ArmoryThreading::StackTimedOutException);
+   ASSERT_THROW(getFeature(serverListener_->data_, 100ms), Armory::Threading::StackTimedOutException);
 }
 
 TEST_F(TestWebSocket, ClientStartsFirst)

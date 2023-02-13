@@ -1,0 +1,29 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="FULL_BS_LOGO">images/full_logo.png</file>
+        <file>images/bs_logo.png</file>
+        <file>qml/main.qml</file>
+        <file>qml/InfoBanner.qml</file>
+        <file>qml/InfoBannerComponent.qml</file>
+        <file>qml/InfoBar.qml</file>
+        <file>qml/StyledControls/CustomButton.qml</file>
+        <file>qml/StyledControls/CustomButtonBar.qml</file>
+        <file>qml/StyledControls/CustomCheckBox.qml</file>
+        <file>qml/StyledControls/CustomComboBox.qml</file>
+        <file>qml/StyledControls/CustomContainer.qml</file>
+        <file>qml/StyledControls/CustomDialog.qml</file>
+        <file>qml/StyledControls/CustomHeader.qml</file>
+        <file>qml/StyledControls/CustomHeaderPanel.qml</file>
+        <file>qml/StyledControls/CustomLabel.qml</file>
+        <file>qml/StyledControls/CustomLabelValue.qml</file>
+        <file>qml/StyledControls/CustomProgressBar.qml</file>
+        <file>qml/StyledControls/CustomRadioButton.qml</file>
+        <file>qml/StyledControls/CustomSwitch.qml</file>
+        <file>qml/StyledControls/CustomTabButton.qml</file>
+        <file>qml/StyledControls/CustomTextArea.qml</file>
+        <file>qml/StyledControls/CustomTextInput.qml</file>
+        <file>qml/StyledControls/qmldir</file>
+        <file>qml/BsStyles/BSStyle.qml</file>
+        <file>qml/BsStyles/qmldir</file>
+    </qresource>
+</RCC>

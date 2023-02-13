@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -45,8 +45,6 @@
 
 #include <iostream>
 #include <thread>
-
-#include <btc/ecc.h>
 
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
@@ -327,42 +325,32 @@ static int QMLApp(int argc, char **argv
 
       QMLAppObj qmlAppObj(&adapter, logger, settings, splashScreen, engine.rootContext());
 
-      switch (settings->runMode()) {
-      case bs::signer::ui::RunMode::fullgui:
-         engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
-         break;
-      case bs::signer::ui::RunMode::litegui:
-         engine.load(QUrl(QStringLiteral("qrc:/qml/mainLite.qml")));
+      engine.load(QUrl(QStringLiteral("qrc:/qml/mainLite.qml")));
 
-         terminalConnectionTimer.setSingleShot(true);
-         //BST-2786
-         terminalConnectionTimer.setInterval(std::chrono::milliseconds{ 25000 });
+      terminalConnectionTimer.setSingleShot(true);
+      //BST-2786
+      terminalConnectionTimer.setInterval(std::chrono::milliseconds{ 25000 });
 
-         QObject::connect(&adapter, &SignerAdapter::ready, [&timerStarted, &terminalConnectionTimer]()
-            {
-               if (!timerStarted) {
-                  terminalConnectionTimer.start();
-                  timerStarted = true;
-               }
-            });
-
-
-         QObject::connect(&adapter, &SignerAdapter::peerConnected, [&terminalConnected] {
-            terminalConnected = true;
-         });
-         QObject::connect(&adapter, &SignerAdapter::peerDisconnected, [&terminalConnected] {
-            terminalConnected = false;
-         });
-         QObject::connect(&terminalConnectionTimer, &QTimer::timeout, [&terminalConnected] {
-            if (!terminalConnected) {
-               QCoreApplication::quit();
+      QObject::connect(&adapter, &SignerAdapter::ready, [&timerStarted, &terminalConnectionTimer]()
+         {
+            if (!timerStarted) {
+               terminalConnectionTimer.start();
+               timerStarted = true;
             }
          });
 
-         break;
-      default:
-         return EXIT_FAILURE;
-      }
+
+      QObject::connect(&adapter, &SignerAdapter::peerConnected, [&terminalConnected] {
+         terminalConnected = true;
+      });
+      QObject::connect(&adapter, &SignerAdapter::peerDisconnected, [&terminalConnected] {
+         terminalConnected = false;
+      });
+      QObject::connect(&terminalConnectionTimer, &QTimer::timeout, [&terminalConnected] {
+         if (!terminalConnected) {
+            QCoreApplication::quit();
+         }
+      });
 
       if (engine.rootObjects().isEmpty()) {
          throw std::runtime_error("Failed to load main QML file");
@@ -400,7 +388,7 @@ int main(int argc, char** argv)
 
    srand(std::time(nullptr));
 
-   btc_ecc_start();
+   CryptoECDSA::setupContext();
 
    bs::LogManager logMgr;
    auto loggerStdout = logMgr.logger("settings");

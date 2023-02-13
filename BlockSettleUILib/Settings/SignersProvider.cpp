@@ -12,7 +12,7 @@
 
 #include <QDir>
 #include <QStandardPaths>
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 #include "SystemFileUtils.h"
 #include "TransportBIP15x.h"
 
@@ -259,8 +259,9 @@ void SignersProvider::setupSigner(int index, bool needUpdate)
    if (index >= 0 && index < signerList.size()) {
       appSettings_->set(ApplicationSettings::signerIndex, index);
 
-      if (needUpdate)
+      if (needUpdate) {
          emit dataChanged();
+      }
    }
 }
 

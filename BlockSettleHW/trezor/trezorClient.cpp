@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2020 - 2020, BlockSettle AB
+* Copyright (C) 2020 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -306,15 +306,17 @@ void TrezorClient::post(QByteArray&& urlMethod, std::function<void(QNetworkReply
       request.setHeader(QNetworkRequest::ContentTypeHeader, { QByteArray("application/x-www-form-urlencoded") });
    }
 
-   QNetworkReply *reply = connectionManager_->GetNAM()->post(request, input);
-   auto connection = connect(reply, &QNetworkReply::finished, this, [cbCopy = cb, repCopy = reply, sender = QPointer<TrezorClient>(this)]{
-      if (!sender) {
-         return; // TREZOR client already destroyed
-      }
+   QNetworkReply *reply = QNetworkAccessManager().post(request, input);
+   auto connection = connect(reply, &QNetworkReply::finished, this
+      , [cbCopy = cb, repCopy = reply, sender = QPointer<TrezorClient>(this)]
+      {
+         if (!sender) {
+            return; // TREZOR client already destroyed
+         }
 
-      cbCopy(repCopy);
-      repCopy->deleteLater();
-   });
+         cbCopy(repCopy);
+         repCopy->deleteLater();
+      });
 
    // Timeout
    if (timeout) {
@@ -325,7 +327,6 @@ void TrezorClient::post(QByteArray&& urlMethod, std::function<void(QNetworkReply
          replyCopy->abort();
       });
    }
-
 }
 
 void TrezorClient::cleanDeviceData()

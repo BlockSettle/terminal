@@ -1,7 +1,7 @@
 #
 #
 # ***********************************************************************************
-# * Copyright (C) 2020 - 2020, BlockSettle AB
+# * Copyright (C) 2020 - 2021, BlockSettle AB
 # * Distributed under the GNU Affero General Public License (AGPL v3)
 # * See LICENSE or http://www.gnu.org/licenses/agpl.html
 # *
@@ -37,7 +37,6 @@ ENDIF()
 
 TARGET_LINK_LIBRARIES(${BLOCKSETTLE_TRACKER}
    ${BS_NETWORK_LIB_NAME}
-   ${ZMQ_LIB}
    ${WS_LIB}
    ${OPENSSL_LIBS}
    ${OS_SPECIFIC_LIBS_TRACKER}

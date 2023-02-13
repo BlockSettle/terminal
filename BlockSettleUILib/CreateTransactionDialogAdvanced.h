@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -17,6 +17,7 @@
 namespace Ui {
     class CreateTransactionDialogAdvanced;
 }
+
 namespace bs {
    namespace sync {
       namespace hd {
@@ -27,53 +28,32 @@ namespace bs {
    }
 }
 
+class TransactionOutputsModel;
 class QNetworkAccessManager;
+class SelectAddressDialog;
 
 class CreateTransactionDialogAdvanced : public CreateTransactionDialog
 {
 Q_OBJECT
 
 public:
-   static std::shared_ptr<CreateTransactionDialogAdvanced>  CreateForRBF(
-        const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer>&
-      , const std::shared_ptr<spdlog::logger>&
-      , const std::shared_ptr<ApplicationSettings> &
-      , const Tx &
+   static std::shared_ptr<CreateTransactionDialogAdvanced>  CreateForRBF(uint32_t topBlock
+      , const std::shared_ptr<spdlog::logger>&, const Tx &
       , QWidget* parent = nullptr);
 
-   static std::shared_ptr<CreateTransactionDialogAdvanced>  CreateForCPFP(
-        const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager>&
-      , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer>&
-      , const std::shared_ptr<bs::sync::Wallet>&
-      , const std::shared_ptr<spdlog::logger>&
-      , const std::shared_ptr<ApplicationSettings> &
-      , const Tx &
-      , QWidget* parent = nullptr);
+   static std::shared_ptr<CreateTransactionDialogAdvanced>  CreateForCPFP(uint32_t topBlock
+      , const std::string& walletId, const std::shared_ptr<spdlog::logger>&
+      , const Tx &, QWidget* parent = nullptr);
 
-   static std::shared_ptr<CreateTransactionDialog> CreateForPaymentRequest(
-        const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer>&
+   static std::shared_ptr<CreateTransactionDialog> CreateForPaymentRequest(uint32_t topBlock
       , const std::shared_ptr<spdlog::logger>&
-      , const std::shared_ptr<ApplicationSettings> &
       , const Bip21::PaymentRequestInfo& paymentInfo
       , QWidget* parent = nullptr);
 
 public:
-   CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer> &
-      , bool loadFeeSuggestions
-      , const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
-      , const std::shared_ptr<TransactionData> &
+   CreateTransactionDialogAdvanced(bool loadFeeSuggestions, uint32_t topBlock
+      , const std::shared_ptr<spdlog::logger>&
+      , const std::shared_ptr<TransactionData>&
       , bs::UtxoReservationToken utxoReservation
       , QWidget* parent = nullptr);
    ~CreateTransactionDialogAdvanced() override;
@@ -85,9 +65,15 @@ public:
 
    bool switchModeRequested() const override;
    std::shared_ptr<CreateTransactionDialog> SwitchMode() override;
+   void onWalletsList(const std::string& id, const std::vector<bs::sync::HDWalletData>&) override;
 
 protected:
    bool eventFilter(QObject *watched, QEvent *) override;
+   void onAddresses(const std::string& walletId, const std::vector<bs::sync::Address>&) override;
+   void onAddressComments(const std::string& walletId
+      , const std::map<bs::Address, std::string>&) override;
+   void onAddressBalances(const std::string& walletId
+      , const std::vector<bs::sync::WalletBalanceData::AddressBalance>&) override;
 
    QComboBox *comboBoxWallets() const override;
    QComboBox *comboBoxFeeSuggestions() const override;
@@ -112,7 +98,7 @@ protected:
    virtual QLabel *changeLabel() const override;
 
    void onTransactionUpdated() override;
-   void getChangeAddress(AddressCb cb) const override;
+   void getChangeAddress(AddressCb cb) override;
 
    bool HaveSignedImportedTransaction() const override;
 
@@ -143,15 +129,10 @@ private slots:
    void onOutputsClicked(const QModelIndex &index);
    void onSimpleDialogRequested();
    void onUpdateChangeWidget();
-   void onBitPayTxVerified(bool result);
-   void onVerifyBitPayUnsignedTx(const std::string& unsignedTx, uint64_t virtSize);
-signals:
-   void VerifyBitPayUnsignedTx(const std::string& unsignedTx, uint64_t virtSize);
-   void BitPayTxVerified(bool result);
 
 private:
    void clear() override;
-   void initUI();
+   void initUI() override;
 
    void updateOutputButtonTitle();
 
@@ -228,6 +209,8 @@ private:
    Bip21::PaymentRequestInfo paymentInfo_;
 
    std::shared_ptr<QNetworkAccessManager> nam_;
+
+   SelectAddressDialog* selChangeAddrDlg_{ nullptr };
 };
 
 #endif // __CREATE_TRANSACTION_DIALOG_ADVANCED_H__

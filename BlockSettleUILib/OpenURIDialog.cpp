@@ -13,7 +13,6 @@
 #include "ui_OpenURIDialog.h"
 
 #include "Address.h"
-#include "BitPayRequests.h"
 #include "JsonTools.h"
 #include "UiUtils.h"
 
@@ -93,6 +92,7 @@ void OpenURIDialog::LoadPaymentOptions()
    ui_->lineEditURI->setEnabled(false);
 
    // send request
+#if 0 //BitPay is not supported now
    QNetworkRequest request = BitPay::getBTCPaymentRequest(requestInfo_.requestURL);
    QNetworkReply *reply = nam_->post(request, BitPay::getBTCPaymentRequestPayload());
 
@@ -285,6 +285,7 @@ void OpenURIDialog::LoadPaymentOptions()
 
    connect(reply, &QNetworkReply::finished, reply, &QNetworkReply::deleteLater);
    connect(this, &OpenURIDialog::finished, reply, &QNetworkReply::abort);
+#endif   //0
 }
 
 bool OpenURIDialog::ParseURI()

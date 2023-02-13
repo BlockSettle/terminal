@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -15,8 +15,10 @@
 #include <QClipboard>
 #include <spdlog/spdlog.h>
 #include "ApplicationSettings.h"
-#include "CreateTransactionDialogAdvanced.h"
 #include "BSMessageBox.h"
+#include "CCPortfolioModel.h"
+#include "CreateTransactionDialogAdvanced.h"
+#include "CurrencyPair.h"
 #include "TransactionDetailDialog.h"
 #include "TransactionsViewModel.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -87,32 +89,40 @@ void PortfolioWidget::SetTransactionsModel(const std::shared_ptr<TransactionsVie
       static_cast<int>(TransactionsViewModel::Columns::TxHash));
 }
 
-void PortfolioWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<MarketDataProvider> &mdProvider
-   , const std::shared_ptr<MDCallbacksQt> &mdCallbacks
-   , const std::shared_ptr<CCPortfolioModel> &model
-   , const std::shared_ptr<WalletSignerContainer> &container
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::UTXOReservationManager> &utxoReservationManager
-   , const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
+void PortfolioWidget::init(const std::shared_ptr<spdlog::logger>& logger)
 {
-   TransactionsWidgetInterface::init(walletsMgr, armory, utxoReservationManager, container, appSettings, logger);
-
-   ui_->widgetMarketData->init(appSettings, ApplicationSettings::Filter_MD_RFQ_Portfolio
-      , mdProvider, mdCallbacks);
-   ui_->widgetCCProtfolio->SetPortfolioModel(model);
+   logger_ = logger;
+   portfolioModel_ = std::make_shared<CCPortfolioModel>(this);
+   ui_->widgetCCProtfolio->SetPortfolioModel(portfolioModel_);
 }
 
 void PortfolioWidget::shortcutActivated(ShortcutType s)
-{
+{}
 
+void PortfolioWidget::onHDWallet(const bs::sync::WalletInfo& wi)
+{
+   portfolioModel_->onHDWallet(wi);
 }
 
-void PortfolioWidget::setAuthorized(bool authorized)
+void PortfolioWidget::onHDWalletDetails(const bs::sync::HDWalletData& wd)
 {
-   ui_->widgetMarketData->setAuthorized(authorized);
+   portfolioModel_->onHDWalletDetails(wd);
 }
+
+void PortfolioWidget::onWalletBalance(const bs::sync::WalletBalanceData& wbd)
+{
+   portfolioModel_->onWalletBalance(wbd);
+   ui_->widgetCCProtfolio->onWalletBalance(wbd);
+}
+
+void PortfolioWidget::onBalance(const std::string& currency, double balance)
+{
+   portfolioModel_->onBalance(currency, balance);
+   ui_->widgetCCProtfolio->onBalance(currency, balance);
+}
+
+void PortfolioWidget::onEnvConfig(int value)
+{}
 
 void PortfolioWidget::showTransactionDetails(const QModelIndex& index)
 {
@@ -124,8 +134,11 @@ void PortfolioWidget::showTransactionDetails(const QModelIndex& index)
          return;
       }
 
-      TransactionDetailDialog transactionDetailDialog(txItem, walletsManager_, armory_, this);
-      transactionDetailDialog.exec();
+      auto txDetailDialog = new TransactionDetailDialog(txItem, this);
+      connect(txDetailDialog, &QDialog::finished, [txDetailDialog](int) {
+         txDetailDialog->deleteLater();
+      });
+      txDetailDialog->show();
    }
 }
 
@@ -161,7 +174,7 @@ void PortfolioWidget::showContextMenu(const QPoint &point)
 
    if (txNode->item()->isPayin()) {
       actionRevoke_->setData(sourceIndex);
-      actionRevoke_->setEnabled(model_->isTxRevocable(txNode->item()->tx));
+//      actionRevoke_->setEnabled(model_->isTxRevocable(txNode->item()->tx));
       contextMenu_.addAction(actionRevoke_);
    }
    else {
@@ -181,7 +194,5 @@ void PortfolioWidget::showContextMenu(const QPoint &point)
       contextMenu_.exec(ui_->treeViewUnconfirmedTransactions->mapToGlobal(point));
    }
 }
-
-
 
 #include "PortfolioWidget.moc"

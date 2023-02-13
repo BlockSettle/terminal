@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -12,13 +12,14 @@
 
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
-#include "InprocSigner.h"
+#include "Wallets/HeadlessContainer.h"
+#include "Wallets/InprocSigner.h"
 #include "SettableField.h"
 #include "StringUtils.h"
 #include "TestEnv.h"
-#include "TradesUtils.h"
+#include "Wallets/TradesUtils.h"
 #include "TradesVerification.h"
-#include "Trading/OtcClient.h"
+//#include "Trading/OtcClient.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -34,8 +35,9 @@ namespace {
    const auto kSettlementId = std::string("dc26c004d7b24f71cd5b348a254c292777586f5d9d00f60ac65dd7d5b06d0c2b");
 
 } // namespace
+class QtHCT;
 
-class TestPeer
+class TestPeer : public SignerCallbackTarget
 {
 public:
    void init(TestEnv &env, const std::string &name)
@@ -79,7 +81,8 @@ public:
 
       walletsMgr_->addWallet(wallet_);
 
-      signer_ = std::make_shared<InprocSigner>(walletsMgr_, env.logger(), "", NetworkType::TestNet);
+      signer_ = std::make_shared<InprocSigner>(walletsMgr_, env.logger(), this
+         , "", NetworkType::TestNet);
       signer_->Start();
 
       syncWalletMgr_ = std::make_shared<bs::sync::WalletsManager>(env.logger()
@@ -100,10 +103,11 @@ public:
       }
       const auto regIDs = syncWalletMgr_->registerWallets();
       UnitTestWalletACT::waitOnRefresh(regIDs);
-
+#if 0
       OtcClientParams params;
       otc_ = std::make_shared<OtcClient>(env.logger(), syncWalletMgr_, env.armoryConnection(), signer_, nullptr, nullptr, env.appSettings(), params);
       otc_->setOwnContactId(name);
+#endif
    }
 
    std::string name_;
@@ -111,7 +115,8 @@ public:
    std::shared_ptr<bs::core::WalletsManager> walletsMgr_;
    std::shared_ptr<bs::sync::WalletsManager> syncWalletMgr_;
    std::shared_ptr<InprocSigner> signer_;
-   std::shared_ptr<OtcClient> otc_;
+   std::shared_ptr<QtHCT>        hct_;
+   //std::shared_ptr<OtcClient> otc_;
    bs::Address authAddress_;
    bs::Address nativeAddr_;
    bs::Address nestedAddr_;
@@ -139,7 +144,7 @@ public:
                auto d = response.mutable_start_otc();
                d->set_request_id(request.start_otc().request_id());
                d->set_settlement_id(kSettlementId);
-               peer.otc_->processPbMessage(response);
+               //peer.otc_->processPbMessage(response);
                break;
             }
 
@@ -242,7 +247,7 @@ public:
                ASSERT_TRUE(false) << std::to_string(request.data_case());
          }
       };
-
+#if 0
       QObject::connect(peer1_.otc_.get(), &OtcClient::sendContactMessage, qApp, [this](const std::string &contactId, const BinaryData &data) {
          peer2_.otc_->processContactMessage(peer1_.name_, data);
       }, Qt::QueuedConnection);
@@ -256,6 +261,7 @@ public:
       QObject::connect(peer2_.otc_.get(), &OtcClient::sendPbMessage, qApp, [this, processPbMessage](const std::string &data) {
          processPbMessage(peer2_, data);
       }, Qt::QueuedConnection);
+#endif   //0
    }
 
    void sendStateUpdate(ProxyTerminalPb::OtcState state)
@@ -265,14 +271,14 @@ public:
       d->set_settlement_id(kSettlementId);
       d->set_state(state);
       d->set_timestamp_ms(QDateTime::currentDateTime().toMSecsSinceEpoch());
-      peer1_.otc_->processPbMessage(response);
-      peer2_.otc_->processPbMessage(response);
+      //peer1_.otc_->processPbMessage(response);
+      //peer2_.otc_->processPbMessage(response);
    }
 
    void mineNewBlocks(const bs::Address &dst, unsigned count)
    {
       auto curHeight = env_->armoryConnection()->topBlock();
-      auto addrRecip = dst.getRecipient(bs::XBTAmount{uint64_t(1 * COIN)});
+      auto addrRecip = dst.getRecipient(bs::XBTAmount{int64_t(1 * COIN)});
       env_->armoryInstance()->mineNewBlock(addrRecip.get(), count);
       env_->blockMonitor()->waitForNewBlocks(curHeight + count);
    }
@@ -292,8 +298,8 @@ public:
       manualInput_ = testNum & 0x0004;
       withoutChange_ = testNum & 0x0008;
 
-      peer1_.otc_->contactConnected(peer2_.name_);
-      peer2_.otc_->contactConnected(peer1_.name_);
+      //peer1_.otc_->contactConnected(peer2_.name_);
+      //peer2_.otc_->contactConnected(peer1_.name_);
 
       auto &sender = sellerOffers_ ? peer1_ : peer2_;
       auto &receiver = sellerOffers_ ? peer2_ : peer1_;
@@ -323,7 +329,7 @@ public:
       // needed to be able sign pay-in and pay-out
       const bs::core::WalletPasswordScoped lock1(peer1_.wallet_, kPassword);
       const bs::core::WalletPasswordScoped lock2(peer2_.wallet_, kPassword);
-
+#if 0
       {
          bs::network::otc::Offer offer;
          offer.price = 100;
@@ -366,6 +372,7 @@ public:
       ASSERT_TRUE(payoutDone_);
       ASSERT_TRUE(payinSealDone_);
       ASSERT_TRUE(payinDone_);
+#endif   //0
    }
 
    std::unique_ptr<TestEnv> env_;

@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -24,6 +24,7 @@
 #include "Bip21Types.h"
 #include "BSErrorCodeStrings.h"
 #include "CoreWallet.h"
+#include "Wallets/SignContainer.h"
 #include "UtxoReservationToken.h"
 #include "ValidityFlag.h"
 
@@ -42,9 +43,7 @@ class QLineEdit;
 class QPushButton;
 class QTextEdit;
 class RecipientWidget;
-class SignContainer;
 class TransactionData;
-class TransactionOutputsModel;
 class UsedInputsModel;
 class XbtAmountValidator;
 
@@ -58,20 +57,46 @@ class CreateTransactionDialog : public QDialog
 Q_OBJECT
 
 public:
-   CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::UTXOReservationManager> &
-      , const std::shared_ptr<SignContainer> &
-      , bool loadFeeSuggestions, const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ApplicationSettings> &applicationSettings
-      , bs::UtxoReservationToken utxoReservation
-      , QWidget* parent);
+   CreateTransactionDialog(bool loadFeeSuggestions, uint32_t topBlock
+      , const std::shared_ptr<spdlog::logger>&, QWidget* parent);
    ~CreateTransactionDialog() noexcept override;
 
    int SelectWallet(const std::string& walletId, UiUtils::WalletsTypes type);
 
+   virtual void initUI() = 0;
    virtual bool switchModeRequested() const= 0;
    virtual std::shared_ptr<CreateTransactionDialog> SwitchMode() = 0;
+
+   virtual void onAddresses(const std::string &walletId, const std::vector<bs::sync::Address>&) {}
+   virtual void onAddressComments(const std::string& walletId
+      , const std::map<bs::Address, std::string>&) {}
+   virtual void onAddressBalances(const std::string& walletId
+      , const std::vector<bs::sync::WalletBalanceData::AddressBalance>&);
+   virtual void onChangeAddress(const std::string& walletId, const bs::Address&);
+
+   virtual void onWalletsList(const std::string &id, const std::vector<bs::sync::HDWalletData>&);
+   virtual void onWalletDeleted(const bs::sync::WalletInfo&);
+   void onFeeLevels(const std::map<unsigned int, float>&);
+   void onUTXOs(const std::string& id, const std::string& walletId, const std::vector<UTXO>&);
+   void onSignedTX(const std::string& id, BinaryData signedTX, bs::error::ErrorCode result);
+
+signals:
+   void walletChanged();
+   void needWalletsList(UiUtils::WalletsTypes, const std::string &id);
+   void needChangeAddress(const std::string& walletId);
+   void needFeeLevels(const std::vector<unsigned int>&);
+   void needUTXOs(const std::string &id, const std::string& walletId
+      , bool confOnly=false, bool swOnly=false);
+   void needExtAddresses(const std::string& walletId);
+   void needIntAddresses(const std::string& walletId);
+   void needUsedAddresses(const std::string& walletId);
+   void needAddrComments(const std::string& walletId, const std::vector<bs::Address>&);
+   void needWalletBalances(const std::string& walletId);
+   void needSignTX(const std::string& id, const bs::core::wallet::TXSignRequest &
+      , bool keepDupRecips = false, SignContainer::TXSignMode mode = SignContainer::TXSignMode::Full
+      , const SecureBinaryData& passphrase = {});
+   void needBroadcastZC(const std::string &id, const BinaryData &);
+   void needSetTxComment(const std::string& walletId, const BinaryData& txHash, const std::string &comment);
 
 protected:
    virtual void init();
@@ -96,12 +121,13 @@ protected:
    virtual QLabel *labelTxSize() const = 0;
    virtual QPushButton *pushButtonCreate() const = 0;
    virtual QPushButton *pushButtonCancel() const = 0;
+   virtual QLineEdit* lineEditPassphrase() const { return nullptr; };
 
    virtual QLabel* feePerByteLabel() const { return nullptr; }
    virtual QLabel* changeLabel() const {return nullptr; }
 
    using AddressCb = std::function<void(const bs::Address&)>;
-   virtual void getChangeAddress(AddressCb) const = 0;
+   virtual void getChangeAddress(AddressCb);
 
    virtual void onTransactionUpdated();
 
@@ -115,42 +141,35 @@ protected:
 
    void showError(const QString &text, const QString &detailedText);
 
-signals:
-   void feeLoadingCompleted(const std::map<unsigned int, float> &);
-   void walletChanged();
-
 protected slots:
    virtual void onFeeSuggestionsLoaded(const std::map<unsigned int, float> &);
    virtual void feeSelectionChanged(int);
    virtual void selectedWalletChanged(int, bool resetInputs = false
       , const std::function<void()> &cbInputsReset = nullptr);
    virtual void onMaxPressed();
-   void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result);
+   void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result); //deprecated
    void updateCreateButtonText();
    void onSignerAuthenticated();
 
 protected:
    void populateFeeList();
+   void populateWalletsList();
 
    bool createTransactionImpl();
 
    static bool canUseSimpleMode(const Bip21::PaymentRequestInfo& paymentInfo);
 
 private:
-   void loadFees();
-   void populateWalletsList();
    void startBroadcasting();
    void stopBroadcasting();
 
 protected:
-   std::shared_ptr<ArmoryConnection>   armory_;
-   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<SignContainer>   signContainer_;
    std::shared_ptr<TransactionData> transactionData_;
    std::shared_ptr<spdlog::logger> logger_;
-   std::shared_ptr<ApplicationSettings> applicationSettings_;
+   //std::shared_ptr<ApplicationSettings> applicationSettings_;
    std::shared_ptr<bs::UTXOReservationManager> utxoReservationManager_;
    bs::UtxoReservationToken utxoRes_;
+   uint32_t topBlock_;
 
    XbtAmountValidator * xbtValidator_ = nullptr;
 
@@ -175,8 +194,11 @@ protected:
 
    ValidityFlag validityFlag_;
 
+   std::unordered_map<std::string, bs::sync::HDWalletData>  hdWallets_;
+
 private:
    bs::core::wallet::TXSignRequest  txReq_;
+   AddressCb   changeAddrCb_{ nullptr };
 };
 
 #endif // __CREATE_TRANSACTION_DIALOG_H__

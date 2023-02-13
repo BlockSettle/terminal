@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2020 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -13,8 +13,8 @@
 
 #include <QStringList>
 #include <QVariant>
-#include "SignerDefs.h"
-#include "SignerUiDefs.h"
+#include "Wallets/SignerDefs.h"
+#include "Wallets/SignerUiDefs.h"
 
 namespace Blocksettle { namespace Communication { namespace signer {
    class Settings;
@@ -81,7 +81,6 @@ public:
    bool twoWaySignerAuth() const;
 
    QString dirDocuments() const;
-   bs::signer::ui::RunMode runMode() const { return runMode_; }
    bool closeHeadless() const { return true; }
 
    void setOffline(bool val);
@@ -134,9 +133,7 @@ private:
    std::string fileName_;
    std::string srvIDKey_;
    int signerPort_{};
-   bs::signer::ui::RunMode runMode_{};
    std::unique_ptr<Settings> d_;
-
 };
 
 

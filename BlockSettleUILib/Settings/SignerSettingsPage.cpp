@@ -18,14 +18,13 @@
 #include "ApplicationSettings.h"
 #include "BtcUtils.h"
 #include "BSMessageBox.h"
-#include "SignContainer.h"
+#include "Wallets/HeadlessContainer.h"
+#include "Wallets/SignContainer.h"
 #include "SignersManageWidget.h"
-#include "HeadlessContainer.h"
 
 SignerSettingsPage::SignerSettingsPage(QWidget* parent)
    : SettingsPage{parent}
    , ui_{new Ui::SignerSettingsPage{}}
-   , reset_{false}
 {
    ui_->setupUi(this);
    ui_->widgetTwoWayAuth->hide();
@@ -61,24 +60,36 @@ SignerSettingsPage::~SignerSettingsPage() = default;
 
 void SignerSettingsPage::display()
 {
-   ui_->checkBoxTwoWayAuth->setChecked(appSettings_->get<bool>(ApplicationSettings::twoWaySignerAuth));
-   ui_->comboBoxSigner->setCurrentIndex(signersProvider_->indexOfCurrent());
+   if (appSettings_ && signersProvider_) {
+      ui_->checkBoxTwoWayAuth->setChecked(appSettings_->get<bool>(ApplicationSettings::twoWaySignerAuth));
+      ui_->comboBoxSigner->setCurrentIndex(signersProvider_->indexOfCurrent());
 
-   showLimits(signersProvider_->indexOfCurrent() == 0);
-   ui_->labelTerminalKey->setText(QString::fromStdString(signersProvider_->remoteSignerOwnKey().toHexStr()));
+      showLimits(signersProvider_->indexOfCurrent() == 0);
+      ui_->labelTerminalKey->setText(QString::fromStdString(signersProvider_->remoteSignerOwnKey().toHexStr()));
+   }
+   else {
+      ui_->checkBoxTwoWayAuth->setChecked(settings_.at(ApplicationSettings::twoWaySignerAuth).toBool());
+      ui_->comboBoxSigner->setCurrentIndex(curSignerIdx_);
+      showLimits(curSignerIdx_ == 0);
+      ui_->labelTerminalKey->setText(QString::fromStdString(ownKey_));
+   }
 }
 
 void SignerSettingsPage::reset()
 {
-   reset_ = true;
-   for (const auto &setting : { ApplicationSettings::remoteSigners
-                                 , ApplicationSettings::autoSignSpendLimit
-                                 , ApplicationSettings::twoWaySignerAuth
-                              }) {
-      appSettings_->reset(setting, false);
+   const std::vector<ApplicationSettings::Setting> resetList {
+      ApplicationSettings::remoteSigners, ApplicationSettings::autoSignSpendLimit
+      , ApplicationSettings::twoWaySignerAuth
+   };
+   if (appSettings_) {
+      for (const auto& setting : resetList) {
+         appSettings_->reset(setting, false);
+      }
+      display();
    }
-   display();
-   reset_ = false;
+   else {
+      emit resetSettings(resetList);
+   }
 }
 
 void SignerSettingsPage::showHost(bool show)
@@ -119,48 +130,78 @@ void SignerSettingsPage::onManageSignerKeys()
    // workaround here - wrap widget by QDialog
    // TODO: fix stylesheet to support popup widgets
 
-   QDialog *d = new QDialog(this);
-   QVBoxLayout *l = new QVBoxLayout(d);
-   l->setContentsMargins(0,0,0,0);
-   d->setLayout(l);
-   d->setWindowTitle(tr("Manage Signer Connection"));
+   QDialog *dlg = new QDialog(this);
+   QVBoxLayout *layout = new QVBoxLayout(dlg);
+   layout->setContentsMargins(0,0,0,0);
+   dlg->setLayout(layout);
+   dlg->setWindowTitle(tr("Manage Signer Connection"));
 
-   SignerKeysWidget *signerKeysWidget = new SignerKeysWidget(signersProvider_, appSettings_, this);
-   d->resize(signerKeysWidget->size());
+   if (appSettings_ && signersProvider_) {
+      signerKeysWidget_ = new SignerKeysWidget(signersProvider_, appSettings_, this);
+   }
+   else {
+      signerKeysWidget_ = new SignerKeysWidget(this);
+   }
+   dlg->resize(signerKeysWidget_->size());
 
-   l->addWidget(signerKeysWidget);
+   layout->addWidget(signerKeysWidget_);
 
-   connect(signerKeysWidget, &SignerKeysWidget::needClose, this, [d](){
-      d->reject();
+   connect(signerKeysWidget_, &SignerKeysWidget::needClose, dlg, &QDialog::reject);
+   connect(dlg, &QDialog::finished, [this](int) {
+      signerKeysWidget_->deleteLater();
+      signerKeysWidget_ = nullptr;
    });
-
-   d->exec();
+   signerKeysWidget_->onSignerSettings(signers_, curSignerIdx_);
+   dlg->exec();
 
    emit signersChanged();
 }
 
 void SignerSettingsPage::apply()
 {
-   appSettings_->set(ApplicationSettings::twoWaySignerAuth, ui_->checkBoxTwoWayAuth->isChecked());
-   signersProvider_->setupSigner(ui_->comboBoxSigner->currentIndex());
+   if (appSettings_) {
+      appSettings_->set(ApplicationSettings::twoWaySignerAuth, ui_->checkBoxTwoWayAuth->isChecked());
+      signersProvider_->setupSigner(ui_->comboBoxSigner->currentIndex());
+   }
+   else {
+      emit putSetting(ApplicationSettings::twoWaySignerAuth, ui_->checkBoxTwoWayAuth->isChecked());
+      emit setSigner(ui_->comboBoxSigner->currentIndex());
+   }
 }
 
 void SignerSettingsPage::initSettings()
 {
-   signersModel_ = new SignersModel(signersProvider_, this);
+   if (signersProvider_) {
+      signersModel_ = new SignersModel(signersProvider_, this);
+      connect(signersProvider_.get(), &SignersProvider::dataChanged, this, &SignerSettingsPage::display);
+   }
+   else {
+      signersModel_ = new SignersModel(this);
+   }
    signersModel_->setSingleColumnMode(true);
    signersModel_->setHighLightSelectedServer(false);
    ui_->comboBoxSigner->setModel(signersModel_);
-
-   connect(signersProvider_.get(), &SignersProvider::dataChanged, this, &SignerSettingsPage::display);
 }
 
-void SignerSettingsPage::init(const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
-   , const std::shared_ptr<SignersProvider> &signersProvider, const std::shared_ptr<SignContainer> &signContainer
-   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
+void SignerSettingsPage::init(const ApplicationSettings::State& state)
 {
-   reset_ = true;
-   SettingsPage::init(appSettings, armoryServersProvider, signersProvider, signContainer, walletsMgr);
-   reset_ = false;
+   if (state.find(ApplicationSettings::twoWaySignerAuth) == state.end()) {
+      return;  // not our snapshot
+   }
+   SettingsPage::init(state);
+}
+
+void SignerSettingsPage::onSignerSettings(const QList<SignerHost>& signers
+   , const std::string& ownKey, int idxCur)
+{
+   signers_ = signers;
+   curSignerIdx_ = idxCur;
+   ownKey_ = ownKey;
+   if (signersModel_) {
+      signersModel_->onSignerSettings(signers, idxCur);
+   }
+   if (signerKeysWidget_) {
+      signerKeysWidget_->onSignerSettings(signers, idxCur);
+   }
+   display();
 }

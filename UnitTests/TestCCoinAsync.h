@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -18,8 +18,8 @@
 
 #include "Address.h"
 #include "BlockchainMonitor.h"
+#include "Wallets/SignContainer.h"
 #include "TestEnv.h"
-#include "CCLogicAsync.h"
 
 namespace bs {
    namespace core {
@@ -40,8 +40,9 @@ namespace bs {
       class WalletsManager;
    }
 }
+class QtHCT;
 
-
+#if 0 // CC code turned off
 class AsyncCCT : public ColoredCoinTrackerAsync
 {
 public:
@@ -68,7 +69,7 @@ public:
 };
 
 
-class TestCCoinAsync : public ::testing::Test
+class TestCCoinAsync : public ::testing::Test, public SignerCallbackTarget
 {
 public:
    using UTXOs = std::vector<UTXO>;
@@ -83,6 +84,7 @@ public:
    std::vector<std::shared_ptr<bs::sync::hd::Leaf>>   userWallets_;
 
    std::shared_ptr<bs::sync::WalletsManager> syncMgr_;
+   std::shared_ptr<QtHCT>  hct_;
 
    bs::Address              genesisAddr_;
    bs::Address              revocationAddr_;
@@ -176,5 +178,5 @@ public:
 private:
    std::map<std::string, std::function<void()>> refreshCb_;
 };
-
+#endif   //0
 #endif // TEST_CCOIN_ASYNC_H

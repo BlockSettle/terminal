@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -13,6 +13,7 @@
 
 #include <QDialog>
 #include <memory>
+#include "Wallets/SignerDefs.h"
 
 namespace Ui {
     class SelectWalletDialog;
@@ -32,10 +33,14 @@ class SelectWalletDialog : public QDialog
 Q_OBJECT
 
 public:
-   SelectWalletDialog(const std::shared_ptr<bs::sync::WalletsManager> &, const std::string &selWalletId, QWidget* parent = nullptr);
+   SelectWalletDialog(const std::string& selWalletId, QWidget* parent = nullptr);
    ~SelectWalletDialog() override;
 
-   std::shared_ptr<bs::sync::Wallet> getSelectedWallet() const;
+   std::string getSelectedWallet() const;
+
+   void onHDWallet(const bs::sync::WalletInfo&);
+   void onHDWalletDetails(const bs::sync::HDWalletData&);
+   void onWalletBalances(const bs::sync::WalletBalanceData&);
 
 public slots:
    void onSelectionChanged();
@@ -43,9 +48,8 @@ public slots:
 
 private:
    std::unique_ptr<Ui::SelectWalletDialog> ui_;
-   WalletsViewModel  *              walletsModel_;
-   std::shared_ptr<bs::sync::Wallet>         selectedWallet_;
-   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
+   WalletsViewModel  *walletsModel_;
+   std::string       selectedWallet_;
 };
 
 #endif // __SELECT_WALLET_DIALOG_H__

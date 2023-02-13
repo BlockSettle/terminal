@@ -15,6 +15,7 @@
 #include <memory>
 #include <QAbstractTableModel>
 #include "CoreWallet.h"
+#include "Wallets/SignerDefs.h"
 #include "ValidityFlag.h"
 
 namespace bs {
@@ -33,7 +34,6 @@ class AddressListModel : public QAbstractTableModel
 public:
    struct AddressRow
    {
-      std::shared_ptr<bs::sync::Wallet> wallet;
       bs::Address address;
       QByteArray bytes;
       int transactionCount = 0;
@@ -42,7 +42,8 @@ public:
       QString  displayedAddress;
       QString  walletName;
       QString  walletId;
-      size_t   addrIndex = 0;
+      QString  index;
+      int      addrIndex = 0;
       bs::core::wallet::Type wltType = bs::core::wallet::Type::Unknown;
       bool     isExternal;
 
@@ -70,7 +71,13 @@ public:
       WalletIdRole,
       AddrIndexRole,
       AddressRole,
-      IsExternalRole
+      AddressCommentRole,
+      IsExternalRole,
+      AddressIndexRole,
+      WalletTypeRole,
+      WalletNameRole,
+      TxNRole,
+      BalanceRole
    };
 
    enum AddressType {
@@ -80,10 +87,9 @@ public:
       ExtAndNonEmptyInt = 4
    };
 
-   typedef std::vector<std::shared_ptr<bs::sync::Wallet>>   Wallets;
+   typedef std::vector<bs::sync::WalletInfo> Wallets;
 
-   AddressListModel(const std::shared_ptr<bs::sync::WalletsManager> &, QObject* parent
-      , AddressType addrType = AddressType::All);
+   AddressListModel(QObject* parent, AddressType addrType = AddressType::All);
    ~AddressListModel() noexcept = default;
 
    int rowCount(const QModelIndex & parent) const override;
@@ -91,27 +97,45 @@ public:
    QVariant data(const QModelIndex & index, int role = Qt::DisplayRole) const override;
    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
-   bool setWallets(const Wallets &, bool force, bool filterBtcOnly);
+   void setWallets(const Wallets &, bool force, bool filterBtcOnly);
+   void onAddresses(const std::string &walletId, const std::vector<bs::sync::Address> &);
+   void onAddressComments(const std::string &walletId
+      , const std::map<bs::Address, std::string> &);
+   void onAddressBalances(const std::string &walletId
+      , const std::vector<bs::sync::WalletBalanceData::AddressBalance> &);
+
+signals:
+   void needExtAddresses(const std::string &walletId);
+   void needIntAddresses(const std::string &walletId);
+   void needUsedAddresses(const std::string &walletId);
+   void needAddrComments(const std::string &walletId, const std::vector<bs::Address> &);
 
 private slots:
-   void updateWallets();
-   void updateData(const std::string &walletId);
-   void removeEmptyIntAddresses();
+   void updateWallets();   // deprecated
+//   void updateData(const std::string &walletId);
+   void removeEmptyIntAddresses();  // deprecated
 
 private:
-   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
+   [[deprecated]] std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    Wallets                    wallets_;
    std::vector<AddressRow>    addressRows_;
    const AddressType          addrType_;
+   std::map<BinaryData, int>  indexByAddr_;
+
+   struct AddrBalance {
+      BTCNumericTypes::satoshi_type balance;
+      uint32_t    txn;
+   };
+   std::unordered_map<std::string, std::map<BinaryData, AddrBalance>>   pooledBalances_;
 
    std::atomic_bool           processing_;
    bool filterBtcOnly_{false};
    ValidityFlag validityFlag_;
 
 private:
-   void updateWallet(const std::shared_ptr<bs::sync::Wallet> &wallet, std::vector<AddressRow> &addresses);
+   void updateWallet(const bs::sync::WalletInfo &wallet);
    void updateWalletData();
-   AddressRow createRow(const bs::Address &, const std::shared_ptr<bs::sync::Wallet> &) const;
+   AddressRow createRow(const bs::Address &, const bs::sync::WalletInfo &) const;
    QVariant dataForRow(const AddressListModel::AddressRow &row, int column) const;
 };
 

@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -25,7 +25,7 @@
 #include "DispatchQueue.h"
 #include "GenoaStreamServerConnection.h"
 #include "HeadlessApp.h"
-#include "HeadlessContainerListener.h"
+#include "Wallets/HeadlessContainerListener.h"
 #include "Settings/HeadlessSettings.h"
 #include "SignerAdapterListener.h"
 #include "SignerVersion.h"
@@ -36,6 +36,7 @@
 #include "bs_signer.pb.h"
 
 using namespace bs::error;
+using namespace Blocksettle::Communication;
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<HeadlessSettings> &params, const std::shared_ptr<DispatchQueue> &queue)
@@ -321,13 +322,7 @@ void HeadlessAppObj::startTerminalsProcessing()
    if (!result) {
       logger_->error("Failed to bind to {}:{}"
          , settings_->listenAddress(), settings_->listenPort());
-
-      // Abort only if litegui used, fullgui should just show error message instead
-      if (settings_->runMode() == bs::signer::RunMode::litegui) {
-         throw std::runtime_error("failed to bind listening socket");
-      }
    }
-
    signerBindStatus_ = result ? bs::signer::BindStatus::Succeed : bs::signer::BindStatus::Failed;
 }
 
@@ -477,13 +472,6 @@ void HeadlessAppObj::passwordReceived(const std::string &walletId, ErrorCode res
 {
    if (terminalListener_) {
       terminalListener_->passwordReceived(walletId, result, password);
-   }
-}
-
-void HeadlessAppObj::windowVisibilityChanged(bool visible)
-{
-   if (terminalListener_ && settings_->runMode() == bs::signer::RunMode::litegui) {
-      terminalListener_->windowVisibilityChanged(visible);
    }
 }
 

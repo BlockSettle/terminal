@@ -15,7 +15,7 @@
 #include <QFont>
 #include "BTCNumericTypes.h"
 #include "BtcUtils.h"
-#include "SelectedTransactionInputs.h"
+#include "Wallets/SelectedTransactionInputs.h"
 #include "TxClasses.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWallet.h"
@@ -599,8 +599,10 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
 
          if (itAddr == cpfpNodes_.end()) {
             const int row = cpfpNodes_.size();
+            const auto& wallet = selectedInputs->GetWallet();
             addressNode = new AddressNode(CoinControlNode::Type::DoesNotMatter, QString::fromStdString(address.display())
-               , QString::fromStdString(selectedInputs->GetWallet()->getAddressComment(bs::Address::fromHash(input.getRecipientScrAddr()))), row, cpfp_.get());
+               , QString::fromStdString(wallet ? wallet->getAddressComment(bs::Address::fromHash(input.getRecipientScrAddr())) : "")
+               , row, cpfp_.get());
             cpfp_->appendChildNode(addressNode);
             cpfpNodes_[addrStr] = addressNode;
          }

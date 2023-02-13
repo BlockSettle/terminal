@@ -11,7 +11,7 @@
 #include "ui_CoinControlDialog.h"
 #include "CoinControlDialog.h"
 #include <QPushButton>
-#include "SelectedTransactionInputs.h"
+#include "Wallets/SelectedTransactionInputs.h"
 
 
 CoinControlDialog::CoinControlDialog(const std::shared_ptr<SelectedTransactionInputs> &inputs, bool allowAutoSel, QWidget* parent)

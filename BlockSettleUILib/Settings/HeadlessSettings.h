@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2020 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -13,7 +13,7 @@
 
 #include <memory>
 #include "BtcDefinitions.h"
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 #include <SettableField.h>
 
 namespace spdlog {
@@ -49,8 +49,6 @@ public:
    bool twoWaySignerAuth() const;
    bool offline() const;
 
-   bs::signer::RunMode runMode() const { return runMode_; }
-
    BinaryData serverIdKey() const { return serverIdKey_; }
    void setServerIdKey(const BinaryData &key) { serverIdKey_ = key; }
 
@@ -67,7 +65,6 @@ private:
 
    std::string logFile_;
    std::string termIDKeyStr_;
-   bs::signer::RunMode runMode_;
    std::string walletsDir_;
    std::unique_ptr<Settings> d_;
    BinaryData  serverIdKey_;

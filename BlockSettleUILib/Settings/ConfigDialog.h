@@ -15,7 +15,8 @@
 #include <QDialog>
 #include "ApplicationSettings.h"
 #include "ArmoryServersProvider.h"
-#include "SignContainer.h"
+#include "Settings/SignersProvider.h"
+#include "Wallets/SignContainer.h"
 
 class ArmoryServersProvider;
 class SignersProvider;
@@ -31,11 +32,14 @@ class SettingsPage : public QWidget
 public:
    SettingsPage(QWidget *parent);
 
-   virtual void init(const std::shared_ptr<ApplicationSettings> &appSettings
+   [[deprecated]] virtual void init(const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
       , const std::shared_ptr<SignersProvider> &signersProvider
       , const std::shared_ptr<SignContainer> &signContainer
       , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr);
+   virtual void init(const ApplicationSettings::State &);
+
+   virtual void onSetting(int setting, const QVariant& value);
 
 public slots:
    virtual void initSettings() {}
@@ -44,9 +48,12 @@ public slots:
    virtual void apply() = 0;
 
 signals:
+   void putSetting(ApplicationSettings::Setting, const QVariant&);
+   void resetSettings(const std::vector<ApplicationSettings::Setting>&);
    void illformedSettings(bool illformed);
 
 protected:
+   ApplicationSettings::State    settings_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
    std::shared_ptr<SignersProvider>       signersProvider_;
@@ -60,15 +67,21 @@ class ConfigDialog : public QDialog
 Q_OBJECT
 
 public:
-   ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettings
+   [[deprecated]] ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettings
      , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
      , const std::shared_ptr<SignersProvider> &signersProvider
      , const std::shared_ptr<SignContainer> &signContainer
      , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
      , QWidget* parent = nullptr);
+   ConfigDialog(QWidget* parent = nullptr);
    ~ConfigDialog() override;
 
    void popupNetworkSettings();
+
+   void onSettingsState(const ApplicationSettings::State &);
+   void onSetting(int setting, const QVariant& value);
+   void onArmoryServers(const QList<ArmoryServer>&, int idxCur, int idxConn);
+   void onSignerSettings(const QList<SignerHost>&, const std::string& ownKey, int idxCur);
 
    enum class EncryptError
    {
@@ -91,15 +104,20 @@ private slots:
    void onDisplayDefault();
    void onAcceptSettings();
    void onSelectionChanged(int currentRow);
-   void illformedSettings(bool illformed);
+   void onIllformedSettings(bool illformed);
 
 signals:
    void reconnectArmory();
+   void putSetting(ApplicationSettings::Setting, const QVariant&);
+   void resetSettings(const std::vector<ApplicationSettings::Setting>&);
+   void resetSettingsToState(const ApplicationSettings::State &);
+   void setArmoryServer(int);
+   void addArmoryServer(const ArmoryServer&);
+   void delArmoryServer(int);
+   void updArmoryServer(int, const ArmoryServer&);
+   void setSigner(int);
 
 private:
-   static void getChatPrivKey(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-      , const std::shared_ptr<SignContainer> &signContainer, const EncryptCb &cb);
-
    std::unique_ptr<Ui::ConfigDialog> ui_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;

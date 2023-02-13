@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -10,25 +10,18 @@
 */
 #include "StatusBarView.h"
 #include "AssetManager.h"
+#include "Wallets/HeadlessContainer.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
 #include <QEvent>
 
-StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<BaseCelerClient> &celerClient
-   , const std::shared_ptr<SignContainer> &container, QStatusBar *parent)
+StatusBarView::StatusBarView(QStatusBar *parent)
    : QObject(nullptr)
    , statusBar_(parent)
    , iconSize_(16, 16)
-   , armoryConnState_(ArmoryState::Offline)
-   , walletsManager_(walletsManager)
-   , assetManager_(assetManager)
 {
-   init(armory.get());
-
    for (int s : {16, 24, 32})
    {
       iconCeler_.addFile(QString(QLatin1String(":/ICON_BS_%1")).arg(s), QSize(s, s), QIcon::Normal);
@@ -82,32 +75,10 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
 
    SetLoggedOutStatus();
 
-   connect(assetManager_.get(), &AssetManager::totalChanged, this, &StatusBarView::updateBalances);
-   connect(assetManager_.get(), &AssetManager::securitiesChanged, this, &StatusBarView::updateBalances);
+   onDisconnectedFromMatching();
 
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportStarted, this, &StatusBarView::onWalletImportStarted);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, this, &StatusBarView::onWalletImportFinished);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &StatusBarView::updateBalances);
-
-   connect(celerClient.get(), &BaseCelerClient::OnConnectedToServer, this, &StatusBarView::onConnectedToServer);
-   connect(celerClient.get(), &BaseCelerClient::OnConnectionClosed, this, &StatusBarView::onConnectionClosed);
-   connect(celerClient.get(), &BaseCelerClient::OnConnectionError, this, &StatusBarView::onConnectionError);
-
-   // container might be null if user rejects remote signer key
-   if (container) {
-      // connected are not used here because we wait for authenticated signal instead
-      // disconnected are not used here because onContainerError should be always called
-      connect(container.get(), &SignContainer::authenticated, this, &StatusBarView::onContainerAuthorized);
-      connect(container.get(), &SignContainer::connectionError, this, &StatusBarView::onContainerError);
-   }
-
-   onArmoryStateChanged(armory_->state());
-   onConnectionClosed();
-   setBalances();
-
+   connectionStatusLabel_->setPixmap(iconContainerOffline_);
    containerStatusLabel_->setPixmap(iconContainerOffline_);
-
-   connectionStatusLabel_->installEventFilter(this);
 }
 
 StatusBarView::~StatusBarView() noexcept
@@ -123,12 +94,67 @@ StatusBarView::~StatusBarView() noexcept
       separator->deleteLater();
    }
 
-   cleanup();
+   if (armory_) {
+      cleanup();
+   }
+}
+
+void StatusBarView::onBlockchainStateChanged(int state, unsigned int blockNum)
+{
+   onArmoryStateChanged(static_cast<ArmoryState>(state), blockNum);
+}
+
+void StatusBarView::onXbtBalance(const bs::sync::WalletBalanceData &wbd)
+{  // uppercase eliminates ext-int balance duplication
+   xbtBalances_[QString::fromStdString(wbd.id).toUpper().toStdString()] = wbd.balTotal;
+   if (balanceSymbols_.empty() || (balanceSymbols_[0] != bs::network::XbtCurrency)) {
+      balanceSymbols_.insert(balanceSymbols_.cbegin(), bs::network::XbtCurrency);
+   }
+
+   BTCNumericTypes::balance_type accBalance = 0;
+   for (const auto& bal : xbtBalances_) {
+      accBalance += bal.second;
+   }
+   balances_[bs::network::XbtCurrency] = accBalance;
+   displayBalances();
+}
+
+void StatusBarView::displayBalances()
+{
+   QString text;
+   for (const auto& currency : balanceSymbols_) {
+      if (currency == bs::network::XbtCurrency) {
+         QString xbt;
+         switch (armoryConnState_) {
+         case ArmoryState::Ready:
+            xbt = UiUtils::displayAmount(balances_.at(currency));
+            break;
+         case ArmoryState::Scanning:
+         case ArmoryState::Connected:
+            xbt = tr("Loading...");
+            break;
+         case ArmoryState::Closing:
+         case ArmoryState::Offline:
+         default:
+            xbt = tr("...");
+            break;
+         }
+         text += tr("   XBT: <b>%1</b> ").arg(xbt);
+      } else {
+         text += tr("| %1: <b>%2</b> ")
+            .arg(QString::fromStdString(currency))
+            .arg(UiUtils::displayCurrencyAmount(balances_.at(currency)));
+      }
+   }
+   balanceLabel_->setText(text);
+   progressBar_->setVisible(false);
+   estimateLabel_->setVisible(false);
+   connectionStatusLabel_->show();
 }
 
 void StatusBarView::onStateChanged(ArmoryState state)
 {
-   QMetaObject::invokeMethod(this, [this, state] { onArmoryStateChanged(state); });
+   QMetaObject::invokeMethod(this, [this, state] { onArmoryStateChanged(state, blockNum_); });
 }
 
 void StatusBarView::onError(int, const std::string &errMsg)
@@ -150,10 +176,11 @@ void StatusBarView::onPrepareConnection(NetworkType netType, const std::string &
    QMetaObject::invokeMethod(this, [this, netType] { onPrepareArmoryConnection(netType); });
 }
 
-void StatusBarView::onNewBlock(unsigned, unsigned)
+void StatusBarView::onNewBlock(unsigned topBlock, unsigned)
 {
-   QMetaObject::invokeMethod(this, [this] {
+   QMetaObject::invokeMethod(this, [this, topBlock] {
       timeSinceLastBlock_ = std::chrono::steady_clock::now();
+      updateConnectionStatusDetails(static_cast<ArmoryState>(armoryState_), topBlock);
    });
 }
 
@@ -192,19 +219,23 @@ void StatusBarView::onPrepareArmoryConnection(NetworkType netType)
    progressBar_->setVisible(false);
    estimateLabel_->setVisible(false);
 
-   onArmoryStateChanged(ArmoryState::Offline);
+   onArmoryStateChanged(ArmoryState::Offline, 0);
 }
 
-void StatusBarView::onArmoryStateChanged(ArmoryState state)
+void StatusBarView::onArmoryStateChanged(ArmoryState state, unsigned int topBlock)
 {
-   progressBar_->setVisible(false);
-   estimateLabel_->setVisible(false);
+   armoryState_ = (int)state;
+   blockNum_ = topBlock;
+
+   progressBar_->hide();
+   estimateLabel_->hide();
    connectionStatusLabel_->show();
 
    armoryConnState_ = state;
 
    setBalances();
 
+   // for some reason previous icons don't display at all now
    switch (state) {
    case ArmoryState::Scanning:
    case ArmoryState::Connecting:
@@ -214,16 +245,18 @@ void StatusBarView::onArmoryStateChanged(ArmoryState state)
    case ArmoryState::Closing:
    case ArmoryState::Offline:
    case ArmoryState::Cancelled:
-      connectionStatusLabel_->setPixmap(iconOffline_);
+      connectionStatusLabel_->setPixmap(/*iconOffline_*/iconContainerOnline_);
       break;
 
    case ArmoryState::Ready:
-      connectionStatusLabel_->setPixmap(iconOnline_);
+      connectionStatusLabel_->setPixmap(/*iconOnline_*/iconContainerOnline_);
       updateBalances();
       break;
 
    default:    break;
    }
+
+   updateConnectionStatusDetails(state, topBlock);
 }
 
 void StatusBarView::onArmoryProgress(BDMPhase phase, float progress, unsigned int secondsRem)
@@ -260,6 +293,9 @@ void StatusBarView::onArmoryError(QString errorMessage)
 
 void StatusBarView::setBalances()
 {
+   if (!walletsManager_) {
+      return;
+   }
    QString xbt;
 
    switch (armoryConnState_) {
@@ -284,17 +320,34 @@ void StatusBarView::setBalances()
    QString text = tr("   XBT: <b>%1</b> ").arg(xbt);
 
    for (const auto& currency : assetManager_->currencies()) {
-      text += tr("| %1: <b>%2</b> ")
-         .arg(QString::fromStdString(currency))
-         .arg(UiUtils::displayCurrencyAmount(assetManager_->getBalance(currency, false, nullptr)));
+      if (currency != "EURP" && currency != "EURD") {
+         text += tr("| %1: <b>%2</b> ")
+            .arg(QString::fromStdString(currency))
+            .arg(UiUtils::displayCurrencyAmount(assetManager_->getBalance(currency, false, nullptr)));
+      }
    }
 
    balanceLabel_->setText(text);
 }
 
-void StatusBarView::updateConnectionStatusDetails()
+void StatusBarView::onBalanceUpdated(const std::string &symbol, double balance)
 {
-   switch (armory_->state()) {
+   balances_[symbol] = balance;
+   const auto &it = std::find(balanceSymbols_.cbegin(), balanceSymbols_.cend(), symbol);
+   if (it == balanceSymbols_.cend()) {
+      if (symbol == bs::network::XbtCurrency) {
+         balanceSymbols_.insert(balanceSymbols_.cbegin(), symbol);
+      }
+      else {
+         balanceSymbols_.push_back(symbol);
+      }
+   }
+   displayBalances();
+}
+
+void StatusBarView::updateConnectionStatusDetails(ArmoryState state, unsigned int topBlock)
+{
+   switch (state) {
       case ArmoryState::Scanning:
       case ArmoryState::Connecting:
       case ArmoryState::Connected:
@@ -309,7 +362,7 @@ void StatusBarView::updateConnectionStatusDetails()
 
       case ArmoryState::Ready: {
          auto lastBlockMinutes = (std::chrono::steady_clock::now() - timeSinceLastBlock_) / std::chrono::minutes(1);
-         auto tooltip = tr("Connected to DB (%1 blocks, last block updated %2 minute(s) ago)").arg(armory_->topBlock()).arg(lastBlockMinutes);
+         auto tooltip = tr("Connected to DB (%1 blocks, last block updated %2 minute(s) ago)").arg(blockNum_).arg(lastBlockMinutes);
          connectionStatusLabel_->setToolTip(tooltip);
          break;
       }
@@ -386,32 +439,14 @@ void StatusBarView::SetCelerConnectingStatus()
    celerConnectionIconLabel_->setPixmap(iconCelerConnecting_);
 }
 
-void StatusBarView::onConnectedToServer()
+void StatusBarView::onConnectedToMatching()
 {
    SetLoggedinStatus();
 }
 
-void StatusBarView::onConnectionClosed()
+void StatusBarView::onDisconnectedFromMatching()
 {
    SetLoggedOutStatus();
-}
-
-void StatusBarView::onConnectionError(int errorCode)
-{
-   switch(errorCode)
-   {
-   case BaseCelerClient::ResolveHostError:
-      statusBar_->showMessage(tr("Could not resolve Celer host"));
-      break;
-   case BaseCelerClient::LoginError:
-      statusBar_->showMessage(tr("Invalid login/password pair"), 2000);
-      break;
-   case BaseCelerClient::ServerMaintainanceError:
-      statusBar_->showMessage(tr("Server maintainance"));
-      break;
-   case BaseCelerClient::UndefinedError:
-      break;
-   }
 }
 
 void StatusBarView::onContainerAuthorized()
@@ -419,13 +454,17 @@ void StatusBarView::onContainerAuthorized()
    containerStatusLabel_->setPixmap(iconContainerOnline_);
 }
 
-void StatusBarView::onContainerError(SignContainer::ConnectionError error, const QString &details)
+void StatusBarView::onSignerStatusChanged(SignContainer::ConnectionError error, const QString &details)
 {
    Q_UNUSED(details);
 
    switch (error) {
       case SignContainer::NoError:
          assert(false);
+         break;
+
+      case SignContainer::Ready:
+         containerStatusLabel_->setPixmap(iconContainerOnline_);
          break;
 
       case SignContainer::UnknownError:
@@ -497,7 +536,7 @@ QString StatusBarView::getImportingText() const
 bool StatusBarView::eventFilter(QObject *object, QEvent *event)
 {
     if (object == connectionStatusLabel_ && event->type() == QEvent::ToolTip) {
-        updateConnectionStatusDetails();
+        updateConnectionStatusDetails(static_cast<ArmoryState>(armoryState_), blockNum_);
     }
     return false;
 }

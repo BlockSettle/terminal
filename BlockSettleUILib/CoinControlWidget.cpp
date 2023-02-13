@@ -13,7 +13,7 @@
 
 #include "UiUtils.h"
 #include "CoinControlModel.h"
-#include "SelectedTransactionInputs.h"
+#include "Wallets/SelectedTransactionInputs.h"
 
 #include <QTreeView>
 #include <QStyledItemDelegate>

@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -11,14 +11,12 @@
 #include "UiUtils.h"
 
 #include "ApplicationSettings.h"
-#include "AuthAddressManager.h"
 #include "BinaryData.h"
-#include "BlockDataManagerConfig.h"
 #include "BTCNumericTypes.h"
 #include "BtcUtils.h"
 #include "CoinControlModel.h"
 #include "CustomControls/QtAwesome.h"
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 #include "TxClasses.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -42,7 +40,8 @@ template <typename T> bool contains(const std::vector<T>& v, const T& value)
    return std::find(v.begin(), v.end(), value) != v.end();
 }
 
-const QLatin1String UiUtils::XbtCurrency = QLatin1String("XBT");
+static const std::string XbtCurrencyString = "XBT";
+const QString UiUtils::XbtCurrency = QString::fromStdString(XbtCurrencyString);
 
 void UiUtils::SetupLocale()
 {
@@ -63,7 +62,7 @@ QString UiUtils::displayDateTime(const QDateTime& datetime)
    return datetime.toString(format);
 }
 
-QString UiUtils::displayDateTime(uint64_t time)
+QString UiUtils::displayDateTime(uint32_t time) // in UnixTime
 {
    return displayDateTime(QDateTime::fromTime_t(time));
 }
@@ -121,9 +120,17 @@ namespace UiUtils {
       return UnifyValueString(QLocale().toString(amountToBtc(value), 'f', GetAmountPrecisionXBT()));
    }
 
+   template <> QString displayAmount(int value)
+   {
+      if (value == INT_MAX) {
+         return CommonUiUtilsText::tr("Loading...");
+      }
+      return UnifyValueString(QLocale().toString(amountToBtc(value), 'f', GetAmountPrecisionXBT()));
+   }
+
    QString displayAmount(const bs::XBTAmount &amount)
    {
-      if (!amount.isValid()) {
+      if (amount.isZero()) {
          return CommonUiUtilsText::tr("Loading...");
       }
       return UnifyValueString(QLocale().toString(amountToBtc(amount.GetValue())
@@ -280,18 +287,85 @@ int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs
    return selected;
 }
 
-void UiUtils::fillAuthAddressesComboBoxWithSubmitted(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager> &authAddressManager)
+int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox
+   , const std::vector<bs::sync::HDWalletData>& wallets, int walletTypes)
 {
+   int selected = 0;
+   const auto b = comboBox->blockSignals(true);
    comboBox->clear();
-   const auto &addrList = authAddressManager->GetSubmittedAddressList();
-   if (!addrList.empty()) {
-      const auto b = comboBox->blockSignals(true);
-      for (const auto &address : addrList) {
+
+   auto addRow = [comboBox](const std::string& label, const std::string& walletId, WalletsTypes type)
+   {
+      if (WalletsTypes::None == type) {
+         return;
+      }
+      int i = comboBox->count();
+      comboBox->addItem(QString::fromStdString(label));
+      comboBox->setItemData(i, QString::fromStdString(walletId), UiUtils::WalletIdRole);
+      comboBox->setItemData(i, QVariant::fromValue(static_cast<int>(type)), UiUtils::WalletType);
+   };
+
+   for (const auto& hdWallet : wallets) {
+      if (hdWallet.primary) {
+         selected = comboBox->count();
+      }
+
+      WalletsTypes type = WalletsTypes::None;
+      // HW wallets marked as offline too, make sure to check that first
+/*      if (!hdWallet->canMixLeaves()) {
+
+         if (hdWallet->isHardwareOfflineWallet() && !(walletTypes & WalletsTypes::WatchOnly)) {
+            continue;
+         }
+
+         for (auto const& leaf : hdWallet->getGroup(hdWallet->getXBTGroupType())->getLeaves()) {
+            std::string label = hdWallet->name();
+            type = WalletsTypes::None;
+
+            auto purpose = leaf->purpose();
+            if (purpose == bs::hd::Purpose::Native &&
+               (walletTypes & WalletsTypes::HardwareNativeSW)) {
+               label += " Native";
+               type = WalletsTypes::HardwareNativeSW;
+            } else if (purpose == bs::hd::Purpose::Nested &&
+               (walletTypes & WalletsTypes::HardwareNestedSW)) {
+               label += " Nested";
+               type = WalletsTypes::HardwareNestedSW;
+            } else if (purpose == bs::hd::Purpose::NonSegWit &&
+               (walletTypes & WalletsTypes::HardwareLegacy) && leaf->getTotalBalance() > 0) {
+               label += " Legacy";
+               type = WalletsTypes::HardwareLegacy;
+            }
+            addRow(label, hdWallet->walletId(), type);
+         }
+         continue;
+      }*/   //TODO
+
+      if (hdWallet.offline) {
+         type = (walletTypes & WalletsTypes::WatchOnly) ? WalletsTypes::WatchOnly : WalletsTypes::None;
+      } else if (walletTypes & WalletsTypes::Full) {
+         type = WalletsTypes::Full;
+      }
+
+      addRow(hdWallet.name, hdWallet.id, type);
+   }
+   comboBox->blockSignals(b);
+   comboBox->setCurrentIndex(selected);
+   return selected;
+}
+
+void UiUtils::fillAuthAddressesComboBoxWithSubmitted(QComboBox* comboBox
+   , const std::vector<bs::Address>& addrs, int defaultIdx)
+{
+   const auto b = comboBox->blockSignals(true);
+   comboBox->clear();
+   if (!addrs.empty()) {
+      for (const auto& address : addrs) {
          comboBox->addItem(QString::fromStdString(address.display()));
       }
-      comboBox->blockSignals(b);
-      QMetaObject::invokeMethod(comboBox, "setCurrentIndex", Q_ARG(int, authAddressManager->getDefaultIndex()));
       comboBox->setEnabled(true);
+      comboBox->blockSignals(b);
+      comboBox->setCurrentIndex(defaultIdx);
    } else {
       comboBox->setEnabled(false);
    }
@@ -331,6 +405,20 @@ void UiUtils::fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox
       }
    }
 
+   comboBox->setEnabled(true);
+   comboBox->setCurrentIndex(0);
+}
+
+void UiUtils::fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox
+   , const std::vector<bs::sync::WalletData>& wallets)
+{
+   comboBox->clear();
+   comboBox->addItem(QObject::tr("Auto Create"));
+   for (const auto& wd : wallets) {
+      for (auto addr : wd.addresses) {
+         comboBox->addItem(QString::fromStdString(addr.address.display()));
+      }
+   }
    comboBox->setEnabled(true);
    comboBox->setCurrentIndex(0);
 }
@@ -419,12 +507,14 @@ double UiUtils::truncatePriceForAsset(double price, bs::network::Asset::Type at)
       multiplier = 10000;
       break;
    case bs::network::Asset::SpotXBT:
+   case bs::network::Asset::Future:
       multiplier = 100;
       break;
    case bs::network::Asset::PrivateMarket:
       multiplier = 1000000;
       break;
    default:
+      assert(false);
       return 0;
    }
 
@@ -437,9 +527,13 @@ QString UiUtils::displayPriceForAssetType(double price, bs::network::Asset::Type
    case bs::network::Asset::SpotFX:
       return UiUtils::displayPriceFX(price);
    case bs::network::Asset::SpotXBT:
+   case bs::network::Asset::Future:
       return UiUtils::displayPriceXBT(price);
    case bs::network::Asset::PrivateMarket:
       return UiUtils::displayPriceCC(price);
+   default:
+      assert(false);
+      break;
    }
 
    return QString();
@@ -466,9 +560,13 @@ int UiUtils::GetPricePrecisionForAssetType(const bs::network::Asset::Type& asset
    case bs::network::Asset::SpotFX:
       return GetPricePrecisionFX();
    case bs::network::Asset::SpotXBT:
+   case bs::network::Asset::Future:
       return GetPricePrecisionXBT();
    case bs::network::Asset::PrivateMarket:
       return GetPricePrecisionCC();
+   default:
+      assert(false);
+      break;
    }
 
    // Allow entering floating point numbers if the asset type was detected as Undefined
@@ -496,9 +594,11 @@ static void getPrecsFor(const std::string &security, const std::string &product,
       valuePrec = UiUtils::GetAmountPrecisionFX();
       break;
    case bs::network::Asset::Type::SpotXBT:
+   case bs::network::Asset::Type::Future:
       qtyPrec = UiUtils::GetAmountPrecisionXBT();
       valuePrec = UiUtils::GetAmountPrecisionFX();
-      if (security.substr(0, security.find('/')) != product) {
+
+      if (product != XbtCurrencyString) {
          std::swap(qtyPrec, valuePrec);
       }
       break;
@@ -506,6 +606,9 @@ static void getPrecsFor(const std::string &security, const std::string &product,
       qtyPrec = UiUtils::GetAmountPrecisionCC();
       // special case. display value for XBT with 6 decimals
       valuePrec = 6;
+      break;
+   default:
+      assert(false);
       break;
    }
 }
@@ -545,9 +648,10 @@ QString UiUtils::displayShortAddress(const QString &addr, const uint maxLength)
 }
 
 
-std::string UiUtils::getSelectedWalletId(QComboBox* comboBox)
+std::string UiUtils::getSelectedWalletId(QComboBox* comboBox, int index)
 {
-   return comboBox->currentData(WalletIdRole).toString().toStdString();
+   return comboBox->itemData(index, WalletIdRole).toString().toStdString();
+   //return comboBox->currentData().toString().toStdString();
 }
 
 UiUtils::WalletsTypes UiUtils::getSelectedWalletType(QComboBox* comboBox)
@@ -690,7 +794,11 @@ ApplicationSettings::Setting UiUtils::limitRfqSetting(bs::network::Asset::Type t
       case bs::network::Asset::PrivateMarket :
          return ApplicationSettings::PmRfqLimit;
 
+      case bs::network::Asset::Future :
+         return ApplicationSettings::FuturesLimit;
+
       default :
+         assert(false);
          return ApplicationSettings::FxRfqLimit;
    }
 }
@@ -704,7 +812,10 @@ ApplicationSettings::Setting UiUtils::limitRfqSetting(const QString &name)
    } else if (name ==
          QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::PrivateMarket))) {
             return ApplicationSettings::PmRfqLimit;
+   } else if (name == QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::Future))) {
+      return ApplicationSettings::FuturesLimit;
    } else {
+      assert(false);
       return ApplicationSettings::FxRfqLimit;
    }
 }
@@ -721,7 +832,11 @@ QString UiUtils::marketNameForLimit(ApplicationSettings::Setting s)
       case ApplicationSettings::PmRfqLimit :
          return QObject::tr(bs::network::Asset::toString(bs::network::Asset::PrivateMarket));
 
+      case ApplicationSettings::FuturesLimit :
+         return QObject::tr(bs::network::Asset::toString(bs::network::Asset::Future));
+
       default :
+         assert(false);
          return QString();
    }
 }

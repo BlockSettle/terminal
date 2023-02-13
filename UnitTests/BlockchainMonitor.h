@@ -16,7 +16,6 @@
 #include <vector>
 #include "ArmoryConnection.h"
 #include "BinaryData.h"
-#include "ClientClasses.h"
 #include "ThreadSafeClasses.h"
 
 
@@ -53,7 +52,7 @@ private:
 
 private:
    std::atomic_bool  receivedNewBlock_{ false };
-   ArmoryThreading::BlockingQueue<std::vector<bs::TXEntry>> zcQueue_;
+   Armory::Threading::BlockingQueue<std::vector<bs::TXEntry>> zcQueue_;
 };
 
 #endif // __BLOCKCHAIN_MONITOR_H__

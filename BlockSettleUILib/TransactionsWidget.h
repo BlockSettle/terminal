@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -18,6 +18,7 @@
 #include "BinaryData.h"
 #include "BSErrorCode.h"
 #include "TransactionsWidgetInterface.h"
+#include "Wallets/SignerDefs.h"
 
 namespace spdlog {
    class logger;
@@ -33,10 +34,10 @@ namespace bs {
 }
 class ApplicationSettings;
 class ArmoryConnection;
+class HeadlessContainer;
 class TransactionsProxy;
 class TransactionsViewModel;
 class TransactionsSortFilterModel;
-class WalletSignerContainer;
 
 
 class TransactionsWidget : public TransactionsWidgetInterface
@@ -47,15 +48,13 @@ public:
    TransactionsWidget(QWidget* parent = nullptr );
    ~TransactionsWidget() override;
 
-   void init(const std::shared_ptr<bs::sync::WalletsManager> &
-             , const std::shared_ptr<ArmoryConnection> &
-             , const std::shared_ptr<bs::UTXOReservationManager> &
-             , const std::shared_ptr<WalletSignerContainer> &
-             , const std::shared_ptr<ApplicationSettings>&
-             , const std::shared_ptr<spdlog::logger> &);
-   void SetTransactionsModel(const std::shared_ptr<TransactionsViewModel> &);
+   void init(const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<TransactionsViewModel> &);
 
    void shortcutActivated(ShortcutType s) override;
+
+   void onHDWalletDetails(const bs::sync::HDWalletData&);
+   void onWalletDeleted(const bs::sync::WalletInfo&);
 
 private slots:
    void showTransactionDetails(const QModelIndex& index);
@@ -70,9 +69,9 @@ private slots:
 private:
    void scheduleDateFilterCheck();
    std::unique_ptr<Ui::TransactionsWidget> ui_;
+   std::unordered_map<std::string, bs::sync::HDWalletData>   wallets_;
 
    TransactionsSortFilterModel         *  sortFilterModel_;
-   
 };
 
 

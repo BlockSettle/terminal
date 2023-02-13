@@ -1,7 +1,7 @@
 #
 #
 # ***********************************************************************************
-# * Copyright (C) 2011 - 2020, BlockSettle AB
+# * Copyright (C) 2018 - 2021, BlockSettle AB
 # * Distributed under the GNU Affero General Public License (AGPL v3)
 # * See LICENSE or http://www.gnu.org/licenses/agpl.html
 # *
@@ -22,24 +22,25 @@ if sys.platform == "darwin":
 sys.path.insert(0, os.path.join('common'))
 sys.path.insert(0, os.path.join('common', 'build_scripts'))
 
-from build_scripts.settings               import Settings
-from build_scripts.protobuf_settings      import ProtobufSettings
-from build_scripts.gtest_settings         import GtestSettings
-from build_scripts.jom_settings           import JomSettings
-from build_scripts.qt_settings            import QtSettings
-from build_scripts.spdlog_settings        import SpdlogSettings
-from build_scripts.zeromq_settings        import ZeroMQSettings
-from build_scripts.libqrencode_settings   import LibQREncode
-from build_scripts.mpir_settings          import MPIRSettings
-from build_scripts.libbtc_settings        import LibBTC
-from build_scripts.openssl_settings       import OpenSslSettings
-from build_scripts.websockets_settings    import WebsocketsSettings
+from build_scripts.bip_protocols_settings       import BipProtocolsSettings
+from build_scripts.botan_settings               import BotanSettings
+from build_scripts.gtest_settings               import GtestSettings
+from build_scripts.hidapi_settings              import HidapiSettings
+from build_scripts.jom_settings                 import JomSettings
+from build_scripts.libbtc_settings              import LibBTC
 from build_scripts.libchacha20poly1305_settings import LibChaCha20Poly1305Settings
-from build_scripts.botan_settings         import BotanSettings
-from build_scripts.hidapi_settings        import HidapiSettings
-from build_scripts.libusb_settings        import LibusbSettings
-from build_scripts.trezor_common_settings import TrezorCommonSettings
-from build_scripts.bip_protocols_settings import BipProtocolsSettings
+from build_scripts.libqrencode_settings         import LibQREncode
+from build_scripts.libusb_settings              import LibusbSettings
+from build_scripts.mpir_settings                import MPIRSettings
+from build_scripts.nlohmann_json_settings       import NLohmanJson
+from build_scripts.openssl_settings             import OpenSslSettings
+from build_scripts.protobuf_settings            import ProtobufSettings
+from build_scripts.qt_settings                  import QtSettings
+from build_scripts.settings                     import Settings
+from build_scripts.spdlog_settings              import SpdlogSettings
+from build_scripts.trezor_common_settings       import TrezorCommonSettings
+from build_scripts.websockets_settings          import WebsocketsSettings
+from build_scripts.zeromq_settings              import ZeroMQSettings
 
 def generate_project(build_mode, link_mode, build_production, hide_warnings, cmake_flags, build_tests, build_tracker):
    project_settings = Settings(build_mode, link_mode)
@@ -70,7 +71,8 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
       HidapiSettings(project_settings),
       LibusbSettings(project_settings),
       TrezorCommonSettings(project_settings),
-      BipProtocolsSettings(project_settings)
+      BipProtocolsSettings(project_settings),
+      NLohmanJson(project_settings)
    ]
 
    if build_tests:

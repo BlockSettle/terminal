@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -9,34 +9,37 @@
 
 */
 #include "TestSettlement.h"
-#include <QApplication>
-#include <QDateTime>
-#include <QDebug>
-#include <QMutexLocker>
-#include <QThread>
 #include <spdlog/spdlog.h>
-#include "ApplicationSettings.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
-#include "InprocSigner.h"
+#include "Wallets/HeadlessContainer.h"
+#include "Wallets/InprocSigner.h"
+#include "MessageUtils.h"
+#include "MockTerminal.h"
+#include "TestAdapters.h"
 #include "TestEnv.h"
-#include "TransactionData.h"
-#include "Wallets/SyncWalletsManager.h"
-#include "Wallets/SyncHDWallet.h"
-#include "Wallets/SyncPlainWallet.h"
-#include "CheckRecipSigner.h"
 
-using std::make_unique;
-using namespace std::chrono_literals;
-using namespace ArmorySigner;
+#include "common.pb.h"
+#include "terminal.pb.h"
 
-void TestSettlement::mineBlocks(unsigned count)
+using namespace Armory::Signer;
+using namespace bs::message;
+using namespace BlockSettle::Common;
+using namespace BlockSettle::Terminal;
+
+constexpr auto kFutureWaitTimeout = std::chrono::seconds(5);
+constexpr auto kLongWaitTimeout = std::chrono::seconds(15);
+
+void TestSettlement::mineBlocks(unsigned count, bool wait)
 {
-   auto curHeight = envPtr_->armoryConnection()->topBlock();
+//   auto curHeight = envPtr_->armoryConnection()->topBlock();
+   auto curHeight = envPtr_->armoryInstance()->getCurrentTopBlock();
    Recipient_P2PKH coinbaseRecipient(coinbaseScrAddr_, 50 * COIN);
    auto&& cbMap = envPtr_->armoryInstance()->mineNewBlock(&coinbaseRecipient, count);
    coinbaseHashes_.insert(cbMap.begin(), cbMap.end());
-   envPtr_->blockMonitor()->waitForNewBlocks(curHeight + count);
+   if (wait) { // don't use if armoryConnection is not ready
+      envPtr_->blockMonitor()->waitForNewBlocks(curHeight + count);
+   }
 }
 
 void TestSettlement::sendTo(uint64_t value, bs::Address& addr)
@@ -59,7 +62,7 @@ void TestSettlement::sendTo(uint64_t value, bs::Address& addr)
 
    signer.addSpender(spendPtr);
 
-   signer.addRecipient(addr.getRecipient(bs::XBTAmount{ value }));
+   signer.addRecipient(addr.getRecipient(bs::XBTAmount{ (int64_t)value }));
    signer.setFeed(coinbaseFeed_);
 
    //sign & send
@@ -68,9 +71,6 @@ void TestSettlement::sendTo(uint64_t value, bs::Address& addr)
 }
 
 TestSettlement::TestSettlement()
-{}
-
-void TestSettlement::SetUp()
 {
    passphrase_ = SecureBinaryData::fromString("pass");
    coinbasePubKey_ = CryptoECDSA().ComputePublicKey(coinbasePrivKey_, true);
@@ -79,18 +79,20 @@ void TestSettlement::SetUp()
       std::make_shared<ResolverOneAddress>(coinbasePrivKey_, coinbasePubKey_);
 
    envPtr_ = std::make_shared<TestEnv>(StaticLogger::loggerPtr);
-   envPtr_->requireAssets();
-//   act_ = std::make_unique<SingleUTWalletACT>(envPtr_->armoryConnection().get());
+   envPtr_->requireArmory(false);
 
-   mineBlocks(101);
+   mineBlocks(101, false);
+}
 
+void TestSettlement::SetUp()
+{
    const auto logger = envPtr_->logger();
-   const auto amount = (initialTransferAmount_ + 10) * COIN;
+   const auto amount = initialTransferAmount_ * COIN;
 
-   walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
    const bs::wallet::PasswordData pd{ passphrase_, { bs::wallet::EncryptionType::Password } };
 
    for (size_t i = 0; i < nbParties_; i++) {
+      walletsMgr_.push_back(std::make_shared<bs::core::WalletsManager>(logger));
       auto hdWallet = std::make_shared<bs::core::hd::Wallet>(
          "Primary" + std::to_string(i), ""
          , NetworkType::TestNet, pd
@@ -102,10 +104,13 @@ void TestSettlement::SetUp()
       {
          const bs::core::WalletPasswordScoped lock(hdWallet, passphrase_);
          leaf = grp->createLeaf(AddressEntryType_P2SH, 0);
-         addr = leaf->getNewExtAddress();
       }
 
+      addr = leaf->getNewExtAddress();
       sendTo(amount, addr);
+
+      recvAddrs_.push_back(leaf->getNewExtAddress());
+      changeAddrs_.push_back(leaf->getNewIntAddress());
 
       std::shared_ptr<bs::core::hd::Leaf> authLeaf, settlLeaf;
       bs::Address authAddr;
@@ -120,7 +125,7 @@ void TestSettlement::SetUp()
 
          settlLeaf = hdWallet->createSettlementLeaf(authAddr);
          const auto assetPtr = settlLeaf->getRootAsset();
-         const auto assetSingle = std::dynamic_pointer_cast<AssetEntry_Single>(assetPtr);
+         const auto assetSingle = std::dynamic_pointer_cast<Armory::Assets::AssetEntry_Single>(assetPtr);
          if (assetSingle) {
             authKey =  assetSingle->getPubKey()->getCompressedKey();
          }
@@ -128,7 +133,7 @@ void TestSettlement::SetUp()
 
       logger->debug("[TestSettlement] {} fundAddr={}, authAddr={}, authKey={}"
          , hdWallet->name(), addr.display(), authAddr.display(), authKey.toHexStr());
-      walletsMgr_->addWallet(hdWallet);
+      walletsMgr_[i]->addWallet(hdWallet);
       xbtWallet_.emplace_back(leaf);
       authWallet_.push_back(authLeaf);
       fundAddrs_.emplace_back(addr);
@@ -136,54 +141,15 @@ void TestSettlement::SetUp()
       authAddrs_.emplace_back(authAddr);
       authKeys_.emplace_back(std::move(authKey));
       hdWallet_.push_back(hdWallet);
+
+      inprocSigner_.push_back(std::make_shared<InprocSigner>(
+         walletsMgr_.at(i), logger, this, "", NetworkType::TestNet
+         , [this, hdWallet](const std::string&) {
+         return std::make_unique<bs::core::WalletPasswordScoped>(hdWallet, passphrase_);
+      }));
+      inprocSigner_.at(i)->Start();
    }
-
-   auto inprocSigner = std::make_shared<InprocSigner>(
-      walletsMgr_, logger, "", NetworkType::TestNet);
-   inprocSigner->Start();
-   syncMgr_ = std::make_shared<bs::sync::WalletsManager>(logger
-      , envPtr_->appSettings(), envPtr_->armoryConnection());
-   syncMgr_->setSignContainer(inprocSigner);
-   auto promSync = std::make_shared<std::promise<bool>>();
-   auto futSync = promSync->get_future();
-   syncMgr_->syncWallets([promSync](int cur, int total) {
-      if (cur == total) {
-         promSync->set_value(true);
-      }
-   });
-   futSync.wait();
-
-   UnitTestWalletACT::clear();
-
-   for (const auto &hdWallet : syncMgr_->hdWallets()) {
-      hdWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
-   }
-
-   const auto regIDs = syncMgr_->registerWallets();
-   UnitTestWalletACT::waitOnRefresh(regIDs);
-
-//   auto curHeight = envPtr_->armoryConnection()->topBlock();
    mineBlocks(6);
-
-   auto promPtr = std::make_shared<std::promise<bool>>();
-   auto fut = promPtr->get_future();
-   auto ctrPtr = std::make_shared<std::atomic<unsigned>>(0);
-   auto wltCount = syncMgr_->getAllWallets().size() - 2;
-
-   auto balLBD = [promPtr, ctrPtr, wltCount](void)->void
-   {
-      ctrPtr->fetch_add(1);
-      if (*ctrPtr == wltCount)
-         promPtr->set_value(true);
-   };
-
-   for (const auto &wallet : syncMgr_->getAllWallets()) {
-      wallet->updateBalances(balLBD);
-   }
-
-   settlementId_ = CryptoPRNG::generateRandom(32);
-
-   fut.wait();
 }
 
 void TestSettlement::TearDown()
@@ -193,337 +159,631 @@ void TestSettlement::TearDown()
    authAddrs_.clear();
    fundAddrs_.clear();
    hdWallet_.clear();
-   userId_.clear();
-   syncMgr_.reset();
+   walletsMgr_.clear();
+   inprocSigner_.clear();
 }
 
 TestSettlement::~TestSettlement()
-{}
+{
+   envPtr_->armoryInstance()->shutdown();
+}
 
 TEST_F(TestSettlement, Initial_balances)
 {
    ASSERT_FALSE(xbtWallet_.empty());
+   ASSERT_EQ(nbParties_, 2);
    for (size_t i = 0; i < nbParties_; i++) {
-      ASSERT_NE(xbtWallet_[i], nullptr);
-      const auto syncWallet = syncMgr_->getWalletById(xbtWallet_[i]->walletId());
-      ASSERT_NE(syncWallet, nullptr);
-      ASSERT_GE(syncWallet->getSpendableBalance(), initialTransferAmount_);
+      ASSERT_NE(xbtWallet_.at(i), nullptr);
    }
+   MockTerminal t1(StaticLogger::loggerPtr, "T1", inprocSigner_.at(0), envPtr_->armoryConnection());
+   MockTerminal t2(StaticLogger::loggerPtr, "T2", inprocSigner_.at(1), envPtr_->armoryConnection());
+   const auto& sup1 = std::make_shared<TestSupervisor>(t1.name());
+   t1.bus()->addAdapter(sup1);
+   const auto& sup2 = std::make_shared<TestSupervisor>(t2.name());
+   t2.bus()->addAdapter(sup2);
 
-   //auto promPtr = std::make_shared<std::promise<float>>();
-   //auto fut = promPtr->get_future();
-   //
-   //const auto &cbFee = [promPtr](float feePerByte) {
-   //   promPtr->set_value(feePerByte);
-   //};
-   //syncMgr_->estimatedFeePerByte(1, cbFee);
+   const auto& walletReady = [](const auto& walletId)
+   {
+      return [walletId](const bs::message::Envelope& env)
+      {
+         if (env.isRequest() ||
+            (env.sender->value<TerminalUsers>() != TerminalUsers::Wallets)) {
+            return false;
+         }
+         WalletsMessage msg;
+         if (msg.ParseFromString(env.message)) {
+            if (msg.data_case() == WalletsMessage::kWalletReady) {
+               return (msg.wallet_ready() == walletId);
+            }
+         }
+         return false;
+      };
+   };
+   auto fut1 = sup1->waitFor(walletReady(xbtWallet_.at(0)->walletId()));
+   auto fut2 = sup2->waitFor(walletReady(xbtWallet_.at(1)->walletId()));
+   t1.start();
+   t2.start();
+   ASSERT_EQ(fut1.wait_for(kFutureWaitTimeout), std::future_status::ready);
+   ASSERT_EQ(fut2.wait_for(kFutureWaitTimeout), std::future_status::ready);
 
-   //fut.wait();
-
-   //EXPECT_GE(fut.get(), 5);
+   const auto& walletBalance = [](const std::string& walletId, double expectedBal)
+   {
+      return [walletId, expectedBal](const bs::message::Envelope& env)
+      {
+         if (!env.receiver || (env.receiver->value<TerminalUsers>() != TerminalUsers::API)
+            || (env.sender->value<TerminalUsers>() != TerminalUsers::Wallets)) {
+            return false;
+         }
+         WalletsMessage msg;
+         if (msg.ParseFromString(env.message)) {
+            if (msg.data_case() == WalletsMessage::kWalletBalances) {
+               return ((msg.wallet_balances().wallet_id() == walletId)
+                  && qFuzzyCompare(msg.wallet_balances().spendable_balance(), expectedBal));
+            }
+         }
+         return false;
+      };
+   };
+   fut1 = sup1->waitFor(walletBalance(xbtWallet_.at(0)->walletId()
+      , initialTransferAmount_));
+   fut2 = sup2->waitFor(walletBalance(xbtWallet_.at(1)->walletId()
+      , initialTransferAmount_));
+   WalletsMessage msgWlt;
+   msgWlt.set_get_wallet_balances(xbtWallet_.at(0)->walletId());
+   sup1->send(TerminalUsers::API, TerminalUsers::Wallets, msgWlt.SerializeAsString(), true);
+   msgWlt.set_get_wallet_balances(xbtWallet_.at(1)->walletId());
+   sup2->send(TerminalUsers::API, TerminalUsers::Wallets, msgWlt.SerializeAsString(), true);
+   ASSERT_EQ(fut1.wait_for(kFutureWaitTimeout), std::future_status::ready);
+   ASSERT_EQ(fut2.wait_for(kFutureWaitTimeout), std::future_status::ready);
 }
 
-#if 0    //temporarily disabled
+TEST_F(TestSettlement, SpotFX_sell)
+{
+   ASSERT_GE(inprocSigner_.size(), 2);
+   const std::string& email1 = "aaa@example.com";
+   const std::string& email2 = "bbb@example.com";
+   MockTerminal t1(StaticLogger::loggerPtr, "T1", inprocSigner_.at(0), envPtr_->armoryConnection());
+   MockTerminal t2(StaticLogger::loggerPtr, "T2", inprocSigner_.at(1), envPtr_->armoryConnection());
+   const auto& sup1 = std::make_shared<TestSupervisor>(t1.name());
+   t1.bus()->addAdapter(sup1);
+   const auto& sup2 = std::make_shared<TestSupervisor>(t2.name());
+   t2.bus()->addAdapter(sup2);
+   const auto& m1 = std::make_shared<MatchingMock>(StaticLogger::loggerPtr, "T1"
+      , email1, envPtr_->armoryInstance());
+   const auto& m2 = std::make_shared<MatchingMock>(StaticLogger::loggerPtr, "T2"
+      , email2, envPtr_->armoryInstance());
+   m1->link(m2);
+   m2->link(m1);
+   t1.bus()->addAdapter(m1);
+   t2.bus()->addAdapter(m2);
+   t1.start();
+   t2.start();
+
+   const auto& rfqId = CryptoPRNG::generateRandom(5).toHexStr();
+   const double qty = 123;
+   const auto& quoteReqNotif = [this, qty, rfqId](const Envelope& env)
+   {
+      if (env.receiver || (env.receiver && !env.receiver->isBroadcast()) ||
+         (env.sender->value<TerminalUsers>() != TerminalUsers::Settlement)) {
+         return false;
+      }
+      SettlementMessage msg;
+      if (msg.ParseFromString(env.message)) {
+         if (msg.data_case() == SettlementMessage::kQuoteReqNotif) {
+            const auto& rfq = msg.quote_req_notif().rfq();
+            return ((rfq.security() == fxSecurity_) && (rfq.product() == fxProduct_)
+               && !rfq.buy() && (rfq.quantity() == qty) && (rfq.id() == rfqId));
+         }
+      }
+      return false;
+   };
+   auto fut = sup2->waitFor(quoteReqNotif);
+
+   SettlementMessage msgSettl;
+   auto msgSendRFQ = msgSettl.mutable_send_rfq();
+   auto msgRFQ = msgSendRFQ->mutable_rfq();
+   msgRFQ->set_id(rfqId);
+   msgRFQ->set_security(fxSecurity_);
+   msgRFQ->set_product(fxProduct_);
+   msgRFQ->set_asset_type((int)bs::network::Asset::SpotFX);
+   msgRFQ->set_buy(false);
+   msgRFQ->set_quantity(qty);
+   sup1->send(TerminalUsers::API, TerminalUsers::Settlement, msgSettl.SerializeAsString(), true);
+   ASSERT_EQ(fut.wait_for(kFutureWaitTimeout), std::future_status::ready);
+
+   const double replyPrice = 1.23;
+   const auto& quoteReply = [this, replyPrice, qty, rfqId](const Envelope& env)
+   {
+      if (env.sender->value<TerminalUsers>() != TerminalUsers::Settlement) {
+         return false;
+      }
+      SettlementMessage msg;
+      if (msg.ParseFromString(env.message) && (msg.data_case() == SettlementMessage::kQuote)) {
+         return ((msg.quote().security() == fxSecurity_) && (msg.quote().product() == fxProduct_)
+            && (msg.quote().request_id() == rfqId) && (msg.quote().price() == replyPrice)
+            && (msg.quote().quantity() == qty) && msg.quote().buy());
+      }
+      return false;
+   };
+   SettlementMessage inMsg;
+   ASSERT_TRUE(inMsg.ParseFromString(fut.get().message));
+   const auto& qrn = fromMsg(inMsg.quote_req_notif());
+   bs::network::QuoteNotification qn(qrn, {}, replyPrice, {});
+   qn.validityInS = 5;
+   toMsg(qn, msgSettl.mutable_reply_to_rfq());
+   fut = sup1->waitFor(quoteReply);
+   sup2->send(TerminalUsers::API, TerminalUsers::Settlement, msgSettl.SerializeAsString(), true);
+   ASSERT_EQ(fut.wait_for(kFutureWaitTimeout), std::future_status::ready);
+
+   ASSERT_TRUE(inMsg.ParseFromString(fut.get().message));
+   const auto& quote = fromMsg(inMsg.quote());
+   const auto& pendingOrder = [this, rfqId](const Envelope& env)
+   {
+      if (env.sender->value<TerminalUsers>() != TerminalUsers::Settlement) {
+         return false;
+      }
+      SettlementMessage msg;
+      if (msg.ParseFromString(env.message) && (msg.data_case() == SettlementMessage::kPendingSettlement)) {
+         return (msg.pending_settlement().ids().rfq_id() == rfqId);
+      }
+      return false;
+   };
+   fut = sup1->waitFor(pendingOrder);
+   ASSERT_EQ(fut.wait_for(kLongWaitTimeout), std::future_status::ready);
+   ASSERT_TRUE(inMsg.ParseFromString(fut.get().message));
+   const auto& quoteId = inMsg.pending_settlement().ids().quote_id();
+   ASSERT_EQ(quoteId, quote.quoteId);
+
+   const auto& filledOrder = [this, rfqId, quoteId, replyPrice](const Envelope& env)
+   {
+      if (env.sender->value<TerminalUsers>() != TerminalUsers::Settlement) {
+         return false;
+      }
+      SettlementMessage msg;
+      if (msg.ParseFromString(env.message) && (msg.data_case() == SettlementMessage::kMatchedQuote)) {
+         const auto& matched = msg.matched_quote();
+         return ((matched.rfq_id() == rfqId) && (matched.quote_id() == quoteId)
+            && (matched.price() == replyPrice));
+      }
+      return false;
+   };
+   fut = sup2->waitFor(filledOrder);
+   auto msgAccept = msgSettl.mutable_accept_rfq();
+   msgAccept->set_rfq_id(rfqId);
+   toMsg(quote, msgAccept->mutable_quote());
+   sup1->send(TerminalUsers::API, TerminalUsers::Settlement, msgSettl.SerializeAsString(), true);
+   ASSERT_EQ(fut.wait_for(kFutureWaitTimeout), std::future_status::ready);
+}
+
+TEST_F(TestSettlement, SpotFX_buy)
+{
+   ASSERT_GE(inprocSigner_.size(), 2);
+   const std::string& email1 = "aaa@example.com";
+   const std::string& email2 = "bbb@example.com";
+   MockTerminal t1(StaticLogger::loggerPtr, "T1", inprocSigner_.at(0), envPtr_->armoryConnection());
+   MockTerminal t2(StaticLogger::loggerPtr, "T2", inprocSigner_.at(1), envPtr_->armoryConnection());
+   const auto& sup1 = std::make_shared<TestSupervisor>(t1.name());
+   t1.bus()->addAdapter(sup1);
+   const auto& sup2 = std::make_shared<TestSupervisor>(t2.name());
+   t2.bus()->addAdapter(sup2);
+   const auto& m1 = std::make_shared<MatchingMock>(StaticLogger::loggerPtr, "T1"
+      , email1, envPtr_->armoryInstance());
+   const auto& m2 = std::make_shared<MatchingMock>(StaticLogger::loggerPtr, "T2"
+      , email2, envPtr_->armoryInstance());
+   m1->link(m2);
+   m2->link(m1);
+   t1.bus()->addAdapter(m1);
+   t2.bus()->addAdapter(m2);
+   t1.start();
+   t2.start();
+
+   const auto& rfqId = CryptoPRNG::generateRandom(5).toHexStr();
+   const double qty = 234;
+   const auto& quoteReqNotif = [this, qty, rfqId](const Envelope& env)
+   {
+      if (env.receiver || (env.receiver && !env.receiver->isBroadcast()) ||
+         (env.sender->value<TerminalUsers>() != TerminalUsers::Settlement)) {
+         return false;
+      }
+      SettlementMessage msg;
+      if (msg.ParseFromString(env.message)) {
+         if (msg.data_case() == SettlementMessage::kQuoteReqNotif) {
+            const auto& rfq = msg.quote_req_notif().rfq();
+            return ((rfq.security() == fxSecurity_) && (rfq.product() == fxProduct_)
+               && rfq.buy() && (rfq.quantity() == qty) && (rfq.id() == rfqId));
+         }
+      }
+      return false;
+   };
+   auto fut = sup2->waitFor(quoteReqNotif);
+
+   SettlementMessage msgSettl;
+   auto msgSendRFQ = msgSettl.mutable_send_rfq();
+   auto msgRFQ = msgSendRFQ->mutable_rfq();
+   msgRFQ->set_id(rfqId);
+   msgRFQ->set_security(fxSecurity_);
+   msgRFQ->set_product(fxProduct_);
+   msgRFQ->set_asset_type((int)bs::network::Asset::SpotFX);
+   msgRFQ->set_buy(true);
+   msgRFQ->set_quantity(qty);
+   sup1->send(TerminalUsers::API, TerminalUsers::Settlement, msgSettl.SerializeAsString(), true);
+   ASSERT_EQ(fut.wait_for(kFutureWaitTimeout), std::future_status::ready);
+
+   const double replyPrice = 1.21;
+   const auto& quoteReply = [this, replyPrice, qty, rfqId](const Envelope& env)
+   {
+      if (env.sender->value<TerminalUsers>() != TerminalUsers::Settlement) {
+         return false;
+      }
+      SettlementMessage msg;
+      if (msg.ParseFromString(env.message) && (msg.data_case() == SettlementMessage::kQuote)) {
+         return ((msg.quote().security() == fxSecurity_) && (msg.quote().product() == fxProduct_)
+            && (msg.quote().request_id() == rfqId) && (msg.quote().price() == replyPrice)
+            && (msg.quote().quantity() == qty) && !msg.quote().buy());
+      }
+      return false;
+   };
+   SettlementMessage inMsg;
+   ASSERT_TRUE(inMsg.ParseFromString(fut.get().message));
+   const auto& qrn = fromMsg(inMsg.quote_req_notif());
+   bs::network::QuoteNotification qn(qrn, {}, replyPrice, {});
+   qn.validityInS = 5;
+   toMsg(qn, msgSettl.mutable_reply_to_rfq());
+   fut = sup1->waitFor(quoteReply);
+   sup2->send(TerminalUsers::API, TerminalUsers::Settlement, msgSettl.SerializeAsString(), true);
+   ASSERT_EQ(fut.wait_for(kFutureWaitTimeout), std::future_status::ready);
+
+   ASSERT_TRUE(inMsg.ParseFromString(fut.get().message));
+   const auto& quote = fromMsg(inMsg.quote());
+   const auto& pendingOrder = [this, rfqId](const Envelope& env)
+   {
+      if (env.sender->value<TerminalUsers>() != TerminalUsers::Settlement) {
+         return false;
+      }
+      SettlementMessage msg;
+      if (msg.ParseFromString(env.message) && (msg.data_case() == SettlementMessage::kPendingSettlement)) {
+         return (msg.pending_settlement().ids().rfq_id() == rfqId);
+      }
+      return false;
+   };
+   fut = sup1->waitFor(pendingOrder);
+   ASSERT_EQ(fut.wait_for(kLongWaitTimeout), std::future_status::ready);
+   ASSERT_TRUE(inMsg.ParseFromString(fut.get().message));
+   const auto& quoteId = inMsg.pending_settlement().ids().quote_id();
+   ASSERT_EQ(quoteId, quote.quoteId);
+
+   const auto& filledOrder = [this, rfqId, quoteId, replyPrice](const Envelope& env)
+   {
+      if (env.sender->value<TerminalUsers>() != TerminalUsers::Settlement) {
+         return false;
+      }
+      SettlementMessage msg;
+      if (msg.ParseFromString(env.message) && (msg.data_case() == SettlementMessage::kMatchedQuote)) {
+         const auto& matched = msg.matched_quote();
+         return ((matched.rfq_id() == rfqId) && (matched.quote_id() == quoteId)
+            && (matched.price() == replyPrice));
+      }
+      return false;
+   };
+   fut = sup2->waitFor(filledOrder);
+   auto msgAccept = msgSettl.mutable_accept_rfq();
+   msgAccept->set_rfq_id(rfqId);
+   toMsg(quote, msgAccept->mutable_quote());
+   sup1->send(TerminalUsers::API, TerminalUsers::Settlement, msgSettl.SerializeAsString(), true);
+   ASSERT_EQ(fut.wait_for(kFutureWaitTimeout), std::future_status::ready);
+}
+
 TEST_F(TestSettlement, SpotXBT_sell)
 {
-   const auto feePerByte = TestEnv::walletsMgr()->estimatedFeePerByte(1);
-   const auto &settlWallet = TestEnv::walletsMgr()->GetSettlementWallet();
-   uint32_t curHeight = 0;
+   ASSERT_FALSE(xbtWallet_.empty());
+   ASSERT_GE(nbParties_, 2);
+   ASSERT_GE(inprocSigner_.size(), 2);
+   const float fpbRate = 2.3;
+   const std::string& email1 = "aaa@example.com";
+   const std::string& email2 = "bbb@example.com";
+   MockTerminal t1(StaticLogger::loggerPtr, "T1", inprocSigner_.at(0), envPtr_->armoryConnection());
+   MockTerminal t2(StaticLogger::loggerPtr, "T2", inprocSigner_.at(1), envPtr_->armoryConnection());
+   const auto& sup1 = std::make_shared<TestSupervisor>(t1.name());
+   t1.bus()->addAdapter(sup1);
+   const auto& sup2 = std::make_shared<TestSupervisor>(t2.name());
+   t2.bus()->addAdapter(sup2);
+   const auto& m1 = std::make_shared<MatchingMock>(StaticLogger::loggerPtr, "T1"
+      , email1, envPtr_->armoryInstance());
+   const auto& m2 = std::make_shared<MatchingMock>(StaticLogger::loggerPtr, "T2"
+      , email2, envPtr_->armoryInstance());
+   m1->link(m2);
+   m2->link(m1);
+   t1.bus()->addAdapter(m1);
+   t2.bus()->addAdapter(m2);
 
-   for (int i = 0; i < nbParties_; i++) {
-      ASSERT_FALSE(authAddr_[i].isNull());
-      ASSERT_FALSE(authWallet_[i]->GetPubChainedKeyFor(authAddr_[i]).isNull());
-   }
-   const auto settlementAddr = settlWallet->newAddress(settlementId_
-      , authWallet_[0]->GetPubChainedKeyFor(authAddr_[0]), authWallet_[1]->GetPubChainedKeyFor(authAddr_[1]));
-   ASSERT_NE(settlementAddr, nullptr);
-   EXPECT_TRUE(waitForSettlWallet());
+   const auto& walletReady = [](const auto& walletId)
+   {
+      return [walletId](const bs::message::Envelope& env)
+      {
+         if (env.isRequest() || env.receiver ||
+            (env.sender->value<TerminalUsers>() != TerminalUsers::Wallets)) {
+            return false;
+         }
+         WalletsMessage msg;
+         if (msg.ParseFromString(env.message)) {
+            if (msg.data_case() == WalletsMessage::kWalletReady) {
+               return (msg.wallet_ready() == walletId);
+            }
+         }
+         return false;
+      };
+   };
+   auto fut1 = sup1->waitFor(walletReady(xbtWallet_.at(0)->walletId()));
+   auto fut2 = sup2->waitFor(walletReady(xbtWallet_.at(1)->walletId()));
+   t1.start();
+   t2.start();
 
-   // Requester's side
-   TransactionData reqTxData([] {});
-   reqTxData.SetFeePerByte(feePerByte);
-   reqTxData.SetWallet(wallet_[1]);
-   const auto reqRecip = reqTxData.RegisterNewRecipient();
-   reqTxData.UpdateRecipientAddress(reqRecip, settlementAddr);
-   reqTxData.UpdateRecipientAmount(reqRecip, 0.1);
-   ASSERT_TRUE(reqTxData.IsTransactionValid());
-   ASSERT_GE(reqTxData.GetTransactionSummary().selectedBalance, 0.1);
+   WalletsMessage msgWlt;
+   msgWlt.set_set_settlement_fee(fpbRate);
+   sup1->send(TerminalUsers::API, TerminalUsers::Wallets, msgWlt.SerializeAsString(), true);
+   sup2->send(TerminalUsers::API, TerminalUsers::Wallets, msgWlt.SerializeAsString(), true);
+   ASSERT_EQ(fut1.wait_for(kFutureWaitTimeout), std::future_status::ready);
+   ASSERT_EQ(fut2.wait_for(kFutureWaitTimeout), std::future_status::ready);
 
-   auto monitor = settlWallet->createMonitor(settlementAddr, TestEnv::logger());
-   ASSERT_NE(monitor, nullptr);
-   connect(monitor.get(), &bs::SettlementMonitor::payInDetected, [this] { receivedPayIn_ = true; });
-   connect(monitor.get(), &bs::SettlementMonitor::payOutDetected, [this] (int nbConf, bs::PayoutSigner::Type poType) {
-      qDebug() << "poType=" << poType << "nbConf=" << nbConf;
-      receivedPayOut_ = true;
-      poType_ = poType;
-   });
-   monitor->start();
+   const auto& rfqId = CryptoPRNG::generateRandom(5).toHexStr();
+   const double qty = 0.23;
 
-   auto txPayInReq = reqTxData.CreateTXRequest();
-   const auto txPayIn = reqTxData.GetWallet()->SignTXRequest(txPayInReq);
-   const auto txHex = QString::fromStdString(txPayIn.toHexStr());
-   ASSERT_FALSE(txPayIn.isNull());
-   ASSERT_TRUE(TestEnv::regtestControl()->SendTx(txHex));
+   auto msgReq = msgWlt.mutable_reserve_utxos();
+   msgReq->set_id(rfqId);
+   msgReq->set_sub_id(xbtWallet_.at(0)->walletId());
+   msgReq->set_amount(bs::XBTAmount(qty).GetValue());
+   sup1->send(TerminalUsers::API, TerminalUsers::Wallets, msgWlt.SerializeAsString(), true);
 
-   ASSERT_TRUE(waitForPayIn());
-   settlWallet->UpdateBalanceFromDB();
-   EXPECT_DOUBLE_EQ(settlWallet->GetUnconfirmedBalance(), 0.1);
+   const auto& quoteReqNotif = [this, qty, rfqId](const Envelope& env)
+   {
+      if (env.receiver || (env.receiver && !env.receiver->isBroadcast()) ||
+         (env.sender->value<TerminalUsers>() != TerminalUsers::Settlement)) {
+         return false;
+      }
+      SettlementMessage msg;
+      if (msg.ParseFromString(env.message)) {
+         if (msg.data_case() == SettlementMessage::kQuoteReqNotif) {
+            const auto& rfq = msg.quote_req_notif().rfq();
+            return ((rfq.security() == xbtSecurity_) && (rfq.product() == bs::network::XbtCurrency)
+               && !rfq.buy() && (rfq.quantity() == qty) && (rfq.id() == rfqId));
+         }
+      }
+      return false;
+   };
+   auto fut = sup2->waitFor(quoteReqNotif);
 
-   // Responder's side
-   const auto authKeys = authWallet_[0]->GetKeyPairFor(authAddr_[0], {});
-   ASSERT_FALSE(authKeys.privKey.isNull());
-   ASSERT_FALSE(authKeys.pubKey.isNull());
+   SettlementMessage msgSettl;
+   auto msgSendRFQ = msgSettl.mutable_send_rfq();
+   msgSendRFQ->set_reserve_id(rfqId);
+   auto msgRFQ = msgSendRFQ->mutable_rfq();
+   msgRFQ->set_id(rfqId);
+   msgRFQ->set_security(xbtSecurity_);
+   msgRFQ->set_product(bs::network::XbtCurrency);
+   msgRFQ->set_asset_type((int)bs::network::Asset::SpotXBT);
+   msgRFQ->set_buy(false);
+   msgRFQ->set_quantity(qty);
+   msgRFQ->set_auth_pub_key(authKeys_.at(0).toHexStr());
+   sup1->send(TerminalUsers::API, TerminalUsers::Settlement, msgSettl.SerializeAsString(), true);
+   ASSERT_EQ(fut.wait_for(kFutureWaitTimeout), std::future_status::ready);
 
-   ASSERT_FALSE(settlWallet->getSpendableZCList().empty());
-   const auto payInHash = Tx(txPayIn).getThisHash();
-   auto txReq = settlWallet->CreatePayoutTXRequest(settlWallet->GetInputFor(settlementAddr)
-      , fundAddr_[0], feePerByte);
-   ASSERT_FALSE(txReq.inputs.empty());
-   const auto txPayOut = settlWallet->SignPayoutTXRequest(txReq, authKeys, settlementAddr->getAsset()->settlementId()
-      , settlementAddr->getAsset()->buyAuthPubKey(), settlementAddr->getAsset()->sellAuthPubKey());
-   ASSERT_FALSE(txPayOut.isNull());
-   ASSERT_TRUE(TestEnv::regtestControl()->SendTx(QString::fromStdString(txPayOut.toHexStr())));
+   const double replyPrice = 12345.67;
+   const auto& quoteReply = [this, replyPrice, qty, rfqId](const Envelope& env)
+   {
+      if (env.sender->value<TerminalUsers>() != TerminalUsers::Settlement) {
+         return false;
+      }
+      SettlementMessage msg;
+      if (msg.ParseFromString(env.message) && (msg.data_case() == SettlementMessage::kQuote)) {
+         return ((msg.quote().security() == xbtSecurity_) && (msg.quote().product() == bs::network::XbtCurrency)
+            && (msg.quote().request_id() == rfqId) && (msg.quote().price() == replyPrice)
+            && (msg.quote().quantity() == qty) && msg.quote().buy());
+      }
+      return false;
+   };
+   SettlementMessage inMsg;
+   ASSERT_TRUE(inMsg.ParseFromString(fut.get().message));
+   const auto& qrn = fromMsg(inMsg.quote_req_notif());
+   bs::network::QuoteNotification qn(qrn, authKeys_.at(1).toHexStr(), replyPrice, {});
+   qn.receiptAddress = recvAddrs_.at(1).display();
+   qn.validityInS = 5;
+   toMsg(qn, msgSettl.mutable_reply_to_rfq());
+   fut = sup1->waitFor(quoteReply);
+   sup2->send(TerminalUsers::API, TerminalUsers::Settlement, msgSettl.SerializeAsString(), true);
+   ASSERT_EQ(fut.wait_for(kFutureWaitTimeout), std::future_status::ready);
 
-//   ASSERT_TRUE(waitForPayOut());
-   curHeight = PyBlockDataManager::instance()->GetTopBlockHeight();
-   TestEnv::regtestControl()->GenerateBlocks(1);
-   TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 1);
-   EXPECT_TRUE(waitForPayOut());
-   EXPECT_EQ(poType_, bs::PayoutSigner::Type::SignedByBuyer);
+   const auto& settlementId = BinaryData::CreateFromHex(qrn.settlementId);
+   ASSERT_FALSE(settlementId.empty());
+   ASSERT_TRUE(inMsg.ParseFromString(fut.get().message));
+   const auto& quote = fromMsg(inMsg.quote());
 
-   curHeight = PyBlockDataManager::instance()->GetTopBlockHeight();
-   TestEnv::regtestControl()->GenerateBlocks(6);
-   TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
-   settlWallet->UpdateBalanceFromDB();
-   wallet_[0]->UpdateBalanceFromDB();
-   wallet_[1]->UpdateBalanceFromDB();
-   EXPECT_GT(wallet_[0]->GetTotalBalance(), initialTransferAmount_ + 0.1 - 0.01);   // buyer (dealer)
-   EXPECT_LT(wallet_[1]->GetTotalBalance(), initialTransferAmount_ - 0.1);          // seller (requester)
-   EXPECT_DOUBLE_EQ(settlWallet->GetTotalBalance(), 0);
-   monitor = nullptr;
+   const auto& pendingOrder = [rfqId](const Envelope& env)
+   {
+      if (env.sender->value<TerminalUsers>() != TerminalUsers::Settlement) {
+         return false;
+      }
+      SettlementMessage msg;
+      if (msg.ParseFromString(env.message) && (msg.data_case() == SettlementMessage::kPendingSettlement)) {
+         return (msg.pending_settlement().ids().rfq_id() == rfqId);
+      }
+      return false;
+   };
+   fut = sup1->waitFor(pendingOrder);
+   ASSERT_EQ(fut.wait_for(kLongWaitTimeout), std::future_status::ready);
+   ASSERT_TRUE(inMsg.ParseFromString(fut.get().message));
+   const auto& quoteId = inMsg.pending_settlement().ids().quote_id();
+   ASSERT_EQ(quoteId, quote.quoteId);
+
+   const auto& settlementComplete = [rfqId, quoteId, settlementId](const Envelope& env)
+   {
+      if (env.sender->value<TerminalUsers>() != TerminalUsers::Settlement) {
+         return false;
+      }
+      SettlementMessage msg;
+      if (msg.ParseFromString(env.message) && (msg.data_case() == SettlementMessage::kSettlementComplete)) {
+         return ((msg.settlement_complete().rfq_id() == rfqId) &&
+            (msg.settlement_complete().quote_id() == quoteId) &&
+            (msg.settlement_complete().settlement_id() == settlementId.toBinStr()));
+      }
+      return false;
+   };
+   fut = sup2->waitFor(settlementComplete);
+   ASSERT_EQ(fut.wait_for(kLongWaitTimeout), std::future_status::ready);
 }
-#endif   //0
 
-#if 0
 TEST_F(TestSettlement, SpotXBT_buy)
 {
-   auto logger = StaticLogger::loggerPtr;
+   ASSERT_FALSE(xbtWallet_.empty());
+   ASSERT_GE(nbParties_, 2);
+   ASSERT_GE(inprocSigner_.size(), 2);
+   const float fpbRate = 2.3;
+   const std::string& email1 = "aaa@example.com";
+   const std::string& email2 = "bbb@example.com";
+   MockTerminal t1(StaticLogger::loggerPtr, "T1", inprocSigner_.at(0), envPtr_->armoryConnection());
+   MockTerminal t2(StaticLogger::loggerPtr, "T2", inprocSigner_.at(1), envPtr_->armoryConnection());
+   const auto& sup1 = std::make_shared<TestSupervisor>(t1.name());
+   t1.bus()->addAdapter(sup1);
+   const auto& sup2 = std::make_shared<TestSupervisor>(t2.name());
+   t2.bus()->addAdapter(sup2);
+   const auto& m1 = std::make_shared<MatchingMock>(StaticLogger::loggerPtr, "T1"
+      , email1, envPtr_->armoryInstance());
+   const auto& m2 = std::make_shared<MatchingMock>(StaticLogger::loggerPtr, "T2"
+      , email2, envPtr_->armoryInstance());
+   m1->link(m2);
+   m2->link(m1);
+   t1.bus()->addAdapter(m1);
+   t2.bus()->addAdapter(m2);
 
-   const float feePerByte = 1.05;
-   ASSERT_GE(authAddrs_.size(), 2);
-   const auto settlWallet1 = std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(settlLeafMap_[authAddrs_[0]]);
-   ASSERT_NE(settlWallet1, nullptr);
-   const auto settlWallet2 = std::dynamic_pointer_cast<bs::core::hd::SettlementLeaf>(settlLeafMap_[authAddrs_[1]]);
-   ASSERT_NE(settlWallet2, nullptr);
-   uint32_t curHeight = 0;
-   const double amount = 0.1;
-
-   settlWallet1->addSettlementID(settlementId_);
-   settlWallet1->getNewExtAddress();
-   settlWallet2->addSettlementID(settlementId_);
-   settlWallet2->getNewExtAddress();
-
-   ASSERT_GE(authKeys_.size(), 2);
-   ASSERT_FALSE(authKeys_[0].isNull());
-   ASSERT_FALSE(authKeys_[1].isNull());
-
-   const bs::core::wallet::SettlementData settlDataBuy{ settlementId_, authKeys_[1], true };
-   const bs::core::wallet::SettlementData settlDataSell{ settlementId_, authKeys_[0], false };
-   const auto settlementAddr = hdWallet_[0]->getSettlementPayinAddress(settlDataBuy);
-   ASSERT_FALSE(settlementAddr.isNull());
-   EXPECT_EQ(settlementAddr, hdWallet_[1]->getSettlementPayinAddress(settlDataSell));
-
-   const auto dummyWalletId = CryptoPRNG::generateRandom(8).toHexStr();
-   auto syncSettlWallet = std::make_shared<bs::sync::PlainWallet>(dummyWalletId
-      , "temporary", "Dummy settlement wallet", nullptr, StaticLogger::loggerPtr);
-   syncSettlWallet->addAddress(settlementAddr, {}, false);
-   UnitTestWalletACT::clear();
-   const auto settlRegId = syncSettlWallet->registerWallet(envPtr_->armoryConnection(), true);
-   UnitTestWalletACT::waitOnRefresh(settlRegId);
-
-   const auto syncLeaf1 = syncMgr_->getWalletById(xbtWallet_[0]->walletId());
-   const auto syncLeaf2 = syncMgr_->getWalletById(xbtWallet_[1]->walletId());
-
-   auto promUtxo2 = std::make_shared<std::promise<UTXO>>();
-   auto futUtxo2 = promUtxo2->get_future();
-   const auto &cbTxOutList2 = [this, promUtxo2]
-   (const std::vector<UTXO> &inputs)->void
+   const auto& walletReady = [](const auto& walletId)
    {
-      if (inputs.size() != 1) {
-         promUtxo2->set_value({});
-      }
-      else {
-         promUtxo2->set_value(inputs.front());
-      }
+      return [walletId](const bs::message::Envelope& env)
+      {
+         if (env.isRequest() || env.receiver ||
+            (env.sender->value<TerminalUsers>() != TerminalUsers::Wallets)) {
+            return false;
+         }
+         WalletsMessage msg;
+         if (msg.ParseFromString(env.message)) {
+            if (msg.data_case() == WalletsMessage::kWalletReady) {
+               return (msg.wallet_ready() == walletId);
+            }
+         }
+         return false;
+      };
    };
-   ASSERT_TRUE(syncLeaf2->getSpendableTxOutList(cbTxOutList2, UINT64_MAX, true));
-   const auto input2 = futUtxo2.get();
-   ASSERT_TRUE(input2.isInitialized());
+   auto fut1 = sup1->waitFor(walletReady(xbtWallet_.at(0)->walletId()));
+   auto fut2 = sup2->waitFor(walletReady(xbtWallet_.at(1)->walletId()));
+   t1.start();
+   t2.start();
 
-   std::vector<UTXO> payinInputs = { input2 };
+   WalletsMessage msgWlt;
+   msgWlt.set_set_settlement_fee(fpbRate);
+   sup1->send(TerminalUsers::API, TerminalUsers::Wallets, msgWlt.SerializeAsString(), true);
+   sup2->send(TerminalUsers::API, TerminalUsers::Wallets, msgWlt.SerializeAsString(), true);
+   ASSERT_EQ(fut1.wait_for(kFutureWaitTimeout), std::future_status::ready);
+   ASSERT_EQ(fut2.wait_for(kFutureWaitTimeout), std::future_status::ready);
 
-   // Dealer's side
-   TransactionData dealerTxData([] {}, envPtr_->logger());
-   dealerTxData.setFeePerByte(feePerByte);
-   dealerTxData.setWalletAndInputs(syncLeaf2, payinInputs, envPtr_->armoryConnection()->topBlock());
-   const auto dealerRecip = dealerTxData.RegisterNewRecipient();
-   dealerTxData.UpdateRecipientAddress(dealerRecip, settlementAddr);
-   dealerTxData.UpdateRecipientAmount(dealerRecip, amount);
-   ASSERT_TRUE(dealerTxData.IsTransactionValid());
-   ASSERT_GE(dealerTxData.GetTransactionSummary().selectedBalance, amount);
+   const auto& rfqId = CryptoPRNG::generateRandom(5).toHexStr();
+   const double qty = 0.237;
 
-   bs::core::wallet::TXSignRequest unsignedTxReq;
-   if (dealerTxData.GetTransactionSummary().hasChange) {
-      const auto changeAddr = xbtWallet_[1]->getNewChangeAddress();
-      unsignedTxReq = dealerTxData.createUnsignedTransaction(false, changeAddr);
-   }
-   else {
-      unsignedTxReq = dealerTxData.createUnsignedTransaction();
-   }
-   ASSERT_TRUE(unsignedTxReq.isValid());
-
-   auto payinResolver = xbtWallet_[1]->getPublicResolver();
-   const auto dealerPayInHash = unsignedTxReq.txId(payinResolver);
-   EXPECT_FALSE(dealerPayInHash.isNull());
-
-   const auto serializedPayinRequest = unsignedTxReq.serializeState(payinResolver);
-
-   ASSERT_FALSE(serializedPayinRequest.isNull());
-
-   bs::CheckRecipSigner deserializedSigner{serializedPayinRequest , envPtr_->armoryConnection() };
-
-   auto inputs = deserializedSigner.getTxInsData();
-
-   auto spenders = deserializedSigner.spenders();
-   auto recipients = deserializedSigner.recipients();
-
-   logger->debug("Settlement address: {}", settlementAddr.display());
-   auto settlementAddressRecipient = settlementAddr.getRecipient(bs::XBTAmount{ amount });
-   auto settlementRecipientScript = settlementAddressRecipient->getSerializedScript();
-
-   auto settAddressString = settlementAddr.display();
-
-   bool recipientFound = false;
-
-   // amount to settlement address ( single output )
-   for (const auto recipient : recipients) {
-      auto amount = recipient->getValue();
-      auto serializedRecipient = recipient->getSerializedScript();
-
-      BtcUtils::pprintScript(serializedRecipient);
-      std::cout << '\n';
-
-      if (serializedRecipient == settlementRecipientScript) {
-         recipientFound = true;
-         break;
-      }
-   }
-
-   for (const auto recipient : recipients) {
-      logger->debug("{} : {}", bs::CheckRecipSigner::getRecipientAddress(recipient).display(), recipient->getValue());
-   }
-
-   // fee amount
-   // get all inputs amount
-   uint64_t totalInputAmount = 0;
-   for (const auto& input : spenders) {
-      totalInputAmount += input->getValue();
-   }
-
-   // get all outputs amount
-   uint64_t totalOutputValue = 0;
-   for (const auto& output : recipients) {
-      totalOutputValue += output->getValue();
-   }
-
-   try {
-      Tx tx{ serializedPayinRequest };
-
-      // XXX check that payin is not rbf
-      ASSERT_FALSE(tx.isRBF());
-
-      auto txOutCount = tx.getNumTxOut();
-
-      for (unsigned i = 0; i < txOutCount; ++i) {
-         auto txOut = tx.getTxOutCopy(i);
-
-      }
-
-      auto txHash = tx.getThisHash();
-
-      StaticLogger::loggerPtr->debug("TX serialized");
-   } catch (...) {
-      StaticLogger::loggerPtr->error("Failed to serialize TX");
-   }
-
-   // Requester's side
-   StaticLogger::loggerPtr->debug("[{}] payin hash: {}", __func__, dealerPayInHash.toHexStr(true));
-   const auto payinInput = bs::SettlementMonitor::getInputFromTX(settlementAddr, dealerPayInHash
-      , bs::XBTAmount{ amount });
-   const auto payoutTxReq = bs::SettlementMonitor::createPayoutTXRequest(payinInput
-      , fundAddrs_[0], feePerByte, envPtr_->armoryConnection()->topBlock());
-   ASSERT_TRUE(payoutTxReq.isValid());
-
-   BinaryData txPayOut;
+   const auto& quoteReqNotif = [this, qty, rfqId](const Envelope& env)
    {
-      bs::core::WalletPasswordScoped passLock(hdWallet_[0], passphrase_);
-      txPayOut = hdWallet_[0]->signSettlementTXRequest(payoutTxReq, settlDataBuy);
-   }
-   ASSERT_FALSE(txPayOut.isNull());
-
-   // Back to dealer
-   const auto payinTxReq = dealerTxData.getSignTxRequest();
-   BinaryData txPayIn;
-   {
-      bs::core::WalletPasswordScoped passLock(hdWallet_[1], passphrase_);
-      txPayIn = xbtWallet_[1]->signTXRequest(payinTxReq);
-   }
-   ASSERT_FALSE(txPayIn.isNull());
-   Tx txPayinObj(txPayIn);
-   EXPECT_EQ(txPayinObj.getThisHash(), dealerPayInHash);
-
-   // get fee size. check against rate
-   const auto totalFee = totalInputAmount - totalOutputValue;
-   auto correctedFPB = feePerByte;
-   const auto estimatedFee = deserializedSigner.estimateFee(correctedFPB);
-
-   UnitTestWalletACT::clear();
-   StaticLogger::loggerPtr->debug("[{}] payin TX: {}", __func__, txPayIn.toHexStr());
-   envPtr_->armoryInstance()->pushZC(txPayIn);
-   const auto& zcVecPayin = UnitTestWalletACT::waitOnZC();
-   ASSERT_GE(zcVecPayin.size(), 1);
-   EXPECT_EQ(zcVecPayin[0].txHash, txPayinObj.getThisHash());
-
-   auto promUtxo = std::make_shared<std::promise<UTXO>>();
-   auto futUtxo = promUtxo->get_future();
-   const auto &cbZCList = [this, promUtxo]
-   (const std::vector<UTXO> &inputs)->void
-   {
-      if (inputs.size() != 1) {
-         promUtxo->set_value({});
-      } else {
-         promUtxo->set_value(inputs.front());
+      if (env.receiver || (env.receiver && !env.receiver->isBroadcast()) ||
+         (env.sender->value<TerminalUsers>() != TerminalUsers::Settlement)) {
+         return false;
       }
+      SettlementMessage msg;
+      if (msg.ParseFromString(env.message)) {
+         if (msg.data_case() == SettlementMessage::kQuoteReqNotif) {
+            const auto& rfq = msg.quote_req_notif().rfq();
+            return ((rfq.security() == xbtSecurity_) && (rfq.product() == bs::network::XbtCurrency)
+               && rfq.buy() && (rfq.quantity() == qty) && (rfq.id() == rfqId));
+         }
+      }
+      return false;
    };
-   ASSERT_TRUE(syncSettlWallet->getSpendableZCList(cbZCList));
-   const auto zcPayin = futUtxo.get();
-   ASSERT_TRUE(zcPayin.isInitialized());
-   EXPECT_EQ(zcPayin, payinInput);
-   EXPECT_EQ(zcPayin.getScript(), payinInput.getScript());
-   EXPECT_EQ(zcPayin.getTxOutIndex(), payinInput.getTxOutIndex());
-   std::this_thread::sleep_for(20ms);
-   UnitTestWalletACT::clear();
+   auto fut = sup2->waitFor(quoteReqNotif);
 
-   Tx txPayoutObj(txPayOut);
-   ASSERT_TRUE(txPayoutObj.isInitialized());
-   ASSERT_EQ(txPayoutObj.getNumTxIn(), 1);
-   ASSERT_EQ(txPayoutObj.getNumTxOut(), 1);
+   SettlementMessage msgSettl;
+   auto msgSendRFQ = msgSettl.mutable_send_rfq();
+   msgSendRFQ->set_reserve_id(rfqId);
+   auto msgRFQ = msgSendRFQ->mutable_rfq();
+   msgRFQ->set_id(rfqId);
+   msgRFQ->set_security(xbtSecurity_);
+   msgRFQ->set_product(bs::network::XbtCurrency);
+   msgRFQ->set_asset_type((int)bs::network::Asset::SpotXBT);
+   msgRFQ->set_buy(true);
+   msgRFQ->set_quantity(qty);
+   msgRFQ->set_auth_pub_key(authKeys_.at(0).toHexStr());
+   msgRFQ->set_receipt_address(recvAddrs_.at(0).display());
+   sup1->send(TerminalUsers::API, TerminalUsers::Settlement, msgSettl.SerializeAsString(), true);
+   ASSERT_EQ(fut.wait_for(kFutureWaitTimeout), std::future_status::ready);
 
-   StaticLogger::loggerPtr->debug("[{}] payout TX: {}", __func__, txPayOut.toHexStr());
-   envPtr_->armoryInstance()->pushZC(txPayOut);
-   const auto& zcVecPayout = UnitTestWalletACT::waitOnZC(true);
-   ASSERT_GE(zcVecPayout.size(), 1);
-   EXPECT_EQ(zcVecPayout[0].txHash, txPayoutObj.getThisHash());
-   std::this_thread::sleep_for(150ms); // have no idea yet, why it's required
+   auto msgReq = msgWlt.mutable_reserve_utxos();
+   msgReq->set_id(rfqId);
+   msgReq->set_sub_id(xbtWallet_.at(1)->walletId());
+   msgReq->set_amount(bs::XBTAmount(qty).GetValue());
+   sup2->send(TerminalUsers::API, TerminalUsers::Wallets, msgWlt.SerializeAsString(), true);
+   const double replyPrice = 12345.78;
+
+   const auto& quoteReply = [this, replyPrice, qty, rfqId](const Envelope& env)
+   {
+      if (env.sender->value<TerminalUsers>() != TerminalUsers::Settlement) {
+         return false;
+      }
+      SettlementMessage msg;
+      if (msg.ParseFromString(env.message) && (msg.data_case() == SettlementMessage::kQuote)) {
+         return ((msg.quote().security() == xbtSecurity_) && (msg.quote().product() == bs::network::XbtCurrency)
+            && (msg.quote().request_id() == rfqId) && (msg.quote().price() == replyPrice)
+            && (msg.quote().quantity() == qty) && !msg.quote().buy());
+      }
+      return false;
+   };
+   SettlementMessage inMsg;
+   ASSERT_TRUE(inMsg.ParseFromString(fut.get().message));
+   const auto& qrn = fromMsg(inMsg.quote_req_notif());
+   bs::network::QuoteNotification qn(qrn, authKeys_.at(1).toHexStr(), replyPrice, {});
+   //qn.receiptAddress = recvAddrs_.at(1).display();
+   qn.validityInS = 5;
+   toMsg(qn, msgSettl.mutable_reply_to_rfq());
+   fut = sup1->waitFor(quoteReply);
+   sup2->send(TerminalUsers::API, TerminalUsers::Settlement, msgSettl.SerializeAsString(), true);
+   ASSERT_EQ(fut.wait_for(kFutureWaitTimeout), std::future_status::ready);
+
+   const auto& settlementId = BinaryData::CreateFromHex(qrn.settlementId);
+   ASSERT_FALSE(settlementId.empty());
+   ASSERT_TRUE(inMsg.ParseFromString(fut.get().message));
+   const auto& quote = fromMsg(inMsg.quote());
+
+   const auto& pendingOrder = [rfqId](const Envelope& env)
+   {
+      if (env.sender->value<TerminalUsers>() != TerminalUsers::Settlement) {
+         return false;
+      }
+      SettlementMessage msg;
+      if (msg.ParseFromString(env.message) && (msg.data_case() == SettlementMessage::kPendingSettlement)) {
+         return (msg.pending_settlement().ids().rfq_id() == rfqId);
+      }
+      return false;
+   };
+   fut = sup1->waitFor(pendingOrder);
+   ASSERT_EQ(fut.wait_for(kLongWaitTimeout), std::future_status::ready);
+   ASSERT_TRUE(inMsg.ParseFromString(fut.get().message));
+   const auto& quoteId = inMsg.pending_settlement().ids().quote_id();
+   ASSERT_EQ(quoteId, quote.quoteId);
+
+   const auto& settlementComplete = [rfqId, quoteId, settlementId](const Envelope& env)
+   {
+      if (env.sender->value<TerminalUsers>() != TerminalUsers::Settlement) {
+         return false;
+      }
+      SettlementMessage msg;
+      if (msg.ParseFromString(env.message) && (msg.data_case() == SettlementMessage::kSettlementComplete)) {
+         return ((msg.settlement_complete().rfq_id() == rfqId) &&
+            (msg.settlement_complete().quote_id() == quoteId) &&
+            (msg.settlement_complete().settlement_id() == settlementId.toBinStr()));
+      }
+      return false;
+   };
+   fut = sup2->waitFor(settlementComplete);
+   ASSERT_EQ(fut.wait_for(kLongWaitTimeout), std::future_status::ready);
 }
-#endif

@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -19,9 +19,9 @@
 #include <QMutex>
 #include "Address.h"
 #include "BlockchainMonitor.h"
+#include "Wallets/SignContainer.h"
 #include "TestEnv.h"
 
-#include "AuthAddressLogic.h"
 
 namespace bs {
    namespace sync {
@@ -36,8 +36,10 @@ namespace bs {
       class Wallet;
    }
 }
+class QtHCT;
 
 ////////////////////////////////////////////////////////////////////////////////
+#if 0 // Auth address code turned off
 class TestValidationACT : public ValidationAddressACT
 {
 private:
@@ -104,7 +106,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class TestAuth : public ::testing::Test
+class TestAuth : public ::testing::Test, public SignerCallbackTarget
 {
 protected:
    void SetUp() override;
@@ -124,6 +126,7 @@ protected:
    std::shared_ptr<bs::core::Wallet>   xbtSignWallet_;
    std::shared_ptr<bs::sync::Wallet>   xbtWallet_;
    std::shared_ptr<bs::sync::WalletsManager> syncMgr_;
+   std::shared_ptr<QtHCT>  hct_;
    bs::Address    recvAddr_;
    std::shared_ptr<TestEnv> envPtr_;
 
@@ -150,5 +153,6 @@ protected:
 
    SecureBinaryData passphrase_;
 };
+#endif   //0
 
 #endif

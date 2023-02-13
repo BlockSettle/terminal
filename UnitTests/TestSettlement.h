@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -19,6 +19,7 @@
 #include <QMutex>
 #include "Address.h"
 #include "BlockchainMonitor.h"
+#include "Wallets/SignContainer.h"
 #include "TestEnv.h"
 
 
@@ -41,8 +42,9 @@ namespace bs {
       class WalletsManager;
    }
 }
+class QtHCT;
 
-class TestSettlement : public ::testing::Test
+class TestSettlement : public ::testing::Test, public SignerCallbackTarget
 {
 protected:
    TestSettlement();
@@ -51,11 +53,7 @@ protected:
    void SetUp() override;
    void TearDown() override;
 
-   bool waitForPayIn() { return BlockchainMonitor::waitForFlag(receivedPayIn_); }
-   bool waitForPayOut() { return BlockchainMonitor::waitForFlag(receivedPayOut_); }
-//   bool waitForSettlWallet() { return BlockchainMonitor::waitForFlag(settlWalletReady_); }
-   
-   void mineBlocks(unsigned count);
+   void mineBlocks(unsigned count, bool wait = true);
    void sendTo(uint64_t value, bs::Address& addr);
 
 public:
@@ -67,18 +65,17 @@ protected:
    const double   initialTransferAmount_ = 1.23;
    std::vector<std::shared_ptr<bs::core::hd::Wallet>> hdWallet_;
    std::vector<std::shared_ptr<bs::core::hd::Leaf>>   authWallet_;
-   std::shared_ptr<bs::core::WalletsManager>          walletsMgr_;
-   std::shared_ptr<bs::sync::WalletsManager>          syncMgr_;
    std::vector<std::shared_ptr<bs::core::Wallet>>     xbtWallet_;
+   std::vector<std::shared_ptr<bs::core::WalletsManager>>   walletsMgr_;
+   std::vector<std::shared_ptr<WalletSignerContainer>>      inprocSigner_;
    std::vector<bs::Address>      authAddrs_;
    std::vector<SecureBinaryData> authKeys_;
-   std::vector<bs::Address>      fundAddrs_;
-   SecureBinaryData              settlementId_;
-   std::vector<SecureBinaryData> userId_;
+   std::vector<bs::Address>      fundAddrs_, recvAddrs_, changeAddrs_;
    std::map<bs::Address, std::shared_ptr<bs::core::hd::Leaf>>  settlLeafMap_;
-   std::atomic_bool  receivedPayIn_{ false };
-   std::atomic_bool  receivedPayOut_{ false };
-   bs::PayoutSignatureType poType_{};
+
+   const std::string fxSecurity_{ "EUR/USD" };
+   const std::string fxProduct_{ "EUR" };
+   const std::string xbtSecurity_{ "XBT/EUR" };
 
 private:
    QMutex            mtxWalletId_;
@@ -92,8 +89,6 @@ private:
 
    std::map<unsigned, BinaryData> coinbaseHashes_;
    unsigned coinbaseCounter_ = 0;
-
-   std::unique_ptr<SingleUTWalletACT>  act_;
 
 private:
    void onWalletReady(const QString &id);

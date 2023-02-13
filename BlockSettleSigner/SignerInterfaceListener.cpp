@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -16,14 +16,12 @@
 #include <QVariant>
 #include <QStandardPaths>
 #include <QApplication>
-#include "CelerClientConnection.h"
 #include "DataConnection.h"
 #include "HeadlessApp.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ZmqContext.h"
 
 #include "SignerInterfaceListener.h"
-#include "SignerAdapterContainer.h"
 #include <memory>
 
 using namespace bs::sync;
@@ -421,15 +419,15 @@ void SignerInterfaceListener::onSyncHDWallet(const std::string &data, bs::signer
       return;
    }
    bs::sync::HDWalletData result;
-   for (int i = 0; i < response.groups_size(); ++i) {
-      const auto group = response.groups(i);
+   for (const auto &group : response.groups()) {
       std::vector<bs::sync::HDWalletData::Leaf> leaves;
-      for (int j = 0; j < group.leaves_size(); ++j) {
-         const auto leaf = group.leaves(j);
-         leaves.push_back({ leaf.id(), bs::hd::Path::fromString(leaf.path())
-            , false, BinaryData::fromString(leaf.extra_data()) });
+      for (const auto &leaf : group.leaves()) {
+         leaves.push_back({ {leaf.id()}, bs::hd::Path::fromString(leaf.path())
+            , std::string{}, std::string{}, false
+            , BinaryData::fromString(leaf.extra_data()) });
       }
-      result.groups.push_back({ static_cast<bs::hd::CoinType>(group.type()), leaves });
+      result.groups.push_back({ static_cast<bs::hd::CoinType>(group.type())
+         , std::string{}, std::string{}, leaves });
    }
    itCb->second(result);
    cbHDWalletData_.erase(itCb);

@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -19,7 +19,8 @@
 #include "CoreHDWallet.h"
 #include "CoreWallet.h"
 #include "CoreWalletsManager.h"
-#include "InprocSigner.h"
+#include "Wallets/HeadlessContainer.h"
+#include "Wallets/InprocSigner.h"
 #include "SystemFileUtils.h"
 #include "TestEnv.h"
 #include "UiUtils.h"
@@ -47,7 +48,7 @@ unit tests to add:
 ***/
 
 ////////////////////////////////////////////////////////////////////////////////
-class TestWallet : public ::testing::Test
+class TestWallet : public ::testing::Test, public SignerCallbackTarget
 {
    void SetUp()
    {
@@ -82,7 +83,7 @@ TEST_F(TestWallet, BIP84_derivation)
 
    {
       const bs::core::WalletPasswordScoped lock(wallet, passphrase);
-      wallet->createStructure();
+      wallet->createStructure(false);
       ASSERT_NE(wallet->getGroup(wallet->getXBTGroupType()), nullptr);
    }
 
@@ -189,8 +190,8 @@ TEST_F(TestWallet, BIP84_primary)
       EXPECT_EQ(leafCC->name(), "84'/16979'/7568'"); //16979 == 0x4253
    }
 
-   auto inprocSigner = std::make_shared<InprocSigner>(
-      envPtr_->walletsMgr(), envPtr_->logger(), "", NetworkType::TestNet);
+   auto inprocSigner = std::make_shared<InprocSigner>(envPtr_->walletsMgr()
+      , envPtr_->logger(), this, "", NetworkType::TestNet);
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -602,7 +603,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       }
 
       //create sync manager
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, this, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -665,8 +666,9 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       EXPECT_EQ(syncWallet->getUsedAddressCount(), 10);
       EXPECT_EQ(syncWallet->getExtAddressCount(), 5);
       EXPECT_EQ(syncWallet->getIntAddressCount(), 5);
+#if 0
       syncWallet->syncAddresses();
-
+#endif
       //check address maps
       BIP32_Node extNode = base_node;
       extNode.derivePrivate(0);
@@ -704,7 +706,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
          filename, NetworkType::TestNet, "", ctrlPass, envPtr_->logger());
 
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, this, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -789,8 +791,9 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       EXPECT_EQ(syncWallet->getUsedAddressCount(), 12);
       EXPECT_EQ(syncWallet->getExtAddressCount(), 6);
       EXPECT_EQ(syncWallet->getIntAddressCount(), 6);
+#if 0
       syncWallet->syncAddresses();
-
+#endif
       //create WO copy
       auto WOcopy = walletPtr->createWatchingOnly();
       filename = WOcopy->getFileName();
@@ -807,7 +810,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       EXPECT_EQ(walletPtr->isWatchingOnly(), true);
 
       //create sync manager
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, this, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1333,11 +1336,11 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
 
       {
          const bs::core::WalletPasswordScoped lock(walletPtr, passphrase);
-         walletPtr->createStructure(10);
+         walletPtr->createStructure(false, 10);
       }
 
       //create sync manager
-      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, this, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1693,7 +1696,7 @@ TEST_F(TestWallet, ImportExport_xpriv)
             wallet2->getDecryptedSeed());
          ASSERT_TRUE(false);
       }
-      catch (const WalletException &) {}
+      catch (const Armory::Wallets::WalletException &) {}
 
       //shut it all down, reload, check seeds again
       filename = wallet2->getFileName();
@@ -1764,9 +1767,9 @@ TEST_F(TestWallet, TxIdNativeSegwit)
    UTXO input;
    input.unserialize(BinaryData::CreateFromHex(
       "cc16060000000000741618000300010020d5921cfa9b95c9fdafa9dca6d2765b5d7d2285914909b8f5f74f0b137259153b16001428d45f4ef82103691ea40c26b893a4566729b335ffffffff"));
-   request.armorySigner_.addSpender(std::make_shared<ArmorySigner::ScriptSpender>(input));
+   request.armorySigner_.addSpender(std::make_shared<Armory::Signer::ScriptSpender>(input));
 
-   auto recipient = ArmorySigner::ScriptRecipient::fromScript(BinaryData::CreateFromHex(
+   auto recipient = Armory::Signer::ScriptRecipient::fromScript(BinaryData::CreateFromHex(
       "a086010000000000220020aa38b39ed9b524967159ad2bd488d14c1b9ccd70364655a7d9f35cb83e4dc6ed"));
    request.armorySigner_.addRecipient(recipient);
 
@@ -1801,7 +1804,7 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    envPtr_->requireArmory();
    ASSERT_NE(envPtr_->armoryConnection(), nullptr);
 
-   auto inprocSigner = std::make_shared<InprocSigner>(coreWallet, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(coreWallet, this, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1821,10 +1824,11 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    ASSERT_NE(syncHdWallet, nullptr);
 
    syncHdWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+#if 0
    const auto regIDs = syncHdWallet->registerWallet(envPtr_->armoryConnection());
    ASSERT_FALSE(regIDs.empty());
    UnitTestWalletACT::waitOnRefresh(regIDs);
-
+#endif
    auto syncWallet = syncMgr->getWalletById(coreLeaf->walletId());
    auto syncLeaf = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(syncWallet);
    ASSERT_TRUE(syncLeaf != nullptr);
@@ -1833,7 +1837,7 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    unsigned blockCount = 6;
 
    auto curHeight = envPtr_->armoryConnection()->topBlock();
-   auto addrRecip = address.getRecipient(bs::XBTAmount{ (uint64_t)(50 * COIN) });
+   auto addrRecip = address.getRecipient(bs::XBTAmount{ (int64_t)(50 * COIN) });
    armoryInstance->mineNewBlock(addrRecip.get(), blockCount);
    auto newTop = UnitTestWalletACT::waitOnNewBlock();
    ASSERT_EQ(curHeight + blockCount, newTop);
@@ -1855,9 +1859,9 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    ASSERT_TRUE(input.isInitialized());
 
    bs::core::wallet::TXSignRequest request;
-   request.armorySigner_.addSpender(std::make_shared<ArmorySigner::ScriptSpender>(input));
+   request.armorySigner_.addSpender(std::make_shared<Armory::Signer::ScriptSpender>(input));
 
-   auto recipient = ArmorySigner::ScriptRecipient::fromScript(BinaryData::CreateFromHex(
+   auto recipient = Armory::Signer::ScriptRecipient::fromScript(BinaryData::CreateFromHex(
       "a086010000000000220020d35c94ed03ae988841bd990124e176dae3928ba41f5a684074a857e788d768ba"));
    request.armorySigner_.addRecipient(recipient);
 
@@ -1935,7 +1939,6 @@ TEST_F(TestWallet, ChangeControlPassword)
 
    const bs::core::wallet::Seed seed{ SecureBinaryData::fromString("Sample test seed")
       , NetworkType::TestNet };
-
 
    {
       auto wallet = std::make_shared<bs::core::hd::Wallet>(

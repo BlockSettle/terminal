@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -41,7 +41,7 @@ public:
       }
       const auto &index = txModel->index(source_row, 0, source_parent);
       const auto &txItem = txModel->getItem(index);
-      return (txItem && txItem->isSet() && (txItem->txEntry.value > 0));
+      return (txItem && (txItem->txEntry.value > 0));
    }
 };
 
@@ -58,7 +58,7 @@ public:
       }
       const auto &index = txModel->index(source_row, 0, source_parent);
       const auto &txItem = txModel->getItem(index);
-      return (txItem && txItem->isSet() && (txItem->txEntry.value < 0));
+      return (txItem && (txItem->txEntry.value < 0));
    }
 };
 
@@ -88,41 +88,33 @@ public:
 
 
 AddressDetailDialog::AddressDetailDialog(const bs::Address& address
-   , const std::shared_ptr<bs::sync::Wallet> &wallet
-   , const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
-   , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<spdlog::logger> &logger, QWidget* parent)
+   , const std::shared_ptr<spdlog::logger> &logger, bs::core::wallet::Type wltType
+   , uint64_t balance, uint32_t txn, const QString &walletName
+   , const std::string &addrIndex, const std::string &comment, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::AddressDetailDialog())
-   , logger_(logger)
    , address_(address)
-   , walletsManager_(walletsManager)
-   , armory_(armory)
-   , wallet_(wallet)
+   , logger_(logger)
 {
    ui_->setupUi(this);
    ui_->labelError->hide();
 
-   auto balanceVec = wallet_->getAddrBalance(address);
-   onAddrBalanceReceived(balanceVec);
-
-   onAddrTxNReceived(wallet_->getAddrTxN(address));
+   setBalance(balance, wltType);
+   onAddrTxNReceived(txn);
 
    auto copyButton = ui_->buttonBox->addButton(tr("Copy to clipboard"), QDialogButtonBox::ActionRole);
    connect(copyButton, &QPushButton::clicked, this, &AddressDetailDialog::onCopyClicked);
 
-   ui_->labelWallenName->setText(QString::fromStdString(wallet_->name()));
+   ui_->labelWalletName->setText(walletName);
 
    const auto addressString = QString::fromStdString(address.display());
    ui_->labelAddress->setText(addressString);
 
-   const auto addrIndex = wallet_->getAddressIndex(address);
    const auto path = bs::hd::Path::fromString(addrIndex);
    QString index;
    if (path.length() != 2) {
       index = QString::fromStdString(addrIndex);
-   }
-   else {
+   } else {
       const auto lastIndex = QString::number(path.get(-1));
       switch (path.get(-2)) {
       case 0:
@@ -140,30 +132,10 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
    }
    ui_->labelAddrIndex->setText(index);
 
-   const auto comment = wallet_->getAddressComment(address);
    ui_->labelComment->setText(QString::fromStdString(comment));
 
    ui_->inputAddressesWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->outputAddressesWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-
-   if (armory_->state() != ArmoryState::Ready) {
-      ui_->labelError->setText(tr("BlockSettleDB is not connected"));
-      onError();
-   }
-   else {
-      QPointer<AddressDetailDialog> thisPtr = this;
-      const auto &cbLedgerDelegate = [thisPtr, armory](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
-         QMetaObject::invokeMethod(qApp, [thisPtr, delegate]{
-            if (thisPtr) {
-               thisPtr->initModels(delegate);
-            }
-         });
-      };
-      if (!wallet_->getLedgerDelegateForAddress(address_, cbLedgerDelegate)) {
-         ui_->labelError->setText(tr("Error loading address info"));
-         onError();
-      }
-   }
 
    const QString addrURI = QLatin1String("bitcoin:") + addressString;
    ui_->labelQR->setPixmap(UiUtils::getQRCode(addrURI, 128));
@@ -175,43 +147,47 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
       this, &AddressDetailDialog::onInputAddrContextMenu);
    connect(ui_->outputAddressesWidget, &QTreeView::customContextMenuRequested,
       this, &AddressDetailDialog::onOutputAddrContextMenu);
-}
 
-AddressDetailDialog::~AddressDetailDialog() = default;
-
-void AddressDetailDialog::initModels(const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate)
-{
-   TransactionsViewModel* model = new TransactionsViewModel(armory_
-                                                            , walletsManager_
-                                                            , delegate
-                                                            , logger_
-                                                            , wallet_
-                                                            , address_
-                                                            , this);
+   model_ = new TransactionsViewModel(logger_, this);
+   connect(model_, &TransactionsViewModel::needTXDetails, this, &AddressDetailDialog::needTXDetails);
 
    IncomingTransactionFilter* incomingFilter = new IncomingTransactionFilter(this);
-   incomingFilter->setSourceModel(model);
+   incomingFilter->setSourceModel(model_);
    AddressTransactionFilter* inFilter = new AddressTransactionFilter(this);
    inFilter->setSourceModel(incomingFilter);
    ui_->inputAddressesWidget->setModel(inFilter);
    ui_->inputAddressesWidget->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date), Qt::DescendingOrder);
 
    OutgoingTransactionFilter* outgoingFilter = new OutgoingTransactionFilter(this);
-   outgoingFilter->setSourceModel(model);
+   outgoingFilter->setSourceModel(model_);
    AddressTransactionFilter* outFilter = new AddressTransactionFilter(this);
    outFilter->setSourceModel(outgoingFilter);
    ui_->outputAddressesWidget->setModel(outFilter);
    ui_->outputAddressesWidget->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date), Qt::DescendingOrder);
 }
 
-void AddressDetailDialog::onAddrBalanceReceived(const std::vector<uint64_t> &balance)
+AddressDetailDialog::~AddressDetailDialog() = default;
+
+void AddressDetailDialog::onNewBlock(unsigned int blockNum)
 {
-   if (balance.empty()) {
-      ui_->labelBalance->setText(QString::number(0));
-      return;
-   }
-   ui_->labelBalance->setText((wallet_->type() == bs::core::wallet::Type::ColorCoin)
-      ? UiUtils::displayCCAmount(balance[0]) : UiUtils::displayAmount(balance[0]));
+   model_->onNewBlock(blockNum);
+}
+
+void AddressDetailDialog::onLedgerEntries(uint32_t curBlock
+   , const std::vector<bs::TXEntry> &entries)
+{
+   model_->onLedgerEntries({}, 0, 0, curBlock, entries);
+}
+
+void AddressDetailDialog::onTXDetails(const std::vector<bs::sync::TXWalletDetails> &details)
+{
+   model_->onTXDetails(details);
+}
+
+void AddressDetailDialog::setBalance(uint64_t balance, bs::core::wallet::Type wltType)
+{
+   ui_->labelBalance->setText((wltType == bs::core::wallet::Type::ColorCoin)
+      ? UiUtils::displayCCAmount(balance) : UiUtils::displayAmount(balance));
 }
 
 void AddressDetailDialog::onAddrTxNReceived(uint32_t txn)

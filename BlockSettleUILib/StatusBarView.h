@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2018 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -19,9 +19,8 @@
 
 #include <memory>
 #include "ArmoryConnection.h"
-#include "CelerClient.h"
 #include "CircleProgressBar.h"
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 
 namespace bs {
    namespace sync {
@@ -29,16 +28,13 @@ namespace bs {
    }
 }
 class AssetManager;
-class SignContainer;
+class HeadlessContainer;
 
 class StatusBarView  : public QObject, public ArmoryCallbackTarget
 {
    Q_OBJECT
 public:
-   StatusBarView(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<BaseCelerClient> &
-      , const std::shared_ptr<SignContainer> &, QStatusBar *parent);
+   StatusBarView(QStatusBar *parent);
    ~StatusBarView() noexcept override;
 
    StatusBarView(const StatusBarView&) = delete;
@@ -46,27 +42,29 @@ public:
    StatusBarView(StatusBarView&&) = delete;
    StatusBarView& operator = (StatusBarView&&) = delete;
 
-private slots:
+public slots:
+   void onBalanceUpdated(const std::string &symbol, double balance);
    void onPrepareArmoryConnection(NetworkType);
-   void onArmoryStateChanged(ArmoryState);
+   void onArmoryStateChanged(ArmoryState, unsigned int topBlock);
    void onArmoryProgress(BDMPhase, float progress, unsigned int secondsRem);
    void onArmoryError(QString);
-   void onConnectedToServer();
-   void onConnectionClosed();
-   void onConnectionError(int errorCode);
+   void onConnectedToMatching();
+   void onDisconnectedFromMatching();
    void onContainerAuthorized();
-   void onContainerError(SignContainer::ConnectionError error, const QString &details);
-   void updateBalances();
+   void onSignerStatusChanged(SignContainer::ConnectionError error, const QString &details);
+   void updateBalances();  //deprecated
    void onWalletImportStarted(const std::string &walletId);
    void onWalletImportFinished(const std::string &walletId);
+   void onBlockchainStateChanged(int, unsigned int);
+   void onXbtBalance(const bs::sync::WalletBalanceData&);
 
 private:
-   void onStateChanged(ArmoryState) override;
-   void onError(int errCode, const std::string &) override;
-   void onLoadProgress(BDMPhase, float, unsigned int, unsigned int) override;
-   void onPrepareConnection(NetworkType, const std::string &host
+   [[deprecated]] void onStateChanged(ArmoryState) override;
+   [[deprecated]] void onError(int errCode, const std::string &) override;
+   [[deprecated]] void onLoadProgress(BDMPhase, float, unsigned int, unsigned int) override;
+   [[deprecated]] void onPrepareConnection(NetworkType, const std::string &host
       , const std::string &port) override;
-   void onNewBlock(unsigned, unsigned) override;
+   [[deprecated]] void onNewBlock(unsigned, unsigned) override;
 
 public:
    void updateDBHeadersProgress(float progress, unsigned secondsRem);
@@ -78,16 +76,16 @@ public:
 private:
    void setupBtcIcon(NetworkType);
    void SetLoggedinStatus();
-   void SetCelerErrorStatus(const QString& message);
    void SetLoggedOutStatus();
    void SetCelerConnectingStatus();
    QWidget *CreateSeparator();
-   void setBalances();
-   void updateConnectionStatusDetails();
+   [[deprecated]] void setBalances();
+   void displayBalances();
+   void updateConnectionStatusDetails(ArmoryState state, unsigned int blockNum);
 
 private:
    void updateProgress(float progress, unsigned secondsRem);
-   QString getImportingText() const;
+   [[deprecated]] QString getImportingText() const;
 
    bool eventFilter(QObject *object, QEvent *event) override;
 
@@ -120,6 +118,11 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<AssetManager>       assetManager_;
    std::unordered_set<std::string>     importingWallets_;
+   std::vector<std::string>   balanceSymbols_;
+   std::unordered_map<std::string, double>   balances_;
+   std::unordered_map<std::string, BTCNumericTypes::balance_type> xbtBalances_;
+   int            armoryState_{ -1 };
+   unsigned int   blockNum_{ 0 };
 
    std::chrono::steady_clock::time_point timeSinceLastBlock_{std::chrono::steady_clock::now()};
 };

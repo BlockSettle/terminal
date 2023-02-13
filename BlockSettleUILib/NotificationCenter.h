@@ -40,21 +40,13 @@ namespace bs {
       enum class NotifyType {
          Unknown,
          BlockchainTX,
-         CelerOrder,
-         DealerQuotes,
-         AuthAddress,
          BroadcastError,
          NewVersion,
-         UpdateUnreadMessage,
-         FriendRequest,
-         OTCOrderError,
          LogOut,
          BitcoinCoreOnline,
          BitcoinCoreOffline,
          AccountDisabled,
-         AccountEnabled,
-         TradingEnabledOnPB,
-         TradingDisabledOnPB
+         AccountEnabled
       };
 
       using NotifyMessage = QList<QVariant>;
@@ -80,8 +72,10 @@ class NotificationCenter : public QObject
    Q_OBJECT
 
 public:
-   NotificationCenter(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings> &
+   [[deprecated]] NotificationCenter(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings> &
       , const Ui::BSTerminalMainWindow *, const std::shared_ptr<QSystemTrayIcon> &, QObject *parent = nullptr);
+   NotificationCenter(const std::shared_ptr<spdlog::logger>&, const Ui::BSTerminalMainWindow*
+      , const std::shared_ptr<QSystemTrayIcon>&, QObject* parent = nullptr);
    ~NotificationCenter() noexcept = default;
 
    static void createInstance(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<ApplicationSettings> &, const Ui::BSTerminalMainWindow *
@@ -89,13 +83,13 @@ public:
    static NotificationCenter *instance();
    static void destroyInstance();
    static void notify(bs::ui::NotifyType, const bs::ui::NotifyMessage &);
+   void enqueue(bs::ui::NotifyType, const bs::ui::NotifyMessage&);
 
 signals:
    void notifyEndpoint(bs::ui::NotifyType, const bs::ui::NotifyMessage &);
    void newChatMessageClick(const QString &chatId);
 
 private:
-   void enqueue(bs::ui::NotifyType, const bs::ui::NotifyMessage &);
    void addResponder(const std::shared_ptr<NotificationResponder> &);
 
 private:
@@ -108,8 +102,10 @@ class NotificationTabResponder : public NotificationResponder
 {
    Q_OBJECT
 public:
-   NotificationTabResponder(const Ui::BSTerminalMainWindow *mainWinUi,
+   [[deprecated]] NotificationTabResponder(const Ui::BSTerminalMainWindow *mainWinUi,
       std::shared_ptr<ApplicationSettings> appSettings, QObject *parent = nullptr);
+   NotificationTabResponder(const Ui::BSTerminalMainWindow* mainWinUi,
+      QObject* parent = nullptr);
 
    void respond(bs::ui::NotifyType, bs::ui::NotifyMessage) override;
 
@@ -131,9 +127,11 @@ class NotificationTrayIconResponder : public NotificationResponder
 {
    Q_OBJECT
 public:
-   NotificationTrayIconResponder(const std::shared_ptr<spdlog::logger> &, const Ui::BSTerminalMainWindow *mainWinUi
+   [[deprecated]] NotificationTrayIconResponder(const std::shared_ptr<spdlog::logger> &, const Ui::BSTerminalMainWindow *mainWinUi
       , const std::shared_ptr<QSystemTrayIcon> &trayIcon, const std::shared_ptr<ApplicationSettings> &appSettings
       , QObject *parent = nullptr);
+   NotificationTrayIconResponder(const std::shared_ptr<spdlog::logger>&, const Ui::BSTerminalMainWindow* mainWinUi
+      , const std::shared_ptr<QSystemTrayIcon>& trayIcon, QObject* parent = nullptr);
 
    void respond(bs::ui::NotifyType, bs::ui::NotifyMessage) override;
 
@@ -149,8 +147,6 @@ private:
    std::shared_ptr<QSystemTrayIcon>       trayIcon_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    bool  newVersionMessage_ = false;
-   bool  newChatMessage_ = false;
-   QString  newChatId_;
 
    enum NotificationMode {
       QSystemTray,

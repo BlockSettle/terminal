@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2020 - 2020, BlockSettle AB
+* Copyright (C) 2020 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -20,6 +20,7 @@ namespace Ui {
 }
 class AutoRFQ;
 
+//TODO: rework to allow incoming API connections
 class APISettingsPage : public SettingsPage
 {
 public:
@@ -29,6 +30,9 @@ public:
    void display() override;
    void reset() override;
    void apply() override;
+
+private slots:
+   void onApiKeyImport();
 
 private:
    void updateApiKeyStatus();

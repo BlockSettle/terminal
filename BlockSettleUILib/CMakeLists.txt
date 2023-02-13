@@ -1,7 +1,7 @@
 #
 #
 # ***********************************************************************************
-# * Copyright (C) 2018 - 2020, BlockSettle AB
+# * Copyright (C) 2018 - 2021, BlockSettle AB
 # * Distributed under the GNU Affero General Public License (AGPL v3)
 # * See LICENSE or http://www.gnu.org/licenses/agpl.html
 # *
@@ -10,7 +10,7 @@
 #
 CMAKE_MINIMUM_REQUIRED( VERSION 3.3 )
 
-SET(CMAKE_CXX_STANDARD 14)
+SET(CMAKE_CXX_STANDARD 17)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 SET(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -60,6 +60,7 @@ INCLUDE_DIRECTORIES( ${COMMON_LIB_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${COMMON_UI_LIB_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( Settings )
 INCLUDE_DIRECTORIES( Trading )
+INCLUDE_DIRECTORIES( ${BIP39_INCLUDE_DIR} )
 
 foreach(RESOURCE_FILE ${RESOURCE_FILES})
 	qt5_add_resources( GENERATED_RESOURCES ${RESOURCE_FILE})

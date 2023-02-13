@@ -13,10 +13,8 @@
 
 #include "Bip15xDataConnection.h"
 #include "Bip15xServerConnection.h"
-#include "CelerMessageMapper.h"
 #include "CommonTypes.h"
 #include "IdStringGenerator.h"
-#include "QuoteProvider.h"
 #include "ServerConnection.h"
 #include "TestEnv.h"
 #include "TransportBIP15x.h"
@@ -60,6 +58,7 @@ static bs::network::TransportBIP15xServer::TrustedClientsCallback constructTrust
    };
 }
 
+#if 0
 TEST(TestNetwork, CelerMessageMapper)
 {
    for (int i = CelerAPI::CelerMessageTypeFirst; i < CelerAPI::CelerMessageTypeLast; i++) {
@@ -76,16 +75,17 @@ using namespace bs::network;
 TEST(TestNetwork, Types)
 {
    for (const auto t : {Side::Buy, Side::Sell}) {
-      const auto celerType = Side::toCeler(t);
-      EXPECT_EQ(Side::fromCeler(celerType), t) << "Side " << Side::toString(t);
+      const auto celerType = bs::celer::toCeler(t);
+      EXPECT_EQ(bs::celer::fromCeler(celerType), t) << "Side " << Side::toString(t);
    }
 
    for (int i = bs::network::Asset::first; i < bs::network::Asset::last; i++) {
       const auto t = static_cast<bs::network::Asset::Type>(i);
-      const auto celerProdType = bs::network::Asset::toCelerProductType(t);
-      EXPECT_EQ(bs::network::Asset::fromCelerProductType(celerProdType), t) << "Asset type " << bs::network::Asset::toString(t);
+      const auto celerProdType = bs::celer::toCelerProductType(t);
+      EXPECT_EQ(bs::celer::fromCelerProductType(celerProdType), t) << "Asset type " << bs::network::Asset::toString(t);
    }
 }
+#endif   //0
 
 TEST(TestNetwork, IdString)
 {

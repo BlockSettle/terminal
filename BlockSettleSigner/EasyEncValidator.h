@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2020 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -21,7 +21,6 @@
 
 class EasyEncValidator : public QValidator
 {
-
    Q_OBJECT
    Q_PROPERTY(QString statusMsg READ getStatusMsg NOTIFY statusMsgChanged)
    Q_PROPERTY(QString name READ getName WRITE setName)
@@ -35,11 +34,11 @@ public:
    };
 
    //contructor used by the QmlEngine
-   explicit EasyEncValidator(QObject *parent = nullptr) :
+   EasyEncValidator(QObject *parent = nullptr) :
        QValidator(parent),
        wordSize_(4),
        numWords_(9),
-       hasChecksum_(true)
+       hasChecksum_(false)
    {}
 
    State validate(QString &input, int &pos) const override;

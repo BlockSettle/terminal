@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -17,14 +17,17 @@
 #include "CoreWalletsManager.h"
 #include "DispatchQueue.h"
 #include "HeadlessApp.h"
-#include "HeadlessContainerListener.h"
-#include "OfflineSigner.h"
-#include "ProtobufHeadlessUtils.h"
+#include "Wallets/HeadlessContainerListener.h"
+#include "Wallets/OfflineSigner.h"
+#include "Wallets/ProtobufHeadlessUtils.h"
 #include "ScopeGuard.h"
 #include "ServerConnection.h"
 #include "Settings/HeadlessSettings.h"
 #include "StringUtils.h"
 #include "SystemFileUtils.h"
+
+#include "bs_signer.pb.h"
+#include "headless.pb.h"
 
 using namespace Blocksettle::Communication;
 
@@ -55,11 +58,6 @@ public:
       signer::ClientDisconnected evt;
       evt.set_client_id(clientId);
       owner_->sendData(signer::PeerDisconnectedType, evt.SerializeAsString());
-
-      if (owner_->settings_->runMode() == bs::signer::RunMode::litegui) {
-         owner_->logger_->info("Quit because terminal disconnected unexpectedly and litegui used");
-         owner_->queue_->quit();
-      }
    }
 
    void ccNamesReceived(bool result) override
@@ -123,7 +121,7 @@ public:
       signer::DecryptWalletRequest request;
       request.set_dialogtype(dialogType);
       *(request.mutable_signtxrequest()) = bs::signer::coreTxRequestToPb(txReq);
-      *(request.mutable_passworddialogdata()) = dialogData;
+      *(request.mutable_passworddialogdata()) = dialogData.data();
 
       owner_->sendData(signer::DecryptWalletRequestType, request.SerializeAsString());
    }
@@ -131,7 +129,7 @@ public:
    void updateDialogData(const Internal::PasswordDialogDataWrapper &dialogData) override
    {
       headless::UpdateDialogDataRequest request;
-      *request.mutable_passworddialogdata() = dialogData;
+      *request.mutable_passworddialogdata() = dialogData.data();
       owner_->sendData(signer::UpdateDialogDataType, request.SerializeAsString());
    }
 
@@ -255,9 +253,6 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
    case signer::ChangeControlPasswordType:
       rc = onChangeControlPassword(packet.data(), packet.id());
       break;
-   case signer::WindowStatusType:
-      rc = onWindowsStatus(packet.data(), packet.id());
-      break;
    case signer::VerifyOfflineTxRequestType:
       rc = onVerifyOfflineTx(packet.data(), packet.id());
       break;
@@ -298,7 +293,7 @@ void SignerAdapterListener::sendStatusUpdate()
    callbacks_->ccNamesReceived(!walletsMgr_->ccLeaves().empty());
 }
 
-void SignerAdapterListener::sendControlPasswordStatusUpdate(signer::ControlPasswordStatus status)
+void SignerAdapterListener::sendControlPasswordStatusUpdate(const signer::ControlPasswordStatus &status)
 {
    signer::UpdateControlPasswordStatus evt;
    evt.set_controlpasswordstatus(status);
@@ -410,7 +405,7 @@ bool SignerAdapterListener::onSyncHDWallet(const std::string &data, bs::signer::
                   throw std::runtime_error("unexpected leaf type");
                }
                const auto rootAsset = settlLeaf->getRootAsset();
-               const auto rootSingle = std::dynamic_pointer_cast<AssetEntry_Single>(rootAsset);
+               const auto rootSingle = std::dynamic_pointer_cast<Armory::Assets::AssetEntry_Single>(rootAsset);
                if (rootSingle == nullptr) {
                   throw std::runtime_error("invalid root asset");
                }
@@ -508,12 +503,12 @@ bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, bs::sign
       seedStr = seed.seed().toBinStr();
       privKeyStr = seed.toXpriv().toBinStr();
    }
-   catch (const WalletException &e) {
+   catch (const Armory::Wallets::WalletException &e) {
       logger_->error("[SignerAdapterListener::onGetDecryptedNode] failed to decrypt wallet with id {}: {}"
          , request.wallet_id(), e.what());
       return false;
    }
-   catch (const DecryptedDataContainerException &e) {
+   catch (const Armory::Wallets::Encryption::DecryptedDataContainerException &e) {
       logger_->error("[SignerAdapterListener::onGetDecryptedNode] wallet {} decryption failure: {}"
          , request.wallet_id(), e.what());
       return false;
@@ -583,17 +578,6 @@ bool SignerAdapterListener::onChangeControlPassword(const std::string &data, bs:
    response.set_errorcode(static_cast<uint32_t>(result));
    sendData(signer::ChangeControlPasswordType, response.SerializeAsString(), reqId);
 
-   return true;
-}
-
-bool SignerAdapterListener::onWindowsStatus(const std::string &data, bs::signer::RequestId)
-{
-   headless::WindowStatus msg;
-   if (!msg.ParseFromString(data)) {
-      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
-      return false;
-   }
-   app_->windowVisibilityChanged(msg.visible());
    return true;
 }
 
@@ -958,7 +942,7 @@ void SignerAdapterListener::onStarted()
 
 void SignerAdapterListener::shutdownIfNeeded()
 {
-   if (settings_->runMode() == bs::signer::RunMode::litegui && app_) {
+   if (app_) {
       logger_->info("terminal disconnect detected, shutdown...");
       app_->close();
    }

@@ -56,39 +56,10 @@ ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProv
       emit needClose();
    });
 
-   connect(ui_->tableViewArmory->selectionModel(), &QItemSelectionModel::selectionChanged, this,
-           [this](const QItemSelection &selected, const QItemSelection &deselected){
-      // this check will prevent loop selectionChanged -> setupServerFromSelected -> select -> selectionChanged
-      if (deselected.isEmpty()) {
-         return;
-      }
-
-      bool isEmpty = ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty();
-      ui_->pushButtonDeleteServer->setDisabled(isEmpty);
-      ui_->pushButtonEditServer->setDisabled(isEmpty);
-      ui_->pushButtonConnect->setDisabled(isEmpty);
-      ui_->pushButtonSelectServer->setDisabled(isEmpty);
-
-      if (!isEmpty && selected.indexes().first().row() < ArmoryServersProvider::kDefaultServersCount) {
-         ui_->pushButtonDeleteServer->setDisabled(true);
-         ui_->pushButtonEditServer->setDisabled(true);
-      }
-
-      resetForm();
-
-      // save to settings right after row highlight
-      setupServerFromSelected(true);
-   });
-
-   connect(ui_->comboBoxNetworkType, QOverload<int>::of(&QComboBox::currentIndexChanged),
-           [this](int index){
-      if (index == 1) {
-         ui_->spinBoxPort->setValue(appSettings_->GetDefaultArmoryRemotePort(NetworkType::MainNet));
-      }
-      else if (index == 2){
-         ui_->spinBoxPort->setValue(appSettings_->GetDefaultArmoryRemotePort(NetworkType::TestNet));
-      }
-   });
+   connect(ui_->tableViewArmory->selectionModel(), &QItemSelectionModel::selectionChanged
+      , this, &ArmoryServersWidget::onSelectionChanged);
+   connect(ui_->comboBoxNetworkType, QOverload<int>::of(&QComboBox::currentIndexChanged)
+      , this, &ArmoryServersWidget::onCurIndexChanged);
 
    resetForm();
 
@@ -114,15 +85,102 @@ ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProv
    ui_->pushButtonKeyImport->hide();
 }
 
+ArmoryServersWidget::ArmoryServersWidget(QWidget* parent)
+   : QWidget(parent)
+   , ui_(new Ui::ArmoryServersWidget)
+{
+   armoryServersModel_ = new ArmoryServersViewModel(this);
+   ui_->setupUi(this);
+
+   ui_->pushButtonConnect->setVisible(false);
+   ui_->spinBoxPort->setValue(kArmoryDefaultMainNetPort);
+
+   ui_->tableViewArmory->setModel(armoryServersModel_);
+   ui_->tableViewArmory->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+   //   int defaultSectionSize = ui_->tableViewArmory->horizontalHeader()->defaultSectionSize();
+   //   ui_->tableViewArmory->horizontalHeader()->resizeSection(0, defaultSectionSize * 2);
+   //   ui_->tableViewArmory->horizontalHeader()->resizeSection(1, defaultSectionSize);
+   //   ui_->tableViewArmory->horizontalHeader()->resizeSection(2, defaultSectionSize);
+   //   ui_->tableViewArmory->horizontalHeader()->resizeSection(3, defaultSectionSize);
+   ui_->tableViewArmory->horizontalHeader()->setStretchLastSection(true);
+
+   isStartupDialog_ = false;
+
+   connect(ui_->pushButtonAddServer, &QPushButton::clicked, this, &ArmoryServersWidget::onAddServer);
+   connect(ui_->pushButtonDeleteServer, &QPushButton::clicked, this, &ArmoryServersWidget::onDeleteServer);
+   connect(ui_->pushButtonEditServer, &QPushButton::clicked, this, &ArmoryServersWidget::onEdit);
+   connect(ui_->pushButtonSelectServer, &QPushButton::clicked, this, &ArmoryServersWidget::onSelect);
+   connect(ui_->pushButtonConnect, &QPushButton::clicked, this, &ArmoryServersWidget::onConnect);
+   connect(ui_->pushButtonCancelSaveServer, &QPushButton::clicked, this, &ArmoryServersWidget::resetForm);
+   connect(ui_->pushButtonSaveServer, &QPushButton::clicked, this, &ArmoryServersWidget::onSave);
+   connect(ui_->lineEditAddress, &QLineEdit::textChanged, this, &ArmoryServersWidget::onFormChanged);
+
+   QRegExp rx(kRxAddress);
+   ui_->lineEditAddress->setValidator(new QRegExpValidator(rx, this));
+   onFormChanged();
+
+   connect(ui_->pushButtonClose, &QPushButton::clicked, this, [this]() {
+      emit needClose();
+   });
+
+   connect(ui_->tableViewArmory->selectionModel(), &QItemSelectionModel::selectionChanged
+      , this, &ArmoryServersWidget::onSelectionChanged);
+   connect(ui_->comboBoxNetworkType, QOverload<int>::of(&QComboBox::currentIndexChanged)
+      , this, &ArmoryServersWidget::onCurIndexChanged);
+
+   resetForm();
+
+   connect(ui_->lineEditName, &QLineEdit::textEdited, this, &ArmoryServersWidget::updateSaveButton);
+   connect(ui_->lineEditAddress, &QLineEdit::textEdited, this, &ArmoryServersWidget::updateSaveButton);
+   connect(ui_->comboBoxNetworkType, &QComboBox::currentTextChanged, this, &ArmoryServersWidget::updateSaveButton);
+   connect(ui_->spinBoxPort, QOverload<const QString&>::of(&QSpinBox::valueChanged), this, &ArmoryServersWidget::updateSaveButton);
+
+   updateSaveButton();
+
+   // TODO: remove select server button if it's not required anymore
+   ui_->pushButtonSelectServer->hide();
+   ui_->pushButtonKeyImport->hide();
+}
+
+void ArmoryServersWidget::onSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
+{
+   // this check will prevent loop selectionChanged -> setupServerFromSelected -> select -> selectionChanged
+   if (deselected.isEmpty()) {
+      return;
+   }
+
+   bool isEmpty = ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty();
+   ui_->pushButtonDeleteServer->setDisabled(isEmpty);
+   ui_->pushButtonEditServer->setDisabled(isEmpty);
+   ui_->pushButtonConnect->setDisabled(isEmpty);
+   ui_->pushButtonSelectServer->setDisabled(isEmpty);
+
+   if (!isEmpty && selected.indexes().first().row() < ArmoryServersProvider::kDefaultServersCount) {
+      ui_->pushButtonDeleteServer->setDisabled(true);
+      ui_->pushButtonEditServer->setDisabled(true);
+   }
+
+   resetForm();
+
+   // save to settings right after row highlight
+   setupServerFromSelected(true);
+}
+
 void ArmoryServersWidget::setRowSelected(int row)
 {
    QModelIndex currentIndex;
-   if (armoryServersProvider_->servers().size() >= 0) {
+   if (armoryServersProvider_ && (armoryServersProvider_->servers().size() >= 0)) {
       int indexOfCurrent = row;
       if (indexOfCurrent < 0 || indexOfCurrent >= armoryServersProvider_->servers().size()) {
          indexOfCurrent = 0;
       }
       currentIndex = armoryServersModel_->index(indexOfCurrent, 0);
+   }
+   else {
+      if (row >= armoryServersModel_->rowCount()) {
+         row = 0;
+      }
+      currentIndex = armoryServersModel_->index(row, 0);
    }
    ui_->tableViewArmory->selectionModel()->select(currentIndex
       , QItemSelectionModel::Select | QItemSelectionModel::Rows);
@@ -146,11 +204,17 @@ void ArmoryServersWidget::onAddServer()
    server.armoryDBPort = ui_->spinBoxPort->value();
    server.armoryDBKey = ui_->lineEditKey->text();
 
-   bool ok = armoryServersProvider_->add(server);
-   if (ok) {
+   if (armoryServersProvider_) {
+      bool ok = armoryServersProvider_->add(server);
+      if (ok) {
+         resetForm();
+         setRowSelected(armoryServersProvider_->servers().size() - 1);
+         setupServerFromSelected(true);
+      }
+   }
+   else {
+      emit addServer(server);
       resetForm();
-      setRowSelected(armoryServersProvider_->servers().size() - 1);
-      setupServerFromSelected(true);
    }
 }
 
@@ -165,9 +229,13 @@ void ArmoryServersWidget::onDeleteServer()
    if (selectedRow < ArmoryServersProvider::kDefaultServersCount) {
       return;
    }
-   armoryServersProvider_->remove(selectedRow);
-   setRowSelected(0);
-   setupServerFromSelected(true);
+   if (armoryServersProvider_) {
+      armoryServersProvider_->remove(selectedRow);
+      setupServerFromSelected(true);
+   }
+   else {
+      emit delServer(selectedRow);
+   }
 }
 
 void ArmoryServersWidget::onEdit()
@@ -177,11 +245,20 @@ void ArmoryServersWidget::onEdit()
    }
 
    int index = ui_->tableViewArmory->selectionModel()->selectedIndexes().first().row();
-   if (index >= armoryServersProvider_->servers().size()) {
-      return;
+   ArmoryServer server;
+   if (armoryServersProvider_) {
+      if (index >= armoryServersProvider_->servers().size()) {
+         return;
+      }
+      server = armoryServersProvider_->servers().at(index);
+   }
+   else {
+      if (index >= servers_.size()) {
+         return;
+      }
+      server = servers_.at(index);  //FIXME: use model instead to retrieve server data
    }
 
-   ArmoryServer server = armoryServersProvider_->servers().at(index);
    ui_->stackedWidgetAddSave->setCurrentWidget(ui_->pageSaveServerButton);
 
    ui_->lineEditName->setText(server.name);
@@ -208,7 +285,7 @@ void ArmoryServersWidget::onSave()
    }
 
    int index = ui_->tableViewArmory->selectionModel()->selectedIndexes().first().row();
-   if (index >= armoryServersProvider_->servers().size()) {
+   if (armoryServersProvider_ && (index >= armoryServersProvider_->servers().size())) {
       return;
    }
 
@@ -219,10 +296,16 @@ void ArmoryServersWidget::onSave()
    server.armoryDBPort = ui_->spinBoxPort->value();
    server.armoryDBKey = ui_->lineEditKey->text();
 
-   bool ok = armoryServersProvider_->replace(index, server);
-   if (ok) {
+   if (armoryServersProvider_) {
+      bool ok = armoryServersProvider_->replace(index, server);
+      if (ok) {
+         resetForm();
+         setRowSelected(armoryServersProvider_->indexOfCurrent());
+      }
+   }
+   else {
+      emit updServer(index, server);
       resetForm();
-      setRowSelected(armoryServersProvider_->indexOfCurrent());
    }
 }
 
@@ -251,14 +334,17 @@ void ArmoryServersWidget::setupServerFromSelected(bool needUpdate)
    if (ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty()) {
       return;
    }
-
    int index = ui_->tableViewArmory->selectionModel()->selectedIndexes().first().row();
-   if (index >= armoryServersProvider_->servers().size()) {
+   if (armoryServersProvider_ && (index >= armoryServersProvider_->servers().size())) {
       return;
    }
-
-   armoryServersProvider_->setupServer(index, needUpdate);
-   setRowSelected(armoryServersProvider_->indexOfCurrent());
+   if (armoryServersProvider_) {
+      armoryServersProvider_->setupServer(index, needUpdate);
+      setRowSelected(armoryServersProvider_->indexOfCurrent());
+   }
+   else {
+      emit setServer(index);
+   }
 }
 
 void ArmoryServersWidget::resetForm()
@@ -269,7 +355,7 @@ void ArmoryServersWidget::resetForm()
    ui_->comboBoxNetworkType->setCurrentIndex(0);
    ui_->lineEditAddress->clear();
    ui_->spinBoxPort->setValue(0);
-   ui_->spinBoxPort->setSpecialValueText(tr(" "));
+   ui_->spinBoxPort->setSpecialValueText(QLatin1String(" "));
    ui_->lineEditKey->clear();
 }
 
@@ -289,9 +375,24 @@ bool ArmoryServersWidget::isExpanded() const
    return isExpanded_;
 }
 
+void ArmoryServersWidget::onArmoryServers(const QList<ArmoryServer>& servers
+   , int idxCur, int idxConn)
+{
+   servers_ = servers;
+   if (idxCur < ArmoryServersProvider::kDefaultServersCount) {
+      ui_->pushButtonDeleteServer->setDisabled(true);
+      ui_->pushButtonEditServer->setDisabled(true);
+   }
+
+   if (armoryServersModel_) {
+      armoryServersModel_->onArmoryServers(servers, idxCur, idxConn);
+   }
+   setRowSelected(idxCur);
+}
+
 void ArmoryServersWidget::onFormChanged()
 {
-   bool acceptable = ui_->lineEditAddress->hasAcceptableInput();
+   const bool acceptable = ui_->lineEditAddress->hasAcceptableInput();
    bool exists = false;
    bool valid = false;
    if (acceptable) {
@@ -302,10 +403,33 @@ void ArmoryServersWidget::onFormChanged()
       armoryHost.armoryDBKey = ui_->lineEditKey->text();
       valid = armoryHost.isValid();
       if (valid) {
-         exists = armoryServersProvider_->indexOf(armoryHost.name) != -1
+         if (armoryServersProvider_) {
+            exists = armoryServersProvider_->indexOf(armoryHost.name) != -1
                || armoryServersProvider_->indexOf(armoryHost) != -1;
+         }
+         else {
+            for (int i = 0; i < servers_.size(); ++i) {
+               if ((armoryHost.name == servers_.at(i).name)
+                  || ((armoryHost.armoryDBIp == servers_.at(i).armoryDBIp) &&
+                        (armoryHost.armoryDBPort == servers_.at(i).armoryDBPort))) {
+                  exists = true;
+                  break;
+               }
+            }
+         }
       }
    }
    ui_->pushButtonAddServer->setEnabled(valid && acceptable && !exists);
    ui_->pushButtonSaveServer->setEnabled(valid && acceptable);
+}
+
+void ArmoryServersWidget::onCurIndexChanged(int index)
+{
+   if (appSettings_) {
+      if (index == 1) {
+         ui_->spinBoxPort->setValue(appSettings_->GetDefaultArmoryRemotePort(NetworkType::MainNet));
+      } else if (index == 2) {
+         ui_->spinBoxPort->setValue(appSettings_->GetDefaultArmoryRemotePort(NetworkType::TestNet));
+      }
+   }
 }

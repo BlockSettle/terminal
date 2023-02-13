@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -58,16 +58,17 @@ check unflagged return
 #include "CheckRecipSigner.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
-#include "InprocSigner.h"
+#include "Wallets/HeadlessContainer.h"
+#include "Wallets/InprocSigner.h"
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "AddressVerificator.h"
 
 #include "TestAuth.h"
 
-using namespace ArmorySigner;
+using namespace Armory::Signer;
 
+#if 0 // Auth address code turned off
 ///////////////////////////////////////////////////////////////////////////////
 void TestValidationACT::onRefresh(const std::vector<BinaryData>& ids, bool online)
 {
@@ -127,7 +128,7 @@ BinaryData TestAuth::sendTo(uint64_t value, bs::Address& addr)
 
    signer.addSpender(spendPtr);
 
-   signer.addRecipient(addr.getRecipient(bs::XBTAmount{value}));
+   signer.addRecipient(addr.getRecipient(bs::XBTAmount{(int64_t)value}));
    signer.setFeed(coinbaseFeed_);
 
    //sign & send
@@ -250,7 +251,7 @@ void TestAuth::SetUp()
    }
 
    //setup sync manager
-   auto inprocSigner = std::make_shared<InprocSigner>(priWallet_, envPtr_->logger());
+   auto inprocSigner = std::make_shared<InprocSigner>(priWallet_, this, envPtr_->logger());
    inprocSigner->Start();
    syncMgr_ = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger(),
       envPtr_->appSettings(), envPtr_->armoryConnection());
@@ -1293,5 +1294,5 @@ TEST_F(TestAuth, Concurrency_WithACT)
    EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[4]));
    EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[5]));
 }
-
+#endif   //0
 //reorg & zc replacement test

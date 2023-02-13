@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -10,9 +10,9 @@
 */
 #include "PubKeyLoader.h"
 #include <QFile>
+#include <spdlog/fmt/fmt.h>
 #include "BSMessageBox.h"
 #include "ImportKeyBox.h"
-#include "BSTerminalMainWindow.h"
 #include "FutureValue.h"
 
 PubKeyLoader::PubKeyLoader(const std::shared_ptr<ApplicationSettings> &appSettings
@@ -88,10 +88,10 @@ bs::network::BIP15xNewKeyCb PubKeyLoader::getApprovingCallback(const KeyType kt
          });
       };
 
-      BSTerminalMainWindow *mw = qobject_cast<BSTerminalMainWindow *>(bsMainWindow);
+/*      BSTerminalMainWindow *mw = qobject_cast<BSTerminalMainWindow *>(bsMainWindow);
       if (mw) {
          mw->addDeferredDialog(deferredDialog);
-      }
+      }*/
    };
 }
 

@@ -11,12 +11,12 @@
 #include "TXInfo.h"
 
 #include "CheckRecipSigner.h"
-#include "OfflineSigner.h"
+#include "Wallets/OfflineSigner.h"
 #include "TxClasses.h"
 #include "ScriptRecipient.h"
 #include "Wallets/SyncHDWallet.h"
 
-#include "QWalletInfo.h"
+#include "Wallets/QWalletInfo.h"
 
 #include <spdlog/spdlog.h>
 #include <QFile>
@@ -97,22 +97,6 @@ double TXInfo::inputAmountFull() const
 double TXInfo::outputAmountFull() const
 {
    return txReq_.armorySigner_.getTotalOutputsValue() / BTCNumericTypes::BalanceDivider;
-}
-
-double TXInfo::amountCCReceived(const QString &cc) const
-{
-   ContainsAddressCb &containsCCAddressCb = [this, cc](const bs::Address &address){
-      const auto &wallet = walletsMgr_->getCCWallet(cc.toStdString());
-      return wallet->containsAddress(address);
-   };
-
-   return txReq_.amountReceived(containsCCAddressCb) / BTCNumericTypes::BalanceDivider;
-}
-
-double TXInfo::amountCCSent() const
-{
-   return txReq_.totalSpent(containsAnyOurCCAddressCb_) / BTCNumericTypes::BalanceDivider;
-
 }
 
 double TXInfo::amountXBTReceived() const
@@ -197,7 +181,7 @@ QStringList TXInfo::counterPartyRecipients() const
    // Get recipients not listed in our wallets
    // Usable for settlement tx dialog
 
-   std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recipientsList;
+   std::vector<std::shared_ptr<Armory::Signer::ScriptRecipient>> recipientsList;
    recipientsList = txReq_.getRecipients(containsCounterPartyAddressCb_);
 
    QStringList result;
@@ -215,7 +199,7 @@ QStringList TXInfo::allRecipients() const
    // Get all recipients from this tx (minus change)
    // Usable for regular tx sign dialog
 
-   std::vector<std::shared_ptr<ArmorySigner::ScriptRecipient>> recipientsList;
+   std::vector<std::shared_ptr<Armory::Signer::ScriptRecipient>> recipientsList;
    recipientsList = txReq_.getRecipients([this](const bs::Address &addr){
       return (addr != txReq_.change.address); });
 

@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2019 - 2020, BlockSettle AB
+* Copyright (C) 2019 - 2021, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -14,7 +14,9 @@
 #include <QDialog>
 #include <memory>
 #include "BinaryData.h"
-#include "QWalletInfo.h"
+#include "Wallets/SignerDefs.h"
+#include "Wallets/SignerUiDefs.h"
+#include "Wallets/QWalletInfo.h"
 
 namespace Ui {
     class WalletPropertiesDialog;
@@ -33,7 +35,7 @@ class ArmoryConnection;
 class ApplicationSettings;
 class AssetManager;
 class CurrentWalletFilter;
-class SignContainer;
+class HeadlessContainer;
 class WalletsViewModel;
 class ConnectionManager;
 
@@ -44,15 +46,22 @@ Q_OBJECT
 
 public:
    RootWalletPropertiesDialog(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<bs::sync::hd::Wallet> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<SignContainer> &
-      , WalletsViewModel *walletsModel
-      , const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<ConnectionManager> &
-      , const std::shared_ptr<AssetManager> &, QWidget* parent = nullptr);
+      , const bs::sync::WalletInfo &, WalletsViewModel *walletsModel
+      , QWidget* parent = nullptr);
    ~RootWalletPropertiesDialog() override;
+
+   void onHDWalletDetails(const bs::sync::HDWalletData&);
+   void onWalletBalances(const bs::sync::WalletBalanceData&);
+   void onSpendableUTXOs();
+   void walletDeleted(const std::string& rootId);
+
+signals:
+   void startRescan(std::string walletId);
+   void needHDWalletDetails(const std::string &walletId);
+   void needWalletBalances(const std::string &walletId);
+   void needUTXOs(const std::string& id, const std::string& walletId
+      , bool confOnly = false, bool swOnly = false);
+   void needWalletDialog(bs::signer::ui::GeneralDialogType, const std::string& rootId);
 
 private slots:
    void onDeleteWallet();
@@ -64,15 +73,14 @@ private slots:
    void onModelReset();
 
 private:
-   void updateWalletDetails(const std::shared_ptr<bs::sync::hd::Wallet> &);
-   void updateWalletDetails(const std::shared_ptr<bs::sync::Wallet> &);
+   void updateWalletDetails(const bs::sync::WalletInfo &);
 
 private:
    std::unique_ptr<Ui::WalletPropertiesDialog>  ui_;
-   std::shared_ptr<bs::sync::hd::Wallet>        wallet_;
+   bs::sync::WalletInfo    wallet_;
    std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;
    bs::hd::WalletInfo                  walletInfo_;
-   std::shared_ptr<SignContainer>      signingContainer_;
+   std::shared_ptr<HeadlessContainer>  signingContainer_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>  connectionManager_;
    std::shared_ptr<AssetManager>       assetMgr_;

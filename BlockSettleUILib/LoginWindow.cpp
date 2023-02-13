@@ -15,15 +15,12 @@
 #include "InfoDialogs/AboutDialog.h"
 #include "ApplicationSettings.h"
 #include "BSMessageBox.h"
-#include "BsClient.h"
 #include "UiUtils.h"
-#include "ZmqContext.h"
 #include "ui_LoginWindow.h"
 #include "FutureValue.h"
 #include "QBitmap"
 
 namespace {
-   const auto kAutheIdTimeout = int(BsClient::autheidLoginTimeout() / std::chrono::seconds(1));
    const auto kProdTitle = QObject::tr("Login to BlockSettle");
    const auto kTestTitle = QObject::tr("Test Environment Login");
 
@@ -33,25 +30,20 @@ namespace {
    //<span style = " font-size:12px;">Not signed up yet ? < / span><br><a href = "{GetAccountLink}"><span style = " font-size:12px; text-decoration: underline; color:#fefeff">Get a BlockSettle Account< / span>< / a>
 }
 
-LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<BsClient> &bsClient
-   , std::shared_ptr<ApplicationSettings> &settings
-   , QWidget* parent)
+LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger>& logger
+   , ApplicationSettings::EnvConfiguration envCfg, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::LoginWindow())
    , logger_(logger)
-   , settings_(settings)
-   , bsClient_(bsClient)
 {
    ui_->setupUi(this);
-   ui_->progressBar->setMaximum(kAutheIdTimeout * 2); // update every 0.5 sec
+   //ui_->progressBar->setMaximum(kAutheIdTimeout * 2); // update every 0.5 sec
    const auto version = ui_->loginVersionLabel->text().replace(QLatin1String("{Version}")
       , tr("Version %1").arg(QString::fromStdString(AboutDialog::version())));
    ui_->loginVersionLabel->setText(version);
    resize(minimumSize());
 
-   const bool isProd = settings_->get<int>(ApplicationSettings::envConfiguration) ==
-      static_cast<int>(ApplicationSettings::EnvConfiguration::Production);
+   const bool isProd = (envCfg == ApplicationSettings::EnvConfiguration::Production);
 
    ApplicationSettings::Setting urlType;
    auto getAccountText = ui_->labelGetAccount->text();
@@ -59,30 +51,28 @@ LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
    if (isProd) {
       urlType = ApplicationSettings::GetAccount_UrlProd;
       title = kProdTitle;
-   }
-   else {
+   } else {
       urlType = ApplicationSettings::GetAccount_UrlTest;
       title = kTestTitle;
       getAccountText.replace(kCreateAccountProd, kCreateAccountTest);
    }
 
    ui_->widgetSignup->setProperty("prodEnv", QVariant(true));
-   getAccountText.replace(QLatin1String("{GetAccountLink}")
-      , settings->get<QString>(urlType));
+/*   getAccountText.replace(QLatin1String("{GetAccountLink}")
+      , settings->get<QString>(urlType));*/  // TODO: use async retrieval
    ui_->labelGetAccount->setText(getAccountText);
    ui_->widgetSignup->update();
 
    connect(ui_->lineEditUsername, &QLineEdit::textChanged, this, &LoginWindow::onTextChanged);
 
-   ui_->checkBoxRememberUsername->setChecked(settings_->get<bool>(ApplicationSettings::rememberLoginUserName));
+//   ui_->checkBoxRememberUsername->setChecked(settings_->get<bool>(ApplicationSettings::rememberLoginUserName));
 
-   const QString username = settings_->get<QString>(ApplicationSettings::celerUsername);
+/*   const QString username = settings_->get<QString>(ApplicationSettings::celerUsername);
    if (!username.isEmpty() && ui_->checkBoxRememberUsername->isChecked()) {
       ui_->lineEditUsername->setText(username);
-   }
-   else {
+   } else {
       ui_->lineEditUsername->setFocus();
-   }
+   }*/   //TODO: use async retrieval
 
    connect(ui_->signWithEidButton, &QPushButton::clicked, this, &LoginWindow::accept);
 
@@ -91,9 +81,6 @@ LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
    timer_.start();
 
    updateState();
-
-   connect(bsClient_.get(), &BsClient::startLoginDone, this, &LoginWindow::onStartLoginDone);
-   connect(bsClient_.get(), &BsClient::getLoginResultDone, this, &LoginWindow::onGetLoginResultDone);
 }
 
 LoginWindow::~LoginWindow() = default;
@@ -125,6 +112,45 @@ QString LoginWindow::email() const
    return ui_->lineEditUsername->text().toLower();
 }
 
+void LoginWindow::setLogin(const QString& login)
+{
+   ui_->lineEditUsername->setText(login);
+   updateState();
+}
+
+void LoginWindow::setRememberLogin(bool flag)
+{
+   ui_->checkBoxRememberUsername->setChecked(flag);
+}
+
+void LoginWindow::onLoginStarted(const std::string& login, bool success
+   , const std::string& errMsg)
+{
+   if (success) {
+      setState(WaitLoginResult);
+   }
+   else {
+      setState(Idle);
+      displayError(errMsg);
+   }
+}
+
+#if 0
+void LoginWindow::onLoggedIn(const BsClientLoginResult& result)
+{
+   if (result.status == AutheIDClient::Cancelled || result.status == AutheIDClient::Timeout) {
+      setState(Idle);
+      return;
+   }
+   if (result.status != AutheIDClient::NoError) {
+      setState(Idle);
+      displayError(result.errorMsg);
+      return;
+   }
+   QDialog::accept();
+}
+#endif
+
 void LoginWindow::onStartLoginDone(bool success, const std::string &errorMsg)
 {
    if (!success) {
@@ -133,26 +159,9 @@ void LoginWindow::onStartLoginDone(bool success, const std::string &errorMsg)
       return;
    }
 
-   bsClient_->getLoginResult();
+   //bsClient_->getLoginResult();
 
    setState(WaitLoginResult);
-}
-
-void LoginWindow::onGetLoginResultDone(const BsClientLoginResult &result)
-{
-   if (result.status == AutheIDClient::Cancelled || result.status == AutheIDClient::Timeout) {
-      setState(Idle);
-      return;
-   }
-
-   if (result.status != AutheIDClient::NoError) {
-      setState(Idle);
-      displayError(result.errorMsg);
-      return;
-   }
-
-   result_ = std::make_unique<BsClientLoginResult>(std::move(result));
-   QDialog::accept();
 }
 
 void LoginWindow::accept()
@@ -163,7 +172,7 @@ void LoginWindow::accept()
 void LoginWindow::reject()
 {
    if (state_ == WaitLoginResult) {
-      bsClient_->cancelLogin();
+      emit needCancelLogin();
    }
    QDialog::reject();
 }
@@ -210,19 +219,28 @@ void LoginWindow::onAuthPressed()
       return;
    }
 
-   timeLeft_ = kAutheIdTimeout;
-
    QString login = ui_->lineEditUsername->text().trimmed();
    ui_->lineEditUsername->setText(login);
 
-   bsClient_->startLogin(login.toStdString());
+   emit needStartLogin(login.toStdString());
 
    if (ui_->checkBoxRememberUsername->isChecked()) {
-      settings_->set(ApplicationSettings::rememberLoginUserName, true);
-      settings_->set(ApplicationSettings::celerUsername, ui_->lineEditUsername->text());
+      if (settings_) {
+         settings_->set(ApplicationSettings::rememberLoginUserName, true);
+         settings_->set(ApplicationSettings::celerUsername, ui_->lineEditUsername->text());
+      }
+      else {
+         emit putSetting(ApplicationSettings::rememberLoginUserName, true);
+         emit putSetting(ApplicationSettings::celerUsername, ui_->lineEditUsername->text());
+      }
    }
    else {
-      settings_->set(ApplicationSettings::rememberLoginUserName, false);
+      if (settings_) {
+         settings_->set(ApplicationSettings::rememberLoginUserName, false);
+      }
+      else {
+         emit putSetting(ApplicationSettings::rememberLoginUserName, false);
+      }
    }
 
    setState(WaitLoginResult);

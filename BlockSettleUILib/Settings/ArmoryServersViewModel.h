@@ -15,7 +15,6 @@
 #include <memory>
 
 #include "AuthAddress.h"
-#include "AuthAddressManager.h"
 #include "BinaryData.h"
 #include "ApplicationSettings.h"
 #include "ArmoryServersProvider.h"
@@ -24,8 +23,9 @@
 class ArmoryServersViewModel : public QAbstractTableModel
 {
 public:
-   ArmoryServersViewModel(const std::shared_ptr<ArmoryServersProvider>& serversProvider
+   [[deprecated]] ArmoryServersViewModel(const std::shared_ptr<ArmoryServersProvider>& serversProvider
                           , QObject *parent = nullptr);
+   ArmoryServersViewModel(QObject* parent = nullptr);
    ~ArmoryServersViewModel() noexcept = default;
 
    ArmoryServersViewModel(const ArmoryServersViewModel&) = delete;
@@ -43,6 +43,8 @@ public:
    void setHighLightSelectedServer(bool highLightSelectedServer);
    void setSingleColumnMode(bool singleColumnMode);
 
+   void onArmoryServers(const QList<ArmoryServer>&, int idxCur, int idxConn);
+
 public slots:
    void update();
 
@@ -51,6 +53,7 @@ private:
    QList<ArmoryServer> servers_;
    bool highLightSelectedServer_ = true;
    bool singleColumnMode_ = false;
+   int currentServerIndex_{ 0 };
 
    enum ArmoryServersViewViewColumns : int
    {
