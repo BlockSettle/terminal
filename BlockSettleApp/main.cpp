@@ -30,9 +30,10 @@
 #include "AssetsAdapter.h"
 #include "BsServerAdapter.h"
 #include "QtGuiAdapter.h"
+#include "QtQuickAdapter.h"
 #include "SettingsAdapter.h"
 #include "SignerAdapter.h"
-
+#include <spdlog/spdlog.h>
 #include <spdlog/sinks/daily_file_sink.h>
 
 //#include "AppNap.h"
@@ -54,6 +55,23 @@ Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
 
 Q_IMPORT_PLUGIN(QSQLiteDriverPlugin)
 Q_IMPORT_PLUGIN(QICOPlugin)
+
+#ifdef STATIC_BUILD
+#if defined (Q_OS_LINUX)
+Q_IMPORT_PLUGIN(QtQuick2PrivateWidgetsPlugin)
+#endif
+
+Q_IMPORT_PLUGIN(QtQuick2Plugin)
+Q_IMPORT_PLUGIN(QtQuick2WindowPlugin)
+Q_IMPORT_PLUGIN(QtQuickControls2Plugin)
+Q_IMPORT_PLUGIN(QtQuickTemplates2Plugin)
+//Q_IMPORT_PLUGIN(QtQuickControls1Plugin)
+Q_IMPORT_PLUGIN(QtQuickLayoutsPlugin)
+Q_IMPORT_PLUGIN(QtQmlModelsPlugin)
+Q_IMPORT_PLUGIN(QmlFolderListModelPlugin)
+Q_IMPORT_PLUGIN(QmlSettingsPlugin)
+//Q_IMPORT_PLUGIN(QtLabsPlatformPlugin)
+#endif // STATIC_BUILD
 
 Q_DECLARE_METATYPE(ArmorySettings)
 Q_DECLARE_METATYPE(AsyncClient::LedgerDelegate)
@@ -158,13 +176,22 @@ int main(int argc, char** argv)
             + QDir::separator() + ApplicationSettings::appSubDir());
       const auto &adSettings = std::make_shared<SettingsAdapter>(settings, args);
       const auto &logMgr = adSettings->logManager();
+      spdlog::set_default_logger(logMgr->logger());
 
       bs::message::TerminalInprocBus inprocBus(logMgr->logger());
       inprocBus.addAdapter(adSettings);
 
       const auto &apiAdapter = std::make_shared<ApiAdapter>(logMgr->logger("API"));
-      const auto &guiAdapter = std::make_shared<QtGuiAdapter>(logMgr->logger("ui"));
-      //const auto& guiAdapter = std::make_shared<QtQuickAdapter>(logMgr->logger("ui"));
+      std::shared_ptr<ApiBusAdapter> guiAdapter;
+      if (adSettings->guiMode() == "qtwidgets") {
+         guiAdapter = std::make_shared<QtGuiAdapter>(logMgr->logger("ui"));
+      }
+      else if (adSettings->guiMode() == "qtquick") {
+         guiAdapter = std::make_shared<QtQuickAdapter>(logMgr->logger("ui"));
+      }
+      else {
+         throw std::runtime_error("unknown GUI mode " + adSettings->guiMode());
+      }
       apiAdapter->add(guiAdapter);
       apiAdapter->add(std::make_shared<ApiJsonAdapter>(logMgr->logger("json")));
       inprocBus.addAdapter(apiAdapter);
@@ -174,18 +201,17 @@ int main(int argc, char** argv)
 
       const auto& userBlockchain = bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain);
       const auto& userWallets = bs::message::UserTerminal::create(bs::message::TerminalUsers::Wallets);
-      inprocBus.addAdapter(std::make_shared<AssetsAdapter>(logMgr->logger()));
+      //inprocBus.addAdapter(std::make_shared<AssetsAdapter>(logMgr->logger()));
       inprocBus.addAdapterWithQueue(std::make_shared<WalletsAdapter>(logMgr->logger()
          , userWallets, signAdapter->createClient(), userBlockchain), "wallets");
       inprocBus.addAdapter(std::make_shared<BsServerAdapter>(logMgr->logger("bscon")));
-
       //inprocBus.addAdapter(std::make_shared<MatchingAdapter>(logMgr->logger("match")));
       //inprocBus.addAdapter(std::make_shared<SettlementAdapter>(logMgr->logger("settl")));
       //inprocBus.addAdapter(std::make_shared<MktDataAdapter>(logMgr->logger("md")));
       //inprocBus.addAdapter(std::make_shared<MDHistAdapter>(logMgr->logger("mdh")));
       //inprocBus.addAdapter(std::make_shared<ChatAdapter>(logMgr->logger("chat")));
       inprocBus.addAdapterWithQueue(std::make_shared<BlockchainAdapter>(logMgr->logger()
-         , userBlockchain), "blkchain_conn");
+         , userBlockchain), /*"blkchain_conn"*/"signer");
 
       if (!inprocBus.run(argc, argv)) {
          logMgr->logger()->error("No runnable adapter found on main inproc bus");
