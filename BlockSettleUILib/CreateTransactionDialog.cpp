@@ -92,7 +92,7 @@ void CreateTransactionDialog::init()
    xbtValidator_ = new XbtAmountValidator(this);
    lineEditAmount()->setValidator(xbtValidator_);
 
-   populateWalletsList();
+   emit needWalletsList(UiUtils::WalletsTypes::All_AllowHwLegacy, "CreateTX");
    if (loadFeeSuggestions_) {
       populateFeeList();
    }
@@ -170,42 +170,29 @@ int CreateTransactionDialog::SelectWallet(const std::string& walletId, UiUtils::
 
 void CreateTransactionDialog::populateWalletsList()
 {
-   emit needWalletsList(UiUtils::WalletsTypes::All_AllowHwLegacy, "CreateTX");
-}
-
-void CreateTransactionDialog::onWalletsList(const std::string &id
-   , const std::vector<bs::sync::HDWalletData>& hdWallets)
-{
-   if (id != "CreateTX") {
-      return;
-   }
    int selected = 0;
    auto comboBox = comboBoxWallets();
    comboBox->clear();
 
-   const auto &addRow = [comboBox, this]
-      (const std::string& label, const std::string& walletId, UiUtils::WalletsTypes type)
+   const auto& addRow = [comboBox, this]
+   (const std::string& label, const std::string& walletId, UiUtils::WalletsTypes type)
    {
       bool blocked = comboBox->blockSignals(true);
       int i = comboBox->count();
-      logger_->debug("[CreateTransactionDialog::onWalletsList::addRow] #{}: {}", i, walletId);
       comboBox->addItem(QString::fromStdString(label));
       comboBox->setItemData(i, QString::fromStdString(walletId), UiUtils::WalletIdRole);
       comboBox->setItemData(i, QVariant::fromValue(static_cast<int>(type)), UiUtils::WalletType);
-      logger_->debug("[CreateTransactionDialog::onWalletsList::addRow] {} #{} get: {}", i, (void*)comboBox, comboBox->itemData(i, UiUtils::WalletIdRole).toString().toStdString());
       comboBox->blockSignals(blocked);
    };
 
-   hdWallets_.clear();
-   for (const auto& hdWallet : hdWallets) {
-      hdWallets_[hdWallet.id] = hdWallet;
-      if (hdWallet.primary) {
+   for (const auto& hdWallet : hdWallets_) {
+      if (hdWallet.second.primary) {
          selected = comboBox->count();
       }
       UiUtils::WalletsTypes type = UiUtils::WalletsTypes::None;
-      if ((hdWallet.groups.size() == 1) && (hdWallet.groups[0].leaves.size() == 1)) {
-         const auto& leaf = hdWallet.groups[0].leaves.at(0);
-         std::string label = hdWallet.name;
+      if ((hdWallet.second.groups.size() == 1) && (hdWallet.second.groups[0].leaves.size() == 1)) {
+         const auto& leaf = hdWallet.second.groups[0].leaves.at(0);
+         std::string label = hdWallet.second.name;
          const auto purpose = static_cast<bs::hd::Purpose>(leaf.path.get(0) & ~bs::hd::hardFlag);
          if (purpose == bs::hd::Purpose::Native) {
             label += " Native";
@@ -217,19 +204,39 @@ void CreateTransactionDialog::onWalletsList(const std::string &id
             label += " Legacy";
             type = UiUtils::WalletsTypes::HardwareLegacy;
          }
-         addRow(label, hdWallet.id, type);
-      }
-      else {
-         if (hdWallet.offline) {
+         addRow(label, hdWallet.second.id, type);
+      } else {
+         if (hdWallet.second.offline) {
             type = UiUtils::WalletsTypes::WatchOnly;
          } else {
             type = UiUtils::WalletsTypes::Full;
          }
-         addRow(hdWallet.name, hdWallet.id, type);
+         addRow(hdWallet.second.name, hdWallet.second.id, type);
       }
    }
    comboBox->setCurrentIndex(selected);
    selectedWalletChanged(selected, true);
+}
+
+void CreateTransactionDialog::onWalletsList(const std::string &id
+   , const std::vector<bs::sync::HDWalletData>& hdWallets)
+{
+   if (id != "CreateTX") {
+      return;
+   }
+
+   hdWallets_.clear();
+   for (const auto& hdWallet : hdWallets) {
+      hdWallets_[hdWallet.id] = hdWallet;
+   }
+   populateWalletsList();
+}
+
+void CreateTransactionDialog::onWalletDeleted(const bs::sync::WalletInfo& wi)
+{
+   const auto& rootId = *wi.ids.cbegin();
+   hdWallets_.erase(rootId);
+   populateWalletsList();
 }
 
 void CreateTransactionDialog::onFeeLevels(const std::map<unsigned int, float>& feeLevels)

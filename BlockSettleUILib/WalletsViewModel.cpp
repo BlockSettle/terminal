@@ -154,27 +154,27 @@ public:
 
       return ret;
    }
-   BTCNumericTypes::balance_type getBalanceTotal() const { return balTotal_; }
-   BTCNumericTypes::balance_type getBalanceUnconf() const { return balUnconf_; }
-   BTCNumericTypes::balance_type getBalanceSpend() const { return balSpend_; }
-   size_t getNbUsedAddresses() const { return nbAddr_; }
+   BTCNumericTypes::balance_type getBalanceTotal() const override { return balTotal_; }
+   BTCNumericTypes::balance_type getBalanceUnconf() const override { return balUnconf_; }
+   BTCNumericTypes::balance_type getBalanceSpend() const override { return balSpend_; }
+   size_t getNbUsedAddresses() const override { return nbAddr_; }
    bs::sync::WalletInfo hdWallet() const override { return hdWallet_; }
 
-   void updateCounters(WalletRootNode *node) {
-      if (!node) {
-         return;
-      }
-      if (node->getBalanceTotal() > 0) {
-         balTotal_.store(balTotal_.load() + node->getBalanceTotal());
-      }
-      if (node->getBalanceUnconf() > 0) {
-         balUnconf_.store(balUnconf_.load() + node->getBalanceUnconf());
-      }
-      if (node->getBalanceSpend() > 0) {
-         balSpend_.store(balSpend_.load() + node->getBalanceSpend());
-      }
-      if (type() != Type::GroupCC) {
-         nbAddr_ += node->getNbUsedAddresses();
+   void updateCounters()
+   {
+      balTotal_ = 0;
+      balUnconf_ = 0;
+      balSpend_ = 0;
+      nbAddr_ = 0;
+
+      for (const auto& child : children_) {
+         balTotal_.store(balTotal_.load() + child->getBalanceTotal());
+         balUnconf_.store(balUnconf_.load() + child->getBalanceUnconf());
+         balSpend_.store(balSpend_.load() + child->getBalanceSpend());
+
+         if (type() != Type::GroupCC) {
+            nbAddr_ += child->getNbUsedAddresses();
+         }
       }
    }
 
@@ -314,7 +314,7 @@ public:
       const auto leafNode = new WalletLeafNode(viewModel_, leaf, hdWallet_, nbChildren(), this);
       leafNode->setBalances(wallet);
       add(leafNode);
-      updateCounters(leafNode);
+      updateCounters();
       wallets_.push_back(leaf);
    }
 
@@ -690,111 +690,7 @@ void WalletsViewModel::onWalletBalances(const bs::sync::WalletBalanceData &wbd)
    if (!groupNode) {
       return;
    }
-   groupNode->updateCounters(leafNode);
+   groupNode->updateCounters();
    emit dataChanged(createIndex(groupNode->row(), (int)WalletColumns::ColumnSpendableBalance, static_cast<void*>(groupNode->parent()))
       , createIndex(leafNode->row(), (int)WalletColumns::ColumnNbAddresses, static_cast<void*>(groupNode->parent())));
-}
-
-void WalletsViewModel::LoadWallets(bool keepSelection)
-{
-   const auto treeView = qobject_cast<QTreeView *>(QObject::parent());
-   std::string selectedWalletId;
-   if (keepSelection && (treeView != nullptr)) {
-      selectedWalletId = "empty";
-      const auto sel = treeView->selectionModel()->selectedRows();
-      if (!sel.empty()) {
-         const auto fltModel = qobject_cast<QSortFilterProxyModel *>(treeView->model());
-         const auto index = fltModel ? fltModel->mapToSource(sel[0]) : sel[0];
-         const auto node = getNode(index);
-         if (node != nullptr) {
-            const auto &wallets = node->wallets();
-            if (wallets.size() == 1) {
-               selectedWalletId = *wallets[0].ids.cbegin();
-            }
-         }
-      }
-   }
-
-   beginResetModel();
-   rootNode_->clear();
-   for (const auto &hdWallet : walletsManager_->hdWallets()) {
-      if (!hdWallet) {
-         continue;
-      }
-      const auto hdNode = new WalletRootNode(this, bs::sync::WalletInfo::fromWallet(hdWallet)
-         , hdWallet->name(), hdWallet->description()
-         , getHDWalletType(hdWallet, walletsManager_), rootNode_->nbChildren(), rootNode_.get());
-      rootNode_->add(hdNode);
-
-      // filter groups
-      // don't display Settlement
-      for (const auto &group : hdWallet->getGroups()) {
-         if (group->type() == bs::core::wallet::Type::Settlement) {
-            continue;
-         }
-         auto groupNode = hdNode->addGroup(group->type(), group->name(), group->description());
-         if (groupNode) {
-            for (const auto &leaf : group->getLeaves()) {
-               groupNode->addLeaf(bs::sync::WalletInfo::fromLeaf(leaf), leaf);
-            }
-         }
-      }
-      /*TODO: if (signContainer_) {
-         if (signContainer_->isOffline()) {
-            hdNode->setState(WalletNode::State::Offline);
-         }
-         else if (hdWallet->isHardwareWallet()) {
-            hdNode->setState(WalletNode::State::Hardware);
-         }
-         else if (signContainer_->isWalletOffline(hdWallet->walletId())) {
-            hdNode->setState(WalletNode::State::Offline);
-         }
-         else if (hdWallet->isPrimary()) {
-            hdNode->setState(WalletNode::State::Primary);
-         } else {
-            hdNode->setState(WalletNode::State::Full);
-         }
-      }*/
-   }
-
-/*   const auto stmtWallet = walletsManager_->getSettlementWallet();
-   if (!showRegularWallets() && (stmtWallet != nullptr)) {
-      const auto stmtNode = new WalletLeafNode(this, stmtWallet, rootNode_->nbChildren(), rootNode_.get());
-      rootNode_->add(stmtNode);
-   }*/   //TODO: add later if decided
-   endResetModel();
-
-   QModelIndexList selection;
-   if (selectedWalletId.empty()) {
-      selectedWalletId = defaultWalletId_;
-   }
-   auto node = rootNode_->findByWalletId(selectedWalletId);
-   if (node != nullptr) {
-      selection.push_back(createIndex(node->row(), 0, static_cast<void*>(node)));
-   }
-   else if(rootNode_->hasChildren()) {
-      node = rootNode_->child(0);
-      selection.push_back(createIndex(node->row(), 0, static_cast<void*>(node)));
-   }
-   
-   if (treeView != nullptr) {
-      for (int i = 0; i < rowCount(); i++) {
-         treeView->expand(index(i, 0));
-         // Expand XBT leaves
-         treeView->expand(index(0, 0, index(i, 0)));
-      }
-
-      if (!selection.empty()) {
-         treeView->setCurrentIndex(selection[0]);
-         treeView->selectionModel()->select(selection[0], QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-         treeView->expand(selection[0]);
-         treeView->scrollTo(selection[0]);
-      }
-   }
-   emit updateAddresses();
-}
-
-void WalletsViewModel::onWalletChanged()
-{
-   LoadWallets(true);
 }

@@ -65,6 +65,7 @@ public:
    std::string name() const override { return "Settings"; }
 
    std::shared_ptr<bs::LogManager> logManager() const { return logMgr_; }
+   std::string guiMode() const;
 
 private:
    bool processGetRequest(const bs::message::Envelope &
