@@ -10,107 +10,12 @@
 */
 #include "StatusBarView.h"
 #include "AssetManager.h"
-#include "HeadlessContainer.h"
+#include "Wallets/HeadlessContainer.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
 #include <QEvent>
-
-StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
-   , std::shared_ptr<AssetManager> assetManager
-   , const std::shared_ptr<CelerClientQt> &celerClient
-   , const std::shared_ptr<SignContainer> &container, QStatusBar *parent)
-   : QObject(nullptr)
-   , statusBar_(parent)
-   , iconSize_(16, 16)
-   , armoryConnState_(ArmoryState::Offline)
-   , walletsManager_(walletsManager)
-   , assetManager_(assetManager)
-{
-   init(armory.get());
-
-   for (int s : {16, 24, 32})
-   {
-      iconCeler_.addFile(QString(QLatin1String(":/ICON_BS_%1")).arg(s), QSize(s, s), QIcon::Normal);
-      iconCeler_.addFile(QString(QLatin1String(":/ICON_BS_%1_GRAY")).arg(s), QSize(s, s), QIcon::Disabled);
-   }
-   estimateLabel_ = new QLabel(statusBar_);
-
-   iconCelerOffline_ = iconCeler_.pixmap(iconSize_, QIcon::Disabled);
-   iconCelerConnecting_ = iconCeler_.pixmap(iconSize_, QIcon::Disabled);
-   iconCelerOnline_ = iconCeler_.pixmap(iconSize_, QIcon::Normal);
-   iconCelerError_ = iconCeler_.pixmap(iconSize_, QIcon::Disabled);
-
-   QIcon contIconGray(QLatin1String(":/ICON_STATUS_OFFLINE"));
-   QIcon contIconYellow(QLatin1String(":/ICON_STATUS_CONNECTING"));
-   QIcon contIconRed(QLatin1String(":/ICON_STATUS_ERROR"));
-   QIcon contIconGreen(QLatin1String(":/ICON_STATUS_ONLINE"));
-
-   iconContainerOffline_ = contIconGray.pixmap(iconSize_);
-   iconContainerError_ = contIconRed.pixmap(iconSize_);
-   iconContainerOnline_ = contIconGreen.pixmap(iconSize_);
-
-   balanceLabel_ = new QLabel(statusBar_);
-
-   progressBar_ = new CircleProgressBar(statusBar_);
-   progressBar_->setMinimum(0);
-   progressBar_->setMaximum(100);
-   progressBar_->hide();
-
-   celerConnectionIconLabel_ = new QLabel(statusBar_);
-   connectionStatusLabel_ = new QLabel(statusBar_);
-
-   containerStatusLabel_ = new QLabel(statusBar_);
-   containerStatusLabel_->setPixmap(iconContainerOffline_);
-   containerStatusLabel_->setToolTip(tr("Signing container status"));
-
-   statusBar_->addWidget(estimateLabel_);
-   statusBar_->addWidget(balanceLabel_);
-
-   statusBar_->addPermanentWidget(celerConnectionIconLabel_);
-   statusBar_->addPermanentWidget(CreateSeparator());
-   statusBar_->addPermanentWidget(progressBar_);
-   statusBar_->addPermanentWidget(connectionStatusLabel_);
-   statusBar_->addPermanentWidget(CreateSeparator());
-   statusBar_->addPermanentWidget(containerStatusLabel_);
-
-   QWidget* w = new QWidget();
-   w->setFixedWidth(6);
-   statusBar_->addPermanentWidget(w);
-
-   statusBar_->setStyleSheet(QLatin1String("QStatusBar::item { border: none; }"));
-
-   SetLoggedOutStatus();
-
-   connect(assetManager_.get(), &AssetManager::totalChanged, this, &StatusBarView::updateBalances);
-   connect(assetManager_.get(), &AssetManager::securitiesChanged, this, &StatusBarView::updateBalances);
-
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportStarted, this, &StatusBarView::onWalletImportStarted);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, this, &StatusBarView::onWalletImportFinished);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &StatusBarView::updateBalances);
-
-   connect(celerClient.get(), &CelerClientQt::OnConnectedToServer, this, &StatusBarView::onConnectedToMatching);
-   connect(celerClient.get(), &CelerClientQt::OnConnectionClosed, this, &StatusBarView::onDisconnectedFromMatching);
-   connect(celerClient.get(), &CelerClientQt::OnConnectionError, this, &StatusBarView::onMatchingConnError);
-
-   // container might be null if user rejects remote signer key
-/*   if (container) {
-      // connected are not used here because we wait for authenticated signal instead
-      // disconnected are not used here because onContainerError should be always called
-      connect(container.get(), &SignContainer::authenticated, this, &StatusBarView::onContainerAuthorized);
-      connect(container.get(), &SignContainer::connectionError, this, &StatusBarView::onSignerStatusChanged);
-   }*/
-
-   onArmoryStateChanged(armory_->state(), armory_->topBlock());
-   onDisconnectedFromMatching();
-   setBalances();
-
-   containerStatusLabel_->setPixmap(iconContainerOffline_);
-
-   connectionStatusLabel_->installEventFilter(this);
-}
 
 StatusBarView::StatusBarView(QStatusBar *parent)
    : QObject(nullptr)
@@ -542,24 +447,6 @@ void StatusBarView::onConnectedToMatching()
 void StatusBarView::onDisconnectedFromMatching()
 {
    SetLoggedOutStatus();
-}
-
-void StatusBarView::onMatchingConnError(int errorCode)
-{
-   switch(errorCode)
-   {
-   case BaseCelerClient::ResolveHostError:
-      statusBar_->showMessage(tr("Could not resolve Celer host"));
-      break;
-   case BaseCelerClient::LoginError:
-      statusBar_->showMessage(tr("Invalid login/password pair"), 2000);
-      break;
-   case BaseCelerClient::ServerMaintainanceError:
-      statusBar_->showMessage(tr("Server maintainance"));
-      break;
-   case BaseCelerClient::UndefinedError:
-      break;
-   }
 }
 
 void StatusBarView::onContainerAuthorized()

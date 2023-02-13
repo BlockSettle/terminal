@@ -16,8 +16,8 @@
 #include <QWidget>
 #include <QItemSelection>
 #include "Address.h"
-#include "SignerDefs.h"
-#include "SignerUiDefs.h"
+#include "Wallets/SignerDefs.h"
+#include "Wallets/SignerUiDefs.h"
 #include "TabWithShortcut.h"
 #include "BSErrorCode.h"
 #include "BSErrorCodeStrings.h"
@@ -134,7 +134,6 @@ private slots:
    //void onWalletContextMenu(const QPoint &);
    void onCopyAddress();
    void onEditAddrComment();
-   void onRevokeSettlement();
    void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result);
    //void onDeleteWallet();
    void onFilterSettingsChanged();
@@ -145,14 +144,11 @@ private slots:
    void treeViewAddressesSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
    void treeViewAddressesLayoutChanged();
    void scrollChanged();
-   void onWalletsSynchronized();
 
 private:
    std::unique_ptr<Ui::WalletsWidget> ui_;
 
    std::shared_ptr<spdlog::logger> logger_;
-   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<HeadlessContainer>     signingContainer_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<AssetManager>          assetManager_;
@@ -165,10 +161,8 @@ private:
    NewAddressDialog* newAddrDlg_{ nullptr };
    QAction  *  actCopyAddr_ = nullptr;
    QAction  *  actEditComment_ = nullptr;
-   QAction  *  actRevokeSettl_ = nullptr;
    //QAction  *  actDeleteWallet_ = nullptr;
    bs::Address curAddress_;
-   [[deprecated]] std::shared_ptr<bs::sync::Wallet>   curWallet_;
    std::set<bs::sync::WalletInfo>   wallets_;
    std::unordered_map<std::string, bs::sync::HDWalletData>        walletDetails_;
    std::unordered_map<std::string, bs::sync::WalletBalanceData>   walletBalances_;

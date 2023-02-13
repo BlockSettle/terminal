@@ -44,7 +44,8 @@ bool BsServerAdapter::process(const bs::message::Envelope &env)
    if (env.sender->value<TerminalUsers>() == TerminalUsers::Settings) {
       SettingsMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse settings message #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse settings message #{}", __func__
+            , env.foreignId());
          return true;
       }
       if (msg.data_case() == SettingsMessage::kGetResponse) {
@@ -62,7 +63,8 @@ bool BsServerAdapter::processBroadcast(const bs::message::Envelope& env)
    if (env.sender->isSystem()) {
       AdministrativeMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse administrative message #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse administrative message #{}"
+            , __func__, env.foreignId());
          return false;
       }
       switch (msg.data_case()) {
@@ -84,7 +86,7 @@ void BsServerAdapter::start()
    req->set_source(SettingSource_Local);
    req->set_type(SettingType_Int);
    req->set_index(SetIdx_Environment);
-   pushRequest(user_, UserTerminal::create(TerminalUsers::Settings)
+   const auto msgId = pushRequest(user_, UserTerminal::create(TerminalUsers::Settings)
       , msg.SerializeAsString());
 }
 
@@ -92,14 +94,16 @@ bool BsServerAdapter::processOwnRequest(const Envelope &env)
 {
    BsServerMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse own request #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse own request #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {
    case BsServerMessage::kOpenConnection:
       return processOpenConnection();
    case BsServerMessage::kCloseConnection:
+#if 0
       bsClient_.reset();
+#endif
       break;
    case BsServerMessage::kStartLogin:
       return processStartLogin(msg.start_login());
@@ -109,6 +113,7 @@ bool BsServerAdapter::processOwnRequest(const Envelope &env)
       return processPuBKeyResponse(msg.pub_new_key_response());
    case BsServerMessage::kTimeout:
       return processTimeout(msg.timeout());
+#if 0
    case BsServerMessage::kSendMatching:
       if (bsClient_) {
          bsClient_->celerSend(static_cast<CelerAPI::CelerMessageType>(msg.send_matching().message_type())
@@ -123,6 +128,7 @@ bool BsServerAdapter::processOwnRequest(const Envelope &env)
       return processOutSignedPayin(msg.send_signed_payin());
    case BsServerMessage::kSendSignedPayout:
       return processOutSignedPayout(msg.send_signed_payout());
+#endif
    default:    break;
    }
    return true;
@@ -137,8 +143,9 @@ bool BsServerAdapter::processLocalSettings(const SettingsMessage_SettingsRespons
          {
             AdministrativeMessage admMsg;
             admMsg.set_component_loading(user_->value());
-            pushBroadcast(UserTerminal::create(TerminalUsers::System)
+            const auto msgId = pushBroadcast(UserTerminal::create(TerminalUsers::System)
                , admMsg.SerializeAsString());
+            logger_->debug("[BsServerAdapter::processLocalSettings] #{}", msgId);
          }
          break;
 
@@ -177,7 +184,9 @@ bool BsServerAdapter::processOpenConnection()
       logger_->error("[{}] already connected", __func__);
       return true;
    }
+#if 0
    bsClient_ = std::make_unique<BsClient>(logger_, this);
+#endif
    bs::network::BIP15xParams params;
    params.ephemeralPeers = true;
    params.authMode = bs::network::BIP15xAuthMode::OneWay;
@@ -197,6 +206,7 @@ bool BsServerAdapter::processOpenConnection()
 
    auto wsConnection = std::make_unique<WsDataConnection>(logger_, WsDataConnectionParams{});
    auto connection = std::make_unique<Bip15xDataConnection>(logger_, std::move(wsConnection), bip15xTransport);
+#if 0
    if (!connection->openConnection(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::Proxy, envConfig_)
       , PubKeyLoader::serverHttpPort(), bsClient_.get())) {
       logger_->error("[{}] failed to set up connection to {}", __func__
@@ -204,6 +214,7 @@ bool BsServerAdapter::processOpenConnection()
       return false;  //TODO: send negative result response, maybe?
    }
    bsClient_->setConnection(std::move(connection));
+#endif
    return true;
 }
 
@@ -214,10 +225,12 @@ bool BsServerAdapter::processStartLogin(const std::string& login)
    }
    if (currentLogin_.empty()) {
       currentLogin_ = login;
+#if 0
       bsClient_->startLogin(login);
+#endif
    }
    else {
-      onStartLoginDone(true, {});
+      //onStartLoginDone(true, {});
    }
    return true;
 }
@@ -228,134 +241,13 @@ bool BsServerAdapter::processCancelLogin()
       logger_->warn("[BsServerAdapter::processCancelLogin] no login started - ignoring request");
       return true;
    }
+#if 0
    bsClient_->cancelLogin();
+#endif
    return true;
 }
 
-bool BsServerAdapter::processSubmitAuthAddr(const bs::message::Envelope& env
-   , const std::string& addr)
-{
-   const auto& sendReply = [this, env](bs::error::AuthAddressSubmitResult code)
-   {
-      BsServerMessage msg;
-      msg.set_submit_auth_result((int)code);
-      pushResponse(user_, env, msg.SerializeAsString());
-   };
-   const auto& address = bs::Address::fromAddressString(addr);
-   bsClient_->signAuthAddress(address, [this, address, sendReply](const BsClient::SignResponse& response) {
-      if (response.userCancelled) {
-         logger_->error("[BsServerAdapter::processSubmitAuthAddr] signing auth "
-            "address cancelled: {}", response.errorMsg);
-         sendReply(bs::error::AuthAddressSubmitResult::AuthSignCancelled);
-         return;
-      }
-      if (!response.success) {
-         logger_->error("[BsServerAdapter::processSubmitAuthAddr] signing auth "
-            "address failed: {}", response.errorMsg);
-         sendReply(bs::error::AuthAddressSubmitResult::AuthRequestSignFailed);
-         return;
-      }
-      logger_->debug("[BsServerAdapter::processSubmitAuthAddr] signing auth address succeed");
-
-      bsClient_->confirmAuthAddress(address, [this, address, sendReply](bs::error::AuthAddressSubmitResult submitResult) {
-         sendReply(submitResult);
-         if (submitResult != bs::error::AuthAddressSubmitResult::Success) {
-            logger_->error("[BsServerAdapter::processSubmitAuthAddr] confirming"
-               " auth address failed: {}", static_cast<int>(submitResult));
-         }
-         else {
-            logger_->debug("[BsServerAdapter::processSubmitAuthAddr] confirming"
-               " auth address succeed");
-         }
-
-         AssetsMessage msg;
-         msg.set_submit_auth_address(address.display());
-         pushRequest(user_, UserTerminal::create(TerminalUsers::Assets)
-            , msg.SerializeAsString());
-      });
-   });
-   return true;
-}
-
-void BsServerAdapter::processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders& orders)
-{
-   BsServerMessage msg;
-   auto msgOrders = msg.mutable_orders_update();
-   for (const auto& order : orders.orders()) {
-      auto msgOrder = msgOrders->add_orders();
-      switch (order.status()) {
-      case bs::types::ORDER_STATUS_PENDING:
-         msgOrder->set_status((int)bs::network::Order::Pending);
-         break;
-      case bs::types::ORDER_STATUS_FILLED:
-         msgOrder->set_status((int)bs::network::Order::Filled);
-         break;
-      case bs::types::ORDER_STATUS_VOID:
-         msgOrder->set_status((int)bs::network::Order::Failed);
-         break;
-      default:
-         break;
-      }
-      msgOrder->set_status_text(order.status_text());
-      msgOrder->set_product(order.product());
-      msgOrder->set_contra_product(order.product_against());
-      msgOrder->set_buy(order.side() == bs::types::Side::SIDE_BUY);
-      msgOrder->set_quantity(order.quantity());
-      msgOrder->set_price(order.price());
-      msgOrder->set_timestamp(order.timestamp_ms());
-   }
-   pushBroadcast(user_, msg.SerializeAsString());
-}
-
-void BsServerAdapter::processUnsignedPayin(const Blocksettle::Communication::ProxyTerminalPb::Response_UnsignedPayinRequest& response)
-{
-   BsServerMessage msg;
-   msg.set_unsigned_payin_requested(BinaryData::CreateFromHex(response.settlement_id()).toBinStr());
-   pushResponse(user_, userSettl_, msg.SerializeAsString());
-}
-
-void BsServerAdapter::processSignPayin(const Blocksettle::Communication::ProxyTerminalPb::Response_SignPayinRequest& response)
-{
-   BsServerMessage msg;
-   auto msgBC = msg.mutable_signed_payin_requested();
-   msgBC->set_settlement_id(BinaryData::CreateFromHex(response.settlement_id()).toBinStr());
-   msgBC->set_unsigned_payin(BinaryData::fromString(response.unsigned_payin_data()).toBinStr());
-   msgBC->set_payin_hash(BinaryData::fromString(response.payin_hash()).toBinStr());
-   msgBC->set_timestamp(response.timestamp_ms());
-   pushResponse(user_, userSettl_, msg.SerializeAsString());
-}
-
-void BsServerAdapter::processSignPayout(const Blocksettle::Communication::ProxyTerminalPb::Response_SignPayoutRequest& response)
-{
-   BsServerMessage msg;
-   auto msgBC = msg.mutable_signed_payout_requested();
-   msgBC->set_settlement_id(BinaryData::CreateFromHex(response.settlement_id()).toBinStr());
-   msgBC->set_payin_hash(BinaryData::fromString(response.payin_data()).toBinStr());
-   msgBC->set_timestamp(response.timestamp_ms());
-   pushResponse(user_, userSettl_, msg.SerializeAsString());
-}
-
-bool BsServerAdapter::processOutUnsignedPayin(const BsServerMessage_XbtTransaction& request)
-{
-   const auto& settlementId = BinaryData::fromString(request.settlement_id());
-   bsClient_->sendUnsignedPayin(settlementId.toHexStr(), { request.tx() });
-   return true;
-}
-
-bool BsServerAdapter::processOutSignedPayin(const BsServerMessage_XbtTransaction& request)
-{
-   const auto& settlementId = BinaryData::fromString(request.settlement_id());
-   bsClient_->sendSignedPayin(settlementId.toHexStr(), BinaryData::fromString(request.tx()));
-   return true;
-}
-
-bool BsServerAdapter::processOutSignedPayout(const BsServerMessage_XbtTransaction& request)
-{
-   const auto& settlementId = BinaryData::fromString(request.settlement_id());
-   bsClient_->sendSignedPayout(settlementId.toHexStr(), BinaryData::fromString(request.tx()));
-   return true;
-}
-
+#if 0
 void BsServerAdapter::startTimer(std::chrono::milliseconds timeout
    , const std::function<void()>&cb)
 {
@@ -432,16 +324,6 @@ void BsServerAdapter::onGetLoginResultDone(const BsClientLoginResult& result)
    currentLogin_.clear();
 }
 
-void BsServerAdapter::onCelerRecv(CelerAPI::CelerMessageType messageType
-   , const std::string& data)
-{
-   BsServerMessage msg;
-   auto msgResp = msg.mutable_recv_matching();
-   msgResp->set_message_type((int)messageType);
-   msgResp->set_data(data);
-   pushResponse(user_, userMtch_, msg.SerializeAsString());
-}
-
 void BsServerAdapter::onProcessPbMessage(const Blocksettle::Communication::ProxyTerminalPb::Response& response)
 {
    switch (response.data_case()) {
@@ -498,3 +380,4 @@ void BsServerAdapter::onTradingStatusChanged(bool tradingEnabled)
    msg.set_trading_enabled(tradingEnabled);
    pushBroadcast(user_, msg.SerializeAsString());
 }
+#endif

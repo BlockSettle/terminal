@@ -31,7 +31,7 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "BSErrorCodeStrings.h"
-#include "OfflineSigner.h"
+#include "Wallets/OfflineSigner.h"
 
 #include "signer.pb.h"
 
@@ -288,8 +288,8 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
          if (!wallet) {
             throw std::runtime_error("failed to find wallet with id " + walletId.toStdString());
          }
-         const auto& encoded = ArmoryBackups::BackupEasy16::encode(chainCode
-            , ArmoryBackups::BackupType::BIP32_Seed_Structured);
+         const auto& encoded = Armory::Backups::BackupEasy16::encode(chainCode
+            , Armory::Backups::BackupType::BIP32_Seed_Structured);
          if (encoded.size() != 2) {
             throw std::runtime_error("failed to encode easy16");
          }

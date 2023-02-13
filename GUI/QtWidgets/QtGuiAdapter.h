@@ -15,7 +15,7 @@
 #include <QObject>
 #include "Address.h"
 #include "ApiAdapter.h"
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 #include "ThreadSafeClasses.h"
 #include "UiUtils.h"
 
@@ -30,9 +30,9 @@ namespace BlockSettle {
    namespace Common {
       class ArmoryMessage_AddressHistory;
       class ArmoryMessage_FeeLevelsResponse;
-      class ArmoryMessage_LedgerEntries;
       class ArmoryMessage_ZCInvalidated;
       class ArmoryMessage_ZCReceived;
+      class LedgerEntries;
       class OnChainTrackMessage_AuthAddresses;
       class OnChainTrackMessage_AuthState;
       class SignerMessage_SignTxResponse;
@@ -69,8 +69,6 @@ class BSTerminalSplashScreen;
 class GuiThread;
 
 
-using GuiQueue = ArmoryThreading::TimedQueue<bs::message::Envelope>;
-
 class QtGuiAdapter : public QObject, public ApiBusAdapter, public bs::MainLoopRuner
 {
    Q_OBJECT
@@ -82,9 +80,7 @@ public:
    bool process(const bs::message::Envelope &) override;
    bool processBroadcast(const bs::message::Envelope&) override;
 
-   std::set<std::shared_ptr<bs::message::User>> supportedReceivers() const override {
-      return { user_ };
-   }
+   Users supportedReceivers() const override { return { user_ }; }
    std::string name() const override { return "QtGUI"; }
 
    void run(int &argc, char **argv) override;
@@ -94,7 +90,6 @@ private:
    bool processSettingsGetResponse(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
    bool processSettingsState(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
    bool processArmoryServers(const BlockSettle::Terminal::SettingsMessage_ArmoryServers&);
-   bool processSignerServers(const BlockSettle::Terminal::SettingsMessage_SignerServers&);
    bool processAdminMessage(const bs::message::Envelope &);
    bool processBlockchain(const bs::message::Envelope &);
    bool processSigner(const bs::message::Envelope &);
@@ -116,7 +111,7 @@ private:
    bool processWalletBalances(const bs::message::Envelope &
       , const BlockSettle::Common::WalletsMessage_WalletBalances &);
    bool processTXDetails(uint64_t msgId, const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
-   bool processLedgerEntries(const BlockSettle::Common::ArmoryMessage_LedgerEntries &);
+   bool processLedgerEntries(const BlockSettle::Common::LedgerEntries &);
    bool processAddressHist(const BlockSettle::Common::ArmoryMessage_AddressHistory&);
    bool processFeeLevels(const BlockSettle::Common::ArmoryMessage_FeeLevelsResponse&);
    bool processWalletsList(const BlockSettle::Common::WalletsMessage_WalletsListResponse&);
@@ -129,26 +124,11 @@ private:
    bool processStartLogin(const BlockSettle::Terminal::BsServerMessage_StartLoginResult&);
    bool processLogin(const BlockSettle::Terminal::BsServerMessage_LoginResult&);
 
-   bool processSettlement(const bs::message::Envelope&);
    bool processMatching(const bs::message::Envelope&);
    bool processMktData(const bs::message::Envelope&);
    bool processSecurity(const std::string&, int);
    bool processMdUpdate(const BlockSettle::Terminal::MktDataMessage_Prices &);
-   bool processAuthWallet(const BlockSettle::Common::WalletsMessage_WalletData&);
-   bool processAuthState(const BlockSettle::Common::OnChainTrackMessage_AuthState&);
-   bool processSubmittedAuthAddrs(const BlockSettle::Terminal::AssetsMessage_SubmittedAuthAddresses&);
    bool processBalance(const BlockSettle::Terminal::AssetsMessage_Balance&);
-   bool processVerifiedAuthAddrs(const BlockSettle::Common::OnChainTrackMessage_AuthAddresses&);
-   bool processAuthKey(const BlockSettle::Common::WalletsMessage_AuthKey&);
-   bool processQuote(const BlockSettle::Terminal::Quote&);
-   bool processMatchedQuote(const BlockSettle::Terminal::SettlementMessage_MatchedQuote&);
-   bool processFailedSettl(const BlockSettle::Terminal::SettlementMessage_FailedSettlement&);
-   bool processPendingSettl(const BlockSettle::Terminal::SettlementMessage_PendingSettlement&);
-   bool processSettlComplete(const BlockSettle::Terminal::SettlementMessage_SettlementIds&);
-   bool processQuoteReqNotif(const BlockSettle::Terminal::IncomingRFQ&);
-   bool processOrdersUpdate(const BlockSettle::Terminal::BsServerMessage_Orders&);
-   bool sendPooledOrdersUpdate();
-   bool processQuoteCancelled(const BlockSettle::Terminal::QuoteCancelled&);
    bool processReservedUTXOs(const BlockSettle::Common::WalletsMessage_ReservedUTXOs&);
 
 private slots:
@@ -171,6 +151,7 @@ private slots:
    void onCreateExtAddress(const std::string& walletId);
    void onNeedExtAddresses(const std::string &walletId);
    void onNeedIntAddresses(const std::string &walletId);
+   void onNeedChangeAddress(const std::string& walletId);
    void onNeedUsedAddresses(const std::string &walletId);
    void onNeedAddrComments(const std::string &walletId, const std::vector<bs::Address> &);
    void onSetAddrComment(const std::string &walletId, const bs::Address &
@@ -184,7 +165,7 @@ private slots:
    void onNeedUTXOs(const std::string& id, const std::string& walletId
       , bool confOnly, bool swOnly);
    void onNeedSignTX(const std::string& id, const bs::core::wallet::TXSignRequest&
-      , bool keepDupRecips, SignContainer::TXSignMode);
+      , bool keepDupRecips, SignContainer::TXSignMode, const SecureBinaryData& passphrase);
    void onNeedBroadcastZC(const std::string& id, const BinaryData&);
    void onNeedSetTxComment(const std::string& walletId, const BinaryData& txHash
       , const std::string& comment);
@@ -194,18 +175,9 @@ private slots:
    void onNeedCancelLogin();
    void onNeedMatchingLogout();
    void onNeedMdConnection(ApplicationSettings::EnvConfiguration);
-   void onNeedNewAuthAddress();
-   void onNeedSubmitAuthAddress(const bs::Address&);
-   void onNeedSubmitRFQ(const bs::network::RFQ&, const std::string& reserveId = {});
-   void onNeedAcceptRFQ(const std::string& id, const bs::network::Quote&);
-   void onNeedCancelRFQ(const std::string& id);
-   void onNeedAuthKey(const bs::Address&);
    void onNeedReserveUTXOs(const std::string& reserveId, const std::string& subId
       , uint64_t amount, bool withZC = false, const std::vector<UTXO>& utxos = {});
    void onNeedUnreserveUTXOs(const std::string& reserveId, const std::string& subId);
-   void onSubmitQuote(const bs::network::QuoteNotification&);
-   void onPullQuote(const std::string& settlementId, const std::string& reqId
-      , const std::string& reqSessToken);
    void onNeedWalletDialog(bs::signer::ui::GeneralDialogType, const std::string& rootId);
 
 private:
@@ -232,7 +204,8 @@ private:
 
    std::unordered_map<std::string, bs::network::Asset::Type>   assetTypes_;
    bool mdInstrumentsReceived_{ false };
-   std::vector<bs::network::Order>  pooledOrders_;
+
+   std::set<bs::message::SeqId>  needChangeAddrReqs_;
 };
 
 

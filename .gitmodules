@@ -1,9 +1,3 @@
-[submodule "Celer"]
-	path = Celer
-	url = ../Celer
 [submodule "common"]
 	path = common
 	url = ../common
-[submodule "AuthAPI"]
-	path = AuthAPI
-	url = https://github.com/autheid/AuthAPI.git

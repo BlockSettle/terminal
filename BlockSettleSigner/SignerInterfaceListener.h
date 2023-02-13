@@ -13,7 +13,7 @@
 
 #include <QObject>
 #include "DataConnectionListener.h"
-#include "SignerUiDefs.h"
+#include "Wallets/SignerUiDefs.h"
 #include "TXInfo.h"
 
 #include "bs_signer.pb.h"

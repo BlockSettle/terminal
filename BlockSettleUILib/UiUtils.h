@@ -22,7 +22,7 @@
 #include "ApplicationSettings.h"
 #include "CommonTypes.h"
 #include "HDPath.h"
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 
 QT_BEGIN_NAMESPACE
 class QAbstractItemModel;
@@ -37,9 +37,7 @@ namespace bs {
       }
    }
 }
-class AuthAddressManager;
 class BinaryData;
-class PyBlockDataManager;
 class QComboBox;
 class QDateTime;
 class QPixmap;
@@ -139,7 +137,6 @@ namespace UiUtils
       , int walletTypes);
    int fillHDWalletsComboBox(QComboBox* comboBox, const std::vector<bs::sync::HDWalletData>&, int walletTypes);
 
-   [[deprecated]] void fillAuthAddressesComboBoxWithSubmitted(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager>& authAddressManager);
    void fillAuthAddressesComboBoxWithSubmitted(QComboBox* comboBox
       , const std::vector<bs::Address> &, int defaultIdx = 0);
 
@@ -149,7 +146,7 @@ namespace UiUtils
    void fillRecvAddressesComboBoxHDWallet(QComboBox* comboBox, const std::vector<bs::sync::WalletData>& wallet);
 
    int selectWalletInCombobox(QComboBox* comboBox, const std::string& walletId, WalletsTypes type = WalletsTypes::None);
-   std::string getSelectedWalletId(QComboBox* comboBox);
+   std::string getSelectedWalletId(QComboBox* comboBox, int index);
    WalletsTypes getSelectedWalletType(QComboBox* comboBox);
    bs::hd::Purpose getSelectedHwPurpose(QComboBox* comboBox);
 

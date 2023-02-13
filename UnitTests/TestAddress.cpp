@@ -9,8 +9,9 @@
 
 */
 #include <gtest/gtest.h>
-
 #include "Address.h"
+#include "BitcoinSettings.h"
+
 
 TEST(TestAddress, ValidScenarios)
 {
@@ -35,7 +36,7 @@ TEST(TestAddress, ValidScenarios)
       auto addr = bs::Address::fromPubKey(pubkey1, AddressEntryType_P2PKH);
       
       BinaryData prefixedHash;
-      prefixedHash.append(NetworkConfig::getPubkeyHashPrefix());
+      prefixedHash.append(Armory::Config::BitcoinSettings::getPubkeyHashPrefix());
       prefixedHash.append(pubkeyHash1);
 
       EXPECT_EQ(prefixedHash, addr.prefixed());
@@ -73,12 +74,12 @@ TEST(TestAddress, ValidScenarios)
    {
       //P2SH
       BinaryData prefixed;
-      prefixed.append(NetworkConfig::getScriptHashPrefix());
+      prefixed.append(Armory::Config::BitcoinSettings::getScriptHashPrefix());
       prefixed.append(rando20);
       auto addr = bs::Address::fromHash(prefixed);
 
       BinaryData prefixedHash;
-      prefixedHash.append(NetworkConfig::getScriptHashPrefix());
+      prefixedHash.append(Armory::Config::BitcoinSettings::getScriptHashPrefix());
       prefixedHash.append(rando20);
 
       EXPECT_EQ(prefixedHash, addr.prefixed());
@@ -100,7 +101,7 @@ TEST(TestAddress, ValidScenarios)
 
       BinaryData script = BtcUtils::getP2PKHScript(pubkeyHash1);
       BinaryData prefixedHash;
-      prefixedHash.append(NetworkConfig::getScriptHashPrefix());
+      prefixedHash.append(Armory::Config::BitcoinSettings::getScriptHashPrefix());
       prefixedHash.append(BtcUtils::getHash160(script));
 
       EXPECT_EQ(prefixedHash, addr.prefixed());
@@ -121,7 +122,7 @@ TEST(TestAddress, ValidScenarios)
 
       BinaryData script = BtcUtils::getP2WPKHOutputScript(pubkeyHash1);
       BinaryData prefixedHash;
-      prefixedHash.append(NetworkConfig::getScriptHashPrefix());
+      prefixedHash.append(Armory::Config::BitcoinSettings::getScriptHashPrefix());
       prefixedHash.append(BtcUtils::getHash160(script));
 
       EXPECT_EQ(prefixedHash, addr.prefixed());
@@ -145,7 +146,7 @@ TEST(TestAddress, ValidScenarios)
       EXPECT_EQ(hash, addr.unprefixed());
 
       BinaryData prefixedHash;
-      prefixedHash.append(NetworkConfig::getScriptHashPrefix());
+      prefixedHash.append(Armory::Config::BitcoinSettings::getScriptHashPrefix());
       prefixedHash.append(hash);
       EXPECT_EQ(prefixedHash, addr.prefixed());
 
@@ -177,7 +178,7 @@ TEST(TestAddress, ValidScenarios)
       EXPECT_EQ(addr.unprefixed(), hash);
 
       BinaryData prefixedHash;
-      prefixedHash.append(NetworkConfig::getScriptHashPrefix());
+      prefixedHash.append(Armory::Config::BitcoinSettings::getScriptHashPrefix());
       prefixedHash.append(hash);
       EXPECT_EQ(prefixedHash, addr.prefixed());
       
@@ -612,7 +613,7 @@ TEST(TestAddress, P2SH_ImplicitDetection)
    const auto& prefixed = addr.prefixed();
    ASSERT_EQ(prefixed.getSize(), 21);
    EXPECT_EQ(prefixed, scriptHash);
-   EXPECT_EQ(prefixed.getPtr()[0], NetworkConfig::getScriptHashPrefix());
+   EXPECT_EQ(prefixed.getPtr()[0], Armory::Config::BitcoinSettings::getScriptHashPrefix());
 }
 
 TEST(TestAddress, P2SH_ExplicitDetection)
@@ -649,7 +650,7 @@ TEST(TestAddress, P2SH_ExplicitDetection)
       const auto& prefixed = addr.prefixed();
       ASSERT_EQ(prefixed.getSize(), 21);
       EXPECT_EQ(prefixed.getSliceCopy(1, 20), scriptHash);
-      EXPECT_EQ(prefixed.getPtr()[0], NetworkConfig::getScriptHashPrefix());
+      EXPECT_EQ(prefixed.getPtr()[0], Armory::Config::BitcoinSettings::getScriptHashPrefix());
    }
 
    {
@@ -667,7 +668,7 @@ TEST(TestAddress, P2SH_ExplicitDetection)
       const auto& prefixed = addr.prefixed();
       ASSERT_EQ(prefixed.getSize(), 21);
       EXPECT_EQ(prefixed.getSliceCopy(1, 20), scriptHash);
-      EXPECT_EQ(prefixed.getPtr()[0], NetworkConfig::getScriptHashPrefix());
+      EXPECT_EQ(prefixed.getPtr()[0], Armory::Config::BitcoinSettings::getScriptHashPrefix());
    }
 
    {
@@ -685,7 +686,7 @@ TEST(TestAddress, P2SH_ExplicitDetection)
       const auto& prefixed = addr.prefixed();
       ASSERT_EQ(prefixed.getSize(), 21);
       EXPECT_EQ(prefixed.getSliceCopy(1, 20), scriptHash);
-      EXPECT_EQ(prefixed.getPtr()[0], NetworkConfig::getScriptHashPrefix());
+      EXPECT_EQ(prefixed.getPtr()[0], Armory::Config::BitcoinSettings::getScriptHashPrefix());
    }
 }
 

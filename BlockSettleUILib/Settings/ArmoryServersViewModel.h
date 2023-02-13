@@ -15,7 +15,6 @@
 #include <memory>
 
 #include "AuthAddress.h"
-#include "AuthAddressManager.h"
 #include "BinaryData.h"
 #include "ApplicationSettings.h"
 #include "ArmoryServersProvider.h"

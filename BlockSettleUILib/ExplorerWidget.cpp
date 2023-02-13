@@ -10,7 +10,6 @@
 */
 #include "ExplorerWidget.h"
 #include "ui_ExplorerWidget.h"
-#include "AuthAddressManager.h"
 #include "BSMessageBox.h"
 #include "TransactionDetailsWidget.h"
 #include "UiUtils.h"
@@ -64,30 +63,6 @@ ExplorerWidget::ExplorerWidget(QWidget *parent) :
 }
 
 ExplorerWidget::~ExplorerWidget() = default;
-
-// Initialize the widget and related widgets (block, address, Tx). Blocks won't
-// be set up for now.
-void ExplorerWidget::init(const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<spdlog::logger> &inLogger
-   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-   , const std::shared_ptr<CCFileManager> &ccFileMgr
-   , const std::shared_ptr<AuthAddressManager> &authMgr)
-{
-   logger_ = inLogger;
-   authMgr_ = authMgr;
-   ui_->Transaction->init(armory, inLogger, walletsMgr, ccFileMgr->getResolver());
-   ui_->Address->init(armory, inLogger, ccFileMgr->getResolver(), walletsMgr);
-//   ui_->Block->init(armory, inLogger);
-
-   connect(authMgr_.get(), &AuthAddressManager::gotBsAddressList, [this] {
-      ui_->Address->setBSAuthAddrs(authMgr_->GetBSAddresses());
-   });
-
-   // With Armory and the logger set, we can start accepting text input.
-   ui_->searchBox->setReadOnly(false);
-   ui_->searchBox->setPlaceholderText(QString::fromStdString(
-      "Search for a transaction or address."));
-}
 
 void ExplorerWidget::init(const std::shared_ptr<spdlog::logger> &logger)
 {

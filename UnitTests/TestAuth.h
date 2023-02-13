@@ -19,10 +19,9 @@
 #include <QMutex>
 #include "Address.h"
 #include "BlockchainMonitor.h"
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 #include "TestEnv.h"
 
-#include "AuthAddressLogic.h"
 
 namespace bs {
    namespace sync {
@@ -40,6 +39,7 @@ namespace bs {
 class QtHCT;
 
 ////////////////////////////////////////////////////////////////////////////////
+#if 0 // Auth address code turned off
 class TestValidationACT : public ValidationAddressACT
 {
 private:
@@ -153,5 +153,6 @@ protected:
 
    SecureBinaryData passphrase_;
 };
+#endif   //0
 
 #endif

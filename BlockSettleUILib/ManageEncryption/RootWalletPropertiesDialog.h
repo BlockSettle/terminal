@@ -14,9 +14,9 @@
 #include <QDialog>
 #include <memory>
 #include "BinaryData.h"
-#include "SignerDefs.h"
-#include "SignerUiDefs.h"
-#include "QWalletInfo.h"
+#include "Wallets/SignerDefs.h"
+#include "Wallets/SignerUiDefs.h"
+#include "Wallets/QWalletInfo.h"
 
 namespace Ui {
     class WalletPropertiesDialog;
@@ -53,6 +53,7 @@ public:
    void onHDWalletDetails(const bs::sync::HDWalletData&);
    void onWalletBalances(const bs::sync::WalletBalanceData&);
    void onSpendableUTXOs();
+   void walletDeleted(const std::string& rootId);
 
 signals:
    void startRescan(std::string walletId);

@@ -16,9 +16,9 @@
 #include "CoreWallet.h"
 #include "QmlBridge.h"
 #include "QmlFactory.h"
-#include "QPasswordData.h"
-#include "HeadlessContainer.h"
-#include "SignerDefs.h"
+#include "Wallets/QPasswordData.h"
+#include "Wallets/HeadlessContainer.h"
+#include "Wallets/SignerDefs.h"
 
 #include "bs_signer.pb.h"
 

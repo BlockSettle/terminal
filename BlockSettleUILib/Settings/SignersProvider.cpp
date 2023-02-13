@@ -12,7 +12,7 @@
 
 #include <QDir>
 #include <QStandardPaths>
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 #include "SystemFileUtils.h"
 #include "TransportBIP15x.h"
 

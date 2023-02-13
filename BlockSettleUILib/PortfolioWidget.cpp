@@ -70,9 +70,6 @@ PortfolioWidget::PortfolioWidget(QWidget* parent)
    connect(ui_->treeViewUnconfirmedTransactions, &QTreeView::customContextMenuRequested, this, &PortfolioWidget::showContextMenu);
    connect(ui_->treeViewUnconfirmedTransactions, &QTreeView::activated, this, &PortfolioWidget::showTransactionDetails);
    ui_->treeViewUnconfirmedTransactions->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-
-   connect(ui_->widgetMarketData, &MarketDataWidget::needMdConnection, this, &PortfolioWidget::needMdConnection);
-   connect(ui_->widgetMarketData, &MarketDataWidget::needMdDisconnect, this, &PortfolioWidget::needMdDisconnect);
 }
 
 PortfolioWidget::~PortfolioWidget() = default;
@@ -102,74 +99,6 @@ void PortfolioWidget::init(const std::shared_ptr<spdlog::logger>& logger)
 void PortfolioWidget::shortcutActivated(ShortcutType s)
 {}
 
-void PortfolioWidget::setAuthorized(bool authorized)
-{
-   ui_->widgetMarketData->setAuthorized(authorized);
-}
-
-void PortfolioWidget::onMDConnected()
-{
-   ui_->widgetMarketData->onMDConnected();
-}
-
-void PortfolioWidget::onMDDisconnected()
-{
-   ui_->widgetMarketData->onMDDisconnected();
-}
-
-void PortfolioWidget::onMDUpdated(bs::network::Asset::Type assetType
-   , const QString& security, const bs::network::MDFields& fields)
-{
-   ui_->widgetMarketData->onMDUpdated(assetType, security, fields);
-
-   if ((assetType == bs::network::Asset::Undefined) || security.isEmpty()) {
-      return;
-   }
-   double lastPx = 0;
-   double bidPrice = 0;
-
-   double productPrice = 0;
-   CurrencyPair cp(security.toStdString());
-   std::string ccy;
-
-   switch (assetType) {
-   case bs::network::Asset::PrivateMarket:
-      ccy = cp.NumCurrency();
-      break;
-   case bs::network::Asset::SpotXBT:
-      ccy = cp.DenomCurrency();
-      break;
-   default:
-      return;
-   }
-
-   if (ccy.empty()) {
-      return;
-   }
-
-   for (const auto& field : fields) {
-      if (field.type == bs::network::MDField::PriceLast) {
-         lastPx = field.value;
-         break;
-      } else  if (field.type == bs::network::MDField::PriceBid) {
-         bidPrice = field.value;
-      }
-   }
-
-   productPrice = (lastPx > 0) ? lastPx : bidPrice;
-
-   if (productPrice > 0) {
-      if (ccy == cp.DenomCurrency()) {
-         productPrice = 1 / productPrice;
-      }
-      portfolioModel_->onPriceChanged(ccy, productPrice);
-      ui_->widgetCCProtfolio->onPriceChanged(ccy, productPrice);
-      if (ccy == "EUR") {
-         ui_->widgetCCProtfolio->onBasePriceChanged(ccy, 1/productPrice);
-      }
-   }
-}
-
 void PortfolioWidget::onHDWallet(const bs::sync::WalletInfo& wi)
 {
    portfolioModel_->onHDWallet(wi);
@@ -193,9 +122,7 @@ void PortfolioWidget::onBalance(const std::string& currency, double balance)
 }
 
 void PortfolioWidget::onEnvConfig(int value)
-{
-   ui_->widgetMarketData->onEnvConfig(value);
-}
+{}
 
 void PortfolioWidget::showTransactionDetails(const QModelIndex& index)
 {

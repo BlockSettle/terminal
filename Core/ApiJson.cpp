@@ -11,7 +11,6 @@
 #include "ApiJson.h"
 #include <spdlog/spdlog.h>
 #include "Address.h"
-#include "BsClient.h"
 #include "MessageUtils.h"
 #include "ProtobufUtils.h"
 #include "SslServerConnection.h"
@@ -69,7 +68,7 @@ bool ApiJsonAdapter::process(const Envelope &env)
       }
    }
    else {
-      logger_->warn("[{}] non-terminal #{} user {}", __func__, env.id()
+      logger_->warn("[{}] non-terminal #{} user {}", __func__, env.foreignId()
          , env.sender->name());
    }
    return true;
@@ -239,7 +238,7 @@ bool ApiJsonAdapter::processSettings(const Envelope &env)
 {
    SettingsMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse settings msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse settings msg #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {
@@ -302,7 +301,7 @@ bool ApiJsonAdapter::processAdminMessage(const Envelope &env)
 {
    AdministrativeMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse admin msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse admin msg #{}", __func__, env.foreignId());
       return false;
    }
    switch (msg.data_case()) {
@@ -319,7 +318,7 @@ bool ApiJsonAdapter::processBlockchain(const Envelope &env)
    ArmoryMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[QtGuiAdapter::processBlockchain] failed to parse msg #{}"
-         , env.id());
+         , env.foreignId());
       if (!env.receiver) {
          logger_->debug("[{}] no receiver", __func__);
       }
@@ -361,7 +360,7 @@ bool ApiJsonAdapter::processSigner(const Envelope &env)
    SignerMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[QtGuiAdapter::processSigner] failed to parse msg #{}"
-         , env.id());
+         , env.foreignId());
       if (!env.receiver) {
          logger_->debug("[{}] no receiver", __func__);
       }
@@ -386,23 +385,21 @@ bool ApiJsonAdapter::processWallets(const Envelope &env)
 {
    WalletsMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {
-   case WalletsMessage::kWalletLoaded: [[fallthrough]];
-   case WalletsMessage::kAuthWallet: [[fallthrough]];
+   case WalletsMessage::kWalletLoaded:
    case WalletsMessage::kHdWallet:
       sendReplyToClient(0, msg, env.sender);
       break;
-   case WalletsMessage::kWalletAddresses: [[fallthrough]];
-   case WalletsMessage::kAddrComments: [[fallthrough]];
-   case WalletsMessage::kWalletData: [[fallthrough]];
-   case WalletsMessage::kWalletBalances: [[fallthrough]];
-   case WalletsMessage::kTxDetailsResponse: [[fallthrough]];
-   case WalletsMessage::kWalletsListResponse: [[fallthrough]];
-   case WalletsMessage::kUtxos: [[fallthrough]];
-   case WalletsMessage::kAuthKey: [[fallthrough]];
+   case WalletsMessage::kWalletAddresses:
+   case WalletsMessage::kAddrComments:
+   case WalletsMessage::kWalletData:
+   case WalletsMessage::kWalletBalances:
+   case WalletsMessage::kTxDetailsResponse:
+   case WalletsMessage::kWalletsListResponse:
+   case WalletsMessage::kUtxos:
    case WalletsMessage::kReservedUtxos:
       if (hasRequest(env.responseId())) {
          sendReplyToClient(env.responseId(), msg, env.sender);
@@ -417,7 +414,7 @@ bool ApiJsonAdapter::processOnChainTrack(const Envelope &env)
 {
    OnChainTrackMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {
@@ -434,7 +431,7 @@ bool ApiJsonAdapter::processAssets(const bs::message::Envelope& env)
 {
    AssetsMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {
@@ -473,7 +470,7 @@ bool ApiJsonAdapter::processBsServer(const bs::message::Envelope& env)
 {
    BsServerMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {
@@ -498,7 +495,7 @@ bool ApiJsonAdapter::processSettlement(const bs::message::Envelope& env)
 {
    SettlementMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {
@@ -520,7 +517,7 @@ bool ApiJsonAdapter::processMatching(const bs::message::Envelope& env)
 {
    MatchingMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {
@@ -542,7 +539,7 @@ bool ApiJsonAdapter::processMktData(const bs::message::Envelope& env)
 {
    MktDataMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.id());
+      logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
       return true;
    }
    switch (msg.data_case()) {

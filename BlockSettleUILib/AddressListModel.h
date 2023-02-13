@@ -15,7 +15,7 @@
 #include <memory>
 #include <QAbstractTableModel>
 #include "CoreWallet.h"
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 #include "ValidityFlag.h"
 
 namespace bs {
@@ -89,8 +89,6 @@ public:
 
    typedef std::vector<bs::sync::WalletInfo> Wallets;
 
-   [[deprecated]] AddressListModel(const std::shared_ptr<bs::sync::WalletsManager> &, QObject* parent
-      , AddressType addrType = AddressType::All);
    AddressListModel(QObject* parent, AddressType addrType = AddressType::All);
    ~AddressListModel() noexcept = default;
 

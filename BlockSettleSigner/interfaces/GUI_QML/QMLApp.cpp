@@ -9,8 +9,6 @@
 
 */
 #include "ApplicationSettings.h"
-#include "AutheIDClient.h"
-#include "AuthProxy.h"
 #include "ConnectionManager.h"
 #include "CoreWalletsManager.h"
 #include "EasyEncValidator.h"
@@ -21,14 +19,14 @@
 #include "QmlFactory.h"
 #include "QMLStatusUpdater.h"
 #include "QmlWalletsViewModel.h"
-#include "QPasswordData.h"
-#include "QSeed.h"
-#include "QWalletInfo.h"
+#include "Wallets/QPasswordData.h"
+#include "Wallets/QSeed.h"
+#include "Wallets/QWalletInfo.h"
 #include "SignerAdapter.h"
 #include "Settings/SignerSettings.h"
 #include "SignerVersion.h"
-#include "SignerUiDefs.h"
-#include "SignContainer.h"
+#include "Wallets/SignerUiDefs.h"
+#include "Wallets/SignContainer.h"
 #include "TXInfo.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -113,21 +111,19 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
       }
    });
 
-   if (params->runMode() != bs::signer::ui::RunMode::litegui) {
-      trayIconOptional_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
-      connect(trayIconOptional_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
-      connect(trayIconOptional_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
+   trayIconOptional_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
+   connect(trayIconOptional_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
+   connect(trayIconOptional_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
 
 #ifdef BS_USE_DBUS
-      if (dbus_->isValid()) {
-         notifMode_ = Freedesktop;
+   if (dbus_->isValid()) {
+      notifMode_ = Freedesktop;
 
-         QObject::disconnect(trayIconOptional_, &QSystemTrayIcon::messageClicked,
-            this, &QMLAppObj::onSysTrayMsgClicked);
-         connect(dbus_, &DBusNotification::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
-      }
-#endif // BS_USE_DBUS
+      QObject::disconnect(trayIconOptional_, &QSystemTrayIcon::messageClicked,
+         this, &QMLAppObj::onSysTrayMsgClicked);
+      connect(dbus_, &DBusNotification::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
    }
+#endif // BS_USE_DBUS
 
    if (adapter) {
       settingsConnections();
@@ -214,23 +210,18 @@ void QMLAppObj::registerQtTypes()
    qRegisterMetaType<QJSValueList>("QJSValueList");
 
    qRegisterMetaType<bs::core::wallet::TXSignRequest>();
-   qRegisterMetaType<AutheIDClient::RequestType>("AutheIDClient::RequestType");
    qRegisterMetaType<bs::wallet::EncryptionType>("EncryptionType");
    qRegisterMetaType<bs::wallet::QSeed>("QSeed");
-   qRegisterMetaType<AuthSignWalletObject>("AuthSignWalletObject");
 
    qmlRegisterUncreatableType<QmlWalletsViewModel>("com.blocksettle.WalletsViewModel", 1, 0,
       "WalletsModel", QStringLiteral("Cannot create a WalletsViewModel instance"));
    qmlRegisterUncreatableType<WalletsProxy>("com.blocksettle.WalletsProxy", 1, 0,
       "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
-   qmlRegisterUncreatableType<AutheIDClient>("com.blocksettle.AutheIDClient", 1, 0,
-      "AutheIDClient", QStringLiteral("Cannot create a AutheIDClient instance"));
    qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
       "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
    qmlRegisterUncreatableType<HwDeviceManager>("com.blocksettle.HwDeviceManager", 1, 0,
       "HwDeviceManager", QStringLiteral("Cannot create a HwDeviceManager instance"));
 
-   qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
    qmlRegisterType<bs::wallet::TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
    qmlRegisterType<bs::sync::PasswordDialogData>("com.blocksettle.PasswordDialogData", 1, 0, "PasswordDialogData");
    qmlRegisterType<QmlPdfBackup>("com.blocksettle.QmlPdfBackup", 1, 0, "QmlPdfBackup");

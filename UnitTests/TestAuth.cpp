@@ -58,17 +58,17 @@ check unflagged return
 #include "CheckRecipSigner.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
-#include "HeadlessContainer.h"
-#include "InprocSigner.h"
+#include "Wallets/HeadlessContainer.h"
+#include "Wallets/InprocSigner.h"
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "AddressVerificator.h"
 
 #include "TestAuth.h"
 
-using namespace ArmorySigner;
+using namespace Armory::Signer;
 
+#if 0 // Auth address code turned off
 ///////////////////////////////////////////////////////////////////////////////
 void TestValidationACT::onRefresh(const std::vector<BinaryData>& ids, bool online)
 {
@@ -1294,5 +1294,5 @@ TEST_F(TestAuth, Concurrency_WithACT)
    EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[4]));
    EXPECT_FALSE(AuthAddressLogic::isValid(*vam, authAddresses[5]));
 }
-
+#endif   //0
 //reorg & zc replacement test

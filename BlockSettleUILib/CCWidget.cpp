@@ -29,21 +29,11 @@ CCWidget::~CCWidget() = default;
 
 void CCWidget::SetPortfolioModel(const std::shared_ptr<CCPortfolioModel>& model)
 {
-   assetManager_ = model->assetManager();
-   const auto &walletsManager = model->walletsManager();
-
    ui_->treeViewCC->setModel(model.get());
    ui_->treeViewCC->header()->setSectionResizeMode(QHeaderView::Stretch);
 
    connect(model.get(), &CCPortfolioModel::rowsInserted, this, &CCWidget::onRowsInserted);
    connect(model.get(), &CCPortfolioModel::modelReset, this, [this]() { ui_->treeViewCC->expandAll(); });
-   if (assetManager_) {
-      connect(assetManager_.get(), &AssetManager::totalChanged, this, &CCWidget::updateTotalAssets);
-   }
-   if (walletsManager) {
-      connect(walletsManager.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &CCWidget::updateTotalAssets);
-      updateTotalAssets();
-   }
 }
 
 void CCWidget::onWalletBalance(const bs::sync::WalletBalanceData& wbd)
@@ -80,7 +70,7 @@ void CCWidget::onBalance(const std::string& currency, double balance)
 
 void CCWidget::updateTotalAssets()
 {
-   auto assets = assetManager_->getTotalAssets();
+   int assets = 0;   //FIXME
    if (assets < 0) {
       ui_->labelTotalValue->setText(tr("<b>%1</b>").arg(tr("Loading...")));
    }

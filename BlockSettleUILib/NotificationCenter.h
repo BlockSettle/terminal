@@ -40,21 +40,13 @@ namespace bs {
       enum class NotifyType {
          Unknown,
          BlockchainTX,
-         CelerOrder,
-         DealerQuotes,
-         AuthAddress,
          BroadcastError,
          NewVersion,
-         UpdateUnreadMessage,
-         FriendRequest,
-         OTCOrderError,
          LogOut,
          BitcoinCoreOnline,
          BitcoinCoreOffline,
          AccountDisabled,
-         AccountEnabled,
-         TradingEnabledOnPB,
-         TradingDisabledOnPB
+         AccountEnabled
       };
 
       using NotifyMessage = QList<QVariant>;
@@ -155,8 +147,6 @@ private:
    std::shared_ptr<QSystemTrayIcon>       trayIcon_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    bool  newVersionMessage_ = false;
-   bool  newChatMessage_ = false;
-   QString  newChatId_;
 
    enum NotificationMode {
       QSystemTray,

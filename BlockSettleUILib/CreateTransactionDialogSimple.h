@@ -62,8 +62,7 @@ protected:
    QLabel *changeLabel() const override;
    QLabel* labelTXAmount() const override;
    QLabel* labelTxOutputs() const override;
-
-   void getChangeAddress(AddressCb cb) const override;
+   QLineEdit* lineEditPassphrase() const override;
 
 protected slots:
    void onMaxPressed() override;
@@ -73,6 +72,7 @@ private slots:
    void showAdvanced();
    void onAddressTextChanged(const QString &address);
    void onXBTAmountChanged(const QString& text);
+   void onPassphraseChanged(const QString& text);
    void createTransaction();
    void onImportPressed();
 

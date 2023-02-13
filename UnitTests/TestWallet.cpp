@@ -19,8 +19,8 @@
 #include "CoreHDWallet.h"
 #include "CoreWallet.h"
 #include "CoreWalletsManager.h"
-#include "HeadlessContainer.h"
-#include "InprocSigner.h"
+#include "Wallets/HeadlessContainer.h"
+#include "Wallets/InprocSigner.h"
 #include "SystemFileUtils.h"
 #include "TestEnv.h"
 #include "UiUtils.h"
@@ -666,8 +666,9 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       EXPECT_EQ(syncWallet->getUsedAddressCount(), 10);
       EXPECT_EQ(syncWallet->getExtAddressCount(), 5);
       EXPECT_EQ(syncWallet->getIntAddressCount(), 5);
+#if 0
       syncWallet->syncAddresses();
-
+#endif
       //check address maps
       BIP32_Node extNode = base_node;
       extNode.derivePrivate(0);
@@ -790,8 +791,9 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       EXPECT_EQ(syncWallet->getUsedAddressCount(), 12);
       EXPECT_EQ(syncWallet->getExtAddressCount(), 6);
       EXPECT_EQ(syncWallet->getIntAddressCount(), 6);
+#if 0
       syncWallet->syncAddresses();
-
+#endif
       //create WO copy
       auto WOcopy = walletPtr->createWatchingOnly();
       filename = WOcopy->getFileName();
@@ -1694,7 +1696,7 @@ TEST_F(TestWallet, ImportExport_xpriv)
             wallet2->getDecryptedSeed());
          ASSERT_TRUE(false);
       }
-      catch (const WalletException &) {}
+      catch (const Armory::Wallets::WalletException &) {}
 
       //shut it all down, reload, check seeds again
       filename = wallet2->getFileName();
@@ -1765,9 +1767,9 @@ TEST_F(TestWallet, TxIdNativeSegwit)
    UTXO input;
    input.unserialize(BinaryData::CreateFromHex(
       "cc16060000000000741618000300010020d5921cfa9b95c9fdafa9dca6d2765b5d7d2285914909b8f5f74f0b137259153b16001428d45f4ef82103691ea40c26b893a4566729b335ffffffff"));
-   request.armorySigner_.addSpender(std::make_shared<ArmorySigner::ScriptSpender>(input));
+   request.armorySigner_.addSpender(std::make_shared<Armory::Signer::ScriptSpender>(input));
 
-   auto recipient = ArmorySigner::ScriptRecipient::fromScript(BinaryData::CreateFromHex(
+   auto recipient = Armory::Signer::ScriptRecipient::fromScript(BinaryData::CreateFromHex(
       "a086010000000000220020aa38b39ed9b524967159ad2bd488d14c1b9ccd70364655a7d9f35cb83e4dc6ed"));
    request.armorySigner_.addRecipient(recipient);
 
@@ -1822,10 +1824,11 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    ASSERT_NE(syncHdWallet, nullptr);
 
    syncHdWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+#if 0
    const auto regIDs = syncHdWallet->registerWallet(envPtr_->armoryConnection());
    ASSERT_FALSE(regIDs.empty());
    UnitTestWalletACT::waitOnRefresh(regIDs);
-
+#endif
    auto syncWallet = syncMgr->getWalletById(coreLeaf->walletId());
    auto syncLeaf = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(syncWallet);
    ASSERT_TRUE(syncLeaf != nullptr);
@@ -1856,9 +1859,9 @@ TEST_F(TestWallet, TxIdNestedSegwit)
    ASSERT_TRUE(input.isInitialized());
 
    bs::core::wallet::TXSignRequest request;
-   request.armorySigner_.addSpender(std::make_shared<ArmorySigner::ScriptSpender>(input));
+   request.armorySigner_.addSpender(std::make_shared<Armory::Signer::ScriptSpender>(input));
 
-   auto recipient = ArmorySigner::ScriptRecipient::fromScript(BinaryData::CreateFromHex(
+   auto recipient = Armory::Signer::ScriptRecipient::fromScript(BinaryData::CreateFromHex(
       "a086010000000000220020d35c94ed03ae988841bd990124e176dae3928ba41f5a684074a857e788d768ba"));
    request.armorySigner_.addRecipient(recipient);
 

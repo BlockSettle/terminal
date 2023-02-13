@@ -16,7 +16,7 @@
 #include <QTimer>
 #include <QElapsedTimer>
 #include <QJSValue>
-#include <QPasswordData.h>
+#include <Wallets/QPasswordData.h>
 #include "Settings/SignerSettings.h"
 
 namespace spdlog {

@@ -15,7 +15,7 @@
 #include <QFont>
 #include "BTCNumericTypes.h"
 #include "BtcUtils.h"
-#include "SelectedTransactionInputs.h"
+#include "Wallets/SelectedTransactionInputs.h"
 #include "TxClasses.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWallet.h"

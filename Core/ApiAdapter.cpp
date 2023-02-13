@@ -67,10 +67,7 @@ public:
       , userTermBroadcast_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::BROADCAST))
    {}
 
-   std::set<std::shared_ptr<bs::message::User>> supportedReceivers() const override
-   {
-      return { user_ };
-   }
+   Users supportedReceivers() const override { return { user_ }; }
    std::string name() const override { return "APIbusGW"; }
 
    bool processBroadcast(const bs::message::Envelope& env) override
@@ -87,7 +84,8 @@ public:
       if (std::dynamic_pointer_cast<bs::message::UserTerminal>(env.receiver)) {
          if (parent_->pushFill(envCopy)) {
             if (env.isRequest()) {
-               idMap_[envCopy.id()] = { env.id(), env.sender };
+               std::unique_lock<std::mutex> lock(mtxIdMap_);
+               idMap_[envCopy.foreignId()] = { env.foreignId(), env.sender };
             }
             return true;
          }
@@ -101,6 +99,7 @@ public:
             return parent_->pushFill(envCopy);
          }
          else {
+            std::unique_lock<std::mutex> lock(mtxIdMap_);
             const auto &itId = idMap_.find(env.responseId());
             if (itId == idMap_.end()) {
                envCopy.receiver = userTermBroadcast_;
@@ -127,6 +126,7 @@ public:
       envCopy.setId(0);
       envCopy.receiver.reset();
       if (!env.isRequest() && env.receiver) {
+         std::unique_lock<std::mutex> lock(mtxIdMap_);
          const auto& itIdMap = idMap_.find(env.responseId());
          if (itIdMap != idMap_.end()) {
             envCopy = bs::message::Envelope::makeResponse(env.sender
@@ -143,7 +143,8 @@ public:
       }
       bool rc = pushFill(envCopy);
       if (rc && env.isRequest()) {
-         idMap_[envCopy.id()] = { env.id(), env.sender };
+         std::unique_lock<std::mutex> lock(mtxIdMap_);
+         idMap_[envCopy.foreignId()] = { env.foreignId(), env.sender };
       }
       return rc;
    }
@@ -158,6 +159,7 @@ private:
       uint64_t id;
       std::shared_ptr<bs::message::User>  requester;
    };
+   std::mutex  mtxIdMap_;
    std::map<uint64_t, RequestData>  idMap_;
 };
 
@@ -166,6 +168,7 @@ ApiAdapter::ApiAdapter(const std::shared_ptr<spdlog::logger> &logger)
    : logger_(logger)
    , user_(std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::API))
 {
+   fallbackUser_ = std::make_shared<bs::message::UserTerminal>(bs::message::TerminalUsers::Unknown);  // RelayAdapter member
    apiBus_ = std::make_shared<ApiBus>(logger);
    gwAdapter_ = std::make_shared<ApiBusGateway>(logger, this);
    apiBus_->addAdapter(gwAdapter_);
@@ -203,5 +206,17 @@ void ApiAdapter::add(const std::shared_ptr<ApiBusAdapter> &adapter)
 
 bool ApiAdapter::process(const bs::message::Envelope &env)
 {
-   return gwAdapter_->pushToApiBus(env);
+   RelayAdapter::process(env);
+   if (env.receiver->value() == user_->value()) {
+      return gwAdapter_->pushToApiBus(env);
+   }
+   return true;
+}
+
+bool ApiAdapter::processBroadcast(const bs::message::Envelope& env)
+{
+   if (RelayAdapter::processBroadcast(env)) {
+      return gwAdapter_->pushToApiBus(env);
+   }
+   return false;
 }

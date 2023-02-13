@@ -18,9 +18,9 @@
 #include "ApplicationSettings.h"
 #include "BtcUtils.h"
 #include "BSMessageBox.h"
-#include "SignContainer.h"
+#include "Wallets/HeadlessContainer.h"
+#include "Wallets/SignContainer.h"
 #include "SignersManageWidget.h"
-#include "HeadlessContainer.h"
 
 SignerSettingsPage::SignerSettingsPage(QWidget* parent)
    : SettingsPage{parent}

@@ -19,7 +19,7 @@
 #include <QMutex>
 #include "Address.h"
 #include "BlockchainMonitor.h"
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 #include "TestEnv.h"
 
 

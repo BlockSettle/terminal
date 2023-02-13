@@ -16,8 +16,8 @@
 #include "ArmoryConnection.h"
 #include "BSMessageBox.h"
 #include "CreateTransactionDialogAdvanced.h"
-#include "SignContainer.h"
-#include "TransactionData.h"
+#include "Wallets/SignContainer.h"
+#include "Wallets/TransactionData.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
@@ -46,6 +46,7 @@ void CreateTransactionDialogSimple::initUI()
    connect(ui_->pushButtonImport, &QPushButton::clicked, this, &CreateTransactionDialogSimple::onImportPressed);
 
    connect(ui_->pushButtonShowAdvanced, &QPushButton::clicked, this, &CreateTransactionDialogSimple::showAdvanced);
+   connect(ui_->lineEditPassphrase, &QLineEdit::textChanged, this, &CreateTransactionDialogSimple::onPassphraseChanged);
 }
 
 QComboBox *CreateTransactionDialogSimple::comboBoxWallets() const
@@ -153,6 +154,13 @@ void CreateTransactionDialogSimple::onXBTAmountChanged(const QString &text)
    transactionData_->UpdateRecipientAmount(recipientId_, value);
 }
 
+void CreateTransactionDialogSimple::onPassphraseChanged(const QString& text)
+{
+   if (!text.isEmpty()) {
+      ui_->labelPassphraseHint->clear();
+   }
+}
+
 void CreateTransactionDialogSimple::onMaxPressed()
 {
    transactionData_->UpdateRecipientAmount(recipientId_, {}, false);
@@ -180,19 +188,13 @@ void CreateTransactionDialogSimple::showAdvanced()
    accept();
 }
 
-void CreateTransactionDialogSimple::getChangeAddress(AddressCb cb) const
-{
-   if (transactionData_->GetTransactionSummary().hasChange) {
-      transactionData_->getWallet()->getNewChangeAddress([cb = std::move(cb)](const bs::Address &addr) {
-         cb(addr);
-      });
-      return;
-   }
-   cb({});
-}
-
 void CreateTransactionDialogSimple::createTransaction()
 {
+   if (ui_->lineEditPassphrase->text().isEmpty()) {
+      ui_->lineEditPassphrase->setFocus();
+      ui_->labelPassphraseHint->setText(tr("Enter wallet password"));
+      return;
+   }
    if (!importedSignedTX_.empty()) {
       if (BroadcastImportedTx()) {
          accept();
@@ -236,7 +238,7 @@ std::shared_ptr<CreateTransactionDialog> CreateTransactionDialogSimple::SwitchMo
       advancedDialog->SetImportedTransactions(offlineTransactions_);
    } else {
       // select wallet
-      advancedDialog->SelectWallet(UiUtils::getSelectedWalletId(ui_->comboBoxWallets),
+      advancedDialog->SelectWallet(UiUtils::getSelectedWalletId(ui_->comboBoxWallets, ui_->comboBoxWallets->currentIndex()),
          UiUtils::getSelectedWalletType(ui_->comboBoxWallets));
 
       // set inputs and amounts
@@ -273,6 +275,11 @@ QLabel* CreateTransactionDialogSimple::labelTXAmount() const
 QLabel* CreateTransactionDialogSimple::labelTxOutputs() const
 {
    return ui_->labelTXOutputs;
+}
+
+QLineEdit* CreateTransactionDialogSimple::lineEditPassphrase() const
+{
+   return ui_->lineEditPassphrase;
 }
 
 void CreateTransactionDialogSimple::preSetAddress(const QString& address)

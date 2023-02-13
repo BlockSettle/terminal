@@ -13,7 +13,7 @@
 
 #include <memory>
 #include <QAbstractItemModel>
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 
 namespace bs {
    namespace sync {
@@ -40,14 +40,10 @@ public:
    CCPortfolioModel(CCPortfolioModel&&) = delete;
    CCPortfolioModel& operator = (CCPortfolioModel&&) = delete;
 
-   [[deprecated]] std::shared_ptr<AssetManager> assetManager();
-   [[deprecated]] std::shared_ptr<bs::sync::WalletsManager> walletsManager();
-
    void onHDWallet(const bs::sync::WalletInfo&);
    void onHDWalletDetails(const bs::sync::HDWalletData&);
    void onWalletBalance(const bs::sync::WalletBalanceData&);
    void onBalance(const std::string& currency, double balance);
-   void onPriceChanged(const std::string& currency, double price);
 
 private:
    enum PortfolioColumns

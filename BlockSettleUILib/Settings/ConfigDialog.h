@@ -16,7 +16,7 @@
 #include "ApplicationSettings.h"
 #include "ArmoryServersProvider.h"
 #include "Settings/SignersProvider.h"
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 
 class ArmoryServersProvider;
 class SignersProvider;
@@ -118,9 +118,6 @@ signals:
    void setSigner(int);
 
 private:
-   static void getChatPrivKey(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-      , const std::shared_ptr<SignContainer> &signContainer, const EncryptCb &cb);
-
    std::unique_ptr<Ui::ConfigDialog> ui_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;

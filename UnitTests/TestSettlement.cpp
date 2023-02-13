@@ -12,8 +12,8 @@
 #include <spdlog/spdlog.h>
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
-#include "HeadlessContainer.h"
-#include "InprocSigner.h"
+#include "Wallets/HeadlessContainer.h"
+#include "Wallets/InprocSigner.h"
 #include "MessageUtils.h"
 #include "MockTerminal.h"
 #include "TestAdapters.h"
@@ -22,7 +22,7 @@
 #include "common.pb.h"
 #include "terminal.pb.h"
 
-using namespace ArmorySigner;
+using namespace Armory::Signer;
 using namespace bs::message;
 using namespace BlockSettle::Common;
 using namespace BlockSettle::Terminal;
@@ -125,7 +125,7 @@ void TestSettlement::SetUp()
 
          settlLeaf = hdWallet->createSettlementLeaf(authAddr);
          const auto assetPtr = settlLeaf->getRootAsset();
-         const auto assetSingle = std::dynamic_pointer_cast<AssetEntry_Single>(assetPtr);
+         const auto assetSingle = std::dynamic_pointer_cast<Armory::Assets::AssetEntry_Single>(assetPtr);
          if (assetSingle) {
             authKey =  assetSingle->getPubKey()->getCompressedKey();
          }

@@ -19,9 +19,8 @@
 
 #include <memory>
 #include "ArmoryConnection.h"
-#include "Celer/CelerClient.h"
 #include "CircleProgressBar.h"
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 
 namespace bs {
    namespace sync {
@@ -35,10 +34,6 @@ class StatusBarView  : public QObject, public ArmoryCallbackTarget
 {
    Q_OBJECT
 public:
-   [[deprecated]] StatusBarView(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<CelerClientQt> &
-      , const std::shared_ptr<SignContainer> &, QStatusBar *parent);
    StatusBarView(QStatusBar *parent);
    ~StatusBarView() noexcept override;
 
@@ -55,7 +50,6 @@ public slots:
    void onArmoryError(QString);
    void onConnectedToMatching();
    void onDisconnectedFromMatching();
-   void onMatchingConnError(int errorCode);
    void onContainerAuthorized();
    void onSignerStatusChanged(SignContainer::ConnectionError error, const QString &details);
    void updateBalances();  //deprecated

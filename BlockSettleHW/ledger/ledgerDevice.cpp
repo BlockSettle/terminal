@@ -12,7 +12,7 @@
 #include "ledger/ledgerDevice.h"
 #include "ledger/ledgerClient.h"
 #include "Assets.h"
-#include "ProtobufHeadlessUtils.h"
+#include "Wallets/ProtobufHeadlessUtils.h"
 #include "CoreWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"
@@ -539,7 +539,7 @@ BIP32_Node LedgerCommandThread::getPublicKeyApdu(bs::hd::Path&& derivationPath, 
    bool result = pubKey.parseFromResponse(response);
 
    auto data = SecureBinaryData::fromString(pubKey.pubKey_.toStdString());
-   Asset_PublicKey pubKeyAsset(data);
+   Armory::Assets::Asset_PublicKey pubKeyAsset(data);
    SecureBinaryData chainCode = SecureBinaryData::fromString(pubKey.chainCode_.toStdString());
 
    uint32_t fingerprint = 0;

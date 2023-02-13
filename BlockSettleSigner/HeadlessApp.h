@@ -15,7 +15,7 @@
 #include <functional>
 #include <memory>
 
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 #include "BSErrorCode.h"
 
 namespace spdlog {
@@ -61,7 +61,6 @@ public:
    void reloadWallets(bool notifyGUI, const std::function<void()> & = nullptr);
    void setLimits(bs::signer::Limits);
    void passwordReceived(const std::string &walletId, bs::error::ErrorCode result, const SecureBinaryData &);
-   void windowVisibilityChanged(bool visible);
 
    bs::error::ErrorCode activateAutoSign(const std::string &walletId, bool activate, const SecureBinaryData& password);
 

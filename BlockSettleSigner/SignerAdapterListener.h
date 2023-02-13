@@ -13,7 +13,7 @@
 
 #include <memory>
 #include "CoreWallet.h"
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 #include "ServerConnectionListener.h"
 #include "BSErrorCode.h"
 
@@ -109,7 +109,6 @@ protected:
    bool onSyncSettings(const std::string &data);
    bool onControlPasswordReceived(const std::string &data);
    bool onChangeControlPassword(const std::string &data, bs::signer::RequestId);
-   bool onWindowsStatus(const std::string &data, bs::signer::RequestId);
    bool onVerifyOfflineTx(const std::string &data, bs::signer::RequestId);
 
    void shutdownIfNeeded();

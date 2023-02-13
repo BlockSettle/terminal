@@ -39,7 +39,8 @@ bool MktDataAdapter::process(const bs::message::Envelope &env)
    if (env.receiver->value() == user_->value()) {
       MktDataMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse own request #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse own request #{}"
+            , __func__, env.foreignId());
          return true;
       }
       switch (msg.data_case()) {
@@ -58,7 +59,8 @@ bool MktDataAdapter::processBroadcast(const bs::message::Envelope& env)
    if (env.sender->isSystem()) {
       AdministrativeMessage msg;
       if (!msg.ParseFromString(env.message)) {
-         logger_->error("[{}] failed to parse administrative message #{}", __func__, env.id());
+         logger_->error("[{}] failed to parse administrative message #{}"
+            , __func__, env.foreignId());
          return false;
       }
       if (msg.data_case() == AdministrativeMessage::kStart) {

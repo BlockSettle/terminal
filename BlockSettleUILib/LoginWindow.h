@@ -15,7 +15,6 @@
 #include <QDialog>
 #include <memory>
 #include "ApplicationSettings.h"
-#include "AutheIDClient.h"
 
 namespace Ui {
     class LoginWindow;
@@ -24,7 +23,6 @@ namespace spdlog {
    class logger;
 }
 
-struct BsClientLoginResult;
 struct NetworkSettings;
 
 class ApplicationSettings;
@@ -35,10 +33,6 @@ class LoginWindow : public QDialog
 Q_OBJECT
 
 public:
-   [[deprecated]] LoginWindow(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<BsClientQt> &bsClient
-      , std::shared_ptr<ApplicationSettings> &settings
-      , QWidget* parent = nullptr);
    LoginWindow(const std::shared_ptr<spdlog::logger>& logger
       , ApplicationSettings::EnvConfiguration, QWidget* parent = nullptr);
    ~LoginWindow() override;
@@ -49,12 +43,11 @@ public:
    };
 
    QString email() const;
-   [[deprecated]] BsClientLoginResult *result() const { return result_.get(); }
 
    void setLogin(const QString&);
    void setRememberLogin(bool);
    void onLoginStarted(const std::string& login, bool success, const std::string& errMsg);
-   void onLoggedIn(const BsClientLoginResult&);
+   //void onLoggedIn(const BsClientLoginResult&);
 
 signals:
    void putSetting(ApplicationSettings::Setting, const QVariant&);
@@ -63,7 +56,6 @@ signals:
 
 private slots:
    void onStartLoginDone(bool success, const std::string &errorMsg);
-   void onGetLoginResultDone(const BsClientLoginResult &result);  //deprecated
    void onTextChanged();
    void onAuthPressed();
    void onTimer();
@@ -85,7 +77,6 @@ private:
    QTimer      timer_;
    float       timeLeft_{};
    std::shared_ptr<BsClientQt>            bsClient_;
-   std::unique_ptr<BsClientLoginResult>   result_;
 };
 
 #endif // __LOGIN_WINDOW_H__

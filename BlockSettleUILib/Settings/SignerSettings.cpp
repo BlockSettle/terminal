@@ -13,9 +13,9 @@
 #include <QStandardPaths>
 #include <QMetaEnum>
 #include <QMessageBox>
+#include "ArmoryConfig.h"
 #include "BIP150_151.h"
 #include "BtcDefinitions.h"
-#include "BlockDataManagerConfig.h"
 #include "BtcUtils.h"
 #include "SignerSettings.h"
 #include "SystemFileUtils.h"
@@ -193,18 +193,16 @@ bool SignerSettings::loadSettings(const std::shared_ptr<HeadlessSettings> &mainS
    if (!mainSettings) {
       return false;
    }
-   runMode_ = static_cast<bs::signer::ui::RunMode>(mainSettings->runMode());
    srvIDKey_ = mainSettings->serverIdKey().toHexStr();
    signerPort_ = mainSettings->interfacePort();
    d_->set_test_net(mainSettings->testNet());
 
    if (d_->test_net()) {
-      NetworkConfig::selectNetwork(NETWORK_MODE_TESTNET);
+      Armory::Config::NetworkSettings::selectNetwork(Armory::Config::NETWORK_MODE_TESTNET);
    }
    else {
-      NetworkConfig::selectNetwork(NETWORK_MODE_MAINNET);
+      Armory::Config::NetworkSettings::selectNetwork(Armory::Config::NETWORK_MODE_MAINNET);
    }
-
    return true;
 }
 

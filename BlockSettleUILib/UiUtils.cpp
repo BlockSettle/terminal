@@ -11,14 +11,12 @@
 #include "UiUtils.h"
 
 #include "ApplicationSettings.h"
-#include "AuthAddressManager.h"
 #include "BinaryData.h"
-#include "BlockDataManagerConfig.h"
 #include "BTCNumericTypes.h"
 #include "BtcUtils.h"
 #include "CoinControlModel.h"
 #include "CustomControls/QtAwesome.h"
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 #include "TxClasses.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -117,6 +115,14 @@ namespace UiUtils {
    template <> QString displayAmount(int64_t value)
    {
       if (value == INT64_MAX) {
+         return CommonUiUtilsText::tr("Loading...");
+      }
+      return UnifyValueString(QLocale().toString(amountToBtc(value), 'f', GetAmountPrecisionXBT()));
+   }
+
+   template <> QString displayAmount(int value)
+   {
+      if (value == INT_MAX) {
          return CommonUiUtilsText::tr("Loading...");
       }
       return UnifyValueString(QLocale().toString(amountToBtc(value), 'f', GetAmountPrecisionXBT()));
@@ -348,23 +354,6 @@ int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox
    return selected;
 }
 
-void UiUtils::fillAuthAddressesComboBoxWithSubmitted(QComboBox* comboBox, const std::shared_ptr<AuthAddressManager> &authAddressManager)
-{
-   comboBox->clear();
-   const auto &addrList = authAddressManager->GetSubmittedAddressList();
-   if (!addrList.empty()) {
-      const auto b = comboBox->blockSignals(true);
-      for (const auto &address : addrList) {
-         comboBox->addItem(QString::fromStdString(address.display()));
-      }
-      comboBox->blockSignals(b);
-      QMetaObject::invokeMethod(comboBox, "setCurrentIndex", Q_ARG(int, authAddressManager->getDefaultIndex()));
-      comboBox->setEnabled(true);
-   } else {
-      comboBox->setEnabled(false);
-   }
-}
-
 void UiUtils::fillAuthAddressesComboBoxWithSubmitted(QComboBox* comboBox
    , const std::vector<bs::Address>& addrs, int defaultIdx)
 {
@@ -518,7 +507,7 @@ double UiUtils::truncatePriceForAsset(double price, bs::network::Asset::Type at)
       multiplier = 10000;
       break;
    case bs::network::Asset::SpotXBT:
-   case bs::network::Asset::DeliverableFutures:
+   case bs::network::Asset::Future:
       multiplier = 100;
       break;
    case bs::network::Asset::PrivateMarket:
@@ -538,8 +527,7 @@ QString UiUtils::displayPriceForAssetType(double price, bs::network::Asset::Type
    case bs::network::Asset::SpotFX:
       return UiUtils::displayPriceFX(price);
    case bs::network::Asset::SpotXBT:
-   case bs::network::Asset::DeliverableFutures:
-   case bs::network::Asset::CashSettledFutures:
+   case bs::network::Asset::Future:
       return UiUtils::displayPriceXBT(price);
    case bs::network::Asset::PrivateMarket:
       return UiUtils::displayPriceCC(price);
@@ -572,8 +560,7 @@ int UiUtils::GetPricePrecisionForAssetType(const bs::network::Asset::Type& asset
    case bs::network::Asset::SpotFX:
       return GetPricePrecisionFX();
    case bs::network::Asset::SpotXBT:
-   case bs::network::Asset::DeliverableFutures:
-   case bs::network::Asset::CashSettledFutures:
+   case bs::network::Asset::Future:
       return GetPricePrecisionXBT();
    case bs::network::Asset::PrivateMarket:
       return GetPricePrecisionCC();
@@ -607,8 +594,7 @@ static void getPrecsFor(const std::string &security, const std::string &product,
       valuePrec = UiUtils::GetAmountPrecisionFX();
       break;
    case bs::network::Asset::Type::SpotXBT:
-   case bs::network::Asset::Type::DeliverableFutures:
-   case bs::network::Asset::Type::CashSettledFutures:
+   case bs::network::Asset::Type::Future:
       qtyPrec = UiUtils::GetAmountPrecisionXBT();
       valuePrec = UiUtils::GetAmountPrecisionFX();
 
@@ -662,9 +648,10 @@ QString UiUtils::displayShortAddress(const QString &addr, const uint maxLength)
 }
 
 
-std::string UiUtils::getSelectedWalletId(QComboBox* comboBox)
+std::string UiUtils::getSelectedWalletId(QComboBox* comboBox, int index)
 {
-   return comboBox->currentData(WalletIdRole).toString().toStdString();
+   return comboBox->itemData(index, WalletIdRole).toString().toStdString();
+   //return comboBox->currentData().toString().toStdString();
 }
 
 UiUtils::WalletsTypes UiUtils::getSelectedWalletType(QComboBox* comboBox)
@@ -807,7 +794,7 @@ ApplicationSettings::Setting UiUtils::limitRfqSetting(bs::network::Asset::Type t
       case bs::network::Asset::PrivateMarket :
          return ApplicationSettings::PmRfqLimit;
 
-      case bs::network::Asset::DeliverableFutures :
+      case bs::network::Asset::Future :
          return ApplicationSettings::FuturesLimit;
 
       default :
@@ -825,7 +812,7 @@ ApplicationSettings::Setting UiUtils::limitRfqSetting(const QString &name)
    } else if (name ==
          QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::PrivateMarket))) {
             return ApplicationSettings::PmRfqLimit;
-   } else if (name == QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::DeliverableFutures))) {
+   } else if (name == QString::fromUtf8(bs::network::Asset::toString(bs::network::Asset::Future))) {
       return ApplicationSettings::FuturesLimit;
    } else {
       assert(false);
@@ -846,7 +833,7 @@ QString UiUtils::marketNameForLimit(ApplicationSettings::Setting s)
          return QObject::tr(bs::network::Asset::toString(bs::network::Asset::PrivateMarket));
 
       case ApplicationSettings::FuturesLimit :
-         return QObject::tr(bs::network::Asset::toString(bs::network::Asset::DeliverableFutures));
+         return QObject::tr(bs::network::Asset::toString(bs::network::Asset::Future));
 
       default :
          assert(false);

@@ -9,7 +9,7 @@
 
 */
 #include "QmlBridge.h"
-#include "SignerUiDefs.h"
+#include "Wallets/SignerUiDefs.h"
 
 #include <spdlog/spdlog.h>
 

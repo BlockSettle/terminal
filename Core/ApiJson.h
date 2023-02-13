@@ -17,7 +17,7 @@
 #include "ApiAdapter.h"
 #include "ServerConnection.h"
 #include "ServerConnectionListener.h"
-#include "SignContainer.h"
+#include "Wallets/SignContainer.h"
 #include "WsConnection.h"
 
 namespace BlockSettle {
@@ -35,9 +35,7 @@ public:
    bool process(const bs::message::Envelope &) override;
    bool processBroadcast(const bs::message::Envelope&) override;
 
-   std::set<std::shared_ptr<bs::message::User>> supportedReceivers() const override {
-      return { user_ };
-   }
+   Users supportedReceivers() const override { return { user_ }; }
    std::string name() const override { return "JSON API"; }
 
 protected:  // ServerConnectionListener overrides

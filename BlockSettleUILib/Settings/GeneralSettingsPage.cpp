@@ -90,7 +90,7 @@ void GeneralSettingsPage::display()
       }
 
       if (setFirstWalletAsDefault) {
-         walletId = UiUtils::getSelectedWalletId(ui_->comboBox_defaultWallet);
+         walletId = UiUtils::getSelectedWalletId(ui_->comboBox_defaultWallet, ui_->comboBox_defaultWallet->currentIndex());
          appSettings_->setDefaultWalletId(walletId);
       }
    }
@@ -153,7 +153,7 @@ static inline QString logLevel(int level)
 
 void GeneralSettingsPage::apply()
 {
-   const auto walletId = UiUtils::getSelectedWalletId(ui_->comboBox_defaultWallet);
+   const auto walletId = UiUtils::getSelectedWalletId(ui_->comboBox_defaultWallet, ui_->comboBox_defaultWallet->currentIndex());
 
    if (appSettings_) {
       appSettings_->set(ApplicationSettings::launchToTray, ui_->checkBoxLaunchToTray->isChecked());

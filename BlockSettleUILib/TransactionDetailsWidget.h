@@ -13,8 +13,7 @@
 
 #include "ArmoryConnection.h"
 #include "BinaryData.h"
-#include "CCFileManager.h"
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 #include "TxClasses.h"
 
 #include <QMap>
@@ -75,10 +74,6 @@ public:
    explicit TransactionDetailsWidget(QWidget *parent = nullptr);
    ~TransactionDetailsWidget() override;
 
-   [[deprecated]] void init(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &
-      , const std::shared_ptr<bs::sync::CCDataResolver> &);
    void init(const std::shared_ptr<spdlog::logger>&);
 
    void populateTransactionWidget(const TxHash &rpcTXID,
@@ -113,22 +108,17 @@ private:
    void loadInputs();
    void setTxGUIValues();
    void clear();
-   void updateCCInputs();
-   void checkTxForCC(const Tx &, QTreeWidget *);
 
-   [[deprecated]] void processTxData(const Tx &tx);
+   void processTxData(const Tx &tx);
 
    void addItem(QTreeWidget *tree, const QString &address, const uint64_t amount
       , const QString &wallet, const BinaryData &txHash, const int txIndex = -1);
-
-   static void updateTreeCC(QTreeWidget *, const std::string &product, uint64_t lotSize);
 
 private:
    std::unique_ptr<Ui::TransactionDetailsWidget>   ui_;
    std::shared_ptr<ArmoryConnection>   armoryPtr_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
-   std::shared_ptr<bs::sync::CCDataResolver> ccResolver_;
 
    Tx curTx_; // The Tx being analyzed in the widget.
    BinaryData  curTxHash_;

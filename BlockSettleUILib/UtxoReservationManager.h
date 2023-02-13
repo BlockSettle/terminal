@@ -94,10 +94,6 @@ namespace bs {
       void getBestXbtUtxoSet(const HDWalletId& walletId, bs::hd::Purpose purpose, BTCNumericTypes::satoshi_type quantity,
          std::function<void(std::vector<UTXO>&&)>&& cb, bool checkPbFeeFloor, CheckAmount checkAmount);
 
-      // CC specific implementation
-      BTCNumericTypes::balance_type getAvailableCCUtxoSum(const CCProductName& CCProduct) const;
-      std::vector<UTXO> getAvailableCCUTXOs(const CCWalletId& walletId) const;
-
       // Mutual functions
       FixedXbtInputs convertUtxoToFixedInput(const HDWalletId& walletId, const std::vector<UTXO>& utxos);
       FixedXbtInputs convertUtxoToPartialFixedInput(const HDWalletId& walletId, const std::vector<UTXO>& utxos);

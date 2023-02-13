@@ -13,7 +13,7 @@
 
 #include <QQuickPaintedItem>
 
-#include "QSeed.h"
+#include "Wallets/QSeed.h"
 #include "PaperBackupWriter.h"
 #include <memory>
 

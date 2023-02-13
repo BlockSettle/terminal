@@ -55,25 +55,6 @@ bool AddressListModel::AddressRow::operator==(const AddressRow& other) const
       isExternal == other.isExternal;
 }
 
-AddressListModel::AddressListModel(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-   , QObject* parent, AddressType addrType)
-   : QAbstractTableModel(parent)
-   , walletsMgr_(walletsMgr)
-   , addrType_(addrType)
-   , processing_(false)
-{
-   if (walletsMgr_) {
-      connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, this
-         , &AddressListModel::updateWallets);
-      connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletChanged, this
-         , &AddressListModel::updateWallets);
-      connect(walletsMgr_.get(), &bs::sync::WalletsManager::blockchainEvent, this
-         , &AddressListModel::updateWallets);
-      connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletBalanceUpdated
-         , this, &AddressListModel::updateWallets);
-   }
-}
-
 AddressListModel::AddressListModel(QObject* parent, AddressType addrType)
    : QAbstractTableModel(parent)
    , addrType_(addrType)
@@ -199,7 +180,7 @@ void AddressListModel::updateWallet(const bs::sync::WalletInfo &wallet)
    }
 }
 
-void AddressListModel::onAddresses(const std::string &
+void AddressListModel::onAddresses(const std::string &/*walletId*/
    , const std::vector<bs::sync::Address> &addrs)
 {
    if (addrs.empty()) { //TODO: check against walletId (first arg)
@@ -216,8 +197,11 @@ void AddressListModel::onAddresses(const std::string &
          newAddrs.push_back(addr);
       }
    }
+   if (newAddrs.empty()) {
+      return;
+   }
    beginInsertRows(QModelIndex(), addressRows_.size()
-      , addressRows_.size() + newAddrs.size() - 1);
+      , addressRows_.size() + newAddrs.size() -1);
    for (const auto &addr : newAddrs) {
       const auto &itWallet = std::find_if(wallets_.cbegin(), wallets_.cend()
          , [walletId = addr.walletId](const bs::sync::WalletInfo &wi){
@@ -279,9 +263,6 @@ void AddressListModel::onAddressComments(const std::string &
 void AddressListModel::onAddressBalances(const std::string &walletId
    , const std::vector<bs::sync::WalletBalanceData::AddressBalance> &balances)
 {
-   if (balances.empty()) {
-      return;
-   }
    const auto &lbdSaveBalToPool = [this, walletId, balances]
    {
       auto &walletBal = pooledBalances_[walletId];
@@ -314,9 +295,6 @@ void AddressListModel::onAddressBalances(const std::string &walletId
       endRow = std::max(endRow, itAddr->second);
       addressRows_[itAddr->second].balance = bal.balTotal;
       addressRows_[itAddr->second].transactionCount = bal.txn;
-   }
-   if (!nbFound) {
-      return;
    }
    for (auto &addrRow : addressRows_) {
       if ((addrRow.balance > 0) || (addrRow.transactionCount > 0)) {

@@ -15,14 +15,15 @@
 #include "CheckRecipSigner.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
-#include "HeadlessContainer.h"
-#include "InprocSigner.h"
+#include "Wallets/HeadlessContainer.h"
+#include "Wallets/InprocSigner.h"
 #include "Wallets/SyncHDLeaf.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
-using namespace ArmorySigner;
+using namespace Armory::Signer;
 
+#if 0 // CC code turned off
 TestCCoinAsync::TestCCoinAsync()
 {}
 
@@ -1474,3 +1475,4 @@ TEST_F(TestCCoinAsync, Reorg)
       EXPECT_EQ(cct->getCcValueForAddress(userCCAddresses_[c]), y*ccLotSize_);
    }
 }
+#endif   //0

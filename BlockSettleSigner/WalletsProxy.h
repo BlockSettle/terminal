@@ -16,7 +16,7 @@
 #include <QJSValue>
 
 #include "BSErrorCode.h"
-#include "SignerDefs.h"
+#include "Wallets/SignerDefs.h"
 #include "hwcommonstructure.h"
 
 namespace spdlog {

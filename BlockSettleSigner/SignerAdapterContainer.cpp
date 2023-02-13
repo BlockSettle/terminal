@@ -13,11 +13,10 @@
 #include <QDataStream>
 #include <QFile>
 #include <QStandardPaths>
-#include "Celer/ClientConnection.h"
 #include "DataConnection.h"
 #include "DataConnectionListener.h"
 #include "HeadlessApp.h"
-#include "ProtobufHeadlessUtils.h"
+#include "Wallets/ProtobufHeadlessUtils.h"
 #include "SignerInterfaceListener.h"
 #include "Wallets/SyncWalletsManager.h"
 
