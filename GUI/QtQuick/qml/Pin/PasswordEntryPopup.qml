@@ -147,7 +147,7 @@ Window {
                 width: 190
 
                 Component.onCompleted: {
-                    copy_seed_but.preferred = false
+                    cancel_but.preferred = false
                 }
                 function click_enter() {
                     root.clean()

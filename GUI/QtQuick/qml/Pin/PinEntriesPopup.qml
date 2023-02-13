@@ -51,7 +51,7 @@ Window {
             anchors.right: parent.right
             anchors.rightMargin: 24
 
-            source: "qrc:/images/close_button.png"
+            source: "qrc:/images/close_button.svg"
             width: 16
             height: 16
             MouseArea {

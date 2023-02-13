@@ -160,5 +160,7 @@
         <file>images/delete.svg</file>
         <file>qml/TransactionDetails.qml</file>
         <file>qml/StyledControls/CloseIconButton.qml</file>
+        <file>qml/StyledControls/CustomTableDelegateRow.qml</file>
+        <file>qml/Send/SelectInputs.qml</file>
     </qresource>
 </RCC>

@@ -36,7 +36,7 @@ TableView {
     property int copy_button_column_index: 0
     property int delete_button_column_index: -1
 
-    property int left_first_header_padding: 10
+    property int left_first_header_padding: -1
     property int left_text_padding: 10
 
     property var columnWidths:  ({})
@@ -49,6 +49,8 @@ TableView {
     onWidthChanged: component.forceLayout()
 
     delegate: Rectangle {
+        id: delega
+
         implicitHeight: 34
         color: row === 0 ? BSStyle.tableCellBackgroundColor : (row === selected_row_index ? BSStyle.tableCellSelectedBackgroundColor : BSStyle.tableCellBackgroundColor)
 
@@ -82,41 +84,57 @@ TableView {
             } 
         }
 
-        Row {
+        Loader {
+            id: row_loader
+
             width: parent.width
-            height: parent.height
+            height: childrenRect.height
 
-            Text {
-                id: internal_text
+            property int delete_button_column_index: component.delete_button_column_index
+            property int text_header_size: component.text_header_size
+            property int cell_text_size: component.cell_text_size
+            property int copy_button_column_index: component.copy_button_column_index
+            property int selected_row_index: component.selected_row_index
+            property int left_first_header_padding: component.left_first_header_padding
+            property int left_text_padding: component.left_text_padding
+            property int model_row: row
+            property int model_column: column
 
-                visible: column !== component.delete_button_column_index
+            property string model_tableData: tableData
+            property var model_dataColor: dataColor
 
-                text: tableData
-                height: parent.height
-                verticalAlignment: Text.AlignVCenter
-                clip: true
-
-                color: dataColor
-                font.family: "Roboto"
-                font.weight: Font.Normal
-                font.pixelSize: row === 0 ? component.text_header_size : component.cell_text_size
-
-                leftPadding: (row === 0 && column === 0)
-                             ? left_first_header_padding : left_text_padding
+            Component.onCompleted: {
+                delega.update_row_loader_size()
             }
+        }
 
-            DeleteIconButton {
-                id: delete_icon
-                x: 0
-                visible: column === component.delete_button_column_index && row > 0
-                onDeleteRequested: component.deleteRequested(row)
+        Connections {
+            target: row_loader.item
+            function onDeleteRequested (row)
+            {
+                component.deleteRequested(row)
             }
+            function onCopyRequested (tableData)
+            {
+                component.copyRequested(tableData)
+            }
+        }
 
-            CopyIconButton {
-                id: copy_icon
-                x: internal_text.contentWidth + copy_icon.width / 2
-                visible: column === component.copy_button_column_index && row == selected_row_index
-                onCopy: component.copyRequested(tableData)
+        onWidthChanged: {
+            delega.update_row_loader_size()
+        }
+
+        onHeightChanged: {
+            delega.update_row_loader_size()
+        }
+
+        function update_row_loader_size()
+        {
+            row_loader.width = delega.width
+            row_loader.height = childrenRect.height
+            if (row_loader.width && row_loader.height && (row_loader.source !== ""))
+            {
+                row_loader.setSource(choose_row_source(row, column))
             }
         }
 
@@ -127,5 +145,10 @@ TableView {
 
             anchors.bottom: parent.bottom
         }
+    }
+
+    function choose_row_source(row, column)
+    {
+        return "CustomTableDelegateRow.qml"
     }
 }

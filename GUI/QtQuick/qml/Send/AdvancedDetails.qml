@@ -1,7 +1,6 @@
 import QtQuick 2.12
 import QtQuick.Window 2.12
 import QtQuick.Controls 2.12
-import QtQuick.Controls 1.4
 import QtQuick.Layouts 1.15
 
 import "../BsStyles"
@@ -139,21 +138,20 @@ ColumnLayout  {
                     width: 504
                     height: 70
 
-                    onActivated: {
+                    onActivated: (index_act) =>  {
+                        if (rec_addr_input.isValid) {
+                            var fpb = parseFloat(fee_suggest_combo.currentValue)
+                            tempRequest = bsApp.createTXSignRequest(index_act
+                                        , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
+                        }
+
                         //I dont understand why but acceptableInput dont work...
-                        var amount_max = getWalletData(from_wallet_combo.currentIndex, WalletBalance.TotalRole)
                         var cur_value = parseFloat(amount_input.input_text)
                         var bottom = 0
                         var top = tempRequest.maxAmount
                         if(cur_value < bottom || cur_value > top)
                         {
-                            amount_input.input_text = amount_max
-                        }
-
-                        if (rec_addr_input.isValid) {
-                            var fpb = parseFloat(fee_suggest_combo.currentValue)
-                            tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
-                                        , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
+                            amount_input.input_text = tempRequest.maxAmount
                         }
                     }
                 }
@@ -346,21 +344,6 @@ ColumnLayout  {
                         txOutputsModel.delOutput(row)
                     }
                 }
-
-                TreeView {
-                    TableViewColumn {
-                        title: "Name"
-                        role: "fileName"
-                        width: 300
-                    }
-                    TableViewColumn {
-                        title: "Permissions"
-                        role: "filePermissions"
-                        width: 100
-                    }
-                    model: fileSystemModel
-                }
-
             }
         }
     }
