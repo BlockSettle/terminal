@@ -34,7 +34,8 @@ SettingsAdapter::SettingsAdapter(const std::shared_ptr<ApplicationSettings> &set
    , user_(std::make_shared<UserTerminal>(TerminalUsers::Settings))
 {
    if (!appSettings_->LoadApplicationSettings(appArgs)) {
-      throw std::runtime_error("failed to load settings");
+      std::cerr << "failed to load settings: " << appSettings_->ErrorText().toStdString() << "\n";
+      throw std::runtime_error("failed to load settings: " + appSettings_->ErrorText().toStdString());
    }
    logMgr_ = std::make_shared<bs::LogManager>();
    logMgr_->add(appSettings_->GetLogsConfig());
@@ -318,6 +319,14 @@ bool SettingsAdapter::processApiClientsList(const bs::message::Envelope& env)
       msgResp->add_pub_keys(clientKey);
    }
    return pushResponse(user_, env, msg.SerializeAsString());
+}
+
+std::string SettingsAdapter::guiMode() const
+{
+   if (!appSettings_) {
+      return {};
+   }
+   return appSettings_->guiMode().toStdString();
 }
 
 bool SettingsAdapter::processGetRequest(const bs::message::Envelope &env
