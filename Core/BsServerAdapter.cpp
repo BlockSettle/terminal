@@ -86,7 +86,7 @@ void BsServerAdapter::start()
    req->set_source(SettingSource_Local);
    req->set_type(SettingType_Int);
    req->set_index(SetIdx_Environment);
-   pushRequest(user_, UserTerminal::create(TerminalUsers::Settings)
+   const auto msgId = pushRequest(user_, UserTerminal::create(TerminalUsers::Settings)
       , msg.SerializeAsString());
 }
 
@@ -143,8 +143,9 @@ bool BsServerAdapter::processLocalSettings(const SettingsMessage_SettingsRespons
          {
             AdministrativeMessage admMsg;
             admMsg.set_component_loading(user_->value());
-            pushBroadcast(UserTerminal::create(TerminalUsers::System)
+            const auto msgId = pushBroadcast(UserTerminal::create(TerminalUsers::System)
                , admMsg.SerializeAsString());
+            logger_->debug("[BsServerAdapter::processLocalSettings] #{}", msgId);
          }
          break;
 

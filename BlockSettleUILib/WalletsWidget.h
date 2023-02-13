@@ -144,13 +144,11 @@ private slots:
    void treeViewAddressesSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
    void treeViewAddressesLayoutChanged();
    void scrollChanged();
-   void onWalletsSynchronized();
 
 private:
    std::unique_ptr<Ui::WalletsWidget> ui_;
 
    std::shared_ptr<spdlog::logger> logger_;
-   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<AssetManager>          assetManager_;
@@ -165,7 +163,6 @@ private:
    QAction  *  actEditComment_ = nullptr;
    //QAction  *  actDeleteWallet_ = nullptr;
    bs::Address curAddress_;
-   [[deprecated]] std::shared_ptr<bs::sync::Wallet>   curWallet_;
    std::set<bs::sync::WalletInfo>   wallets_;
    std::unordered_map<std::string, bs::sync::HDWalletData>        walletDetails_;
    std::unordered_map<std::string, bs::sync::WalletBalanceData>   walletBalances_;
