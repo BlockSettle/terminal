@@ -151,8 +151,7 @@ static inline QString encTypeToString(bs::wallet::EncryptionType enc)
       case bs::wallet::EncryptionType::Hardware :
          return QObject::tr("Hardware Security Module");
    };
-
-   //no default entry in switch statment nor default return value
+   return QObject::tr("Unknown");
 }
 
 void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, const bs::hd::WalletInfo &walletInfo)
@@ -260,6 +259,13 @@ void RootWalletPropertiesDialog::onHDWalletDetails(const bs::sync::HDWalletData&
 void RootWalletPropertiesDialog::onSpendableUTXOs()
 {
 //   ui_->labelUTXOs->setText(QString::number(sizeUTXOs));
+}
+
+void RootWalletPropertiesDialog::walletDeleted(const std::string& rootId)
+{
+   if (walletInfo_.rootId().toStdString() == rootId) {
+      close();
+   }
 }
 
 void RootWalletPropertiesDialog::onWalletBalances(const bs::sync::WalletBalanceData&)

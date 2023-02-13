@@ -161,14 +161,12 @@ public:
    void onZCsInvalidated(const std::vector<BinaryData>& txHashes);
    void onNewBlock(unsigned int topBlock);
    void onTXDetails(const std::vector<bs::sync::TXWalletDetails> &);
+   size_t removeEntriesFor(const bs::sync::HDWalletData&);
 
 signals:
    void needTXDetails(const std::vector<bs::sync::TXWallet> &, bool useCache, const bs::Address &);
 
 private slots:
-   void updatePage();
-   void refresh();
-   void onWalletDeleted(std::string walletId);
    void onNewItems(const std::vector<TXNode *> &);
    void onDelRows(std::vector<int> rows);
    void onItemConfirmed(const TransactionPtr);
@@ -208,13 +206,11 @@ public:
 
 private:
    std::unique_ptr<TXNode>       rootNode_;
-   std::map<BinaryData, TXNode*> invalidatedNodes_;
    TransactionPtr oldestItem_;
    std::shared_ptr<spdlog::logger>     logger_;
    mutable QMutex                      updateMutex_;
    std::shared_ptr<bs::sync::Wallet>   defaultWallet_;
    std::atomic_bool  signalOnEndLoading_{ false };
-   const bool        allWallets_;
    std::shared_ptr<std::atomic_bool>  stopped_;
    std::atomic_bool  initialLoadCompleted_{ true };
 
@@ -232,7 +228,8 @@ private:
          return ((txHash == other.txHash) && (walletId == other.walletId));
       }
    };
-   std::map<ItemKey, int>  itemIndex_;
+   std::map<ItemKey, int>     itemIndex_;
+   std::map<ItemKey, TXNode*> invalidatedNodes_;
 
    // If set, amount field will show only related address balance changes
    // (without fees because fees are related to transaction, not address).

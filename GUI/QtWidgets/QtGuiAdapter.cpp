@@ -39,20 +39,6 @@ using namespace BlockSettle::Common;
 using namespace BlockSettle::Terminal;
 using namespace bs::message;
 
-#if 0
-Q_DECLARE_METATYPE(bs::error::AuthAddressSubmitResult)
-Q_DECLARE_METATYPE(std::string)
-Q_DECLARE_METATYPE(std::vector<bs::Address>)
-Q_DECLARE_METATYPE(std::vector<ApplicationSettings::Setting>);
-Q_DECLARE_METATYPE(bs::PayoutSignatureType)
-Q_DECLARE_METATYPE(bs::network::Asset::Type)
-Q_DECLARE_METATYPE(bs::network::MDField)
-Q_DECLARE_METATYPE(bs::network::MDFields)
-Q_DECLARE_METATYPE(bs::network::SecurityDef)
-Q_DECLARE_METATYPE(bs::network::CCSecurityDef)
-Q_DECLARE_METATYPE(bs::PayoutSignatureType)
-#endif
-
 #if defined (Q_OS_MAC)
 class MacOsApp : public QApplication
 {
@@ -203,25 +189,6 @@ void QtGuiAdapter::run(int &argc, char **argv)
       return;
    }
 
-#if 0
-   qRegisterMetaType<bs::error::AuthAddressSubmitResult>();
-   qRegisterMetaType<QVector<int>>();
-   qRegisterMetaType<std::string>();
-   qRegisterMetaType<std::vector<bs::Address>>();
-   qRegisterMetaType<std::vector<ApplicationSettings::Setting>>();
-   qRegisterMetaType<bs::network::Asset::Type>("AssetType");
-   qRegisterMetaType<bs::network::Quote>("Quote");
-   qRegisterMetaType<bs::network::Order>("Order");
-   qRegisterMetaType<bs::network::SecurityDef>("SecurityDef");
-   qRegisterMetaType<bs::network::MDField>("MDField");
-   qRegisterMetaType<bs::network::MDFields>("MDFields");
-   qRegisterMetaType<bs::network::CCSecurityDef>("CCSecurityDef");
-   qRegisterMetaType<bs::network::NewTrade>("NewTrade");
-   qRegisterMetaType<bs::network::NewPMTrade>("NewPMTrade");
-   qRegisterMetaType<bs::network::UnsignedPayinData>();
-   qRegisterMetaType<bs::PayoutSignatureType>();
-#endif
-
    QString logoIcon;
    logoIcon = QLatin1String(":/SPLASH_LOGO");
 
@@ -330,8 +297,6 @@ bool QtGuiAdapter::processSettings(const Envelope &env)
       return processSettingsState(msg.state());
    case SettingsMessage::kArmoryServers:
       return processArmoryServers(msg.armory_servers());
-   case SettingsMessage::kSignerServers:
-      return processSignerServers(msg.signer_servers());
    default: break;
    }
    return true;
@@ -420,19 +385,6 @@ bool QtGuiAdapter::processArmoryServers(const SettingsMessage_ArmoryServers& res
    });
 }
 
-bool QtGuiAdapter::processSignerServers(const SettingsMessage_SignerServers& response)
-{
-   QList<SignerHost> servers;
-   for (const auto& server : response.servers()) {
-      servers << SignerHost{ QString::fromStdString(server.name())
-         , QString::fromStdString(server.host()), std::stoi(server.port())
-         , QString::fromStdString(server.key()) };
-   }
-   return QMetaObject::invokeMethod(mainWindow_, [mw = mainWindow_, servers, response] {
-      mw->onSignerSettings(servers, response.own_key(), response.idx_current());
-   });
-}
-
 bool QtGuiAdapter::processAdminMessage(const Envelope &env)
 {
    AdministrativeMessage msg;
@@ -443,6 +395,7 @@ bool QtGuiAdapter::processAdminMessage(const Envelope &env)
    switch (msg.data_case()) {
    case AdministrativeMessage::kComponentCreated:
       switch (static_cast<TerminalUsers>(msg.component_created())) {
+      case TerminalUsers::Unknown:
       case TerminalUsers::API:
       case TerminalUsers::Settings:
          break;
@@ -503,8 +456,6 @@ bool QtGuiAdapter::processBlockchain(const Envelope &env)
          });
       }
       break;
-   case ArmoryMessage::kLedgerEntries:
-      return processLedgerEntries(msg.ledger_entries());
    case ArmoryMessage::kAddressHistory:
       return processAddressHist(msg.address_history());
    case ArmoryMessage::kFeeLevelsResponse:
@@ -544,6 +495,23 @@ bool QtGuiAdapter::processSigner(const Envelope &env)
       break;
    case SignerMessage::kSignTxResponse:
       return processSignTX(msg.sign_tx_response());
+   case SignerMessage::kWalletDeleted:
+      if (mainWindow_) {
+         const auto& itWallet = hdWallets_.find(msg.wallet_deleted());
+         QMetaObject::invokeMethod(mainWindow_, [this, itWallet, rootId=msg.wallet_deleted()] {
+            bs::sync::WalletInfo wi;
+            if (itWallet == hdWallets_.end()) {
+               wi.ids.push_back(rootId);
+            } else {
+               wi = itWallet->second;
+            }
+            mainWindow_->onWalletDeleted(wi);
+            if (itWallet != hdWallets_.end()) {
+               hdWallets_.erase(itWallet);
+            }
+         });
+      }
+      break;
    default:    break;
    }
    return true;
@@ -586,7 +554,6 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
 
    case WalletsMessage::kWalletAddresses: {
       std::vector<bs::sync::Address> addresses;
-      logger_->debug("[kWalletAddresses] #{}", env.responseId());
       for (const auto &addr : msg.wallet_addresses().addresses()) {
          try {
             addresses.push_back({ std::move(bs::Address::fromAddressString(addr.address()))
@@ -634,6 +601,13 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
       return processUTXOs(msg.utxos());
    case WalletsMessage::kReservedUtxos:
       return processReservedUTXOs(msg.reserved_utxos());
+   case WalletsMessage::kWalletChanged:
+      if (walletsReady_) {
+         onNeedLedgerEntries({});
+      }
+      break;
+   case WalletsMessage::kLedgerEntries:
+      return processLedgerEntries(msg.ledger_entries());
    default:    break;
    }
    return true;
@@ -1027,9 +1001,9 @@ void QtGuiAdapter::onSetAddrComment(const std::string &walletId, const bs::Addre
 
 void QtGuiAdapter::onNeedLedgerEntries(const std::string &filter)
 {
-   ArmoryMessage msg;
+   WalletsMessage msg;
    msg.set_get_ledger_entries(filter);
-   pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
 void QtGuiAdapter::onNeedTXDetails(const std::vector<bs::sync::TXWallet> &txWallet
@@ -1039,7 +1013,7 @@ void QtGuiAdapter::onNeedTXDetails(const std::vector<bs::sync::TXWallet> &txWall
    auto msgReq = msg.mutable_tx_details_request();
    for (const auto &txw : txWallet) {
       auto request = msgReq->add_requests();
-      logger_->debug("[{}] {}", __func__, txw.txHash.toHexStr());
+      //logger_->debug("[{}] {}", __func__, txw.txHash.toHexStr());
       request->set_tx_hash(txw.txHash.toBinStr());
       request->set_wallet_id(txw.walletId);
       request->set_value(txw.value);
@@ -1270,6 +1244,19 @@ void QtGuiAdapter::onNeedWalletDialog(bs::signer::ui::GeneralDialogType dlgType
          });
       }
       break;
+   case bs::signer::ui::GeneralDialogType::DeleteWallet:
+      if (mainWindow_) {
+         const auto& itWallet = hdWallets_.find(rootId);
+         const std::string walletName = (itWallet == hdWallets_.end()) ? "" : itWallet->second.name;
+         QMetaObject::invokeMethod(mainWindow_, [this, rootId, walletName] {
+            if (mainWindow_->deleteWallet(rootId, walletName)) {
+               SignerMessage msg;
+               msg.set_delete_wallet(rootId);
+               pushRequest(user_, userSigner_, msg.SerializeAsString());
+            }
+         });
+      }
+      break;
    default:
       logger_->debug("[{}] {} ({})", __func__, (int)dlgType, rootId);
       break;
@@ -1404,7 +1391,7 @@ bool QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMessage_TXDetai
    });
 }
 
-bool QtGuiAdapter::processLedgerEntries(const ArmoryMessage_LedgerEntries &response)
+bool QtGuiAdapter::processLedgerEntries(const LedgerEntries &response)
 {
    std::vector<bs::TXEntry> entries;
    for (const auto &entry : response.entries()) {

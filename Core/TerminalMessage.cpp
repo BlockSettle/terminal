@@ -132,10 +132,10 @@ void bs::message::TerminalInprocBus::sendLoading(const std::shared_ptr<Adapter>&
 void TerminalInprocBus::shutdown()
 {
    runnableAdapter_.reset();
+   relayAdapter_.reset();
    for (const auto& q : queues_) {
       q.second->terminate();
    }
-   relayAdapter_.reset();
 }
 
 bool TerminalInprocBus::run(int &argc, char **argv)

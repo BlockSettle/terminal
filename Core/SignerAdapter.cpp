@@ -133,9 +133,11 @@ bool SignerAdapter::processOwnRequest(const bs::message::Envelope &env
    case SignerMessage::kDialogRequest:
       return processDialogRequest(env, request.dialog_request());
    case SignerMessage::kCreateWallet:
-      return processCreateWallet(env, request.create_wallet());
+      return processCreateWallet(env, false, request.create_wallet());
    case SignerMessage::kImportWallet:
-      return processCreateWallet(env, request.import_wallet());
+      return processCreateWallet(env, true, request.import_wallet());
+   case SignerMessage::kDeleteWallet:
+      return processDeleteWallet(env, request.delete_wallet());
    default:
       logger_->warn("[{}] unknown signer request: {}", __func__, request.data_case());
       break;
@@ -164,10 +166,10 @@ bool SignerAdapter::processSignerSettings(const SettingsMessage_SignerServer &re
    return sendComponentLoading();
 }
 
-void SignerAdapter::walletsChanged()
+void SignerAdapter::walletsChanged(bool rescan)
 {
    SignerMessage msg;
-   msg.mutable_wallets_list_updated();
+   msg.set_wallets_list_updated(rescan);
    pushBroadcast(user_, msg.SerializeAsString(), true);
 }
 
@@ -566,7 +568,7 @@ bool SignerAdapter::processDialogRequest(const bs::message::Envelope&
 }
 
 bool SignerAdapter::processCreateWallet(const bs::message::Envelope& env
-   , const SignerMessage_CreateWalletRequest& w)
+   , bool rescan, const SignerMessage_CreateWalletRequest& w)
 {
    bs::wallet::PasswordData pwdData;
    pwdData.password = SecureBinaryData::fromString(w.password());
@@ -582,7 +584,7 @@ bool SignerAdapter::processCreateWallet(const bs::message::Envelope& env
       const auto& wallet = walletsMgr_->createWallet(w.name(), w.description(), seed
          , walletsDir_, pwdData, w.primary());
       msgResp->set_wallet_id(wallet->walletId());
-      walletsChanged();
+      walletsChanged(rescan);
       logger_->debug("[{}] wallet {} created", __func__, wallet->walletId());
    }
    catch (const std::exception& e) {
@@ -590,5 +592,20 @@ bool SignerAdapter::processCreateWallet(const bs::message::Envelope& env
       msgResp->set_error_msg(e.what());
    }
    pushResponse(user_, env, msg.SerializeAsString());
+   return true;
+}
+
+bool SignerAdapter::processDeleteWallet(const bs::message::Envelope& env
+   , const std::string& rootId)
+{
+   SignerMessage msg;
+   const auto& hdWallet = walletsMgr_->getHDWalletById(rootId);
+   if (hdWallet && walletsMgr_->deleteWalletFile(hdWallet)) {
+      msg.set_wallet_deleted(rootId);
+   }
+   else {
+      msg.set_wallet_deleted("");
+   }
+   pushBroadcast(user_, msg.SerializeAsString());
    return true;
 }
