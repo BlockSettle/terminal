@@ -23,6 +23,7 @@ Popup {
     property string transactions: ""
     property string balance: ""
     property string comment: ""
+    property string asset_type: ""
     property string type: ""
     property string wallet: ""
 
@@ -137,11 +138,20 @@ Popup {
                         font.pixelSize: 14
                         width: 140
                     }
-                    Text {
-                        text: address_details.type
-                        color: BSStyle.textColor
-                        font.family: "Roboto"
-                        font.pixelSize: 14
+                    Row {
+                        spacing: 14
+                        Text {
+                            text: address_details.asset_type
+                            color: BSStyle.textColor
+                            font.family: "Roboto"
+                            font.pixelSize: 14
+                        }
+                        Text {
+                            text: address_details.type
+                            color: BSStyle.textColor
+                            font.family: "Roboto"
+                            font.pixelSize: 14
+                        }
                     }
 
                     Text {

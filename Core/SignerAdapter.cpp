@@ -407,11 +407,13 @@ ProcessingResult SignerAdapter::processSyncWallet(const bs::message::Envelope &e
       if (!sender) {
          return;
       }
+      logger_->debug("[SignerAdapter::processSyncWallet] wallet {} asset type: {}", walletId, data.assetType);
       SignerMessage msg;
       auto msgResp = msg.mutable_wallet_synced();
       msgResp->set_wallet_id(walletId);
       msgResp->set_high_ext_index(data.highestExtIndex);
       msgResp->set_high_int_index(data.highestIntIndex);
+      msgResp->set_asset_type((int)data.assetType);
 
       for (const auto &addr : data.addresses) {
          auto msgAddr = msgResp->add_addresses();

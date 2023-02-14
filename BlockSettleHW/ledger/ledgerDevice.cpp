@@ -22,8 +22,27 @@
 #include "QByteArray"
 
 namespace {
+   class LedgerException : public std::runtime_error
+   {
+   public:
+      LedgerException(const std::string& desc) : std::runtime_error(desc) {}
+   };
+
+   class LedgerBrokenSequence : public LedgerException
+   {
+   public:
+      LedgerBrokenSequence() : LedgerException("Unexpected sequence number 191")
+      {}
+   };
+
+   class LedgerReconnectDevice : public LedgerException
+   {
+   public:
+      LedgerReconnectDevice() : LedgerException("Device needs to be reconnected")
+      {}
+   };
+
    const uint16_t kHidapiBrokenSequence = 191;
-   const std::string kHidapiSequence191 = "Unexpected sequence number 191";
    int sendApdu(hid_device* dongle, const QByteArray& command) {
       int result = 0;
       QVector<QByteArray> chunks;
@@ -64,7 +83,6 @@ namespace {
             break;
          }
       }
-
       return result;
    }
 
@@ -83,10 +101,10 @@ namespace {
          auto chunkIndex = static_cast<uint16_t>(((uint8_t)chunk[3] << 8) | (uint8_t)chunk[4]);
          if (chunkIndex != expectedChunkIndex++) {
             if (chunkIndex == static_cast<uint16_t>(kHidapiBrokenSequence)) {
-               throw std::logic_error(kHidapiSequence191);
+               throw LedgerBrokenSequence();
             }
             else {
-               throw std::logic_error("Unexpected sequence number");
+               throw LedgerException("Unexpected sequence number");
             }
          }
       };
@@ -164,29 +182,32 @@ void LedgerDevice::init()
 }
 
 
-bool DeviceIOHandler::writeData(const QByteArray& input, const std::string& logHeader)
+bool DeviceIOHandler::writeData(const QByteArray& input, const std::string& logHeader) noexcept
 {
-   logger_->debug("{} - >>> {}", logHeader, input.toHex().toStdString());
+   logger_->debug("{} >>> {}", logHeader, input.toHex().toStdString());
    if (sendApdu(dongle_, input) < 0) {
-      logger_->error("{} - Cannot write to device.", logHeader);
-      throw std::runtime_error("Cannot write to device");
+      logger_->error("{} Cannot write to device", logHeader);
+      return false;
    }
    return true;
 }
 
-bool DeviceIOHandler::readData(QByteArray& output, const std::string& logHeader)
+void DeviceIOHandler::readData(QByteArray& output, const std::string& logHeader)
 {
    const auto res = receiveApduResult(dongle_, output);
    if (res != Ledger::SW_OK) {
-      logger_->error("{} - Cannot read from device. APDU error code : {}",
+      if (res == Ledger::SW_RECONNECT_DEVICE) {
+         logger_->debug("[{}] {} bytes read before reconnect", __func__, output.size());
+         throw LedgerReconnectDevice();
+      }
+      logger_->error("{} Cannot read from device. APDU error code : {}",
          logHeader, QByteArray::number(res, 16).toStdString());
-      throw std::runtime_error("Can't read from device: " + std::to_string(res));
+      throw LedgerException("Can't read from device: " + std::to_string(res));
    }
-   logger_->debug("{} - <<< {}", logHeader, BinaryData::fromString(output.toStdString()).toHexStr() + "9000");
-   return true;
+   logger_->debug("{} <<< {}", logHeader, BinaryData::fromString(output.toStdString()).toHexStr() + "9000");
 }
 
-bool DeviceIOHandler::initDevice()
+bool DeviceIOHandler::initDevice() noexcept
 {
    if (hid_init() < 0 || hidDeviceInfo_.serialNumber.empty()) {
       logger_->info("[DeviceIOHandler::initDevice] cannot init hid");
@@ -206,7 +227,6 @@ bool DeviceIOHandler::initDevice()
             break;
          }
       }
-
       if (!bFound) {
          return false;
       }
@@ -215,13 +235,12 @@ bool DeviceIOHandler::initDevice()
    std::unique_ptr<wchar_t> serNumb(new wchar_t[hidDeviceInfo_.serialNumber.length() + 1]);
    QString::fromStdString(hidDeviceInfo_.serialNumber).toWCharArray(serNumb.get());
    serNumb.get()[hidDeviceInfo_.serialNumber.length()] = 0x00;
-   dongle_ = nullptr;
    dongle_ = hid_open(hidDeviceInfo_.vendorId, static_cast<ushort>(hidDeviceInfo_.productId), serNumb.get());
 
    return dongle_ != nullptr;
 }
 
-void DeviceIOHandler::releaseDevice()
+void DeviceIOHandler::releaseDevice() noexcept
 {
    if (dongle_) {
       hid_close(dongle_);
@@ -238,9 +257,10 @@ bool DeviceIOHandler::exchangeData(const QByteArray& input, QByteArray& output
    }
 
    try {
-      return readData(output, logHeader);
+      readData(output, logHeader);
+      return true;
    }
-   catch (std::exception& e) {
+   catch (const LedgerBrokenSequence&) {
       // Special case : sometimes hidapi return incorrect sequence_index as response
       // and there is really now good solution for it, except restart dongle session
       // till the moment error gone.
@@ -249,22 +269,30 @@ bool DeviceIOHandler::exchangeData(const QByteArray& input, QByteArray& output
       // Also it's a general issue for OSX really, but let's left it for all system, just in case
       // And let's have 10 times threshold to avoid trying infinitively
       static int maxAttempts = 10;
-      if (e.what() == kHidapiSequence191 && maxAttempts > 0) {
+      if (maxAttempts > 0) {
          --maxAttempts;
          ScopedGuard guard([] {
             ++maxAttempts;
             });
-
          releaseDevice();
+         std::this_thread::sleep_for(std::chrono::milliseconds{ 100 });
          initDevice();
          output.clear();
 
          return exchangeData(input, output, std::move(logHeader));
       }
-      else {
-         throw e;
-      }
    }
+   catch (const LedgerReconnectDevice&) {
+      logger_->error("{} device requires reconnection", logHeader);
+      /*releaseDevice();
+      std::this_thread::sleep_for(std::chrono::milliseconds{100});
+      initDevice();
+      output.clear();
+      return exchangeData(input, output, std::move(logHeader));*/
+      return false;
+   }
+   catch (const LedgerException&) {}
+   return false;
 }
 
 BIP32_Node GetPubKeyHandler::getPublicKeyApdu(const bs::hd::Path& derivationPath
@@ -281,7 +309,7 @@ BIP32_Node GetPubKeyHandler::getPublicKeyApdu(const bs::hd::Path& derivationPath
    command.append(payload);
 
    QByteArray response;
-   if (!exchangeData(command, response, "[GetPubKeyHandler::getPublicKeyApdu] ")) {
+   if (!exchangeData(command, response, "[GetPubKeyHandler::getPublicKeyApdu]")) {
       return {};
    }
 
@@ -424,62 +452,67 @@ void LedgerDevice::getPublicKeys()
 
 void LedgerDevice::signTX(const bs::core::wallet::TXSignRequest& coreReq)
 {
-   // retrieve inputs paths
-   std::vector<bs::hd::Path> inputPaths;
-   for (int i = 0; i < coreReq.armorySigner_.getTxInCount(); ++i) {
-      auto spender = coreReq.armorySigner_.getSpender(i);
-      const auto& bip32Paths = spender->getBip32Paths();
-      if (bip32Paths.size() != 1) {
-         throw std::logic_error("spender should only have one bip32 path");
-      }
-      auto pathFromRoot = bip32Paths.begin()->second.getDerivationPathFromSeed();
+   try {
+      // retrieve inputs paths
+      std::vector<bs::hd::Path> inputPaths;
+      for (int i = 0; i < coreReq.armorySigner_.getTxInCount(); ++i) {
+         auto spender = coreReq.armorySigner_.getSpender(i);
+         const auto& bip32Paths = spender->getBip32Paths();
+         if (bip32Paths.size() != 1) {
+            throw LedgerException("spender should only have one bip32 path");
+         }
+         auto pathFromRoot = bip32Paths.begin()->second.getDerivationPathFromSeed();
 
-      bs::hd::Path path;
-      for (unsigned i=0; i<pathFromRoot.size(); i++) {
-         path.append(pathFromRoot[i]);
+         bs::hd::Path path;
+         for (unsigned i = 0; i < pathFromRoot.size(); i++) {
+            path.append(pathFromRoot[i]);
+         }
+
+         inputPaths.push_back(std::move(path));
       }
 
-      inputPaths.push_back(std::move(path));
+      // retrieve change path if any
+      bs::hd::Path changePath;
+      if (coreReq.change.value > 0) {
+         const auto purp = bs::hd::purpose(coreReq.change.address.getType());
+         if (coreReq.change.index.empty()) {
+            throw LedgerException(fmt::format("can't find change address index for '{}'", coreReq.change.address.display()));
+         }
+
+         changePath = getDerivationPath(testNet_, purp);
+         changePath.append(bs::hd::Path::fromString(coreReq.change.index));
+      }
+
+      auto inPubData = std::make_shared<PubKeyIn>();
+      inPubData->paths = inputPaths;
+
+      const auto& cb = [this](const std::shared_ptr<bs::OutData>& data)
+      {
+         const auto& reply = std::static_pointer_cast<SignTXOut>(data);
+         if (!reply) {
+            logger_->error("[LedgerDevice::signTX] invalid callback data");
+            operationFailed("invalid data");
+            return;
+         }
+         cb_->txSigned(key(), reply->serInputSigs);
+      };
+      auto inData = std::make_shared<SignTXIn>();
+      inData->key = key();
+      inData->txReq = coreReq;
+      inData->inputPaths = std::move(inputPaths);
+      inData->changePath = std::move(changePath);
+
+      const auto& cbPub = [this, inData, cb](const std::shared_ptr<bs::OutData>& data)
+      {
+         const auto& pubResult = std::static_pointer_cast<PubKeyOut>(data);
+         inData->inputNodes = std::move(pubResult->pubKeys);
+         processQueued(inData, cb);
+      };
+      processQueued(inPubData, cbPub);
    }
-
-   // retrieve change path if any
-   bs::hd::Path changePath;
-   if (coreReq.change.value > 0) {
-      const auto purp = bs::hd::purpose(coreReq.change.address.getType());
-      if (coreReq.change.index.empty()) {
-         throw std::logic_error(fmt::format("can't find change address index for '{}'", coreReq.change.address.display()));
-      }
-
-      changePath = getDerivationPath(testNet_, purp);
-      changePath.append(bs::hd::Path::fromString(coreReq.change.index));
+   catch (const LedgerException& e) {
+      operationFailed(e.what());
    }
-
-   auto inPubData = std::make_shared<PubKeyIn>();
-   inPubData->paths = inputPaths;
-
-   const auto& cb = [this](const std::shared_ptr<bs::OutData>& data)
-   {
-      const auto& reply = std::static_pointer_cast<SignTXOut>(data);
-      if (!reply) {
-         logger_->error("[LedgerDevice::signTX] invalid callback data");
-         operationFailed("invalid data");
-         return;
-      }
-      cb_->txSigned(key(), reply->serInputSigs);
-   };
-   auto inData = std::make_shared<SignTXIn>();
-   inData->key = key();
-   inData->txReq = coreReq;
-   inData->inputPaths = std::move(inputPaths);
-   inData->changePath = std::move(changePath);
-
-   const auto& cbPub = [this, inData, cb](const std::shared_ptr<bs::OutData>& data)
-   {
-      const auto& pubResult = std::static_pointer_cast<PubKeyOut>(data);
-      inData->inputNodes = std::move(pubResult->pubKeys);
-      processQueued(inData, cb);
-   };
-   processQueued(inPubData, cbPub);
 }
 
 void bs::hww::LedgerDevice::retrieveXPubRoot()
@@ -583,7 +616,7 @@ void SignTXHandler::startUntrustedTransaction(const std::vector<QByteArray>& tru
    const std::vector<QByteArray>& redeemScripts,
    unsigned txOutIndex, bool isNew, bool isSW, bool isRbf)
 {
-   {
+   try {
       //setup untrusted transaction
       logger_->debug("[SignTXHandler::startUntrustedTransaction] start Init section");
       QByteArray initPayload;
@@ -600,9 +633,13 @@ void SignTXHandler::startUntrustedTransaction(const std::vector<QByteArray>& tru
       QByteArray responseInit;
       if (!exchangeData(initCommand, responseInit, "[SignTXHandler::startUntrustedTransaction] InitPayload")) {
          releaseDevice();
-         throw std::runtime_error("failed to init untrusted tx");
+         throw LedgerException("failed to init untrusted tx");
       }
       logger_->debug("[SignTXHandler::startUntrustedTransaction] done Init section");
+   }
+   catch (const LedgerException& e) {
+      logger_->error("[{}] {}", __func__, e.what());
+      return;
    }
 
    //pass each input
@@ -638,14 +675,20 @@ void SignTXHandler::startUntrustedTransaction(const std::vector<QByteArray>& tru
       inputCommands.push_back(std::move(secondPart));
    }
 
-   for (const auto &inputCommand : inputCommands) {
-      QByteArray responseInput;
-      if (!exchangeData(inputCommand, responseInput, "[SignTXHandler::startUntrustedTransaction] inputPayload")) {
-         releaseDevice();
-         throw std::runtime_error("failed to create untrusted tx");
+   try {
+      for (const auto& inputCommand : inputCommands) {
+         QByteArray responseInput;
+         if (!exchangeData(inputCommand, responseInput, "[SignTXHandler::startUntrustedTransaction] inputPayload")) {
+            releaseDevice();
+            throw LedgerException("failed to create untrusted tx");
+         }
       }
+      logger_->debug("[SignTXHandler::startUntrustedTransaction] done Input section");
    }
-   logger_->debug("[SignTXHandler::startUntrustedTransaction] done Input section");
+   catch (const LedgerException& e) {
+      logger_->error("[{}] {}", __func__, e.what());
+      return;
+   }
 }
 
 void SignTXHandler::finalizeInputFull(const std::shared_ptr<SignTXIn>& inData)
@@ -694,15 +737,20 @@ void SignTXHandler::finalizeInputFull(const std::shared_ptr<SignTXIn>& inData)
    }
 
    //emit info(HWInfoStatus::kPressButton);
-
-   for (auto &outputCommand : outputCommands) {
-      QByteArray responseOutput;
-      if (!exchangeData(outputCommand, responseOutput, "[SignTXHandler::finalizeInputFull] outputPayload")) {
-         releaseDevice();
-         throw std::runtime_error("failed to upload recipients");
+   try {
+      for (auto& outputCommand : outputCommands) {
+         QByteArray responseOutput;
+         if (!exchangeData(outputCommand, responseOutput, "[SignTXHandler::finalizeInputFull] outputPayload")) {
+            releaseDevice();
+            throw LedgerException("failed to upload recipients");
+         }
       }
+      logger_->debug("[SignTXHandler::finalizeInputFull] done output section");
    }
-   logger_->debug("[SignTXHandler::finalizeInputFull] done output section");
+   catch (const LedgerException& e) {
+      logger_->error("[{}] {}", __func__, e.what());
+      return;
+   }
 }
 
 void SignTXHandler::processTXLegacy(const std::shared_ptr<SignTXIn>& inData
@@ -712,10 +760,12 @@ void SignTXHandler::processTXLegacy(const std::shared_ptr<SignTXIn>& inData
    //emit info(HWInfoStatus::kTransaction);
    std::vector<QByteArray> trustedInputs;
    for (unsigned i=0; i < inData->txReq.armorySigner_.getTxInCount(); i++) {
-      auto spender = inData->txReq.armorySigner_.getSpender(i);
-      auto trustedInput = getTrustedInput(inData, spender->getOutputHash()
+      const auto& spender = inData->txReq.armorySigner_.getSpender(i);
+      const auto& trustedInput = getTrustedInput(inData, spender->getOutputHash()
          , spender->getOutputIndex());
-      trustedInputs.push_back(trustedInput);
+      if (!trustedInput.isEmpty()) {
+         trustedInputs.push_back(trustedInput);
+      }
    }
 
    // -- collect all redeem scripts
@@ -795,16 +845,22 @@ void SignTXHandler::processTXSegwit(const std::shared_ptr<SignTXIn>& inData
    , const std::shared_ptr<SignTXOut>& outData)
 {
    //emit info(HWInfoStatus::kTransaction);
-   // ---- Prepare all pib32 nodes for input from device -----
-   auto segwitData = getSegwitData(inData);
+   // ---- Prepare all bip32 nodes for input from device -----
+   const auto& segwitData = getSegwitData(inData);
+   if (segwitData.empty()) {
+      logger_->error("[{}] empty segwit data", __func__);
+      return;
+   }
 
    //upload supporting tx to ledger, get trusted input back for our outpoints
    std::vector<QByteArray> trustedInputs;
    for (unsigned i=0; i < inData->txReq.armorySigner_.getTxInCount(); i++) {
-      auto spender = inData->txReq.armorySigner_.getSpender(i);
-      auto trustedInput = getTrustedInput(inData, spender->getOutputHash()
+      const auto& spender = inData->txReq.armorySigner_.getSpender(i);
+      const auto& trustedInput = getTrustedInput(inData, spender->getOutputHash()
          , spender->getOutputIndex());
-      trustedInputs.push_back(trustedInput);
+      if (!trustedInput.isEmpty()) {
+         trustedInputs.push_back(trustedInput);
+      }
    }
 
    // -- Collect all redeem scripts
@@ -882,46 +938,52 @@ void SignTXHandler::processTXSegwit(const std::shared_ptr<SignTXIn>& inData
 SegwitInputData SignTXHandler::getSegwitData(const std::shared_ptr<SignTXIn>& inData)
 {
    logger_->info("[SignTXHandler::getSegwitData] start retrieving segwit data");
-   SegwitInputData data;
-   for (unsigned i = 0; i < inData->txReq.armorySigner_.getTxInCount(); i++) {
-      const auto& path = inData->inputPaths.at(i);
-      auto spender = inData->txReq.armorySigner_.getSpender(i);
+   try {
+      SegwitInputData data;
+      for (unsigned i = 0; i < inData->txReq.armorySigner_.getTxInCount(); i++) {
+         const auto& path = inData->inputPaths.at(i);
+         auto spender = inData->txReq.armorySigner_.getSpender(i);
 
-      if (!isNestedSegwit(path)) {
-         continue;
+         if (!isNestedSegwit(path)) {
+            continue;
+         }
+         const auto& pubKeyNode = inData->inputNodes.at(i);
+
+         //recreate the p2wpkh & witness scripts
+         auto compressedKey = CryptoECDSA().CompressPoint(pubKeyNode.getPublicKey());
+         auto pubKeyHash = BtcUtils::getHash160(compressedKey);
+
+         auto witnessScript = BtcUtils::getP2WPKHWitnessScript(pubKeyHash);
+
+         BinaryWriter bwSwScript;
+         bwSwScript.put_uint8_t(16);
+         bwSwScript.put_BinaryData(BtcUtils::getP2WPKHOutputScript(pubKeyHash));
+         const auto& swScript = bwSwScript.getData();
+
+         /* sanity check: make sure the swScript is the preimage to the utxo's p2sh script */
+
+         //recreate p2sh hash
+         //auto p2shHash = BtcUtils::hash160(swScript);
+         auto p2shHash = BtcUtils::hash160(swScript.getSliceRef(1, 22));
+
+         //recreate p2sh script
+         auto p2shScript = BtcUtils::getP2SHScript(p2shHash);
+
+         //check vs utxo's script
+         if (spender->getOutputScript() != p2shScript) {
+            throw LedgerException("p2sh script mismatch");
+         }
+
+         data.preimages[i] = swScript;
+         data.redeemScripts[i] = std::move(witnessScript);
       }
-      const auto& pubKeyNode = inData->inputNodes.at(i);
-
-      //recreate the p2wpkh & witness scripts
-      auto compressedKey = CryptoECDSA().CompressPoint(pubKeyNode.getPublicKey());
-      auto pubKeyHash = BtcUtils::getHash160(compressedKey);
-
-      auto witnessScript = BtcUtils::getP2WPKHWitnessScript(pubKeyHash);
-
-      BinaryWriter bwSwScript;
-      bwSwScript.put_uint8_t(16);
-      bwSwScript.put_BinaryData(BtcUtils::getP2WPKHOutputScript(pubKeyHash));
-      const auto& swScript = bwSwScript.getData();
-
-      /* sanity check: make sure the swScript is the preimage to the utxo's p2sh script */
-
-      //recreate p2sh hash
-      //auto p2shHash = BtcUtils::hash160(swScript);
-      auto p2shHash = BtcUtils::hash160(swScript.getSliceRef(1, 22));
-
-      //recreate p2sh script
-      auto p2shScript = BtcUtils::getP2SHScript(p2shHash);
-
-      //check vs utxo's script
-      if (spender->getOutputScript() != p2shScript) {
-         throw std::runtime_error("p2sh script mismatch");
-      }
-
-      data.preimages[i] = swScript;
-      data.redeemScripts[i] = std::move(witnessScript);
+      logger_->info("[SignTXHandler::getSegwitData] done retrieving segwit data");
+      return data;
    }
-   logger_->info("[SignTXHandler::getSegwitData] done retrieving segwit data");
-   return data;
+   catch (const LedgerException& e) {
+      logger_->error("[{}] {}", __func__, e.what());
+      return {};
+   }
 }
 
 void SignTXHandler::sendTxSigningResult(const std::shared_ptr<SignTXOut>& outData
@@ -1085,26 +1147,32 @@ QByteArray SignTXHandler::getTrustedInput(const std::shared_ptr<SignTXIn>& inDat
       inputCommands.push_back(std::move(commandScript));
    }
 
-   for (auto& inputCommand : inputCommands) {
-      QByteArray responseInput;
-      if (!exchangeData(inputCommand, responseInput, "[LedgerCommandThread] signTX - getting trusted input")) {
-         releaseDevice();
-         throw std::runtime_error("failed to get trusted input");
+   try {
+      for (auto& inputCommand : inputCommands) {
+         QByteArray responseInput;
+         if (!exchangeData(inputCommand, responseInput, "[LedgerCommandThread] signTX - getting trusted input")) {
+            releaseDevice();
+            throw LedgerException("failed to get trusted input");
+         }
       }
+
+      //locktime
+      QByteArray locktime;
+      writeUintLE(locktime, tx.getLockTime());
+      auto command = getApduCommand(
+         Ledger::CLA, Ledger::INS_GET_TRUSTED_INPUT, 0x80, 0x00, std::move(locktime));
+
+      QByteArray trustedInput;
+      if (!exchangeData(command, trustedInput, "[SignTXHandler::getTrustedInput] ")) {
+         releaseDevice();
+         throw LedgerException("failed to get trusted input");
+      }
+
+      logger_->debug("[SignTXHandler::getTrustedInput] done retrieve trusted input for legacy address");
+      return trustedInput;
    }
-
-   //locktime
-   QByteArray locktime;
-   writeUintLE(locktime, tx.getLockTime());
-   auto command = getApduCommand(
-      Ledger::CLA, Ledger::INS_GET_TRUSTED_INPUT, 0x80, 0x00, std::move(locktime));
-
-   QByteArray trustedInput;
-   if (!exchangeData(command, trustedInput, "[SignTXHandler::getTrustedInput] ")) {
-      releaseDevice();
-      throw std::runtime_error("failed to get trusted input");
+   catch (const LedgerException& e) {
+      logger_->error("[{}] {}", __func__, e.what());
+      return {};
    }
-
-   logger_->debug("[SignTXHandler::getTrustedInput] done retrieve trusted input for legacy address");
-   return trustedInput;
 }
