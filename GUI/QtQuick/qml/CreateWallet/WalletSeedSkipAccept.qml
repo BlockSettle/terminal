@@ -22,7 +22,7 @@ ColumnLayout  {
         id: title
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : title.height
-        text: "Verify your seed"
+        text: qsTr("Verify your seed")
     }
 
     Image {

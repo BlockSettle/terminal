@@ -111,6 +111,7 @@
         <file>qml/Send/SignTransaction.qml</file>
         <file>images/paste_icon.png</file>
         <file>qml/StyledControls/CustomCompleterPopup.qml</file>
+        <file>qml/Send/AdvancedDetails.qml</file>
         <file>qml/Pin/PinEntriesPopup.qml</file>
         <file>qml/Pin/qmldir</file>
         <file>qml/StyledControls/CustomMessageDialog.qml</file>
@@ -129,7 +130,6 @@
         <file>images/notification_question.png</file>
         <file>images/notification_success.png</file>
         <file>images/notification_warning.png</file>
-        <file>images/delete.svg</file>
         <file>images/plus.svg</file>
         <file>qml/Settings/qmldir</file>
         <file>qml/Settings/SettingsMenu.qml</file>
@@ -151,7 +151,21 @@
         <file>qml/StyledControls/InputOutputTableView.qml</file>
         <file>images/down_arrow.svg</file>
         <file>images/up_arrow.svg</file>
+        <file>qml/Send/WalletsComboBox.qml</file>
+        <file>qml/Send/AmountInput.qml</file>
+        <file>qml/Send/FeeSuggestComboBox.qml</file>
+        <file>qml/Send/RecvAddrTextInput.qml</file>
+        <file>qml/StyledControls/DeleteIconButton.qml</file>
+        <file>images/delete.png</file>
+        <file>images/delete.svg</file>
         <file>qml/TransactionDetails.qml</file>
         <file>qml/StyledControls/CloseIconButton.qml</file>
+        <file>qml/StyledControls/CustomTableDelegateRow.qml</file>
+        <file>qml/Send/SelectInputs.qml</file>
+        <file>images/check.svg</file>
+        <file>images/collapsed.svg</file>
+        <file>images/expanded.svg</file>
+        <file>qml/Send/SignTransactionAdvanced.qml</file>
+        <file>qml/Send/PasswordWithTimer.qml</file>
     </qresource>
 </RCC>

@@ -38,7 +38,7 @@ Window {
         radius: 16
         height: 510
         width: 430
-        border.color : "#3C435A"
+        border.color : BsStyle.defaultBorderColor
         border.width : 1
 
         Image {
@@ -147,7 +147,7 @@ Window {
                 width: 190
 
                 Component.onCompleted: {
-                    copy_seed_but.preferred = false
+                    cancel_but.preferred = false
                 }
                 function click_enter() {
                     root.clean()

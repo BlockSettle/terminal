@@ -12,12 +12,12 @@
 #include <spdlog/spdlog.h>
 #include "Address.h"
 #include "BTCNumericTypes.h"
+#include "ColorScheme.h"
 
 namespace {
    static const QHash<int, QByteArray> kRoles{
       {TxOutputsModel::TableDataRole, "tableData"},
       {TxOutputsModel::HeadingRole, "heading"},
-      {TxOutputsModel::WidthRole, "colWidth"},
       {TxOutputsModel::ColorRole, "dataColor"}
    };
 }
@@ -44,8 +44,6 @@ QVariant TxOutputsModel::data(const QModelIndex& index, int role) const
       return getData(index.row(), index.column());
    case HeadingRole:
       return (index.row() == 0);
-   case WidthRole:
-      return colWidth(index.column());
    case ColorRole:
       return dataColor(index.row(), index.column());
    default: break;
@@ -81,6 +79,24 @@ void TxOutputsModel::clearOutputs()
    beginResetModel();
    data_.clear();
    endResetModel();
+}
+
+QStringList TxOutputsModel::getOutputAddresses() const
+{
+   QStringList res;
+   for(int row=1; row<rowCount(); row++)
+      res.append(getData(row,0).toString());
+
+   return res;
+}
+
+QList<double> TxOutputsModel::getOutputAmounts() const
+{
+   QList<double> res;
+   for(int row=1; row<rowCount(); row++)
+       res.append(data_.at(row - 1).amount);
+
+    return res;
 }
 
 void TxOutputsModel::addOutput(const QString& address, double amount)
@@ -123,19 +139,8 @@ QVariant TxOutputsModel::getData(int row, int col) const
 
 QColor TxOutputsModel::dataColor(int row, int col) const
 {
-   if (row == 0) {
-      return QColorConstants::DarkGray;
-   }
-   return QColorConstants::LightGray;
-}
-
-float TxOutputsModel::colWidth(int col) const
-{  // width ratio, sum should give columnCount() as a result
-   switch (col) {
-   case 0:  return 2.0;
-   case 1:  return 0.5;
-   case 2:  return 0.2;
-   default: break;
-   }
-   return 1.0;
+    if (row == 0) {
+       return ColorScheme::tableHeaderColor;
+    }
+    return ColorScheme::tableTextColor;
 }

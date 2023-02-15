@@ -17,24 +17,29 @@ CheckBox {
     id: control
 
     checked: true
+    spacing: 0
 
     indicator: Rectangle {
-        implicitWidth: 16
-        implicitHeight: 16
+        implicitWidth: 18
+        implicitHeight: 18
         x: control.leftPadding
         y: parent.height / 2 - height / 2
-        radius: 8
-        border.color: "#45A6FF"
+        radius: 6
+        border.color: "#416485"
         color: "transparent"
 
-        Rectangle {
-            width: 8
-            height: 8
-            x: 4
-            y: 4
-            radius: 4
-            color: "#45A6FF"
+        Image {
+            id: check_icon
+
+            anchors.centerIn: parent
+
+            width: 10
+            height: 7
+            sourceSize.width: 10
+            sourceSize.height: 7
+
             visible: control.checked
+            source: "qrc:/images/check.svg"
         }
     }
 

@@ -21,7 +21,7 @@ ColumnLayout  {
         id: title
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : title.height
-        text: "Generate address"
+        text: qsTr("Generate address")
     }
 
 

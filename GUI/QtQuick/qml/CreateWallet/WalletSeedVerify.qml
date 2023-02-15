@@ -24,7 +24,7 @@ ColumnLayout  {
         id: title
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : title.height
-        text: "Verify your seed"
+        text: qsTr("Verify your seed")
     }
 
     ListView {
@@ -65,7 +65,7 @@ ColumnLayout  {
 
         visible: !list.isValid
 
-        text: "Your words are wrong"
+        text: qsTr("Your words are wrong")
 
         Layout.leftMargin: 222
         Layout.bottomMargin: 114

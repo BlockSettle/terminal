@@ -40,7 +40,7 @@ Window {
         radius: 16
         height: 610
         width: 430
-        border.color : "#3C435A"
+        border.color : BsStyle.defaultBorderColor
         border.width : 1
 
         Image {
@@ -51,7 +51,7 @@ Window {
             anchors.right: parent.right
             anchors.rightMargin: 24
 
-            source: "qrc:/images/close_button.png"
+            source: "qrc:/images/close_button.svg"
             width: 16
             height: 16
             MouseArea {

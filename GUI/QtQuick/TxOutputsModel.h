@@ -44,6 +44,8 @@ public:
    Q_INVOKABLE void addOutput(const QString& address, double amount);
    Q_INVOKABLE void delOutput(int row);
    Q_INVOKABLE void clearOutputs();
+   Q_INVOKABLE QStringList getOutputAddresses() const;
+   Q_INVOKABLE QList<double> getOutputAmounts() const;
 
 signals:
    void selectionChanged() const;
@@ -51,7 +53,6 @@ signals:
 private:
    QVariant getData(int row, int col) const;
    QColor dataColor(int row, int col) const;
-   float colWidth(int col) const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

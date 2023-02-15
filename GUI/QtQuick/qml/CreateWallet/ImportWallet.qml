@@ -73,7 +73,7 @@ ColumnLayout  {
         Label {
             id: radbut_text
 
-            text: "Seed phrase type:"
+            text: qsTr("Seed phrase type:")
 
             Layout.leftMargin: 25
 
@@ -125,7 +125,7 @@ ColumnLayout  {
 
         height: 1
 
-        color: "#3C435A"
+        color: BsStyle.defaultGreyColor
     }
 
     GridView {

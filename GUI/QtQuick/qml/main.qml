@@ -242,7 +242,7 @@ ApplicationWindow {
         Rectangle {
             width: parent.width
             height: 1
-            color: "#3C435A"
+            color: BsStyle.defaultGreyColor
         }
     }
 

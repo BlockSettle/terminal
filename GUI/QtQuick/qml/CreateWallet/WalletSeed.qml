@@ -22,7 +22,7 @@ ColumnLayout  {
         id: title
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : title.height
-        text: "Create new wallet"
+        text: qsTr("Create new wallet")
     }
 
     Label {

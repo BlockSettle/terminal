@@ -36,6 +36,7 @@
 #include "hwdevicemanager.h"
 #include "QTXSignRequest.h"
 #include "TxOutputsModel.h"
+#include "TxInputsSelectedModel.h"
 #include "SettingsAdapter.h"
 #include "Wallets/ProtobufHeadlessUtils.h"
 #include "WalletBalancesModel.h"
@@ -134,6 +135,8 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    expTxByAddrModel_ = new TxListForAddr(logger, this);
    txOutputsModel_ = new TxOutputsModel(logger, this);
    txInputsModel_ = new TxInputsModel(logger, txOutputsModel_, this);
+   txInputsSelectedModel_ = new TxInputsSelectedModel(this);
+   txInputsSelectedModel_->setSourceModel(txInputsModel_);
    hwDeviceModel_ = new HwDeviceModel(logger, this);
    walletBalances_ = new WalletBalancesModel(logger, this);
    feeSuggModel_ = new FeeSuggestionModel(logger, this);
@@ -215,6 +218,8 @@ void QtQuickAdapter::run(int &argc, char **argv)
    qmlRegisterInterface<QTxDetails>("QTxDetails");
    qmlRegisterUncreatableMetaObject(WalletBalance::staticMetaObject, "wallet.balance"
       , 1, 0, "WalletBalance", tr("Error: only enums"));
+   qmlRegisterUncreatableMetaObject(TxInputsModel::staticMetaObject, "tx.inputs.model"
+      , 1, 0, "TxInputsModel", tr("Error: only enums"));
     qmlRegisterType<TransactionFilterModel>("terminal.models", 1, 0, "TransactionFilterModel");
     qmlRegisterType<TransactionForAddressFilterModel>("terminal.models", 1, 0, "TransactionForAddressFilterModel");
 
@@ -232,6 +237,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
    rootCtxt_->setContextProperty(QLatin1Literal("txListModel"), txModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("txListByAddrModel"), expTxByAddrModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("txInputsModel"), txInputsModel_);
+   rootCtxt_->setContextProperty(QLatin1Literal("txInputsSelectedModel"), txInputsSelectedModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("txOutputsModel"), txOutputsModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("hwDeviceModel"), hwDeviceModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("walletBalances"), walletBalances_);

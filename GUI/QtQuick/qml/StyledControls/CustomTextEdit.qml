@@ -35,7 +35,7 @@ Rectangle {
     opacity: 1
     radius: 14
 
-    border.color: input.activeFocus ? "#45A6FF" : "#3C435A"
+    border.color: input.activeFocus ? "#45A6FF" : BsStyle.defaultBorderColor
     border.width: 1
 
     Label {
