@@ -125,7 +125,7 @@ ColumnLayout  {
 
         height: 1
 
-        color: BsStyle.defaultGreyColor
+        color: BSStyle.defaultGreyColor
     }
 
     GridView {

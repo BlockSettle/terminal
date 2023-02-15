@@ -36,7 +36,7 @@ Window {
 
         anchors.fill: parent
 
-        border.color : BsStyle.defaultBorderColor
+        border.color : BSStyle.defaultBorderColor
         border.width : 1
 
         Label {

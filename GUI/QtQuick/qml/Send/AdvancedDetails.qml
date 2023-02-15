@@ -54,7 +54,7 @@ ColumnLayout  {
 
                 radius: 14
 
-                border.color: BsStyle.defaultBorderColor
+                border.color: BSStyle.defaultBorderColor
                 border.width: 1
 
             }
@@ -187,7 +187,7 @@ ColumnLayout  {
                     Layout.topMargin: 196
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
-                    color: BsStyle.defaultGreyColor
+                    color: BSStyle.defaultGreyColor
                 }
 
 
@@ -300,7 +300,7 @@ ColumnLayout  {
 
             radius: 16
 
-            border.color: BsStyle.defaultBorderColor
+            border.color: BSStyle.defaultBorderColor
             border.width: 1
 
             ColumnLayout  {
@@ -416,7 +416,7 @@ ColumnLayout  {
                     Layout.topMargin: 30
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
-                    color: BsStyle.defaultGreyColor
+                    color: BSStyle.defaultGreyColor
                 }
 
                 CustomTableView {

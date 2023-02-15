@@ -35,7 +35,7 @@ Rectangle {
     opacity: 1
     radius: 14
 
-    border.color: input.activeFocus ? "#45A6FF" : BsStyle.defaultBorderColor
+    border.color: input.activeFocus ? "#45A6FF" : BSStyle.defaultBorderColor
     border.width: 1
 
     Label {
@@ -58,6 +58,8 @@ Rectangle {
 
         focus: true
         activeFocusOnTab: true
+
+        clip: true
 
         anchors.top: rect.top
         anchors.topMargin: 35

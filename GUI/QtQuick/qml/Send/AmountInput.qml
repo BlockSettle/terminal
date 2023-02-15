@@ -27,12 +27,18 @@ CustomTextInput {
     property string prev_text : ""
     onTextEdited : {
 
-        if (tempRequest == null) {
-            amount_input.input_text = "0"
-        }
+//        if (tempRequest === null) {
+//            amount_input.input_text = "0"
+//        }
 
         amount_input.input_text = amount_input.input_text.replace(",", ".")
 
+        var indexOfDot = amount_input.input_text.indexOf(".")
+        if (indexOfDot >= 0)
+        {
+            amount_input.input_text = amount_input.input_text.substring(0,
+                                      Math.min(indexOfDot+9, amount_input.input_text.length))
+        }
         if (amount_input.input_text.startsWith("0")
             && !amount_input.input_text.startsWith("0.")
             && amount_input.input_text.length > 1)
@@ -41,7 +47,7 @@ CustomTextInput {
                     + amount_input.input_text.substring(1, amount_input.input_text.length)
         }
         try {
-            var input_number =  Number.fromLocaleString(Qt.locale("en_US"), amount_input.input_text)
+            var input_number = Number.fromLocaleString(Qt.locale("en_US"), amount_input.input_text)
         }
         catch (error)
         {

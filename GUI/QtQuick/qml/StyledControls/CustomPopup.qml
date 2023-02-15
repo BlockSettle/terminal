@@ -38,7 +38,7 @@ Window {
         radius: 16
         height: stack_create_wallet.height + navig_bar_width
         width: stack_create_wallet.width
-        border.color : BsStyle.defaultBorderColor
+        border.color : BSStyle.defaultBorderColor
         border.width : 1
 
         Image {

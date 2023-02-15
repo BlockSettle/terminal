@@ -49,7 +49,7 @@ ToolButton {
             anchors.topMargin:  -border.width
             anchors.bottomMargin:  -border.width
             border.width: 1
-            border.color: BsStyle.defaultBorderColor
+            border.color: BSStyle.defaultBorderColor
         }
     }
 

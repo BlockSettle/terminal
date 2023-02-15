@@ -54,7 +54,7 @@ ColumnLayout  {
 
                 radius: 14
 
-                border.color: BsStyle.defaultBorderColor
+                border.color: BSStyle.defaultBorderColor
                 border.width: 1
 
             }

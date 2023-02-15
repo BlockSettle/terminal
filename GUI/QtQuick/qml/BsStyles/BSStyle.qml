@@ -91,8 +91,8 @@ QtObject {
     readonly property color buttonsPreferredHoveredColor: "#0085FF"
     readonly property color buttonsPreferredBorderColor: "#FFFFFF"
 
-    readonly property color buttonsTextColor: "#7A88B0"
-    readonly property color buttonsHeaderTextColor: "#FFFFFF"
+    readonly property color buttonsTextColor: "#FFFFFF"
+    readonly property color buttonsHeaderTextColor: "#7A88B0"
     readonly property color buttonsDisabledTextColor: "#1C2130"
 
     readonly property color buttonsDisabledColor: "#32394F"
@@ -127,4 +127,7 @@ QtObject {
     readonly property color transactionConfirmationHigh: "#67D2A3"
 
     readonly property color defaultBorderColor: defaultGreyColor
+
+    //not colors
+    readonly property int defaultPrecision: 8
 }
