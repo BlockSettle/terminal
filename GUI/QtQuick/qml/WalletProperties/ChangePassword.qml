@@ -104,7 +104,7 @@ ColumnLayout {
                  && (confirm_password.input_text !== "")
 
         function click_enter() {
-            const result = wallet_properties_vm.changePassword(
+            const result = bsApp.changePassword(
                 password.input_text,
                 new_password.input_text,
                 confirm_password.input_text

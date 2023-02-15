@@ -61,7 +61,6 @@ Popup {
                 font.weight: Font.Medium
             }
 
-
             Grid {
                 columns: 2
                 rowSpacing: 8
@@ -137,21 +136,21 @@ Popup {
                     width: 170
                 }
                 Text {
-                    function define_color(value) {
-                        if (value === 'Sent') {
+                    function define_transaction_type_color(value) {
+                        if (value == Transactions.Sent) {
                             return BSStyle.transactionTypeSent
                         }
-                        else if (value === 'Received') {
-                            return BSStyle.transactionTypeRecevied
+                        else if (value == Transactions.Received) {
+                            return BSStyle.transactionTypeReceived
                         }
-                        else if (value === 'Internal') {
+                        else if (value == Transactions.Internal) {
                             return BSStyle.transactionTypeInternal
                         }
                         return 'white'
                     }
 
                     text: transaction_details.txType
-                    color: define_color(transaction_details.txType)
+                    color: define_transaction_type_color(tx.direction)
                     font.family: "Roboto"
                     font.pixelSize: 14
                 }
@@ -206,7 +205,7 @@ Popup {
                     width: 170
                 }
                 Label {
-                    function define_color(value) {
+                    function define_confirmation_color(value) {
                         if (value == 0) {
                             return BSStyle.transactionConfirmationZero
                         }
@@ -217,7 +216,7 @@ Popup {
                     }
 
                     text: tx.nbConf
-                    color: define_color(tx.nbConf)
+                    color: define_confirmation_color(tx.nbConf)
                     font.family: "Roboto"
                     font.pixelSize: 14
                 }

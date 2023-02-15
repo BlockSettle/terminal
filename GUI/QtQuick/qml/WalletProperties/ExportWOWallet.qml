@@ -126,13 +126,13 @@ ColumnLayout  {
         width: 530
 
         function click_enter() {
-            wallet_properties_vm.exportWallet()
+            bsApp.exportWallet()
         }
     }
 
     FileDialog {
         id: fileDialog
-        title: "Please choose a directory"
+        title: qsTr("Please choose a directory")
         folder: shortcuts.home
         selectFolder: true
 

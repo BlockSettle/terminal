@@ -63,7 +63,7 @@ ColumnLayout  {
         enabled: (password.input_text !== "")
 
         function click_enter() {
-            const result = wallet_properties_vm.viewWalletSeedAuth(
+            const result = bsApp.viewWalletSeedAuth(
                 password.input_text
             )
             if (result === 0) {

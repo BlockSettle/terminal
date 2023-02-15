@@ -62,7 +62,7 @@ ColumnLayout  {
         enabled: (password.input_text !== "")
 
         function click_enter() {
-            const result = wallet_properties_vm.exportWalletAuth(
+            const result = bsApp.exportWalletAuth(
                 password.input_text
             )
             if (result === 0) {

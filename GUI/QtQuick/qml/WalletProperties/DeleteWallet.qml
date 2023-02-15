@@ -79,7 +79,7 @@ ColumnLayout {
 
 
             function click_enter() {
-                const result = wallet_properties_vm.deleteWallet(
+                const result = bsApp.deleteWallet(
                     password.input_text
                 )
 

@@ -241,6 +241,8 @@ void QtQuickAdapter::run(int &argc, char **argv)
     qmlRegisterType<TransactionFilterModel>("terminal.models", 1, 0, "TransactionFilterModel");
     qmlRegisterType<TransactionForAddressFilterModel>("terminal.models", 1, 0, "TransactionForAddressFilterModel");
     qmlRegisterType<qtquick_gui::WalletPropertiesVM>("terminal.models", 1, 0, "WalletPropertiesVM");
+   qmlRegisterUncreatableMetaObject(Transactions::staticMetaObject, "terminal.models" 
+      , 1, 0, "Transactions", tr("Error: only enums"));
 
    //need to read files in qml
    qputenv("QML_XHR_ALLOW_FILE_READ", QByteArray("1"));
@@ -874,7 +876,7 @@ void QtQuickAdapter::walletSelected(int index)
          walletPropertiesVM_->setWalletInfo({
             QString::fromStdString(hdWallets_.at(walletId).name),
             QString::fromStdString(hdWallets_.at(walletId).description),
-            QString::fromStdString(hdWallets_.at(walletId).ids.size() > 0 ? hdWallets_.at(walletId).ids[0] : std::string()),
+            QString::fromStdString(walletId),
             QString::fromLatin1("0/") + QString::number(hdWallets_.at(walletId).leaves.size()),
             hdWallets_.at(walletId).encryptionTypes.size() > 0 ? encTypeToString(hdWallets_.at(walletId).encryptionTypes[0]) : QString(),
             0,
@@ -1809,4 +1811,29 @@ void QtQuickAdapter::startAddressSearch(const QString& s)
 qtquick_gui::WalletPropertiesVM* QtQuickAdapter::walletProperitesVM() const
 {
    return walletPropertiesVM_.get();
+}
+
+int QtQuickAdapter::exportWallet()
+{
+   return 0;
+}
+
+int QtQuickAdapter::changePassword(const QString& oldPassword, const QString& newPassword)
+{
+   return 0;
+}
+
+int QtQuickAdapter::exportWalletAuth(const QString& password)
+{
+   return 0;
+}
+
+int QtQuickAdapter::viewWalletSeedAuth(const QString& password)
+{
+   return 0;
+}
+
+int QtQuickAdapter::deleteWallet(const QString& password)
+{
+   return 0;
 }

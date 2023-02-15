@@ -62,12 +62,6 @@ public:
    const QString& exportPath() const;
    void setExportPath(const QString& path);
 
-   Q_INVOKABLE int changePassword(const QString& oldPassword, const QString& newPassword);
-   Q_INVOKABLE int exportWalletAuth(const QString& password);
-   Q_INVOKABLE int viewWalletSeedAuth(const QString& password);
-   Q_INVOKABLE int deleteWallet(const QString& password);
-   Q_INVOKABLE int exportWallet();
-
 signals:
    void changed();
    void seedChanged();

@@ -182,6 +182,11 @@ public:
    Q_INVOKABLE int getSearchInputType(const QString&);
    Q_INVOKABLE void startAddressSearch(const QString&);
    Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash);
+   Q_INVOKABLE int changePassword(const QString& oldPassword, const QString& newPassword);
+   Q_INVOKABLE int exportWalletAuth(const QString& password);
+   Q_INVOKABLE int viewWalletSeedAuth(const QString& password);
+   Q_INVOKABLE int deleteWallet(const QString& password);
+   Q_INVOKABLE int exportWallet();
 
 signals:
    void walletsListChanged();

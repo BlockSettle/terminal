@@ -11,8 +11,7 @@
 #include "WalletPropertiesVM.h"
 #include <QDebug>
 
-namespace qtquick_gui
-{
+using namespace qtquick_gui;
 
 WalletPropertiesVM::WalletPropertiesVM(QObject* parent)
    : QObject(parent)
@@ -65,30 +64,6 @@ quint32 WalletPropertiesVM::walletAvailableUtxo() const
    return info_.availableUtxo;
 }
 
-int WalletPropertiesVM::changePassword(const QString& oldPassword, const QString& newPassword)
-{
-   qDebug() << "Changed pwd request:" << oldPassword << " " << newPassword;
-   return 0;
-}
-
-int WalletPropertiesVM::exportWalletAuth(const QString& password)
-{
-   qDebug() << "export WO wallet auth:" << password;
-   return 0;
-}
-
-int WalletPropertiesVM::viewWalletSeedAuth(const QString& password)
-{
-   qDebug() << "view wallet seed:" << password;
-   return 0;
-}
-
-int WalletPropertiesVM::deleteWallet(const QString& password)
-{
-   qDebug() << "delete wallet:" << password;
-   return 0;
-}
-
 const QStringList& WalletPropertiesVM::seed() const
 {
    return seed_;
@@ -110,12 +85,4 @@ void WalletPropertiesVM::setExportPath(const QString& path)
 {
    exportPath_ = path;
    emit pathChanged();
-}
-
-int WalletPropertiesVM::exportWallet()
-{
-   qDebug() << "Exporting wallet to " << exportPath_;
-   return 0;
-}
-
 }
