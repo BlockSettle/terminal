@@ -218,8 +218,6 @@ void QtQuickAdapter::run(int &argc, char **argv)
    qmlRegisterInterface<QTxDetails>("QTxDetails");
    qmlRegisterUncreatableMetaObject(WalletBalance::staticMetaObject, "wallet.balance"
       , 1, 0, "WalletBalance", tr("Error: only enums"));
-   qmlRegisterUncreatableMetaObject(TxInputsModel::staticMetaObject, "tx.inputs.model"
-      , 1, 0, "TxInputsModel", tr("Error: only enums"));
     qmlRegisterType<TransactionFilterModel>("terminal.models", 1, 0, "TransactionFilterModel");
     qmlRegisterType<TransactionForAddressFilterModel>("terminal.models", 1, 0, "TransactionForAddressFilterModel");
 

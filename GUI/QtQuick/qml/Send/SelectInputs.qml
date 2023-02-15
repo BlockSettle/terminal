@@ -16,8 +16,6 @@ import QtQuick.Layouts 1.15
 import "../BsStyles"
 import "../StyledControls"
 
-import tx.inputs.model 1.0
-
 ColumnLayout  {
 
     id: layout
@@ -45,7 +43,7 @@ ColumnLayout  {
 
         radius: 16
 
-        border.color: BsStyle.defaultBorderColor
+        border.color: BSStyle.defaultBorderColor
         border.width: 1
 
         CustomTableView {

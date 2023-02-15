@@ -40,7 +40,7 @@ Window {
         radius: 16
         height: 610
         width: 430
-        border.color : BsStyle.defaultBorderColor
+        border.color : BSStyle.defaultBorderColor
         border.width : 1
 
         Image {

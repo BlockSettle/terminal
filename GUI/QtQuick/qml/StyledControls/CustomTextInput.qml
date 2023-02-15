@@ -31,6 +31,8 @@ Rectangle {
     property bool isPassword: false
     property bool isHiddenText: false
 
+    property int input_right_margin: 16
+
     property var completer: null
 
     signal textEdited()
@@ -43,7 +45,7 @@ Rectangle {
     opacity: 1
     radius: 14
 
-    border.color: isValid ? (input.activeFocus ? "#45A6FF" : BsStyle.defaultBorderColor) : "#EB6060"
+    border.color: isValid ? (input.activeFocus ? "#45A6FF" : BSStyle.defaultBorderColor) : "#EB6060"
     border.width: 1
 
     Label {
@@ -67,11 +69,13 @@ Rectangle {
         focus: true
         activeFocusOnTab: true
 
+        clip: true
+
         anchors.top: rect.top
         anchors.topMargin: 35
         anchors.left: rect.left
-        anchors.leftMargin: title.anchors.leftMargin
-        width: rect.width - 2*title.anchors.leftMargin
+        anchors.leftMargin: 16
+        width: rect.width - 16 - input_right_margin
         height: 19
 
         echoMode: isHiddenText? TextInput.Password : TextInput.Normal

@@ -23,6 +23,9 @@ CustomTextInput {
 
     signal focus_next()
 
+    input_right_margin: paste_but.anchors.rightMargin +
+                        paste_but.width + 16
+
     //aliases
     title_text: qsTr("Receiver address")
 

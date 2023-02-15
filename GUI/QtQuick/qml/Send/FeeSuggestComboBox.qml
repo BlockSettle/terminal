@@ -33,11 +33,11 @@ CustomComboBox {
         target:feeSuggestions
         function onRowCountChanged ()
         {
+            fee_suggest_combo.currentIndex = 0
             if (typeof change_index_handler === "function")
             {
                 change_index_handler()
             }
-            fee_suggest_combo.currentIndex = 0
         }
     }
 
