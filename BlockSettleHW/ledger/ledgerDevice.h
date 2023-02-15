@@ -97,10 +97,10 @@ namespace bs {
             releaseDevice();
          }
 
-         bool initDevice();
-         void releaseDevice();
-         bool writeData(const QByteArray& input, const std::string& logHeader);
-         bool readData(QByteArray& output, const std::string& logHeader);
+         bool initDevice() noexcept;
+         void releaseDevice() noexcept;
+         bool writeData(const QByteArray& input, const std::string& logHeader) noexcept;
+         void readData(QByteArray& output, const std::string& logHeader);
          bool exchangeData(const QByteArray& input, QByteArray& output, std::string&& logHeader);
 
       protected:

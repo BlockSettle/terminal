@@ -24,7 +24,7 @@ Rectangle {
     signal requestWalletProperties()
     signal createNewWallet()
     signal walletIndexChanged(index : int)
-    signal openAddressDetails(var address, var transactions, var balance, var comment, var type, var wallet)
+    signal openAddressDetails(var address, var transactions, var balance, var comment, var asset_type, var type, var wallet)
 
     Column {
         anchors.leftMargin: 18
@@ -81,8 +81,9 @@ Rectangle {
                         const balance = model.data(model.index(row, 2), 257)
                         const comment = model.data(model.index(row, 3), 257)
                         const type = model.data(model.index(row, 0), 261)
+                        const asset_type = model.data(model.index(row, 0), 262)
 
-                        openAddressDetails(address, transactions, balance, comment, type, overview_panel.currentWallet)
+                        openAddressDetails(address, transactions, balance, comment, asset_type, type, overview_panel.currentWallet)
                     }
                 }
             }

@@ -158,9 +158,15 @@ struct HidDeviceInfo {
    int      interfaceNumber;
 };
 
-struct SegwitInputData {
+struct SegwitInputData
+{
    std::map<int, BinaryData>  preimages;
    std::map<int, BinaryData>  redeemScripts;
+
+   bool empty() const
+   {
+      return (preimages.empty() && redeemScripts.empty());
+   }
 };
 
 struct LedgerPublicKey

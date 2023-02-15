@@ -33,7 +33,8 @@ public:
       HeadingRole,
       FirstColRole,
       ColorRole,
-      AddressTypeRole
+      AddressTypeRole,
+      AssetTypeRole
    };
    QmlAddressListModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
 

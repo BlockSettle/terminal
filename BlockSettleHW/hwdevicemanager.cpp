@@ -432,16 +432,9 @@ bs::message::ProcessingResult DeviceManager::prepareDeviceForSign(bs::message::S
    bs::wallet::HardwareEncKey hwEncType(BinaryData::fromString(hdWallet.encryption_keys(0)));
    logger_->debug("[{}] [re]scanning devices of type {}", __func__, (int)hwEncType.deviceType());
    if (bs::wallet::HardwareEncKey::WalletType::Ledger == hwEncType.deviceType()) {
-      ledgerClient_->scanDevices();
-      const auto& devices = ledgerClient_->deviceKeys();
-      if (devices.empty()) {
-         lastOperationError_ = ledgerClient_->lastScanError();
-         deviceNotFound(kDeviceLedgerId);
-         return bs::message::ProcessingResult::Error;
-      }
-
       bool found = false;
-      for (const auto& key : devices) {
+      for (const auto& key : ledgerClient_->deviceKeys()) {
+         logger_->debug("[{}] ledger device {} for wallet {}", __func__, key.id, key.walletId);
          if (key.walletId == hdWallet.wallet_id()) {
             deviceKey = key;
             found = true;
@@ -449,13 +442,14 @@ bs::message::ProcessingResult DeviceManager::prepareDeviceForSign(bs::message::S
          }
       }
       if (!found) {
-         if (!devices.empty()) {
-            lastOperationError_ = getDevice(devices.front())->lastError();
-         }
-         deviceNotFound(kDeviceLedgerId);
-      }  
+         logger_->debug("[{}] ledger device for wallet {} not found", __func__, hdWallet.wallet_id());
+         nbScanning_ = 1;
+         ledgerClient_->scanDevices();
+      }
       else {
-         deviceReady(kDeviceLedgerId);
+         logger_->debug("[{}] found ledger device {} for wallet {}", __func__
+            , deviceKey.id, deviceKey.walletId);
+         deviceReady(deviceKey.id);
          walletReady(deviceKey.walletId);
       }
    }

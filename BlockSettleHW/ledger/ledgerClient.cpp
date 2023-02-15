@@ -80,11 +80,11 @@ void LedgerClient::scanDevices()
 
    hid_device_info* info = hid_enumerate(0, 0);
    for (; info; info = info->next) {
-      logger_->debug("[{}] found: vendor {}, product {} ({}), serial {}, iface {}"
+      /*logger_->debug("[{}] found: vendor {}, product {} ({}), serial {}, iface {}"
          , __func__, info->vendor_id, info->product_id
          , QString::fromWCharArray(info->product_string).toStdString()
          , QString::fromWCharArray(info->serial_number).toStdString()
-         , info->interface_number);
+         , info->interface_number);*/
       if (checkLedgerDevice(info)) {
          const auto& device = std::make_shared<LedgerDevice>(fromHidOriginal(info)
             , testNet_, logger_, cb_, hidLock_);

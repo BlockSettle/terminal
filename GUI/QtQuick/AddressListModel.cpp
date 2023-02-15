@@ -20,7 +20,8 @@ namespace
       {QmlAddressListModel::HeadingRole, "heading"},
       {QmlAddressListModel::FirstColRole, "firstcol"},
       {QmlAddressListModel::ColorRole, "dataColor"},
-      {QmlAddressListModel::AddressTypeRole, "addressType"} };
+      {QmlAddressListModel::AddressTypeRole, "addressType"},
+      {QmlAddressListModel::AssetTypeRole, "assetType"} };
 }
 
 QmlAddressListModel::QmlAddressListModel(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
@@ -40,18 +41,15 @@ int QmlAddressListModel::columnCount(const QModelIndex&) const
 
 QVariant QmlAddressListModel::data(const QModelIndex& index, int role) const
 {
-   try
-   {
+   const int row = index.row() - 1;
+   try {
       switch (role)
       {
       case TableDataRole:
-         if (index.row() == 0)
-         {
+         if (index.row() == 0) {
             return header_.at(index.column());
          }
-         else
-         {
-            const int row = index.row() - 1;
+         else {
             switch (index.column())
             {
             case 0: return table_.at(row).at(0);
@@ -65,20 +63,18 @@ QVariant QmlAddressListModel::data(const QModelIndex& index, int role) const
       case HeadingRole: return (index.row() == 0);
       case FirstColRole: return (index.column() == 0);
       case ColorRole:
-         if (index.row() == 0)
-         {
+         if (index.row() == 0) {
             return ColorScheme::tableHeaderColor;
          }
-         else
-         {
+         else {
             return QColorConstants::White;
          }
-      case AddressTypeRole: return table_.at(index.row() - 1).at(2);
+      case AddressTypeRole: return table_.at(row).at(2);
+      case AssetTypeRole:  return table_.at(row).at(3);
       default: break;
       }
    }
-   catch (const std::exception&)
-   {
+   catch (const std::exception&) {
       return QString{};
    }
    return QVariant();
