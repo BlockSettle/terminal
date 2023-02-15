@@ -33,7 +33,7 @@ ColumnLayout  {
         Layout.alignment: Qt.AlignLeft
         Layout.leftMargin: 24
         Layout.preferredHeight : title.height
-        text: "Terms and conditions"
+        text: qsTr("Terms and conditions")
     }
 
     Label {
@@ -79,7 +79,7 @@ ColumnLayout  {
     Rectangle {
         Layout.fillWidth: true
         height: 1
-        color: "#3C435A"
+        color: BsStyle.defaultGreyColor
     }
 
     Label {

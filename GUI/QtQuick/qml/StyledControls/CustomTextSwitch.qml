@@ -23,7 +23,7 @@ Rectangle {
 
     color: "transparent"
     radius: 37
-    border.color : "#3C435A"
+    border.color : BsStyle.defaultBorderColor
     border.width : 1
 
     Rectangle {

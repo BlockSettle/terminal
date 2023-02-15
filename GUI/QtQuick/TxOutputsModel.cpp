@@ -12,6 +12,7 @@
 #include <spdlog/spdlog.h>
 #include "Address.h"
 #include "BTCNumericTypes.h"
+#include "ColorScheme.h"
 
 namespace {
    static const QHash<int, QByteArray> kRoles{
@@ -139,7 +140,7 @@ QVariant TxOutputsModel::getData(int row, int col) const
 QColor TxOutputsModel::dataColor(int row, int col) const
 {
     if (row == 0) {
-       return QColor("#7A88B0");
+       return ColorScheme::tableHeaderColor;
     }
-    return QColor("#FFFFFF");
+    return ColorScheme::tableTextColor;
 }

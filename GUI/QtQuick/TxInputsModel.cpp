@@ -14,6 +14,7 @@
 #include "BTCNumericTypes.h"
 #include "CoinSelection.h"
 #include "TxOutputsModel.h"
+#include "ColorScheme.h"
 
 namespace {
    static const QHash<int, QByteArray> kRoles{
@@ -67,9 +68,9 @@ QVariant TxInputsModel::data(const QModelIndex& index, int role) const
 QColor TxInputsModel::dataColor(int row, int col) const
 {
    if (row == 0) {
-      return QColor("#7A88B0");
+      return ColorScheme::tableHeaderColor;
    }
-   return QColor("#FFFFFF");
+   return ColorScheme::tableTextColor;
 }
 
 QHash<int, QByteArray> TxInputsModel::roleNames() const
@@ -128,7 +129,6 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
 
 void TxInputsModel::toggle(int row)
 {
-    logger_->debug("[{}] samii begin row: {}", __func__, row);
    --row;
    auto& entry = data_[row];
    if (!entry.txId.empty()) {

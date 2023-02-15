@@ -30,7 +30,7 @@ ColumnLayout  {
         id: title
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : title.height
-        text: "Select inputs"
+        text: qsTr("Select inputs")
     }
 
     Rectangle {
@@ -45,7 +45,7 @@ ColumnLayout  {
 
         radius: 16
 
-        border.color: "#3C435A"
+        border.color: BsStyle.defaultBorderColor
         border.width: 1
 
         CustomTableView {

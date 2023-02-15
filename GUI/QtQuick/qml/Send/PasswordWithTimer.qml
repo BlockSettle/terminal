@@ -66,7 +66,7 @@ Item {
         anchors.top: progress_bar.bottom
         anchors.topMargin: 8
 
-        text: Number(root.time_progress).toLocaleString() +" seconds left"
+        text: qsTr("%1 seconds left").arg (Number(root.time_progress).toLocaleString())
 
         color: "#45A6FF"
 

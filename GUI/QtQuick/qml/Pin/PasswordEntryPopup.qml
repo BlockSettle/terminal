@@ -38,7 +38,7 @@ Window {
         radius: 16
         height: 510
         width: 430
-        border.color : "#3C435A"
+        border.color : BsStyle.defaultBorderColor
         border.width : 1
 
         Image {

@@ -20,7 +20,7 @@ ColumnLayout  {
         id: title
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : title.height
-        text: "Success"
+        text: qsTr("Success")
     }
 
 
@@ -41,7 +41,7 @@ ColumnLayout  {
     Label {
         Layout.topMargin: 26
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
-        text: "Your wallet has successfully been created"
+        text: qsTr("Your wallet has successfully been created")
         font.pixelSize: 14
         font.family: "Roboto"
         font.weight: Font.Normal

@@ -7,9 +7,8 @@ TxInputsSelectedModel::TxInputsSelectedModel (QObject *parent)
    connect (this, &TxInputsSelectedModel::rowsRemoved, this, &TxInputsSelectedModel::rowCountChanged);
 }
 
-bool TxInputsSelectedModel::filterAcceptsRow (int sourceRow, const QModelIndex &sourceParent) const
+bool TxInputsSelectedModel::filterAcceptsRow (int sourceRow, const QModelIndex & /*sourceParent*/) const
 {
-   Q_UNUSED(sourceParent)
    const auto inputsModel = qobject_cast<TxInputsModel *> (sourceModel ());
    if (!inputsModel) {
       return false;

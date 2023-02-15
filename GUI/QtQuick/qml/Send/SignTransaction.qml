@@ -26,7 +26,7 @@ ColumnLayout  {
         Layout.topMargin: 6
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
         Layout.preferredHeight : title.height
-        text: "Sign Transaction"
+        text: qsTr("Sign Transaction")
     }
 
     Label {

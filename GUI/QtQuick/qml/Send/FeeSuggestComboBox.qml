@@ -28,16 +28,23 @@ CustomComboBox {
     textRole: "text"
     valueRole: "value"
 
-    onActivated: (index_act) => {
-        txInputsModel.fee = parseFloat(fee_suggest_combo.currentValue)
-    }
-
     Connections
     {
         target:feeSuggestions
         function onRowCountChanged ()
         {
+            if (typeof change_index_handler === "function")
+            {
+                change_index_handler()
+            }
             fee_suggest_combo.currentIndex = 0
+        }
+    }
+
+    onCurrentIndexChanged: {
+        if (typeof change_index_handler === "function")
+        {
+            change_index_handler()
         }
     }
 }

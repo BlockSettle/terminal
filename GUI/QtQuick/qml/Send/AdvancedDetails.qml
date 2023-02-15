@@ -38,7 +38,7 @@ ColumnLayout  {
             font.pixelSize: 13
             font.family: "Roboto"
             font.weight: Font.Normal
-            palette.buttonText: "#7A88B0"
+            palette.buttonText: BSStyle.buttonsHeaderTextColor
 
             text: qsTr("Simple")
 
@@ -54,7 +54,7 @@ ColumnLayout  {
 
                 radius: 14
 
-                border.color: "#3C435A"
+                border.color: BsStyle.defaultBorderColor
                 border.width: 1
 
             }
@@ -102,7 +102,7 @@ ColumnLayout  {
 
             radius: 16
 
-            border.color: "#3C435A"
+            border.color: BSStyle.defaultBorderColor
             border.width: 1
 
             ColumnLayout  {
@@ -170,7 +170,9 @@ ColumnLayout  {
                     width: 504
                     height: 70
 
-                    onCurrentIndexChanged: {
+                    function change_index_handler()
+                    {
+                        txInputsModel.fee = parseFloat(fee_suggest_combo.currentValue)
                         bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
                         txOutputsModel.clearOutputs()
                     }
@@ -185,7 +187,7 @@ ColumnLayout  {
                     Layout.topMargin: 196
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
-                    color: "#3C435A"
+                    color: BsStyle.defaultGreyColor
                 }
 
 
@@ -298,7 +300,7 @@ ColumnLayout  {
 
             radius: 16
 
-            border.color: "#3C435A"
+            border.color: BsStyle.defaultBorderColor
             border.width: 1
 
             ColumnLayout  {
@@ -414,7 +416,7 @@ ColumnLayout  {
                     Layout.topMargin: 30
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
-                    color: "#3C435A"
+                    color: BsStyle.defaultGreyColor
                 }
 
                 CustomTableView {

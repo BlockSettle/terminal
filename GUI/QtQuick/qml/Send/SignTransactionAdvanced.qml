@@ -26,7 +26,7 @@ ColumnLayout  {
         Layout.topMargin: 6
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
         Layout.preferredHeight : title.height
-        text: "Sign Transaction"
+        text: qsTr("Sign Transaction")
     }
 
 
@@ -52,7 +52,7 @@ ColumnLayout  {
 
             radius: 14
 
-            border.color: "#3C435A"
+            border.color: BsStyle.defaultBorderColor
             border.width: 1
 
             CustomTableView {
@@ -139,7 +139,7 @@ ColumnLayout  {
 
         radius: 14
 
-        border.color: "#3C435A"
+        border.color: BsStyle.defaultBorderColor
         border.width: 1
 
         Label {

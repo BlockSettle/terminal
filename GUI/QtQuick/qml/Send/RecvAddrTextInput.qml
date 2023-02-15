@@ -65,6 +65,8 @@ CustomTextInput {
             }
         }
         else
+        {
             rec_addr_input.isValid = true
+        }
     }
 }

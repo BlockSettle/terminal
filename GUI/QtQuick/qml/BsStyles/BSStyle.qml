@@ -79,7 +79,9 @@ QtObject {
 
 
     //new properties
-    readonly property color buttonsStandardColor: "#3C435A"
+    readonly property color defaultGreyColor: "#3C435A"
+
+    readonly property color buttonsStandardColor: defaultGreyColor
     readonly property color buttonsStandardPressedColor: "#232734"
     readonly property color buttonsStandardHoveredColor: "#2E3343"
     readonly property color buttonsStandardBorderColor: "#FFFFFF"
@@ -89,7 +91,8 @@ QtObject {
     readonly property color buttonsPreferredHoveredColor: "#0085FF"
     readonly property color buttonsPreferredBorderColor: "#FFFFFF"
 
-    readonly property color buttonsTextColor: "#FFFFFF"
+    readonly property color buttonsTextColor: "#7A88B0"
+    readonly property color buttonsHeaderTextColor: "#FFFFFF"
     readonly property color buttonsDisabledTextColor: "#1C2130"
 
     readonly property color buttonsDisabledColor: "#32394F"
@@ -99,7 +102,7 @@ QtObject {
     readonly property color comboBoxItemTextCurrentColor: "#7A88B0"
     readonly property color comboBoxItemHighlightedColor: "#45A6FF"
 
-    readonly property color comboBoxBorderColor: "#3C435A"
+    readonly property color comboBoxBorderColor: defaultGreyColor
     readonly property color comboBoxHoveredBorderColor: "#7A88B0"
     readonly property color comboBoxFocusedBorderColor: "#FFFFFF"
     readonly property color comboBoxPopupedBorderColor: "#45A6FF"
@@ -107,7 +110,7 @@ QtObject {
     readonly property color comboBoxIndicatorColor: "#DCE2FF"
     readonly property color comboBoxPopupedIndicatorColor: "#45A6FF"
 
-    readonly property color tableSeparatorColor: "#3C435A"
+    readonly property color tableSeparatorColor: defaultGreyColor
     readonly property color tableCellBackgroundColor: "transparent"
     readonly property color tableCellSelectedBackgroundColor: "#22293B"
 
@@ -117,9 +120,11 @@ QtObject {
     readonly property color listItemBorderColor: "#3C435A"
 
     readonly property color popupBackgroundColor: "#191E2A"
-    readonly property color popupBorderColor: "#3C435A"
+    readonly property color popupBorderColor: defaultGreyColor
 
     readonly property color transactionConfirmationZero: "#EB6060"
     readonly property color transactionConfirmationLow: "yellow"
     readonly property color transactionConfirmationHigh: "#67D2A3"
+
+    readonly property color defaultBorderColor: defaultGreyColor
 }
