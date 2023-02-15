@@ -19,6 +19,8 @@ TableView {
     width: 1200
     height: 200
 
+    reuseItems: false
+
     columnSpacing: 0
     rowSpacing: 0
     clip: true
@@ -36,7 +38,6 @@ TableView {
     property int copy_button_column_index: 0
     property int delete_button_column_index: -1
 
-    property int left_first_header_padding: -1
     property int left_text_padding: 10
 
     property var columnWidths:  ({})
@@ -95,13 +96,33 @@ TableView {
             property int cell_text_size: component.cell_text_size
             property int copy_button_column_index: component.copy_button_column_index
             property int selected_row_index: component.selected_row_index
-            property int left_first_header_padding: component.left_first_header_padding
-            property int left_text_padding: component.left_text_padding
             property int model_row: row
             property int model_column: column
 
-            property string model_tableData: tableData
-            property var model_dataColor: dataColor
+            property string model_tableData: (typeof tableData !== "undefined") ? tableData : ({})
+            property bool model_selected: (typeof selected !== "undefined") ? selected : ({})
+            property bool model_expanded: (typeof expanded !== "undefined") ? expanded : ({})
+            property bool model_is_expandable: (typeof is_expandable !== "undefined") ? is_expandable : ({})
+
+            function get_text_left_padding(row, column, isExpandable)
+            {
+                if (typeof component.get_text_left_padding === "function")
+                    return component.get_text_left_padding(row, column, isExpandable)
+                else
+                    return left_text_padding
+            }
+
+            function get_data_color(row, column)
+            {
+                if (typeof component.get_data_color === "function")
+                {
+                    var res = component.get_data_color(row, column)
+                    if (res!== null)
+                        return res
+                }
+
+                return (typeof dataColor !== "undefined") ? dataColor : ({})
+            }
 
             Component.onCompleted: {
                 delega.update_row_loader_size()
@@ -132,13 +153,17 @@ TableView {
         {
             row_loader.width = delega.width
             row_loader.height = childrenRect.height
-            if (row_loader.width && row_loader.height && (row_loader.source !== ""))
+            if (row_loader.width && row_loader.height && !row_loader.sourceComponent)
             {
-                row_loader.setSource(choose_row_source(row, column))
+                row_loader.sourceComponent = choose_row_source_component(row, column)
             }
         }
 
         Rectangle {
+
+            anchors.left: parent.left
+            anchors.leftMargin: get_line_left_padding(row, column, is_expandable)
+
             height: 1
             width: parent.width
             color: BSStyle.tableSeparatorColor
@@ -147,8 +172,17 @@ TableView {
         }
     }
 
-    function choose_row_source(row, column)
+    CustomTableDelegateRow {
+        id: cmpnt_table_delegate
+    }
+
+    function choose_row_source_component(row, column)
     {
-        return "CustomTableDelegateRow.qml"
+        return cmpnt_table_delegate
+    }
+
+    function get_line_left_padding(row, column, isExpandable)
+    {
+        return 0
     }
 }

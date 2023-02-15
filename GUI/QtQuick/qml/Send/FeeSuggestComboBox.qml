@@ -28,6 +28,10 @@ CustomComboBox {
     textRole: "text"
     valueRole: "value"
 
+    onActivated: (index_act) => {
+        txInputsModel.fee = parseFloat(fee_suggest_combo.currentValue)
+    }
+
     Connections
     {
         target:feeSuggestions

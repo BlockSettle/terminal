@@ -20,6 +20,7 @@
 #include "hwdevicemodel.h"
 #include "ThreadSafeClasses.h"
 #include "TxInputsModel.h"
+#include "TxInputsSelectedModel.h"
 #include "TxListModel.h"
 #include "UiUtils.h"
 #include "Wallets/SignContainer.h"
@@ -271,6 +272,7 @@ private:
    TxListModel* txModel_{ nullptr };
    TxListForAddr* expTxByAddrModel_{ nullptr };
    TxInputsModel* txInputsModel_{ nullptr };
+   TxInputsSelectedModel * txInputsSelectedModel_{ nullptr };
    TxOutputsModel* txOutputsModel_{ nullptr };
    HwDeviceModel* hwDeviceModel_{ nullptr };
    WalletBalancesModel* walletBalances_{ nullptr };

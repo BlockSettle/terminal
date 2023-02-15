@@ -19,17 +19,20 @@ namespace {
    static const QHash<int, QByteArray> kRoles{
       {TxInputsModel::TableDataRole, "tableData"},
       {TxInputsModel::HeadingRole, "heading"},
-      {TxInputsModel::WidthRole, "colWidth"},
       {TxInputsModel::ColorRole, "dataColor"},
-      {TxInputsModel::BgColorRole, "bgColor"},
+      {TxInputsModel::SelectedRole, "selected"},
+      {TxInputsModel::ExpandedRole, "expanded"},
+      {TxInputsModel::CanBeExpandedRole, "is_expandable"}
    };
 }
 
 TxInputsModel::TxInputsModel(const std::shared_ptr<spdlog::logger>& logger
    , TxOutputsModel* outs, QObject* parent)
    : QAbstractTableModel(parent), logger_(logger), outsModel_(outs)
-   , header_{ {}, tr("Address/Hash"), tr("#Tx"), tr("Balance (BTC)"), tr("Comment") }
-{ }
+   , header_{{ColumnAddress, tr("Address/Hash")}, {ColumnTx, tr("#Tx")},
+            {ColumnComment, tr("Comment")}, {ColumnBalance, tr("Balance (BTC)")}}
+{
+}
 
 int TxInputsModel::rowCount(const QModelIndex &) const
 {
@@ -48,15 +51,25 @@ QVariant TxInputsModel::data(const QModelIndex& index, int role) const
       return getData(index.row(), index.column());
    case HeadingRole:
       return (index.row() == 0);
-   case WidthRole:
-      return colWidth(index.column());
+   case SelectedRole:
+      return (index.row() > 0 && index.column() == 0) ? (selection_.find(index.row() -1) != selection_.end()) : false;
+   case ExpandedRole:
+      return (index.row() > 0 && index.column() == 0) ? data_[index.row() - 1].expanded : false;
+   case CanBeExpandedRole:
+      return (index.row() > 0 && index.column() == 0) ? data_[index.row() - 1].txId.empty() : false;
    case ColorRole:
       return dataColor(index.row(), index.column());
-   case BgColorRole:
-      return bgColor(index.row());
    default: break;
    }
    return QVariant();
+}
+
+QColor TxInputsModel::dataColor(int row, int col) const
+{
+   if (row == 0) {
+      return QColor("#7A88B0");
+   }
+   return QColor("#FFFFFF");
 }
 
 QHash<int, QByteArray> TxInputsModel::roleNames() const
@@ -72,6 +85,7 @@ void TxInputsModel::clear()
    selection_.clear();
    preSelected_.clear();
    endResetModel();
+   emit rowCountChanged();
 }
 
 void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
@@ -91,12 +105,14 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
             beginInsertRows(QModelIndex(), rowCount(), rowCount());
             data_.push_back({ addr });
             endInsertRows();
+            emit rowCountChanged();
          }
          else {
             if (data_.at(addrIndex).expanded) {
                beginInsertRows(QModelIndex(), addrIndex + 2, addrIndex + 2);
                data_.insert(data_.cbegin() + addrIndex + 1, { {}, utxo.getTxHash(), utxo.getTxOutIndex() });
                endInsertRows();
+               emit rowCountChanged();
             }
          }
       }
@@ -112,6 +128,7 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
 
 void TxInputsModel::toggle(int row)
 {
+    logger_->debug("[{}] samii begin row: {}", __func__, row);
    --row;
    auto& entry = data_[row];
    if (!entry.txId.empty()) {
@@ -145,8 +162,10 @@ void TxInputsModel::toggle(int row)
       }
       beginRemoveRows(QModelIndex(), row + 2, row + it->second.size() + 1);
       changeSelection(selChanges);
-      data_.erase(data_.cbegin() + row + 1, data_.cbegin() + row + it->second.size());
+      data_.erase(data_.cbegin() + row + 1, data_.cbegin() + row + it->second.size() + 1);
       endRemoveRows();
+
+      emit rowCountChanged();
    }
    else {
       entry.expanded = true;
@@ -166,7 +185,8 @@ void TxInputsModel::toggle(int row)
       changeSelection(selChanges);
       data_.insert(data_.cbegin() + row + 1, entries.cbegin(), entries.cend());
       endInsertRows();
-      emit dataChanged(createIndex(row + 1, 0), createIndex(row + 1, columnCount() - 1), { BgColorRole });
+      emit rowCountChanged();
+      emit dataChanged(createIndex(row + 1, 0), createIndex(row + 1, columnCount() - 1), { SelectedRole });
    }
 }
 
@@ -313,28 +333,29 @@ QList<QUTXO*> TxInputsModel::collectUTXOsFor(double amount)
 QVariant TxInputsModel::getData(int row, int col) const
 {
    if (row == 0) {
-      return header_.at(col);
+      return header_[col];
    }
    const auto& entry = data_.at(row - 1);
    const auto& itUTXOs = entry.address.empty() ? utxos_.end() : utxos_.find(entry.address);
    switch (col) {
-   case 0:
-      return (selection_.find(row -1) != selection_.end());
-   case 1:
+   case ColumnAddress:
       if (!entry.txId.empty()) {
          const auto& txId = entry.txId.toHexStr(true);
-         std::string str = "   " + txId.substr(0, 8) + "..." + txId.substr(txId.size() - 9, 8);
+         std::string str = txId;
+         if (txId.size() > 40)
+            str = txId.substr(0, 20) + "..." + txId.substr(txId.size() - 21, 20);
+
          return QString::fromStdString(str);
       }
       else {
          return QString::fromStdString(entry.address.display());
       }
-   case 2:
+   case ColumnTx:
       if (itUTXOs != utxos_.end()) {
          return QString::number(itUTXOs->second.size());
       }
       break;
-   case 3:
+   case ColumnBalance:
       if (itUTXOs != utxos_.end()) {
          uint64_t balance = 0;
          for (const auto& utxo : itUTXOs->second) {
@@ -355,36 +376,4 @@ QVariant TxInputsModel::getData(int row, int col) const
    default: break;
    }
    return {};
-}
-
-QColor TxInputsModel::dataColor(int row, int col) const
-{
-   if (row == 0) {
-      return QColorConstants::DarkGray;
-   }
-   return QColorConstants::LightGray;
-}
-
-QColor TxInputsModel::bgColor(int row) const
-{
-   if (row == 0) {
-      return QColorConstants::Black;
-   }
-   if (selection_.find(row - 1) != selection_.end()) {
-      return QColorConstants::DarkCyan;
-   }
-   return QColorConstants::DarkBlue;
-}
-
-float TxInputsModel::colWidth(int col) const
-{  // width ratio, sum should give columnCount() as a result
-   switch (col) {
-   case 0:  return 0.2;
-   case 1:  return 2.6;
-   case 2:  return 0.4;
-   case 3:  return 0.8;
-   case 4:  return 1;
-   default: break;
-   }
-   return 1.0;
 }

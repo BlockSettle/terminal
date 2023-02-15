@@ -162,5 +162,10 @@
         <file>qml/StyledControls/CloseIconButton.qml</file>
         <file>qml/StyledControls/CustomTableDelegateRow.qml</file>
         <file>qml/Send/SelectInputs.qml</file>
+        <file>images/check.svg</file>
+        <file>images/collapsed.svg</file>
+        <file>images/expanded.svg</file>
+        <file>qml/Send/SignTransactionAdvanced.qml</file>
+        <file>qml/Send/PasswordWithTimer.qml</file>
     </qresource>
 </RCC>

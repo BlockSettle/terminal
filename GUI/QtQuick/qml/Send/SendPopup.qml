@@ -52,11 +52,39 @@ CustomPopup {
         visible: false
 
         onSig_continue: (signature) => {
+            sign_trans_advanced.txSignRequest = signature
+            _stack_view.push(sign_trans_advanced)
+            sign_trans_advanced.init()
         }
 
         onSig_simple: {
             _stack_view.replace(simple_details)
             simple_details.init()
+        }
+
+        onSig_select_inputs: {
+            _stack_view.push(select_inputs)
+            select_inputs.init()
+        }
+    }
+
+    SelectInputs {
+        id: select_inputs
+        visible: false
+    }
+
+    SignTransactionAdvanced {
+        id: sign_trans_advanced
+        visible: false
+
+        onSig_broadcast:  {
+            root.close()
+            _stack_view.pop(null)
+        }
+
+        onSig_time_finished:  {
+            root.close()
+            _stack_view.pop(null)
         }
     }
 

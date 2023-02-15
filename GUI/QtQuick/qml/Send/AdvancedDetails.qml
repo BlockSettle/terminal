@@ -14,6 +14,7 @@ ColumnLayout  {
 
     signal sig_continue(signature: var)
     signal sig_simple()
+    signal sig_select_inputs()
 
     height: 748
     width: 1132
@@ -153,6 +154,8 @@ ColumnLayout  {
                         {
                             amount_input.input_text = tempRequest.maxAmount
                         }
+
+                        bsApp.getUTXOsForWallet(index_act)
                     }
                 }
 
@@ -185,9 +188,100 @@ ColumnLayout  {
                     color: "#3C435A"
                 }
 
-                Label {
+
+                CustomTableView {
+                    id: table_sel_inputs
+
                     Layout.fillWidth: true
                     Layout.fillHeight : true
+                    Layout.leftMargin: 16
+                    Layout.rightMargin: 16
+
+                    model: txInputsSelectedModel
+                    columnWidths: [0.7, 0.1, 0, 0.2]
+
+                    text_header_size: 12
+                    cell_text_size: 13
+                    copy_button_column_index: -1
+
+                    Component
+                    {
+                        id: cmpnt_sel_inputs
+
+                        Row {
+                            id: cmpnt_sel_inputs_row
+
+                            spacing: 12
+
+                            Text {
+                                id: internal_text
+
+                                visible: model_column !== delete_button_column_index
+
+                                text: model_tableData
+                                height: parent.height
+                                verticalAlignment: Text.AlignVCenter
+                                clip: true
+
+                                color: get_data_color(model_row, model_column)
+                                font.family: "Roboto"
+                                font.weight: Font.Normal
+                                font.pixelSize: model_row === 0 ? text_header_size : cell_text_size
+
+                                leftPadding: table_sel_inputs.get_text_left_padding(model_row, model_column)
+                            }
+
+                            Button {
+                                id: sel_inputs_button
+
+                                text: qsTr("Select Inputs")
+
+                                font.family: "Roboto"
+                                font.weight: Font.DemiBold
+                                font.pixelSize: 12
+
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                contentItem: Text {
+                                    text: sel_inputs_button.text
+                                    font: sel_inputs_button.font
+                                    color: "#45A6FF"
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    elide: Text.ElideRight
+                                }
+
+                                background: Rectangle {
+                                    implicitWidth: 84
+                                    implicitHeight: 25
+                                    color: "transparent"
+                                    border.color: "#45A6FF"
+                                    border.width: 1
+                                    radius: 8
+                                }
+
+                                onClicked: layout.sig_select_inputs()
+                            }
+                        }
+                    }
+
+
+                    CustomTableDelegateRow {
+                        id: cmpnt_table_delegate
+                    }
+
+                    function choose_row_source_component(row, column)
+                    {
+                        if(row === 0 && column === 0)
+                            return cmpnt_sel_inputs
+                        else
+                            return cmpnt_table_delegate
+                    }
+
+                    function get_text_left_padding(row, column)
+                    {
+                        return (row === 0 && column === 0) ? 0 : left_text_padding
+                    }
                 }
             }
         }
@@ -324,24 +418,29 @@ ColumnLayout  {
                 }
 
                 CustomTableView {
+                    id: table_outputs
 
                     Layout.fillWidth: true
                     Layout.fillHeight : true
                     Layout.leftMargin: 16
                     Layout.rightMargin: 16
 
-                    model: txOutputsModel
+                    model:txOutputsModel
                     columnWidths: [0.744, 0.20, 0.056]
 
                     text_header_size: 12
                     cell_text_size: 13
                     copy_button_column_index: -1
                     delete_button_column_index: 2
-                    left_first_header_padding: 0
 
                     onDeleteRequested: (row) =>
                     {
                         txOutputsModel.delOutput(row)
+                    }
+
+                    function get_text_left_padding(row, column)
+                    {
+                        return (row === 0 && column === 0) ? 0 : left_text_padding
                     }
                 }
             }
@@ -356,27 +455,30 @@ ColumnLayout  {
 
 
     CustomButton {
-        id: broadcast_but
+        id: continue_but
 
-        enabled: false
+        enabled: txOutputsModel.rowCount && table_sel_inputs.rowCount
 
         width: 1084
 
         Layout.bottomMargin: 40
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
-        text: qsTr("Broadcast")
+        text: qsTr("Continue")
 
         Component.onCompleted: {
-            broadcast_but.preferred = true
+            continue_but.preferred = true
         }
 
-        function click_enter() {
 
+        function click_enter() {
+            layout.sig_continue( bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
+                , parseFloat(fee_suggest_combo.currentValue), comment_input.input_text
+                , txInputsModel.getSelection()))
         }
 
     }
-
 
     function init()
     {

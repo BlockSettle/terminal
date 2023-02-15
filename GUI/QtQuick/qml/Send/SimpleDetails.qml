@@ -142,7 +142,7 @@ ColumnLayout  {
                 if(cur_value < bottom || cur_value > top)
                 {
                     amount_input.input_text = tempRequest.maxAmount
-                }
+                }              
             }
         }
 

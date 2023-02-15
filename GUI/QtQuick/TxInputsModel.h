@@ -53,10 +53,12 @@ private:
 
 class TxInputsModel : public QAbstractTableModel
 {
-   Q_OBJECT
+   Q_OBJECT    
+   Q_PROPERTY(int rowCount READ rowCount NOTIFY rowCountChanged)
+
 public:
-   enum TableRoles { TableDataRole = Qt::UserRole + 1, HeadingRole, WidthRole
-      , ColorRole, BgColorRole };
+   enum TableRoles { TableDataRole = Qt::UserRole + 1, HeadingRole, ColorRole,
+                     SelectedRole, ExpandedRole, CanBeExpandedRole };
    TxInputsModel(const std::shared_ptr<spdlog::logger>&, TxOutputsModel*, QObject* parent = nullptr);
 
    int rowCount(const QModelIndex & = QModelIndex()) const override;
@@ -84,18 +86,19 @@ public:
 signals:
    void selectionChanged() const;
    void feeChanged() const;
+   void rowCountChanged ();
 
 private:
    QVariant getData(int row, int col) const;
    QColor dataColor(int row, int col) const;
-   QColor bgColor(int row) const;
-   float colWidth(int col) const;
    QList<QUTXO*> collectUTXOsFor(double amount);
 
 private:
+   enum Columns {ColumnAddress, ColumnTx, ColumnComment, ColumnBalance};
+
    std::shared_ptr<spdlog::logger>  logger_;
    TxOutputsModel* outsModel_{ nullptr };
-   const QStringList header_;
+   const QMap<int, QString> header_;
    std::map<bs::Address, std::vector<UTXO>>  utxos_;
 
    struct Entry {
