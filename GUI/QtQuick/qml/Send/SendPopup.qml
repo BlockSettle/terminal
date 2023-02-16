@@ -91,4 +91,16 @@ CustomPopup {
     function init() {
         simple_details.init()
     }
+
+    onSig_close_click: {
+        if (simple_details.visible)
+        {
+            stack_create_wallet.pop()
+        }
+        else
+        {
+            root.close()
+            stack_create_wallet.pop(null)
+        }
+    }
 }

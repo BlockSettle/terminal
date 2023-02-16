@@ -29,6 +29,9 @@ Window {
     x: mainWindow.x + (mainWindow.width - width)/2
     y: mainWindow.y + 28
 
+    signal sig_close_click()
+    signal sig_back_arrow_click()
+
     Rectangle {
         id: rect
 
@@ -55,8 +58,7 @@ Window {
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                   root.close()
-                   stack_create_wallet.pop(null)
+                    sig_close_click()
                 }
             }
         }
@@ -75,7 +77,7 @@ Window {
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                   stack_create_wallet.pop()
+                    sig_back_arrow_click()
                 }
             }
         }
@@ -145,6 +147,15 @@ Window {
             }
         }
 
+    }
+
+    onSig_close_click: {
+        root.close()
+        stack_create_wallet.pop(null)
+    }
+
+    onSig_back_arrow_click: {
+        stack_create_wallet.pop()
     }
 
 }
