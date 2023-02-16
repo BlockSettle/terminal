@@ -877,7 +877,7 @@ void QtQuickAdapter::walletSelected(int index)
             QString::fromStdString(hdWallets_.at(walletId).name),
             QString::fromStdString(hdWallets_.at(walletId).description),
             QString::fromStdString(walletId),
-            QString::fromLatin1("0/") + QString::number(hdWallets_.at(walletId).leaves.size()),
+            QString::fromLatin1("1/") + QString::number(hdWallets_.at(walletId).leaves.size()),
             hdWallets_.at(walletId).encryptionTypes.size() > 0 ? encTypeToString(hdWallets_.at(walletId).encryptionTypes[0]) : QString(),
             0,
             0,
@@ -1815,25 +1815,30 @@ qtquick_gui::WalletPropertiesVM* QtQuickAdapter::walletProperitesVM() const
 
 int QtQuickAdapter::exportWallet()
 {
+   //auto walletId = walletPropertiesVM_->walletId();
    return 0;
 }
 
 int QtQuickAdapter::changePassword(const QString& oldPassword, const QString& newPassword)
 {
+   //auto walletId = walletPropertiesVM_->walletId();
    return 0;
 }
 
 int QtQuickAdapter::exportWalletAuth(const QString& password)
 {
+   //auto walletId = walletPropertiesVM_->walletId();
    return 0;
 }
 
 int QtQuickAdapter::viewWalletSeedAuth(const QString& password)
 {
+   //auto walletId = walletPropertiesVM_->walletId();
    return 0;
 }
 
 int QtQuickAdapter::deleteWallet(const QString& password)
 {
+   //auto walletId = walletPropertiesVM_->walletId();
    return 0;
 }

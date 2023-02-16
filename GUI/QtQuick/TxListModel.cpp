@@ -754,15 +754,9 @@ QString QTxDetails::feePerByte() const
    return displayBTC(amount / txWeight, 1);
 }
 
-
 quint32 QTxDetails::height() const
 {
    return details_.tx.getTxHeight();
-}
-
-qint32 QTxDetails::direction() const
-{
-   return static_cast<qint32>(transform_direction(details_.direction));
 }
 
 TxInOutModel::TxInOutModel(const std::vector<bs::sync::AddressDetails>& data, const QString& type, QObject* parent)

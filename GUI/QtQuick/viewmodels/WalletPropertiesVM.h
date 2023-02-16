@@ -11,7 +11,6 @@
 #pragma once
 
 #include <QObject>
-#include "Wallets/SignContainer.h"
 
 namespace qtquick_gui
 {

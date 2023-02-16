@@ -160,7 +160,6 @@
         <file>images/delete.svg</file>
         <file>qml/TransactionDetails.qml</file>
         <file>qml/StyledControls/CloseIconButton.qml</file>
-<<<<<<< HEAD
         <file>qml/StyledControls/CustomTableDelegateRow.qml</file>
         <file>qml/Send/SelectInputs.qml</file>
         <file>images/check.svg</file>
@@ -168,7 +167,6 @@
         <file>images/expanded.svg</file>
         <file>qml/Send/SignTransactionAdvanced.qml</file>
         <file>qml/Send/PasswordWithTimer.qml</file>
-=======
         <file>images/delete_icon.svg</file>
         <file>images/eye_icon.svg</file>
         <file>images/shield_icon.svg</file>
@@ -183,6 +181,5 @@
         <file>qml/WalletProperties/WalletSeed.qml</file>
         <file>qml/WalletProperties/WalletSeedAuth.qml</file>
         <file>images/wallet_icon_warn.svg</file>
->>>>>>> eea857493... Wallet properties
     </qresource>
 </RCC>

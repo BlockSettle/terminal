@@ -26,6 +26,7 @@ Popup {
     property string txAmount: ''
     property string txDateTime: ''
     property string txType: ''
+    property color txTypeColor
     property string txComment: ''
 
     width: 916
@@ -136,21 +137,8 @@ Popup {
                     width: 170
                 }
                 Text {
-                    function define_transaction_type_color(value) {
-                        if (value == Transactions.Sent) {
-                            return BSStyle.transactionTypeSent
-                        }
-                        else if (value == Transactions.Received) {
-                            return BSStyle.transactionTypeReceived
-                        }
-                        else if (value == Transactions.Internal) {
-                            return BSStyle.transactionTypeInternal
-                        }
-                        return 'white'
-                    }
-
                     text: transaction_details.txType
-                    color: define_transaction_type_color(tx.direction)
+                    color: transaction_details.txTypeColor
                     font.family: "Roboto"
                     font.pixelSize: 14
                 }
@@ -252,7 +240,7 @@ Popup {
                     }
                     CopyIconButton {
                         anchors.verticalCenter: parent.verticalCenter
-                        onCopy: bsApp.copyAddressToClipboard(tx.txId)
+                        onCopy: bsApp.copyAddressToClipboard(transaction_details.address)
                     }
                 }
 

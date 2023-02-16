@@ -190,8 +190,6 @@ public:
    QString feePerByte() const;
    Q_PROPERTY(quint32 height READ height NOTIFY updated)
    quint32 height() const;
-   Q_PROPERTY(qint32 direction READ direction NOTIFY updated)
-   qint32 direction() const;
 
    Q_PROPERTY(TxInOutModel* inputs READ inputs NOTIFY updated)
    TxInOutModel* inputs() const { return inputsModel_; }

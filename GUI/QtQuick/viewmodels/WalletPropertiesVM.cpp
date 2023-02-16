@@ -9,7 +9,6 @@
 
 */
 #include "WalletPropertiesVM.h"
-#include <QDebug>
 
 using namespace qtquick_gui;
 
