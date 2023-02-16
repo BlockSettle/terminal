@@ -38,16 +38,6 @@ namespace {
    };
 
    static const QString dateTimeFormat = QString::fromStdString("yyyy-MM-dd hh:mm:ss");
-
-   Transactions::Direction transform_direction(bs::sync::Transaction::Direction direction)
-   {
-      switch (direction) {
-      case bs::sync::Transaction::Direction::Received:   return Transactions::Direction::Received;
-      case bs::sync::Transaction::Direction::Sent:       return Transactions::Direction::Sent;
-      case bs::sync::Transaction::Direction::Internal:   return Transactions::Direction::Internal;
-      default:                                           return Transactions::Direction::Unknown;
-      }
-   }
 }
 
 TxListModel::TxListModel(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
