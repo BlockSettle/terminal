@@ -164,7 +164,7 @@ CustomPopup {
                         }
                     }
 
-                    Row {
+/*                    Row {
                         width: parent.width
 
                         Text {
@@ -182,7 +182,7 @@ CustomPopup {
                             width: parent.width / 2
                             horizontalAlignment: Text.AlignRight
                         }
-                    }
+                    }*/
                 }
 
                 Rectangle {

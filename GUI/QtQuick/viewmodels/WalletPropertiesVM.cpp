@@ -23,6 +23,24 @@ void WalletPropertiesVM::setWalletInfo(const WalletInfo& info)
    emit changed();
 }
 
+void qtquick_gui::WalletPropertiesVM::setNbActiveAddrs(const std::string& walletId, uint32_t nb)
+{
+   if (info_.walletId.isEmpty() || (info_.walletId.toStdString() != walletId)) {
+      return;
+   }
+   nbActiveAddrs_ = nb;
+   emit changed();
+}
+
+void qtquick_gui::WalletPropertiesVM::setNbUTXOs(const std::string& walletId, uint32_t nb)
+{
+   if (info_.walletId.isEmpty() || (info_.walletId.toStdString() != walletId)) {
+      return;
+   }
+   nbUTXOs_ = nb;
+   emit changed();
+}
+
 const QString& WalletPropertiesVM::walletName() const
 {
    return info_.name;
@@ -55,12 +73,12 @@ quint32 WalletPropertiesVM::walletGeneratedAddresses() const
 
 quint32 WalletPropertiesVM::walletActiveAddresses() const
 {
-   return info_.activeAddresses;
+   return nbActiveAddrs_;
 }
 
 quint32 WalletPropertiesVM::walletAvailableUtxo() const
 {
-   return info_.availableUtxo;
+   return nbUTXOs_;
 }
 
 const QStringList& WalletPropertiesVM::seed() const
@@ -73,7 +91,6 @@ void WalletPropertiesVM::setSeed(const QStringList& seed)
    seed_ = seed;
    emit seedChanged();
 }
-
 
 const QString& WalletPropertiesVM::exportPath() const
 {

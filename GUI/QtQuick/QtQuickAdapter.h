@@ -286,6 +286,7 @@ private:
    HwDeviceModel* hwDeviceModel_{ nullptr };
    WalletBalancesModel* walletBalances_{ nullptr };
    FeeSuggestionModel* feeSuggModel_{ nullptr };
+   std::unique_ptr<qtquick_gui::WalletPropertiesVM> walletPropertiesModel_;
    bs::Address generatedAddress_;
    bool hwDevicesPolling_{ false };
    bs::hww::DeviceKey curAuthDevice_{};
@@ -295,8 +296,6 @@ private:
    std::map<bs::message::SeqId, QTxDetails*>          txDetailReqs_;
    std::map<ApplicationSettings::Setting, QVariant>   settingsCache_;
    std::set<bs::message::SeqId>  expTxAddrReqs_, expTxAddrInReqs_;
-
-   std::unique_ptr<qtquick_gui::WalletPropertiesVM> walletPropertiesVM_;
 };
 
 #endif	// QT_QUICK_ADAPTER_H

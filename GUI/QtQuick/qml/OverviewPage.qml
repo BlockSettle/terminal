@@ -24,6 +24,7 @@ import wallet.balance 1.0
 
 Item {
     id: overview
+    property int walletIndex: 0
 
     signal newWalletClicked();
     signal curWalletIndexChanged(index : int)
@@ -49,12 +50,16 @@ Item {
         anchors.fill: parent
 
         onRequestWalletProperties: {
+            bsApp.getUTXOsForWallet(walletIndex)
             walletProperties.show()
             walletProperties.raise()
             walletProperties.requestActivate()
         }
         onCreateNewWallet: overview.newWalletClicked()
-        onWalletIndexChanged: overview.curWalletIndexChanged(index)
+        onWalletIndexChanged: {
+            walletIndex = index
+            overview.curWalletIndexChanged(index)
+        }
         onOpenAddressDetails: (address, transactions, balance, comment, asset_type, type, wallet) => {
             addressDetails.address = address
             addressDetails.transactions = transactions

@@ -166,7 +166,9 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    };
 
    //async, has to wait
+#ifdef OLD_WALLETS_CODE
    syncLeaf->updateBalances(cbBalance);
+#endif
    fut2.wait();
 
    //check balance
@@ -216,7 +218,9 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    };
 
    //async, has to wait
+#ifdef OLD_WALLETS_CODE
    syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
+#endif
    ASSERT_TRUE(fut1.get());
 
    //mine 6 more blocks
@@ -234,7 +238,9 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    };
 
    //async, has to wait
+#ifdef OLD_WALLETS_CODE
    syncLeaf->updateBalances(cbBalance2);
+#endif
    fut4.wait();
 
    //check balance
@@ -338,7 +344,9 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       };
 
       //async, has to wait
+#ifdef OLD_WALLETS_CODE
       syncLeaf->updateBalances(cbBalance);
+#endif
       fut2.wait();
 
       //check balance
@@ -396,7 +404,9 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       };
 
       //async, has to wait
+#ifdef OLD_WALLETS_CODE
       syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
+#endif
       fut1.wait();
 
       //mine 6 more blocks
@@ -414,7 +424,9 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       };
 
       //async, has to wait
+#ifdef OLD_WALLETS_CODE
       syncLeaf->updateBalances(cbBalance2);
+#endif
       fut4.wait();
 
       //check balance
@@ -509,7 +521,9 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       };
 
       //async, has to wait
+#ifdef OLD_WALLETS_CODE
       ASSERT_TRUE(syncLeaf->updateBalances(cbBalance));
+#endif
       fut2.wait();
 
       //check balance
@@ -640,7 +654,9 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
          promPtr2->set_value(true);
       };
       //async, has to wait
+#ifdef OLD_WALLETS_CODE
       ASSERT_TRUE(syncLeaf->updateBalances(cbBalance));
+#endif
       fut2.wait();
 
       //check balance
@@ -717,7 +733,9 @@ TEST_F(TestWalletWithArmory, Comments)
    {
       promPtr->set_value(inputs);
    };
+#ifdef OLD_WALLETS_CODE
    EXPECT_TRUE(syncWallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true));
+#endif
    const auto inputs = fut.get();
    ASSERT_FALSE(inputs.empty());
    const auto recip = addr.getRecipient(bs::XBTAmount{ (int64_t)12000 });
@@ -771,7 +789,9 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    {
       balProm->set_value(true);
    };
+#ifdef OLD_WALLETS_CODE
    syncLeaf->updateBalances(waitOnBalance);
+#endif
    balFut.wait();
    EXPECT_DOUBLE_EQ(syncLeaf->getTotalBalance(), 0);
    EXPECT_DOUBLE_EQ(syncLeaf->getSpendableBalance(), 0);
@@ -794,7 +814,9 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    {
       balProm1->set_value(true);
    };
+#ifdef OLD_WALLETS_CODE
    syncLeaf->updateBalances(waitOnBalance1);
+#endif
    balFut1.wait();
    EXPECT_DOUBLE_EQ(syncLeaf->getTotalBalance(), 300);
    EXPECT_DOUBLE_EQ(syncLeaf->getSpendableBalance(), 300);
@@ -811,7 +833,9 @@ TEST_F(TestWalletWithArmory, ZCBalance)
       promPtr1->set_value(inputs);
    };
    //async, has to wait
+#ifdef OLD_WALLETS_CODE
    syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
+#endif
    const auto inputs = fut1.get();
    ASSERT_GE(inputs.size(), 1);
 
@@ -849,7 +873,9 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    };
 
    //async, has to wait
+#ifdef OLD_WALLETS_CODE
    syncLeaf->updateBalances(cbBalance);
+#endif
    fut2.wait();
 
    EXPECT_DOUBLE_EQ(syncLeaf->getTotalBalance(),
@@ -882,7 +908,9 @@ TEST_F(TestWalletWithArmory, ZCBalance)
 
       prom3->set_value(true);
    };
+#ifdef OLD_WALLETS_CODE
    syncLeaf->getSpendableZCList(zcTxOutLbd);
+#endif
    fut3.wait();
 
    blockCount = 1;
@@ -898,7 +926,9 @@ TEST_F(TestWalletWithArmory, ZCBalance)
       promUpdBal->set_value(true);
    };
    //async, has to wait
+#ifdef OLD_WALLETS_CODE
    syncLeaf->updateBalances(cbBalance4);
+#endif
    futUpdBal.wait();
 
    EXPECT_EQ(syncLeaf->getTotalBalance(),
@@ -920,7 +950,9 @@ TEST_F(TestWalletWithArmory, ZCBalance)
       promUpdBal->set_value(true);
    };
    //async, has to wait
+#ifdef OLD_WALLETS_CODE
    syncLeaf->updateBalances(cbBalance5);
+#endif
    futUpdBal.wait();
 
    EXPECT_EQ(syncLeaf->getTotalBalance(),
@@ -976,8 +1008,9 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    {
       promPtr1->set_value(inputs);
    };
-   
+#ifdef OLD_WALLETS_CODE
    syncLeaf->getSpendableTxOutList(cbTxOutList1, UINT64_MAX, true);
+#endif
    const auto inputs1 = fut1.get();
    ASSERT_FALSE(inputs1.empty());
 
@@ -1010,8 +1043,9 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    {
          promPtr2->set_value(true);
    };
-
+#ifdef OLD_WALLETS_CODE
    syncLeaf->updateBalances(cbBalance);
+#endif
    fut2.wait();
    EXPECT_EQ(syncLeaf->getAddrBalance(addr2)[0], amount1);
 
@@ -1021,8 +1055,9 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    {
       promPtr3->set_value(inputs);
    };
-
+#ifdef OLD_WALLETS_CODE
    syncLeaf->getSpendableTxOutList(cbTxOutList2, UINT64_MAX, true);
+#endif
    const auto inputs2 = fut3.get();
    ASSERT_FALSE(inputs2.empty());
 
@@ -1264,7 +1299,9 @@ TEST_F(TestWalletWithArmory, GlobalDelegateConf)
       promPtrBal->set_value(true);
    };
    //async, has to wait
+#ifdef OLD_WALLETS_CODE
    syncLeaf->updateBalances(cbBalance);
+#endif
    futBal.wait();
 
    //check balance
@@ -1336,7 +1373,9 @@ TEST_F(TestWalletWithArmory, GlobalDelegateConf)
       promTxOut->set_value(inputs);
    };
    //async, has to wait
+#ifdef OLD_WALLETS_CODE
    EXPECT_TRUE(syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true));
+#endif
    const auto &inputs = futTxOut.get();
    ASSERT_FALSE(inputs.empty());
 
@@ -1469,7 +1508,9 @@ TEST_F(TestWalletWithArmory, PushZC_retry)
       promPtr1->set_value(inputs);
    };
    //async, has to wait
+#ifdef OLD_WALLETS_CODE
    syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true);
+#endif
    const auto inputs = fut1.get();
    ASSERT_GE(inputs.size(), 1);
 

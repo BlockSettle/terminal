@@ -146,7 +146,7 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    , userSigner_(std::make_shared<UserTerminal>(TerminalUsers::Signer))
    , userHWW_(bs::message::UserTerminal::create(bs::message::TerminalUsers::HWWallets))
    , txTypes_({ tr("All transactions") })
-   , walletPropertiesVM_(std::make_unique<qtquick_gui::WalletPropertiesVM>())
+   , walletPropertiesModel_(std::make_unique<qtquick_gui::WalletPropertiesVM>())
 {
    staticLogger = logger;
    addrModel_ = new QmlAddressListModel(logger, this);
@@ -238,9 +238,9 @@ void QtQuickAdapter::run(int &argc, char **argv)
    qmlRegisterInterface<QTxDetails>("QTxDetails");
    qmlRegisterUncreatableMetaObject(WalletBalance::staticMetaObject, "wallet.balance"
       , 1, 0, "WalletBalance", tr("Error: only enums"));
-    qmlRegisterType<TransactionFilterModel>("terminal.models", 1, 0, "TransactionFilterModel");
-    qmlRegisterType<TransactionForAddressFilterModel>("terminal.models", 1, 0, "TransactionForAddressFilterModel");
-    qmlRegisterType<qtquick_gui::WalletPropertiesVM>("terminal.models", 1, 0, "WalletPropertiesVM");
+   qmlRegisterType<TransactionFilterModel>("terminal.models", 1, 0, "TransactionFilterModel");
+   qmlRegisterType<TransactionForAddressFilterModel>("terminal.models", 1, 0, "TransactionForAddressFilterModel");
+   qmlRegisterType<qtquick_gui::WalletPropertiesVM>("terminal.models", 1, 0, "WalletPropertiesVM");
    qmlRegisterUncreatableMetaObject(Transactions::staticMetaObject, "terminal.models" 
       , 1, 0, "Transactions", tr("Error: only enums"));
 
@@ -873,16 +873,18 @@ void QtQuickAdapter::walletSelected(int index)
       walletInfoReq_[msgId] = walletName;
 
       if (hdWallets_.count(walletId) > 0) {
-         walletPropertiesVM_->setWalletInfo({
-            QString::fromStdString(hdWallets_.at(walletId).name),
-            QString::fromStdString(hdWallets_.at(walletId).description),
-            QString::fromStdString(walletId),
-            QString::fromLatin1("1/") + QString::number(hdWallets_.at(walletId).leaves.size()),
-            hdWallets_.at(walletId).encryptionTypes.size() > 0 ? encTypeToString(hdWallets_.at(walletId).encryptionTypes[0]) : QString(),
-            0,
-            0,
-            0
-         });   
+         try {
+            walletPropertiesModel_->setWalletInfo({
+               QString::fromStdString(hdWallets_.at(walletId).name),
+               QString::fromStdString(hdWallets_.at(walletId).description),
+               QString::fromStdString(walletId),
+               QString::fromLatin1("1/") + QString::number(hdWallets_.at(walletId).leaves.size()),
+               hdWallets_.at(walletId).encryptionTypes.size() > 0
+                  ? encTypeToString(hdWallets_.at(walletId).encryptionTypes[0]) : tr("Unknown"),
+               hdWallets_.at(walletId).nbAddresses
+            });
+         }
+         catch (const std::exception&) {}
       }
    });
 }
@@ -926,6 +928,8 @@ static QString assetTypeToString(const bs::AssetType assetType)
 ProcessingResult QtQuickAdapter::processWalletData(bs::message::SeqId msgId
    , const WalletsMessage_WalletData& response)
 {
+   walletPropertiesModel_->setNbActiveAddrs(response.wallet_id(), response.used_addresses_size());
+
    const auto& itReq = walletInfoReq_.find(msgId);
    if (itReq != walletInfoReq_.end()) {
       std::unordered_set<std::string> walletIds;
@@ -1468,6 +1472,9 @@ ProcessingResult QtQuickAdapter::processWalletsList(const WalletsMessage_Wallets
 
 ProcessingResult QtQuickAdapter::processUTXOs(const WalletsMessage_UtxoListResponse& response)
 {
+   logger_->debug("[{}] {} UTXOs for {}", __func__, response.utxos_size(), response.wallet_id());
+   walletPropertiesModel_->setNbUTXOs(response.wallet_id(), response.utxos_size());
+
    std::vector<UTXO> utxos;
    for (const auto& serUtxo : response.utxos()) {
       UTXO utxo;
@@ -1810,7 +1817,7 @@ void QtQuickAdapter::startAddressSearch(const QString& s)
 
 qtquick_gui::WalletPropertiesVM* QtQuickAdapter::walletProperitesVM() const
 {
-   return walletPropertiesVM_.get();
+   return walletPropertiesModel_.get();
 }
 
 int QtQuickAdapter::exportWallet(const QString& walletId)

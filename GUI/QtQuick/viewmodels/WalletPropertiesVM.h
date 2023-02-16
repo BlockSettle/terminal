@@ -23,8 +23,6 @@ struct WalletInfo
    QString groups;
    QString ecryption;
    quint32 generatedAddresses;
-   quint32 activeAddresses;
-   quint32 availableUtxo;
 };
 
 class WalletPropertiesVM: public QObject
@@ -45,6 +43,8 @@ public:
    WalletPropertiesVM(QObject* parent = nullptr);
 
    void setWalletInfo(const WalletInfo& info);
+   void setNbActiveAddrs(const std::string& walletId, uint32_t nb);
+   void setNbUTXOs(const std::string& walletId, uint32_t nb);
 
    const QString& walletName() const;
    const QString& walletDescription() const;
@@ -67,7 +67,9 @@ signals:
    void pathChanged();
 
 private:
-   WalletInfo info_;
+   WalletInfo  info_;
+   uint32_t    nbActiveAddrs_{ 0 };
+   uint32_t    nbUTXOs_{ 0 };
    QStringList seed_;
    QString exportPath_;
 };
