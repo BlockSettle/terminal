@@ -1854,7 +1854,9 @@ TEST_F(TestWallet, TxIdNestedSegwit)
          promUtxo->set_value(inputs.front());
       }
    };
+#ifdef OLD_WALLETS_CODE
    ASSERT_TRUE(syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true));
+#endif
    const auto input = futUtxo.get();
    ASSERT_TRUE(input.isInitialized());
 

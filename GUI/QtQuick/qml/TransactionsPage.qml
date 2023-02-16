@@ -23,6 +23,9 @@ import "BsStyles"
 Item {
     id: transactions
 
+    width: 1200
+    height: 788
+
     TransactionDetails {
         id: transactionDetails
         visible: false
@@ -157,6 +160,7 @@ Item {
                 transactionDetails.address = model.data(model.index(row, 3), 257)
                 transactionDetails.txDateTime = model.data(model.index(row, 0), 257)
                 transactionDetails.txType = model.data(model.index(row, 2), 257)
+                transactionDetails.txTypeColor = model.data(model.index(row, 2), 259)
                 transactionDetails.txComment = model.data(model.index(row, 7), 257)
                 transactionDetails.txAmount = model.data(model.index(row, 4), 257)
                 transactionDetails.tx = bsApp.getTXDetails(txHash)

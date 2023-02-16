@@ -24,6 +24,7 @@
 #include "TxListModel.h"
 #include "UiUtils.h"
 #include "Wallets/SignContainer.h"
+#include "viewmodels/WalletPropertiesVM.h"
 
 namespace bs {
    namespace gui {
@@ -152,6 +153,9 @@ public:
    Q_PROPERTY(bool scanningDevices READ scanningDevices NOTIFY scanningChanged)
    bool scanningDevices() const;
 
+   Q_PROPERTY(qtquick_gui::WalletPropertiesVM* walletProperitesVM READ walletProperitesVM CONSTANT)
+   qtquick_gui::WalletPropertiesVM* walletProperitesVM() const;
+
    // QML-invokable methods
    Q_INVOKABLE QStringList newSeedPhrase();
    Q_INVOKABLE QStringList completeBIP39dic(const QString& prefix);
@@ -178,6 +182,11 @@ public:
    Q_INVOKABLE int getSearchInputType(const QString&);
    Q_INVOKABLE void startAddressSearch(const QString&);
    Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash);
+   Q_INVOKABLE int changePassword(const QString& walletId, const QString& oldPassword, const QString& newPassword);
+   Q_INVOKABLE int exportWalletAuth(const QString& walletId, const QString& password);
+   Q_INVOKABLE int viewWalletSeedAuth(const QString& walletId, const QString& password);
+   Q_INVOKABLE int deleteWallet(const QString& walletId, const QString& password);
+   Q_INVOKABLE int exportWallet(const QString& walletId);
 
 signals:
    void walletsListChanged();
@@ -277,6 +286,7 @@ private:
    HwDeviceModel* hwDeviceModel_{ nullptr };
    WalletBalancesModel* walletBalances_{ nullptr };
    FeeSuggestionModel* feeSuggModel_{ nullptr };
+   std::unique_ptr<qtquick_gui::WalletPropertiesVM> walletPropertiesModel_;
    bs::Address generatedAddress_;
    bool hwDevicesPolling_{ false };
    bs::hww::DeviceKey curAuthDevice_{};

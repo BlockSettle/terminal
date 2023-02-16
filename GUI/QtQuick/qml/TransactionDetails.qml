@@ -26,6 +26,7 @@ Popup {
     property string txAmount: ''
     property string txDateTime: ''
     property string txType: ''
+    property color txTypeColor
     property string txComment: ''
 
     width: 916
@@ -60,7 +61,6 @@ Popup {
                 font.pixelSize: 19
                 font.weight: Font.Medium
             }
-
 
             Grid {
                 columns: 2
@@ -138,7 +138,7 @@ Popup {
                 }
                 Text {
                     text: transaction_details.txType
-                    color: BSStyle.textColor
+                    color: transaction_details.txTypeColor
                     font.family: "Roboto"
                     font.pixelSize: 14
                 }
@@ -193,7 +193,7 @@ Popup {
                     width: 170
                 }
                 Label {
-                    function define_color(value) {
+                    function define_confirmation_color(value) {
                         if (value == 0) {
                             return BSStyle.transactionConfirmationZero
                         }
@@ -204,7 +204,7 @@ Popup {
                     }
 
                     text: tx.nbConf
-                    color: define_color(tx.nbConf)
+                    color: define_confirmation_color(tx.nbConf)
                     font.family: "Roboto"
                     font.pixelSize: 14
                 }
@@ -240,7 +240,7 @@ Popup {
                     }
                     CopyIconButton {
                         anchors.verticalCenter: parent.verticalCenter
-                        onCopy: bsApp.copyAddressToClipboard(tx.txId)
+                        onCopy: bsApp.copyAddressToClipboard(transaction_details.address)
                     }
                 }
 
@@ -292,8 +292,8 @@ Popup {
                     anchors.centerIn: parent
                     model: tx.inputs
 
-                    copy_button_column_index: 0
-                    columnWidths: [0.7, 0.2, 0.1]
+                    copy_button_column_index: 1
+                    columnWidths: [0.1, 0.5, 0.2, 0.2]
                     onCopyRequested: bsApp.copyAddressToClipboard(id)
                 }
             }
@@ -331,8 +331,8 @@ Popup {
                     anchors.centerIn: parent
                     model: tx.outputs
 
-                    copy_button_column_index: 0
-                    columnWidths: [0.7, 0.2, 0.1]
+                    copy_button_column_index: 1
+                    columnWidths: [0.1, 0.5, 0.2, 0.2]
                     onCopyRequested: bsApp.copyAddressToClipboard(id)
                 }
             }

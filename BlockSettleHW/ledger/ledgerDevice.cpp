@@ -43,7 +43,9 @@ namespace {
    };
 
    const uint16_t kHidapiBrokenSequence = 191;
-   int sendApdu(hid_device* dongle, const QByteArray& command) {
+
+   int sendApdu(hid_device* dongle, const QByteArray& command)
+   {
       int result = 0;
       QVector<QByteArray> chunks;
       uint16_t chunkNumber = 0;
@@ -86,30 +88,32 @@ namespace {
       return result;
    }
 
-   uint16_t receiveApduResult(hid_device* dongle, QByteArray& response) {
+   uint16_t receiveApduResult(hid_device* dongle, QByteArray& response)
+   {
       response.clear();
       uint16_t expectedChunkIndex = 0;
-
       unsigned char buf[Ledger::CHUNK_MAX_BLOCK];
+
       int result = hid_read(dongle, buf, Ledger::CHUNK_MAX_BLOCK);
       if (result < 0) {
          return result;
       }
 
       QByteArray chunk(reinterpret_cast<char*>(buf), Ledger::CHUNK_MAX_BLOCK);
-      auto checkChunkIndex = [&chunk, &expectedChunkIndex]() {
+      const auto& checkChunkIndex = [&expectedChunkIndex](const QByteArray& chunk)
+      {
          auto chunkIndex = static_cast<uint16_t>(((uint8_t)chunk[3] << 8) | (uint8_t)chunk[4]);
          if (chunkIndex != expectedChunkIndex++) {
             if (chunkIndex == static_cast<uint16_t>(kHidapiBrokenSequence)) {
                throw LedgerBrokenSequence();
             }
             else {
-               throw LedgerException("Unexpected sequence number");
+               throw LedgerException("unexpected sequence number");
             }
          }
       };
 
-      checkChunkIndex();
+      checkChunkIndex(chunk);
       int left = static_cast<int>(((uint8_t)chunk[5] << 8) | (uint8_t)chunk[6]);
 
       response.append(chunk.mid(Ledger::FIRST_BLOCK_OFFSET, left));
@@ -123,7 +127,7 @@ namespace {
          }
 
          chunk = QByteArray(reinterpret_cast<char*>(buf), Ledger::CHUNK_MAX_BLOCK);
-         checkChunkIndex();
+         checkChunkIndex(chunk);
 
          response.append(chunk.mid(Ledger::NEXT_BLOCK_OFFSET, left));
       }
@@ -131,7 +135,6 @@ namespace {
       auto resultCode = response.right(2);
       response.chop(2);
       return static_cast<uint16_t>(((uint8_t)resultCode[0] << 8) | (uint8_t)resultCode[1]);
-
    }
 
    QByteArray getApduHeader(uint8_t cla, uint8_t ins, uint8_t p1, uint8_t p2) {
@@ -210,13 +213,15 @@ void DeviceIOHandler::readData(QByteArray& output, const std::string& logHeader)
 bool DeviceIOHandler::initDevice() noexcept
 {
    if (hid_init() < 0 || hidDeviceInfo_.serialNumber.empty()) {
-      logger_->info("[DeviceIOHandler::initDevice] cannot init hid");
+      logger_->error("[DeviceIOHandler::initDevice] cannot init hid");
       return false;
    }
 
    {  // make sure that user does not switch off device in the middle of operation
       auto* info = hid_enumerate(hidDeviceInfo_.vendorId, hidDeviceInfo_.productId);
       if (!info) {
+         logger_->error("[DeviceIOHandler::initDevice] device {} {} not found"
+            , hidDeviceInfo_.vendorId, hidDeviceInfo_.productId);
          return false;
       }
 
@@ -228,6 +233,7 @@ bool DeviceIOHandler::initDevice() noexcept
          }
       }
       if (!bFound) {
+         logger_->error("[DeviceIOHandler::initDevice] device not found");
          return false;
       }
    }
@@ -236,8 +242,9 @@ bool DeviceIOHandler::initDevice() noexcept
    QString::fromStdString(hidDeviceInfo_.serialNumber).toWCharArray(serNumb.get());
    serNumb.get()[hidDeviceInfo_.serialNumber.length()] = 0x00;
    dongle_ = hid_open(hidDeviceInfo_.vendorId, static_cast<ushort>(hidDeviceInfo_.productId), serNumb.get());
-
-   return dongle_ != nullptr;
+   logger_->debug("[DeviceIOHandler::initDevice] {} {}: {}", hidDeviceInfo_.vendorId
+      , hidDeviceInfo_.productId, (dongle_ != NULL));
+   return dongle_ != NULL;
 }
 
 void DeviceIOHandler::releaseDevice() noexcept
@@ -246,6 +253,8 @@ void DeviceIOHandler::releaseDevice() noexcept
       hid_close(dongle_);
       hid_exit();
       dongle_ = nullptr;
+      logger_->debug("[DeviceIOHandler::releaseDevice] {} {}", hidDeviceInfo_.vendorId
+         , hidDeviceInfo_.productId);
    }
 }
 
@@ -277,8 +286,6 @@ bool DeviceIOHandler::exchangeData(const QByteArray& input, QByteArray& output
          releaseDevice();
          std::this_thread::sleep_for(std::chrono::milliseconds{ 100 });
          initDevice();
-         output.clear();
-
          return exchangeData(input, output, std::move(logHeader));
       }
    }
@@ -287,7 +294,6 @@ bool DeviceIOHandler::exchangeData(const QByteArray& input, QByteArray& output
       /*releaseDevice();
       std::this_thread::sleep_for(std::chrono::milliseconds{100});
       initDevice();
-      output.clear();
       return exchangeData(input, output, std::move(logHeader));*/
       return false;
    }
@@ -552,7 +558,7 @@ void bs::hww::LedgerDevice::retrieveXPubRoot()
          handleError(Ledger::INTERNAL_ERROR);
          return;
       }
-      //TODO: invoke callback with walletInfo
+      cb_->walletInfoReady(key(), *walletInfo);
    };
    processQueued(inData, cb);
 }
