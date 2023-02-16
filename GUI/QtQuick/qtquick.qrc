@@ -167,5 +167,19 @@
         <file>images/expanded.svg</file>
         <file>qml/Send/SignTransactionAdvanced.qml</file>
         <file>qml/Send/PasswordWithTimer.qml</file>
+        <file>images/delete_icon.svg</file>
+        <file>images/eye_icon.svg</file>
+        <file>images/shield_icon.svg</file>
+        <file>images/lock_icon.svg</file>
+        <file>images/scan_icon.svg</file>
+        <file>qml/WalletProperties/WalletPropertiesPopup.qml</file>
+        <file>qml/WalletProperties/ChangePassword.qml</file>
+        <file>qml/WalletProperties/DeleteWallet.qml</file>
+        <file>qml/WalletProperties/DeleteWalletWarn.qml</file>
+        <file>qml/WalletProperties/ExportWOWallet.qml</file>
+        <file>qml/WalletProperties/ExportWOWalletAuth.qml</file>
+        <file>qml/WalletProperties/WalletSeed.qml</file>
+        <file>qml/WalletProperties/WalletSeedAuth.qml</file>
+        <file>images/wallet_icon_warn.svg</file>
     </qresource>
 </RCC>

@@ -16,6 +16,7 @@ import QtQml.Models 2
 import "Overview" as Overview
 import "StyledControls"
 import "BsStyles"
+import "WalletProperties"
 //import "BsControls"
 //import "BsDialogs"
 //import "js/helper.js" as JsHelper
@@ -37,10 +38,21 @@ Item {
         visible: false
     }
 
+    WalletPropertiesPopup {
+        id: walletProperties
+        visible: false
+
+        wallet_properties_vm: bsApp.walletProperitesVM
+    }
+
     Overview.OverviewPanel {
         anchors.fill: parent
 
-        onRequestWalletProperties: console.log("Nothing to do")
+        onRequestWalletProperties: {
+            walletProperties.show()
+            walletProperties.raise()
+            walletProperties.requestActivate()
+        }
         onCreateNewWallet: overview.newWalletClicked()
         onWalletIndexChanged: overview.curWalletIndexChanged(index)
         onOpenAddressDetails: (address, transactions, balance, comment, asset_type, type, wallet) => {

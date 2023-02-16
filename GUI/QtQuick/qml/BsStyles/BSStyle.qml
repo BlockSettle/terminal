@@ -130,4 +130,11 @@ QtObject {
 
     //not colors
     readonly property int defaultPrecision: 8
+
+    readonly property color transactionTypeSent: "#EB6060"
+    readonly property color transactionTypeInternal: "cyan"
+    readonly property color transactionTypeReceived: "#67D2A3"
+
+    readonly property color exportWalletLabelBackground: "#32394F"
+    readonly property color exportWalletLabelNameColor: "#45A6FF"
 }

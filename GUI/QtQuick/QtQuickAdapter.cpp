@@ -42,6 +42,7 @@
 #include "WalletBalancesModel.h"
 #include "TransactionFilterModel.h"
 #include "TransactionForAddressFilterModel.h"
+#include "viewmodels/WalletPropertiesVM.h"
 
 #include "common.pb.h"
 #include "hardware_wallet.pb.h"
@@ -55,6 +56,24 @@ using namespace bs::message;
 
 namespace {
    std::shared_ptr<spdlog::logger> staticLogger;
+
+   static inline QString encTypeToString(bs::wallet::EncryptionType enc)
+   {
+      switch (enc) {
+         case bs::wallet::EncryptionType::Unencrypted :
+            return QObject::tr("Unencrypted");
+
+         case bs::wallet::EncryptionType::Password :
+            return QObject::tr("Password");
+
+         case bs::wallet::EncryptionType::Auth :
+            return QObject::tr("Auth eID");
+
+         case bs::wallet::EncryptionType::Hardware :
+            return QObject::tr("Hardware Security Module");
+      };
+      return QObject::tr("Unknown");
+   }
 }
 // redirect qDebug() to the log
 // stdout redirected to parent process
@@ -127,6 +146,7 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    , userSigner_(std::make_shared<UserTerminal>(TerminalUsers::Signer))
    , userHWW_(bs::message::UserTerminal::create(bs::message::TerminalUsers::HWWallets))
    , txTypes_({ tr("All transactions") })
+   , walletPropertiesVM_(std::make_unique<qtquick_gui::WalletPropertiesVM>())
 {
    staticLogger = logger;
    addrModel_ = new QmlAddressListModel(logger, this);
@@ -220,6 +240,9 @@ void QtQuickAdapter::run(int &argc, char **argv)
       , 1, 0, "WalletBalance", tr("Error: only enums"));
     qmlRegisterType<TransactionFilterModel>("terminal.models", 1, 0, "TransactionFilterModel");
     qmlRegisterType<TransactionForAddressFilterModel>("terminal.models", 1, 0, "TransactionForAddressFilterModel");
+    qmlRegisterType<qtquick_gui::WalletPropertiesVM>("terminal.models", 1, 0, "WalletPropertiesVM");
+   qmlRegisterUncreatableMetaObject(Transactions::staticMetaObject, "terminal.models" 
+      , 1, 0, "Transactions", tr("Error: only enums"));
 
    //need to read files in qml
    qputenv("QML_XHR_ALLOW_FILE_READ", QByteArray("1"));
@@ -848,6 +871,19 @@ void QtQuickAdapter::walletSelected(int index)
       msg.set_wallet_get(walletId);
       const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
       walletInfoReq_[msgId] = walletName;
+
+      if (hdWallets_.count(walletId) > 0) {
+         walletPropertiesVM_->setWalletInfo({
+            QString::fromStdString(hdWallets_.at(walletId).name),
+            QString::fromStdString(hdWallets_.at(walletId).description),
+            QString::fromStdString(walletId),
+            QString::fromLatin1("1/") + QString::number(hdWallets_.at(walletId).leaves.size()),
+            hdWallets_.at(walletId).encryptionTypes.size() > 0 ? encTypeToString(hdWallets_.at(walletId).encryptionTypes[0]) : QString(),
+            0,
+            0,
+            0
+         });   
+      }
    });
 }
 
@@ -1770,4 +1806,34 @@ void QtQuickAdapter::startAddressSearch(const QString& s)
       msg.set_get_address_history(s.trimmed().toStdString());
       pushRequest(user_, userBlockchain_, msg.SerializeAsString()
          , {}, 10, std::chrono::milliseconds{ 230 });
+}
+
+qtquick_gui::WalletPropertiesVM* QtQuickAdapter::walletProperitesVM() const
+{
+   return walletPropertiesVM_.get();
+}
+
+int QtQuickAdapter::exportWallet(const QString& walletId)
+{
+   return 0;
+}
+
+int QtQuickAdapter::changePassword(const QString& walletId, const QString& oldPassword, const QString& newPassword)
+{
+   return 0;
+}
+
+int QtQuickAdapter::exportWalletAuth(const QString& walletId, const QString& password)
+{
+   return 0;
+}
+
+int QtQuickAdapter::viewWalletSeedAuth(const QString& walletId, const QString& password)
+{
+   return 0;
+}
+
+int QtQuickAdapter::deleteWallet(const QString& walletId, const QString& password)
+{
+   return 0;
 }
