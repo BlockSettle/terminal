@@ -105,6 +105,7 @@ ColumnLayout {
 
         function click_enter() {
             const result = bsApp.changePassword(
+                wallet_properties_vm.walletId,
                 password.input_text,
                 new_password.input_text,
                 confirm_password.input_text

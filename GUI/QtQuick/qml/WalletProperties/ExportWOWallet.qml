@@ -126,7 +126,7 @@ ColumnLayout  {
         width: 530
 
         function click_enter() {
-            bsApp.exportWallet()
+            bsApp.exportWallet(wallet_properties_vm.walletId)
         }
     }
 

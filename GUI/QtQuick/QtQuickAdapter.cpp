@@ -1813,32 +1813,27 @@ qtquick_gui::WalletPropertiesVM* QtQuickAdapter::walletProperitesVM() const
    return walletPropertiesVM_.get();
 }
 
-int QtQuickAdapter::exportWallet()
+int QtQuickAdapter::exportWallet(const QString& walletId)
 {
-   //auto walletId = walletPropertiesVM_->walletId();
    return 0;
 }
 
-int QtQuickAdapter::changePassword(const QString& oldPassword, const QString& newPassword)
+int QtQuickAdapter::changePassword(const QString& walletId, const QString& oldPassword, const QString& newPassword)
 {
-   //auto walletId = walletPropertiesVM_->walletId();
    return 0;
 }
 
-int QtQuickAdapter::exportWalletAuth(const QString& password)
+int QtQuickAdapter::exportWalletAuth(const QString& walletId, const QString& password)
 {
-   //auto walletId = walletPropertiesVM_->walletId();
    return 0;
 }
 
-int QtQuickAdapter::viewWalletSeedAuth(const QString& password)
+int QtQuickAdapter::viewWalletSeedAuth(const QString& walletId, const QString& password)
 {
-   //auto walletId = walletPropertiesVM_->walletId();
    return 0;
 }
 
-int QtQuickAdapter::deleteWallet(const QString& password)
+int QtQuickAdapter::deleteWallet(const QString& walletId, const QString& password)
 {
-   //auto walletId = walletPropertiesVM_->walletId();
    return 0;
 }

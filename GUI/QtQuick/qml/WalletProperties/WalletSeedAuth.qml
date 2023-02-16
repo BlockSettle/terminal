@@ -64,6 +64,7 @@ ColumnLayout  {
 
         function click_enter() {
             const result = bsApp.viewWalletSeedAuth(
+                wallet_properties_vm.walletId,
                 password.input_text
             )
             if (result === 0) {
