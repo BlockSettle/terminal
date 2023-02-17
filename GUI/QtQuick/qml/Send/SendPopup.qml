@@ -91,4 +91,17 @@ CustomPopup {
     function init() {
         simple_details.init()
     }
+
+    function close_click()
+    {
+        if (select_inputs.visible)
+        {
+            _stack_view.pop()
+        }
+        else
+        {
+            root.close()
+            _stack_view.pop(null)
+        }
+    }
 }

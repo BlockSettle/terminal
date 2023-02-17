@@ -8,7 +8,7 @@ Window {
     id: root
 
     property int navig_bar_width: 36
-    property alias _stack_view: stack_create_wallet
+    property alias _stack_view: stack_popup
     property alias _arrow_but_visibility: back_arrow_button.visible
 
     visible: true
@@ -29,6 +29,9 @@ Window {
     x: mainWindow.x + (mainWindow.width - width)/2
     y: mainWindow.y + 28
 
+    signal sig_close_click()
+    signal sig_back_arrow_click()
+
     Rectangle {
         id: rect
 
@@ -36,8 +39,8 @@ Window {
         color: "#191E2A"
         opacity: 1
         radius: 16
-        height: stack_create_wallet.height + navig_bar_width
-        width: stack_create_wallet.width
+        height: stack_popup.height + navig_bar_width
+        width: stack_popup.width
         border.color : BSStyle.defaultBorderColor
         border.width : 1
 
@@ -55,8 +58,7 @@ Window {
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                   root.close()
-                   stack_create_wallet.pop(null)
+                    sig_close_click()
                 }
             }
         }
@@ -75,13 +77,13 @@ Window {
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                   stack_create_wallet.pop()
+                    sig_back_arrow_click()
                 }
             }
         }
 
         StackView {
-            id: stack_create_wallet
+            id: stack_popup
 
             anchors.top: close_button.bottom
             anchors.topMargin: 0
@@ -145,6 +147,20 @@ Window {
             }
         }
 
+    }
+
+    onSig_close_click: {
+        close_click()
+    }
+
+    onSig_back_arrow_click: {
+        stack_popup.pop()
+    }
+
+    function close_click()
+    {
+        root.close()
+        stack_popup.pop(null)
     }
 
 }

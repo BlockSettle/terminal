@@ -459,7 +459,7 @@ ColumnLayout  {
     CustomButton {
         id: continue_but
 
-        enabled: txOutputsModel.rowCount && table_sel_inputs.rowCount
+        enabled: txOutputsModel.rowCount
 
         width: 1084
 
@@ -474,10 +474,19 @@ ColumnLayout  {
 
 
         function click_enter() {
-            layout.sig_continue( bsApp.createTXSignRequest(from_wallet_combo.currentIndex
-                , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
-                , parseFloat(fee_suggest_combo.currentValue), comment_input.input_text
-                , txInputsModel.getSelection()))
+            if (table_sel_inputs.rowCount)
+            {
+                layout.sig_continue( bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                    , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
+                    , parseFloat(fee_suggest_combo.currentValue), comment_input.input_text
+                    , txInputsModel.getSelection()) )
+            }
+            else
+            {
+                layout.sig_continue( bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                    , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
+                    , parseFloat(fee_suggest_combo.currentValue), comment_input.input_text) )
+            }
         }
 
     }
