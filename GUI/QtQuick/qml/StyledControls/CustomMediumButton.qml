@@ -21,6 +21,7 @@ Button {
 
     width: 136
     height: 36
+    hoverEnabled: true
 
     font.pixelSize: 12
     font.family: "Roboto"
@@ -30,7 +31,11 @@ Button {
         color: control.background_color
         radius: control.background_radius
 
-        border.width: 0
+
+        border.color: 
+            (control.hovered ? BSStyle.comboBoxHoveredBorderColor :
+            (control.activeFocus ? BSStyle.comboBoxFocusedBorderColor : BSStyle.comboBoxBorderColor))
+        border.width: 1
     }
 
     contentItem: Text {

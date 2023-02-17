@@ -26,7 +26,12 @@ TableView {
     clip: true
     boundsBehavior: Flickable.StopAtBounds
 
-    ScrollBar.vertical: ScrollBar { }
+    flickDeceleration: 750
+    maximumFlickVelocity: 1000
+
+    ScrollBar.vertical: ScrollBar { 
+        policy: contentHeight > height ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
+    }
 
     signal copyRequested(var id)
     signal deleteRequested(int id)

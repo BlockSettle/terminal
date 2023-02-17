@@ -81,6 +81,16 @@ quint32 WalletPropertiesVM::walletAvailableUtxo() const
    return nbUTXOs_;
 }
 
+bool WalletPropertiesVM::isHardware() const
+{
+   return info_.isHardware;
+}
+
+bool WalletPropertiesVM::isWatchingOnly() const
+{
+   return info_.isWatchingOnly;
+}
+
 const QStringList& WalletPropertiesVM::seed() const
 {
    return seed_;
