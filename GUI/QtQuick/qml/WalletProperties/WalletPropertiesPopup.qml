@@ -56,8 +56,14 @@ CustomPopup {
     DeleteWalletWarn {
         id: delete_wallet_warn
         visible: false
-        onViewWalletSeed: _stack_view.push(wallet_seed_auth)
-        onDeleteWallet: _stack_view.push(delete_wallet)
+        onViewWalletSeed: {
+            _stack_view.push(wallet_seed_auth)
+            wallet_seed_auth.init()
+        }
+        onDeleteWallet: {
+            _stack_view.push(delete_wallet)
+            delete_wallet.init()
+        }
     }
 
     DeleteWallet {
@@ -287,6 +293,7 @@ CustomPopup {
 
                 CustomListItem {
                     width: parent.width
+                    enabled: !wallet_properties_vm.isHardware
 
                     isButton: true
 
@@ -305,18 +312,25 @@ CustomPopup {
                     icon_add_source: "qrc:/images/arrow.png"
                     title_text: qsTr("Export watching-only wallet")
 
-                    onClicked: _stack_view.push(export_wo_wallet_auth)
+                    onClicked: {
+                        _stack_view.push(export_wo_wallet_auth)
+                        export_wo_wallet_auth.init()
+                    }
                 }
 
                 CustomListItem {
                     width: parent.width
                     isButton: true
+                    enabled: !wallet_properties_vm.isHardware
 
                     icon_source: "qrc:/images/shield_icon.svg"
                     icon_add_source: "qrc:/images/arrow.png"
                     title_text: qsTr("View wallet seed")
 
-                    onClicked: _stack_view.push(wallet_seed_auth)
+                    onClicked: {
+                        _stack_view.push(wallet_seed_auth)
+                        wallet_seed_auth.init()
+                    }
                 }
 
                 CustomListItem {
@@ -333,6 +347,7 @@ CustomPopup {
                 CustomListItem {
                     width: parent.width
                     isButton: true
+                    enabled: wallet_properties_vm.isWatchingOnly || wallet_properties_vm.isHardware
 
                     icon_source: "qrc:/images/delete_icon.svg"
                     icon_add_source: "qrc:/images/arrow.png"

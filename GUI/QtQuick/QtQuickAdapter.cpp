@@ -881,8 +881,10 @@ void QtQuickAdapter::walletSelected(int index)
                QString::fromLatin1("1/") + QString::number(hdWallets_.at(walletId).leaves.size()),
                hdWallets_.at(walletId).encryptionTypes.size() > 0
                   ? encTypeToString(hdWallets_.at(walletId).encryptionTypes[0]) : tr("Unknown"),
-               hdWallets_.at(walletId).nbAddresses
-            });
+               hdWallets_.at(walletId).nbAddresses,
+               hdWallets_.at(walletId).isHardware,
+               hdWallets_.at(walletId).watchOnly
+            });  
          }
          catch (const std::exception&) {}
       }

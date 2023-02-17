@@ -56,14 +56,44 @@ Rectangle {
                 anchors.fill: parent
                 anchors.margins: 20
                 spacing: 10
+                
+                Rectangle {
+                    color: "transparent"
+                    width: parent.width
+                    height: 30
 
-                Text {
-                    text: qsTr("Addresses")
-                    color: BSStyle.textColor
-                    font.pixelSize: 19
-                    font.family: "Roboto"
-                    font.weight: Font.DemiBold
-                    
+                    Text {
+                        text: qsTr("Addresses")
+                        color: BSStyle.textColor
+                        font.pixelSize: 19
+                        font.family: "Roboto"
+                        font.weight: Font.DemiBold
+                    }
+
+                    Row {
+                        anchors.right: parent.right
+                        spacing: 6
+
+                        CustomSmallButton {
+                            width: 85
+                            text: qsTr("Hide used")
+                        }
+
+                        CustomSmallButton {
+                            width: 90
+                            text: qsTr("Hide internal")
+                        }
+
+                        CustomSmallButton {
+                            width: 90
+                            text: qsTr("Hide external")
+                        }
+
+                        CustomSmallButton {
+                            width: 85
+                            text: qsTr("Hide empty")
+                        }
+                    }
                 }
 
                 CustomTableView {

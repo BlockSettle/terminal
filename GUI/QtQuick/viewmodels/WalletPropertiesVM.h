@@ -23,6 +23,8 @@ struct WalletInfo
    QString groups;
    QString ecryption;
    quint32 generatedAddresses;
+   bool isHardware;
+   bool isWatchingOnly;
 };
 
 class WalletPropertiesVM: public QObject
@@ -36,6 +38,8 @@ class WalletPropertiesVM: public QObject
    Q_PROPERTY(quint32 walletGeneratedAddresses READ walletGeneratedAddresses NOTIFY changed)
    Q_PROPERTY(quint32 walletActiveAddresses    READ walletActiveAddresses    NOTIFY changed)
    Q_PROPERTY(quint32 walletAvailableUtxo      READ walletAvailableUtxo      NOTIFY changed)
+   Q_PROPERTY(bool isHardware                  READ isHardware               NOTIFY changed)
+   Q_PROPERTY(bool isWatchingOnly              READ isWatchingOnly           NOTIFY changed)
    Q_PROPERTY(QStringList seed                 READ seed                     NOTIFY seedChanged)
    Q_PROPERTY(QString exportPath READ exportPath WRITE setExportPath NOTIFY pathChanged)
 
@@ -54,6 +58,8 @@ public:
    quint32 walletGeneratedAddresses() const;
    quint32 walletActiveAddresses() const;
    quint32 walletAvailableUtxo() const;
+   bool isHardware() const;
+   bool isWatchingOnly() const;
 
    const QStringList& seed() const;
    void setSeed(const QStringList& seed);

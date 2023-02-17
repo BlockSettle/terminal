@@ -18,6 +18,7 @@ ColumnLayout {
     signal walletDeleted()
 
     property var wallet_properties_vm
+    property bool is_password_requried: !(wallet_properties_vm.isHardware || wallet_properties_vm.isWatchingOnly)
 
     CustomTitleLabel {
         id: title
@@ -28,6 +29,7 @@ ColumnLayout {
 
     CustomTextInput {
         id: password
+        visible: is_password_requried
 
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : 70
@@ -73,7 +75,7 @@ ColumnLayout {
             Layout.bottomMargin: 40
             Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
-            enabled: (password.input_text !== "")
+            enabled: (password.input_text !== "" || !is_password_requried)
 
             width: 260
 
@@ -90,6 +92,12 @@ ColumnLayout {
                 }
             }
         }
+    }
+
+    function init()
+    {
+        clear()
+        password.setActiveFocus()
     }
 
     function clear()
