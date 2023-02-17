@@ -16,6 +16,7 @@
 #include <QList>
 #include <QObject>
 #include <QVariant>
+
 #include "Address.h"
 #include "BinaryData.h"
 #include "TxClasses.h"
@@ -108,7 +109,10 @@ private:
       bool  expanded{ false };
    };
    std::vector<Entry>   data_;
-   std::set<int>  selection_;
+   std::set<std::pair<BinaryData, uint32_t>> selection_utxos_;
+   std::set<bs::Address> selection_addresses_;
+   bool selection_root_ {false};
+
    std::map<int, QList<QUTXO*>>   preSelected_;
    int nbTx_{ 0 };
    uint64_t  selectedBalance_{ 0 };

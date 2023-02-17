@@ -80,7 +80,7 @@ TableView {
             }
             onDoubleClicked: {
                 if (row !== 0) {
-                    omponent.cellDoubleClicked(row, column, tableData)
+                    component.cellDoubleClicked(row, column, tableData)
                 }
             } 
         }
