@@ -459,7 +459,7 @@ ColumnLayout  {
     CustomButton {
         id: continue_but
 
-        enabled: txOutputsModel.rowCount > 1
+        enabled: txOutputsModel.rowCount > 0
 
         width: 1084
 

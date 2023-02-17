@@ -109,9 +109,9 @@ private:
       bool  expanded{ false };
    };
    std::vector<Entry>   data_;
-   std::set<std::pair<BinaryData, uint32_t>> selection_utxos_;
-   std::set<bs::Address> selection_addresses_;
-   bool selection_root_ {false};
+   std::set<std::pair<BinaryData, uint32_t>> selectionUtxos_;
+   std::set<bs::Address> selectionAddresses_;
+   bool selectionRoot_ {false};
 
    std::map<int, QList<QUTXO*>>   preSelected_;
    int nbTx_{ 0 };

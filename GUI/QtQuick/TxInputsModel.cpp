@@ -57,15 +57,15 @@ QVariant TxInputsModel::data(const QModelIndex& index, int role) const
           return false;
       }
       else if (index.row() == 0) {
-          return selection_root_;
+          return selectionRoot_;
       }
       else if (data_[index.row() - 1].txId.empty()) {
-         return (selection_addresses_.find(data_[index.row() - 1].address)
-                 != selection_addresses_.end());
+         return (selectionAddresses_.find(data_[index.row() - 1].address)
+                 != selectionAddresses_.end());
       }
       else {
-         return (selection_utxos_.find({data_[index.row() - 1].txId, data_[index.row() - 1].txOutIndex})
-                 != selection_utxos_.end());
+         return (selectionUtxos_.find({data_[index.row() - 1].txId, data_[index.row() - 1].txOutIndex})
+                 != selectionUtxos_.end());
       }
    case ExpandedRole:
       return (index.row() > 0 && index.column() == 0) ? data_[index.row() - 1].expanded : false;
@@ -96,9 +96,9 @@ void TxInputsModel::clear()
    beginResetModel();
    utxos_.clear();
    data_.clear();
-   selection_utxos_.clear();
-   selection_addresses_.clear();
-   selection_root_ = false;
+   selectionUtxos_.clear();
+   selectionAddresses_.clear();
+   selectionRoot_ = false;
    preSelected_.clear();
    endResetModel();
    emit rowCountChanged();
@@ -180,22 +180,22 @@ void TxInputsModel::toggle(int row)
 void TxInputsModel::toggleSelection(int row)
 {
    if (row == 0) {
-      selection_root_ = !selection_root_;
+      selectionRoot_ = !selectionRoot_;
 
-      if (!selection_root_) {
-         selection_utxos_.clear();
-         selection_addresses_.clear();
+      if (!selectionRoot_) {
+         selectionUtxos_.clear();
+         selectionAddresses_.clear();
       }
       else {
          for (int i_row = 1;  i_row < rowCount(); i_row ++) {
             const auto& entry = data_.at(i_row-1);
             if (entry.txId.empty()) {
-               selection_addresses_.insert(entry.address);
+               selectionAddresses_.insert(entry.address);
             }
             const auto& itAddr = utxos_.find(entry.address);
             if (itAddr != utxos_.end()) {
                 for (const auto& u : itAddr->second) {
-                   selection_utxos_.insert({u.getTxHash(), u.getTxOutIndex()});
+                   selectionUtxos_.insert({u.getTxHash(), u.getTxOutIndex()});
                    selectedBalance_ += u.getValue();
                    nbTx_++;
                 }
@@ -229,25 +229,25 @@ void TxInputsModel::toggleSelection(int row)
    int selStart = row + 1;
    int selEnd = row + 1;
 
-   const bool wasSelectedAddr = (selection_addresses_.find(data_[row].address))
-           != selection_addresses_.end();
-   const bool wasSelectedUtxo = (selection_utxos_.find({data_[row].txId, data_[row].txOutIndex}))
-           != selection_utxos_.end();
+   const bool wasSelectedAddr = (selectionAddresses_.find(data_[row].address))
+           != selectionAddresses_.end();
+   const bool wasSelectedUtxo = (selectionUtxos_.find({data_[row].txId, data_[row].txOutIndex}))
+           != selectionUtxos_.end();
 
    if (!wasSelectedAddr && !wasSelectedUtxo)  {
       if (!entry.txId.empty()) {
          nbTx_++;
          selectedBalance_ += utxo.getValue();
-         selection_utxos_.insert({utxo.getTxHash(), utxo.getTxOutIndex()});
+         selectionUtxos_.insert({utxo.getTxHash(), utxo.getTxOutIndex()});
       }
       else {
-         selection_addresses_.insert(entry.address);
+         selectionAddresses_.insert(entry.address);
          if (itAddr != utxos_.end()) {
             for (const auto& utxo_addr : itAddr->second) {
-               if ((selection_utxos_.find({utxo_addr.getTxHash(), utxo_addr.getTxOutIndex()}))
-                       == selection_utxos_.end()) {
+               if ((selectionUtxos_.find({utxo_addr.getTxHash(), utxo_addr.getTxOutIndex()}))
+                       == selectionUtxos_.end()) {
                   selectedBalance_ += utxo_addr.getValue();
-                  selection_utxos_.insert({utxo_addr.getTxHash(), utxo_addr.getTxOutIndex()});
+                  selectionUtxos_.insert({utxo_addr.getTxHash(), utxo_addr.getTxOutIndex()});
                   nbTx_++;
                }
             }
@@ -259,10 +259,10 @@ void TxInputsModel::toggleSelection(int row)
       nbTx_--;
       selectedBalance_ -= utxo.getValue();
       int rowParent = row - 1;
-      selection_utxos_.erase({utxo.getTxHash(), utxo.getTxOutIndex()});
+      selectionUtxos_.erase({utxo.getTxHash(), utxo.getTxOutIndex()});
       while (rowParent >= 0) {
          if (data_.at(rowParent).expanded) {
-            selection_addresses_.erase(data_.at(rowParent).address);
+            selectionAddresses_.erase(data_.at(rowParent).address);
             break;
          }
          rowParent--;
@@ -271,13 +271,13 @@ void TxInputsModel::toggleSelection(int row)
       selStart = rowParent + 1;
    }
    else if (wasSelectedAddr){
-      selection_addresses_.erase(entry.address);
+      selectionAddresses_.erase(entry.address);
       if (itAddr != utxos_.end()) {
          for (const auto& utxo_addr : itAddr->second) {
-            if ((selection_utxos_.find({utxo_addr.getTxHash(), utxo_addr.getTxOutIndex()}))
-                    != selection_utxos_.end()) {
+            if ((selectionUtxos_.find({utxo_addr.getTxHash(), utxo_addr.getTxOutIndex()}))
+                    != selectionUtxos_.end()) {
                selectedBalance_ -= utxo_addr.getValue();
-               selection_utxos_.erase({utxo_addr.getTxHash(), utxo_addr.getTxOutIndex()});
+               selectionUtxos_.erase({utxo_addr.getTxHash(), utxo_addr.getTxOutIndex()});
                nbTx_--;
             }
          }
@@ -307,7 +307,7 @@ QUTXOList* TxInputsModel::getSelection()
       preSelected_[(int)std::floor(amount * BTCNumericTypes::BalanceDivider)] = result;
    }
    else {
-      for (auto sel_utxo : selection_utxos_) {
+      for (auto sel_utxo : selectionUtxos_) {
          bool added = false;
          for (const auto& byAddr : utxos_) {
             for (const auto& utxo : byAddr.second) {
@@ -324,7 +324,7 @@ QUTXOList* TxInputsModel::getSelection()
          emit selectionChanged();
       }
       selectedBalance_ = 0;
-      for (auto sel_addr : selection_addresses_) {
+      for (auto sel_addr : selectionAddresses_) {
          const auto& itUTXO = utxos_.find(sel_addr);
          if (itUTXO != utxos_.end()) {
             for (const auto& utxo : itUTXO->second) {
