@@ -53,7 +53,7 @@ QVariant TxInputsModel::data(const QModelIndex& index, int role) const
    case HeadingRole:
       return (index.row() == 0);
    case SelectedRole:
-      return (index.column() == 0) ? data_[index.row() - 1].selected : false;
+      return (index.column() == 0) ? (selection_.find(index.row() - 1) != selection_.end()) : false;
    case ExpandedRole:
       return (index.row() > 0 && index.column() == 0) ? data_[index.row() - 1].expanded : false;
    case CanBeExpandedRole:
