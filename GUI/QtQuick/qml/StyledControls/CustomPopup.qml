@@ -8,7 +8,7 @@ Window {
     id: root
 
     property int navig_bar_width: 36
-    property alias _stack_view: stack_create_wallet
+    property alias _stack_view: stack_popup
     property alias _arrow_but_visibility: back_arrow_button.visible
 
     visible: true
@@ -39,8 +39,8 @@ Window {
         color: "#191E2A"
         opacity: 1
         radius: 16
-        height: stack_create_wallet.height + navig_bar_width
-        width: stack_create_wallet.width
+        height: stack_popup.height + navig_bar_width
+        width: stack_popup.width
         border.color : BSStyle.defaultBorderColor
         border.width : 1
 
@@ -83,7 +83,7 @@ Window {
         }
 
         StackView {
-            id: stack_create_wallet
+            id: stack_popup
 
             anchors.top: close_button.bottom
             anchors.topMargin: 0
@@ -150,12 +150,17 @@ Window {
     }
 
     onSig_close_click: {
-        root.close()
-        stack_create_wallet.pop(null)
+        close_click()
     }
 
     onSig_back_arrow_click: {
-        stack_create_wallet.pop()
+        stack_popup.pop()
+    }
+
+    function close_click()
+    {
+        root.close()
+        stack_popup.pop(null)
     }
 
 }

@@ -97,9 +97,7 @@ ColumnLayout  {
 
 
         function createTempRequest() {
-            var fpb = parseFloat(fee_suggest_combo.currentValue)
-            tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
-                        , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
+            create_temp_request()
         }
     }
 
@@ -129,20 +127,7 @@ ColumnLayout  {
             width: 271
 
             onActivated: (index_act) => {
-                if (rec_addr_input.isValid) {
-                    var fpb = parseFloat(fee_suggest_combo.currentValue)
-                    tempRequest = bsApp.createTXSignRequest(index_act
-                                , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
-                }
-
-                //I dont understand why but acceptableInput dont work...
-                var cur_value = parseFloat(amount_input.input_text)
-                var bottom = 0
-                var top = tempRequest.maxAmount
-                if(cur_value < bottom || cur_value > top)
-                {
-                    amount_input.input_text = tempRequest.maxAmount
-                }              
+                create_temp_request()
             }
         }
 
@@ -214,6 +199,32 @@ ColumnLayout  {
 
     Keys.onReturnPressed: {
         continue_but.click_enter()
+    }
+
+    Connections
+    {
+        target:tempRequest
+        function onTxSignReqChanged ()
+        {
+            //I dont understand why but acceptableInput dont work...
+            var cur_value = parseFloat(amount_input.input_text)
+            var bottom = 0
+            var top = tempRequest.maxAmount
+            console.log("tempRequest.maxAmount = " + tempRequest.maxAmount)
+            if(cur_value < bottom || cur_value > top)
+            {
+                amount_input.input_text = tempRequest.maxAmount
+            }
+        }
+    }
+
+    function create_temp_request()
+    {
+        if (rec_addr_input.isValid) {
+            var fpb = parseFloat(fee_suggest_combo.currentValue)
+            tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                        , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
+        }
     }
 
     function init()

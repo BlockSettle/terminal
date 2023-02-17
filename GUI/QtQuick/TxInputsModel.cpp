@@ -53,7 +53,7 @@ QVariant TxInputsModel::data(const QModelIndex& index, int role) const
    case HeadingRole:
       return (index.row() == 0);
    case SelectedRole:
-      return (index.row() > 0 && index.column() == 0) ? (selection_.find(index.row() -1) != selection_.end()) : false;
+      return (index.column() == 0) ? data_[index.row() - 1].selected : false;
    case ExpandedRole:
       return (index.row() > 0 && index.column() == 0) ? data_[index.row() - 1].expanded : false;
    case CanBeExpandedRole:
@@ -142,17 +142,20 @@ void TxInputsModel::toggle(int row)
    {
       for (const auto& idx : selChanges) {
          selection_.erase(idx.first);
+      }
+      for (const auto& idx : selChanges) {
          if (idx.second >= 0) {
             selection_.insert(idx.second);
          }
       }
    };
+
    std::map<int, int> selChanges;
    if (entry.expanded) {
       entry.expanded = false;
       for (const auto& sel : selection_) {
-         if (sel > row) {
-            if (sel <= (row + it->second.size())) {
+         if (sel > row + 1) {
+            if (sel <= (row + 1 + it->second.size())) {
                selChanges[sel] = -1;
             }
             else {
@@ -169,33 +172,71 @@ void TxInputsModel::toggle(int row)
    }
    else {
       entry.expanded = true;
-      for (const auto& sel : selection_) {
-         if (sel == row) {
-            selChanges[sel] = -1;
+
+      bool isSelectedParent = (selection_.find(row + 1) != selection_.end());
+      for (int i=0; i<it->second.size(); i++) {
+         bool isSelectedChild = (selection_.find(row + 2 + i) != selection_.end());
+         if (isSelectedParent || isSelectedChild) {
+            selChanges[-1] = row + 2 + i;
          }
-         else if (sel > row) {
+      }
+
+      for (const auto& sel : selection_) {
+         if (sel > row + 1) {
             selChanges[sel] = sel + it->second.size();
          }
       }
+
       std::vector<Entry> entries;
       for (const auto& utxo : it->second) {
          entries.push_back({ {}, utxo.getTxHash(), utxo.getTxOutIndex()});
       }
       beginInsertRows(QModelIndex(), row + 2, row + it->second.size() + 1);
-      changeSelection(selChanges);
       data_.insert(data_.cbegin() + row + 1, entries.cbegin(), entries.cend());
+      changeSelection(selChanges);
       endInsertRows();
       emit rowCountChanged();
-      emit dataChanged(createIndex(row + 1, 0), createIndex(row + 1, columnCount() - 1), { SelectedRole });
+      emit dataChanged(createIndex(row + 1, 0), createIndex(rowCount() - 1, 0), { SelectedRole });
    }
 }
 
 void TxInputsModel::toggleSelection(int row)
 {
-   --row;
-   if (data_.at(row).expanded) {
+   if (row == 0) {
+      auto temp_selection = selection_;
+      for (const auto & sel_row : temp_selection) {
+         if (sel_row != 0) {
+            const auto& entry = data_.at(sel_row - 1);
+            if (entry.txId.empty()) {
+               toggleSelection(sel_row);
+            }
+         }
+      }
+      temp_selection = selection_;
+      for (const auto & sel_row : temp_selection) {
+         if (sel_row != 0) {
+            toggleSelection(sel_row);
+         }
+      }
+      if (selection_.find(0) == selection_.end()) {
+         selection_.insert(0);
+         for (int i_row = 1;  i_row < rowCount(); i_row ++) {
+            const auto& entry = data_.at(i_row-1);
+            if (entry.txId.empty()) {
+               toggleSelection(i_row);
+            }
+         }
+      }
+      else {
+         selection_.erase(0);
+      }
       return;
    }
+
+   --row;
+//   if (data_.at(row).expanded) {
+//      return;
+//   }
    const auto& entry = data_.at(row);
    const auto& itAddr = utxos_.find(entry.address);
    UTXO utxo{};
@@ -214,8 +255,10 @@ void TxInputsModel::toggleSelection(int row)
          }
       }
    }
-   if (selection_.find(row) == selection_.end()) {
-      selection_.insert(row);
+   int selStart = row + 1;
+   int selEnd = row + 1;
+   if (selection_.find(row + 1) == selection_.end()) {
+      selection_.insert(row + 1);
       if (!entry.txId.empty()) {
          nbTx_++;
          selectedBalance_ += utxo.getValue();
@@ -226,14 +269,30 @@ void TxInputsModel::toggleSelection(int row)
             for (const auto& utxo : itAddr->second) {
                selectedBalance_ += utxo.getValue();
             }
+            if (data_.at(row).expanded) {
+               for (int i=0; i<itAddr->second.size(); i++) {
+                   selection_.insert(row + 2 + i);
+               }
+               selEnd = row + 1 + itAddr->second.size();
+            }
          }
       }
    }
    else {
-      selection_.erase(row);
+      selection_.erase(row+1);
       if (!entry.txId.empty()) {
          nbTx_--;
          selectedBalance_ -= utxo.getValue();
+         int rowParent = row - 1;
+         while (rowParent >= 0) {
+            if (data_.at(rowParent).expanded) {
+               selection_.erase(rowParent + 1);
+               break;
+            }
+            rowParent--;
+         }
+         if (rowParent >= 0)
+         selStart = rowParent + 1;
       }
       else {
          if (itAddr != utxos_.end()) {
@@ -242,10 +301,16 @@ void TxInputsModel::toggleSelection(int row)
                selectedBalance_ -= utxo.getValue();
             }
          }
+         if (data_.at(row).expanded) {
+            for (int i=0; i<itAddr->second.size(); i++) {
+               selection_.erase(row + 2 + i);
+            }
+            selEnd = row + 1 + itAddr->second.size();
+         }
       }
    }
    emit selectionChanged();
-   emit dataChanged(createIndex(row + 1, 0), createIndex(row + 1, columnCount() - 1));
+   emit dataChanged(createIndex(selStart, 0), createIndex(selEnd, 0), {SelectedRole});
 }
 
 QUTXOList* TxInputsModel::getSelection()
@@ -266,7 +331,8 @@ QUTXOList* TxInputsModel::getSelection()
       preSelected_[(int)std::floor(amount * BTCNumericTypes::BalanceDivider)] = result;
    }
    else {
-      for (const int idx : selection_) {
+      for (int idx : selection_) {
+         --idx;
          const auto& entry = data_.at(idx);
          if (!entry.txId.empty()) {
             bool added = false;

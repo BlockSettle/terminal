@@ -75,11 +75,10 @@ ColumnLayout  {
                         anchors.verticalCenter: parent.verticalCenter
 
                         checked: model_selected
-                        checkable: (model_row !== 0)
+                        checkable: true
 
                         onClicked: {
-                            if (model_row !== 0)
-                                txInputsModel.toggleSelection(model_row)
+                            txInputsModel.toggleSelection(model_row)
                         }
                     }
 
