@@ -43,6 +43,7 @@
 #include "TransactionFilterModel.h"
 #include "TransactionForAddressFilterModel.h"
 #include "viewmodels/WalletPropertiesVM.h"
+#include "PendingTransactionFilterModel.h"
 
 #include "common.pb.h"
 #include "hardware_wallet.pb.h"
@@ -150,7 +151,6 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
 {
    staticLogger = logger;
    addrModel_ = new QmlAddressListModel(logger, this);
-   pendingTxModel_ = new TxListModel(logger, this);
    txModel_ = new TxListModel(logger, this);
    expTxByAddrModel_ = new TxListForAddr(logger, this);
    txOutputsModel_ = new TxOutputsModel(logger, this);
@@ -240,6 +240,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
       , 1, 0, "WalletBalance", tr("Error: only enums"));
    qmlRegisterType<TransactionFilterModel>("terminal.models", 1, 0, "TransactionFilterModel");
    qmlRegisterType<TransactionForAddressFilterModel>("terminal.models", 1, 0, "TransactionForAddressFilterModel");
+   qmlRegisterType<PendingTransactionFilterModel>("terminal.models", 1, 0, "PendingTransactionFilterModel");
    qmlRegisterType<qtquick_gui::WalletPropertiesVM>("terminal.models", 1, 0, "WalletPropertiesVM");
    qmlRegisterUncreatableMetaObject(Transactions::staticMetaObject, "terminal.models" 
       , 1, 0, "Transactions", tr("Error: only enums"));
@@ -254,7 +255,6 @@ void QtQuickAdapter::run(int &argc, char **argv)
    rootCtxt_->setContextProperty(QStringLiteral("fixedFont"), fixedFont);
    rootCtxt_->setContextProperty(QLatin1Literal("bsApp"), this);
    rootCtxt_->setContextProperty(QLatin1Literal("addressListModel"), addrModel_);
-   rootCtxt_->setContextProperty(QLatin1Literal("pendingTxListModel"), pendingTxModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("txListModel"), txModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("txListByAddrModel"), expTxByAddrModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("txInputsModel"), txInputsModel_);
@@ -693,7 +693,6 @@ void QtQuickAdapter::updateStates()
 void QtQuickAdapter::setTopBlock(uint32_t topBlock)
 {
    blockNum_ = topBlock;
-   pendingTxModel_->setCurrentBlock(blockNum_);
    txModel_->setCurrentBlock(blockNum_);
    expTxByAddrModel_->setCurrentBlock(blockNum_);
    txInputsModel_->setTopBlock(topBlock);
@@ -989,7 +988,6 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
          txDet.comment = response.error_msg();
       }
       if (!resp.comment().empty()) {
-         pendingTxModel_->setTxComment(resp.tx_hash(), txDet.comment);
          txModel_->setTxComment(resp.tx_hash(), txDet.comment);
       }
 
@@ -1056,7 +1054,6 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
 
       const auto& itTxDet = txDetailReqs_.find(msgId);
       if (itTxDet == txDetailReqs_.end()) {
-         pendingTxModel_->setDetails(txDet);
          txModel_->setDetails(txDet);
       }
       else {
@@ -1099,11 +1096,6 @@ ProcessingResult QtQuickAdapter::processLedgerEntries(const LedgerEntries &respo
          catch (const std::exception &) {}
       }
       entries.push_back(std::move(txEntry));
-   }
-   for (const auto& entry : entries) {
-      if (entry.nbConf <= 6) {
-         pendingTxModel_->addRow(entry);
-      }
    }
    txModel_->addRows(entries);
    pushRequest(user_, userWallets_, msg.SerializeAsString());
@@ -1538,7 +1530,6 @@ ProcessingResult QtQuickAdapter::processZC(const BlockSettle::Common::ArmoryMess
          }
          catch (const std::exception&) {}
       }
-      pendingTxModel_->prependRow(txEntry);
       txModel_->prependRow(txEntry);
    }
    pushRequest(user_, userWallets_, msg.SerializeAsString());

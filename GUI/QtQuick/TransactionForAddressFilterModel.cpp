@@ -20,10 +20,6 @@ TransactionForAddressFilterModel::TransactionForAddressFilterModel(QObject* pare
 
 bool TransactionForAddressFilterModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const
 {
-   if (source_row == 0) {
-      return true;
-   }
-
    const auto index = sourceModel()->index(source_row, 5);
    const auto transaction_value = sourceModel()->data(index, TxListForAddr::TableRoles::TableDataRole);
    if ((positive_ && transaction_value < 0) || (!positive_ && transaction_value > 0)) {

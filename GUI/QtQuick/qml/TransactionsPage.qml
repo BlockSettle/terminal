@@ -155,12 +155,12 @@ Item {
             columnWidths: [0.12, 0.1, 0.08, 0.3, 0.1, 0.1, 0.1, 0.1]
             onCopyRequested: bsApp.copyAddressToClipboard(id)
             onCellClicked: (row, column, data) => {
-                const txHash = model.data(model.index(row, 0), 261)
+                const txHash = model.data(model.index(row, 0), 259)
                 transactionDetails.walletName = model.data(model.index(row, 1), 257)
                 transactionDetails.address = model.data(model.index(row, 3), 257)
                 transactionDetails.txDateTime = model.data(model.index(row, 0), 257)
                 transactionDetails.txType = model.data(model.index(row, 2), 257)
-                transactionDetails.txTypeColor = model.data(model.index(row, 2), 259)
+                transactionDetails.txTypeColor = model.data(model.index(row, 2), 258)
                 transactionDetails.txComment = model.data(model.index(row, 7), 257)
                 transactionDetails.txAmount = model.data(model.index(row, 4), 257)
                 transactionDetails.tx = bsApp.getTXDetails(txHash)

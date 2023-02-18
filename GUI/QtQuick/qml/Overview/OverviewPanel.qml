@@ -9,10 +9,12 @@
 
 */
 import QtQuick 2.15
+import QtQuick.Controls 2.15
 
 import "../BsStyles"
 import "../StyledControls"
 import "." as OverviewControls
+import terminal.models 1.0
 
 Rectangle {
     id: control
@@ -58,6 +60,7 @@ Rectangle {
                 spacing: 10
                 
                 Rectangle {
+                    id: tableMenu
                     color: "transparent"
                     width: parent.width
                     height: 30
@@ -97,8 +100,9 @@ Rectangle {
                 }
 
                 CustomTableView {
+                    id: tablewView
                     width: parent.width
-                    height: parent.height - 40
+                    height: parent.height - tableMenu.height
 
                     model: addressListModel
                     copy_button_column_index: 0
@@ -110,8 +114,8 @@ Rectangle {
                         const transactions = model.data(model.index(row, 1), 257)
                         const balance = model.data(model.index(row, 2), 257)
                         const comment = model.data(model.index(row, 3), 257)
-                        const type = model.data(model.index(row, 0), 261)
-                        const asset_type = model.data(model.index(row, 0), 262)
+                        const type = model.data(model.index(row, 0), 259)
+                        const asset_type = model.data(model.index(row, 0), 260)
 
                         openAddressDetails(address, transactions, balance, comment, asset_type, type, overview_panel.currentWallet)
                     }
@@ -141,7 +145,10 @@ Rectangle {
                 CustomTableView {
                     width: parent.width
                     height: parent.height - 40
-                    model: pendingTxListModel
+                    
+                    model: PendingTransactionFilterModel {
+                        sourceModel: txListModel
+                    }
 
                     copy_button_column_index: 3
                     columnWidths: [0.12, 0.1, 0.08, 0.3, 0.1, 0.1, 0.1, 0.1]

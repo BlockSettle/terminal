@@ -17,8 +17,6 @@ namespace
 {
    static const QHash<int, QByteArray> kRoles{
       {QmlAddressListModel::TableDataRole, "tableData"},
-      {QmlAddressListModel::HeadingRole, "heading"},
-      {QmlAddressListModel::FirstColRole, "firstcol"},
       {QmlAddressListModel::ColorRole, "dataColor"},
       {QmlAddressListModel::AddressTypeRole, "addressType"},
       {QmlAddressListModel::AssetTypeRole, "assetType"} };
@@ -31,7 +29,7 @@ QmlAddressListModel::QmlAddressListModel(const std::shared_ptr<spdlog::logger>& 
 
 int QmlAddressListModel::rowCount(const QModelIndex&) const
 {
-   return table_.size() + 1;
+   return table_.size();
 }
 
 int QmlAddressListModel::columnCount(const QModelIndex&) const
@@ -41,15 +39,12 @@ int QmlAddressListModel::columnCount(const QModelIndex&) const
 
 QVariant QmlAddressListModel::data(const QModelIndex& index, int role) const
 {
-   const int row = index.row() - 1;
+   const int row = index.row();
    try {
       switch (role)
       {
       case TableDataRole:
-         if (index.row() == 0) {
-            return header_.at(index.column());
-         }
-         else {
+         {
             switch (index.column())
             {
             case 0: return table_.at(row).at(0);
@@ -60,15 +55,7 @@ QVariant QmlAddressListModel::data(const QModelIndex& index, int role) const
             }
          }
          break;
-      case HeadingRole: return (index.row() == 0);
-      case FirstColRole: return (index.column() == 0);
-      case ColorRole:
-         if (index.row() == 0) {
-            return ColorScheme::tableHeaderColor;
-         }
-         else {
-            return QColorConstants::White;
-         }
+      case ColorRole: return QColorConstants::White;
       case AddressTypeRole: return table_.at(row).at(2);
       case AssetTypeRole:  return table_.at(row).at(3);
       default: break;
@@ -141,7 +128,7 @@ void QmlAddressListModel::updateRow(const BinaryData& addrPubKey, uint64_t bal, 
       // logger_->debug("[QmlAddressListModel::updateRow] {} {} {}", addr.display(), bal, nbTx);
       if (addr.id() == addrPubKey)
       {
-         emit dataChanged(createIndex(i + 1, 1), createIndex(i + 1, 2));
+         emit dataChanged(createIndex(i, 1), createIndex(i, 2));
          break;
       }
    }
@@ -156,6 +143,13 @@ void QmlAddressListModel::reset(const std::string& expectedWalletId)
    endResetModel();
 }
 
+QVariant QmlAddressListModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+   if (orientation == Qt::Orientation::Horizontal) {
+      return header_.at(section);
+   }
+   return QVariant();
+}
 
 quint32 QmlAddressListModel::getTransactionCount(const BinaryData& address) const
 {

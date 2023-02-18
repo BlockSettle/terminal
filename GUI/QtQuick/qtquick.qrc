@@ -181,5 +181,7 @@
         <file>qml/WalletProperties/WalletSeed.qml</file>
         <file>qml/WalletProperties/WalletSeedAuth.qml</file>
         <file>images/wallet_icon_warn.svg</file>
+        <file>qml/StyledControls/CustomSimpleTableView.qml</file>
+        <file>qml/StyledControls/CustomHorizontalHeaderView.qml</file>
     </qresource>
 </RCC>

@@ -56,8 +56,6 @@ ColumnLayout  {
             model: txInputsModel
             columnWidths: [0.7, 0.1, 0.1, 0.1]
 
-            text_header_size: 12
-            cell_text_size: 13
             copy_button_column_index: -1
 
             Component

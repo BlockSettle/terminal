@@ -277,7 +277,6 @@ private:
 
    const QStringList txTypes_;
    QmlAddressListModel* addrModel_{ nullptr };
-   TxListModel* pendingTxModel_{ nullptr };
    TxListModel* txModel_{ nullptr };
    TxListForAddr* expTxByAddrModel_{ nullptr };
    TxInputsModel* txInputsModel_{ nullptr };

@@ -225,9 +225,9 @@ Item {
                         columnWidths: [0.0, 0.7, 0.2, 0.1]
                         onCopyRequested: bsApp.copyAddressToClipboard(id)
 
-                        // TODO: change constant 261 with C++ defined enum
+                        // TODO: change constant 259 with C++ defined enum
                         onCellClicked: (row, column, data) => {
-                            var address = model.data(model.index(row, 0), 261)
+                            var address = model.data(model.index(row, 0), 259)
                             requestPageChange(address)
                         }
                     }
@@ -274,7 +274,7 @@ Item {
 
                         // TODO: change constant 257 with C++ defined enum
                         onCellClicked: (row, column, data) => {
-                            var address = model.data(model.index(row, 0), 257)
+                            var address = model.data(model.index(row, 1), 257)
                             requestPageChange(address)
                         }
                     }

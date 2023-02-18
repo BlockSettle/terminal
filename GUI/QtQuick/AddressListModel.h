@@ -30,8 +30,6 @@ public:
    enum TableRoles
    {
       TableDataRole = Qt::UserRole + 1,
-      HeadingRole,
-      FirstColRole,
       ColorRole,
       AddressTypeRole,
       AssetTypeRole
@@ -42,6 +40,7 @@ public:
    int columnCount(const QModelIndex & = QModelIndex()) const override;
    QVariant data(const QModelIndex& index, int role) const override;
    QHash<int, QByteArray> roleNames() const override;
+   QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
    void addRow(const std::string& walletId, const QVector<QString>&);
    void addRows(const std::string& walletId, const QVector<QVector<QString>>&);
