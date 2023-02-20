@@ -4,6 +4,9 @@ import QtQuick.Controls 2.15
 import "../BsStyles"
 
 HorizontalHeaderView {
+   id: root
+   property int text_size
+
    delegate: Rectangle {
 
       implicitHeight: 34
@@ -17,7 +20,7 @@ HorizontalHeaderView {
          color: BSStyle.titleTextColor
          font.family: "Roboto"
          font.weight: Font.Normal
-         font.pixelSize: 11
+         font.pixelSize: root.text_size
          leftPadding: 10
       }
 

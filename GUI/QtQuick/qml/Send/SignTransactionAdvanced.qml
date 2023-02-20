@@ -65,7 +65,10 @@ ColumnLayout  {
                 model: txInputsSelectedModel
                 columnWidths: [0.7, 0.1, 0, 0.2]
 
+                text_header_size: 12
+                cell_text_size: 13
                 copy_button_column_index: -1
+                has_header: false
 
                 function get_text_left_padding(row, column)
                 {
@@ -101,8 +104,11 @@ ColumnLayout  {
                 model:txOutputsModel
                 columnWidths: [0.744, 0.20, 0.056]
 
+                text_header_size: 12
+                cell_text_size: 13
                 copy_button_column_index: -1
                 delete_button_column_index: 2
+                has_header: false
 
                 onDeleteRequested: (row) =>
                 {

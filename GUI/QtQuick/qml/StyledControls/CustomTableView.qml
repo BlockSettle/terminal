@@ -27,6 +27,8 @@ Column {
     property int delete_button_column_index: -1
     property int left_text_padding: 10
     property bool has_header: true
+    property int text_header_size: 11    
+    property int cell_text_size: 12
 
     signal copyRequested(var id)
     signal deleteRequested(int id)
@@ -39,6 +41,7 @@ Column {
         syncView: component
         height: 32
         visible: root.has_header
+        text_size: root.text_header_size
     }
 
     TableView {
@@ -174,6 +177,7 @@ Column {
 
     CustomTableDelegateRow {
         id: cmpnt_table_delegate
+        text_size: root.cell_text_size
     }
 
     function choose_row_source_component(row, column)
