@@ -26,6 +26,7 @@ Column {
     property int copy_button_column_index: 0
     property int delete_button_column_index: -1
     property int left_text_padding: 10
+    property bool has_header: true
 
     signal copyRequested(var id)
     signal deleteRequested(int id)
@@ -37,6 +38,7 @@ Column {
         width: parent.width
         syncView: component
         height: 32
+        visible: root.has_header
     }
 
     TableView {
