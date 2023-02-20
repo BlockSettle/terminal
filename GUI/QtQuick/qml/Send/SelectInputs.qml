@@ -59,6 +59,7 @@ ColumnLayout  {
             text_header_size: 12
             cell_text_size: 13
             copy_button_column_index: -1
+            has_header: false
 
             Component
             {

@@ -36,7 +36,7 @@ Component
             color: get_data_color(model_row, model_column)
             font.family: "Roboto"
             font.weight: Font.Normal
-            font.pixelSize: model_row === 0 ? text_header_size : cell_text_size
+            font.pixelSize: text_size
 
             leftPadding: get_text_left_padding(model_row, model_column, model_is_expandable)
         }
@@ -44,7 +44,7 @@ Component
         DeleteIconButton {
             id: delete_icon
             x: 0
-            visible: model_column === delete_button_column_index && model_row > 0
+            visible: model_column === delete_button_column_index
             onDeleteRequested: root.deleteRequested(model_row)
         }
 

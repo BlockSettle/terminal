@@ -21,11 +21,6 @@ TransactionFilterModel::TransactionFilterModel(QObject* parent)
 bool TransactionFilterModel::filterAcceptsRow(int source_row,
    const QModelIndex& source_parent) const
 {
-   if (source_row == 0)
-   {
-      return true;
-   }
-
    const auto walletNameIndex = sourceModel()->index(source_row, 1);
    const auto transactionTypeIndex = sourceModel()->index(source_row, 2);
 

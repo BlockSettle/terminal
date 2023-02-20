@@ -24,8 +24,8 @@ CustomTableView {
     }
 
     delegate: Rectangle {
-        implicitHeight: row === 0 ? 34 : 58
-        color: row === 0 ? BSStyle.tableCellBackgroundColor : (row === component.selected_row_index ? BSStyle.tableCellSelectedBackgroundColor : BSStyle.tableCellBackgroundColor)
+        implicitHeight: 58
+        color: (row === component.selected_row_index ? BSStyle.tableCellSelectedBackgroundColor : BSStyle.tableCellBackgroundColor)
 
         MouseArea {
             anchors.fill: parent
@@ -33,18 +33,8 @@ CustomTableView {
             propagateComposedEvents: true
             hoverEnabled: true
 
-            onEntered: {
-                if (row !== 0) {
-                    component.selected_row_index = row
-                }
-            }
-
-            onExited: {
-                if (row !== 0) {
-                    component.selected_row_index = -1
-                }
-            }
-
+            onEntered: component.selected_row_index = row
+            onExited: component.selected_row_index = -1
             onClicked: component.cellClicked(row, column, tableData)
             onDoubleClicked: component.cellDoubleClicked(row, column, tableData)
         }
@@ -55,24 +45,24 @@ CustomTableView {
 
             Text {
                 id: internal_text
-                visible: column !== 1 || row === 0
+                visible: column !== 1
                 text: tableData
                 height: parent.height
-                verticalAlignment: row === 0 ? Text.AlignVCenter : Text.AlignTop
+                verticalAlignment: Text.AlignTop
                 clip: true
 
                 color: dataColor
                 font.family: "Roboto"
                 font.weight: Font.Normal
-                font.pixelSize: row === 0 ? component.text_header_size : component.cell_text_size
+                font.pixelSize: 13
 
                 leftPadding: 10
-                topPadding: row === 0 ? 0 : 9
+                topPadding: 9
             }
 
             Column {
                 spacing: 8
-                visible: column === 1 && row !== 0
+                visible: column === 1
                 width: parent.width
                 anchors.centerIn: parent
 
