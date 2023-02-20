@@ -19,7 +19,6 @@ Component
 
     Row {
         id: root
-        property int text_size
 
         signal deleteRequested (int row)
         signal copyRequested (string tableData)
@@ -37,7 +36,7 @@ Component
             color: get_data_color(model_row, model_column)
             font.family: "Roboto"
             font.weight: Font.Normal
-            font.pixelSize: root.text_size
+            font.pixelSize: text_size
 
             leftPadding: get_text_left_padding(model_row, model_column, model_is_expandable)
         }

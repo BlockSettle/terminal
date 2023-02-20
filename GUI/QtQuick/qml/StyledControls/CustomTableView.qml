@@ -100,6 +100,7 @@ Column {
                 property int selected_row_index: component.selected_row_index
                 property int model_row: row
                 property int model_column: column
+                property int text_size: root.cell_text_size
 
                 property string model_tableData: (typeof tableData !== "undefined") ? tableData : ({})
                 property bool model_selected: (typeof selected !== "undefined") ? selected : ({})
@@ -177,7 +178,6 @@ Column {
 
     CustomTableDelegateRow {
         id: cmpnt_table_delegate
-        text_size: root.cell_text_size
     }
 
     function choose_row_source_component(row, column)
