@@ -10,8 +10,8 @@
 */
 #include "AddressListModel.h"
 #include <spdlog/spdlog.h>
-#include "BTCNumericTypes.h"
 #include "ColorScheme.h"
+#include "Utils.h"
 
 namespace
 {
@@ -49,7 +49,7 @@ QVariant QmlAddressListModel::data(const QModelIndex& index, int role) const
             {
             case 0: return table_.at(row).at(0);
             case 1: return QString::number(getTransactionCount(addresses_.at(row).id()));
-            case 2: return QString::number(getAddressBalance(addresses_.at(row).id()), 'f', 8);
+            case 2: return getAddressBalance(addresses_.at(row).id());
             case 3: return table_.at(row).at(1);
             default: return QString{};
             }
@@ -159,10 +159,10 @@ quint32 QmlAddressListModel::getTransactionCount(const BinaryData& address) cons
    return 0;
 }
 
-float QmlAddressListModel::getAddressBalance(const BinaryData& address) const
+QString QmlAddressListModel::getAddressBalance(const BinaryData& address) const
 {
    if (pendingBalances_.count(address) > 0) {
-      return pendingBalances_.at(address).balance / BTCNumericTypes::BalanceDivider;
+      return gui_utils::satoshiToQString(pendingBalances_.at(address).balance);
    }
-   return 0;
+   return QString();
 }

@@ -47,7 +47,7 @@ Column {
     TableView {
         id: component
         width: parent.width
-        height: parent.height - tableHeader.height
+        height: parent.height - tableHeader.height - root.spacing
 
         reuseItems: false
 

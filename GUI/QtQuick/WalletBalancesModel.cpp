@@ -13,6 +13,7 @@
 #include <QDateTime>
 #include <spdlog/spdlog.h>
 #include "StringUtils.h"
+#include "Utils.h"
 
 namespace {
    static const QHash<int, QByteArray> kWalletBalanceRoles{
@@ -46,13 +47,13 @@ QVariant WalletBalancesModel::data(const QModelIndex& index, int role) const
    case WalletBalance::IdRole:
       return QString::fromStdString(wallets_.at(index.row()).walletId);
    case WalletBalance::TotalRole:
-      ff = [](const Balance& bal) { return QString::number(bal.total, 'f', 8); };
+      ff = [](const Balance& bal) { return gui_utils::normalizedSatoshiToQString(bal.total); };
       break;
    case WalletBalance::ConfirmedRole:
-      ff = [](const Balance& bal) { return QString::number(bal.confirmed, 'f', 8); };
+      ff = [](const Balance& bal) { return gui_utils::normalizedSatoshiToQString(bal.confirmed); };
       break;
    case WalletBalance::UnconfirmedRole:
-      ff = [](const Balance& bal) { return QString::number(bal.unconfirmed, 'f', 8); };
+      ff = [](const Balance& bal) { return gui_utils::normalizedSatoshiToQString(bal.unconfirmed); };
       break;
    case WalletBalance::NbAddrRole:
       ff = [](const Balance& bal) { return QString::number(bal.nbAddresses); };

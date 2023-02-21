@@ -187,6 +187,7 @@ public:
    Q_INVOKABLE int viewWalletSeedAuth(const QString& walletId, const QString& password);
    Q_INVOKABLE int deleteWallet(const QString& walletId, const QString& password);
    Q_INVOKABLE int exportWallet(const QString& walletId);
+   Q_INVOKABLE void walletSelected(int);
 
 signals:
    void walletsListChanged();
@@ -199,9 +200,6 @@ signals:
    void invokePINentry();
    void invokePasswordEntry(const QString& devName, bool acceptOnDevice);
    void showError(const QString&);
-
-private slots:
-   void walletSelected(int);
 
 private:
    bs::message::ProcessingResult processSettings(const bs::message::Envelope &);

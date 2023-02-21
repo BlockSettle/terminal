@@ -14,6 +14,7 @@
 #include <spdlog/spdlog.h>
 #include "StringUtils.h"
 #include "ColorScheme.h"
+#include "Utils.h"
 
 namespace {
    static const QHash<int, QByteArray> kTxListRoles{
@@ -67,7 +68,7 @@ QString TxListModel::getData(int row, int col) const
       }
       return QString::fromStdString(address.display());
    }
-   case 4: return QString::number(std::abs(entry.value) / BTCNumericTypes::BalanceDivider, 'f', 8);
+   case 4: return gui_utils::satoshiToQString(std::abs(entry.value));
    case 5: return QString::number(entry.nbConf);
    case 6: return txFlag(row);
    case 7: {
@@ -401,7 +402,7 @@ QString TxListForAddr::getData(int row, int col) const
    case 2:  return QString::number(entry.nbConf);
    case 3:  return displayNb(nbInputs(row));
    case 4:  return displayNb(nbOutputs(row));
-   case 5:  return QString::number(entry.value / BTCNumericTypes::BalanceDivider, 'f', 8);
+   case 5:  return gui_utils::satoshiToQString(entry.value);
    case 6:  return displayBTC(totFees / BTCNumericTypes::BalanceDivider);
    case 7:  return (totFees < 0) ? tr("...") : displayBTC(totFees / (double)txSize(row), 1);
    case 8:  return displayNb(txSize(row));

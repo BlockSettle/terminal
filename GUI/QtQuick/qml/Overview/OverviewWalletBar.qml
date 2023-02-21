@@ -38,7 +38,6 @@ Rectangle {
             width: 263
             height: 53
 
-            objectName: "walletsComboBox"
             model: walletBalances
             textRole: "name"
             valueRole: "name"
@@ -48,6 +47,7 @@ Rectangle {
             }
 
             onActivated: (ind) => {
+                bsApp.walletSelected(ind)
                 control.walletIndexChanged(ind)
             }
         }

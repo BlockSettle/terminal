@@ -10,7 +10,6 @@
 */
 #include "TransactionFilterModel.h"
 #include "TxListModel.h"
-#include <QDebug>
 
 TransactionFilterModel::TransactionFilterModel(QObject* parent)
    : QSortFilterProxyModel(parent)
