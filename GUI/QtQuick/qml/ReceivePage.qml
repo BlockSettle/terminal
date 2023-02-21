@@ -41,12 +41,15 @@ Item {
             spacing: 23
             ComboBox {
                 id: receiveWalletsComboBox
-                objectName: "receiveWalletsComboBox"
                 model: bsApp.walletsList
                 currentIndex: walletsComboBox.currentIndex
                 font.pointSize: 14
                 width: 500
                 visible: (bsApp.walletsList.length > 1)
+
+                onActivated: (index) => {
+                    bsApp.walletSelected(index)
+                }
             }
             Label {
                 text: qsTr("<font color=\"white\">%1 BTC</font>").arg(bsApp.totalBalance)

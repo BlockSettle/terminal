@@ -39,7 +39,6 @@ TabButton {
             width: 24
             height: 24
             Layout.alignment : Qt.AlignTop | Qt.AlignHCenter
-            Layout.topMargin : 10
 
             source: control.checked? selectedIcon_ :nonSelectedIcon_
             sourceSize: Qt.size(parent.width, parent.height)
@@ -51,7 +50,6 @@ TabButton {
             id: text_
 
             Layout.alignment : Qt.AlignBottom | Qt.AlignHCenter
-            Layout.bottomMargin : 5
 
             text: control.text
             font: control.font

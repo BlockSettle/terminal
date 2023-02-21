@@ -13,6 +13,7 @@
 #include "Address.h"
 #include "BTCNumericTypes.h"
 #include "ColorScheme.h"
+#include "Utils.h"
 
 namespace {
    static const QHash<int, QByteArray> kRoles{
@@ -131,7 +132,7 @@ QVariant TxOutputsModel::getData(int row, int col) const
    case 0:
       return QString::fromStdString(entry.address.display());
    case 1:
-      return QString::number(entry.amount, 'f', 8);
+      return gui_utils::normalized_balance_to_qstring(entry.amount);
    default: break;
    }
    return {};

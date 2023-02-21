@@ -146,7 +146,7 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    , userBlockchain_(std::make_shared<UserTerminal>(TerminalUsers::Blockchain))
    , userSigner_(std::make_shared<UserTerminal>(TerminalUsers::Signer))
    , userHWW_(bs::message::UserTerminal::create(bs::message::TerminalUsers::HWWallets))
-   , txTypes_({ tr("All transactions") })
+   , txTypes_({ tr("All transactions"), tr("Received"), tr("Sent"), tr("Internal") })
    , walletPropertiesModel_(std::make_unique<qtquick_gui::WalletPropertiesVM>())
 {
    staticLogger = logger;
@@ -279,19 +279,6 @@ void QtQuickAdapter::run(int &argc, char **argv)
       if (window) {
          window->show();
       }
-   }
-
-   auto comboWalletsList = rootObj_->findChild<QQuickItem*>(QLatin1Literal("walletsComboBox"));
-   if (comboWalletsList) {
-      QObject::connect((QObject*)comboWalletsList, SIGNAL(activated(int)), this, SLOT(walletSelected(int)));
-   }
-   comboWalletsList = rootObj_->findChild<QQuickItem*>(QLatin1Literal("receiveWalletsComboBox"));
-   if (comboWalletsList) {
-      QObject::connect((QObject*)comboWalletsList, SIGNAL(activated(int)), this, SLOT(walletSelected(int)));
-   }
-   comboWalletsList = rootObj_->findChild<QQuickItem*>(QLatin1Literal("sendWalletsComboBox"));
-   if (comboWalletsList) {
-      QObject::connect((QObject*)comboWalletsList, SIGNAL(activated(int)), this, SLOT(walletSelected(int)));
    }
 
    updateStates();
