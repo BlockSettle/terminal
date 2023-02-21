@@ -162,7 +162,7 @@ quint32 QmlAddressListModel::getTransactionCount(const BinaryData& address) cons
 QString QmlAddressListModel::getAddressBalance(const BinaryData& address) const
 {
    if (pendingBalances_.count(address) > 0) {
-      return gui_utils::balance_to_qstring(pendingBalances_.at(address).balance);
+      return gui_utils::satoshiToQString(pendingBalances_.at(address).balance);
    }
    return QString();
 }

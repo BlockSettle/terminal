@@ -400,13 +400,13 @@ QVariant TxInputsModel::getData(int row, int col) const
          for (const auto& utxo : itUTXOs->second) {
             balance += utxo.getValue();
          }
-         return gui_utils::balance_to_qstring(balance);
+         return gui_utils::satoshiToQString(balance);
       }
       else {
          for (const auto& byAddr : utxos_) {
             for (const auto& utxo : byAddr.second) {
                if ((entry.txId == utxo.getTxHash()) && (entry.txOutIndex == utxo.getTxOutIndex())) {
-                  return gui_utils::balance_to_qstring(utxo.getValue());
+                  return gui_utils::satoshiToQString(utxo.getValue());
                }
             }
          }
