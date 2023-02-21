@@ -3,7 +3,7 @@
 
 using namespace gui_utils;
 
-QString gui_utils::satoshiToQString(double balance)
+QString gui_utils::satoshiToQString(int64_t balance)
 {
    if (balance < 0) {
       balance = 0;
