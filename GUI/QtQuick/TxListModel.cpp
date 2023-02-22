@@ -76,6 +76,9 @@ QVariant TxListModel::getData(int row, int col) const
       if (itComm != txComments_.end()) {
          return QString::fromStdString(itComm->second);
       }
+      else {
+         return QString();
+      }
       break;
    }
    default: break;

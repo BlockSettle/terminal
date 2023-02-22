@@ -37,6 +37,7 @@ public:
    int columnCount(const QModelIndex & = QModelIndex()) const override;
    QVariant data(const QModelIndex& index, int role) const override;
    QHash<int, QByteArray> roleNames() const override;
+   QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
    double totalAmount() const;
    std::vector<std::shared_ptr<Armory::Signer::ScriptRecipient>> recipients() const;
