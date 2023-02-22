@@ -143,7 +143,7 @@ QVariant TxOutputsModel::getData(int row, int col) const
    case 0:
       return QString::fromStdString(entry.address.display());
    case 1:
-      return gui_utils::normalizedSatoshiToQString(entry.amount);
+      return gui_utils::xbtToQString(entry.amount);
    default: break;
    }
    return {};

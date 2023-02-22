@@ -5,10 +5,10 @@ using namespace gui_utils;
 
 QString gui_utils::satoshiToQString(int64_t balance)
 {
-   return normalizedSatoshiToQString(balance / BTCNumericTypes::BalanceDivider);
+   return xbtToQString(balance / BTCNumericTypes::BalanceDivider);
 }
 
-QString gui_utils::normalizedSatoshiToQString(double balance)
+QString gui_utils::xbtToQString(double balance)
 {
    return QString::number(balance, 'f', 8);
 }
