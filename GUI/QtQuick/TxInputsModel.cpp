@@ -79,6 +79,14 @@ QVariant TxInputsModel::data(const QModelIndex& index, int role) const
    return QVariant();
 }
 
+QVariant TxInputsModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+   if (orientation == Qt::Orientation::Horizontal) {
+      return header_[section];
+   }
+   return QVariant();
+}
+
 QColor TxInputsModel::dataColor(int row, int col) const
 {
    if (row == 0) {

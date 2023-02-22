@@ -60,7 +60,7 @@ Column {
         maximumFlickVelocity: 1000
 
         ScrollBar.vertical: ScrollBar { 
-            policy: contentHeight > height ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
+            policy: component.contentHeight > component.height ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
         }
 
         columnWidthProvider: function (column) {

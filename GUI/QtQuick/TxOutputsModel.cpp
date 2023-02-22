@@ -57,6 +57,14 @@ QHash<int, QByteArray> TxOutputsModel::roleNames() const
    return kRoles;
 }
 
+QVariant TxOutputsModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+   if (orientation == Qt::Orientation::Horizontal) {
+      return header_.at(section);
+   }
+   return QVariant();
+}
+
 double TxOutputsModel::totalAmount() const
 {
    double result = 0.0;
@@ -117,6 +125,9 @@ void TxOutputsModel::addOutput(const QString& address, double amount)
 
 void TxOutputsModel::delOutput(int row)
 {
+   if (row == 0) {
+      return;
+   }
    beginRemoveRows(QModelIndex(), row, row);
    data_.erase(data_.cbegin() + row - 1);
    endRemoveRows();
