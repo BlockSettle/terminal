@@ -51,7 +51,7 @@ int TxListModel::columnCount(const QModelIndex &) const
    return header_.size();
 }
 
-QString TxListModel::getData(int row, int col) const
+QVariant TxListModel::getData(int row, int col) const
 {
    if (row > data_.size()) {
       return {};
@@ -69,7 +69,7 @@ QString TxListModel::getData(int row, int col) const
       return QString::fromStdString(address.display());
    }
    case 4: return gui_utils::satoshiToQString(std::abs(entry.value));
-   case 5: return QString::number(entry.nbConf);
+   case 5: return entry.nbConf;
    case 6: return txFlag(row);
    case 7: {
       const auto& itComm = txComments_.find(entry.txHash.toBinStr());
@@ -346,12 +346,12 @@ bool TxListModel::exportCSVto(const QString& filename)
       const auto& entry = data_.at(i);
       std::time_t txTime = entry.txTime;
       fstrm << "\"" << std::put_time(std::localtime(&txTime), "%Y-%m-%d %X") << "\";"
-         << "\"" << getData(i, 1).toUtf8().toStdString() << "\";"
-         << getData(i, 2).toStdString() << ";"
-         << getData(i, 3).toStdString() << ";"
+         << "\"" << getData(i, 1).toString().toUtf8().toStdString() << "\";"
+         << getData(i, 2).toString().toStdString() << ";"
+         << getData(i, 3).toString().toStdString() << ";"
          << txId(i).toStdString() << ";"
          << fmt::format("{:.8f}", entry.value / BTCNumericTypes::BalanceDivider) << ";"
-         << "\"" << getData(i, 7).toStdString() << "\"\n";
+         << "\"" << getData(i, 7).toString().toStdString() << "\"\n";
    }
    return true;
 }

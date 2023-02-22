@@ -53,7 +53,7 @@ signals:
    void nbTxChanged();
 
 private:
-   QString getData(int row, int col) const;
+   QVariant getData(int row, int col) const;
    QColor dataColor(int row, int col) const;
    QString walletName(int row) const;
    QString txType(int row) const;

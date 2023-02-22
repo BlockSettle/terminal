@@ -849,17 +849,17 @@ void QtQuickAdapter::walletSelected(int index)
 {
    logger_->debug("[{}] {}", __func__, index);
    QMetaObject::invokeMethod(this, [this, index] {
-      const auto& walletName = walletBalances_->wallets().at(index).toStdString();
-      const auto& walletId = hdWalletIdByIndex(index);
+      try {
+         const auto& walletName = walletBalances_->wallets().at(index).toStdString();
+         const auto& walletId = hdWalletIdByIndex(index);
 
-      addrModel_->reset(walletId);
-      WalletsMessage msg;
-      msg.set_wallet_get(walletId);
-      const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
-      walletInfoReq_[msgId] = walletName;
+         addrModel_->reset(walletId);
+         WalletsMessage msg;
+         msg.set_wallet_get(walletId);
+         const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
+         walletInfoReq_[msgId] = walletName;
 
-      if (hdWallets_.count(walletId) > 0) {
-         try {
+         if (hdWallets_.count(walletId) > 0) {
             walletPropertiesModel_->setWalletInfo({
                QString::fromStdString(hdWallets_.at(walletId).name),
                QString::fromStdString(hdWallets_.at(walletId).description),
@@ -872,8 +872,8 @@ void QtQuickAdapter::walletSelected(int index)
                hdWallets_.at(walletId).watchOnly
             });  
          }
-         catch (const std::exception&) {}
       }
+      catch (const std::exception&) {}
    });
 }
 
