@@ -218,25 +218,29 @@ void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
       }
    }
    if (!newEntries.empty()) {
-      beginInsertRows(QModelIndex(), rowCount(), rowCount() + newEntries.size() - 1);
-      data_.insert(data_.end(), newEntries.cbegin(), newEntries.cend());
-      endInsertRows();
-      emit nbTxChanged();
+      QMetaObject::invokeMethod(this, [this, newEntries] {
+         beginInsertRows(QModelIndex(), rowCount(), rowCount() + newEntries.size() - 1);
+         data_.insert(data_.end(), newEntries.cbegin(), newEntries.cend());
+         endInsertRows();
+         emit nbTxChanged();
+         });
    }
 }
 
 void TxListModel::prependRow(const bs::TXEntry& entry)
 {
    //logger_->debug("[{}::{}] prepending entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
-   decltype(txDetails_) prevDet;
-   beginInsertRows(QModelIndex(), 0, 0);
-   data_.insert(data_.cbegin(), entry);
-   txDetails_.swap(prevDet);
-   for (auto txDet : prevDet) {
-      txDetails_[txDet.first] = std::move(txDet.second);
-   }
-   endInsertRows();
-   emit nbTxChanged();
+   QMetaObject::invokeMethod(this, [this, entry] {
+      decltype(txDetails_) prevDet;
+      beginInsertRows(QModelIndex(), 0, 0);
+      data_.insert(data_.cbegin(), entry);
+      txDetails_.swap(prevDet);
+      for (auto txDet : prevDet) {
+         txDetails_[txDet.first] = std::move(txDet.second);
+      }
+      endInsertRows();
+      emit nbTxChanged();
+      });
 }
 
 void TxListModel::addRow(const bs::TXEntry& entry)
@@ -258,10 +262,12 @@ void TxListModel::addRow(const bs::TXEntry& entry)
    }
    else {
       //logger_->debug("[{}::{}] adding entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
-      beginInsertRows(QModelIndex(), rowCount(), rowCount());
-      data_.push_back(entry);
-      endInsertRows();
-      emit nbTxChanged();
+      QMetaObject::invokeMethod(this, [this, entry] {
+         beginInsertRows(QModelIndex(), rowCount(), rowCount());
+         data_.push_back(entry);
+         endInsertRows();
+         emit nbTxChanged();
+         });
    }
 }
 
@@ -522,20 +528,24 @@ QHash<int, QByteArray> TxListForAddr::roleNames() const
 void TxListForAddr::addRows(const std::vector<bs::TXEntry>& entries)
 {
    if (!entries.empty()) {
-      beginInsertRows(QModelIndex(), rowCount(), rowCount() + entries.size() - 1);
-      data_.insert(data_.end(), entries.cbegin(), entries.cend());
-      endInsertRows();
+      QMetaObject::invokeMethod(this, [this, entries] {
+         beginInsertRows(QModelIndex(), rowCount(), rowCount() + entries.size() - 1);
+         data_.insert(data_.end(), entries.cbegin(), entries.cend());
+         endInsertRows();
+         emit changed();
+         });
    }
-   emit changed();
 }
 
 void TxListForAddr::clear()
 {
-   beginResetModel();
-   data_.clear();
-   txs_.clear();
-   endResetModel();
-   emit changed();
+   QMetaObject::invokeMethod(this, [this] {
+      beginResetModel();
+      data_.clear();
+      txs_.clear();
+      endResetModel();
+      emit changed();
+      });
 }
 
 void TxListForAddr::setDetails(const std::vector<Tx>& txs)
