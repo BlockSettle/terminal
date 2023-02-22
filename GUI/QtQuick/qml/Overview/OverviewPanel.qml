@@ -148,6 +148,7 @@ Rectangle {
                     
                     model: PendingTransactionFilterModel {
                         sourceModel: txListModel
+                        dynamicSortFilter: true
                     }
 
                     copy_button_column_index: 3
