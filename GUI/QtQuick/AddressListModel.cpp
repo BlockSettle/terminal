@@ -87,9 +87,11 @@ void QmlAddressListModel::addRow(const std::string& walletId, const QVector<QStr
    {
       addresses_.push_back(bs::Address{});
    }
-   beginInsertRows(QModelIndex(), rowCount(), rowCount());
-   table_.append(row);
-   endInsertRows();
+   QMetaObject::invokeMethod(this, [this, row] {
+      beginInsertRows(QModelIndex(), rowCount(), rowCount());
+      table_.append(row);
+      endInsertRows();
+      });
 }
 
 void QmlAddressListModel::addRows(const std::string& walletId, const QVector<QVector<QString>>& rows)
@@ -114,9 +116,11 @@ void QmlAddressListModel::addRows(const std::string& walletId, const QVector<QVe
          addresses_.push_back(bs::Address{});
       }
    }
-   beginInsertRows(QModelIndex(), rowCount(), rowCount() + rows.size() - 1);
-   table_.append(rows);
-   endInsertRows();
+   QMetaObject::invokeMethod(this, [this, rows] {
+      beginInsertRows(QModelIndex(), rowCount(), rowCount() + rows.size() - 1);
+      table_.append(rows);
+      endInsertRows();
+      });
 }
 
 void QmlAddressListModel::updateRow(const BinaryData& addrPubKey, uint64_t bal, uint32_t nbTx)
