@@ -27,11 +27,25 @@ ColumnLayout  {
         Layout.fillWidth: true
         Layout.preferredHeight : 34
 
+        Label {
+            Layout.fillWidth: true
+            Layout.preferredHeight : 34
+        }
+
+        CustomTitleLabel {
+            id: title
+
+            Layout.rightMargin: 378
+            Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
+
+            text: qsTr("Send Bitcoin")
+        }
+
         Button {
             id: simple_but
 
-            Layout.leftMargin: 24
-            Layout.alignment: Qt.AlignLeft | Qt.AlingVCenter
+            Layout.rightMargin: 60
+            Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
 
             activeFocusOnTab: true
 
@@ -63,21 +77,6 @@ ColumnLayout  {
                layout.sig_simple()
             }
         }
-
-        CustomTitleLabel {
-            id: title
-
-            Layout.leftMargin: 378
-            Layout.alignment: Qt.AlignLeft | Qt.AlingVCenter
-
-            text: qsTr("Send Bitcoin")
-        }
-
-        Label {
-            Layout.fillWidth: true
-            Layout.preferredHeight : 34
-        }
-
     }
 
     RowLayout {
@@ -202,8 +201,6 @@ ColumnLayout  {
                     model: txInputsSelectedModel
                     columnWidths: [0.7, 0.1, 0, 0.2]
 
-                    text_header_size: 12
-                    cell_text_size: 13
                     copy_button_column_index: -1
 
                     Component
@@ -430,8 +427,6 @@ ColumnLayout  {
                     model:txOutputsModel
                     columnWidths: [0.744, 0.20, 0.056]
 
-                    text_header_size: 12
-                    cell_text_size: 13
                     copy_button_column_index: -1
                     delete_button_column_index: 2
 
