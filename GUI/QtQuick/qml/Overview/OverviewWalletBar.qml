@@ -34,20 +34,17 @@ Rectangle {
         Controls.CustomComboBox {
             id: wallet_selection_combobox
             anchors.verticalCenter: parent.verticalCenter
+            objectName: "walletsComboBox"
 
             width: 263
             height: 53
 
-            objectName: "walletsComboBox"
             model: walletBalances
             textRole: "name"
             valueRole: "name"
 
-            Component.onCompleted: {
-                control.walletIndexChanged(0)
-            }
-
             onActivated: (ind) => {
+                bsApp.walletSelected(ind)
                 control.walletIndexChanged(ind)
             }
         }

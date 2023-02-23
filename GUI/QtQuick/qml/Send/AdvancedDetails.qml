@@ -202,6 +202,7 @@ ColumnLayout  {
                     columnWidths: [0.7, 0.1, 0, 0.2]
 
                     copy_button_column_index: -1
+                    has_header: false
 
                     Component
                     {
@@ -225,7 +226,7 @@ ColumnLayout  {
                                 color: get_data_color(model_row, model_column)
                                 font.family: "Roboto"
                                 font.weight: Font.Normal
-                                font.pixelSize: model_row === 0 ? text_header_size : cell_text_size
+                                font.pixelSize: model_row === 0 ? table_sel_inputs.text_header_size : table_sel_inputs.cell_text_size
 
                                 leftPadding: table_sel_inputs.get_text_left_padding(model_row, model_column)
                             }
@@ -429,6 +430,7 @@ ColumnLayout  {
 
                     copy_button_column_index: -1
                     delete_button_column_index: 2
+                    has_header: false
 
                     onDeleteRequested: (row) =>
                     {

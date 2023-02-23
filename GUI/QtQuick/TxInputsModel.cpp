@@ -15,6 +15,7 @@
 #include "CoinSelection.h"
 #include "TxOutputsModel.h"
 #include "ColorScheme.h"
+#include "Utils.h"
 
 namespace {
    static const QHash<int, QByteArray> kRoles{
@@ -74,6 +75,14 @@ QVariant TxInputsModel::data(const QModelIndex& index, int role) const
    case ColorRole:
       return dataColor(index.row(), index.column());
    default: break;
+   }
+   return QVariant();
+}
+
+QVariant TxInputsModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+   if (orientation == Qt::Orientation::Horizontal) {
+      return header_[section];
    }
    return QVariant();
 }
@@ -399,13 +408,13 @@ QVariant TxInputsModel::getData(int row, int col) const
          for (const auto& utxo : itUTXOs->second) {
             balance += utxo.getValue();
          }
-         return QString::number(balance / BTCNumericTypes::BalanceDivider, 'f', 8);
+         return gui_utils::satoshiToQString(balance);
       }
       else {
          for (const auto& byAddr : utxos_) {
             for (const auto& utxo : byAddr.second) {
                if ((entry.txId == utxo.getTxHash()) && (entry.txOutIndex == utxo.getTxOutIndex())) {
-                  return QString::number(utxo.getValue() / BTCNumericTypes::BalanceDivider, 'f', 8);
+                  return gui_utils::satoshiToQString(utxo.getValue());
                }
             }
          }

@@ -57,6 +57,7 @@ ColumnLayout  {
             columnWidths: [0.7, 0.1, 0.1, 0.1]
 
             copy_button_column_index: -1
+            has_header: false
 
             Component
             {

@@ -27,14 +27,14 @@ class TxListModel : public QAbstractTableModel
 {
    Q_OBJECT
 public:
-   enum TableRoles { TableDataRole = Qt::UserRole + 1, HeadingRole, ColorRole
-      , WidthRole, TxIdRole };
+   enum TableRoles { TableDataRole = Qt::UserRole + 1, ColorRole, TxIdRole };
    TxListModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
 
    int rowCount(const QModelIndex & = QModelIndex()) const override;
    int columnCount(const QModelIndex & = QModelIndex()) const override;
    QVariant data(const QModelIndex& index, int role) const override;
    QHash<int, QByteArray> roleNames() const override;
+   QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
    Q_PROPERTY(int nbTx READ nbTx NOTIFY nbTxChanged);
    int nbTx() const { return data_.size(); }
@@ -53,9 +53,8 @@ signals:
    void nbTxChanged();
 
 private:
-   QString getData(int row, int col) const;
+   QVariant getData(int row, int col) const;
    QColor dataColor(int row, int col) const;
-   float colWidth(int col) const;
    QString walletName(int row) const;
    QString txType(int row) const;
    QString txFlag(int row) const;
@@ -76,7 +75,7 @@ class TxListForAddr : public QAbstractTableModel
    Q_OBJECT
 public:
    enum TableRoles {
-      TableDataRole = Qt::UserRole + 1, HeadingRole, ColorRole, WidthRole
+      TableDataRole = Qt::UserRole + 1, ColorRole
    };
    TxListForAddr(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
 
@@ -84,6 +83,7 @@ public:
    int columnCount(const QModelIndex & = QModelIndex()) const override;
    QVariant data(const QModelIndex& index, int role) const override;
    QHash<int, QByteArray> roleNames() const override;
+   QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
    void addRows(const std::vector<bs::TXEntry>&);
    void clear();
@@ -106,7 +106,6 @@ signals:
 private:
    QString getData(int row, int col) const;
    QColor dataColor(int row, int col) const;
-   float colWidth(int col) const;
    QString txId(int row) const;
    int nbInputs(int row) const;
    int nbOutputs(int row) const;
@@ -128,7 +127,7 @@ class TxInOutModel : public QAbstractTableModel
    Q_OBJECT
 public:
    enum TableRoles {
-      TableDataRole = Qt::UserRole + 1, HeadingRole, ColorRole, WidthRole, TxHashRole
+      TableDataRole = Qt::UserRole + 1, ColorRole, TxHashRole
    };
    TxInOutModel(const std::vector<bs::sync::AddressDetails>& data, const QString& type, QObject* parent = nullptr);
 
@@ -136,11 +135,11 @@ public:
    int columnCount(const QModelIndex & = QModelIndex()) const override;
    QVariant data(const QModelIndex& index, int role) const override;
    QHash<int, QByteArray> roleNames() const override;
+   QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
 private:
    QString getData(int row, int col) const;
    QColor dataColor(int row, int col) const;
-   float colWidth(int col) const;
 
 private:
    const QString type_;

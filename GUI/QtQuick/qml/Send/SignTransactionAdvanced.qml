@@ -66,6 +66,7 @@ ColumnLayout  {
                 columnWidths: [0.7, 0.1, 0, 0.2]
 
                 copy_button_column_index: -1
+                has_header: false
 
                 function get_text_left_padding(row, column)
                 {
@@ -103,6 +104,7 @@ ColumnLayout  {
 
                 copy_button_column_index: -1
                 delete_button_column_index: 2
+                has_header: false
 
                 onDeleteRequested: (row) =>
                 {

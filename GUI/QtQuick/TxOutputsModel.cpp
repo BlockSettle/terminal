@@ -13,6 +13,7 @@
 #include "Address.h"
 #include "BTCNumericTypes.h"
 #include "ColorScheme.h"
+#include "Utils.h"
 
 namespace {
    static const QHash<int, QByteArray> kRoles{
@@ -54,6 +55,14 @@ QVariant TxOutputsModel::data(const QModelIndex& index, int role) const
 QHash<int, QByteArray> TxOutputsModel::roleNames() const
 {
    return kRoles;
+}
+
+QVariant TxOutputsModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+   if (orientation == Qt::Orientation::Horizontal) {
+      return header_.at(section);
+   }
+   return QVariant();
 }
 
 double TxOutputsModel::totalAmount() const
@@ -116,6 +125,9 @@ void TxOutputsModel::addOutput(const QString& address, double amount)
 
 void TxOutputsModel::delOutput(int row)
 {
+   if (row == 0) {
+      return;
+   }
    beginRemoveRows(QModelIndex(), row, row);
    data_.erase(data_.cbegin() + row - 1);
    endRemoveRows();
@@ -131,7 +143,7 @@ QVariant TxOutputsModel::getData(int row, int col) const
    case 0:
       return QString::fromStdString(entry.address.display());
    case 1:
-      return QString::number(entry.amount, 'f', 8);
+      return gui_utils::xbtToQString(entry.amount);
    default: break;
    }
    return {};

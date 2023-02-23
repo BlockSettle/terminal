@@ -13,6 +13,7 @@ import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.12
 import QtQml.Models 2
 import QtQuick.Dialogs 1.3
+import terminal.models 1.0
 
 import "StyledControls"
 import "BsStyles"
@@ -25,6 +26,11 @@ Item {
 
     width: 1200
     height: 788
+
+    TransactionFilterModel {
+        id: transactionModel
+        sourceModel: txListModel
+    }
 
     TransactionDetails {
         id: transactionDetails
@@ -80,7 +86,6 @@ Item {
 
                 CustomSmallComboBox {
                     id: txWalletsComboBox
-                    objectName: "txWalletsComboBox"
                     model: bsApp.txWalletsList
                     font.pointSize: 8
 
@@ -88,11 +93,14 @@ Item {
                     height: 29
 
                     anchors.verticalCenter: parent.verticalCenter
+
+                    onActivated: (index) => {
+                        transactionModel.walletName = index == 0 ? "" : txWalletsComboBox.currentValue
+                    }
                 }
 
                 CustomSmallComboBox {
                     id: txTypesComboBox
-                    objectName: "txTypesComboBox"
                     model: bsApp.txTypesList
                     font.pointSize: 8
 
@@ -100,6 +108,10 @@ Item {
                     height: 29
 
                     anchors.verticalCenter: parent.verticalCenter
+
+                    onActivated: (index) => {
+                        transactionModel.transactionType = index == 0 ? "" : txTypesComboBox.currentValue
+                    }
                 }
 
 
@@ -149,18 +161,18 @@ Item {
         CustomTableView {
             width: parent.width
             height: parent.height - transaction_header_menu.height
-            model: txListModel
+            model: transactionModel
 
             copy_button_column_index: 3
             columnWidths: [0.12, 0.1, 0.08, 0.3, 0.1, 0.1, 0.1, 0.1]
             onCopyRequested: bsApp.copyAddressToClipboard(id)
             onCellClicked: (row, column, data) => {
-                const txHash = model.data(model.index(row, 0), 261)
+                const txHash = model.data(model.index(row, 0), 259)
                 transactionDetails.walletName = model.data(model.index(row, 1), 257)
                 transactionDetails.address = model.data(model.index(row, 3), 257)
                 transactionDetails.txDateTime = model.data(model.index(row, 0), 257)
                 transactionDetails.txType = model.data(model.index(row, 2), 257)
-                transactionDetails.txTypeColor = model.data(model.index(row, 2), 259)
+                transactionDetails.txTypeColor = model.data(model.index(row, 2), 258)
                 transactionDetails.txComment = model.data(model.index(row, 7), 257)
                 transactionDetails.txAmount = model.data(model.index(row, 4), 257)
                 transactionDetails.tx = bsApp.getTXDetails(txHash)
