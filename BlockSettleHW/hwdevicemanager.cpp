@@ -85,13 +85,18 @@ bool DeviceManager::processBroadcast(const bs::message::Envelope& env)
 void DeviceManager::scanDevices(const bs::message::Envelope& env)
 {
    if (nbScanning_ > 0) {
+      logger_->warn("[{}] device scan is already in progress");
+      HW::DeviceMgrMessage msg;
+      msg.mutable_available_devices();
+      pushResponse(user_, env, msg.SerializeAsString());
       return;
    }
    envReqScan_ = env;
    devices_.clear();
-   nbScanning_ = 2;  // # of callbacks to receive
+   nbScanning_ = 3;  // # of callbacks to receive
    ledgerClient_->scanDevices();
    trezorClient_->listDevices();
+   jadeClient_->scanDevices();
 }
 
 void DeviceManager::setMatrixPin(const DeviceKey& key, const std::string& pin)
@@ -207,6 +212,7 @@ bs::message::ProcessingResult DeviceManager::processSettings(const bs::message::
             logger_->debug("[hww::DeviceManager::processSettings] testnet={}", testNet_);
             trezorClient_ = std::make_unique<TrezorClient>(logger_, testNet_, this);
             ledgerClient_ = std::make_unique<LedgerClient>(logger_, testNet_, this);
+            jadeClient_ = std::make_unique<JadeClient>(logger_, testNet_, this);
             return bs::message::ProcessingResult::Success;
          }
       }

@@ -127,17 +127,21 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
             }
          }
          if (addrIndex < 0) {
-            beginInsertRows(QModelIndex(), rowCount(), rowCount());
-            data_.push_back({ addr });
-            endInsertRows();
-            emit rowCountChanged();
+            QMetaObject::invokeMethod(this, [this, addr] {
+               beginInsertRows(QModelIndex(), rowCount(), rowCount());
+               data_.push_back({ addr });
+               endInsertRows();
+               emit rowCountChanged();
+               });
          }
          else {
             if (data_.at(addrIndex).expanded) {
-               beginInsertRows(QModelIndex(), addrIndex + 2, addrIndex + 2);
-               data_.insert(data_.cbegin() + addrIndex + 1, { {}, utxo.getTxHash(), utxo.getTxOutIndex() });
-               endInsertRows();
-               emit rowCountChanged();
+               QMetaObject::invokeMethod(this, [this, addrIndex, utxo] {
+                  beginInsertRows(QModelIndex(), addrIndex + 2, addrIndex + 2);
+                  data_.insert(data_.cbegin() + addrIndex + 1, { {}, utxo.getTxHash(), utxo.getTxOutIndex() });
+                  endInsertRows();
+                  emit rowCountChanged();
+                  });
             }
          }
       }
