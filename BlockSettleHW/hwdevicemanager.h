@@ -17,6 +17,7 @@
 #include "Message/Adapter.h"
 #include "ledger/ledgerClient.h"
 #include "trezor/trezorClient.h"
+#include "jade/jadeClient.h"
 #include "SecureBinaryData.h"
 
 
@@ -142,6 +143,7 @@ namespace bs {
          std::shared_ptr<spdlog::logger> logger_;
          std::unique_ptr<TrezorClient> trezorClient_;
          std::unique_ptr<LedgerClient> ledgerClient_;
+         std::unique_ptr<JadeClient>   jadeClient_;
          std::shared_ptr<bs::message::User>  user_, userWallets_, userSigner_, userBlockchain_;
          std::vector<DeviceKey>  devices_;
 
