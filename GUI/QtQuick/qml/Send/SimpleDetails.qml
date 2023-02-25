@@ -26,11 +26,25 @@ ColumnLayout  {
         Layout.fillWidth: true
         Layout.preferredHeight : 34
 
+        Label {
+            Layout.fillWidth: true
+            Layout.preferredHeight : 34
+        }
+
+        CustomTitleLabel {
+            id: title
+
+            Layout.rightMargin: 104
+            Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
+
+            text: qsTr("Send Bitcoin")
+        }
+
         Button {
             id: advanced_but
 
-            Layout.leftMargin: 24
-            Layout.alignment: Qt.AlignLeft | Qt.AlingVCenter
+            Layout.rightMargin: 60
+            Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
 
             activeFocusOnTab: true
 
@@ -63,21 +77,6 @@ ColumnLayout  {
                layout.sig_advanced()
             }
         }
-
-        CustomTitleLabel {
-            id: title
-
-            Layout.leftMargin: 104
-            Layout.alignment: Qt.AlignLeft | Qt.AlingVCenter
-
-            text: qsTr("Send Bitcoin")
-        }
-
-        Label {
-            Layout.fillWidth: true
-            Layout.preferredHeight : 34
-        }
-
     }
 
     RecvAddrTextInput {

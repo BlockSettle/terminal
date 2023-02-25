@@ -16,6 +16,8 @@
 #include <QList>
 #include <QObject>
 #include <QVariant>
+#include <QMutex>
+#include <QWaitCondition>
 
 #include "Address.h"
 #include "BinaryData.h"
@@ -120,6 +122,10 @@ private:
    QString fee_;
    uint32_t topBlock_{ 0 };
    double collectUTXOsForAmount_{ 0 };
+
+   QMutex mutex_;
+   QWaitCondition waitCond_;
+
 };
 
 #endif	// TX_INPUTS_MODEL_H

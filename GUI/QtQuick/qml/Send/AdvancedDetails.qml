@@ -27,11 +27,25 @@ ColumnLayout  {
         Layout.fillWidth: true
         Layout.preferredHeight : 34
 
+        Label {
+            Layout.fillWidth: true
+            Layout.preferredHeight : 34
+        }
+
+        CustomTitleLabel {
+            id: title
+
+            Layout.rightMargin: 378
+            Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
+
+            text: qsTr("Send Bitcoin")
+        }
+
         Button {
             id: simple_but
 
-            Layout.leftMargin: 24
-            Layout.alignment: Qt.AlignLeft | Qt.AlingVCenter
+            Layout.rightMargin: 60
+            Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
 
             activeFocusOnTab: true
 
@@ -63,21 +77,6 @@ ColumnLayout  {
                layout.sig_simple()
             }
         }
-
-        CustomTitleLabel {
-            id: title
-
-            Layout.leftMargin: 378
-            Layout.alignment: Qt.AlignLeft | Qt.AlingVCenter
-
-            text: qsTr("Send Bitcoin")
-        }
-
-        Label {
-            Layout.fillWidth: true
-            Layout.preferredHeight : 34
-        }
-
     }
 
     RowLayout {
@@ -112,20 +111,47 @@ ColumnLayout  {
 
                 spacing: 0
 
-                Label {
-                    id: inputs_title
+                RowLayout {
 
-                    Layout.leftMargin: 16
+                    Layout.fillWidth: true
+                    Layout.preferredHeight : 19
                     Layout.topMargin: 16
-                    Layout.alignment: Qt.AlignLeft | Qt.AlingTop
+                    Layout.alignment: Qt.AlingTop
 
-                    text: qsTr("Inputs")
+                    Label {
+                        id: inputs_title
 
-                    height : 19
-                    color: "#E2E7FF"
-                    font.pixelSize: 16
-                    font.family: "Roboto"
-                    font.weight: Font.Medium
+                        Layout.leftMargin: 16
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+
+                        text: qsTr("Inputs")
+
+                        height : 19
+                        color: "#E2E7FF"
+                        font.pixelSize: 16
+                        font.family: "Roboto"
+                        font.weight: Font.Medium
+                    }
+
+                    Label {
+                        Layout.fillWidth: true
+                        Layout.fillHeight : true
+                    }
+
+                    CustomCheckBox {
+                        id: checkbox_rbf
+
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                        Layout.rightMargin: 16
+
+                        text: qsTr("RBF")
+
+                        spacing: 6
+                        font.pixelSize: 13
+                        font.family: "Roboto"
+                        font.weight: Font.Normal
+                    }
+
                 }
 
                 WalletsComboBox {
@@ -178,13 +204,12 @@ ColumnLayout  {
                     }
                 }
 
-
                 Rectangle {
 
                     height: 1
 
                     Layout.fillWidth: true
-                    Layout.topMargin: 196
+                    Layout.topMargin: 168
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
                     color: BSStyle.defaultGreyColor
@@ -202,8 +227,6 @@ ColumnLayout  {
                     model: txInputsSelectedModel
                     columnWidths: [0.7, 0.1, 0, 0.2]
 
-                    text_header_size: 12
-                    cell_text_size: 13
                     copy_button_column_index: -1
                     has_header: false
 
@@ -431,8 +454,6 @@ ColumnLayout  {
                     model:txOutputsModel
                     columnWidths: [0.744, 0.20, 0.056]
 
-                    text_header_size: 12
-                    cell_text_size: 13
                     copy_button_column_index: -1
                     delete_button_column_index: 2
                     has_header: false
@@ -481,7 +502,7 @@ ColumnLayout  {
                 layout.sig_continue( bsApp.createTXSignRequest(from_wallet_combo.currentIndex
                     , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
                     , parseFloat(fee_suggest_combo.currentValue), comment_input.input_text
-                    , txInputsModel.getSelection()) )
+                    , checkbox_rbf.checked, txInputsModel.getSelection()) )
             }
             else
             {

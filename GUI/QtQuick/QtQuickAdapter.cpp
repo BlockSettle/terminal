@@ -1242,7 +1242,7 @@ void QtQuickAdapter::requestFeeSuggestions()
 }
 
 QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStringList& recvAddrs
-   , const QList<double>& recvAmounts, double fee, const QString& comment, QUTXOList* utxos)
+   , const QList<double>& recvAmounts, double fee, const QString& comment, bool isRbf, QUTXOList* utxos)
 {
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_request();
@@ -1287,6 +1287,7 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStri
          idx++;
       }
    }
+   msgReq->set_rbf(isRbf);
    msgReq->set_fee_per_byte(fee);
    if (!comment.isEmpty()) {
       msgReq->set_comment(comment.toStdString());
