@@ -116,7 +116,6 @@ void TxInputsModel::clear()
    emit rowCountChanged();
 }
 
-#include <QThread>
 void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
 {
    for (const auto& utxo : utxos) {
@@ -136,11 +135,11 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
                data_.push_back({ addr });
                endInsertRows();
                emit rowCountChanged();
-               waitCond.wakeAll();
+               waitCond_.wakeAll();
             });
-            mutex.lock();
-            waitCond.wait(&mutex);
-            mutex.unlock();
+            mutex_.lock();
+            waitCond_.wait(&mutex_);
+            mutex_.unlock();
          }
          else {
             if (data_.at(addrIndex).expanded) {
@@ -149,11 +148,11 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
                   data_.insert(data_.cbegin() + addrIndex + 1, { {}, utxo.getTxHash(), utxo.getTxOutIndex() });
                   endInsertRows();
                   emit rowCountChanged();
-                  waitCond.wakeAll();
+                  waitCond_.wakeAll();
                });
-               mutex.lock();
-               waitCond.wait(&mutex);
-               mutex.unlock();
+               mutex_.lock();
+               waitCond_.wait(&mutex_);
+               mutex_.unlock();
             }
          }
       }
@@ -210,8 +209,8 @@ void TxInputsModel::toggleSelection(int row)
       if (!selectionRoot_) {
          selectionUtxos_.clear();
          selectionAddresses_.clear();
-         for (int i_row = 1;  i_row < rowCount(); i_row ++) {
-            const auto& entry = data_.at(i_row-1);
+         for (int iRow = 1;  iRow < rowCount(); iRow ++) {
+            const auto& entry = data_.at(iRow-1);
             const auto& itAddr = utxos_.find(entry.address);
             if (itAddr != utxos_.end()) {
                 for (const auto& u : itAddr->second) {
@@ -223,8 +222,8 @@ void TxInputsModel::toggleSelection(int row)
          }
       }
       else {
-         for (int i_row = 1;  i_row < rowCount(); i_row ++) {
-            const auto& entry = data_.at(i_row-1);
+         for (int iRow = 1;  iRow < rowCount(); iRow ++) {
+            const auto& entry = data_.at(iRow-1);
             if (entry.txId.empty()) {
                selectionAddresses_.insert(entry.address);
             }

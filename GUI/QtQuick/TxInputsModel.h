@@ -96,8 +96,6 @@ private:
    QVariant getData(int row, int col) const;
    QColor dataColor(int row, int col) const;
    QList<QUTXO*> collectUTXOsFor(double amount);
-   QMutex mutex;
-   QWaitCondition waitCond;
 
 private:
    enum Columns {ColumnAddress, ColumnTx, ColumnComment, ColumnBalance};
@@ -124,6 +122,10 @@ private:
    QString fee_;
    uint32_t topBlock_{ 0 };
    double collectUTXOsForAmount_{ 0 };
+
+   QMutex mutex_;
+   QWaitCondition waitCond_;
+
 };
 
 #endif	// TX_INPUTS_MODEL_H
