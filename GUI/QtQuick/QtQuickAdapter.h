@@ -176,7 +176,7 @@ public:
 
    Q_INVOKABLE void requestFeeSuggestions();
    Q_INVOKABLE QTXSignRequest* createTXSignRequest(int walletIndex, const QStringList& recvAddrs
-      , const QList<double>& recvAmounts, double fee, const QString& comment = {}, QUTXOList* utxos = nullptr);
+      , const QList<double>& recvAmounts, double fee, const QString& comment = {}, bool isRbf = true, QUTXOList* utxos = nullptr);
    Q_INVOKABLE void getUTXOsForWallet(int walletIndex);
    Q_INVOKABLE void signAndBroadcast(QTXSignRequest*, const QString& password);
    Q_INVOKABLE int getSearchInputType(const QString&);

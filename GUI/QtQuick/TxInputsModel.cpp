@@ -109,10 +109,14 @@ void TxInputsModel::clear()
    selectionAddresses_.clear();
    selectionRoot_ = false;
    preSelected_.clear();
+   selectedBalance_ = 0;
+   nbTx_ = 0;
    endResetModel();
+   emit selectionChanged();
    emit rowCountChanged();
 }
 
+#include <QThread>
 void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
 {
    for (const auto& utxo : utxos) {
@@ -132,7 +136,11 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
                data_.push_back({ addr });
                endInsertRows();
                emit rowCountChanged();
-               });
+               waitCond.wakeAll();
+            });
+            mutex.lock();
+            waitCond.wait(&mutex);
+            mutex.unlock();
          }
          else {
             if (data_.at(addrIndex).expanded) {
@@ -141,7 +149,11 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
                   data_.insert(data_.cbegin() + addrIndex + 1, { {}, utxo.getTxHash(), utxo.getTxOutIndex() });
                   endInsertRows();
                   emit rowCountChanged();
-                  });
+                  waitCond.wakeAll();
+               });
+               mutex.lock();
+               waitCond.wait(&mutex);
+               mutex.unlock();
             }
          }
       }
@@ -198,6 +210,17 @@ void TxInputsModel::toggleSelection(int row)
       if (!selectionRoot_) {
          selectionUtxos_.clear();
          selectionAddresses_.clear();
+         for (int i_row = 1;  i_row < rowCount(); i_row ++) {
+            const auto& entry = data_.at(i_row-1);
+            const auto& itAddr = utxos_.find(entry.address);
+            if (itAddr != utxos_.end()) {
+                for (const auto& u : itAddr->second) {
+                   selectionUtxos_.erase({u.getTxHash(), u.getTxOutIndex()});
+                   selectedBalance_ -= u.getValue();
+                   nbTx_--;
+                }
+            }
+         }
       }
       else {
          for (int i_row = 1;  i_row < rowCount(); i_row ++) {

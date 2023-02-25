@@ -16,6 +16,8 @@
 #include <QList>
 #include <QObject>
 #include <QVariant>
+#include <QMutex>
+#include <QWaitCondition>
 
 #include "Address.h"
 #include "BinaryData.h"
@@ -94,6 +96,8 @@ private:
    QVariant getData(int row, int col) const;
    QColor dataColor(int row, int col) const;
    QList<QUTXO*> collectUTXOsFor(double amount);
+   QMutex mutex;
+   QWaitCondition waitCond;
 
 private:
    enum Columns {ColumnAddress, ColumnTx, ColumnComment, ColumnBalance};

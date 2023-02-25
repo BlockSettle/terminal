@@ -243,7 +243,7 @@ ColumnLayout  {
 
         Label {
 
-            id: amount_title
+            id: total_amount
 
             anchors.top: trans_inputs.bottom
             anchors.topMargin: 18
@@ -267,6 +267,5 @@ ColumnLayout  {
 
     function init()
     {
-
     }
 }
