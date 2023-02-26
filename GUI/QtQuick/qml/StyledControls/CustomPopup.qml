@@ -3,6 +3,7 @@ import QtQuick.Window 2.12
 import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.15
 
+import "../BsStyles"
 
 Window {
     id: root
@@ -35,8 +36,7 @@ Window {
     Rectangle {
         id: rect
 
-        property var phrase
-        color: "#191E2A"
+        color: BSStyle.popupBackgroundColor
         opacity: 1
         radius: 16
         height: stack_popup.height + navig_bar_width

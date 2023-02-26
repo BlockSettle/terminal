@@ -21,6 +21,9 @@ ColumnLayout  {
     spacing: 0
 
     property var tempRequest: null
+    property string txId: ""
+    property bool isRBF: false
+    property bool isCPFP: false
 
     RowLayout {
 
@@ -38,7 +41,8 @@ ColumnLayout  {
             Layout.rightMargin: 378
             Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
 
-            text: qsTr("Send Bitcoin")
+            text: (!isRBF && !isCPFP) ? qsTr("Send Bitcoin")
+                  : (isRBF ? qsTr("Send Bitcoin (RBF)") : qsTr("Send Bitcoin (CPFP)"))
         }
 
         Button {
@@ -145,6 +149,7 @@ ColumnLayout  {
                         Layout.rightMargin: 16
 
                         text: qsTr("RBF")
+                        checked: isRBF
 
                         spacing: 6
                         font.pixelSize: 13
@@ -259,6 +264,8 @@ ColumnLayout  {
 
                             Button {
                                 id: sel_inputs_button
+
+                                enabled: !isRBF && !isCPFP
 
                                 text: qsTr("Select Inputs")
 

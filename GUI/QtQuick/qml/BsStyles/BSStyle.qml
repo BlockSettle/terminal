@@ -80,6 +80,7 @@ QtObject {
 
     //new properties
     readonly property color defaultGreyColor: "#3C435A"
+    readonly property color wildBlueColor: "#7A88B0"
 
     readonly property color buttonsStandardColor: defaultGreyColor
     readonly property color buttonsStandardPressedColor: "#232734"
@@ -99,11 +100,11 @@ QtObject {
 
     readonly property color comboBoxItemTextColor: "#020817"
     readonly property color comboBoxItemTextHighlightedColor: "#45A6FF"
-    readonly property color comboBoxItemTextCurrentColor: "#7A88B0"
+    readonly property color comboBoxItemTextCurrentColor: wildBlueColor
     readonly property color comboBoxItemHighlightedColor: "#45A6FF"
 
     readonly property color comboBoxBorderColor: defaultGreyColor
-    readonly property color comboBoxHoveredBorderColor: "#7A88B0"
+    readonly property color comboBoxHoveredBorderColor: wildBlueColor
     readonly property color comboBoxFocusedBorderColor: "#FFFFFF"
     readonly property color comboBoxPopupedBorderColor: "#45A6FF"
 
@@ -127,6 +128,10 @@ QtObject {
     readonly property color transactionConfirmationHigh: "#67D2A3"
 
     readonly property color defaultBorderColor: defaultGreyColor
+
+    readonly property color menuItemTextColor: wildBlueColor
+    readonly property color menuItemHoveredColor: "#2E3343"
+    readonly property color menuItemColor: "transparent"
 
     //not colors
     readonly property int defaultPrecision: 8

@@ -267,6 +267,13 @@ ApplicationWindow {
 
         TransactionsPage {
             id: transactionsPage
+
+            onOpenSend: (txId, isRBF, isCPFP) => {
+                send_popup.open(txId, isRBF, isCPFP)
+                send_popup.show()
+                send_popup.raise()
+                send_popup.requestActivate()
+            }
         }
 
         ExplorerPage {

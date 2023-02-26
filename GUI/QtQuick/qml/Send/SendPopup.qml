@@ -92,6 +92,14 @@ CustomPopup {
         simple_details.init()
     }
 
+    function open(txId: string, isRBF: bool, isCPFP: bool) {
+        _stack_view.replace(advanced_details)
+        advanced_details.init()
+        advanced_details.txId = txId
+        advanced_details.isRBF = isRBF
+        advanced_details.isCPFP = isCPFP
+    }
+
     function close_click()
     {
         if (select_inputs.visible)

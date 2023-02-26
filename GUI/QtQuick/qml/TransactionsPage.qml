@@ -13,19 +13,19 @@ import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.12
 import QtQml.Models 2
 import QtQuick.Dialogs 1.3
-import terminal.models 1.0
 
 import "StyledControls"
 import "BsStyles"
-//import "BsControls"
-//import "BsDialogs"
-//import "js/helper.js" as JsHelper
+
+import terminal.models 1.0
 
 Item {
     id: transactions
 
     width: 1200
     height: 788
+
+    signal openSend (string txId, bool isRBF, bool isCPFP)
 
     TransactionFilterModel {
         id: transactionModel
@@ -165,7 +165,9 @@ Item {
 
             copy_button_column_index: 3
             columnWidths: [0.12, 0.1, 0.08, 0.3, 0.1, 0.1, 0.1, 0.1]
+
             onCopyRequested: bsApp.copyAddressToClipboard(id)
+
             onCellClicked: (row, column, data) => {
                 const txHash = model.data(model.index(row, 0), 259)
                 transactionDetails.walletName = model.data(model.index(row, 1), 257)
@@ -177,6 +179,36 @@ Item {
                 transactionDetails.txAmount = model.data(model.index(row, 4), 257)
                 transactionDetails.tx = bsApp.getTXDetails(txHash)
                 transactionDetails.open()
+            }
+
+            onCellRightClicked: (row, column, data) => {
+                context_menu.row = row
+                context_menu.column = column
+                context_menu.popup()
+            }
+
+            CustomContextMenu {
+                id: context_menu
+
+                property int row
+                property int column
+
+                Action {
+                    text: qsTr("RBF")
+                    onTriggered: {
+                        var txId = transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.TxIdRole)
+                        openSend(txId, true, false)
+                    }
+                }
+
+                Action {
+                    text: qsTr("CPFP")
+                    onTriggered: {
+                        var txId = transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.TxIdRole)
+                        openSend(txId, false, true)
+                    }
+                }
+
             }
         }
     }
