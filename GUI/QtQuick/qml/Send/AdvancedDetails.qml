@@ -534,6 +534,7 @@ ColumnLayout  {
         amount_input.input_text = ""
         comment_input.input_text = ""
         rec_addr_input.input_text = ""
+        checkbox_rbf.checked = true
 
         bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
         txOutputsModel.clearOutputs()
