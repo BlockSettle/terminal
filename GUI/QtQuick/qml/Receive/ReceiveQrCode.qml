@@ -6,6 +6,7 @@ import QtQuick.Layouts 1.15
 import "../BsStyles"
 import "../StyledControls"
 
+import wallet.balance 1.0
 
 ColumnLayout  {
 
@@ -43,7 +44,7 @@ ColumnLayout  {
         Layout.alignment: Qt.AlignCenter
         Layout.topMargin: 6
         Layout.preferredHeight : 16
-        text: bsApp.walletsList[overviewWalletIndex] + " / Native SegWit"
+        text:  qsTr("%1 / Native SegWit").arg(getWalletData(overviewWalletIndex, WalletBalance.NameRole))
         color: "#E2E7FF"
         font.pixelSize: 14
         font.family: "Roboto"
