@@ -595,14 +595,16 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
 
    case WalletsMessage::kWalletAddresses: {
       std::vector<bs::sync::Address> addresses;
-      const auto& hdWallet = hdWallets_.at(msg.wallet_addresses().wallet_id());
       for (const auto &addr : msg.wallet_addresses().addresses()) {
-         try {
-            const auto& assetType = hdWallet.leaves.at(addr.wallet_id());
-            addresses.push_back({ std::move(bs::Address::fromAddressString(addr.address()))
-               , addr.index(), addr.wallet_id(), assetType});
+         for (const auto& hdWallet : hdWallets_) {
+            try {
+               const auto& assetType = hdWallet.second.leaves.at(addr.wallet_id());
+               addresses.push_back({ std::move(bs::Address::fromAddressString(addr.address()))
+                  , addr.index(), addr.wallet_id(), assetType });
+               break;
+            }
+            catch (const std::exception&) {}
          }
-         catch (const std::exception &) {}
       }
       processWalletAddresses(msg.wallet_addresses().wallet_id(), addresses);
    }
