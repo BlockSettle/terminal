@@ -30,7 +30,7 @@ ApplicationWindow {
     title: qsTr("BlockSettle Terminal")
 
     property var currentDialog: ({})
-    property int overviewWalletIndex: 0
+    property int overviewWalletIndex: -1
     readonly property int resizeAnimationDuration: 25
 
     Component.onCompleted: {
@@ -88,20 +88,14 @@ ApplicationWindow {
         target:bsApp
         function onInvokePINentry ()
         {
-            pin_popup.init()
-            pin_popup.show()
-            pin_popup.raise()
-            pin_popup.requestActivate()
+            show_popup(pin_popup)
         }
 
         function onInvokePasswordEntry(devName, acceptOnDevice)
         {
             password_popup.device_name = devName
             password_popup.accept_on_device = acceptOnDevice
-            password_popup.init()
-            password_popup.show()
-            password_popup.raise()
-            password_popup.requestActivate()
+            show_popup(password_popup)
         }
 
         function onShowError(text)
@@ -109,6 +103,18 @@ ApplicationWindow {
             //ibFailure.displayMessage(text)
             error_dialog.error = text
             error_dialog.open()
+        }
+    }
+
+    Connections
+    {
+        target:walletBalances
+        function onRowCountChanged ()
+        {
+            if (overviewWalletIndex === -1)
+            {
+                overviewWalletIndex = 0
+            }
         }
     }
 
@@ -202,11 +208,11 @@ ApplicationWindow {
                     {
                         bsApp.requestFeeSuggestions()
                         topMenuBtnClicked(btnSend)
-                        //stack.push(sendPage)
-                        send_popup.init()
-                        send_popup.show()
-                        send_popup.raise()
-                        send_popup.requestActivate()
+                        show_popup(send_popup)
+                    }
+                    else
+                    {
+                        show_popup(create_wallet)
                     }
                 }
             }
@@ -223,11 +229,12 @@ ApplicationWindow {
                     if (walletBalances.rowCount > 0)
                     {
                         topMenuBtnClicked(btnReceive)
-                        //stack.push(receivePage)
                         bsApp.generateNewAddress(overviewWalletIndex, true)
-                        receive_popup.show()
-                        receive_popup.raise()
-                        receive_popup.requestActivate()
+                        show_popup(receive_popup)
+                    }
+                    else
+                    {
+                        show_popup(create_wallet)
                     }
                 }
             }
@@ -237,10 +244,7 @@ ApplicationWindow {
                 icon.source: "qrc:/images/settings_icon.png"
                 onClicked: {
                     topMenuBtnClicked(btnSettings)
-                    //stack.push(settingsPage)
-                    settings_popup.show()
-                    settings_popup.raise()
-                    settings_popup.requestActivate()
+                    show_popup(settings_popup)
                 }
             }
         }
@@ -260,10 +264,7 @@ ApplicationWindow {
         OverviewPage {
             id: overviewPage
             onNewWalletClicked: {
-                create_wallet.init()
-                create_wallet.show()
-                create_wallet.raise()
-                create_wallet.requestActivate()
+                show_popup(create_wallet)
             }
 
             onCurWalletIndexChanged: (ind) => {
@@ -276,9 +277,7 @@ ApplicationWindow {
 
             onOpenSend: (txId, isRBF, isCPFP) => {
                 send_popup.open(txId, isRBF, isCPFP)
-                send_popup.show()
-                send_popup.raise()
-                send_popup.requestActivate()
+                show_popup(send_popup)
             }
         }
 
@@ -436,5 +435,16 @@ ApplicationWindow {
     function getFeeSuggData (index: int, role: string)
     {
         return feeSuggestions.data(feeSuggestions.index(index, 0), role)
+    }
+
+    function show_popup (id)
+    {
+        if (typeof id.init === "function")
+        {
+            id.init()
+        }
+        id.show()
+        id.raise()
+        id.requestActivate()
     }
 }

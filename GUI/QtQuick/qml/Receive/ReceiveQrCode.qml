@@ -44,25 +44,11 @@ ColumnLayout  {
         Layout.alignment: Qt.AlignCenter
         Layout.topMargin: 6
         Layout.preferredHeight : 16
-        text:  fill_in_text()
+        text:  qsTr("%1 / Native SegWit").arg(getWalletData(overviewWalletIndex, WalletBalance.NameRole))
         color: "#E2E7FF"
         font.pixelSize: 14
         font.family: "Roboto"
         font.weight: Font.Normal
-
-        Connections
-        {
-            target:walletBalances
-            function onRowCountChanged ()
-            {
-                fill_in_text()
-            }
-        }
-
-        function fill_in_text()
-        {
-            wallet_name.text = getWalletData(overviewWalletIndex, WalletBalance.NameRole) + qsTr(" / Native SegWit")
-        }
     }
 
 
