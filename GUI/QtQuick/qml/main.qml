@@ -30,7 +30,7 @@ ApplicationWindow {
     title: qsTr("BlockSettle Terminal")
 
     property var currentDialog: ({})
-    property int overviewWalletIndex
+    property int overviewWalletIndex: 0
     readonly property int resizeAnimationDuration: 25
 
     Component.onCompleted: {
@@ -198,13 +198,16 @@ ApplicationWindow {
                 font.pointSize: 16
                 Layout.fillHeight: true
                 onClicked: {
-                    bsApp.requestFeeSuggestions()
-                    topMenuBtnClicked(btnSend)
-                    //stack.push(sendPage)
-                    send_popup.init()
-                    send_popup.show()
-                    send_popup.raise()
-                    send_popup.requestActivate()
+                    if (walletBalances.rowCount > 0)
+                    {
+                        bsApp.requestFeeSuggestions()
+                        topMenuBtnClicked(btnSend)
+                        //stack.push(sendPage)
+                        send_popup.init()
+                        send_popup.show()
+                        send_popup.raise()
+                        send_popup.requestActivate()
+                    }
                 }
             }
             CustomTitleToolButton {
@@ -217,12 +220,15 @@ ApplicationWindow {
                 enabled: !bsApp.walletsList.empty
 
                 onClicked: {
-                    topMenuBtnClicked(btnReceive)
-                    //stack.push(receivePage)
-                    bsApp.generateNewAddress(overviewWalletIndex, true)
-                    receive_popup.show()
-                    receive_popup.raise()
-                    receive_popup.requestActivate()
+                    if (walletBalances.rowCount > 0)
+                    {
+                        topMenuBtnClicked(btnReceive)
+                        //stack.push(receivePage)
+                        bsApp.generateNewAddress(overviewWalletIndex, true)
+                        receive_popup.show()
+                        receive_popup.raise()
+                        receive_popup.requestActivate()
+                    }
                 }
             }
             CustomTitleToolButton {
