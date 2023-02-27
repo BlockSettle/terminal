@@ -149,7 +149,6 @@ ColumnLayout  {
                         Layout.rightMargin: 16
 
                         text: qsTr("RBF")
-                        checked: isRBF
 
                         spacing: 6
                         font.pixelSize: 13
