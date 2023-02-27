@@ -244,6 +244,9 @@ void QtQuickAdapter::run(int &argc, char **argv)
    qmlRegisterType<qtquick_gui::WalletPropertiesVM>("terminal.models", 1, 0, "WalletPropertiesVM");
    qmlRegisterUncreatableMetaObject(Transactions::staticMetaObject, "terminal.models" 
       , 1, 0, "Transactions", tr("Error: only enums"));
+   //qmlRegisterType<TransactionFilterModel>("terminal.models", 1, 0, "TxListModel");
+   qmlRegisterUncreatableMetaObject(TxListModel::staticMetaObject, "terminal.models"
+      , 1, 0, "TxListModel", tr("Error: only enums"));
 
    //need to read files in qml
    qputenv("QML_XHR_ALLOW_FILE_READ", QByteArray("1"));

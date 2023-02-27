@@ -21,6 +21,9 @@ ColumnLayout  {
     spacing: 0
 
     property var tempRequest: null
+    property string txId: ""
+    property bool isRBF: false
+    property bool isCPFP: false
 
     RowLayout {
 
@@ -38,7 +41,8 @@ ColumnLayout  {
             Layout.rightMargin: 378
             Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
 
-            text: qsTr("Send Bitcoin")
+            text: (!isRBF && !isCPFP) ? qsTr("Send Bitcoin")
+                  : (isRBF ? qsTr("Send Bitcoin (RBF)") : qsTr("Send Bitcoin (CPFP)"))
         }
 
         Button {
@@ -259,6 +263,8 @@ ColumnLayout  {
 
                             Button {
                                 id: sel_inputs_button
+
+                                enabled: !isRBF && !isCPFP
 
                                 text: qsTr("Select Inputs")
 
@@ -528,6 +534,7 @@ ColumnLayout  {
         amount_input.input_text = ""
         comment_input.input_text = ""
         rec_addr_input.input_text = ""
+        checkbox_rbf.checked = true
 
         bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
         txOutputsModel.clearOutputs()

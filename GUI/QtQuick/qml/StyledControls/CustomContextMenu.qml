@@ -10,52 +10,55 @@
 */
 import QtQuick 2.9
 import QtQuick.Controls 2.3
+
 import "../BsStyles"
 
-MouseArea {
-    hoverEnabled: true
-    acceptedButtons: Qt.RightButton
-    cursorShape: Qt.IBeamCursor
-    onClicked: {
-        if (mouse.button === Qt.RightButton) {
-            let selectStart = root.selectionStart
-            let selectEnd = root.selectionEnd
-            let curPos = root.cursorPosition
-            contextMenu.popup()
-            root.cursorPosition = curPos
-            root.select(selectStart,selectEnd)
+Menu {
+    id: menu
+
+    leftPadding: 6
+    topPadding: 4
+    bottomPadding: 4
+
+    delegate: MenuItem {
+        id: menuItem
+        implicitWidth: 200
+        implicitHeight: 40
+
+        contentItem: Text {
+            leftPadding: menuItem.indicator.width
+            rightPadding: menuItem.arrow.width
+
+            text: menuItem.text
+
+            font.pixelSize: 12
+            font.family: "Roboto"
+            font.weight: Font.Normal
+
+            color: BSStyle.wildBlueColor
+
+            horizontalAlignment: Text.AlignLeft
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+        }
+
+        background: Rectangle {
+            implicitWidth: 200
+            implicitHeight: 40
+
+            radius: 14
+            color: menuItem.highlighted ? BSStyle.menuItemHoveredColor : BSStyle.menuItemColor
         }
     }
-    onPressAndHold: {
-        if (mouse.source === Qt.MouseEventNotSynthesized) {
-            let selectStart = root.selectionStart
-            let selectEnd = root.selectionEnd
-            let curPos = root.cursorPosition
-            contextMenu.popup()
-            root.cursorPosition = curPos
-            root.select(selectStart,selectEnd)
-        }
-    }
-    
-    Menu {
-        id: contextMenu
-        MenuItem {
-            text: qsTr("Cut")
-            onTriggered: {
-                root.cut()
-            }
-        }
-        MenuItem {
-            text: qsTr("Copy")
-            onTriggered: {
-                root.copy()
-            }
-        }
-        MenuItem {
-            text: qsTr("Paste")
-            onTriggered: {
-                root.paste()
-            }
-        }
+
+
+    background: Rectangle {
+        implicitWidth: 200
+        implicitHeight: 40
+        color: BSStyle.popupBackgroundColor
+        opacity: 1
+        radius: 14
+        border.color : BSStyle.defaultBorderColor
+        border.width : 1
     }
 }

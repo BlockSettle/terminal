@@ -28,6 +28,8 @@ class TxListModel : public QAbstractTableModel
    Q_OBJECT
 public:
    enum TableRoles { TableDataRole = Qt::UserRole + 1, ColorRole, TxIdRole };
+   Q_ENUM(TableRoles)
+
    TxListModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
 
    int rowCount(const QModelIndex & = QModelIndex()) const override;
@@ -68,7 +70,6 @@ private:
    std::map<int, bs::sync::TXWalletDetails>  txDetails_;
    uint32_t curBlock_;
 };
-
 
 class TxListForAddr : public QAbstractTableModel
 {
