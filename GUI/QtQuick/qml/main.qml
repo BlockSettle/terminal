@@ -12,6 +12,7 @@ import QtQuick 2
 import QtQuick.Controls 2.9
 import QtQuick.Layouts 1.3
 import QtQuick.Window 2
+import Qt.labs.platform 1.1
 
 import "StyledControls" 1
 import "BsStyles" 1
@@ -446,5 +447,28 @@ ApplicationWindow {
         id.show()
         id.raise()
         id.requestActivate()
+    }
+
+    SystemTrayIcon {
+        id: trayIcon
+        visible: true
+        icon.source: "qrc:/images/bs_logo.png"
+
+        onActivated: {
+            mainWindow.show()
+            mainWindow.raise()
+            mainWindow.requestActivate()
+        }
+
+        Component.onCompleted: {
+            trayIcon.show()
+        }
+    }
+
+    Connections {
+        target: bsApp
+        function onShowNotification(title, text) {
+            trayIcon.showMessage(title, text, SystemTrayIcon.Information, 5000)
+        }
     }
 }

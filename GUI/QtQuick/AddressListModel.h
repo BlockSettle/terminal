@@ -34,6 +34,8 @@ public:
       AddressTypeRole,
       AssetTypeRole
    };
+   Q_ENUM(TableRoles)
+
    QmlAddressListModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
 
    int rowCount(const QModelIndex & = QModelIndex()) const override;

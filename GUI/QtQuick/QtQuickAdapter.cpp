@@ -44,6 +44,8 @@
 #include "TransactionForAddressFilterModel.h"
 #include "viewmodels/WalletPropertiesVM.h"
 #include "PendingTransactionFilterModel.h"
+#include "Utils.h"
+#include "AddressFilterModel.h"
 
 #include "hardware_wallet.pb.h"
 #include "terminal.pb.h"
@@ -243,9 +245,11 @@ void QtQuickAdapter::run(int &argc, char **argv)
    qmlRegisterType<qtquick_gui::WalletPropertiesVM>("terminal.models", 1, 0, "WalletPropertiesVM");
    qmlRegisterUncreatableMetaObject(Transactions::staticMetaObject, "terminal.models" 
       , 1, 0, "Transactions", tr("Error: only enums"));
-   //qmlRegisterType<TransactionFilterModel>("terminal.models", 1, 0, "TxListModel");
    qmlRegisterUncreatableMetaObject(TxListModel::staticMetaObject, "terminal.models"
       , 1, 0, "TxListModel", tr("Error: only enums"));
+   qmlRegisterUncreatableMetaObject(QmlAddressListModel::staticMetaObject, "terminal.models"
+      , 1, 0, "QmlAddressListModel", tr("Error: only enums"));
+   qmlRegisterType<AddressFilterModel>("terminal.models", 1, 0, "AddressFilterModel");
 
    //need to read files in qml
    qputenv("QML_XHR_ALLOW_FILE_READ", QByteArray("1"));
@@ -428,6 +432,7 @@ ProcessingResult QtQuickAdapter::processArmoryServers(const SettingsMessage_Armo
          , SecureBinaryData::fromString(server.password())
          , server.run_locally(), server.one_way_auth() };
    }
+
    logger_->debug("[{}] {} servers, cur: {}, conn: {}", __func__, servers.size()
       , response.idx_current(), response.idx_connected());
    //TODO
@@ -1560,6 +1565,8 @@ ProcessingResult QtQuickAdapter::processZC(const BlockSettle::Common::ArmoryMess
          catch (const std::exception&) {}
       }
       txModel_->prependRow(txEntry);
+
+      notifyNewTransaction(txEntry);
    }
    pushRequest(user_, userWallets_, msg.SerializeAsString());
    return ProcessingResult::Success;
@@ -1907,4 +1914,23 @@ int QtQuickAdapter::viewWalletSeedAuth(const QString& walletId, const QString& p
 int QtQuickAdapter::deleteWallet(const QString& walletId, const QString& password)
 {
    return 0;
+}
+
+void QtQuickAdapter::notifyNewTransaction(bs::TXEntry tx)
+{
+   const auto txId = QString::fromStdString(tx.txHash.toHexStr(true));
+   auto txDetails = getTXDetails(txId);
+   connect(txDetails, &QTxDetails::updated, this, [txDetails, tx, this](){
+      showNotification(
+         tr("BlockSettle Terminal"),
+         tr("%1: %2\n%3: %4\n%5: %6\n%7: %8\n").arg(
+              tr("Date"), QDateTime::fromSecsSinceEpoch(tx.txTime).toString(gui_utils::dateTimeFormat)
+            , tr("Amount"), gui_utils::satoshiToQString(std::abs(tx.value))
+            , tr("Type"), gui_utils::directionToQString(txDetails->direction())
+            , tr("Address"), !tx.addresses.empty() ? QString::fromStdString((*tx.addresses.cbegin()).display()) : tr("")
+         )
+      );
+      txDetails->disconnect(this);
+   }, Qt::QueuedConnection);
+
 }

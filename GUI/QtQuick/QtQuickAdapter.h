@@ -183,6 +183,10 @@ signals:
    void invokePINentry();
    void invokePasswordEntry(const QString& devName, bool acceptOnDevice);
    void showError(const QString&);
+   void showNotification(QString, QString);
+
+private slots:
+   void notifyNewTransaction(bs::TXEntry tx);
 
 private:
    bs::message::ProcessingResult processSettings(const bs::message::Envelope &);

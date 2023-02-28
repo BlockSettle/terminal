@@ -24,7 +24,10 @@ Button {
     font.family: "Roboto"
     font.weight: Font.Normal
 
+    property alias backgroundColor: backgroundItem.color
+
     background: Rectangle {
+        id: backgroundItem
         color: "#020817"
         radius: 14
 
