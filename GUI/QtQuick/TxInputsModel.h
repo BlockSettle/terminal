@@ -74,6 +74,15 @@ public:
    void addUTXOs(const std::vector<UTXO>&);
    void setTopBlock(uint32_t topBlock) { topBlock_ = topBlock; }
 
+   struct Entry {
+      bs::Address address;
+      BinaryData  txId{};
+      uint32_t    txOutIndex{ UINT32_MAX };
+      uint64_t    amount{ 0 };
+      bool  expanded{ false };
+   };
+   void addEntries(const std::vector<Entry>&);
+
    Q_PROPERTY(int nbTx READ nbTx NOTIFY selectionChanged)
    int nbTx() const { return nbTx_; }
    Q_PROPERTY(QString balance READ balance NOTIFY selectionChanged)
@@ -86,6 +95,7 @@ public:
    Q_INVOKABLE void toggle(int row);
    Q_INVOKABLE void toggleSelection(int row);
    Q_INVOKABLE QUTXOList* getSelection();
+   Q_INVOKABLE QUTXOList* zcInputs() const;
 
 signals:
    void selectionChanged() const;
@@ -105,12 +115,6 @@ private:
    const QMap<int, QString> header_;
    std::map<bs::Address, std::vector<UTXO>>  utxos_;
 
-   struct Entry {
-      bs::Address address;
-      BinaryData  txId{};
-      uint32_t    txOutIndex{ UINT32_MAX };
-      bool  expanded{ false };
-   };
    std::vector<Entry>   data_;
    std::set<std::pair<BinaryData, uint32_t>> selectionUtxos_;
    std::set<bs::Address> selectionAddresses_;

@@ -166,6 +166,14 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
    }
 }
 
+void TxInputsModel::addEntries(const std::vector<Entry>& entries)
+{
+   beginInsertRows(QModelIndex(), rowCount(), rowCount() + entries.size() - 1);
+   data_.insert(data_.cend(), entries.cbegin(), entries.cend());
+   endInsertRows();
+   emit rowCountChanged();
+}
+
 void TxInputsModel::toggle(int row)
 {
    --row;
@@ -374,6 +382,16 @@ QUTXOList* TxInputsModel::getSelection()
    return new QUTXOList(result, (QObject*)this);
 }
 
+QUTXOList* TxInputsModel::zcInputs() const
+{
+   QList<QUTXO*> result;
+   for (const auto& entry : data_) {
+      result.push_back(new QUTXO(UTXO(entry.amount, UINT32_MAX, UINT32_MAX
+         , entry.txOutIndex, entry.txId, BinaryData::fromString("dummy")), (QObject*)this));
+   }
+   return new QUTXOList(result, (QObject*)this);
+}
+
 QList<QUTXO*> TxInputsModel::collectUTXOsFor(double amount)
 {
    QList<QUTXO*> result;
@@ -424,7 +442,10 @@ QVariant TxInputsModel::getData(int row, int col) const
          return QString::fromStdString(entry.address.display());
       }
    case ColumnTx:
-      if (itUTXOs != utxos_.end()) {
+      if (itUTXOs == utxos_.end()) {
+         return QString::number(1);
+      }
+      else {
          return QString::number(itUTXOs->second.size());
       }
       break;
@@ -437,6 +458,9 @@ QVariant TxInputsModel::getData(int row, int col) const
          return gui_utils::satoshiToQString(balance);
       }
       else {
+         if (utxos_.empty()) {
+            return gui_utils::satoshiToQString(entry.amount);
+         }
          for (const auto& byAddr : utxos_) {
             for (const auto& utxo : byAddr.second) {
                if ((entry.txId == utxo.getTxHash()) && (entry.txOutIndex == utxo.getTxOutIndex())) {

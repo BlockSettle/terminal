@@ -45,7 +45,6 @@
 #include "viewmodels/WalletPropertiesVM.h"
 #include "PendingTransactionFilterModel.h"
 
-#include "common.pb.h"
 #include "hardware_wallet.pb.h"
 #include "terminal.pb.h"
 
@@ -513,6 +512,8 @@ ProcessingResult QtQuickAdapter::processBlockchain(const Envelope &env)
             .arg(QString::fromStdString(msg.tx_push_result().error_message())));
       }
       break;
+   case ArmoryMessage::kUtxos:
+      return processUTXOs(env.responseId(), msg.utxos());
    default: return ProcessingResult::Ignored;
    }
    return ProcessingResult::Success;
@@ -1007,7 +1008,7 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
             txDet.inputAddresses.push_back({ bs::Address::fromAddressString(inAddr.address())
                , inAddr.value(), inAddr.value_string(), inAddr.wallet_name()
                , static_cast<TXOUT_SCRIPT_TYPE>(inAddr.script_type())
-               , BinaryData::fromString(inAddr.out_hash()), inAddr.out_index() });
+               , BinaryData::fromString(inAddr.out_hash()), (uint32_t)inAddr.out_index() });
          } catch (const std::exception &e) {
             logger_->warn("[QtGuiAdapter::processTXDetails] input deser error: {}", e.what());
          }
@@ -1017,12 +1018,12 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
             txDet.outputAddresses.push_back({ bs::Address::fromAddressString(outAddr.address())
                , outAddr.value(), outAddr.value_string(), outAddr.wallet_name()
                , static_cast<TXOUT_SCRIPT_TYPE>(outAddr.script_type())
-               , BinaryData::fromString(outAddr.out_hash()), outAddr.out_index() });
+               , BinaryData::fromString(outAddr.out_hash()), (uint32_t)outAddr.out_index() });
          } catch (const std::exception &) { // OP_RETURN data for valueStr
             txDet.outputAddresses.push_back({ bs::Address{}
                , outAddr.value(), outAddr.address(), outAddr.wallet_name()
                , static_cast<TXOUT_SCRIPT_TYPE>(outAddr.script_type()), ownTxHash
-               , outAddr.out_index() });
+               , (uint32_t)outAddr.out_index() });
          }
       }
       try {
@@ -1031,7 +1032,7 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
             , resp.change_address().wallet_name()
             , static_cast<TXOUT_SCRIPT_TYPE>(resp.change_address().script_type())
             , BinaryData::fromString(resp.change_address().out_hash())
-            , resp.change_address().out_index() };
+            , (uint32_t)resp.change_address().out_index() };
       }
       catch (const std::exception &) {}
       for (const auto& addr : resp.own_addresses()) {
@@ -1251,7 +1252,9 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStri
 {
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_request();
-   msgReq->set_hd_wallet_id(hdWalletIdByIndex(walletIndex));
+   if (walletIndex >= 0) {
+      msgReq->set_hd_wallet_id(hdWalletIdByIndex(walletIndex));
+   }
    bool isMaxAmount = false;
    if (recvAddrs.isEmpty()) {
       const auto& recipients = txOutputsModel_->recipients();
@@ -1297,13 +1300,46 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStri
    if (!comment.isEmpty()) {
       msgReq->set_comment(comment.toStdString());
    }
+   QTXSignRequest* txReq = nullptr;
    if (utxos) {
-      for (const auto& qUtxo : utxos->data()) {
-         msgReq->add_utxos(qUtxo->utxo().serialize().toBinStr());
+      if (walletIndex < 0) {
+         txReq = new QTXSignRequest(this);
+         for (const auto& qUtxo : utxos->data()) {
+            txReq->addDummyUTXO(qUtxo->utxo());
+         }
+         ArmoryMessage msgSpendable;
+         ArmoryMessage_WalletIDs* msgWltIds = nullptr;
+         if (walletIndex == -1) {      // RBF mode
+            msgWltIds = msgSpendable.mutable_get_rbf_utxos();
+         }
+         else if (walletIndex == -2) { // CPFP mode
+            msgWltIds = msgSpendable.mutable_get_zc_utxos();
+         }
+         if (msgWltIds) {
+            for (const auto& wallet : hdWallets_) {
+               for (const auto& leaf : wallet.second.leaves) {
+                  msgWltIds->add_wallet_ids(leaf.first);
+               }
+            }
+            const auto msgId = pushRequest(user_, userBlockchain_, msgSpendable.SerializeAsString());
+            txReqs_[msgId] = { txReq, isMaxAmount, msg };
+            return txReq;
+         }
+         else {
+            emit showError(tr("Unknown TX mode"));
+            return txReq;
+         }
+      }
+      else {
+         for (const auto& qUtxo : utxos->data()) {
+            msgReq->add_utxos(qUtxo->utxo().serialize().toBinStr());
+         }
       }
    }
    const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
-   const auto txReq = new QTXSignRequest(this);
+   if (!txReq) {
+      txReq = new QTXSignRequest(this);
+   }
    txReqs_[msgId] = { txReq, isMaxAmount };
    return txReq;
 }
@@ -1324,14 +1360,14 @@ QTxDetails* QtQuickAdapter::getTXDetails(const QString& txHash)
    txBinHash.swapEndian();
    if (txBinHash.getSize() != 32) {
       logger_->warn("[{}] invalid TX hash size {}", __func__, txBinHash.getSize());
-      return new QTxDetails({}, this);
+      return new QTxDetails(logger_, {}, this);
    }
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_details_request();
    auto txReq = msgReq->add_requests();
    txReq->set_tx_hash(txBinHash.toBinStr());
    const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
-   const auto txDet = new QTxDetails(txBinHash, this);
+   const auto txDet = new QTxDetails(logger_, txBinHash, this);
    txDetailReqs_[msgId] = txDet;
    return txDet;
 }
@@ -1617,8 +1653,8 @@ bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::Seq
       logger_->error("[{}] unknown request #{}", __func__, msgId);
       return bs::message::ProcessingResult::Error;
    }
-   auto qReq = itReq->second.first;
-   const bool noReqAmount = itReq->second.second;
+   auto qReq = itReq->second.txReq;
+   const bool noReqAmount = itReq->second.isMaxAmount;
    txReqs_.erase(itReq);
    if (!response.error_text().empty()) {
       logger_->error("[{}] {}", __func__, response.error_text());
@@ -1656,6 +1692,48 @@ bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::Seq
       }
    }
    qReq->setTxSignReq(txReq);
+   return bs::message::ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult QtQuickAdapter::processUTXOs(bs::message::SeqId msgId
+   , const ArmoryMessage_UTXOs& response)
+{
+   const auto& itReq = txReqs_.find(msgId);
+   if (itReq == txReqs_.end()) {
+      logger_->error("[{}] unknown request #{}", __func__, msgId);
+      return bs::message::ProcessingResult::Error;
+   }
+   std::vector<UTXO> utxos;
+   utxos.reserve(response.utxos_size());
+   try {
+      for (const auto& serUtxo : response.utxos()) {
+         UTXO utxo;
+         utxo.unserialize(BinaryData::fromString(serUtxo));
+         utxos.emplace_back(std::move(utxo));
+      }
+   }
+   catch (const std::exception& e) {
+      logger_->error("[{}] failed to deser UTXO: {}", __func__, e.what());
+   }
+   const auto& dummyUTXOs = itReq->second.txReq->dummyUTXOs();
+   auto msgReq = itReq->second.msg.mutable_tx_request();
+   for (const auto& u : dummyUTXOs) {
+      for (const auto& utxo : utxos) {
+         if ((u.getTxHash() == utxo.getTxHash())) {
+            msgReq->add_utxos(utxo.serialize().toBinStr());
+            break;
+         }
+      }
+   }
+   if (msgReq->utxos_size() != dummyUTXOs.size()) {
+      emit showError(tr("failed to obtain UTXO[s]"));
+      txReqs_.erase(itReq);
+      return bs::message::ProcessingResult::Error;
+   }
+   msgReq->set_hd_wallet_id(response.wallet_id());
+   msgId = pushRequest(user_, userWallets_, itReq->second.msg.SerializeAsString());
+   txReqs_[msgId] = { itReq->second.txReq, itReq->second.isMaxAmount };
+   txReqs_.erase(itReq);
    return bs::message::ProcessingResult::Success;
 }
 

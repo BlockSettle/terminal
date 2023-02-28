@@ -17,6 +17,7 @@
 #include <QObject>
 #include <QVariant>
 #include "ArmoryConnection.h"
+#include "TxInputsModel.h"
 #include "Wallets/SignerDefs.h"
 
 namespace spdlog {
@@ -27,7 +28,8 @@ class TxListModel : public QAbstractTableModel
 {
    Q_OBJECT
 public:
-   enum TableRoles { TableDataRole = Qt::UserRole + 1, ColorRole, TxIdRole };
+   enum TableRoles { TableDataRole = Qt::UserRole + 1, ColorRole, TxIdRole
+      , RBFRole, NbConfRole };
    Q_ENUM(TableRoles)
 
    TxListModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
@@ -61,6 +63,8 @@ private:
    QString txType(int row) const;
    QString txFlag(int row) const;
    QString txId(int row) const;
+   bool isRBF(int row) const;
+   quint32 nbConf(int row) const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
@@ -163,8 +167,9 @@ class QTxDetails : public QObject
 {
    Q_OBJECT
 public:
-   QTxDetails(const BinaryData& txHash, QObject* parent = nullptr)
-      : QObject(parent), txHash_(txHash)
+   QTxDetails(const std::shared_ptr<spdlog::logger>& logger, const BinaryData& txHash
+      , QObject* parent = nullptr)
+      : QObject(parent), logger_(logger), txHash_(txHash)
    {}
 
    void setDetails(const bs::sync::TXWalletDetails&);
@@ -195,16 +200,25 @@ public:
    TxInOutModel* inputs() const { return inputsModel_; }
    Q_PROPERTY(TxInOutModel* outputs READ outputs NOTIFY updated)
    TxInOutModel* outputs() const { return outputsModel_; }
+   Q_PROPERTY(TxInputsModel* ownInputs READ ownInputs NOTIFY updated)
+   TxInputsModel* ownInputs() const { return ownInputs_; }
+   Q_PROPERTY(TxInputsModel* ownOutputs READ ownOutputs NOTIFY updated)
+   TxInputsModel* ownOutputs() const { return ownOutputs_; }
+   std::vector<std::pair<bs::Address, double>> outputData() const;
 
 signals:
    void updated();
    void newBlock();
 
 private:
+   std::shared_ptr<spdlog::logger>  logger_;
    const BinaryData txHash_;
    bs::sync::TXWalletDetails details_;
    TxInOutModel* inputsModel_{ nullptr };
    TxInOutModel* outputsModel_{ nullptr };
+   TxInputsModel* ownInputs_{ nullptr };
+   TxInputsModel* ownOutputs_{ nullptr };
+   std::vector<TxInputsModel::Entry> outputs_;
    uint32_t curBlock_{ 0 };
 };
 

@@ -34,6 +34,8 @@ public:
    bs::core::wallet::TXSignRequest txReq() const { return txReq_; }
    void setTxSignReq(const bs::core::wallet::TXSignRequest&);
    void setError(const QString&);
+   void addDummyUTXO(const UTXO& utxo) { dummyUTXOs_.push_back(utxo); }
+   std::vector<UTXO> dummyUTXOs() const { return dummyUTXOs_; }
 
    void setHWW(bool hww)
    {
@@ -81,6 +83,7 @@ signals:
 private:
    bs::core::wallet::TXSignRequest txReq_{};
    QString  error_;
+   std::vector<UTXO> dummyUTXOs_;
    bool  isHWW_{ false };
    bool  isHWWready_{ false };
 };

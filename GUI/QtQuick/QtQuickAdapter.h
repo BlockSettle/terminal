@@ -26,6 +26,8 @@
 #include "Wallets/SignContainer.h"
 #include "viewmodels/WalletPropertiesVM.h"
 
+#include "common.pb.h"
+
 namespace bs {
    namespace gui {
       namespace qt {
@@ -34,25 +36,6 @@ namespace bs {
    }
 }
 namespace BlockSettle {
-   namespace Common {
-      class ArmoryMessage_AddressHistory;
-      class ArmoryMessage_FeeLevelsResponse;
-      class ArmoryMessage_Transactions;
-      class ArmoryMessage_ZCInvalidated;
-      class ArmoryMessage_ZCReceived;
-      class LedgerEntries;
-      class OnChainTrackMessage_AuthAddresses;
-      class OnChainTrackMessage_AuthState;
-      class SignerMessage_SignTxResponse;
-      class WalletsMessage_AuthKey;
-      class WalletsMessage_ReservedUTXOs;
-      class WalletsMessage_TXDetailsResponse;
-      class WalletsMessage_TxResponse;
-      class WalletsMessage_UtxoListResponse;
-      class WalletsMessage_WalletBalances;
-      class WalletsMessage_WalletData;
-      class WalletsMessage_WalletsListResponse;
-   }
    namespace HW {
       class DeviceMgrMessage_Devices;
       class DeviceMgrMessage_SignTxResponse;
@@ -240,6 +223,8 @@ private:
    void processWalletAddresses(const std::string& walletId, const std::vector<bs::sync::Address>&);
    bs::message::ProcessingResult processTxResponse(bs::message::SeqId
       , const BlockSettle::Common::WalletsMessage_TxResponse&);
+   bs::message::ProcessingResult processUTXOs(bs::message::SeqId
+      , const BlockSettle::Common::ArmoryMessage_UTXOs&);
 
    bs::message::ProcessingResult processHWDevices(const BlockSettle::HW::DeviceMgrMessage_Devices&);
    bs::message::ProcessingResult processHWWready(const std::string& walletId);
@@ -288,7 +273,12 @@ private:
    bool hwDevicesPolling_{ false };
    bs::hww::DeviceKey curAuthDevice_{};
 
-   std::map<bs::message::SeqId, std::pair<QTXSignRequest*, bool>> txReqs_;
+   struct TXReq {
+      QTXSignRequest* txReq;
+      bool  isMaxAmount{ false };
+      BlockSettle::Common::WalletsMessage msg{};
+   };
+   std::map<bs::message::SeqId, TXReq>    txReqs_;
    std::unordered_map<std::string, QTXSignRequest*>   hwwReady_;
    std::map<bs::message::SeqId, QTxDetails*>          txDetailReqs_;
    std::map<ApplicationSettings::Setting, QVariant>   settingsCache_;

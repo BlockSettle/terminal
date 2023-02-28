@@ -24,6 +24,7 @@
 namespace spdlog {
    class logger;
 }
+class QTxDetails;
 
 class TxOutputsModel : public QAbstractTableModel
 {
@@ -47,6 +48,7 @@ public:
    Q_INVOKABLE void clearOutputs();
    Q_INVOKABLE QStringList getOutputAddresses() const;
    Q_INVOKABLE QList<double> getOutputAmounts() const;
+   Q_INVOKABLE void setOutputsFrom(QTxDetails*);
 
 signals:
    void selectionChanged() const;

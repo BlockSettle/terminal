@@ -21,7 +21,7 @@ ColumnLayout  {
     spacing: 0
 
     property var tempRequest: null
-    property string txId: ""
+    property var tx: null
     property bool isRBF: false
     property bool isCPFP: false
 
@@ -149,6 +149,7 @@ ColumnLayout  {
                         Layout.rightMargin: 16
 
                         text: qsTr("RBF")
+                        enabled: !isRBF
 
                         spacing: 6
                         font.pixelSize: 13
@@ -165,6 +166,7 @@ ColumnLayout  {
                     Layout.leftMargin: 16
                     Layout.topMargin: 16
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
+                    visible: !isRBF && !isCPFP
 
                     width: 504
                     height: 70
@@ -202,9 +204,16 @@ ColumnLayout  {
 
                     function change_index_handler()
                     {
-                        txInputsModel.fee = parseFloat(fee_suggest_combo.currentValue)
-                        bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
-                        txOutputsModel.clearOutputs()
+                        console.log("fee index changed")
+                        if (isRBF) {
+                        }
+                        else if (isCPFP) {
+                        }
+                        else {
+                            txInputsModel.fee = parseFloat(fee_suggest_combo.currentValue)
+                            bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
+                            txOutputsModel.clearOutputs()
+                        }
                     }
                 }
 
@@ -228,7 +237,7 @@ ColumnLayout  {
                     Layout.leftMargin: 16
                     Layout.rightMargin: 16
 
-                    model: txInputsSelectedModel
+                    model: isRBF ? tx.ownInputs : isCPFP ? tx.ownOutputs : txInputsSelectedModel
                     columnWidths: [0.7, 0.1, 0, 0.2]
 
                     copy_button_column_index: -1
@@ -419,8 +428,8 @@ ColumnLayout  {
                     Layout.topMargin: 16
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
-                    enabled: rec_addr_input.isValid && rec_addr_input.input_text.length
-                             && parseFloat(amount_input.input_text) !== 0 && amount_input.input_text.length
+                    enabled: isRBF || (rec_addr_input.isValid && rec_addr_input.input_text.length
+                             && parseFloat(amount_input.input_text) !== 0 && amount_input.input_text.length)
 
                     icon.source: "qrc:/images/plus.svg"
                     icon.color: include_output_but.enabled ? "#45A6FF" : BSStyle.buttonsDisabledTextColor
@@ -432,6 +441,11 @@ ColumnLayout  {
                     }
 
                     function click_enter() {
+                        if (isRBF) {
+                            txOutputsModel.setOutputsFrom(tx)
+                            return
+                        }
+
                         if (!include_output_but.enabled) return
 
                         txOutputsModel.addOutput(rec_addr_input.input_text, amount_input.input_text)
@@ -503,18 +517,27 @@ ColumnLayout  {
 
 
         function click_enter() {
-            if (table_sel_inputs.rowCount)
-            {
-                layout.sig_continue( bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+            if (isRBF) {
+                layout.sig_continue( bsApp.createTXSignRequest(-1
                     , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
                     , parseFloat(fee_suggest_combo.currentValue), comment_input.input_text
-                    , checkbox_rbf.checked, txInputsModel.getSelection()) )
+                    , checkbox_rbf.checked, tx.ownInputs.zcInputs()) )
             }
-            else
-            {
-                layout.sig_continue( bsApp.createTXSignRequest(from_wallet_combo.currentIndex
-                    , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
-                    , parseFloat(fee_suggest_combo.currentValue), comment_input.input_text) )
+            else if (isCPFP) {
+
+            }
+            else {  // normal operation
+                if (table_sel_inputs.rowCount) {
+                    layout.sig_continue( bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                        , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
+                        , parseFloat(fee_suggest_combo.currentValue), comment_input.input_text
+                        , checkbox_rbf.checked, txInputsModel.getSelection()) )
+                }
+                else {
+                    layout.sig_continue( bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                        , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
+                        , parseFloat(fee_suggest_combo.currentValue), comment_input.input_text) )
+                }
             }
         }
 
@@ -535,8 +558,16 @@ ColumnLayout  {
         comment_input.input_text = ""
         rec_addr_input.input_text = ""
         checkbox_rbf.checked = true
-
-        bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
         txOutputsModel.clearOutputs()
+
+        if (!isRBF && !isCPFP) {
+            bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
+        }
+        else {
+            bsApp.requestFeeSuggestions()
+            if (isRBF) {
+                txOutputsModel.setOutputsFrom(tx)
+            }
+        }
     }
 }

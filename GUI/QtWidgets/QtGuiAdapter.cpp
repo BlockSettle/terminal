@@ -681,7 +681,7 @@ void QtGuiAdapter::updateSplashProgress()
       c += std::to_string(cc) + " ";
    }
    logger_->debug("[{}] {}/{}", __func__, l, c);*/
-   int percent = 100 * loadingComponents_.size() / createdComponents_.size();
+   int percent = (int)(100 * loadingComponents_.size() / createdComponents_.size());
    QMetaObject::invokeMethod(splashScreen_, [this, percent] {
       splashScreen_->SetProgress(percent);
    });
@@ -1350,7 +1350,7 @@ ProcessingResult QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMes
             txDet.inputAddresses.push_back({ bs::Address::fromAddressString(inAddr.address())
                , inAddr.value(), inAddr.value_string(), inAddr.wallet_name()
                , static_cast<TXOUT_SCRIPT_TYPE>(inAddr.script_type())
-               , BinaryData::fromString(inAddr.out_hash()), inAddr.out_index() });
+               , BinaryData::fromString(inAddr.out_hash()), (uint32_t)inAddr.out_index() });
          } catch (const std::exception &e) {
             logger_->warn("[QtGuiAdapter::processTXDetails] input deser error: {}", e.what());
          }
@@ -1360,12 +1360,12 @@ ProcessingResult QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMes
             txDet.outputAddresses.push_back({ bs::Address::fromAddressString(outAddr.address())
                , outAddr.value(), outAddr.value_string(), outAddr.wallet_name()
                , static_cast<TXOUT_SCRIPT_TYPE>(outAddr.script_type())
-               , BinaryData::fromString(outAddr.out_hash()), outAddr.out_index() });
-         } catch (const std::exception &e) { // OP_RETURN data for valueStr
+               , BinaryData::fromString(outAddr.out_hash()), (uint32_t)outAddr.out_index() });
+         } catch (const std::exception &) { // OP_RETURN data for valueStr
             txDet.outputAddresses.push_back({ bs::Address{}
                , outAddr.value(), outAddr.address(), outAddr.wallet_name()
                , static_cast<TXOUT_SCRIPT_TYPE>(outAddr.script_type()), ownTxHash
-               , outAddr.out_index() });
+               , (uint32_t)outAddr.out_index() });
          }
       }
       try {
@@ -1374,7 +1374,7 @@ ProcessingResult QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMes
             , resp.change_address().wallet_name()
             , static_cast<TXOUT_SCRIPT_TYPE>(resp.change_address().script_type())
             , BinaryData::fromString(resp.change_address().out_hash())
-            , resp.change_address().out_index() };
+            , (uint32_t)resp.change_address().out_index() };
       }
       catch (const std::exception &) {}
       txDetails.emplace_back(std::move(txDet));

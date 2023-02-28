@@ -12,8 +12,9 @@
 #include <fstream>
 #include <QDateTime>
 #include <spdlog/spdlog.h>
-#include "StringUtils.h"
 #include "ColorScheme.h"
+#include "StringUtils.h"
+#include "TxOutputsModel.h"
 #include "Utils.h"
 
 namespace {
@@ -146,11 +147,8 @@ QString TxListModel::txType(int row) const
 
 QString TxListModel::txFlag(int row) const
 {
-   const auto& itTxDet = txDetails_.find(row);
-   if (itTxDet != txDetails_.end()) {
-      if (itTxDet->second.tx.isRBF()) {
-         return tr("RBF");
-      }
+   if (isRBF(row)) {
+      return tr("RBF");
    }
    return {};
 }
@@ -162,6 +160,27 @@ QString TxListModel::txId(int row) const
       return QString::fromStdString(itTxDet->second.txHash.toHexStr(true));
    }
    return {};
+}
+
+bool TxListModel::isRBF(int row) const
+{
+   const auto& itTxDet = txDetails_.find(row);
+   if (itTxDet != txDetails_.end()) {
+      return itTxDet->second.tx.isRBF();
+   }
+   return false;
+}
+
+quint32 TxListModel::nbConf(int row) const
+{
+   const auto& itTxDet = txDetails_.find(row);
+   if (itTxDet != txDetails_.end()) {
+      if (itTxDet->second.tx.getTxHeight() == UINT32_MAX) {
+         return 0;
+      }
+      return curBlock_ - itTxDet->second.tx.getTxHeight() + 1;
+   }
+   return UINT32_MAX;
 }
 
 QVariant TxListModel::data(const QModelIndex& index, int role) const
@@ -176,6 +195,10 @@ QVariant TxListModel::data(const QModelIndex& index, int role) const
       return dataColor(index.row(), index.column());
    case TxIdRole:
       return txId(index.row());
+   case RBFRole:
+      return isRBF(index.row());
+   case NbConfRole:
+      return nbConf(index.row());
    default: break;
    }
    return QVariant();
@@ -633,17 +656,51 @@ void QTxDetails::setDetails(const bs::sync::TXWalletDetails& details)
    if (details.changeAddress.address.isValid()) {
       details_.outputAddresses.push_back(details.changeAddress);
    }
-   QMetaObject::invokeMethod(this, [this] {
-      inputsModel_ = new TxInOutModel(details_.inputAddresses, tr("Input"), this);
-      outputsModel_ = new TxInOutModel(details_.outputAddresses, tr("Output"), this);
+   inputsModel_ = new TxInOutModel(details_.inputAddresses, tr("Input"), this);
+   outputsModel_ = new TxInOutModel(details_.outputAddresses, tr("Output"), this);
+   auto outputsModel = new TxOutputsModel(logger_, this);
+   for (const auto& out : details.outputAddresses) {
+      outputsModel->addOutput(QString::fromStdString(out.address.display())
+         , out.value / BTCNumericTypes::BalanceDivider);
+   }
+   ownInputs_ = new TxInputsModel(logger_, outputsModel, this);
+   std::vector<TxInputsModel::Entry> inputs;
+   inputs.reserve(details.inputAddresses.size());
+   for (const auto& in : details.inputAddresses) {
+      inputs.push_back({ in.address, in.outHash, in.outIndex, in.value });
+   }
+   ownOutputs_ = new TxInputsModel(logger_, outputsModel, this);
+   outputs_.clear();
+   outputs_.reserve(details.inputAddresses.size());
+   for (const auto& out : details.outputAddresses) {
+      outputs_.push_back({ out.address, out.outHash, out.outIndex, out.value });
+   }
+   QMetaObject::invokeMethod(this, [this, inputs] {
+      ownInputs_->addEntries(inputs);
+      ownOutputs_->addEntries(outputs_);
       emit updated();
    });
+}
+
+std::vector<std::pair<bs::Address, double>> QTxDetails::outputData() const
+{
+   std::vector<std::pair<bs::Address, double>> result;
+   for (const auto& out : outputs_) {
+      result.push_back({out.address, out.amount / BTCNumericTypes::BalanceDivider});
+   }
+   return result;
 }
 
 void QTxDetails::setCurBlock(uint32_t curBlock)
 {
    if (curBlock_ != curBlock) {
       curBlock_ = curBlock;
+      if (ownInputs_) {
+         ownInputs_->setTopBlock(curBlock);
+      }
+      if (ownOutputs_) {
+         ownOutputs_->setTopBlock(curBlock);
+      }
       QMetaObject::invokeMethod(this, [this] {
          emit newBlock();
       });
@@ -721,6 +778,7 @@ quint32 QTxDetails::height() const
 {
    return details_.tx.getTxHeight();
 }
+
 
 TxInOutModel::TxInOutModel(const std::vector<bs::sync::AddressDetails>& data, const QString& type, QObject* parent)
    : QAbstractTableModel(parent)

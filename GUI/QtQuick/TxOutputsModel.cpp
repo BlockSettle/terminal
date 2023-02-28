@@ -13,6 +13,7 @@
 #include "Address.h"
 #include "BTCNumericTypes.h"
 #include "ColorScheme.h"
+#include "TxListModel.h"
 #include "Utils.h"
 
 namespace {
@@ -108,6 +109,17 @@ QList<double> TxOutputsModel::getOutputAmounts() const
     return res;
 }
 
+void TxOutputsModel::setOutputsFrom(QTxDetails* tx)
+{
+   beginResetModel();
+   data_.clear();
+   for (const auto& out : tx->outputData()) {
+      data_.push_back({out.first, out.second});
+   }
+   endResetModel();
+   logger_->debug("[{}] {} entries", __func__, data_.size());
+}
+
 void TxOutputsModel::addOutput(const QString& address, double amount)
 {
    bs::Address addr;
@@ -117,10 +129,12 @@ void TxOutputsModel::addOutput(const QString& address, double amount)
    catch (const std::exception&) {
       return;
    }
-   Entry entry{ addr, amount };
-   beginInsertRows(QModelIndex(), rowCount(), rowCount());
-   data_.emplace_back(std::move(entry));
-   endInsertRows();
+   QMetaObject::invokeMethod(this, [this, addr, amount] {
+      Entry entry{ addr, amount };
+      beginInsertRows(QModelIndex(), rowCount(), rowCount());
+      data_.emplace_back(std::move(entry));
+      endInsertRows();
+      });
 }
 
 void TxOutputsModel::delOutput(int row)

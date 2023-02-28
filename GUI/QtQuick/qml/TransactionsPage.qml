@@ -195,6 +195,8 @@ Item {
 
                 Action {
                     text: qsTr("RBF")
+                    enabled: transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.RBFRole)
+                        //&& (transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.NbConfRole) === 0)
                     onTriggered: {
                         var txId = transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.TxIdRole)
                         openSend(txId, true, false)
@@ -203,6 +205,7 @@ Item {
 
                 Action {
                     text: qsTr("CPFP")
+                    enabled: true//(transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.NbConfRole) === 0)
                     onTriggered: {
                         var txId = transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.TxIdRole)
                         openSend(txId, false, true)
