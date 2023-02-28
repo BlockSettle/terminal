@@ -65,6 +65,7 @@ class BSTerminalSplashScreen;
 class FeeSuggestionModel;
 class HwDeviceModel;
 class QQmlContext;
+class QQmlApplicationEngine;
 class QmlWalletsList;
 class QTxDetails;
 class QTXSignRequest;
@@ -172,6 +173,9 @@ public:
    Q_INVOKABLE int exportWallet(const QString& walletId);
    Q_INVOKABLE void walletSelected(int);
 
+   Q_INVOKABLE void clearCache();
+   Q_INVOKABLE void reconnectSignals();
+
 signals:
    void walletsListChanged();
    void walletBalanceChanged();
@@ -239,6 +243,7 @@ private:
    BSTerminalSplashScreen* splashScreen_{ nullptr };
    QObject* rootObj_{ nullptr };
    QQmlContext* rootCtxt_{nullptr};
+   std::unique_ptr<QQmlApplicationEngine> engine_;
    std::shared_ptr<bs::message::UserTerminal>   userSettings_, userWallets_;
    std::shared_ptr<bs::message::UserTerminal>   userBlockchain_, userSigner_;
    std::shared_ptr<bs::message::UserTerminal>   userHWW_;
