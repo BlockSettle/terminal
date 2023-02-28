@@ -518,13 +518,16 @@ ColumnLayout  {
 
         function click_enter() {
             if (isRBF) {
-                layout.sig_continue( bsApp.createTXSignRequest(-1
+                layout.sig_continue( bsApp.createTXSignRequest(-1   //special index for RBF mode
                     , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
                     , parseFloat(fee_suggest_combo.currentValue), comment_input.input_text
                     , checkbox_rbf.checked, tx.ownInputs.zcInputs()) )
             }
             else if (isCPFP) {
-
+                layout.sig_continue( bsApp.createTXSignRequest(-2   //special index for CPFP mode
+                    , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
+                    , parseFloat(fee_suggest_combo.currentValue), comment_input.input_text
+                    , checkbox_rbf.checked, tx.ownOutputs.zcInputs()) )
             }
             else {  // normal operation
                 if (table_sel_inputs.rowCount) {
