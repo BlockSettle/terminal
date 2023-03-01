@@ -1916,7 +1916,7 @@ int QtQuickAdapter::deleteWallet(const QString& walletId, const QString& passwor
    return 0;
 }
 
-void QtQuickAdapter::notifyNewTransaction(bs::TXEntry tx)
+void QtQuickAdapter::notifyNewTransaction(const bs::TXEntry& tx)
 {
    const auto txId = QString::fromStdString(tx.txHash.toHexStr(true));
    auto txDetails = getTXDetails(txId);
