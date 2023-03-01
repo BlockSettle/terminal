@@ -206,6 +206,8 @@ public:
    TxInputsModel* ownOutputs() const { return ownOutputs_; }
    std::vector<std::pair<bs::Address, double>> outputData() const;
 
+   bs::sync::Transaction::Direction direction() const;
+
 signals:
    void updated();
    void newBlock();

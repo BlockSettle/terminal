@@ -74,7 +74,7 @@ Q_IMPORT_PLUGIN(QtQuickLayoutsPlugin)
 Q_IMPORT_PLUGIN(QtQmlModelsPlugin)
 Q_IMPORT_PLUGIN(QmlFolderListModelPlugin)
 Q_IMPORT_PLUGIN(QmlSettingsPlugin)
-//Q_IMPORT_PLUGIN(QtLabsPlatformPlugin)
+Q_IMPORT_PLUGIN(QtLabsPlatformPlugin)
 #endif // STATIC_BUILD
 
 Q_DECLARE_METATYPE(ArmorySettings)

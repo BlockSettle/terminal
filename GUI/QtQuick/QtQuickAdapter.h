@@ -171,6 +171,7 @@ public:
    Q_INVOKABLE int deleteWallet(const QString& walletId, const QString& password);
    Q_INVOKABLE int exportWallet(const QString& walletId);
    Q_INVOKABLE void walletSelected(int);
+   void notifyNewTransaction(const bs::TXEntry& tx);
 
 signals:
    void walletsListChanged();
@@ -183,6 +184,7 @@ signals:
    void invokePINentry();
    void invokePasswordEntry(const QString& devName, bool acceptOnDevice);
    void showError(const QString&);
+   void showNotification(QString, QString);
 
 private:
    bs::message::ProcessingResult processSettings(const bs::message::Envelope &);
