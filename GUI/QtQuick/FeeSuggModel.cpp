@@ -93,16 +93,20 @@ void FeeSuggestionModel::addRows(const std::map<uint32_t, float>& feeLevels)
       FeeSuggestion row{ feeLevel.first, std::move(estTime), feeLevel.second };
       newRows.emplace_back(std::move(row));
    }
-   beginInsertRows(QModelIndex(), rowCount(), rowCount() + newRows.size() - 1);
-   data_.insert(data_.cend(), newRows.begin(), newRows.end());
-   endInsertRows();
-   emit rowCountChanged();
+   QMetaObject::invokeMethod(this, [this, newRows] {
+      beginInsertRows(QModelIndex(), rowCount(), rowCount() + newRows.size() - 1);
+      data_.insert(data_.cend(), newRows.begin(), newRows.end());
+      endInsertRows();
+      emit rowCountChanged();
+      });
 }
 
 void FeeSuggestionModel::clear()
 {
-   beginResetModel();
-   data_.clear();
-   endResetModel();
-   emit rowCountChanged();
+   QMetaObject::invokeMethod(this, [this] {
+      beginResetModel();
+      data_.clear();
+      endResetModel();
+      emit rowCountChanged();
+      });
 }

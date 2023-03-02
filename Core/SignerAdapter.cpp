@@ -10,6 +10,7 @@
 */
 #include "SignerAdapter.h"
 #include <spdlog/spdlog.h>
+#include "bip39/bip39.h"
 #include "Adapters/SignerClient.h"
 #include "CoreWalletsManager.h"
 #include "Wallets/InprocSigner.h"
@@ -140,6 +141,12 @@ ProcessingResult SignerAdapter::processOwnRequest(const bs::message::Envelope &e
       return processDeleteWallet(env, request.delete_wallet());
    case SignerMessage::kImportHwWallet:
       return processImportHwWallet(env, request.import_hw_wallet());
+   case SignerMessage::kExportWoWallet:
+      return processExportWoWallet(env, request.export_wo_wallet());
+   case SignerMessage::kChangeWalletPass:
+      return processChangeWalletPass(env, request.change_wallet_pass());
+   case SignerMessage::kGetWalletSeed:
+      return processGetWalletSeed(env, request.get_wallet_seed());
    default:
       logger_->warn("[{}] unknown signer request: {}", __func__, request.data_case());
       break;
@@ -660,16 +667,101 @@ bs::message::ProcessingResult SignerAdapter::processImportHwWallet(const bs::mes
 }
 
 ProcessingResult SignerAdapter::processDeleteWallet(const bs::message::Envelope& env
-   , const std::string& rootId)
+   , const SignerMessage_WalletRequest& request)
 {
    SignerMessage msg;
-   const auto& hdWallet = walletsMgr_->getHDWalletById(rootId);
+   const auto& hdWallet = walletsMgr_->getHDWalletById(request.wallet_id());
    if (hdWallet && walletsMgr_->deleteWalletFile(hdWallet)) {
-      msg.set_wallet_deleted(rootId);
+      msg.set_wallet_deleted(request.wallet_id());
    }
    else {
       msg.set_wallet_deleted("");
    }
    pushBroadcast(user_, msg.SerializeAsString());
    return ProcessingResult::Success;
+}
+
+ProcessingResult SignerAdapter::processExportWoWallet(const bs::message::Envelope& env
+   , const SignerMessage_WalletRequest& request)
+{
+   const auto& hdWallet = walletsMgr_->getHDWalletById(request.wallet_id());
+   if (!hdWallet) {
+      logger_->error("[{}] wallet {} not found", __func__, request.wallet_id());
+      return ProcessingResult::Error;
+   }
+   if (hdWallet->isWatchingOnly()) {
+      logger_->error("[{}] can't export {} (already watching only)", __func__, request.wallet_id());
+      return ProcessingResult::Error;
+   }
+   auto woWallet = hdWallet->createWatchingOnly();
+   if (!woWallet) {
+      logger_->error("[{}] WO export {} failed", __func__, request.wallet_id());
+      return ProcessingResult::Error;
+   }
+   logger_->debug("[{}] exported {} to {}", __func__, request.wallet_id(), woWallet->getFileName());
+   return ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult SignerAdapter::processChangeWalletPass(const bs::message::Envelope& env
+   , const SignerMessage_ChangeWalletPassword& request)
+{
+   const auto& hdWallet = walletsMgr_->getHDWalletById(request.wallet().wallet_id());
+   if (!hdWallet) {
+      logger_->error("[{}] wallet {} not found", __func__, request.wallet().wallet_id());
+      return ProcessingResult::Error;
+   }
+   bool result = true;
+   {
+      const auto oldPass = SecureBinaryData::fromString(request.wallet().password());
+      const bs::wallet::PasswordData newPass{ SecureBinaryData::fromString(request.new_password())
+         , {bs::wallet::EncryptionType::Password} };
+      const bs::core::WalletPasswordScoped lock(hdWallet, oldPass);
+      result = hdWallet->changePassword({bs::wallet::EncryptionType::Password}, newPass);
+   }
+   SignerMessage msg;
+   msg.set_wallet_pass_changed(result);
+   pushResponse(user_, env, msg.SerializeAsString());
+   return bs::message::ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult SignerAdapter::processGetWalletSeed(const bs::message::Envelope& env
+   , const SignerMessage_WalletRequest& request)
+{
+   SignerMessage msg;
+   auto msgResp = msg.mutable_wallet_seed();
+   msgResp->set_wallet_id(request.wallet_id());
+   const auto& hdWallet = walletsMgr_->getHDWalletById(request.wallet_id());
+   if (!hdWallet) {
+      logger_->error("[{}] wallet {} not found", __func__, request.wallet_id());
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Error;
+   }
+   try {
+      const bs::core::WalletPasswordScoped lock(hdWallet, SecureBinaryData::fromString(request.password()));
+      const auto& seed = hdWallet->getDecryptedSeed();
+      msgResp->set_xpriv(seed.toXpriv().toBinStr());
+      msgResp->set_seed(seed.seed().toBinStr());
+
+      if (seed.hasPrivateKey()) {
+         const auto& privKey = seed.privateKey();
+         std::vector<uint8_t> privData;
+         for (int i = 0; i < (int)privKey.getSize(); ++i) {
+            privData.push_back(privKey.getPtr()[i]);
+         }
+         const auto& words = BIP39::create_mnemonic(privData);
+         std::string bip39Seed;
+         for (const auto& w : words) {
+            bip39Seed += w + " ";
+         }
+         bip39Seed.pop_back();
+         msgResp->set_bip39_seed(bip39Seed);
+      }
+   }
+   catch (const Armory::Wallets::WalletException& e) {
+      logger_->error("[{}] failed to decrypt wallet {}: {}", __func__, request.wallet_id(), e.what());
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Error;
+   }
+   pushResponse(user_, env, msg.SerializeAsString());
+   return bs::message::ProcessingResult::Success;
 }

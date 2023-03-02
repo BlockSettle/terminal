@@ -37,10 +37,7 @@ namespace WalletBalance {
 class WalletBalancesModel : public QAbstractTableModel
 {
    Q_OBJECT
-
-   Q_PROPERTY(int rowCount READ rowCount NOTIFY rowCountChanged)
 public:
-
    WalletBalancesModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
 
    int rowCount(const QModelIndex & = QModelIndex()) const override;
@@ -55,6 +52,7 @@ public:
       std::string walletName;
    };
    void addWallet(const Wallet&);
+   void deleteWallet(const std::string& walletId);
 
    struct Balance {
       double   confirmed{ 0 };
@@ -63,6 +61,8 @@ public:
       uint32_t nbAddresses{ 0 };
    };
    void setWalletBalance(const std::string& walletId, const Balance&);
+
+   Q_PROPERTY(int rowCount READ rowCount NOTIFY rowCountChanged)
 
 private:
    using FieldFunc = std::function<QString(const Balance&)>;

@@ -47,6 +47,7 @@ public:
    WalletPropertiesVM(QObject* parent = nullptr);
 
    void setWalletInfo(const WalletInfo& info);
+   void setWalletSeed(const std::string& walletId, const std::string& seed);
    void setNbActiveAddrs(const std::string& walletId, uint32_t nb);
    void setNbUTXOs(const std::string& walletId, uint32_t nb);
 
@@ -62,7 +63,6 @@ public:
    bool isWatchingOnly() const;
 
    const QStringList& seed() const;
-   void setSeed(const QStringList& seed);
 
    const QString& exportPath() const;
    void setExportPath(const QString& path);

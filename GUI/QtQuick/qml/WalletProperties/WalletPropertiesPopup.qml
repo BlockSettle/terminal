@@ -341,7 +341,7 @@ CustomPopup {
                     icon_add_source: "qrc:/images/arrow.png"
                     title_text: qsTr("Rescan wallet")
 
-                    onClicked: console.log('Unsuported')
+                    onClicked: bsApp.rescanWallet(wallet_properties_vm.walletId)
                 }
 
                 CustomListItem {

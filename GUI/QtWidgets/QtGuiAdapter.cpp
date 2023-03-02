@@ -1256,7 +1256,8 @@ void QtGuiAdapter::onNeedWalletDialog(bs::signer::ui::GeneralDialogType dlgType
          QMetaObject::invokeMethod(mainWindow_, [this, rootId, walletName] {
             if (mainWindow_->deleteWallet(rootId, walletName)) {
                SignerMessage msg;
-               msg.set_delete_wallet(rootId);
+               auto msgReq = msg.mutable_delete_wallet();
+               msgReq->set_wallet_id(rootId);
                pushRequest(user_, userSigner_, msg.SerializeAsString());
             }
          });

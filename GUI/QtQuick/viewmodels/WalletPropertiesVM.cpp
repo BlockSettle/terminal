@@ -23,6 +23,15 @@ void WalletPropertiesVM::setWalletInfo(const WalletInfo& info)
    emit changed();
 }
 
+void qtquick_gui::WalletPropertiesVM::setWalletSeed(const std::string& walletId, const std::string& seed)
+{
+   if (walletId != info_.walletId.toStdString()) {
+      return;
+   }
+   seed_ = QString::fromStdString(seed).split(QLatin1Char(' '));
+   emit seedChanged();
+}
+
 void qtquick_gui::WalletPropertiesVM::setNbActiveAddrs(const std::string& walletId, uint32_t nb)
 {
    if (info_.walletId.isEmpty() || (info_.walletId.toStdString() != walletId)) {
@@ -94,12 +103,6 @@ bool WalletPropertiesVM::isWatchingOnly() const
 const QStringList& WalletPropertiesVM::seed() const
 {
    return seed_;
-}
-
-void WalletPropertiesVM::setSeed(const QStringList& seed)
-{
-   seed_ = seed;
-   emit seedChanged();
 }
 
 const QString& WalletPropertiesVM::exportPath() const

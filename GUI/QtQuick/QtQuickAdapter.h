@@ -59,6 +59,7 @@ namespace BlockSettle {
       class SettingsMessage_ArmoryServers;
       class SettingsMessage_SettingsResponse;
       class SettingsMessage_SignerServers;
+      class SignerMessage_WalletSeed;
    }
 }
 class BSTerminalSplashScreen;
@@ -169,7 +170,7 @@ public:
    Q_INVOKABLE int exportWalletAuth(const QString& walletId, const QString& password);
    Q_INVOKABLE int viewWalletSeedAuth(const QString& walletId, const QString& password);
    Q_INVOKABLE int deleteWallet(const QString& walletId, const QString& password);
-   Q_INVOKABLE int exportWallet(const QString& walletId);
+   Q_INVOKABLE int rescanWallet(const QString& walletId);
    Q_INVOKABLE void walletSelected(int);
    void notifyNewTransaction(const bs::TXEntry& tx);
 
@@ -216,6 +217,8 @@ private:
    bs::message::ProcessingResult processAddressHist(const BlockSettle::Common::ArmoryMessage_AddressHistory&);
    bs::message::ProcessingResult processFeeLevels(const BlockSettle::Common::ArmoryMessage_FeeLevelsResponse&);
    bs::message::ProcessingResult processWalletsList(const BlockSettle::Common::WalletsMessage_WalletsListResponse&);
+   bs::message::ProcessingResult processWalletDeleted(const std::string& walletId);
+   bs::message::ProcessingResult processWalletSeed(const BlockSettle::Common::SignerMessage_WalletSeed&);
    bs::message::ProcessingResult processUTXOs(const BlockSettle::Common::WalletsMessage_UtxoListResponse&);
    bs::message::ProcessingResult processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse&);
    bs::message::ProcessingResult processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived&);

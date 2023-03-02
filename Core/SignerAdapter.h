@@ -29,6 +29,7 @@ namespace BlockSettle {
    namespace Common {
       class SignerMessage;
       class SignerMessage_AutoSign;
+      class SignerMessage_ChangeWalletPassword;
       class SignerMessage_CreateWalletRequest;
       class SignerMessage_DialogRequest;
       class SignerMessage_ExtendAddrChain;
@@ -41,6 +42,7 @@ namespace BlockSettle {
       class SignerMessage_SyncAddressComment;
       class SignerMessage_SyncNewAddresses;
       class SignerMessage_SyncTxComment;
+      class SignerMessage_WalletRequest;
    }
    namespace Terminal {
       class SettingsMessage_SignerServer;
@@ -107,7 +109,14 @@ private:
       , const BlockSettle::Common::SignerMessage_CreateWalletRequest&);
    bs::message::ProcessingResult processImportHwWallet(const bs::message::Envelope&
       , const BlockSettle::Common::SignerMessage_ImportHWWallet&);
-   bs::message::ProcessingResult processDeleteWallet(const bs::message::Envelope&, const std::string& rootId);
+   bs::message::ProcessingResult processDeleteWallet(const bs::message::Envelope&
+      , const BlockSettle::Common::SignerMessage_WalletRequest&);
+   bs::message::ProcessingResult processExportWoWallet(const bs::message::Envelope&
+      , const BlockSettle::Common::SignerMessage_WalletRequest&);
+   bs::message::ProcessingResult processChangeWalletPass(const bs::message::Envelope&
+      , const BlockSettle::Common::SignerMessage_ChangeWalletPassword&);
+   bs::message::ProcessingResult processGetWalletSeed(const bs::message::Envelope&
+      , const BlockSettle::Common::SignerMessage_WalletRequest&);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

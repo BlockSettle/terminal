@@ -547,22 +547,19 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
    case SignerMessage::kSignTxResponse:
       return processSignTX(msg.sign_tx_response());
    case SignerMessage::kWalletDeleted:
-      {
-         const auto& itWallet = hdWallets_.find(msg.wallet_deleted());
-         bs::sync::WalletInfo wi;
-         if (itWallet == hdWallets_.end()) {
-            wi.ids.push_back(msg.wallet_deleted());
-         } else {
-            wi = itWallet->second;
-         }
-         //TODO
-      }
-      break;
+      return processWalletDeleted(msg.wallet_deleted());
    case SignerMessage::kCreatedWallet:
       walletBalances_->clear();
       logger_->debug("[{}] wallet {} created: {}", __func__    //TODO: show something in the GUI if needed
          , msg.created_wallet().wallet_id(), msg.created_wallet().error_msg());
       break;
+   case SignerMessage::kWalletPassChanged:
+      if (!msg.wallet_pass_changed()) {
+         emit showError(tr("Failed to change wallet password - see log for details"));
+      }
+      break;
+   case SignerMessage::kWalletSeed:
+      return processWalletSeed(msg.wallet_seed());
    default: return ProcessingResult::Ignored;
    }
    return ProcessingResult::Success;
@@ -1250,6 +1247,7 @@ void QtQuickAdapter::requestFeeSuggestions()
    }
    pushRequest(user_, userBlockchain_, msg.SerializeAsString(), {}, 10
       , std::chrono::milliseconds{500});
+   feeSuggModel_->clear();
 }
 
 QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStringList& recvAddrs
@@ -1496,6 +1494,26 @@ ProcessingResult QtQuickAdapter::processWalletsList(const WalletsMessage_Wallets
    }
    emit walletsListChanged();
    return ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult QtQuickAdapter::processWalletDeleted(const std::string& walletId)
+{
+   if (walletId.empty()) {
+      return bs::message::ProcessingResult::Ignored;
+   }
+   logger_->debug("[{}] {}", __func__, walletId);
+   walletBalances_->deleteWallet(walletId);
+   return bs::message::ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult QtQuickAdapter::processWalletSeed(const BlockSettle::Common::SignerMessage_WalletSeed& response)
+{
+   if (response.bip39_seed().empty()) {
+      emit showError(tr("Failed to obtain wallet seed"));
+      return bs::message::ProcessingResult::Error;
+   }
+   walletPropertiesModel_->setWalletSeed(response.wallet_id(), response.bip39_seed());
+   return bs::message::ProcessingResult::Success;
 }
 
 ProcessingResult QtQuickAdapter::processUTXOs(const WalletsMessage_UtxoListResponse& response)
@@ -1879,11 +1897,11 @@ int QtQuickAdapter::getSearchInputType(const QString& s)
 
 void QtQuickAdapter::startAddressSearch(const QString& s)
 {
-      expTxByAddrModel_->clear();
-      ArmoryMessage msg;
-      msg.set_get_address_history(s.trimmed().toStdString());
-      pushRequest(user_, userBlockchain_, msg.SerializeAsString()
-         , {}, 10, std::chrono::milliseconds{ 230 });
+   expTxByAddrModel_->clear();
+   ArmoryMessage msg;
+   msg.set_get_address_history(s.trimmed().toStdString());
+   pushRequest(user_, userBlockchain_, msg.SerializeAsString()
+      , {}, 10, std::chrono::milliseconds{ 230 });
 }
 
 qtquick_gui::WalletPropertiesVM* QtQuickAdapter::walletProperitesVM() const
@@ -1891,29 +1909,55 @@ qtquick_gui::WalletPropertiesVM* QtQuickAdapter::walletProperitesVM() const
    return walletPropertiesModel_.get();
 }
 
-int QtQuickAdapter::exportWallet(const QString& walletId)
+int QtQuickAdapter::rescanWallet(const QString& walletId)
 {
-   return 0;
+   logger_->debug("[{}] {}", __func__, walletId.toStdString());
+   WalletsMessage msg;
+   msg.set_wallet_rescan(walletId.toStdString());
+   const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
+   return (msgId == 0) ? -1 : 0;
 }
 
 int QtQuickAdapter::changePassword(const QString& walletId, const QString& oldPassword, const QString& newPassword)
 {
-   return 0;
+   SignerMessage msg;
+   auto msgReq = msg.mutable_change_wallet_pass();
+   auto msgWallet = msgReq->mutable_wallet();
+   msgWallet->set_wallet_id(walletId.toStdString());
+   msgWallet->set_password(oldPassword.toStdString());
+   msgReq->set_new_password(newPassword.toStdString());
+   const auto msgId = pushRequest(user_, userSigner_, msg.SerializeAsString());
+   return (msgId == 0) ? -1 : 0;
 }
 
 int QtQuickAdapter::exportWalletAuth(const QString& walletId, const QString& password)
 {
-   return 0;
+   SignerMessage msg;
+   auto msgReq = msg.mutable_export_wo_wallet();
+   msgReq->set_wallet_id(walletId.toStdString());
+   msgReq->set_password(password.toStdString());
+   const auto msgId = pushRequest(user_, userSigner_, msg.SerializeAsString());
+   return (msgId == 0) ? -1 : 0;
 }
 
 int QtQuickAdapter::viewWalletSeedAuth(const QString& walletId, const QString& password)
 {
-   return 0;
+   SignerMessage msg;
+   auto msgReq = msg.mutable_get_wallet_seed();
+   msgReq->set_wallet_id(walletId.toStdString());
+   msgReq->set_password(password.toStdString());
+   const auto msgId = pushRequest(user_, userSigner_, msg.SerializeAsString());
+   return (msgId == 0) ? -1 : 0;
 }
 
 int QtQuickAdapter::deleteWallet(const QString& walletId, const QString& password)
 {
-   return 0;
+   SignerMessage msg;
+   auto msgReq = msg.mutable_delete_wallet();
+   msgReq->set_wallet_id(walletId.toStdString());
+   msgReq->set_password(password.toStdString());
+   const auto msgId = pushRequest(user_, userSigner_, msg.SerializeAsString());
+   return (msgId == 0) ? -1 : 0;
 }
 
 void QtQuickAdapter::notifyNewTransaction(const bs::TXEntry& tx)
@@ -1932,5 +1976,4 @@ void QtQuickAdapter::notifyNewTransaction(const bs::TXEntry& tx)
       );
       txDetails->disconnect(this);
    }, Qt::QueuedConnection);
-
 }

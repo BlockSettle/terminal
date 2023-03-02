@@ -90,11 +90,34 @@ void WalletBalancesModel::addWallet(const Wallet& wallet)
       }
    }
    //logger_->debug("[WalletBalancesModel::addWallet] adding #{}: {}", rowCount(), wallet.walletName);
-   beginInsertRows(QModelIndex(), rowCount(), rowCount());
-   wallets_.push_back(wallet);
-   endInsertRows();
+   QMetaObject::invokeMethod(this, [this, wallet] {
+      beginInsertRows(QModelIndex(), rowCount(), rowCount());
+      wallets_.push_back(wallet);
+      endInsertRows();
 
-   emit rowCountChanged();
+      emit rowCountChanged();
+      });
+}
+
+void WalletBalancesModel::deleteWallet(const std::string& walletId)
+{
+   int idx = -1;
+   for (int i = 0; i < wallets_.size(); ++i) {
+      if (wallets_.at(i).walletId == walletId) {
+         idx = i;
+         break;
+      }
+   }
+   if (idx < 0) {
+      logger_->warn("[{}] wallet {} is not in the list", __func__, walletId);
+      return;
+   }
+   QMetaObject::invokeMethod(this, [this, idx] {
+      beginRemoveRows(QModelIndex(), idx, idx);
+      wallets_.erase(wallets_.cbegin() + idx);
+      endRemoveRows();
+      emit rowCountChanged();
+      });
 }
 
 QStringList WalletBalancesModel::wallets() const
