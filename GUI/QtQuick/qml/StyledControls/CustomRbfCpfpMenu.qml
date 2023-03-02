@@ -29,10 +29,8 @@ CustomContextMenu {
         enabled: transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.RBFRole)
             //&& (transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.NbConfRole) === 0)
         onTriggered: {
-            console.log ("before txId")
             var txId = transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.TxIdRole)
-            console.log ("after - txId = " + txId)
-            openSend(txId, true, false)
+            context_menu.openSend(txId, true, false)
         }
     }
 
@@ -41,7 +39,7 @@ CustomContextMenu {
         enabled: true//(transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.NbConfRole) === 0)
         onTriggered: {
             var txId = transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.TxIdRole)
-            openSend(txId, false, true)
+            context_menu.openSend(txId, false, true)
         }
     }
 

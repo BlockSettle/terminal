@@ -166,7 +166,7 @@ Rectangle {
                     CustomRbfCpfpMenu {
                         id: context_menu
 
-                        onOpenSend: (txId, isRBF, isCPFP) => openSend(txId, isRBF, isCPFP)
+                        onOpenSend: (txId, isRBF, isCPFP) => control.openSend(txId, isRBF, isCPFP)
                     }
                 }
             }

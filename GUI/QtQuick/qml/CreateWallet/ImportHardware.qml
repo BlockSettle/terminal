@@ -53,6 +53,7 @@ ColumnLayout  {
         font.family: "Roboto"
         font.weight: Font.Normal
     }
+
     TableView {
         visible: !hwDeviceModel.empty
         width: 800

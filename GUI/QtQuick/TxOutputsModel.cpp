@@ -31,6 +31,7 @@ TxOutputsModel::TxOutputsModel(const std::shared_ptr<spdlog::logger>& logger, QO
 
 int TxOutputsModel::rowCount(const QModelIndex &) const
 {
+   logger_->debug("[{}] data_.size() = {}", __func__, data_.size());
    return data_.size() + 1;
 }
 
@@ -89,7 +90,6 @@ void TxOutputsModel::clearOutputs()
    beginResetModel();
    data_.clear();
    endResetModel();
-   emit rowCountChanged();
 }
 
 QStringList TxOutputsModel::getOutputAddresses() const
@@ -118,7 +118,6 @@ void TxOutputsModel::setOutputsFrom(QTxDetails* tx)
       data_.push_back({out.first, out.second});
    }
    endResetModel();
-   emit rowCountChanged();
    logger_->debug("[{}] {} entries", __func__, data_.size());
 }
 
@@ -136,7 +135,6 @@ void TxOutputsModel::addOutput(const QString& address, double amount)
       beginInsertRows(QModelIndex(), rowCount(), rowCount());
       data_.emplace_back(std::move(entry));
       endInsertRows();
-      emit rowCountChanged();
       });
 }
 
@@ -148,7 +146,6 @@ void TxOutputsModel::delOutput(int row)
    beginRemoveRows(QModelIndex(), row, row);
    data_.erase(data_.cbegin() + row - 1);
    endRemoveRows();
-   emit rowCountChanged();
 }
 
 QVariant TxOutputsModel::getData(int row, int col) const

@@ -46,7 +46,7 @@ ColumnLayout  {
             Layout.rightMargin: 60
             Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
 
-            activeFocusOnTab: true
+            activeFocusOnTab: false
 
             font.pixelSize: 13
             font.family: "Roboto"
@@ -172,6 +172,8 @@ ColumnLayout  {
 
         enabled: rec_addr_input.isValid && rec_addr_input.input_text.length
                  && parseFloat(amount_input.input_text) !== 0 && amount_input.input_text.length
+
+        activeFocusOnTab: continue_but.enabled
 
         width: 552
 

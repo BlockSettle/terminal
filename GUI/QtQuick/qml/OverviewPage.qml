@@ -73,6 +73,6 @@ Item {
             addressDetails.open()
         }
 
-        onOpenSend: (txId, isRBF, isCPFP) => openSend(txId, isRBF, isCPFP)
+        onOpenSend: (txId, isRBF, isCPFP) => overview.openSend(txId, isRBF, isCPFP)
     }
 }
