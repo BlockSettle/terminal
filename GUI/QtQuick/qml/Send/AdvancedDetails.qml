@@ -156,6 +156,8 @@ ColumnLayout  {
                     CustomCheckBox {
                         id: checkbox_rbf
 
+                        activeFocusOnTab: false
+
                         implicitHeight: 18
 
                         Layout.alignment: Qt.AlignRight | Qt.AlignTop
@@ -287,6 +289,8 @@ ColumnLayout  {
                                 id: sel_inputs_button
 
                                 enabled: !isRBF && !isCPFP
+
+                                activeFocusOnTab: false
 
                                 text: qsTr("Select Inputs")
 
@@ -429,7 +433,7 @@ ColumnLayout  {
                     //aliases
                     title_text: qsTr("Comment")
 
-                    onTabNavigated: continue_but.forceActiveFocus()
+                    onTabNavigated: include_output_but.forceActiveFocus()
                     onBackTabNavigated: fee_suggest_combo.forceActiveFocus()
                 }
 
@@ -441,7 +445,7 @@ ColumnLayout  {
                     Layout.topMargin: 16
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
-                    activeFocusOnTab: false
+                    activeFocusOnTab: include_output_but.enabled
 
                     enabled: isRBF || (rec_addr_input.isValid && rec_addr_input.input_text.length
                              && parseFloat(amount_input.input_text) !== 0 && amount_input.input_text.length)
@@ -456,12 +460,12 @@ ColumnLayout  {
                     }
 
                     function click_enter() {
+                        if (!include_output_but.enabled) return
+
                         if (isRBF) {
                             txOutputsModel.setOutputsFrom(tx)
                             return
                         }
-
-                        if (!include_output_but.enabled) return
 
                         txOutputsModel.addOutput(rec_addr_input.input_text, amount_input.input_text)
                     }
@@ -519,7 +523,7 @@ ColumnLayout  {
 
         activeFocusOnTab: continue_but.enabled
 
-        enabled: (table_outputs.rowCount > 1)
+        enabled: (txOutputsModel.rowCount > 1)
 
         width: 1084
 
@@ -561,6 +565,27 @@ ColumnLayout  {
             }
         }
 
+    }
+
+
+    Keys.onEnterPressed: {
+        click_buttons()
+    }
+
+    Keys.onReturnPressed: {
+        click_buttons()
+    }
+
+    function click_buttons()
+    {
+        if (include_output_but.enabled)
+        {
+            include_output_but.click_enter()
+        }
+        else if (continue_but.enabled)
+        {
+            continue_but.click_enter()
+        }
     }
 
     function init()

@@ -13,6 +13,8 @@ ColumnLayout  {
     property var txSignRequest
 
     property int time_progress
+    property bool isRBF: false
+    property bool isCPFP: false
 
     signal sig_broadcast()
     signal sig_time_finished()
@@ -62,7 +64,7 @@ ColumnLayout  {
                 height: parent.height - 24
                 anchors.centerIn: parent
 
-                model: txInputsSelectedModel
+                model: isRBF ? tx.ownInputs : isCPFP ? tx.ownOutputs : txInputsSelectedModel
                 columnWidths: [0.7, 0.1, 0, 0.2]
 
                 copy_button_column_index: -1
@@ -127,7 +129,7 @@ ColumnLayout  {
     Rectangle {
         id: details_rect
 
-        Layout.fillWidth: true
+        Layout.alignment: Qt.AlignHCenter | Qt.AlingTop
         Layout.preferredHeight : 100
         Layout.topMargin: 20
 
