@@ -28,6 +28,7 @@ Item {
 
     signal newWalletClicked();
     signal curWalletIndexChanged(index : int)
+    signal openSend (string txId, bool isRBF, bool isCPFP)
 
     CreateNewWallet {
         id: createNewWalletPage
@@ -71,5 +72,7 @@ Item {
             bsApp.startAddressSearch(address)
             addressDetails.open()
         }
+
+        onOpenSend: (txId, isRBF, isCPFP) => overview.openSend(txId, isRBF, isCPFP)
     }
 }

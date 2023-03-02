@@ -89,16 +89,26 @@ CustomPopup {
     }
 
     function init() {
-        simple_details.init()
+        if (_stack_view.currentItem === simple_details)
+        {
+            simple_details.init()
+        }
+        else if (_stack_view.currentItem === advanced_details)
+        {
+            advanced_details.init()
+        }
+        advanced_details.tx = null
+        advanced_details.isRBF = false
+        advanced_details.isCPFP = false
     }
 
     function open(txId: string, isRBF: bool, isCPFP: bool)
     {
         _stack_view.replace(advanced_details)
-        advanced_details.init()
         advanced_details.tx = bsApp.getTXDetails(txId)
         advanced_details.isRBF = isRBF
         advanced_details.isCPFP = isCPFP
+        advanced_details.init()
     }
 
     function close_click()

@@ -25,6 +25,17 @@ ColumnLayout  {
     property bool isRBF: false
     property bool isCPFP: false
 
+    Connections
+    {
+        target:tx
+        function onUpdated ()
+        {
+            if (isRBF) {
+                txOutputsModel.setOutputsFrom(tx)
+            }
+        }
+    }
+
     RowLayout {
 
         Layout.fillWidth: true
@@ -51,7 +62,7 @@ ColumnLayout  {
             Layout.rightMargin: 60
             Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
 
-            activeFocusOnTab: true
+            activeFocusOnTab: false
 
             font.pixelSize: 13
             font.family: "Roboto"
@@ -118,14 +129,15 @@ ColumnLayout  {
                 RowLayout {
 
                     Layout.fillWidth: true
-                    Layout.preferredHeight : 19
                     Layout.topMargin: 16
+                    Layout.preferredHeight: 19
                     Layout.alignment: Qt.AlingTop
 
                     Label {
                         id: inputs_title
 
                         Layout.leftMargin: 16
+                        Layout.fillHeight: true
                         Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
 
                         text: qsTr("Inputs")
@@ -139,14 +151,16 @@ ColumnLayout  {
 
                     Label {
                         Layout.fillWidth: true
-                        Layout.fillHeight : true
                     }
 
                     CustomCheckBox {
                         id: checkbox_rbf
 
-                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                        implicitHeight: 18
+
+                        Layout.alignment: Qt.AlignRight | Qt.AlignTop
                         Layout.rightMargin: 16
+                        Layout.topMargin: 0
 
                         text: qsTr("RBF")
                         enabled: !isRBF
@@ -164,7 +178,7 @@ ColumnLayout  {
                     id: from_wallet_combo
 
                     Layout.leftMargin: 16
-                    Layout.topMargin: 16
+                    Layout.topMargin: 8
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
                     visible: !isRBF && !isCPFP
 
@@ -204,7 +218,6 @@ ColumnLayout  {
 
                     function change_index_handler()
                     {
-                        console.log("fee index changed")
                         if (isRBF) {
                         }
                         else if (isCPFP) {
@@ -222,7 +235,7 @@ ColumnLayout  {
                     height: 1
 
                     Layout.fillWidth: true
-                    Layout.topMargin: 168
+                    Layout.topMargin: (!isRBF && !isCPFP) ? 196 : 274
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
                     color: BSStyle.defaultGreyColor
@@ -428,6 +441,8 @@ ColumnLayout  {
                     Layout.topMargin: 16
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
+                    activeFocusOnTab: false
+
                     enabled: isRBF || (rec_addr_input.isValid && rec_addr_input.input_text.length
                              && parseFloat(amount_input.input_text) !== 0 && amount_input.input_text.length)
 
@@ -502,7 +517,9 @@ ColumnLayout  {
     CustomButton {
         id: continue_but
 
-        enabled: txOutputsModel.rowCount > 0
+        activeFocusOnTab: continue_but.enabled
+
+        enabled: (table_outputs.rowCount > 1)
 
         width: 1084
 
@@ -561,8 +578,8 @@ ColumnLayout  {
         comment_input.input_text = ""
         rec_addr_input.input_text = ""
         checkbox_rbf.checked = true
-        txOutputsModel.clearOutputs()
 
+        txOutputsModel.clearOutputs()
         if (!isRBF && !isCPFP) {
             bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
         }

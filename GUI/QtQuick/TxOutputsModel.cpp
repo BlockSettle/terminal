@@ -31,6 +31,7 @@ TxOutputsModel::TxOutputsModel(const std::shared_ptr<spdlog::logger>& logger, QO
 
 int TxOutputsModel::rowCount(const QModelIndex &) const
 {
+   logger_->debug("[{}] data_.size() = {}", __func__, data_.size());
    return data_.size() + 1;
 }
 

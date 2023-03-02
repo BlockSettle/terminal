@@ -207,7 +207,6 @@ ApplicationWindow {
                 onClicked: {
                     if (walletBalances.rowCount > 0)
                     {
-                        bsApp.requestFeeSuggestions()
                         topMenuBtnClicked(btnSend)
                         show_popup(send_popup)
                     }
@@ -271,6 +270,11 @@ ApplicationWindow {
             onCurWalletIndexChanged: (ind) => {
                 overviewWalletIndex = ind
             }
+
+            onOpenSend: (txId, isRBF, isCPFP) => {
+                send_popup.open(txId, isRBF, isCPFP)
+                show_popup(send_popup, true)
+            }
         }
 
         TransactionsPage {
@@ -278,7 +282,7 @@ ApplicationWindow {
 
             onOpenSend: (txId, isRBF, isCPFP) => {
                 send_popup.open(txId, isRBF, isCPFP)
-                show_popup(send_popup)
+                show_popup(send_popup, true)
             }
         }
 
@@ -438,9 +442,9 @@ ApplicationWindow {
         return feeSuggestions.data(feeSuggestions.index(index, 0), role)
     }
 
-    function show_popup (id)
+    function show_popup (id, noInit = false)
     {
-        if (typeof id.init === "function")
+        if (typeof id.init === "function" && !noInit)
         {
             id.init()
         }
