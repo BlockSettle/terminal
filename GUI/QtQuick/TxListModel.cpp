@@ -32,8 +32,6 @@ namespace {
       {TxInOutModel::ColorRole, "dataColor"},
       {TxInOutModel::TxHashRole, "txHash"},
    };
-
-   static const QString dateTimeFormat = QString::fromStdString("yyyy-MM-dd hh:mm:ss");
 }
 
 TxListModel::TxListModel(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
@@ -59,7 +57,7 @@ QVariant TxListModel::getData(int row, int col) const
    }
    const auto& entry = data_.at(row);
    switch (col) {
-   case 0:  return QDateTime::fromSecsSinceEpoch(entry.txTime).toString(dateTimeFormat);
+   case 0:  return QDateTime::fromSecsSinceEpoch(entry.txTime).toString(gui_utils::dateTimeFormat);
    case 1:  return walletName(row);
    case 2:  return txType(row);
    case 3: {
@@ -134,13 +132,7 @@ QString TxListModel::txType(int row) const
 {
    const auto& itTxDet = txDetails_.find(row);
    if (itTxDet != txDetails_.end()) {
-      switch (itTxDet->second.direction) {
-      case bs::sync::Transaction::Direction::Received:   return tr("Received");
-      case bs::sync::Transaction::Direction::Sent:       return tr("Sent");
-      case bs::sync::Transaction::Direction::Internal:   return tr("Internal");
-      case bs::sync::Transaction::Direction::Unknown:    return tr("Unknown");
-      default: return QString::number((int)itTxDet->second.direction);
-      }
+      return gui_utils::directionToQString(itTxDet->second.direction);
    }
    return {};
 }
@@ -429,7 +421,7 @@ QString TxListForAddr::getData(int row, int col) const
    const auto& entry = data_.at(row);
    const auto totFees = totalFees(row);
    switch (col) {
-   case 0:  return QDateTime::fromSecsSinceEpoch(entry.txTime).toString(dateTimeFormat);
+   case 0:  return QDateTime::fromSecsSinceEpoch(entry.txTime).toString(gui_utils::dateTimeFormat);
    case 1:  return txId(row);
    case 2:  return QString::number(entry.nbConf);
    case 3:  return displayNb(nbInputs(row));
@@ -779,6 +771,10 @@ quint32 QTxDetails::height() const
    return details_.tx.getTxHeight();
 }
 
+bs::sync::Transaction::Direction QTxDetails::direction() const
+{
+   return details_.direction;
+}
 
 TxInOutModel::TxInOutModel(const std::vector<bs::sync::AddressDetails>& data, const QString& type, QObject* parent)
    : QAbstractTableModel(parent)

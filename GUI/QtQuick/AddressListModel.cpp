@@ -168,5 +168,5 @@ QString QmlAddressListModel::getAddressBalance(const BinaryData& address) const
    if (pendingBalances_.count(address) > 0) {
       return gui_utils::satoshiToQString(pendingBalances_.at(address).balance);
    }
-   return QString();
+   return gui_utils::satoshiToQString(0);;
 }

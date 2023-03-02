@@ -142,4 +142,6 @@ QtObject {
 
     readonly property color exportWalletLabelBackground: "#32394F"
     readonly property color exportWalletLabelNameColor: "#45A6FF"
+
+    readonly property color smallButtonBackgroundColor: "#020817"
 }

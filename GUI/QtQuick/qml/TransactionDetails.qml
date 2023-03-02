@@ -28,6 +28,8 @@ Popup {
     property string txType: ''
     property color txTypeColor
     property string txComment: ''
+    property string txConfirmations: ''
+    property color txConfirmationsColor
 
     width: 916
     height: 718
@@ -193,18 +195,8 @@ Popup {
                     width: 170
                 }
                 Label {
-                    function define_confirmation_color(value) {
-                        if (value == 0) {
-                            return BSStyle.transactionConfirmationZero
-                        }
-                        else if (value < 6) {
-                            return BSStyle.transactionConfirmationLow
-                        }
-                        return BSStyle.transactionConfirmationHigh
-                    }
-
-                    text: tx.nbConf
-                    color: define_confirmation_color(tx.nbConf)
+                    text: txConfirmations
+                    color: txConfirmationsColor
                     font.family: "Roboto"
                     font.pixelSize: 14
                 }

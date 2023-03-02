@@ -14,6 +14,7 @@ import QtQuick.Controls 2.15
 import "../BsStyles"
 import "../StyledControls"
 import "." as OverviewControls
+import ".."
 import terminal.models 1.0
 
 Rectangle {
@@ -29,6 +30,11 @@ Rectangle {
     signal createNewWallet()
     signal walletIndexChanged(index : int)
     signal openAddressDetails(var address, var transactions, var balance, var comment, var asset_type, var type, var wallet)
+
+    AddressFilterModel {
+        id: addressFilterModel
+        sourceModel: addressListModel
+    }
 
     Column {
         anchors.leftMargin: 18
@@ -82,21 +88,29 @@ Rectangle {
                         CustomSmallButton {
                             width: 85
                             text: qsTr("Hide used")
+                            onClicked: addressFilterModel.hideUsed = !addressFilterModel.hideUsed
+                            backgroundColor: addressFilterModel.hideUsed ? BSStyle.smallButtonBackgroundColor : 'transparent'
                         }
 
                         CustomSmallButton {
                             width: 90
                             text: qsTr("Hide internal")
+                            onClicked: addressFilterModel.hideInternal = !addressFilterModel.hideInternal
+                            backgroundColor: addressFilterModel.hideInternal ? BSStyle.smallButtonBackgroundColor : 'transparent'
                         }
 
                         CustomSmallButton {
                             width: 90
                             text: qsTr("Hide external")
+                            onClicked: addressFilterModel.hideExternal = !addressFilterModel.hideExternal
+                            backgroundColor: addressFilterModel.hideExternal ? BSStyle.smallButtonBackgroundColor : 'transparent'
                         }
 
                         CustomSmallButton {
                             width: 85
                             text: qsTr("Hide empty")
+                            onClicked: addressFilterModel.hideEmpty = !addressFilterModel.hideEmpty
+                            backgroundColor: addressFilterModel.hideEmpty ? BSStyle.smallButtonBackgroundColor :  'transparent'
                         }
                     }
                 }
@@ -106,18 +120,18 @@ Rectangle {
                     width: parent.width
                     height: parent.height - tableMenu.height
 
-                    model: addressListModel
+                    model: addressFilterModel
                     copy_button_column_index: 0
 
                     columnWidths: [0.35, 0.15, 0.1, 0.4]
                     onCopyRequested: bsApp.copyAddressToClipboard(id)
                     onCellClicked: (row, column, data) => {
-                        const address = (column === 0) ? data : model.data(model.index(row, 0), 257)
-                        const transactions = model.data(model.index(row, 1), 257)
-                        const balance = model.data(model.index(row, 2), 257)
-                        const comment = model.data(model.index(row, 3), 257)
-                        const type = model.data(model.index(row, 0), 259)
-                        const asset_type = model.data(model.index(row, 0), 260)
+                        const address = (column === 0) ? data : model.data(model.index(row, 0), QmlAddressListModel.TableDataRole)
+                        const transactions = model.data(model.index(row, 1), QmlAddressListModel.TableDataRole)
+                        const balance = model.data(model.index(row, 2), QmlAddressListModel.TableDataRole)
+                        const comment = model.data(model.index(row, 3), QmlAddressListModel.TableDataRole)
+                        const type = model.data(model.index(row, 0), QmlAddressListModel.AddressTypeRole)
+                        const asset_type = model.data(model.index(row, 0), QmlAddressListModel.AssetTypeRole)
 
                         openAddressDetails(address, transactions, balance, comment, asset_type, type, overview_panel.currentWallet)
                     }
@@ -167,6 +181,27 @@ Rectangle {
                         id: context_menu
 
                         onOpenSend: (txId, isRBF, isCPFP) => control.openSend(txId, isRBF, isCPFP)
+                    }
+
+                    onCellClicked: (row, column, data) => {
+                        const txHash = model.data(model.index(row, 0), TxListModel.TxIdRole)
+                        transactionDetails.walletName = model.data(model.index(row, 1), TxListModel.TableDataRole)
+                        transactionDetails.address = model.data(model.index(row, 3), TxListModel.TableDataRole)
+                        transactionDetails.txDateTime = model.data(model.index(row, 0), TxListModel.TableDataRole)
+                        transactionDetails.txType = model.data(model.index(row, 2), TxListModel.TableDataRole)
+                        transactionDetails.txTypeColor = model.data(model.index(row, 2), TxListModel.ColorRole)
+                        transactionDetails.txComment = model.data(model.index(row, 7), TxListModel.TableDataRole)
+                        transactionDetails.txAmount = model.data(model.index(row, 4), TxListModel.TableDataRole)
+                        transactionDetails.txConfirmations = model.data(model.index(row, 5), TxListModel.TableDataRole)
+                        transactionDetails.txConfirmationsColor = model.data(model.index(row, 5), TxListModel.ColorRole)
+                        transactionDetails.tx = bsApp.getTXDetails(txHash)
+                        transactionDetails.open()
+                    }
+
+
+                    TransactionDetails {
+                        id: transactionDetails
+                        visible: false
                     }
                 }
             }
