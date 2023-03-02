@@ -160,7 +160,7 @@ Item {
 
         CustomTableView {
             width: parent.width
-            height: parent.height - transaction_header_menu.height
+            height: parent.height - transaction_header_menu.height - transaction_header_menu.spacing - 1
             model: transactionModel
 
             copy_button_column_index: 3

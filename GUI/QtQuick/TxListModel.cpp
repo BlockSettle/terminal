@@ -242,50 +242,6 @@ void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
    }
 }
 
-void TxListModel::prependRow(const bs::TXEntry& entry)
-{
-   //logger_->debug("[{}::{}] prepending entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
-   QMetaObject::invokeMethod(this, [this, entry] {
-      decltype(txDetails_) prevDet;
-      beginInsertRows(QModelIndex(), 0, 0);
-      data_.insert(data_.cbegin(), entry);
-      txDetails_.swap(prevDet);
-      for (auto txDet : prevDet) {
-         txDetails_[txDet.first] = std::move(txDet.second);
-      }
-      endInsertRows();
-      emit nbTxChanged();
-      });
-}
-
-void TxListModel::addRow(const bs::TXEntry& entry)
-{
-   int row = -1;
-   for (int i = 0; i < data_.size(); ++i) {
-      const auto& de = data_.at(i);
-      if ((entry.txHash == de.txHash) && (de.walletIds == entry.walletIds)) {
-         data_[i].txTime = entry.txTime;
-         data_[i].recvTime = entry.recvTime;
-         row = i;
-         break;
-      }
-   }
-
-   if (row != -1) {
-      //logger_->debug("[{}::{}] updating entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
-      emit dataChanged(createIndex(row, 0), createIndex(row, 0));
-   }
-   else {
-      //logger_->debug("[{}::{}] adding entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
-      QMetaObject::invokeMethod(this, [this, entry] {
-         beginInsertRows(QModelIndex(), rowCount(), rowCount());
-         data_.push_back(entry);
-         endInsertRows();
-         emit nbTxChanged();
-         });
-   }
-}
-
 void TxListModel::clear()
 {
    beginResetModel();
