@@ -228,6 +228,7 @@ ColumnLayout  {
 
     function init()
     {
+        bsApp.requestFeeSuggestions()
         rec_addr_input.setActiveFocus()
 
         //we need set first time currentIndex to 0

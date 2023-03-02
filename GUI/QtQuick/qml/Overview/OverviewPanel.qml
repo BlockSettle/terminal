@@ -19,6 +19,8 @@ import terminal.models 1.0
 Rectangle {
     id: control
 
+    signal openSend (string txId, bool isRBF, bool isCPFP)
+
     width: 1200
     height: 788
     color: "transparent"
@@ -154,6 +156,18 @@ Rectangle {
                     copy_button_column_index: 3
                     columnWidths: [0.12, 0.1, 0.08, 0.3, 0.1, 0.1, 0.1, 0.1]
                     onCopyRequested: bsApp.copyAddressToClipboard(id)
+
+                    onCellRightClicked: (row, column, data) => {
+                        context_menu.row = row
+                        context_menu.column = column
+                        context_menu.popup()
+                    }
+
+                    CustomRbfCpfpMenu {
+                        id: context_menu
+
+                        onOpenSend: (txId, isRBF, isCPFP) => openSend(txId, isRBF, isCPFP)
+                    }
                 }
             }
         }

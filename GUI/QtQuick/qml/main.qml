@@ -206,7 +206,6 @@ ApplicationWindow {
                 onClicked: {
                     if (walletBalances.rowCount > 0)
                     {
-                        bsApp.requestFeeSuggestions()
                         topMenuBtnClicked(btnSend)
                         show_popup(send_popup)
                     }
@@ -269,6 +268,11 @@ ApplicationWindow {
 
             onCurWalletIndexChanged: (ind) => {
                 overviewWalletIndex = ind
+            }
+
+            onOpenSend: (txId, isRBF, isCPFP) => {
+                send_popup.open(txId, isRBF, isCPFP)
+                show_popup(send_popup)
             }
         }
 
