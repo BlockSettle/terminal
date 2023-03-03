@@ -73,6 +73,8 @@ public:
    bool isHWW() const { return isHWW_; }
    Q_PROPERTY(bool isHWWready READ isHWWready NOTIFY hwwReady)
    bool isHWWready() const { return isHWWready_; }
+   Q_PROPERTY(bool hasError READ hasError NOTIFY error)
+   bool hasError() const { return !error_.isEmpty(); }
 
 signals:
    void txSignReqChanged();
