@@ -66,7 +66,7 @@ ComboBox {
             color: "#7A88B0"
         }
 
-        Label {
+        TextInput {
             id: input
 
             focus: true
@@ -86,6 +86,8 @@ ComboBox {
             color: control.fontColor
 
             text: control.currentText
+            enabled: control.editable
+
             clip: true
         }
     }

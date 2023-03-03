@@ -23,22 +23,23 @@ CustomContextMenu {
 
     property int row
     property int column
+    property var model
 
     Action {
         text: qsTr("RBF")
-        enabled: transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.RBFRole)
-            //&& (transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.NbConfRole) === 0)
+        enabled: model.data(model.index(context_menu.row, context_menu.column), TxListModel.RBFRole)
+            //&& (model.data(model.index(context_menu.row, context_menu.column), TxListModel.NbConfRole) === 0)
         onTriggered: {
-            var txId = transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.TxIdRole)
+            var txId = model.data(model.index(context_menu.row, context_menu.column), TxListModel.TxIdRole)
             context_menu.openSend(txId, true, false)
         }
     }
 
     Action {
         text: qsTr("CPFP")
-        enabled: true//(transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.NbConfRole) === 0)
+        enabled: true//(model.data(model.index(context_menu.row, context_menu.column), TxListModel.NbConfRole) === 0)
         onTriggered: {
-            var txId = transactionModel.data(transactionModel.index(context_menu.row, context_menu.column), TxListModel.TxIdRole)
+            var txId = model.data(model.index(context_menu.row, context_menu.column), TxListModel.TxIdRole)
             context_menu.openSend(txId, false, true)
         }
     }

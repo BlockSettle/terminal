@@ -19,6 +19,7 @@ CustomComboBox {
     id: fee_suggest_combo
 
     model: feeSuggestions
+    editable: true
 
     //aliases
     title_text: qsTr("Fee Suggestions")
