@@ -946,6 +946,10 @@ ProcessingResult QtQuickAdapter::processWalletData(bs::message::SeqId msgId
    }
    QVector<QVector<QString>> addresses;
    for (const auto& addr : response.used_addresses()) {
+      try {
+         addressCache_[bs::Address::fromAddressString(addr.address())] = response.wallet_id();
+      }
+      catch (const std::exception&) {}
       addresses.append({ QString::fromStdString(addr.address())
          , QString::fromStdString(addr.comment())
          , QString::fromStdString(addr.index())
@@ -993,6 +997,8 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
             if (tx.isInitialized()) {
                txDet.tx = std::move(tx);
                txDet.tx.setTxHeight(resp.tx_height());
+               logger_->debug("[{}] own txid: {}/{}", ownTxHash.toHexStr(true)
+                  , txDet.tx.getThisHash().toHexStr(true));
             }
          }
       } catch (const std::exception &e) {
@@ -1305,11 +1311,12 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStri
       msgReq->set_comment(comment.toStdString());
    }
    QTXSignRequest* txReq = nullptr;
+   std::vector<UTXO> inputs;
    if (utxos) {
       if (walletIndex < 0) {
-         txReq = new QTXSignRequest(this);
+         txReq = new QTXSignRequest(logger_, this);
          for (const auto& qUtxo : utxos->data()) {
-            txReq->addDummyUTXO(qUtxo->utxo());
+            txReq->addInput(qUtxo->input());
          }
          ArmoryMessage msgSpendable;
          ArmoryMessage_WalletIDs* msgWltIds = nullptr;
@@ -1338,12 +1345,16 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStri
       else {
          for (const auto& qUtxo : utxos->data()) {
             msgReq->add_utxos(qUtxo->utxo().serialize().toBinStr());
+            inputs.push_back(qUtxo->utxo());
          }
       }
    }
    const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
    if (!txReq) {
-      txReq = new QTXSignRequest(this);
+      txReq = new QTXSignRequest(logger_, this);
+   }
+   if (!inputs.empty()) {
+      txReq->setInputs(inputs);
    }
    txReqs_[msgId] = { txReq, isMaxAmount };
    return txReq;
@@ -1665,6 +1676,7 @@ void QtQuickAdapter::processWalletAddresses(const std::string& walletId
    }
    const auto lastAddr = addresses.at(addresses.size() - 1);
    logger_->debug("[{}] {} last address: {}", __func__, hdWalletId, lastAddr.address.display());
+   addressCache_[lastAddr.address] = hdWalletId;
    addrModel_->addRow(hdWalletId, { QString::fromStdString(lastAddr.address.display())
       , QString(), QString::fromStdString(lastAddr.index), assetTypeToString(lastAddr.assetType)});
    generatedAddress_ = lastAddr.address;
@@ -1722,6 +1734,18 @@ bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::Seq
    return bs::message::ProcessingResult::Success;
 }
 
+std::string QtQuickAdapter::hdWalletIdByLeafId(const std::string& walletId) const
+{
+   for (const auto& hdWallet : hdWallets_) {
+      for (const auto& leaf : hdWallet.second.leaves) {
+         if (walletId == leaf.first) {
+            return hdWallet.first;
+         }
+      }
+   }
+   return {};
+}
+
 bs::message::ProcessingResult QtQuickAdapter::processUTXOs(bs::message::SeqId msgId
    , const ArmoryMessage_UTXOs& response)
 {
@@ -1742,22 +1766,40 @@ bs::message::ProcessingResult QtQuickAdapter::processUTXOs(bs::message::SeqId ms
    catch (const std::exception& e) {
       logger_->error("[{}] failed to deser UTXO: {}", __func__, e.what());
    }
-   const auto& dummyUTXOs = itReq->second.txReq->dummyUTXOs();
+   const auto& dummyUTXOs = itReq->second.txReq->inputs();
    auto msgReq = itReq->second.msg.mutable_tx_request();
+   std::vector<UTXO> inputs;
+   std::set<bs::Address> inputAddrs;
    for (const auto& u : dummyUTXOs) {
       for (const auto& utxo : utxos) {
-         if ((u.getTxHash() == utxo.getTxHash())) {
+         logger_->debug("[{}] {}:{} vs {}:{}", __func__, u.txHash.toHexStr(true), u.txOutIndex
+            , utxo.getTxHash().toHexStr(true), utxo.getTxOutIndex());
+         if ((u.txHash == utxo.getTxHash()) && (u.txOutIndex == utxo.getTxOutIndex())) {
+            try {
+               inputAddrs.insert(bs::Address::fromUTXO(utxo));
+            }
+            catch (const std::exception&) {}
             msgReq->add_utxos(utxo.serialize().toBinStr());
+            inputs.push_back(utxo);
             break;
          }
       }
    }
+   itReq->second.txReq->setInputs(inputs);
+   logger_->debug("[{}] matched {} UTXOs of {}", __func__, msgReq->utxos_size(), dummyUTXOs.size());
    if (msgReq->utxos_size() != dummyUTXOs.size()) {
-      emit showError(tr("failed to obtain UTXO[s]"));
+      itReq->second.txReq->setError(tr("Failed to obtain UTXO[s]"));
       txReqs_.erase(itReq);
       return bs::message::ProcessingResult::Error;
    }
-   msgReq->set_hd_wallet_id(response.wallet_id());
+   for (const auto& addr : inputAddrs) {
+      const auto& itAddr = addressCache_.find(addr);
+      if (itAddr != addressCache_.end()) {
+         msgReq->set_hd_wallet_id(itAddr->second);
+         logger_->debug("[{}] set HD wallet id {} from {}", __func__, msgReq->hd_wallet_id(), addr.display());
+         break;
+      }
+   }
    msgId = pushRequest(user_, userWallets_, itReq->second.msg.SerializeAsString());
    txReqs_[msgId] = { itReq->second.txReq, itReq->second.isMaxAmount };
    txReqs_.erase(itReq);

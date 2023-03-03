@@ -207,6 +207,7 @@ private:
    void createWallet(bool primary);
    std::string hdWalletIdByIndex(int);
    std::string generateWalletName() const;
+   std::string hdWalletIdByLeafId(const std::string&) const;
 
    void processWalletLoaded(const bs::sync::WalletInfo &);
    bs::message::ProcessingResult processWalletData(const bs::message::SeqId
@@ -288,6 +289,7 @@ private:
    std::map<bs::message::SeqId, QTxDetails*>          txDetailReqs_;
    std::map<ApplicationSettings::Setting, QVariant>   settingsCache_;
    std::set<bs::message::SeqId>  expTxAddrReqs_, expTxAddrInReqs_;
+   std::map<bs::Address, std::string>  addressCache_;
 };
 
 #endif	// QT_QUICK_ADAPTER_H

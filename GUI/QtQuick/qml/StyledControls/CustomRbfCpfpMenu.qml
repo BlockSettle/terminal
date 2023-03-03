@@ -28,7 +28,7 @@ CustomContextMenu {
     Action {
         text: qsTr("RBF")
         enabled: model.data(model.index(context_menu.row, context_menu.column), TxListModel.RBFRole)
-            //&& (model.data(model.index(context_menu.row, context_menu.column), TxListModel.NbConfRole) === 0)
+            && (model.data(model.index(context_menu.row, context_menu.column), TxListModel.NbConfRole) === 0)
         onTriggered: {
             var txId = model.data(model.index(context_menu.row, context_menu.column), TxListModel.TxIdRole)
             context_menu.openSend(txId, true, false)
@@ -37,7 +37,7 @@ CustomContextMenu {
 
     Action {
         text: qsTr("CPFP")
-        enabled: true//(model.data(model.index(context_menu.row, context_menu.column), TxListModel.NbConfRole) === 0)
+        enabled: (model.data(model.index(context_menu.row, context_menu.column), TxListModel.NbConfRole) === 0)
         onTriggered: {
             var txId = model.data(model.index(context_menu.row, context_menu.column), TxListModel.TxIdRole)
             context_menu.openSend(txId, false, true)

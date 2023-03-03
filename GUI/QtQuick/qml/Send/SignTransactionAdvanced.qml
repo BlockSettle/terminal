@@ -64,7 +64,7 @@ ColumnLayout  {
                 height: parent.height - 24
                 anchors.centerIn: parent
 
-                model: isRBF ? tx.ownInputs : isCPFP ? tx.ownOutputs : txInputsSelectedModel
+                model: txSignRequest.inputs
                 columnWidths: [0.7, 0.1, 0, 0.2]
 
                 copy_button_column_index: -1
@@ -377,13 +377,13 @@ ColumnLayout  {
 
     CustomButton {
         id: broadcast_but
-        text: qsTr("Broadcast")
+        text: txSignRequest.hasError ? txSignRequest.errorText : qsTr("Broadcast")
         width: 1084
 
         Layout.bottomMargin: 40
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
-        enabled: (txSignRequest.isHWW && txSignRequest.isHWWready) || password.value.length
+        enabled: !txSignRequest.hasError && ((txSignRequest.isHWW && txSignRequest.isHWWready) || password.value.length)
 
         Component.onCompleted: {
             broadcast_but.preferred = true

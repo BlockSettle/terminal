@@ -332,13 +332,13 @@ ColumnLayout  {
 
     CustomButton {
         id: broadcast_but
-        text: qsTr("Broadcast")
+        text: txSignRequest.hasError ? txSignRequest.errorText : qsTr("Broadcast")
         width: 532
 
         Layout.bottomMargin: 40
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
-        enabled: (txSignRequest.isHWW && txSignRequest.isHWWready) || password.value.length
+        enabled: !txSignRequest.hasError && ((txSignRequest.isHWW && txSignRequest.isHWWready) || password.value.length)
 
         Component.onCompleted: {
             broadcast_but.preferred = true

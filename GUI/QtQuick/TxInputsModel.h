@@ -35,10 +35,21 @@ class QUTXO : public QObject
 public:
    QUTXO(const UTXO& utxo, QObject* parent = nullptr)
       : QObject(parent), utxo_(utxo) {}
+
+   struct Input {
+      BinaryData  txHash;
+      uint64_t    amount;
+      uint32_t    txOutIndex;
+   };
+   QUTXO(const Input& input, QObject* parent = nullptr)
+      : QObject(parent), input_(input) {}
+
    UTXO utxo() const { return utxo_; }
+   Input input() const { return input_; }
 
 private:
-   const UTXO utxo_;
+   UTXO  utxo_{};
+   Input input_{};
 };
 
 class QUTXOList : public QObject
@@ -62,7 +73,8 @@ class TxInputsModel : public QAbstractTableModel
 public:
    enum TableRoles { TableDataRole = Qt::UserRole + 1, HeadingRole, ColorRole,
                      SelectedRole, ExpandedRole, CanBeExpandedRole };
-   TxInputsModel(const std::shared_ptr<spdlog::logger>&, TxOutputsModel*, QObject* parent = nullptr);
+   TxInputsModel(const std::shared_ptr<spdlog::logger>&, TxOutputsModel*
+      , QObject* parent = nullptr);
 
    int rowCount(const QModelIndex & = QModelIndex()) const override;
    int columnCount(const QModelIndex & = QModelIndex()) const override;
@@ -126,10 +138,6 @@ private:
    QString fee_;
    uint32_t topBlock_{ 0 };
    double collectUTXOsForAmount_{ 0 };
-
-   QMutex mutex_;
-   QWaitCondition waitCond_;
-
 };
 
 #endif	// TX_INPUTS_MODEL_H

@@ -9,24 +9,47 @@
 
 */
 #include "QTXSignRequest.h"
+#include <spdlog/spdlog.h>
 #include "Address.h"
 #include "BTCNumericTypes.h"
 
 
-QTXSignRequest::QTXSignRequest(QObject* parent)
-   : QObject(parent)
+QTXSignRequest::QTXSignRequest(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
+   : QObject(parent), logger_(logger)
 {}
 
 void QTXSignRequest::setTxSignReq(const bs::core::wallet::TXSignRequest& txReq)
 {
    txReq_ = txReq;
-   emit txSignReqChanged();
+   std::vector<UTXO> inputs;
+   inputs.reserve(txReq.armorySigner_.getTxInCount());
+   for (unsigned int i = 0; i < txReq.armorySigner_.getTxInCount(); ++i) {
+      const auto& spender = txReq.armorySigner_.getSpender(i);
+      inputs.push_back(spender->getUtxo());
+   }
+   setInputs(inputs);
 }
 
 void QTXSignRequest::setError(const QString& err)
 {
    error_ = err;
-   emit error();
+   emit errorSet();
+}
+
+void QTXSignRequest::setInputs(const std::vector<UTXO>& utxos)
+{
+   if (inputsModel_) {
+      inputsModel_->clear();
+      inputsModel_->addUTXOs(utxos);
+      emit txSignReqChanged();
+   }
+   else {
+      QMetaObject::invokeMethod(this, [this, utxos] {
+         inputsModel_ = new TxInputsModel(logger_, nullptr, this);
+         inputsModel_->addUTXOs(utxos);
+         emit txSignReqChanged();
+         });
+   }
 }
 
 QStringList QTXSignRequest::outputAddresses() const

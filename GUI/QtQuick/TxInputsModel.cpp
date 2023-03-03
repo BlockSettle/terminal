@@ -33,8 +33,7 @@ TxInputsModel::TxInputsModel(const std::shared_ptr<spdlog::logger>& logger
    : QAbstractTableModel(parent), logger_(logger), outsModel_(outs)
    , header_{{ColumnAddress, tr("Address/Hash")}, {ColumnTx, tr("#Tx")},
             {ColumnComment, tr("Comment")}, {ColumnBalance, tr("Balance (BTC)")}}
-{
-}
+{}
 
 int TxInputsModel::rowCount(const QModelIndex &) const
 {
@@ -118,52 +117,42 @@ void TxInputsModel::clear()
 
 void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
 {
-   for (const auto& utxo : utxos) {
-      try {
-         const auto& addr = bs::Address::fromUTXO(utxo);
-         utxos_[addr].push_back(utxo);
-         int addrIndex = -1;
-         for (int i = 0; i < data_.size(); ++i) {
-            if (data_.at(i).address == addr) {
-               addrIndex = i;
-               break;
+   QMetaObject::invokeMethod(this, [this, utxos] {
+      for (const auto& utxo : utxos) {
+         try {
+            const auto& addr = bs::Address::fromUTXO(utxo);
+            utxos_[addr].push_back(utxo);
+            int addrIndex = -1;
+            for (int i = 0; i < data_.size(); ++i) {
+               if (data_.at(i).address == addr) {
+                  addrIndex = i;
+                  break;
+               }
             }
-         }
-         if (addrIndex < 0) {
-            QMetaObject::invokeMethod(this, [this, addr] {
+            if (addrIndex < 0) {
                beginInsertRows(QModelIndex(), rowCount(), rowCount());
                data_.push_back({ addr });
                endInsertRows();
                emit rowCountChanged();
-               waitCond_.wakeAll();
-            });
-            mutex_.lock();
-            waitCond_.wait(&mutex_);
-            mutex_.unlock();
-         }
-         else {
-            if (data_.at(addrIndex).expanded) {
-               QMetaObject::invokeMethod(this, [this, addrIndex, utxo] {
+            }
+            else {
+               if (data_.at(addrIndex).expanded) {
                   beginInsertRows(QModelIndex(), addrIndex + 2, addrIndex + 2);
                   data_.insert(data_.cbegin() + addrIndex + 1, { {}, utxo.getTxHash(), utxo.getTxOutIndex() });
                   endInsertRows();
                   emit rowCountChanged();
-                  waitCond_.wakeAll();
-               });
-               mutex_.lock();
-               waitCond_.wait(&mutex_);
-               mutex_.unlock();
+               }
             }
          }
+         catch (const std::exception&) {
+            continue;
+         }
       }
-      catch (const std::exception&) {
-         continue;
+      if (collectUTXOsForAmount_ > 0) {
+         collectUTXOsFor(collectUTXOsForAmount_);
+         collectUTXOsForAmount_ = 0;
       }
-   }
-   if (collectUTXOsForAmount_ > 0) {
-      collectUTXOsFor(collectUTXOsForAmount_);
-      collectUTXOsForAmount_ = 0;
-   }
+   });
 }
 
 void TxInputsModel::addEntries(const std::vector<Entry>& entries)
@@ -386,8 +375,9 @@ QUTXOList* TxInputsModel::zcInputs() const
 {
    QList<QUTXO*> result;
    for (const auto& entry : data_) {
-      result.push_back(new QUTXO(UTXO(entry.amount, UINT32_MAX, UINT32_MAX
-         , entry.txOutIndex, entry.txId, BinaryData::fromString("dummy")), (QObject*)this));
+      logger_->debug("[{}] {}:{} {}", __func__, entry.txId.toHexStr(true), entry.txOutIndex, entry.amount);
+      result.push_back(new QUTXO(QUTXO::Input{ entry.txId, entry.amount, entry.txOutIndex }
+         , (QObject*)this));
    }
    return new QUTXOList(result, (QObject*)this);
 }
@@ -400,7 +390,7 @@ QList<QUTXO*> TxInputsModel::collectUTXOsFor(double amount)
       allUTXOs.insert(allUTXOs.cend(), byAddr.second.cbegin(), byAddr.second.cend());
    }
    bs::Address::decorateUTXOs(allUTXOs);
-   const auto& recipients = outsModel_->recipients();
+   const auto& recipients = outsModel_ ? outsModel_->recipients() : decltype(outsModel_->recipients()){};
    std::map<unsigned, std::vector<std::shared_ptr<Armory::Signer::ScriptRecipient>>> recipientsMap;
    for (unsigned i = 0; i < recipients.size(); ++i) {
       recipientsMap[i] = { recipients.at(i) };

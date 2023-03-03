@@ -16,6 +16,7 @@
 #include <QVariant>
 #include "BinaryData.h"
 #include "CoreWallet.h"
+#include "TxInputsModel.h"
 
 namespace spdlog {
    class logger;
@@ -30,12 +31,13 @@ public:
       double            amount;
    };
 
-   QTXSignRequest(QObject* parent = nullptr);
+   QTXSignRequest(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
    bs::core::wallet::TXSignRequest txReq() const { return txReq_; }
    void setTxSignReq(const bs::core::wallet::TXSignRequest&);
    void setError(const QString&);
-   void addDummyUTXO(const UTXO& utxo) { dummyUTXOs_.push_back(utxo); }
-   std::vector<UTXO> dummyUTXOs() const { return dummyUTXOs_; }
+   void addInput(const QUTXO::Input& input) { inputs_.push_back(input); }
+   std::vector<QUTXO::Input> inputs() const { return inputs_; }
+   void setInputs(const std::vector<UTXO>&);
 
    void setHWW(bool hww)
    {
@@ -64,7 +66,7 @@ public:
    quint32 txSize() const;
    Q_PROPERTY(QString feePerByte READ feePerByte NOTIFY txSignReqChanged)
    QString feePerByte() const;
-   Q_PROPERTY(QString errorText READ errorText NOTIFY error)
+   Q_PROPERTY(QString errorText READ errorText NOTIFY errorSet)
    QString errorText() const { return error_; }
    Q_PROPERTY(bool isValid READ isValid NOTIFY txSignReqChanged)
    bool isValid() const { return (error_.isEmpty() && txReq_.isValid()); }
@@ -73,19 +75,23 @@ public:
    bool isHWW() const { return isHWW_; }
    Q_PROPERTY(bool isHWWready READ isHWWready NOTIFY hwwReady)
    bool isHWWready() const { return isHWWready_; }
-   Q_PROPERTY(bool hasError READ hasError NOTIFY error)
+   Q_PROPERTY(bool hasError READ hasError NOTIFY errorSet)
    bool hasError() const { return !error_.isEmpty(); }
+   Q_PROPERTY(TxInputsModel* inputs READ inputsModel NOTIFY txSignReqChanged)
+   TxInputsModel* inputsModel() const { return inputsModel_; }
 
 signals:
    void txSignReqChanged();
    void hwwChanged();
    void hwwReady();
-   void error();
+   void errorSet();
 
 private:
-   bs::core::wallet::TXSignRequest txReq_{};
+   std::shared_ptr<spdlog::logger>  logger_;
+   bs::core::wallet::TXSignRequest  txReq_{};
    QString  error_;
-   std::vector<UTXO> dummyUTXOs_;
+   std::vector<QUTXO::Input>  inputs_;
+   TxInputsModel* inputsModel_{ nullptr };
    bool  isHWW_{ false };
    bool  isHWWready_{ false };
 };

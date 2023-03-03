@@ -664,8 +664,9 @@ void QTxDetails::setDetails(const bs::sync::TXWalletDetails& details)
    ownOutputs_ = new TxInputsModel(logger_, outputsModel, this);
    outputs_.clear();
    outputs_.reserve(details.inputAddresses.size());
+   const auto& txId = details_.tx.isInitialized() ? details_.tx.getThisHash() : BinaryData{};
    for (const auto& out : details.outputAddresses) {
-      outputs_.push_back({ out.address, out.outHash, out.outIndex, out.value });
+      outputs_.push_back({ out.address, txId, out.outIndex, out.value });
    }
    QMetaObject::invokeMethod(this, [this, inputs] {
       ownInputs_->addEntries(inputs);
