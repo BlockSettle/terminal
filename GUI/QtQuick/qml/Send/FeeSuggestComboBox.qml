@@ -66,6 +66,15 @@ CustomComboBox {
         return res
     }
 
+    function edit_value()
+    {
+        var res = fee_suggest_combo.input_text
+        var index = res.indexOf(":")
+        res = res.slice(index+2)
+        res = res.replace(" s/b", "")
+        return res
+    }
+
     property string prev_text : fee_suggest_combo.currentText
     onTextEdited : {
         if (!fee_suggest_combo.input_accept_input)
