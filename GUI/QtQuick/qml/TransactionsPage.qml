@@ -192,6 +192,8 @@ Item {
             CustomRbfCpfpMenu {
                 id: context_menu
 
+                model: transactionModel
+
                 onOpenSend: (txId, isRBF, isCPFP) => transactions.openSend(txId, isRBF, isCPFP)
             }
         }

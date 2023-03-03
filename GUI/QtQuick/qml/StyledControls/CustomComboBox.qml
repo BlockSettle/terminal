@@ -22,6 +22,7 @@ ComboBox {
     property int fontSize: 16
     property color fontColor: "#FFFFFF"
 
+    editable: false
     activeFocusOnTab: true
 
     leftPadding: 16
@@ -148,7 +149,7 @@ ComboBox {
         topPadding: 4
         bottomPadding: 4
 
-        contentItem: Text {
+        contentItem: TextInput {
 
             text: control.textRole
                 ? (Array.isArray(control.model) ? modelData[control.textRole] : model[control.textRole])
@@ -158,7 +159,8 @@ ComboBox {
             font.family: "Roboto"
             font.weight: Font.Normal
 
-            elide: Text.ElideNone
+            enabled: control.editable
+            //elide: Text.ElideNone
             verticalAlignment: Text.AlignVCenter
         }
 
