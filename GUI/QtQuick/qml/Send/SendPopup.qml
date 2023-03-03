@@ -16,6 +16,10 @@ CustomPopup {
     _stack_view.initialItem: simple_details
     _arrow_but_visibility: !simple_details.visible && !advanced_details.visible
 
+    property var tx: null
+    property bool isRBF: false
+    property bool isCPFP: false
+
     SimpleDetails {
         id: simple_details
         visible: false
@@ -51,6 +55,10 @@ CustomPopup {
         id: advanced_details
         visible: false
 
+        tx: root.tx
+        isRBF: root.isRBF
+        isCPFP: root.isCPFP
+
         onSig_continue: (signature) => {
             sign_trans_advanced.txSignRequest = signature
             _stack_view.push(sign_trans_advanced)
@@ -77,6 +85,9 @@ CustomPopup {
         id: sign_trans_advanced
         visible: false
 
+        isRBF: root.isRBF
+        isCPFP: root.isCPFP
+
         onSig_broadcast:  {
             root.close()
             _stack_view.pop(null)
@@ -97,17 +108,17 @@ CustomPopup {
         {
             advanced_details.init()
         }
-        advanced_details.tx = null
-        advanced_details.isRBF = false
-        advanced_details.isCPFP = false
+        root.tx = null
+        root.isRBF = false
+        root.isCPFP = false
     }
 
     function open(txId: string, isRBF: bool, isCPFP: bool)
     {
         _stack_view.replace(advanced_details)
-        advanced_details.tx = bsApp.getTXDetails(txId)
-        advanced_details.isRBF = isRBF
-        advanced_details.isCPFP = isCPFP
+        root.tx = bsApp.getTXDetails(txId)
+        root.isRBF = isRBF
+        root.isCPFP = isCPFP
         advanced_details.init()
     }
 

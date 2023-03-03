@@ -27,11 +27,17 @@ namespace {
 TxOutputsModel::TxOutputsModel(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
    : QAbstractTableModel(parent), logger_(logger)
    , header_{ tr("Output Address"), tr("Amount (BTC)"), {} }
-{ }
+{
+   connect(this, &TxOutputsModel::modelReset,
+           this, &TxOutputsModel::rowCountChanged);
+   connect(this, &TxOutputsModel::rowsInserted,
+           this, &TxOutputsModel::rowCountChanged);
+   connect(this, &TxOutputsModel::rowsRemoved,
+           this, &TxOutputsModel::rowCountChanged);
+}
 
 int TxOutputsModel::rowCount(const QModelIndex &) const
 {
-   logger_->debug("[{}] data_.size() = {}", __func__, data_.size());
    return data_.size() + 1;
 }
 

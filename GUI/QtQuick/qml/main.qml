@@ -24,8 +24,11 @@ import "Settings"  1
 
 ApplicationWindow {
     id: mainWindow
+
     minimumWidth: 1200
-    minimumHeight: 900
+    minimumHeight: 800
+    x: Screen.width / 2 - width / 2
+    y: Screen.height / 2 - height / 2
 
     visible: false
     title: qsTr("BlockSettle Terminal")
