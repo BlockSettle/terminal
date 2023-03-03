@@ -187,7 +187,11 @@ ColumnLayout  {
         }
 
         function click_enter() {
-            console.log ("fees = " + parseFloat(fee_suggest_combo.edit_value()))
+            if (!fee_suggest_combo.edit_value())
+            {
+                fee_suggest_combo.input_text = fee_suggest_combo.currentText
+            }
+
             layout.sig_continue( bsApp.createTXSignRequest(from_wallet_combo.currentIndex
                 , [rec_addr_input.input_text], [parseFloat(amount_input.input_text)]
                 , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text))
