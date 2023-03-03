@@ -30,6 +30,7 @@ ColumnLayout  {
         target:tx
         function onUpdated ()
         {
+            bsApp.requestFeeSuggestions()
             if (isRBF) {
                 txOutputsModel.setOutputsFrom(tx)
             }
@@ -190,8 +191,7 @@ ColumnLayout  {
                     onActivated: (index_act) =>  {
                         if (rec_addr_input.isValid) {
                             var fpb = parseFloat(fee_suggest_combo.currentValue)
-                            tempRequest = bsApp.createTXSignRequest(index_act
-                                        , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
+                            create_temp_request()
                         }
 
                         //I dont understand why but acceptableInput dont work...
@@ -398,13 +398,6 @@ ColumnLayout  {
                     onFocus_next: {
                         amount_input.setActiveFocus()
                     }
-
-
-                    function createTempRequest() {
-                        var fpb = parseFloat(fee_suggest_combo.currentValue)
-                        tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
-                                    , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
-                    }
                 }
 
                 AmountInput {
@@ -585,6 +578,15 @@ ColumnLayout  {
         else if (continue_but.enabled)
         {
             continue_but.click_enter()
+        }
+    }
+
+    function create_temp_request()
+    {
+        if (rec_addr_input.isValid) {
+            var fpb = parseFloat(fee_suggest_combo.currentValue)
+            tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                        , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
         }
     }
 
