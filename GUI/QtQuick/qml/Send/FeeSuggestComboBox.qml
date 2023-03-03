@@ -8,7 +8,7 @@
 **********************************************************************************
 
 */
-import QtQuick 2.9
+import QtQuick 2.15
 import QtQuick.Controls 2.3
 
 import "../BsStyles"
@@ -29,6 +29,8 @@ CustomComboBox {
     textRole: "text"
     valueRole: "value"
 
+    validator: RegExpValidator {regExp: new RegExp(create_regexp())}
+
     Connections
     {
         target:feeSuggestions
@@ -39,6 +41,9 @@ CustomComboBox {
             {
                 change_index_handler()
             }
+
+            validator.regExp = new RegExp(create_regexp())
+            prev_text = fee_suggest_combo.currentText
         }
     }
 
@@ -47,5 +52,27 @@ CustomComboBox {
         {
             change_index_handler()
         }
+        validator.regExp = new RegExp(create_regexp())
+        prev_text = fee_suggest_combo.currentText
+    }
+
+    function create_regexp()
+    {
+        var res = fee_suggest_combo.currentText
+        var index = res.indexOf(":")
+        res = res.slice(0, index+2)
+        res = res.replace("(", "\\(").replace(")", "\\)")
+        res = res + "\\d+\\.?\\d{0,1} s\/b"
+        return res
+    }
+
+    property string prev_text : fee_suggest_combo.currentText
+    onTextEdited : {
+        if (!fee_suggest_combo.input_accept_input)
+        {
+            fee_suggest_combo.input_text  = prev_text
+        }
+
+        prev_text = fee_suggest_combo.input_text
     }
 }
