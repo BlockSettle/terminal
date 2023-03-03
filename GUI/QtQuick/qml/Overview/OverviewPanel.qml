@@ -163,6 +163,8 @@ Rectangle {
                     height: parent.height - 40
                     
                     model: PendingTransactionFilterModel {
+                        id: pendingTransactionModel
+
                         sourceModel: txListModel
                         dynamicSortFilter: true
                     }
@@ -179,6 +181,8 @@ Rectangle {
 
                     CustomRbfCpfpMenu {
                         id: context_menu
+
+                        model: pendingTransactionModel
 
                         onOpenSend: (txId, isRBF, isCPFP) => control.openSend(txId, isRBF, isCPFP)
                     }
