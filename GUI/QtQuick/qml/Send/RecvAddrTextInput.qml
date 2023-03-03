@@ -63,7 +63,7 @@ CustomTextInput {
             rec_addr_input.isValid = bsApp.validateAddress(rec_addr_input.input_text)
             if (rec_addr_input.isValid)
             {
-                createTempRequest()
+                create_temp_request()
                 focus_next()
             }
         }

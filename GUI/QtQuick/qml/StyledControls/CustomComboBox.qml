@@ -22,6 +22,11 @@ ComboBox {
     property int fontSize: 16
     property color fontColor: "#FFFFFF"
 
+    property alias input_accept_input: input.acceptableInput
+    property alias input_text: input.text
+
+    signal textEdited()
+
     activeFocusOnTab: true
 
     leftPadding: 16
@@ -86,9 +91,14 @@ ComboBox {
             color: control.fontColor
 
             text: control.currentText
+            validator: control.validator
             enabled: control.editable
 
             clip: true
+
+            onTextEdited : {
+                control.textEdited()
+            }
         }
     }
 

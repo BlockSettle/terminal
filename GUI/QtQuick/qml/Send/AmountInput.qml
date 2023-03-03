@@ -26,6 +26,7 @@ CustomTextInput {
     //it is why I have realized my validator inside of onTextEdited
     property string prev_text : ""
     onTextEdited : {
+
        if (tempRequest === null || !tempRequest.isValid) {
            amount_input.input_text = "0"
        }
