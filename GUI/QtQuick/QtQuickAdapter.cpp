@@ -1258,6 +1258,7 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStri
    if (walletIndex >= 0) {
       msgReq->set_hd_wallet_id(hdWalletIdByIndex(walletIndex));
    }
+   logger_->debug("[{}] walletIdx={}", __func__, walletIndex);
    bool isMaxAmount = false;
    if (recvAddrs.isEmpty()) {
       const auto& recipients = txOutputsModel_->recipients();
@@ -1326,6 +1327,7 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStri
             }
             const auto msgId = pushRequest(user_, userBlockchain_, msgSpendable.SerializeAsString());
             txReqs_[msgId] = { txReq, isMaxAmount, msg };
+            logger_->debug("[{}] {}", __func__, msgSpendable.DebugString());
             return txReq;
          }
          else {
