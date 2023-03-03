@@ -187,9 +187,10 @@ ColumnLayout  {
         }
 
         function click_enter() {
+            console.log ("fees = " + parseFloat(fee_suggest_combo.edit_value()))
             layout.sig_continue( bsApp.createTXSignRequest(from_wallet_combo.currentIndex
                 , [rec_addr_input.input_text], [parseFloat(amount_input.input_text)]
-                , parseFloat(fee_suggest_combo.currentValue), comment_input.input_text))
+                , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text))
         }
     }
 
@@ -222,7 +223,7 @@ ColumnLayout  {
     function create_temp_request()
     {
         if (rec_addr_input.isValid) {
-            var fpb = parseFloat(fee_suggest_combo.currentValue)
+            var fpb = parseFloat(fee_suggest_combo.edit_value())
             tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
                         , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
         }

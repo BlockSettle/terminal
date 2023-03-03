@@ -106,7 +106,7 @@ ApplicationWindow {
         {
             //ibFailure.displayMessage(text)
             error_dialog.error = text
-            error_dialog.open()
+            show_popup(error_dialog)
         }
     }
 
