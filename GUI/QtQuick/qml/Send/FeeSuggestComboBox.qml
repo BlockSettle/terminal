@@ -62,7 +62,7 @@ CustomComboBox {
         var index = res.indexOf(":")
         res = res.slice(0, index+2)
         res = res.replace("(", "\\(").replace(")", "\\)")
-        res = res + "\\d+\\.?\\d{0,1} s\/b"
+        res = res + "\\d*\\.?\\d? s\/b"
         return res
     }
 
@@ -79,9 +79,16 @@ CustomComboBox {
     onTextEdited : {
         if (!fee_suggest_combo.input_accept_input)
         {
-            fee_suggest_combo.input_text  = prev_text
+            fee_suggest_combo.input_text = prev_text
         }
 
         prev_text = fee_suggest_combo.input_text
+    }
+
+    onEditingFinished : {
+        if (!edit_value())
+        {
+            fee_suggest_combo.input_text = fee_suggest_combo.currentText
+        }
     }
 }

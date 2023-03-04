@@ -26,6 +26,7 @@ ComboBox {
     property alias input_text: input.text
 
     signal textEdited()
+    signal editingFinished()
 
     activeFocusOnTab: true
 
@@ -98,6 +99,10 @@ ComboBox {
 
             onTextEdited : {
                 control.textEdited()
+            }
+
+            onEditingFinished : {
+                control.editingFinished()
             }
         }
     }

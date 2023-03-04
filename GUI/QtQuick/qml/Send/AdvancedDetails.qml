@@ -530,7 +530,11 @@ ColumnLayout  {
 
 
         function click_enter() {
-            console.log ("fees = " + parseFloat(fee_suggest_combo.edit_value()))
+            if (!fee_suggest_combo.edit_value())
+            {
+                fee_suggest_combo.input_text = fee_suggest_combo.currentText
+            }
+
             if (isRBF) {
                 layout.sig_continue( bsApp.createTXSignRequest(-1   //special index for RBF mode
                     , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
