@@ -14,6 +14,8 @@
 PendingTransactionFilterModel::PendingTransactionFilterModel(QObject* parent)
    : QSortFilterProxyModel(parent)
 {
+   setDynamicSortFilter(true);
+   sort(0, Qt::AscendingOrder);
 }
 
 bool PendingTransactionFilterModel::filterAcceptsRow(int source_row,
@@ -28,3 +30,8 @@ bool PendingTransactionFilterModel::filterAcceptsRow(int source_row,
    return true;
 }
 
+bool PendingTransactionFilterModel::lessThan(const QModelIndex& left, const QModelIndex& right) const
+{
+   return sourceModel()->data(sourceModel()->index(left.row(), 5), TxListModel::TableRoles::TableDataRole) < 
+      sourceModel()->data(sourceModel()->index(right.row(), 5), TxListModel::TableRoles::TableDataRole);
+}

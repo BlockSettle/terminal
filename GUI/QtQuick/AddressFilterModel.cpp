@@ -24,7 +24,7 @@ bool AddressFilterModel::filterAcceptsRow(int source_row, const QModelIndex& sou
       const auto txCountIndex = sourceModel()->index(source_row, 1);
       const auto bananceIndex = sourceModel()->index(source_row, 2);
       if (sourceModel()->data(txCountIndex, QmlAddressListModel::TableRoles::TableDataRole) != 0 &&
-         qFuzzyCompare(sourceModel()->data(bananceIndex, QmlAddressListModel::TableRoles::TableDataRole).toFloat(), 0.0f))
+          qFuzzyIsNull(sourceModel()->data(bananceIndex, QmlAddressListModel::TableRoles::TableDataRole).toDouble()))
       {
          return false;
       }
@@ -32,7 +32,7 @@ bool AddressFilterModel::filterAcceptsRow(int source_row, const QModelIndex& sou
 
    if (hideEmpty_) {
       const auto bananceIndex = sourceModel()->index(source_row, 2);
-      if (qFuzzyCompare(sourceModel()->data(bananceIndex, QmlAddressListModel::TableRoles::TableDataRole).toFloat(), 0.0f))
+      if (qFuzzyIsNull(sourceModel()->data(bananceIndex, QmlAddressListModel::TableRoles::TableDataRole).toDouble()))
       {
          return false;
       }
