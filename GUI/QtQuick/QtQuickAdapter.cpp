@@ -1595,8 +1595,6 @@ ProcessingResult QtQuickAdapter::processZC(const BlockSettle::Common::ArmoryMess
          }
          catch (const std::exception&) {}
       }
-      txModel_->prependRow(txEntry);
-
       notifyNewTransaction(txEntry);
    }
    pushRequest(user_, userWallets_, msg.SerializeAsString());

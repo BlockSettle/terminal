@@ -23,6 +23,7 @@ public:
 protected:
    bool filterAcceptsRow(int source_row,
       const QModelIndex& source_parent) const override;
+   bool lessThan(const QModelIndex& left, const QModelIndex& right) const override;
 };
 
 #endif // PENDING_TRANSACTION_FILTER_MODEL_H

@@ -58,7 +58,7 @@ Popup {
             spacing: 20
 
             Label {
-                text: qsTr("Transactions details")
+                text: qsTr("Transaction details")
                 color: BSStyle.textColor
                 font.pixelSize: 19
                 font.weight: Font.Medium

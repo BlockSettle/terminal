@@ -10,7 +10,7 @@
 */
 #include "AddressFilterModel.h"
 #include "AddressListModel.h"
-#include <QDebug>
+#include <QtGlobal>
 
 AddressFilterModel::AddressFilterModel(QObject* parent)
    : QSortFilterProxyModel(parent)
@@ -22,15 +22,17 @@ bool AddressFilterModel::filterAcceptsRow(int source_row, const QModelIndex& sou
 {
    if (hideUsed_) {
       const auto txCountIndex = sourceModel()->index(source_row, 1);
-      if (sourceModel()->data(txCountIndex, QmlAddressListModel::TableRoles::TableDataRole) != 0)
+      const auto bananceIndex = sourceModel()->index(source_row, 2);
+      if (sourceModel()->data(txCountIndex, QmlAddressListModel::TableRoles::TableDataRole) != 0 &&
+          qFuzzyIsNull(sourceModel()->data(bananceIndex, QmlAddressListModel::TableRoles::TableDataRole).toDouble()))
       {
          return false;
       }
    }
 
    if (hideEmpty_) {
-      const auto txCountIndex = sourceModel()->index(source_row, 1);
-      if (sourceModel()->data(txCountIndex, QmlAddressListModel::TableRoles::TableDataRole) == 0)
+      const auto bananceIndex = sourceModel()->index(source_row, 2);
+      if (qFuzzyIsNull(sourceModel()->data(bananceIndex, QmlAddressListModel::TableRoles::TableDataRole).toDouble()))
       {
          return false;
       }

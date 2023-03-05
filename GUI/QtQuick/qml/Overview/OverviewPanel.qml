@@ -88,28 +88,40 @@ Rectangle {
                         CustomSmallButton {
                             width: 85
                             text: qsTr("Hide used")
-                            onClicked: addressFilterModel.hideUsed = !addressFilterModel.hideUsed
+                            onClicked: {
+                                addressFilterModel.hideUsed = !addressFilterModel.hideUsed
+                                tablewView.update()
+                            }
                             backgroundColor: addressFilterModel.hideUsed ? BSStyle.smallButtonBackgroundColor : 'transparent'
                         }
 
                         CustomSmallButton {
                             width: 90
                             text: qsTr("Hide internal")
-                            onClicked: addressFilterModel.hideInternal = !addressFilterModel.hideInternal
+                            onClicked: {
+                                addressFilterModel.hideInternal = !addressFilterModel.hideInternal
+                                tablewView.update()
+                            }
                             backgroundColor: addressFilterModel.hideInternal ? BSStyle.smallButtonBackgroundColor : 'transparent'
                         }
 
                         CustomSmallButton {
                             width: 90
                             text: qsTr("Hide external")
-                            onClicked: addressFilterModel.hideExternal = !addressFilterModel.hideExternal
+                            onClicked: {
+                                addressFilterModel.hideExternal = !addressFilterModel.hideExternal
+                                tablewView.update()
+                            }
                             backgroundColor: addressFilterModel.hideExternal ? BSStyle.smallButtonBackgroundColor : 'transparent'
                         }
 
                         CustomSmallButton {
                             width: 85
                             text: qsTr("Hide empty")
-                            onClicked: addressFilterModel.hideEmpty = !addressFilterModel.hideEmpty
+                            onClicked: {
+                                addressFilterModel.hideEmpty = !addressFilterModel.hideEmpty
+                                tablewView.update()
+                            }
                             backgroundColor: addressFilterModel.hideEmpty ? BSStyle.smallButtonBackgroundColor :  'transparent'
                         }
                     }

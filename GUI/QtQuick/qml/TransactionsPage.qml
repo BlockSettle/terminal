@@ -96,6 +96,7 @@ Item {
 
                     onActivated: (index) => {
                         transactionModel.walletName = index == 0 ? "" : txWalletsComboBox.currentValue
+                        tableView.update()
                     }
                 }
 
@@ -111,6 +112,7 @@ Item {
 
                     onActivated: (index) => {
                         transactionModel.transactionType = index == 0 ? "" : txTypesComboBox.currentValue
+                        tableView.update()
                     }
                 }
 
@@ -159,8 +161,9 @@ Item {
         }
 
         CustomTableView {
+            id: tableView
             width: parent.width
-            height: parent.height - transaction_header_menu.height
+            height: parent.height - transaction_header_menu.height - transaction_header_menu.spacing - 1
             model: transactionModel
 
             copy_button_column_index: 3

@@ -10,10 +10,13 @@
 */
 #include "TransactionFilterModel.h"
 #include "TxListModel.h"
+#include <QDebug>
 
 TransactionFilterModel::TransactionFilterModel(QObject* parent)
    : QSortFilterProxyModel(parent)
 {
+   setDynamicSortFilter(true);
+   sort(0, Qt::AscendingOrder);
    connect(this, &TransactionFilterModel::changed, this, &TransactionFilterModel::invalidate);
 }
 
@@ -62,4 +65,10 @@ void TransactionFilterModel::setTransactionType(const QString& type)
 {
    transactionType_ = type;
    emit changed();
+}
+
+bool TransactionFilterModel::lessThan(const QModelIndex& left, const QModelIndex& right) const
+{
+   return sourceModel()->data(sourceModel()->index(left.row(), 5), TxListModel::TableRoles::TableDataRole) < 
+      sourceModel()->data(sourceModel()->index(right.row(), 5), TxListModel::TableRoles::TableDataRole);
 }

@@ -37,6 +37,10 @@ Column {
     signal cellDoubleClicked(var row, var column, var data)
     signal cellRightDoubleClicked(var row, var column, var data)
 
+    function update() {
+        component.forceLayout()
+    }
+
     CustomHorizontalHeaderView {
         id: tableHeader
         width: parent.width
@@ -62,6 +66,7 @@ Column {
         maximumFlickVelocity: 1000
 
         ScrollBar.vertical: ScrollBar { 
+            id: verticalScrollBar
             policy: component.contentHeight > component.height ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
         }
 
