@@ -291,6 +291,33 @@ void TxListModel::setDetails(const bs::sync::TXWalletDetails& txDet)
    }
 }
 
+void TxListModel::removeTX(const BinaryData& txHash)
+{
+   int rowStart = -1, rowEnd = -1;
+   for (int i = 0; i < data_.size(); ++i) {
+      const auto& entry = data_.at(i);
+      if (entry.txHash == txHash) {
+         if (rowStart < 0) {
+            rowStart = i;
+         }
+         rowEnd = i;
+      }
+   }
+   if ((rowEnd < 0) || (rowStart < 0)) {
+      logger_->warn("[{}] TX {} not found", __func__, txHash.toHexStr(true));
+      return;
+   }
+   logger_->debug("[{}] {}: start: {}, end: {}", __func__, txHash.toHexStr(true), rowStart, rowEnd);
+   QMetaObject::invokeMethod(this, [this, rowStart, rowEnd] {
+      beginRemoveRows(QModelIndex(), rowStart, rowEnd);
+      data_.erase(data_.cbegin() + rowStart, data_.cbegin() + rowEnd + 1);
+      for (int i = rowEnd + 1; i < txDetails_.size(); i++) {
+         txDetails_[i - (rowEnd - rowStart) - 1] = std::move(txDetails_[i]);
+      }
+      endRemoveRows();
+   });
+}
+
 void TxListModel::setCurrentBlock(uint32_t nbBlock)
 {
    if (!nbBlock) {
@@ -663,8 +690,8 @@ QString QTxDetails::virtSize() const
 
 QString QTxDetails::nbConf() const
 {
-   const int txHeight = details_.tx.getTxHeight();
-   return displayNb((txHeight > 0) ? curBlock_ - txHeight + 1 : txHeight);
+   const auto txHeight = details_.tx.getTxHeight();
+   return (txHeight != UINT32_MAX) ? displayNb(curBlock_ - txHeight + 1) : tr("-");
 }
 
 QString QTxDetails::nbInputs() const
@@ -721,6 +748,12 @@ QString QTxDetails::feePerByte() const
       txWeight = -1;
    }
    return displayBTC(amount / txWeight, 1);
+}
+
+QString QTxDetails::timestamp() const
+{
+   return QDateTime::fromSecsSinceEpoch(details_.tx.getTxTime())
+      .toString(gui_utils::dateTimeFormat);
 }
 
 quint32 QTxDetails::height() const

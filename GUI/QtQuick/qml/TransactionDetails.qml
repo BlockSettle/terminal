@@ -28,7 +28,6 @@ Popup {
     property string txType: ''
     property color txTypeColor
     property string txComment: ''
-    property string txConfirmations: ''
     property color txConfirmationsColor
 
     width: 916
@@ -195,7 +194,7 @@ Popup {
                     width: 170
                 }
                 Label {
-                    text: txConfirmations
+                    text: transaction_details.nbConf
                     color: txConfirmationsColor
                     font.family: "Roboto"
                     font.pixelSize: 14

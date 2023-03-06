@@ -1055,7 +1055,12 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
 
       const auto& itTxDet = txDetailReqs_.find(msgId);
       if (itTxDet == txDetailReqs_.end()) {
-         txModel_->setDetails(txDet);
+         if (txDet.direction == bs::sync::Transaction::Direction::Revoke) {
+            txModel_->removeTX(txDet.txHash);
+         }
+         else {
+            txModel_->setDetails(txDet);
+         }
       }
       else {
          itTxDet->second->setDetails(txDet); // shouldn't be more than one entry
@@ -1264,7 +1269,6 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStri
    if (walletIndex >= 0) {
       msgReq->set_hd_wallet_id(hdWalletIdByIndex(walletIndex));
    }
-   logger_->debug("[{}] walletIdx={}", __func__, walletIndex);
    bool isMaxAmount = false;
    if (recvAddrs.isEmpty()) {
       const auto& recipients = txOutputsModel_->recipients();
@@ -1329,7 +1333,12 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStri
          if (msgWltIds) {
             for (const auto& wallet : hdWallets_) {
                for (const auto& leaf : wallet.second.leaves) {
-                  msgWltIds->add_wallet_ids(leaf.first);
+                  auto leafId = leaf.first;
+                  msgWltIds->add_wallet_ids(leafId);
+                  for (auto& c : leafId) {
+                     c = std::toupper(c);
+                  }
+                  msgWltIds->add_wallet_ids(leafId);
                }
             }
             const auto msgId = pushRequest(user_, userBlockchain_, msgSpendable.SerializeAsString());
@@ -1603,11 +1612,14 @@ ProcessingResult QtQuickAdapter::processZC(const BlockSettle::Common::ArmoryMess
 
 ProcessingResult QtQuickAdapter::processZCInvalidated(const ArmoryMessage_ZCInvalidated& zcInv)
 {
-   std::vector<BinaryData> txHashes;
    for (const auto& hashStr : zcInv.tx_hashes()) {
-      txHashes.push_back(BinaryData::fromString(hashStr));
+      const auto& txHash = BinaryData::fromString(hashStr);
+      WalletsMessage msg;
+      auto msgReq = msg.mutable_tx_details_request();
+      auto txReq = msgReq->add_requests();
+      txReq->set_tx_hash(txHash.toBinStr());
+      pushRequest(user_, userWallets_, msg.SerializeAsString());
    }
-   //TODO
    return ProcessingResult::Success;
 }
 
@@ -2007,6 +2019,7 @@ void QtQuickAdapter::notifyNewTransaction(const bs::TXEntry& tx)
    const auto txId = QString::fromStdString(tx.txHash.toHexStr(true));
    auto txDetails = getTXDetails(txId);
    connect(txDetails, &QTxDetails::updated, this, [txDetails, tx, this](){
+      logger_->debug("[QtQuickAdapter::notifyNewTransaction] {}: {}", txDetails->txId().toStdString(), txDetails->timestamp().toStdString());
       showNotification(
          tr("BlockSettle Terminal"),
          tr("%1: %2\n%3: %4\n%5: %6\n%7: %8\n").arg(

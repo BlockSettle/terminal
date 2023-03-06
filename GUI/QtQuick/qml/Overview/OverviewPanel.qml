@@ -208,7 +208,6 @@ Rectangle {
                         transactionDetails.txTypeColor = model.data(model.index(row, 2), TxListModel.ColorRole)
                         transactionDetails.txComment = model.data(model.index(row, 7), TxListModel.TableDataRole)
                         transactionDetails.txAmount = model.data(model.index(row, 4), TxListModel.TableDataRole)
-                        transactionDetails.txConfirmations = model.data(model.index(row, 5), TxListModel.TableDataRole)
                         transactionDetails.txConfirmationsColor = model.data(model.index(row, 5), TxListModel.ColorRole)
                         transactionDetails.tx = bsApp.getTXDetails(txHash)
                         transactionDetails.open()

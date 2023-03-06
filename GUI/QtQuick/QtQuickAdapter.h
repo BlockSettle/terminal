@@ -290,6 +290,7 @@ private:
    std::map<ApplicationSettings::Setting, QVariant>   settingsCache_;
    std::set<bs::message::SeqId>  expTxAddrReqs_, expTxAddrInReqs_;
    std::map<bs::Address, std::string>  addressCache_;
+   std::set<BinaryData> rmTxOnInvalidation_;
 };
 
 #endif	// QT_QUICK_ADAPTER_H

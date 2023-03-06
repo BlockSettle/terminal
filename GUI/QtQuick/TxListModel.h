@@ -49,6 +49,7 @@ public:
    void clear();
    void setTxComment(const std::string& txHash, const std::string& comment);
    void setDetails(const bs::sync::TXWalletDetails&);
+   void removeTX(const BinaryData& txHash);
    void setCurrentBlock(uint32_t);
 
 signals:
@@ -193,6 +194,8 @@ public:
    QString feePerByte() const;
    Q_PROPERTY(quint32 height READ height NOTIFY updated)
    quint32 height() const;
+   Q_PROPERTY(QString timestamp READ timestamp NOTIFY updated)
+   QString timestamp() const;
 
    Q_PROPERTY(TxInOutModel* inputs READ inputs NOTIFY updated)
    TxInOutModel* inputs() const { return inputsModel_; }

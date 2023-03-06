@@ -157,6 +157,9 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
 
 void TxInputsModel::addEntries(const std::vector<Entry>& entries)
 {
+   if (entries.empty()) {
+      return;
+   }
    beginInsertRows(QModelIndex(), rowCount(), rowCount() + entries.size() - 1);
    data_.insert(data_.cend(), entries.cbegin(), entries.cend());
    endInsertRows();
