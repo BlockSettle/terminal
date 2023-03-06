@@ -192,8 +192,8 @@ public:
    QString fee() const;
    Q_PROPERTY(QString feePerByte READ feePerByte NOTIFY updated)
    QString feePerByte() const;
-   Q_PROPERTY(quint32 height READ height NOTIFY updated)
-   quint32 height() const;
+   Q_PROPERTY(QString height READ height NOTIFY updated)
+   QString height() const;
    Q_PROPERTY(QString timestamp READ timestamp NOTIFY updated)
    QString timestamp() const;
 

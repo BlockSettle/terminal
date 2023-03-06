@@ -691,7 +691,7 @@ QString QTxDetails::virtSize() const
 QString QTxDetails::nbConf() const
 {
    const auto txHeight = details_.tx.getTxHeight();
-   return (txHeight != UINT32_MAX) ? displayNb(curBlock_ - txHeight + 1) : tr("-");
+   return (txHeight != UINT32_MAX) ? displayNb(curBlock_ - txHeight + 1) : displayNb(0);
 }
 
 QString QTxDetails::nbInputs() const
@@ -756,9 +756,10 @@ QString QTxDetails::timestamp() const
       .toString(gui_utils::dateTimeFormat);
 }
 
-quint32 QTxDetails::height() const
+QString QTxDetails::height() const
 {
-   return details_.tx.getTxHeight();
+   return (details_.tx.getTxHeight() != UINT32_MAX) ? displayNb(details_.tx.getTxHeight())
+      : tr("-");
 }
 
 bs::sync::Transaction::Direction QTxDetails::direction() const
