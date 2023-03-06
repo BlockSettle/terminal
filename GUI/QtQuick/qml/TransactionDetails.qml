@@ -194,7 +194,7 @@ Popup {
                     width: 170
                 }
                 Label {
-                    text: transaction_details.nbConf
+                    text: tx.nbConf
                     color: txConfirmationsColor
                     font.family: "Roboto"
                     font.pixelSize: 14
