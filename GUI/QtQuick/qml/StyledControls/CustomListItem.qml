@@ -37,7 +37,7 @@ Rectangle {
     opacity: 1
     radius: 14
 
-    border.color: BSStyle.listItemBorderColor
+    border.color: mouseArea.containsMouse ? BSStyle.listItemHoveredBorderColor : BSStyle.listItemBorderColor
     border.width: 1
 
     Image {
@@ -92,7 +92,9 @@ Rectangle {
     }
 
     MouseArea {
+        id: mouseArea
         anchors.fill: parent
+        hoverEnabled: true
         propagateComposedEvents: true
         onClicked: {
             if (isButton)

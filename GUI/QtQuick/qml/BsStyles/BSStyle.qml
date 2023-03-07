@@ -118,7 +118,8 @@ QtObject {
     readonly property color balanceValueTextColor: "#E2E7FF"
     readonly property color addressesPanelBackgroundColor: "#333C435A"
 
-    readonly property color listItemBorderColor: "#3C435A"
+    readonly property color listItemBorderColor: defaultGreyColor
+    readonly property color listItemHoveredBorderColor: wildBlueColor
 
     readonly property color popupBackgroundColor: "#191E2A"
     readonly property color popupBorderColor: defaultGreyColor

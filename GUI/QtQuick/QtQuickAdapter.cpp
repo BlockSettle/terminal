@@ -870,7 +870,6 @@ void QtQuickAdapter::walletSelected(int index)
          if (hdWallets_.count(walletId) > 0) {
             walletPropertiesModel_->setWalletInfo({
                QString::fromStdString(hdWallets_.at(walletId).name),
-               QString::fromStdString(hdWallets_.at(walletId).description),
                QString::fromStdString(walletId),
                QString::fromLatin1("1/") + QString::number(hdWallets_.at(walletId).leaves.size()),
                hdWallets_.at(walletId).encryptionTypes.size() > 0
