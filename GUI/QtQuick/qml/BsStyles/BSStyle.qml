@@ -81,6 +81,7 @@ QtObject {
     //new properties
     readonly property color defaultGreyColor: "#3C435A"
     readonly property color wildBlueColor: "#7A88B0"
+    readonly property color titanWhiteColor: "#E2E7FF"
 
     readonly property color buttonsStandardColor: defaultGreyColor
     readonly property color buttonsStandardPressedColor: "#232734"
@@ -115,7 +116,7 @@ QtObject {
     readonly property color tableCellBackgroundColor: "transparent"
     readonly property color tableCellSelectedBackgroundColor: "#22293B"
 
-    readonly property color balanceValueTextColor: "#E2E7FF"
+    readonly property color balanceValueTextColor: titanWhiteColor
     readonly property color addressesPanelBackgroundColor: "#333C435A"
 
     readonly property color listItemBorderColor: defaultGreyColor
