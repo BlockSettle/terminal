@@ -24,16 +24,13 @@ ColumnLayout  {
         text: qsTr("Export watching-only wallet")
     }
 
-    Item {
-        width: parent.width
-        height: 24
-    }
-
     Rectangle {
         width: 530
         height: 82
         radius: 14
         color: BSStyle.exportWalletLabelBackground
+
+        Layout.topMargin: 24
         Layout.alignment: Qt.AlignCenter
 
         Grid {
@@ -80,33 +77,73 @@ ColumnLayout  {
         }
     }
 
-    Item {
-        width: parent.width
-        height: 32
-    }
+    Label {
 
-    CustomTitleLabel {
-        width: 530
+        Layout.leftMargin: 24
+        Layout.rightMargin: 24
+        Layout.topMargin: 32
+        Layout.preferredHeight: 16
+        Layout.fillWidth: true
+        Layout.alignment: Qt.AlignLeft | Qt.AlingTop
+
         font.pixelSize: 14
+        font.family: "Roboto"
+        font.weight: Font.Normal
+
         text: qsTr("Backup file:")
-        leftPadding: 24
+        color: BSStyle.wildBlueColor
     }
 
-    CustomTitleLabel {
+    Label {
+
+        Layout.leftMargin: 24
+        Layout.rightMargin: 24
+        Layout.topMargin: 8
+        Layout.preferredHeight: 16
+        Layout.fillWidth: true
+        Layout.alignment: Qt.AlignLeft | Qt.AlingTop
+
         font.pixelSize: 14
-        color: BSStyle.textColor
+        color: BSStyle.titanWhiteColor
         text: wallet_properties_vm.exportPath
         leftPadding: 24
     }
 
-    CustomButtonLeftIcon {
-        Layout.leftMargin: 24
-        width: 160
-        text: qsTr("Select target dir")
-        font.pixelSize: 12
+    Button {
 
-        custom_icon.source: "qrc:/images/folder_icon.png"
-        onClicked: fileDialog.open()
+        Layout.leftMargin: 24
+        Layout.topMargin: 12
+        Layout.alignment: Qt.AlignLeft | Qt.AlingTop
+
+        activeFocusOnTab: false
+
+        font.pixelSize: 13
+        font.family: "Roboto"
+        font.weight: Font.Normal
+        palette.buttonText: BSStyle.buttonsHeaderTextColor
+
+        text: qsTr("Select target dir")
+
+        icon.color: BSStyle.wildBlueColor
+        icon.source: "qrc:/images/folder_icon.png"
+        icon.width: 20
+        icon.height: 16
+
+        background: Rectangle {
+            implicitWidth: 160
+            implicitHeight: 34
+            color: "transparent"
+
+            radius: 14
+
+            border.color: BSStyle.defaultBorderColor
+            border.width: 1
+
+        }
+
+        onClicked: {
+           fileDialog.open()
+        }
     }
 
     Label {
