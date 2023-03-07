@@ -79,14 +79,7 @@ private:
    bs::message::ProcessingResult processDelArmoryServer(const bs::message::Envelope&, int index);
    bs::message::ProcessingResult processUpdArmoryServer(const bs::message::Envelope&
       , const BlockSettle::Terminal::SettingsMessage_ArmoryServerUpdate&);
-   bs::message::ProcessingResult processSignerSettings(const bs::message::Envelope &);
-   bs::message::ProcessingResult processSignerSetKey(const BlockSettle::Terminal::SettingsMessage_SignerSetKey &);
-   bs::message::ProcessingResult processSignerReset();
-   bs::message::ProcessingResult processGetSigners(const bs::message::Envelope&);
-   bs::message::ProcessingResult processSetSigner(const bs::message::Envelope&, int);
-   bs::message::ProcessingResult processAddSigner(const bs::message::Envelope&
-      , const BlockSettle::Terminal::SettingsMessage_SignerServer&);
-   bs::message::ProcessingResult processDelSigner(const bs::message::Envelope&, int);
+   bs::message::ProcessingResult processSignerSettings(const bs::message::Envelope&);
    bs::message::ProcessingResult processRemoteSettings(uint64_t msgId);
    bs::message::ProcessingResult processGetState(const bs::message::Envelope&);
    bs::message::ProcessingResult processReset(const bs::message::Envelope&
@@ -104,8 +97,7 @@ private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<BootstrapDataManager>  bootstrapDataManager_;
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
-   std::shared_ptr<SignersProvider>       signersProvider_;
-   std::shared_ptr<CCFileManager>         ccFileManager_;
+   //std::shared_ptr<CCFileManager>         ccFileManager_;
    std::shared_ptr<bs::TradeSettings>     tradeSettings_;
 
    std::map<uint64_t, bs::message::Envelope> remoteSetReqs_;

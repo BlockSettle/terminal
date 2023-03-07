@@ -144,7 +144,7 @@ void NetworkSettingsPage::initSettings()
 {
    if (armoryServersProvider_) {
       armoryServerModel_ = new ArmoryServersViewModel(armoryServersProvider_);
-      connect(armoryServersProvider_.get(), &ArmoryServersProvider::dataChanged, this, &NetworkSettingsPage::displayArmorySettings);
+      //connect(armoryServersProvider_.get(), &ArmoryServersProvider::dataChanged, this, &NetworkSettingsPage::displayArmorySettings);
    }
    else {
       armoryServerModel_ = new ArmoryServersViewModel(this);
@@ -177,7 +177,10 @@ void NetworkSettingsPage::displayArmorySettings()
       // set index of selected server
       selectedServer = armoryServersProvider_->getArmorySettings();
       selectedServerIndex = armoryServersProvider_->indexOfCurrent();
-      connectedServerSettings = armoryServersProvider_->connectedArmorySettings();
+      const auto& connectedIdx = armoryServersProvider_->indexOfCurrent();
+      if (connectedIdx >= 0) {
+         connectedServerSettings = armoryServersProvider_->servers().at(connectedIdx);
+      }
       connectedServerIndex = armoryServersProvider_->indexOfConnected();
    }
    else {
@@ -273,8 +276,15 @@ void NetworkSettingsPage::onEnvSelected(int envIndex)
    const auto env = ApplicationSettings::EnvConfiguration(envIndex);
    const int armoryIndex = ui_->comboBoxArmoryServer->currentIndex();
    int serverIndex = armoryIndex;
-   const auto &armoryServers = armoryServersProvider_ ? armoryServersProvider_->servers()
-      : armoryServers_;
+   QList<ArmoryServer> armoryServers;
+   if (armoryServersProvider_) {
+      for (const auto& server : armoryServersProvider_->servers()) {
+         armoryServers.append(server);
+      }
+   }
+   else {
+      armoryServers = armoryServers_;
+   }
    if (armoryIndex < 0 || armoryIndex >= armoryServers.count()) {
       return;
    }
@@ -292,8 +302,15 @@ void NetworkSettingsPage::onEnvSelected(int envIndex)
 void NetworkSettingsPage::onArmorySelected(int armoryIndex)
 {
    int envIndex = ui_->comboBoxEnvironment->currentIndex();
-   auto armoryServers = armoryServersProvider_ ? armoryServersProvider_->servers()
-      : armoryServers_;
+   QList<ArmoryServer> armoryServers;
+   if (armoryServersProvider_) {
+      for (const auto& server : armoryServersProvider_->servers()) {
+         armoryServers.append(server);
+      }
+   }
+   else {
+      armoryServers = armoryServers_;
+   }
    if (armoryIndex < 0 || armoryIndex >= armoryServers.count()) {
       return;
    }

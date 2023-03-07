@@ -20,7 +20,7 @@ ArmoryServersViewModel::ArmoryServersViewModel(const std::shared_ptr<ArmoryServe
    , serversProvider_(serversProvider)
 {
    update();
-   connect(serversProvider.get(), &ArmoryServersProvider::dataChanged, this, &ArmoryServersViewModel::update);
+   //connect(serversProvider.get(), &ArmoryServersProvider::dataChanged, this, &ArmoryServersViewModel::update);
 }
 
 ArmoryServersViewModel::ArmoryServersViewModel(QObject* parent)
@@ -105,7 +105,10 @@ QVariant ArmoryServersViewModel::headerData(int section, Qt::Orientation orienta
 void ArmoryServersViewModel::update()
 {
    beginResetModel();
-   servers_ = serversProvider_->servers();
+   servers_.clear();
+   for (const auto& server : serversProvider_->servers()) {
+      servers_.append(server);
+   }
    endResetModel();
 }
 

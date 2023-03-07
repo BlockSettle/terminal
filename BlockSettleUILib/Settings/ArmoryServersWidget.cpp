@@ -339,7 +339,7 @@ void ArmoryServersWidget::setupServerFromSelected(bool needUpdate)
       return;
    }
    if (armoryServersProvider_) {
-      armoryServersProvider_->setupServer(index, needUpdate);
+      armoryServersProvider_->setupServer(index);
       setRowSelected(armoryServersProvider_->indexOfCurrent());
    }
    else {

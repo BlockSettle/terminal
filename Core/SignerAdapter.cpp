@@ -92,6 +92,7 @@ void SignerAdapter::start()
       walletsReady();
       return;
    }
+   logger_->debug("[SignerAdapter::start]");
    SettingsMessage msg;
    msg.mutable_signer_request();
    pushRequest(user_, UserTerminal::create(TerminalUsers::Settings)

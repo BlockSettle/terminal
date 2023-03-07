@@ -64,9 +64,7 @@ SettingsAdapter::SettingsAdapter(const std::shared_ptr<ApplicationSettings> &set
             , filePathInResources.toStdString());
       }
    }
-
-   armoryServersProvider_ = std::make_shared<ArmoryServersProvider>(settings, bootstrapDataManager_);
-   signersProvider_ = std::make_shared<SignersProvider>(appSettings_);
+   armoryServersProvider_ = std::make_shared<ArmoryServersProvider>(settings);
 }
 
 ProcessingResult SettingsAdapter::process(const bs::message::Envelope &env)
@@ -96,18 +94,6 @@ ProcessingResult SettingsAdapter::process(const bs::message::Envelope &env)
          return processUpdArmoryServer(env, msg.upd_armory_server());
       case SettingsMessage::kSignerRequest:
          return processSignerSettings(env);
-      case SettingsMessage::kSignerSetKey:
-         return processSignerSetKey(msg.signer_set_key());
-      case SettingsMessage::kSignerReset:
-         return processSignerReset();
-      case SettingsMessage::kSignerServersGet:
-         return processGetSigners(env);
-      case SettingsMessage::kSetSignerServer:
-         return processSetSigner(env, msg.set_signer_server());
-      case SettingsMessage::kAddSignerServer:
-         return processAddSigner(env, msg.add_signer_server());
-      case SettingsMessage::kDelSignerServer:
-         return processDelSigner(env, msg.del_signer_server());
       case SettingsMessage::kStateGet:
          return processGetState(env);
       case SettingsMessage::kReset:
@@ -592,6 +578,17 @@ ProcessingResult SettingsAdapter::processUpdArmoryServer(const bs::message::Enve
    return processGetArmoryServers(env);
 }
 
+ProcessingResult SettingsAdapter::processSignerSettings(const bs::message::Envelope& env)
+{
+   SettingsMessage msg;
+   auto msgResp = msg.mutable_signer_response();
+   msgResp->set_network_type(appSettings_->get<int>(ApplicationSettings::netType));
+   msgResp->set_home_dir(appSettings_->GetHomeDir().toStdString());
+   //msgResp->set_auto_sign_spend_limit(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
+   pushResponse(user_, env, msg.SerializeAsString());
+   return ProcessingResult::Success;
+}
+
 #include <QTextCodec>
 static std::string convertPathname(const QString& pathname)
 {
@@ -603,97 +600,6 @@ static std::string convertPathname(const QString& pathname)
 #endif
    return baFilename.toStdString();
 }
-
-ProcessingResult SettingsAdapter::processSignerSettings(const bs::message::Envelope &env)
-{
-   SettingsMessage msg;
-   auto msgResp = msg.mutable_signer_response();
-   msgResp->set_is_local(signersProvider_->currentSignerIsLocal());
-   msgResp->set_network_type(appSettings_->get<int>(ApplicationSettings::netType));
-
-   const auto &signerHost = signersProvider_->getCurrentSigner();
-   msgResp->set_name(signerHost.name.toStdString());
-   msgResp->set_host(signerHost.address.toStdString());
-   msgResp->set_port(std::to_string(signerHost.port));
-   msgResp->set_key(signerHost.key.toStdString());
-   msgResp->set_id(signerHost.serverId());
-   msgResp->set_remote_keys_dir(signersProvider_->remoteSignerKeysDir());
-   msgResp->set_remote_keys_file(signersProvider_->remoteSignerKeysFile());
-
-   for (const auto &signer : signersProvider_->signers()) {
-      auto keyVal = msgResp->add_client_keys();
-      keyVal->set_key(signer.serverId());
-      keyVal->set_value(signer.key.toStdString());
-   }
-   msgResp->set_home_dir(convertPathname(appSettings_->GetHomeDir()));
-   msgResp->set_auto_sign_spend_limit(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
-
-   pushResponse(user_, env, msg.SerializeAsString());
-   return ProcessingResult::Success;
-}
-
-ProcessingResult SettingsAdapter::processSignerSetKey(const SettingsMessage_SignerSetKey &request)
-{
-   signersProvider_->addKey(request.server_id(), request.new_key());
-   return ProcessingResult::Success;
-}
-
-ProcessingResult SettingsAdapter::processSignerReset()
-{
-   signersProvider_->setupSigner(0, true);
-   return ProcessingResult::Success;
-}
-
-ProcessingResult SettingsAdapter::processGetSigners(const bs::message::Envelope& env)
-{
-   SettingsMessage msg;
-   auto msgResp = msg.mutable_signer_servers();
-   msgResp->set_own_key(signersProvider_->remoteSignerOwnKey().toHexStr());
-   msgResp->set_idx_current(signersProvider_->indexOfCurrent());
-   for (const auto& signer : signersProvider_->signers()) {
-      auto msgSrv = msgResp->add_servers();
-      msgSrv->set_name(signer.name.toStdString());
-      msgSrv->set_host(signer.address.toStdString());
-      msgSrv->set_port(std::to_string(signer.port));
-      msgSrv->set_key(signer.key.toStdString());
-   }
-   pushResponse(user_, env, msg.SerializeAsString());
-   return ProcessingResult::Success;
-}
-
-ProcessingResult SettingsAdapter::processSetSigner(const bs::message::Envelope& env
-   , int index)
-{
-   signersProvider_->setupSigner(index);
-   return processGetSigners(env);
-}
-
-static SignerHost fromMessage(const SettingsMessage_SignerServer& msg)
-{
-   SignerHost result;
-   result.name = QString::fromStdString(msg.name());
-   result.address = QString::fromStdString(msg.host());
-   result.port = std::stoi(msg.port());
-   result.key = QString::fromStdString(msg.key());
-   return result;
-}
-
-ProcessingResult SettingsAdapter::processAddSigner(const bs::message::Envelope& env
-   , const SettingsMessage_SignerServer& request)
-{
-   const auto& signer = fromMessage(request);
-   signersProvider_->add(signer);
-   signersProvider_->setupSigner(signersProvider_->indexOf(signer));
-   return processGetSigners(env);
-}
-
-ProcessingResult SettingsAdapter::processDelSigner(const bs::message::Envelope& env
-   , int index)
-{
-   signersProvider_->remove(index);
-   return processGetSigners(env);
-}
-
 
 void bs::message::setFromQVariant(const QVariant& val, SettingRequest* req, SettingResponse* resp)
 {
