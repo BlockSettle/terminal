@@ -99,7 +99,8 @@ Rectangle {
         onClicked: {
             if (isButton)
                 rect.clicked()
-            mouse.accepted = false
+            else
+                mouse.accepted = false
         }
     }
 }
