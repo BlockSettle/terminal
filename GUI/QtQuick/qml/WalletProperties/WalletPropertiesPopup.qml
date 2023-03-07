@@ -23,14 +23,6 @@ CustomPopup {
         wallet_properties_vm: root.wallet_properties_vm
     }
 
-    ExportWOWalletAuth {
-        id: export_wo_wallet_auth
-        visible: false
-        onAuthorized: _stack_view.replace(export_wo_wallet)
-
-        wallet_properties_vm: root.wallet_properties_vm
-    }
-
     ExportWOWallet {
         id: export_wo_wallet
         visible: false
@@ -134,14 +126,14 @@ CustomPopup {
                         width: parent.width
 
                         Text {
-                            text: qsTr("Description")
+                            text: qsTr("Encryption")
                             color: BSStyle.titleTextColor
                             font.family: "Roboto"
                             font.pixelSize: 14
                             width: parent.width / 2
                         }
                         Text {
-                            text: wallet_properties_vm.walletDescription
+                            text: wallet_properties_vm.walletEncryption
                             color: BSStyle.textColor
                             font.family: "Roboto"
                             font.pixelSize: 14
@@ -202,26 +194,6 @@ CustomPopup {
                     spacing: 8
                     width: parent.width / 2
                     height: parent.height
-
-                    Row {
-                        width: parent.width
-
-                        Text {
-                            text: qsTr("Encryption")
-                            color: BSStyle.titleTextColor
-                            font.family: "Roboto"
-                            font.pixelSize: 14
-                            width: parent.width / 2
-                        }
-                        Text {
-                            text: wallet_properties_vm.walletEncryption
-                            color: BSStyle.textColor
-                            font.family: "Roboto"
-                            font.pixelSize: 14
-                            width: parent.width / 2
-                            horizontalAlignment: Text.AlignRight
-                        }
-                    }
 
                     Row {
                         width: parent.width
@@ -293,7 +265,7 @@ CustomPopup {
 
                 CustomListItem {
                     width: parent.width
-                    enabled: !wallet_properties_vm.isHardware
+                    visible: (!wallet_properties_vm.isHardware && !wallet_properties_vm.isWatchingOnly)
 
                     isButton: true
 
@@ -301,7 +273,10 @@ CustomPopup {
                     icon_add_source: "qrc:/images/arrow.png"
                     title_text: qsTr("Change password")
 
-                    onClicked: _stack_view.push(change_password)
+                    onClicked: {
+                        _stack_view.push(change_password)
+                        change_password.init()
+                    }
                 }
 
                 CustomListItem {
@@ -313,15 +288,14 @@ CustomPopup {
                     title_text: qsTr("Export watching-only wallet")
 
                     onClicked: {
-                        _stack_view.push(export_wo_wallet_auth)
-                        export_wo_wallet_auth.init()
+                        _stack_view.push(export_wo_wallet)
                     }
                 }
 
                 CustomListItem {
                     width: parent.width
                     isButton: true
-                    enabled: !wallet_properties_vm.isHardware
+                    visible: (!wallet_properties_vm.isHardware && !wallet_properties_vm.isWatchingOnly)
 
                     icon_source: "qrc:/images/shield_icon.svg"
                     icon_add_source: "qrc:/images/arrow.png"
@@ -347,7 +321,6 @@ CustomPopup {
                 CustomListItem {
                     width: parent.width
                     isButton: true
-                    enabled: wallet_properties_vm.isWatchingOnly || wallet_properties_vm.isHardware
 
                     icon_source: "qrc:/images/delete_icon.svg"
                     icon_add_source: "qrc:/images/arrow.png"

@@ -18,7 +18,6 @@ namespace qtquick_gui
 struct WalletInfo
 {
    QString name;
-   QString description;
    QString walletId;
    QString groups;
    QString ecryption;
@@ -31,7 +30,6 @@ class WalletPropertiesVM: public QObject
 {
    Q_OBJECT
    Q_PROPERTY(QString walletName               READ walletName               NOTIFY changed)
-   Q_PROPERTY(QString walletDescription        READ walletDescription        NOTIFY changed)
    Q_PROPERTY(QString walletId                 READ walletId                 NOTIFY changed)
    Q_PROPERTY(QString walletGroups             READ walletGroups             NOTIFY changed)
    Q_PROPERTY(QString walletEncryption         READ walletEncryption         NOTIFY changed)
@@ -52,7 +50,6 @@ public:
    void setNbUTXOs(const std::string& walletId, uint32_t nb);
 
    const QString& walletName() const;
-   const QString& walletDescription() const;
    const QString& walletId() const;
    const QString& walletGroups() const;
    const QString& walletEncryption() const;

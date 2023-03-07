@@ -55,11 +55,6 @@ const QString& WalletPropertiesVM::walletName() const
    return info_.name;
 }
 
-const QString& WalletPropertiesVM::walletDescription() const
-{
-   return info_.description;
-}
-
 const QString& WalletPropertiesVM::walletId() const
 {
    return info_.walletId;
