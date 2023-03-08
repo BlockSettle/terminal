@@ -936,7 +936,7 @@ static QString assetTypeToString(const bs::AssetType assetType)
 ProcessingResult QtQuickAdapter::processWalletData(bs::message::SeqId msgId
    , const WalletsMessage_WalletData& response)
 {
-   walletPropertiesModel_->setNbActiveAddrs(response.wallet_id(), response.used_addresses_size());
+   walletPropertiesModel_->setNbUsedAddrs(response.wallet_id(), response.used_addresses_size());
 
    const auto& itReq = walletInfoReq_.find(msgId);
    if (itReq != walletInfoReq_.end()) {
