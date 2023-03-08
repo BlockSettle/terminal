@@ -104,9 +104,11 @@ ColumnLayout  {
         Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
         font.pixelSize: 14
+        font.family: "Roboto"
+        font.weight: Font.Normal
+
+        text: bsApp.settingExportDir
         color: BSStyle.titanWhiteColor
-        text: wallet_properties_vm.exportPath
-        leftPadding: 24
     }
 
     Button {
@@ -174,7 +176,7 @@ ColumnLayout  {
         selectFolder: true
 
         onAccepted: {
-            wallet_properties_vm.exportPath = fileDialog.fileUrl
+            bsApp.settingExportDir = fileDialog.fileUrl.toString().replace(/^(file:\/{3})/,"");
         }
     }
 }

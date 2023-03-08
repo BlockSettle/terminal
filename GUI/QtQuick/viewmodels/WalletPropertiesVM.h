@@ -10,7 +10,13 @@
 */
 #pragma once
 
+#include <memory>
+
 #include <QObject>
+
+namespace spdlog {
+   class logger;
+}
 
 namespace qtquick_gui
 {
@@ -39,10 +45,9 @@ class WalletPropertiesVM: public QObject
    Q_PROPERTY(bool isHardware                  READ isHardware               NOTIFY changed)
    Q_PROPERTY(bool isWatchingOnly              READ isWatchingOnly           NOTIFY changed)
    Q_PROPERTY(QStringList seed                 READ seed                     NOTIFY seedChanged)
-   Q_PROPERTY(QString exportPath READ exportPath WRITE setExportPath NOTIFY pathChanged)
 
 public:
-   WalletPropertiesVM(QObject* parent = nullptr);
+   WalletPropertiesVM(const std::shared_ptr<spdlog::logger> & logger, QObject* parent = nullptr);
 
    void setWalletInfo(const WalletInfo& info);
    void setWalletSeed(const std::string& walletId, const std::string& seed);
@@ -60,21 +65,17 @@ public:
    bool isWatchingOnly() const;
 
    const QStringList& seed() const;
-
-   const QString& exportPath() const;
-   void setExportPath(const QString& path);
-
+   
 signals:
    void changed();
    void seedChanged();
-   void pathChanged();
 
 private:
+   std::shared_ptr<spdlog::logger>  logger_;
    WalletInfo  info_;
    uint32_t    nbActiveAddrs_{ 0 };
    uint32_t    nbUTXOs_{ 0 };
    QStringList seed_;
-   QString exportPath_;
 };
 
 }

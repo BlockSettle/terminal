@@ -12,7 +12,9 @@
 #define QT_QUICK_ADAPTER_H
 
 #include <set>
+
 #include <QObject>
+
 #include "Address.h"
 #include "AddressListModel.h"
 #include "ApiAdapter.h"
@@ -128,6 +130,10 @@ public:
    Q_PROPERTY(bool settingActivated READ settingActivated WRITE setActivated NOTIFY settingChanged)
    bool settingActivated() const { return getSetting(ApplicationSettings::Setting::initialized).toBool(); }
    void setActivated(bool b) { setSetting(ApplicationSettings::Setting::initialized, b); }
+   
+   Q_PROPERTY(QString settingExportDir READ settingExportDir WRITE setExportDir NOTIFY settingChanged)
+   QString settingExportDir() const { return getSetting(ApplicationSettings::Setting::ExportDir).toString(); }
+   void setExportDir(const QString& str) {setSetting(ApplicationSettings::Setting::ExportDir, str); }
 
    Q_PROPERTY(int armoryState READ armoryState NOTIFY armoryStateChanged)
    int armoryState() const { return armoryState_; }

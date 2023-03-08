@@ -8,12 +8,16 @@
 **********************************************************************************
 
 */
+
 #include "WalletPropertiesVM.h"
+
+#include <spdlog/spdlog.h>
 
 using namespace qtquick_gui;
 
-WalletPropertiesVM::WalletPropertiesVM(QObject* parent)
-   : QObject(parent)
+WalletPropertiesVM::WalletPropertiesVM(const std::shared_ptr<spdlog::logger> & logger, QObject* parent)
+   : QObject(parent),
+     logger_(logger)
 {
 }
 
@@ -98,15 +102,4 @@ bool WalletPropertiesVM::isWatchingOnly() const
 const QStringList& WalletPropertiesVM::seed() const
 {
    return seed_;
-}
-
-const QString& WalletPropertiesVM::exportPath() const
-{
-   return exportPath_;
-}
-
-void WalletPropertiesVM::setExportPath(const QString& path)
-{
-   exportPath_ = path;
-   emit pathChanged();
 }
