@@ -170,7 +170,7 @@ public:
    Q_INVOKABLE void startAddressSearch(const QString&);
    Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash);
    Q_INVOKABLE int changePassword(const QString& walletId, const QString& oldPassword, const QString& newPassword);
-   Q_INVOKABLE int exportWallet(const QString& walletId);
+   Q_INVOKABLE int exportWallet(const QString& walletId, const QString & exportDir);
    Q_INVOKABLE int viewWalletSeedAuth(const QString& walletId, const QString& password);
    Q_INVOKABLE int deleteWallet(const QString& walletId, const QString& password);
    Q_INVOKABLE int rescanWallet(const QString& walletId);

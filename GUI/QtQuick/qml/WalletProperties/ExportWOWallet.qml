@@ -10,7 +10,7 @@ import "../StyledControls"
 ColumnLayout  {
     id: layout
 
-    signal sig_success(string nameExport)
+    signal sig_success(string nameExport, string pathExport)
 
     property var wallet_properties_vm
 
@@ -25,7 +25,7 @@ ColumnLayout  {
         target:bsApp
         function onSuccessExport (nameExport)
         {
-            layout.sig_success(nameExport)
+            layout.sig_success(nameExport, bsApp.settingExportDir)
         }
     }
 
@@ -169,7 +169,7 @@ ColumnLayout  {
     CustomButton {
         id: confirm_but
 
-        enabled: bsApp.settingExportDir
+        enabled: bsApp.settingExportDir.length === 0
         preferred: true
         text: qsTr("Export")
 
@@ -179,7 +179,7 @@ ColumnLayout  {
         width: 530
 
         function click_enter() {
-            bsApp.exportWallet(wallet_properties_vm.walletId)
+            bsApp.exportWallet(wallet_properties_vm.walletId, bsApp.settingExportDir)
             layout.sig_export()
         }
     }

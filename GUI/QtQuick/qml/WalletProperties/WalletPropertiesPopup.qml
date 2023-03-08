@@ -30,9 +30,9 @@ CustomPopup {
 
         wallet_properties_vm: root.wallet_properties_vm
 
-        onSig_success: (nameExport) => {
+        onSig_success: (nameExport, pathExport) => {
             _stack_view.push(success)
-            success.details_text = qsTr("Wallet %1 has successfully been exported").arg(nameExport)
+            success.details_text = qsTr("Wallet %1 has successfully been exported to %2").arg(nameExport).arg(pathExport)
         }
     }
 
