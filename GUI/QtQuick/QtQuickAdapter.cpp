@@ -29,6 +29,7 @@
 #include <QThread>
 #include <QTimer>
 #include <spdlog/spdlog.h>
+#include "ArmoryServersModel.h"
 #include "bip39/bip39.h"
 #include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
@@ -237,6 +238,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
    qmlRegisterInterface<QUTXO>("QUTXO");
    qmlRegisterInterface<QUTXOList>("QUTXOList");
    qmlRegisterInterface<QTxDetails>("QTxDetails");
+   qmlRegisterInterface<ArmoryServersModel>("ArmoryServersModel");
    qmlRegisterUncreatableMetaObject(WalletBalance::staticMetaObject, "wallet.balance"
       , 1, 0, "WalletBalance", tr("Error: only enums"));
    qmlRegisterType<TransactionFilterModel>("terminal.models", 1, 0, "TransactionFilterModel");
@@ -360,7 +362,7 @@ ProcessingResult QtQuickAdapter::processSettings(const Envelope &env)
    case SettingsMessage::kState:
       return processSettingsState(msg.state());
    case SettingsMessage::kArmoryServers:
-      return processArmoryServers(msg.armory_servers());
+      return processArmoryServers(env.responseId(), msg.armory_servers());
    default: break;
    }
    return ProcessingResult::Ignored;
@@ -423,21 +425,25 @@ ProcessingResult QtQuickAdapter::processSettingsState(const SettingsMessage_Sett
    return ProcessingResult::Success;
 }
 
-ProcessingResult QtQuickAdapter::processArmoryServers(const SettingsMessage_ArmoryServers& response)
+ProcessingResult QtQuickAdapter::processArmoryServers(bs::message::SeqId msgId
+   , const SettingsMessage_ArmoryServers& response)
 {
-   QList<ArmoryServer> servers;
+   const auto& itReq = armoryServersReq_.find(msgId);
+   if (itReq == armoryServersReq_.end()) {
+      logger_->warn("[{}] unknown request #{}", __func__, msgId);
+      return ProcessingResult::Error;
+   }
+   std::vector<ArmoryServer> servers;
    for (const auto& server : response.servers()) {
-      servers << ArmoryServer{ QString::fromStdString(server.server_name())
+      servers.push_back({ QString::fromStdString(server.server_name())
          , static_cast<NetworkType>(server.network_type())
          , QString::fromStdString(server.server_address())
          , std::stoi(server.server_port()), QString::fromStdString(server.server_key())
          , SecureBinaryData::fromString(server.password())
-         , server.run_locally(), server.one_way_auth() };
+         , server.run_locally(), server.one_way_auth() });
    }
-
-   logger_->debug("[{}] {} servers, cur: {}, conn: {}", __func__, servers.size()
-      , response.idx_current(), response.idx_connected());
-   //TODO
+   itReq->second->setData(response.idx_current(), response.idx_connected(), servers);
+   armoryServersReq_.erase(itReq);
    return ProcessingResult::Success;
 }
 
@@ -1253,6 +1259,96 @@ bool QtQuickAdapter::validateAddress(const QString& addr)
       return false;
    }
    return true;
+}
+
+ArmoryServersModel* QtQuickAdapter::getArmoryServers()
+{
+   SettingsMessage msg;
+   msg.mutable_armory_servers_get();
+   const auto msgId = pushRequest(user_, userSettings_, msg.SerializeAsString());
+   auto model = new ArmoryServersModel(this);
+   armoryServersReq_[msgId] = model;
+   connect(model, &ArmoryServersModel::changed, this, &QtQuickAdapter::onArmoryServerChanged);
+   return model;
+}
+
+bool QtQuickAdapter::addArmoryServer(ArmoryServersModel* model, const QString& name
+   , int netType, const QString& ipAddr, const QString& ipPort, const QString& key)
+{
+   for (const auto& srv : model->data()) {
+      if (srv.name == name) {
+         logger_->debug("[{}] armory server {} already exists", __func__, name.toStdString());
+         return false;
+      }
+   }
+   SettingsMessage msg;
+   auto msgReq = msg.mutable_add_armory_server();
+   msgReq->set_server_name(name.toStdString());
+   msgReq->set_network_type(netType);
+   msgReq->set_server_address(ipAddr.toStdString());
+   msgReq->set_server_port(ipPort.toStdString());
+   msgReq->set_server_key(key.toStdString());
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
+   model->add({ name, static_cast<NetworkType>(netType), ipAddr, ipPort.toInt(), key });
+   return true;
+}
+
+bool QtQuickAdapter::delArmoryServer(ArmoryServersModel* model, int idx)
+{
+   if (!model->isEditable(idx)) {
+      return false;
+   }
+   SettingsMessage msg;
+   msg.set_del_armory_server(idx);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
+   model->del(idx);
+   return true;
+}
+
+void QtQuickAdapter::onArmoryServerChanged(const QModelIndex& index, const QVariant& value)
+{
+   auto model = qobject_cast<ArmoryServersModel*>(sender());
+   if (!model) {
+      logger_->error("[{}] invalid sender", __func__);
+      return;
+   }
+   auto srv = model->data(index.row());
+   switch (index.column()) {
+   case 0:
+      for (int i = 0; i < model->rowCount(); ++i) {
+         if (i == index.row()) {
+            continue;
+         }
+         if (model->data(i).name == value.toString()) {
+            return;
+         }
+      }
+      srv.name = value.toString();
+      break;
+   case 1:
+      srv.netType = static_cast<NetworkType>(value.toInt());
+      break;
+   case 2:
+      srv.armoryDBIp = value.toString();
+      break;
+   case 3:
+      srv.armoryDBPort = value.toInt();
+      break;
+   case 4:
+      srv.armoryDBKey = value.toString();
+      break;
+   default: break;
+   }
+   SettingsMessage msg;
+   auto msgReq = msg.mutable_upd_armory_server();
+   msgReq->set_index(index.row());
+   auto msgSrv = msgReq->mutable_server();
+   msgSrv->set_server_name(srv.name.toStdString());
+   msgSrv->set_server_address(srv.armoryDBIp.toStdString());
+   msgSrv->set_server_port(std::to_string(srv.armoryDBPort));
+   msgSrv->set_server_key(srv.armoryDBKey.toStdString());
+   msgSrv->set_network_type((int)srv.netType);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
 void QtQuickAdapter::requestFeeSuggestions()

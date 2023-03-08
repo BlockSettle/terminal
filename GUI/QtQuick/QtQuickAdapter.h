@@ -64,6 +64,7 @@ namespace BlockSettle {
       class SignerMessage_WalletSeed;
    }
 }
+class ArmoryServersModel;
 class BSTerminalSplashScreen;
 class FeeSuggestionModel;
 class HwDeviceModel;
@@ -119,14 +120,6 @@ public:
    Q_PROPERTY(QStringList settingEnvironments READ settingEnvironments)
    QStringList settingEnvironments() const;
 
-   Q_PROPERTY(QString settingArmoryHost READ settingArmoryHost WRITE setArmoryHost NOTIFY settingChanged)
-   QString settingArmoryHost() const { return getSetting(ApplicationSettings::Setting::armoryDbIp).toString(); }
-   void setArmoryHost(const QString& str) { setSetting(ApplicationSettings::Setting::armoryDbIp, str); }
-
-   Q_PROPERTY(QString settingArmoryPort READ settingArmoryPort WRITE setArmoryPort NOTIFY settingChanged)
-   QString settingArmoryPort() const { return getSetting(ApplicationSettings::Setting::armoryDbPort).toString(); }
-   void setArmoryPort(const QString& str) { setSetting(ApplicationSettings::Setting::armoryDbPort, str); }
-
    Q_PROPERTY(bool settingActivated READ settingActivated WRITE setActivated NOTIFY settingChanged)
    bool settingActivated() const { return getSetting(ApplicationSettings::Setting::initialized).toBool(); }
    void setActivated(bool b) { setSetting(ApplicationSettings::Setting::initialized, b); }
@@ -163,6 +156,10 @@ public:
    Q_INVOKABLE void copyAddressToClipboard(const QString& addr);
    Q_INVOKABLE QString pasteTextFromClipboard();
    Q_INVOKABLE bool validateAddress(const QString& addr);
+   Q_INVOKABLE ArmoryServersModel* getArmoryServers();
+   Q_INVOKABLE bool addArmoryServer(ArmoryServersModel*, const QString& name
+      , int netType, const QString& ipAddr, const QString& ipPort, const QString& key = {});
+   Q_INVOKABLE bool delArmoryServer(ArmoryServersModel*, int idx);
 
    Q_INVOKABLE void requestFeeSuggestions();
    Q_INVOKABLE QTXSignRequest* createTXSignRequest(int walletIndex, const QStringList& recvAddrs
@@ -193,11 +190,15 @@ signals:
    void showError(const QString&);
    void showNotification(QString, QString);
 
+private slots:
+   void onArmoryServerChanged(const QModelIndex&, const QVariant&);
+
 private:
    bs::message::ProcessingResult processSettings(const bs::message::Envelope &);
    bs::message::ProcessingResult processSettingsGetResponse(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
    bs::message::ProcessingResult processSettingsState(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
-   bs::message::ProcessingResult processArmoryServers(const BlockSettle::Terminal::SettingsMessage_ArmoryServers&);
+   bs::message::ProcessingResult processArmoryServers(bs::message::SeqId
+      , const BlockSettle::Terminal::SettingsMessage_ArmoryServers&);
    bs::message::ProcessingResult processAdminMessage(const bs::message::Envelope &);
    bs::message::ProcessingResult processBlockchain(const bs::message::Envelope &);
    bs::message::ProcessingResult processSigner(const bs::message::Envelope &);
@@ -297,6 +298,7 @@ private:
    std::set<bs::message::SeqId>  expTxAddrReqs_, expTxAddrInReqs_;
    std::map<bs::Address, std::string>  addressCache_;
    std::set<BinaryData> rmTxOnInvalidation_;
+   std::map<bs::message::SeqId, ArmoryServersModel*>  armoryServersReq_;
 };
 
 #endif	// QT_QUICK_ADAPTER_H

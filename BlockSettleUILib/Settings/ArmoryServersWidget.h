@@ -15,7 +15,7 @@
 #include <QWidget>
 #include <ApplicationSettings.h>
 
-#include "ArmoryServersProvider.h"
+#include "../Core/ArmoryServersProvider.h"
 #include "ArmoryServersViewModel.h"
 
 namespace Ui {

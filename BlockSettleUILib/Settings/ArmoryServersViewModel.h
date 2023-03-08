@@ -17,7 +17,7 @@
 #include "AuthAddress.h"
 #include "BinaryData.h"
 #include "ApplicationSettings.h"
-#include "ArmoryServersProvider.h"
+#include "../../Core/ArmoryServersProvider.h"
 
 
 class ArmoryServersViewModel : public QAbstractTableModel
