@@ -10,12 +10,24 @@ import "../StyledControls"
 ColumnLayout  {
     id: layout
 
+    signal sig_success(string nameExport)
+
     property var wallet_properties_vm
 
     height: 548
     width: 580
 
     spacing: 0
+
+
+    Connections
+    {
+        target:bsApp
+        function onSuccessExport (nameExport)
+        {
+            layout.sig_success(nameExport)
+        }
+    }
 
     CustomTitleLabel {
         id: title
@@ -156,6 +168,8 @@ ColumnLayout  {
 
     CustomButton {
         id: confirm_but
+
+        enabled: bsApp.settingExportDir
         preferred: true
         text: qsTr("Export")
 
@@ -166,7 +180,16 @@ ColumnLayout  {
 
         function click_enter() {
             bsApp.exportWallet(wallet_properties_vm.walletId)
+            layout.sig_export()
         }
+    }
+
+    Keys.onEnterPressed: {
+        confirm_but.click_enter()
+    }
+
+    Keys.onReturnPressed: {
+        confirm_but.click_enter()
     }
 
     FileDialog {
@@ -176,7 +199,12 @@ ColumnLayout  {
         selectFolder: true
 
         onAccepted: {
-            bsApp.settingExportDir = fileDialog.fileUrl.toString().replace(/^(file:\/{3})/,"");
+            var res = fileDialog.fileUrl.toString().replace(/^(file:\/{3})/,"")
+            if (res)
+            {
+                bsApp.settingExportDir = res
+            }
         }
     }
+
 }

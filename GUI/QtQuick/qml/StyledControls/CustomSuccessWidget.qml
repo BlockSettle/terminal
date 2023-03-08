@@ -10,6 +10,8 @@ ColumnLayout  {
 
     id: layout
 
+    property alias details_text: details.text
+
     signal sig_finish()
 
     height: 485
@@ -39,6 +41,8 @@ ColumnLayout  {
 
 
     Label {
+        id: details
+
         Layout.topMargin: 26
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
         text: qsTr("Your wallet has successfully been created")

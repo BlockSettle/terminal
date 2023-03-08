@@ -83,7 +83,6 @@
         <file>qml/CreateWallet/ImportWatchingWallet.qml</file>
         <file>qml/CreateWallet/qmldir</file>
         <file>qml/CreateWallet/StartCreateWallet.qml</file>
-        <file>qml/CreateWallet/SuccessNewWallet.qml</file>
         <file>qml/CreateWallet/TermsAndConditions.qml</file>
         <file>qml/CreateWallet/WalletSeed.qml</file>
         <file>qml/CreateWallet/WalletSeedSkipAccept.qml</file>
@@ -173,5 +172,6 @@
         <file>images/wallet_icon_warn.svg</file>
         <file>qml/StyledControls/CustomHorizontalHeaderView.qml</file>
         <file>qml/StyledControls/CustomRbfCpfpMenu.qml</file>
+        <file>qml/StyledControls/CustomSuccessWidget.qml</file>
     </qresource>
 </RCC>

@@ -2086,12 +2086,13 @@ int QtQuickAdapter::changePassword(const QString& walletId, const QString& oldPa
    return (msgId == 0) ? -1 : 0;
 }
 
-int QtQuickAdapter::exportWalletAuth(const QString& walletId, const QString& password)
+int QtQuickAdapter::exportWallet(const QString& walletId)
 {
+   //TODO
+   // exportDir = settingExportDir()
    SignerMessage msg;
    auto msgReq = msg.mutable_export_wo_wallet();
    msgReq->set_wallet_id(walletId.toStdString());
-   msgReq->set_password(password.toStdString());
    const auto msgId = pushRequest(user_, userSigner_, msg.SerializeAsString());
    return (msgId == 0) ? -1 : 0;
 }
