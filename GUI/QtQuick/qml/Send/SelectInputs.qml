@@ -20,6 +20,9 @@ ColumnLayout  {
 
     id: layout
 
+    property int text_header_size: 11
+    property int cell_text_size: 12
+
     height: 662
     width: 1132
     spacing: 0

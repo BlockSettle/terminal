@@ -94,7 +94,7 @@ public:
 
    Q_PROPERTY(QStringList txWalletsList READ txWalletsList NOTIFY walletsListChanged)
    QStringList txWalletsList() const;
-   Q_PROPERTY(QStringList txTypesList READ txTypesList)
+   Q_PROPERTY(QStringList txTypesList READ txTypesList CONSTANT)
    QStringList txTypesList() const { return txTypes_; }
 
    Q_PROPERTY(QString generatedAddress READ generatedAddress NOTIFY addressGenerated)

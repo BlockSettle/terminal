@@ -71,7 +71,7 @@ Popup {
                     anchors.verticalCenter: parent.verticalCenter
 
                     Image {
-                        source: "image://QR/" + address_details.address
+                        source: address !== "" ? ("image://QR/" + address_details.address) : ""
                         sourceSize.width: parent.width - parent.radius
                         sourceSize.height: parent.width - parent.radius
                         anchors.centerIn: parent

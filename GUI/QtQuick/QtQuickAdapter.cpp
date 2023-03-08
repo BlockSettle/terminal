@@ -73,7 +73,7 @@ namespace {
             return QObject::tr("Auth eID");
 
          case bs::wallet::EncryptionType::Hardware :
-            return QObject::tr("Hardware Security Module");
+            return QObject::tr("Hardware");
       };
       return QObject::tr("Unknown");
    }
@@ -1075,8 +1075,12 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
          }
       }
       else {
-         itTxDet->second->setDetails(txDet); // shouldn't be more than one entry
-         itTxDet->second->setCurBlock(blockNum_);
+         const auto details = itTxDet->second;
+         QMetaObject::invokeMethod(this, [this, details, txDet] {
+            details->setDetails(txDet);
+            details->setCurBlock(blockNum_);
+         }); // shouldn't be more than one entry
+         
          txDetailReqs_.erase(itTxDet);
       }
    }
@@ -1706,7 +1710,8 @@ ProcessingResult QtQuickAdapter::processZC(const BlockSettle::Common::ArmoryMess
          }
          catch (const std::exception&) {}
       }
-      notifyNewTransaction(txEntry);
+      QMetaObject::invokeMethod(this, [this, txEntry] { notifyNewTransaction(txEntry); });
+      
    }
    pushRequest(user_, userWallets_, msg.SerializeAsString());
    return ProcessingResult::Success;
