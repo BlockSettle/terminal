@@ -566,6 +566,14 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
          emit showError(tr("Failed to change wallet password - see log for details"));
       }
       break;
+   case SignerMessage::kExportWoWalletResponse:
+      if (msg.export_wo_wallet_response().empty()) {
+         emit showError(tr("WO wallet export failed - see log for details"));
+      }
+      else {
+         emit successExport(QString::fromStdString(msg.export_wo_wallet_response()));
+      }
+      break;
    case SignerMessage::kWalletSeed:
       return processWalletSeed(msg.wallet_seed());
    case SignerMessage::kWalletsListUpdated:
@@ -2099,11 +2107,12 @@ int QtQuickAdapter::changePassword(const QString& walletId, const QString& oldPa
    return (msgId == 0) ? -1 : 0;
 }
 
-int QtQuickAdapter::exportWallet(const QString& walletId, const QString & exportDir)
+int QtQuickAdapter::exportWallet(const QString& walletId, const QString& exportDir)
 {
    SignerMessage msg;
-   auto msgReq = msg.mutable_export_wo_wallet();
-   msgReq->set_wallet_id(walletId.toStdString());
+   auto msgReq = msg.mutable_export_wo_wallet_request();
+   msgReq->mutable_wallet()->set_wallet_id(walletId.toStdString());
+   msgReq->set_output_dir(exportDir.toStdString());
    const auto msgId = pushRequest(user_, userSigner_, msg.SerializeAsString());
    return (msgId == 0) ? -1 : 0;
 }
