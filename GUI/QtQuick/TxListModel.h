@@ -71,6 +71,7 @@ private:
    std::vector<bs::TXEntry> data_;
    std::unordered_map<std::string, std::string> txComments_;
    std::map<int, bs::sync::TXWalletDetails>  txDetails_;
+   std::vector<bs::sync::TXWalletDetails>    pendingDetails_;
    uint32_t curBlock_;
 };
 

@@ -20,7 +20,7 @@ import "BsStyles"
 Popup {
     id: transaction_details
 
-    property var tx
+    property var tx: null
     property string walletName: ''
     property string address: ''
     property string txAmount: ''
@@ -76,7 +76,7 @@ Popup {
                 }
                 Row {
                     Text {
-                        text: tx.txId
+                        text: tx !== null ? tx.txId : ""
                         color: BSStyle.textColor
                         font.family: "Roboto"
                         font.pixelSize: 14
@@ -110,7 +110,7 @@ Popup {
                     width: 170
                 }
                 Text {
-                    text: tx.height
+                    text: tx !== null ? tx.height : ""
                     color: BSStyle.textColor
                     font.family: "Roboto"
                     font.pixelSize: 14
@@ -152,7 +152,7 @@ Popup {
                     width: 170
                 }
                 Label {
-                    text: tx.virtSize
+                    text: tx !== null ? tx.virtSize : ""
                     color: BSStyle.textColor
                     font.family: "Roboto"
                     font.pixelSize: 14
@@ -166,7 +166,7 @@ Popup {
                     width: 170
                 }
                 Label {
-                    text: tx.feePerByte
+                    text: tx !== null ? tx.feePerByte : ""
                     color: BSStyle.textColor
                     font.family: "Roboto"
                     font.pixelSize: 14
@@ -180,7 +180,7 @@ Popup {
                     width: 170
                 }
                 Label {
-                    text: tx.fee
+                    text: tx !== null ? tx.fee : ""
                     color: BSStyle.textColor
                     font.family: "Roboto"
                     font.pixelSize: 14
@@ -194,7 +194,7 @@ Popup {
                     width: 170
                 }
                 Label {
-                    text: tx.nbConf
+                    text: tx !== null ? tx.nbConf : ""
                     color: txConfirmationsColor
                     font.family: "Roboto"
                     font.pixelSize: 14
@@ -281,7 +281,7 @@ Popup {
                     width: parent.width - 20
                     height: parent.height
                     anchors.centerIn: parent
-                    model: tx.inputs
+                    model: tx !== null ? tx.inputs : []
 
                     copy_button_column_index: 1
                     columnWidths: [0.1, 0.5, 0.2, 0.2]
@@ -320,7 +320,7 @@ Popup {
                     width: parent.width - 20
                     height: parent.height
                     anchors.centerIn: parent
-                    model: tx.outputs
+                    model: tx !== null ? tx.outputs : []
 
                     copy_button_column_index: 1
                     columnWidths: [0.1, 0.5, 0.2, 0.2]

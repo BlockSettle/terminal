@@ -235,14 +235,14 @@ CustomPopup {
                         width: parent.width
 
                         Text {
-                            text: qsTr("Active addresses")
+                            text: qsTr("Used addresses")
                             color: BSStyle.titleTextColor
                             font.family: "Roboto"
                             font.pixelSize: 14
                             width: parent.width / 2
                         }
                         Text {
-                            text: wallet_properties_vm.walletActiveAddresses
+                            text: wallet_properties_vm.walletUsedAddresses
                             color: BSStyle.textColor
                             font.family: "Roboto"
                             font.pixelSize: 14

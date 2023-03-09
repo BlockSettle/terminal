@@ -132,7 +132,7 @@ ColumnLayout  {
                     Layout.fillWidth: true
                     Layout.topMargin: 16
                     Layout.preferredHeight: 19
-                    Layout.alignment: Qt.AlingTop
+                    Layout.alignment: Qt.AlignTop
 
                     Label {
                         id: inputs_title

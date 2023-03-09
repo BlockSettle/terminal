@@ -21,7 +21,7 @@ import "Overview"
 //import "js/helper.js" as JsHelper
 
 Item {
-    property var tx
+    property var tx: null
 
     signal requestPageChange(var text)
 
@@ -34,24 +34,29 @@ Item {
 
         Row {
             spacing: 16
+            height: 20
+            width: parent.width
 
             Label {
                 text: qsTr("Transaction ID")
+                height: parent.height
                 color: BSStyle.textColor
                 font.pixelSize: 20
                 font.weight: Font.Bold
-                anchors.bottom: parent.bottom
+                verticalAlignment: Text.AlignBottom
             }
             Label {
+                id: transactionIdLabel
+                height: parent.height
                 text: tx ? tx.txId : qsTr("Unknown")
                 color: BSStyle.textColor
                 font.pixelSize: 14
-                anchors.bottom: parent.bottom
-            }
+                verticalAlignment: Text.AlignBottom
             
-            CopyIconButton {
-                anchors.left: address.right
-                onCopy: bsApp.copyAddressToClipboard(tx.txId)
+                CopyIconButton {
+                    anchors.left: transactionIdLabel.right
+                    onCopy: bsApp.copyAddressToClipboard(tx.txId)
+                }
             }
         }
 
@@ -76,7 +81,7 @@ Item {
                 BaseBalanceLabel {
                     width: 110
                     label_text: qsTr("Confirmations")
-                    label_value: tx.nbConf
+                    label_value: tx !== null ? tx.nbConf : ""
                     anchors.verticalCenter: parent.verticalCenter
                     label_value_color: "green"
                 }
@@ -91,7 +96,7 @@ Item {
                 BaseBalanceLabel {
                     width: 80
                     label_text: qsTr("Inputs")
-                    label_value: tx.nbInputs
+                    label_value: tx !== null ? tx.nbInputs : ""
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
@@ -105,7 +110,7 @@ Item {
                 BaseBalanceLabel {
                     width: 90
                     label_text: qsTr("Outputs")
-                    label_value: tx.nbOutputs
+                    label_value: tx !== null ? tx.nbOutputs : ""
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
@@ -119,7 +124,7 @@ Item {
                 BaseBalanceLabel {
                     width: 150
                     label_text: qsTr("Input Amount (BTC)")
-                    label_value: tx.inputAmount
+                    label_value: tx !== null ? tx.inputAmount : ""
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
@@ -133,7 +138,7 @@ Item {
                 BaseBalanceLabel {
                     width: 150
                     label_text: qsTr("Output Amount (BTC)")
-                    label_value: tx.outputAmount
+                    label_value: tx !== null ? tx.outputAmount : ""
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
@@ -147,7 +152,7 @@ Item {
                 BaseBalanceLabel {
                     width: 130
                     label_text: qsTr("Fees (BTC)")
-                    label_value: tx.fee
+                    label_value: tx !== null ? tx.fee : ""
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
@@ -161,7 +166,7 @@ Item {
                 BaseBalanceLabel {
                     width: 150
                     label_text: qsTr("Fee per byte (s/b)")
-                    label_value: tx.feePerByte
+                    label_value: tx !== null ? tx.feePerByte : ""
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
@@ -175,7 +180,7 @@ Item {
                 BaseBalanceLabel {
                     width: 150
                     label_text: qsTr("Size (virtual bytes)")
-                    label_value: tx.virtSize
+                    label_value: tx !== null ? tx.virtSize : ""
                     anchors.verticalCenter: parent.verticalCenter
                 }
             }
@@ -220,7 +225,7 @@ Item {
                     InputOutputTableView {
                         width: parent.width
                         height: parent.height - 20
-                        model: tx.inputs
+                        model: tx !== null ? tx.inputs : []
                         copy_button_column_index: -1
                         columnWidths: [0.0, 0.7, 0.2, 0.1]
                         onCopyRequested: bsApp.copyAddressToClipboard(id)
@@ -267,7 +272,7 @@ Item {
                     InputOutputTableView {
                         width: parent.width
                         height: parent.height - 20
-                        model: tx.outputs
+                        model: tx !== null ? tx.outputs : []
                         copy_button_column_index: -1
                         columnWidths: [0.0, 0.7, 0.2, 0.1]
                         onCopyRequested: bsApp.copyAddressToClipboard(id)

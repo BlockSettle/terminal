@@ -13,9 +13,10 @@
 #include "bip39/bip39.h"
 #include "Adapters/SignerClient.h"
 #include "CoreWalletsManager.h"
+#include "SystemFileUtils.h"
+#include "TerminalMessage.h"
 #include "Wallets/InprocSigner.h"
 #include "Wallets/ProtobufHeadlessUtils.h"
-#include "TerminalMessage.h"
 
 #include "common.pb.h"
 #include "terminal.pb.h"
@@ -142,8 +143,8 @@ ProcessingResult SignerAdapter::processOwnRequest(const bs::message::Envelope &e
       return processDeleteWallet(env, request.delete_wallet());
    case SignerMessage::kImportHwWallet:
       return processImportHwWallet(env, request.import_hw_wallet());
-   case SignerMessage::kExportWoWallet:
-      return processExportWoWallet(env, request.export_wo_wallet());
+   case SignerMessage::kExportWoWalletRequest:
+      return processExportWoWallet(env, request.export_wo_wallet_request());
    case SignerMessage::kChangeWalletPass:
       return processChangeWalletPass(env, request.change_wallet_pass());
    case SignerMessage::kGetWalletSeed:
@@ -683,23 +684,50 @@ ProcessingResult SignerAdapter::processDeleteWallet(const bs::message::Envelope&
 }
 
 ProcessingResult SignerAdapter::processExportWoWallet(const bs::message::Envelope& env
-   , const SignerMessage_WalletRequest& request)
+   , const SignerMessage_ExportWoWalletRequest& request)
 {
-   const auto& hdWallet = walletsMgr_->getHDWalletById(request.wallet_id());
+   SignerMessage msg;
+   msg.set_export_wo_wallet_response("");
+   const auto& hdWallet = walletsMgr_->getHDWalletById(request.wallet().wallet_id());
    if (!hdWallet) {
-      logger_->error("[{}] wallet {} not found", __func__, request.wallet_id());
+      logger_->error("[{}] wallet {} not found", __func__, request.wallet().wallet_id());
+      pushResponse(user_, env, msg.SerializeAsString());
       return ProcessingResult::Error;
    }
    if (hdWallet->isWatchingOnly()) {
-      logger_->error("[{}] can't export {} (already watching only)", __func__, request.wallet_id());
+      logger_->error("[{}] can't export {} (already watching only)", __func__, request.wallet().wallet_id());
+      pushResponse(user_, env, msg.SerializeAsString());
       return ProcessingResult::Error;
    }
    auto woWallet = hdWallet->createWatchingOnly();
    if (!woWallet) {
-      logger_->error("[{}] WO export {} failed", __func__, request.wallet_id());
+      logger_->error("[{}] WO export {} failed", __func__, request.wallet().wallet_id());
+      pushResponse(user_, env, msg.SerializeAsString());
       return ProcessingResult::Error;
    }
-   logger_->debug("[{}] exported {} to {}", __func__, request.wallet_id(), woWallet->getFileName());
+   const auto srcPathName = woWallet->getFileName();
+   const auto& rm = [srcPathName]() -> bool
+   {
+      bool rc = SystemFileUtils::rmFile(srcPathName);
+      rc &= SystemFileUtils::rmFile(srcPathName + "-lock");
+      return rc;
+   };
+   woWallet->shutdown();
+   woWallet.reset();
+   const auto& fileName = SystemFileUtils::getFileName(srcPathName);
+   const auto& dstPathName = request.output_dir() + "/" + fileName;
+   if (!SystemFileUtils::cpFile(srcPathName, dstPathName)) {
+      rm();
+      logger_->error("[{}] failed to copy {} -> {}", __func__, srcPathName, dstPathName);
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Error;
+   }
+   if (!rm()) {
+      logger_->error("[{}] failed to rm {}", __func__, srcPathName);
+   }
+   logger_->debug("[{}] exported {} to {}", __func__, request.wallet().wallet_id(), dstPathName);
+   msg.set_export_wo_wallet_response(fileName);
+   pushResponse(user_, env, msg.SerializeAsString());
    return ProcessingResult::Success;
 }
 

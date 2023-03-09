@@ -69,7 +69,7 @@ Rectangle {
     Image {
         id: icon_add
 
-        visible: source.length
+        visible: source.length > 0
 
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: rect.right

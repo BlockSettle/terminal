@@ -40,7 +40,7 @@ class WalletPropertiesVM: public QObject
    Q_PROPERTY(QString walletGroups             READ walletGroups             NOTIFY changed)
    Q_PROPERTY(QString walletEncryption         READ walletEncryption         NOTIFY changed)
    Q_PROPERTY(quint32 walletGeneratedAddresses READ walletGeneratedAddresses NOTIFY changed)
-   Q_PROPERTY(quint32 walletActiveAddresses    READ walletActiveAddresses    NOTIFY changed)
+   Q_PROPERTY(quint32 walletUsedAddresses      READ walletUsedAddresses    NOTIFY changed)
    Q_PROPERTY(quint32 walletAvailableUtxo      READ walletAvailableUtxo      NOTIFY changed)
    Q_PROPERTY(bool isHardware                  READ isHardware               NOTIFY changed)
    Q_PROPERTY(bool isWatchingOnly              READ isWatchingOnly           NOTIFY changed)
@@ -51,7 +51,7 @@ public:
 
    void setWalletInfo(const WalletInfo& info);
    void setWalletSeed(const std::string& walletId, const std::string& seed);
-   void setNbActiveAddrs(const std::string& walletId, uint32_t nb);
+   void setNbUsedAddrs(const std::string& walletId, uint32_t nb);
    void setNbUTXOs(const std::string& walletId, uint32_t nb);
 
    const QString& walletName() const;
@@ -59,7 +59,7 @@ public:
    const QString& walletGroups() const;
    const QString& walletEncryption() const;
    quint32 walletGeneratedAddresses() const;
-   quint32 walletActiveAddresses() const;
+   quint32 walletUsedAddresses() const;
    quint32 walletAvailableUtxo() const;
    bool isHardware() const;
    bool isWatchingOnly() const;
@@ -73,7 +73,7 @@ signals:
 private:
    std::shared_ptr<spdlog::logger>  logger_;
    WalletInfo  info_;
-   uint32_t    nbActiveAddrs_{ 0 };
+   uint32_t    nbUsedAddrs_{ 0 };
    uint32_t    nbUTXOs_{ 0 };
    QStringList seed_;
 };

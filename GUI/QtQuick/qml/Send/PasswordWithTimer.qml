@@ -35,7 +35,7 @@ Item {
         title_leftMargin: 16
         title_topMargin: 16
 
-        visible: !txSignRequest.isHWW
+        visible: txSignRequest !== null ? !txSignRequest.isHWW : false
         title_text: qsTr("Password")
 
         Component.onCompleted: {

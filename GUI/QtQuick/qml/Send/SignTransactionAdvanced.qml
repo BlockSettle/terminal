@@ -10,7 +10,7 @@ ColumnLayout  {
 
     id: layout
 
-    property var txSignRequest
+    property var txSignRequest: null
 
     property int time_progress
     property bool isRBF: false
@@ -64,7 +64,7 @@ ColumnLayout  {
                 height: parent.height - 24
                 anchors.centerIn: parent
 
-                model: txSignRequest.inputs
+                model: txSignRequest !== null ? txSignRequest.inputs : []
                 columnWidths: [0.7, 0.1, 0, 0.2]
 
                 copy_button_column_index: -1
@@ -101,7 +101,7 @@ ColumnLayout  {
                 height: parent.height - 24
                 anchors.centerIn: parent
 
-                model:txOutputsModel
+                model: txOutputsModel
                 columnWidths: [0.744, 0.20, 0.056]
 
                 copy_button_column_index: -1
@@ -169,7 +169,7 @@ ColumnLayout  {
             anchors.right: parent.horizontalCenter
             anchors.rightMargin: 24
 
-            text: txSignRequest.inputAmount
+            text: txSignRequest !== null ? txSignRequest.inputAmount : ""
 
             color: "#E2E7FF"
 
@@ -205,7 +205,7 @@ ColumnLayout  {
             anchors.right: parent.horizontalCenter
             anchors.rightMargin: 24
 
-            text: txSignRequest.returnAmount
+            text: txSignRequest !== null ? txSignRequest.returnAmount : ""
 
             color: "#E2E7FF"
 
@@ -241,7 +241,7 @@ ColumnLayout  {
             anchors.right: parent.horizontalCenter
             anchors.rightMargin: 24
 
-            text: txSignRequest.fee
+            text: txSignRequest !== null ? txSignRequest.fee : ""
 
             color: "#E2E7FF"
 
@@ -277,7 +277,7 @@ ColumnLayout  {
             anchors.right: parent.right
             anchors.rightMargin: 16
 
-            text: txSignRequest.txSize
+            text: txSignRequest !== null ? txSignRequest.txSize : ""
 
             color: "#E2E7FF"
 
@@ -313,7 +313,7 @@ ColumnLayout  {
             anchors.right: parent.right
             anchors.rightMargin: 16
 
-            text: txSignRequest.feePerByte
+            text: txSignRequest !== null ? txSignRequest.feePerByte : ""
 
             color: "#E2E7FF"
 
@@ -349,7 +349,7 @@ ColumnLayout  {
             anchors.right: parent.right
             anchors.rightMargin: 16
 
-            text: txSignRequest.outputAmount
+            text: txSignRequest !== null ? txSignRequest.outputAmount : ""
 
             color: "#E2E7FF"
 
@@ -377,13 +377,15 @@ ColumnLayout  {
 
     CustomButton {
         id: broadcast_but
-        text: txSignRequest.hasError ? txSignRequest.errorText : qsTr("Broadcast")
+        text: txSignRequest !== null ? (txSignRequest.hasError ? txSignRequest.errorText : qsTr("Broadcast")) : ""
         width: 1084
 
         Layout.bottomMargin: 40
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
-        enabled: !txSignRequest.hasError && ((txSignRequest.isHWW && txSignRequest.isHWWready) || password.value.length)
+        enabled: txSignRequest !== null ? 
+            (!txSignRequest.hasError && ((txSignRequest.isHWW && txSignRequest.isHWWready) || password.value.length)) :
+            false
 
         Component.onCompleted: {
             broadcast_but.preferred = true
