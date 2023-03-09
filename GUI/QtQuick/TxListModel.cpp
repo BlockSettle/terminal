@@ -651,11 +651,10 @@ void QTxDetails::setDetails(const bs::sync::TXWalletDetails& details)
    for (const auto& out : details.outputAddresses) {
       outputs_.push_back({ out.address, txId, out.outIndex, out.value });
    }
-   QMetaObject::invokeMethod(this, [this, inputs] {
-      ownInputs_->addEntries(inputs);
-      ownOutputs_->addEntries(outputs_);
-      emit updated();
-   });
+
+   ownInputs_->addEntries(inputs);
+   ownOutputs_->addEntries(outputs_);
+   emit updated();
 }
 
 std::vector<std::pair<bs::Address, double>> QTxDetails::outputData() const
