@@ -16,6 +16,7 @@
 #include <QObject>
 
 #include "Address.h"
+#include "ArmoryServersModel.h"
 #include "AddressListModel.h"
 #include "ApiAdapter.h"
 #include "ApplicationSettings.h"

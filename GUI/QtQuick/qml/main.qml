@@ -112,10 +112,14 @@ ApplicationWindow {
 
     Connections
     {
-        target:walletBalances
-        function onRowCountChanged ()
+        target:bsApp
+        function onWalletsListChanged ()
         {
-            if (overviewWalletIndex === -1)
+            if (walletBalances.rowCount === 0)
+            {
+                show_popup(create_wallet)
+            }
+            else if (overviewWalletIndex === -1)
             {
                 overviewWalletIndex = 0
             }
@@ -178,7 +182,7 @@ ApplicationWindow {
 
             Image {
                 id: imgArmoryStatus
-                source: (bsApp.armoryState === 7) ? "qrc:/images/conn_ind.png" : "qrc:/images/conn_inactive.png"
+                source: (bsApp.armoryState === 7) ? "qrc:/images/conn_ind.png" : "qrc:/images/disconn_ind.png"
             }
 
             Label {

@@ -173,5 +173,6 @@
         <file>qml/StyledControls/CustomHorizontalHeaderView.qml</file>
         <file>qml/StyledControls/CustomRbfCpfpMenu.qml</file>
         <file>qml/StyledControls/CustomSuccessWidget.qml</file>
+        <file>images/disconn_ind.png</file>
     </qresource>
 </RCC>

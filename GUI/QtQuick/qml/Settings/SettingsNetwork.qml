@@ -10,6 +10,10 @@ ColumnLayout  {
 
     id: layout
 
+    property var armoryServersModel: ({})
+
+    signal sig_add_custom()
+
     height: 548
     width: 580
 
@@ -24,46 +28,54 @@ ColumnLayout  {
         text: qsTr("Network")
     }
 
-    CustomTextInput {
-        id: host
+    ListView {
+        id: list
 
-        input_validator: RegExpValidator { regExp: /(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}(,(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3})*/ }
+        Layout.fillHeight: true
+        Layout.fillWidth: true
+        Layout.leftMargin: 25
+        Layout.topMargin: 32
 
-        Layout.alignment: Qt.AlignCenter
-        Layout.preferredHeight : 70
-        Layout.preferredWidth: 532
-        Layout.topMargin: 24
+        spacing: 10
 
-        input_topMargin: 35
-        title_leftMargin: 16
-        title_topMargin: 16
+        model: armoryServersModel
 
-        title_text: qsTr("Armory host")
+        delegate: CustomListRadioButton {
+            id: _delegate
 
-        onTextEdited : {
-            bsApp.settingArmoryHost = host.input_text
+            width: 530
+            title_text: name
+            icon_add_source: "qrc:/images/delete.png"
+            radio_checked: isCurrent
+
+            onClicked_add: {
+                if (!isDefault)
+                {
+                    bsApp.delArmoryServer(armoryServersModel, index)
+                }
+            }
+
+            onSig_radio_clicked: {
+                if (radio_checked)
+                {
+                    isCurrent = true
+                }
+            }
         }
+
     }
 
-    CustomTextInput {
-        id: port
-
-        input_validator: IntValidator {bottom: 0; top: 65536;}
+    CustomListItem {
+        id: add_custom_server
 
         Layout.alignment: Qt.AlignCenter
-        Layout.preferredHeight : 70
-        Layout.preferredWidth: 532
         Layout.topMargin: 10
 
-        input_topMargin: 35
-        title_leftMargin: 16
-        title_topMargin: 16
+        //aliases
+        icon_source: "qrc:/images/plus.svg"
+        title_text: qsTr("Add custom server")
 
-        title_text: qsTr("Armory port")
-
-        onTextEdited : {
-            bsApp.settingArmoryPort = port.input_text
-        }
+        onClicked: sig_add_custom()
     }
 
     Label {
@@ -74,9 +86,9 @@ ColumnLayout  {
 
     function init()
     {
-        port.input_text = bsApp.settingArmoryPort
-        host.input_text = bsApp.settingArmoryHost
+    }
 
-        host.setActiveFocus()
+    Component.onCompleted: {
+        layout.armoryServersModel = bsApp.getArmoryServers()
     }
 }

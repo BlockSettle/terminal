@@ -16,9 +16,6 @@ import "../BsStyles"
 Rectangle {
     id: rect
 
-    //properties
-    property bool isButton: false
-
     //aliases
     property alias icon_source: icon.source
     property alias icon_visible: icon.visible
@@ -97,10 +94,7 @@ Rectangle {
         hoverEnabled: true
         propagateComposedEvents: true
         onClicked: {
-            if (isButton)
-                rect.clicked()
-            else
-                mouse.accepted = false
+            rect.clicked()
         }
     }
 }

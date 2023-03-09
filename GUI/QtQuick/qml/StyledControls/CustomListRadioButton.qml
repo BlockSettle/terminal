@@ -17,23 +17,23 @@ CustomListItem {
     id: root
 
     //properties
-    property bool rad_but_down: rad_but.down
+    property alias radio_checked: rad_but.checked
 
-    signal sig_rad_but_clicked()
+    signal sig_radio_clicked()
 
     icon_visible: false
 
     CustomRadioButton {
         id: rad_but
 
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.left: rect.left
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.left: root.left
         anchors.leftMargin: 21
 
         width: 15
         height: 15
 
-        onClicked: root.sig_rad_but_clicked()
+        onClicked : root.sig_radio_clicked()
     }
 
 }
