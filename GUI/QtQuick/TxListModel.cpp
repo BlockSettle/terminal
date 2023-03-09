@@ -211,6 +211,7 @@ QHash<int, QByteArray> TxListModel::roleNames() const
 
 void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
 {
+   logger_->debug("[TxListModel::addRows] {} entries", entries.size());
    std::vector<bs::TXEntry> newEntries;
    for (const auto& entry : entries) {
       int row = -1;
@@ -224,7 +225,7 @@ void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
          }
       }
       if (row != -1) {
-         //logger_->debug("[{}::{}] updating entry {}", (void*)this, __func__, entry.txHash.toHexStr(true));
+         logger_->debug("[{}] updating entry #{} {}", __func__, row, entry.txHash.toHexStr(true));
          emit dataChanged(createIndex(row, 0), createIndex(row, 0));
       }
       else {
@@ -234,10 +235,19 @@ void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
    }
    if (!newEntries.empty()) {
       QMetaObject::invokeMethod(this, [this, newEntries] {
+         logger_->debug("[TxListModel::addRows] {} new entries", newEntries.size());
          beginInsertRows(QModelIndex(), rowCount(), rowCount() + newEntries.size() - 1);
          data_.insert(data_.end(), newEntries.cbegin(), newEntries.cend());
          endInsertRows();
          emit nbTxChanged();
+
+         if (!pendingDetails_.empty()) {
+            logger_->debug("[TxListModel::addRows] {} pending details", pendingDetails_.size());
+            for (const auto& txDet : pendingDetails_) {
+               setDetails(txDet);
+            }
+            pendingDetails_.clear();
+         }
          });
    }
 }
@@ -283,11 +293,12 @@ void TxListModel::setDetails(const bs::sync::TXWalletDetails& txDet)
    }
    if (row != -1) {
       emit dataChanged(createIndex(row, 1), createIndex(row, 6));
-      //logger_->debug("[{}] {} {} found at row {}", __func__, txDet.txHash.toHexStr(), txDet.hdWalletId, row);
+      //logger_->debug("[TxListModel::setDetails] {} {} found at row {}", txDet.txHash.toHexStr(), txDet.hdWalletId, row);
       
    }
    else {
-      //logger_->debug("[{}] {} {} not found", __func__, txDet.txHash.toHexStr(), txDet.hdWalletId);
+      //logger_->warn("[TxListModel::setDetails] {} {} not found", txDet.txHash.toHexStr(), txDet.hdWalletId);
+      pendingDetails_.push_back(txDet);
    }
 }
 

@@ -179,6 +179,7 @@ public:
 
 signals:
    void walletsListChanged();
+   void walletsLoaded(quint32 nb);
    void walletBalanceChanged();
    void addressGenerated();
    void settingChanged();

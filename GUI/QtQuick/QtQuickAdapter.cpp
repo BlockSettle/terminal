@@ -568,22 +568,29 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
       break;
    case SignerMessage::kWalletSeed:
       return processWalletSeed(msg.wallet_seed());
+   case SignerMessage::kWalletsListUpdated:
    default: return ProcessingResult::Ignored;
    }
    return ProcessingResult::Success;
 }
 
+#include "StringUtils.h"
 ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
 {
    WalletsMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
+      logger_->error("[{}] failed to parse msg #{}\n{}", __func__, env.foreignId(), bs::toHex(env.message));
       return ProcessingResult::Error;
    }
    switch (msg.data_case()) {
    case WalletsMessage::kLoading:
       loadingComponents_.insert(env.sender->value());
       updateSplashProgress();
+      break;
+
+   case WalletsMessage::kReady:
+      emit walletsLoaded(msg.ready());
+      logger_->debug("[{}] loaded {} wallet[s]", __func__, msg.ready());
       break;
 
    case WalletsMessage::kWalletLoaded: {
@@ -974,7 +981,7 @@ ProcessingResult QtQuickAdapter::processWalletData(bs::message::SeqId msgId
 ProcessingResult QtQuickAdapter::processWalletBalances(bs::message::SeqId responseId
    , const WalletsMessage_WalletBalances &response)
 {
-   logger_->debug("[{}] {}", __func__, response.DebugString());
+   //logger_->debug("[{}] {}", __func__, response.DebugString());
    const WalletBalancesModel::Balance bal{ response.spendable_balance(), response.unconfirmed_balance()
       , response.total_balance(), response.nb_addresses() };
    walletBalances_->setWalletBalance(response.wallet_id(), bal);
@@ -1020,7 +1027,8 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
          try {
             txDet.outAddresses.push_back(std::move(bs::Address::fromAddressString(addrStr)));
          } catch (const std::exception &e) {
-            logger_->warn("[QtGuiAdapter::processTXDetails] out deser error: {}", e.what());
+            logger_->warn("[QtGuiAdapter::processTXDetails] out deser '{}' error: {}"
+               , addrStr, e.what());
          }
       }
       for (const auto &inAddr : resp.input_addresses()) {
