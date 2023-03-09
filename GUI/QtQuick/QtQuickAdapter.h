@@ -174,6 +174,7 @@ public:
    Q_INVOKABLE int viewWalletSeedAuth(const QString& walletId, const QString& password);
    Q_INVOKABLE int deleteWallet(const QString& walletId, const QString& password);
    Q_INVOKABLE int rescanWallet(const QString& walletId);
+   Q_INVOKABLE int renameWallet(const QString& walletId, const QString& newName);
    Q_INVOKABLE void walletSelected(int);
    void notifyNewTransaction(const bs::TXEntry& tx);
 
