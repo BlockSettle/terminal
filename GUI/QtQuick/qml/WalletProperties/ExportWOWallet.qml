@@ -169,7 +169,7 @@ ColumnLayout  {
     CustomButton {
         id: confirm_but
 
-        enabled: bsApp.settingExportDir.length === 0
+        enabled: bsApp.settingExportDir.length !== 0
         preferred: true
         text: qsTr("Export")
 
