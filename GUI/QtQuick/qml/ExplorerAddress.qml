@@ -21,7 +21,7 @@ import "Overview"
 //import "js/helper.js" as JsHelper
 
 Item {
-    property var address
+    property string address
 
     signal requestPageChange(var text)
 
@@ -34,25 +34,28 @@ Item {
 
         Row {
             spacing: 16
+            height: 20
 
             Label {
                 text: qsTr("Address")
                 color: BSStyle.textColor
                 font.pixelSize: 20
                 font.weight: Font.Bold
-                anchors.bottom: parent.bottom
+                height: parent.height
+                verticalAlignment: Text.AlignBottom
             }
             Label {
                 id: address_label
-                text: address
+                text: address !== null ? address : ""
                 color: BSStyle.textColor
                 font.pixelSize: 14
-                anchors.bottom: parent.bottom
-            }
+                height: parent.height
+                verticalAlignment: Text.AlignBottom
             
-            CopyIconButton {
-                anchors.left: address.right
-                onCopy: bsApp.copyAddressToClipboard(address)
+                CopyIconButton {
+                    anchors.left: address_label.right
+                    onCopy: bsApp.copyAddressToClipboard(address)
+                }
             }
         }
 

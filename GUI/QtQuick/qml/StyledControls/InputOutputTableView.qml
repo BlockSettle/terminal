@@ -39,7 +39,7 @@ CustomTableView {
             onDoubleClicked: component.cellDoubleClicked(row, column, tableData)
         }
 
-        Row {
+        Item {
             width: parent.width
             height: parent.height
 

@@ -77,8 +77,6 @@ Item {
                     text: "1"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
             TextInput {
@@ -93,8 +91,6 @@ Item {
                     text: "2"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
             TextInput {
@@ -109,8 +105,6 @@ Item {
                     text: "3"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
         }
@@ -129,8 +123,6 @@ Item {
                     text: "4"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
             TextInput {
@@ -145,8 +137,6 @@ Item {
                     text: "5"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
             TextInput {
@@ -161,8 +151,6 @@ Item {
                     text: "6"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
         }
@@ -181,8 +169,6 @@ Item {
                     text: "7"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
             TextInput {
@@ -197,8 +183,6 @@ Item {
                     text: "8"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
             TextInput {
@@ -213,8 +197,6 @@ Item {
                     text: "9"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
         }
@@ -233,8 +215,6 @@ Item {
                     text: "10"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
             TextInput {
@@ -249,8 +229,6 @@ Item {
                     text: "11"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
             TextInput {
@@ -265,8 +243,6 @@ Item {
                     text: "12"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
         }
@@ -286,8 +262,6 @@ Item {
                     text: "13"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
             TextInput {
@@ -302,8 +276,6 @@ Item {
                     text: "14"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
             TextInput {
@@ -318,8 +290,6 @@ Item {
                     text: "15"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
         }
@@ -339,8 +309,6 @@ Item {
                     text: "16"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
             TextInput {
@@ -355,8 +323,6 @@ Item {
                     text: "17"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
             TextInput {
@@ -371,8 +337,6 @@ Item {
                     text: "18"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
         }
@@ -392,8 +356,6 @@ Item {
                     text: "19"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
             TextInput {
@@ -408,8 +370,6 @@ Item {
                     text: "20"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
             TextInput {
@@ -424,8 +384,6 @@ Item {
                     text: "21"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
         }
@@ -445,8 +403,6 @@ Item {
                     text: "22"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
             TextInput {
@@ -461,8 +417,6 @@ Item {
                     text: "23"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
             TextInput {
@@ -477,8 +431,6 @@ Item {
                     text: "24"
                     font.pointSize: 6
                     color: 'darkgrey'
-                    anchors.left: parent
-                    anchors.top: parent
                 }
             }
         }

@@ -10,6 +10,7 @@ HorizontalHeaderView {
    delegate: Rectangle {
 
       implicitHeight: 34
+      implicitWidth: 100
       color: BSStyle.tableCellBackgroundColor
 
       Text {

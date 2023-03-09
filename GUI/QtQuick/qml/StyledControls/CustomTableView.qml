@@ -22,6 +22,8 @@ Column {
 
     property alias model: component.model
     property alias delegate: component.delegate
+    property alias selected_row_index: component.selected_row_index
+    property bool is_expandable: false
     property var columnWidths
     property int copy_button_column_index: 0
     property int delete_button_column_index: -1
@@ -82,6 +84,7 @@ Column {
             id: delega
 
             implicitHeight: 34
+            implicitWidth: 100
             color: row === component.selected_row_index ? BSStyle.tableCellSelectedBackgroundColor : BSStyle.tableCellBackgroundColor
 
             MouseArea {
@@ -160,6 +163,7 @@ Column {
 
             Connections {
                 target: row_loader.item
+                ignoreUnknownSignals: true
                 function onDeleteRequested (row)
                 {
                     root.deleteRequested(row)

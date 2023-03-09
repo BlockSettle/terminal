@@ -73,16 +73,12 @@ Item {
                 font.pixelSize: 19
                 font.weight: Font.DemiBold
                 color: BSStyle.textColor
-
-                anchors.verticalCenter: parent.verticalCenter
             }
 
             Row 
             {
                 spacing: 8
                 height: parent.height
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
 
                 CustomSmallComboBox {
                     id: txWalletsComboBox
