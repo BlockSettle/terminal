@@ -30,11 +30,6 @@ Item {
     signal curWalletIndexChanged(index : int)
     signal openSend (string txId, bool isRBF, bool isCPFP)
 
-    CreateNewWallet {
-        id: createNewWalletPage
-        visible: false
-    }
-
     AddressDetails {
         id: addressDetails
         visible: false

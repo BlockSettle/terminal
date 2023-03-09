@@ -20,17 +20,8 @@
         <file>qml/ExplorerAddress.qml</file>
         <file>qml/ExplorerTX.qml</file>
         <file>qml/ExplorerLoader.qml</file>
-        <file>qml/SendPage.qml</file>
-        <file>qml/SendAdvanced.qml</file>
-        <file>qml/ReceivePage.qml</file>
-        <file>qml/SettingsPage.qml</file>
-        <file>qml/CreateNewWallet.qml</file>
-        <file>qml/SeedPhrase.qml</file>
         <file>qml/ImportSeedPhrase.qml</file>
-        <file>qml/VerifySeedPhrase.qml</file>
-        <file>qml/WalletNamePass.qml</file>
         <file>qml/VerifyTX.qml</file>
-        <file>qml/VerifyAdvancedTX.qml</file>
         <file>qml/InfoBanner.qml</file>
         <file>qml/InfoBannerComponent.qml</file>
         <file>qml/InfoBar.qml</file>
@@ -92,7 +83,6 @@
         <file>qml/CreateWallet/ImportWatchingWallet.qml</file>
         <file>qml/CreateWallet/qmldir</file>
         <file>qml/CreateWallet/StartCreateWallet.qml</file>
-        <file>qml/CreateWallet/SuccessNewWallet.qml</file>
         <file>qml/CreateWallet/TermsAndConditions.qml</file>
         <file>qml/CreateWallet/WalletSeed.qml</file>
         <file>qml/CreateWallet/WalletSeedSkipAccept.qml</file>
@@ -182,5 +172,6 @@
         <file>images/wallet_icon_warn.svg</file>
         <file>qml/StyledControls/CustomHorizontalHeaderView.qml</file>
         <file>qml/StyledControls/CustomRbfCpfpMenu.qml</file>
+        <file>qml/StyledControls/CustomSuccessWidget.qml</file>
     </qresource>
 </RCC>

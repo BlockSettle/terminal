@@ -149,7 +149,6 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    , userSigner_(std::make_shared<UserTerminal>(TerminalUsers::Signer))
    , userHWW_(bs::message::UserTerminal::create(bs::message::TerminalUsers::HWWallets))
    , txTypes_({ tr("All transactions"), tr("Received"), tr("Sent"), tr("Internal") })
-   , walletPropertiesModel_(std::make_unique<qtquick_gui::WalletPropertiesVM>())
 {
    staticLogger = logger;
    addrModel_ = new QmlAddressListModel(logger, this);
@@ -162,6 +161,7 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    hwDeviceModel_ = new HwDeviceModel(logger, this);
    walletBalances_ = new WalletBalancesModel(logger, this);
    feeSuggModel_ = new FeeSuggestionModel(logger, this);
+   walletPropertiesModel_ = std::make_unique<qtquick_gui::WalletPropertiesVM>(logger);
 }
 
 QtQuickAdapter::~QtQuickAdapter()
@@ -244,7 +244,9 @@ void QtQuickAdapter::run(int &argc, char **argv)
    qmlRegisterType<TransactionFilterModel>("terminal.models", 1, 0, "TransactionFilterModel");
    qmlRegisterType<TransactionForAddressFilterModel>("terminal.models", 1, 0, "TransactionForAddressFilterModel");
    qmlRegisterType<PendingTransactionFilterModel>("terminal.models", 1, 0, "PendingTransactionFilterModel");
-   qmlRegisterType<qtquick_gui::WalletPropertiesVM>("terminal.models", 1, 0, "WalletPropertiesVM");
+   qmlRegisterUncreatableMetaObject(qtquick_gui::WalletPropertiesVM::staticMetaObject, "terminal.models"
+      , 1, 0, "WalletPropertiesVM", tr("Error: only enums"));
+//   qmlRegisterType<qtquick_gui::WalletPropertiesVM>("terminal.models", 1, 0, "WalletPropertiesVM");
    qmlRegisterUncreatableMetaObject(Transactions::staticMetaObject, "terminal.models" 
       , 1, 0, "Transactions", tr("Error: only enums"));
    qmlRegisterUncreatableMetaObject(TxListModel::staticMetaObject, "terminal.models"
@@ -816,6 +818,11 @@ void QtQuickAdapter::requestInitialSettings()
    setReq = msgReq->add_requests();
    setReq->set_source(SettingSource_Local);
    setReq->set_index(SetIdx_ArmoryDbPort);
+   setReq->set_type(SettingType_String);
+
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_ExportDir);
    setReq->set_type(SettingType_String);
 
    pushRequest(user_, userSettings_, msg.SerializeAsString());
@@ -2079,12 +2086,11 @@ int QtQuickAdapter::changePassword(const QString& walletId, const QString& oldPa
    return (msgId == 0) ? -1 : 0;
 }
 
-int QtQuickAdapter::exportWalletAuth(const QString& walletId, const QString& password)
+int QtQuickAdapter::exportWallet(const QString& walletId, const QString & exportDir)
 {
    SignerMessage msg;
    auto msgReq = msg.mutable_export_wo_wallet();
    msgReq->set_wallet_id(walletId.toStdString());
-   msgReq->set_password(password.toStdString());
    const auto msgId = pushRequest(user_, userSigner_, msg.SerializeAsString());
    return (msgId == 0) ? -1 : 0;
 }

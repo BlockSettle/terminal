@@ -12,7 +12,9 @@
 #define QT_QUICK_ADAPTER_H
 
 #include <set>
+
 #include <QObject>
+
 #include "Address.h"
 #include "AddressListModel.h"
 #include "ApiAdapter.h"
@@ -121,6 +123,10 @@ public:
    Q_PROPERTY(bool settingActivated READ settingActivated WRITE setActivated NOTIFY settingChanged)
    bool settingActivated() const { return getSetting(ApplicationSettings::Setting::initialized).toBool(); }
    void setActivated(bool b) { setSetting(ApplicationSettings::Setting::initialized, b); }
+   
+   Q_PROPERTY(QString settingExportDir READ settingExportDir WRITE setExportDir NOTIFY settingChanged)
+   QString settingExportDir() const { return getSetting(ApplicationSettings::Setting::ExportDir).toString(); }
+   void setExportDir(const QString& str) {setSetting(ApplicationSettings::Setting::ExportDir, str); }
 
    Q_PROPERTY(int armoryState READ armoryState NOTIFY armoryStateChanged)
    int armoryState() const { return armoryState_; }
@@ -164,7 +170,7 @@ public:
    Q_INVOKABLE void startAddressSearch(const QString&);
    Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash);
    Q_INVOKABLE int changePassword(const QString& walletId, const QString& oldPassword, const QString& newPassword);
-   Q_INVOKABLE int exportWalletAuth(const QString& walletId, const QString& password);
+   Q_INVOKABLE int exportWallet(const QString& walletId, const QString & exportDir);
    Q_INVOKABLE int viewWalletSeedAuth(const QString& walletId, const QString& password);
    Q_INVOKABLE int deleteWallet(const QString& walletId, const QString& password);
    Q_INVOKABLE int rescanWallet(const QString& walletId);
@@ -183,6 +189,7 @@ signals:
    void invokePasswordEntry(const QString& devName, bool acceptOnDevice);
    void showError(const QString&);
    void showNotification(QString, QString);
+   void successExport(QString nameExport);
 
 private slots:
    void onArmoryServerChanged(const QModelIndex&, const QVariant&);

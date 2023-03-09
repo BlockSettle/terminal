@@ -129,8 +129,10 @@ CustomPopup {
         }
     }
 
-    SuccessNewWallet {
+    CustomSuccessWidget {
         id: success_wallet
+
+        details_text: qsTr("Your wallet has successfully been created")
         visible: false
         onSig_finish: {
             root.close()

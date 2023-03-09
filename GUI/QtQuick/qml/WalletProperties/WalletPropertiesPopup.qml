@@ -29,6 +29,11 @@ CustomPopup {
         visible: false
 
         wallet_properties_vm: root.wallet_properties_vm
+
+        onSig_success: (nameExport, pathExport) => {
+            _stack_view.push(success)
+            success.details_text = qsTr("Wallet %1 has successfully been exported to %2").arg(nameExport).arg(pathExport)
+        }
     }
 
     WalletSeedAuth {
@@ -70,6 +75,16 @@ CustomPopup {
             _stack_view.pop()
             _stack_view.pop()
             root.close()
+        }
+    }
+
+    CustomSuccessWidget {
+        id: success
+
+        visible: false
+        onSig_finish: {
+            root.close()
+            _stack_view.pop(null)
         }
     }
 

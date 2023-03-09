@@ -155,21 +155,6 @@ ApplicationWindow {
         anchors.fill: parent
     }
 
-    SendPage {
-        id: sendPage
-        visible: false
-    }
-
-    ReceivePage {
-        id: receivePage
-        visible: false
-    }
-
-    SettingsPage {
-        id: settingsPage
-        visible: false
-    }
-
     header: Column {
         height: 57
         width: parent.width

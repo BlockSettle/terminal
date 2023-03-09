@@ -10,12 +10,24 @@ import "../StyledControls"
 ColumnLayout  {
     id: layout
 
+    signal sig_success(string nameExport, string pathExport)
+
     property var wallet_properties_vm
 
     height: 548
     width: 580
 
     spacing: 0
+
+
+    Connections
+    {
+        target:bsApp
+        function onSuccessExport (nameExport)
+        {
+            layout.sig_success(nameExport, bsApp.settingExportDir)
+        }
+    }
 
     CustomTitleLabel {
         id: title
@@ -104,9 +116,11 @@ ColumnLayout  {
         Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
         font.pixelSize: 14
+        font.family: "Roboto"
+        font.weight: Font.Normal
+
+        text: bsApp.settingExportDir
         color: BSStyle.titanWhiteColor
-        text: wallet_properties_vm.exportPath
-        leftPadding: 24
     }
 
     Button {
@@ -154,6 +168,8 @@ ColumnLayout  {
 
     CustomButton {
         id: confirm_but
+
+        enabled: bsApp.settingExportDir.length !== 0
         preferred: true
         text: qsTr("Export")
 
@@ -163,8 +179,17 @@ ColumnLayout  {
         width: 530
 
         function click_enter() {
-            bsApp.exportWallet(wallet_properties_vm.walletId)
+            bsApp.exportWallet(wallet_properties_vm.walletId, bsApp.settingExportDir)
+            layout.sig_export()
         }
+    }
+
+    Keys.onEnterPressed: {
+        confirm_but.click_enter()
+    }
+
+    Keys.onReturnPressed: {
+        confirm_but.click_enter()
     }
 
     FileDialog {
@@ -174,7 +199,12 @@ ColumnLayout  {
         selectFolder: true
 
         onAccepted: {
-            wallet_properties_vm.exportPath = fileDialog.fileUrl
+            var res = fileDialog.fileUrl.toString().replace(/^(file:\/{3})/,"")
+            if (res)
+            {
+                bsApp.settingExportDir = res
+            }
         }
     }
+
 }
