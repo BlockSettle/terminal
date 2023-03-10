@@ -277,8 +277,8 @@ void QtQuickAdapter::run(int &argc, char **argv)
 
    connect(&engine, &QQmlApplicationEngine::objectCreated,
            [this]() {
-      if(nWalletsLoaded >= 0) {
-         emit walletsLoaded(nWalletsLoaded);
+      if(nWalletsLoaded_ >= 0) {
+         emit walletsLoaded(nWalletsLoaded_);
       }
    });
 
@@ -606,7 +606,7 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
       break;
 
    case WalletsMessage::kReady:
-      nWalletsLoaded = msg.ready();
+      nWalletsLoaded_ = msg.ready();
       emit walletsLoaded(msg.ready());
       logger_->debug("[{}] loaded {} wallet[s]", __func__, msg.ready());
       break;

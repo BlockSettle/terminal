@@ -105,7 +105,6 @@ ApplicationWindow {
 
         function onShowError(text)
         {
-            //ibFailure.displayMessage(text)
             error_dialog.error = text
             show_popup(error_dialog)
         }
@@ -123,7 +122,6 @@ ApplicationWindow {
             if (nb === 0)
             {
                 isNoWalletsWizard = true
-                console.log("isNoWalletsWizard = " + isNoWalletsWizard)
             }
         }
 
@@ -144,8 +142,6 @@ ApplicationWindow {
     }
 
     onVisibleChanged: {
-        console.log("onVisibleChanged mainWindow.visible= " + mainWindow.visible)
-        console.log("onVisibleChanged isNoWalletsWizard= " + isNoWalletsWizard)
         if (mainWindow.visible && isNoWalletsWizard)
         {
             isNoWalletsWizard = false
@@ -161,11 +157,6 @@ ApplicationWindow {
     overlay.modeless: Rectangle {
         color: BSStyle.backgroundModeLessColor
     }
-
-    // attached to use from c++
-/*    function messageBoxCritical(title, text, details) {
-        return JsHelper.messageBoxCritical(title, text, details)
-    }*/
 
     InfoBanner {
         id: ibSuccess

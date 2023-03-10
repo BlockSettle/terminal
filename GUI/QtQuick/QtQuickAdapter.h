@@ -304,7 +304,7 @@ private:
    std::set<BinaryData> rmTxOnInvalidation_;
    std::map<bs::message::SeqId, ArmoryServersModel*>  armoryServersReq_;
 
-   int nWalletsLoaded {-1};
+   int nWalletsLoaded_ {-1};
 };
 
 #endif	// QT_QUICK_ADAPTER_H

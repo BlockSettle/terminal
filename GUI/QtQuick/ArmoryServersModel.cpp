@@ -121,18 +121,36 @@ QVariant ArmoryServersModel::data(const QModelIndex& index, int role) const
 
 bool ArmoryServersModel::setData(const QModelIndex& index, const QVariant& value, int role)
 {
-   if(!index.isValid()) {
+   if(!index.isValid() || index.row() > rowCount() || index.column() > columnCount()) {
       return false;
    }
 
-   switch (role)
-   {
-   case CurrentServerRole:
+   if (role == CurrentServerRole) {
       logger_->debug("[{}] current = {}", __func__, value.toInt());
       setCurrent(value.toInt());
-   break;
-   default:
-   break;
+   }
+   else if (!isEditable(index.row())) {
+      auto row = index.row();
+      switch (role)
+      {
+      case NameRole:
+         data_.at(row).name = value.toString();
+      break;
+      case NetTypeRole:
+         data_.at(row).netType = static_cast<NetworkType>(value.toInt());
+      break;
+      case AddressRole:
+         data_.at(row).armoryDBIp = value.toString();
+      break;
+      case PortRole:
+         data_.at(row).armoryDBPort = value.toInt();
+      break;
+      case KeyRole:
+         data_.at(row).armoryDBKey = value.toString();
+      break;
+      default:
+      break;
+      }
    }
 
    emit changed(index, value);
