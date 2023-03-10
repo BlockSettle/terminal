@@ -11,6 +11,8 @@
 #include "ArmoryServersModel.h"
 #include "ArmoryServersProvider.h"
 
+#include <spdlog/spdlog.h>
+
 namespace {
    static const QHash<int, QByteArray> kRoleNames{
       {ArmoryServersModel::TableDataRole, "tableData"},
@@ -24,9 +26,10 @@ namespace {
    };
 }
 
-ArmoryServersModel::ArmoryServersModel(QObject* parent)
+ArmoryServersModel::ArmoryServersModel(const std::shared_ptr<spdlog::logger> & logger, QObject* parent)
    : QAbstractTableModel(parent)
    , header_{ tr("Name"), tr("Network"), tr("Address"), tr("Port"), tr("Key") }
+   , logger_(logger)
 {}
 
 void ArmoryServersModel::setCurrent (int value)
@@ -118,13 +121,14 @@ QVariant ArmoryServersModel::data(const QModelIndex& index, int role) const
 
 bool ArmoryServersModel::setData(const QModelIndex& index, const QVariant& value, int role)
 {
-   if(!index.isValid() || !isEditable(index.row())) {
+   if(!index.isValid()) {
       return false;
    }
 
    switch (role)
    {
    case CurrentServerRole:
+      logger_->debug("[{}] current = {}", __func__, value.toInt());
       setCurrent(value.toInt());
    break;
    default:

@@ -275,6 +275,13 @@ void QtQuickAdapter::run(int &argc, char **argv)
    rootCtxt_->setContextProperty(QLatin1Literal("feeSuggestions"), feeSuggModel_);
    engine.addImageProvider(QLatin1Literal("QR"), new QRImageProvider);
 
+   connect(&engine, &QQmlApplicationEngine::objectCreated,
+           [this]() {
+      if(nWalletsLoaded >= 0) {
+         emit walletsLoaded(nWalletsLoaded);
+      }
+   });
+
    engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
    if (engine.rootObjects().empty()) {
       BSMessageBox box(BSMessageBox::critical, app.tr("BlockSettle Terminal")
@@ -294,6 +301,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
    updateStates();
 
    requestInitialSettings();
+
    logger_->debug("[QtGuiAdapter::run] initial setup done");
    app.exec();
 }
@@ -428,6 +436,7 @@ ProcessingResult QtQuickAdapter::processSettingsState(const SettingsMessage_Sett
 ProcessingResult QtQuickAdapter::processArmoryServers(bs::message::SeqId msgId
    , const SettingsMessage_ArmoryServers& response)
 {
+   logger_->debug("[{}]", __func__);
    const auto& itReq = armoryServersReq_.find(msgId);
    if (itReq == armoryServersReq_.end()) {
       logger_->warn("[{}] unknown request #{}", __func__, msgId);
@@ -597,6 +606,7 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
       break;
 
    case WalletsMessage::kReady:
+      nWalletsLoaded = msg.ready();
       emit walletsLoaded(msg.ready());
       logger_->debug("[{}] loaded {} wallet[s]", __func__, msg.ready());
       break;
@@ -1286,7 +1296,7 @@ ArmoryServersModel* QtQuickAdapter::getArmoryServers()
    SettingsMessage msg;
    msg.mutable_armory_servers_get();
    const auto msgId = pushRequest(user_, userSettings_, msg.SerializeAsString());
-   auto model = new ArmoryServersModel(this);
+   auto model = new ArmoryServersModel(logger_, this);
    armoryServersReq_[msgId] = model;
    connect(model, &ArmoryServersModel::changed, this, &QtQuickAdapter::onArmoryServerChanged);
    return model;

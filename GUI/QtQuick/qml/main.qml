@@ -34,6 +34,7 @@ ApplicationWindow {
     title: qsTr("BlockSettle Terminal")
 
     property var currentDialog: ({})
+    property bool isNoWalletsWizard: false
     property int overviewWalletIndex: -1
     readonly property int resizeAnimationDuration: 25
 
@@ -108,21 +109,47 @@ ApplicationWindow {
             error_dialog.error = text
             show_popup(error_dialog)
         }
-    }
 
-    Connections
-    {
-        target:bsApp
         function onWalletsListChanged ()
         {
-            if (walletBalances.rowCount === 0)
-            {
-                show_popup(create_wallet)
-            }
-            else if (overviewWalletIndex === -1)
+            if (overviewWalletIndex === -1)
             {
                 overviewWalletIndex = 0
             }
+        }
+
+        function onWalletsLoaded (nb)
+        {
+            if (nb === 0)
+            {
+                isNoWalletsWizard = true
+                console.log("isNoWalletsWizard = " + isNoWalletsWizard)
+            }
+        }
+
+        function onShowNotification(title, text) {
+            trayIcon.showMessage(title, text, SystemTrayIcon.Information, 5000)
+        }
+    }
+
+    Timer {
+        id: timerNoWalletsWizard
+
+        interval: 1000
+        running: false
+        repeat: false
+        onTriggered: {
+            show_popup(create_wallet)
+        }
+    }
+
+    onVisibleChanged: {
+        console.log("onVisibleChanged mainWindow.visible= " + mainWindow.visible)
+        console.log("onVisibleChanged isNoWalletsWizard= " + isNoWalletsWizard)
+        if (mainWindow.visible && isNoWalletsWizard)
+        {
+            isNoWalletsWizard = false
+            timerNoWalletsWizard.running = true
         }
     }
 
@@ -182,7 +209,9 @@ ApplicationWindow {
 
             Image {
                 id: imgArmoryStatus
-                source: (bsApp.armoryState === 7) ? "qrc:/images/conn_ind.png" : "qrc:/images/disconn_ind.png"
+                source: (bsApp.armoryState === 7) ? "qrc:/images/conn_ind.png" :
+                        ((bsApp.armoryState === 0) ? "qrc:/images/disconn_ind.png" :
+                ((bsApp.armoryState === 5) ||  (bsApp.armoryState === 6) ? "qrc:/images/conn_ind_red.png" : "qrc:/images/conn_ind_yellow.png"))
             }
 
             Label {
@@ -191,45 +220,27 @@ ApplicationWindow {
 
             CustomTitleToolButton {
                 id: btnSend
-                enabled: !bsApp.walletsList.empty
+
+                enabled: (walletBalances.rowCount > 0)
+
                 text: qsTr("Send")
                 icon.source: "qrc:/images/send_icon.png"
                 font.pointSize: 16
                 Layout.fillHeight: true
-                onClicked: {
-                    if (walletBalances.rowCount > 0)
-                    {
-                        topMenuBtnClicked(btnSend)
-                        show_popup(send_popup)
-                    }
-                    else
-                    {
-                        show_popup(create_wallet)
-                    }
-                }
             }
+
             CustomTitleToolButton {
                 id: btnReceive
+
+                enabled: (walletBalances.rowCount > 0)
+
                 text: qsTr("Receive")
                 icon.source: "qrc:/images/receive_icon.png"
 
                 font.pointSize: 16
                 Layout.fillHeight: true
-                enabled: !bsApp.walletsList.empty
-
-                onClicked: {
-                    if (walletBalances.rowCount > 0)
-                    {
-                        topMenuBtnClicked(btnReceive)
-                        bsApp.generateNewAddress(overviewWalletIndex, true)
-                        show_popup(receive_popup)
-                    }
-                    else
-                    {
-                        show_popup(create_wallet)
-                    }
-                }
             }
+
             CustomTitleToolButton {
                 id: btnSettings
                 text: qsTr("Settings")
@@ -354,25 +365,6 @@ ApplicationWindow {
         clickedBtn.select(true)
     }
 
-/*    function raiseWindow() {
-        JsHelper.raiseWindow(mainWindow)
-    }
-    function hideWindow() {
-        JsHelper.hideWindow(mainWindow)
-    }
-
-    function customDialogRequest(dialogName, data) {
-        var newDialog = JsHelper.customDialogRequest(dialogName, data)
-        if (newDialog) {
-            raiseWindow()
-            JsHelper.prepareDialog(newDialog)
-        }
-    }
-
-    function invokeQmlMethod(method, cppCallback, argList) {
-        JsHelper.evalWorker(method, cppCallback, argList)
-    }*/
-
     function moveMainWindowToScreenCenter() {
         mainWindow.x = Screen.virtualX + (Screen.width - mainWindow.width) / 2
         mainWindow.y = Screen.virtualY + (Screen.height - mainWindow.height) / 2
@@ -458,13 +450,6 @@ ApplicationWindow {
 
         Component.onCompleted: {
             trayIcon.show()
-        }
-    }
-
-    Connections {
-        target: bsApp
-        function onShowNotification(title, text) {
-            trayIcon.showMessage(title, text, SystemTrayIcon.Information, 5000)
         }
     }
 }

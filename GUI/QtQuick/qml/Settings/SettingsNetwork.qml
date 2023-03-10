@@ -31,22 +31,26 @@ ColumnLayout  {
     ListView {
         id: list
 
-        Layout.fillHeight: true
+//        Layout.preferredHeight: Math.min(armoryServersModel.rowCount * 50 + (armoryServersModel.rowCount - 1) * 10,
+//                                         425)
         Layout.fillWidth: true
-        Layout.leftMargin: 25
-        Layout.topMargin: 32
+        Layout.fillHeight: true
+        Layout.leftMargin: 24
+        Layout.topMargin: 24
 
         spacing: 10
 
         model: armoryServersModel
 
+        ButtonGroup { id: radioGroup }
+
         delegate: CustomListRadioButton {
             id: _delegate
 
-            width: 530
             title_text: name
             icon_add_source: "qrc:/images/delete.png"
             radio_checked: isCurrent
+            radio_group: radioGroup
 
             onClicked_add: {
                 if (!isDefault)

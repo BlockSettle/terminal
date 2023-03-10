@@ -27,7 +27,7 @@ ToolButton {
     font.pixelSize: 12
     font.family: "Roboto"
     font.weight: Font.Normal
-    palette.buttonText: !enabled ? BSStyle.disabledTextColor :
+    palette.buttonText: !enabled ? BSStyle.buttonsDisabledTextColor :
                         (control.down ?  BSStyle.textPressedColor :
                         (_isSelected ? BSStyle.selectedColor : BSStyle.titleTextColor))
 
@@ -39,7 +39,7 @@ ToolButton {
         anchors.fill: parent
         id: btn_background
         clip: true
-        color: !control.enabled ? BSStyle.disabledColor :
+        color: !control.enabled ? BSStyle.buttonsDisabledColor :
                 (control.down ? BSStyle.buttonsPressedColor :
                 (control.hovered ? BSStyle.buttonsHoveredColor : BSStyle.buttonsMainColor))
         Rectangle {

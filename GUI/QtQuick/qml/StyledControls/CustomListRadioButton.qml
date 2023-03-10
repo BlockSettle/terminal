@@ -18,6 +18,7 @@ CustomListItem {
 
     //properties
     property alias radio_checked: rad_but.checked
+    property var radio_group
 
     signal sig_radio_clicked()
 
@@ -26,9 +27,14 @@ CustomListItem {
     CustomRadioButton {
         id: rad_but
 
-        anchors.verticalCenter: parent.verticalCenter
+        ButtonGroup.group: radio_group
+
+        anchors.verticalCenter: root.verticalCenter
         anchors.left: root.left
         anchors.leftMargin: 21
+
+        leftPadding: 0
+        spacing: 0
 
         width: 15
         height: 15

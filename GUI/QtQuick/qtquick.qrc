@@ -174,5 +174,7 @@
         <file>qml/StyledControls/CustomRbfCpfpMenu.qml</file>
         <file>qml/StyledControls/CustomSuccessWidget.qml</file>
         <file>images/disconn_ind.png</file>
+        <file>images/conn_ind_yellow.png</file>
+        <file>images/conn_ind_red.png</file>
     </qresource>
 </RCC>
