@@ -2105,6 +2105,12 @@ int QtQuickAdapter::rescanWallet(const QString& walletId)
    return (msgId == 0) ? -1 : 0;
 }
 
+int QtQuickAdapter::renameWallet(const QString& walletId, const QString& newName)
+{
+   logger_->debug("[{}] {} -> {}", __func__, walletId.toStdString(), newName.toStdString());
+   return 0;
+}
+
 int QtQuickAdapter::changePassword(const QString& walletId, const QString& oldPassword, const QString& newPassword)
 {
    SignerMessage msg;
