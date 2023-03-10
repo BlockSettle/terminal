@@ -283,8 +283,6 @@ CustomPopup {
                     width: parent.width
                     visible: (!wallet_properties_vm.isHardware && !wallet_properties_vm.isWatchingOnly)
 
-                    isButton: true
-
                     icon_source: "qrc:/images/lock_icon.svg"
                     icon_add_source: "qrc:/images/arrow.png"
                     title_text: qsTr("Change password")
@@ -297,7 +295,6 @@ CustomPopup {
 
                 CustomListItem {
                     width: parent.width
-                    isButton: true
 
                     icon_source: "qrc:/images/eye_icon.svg"
                     icon_add_source: "qrc:/images/arrow.png"
@@ -310,7 +307,7 @@ CustomPopup {
 
                 CustomListItem {
                     width: parent.width
-                    isButton: true
+
                     visible: (!wallet_properties_vm.isHardware && !wallet_properties_vm.isWatchingOnly)
 
                     icon_source: "qrc:/images/shield_icon.svg"
@@ -325,7 +322,6 @@ CustomPopup {
 
                 CustomListItem {
                     width: parent.width
-                    isButton: true
 
                     icon_source: "qrc:/images/scan_icon.svg"
                     icon_add_source: "qrc:/images/arrow.png"
@@ -336,7 +332,6 @@ CustomPopup {
 
                 CustomListItem {
                     width: parent.width
-                    isButton: true
 
                     icon_source: "qrc:/images/delete_icon.svg"
                     icon_add_source: "qrc:/images/arrow.png"

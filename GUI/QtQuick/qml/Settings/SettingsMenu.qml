@@ -34,9 +34,6 @@ ColumnLayout  {
         Layout.alignment: Qt.AlignCenter
         Layout.topMargin: 24
 
-        //properties
-        isButton: true
-
         //aliases
         icon_source: "qrc:/images/general.png"
         icon_add_source: "qrc:/images/arrow.png"
@@ -51,9 +48,6 @@ ColumnLayout  {
         Layout.alignment: Qt.AlignCenter
         Layout.topMargin: 10
 
-        //properties
-        isButton: true
-
         //aliases
         icon_source: "qrc:/images/network.png"
         icon_add_source: "qrc:/images/arrow.png"
@@ -67,9 +61,6 @@ ColumnLayout  {
 
         Layout.alignment: Qt.AlignCenter
         Layout.topMargin: 10
-
-        //properties
-        isButton: true
 
         //aliases
         icon_source: "qrc:/images/about.png"

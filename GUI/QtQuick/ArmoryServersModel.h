@@ -10,24 +10,31 @@
 */
 #pragma once
 
+#include <memory>
+
 #include <QAbstractTableModel>
 #include "ArmorySettings.h"
+
+namespace spdlog {
+   class logger;
+}
 
 class ArmoryServersModel: public QAbstractTableModel
 {
    Q_OBJECT
-   Q_PROPERTY(int current READ current NOTIFY currentChanged)
+   Q_PROPERTY(int current READ current WRITE setCurrent NOTIFY currentChanged)
    Q_PROPERTY(int connected READ connected NOTIFY connectedChanged)
 
 public:
    enum TableRoles {
       TableDataRole = Qt::UserRole + 1, NameRole, NetTypeRole, AddressRole,
-      PortRole, KeyRole
+      PortRole, KeyRole, DefaultServerRole, CurrentServerRole
    };
    Q_ENUM(TableRoles)
    
-   ArmoryServersModel(QObject* parent = nullptr);
+   ArmoryServersModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
 
+   void setCurrent (int value);
    void setData(int curIdx, int connIdx, const std::vector<ArmoryServer>&);
    void add(const ArmoryServer&);
    bool del(int idx);
@@ -54,6 +61,7 @@ private:
    QVariant getData(int row, int col) const;
 
 private:
+   std::shared_ptr<spdlog::logger>  logger_;
    const QStringList header_;
    int current_{ -1 };
    int connected_{ -1 };

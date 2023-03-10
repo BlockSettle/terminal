@@ -16,6 +16,7 @@
 #include <QObject>
 
 #include "Address.h"
+#include "ArmoryServersModel.h"
 #include "AddressListModel.h"
 #include "ApiAdapter.h"
 #include "ApplicationSettings.h"
@@ -302,6 +303,8 @@ private:
    std::map<bs::Address, std::string>  addressCache_;
    std::set<BinaryData> rmTxOnInvalidation_;
    std::map<bs::message::SeqId, ArmoryServersModel*>  armoryServersReq_;
+
+   int nWalletsLoaded_ {-1};
 };
 
 #endif	// QT_QUICK_ADAPTER_H
