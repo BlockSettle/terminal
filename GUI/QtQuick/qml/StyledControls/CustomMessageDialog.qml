@@ -85,9 +85,7 @@ Window {
             width: 250
             height: 40
 
-            Component.onCompleted: {
-                ok_but.preferred = true
-            }
+            preferred: true
 
             function click_enter() {
                 root.close()

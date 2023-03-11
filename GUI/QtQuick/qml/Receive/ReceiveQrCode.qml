@@ -97,9 +97,7 @@ ColumnLayout  {
         icon.height: 24
         icon.color: "#FFFFFF"
 
-        Component.onCompleted: {
-            copy_but.preferred = true
-        }
+        preferred: true
 
         function click_enter() {
             bsApp.copySeedToClipboard(bsApp.generatedAddress)

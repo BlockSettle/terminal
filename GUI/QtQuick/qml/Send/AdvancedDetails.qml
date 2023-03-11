@@ -447,9 +447,7 @@ ColumnLayout  {
 
                     width: 504
 
-                    Component.onCompleted: {
-                        include_output_but.preferred = false
-                    }
+                    preferred: false
 
                     function click_enter() {
                         if (!include_output_but.enabled) return
@@ -524,10 +522,7 @@ ColumnLayout  {
 
         text: qsTr("Continue")
 
-        Component.onCompleted: {
-            continue_but.preferred = true
-        }
-
+        preferred: true
 
         function click_enter() {
             if (!fee_suggest_combo.edit_value())

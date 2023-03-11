@@ -342,9 +342,8 @@ ColumnLayout  {
           (!txSignRequest.hasError && ((txSignRequest.isHWW && txSignRequest.isHWWready) || password.value.length)) :
           false
 
-        Component.onCompleted: {
-            broadcast_but.preferred = true
-        }
+        preferred: true
+
         function click_enter() {
             bsApp.signAndBroadcast(txSignRequest, password.value)
             password.value = ""
