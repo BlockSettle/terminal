@@ -93,9 +93,7 @@ ColumnLayout  {
             text: qsTr("Skip")
             width: 261
 
-            Component.onCompleted: {
-                skip_but.preferred = false
-            }
+            preferred: false
 
             function click_enter() {
                 layout.sig_skipped()
@@ -109,9 +107,7 @@ ColumnLayout  {
 
             enabled: list.isComplete
 
-            Component.onCompleted: {
-                continue_but.preferred = true
-            }
+            preferred: true
 
             function click_enter() {
                 if (!continue_but.enabled) return

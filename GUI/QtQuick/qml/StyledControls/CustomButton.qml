@@ -23,7 +23,7 @@ Button {
     //aliases
     property alias back_radius: back.radius
 
-    activeFocusOnTab: true
+    activeFocusOnTab: control.enabled
 
     font.pixelSize: 16
     font.family: "Roboto"

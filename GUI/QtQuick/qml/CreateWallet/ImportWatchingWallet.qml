@@ -34,6 +34,7 @@ ColumnLayout  {
 
         Layout.alignment: Qt.AlignCenter
         Layout.topMargin: 24
+        isFullChoosed: false
 
         onSig_full_changed: (isFull) => {
             if (isFull === true)
@@ -41,10 +42,6 @@ ColumnLayout  {
                 type_switch.isFullChoosed = false
                 layout.sig_full()
             }
-        }
-
-        Component.onCompleted: {
-            type_switch.isFullChoosed = false
         }
     }
 
@@ -145,10 +142,7 @@ ColumnLayout  {
         Layout.topMargin: 32
         width: 530
         enabled: layout.isFileChoosen
-
-        Component.onCompleted: {
-            import_but.preferred = true
-        }
+        preferred: true
 
         function click_enter() {
             if (!import_but.enabled) return

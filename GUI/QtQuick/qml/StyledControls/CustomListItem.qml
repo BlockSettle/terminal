@@ -69,12 +69,13 @@ Rectangle {
     Image {
         id: icon_add
 
-        visible: source.length > 0
+        visible: source.toString().length > 0
 
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: rect.right
         anchors.rightMargin: 13
 
+        z: 1
         width: 24
         height: 24
         sourceSize.width: 24
@@ -91,10 +92,10 @@ Rectangle {
     MouseArea {
         id: mouseArea
         anchors.fill: parent
-        hoverEnabled: true
         propagateComposedEvents: true
         onClicked: {
             rect.clicked()
+            mouse.accepted = false
         }
     }
 }

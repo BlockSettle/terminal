@@ -73,9 +73,7 @@ ColumnLayout  {
             text: qsTr("Yes, Skip")
             width: 261
 
-            Component.onCompleted: {
-                skip_but.preferred = false
-            }
+            preferred: false
 
             function click_enter() {
                 layout.sig_skip()
@@ -87,9 +85,7 @@ ColumnLayout  {
             text: qsTr("No")
             width: 261
 
-            Component.onCompleted: {
-                no_but.preferred = true
-            }
+            preferred: true
 
             function click_enter() {
                 layout.sig_not_skip()

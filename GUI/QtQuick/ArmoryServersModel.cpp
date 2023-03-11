@@ -30,7 +30,14 @@ ArmoryServersModel::ArmoryServersModel(const std::shared_ptr<spdlog::logger> & l
    : QAbstractTableModel(parent)
    , header_{ tr("Name"), tr("Network"), tr("Address"), tr("Port"), tr("Key") }
    , logger_(logger)
-{}
+{
+   connect(this, &ArmoryServersModel::modelReset,
+           this, &ArmoryServersModel::rowCountChanged);
+   connect(this, &ArmoryServersModel::rowsInserted,
+           this, &ArmoryServersModel::rowCountChanged);
+   connect(this, &ArmoryServersModel::rowsRemoved,
+           this, &ArmoryServersModel::rowCountChanged);
+}
 
 void ArmoryServersModel::setCurrent (int value)
 {
@@ -65,6 +72,24 @@ void ArmoryServersModel::add(const ArmoryServer& srv)
       });
 }
 
+// netType==0 => MainNet, netType==1 => TestNet
+void ArmoryServersModel::add(QString name, QString armoryDBIp, int armoryDBPort, int netType, QString armoryDBKey)
+{
+   ArmoryServer server;
+   server.name = name;
+   server.armoryDBPort = armoryDBPort;
+   server.armoryDBIp = armoryDBIp;
+   server.armoryDBKey = armoryDBKey;
+   if (netType == 0) {
+      server.netType = NetworkType::MainNet;
+   }
+   else if (netType == 1) {
+      server.netType = NetworkType::TestNet;
+   }
+
+   add(server);
+}
+
 bool ArmoryServersModel::del(int idx)
 {
    if ((idx >= rowCount()) || (idx < 0) || (idx < ArmoryServersProvider::kDefaultServersCount)) {
@@ -75,6 +100,10 @@ bool ArmoryServersModel::del(int idx)
       data_.erase(data_.cbegin() + idx);
       endRemoveRows();
       });
+   if (idx == current()) {
+      //@dvajdual dont sure - what server must be default?
+      setCurrent(0);
+   }
    return true;
 }
 
@@ -125,12 +154,12 @@ bool ArmoryServersModel::setData(const QModelIndex& index, const QVariant& value
       return false;
    }
 
+   int row = index.row();
+
    if (role == CurrentServerRole) {
-      logger_->debug("[{}] current = {}", __func__, value.toInt());
-      setCurrent(value.toInt());
+      setCurrent(row);
    }
    else if (!isEditable(index.row())) {
-      auto row = index.row();
       switch (role)
       {
       case NameRole:

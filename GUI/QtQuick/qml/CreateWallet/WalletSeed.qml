@@ -68,9 +68,8 @@ ColumnLayout  {
             text: qsTr("Copy Seed")
             width: 261
 
-            Component.onCompleted: {
-                copy_seed_but.preferred = false
-            }
+            preferred: false
+
             function click_enter() {
                 bsApp.copySeedToClipboard(phrase)
             }
@@ -81,9 +80,7 @@ ColumnLayout  {
             text: qsTr("Continue")
             width: 261
 
-            Component.onCompleted: {
-                continue_but.preferred = true
-            }
+            preferred: true
 
             function click_enter() {
                 layout.sig_continue()

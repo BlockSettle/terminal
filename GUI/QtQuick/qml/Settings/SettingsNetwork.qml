@@ -13,6 +13,7 @@ ColumnLayout  {
     property var armoryServersModel: ({})
 
     signal sig_add_custom()
+    signal sig_delete_custom(int ind)
 
     height: 548
     width: 580
@@ -31,14 +32,22 @@ ColumnLayout  {
     ListView {
         id: list
 
-//        Layout.preferredHeight: Math.min(armoryServersModel.rowCount * 50 + (armoryServersModel.rowCount - 1) * 10,
-//                                         425)
         Layout.fillWidth: true
-        Layout.fillHeight: true
         Layout.leftMargin: 24
         Layout.topMargin: 24
 
         spacing: 10
+
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+
+        flickDeceleration: 750
+        maximumFlickVelocity: 1000
+
+        ScrollBar.vertical: ScrollBar {
+            id: verticalScrollBar
+            policy: list.contentHeight > list.height ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
+        }
 
         model: armoryServersModel
 
@@ -48,15 +57,12 @@ ColumnLayout  {
             id: _delegate
 
             title_text: name
-            icon_add_source: "qrc:/images/delete.png"
+            icon_add_source: isDefault ? "" : "qrc:/images/delete.png"
             radio_checked: isCurrent
             radio_group: radioGroup
 
             onClicked_add: {
-                if (!isDefault)
-                {
-                    bsApp.delArmoryServer(armoryServersModel, index)
-                }
+                sig_delete_custom (index)
             }
 
             onSig_radio_clicked: {
@@ -67,6 +73,18 @@ ColumnLayout  {
             }
         }
 
+
+        Connections
+        {
+            target:armoryServersModel
+            function onRowCountChanged ()
+            {
+                var new_height = Math.min(armoryServersModel.rowCount * 50 + (armoryServersModel.rowCount - 1) * 10,
+                                          425)
+                //list.height = new_height
+                list.implicitHeight = new_height
+            }
+        }
     }
 
     CustomListItem {
@@ -90,9 +108,5 @@ ColumnLayout  {
 
     function init()
     {
-    }
-
-    Component.onCompleted: {
-        layout.armoryServersModel = bsApp.getArmoryServers()
     }
 }

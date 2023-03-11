@@ -73,9 +73,8 @@ ColumnLayout  {
             text: qsTr("Hardware Wallet")
             width: 170
 
-            Component.onCompleted: {
-                hardware_but.preferred = false
-            }
+            preferred: false
+
             function click_enter() {
                 sig_hardware_wallet()
             }
@@ -86,9 +85,8 @@ ColumnLayout  {
             text: qsTr("Import Wallet")
             width: 170
 
-            Component.onCompleted: {
-                import_but.preferred = false
-            }
+            preferred: false
+
             function click_enter() {
                 sig_import_wallet()
             }
@@ -99,9 +97,8 @@ ColumnLayout  {
             text: qsTr("Create new")
             width: 170
 
-            Component.onCompleted: {
-                create_but.preferred = true
-            }
+            preferred: true
+
             function click_enter() {
                 sig_create_new()
             }

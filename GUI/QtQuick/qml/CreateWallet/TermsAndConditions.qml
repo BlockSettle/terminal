@@ -92,10 +92,8 @@ ColumnLayout  {
         text: qsTr("Continue")
         Layout.leftMargin: 24
         width: 532
+        preferred: true
 
-        Component.onCompleted: {
-            continue_but.preferred = true
-        }
         function click_enter() {
             bsApp.settingActivated = true
             sig_continue()

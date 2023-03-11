@@ -36,12 +36,10 @@ ColumnLayout  {
         title_leftMargin: 16
         title_topMargin: 16
 
-        title_text: qsTr("Password")
+        isPassword: true
+        isHiddenText: true
 
-        Component.onCompleted: {
-            password.isPassword = true
-            password.isHiddenText = true
-        }
+        title_text: qsTr("Password")
     }
 
 
@@ -57,12 +55,10 @@ ColumnLayout  {
         title_leftMargin: 16
         title_topMargin: 16
 
-        title_text: qsTr("Confirm Password")
+        isPassword: true
+        isHiddenText: true
 
-        Component.onCompleted: {
-            confirm_password.isPassword = true
-            confirm_password.isHiddenText = true
-        }
+        title_text: qsTr("Confirm Password")
     }
 
     Label {
@@ -81,10 +77,7 @@ ColumnLayout  {
         width: 530
         enabled: (password.input_text !== "")
                  && (confirm_password.input_text !== "")
-
-        Component.onCompleted: {
-            confirm_but.preferred = true
-        }
+        preferred: true
 
         function click_enter() {
             if (!confirm_but.enabled) return

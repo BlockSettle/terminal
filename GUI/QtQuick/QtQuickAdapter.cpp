@@ -253,6 +253,8 @@ void QtQuickAdapter::run(int &argc, char **argv)
       , 1, 0, "TxListModel", tr("Error: only enums"));
    qmlRegisterUncreatableMetaObject(QmlAddressListModel::staticMetaObject, "terminal.models"
       , 1, 0, "QmlAddressListModel", tr("Error: only enums"));
+   qmlRegisterUncreatableMetaObject(ArmoryServersModel::staticMetaObject, "terminal.models"
+      , 1, 0, "ArmoryServersModel", tr("Error: only enums"));
    qmlRegisterType<AddressFilterModel>("terminal.models", 1, 0, "AddressFilterModel");
 
    //need to read files in qml
