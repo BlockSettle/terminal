@@ -17,6 +17,7 @@ RadioButton {
     id: control
 
     checked: true
+    activeFocusOnTab: false
 
     indicator: Rectangle {
         implicitWidth: 16

@@ -45,16 +45,14 @@ ColumnLayout  {
         Layout.alignment: Qt.AlignCenter
         Layout.topMargin: 24
 
+        isFullChoosed: true
+
         onSig_full_changed: (isFull) => {
             if (isFull === false)
             {
                 type_switch.isFullChoosed = true
                 layout.sig_only_watching()
             }
-        }
-
-        Component.onCompleted: {
-            type_switch.isFullChoosed = true
         }
     }
 
@@ -339,10 +337,8 @@ ColumnLayout  {
 
         width: 530
         enabled: !grid.hasEmptyWords
+        preferred: true
 
-        Component.onCompleted: {
-            import_but.preferred = true
-        }
         function click_enter() {
             if (!import_but.enabled) return
 

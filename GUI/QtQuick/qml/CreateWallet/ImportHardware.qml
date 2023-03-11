@@ -100,10 +100,8 @@ ColumnLayout  {
 
         width: 530
         enabled: /*layout.isConnected &&*/ (hwDeviceModel.selDevice >= 0)
+        preferred: true
 
-        Component.onCompleted: {
-            confirm_but.preferred = true
-        }
         function click_enter() {
             if (!confirm_but.enabled) return
 

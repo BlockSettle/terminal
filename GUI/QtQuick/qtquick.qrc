@@ -176,5 +176,8 @@
         <file>images/disconn_ind.png</file>
         <file>images/conn_ind_yellow.png</file>
         <file>images/conn_ind_red.png</file>
+        <file>qml/Settings/AddArmoryServer.qml</file>
+        <file>images/delete_custom_server.svg</file>
+        <file>qml/Settings/DeleteArmoryServer.qml</file>
     </qresource>
 </RCC>

@@ -22,8 +22,9 @@ namespace spdlog {
 class ArmoryServersModel: public QAbstractTableModel
 {
    Q_OBJECT
-   Q_PROPERTY(int current READ current WRITE setCurrent NOTIFY currentChanged)
-   Q_PROPERTY(int connected READ connected NOTIFY connectedChanged)
+   Q_PROPERTY(int current     READ current      WRITE setCurrent     NOTIFY currentChanged)
+   Q_PROPERTY(int connected   READ connected    NOTIFY connectedChanged)
+   Q_PROPERTY(int rowCount    READ rowCount     NOTIFY rowCountChanged)
 
 public:
    enum TableRoles {
@@ -37,7 +38,9 @@ public:
    void setCurrent (int value);
    void setData(int curIdx, int connIdx, const std::vector<ArmoryServer>&);
    void add(const ArmoryServer&);
-   bool del(int idx);
+   // netType==0 => MainNet, netType==1 => TestNet
+   Q_INVOKABLE void add(QString name, QString armoryDBIp, int armoryDBPort, int netType, QString armoryDBKey);
+   Q_INVOKABLE bool del(int idx);
    auto data() const { return data_; }
    auto data(int idx) const { return data_.at(idx); }
 
@@ -48,12 +51,13 @@ public:
    QHash<int, QByteArray> roleNames() const override;
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
-   Q_INVOKABLE bool isEditable(int row) const;
+   bool isEditable(int row) const;
 
 signals:
    void changed(const QModelIndex&, const QVariant&);
    void currentChanged();
    void connectedChanged();
+   void rowCountChanged();
 
 private:
    int current() const { return current_; }

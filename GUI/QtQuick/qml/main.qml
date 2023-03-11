@@ -218,6 +218,11 @@ ApplicationWindow {
                 icon.source: "qrc:/images/send_icon.png"
                 font.pointSize: 16
                 Layout.fillHeight: true
+
+                onClicked: {
+                    topMenuBtnClicked(btnSend)
+                    show_popup(send_popup)
+                }
             }
 
             CustomTitleToolButton {
@@ -230,6 +235,12 @@ ApplicationWindow {
 
                 font.pointSize: 16
                 Layout.fillHeight: true
+
+                onClicked: {
+                    topMenuBtnClicked(btnReceive)
+                    bsApp.generateNewAddress(overviewWalletIndex, true)
+                    show_popup(receive_popup)
+                }
             }
 
             CustomTitleToolButton {
