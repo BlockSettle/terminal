@@ -319,7 +319,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
    app.exec();
 }
 
-QStringList QtQuickAdapter::txWalletsList() const\
+QStringList QtQuickAdapter::txWalletsList() const
 {
    QStringList result = { tr("All wallets") };
    result.append(walletBalances_->wallets());
