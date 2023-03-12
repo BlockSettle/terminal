@@ -12,10 +12,30 @@
 #include "AddressListModel.h"
 #include <QtGlobal>
 
-AddressFilterModel::AddressFilterModel(QObject* parent)
-   : QSortFilterProxyModel(parent)
+AddressFilterModel::AddressFilterModel(std::shared_ptr<SettingsController> settings)
+   : QSortFilterProxyModel()
+   , settings_(settings)
 {
    connect(this, &AddressFilterModel::changed, this, &AddressFilterModel::invalidate);
+
+   if (settings_ != nullptr)
+   {
+      connect(settings_.get(), &SettingsController::reseted, this, [this]()
+      {
+         if (settings_->hasParam(ApplicationSettings::Setting::AddressFilterHideUsed)) {
+            setHideUsed(settings_->getParam(ApplicationSettings::Setting::AddressFilterHideUsed).toBool());
+         }
+         if (settings_->hasParam(ApplicationSettings::Setting::AddressFilterHideInternal)) {
+            setHideInternal(settings_->getParam(ApplicationSettings::Setting::AddressFilterHideInternal).toBool());
+         }
+         if (settings_->hasParam(ApplicationSettings::Setting::AddressFilterHideExternal)) {
+            setHideExternal(settings_->getParam(ApplicationSettings::Setting::AddressFilterHideExternal).toBool());
+         }
+         if (settings_->hasParam(ApplicationSettings::Setting::AddressFilterHideEmpty)) {
+            setHideEmpty(settings_->getParam(ApplicationSettings::Setting::AddressFilterHideEmpty).toBool());
+         }
+      });
+   }
 }
 
 bool AddressFilterModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const
@@ -80,6 +100,7 @@ void AddressFilterModel::setHideUsed(bool hideUsed) noexcept
 {
    if (hideUsed != hideUsed_) {
       hideUsed_ = hideUsed;
+      settings_->setParam(ApplicationSettings::Setting::AddressFilterHideUsed, hideUsed_);
       emit changed();
    }
 }
@@ -88,6 +109,7 @@ void AddressFilterModel::setHideInternal(bool hideInternal) noexcept
 {
    if (hideInternal_ != hideInternal) {
       hideInternal_ = hideInternal;
+      settings_->setParam(ApplicationSettings::Setting::AddressFilterHideInternal, hideInternal_);
       emit changed();
    }
 }
@@ -96,6 +118,7 @@ void AddressFilterModel::setHideExternal(bool hideExternal) noexcept
 {
    if (hideExternal_ != hideExternal) {
       hideExternal_ = hideExternal;
+      settings_->setParam(ApplicationSettings::Setting::AddressFilterHideExternal, hideExternal_);
       emit changed();
    }
 }
@@ -104,6 +127,7 @@ void AddressFilterModel::setHideEmpty(bool hideEmpty) noexcept
 {
    if (hideEmpty_ != hideEmpty) {
       hideEmpty_ = hideEmpty;
+      settings_->setParam(ApplicationSettings::Setting::AddressFilterHideEmpty, hideEmpty_);
       emit changed();
    }
 }

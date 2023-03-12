@@ -12,6 +12,7 @@
 #define TRANSACTION_FILTER_MODEL_H
 
 #include <QSortFilterProxyModel>
+#include "SettingsController.h"
 
 class TransactionFilterModel: public QSortFilterProxyModel
 {
@@ -20,7 +21,7 @@ class TransactionFilterModel: public QSortFilterProxyModel
    Q_PROPERTY(QString transactionType READ transactionType WRITE setTransactionType NOTIFY changed)
 
 public:
-   TransactionFilterModel(QObject* parent = nullptr);
+   TransactionFilterModel(std::shared_ptr<SettingsController> settings);
 
    const QString& walletName() const;
    void setWalletName(const QString&);
@@ -38,6 +39,7 @@ protected:
 private:
    QString walletName_;
    QString transactionType_;
+   std::shared_ptr<SettingsController> settings_;
 };
 
 #endif // TRANSACTION_FILTER_MODEL_H

@@ -138,7 +138,7 @@ Popup {
                     width: 170
                 }
                 Text {
-                    text: transaction_details.txType
+                    text: transaction_details.txType !== "" ? transaction_details.txType : "..."
                     color: transaction_details.txTypeColor
                     font.family: "Roboto"
                     font.pixelSize: 14
@@ -208,7 +208,7 @@ Popup {
                     width: 170
                 }
                 Label {
-                    text: transaction_details.walletName
+                    text: transaction_details.walletName !== "" ? transaction_details.walletName : "..."
                     color: BSStyle.textColor
                     font.family: "Roboto"
                     font.pixelSize: 14
