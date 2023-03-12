@@ -74,6 +74,7 @@ Item {
             {
                 spacing: 8
                 height: parent.height
+                anchors.right: parent.right
 
                 CustomSmallComboBox {
                     id: txWalletsComboBox
