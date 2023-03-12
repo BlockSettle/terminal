@@ -24,11 +24,12 @@ TransactionFilterModel::TransactionFilterModel(std::shared_ptr<SettingsControlle
       connect(settings_.get(), &SettingsController::reseted, this, [this]()
       {
          if (settings_->hasParam(ApplicationSettings::Setting::TransactionFilterWalletName)) {
-            setWalletName(settings_->getParam(ApplicationSettings::Setting::TransactionFilterWalletName).toString());
+            walletName_ = settings_->getParam(ApplicationSettings::Setting::TransactionFilterWalletName).toString();
          }
          if (settings_->hasParam(ApplicationSettings::Setting::TransactionFilterTransactionType)) {
-            setTransactionType(settings_->getParam(ApplicationSettings::Setting::TransactionFilterTransactionType).toString());
+            transactionType_ = settings_->getParam(ApplicationSettings::Setting::TransactionFilterTransactionType).toString();
          }
+         emit changed();
       });
    }
 }
@@ -65,9 +66,11 @@ const QString& TransactionFilterModel::walletName() const
 
 void TransactionFilterModel::setWalletName(const QString& name)
 {
-   walletName_ = name;
-   settings_->setParam(ApplicationSettings::Setting::TransactionFilterWalletName, walletName_);
-   emit changed();
+   if (walletName_ != name) {
+      walletName_ = name;
+      settings_->setParam(ApplicationSettings::Setting::TransactionFilterWalletName, walletName_);
+      emit changed();
+   }
 }
 
 const QString& TransactionFilterModel::transactionType() const
@@ -77,9 +80,11 @@ const QString& TransactionFilterModel::transactionType() const
 
 void TransactionFilterModel::setTransactionType(const QString& type)
 {
-   transactionType_ = type;
-   settings_->setParam(ApplicationSettings::Setting::TransactionFilterTransactionType, transactionType_);
-   emit changed();
+   if (transactionType_ != type) {
+      transactionType_ = type;
+      settings_->setParam(ApplicationSettings::Setting::TransactionFilterTransactionType, transactionType_);
+      emit changed();
+   }
 }
 
 bool TransactionFilterModel::lessThan(const QModelIndex& left, const QModelIndex& right) const

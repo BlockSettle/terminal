@@ -23,17 +23,18 @@ AddressFilterModel::AddressFilterModel(std::shared_ptr<SettingsController> setti
       connect(settings_.get(), &SettingsController::reseted, this, [this]()
       {
          if (settings_->hasParam(ApplicationSettings::Setting::AddressFilterHideUsed)) {
-            setHideUsed(settings_->getParam(ApplicationSettings::Setting::AddressFilterHideUsed).toBool());
+            hideUsed_ = settings_->getParam(ApplicationSettings::Setting::AddressFilterHideUsed).toBool();
          }
          if (settings_->hasParam(ApplicationSettings::Setting::AddressFilterHideInternal)) {
-            setHideInternal(settings_->getParam(ApplicationSettings::Setting::AddressFilterHideInternal).toBool());
+            hideInternal_ = settings_->getParam(ApplicationSettings::Setting::AddressFilterHideInternal).toBool();
          }
          if (settings_->hasParam(ApplicationSettings::Setting::AddressFilterHideExternal)) {
-            setHideExternal(settings_->getParam(ApplicationSettings::Setting::AddressFilterHideExternal).toBool());
+            hideExternal_ = settings_->getParam(ApplicationSettings::Setting::AddressFilterHideExternal).toBool();
          }
          if (settings_->hasParam(ApplicationSettings::Setting::AddressFilterHideEmpty)) {
-            setHideEmpty(settings_->getParam(ApplicationSettings::Setting::AddressFilterHideEmpty).toBool());
+            hideEmpty_ = settings_->getParam(ApplicationSettings::Setting::AddressFilterHideEmpty).toBool();
          }
+         emit changed();
       });
    }
 }
