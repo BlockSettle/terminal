@@ -127,10 +127,8 @@ Window {
 
             title_text: qsTr("Password")
 
-            Component.onCompleted: {
-                password.isPassword = true
-                password.isHiddenText = true
-            }
+            isPassword: true
+            isHiddenText: true
         }
 
         RowLayout {
@@ -146,9 +144,7 @@ Window {
                 text: qsTr("Cancel")
                 width: 190
 
-                Component.onCompleted: {
-                    cancel_but.preferred = false
-                }
+                preferred: false
                 function click_enter() {
                     root.clean()
                     root.close()
@@ -162,9 +158,7 @@ Window {
 
                 //enabled: accept_on_device || password.input_text.length   //always accept now
 
-                Component.onCompleted: {
-                    accept_but.preferred = true
-                }
+                preferred: true
 
                 function click_enter() {
                     bsApp.setHWpassword(password.input_text)

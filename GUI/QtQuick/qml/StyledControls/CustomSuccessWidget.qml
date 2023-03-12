@@ -67,9 +67,8 @@ ColumnLayout  {
 
         text: qsTr("Finish")
 
-        Component.onCompleted: {
-            finish_but.preferred = true
-        }
+        preferred: true
+
         function click_enter() {
             sig_finish()
         }

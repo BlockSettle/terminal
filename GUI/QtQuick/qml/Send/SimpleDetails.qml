@@ -182,9 +182,7 @@ ColumnLayout  {
 
         text: qsTr("Continue")
 
-        Component.onCompleted: {
-            continue_but.preferred = true
-        }
+        preferred: true
 
         function click_enter() {
             if (!fee_suggest_combo.edit_value())

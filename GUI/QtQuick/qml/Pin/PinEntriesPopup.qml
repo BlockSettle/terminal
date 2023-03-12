@@ -186,9 +186,7 @@ Window {
 
             width: 380
 
-            Component.onCompleted: {
-                accept_but.preferred = true
-            }
+            preferred: true
 
             function click_enter() {
                 if (!accept_but.enabled) return

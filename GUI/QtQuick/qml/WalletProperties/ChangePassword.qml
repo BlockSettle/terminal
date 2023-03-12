@@ -37,10 +37,8 @@ ColumnLayout {
 
         title_text: qsTr("Password")
 
-        Component.onCompleted: {
-            password.isPassword = true
-            password.isHiddenText = true
-        }
+        isPassword: true
+        isHiddenText: true
     }
 
     CustomTextInput {
@@ -57,10 +55,8 @@ ColumnLayout {
 
         title_text: qsTr("New Password")
 
-        Component.onCompleted: {
-            new_password.isPassword = true
-            new_password.isHiddenText = true
-        }
+        isPassword: true
+        isHiddenText: true
     }
 
 
@@ -78,10 +74,8 @@ ColumnLayout {
 
         title_text: qsTr("Confirm Password")
 
-        Component.onCompleted: {
-            confirm_password.isPassword = true
-            confirm_password.isHiddenText = true
-        }
+        isPassword: true
+        isHiddenText: true
     }
 
     Label {

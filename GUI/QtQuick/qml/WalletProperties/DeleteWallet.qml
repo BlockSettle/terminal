@@ -42,10 +42,8 @@ ColumnLayout {
 
         title_text: qsTr("Password")
 
-        Component.onCompleted: {
-            password.isPassword = true
-            password.isHiddenText = true
-        }
+        isPassword: true
+        isHiddenText: true
     }
 
     Label {

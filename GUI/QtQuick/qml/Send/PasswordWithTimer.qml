@@ -38,10 +38,8 @@ Item {
         visible: txSignRequest !== null ? !txSignRequest.isHWW : false
         title_text: qsTr("Password")
 
-        Component.onCompleted: {
-            password.isPassword = true
-            password.isHiddenText = true
-        }
+        isPassword: true
+        isHiddenText: true
     }
 
     CustomProgressBar {
