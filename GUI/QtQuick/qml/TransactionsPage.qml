@@ -168,6 +168,23 @@ Item {
             onCopyRequested: bsApp.copyAddressToClipboard(id)
 
             onCellClicked: (row, column, data) => {
+                show_transaction_details(row, column, data)
+            }
+
+            onCellRightClicked: (row, column, data) => {
+                var nbConf = model.data(model.index(row, 5), TxListModel.NbConfRole)
+                if (nbConf === 0)
+                {
+                    show_rbf_cfpf_menu(row, column, data)
+                }
+                else
+                {
+                    show_transaction_details(row, column, data)
+                }
+            }
+
+            function show_transaction_details(row, column, data)
+            {
                 const txHash = model.data(model.index(row, 0), TxListModel.TxIdRole)
                 transactionDetails.walletName = model.data(model.index(row, 1), TxListModel.TableDataRole)
                 transactionDetails.address = model.data(model.index(row, 3), TxListModel.TableDataRole)
@@ -181,7 +198,8 @@ Item {
                 transactionDetails.open()
             }
 
-            onCellRightClicked: (row, column, data) => {
+            function show_rbf_cfpf_menu(row, column, data)
+            {
                 context_menu.row = row
                 context_menu.column = column
                 context_menu.popup()

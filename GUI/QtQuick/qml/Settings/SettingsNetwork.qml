@@ -14,6 +14,7 @@ ColumnLayout  {
 
     signal sig_add_custom()
     signal sig_delete_custom(int ind)
+    signal sig_modify_custom(int ind)
 
     height: 548
     width: 580
@@ -56,13 +57,23 @@ ColumnLayout  {
         delegate: CustomListRadioButton {
             id: _delegate
 
-            title_text: name
+            title_text: display
             icon_add_source: isDefault ? "" : "qrc:/images/delete.png"
             radio_checked: isCurrent
             radio_group: radioGroup
 
             onClicked_add: {
-                sig_delete_custom (index)
+                if (!isDefault)
+                {
+                    sig_delete_custom (index)
+                }
+            }
+
+            onClicked: {
+                if (!isDefault)
+                {
+                    sig_modify_custom (index)
+                }
             }
 
             onSig_radio_clicked: {

@@ -185,12 +185,6 @@ Rectangle {
                     columnWidths: [0.12, 0.1, 0.08, 0.3, 0.1, 0.1, 0.1, 0.1]
                     onCopyRequested: bsApp.copyAddressToClipboard(id)
 
-                    onCellRightClicked: (row, column, data) => {
-                        context_menu.row = row
-                        context_menu.column = column
-                        context_menu.popup()
-                    }
-
                     CustomRbfCpfpMenu {
                         id: context_menu
 
@@ -200,6 +194,24 @@ Rectangle {
                     }
 
                     onCellClicked: (row, column, data) => {
+                        show_transaction_details(row, column, data)
+                    }
+
+                    onCellRightClicked: (row, column, data) => {
+                        var nbConf = model.data(model.index(row, 5), TxListModel.NbConfRole)
+                        if (nbConf === 0)
+                        {
+                            show_rbf_cfpf_menu(row, column, data)
+                        }
+                        else
+                        {
+                            show_transaction_details(row, column, data)
+                        }
+                    }
+
+
+                    function show_transaction_details(row, column, data)
+                    {
                         const txHash = model.data(model.index(row, 0), TxListModel.TxIdRole)
                         transactionDetails.walletName = model.data(model.index(row, 1), TxListModel.TableDataRole)
                         transactionDetails.address = model.data(model.index(row, 3), TxListModel.TableDataRole)
@@ -213,6 +225,12 @@ Rectangle {
                         transactionDetails.open()
                     }
 
+                    function show_rbf_cfpf_menu(row, column, data)
+                    {
+                        context_menu.row = row
+                        context_menu.column = column
+                        context_menu.popup()
+                    }
 
                     TransactionDetails {
                         id: transactionDetails

@@ -3,6 +3,7 @@ module Settings
 SettingsPopup         1.0 SettingsPopup.qml
 SettingsMenu          1.0 SettingsMenu.qml
 AddArmoryServer       1.0 AddArmoryServer.qml
+ModifyArmoryServer    1.0 ModifyArmoryServer.qml
 DeleteArmoryServer    1.0 DeleteArmoryServer.qml
 SettingsGeneral       1.0 SettingsGeneral.qml
 SettingsNetwork       1.0 SettingsNetwork.qml

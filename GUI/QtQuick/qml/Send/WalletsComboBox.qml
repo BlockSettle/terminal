@@ -23,6 +23,7 @@ CustomComboBox {
     height: 70
 
     model: walletBalances
+    currentIndex: overviewWalletIndex
 
     //aliases
     title_text: qsTr("From Wallet")
@@ -31,12 +32,13 @@ CustomComboBox {
     textRole: "name"
     valueRole: "name"
 
-    Connections
-    {
-        target:walletBalances
-        function onRowCountChanged ()
-        {
-            from_wallet_combo.currentIndex = overviewWalletIndex
-        }
-    }
+//    Connections
+//    {
+//        target:walletBalances
+//        function onRowCountChanged ()
+//        {
+//            console.log("WalletsComboBox: overviewWalletIndex = " + overviewWalletIndex)
+//            from_wallet_combo.currentIndex = overviewWalletIndex
+//        }
+//    }
 }

@@ -6,12 +6,14 @@ import QtQuick.Layouts 1.15
 import "../BsStyles"
 import "../StyledControls"
 
+import terminal.models 1.0
+
 ColumnLayout  {
 
     id: layout
 
     property var armoryServersModel: ({})
-    signal sig_added()
+    property int server_index
 
     height: 548
     width: 580
@@ -22,7 +24,7 @@ ColumnLayout  {
         id: title
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
         Layout.preferredHeight : title.height
-        text: qsTr("Add custom server")
+        text: qsTr("Modify custom server")
     }
 
     RowLayout {
@@ -67,6 +69,12 @@ ColumnLayout  {
             font.weight: Font.Normal
 
             checked: true
+
+            // netType==0 => MainNet, netType==1 => TestNet
+            onClicked : {
+                armoryServersModel.setData(armoryServersModel.index(server_index, 0)
+                                           , 0, ArmoryServersModel.NetTypeRole)
+            }
         }
 
         CustomRadioButton {
@@ -82,6 +90,12 @@ ColumnLayout  {
             font.weight: Font.Normal
 
             checked: false
+
+            // netType==0 => MainNet, netType==1 => TestNet
+            onClicked : {
+                armoryServersModel.setData(armoryServersModel.index(server_index, 0)
+                                           , 1, ArmoryServersModel.NetTypeRole)
+            }
         }
 
         Label {
@@ -98,6 +112,11 @@ ColumnLayout  {
         Layout.topMargin: 10
 
         title_text: qsTr("Name")
+
+        onTextEdited: {
+            armoryServersModel.setData(armoryServersModel.index(server_index, 0)
+                                       , name_text_input.input_text, ArmoryServersModel.NameRole)
+        }
     }
 
     CustomTextInput {
@@ -111,6 +130,11 @@ ColumnLayout  {
         title_text: qsTr("IP/DNS")
 
         input_validator: RegExpValidator { regExp: /(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}(,(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3})*/ }
+
+        onTextEdited: {
+            armoryServersModel.setData(armoryServersModel.index(server_index, 0)
+                                       , ip_dns_text_input.input_text, ArmoryServersModel.AddressRole)
+        }
     }
 
     CustomTextInput {
@@ -124,6 +148,11 @@ ColumnLayout  {
         title_text: qsTr("Port")
 
         input_validator: IntValidator {bottom: 0; top: 65536;}
+
+        onTextEdited: {
+            armoryServersModel.setData(armoryServersModel.index(server_index, 0)
+                                       , port_text_input.input_text, ArmoryServersModel.PortRole)
+        }
     }
 
     CustomTextInput {
@@ -135,36 +164,10 @@ ColumnLayout  {
         Layout.topMargin: 10
 
         title_text: qsTr("DB Key (optional)")
-    }
 
-    CustomButton {
-        id: save_but
-        text: qsTr("Save")
-
-        Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
-        height : 70
-        width: 532
-        Layout.topMargin: 10
-
-        enabled: (name_text_input.input_text !== "")
-                 && (ip_dns_text_input.input_text !== "")
-                 && (port_text_input.input_text !== "")
-        preferred: true
-
-        function click_enter() {
-            if (!save_but.enabled) return
-
-            var networkType = radbut_main.checked ? 0 : 1
-            var name = name_text_input.input_text
-            var ip_dns = ip_dns_text_input.input_text
-            var port = parseInt(port_text_input.input_text)
-            var db_key = db_key_text_input.input_text
-
-            armoryServersModel.add(name, ip_dns, port, networkType, db_key)
-
-            clear()
-
-            sig_added()
+        onTextEdited: {
+            armoryServersModel.setData(armoryServersModel.index(server_index, 0)
+                                       , db_key_text_input.input_text, ArmoryServersModel.KeyRole)
         }
     }
 
@@ -174,25 +177,26 @@ ColumnLayout  {
         Layout.fillHeight: true
     }
 
-    Keys.onEnterPressed: {
-        save_but.click_enter()
-    }
-
-    Keys.onReturnPressed: {
-        save_but.click_enter()
-    }
-
     function init()
     {
-        clear()
+        // netType==0 => MainNet, netType==1 => TestNet
+        var netType = armoryServersModel.data(armoryServersModel.index(server_index, 0), ArmoryServersModel.NetTypeRole)
+        if (netType === 0)
+        {
+            radbut_main.checked = true
+        }
+        else if (netType === 1)
+        {
+            radbut_test.checked = true
+        }
+        name_text_input.input_text = armoryServersModel.data(armoryServersModel.index(server_index, 0)
+                                                             , ArmoryServersModel.NameRole)
+        ip_dns_text_input.input_text = armoryServersModel.data(armoryServersModel.index(server_index, 0)
+                                                               , ArmoryServersModel.AddressRole)
+        port_text_input.input_text = armoryServersModel.data(armoryServersModel.index(server_index, 0)
+                                                               , ArmoryServersModel.PortRole)
+        db_key_text_input.input_text = armoryServersModel.data(armoryServersModel.index(server_index, 0)
+                                                               , ArmoryServersModel.KeyRole)
         name_text_input.setActiveFocus()
-    }
-
-    function clear()
-    {
-        ip_dns_text_input.input_text = ""
-        port_text_input.input_text = ""
-        db_key_text_input.input_text = ""
-        name_text_input.input_text = ""
     }
 }

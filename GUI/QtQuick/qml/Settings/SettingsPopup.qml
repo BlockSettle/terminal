@@ -51,10 +51,16 @@ CustomPopup {
             add_armory_server.init()
         }
 
+        onSig_modify_custom: (server_index) => {
+            _stack_view.push(modify_armory_server)
+            modify_armory_server.server_index = server_index
+            modify_armory_server.init()
+        }
+
         onSig_delete_custom: (server_index) => {
             _stack_view.push(delete_armory_server)
-            delete_armory_server.init()
             delete_armory_server.server_index = server_index
+            delete_armory_server.init()
         }
     }
 
@@ -67,6 +73,13 @@ CustomPopup {
         onSig_added: {
             _stack_view.pop()
         }
+    }
+
+    ModifyArmoryServer {
+        id: modify_armory_server
+        visible: false
+
+        armoryServersModel: root.armoryServersModel
     }
 
     DeleteArmoryServer {
