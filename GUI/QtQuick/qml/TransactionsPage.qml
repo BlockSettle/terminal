@@ -27,11 +27,6 @@ Item {
 
     signal openSend (string txId, bool isRBF, bool isCPFP)
 
-    TransactionFilterModel {
-        id: transactionModel
-        sourceModel: txListModel
-    }
-
     TransactionDetails {
         id: transactionDetails
         visible: false
@@ -79,6 +74,7 @@ Item {
             {
                 spacing: 8
                 height: parent.height
+                anchors.right: parent.right
 
                 CustomSmallComboBox {
                     id: txWalletsComboBox
@@ -91,8 +87,21 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
 
                     onActivated: (index) => {
-                        transactionModel.walletName = index == 0 ? "" : txWalletsComboBox.currentValue
+                        transactionFilterModel.walletName = index == 0 ? "" : txWalletsComboBox.currentValue
                         tableView.update()
+                    }
+
+                    Connections {
+                        target: transactionFilterModel
+                        onChanged: {
+                            if (transactionFilterModel.walletName != txWalletsComboBox.currentValue) {
+                                for (var i = 0; i < bsApp.txWalletsList.length; ++i) {
+                                    if (bsApp.txWalletsList[i] == transactionFilterModel.walletName) {
+                                        txWalletsComboBox.currentIndex = i
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -107,8 +116,21 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
 
                     onActivated: (index) => {
-                        transactionModel.transactionType = index == 0 ? "" : txTypesComboBox.currentValue
+                        transactionFilterModel.transactionType = index == 0 ? "" : txTypesComboBox.currentValue
                         tableView.update()
+                    }
+
+                    Connections {
+                        target: transactionFilterModel
+                        onChanged: {
+                            if (transactionFilterModel.transactionType != txTypesComboBox.currentValue) {
+                                for (var i = 0; i < bsApp.txTypesList.length; ++i) {
+                                    if (bsApp.txTypesList[i] == transactionFilterModel.transactionType) {
+                                        txTypesComboBox.currentIndex = i
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -160,7 +182,7 @@ Item {
             id: tableView
             width: parent.width
             height: parent.height - transaction_header_menu.height - transaction_header_menu.spacing - 1
-            model: transactionModel
+            model: transactionFilterModel
 
             copy_button_column_index: 3
             columnWidths: [0.12, 0.1, 0.08, 0.3, 0.1, 0.1, 0.1, 0.1]
@@ -190,7 +212,7 @@ Item {
             CustomRbfCpfpMenu {
                 id: context_menu
 
-                model: transactionModel
+                model: transactionFilterModel
 
                 onOpenSend: (txId, isRBF, isCPFP) => transactions.openSend(txId, isRBF, isCPFP)
             }

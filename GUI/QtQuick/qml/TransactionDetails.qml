@@ -54,7 +54,7 @@ Popup {
             anchors.leftMargin: 12
             anchors.rightMargin: 12
             anchors.bottomMargin: 12
-            spacing: 20
+            spacing: 14
 
             Label {
                 text: qsTr("Transaction details")
@@ -138,7 +138,7 @@ Popup {
                     width: 170
                 }
                 Text {
-                    text: transaction_details.txType
+                    text: transaction_details.txType !== "" ? transaction_details.txType : "..."
                     color: transaction_details.txTypeColor
                     font.family: "Roboto"
                     font.pixelSize: 14
@@ -208,7 +208,7 @@ Popup {
                     width: 170
                 }
                 Label {
-                    text: transaction_details.walletName
+                    text: transaction_details.walletName !== "" ? transaction_details.walletName : "..."
                     color: BSStyle.textColor
                     font.family: "Roboto"
                     font.pixelSize: 14
@@ -250,28 +250,16 @@ Popup {
                 }
             }
 
-            Row {
-                spacing: 8
-
-                Label {
-                    text: qsTr("Input addresses")
-                    color: BSStyle.textColor
-                    font.pixelSize: 19
-                    font.weight: Font.Medium
-                }
-
-                Image {
-                    width: 9
-                    height: 12
-                    source: "qrc:/images/up_arrow.svg"
-                    anchors.leftMargin: 20
-                    anchors.verticalCenter: parent.verticalCenter
-                }
+            Label {
+                text: qsTr("Input addresses")
+                color: BSStyle.textColor
+                font.pixelSize: 19
+                font.weight: Font.Medium
             }
 
             Rectangle {
                 width: parent.width
-                height: 100
+                height: 110
                 color: "transparent"
                 radius: 14
                 border.color: BSStyle.popupBorderColor
@@ -289,28 +277,16 @@ Popup {
                 }
             }
 
-            Row {
-                spacing: 8
-
-                Label {
-                    text: qsTr("Output addresses")
-                    color: BSStyle.textColor
-                    font.pixelSize: 19
-                    font.weight: Font.Medium
-                }
-
-                Image {
-                    width: 9
-                    height: 12
-                    source: "qrc:/images/down_arrow.svg"
-                    anchors.leftMargin: 20
-                    anchors.verticalCenter: parent.verticalCenter
-                }
+            Label {
+                text: qsTr("Output addresses")
+                color: BSStyle.textColor
+                font.pixelSize: 19
+                font.weight: Font.Medium
             }
 
             Rectangle {
                 width: parent.width
-                height: 100
+                height: 110
                 color: "transparent"
                 radius: 14
                 border.color: BSStyle.popupBorderColor

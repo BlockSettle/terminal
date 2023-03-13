@@ -10,14 +10,28 @@
 */
 #include "TransactionFilterModel.h"
 #include "TxListModel.h"
-#include <QDebug>
 
-TransactionFilterModel::TransactionFilterModel(QObject* parent)
-   : QSortFilterProxyModel(parent)
+TransactionFilterModel::TransactionFilterModel(std::shared_ptr<SettingsController> settings)
+   : QSortFilterProxyModel()
+   , settings_(settings)
 {
    setDynamicSortFilter(true);
    sort(0, Qt::AscendingOrder);
    connect(this, &TransactionFilterModel::changed, this, &TransactionFilterModel::invalidate);
+
+   if (settings_ != nullptr)
+   {
+      connect(settings_.get(), &SettingsController::reset, this, [this]()
+      {
+         if (settings_->hasParam(ApplicationSettings::Setting::TransactionFilterWalletName)) {
+            walletName_ = settings_->getParam(ApplicationSettings::Setting::TransactionFilterWalletName).toString();
+         }
+         if (settings_->hasParam(ApplicationSettings::Setting::TransactionFilterTransactionType)) {
+            transactionType_ = settings_->getParam(ApplicationSettings::Setting::TransactionFilterTransactionType).toString();
+         }
+         emit changed();
+      });
+   }
 }
 
 bool TransactionFilterModel::filterAcceptsRow(int source_row,
@@ -52,8 +66,11 @@ const QString& TransactionFilterModel::walletName() const
 
 void TransactionFilterModel::setWalletName(const QString& name)
 {
-   walletName_ = name;
-   emit changed();
+   if (walletName_ != name) {
+      walletName_ = name;
+      settings_->setParam(ApplicationSettings::Setting::TransactionFilterWalletName, walletName_);
+      emit changed();
+   }
 }
 
 const QString& TransactionFilterModel::transactionType() const
@@ -63,8 +80,11 @@ const QString& TransactionFilterModel::transactionType() const
 
 void TransactionFilterModel::setTransactionType(const QString& type)
 {
-   transactionType_ = type;
-   emit changed();
+   if (transactionType_ != type) {
+      transactionType_ = type;
+      settings_->setParam(ApplicationSettings::Setting::TransactionFilterTransactionType, transactionType_);
+      emit changed();
+   }
 }
 
 bool TransactionFilterModel::lessThan(const QModelIndex& left, const QModelIndex& right) const

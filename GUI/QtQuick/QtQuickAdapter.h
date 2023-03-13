@@ -28,6 +28,7 @@
 #include "UiUtils.h"
 #include "Wallets/SignContainer.h"
 #include "viewmodels/WalletPropertiesVM.h"
+#include "SettingsController.h"
 
 #include "common.pb.h"
 
@@ -76,6 +77,9 @@ class QTXSignRequest;
 class TxInputsModel;
 class TxOutputsModel;
 class WalletBalancesModel;
+class AddressFilterModel;
+class TransactionFilterModel;
+class PendingTransactionFilterModel;
 
 class QtQuickAdapter : public QObject, public ApiBusAdapter, public bs::MainLoopRuner
 {
@@ -193,6 +197,7 @@ signals:
    void showError(const QString&);
    void showNotification(QString, QString);
    void successExport(QString nameExport);
+   void requestWalletSelection(quint32 index);
 
 private slots:
    void onArmoryServerChanged(const QModelIndex&, const QVariant&);
@@ -210,6 +215,7 @@ private:
    bs::message::ProcessingResult processHWW(const bs::message::Envelope&);
 
    void requestInitialSettings();
+   void requestPostLoadingSettings();
    void updateSplashProgress();
    void splashProgressCompleted();
    void updateStates();
@@ -305,6 +311,9 @@ private:
    std::map<bs::message::SeqId, ArmoryServersModel*>  armoryServersReq_;
 
    int nWalletsLoaded_ {-1};
+   std::shared_ptr<SettingsController> settingsController_;
+   std::unique_ptr<AddressFilterModel> addressFilterModel_;
+   std::unique_ptr<TransactionFilterModel> transactionFilterModel_;
 };
 
 #endif	// QT_QUICK_ADAPTER_H
