@@ -43,9 +43,15 @@ Rectangle {
             textRole: "name"
             valueRole: "name"
 
-            onActivated: (ind) => {
-                bsApp.walletSelected(ind)
-                control.walletIndexChanged(ind)
+            onCurrentIndexChanged: {
+                bsApp.walletSelected(currentIndex)
+            }
+
+            Connections {
+                target: bsApp
+                onRequestWalletSelection: (index) => {
+                    currentIndex = index
+                }
             }
         }
 

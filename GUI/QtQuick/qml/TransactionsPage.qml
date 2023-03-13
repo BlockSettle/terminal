@@ -94,7 +94,7 @@ Item {
                     Connections {
                         target: transactionFilterModel
                         onChanged: {
-                            if (transactionFilterModel.walletName != currentValue) {
+                            if (transactionFilterModel.walletName != txWalletsComboBox.currentValue) {
                                 for (var i = 0; i < bsApp.txWalletsList.length; ++i) {
                                     if (bsApp.txWalletsList[i] == transactionFilterModel.walletName) {
                                         txWalletsComboBox.currentIndex = i
@@ -123,7 +123,7 @@ Item {
                     Connections {
                         target: transactionFilterModel
                         onChanged: {
-                            if (transactionFilterModel.transactionType != currentValue) {
+                            if (transactionFilterModel.transactionType != txTypesComboBox.currentValue) {
                                 for (var i = 0; i < bsApp.txTypesList.length; ++i) {
                                     if (bsApp.txTypesList[i] == transactionFilterModel.transactionType) {
                                         txTypesComboBox.currentIndex = i

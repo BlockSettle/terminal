@@ -162,7 +162,6 @@ Rectangle {
                     font.pixelSize: 19
                     font.family: "Roboto"
                     font.weight: Font.DemiBold
-                    
                 }
 
                 CustomTableView {

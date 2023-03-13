@@ -20,7 +20,7 @@ AddressFilterModel::AddressFilterModel(std::shared_ptr<SettingsController> setti
 
    if (settings_ != nullptr)
    {
-      connect(settings_.get(), &SettingsController::reseted, this, [this]()
+      connect(settings_.get(), &SettingsController::reset, this, [this]()
       {
          if (settings_->hasParam(ApplicationSettings::Setting::AddressFilterHideUsed)) {
             hideUsed_ = settings_->getParam(ApplicationSettings::Setting::AddressFilterHideUsed).toBool();

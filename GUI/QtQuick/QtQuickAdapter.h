@@ -197,6 +197,7 @@ signals:
    void showError(const QString&);
    void showNotification(QString, QString);
    void successExport(QString nameExport);
+   void requestWalletSelection(quint32 index);
 
 private slots:
    void onArmoryServerChanged(const QModelIndex&, const QVariant&);
@@ -214,6 +215,7 @@ private:
    bs::message::ProcessingResult processHWW(const bs::message::Envelope&);
 
    void requestInitialSettings();
+   void requestPostLoadingSettings();
    void updateSplashProgress();
    void splashProgressCompleted();
    void updateStates();

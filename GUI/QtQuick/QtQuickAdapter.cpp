@@ -865,6 +865,45 @@ void QtQuickAdapter::requestInitialSettings()
    setReq->set_index(SetIdx_ExportDir);
    setReq->set_type(SettingType_String);
 
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_AddressFilterHideUsed);
+   setReq->set_type(SettingType_Bool);
+
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_AddressFilterHideInternal);
+   setReq->set_type(SettingType_Bool);
+
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_AddressFilterHideExternal);
+   setReq->set_type(SettingType_Bool);
+
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_AddressFilterHideEmpty);
+   setReq->set_type(SettingType_Bool);
+
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
+}
+
+void QtQuickAdapter::requestPostLoadingSettings()
+{
+   SettingsMessage msg;
+   auto msgReq = msg.mutable_get_request();
+   auto setReq = msgReq->add_requests();
+
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_TransactionFilterWalletName);
+   setReq->set_type(SettingType_String);
+
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_TransactionFilterTransactionType);
+   setReq->set_type(SettingType_String);
+
    pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
@@ -947,11 +986,8 @@ void QtQuickAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
       hwDeviceModel_->setLoaded(walletId);
       walletBalances_->addWallet({ walletId, walletName });
       if (isInitialLoad) {
-         auto comboWalletsList = rootObj_->findChild<QQuickItem*>(QLatin1Literal("walletsComboBox"));
-         if (comboWalletsList) {
-            comboWalletsList->setProperty("currentIndex", 0);
-         }
-         walletSelected(0);
+         requestWalletSelection(0);
+         requestPostLoadingSettings();
       }
       emit walletsListChanged();
    });

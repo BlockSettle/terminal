@@ -33,7 +33,7 @@ public:
 
 signals:
    void changed(ApplicationSettings::Setting);
-   void reseted();
+   void reset();
 
 private:
    SettingsCache settingsCache_;

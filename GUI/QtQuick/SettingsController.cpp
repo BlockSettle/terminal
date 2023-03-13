@@ -29,7 +29,7 @@ SettingsController& SettingsController::operator=(const SettingsController& othe
 void SettingsController::resetCache(const SettingsController::SettingsCache& cache)
 {
    settingsCache_ = cache;
-   emit reseted();
+   emit reset();
 }
 
 const SettingsController::SettingsCache& SettingsController::getCache() const
