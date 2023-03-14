@@ -111,6 +111,7 @@ ApplicationWindow {
 
         function onWalletsListChanged ()
         {
+            console.log("onWalletsListChanged: overviewWalletIndex = " + overviewWalletIndex)
             if (overviewWalletIndex === -1)
             {
                 overviewWalletIndex = 0

@@ -12,14 +12,14 @@
 
 #include <memory>
 
-#include <QAbstractTableModel>
+#include <QAbstractListModel>
 #include "ArmorySettings.h"
 
 namespace spdlog {
    class logger;
 }
 
-class ArmoryServersModel: public QAbstractTableModel
+class ArmoryServersModel: public QAbstractListModel
 {
    Q_OBJECT
    Q_PROPERTY(int current     READ current      WRITE setCurrent     NOTIFY currentChanged)
@@ -45,11 +45,9 @@ public:
    auto data(int idx) const { return data_.at(idx); }
 
    int rowCount(const QModelIndex & = QModelIndex()) const override;
-   int columnCount(const QModelIndex & = QModelIndex()) const override;
    QVariant data(const QModelIndex& index, int role) const override;
    bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) override;
    QHash<int, QByteArray> roleNames() const override;
-   QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
    bool isEditable(int row) const;
 
@@ -62,11 +60,9 @@ signals:
 private:
    int current() const { return current_; }
    int connected() const { return connected_; }
-   QVariant getData(int row, int col) const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
-   const QStringList header_;
    int current_{ -1 };
    int connected_{ -1 };
    std::vector<ArmoryServer> data_;

@@ -41,9 +41,4 @@ CustomListItem {
 
         onClicked : root.sig_radio_clicked()
     }
-
-    onClicked : {
-        rad_but.checked = true
-        root.sig_radio_clicked()
-    }
 }

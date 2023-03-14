@@ -115,6 +115,7 @@ Rectangle {
         anchors.rightMargin: 23
 
         source: isHiddenText? "qrc:/images/Eye_icon _unvisible.png" : "qrc:/images/Eye_icon _visible.png"
+        z: 1
         width: 24
         height: 24
 
@@ -128,10 +129,8 @@ Rectangle {
 
     MouseArea {
         anchors.fill: parent
-        propagateComposedEvents: true
         onClicked: {
             input.forceActiveFocus()
-            mouse.accepted = false
         }
     }
 

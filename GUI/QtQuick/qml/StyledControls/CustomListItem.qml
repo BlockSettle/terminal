@@ -92,10 +92,10 @@ Rectangle {
     MouseArea {
         id: mouseArea
         anchors.fill: parent
-        propagateComposedEvents: true
+        //propagateComposedEvents: true
         onClicked: {
             rect.clicked()
-            mouse.accepted = false
+            //mouse.accepted = false
         }
     }
 }

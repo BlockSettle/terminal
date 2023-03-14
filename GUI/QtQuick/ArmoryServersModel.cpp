@@ -15,6 +15,7 @@
 
 namespace {
    static const QHash<int, QByteArray> kRoleNames{
+      {Qt::DisplayRole, "display"},
       {ArmoryServersModel::TableDataRole, "tableData"},
       {ArmoryServersModel::NameRole, "name"},
       {ArmoryServersModel::NetTypeRole, "netType"},
@@ -27,8 +28,7 @@ namespace {
 }
 
 ArmoryServersModel::ArmoryServersModel(const std::shared_ptr<spdlog::logger> & logger, QObject* parent)
-   : QAbstractTableModel(parent)
-   , header_{ tr("Name"), tr("Network"), tr("Address"), tr("Port"), tr("Key") }
+   : QAbstractListModel(parent)
    , logger_(logger)
 {
    connect(this, &ArmoryServersModel::modelReset,
@@ -52,7 +52,7 @@ void ArmoryServersModel::setData(int curIdx, int connIdx
       beginResetModel();
       data_ = data;
       endResetModel();
-
+      logger_->debug("[{}] curIdx = {}", __func__, curIdx);
       if (current_ != curIdx) {
          setCurrent(curIdx);
       }
@@ -112,45 +112,32 @@ int ArmoryServersModel::rowCount(const QModelIndex&) const
    return data_.size();
 }
 
-int ArmoryServersModel::columnCount(const QModelIndex&) const
-{
-   return header_.size();
-}
-
-QVariant ArmoryServersModel::getData(int row, int col) const
-{
-   if ((row < 0) || (row >= rowCount())) {
-      return {};
-   }
-   switch (col) {
-   case 0:  return data_.at(row).name;
-   case 1:  return (int)data_.at(row).netType;
-   case 2:  return data_.at(row).armoryDBIp;
-   case 3:  return QString::number(data_.at(row).armoryDBPort);
-   case 4:  return data_.at(row).armoryDBKey;
-   default: break;
-   }
-   return {};
-}
-
 QVariant ArmoryServersModel::data(const QModelIndex& index, int role) const
 {
+   if(!index.isValid() || index.row() > rowCount()) {
+      return QVariant();
+   }
+
+   int row = index.row();
+
    switch (role) {
-   case NameRole:          return getData(index.row(), 0);
-   case NetTypeRole:       return getData(index.row(), 1);
-   case AddressRole:       return getData(index.row(), 2);
-   case PortRole:          return getData(index.row(), 3);
-   case KeyRole:           return getData(index.row(), 4);
+   case Qt::DisplayRole:   return (data_.at(row).netType == NetworkType::MainNet) ? (data_.at(row).name + QLatin1String(" (Mainnet)"))
+                           : (data_.at(row).name + QLatin1String(" (Testnet)"));
+   case NameRole:          return data_.at(row).name;
+   case NetTypeRole:       return (int)data_.at(row).netType;
+   case AddressRole:       return data_.at(row).armoryDBIp;
+   case PortRole:          return QString::number(data_.at(row).armoryDBPort);
+   case KeyRole:           return data_.at(row).armoryDBKey;
    case DefaultServerRole: return (index.row() < ArmoryServersProvider::kDefaultServersCount) && (index.row() < rowCount());
    case CurrentServerRole: return (index.row() == current());
-   default: return getData(index.row(), index.column());
+   default: return QVariant();
    }
-   return {};
+   return QVariant();
 }
 
 bool ArmoryServersModel::setData(const QModelIndex& index, const QVariant& value, int role)
 {
-   if(!index.isValid() || index.row() > rowCount() || index.column() > columnCount()) {
+   if(!index.isValid() || index.row() > rowCount()) {
       return false;
    }
 
@@ -191,15 +178,7 @@ QHash<int, QByteArray> ArmoryServersModel::roleNames() const
    return kRoleNames;
 }
 
-QVariant ArmoryServersModel::headerData(int section, Qt::Orientation orientation, int role) const
-{
-   if (orientation == Qt::Orientation::Horizontal) {
-      return header_.at(section);
-   }
-   return {};
-}
-
 bool ArmoryServersModel::isEditable(int row) const
 {
-   return data(index(row,0), DefaultServerRole).toBool();
+   return data(index(row), DefaultServerRole).toBool();
 }
