@@ -31,11 +31,6 @@ Rectangle {
     signal walletIndexChanged(index : int)
     signal openAddressDetails(var address, var transactions, var balance, var comment, var asset_type, var type, var wallet)
 
-    AddressFilterModel {
-        id: addressFilterModel
-        sourceModel: addressListModel
-    }
-
     Column {
         anchors.leftMargin: 18
         anchors.rightMargin: 18
@@ -167,7 +162,6 @@ Rectangle {
                     font.pixelSize: 19
                     font.family: "Roboto"
                     font.weight: Font.DemiBold
-                    
                 }
 
                 CustomTransactionsTableView {

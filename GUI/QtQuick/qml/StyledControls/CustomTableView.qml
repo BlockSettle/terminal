@@ -39,6 +39,7 @@ Column {
 
     function update() {
         component.forceLayout()
+        verticalScrollBar.position = 0
     }
 
     CustomHorizontalHeaderView {

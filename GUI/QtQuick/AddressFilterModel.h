@@ -11,6 +11,7 @@
 #pragma once
 
 #include <QSortFilterProxyModel>
+#include "SettingsController.h"
 
 class AddressFilterModel: public QSortFilterProxyModel
 {
@@ -21,7 +22,7 @@ class AddressFilterModel: public QSortFilterProxyModel
    Q_PROPERTY(bool hideEmpty    READ hideEmpty    WRITE setHideEmpty    NOTIFY changed)
 
 public:
-   AddressFilterModel(QObject* parent = nullptr);
+   AddressFilterModel(std::shared_ptr<SettingsController> settings);
 
    bool hideUsed() const;
    bool hideInternal() const;
@@ -44,4 +45,5 @@ private:
    bool hideInternal_ { false };
    bool hideExternal_ { false };
    bool hideEmpty_ { false };
+   std::shared_ptr<SettingsController> settings_;
 };

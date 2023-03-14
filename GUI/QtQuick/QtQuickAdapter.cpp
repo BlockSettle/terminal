@@ -149,6 +149,9 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    , userSigner_(std::make_shared<UserTerminal>(TerminalUsers::Signer))
    , userHWW_(bs::message::UserTerminal::create(bs::message::TerminalUsers::HWWallets))
    , txTypes_({ tr("All transactions"), tr("Received"), tr("Sent"), tr("Internal") })
+   , settingsController_(std::make_shared<SettingsController>())
+   , addressFilterModel_(std::make_unique<AddressFilterModel>(settingsController_))
+   , transactionFilterModel_(std::make_unique<TransactionFilterModel>(settingsController_))
 {
    staticLogger = logger;
    addrModel_ = new QmlAddressListModel(logger, this);
@@ -162,6 +165,14 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    walletBalances_ = new WalletBalancesModel(logger, this);
    feeSuggModel_ = new FeeSuggestionModel(logger, this);
    walletPropertiesModel_ = std::make_unique<qtquick_gui::WalletPropertiesVM>(logger);
+
+   addressFilterModel_->setSourceModel(addrModel_);
+   transactionFilterModel_->setSourceModel(txModel_);
+
+   connect(settingsController_.get(), &SettingsController::changed, this, [this](ApplicationSettings::Setting key)
+   {
+      setSetting(key, settingsController_->getParam(key));
+   });
 }
 
 QtQuickAdapter::~QtQuickAdapter()
@@ -241,7 +252,6 @@ void QtQuickAdapter::run(int &argc, char **argv)
    qmlRegisterInterface<ArmoryServersModel>("ArmoryServersModel");
    qmlRegisterUncreatableMetaObject(WalletBalance::staticMetaObject, "wallet.balance"
       , 1, 0, "WalletBalance", tr("Error: only enums"));
-   qmlRegisterType<TransactionFilterModel>("terminal.models", 1, 0, "TransactionFilterModel");
    qmlRegisterType<TransactionForAddressFilterModel>("terminal.models", 1, 0, "TransactionForAddressFilterModel");
    qmlRegisterType<PendingTransactionFilterModel>("terminal.models", 1, 0, "PendingTransactionFilterModel");
    qmlRegisterUncreatableMetaObject(qtquick_gui::WalletPropertiesVM::staticMetaObject, "terminal.models"
@@ -255,7 +265,6 @@ void QtQuickAdapter::run(int &argc, char **argv)
       , 1, 0, "QmlAddressListModel", tr("Error: only enums"));
    qmlRegisterUncreatableMetaObject(ArmoryServersModel::staticMetaObject, "terminal.models"
       , 1, 0, "ArmoryServersModel", tr("Error: only enums"));
-   qmlRegisterType<AddressFilterModel>("terminal.models", 1, 0, "AddressFilterModel");
 
    //need to read files in qml
    qputenv("QML_XHR_ALLOW_FILE_READ", QByteArray("1"));
@@ -275,6 +284,8 @@ void QtQuickAdapter::run(int &argc, char **argv)
    rootCtxt_->setContextProperty(QLatin1Literal("hwDeviceModel"), hwDeviceModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("walletBalances"), walletBalances_);
    rootCtxt_->setContextProperty(QLatin1Literal("feeSuggestions"), feeSuggModel_);
+   rootCtxt_->setContextProperty(QLatin1Literal("addressFilterModel"), addressFilterModel_.get());
+   rootCtxt_->setContextProperty(QLatin1Literal("transactionFilterModel"), transactionFilterModel_.get());
    engine.addImageProvider(QLatin1Literal("QR"), new QRImageProvider);
 
    connect(&engine, &QQmlApplicationEngine::objectCreated,
@@ -332,6 +343,7 @@ ProcessingResult QtQuickAdapter::process(const Envelope &env)
       default:    break;
       }
    }
+   
    return ProcessingResult::Ignored;
 }
 
@@ -421,6 +433,7 @@ ProcessingResult QtQuickAdapter::processSettingsGetResponse(const SettingsMessag
       }
       emit settingChanged();
    }
+   QMetaObject::invokeMethod(this, [this] { settingsController_->resetCache(settingsCache_); });
    return ProcessingResult::Success;
 }
 
@@ -852,6 +865,45 @@ void QtQuickAdapter::requestInitialSettings()
    setReq->set_index(SetIdx_ExportDir);
    setReq->set_type(SettingType_String);
 
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_AddressFilterHideUsed);
+   setReq->set_type(SettingType_Bool);
+
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_AddressFilterHideInternal);
+   setReq->set_type(SettingType_Bool);
+
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_AddressFilterHideExternal);
+   setReq->set_type(SettingType_Bool);
+
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_AddressFilterHideEmpty);
+   setReq->set_type(SettingType_Bool);
+
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
+}
+
+void QtQuickAdapter::requestPostLoadingSettings()
+{
+   SettingsMessage msg;
+   auto msgReq = msg.mutable_get_request();
+   auto setReq = msgReq->add_requests();
+
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_TransactionFilterWalletName);
+   setReq->set_type(SettingType_String);
+
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_TransactionFilterTransactionType);
+   setReq->set_type(SettingType_String);
+
    pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
@@ -934,11 +986,8 @@ void QtQuickAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
       hwDeviceModel_->setLoaded(walletId);
       walletBalances_->addWallet({ walletId, walletName });
       if (isInitialLoad) {
-         auto comboWalletsList = rootObj_->findChild<QQuickItem*>(QLatin1Literal("walletsComboBox"));
-         if (comboWalletsList) {
-            comboWalletsList->setProperty("currentIndex", 0);
-         }
-         walletSelected(0);
+         requestWalletSelection(0);
+         requestPostLoadingSettings();
       }
       emit walletsListChanged();
    });

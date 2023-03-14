@@ -29,7 +29,7 @@ CustomTableView {
     CustomRbfCpfpMenu {
         id: context_menu
 
-        model: pendingTransactionModel
+        model: control.model
 
         onOpenSend: (txId, isRBF, isCPFP) => control.openSend(txId, isRBF, isCPFP)
     }
