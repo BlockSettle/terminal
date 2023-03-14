@@ -109,8 +109,6 @@ ColumnLayout  {
         Layout.topMargin: 10
 
         title_text: qsTr("IP/DNS")
-
-        input_validator: RegExpValidator { regExp: /(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}(,(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3})*/ }
     }
 
     CustomTextInput {
@@ -123,7 +121,7 @@ ColumnLayout  {
 
         title_text: qsTr("Port")
 
-        input_validator: IntValidator {bottom: 0; top: 65536;}
+        input_validator: IntValidator {bottom: 80; top: 65535;}
     }
 
     CustomTextInput {

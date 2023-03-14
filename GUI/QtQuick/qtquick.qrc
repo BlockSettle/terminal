@@ -180,5 +180,6 @@
         <file>images/delete_custom_server.svg</file>
         <file>qml/Settings/DeleteArmoryServer.qml</file>
         <file>qml/Settings/ModifyArmoryServer.qml</file>
+        <file>qml/StyledControls/CustomTransactionsTableView.qml</file>
     </qresource>
 </RCC>

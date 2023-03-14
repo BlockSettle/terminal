@@ -34,10 +34,8 @@ Column {
 
     signal copyRequested(var id)
     signal deleteRequested(int id)
-    signal cellClicked(var row, var column, var data)
-    signal cellRightClicked(var row, var column, var data)
-    signal cellDoubleClicked(var row, var column, var data)
-    signal cellRightDoubleClicked(var row, var column, var data)
+    signal cellClicked(var row, var column, var data, var mouse)
+    signal cellDoubleClicked(var row, var column, var data, var mouse)
 
     function update() {
         component.forceLayout()
@@ -97,24 +95,10 @@ Column {
                 onEntered: component.selected_row_index = row
                 onExited: component.selected_row_index = -1
                 onClicked: (mouse) => {
-                    if (mouse.button === Qt.LeftButton)
-                    {
-                        root.cellClicked(row, column, tableData)
-                    }
-                    else if (mouse.button === Qt.RightButton)
-                    {
-                        root.cellRightClicked(row, column, tableData)
-                    }
+                    root.cellClicked(row, column, tableData, mouse)
                 }
                 onDoubleClicked: (mouse) => {
-                    if (mouse.button === Qt.LeftButton)
-                    {
-                        root.cellDoubleClicked(row, column, tableData)
-                    }
-                    else if (mouse.button === Qt.RightButton)
-                    {
-                        root.cellRightDoubleClicked(row, column, tableData)
-                    }
+                    root.cellDoubleClicked(row, column, tableData, mouse)
                 }
             }
 

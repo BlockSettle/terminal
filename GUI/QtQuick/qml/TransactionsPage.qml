@@ -156,62 +156,13 @@ Item {
             }
         }
 
-        CustomTableView {
+        CustomTransactionsTableView {
             id: tableView
             width: parent.width
             height: parent.height - transaction_header_menu.height - transaction_header_menu.spacing - 1
             model: transactionModel
 
-            copy_button_column_index: 3
-            columnWidths: [0.12, 0.1, 0.08, 0.3, 0.1, 0.1, 0.1, 0.1]
-
-            onCopyRequested: bsApp.copyAddressToClipboard(id)
-
-            onCellClicked: (row, column, data) => {
-                show_transaction_details(row, column, data)
-            }
-
-            onCellRightClicked: (row, column, data) => {
-                var nbConf = model.data(model.index(row, 5), TxListModel.NbConfRole)
-                if (nbConf === 0)
-                {
-                    show_rbf_cfpf_menu(row, column, data)
-                }
-                else
-                {
-                    show_transaction_details(row, column, data)
-                }
-            }
-
-            function show_transaction_details(row, column, data)
-            {
-                const txHash = model.data(model.index(row, 0), TxListModel.TxIdRole)
-                transactionDetails.walletName = model.data(model.index(row, 1), TxListModel.TableDataRole)
-                transactionDetails.address = model.data(model.index(row, 3), TxListModel.TableDataRole)
-                transactionDetails.txDateTime = model.data(model.index(row, 0), TxListModel.TableDataRole)
-                transactionDetails.txType = model.data(model.index(row, 2), TxListModel.TableDataRole)
-                transactionDetails.txTypeColor = model.data(model.index(row, 2), TxListModel.ColorRole)
-                transactionDetails.txComment = model.data(model.index(row, 7), TxListModel.TableDataRole)
-                transactionDetails.txAmount = model.data(model.index(row, 4), TxListModel.TableDataRole)
-                transactionDetails.txConfirmationsColor = model.data(model.index(row, 5), TxListModel.ColorRole)
-                transactionDetails.tx = bsApp.getTXDetails(txHash)
-                transactionDetails.open()
-            }
-
-            function show_rbf_cfpf_menu(row, column, data)
-            {
-                context_menu.row = row
-                context_menu.column = column
-                context_menu.popup()
-            }
-
-            CustomRbfCpfpMenu {
-                id: context_menu
-
-                model: transactionModel
-
-                onOpenSend: (txId, isRBF, isCPFP) => transactions.openSend(txId, isRBF, isCPFP)
-            }
+            onOpenSend: (txId, isRBF, isCPFP) => control.openSend(txId, isRBF, isCPFP)
         }
     }
 }
