@@ -45,6 +45,7 @@ Rectangle {
 
             onCurrentIndexChanged: {
                 bsApp.walletSelected(currentIndex)
+                control.walletIndexChanged(currentIndex)
             }
 
             Connections {

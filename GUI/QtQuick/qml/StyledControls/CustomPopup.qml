@@ -44,17 +44,32 @@ Window {
         border.color : BSStyle.defaultBorderColor
         border.width : 1
 
-        Image {
-            id: close_button
+
+        Rectangle {
+            id: close_rect
 
             anchors.top: parent.top
-            anchors.topMargin: 24
+            anchors.topMargin: 1
             anchors.right: parent.right
-            anchors.rightMargin: 24
+            anchors.rightMargin: 1
+            radius: 16
 
-            source: "qrc:/images/close_button.svg"
-            width: 16
-            height: 16
+            color: BSStyle.popupBackgroundColor
+            height: 39
+            width: 110
+
+            Image {
+                id: close_button
+
+                anchors.top: parent.top
+                anchors.topMargin: 23
+                anchors.right: parent.right
+                anchors.rightMargin: 23
+
+                source: "qrc:/images/close_button.svg"
+                width: 16
+                height: 16
+            }
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
@@ -85,7 +100,7 @@ Window {
         StackView {
             id: stack_popup
 
-            anchors.top: close_button.bottom
+            anchors.top: close_rect.bottom
             anchors.topMargin: 0
 
             implicitHeight: currentItem.height
