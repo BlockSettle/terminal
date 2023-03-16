@@ -64,7 +64,7 @@ SettingsAdapter::SettingsAdapter(const std::shared_ptr<ApplicationSettings> &set
             , filePathInResources.toStdString());
       }
    }
-   armoryServersProvider_ = std::make_shared<ArmoryServersProvider>(settings);
+   armoryServersProvider_ = std::make_shared<ArmoryServersProvider>(settings, logger_);
 }
 
 ProcessingResult SettingsAdapter::process(const bs::message::Envelope &env)
@@ -126,26 +126,39 @@ bool SettingsAdapter::processBroadcast(const bs::message::Envelope& env)
          return false;
       }
       if (msg.data_case() == ArmoryMessage::kSettingsRequest) {
-         ArmoryMessage msgReply;
-         auto msgResp = msgReply.mutable_settings_response();
-         const auto& armorySettings = armoryServersProvider_->getArmorySettings();
-         armoryServersProvider_->setConnectedArmorySettings(armorySettings);
-         msgResp->set_socket_type(armorySettings.socketType);
-         msgResp->set_network_type((int)armorySettings.netType);
-         msgResp->set_host(armorySettings.armoryDBIp.toStdString());
-         msgResp->set_port(std::to_string(armorySettings.armoryDBPort));
-         msgResp->set_bip15x_key(armorySettings.armoryDBKey.toStdString());
-         msgResp->set_run_locally(armorySettings.runLocally);
-         msgResp->set_data_dir(armorySettings.dataDir.toStdString());
-         msgResp->set_executable_path(armorySettings.armoryExecutablePath.toStdString());
-         msgResp->set_bitcoin_dir(armorySettings.bitcoinBlocksDir.toStdString());
-         msgResp->set_db_dir(armorySettings.dbDir.toStdString());
-         msgResp->set_cache_file_name(appSettings_->get<std::string>(ApplicationSettings::txCacheFileName));
-         pushResponse(user_, env, msgReply.SerializeAsString());
+         sendSettings(armoryServersProvider_->getArmorySettings());
+         logger_->debug("current={}, connected={}", armoryServersProvider_->indexOfCurrent()
+            , armoryServersProvider_->indexOfConnected());
          return true;
       }
    }
    return false;
+}
+
+void SettingsAdapter::sendSettings(const ArmorySettings& armorySettings, bool netTypeChanged)
+{
+   {
+      ArmoryMessage msg;
+      auto msgResp = msg.mutable_settings_response();
+      armoryServersProvider_->setConnectedArmorySettings(armorySettings);
+      msgResp->set_socket_type(armorySettings.socketType);
+      msgResp->set_network_type((int)armorySettings.netType);
+      msgResp->set_host(armorySettings.armoryDBIp.toStdString());
+      msgResp->set_port(std::to_string(armorySettings.armoryDBPort));
+      msgResp->set_bip15x_key(armorySettings.armoryDBKey.toStdString());
+      msgResp->set_run_locally(armorySettings.runLocally);
+      msgResp->set_data_dir(armorySettings.dataDir.toStdString());
+      msgResp->set_executable_path(armorySettings.armoryExecutablePath.toStdString());
+      msgResp->set_bitcoin_dir(armorySettings.bitcoinBlocksDir.toStdString());
+      msgResp->set_db_dir(armorySettings.dbDir.toStdString());
+      msgResp->set_cache_file_name(appSettings_->get<std::string>(ApplicationSettings::txCacheFileName));
+      pushResponse(user_, bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain)
+         , msg.SerializeAsString());
+   }
+   if (netTypeChanged) {
+      logger_->debug("[{}] network type changed - reloading wallets", __func__);
+      processSignerSettings({});
+   }
 }
 
 ProcessingResult SettingsAdapter::processRemoteSettings(uint64_t msgId)
@@ -327,7 +340,7 @@ ProcessingResult SettingsAdapter::processGetRequest(const bs::message::Envelope 
    for (const auto &req : request.requests()) {
       auto resp = msgResp->add_responses();
       resp->set_allocated_request(new SettingRequest(req));
-      if (req.source() == SettingSource_Local) {
+      if ((req.source() == SettingSource_Local) || (req.source() == SettingSource_Unknown)) {
          switch (req.index()) {
          case SetIdx_BlockSettleSignAddress:
             resp->set_s(appSettings_->GetBlocksettleSignAddress());
@@ -497,7 +510,7 @@ ProcessingResult SettingsAdapter::processArmoryServer(const BlockSettle::Termina
    }
    if (selIndex >= armoryServersProvider_->servers().size()) {
       logger_->error("[{}] failed to find Armory server {}", __func__, request.server_name());
-      return ProcessingResult::Success;
+      return ProcessingResult::Error;
    }
    armoryServersProvider_->setupServer(selIndex);
    appSettings_->selectNetwork();
@@ -506,9 +519,21 @@ ProcessingResult SettingsAdapter::processArmoryServer(const BlockSettle::Termina
 
 ProcessingResult SettingsAdapter::processSetArmoryServer(const bs::message::Envelope& env, int index)
 {
-   armoryServersProvider_->setupServer(index);
+   if (armoryServersProvider_->indexOfConnected() == index) {
+      return ProcessingResult::Ignored;
+   }
+   logger_->debug("[{}] #{}", __func__, index);
+   const auto prevNetType = armoryServersProvider_->getArmorySettings().netType;
+   const auto newNetType = armoryServersProvider_->setupServer(index);
+   if (newNetType == NetworkType::Invalid) {
+      logger_->error("[{}] Failed to setup server #{}", __func__, index);
+      return ProcessingResult::Error;
+   }
    appSettings_->selectNetwork();
-   return processGetArmoryServers(env);
+   logger_->debug("[{}] net {} selected", __func__
+      , (int)appSettings_->get<NetworkType>(ApplicationSettings::Setting::netType));
+   sendSettings(armoryServersProvider_->getArmorySettings(), (prevNetType != newNetType));
+   return ProcessingResult::Success;
 }
 
 ProcessingResult SettingsAdapter::processGetArmoryServers(const bs::message::Envelope& env)
@@ -582,10 +607,18 @@ ProcessingResult SettingsAdapter::processSignerSettings(const bs::message::Envel
 {
    SettingsMessage msg;
    auto msgResp = msg.mutable_signer_response();
-   msgResp->set_network_type(appSettings_->get<int>(ApplicationSettings::netType));
+   const auto netType = appSettings_->get<int>(ApplicationSettings::netType);
+   logger_->debug("[{}] network type: {}", __func__, netType);
+   msgResp->set_network_type(netType);
    msgResp->set_home_dir(appSettings_->GetHomeDir().toStdString());
    //msgResp->set_auto_sign_spend_limit(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
-   pushResponse(user_, env, msg.SerializeAsString());
+   if (env.sender) {
+      pushResponse(user_, env, msg.SerializeAsString());
+   }
+   else {
+      pushResponse(user_, bs::message::UserTerminal::create(bs::message::TerminalUsers::Signer)
+         , msg.SerializeAsString());
+   }
    return ProcessingResult::Success;
 }
 

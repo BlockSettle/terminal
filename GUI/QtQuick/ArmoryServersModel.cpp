@@ -41,8 +41,12 @@ ArmoryServersModel::ArmoryServersModel(const std::shared_ptr<spdlog::logger> & l
 
 void ArmoryServersModel::setCurrent (int value)
 {
+   logger_->debug("[{}] {} -> {}", __func__, current_, value);
+   if (current_ == value) {
+      return;
+   }
    current_ = value;
-   emit currentChanged();
+   emit currentChanged(value);
 }
 
 void ArmoryServersModel::setData(int curIdx, int connIdx
@@ -140,7 +144,7 @@ QVariant ArmoryServersModel::data(const QModelIndex& index, int role) const
 
 bool ArmoryServersModel::setData(const QModelIndex& index, const QVariant& value, int role)
 {
-   if(!index.isValid() || index.row() > rowCount()) {
+   if (!index.isValid() || index.row() > rowCount()) {
       return false;
    }
 

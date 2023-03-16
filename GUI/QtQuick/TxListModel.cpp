@@ -215,11 +215,12 @@ void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
    std::vector<bs::TXEntry> newEntries;
    for (const auto& entry : entries) {
       int row = -1;
+      std::shared_lock readLock{ dataMtx_ };
       for (int i = 0; i < data_.size(); ++i) {
-         const auto& de = data_.at(i);
+         auto& de = data_.at(i);
          if ((entry.txHash == de.txHash) && (de.walletIds == entry.walletIds)) {
-            data_[i].txTime = entry.txTime;
-            data_[i].recvTime = entry.recvTime;
+            de.txTime = entry.txTime;
+            de.recvTime = entry.recvTime;
             row = i;
             break;
          }
@@ -236,6 +237,7 @@ void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
    if (!newEntries.empty()) {
       QMetaObject::invokeMethod(this, [this, newEntries] {
          logger_->debug("[TxListModel::addRows] {} new entries", newEntries.size());
+         //std::unique_lock writeLock{ dataMtx_ };
          beginInsertRows(QModelIndex(), rowCount(), rowCount() + newEntries.size() - 1);
          data_.insert(data_.end(), newEntries.cbegin(), newEntries.cend());
          endInsertRows();
@@ -254,6 +256,7 @@ void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
 
 void TxListModel::clear()
 {
+   //std::unique_lock writeLock{ dataMtx_ };
    beginResetModel();
    data_.clear();
    txDetails_.clear();
@@ -282,9 +285,11 @@ void TxListModel::setTxComment(const std::string& txHash, const std::string& com
 void TxListModel::setDetails(const bs::sync::TXWalletDetails& txDet)
 {
    int row = -1;
+   //std::shared_lock readLock{ dataMtx_ };
    for (int i = 0; i < data_.size(); ++i) {
       const auto& entry = data_.at(i);
       if ((entry.txHash == txDet.txHash) && (txDet.walletIds == entry.walletIds)) {
+         std::unique_lock writeLock{ dataMtx_ };
          txDetails_[i] = txDet;
          data_[i].addresses = txDet.ownAddresses;
          row = i;
@@ -293,11 +298,12 @@ void TxListModel::setDetails(const bs::sync::TXWalletDetails& txDet)
    }
    if (row != -1) {
       emit dataChanged(createIndex(row, 1), createIndex(row, 6));
-      //logger_->debug("[TxListModel::setDetails] {} {} found at row {}", txDet.txHash.toHexStr(), txDet.hdWalletId, row);
+      logger_->debug("[TxListModel::setDetails] {} {} found at row {}", txDet.txHash.toHexStr(), txDet.hdWalletId, row);
       
    }
    else {
-      //logger_->warn("[TxListModel::setDetails] {} {} not found", txDet.txHash.toHexStr(), txDet.hdWalletId);
+      logger_->warn("[TxListModel::setDetails] {} {} not found", txDet.txHash.toHexStr(), txDet.hdWalletId);
+      //std::unique_lock writeLock{ dataMtx_ };
       pendingDetails_.push_back(txDet);
    }
 }
@@ -305,6 +311,7 @@ void TxListModel::setDetails(const bs::sync::TXWalletDetails& txDet)
 void TxListModel::removeTX(const BinaryData& txHash)
 {
    int rowStart = -1, rowEnd = -1;
+   std::shared_lock readLock{ dataMtx_ };
    for (int i = 0; i < data_.size(); ++i) {
       const auto& entry = data_.at(i);
       if (entry.txHash == txHash) {
@@ -320,6 +327,10 @@ void TxListModel::removeTX(const BinaryData& txHash)
    }
    logger_->debug("[{}] {}: start: {}, end: {}", __func__, txHash.toHexStr(true), rowStart, rowEnd);
    QMetaObject::invokeMethod(this, [this, rowStart, rowEnd] {
+      if (rowStart >= rowCount()) {
+         return;
+      }
+      //std::unique_lock writeLock{ dataMtx_ };
       beginRemoveRows(QModelIndex(), rowStart, rowEnd);
       data_.erase(data_.cbegin() + rowStart, data_.cbegin() + rowEnd + 1);
       for (int i = rowEnd + 1; i < txDetails_.size(); i++) {
@@ -339,6 +350,7 @@ void TxListModel::setCurrentBlock(uint32_t nbBlock)
       return;
    }
    const int diff = nbBlock - curBlock_;
+   std::unique_lock writeLock{ dataMtx_ };
    curBlock_ = nbBlock;
    for (auto& entry : data_) {
       entry.nbConf += diff;
@@ -360,6 +372,7 @@ bool TxListModel::exportCSVto(const QString& filename)
       return false;
    }
    fstrm << "sep=;\nTimestamp;Wallet;Type;Address;TxId;Amount;Comment\n";
+   std::shared_lock readLock{ dataMtx_ };
    for (int i = 0; i < rowCount(); ++i) {
       const auto& entry = data_.at(i);
       std::time_t txTime = entry.txTime;

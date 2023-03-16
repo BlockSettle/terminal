@@ -201,6 +201,7 @@ signals:
 
 private slots:
    void onArmoryServerChanged(const QModelIndex&, const QVariant&);
+   void onArmoryServerSelected(int index);
 
 private:
    bs::message::ProcessingResult processSettings(const bs::message::Envelope &);

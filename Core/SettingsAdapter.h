@@ -14,6 +14,7 @@
 #include <QObject>
 #include <QStringList>
 #include <QVariant>
+#include "ArmorySettings.h"
 #include "Message/Adapter.h"
 #include "TerminalMessage.h"
 
@@ -80,6 +81,7 @@ private:
    bs::message::ProcessingResult processUpdArmoryServer(const bs::message::Envelope&
       , const BlockSettle::Terminal::SettingsMessage_ArmoryServerUpdate&);
    bs::message::ProcessingResult processSignerSettings(const bs::message::Envelope&);
+   void sendSettings(const ArmorySettings&, bool netTypeChanged = false);
    bs::message::ProcessingResult processRemoteSettings(uint64_t msgId);
    bs::message::ProcessingResult processGetState(const bs::message::Envelope&);
    bs::message::ProcessingResult processReset(const bs::message::Envelope&

@@ -22,10 +22,15 @@
 #define TESTNET_ARMORY_BLOCKSETTLE_ADDRESS "armory-testnet.blocksettle.com"
 #define TESTNET_ARMORY_BLOCKSETTLE_PORT 80
 
+namespace spdlog {
+   class logger;
+}
+
 class ArmoryServersProvider
 {
 public:
-   ArmoryServersProvider(const std::shared_ptr<ApplicationSettings>&);
+   ArmoryServersProvider(const std::shared_ptr<ApplicationSettings>&
+      , const std::shared_ptr<spdlog::logger> &);
 
    std::vector<ArmoryServer> servers() const;
    ArmorySettings getArmorySettings() const;
@@ -41,7 +46,7 @@ public:
    bool add(const ArmoryServer &server);
    bool replace(int index, const ArmoryServer &server);
    bool remove(int index);
-   void setupServer(int index);
+   NetworkType setupServer(int index);
 
    int addKey(const QString &address, int port, const QString &key);
    int addKey(const std::string &srvIPPort, const BinaryData &srvPubKey);
@@ -54,6 +59,7 @@ public:
 
 private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
+   std::shared_ptr<spdlog::logger>        logger_;
    int lastConnectedIndex_{ -1 };
    static const std::vector<ArmoryServer> defaultServers_;
 };

@@ -53,7 +53,7 @@ public:
 
 signals:
    void changed(const QModelIndex&, const QVariant&);
-   void currentChanged();
+   void currentChanged(int index);
    void connectedChanged();
    void rowCountChanged();
 

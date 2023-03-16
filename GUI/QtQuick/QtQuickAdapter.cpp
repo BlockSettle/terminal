@@ -369,6 +369,19 @@ bool QtQuickAdapter::processBroadcast(const bs::message::Envelope& env)
    return false;
 }
 
+void QtQuickAdapter::onArmoryServerSelected(int index)
+{
+   auto model = qobject_cast<ArmoryServersModel*>(sender());
+   if (!model) {
+      logger_->error("[{}] invalid sender", __func__);
+      return;
+   }
+   logger_->debug("[{}] #{}", __func__, index);
+   SettingsMessage msg;
+   msg.set_set_armory_server(index);
+   pushRequest(user_, userSettings_, msg.SerializeAsString());
+}
+
 ProcessingResult QtQuickAdapter::processSettings(const Envelope &env)
 {
    SettingsMessage msg;
@@ -451,7 +464,8 @@ ProcessingResult QtQuickAdapter::processSettingsState(const SettingsMessage_Sett
 ProcessingResult QtQuickAdapter::processArmoryServers(bs::message::SeqId msgId
    , const SettingsMessage_ArmoryServers& response)
 {
-   logger_->debug("[{}]", __func__);
+   logger_->debug("[{}] current={}, connected={}", __func__, response.idx_current()
+      , response.idx_connected());
    const auto& itReq = armoryServersReq_.find(msgId);
    if (itReq == armoryServersReq_.end()) {
       logger_->warn("[{}] unknown request #{}", __func__, msgId);
@@ -527,6 +541,7 @@ ProcessingResult QtQuickAdapter::processBlockchain(const Envelope &env)
       break;
    case ArmoryMessage::kWalletRegistered:
       if (msg.wallet_registered().success() && msg.wallet_registered().wallet_id().empty()) {
+         logger_->debug("wallets ready");
          walletsReady_ = true;
          WalletsMessage msg;
          msg.set_get_ledger_entries({});
@@ -600,6 +615,13 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
       break;
    case SignerMessage::kWalletSeed:
       return processWalletSeed(msg.wallet_seed());
+   case SignerMessage::kWalletsReset:
+      hdWallets_.clear();
+      if (walletBalances_) {
+         walletBalances_->clear();
+      }
+      walletsReady_ = false;
+      break;
    case SignerMessage::kWalletsListUpdated:
    default: return ProcessingResult::Ignored;
    }
@@ -686,6 +708,7 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
       return processReservedUTXOs(msg.reserved_utxos());
    case WalletsMessage::kWalletChanged:
       if (walletsReady_) {
+         logger_->debug("ledger entries");
           WalletsMessage msg;
           msg.set_get_ledger_entries({});
           pushRequest(user_, userWallets_, msg.SerializeAsString());
@@ -947,6 +970,9 @@ std::string QtQuickAdapter::generateWalletName() const
 
 void QtQuickAdapter::walletSelected(int index)
 {
+   if (index < 0) {
+      return;
+   }
    logger_->debug("[{}] {}", __func__, index);
    QMetaObject::invokeMethod(this, [this, index] {
       try {
@@ -1152,12 +1178,10 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
          }
       }
       else {
-         const auto details = itTxDet->second;
-         QMetaObject::invokeMethod(this, [this, details, txDet] {
+         QMetaObject::invokeMethod(this, [this, details = itTxDet->second, txDet] {
             details->setDetails(txDet);
             details->setCurBlock(blockNum_);
          }); // shouldn't be more than one entry
-         
          txDetailReqs_.erase(itTxDet);
       }
    }
@@ -1350,6 +1374,7 @@ ArmoryServersModel* QtQuickAdapter::getArmoryServers()
    auto model = new ArmoryServersModel(logger_, this);
    armoryServersReq_[msgId] = model;
    connect(model, &ArmoryServersModel::changed, this, &QtQuickAdapter::onArmoryServerChanged);
+   connect(model, &ArmoryServersModel::currentChanged, this, &QtQuickAdapter::onArmoryServerSelected);
    return model;
 }
 

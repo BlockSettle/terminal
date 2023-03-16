@@ -158,6 +158,11 @@ ProcessingResult SignerAdapter::processOwnRequest(const bs::message::Envelope &e
 
 ProcessingResult SignerAdapter::processSignerSettings(const SettingsMessage_SignerServer &response)
 {
+   {
+      SignerMessage msg;
+      msg.mutable_wallets_reset();
+      pushBroadcast(user_, msg.SerializeAsString(), true);
+   }
    curServerId_ = response.id();
    netType_ = static_cast<NetworkType>(response.network_type());
    walletsDir_ = response.home_dir();

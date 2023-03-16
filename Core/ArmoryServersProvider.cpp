@@ -12,6 +12,7 @@
 #include "BootstrapDataManager.h"
 #include <QDir>
 #include <QStandardPaths>
+#include <spdlog/spdlog.h>
 
 namespace {
 
@@ -40,8 +41,9 @@ const std::vector<ArmoryServer> ArmoryServersProvider::defaultServers_ = {
 
 const int ArmoryServersProvider::kDefaultServersCount = ArmoryServersProvider::defaultServers_.size();
 
-ArmoryServersProvider::ArmoryServersProvider(const std::shared_ptr<ApplicationSettings> &appSettings)
-   : appSettings_(appSettings)
+ArmoryServersProvider::ArmoryServersProvider(const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<spdlog::logger>& logger)
+   : appSettings_(appSettings), logger_(logger)
 {}
 
 std::vector<ArmoryServer> ArmoryServersProvider::servers() const
@@ -128,7 +130,11 @@ int ArmoryServersProvider::indexOf(const ArmoryServer &server) const
    const auto& srvrs = servers();
    for (int i = 0; i < srvrs.size(); ++i) {
       const auto& s = srvrs.at(i);
-      if ((s.name == server.name) && (s.netType == server.netType)
+      logger_->debug("[{}] {}: {} vs {}, {} vs {}, {} vs {}, {} vs {}", __func__
+         , i, s.name.toStdString(), server.name.toStdString(), (int)s.netType
+         , (int)server.netType, s.armoryDBIp.toStdString()
+         , server.armoryDBIp.toStdString(), s.armoryDBPort, server.armoryDBPort);
+      if ((server.name.isEmpty() || (s.name == server.name)) && (s.netType == server.netType)
          && (s.armoryDBIp == server.armoryDBIp) && (s.armoryDBPort == server.armoryDBPort)) {
          return i;
       }
@@ -251,8 +257,9 @@ bool ArmoryServersProvider::remove(int index)
    }
 }
 
-void ArmoryServersProvider::setupServer(int index)
+NetworkType ArmoryServersProvider::setupServer(int index)
 {
+   NetworkType netType{ NetworkType::Invalid };
    const auto& srvList = servers();
    if (index >= 0 && index < srvList.size()) {
       ArmoryServer server = srvList.at(index);
@@ -261,7 +268,10 @@ void ArmoryServersProvider::setupServer(int index)
       appSettings_->set(ApplicationSettings::armoryDbPort, server.armoryDBPort);
       appSettings_->set(ApplicationSettings::netType, static_cast<int>(server.netType));
       appSettings_->set(ApplicationSettings::runArmoryLocally, server.runLocally);
+      netType = server.netType;
    }
+   lastConnectedIndex_ = index;
+   return netType;
 }
 
 int ArmoryServersProvider::addKey(const QString &address, int port, const QString &key)
