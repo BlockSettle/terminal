@@ -22,8 +22,8 @@ namespace {
    enum class ServerIndices {
       MainNet = 0,
       TestNet,
-      LocalhostMainNet,
-      LocalHostTestNet
+      //LocalhostMainNet,
+      //LocalHostTestNet
    };
 
 } // namespace
@@ -31,12 +31,12 @@ namespace {
 const std::vector<ArmoryServer> ArmoryServersProvider::defaultServers_ = {
    ArmoryServer::fromTextSettings(QStringLiteral(ARMORY_BLOCKSETTLE_NAME":0:mainnet.blocksettle.com:9003:")),
    ArmoryServer::fromTextSettings(QStringLiteral(ARMORY_BLOCKSETTLE_NAME":1:testnet.blocksettle.com:19003:")),
-   ArmoryServer::fromTextSettings(kEnableLocalAutostart ?
+/*   ArmoryServer::fromTextSettings(kEnableLocalAutostart ?
       QStringLiteral("%1:0:127.0.0.1::").arg(QObject::tr("Local Auto-launch Node")) :
       QStringLiteral("%1:0:127.0.0.1::").arg(QObject::tr("Local BlockSettleDB Node"))),
    ArmoryServer::fromTextSettings(kEnableLocalAutostart ?
       QStringLiteral("%1:1:127.0.0.1::").arg(QObject::tr("Local Auto-launch Node")) :
-      QStringLiteral("%1:1:127.0.0.1:81:").arg(QObject::tr("Local BlockSettleDB Node")))
+      QStringLiteral("%1:1:127.0.0.1:81:").arg(QObject::tr("Local BlockSettleDB Node")))*/
 };
 
 const int ArmoryServersProvider::kDefaultServersCount = ArmoryServersProvider::defaultServers_.size();
@@ -61,7 +61,7 @@ std::vector<ArmoryServer> ArmoryServersProvider::servers() const
    //bsTestNet.armoryDBKey = QString::fromStdString(bootstrapDataManager_->getArmoryTestnetKey());
    servers.push_back(bsTestNet);
 
-   // #3 add localhost node MainNet
+/*   // #3 add localhost node MainNet
    ArmoryServer localMainNet = defaultServers_.at(static_cast<int>(ServerIndices::LocalhostMainNet));
    localMainNet.armoryDBPort = appSettings_->GetDefaultArmoryLocalPort(NetworkType::MainNet);
    localMainNet.runLocally = kEnableLocalAutostart;
@@ -71,7 +71,7 @@ std::vector<ArmoryServer> ArmoryServersProvider::servers() const
    ArmoryServer localTestNet = defaultServers_.at(static_cast<int>(ServerIndices::LocalHostTestNet));
    localTestNet.armoryDBPort = appSettings_->GetDefaultArmoryLocalPort(NetworkType::TestNet);
    localTestNet.runLocally = kEnableLocalAutostart;
-   servers.push_back(localTestNet);
+   servers.push_back(localTestNet);*/
 
    for (const QString &srv : userServers) {
       servers.push_back(ArmoryServer::fromTextSettings(srv));

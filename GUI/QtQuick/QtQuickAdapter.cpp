@@ -1401,6 +1401,7 @@ bool QtQuickAdapter::addArmoryServer(ArmoryServersModel* model, const QString& n
 
 bool QtQuickAdapter::delArmoryServer(ArmoryServersModel* model, int idx)
 {
+   logger_->debug("[{}] #{}", __func__, idx);
    if (!model->isEditable(idx)) {
       return false;
    }
