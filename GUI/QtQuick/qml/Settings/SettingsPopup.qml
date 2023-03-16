@@ -14,7 +14,7 @@ CustomPopup {
     _stack_view.initialItem: settings_menu
     _arrow_but_visibility: !settings_menu.visible
 
-    property var armoryServersModel: ({})
+    property var armoryServersModel: null
 
     SettingsMenu {
         id: settings_menu
@@ -27,6 +27,7 @@ CustomPopup {
 
         onSig_network: {
             _stack_view.push(settings_network)
+            root.updateServersModel()
             settings_network.init()
         }
 
@@ -101,7 +102,8 @@ CustomPopup {
         settings_menu.init()
     }
 
-    Component.onCompleted: {
+    function updateServersModel()
+    {
         root.armoryServersModel = bsApp.getArmoryServers()
     }
 }

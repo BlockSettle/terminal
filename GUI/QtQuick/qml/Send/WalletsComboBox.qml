@@ -31,14 +31,4 @@ CustomComboBox {
 
     textRole: "name"
     valueRole: "name"
-
-//    Connections
-//    {
-//        target:walletBalances
-//        function onRowCountChanged ()
-//        {
-//            console.log("WalletsComboBox: overviewWalletIndex = " + overviewWalletIndex)
-//            from_wallet_combo.currentIndex = overviewWalletIndex
-//        }
-//    }
 }

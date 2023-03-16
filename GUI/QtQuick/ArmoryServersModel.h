@@ -39,8 +39,8 @@ public:
    void setData(int curIdx, int connIdx, const std::vector<ArmoryServer>&);
    void add(const ArmoryServer&);
    // netType==0 => MainNet, netType==1 => TestNet
-   Q_INVOKABLE void add(QString name, QString armoryDBIp, int armoryDBPort, int netType, QString armoryDBKey);
-   Q_INVOKABLE bool del(int idx);
+   void add(QString name, QString armoryDBIp, int armoryDBPort, int netType, QString armoryDBKey);
+   bool del(int idx);
    auto data() const { return data_; }
    auto data(int idx) const { return data_.at(idx); }
 
