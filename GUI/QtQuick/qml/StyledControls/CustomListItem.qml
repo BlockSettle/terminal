@@ -22,6 +22,7 @@ Rectangle {
     //usually we dont need only if custom margin and size
     property alias _icon: icon
     property alias icon_add_source: icon_add.source
+    property alias icon_add_z: icon_add.z
     property alias title_text: title.text
 
     signal clicked_add()
@@ -75,7 +76,7 @@ Rectangle {
         anchors.right: rect.right
         anchors.rightMargin: 13
 
-        z: 1
+        z: 0
         width: 24
         height: 24
         sourceSize.width: 24
@@ -92,10 +93,8 @@ Rectangle {
     MouseArea {
         id: mouseArea
         anchors.fill: parent
-        //propagateComposedEvents: true
         onClicked: {
             rect.clicked()
-            //mouse.accepted = false
         }
     }
 }

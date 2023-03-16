@@ -87,7 +87,10 @@ void ArmoryServersModel::add(QString name, QString armoryDBIp, int armoryDBPort,
       server.netType = NetworkType::TestNet;
    }
 
-   add(server);
+   QMetaObject::invokeMethod(this, [this, server] {
+      add(server);
+      setCurrent(rowCount() - 1);
+      });
 }
 
 bool ArmoryServersModel::del(int idx)

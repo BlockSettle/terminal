@@ -61,6 +61,7 @@ ColumnLayout  {
             icon_add_source: isDefault ? "" : "qrc:/images/delete.png"
             radio_checked: isCurrent
             radio_group: radioGroup
+            icon_add_z: 1
 
             onClicked_add: {
                 if (!isDefault)
@@ -70,16 +71,17 @@ ColumnLayout  {
             }
 
             onClicked: {
-                if (!isDefault)
-                {
-                    sig_modify_custom (index)
-                }
-            }
-
-            onSig_radio_clicked: {
-                if (radio_checked)
+                console.log("SettingsNetwork: radiolistitem: onclicked")
+                console.log("isCurrent = " + isCurrent)
+                console.log("isDefault = " + isDefault)
+                if (isCurrent === false)
                 {
                     isCurrent = true
+                    radio_checked = true
+                }
+                else if (isDefault === false)
+                {
+                    sig_modify_custom (index)
                 }
             }
         }

@@ -71,7 +71,7 @@ QString WalletBalancesModel::getBalance(const std::string& walletId
 {
    const auto& itBal = balances_.find(walletId);
    if (itBal == balances_.end()) {
-      return tr("-");
+      return QLatin1String("0.00000000");
    }
    return ff(itBal->second);
 }
