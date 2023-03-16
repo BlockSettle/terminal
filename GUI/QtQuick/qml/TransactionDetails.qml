@@ -59,8 +59,10 @@ Popup {
             Label {
                 text: qsTr("Transaction details")
                 color: BSStyle.textColor
-                font.pixelSize: 19
-                font.weight: Font.Medium
+                font.pixelSize: 20
+                font.family: "Roboto"
+                font.weight: Font.Bold
+                font.letterSpacing: 0.35
             }
 
             Grid {
@@ -253,8 +255,9 @@ Popup {
             Label {
                 text: qsTr("Input addresses")
                 color: BSStyle.textColor
-                font.pixelSize: 19
-                font.weight: Font.Medium
+                font.pixelSize: 16
+                font.weight: Font.DemiBold
+                font.family: "Roboto"
             }
 
             Rectangle {
@@ -277,11 +280,12 @@ Popup {
                 }
             }
 
-            Label {
+            Text {
                 text: qsTr("Output addresses")
                 color: BSStyle.textColor
-                font.pixelSize: 19
-                font.weight: Font.Medium
+                font.pixelSize: 16
+                font.weight: Font.DemiBold
+                font.family: "Roboto"
             }
 
             Rectangle {

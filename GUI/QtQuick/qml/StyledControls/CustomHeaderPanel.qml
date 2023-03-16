@@ -37,6 +37,7 @@ Rectangle {
         font.capitalization: Font.AllUppercase
         color: BSStyle.textColor
         font.pixelSize: 11
+        font.family: "Roboto"
         verticalAlignment: Text.AlignVCenter
     }
 }

@@ -42,7 +42,9 @@ Item {
                 height: parent.height
                 color: BSStyle.textColor
                 font.pixelSize: 20
+                font.family: "Roboto"
                 font.weight: Font.Bold
+                font.letterSpacing: 0.35
                 verticalAlignment: Text.AlignBottom
             }
             Label {
@@ -51,6 +53,7 @@ Item {
                 text: tx ? tx.txId : qsTr("Unknown")
                 color: BSStyle.textColor
                 font.pixelSize: 14
+                font.family: "Roboto"
                 verticalAlignment: Text.AlignBottom
             
                 CopyIconButton {
@@ -211,6 +214,7 @@ Item {
                             text: qsTr("Input")
                             color: BSStyle.textColor
                             font.pixelSize: 20
+                            font.family: "Roboto"
                             font.weight: Font.Bold
                         }
                         Image {
@@ -259,6 +263,7 @@ Item {
                             text: qsTr("Output")
                             color: BSStyle.textColor
                             font.pixelSize: 20
+                            font.family: "Roboto"
                             font.weight: Font.Bold
                         }
                         Image {

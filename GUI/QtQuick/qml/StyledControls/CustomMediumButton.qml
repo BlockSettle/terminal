@@ -26,6 +26,7 @@ Button {
     font.pixelSize: 12
     font.family: "Roboto"
     font.weight: Font.Normal
+    font.letterSpacing: 0.3
 
     background: Rectangle {
         color: control.background_color

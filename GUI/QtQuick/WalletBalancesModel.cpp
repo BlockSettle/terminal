@@ -90,13 +90,10 @@ void WalletBalancesModel::addWallet(const Wallet& wallet)
       }
    }
    //logger_->debug("[WalletBalancesModel::addWallet] adding #{}: {}", rowCount(), wallet.walletName);
-   QMetaObject::invokeMethod(this, [this, wallet] {
-      beginInsertRows(QModelIndex(), rowCount(), rowCount());
-      wallets_.push_back(wallet);
-      endInsertRows();
-
-      emit rowCountChanged();
-      });
+   beginInsertRows(QModelIndex(), rowCount(), rowCount());
+   wallets_.push_back(wallet);
+   endInsertRows();
+   emit rowCountChanged();
 }
 
 void WalletBalancesModel::deleteWallet(const std::string& walletId)

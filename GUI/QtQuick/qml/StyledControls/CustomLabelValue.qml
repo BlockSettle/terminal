@@ -14,6 +14,7 @@ import "../BsStyles"
 
 Label {
     font.pixelSize: 11
+    font.family: "Roboto"
     color: "white"
     wrapMode: Text.WordWrap
     topPadding: 5

@@ -76,6 +76,7 @@ CustomTableView {
                         font.family: "Roboto"
                         font.weight: Font.Normal
                         font.pixelSize: 13
+                        font.letterSpacing: -0.2
                         leftPadding: 10
                     }
                     Text {
@@ -85,6 +86,7 @@ CustomTableView {
                         font.family: "Roboto"
                         font.weight: Font.Normal
                         font.pixelSize: 13
+                        font.letterSpacing: -0.2
                         clip: true
                     }
                 }
@@ -98,6 +100,7 @@ CustomTableView {
                         font.family: "Roboto"
                         font.weight: Font.Normal
                         font.pixelSize: 13
+                        font.letterSpacing: -0.2
                         leftPadding: 10
                     }
                     Text {
@@ -107,6 +110,7 @@ CustomTableView {
                         font.family: "Roboto"
                         font.weight: Font.Normal
                         font.pixelSize: 13
+                        font.letterSpacing: -0.2
                         clip: true
                     }
                 }

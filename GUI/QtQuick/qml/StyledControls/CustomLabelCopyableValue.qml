@@ -22,6 +22,7 @@ Label {
     property string textForCopy
 
     font.pixelSize: 11
+    font.family: "Roboto"
     color: "white"
     wrapMode: Text.WordWrap
     padding: 5

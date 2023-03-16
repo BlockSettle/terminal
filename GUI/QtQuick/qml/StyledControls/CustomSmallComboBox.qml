@@ -17,7 +17,9 @@ import "."
 CustomComboBox {
     id: control
 
-    fontSize: 11
+    font.family: "Roboto"
+    font.letterSpacing: 0.3
+    fontSize: 12
     fontColor: BSStyle.titleTextColor
 
     leftPadding: 10

@@ -23,6 +23,7 @@ Button {
 
     contentItem: Text {
         text: parent.text
+        font.family: "Roboto"
         font.capitalization: Font.AllUppercase
         color: { parent.enabled ? textColor : BSStyle.disabledHeaderColor }
         font.pixelSize: 11

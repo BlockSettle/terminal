@@ -15,6 +15,7 @@ import "../BsStyles"
 Label {
     horizontalAlignment: Text.AlignHLeft
     font.pixelSize: 11
+    font.family: "Roboto"
     color: { enabled ? BSStyle.labelsTextColor : BSStyle.disabledColor }
     wrapMode: Text.WordWrap
     topPadding: 5

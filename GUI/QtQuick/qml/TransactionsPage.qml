@@ -65,9 +65,11 @@ Item {
 
             Label {
                 text: qsTr("Transactions list")
-                font.pixelSize: 19
-                font.weight: Font.DemiBold
                 color: BSStyle.textColor
+                font.pixelSize: 20
+                font.family: "Roboto"
+                font.weight: Font.Bold
+                font.letterSpacing: 0.35
             }
 
             Row 
@@ -79,7 +81,6 @@ Item {
                 CustomSmallComboBox {
                     id: txWalletsComboBox
                     model: bsApp.txWalletsList
-                    font.pointSize: 8
 
                     width: 124
                     height: 29
@@ -108,7 +109,6 @@ Item {
                 CustomSmallComboBox {
                     id: txTypesComboBox
                     model: bsApp.txTypesList
-                    font.pointSize: 8
 
                     width: 124
                     height: 29
@@ -141,7 +141,6 @@ Item {
                     
                     CustomButtonLeftIcon {
                         text: qsTr("From")
-                        font.pointSize: 8
 
                         custom_icon.source: "qrc:/images/calendar_icon.svg"
 
@@ -156,7 +155,6 @@ Item {
 
                     CustomButtonLeftIcon {
                         text: qsTr("To")
-                        font.pointSize: 8
 
                         custom_icon.source: "qrc:/images/calendar_icon.svg"
                     }
@@ -164,7 +162,6 @@ Item {
 
                 CustomButtonRightIcon {
                     text: qsTr("CSV download")
-                    font.pointSize: 8
 
                     custom_icon.source: "qrc:/images/download_icon.svg"
                     custom_icon.width: 10

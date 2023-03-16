@@ -53,11 +53,13 @@ Popup {
             anchors.bottomMargin: 12
             spacing: 20
 
-            Label {
-                text: qsTr("Address details")
+            Text {
+                text: qsTr("Address")
                 color: BSStyle.textColor
-                font.pixelSize: 19
-                font.weight: Font.Medium
+                font.pixelSize: 20
+                font.family: "Roboto"
+                font.weight: Font.Bold
+                font.letterSpacing: 0.35
             }
 
             Row {
@@ -190,8 +192,9 @@ Popup {
                 Label {
                     text: qsTr("Incoming transactions")
                     color: BSStyle.textColor
-                    font.pixelSize: 19
-                    font.weight: Font.Medium
+                    font.pixelSize: 16
+                    font.weight: Font.DemiBold
+                    font.family: "Roboto"
                 }
 
                 Image {
@@ -233,8 +236,9 @@ Popup {
                 Label {
                     text: qsTr("Outgoing transactions")
                     color: BSStyle.textColor
-                    font.pixelSize: 19
-                    font.weight: Font.Medium
+                    font.family: "Roboto"
+                    font.pixelSize: 16
+                    font.weight: Font.DemiBold
                 }
 
                 Image {
