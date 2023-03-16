@@ -104,9 +104,6 @@ CustomPopup {
 
     function updateServersModel()
     {
-        if (root.armoryServersModel === null)
-        {
-            root.armoryServersModel = bsApp.getArmoryServers()
-        }
+        root.armoryServersModel = bsApp.getArmoryServers()
     }
 }
