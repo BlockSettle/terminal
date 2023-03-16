@@ -88,7 +88,7 @@ ColumnLayout  {
 
             preferred: true
             function click_enter() {
-                armoryServersModel.del(server_index)
+                bsApp.delArmoryServer(armoryServersModel, server_index)
                 sig_delete()
             }
         }

@@ -214,7 +214,6 @@ ColumnLayout  {
             var cur_value = parseFloat(amount_input.input_text)
             var bottom = 0
             var top = tempRequest.maxAmount
-            console.log("tempRequest.maxAmount = " + tempRequest.maxAmount)
             if(cur_value < bottom || cur_value > top)
             {
                 amount_input.input_text = tempRequest.maxAmount

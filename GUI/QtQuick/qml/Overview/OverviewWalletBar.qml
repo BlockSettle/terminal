@@ -51,7 +51,7 @@ Rectangle {
             Connections {
                 target: bsApp
                 onRequestWalletSelection: (index) => {
-                    currentIndex = index
+                    wallet_selection_combobox.currentIndex = index
                 }
             }
         }

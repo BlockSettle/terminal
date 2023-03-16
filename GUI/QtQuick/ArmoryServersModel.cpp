@@ -57,9 +57,7 @@ void ArmoryServersModel::setData(int curIdx, int connIdx
       data_ = data;
       endResetModel();
       logger_->debug("[{}] curIdx = {}", __func__, curIdx);
-      if (current_ != curIdx) {
-         setCurrent(curIdx);
-      }
+      setCurrent(curIdx);
       if (connected_ != connIdx) {
          connected_ = connIdx;
          emit connectedChanged();
@@ -187,5 +185,5 @@ QHash<int, QByteArray> ArmoryServersModel::roleNames() const
 
 bool ArmoryServersModel::isEditable(int row) const
 {
-   return data(index(row), DefaultServerRole).toBool();
+   return !data(index(row), DefaultServerRole).toBool();
 }

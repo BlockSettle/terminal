@@ -71,9 +71,6 @@ ColumnLayout  {
             }
 
             onClicked: {
-                console.log("SettingsNetwork: radiolistitem: onclicked")
-                console.log("isCurrent = " + isCurrent)
-                console.log("isDefault = " + isDefault)
                 if (isCurrent === false)
                 {
                     isCurrent = true
@@ -94,8 +91,11 @@ ColumnLayout  {
             {
                 var new_height = Math.min(armoryServersModel.rowCount * 50 + (armoryServersModel.rowCount - 1) * 10,
                                           425)
-                //list.height = new_height
                 list.implicitHeight = new_height
+            }
+            function onCurrentChanged (ind)
+            {
+                list.itemAtIndex(ind).radio_checked = true
             }
         }
     }
