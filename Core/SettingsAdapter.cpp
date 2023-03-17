@@ -114,6 +114,9 @@ ProcessingResult SettingsAdapter::process(const bs::message::Envelope &env)
          break;
       }
    }
+   else {
+      return ProcessingResult::Success;
+   }
    return ProcessingResult::Ignored;
 }
 
@@ -137,7 +140,7 @@ bool SettingsAdapter::processBroadcast(const bs::message::Envelope& env)
 
 void SettingsAdapter::sendSettings(const ArmorySettings& armorySettings, bool netTypeChanged)
 {
-   {
+   if (!armorySettings.empty()) {
       ArmoryMessage msg;
       auto msgResp = msg.mutable_settings_response();
       armoryServersProvider_->setConnectedArmorySettings(armorySettings);
@@ -152,8 +155,8 @@ void SettingsAdapter::sendSettings(const ArmorySettings& armorySettings, bool ne
       msgResp->set_bitcoin_dir(armorySettings.bitcoinBlocksDir.toStdString());
       msgResp->set_db_dir(armorySettings.dbDir.toStdString());
       msgResp->set_cache_file_name(appSettings_->get<std::string>(ApplicationSettings::txCacheFileName));
-      pushResponse(user_, bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain)
-         , msg.SerializeAsString());
+      pushRequest(user_, bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain)
+         , msg.SerializeAsString(), {}, 3, std::chrono::seconds{10});
    }
    if (netTypeChanged) {
       logger_->debug("[{}] network type changed - reloading wallets", __func__);
