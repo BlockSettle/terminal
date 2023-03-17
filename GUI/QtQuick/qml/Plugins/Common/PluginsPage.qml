@@ -12,6 +12,7 @@ import QtQuick 2.9
 import QtQuick.Controls 2.3
 
 import "."
+import "../../BsStyles"
 import "../../StyledControls"
 
 Rectangle {
@@ -53,7 +54,7 @@ Rectangle {
          width: parent.width
          height: parent.height - header.height
          cellWidth: 237
-         cellHeight: 312
+         cellHeight: 302
          model: pluginFilterModel
          clip: true
 
@@ -65,13 +66,13 @@ Rectangle {
          delegate: Rectangle {
             color: "transparent"
             width: 237
-            height: 312
+            height: 302
 
             Card {
-               anchors.centerIn: parent
-               name: name
-               description: description
-               icon_source: icon
+               anchors.top: parent.top
+               name: name_role
+               description: description_role
+               icon_source: icon_role
             }
          }
       }

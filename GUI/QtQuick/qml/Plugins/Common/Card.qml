@@ -56,7 +56,7 @@ Rectangle {
          font.letterSpacing: 0.3
          color: BSStyle.titleTextColor
          width: parent.width
-         wrapMode: Text.WrapAnywhere
+         wrapMode: Text.Wrap
       }
    }
 

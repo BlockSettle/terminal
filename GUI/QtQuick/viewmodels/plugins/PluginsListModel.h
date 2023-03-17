@@ -19,7 +19,6 @@ struct Plugin {
    QString name;
    QString description;
    QString icon;
-   bool isInstalled;
 };
 
 class PluginsListModel: public QAbstractListModel
@@ -30,8 +29,7 @@ public:
    {
       Name = Qt::UserRole + 1,
       Description,
-      Icon,
-      IsInstalled
+      Icon
    };
    Q_ENUM(PluginRoles)
 
@@ -40,9 +38,7 @@ public:
    int rowCount(const QModelIndex & = QModelIndex()) const override;
    QVariant data(const QModelIndex& index, int role) const override;
    QHash<int, QByteArray> roleNames() const override;
-   bool setData(const QModelIndex& index, const QVariant& value, int role) override;
 
 private:
    std::vector<Plugin> plugins_;
 };
-

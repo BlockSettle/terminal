@@ -14,42 +14,19 @@
 namespace
 {
    static const QHash<int, QByteArray> kRoles {
-      {PluginsListModel::PluginRoles::Name, "name"},
-      {PluginsListModel::PluginRoles::Description, "description"},
-      {PluginsListModel::PluginRoles::Icon, "icon"},
-      {PluginsListModel::PluginRoles::IsInstalled, "isInstalled"}
+      {PluginsListModel::PluginRoles::Name, "name_role"},
+      {PluginsListModel::PluginRoles::Description, "description_role"},
+      {PluginsListModel::PluginRoles::Icon, "icon_role"}
    };
 }
 
 PluginsListModel::PluginsListModel(QObject* parent)
    : QAbstractListModel(parent)
 {
-   // temporary model
    plugins_ = {
-      { tr("SideShift.ai v1")
+      { tr("SideShift.ai")
       , tr("Shift between BTC, ETH, BCH, XMR, USDT and 90+ other cryptocurrencies")
-      , QString::fromLatin1("qrc:/images/sideshift_plugin.png")
-      , false },
-      { tr("SideShift.ai v2")
-      , tr("Shift between BTC, ETH, BCH, XMR, USDT and 90+ other cryptocurrencies")
-      , QString::fromLatin1("qrc:/images/sideshift_plugin.png")
-      , false },
-      { tr("SideShift.ai v3")
-      , tr("Shift between BTC, ETH, BCH, XMR, USDT and 90+ other cryptocurrencies")
-      , QString::fromLatin1("qrc:/images/sideshift_plugin.png")
-      , false },
-      { tr("SideShift.ai v4")
-      , tr("Shift between BTC, ETH, BCH, XMR, USDT and 90+ other cryptocurrencies")
-      , QString::fromLatin1("qrc:/images/sideshift_plugin.png")
-      , false },
-      { tr("SideShift.ai v5")
-      , tr("Shift between BTC, ETH, BCH, XMR, USDT and 90+ other cryptocurrencies")
-      , QString::fromLatin1("qrc:/images/sideshift_plugin.png")
-      , false },
-      { tr("SideShift.ai v6")
-      , tr("Shift between BTC, ETH, BCH, XMR, USDT and 90+ other cryptocurrencies")
-      , QString::fromLatin1("qrc:/images/sideshift_plugin.png")
-      , false }
+      , QString::fromLatin1("qrc:/images/sideshift_plugin.png") }
    };
 }
 
@@ -66,7 +43,6 @@ QVariant PluginsListModel::data(const QModelIndex& index, int role) const
       case Name: return plugins_.at(row).name;
       case Description: return plugins_.at(row).description;
       case Icon: return plugins_.at(row).icon;
-      case IsInstalled:  return plugins_.at(row).isInstalled;
       default: break;
       }
    }
@@ -74,16 +50,6 @@ QVariant PluginsListModel::data(const QModelIndex& index, int role) const
       return QString{};
    }
    return QVariant();
-}
-
-bool PluginsListModel::setData(const QModelIndex& index, const QVariant& value, int role)
-{
-   if(role == IsInstalled) {
-      plugins_.at(index.row()).isInstalled = value.toBool();
-      emit dataChanged(index, index);
-      return true;
-   }
-   return false;
 }
 
 QHash<int, QByteArray> PluginsListModel::roleNames() const
