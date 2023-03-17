@@ -81,12 +81,12 @@ Rectangle {
         anchors.right: parent.right
 
         Controls.CustomMediumButton {
-            text: "Wallet Properties"
+            text: qsTr("Wallet Properties")
             onClicked: control.requestWalletProperties()
         }
 
         Controls.CustomMediumButton {
-            text: "Create new wallet"
+            text: qsTr("Create new wallet")
             onClicked: control.createNewWallet()
         }
     }
