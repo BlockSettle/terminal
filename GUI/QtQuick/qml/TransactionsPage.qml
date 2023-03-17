@@ -27,11 +27,6 @@ Item {
 
     signal openSend (string txId, bool isRBF, bool isCPFP)
 
-    TransactionDetails {
-        id: transactionDetails
-        visible: false
-    }
-
     FileDialog  {
         id: fileDialogCSV
         visible: false
