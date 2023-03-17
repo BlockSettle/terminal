@@ -138,7 +138,7 @@ ApplicationWindow {
         running: false
         repeat: false
         onTriggered: {
-            bsApp.getArmoryServers()
+            //bsApp.getArmoryServers()
             show_popup(create_wallet)
         }
     }
