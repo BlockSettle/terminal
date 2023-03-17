@@ -22,7 +22,7 @@ bool PendingTransactionFilterModel::filterAcceptsRow(int source_row,
    const QModelIndex& source_parent) const
 {
    const auto confirmationCountIndex = sourceModel()->index(source_row, 5);
-   if (sourceModel()->data(confirmationCountIndex, TxListModel::TableRoles::TableDataRole) > 6)
+   if (sourceModel()->data(confirmationCountIndex, TxListModel::TableRoles::TableDataRole) >= 6)
    {
       return false;
    }
