@@ -130,10 +130,10 @@ int ArmoryServersProvider::indexOf(const ArmoryServer &server) const
    const auto& srvrs = servers();
    for (int i = 0; i < srvrs.size(); ++i) {
       const auto& s = srvrs.at(i);
-      logger_->debug("[{}] {}: {} vs {}, {} vs {}, {} vs {}, {} vs {}", __func__
+/*      logger_->debug("[{}] {}: {} vs {}, {} vs {}, {} vs {}, {} vs {}", __func__
          , i, s.name.toStdString(), server.name.toStdString(), (int)s.netType
          , (int)server.netType, s.armoryDBIp.toStdString()
-         , server.armoryDBIp.toStdString(), s.armoryDBPort, server.armoryDBPort);
+         , server.armoryDBIp.toStdString(), s.armoryDBPort, server.armoryDBPort);*/
       if ((server.name.isEmpty() || (s.name == server.name)) && (s.netType == server.netType)
          && (s.armoryDBIp == server.armoryDBIp) && (s.armoryDBPort == server.armoryDBPort)) {
          return i;

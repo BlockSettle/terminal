@@ -52,20 +52,20 @@ void ArmoryServersModel::setCurrent (int value)
 void ArmoryServersModel::setData(int curIdx, int connIdx
    , const std::vector<ArmoryServer>& data)
 {
-   QMetaObject::invokeMethod(this, [this, &curIdx, connIdx, data] {
+   QMetaObject::invokeMethod(this, [this, curIdx, connIdx, data] {
       beginResetModel();
       data_ = data;
       endResetModel();
-      logger_->debug("[{}] curIdx = {}", __func__, curIdx);
+      int newCur = curIdx;
       if (curIdx == -1) {
-         curIdx = 0;
+         newCur = 0;
       }
-      setCurrent(curIdx);
+      setCurrent(newCur);
       if (connected_ != connIdx) {
          connected_ = connIdx;
          emit connectedChanged();
       }
-      });
+   });
 }
 
 void ArmoryServersModel::add(const ArmoryServer& srv)
