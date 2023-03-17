@@ -20,8 +20,8 @@ HorizontalHeaderView {
          clip: true
          color: BSStyle.titleTextColor
          font.family: "Roboto"
-         font.weight: Font.Normal
          font.pixelSize: root.text_size
+         font.letterSpacing: -0.2
          leftPadding: 10
       }
 

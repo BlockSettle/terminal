@@ -24,6 +24,7 @@ TabButton {
     font.pixelSize: 10
     font.family: "Roboto"
     font.weight: Font.Medium
+    font.letterSpacing: 0.2
 
     property url selectedIcon_;
     property url nonSelectedIcon_;

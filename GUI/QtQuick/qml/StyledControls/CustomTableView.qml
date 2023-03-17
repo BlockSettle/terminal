@@ -29,8 +29,8 @@ Column {
     property int delete_button_column_index: -1
     property int left_text_padding: 10
     property bool has_header: true
-    property int text_header_size: 11    
-    property int cell_text_size: 12
+    property int text_header_size: 12
+    property int cell_text_size: 13
 
     signal copyRequested(var id)
     signal deleteRequested(int id)

@@ -40,7 +40,9 @@ Item {
                 text: qsTr("Address")
                 color: BSStyle.textColor
                 font.pixelSize: 20
+                font.family: "Roboto"
                 font.weight: Font.Bold
+                font.letterSpacing: 0.35
                 height: parent.height
                 verticalAlignment: Text.AlignBottom
             }
@@ -132,6 +134,7 @@ Item {
             text: qsTr("Transactions")
             color: BSStyle.textColor
             font.pixelSize: 20
+            font.family: "Roboto"
             font.weight: Font.Bold
         }
 

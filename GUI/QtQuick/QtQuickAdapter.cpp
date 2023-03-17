@@ -173,6 +173,14 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    {
       setSetting(key, settingsController_->getParam(key));
    });
+
+
+   connect(settingsController_.get(), &SettingsController::reset, this, [this]()
+   {
+      if (settingsController_->hasParam(ApplicationSettings::Setting::SelectedWallet)) {
+         emit requestWalletSelection(settingsController_->getParam(ApplicationSettings::Setting::SelectedWallet).toInt());
+      }
+   });
 }
 
 QtQuickAdapter::~QtQuickAdapter()
@@ -927,6 +935,11 @@ void QtQuickAdapter::requestPostLoadingSettings()
    setReq->set_index(SetIdx_TransactionFilterTransactionType);
    setReq->set_type(SettingType_String);
 
+   setReq = msgReq->add_requests();
+   setReq->set_source(SettingSource_Local);
+   setReq->set_index(SetIdx_SelectedWallet);
+   setReq->set_type(SettingType_Int);
+
    pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
 
@@ -997,6 +1010,8 @@ void QtQuickAdapter::walletSelected(int index)
                hdWallets_.at(walletId).watchOnly
             });  
          }
+
+         settingsController_->setParam(ApplicationSettings::Setting::SelectedWallet, index);
       }
       catch (const std::exception&) {}
    });
@@ -1011,11 +1026,10 @@ void QtQuickAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
    QMetaObject::invokeMethod(this, [this, isInitialLoad, walletId, walletName = wi.name] {
       hwDeviceModel_->setLoaded(walletId);
       walletBalances_->addWallet({ walletId, walletName });
+      emit walletsListChanged();
       if (isInitialLoad) {
-         requestWalletSelection(0);
          requestPostLoadingSettings();
       }
-      emit walletsListChanged();
    });
 
    WalletsMessage msg;
@@ -1718,12 +1732,14 @@ ProcessingResult QtQuickAdapter::processFeeLevels(const ArmoryMessage_FeeLevelsR
 ProcessingResult QtQuickAdapter::processWalletsList(const WalletsMessage_WalletsListResponse& response)
 {
    logger_->debug("[QtQuickAdapter::processWalletsList] {}", response.DebugString());
-   walletBalances_->clear();
-   for (const auto& wallet : response.wallets()) {
-      const auto& hdWallet = bs::sync::HDWalletData::fromCommonMessage(wallet);
-      walletBalances_->addWallet({hdWallet.id, hdWallet.name});
-   }
-   emit walletsListChanged();
+   QMetaObject::invokeMethod(this, [this, response] {
+      walletBalances_->clear();
+      for (const auto& wallet : response.wallets()) {
+         const auto& hdWallet = bs::sync::HDWalletData::fromCommonMessage(wallet);
+         walletBalances_->addWallet({hdWallet.id, hdWallet.name});
+      }
+      emit walletsListChanged();
+   });
    return ProcessingResult::Success;
 }
 

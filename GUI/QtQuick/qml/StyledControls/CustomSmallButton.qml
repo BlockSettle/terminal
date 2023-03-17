@@ -19,10 +19,11 @@ Button {
     width: 134
     height: 29
 
-    hoverEnabled: true
-    font.pixelSize: 11
+    font.pixelSize: 12
     font.family: "Roboto"
-    font.weight: Font.Normal
+    font.letterSpacing: 0.3
+
+    hoverEnabled: true
 
     property alias backgroundColor: backgroundItem.color
 

@@ -36,8 +36,6 @@ Rectangle {
             width: 130
             label_text: qsTr("Confirmed balance")
             value_suffix: qsTr('BTC')
-            label_text_font_size: 11
-            label_value_font_size: 13
             anchors.verticalCenter: parent.verticalCenter
         }
 
@@ -53,8 +51,6 @@ Rectangle {
             width: 130
             label_text: qsTr("Unconfirmed balance")
             value_suffix: qsTr('BTC')
-            label_text_font_size: 11
-            label_value_font_size: 13
             anchors.verticalCenter: parent.verticalCenter
         }
 
@@ -70,8 +66,6 @@ Rectangle {
             width: 130
             label_text: qsTr("Total balance")
             value_suffix: qsTr('BTC')
-            label_text_font_size: 11
-            label_value_font_size: 13
             anchors.verticalCenter: parent.verticalCenter
         }
 
@@ -86,8 +80,6 @@ Rectangle {
             id: used_addresses
             label_text: qsTr("#Used addresses")
             value_suffix: ""
-            label_text_font_size: 11
-            label_value_font_size: 13
             anchors.verticalCenter: parent.verticalCenter
         }
     }

@@ -38,6 +38,10 @@ ApplicationWindow {
     property int overviewWalletIndex: -1
     readonly property int resizeAnimationDuration: 25
 
+    FontLoader {
+        source: "qrc:/fonts/Roboto-Regular.ttf"
+    }
+
     Component.onCompleted: {
         hide()
 //        qmlFactory.installEventFilterToObj(mainWindow)
@@ -217,7 +221,8 @@ ApplicationWindow {
 
                 text: qsTr("Send")
                 icon.source: "qrc:/images/send_icon.png"
-                font.pointSize: 16
+                font.pixelSize: 12
+                font.letterSpacing: 0.3
                 Layout.fillHeight: true
 
                 onClicked: {
@@ -234,7 +239,8 @@ ApplicationWindow {
                 text: qsTr("Receive")
                 icon.source: "qrc:/images/receive_icon.png"
 
-                font.pointSize: 16
+                font.pixelSize: 12
+                font.letterSpacing: 0.3
                 Layout.fillHeight: true
 
                 onClicked: {
@@ -247,6 +253,8 @@ ApplicationWindow {
             CustomTitleToolButton {
                 id: btnSettings
                 text: qsTr("Settings")
+                font.pixelSize: 12
+                font.letterSpacing: 0.3
                 icon.source: "qrc:/images/settings_icon.png"
                 onClicked: {
                     topMenuBtnClicked(btnSettings)

@@ -40,9 +40,6 @@ Item {
         visible: false
         onRequestPageChange: (text) => { expSearchBox.requestSearchText(text) }
     }
-//    ExplorerLoader {
-//        id: explorerTX
-//    }
 
     Column {
         anchors.fill: parent

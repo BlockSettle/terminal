@@ -16,12 +16,8 @@ Rectangle {
     id: control
 
     property string label_text
-    property int label_text_font_size: 12
-
     property string label_value
-    property int label_value_font_size: 14
     property color label_value_color: BSStyle.balanceValueTextColor
-    property int label_value_font_weight: Font.DemiBold
 
     property string value_suffix
     property int left_text_padding: 10
@@ -39,7 +35,9 @@ Rectangle {
             leftPadding: control.left_text_padding
 
             color: BSStyle.titleTextColor
-            font.pixelSize: control.label_text_font_size
+            font.family: "Roboto"
+            font.pixelSize: 12
+            font.letterSpacing: -0.2
         }
 
         Text {
@@ -47,8 +45,10 @@ Rectangle {
             leftPadding: control.left_text_padding
 
             color: control.label_value_color
-            font.weight: control.label_value_font_weight
-            font.pixelSize: control.label_value_font_size
+            font.family: "Roboto"
+            font.weight: Font.Bold
+            font.pixelSize: 14
+            font.letterSpacing: 0.2
         }
     }
 }

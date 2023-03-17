@@ -43,6 +43,8 @@ Rectangle {
             textRole: "name"
             valueRole: "name"
 
+            fontSize: 16
+
             onCurrentIndexChanged: {
                 bsApp.walletSelected(currentIndex)
                 control.walletIndexChanged(currentIndex)
@@ -50,8 +52,10 @@ Rectangle {
 
             Connections {
                 target: bsApp
-                onRequestWalletSelection: (index) => {
-                    wallet_selection_combobox.currentIndex = index
+                function onRequestWalletSelection(index) {
+                    if (wallet_selection_combobox.currentIndex != index && index < walletBalances.length) {
+                        wallet_selection_combobox.currentIndex = index
+                    }
                 }
             }
         }
@@ -77,12 +81,12 @@ Rectangle {
         anchors.right: parent.right
 
         Controls.CustomMediumButton {
-            text: "Wallet properties"
+            text: qsTr("Wallet Properties")
             onClicked: control.requestWalletProperties()
         }
 
         Controls.CustomMediumButton {
-            text: "Create new wallet"
+            text: qsTr("Create new wallet")
             onClicked: control.createNewWallet()
         }
     }

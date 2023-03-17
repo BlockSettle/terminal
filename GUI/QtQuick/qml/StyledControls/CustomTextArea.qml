@@ -16,6 +16,7 @@ TextArea {
     id: root
     horizontalAlignment: Text.AlignHLeft
     font.pixelSize: 11
+    font.family: "Roboto"
     color: "white"
     wrapMode: TextEdit.WordWrap
 

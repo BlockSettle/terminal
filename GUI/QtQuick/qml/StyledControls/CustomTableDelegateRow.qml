@@ -37,6 +37,7 @@ Component
             font.family: "Roboto"
             font.weight: Font.Normal
             font.pixelSize: text_size
+            font.letterSpacing: -0.2
 
             leftPadding: get_text_left_padding(model_row, model_column, model_is_expandable)
         }

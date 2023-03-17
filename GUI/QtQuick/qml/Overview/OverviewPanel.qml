@@ -11,10 +11,10 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 
-import "../BsStyles"
-import "../StyledControls"
 import "." as OverviewControls
 import ".."
+import "../BsStyles"
+import "../StyledControls"
 import terminal.models 1.0
 
 Rectangle {
@@ -71,9 +71,10 @@ Rectangle {
                     Text {
                         text: qsTr("Addresses")
                         color: BSStyle.textColor
-                        font.pixelSize: 19
+                        font.pixelSize: 20
                         font.family: "Roboto"
-                        font.weight: Font.DemiBold
+                        font.weight: Font.Bold
+                        font.letterSpacing: 0.35
                     }
 
                     Row {
@@ -129,6 +130,8 @@ Rectangle {
 
                     model: addressFilterModel
                     copy_button_column_index: 0
+                    text_header_size: 12
+                    cell_text_size: 13
 
                     columnWidths: [0.35, 0.15, 0.1, 0.4]
                     onCopyRequested: bsApp.copyAddressToClipboard(id)
@@ -159,9 +162,10 @@ Rectangle {
                 Text {
                     text: qsTr("Non-settled Transactions")
                     color: BSStyle.textColor
-                    font.pixelSize: 19
+                    font.pixelSize: 20
                     font.family: "Roboto"
-                    font.weight: Font.DemiBold
+                    font.weight: Font.Bold
+                    font.letterSpacing: 0.35
                 }
 
                 CustomTransactionsTableView {
