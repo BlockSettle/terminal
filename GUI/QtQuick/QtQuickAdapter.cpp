@@ -305,7 +305,6 @@ void QtQuickAdapter::run(int &argc, char **argv)
    connect(&engine, &QQmlApplicationEngine::objectCreated,
            [this]() {
       if(nWalletsLoaded_ >= 0) {
-         requestPostLoadingSettings();
          emit walletsLoaded(nWalletsLoaded_);
       }
    });
@@ -1034,6 +1033,10 @@ void QtQuickAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
       hwDeviceModel_->setLoaded(walletId);
       walletBalances_->addWallet({ walletId, walletName });
       emit walletsListChanged();
+      if (isInitialLoad) {
+         emit requestWalletSelection(0);
+         requestPostLoadingSettings();
+      }
    });
 
    WalletsMessage msg;
