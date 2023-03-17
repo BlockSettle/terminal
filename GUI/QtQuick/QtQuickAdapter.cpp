@@ -658,6 +658,7 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
 
    case WalletsMessage::kReady:
       nWalletsLoaded_ = msg.ready();
+      requestPostLoadingSettings();
       emit walletsLoaded(msg.ready());
       logger_->debug("[{}] loaded {} wallet[s]", __func__, msg.ready());
       break;
@@ -989,7 +990,7 @@ std::string QtQuickAdapter::generateWalletName() const
 
 void QtQuickAdapter::walletSelected(int index)
 {
-   if (index < 0) {
+   if (index < 0 || index >= walletBalances_->wallets().size()) {
       return;
    }
    logger_->debug("[{}] {}", __func__, index);
@@ -1033,10 +1034,6 @@ void QtQuickAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
       hwDeviceModel_->setLoaded(walletId);
       walletBalances_->addWallet({ walletId, walletName });
       emit walletsListChanged();
-      if (isInitialLoad) {
-         emit requestWalletSelection(0);
-         requestPostLoadingSettings();
-      }
    });
 
    WalletsMessage msg;

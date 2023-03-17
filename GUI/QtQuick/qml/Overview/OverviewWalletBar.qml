@@ -53,7 +53,7 @@ Rectangle {
             Connections {
                 target: bsApp
                 function onRequestWalletSelection(index) {
-                    if (wallet_selection_combobox.currentIndex != index && index < walletBalances.length) {
+                    if (wallet_selection_combobox.currentIndex != index) {
                         wallet_selection_combobox.currentIndex = index
                     }
                 }
