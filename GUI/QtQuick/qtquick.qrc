@@ -181,5 +181,8 @@
         <file>qml/Settings/ModifyArmoryServer.qml</file>
         <file>qml/StyledControls/CustomTransactionsTableView.qml</file>
         <file>fonts/Roboto-Regular.ttf</file>
+        <file>qml/Plugins/Common/Card.qml</file>
+        <file>qml/Plugins/Common/PluginsPage.qml</file>
+        <file>images/sideshift_plugin.png</file>
     </qresource>
 </RCC>
