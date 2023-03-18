@@ -21,6 +21,7 @@ import "Send"  1
 import "CreateWallet"  1
 import "Pin"  1
 import "Settings"  1
+import "Plugins/Common" 1
 
 ApplicationWindow {
     id: mainWindow
@@ -303,6 +304,10 @@ ApplicationWindow {
 
         ExplorerPage {
             id: explorerPage
+        }
+
+        PluginsPage {
+            id: pluginPage
         }
     }
 
