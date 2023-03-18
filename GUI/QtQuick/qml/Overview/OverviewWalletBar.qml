@@ -48,6 +48,7 @@ Rectangle {
             onCurrentIndexChanged: {
                 bsApp.walletSelected(currentIndex)
                 control.walletIndexChanged(currentIndex)
+                walletBalances.selectedWallet = currentIndex
             }
 
             Connections {
@@ -64,14 +65,10 @@ Rectangle {
             id: balance_bar
             anchors.verticalCenter: parent.verticalCenter
 
-            confirmed_balance_value: walletBalances.data(walletBalances.index(wallet_selection_combobox.currentIndex, 0),
-                                                         WalletBalance.ConfirmedRole)
-            uncorfirmed_balance_value: walletBalances.data(walletBalances.index(wallet_selection_combobox.currentIndex, 0),
-                                                           WalletBalance.UnconfirmedRole)
-            total_balance_value: walletBalances.data(walletBalances.index(wallet_selection_combobox.currentIndex, 0),
-                                                     WalletBalance.TotalRole)
-            used_addresses_value: walletBalances.data(walletBalances.index(wallet_selection_combobox.currentIndex, 0),
-                                                WalletBalance.NbAddrRole)
+            confirmed_balance_value: walletBalances.confirmedBalance
+            uncorfirmed_balance_value: walletBalances.unconfirmedBalance
+            total_balance_value: walletBalances.totalBalance
+            used_addresses_value: walletBalances.numberAddresses
         }
     }
 

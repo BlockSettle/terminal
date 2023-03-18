@@ -94,6 +94,7 @@ void WalletBalancesModel::addWallet(const Wallet& wallet)
    wallets_.push_back(wallet);
    endInsertRows();
    emit rowCountChanged();
+   emit changed();
 }
 
 void WalletBalancesModel::deleteWallet(const std::string& walletId)
@@ -114,7 +115,8 @@ void WalletBalancesModel::deleteWallet(const std::string& walletId)
       wallets_.erase(wallets_.cbegin() + idx);
       endRemoveRows();
       emit rowCountChanged();
-      });
+      emit changed();
+   });
 }
 
 QStringList WalletBalancesModel::wallets() const
@@ -133,6 +135,7 @@ void WalletBalancesModel::clear()
    balances_.clear();
    endResetModel();
 
+   emit changed();
    emit rowCountChanged();
 }
 
@@ -155,4 +158,54 @@ void WalletBalancesModel::setWalletBalance(const std::string& walletId, const Ba
    else {
       logger_->warn("[{}] {} not found", __func__, walletId);
    }
+   emit changed();
+}
+
+void WalletBalancesModel::setSelectedWallet(int index)
+{
+   if (selectedWallet_ != index) {
+      selectedWallet_ = index;
+      emit changed();
+   }
+}
+
+int WalletBalancesModel::selectedWallet() const
+{
+   return selectedWallet_;
+}
+
+QString WalletBalancesModel::confirmedBalance() const
+{
+   if (selectedWallet_ >= 0 & selectedWallet_ < wallets_.size()) {
+      return getBalance(wallets_.at(selectedWallet_).walletId
+         , [](const Balance& bal) { return gui_utils::xbtToQString(bal.confirmed); });
+   }
+   return tr("-");
+}
+
+QString WalletBalancesModel::unconfirmedBalance() const
+{
+   if (selectedWallet_ >= 0 & selectedWallet_ < wallets_.size()) {
+      return getBalance(wallets_.at(selectedWallet_).walletId
+         , [](const Balance& bal) { return gui_utils::xbtToQString(bal.unconfirmed); });
+   }
+   return tr("-");
+}
+
+QString WalletBalancesModel::totalBalance() const
+{
+   if (selectedWallet_ >= 0 & selectedWallet_ < wallets_.size()) {
+      return getBalance(wallets_.at(selectedWallet_).walletId
+         , [](const Balance& bal) { return gui_utils::xbtToQString(bal.total); });
+   }
+   return tr("-");
+}
+
+QString WalletBalancesModel::numberAddresses() const
+{
+   if (selectedWallet_ >= 0 & selectedWallet_ < wallets_.size()) {
+      return getBalance(wallets_.at(selectedWallet_).walletId
+         , [](const Balance& bal) { return QString::number(bal.nbAddresses); });
+   }
+   return tr("-");
 }

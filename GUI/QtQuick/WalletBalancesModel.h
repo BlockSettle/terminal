@@ -37,6 +37,13 @@ namespace WalletBalance {
 class WalletBalancesModel : public QAbstractTableModel
 {
    Q_OBJECT
+   Q_PROPERTY(int rowCount READ rowCount NOTIFY rowCountChanged)
+   Q_PROPERTY(int selectedWallet READ selectedWallet WRITE setSelectedWallet NOTIFY changed)
+   Q_PROPERTY(QString confirmedBalance   READ confirmedBalance NOTIFY changed)
+   Q_PROPERTY(QString unconfirmedBalance READ unconfirmedBalance NOTIFY changed)
+   Q_PROPERTY(QString totalBalance       READ totalBalance NOTIFY changed)
+   Q_PROPERTY(QString numberAddresses   READ numberAddresses NOTIFY changed)
+
 public:
    WalletBalancesModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
 
@@ -62,19 +69,26 @@ public:
    };
    void setWalletBalance(const std::string& walletId, const Balance&);
 
-   Q_PROPERTY(int rowCount READ rowCount NOTIFY rowCountChanged)
+   void setSelectedWallet(int index);
+   int selectedWallet() const;
+   QString confirmedBalance() const;
+   QString unconfirmedBalance() const;
+   QString totalBalance() const;
+   QString numberAddresses() const;
+
+signals:
+   void changed();
+   void rowCountChanged();
 
 private:
    using FieldFunc = std::function<QString(const Balance&)>;
    QString getBalance(const std::string& walletId, const FieldFunc&) const;
 
 private:
+   int selectedWallet_;
    std::shared_ptr<spdlog::logger>  logger_;
    std::vector<Wallet>  wallets_;
    std::unordered_map<std::string, Balance>  balances_;  //key: walletId
-
-signals:
-   void rowCountChanged();
 };
 
 #endif	// WALLET_BALANCES_MODEL_H
