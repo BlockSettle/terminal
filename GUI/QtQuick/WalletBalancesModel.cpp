@@ -176,7 +176,7 @@ int WalletBalancesModel::selectedWallet() const
 
 QString WalletBalancesModel::confirmedBalance() const
 {
-   if (selectedWallet_ >= 0 & selectedWallet_ < wallets_.size()) {
+   if (selectedWallet_ >= 0 && selectedWallet_ < wallets_.size()) {
       return getBalance(wallets_.at(selectedWallet_).walletId
          , [](const Balance& bal) { return gui_utils::xbtToQString(bal.confirmed); });
    }
@@ -185,7 +185,7 @@ QString WalletBalancesModel::confirmedBalance() const
 
 QString WalletBalancesModel::unconfirmedBalance() const
 {
-   if (selectedWallet_ >= 0 & selectedWallet_ < wallets_.size()) {
+   if (selectedWallet_ >= 0 && selectedWallet_ < wallets_.size()) {
       return getBalance(wallets_.at(selectedWallet_).walletId
          , [](const Balance& bal) { return gui_utils::xbtToQString(bal.unconfirmed); });
    }
@@ -194,7 +194,7 @@ QString WalletBalancesModel::unconfirmedBalance() const
 
 QString WalletBalancesModel::totalBalance() const
 {
-   if (selectedWallet_ >= 0 & selectedWallet_ < wallets_.size()) {
+   if (selectedWallet_ >= 0 && selectedWallet_ < wallets_.size()) {
       return getBalance(wallets_.at(selectedWallet_).walletId
          , [](const Balance& bal) { return gui_utils::xbtToQString(bal.total); });
    }
@@ -203,7 +203,7 @@ QString WalletBalancesModel::totalBalance() const
 
 QString WalletBalancesModel::numberAddresses() const
 {
-   if (selectedWallet_ >= 0 & selectedWallet_ < wallets_.size()) {
+   if (selectedWallet_ >= 0 && selectedWallet_ < wallets_.size()) {
       return getBalance(wallets_.at(selectedWallet_).walletId
          , [](const Balance& bal) { return QString::number(bal.nbAddresses); });
    }
