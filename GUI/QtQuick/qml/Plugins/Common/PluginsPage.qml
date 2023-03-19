@@ -12,6 +12,7 @@ import QtQuick 2.9
 import QtQuick.Controls 2.3
 
 import "."
+import "../SideShift"
 import "../../BsStyles"
 import "../../StyledControls"
 
@@ -55,7 +56,7 @@ Rectangle {
          height: parent.height - header.height
          cellWidth: 237
          cellHeight: 302
-         model: pluginFilterModel
+         model: pluginsListModel
          clip: true
 
          ScrollBar.vertical: ScrollBar { 
@@ -73,6 +74,14 @@ Rectangle {
                name: name_role
                description: description_role
                icon_source: icon_role
+               onCardClicked: plugin_popup.open()
+            }
+
+            SideShiftPopup {
+               id: plugin_popup
+               Component.onCompleted: {
+                  plugin_popup.controller = pluginsListModel.getPlugin(index)
+               }
             }
          }
       }

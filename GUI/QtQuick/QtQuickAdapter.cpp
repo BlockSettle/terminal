@@ -299,6 +299,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
    rootCtxt_->setContextProperty(QLatin1Literal("feeSuggestions"), feeSuggModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("addressFilterModel"), addressFilterModel_.get());
    rootCtxt_->setContextProperty(QLatin1Literal("transactionFilterModel"), transactionFilterModel_.get());
+   rootCtxt_->setContextProperty(QLatin1Literal("pluginsListModel"), pluginsListModel_.get());
    rootCtxt_->setContextProperty(QLatin1Literal("pluginFilterModel"), pluginsFilterModel_.get());
    engine.addImageProvider(QLatin1Literal("QR"), new QRImageProvider);
 

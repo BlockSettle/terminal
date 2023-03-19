@@ -190,5 +190,15 @@
         <file>qml/Plugins/Common/Card.qml</file>
         <file>qml/Plugins/Common/PluginsPage.qml</file>
         <file>images/sideshift_plugin.png</file>
+        <file>qml/Plugins/Common/PluginPopup.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftButton.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftCombobox.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftComboboxWithIcon.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftIconButton.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftPopup.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftTextInput.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftTextInput.qml</file>
+        <file>images/transfer_icon.png</file>
+        <file>images/sideshift_btc.png</file>
     </qresource>
 </RCC>

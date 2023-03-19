@@ -9,6 +9,7 @@
 
 */
 #include "PluginsListModel.h"
+#include "SideShiftController.h"
 #include <QString>
 
 namespace
@@ -26,7 +27,8 @@ PluginsListModel::PluginsListModel(QObject* parent)
    plugins_ = {
       { tr("SideShift.ai")
       , tr("Shift between BTC, ETH, BCH, XMR, USDT and 90+ other cryptocurrencies")
-      , QString::fromLatin1("qrc:/images/sideshift_plugin.png") }
+      , QString::fromLatin1("qrc:/images/sideshift_plugin.png")
+      , std::dynamic_pointer_cast<QObject>(std::make_shared<SideShiftController>())}
    };
 }
 
@@ -55,4 +57,14 @@ QVariant PluginsListModel::data(const QModelIndex& index, int role) const
 QHash<int, QByteArray> PluginsListModel::roleNames() const
 {
    return kRoles;
+}
+
+QObject* PluginsListModel::getPlugin(int index)
+{
+   try {
+      return plugins_.at(index).controller.get();
+   }
+   catch (...) {
+   }
+   return nullptr;
 }

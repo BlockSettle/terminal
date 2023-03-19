@@ -14,11 +14,13 @@
 #include <QObject>
 #include <QVariant>
 #include <QColor>
+#include <memory>
 
 struct Plugin {
    QString name;
    QString description;
    QString icon;
+   std::shared_ptr<QObject> controller;
 };
 
 class PluginsListModel: public QAbstractListModel
@@ -38,6 +40,8 @@ public:
    int rowCount(const QModelIndex & = QModelIndex()) const override;
    QVariant data(const QModelIndex& index, int role) const override;
    QHash<int, QByteArray> roleNames() const override;
+
+   Q_INVOKABLE QObject* getPlugin(int index);
 
 private:
    std::vector<Plugin> plugins_;
