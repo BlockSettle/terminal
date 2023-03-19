@@ -21,6 +21,7 @@ struct Plugin {
    QString description;
    QString icon;
    std::shared_ptr<QObject> controller;
+   QString path;
 };
 
 class PluginsListModel: public QAbstractListModel
@@ -31,7 +32,8 @@ public:
    {
       Name = Qt::UserRole + 1,
       Description,
-      Icon
+      Icon,
+      Path
    };
    Q_ENUM(PluginRoles)
 

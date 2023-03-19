@@ -65,9 +65,13 @@ Rectangle {
          }
 
          delegate: Rectangle {
+            id: plugin_item
             color: "transparent"
             width: 237
             height: 302
+
+            property var component
+            property var plugin_popup
 
             Card {
                anchors.top: parent.top
@@ -77,11 +81,19 @@ Rectangle {
                onCardClicked: plugin_popup.open()
             }
 
-            SideShiftPopup {
-               id: plugin_popup
-               Component.onCompleted: {
+            function finishCreation() {
+               if (component.status == Component.Ready) {
                   plugin_popup.controller = pluginsListModel.getPlugin(index)
                }
+            }
+
+            Component.onCompleted: {
+               component = Qt.createComponent(path_role);
+               plugin_popup = component.createObject(plugin_item)
+               if (component.status == Component.Ready)
+                   finishCreation();
+               else
+                   component.statusChanged.connect(finishCreation);
             }
          }
       }
