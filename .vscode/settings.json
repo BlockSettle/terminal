@@ -1,0 +1,11 @@
+{
+  "files.associations": {
+    "map": "cpp",
+    "iosfwd": "cpp",
+    "xlocbuf": "cpp",
+    "ios": "cpp",
+    "type_traits": "cpp",
+    "xstring": "cpp",
+    "xutility": "cpp"
+  }
+}
