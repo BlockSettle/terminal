@@ -1,7 +1,7 @@
 <RCC>
     <qresource prefix="/">
         <file alias="FULL_BS_LOGO">images/full_logo.png</file>
-        <file>images/bs_logo.png</file>
+        <file>images/terminal.ico</file>
         <file>images/bitcoin-test-net.png</file>
         <file>images/bitcoin-main-net.png</file>
         <file>images/bitcoin-disabled.png</file>

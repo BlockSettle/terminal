@@ -216,6 +216,26 @@ ApplicationWindow {
                 Layout.fillWidth: true
             }
 
+            Label {
+                width: 35
+                text: qsTr("Connection: ")
+                font.pixelSize: 12
+                font.family: "Roboto"
+                font.weight: Font.Normal
+                color: BSStyle.titleTextColor
+            }
+
+            Image {
+                id: imgEnvKind
+                width: 16
+                source: (bsApp.armoryServerIndex === 0) ? "qrc:/images/bitcoin-main-net.png" :
+                        ((bsApp.armoryServerIndex === 1) ? "qrc:/images/bitcoin-test-net.png" : "qrc:/images/bitcoin-disabled.png")
+            }
+
+            Label {
+                width: 12
+            }
+
             CustomTitleToolButton {
                 id: btnSend
 
@@ -457,7 +477,7 @@ ApplicationWindow {
     SystemTrayIcon {
         id: trayIcon
         visible: true
-        icon.source: "qrc:/images/bs_logo.png"
+        icon.source: "qrc:/images/terminal.ico"
 
         onActivated: {
             mainWindow.show()

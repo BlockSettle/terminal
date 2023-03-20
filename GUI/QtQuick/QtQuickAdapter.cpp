@@ -202,7 +202,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
    QApplication app(argc, argv);
 
    QApplication::setOrganizationDomain(QLatin1String("blocksettle.com"));
-   QApplication::setWindowIcon(QIcon(QStringLiteral(":/images/bs_logo.png")));
+   QApplication::setWindowIcon(QIcon(QStringLiteral(":/images/terminal.ico")));
 
    const QFileInfo localStyleSheetFile(QLatin1String("stylesheet.css"));
    QFile stylesheetFile(localStyleSheetFile.exists()
@@ -390,6 +390,11 @@ void QtQuickAdapter::onArmoryServerSelected(int index)
       logger_->error("[{}] invalid sender", __func__);
       return;
    }
+
+   armoryServerIndex_ = index;
+
+   emit armoryServerIndexChanged();
+   
    logger_->debug("[{}] #{}", __func__, index);
    SettingsMessage msg;
    msg.set_set_armory_server(index);
