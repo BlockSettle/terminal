@@ -400,6 +400,9 @@ void QtQuickAdapter::onArmoryServerSelected(int index)
 
    const auto newNetType = model->data(index).netType;
    if (netType_ != newNetType) {
+      if (txModel_) {
+         txModel_->clear();
+      }
       netType_ = newNetType;
       emit networkTypeChanged();
    }
@@ -562,6 +565,7 @@ ProcessingResult QtQuickAdapter::processBlockchain(const Envelope &env)
       break;
    case ArmoryMessage::kStateChanged:
       armoryState_ = msg.state_changed().state();
+      netType_ = static_cast<NetworkType>(msg.state_changed().net_type());
       setTopBlock(msg.state_changed().top_block());
       emit armoryStateChanged();
       break;
@@ -649,9 +653,6 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
       hdWallets_.clear();
       if (addrModel_) {
          addrModel_->reset({});
-      }
-      if (txModel_) {
-         txModel_->clear();
       }
       if (walletBalances_) {
          walletBalances_->clear();
