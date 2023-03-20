@@ -138,8 +138,8 @@ public:
    Q_PROPERTY(int armoryState READ armoryState NOTIFY armoryStateChanged)
    int armoryState() const { return armoryState_; }
 
-   Q_PROPERTY(int armoryServerIndex READ armoryServerIndex NOTIFY armoryServerIndexChanged)
-   int armoryServerIndex() const { return armoryServerIndex_; }
+   Q_PROPERTY(int networkType READ networkType NOTIFY networkTypeChanged)
+   int networkType() const { return (int)netType_; }
 
    Q_PROPERTY(HwDeviceModel* devices READ devices NOTIFY devicesChanged)
    HwDeviceModel* devices();
@@ -195,7 +195,7 @@ signals:
    void addressGenerated();
    void settingChanged();
    void armoryStateChanged();
-   void armoryServerIndexChanged();
+   void networkTypeChanged();
    void devicesChanged();
    void scanningChanged();
    void invokePINentry();
@@ -279,6 +279,7 @@ private:
    std::set<int>  loadingComponents_;
    int         armoryState_{ -1 };
    int         armoryServerIndex_{ -1 };
+   NetworkType netType_{ NetworkType::Invalid };
    uint32_t    blockNum_{ 0 };
    int         signerState_{ -1 };
    std::string signerDetails_;

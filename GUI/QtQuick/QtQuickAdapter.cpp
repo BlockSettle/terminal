@@ -304,7 +304,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
 
    connect(&engine, &QQmlApplicationEngine::objectCreated,
            [this]() {
-      if(nWalletsLoaded_ >= 0) {
+      if (nWalletsLoaded_ >= 0) {
          emit walletsLoaded(nWalletsLoaded_);
       }
    });
@@ -385,15 +385,24 @@ bool QtQuickAdapter::processBroadcast(const bs::message::Envelope& env)
 
 void QtQuickAdapter::onArmoryServerSelected(int index)
 {
+   if (armoryServerIndex_ == index) {
+      return;
+   }
+   armoryServerIndex_ = index;
    auto model = qobject_cast<ArmoryServersModel*>(sender());
    if (!model) {
       logger_->error("[{}] invalid sender", __func__);
       return;
    }
 
-   armoryServerIndex_ = index;
+   armoryState_ = 0;
+   emit armoryStateChanged();
 
-   emit armoryServerIndexChanged();
+   const auto newNetType = model->data(index).netType;
+   if (netType_ != newNetType) {
+      netType_ = newNetType;
+      emit networkTypeChanged();
+   }
    
    logger_->debug("[{}] #{}", __func__, index);
    SettingsMessage msg;
@@ -483,6 +492,7 @@ ProcessingResult QtQuickAdapter::processSettingsState(const SettingsMessage_Sett
 ProcessingResult QtQuickAdapter::processArmoryServers(bs::message::SeqId msgId
    , const SettingsMessage_ArmoryServers& response)
 {
+   armoryServerIndex_ = response.idx_current();
    logger_->debug("[{}] current={}, connected={}", __func__, response.idx_current()
       , response.idx_connected());
    const auto& itReq = armoryServersReq_.find(msgId);
@@ -616,6 +626,7 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
       return processWalletDeleted(msg.wallet_deleted());
    case SignerMessage::kCreatedWallet:
       walletBalances_->clear();
+      addrModel_->reset(msg.created_wallet().wallet_id());
       logger_->debug("[{}] wallet {} created: {}", __func__    //TODO: show something in the GUI if needed
          , msg.created_wallet().wallet_id(), msg.created_wallet().error_msg());
       break;
@@ -636,6 +647,12 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
       return processWalletSeed(msg.wallet_seed());
    case SignerMessage::kWalletsReset:
       hdWallets_.clear();
+      if (addrModel_) {
+         addrModel_->reset({});
+      }
+      if (txModel_) {
+         txModel_->clear();
+      }
       if (walletBalances_) {
          walletBalances_->clear();
       }
@@ -666,6 +683,16 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
       requestPostLoadingSettings();
       emit walletsLoaded(msg.ready());
       logger_->debug("[{}] loaded {} wallet[s]", __func__, msg.ready());
+      {
+         const int lastIdx = settingsController_->getParam(ApplicationSettings::Setting::SelectedWallet).toInt();
+         if ((lastIdx >= 0) && (lastIdx < nWalletsLoaded_)) {
+            logger_->debug("[{}] selecting wallet #{}", __func__, lastIdx);
+            walletSelected(lastIdx);
+         }
+         else {
+            logger_->debug("[{}] wallet #{} is not selectable", __func__, lastIdx);
+         }
+      }
       break;
 
    case WalletsMessage::kWalletLoaded: {
@@ -1022,7 +1049,6 @@ void QtQuickAdapter::walletSelected(int index)
                hdWallets_.at(walletId).watchOnly
             });  
          }
-
          settingsController_->setParam(ApplicationSettings::Setting::SelectedWallet, index);
       }
       catch (const std::exception&) {}
@@ -1081,6 +1107,7 @@ ProcessingResult QtQuickAdapter::processWalletData(bs::message::SeqId msgId
       }
       walletInfoReq_.erase(itReq);
    }
+   logger_->debug("[{}] {} used addresses", __func__, response.used_addresses_size());
    QVector<QVector<QString>> addresses;
    for (const auto& addr : response.used_addresses()) {
       try {
@@ -1114,7 +1141,7 @@ ProcessingResult QtQuickAdapter::processWalletBalances(bs::message::SeqId respon
 ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
    , const WalletsMessage_TXDetailsResponse &response)
 {
-   //logger_->debug("[{}] {}", __func__, response.DebugString());
+   logger_->debug("[{}] {}", __func__, response.DebugString());
    for (const auto &resp : response.responses()) {
       bs::sync::TXWalletDetails txDet{ BinaryData::fromString(resp.tx_hash()), resp.hd_wallet_id()
          , resp.wallet_name(), static_cast<bs::core::wallet::Type>(resp.wallet_type())
@@ -1193,6 +1220,7 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
 
       const auto& itTxDet = txDetailReqs_.find(msgId);
       if (itTxDet == txDetailReqs_.end()) {
+         logger_->debug("[{}] TX model update", __func__);
          if (txDet.direction == bs::sync::Transaction::Direction::Revoke) {
             txModel_->removeTX(txDet.txHash);
          }
@@ -1910,6 +1938,7 @@ void QtQuickAdapter::processWalletAddresses(const std::string& walletId
    , const std::vector<bs::sync::Address>& addresses)
 {
    if (addresses.empty()) {
+      logger_->debug("[{}] {} no addresses", __func__, walletId);
       return;
    }
    auto hdWalletId = walletId;

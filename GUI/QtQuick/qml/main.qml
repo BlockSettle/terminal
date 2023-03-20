@@ -228,8 +228,8 @@ ApplicationWindow {
             Image {
                 id: imgEnvKind
                 width: 16
-                source: (bsApp.armoryServerIndex === 0) ? "qrc:/images/bitcoin-main-net.png" :
-                        ((bsApp.armoryServerIndex === 1) ? "qrc:/images/bitcoin-test-net.png" : "qrc:/images/bitcoin-disabled.png")
+                source: (bsApp.armoryState !== 7) ? "qrc:/images/bitcoin-disabled.png" :
+                    ((bsApp.networkType === 0) ? "qrc:/images/bitcoin-main-net.png" : "qrc:/images/bitcoin-test-net.png")
             }
 
             Label {

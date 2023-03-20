@@ -24,8 +24,7 @@ namespace
 
 QmlAddressListModel::QmlAddressListModel(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
    : QAbstractTableModel(parent), logger_(logger), header_({ tr("Address"), tr("#Tx"), tr("Balance (BTC)"), tr("Comment") })
-{
-}
+{}
 
 int QmlAddressListModel::rowCount(const QModelIndex&) const
 {
@@ -45,8 +44,7 @@ QVariant QmlAddressListModel::data(const QModelIndex& index, int role) const
       {
       case TableDataRole:
          {
-            switch (index.column())
-            {
+            switch (index.column()) {
             case 0: return table_.at(row).at(0);
             case 1: return QString::number(getTransactionCount(addresses_.at(row).id()));
             case 2: return getAddressBalance(addresses_.at(row).id());
@@ -74,17 +72,15 @@ QHash<int, QByteArray> QmlAddressListModel::roleNames() const
 
 void QmlAddressListModel::addRow(const std::string& walletId, const QVector<QString>& row)
 {
-   if (walletId != expectedWalletId_)
-   {
+   if (walletId != expectedWalletId_) {
       logger_->warn("[QmlAddressListModel::addRow] wallet {} not expected ({})", walletId, expectedWalletId_);
       return;
    }
-   try
-   {
+   try {
       addresses_.push_back(bs::Address::fromAddressString(row.at(0).toStdString()));
    }
-   catch (const std::exception&)
-   {
+   catch (const std::exception&) {
+      logger_->warn("[{}] {} invalid address {}", __func__, walletId, row.at(0).toStdString());
       addresses_.push_back(bs::Address{});
    }
    QMetaObject::invokeMethod(this, [this, row] {
@@ -96,42 +92,70 @@ void QmlAddressListModel::addRow(const std::string& walletId, const QVector<QStr
 
 void QmlAddressListModel::addRows(const std::string& walletId, const QVector<QVector<QString>>& rows)
 {
-   if (walletId != expectedWalletId_)
-   {
+   if (walletId != expectedWalletId_) {
       logger_->warn("[QmlAddressListModel::addRows] wallet {} not expected ({})", walletId, expectedWalletId_);
       return;
    }
-   if (rows.empty())
-   {
+   if (rows.empty()) {
       return;
    }
-   for (const auto& row : rows)
-   {
-      try
-      {
-         addresses_.push_back(bs::Address::fromAddressString(row.at(0).toStdString()));
+   for (const auto& row : rows) {
+      try {
+         const auto& addr = bs::Address::fromAddressString(row.at(0).toStdString());
+         bool found = false;
+         for (const auto& a : addresses_) {
+            if (a == addr) {
+               found = true;
+               break;
+            }
+         }
+         if (!found) {
+            addresses_.push_back(addr);
+         }
       }
-      catch (const std::exception&)
-      {
+      catch (const std::exception&) {
          addresses_.push_back(bs::Address{});
       }
    }
+   logger_->debug("[{}] {} rows / {} addresses", __func__, rows.size(), addresses_.size());
    QMetaObject::invokeMethod(this, [this, rows] {
-      beginInsertRows(QModelIndex(), rowCount(), rowCount() + rows.size() - 1);
-      table_.append(rows);
-      endInsertRows();
+      QVector<QVector<QString>> newRows;
+      for (const auto& row : rows) {
+         bool found = false;
+         for (const auto& r : table_) {
+            if (r.at(0) == row.at(0)) {
+               found = true;
+               break;
+            }
+         }
+         if (!found) {
+            for (const auto& r : newRows) {
+               if (r.at(0) == row.at(0)) {
+                  found = true;
+                  break;
+               }
+            }
+         }
+         if (!found) {
+            newRows.append(row);
+         }
+      }
+      bool found = false;
+      if (!newRows.empty()) {
+         beginInsertRows(QModelIndex(), rowCount(), rowCount() + newRows.size() - 1);
+         table_.append(newRows);
+         endInsertRows();
+      }
       });
 }
 
 void QmlAddressListModel::updateRow(const BinaryData& addrPubKey, uint64_t bal, uint32_t nbTx)
 {
    pendingBalances_[addrPubKey] = { bal, nbTx };
-   for (int i = 0; i < table_.size(); ++i)
-   {
+   for (int i = 0; i < table_.size(); ++i) {
       const auto& addr = addresses_.at(i);
       // logger_->debug("[QmlAddressListModel::updateRow] {} {} {}", addr.display(), bal, nbTx);
-      if (addr.id() == addrPubKey)
-      {
+      if (addr.id() == addrPubKey) {
          emit dataChanged(createIndex(i, 1), createIndex(i, 2));
          break;
       }

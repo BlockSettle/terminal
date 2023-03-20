@@ -12,7 +12,7 @@
 #define TX_LIST_MODEL_H
 
 #include <memory>
-#include <shared_mutex>
+#include <mutex>
 #include <QAbstractTableModel>
 #include <QColor>
 #include <QObject>
@@ -49,7 +49,7 @@ public:
    void addRows(const std::vector<bs::TXEntry>&);
    void clear();
    void setTxComment(const std::string& txHash, const std::string& comment);
-   void setDetails(const bs::sync::TXWalletDetails&);
+   void setDetails(const bs::sync::TXWalletDetails&, bool usePending = true);
    void removeTX(const BinaryData& txHash);
    void setCurrentBlock(uint32_t);
 
@@ -74,7 +74,7 @@ private:
    std::map<int, bs::sync::TXWalletDetails>  txDetails_;
    std::vector<bs::sync::TXWalletDetails>    pendingDetails_;
    uint32_t curBlock_;
-   std::shared_mutex dataMtx_;
+   std::mutex dataMtx_;
 };
 
 class TxListForAddr : public QAbstractTableModel
