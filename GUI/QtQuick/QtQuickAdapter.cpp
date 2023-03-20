@@ -687,11 +687,10 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
       {
          const int lastIdx = settingsController_->getParam(ApplicationSettings::Setting::SelectedWallet).toInt();
          if ((lastIdx >= 0) && (lastIdx < nWalletsLoaded_)) {
-            logger_->debug("[{}] selecting wallet #{}", __func__, lastIdx);
             walletSelected(lastIdx);
          }
-         else {
-            logger_->debug("[{}] wallet #{} is not selectable", __func__, lastIdx);
+         else if (nWalletsLoaded_ > 0) {
+            walletSelected(0);
          }
       }
       break;
