@@ -233,7 +233,7 @@ ColumnLayout  {
 
     function create_temp_request()
     {
-        if (rec_addr_input.isValid) {
+        if (rec_addr_input.isValid && rec_addr_input.input_text.length) {
             var fpb = parseFloat(fee_suggest_combo.edit_value())
             tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
                         , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
