@@ -106,7 +106,7 @@ ColumnLayout {
                 confirm_password.input_text
             )
             if (result === 0) {
-                clear()
+                init()
             }
         }
     }

@@ -72,6 +72,8 @@ Window {
             text: "Test Description"
 
             horizontalAlignment: Text.AlignHCenter
+            width: ApplicationWindow.width - 10;
+            wrapMode: Label.WordWrap
          }
 
         CustomButton {

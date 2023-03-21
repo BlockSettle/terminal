@@ -380,7 +380,7 @@ ApplicationWindow {
 
                 CustomTabButton {
                     id: btnPlugins
-                    text: qsTr("Plugins")
+                    text: qsTr("Apps")
                     Component.onCompleted: {
                         btnPlugins.setIcons ("qrc:/images/plugins_icon.png", "qrc:/images/plugins_icon_unchoosed.png")
                     }

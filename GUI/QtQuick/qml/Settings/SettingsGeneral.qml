@@ -93,6 +93,6 @@ ColumnLayout  {
         checkbox_advanced_tx.checked = bsApp.settingAdvancedTX
         log_file.input_text = bsApp.settingLogFile
 
-        log_file.setActiveFocus()
+        //log_file.setActiveFocus()
     }
 }
