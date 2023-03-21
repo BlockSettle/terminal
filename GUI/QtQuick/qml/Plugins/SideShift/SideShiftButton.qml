@@ -26,7 +26,7 @@ Button {
 
     background: Rectangle {
         id: backgroundItem
-        color: "black"
+        color: control.enabled ? "#f05c44" : "black"
         radius: 4
 
         border.color: 
@@ -39,7 +39,7 @@ Button {
         text: control.text
         font: control.font
         anchors.fill: parent
-        color: "white"
+        color: control.enabled ? "black" : "white"
         verticalAlignment: Text.AlignVCenter
         horizontalAlignment: Text.AlignHCenter
     }

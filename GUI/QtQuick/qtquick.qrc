@@ -199,5 +199,6 @@
         <file>qml/Plugins/SideShift/SideShiftTextInput.qml</file>
         <file>images/transfer_icon.png</file>
         <file>images/sideshift_btc.png</file>
+        <file>qml/Plugins/SideShift/SideShiftMainPage.qml</file>
     </qresource>
 </RCC>
