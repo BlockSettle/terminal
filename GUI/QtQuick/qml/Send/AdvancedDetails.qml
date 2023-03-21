@@ -188,7 +188,12 @@ ColumnLayout  {
                     width: 504
                     height: 70
 
-                    onActivated: (index_act) =>  {
+                    onActivated: {
+                        walletBalances.selectedWallet = currentIndex
+                        prepareRequest()
+                    }
+
+                    function prepareRequest()  {
                         if (rec_addr_input.isValid) {
                             create_temp_request()
                         }
@@ -202,7 +207,16 @@ ColumnLayout  {
                             amount_input.input_text = tempRequest.maxAmount
                         }
 
-                        bsApp.getUTXOsForWallet(index_act)
+                        bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
+                    }
+
+                    Connections {
+                        target: walletBalances
+                        onChanged: {
+                            if (layout.visible) {
+                                prepareRequest()
+                            }
+                        }
                     }
                 }
 
@@ -582,7 +596,7 @@ ColumnLayout  {
 
     function create_temp_request()
     {
-        if (rec_addr_input.isValid) {
+        if (rec_addr_input.isValid && rec_addr_input.input_text.length) {
             var fpb = parseFloat(fee_suggest_combo.edit_value())
             tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
                         , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
@@ -597,8 +611,6 @@ ColumnLayout  {
         //only after we will have signal rowchanged
         if (fee_suggest_combo.currentIndex >= 0)
             fee_suggest_combo.currentIndex = 0
-        if (from_wallet_combo.currentIndex >= 0)
-            from_wallet_combo.currentIndex = overviewWalletIndex
 
         amount_input.input_text = ""
         comment_input.input_text = ""

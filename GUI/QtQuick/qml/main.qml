@@ -36,7 +36,6 @@ ApplicationWindow {
 
     property var currentDialog: ({})
     property bool isNoWalletsWizard: false
-    property int overviewWalletIndex: -1
     readonly property int resizeAnimationDuration: 25
 
     FontLoader {
@@ -112,15 +111,6 @@ ApplicationWindow {
         {
             error_dialog.error = text
             show_popup(error_dialog)
-        }
-
-        function onWalletsListChanged ()
-        {
-            console.log("onWalletsListChanged: overviewWalletIndex = " + overviewWalletIndex)
-            if (overviewWalletIndex === -1)
-            {
-                overviewWalletIndex = 0
-            }
         }
 
         function onWalletsLoaded (nb)
@@ -267,7 +257,7 @@ ApplicationWindow {
 
                 onClicked: {
                     topMenuBtnClicked(btnReceive)
-                    bsApp.generateNewAddress(overviewWalletIndex, true)
+                    bsApp.generateNewAddress(walletBalances.selectedWallet, true)
                     show_popup(receive_popup)
                 }
             }
