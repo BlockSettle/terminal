@@ -685,12 +685,14 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
       emit walletsLoaded(msg.ready());
       logger_->debug("[{}] loaded {} wallet[s]", __func__, msg.ready());
       {
-         const int lastIdx = settingsController_->getParam(ApplicationSettings::Setting::SelectedWallet).toInt();
-         if ((lastIdx >= 0) && (lastIdx < nWalletsLoaded_)) {
-            walletSelected(lastIdx);
-         }
-         else if (nWalletsLoaded_ > 0) {
-            walletSelected(0);
+         if (settingsController_->hasParam(ApplicationSettings::Setting::SelectedWallet)) {
+            const int lastIdx = settingsController_->getParam(ApplicationSettings::Setting::SelectedWallet).toInt();
+            if ((lastIdx >= 0) && (lastIdx < nWalletsLoaded_)) {
+               walletSelected(lastIdx);
+            }
+            else if (nWalletsLoaded_ > 0) {
+               walletSelected(0);
+            }
          }
       }
       break;
