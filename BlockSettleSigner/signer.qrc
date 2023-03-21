@@ -10,7 +10,6 @@
 -->
 <RCC>
     <qresource prefix="/">
-        <file>images/bs_logo.png</file>
         <file alias="FULL_LOGO">images/full_logo.png</file>
         <file alias="NOTIFICATION_CRITICAL">images/notification_critical.png</file>
         <file alias="NOTIFICATION_INFO">images/notification_info.png</file>

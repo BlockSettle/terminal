@@ -222,7 +222,7 @@ static int QMLApp(int argc, char **argv
    QApplication::setOrganizationName(QLatin1String("BlockSettle"));
    QApplication::setApplicationName(QLatin1String("Signer"));
 #endif
-   QApplication::setWindowIcon(QIcon(QStringLiteral(":/images/bs_logo.png")));
+   QApplication::setWindowIcon(QIcon(QStringLiteral(":/images/terminal.ico")));
 
    // ToDo: support 2.0 styles
    // app.setStyle(QStyleFactory::create(QStringLiteral("Universal")));
