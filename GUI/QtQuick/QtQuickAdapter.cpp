@@ -621,12 +621,12 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
       break;
    case SignerMessage::kWalletPassChanged:
       if (!msg.wallet_pass_changed()) {
-         emit showError(tr("Failed to change wallet password - see log for details"));
+         emit showError(tr("Failed to change wallet password\nsee log for details"));
       }
       break;
    case SignerMessage::kExportWoWalletResponse:
       if (msg.export_wo_wallet_response().empty()) {
-         emit showError(tr("WO wallet export failed - see log for details"));
+         emit showError(tr("WO wallet export failed\nsee log for details"));
       }
       else {
          emit successExport(QString::fromStdString(msg.export_wo_wallet_response()));

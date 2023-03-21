@@ -38,7 +38,7 @@ Rectangle {
             Text {
                height: parent.height
                width: 110
-               text: qsTr("Plugins")
+               text: qsTr("Apps")
                color: BSStyle.textColor
                font.family: "Roboto"
                font.pixelSize: 20
