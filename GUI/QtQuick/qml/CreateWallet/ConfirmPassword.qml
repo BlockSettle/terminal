@@ -40,6 +40,13 @@ ColumnLayout  {
         isHiddenText: true
 
         title_text: qsTr("Password")
+
+        Keys.onEnterPressed: {
+            confirm_password.setActiveFocus()
+        }
+        Keys.onReturnPressed: {
+            confirm_password.setActiveFocus()
+        }
     }
 
 
@@ -77,6 +84,7 @@ ColumnLayout  {
         width: 530
         enabled: (password.input_text !== "")
                  && (confirm_password.input_text !== "")
+                 && (password.input_text === confirm_password.input_text)
         preferred: true
 
         function click_enter() {
