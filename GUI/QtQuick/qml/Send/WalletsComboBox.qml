@@ -23,11 +23,11 @@ CustomComboBox {
     height: 70
 
     model: walletBalances
-    currentIndex: overviewWalletIndex
+    currentIndex: walletBalances.selectedWallet
 
     //aliases
     title_text: qsTr("From Wallet")
-    details_text: getWalletData(currentIndex, WalletBalance.TotalRole)
+    details_text: walletBalances.totalBalance
 
     textRole: "name"
     valueRole: "name"

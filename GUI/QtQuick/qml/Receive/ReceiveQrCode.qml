@@ -44,7 +44,7 @@ ColumnLayout  {
         Layout.alignment: Qt.AlignCenter
         Layout.topMargin: 6
         Layout.preferredHeight : 16
-        text:  qsTr("%1 / Native SegWit").arg(getWalletData(overviewWalletIndex, WalletBalance.NameRole))
+        text:  qsTr("%1 / Native SegWit").arg(getWalletData(walletBalances.selectedWallet, WalletBalance.NameRole))
         color: "#E2E7FF"
         font.pixelSize: 14
         font.family: "Roboto"

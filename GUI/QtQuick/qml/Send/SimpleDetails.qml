@@ -126,7 +126,17 @@ ColumnLayout  {
             width: 271
 
             onActivated: (index_act) => {
+                walletBalances.selectedWallet = currentIndex
                 create_temp_request()
+            }
+
+            Connections {
+                target: walletBalances
+                onChanged: {
+                    if (layout.visible) {
+                        create_temp_request()
+                    }
+                }
             }
         }
 
@@ -239,8 +249,6 @@ ColumnLayout  {
         //only after we will have signal rowchanged
         if (fee_suggest_combo.currentIndex >= 0)
             fee_suggest_combo.currentIndex = 0
-        if (from_wallet_combo.currentIndex >= 0)
-            from_wallet_combo.currentIndex = overviewWalletIndex
 
         amount_input.input_text = ""
         comment_input.input_text = ""
