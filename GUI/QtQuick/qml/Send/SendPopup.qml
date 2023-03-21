@@ -13,14 +13,14 @@ CustomPopup {
 
     navig_bar_width: 30
 
-    _stack_view.initialItem: simple_details
+    //_stack_view.initialItem: bsApp.settingAdvancedTX ? simple_details : advanced_details
     _arrow_but_visibility: !simple_details.visible && !advanced_details.visible
 
     property var tx: null
     property bool isRBF: false
     property bool isCPFP: false
 
-    SimpleDetails {
+    SimpleDetails {     
         id: simple_details
         visible: false
 
@@ -100,6 +100,9 @@ CustomPopup {
     }
 
     function init() {
+        if (_stack_view.currentItem == null)
+            _stack_view.push(bsApp.settingAdvancedTX ? advanced_details : simple_details)
+
         if (_stack_view.currentItem === simple_details)
         {
             simple_details.init()

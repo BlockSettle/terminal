@@ -48,7 +48,7 @@ Rectangle {
             font.family: "Roboto"
             font.weight: Font.Bold
             font.pixelSize: 14
-            font.letterSpacing: 0.2
+            //font.letterSpacing: 0.2
         }
     }
 }
