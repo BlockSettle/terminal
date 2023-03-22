@@ -46,7 +46,6 @@
         <file>qml/BsStyles/qmldir</file>
         <file>qml/StyledControls/CustomTitleToolButton.qml</file>
         <file>images/logo.png</file>
-        <file>images/conn_ind.png</file>
         <file>images/plugins_icon.png</file>
         <file>images/overview_icon_not_choosed.png</file>
         <file>images/plugins_icon_unchoosed.png</file>
@@ -178,9 +177,6 @@
         <file>qml/StyledControls/CustomHorizontalHeaderView.qml</file>
         <file>qml/StyledControls/CustomRbfCpfpMenu.qml</file>
         <file>qml/StyledControls/CustomSuccessWidget.qml</file>
-        <file>images/disconn_ind.png</file>
-        <file>images/conn_ind_yellow.png</file>
-        <file>images/conn_ind_red.png</file>
         <file>qml/Settings/AddArmoryServer.qml</file>
         <file>images/delete_custom_server.svg</file>
         <file>qml/Settings/DeleteArmoryServer.qml</file>
