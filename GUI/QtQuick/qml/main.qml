@@ -195,13 +195,6 @@ ApplicationWindow {
                 width: 13
             }
 
-            Image {
-                id: imgArmoryStatus
-                source: (bsApp.armoryState === 7) ? "qrc:/images/conn_ind.png" :
-                        ((bsApp.armoryState === 0) ? "qrc:/images/disconn_ind.png" :
-                ((bsApp.armoryState === 5) ||  (bsApp.armoryState === 6) ? "qrc:/images/conn_ind_red.png" : "qrc:/images/conn_ind_yellow.png"))
-            }
-
             Label {
                 Layout.fillWidth: true
             }
