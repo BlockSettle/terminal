@@ -20,11 +20,13 @@ Rectangle {
    color: "#181414"
    border.width: 1
    border.color: (mouseArea.containsMouse || control.activeFocus) ? "white" : "gray"
+   activeFocusOnTab: true
 
    property string textHint
    property string fontFamily
+   property alias text: textEdit.text
 
-   TextEdit {
+   TextInput {
       id: textEdit
       color: "white"
       verticalAlignment: Text.AlignVCenter

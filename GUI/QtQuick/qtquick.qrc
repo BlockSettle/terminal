@@ -200,5 +200,8 @@
         <file>images/transfer_icon.png</file>
         <file>images/sideshift_btc.png</file>
         <file>qml/Plugins/SideShift/SideShiftMainPage.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftBuyPage.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftCopyButton.qml</file>
+        <file>images/sideshift_right_arrow.png</file>
     </qresource>
 </RCC>

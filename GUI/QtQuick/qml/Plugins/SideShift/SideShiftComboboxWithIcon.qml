@@ -60,7 +60,7 @@ ComboBox {
                 horizontalAlignment: Text.AlignHCenter
                 anchors.horizontalCenter: parent.horizontalCenter
             }
-         }
+        }
     }
 
     indicator: Item {}

@@ -81,7 +81,6 @@ class AddressFilterModel;
 class TransactionFilterModel;
 class PendingTransactionFilterModel;
 class PluginsListModel;
-class PluginsFilterModel;
 
 class QtQuickAdapter : public QObject, public ApiBusAdapter, public bs::MainLoopRuner
 {
@@ -324,7 +323,6 @@ private:
    std::unique_ptr<AddressFilterModel> addressFilterModel_;
    std::unique_ptr<TransactionFilterModel> transactionFilterModel_;
    std::unique_ptr<PluginsListModel> pluginsListModel_;
-   std::unique_ptr<PluginsFilterModel> pluginsFilterModel_;
 };
 
 #endif	// QT_QUICK_ADAPTER_H

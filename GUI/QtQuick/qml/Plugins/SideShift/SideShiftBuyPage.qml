@@ -11,15 +11,15 @@
 import QtQuick 2.15
 import QtQuick.Window 2.2
 import QtQuick.Controls 2.12
-import QtGraphicalEffects 1.0
 
 import "."
 import "../../"
 
 
 Item {
-   width: 720
-   height: 800
+   id: root
+
+   property var controller
    property string inputCurrency: "ETH"
    property string outputCurrency: "BTC"
    property string orderId: "253380c874f87a7a4f70"
@@ -65,14 +65,8 @@ Item {
                id: arrowImage
                width: 20
                height: 20
-               source: "file:////home/yauhen/Workspace/terminal/GUI/QtQuick/images/sideshift_right_arrow.png"
+               source: "qrc:/sideshift_right_arrow.png"
                anchors.verticalCenter: parent.verticalCenter
-
-               ColorOverlay {
-                   anchors.fill: arrowImage
-                   source: arrowImage
-                   color: "lightgray" 
-               }
             }
 
             Text {
@@ -89,7 +83,7 @@ Item {
 
             Text {
                color: "lightgray"
-               text: "ORDER"
+               text: qsTr("ORDER")
                anchors.right: parent.right
             }
             
@@ -103,7 +97,7 @@ Item {
 
       Text {
          color: "white"
-         text: "WAITING FOR YOU TO SEND " + inputCurrency
+         text: qsTr("WAITING FOR YOU TO SEND ") + inputCurrency
          topPadding: 40
          font.pixelSize: 24
          anchors.horizontalCenter: parent.horizontalCenter
@@ -128,7 +122,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
 
             Text {
-               text: "PLEASE SEND"
+               text: qsTr("PLEASE SEND")
                color: "lightgray"
                font.pixelSize: 20
                anchors.horizontalCenter: parent.horizontalCenter
@@ -138,7 +132,7 @@ Item {
                spacing: 10
                anchors.horizontalCenter: parent.horizontalCenter
                Text {
-                  text: "Min"
+                  text: qsTr("Min")
                   color: "lightgray"
                   anchors.verticalCenter: parent.verticalCenter
                }
@@ -160,7 +154,7 @@ Item {
                spacing: 10
                anchors.horizontalCenter: parent.horizontalCenter
                Text {
-                  text: "Min"
+                  text: qsTr("Min")
                   color: "lightgray"
                   anchors.verticalCenter: parent.verticalCenter
                }
@@ -180,7 +174,7 @@ Item {
 
             Text {
                topPadding: 20
-               text: "TO ADDRESS"
+               text: qsTr("TO ADDRESS")
                color: "lightgray"
                font.pixelSize: 20
                anchors.horizontalCenter: parent.horizontalCenter
@@ -207,12 +201,10 @@ Item {
                }
             }
 
-            Text {
-               text: "COPY ADDRESS"
-               color: "skyblue"
-               font.pixelSize: 14
-               font.weight: Font.Bold
+            SideShiftCopyButton {
+               text: qsTr("COPY ADDRESS")
                anchors.horizontalCenter: parent.horizontalCenter
+               onClicked: bsApp.copyAddressToClipboard(toAddress)
             }
          }
 
@@ -226,24 +218,33 @@ Item {
                height: 200
                color: "gray"
                anchors.horizontalCenter: parent.horizontalCenter
+
+               Image {
+                   source: "image://QR/" + root.toAddress
+                   sourceSize.width: 180
+                   sourceSize.height: 180
+                   width: 180
+                   height: 180
+                   anchors.centerIn: parent
+               }
             }
          }
       }
 
       Item {
          width: 1
-         height: 100
+         height: 80
       }
 
       Text {
-         text: "ESTIMATED NETWORK FEES: " + networkFee
+         text: qsTr("ESTIMATED NETWORK FEES: ") + networkFee
          color: "white"
          anchors.horizontalCenter: parent.horizontalCenter
       }
 
       Item {
          width: 1
-         height: 100
+         height: 60
       }
 
       Rectangle {
@@ -257,13 +258,15 @@ Item {
 
             Text {
                color: "lightgray"
-               text: "RECEIVING ADDRESS"
+               text: qsTr("RECEIVING ADDRESS")
             }
             
             Text {
+               width: 200
                color: "lightgray"
                text: receivingAddress
                font.weight: Font.Bold
+               clip: true
             }
          }
 
@@ -273,7 +276,7 @@ Item {
 
             Text {
                color: "lightgray"
-               text: "CREATED AT"
+               text: qsTr("CREATED AT")
                anchors.right: parent.right
             }
             

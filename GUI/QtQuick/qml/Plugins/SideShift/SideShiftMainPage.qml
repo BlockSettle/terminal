@@ -17,12 +17,35 @@ import "../../"
 
 
 Item {
+   id: root
+
+   property var controller
+   property bool receive: true
+   property var receiveModel: [
+        { 
+            currency: "BTC",
+            icon: "qrc:/images/sideshift_btc.png"
+        },
+        { 
+            currency: "ETC",
+            icon: "qrc:/images/sideshift_btc.png"
+        }
+    ]
+   property var sendModel: [
+        { 
+            currency: "BTC",
+            icon: "qrc:/images/sideshift_btc.png"
+        }
+    ]
+
+   signal shift()
+
    Column {
       anchors.centerIn: parent
       spacing: 20
 
       Text {
-         text: root.controller.conversionRate
+         text: root.controller !== null ? root.controller.conversionRate : ""
          color: "gray"
          font.pixelSize: 14
          font.family: "Roboto"
@@ -85,8 +108,9 @@ Item {
 
       SideShiftButton {
          text: qsTr("SHIFT")
-         enabled: root.receive ? walletCombobox.currentIndex >= 0 : addressInput.text != ""
+         enabled: root.receive ? walletCombobox.currentIndex >= 0 : addressInput.text !== ""
          anchors.horizontalCenter: parent.horizontalCenter
+         onClicked: root.shift()
       }
    }
 }

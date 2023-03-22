@@ -23,6 +23,7 @@ Button {
     font.letterSpacing: 0.5
 
     hoverEnabled: true
+    activeFocusOnTab: true
 
     background: Rectangle {
         id: backgroundItem
@@ -30,8 +31,9 @@ Button {
         radius: 4
 
         border.color: 
+            (enabled ? "transparent" :
             (control.hovered ? "white" :
-            (control.activeFocus ? "gray" : "gray"))
+            (control.activeFocus ? "gray" : "gray")))
         border.width: 1
     }
 

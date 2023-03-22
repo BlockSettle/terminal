@@ -83,17 +83,25 @@ Rectangle {
 
             function finishCreation() {
                if (component.status == Component.Ready) {
+                  plugin_popup = component.createObject(plugin_item)
                   plugin_popup.controller = pluginsListModel.getPlugin(index)
+               }
+               else if (component.status == Component.Error) {
+                  console.log(component.errorString())
                }
             }
 
             Component.onCompleted: {
                component = Qt.createComponent(path_role);
-               plugin_popup = component.createObject(plugin_item)
-               if (component.status == Component.Ready)
+               if (component.status == Component.Ready) {
                    finishCreation();
-               else
+               }
+               else if (component.status == Component.Error) {
+                  console.log(component.errorString())
+               }
+               else {
                    component.statusChanged.connect(finishCreation);
+               }
             }
          }
       }

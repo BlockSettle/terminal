@@ -19,32 +19,6 @@ import "../../"
 PluginPopup {
    id: root
 
-   property bool receive: true
-   property var receiveModel: [
-        { 
-            currency: "BTC",
-            icon: "qrc:/images/sideshift_btc.png"
-        },
-        { 
-            currency: "ETC",
-            icon: "qrc:/images/sideshift_btc.png"
-        },
-        { 
-            currency: "DOG",
-            icon: "qrc:/images/sideshift_btc.png"
-        },
-        { 
-            currency: "XYZ",
-            icon: "qrc:/images/sideshift_btc.png"
-        },
-    ]
-   property var sendModel: [
-        { 
-            currency: "BTC",
-            icon: "qrc:/images/sideshift_btc.png"
-        }
-    ]
-
    background: Rectangle {
       anchors.fill: parent
       color: "black"
@@ -55,17 +29,27 @@ PluginPopup {
       id: stackView
       initialItem: mainPage
       anchors.fill: parent
-   }
-
-   Component {
-      id: mainPage
-
+      
       SideShiftMainPage {
+         id: mainPage
+         onShift: {
+            if (!mainPage.receive) {
+               stackView.push(buyPage)
+            }
+         }
+         controller: root.controller
+         visible: false
+      }
 
+      SideShiftBuyPage {
+         id: buyPage
+         controller: root.controller
+         visible: false
       }
    }
 
-   function reset() {
+   function reset()
+   {
       stackView.clear()
       stackView.pop()
    }
