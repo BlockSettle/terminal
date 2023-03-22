@@ -127,6 +127,12 @@
         <file>qml/StyledControls/CustomListItem.qml</file>
         <file>qml/StyledControls/CustomListRadioButton.qml</file>
         <file>qml/Settings/SettingsGeneral.qml</file>
+        <file>qml/Settings/SettingsAbout.qml</file>
+        <file>images/about_github.svg</file>
+        <file>images/about_hello.svg</file>
+        <file>images/about_telegram.svg</file>
+        <file>images/about_terminal.svg</file>
+        <file>images/about_twitter.svg</file>
         <file>images/combobox_open_button.svg</file>
         <file>qml/StyledControls/CustomTableView.qml</file>
         <file>qml/StyledControls/CustomSmallButton.qml</file>

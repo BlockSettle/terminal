@@ -170,6 +170,11 @@ ColumnLayout  {
 
         onTabNavigated: continue_but.forceActiveFocus()
         onBackTabNavigated: fee_suggest_combo.forceActiveFocus()
+    
+        onEnterKeyPressed: {
+            event.accepted = true;
+            continue_but.forceActiveFocus()
+        }
     }
 
     Label {

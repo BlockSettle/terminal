@@ -29,7 +29,7 @@ Rectangle {
     signal textChanged()
     signal tabNavigated()
     signal backTabNavigated()
-
+    signal enterKeyPressed()
 
     color: "#020817"
     opacity: 1
@@ -92,6 +92,13 @@ Rectangle {
 
         Keys.onBacktabPressed: {
             backTabNavigated()
+        }
+
+        Keys.onEnterPressed: {
+            enterKeyPressed()
+        }
+        Keys.onReturnPressed: {
+            enterKeyPressed()
         }
     }
 

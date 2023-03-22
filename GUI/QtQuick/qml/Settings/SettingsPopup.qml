@@ -32,7 +32,8 @@ CustomPopup {
         }
 
         onSig_about: {
-
+            _stack_view.push(settings_about)
+            settings_about.init()
         }
     }
 
@@ -63,6 +64,11 @@ CustomPopup {
             delete_armory_server.server_index = server_index
             delete_armory_server.init()
         }
+    }
+
+    SettingsAbout {
+        id: settings_about
+        visible: false
     }
 
     AddArmoryServer {
