@@ -29,7 +29,7 @@ PluginsListModel::PluginsListModel(QObject* parent)
       { tr("SideShift.ai")
       , tr("Shift between BTC, ETH, BCH, XMR, USDT and 90+ other cryptocurrencies")
       , QString::fromLatin1("qrc:/images/sideshift_plugin.png")
-      , std::dynamic_pointer_cast<QObject>(std::make_shared<SideShiftController>(this))
+      , new SideShiftController(this)
       , QString::fromLatin1("qrc:/qml/Plugins/SideShift/SideShiftPopup.qml") }
    };
 }
@@ -65,7 +65,7 @@ QHash<int, QByteArray> PluginsListModel::roleNames() const
 QObject* PluginsListModel::getPlugin(int index)
 {
    try {
-      return plugins_.at(index).controller.get();
+      return plugins_.at(index).controller;
    }
    catch (...) {
    }

@@ -20,7 +20,7 @@ struct Plugin {
    QString name;
    QString description;
    QString icon;
-   std::shared_ptr<QObject> controller;
+   QObject* controller;
    QString path;
 };
 
