@@ -32,7 +32,7 @@ CustomPopup {
 
         onSig_success: (nameExport, pathExport) => {
             _stack_view.push(success)
-            success.details_text = qsTr("Your watching-only wallet has successfully been exported\n\nFilename: %1\nFolder:      %2").arg(nameExport).arg(pathExport)
+            success.details_text = qsTr("Your watching-only wallet has successfully been exported\n\nFilename:\t%1\nFolder:\t%2").arg(nameExport).arg(pathExport)
         }
     }
 

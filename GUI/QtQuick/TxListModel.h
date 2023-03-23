@@ -68,7 +68,6 @@ private:
    QString txId(int row) const;
    bool isRBF(int row) const;
    quint32 nbConf(int row) const;
-   QString getTime2String(std::time_t& t) const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

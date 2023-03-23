@@ -60,6 +60,8 @@ using namespace bs::message;
 
 
 namespace {
+   const int kMinPasswordLength = 6;
+
    std::shared_ptr<spdlog::logger> staticLogger;
 
    static inline QString encTypeToString(bs::wallet::EncryptionType enc)
@@ -2258,9 +2260,7 @@ int QtQuickAdapter::changePassword(const QString& walletId, const QString& oldPa
 
 bool QtQuickAdapter::isValidPassword(const QString& password)
 {
-#define MINIMUM_PASSWORD_LENGTH 6
-
-   return password.length() >= MINIMUM_PASSWORD_LENGTH;
+   return password.length() >= kMinPasswordLength;
 }
 
 int QtQuickAdapter::exportWallet(const QString& walletId, const QString& exportDir)

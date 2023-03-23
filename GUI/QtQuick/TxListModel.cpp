@@ -32,6 +32,15 @@ namespace {
       {TxInOutModel::ColorRole, "dataColor"},
       {TxInOutModel::TxHashRole, "txHash"},
    };
+
+   QString getTime2String(std::time_t& t)
+   {
+      std::tm* tm = std::localtime(&t);
+      char buffer[50];
+
+      std::strftime(buffer, sizeof(buffer), "%y%m%d", tm);
+      return QString::fromStdString(std::string(buffer));   
+   }
 }
 
 TxListModel::TxListModel(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
@@ -391,7 +400,7 @@ bool TxListModel::exportCSVto(const QString& filename)
 
 QString TxListModel::getBegDate() const
 {
-   std::time_t minTime = std::numeric_limits<std::time_t>::max();
+   std::time_t minTime = std::time(nullptr);
 
    for (int i = 0; i < rowCount(); ++i) {
       const auto& entry = data_.at(i);
@@ -400,37 +409,14 @@ QString TxListModel::getBegDate() const
          minTime = entry.txTime;
    }
 
-   if (minTime == std::numeric_limits<std::time_t>::max())
-      minTime = std::time(nullptr);
-   
    return getTime2String(minTime);
 }
 
 QString TxListModel::getEndDate() const
 {
    std::time_t maxTime = std::time(nullptr);
-   // std::time_t maxTime = std::numeric_limits<std::time_t>::min();
-
-   // for (int i = 0; i < rowCount(); ++i) {
-   //    const auto& entry = data_.at(i);
-
-   //    if (maxTime < entry.txTime)
-   //       maxTime = entry.txTime;
-   // }
-
-   // if (maxTime == std::numeric_limits<std::time_t>::max())
-   //    maxTime = std::time(nullptr);
    
    return getTime2String(maxTime);
-}
-
-QString TxListModel::getTime2String(std::time_t& t) const
-{
-   std::tm* tm = std::localtime(&t);
-   char buffer[50];
-
-   std::strftime(buffer, sizeof(buffer), "%y%m%d", tm);
-   return QString::fromStdString(std::string(buffer));   
 }
 
 TxListForAddr::TxListForAddr(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
