@@ -389,6 +389,49 @@ bool TxListModel::exportCSVto(const QString& filename)
    return true;
 }
 
+QString TxListModel::getBegDate() const
+{
+   std::time_t minTime = std::numeric_limits<std::time_t>::max();
+
+   for (int i = 0; i < rowCount(); ++i) {
+      const auto& entry = data_.at(i);
+
+      if (minTime > entry.txTime)
+         minTime = entry.txTime;
+   }
+
+   if (minTime == std::numeric_limits<std::time_t>::max())
+      minTime = std::time(nullptr);
+   
+   return getTime2String(minTime);
+}
+
+QString TxListModel::getEndDate() const
+{
+   std::time_t maxTime = std::time(nullptr);
+   // std::time_t maxTime = std::numeric_limits<std::time_t>::min();
+
+   // for (int i = 0; i < rowCount(); ++i) {
+   //    const auto& entry = data_.at(i);
+
+   //    if (maxTime < entry.txTime)
+   //       maxTime = entry.txTime;
+   // }
+
+   // if (maxTime == std::numeric_limits<std::time_t>::max())
+   //    maxTime = std::time(nullptr);
+   
+   return getTime2String(maxTime);
+}
+
+QString TxListModel::getTime2String(std::time_t& t) const
+{
+   std::tm* tm = std::localtime(&t);
+   char buffer[50];
+
+   std::strftime(buffer, sizeof(buffer), "%y%m%d", tm);
+   return QString::fromStdString(std::string(buffer));   
+}
 
 TxListForAddr::TxListForAddr(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
    : QAbstractTableModel(parent), logger_(logger)

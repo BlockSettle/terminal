@@ -85,6 +85,7 @@ ColumnLayout  {
         enabled: (password.input_text !== "")
                  && (confirm_password.input_text !== "")
                  && (password.input_text === confirm_password.input_text)
+                 && bsApp.isValidPassword(password.input_text)
         preferred: true
 
         function click_enter() {

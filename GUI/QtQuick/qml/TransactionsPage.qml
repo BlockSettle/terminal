@@ -129,7 +129,6 @@ Item {
                     }
                 }
 
-
                 Row {
                     spacing: 4
                     anchors.verticalCenter: parent.verticalCenter
@@ -163,6 +162,14 @@ Item {
                     custom_icon.height: 10
 
                     onClicked: {
+                        //There is a qtquick problem on setting currentFile.
+
+                        // fileDialogCSV.currentFile = "%1/BlockSettle_%2_%3_%4.csv"
+                        //    .arg(fileDialogCSV.folder)
+                        //    .arg(txWalletsComboBox.currentIndex === 0 ? "all" : txWalletsComboBox.currentText)
+                        //    .arg(txListModel.getBegDate())
+                        //    .arg(txListModel.getEndDate())
+
                         fileDialogCSV.visible = true
                     }
                     anchors.verticalCenter: parent.verticalCenter

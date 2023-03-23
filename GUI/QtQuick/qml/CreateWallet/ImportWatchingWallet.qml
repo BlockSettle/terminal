@@ -116,10 +116,24 @@ ColumnLayout  {
             font.weight: Font.Normal
         }
 
+        // states: [
+        //     State {
+        //         name: "clicked"
+        //         AnchorChanges { target: file_icon; anchors { left: undefined; } }
+        //         AnchorChanges { target: label_file; anchors { left: undefined; horizontalCenter: parent.horizontalCenter} }
+
+        //         PropertyChanges { target: file_icon; anchors.leftMargin: 0; x: 0; }
+        //         PropertyChanges { target: label_file; anchors.horizontalCenterMargin: 13 }
+        //         PropertyChanges { target: file_icon; x: label_file.x - 27; }
+        //     },
+        // ]
+
         FileDialog  {
             id: fileDialog
             visible: false
             onAccepted: {
+                dashed_border.state = "clicked"
+
                 label_file.text = basename(fileDialog.fileUrl.toString())
                 layout.isFileChoosen = true
                 dashed_border.source = "qrc:/images/wallet_file.png"

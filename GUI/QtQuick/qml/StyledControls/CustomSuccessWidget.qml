@@ -11,6 +11,8 @@ ColumnLayout  {
     id: layout
 
     property alias details_text: details.text
+    property alias details_font_size: details.font.pixelSize
+    property alias details_font_weight: details.font.weight
 
     signal sig_finish()
 

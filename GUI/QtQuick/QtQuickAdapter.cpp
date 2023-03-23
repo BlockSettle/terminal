@@ -2256,6 +2256,13 @@ int QtQuickAdapter::changePassword(const QString& walletId, const QString& oldPa
    return (msgId == 0) ? -1 : 0;
 }
 
+bool QtQuickAdapter::isValidPassword(const QString& password)
+{
+#define MINIMUM_PASSWORD_LENGTH 6
+
+   return password.length() >= MINIMUM_PASSWORD_LENGTH;
+}
+
 int QtQuickAdapter::exportWallet(const QString& walletId, const QString& exportDir)
 {
    SignerMessage msg;
