@@ -29,7 +29,7 @@ PluginsListModel::PluginsListModel(QObject* parent)
       { tr("SideShift.ai")
       , tr("Shift between BTC, ETH, BCH, XMR, USDT and 90+ other cryptocurrencies")
       , QString::fromLatin1("qrc:/images/sideshift_plugin.png")
-      , std::dynamic_pointer_cast<QObject>(std::make_shared<SideShiftController>())
+      , std::dynamic_pointer_cast<QObject>(std::make_shared<SideShiftController>(this))
       , QString::fromLatin1("qrc:/qml/Plugins/SideShift/SideShiftPopup.qml") }
    };
 }

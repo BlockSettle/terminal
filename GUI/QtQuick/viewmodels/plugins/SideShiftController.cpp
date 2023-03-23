@@ -10,8 +10,8 @@
 */
 #include "SideShiftController.h"
 
-SideShiftController::SideShiftController()
-   : QObject()
+SideShiftController::SideShiftController(QObject* parent)
+   : QObject(parent)
 {
 }
 

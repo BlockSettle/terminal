@@ -18,7 +18,7 @@ class SideShiftController: public QObject
    Q_PROPERTY(QString conversionRate READ conversionRate NOTIFY changed)
 
 public:
-   SideShiftController();
+   SideShiftController(QObject* parent = nullptr);
 
    QString conversionRate() const;
 
