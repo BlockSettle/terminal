@@ -719,7 +719,8 @@ ProcessingResult SignerAdapter::processExportWoWallet(const bs::message::Envelop
    };
    woWallet->shutdown();
    woWallet.reset();
-   const auto& fileName = SystemFileUtils::getFileName(srcPathName);
+   const std::string netType = (hdWallet->networkType() == NetworkType::TestNet) ? "Testnet_" : "";
+   const std::string fileName = "BlockSettle_" + netType + hdWallet->walletId() + "_watchonly.lmdb";
    const auto& dstPathName = request.output_dir() + "/" + fileName;
    if (!SystemFileUtils::cpFile(srcPathName, dstPathName)) {
       rm();
