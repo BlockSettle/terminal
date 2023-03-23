@@ -78,7 +78,10 @@ Rectangle {
                name: name_role
                description: description_role
                icon_source: icon_role
-               onCardClicked: plugin_popup.open()
+               onCardClicked: {
+                  plugin_popup.reset()
+                  plugin_popup.open()
+               }
             }
 
             function finishCreation() {

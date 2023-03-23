@@ -113,4 +113,8 @@ Item {
          onClicked: root.shift()
       }
    }
+
+   function reset() {
+      addressInput.text = ""
+   }
 }

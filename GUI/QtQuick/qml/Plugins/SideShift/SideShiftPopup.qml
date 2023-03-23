@@ -33,8 +33,8 @@ PluginPopup {
       SideShiftMainPage {
          id: mainPage
          onShift: {
-            if (!mainPage.receive) {
-               stackView.push(buyPage)
+            if (mainPage.receive) {
+               stackView.replace(buyPage)
             }
          }
          controller: root.controller
@@ -50,7 +50,7 @@ PluginPopup {
 
    function reset()
    {
-      stackView.clear()
-      stackView.pop()
+      mainPage.reset()
+      stackView.replace(mainPage)
    }
 }
