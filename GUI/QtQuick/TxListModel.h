@@ -46,6 +46,9 @@ public:
 
    Q_INVOKABLE bool exportCSVto(const QString&);
 
+   Q_INVOKABLE QString getBegDate() const;
+   Q_INVOKABLE QString getEndDate() const;
+
    void addRows(const std::vector<bs::TXEntry>&);
    void clear();
    void setTxComment(const std::string& txHash, const std::string& comment);

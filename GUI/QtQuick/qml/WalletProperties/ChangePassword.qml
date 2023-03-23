@@ -94,9 +94,10 @@ ColumnLayout {
 
         width: 530
         enabled: (password.input_text !== "")
-                 && (new_password.input_text != "")
+                 && (new_password.input_text !== "")
                  && (confirm_password.input_text !== "")
-                 && (password.input_text == confirm_password.input_text !== "")
+                 && (new_password.input_text === confirm_password.input_text)
+                 && bsApp.isValidPassword(new_password.input_text)
 
         function click_enter() {
             const result = bsApp.changePassword(

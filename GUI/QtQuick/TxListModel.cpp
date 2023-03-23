@@ -32,6 +32,15 @@ namespace {
       {TxInOutModel::ColorRole, "dataColor"},
       {TxInOutModel::TxHashRole, "txHash"},
    };
+
+   QString getTime2String(std::time_t& t)
+   {
+      std::tm* tm = std::localtime(&t);
+      char buffer[50];
+
+      std::strftime(buffer, sizeof(buffer), "%y%m%d", tm);
+      return QString::fromStdString(std::string(buffer));   
+   }
 }
 
 TxListModel::TxListModel(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
@@ -389,6 +398,26 @@ bool TxListModel::exportCSVto(const QString& filename)
    return true;
 }
 
+QString TxListModel::getBegDate() const
+{
+   std::time_t minTime = std::time(nullptr);
+
+   for (int i = 0; i < rowCount(); ++i) {
+      const auto& entry = data_.at(i);
+
+      if (minTime > entry.txTime)
+         minTime = entry.txTime;
+   }
+
+   return getTime2String(minTime);
+}
+
+QString TxListModel::getEndDate() const
+{
+   std::time_t maxTime = std::time(nullptr);
+   
+   return getTime2String(maxTime);
+}
 
 TxListForAddr::TxListForAddr(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
    : QAbstractTableModel(parent), logger_(logger)
