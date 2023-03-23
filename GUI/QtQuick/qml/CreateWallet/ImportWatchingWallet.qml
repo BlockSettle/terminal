@@ -116,17 +116,17 @@ ColumnLayout  {
             font.weight: Font.Normal
         }
 
-        // states: [
-        //     State {
-        //         name: "clicked"
-        //         AnchorChanges { target: file_icon; anchors { left: undefined; } }
-        //         AnchorChanges { target: label_file; anchors { left: undefined; horizontalCenter: parent.horizontalCenter} }
+        states: [
+            State {
+                name: "clicked"
+                AnchorChanges { target: file_icon; anchors { left: undefined; } }
+                AnchorChanges { target: label_file; anchors { left: undefined; horizontalCenter: parent.horizontalCenter} }
 
-        //         PropertyChanges { target: file_icon; anchors.leftMargin: 0; x: 0; }
-        //         PropertyChanges { target: label_file; anchors.horizontalCenterMargin: 13 }
-        //         PropertyChanges { target: file_icon; x: label_file.x - 27; }
-        //     },
-        // ]
+                PropertyChanges { target: file_icon; anchors.leftMargin: 0; x: 0; }
+                PropertyChanges { target: label_file; anchors.horizontalCenterMargin: 13 }
+                PropertyChanges { target: file_icon; x: label_file.x - 27; }
+            }
+        ]
 
         FileDialog  {
             id: fileDialog

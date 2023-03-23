@@ -39,6 +39,8 @@ Rectangle {
     signal textChanged()
     signal editingFinished()
     signal activeFocusChanged()
+    signal tabNavigated()
+    signal backTabNavigated()
 
 
     color: "#020817"
@@ -102,6 +104,13 @@ Rectangle {
             rect.activeFocusChanged()
         }
 
+        Keys.onTabPressed: {
+            tabNavigated()
+        }
+
+        Keys.onBacktabPressed: {
+            backTabNavigated()
+        }
     }
 
     Image {

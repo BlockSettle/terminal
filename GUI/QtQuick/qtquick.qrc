@@ -103,6 +103,7 @@
         <file>qml/Pin/PinEntriesPopup.qml</file>
         <file>qml/Pin/qmldir</file>
         <file>qml/StyledControls/CustomMessageDialog.qml</file>
+        <file>qml/StyledControls/CustomFailDialog.qml</file>
         <file>qml/StyledControls/CustomMediumButton.qml</file>
         <file>qml/Overview/BalanceBar.qml</file>
         <file>qml/Overview/BaseBalanceLabel.qml</file>
@@ -186,5 +187,6 @@
         <file>qml/Plugins/Common/Card.qml</file>
         <file>qml/Plugins/Common/PluginsPage.qml</file>
         <file>images/sideshift_plugin.png</file>
+        <file>images/try_icon.png</file>
     </qresource>
 </RCC>

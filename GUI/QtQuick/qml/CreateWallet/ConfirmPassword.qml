@@ -24,6 +24,12 @@ ColumnLayout  {
         text: qsTr("Set password")
     }
 
+    CustomMessageDialog {
+        id: error_dialog
+        error: qsTr("Password should be over 6 charaters")
+        visible: false
+    }
+
     CustomTextInput {
         id: password
 
@@ -35,6 +41,7 @@ ColumnLayout  {
         input_topMargin: 35
         title_leftMargin: 16
         title_topMargin: 16
+        activeFocusOnTab: true
 
         isPassword: true
         isHiddenText: true
@@ -42,10 +49,19 @@ ColumnLayout  {
         title_text: qsTr("Password")
 
         Keys.onEnterPressed: {
+            checkPasswordLength()
             confirm_password.setActiveFocus()
         }
         Keys.onReturnPressed: {
+            checkPasswordLength()
             confirm_password.setActiveFocus()
+        }
+        onTabNavigated: {
+            checkPasswordLength()
+            confirm_password.setActiveFocus()
+        }
+        onBackTabNavigated: {
+            checkPasswordLength()
         }
     }
 
@@ -85,7 +101,6 @@ ColumnLayout  {
         enabled: (password.input_text !== "")
                  && (confirm_password.input_text !== "")
                  && (password.input_text === confirm_password.input_text)
-                 && bsApp.isValidPassword(password.input_text)
         preferred: true
 
         function click_enter() {
@@ -125,5 +140,14 @@ ColumnLayout  {
         confirm_password.isValid = true
         password.input_text = ""
         confirm_password.input_text = ""
+    }
+
+    function checkPasswordLength()
+    {
+        if (password.input_text.length < 6) {
+            error_dialog.show()
+            error_dialog.raise()
+            error_dialog.requestActivate()
+        }
     }
 }

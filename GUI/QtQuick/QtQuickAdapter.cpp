@@ -638,7 +638,10 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
       break;
    case SignerMessage::kWalletPassChanged:
       if (!msg.wallet_pass_changed()) {
-         emit showError(tr("Failed to change wallet password\nsee log for details"));
+         emit showFail(tr("Incorrect password"), tr("The password you entered is incorrect"));
+      }
+      else {
+         emit successChangePassword();
       }
       break;
    case SignerMessage::kExportWoWalletResponse:
@@ -1833,7 +1836,7 @@ ProcessingResult QtQuickAdapter::processSignTX(const BlockSettle::Common::Signer
       pushRequest(user_, userBlockchain_, msg.SerializeAsString());
    }
    else {
-      emit showError(tr("TX sign failed, error %1: %2").arg(response.error_code())
+      emit showFail(tr("Incorrect password"), tr("TX sign failed\nerror %1: %2").arg(response.error_code())
          .arg(QString::fromStdString(response.error_text())));
    }
    return ProcessingResult::Success;

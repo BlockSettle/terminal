@@ -22,6 +22,11 @@ CustomPopup {
         visible: false
 
         wallet_properties_vm: root.wallet_properties_vm
+
+        onSig_success: {
+            _stack_view.push(success)
+            success.details_text = qsTr("Your password has successfully been changed")
+        }
     }
 
     ExportWOWallet {
@@ -85,7 +90,7 @@ CustomPopup {
         details_font_size: 16
         details_font_weight: Font.Medium
         onSig_finish: {
-            root.close()
+            //root.close()
             _stack_view.pop(null)
         }
     }

@@ -9,12 +9,29 @@ import "../StyledControls"
 ColumnLayout {
     id: layout
 
+    signal sig_success()
+
     height: 548
     width: 580
 
     spacing: 0
 
     property var wallet_properties_vm
+
+    Connections
+    {
+        target:bsApp
+        function onSuccessChangePassword ()
+        {
+            layout.sig_success()
+        }
+    }
+
+    CustomMessageDialog {
+        id: error_dialog
+        error: qsTr("Password should be over 6 charaters")
+        visible: false
+    }
 
     CustomTitleLabel {
         id: title
@@ -52,13 +69,30 @@ ColumnLayout {
         input_topMargin: 35
         title_leftMargin: 16
         title_topMargin: 16
+        activeFocusOnTab: true
 
         title_text: qsTr("New Password")
 
         isPassword: true
         isHiddenText: true
-    }
 
+        Keys.onEnterPressed: {
+            checkPasswordLength()
+            confirm_password.setActiveFocus()
+        }
+        Keys.onReturnPressed: {
+            checkPasswordLength()
+            confirm_password.setActiveFocus()
+        }
+        onTabNavigated: {
+            checkPasswordLength()
+            confirm_password.setActiveFocus()
+        }
+        onBackTabNavigated: {
+            checkPasswordLength()
+            password.setActiveFocus()
+        }
+    }
 
     CustomTextInput {
         id: confirm_password
@@ -97,7 +131,6 @@ ColumnLayout {
                  && (new_password.input_text !== "")
                  && (confirm_password.input_text !== "")
                  && (new_password.input_text === confirm_password.input_text)
-                 && bsApp.isValidPassword(new_password.input_text)
 
         function click_enter() {
             const result = bsApp.changePassword(
@@ -134,5 +167,14 @@ ColumnLayout {
         password.input_text = ""
         new_password.input_text = ""
         confirm_password.input_text = ""
+    }
+
+    function checkPasswordLength()
+    {
+        if (new_password.input_text.length < 6) {
+            error_dialog.show()
+            error_dialog.raise()
+            error_dialog.requestActivate()
+        }
     }
 }
