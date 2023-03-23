@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2020 - 2021, BlockSettle AB
+* Copyright (C) 2020 - 2023, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -9,6 +9,7 @@
 
 */
 #include "SignerAdapter.h"
+#include <filesystem>
 #include <spdlog/spdlog.h>
 #include "bip39/bip39.h"
 #include "Adapters/SignerClient.h"
@@ -711,26 +712,20 @@ ProcessingResult SignerAdapter::processExportWoWallet(const bs::message::Envelop
       return ProcessingResult::Error;
    }
    const auto srcPathName = woWallet->getFileName();
-   const auto& rm = [srcPathName]() -> bool
-   {
-      bool rc = SystemFileUtils::rmFile(srcPathName);
-      rc &= SystemFileUtils::rmFile(srcPathName + "-lock");
-      return rc;
-   };
-   woWallet->shutdown();
-   woWallet.reset();
    const std::string netType = (hdWallet->networkType() == NetworkType::TestNet) ? "Testnet_" : "";
    const std::string fileName = "BlockSettle_" + netType + hdWallet->walletId() + "_watchonly.lmdb";
    const auto& dstPathName = request.output_dir() + "/" + fileName;
-   if (!SystemFileUtils::cpFile(srcPathName, dstPathName)) {
-      rm();
-      logger_->error("[{}] failed to copy {} -> {}", __func__, srcPathName, dstPathName);
+   woWallet->shutdown();
+   try {
+      std::filesystem::rename(srcPathName, dstPathName);
+      std::filesystem::remove(srcPathName + "-lock");
+   }
+   catch (const std::exception& e) {
+      logger_->error("[{}] failed to move {} -> {}: {}", __func__, srcPathName, dstPathName, e.what());
       pushResponse(user_, env, msg.SerializeAsString());
       return ProcessingResult::Error;
    }
-   if (!rm()) {
-      logger_->error("[{}] failed to rm {}", __func__, srcPathName);
-   }
+
    logger_->debug("[{}] exported {} to {}", __func__, request.wallet().wallet_id(), dstPathName);
    msg.set_export_wo_wallet_response(fileName);
    pushResponse(user_, env, msg.SerializeAsString());

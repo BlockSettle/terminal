@@ -1165,8 +1165,8 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
             if (tx.isInitialized()) {
                txDet.tx = std::move(tx);
                txDet.tx.setTxHeight(resp.tx_height());
-               logger_->debug("[{}] own txid: {}/{}", ownTxHash.toHexStr(true)
-                  , txDet.tx.getThisHash().toHexStr(true));
+               /*logger_->debug("[{}] own txid: {}/{}", ownTxHash.toHexStr(true)
+                  , txDet.tx.getThisHash().toHexStr(true));*/
             }
          }
       } catch (const std::exception &e) {
