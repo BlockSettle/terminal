@@ -212,7 +212,7 @@ ColumnLayout  {
 
                     Connections {
                         target: walletBalances
-                        onChanged: {
+                        function onChanged() {
                             if (layout.visible) {
                                 prepareRequest()
                             }

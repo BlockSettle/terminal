@@ -10,23 +10,18 @@
 */
 #pragma once
 
-#include <QSortFilterProxyModel>
-#include "SettingsController.h"
+#include <QObject>
 
-class PluginsFilterModel: public QSortFilterProxyModel
+class SideShiftController: public QObject
 {
    Q_OBJECT
+   Q_PROPERTY(QString conversionRate READ conversionRate NOTIFY changed)
 
 public:
-   PluginsFilterModel(std::shared_ptr<SettingsController> settings);
+   SideShiftController(QObject* parent = nullptr);
+
+   QString conversionRate() const;
 
 signals:
    void changed();
-
-protected:
-   bool filterAcceptsRow(int source_row,
-      const QModelIndex& source_parent) const override;
-
-private:
-   std::shared_ptr<SettingsController> settings_;
 };

@@ -48,7 +48,6 @@
 #include "Utils.h"
 #include "AddressFilterModel.h"
 #include "viewmodels/plugins/PluginsListModel.h"
-#include "viewmodels/plugins/PluginsFilterModel.h"
 
 #include "hardware_wallet.pb.h"
 #include "terminal.pb.h"
@@ -157,7 +156,6 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
    , addressFilterModel_(std::make_unique<AddressFilterModel>(settingsController_))
    , transactionFilterModel_(std::make_unique<TransactionFilterModel>(settingsController_))
    , pluginsListModel_(std::make_unique<PluginsListModel>())
-   , pluginsFilterModel_(std::make_unique<PluginsFilterModel>(settingsController_))
 {
    staticLogger = logger;
    addrModel_ = new QmlAddressListModel(logger, this);
@@ -174,7 +172,6 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
 
    addressFilterModel_->setSourceModel(addrModel_);
    transactionFilterModel_->setSourceModel(txModel_);
-   pluginsFilterModel_->setSourceModel(pluginsListModel_.get());
 
    connect(settingsController_.get(), &SettingsController::changed, this, [this](ApplicationSettings::Setting key)
    {
@@ -301,7 +298,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
    rootCtxt_->setContextProperty(QLatin1Literal("feeSuggestions"), feeSuggModel_);
    rootCtxt_->setContextProperty(QLatin1Literal("addressFilterModel"), addressFilterModel_.get());
    rootCtxt_->setContextProperty(QLatin1Literal("transactionFilterModel"), transactionFilterModel_.get());
-   rootCtxt_->setContextProperty(QLatin1Literal("pluginFilterModel"), pluginsFilterModel_.get());
+   rootCtxt_->setContextProperty(QLatin1Literal("pluginsListModel"), pluginsListModel_.get());
    engine.addImageProvider(QLatin1Literal("QR"), new QRImageProvider);
 
    connect(&engine, &QQmlApplicationEngine::objectCreated,
@@ -1168,8 +1165,8 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
             if (tx.isInitialized()) {
                txDet.tx = std::move(tx);
                txDet.tx.setTxHeight(resp.tx_height());
-               logger_->debug("[{}] own txid: {}/{}", ownTxHash.toHexStr(true)
-                  , txDet.tx.getThisHash().toHexStr(true));
+               /*logger_->debug("[{}] own txid: {}/{}", ownTxHash.toHexStr(true)
+                  , txDet.tx.getThisHash().toHexStr(true));*/
             }
          }
       } catch (const std::exception &e) {
