@@ -57,7 +57,7 @@ ComboBox {
 
     background: Rectangle {
 
-        color: SideSwapStyles.buttonSecondartBackground
+        color: SideSwapStyles.buttonSecondaryBackground
         opacity: 1
         radius: 4
 
@@ -125,7 +125,7 @@ ComboBox {
         }
 
         background: Rectangle {
-            color: SideSwapStyles.buttonSecondartBackground
+            color: SideSwapStyles.buttonSecondaryBackground
             radius: 4
 
             border.width: 1

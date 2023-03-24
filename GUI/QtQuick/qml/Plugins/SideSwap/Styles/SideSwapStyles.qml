@@ -17,10 +17,10 @@ QtObject {
 
    readonly property color primaryTextColor: "white"
    readonly property color secondaryTextColor: "#03b3f3"
-   readonly property color parapraphTextColor: "#6d9dab"
+   readonly property color paragraphTextColor: "#6d9dab"
 
    readonly property color spacerColor: "#104c72"
 
    readonly property color buttonBackground: "#00b4e9"
-   readonly property color buttonSecondartBackground: "#043857"
+   readonly property color buttonSecondaryBackground: "#043857"
 }

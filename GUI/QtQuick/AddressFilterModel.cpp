@@ -132,7 +132,7 @@ void AddressFilterModel::setHideUsed(bool hideUsed) noexcept
 }
 
 void AddressFilterModel::setHideInternal(bool hideInternal) noexcept
-{\
+{
    if (hideInternal_ != hideInternal) {
       hideInternal_ = hideInternal;
       settings_->setParam(ApplicationSettings::Setting::AddressFilterHideInternal, hideInternal_);

@@ -49,7 +49,7 @@ Column {
         text: comment
         font.family: "Roboto"
         font.pixelSize: 16
-        color: SideSwapStyles.parapraphTextColor
+        color: SideSwapStyles.paragraphTextColor
     }
 }
 

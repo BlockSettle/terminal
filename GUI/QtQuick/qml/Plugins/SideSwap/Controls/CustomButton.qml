@@ -30,7 +30,7 @@ Button {
 
     background: Rectangle {
         id: backgroundItem
-        color: control.active ? SideSwapStyles.buttonBackground : SideSwapStyles.buttonSecondartBackground
+        color: control.active ? SideSwapStyles.buttonBackground : SideSwapStyles.buttonSecondaryBackground
         radius: 8
     }
 
@@ -38,7 +38,7 @@ Button {
         text: control.text
         font: control.font
         anchors.fill: parent
-        color: control.active ? SideSwapStyles.primaryTextColor : SideSwapStyles.parapraphTextColor
+        color: control.active ? SideSwapStyles.primaryTextColor : SideSwapStyles.paragraphTextColor
         verticalAlignment: Text.AlignVCenter
         horizontalAlignment: Text.AlignHCenter
     }
