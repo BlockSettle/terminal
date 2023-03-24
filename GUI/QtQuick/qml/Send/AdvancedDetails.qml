@@ -16,7 +16,7 @@ ColumnLayout  {
     signal sig_simple()
     signal sig_select_inputs()
 
-    height: 748
+    height: 723
     width: 1132
     spacing: 0
 
@@ -101,7 +101,7 @@ ColumnLayout  {
 
         Layout.fillWidth: true
         Layout.preferredHeight : 580
-        Layout.topMargin: 20
+        Layout.topMargin: 15
 
         spacing: 12
 
@@ -112,7 +112,7 @@ ColumnLayout  {
             Layout.alignment: Qt.AlignLeft | Qt.AlingVCenter
 
             width: 536
-            height: 580
+            height: 565
             color: "transparent"
 
             radius: 16
@@ -364,7 +364,7 @@ ColumnLayout  {
             Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
 
             width: 536
-            height: 580
+            height: 565
             color: "transparent"
 
             radius: 16
@@ -531,7 +531,7 @@ ColumnLayout  {
 
         width: 1084
 
-        Layout.bottomMargin: 40
+        Layout.bottomMargin: 30
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         text: qsTr("Continue")
