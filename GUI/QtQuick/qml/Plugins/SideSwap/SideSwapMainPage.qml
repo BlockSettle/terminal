@@ -77,7 +77,7 @@ Item {
          }
 
          Text {
-            text: "SideSwap will generate a Peg-In address for you to deliver BTC into. Each peg-in/out URL is unique and can be re-entered to view your progress. A peg-in/out address may be re-used."
+            text: qsTr("SideSwap will generate a Peg-In address for you to deliver BTC into. Each peg-in/out URL is unique and can be re-entered to view your progress. A peg-in/out address may be re-used.")
             width: parent.width - 20
             color: SideSwapStyles.paragraphTextColor
             clip: true
