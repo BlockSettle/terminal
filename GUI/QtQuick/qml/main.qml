@@ -92,6 +92,11 @@ ApplicationWindow {
         visible: false
     }
 
+    CustomFailDialog {
+        id: fail_dialog
+        visible: false;
+    }
+
     Connections
     {
         target:bsApp
@@ -111,6 +116,13 @@ ApplicationWindow {
         {
             error_dialog.error = text
             show_popup(error_dialog)
+        }
+
+        function onShowFail(header, fail)
+        {
+            fail_dialog.header = header
+            fail_dialog.fail = fail
+            show_popup(fail_dialog)
         }
 
         function onWalletsLoaded (nb)

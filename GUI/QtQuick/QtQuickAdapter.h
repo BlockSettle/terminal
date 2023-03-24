@@ -201,9 +201,11 @@ signals:
    void invokePINentry();
    void invokePasswordEntry(const QString& devName, bool acceptOnDevice);
    void showError(const QString&);
+   void showFail(const QString&, const QString&);
    void showNotification(QString, QString);
    void successExport(QString nameExport);
    void requestWalletSelection(quint32 index);
+   void successChangePassword();
 
 private slots:
    void onArmoryServerChanged(const QModelIndex&, const QVariant&);
