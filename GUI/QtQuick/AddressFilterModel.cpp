@@ -11,11 +11,14 @@
 #include "AddressFilterModel.h"
 #include "AddressListModel.h"
 #include <QtGlobal>
+#include <QDebug>
 
 AddressFilterModel::AddressFilterModel(std::shared_ptr<SettingsController> settings)
    : QSortFilterProxyModel()
    , settings_(settings)
 {
+   setDynamicSortFilter(true);
+   sort(0, Qt::AscendingOrder);
    connect(this, &AddressFilterModel::changed, this, &AddressFilterModel::invalidate);
 
    if (settings_ != nullptr)
@@ -77,6 +80,29 @@ bool AddressFilterModel::filterAcceptsRow(int source_row, const QModelIndex& sou
    return true;
 }
 
+bool AddressFilterModel::lessThan(const QModelIndex& left, const QModelIndex& right) const
+{       
+   try {
+      if (qFuzzyIsNull(sourceModel()->data(sourceModel()->index(left.row(), 2)
+               , QmlAddressListModel::TableRoles::TableDataRole).toDouble()) && 
+         !qFuzzyIsNull(sourceModel()->data(sourceModel()->index(right.row(), 2)
+               , QmlAddressListModel::TableRoles::TableDataRole).toDouble())) {
+         return true;
+      }
+      else if (qFuzzyIsNull(sourceModel()->data(sourceModel()->index(left.row(), 2)
+               , QmlAddressListModel::TableRoles::TableDataRole).toDouble()) == 
+               qFuzzyIsNull(sourceModel()->data(sourceModel()->index(right.row(), 2)
+               , QmlAddressListModel::TableRoles::TableDataRole).toDouble())) {
+         return (sourceModel()->data(sourceModel()->index(left.row(), 0)
+               , QmlAddressListModel::TableRoles::AddressTypeRole).toString().remove(0, 2).toInt() < 
+                 sourceModel()->data(sourceModel()->index(right.row(), 0)
+               , QmlAddressListModel::TableRoles::AddressTypeRole).toString().remove(0, 2).toInt());
+      }
+   }
+   catch (...) {}
+   return false;
+}
+
 bool AddressFilterModel::hideUsed() const
 {
    return hideUsed_;
@@ -107,7 +133,7 @@ void AddressFilterModel::setHideUsed(bool hideUsed) noexcept
 }
 
 void AddressFilterModel::setHideInternal(bool hideInternal) noexcept
-{
+{\
    if (hideInternal_ != hideInternal) {
       hideInternal_ = hideInternal;
       settings_->setParam(ApplicationSettings::Setting::AddressFilterHideInternal, hideInternal_);

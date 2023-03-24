@@ -39,9 +39,10 @@ signals:
 protected:
    bool filterAcceptsRow(int source_row,
       const QModelIndex& source_parent) const override;
+   bool lessThan(const QModelIndex & left, const QModelIndex & right) const override;
 
 private:
-   bool hideUsed_ { false };
+   bool hideUsed_ { true };
    bool hideInternal_ { false };
    bool hideExternal_ { false };
    bool hideEmpty_ { false };
