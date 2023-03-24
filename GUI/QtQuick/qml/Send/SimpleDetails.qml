@@ -132,7 +132,7 @@ ColumnLayout  {
 
             Connections {
                 target: walletBalances
-                onChanged: {
+                function onChanged() {
                     if (layout.visible) {
                         create_temp_request()
                     }

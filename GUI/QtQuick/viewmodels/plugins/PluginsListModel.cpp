@@ -9,6 +9,7 @@
 
 */
 #include "PluginsListModel.h"
+#include "SideShiftController.h"
 #include <QString>
 
 namespace
@@ -16,7 +17,8 @@ namespace
    static const QHash<int, QByteArray> kRoles {
       {PluginsListModel::PluginRoles::Name, "name_role"},
       {PluginsListModel::PluginRoles::Description, "description_role"},
-      {PluginsListModel::PluginRoles::Icon, "icon_role"}
+      {PluginsListModel::PluginRoles::Icon, "icon_role"},
+      {PluginsListModel::PluginRoles::Path, "path_role"}
    };
 }
 
@@ -26,7 +28,9 @@ PluginsListModel::PluginsListModel(QObject* parent)
    plugins_ = {
       { tr("SideShift.ai")
       , tr("Shift between BTC, ETH, BCH, XMR, USDT and 90+ other cryptocurrencies")
-      , QString::fromLatin1("qrc:/images/sideshift_plugin.png") }
+      , QString::fromLatin1("qrc:/images/sideshift_plugin.png")
+      , new SideShiftController(this)
+      , QString::fromLatin1("qrc:/qml/Plugins/SideShift/SideShiftPopup.qml") }
    };
 }
 
@@ -43,6 +47,7 @@ QVariant PluginsListModel::data(const QModelIndex& index, int role) const
       case Name: return plugins_.at(row).name;
       case Description: return plugins_.at(row).description;
       case Icon: return plugins_.at(row).icon;
+      case Path: return plugins_.at(row).path;
       default: break;
       }
    }
@@ -55,4 +60,14 @@ QVariant PluginsListModel::data(const QModelIndex& index, int role) const
 QHash<int, QByteArray> PluginsListModel::roleNames() const
 {
    return kRoles;
+}
+
+QObject* PluginsListModel::getPlugin(int index)
+{
+   try {
+      return plugins_.at(index).controller;
+   }
+   catch (...) {
+   }
+   return nullptr;
 }
