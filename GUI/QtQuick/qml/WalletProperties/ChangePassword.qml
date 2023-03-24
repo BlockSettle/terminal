@@ -29,7 +29,7 @@ ColumnLayout {
 
     CustomMessageDialog {
         id: error_dialog
-        error: qsTr("Password should be over 6 charaters")
+        error: qsTr("Password strength is insufficient")
         visible: false
     }
 
@@ -171,7 +171,7 @@ ColumnLayout {
 
     function checkPasswordLength()
     {
-        if (new_password.input_text.length < 6) {
+        if (!bsApp.validatePassword(new_password.input_text)) {
             error_dialog.show()
             error_dialog.raise()
             error_dialog.requestActivate()

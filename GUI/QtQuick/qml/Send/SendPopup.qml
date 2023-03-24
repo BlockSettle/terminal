@@ -100,8 +100,7 @@ CustomPopup {
     }
 
     function init() {
-        //if (_stack_view.currentItem == null)
-        _stack_view.push(bsApp.settingAdvancedTX ? advanced_details : simple_details)
+        _stack_view.replace(bsApp.settingAdvancedTX ? advanced_details : simple_details)
 
         if (_stack_view.currentItem === simple_details)
         {
