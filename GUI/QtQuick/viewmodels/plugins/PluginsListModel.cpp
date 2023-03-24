@@ -26,11 +26,23 @@ PluginsListModel::PluginsListModel(QObject* parent)
    : QAbstractListModel(parent)
 {
    plugins_ = {
+      { tr("Leverex")
+      , tr("Leverage made simple")
+      , QString::fromLatin1("qrc:/images/leverex_plugin.png")
+      , nullptr
+      , QString::fromLatin1("") },
+
       { tr("SideShift.ai")
       , tr("Shift between BTC, ETH, BCH, XMR, USDT and 90+ other cryptocurrencies")
       , QString::fromLatin1("qrc:/images/sideshift_plugin.png")
       , new SideShiftController(this)
-      , QString::fromLatin1("qrc:/qml/Plugins/SideShift/SideShiftPopup.qml") }
+      , QString::fromLatin1("qrc:/qml/Plugins/SideShift/SideShiftPopup.qml") },
+
+      { tr("SideSwap.io")
+      , tr("Easiest way to get started on the Liquid Network")
+      , QString::fromLatin1("qrc:/images/sideswap_plugin.png")
+      , nullptr
+      , QString::fromLatin1("qrc:/qml/Plugins/SideSwap/SideSwapPopup.qml") }
    };
 }
 
