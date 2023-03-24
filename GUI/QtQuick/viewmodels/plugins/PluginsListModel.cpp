@@ -27,7 +27,7 @@ PluginsListModel::PluginsListModel(QObject* parent)
 {
    plugins_ = {
       { tr("Leverex")
-      , tr("Levereage made simple")
+      , tr("Leverage made simple")
       , QString::fromLatin1("qrc:/images/leverex_plugin.png")
       , nullptr
       , QString::fromLatin1("") },
