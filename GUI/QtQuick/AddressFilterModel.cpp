@@ -11,7 +11,6 @@
 #include "AddressFilterModel.h"
 #include "AddressListModel.h"
 #include <QtGlobal>
-#include <QDebug>
 
 AddressFilterModel::AddressFilterModel(std::shared_ptr<SettingsController> settings)
    : QSortFilterProxyModel()
@@ -83,9 +82,9 @@ bool AddressFilterModel::filterAcceptsRow(int source_row, const QModelIndex& sou
 bool AddressFilterModel::lessThan(const QModelIndex& left, const QModelIndex& right) const
 {       
    try {
-      if (qFuzzyIsNull(sourceModel()->data(sourceModel()->index(left.row(), 2)
+      if (!qFuzzyIsNull(sourceModel()->data(sourceModel()->index(left.row(), 2)
                , QmlAddressListModel::TableRoles::TableDataRole).toDouble()) && 
-         !qFuzzyIsNull(sourceModel()->data(sourceModel()->index(right.row(), 2)
+         qFuzzyIsNull(sourceModel()->data(sourceModel()->index(right.row(), 2)
                , QmlAddressListModel::TableRoles::TableDataRole).toDouble())) {
          return true;
       }

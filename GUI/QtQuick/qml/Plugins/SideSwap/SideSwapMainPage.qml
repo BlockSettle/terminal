@@ -33,7 +33,7 @@ Item {
       Rectangle {
          id: topPanel
          width: parent.width
-         height: 350
+         height: 270
          anchors.top: parent.top
          color: SideSwapStyles.darkBlueBackground
       }
