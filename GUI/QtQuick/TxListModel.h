@@ -51,7 +51,6 @@ public:
 
    void addRows(const std::vector<bs::TXEntry>&);
    void clear();
-   void setTxComment(const std::string& txHash, const std::string& comment);
    void setDetails(const bs::sync::TXWalletDetails&, bool usePending = true);
    void removeTX(const BinaryData& txHash);
    void setCurrentBlock(uint32_t);
@@ -66,6 +65,7 @@ private:
    QString txType(int row) const;
    QString txFlag(int row) const;
    QString txId(int row) const;
+   QString txComment(int row) const;
    bool isRBF(int row) const;
    quint32 nbConf(int row) const;
 
@@ -73,7 +73,6 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    const QStringList header_;
    std::vector<bs::TXEntry> data_;
-   std::unordered_map<std::string, std::string> txComments_;
    std::map<int, bs::sync::TXWalletDetails>  txDetails_;
    std::vector<bs::sync::TXWalletDetails>    pendingDetails_;
    uint32_t curBlock_;

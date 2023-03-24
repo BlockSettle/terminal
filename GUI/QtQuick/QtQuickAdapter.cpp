@@ -1155,9 +1155,6 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
       if (!response.error_msg().empty()) {
          txDet.comment = response.error_msg();
       }
-      if (!resp.comment().empty()) {
-         txModel_->setTxComment(resp.tx_hash(), txDet.comment);
-      }
 
       const auto &ownTxHash = BinaryData::fromString(resp.tx_hash());
       try {
@@ -1225,7 +1222,6 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
 
       const auto& itTxDet = txDetailReqs_.find(msgId);
       if (itTxDet == txDetailReqs_.end()) {
-         logger_->debug("[{}] TX model update", __func__);
          if (txDet.direction == bs::sync::Transaction::Direction::Revoke) {
             txModel_->removeTX(txDet.txHash);
          }

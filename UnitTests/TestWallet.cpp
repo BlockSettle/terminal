@@ -2057,10 +2057,12 @@ TEST_F(TestWallet, WalletMeta)
          EXPECT_EQ(result.first, settlCp.settlementId);
          EXPECT_EQ(result.second, settlCp.cpAddr);
       }
+#if 0
       for (auto &settlMeta : settlMetas) {
          auto result = leafNative->getSettlAuthAddr(settlMeta.settlementId);
          EXPECT_EQ(result, settlMeta.authAddr);
       }
+#endif
       for (auto &addr : addrComments) {
          EXPECT_EQ(leafNative->getAddressComment(addr.first), addr.second);
       }

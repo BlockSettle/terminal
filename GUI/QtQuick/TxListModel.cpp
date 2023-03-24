@@ -79,16 +79,7 @@ QVariant TxListModel::getData(int row, int col) const
    case 4: return gui_utils::satoshiToQString(std::abs(entry.value));
    case 5: return entry.nbConf;
    case 6: return txFlag(row);
-   case 7: {
-      const auto& itComm = txComments_.find(entry.txHash.toBinStr());
-      if (itComm != txComments_.end()) {
-         return QString::fromStdString(itComm->second);
-      }
-      else {
-         return QString();
-      }
-      break;
-   }
+   case 7: return txComment(row);
    default: break;
    }
    return {};
@@ -142,6 +133,15 @@ QString TxListModel::txType(int row) const
    const auto& itTxDet = txDetails_.find(row);
    if (itTxDet != txDetails_.end()) {
       return gui_utils::directionToQString(itTxDet->second.direction);
+   }
+   return {};
+}
+
+QString TxListModel::txComment(int row) const
+{
+   const auto& itTxDet = txDetails_.find(row);
+   if (itTxDet != txDetails_.end()) {
+      return QString::fromStdString(itTxDet->second.comment);
    }
    return {};
 }
@@ -277,24 +277,6 @@ void TxListModel::clear()
    emit nbTxChanged();
 }
 
-void TxListModel::setTxComment(const std::string& txHash, const std::string& comment)
-{
-   txComments_[txHash] = comment;
-   int rowFirst = -1, rowLast = -1;
-   for (int i = 0; i < data_.size(); ++i) {
-      const auto& txEntryHash = data_.at(i).txHash.toBinStr();
-      if (txHash == txEntryHash) {
-         if (!rowFirst) {
-            rowFirst = i;
-         }
-         rowLast = i;
-      }
-   }
-   if (rowFirst != -1 && rowLast != -1) {
-      emit dataChanged(createIndex(rowFirst, 7), createIndex(rowLast, 7));
-   }
-}
-
 void TxListModel::setDetails(const bs::sync::TXWalletDetails& txDet, bool usePending)
 {
    int row = -1;
@@ -309,12 +291,12 @@ void TxListModel::setDetails(const bs::sync::TXWalletDetails& txDet, bool usePen
       }
    }
    if (row != -1) {
-      emit dataChanged(createIndex(row, 1), createIndex(row, 6));
-      logger_->debug("[TxListModel::setDetails] {} {} found at row {}", txDet.txHash.toHexStr(), txDet.hdWalletId, row);
+      emit dataChanged(createIndex(row, 1), createIndex(row, 7));
+      //logger_->debug("[TxListModel::setDetails] {} {} found at row {}", txDet.txHash.toHexStr(), txDet.hdWalletId, row);
       
    }
    else {
-      logger_->warn("[TxListModel::setDetails] {} {} not found", txDet.txHash.toHexStr(), txDet.hdWalletId);
+      //logger_->warn("[TxListModel::setDetails] {} {} not found", txDet.txHash.toHexStr(), txDet.hdWalletId);
       if (usePending) {
          pendingDetails_.push_back(txDet);
       }
