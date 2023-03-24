@@ -23,11 +23,6 @@ Rectangle {
 
    signal buttonClicked()
 
-   // Image {
-   //    anchors.fill: parent
-   //    source: "qrc:/images/transfer_icon.png"
-   // }
-
    MouseArea {
       id: mouseArea
       anchors.fill: parent
