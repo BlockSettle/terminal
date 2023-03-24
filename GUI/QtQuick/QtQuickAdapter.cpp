@@ -39,6 +39,7 @@
 #include "TxOutputsModel.h"
 #include "TxInputsSelectedModel.h"
 #include "SettingsAdapter.h"
+#include "SystemFileUtils.h"
 #include "Wallets/ProtobufHeadlessUtils.h"
 #include "WalletBalancesModel.h"
 #include "TransactionFilterModel.h"
@@ -1145,7 +1146,7 @@ ProcessingResult QtQuickAdapter::processWalletBalances(bs::message::SeqId respon
 ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
    , const WalletsMessage_TXDetailsResponse &response)
 {
-   logger_->debug("[{}] {}", __func__, response.DebugString());
+   //logger_->debug("[{}] {}", __func__, response.DebugString());
    for (const auto &resp : response.responses()) {
       bs::sync::TXWalletDetails txDet{ BinaryData::fromString(resp.tx_hash()), resp.hd_wallet_id()
          , resp.wallet_name(), static_cast<bs::core::wallet::Type>(resp.wallet_type())
@@ -1707,12 +1708,26 @@ void QtQuickAdapter::setHWpassword(const QString& password)
    curAuthDevice_ = {};
 }
 
+void QtQuickAdapter::importWOWallet(const QString& filename)
+{
+   if (filename.isEmpty() || !SystemFileUtils::fileExist(filename.toStdString())) {
+      emit showError(tr("Invalid or non-existing wallet file %1").arg(filename));
+      return;
+   }
+   logger_->debug("[{}] {}", __func__, filename.toStdString());
+   SignerMessage msg;
+   msg.set_import_wo_wallet(filename.toStdString());
+   pushRequest(user_, userSigner_, msg.SerializeAsString());
+}
+
 void QtQuickAdapter::importHWWallet(int deviceIndex)
 {
    auto devKey = hwDeviceModel_->getDevice(deviceIndex);
    if (devKey.id.empty() && (deviceIndex >= 0)) {
+      emit showError(tr("Invalid device #%1").arg(deviceIndex));
       return;
    }
+   logger_->debug("[{}] {}", __func__, deviceIndex);
    HW::DeviceMgrMessage msg;
    bs::hww::deviceKeyToMsg(devKey, msg.mutable_import_device());
    pushRequest(user_, userHWW_, msg.SerializeAsString());

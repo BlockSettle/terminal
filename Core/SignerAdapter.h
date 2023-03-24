@@ -118,6 +118,8 @@ private:
       , const BlockSettle::Common::SignerMessage_ChangeWalletPassword&);
    bs::message::ProcessingResult processGetWalletSeed(const bs::message::Envelope&
       , const BlockSettle::Common::SignerMessage_WalletRequest&);
+   bs::message::ProcessingResult processImportWoWallet(const bs::message::Envelope&
+      , const std::string& filename);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

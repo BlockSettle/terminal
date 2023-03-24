@@ -15,7 +15,7 @@ ColumnLayout  {
     signal sig_import()
     signal sig_full()
 
-    property bool isFileChoosen: false
+    property string chosenFilename: ""
 
     height: 515
     width: 580
@@ -60,7 +60,7 @@ ColumnLayout  {
         Image {
             id: file_icon
 
-            visible: layout.isFileChoosen
+            visible: layout.chosenFilename.length > 0
 
             width:12
             height: 16
@@ -75,7 +75,7 @@ ColumnLayout  {
         Image {
             id: folder_icon
 
-            visible: !layout.isFileChoosen
+            visible: layout.chosenFilename === ""
 
             width: 20
             height: 16
@@ -90,7 +90,7 @@ ColumnLayout  {
         Label {
             id: label_file
 
-            visible: layout.isFileChoosen
+            visible: layout.chosenFilename.length > 0
 
             anchors.left: parent.left
             anchors.leftMargin: 230
@@ -104,7 +104,7 @@ ColumnLayout  {
         Label {
             id: label_folder
 
-            visible: !layout.isFileChoosen
+            visible: layout.chosenFilename === ""
 
             anchors.left: parent.left
             anchors.leftMargin: 225
@@ -135,7 +135,9 @@ ColumnLayout  {
                 dashed_border.state = "clicked"
 
                 label_file.text = basename(fileDialog.fileUrl.toString())
-                layout.isFileChoosen = true
+                var pathname = fileDialog.fileUrl.toString()
+                pathname = pathname.replace(/^(file:\/{3})/, "")
+                layout.chosenFilename = decodeURIComponent(pathname)
                 dashed_border.source = "qrc:/images/wallet_file.png"
             }
         }
@@ -155,12 +157,13 @@ ColumnLayout  {
         Layout.leftMargin: 25
         Layout.topMargin: 32
         width: 530
-        enabled: layout.isFileChoosen
+        enabled: layout.chosenFilename.length > 0
         preferred: true
 
         function click_enter() {
             if (!import_but.enabled) return
-
+            console.log("import: ", layout.chosenFilename)
+            bsApp.importWOWallet(layout.chosenFilename)
             layout.sig_import()
         }
     }

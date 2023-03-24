@@ -160,6 +160,7 @@ public:
    Q_INVOKABLE void stopHWWalletsPolling();
    Q_INVOKABLE void setHWpin(const QString&);
    Q_INVOKABLE void setHWpassword(const QString&);
+   Q_INVOKABLE void importWOWallet(const QString& filename);
    Q_INVOKABLE void importHWWallet(int deviceIndex);
    Q_INVOKABLE void generateNewAddress(int walletIndex, bool isNative);
    Q_INVOKABLE void copyAddressToClipboard(const QString& addr);

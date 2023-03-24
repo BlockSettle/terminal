@@ -150,6 +150,8 @@ ProcessingResult SignerAdapter::processOwnRequest(const bs::message::Envelope &e
       return processChangeWalletPass(env, request.change_wallet_pass());
    case SignerMessage::kGetWalletSeed:
       return processGetWalletSeed(env, request.get_wallet_seed());
+   case SignerMessage::kImportWoWallet:
+      return processImportWoWallet(env, request.import_wo_wallet());
    default:
       logger_->warn("[{}] unknown signer request: {}", __func__, request.data_case());
       break;
@@ -793,5 +795,35 @@ bs::message::ProcessingResult SignerAdapter::processGetWalletSeed(const bs::mess
       return ProcessingResult::Error;
    }
    pushResponse(user_, env, msg.SerializeAsString());
+   return bs::message::ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult SignerAdapter::processImportWoWallet(const bs::message::Envelope& env
+   , const std::string& filename)
+{
+   SignerMessage msg;
+   auto msgResp = msg.mutable_created_wallet();
+   const auto& fn = SystemFileUtils::getFileName(filename);
+   const auto& targetFile = walletsDir_ + "/" + fn;
+   try {
+      std::filesystem::copy(filename, targetFile);
+   }
+   catch (const std::exception& e) {
+      logger_->error("[{}] failed to copy {} to wallets dir {}: {}", __func__
+         , filename, walletsDir_, e.what());
+      msgResp->set_error_msg("failed to copy");
+      pushResponse(user_, env, msg.SerializeAsString());
+      return bs::message::ProcessingResult::Error;
+   }
+   const auto& wallet = signer_->importWoWallet(netType_, targetFile);
+   if (!wallet) {
+      msgResp->set_error_msg("failed to import");
+      pushResponse(user_, env, msg.SerializeAsString());
+      return bs::message::ProcessingResult::Error;
+   }
+   msgResp->set_wallet_id(wallet->walletId());
+   pushResponse(user_, env, msg.SerializeAsString());
+   walletsChanged();
+   walletsReady();
    return bs::message::ProcessingResult::Success;
 }
