@@ -32,10 +32,34 @@ PluginPopup {
 
       SideSwapMainPage {
          id: mainPage
+         visible: false
+
+         onContinueClicked: {
+            if (mainPage.peg_in) {
+               stackView.replace(pegInPage)
+            }
+            else {
+               stackView.replace(pegOutPage)
+            }
+         }
+      }
+
+      SideSwapPegOut {
+         id: pegOutPage
+         visible: false
+         onBack: root.reset()
+      }
+
+      SideSwapPegIn {
+         id: pegInPage
+         visible: false
+         onBack: root.reset()
       }
    }
 
    function reset()
    {
+      stackView.replace(mainPage)
+      mainPage.reset()
    }
 }

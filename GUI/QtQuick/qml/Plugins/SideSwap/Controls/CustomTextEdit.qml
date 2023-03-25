@@ -38,12 +38,14 @@ Rectangle {
       bottomPadding: 10
       clip: true
       anchors.fill: parent
+      font.pixelSize: 14
       font.family: control.fontFamily
 
       Text {
          text: control.textHint
          color: SideSwapStyles.secondaryTextColor
          font.family: control.fontFamily
+         font.pixelSize: 12
          leftPadding: 10
          topPadding: 10
       }

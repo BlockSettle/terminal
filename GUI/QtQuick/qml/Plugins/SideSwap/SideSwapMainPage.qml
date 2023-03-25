@@ -25,6 +25,8 @@ Item {
 
    property bool peg_in: true
 
+   signal continueClicked()
+
    Rectangle{
       anchors.fill: parent
       color: "transparent"
@@ -166,6 +168,7 @@ Item {
             }
 
             CustomTextEdit {
+               id: amountInput
                width: parent.width
                height: 60
                textHint: qsTr("Amount")
@@ -174,6 +177,7 @@ Item {
             }
 
             CustomTextEdit {
+               id: addressInput
                width: parent.width
                height: 60
                textHint: qsTr("Your Liquid Address")
@@ -185,10 +189,13 @@ Item {
             text: qsTr("CONTINUE")
             width: parent.width
             anchors.horizontalCenter: parent.horizontalCenter
+            onClicked: root.continueClicked()
          }
       }
    }
 
    function reset() {
+      amountInput.text = ""
+      addressInput.text = ""
    }
 }
