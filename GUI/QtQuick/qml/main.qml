@@ -293,13 +293,14 @@ ApplicationWindow {
                 show_popup(create_wallet)
             }
 
-            onCurWalletIndexChanged: (ind) => {
-                overviewWalletIndex = ind
-            }
-
             onOpenSend: (txId, isRBF, isCPFP) => {
                 send_popup.open(txId, isRBF, isCPFP)
                 show_popup(send_popup, true)
+            }
+
+            onOpenExplorer: (txId) => {
+                tabBar.currentIndex = 2
+                explorerPage.openTransaction(txId)
             }
         }
 
@@ -309,6 +310,10 @@ ApplicationWindow {
             onOpenSend: (txId, isRBF, isCPFP) => {
                 send_popup.open(txId, isRBF, isCPFP)
                 show_popup(send_popup, true)
+            }
+            onOpenExplorer: (txId) => {
+                tabBar.currentIndex = 2
+                explorerPage.openTransaction(txId)
             }
         }
 

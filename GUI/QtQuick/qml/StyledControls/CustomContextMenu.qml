@@ -19,6 +19,7 @@ Menu {
     leftPadding: 6
     topPadding: 4
     bottomPadding: 4
+    rightPadding: 6
 
     delegate: MenuItem {
         id: menuItem

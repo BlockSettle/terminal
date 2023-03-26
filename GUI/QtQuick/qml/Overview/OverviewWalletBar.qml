@@ -39,7 +39,7 @@ Rectangle {
             width: 263
             height: 53
 
-            model: walletBalances.rowCount > 0 ? walletBalances : [{ "name": qsTr("Create new wallet")}]
+            model: walletBalances.rowCount > 0 ? walletBalances : [{ "name": qsTr("Create wallet")}]
             textRole: "name"
             valueRole: "name"
 
@@ -53,6 +53,12 @@ Rectangle {
                     bsApp.walletSelected(currentIndex)
                     control.walletIndexChanged(currentIndex)
                     walletBalances.selectedWallet = currentIndex
+                }
+            }
+
+            onActivated: {
+                if (walletBalances.rowCount === 0) {
+                    control.createNewWallet()
                 }
             }
 

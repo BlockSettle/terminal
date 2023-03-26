@@ -29,6 +29,7 @@ Item {
     signal newWalletClicked();
     signal curWalletIndexChanged(index : int)
     signal openSend (string txId, bool isRBF, bool isCPFP)
+    signal openExplorer (string txId)
 
     AddressDetails {
         id: addressDetails
@@ -69,5 +70,6 @@ Item {
         }
 
         onOpenSend: (txId, isRBF, isCPFP) => overview.openSend(txId, isRBF, isCPFP)
+        onOpenExplorer: (txId) => overview.openExplorer(txId)
     }
 }
