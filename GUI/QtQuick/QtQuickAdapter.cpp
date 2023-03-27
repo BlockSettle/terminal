@@ -629,6 +629,10 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
    case SignerMessage::kWalletDeleted:
       return processWalletDeleted(msg.wallet_deleted());
    case SignerMessage::kCreatedWallet:
+      if (!msg.created_wallet().error_msg().empty() && msg.created_wallet().wallet_id().empty()) {
+         emit showError(QString::fromStdString(msg.created_wallet().error_msg()));
+         break;
+      }
       walletBalances_->clear();
       addrModel_->reset(msg.created_wallet().wallet_id());
       logger_->debug("[{}] wallet {} created: {}", __func__    //TODO: show something in the GUI if needed
