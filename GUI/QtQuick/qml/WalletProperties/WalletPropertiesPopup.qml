@@ -77,9 +77,12 @@ CustomPopup {
         wallet_properties_vm: root.wallet_properties_vm
 
         onWalletDeleted: {
-            _stack_view.pop()
-            _stack_view.pop()
-            root.close()
+            _stack_view.push(success)
+            success.details_text = qsTr("Wallet %1 has successfully been deleted").arg(wallet_properties_vm.walletName)
+        }
+        onSig_success: {
+            _stack_view.push(success)
+            success.details_text = qsTr("Wallet has successfully been deleted")
         }
     }
 

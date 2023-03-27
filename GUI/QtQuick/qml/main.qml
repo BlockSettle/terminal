@@ -297,7 +297,9 @@ ApplicationWindow {
             onNewWalletClicked: {
                 show_popup(create_wallet)
             }
-
+            onCurWalletIndexChanged: (ind) => {
+                //overviewWalletIndex = ind
+            }
             onOpenSend: (txId, isRBF, isCPFP) => {
                 send_popup.open(txId, isRBF, isCPFP)
                 show_popup(send_popup, true)

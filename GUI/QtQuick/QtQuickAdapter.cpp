@@ -186,6 +186,11 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
          emit requestWalletSelection(settingsController_->getParam(ApplicationSettings::Setting::SelectedWallet).toInt());
       }
    });
+
+   connect(walletBalances_, &WalletBalancesModel::walletSelected, this, [this](int index)
+   {
+        walletSelected(index);
+   });
 }
 
 QtQuickAdapter::~QtQuickAdapter()
@@ -477,7 +482,12 @@ ProcessingResult QtQuickAdapter::processSettingsGetResponse(const SettingsMessag
       }
       emit settingChanged();
    }
-   QMetaObject::invokeMethod(this, [this] { settingsController_->resetCache(settingsCache_); });
+   if (createdWalletId_.empty()) {
+      QMetaObject::invokeMethod(this, [this] { settingsController_->resetCache(settingsCache_); });
+   }
+   else {
+       createdWalletId_.clear();
+   }
    return ProcessingResult::Success;
 }
 
@@ -607,6 +617,7 @@ ProcessingResult QtQuickAdapter::processBlockchain(const Envelope &env)
 ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
 {
    SignerMessage msg;
+
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[QtGuiAdapter::processSigner] failed to parse msg #{}"
          , env.foreignId());
@@ -629,12 +640,10 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
    case SignerMessage::kWalletDeleted:
       return processWalletDeleted(msg.wallet_deleted());
    case SignerMessage::kCreatedWallet:
-      if (!msg.created_wallet().error_msg().empty() && msg.created_wallet().wallet_id().empty()) {
-         emit showError(QString::fromStdString(msg.created_wallet().error_msg()));
-         break;
-      }
+      createdWalletId_ = msg.created_wallet().wallet_id();
       walletBalances_->clear();
-      addrModel_->reset(msg.created_wallet().wallet_id());
+      addrModel_->reset(createdWalletId_);
+      walletBalances_->setCreatedWalletId(createdWalletId_);
       logger_->debug("[{}] wallet {} created: {}", __func__    //TODO: show something in the GUI if needed
          , msg.created_wallet().wallet_id(), msg.created_wallet().error_msg());
       break;
@@ -692,13 +701,15 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
       emit walletsLoaded(msg.ready());
       logger_->debug("[{}] loaded {} wallet[s]", __func__, msg.ready());
       {
-         if (settingsController_->hasParam(ApplicationSettings::Setting::SelectedWallet)) {
-            const int lastIdx = settingsController_->getParam(ApplicationSettings::Setting::SelectedWallet).toInt();
-            if ((lastIdx >= 0) && (lastIdx < nWalletsLoaded_)) {
-               walletSelected(lastIdx);
-            }
-            else if (nWalletsLoaded_ > 0) {
-               walletSelected(0);
+         if (createdWalletId_.empty()) {
+            if (settingsController_->hasParam(ApplicationSettings::Setting::SelectedWallet)) {
+               const int lastIdx = settingsController_->getParam(ApplicationSettings::Setting::SelectedWallet).toInt();
+               if ((lastIdx >= 0) && (lastIdx < nWalletsLoaded_)) {
+                  walletSelected(lastIdx);
+               }
+               else if (nWalletsLoaded_ > 0) {
+                  walletSelected(0);
+               }
             }
          }
       }
@@ -1032,8 +1043,11 @@ std::string QtQuickAdapter::generateWalletName() const
 void QtQuickAdapter::walletSelected(int index)
 {
    if (index < 0 || index >= walletBalances_->wallets().size()) {
+      addrModel_->reset("");
+      txModel_->clear();
       return;
    }
+
    logger_->debug("[{}] {}", __func__, index);
    QMetaObject::invokeMethod(this, [this, index] {
       try {
@@ -1802,10 +1816,13 @@ ProcessingResult QtQuickAdapter::processWalletsList(const WalletsMessage_Wallets
 bs::message::ProcessingResult QtQuickAdapter::processWalletDeleted(const std::string& walletId)
 {
    if (walletId.empty()) {
+      emit failedDeleteWallet();
       return bs::message::ProcessingResult::Ignored;
    }
    logger_->debug("[{}] {}", __func__, walletId);
+
    walletBalances_->deleteWallet(walletId);
+   emit successDeleteWallet();
    return bs::message::ProcessingResult::Success;
 }
 
@@ -2285,7 +2302,21 @@ int QtQuickAdapter::changePassword(const QString& walletId, const QString& oldPa
    return (msgId == 0) ? -1 : 0;
 }
 
-bool QtQuickAdapter::isValidPassword(const QString& password)
+bool QtQuickAdapter::isWalletPasswordValid(const QString& walletId, const QString& Password)
+{
+   if (Password.isEmpty()) {
+      return false;
+   }
+
+   return true;
+}
+
+bool QtQuickAdapter::isWalletNameExist(const QString& walletName)
+{
+   return walletBalances_->nameExist(walletName.toStdString());
+}
+
+bool QtQuickAdapter::verifyPasswordIntegrity(const QString& password)
 {
    return password.length() >= kMinPasswordLength;
 }
@@ -2317,6 +2348,7 @@ int QtQuickAdapter::deleteWallet(const QString& walletId, const QString& passwor
    msgReq->set_wallet_id(walletId.toStdString());
    msgReq->set_password(password.toStdString());
    const auto msgId = pushRequest(user_, userSigner_, msg.SerializeAsString());
+
    return (msgId == 0) ? -1 : 0;
 }
 

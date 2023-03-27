@@ -171,7 +171,7 @@ ColumnLayout {
 
     function checkPasswordLength()
     {
-        if (!bsApp.isValidPassword(new_password.input_text)) {
+        if (!bsApp.verifyPasswordIntegrity(new_password.input_text)) {
             error_dialog.show()
             error_dialog.raise()
             error_dialog.requestActivate()

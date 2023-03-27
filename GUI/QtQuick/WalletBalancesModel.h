@@ -76,10 +76,13 @@ public:
    QString unconfirmedBalance() const;
    QString totalBalance() const;
    QString numberAddresses() const;
+   bool nameExist(const std::string& walletName);
+   void setCreatedWalletId(const std::string& walletId);
 
 signals:
    void changed();
    void rowCountChanged();
+   void walletSelected(int index);
 
 private:
    using FieldFunc = std::function<QString(const Balance&)>;
@@ -91,6 +94,7 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::vector<Wallet>  wallets_;
    std::unordered_map<std::string, Balance>  balances_;  //key: walletId
+   std::string createdWalletId_;
 };
 
 #endif	// WALLET_BALANCES_MODEL_H

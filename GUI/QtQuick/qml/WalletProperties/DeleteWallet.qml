@@ -16,9 +16,29 @@ ColumnLayout {
 
     signal back()
     signal walletDeleted()
+    signal sig_success()
 
     property var wallet_properties_vm
     property bool is_password_requried: !(wallet_properties_vm.isHardware || wallet_properties_vm.isWatchingOnly)
+
+    Connections
+    {
+        target:bsApp
+        function onSuccessDeleteWallet ()
+        {
+            layout.sig_success()
+        }
+        function onFailedDeleteWallet()
+        {
+            showError(qsTr("Failed to delete"))
+        }
+    }
+
+    CustomMessageDialog {
+        id: error_dialog
+        error: qsTr("Password is incorrect")
+        visible: false
+    }
 
     CustomTitleLabel {
         id: title
@@ -77,16 +97,23 @@ ColumnLayout {
 
             width: 260
 
-
             function click_enter() {
+                if (!bsApp.isWalletPasswordValid(wallet_properties_vm.walletId, password.input_text)){
+                    showError(qsTr("Password is incorrect"))
+                    init()
+
+                    return
+                }
+
                 const result = bsApp.deleteWallet(
                     wallet_properties_vm.walletId,
                     password.input_text
                 )
 
-                if (result === 0) {
-                    walletDeleted()
-                    clear()
+                if (result === -1) {
+                    showError(qsTr("Failed to delete"))
+
+                    init()
                 }
             }
         }
@@ -102,5 +129,13 @@ ColumnLayout {
     {
         password.isValid = true
         password.input_text = ""
+    }
+
+    function showError(msg)
+    {
+        error_dialog.error = msg
+        error_dialog.show()
+        error_dialog.raise()
+        error_dialog.requestActivate()
     }
 }
