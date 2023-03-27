@@ -299,7 +299,7 @@ ApplicationWindow {
             }
 
             onCurWalletIndexChanged: (ind) => {
-                overviewWalletIndex = ind
+                //overviewWalletIndex = ind
             }
 
             onOpenSend: (txId, isRBF, isCPFP) => {

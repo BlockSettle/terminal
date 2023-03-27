@@ -75,6 +75,7 @@ public:
    QString unconfirmedBalance() const;
    QString totalBalance() const;
    QString numberAddresses() const;
+   bool nameExist(const std::string& walletName);
 
 signals:
    void changed();

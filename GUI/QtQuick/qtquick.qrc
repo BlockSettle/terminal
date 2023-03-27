@@ -74,6 +74,7 @@
         <file>images/copy_icon.svg</file>
         <file>qml/Receive/qmldir</file>
         <file>qml/Receive/ReceivePopup.qml</file>
+        <file>qml/CreateWallet/WalletName.qml</file>
         <file>qml/CreateWallet/ConfirmPassword.qml</file>
         <file>qml/CreateWallet/CreateWallet.qml</file>
         <file>qml/CreateWallet/ImportHardware.qml</file>
@@ -175,6 +176,7 @@
         <file>qml/WalletProperties/WalletSeed.qml</file>
         <file>qml/WalletProperties/WalletSeedAuth.qml</file>
         <file>images/wallet_icon_warn.svg</file>
+        <file>images/edit_wallet_name.ico</file>
         <file>qml/StyledControls/CustomHorizontalHeaderView.qml</file>
         <file>qml/StyledControls/CustomRbfCpfpMenu.qml</file>
         <file>qml/StyledControls/CustomSuccessWidget.qml</file>

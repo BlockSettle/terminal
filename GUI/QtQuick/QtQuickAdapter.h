@@ -180,7 +180,9 @@ public:
    Q_INVOKABLE void startAddressSearch(const QString&);
    Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash);
    Q_INVOKABLE int changePassword(const QString& walletId, const QString& oldPassword, const QString& newPassword);
-   Q_INVOKABLE bool isValidPassword(const QString& password);
+   Q_INVOKABLE bool isWalletNameExist(const QString& walletName);
+   Q_INVOKABLE bool isWalletPasswordValid(const QString& walletId, const QString& Password);
+   Q_INVOKABLE bool verifyPasswordIntegrity(const QString& password);
    Q_INVOKABLE int exportWallet(const QString& walletId, const QString & exportDir);
    Q_INVOKABLE int viewWalletSeedAuth(const QString& walletId, const QString& password);
    Q_INVOKABLE int deleteWallet(const QString& walletId, const QString& password);
@@ -207,6 +209,8 @@ signals:
    void successExport(QString nameExport);
    void requestWalletSelection(quint32 index);
    void successChangePassword();
+   void failedDeleteWallet();
+   void successDeleteWallet();
 
 private slots:
    void onArmoryServerChanged(const QModelIndex&, const QVariant&);
@@ -287,6 +291,7 @@ private:
    int         signerState_{ -1 };
    std::string signerDetails_;
    bool  walletsReady_{ false };
+   bool  createdWallet_{ false };     
 
    std::unordered_map<std::string, bs::sync::WalletInfo> hdWallets_;
    std::unordered_map<std::string, std::string> walletNames_;

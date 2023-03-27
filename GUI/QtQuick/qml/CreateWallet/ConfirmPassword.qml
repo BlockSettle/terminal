@@ -10,6 +10,7 @@ ColumnLayout  {
 
     id: layout
 
+    property string wallet_name
     signal sig_confirm()
 
     height: 485
@@ -108,7 +109,7 @@ ColumnLayout  {
 
             if(password.input_text === confirm_password.input_text)
             {
-                bsApp.createWallet("", phrase, password.input_text)
+                bsApp.createWallet(layout.wallet_name, phrase, password.input_text)
                 layout.sig_confirm()
                 clear()
             }
@@ -144,7 +145,7 @@ ColumnLayout  {
 
     function checkPasswordLength()
     {
-        if (!bsApp.isValidPassword(password.input_text)) {
+        if (!bsApp.verifyPasswordIntegrity(password.input_text)) {
             error_dialog.show()
             error_dialog.raise()
             error_dialog.requestActivate()

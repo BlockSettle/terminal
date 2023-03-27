@@ -17,6 +17,8 @@ Rectangle {
 
     //aliases - title
     property alias title_text: title.text
+    property string placeholder_text
+    property bool hide_placeholder_when_activefocus: true
     property alias title_leftMargin: title.anchors.leftMargin
     property alias title_topMargin: title.anchors.topMargin
     property alias title_font_size: title.font.pixelSize
@@ -87,6 +89,16 @@ Rectangle {
         font.weight: Font.Normal
 
         color: "#E2E7FF"
+
+        Text {
+            text: rect.placeholder_text
+            color: "#7A88B0"
+            visible: !input.text && (!hide_placeholder_when_activefocus || !input.activeFocus)
+
+            font.pixelSize: 16
+            font.family: "Roboto"
+            font.weight: Font.Normal
+        }
 
         onTextEdited : {
             rect.textEdited()

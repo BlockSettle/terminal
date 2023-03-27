@@ -59,8 +59,8 @@ CustomPopup {
         visible: false
         phrase: root.phrase
         onSig_verified: {
-            _stack_view.push(confirm_password)
-            confirm_password.init()
+            _stack_view.push(wallet_name)
+            wallet_name.init()
         }
         onSig_skipped: {
             _stack_view.push(wallet_seed_accept)
@@ -72,11 +72,21 @@ CustomPopup {
         id: wallet_seed_accept
         visible: false
         onSig_skip: {
-            _stack_view.replace(confirm_password)
-            confirm_password.init()
+            _stack_view.replace(wallet_name)
+            wallet_name.init()
         }
         onSig_not_skip: {
             _stack_view.pop()
+        }
+    }
+
+    WalletName {
+        id: wallet_name
+        visible: false
+        onSig_confirm: {
+            _stack_view.push(confirm_password)
+            confirm_password.wallet_name = wallet_name.wallet_name
+            confirm_password.init()
         }
     }
 
@@ -120,8 +130,8 @@ CustomPopup {
         id: import_wallet
         visible: false
         onSig_import: {
-            _stack_view.push(confirm_password)
-            confirm_password.init()
+            _stack_view.push(wallet_name)
+            wallet_name.init()
             root.phrase = import_wallet.phrase
         }
         onSig_only_watching: {

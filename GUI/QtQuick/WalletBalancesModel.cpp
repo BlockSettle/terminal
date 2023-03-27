@@ -209,3 +209,14 @@ QString WalletBalancesModel::numberAddresses() const
    }
    return tr("-");
 }
+
+bool WalletBalancesModel::nameExist(const std::string& walletName)
+{
+   for (int i = 0; i < wallets_.size(); ++i) {
+      const auto& w = wallets_.at(i);
+      if (w.walletName == walletName) {
+         return true;
+      }
+   }
+   return false;
+}
