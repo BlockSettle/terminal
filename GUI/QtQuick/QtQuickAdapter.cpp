@@ -641,6 +641,10 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
       return processWalletDeleted(msg.wallet_deleted());
    case SignerMessage::kCreatedWallet:
       createdWalletId_ = msg.created_wallet().wallet_id();
+      if (!msg.created_wallet().error_msg().empty() && msg.created_wallet().wallet_id().empty()) {
+         emit showError(QString::fromStdString(msg.created_wallet().error_msg()));
+         break;
+      }
       walletBalances_->clear();
       addrModel_->reset(createdWalletId_);
       walletBalances_->setCreateWalletId(createdWalletId_);
