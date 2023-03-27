@@ -94,6 +94,7 @@
         <file>qml/StyledControls/CustomTextEdit.qml</file>
         <file>qml/StyledControls/CustomTitleDialogWindow.qml</file>
         <file>qml/StyledControls/CustomTitleDialogWindowWithExpander.qml</file>
+        <file>qml/StyledControls/CustomExportSuccessDialog.qml</file>
         <file>qml/Send/qmldir</file>
         <file>qml/Send/SendPopup.qml</file>
         <file>qml/Send/SimpleDetails.qml</file>

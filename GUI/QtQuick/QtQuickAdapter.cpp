@@ -1037,6 +1037,8 @@ void QtQuickAdapter::walletSelected(int index)
 {
    if (index < 0 || index >= walletBalances_->wallets().size()) {
       addrModel_->reset("");
+      txModel_->clear();
+
       return;
    }
    logger_->debug("[{}] {}", __func__, index);

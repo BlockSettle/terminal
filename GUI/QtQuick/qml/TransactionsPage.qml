@@ -31,7 +31,7 @@ Item {
         id: fileDialogCSV
         visible: false
         title: qsTr("Choose CSV file name")
-        folder: shortcuts.home
+        folder: shortcuts.documents
         defaultSuffix: "csv"
         selectExisting: false
         onAccepted: {
@@ -43,6 +43,17 @@ Item {
                 ibFailure.displayMessage(qsTr("Failed to save CSV to %1").arg(csvFile))
             }
         }
+    }
+
+    CustomFailDialog {
+        id: fail_dialog
+        visible: false;
+    }
+
+    CustomExportSuccessDialog{
+        id: succes_dialog
+        header: "Success"
+        visible: false
     }
 
     Column {
@@ -169,8 +180,21 @@ Item {
                         //    .arg(txWalletsComboBox.currentIndex === 0 ? "all" : txWalletsComboBox.currentText)
                         //    .arg(txListModel.getBegDate())
                         //    .arg(txListModel.getEndDate())
+                        var csvFile = "%1/BlockSettle_%2_%3_%4.csv"
+                           .arg(fileDialogCSV.folder)
+                           .arg(txWalletsComboBox.currentIndex === 0 ? "all" : txWalletsComboBox.currentText)
+                           .arg(txListModel.getBegDate())
+                           .arg(txListModel.getEndDate())
 
-                        fileDialogCSV.visible = true
+                        if (txListModel.exportCSVto(csvFile)) {
+                            succes_dialog.path_name = csvFile.substring(("file:///").length, csvFile.length)
+                            show_popup(succes_dialog)
+                        }
+                        else {
+                            fail_dialog.header = "Export CSV Error"
+                            fail_dialog.fail = "Failed to export CSV File"
+                            show_popup(fail_dialog)
+                        }
                     }
                     anchors.verticalCenter: parent.verticalCenter
                 }
@@ -184,6 +208,13 @@ Item {
             model: transactionFilterModel
 
             onOpenSend: (txId, isRBF, isCPFP) => control.openSend(txId, isRBF, isCPFP)
+        }
+
+        function show_popup (id)
+        {
+            id.show()
+            id.raise()
+            id.requestActivate()
         }
     }
 }
