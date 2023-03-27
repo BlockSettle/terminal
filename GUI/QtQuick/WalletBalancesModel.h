@@ -76,7 +76,7 @@ public:
    QString totalBalance() const;
    QString numberAddresses() const;
    bool nameExist(const std::string& walletName);
-   void setCreateWalletId(const std::string& walletId);
+   void setCreatedWalletId(const std::string& walletId);
 
 signals:
    void changed();

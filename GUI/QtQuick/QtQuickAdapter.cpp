@@ -482,11 +482,11 @@ ProcessingResult QtQuickAdapter::processSettingsGetResponse(const SettingsMessag
       }
       emit settingChanged();
    }
-   if (createdWalletId_ == "") {
+   if (createdWalletId_.empty()) {
       QMetaObject::invokeMethod(this, [this] { settingsController_->resetCache(settingsCache_); });
    }
    else {
-       createdWalletId_ = "";
+       createdWalletId_.clear();
    }
    return ProcessingResult::Success;
 }
@@ -641,13 +641,9 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
       return processWalletDeleted(msg.wallet_deleted());
    case SignerMessage::kCreatedWallet:
       createdWalletId_ = msg.created_wallet().wallet_id();
-      if (!msg.created_wallet().error_msg().empty() && msg.created_wallet().wallet_id().empty()) {
-         emit showError(QString::fromStdString(msg.created_wallet().error_msg()));
-         break;
-      }
       walletBalances_->clear();
       addrModel_->reset(createdWalletId_);
-      walletBalances_->setCreateWalletId(createdWalletId_);
+      walletBalances_->setCreatedWalletId(createdWalletId_);
       logger_->debug("[{}] wallet {} created: {}", __func__    //TODO: show something in the GUI if needed
          , msg.created_wallet().wallet_id(), msg.created_wallet().error_msg());
       break;

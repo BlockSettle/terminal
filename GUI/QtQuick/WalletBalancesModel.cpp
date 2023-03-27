@@ -95,8 +95,8 @@ void WalletBalancesModel::addWallet(const Wallet& wallet)
    endInsertRows();
 
    //find index of new created wallet
-   if (createdWalletId_ != "" && wallet.walletId == createdWalletId_) {
-      createdWalletId_ = "";
+   if (!createdWalletId_.empty() && wallet.walletId == createdWalletId_) {
+      createdWalletId_.clear();
       int findIndex = wallets_.size() - 1;
       emit walletSelected(findIndex);
    }
@@ -228,7 +228,7 @@ bool WalletBalancesModel::nameExist(const std::string& walletName)
    return false;
 }
 
-void WalletBalancesModel::setCreateWalletId(const std::string& walletId)
+void WalletBalancesModel::setCreatedWalletId(const std::string& walletId)
 {
    createdWalletId_ = walletId;
 }
