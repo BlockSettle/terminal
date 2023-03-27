@@ -81,6 +81,17 @@ namespace {
       };
       return QObject::tr("Unknown");
    }
+
+   static inline QString walletType(bool isHardware, bool isWatchingOnly)
+   {
+      if (isHardware) {
+         return QObject::tr("Hardware");
+      }
+      if (isWatchingOnly) {
+         return QObject::tr("Watch-only");
+      }
+      return QObject::tr("Software");
+   }
 }
 // redirect qDebug() to the log
 // stdout redirected to parent process
@@ -705,10 +716,10 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
             if (settingsController_->hasParam(ApplicationSettings::Setting::SelectedWallet)) {
                const int lastIdx = settingsController_->getParam(ApplicationSettings::Setting::SelectedWallet).toInt();
                if ((lastIdx >= 0) && (lastIdx < nWalletsLoaded_)) {
-                  walletSelected(lastIdx);
+                  emit requestWalletSelection(lastIdx);
                }
                else if (nWalletsLoaded_ > 0) {
-                  walletSelected(0);
+                  emit requestWalletSelection(0);
                }
             }
          }
@@ -1024,7 +1035,7 @@ std::string QtQuickAdapter::hdWalletIdByIndex(int index)
 
 std::string QtQuickAdapter::generateWalletName() const
 {
-   int index = walletNames_.size();
+   int index = walletBalances_->rowCount();
    std::string name;
    bool nameExists = true;
    while (nameExists) {
@@ -1061,15 +1072,15 @@ void QtQuickAdapter::walletSelected(int index)
          walletInfoReq_[msgId] = walletName;
 
          if (hdWallets_.count(walletId) > 0) {
+            const auto& hdWallet = hdWallets_.at(walletId);
             walletPropertiesModel_->setWalletInfo({
-               QString::fromStdString(hdWallets_.at(walletId).name),
+               QString::fromStdString(hdWallet.name),
                QString::fromStdString(walletId),
-               QString::fromLatin1("1/") + QString::number(hdWallets_.at(walletId).leaves.size()),
-               hdWallets_.at(walletId).encryptionTypes.size() > 0
-                  ? encTypeToString(hdWallets_.at(walletId).encryptionTypes[0]) : tr("Unknown"),
-               hdWallets_.at(walletId).nbAddresses,
-               hdWallets_.at(walletId).isHardware,
-               hdWallets_.at(walletId).watchOnly
+               QString::fromLatin1("1/") + QString::number(hdWallet.leaves.size()),
+               walletType(hdWallet.isHardware, hdWallet.watchOnly),
+               hdWallet.nbAddresses,
+               hdWallet.isHardware,
+               hdWallet.watchOnly
             });  
          }
          settingsController_->setParam(ApplicationSettings::Setting::SelectedWallet, index);
@@ -1416,7 +1427,6 @@ void QtQuickAdapter::copyAddressToClipboard(const QString& addr)
       emit addressGenerated();
    }
 }
-
 
 QString QtQuickAdapter::pasteTextFromClipboard()
 {

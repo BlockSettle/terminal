@@ -50,9 +50,9 @@ Rectangle {
                     control.createNewWallet()
                 }
                 else {
-                    bsApp.walletSelected(currentIndex)
-                    control.walletIndexChanged(currentIndex)
-                    walletBalances.selectedWallet = currentIndex
+                    bsApp.walletSelected(wallet_selection_combobox.currentIndex)
+                    control.walletIndexChanged(wallet_selection_combobox.currentIndex)
+                    walletBalances.selectedWallet = wallet_selection_combobox.currentIndex
                 }
             }
 
@@ -60,14 +60,25 @@ Rectangle {
                 if (walletBalances.rowCount === 0) {
                     control.createNewWallet()
                 }
+                else {
+                    bsApp.walletSelected(wallet_selection_combobox.currentIndex)
+                    control.walletIndexChanged(wallet_selection_combobox.currentIndex)
+                    walletBalances.selectedWallet = wallet_selection_combobox.currentIndex
+                }
+            }
+
+            onModelChanged: {
+                if (model === walletBalances) {
+                    wallet_selection_combobox.currentIndex = walletBalances.selectedWallet
+                }
             }
 
             Connections {
                 target: bsApp
                 function onRequestWalletSelection(index) {
-                    if (wallet_selection_combobox.currentIndex != index) {
-                        wallet_selection_combobox.currentIndex = index
-                    }
+                    bsApp.walletSelected(index)
+                    control.walletIndexChanged(index)
+                    wallet_selection_combobox.currentIndex = index
                 }
             }
         }

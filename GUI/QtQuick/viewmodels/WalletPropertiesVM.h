@@ -26,7 +26,7 @@ struct WalletInfo
    QString name;
    QString walletId;
    QString groups;
-   QString ecryption;
+   QString walletType;
    quint32 generatedAddresses;
    bool isHardware;
    bool isWatchingOnly;
@@ -38,7 +38,7 @@ class WalletPropertiesVM: public QObject
    Q_PROPERTY(QString walletName               READ walletName               NOTIFY changed)
    Q_PROPERTY(QString walletId                 READ walletId                 NOTIFY changed)
    Q_PROPERTY(QString walletGroups             READ walletGroups             NOTIFY changed)
-   Q_PROPERTY(QString walletEncryption         READ walletEncryption         NOTIFY changed)
+   Q_PROPERTY(QString walletType               READ walletType               NOTIFY changed)
    Q_PROPERTY(quint32 walletGeneratedAddresses READ walletGeneratedAddresses NOTIFY changed)
    Q_PROPERTY(quint32 walletUsedAddresses      READ walletUsedAddresses    NOTIFY changed)
    Q_PROPERTY(quint32 walletAvailableUtxo      READ walletAvailableUtxo      NOTIFY changed)
@@ -57,7 +57,7 @@ public:
    const QString& walletName() const;
    const QString& walletId() const;
    const QString& walletGroups() const;
-   const QString& walletEncryption() const;
+   const QString& walletType() const;
    quint32 walletGeneratedAddresses() const;
    quint32 walletUsedAddresses() const;
    quint32 walletAvailableUtxo() const;

@@ -69,9 +69,9 @@ const QString& WalletPropertiesVM::walletGroups() const
    return info_.groups;
 }
 
-const QString& WalletPropertiesVM::walletEncryption() const
+const QString& WalletPropertiesVM::walletType() const
 {
-   return info_.ecryption;
+   return info_.walletType;
 }
 
 quint32 WalletPropertiesVM::walletGeneratedAddresses() const

@@ -18,6 +18,7 @@ Button {
 
     width: 150
     height: 50
+    focusPolicy: Qt.NoFocus
 
     font.pixelSize: 16
     font.family: "Roboto"
