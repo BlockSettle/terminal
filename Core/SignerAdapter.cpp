@@ -152,6 +152,9 @@ ProcessingResult SignerAdapter::processOwnRequest(const bs::message::Envelope &e
       return processGetWalletSeed(env, request.get_wallet_seed());
    case SignerMessage::kImportWoWallet:
       return processImportWoWallet(env, request.import_wo_wallet());
+   case SignerMessage::kSetWalletName:
+      return processWalletRename(env, request.set_wallet_name().wallet().wallet_id()
+         , request.set_wallet_name().new_name());
    default:
       logger_->warn("[{}] unknown signer request: {}", __func__, request.data_case());
       break;
@@ -825,5 +828,17 @@ bs::message::ProcessingResult SignerAdapter::processImportWoWallet(const bs::mes
    pushResponse(user_, env, msg.SerializeAsString());
    walletsChanged();
    walletsReady();
+   return bs::message::ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult SignerAdapter::processWalletRename(const bs::message::Envelope&
+   , const std::string& walletId, const std::string& newName)
+{
+   const auto& hdWallet = walletsMgr_->getHDWalletById(walletId);
+   if (!hdWallet) {
+      logger_->error("[{}] wallet {} not found", __func__, walletId);
+      return bs::message::ProcessingResult::Error;
+   }
+   hdWallet->setName(newName);
    return bs::message::ProcessingResult::Success;
 }

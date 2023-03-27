@@ -2258,6 +2258,18 @@ int QtQuickAdapter::rescanWallet(const QString& walletId)
 int QtQuickAdapter::renameWallet(const QString& walletId, const QString& newName)
 {
    logger_->debug("[{}] {} -> {}", __func__, walletId.toStdString(), newName.toStdString());
+   const auto& itWallet = hdWallets_.find(walletId.toStdString());
+   if (itWallet == hdWallets_.end()) {
+      showError(tr("Wallet %1 not found").arg(walletId));
+      return -1;
+   }
+   itWallet->second.name = newName.toStdString();
+   SignerMessage msg;
+   auto msgReq = msg.mutable_set_wallet_name();
+   msgReq->mutable_wallet()->set_wallet_id(walletId.toStdString());
+   msgReq->set_new_name(newName.toStdString());
+   pushRequest(user_, userSigner_, msg.SerializeAsString());
+   walletBalances_->rename(walletId.toStdString(), newName.toStdString());
    return 0;
 }
 

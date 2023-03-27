@@ -120,6 +120,8 @@ private:
       , const BlockSettle::Common::SignerMessage_WalletRequest&);
    bs::message::ProcessingResult processImportWoWallet(const bs::message::Envelope&
       , const std::string& filename);
+   bs::message::ProcessingResult processWalletRename(const bs::message::Envelope&
+      , const std::string& walletId, const std::string& newName);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

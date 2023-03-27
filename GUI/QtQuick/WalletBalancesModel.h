@@ -60,6 +60,7 @@ public:
    };
    void addWallet(const Wallet&);
    void deleteWallet(const std::string& walletId);
+   void rename(const std::string& walletId, const std::string& newName);
 
    struct Balance {
       double   confirmed{ 0 };
@@ -83,9 +84,10 @@ signals:
 private:
    using FieldFunc = std::function<QString(const Balance&)>;
    QString getBalance(const std::string& walletId, const FieldFunc&) const;
+   int getWalletIndex(const std::string& walletId) const;
 
 private:
-   int selectedWallet_;
+   int selectedWallet_{ -1 };
    std::shared_ptr<spdlog::logger>  logger_;
    std::vector<Wallet>  wallets_;
    std::unordered_map<std::string, Balance>  balances_;  //key: walletId

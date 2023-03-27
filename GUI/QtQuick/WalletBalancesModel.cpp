@@ -83,11 +83,10 @@ QHash<int, QByteArray> WalletBalancesModel::roleNames() const
 
 void WalletBalancesModel::addWallet(const Wallet& wallet)
 {
-   for (int i = 0; i < wallets_.size(); ++i) {
-      const auto& w = wallets_.at(i);
-      if (wallet.walletId == w.walletId) {
-         return;
-      }
+   const auto idx = getWalletIndex(wallet.walletId);
+   if (idx >= 0) {
+      logger_->warn("[{}] wallet {} already exists (#{})", __func__, wallet.walletId, idx);
+      return;
    }
    //logger_->debug("[WalletBalancesModel::addWallet] adding #{}: {}", rowCount(), wallet.walletName);
    beginInsertRows(QModelIndex(), rowCount(), rowCount());
@@ -97,7 +96,7 @@ void WalletBalancesModel::addWallet(const Wallet& wallet)
    emit changed();
 }
 
-void WalletBalancesModel::deleteWallet(const std::string& walletId)
+int WalletBalancesModel::getWalletIndex(const std::string& walletId) const
 {
    int idx = -1;
    for (int i = 0; i < wallets_.size(); ++i) {
@@ -106,6 +105,12 @@ void WalletBalancesModel::deleteWallet(const std::string& walletId)
          break;
       }
    }
+   return idx;
+}
+
+void WalletBalancesModel::deleteWallet(const std::string& walletId)
+{
+   const auto idx = getWalletIndex(walletId);
    if (idx < 0) {
       logger_->warn("[{}] wallet {} is not in the list", __func__, walletId);
       return;
@@ -117,6 +122,17 @@ void WalletBalancesModel::deleteWallet(const std::string& walletId)
       emit rowCountChanged();
       emit changed();
    });
+}
+
+void WalletBalancesModel::rename(const std::string& walletId, const std::string& newName)
+{
+   const auto idx = getWalletIndex(walletId);
+   if (idx < 0) {
+      logger_->warn("[{}] wallet {} is not in the list", __func__, walletId);
+      return;
+   }
+   wallets_.at(idx).walletName = newName;
+   emit dataChanged(createIndex(idx, 0), createIndex(idx, 0), { WalletBalance::NameRole });
 }
 
 QStringList WalletBalancesModel::wallets() const
@@ -142,14 +158,7 @@ void WalletBalancesModel::clear()
 void WalletBalancesModel::setWalletBalance(const std::string& walletId, const Balance& bal)
 {
    balances_[walletId] = bal;
-   int row = -1;
-   for (int i = 0; i < wallets_.size(); ++i) {
-      const auto& w = wallets_.at(i);
-      if (w.walletId == walletId) {
-         row = i;
-         break;
-      }
-   }
+   const int row = getWalletIndex(walletId);
    if (row >= 0) {
       //logger_->debug("[{}] {} {} found at row {}", __func__, txDet.txHash.toHexStr(), txDet.hdWalletId, row);
       emit dataChanged(createIndex(row, 0), createIndex(row, 0), { WalletBalance::TotalRole
