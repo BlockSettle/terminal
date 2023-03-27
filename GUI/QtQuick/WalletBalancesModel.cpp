@@ -93,6 +93,13 @@ void WalletBalancesModel::addWallet(const Wallet& wallet)
    beginInsertRows(QModelIndex(), rowCount(), rowCount());
    wallets_.push_back(wallet);
    endInsertRows();
+
+   //find index of new created wallet
+   if (createdWalletId_ != "" && wallet.walletId == createdWalletId_) {
+      createdWalletId_ = "";
+      int findIndex = wallets_.size() - 1;
+      emit walletSelected(findIndex);
+   }
    emit rowCountChanged();
    emit changed();
 }
@@ -219,4 +226,9 @@ bool WalletBalancesModel::nameExist(const std::string& walletName)
       }
    }
    return false;
+}
+
+void WalletBalancesModel::setCreateWalletId(const std::string& walletId)
+{
+   createdWalletId_ = walletId;
 }

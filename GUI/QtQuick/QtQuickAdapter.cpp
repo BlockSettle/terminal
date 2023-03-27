@@ -186,6 +186,11 @@ QtQuickAdapter::QtQuickAdapter(const std::shared_ptr<spdlog::logger> &logger)
          emit requestWalletSelection(settingsController_->getParam(ApplicationSettings::Setting::SelectedWallet).toInt());
       }
    });
+
+   connect(walletBalances_, &WalletBalancesModel::walletSelected, this, [this](int index)
+   {
+        walletSelected(index);
+   });
 }
 
 QtQuickAdapter::~QtQuickAdapter()
@@ -477,7 +482,12 @@ ProcessingResult QtQuickAdapter::processSettingsGetResponse(const SettingsMessag
       }
       emit settingChanged();
    }
-   QMetaObject::invokeMethod(this, [this] { settingsController_->resetCache(settingsCache_); });
+   if (createdWalletId_ == "") {
+      QMetaObject::invokeMethod(this, [this] { settingsController_->resetCache(settingsCache_); });
+   }
+   else {
+       createdWalletId_ = "";
+   }
    return ProcessingResult::Success;
 }
 
@@ -630,9 +640,10 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
    case SignerMessage::kWalletDeleted:
       return processWalletDeleted(msg.wallet_deleted());
    case SignerMessage::kCreatedWallet:
-      createdWallet_ = true;
+      createdWalletId_ = msg.created_wallet().wallet_id();
       walletBalances_->clear();
-      addrModel_->reset(msg.created_wallet().wallet_id());
+      addrModel_->reset(createdWalletId_);
+      walletBalances_->setCreateWalletId(createdWalletId_);
       logger_->debug("[{}] wallet {} created: {}", __func__    //TODO: show something in the GUI if needed
          , msg.created_wallet().wallet_id(), msg.created_wallet().error_msg());
       break;
@@ -690,7 +701,7 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
       emit walletsLoaded(msg.ready());
       logger_->debug("[{}] loaded {} wallet[s]", __func__, msg.ready());
       {
-         if (!createdWallet_) {
+         if (createdWalletId_.empty()) {
             if (settingsController_->hasParam(ApplicationSettings::Setting::SelectedWallet)) {
                const int lastIdx = settingsController_->getParam(ApplicationSettings::Setting::SelectedWallet).toInt();
                if ((lastIdx >= 0) && (lastIdx < nWalletsLoaded_)) {
@@ -700,10 +711,6 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
                   walletSelected(0);
                }
             }
-         }
-         else {
-            createdWallet_ = false;
-            emit requestWalletSelection(nWalletsLoaded_ - 1);
          }
       }
       break;
@@ -1038,9 +1045,9 @@ void QtQuickAdapter::walletSelected(int index)
    if (index < 0 || index >= walletBalances_->wallets().size()) {
       addrModel_->reset("");
       txModel_->clear();
-
       return;
    }
+
    logger_->debug("[{}] {}", __func__, index);
    QMetaObject::invokeMethod(this, [this, index] {
       try {

@@ -291,7 +291,7 @@ private:
    int         signerState_{ -1 };
    std::string signerDetails_;
    bool  walletsReady_{ false };
-   bool  createdWallet_{ false };     
+   std::string createdWalletId_;     
 
    std::unordered_map<std::string, bs::sync::WalletInfo> hdWallets_;
    std::unordered_map<std::string, std::string> walletNames_;
