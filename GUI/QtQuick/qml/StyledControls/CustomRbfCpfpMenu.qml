@@ -20,6 +20,7 @@ CustomContextMenu {
     id: context_menu
 
     signal openSend (string txId, bool isRBF, bool isCPFP)
+    signal openExplorer(string txId)
 
     property int row
     property int column
@@ -44,4 +45,11 @@ CustomContextMenu {
         }
     }
 
+    Action {
+        text: qsTr("View in explorer")
+        onTriggered: {
+            var txId = model.data(model.index(context_menu.row, context_menu.column), TxListModel.TxIdRole)
+            context_menu.openExplorer(txId)
+        }
+    }
 }

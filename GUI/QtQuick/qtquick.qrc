@@ -215,5 +215,8 @@
         <file>qml/Plugins/SideSwap/Styles/SideSwapStyles.qml</file>
         <file>images/sideswap/btc_icon.svg</file>
         <file>images/sideswap/lbtc_icon.svg</file>
+        <file>qml/Plugins/SideSwap/Controls/CustomBorderedButton.qml</file>
+        <file>qml/Plugins/SideSwap/SideSwapPegOut.qml</file>
+        <file>qml/Plugins/SideSwap/SideSwapPegIn.qml</file>
     </qresource>
 </RCC>

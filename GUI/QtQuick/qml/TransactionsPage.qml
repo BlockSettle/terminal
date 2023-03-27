@@ -26,6 +26,7 @@ Item {
     height: 788
 
     signal openSend (string txId, bool isRBF, bool isCPFP)
+    signal openExplorer (string txId)
 
     FileDialog  {
         id: fileDialogCSV
@@ -184,6 +185,7 @@ Item {
             model: transactionFilterModel
 
             onOpenSend: (txId, isRBF, isCPFP) => control.openSend(txId, isRBF, isCPFP)
+            onOpenExplorer: (txId) => transactions.openExplorer(txId)
         }
     }
 }

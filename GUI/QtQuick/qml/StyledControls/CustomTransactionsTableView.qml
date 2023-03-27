@@ -21,6 +21,7 @@ CustomTableView {
     id: control
 
     signal openSend (string txId, bool isRBF, bool isCPFP)
+    signal openExplorer (string txId)
 
     copy_button_column_index: 3
     columnWidths: [0.12, 0.1, 0.08, 0.3, 0.1, 0.1, 0.1, 0.1]
@@ -32,11 +33,11 @@ CustomTableView {
         model: control.model
 
         onOpenSend: (txId, isRBF, isCPFP) => control.openSend(txId, isRBF, isCPFP)
+        onOpenExplorer: (txId) => control.openExplorer(txId)
     }
 
     onCellClicked: (row, column, data, mouse) => {
-        var nbConf = model.data(model.index(row, 5), TxListModel.NbConfRole)
-        if (mouse.button === Qt.RightButton && nbConf === 0)
+        if (mouse.button === Qt.RightButton)
         {
             context_menu.row = row
             context_menu.column = column

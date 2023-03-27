@@ -26,6 +26,10 @@ Item {
     
     id: explorer
 
+    function openTransaction(txId) {
+        expSearchBox.requestSearchText(txId)
+    }
+
     ExplorerEmpty {
         id: explorerEmpty
         visible: false

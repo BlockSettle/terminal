@@ -21,6 +21,7 @@ Rectangle {
     id: control
 
     signal openSend (string txId, bool isRBF, bool isCPFP)
+    signal openExplorer (string txId)
 
     width: 1200
     height: 788
@@ -61,7 +62,7 @@ Rectangle {
                 anchors.fill: parent
                 anchors.margins: 20
                 spacing: 10
-                
+
                 Rectangle {
                     id: tableMenu
                     color: "transparent"
@@ -180,8 +181,8 @@ Rectangle {
                     }
 
                     onOpenSend: (txId, isRBF, isCPFP) => control.openSend(txId, isRBF, isCPFP)
+                    onOpenExplorer: (txId) => control.openExplorer(txId)
                 }
-
             }
         }
     }
