@@ -171,13 +171,14 @@
         <file>images/scan_icon.svg</file>
         <file>qml/WalletProperties/WalletPropertiesPopup.qml</file>
         <file>qml/WalletProperties/ChangePassword.qml</file>
+        <file>qml/WalletProperties/RenameWallet.qml</file>
         <file>qml/WalletProperties/DeleteWallet.qml</file>
         <file>qml/WalletProperties/DeleteWalletWarn.qml</file>
         <file>qml/WalletProperties/ExportWOWallet.qml</file>
         <file>qml/WalletProperties/WalletSeed.qml</file>
         <file>qml/WalletProperties/WalletSeedAuth.qml</file>
         <file>images/wallet_icon_warn.svg</file>
-        <file>images/edit_wallet_name.ico</file>
+        <file>images/edit_wallet_name.png</file>
         <file>qml/StyledControls/CustomHorizontalHeaderView.qml</file>
         <file>qml/StyledControls/CustomRbfCpfpMenu.qml</file>
         <file>qml/StyledControls/CustomSuccessWidget.qml</file>
