@@ -17,6 +17,16 @@ CustomPopup {
 
     property var wallet_properties_vm
 
+    RenameWallet {
+        id: rename_wallet
+        visible: false
+        wallet_properties_vm: root.wallet_properties_vm
+
+        onSig_confirm: {
+            wallet_name.text = rename_wallet.wallet_name;
+        }
+    }
+
     ChangePassword {
         id: change_password
         visible: false
@@ -139,6 +149,7 @@ CustomPopup {
                             width: parent.width / 2
                         }
                         Text {
+                            id: wallet_name
                             text: wallet_properties_vm.walletName
                             color: BSStyle.textColor
                             font.family: "Roboto"
@@ -146,7 +157,32 @@ CustomPopup {
                             width: parent.width / 2
                             horizontalAlignment: Text.AlignRight
                         }
+                        
+                        Image {
+                            id: close_button
+
+                            x: parent.horizontalCenter - 10
+                            y: wallet_name.top
+
+                            source: "qrc:/images/edit_wallet_name.png"
+                            width: 32
+                            height: 16
+
+                            horizontalAlignment: Image.AlignHCenter
+                            fillMode: Image.PreserveAspectFit;
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    rename_wallet.wallet_name = wallet_name.text
+
+                                    rename_wallet.show()
+                                    rename_wallet.raise()
+                                    rename_wallet.requestActivate()
+                                }
+                            }
+                        }
                     }
+
 
                     Row {
                         width: parent.width
@@ -351,5 +387,7 @@ CustomPopup {
                 }
             }
         }
+
+        
     }
 }
