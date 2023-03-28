@@ -13,6 +13,7 @@
 #include <memory>
 
 #include <QObject>
+#include <Wallets/SignerDefs.h>
 
 namespace spdlog {
    class logger;
@@ -49,7 +50,7 @@ class WalletPropertiesVM: public QObject
 public:
    WalletPropertiesVM(const std::shared_ptr<spdlog::logger> & logger, QObject* parent = nullptr);
 
-   void setWalletInfo(const WalletInfo& info);
+   void setWalletInfo(const QString& walletId, const bs::sync::WalletInfo& info);
    void setWalletSeed(const std::string& walletId, const std::string& seed);
    void setNbUsedAddrs(const std::string& walletId, uint32_t nb);
    void setNbUTXOs(const std::string& walletId, uint32_t nb);
