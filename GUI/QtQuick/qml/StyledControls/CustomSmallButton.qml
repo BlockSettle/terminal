@@ -19,7 +19,7 @@ Button {
     width: 134
     height: 29
 
-    focusPolicy: Qt.NoFocus
+    focusPolicy: Qt.TabFocus
     font.pixelSize: 12
     font.family: "Roboto"
     font.letterSpacing: 0.3

@@ -29,7 +29,7 @@ Button {
     font.family: "Roboto"
     font.weight: Font.Bold
     palette.buttonText: enabled ? BSStyle.buttonsTextColor : BSStyle.buttonsDisabledTextColor
-    focusPolicy: Qt.NoFocus
+    focusPolicy: Qt.TabFocus
 
 
     icon.color: "transparent"

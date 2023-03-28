@@ -24,6 +24,10 @@ Item {
    property var receiveModel: controller.inputCurrencies
    property var sendModel: controller.outputCurrencies
 
+   property alias inputCurrency: inputCombobox.currentText
+   property alias outputCurrency: receivingCombobox.currentText
+   property alias receivingAddress: walletCombobox.currentText
+
    signal shift()
 
    Column {
@@ -43,10 +47,15 @@ Item {
          anchors.horizontalCenter: parent.horizontalCenter
 
          SideShiftComboboxWithIcon {
+            id: inputCombobox
             popupWidth: 200
             //textRole: "currency"
             controlHint: qsTr("YOU SEND")
             model: root.receive ? root.receiveModel : root.sendModel
+
+            onActivated: {
+               root.controller.inputCurrencySelected(currentText)
+            }
          }
 
          SideShiftIconButton {

@@ -47,6 +47,10 @@ PluginPopup {
          id: buyPage
          controller: root.controller
          visible: false
+
+         inputCurrency: mainPage.inputCurrency
+         outputCurrency: mainPage.outputCurrency
+         receivingAddress: mainPage.receivingAddress
       }
    }
 

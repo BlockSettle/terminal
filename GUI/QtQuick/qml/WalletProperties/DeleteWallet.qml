@@ -98,11 +98,13 @@ ColumnLayout {
             width: 260
 
             function click_enter() {
-                if (!bsApp.isWalletPasswordValid(wallet_properties_vm.walletId, password.input_text)){
-                    showError(qsTr("Password is incorrect"))
-                    init()
+                if (!wallet_properties_vm.isHardware && !wallet_properties_vm.isWatchingOnly) {
+                    if (!bsApp.isWalletPasswordValid(wallet_properties_vm.walletId, password.input_text)){
+                        showError(qsTr("Password is incorrect"))
+                        init()
 
-                    return
+                        return
+                    }
                 }
 
                 const result = bsApp.deleteWallet(

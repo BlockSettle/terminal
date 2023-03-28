@@ -15,7 +15,10 @@ ColumnLayout {
     spacing: 0
 
     signal viewWalletSeed()
+    signal exportWOWallet()
     signal deleteWallet()
+
+    property var wallet_properties_vm
 
     CustomTitleLabel {
         id: title
@@ -53,7 +56,7 @@ ColumnLayout {
 
         CustomButton {
             text: qsTr("View wallet seed")
-
+            visible: !wallet_properties_vm.isHardware && !wallet_properties_vm.isWatchingOnly
 
             Layout.bottomMargin: 40
             Layout.alignment: Qt.AlignBottom
@@ -63,6 +66,18 @@ ColumnLayout {
             onClicked: viewWalletSeed()
         }
 
+        CustomButton {
+            text: qsTr("Export watching-only wallet")
+            visible: wallet_properties_vm.isHardware || wallet_properties_vm.isWatchingOnly
+
+            Layout.bottomMargin: 40
+            Layout.alignment: Qt.AlignBottom
+
+            width: 260
+
+            onClicked: exportWOWallet()
+        }
+    
         CustomButton {
             text: qsTr("Continue")
             preferred: true

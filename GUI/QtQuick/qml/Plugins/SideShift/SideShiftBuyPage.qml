@@ -53,8 +53,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
 
             Text {
-                //id: inputCurrency
-                //model: controller.inputCurrencies
+               text: root.inputCurrency
                color: "lightgray"
                font.weight: Font.Bold
                anchors.verticalCenter: parent.verticalCenter
@@ -96,7 +95,7 @@ Item {
 
       Text {
          color: "white"
-         text: qsTr("WAITING FOR YOU TO SEND ") + inputCurrency.currentText
+         text: qsTr("WAITING FOR YOU TO SEND ") + root.inputCurrency
          topPadding: 40
          font.pixelSize: 24
          anchors.horizontalCenter: parent.horizontalCenter
@@ -142,7 +141,7 @@ Item {
                   font.pixelSize: 18
                }
                Text {
-                  text: inputCurrency.currentText
+                  text: root.inputCurrency
                   color: "white"
                   font.weight: Font.Bold
                   font.pixelSize: 18
@@ -164,7 +163,7 @@ Item {
                   font.pixelSize: 18
                }
                Text {
-                  text: outputCurrency
+                  text: root.inputCurrency
                   color: "white"
                   font.weight: Font.Bold
                   font.pixelSize: 18
@@ -264,8 +263,7 @@ Item {
             Text {
                width: 200
                color: "lightgray"
-               text: receivingAddress
-               id: receivingAddress
+               text: root.receivingAddress
                font.weight: Font.Bold
                clip: true
             }
@@ -288,6 +286,12 @@ Item {
                anchors.right: parent.right
             }
          }
+      }
+   }
+
+   onVisibleChanged: {
+      if (visible) {
+         console.log('SideShift buy page opened')
       }
    }
 }

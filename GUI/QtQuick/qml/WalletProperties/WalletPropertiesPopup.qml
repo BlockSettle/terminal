@@ -16,6 +16,17 @@ CustomPopup {
     _arrow_but_visibility: !properties.visible
 
     property var wallet_properties_vm
+    property bool walletSeedRequested: false
+
+    Connections {
+        target: bsApp
+        onWalletSeedAuthFailed: {
+            if (_stack_view.currentItem == wallet_seed_auth ||
+                _stack_view.currentItem == wallet_seed) {
+                _stack_view.replace(wallet_seed_auth)
+            }
+        }
+    }
 
     RenameWallet {
         id: rename_wallet
@@ -54,7 +65,9 @@ CustomPopup {
     WalletSeedAuth {
         id: wallet_seed_auth
         visible: false
-        onAuthorized: _stack_view.replace(wallet_seed)
+        onAuthorized: {
+            _stack_view.replace(wallet_seed)
+        }
 
         wallet_properties_vm: root.wallet_properties_vm
     }
@@ -69,6 +82,10 @@ CustomPopup {
     DeleteWalletWarn {
         id: delete_wallet_warn
         visible: false
+        wallet_properties_vm: root.wallet_properties_vm
+        onExportWOWallet: {
+            _stack_view.push(export_wo_wallet)
+        }
         onViewWalletSeed: {
             _stack_view.push(wallet_seed_auth)
             wallet_seed_auth.init()
@@ -387,7 +404,5 @@ CustomPopup {
                 }
             }
         }
-
-        
     }
 }
