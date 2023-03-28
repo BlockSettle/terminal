@@ -24,26 +24,18 @@ namespace
 
 PluginsListModel::PluginsListModel(QObject* parent)
    : QAbstractListModel(parent)
+{}
+
+void PluginsListModel::addPlugins(const std::vector<Plugin*>& plugins)
 {
-   plugins_ = {
-      { tr("Leverex")
-      , tr("Leverage made simple")
-      , QString::fromLatin1("qrc:/images/leverex_plugin.png")
-      , nullptr
-      , QString::fromLatin1("") },
-
-      { tr("SideShift.ai")
-      , tr("Shift between BTC, ETH, BCH, XMR, USDT and 90+ other cryptocurrencies")
-      , QString::fromLatin1("qrc:/images/sideshift_plugin.png")
-      , new SideShiftController(this)
-      , QString::fromLatin1("qrc:/qml/Plugins/SideShift/SideShiftPopup.qml") },
-
-      { tr("SideSwap.io")
-      , tr("Easiest way to get started on the Liquid Network")
-      , QString::fromLatin1("qrc:/images/sideswap_plugin.png")
-      , nullptr
-      , QString::fromLatin1("qrc:/qml/Plugins/SideSwap/SideSwapPopup.qml") }
-   };
+   if (plugins.empty()) {
+      return;
+   }
+   QMetaObject::invokeMethod(this, [this, plugins] {
+      beginInsertRows(QModelIndex(), rowCount(), rowCount() + plugins.size() - 1);
+      plugins_.insert(plugins_.cend(), plugins.cbegin(), plugins.cend());
+      endInsertRows();
+      });
 }
 
 int PluginsListModel::rowCount(const QModelIndex&) const
@@ -56,10 +48,10 @@ QVariant PluginsListModel::data(const QModelIndex& index, int role) const
    const int row = index.row();
    try {
       switch(role) {
-      case Name: return plugins_.at(row).name;
-      case Description: return plugins_.at(row).description;
-      case Icon: return plugins_.at(row).icon;
-      case Path: return plugins_.at(row).path;
+      case Name: return plugins_.at(row)->name();
+      case Description: return plugins_.at(row)->description();
+      case Icon: return plugins_.at(row)->icon();
+      case Path: return plugins_.at(row)->path();
       default: break;
       }
    }
@@ -77,7 +69,7 @@ QHash<int, QByteArray> PluginsListModel::roleNames() const
 QObject* PluginsListModel::getPlugin(int index)
 {
    try {
-      return plugins_.at(index).controller;
+      return plugins_.at(index);
    }
    catch (...) {
    }

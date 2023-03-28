@@ -49,6 +49,9 @@
 #include "Utils.h"
 #include "AddressFilterModel.h"
 #include "viewmodels/plugins/PluginsListModel.h"
+#include "LeverexPlugin.h"
+#include "SideshiftPlugin.h"
+#include "SideswapPlugin.h"
 
 #include "hardware_wallet.pb.h"
 #include "terminal.pb.h"
@@ -333,6 +336,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
    updateStates();
 
    requestInitialSettings();
+   loadPlugins();
 
    logger_->debug("[QtGuiAdapter::run] initial setup done");
    app.exec();
@@ -829,6 +833,14 @@ void QtQuickAdapter::setTopBlock(uint32_t topBlock)
    txModel_->setCurrentBlock(blockNum_);
    expTxByAddrModel_->setCurrentBlock(blockNum_);
    txInputsModel_->setTopBlock(topBlock);
+}
+
+void QtQuickAdapter::loadPlugins()
+{  // load embedded plugins
+   pluginsListModel_->addPlugins({ new LeverexPlugin(this), new SideshiftPlugin(this)
+      , new SideswapPlugin(this) });
+
+   //TODO: send broadcast to request 3rd-party plugins loading
 }
 
 //#define DEBUG_LOADING_PROGRESS

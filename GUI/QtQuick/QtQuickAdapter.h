@@ -234,6 +234,7 @@ private:
    void splashProgressCompleted();
    void updateStates();
    void setTopBlock(uint32_t);
+   void loadPlugins();
 
    void createWallet(bool primary);
    std::string hdWalletIdByIndex(int);
