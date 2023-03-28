@@ -683,6 +683,12 @@ ProcessingResult SignerAdapter::processDeleteWallet(const bs::message::Envelope&
    , const SignerMessage_WalletRequest& request)
 {
    SignerMessage msg;
+   if (!isPasswordValid(request.wallet_id(), SecureBinaryData::fromString(request.password()))) {
+      logger_->warn("[{}] {} password check failed", __func__, request.wallet_id());
+      msg.set_wallet_deleted("");
+      pushBroadcast(user_, msg.SerializeAsString());
+      return ProcessingResult::Error;
+   }
    const auto& hdWallet = walletsMgr_->getHDWalletById(request.wallet_id());
    if (hdWallet && walletsMgr_->deleteWalletFile(hdWallet)) {
       msg.set_wallet_deleted(request.wallet_id());
@@ -759,6 +765,37 @@ bs::message::ProcessingResult SignerAdapter::processChangeWalletPass(const bs::m
    return bs::message::ProcessingResult::Success;
 }
 
+bool SignerAdapter::isPasswordValid(const std::string& walletId
+   , const SecureBinaryData& password) const
+{
+   const auto& hdWallet = walletsMgr_->getHDWalletById(walletId);
+   if (!hdWallet) {
+      logger_->error("[{}] wallet {} not found", __func__, walletId);
+      return false;
+   }
+   if (hdWallet->isWatchingOnly() || hdWallet->isHardwareWallet()) {
+      if (password.empty()) {
+         return true;
+      }
+      else {
+         return false;
+      }
+   }
+   try {
+      const bs::core::WalletPasswordScoped lock(hdWallet, password);
+      const auto& seed = hdWallet->getDecryptedSeed();
+      logger_->debug("[{}] seed id: {}, walletId: {}, pass size: {}", __func__, seed.getWalletId(), walletId, password.getSize());
+      return (seed.getWalletId() == walletId);
+   }
+   catch (const Armory::Wallets::WalletException& e) {
+      logger_->error("[{}] failed to decrypt wallet {}: {}", __func__, walletId, e.what());
+   }
+   catch (const Armory::Wallets::Encryption::DecryptedDataContainerException&) {
+      logger_->error("[{}] failed to decrypt wallet {}", __func__, walletId);
+   }
+   return false;
+}
+
 bs::message::ProcessingResult SignerAdapter::processGetWalletSeed(const bs::message::Envelope& env
    , const SignerMessage_WalletRequest& request)
 {
@@ -771,14 +808,21 @@ bs::message::ProcessingResult SignerAdapter::processGetWalletSeed(const bs::mess
       pushResponse(user_, env, msg.SerializeAsString());
       return ProcessingResult::Error;
    }
+   const auto& password = SecureBinaryData::fromString(request.password());
+   if (!isPasswordValid(request.wallet_id(), password)) {
+      logger_->warn("[{}] invalid password supplied", __func__);
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Error;
+   }
    try {
-      const bs::core::WalletPasswordScoped lock(hdWallet, SecureBinaryData::fromString(request.password()));
+      const bs::core::WalletPasswordScoped lock(hdWallet, password);
       const auto& seed = hdWallet->getDecryptedSeed();
       msgResp->set_xpriv(seed.toXpriv().toBinStr());
       msgResp->set_seed(seed.seed().toBinStr());
 
       if (seed.hasPrivateKey()) {
          const auto& privKey = seed.privateKey();
+         logger_->debug("[{}] priv key size: {}", __func__, privKey.getSize());
          std::vector<uint8_t> privData;
          for (int i = 0; i < (int)privKey.getSize(); ++i) {
             privData.push_back(privKey.getPtr()[i]);
@@ -794,6 +838,10 @@ bs::message::ProcessingResult SignerAdapter::processGetWalletSeed(const bs::mess
    }
    catch (const Armory::Wallets::WalletException& e) {
       logger_->error("[{}] failed to decrypt wallet {}: {}", __func__, request.wallet_id(), e.what());
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Error;
+   }
+   catch (const Armory::Wallets::Encryption::DecryptedDataContainerException&) {
       pushResponse(user_, env, msg.SerializeAsString());
       return ProcessingResult::Error;
    }

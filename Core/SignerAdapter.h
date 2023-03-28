@@ -77,6 +77,7 @@ private:
    void newWalletPrompt() override;
    void autoSignStateChanged(bs::error::ErrorCode
       , const std::string& walletId) override;
+   bool isPasswordValid(const std::string& walletId, const SecureBinaryData& password) const;
 
    bs::message::ProcessingResult processOwnRequest(const bs::message::Envelope &
       , const BlockSettle::Common::SignerMessage &);
