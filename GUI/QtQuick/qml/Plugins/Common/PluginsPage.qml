@@ -79,27 +79,25 @@ Rectangle {
                description: description_role
                icon_source: icon_role
                onCardClicked: {
-                  plugin_popup.reset()
-                  plugin_popup.open()
+                   console.log("onCardClicked")
+                   //plugin_popup = component.createObject(plugin_item)
+                   plugin_popup.reset()
+                   plugin_popup.controller = pluginsListModel.getPlugin(index)
+                   plugin_popup.controller.init()
+                   plugin_popup.open()
                }
             }
 
             function finishCreation() {
-               if (component.status == Component.Ready) {
-                  plugin_popup = component.createObject(plugin_item)
-                  plugin_popup.controller = pluginsListModel.getPlugin(index)
-               }
-               else if (component.status == Component.Error) {
-                  console.log(component.errorString())
-               }
+                plugin_popup = component.createObject(plugin_item)
             }
 
             Component.onCompleted: {
                component = Qt.createComponent(path_role);
-               if (component.status == Component.Ready) {
+               if (component.status === Component.Ready) {
                    finishCreation();
                }
-               else if (component.status == Component.Error) {
+               else if (component.status === Component.Error) {
                   console.log(component.errorString())
                }
                else {

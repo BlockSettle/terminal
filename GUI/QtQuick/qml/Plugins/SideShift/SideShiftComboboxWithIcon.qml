@@ -37,7 +37,7 @@ ComboBox {
             Image {
                 width: 80
                 height: 80
-                source: model[currentIndex].icon
+                source: "qrc:/images/sideshift_btc.png" //model[currentIndex].icon
                 anchors.horizontalCenter: parent.horizontalCenter
             }
 
@@ -92,7 +92,6 @@ ComboBox {
         bottomPadding: 4
 
         contentItem: Text {
-
             text: control.textRole
                 ? (Array.isArray(control.model) ? modelData[control.textRole] : model[control.textRole])
                 : modelData

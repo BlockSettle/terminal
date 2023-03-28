@@ -21,22 +21,8 @@ Item {
 
    property var controller
    property bool receive: true
-   property var receiveModel: [
-        { 
-            currency: "BTC",
-            icon: "qrc:/images/sideshift_btc.png"
-        },
-        { 
-            currency: "ETC",
-            icon: "qrc:/images/sideshift_btc.png"
-        }
-    ]
-   property var sendModel: [
-        { 
-            currency: "BTC",
-            icon: "qrc:/images/sideshift_btc.png"
-        }
-    ]
+   property var receiveModel: controller.inputCurrencies
+   property var sendModel: controller.outputCurrencies
 
    signal shift()
 
@@ -58,7 +44,7 @@ Item {
 
          SideShiftComboboxWithIcon {
             popupWidth: 200
-            textRole: "currency"
+            //textRole: "currency"
             controlHint: qsTr("YOU SEND")
             model: root.receive ? root.receiveModel : root.sendModel
          }
@@ -71,7 +57,7 @@ Item {
          SideShiftComboboxWithIcon {
             id: receivingCombobox
             popupWidth: 200
-            textRole: "currency"
+            //textRole: "currency"
             controlHint: qsTr("YOU RECEIVE")
             model: root.receive ? root.sendModel : root.receiveModel 
          }
@@ -100,9 +86,9 @@ Item {
       SideShiftCombobox {
          id: walletCombobox
          visible: root.receive
-         model: walletBalances
-         textRole: "name"
-         valueRole: "name"
+         model: addressListModel
+         textRole: "address"
+         valueRole: "address"
          anchors.horizontalCenter: parent.horizontalCenter
       }
 

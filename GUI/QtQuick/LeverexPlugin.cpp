@@ -9,7 +9,10 @@
 
 */
 #include "LeverexPlugin.h"
+#include <qqml.h>
 
 LeverexPlugin::LeverexPlugin(QObject* parent)
    : Plugin(parent)
-{}
+{
+   qmlRegisterInterface<LeverexPlugin>("LeverexPlugin");
+}

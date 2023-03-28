@@ -18,6 +18,7 @@ import "../../"
 
 PluginPopup {
    id: root
+   property var controller: null
 
    background: Rectangle {
       anchors.fill: parent
@@ -33,6 +34,7 @@ PluginPopup {
       SideShiftMainPage {
          id: mainPage
          onShift: {
+            controller.inputCurrencySelected("USDT");   //TODO: should be a selected input currency from previous step
             if (mainPage.receive) {
                stackView.replace(buyPage)
             }

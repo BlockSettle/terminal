@@ -9,7 +9,6 @@
 
 */
 #include "jadeClient.h"
-#include <curl/curl.h>
 #include "hwdevicemanager.h"
 #include "jadeDevice.h"
 #include "SystemFileUtils.h"

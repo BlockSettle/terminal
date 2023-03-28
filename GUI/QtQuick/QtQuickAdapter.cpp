@@ -732,8 +732,11 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
       break;
 
    case WalletsMessage::kWalletDeleted: {
-      const auto& wi = bs::sync::WalletInfo::fromCommonMsg(msg.wallet_deleted());
-      //TODO
+      if (!msg.wallet_deleted().id_size()) {
+         showError(tr("Wallet deletion failed"));
+         break;
+      }
+      //const auto& wi = bs::sync::WalletInfo::fromCommonMsg(msg.wallet_deleted());
    }
       break;
 
@@ -837,7 +840,8 @@ void QtQuickAdapter::setTopBlock(uint32_t topBlock)
 
 void QtQuickAdapter::loadPlugins()
 {  // load embedded plugins
-   pluginsListModel_->addPlugins({ new LeverexPlugin(this), new SideshiftPlugin(this)
+   pluginsListModel_->addPlugins({ new LeverexPlugin(this)
+      , new SideshiftPlugin(logger_, this)
       , new SideswapPlugin(this) });
 
    //TODO: send broadcast to request 3rd-party plugins loading

@@ -45,7 +45,7 @@ namespace bs {
       class TrezorPostHandler : public bs::HandlerImpl<TrezorPostIn, TrezorPostOut>
       {
       public:
-         TrezorPostHandler(const std::shared_ptr<spdlog::logger>& logger
+         TrezorPostHandler(const std::shared_ptr<spdlog::logger>&
             , const std::string& baseURL);
          ~TrezorPostHandler() override;
 

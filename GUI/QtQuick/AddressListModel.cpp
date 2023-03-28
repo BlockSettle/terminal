@@ -16,6 +16,7 @@
 namespace
 {
    static const QHash<int, QByteArray> kRoles{
+      {Qt::DisplayRole, "address"},
       {QmlAddressListModel::TableDataRole, "tableData"},
       {QmlAddressListModel::ColorRole, "dataColor"},
       {QmlAddressListModel::AddressTypeRole, "addressType"},
@@ -42,6 +43,8 @@ QVariant QmlAddressListModel::data(const QModelIndex& index, int role) const
    try {
       switch (role)
       {
+      case Qt::DisplayRole:
+         return table_.at(row).at(0);
       case TableDataRole:
          {
             switch (index.column()) {

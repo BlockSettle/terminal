@@ -9,7 +9,10 @@
 
 */
 #include "SideswapPlugin.h"
+#include <qqml.h>
 
 SideswapPlugin::SideswapPlugin(QObject* parent)
    : Plugin(parent)
-{}
+{
+   qmlRegisterInterface<SideswapPlugin>("SideswapPlugin");
+}

@@ -20,16 +20,14 @@ Item {
    id: root
 
    property var controller
-   property string inputCurrency: "ETH"
+   property string inputCurrency
    property string outputCurrency: "BTC"
-   property string orderId: "253380c874f87a7a4f70"
-   property string conversionRate: "1 ETH = 0.06177451 BTC"
-   property string minAmout: "0.0286751507"
-   property string maxAmout: "22.94012056"
-   property string toAddress: "0x514cD3B3a164A78BA93b881C7b567d19CC6a1843"
-   property string networkFee: "1.97 USD"
-   property string receivingAddress: "bc1qvrl85pygns90xut25qu0tpmawm9h03j3d9w94a"
-   property string creationDate: "2023-03-21 07:48"
+//   property string orderId: "253380c874f87a7a4f70"
+   //property string conversionRate: "1 ETH = 0.06177451 BTC"
+   //property string toAddress: "0x514cD3B3a164A78BA93b881C7b567d19CC6a1843"
+   //property string networkFee: "1.97 USD"
+   property string receivingAddress
+   //property string creationDate: "2023-03-21 07:48"
 
    Rectangle {
       anchors.fill: parent
@@ -55,7 +53,8 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
 
             Text {
-               text: inputCurrency
+                //id: inputCurrency
+                //model: controller.inputCurrencies
                color: "lightgray"
                font.weight: Font.Bold
                anchors.verticalCenter: parent.verticalCenter
@@ -89,7 +88,7 @@ Item {
             
             Text {
                color: "lightgray"
-               text: orderId
+               text: controller.orderId
                font.weight: Font.Bold
             }
          }
@@ -97,7 +96,7 @@ Item {
 
       Text {
          color: "white"
-         text: qsTr("WAITING FOR YOU TO SEND ") + inputCurrency
+         text: qsTr("WAITING FOR YOU TO SEND ") + inputCurrency.currentText
          topPadding: 40
          font.pixelSize: 24
          anchors.horizontalCenter: parent.horizontalCenter
@@ -106,7 +105,7 @@ Item {
       Text {
          topPadding: 15
          color: "lightgray"
-         text: conversionRate
+         text: controller.conversionRate
          anchors.horizontalCenter: parent.horizontalCenter
       }
 
@@ -137,13 +136,13 @@ Item {
                   anchors.verticalCenter: parent.verticalCenter
                }
                Text {
-                  text: minAmout
+                  text: controller.minAmount
                   color: "white"
                   font.weight: Font.Bold
                   font.pixelSize: 18
                }
                Text {
-                  text: inputCurrency
+                  text: inputCurrency.currentText
                   color: "white"
                   font.weight: Font.Bold
                   font.pixelSize: 18
@@ -159,7 +158,7 @@ Item {
                   anchors.verticalCenter: parent.verticalCenter
                }
                Text {
-                  text: maxAmout
+                  text: controller.maxAmount
                   color: "white"
                   font.weight: Font.Bold
                   font.pixelSize: 18
@@ -191,7 +190,8 @@ Item {
             
                Text {
                   anchors.fill: parent
-                  text: toAddress
+                  id: toAddress
+                  text: controller.depositAddress
                   color: "white"
                   clip: true
                   font.weight: Font.Bold
@@ -204,7 +204,7 @@ Item {
             SideShiftCopyButton {
                text: qsTr("COPY ADDRESS")
                anchors.horizontalCenter: parent.horizontalCenter
-               onClicked: bsApp.copyAddressToClipboard(toAddress)
+               onClicked: bsApp.copyAddressToClipboard(toAddress.text)
             }
          }
 
@@ -220,7 +220,7 @@ Item {
                anchors.horizontalCenter: parent.horizontalCenter
 
                Image {
-                   source: "image://QR/" + root.toAddress
+                   source: "image://QR/" + root.toAddress.text
                    sourceSize.width: 180
                    sourceSize.height: 180
                    width: 180
@@ -237,7 +237,7 @@ Item {
       }
 
       Text {
-         text: qsTr("ESTIMATED NETWORK FEES: ") + networkFee
+         text: qsTr("ESTIMATED NETWORK FEES: ") + controller.networkFee
          color: "white"
          anchors.horizontalCenter: parent.horizontalCenter
       }
@@ -265,6 +265,7 @@ Item {
                width: 200
                color: "lightgray"
                text: receivingAddress
+               id: receivingAddress
                font.weight: Font.Bold
                clip: true
             }
@@ -282,7 +283,7 @@ Item {
             
             Text {
                color: "lightgray"
-               text: creationDate
+               text: controller.creationDate
                font.weight: Font.Bold
                anchors.right: parent.right
             }
