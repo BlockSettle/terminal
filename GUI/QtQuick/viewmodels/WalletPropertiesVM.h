@@ -13,6 +13,7 @@
 #include <memory>
 
 #include <QObject>
+#include <Wallets/SignerDefs.h>
 
 namespace spdlog {
    class logger;
@@ -26,7 +27,7 @@ struct WalletInfo
    QString name;
    QString walletId;
    QString groups;
-   QString ecryption;
+   QString walletType;
    quint32 generatedAddresses;
    bool isHardware;
    bool isWatchingOnly;
@@ -38,7 +39,7 @@ class WalletPropertiesVM: public QObject
    Q_PROPERTY(QString walletName               READ walletName               NOTIFY changed)
    Q_PROPERTY(QString walletId                 READ walletId                 NOTIFY changed)
    Q_PROPERTY(QString walletGroups             READ walletGroups             NOTIFY changed)
-   Q_PROPERTY(QString walletEncryption         READ walletEncryption         NOTIFY changed)
+   Q_PROPERTY(QString walletType               READ walletType               NOTIFY changed)
    Q_PROPERTY(quint32 walletGeneratedAddresses READ walletGeneratedAddresses NOTIFY changed)
    Q_PROPERTY(quint32 walletUsedAddresses      READ walletUsedAddresses    NOTIFY changed)
    Q_PROPERTY(quint32 walletAvailableUtxo      READ walletAvailableUtxo      NOTIFY changed)
@@ -49,7 +50,7 @@ class WalletPropertiesVM: public QObject
 public:
    WalletPropertiesVM(const std::shared_ptr<spdlog::logger> & logger, QObject* parent = nullptr);
 
-   void setWalletInfo(const WalletInfo& info);
+   void setWalletInfo(const QString& walletId, const bs::sync::WalletInfo& info);
    void setWalletSeed(const std::string& walletId, const std::string& seed);
    void setNbUsedAddrs(const std::string& walletId, uint32_t nb);
    void setNbUTXOs(const std::string& walletId, uint32_t nb);
@@ -57,7 +58,7 @@ public:
    const QString& walletName() const;
    const QString& walletId() const;
    const QString& walletGroups() const;
-   const QString& walletEncryption() const;
+   const QString& walletType() const;
    quint32 walletGeneratedAddresses() const;
    quint32 walletUsedAddresses() const;
    quint32 walletAvailableUtxo() const;

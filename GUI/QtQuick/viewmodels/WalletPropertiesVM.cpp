@@ -15,15 +15,34 @@
 
 using namespace qtquick_gui;
 
+namespace {
+   static inline QString walletTypeFromInfo(const bs::sync::WalletInfo& info)
+   {
+      if (info.isHardware) {
+         return QObject::tr("Hardware");
+      }
+      if (info.watchOnly) {
+         return QObject::tr("Watch-only");
+      }
+      return QObject::tr("Software");
+   }
+}
+
 WalletPropertiesVM::WalletPropertiesVM(const std::shared_ptr<spdlog::logger> & logger, QObject* parent)
    : QObject(parent),
      logger_(logger)
 {
 }
 
-void WalletPropertiesVM::setWalletInfo(const WalletInfo& info)
+void WalletPropertiesVM::setWalletInfo(const QString& walletId, const bs::sync::WalletInfo& info)
 {
-   info_ = info;
+   info_.name = QString::fromStdString(info.name);
+   info_.walletId = walletId;
+   info_.groups = QString::fromLatin1("1/") + QString::number(info.leaves.size());
+   info_.walletType = walletTypeFromInfo(info);
+   info_.generatedAddresses = info.nbAddresses;
+   info_.isHardware = info.isHardware;
+   info_.isWatchingOnly = info.watchOnly;
    emit changed();
 }
 
@@ -69,9 +88,9 @@ const QString& WalletPropertiesVM::walletGroups() const
    return info_.groups;
 }
 
-const QString& WalletPropertiesVM::walletEncryption() const
+const QString& WalletPropertiesVM::walletType() const
 {
-   return info_.ecryption;
+   return info_.walletType;
 }
 
 quint32 WalletPropertiesVM::walletGeneratedAddresses() const

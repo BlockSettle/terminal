@@ -39,8 +39,10 @@ const SettingsController::SettingsCache& SettingsController::getCache() const
 
 void SettingsController::setParam(ApplicationSettings::Setting key, const QVariant& value)
 {
-   settingsCache_[key] = value;
-   emit changed(key);
+   if (settingsCache_.count(key) == 0 || settingsCache_.at(key) != value) {
+      settingsCache_[key] = value;
+      emit changed(key);
+   }
 }
 
 const QVariant& SettingsController::getParam(ApplicationSettings::Setting key) const

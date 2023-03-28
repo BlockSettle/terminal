@@ -29,6 +29,7 @@ ComboBox {
     signal editingFinished()
 
     activeFocusOnTab: true
+    focusPolicy: Qt.NoFocus
 
     leftPadding: 16
     rightPadding: 36

@@ -19,6 +19,7 @@ Button {
     width: 150
     height: 50
 
+    focusPolicy: Qt.NoFocus
     property bool active: true
 
     font.pixelSize: 16

@@ -179,10 +179,8 @@ void WalletBalancesModel::setWalletBalance(const std::string& walletId, const Ba
 
 void WalletBalancesModel::setSelectedWallet(int index)
 {
-   if (selectedWallet_ != index) {
-      selectedWallet_ = index;
-      emit changed();
-   }
+   selectedWallet_ = index;
+   emit changed();
 }
 
 int WalletBalancesModel::selectedWallet() const

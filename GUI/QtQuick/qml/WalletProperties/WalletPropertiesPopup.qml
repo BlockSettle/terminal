@@ -188,14 +188,14 @@ CustomPopup {
                         width: parent.width
 
                         Text {
-                            text: qsTr("Encryption")
+                            text: qsTr("Wallet type")
                             color: BSStyle.titleTextColor
                             font.family: "Roboto"
                             font.pixelSize: 14
                             width: parent.width / 2
                         }
                         Text {
-                            text: wallet_properties_vm.walletEncryption
+                            text: wallet_properties_vm.walletType
                             color: BSStyle.textColor
                             font.family: "Roboto"
                             font.pixelSize: 14

@@ -622,10 +622,10 @@ ColumnLayout  {
             bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
         }
         else {
-            bsApp.requestFeeSuggestions()
             if (isRBF) {
                 txOutputsModel.setOutputsFrom(tx)
             }
         }
+        bsApp.requestFeeSuggestions()
     }
 }
