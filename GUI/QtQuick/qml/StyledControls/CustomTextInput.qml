@@ -43,6 +43,8 @@ Rectangle {
     signal activeFocusChanged()
     signal tabNavigated()
     signal backTabNavigated()
+    signal enterPressed()
+    signal returnPressed()
 
 
     color: "#020817"
@@ -98,6 +100,14 @@ Rectangle {
             font.pixelSize: 16
             font.family: "Roboto"
             font.weight: Font.Normal
+        }
+
+        Keys.onEnterPressed: {
+            enterPressed()
+        }
+
+        Keys.onReturnPressed: {
+            returnPressed()
         }
 
         onTextEdited : {
