@@ -192,7 +192,7 @@ Item {
         Row {
             spacing: 24
             width: parent.width
-            height: 500
+            height: 450
 
             Rectangle {
                 height: parent.height

@@ -182,6 +182,7 @@
         <file>qml/StyledControls/CustomHorizontalHeaderView.qml</file>
         <file>qml/StyledControls/CustomRbfCpfpMenu.qml</file>
         <file>qml/StyledControls/CustomSuccessWidget.qml</file>
+        <file>qml/StyledControls/CustomSuccessDialog.qml</file>
         <file>qml/Settings/AddArmoryServer.qml</file>
         <file>images/delete_custom_server.svg</file>
         <file>qml/Settings/DeleteArmoryServer.qml</file>
