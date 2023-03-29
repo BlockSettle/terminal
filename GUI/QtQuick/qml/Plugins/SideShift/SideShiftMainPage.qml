@@ -26,7 +26,7 @@ Item {
 
    property alias inputCurrency: inputCombobox.currentText
    property alias outputCurrency: receivingCombobox.currentText
-   property alias receivingAddress: walletCombobox.currentText
+   property alias receivingAddress: addressCombobox.currentText
 
    signal shift()
 
@@ -93,7 +93,7 @@ Item {
       }
 
       SideShiftCombobox {
-         id: walletCombobox
+         id: addressCombobox
          visible: root.receive
          model: addressListModel
          textRole: "address"
@@ -103,7 +103,7 @@ Item {
 
       SideShiftButton {
          text: qsTr("SHIFT")
-         enabled: root.receive ? walletCombobox.currentIndex >= 0 : addressInput.text !== ""
+         enabled: root.receive ? addressCombobox.currentIndex >= 0 : addressInput.text !== ""
          anchors.horizontalCenter: parent.horizontalCenter
          onClicked: root.shift()
       }
