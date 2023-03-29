@@ -131,6 +131,7 @@ ColumnLayout  {
         FileDialog  {
             id: fileDialog
             visible: false
+            folder: shortcuts.documents
             onAccepted: {
                 dashed_border.state = "clicked"
 
@@ -186,6 +187,10 @@ ColumnLayout  {
     function basename(str)
     {
         return (str.slice(str.lastIndexOf("/")+1))
+    }
+
+    function init() {
+        chosenFilename = ""
     }
 
 }
