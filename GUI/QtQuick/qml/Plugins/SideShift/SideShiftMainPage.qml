@@ -24,6 +24,10 @@ Item {
    property var receiveModel: controller.inputCurrencies
    property var sendModel: controller.outputCurrencies
 
+   property alias inputCurrency: inputCombobox.currentText
+   property alias outputCurrency: receivingCombobox.currentText
+   property alias receivingAddress: addressCombobox.currentText
+
    signal shift()
 
    Column {
@@ -43,10 +47,15 @@ Item {
          anchors.horizontalCenter: parent.horizontalCenter
 
          SideShiftComboboxWithIcon {
+            id: inputCombobox
             popupWidth: 200
             //textRole: "currency"
             controlHint: qsTr("YOU SEND")
             model: root.receive ? root.receiveModel : root.sendModel
+
+            onActivated: {
+               root.controller.inputCurrencySelected(currentText)
+            }
          }
 
          SideShiftIconButton {
@@ -84,7 +93,7 @@ Item {
       }
 
       SideShiftCombobox {
-         id: walletCombobox
+         id: addressCombobox
          visible: root.receive
          model: addressListModel
          textRole: "address"
@@ -94,7 +103,7 @@ Item {
 
       SideShiftButton {
          text: qsTr("SHIFT")
-         enabled: root.receive ? walletCombobox.currentIndex >= 0 : addressInput.text !== ""
+         enabled: root.receive ? addressCombobox.currentIndex >= 0 : addressInput.text !== ""
          anchors.horizontalCenter: parent.horizontalCenter
          onClicked: root.shift()
       }

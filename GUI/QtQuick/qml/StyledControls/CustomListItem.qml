@@ -93,6 +93,7 @@ Rectangle {
     MouseArea {
         id: mouseArea
         anchors.fill: parent
+        hoverEnabled: true
         onClicked: {
             rect.clicked()
         }

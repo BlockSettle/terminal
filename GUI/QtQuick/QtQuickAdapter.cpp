@@ -1837,6 +1837,7 @@ bs::message::ProcessingResult QtQuickAdapter::processWalletSeed(const BlockSettl
 {
    if (response.bip39_seed().empty()) {
       emit showError(tr("Failed to obtain wallet seed"));
+      emit walletSeedAuthFailed();
       return bs::message::ProcessingResult::Error;
    }
    walletPropertiesModel_->setWalletSeed(response.wallet_id(), response.bip39_seed());
@@ -1880,7 +1881,7 @@ ProcessingResult QtQuickAdapter::processSignTX(const BlockSettle::Common::Signer
 
 ProcessingResult QtQuickAdapter::processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived& zcs)
 {
-   //logger_->debug("[{}] {}", __func__, zcs.DebugString());
+   logger_->debug("[{}] {}", __func__, zcs.DebugString());
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_details_request();
    for (const auto& zcEntry : zcs.tx_entries()) {

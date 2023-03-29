@@ -142,14 +142,21 @@ Item {
                                 explorerAddress.address = expSearchBox.text
                                 bsApp.startAddressSearch(explorerAddress.address)
                                 explorerStack.replace(explorerAddress)
+                                expSearchBox.text = ""
                             }
                             else if (rc === 2) {    // TXid entered
                                 explorerTX.tx = bsApp.getTXDetails(expSearchBox.text)
                                 explorerStack.replace(explorerTX)
+                                expSearchBox.text = ""
                             }
                         }
 
                         onAccepted: requestSearch()
+                        onTextEdited: {
+                            if (bsApp.getSearchInputType(expSearchBox.text) != 0) {
+                                requestSearch()
+                            }
+                        }
 
                         Text {
                             text: qsTr("Search for transaction or address")

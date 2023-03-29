@@ -9,7 +9,6 @@
 
 */
 #include "PluginsListModel.h"
-#include "SideShiftController.h"
 #include <QString>
 
 namespace
