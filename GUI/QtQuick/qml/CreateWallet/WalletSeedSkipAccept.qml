@@ -69,30 +69,30 @@ ColumnLayout  {
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         CustomButton {
-            id: skip_but
-            text: qsTr("Yes, Skip")
-            width: 261
-
-            preferred: false
-
-            function click_enter() {
-                layout.sig_skip()
-            }
-        }
-
-        CustomButton {
             id: no_but
             text: qsTr("No")
             width: 261
 
-            preferred: true
+            preferred: false
 
             function click_enter() {
                 layout.sig_not_skip()
             }
 
         }
-   }
+
+        CustomButton {
+            id: skip_but
+            text: qsTr("Yes, Skip")
+            width: 261
+
+            preferred: true
+
+            function click_enter() {
+                layout.sig_skip()
+            }
+        }
+    }
 
     function init()
     {
