@@ -156,6 +156,8 @@ CustomPopup {
             _stack_view.pop()
             _stack_view.replace(start_create, StackView.Immediate)
             start_create.init()
+
+            import_watching_wallet.init()
         }
     }
 }
