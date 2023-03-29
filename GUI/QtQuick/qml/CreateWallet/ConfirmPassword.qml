@@ -27,7 +27,7 @@ ColumnLayout  {
 
     CustomMessageDialog {
         id: error_dialog
-        error: qsTr("Password strength is insufficient")
+        error: qsTr("Password strength is insufficient,\nplease use at least 6 characters")
         visible: false
     }
 
@@ -49,20 +49,46 @@ ColumnLayout  {
 
         title_text: qsTr("Password")
 
-        Keys.onEnterPressed: {
-            checkPasswordLength()
-            confirm_password.setActiveFocus()
+        onEnterPressed: {
+            click_enter()
         }
-        Keys.onReturnPressed: {
-            checkPasswordLength()
-            confirm_password.setActiveFocus()
+        onReturnPressed: {
+            click_enter()
         }
         onTabNavigated: {
-            checkPasswordLength()
-            confirm_password.setActiveFocus()
+            if(checkPasswordLength()) {
+                confirm_password.setActiveFocus()
+            }
+            else {
+                password.setActiveFocus()
+            }
         }
         onBackTabNavigated: {
-            checkPasswordLength()
+            if(checkPasswordLength()) {
+                if (confirm_but.enabled) {
+                    confirm_but.setActiveFocus()
+                }
+                else {
+                    confirm_password.setActiveFocus()
+                }
+            }
+            else {
+                password.setActiveFocus()
+            }
+        }
+
+        function click_enter() {
+            if (confirm_but.enabled) {
+                confirm_but.click_enter()
+            }
+            else {
+                if (checkPasswordLength()) {
+                    confirm_password.setActiveFocus()
+                }
+                else {
+                    password.setActiveFocus()
+                }
+            }
         }
     }
 
@@ -83,6 +109,25 @@ ColumnLayout  {
         isHiddenText: true
 
         title_text: qsTr("Confirm Password")
+
+        onEnterPressed: {
+            confirm_but.click_enter()
+        }
+        onReturnPressed: {
+            confirm_but.click_enter()
+        }
+
+        onTabNavigated: {
+            if (confirm_but.enabled) {
+                confirm_but.setActiveFocus()
+            }
+            else {
+                password.setActiveFocus()
+            }
+        }
+        onBackTabNavigated: {
+            password.setActiveFocus()
+        }
     }
 
     Label {
@@ -149,6 +194,8 @@ ColumnLayout  {
             error_dialog.show()
             error_dialog.raise()
             error_dialog.requestActivate()
+            return false
         }
+        return true
     }
 }

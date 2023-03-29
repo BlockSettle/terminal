@@ -28,6 +28,9 @@ CustomPopup {
         }
     }
 
+    x: mainWindow.x + (mainWindow.width - width)/2
+    y: mainWindow.y + (mainWindow.height - height)/2
+
     RenameWallet {
         id: rename_wallet
         visible: false
@@ -135,7 +138,6 @@ CustomPopup {
 
         visible: false
         onSig_finish: {
-            //root.close()
             root.close_click()
         }
     }

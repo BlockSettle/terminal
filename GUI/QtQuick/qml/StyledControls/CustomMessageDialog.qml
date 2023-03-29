@@ -44,7 +44,7 @@ Window {
             id: tytleLabel
 
             anchors.top: rect.top
-            anchors.topMargin: 8
+            anchors.topMargin: 16
             anchors.horizontalCenter: rect.horizontalCenter
 
             color: "#E2E7FF"
@@ -60,8 +60,8 @@ Window {
         Label {
             id: errorLabel
 
-            anchors.bottom: ok_but.top
-            anchors.bottomMargin: 70
+            anchors.top: tytleLabel.bottom
+            anchors.topMargin: 20
             anchors.horizontalCenter: rect.horizontalCenter
 
             color: "#E2E7FF"

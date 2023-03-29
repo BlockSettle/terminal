@@ -29,7 +29,7 @@ ColumnLayout {
 
     CustomMessageDialog {
         id: error_dialog
-        error: qsTr("Password strength is insufficient")
+        error: qsTr("Password strength is insufficient,\nplease use at least 6 characters")
         visible: false
     }
 
@@ -56,6 +56,35 @@ ColumnLayout {
 
         isPassword: true
         isHiddenText: true
+
+        onEnterPressed: {
+            click_enter()
+        }
+        
+        onReturnPressed: {
+            click_enter()
+        }
+
+        onTabNavigated: {
+            new_password.setActiveFocus()
+        }
+        onBackTabNavigated: {
+            if (confirm_but.enabled){
+                confirm_but.setActiveFocus()
+            }
+            else {
+                confirm_password.setActiveFocus()
+            }
+        }
+
+        function click_enter() {
+            if (confirm_but.enabled) {
+                confirm_but.click_enter()
+            } 
+            else {
+                new_password.setActiveFocus()
+            }
+        }
     }
 
     CustomTextInput {
@@ -76,21 +105,43 @@ ColumnLayout {
         isPassword: true
         isHiddenText: true
 
-        Keys.onEnterPressed: {
-            checkPasswordLength()
-            confirm_password.setActiveFocus()
+        onEnterPressed: {
+            click_enter()
         }
-        Keys.onReturnPressed: {
-            checkPasswordLength()
-            confirm_password.setActiveFocus()
+        
+        onReturnPressed: {
+            click_enter()
         }
+
         onTabNavigated: {
-            checkPasswordLength()
-            confirm_password.setActiveFocus()
+            if (checkPasswordLength()) {
+                confirm_password.setActiveFocus()
+            }
+            else {
+                new_password.setActiveFocus()
+            }
         }
         onBackTabNavigated: {
-            checkPasswordLength()
-            password.setActiveFocus()
+            if (checkPasswordLength()) {
+                password.setActiveFocus()
+            }
+            else {
+                new_password.setActiveFocus()
+            }
+        }
+
+        function click_enter() {
+            if (confirm_but.enabled) {
+                confirm_but.click_enter()
+            }
+            else {
+                if (checkPasswordLength()) {
+                    confirm_password.setActiveFocus()
+                }
+                else {
+                    new_password.setActiveFocus()
+                }
+            }
         }
     }
 
@@ -110,6 +161,30 @@ ColumnLayout {
 
         isPassword: true
         isHiddenText: true
+
+        onEnterPressed: {
+            click_enter()
+        }
+        
+        onReturnPressed: {
+            click_enter()
+        }
+
+        onTabNavigated: {
+            if (confirm_but.enabled) {
+                confirm_but.setActiveFocus()
+            }
+            else {
+                password.setActiveFocus()
+            }
+        }
+        onBackTabNavigated: new_password.setActiveFocus()
+
+        function click_enter() {
+            if (confirm_but.enabled) {
+                confirm_but.click_enter()
+            }
+        }
     }
 
     Label {
@@ -133,6 +208,10 @@ ColumnLayout {
                  && (new_password.input_text === confirm_password.input_text)
 
         function click_enter() {
+            if (!confirm_but.enabled) {
+                return
+            }
+            
             const result = bsApp.changePassword(
                 wallet_properties_vm.walletId,
                 password.input_text,
@@ -145,13 +224,13 @@ ColumnLayout {
         }
     }
 
-    Keys.onEnterPressed: {
-        confirm_but.click_enter()
-    }
+    // Keys.onEnterPressed: {
+    //     confirm_but.click_enter()
+    // }
 
-    Keys.onReturnPressed: {
-        confirm_but.click_enter()
-    }
+    // Keys.onReturnPressed: {
+    //     confirm_but.click_enter()
+    // }
 
     function init()
     {
@@ -175,6 +254,8 @@ ColumnLayout {
             error_dialog.show()
             error_dialog.raise()
             error_dialog.requestActivate()
+            return false
         }
+        return true
     }
 }
