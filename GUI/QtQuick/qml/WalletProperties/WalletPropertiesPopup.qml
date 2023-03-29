@@ -46,8 +46,13 @@ CustomPopup {
         wallet_properties_vm: root.wallet_properties_vm
 
         onSig_success: (nameExport, pathExport) => {
-            _stack_view.push(success)
-            success.details_text = qsTr("Your watching-only wallet has successfully been exported\n\nFilename:\t%1\nFolder:\t%2").arg(nameExport).arg(pathExport)
+            root.close_click()
+
+            success_dialog.details_text = qsTr("Your watching-only wallet has successfully been exported\n\nFilename:\t%1\nFolder:\t%2").arg(nameExport).arg(pathExport)
+            
+            success_dialog.show()
+            success_dialog.raise()
+            success_dialog.requestActivate()
         }
     }
 
@@ -108,6 +113,16 @@ CustomPopup {
         }
     }
 
+    CustomSuccessDialog {
+        id: success_dialog
+
+        visible: false
+        onSig_finish: {
+            //root.close()
+            root.close_click()
+        }
+    }
+
     Rectangle {
         id: properties
         height: 548
@@ -159,7 +174,7 @@ CustomPopup {
                         }
                         
                         Image {
-                            id: close_button
+                            id: rename_button
 
                             x: parent.horizontalCenter - 10
                             y: wallet_name.top
