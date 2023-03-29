@@ -19,7 +19,6 @@
 #include <QFontDatabase>
 #include <QIcon>
 #include <QLockFile>
-#include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickImageProvider>
 #include <QQuickItem>
@@ -336,7 +335,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
    updateStates();
 
    requestInitialSettings();
-   loadPlugins();
+   loadPlugins(engine);
 
    logger_->debug("[QtGuiAdapter::run] initial setup done");
    app.exec();
@@ -838,10 +837,10 @@ void QtQuickAdapter::setTopBlock(uint32_t topBlock)
    txInputsModel_->setTopBlock(topBlock);
 }
 
-void QtQuickAdapter::loadPlugins()
+void QtQuickAdapter::loadPlugins(QQmlApplicationEngine& engine)
 {  // load embedded plugins
    pluginsListModel_->addPlugins({ new LeverexPlugin(this)
-      , new SideshiftPlugin(logger_, this)
+      , new SideshiftPlugin(logger_, engine, this)
       , new SideswapPlugin(this) });
 
    //TODO: send broadcast to request 3rd-party plugins loading

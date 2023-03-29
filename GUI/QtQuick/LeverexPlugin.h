@@ -18,10 +18,10 @@ class LeverexPlugin: public Plugin
 public:
    LeverexPlugin(QObject *parent);
 
-   QString name() override { return QLatin1Literal("Leverex"); }
-   QString description() override { return tr("Leverage made simple"); }
-   QString icon() override { return QLatin1Literal("qrc:/images/leverex_plugin.png"); }
-   QString path() override { return {}; }
+   QString name() const override { return QLatin1Literal("Leverex"); }
+   QString description() const override { return tr("Leverage made simple"); }
+   QString icon() const override { return QLatin1Literal("qrc:/images/leverex_plugin.png"); }
+   QString path() const override { return {}; }
 
    Q_INVOKABLE void init() override {}
 

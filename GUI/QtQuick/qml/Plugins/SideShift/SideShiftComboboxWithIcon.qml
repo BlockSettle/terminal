@@ -22,6 +22,7 @@ ComboBox {
 
     property string controlHint
     property int popupWidth
+    property var networkControl: null
 
     activeFocusOnTab: true
 
@@ -37,7 +38,8 @@ ComboBox {
             Image {
                 width: 80
                 height: 80
-                source: "qrc:/images/sideshift_btc.png" //model[currentIndex].icon
+                source: (networkControl === null) ? "qrc:/images/sideshift_btc.png"
+                          : "image://coin/" + control.currentText + "-" + networkControl.currentText
                 anchors.horizontalCenter: parent.horizontalCenter
             }
 

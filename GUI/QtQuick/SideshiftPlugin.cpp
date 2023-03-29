@@ -10,16 +10,32 @@
 */
 #include "SideshiftPlugin.h"
 #include <qqml.h>
+#include <QQuickImageProvider>
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 using json = nlohmann::json;
 
-SideshiftPlugin::SideshiftPlugin(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
+class CoinImageProvider : public QQuickImageProvider
+{
+public:
+   CoinImageProvider(SideshiftPlugin* parent)
+      : QQuickImageProvider(QQuickImageProvider::Pixmap), parent_(parent)
+   {}
+   QPixmap requestPixmap(const QString& id, QSize* size, const QSize& requestedSize) override;
+
+private:
+   SideshiftPlugin* parent_;
+};
+
+
+SideshiftPlugin::SideshiftPlugin(const std::shared_ptr<spdlog::logger>& logger
+   , QQmlApplicationEngine& engine, QObject* parent)
    : Plugin(parent), logger_(logger)
 {
    qmlRegisterInterface<SideshiftPlugin>("SideshiftPlugin");
+   engine.addImageProvider(QLatin1Literal("coin"), new CoinImageProvider(this));
    outputCurrencies_.append(QLatin1Literal("BTC"));
 }
 
@@ -71,9 +87,11 @@ void SideshiftPlugin::init()
          const auto& msg = json::parse(response);
          for (const auto& coin : msg) {
             const auto& currency = coin["coin"].get<std::string>();
-            //if (currency != "BTC") {
-               inputCurrencies_.append(QString::fromStdString(currency));
-            //}
+            auto& networks = networksByCur_[currency];
+            for (const auto& network : coin["networks"]) {
+               networks.append(QString::fromStdString(network.get<std::string>()));
+            }
+            inputCurrencies_.append(QString::fromStdString(currency));
          }
          logger_->debug("[{}] {} input currencies", __func__, inputCurrencies_.size());
          emit inited();
@@ -86,7 +104,14 @@ void SideshiftPlugin::init()
 
 void SideshiftPlugin::deinit()
 {
+   networksByCur_.clear();
    inputCurrencies_.clear();
+   inputNetworks_.clear();
+   inputNetwork_.clear();
+   inputCurrency_.clear();
+   convRate_.clear();
+   orderId_.clear();
+
    if (curlHeaders_) {
       curl_slist_free_all(curlHeaders_);
       curlHeaders_ = nullptr;
@@ -95,6 +120,44 @@ void SideshiftPlugin::deinit()
       curl_easy_cleanup(curl_);
       curl_ = NULL;
    }
+}
+
+void SideshiftPlugin::setInputNetwork(const QString& network)
+{
+   logger_->debug("[{}] {} '{}' -> '{}'", __func__, inputCurrency_.toStdString()
+      , inputNetwork_.toStdString(), network.toStdString());
+   if (inputCurrency_.isEmpty() || (inputNetwork_ == network)) {
+      return;
+   }
+   inputNetwork_ = network;
+   const auto& response = get("/pair/" + inputCurrency_.toStdString() + "-"
+      + network.toStdString() + "/btc-bitcoin");
+   try {
+      const auto& respJson = json::parse(response);
+      double rate = 0;
+      if (respJson["rate"].is_string()) {
+         rate = std::stod(respJson["rate"].get<std::string>());
+      }
+      else if (respJson["rate"].is_number_float()) {
+         rate = respJson["rate"].get<double>();
+      }
+      if (rate > 0) {
+         if (rate < 0.0001) {
+            convRate_ = tr("1 BTC = %1 %2").arg(QString::number(1.0 / rate, 'f', 2))
+               .arg(inputCurrency_.toUpper());
+         }
+         else {
+            convRate_ = tr("1 %1 = %2 BTC").arg(inputCurrency_.toUpper())
+               .arg(QString::number(rate, 'f', 6));
+         }
+      }
+      minAmount_ = QString::fromStdString(respJson["min"].get<std::string>());
+      maxAmount_ = QString::fromStdString(respJson["max"].get<std::string>());
+   }
+   catch (const json::exception& e) {
+      logger_->error("[{}] failed to parse {}: {}", __func__, response, e.what());
+   }
+   emit inputSelected();
 }
 
 std::string SideshiftPlugin::get(const std::string& request)
@@ -119,9 +182,98 @@ std::string SideshiftPlugin::get(const std::string& request)
    return response;
 }
 
+std::string SideshiftPlugin::post(const std::string& path, const std::string& data)
+{
+   return std::string();
+}
+
 void SideshiftPlugin::inputCurrencySelected(const QString& cur)
 {
-   logger_->debug("{{}] {}", __func__, cur.toStdString());
-   depositAddr_.clear();
+   logger_->debug("{{}] '{}' -> '{}'", __func__, inputCurrency_.toStdString()
+      , cur.toStdString());
+   if (inputCurrency_ == cur) {
+      return;
+   }
+   inputCurrency_ = cur;
+   try {
+      inputNetworks_ = networksByCur_.at(cur.toStdString());
+   }
+   catch (const std::exception&) {
+      inputNetworks_.clear();
+   }
    emit inputCurSelected();
+}
+
+static QString statusToQString(const std::string& s)
+{  //TODO: should be translatable at some point
+   return QString::fromStdString(s);
+}
+
+bool SideshiftPlugin::sendShift(const QString& recvAddr)
+{
+   if (inputCurrency_.isEmpty() || inputNetwork_.isEmpty() || recvAddr.isEmpty()) {
+      logger_->error("[{}] invalid input data: inCur: '{}', inNet: '{}', recvAddr: '{}'"
+         , __func__, inputCurrency_.toStdString(), inputNetwork_.toStdString(), recvAddr.toStdString());
+      return false;
+   }
+   const json msgReq{ {"settleAddress", recvAddr.toStdString()}, {"affiliateId", affiliateId_}
+   , {"settleCoin", "btc"}, {"depositCoin", inputCurrency_.toStdString()}
+   , {"depositNetwork", inputNetwork_.toStdString()} };
+   const auto& response = post("/shifts/variable", msgReq.dump());
+   try {
+      const auto& msgResp = json::parse(response);
+      orderId_ = QString::fromStdString(msgResp["id"].get<std::string>());
+      creationDate_ = QString::fromStdString(msgResp["createdAt"].get<std::string>());
+      expireDate_ = QString::fromStdString(msgResp["expiresAt"].get<std::string>());
+      depositAddr_ = QString::fromStdString(msgResp["depositAddress"].get<std::string>());
+      shiftStatus_ = statusToQString(msgResp["status"].get<std::string>());
+   }
+   catch (const std::exception& e) {
+      logger_->error("[{}] failed to parse {}: {}", __func__, response, e.what());
+      return false;
+   }
+   emit orderSent();
+   return true;
+}
+
+void SideshiftPlugin::updateShiftStatus()
+{
+   if (orderId_.isEmpty()) {
+      return;
+   }
+   const auto& response = get("/shifts/" + orderId_.toStdString());
+   try {
+      const auto& msgResp = json::parse(response);
+      shiftStatus_ = statusToQString(msgResp["status"].get<std::string>());
+      emit orderSent();
+   }
+   catch (const std::exception& e) {
+      logger_->error("[{}] failed to parse {}: {}", __func__, response, e.what());
+   }
+}
+
+
+#include <QSvgRenderer>
+#include <QPainter>
+QPixmap CoinImageProvider::requestPixmap(const QString& id, QSize* size
+   , const QSize& requestedSize)
+{
+   const std::string request = "/coins/icon/" + id.toStdString();
+   const auto& response = parent_->get(request);
+   parent_->logger_->debug("[{}] {} returned {} bytes", __func__, request
+      , response.size());
+   if (response.empty()) {
+      return {};
+   }
+   if (response.at(0) == '{') {  //likely an error in json
+      return {};
+   }
+   QSvgRenderer r(QByteArray::fromStdString(response));
+   QImage img(requestedSize, QImage::Format_ARGB32);
+   QPainter p(&img);
+   r.render(&p);
+   if (size) {
+      *size = requestedSize;
+   }
+   return QPixmap::fromImage(img);
 }

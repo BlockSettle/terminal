@@ -17,10 +17,10 @@ class Plugin: public QObject
 public:
    Plugin(QObject *parent);
 
-   virtual QString name() = 0;
-   virtual QString description() = 0;
-   virtual QString icon() = 0;
-   virtual QString path() = 0;
+   virtual QString name() const = 0;
+   virtual QString description() const = 0;
+   virtual QString icon() const = 0;
+   virtual QString path() const = 0;
 
    Q_INVOKABLE virtual void init() = 0;
 

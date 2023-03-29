@@ -18,10 +18,10 @@ class SideswapPlugin: public Plugin
 public:
    SideswapPlugin(QObject *parent);
 
-   QString name() override { return QLatin1Literal("SideSwap.io"); }
-   QString description() override { return tr("Easiest way to get started on the Liquid Network"); }
-   QString icon() override { return QLatin1Literal("qrc:/images/sideswap_plugin.png"); }
-   QString path() override { return QLatin1Literal("qrc:/qml/Plugins/SideSwap/SideSwapPopup.qml"); }
+   QString name() const override { return QLatin1Literal("SideSwap.io"); }
+   QString description() const override { return tr("Easiest way to get started on the Liquid Network"); }
+   QString icon() const override { return QLatin1Literal("qrc:/images/sideswap_plugin.png"); }
+   QString path() const override { return QLatin1Literal("qrc:/qml/Plugins/SideSwap/SideSwapPopup.qml"); }
 
    Q_INVOKABLE void init() override {}
 

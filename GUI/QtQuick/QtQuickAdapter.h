@@ -12,9 +12,8 @@
 #define QT_QUICK_ADAPTER_H
 
 #include <set>
-
+#include <QQmlApplicationEngine>
 #include <QObject>
-
 #include "Address.h"
 #include "ArmoryServersModel.h"
 #include "AddressListModel.h"
@@ -235,7 +234,7 @@ private:
    void splashProgressCompleted();
    void updateStates();
    void setTopBlock(uint32_t);
-   void loadPlugins();
+   void loadPlugins(QQmlApplicationEngine&);
 
    void createWallet(bool primary);
    std::string hdWalletIdByIndex(int);

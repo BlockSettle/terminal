@@ -35,7 +35,7 @@ Item {
       spacing: 20
 
       Text {
-         text: "1 " + inputCurrency + " = " + controller.conversionRate + " " + outputCurrency
+         text: controller.conversionRate
          color: "gray"
          font.pixelSize: 14
          font.family: "Roboto"
@@ -48,11 +48,14 @@ Item {
 
          SideShiftComboboxWithIcon {
             id: inputCombobox
+            networkControl: networksController
             popupWidth: 200
-            //textRole: "currency"
             controlHint: qsTr("YOU SEND")
             model: root.receive ? root.receiveModel : root.sendModel
 
+            onCurrentValueChanged: {
+                root.controller.inputCurrencySelected(currentText)
+            }
             onActivated: {
                root.controller.inputCurrencySelected(currentText)
             }
@@ -66,7 +69,6 @@ Item {
          SideShiftComboboxWithIcon {
             id: receivingCombobox
             popupWidth: 200
-            //textRole: "currency"
             controlHint: qsTr("YOU RECEIVE")
             model: root.receive ? root.sendModel : root.receiveModel 
          }
@@ -74,9 +76,14 @@ Item {
 
       SideShiftCombobox {
          id: networksController
-         // model: controller.inputNetworks
-         model: ['Network 1', 'Network 2']
+         model: controller.inputNetworks
          anchors.horizontalCenter: parent.horizontalCenter
+         onCurrentValueChanged: {
+            root.controller.inputNetwork = currentText
+         }
+         onActivated: {
+            root.controller.inputNetwork = currentText
+         }
       }
 
       Item {
@@ -112,7 +119,11 @@ Item {
          text: qsTr("SHIFT")
          enabled: root.receive ? addressCombobox.currentIndex >= 0 : addressInput.text !== ""
          anchors.horizontalCenter: parent.horizontalCenter
-         onClicked: root.shift()
+         onClicked: {
+            if (root.controller.sendShift(addressCombobox.currentText)) {
+                root.shift()
+            }
+         }
       }
    }
 
