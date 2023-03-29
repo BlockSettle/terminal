@@ -35,7 +35,7 @@ Item {
       spacing: 20
 
       Text {
-         text: root.controller !== null ? root.controller.conversionRate : ""
+         text: "1 " + inputCurrency + " = " + controller.conversionRate + " " + outputCurrency
          color: "gray"
          font.pixelSize: 14
          font.family: "Roboto"
@@ -70,6 +70,13 @@ Item {
             controlHint: qsTr("YOU RECEIVE")
             model: root.receive ? root.sendModel : root.receiveModel 
          }
+      }
+
+      SideShiftCombobox {
+         id: networksController
+         // model: controller.inputNetworks
+         model: ['Network 1', 'Network 2']
+         anchors.horizontalCenter: parent.horizontalCenter
       }
 
       Item {
