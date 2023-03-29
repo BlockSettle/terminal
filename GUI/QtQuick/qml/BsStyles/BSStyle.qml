@@ -106,7 +106,7 @@ QtObject {
 
     readonly property color comboBoxBorderColor: defaultGreyColor
     readonly property color comboBoxHoveredBorderColor: wildBlueColor
-    readonly property color comboBoxFocusedBorderColor: "#FFFFFF"
+    readonly property color comboBoxFocusedBorderColor: wildBlueColor
     readonly property color comboBoxPopupedBorderColor: "#45A6FF"
 
     readonly property color comboBoxIndicatorColor: "#DCE2FF"

@@ -43,6 +43,9 @@ void WalletPropertiesVM::setWalletInfo(const QString& walletId, const bs::sync::
    info_.generatedAddresses = info.nbAddresses;
    info_.isHardware = info.isHardware;
    info_.isWatchingOnly = info.watchOnly;
+   nbUsedAddrs_ = 0;
+   nbUTXOs_ = 0;
+   seed_.clear();
    emit changed();
 }
 

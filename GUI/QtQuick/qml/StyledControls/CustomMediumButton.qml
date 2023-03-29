@@ -22,7 +22,7 @@ Button {
     width: 136
     height: 36
     hoverEnabled: true
-    focusPolicy: Qt.NoFocus
+    focusPolicy: Qt.TabFocus
 
     font.pixelSize: 12
     font.family: "Roboto"
