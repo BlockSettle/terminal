@@ -33,6 +33,8 @@ Rectangle {
       horizontalAlignment: Text.AlignHCenter
       anchors.fill: parent
       font.family: control.fontFamily
+      width: parent.width
+      clip: true
 
       Text {
          text: control.textHint

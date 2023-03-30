@@ -39,6 +39,8 @@ ComboBox {
                 color: "white"
                 horizontalAlignment: Text.AlignHCenter
                 anchors.horizontalCenter: parent.horizontalCenter
+                clip: true
+                width: parent.width
             }
          }
     }
