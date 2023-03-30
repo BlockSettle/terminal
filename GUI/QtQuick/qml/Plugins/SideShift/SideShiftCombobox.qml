@@ -23,26 +23,20 @@ ComboBox {
     activeFocusOnTab: true
 
     contentItem: Rectangle {
-
         id: input_rect
         color: "transparent"
 
-         Column {
-            spacing: 8
-            anchors.centerIn: parent
-
-            Text {
-                text: control.currentText
-                font.pixelSize: 18
-                font.family: "Roboto"
-                font.weight: Font.Bold
-                color: "white"
-                horizontalAlignment: Text.AlignHCenter
-                anchors.horizontalCenter: parent.horizontalCenter
-                clip: true
-                width: parent.width
-            }
-         }
+        Text {
+            anchors.fill: parent
+            text: control.currentText
+            font.pixelSize: 18
+            font.family: "Roboto"
+            font.weight: Font.Bold
+            color: "white"
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            clip: true
+        }
     }
 
     indicator: Item {}
