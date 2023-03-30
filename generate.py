@@ -154,7 +154,13 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
       cmdStr = r' '.join(command)
       result = subprocess.call(cmdStr)
    else:
-      result = subprocess.call(command)
+      try:
+         subprocess.run(command, check=True)
+         result = 0
+      except subprocess.CalledProcessError as error:
+         print('Error during cmake:', error)
+         result = 1
+
    if result == 0:
       print('Project generated to :' + build_dir)
       return 0
