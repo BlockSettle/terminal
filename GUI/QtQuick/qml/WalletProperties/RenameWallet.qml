@@ -6,7 +6,7 @@ import QtQuick.Layouts 1.15
 import "../BsStyles"
 import "../StyledControls"
 
-Window {
+CustomPopup {
     id: root
 
     property alias header: title.text

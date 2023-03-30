@@ -35,10 +35,6 @@ CustomPopup {
         id: rename_wallet
         visible: false
         wallet_properties_vm: root.wallet_properties_vm
-
-        onSig_confirm: {
-            wallet_name.text = rename_wallet.wallet_name;
-        }
     }
 
     ChangePassword {

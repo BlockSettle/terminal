@@ -55,6 +55,8 @@ public:
    void setNbUsedAddrs(const std::string& walletId, uint32_t nb);
    void setNbUTXOs(const std::string& walletId, uint32_t nb);
 
+   void rename(const std::string& walletId, const std::string& newName);
+
    const QString& walletName() const;
    const QString& walletId() const;
    const QString& walletGroups() const;

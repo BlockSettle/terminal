@@ -76,6 +76,16 @@ void qtquick_gui::WalletPropertiesVM::setNbUTXOs(const std::string& walletId, ui
    emit changed();
 }
 
+void qtquick_gui::WalletPropertiesVM::rename(const std::string& walletId, const std::string& newName)
+{
+   if (info_.walletId != QString::fromStdString(walletId)) {
+      logger_->warn("[{}] wallet {} does not match", __func__, walletId);
+      return;
+   }
+   info_.name = QString::fromStdString(newName);
+   emit changed();
+}
+
 const QString& WalletPropertiesVM::walletName() const
 {
    return info_.name;
