@@ -152,7 +152,7 @@ Item {
                spacing: 10
                anchors.horizontalCenter: parent.horizontalCenter
                Text {
-                  text: qsTr("Min")
+                  text: qsTr("Max")
                   color: "lightgray"
                   anchors.verticalCenter: parent.verticalCenter
                }
@@ -188,8 +188,8 @@ Item {
                anchors.horizontalCenter: parent.horizontalCenter
             
                Text {
-                  anchors.fill: parent
                   id: toAddress
+                  anchors.fill: parent
                   text: controller.depositAddress
                   color: "white"
                   clip: true
@@ -219,7 +219,7 @@ Item {
                anchors.horizontalCenter: parent.horizontalCenter
 
                Image {
-                   source: "image://QR/" + root.toAddress.text
+                   source: "image://QR/" + controller.depositAddress
                    sourceSize.width: 180
                    sourceSize.height: 180
                    width: 180
@@ -289,9 +289,19 @@ Item {
       }
    }
 
+   Timer {
+      id: updateTimer
+      interval: 5000
+      repeat: true
+      onTriggered: controller.updateShiftStatus()
+   }
+
    onVisibleChanged: {
       if (visible) {
-         console.log('SideShift buy page opened')
+         updateTimer.start()
+      }
+      else {
+         updateTimer.stop()
       }
    }
 }
