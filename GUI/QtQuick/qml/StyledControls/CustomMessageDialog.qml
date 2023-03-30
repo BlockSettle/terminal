@@ -88,20 +88,12 @@ Window {
             height: 40
 
             preferred: true
+            focus:true
 
             function click_enter() {
                 root.close()
             }
         }
-
-        Keys.onEnterPressed: {
-            ok_but.click_enter()
-        }
-
-        Keys.onReturnPressed: {
-            ok_but.click_enter()
-        }
-
     }
 
 }

@@ -106,8 +106,8 @@ Window  {
                 Layout.bottomMargin: 40
                 Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
-
                 preferred: true
+                focus:true
 
                 function click_enter() {
                     root.close()
@@ -115,11 +115,11 @@ Window  {
             }
 
             Keys.onEnterPressed: {
-                finish_but.click_enter()
+                click_enter()
             }
 
             Keys.onReturnPressed: {
-                finish_but.click_enter()
+                click_enter()
             }
         }
     }

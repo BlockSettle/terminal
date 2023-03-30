@@ -70,6 +70,7 @@ ColumnLayout  {
         text: qsTr("Finish")
 
         preferred: true
+        focus:true
 
         function click_enter() {
             sig_finish()
@@ -77,10 +78,10 @@ ColumnLayout  {
     }
 
     Keys.onEnterPressed: {
-        finish_but.click_enter()
+        click_enter()
     }
 
     Keys.onReturnPressed: {
-        finish_but.click_enter()
+        click_enter()
     }
 }

@@ -2294,6 +2294,7 @@ int QtQuickAdapter::renameWallet(const QString& walletId, const QString& newName
    msgReq->set_new_name(newName.toStdString());
    pushRequest(user_, userSigner_, msg.SerializeAsString());
    walletBalances_->rename(walletId.toStdString(), newName.toStdString());
+   walletPropertiesModel_->rename(walletId.toStdString(), newName.toStdString());
    return 0;
 }
 
