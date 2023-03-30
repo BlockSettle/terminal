@@ -38,6 +38,8 @@ ComboBox {
             Image {
                 width: 80
                 height: 80
+                sourceSize.width: 80
+                sourceSize.height: 80
                 source: (networkControl === null) ? "qrc:/images/sideshift_btc.png"
                           : "image://coin/" + control.currentText + "-" + networkControl.currentText
                 anchors.horizontalCenter: parent.horizontalCenter

@@ -270,6 +270,7 @@ QPixmap CoinImageProvider::requestPixmap(const QString& id, QSize* size
    }
    QSvgRenderer r(QByteArray::fromStdString(response));
    QImage img(requestedSize, QImage::Format_ARGB32);
+   img.fill(Qt::GlobalColor::transparent);
    QPainter p(&img);
    r.render(&p);
    if (size) {
