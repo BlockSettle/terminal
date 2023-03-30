@@ -95,7 +95,7 @@ Item {
 
       Text {
          color: "white"
-         text: qsTr("WAITING FOR YOU TO SEND ") + root.inputCurrency
+         text: controller.status
          topPadding: 40
          font.pixelSize: 24
          anchors.horizontalCenter: parent.horizontalCenter
@@ -293,7 +293,12 @@ Item {
       id: updateTimer
       interval: 5000
       repeat: true
-      onTriggered: controller.updateShiftStatus()
+      onTriggered: {
+          controller.updateShiftStatus()
+          if (controller.status === "complete") {
+              close()
+          }
+      }
    }
 
    onVisibleChanged: {

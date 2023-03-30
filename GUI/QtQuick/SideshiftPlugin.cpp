@@ -30,9 +30,93 @@ private:
 };
 
 
+struct PostIn : public bs::InData
+{
+   ~PostIn() override = default;
+   std::string path;
+   std::string data;
+};
+struct PostOut : public bs::OutData
+{
+   ~PostOut() override = default;
+   std::string    response;
+   std::string    error;
+};
+
+class SideshiftPlugin::PostHandler : public bs::HandlerImpl<PostIn, PostOut>
+{
+public:
+   PostHandler(SideshiftPlugin* parent)
+      : parent_(parent)
+   {}
+   ~PostHandler() override = default;
+
+protected:
+   std::shared_ptr<PostOut> processData(const std::shared_ptr<PostIn>& in) override
+   {
+      std::unique_lock<std::mutex> lock(parent_->curlMtx_);
+      if (!parent_->curl_) {
+         return nullptr;
+      }
+      auto out = std::make_shared<PostOut>();
+      curl_easy_setopt(parent_->curl_, CURLOPT_POST, 1);
+      const auto url = parent_->baseURL_ + in->path;
+      curl_easy_setopt(parent_->curl_, CURLOPT_URL, url.c_str());
+      curl_easy_setopt(parent_->curl_, CURLOPT_POSTFIELDS, in->data.data());
+      std::string response;
+      curl_easy_setopt(parent_->curl_, CURLOPT_WRITEDATA, &response);
+
+      const auto res = curl_easy_perform(parent_->curl_);
+      if (res != CURLE_OK) {
+         out->error = fmt::format("{} failed: {}", url, res);
+         parent_->logger_->error("[{}] {}", __func__, out->error);
+         return out;
+      }
+      out->response = std::move(response);
+      parent_->logger_->debug("[{}] {} response: {} [{}]", __func__, url, response, response.size());
+      return out;
+   }
+
+private:
+   SideshiftPlugin* parent_{ nullptr };
+};
+
+struct GetIn : public bs::InData
+{
+   ~GetIn() override = default;
+   std::string path;
+};
+struct GetOut : public bs::OutData
+{
+   ~GetOut() override = default;
+   std::string    response;
+};
+
+class SideshiftPlugin::GetHandler : public bs::HandlerImpl<GetIn, GetOut>
+{
+public:
+   GetHandler(SideshiftPlugin* parent) : parent_(parent) {}
+   ~GetHandler() override = default;
+
+protected:
+   std::shared_ptr<GetOut> processData(const std::shared_ptr<GetIn>& in) override
+   {
+      if (!parent_->curl_) {
+         return nullptr;
+      }
+      auto out = std::make_shared<GetOut>();
+      out->response = parent_->get(in->path);
+      return out;
+   }
+
+private:
+   SideshiftPlugin* parent_{ nullptr };
+};
+
+
 SideshiftPlugin::SideshiftPlugin(const std::shared_ptr<spdlog::logger>& logger
    , QQmlApplicationEngine& engine, QObject* parent)
-   : Plugin(parent), logger_(logger)
+   : Plugin(parent), bs::WorkerPool(1, 1), logger_(logger)
 {
    qmlRegisterInterface<SideshiftPlugin>("SideshiftPlugin");
    engine.addImageProvider(QLatin1Literal("coin"), new CoinImageProvider(this));
@@ -67,22 +151,34 @@ static int dumpFunc(CURL* handle, curl_infotype type,
 void SideshiftPlugin::init()
 {
    deinit();
-   curl_ = curl_easy_init();
-   curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, writeToString);
-   curl_easy_setopt(curl_, CURLOPT_USERAGENT, std::string("BlockSettle " + name().toStdString() + " plugin").c_str());
-   curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYPEER, 0L);
-   curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYHOST, 0L);
-   curl_easy_setopt(curl_, CURLOPT_FOLLOWLOCATION, 1L);
+   {
+      std::unique_lock<std::mutex> lock(curlMtx_);
+      curl_ = curl_easy_init();
+      curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, writeToString);
+      curl_easy_setopt(curl_, CURLOPT_USERAGENT, std::string("BlockSettle " + name().toStdString() + " plugin").c_str());
+      curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYPEER, 0L);
+      curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYHOST, 0L);
+      curl_easy_setopt(curl_, CURLOPT_FOLLOWLOCATION, 1L);
 
-   //curl_easy_setopt(curl_, CURLOPT_DEBUGFUNCTION, dumpFunc);
-   //curl_easy_setopt(curl_, CURLOPT_DEBUGDATA, logger_.get());
-   //curl_easy_setopt(curl_, CURLOPT_VERBOSE, 1L);
+      //curl_easy_setopt(curl_, CURLOPT_DEBUGFUNCTION, dumpFunc);
+      //curl_easy_setopt(curl_, CURLOPT_DEBUGDATA, logger_.get());
+      //curl_easy_setopt(curl_, CURLOPT_VERBOSE, 1L);
 
-   curlHeaders_ = curl_slist_append(curlHeaders_, "accept: */*");
-   curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, curlHeaders_);
+      //curlHeaders_ = curl_slist_append(curlHeaders_, "accept: */*");
+      curlHeaders_ = curl_slist_append(curlHeaders_, "Content-Type: application/json");
+      curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, curlHeaders_);
+   }
 
-   const auto& response = get("/coins");
-   if (!response.empty()) {
+   auto in = std::make_shared<GetIn>();
+   in->path = "/coins";
+   const auto& getResult = [this](const std::shared_ptr<bs::OutData>& data)
+   {
+      const auto& reply = std::static_pointer_cast<GetOut>(data);
+      if (!reply || reply->response.empty()) {
+         logger_->error("[SideshiftPlugin::init] network error");
+         return;
+      }
+      const auto& response = reply->response;
       try {
          const auto& msg = json::parse(response);
          for (const auto& coin : msg) {
@@ -93,17 +189,20 @@ void SideshiftPlugin::init()
             }
             inputCurrencies_.append(QString::fromStdString(currency));
          }
-         logger_->debug("[{}] {} input currencies", __func__, inputCurrencies_.size());
          emit inited();
+         logger_->debug("[SideshiftPlugin::init] {} input currencies"
+            , inputCurrencies_.size());
       }
       catch (const json::exception&) {
-         logger_->error("[{}] failed to parse {}", __func__, response);
+         logger_->error("[SideshiftPlugin::init] failed to parse {}", response);
       }
-   }
+   };
+   processQueued(in, getResult);
 }
 
 void SideshiftPlugin::deinit()
 {
+   cancel();
    networksByCur_.clear();
    inputCurrencies_.clear();
    inputNetworks_.clear();
@@ -112,6 +211,7 @@ void SideshiftPlugin::deinit()
    convRate_.clear();
    orderId_.clear();
 
+   std::unique_lock<std::mutex> lock(curlMtx_);
    if (curlHeaders_) {
       curl_slist_free_all(curlHeaders_);
       curlHeaders_ = nullptr;
@@ -122,6 +222,62 @@ void SideshiftPlugin::deinit()
    }
 }
 
+static QString getConvRate(const json& msg, const QString& inputCur)
+{
+   double rate = 0;
+   if (msg["rate"].is_string()) {
+      rate = std::stod(msg["rate"].get<std::string>());
+   }
+   else if (msg["rate"].is_number_float()) {
+      rate = msg["rate"].get<double>();
+   }
+   if (rate > 0) {
+      if (rate < 0.0001) {
+         return QObject::tr("1 BTC = %1 %2").arg(QString::number(1.0 / rate, 'f', 2))
+            .arg(inputCur);
+      }
+      else {
+         return QObject::tr("1 %1 = %2 BTC").arg(inputCur)
+            .arg(QString::number(rate, 'f', 6));
+      }
+   }
+   return {};
+}
+
+void SideshiftPlugin::getPair()
+{
+   auto in = std::make_shared<GetIn>();
+   in->path = "/pair/" + inputCurrency_.toStdString() + "-"
+      + inputNetwork_.toStdString() + "/btc-bitcoin";
+   const auto& getResult = [this](const std::shared_ptr<bs::OutData>& data)
+   {
+      const auto& reply = std::static_pointer_cast<GetOut>(data);
+      if (!reply || reply->response.empty()) {
+         logger_->error("[SideshiftPlugin::getPair] network error");
+         return;
+      }
+      const auto& response = reply->response;
+      try {
+         const auto& respJson = json::parse(response);
+         if (respJson.contains("error")) {
+            const auto& errorMsg = respJson["error"]["message"].get<std::string>();
+            logger_->error("[{}] {}", __func__, errorMsg);
+            convRate_ = tr("Error: %1").arg(QString::fromStdString(errorMsg));
+            emit pairUpdated();
+            return;
+         }
+         convRate_ = getConvRate(respJson, inputCurrency_.toUpper());
+         minAmount_ = QString::fromStdString(respJson["min"].get<std::string>());
+         maxAmount_ = QString::fromStdString(respJson["max"].get<std::string>());
+      }
+      catch (const json::exception& e) {
+         logger_->error("[{}] failed to parse {}: {}", __func__, response, e.what());
+      }
+      emit pairUpdated();
+   };
+   processQueued(in, getResult);
+}
+
 void SideshiftPlugin::setInputNetwork(const QString& network)
 {
    logger_->debug("[{}] {} '{}' -> '{}'", __func__, inputCurrency_.toStdString()
@@ -130,61 +286,29 @@ void SideshiftPlugin::setInputNetwork(const QString& network)
       return;
    }
    inputNetwork_ = network;
-   const auto& response = get("/pair/" + inputCurrency_.toStdString() + "-"
-      + network.toStdString() + "/btc-bitcoin");
-   try {
-      const auto& respJson = json::parse(response);
-      double rate = 0;
-      if (respJson["rate"].is_string()) {
-         rate = std::stod(respJson["rate"].get<std::string>());
-      }
-      else if (respJson["rate"].is_number_float()) {
-         rate = respJson["rate"].get<double>();
-      }
-      if (rate > 0) {
-         if (rate < 0.0001) {
-            convRate_ = tr("1 BTC = %1 %2").arg(QString::number(1.0 / rate, 'f', 2))
-               .arg(inputCurrency_.toUpper());
-         }
-         else {
-            convRate_ = tr("1 %1 = %2 BTC").arg(inputCurrency_.toUpper())
-               .arg(QString::number(rate, 'f', 6));
-         }
-      }
-      minAmount_ = QString::fromStdString(respJson["min"].get<std::string>());
-      maxAmount_ = QString::fromStdString(respJson["max"].get<std::string>());
-   }
-   catch (const json::exception& e) {
-      logger_->error("[{}] failed to parse {}: {}", __func__, response, e.what());
-   }
-   emit inputSelected();
+   getPair();
 }
 
 std::string SideshiftPlugin::get(const std::string& request)
 {
+   std::unique_lock<std::mutex> lock(curlMtx_);
    if (!curl_) {
       logger_->error("[{}] curl not inited");
       return {};
    }
+   curl_easy_setopt(curl_, CURLOPT_POST, 0);
    const auto url = baseURL_ + request;
    curl_easy_setopt(curl_, CURLOPT_URL, url.c_str());
    std::string response;
    curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &response);
-   //long respCode = 0;
-   //curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &respCode);
 
    const auto res = curl_easy_perform(curl_);
    if (res != CURLE_OK) {
       logger_->error("[{}] {} failed: {}", __func__, url, res);
       return {};
    }
-   logger_->debug("[{}] {} response: {}", __func__, url, response);
+   //logger_->debug("[{}] {} response: {} [{}]", __func__, url, response, response.size());
    return response;
-}
-
-std::string SideshiftPlugin::post(const std::string& path, const std::string& data)
-{
-   return std::string();
 }
 
 void SideshiftPlugin::inputCurrencySelected(const QString& cur)
@@ -204,8 +328,11 @@ void SideshiftPlugin::inputCurrencySelected(const QString& cur)
    emit inputCurSelected();
 }
 
-static QString statusToQString(const std::string& s)
-{  //TODO: should be translatable at some point
+QString SideshiftPlugin::statusToQString(const std::string& s) const
+{
+   if (s == "waiting") {
+      return tr("WAITING FOR YOU TO SEND %1").arg(inputCurrency_.toUpper());
+   }
    return QString::fromStdString(s);
 }
 
@@ -216,23 +343,44 @@ bool SideshiftPlugin::sendShift(const QString& recvAddr)
          , __func__, inputCurrency_.toStdString(), inputNetwork_.toStdString(), recvAddr.toStdString());
       return false;
    }
+   shiftStatus_ = tr("Sending request...");
    const json msgReq{ {"settleAddress", recvAddr.toStdString()}, {"affiliateId", affiliateId_}
-   , {"settleCoin", "btc"}, {"depositCoin", inputCurrency_.toStdString()}
+   , {"settleCoin", "btc"}, {"depositCoin", inputCurrency_.toLower().toStdString()}
    , {"depositNetwork", inputNetwork_.toStdString()} };
-   const auto& response = post("/shifts/variable", msgReq.dump());
-   try {
-      const auto& msgResp = json::parse(response);
-      orderId_ = QString::fromStdString(msgResp["id"].get<std::string>());
-      creationDate_ = QString::fromStdString(msgResp["createdAt"].get<std::string>());
-      expireDate_ = QString::fromStdString(msgResp["expiresAt"].get<std::string>());
-      depositAddr_ = QString::fromStdString(msgResp["depositAddress"].get<std::string>());
-      shiftStatus_ = statusToQString(msgResp["status"].get<std::string>());
-   }
-   catch (const std::exception& e) {
-      logger_->error("[{}] failed to parse {}: {}", __func__, response, e.what());
-      return false;
-   }
-   emit orderSent();
+   auto in = std::make_shared<PostIn>();
+   in->path = "/shifts/variable";
+   in->data = msgReq.dump();
+   const auto& postResult = [this](const std::shared_ptr<bs::OutData>& data)
+   {
+      const auto& reply = std::static_pointer_cast<PostOut>(data);
+      if (!reply || reply->response.empty()) {
+         logger_->error("[SideshiftPlugin::sendShift] network error {}"
+            , (reply == nullptr) ? "<null>" : reply->error);
+         return;
+      }
+      const auto& response = reply->response;
+      try {
+         const auto& msgResp = json::parse(response);
+         if (msgResp.contains("error")) {
+            const auto& errMsg = msgResp["error"]["message"].get<std::string>();
+            logger_->error("[SideshiftPlugin::sendShift] failed: {}", errMsg);
+            shiftStatus_ = QString::fromStdString(errMsg);
+         }
+         else {
+            orderId_ = QString::fromStdString(msgResp["id"].get<std::string>());
+            creationDate_ = QString::fromStdString(msgResp["createdAt"].get<std::string>());
+            expireDate_ = QString::fromStdString(msgResp["expiresAt"].get<std::string>());
+            depositAddr_ = QString::fromStdString(msgResp["depositAddress"].get<std::string>());
+            shiftStatus_ = statusToQString(msgResp["status"].get<std::string>());
+         }
+         emit orderSent();
+      }
+      catch (const std::exception& e) {
+         logger_->error("[SideshiftPlugin::sendShift] failed to parse {}: {}"
+            , response, e.what());
+      }
+   };
+   processQueued(in, postResult);
    return true;
 }
 
@@ -241,15 +389,38 @@ void SideshiftPlugin::updateShiftStatus()
    if (orderId_.isEmpty()) {
       return;
    }
-   const auto& response = get("/shifts/" + orderId_.toStdString());
-   try {
-      const auto& msgResp = json::parse(response);
-      shiftStatus_ = statusToQString(msgResp["status"].get<std::string>());
-      emit orderSent();
-   }
-   catch (const std::exception& e) {
-      logger_->error("[{}] failed to parse {}: {}", __func__, response, e.what());
-   }
+   auto in = std::make_shared<GetIn>();
+   in->path = "/shifts/" + orderId_.toStdString();
+   const auto& getResult = [this](const std::shared_ptr<bs::OutData>& data)
+   {
+      const auto& reply = std::static_pointer_cast<GetOut>(data);
+      if (!reply || reply->response.empty()) {
+         logger_->error("[SideshiftPlugin::updateShiftStatus] network error");
+         return;
+      }
+      const auto& response = reply->response;
+      try {
+         logger_->debug("[SideshiftPlugin::updateShiftStatus] {}", response);
+         const auto& msgResp = json::parse(response);
+         if (msgResp.contains("error")) {
+            return;
+         }
+         shiftStatus_ = statusToQString(msgResp["status"].get<std::string>());
+         emit orderSent();
+      }
+      catch (const std::exception& e) {
+         logger_->error("[{}] failed to parse {}: {}", __func__, response, e.what());
+      }
+   };
+   processQueued(in, getResult);
+   getPair();
+}
+
+std::shared_ptr<bs::Worker> SideshiftPlugin::worker(const std::shared_ptr<bs::InData>&)
+{
+   const std::vector<std::shared_ptr<bs::Handler>> handlers {
+      std::make_shared<PostHandler>(this), std::make_shared<GetHandler>(this) };
+   return std::make_shared<bs::WorkerImpl>(handlers);
 }
 
 
@@ -260,8 +431,6 @@ QPixmap CoinImageProvider::requestPixmap(const QString& id, QSize* size
 {
    const std::string request = "/coins/icon/" + id.toStdString();
    const auto& response = parent_->get(request);
-   parent_->logger_->debug("[{}] {} returned {} bytes", __func__, request
-      , response.size());
    if (response.empty()) {
       return {};
    }
