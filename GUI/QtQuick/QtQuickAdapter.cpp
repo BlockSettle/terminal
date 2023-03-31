@@ -1470,7 +1470,9 @@ bool QtQuickAdapter::addArmoryServer(ArmoryServersModel* model, const QString& n
    msgReq->set_server_port(ipPort.toStdString());
    msgReq->set_server_key(key.toStdString());
    pushRequest(user_, userSettings_, msg.SerializeAsString());
-   model->add({ name, static_cast<NetworkType>(netType), ipAddr, ipPort.toInt(), key });
+   QMetaObject::invokeMethod(this, [model, name, netType, ipAddr, ipPort, key] {
+      model->add({ name, static_cast<NetworkType>(netType), ipAddr, ipPort.toInt(), key });
+   });
    return true;
 }
 
@@ -2383,7 +2385,7 @@ void QtQuickAdapter::notifyNewTransaction(const bs::TXEntry& tx)
    }, Qt::QueuedConnection);
 }
 
-void QtQuickAdapter::exportTransaction(const QUrl& path)
+void QtQuickAdapter::exportTransaction(const QUrl& path, QTXSignRequest* request)
 {
    const QString exportPath = path.toLocalFile();
    logger_->debug("[{}] exporting transaction to {}", __func__, exportPath.toStdString());
