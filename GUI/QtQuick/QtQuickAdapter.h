@@ -212,7 +212,7 @@ signals:
    void failedDeleteWallet();
    void successDeleteWallet();
    void walletSeedAuthFailed();
-   void transactionExported(const QString& successMessage);
+   void transactionExported(const QString& destFilename);
    void transactionExportFailed(const QString& errorMessage);
    void successTx();
    void failedTx(const QString&);

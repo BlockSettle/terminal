@@ -2391,6 +2391,6 @@ void QtQuickAdapter::exportTransaction(const QUrl& path, QTXSignRequest* request
    logger_->debug("[{}] exporting transaction to {}", __func__, exportPath.toStdString());
 
    QTimer::singleShot(1000, [this, exportPath](){
-      emit transactionExported(tr("Transaction exported to ") + exportPath);
+      emit transactionExported(exportPath);
    });
 }

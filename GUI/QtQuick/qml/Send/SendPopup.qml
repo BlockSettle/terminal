@@ -112,7 +112,7 @@ CustomPopup {
     Connections {
         target: bsApp
         onTransactionExported: (text) => {
-            successDialog.details_text = text
+            successDialog.details_text = qsTr("Transaction successfully exported to ") + text
             successDialog.open()
         }
         onTransactionExportFailed: (text) => {
