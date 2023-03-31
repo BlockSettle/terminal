@@ -214,6 +214,9 @@ signals:
    void walletSeedAuthFailed();
    void transactionExported(const QString& successMessage);
    void transactionExportFailed(const QString& errorMessage);
+   void successTx();
+   void failedTx(const QString&);
+   void showSuccess(const QString&);
 
 private slots:
    void onArmoryServerChanged(const QModelIndex&, const QVariant&);
