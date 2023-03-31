@@ -250,6 +250,10 @@ ColumnLayout {
 
     function checkPasswordLength()
     {
+        if (!visible) {
+            return false
+        }
+        
         if (!bsApp.verifyPasswordIntegrity(new_password.input_text)) {
             error_dialog.show()
             error_dialog.raise()

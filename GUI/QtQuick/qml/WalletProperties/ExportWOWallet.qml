@@ -16,6 +16,7 @@ ColumnLayout  {
 
     height: 548
     width: 580
+    focus: true
 
     spacing: 0
 
@@ -171,6 +172,7 @@ ColumnLayout  {
 
         enabled: bsApp.settingExportDir.length !== 0
         preferred: true
+        focus: true
         text: qsTr("Export")
 
         Layout.bottomMargin: 40
@@ -195,7 +197,7 @@ ColumnLayout  {
     FileDialog {
         id: fileDialog
         title: qsTr("Please choose a directory")
-        folder: shortcuts.home
+        folder: shortcuts.documents
         selectFolder: true
 
         onAccepted: {
@@ -207,4 +209,7 @@ ColumnLayout  {
         }
     }
 
+    function init() {
+        confirm_but.setActiveFocus()
+    }
 }

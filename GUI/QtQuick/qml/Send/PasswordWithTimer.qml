@@ -21,6 +21,9 @@ Item {
 
     property alias value: password.input_text
 
+    signal enterPressed()
+    signal returnPressed()
+
     CustomTextInput {
         id: password
 
@@ -40,6 +43,13 @@ Item {
 
         isPassword: true
         isHiddenText: true
+
+        onEnterPressed: {
+            root.enterPressed()
+        }
+        onReturnPressed: {
+            root.returnPressed()
+        }
     }
 
     CustomProgressBar {
