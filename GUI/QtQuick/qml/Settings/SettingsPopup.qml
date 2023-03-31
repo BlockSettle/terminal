@@ -64,6 +64,11 @@ CustomPopup {
             delete_armory_server.server_index = server_index
             delete_armory_server.init()
         }
+
+        onRequest_close: {
+            _stack_view.pop()
+            root.close()
+        }
     }
 
     SettingsAbout {
@@ -79,6 +84,8 @@ CustomPopup {
 
         onSig_added: {
             _stack_view.pop()
+            _stack_view.pop()
+            root.close()
         }
     }
 

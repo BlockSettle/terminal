@@ -2032,7 +2032,8 @@ bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::Seq
    for (const auto& walletId : hdWalletIds) {
       txReq.walletIds.push_back(walletId);
       try {
-         if (hdWallets_.at(walletId).isHardware) {
+         const auto wallet = hdWallets_.at(walletId);
+         if (wallet.isHardware) {
             qReq->setHWW(true);
             logger_->debug("[{}] noReqAmt: {} for {}", __func__, noReqAmount, walletId);
             if (!noReqAmount) {
@@ -2041,6 +2042,9 @@ bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::Seq
                pushRequest(user_, userHWW_, msg.SerializeAsString());
                hwwReady_[walletId] = qReq;
             }
+         }
+         else if (wallet.watchOnly) {
+            qReq->setWatchingOnly(true);
          }
       }
       catch (const std::exception&) {
@@ -2377,4 +2381,14 @@ void QtQuickAdapter::notifyNewTransaction(const bs::TXEntry& tx)
       );
       txDetails->disconnect(this);
    }, Qt::QueuedConnection);
+}
+
+void QtQuickAdapter::exportTransaction(const QUrl& path)
+{
+   const QString exportPath = path.toLocalFile();
+   logger_->debug("[{}] exporting transaction to {}", __func__, exportPath.toStdString());
+
+   QTimer::singleShot(1000, [this, exportPath](){
+      emit transactionExported(tr("Transaction exported to ") + exportPath);
+   });
 }

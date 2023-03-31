@@ -15,6 +15,7 @@ ColumnLayout  {
     signal sig_add_custom()
     signal sig_delete_custom(int ind)
     signal sig_modify_custom(int ind)
+    signal request_close()
 
     height: 548
     width: 580
@@ -74,7 +75,7 @@ ColumnLayout  {
                 if (isCurrent === false)
                 {
                     isCurrent = true
-                    radio_checked = true
+                    request_close()
                 }
                 else if (isDefault === false)
                 {
@@ -82,7 +83,6 @@ ColumnLayout  {
                 }
             }
         }
-
 
         Connections
         {
@@ -92,10 +92,6 @@ ColumnLayout  {
                 var new_height = Math.min(armoryServersModel.rowCount * 50 + (armoryServersModel.rowCount - 1) * 10,
                                           425)
                 list.implicitHeight = new_height
-            }
-            function onCurrentChanged (ind)
-            {
-                list.itemAtIndex(ind).radio_checked = true
             }
         }
     }

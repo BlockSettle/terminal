@@ -79,6 +79,9 @@ public:
    bool hasError() const { return !error_.isEmpty(); }
    Q_PROPERTY(TxInputsModel* inputs READ inputsModel NOTIFY txSignReqChanged)
    TxInputsModel* inputsModel() const { return inputsModel_; }
+   Q_PROPERTY(bool isWatchingOnly READ isWatchingOnly NOTIFY txSignReqChanged)
+   bool isWatchingOnly() const;
+   void setWatchingOnly(bool watchingOnly);
 
 signals:
    void txSignReqChanged();
@@ -94,6 +97,7 @@ private:
    TxInputsModel* inputsModel_{ nullptr };
    bool  isHWW_{ false };
    bool  isHWWready_{ false };
+   bool  isWatchingOnly_ { false };
 };
 
 #endif	// Q_TX_SIGN_REQUEST_H

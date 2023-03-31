@@ -122,3 +122,14 @@ QString QTXSignRequest::feePerByte() const
    }
    return QString::number(txReq_.getFee() / (double)txReq_.estimateTxVirtSize(), 'f', 1);
 }
+
+bool QTXSignRequest::isWatchingOnly() const
+{
+   return isWatchingOnly_;
+}
+
+void QTXSignRequest::setWatchingOnly(bool watchingOnly)
+{
+   isWatchingOnly_ = watchingOnly;
+   emit txSignReqChanged();
+}
