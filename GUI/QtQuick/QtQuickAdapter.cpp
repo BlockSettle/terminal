@@ -647,8 +647,6 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
       walletBalances_->clear();
       addrModel_->reset(createdWalletId_);
       walletBalances_->setCreatedWalletId(createdWalletId_);
-      logger_->debug("[{}] wallet {} created: {}", __func__    //TODO: show something in the GUI if needed
-         , msg.created_wallet().wallet_id(), msg.created_wallet().error_msg());
       emit showSuccess(tr("Your wallet has successfully been created"));
       break;
    case SignerMessage::kWalletPassChanged:

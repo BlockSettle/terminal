@@ -170,7 +170,7 @@ ColumnLayout  {
     CustomButton {
         id: confirm_but
 
-        //enabled: bsApp.settingExportDir.length !== 0
+        enabled: bsApp.settingExportDir.length !== 0
         preferred: true
         focus: true
         text: qsTr("Export")
@@ -197,7 +197,7 @@ ColumnLayout  {
     FileDialog {
         id: fileDialog
         title: qsTr("Please choose a directory")
-        folder: shortcuts.home
+        folder: shortcuts.documents
         selectFolder: true
 
         onAccepted: {
