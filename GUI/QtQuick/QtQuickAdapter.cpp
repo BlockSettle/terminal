@@ -647,8 +647,7 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
       walletBalances_->clear();
       addrModel_->reset(createdWalletId_);
       walletBalances_->setCreatedWalletId(createdWalletId_);
-      logger_->debug("[{}] wallet {} created: {}", __func__    //TODO: show something in the GUI if needed
-         , msg.created_wallet().wallet_id(), msg.created_wallet().error_msg());
+      emit showSuccess(tr("Your wallet has successfully been created"));
       break;
    case SignerMessage::kWalletPassChanged:
       if (!msg.wallet_pass_changed()) {
@@ -1870,9 +1869,10 @@ ProcessingResult QtQuickAdapter::processSignTX(const BlockSettle::Common::Signer
       msgTx->set_tx(response.signed_tx());
       //not adding TX hashes atm
       pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+      emit successTx();
    }
    else {
-      emit showFail(tr("Incorrect password"), tr("TX sign failed\nerror %1: %2").arg(response.error_code())
+      emit failedTx(tr("TX sign failed\nerror %1: %2").arg(response.error_code())
          .arg(QString::fromStdString(response.error_text())));
    }
    return ProcessingResult::Success;

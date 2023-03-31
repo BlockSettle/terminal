@@ -113,14 +113,6 @@ Window  {
                     root.close()
                 }
             }
-
-            Keys.onEnterPressed: {
-                click_enter()
-            }
-
-            Keys.onReturnPressed: {
-                click_enter()
-            }
         }
     }
 }

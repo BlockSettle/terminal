@@ -64,6 +64,13 @@ ColumnLayout {
 
         isPassword: true
         isHiddenText: true
+
+        onEnterPressed: {
+            delete_btn.click_enter()
+        }
+        onReturnPressed: {
+            delete_btn.click_enter()
+        }
     }
 
     Label {
@@ -87,6 +94,7 @@ ColumnLayout {
         }
 
         CustomButton {
+            id: delete_btn
             text: qsTr("Delete")
             preferred: true
 
