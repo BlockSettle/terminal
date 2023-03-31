@@ -47,6 +47,8 @@ void ArmoryServersModel::setCurrent (int value)
    }
    current_ = value;
    emit currentChanged(value);
+   const auto dataIndex = index(current_, 0);
+   emit dataChanged(dataIndex, dataIndex, { ArmoryServersModel::TableRoles::CurrentServerRole });
 }
 
 void ArmoryServersModel::setData(int curIdx, int connIdx
@@ -70,11 +72,9 @@ void ArmoryServersModel::setData(int curIdx, int connIdx
 
 void ArmoryServersModel::add(const ArmoryServer& srv)
 {
-   QMetaObject::invokeMethod(this, [this, srv] {
-      beginInsertRows(QModelIndex{}, rowCount(), rowCount());
-      data_.push_back(srv);
-      endInsertRows();
-      });
+   beginInsertRows(QModelIndex{}, rowCount(), rowCount());
+   data_.push_back(srv);
+   endInsertRows();
 }
 
 // netType==0 => MainNet, netType==1 => TestNet
@@ -95,7 +95,7 @@ void ArmoryServersModel::add(QString name, QString armoryDBIp, int armoryDBPort,
    QMetaObject::invokeMethod(this, [this, server] {
       add(server);
       setCurrent(rowCount() - 1);
-      });
+   });
 }
 
 bool ArmoryServersModel::del(int idx)

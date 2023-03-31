@@ -99,6 +99,29 @@ CustomPopup {
         }
     }
 
+    CustomSuccessDialog {
+        id: successDialog
+        visible: false
+    }
+
+    CustomFailDialog {
+        id: failDialog
+        visible: false
+    }
+
+    Connections {
+        target: bsApp
+        onTransactionExported: (text) => {
+            successDialog.details_text = qsTr("Transaction successfully exported to %1").arg(text)
+            successDialog.open()
+        }
+        onTransactionExportFailed: (text) => {
+            failDialog.header = qsTr("Export transaction failed")
+            failDialog.fail = text
+            failDialog.open()
+        }
+    }
+
     function init() {
         _stack_view.replace(bsApp.settingAdvancedTX ? advanced_details : simple_details)
 

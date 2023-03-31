@@ -98,6 +98,8 @@ ColumnLayout  {
         Layout.topMargin: 10
 
         title_text: qsTr("Name")
+
+        onTabNavigated: ip_dns_text_input.setActiveFocus()
     }
 
     CustomTextInput {
@@ -109,6 +111,8 @@ ColumnLayout  {
         Layout.topMargin: 10
 
         title_text: qsTr("IP/DNS")
+
+        onTabNavigated: port_text_input.setActiveFocus()
     }
 
     CustomTextInput {
@@ -122,6 +126,8 @@ ColumnLayout  {
         title_text: qsTr("Port")
 
         input_validator: IntValidator {bottom: 80; top: 65535;}
+
+        onTabNavigated: db_key_text_input.setActiveFocus()
     }
 
     CustomTextInput {
@@ -133,6 +139,8 @@ ColumnLayout  {
         Layout.topMargin: 10
 
         title_text: qsTr("DB Key (optional)")
+
+        onTabNavigated: save_but.forceActiveFocus()
     }
 
     CustomButton {

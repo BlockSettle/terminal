@@ -1470,7 +1470,9 @@ bool QtQuickAdapter::addArmoryServer(ArmoryServersModel* model, const QString& n
    msgReq->set_server_port(ipPort.toStdString());
    msgReq->set_server_key(key.toStdString());
    pushRequest(user_, userSettings_, msg.SerializeAsString());
-   model->add({ name, static_cast<NetworkType>(netType), ipAddr, ipPort.toInt(), key });
+   QMetaObject::invokeMethod(this, [model, name, netType, ipAddr, ipPort, key] {
+      model->add({ name, static_cast<NetworkType>(netType), ipAddr, ipPort.toInt(), key });
+   });
    return true;
 }
 
@@ -2032,7 +2034,8 @@ bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::Seq
    for (const auto& walletId : hdWalletIds) {
       txReq.walletIds.push_back(walletId);
       try {
-         if (hdWallets_.at(walletId).isHardware) {
+         const auto wallet = hdWallets_.at(walletId);
+         if (wallet.isHardware) {
             qReq->setHWW(true);
             logger_->debug("[{}] noReqAmt: {} for {}", __func__, noReqAmount, walletId);
             if (!noReqAmount) {
@@ -2041,6 +2044,9 @@ bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::Seq
                pushRequest(user_, userHWW_, msg.SerializeAsString());
                hwwReady_[walletId] = qReq;
             }
+         }
+         else if (wallet.watchOnly) {
+            qReq->setWatchingOnly(true);
          }
       }
       catch (const std::exception&) {
@@ -2377,4 +2383,14 @@ void QtQuickAdapter::notifyNewTransaction(const bs::TXEntry& tx)
       );
       txDetails->disconnect(this);
    }, Qt::QueuedConnection);
+}
+
+void QtQuickAdapter::exportTransaction(const QUrl& path, QTXSignRequest* request)
+{
+   const QString exportPath = path.toLocalFile();
+   logger_->debug("[{}] exporting transaction to {}", __func__, exportPath.toStdString());
+
+   QTimer::singleShot(1000, [this, exportPath](){
+      emit transactionExported(exportPath);
+   });
 }

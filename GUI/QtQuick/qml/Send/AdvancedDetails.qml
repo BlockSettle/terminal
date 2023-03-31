@@ -2,6 +2,7 @@ import QtQuick 2.12
 import QtQuick.Window 2.12
 import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.15
+import QtQuick.Dialogs 1.3
 
 import "../BsStyles"
 import "../StyledControls"
@@ -515,12 +516,21 @@ ColumnLayout  {
         }
     }
 
-
     Label {
         Layout.fillWidth: true
         Layout.fillHeight : true
     }
 
+    FileDialog {
+        id: exportFileDialog  
+        title: qsTr("Please choose folder to export transaction")
+        folder: shortcuts.documents
+        selectFolder: true
+        selectExisting: false
+        onAccepted: {
+            bsApp.exportTransaction(exportFileDialog.fileUrl, continue_but.prepare_transaction())
+        }
+    }
 
     CustomButton {
         id: continue_but
@@ -534,9 +544,37 @@ ColumnLayout  {
         Layout.bottomMargin: 30
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
-        text: qsTr("Continue")
+        text: tempRequest !== null ? (tempRequest.isWatchingOnly ? qstr("Export transaction") : qsTr("Continue")) : ""
 
         preferred: true
+
+        function prepare_transaction() {
+            if (isRBF) {
+                return bsApp.createTXSignRequest(-1   //special index for RBF mode
+                    , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
+                    , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text
+                    , checkbox_rbf.checked, tx.ownInputs.zcInputs())
+            }
+            else if (isCPFP) {
+                return bsApp.createTXSignRequest(-2   //special index for CPFP mode
+                    , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
+                    , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text
+                    , checkbox_rbf.checked, tx.ownOutputs.zcInputs())
+            }
+            else {  // normal operation
+                if (table_sel_inputs.rowCount) {
+                    return bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                        , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
+                        , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text
+                        , checkbox_rbf.checked, txInputsModel.getSelection())
+                }
+                else {
+                    return bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                        , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
+                        , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text)
+                }
+            }
+        }
 
         function click_enter() {
             if (!fee_suggest_combo.edit_value())
@@ -544,30 +582,13 @@ ColumnLayout  {
                 fee_suggest_combo.input_text = fee_suggest_combo.currentText
             }
 
-            if (isRBF) {
-                layout.sig_continue( bsApp.createTXSignRequest(-1   //special index for RBF mode
-                    , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
-                    , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text
-                    , checkbox_rbf.checked, tx.ownInputs.zcInputs()) )
+            if (tempRequest !== null && tempRequest.isWatchigOnly)
+            {
+                exportFileDialog.open()
             }
-            else if (isCPFP) {
-                layout.sig_continue( bsApp.createTXSignRequest(-2   //special index for CPFP mode
-                    , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
-                    , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text
-                    , checkbox_rbf.checked, tx.ownOutputs.zcInputs()) )
-            }
-            else {  // normal operation
-                if (table_sel_inputs.rowCount) {
-                    layout.sig_continue( bsApp.createTXSignRequest(from_wallet_combo.currentIndex
-                        , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
-                        , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text
-                        , checkbox_rbf.checked, txInputsModel.getSelection()) )
-                }
-                else {
-                    layout.sig_continue( bsApp.createTXSignRequest(from_wallet_combo.currentIndex
-                        , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
-                        , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text) )
-                }
+            else
+            {
+                layout.sig_continue(prepare_transaction())
             }
         }
 

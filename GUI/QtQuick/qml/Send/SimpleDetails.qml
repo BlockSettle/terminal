@@ -2,6 +2,7 @@ import QtQuick 2.12
 import QtQuick.Window 2.12
 import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.15
+import QtQuick.Dialogs 1.3
 
 import "../BsStyles"
 import "../StyledControls"
@@ -189,6 +190,17 @@ ColumnLayout  {
         Layout.fillHeight: true
     }
 
+    FileDialog {
+        id: exportFileDialog  
+        title: qsTr("Please choose folder to export transaction")
+        folder: shortcuts.documents
+        selectFolder: true
+        selectExisting: false
+        onAccepted: {
+            bsApp.exportTransaction(exportFileDialog.fileUrl, continue_but.prepare_transaction())
+        }
+    }
+
     CustomButton {
         id: continue_but
 
@@ -202,9 +214,15 @@ ColumnLayout  {
         Layout.bottomMargin: 40
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
-        text: qsTr("Continue")
+        text: tempRequest !== null ? (tempRequest.isWatchingOnly ? qstr("Export transaction") : qsTr("Continue")) : ""
 
         preferred: true
+
+        function prepare_transaction() {
+            return bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                    , [rec_addr_input.input_text], [parseFloat(amount_input.input_text)]
+                    , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text)
+        }
 
         function click_enter() {
             if (!fee_suggest_combo.edit_value())
@@ -212,9 +230,14 @@ ColumnLayout  {
                 fee_suggest_combo.input_text = fee_suggest_combo.currentText
             }
 
-            layout.sig_continue( bsApp.createTXSignRequest(from_wallet_combo.currentIndex
-                , [rec_addr_input.input_text], [parseFloat(amount_input.input_text)]
-                , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text))
+            if (tempRequest !== null && tempRequest.isWatchingOnly)
+            {
+                exportFileDialog.open()
+            }
+            else
+            {
+                layout.sig_continue( prepare_transaction() )
+            }
         }
     }
 

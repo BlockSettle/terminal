@@ -188,6 +188,7 @@ public:
    Q_INVOKABLE int rescanWallet(const QString& walletId);
    Q_INVOKABLE int renameWallet(const QString& walletId, const QString& newName);
    Q_INVOKABLE void walletSelected(int);
+   Q_INVOKABLE void exportTransaction(const QUrl& path, QTXSignRequest* request);
    void notifyNewTransaction(const bs::TXEntry& tx);
 
 signals:
@@ -211,6 +212,8 @@ signals:
    void failedDeleteWallet();
    void successDeleteWallet();
    void walletSeedAuthFailed();
+   void transactionExported(const QString& destFilename);
+   void transactionExportFailed(const QString& errorMessage);
    void successTx();
    void failedTx(const QString&);
    void showSuccess(const QString&);
