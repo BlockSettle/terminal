@@ -96,7 +96,7 @@ ColumnLayout {
 
         CustomButton {
             text: qsTr("Export watching-only wallet")
-            visible: isHW()
+            visible: !isHW()
 
             Layout.bottomMargin: 40
             Layout.alignment: Qt.AlignBottom
