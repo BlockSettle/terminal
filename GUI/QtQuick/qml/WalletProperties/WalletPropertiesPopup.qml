@@ -44,8 +44,9 @@ CustomPopup {
         wallet_properties_vm: root.wallet_properties_vm
 
         onSig_success: {
-            _stack_view.push(success)
-            success.details_text = qsTr("Your password has successfully been changed")
+            root.close_click()
+
+            show_popup(qsTr("Your password has successfully been changed"))
         }
     }
 
@@ -58,11 +59,9 @@ CustomPopup {
         onSig_success: (nameExport, pathExport) => {
             root.close_click()
 
-            success_dialog.details_text = qsTr("Your watching-only wallet has successfully been exported\n\nFilename:\t%1\nFolder:\t%2").arg(nameExport).arg(pathExport)
-            
-            success_dialog.show()
-            success_dialog.raise()
-            success_dialog.requestActivate()
+            show_popup(qsTr("Your watching-only wallet has successfully been exported\n\nFilename:\t%1\nFolder:\t%2")
+                .arg(nameExport)
+                .arg(pathExport))
         }
     }
 
@@ -94,9 +93,13 @@ CustomPopup {
             _stack_view.push(wallet_seed_auth)
             wallet_seed_auth.init()
         }
-        onDeleteWallet: {
+        onDeleteSWWallet: {
             _stack_view.push(delete_wallet)
             delete_wallet.init()
+        }
+        onSig_success: {
+            root.close_click()
+            show_popup(qsTr("Wallet has successfully been deleted"))
         }
     }
 
@@ -108,24 +111,14 @@ CustomPopup {
         wallet_properties_vm: root.wallet_properties_vm
 
         onWalletDeleted: {
-            _stack_view.push(success)
-            success.details_text = qsTr("Wallet %1 has successfully been deleted").arg(wallet_properties_vm.walletName)
+            root.close_click()
+
+            show_popup(qsTr("Wallet %1 has successfully been deleted").arg(wallet_properties_vm.walletName))
         }
         onSig_success: {
-            _stack_view.push(success)
-            success.details_text = qsTr("Wallet has successfully been deleted")
-        }
-    }
+            root.close_click()
 
-    CustomSuccessWidget {
-        id: success
-
-        visible: false
-        details_font_size: 16
-        details_font_weight: Font.Medium
-        onSig_finish: {
-            //root.close()
-            _stack_view.pop(null)
+            show_popup(qsTr("Wallet has successfully been deleted"))
         }
     }
 
@@ -417,5 +410,13 @@ CustomPopup {
                 }
             }
         }
+    }
+
+    function show_popup(success_) {
+        success_dialog.details_text = success_
+        
+        success_dialog.show()
+        success_dialog.raise()
+        success_dialog.requestActivate()
     }
 }
