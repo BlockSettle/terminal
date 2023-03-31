@@ -26,10 +26,18 @@ ColumnLayout {
         target:bsApp
         function onSuccessDeleteWallet ()
         {
+            if (!layout.visible) {
+                return
+            }
+            
             layout.sig_success()
         }
         function onFailedDeleteWallet()
         {
+            if (!layout.visible) {
+                return
+            }
+            
             showError(qsTr("Failed to delete"))
         }
     }

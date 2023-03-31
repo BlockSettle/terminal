@@ -48,6 +48,13 @@ ColumnLayout  {
 
         title_text: qsTr("Wallet Name")
         placeholder_text: qsTr("Primary wallet")
+
+        onEnterPressed: {
+            confirm_but.click_enter()
+        }
+        onReturnPressed: {
+            confirm_but.click_enter()
+        }
     }
 
     Label {

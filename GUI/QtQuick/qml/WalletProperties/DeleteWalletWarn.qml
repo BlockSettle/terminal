@@ -16,9 +16,37 @@ ColumnLayout {
 
     signal viewWalletSeed()
     signal exportWOWallet()
-    signal deleteWallet()
+    signal deleteSWWallet()
+    signal sig_success()
 
     property var wallet_properties_vm
+
+    Connections
+    {
+        target:bsApp
+        function onSuccessDeleteWallet ()
+        {
+            if (!layout.visible) {
+                return
+            }
+
+            layout.sig_success()
+        }
+        function onFailedDeleteWallet()
+        {
+            if (!layout.visible) {
+                return
+            }
+            
+            showError(qsTr("Failed to delete"))
+        }
+    }
+
+    CustomMessageDialog {
+        id: error_dialog
+        error: qsTr("Failed to delete")
+        visible: false
+    }
 
     CustomTitleLabel {
         id: title
@@ -56,7 +84,7 @@ ColumnLayout {
 
         CustomButton {
             text: qsTr("View wallet seed")
-            visible: !wallet_properties_vm.isHardware && !wallet_properties_vm.isWatchingOnly
+            visible: !isHW()
 
             Layout.bottomMargin: 40
             Layout.alignment: Qt.AlignBottom
@@ -68,7 +96,7 @@ ColumnLayout {
 
         CustomButton {
             text: qsTr("Export watching-only wallet")
-            visible: wallet_properties_vm.isHardware || wallet_properties_vm.isWatchingOnly
+            visible: isHW()
 
             Layout.bottomMargin: 40
             Layout.alignment: Qt.AlignBottom
@@ -79,7 +107,7 @@ ColumnLayout {
         }
     
         CustomButton {
-            text: qsTr("Continue")
+            text: isHW() ? qsTr("Delete") : qsTr("Continue")
             preferred: true
 
             Layout.bottomMargin: 40
@@ -87,7 +115,33 @@ ColumnLayout {
 
             width: 260
 
-            onClicked: deleteWallet()
+            onClicked: {
+                if (isHW()) {
+                    const result = bsApp.deleteWallet(
+                        wallet_properties_vm.walletId,
+                        ""
+                    )
+
+                    if (result === -1) {
+                        showError(qsTr("Failed to delete"))
+                    }
+                }
+                else{
+                    deleteSWWallet()
+                }
+            }
         }
+    }
+
+    function isHW(){
+        return wallet_properties_vm.isHardware || wallet_properties_vm.isWatchingOnly
+    }
+
+    function showError(msg)
+    {
+        error_dialog.error = msg
+        error_dialog.show()
+        error_dialog.raise()
+        error_dialog.requestActivate()
     }
 }
