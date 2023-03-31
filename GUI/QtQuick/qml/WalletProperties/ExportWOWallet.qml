@@ -16,6 +16,7 @@ ColumnLayout  {
 
     height: 548
     width: 580
+    focus: true
 
     spacing: 0
 
@@ -169,8 +170,9 @@ ColumnLayout  {
     CustomButton {
         id: confirm_but
 
-        enabled: bsApp.settingExportDir.length !== 0
+        //enabled: bsApp.settingExportDir.length !== 0
         preferred: true
+        focus: true
         text: qsTr("Export")
 
         Layout.bottomMargin: 40
@@ -207,4 +209,7 @@ ColumnLayout  {
         }
     }
 
+    function init() {
+        confirm_but.setActiveFocus()
+    }
 }

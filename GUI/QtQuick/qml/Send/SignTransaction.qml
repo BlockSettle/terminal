@@ -21,6 +21,37 @@ ColumnLayout  {
     width: 580
     spacing: 0
 
+    property int k: 0
+    Connections
+    {
+        target:bsApp
+        function onSuccessTx()
+        {
+            if (!layout.visible) {
+                return
+            }
+
+            sig_broadcast()
+        }
+        function onFailedTx(error)
+        {
+            if (!layout.visible) {
+                return
+            }
+            
+            fail_dialog.fail = error
+            fail_dialog.show()
+            fail_dialog.raise()
+            fail_dialog.requestActivate()
+        }
+    }
+
+    CustomFailDialog {
+        id: fail_dialog
+        header: "Failed to send"
+        visible: false;
+    }
+
     CustomTitleLabel {
         id: title
         Layout.topMargin: 6
@@ -323,6 +354,13 @@ ColumnLayout  {
         width: 532
 
         time_progress: layout.time_progress
+
+        onEnterPressed: {
+            broadcast_but.click_enter()
+        }
+        onReturnPressed: {
+            broadcast_but.click_enter()
+        }
     }
 
     Label {
@@ -347,7 +385,6 @@ ColumnLayout  {
         function click_enter() {
             bsApp.signAndBroadcast(txSignRequest, password.value)
             password.value = ""
-            sig_broadcast()
         }
     }
 
@@ -366,12 +403,19 @@ ColumnLayout  {
         running: true
         repeat: true
         onTriggered: {
-            layout.time_progress = layout.time_progress - 1
+            if (layout.time_progress != 0) {
+                layout.time_progress = layout.time_progress - 1
+            }
 
-            if (time_progress === 0)
+            if (time_progress === 0 && !fail_dialog.visible)
             {
                 running = false
                 password.value = ""
+                
+                if (fail_dialog.visible) {
+                    fail_dialog.close()
+                }
+
                 sig_time_finished()
             }
         }

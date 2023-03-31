@@ -56,6 +56,12 @@ ColumnLayout  {
                     }
                 }
             }
+            onEnterPressed: {
+                continue_but.click_enter()
+            }
+            onReturnPressed: {
+                continue_but.click_enter()
+            }
         }
 
     }

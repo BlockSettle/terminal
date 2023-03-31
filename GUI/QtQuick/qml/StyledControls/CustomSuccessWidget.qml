@@ -84,4 +84,8 @@ ColumnLayout  {
     Keys.onReturnPressed: {
         click_enter()
     }
+
+    function init() {
+        finish_but.setActiveFocus()
+    }
 }

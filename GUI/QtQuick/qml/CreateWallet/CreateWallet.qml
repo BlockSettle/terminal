@@ -14,7 +14,7 @@ CustomPopup {
     objectName: "create_wallet"
 
     _stack_view.initialItem: terms_conditions
-    _arrow_but_visibility: !(terms_conditions.visible || start_create.visible || success_wallet.visible)
+    _arrow_but_visibility: !(terms_conditions.visible || start_create.visible )
 
     TermsAndConditions {
         id: terms_conditions
@@ -94,7 +94,8 @@ CustomPopup {
         id: confirm_password
         visible: false
         onSig_confirm: {
-            _stack_view.push(success_wallet)
+            root.close()
+            _stack_view.pop(null)
         }
     }
 
@@ -136,17 +137,6 @@ CustomPopup {
         }
         onSig_only_watching: {
             _stack_view.replace(import_watching_wallet)
-        }
-    }
-
-    CustomSuccessWidget {
-        id: success_wallet
-
-        details_text: qsTr("Your wallet has successfully been created")
-        visible: false
-        onSig_finish: {
-            root.close()
-            _stack_view.pop(null)
         }
     }
 

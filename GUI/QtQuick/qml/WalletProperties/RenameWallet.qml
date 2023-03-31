@@ -74,6 +74,13 @@ CustomPopup {
                 activeFocusOnTab: true
 
                 title_text: qsTr("Wallet Name")
+
+                onEnterPressed: {
+                    accept_but.click_enter()
+                }
+                onReturnPressed: {
+                    accept_but.click_enter()
+                }
             }
 
             Label {

@@ -108,6 +108,13 @@ ColumnLayout  {
         Layout.preferredHeight : 70
         Layout.preferredWidth: 552
         Layout.topMargin: 10
+
+        onEnterPressed: {
+            continue_but.click_enter()
+        }
+        onReturnPressed: {
+            continue_but.click_enter()
+        }
     }
 
     RowLayout {
