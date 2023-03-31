@@ -211,6 +211,9 @@ signals:
    void failedDeleteWallet();
    void successDeleteWallet();
    void walletSeedAuthFailed();
+   void successTx();
+   void failedTx(const QString&);
+   void showSuccess(const QString&);
 
 private slots:
    void onArmoryServerChanged(const QModelIndex&, const QVariant&);
