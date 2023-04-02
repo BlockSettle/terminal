@@ -214,7 +214,7 @@ ColumnLayout  {
         Layout.bottomMargin: 40
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
-        text: tempRequest !== null ? (tempRequest.isWatchingOnly ? qstr("Export transaction") : qsTr("Continue")) : ""
+        text: bsApp.walletProperitesVM.isWatchingOnly ? qsTr("Export transaction") : qsTr("Continue")
 
         preferred: true
 
@@ -230,7 +230,7 @@ ColumnLayout  {
                 fee_suggest_combo.input_text = fee_suggest_combo.currentText
             }
 
-            if (tempRequest !== null && tempRequest.isWatchingOnly)
+            if (bsApp.walletProperitesVM.isWatchingOnly)
             {
                 exportFileDialog.open()
             }
