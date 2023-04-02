@@ -55,6 +55,7 @@ void qtquick_gui::WalletPropertiesVM::setWalletSeed(const std::string& walletId,
       return;
    }
    seed_ = QString::fromStdString(seed).split(QLatin1Char(' '));
+   logger_->debug("[{}] seed length: {}", __func__, seed_.size());
    emit seedChanged();
 }
 

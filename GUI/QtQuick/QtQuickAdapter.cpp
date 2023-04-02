@@ -2007,9 +2007,16 @@ bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::Seq
 {
    logger_->debug("[{}] {}", __func__, response.DebugString());
    const auto& itReq = txReqs_.find(msgId);
+   auto txReq = bs::signer::pbTxRequestToCore(response.tx_sign_request(), logger_);
    if (itReq == txReqs_.end()) {
-      logger_->error("[{}] unknown request #{}", __func__, msgId);
-      return bs::message::ProcessingResult::Error;
+      if (txSaveReqs_.empty()) {
+         logger_->error("[{}] unknown request #{}", __func__, msgId);
+         return bs::message::ProcessingResult::Error;
+      }
+      const auto exportPath = *txSaveReqs_.rbegin();
+      txSaveReqs_.pop_back();
+      saveTransaction(txReq, exportPath);
+      return bs::message::ProcessingResult::Success;
    }
    auto qReq = itReq->second.txReq;
    const bool noReqAmount = itReq->second.isMaxAmount;
@@ -2019,7 +2026,6 @@ bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::Seq
       qReq->setError(QString::fromStdString(response.error_text()));
       return bs::message::ProcessingResult::Success;
    }
-   auto txReq = bs::signer::pbTxRequestToCore(response.tx_sign_request(), logger_);
 
    std::unordered_set<std::string> hdWalletIds;
    for (const auto& walletId : txReq.walletIds) {
@@ -2387,10 +2393,79 @@ void QtQuickAdapter::notifyNewTransaction(const bs::TXEntry& tx)
 
 void QtQuickAdapter::exportTransaction(const QUrl& path, QTXSignRequest* request)
 {
-   const QString exportPath = path.toLocalFile();
-   logger_->debug("[{}] exporting transaction to {}", __func__, exportPath.toStdString());
+   txSaveReqs_.push_back(path.toLocalFile().toStdString());
+}
 
-   QTimer::singleShot(1000, [this, exportPath](){
-      emit transactionExported(exportPath);
-   });
+void QtQuickAdapter::saveTransaction(const bs::core::wallet::TXSignRequest& txReq, const std::string& exportPath)
+{
+   if (txReq.walletIds.empty()) {
+      emit transactionExportFailed(tr("TX request doesn't contain wallets"));
+      return;
+   }
+   const auto& timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+   auto walletId = *txReq.walletIds.cbegin();
+   for (const auto& hdWallet : hdWallets_) {
+      for (const auto& leaf : hdWallet.second.leaves) {
+         if (leaf.first == walletId) {
+            walletId = hdWallet.first;
+            break;
+         }
+      }
+   }
+   const std::string filename = "BlockSettle_" + walletId + "_" + std::to_string(timestamp) + "_unsigned.bin";
+   const auto& pathName = exportPath + "/" + filename;
+   logger_->debug("[{}] exporting transaction to {}", __func__, pathName);
+   const auto& txSer = bs::signer::coreTxRequestToPb(txReq, false).SerializeAsString();
+
+   auto f = fopen(pathName.c_str(), "wb");
+   if (!f) {
+      emit transactionExportFailed(tr("Failed to open %1 for writing").arg(QString::fromStdString(pathName)));
+      return;
+   }
+   if (fwrite(txSer.data(), 1, txSer.size(), f) != txSer.size()) {
+      logger_->error("[{}] failed to write {} bytes to {}", __func__, txSer.size(), pathName);
+      emit transactionExportFailed(tr("Failed to write %1 bytes to %2. Disk full?")
+         .arg(txSer.size()).arg(QString::fromStdString(pathName)));
+      return;
+   }
+   fclose(f);
+   logger_->debug("[{}] exporting {} done", __func__, pathName);
+   emit transactionExported(QString::fromStdString(pathName));
+}
+
+QTXSignRequest* QtQuickAdapter::importTransaction(const QUrl& path)
+{
+   const auto& pathName = path.toLocalFile().toStdString();
+   auto f = fopen(pathName.c_str(), "rb");
+   if (!f) {
+      emit transactionImportFailed(tr("Failed to open %1 for reading")
+         .arg(QString::fromStdString(pathName)));
+      return nullptr;
+   }
+   std::string txSer;
+   char buf[512];
+   size_t rc = 0;
+   while ((rc = fread(buf, 1, sizeof(buf), f)) > 0) {
+      txSer.append(std::string(buf, rc));
+   }
+   if (txSer.empty()) {
+      emit transactionImportFailed(tr("Failed to read from %1")
+         .arg(QString::fromStdString(pathName)));
+      return nullptr;
+   }
+   Blocksettle::Communication::headless::SignTxRequest msg;
+   if (!msg.ParseFromString(txSer)) {
+      emit transactionImportFailed(tr("Failed to parse %1 bytes from %2")
+         .arg(txSer.size()).arg(QString::fromStdString(pathName)));
+      return nullptr;
+   }
+   const auto& txReq = bs::signer::pbTxRequestToCore(msg);
+   if (!txReq.isValid()) {
+      emit transactionImportFailed(tr("Failed to obtain valid data from %1")
+         .arg(QString::fromStdString(pathName)));
+      return nullptr;
+   }
+   auto txSignRequest = new QTXSignRequest(logger_, this);
+   txSignRequest->setTxSignReq(txReq);
+   return txSignRequest;
 }

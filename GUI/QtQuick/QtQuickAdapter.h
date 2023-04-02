@@ -189,6 +189,7 @@ public:
    Q_INVOKABLE int renameWallet(const QString& walletId, const QString& newName);
    Q_INVOKABLE void walletSelected(int);
    Q_INVOKABLE void exportTransaction(const QUrl& path, QTXSignRequest* request);
+   Q_INVOKABLE QTXSignRequest* importTransaction(const QUrl& path);
    void notifyNewTransaction(const bs::TXEntry& tx);
 
 signals:
@@ -214,6 +215,7 @@ signals:
    void walletSeedAuthFailed();
    void transactionExported(const QString& destFilename);
    void transactionExportFailed(const QString& errorMessage);
+   void transactionImportFailed(const QString& errorMessage);
    void successTx();
    void failedTx(const QString&);
    void showSuccess(const QString&);
@@ -241,6 +243,7 @@ private:
    void updateStates();
    void setTopBlock(uint32_t);
    void loadPlugins(QQmlApplicationEngine&);
+   void saveTransaction(const bs::core::wallet::TXSignRequest&, const std::string& pathName);
 
    void createWallet(bool primary);
    std::string hdWalletIdByIndex(int);
@@ -326,6 +329,7 @@ private:
       BlockSettle::Common::WalletsMessage msg{};
    };
    std::map<bs::message::SeqId, TXReq>    txReqs_;
+   std::vector<std::string>   txSaveReqs_;
    std::unordered_map<std::string, QTXSignRequest*>   hwwReady_;
    std::map<bs::message::SeqId, QTxDetails*>          txDetailReqs_;
    std::map<ApplicationSettings::Setting, QVariant>   settingsCache_;
