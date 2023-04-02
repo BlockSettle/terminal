@@ -96,6 +96,6 @@ ColumnLayout  {
 
     function init()
     {
-        back_but.forceActiveFocus()
+        delete_but.forceActiveFocus()
     }
 }

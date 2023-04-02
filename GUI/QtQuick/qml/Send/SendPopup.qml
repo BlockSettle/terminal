@@ -100,25 +100,31 @@ CustomPopup {
     }
 
     CustomSuccessDialog {
-        id: successDialog
+        id: exportTransactionSuccessDailog
         visible: false
     }
 
     CustomFailDialog {
-        id: failDialog
+        id: exportTransactionFailDialog
         visible: false
     }
 
     Connections {
         target: bsApp
         onTransactionExported: (text) => {
-            successDialog.details_text = qsTr("Transaction successfully exported to %1").arg(text)
-            successDialog.open()
+            exportTransactionSuccessDailog.details_text = qsTr("Transaction successfully exported to %1").arg(text)
+        
+            exportTransactionSuccessDailog.show()
+            exportTransactionSuccessDailog.raise()
+            exportTransactionSuccessDailog.requestActivate()
         }
         onTransactionExportFailed: (text) => {
-            failDialog.header = qsTr("Export transaction failed")
-            failDialog.fail = text
-            failDialog.open()
+            exportTransactionFailDialog.header = qsTr("Export transaction failed")
+            exportTransactionFailDialog.fail = text
+
+            exportTransactionFailDialog.show()
+            exportTransactionFailDialog.raise()
+            exportTransactionFailDialog.requestActivate()
         }
     }
 

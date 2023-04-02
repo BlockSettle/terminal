@@ -46,10 +46,7 @@ Rectangle {
             fontSize: 16
 
             onCurrentIndexChanged: {
-                if (walletBalances.rowCount === 0) {
-                    control.createNewWallet()
-                }
-                else {
+                if (walletBalances.rowCount !== 0) {
                     bsApp.walletSelected(wallet_selection_combobox.currentIndex)
                     control.walletIndexChanged(wallet_selection_combobox.currentIndex)
                     walletBalances.selectedWallet = wallet_selection_combobox.currentIndex
