@@ -495,7 +495,7 @@ ColumnLayout  {
                     Layout.leftMargin: 16
                     Layout.rightMargin: 16
 
-                    model:txOutputsModel
+                    model: txOutputsModel
                     columnWidths: [0.744, 0.20, 0.056]
 
                     copy_button_column_index: -1
@@ -544,7 +544,7 @@ ColumnLayout  {
         Layout.bottomMargin: 30
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
-        text: tempRequest !== null ? (tempRequest.isWatchingOnly ? qstr("Export transaction") : qsTr("Continue")) : ""
+        text: bsApp.walletProperitesVM.isWatchingOnly ? qsTr("Export transaction") : qsTr("Continue")
 
         preferred: true
 
@@ -582,7 +582,7 @@ ColumnLayout  {
                 fee_suggest_combo.input_text = fee_suggest_combo.currentText
             }
 
-            if (tempRequest !== null && tempRequest.isWatchigOnly)
+            if (bsApp.walletProperitesVM.isWatchingOnly)
             {
                 exportFileDialog.open()
             }

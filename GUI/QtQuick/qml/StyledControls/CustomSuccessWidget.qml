@@ -52,6 +52,10 @@ ColumnLayout  {
         font.family: "Roboto"
         font.weight: Font.Normal
         color: "#E2E7FF"
+        wrapMode: Text.Wrap
+        Layout.maximumWidth: parent.width
+        Layout.leftMargin: 10
+        Layout.rightMargin: 10
     }
 
     Label {

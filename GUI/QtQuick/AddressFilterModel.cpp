@@ -17,7 +17,7 @@ AddressFilterModel::AddressFilterModel(std::shared_ptr<SettingsController> setti
    , settings_(settings)
 {
    setDynamicSortFilter(true);
-   sort(0, Qt::AscendingOrder);
+   sort(2, Qt::AscendingOrder);
    connect(this, &AddressFilterModel::changed, this, &AddressFilterModel::invalidate);
 
    if (settings_ != nullptr)

@@ -109,12 +109,6 @@ QColor TxListModel::dataColor(int row, int col) const
          default: break;
          }
       }
-      return QColorConstants::White;
-   }
-   else if (col == 4) {
-      if (entry.value < 0) {
-         return qRgb(208, 192, 192);
-      }
    }
    return QColorConstants::White;
 }
