@@ -1657,7 +1657,6 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, const QStri
 
 void QtQuickAdapter::getUTXOsForWallet(int walletIndex)
 {
-   logger_->debug("[{}] #{}", __func__, walletIndex);
    txInputsModel_->clear();
    WalletsMessage msg;
    auto msgReq = msg.mutable_get_utxos();
