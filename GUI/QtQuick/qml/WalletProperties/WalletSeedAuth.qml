@@ -32,7 +32,7 @@ ColumnLayout  {
 
     CustomFailDialog {
         id: fail_dialog
-        header: "Error"
+        header: qsTr("Error")
         visible: false
     }
 

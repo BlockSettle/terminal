@@ -207,7 +207,7 @@ signals:
    void showError(const QString&);
    void showFail(const QString&, const QString&);
    void showNotification(QString, QString);
-   void successExport(const QString nameExport);
+   void successExport(const QString& nameExport);
    void requestWalletSelection(quint32 index);
    void successChangePassword();
    void failedDeleteWallet();

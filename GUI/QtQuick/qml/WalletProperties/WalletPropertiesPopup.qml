@@ -51,18 +51,14 @@ CustomPopup {
         onSig_success: (nameExport, pathExport) => {
             if (export_wo_wallet.isExitWhenSuccess) {
                 root.close_click()
-
-                show_popup(qsTr("Your watching-only wallet has successfully been exported\n\nFilename:\t%1\nFolder:\t%2")
-                    .arg(nameExport)
-                    .arg(pathExport))
             }
             else {
                 _stack_view.pop()
-
-                show_popup(qsTr("Your watching-only wallet has successfully been exported\n\nFilename:\t%1\nFolder:\t%2")
-                    .arg(nameExport)
-                    .arg(pathExport))
             }
+
+            show_popup(qsTr("Your watching-only wallet has successfully been exported\n\nFilename:\t%1\nFolder:\t%2")
+                .arg(nameExport)
+                .arg(pathExport))
         }
     }
 
