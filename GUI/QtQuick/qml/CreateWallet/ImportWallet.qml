@@ -27,8 +27,8 @@ ColumnLayout  {
                                  "17", "18", "19", "20",
                                  "21", "22", "23", "24"]
 
-    height: radbut_12.checked ? 555 : 779
-    width: 580
+    height: radbut_12.checked ? 555 : 670
+    width: radbut_12.checked? 580: 760
 
     spacing: 0
 
@@ -138,6 +138,7 @@ ColumnLayout  {
         cellWidth : 180
 
         property bool isValid: true
+        property bool isEmpty: true
         property bool hasEmptyWords: true
 
         model: radbut_12.checked ? layout.grid_model_12 : layout.grid_model_24
@@ -283,11 +284,14 @@ ColumnLayout  {
         function validate()
         {
             grid.isValid = true
-            for (var i = 0; i < grid.count; i++)
-            {
-                if(!grid.itemAtIndex(i).isValid)
-                {
+            grid.isEmpty = true
+            for (var i = 0; i < grid.count; i++) {
+                if(!grid.itemAtIndex(i).isValid) {
                     grid.isValid = false
+                    break
+                }
+                if (!grid.itemAtIndex(i).input_text.length > 0) {
+                    grid.isEmpty = false
                     break
                 }
             }
@@ -312,7 +316,7 @@ ColumnLayout  {
     Label {
         id: error_description
 
-        visible: !grid.isValid
+        visible: !grid.isValid && !grid.isEmpty
 
         text:  qsTr("Invalid seed")
 
@@ -338,6 +342,7 @@ ColumnLayout  {
         width: 530
         enabled: !grid.hasEmptyWords
         preferred: true
+        Layout.alignment: Qt.AlignCenter
 
         function click_enter() {
             if (!import_but.enabled) return
@@ -371,6 +376,7 @@ ColumnLayout  {
     function init()
     {
         clear()
+        radbut_12.checked = true
         grid.itemAtIndex(0).setActiveFocus()
     }
 
@@ -383,6 +389,7 @@ ColumnLayout  {
             grid.itemAtIndex(i).input_text = ""
         }
         grid.isValid = true
+        grid.isEmpty = true
         grid.hasEmptyWords = true
     }
 }
