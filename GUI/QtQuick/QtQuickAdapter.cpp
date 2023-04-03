@@ -1662,6 +1662,7 @@ void QtQuickAdapter::getUTXOsForWallet(int walletIndex)
    WalletsMessage msg;
    auto msgReq = msg.mutable_get_utxos();
    msgReq->set_wallet_id(hdWalletIdByIndex(walletIndex));
+   msgReq->set_confirmed_only(false);
    pushRequest(user_, userWallets_, msg.SerializeAsString());
 }
 
