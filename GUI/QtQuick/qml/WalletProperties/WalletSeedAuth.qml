@@ -18,6 +18,24 @@ ColumnLayout  {
 
     signal authorized()
 
+    Connections {
+        target: bsApp
+        function onWalletSeedAuthFailed(error) {
+            init()
+            show_error(error)
+        }
+        function onWalletSeedAuthSuccess() {
+            authorized()
+            clear()
+        }
+    }
+
+    CustomFailDialog {
+        id: fail_dialog
+        header: "Error"
+        visible: false
+    }
+
     CustomTitleLabel {
         id: title
         Layout.alignment: Qt.AlignCenter
@@ -41,6 +59,13 @@ ColumnLayout  {
 
         isPassword: true
         isHiddenText: true
+
+        onEnterPressed: {
+            confirm_but.click_enter()
+        }
+        onReturnPressed: {
+            confirm_but.click_enter()
+        }
     }
 
     Label {
@@ -61,12 +86,16 @@ ColumnLayout  {
         enabled: (password.input_text !== "")
 
         function click_enter() {
+            if (!confirm_but.enabled) {
+                return
+            }
+
             const result = bsApp.viewWalletSeedAuth(
                 wallet_properties_vm.walletId,
                 password.input_text
             )
-            if (result === 0) {
-                authorized()
+            if (result !== 0) {
+                show_error(qsTr("Failed to send wallet seed message"))
                 clear()
             }
         }
@@ -90,5 +119,13 @@ ColumnLayout  {
     {
         password.isValid = true
         password.input_text = ""
+    }
+
+    function show_error(error)
+    {
+        fail_dialog.fail = error
+        fail_dialog.show()
+        fail_dialog.raise()
+        fail_dialog.requestActivate()
     }
 }

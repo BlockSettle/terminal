@@ -51,6 +51,7 @@ ColumnLayout {
         input_topMargin: 35
         title_leftMargin: 16
         title_topMargin: 16
+        activeFocusOnTab: true
 
         title_text: qsTr("Password")
 

@@ -70,7 +70,7 @@ ColumnLayout {
         font.pixelSize: 14
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : title.height
-        text: qsTr("Save the seed before deleting the wallet")
+        text: isHW() ? qsTr("Are you sure you want to delete this wallet?") : qsTr("Save the seed before deleting the wallet")
     }
 
     Label {
@@ -89,7 +89,7 @@ ColumnLayout {
             Layout.bottomMargin: 40
             Layout.alignment: Qt.AlignBottom
 
-            width: 260
+            width: 160
 
             onClicked: viewWalletSeed()
         }
@@ -101,7 +101,7 @@ ColumnLayout {
             Layout.bottomMargin: 40
             Layout.alignment: Qt.AlignBottom
 
-            width: 260
+            width: 180
 
             onClicked: exportWOWallet()
         }
@@ -113,7 +113,7 @@ ColumnLayout {
             Layout.bottomMargin: 40
             Layout.alignment: Qt.AlignBottom
 
-            width: 260
+            width: isHW() ? 260 : 160
 
             onClicked: {
                 if (isHW()) {

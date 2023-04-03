@@ -412,10 +412,6 @@ ColumnLayout  {
                 running = false
                 password.value = ""
                 
-                if (fail_dialog.visible) {
-                    fail_dialog.close()
-                }
-
                 sig_time_finished()
             }
         }

@@ -207,12 +207,13 @@ signals:
    void showError(const QString&);
    void showFail(const QString&, const QString&);
    void showNotification(QString, QString);
-   void successExport(QString nameExport);
+   void successExport(const QString nameExport);
    void requestWalletSelection(quint32 index);
    void successChangePassword();
    void failedDeleteWallet();
    void successDeleteWallet();
-   void walletSeedAuthFailed();
+   void walletSeedAuthFailed(const QString&);
+   void walletSeedAuthSuccess();
    void transactionExported(const QString& destFilename);
    void transactionExportFailed(const QString& errorMessage);
    void transactionImportFailed(const QString& errorMessage);

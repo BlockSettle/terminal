@@ -18,16 +18,6 @@ CustomPopup {
     property var wallet_properties_vm
     property bool walletSeedRequested: false
 
-    Connections {
-        target: bsApp
-        onWalletSeedAuthFailed: {
-            if (_stack_view.currentItem == wallet_seed_auth ||
-                _stack_view.currentItem == wallet_seed) {
-                _stack_view.replace(wallet_seed_auth)
-            }
-        }
-    }
-
     x: mainWindow.x + (mainWindow.width - width)/2
     y: mainWindow.y + (mainWindow.height - height)/2
 
@@ -35,6 +25,8 @@ CustomPopup {
         id: rename_wallet
         visible: false
         wallet_properties_vm: root.wallet_properties_vm
+
+        onBack: _stack_view.pop()
     }
 
     ChangePassword {
@@ -57,11 +49,20 @@ CustomPopup {
         wallet_properties_vm: root.wallet_properties_vm
 
         onSig_success: (nameExport, pathExport) => {
-            root.close_click()
+            if (export_wo_wallet.isExitWhenSuccess) {
+                root.close_click()
 
-            show_popup(qsTr("Your watching-only wallet has successfully been exported\n\nFilename:\t%1\nFolder:\t%2")
-                .arg(nameExport)
-                .arg(pathExport))
+                show_popup(qsTr("Your watching-only wallet has successfully been exported\n\nFilename:\t%1\nFolder:\t%2")
+                    .arg(nameExport)
+                    .arg(pathExport))
+            }
+            else {
+                _stack_view.pop()
+
+                show_popup(qsTr("Your watching-only wallet has successfully been exported\n\nFilename:\t%1\nFolder:\t%2")
+                    .arg(nameExport)
+                    .arg(pathExport))
+            }
         }
     }
 
@@ -87,6 +88,7 @@ CustomPopup {
         visible: false
         wallet_properties_vm: root.wallet_properties_vm
         onExportWOWallet: {
+            export_wo_wallet.isExitWhenSuccess = false
             _stack_view.push(export_wo_wallet)
         }
         onViewWalletSeed: {
@@ -126,9 +128,6 @@ CustomPopup {
         id: success_dialog
 
         visible: false
-        onSig_finish: {
-            root.close_click()
-        }
     }
 
     Rectangle {
@@ -196,11 +195,8 @@ CustomPopup {
                             MouseArea {
                                 anchors.fill: parent
                                 onClicked: {
-                                    rename_wallet.wallet_name = wallet_name.text
-
-                                    rename_wallet.show()
-                                    rename_wallet.raise()
-                                    rename_wallet.requestActivate()
+                                    _stack_view.push(rename_wallet)
+                                    rename_wallet.init()
                                 }
                             }
                         }
@@ -370,6 +366,7 @@ CustomPopup {
                     title_text: qsTr("Export watching-only wallet")
 
                     onClicked: {
+                        export_wo_wallet.isExitWhenSuccess = true
                         _stack_view.push(export_wo_wallet)
                     }
                 }
