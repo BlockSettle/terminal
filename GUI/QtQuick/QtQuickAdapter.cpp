@@ -1836,11 +1836,11 @@ bs::message::ProcessingResult QtQuickAdapter::processWalletDeleted(const std::st
 bs::message::ProcessingResult QtQuickAdapter::processWalletSeed(const BlockSettle::Common::SignerMessage_WalletSeed& response)
 {
    if (response.bip39_seed().empty()) {
-      emit showError(tr("Failed to obtain wallet seed"));
-      emit walletSeedAuthFailed();
+      emit walletSeedAuthFailed(tr("Failed to obtain wallet seed"));
       return bs::message::ProcessingResult::Error;
    }
    walletPropertiesModel_->setWalletSeed(response.wallet_id(), response.bip39_seed());
+   emit walletSeedAuthSuccess();
    return bs::message::ProcessingResult::Success;
 }
 

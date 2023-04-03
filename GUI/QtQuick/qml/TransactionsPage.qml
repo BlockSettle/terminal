@@ -174,13 +174,6 @@ Item {
                     custom_icon.height: 10
 
                     onClicked: {
-                        //There is a qtquick problem on setting currentFile.
-
-                        // fileDialogCSV.currentFile = "%1/BlockSettle_%2_%3_%4.csv"
-                        //    .arg(fileDialogCSV.folder)
-                        //    .arg(txWalletsComboBox.currentIndex === 0 ? "all" : txWalletsComboBox.currentText)
-                        //    .arg(txListModel.getBegDate())
-                        //    .arg(txListModel.getEndDate())
                         var csvFile = "%1/BlockSettle_%2_%3_%4.csv"
                            .arg(fileDialogCSV.folder)
                            .arg(txWalletsComboBox.currentIndex === 0 ? "all" : txWalletsComboBox.currentText)
@@ -188,7 +181,7 @@ Item {
                            .arg(txListModel.getEndDate())
 
                         if (txListModel.exportCSVto(csvFile)) {
-                            succes_dialog.path_name = csvFile.substring(("file:///").length, csvFile.length)
+                            succes_dialog.path_name = csvFile.replace(/^(file:\/{3})/,"")
                             show_popup(succes_dialog)
                         }
                         else {

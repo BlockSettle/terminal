@@ -13,6 +13,7 @@ ColumnLayout  {
     signal sig_success(string nameExport, string pathExport)
 
     property var wallet_properties_vm
+    property bool isExitWhenSuccess
 
     height: 548
     width: 580

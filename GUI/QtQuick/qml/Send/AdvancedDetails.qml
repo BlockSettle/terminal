@@ -25,13 +25,15 @@ ColumnLayout  {
     property var tx: null
     property bool isRBF: false
     property bool isCPFP: false
+    property bool is_ready_broadcast: (txOutputsModel.rowCount > 1) && rec_addr_input.input_text.length === 0 && amount_input.input_text.length === 0 
+    property bool is_ready_output: (rec_addr_input.isValid && rec_addr_input.input_text.length
+                             && parseFloat(amount_input.input_text) !== 0 && amount_input.input_text.length)
 
     Connections
     {
         target:tx
         function onUpdated ()
         {
-            bsApp.requestFeeSuggestions()
             if (isRBF) {
                 txOutputsModel.setOutputsFrom(tx)
             }
@@ -409,6 +411,18 @@ ColumnLayout  {
 
                     wallets_current_index: from_wallet_combo.currentIndex
 
+                    onEnterPressed: {
+                        if (!processEnterKey()) {
+                            amount_input.setActiveFocus()
+                        }
+                    }
+                    
+                    onReturnPressed: {
+                        if (!processEnterKey()) {
+                            amount_input.setActiveFocus()
+                        }
+                    }
+
                     onFocus_next: {
                         amount_input.setActiveFocus()
                     }
@@ -424,6 +438,18 @@ ColumnLayout  {
 
                     width: 504
                     height: 70
+
+                    onEnterPressed: {
+                        if (!processEnterKey()) {
+                            comment_input.setActiveFocus()
+                        }
+                    }
+                    
+                    onReturnPressed: {
+                        if (!processEnterKey()) {
+                            comment_input.setActiveFocus()
+                        }
+                    }
                 }
 
                 CustomTextEdit {
@@ -454,15 +480,13 @@ ColumnLayout  {
 
                     activeFocusOnTab: include_output_but.enabled
 
-                    enabled: isRBF || (rec_addr_input.isValid && rec_addr_input.input_text.length
-                             && parseFloat(amount_input.input_text) !== 0 && amount_input.input_text.length)
+                    enabled: isRBF || is_ready_output
+                    preferred: !isRBF && is_ready_output
 
                     icon.source: "qrc:/images/plus.svg"
                     icon.color: include_output_but.enabled ? "#45A6FF" : BSStyle.buttonsDisabledTextColor
 
                     width: 504
-
-                    preferred: false
 
                     function click_enter() {
                         if (!include_output_but.enabled) return
@@ -473,6 +497,9 @@ ColumnLayout  {
                         }
 
                         txOutputsModel.addOutput(rec_addr_input.input_text, amount_input.input_text)
+
+                        rec_addr_input.input_text = ""
+                        amount_input.input_text = ""
                     }
                 }
 
@@ -538,6 +565,7 @@ ColumnLayout  {
         activeFocusOnTab: continue_but.enabled
 
         enabled: (txOutputsModel.rowCount > 1)
+        preferred: isRBF || is_ready_broadcast
 
         width: 1084
 
@@ -545,8 +573,6 @@ ColumnLayout  {
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         text: bsApp.walletProperitesVM.isWatchingOnly ? qsTr("Export transaction") : qsTr("Continue")
-
-        preferred: true
 
         function prepare_transaction() {
             if (isRBF) {
@@ -577,6 +603,9 @@ ColumnLayout  {
         }
 
         function click_enter() {
+            if (!continue_but.enabled) {
+                return
+            }
             if (!fee_suggest_combo.edit_value())
             {
                 fee_suggest_combo.input_text = fee_suggest_combo.currentText
@@ -622,6 +651,26 @@ ColumnLayout  {
             tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
                         , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
         }
+    }
+
+    function processEnterKey()
+    {
+        if (isRBF) {
+            include_output_but.click_enter()
+            continue_but.click_enter()
+            return true
+        }
+
+        if (is_ready_broadcast) {
+            continue_but.click_enter()
+            return true
+        }
+        else if (is_ready_output) {
+            include_output_but.click_enter()
+            rec_addr_input.setActiveFocus()
+            return true
+        }
+        return false
     }
 
     function init()

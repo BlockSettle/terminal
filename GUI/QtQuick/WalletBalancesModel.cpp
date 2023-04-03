@@ -128,6 +128,8 @@ void WalletBalancesModel::deleteWallet(const std::string& walletId)
       endRemoveRows();
       emit rowCountChanged();
       emit changed();
+      if (idx >= wallets_.size())
+          emit walletSelected(wallets_.size() - 1);
    });
 }
 
