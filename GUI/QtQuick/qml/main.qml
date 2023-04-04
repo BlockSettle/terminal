@@ -342,6 +342,12 @@ ApplicationWindow {
         PluginsPage {
             id: pluginPage
         }
+
+        onCurrentIndexChanged: {
+            if (currentIndex === 2) {
+                explorerPage.setFocus()
+            }
+        }
     }
 
     footer: Rectangle {
@@ -388,6 +394,9 @@ ApplicationWindow {
                     text: qsTr("Explorer")
                     Component.onCompleted: {
                         btnExplorer.setIcons ("qrc:/images/explorer_icon.png", "qrc:/images/explorer_icon_unchoosed.png")
+                    }
+                    onClicked: {
+                        explorerPage.setFocus()
                     }
                 }
 

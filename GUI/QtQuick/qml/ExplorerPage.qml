@@ -30,6 +30,11 @@ Item {
         expSearchBox.requestSearchText(txId)
     }
 
+    function setFocus() 
+    {
+        expSearchBox.forceActiveFocus()
+    }
+
     ExplorerEmpty {
         id: explorerEmpty
         visible: false
@@ -90,6 +95,7 @@ Item {
                         clip: true
                         color: 'lightgrey'
                         font.pixelSize: 16
+                        focus: true
 
                         function resetSearch() {
                             searchHist = []
@@ -163,7 +169,7 @@ Item {
                             font.pixelSize: 16
                             color: BSStyle.titleTextColor
                             anchors.fill: parent
-                            visible: !expSearchBox.text && !expSearchBox.activeFocus
+                            visible: !expSearchBox.text
                             verticalAlignment: Text.AlignVCenter
                         }
                     }
