@@ -158,13 +158,13 @@ ColumnLayout  {
         Layout.leftMargin: 25
         Layout.topMargin: 32
         width: 530
-        enabled: layout.chosenFilename.length > 0
+        // enabled: layout.chosenFilename.length > 0
         preferred: true
 
         function click_enter() {
             if (!import_but.enabled) return
             console.log("import: ", layout.chosenFilename)
-            bsApp.importWOWallet(layout.chosenFilename)
+            bsApp.importWOWallet("/home/yauhen/Documents/BlockSettle_Testnet_AdHEAbug_watchonly.lmdb")
             layout.sig_import()
         }
     }

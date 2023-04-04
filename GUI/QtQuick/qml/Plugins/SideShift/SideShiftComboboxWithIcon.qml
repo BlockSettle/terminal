@@ -20,9 +20,11 @@ ComboBox {
     width: 200
     height: 200
 
-    property string controlHint
-    property int popupWidth
-    property var networkControl: null
+    property string controlHint: "123"
+    property int popupWidth: 400
+
+    textRole: "coin"
+    valueRole: "network"
 
     activeFocusOnTab: true
 
@@ -40,8 +42,7 @@ ComboBox {
                 height: 80
                 sourceSize.width: 80
                 sourceSize.height: 80
-                source: (networkControl === null) ? "qrc:/images/sideshift_btc.png"
-                          : "image://coin/" + control.currentText + "-" + networkControl.currentText
+                source: "image://coin/" + control.model[control.currentIndex].coin + "-" + control.model[control.currentIndex].network
                 anchors.horizontalCenter: parent.horizontalCenter
             }
 
@@ -89,29 +90,74 @@ ComboBox {
         id: menuItem
 
         width: control.popupWidth - 12
-        height: 50
+        height: 80
 
         leftPadding: 6
         topPadding: 4
         bottomPadding: 4
 
-        contentItem: Text {
-            text: control.textRole
-                ? (Array.isArray(control.model) ? modelData[control.textRole] : model[control.textRole])
-                : modelData
-            color: "white"
-            font.pixelSize: 14
-            font.family: "Roboto"
-            font.weight: Font.Normal
+        contentItem: Rectangle {
+            anchors.fill: parent
+            anchors.leftMargin: 10
+            anchors.rightMargin: 10
+            color: "transparent"
 
-            elide: Text.ElideNone
-            verticalAlignment: Text.AlignVCenter
+            Row {
+                spacing: 10
+                anchors.fill: parent
+
+                Image {
+                    width: 40
+                    height: 40
+                    sourceSize.width: 40
+                    sourceSize.height: 40
+                    source: "image://coin/" + model["coin"] + "-" + model["network"]
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Column {
+                    spacing: 10
+                    width: parent.width - 50
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Text {
+                        text: model["name"]
+                        color: "white"
+                        font.pixelSize: 14
+                        font.family: "Roboto"
+                        font.weight: Font.SemiBold
+                    }
+
+                    Row {
+                        spacing: 10
+
+                        Text {
+                            text: model["coin"]
+                            color: "white"
+                            font.pixelSize: 14
+                            font.family: "Roboto"
+                            font.weight: Font.Normal
+                        }
+
+                        Text {
+                            text: model["network"]
+                            color: "white"
+                            font.pixelSize: 14
+                            font.family: "Roboto"
+                            font.weight: Font.Normal
+                        }
+                    }
+                }
+            }
         }
 
         highlighted: control.highlightedIndex === index
         property bool currented: control.currentIndex === index
 
         background: Rectangle {
+            anchors.fill: parent
+            anchors.leftMargin: 10
+            anchors.rightMargin: 10
             color: menuItem.highlighted ? "white" : "transparent"
             opacity: menuItem.highlighted ? 0.2 : 1
             radius: 4
@@ -121,21 +167,54 @@ ComboBox {
     popup: Popup {
         id: _popup
 
-        y: control.height - 1
+        y: 0
         width: control.popupWidth
+        height: 400
         padding: 6
 
-        contentItem: ListView {
-            id: popup_item
+        contentItem: Rectangle {
+            color: "transparent"
+            anchors.fill: parent
+            
+            Column {
+                anchors.fill: parent
 
-            clip: true
-            implicitHeight: contentHeight
-            model: control.popup.visible ? control.delegateModel : null
-            //model: control.delegateModel
-            currentIndex: control.highlightedIndex
+                Rectangle {
+                    width: parent.width
+                    height: 80
+                    color: "transparent"
 
-            ScrollIndicator.vertical: ScrollIndicator { }
-        }
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        color: "transparent"
+                        border.color: "white"
+                        radius: 10
+                    }
+                    
+                    TextInput {
+                        anchors.fill: parent
+                        color: "white"
+                        leftPadding: 20
+                        verticalAlignment: Text.AlignVCenter
+
+                        onTextEdited: control.model.filter = text
+                    }
+                }
+
+                ListView {
+                    id: popup_item
+                    width: parent.width
+                    height: parent.height - 80
+
+                    clip: true
+                    model: control.popup.visible ? control.delegateModel : null
+                    currentIndex: control.highlightedIndex
+
+                    ScrollIndicator.vertical: ScrollIndicator { }
+                }
+            }
+        }   
 
         background: Rectangle {
             color: "black"

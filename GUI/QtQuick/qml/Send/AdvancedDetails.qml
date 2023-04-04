@@ -450,6 +450,8 @@ ColumnLayout  {
                             comment_input.setActiveFocus()
                         }
                     }
+                    
+                    balanceSubstractor: txOutputsModel.totalAmount
                 }
 
                 CustomTextEdit {
@@ -500,6 +502,8 @@ ColumnLayout  {
 
                         rec_addr_input.input_text = ""
                         amount_input.input_text = ""
+                        
+                        table_sel_inputs.model.updateAutoselection()
                     }
                 }
 

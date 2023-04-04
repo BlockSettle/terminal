@@ -374,6 +374,18 @@ QUTXOList* TxInputsModel::getSelection()
    return new QUTXOList(result, (QObject*)this);
 }
 
+void TxInputsModel::updateAutoselection()
+{
+   const double amount = outsModel_ ? outsModel_->totalAmount() : 0;
+   auto result = collectUTXOsFor(amount);
+   for (const auto& utxo: result) {
+      selectionUtxos_.insert({utxo->utxo().getTxHash(), utxo->utxo().getTxOutIndex()});
+   }
+   emit selectionChanged();
+   emit dataChanged(createIndex(0, 0), createIndex(rowCount() - 1, 0), {SelectedRole});
+}
+
+
 QUTXOList* TxInputsModel::zcInputs() const
 {
    QList<QUTXO*> result;

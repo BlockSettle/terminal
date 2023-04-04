@@ -13,12 +13,66 @@
 #include "Plugin.h"
 #include <string>
 #include <QQmlApplicationEngine>
+#include <QAbstractListModel>
+#include <QSortFilterProxyModel>
 #include "Message/Worker.h"
 
 namespace spdlog {
    class logger;
 }
 class CoinImageProvider;
+
+struct Currency
+{
+   QString name;
+   QString coin;
+   QString network;
+};
+
+class CurrencyListModel : public QAbstractListModel
+{
+   Q_OBJECT
+public:
+   enum CurrencyRoles {
+      NameRole = Qt::UserRole + 1,
+      CoinRole, 
+      NetworkRole
+   };
+
+   CurrencyListModel(QObject* parent = nullptr);
+   
+   int rowCount(const QModelIndex & = QModelIndex()) const override;
+   QVariant data(const QModelIndex& index, int role) const override;
+   QHash<int, QByteArray> roleNames() const override;
+
+   void reset(const QList<Currency>& currencies);
+
+private:
+   QList<Currency> currencies_;
+};
+
+class CurrencyFilterModel : public QSortFilterProxyModel
+{
+   Q_OBJECT
+   Q_PROPERTY(QString filter READ filter WRITE setFilter NOTIFY changed)
+
+public:
+   CurrencyFilterModel(QObject* parent = nullptr);
+
+   const QString& filter() const;
+   void setFilter(const QString& filter);
+
+protected:
+   bool filterAcceptsRow(int source_row,
+      const QModelIndex& source_parent) const override;
+   bool lessThan(const QModelIndex& left, const QModelIndex& right) const override;
+
+signals:
+   void changed();
+
+private:
+   QString filter_;
+};
 
 class SideshiftPlugin: public Plugin, protected bs::WorkerPool
 {
@@ -39,12 +93,10 @@ public:
    QString icon() const override { return QLatin1Literal("qrc:/images/sideshift_plugin.png"); }
    QString path() const override { return QLatin1Literal("qrc:/qml/Plugins/SideShift/SideShiftPopup.qml"); }
 
-   Q_PROPERTY(QStringList inputCurrencies READ inputCurrencies NOTIFY inited)
-   QStringList inputCurrencies() const { return inputCurrencies_; }
-   Q_PROPERTY(QStringList outputCurrencies READ outputCurrencies NOTIFY inited)
-   QStringList outputCurrencies() const { return outputCurrencies_; }
-   Q_PROPERTY(QStringList inputNetworks READ inputNetworks NOTIFY inputCurSelected)
-   QStringList inputNetworks() const { return inputNetworks_; }
+   Q_PROPERTY(QAbstractItemModel* inputCurrenciesModel READ inputCurrenciesModel NOTIFY inited)
+   QAbstractItemModel* inputCurrenciesModel() { return inputFilterModel_; } 
+   Q_PROPERTY(QAbstractItemModel* outputCurrenciesModel READ outputCurrenciesModel NOTIFY inited)
+   QAbstractItemModel* outputCurrenciesModel() { return outputFilterModel_; } 
 
    Q_PROPERTY(QString conversionRate READ conversionRate NOTIFY pairUpdated)
    QString conversionRate() const { return convRate_; }
@@ -96,9 +148,6 @@ private:
    void* curl_{ nullptr };
    std::mutex  curlMtx_;
 
-   QStringList inputCurrencies_, outputCurrencies_;
-   std::unordered_map<std::string, QStringList> networksByCur_;
-   QStringList inputNetworks_;
    QString     inputNetwork_;
    QString     inputCurrency_;
    QString     convRate_;
@@ -108,4 +157,9 @@ private:
    QString     creationDate_, expireDate_;
    QString     orderId_;
    QString     shiftStatus_;
+
+   CurrencyListModel* inputListModel_;
+   CurrencyFilterModel* inputFilterModel_;
+   CurrencyListModel* outputListModel_;
+   CurrencyFilterModel* outputFilterModel_;
 };

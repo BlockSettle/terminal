@@ -18,6 +18,8 @@ CustomTextInput {
 
     id: amount_input
 
+    property var balanceSubstractor: null
+
     //aliases
     title_text: qsTr("Amount")
 
@@ -85,7 +87,7 @@ CustomTextInput {
 
         function click_enter() {
             if (tempRequest != null) {
-                amount_input.input_text = tempRequest.maxAmount
+                amount_input.input_text = (parseFloat(tempRequest.maxAmount) - (balanceSubstractor !== null ? balanceSubstractor : 0.0)).toFixed(8)
             }
         }
     }
