@@ -61,6 +61,8 @@ Item {
                root.controller.inputCurrencySelected(currentText)
                root.controller.inputNetwork = currentValue
             }
+
+            onModelChanged: inputCombobox.currentIndex = 0
          }
 
          SideShiftIconButton {
@@ -74,6 +76,7 @@ Item {
             controlHint: qsTr("YOU RECEIVE")
             model: root.receive ? root.sendModel : root.receiveModel 
             enabled: !root.receive
+            onModelChanged: receivingCombobox.currentIndex = 0
          }
       }
 

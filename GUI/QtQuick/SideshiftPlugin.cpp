@@ -76,6 +76,8 @@ void CurrencyListModel::reset(const QList<Currency>& currencies)
 CurrencyFilterModel::CurrencyFilterModel(QObject* parent)
    : QSortFilterProxyModel(parent)
 {
+   setDynamicSortFilter(true);
+   sort(0, Qt::AscendingOrder);
    connect(this, &CurrencyFilterModel::changed, this, &CurrencyFilterModel::invalidate);
 }
 
@@ -99,15 +101,9 @@ bool CurrencyFilterModel::filterAcceptsRow(int source_row,
       return true;
    }
 
-   return (sourceModel()->data(index(source_row, 0), CurrencyListModel::CurrencyRoles::NameRole).toString().contains(filter_)
-      || sourceModel()->data(index(source_row, 0), CurrencyListModel::CurrencyRoles::CoinRole).toString().contains(filter_)
-      || sourceModel()->data(index(source_row, 0), CurrencyListModel::CurrencyRoles::NetworkRole).toString().contains(filter_));
-}
-   
-bool CurrencyFilterModel::lessThan(const QModelIndex& left, const QModelIndex& right) const
-{
-   return sourceModel()->data(index(left.row(), 0), CurrencyListModel::CurrencyRoles::NameRole) <
-      sourceModel()->data(index(right.row(), 0), CurrencyListModel::CurrencyRoles::NameRole);
+   return (sourceModel()->data(sourceModel()->index(source_row, 0), CurrencyListModel::CurrencyRoles::NameRole).toString().contains(filter_)
+      || sourceModel()->data(sourceModel()->index(source_row, 0), CurrencyListModel::CurrencyRoles::CoinRole).toString().contains(filter_)
+      || sourceModel()->data(sourceModel()->index(source_row, 0), CurrencyListModel::CurrencyRoles::NetworkRole).toString().contains(filter_));
 }
 
 struct PostIn : public bs::InData
@@ -282,7 +278,7 @@ void SideshiftPlugin::init()
          }
 
          inputListModel_->reset(currencies);
-         outputListModel_->reset({ {tr("Bitcoin"), tr("BTC"), tr("")} });
+         outputListModel_->reset({ {tr("Bitcoin"), tr("BTC"), tr("bitcoin")} });
 
          emit inited();
          logger_->debug("[SideshiftPlugin::init] {} input currencies", currencies.size());

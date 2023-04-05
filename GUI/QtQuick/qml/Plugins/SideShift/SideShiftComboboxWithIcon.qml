@@ -42,7 +42,7 @@ ComboBox {
                 height: 80
                 sourceSize.width: 80
                 sourceSize.height: 80
-                source: "image://coin/" + control.model[control.currentIndex].coin + "-" + control.model[control.currentIndex].network
+                source: "image://coin/" + control.currentText + "-" + control.currentValue
                 anchors.horizontalCenter: parent.horizontalCenter
             }
 
