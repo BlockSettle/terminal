@@ -450,6 +450,8 @@ ColumnLayout  {
                             comment_input.setActiveFocus()
                         }
                     }
+                    
+                    balanceSubtractor: txOutputsModel.totalAmount
                 }
 
                 CustomTextEdit {

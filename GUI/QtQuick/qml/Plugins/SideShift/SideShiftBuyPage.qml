@@ -62,8 +62,10 @@ Item {
             Image {
                id: arrowImage
                width: 20
-               height: 20
-               source: "qrc:/sideshift_right_arrow.png"
+               height: 12
+               sourceSize.width: 20
+               sourceSize.height: 12
+               source: "qrc:/images/sideshift_right_arrow.svg"
                anchors.verticalCenter: parent.verticalCenter
             }
 
@@ -87,8 +89,10 @@ Item {
             
             Text {
                color: "lightgray"
-               text: controller.orderId
+               linkColor: "lightgray"
                font.weight: Font.Bold
+               text: "<a href=\"https://sideshift.ai/orders/%1\">%1</a>".arg(controller.orderId)
+               onLinkActivated: Qt.openUrlExternally("https://sideshift.ai/orders/%1".arg(controller.orderId))
             }
          }
       }
@@ -187,7 +191,7 @@ Item {
                border.color: "white"
                anchors.horizontalCenter: parent.horizontalCenter
             
-               Text {
+               TextInput {
                   id: toAddress
                   anchors.fill: parent
                   text: controller.depositAddress
@@ -197,13 +201,25 @@ Item {
                   verticalAlignment: Text.AlignVCenter
                   anchors.leftMargin: 20
                   anchors.rightMargin: 20
+                  enabled: false
                }
             }
 
             SideShiftCopyButton {
-               text: qsTr("COPY ADDRESS")
+               text: timer.running ? qsTr("COPIED") : qsTr("COPY ADDRESS")
                anchors.horizontalCenter: parent.horizontalCenter
-               onClicked: bsApp.copyAddressToClipboard(toAddress.text)
+               onClicked: {
+                  toAddress.selectAll()
+                  bsApp.copyAddressToClipboard(toAddress.text)
+                  timer.start()
+               }
+
+               Timer {
+                   id: timer
+                   repeat: false
+                   interval: 5000
+                   onTriggered: toAddress.select(0, 0)
+               }
             }
          }
 

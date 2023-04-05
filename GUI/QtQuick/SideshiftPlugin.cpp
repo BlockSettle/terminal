@@ -15,6 +15,14 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
+namespace {
+   const QHash<int, QByteArray> kCurrencyListRoles {
+      {CurrencyListModel::CurrencyRoles::NameRole, "name"},
+      {CurrencyListModel::CurrencyRoles::CoinRole, "coin"},
+      {CurrencyListModel::CurrencyRoles::NetworkRole, "network"}
+   };
+}
+
 using json = nlohmann::json;
 
 class CoinImageProvider : public QQuickImageProvider
@@ -29,6 +37,77 @@ private:
    SideshiftPlugin* parent_;
 };
 
+CurrencyListModel::CurrencyListModel(QObject* parent)
+   : QAbstractListModel(parent)
+{
+}
+
+int CurrencyListModel::rowCount(const QModelIndex&) const
+{
+   return currencies_.size();
+}
+
+QVariant CurrencyListModel::data(const QModelIndex& index, int role) const
+{
+   if (index.row() < 0 || index.row() >= currencies_.size()) {
+      return QVariant();
+   }
+   switch(role) {
+      case CurrencyListModel::CurrencyRoles::NameRole: return currencies_.at(index.row()).name;
+      case CurrencyListModel::CurrencyRoles::CoinRole: return currencies_.at(index.row()).coin;
+      case CurrencyListModel::CurrencyRoles::NetworkRole: return currencies_.at(index.row()).network;
+      default: return QVariant();
+   }
+   return QVariant();
+}
+
+QHash<int, QByteArray> CurrencyListModel::roleNames() const
+{
+   return kCurrencyListRoles;
+}
+
+void CurrencyListModel::reset(const QList<Currency>& currencies)
+{
+   beginResetModel();
+   currencies_ = currencies;
+   endResetModel();
+}
+
+CurrencyFilterModel::CurrencyFilterModel(QObject* parent)
+   : QSortFilterProxyModel(parent)
+{
+   setDynamicSortFilter(true);
+   sort(0, Qt::AscendingOrder);
+   connect(this, &CurrencyFilterModel::changed, this, &CurrencyFilterModel::invalidate);
+}
+
+const QString& CurrencyFilterModel::filter() const
+{
+   return filter_;
+}
+
+void CurrencyFilterModel::setFilter(const QString& filter)
+{
+   if (filter_ != filter) {
+      filter_ = filter;
+      emit changed();
+   }
+}
+
+bool CurrencyFilterModel::filterAcceptsRow(int source_row,
+      const QModelIndex& source_parent) const
+{
+   if (filter_.length() == 0) {
+      return true;
+   }
+
+   return (sourceModel()->data(sourceModel()->index(source_row, 0),
+                               CurrencyListModel::CurrencyRoles::NameRole).toString().toLower().contains(filter_.toLower())
+       || sourceModel()->data(sourceModel()->index(source_row, 0),
+                             CurrencyListModel::CurrencyRoles::CoinRole).toString().toLower().contains(filter_.toLower())
+       || sourceModel()->data(sourceModel()->index(source_row, 0),
+                              CurrencyListModel::CurrencyRoles::NetworkRole).toString().toLower().contains(filter_.toLower()));
+}
 
 struct PostIn : public bs::InData
 {
@@ -118,9 +197,18 @@ SideshiftPlugin::SideshiftPlugin(const std::shared_ptr<spdlog::logger>& logger
    , QQmlApplicationEngine& engine, QObject* parent)
    : Plugin(parent), bs::WorkerPool(1, 1), logger_(logger)
 {
+   inputListModel_ = new CurrencyListModel(this);
+   inputFilterModel_ = new CurrencyFilterModel(this);
+   inputFilterModel_->setSourceModel(inputListModel_);
+
+   outputListModel_ = new CurrencyListModel(this);
+   outputFilterModel_ = new CurrencyFilterModel(this);
+   outputFilterModel_->setSourceModel(outputListModel_);
+
    qmlRegisterInterface<SideshiftPlugin>("SideshiftPlugin");
+   qmlRegisterInterface<CurrencyListModel>("CurrencyListModel");
+   qmlRegisterInterface<CurrencyFilterModel>("CurrencyFilterModel");
    engine.addImageProvider(QLatin1Literal("coin"), new CoinImageProvider(this));
-   outputCurrencies_.append(QLatin1Literal("BTC"));
 }
 
 SideshiftPlugin::~SideshiftPlugin()
@@ -181,17 +269,24 @@ void SideshiftPlugin::init()
       const auto& response = reply->response;
       try {
          const auto& msg = json::parse(response);
+         QList<Currency> currencies;
          for (const auto& coin : msg) {
-            const auto& currency = coin["coin"].get<std::string>();
-            auto& networks = networksByCur_[currency];
             for (const auto& network : coin["networks"]) {
-               networks.append(QString::fromStdString(network.get<std::string>()));
+               currencies.append({
+                  QString::fromStdString(coin["name"]),
+                  QString::fromStdString(coin["coin"]),
+                  QString::fromStdString(network.get<std::string>())
+               });
             }
-            inputCurrencies_.append(QString::fromStdString(currency));
          }
+
+         QMetaObject::invokeMethod(this, [this, currencies] {
+            inputListModel_->reset(currencies);
+            outputListModel_->reset({ {tr("Bitcoin"), tr("BTC"), tr("bitcoin")} });
+         });
+
          emit inited();
-         logger_->debug("[SideshiftPlugin::init] {} input currencies"
-            , inputCurrencies_.size());
+         logger_->debug("[SideshiftPlugin::init] {} input currencies", currencies.size());
       }
       catch (const json::exception&) {
          logger_->error("[SideshiftPlugin::init] failed to parse {}", response);
@@ -203,9 +298,6 @@ void SideshiftPlugin::init()
 void SideshiftPlugin::deinit()
 {
    cancel();
-   networksByCur_.clear();
-   inputCurrencies_.clear();
-   inputNetworks_.clear();
    inputNetwork_.clear();
    inputCurrency_.clear();
    convRate_.clear();
@@ -319,12 +411,6 @@ void SideshiftPlugin::inputCurrencySelected(const QString& cur)
       return;
    }
    inputCurrency_ = cur;
-   try {
-      inputNetworks_ = networksByCur_.at(cur.toStdString());
-   }
-   catch (const std::exception&) {
-      inputNetworks_.clear();
-   }
    emit inputCurSelected();
 }
 
