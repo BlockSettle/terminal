@@ -502,8 +502,6 @@ ColumnLayout  {
 
                         rec_addr_input.input_text = ""
                         amount_input.input_text = ""
-                        
-                        table_sel_inputs.model.updateAutoselection()
                     }
                 }
 
