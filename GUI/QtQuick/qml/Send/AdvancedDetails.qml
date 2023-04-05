@@ -451,7 +451,7 @@ ColumnLayout  {
                         }
                     }
                     
-                    balanceSubstractor: txOutputsModel.totalAmount
+                    balanceSubtractor: txOutputsModel.totalAmount
                 }
 
                 CustomTextEdit {

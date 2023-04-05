@@ -101,9 +101,12 @@ bool CurrencyFilterModel::filterAcceptsRow(int source_row,
       return true;
    }
 
-   return (sourceModel()->data(sourceModel()->index(source_row, 0), CurrencyListModel::CurrencyRoles::NameRole).toString().contains(filter_)
-      || sourceModel()->data(sourceModel()->index(source_row, 0), CurrencyListModel::CurrencyRoles::CoinRole).toString().contains(filter_)
-      || sourceModel()->data(sourceModel()->index(source_row, 0), CurrencyListModel::CurrencyRoles::NetworkRole).toString().contains(filter_));
+   return (sourceModel()->data(sourceModel()->index(source_row, 0),
+                               CurrencyListModel::CurrencyRoles::NameRole).toString().toLower().contains(filter_.toLower())
+       || sourceModel()->data(sourceModel()->index(source_row, 0),
+                             CurrencyListModel::CurrencyRoles::CoinRole).toString().toLower().contains(filter_.toLower())
+       || sourceModel()->data(sourceModel()->index(source_row, 0),
+                              CurrencyListModel::CurrencyRoles::NetworkRole).toString().toLower().contains(filter_.toLower()));
 }
 
 struct PostIn : public bs::InData
@@ -277,8 +280,10 @@ void SideshiftPlugin::init()
             }
          }
 
-         inputListModel_->reset(currencies);
-         outputListModel_->reset({ {tr("Bitcoin"), tr("BTC"), tr("bitcoin")} });
+         QMetaObject::invokeMethod(this, [this, currencies] {
+            inputListModel_->reset(currencies);
+            outputListModel_->reset({ {tr("Bitcoin"), tr("BTC"), tr("bitcoin")} });
+         });
 
          emit inited();
          logger_->debug("[SideshiftPlugin::init] {} input currencies", currencies.size());

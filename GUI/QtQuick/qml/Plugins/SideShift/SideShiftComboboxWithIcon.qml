@@ -105,6 +105,7 @@ ComboBox {
             Row {
                 spacing: 10
                 anchors.fill: parent
+                anchors.leftMargin: 10
 
                 Image {
                     width: 40
