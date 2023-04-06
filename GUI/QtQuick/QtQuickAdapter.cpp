@@ -688,7 +688,9 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
 {
    WalletsMessage msg;
    if (!msg.ParseFromString(env.message)) {
-      logger_->error("[{}] failed to parse msg #{}\n{}", __func__, env.foreignId(), bs::toHex(env.message));
+      logger_->error("[{}] failed to parse msg #{} (response#: {}, to {})\n{}", __func__
+         , env.foreignId(), env.responseId(), (env.receiver ? env.receiver->name() : "<null>")
+         , bs::toHex(env.message));
       return ProcessingResult::Error;
    }
    switch (msg.data_case()) {
@@ -1791,8 +1793,9 @@ ProcessingResult QtQuickAdapter::processAddressHist(const ArmoryMessage_AddressH
    }
    expTxByAddrModel_->addRows(entries);
    const auto msgId = pushRequest(user_, userBlockchain_, msg.SerializeAsString()
-      , {}, 10, std::chrono::milliseconds{230} );
+      , {}, 3, std::chrono::milliseconds{2300} );
    expTxAddrReqs_.insert(msgId);
+   logger_->debug("[{}] response handling done", __func__);
    return ProcessingResult::Success;
 }
 
@@ -1956,7 +1959,7 @@ bs::message::ProcessingResult QtQuickAdapter::processTransactions(bs::message::S
       expTxAddrReqs_.erase(itExpTxAddr);
       expTxByAddrModel_->setDetails(result);
       const auto msgIdReq = pushRequest(user_, userBlockchain_, msg.SerializeAsString()
-         , {}, 10, std::chrono::milliseconds{ 230 });
+         , {}, 3, std::chrono::milliseconds{ 2300 });
       expTxAddrInReqs_.insert(msgIdReq);
    }
    const auto& itExpTxAddrIn = expTxAddrInReqs_.find(msgId);
@@ -2273,8 +2276,9 @@ void QtQuickAdapter::startAddressSearch(const QString& s)
    expTxByAddrModel_->clear();
    ArmoryMessage msg;
    msg.set_get_address_history(s.trimmed().toStdString());
-   pushRequest(user_, userBlockchain_, msg.SerializeAsString()
-      , {}, 10, std::chrono::milliseconds{ 230 });
+   const auto msgId = pushRequest(user_, userBlockchain_, msg.SerializeAsString()
+      , {}, 1, std::chrono::seconds{ 15 });
+   logger_->debug("[{}] #{}", __func__, msgId);
 }
 
 qtquick_gui::WalletPropertiesVM* QtQuickAdapter::walletProperitesVM() const
