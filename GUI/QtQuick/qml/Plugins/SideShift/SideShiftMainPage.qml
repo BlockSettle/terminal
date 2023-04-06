@@ -21,8 +21,8 @@ Item {
 
    property var controller
    property bool receive: true
-   property var receiveModel: controller.inputCurrencies
-   property var sendModel: controller.outputCurrencies
+   property var receiveModel: controller.inputCurrenciesModel
+   property var sendModel: controller.outputCurrenciesModel
 
    property alias inputCurrency: inputCombobox.currentText
    property alias outputCurrency: receivingCombobox.currentText
@@ -48,17 +48,21 @@ Item {
 
          SideShiftComboboxWithIcon {
             id: inputCombobox
-            networkControl: networksController
-            popupWidth: 200
+            popupWidth: 400
             controlHint: qsTr("YOU SEND")
             model: root.receive ? root.receiveModel : root.sendModel
+            enabled: root.receive
 
             onCurrentValueChanged: {
                 root.controller.inputCurrencySelected(currentText)
+                root.controller.inputNetwork = currentValue
             }
             onActivated: {
                root.controller.inputCurrencySelected(currentText)
+               root.controller.inputNetwork = currentValue
             }
+
+            onModelChanged: inputCombobox.currentIndex = 0
          }
 
          SideShiftIconButton {
@@ -68,21 +72,11 @@ Item {
 
          SideShiftComboboxWithIcon {
             id: receivingCombobox
-            popupWidth: 200
+            popupWidth: 400
             controlHint: qsTr("YOU RECEIVE")
             model: root.receive ? root.sendModel : root.receiveModel 
-         }
-      }
-
-      SideShiftCombobox {
-         id: networksController
-         model: controller.inputNetworks
-         anchors.horizontalCenter: parent.horizontalCenter
-         onCurrentValueChanged: {
-            root.controller.inputNetwork = currentText
-         }
-         onActivated: {
-            root.controller.inputNetwork = currentText
+            enabled: !root.receive
+            onModelChanged: receivingCombobox.currentIndex = 0
          }
       }
 

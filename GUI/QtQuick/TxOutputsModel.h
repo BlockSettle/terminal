@@ -30,6 +30,7 @@ class TxOutputsModel : public QAbstractTableModel
 {
    Q_OBJECT
    Q_PROPERTY(int rowCount READ rowCount NOTIFY rowCountChanged)
+   Q_PROPERTY(double totalAmount READ totalAmount NOTIFY rowCountChanged)
 
 public:
    enum TableRoles { TableDataRole = Qt::UserRole + 1, HeadingRole, WidthRole

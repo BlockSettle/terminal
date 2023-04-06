@@ -201,11 +201,10 @@
         <file>qml/Plugins/SideShift/SideShiftPopup.qml</file>
         <file>qml/Plugins/SideShift/SideShiftTextInput.qml</file>
         <file>images/transfer_icon.png</file>
-        <file>images/sideshift_btc.png</file>
         <file>qml/Plugins/SideShift/SideShiftMainPage.qml</file>
         <file>qml/Plugins/SideShift/SideShiftBuyPage.qml</file>
         <file>qml/Plugins/SideShift/SideShiftCopyButton.qml</file>
-        <file>images/sideshift_right_arrow.png</file>
+        <file>images/sideshift_right_arrow.svg</file>
         <file>images/sideswap_plugin.png</file>
         <file>images/leverex_plugin.png</file>
         <file>qml/Plugins/SideSwap/SideSwapPopup.qml</file>
