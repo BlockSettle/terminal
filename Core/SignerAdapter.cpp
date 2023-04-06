@@ -822,7 +822,6 @@ bs::message::ProcessingResult SignerAdapter::processGetWalletSeed(const bs::mess
 
       if (seed.hasPrivateKey()) {
          const auto& privKey = seed.privateKey();
-         logger_->debug("[{}] priv key size: {}", __func__, privKey.getSize());
          std::vector<uint8_t> privData;
          for (int i = 0; i < (int)privKey.getSize(); ++i) {
             privData.push_back(privKey.getPtr()[i]);
@@ -834,6 +833,8 @@ bs::message::ProcessingResult SignerAdapter::processGetWalletSeed(const bs::mess
          }
          bip39Seed.pop_back();
          msgResp->set_bip39_seed(bip39Seed);
+         logger_->debug("[{}] bip39 seed: {} [{}] from [{}]", __func__
+            , bip39Seed, words.size(), privData.size());
       }
    }
    catch (const Armory::Wallets::WalletException& e) {

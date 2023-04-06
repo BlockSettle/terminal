@@ -22,13 +22,6 @@ namespace spdlog {
 }
 class CoinImageProvider;
 
-struct Currency
-{
-   QString name;
-   QString coin;
-   QString network;
-};
-
 class CurrencyListModel : public QAbstractListModel
 {
    Q_OBJECT
@@ -37,6 +30,12 @@ public:
       NameRole = Qt::UserRole + 1,
       CoinRole, 
       NetworkRole
+   };
+   struct Currency
+   {
+      QString name;
+      QString coin;
+      QString network;
    };
 
    CurrencyListModel(QObject* parent = nullptr);

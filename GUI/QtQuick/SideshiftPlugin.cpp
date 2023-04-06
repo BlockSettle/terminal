@@ -267,25 +267,23 @@ void SideshiftPlugin::init()
          return;
       }
       const auto& response = reply->response;
+      QList<CurrencyListModel::Currency> currencies;
       try {
          const auto& msg = json::parse(response);
-         QList<Currency> currencies;
          for (const auto& coin : msg) {
             for (const auto& network : coin["networks"]) {
                currencies.append({
-                  QString::fromStdString(coin["name"]),
-                  QString::fromStdString(coin["coin"]),
+                  QString::fromStdString(coin["name"].get<std::string>()),
+                  QString::fromStdString(coin["coin"].get<std::string>()),
                   QString::fromStdString(network.get<std::string>())
                });
             }
          }
-
          QMetaObject::invokeMethod(this, [this, currencies] {
             inputListModel_->reset(currencies);
             outputListModel_->reset({ {tr("Bitcoin"), tr("BTC"), tr("bitcoin")} });
+            emit inited();
          });
-
-         emit inited();
          logger_->debug("[SideshiftPlugin::init] {} input currencies", currencies.size());
       }
       catch (const json::exception&) {

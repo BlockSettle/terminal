@@ -10,8 +10,10 @@
 */
 #include "ApiAdapter.h"
 #include <spdlog/spdlog.h>
+#include "common.pb.h"
 
 using namespace bs::message;
+using namespace BlockSettle::Common;
 
 class ApiRouter : public bs::message::Router
 {
@@ -209,6 +211,9 @@ void ApiAdapter::add(const std::shared_ptr<ApiBusAdapter> &adapter)
 
 ProcessingResult ApiAdapter::process(const bs::message::Envelope &env)
 {
+   if (env.message.empty()) {
+      return ProcessingResult::Success;
+   }
    const auto rc = RelayAdapter::process(env);
    if (env.receiver->value() == user_->value()) {
       return gwAdapter_->pushToApiBus(env);
@@ -223,6 +228,14 @@ bool ApiAdapter::processBroadcast(const bs::message::Envelope& env)
       return true;
    }
    return false;
+}
+
+bool ApiAdapter::processTimeout(const bs::message::Envelope& env)
+{
+   if (!env.receiver) {
+      return false;
+   }
+   return true;
 }
 
 bool ApiBusAdapter::pushFill(bs::message::Envelope& env)
