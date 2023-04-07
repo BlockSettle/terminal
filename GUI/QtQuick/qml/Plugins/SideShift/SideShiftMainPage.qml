@@ -21,8 +21,8 @@ Item {
 
    property var controller
    property bool receive: true
-   property var receiveModel: controller.inputCurrenciesModel
-   property var sendModel: controller.outputCurrenciesModel
+   property var receiveModel: controller !== null ? controller.inputCurrenciesModel : null
+   property var sendModel: controller !== null ? controller.outputCurrenciesModel : null
 
    property alias inputCurrency: inputCombobox.currentText
    property alias outputCurrency: receivingCombobox.currentText
@@ -35,7 +35,7 @@ Item {
       spacing: 20
 
       Text {
-         text: controller.conversionRate
+         text: controller !== null ? controller.conversionRate : ""
          color: "gray"
          font.pixelSize: 14
          font.family: "Roboto"

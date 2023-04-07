@@ -140,7 +140,7 @@ Item {
 
         CustomTableView {
             width: parent.width
-            height: 500
+            height: parent.height - 150
             model: txListByAddrModel
 
             copy_button_column_index: 1

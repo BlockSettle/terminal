@@ -111,14 +111,14 @@ CustomPopup {
 
     Connections {
         target: bsApp
-        onTransactionExported: (text) => {
+        function onTransactionExported(text) {
             exportTransactionSuccessDailog.details_text = qsTr("Transaction successfully exported to %1").arg(text)
         
             exportTransactionSuccessDailog.show()
             exportTransactionSuccessDailog.raise()
             exportTransactionSuccessDailog.requestActivate()
         }
-        onTransactionExportFailed: (text) => {
+        function onTransactionExportFailed(text) {
             exportTransactionFailDialog.header = qsTr("Export transaction failed")
             exportTransactionFailDialog.fail = text
 

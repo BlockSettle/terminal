@@ -25,6 +25,7 @@ Rectangle {
     property alias input_text: input.text
     property alias horizontalAlignment: input.horizontalAlignment
     property alias input_topMargin: input.anchors.topMargin
+    property alias inputHints: input.inputMethodHints
 
     signal textChanged()
     signal tabNavigated()

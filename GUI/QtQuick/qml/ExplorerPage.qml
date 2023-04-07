@@ -140,6 +140,10 @@ Item {
                         }
 
                         function openSearchResult() {
+                            if (expSearchBox.text.length === 0) {
+                                return;
+                            }
+
                             var rc = bsApp.getSearchInputType(expSearchBox.text)
                             if (rc === 0) {
                                 ibFailure.displayMessage(qsTr("Unknown type of search key"))

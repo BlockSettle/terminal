@@ -146,6 +146,14 @@ Rectangle {
 
                         openAddressDetails(address, transactions, balance, comment, asset_type, type, overview_panel.currentWallet)
                     }
+
+                    Connections {
+                        target: addressFilterModel
+                        function onModelReset()
+                        {
+                            tablewView.update()
+                        }
+                    }
                 }
             }
         }

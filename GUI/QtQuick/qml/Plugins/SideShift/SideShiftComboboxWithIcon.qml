@@ -213,6 +213,8 @@ ComboBox {
                     currentIndex: control.highlightedIndex
 
                     ScrollIndicator.vertical: ScrollIndicator { }
+
+                    maximumFlickVelocity: 1000
                 }
             }
         }   
@@ -226,4 +228,3 @@ ComboBox {
         }
     }
 }
-
