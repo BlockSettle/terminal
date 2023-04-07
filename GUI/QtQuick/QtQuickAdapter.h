@@ -180,7 +180,7 @@ public:
    Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash);
    Q_INVOKABLE int changePassword(const QString& walletId, const QString& oldPassword, const QString& newPassword);
    Q_INVOKABLE bool isWalletNameExist(const QString& walletName);
-   Q_INVOKABLE bool isWalletPasswordValid(const QString& walletId, const QString& Password);
+   Q_INVOKABLE bool isWalletPasswordValid(const QString& walletId, const QString& password);
    Q_INVOKABLE bool verifyPasswordIntegrity(const QString& password);
    Q_INVOKABLE int exportWallet(const QString& walletId, const QString & exportDir);
    Q_INVOKABLE int viewWalletSeedAuth(const QString& walletId, const QString& password);
@@ -190,7 +190,8 @@ public:
    Q_INVOKABLE void walletSelected(int);
    Q_INVOKABLE void exportTransaction(const QUrl& path, QTXSignRequest* request);
    Q_INVOKABLE QTXSignRequest* importTransaction(const QUrl& path);
-   void notifyNewTransaction(const bs::TXEntry& tx);
+   Q_INVOKABLE void exportSignedTX(const QUrl& path, QTXSignRequest* request, const QString& password);
+   Q_INVOKABLE bool broadcastSignedTX(const QUrl& path);
 
 signals:
    void walletsListChanged();
@@ -245,6 +246,7 @@ private:
    void setTopBlock(uint32_t);
    void loadPlugins(QQmlApplicationEngine&);
    void saveTransaction(const bs::core::wallet::TXSignRequest&, const std::string& pathName);
+   void notifyNewTransaction(const bs::TXEntry& tx);
 
    void createWallet(bool primary);
    std::string hdWalletIdByIndex(int);
@@ -263,7 +265,7 @@ private:
    bs::message::ProcessingResult processWalletDeleted(const std::string& walletId);
    bs::message::ProcessingResult processWalletSeed(const BlockSettle::Common::SignerMessage_WalletSeed&);
    bs::message::ProcessingResult processUTXOs(const BlockSettle::Common::WalletsMessage_UtxoListResponse&);
-   bs::message::ProcessingResult processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse&);
+   bs::message::ProcessingResult processSignTX(bs::message::SeqId, const BlockSettle::Common::SignerMessage_SignTxResponse&);
    bs::message::ProcessingResult processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived&);
    bs::message::ProcessingResult processZCInvalidated(const BlockSettle::Common::ArmoryMessage_ZCInvalidated&);
    bs::message::ProcessingResult processTransactions(bs::message::SeqId, const BlockSettle::Common::ArmoryMessage_Transactions&);
@@ -331,6 +333,7 @@ private:
    };
    std::map<bs::message::SeqId, TXReq>    txReqs_;
    std::vector<std::string>   txSaveReqs_;
+   std::map<bs::message::SeqId, std::string>          exportTxReqs_;
    std::unordered_map<std::string, QTXSignRequest*>   hwwReady_;
    std::map<bs::message::SeqId, QTxDetails*>          txDetailReqs_;
    std::map<ApplicationSettings::Setting, QVariant>   settingsCache_;

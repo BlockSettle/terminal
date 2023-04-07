@@ -639,7 +639,7 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
       createWallet(true);
       break;
    case SignerMessage::kSignTxResponse:
-      return processSignTX(msg.sign_tx_response());
+      return processSignTX(env.responseId(), msg.sign_tx_response());
    case SignerMessage::kWalletDeleted:
       return processWalletDeleted(msg.wallet_deleted());
    case SignerMessage::kCreatedWallet:
@@ -1862,9 +1862,34 @@ ProcessingResult QtQuickAdapter::processUTXOs(const WalletsMessage_UtxoListRespo
    return ProcessingResult::Success;
 }
 
-ProcessingResult QtQuickAdapter::processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse& response)
+static bool save(const BlockSettle::Common::SignerMessage_SignTxResponse& tx, const std::string& pathName)
+{
+   auto f = fopen(pathName.c_str(), "wb");
+   if (!f) {
+      return false;
+   }
+   const auto& txSer = tx.SerializeAsString();
+   if (fwrite(txSer.data(), 1, txSer.size(), f) != txSer.size()) {
+      fclose(f);
+      SystemFileUtils::rmFile(pathName);
+      return false;
+   }
+   fclose(f);
+   return true;
+}
+
+ProcessingResult QtQuickAdapter::processSignTX(bs::message::SeqId msgId, const BlockSettle::Common::SignerMessage_SignTxResponse& response)
 {
    if (!response.signed_tx().empty()) {
+      const auto& itExport = exportTxReqs_.find(msgId);
+      if (itExport != exportTxReqs_.end()) {
+         if (!save(response, itExport->second)) {
+            logger_->error("[{}] failed to save to {}", __func__, itExport->second);
+            emit failedTx(tr("Signed TX exporting to %1 failed").arg(QString::fromStdString(itExport->second)));
+         }
+         exportTxReqs_.erase(itExport);
+         return ProcessingResult::Success;
+      }
       const auto& signedTX = BinaryData::fromString(response.signed_tx());
       logger_->debug("[{}] signed TX size: {}", __func__, signedTX.getSize());
       ArmoryMessage msg;
@@ -2407,14 +2432,9 @@ void QtQuickAdapter::saveTransaction(const bs::core::wallet::TXSignRequest& txRe
       return;
    }
    const auto& timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-   auto walletId = *txReq.walletIds.cbegin();
-   for (const auto& hdWallet : hdWallets_) {
-      for (const auto& leaf : hdWallet.second.leaves) {
-         if (leaf.first == walletId) {
-            walletId = hdWallet.first;
-            break;
-         }
-      }
+   auto walletId = hdWalletIdByLeafId(*txReq.walletIds.cbegin());
+   if (walletId.empty()) {
+      walletId = *txReq.walletIds.cbegin();
    }
    const std::string filename = "BlockSettle_" + walletId + "_" + std::to_string(timestamp) + "_unsigned.bin";
    const auto& pathName = exportPath + "/" + filename;
@@ -2472,4 +2492,70 @@ QTXSignRequest* QtQuickAdapter::importTransaction(const QUrl& path)
    auto txSignRequest = new QTXSignRequest(logger_, this);
    txSignRequest->setTxSignReq(txReq);
    return txSignRequest;
+}
+
+void QtQuickAdapter::exportSignedTX(const QUrl& path, QTXSignRequest* request
+   , const QString& password)
+{
+   const auto& txSignReq = request->txReq();
+   const auto& timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+   auto walletId = hdWalletIdByLeafId(*txSignReq.walletIds.cbegin());
+   if (walletId.empty()) {
+      walletId = *txSignReq.walletIds.cbegin();
+   }
+   const std::string filename = "BlockSettle_" + walletId + "_" + std::to_string(timestamp) + "_signed.bin";
+   std::string pathName = path.toLocalFile().toStdString() + "/" + filename;
+
+   SignerMessage msg;
+   auto msgReq = msg.mutable_sign_tx_request();
+   //msgReq->set_id(id);
+   *msgReq->mutable_tx_request() = bs::signer::coreTxRequestToPb(txSignReq);
+   msgReq->set_sign_mode((int)SignContainer::TXSignMode::Full);
+   //msgReq->set_keep_dup_recips(keepDupRecips);
+   msgReq->set_passphrase(password.toStdString());
+   const auto msgId = pushRequest(user_, userSigner_, msg.SerializeAsString());
+   exportTxReqs_[msgId] = pathName;
+}
+
+bool QtQuickAdapter::broadcastSignedTX(const QUrl& path)
+{
+   const auto& pathName = path.toLocalFile().toStdString();
+   auto f = fopen(pathName.c_str(), "rb");
+   if (!f) {
+      emit transactionImportFailed(tr("Failed to open %1 for reading")
+         .arg(QString::fromStdString(pathName)));
+      return false;
+   }
+   std::string txSer;
+   char buf[512];
+   size_t rc = 0;
+   while ((rc = fread(buf, 1, sizeof(buf), f)) > 0) {
+      txSer.append(std::string(buf, rc));
+   }
+   if (txSer.empty()) {
+      emit transactionImportFailed(tr("Failed to read from %1")
+         .arg(QString::fromStdString(pathName)));
+      return false;
+   }
+   BlockSettle::Common::SignerMessage_SignTxResponse msgF;
+   if (!msgF.ParseFromString(txSer)) {
+      emit transactionImportFailed(tr("Failed to parse %1 bytes from %2")
+         .arg(txSer.size()).arg(QString::fromStdString(pathName)));
+      return false;
+   }
+   const auto& signedTX = BinaryData::fromString(msgF.signed_tx());
+   logger_->debug("[{}] signed TX size: {}", __func__, signedTX.getSize());
+   if (signedTX.empty()) {
+      emit transactionImportFailed(tr("Invalid TX data from %1")
+         .arg(QString::fromStdString(pathName)));
+      return false;
+   }
+   ArmoryMessage msg;
+   auto msgReq = msg.mutable_tx_push();
+   //msgReq->set_push_id(id);
+   auto msgTx = msgReq->add_txs_to_push();
+   msgTx->set_tx(signedTX.toBinStr());
+   //not adding TX hashes atm
+   pushRequest(user_, userBlockchain_, msg.SerializeAsString());
+   return true;
 }
