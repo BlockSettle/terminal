@@ -174,25 +174,24 @@ CustomPopup {
                             font.pixelSize: 14
                             width: parent.width / 2
                             horizontalAlignment: Text.AlignRight
-                        }
-                        
-                        Image {
-                            id: rename_button
 
-                            x: parent.horizontalCenter - 10
-                            y: wallet_name.top
+                            Image {
+                                id: rename_button
 
-                            source: "qrc:/images/edit_wallet_name.png"
-                            width: 32
-                            height: 16
+                                anchors.left: parent.right
 
-                            horizontalAlignment: Image.AlignHCenter
-                            fillMode: Image.PreserveAspectFit;
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: {
-                                    _stack_view.push(rename_wallet)
-                                    rename_wallet.init()
+                                source: "qrc:/images/edit_wallet_name.png"
+                                width: 32
+                                height: 16
+
+                                horizontalAlignment: Image.AlignHCenter
+                                fillMode: Image.PreserveAspectFit;
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        _stack_view.push(rename_wallet)
+                                        rename_wallet.init()
+                                    }
                                 }
                             }
                         }

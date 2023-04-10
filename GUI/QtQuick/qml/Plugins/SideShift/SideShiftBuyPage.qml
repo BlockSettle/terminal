@@ -21,13 +21,8 @@ Item {
 
    property var controller
    property string inputCurrency
-   property string outputCurrency: "BTC"
-//   property string orderId: "253380c874f87a7a4f70"
-   //property string conversionRate: "1 ETH = 0.06177451 BTC"
-   //property string toAddress: "0x514cD3B3a164A78BA93b881C7b567d19CC6a1843"
-   //property string networkFee: "1.97 USD"
+   property string outputCurrency
    property string receivingAddress
-   //property string creationDate: "2023-03-21 07:48"
 
    Rectangle {
       anchors.fill: parent
@@ -91,24 +86,26 @@ Item {
                color: "lightgray"
                linkColor: "lightgray"
                font.weight: Font.Bold
-               text: "<a href=\"https://sideshift.ai/orders/%1\">%1</a>".arg(controller.orderId)
-               onLinkActivated: Qt.openUrlExternally("https://sideshift.ai/orders/%1".arg(controller.orderId))
+               text: "<a href=\"https://sideshift.ai/orders/%1\">%1</a>".arg(controller !== null ? controller.orderId : "")
+               onLinkActivated: Qt.openUrlExternally("https://sideshift.ai/orders/%1".arg(controller !== null ? controller.orderId : ""))
             }
          }
       }
 
       Text {
          color: "white"
-         text: controller.status
+         text: controller !== null ? controller.status : ""
          topPadding: 40
+         wrapMode: Text.Wrap
          font.pixelSize: 24
          anchors.horizontalCenter: parent.horizontalCenter
+         width: parent.width
       }
 
       Text {
          topPadding: 15
          color: "lightgray"
-         text: controller.conversionRate
+         text: controller !== null ? controller.conversionRate : ""
          anchors.horizontalCenter: parent.horizontalCenter
       }
 
@@ -139,7 +136,7 @@ Item {
                   anchors.verticalCenter: parent.verticalCenter
                }
                Text {
-                  text: controller.minAmount
+                  text: controller !== null ? controller.minAmount : ""
                   color: "white"
                   font.weight: Font.Bold
                   font.pixelSize: 18
@@ -161,7 +158,7 @@ Item {
                   anchors.verticalCenter: parent.verticalCenter
                }
                Text {
-                  text: controller.maxAmount
+                  text: controller !== null ? controller.maxAmount : ""
                   color: "white"
                   font.weight: Font.Bold
                   font.pixelSize: 18
@@ -194,7 +191,7 @@ Item {
                TextInput {
                   id: toAddress
                   anchors.fill: parent
-                  text: controller.depositAddress
+                  text: controller !== null ? controller.depositAddress : ""
                   color: "white"
                   clip: true
                   font.weight: Font.Bold
@@ -235,7 +232,7 @@ Item {
                anchors.horizontalCenter: parent.horizontalCenter
 
                Image {
-                   source: "image://QR/" + controller.depositAddress
+                   source: controller !== null ? ( "image://QR/" + controller.depositAddress) : ""
                    sourceSize.width: 180
                    sourceSize.height: 180
                    width: 180
@@ -252,7 +249,7 @@ Item {
       }
 
       Text {
-         text: qsTr("ESTIMATED NETWORK FEES: ") + controller.networkFee
+         text: qsTr("ESTIMATED NETWORK FEES: ") + (controller !== null ? controller.networkFee : "")
          color: "white"
          anchors.horizontalCenter: parent.horizontalCenter
       }
@@ -297,7 +294,7 @@ Item {
             
             Text {
                color: "lightgray"
-               text: controller.creationDate
+               text: controller !== null ? controller.creationDate : ""
                font.weight: Font.Bold
                anchors.right: parent.right
             }

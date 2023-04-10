@@ -79,8 +79,6 @@ Rectangle {
                description: description_role
                icon_source: icon_role
                onCardClicked: {
-                   console.log("onCardClicked")
-                   //plugin_popup = component.createObject(plugin_item)
                    plugin_popup.reset()
                    plugin_popup.controller = pluginsListModel.getPlugin(index)
                    plugin_popup.controller.init()
@@ -94,14 +92,16 @@ Rectangle {
 
             Component.onCompleted: {
                component = Qt.createComponent(path_role);
-               if (component.status === Component.Ready) {
-                   finishCreation();
-               }
-               else if (component.status === Component.Error) {
-                  console.log(component.errorString())
-               }
-               else {
-                   component.statusChanged.connect(finishCreation);
+               if (component !== null) {
+                  if (component.status === Component.Ready) {
+                      finishCreation();
+                  }
+                  else if (component.status === Component.Error) {
+                     console.log(component.errorString())
+                  }
+                  else {
+                      component.statusChanged.connect(finishCreation);
+                  }
                }
             }
          }

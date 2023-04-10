@@ -49,7 +49,7 @@ ColumnLayout  {
         Layout.topMargin: 16
         Layout.preferredHeight : 16
 
-        text: qsTr("Are you sure you want to delete the \"%1\" server?")
+        text: qsTr("Are you sure you want to delete the \"%1\" server?").arg(server_index)
         .arg(armoryServersModel.data(armoryServersModel.index(server_index, 0), ArmoryServersModel.NameRole))
 
         color: BSStyle.titanWhiteColor

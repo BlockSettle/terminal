@@ -33,7 +33,6 @@ CustomTextInput {
            amount_input.input_text = "0"
        }
 
-
         amount_input.input_text = amount_input.input_text.replace(",", ".")
 
         var indexOfDot = amount_input.input_text.indexOf(".")
@@ -86,7 +85,7 @@ CustomTextInput {
         enabled: (tempRequest != null)
 
         function click_enter() {
-            if (tempRequest != null) {
+            if (tempRequest != null && tempRequest.maxAmount.length > 0) {
                 amount_input.input_text = (parseFloat(tempRequest.maxAmount) - (balanceSubtractor !== null ? balanceSubtractor : 0.0)).toFixed(8)
             }
         }
