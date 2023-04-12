@@ -22,9 +22,6 @@ Rectangle {
 
     signal openSend (string txId, bool isRBF, bool isCPFP)
     signal openExplorer (string txId)
-
-    width: 1200
-    height: 788
     color: "transparent"
 
     signal requestWalletProperties()
@@ -33,15 +30,15 @@ Rectangle {
     signal openAddressDetails(var address, var transactions, var balance, var comment, var asset_type, var type, var wallet)
 
     Column {
-        anchors.leftMargin: 18
-        anchors.rightMargin: 18
+        anchors.leftMargin: BSSizes.applyScale(18)
+        anchors.rightMargin: BSSizes.applyScale(18)
         anchors.fill: parent
         spacing: 0
 
         OverviewControls.OverviewWalletBar {
             id: overview_panel
             width: parent.width
-            height: 100
+            height: BSSizes.applyScale(100)
 
             onRequestWalletProperties: control.requestWalletProperties()
             onCreateNewWallet: control.createNewWallet()
@@ -49,33 +46,33 @@ Rectangle {
         }
 
         Rectangle {
-            height: (parent.height - overview_panel.height) * 0.65
+            height: (parent.height - overview_panel.height) * 0.6
             width: parent.width
             anchors.horizontalCenter: parent.horizontalCenter
 
-            radius: 16
+            radius: BSSizes.applyScale(16)
             color: BSStyle.addressesPanelBackgroundColor
             border.width: 1
             border.color: BSStyle.tableSeparatorColor
 
             Column {
                 anchors.fill: parent
-                anchors.margins: 20
-                spacing: 10
+                anchors.margins: BSSizes.applyScale(20)
+                spacing: BSSizes.applyScale(10)
 
                 Rectangle {
                     id: tableMenu
                     color: "transparent"
                     width: parent.width
-                    height: 30
+                    height: BSSizes.applyScale(30)
 
                     Text {
                         text: qsTr("Addresses")
                         color: BSStyle.textColor
-                        font.pixelSize: 20
+                        font.pixelSize: BSSizes.applyScale(20)
                         font.family: "Roboto"
                         font.weight: Font.Bold
-                        font.letterSpacing: 0.35
+                        font.letterSpacing: BSSizes.applyScale(0.35)
                     }
 
                     Row {
@@ -83,7 +80,7 @@ Rectangle {
                         spacing: 6
 
                         CustomSmallButton {
-                            width: 85
+                            width: BSSizes.applyScale(85)
                             text: qsTr("Hide used")
                             onClicked: {
                                 addressFilterModel.hideUsed = !addressFilterModel.hideUsed
@@ -93,7 +90,7 @@ Rectangle {
                         }
 
                         CustomSmallButton {
-                            width: 90
+                            width: BSSizes.applyScale(90)
                             text: qsTr("Hide internal")
                             onClicked: {
                                 addressFilterModel.hideInternal = !addressFilterModel.hideInternal
@@ -103,7 +100,7 @@ Rectangle {
                         }
 
                         CustomSmallButton {
-                            width: 90
+                            width: BSSizes.applyScale(90)
                             text: qsTr("Hide external")
                             onClicked: {
                                 addressFilterModel.hideExternal = !addressFilterModel.hideExternal
@@ -113,7 +110,7 @@ Rectangle {
                         }
 
                         CustomSmallButton {
-                            width: 85
+                            width: BSSizes.applyScale(85)
                             text: qsTr("Hide empty")
                             onClicked: {
                                 addressFilterModel.hideEmpty = !addressFilterModel.hideEmpty
@@ -131,8 +128,8 @@ Rectangle {
 
                     model: addressFilterModel
                     copy_button_column_index: 0
-                    text_header_size: 12
-                    cell_text_size: 13
+                    text_header_size: BSSizes.applyScale(12)
+                    cell_text_size: BSSizes.applyScale(13)
 
                     columnWidths: [0.35, 0.15, 0.1, 0.4]
                     onCopyRequested: bsApp.copyAddressToClipboard(id)
@@ -161,17 +158,17 @@ Rectangle {
         Rectangle {
             color: "transparent"
             width: parent.width
-            height: (parent.height - overview_panel.height) * 0.35
+            height: (parent.height - overview_panel.height) * 0.4
 
             Column {
                 anchors.fill: parent
-                anchors.topMargin: 20
-                spacing: 10
+                anchors.topMargin: BSSizes.applyScale(20)
+                spacing: BSSizes.applyScale(10)
 
                 Text {
                     text: qsTr("Non-settled Transactions")
                     color: BSStyle.textColor
-                    font.pixelSize: 20
+                    font.pixelSize: BSSizes.applyScale(20)
                     font.family: "Roboto"
                     font.weight: Font.Bold
                     font.letterSpacing: 0.35
@@ -179,7 +176,7 @@ Rectangle {
 
                 CustomTransactionsTableView {
                     width: parent.width
-                    height: parent.height - 40
+                    height: parent.height - BSSizes.applyScale(40)
 
                     model: PendingTransactionFilterModel {
                         id: pendingTransactionModel

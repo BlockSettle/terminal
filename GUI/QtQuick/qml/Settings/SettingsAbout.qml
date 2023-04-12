@@ -22,7 +22,7 @@ ColumnLayout  {
         id: about_terminal
 
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 10
+        Layout.topMargin: BSSizes.applyScale(10)
 
         //aliases
         icon_source: "qrc:/images/about_terminal.svg"
@@ -37,7 +37,7 @@ ColumnLayout  {
         id: about_hello
 
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 10
+        Layout.topMargin: BSSizes.applyScale(10)
 
         //aliases
         icon_source: "qrc:/images/about_hello.svg"
@@ -52,7 +52,7 @@ ColumnLayout  {
         id: about_twitter
 
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 10
+        Layout.topMargin: BSSizes.applyScale(10)
 
         //aliases
         icon_source: "qrc:/images/about_twitter.svg"
@@ -67,7 +67,7 @@ ColumnLayout  {
         id: about_telegram
 
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 10
+        Layout.topMargin: BSSizes.applyScale(10)
 
         //aliases
         icon_source: "qrc:/images/about_telegram.svg"
@@ -82,7 +82,7 @@ ColumnLayout  {
         id: add_github
 
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 10
+        Layout.topMargin: BSSizes.applyScale(10)
 
         //aliases
         icon_source: "qrc:/images/about_github.svg"
@@ -101,7 +101,7 @@ ColumnLayout  {
     CustomLabel {
         id: version
 
-        Layout.bottomMargin: 20
+        Layout.bottomMargin: BSSizes.applyScale(20)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         text: qsTr("version 1.000.244.999")

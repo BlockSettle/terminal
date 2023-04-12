@@ -11,14 +11,12 @@
 import QtQuick 2.15
 import wallet.balance 1.0
 
+import "../BsStyles"
 import "." as OverviewControls
 import "../StyledControls" as Controls
 
 Rectangle {
     id: control
-
-    width: 1200
-    height: 100
     color: "transparent"
 
     property alias currentWallet: wallet_selection_combobox.currentValue
@@ -29,21 +27,21 @@ Rectangle {
 
     Row {
         anchors.fill:parent
-        spacing: 20
+        spacing: BSSizes.applyScale(20)
 
         Controls.CustomComboBox {
             id: wallet_selection_combobox
             anchors.verticalCenter: parent.verticalCenter
             objectName: "walletsComboBox"
 
-            width: 263
-            height: 53
+            width: BSSizes.applyScale(263)
+            height: BSSizes.applyScale(53)
 
             model: walletBalances.rowCount > 0 ? walletBalances : [{ "name": qsTr("Create wallet")}]
             textRole: "name"
             valueRole: "name"
 
-            fontSize: 16
+            fontSize: BSSizes.applyScale(16)
 
             onCurrentIndexChanged: {
                 if (walletBalances.rowCount !== 0) {
@@ -92,7 +90,7 @@ Rectangle {
     }
 
     Row {
-        spacing: 10
+        spacing: BSSizes.applyScale(10)
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: parent.right
 

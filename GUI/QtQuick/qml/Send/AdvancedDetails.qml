@@ -17,8 +17,8 @@ ColumnLayout  {
     signal sig_simple()
     signal sig_select_inputs()
 
-    height: 723
-    width: 1132
+    height: BSSizes.applyWindowHeightScale(723)
+    width: BSSizes.applyWindowWidthScale(1132)
     spacing: 0
 
     property var tempRequest: null
@@ -43,17 +43,17 @@ ColumnLayout  {
     RowLayout {
 
         Layout.fillWidth: true
-        Layout.preferredHeight : 34
+        Layout.preferredHeight : BSSizes.applyScale(34)
 
         Label {
             Layout.fillWidth: true
-            Layout.preferredHeight : 34
+            Layout.preferredHeight : BSSizes.applyScale(34)
         }
 
         CustomTitleLabel {
             id: title
 
-            Layout.rightMargin: 378
+            Layout.rightMargin: BSSizes.applyScale(378)
             Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
 
             text: (!isRBF && !isCPFP) ? qsTr("Send Bitcoin")
@@ -63,12 +63,12 @@ ColumnLayout  {
         Button {
             id: simple_but
 
-            Layout.rightMargin: 60
+            Layout.rightMargin: BSSizes.applyScale(60)
             Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
 
             activeFocusOnTab: false
 
-            font.pixelSize: 13
+            font.pixelSize: BSSizes.applyScale(13)
             font.family: "Roboto"
             font.weight: Font.Normal
             palette.buttonText: BSStyle.buttonsHeaderTextColor
@@ -77,15 +77,15 @@ ColumnLayout  {
 
             icon.color: "transparent"
             icon.source: "qrc:/images/advanced_icon.png"
-            icon.width: 16
-            icon.height: 16
+            icon.width: BSSizes.applyScale(16)
+            icon.height: BSSizes.applyScale(16)
 
             background: Rectangle {
-                implicitWidth: 100
-                implicitHeight: 34
+                implicitWidth: BSSizes.applyScale(100)
+                implicitHeight: BSSizes.applyScale(34)
                 color: "transparent"
 
-                radius: 14
+                radius: BSSizes.applyScale(14)
 
                 border.color: BSStyle.defaultBorderColor
                 border.width: 1
@@ -103,22 +103,22 @@ ColumnLayout  {
         id: rects_row
 
         Layout.fillWidth: true
-        Layout.preferredHeight : 580
-        Layout.topMargin: 15
+        Layout.preferredHeight : BSSizes.applyScale(580)
+        Layout.topMargin: BSSizes.applyScale(15)
 
-        spacing: 12
+        spacing: BSSizes.applyScale(12)
 
         Rectangle {
             id: inputs_rect
 
-            Layout.leftMargin: 24
+            Layout.leftMargin: BSSizes.applyScale(24)
             Layout.alignment: Qt.AlignLeft | Qt.AlingVCenter
 
-            width: 536
-            height: 565
+            width: BSSizes.applyScale(536)
+            height: BSSizes.applyScale(565)
             color: "transparent"
 
-            radius: 16
+            radius: BSSizes.applyScale(16)
 
             border.color: BSStyle.defaultBorderColor
             border.width: 1
@@ -133,22 +133,22 @@ ColumnLayout  {
                 RowLayout {
 
                     Layout.fillWidth: true
-                    Layout.topMargin: 16
-                    Layout.preferredHeight: 19
+                    Layout.topMargin: BSSizes.applyScale(16)
+                    Layout.preferredHeight: BSSizes.applyScale(19)
                     Layout.alignment: Qt.AlignTop
 
                     Label {
                         id: inputs_title
 
-                        Layout.leftMargin: 16
+                        Layout.leftMargin: BSSizes.applyScale(16)
                         Layout.fillHeight: true
                         Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
 
                         text: qsTr("Inputs")
 
-                        height : 19
+                        height : BSSizes.applyScale(19)
                         color: "#E2E7FF"
-                        font.pixelSize: 16
+                        font.pixelSize: BSSizes.applyScale(16)
                         font.family: "Roboto"
                         font.weight: Font.Medium
                     }
@@ -162,17 +162,17 @@ ColumnLayout  {
 
                         activeFocusOnTab: false
 
-                        implicitHeight: 18
+                        implicitHeight: BSSizes.applyScale(18)
 
                         Layout.alignment: Qt.AlignRight | Qt.AlignTop
-                        Layout.rightMargin: 16
-                        Layout.topMargin: 0
+                        Layout.rightMargin: BSSizes.applyScale(16)
+                        Layout.topMargin: BSSizes.applyScale(0)
 
                         text: qsTr("RBF")
                         enabled: !isRBF
 
-                        spacing: 6
-                        font.pixelSize: 13
+                        spacing: BSSizes.applyScale(6)
+                        font.pixelSize: BSSizes.applyScale(13)
                         font.family: "Roboto"
                         font.weight: Font.Normal
                     }
@@ -183,13 +183,13 @@ ColumnLayout  {
 
                     id: from_wallet_combo
 
-                    Layout.leftMargin: 16
-                    Layout.topMargin: 8
+                    Layout.leftMargin: BSSizes.applyScale(16)
+                    Layout.topMargin: BSSizes.applyScale(8)
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
                     visible: !isRBF && !isCPFP
 
-                    width: 504
-                    height: 70
+                    width: BSSizes.applyScale(504)
+                    height: BSSizes.applyScale(70)
 
                     onActivated: {
                         walletBalances.selectedWallet = currentIndex
@@ -227,12 +227,12 @@ ColumnLayout  {
 
                     id: fee_suggest_combo
 
-                    Layout.leftMargin: 16
-                    Layout.topMargin: 10
+                    Layout.leftMargin: BSSizes.applyScale(16)
+                    Layout.topMargin: BSSizes.applyScale(10)
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
-                    width: 504
-                    height: 70
+                    width: BSSizes.applyScale(504)
+                    height: BSSizes.applyScale(70)
 
                     function change_index_handler()
                     {
@@ -253,7 +253,7 @@ ColumnLayout  {
                     height: 1
 
                     Layout.fillWidth: true
-                    Layout.topMargin: (!isRBF && !isCPFP) ? 196 : 274
+                    Layout.topMargin: BSSizes.applyScale((!isRBF && !isCPFP) ? 196 : 274)
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
                     color: BSStyle.defaultGreyColor
@@ -265,8 +265,8 @@ ColumnLayout  {
 
                     Layout.fillWidth: true
                     Layout.fillHeight : true
-                    Layout.leftMargin: 16
-                    Layout.rightMargin: 16
+                    Layout.leftMargin: BSSizes.applyScale(16)
+                    Layout.rightMargin: BSSizes.applyScale(16)
 
                     model: isRBF ? tx.ownInputs : isCPFP ? tx.ownOutputs : txInputsSelectedModel
                     columnWidths: [0.7, 0.1, 0, 0.2]
@@ -281,7 +281,7 @@ ColumnLayout  {
                         Row {
                             id: cmpnt_sel_inputs_row
 
-                            spacing: 12
+                            spacing: BSSizes.applyScale(12)
 
                             Text {
                                 id: internal_text
@@ -312,7 +312,7 @@ ColumnLayout  {
 
                                 font.family: "Roboto"
                                 font.weight: Font.DemiBold
-                                font.pixelSize: 12
+                                font.pixelSize: BSSizes.applyScale(12)
 
                                 anchors.verticalCenter: parent.verticalCenter
 
@@ -326,12 +326,12 @@ ColumnLayout  {
                                 }
 
                                 background: Rectangle {
-                                    implicitWidth: 84
-                                    implicitHeight: 25
+                                    implicitWidth: BSSizes.applyScale(84)
+                                    implicitHeight: BSSizes.applyScale(25)
                                     color: "transparent"
                                     border.color: "#45A6FF"
-                                    border.width: 1
-                                    radius: 8
+                                    border.width: BSSizes.applyScale(1)
+                                    radius: BSSizes.applyScale(8)
                                 }
 
                                 onClicked: layout.sig_select_inputs()
@@ -363,17 +363,17 @@ ColumnLayout  {
         Rectangle {
             id: outputs_rect
 
-            Layout.rightMargin: 24
+            Layout.rightMargin: BSSizes.applyScale(24)
             Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
 
-            width: 536
-            height: 565
+            width: BSSizes.applyScale(536)
+            height: BSSizes.applyScale(565)
             color: "transparent"
 
-            radius: 16
+            radius: BSSizes.applyScale(16)
 
             border.color: BSStyle.defaultBorderColor
-            border.width: 1
+            border.width: BSSizes.applyScale(1)
 
             ColumnLayout  {
                 id: outputs_layout
@@ -385,15 +385,15 @@ ColumnLayout  {
                 Label {
                     id: outputs_title
 
-                    Layout.leftMargin: 16
-                    Layout.topMargin: 16
+                    Layout.leftMargin: BSSizes.applyScale(16)
+                    Layout.topMargin: BSSizes.applyScale(16)
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
                     text: qsTr("Outputs")
 
-                    height : 19
+                    height : BSSizes.applyScale(19)
                     color: "#E2E7FF"
-                    font.pixelSize: 16
+                    font.pixelSize: BSSizes.applyScale(16)
                     font.family: "Roboto"
                     font.weight: Font.Medium
                 }
@@ -402,12 +402,12 @@ ColumnLayout  {
 
                     id: rec_addr_input
 
-                    Layout.leftMargin: 16
-                    Layout.topMargin: 16
+                    Layout.leftMargin: BSSizes.applyScale(16)
+                    Layout.topMargin: BSSizes.applyScale(16)
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
-                    width: 504
-                    height: 70
+                    width: BSSizes.applyScale(504)
+                    height: BSSizes.applyScale(70)
 
                     wallets_current_index: from_wallet_combo.currentIndex
 
@@ -432,12 +432,12 @@ ColumnLayout  {
 
                     id: amount_input
 
-                    Layout.leftMargin: 16
-                    Layout.topMargin: 10
+                    Layout.leftMargin: BSSizes.applyScale(16)
+                    Layout.topMargin: BSSizes.applyScale(10)
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
-                    width: 504
-                    height: 70
+                    width: BSSizes.applyScale(504)
+                    height: BSSizes.applyScale(70)
 
                     onEnterPressed: {
                         if (!processEnterKey()) {
@@ -458,12 +458,12 @@ ColumnLayout  {
 
                     id: comment_input
 
-                    Layout.leftMargin: 16
-                    Layout.topMargin: 10
+                    Layout.leftMargin: BSSizes.applyScale(16)
+                    Layout.topMargin: BSSizes.applyScale(10)
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
-                    Layout.preferredHeight : 90
-                    Layout.preferredWidth: 504
+                    Layout.preferredHeight : BSSizes.applyScale(90)
+                    Layout.preferredWidth: BSSizes.applyScale(504)
 
                     //aliases
                     title_text: qsTr("Comment")
@@ -476,8 +476,8 @@ ColumnLayout  {
                     id: include_output_but
                     text: qsTr("Include Output")
 
-                    Layout.leftMargin: 16
-                    Layout.topMargin: 16
+                    Layout.leftMargin: BSSizes.applyScale(16)
+                    Layout.topMargin: BSSizes.applyScale(16)
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
                     activeFocusOnTab: include_output_but.enabled
@@ -488,7 +488,7 @@ ColumnLayout  {
                     icon.source: "qrc:/images/plus.svg"
                     icon.color: include_output_but.enabled ? "#45A6FF" : BSStyle.buttonsDisabledTextColor
 
-                    width: 504
+                    width: BSSizes.applyScale(504)
 
                     function click_enter() {
                         if (!include_output_but.enabled) return
@@ -510,7 +510,7 @@ ColumnLayout  {
                     height: 1
 
                     Layout.fillWidth: true
-                    Layout.topMargin: 30
+                    Layout.topMargin: BSSizes.applyScale(30)
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
                     color: BSStyle.defaultGreyColor
@@ -521,8 +521,8 @@ ColumnLayout  {
 
                     Layout.fillWidth: true
                     Layout.fillHeight : true
-                    Layout.leftMargin: 16
-                    Layout.rightMargin: 16
+                    Layout.leftMargin: BSSizes.applyScale(16)
+                    Layout.rightMargin: BSSizes.applyScale(16)
 
                     model: txOutputsModel
                     columnWidths: [0.744, 0.20, 0.056]
@@ -569,9 +569,9 @@ ColumnLayout  {
         enabled: (txOutputsModel.rowCount > 1)
         preferred: isRBF || is_ready_broadcast
 
-        width: 1084
+        width: BSSizes.applyScale(1084)
 
-        Layout.bottomMargin: 30
+        Layout.bottomMargin: BSSizes.applyScale(30)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         text: bsApp.walletProperitesVM.isWatchingOnly ? qsTr("Export transaction") : qsTr("Continue")

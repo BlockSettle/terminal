@@ -16,8 +16,8 @@ import "." as OverviewControls
 Rectangle {
     id: control
 
-    width: 520
-    height: 100
+    width: BSSizes.applyScale(520)
+    height: BSSizes.applyScale(100)
     color: "transparent"
 
     property alias confirmed_balance_value: confirmed_balance.label_value
@@ -25,15 +25,15 @@ Rectangle {
     property alias total_balance_value: total_balance.label_value
     property alias used_addresses_value: used_addresses.label_value
 
-    property int spacer_height: 36
+    property int spacer_height: BSSizes.applyScale(36)
 
     Row {
         anchors.fill: parent
-        spacing: 10
+        spacing: BSSizes.applyScale(10)
 
         OverviewControls.BaseBalanceLabel {
             id: confirmed_balance
-            width: 130
+            width: BSSizes.applyScale(130)
             label_text: qsTr("Confirmed balance")
             value_suffix: qsTr('BTC')
             anchors.verticalCenter: parent.verticalCenter
@@ -48,7 +48,7 @@ Rectangle {
 
         OverviewControls.BaseBalanceLabel {
             id: unconfirmed_balance
-            width: 130
+            width: BSSizes.applyScale(130)
             label_text: qsTr("Unconfirmed balance")
             value_suffix: qsTr('BTC')
             anchors.verticalCenter: parent.verticalCenter
@@ -63,7 +63,7 @@ Rectangle {
 
         OverviewControls.BaseBalanceLabel {
             id: total_balance
-            width: 130
+            width: BSSizes.applyScale(130)
             label_text: qsTr("Total balance")
             value_suffix: qsTr('BTC')
             anchors.verticalCenter: parent.verticalCenter

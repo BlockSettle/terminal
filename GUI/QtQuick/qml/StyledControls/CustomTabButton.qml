@@ -16,12 +16,12 @@ import "../BsStyles"
 TabButton {
     id: control
 
-    width: 94
+    width: BSSizes.applyScale(94)
     height: parent.height
 
     focusPolicy: Qt.NoFocus
 
-    font.pixelSize: 10
+    font.pixelSize: BSSizes.applyScale(10)
     font.family: "Roboto"
     font.weight: Font.Medium
     font.letterSpacing: 0.2
@@ -32,13 +32,13 @@ TabButton {
     contentItem: ColumnLayout {
         width: control.width
         height: control.height
-        spacing : 4
+        spacing : BSSizes.applyScale(4)
 
         Image {
             id: image_
 
-            width: 24
-            height: 24
+            width: BSSizes.applyScale(24)
+            height: BSSizes.applyScale(24)
             Layout.alignment : Qt.AlignTop | Qt.AlignHCenter
 
             source: control.checked? selectedIcon_ :nonSelectedIcon_

@@ -15,8 +15,8 @@ Window  {
     flags: Qt.WindowCloseButtonHint | Qt.FramelessWindowHint | Qt.Dialog
     modality: Qt.WindowModal
 
-    height: 375
-    width: 380
+    height: BSSizes.applyScale(375)
+    width: BSSizes.applyScale(380)
 
     color: "transparent"
 
@@ -28,24 +28,24 @@ Window  {
 
         color: "#191E2A"
         opacity: 1
-        radius: 16
+        radius: BSSizes.applyScale(16)
 
         anchors.fill: parent
 
         border.color : BSStyle.defaultBorderColor
-        border.width : 1
+        border.width : BSSizes.applyScale(1)
 
         Image {
             id: close_button
 
             anchors.top: parent.top
-            anchors.topMargin: 20
+            anchors.topMargin: BSSizes.applyScale(20)
             anchors.right: parent.right
-            anchors.rightMargin: 22
+            anchors.rightMargin: BSSizes.applyScale(22)
 
             source: "qrc:/images/close_button.svg"
-            width: 16
-            height: 16
+            width: BSSizes.applyScale(16)
+            height: BSSizes.applyScale(16)
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
@@ -60,7 +60,7 @@ Window  {
             anchors.fill: parent
     
             CustomTitleLabel {
-                Layout.topMargin: 36
+                Layout.topMargin: BSSizes.applyScale(36)
                 id: title
                 Layout.alignment: Qt.AlignCenter
                 Layout.preferredHeight : title.height
@@ -69,24 +69,24 @@ Window  {
 
 
             Image {
-                Layout.topMargin: 24
+                Layout.topMargin: BSSizes.applyScale(24)
                 Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
-                Layout.preferredHeight : 120
-                Layout.preferredWidth : 120
+                Layout.preferredHeight : BSSizes.applyScale(120)
+                Layout.preferredWidth : BSSizes.applyScale(120)
 
                 source: "qrc:/images/try_icon.png"
-                width: 120
-                height: 120
+                width: BSSizes.applyScale(120)
+                height: BSSizes.applyScale(120)
             }
 
 
             Label {
                 id: details
 
-                Layout.topMargin: 16
+                Layout.topMargin: BSSizes.applyScale(16)
                 Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
                 text: qsTr("The password you entered is incorrect")
-                font.pixelSize: 14
+                font.pixelSize: BSSizes.applyScale(14)
                 font.family: "Roboto"
                 font.weight: Font.Normal
                 color: "#E2E7FF"
@@ -101,9 +101,9 @@ Window  {
                 id: finish_but
                 text: qsTr("Try again")
 
-                width: 186
+                width: BSSizes.applyScale(186)
 
-                Layout.bottomMargin: 40
+                Layout.bottomMargin: BSSizes.applyScale(40)
                 Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
                 preferred: true

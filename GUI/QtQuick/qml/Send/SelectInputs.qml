@@ -20,11 +20,11 @@ ColumnLayout  {
 
     id: layout
 
-    property int text_header_size: 11
-    property int cell_text_size: 12
+    property int text_header_size: BSSizes.applyScale(11)
+    property int cell_text_size: BSSizes.applyScale(12)
 
-    height: 662
-    width: 1132
+    height: BSSizes.applyScale(662)
+    width: BSSizes.applyScale(1132)
     spacing: 0
 
     CustomTitleLabel {
@@ -37,14 +37,14 @@ ColumnLayout  {
     Rectangle {
         id: addresses_rect
 
-        Layout.topMargin: 24
+        Layout.topMargin: BSSizes.applyScale(24)
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
 
-        width: 1084
-        height: 434
+        width: BSSizes.applyScale(1084)
+        height: BSSizes.applyScale(434)
         color: "transparent"
 
-        radius: 16
+        radius: BSSizes.applyScale(16)
 
         border.color: BSStyle.defaultBorderColor
         border.width: 1
@@ -52,8 +52,8 @@ ColumnLayout  {
         CustomTableView {
             id: inputs_table
 
-            width: parent.width - 32
-            height: parent.height - 12
+            width: parent.width - BSSizes.applyScale(32)
+            height: parent.height - BSSizes.applyScale(12)
             anchors.centerIn: parent
 
             model: txInputsModel
@@ -88,7 +88,7 @@ ColumnLayout  {
                         id: internal_text
 
                         anchors.left: checkbox_address.right
-                        anchors.leftMargin: 8
+                        anchors.leftMargin: BSSizes.applyScale(8)
                         anchors.verticalCenter: parent.verticalCenter
 
                         visible: model_column !== delete_button_column_index
@@ -119,13 +119,13 @@ ColumnLayout  {
                         visible: model_is_expandable
 
                         anchors.left: internal_text.left
-                        anchors.leftMargin: 10 + internal_text.contentWidth
+                        anchors.leftMargin: BSSizes.applyScale(10) + internal_text.contentWidth
                         anchors.verticalCenter: parent.verticalCenter
 
-                        width: 9
-                        height: 6
-                        sourceSize.width: 9
-                        sourceSize.height: 6
+                        width: BSSizes.applyScale(9)
+                        height: BSSizes.applyScale(6)
+                        sourceSize.width: BSSizes.applyScale(9)
+                        sourceSize.height: BSSizes.applyScale(6)
 
                         source: model_expanded? "qrc:/images/expanded.svg" : "qrc:/images/collapsed.svg"
 
@@ -165,15 +165,15 @@ ColumnLayout  {
     Label {
         id: inputs_details_title
 
-        Layout.leftMargin: 26
-        Layout.topMargin: 24
+        Layout.leftMargin: BSSizes.applyScale(26)
+        Layout.topMargin: BSSizes.applyScale(24)
         Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
         text: qsTr("Inputs details")
 
-        height : 19
+        height : BSSizes.applyScale(19)
         color: "#E2E7FF"
-        font.pixelSize: 16
+        font.pixelSize: BSSizes.applyScale(16)
         font.family: "Roboto"
         font.weight: Font.Medium
     }
@@ -181,29 +181,29 @@ ColumnLayout  {
     Rectangle {
         id: total_rect
 
-        Layout.topMargin: 16
+        Layout.topMargin: BSSizes.applyScale(16)
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
 
-        width: 1084
-        height: 82
+        width: BSSizes.applyScale(1084)
+        height: BSSizes.applyScale(82)
         color: "#32394F"
 
-        radius: 14
+        radius: BSSizes.applyScale(14)
 
         Label {
 
             id: trans_inputs_title
 
             anchors.top: parent.top
-            anchors.topMargin: 18
+            anchors.topMargin: BSSizes.applyScale(18)
             anchors.left: parent.left
-            anchors.leftMargin: 20
+            anchors.leftMargin: BSSizes.applyScale(20)
 
             text: qsTr("Transaction Inputs:")
 
             color: "#45A6FF"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -213,15 +213,15 @@ ColumnLayout  {
             id: total_amount_title
 
             anchors.top: trans_inputs_title.bottom
-            anchors.topMargin: 14
+            anchors.topMargin: BSSizes.applyScale(14)
             anchors.left: parent.left
-            anchors.leftMargin: 20
+            anchors.leftMargin: BSSizes.applyScale(20)
 
             text: qsTr("Total Amount:")
 
             color: "#45A6FF"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -231,15 +231,15 @@ ColumnLayout  {
             id: trans_inputs
 
             anchors.top: parent.top
-            anchors.topMargin: 18
+            anchors.topMargin: BSSizes.applyScale(18)
             anchors.right: parent.right
-            anchors.rightMargin: 20
+            anchors.rightMargin: BSSizes.applyScale(20)
 
             text: txInputsModel.nbTx
 
             color: "#FFFFFF"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -249,15 +249,15 @@ ColumnLayout  {
             id: total_amount
 
             anchors.top: trans_inputs.bottom
-            anchors.topMargin: 18
+            anchors.topMargin: BSSizes.applyScale(18)
             anchors.right: parent.right
-            anchors.rightMargin: 20
+            anchors.rightMargin: BSSizes.applyScale(20)
 
             text: txInputsModel.balance
 
             color: "#FFFFFF"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }

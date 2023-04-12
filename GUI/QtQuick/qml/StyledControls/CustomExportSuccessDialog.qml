@@ -16,25 +16,25 @@ Window  {
     flags: Qt.WindowCloseButtonHint | Qt.FramelessWindowHint | Qt.Dialog
     modality: Qt.WindowModal
 
-    height: 400
-    width: 580
+    height: BSSizes.applyScale(400)
+    width: BSSizes.applyScale(580)
 
     color: "transparent"
 
-    x: mainWindow.x + (mainWindow.width - width)/2
-    y: mainWindow.y + (mainWindow.height - height)/2
+    x: mainWindow.x + (mainWindow.width - width) / 2
+    y: mainWindow.y + (mainWindow.height - height) / 2
 
     Rectangle {
         id: rect
 
         color: "#191E2A"
         opacity: 1
-        radius: 16
+        radius: BSSizes.applyScale(16)
 
         anchors.fill: parent
 
         border.color : BSStyle.defaultBorderColor
-        border.width : 1
+        border.width : BSSizes.applyScale(1)
 
         ColumnLayout  {
             id: layout
@@ -43,7 +43,7 @@ Window  {
 
             CustomTitleLabel {
                 id: title
-                Layout.topMargin: 36
+                Layout.topMargin: BSSizes.applyScale(36)
                 Layout.alignment: Qt.AlignCenter
                 Layout.preferredHeight : title.height
                 text: qsTr("Success")
@@ -53,28 +53,28 @@ Window  {
             Image {
                 id: wallet_icon
 
-                Layout.topMargin: 5
+                Layout.topMargin: BSSizes.applyScale(5)
                 Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
-                Layout.preferredHeight : 120
-                Layout.preferredWidth : 120
+                Layout.preferredHeight : BSSizes.applyScale(120)
+                Layout.preferredWidth : BSSizes.applyScale(120)
 
                 source: "qrc:/images/success.png"
-                width: 120
-                height: 120
+                width: BSSizes.applyScale(120)
+                height: BSSizes.applyScale(120)
             }
 
             Label {
 
                 id: export_type
 
-                Layout.leftMargin: 24
-                Layout.rightMargin: 24
-                Layout.topMargin: 8
-                Layout.preferredHeight: 16
+                Layout.leftMargin: BSSizes.applyScale(24)
+                Layout.rightMargin: BSSizes.applyScale(24)
+                Layout.topMargin: BSSizes.applyScale(8)
+                Layout.preferredHeight: BSSizes.applyScale(16)
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
-                font.pixelSize: 14
+                font.pixelSize: BSSizes.applyScale(14)
                 font.family: "Roboto"
                 font.weight: Font.Normal
 
@@ -86,14 +86,14 @@ Window  {
                 
                 id: file_path
 
-                Layout.leftMargin: 24
-                Layout.rightMargin: 24
-                Layout.topMargin: 4
-                Layout.preferredHeight: 16
+                Layout.leftMargin: BSSizes.applyScale(24)
+                Layout.rightMargin: BSSizes.applyScale(24)
+                Layout.topMargin: BSSizes.applyScale(4)
+                Layout.preferredHeight: BSSizes.applyScale(16)
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignHCenter | Qt.AlingTop
 
-                font.pixelSize: 14
+                font.pixelSize: BSSizes.applyScale(14)
                 font.family: "Roboto"
                 font.weight: Font.Normal
 
@@ -104,9 +104,9 @@ Window  {
             CustomButton {
                 id: finish_but
 
-                width: 532
+                width: BSSizes.applyScale(532)
 
-                Layout.bottomMargin: 40
+                Layout.bottomMargin: BSSizes.applyScale(40)
                 Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
                 text: qsTr("Finish")

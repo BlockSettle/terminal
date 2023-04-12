@@ -13,10 +13,10 @@ import QtQuick.Controls 2.3
 import "../BsStyles"
 
 CustomTextInput {
-    height: 46
+    height: BSSizes.applyScale(46)
     horizontalAlignment : TextInput.AlignHCenter
-    input_topMargin: 13
-    title_leftMargin: 10
-    title_topMargin: 8
-    title_font_size: 12
+    input_topMargin: BSSizes.applyScale(13)
+    title_leftMargin: BSSizes.applyScale(10)
+    title_topMargin: BSSizes.applyScale(8)
+    title_font_size: BSSizes.applyScale(12)
 }

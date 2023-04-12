@@ -19,21 +19,21 @@ Rectangle {
     property alias title_text: title.text
     property string placeholder_text
     property bool hide_placeholder_when_activefocus: true
-    property alias title_leftMargin: title.anchors.leftMargin
-    property alias title_topMargin: title.anchors.topMargin
-    property alias title_font_size: title.font.pixelSize
+    property int title_leftMargin:  BSSizes.applyScale(16)
+    property int title_topMargin: BSSizes.applyScale(16)
+    property int title_font_size: BSSizes.applyScale(13)
 
     //aliases - input
     property alias input_text: input.text
     property alias horizontalAlignment: input.horizontalAlignment
-    property alias input_topMargin: input.anchors.topMargin
+    property int input_topMargin: BSSizes.applyScale(35)
     property alias input_validator: input.validator
 
     property bool isValid: true
     property bool isPassword: false
     property bool isHiddenText: false
 
-    property int input_right_margin: 16
+    property int input_right_margin: BSSizes.applyScale(16)
 
     property var completer: null
 
@@ -49,20 +49,20 @@ Rectangle {
 
     color: "#020817"
     opacity: 1
-    radius: 14
+    radius: BSSizes.applyScale(14)
 
     border.color: isValid ? (input.activeFocus ? "#45A6FF" : BSStyle.defaultBorderColor) : "#EB6060"
-    border.width: 1
+    border.width: BSSizes.applyScale(1)
 
     Label {
         id: title
 
         anchors.top: rect.top
-        anchors.topMargin: 16
+        anchors.topMargin: rect.title_topMargin
         anchors.left: rect.left
-        anchors.leftMargin: 16
+        anchors.leftMargin: rect.title_leftMargin
 
-        font.pixelSize: 13
+        font.pixelSize: rect.title_font_size
         font.family: "Roboto"
         font.weight: Font.Normal
 
@@ -78,15 +78,15 @@ Rectangle {
         clip: true
 
         anchors.top: rect.top
-        anchors.topMargin: 35
+        anchors.topMargin: rect.input_topMargin
         anchors.left: rect.left
-        anchors.leftMargin: 16
-        width: rect.width - 16 - input_right_margin
-        height: 19
+        anchors.leftMargin: rect.title_leftMargin
+        width: rect.width - rect.title_leftMargin - rect.input_right_margin
+        height: BSSizes.applyScale(19)
 
         echoMode: isHiddenText? TextInput.Password : TextInput.Normal
 
-        font.pixelSize: 16
+        font.pixelSize: BSSizes.applyScale(16)
         font.family: "Roboto"
         font.weight: Font.Normal
 
@@ -97,7 +97,7 @@ Rectangle {
             color: "#7A88B0"
             visible: !input.text && (!hide_placeholder_when_activefocus || !input.activeFocus)
 
-            font.pixelSize: 16
+            font.pixelSize: BSSizes.applyScale(16)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -141,14 +141,14 @@ Rectangle {
         visible: isPassword
 
         anchors.top: rect.top
-        anchors.topMargin: 23
+        anchors.topMargin: BSSizes.applyScale(23)
         anchors.right: rect.right
-        anchors.rightMargin: 23
+        anchors.rightMargin: BSSizes.applyScale(23)
 
         source: isHiddenText? "qrc:/images/Eye_icon _unvisible.png" : "qrc:/images/Eye_icon _visible.png"
         z: 1
-        width: 24
-        height: 24
+        width: BSSizes.applyScale(24)
+        height: BSSizes.applyScale(24)
 
         MouseArea {
             anchors.fill: parent

@@ -16,8 +16,8 @@ ColumnLayout  {
     signal sig_continue(signature: var)
     signal sig_advanced()
 
-    height: 554
-    width: 600
+    height: BSSizes.applyWindowHeightScale(554)
+    width: BSSizes.applyWindowWidthScale(600)
     spacing: 0
 
     property var tempRequest: null
@@ -25,17 +25,17 @@ ColumnLayout  {
     RowLayout {
 
         Layout.fillWidth: true
-        Layout.preferredHeight : 34
+        Layout.preferredHeight : BSSizes.applyScale(34)
 
         Label {
             Layout.fillWidth: true
-            Layout.preferredHeight : 34
+            Layout.preferredHeight : BSSizes.applyScale(34)
         }
 
         CustomTitleLabel {
             id: title
 
-            Layout.rightMargin: 104
+            Layout.rightMargin: BSSizes.applyScale(104)
             Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
 
             text: qsTr("Send Bitcoin")
@@ -44,12 +44,12 @@ ColumnLayout  {
         Button {
             id: advanced_but
 
-            Layout.rightMargin: 60
+            Layout.rightMargin: BSSizes.applyScale(60)
             Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
 
             activeFocusOnTab: false
 
-            font.pixelSize: 13
+            font.pixelSize: BSSizes.applyScale(13)
             font.family: "Roboto"
             font.weight: Font.Normal
             palette.buttonText: "#7A88B0"
@@ -59,18 +59,18 @@ ColumnLayout  {
 
             icon.color: "transparent"
             icon.source: "qrc:/images/advanced_icon.png"
-            icon.width: 16
-            icon.height: 16
+            icon.width: BSSizes.applyScale(16)
+            icon.height: BSSizes.applyScale(16)
 
             background: Rectangle {
-                implicitWidth: 116
-                implicitHeight: 34
+                implicitWidth: BSSizes.applyScale(116)
+                implicitHeight: BSSizes.applyScale(34)
                 color: "transparent"
 
-                radius: 14
+                radius: BSSizes.applyScale(14)
 
                 border.color: BSStyle.defaultBorderColor
-                border.width: 1
+                border.width: BSSizes.applyScale(1)
 
             }
 
@@ -85,9 +85,9 @@ ColumnLayout  {
         id: rec_addr_input
 
         Layout.alignment: Qt.AlignCenter
-        Layout.preferredHeight : 70
-        Layout.preferredWidth: 552
-        Layout.topMargin: 23
+        Layout.preferredHeight : BSSizes.applyScale(70)
+        Layout.preferredWidth: BSSizes.applyScale(552)
+        Layout.topMargin: BSSizes.applyScale(23)
 
         wallets_current_index: from_wallet_combo.currentIndex
 
@@ -106,9 +106,9 @@ ColumnLayout  {
         id: amount_input
 
         Layout.alignment: Qt.AlignCenter
-        Layout.preferredHeight : 70
-        Layout.preferredWidth: 552
-        Layout.topMargin: 10
+        Layout.preferredHeight : BSSizes.applyScale(70)
+        Layout.preferredWidth: BSSizes.applyScale(552)
+        Layout.topMargin: BSSizes.applyScale(10)
 
         onEnterPressed: {
             continue_but.click_enter()
@@ -121,17 +121,17 @@ ColumnLayout  {
     RowLayout {
 
         Layout.fillWidth: true
-        Layout.preferredHeight : 70
-        Layout.topMargin: 10
+        Layout.preferredHeight : BSSizes.applyScale(70)
+        Layout.topMargin: BSSizes.applyScale(10)
 
         WalletsComboBox {
 
             id: from_wallet_combo
 
-            Layout.leftMargin: 24
+            Layout.leftMargin: BSSizes.applyScale(24)
             Layout.alignment: Qt.AlignLeft | Qt.AlingVCenter
 
-            width: 271
+            width: BSSizes.applyScale(271)
 
             onActivated: (index_act) => {
                 walletBalances.selectedWallet = currentIndex
@@ -150,17 +150,17 @@ ColumnLayout  {
 
         Label {
             Layout.fillWidth: true
-            Layout.preferredHeight: 70
+            Layout.preferredHeight: BSSizes.applyScale(70)
         }
 
         FeeSuggestComboBox {
 
             id: fee_suggest_combo
 
-            Layout.rightMargin: 24
+            Layout.rightMargin: BSSizes.applyScale(24)
             Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
 
-            width: 271
+            width: BSSizes.applyScale(271)
         }
     }
 
@@ -169,9 +169,9 @@ ColumnLayout  {
         id: comment_input
 
         Layout.alignment: Qt.AlignCenter
-        Layout.preferredHeight : 90
-        Layout.preferredWidth: 552
-        Layout.topMargin: 10
+        Layout.preferredHeight : BSSizes.applyScale(90)
+        Layout.preferredWidth: BSSizes.applyScale(552)
+        Layout.topMargin: BSSizes.applyScale(10)
 
         //aliases
         title_text: qsTr("Comment")
@@ -209,9 +209,9 @@ ColumnLayout  {
 
         activeFocusOnTab: continue_but.enabled
 
-        width: 552
+        width: BSSizes.applyScale(552)
 
-        Layout.bottomMargin: 40
+        Layout.bottomMargin: BSSizes.applyScale(40)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         text: bsApp.walletProperitesVM.isWatchingOnly ? qsTr("Export transaction") : qsTr("Continue")

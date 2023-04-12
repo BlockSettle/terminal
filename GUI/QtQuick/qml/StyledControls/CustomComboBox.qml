@@ -19,7 +19,7 @@ ComboBox {
 
     property alias title_text: title.text
     property alias details_text: details.text
-    property int fontSize: 16
+    property int fontSize: BSSizes.applyScale(16)
     property color fontColor: "#FFFFFF"
 
     property alias input_accept_input: input.acceptableInput
@@ -31,10 +31,10 @@ ComboBox {
     activeFocusOnTab: true
     focusPolicy: Qt.TabFocus
 
-    leftPadding: 16
-    rightPadding: 36
-    topPadding: 16
-    bottomPadding: 16
+    leftPadding: BSSizes.applyScale(16)
+    rightPadding: BSSizes.applyScale(36)
+    topPadding: BSSizes.applyScale(16)
+    bottomPadding: BSSizes.applyScale(16)
 
     contentItem: Rectangle {
 
@@ -51,7 +51,7 @@ ComboBox {
             anchors.left: parent.left
             anchors.leftMargin: 0
 
-            font.pixelSize: 13
+            font.pixelSize: BSSizes.applyScale(13)
             font.family: "Roboto"
             font.weight: Font.Normal
 
@@ -62,11 +62,11 @@ ComboBox {
             id: details
 
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 1
+            anchors.bottomMargin: BSSizes.applyScale(1)
             anchors.right: parent.right
             anchors.rightMargin: 0
 
-            font.pixelSize: 13
+            font.pixelSize: BSSizes.applyScale(13)
             font.family: "Roboto"
             font.weight: Font.Normal
 
@@ -83,8 +83,8 @@ ComboBox {
             anchors.left: parent.left
             anchors.leftMargin: 0
 
-            width: details.text.length ? parent.width - details.width - 16 : parent.width
-            height: 19
+            width: details.text.length ? parent.width - details.width - BSSizes.applyScale(16) : parent.width
+            height: BSSizes.applyScale(19)
 
             font.pixelSize: control.fontSize
             font.family: "Roboto"
@@ -112,10 +112,10 @@ ComboBox {
 
         id: canvas
 
-        x: control.width - width - 17
+        x: control.width - width - BSSizes.applyScale(17)
         y: control.topPadding + (control.availableHeight - height) / 2
-        width: 9
-        height: 6
+        width: BSSizes.applyScale(9)
+        height: BSSizes.applyScale(6)
 
         contextType: "2d"
 
@@ -144,7 +144,7 @@ ComboBox {
 
         color: "#020817"
         opacity: 1
-        radius: 14
+        radius: BSSizes.applyScale(14)
 
         border.color: control.popup.visible ? BSStyle.comboBoxPopupedBorderColor :
                       (control.hovered ? BSStyle.comboBoxHoveredBorderColor :
@@ -159,12 +159,12 @@ ComboBox {
 
         id: menuItem
 
-        width: control.width - 12
-        height: 27
+        width: control.width - BSSizes.applyScale(12)
+        height: BSSizes.applyScale(27)
 
-        leftPadding: 6
-        topPadding: 4
-        bottomPadding: 4
+        leftPadding: BSSizes.applyScale(6)
+        topPadding: BSSizes.applyScale(4)
+        bottomPadding: BSSizes.applyScale(4)
 
         contentItem: Text {
 
@@ -186,16 +186,16 @@ ComboBox {
         background: Rectangle {
             color: menuItem.highlighted ? BSStyle.comboBoxItemHighlightedColor : "transparent"
             opacity: menuItem.highlighted ? 0.2 : 1
-            radius: 14
+            radius: BSSizes.applyScale(14)
         }
     }
 
     popup: Popup {
         id: _popup
 
-        y: control.height - 1
+        y: control.height - BSSizes.applyScale(1)
         width: control.width
-        padding: 6
+        padding: BSSizes.applyScale(6)
 
         contentItem: ListView {
             id: popup_item
@@ -211,7 +211,7 @@ ComboBox {
 
         background: Rectangle {
             color: "#FFFFFF"
-            radius: 14
+            radius: BSSizes.applyScale(14)
         }
     }
 }

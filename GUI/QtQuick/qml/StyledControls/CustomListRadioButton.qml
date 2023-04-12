@@ -31,13 +31,13 @@ CustomListItem {
 
         anchors.verticalCenter: root.verticalCenter
         anchors.left: root.left
-        anchors.leftMargin: 21
+        anchors.leftMargin: BSSizes.applyScale(21)
 
         leftPadding: 0
         spacing: 0
 
-        width: 15
-        height: 15
+        width: BSSizes.applyScale(15)
+        height: BSSizes.applyScale(15)
 
         onClicked : root.sig_radio_clicked()
     }

@@ -34,7 +34,7 @@ Rectangle {
 
     color: "#020817"
     opacity: 1
-    radius: 14
+    radius: BSSizes.applyScale(14)
 
     border.color: input.activeFocus ? "#45A6FF" : BSStyle.defaultBorderColor
     border.width: 1
@@ -43,11 +43,11 @@ Rectangle {
         id: title
 
         anchors.top: rect.top
-        anchors.topMargin: 16
+        anchors.topMargin: BSSizes.applyScale(16)
         anchors.left: rect.left
-        anchors.leftMargin: 16
+        anchors.leftMargin: BSSizes.applyScale(16)
 
-        font.pixelSize: 13
+        font.pixelSize: BSSizes.applyScale(13)
         font.family: "Roboto"
         font.weight: Font.Normal
 
@@ -63,13 +63,13 @@ Rectangle {
         clip: true
 
         anchors.top: rect.top
-        anchors.topMargin: 35
+        anchors.topMargin: BSSizes.applyScale(35)
         anchors.left: rect.left
         anchors.leftMargin: title.anchors.leftMargin
-        width: rect.width - 2*title.anchors.leftMargin
-        height: 39
+        width: rect.width - 2 * title.anchors.leftMargin
+        height: BSSizes.applyScale(39)
 
-        font.pixelSize: 16
+        font.pixelSize: BSSizes.applyScale(16)
         font.family: "Roboto"
         font.weight: Font.Normal
 

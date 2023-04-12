@@ -18,22 +18,22 @@ Rectangle {
     property alias serial_num: serial_number.text
     property alias seed_text: seed.text
 
-    width: 170
-    height: 46
+    width: BSSizes.applyScale(170)
+    height: BSSizes.applyScale(46)
 
     color: "#020817"
     opacity: 1
-    radius: 14
+    radius: BSSizes.applyScale(14)
 
     Label {
         id: serial_number
 
         anchors.top: rect.top
-        anchors.topMargin: 8
+        anchors.topMargin: BSSizes.applyScale(8)
         anchors.left: rect.left
-        anchors.leftMargin: 10
+        anchors.leftMargin: BSSizes.applyScale(10)
 
-        font.pixelSize: 12
+        font.pixelSize: BSSizes.applyScale(12)
         font.family: "Roboto"
         font.weight: Font.Normal
 
@@ -45,7 +45,7 @@ Rectangle {
 
         anchors.centerIn : rect
 
-        font.pixelSize: 16
+        font.pixelSize: BSSizes.applyScale(16)
         font.family: "Roboto"
         font.weight: Font.Normal
 

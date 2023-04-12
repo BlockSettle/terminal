@@ -32,7 +32,7 @@ BSWalletHandlerDialog {
             property string text : root.title
             clip: true
             color: "transparent"
-            height: 40
+            height: BSSizes.applyScale(40)
 
             Layout.fillWidth: true
 
@@ -43,19 +43,19 @@ BSWalletHandlerDialog {
 
             Text {
                 anchors.fill: rect
-                leftPadding: 10
-                rightPadding: 10
+                leftPadding: BSSizes.applyScale(10)
+                rightPadding: BSSizes.applyScale(10)
 
                 text: rect.text
                 font.capitalization: Font.AllUppercase
                 color: BSStyle.textColor
-                font.pixelSize: 11
+                font.pixelSize: BSSizes.applyScale(11)
                 verticalAlignment: Text.AlignVCenter
             }
 
             Button {
                 id: btnExpand
-                width: 100
+                width: BSSizes.applyScale(100)
                 anchors.right: rect.right
                 anchors.top: rect.top
                 anchors.bottom: rect.bottom
@@ -63,7 +63,7 @@ BSWalletHandlerDialog {
                 contentItem: Text {
                     text: headerButtonText
                     color: BSStyle.textColor
-                    font.pixelSize: 11
+                    font.pixelSize: BSSizes.applyScale(11)
                     font.underline: true
                     horizontalAlignment: Text.AlignRight
                     verticalAlignment: Text.AlignVCenter
@@ -71,8 +71,8 @@ BSWalletHandlerDialog {
                 }
 
                 background: Rectangle {
-                    implicitWidth: 70
-                    implicitHeight: 35
+                    implicitWidth: BSSizes.applyScale(70)
+                    implicitHeight: BSSizes.applyScale(35)
                     color: "transparent"
                 }
 

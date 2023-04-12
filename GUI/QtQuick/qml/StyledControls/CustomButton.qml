@@ -16,7 +16,7 @@ Button {
 
     id: control
 
-    height: 50
+    height: BSSizes.applyScale(50)
 
     property bool preferred: false
 
@@ -25,7 +25,7 @@ Button {
 
     activeFocusOnTab: control.enabled
 
-    font.pixelSize: 16
+    font.pixelSize: BSSizes.applyScale(16)
     font.family: "Roboto"
     font.weight: Font.Bold
     palette.buttonText: enabled ? BSStyle.buttonsTextColor : BSStyle.buttonsDisabledTextColor
@@ -33,8 +33,8 @@ Button {
 
 
     icon.color: "transparent"
-    icon.width: 24
-    icon.height: 24
+    icon.width: BSSizes.applyScale(24)
+    icon.height: BSSizes.applyScale(24)
 
     background: Rectangle {
 
@@ -50,7 +50,7 @@ Button {
                 (control.down ? BSStyle.buttonsStandardPressedColor :
                 (control.hovered ? BSStyle.buttonsStandardHoveredColor : BSStyle.buttonsStandardColor)))
 
-        radius: 14
+        radius: BSSizes.applyScale(14)
 
         border.color: preferred ? BSStyle.buttonsPreferredBorderColor : BSStyle.buttonsStandardBorderColor
         border.width: control.activeFocus? 1 : 0

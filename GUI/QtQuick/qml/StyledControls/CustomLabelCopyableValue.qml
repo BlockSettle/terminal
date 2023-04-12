@@ -21,11 +21,11 @@ Label {
     property alias mouseArea: mouseArea
     property string textForCopy
 
-    font.pixelSize: 11
+    font.pixelSize: BSSizes.applyScale(11)
     font.family: "Roboto"
     color: "white"
     wrapMode: Text.WordWrap
-    padding: 5
+    padding: BSSizes.applyScale(5)
     onLinkActivated: Qt.openUrlExternally(link)
 
     MouseArea {

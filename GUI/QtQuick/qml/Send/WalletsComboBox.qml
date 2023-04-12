@@ -20,7 +20,7 @@ CustomComboBox {
 
     id: from_wallet_combo
 
-    height: 70
+    height: BSSizes.applyScale(70)
 
     model: walletBalances
     currentIndex: walletBalances.selectedWallet

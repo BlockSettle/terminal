@@ -28,6 +28,7 @@
 #include "Wallets/SignContainer.h"
 #include "viewmodels/WalletPropertiesVM.h"
 #include "SettingsController.h"
+#include "ScaleController.h"
 
 #include "common.pb.h"
 
@@ -347,6 +348,7 @@ private:
    std::unique_ptr<AddressFilterModel> addressFilterModel_;
    std::unique_ptr<TransactionFilterModel> transactionFilterModel_;
    std::unique_ptr<PluginsListModel> pluginsListModel_;
+   std::unique_ptr<ScaleController> scaleController_;
 };
 
 #endif	// QT_QUICK_ADAPTER_H

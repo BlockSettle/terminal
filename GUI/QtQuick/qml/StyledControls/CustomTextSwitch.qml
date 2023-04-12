@@ -18,33 +18,33 @@ Rectangle {
     property bool isFullChoosed: true
     signal sig_full_changed (bool isFull)
 
-    width: 530
-    height: 40
+    width: BSSizes.applyScale(530)
+    height: BSSizes.applyScale(40)
 
     color: "transparent"
-    radius: 37
+    radius: BSSizes.applyScale(37)
     border.color : BSStyle.defaultBorderColor
-    border.width : 1
+    border.width : BSSizes.applyScale(1)
 
     Rectangle {
         id: left_rect
 
-        width: 260
-        height: 34
+        width: BSSizes.applyScale(260)
+        height: BSSizes.applyScale(34)
 
         anchors.top: root.top
-        anchors.topMargin: 3
+        anchors.topMargin: BSSizes.applyScale(3)
         anchors.left: root.left
-        anchors.leftMargin: 3
+        anchors.leftMargin: BSSizes.applyScale(3)
 
         color: isFullChoosed? "#32394F": "transparent"
-        radius: 37
+        radius: BSSizes.applyScale(37)
 
         Label {
             id: left_label
 
-            width: 260
-            height: 15
+            width: BSSizes.applyScale(260)
+            height: BSSizes.applyScale(15)
 
             anchors.centerIn  : left_rect
             horizontalAlignment :  Text.AlignHCenter
@@ -53,7 +53,7 @@ Rectangle {
 
             color: isFullChoosed? "#E2E7FF": "#7A88B0"
 
-            font.pixelSize: 13
+            font.pixelSize: BSSizes.applyScale(13)
             font.family: "Roboto"
             font.weight: Font.Medium
         }
@@ -70,22 +70,22 @@ Rectangle {
     Rectangle {
         id: right_rect
 
-        width: 260
-        height: 34
+        width: BSSizes.applyScale(260)
+        height: BSSizes.applyScale(34)
 
         anchors.top: root.top
-        anchors.topMargin: 3
+        anchors.topMargin: BSSizes.applyScale(3)
         anchors.right: root.right
-        anchors.rightMargin: 3
+        anchors.rightMargin: BSSizes.applyScale(3)
 
         color: !isFullChoosed? "#32394F": "transparent"
-        radius: 37
+        radius: BSSizes.applyScale(37)
 
         Label {
             id: right_label
 
-            width: 260
-            height: 15
+            width: BSSizes.applyScale(260)
+            height: BSSizes.applyScale(15)
 
             anchors.centerIn  : right_rect
             horizontalAlignment :  Text.AlignHCenter
@@ -94,7 +94,7 @@ Rectangle {
 
             color: !isFullChoosed? "#E2E7FF": "#7A88B0"
 
-            font.pixelSize: 13
+            font.pixelSize: BSSizes.applyScale(13)
             font.family: "Roboto"
             font.weight: Font.Medium
         }

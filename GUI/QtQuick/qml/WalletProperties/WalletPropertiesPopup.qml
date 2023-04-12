@@ -18,8 +18,8 @@ CustomPopup {
     property var wallet_properties_vm
     property bool walletSeedRequested: false
 
-    x: mainWindow.x + (mainWindow.width - width)/2
-    y: mainWindow.y + (mainWindow.height - height)/2
+    x: mainWindow.x + (mainWindow.width - width) / 2
+    y: mainWindow.y + (mainWindow.height - height) / 2
 
     RenameWallet {
         id: rename_wallet
@@ -128,14 +128,14 @@ CustomPopup {
 
     Rectangle {
         id: properties
-        height: 548
-        width: 580
+        height: BSSizes.applyScale(548)
+        width: BSSizes.applyScale(580)
         color: "transparent"
 
         Column {
-            spacing: 40
-            width: parent.width - 48
-            height: parent.height - 48
+            spacing: BSSizes.applyScale(40)
+            width: parent.width - BSSizes.applyScale(48)
+            height: parent.height - BSSizes.applyScale(48)
             anchors.centerIn: parent
 
 
@@ -143,16 +143,16 @@ CustomPopup {
                 text: qsTr("Wallet properties")
                 color: BSStyle.textColor
                 font.family: "Roboto"
-                font.pixelSize: 20
+                font.pixelSize: BSSizes.applyScale(20)
                 anchors.horizontalCenter: parent.horizontalCenter
             }
 
             Row {
-                width: parent.width - 75
-                spacing: 37
+                width: parent.width - BSSizes.applyScale(75)
+                spacing: BSSizes.applyScale(37)
 
                 Column {
-                    spacing: 8
+                    spacing: BSSizes.applyScale(8)
                     width: parent.width / 2
                     height: parent.height
 
@@ -163,7 +163,7 @@ CustomPopup {
                             text: qsTr("Wallet name")
                             color: BSStyle.titleTextColor
                             font.family: "Roboto"
-                            font.pixelSize: 14
+                            font.pixelSize: BSSizes.applyScale(14)
                             width: parent.width / 2
                         }
                         Text {
@@ -171,7 +171,7 @@ CustomPopup {
                             text: wallet_properties_vm.walletName
                             color: BSStyle.textColor
                             font.family: "Roboto"
-                            font.pixelSize: 14
+                            font.pixelSize: BSSizes.applyScale(14)
                             width: parent.width / 2
                             horizontalAlignment: Text.AlignRight
 
@@ -181,8 +181,8 @@ CustomPopup {
                                 anchors.left: parent.right
 
                                 source: "qrc:/images/edit_wallet_name.png"
-                                width: 32
-                                height: 16
+                                width: BSSizes.applyScale(32)
+                                height: BSSizes.applyScale(16)
 
                                 horizontalAlignment: Image.AlignHCenter
                                 fillMode: Image.PreserveAspectFit;
@@ -205,14 +205,14 @@ CustomPopup {
                             text: qsTr("Wallet type")
                             color: BSStyle.titleTextColor
                             font.family: "Roboto"
-                            font.pixelSize: 14
+                            font.pixelSize: BSSizes.applyScale(14)
                             width: parent.width / 2
                         }
                         Text {
                             text: wallet_properties_vm.walletType
                             color: BSStyle.textColor
                             font.family: "Roboto"
-                            font.pixelSize: 14
+                            font.pixelSize: BSSizes.applyScale(14)
                             width: parent.width / 2
                             horizontalAlignment: Text.AlignRight
                         }
@@ -225,14 +225,14 @@ CustomPopup {
                             text: qsTr("Wallet ID")
                             color: BSStyle.titleTextColor
                             font.family: "Roboto"
-                            font.pixelSize: 14
+                            font.pixelSize: BSSizes.applyScale(14)
                             width: parent.width / 2
                         }
                         Text {
                             text: wallet_properties_vm.walletId
                             color: BSStyle.textColor
                             font.family: "Roboto"
-                            font.pixelSize: 14
+                            font.pixelSize: BSSizes.applyScale(14)
                             width: parent.width / 2
                             horizontalAlignment: Text.AlignRight
                         }
@@ -260,14 +260,14 @@ CustomPopup {
                 }
 
                 Rectangle {
-                    width: 1
-                    height: 80
+                    width: BSSizes.applyScale(1)
+                    height: BSSizes.applyScale(80)
                     color: BSStyle.tableSeparatorColor
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
                 Column {
-                    spacing: 8
+                    spacing: BSSizes.applyScale(8)
                     width: parent.width / 2
                     height: parent.height
 
@@ -278,14 +278,14 @@ CustomPopup {
                             text: qsTr("Generated addresses")
                             color: BSStyle.titleTextColor
                             font.family: "Roboto"
-                            font.pixelSize: 14
+                            font.pixelSize: BSSizes.applyScale(14)
                             width: parent.width / 2
                         }
                         Text {
                             text: wallet_properties_vm.walletGeneratedAddresses
                             color: BSStyle.textColor
                             font.family: "Roboto"
-                            font.pixelSize: 14
+                            font.pixelSize: BSSizes.applyScale(14)
                             width: parent.width / 2
                             horizontalAlignment: Text.AlignRight
                         }
@@ -298,14 +298,14 @@ CustomPopup {
                             text: qsTr("Used addresses")
                             color: BSStyle.titleTextColor
                             font.family: "Roboto"
-                            font.pixelSize: 14
+                            font.pixelSize: BSSizes.applyScale(14)
                             width: parent.width / 2
                         }
                         Text {
                             text: wallet_properties_vm.walletUsedAddresses
                             color: BSStyle.textColor
                             font.family: "Roboto"
-                            font.pixelSize: 14
+                            font.pixelSize: BSSizes.applyScale(14)
                             width: parent.width / 2
                             horizontalAlignment: Text.AlignRight
                         }
@@ -318,14 +318,14 @@ CustomPopup {
                             text: qsTr("Available UTXOs")
                             color: BSStyle.titleTextColor
                             font.family: "Roboto"
-                            font.pixelSize: 14
+                            font.pixelSize: BSSizes.applyScale(14)
                             width: parent.width / 2
                         }
                         Text {
                             text: wallet_properties_vm.walletAvailableUtxo
                             color: BSStyle.textColor
                             font.family: "Roboto"
-                            font.pixelSize: 14
+                            font.pixelSize: BSSizes.applyScale(14)
                             width: parent.width / 2
                             horizontalAlignment: Text.AlignRight
                         }
@@ -337,7 +337,7 @@ CustomPopup {
                 spacing: 10
                 width: parent.width
                 height: parent.height * 0.6
-                anchors.margins: 24
+                anchors.margins: BSSizes.applyScale(24)
 
                 CustomListItem {
                     width: parent.width

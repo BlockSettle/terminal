@@ -11,8 +11,8 @@ ColumnLayout {
 
     signal sig_success()
 
-    height: 548
-    width: 580
+    height: BSSizes.applyScale(548)
+    width: BSSizes.applyScale(580)
 
     spacing: 0
 
@@ -44,13 +44,13 @@ ColumnLayout {
         id: password
 
         Layout.alignment: Qt.AlignCenter
-        Layout.preferredHeight : 70
-        Layout.preferredWidth: 532
-        Layout.topMargin: 10
+        Layout.preferredHeight : BSSizes.applyScale(70)
+        Layout.preferredWidth: BSSizes.applyScale(532)
+        Layout.topMargin: BSSizes.applyScale(10)
 
-        input_topMargin: 35
-        title_leftMargin: 16
-        title_topMargin: 16
+        input_topMargin: BSSizes.applyScale(35)
+        title_leftMargin: BSSizes.applyScale(16)
+        title_topMargin: BSSizes.applyScale(16)
         activeFocusOnTab: true
 
         title_text: qsTr("Password")
@@ -92,13 +92,13 @@ ColumnLayout {
         id: new_password
 
         Layout.alignment: Qt.AlignCenter
-        Layout.preferredHeight : 70
-        Layout.preferredWidth: 532
-        Layout.topMargin: 10
+        Layout.preferredHeight : BSSizes.applyScale(70)
+        Layout.preferredWidth: BSSizes.applyScale(532)
+        Layout.topMargin: BSSizes.applyScale(10)
 
-        input_topMargin: 35
-        title_leftMargin: 16
-        title_topMargin: 16
+        input_topMargin: BSSizes.applyScale(35)
+        title_leftMargin: BSSizes.applyScale(16)
+        title_topMargin: BSSizes.applyScale(16)
         activeFocusOnTab: true
 
         title_text: qsTr("New Password")
@@ -150,13 +150,13 @@ ColumnLayout {
         id: confirm_password
 
         Layout.alignment: Qt.AlignCenter
-        Layout.preferredHeight : 70
-        Layout.preferredWidth: 532
-        Layout.topMargin: 10
+        Layout.preferredHeight : BSSizes.applyScale(70)
+        Layout.preferredWidth: BSSizes.applyScale(532)
+        Layout.topMargin: BSSizes.applyScale(10)
 
-        input_topMargin: 35
-        title_leftMargin: 16
-        title_topMargin: 16
+        input_topMargin: BSSizes.applyScale(35)
+        title_leftMargin: BSSizes.applyScale(16)
+        title_topMargin: BSSizes.applyScale(16)
 
         title_text: qsTr("Confirm Password")
 
@@ -199,10 +199,10 @@ ColumnLayout {
         text: qsTr("Save")
         preferred: true
 
-        Layout.bottomMargin: 40
+        Layout.bottomMargin: BSSizes.applyScale(40)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
-        width: 530
+        width: BSSizes.applyScale(530)
         enabled: (password.input_text !== "")
                  && (new_password.input_text !== "")
                  && (confirm_password.input_text !== "")

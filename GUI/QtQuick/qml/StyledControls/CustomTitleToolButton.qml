@@ -20,11 +20,11 @@ ToolButton {
     property bool _isSelected: false
 
     Layout.fillHeight: true
-    implicitWidth: 110
+    implicitWidth: BSSizes.applyScale(110)
 
     hoverEnabled: true
 
-    font.pixelSize: 12
+    font.pixelSize: BSSizes.applyScale(12)
     font.family: "Roboto"
     font.weight: Font.Normal
     palette.buttonText: !enabled ? BSStyle.buttonsDisabledTextColor :
@@ -32,8 +32,8 @@ ToolButton {
                         (_isSelected ? BSStyle.selectedColor : BSStyle.titleTextColor))
 
     icon.color: palette.buttonText
-    icon.width: 16
-    icon.height: 16
+    icon.width: BSSizes.applyScale(16)
+    icon.height: BSSizes.applyScale(16)
 
     background: Rectangle {
         anchors.fill: parent
@@ -48,7 +48,7 @@ ToolButton {
             anchors.rightMargin: -border.width
             anchors.topMargin:  -border.width
             anchors.bottomMargin:  -border.width
-            border.width: 1
+            border.width: BSSizes.applyScale(1)
             border.color: BSStyle.defaultBorderColor
         }
     }

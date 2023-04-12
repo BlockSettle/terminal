@@ -19,7 +19,6 @@
         <file>qml/ExplorerEmpty.qml</file>
         <file>qml/ExplorerAddress.qml</file>
         <file>qml/ExplorerTX.qml</file>
-        <file>qml/ImportSeedPhrase.qml</file>
         <file>qml/VerifyTX.qml</file>
         <file>qml/InfoBanner.qml</file>
         <file>qml/InfoBannerComponent.qml</file>
@@ -43,6 +42,7 @@
         <file>qml/StyledControls/CustomTextInput.qml</file>
         <file>qml/StyledControls/qmldir</file>
         <file>qml/BsStyles/BSStyle.qml</file>
+        <file>qml/BsStyles/BSSizes.qml</file>
         <file>qml/BsStyles/qmldir</file>
         <file>qml/StyledControls/CustomTitleToolButton.qml</file>
         <file>images/logo.png</file>

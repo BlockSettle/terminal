@@ -10,8 +10,8 @@ ColumnLayout  {
 
     id: layout
 
-    height: 548
-    width: 580
+    height: BSSizes.applyScale(548)
+    width: BSSizes.applyScale(580)
 
     spacing: 0
 
@@ -28,13 +28,13 @@ ColumnLayout  {
         id: log_file
 
         Layout.alignment: Qt.AlignCenter
-        Layout.preferredHeight : 70
-        Layout.preferredWidth: 532
-        Layout.topMargin: 24
+        Layout.preferredHeight : BSSizes.applyScale(70)
+        Layout.preferredWidth: BSSizes.applyScale(532)
+        Layout.topMargin: BSSizes.applyScale(24)
 
-        input_topMargin: 35
-        title_leftMargin: 16
-        title_topMargin: 16
+        input_topMargin: BSSizes.applyScale(35)
+        title_leftMargin: BSSizes.applyScale(16)
+        title_topMargin: BSSizes.applyScale(16)
 
         title_text: qsTr("Log file")
 
@@ -47,13 +47,13 @@ ColumnLayout  {
         id: messages_log_file
 
         Layout.alignment: Qt.AlignCenter
-        Layout.preferredHeight : 70
-        Layout.preferredWidth: 532
-        Layout.topMargin: 10
+        Layout.preferredHeight : BSSizes.applyScale(70)
+        Layout.preferredWidth: BSSizes.applyScale(532)
+        Layout.topMargin: BSSizes.applyScale(10)
 
-        input_topMargin: 35
-        title_leftMargin: 16
-        title_topMargin: 16
+        input_topMargin: BSSizes.applyScale(35)
+        title_leftMargin: BSSizes.applyScale(16)
+        title_topMargin: BSSizes.applyScale(16)
 
         title_text: qsTr("Messages log file")
 
@@ -66,13 +66,13 @@ ColumnLayout  {
         id: checkbox_advanced_tx
 
         Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
-        Layout.topMargin: 24
-        Layout.leftMargin: 24
+        Layout.topMargin: BSSizes.applyScale(24)
+        Layout.leftMargin: BSSizes.applyScale(24)
 
         text: qsTr("Advanced TX dialog by default")
 
-        spacing: 6
-        font.pixelSize: 13
+        spacing: BSSizes.applyScale(6)
+        font.pixelSize: BSSizes.applyScale(13)
         font.family: "Roboto"
         font.weight: Font.Normal
 

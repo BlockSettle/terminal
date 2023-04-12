@@ -14,8 +14,8 @@ ColumnLayout  {
     signal sig_network()
     signal sig_about()
 
-    height: 548
-    width: 580
+    height: BSSizes.applyScale(548)
+    width: BSSizes.applyScale(580)
 
     spacing: 0
 
@@ -32,7 +32,7 @@ ColumnLayout  {
         id: general_item
 
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 24
+        Layout.topMargin: BSSizes.applyScale(24)
 
         //aliases
         icon_source: "qrc:/images/general.png"
@@ -46,7 +46,7 @@ ColumnLayout  {
         id: network_item
 
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 10
+        Layout.topMargin: BSSizes.applyScale(10)
 
         //aliases
         icon_source: "qrc:/images/network.png"
@@ -60,7 +60,7 @@ ColumnLayout  {
         id: about_item
 
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 10
+        Layout.topMargin: BSSizes.applyScale(10)
 
         //aliases
         icon_source: "qrc:/images/about.png"

@@ -72,19 +72,20 @@ CustomTextInput {
 
         z: 1
 
-        width: 55
-        height: 28
-        back_radius: 37
+        width: BSSizes.applyScale(55)
+        height: BSSizes.applyScale(28)
+        back_radius: BSSizes.applyScale(37)
 
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: parent.right
-        anchors.rightMargin: 23
+        anchors.rightMargin: BSSizes.applyScale(23)
 
         text: qsTr("MAX")
-        font.pixelSize: 12
+        font.pixelSize: BSSizes.applyScale(12)
         enabled: (tempRequest != null)
 
         function click_enter() {
+            console.log(tempRequest, tempRequest.maxAmount)
             if (tempRequest != null && tempRequest.maxAmount.length > 0) {
                 amount_input.input_text = (parseFloat(tempRequest.maxAmount) - (balanceSubtractor !== null ? balanceSubtractor : 0.0)).toFixed(8)
             }
@@ -97,10 +98,10 @@ CustomTextInput {
 
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: max_but.left
-        anchors.rightMargin: 16
+        anchors.rightMargin: BSSizes.applyScale(16)
 
         text: "BTC"
-        font.pixelSize: 14
+        font.pixelSize: BSSizes.applyScale(14)
         font.family: "Roboto"
         font.weight: Font.Normal
         color: "#7A88B0"

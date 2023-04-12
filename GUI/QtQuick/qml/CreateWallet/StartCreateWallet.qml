@@ -15,8 +15,8 @@ ColumnLayout  {
     signal sig_import_wallet()
     signal sig_hardware_wallet()
 
-    height: 485
-    width: 580
+    height: BSSizes.applyScale(485)
+    width: BSSizes.applyScale(580)
     spacing: 0
 
     CustomTitleLabel {
@@ -28,29 +28,29 @@ ColumnLayout  {
 
     Label {
         Layout.fillWidth: true
-        height: 24
+        height: BSSizes.applyScale(24)
     }
 
     Image {
         id: wallet_icon
 
         Layout.alignment: Qt.AlignCenter
-        Layout.preferredHeight : 120
-        Layout.preferredWidth : 120
+        Layout.preferredHeight : BSSizes.applyScale(120)
+        Layout.preferredWidth : BSSizes.applyScale(120)
 
         source: "qrc:/images/wallet icon.png"
-        width: 120
-        height: 120
+        width: BSSizes.applyScale(120)
+        height: BSSizes.applyScale(120)
     }
 
     Label {
         Layout.fillWidth: true
-        height: 16
+        height: BSSizes.applyScale(16)
     }
 
     Text {
         Layout.alignment: Qt.AlignCenter
-        Layout.preferredHeight : 16
+        Layout.preferredHeight : BSSizes.applyScale(16)
         text: "<p style=\"color:\'#7A88B0\'; font-family: \'Roboto\'; font-size:14px; font-weight:400\">Need help? Please consult our <a href=\"https://blocksettle.com/faq\">Getting Started Guides</a></p>"
         color: "#7A88B0"
         onLinkActivated: Qt.openUrlExternally(link)
@@ -63,15 +63,15 @@ ColumnLayout  {
 
     RowLayout {
         id: row
-        spacing: 10
+        spacing: BSSizes.applyScale(10)
 
-        Layout.bottomMargin: 40
+        Layout.bottomMargin: BSSizes.applyScale(40)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         CustomButton {
             id: hardware_but
             text: qsTr("Hardware Wallet")
-            width: 170
+            width: BSSizes.applyScale(170)
 
             preferred: false
 
@@ -83,7 +83,7 @@ ColumnLayout  {
         CustomButton {
             id: import_but
             text: qsTr("Import Wallet")
-            width: 170
+            width: BSSizes.applyScale(170)
 
             preferred: false
 
@@ -95,7 +95,7 @@ ColumnLayout  {
         CustomButton {
             id: create_but
             text: qsTr("Create new")
-            width: 170
+            width: BSSizes.applyScale(170)
 
             preferred: true
 

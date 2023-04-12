@@ -17,8 +17,8 @@ ColumnLayout  {
     signal sig_modify_custom(int ind)
     signal request_close()
 
-    height: 548
-    width: 580
+    height: BSSizes.applyScale(548)
+    width: BSSizes.applyScale(580)
 
     spacing: 0
 
@@ -35,10 +35,11 @@ ColumnLayout  {
         id: list
 
         Layout.fillWidth: true
-        Layout.leftMargin: 24
-        Layout.topMargin: 24
+        Layout.minimumHeight: BSSizes.applyScale(50) * armoryServersModel.rowCount + BSSizes.applyScale(10) * (armoryServersModel.rowCount - 1)
+        Layout.leftMargin: BSSizes.applyScale(24)
+        Layout.topMargin: BSSizes.applyScale(24)
 
-        spacing: 10
+        spacing: BSSizes.applyScale(10)
 
         clip: true
         boundsBehavior: Flickable.StopAtBounds
@@ -89,8 +90,7 @@ ColumnLayout  {
             target:armoryServersModel
             function onRowCountChanged ()
             {
-                var new_height = Math.min(armoryServersModel.rowCount * 50 + (armoryServersModel.rowCount - 1) * 10,
-                                          425)
+                var new_height = Math.min(armoryServersModel.rowCount * 50 + (armoryServersModel.rowCount - 1) * 10, 425)
                 list.implicitHeight = new_height
             }
         }
@@ -100,7 +100,7 @@ ColumnLayout  {
         id: add_custom_server
 
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 10
+        Layout.topMargin: BSSizes.applyScale(10)
 
         //aliases
         icon_source: "qrc:/images/plus.svg"

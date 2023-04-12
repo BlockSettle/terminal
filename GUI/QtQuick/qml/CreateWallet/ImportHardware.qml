@@ -14,8 +14,8 @@ ColumnLayout  {
 
     signal sig_import()
 
-    height: 485
-    width: 580
+    height: BSSizes.applyScale(485)
+    width: BSSizes.applyScale(580)
 
     spacing: 0
 
@@ -30,12 +30,12 @@ ColumnLayout  {
         id: usb_icon
 
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 24
-        Layout.preferredHeight : 44
-        Layout.preferredWidth : 44
+        Layout.topMargin: BSSizes.applyScale(24)
+        Layout.preferredHeight : BSSizes.applyScale(44)
+        Layout.preferredWidth : BSSizes.applyScale(44)
 
-        width: 44
-        height: 44
+        width: BSSizes.applyScale(44)
+        height: BSSizes.applyScale(44)
 
         source: layout.isConnected ? "qrc:/images/USB_icon_conn.png" : "qrc:/images/USB_icon_disconn.png"
     }
@@ -45,34 +45,34 @@ ColumnLayout  {
         id: subtitle
         visible: hwDeviceModel.empty
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 16
-        Layout.preferredHeight : 16
+        Layout.topMargin: BSSizes.applyScale(16)
+        Layout.preferredHeight : BSSizes.applyScale(16)
         text: qsTr("Connect your wallet")
         color: "#E2E7FF"
-        font.pixelSize: 14
+        font.pixelSize: BSSizes.applyScale(14)
         font.family: "Roboto"
         font.weight: Font.Normal
     }
 
     TableView {
         visible: !hwDeviceModel.empty
-        width: 800
-        height: 200
-        columnSpacing: 1
-        rowSpacing: 1
+        width: BSSizes.applyScale(800)
+        height: BSSizes.applyScale(200)
+        columnSpacing: BSSizes.applyScale(1)
+        rowSpacing: BSSizes.applyScale(1)
         clip: true
         ScrollIndicator.horizontal: ScrollIndicator { }
         ScrollIndicator.vertical: ScrollIndicator { }
         model: hwDeviceModel
         delegate: Rectangle {
-            implicitWidth: 750
-            implicitHeight: 20
+            implicitWidth: BSSizes.applyScale(750)
+            implicitHeight: BSSizes.applyScale(20)
             border.color: "black"
             border.width: 1
             color: 'darkslategrey'
             Text {
                 text: label
-                font.pointSize: 12
+                font.pointSize: BSSizes.applyScale(12)
                 color: 'lightgrey'
                 anchors.centerIn: parent
             }
@@ -95,10 +95,10 @@ ColumnLayout  {
         id: confirm_but
         text: qsTr("Import")
 
-        Layout.bottomMargin: 40
+        Layout.bottomMargin: BSSizes.applyScale(40)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
-        width: 530
+        width: BSSizes.applyScale(530)
         enabled: /*layout.isConnected &&*/ (hwDeviceModel.selDevice >= 0)
         preferred: true
 

@@ -9,10 +9,10 @@ Image {
 
     signal deleteRequested()
 
-    width: 24
-    height: 24
-    sourceSize.width: 24
-    sourceSize.height: 24
+    width: BSSizes.applyScale(24)
+    height: BSSizes.applyScale(24)
+    sourceSize.width: BSSizes.applyScale(24)
+    sourceSize.height: BSSizes.applyScale(24)
 
     anchors.verticalCenter: parent.verticalCenter
     source: "qrc:/images/delete.png"

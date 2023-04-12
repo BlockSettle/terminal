@@ -17,8 +17,8 @@ ColumnLayout  {
 
     property string chosenFilename: ""
 
-    height: 515
-    width: 580
+    height: BSSizes.applyScale(515)
+    width: BSSizes.applyScale(580)
 
     spacing: 0
 
@@ -33,7 +33,7 @@ ColumnLayout  {
         id: type_switch
 
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 24
+        Layout.topMargin: BSSizes.applyScale(24)
         isFullChoosed: false
 
         onSig_full_changed: (isFull) => {
@@ -49,11 +49,11 @@ ColumnLayout  {
         id: dashed_border
 
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 24
-        Layout.leftMargin: 25
-        Layout.rightMargin: 25
-        Layout.preferredHeight: 282
-        height: 282
+        Layout.topMargin: BSSizes.applyScale(24)
+        Layout.leftMargin: BSSizes.applyScale(25)
+        Layout.rightMargin: BSSizes.applyScale(25)
+        Layout.preferredHeight: BSSizes.applyScale(282)
+        height: BSSizes.applyScale(282)
 
         source: "qrc:/images/file_drop.png"
 
@@ -62,11 +62,11 @@ ColumnLayout  {
 
             visible: layout.chosenFilename.length > 0
 
-            width:12
-            height: 16
+            width: BSSizes.applyScale(12)
+            height: BSSizes.applyScale(16)
 
             anchors.left: parent.left
-            anchors.leftMargin: 203
+            anchors.leftMargin: BSSizes.applyScale(203)
             anchors.verticalCenter: parent.verticalCenter
 
             source: "qrc:/images/File.png"
@@ -77,11 +77,11 @@ ColumnLayout  {
 
             visible: layout.chosenFilename === ""
 
-            width: 20
-            height: 16
+            width: BSSizes.applyScale(20)
+            height: BSSizes.applyScale(16)
 
             anchors.left: parent.left
-            anchors.leftMargin: 200
+            anchors.leftMargin: BSSizes.applyScale(200)
             anchors.verticalCenter: parent.verticalCenter
 
             source: "qrc:/images/folder_icon.png"
@@ -93,10 +93,10 @@ ColumnLayout  {
             visible: layout.chosenFilename.length > 0
 
             anchors.left: parent.left
-            anchors.leftMargin: 230
+            anchors.leftMargin: BSSizes.applyScale(230)
             anchors.verticalCenter: parent.verticalCenter
             color: "#E2E7FF"
-            font.pixelSize: 16
+            font.pixelSize: BSSizes.applyScale(16)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -107,11 +107,11 @@ ColumnLayout  {
             visible: layout.chosenFilename === ""
 
             anchors.left: parent.left
-            anchors.leftMargin: 225
+            anchors.leftMargin: BSSizes.applyScale(225)
             anchors.verticalCenter: parent.verticalCenter
             text: qsTr("Select the file")
             color: "#E2E7FF"
-            font.pixelSize: 16
+            font.pixelSize: BSSizes.applyScale(16)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -123,8 +123,8 @@ ColumnLayout  {
                 AnchorChanges { target: label_file; anchors { left: undefined; horizontalCenter: parent.horizontalCenter} }
 
                 PropertyChanges { target: file_icon; anchors.leftMargin: 0; x: 0; }
-                PropertyChanges { target: label_file; anchors.horizontalCenterMargin: 13 }
-                PropertyChanges { target: file_icon; x: label_file.x - 27; }
+                PropertyChanges { target: label_file; anchors.horizontalCenterMargin: BSSizes.applyScale(13) }
+                PropertyChanges { target: file_icon; x: label_file.x - BSSizes.applyScale(27); }
             }
         ]
 
@@ -155,9 +155,9 @@ ColumnLayout  {
     CustomButton {
         id: import_but
         text: qsTr("Import")
-        Layout.leftMargin: 25
-        Layout.topMargin: 32
-        width: 530
+        Layout.leftMargin:BSSizes.applyScale( 25)
+        Layout.topMargin: BSSizes.applyScale(32)
+        width: BSSizes.applyScale(530)
         enabled: layout.chosenFilename.length > 0
         preferred: true
 

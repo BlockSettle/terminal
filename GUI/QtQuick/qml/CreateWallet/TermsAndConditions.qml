@@ -12,8 +12,8 @@ ColumnLayout  {
 
     signal sig_continue()
 
-    height: 485
-    width: 580
+    height: BSSizes.applyScale(485)
+    width: BSSizes.applyScale(580)
 
     spacing: 0
 
@@ -31,22 +31,22 @@ ColumnLayout  {
     CustomTitleLabel {
         id: title
         Layout.alignment: Qt.AlignLeft
-        Layout.leftMargin: 24
+        Layout.leftMargin: BSSizes.applyScale(24)
         Layout.preferredHeight : title.height
         text: qsTr("Terms and conditions")
     }
 
     Label {
         Layout.fillWidth: true
-        height: 24
+        height: BSSizes.applyScale(24)
     }
 
     ScrollView {
         id: scroll
         Layout.alignment: Qt.AlignLeft
-        Layout.leftMargin: 24
-        implicitWidth: 532
-        implicitHeight: 340
+        Layout.leftMargin: BSSizes.applyScale(24)
+        implicitWidth: BSSizes.applyScale(532)
+        implicitHeight: BSSizes.applyScale(340)
 
         ScrollBar.vertical.policy: ScrollBar.AlwaysOn
 
@@ -57,11 +57,11 @@ ColumnLayout  {
 
             width: parent.width
             height: parent.height
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
             leftPadding: 0
-            rightPadding: 10
+            rightPadding: BSSizes.applyScale(10)
             color: BSStyle.titanWhiteColor
             selectByMouse: true
             wrapMode: TextEdit.WordWrap
@@ -69,7 +69,7 @@ ColumnLayout  {
 
             background: Rectangle {
                 color: "transparent"
-                radius: 4
+                radius: BSSizes.applyScale(4)
             }
 
         }
@@ -83,14 +83,14 @@ ColumnLayout  {
 
     Label {
         Layout.fillWidth: true
-        height: 24
+        height: BSSizes.applyScale(24)
     }
 
     CustomButton {
         id: continue_but
         text: qsTr("Continue")
-        Layout.leftMargin: 24
-        width: 532
+        Layout.leftMargin: BSSizes.applyScale(24)
+        width: BSSizes.applyScale(532)
         preferred: true
 
         function click_enter() {
@@ -101,7 +101,7 @@ ColumnLayout  {
 
     Label {
         Layout.fillWidth: true
-        height: 24
+        height: BSSizes.applyScale(24)
     }
 
 

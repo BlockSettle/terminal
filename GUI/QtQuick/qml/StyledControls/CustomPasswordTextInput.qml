@@ -17,15 +17,15 @@ TextField {
     property bool allowShowPass: true
 
     horizontalAlignment: Text.AlignHLeft
-    font.pixelSize: 11
+    font.pixelSize: BSSizes.applyScale(11)
     color: BSStyle.inputsFontColor
     padding: 0
     echoMode: button.pressed ? TextInput.Normal : TextInput.Password
     selectByMouse: false
 
     background: Rectangle {
-        implicitWidth: 200
-        implicitHeight: 25
+        implicitWidth: BSSizes.applyScale(200)
+        implicitHeight: BSSizes.applyScale(25)
         color:"transparent"
         border.color: BSStyle.inputsBorderColor
 
@@ -40,11 +40,11 @@ TextField {
                     source: "qrc:/resources/eye.png"
                 }
             }
-            padding: 2 - (button.pressed ? 1 : 0)
+            padding: (button.pressed ? 1 : 0) - BSSizes.applyScale(2)
             background: Rectangle {color: "transparent"}
             anchors.right: parent.right
-            width: 23
-            height: 23
+            width: BSSizes.applyScale(23)
+            height: BSSizes.applyScale(23)
         }
     }
 }

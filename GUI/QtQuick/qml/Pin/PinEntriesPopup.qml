@@ -25,7 +25,7 @@ Window {
     color: "transparent"
 
     x: mainWindow.x + (mainWindow.width - width)/2
-    y: mainWindow.y + 28
+    y: mainWindow.y + BSSizes.applyScale(28)
 
     property var numbers: [ "7", "8", "9",
                             "4", "5", "6",
@@ -37,9 +37,9 @@ Window {
 
         color: "#191E2A"
         opacity: 1
-        radius: 16
-        height: 610
-        width: 430
+        radius: BSSizes.applyScale(16)
+        height: BSSizes.applyScale(610)
+        width: BSSizes.applyScale(430)
         border.color : BSStyle.defaultBorderColor
         border.width : 1
 
@@ -47,13 +47,13 @@ Window {
             id: close_button
 
             anchors.top: parent.top
-            anchors.topMargin: 24
+            anchors.topMargin: BSSizes.applyScale(24)
             anchors.right: parent.right
-            anchors.rightMargin: 24
+            anchors.rightMargin: BSSizes.applyScale(24)
 
             source: "qrc:/images/close_button.svg"
-            width: 16
-            height: 16
+            width: BSSizes.applyScale(16)
+            height: BSSizes.applyScale(16)
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
@@ -68,7 +68,7 @@ Window {
 
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
-            anchors.topMargin: 36
+            anchors.topMargin: BSSizes.applyScale(36)
 
             text: qsTr("Enter PIN")
         }
@@ -76,13 +76,13 @@ Window {
         Item {
             id: grid_item
 
-            width: 390
-            height: 330
+            width: BSSizes.applyScale(390)
+            height: BSSizes.applyScale(330)
 
             anchors.left: parent.left
-            anchors.leftMargin: 25
+            anchors.leftMargin: BSSizes.applyScale(25)
             anchors.top: title.bottom
-            anchors.topMargin: 24
+            anchors.topMargin: BSSizes.applyScale(24)
 
             GridView {
                 id: grid
@@ -91,8 +91,8 @@ Window {
 
                 anchors.fill: parent
 
-                cellHeight : 110
-                cellWidth : 130
+                cellHeight : BSSizes.applyScale(110)
+                cellWidth : BSSizes.applyScale(130)
 
                 model: numbers
 
@@ -101,10 +101,10 @@ Window {
                 delegate: Button {
                     id: input
 
-                    height: 100
-                    width: 120
+                    height: BSSizes.applyScale(100)
+                    width: BSSizes.applyScale(120)
 
-                    font.pixelSize: 20
+                    font.pixelSize: BSSizes.applyScale(20)
                     font.family: "Roboto"
                     font.weight: Font.Normal
                     palette.buttonText: BSStyle.buttonsTextColor
@@ -112,13 +112,13 @@ Window {
                     text: String.fromCodePoint(0x2022)
 
                     background: Rectangle {
-                        implicitWidth: 100
-                        implicitHeight: 120
+                        implicitWidth: BSSizes.applyScale(100)
+                        implicitHeight: BSSizes.applyScale(120)
 
                         color: input.down ? BSStyle.buttonsStandardPressedColor :
                                (input.hovered ? BSStyle.buttonsStandardHoveredColor : BSStyle.buttonsStandardColor)
 
-                        radius: 14
+                        radius: BSSizes.applyScale(14)
 
                         border.color: BSStyle.buttonsStandardBorderColor
                         border.width: input.down? 1 : 0
@@ -138,25 +138,25 @@ Window {
             id: pin_field
 
             anchors.left: parent.left
-            anchors.leftMargin: 25
+            anchors.leftMargin: BSSizes.applyScale(25)
             anchors.top: grid_item.bottom
-            anchors.topMargin: 24
+            anchors.topMargin: BSSizes.applyScale(24)
 
-            font.pixelSize: 20
+            font.pixelSize: BSSizes.applyScale(20)
             font.family: "Roboto"
             font.weight: Font.Normal
             color: BSStyle.buttonsTextColor
 
-            leftPadding: 14
-            rightPadding: 14
+            leftPadding: BSSizes.applyScale(14)
+            rightPadding: BSSizes.applyScale(14)
 
             readOnly: true
 
             background: Rectangle {
-                implicitWidth: 380
-                implicitHeight: 46
+                implicitWidth: BSSizes.applyScale(380)
+                implicitHeight: BSSizes.applyScale(46)
                 color: "#020817"
-                radius: 14
+                radius: BSSizes.applyScale(14)
             }
 
             Image {
@@ -164,11 +164,11 @@ Window {
 
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.right: parent.right
-                anchors.rightMargin: 24
+                anchors.rightMargin: BSSizes.applyScale(24)
 
                 source: "qrc:/images/close_button.svg"
-                width: 16
-                height: 16
+                width: BSSizes.applyScale(16)
+                height: BSSizes.applyScale(16)
                 MouseArea {
                     anchors.fill: parent
                     onClicked: clean()
@@ -182,9 +182,9 @@ Window {
 
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 40
+            anchors.bottomMargin: BSSizes.applyScale(40)
 
-            width: 380
+            width: BSSizes.applyScale(380)
 
             preferred: true
 

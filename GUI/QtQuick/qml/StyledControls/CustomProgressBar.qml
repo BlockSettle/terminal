@@ -17,23 +17,23 @@ ProgressBar {
     padding: 0
 
     background: Rectangle {
-        implicitWidth: 532
-        implicitHeight: 8
+        implicitWidth: BSSizes.applyScale(532)
+        implicitHeight: BSSizes.applyScale(8)
         color: "transparent"
-        radius: 32
+        radius: BSSizes.applyScale(32)
 
-        border.width: 1
+        border.width: BSSizes.applyScale(1)
         border.color: "#3C435A"
     }
 
     contentItem: Item {
-        implicitWidth: 532
-        implicitHeight: 8
+        implicitWidth: BSSizes.applyScale(532)
+        implicitHeight: BSSizes.applyScale(8)
 
         Rectangle {
             width: control.visualPosition * parent.width
             height: parent.height
-            radius: 32
+            radius: BSSizes.applyScale(32)
             color: "#45A6FF"
         }
     }

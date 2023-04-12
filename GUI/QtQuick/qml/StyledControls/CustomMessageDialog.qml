@@ -14,41 +14,41 @@ Window {
     flags: Qt.WindowCloseButtonHint | Qt.FramelessWindowHint | Qt.Dialog
     modality: Qt.WindowModal
 
-    maximumHeight: 200
-    maximumWidth: 300
+    maximumHeight: BSSizes.applyScale(200)
+    maximumWidth: BSSizes.applyScale(300)
 
-    minimumHeight: 200
-    minimumWidth: 300
+    minimumHeight: BSSizes.applyScale(200)
+    minimumWidth: BSSizes.applyScale(300)
 
-    height: 250
-    width: 300
+    height: BSSizes.applyScale(250)
+    width: BSSizes.applyScale(300)
 
     color: "transparent"
 
-    x: mainWindow.x + (mainWindow.width - width)/2
-    y: mainWindow.y + (mainWindow.height - height)/2
+    x: mainWindow.x + (mainWindow.width - width) / 2
+    y: mainWindow.y + (mainWindow.height - height) / 2
 
     Rectangle {
         id: rect
 
         color: "#191E2A"
         opacity: 1
-        radius: 16
+        radius: BSSizes.applyScale(16)
 
         anchors.fill: parent
 
         border.color : BSStyle.defaultBorderColor
-        border.width : 1
+        border.width : BSSizes.applyScale(1)
 
         Label {
             id: tytleLabel
 
             anchors.top: rect.top
-            anchors.topMargin: 16
+            anchors.topMargin: BSSizes.applyScale(16)
             anchors.horizontalCenter: rect.horizontalCenter
 
             color: "#E2E7FF"
-            font.pixelSize: 20
+            font.pixelSize: BSSizes.applyScale(20)
             font.family: "Roboto"
             font.weight: Font.Medium
 
@@ -61,18 +61,18 @@ Window {
             id: errorLabel
 
             anchors.top: tytleLabel.bottom
-            anchors.topMargin: 20
+            anchors.topMargin: BSSizes.applyScale(20)
             anchors.horizontalCenter: rect.horizontalCenter
 
             color: "#E2E7FF"
-            font.pixelSize: 16
+            font.pixelSize: BSSizes.applyScale(16)
             font.family: "Roboto"
             font.weight: Font.Medium
 
             text: "Test Description"
 
             horizontalAlignment: Text.AlignHCenter
-            width: ApplicationWindow.width - 10;
+            width: ApplicationWindow.width - BSSizes.applyScale(10);
             wrapMode: Label.WordWrap
          }
 
@@ -81,11 +81,11 @@ Window {
             text: qsTr("Ok")
 
             anchors.bottom: rect.bottom
-            anchors.bottomMargin: 24
+            anchors.bottomMargin: BSSizes.applyScale(24)
             anchors.horizontalCenter: rect.horizontalCenter
 
-            width: 250
-            height: 40
+            width: BSSizes.applyScale(250)
+            height: BSSizes.applyScale(40)
 
             preferred: true
             focus:true

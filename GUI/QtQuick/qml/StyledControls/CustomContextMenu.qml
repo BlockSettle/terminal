@@ -16,15 +16,15 @@ import "../BsStyles"
 Menu {
     id: menu
 
-    leftPadding: 6
-    topPadding: 4
-    bottomPadding: 4
-    rightPadding: 6
+    leftPadding: BSSizes.applyScale(6)
+    topPadding: BSSizes.applyScale(4)
+    bottomPadding: BSSizes.applyScale(4)
+    rightPadding: BSSizes.applyScale(6)
 
     delegate: MenuItem {
         id: menuItem
-        implicitWidth: 200
-        implicitHeight: 40
+        implicitWidth: BSSizes.applyScale(200)
+        implicitHeight: BSSizes.applyScale(40)
 
         contentItem: Text {
             leftPadding: menuItem.indicator.width
@@ -32,7 +32,7 @@ Menu {
 
             text: menuItem.text
 
-            font.pixelSize: 12
+            font.pixelSize: BSSizes.applyScale(12)
             font.family: "Roboto"
             font.weight: Font.Normal
 
@@ -44,22 +44,22 @@ Menu {
         }
 
         background: Rectangle {
-            implicitWidth: 200
-            implicitHeight: 40
+            implicitWidth: BSSizes.applyScale(200)
+            implicitHeight: BSSizes.applyScale(40)
 
-            radius: 14
+            radius: BSSizes.applyScale(14)
             color: menuItem.highlighted ? BSStyle.menuItemHoveredColor : BSStyle.menuItemColor
         }
     }
 
 
     background: Rectangle {
-        implicitWidth: 200
-        implicitHeight: 40
+        implicitWidth: BSSizes.applyScale(200)
+        implicitHeight: BSSizes.applyScale(40)
         color: BSStyle.popupBackgroundColor
         opacity: 1
-        radius: 14
+        radius: BSSizes.applyScale(14)
         border.color : BSStyle.defaultBorderColor
-        border.width : 1
+        border.width : BSSizes.applyScale(1)
     }
 }
