@@ -16,12 +16,13 @@ import "."
 import "Styles"
 import "Controls"
 import "../../"
+import "../../BsStyles"
 
 
 Item {
    id: root
-   width: 620
-   height: 720
+   width: BSSizes.applyWindowWidthScale(620)
+   height: BSSizes.applyWindowHeightScale(720)
 
    property bool peg_in: true
 
@@ -35,7 +36,7 @@ Item {
       Rectangle {
          id: topPanel
          width: parent.width
-         height: 290
+         height: BSSizes.applyScale(290)
          anchors.top: parent.top
          color: SideSwapStyles.darkBlueBackground
       }
@@ -48,15 +49,15 @@ Item {
       }
 
       Column {
-         spacing: 20
+         spacing: BSSizes.applyScale(20)
          anchors.fill: parent
-         anchors.topMargin: 40
-         anchors.rightMargin: 20
-         anchors.leftMargin: 20
+         anchors.topMargin: BSSizes.applyScale(40)
+         anchors.rightMargin: BSSizes.applyScale(20)
+         anchors.leftMargin: BSSizes.applyScale(20)
 
          CustomSwitch {
             width: parent.width
-            height: 30
+            height: BSSizes.applyScale(30)
             anchors.horizontalCenter: parent.horizontalCenter
             checked: root.peg_in
             
@@ -73,42 +74,42 @@ Item {
          }
 
          Rectangle {
-            height: 2
+            height: BSSizes.applyScale(2)
             width: parent.width
             color: SideSwapStyles.spacerColor
          }
 
          Text {
             text: qsTr("SideSwap will generate a Peg-In address for you to deliver BTC into. Each peg-in/out URL is unique and can be re-entered to view your progress. A peg-in/out address may be re-used.")
-            width: parent.width - 20
+            width: parent.width - BSSizes.applyScale(20)
             color: SideSwapStyles.paragraphTextColor
             clip: true
             wrapMode: Text.Wrap
          }
 
          Row {
-            spacing: 20
+            spacing: BSSizes.applyScale(20)
             width: parent.width
-            height: 50
+            height: BSSizes.applyScale(50)
 
             IconButton {
-               width: 50
-               height: 50
-               radius: 25
+               width: BSSizes.applyScale(50)
+               height: BSSizes.applyScale(50)
+               radius: BSSizes.applyScale(25)
 
                onButtonClicked: root.peg_in = !root.peg_in
             }
 
             Rectangle {
-               width: 200
-               height: 30
-               radius: 15
+               width: BSSizes.applyScale(200)
+               height: BSSizes.applyScale(30)
+               radius: BSSizes.applyScale(15)
                color: "lightblue"
                anchors.verticalCenter: parent.verticalCenter
 
                Rectangle {
-                  width: 15
-                  height: 15
+                  width: BSSizes.applyScale(15)
+                  height: BSSizes.applyScale(15)
                   anchors.left: parent.left
                   anchors.top: parent.top
                   color: "lightblue"
@@ -123,8 +124,8 @@ Item {
          }
 
          Row {
-            spacing: 20
-            height: 60
+            spacing: BSSizes.applyScale(20)
+            height: BSSizes.applyScale(60)
             width: parent.width
             
             CurrencyLabel {
@@ -140,8 +141,8 @@ Item {
 
             CustomCombobox {
                model: ['A', 'B', 'C']
-               height: 60
-               width: parent.width - receiveLabel.width - 20
+               height: BSSizes.applyScale(60)
+               width: parent.width - receiveLabel.width - BSSizes.applyScale(20)
                anchors.verticalCenter: parent.verticalCenter
                visible: !root.peg_in
                comboboxHint: qsTr("Fee suggestion")
@@ -149,17 +150,17 @@ Item {
          }
 
          Rectangle {
-            height: 2
+            height: BSSizes.applyScale(2)
             width: parent.width
             color: SideSwapStyles.spacerColor
          }
 
          Column {
             width: parent.width
-            spacing: 5
+            spacing: BSSizes.applyScale(5)
 
             CustomCombobox {
-               height: 60
+               height: BSSizes.applyScale(60)
                width: parent.width
                model: walletBalances
                textRole: "name"
@@ -170,7 +171,7 @@ Item {
             CustomTextEdit {
                id: amountInput
                width: parent.width
-               height: 60
+               height: BSSizes.applyScale(60)
                textHint: qsTr("Amount")
                visible: root.peg_in
                inputHints: Text.ImhDigitsOnly
@@ -179,7 +180,7 @@ Item {
             CustomTextEdit {
                id: addressInput
                width: parent.width
-               height: 60
+               height: BSSizes.applyScale(60)
                textHint: qsTr("Your Liquid Address")
                visible: root.peg_in
             }

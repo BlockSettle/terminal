@@ -16,8 +16,8 @@ import "../../StyledControls"
 
 Popup {
     id: plugin_popup
-    width: 580
-    height: 720
+    width: BSSizes.applyWindowWidthScale(580)
+    height: BSSizes.applyWindowHeightScale(720)
     anchors.centerIn: Overlay.overlay
 
     property var controller: null

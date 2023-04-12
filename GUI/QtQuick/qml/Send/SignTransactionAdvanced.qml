@@ -230,7 +230,7 @@ ColumnLayout  {
             id: return_amount
 
             anchors.top: in_amount.bottom
-            anchors.topMargin: BSSizes.applyScale(16)
+            anchors.topMargin: BSSizes.applyScale(10)
             anchors.right: parent.horizontalCenter
             anchors.rightMargin: BSSizes.applyScale(24)
 
@@ -266,7 +266,7 @@ ColumnLayout  {
             id: transaction_fee
 
             anchors.top: return_amount.bottom
-            anchors.topMargin: BSSizes.applyScale(16)
+            anchors.topMargin: BSSizes.applyScale(10)
             anchors.right: parent.horizontalCenter
             anchors.rightMargin: BSSizes.applyScale(24)
 

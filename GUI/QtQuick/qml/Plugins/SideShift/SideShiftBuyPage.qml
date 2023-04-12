@@ -14,10 +14,13 @@ import QtQuick.Controls 2.12
 
 import "."
 import "../../"
+import "../../BsStyles"
 
 
 Item {
    id: root
+   width: BSSizes.applyWindowWidthScale(620)
+   height: BSSizes.applyWindowHeightScale(720)
 
    property var controller
    property string inputCurrency
@@ -26,24 +29,25 @@ Item {
 
    Rectangle {
       anchors.fill: parent
+      radius: BSSizes.applyScale(14)
       color: "black"
    }
 
    Column {
       anchors.fill: parent
-      anchors.leftMargin: 60
-      anchors.rightMargin: 60
-      anchors.topMargin: 25
-      anchors.bottomMargin: 25
+      anchors.leftMargin: BSSizes.applyScale(60)
+      anchors.rightMargin: BSSizes.applyScale(60)
+      anchors.topMargin: BSSizes.applyScale(25)
+      anchors.bottomMargin: BSSizes.applyScale(25)
       spacing: 0
 
       Rectangle {
          color: "transparent"
-         height: 40
+         height: BSSizes.applyScale(40)
          width: parent.width
 
          Row {
-            spacing: 10
+            spacing: BSSizes.applyScale(10)
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
 
@@ -56,10 +60,10 @@ Item {
 
             Image {
                id: arrowImage
-               width: 20
-               height: 12
-               sourceSize.width: 20
-               sourceSize.height: 12
+               width: BSSizes.applyScale(20)
+               height: BSSizes.applyScale(12)
+               sourceSize.width: BSSizes.applyScale(20)
+               sourceSize.height: BSSizes.applyScale(12)
                source: "qrc:/images/sideshift_right_arrow.svg"
                anchors.verticalCenter: parent.verticalCenter
             }
@@ -95,15 +99,16 @@ Item {
       Text {
          color: "white"
          text: controller !== null ? controller.status : ""
-         topPadding: 40
+         topPadding: BSSizes.applyScale(40)
          wrapMode: Text.Wrap
-         font.pixelSize: 24
+         font.pixelSize: BSSizes.applyScale(24)
          anchors.horizontalCenter: parent.horizontalCenter
          width: parent.width
+         horizontalAlignment: Text.AlignHCenter
       }
 
       Text {
-         topPadding: 15
+         topPadding: BSSizes.applyScale(15)
          color: "lightgray"
          text: controller !== null ? controller.conversionRate : ""
          anchors.horizontalCenter: parent.horizontalCenter
@@ -111,11 +116,11 @@ Item {
 
       Rectangle {
          width: parent.width
-         height: 300
+         height: BSSizes.applyScale(300)
          color: "transparent"
          
          Column {
-            spacing: 10
+            spacing: BSSizes.applyScale(10)
             width: parent.width / 2
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
@@ -123,12 +128,12 @@ Item {
             Text {
                text: qsTr("PLEASE SEND")
                color: "lightgray"
-               font.pixelSize: 20
+               font.pixelSize: BSSizes.applyScale(20)
                anchors.horizontalCenter: parent.horizontalCenter
             }
 
             Row {
-               spacing: 10
+               spacing: BSSizes.applyScale(10)
                anchors.horizontalCenter: parent.horizontalCenter
                Text {
                   text: qsTr("Min")
@@ -139,18 +144,18 @@ Item {
                   text: controller !== null ? controller.minAmount : ""
                   color: "white"
                   font.weight: Font.Bold
-                  font.pixelSize: 18
+                  font.pixelSize: BSSizes.applyScale(18)
                }
                Text {
                   text: root.inputCurrency
                   color: "white"
                   font.weight: Font.Bold
-                  font.pixelSize: 18
+                  font.pixelSize: BSSizes.applyScale(18)
                }
             }
 
             Row {
-               spacing: 10
+               spacing: BSSizes.applyScale(10)
                anchors.horizontalCenter: parent.horizontalCenter
                Text {
                   text: qsTr("Max")
@@ -161,29 +166,29 @@ Item {
                   text: controller !== null ? controller.maxAmount : ""
                   color: "white"
                   font.weight: Font.Bold
-                  font.pixelSize: 18
+                  font.pixelSize: BSSizes.applyScale(18)
                }
                Text {
                   text: root.inputCurrency
                   color: "white"
                   font.weight: Font.Bold
-                  font.pixelSize: 18
+                  font.pixelSize: BSSizes.applyScale(18)
                }
             }
 
             Text {
-               topPadding: 20
+               topPadding: BSSizes.applyScale(20)
                text: qsTr("TO ADDRESS")
                color: "lightgray"
-               font.pixelSize: 20
+               font.pixelSize: BSSizes.applyScale(20)
                anchors.horizontalCenter: parent.horizontalCenter
             }
 
             Rectangle {
-               height: 40
-               width: 200
+               height: BSSizes.applyScale(40)
+               width: BSSizes.applyScale(200)
                color: "transparent"
-               radius: 4
+               radius: BSSizes.applyScale(4)
                border.width: 1
                border.color: "white"
                anchors.horizontalCenter: parent.horizontalCenter
@@ -196,8 +201,8 @@ Item {
                   clip: true
                   font.weight: Font.Bold
                   verticalAlignment: Text.AlignVCenter
-                  anchors.leftMargin: 20
-                  anchors.rightMargin: 20
+                  anchors.leftMargin: BSSizes.applyScale(20)
+                  anchors.rightMargin: BSSizes.applyScale(20)
                   enabled: false
                }
             }
@@ -226,17 +231,17 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
 
             Rectangle {
-               width: 200
-               height: 200
+               width: BSSizes.applyScale(200)
+               height: BSSizes.applyScale(200)
                color: "gray"
                anchors.horizontalCenter: parent.horizontalCenter
 
                Image {
                    source: controller !== null ? ( "image://QR/" + controller.depositAddress) : ""
-                   sourceSize.width: 180
-                   sourceSize.height: 180
-                   width: 180
-                   height: 180
+                   sourceSize.width: BSSizes.applyScale(180)
+                   sourceSize.height: BSSizes.applyScale(180)
+                   width: BSSizes.applyScale(180)
+                   height: BSSizes.applyScale(180)
                    anchors.centerIn: parent
                }
             }

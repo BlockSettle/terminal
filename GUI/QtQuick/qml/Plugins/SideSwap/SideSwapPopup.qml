@@ -15,6 +15,7 @@ import QtQuick.Controls 2.12
 import "."
 import "../Common"
 import "../../"
+import "../../BsStyles"
 
 PluginPopup {
    id: root
@@ -22,7 +23,7 @@ PluginPopup {
    background: Rectangle {
       anchors.fill: parent
       color: "black"
-      radius: 14
+      radius: BSSizes.applyScale(14)
    }
 
    contentItem: StackView {
@@ -33,6 +34,7 @@ PluginPopup {
       SideSwapMainPage {
          id: mainPage
          visible: false
+         anchors.centerIn: parent
 
          onContinueClicked: {
             if (mainPage.peg_in) {
@@ -48,12 +50,14 @@ PluginPopup {
          id: pegOutPage
          visible: false
          onBack: root.reset()
+         anchors.centerIn: parent
       }
 
       SideSwapPegIn {
          id: pegInPage
          visible: false
          onBack: root.reset()
+         anchors.centerIn: parent
       }
    }
 

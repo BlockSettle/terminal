@@ -18,8 +18,8 @@ import "../../../BsStyles"
 ComboBox {
     id: control
 
-    width: 400
-    height: 50
+    width: BSSizes.applyScale(400)
+    height: BSSizes.applyScale(50)
 
     activeFocusOnTab: true
 
@@ -31,24 +31,24 @@ ComboBox {
         color: "transparent"
 
          Column {
-            spacing: 4
+            spacing: BSSizes.applyScale(4)
             anchors.verticalCenter: parent.verticalCenter
 
             Text {
                 text: control.comboboxHint
-                font.pixelSize: 12
+                font.pixelSize: BSSizes.applyScale(12)
                 font.family: "Roboto"
                 font.weight: Font.Bold
                 color: SideSwapStyles.secondaryTextColor
-                leftPadding: 10
+                leftPadding: BSSizes.applyScale(10)
             }
 
             Text {
                 text: control.currentText
-                font.pixelSize: 18
+                font.pixelSize: BSSizes.applyScale(18)
                 font.family: "Roboto"
                 color: "white"
-                leftPadding: 10
+                leftPadding: BSSizes.applyScale(10)
             }
          }
     }
@@ -59,7 +59,7 @@ ComboBox {
 
         color: SideSwapStyles.buttonSecondaryBackground
         opacity: 1
-        radius: 4
+        radius: BSSizes.applyScale(4)
 
         border.color: control.popup.visible ? SideSwapStyles.buttonBackground :
                       (control.hovered ? SideSwapStyles.buttonBackground :
@@ -74,12 +74,12 @@ ComboBox {
 
         id: menuItem
 
-        width: control.width - 12
-        height: 50
+        width: control.width - BSSizes.applyScale(12)
+        height: BSSizes.applyScale(50)
 
-        leftPadding: 6
-        topPadding: 4
-        bottomPadding: 4
+        leftPadding: BSSizes.applyScale(6)
+        topPadding: BSSizes.applyScale(4)
+        bottomPadding: BSSizes.applyScale(4)
 
         contentItem: Text {
 
@@ -87,7 +87,7 @@ ComboBox {
                 ? (Array.isArray(control.model) ? modelData[control.textRole] : model[control.textRole])
                 : modelData
             color: "white"
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
 
@@ -101,7 +101,7 @@ ComboBox {
         background: Rectangle {
             color: menuItem.highlighted ? "white" : "transparent"
             opacity: menuItem.highlighted ? 0.2 : 1
-            radius: 4
+            radius: BSSizes.applyScale(4)
         }
     }
 
@@ -110,7 +110,7 @@ ComboBox {
 
         y: control.height - 1
         width: control.width
-        padding: 6
+        padding: BSSizes.applyScale(6)
 
         contentItem: ListView {
             id: popup_item
@@ -126,7 +126,7 @@ ComboBox {
 
         background: Rectangle {
             color: SideSwapStyles.buttonSecondaryBackground
-            radius: 4
+            radius: BSSizes.applyScale(4)
 
             border.width: 1
             border.color: SideSwapStyles.spacerColor

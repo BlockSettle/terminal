@@ -17,11 +17,11 @@ import "../../BsStyles"
 ComboBox {
     id: control
 
-    width: 200
-    height: 200
+    width: BSSizes.applyScale(200)
+    height: BSSizes.applyScale(200)
 
     property string controlHint: "123"
-    property int popupWidth: 400
+    property int popupWidth: BSSizes.applyScale(400)
 
     textRole: "coin"
     valueRole: "network"
@@ -34,31 +34,31 @@ ComboBox {
         color: "transparent"
 
          Column {
-            spacing: 8
+            spacing: BSSizes.applyScale(8)
             anchors.centerIn: parent
 
             Image {
-                width: 80
-                height: 80
-                sourceSize.width: 80
-                sourceSize.height: 80
+                width: BSSizes.applyScale(80)
+                height: BSSizes.applyScale(80)
+                sourceSize.width: BSSizes.applyScale(80)
+                sourceSize.height: BSSizes.applyScale(80)
                 source: "image://coin/" + control.currentText + "-" + control.currentValue
                 anchors.horizontalCenter: parent.horizontalCenter
             }
 
             Text {
                 text: control.controlHint
-                font.pixelSize: 14
+                font.pixelSize: BSSizes.applyScale(14)
                 font.family: "Roboto"
                 font.weight: Font.Normal
                 color: "white"
-                topPadding: 15
+                topPadding: BSSizes.applyScale(15)
                 anchors.horizontalCenter: parent.horizontalCenter
             }
 
             Text {
                 text: control.currentText
-                font.pixelSize: 18
+                font.pixelSize: BSSizes.applyScale(18)
                 font.family: "Roboto"
                 font.weight: Font.Bold
                 color: "white"
@@ -74,7 +74,7 @@ ComboBox {
 
         color: "#181414"
         opacity: 1
-        radius: 14
+        radius: BSSizes.applyScale(14)
 
         border.color: control.popup.visible ? "white" :
                       (control.hovered ? "white" :
@@ -89,53 +89,53 @@ ComboBox {
 
         id: menuItem
 
-        width: control.popupWidth - 12
-        height: 80
+        width: control.popupWidth - BSSizes.applyScale(12)
+        height: BSSizes.applyScale(80)
 
-        leftPadding: 6
-        topPadding: 4
-        bottomPadding: 4
+        leftPadding: BSSizes.applyScale(6)
+        topPadding: BSSizes.applyScale(4)
+        bottomPadding: BSSizes.applyScale(4)
 
         contentItem: Rectangle {
             anchors.fill: parent
-            anchors.leftMargin: 10
-            anchors.rightMargin: 10
+            anchors.leftMargin: BSSizes.applyScale(10)
+            anchors.rightMargin: BSSizes.applyScale(10)
             color: "transparent"
 
             Row {
-                spacing: 10
+                spacing: BSSizes.applyScale(10)
                 anchors.fill: parent
-                anchors.leftMargin: 10
+                anchors.leftMargin: BSSizes.applyScale(10)
 
                 Image {
-                    width: 40
-                    height: 40
-                    sourceSize.width: 40
-                    sourceSize.height: 40
+                    width: BSSizes.applyScale(40)
+                    height: BSSizes.applyScale(40)
+                    sourceSize.width: BSSizes.applyScale(40)
+                    sourceSize.height: BSSizes.applyScale(40)
                     source: "image://coin/" + model["coin"] + "-" + model["network"]
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
                 Column {
-                    spacing: 10
-                    width: parent.width - 50
+                    spacing: BSSizes.applyScale(10)
+                    width: parent.width - BSSizes.applyScale(50)
                     anchors.verticalCenter: parent.verticalCenter
 
                     Text {
                         text: model["name"]
                         color: "white"
-                        font.pixelSize: 14
+                        font.pixelSize: BSSizes.applyScale(14)
                         font.family: "Roboto"
                         font.weight: Font.SemiBold
                     }
 
                     Row {
-                        spacing: 10
+                        spacing: BSSizes.applyScale(10)
 
                         Text {
                             text: model["coin"]
                             color: "white"
-                            font.pixelSize: 14
+                            font.pixelSize: BSSizes.applyScale(14)
                             font.family: "Roboto"
                             font.weight: Font.Normal
                         }
@@ -143,7 +143,7 @@ ComboBox {
                         Text {
                             text: model["network"]
                             color: "white"
-                            font.pixelSize: 14
+                            font.pixelSize: BSSizes.applyScale(14)
                             font.family: "Roboto"
                             font.weight: Font.Normal
                         }
@@ -157,11 +157,11 @@ ComboBox {
 
         background: Rectangle {
             anchors.fill: parent
-            anchors.leftMargin: 10
-            anchors.rightMargin: 10
+            anchors.leftMargin: BSSizes.applyScale(10)
+            anchors.rightMargin: BSSizes.applyScale(10)
             color: menuItem.highlighted ? "white" : "transparent"
             opacity: menuItem.highlighted ? 0.2 : 1
-            radius: 4
+            radius: BSSizes.applyScale(4)
         }
     }
 
@@ -170,8 +170,8 @@ ComboBox {
 
         y: 0
         width: control.popupWidth
-        height: 400
-        padding: 6
+        height: BSSizes.applyScale(400)
+        padding: BSSizes.applyScale(6)
 
         contentItem: Rectangle {
             color: "transparent"
@@ -182,21 +182,21 @@ ComboBox {
 
                 Rectangle {
                     width: parent.width
-                    height: 80
+                    height: BSSizes.applyScale(80)
                     color: "transparent"
 
                     Rectangle {
                         anchors.fill: parent
-                        anchors.margins: 10
+                        anchors.margins: BSSizes.applyScale(10)
                         color: "transparent"
                         border.color: "white"
-                        radius: 10
+                        radius: BSSizes.applyScale(10)
                     }
                     
                     TextInput {
                         anchors.fill: parent
                         color: "white"
-                        leftPadding: 20
+                        leftPadding: BSSizes.applyScale(20)
                         verticalAlignment: Text.AlignVCenter
 
                         onTextEdited: control.model.filter = text
@@ -206,7 +206,7 @@ ComboBox {
                 ListView {
                     id: popup_item
                     width: parent.width
-                    height: parent.height - 80
+                    height: parent.height - BSSizes.applyScale(80)
 
                     clip: true
                     model: control.popup.visible ? control.delegateModel : null
@@ -221,7 +221,7 @@ ComboBox {
 
         background: Rectangle {
             color: "black"
-            radius: 14
+            radius: BSSizes.applyScale(14)
 
             border.width: 1
             border.color: "white"

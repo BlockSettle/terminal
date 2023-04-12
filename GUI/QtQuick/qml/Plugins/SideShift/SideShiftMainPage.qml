@@ -14,10 +14,13 @@ import QtQuick.Controls 2.12
 
 import "."
 import "../../"
+import "../../BsStyles"
 
 
 Item {
    id: root
+   width: BSSizes.applyWindowWidthScale(620)
+   height: BSSizes.applyWindowHeightScale(720)
 
    property var controller
    property bool receive: true
@@ -30,25 +33,31 @@ Item {
 
    signal shift()
 
+   Rectangle {
+      anchors.fill: parent
+      radius: BSSizes.applyScale(14)
+      color: "black"
+   }
+
    Column {
       anchors.centerIn: parent
-      spacing: 20
+      spacing: BSSizes.applyScale(20)
 
       Text {
          text: controller !== null ? controller.conversionRate : ""
          color: "gray"
-         font.pixelSize: 14
+         font.pixelSize: BSSizes.applyScale(14)
          font.family: "Roboto"
          anchors.horizontalCenter: parent.horizontalCenter
       }
 
       Row {
-         spacing: 20
+         spacing: BSSizes.applyScale(20)
          anchors.horizontalCenter: parent.horizontalCenter
 
          SideShiftComboboxWithIcon {
             id: inputCombobox
-            popupWidth: 400
+            popupWidth: BSSizes.applyScale(400)
             controlHint: qsTr("YOU SEND")
             model: root.receive ? root.receiveModel : root.sendModel
             enabled: root.receive
@@ -72,7 +81,7 @@ Item {
 
          SideShiftComboboxWithIcon {
             id: receivingCombobox
-            popupWidth: 400
+            popupWidth: BSSizes.applyScale(400)
             controlHint: qsTr("YOU RECEIVE")
             model: root.receive ? root.sendModel : root.receiveModel 
             enabled: !root.receive
@@ -82,13 +91,13 @@ Item {
 
       Item {
          width: 1
-         height: 20
+         height: BSSizes.applyScale(20)
       }
 
       Text {
          text: qsTr("RECEIVING ADDRESS")
          color: "white"
-         font.pixelSize: 20
+         font.pixelSize: BSSizes.applyScale(20)
          font.family: "Roboto"
          anchors.horizontalCenter: parent.horizontalCenter
       }

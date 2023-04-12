@@ -36,7 +36,7 @@ Rectangle {
     radius: BSSizes.applyScale(14)
 
     border.color: mouseArea.containsMouse ? BSStyle.listItemHoveredBorderColor : BSStyle.listItemBorderColor
-    border.width: BSSizes.applyScale(1)
+    border.width: 1
 
     Image {
         id: icon

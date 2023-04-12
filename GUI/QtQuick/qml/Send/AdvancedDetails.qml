@@ -131,7 +131,7 @@ ColumnLayout  {
                 spacing: 0
 
                 RowLayout {
-
+                    id: input_header_layout
                     Layout.fillWidth: true
                     Layout.topMargin: BSSizes.applyScale(16)
                     Layout.preferredHeight: BSSizes.applyScale(19)
@@ -184,7 +184,7 @@ ColumnLayout  {
                     id: from_wallet_combo
 
                     Layout.leftMargin: BSSizes.applyScale(16)
-                    Layout.topMargin: BSSizes.applyScale(8)
+                    Layout.topMargin: BSSizes.applyScale(16)
                     Layout.alignment: Qt.AlignLeft | Qt.AlingTop
                     visible: !isRBF && !isCPFP
 
@@ -249,8 +249,8 @@ ColumnLayout  {
                 }
 
                 Rectangle {
-
-                    height: 1
+                    id: divider
+                    height: BSSizes.applyScale(1)
 
                     Layout.fillWidth: true
                     Layout.topMargin: BSSizes.applyScale((!isRBF && !isCPFP) ? 196 : 274)
@@ -264,9 +264,10 @@ ColumnLayout  {
                     id: table_sel_inputs
 
                     Layout.fillWidth: true
-                    Layout.fillHeight : true
+                    Layout.fillHeight: true
                     Layout.leftMargin: BSSizes.applyScale(16)
                     Layout.rightMargin: BSSizes.applyScale(16)
+                    Layout.preferredHeight: BSSizes.applyScale(300)
 
                     model: isRBF ? tx.ownInputs : isCPFP ? tx.ownOutputs : txInputsSelectedModel
                     columnWidths: [0.7, 0.1, 0, 0.2]

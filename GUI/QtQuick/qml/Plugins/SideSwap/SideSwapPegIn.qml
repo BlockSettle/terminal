@@ -16,12 +16,13 @@ import "."
 import "Styles"
 import "Controls"
 import "../../"
+import "../../BsStyles"
 
 
 Item {
    id: root
-   width: 620
-   height: 720
+   width: BSSizes.applyWindowWidthScale(620)
+   height: BSSizes.applyWindowHeightScale(720)
 
    signal back()
 
@@ -32,7 +33,7 @@ Item {
 
    Column {
       anchors.fill: parent
-      anchors.margins: 20
+      anchors.margins: BSSizes.applyScale(20)
 
       CustomBorderedButton {
          width: parent.width

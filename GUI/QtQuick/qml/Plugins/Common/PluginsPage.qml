@@ -18,31 +18,29 @@ import "../../StyledControls"
 
 Rectangle {
    id: root
-   width: 1200
-   height: 768
    color: "transparent"
 
    Column {
       anchors.fill: parent
-      anchors.leftMargin: 14
+      anchors.leftMargin: BSSizes.applyScale(14)
 
       Rectangle {
          id: header
          width: parent.width
-         height: 76
+         height: BSSizes.applyScale(76)
          color: "transparent"
 
          Row {
-            spacing: 6
+            spacing: BSSizes.applyScale(6)
             anchors.fill: parent
 
             Text {
                height: parent.height
-               width: 110
+               width: BSSizes.applyScale(110)
                text: qsTr("Apps")
                color: BSStyle.textColor
                font.family: "Roboto"
-               font.pixelSize: 20
+               font.pixelSize: BSSizes.applyScale(20)
                font.weight: Font.Bold
                font.letterSpacing: 0.35
                horizontalAlignment: Text.AlignHCenter
@@ -54,8 +52,8 @@ Rectangle {
       GridView {
          width: parent.width
          height: parent.height - header.height
-         cellWidth: 237
-         cellHeight: 302
+         cellWidth: BSSizes.applyScale(237)
+         cellHeight: BSSizes.applyScale(302)
          model: pluginsListModel
          clip: true
 
@@ -67,8 +65,8 @@ Rectangle {
          delegate: Rectangle {
             id: plugin_item
             color: "transparent"
-            width: 237
-            height: 302
+            width: BSSizes.applyScale(237)
+            height: BSSizes.applyScale(302)
 
             property var component
             property var plugin_popup

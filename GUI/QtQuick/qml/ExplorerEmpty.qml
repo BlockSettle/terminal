@@ -17,11 +17,11 @@ import "BsStyles"
 
 Item {
     anchors.fill: parent
-    anchors.topMargin: BSSizes.applyScale(226)
 
     Column {
         spacing: BSSizes.applyScale(24)
         anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
 
         Image {
             width: BSSizes.applyScale(57)

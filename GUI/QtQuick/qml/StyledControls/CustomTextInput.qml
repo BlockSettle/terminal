@@ -52,7 +52,7 @@ Rectangle {
     radius: BSSizes.applyScale(14)
 
     border.color: isValid ? (input.activeFocus ? "#45A6FF" : BSStyle.defaultBorderColor) : "#EB6060"
-    border.width: BSSizes.applyScale(1)
+    border.width: 1
 
     Label {
         id: title

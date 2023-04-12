@@ -12,15 +12,16 @@ import QtQuick 2.15
 import QtQuick.Controls 2.3
 
 import "../Styles"
+import "../../../BsStyles"
 
 Button {
     id: control
 
-    width: 150
-    height: 50
+    width: BSSizes.applyScale(150)
+    height: BSSizes.applyScale(50)
     focusPolicy: Qt.NoFocus
 
-    font.pixelSize: 16
+    font.pixelSize: BSSizes.applyScale(16)
     font.family: "Roboto"
     font.weight: Font.Bold
     font.letterSpacing: 0.5
@@ -31,7 +32,7 @@ Button {
     background: Rectangle {
         id: backgroundItem
         color: "transparent"
-        radius: 8
+        radius: BSSizes.applyScale(8)
         border.width: 1
         border.color: SideSwapStyles.buttonBackground
     }

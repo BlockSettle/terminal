@@ -11,6 +11,7 @@
 import QtQuick 2.15
 
 import "../Styles"
+import "../../../BsStyles"
 
 Column {
     property string header_text
@@ -18,28 +19,28 @@ Column {
     property string currency_icon
     property string comment
 
-    spacing: 10
+    spacing: BSSizes.applyScale(10)
 
     Text {
         text: header_text
         font.family: "Roboto"
-        font.pixelSize: 14
+        font.pixelSize: BSSizes.applyScale(14)
         color: SideSwapStyles.secondaryTextColor
     }
 
     Row {
-        spacing: 10
+        spacing: BSSizes.applyScale(10)
 
         Image {
             source: currency_icon
-            width: 24
-            height: 24
+            width: BSSizes.applyScale(24)
+            height: BSSizes.applyScale(24)
         }
 
         Text {
             text: currency
             font.family: "Roboto"
-            font.pixelSize: 18
+            font.pixelSize: BSSizes.applyScale(18)
             color: SideSwapStyles.primaryTextColor
         }
     }
@@ -48,7 +49,7 @@ Column {
     Text {
         text: comment
         font.family: "Roboto"
-        font.pixelSize: 16
+        font.pixelSize: BSSizes.applyScale(16)
         color: SideSwapStyles.paragraphTextColor
     }
 }

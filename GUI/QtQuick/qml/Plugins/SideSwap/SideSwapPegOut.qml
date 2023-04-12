@@ -16,12 +16,13 @@ import "."
 import "Styles"
 import "Controls"
 import "../../"
+import "../../BsStyles"
 
 
 Item {
    id: root
-   width: 620
-   height: 720
+   width: BSSizes.applyWindowWidthScale(620)
+   height: BSSizes.applyWindowHeightScale(720)
 
    property string minTransferAmount: qsTr("0.001")
    property string toAddress: "bc1qvrl85pygns90xut25qu0tpmawm9h03j3d9w94a"
@@ -35,22 +36,22 @@ Item {
    }
 
    Column {
-      spacing: 30
+      spacing: BSSizes.applyScale(30)
       anchors.fill: parent
-      anchors.margins: 20
+      anchors.margins: BSSizes.applyScale(20)
 
       Text {
          text: qsTr("Send L-BTC to the following address:")
          color: SideSwapStyles.primaryTextColor
-         font.pixelSize: 24
+         font.pixelSize: BSSizes.applyScale(24)
          anchors.horizontalCenter: parent.horizontalCenter
-         topPadding: 20
+         topPadding: BSSizes.applyScale(20)
       }
 
       Text {
          text: qsTr("Min amount: ") + minTransferAmount
          color: SideSwapStyles.primaryTextColor
-         font.pixelSize: 14
+         font.pixelSize: BSSizes.applyScale(14)
          anchors.horizontalCenter: parent.horizontalCenter
       }
 
@@ -61,33 +62,33 @@ Item {
       }
 
       Row {
-         spacing: 20
+         spacing: BSSizes.applyScale(20)
          width: parent.width
-         height: 300
+         height: BSSizes.applyScale(300)
 
          Item {
             width: parent.width / 2 -  parent.spacing
             height: parent.height
 
             Rectangle {
-               width: 240
-               height: 240
-               radius: 20
+               width: BSSizes.applyScale(240)
+               height: BSSizes.applyScale(240)
+               radius: BSSizes.applyScale(20)
                color: SideSwapStyles.buttonBackground
                anchors.centerIn: parent
 
                Rectangle {
-                  width: 226
-                  height: 226
-                  radius: 16
+                  width: BSSizes.applyScale(226)
+                  height: BSSizes.applyScale(226)
+                  radius: BSSizes.applyScale(16)
                   anchors.centerIn: parent
 
                   Image {
                       source: "image://QR/" + root.toAddress
-                      sourceSize.width: 220
-                      sourceSize.height: 220
-                      width: 220
-                      height: 220
+                      sourceSize.width: BSSizes.applyScale(220)
+                      sourceSize.height: BSSizes.applyScale(220)
+                      width: BSSizes.applyScale(220)
+                      height: BSSizes.applyScale(220)
                       anchors.centerIn: parent
                   }
                }
@@ -99,14 +100,14 @@ Item {
             height: parent.height
 
             Column {
-               spacing: 20
+               spacing: BSSizes.applyScale(20)
                anchors.fill: parent
-               anchors.margins: 20
+               anchors.margins: BSSizes.applyScale(20)
 
                Text {
                   text: root.toAddress
                   color: SideSwapStyles.primaryTextColor
-                  font.pixelSize: 18
+                  font.pixelSize: BSSizes.applyScale(18)
                   width: parent.width
                   clip: true
                   wrapMode: Text.Wrap
@@ -115,7 +116,7 @@ Item {
                CustomButton {
                   text: qsTr("Copy Address")
                   width: parent.width
-                  height: 50
+                  height: BSSizes.applyScale(50)
                   anchors.horizontalCenter: parent.horizontalCenter
                   onClicked: bsApp.copyAddressToClipboard(root.toAddress)
                }
@@ -132,13 +133,13 @@ Item {
       Column {
          Text {
             text: qsTr("BTC payment address")
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             color: SideSwapStyles.paragraphTextColor
          }
 
          Text {
             text: root.fromAddress
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             color: SideSwapStyles.paragraphTextColor
          }
       }
@@ -146,7 +147,7 @@ Item {
       CustomBorderedButton {
          text: qsTr("BACK")
          width: parent.width
-         height: 60
+         height: BSSizes.applyScale(60)
          anchors.horizontalCenter: parent.horizontalCenter
          onClicked: root.back()
       }

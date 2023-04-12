@@ -11,14 +11,16 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.3
 
+import "../../BsStyles"
+
 
 Button {
     id: control
 
-    width: 150
-    height: 50
+    width: BSSizes.applyScale(150)
+    height: BSSizes.applyScale(50)
 
-    font.pixelSize: 14
+    font.pixelSize: BSSizes.applyScale(14)
     font.family: "Roboto"
     font.letterSpacing: 0.5
 
@@ -28,7 +30,7 @@ Button {
     background: Rectangle {
         id: backgroundItem
         color: control.enabled ? "#f05c44" : "black"
-        radius: 4
+        radius: BSSizes.applyScale(4)
 
         border.color: 
             (enabled ? "transparent" :
