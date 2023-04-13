@@ -56,16 +56,16 @@ Item {
 
         Rectangle {
             id: explorer_menu_row
-            height: 100
+            height: BSSizes.applyScale(100)
             width: parent.width
 
             color: "transparent"
 
             Rectangle {
-                anchors.bottomMargin: 24
-                anchors.topMargin: 24
-                anchors.leftMargin: 18
-                anchors.rightMargin: 18
+                anchors.bottomMargin: BSSizes.applyScale(24)
+                anchors.topMargin: BSSizes.applyScale(24)
+                anchors.leftMargin: BSSizes.applyScale(18)
+                anchors.rightMargin: BSSizes.applyScale(18)
                 anchors.fill: parent
                 anchors.centerIn: parent
 
@@ -76,14 +76,14 @@ Item {
                 border.color: BSStyle.comboBoxBorderColor
 
                 Row {
-                    spacing: 20
+                    spacing: BSSizes.applyScale(20)
                     anchors.fill: parent
-                    anchors.leftMargin: 18
+                    anchors.leftMargin: BSSizes.applyScale(18)
 
                     Image {
                         id: search_icon
-                        width: 24
-                        height: 24
+                        width: BSSizes.applyScale(24)
+                        height: BSSizes.applyScale(24)
                         source: "qrc:/images/search_icon.svg"
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -91,10 +91,10 @@ Item {
                     TextInput {
                         id: expSearchBox
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 900
+                        width: BSSizes.applyScale(900)
                         clip: true
                         color: 'lightgrey'
-                        font.pixelSize: 16
+                        font.pixelSize: BSSizes.applyScale(16)
                         focus: true
 
                         function resetSearch() {
@@ -170,7 +170,7 @@ Item {
 
                         Text {
                             text: qsTr("Search for transaction or address")
-                            font.pixelSize: 16
+                            font.pixelSize: BSSizes.applyScale(16)
                             color: BSStyle.titleTextColor
                             anchors.fill: parent
                             visible: !expSearchBox.text
@@ -181,14 +181,14 @@ Item {
 
                 Row {
                     id: right_buttons_menu
-                    spacing: 8
-                    anchors.rightMargin: 11
+                    spacing: BSSizes.applyScale(8)
+                    anchors.rightMargin: BSSizes.applyScale(11)
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     
                     Image {
-                        width: 24
-                        height: 24
+                        width: BSSizes.applyScale(24)
+                        height: BSSizes.applyScale(24)
                         source: "qrc:/images/paste_icon.png"
                         anchors.verticalCenter: parent.verticalCenter
 
@@ -204,24 +204,24 @@ Item {
 
                     CustomSmallButton {
                         text: qsTr("<")
-                        width: 29
-                        height: 29
+                        width: BSSizes.applyScale(29)
+                        height: BSSizes.applyScale(29)
                         enabled: historyIndex >= 0
                         onClicked: expSearchBox.prev()
                     }
 
                     CustomSmallButton {
                         text: qsTr(">")
-                        width: 29
-                        height: 29
+                        width: BSSizes.applyScale(29)
+                        height: BSSizes.applyScale(29)
                         enabled: historyIndex < (searchHist.length - 1)
                         onClicked: expSearchBox.next()
                     }
 
                     CustomSmallButton {
                         text: qsTr("Reset")
-                        width: 68
-                        height: 29
+                        width: BSSizes.applyScale(68)
+                        height: BSSizes.applyScale(29)
                         onClicked: expSearchBox.resetSearch()
                     }
                 }

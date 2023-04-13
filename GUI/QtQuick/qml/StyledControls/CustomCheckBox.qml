@@ -20,11 +20,11 @@ CheckBox {
     spacing: 0
 
     indicator: Rectangle {
-        implicitWidth: 18
-        implicitHeight: 18
+        implicitWidth: BSSizes.applyScale(18)
+        implicitHeight: BSSizes.applyScale(18)
         x: control.leftPadding
         y: parent.height / 2 - height / 2
-        radius: 6
+        radius: BSSizes.applyScale(6)
         border.color: "#416485"
         color: "transparent"
 
@@ -33,10 +33,10 @@ CheckBox {
 
             anchors.centerIn: parent
 
-            width: 10
-            height: 7
-            sourceSize.width: 10
-            sourceSize.height: 7
+            width: BSSizes.applyScale(10)
+            height: BSSizes.applyScale(7)
+            sourceSize.width: BSSizes.applyScale(10)
+            sourceSize.height: BSSizes.applyScale(7)
 
             visible: control.checked
             source: "qrc:/images/check.svg"

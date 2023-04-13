@@ -14,11 +14,11 @@ import "../BsStyles"
 
 Label {
     horizontalAlignment: Text.AlignHLeft
-    font.pixelSize: 11
+    font.pixelSize: BSSizes.applyScale(11)
     font.family: "Roboto"
     color: { enabled ? BSStyle.labelsTextColor : BSStyle.disabledColor }
     wrapMode: Text.WordWrap
-    topPadding: 5
-    bottomPadding: 5
+    topPadding: BSSizes.applyScale(5)
+    bottomPadding: BSSizes.applyScale(5)
 }
 

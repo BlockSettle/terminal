@@ -26,7 +26,7 @@ Button {
         font.family: "Roboto"
         font.capitalization: Font.AllUppercase
         color: { parent.enabled ? textColor : BSStyle.disabledHeaderColor }
-        font.pixelSize: 11
+        font.pixelSize: BSSizes.applyScale(11)
     }
 
     Rectangle {

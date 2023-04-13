@@ -9,8 +9,8 @@ HorizontalHeaderView {
 
    delegate: Rectangle {
 
-      implicitHeight: 34
-      implicitWidth: 100
+      implicitHeight: BSSizes.applyScale(34)
+      implicitWidth: BSSizes.applyScale(100)
       color: BSStyle.tableCellBackgroundColor
 
       Text {
@@ -22,11 +22,11 @@ HorizontalHeaderView {
          font.family: "Roboto"
          font.pixelSize: root.text_size
          font.letterSpacing: -0.2
-         leftPadding: 10
+         leftPadding: BSSizes.applyScale(10)
       }
 
       Rectangle {
-         height: 1
+         height: BSSizes.applyScale(1)
          width: parent.width
          color: BSStyle.tableSeparatorColor
 

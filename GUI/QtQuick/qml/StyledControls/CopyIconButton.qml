@@ -9,8 +9,8 @@ Image {
 
     signal copy();
 
-    width: 24
-    height: 24
+    width: BSSizes.applyScale(24)
+    height: BSSizes.applyScale(24)
     anchors.verticalCenter: parent.verticalCenter
     source: "qrc:/images/copy_icon.svg"
     MouseArea {
@@ -19,7 +19,7 @@ Image {
             id: tool_tip
             timeout: 1000
             text: qsTr("Copied")
-            font.pixelSize: 10
+            font.pixelSize: BSSizes.applyScale(10)
             font.family: "Roboto"
             font.weight: Font.Normal
             contentItem: Text {
@@ -30,8 +30,8 @@ Image {
             background: Rectangle {
                 color: BSStyle.buttonsStandardColor
                 border.color: BSStyle.buttonsStandardColor
-                border.width: 1
-                radius: 14
+                border.width: BSSizes.applyScale(1)
+                radius: BSSizes.applyScale(14)
             }
         }
         onClicked: {

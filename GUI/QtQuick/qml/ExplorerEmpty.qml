@@ -17,21 +17,21 @@ import "BsStyles"
 
 Item {
     anchors.fill: parent
-    anchors.topMargin: 226
 
     Column {
-        spacing: 24
+        spacing: BSSizes.applyScale(24)
         anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
 
         Image {
-            width: 57
-            height: 72
+            width: BSSizes.applyScale(57)
+            height: BSSizes.applyScale(72)
             source: "qrc:/images/logo_no_text.svg"
             anchors.horizontalCenter: parent.horizontalCenter
         }
         Label {
             text: qsTr("Provides you with a convenient, powerful, yet simple tool to read\n transaction and address data from the bitcoin network")
-            font.pixelSize: 16
+            font.pixelSize: BSSizes.applyScale(16)
             color: BSStyle.titleTextColor
             horizontalAlignment: Text.AlignHCenter
         }

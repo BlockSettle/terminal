@@ -20,10 +20,10 @@ Rectangle {
     property color label_value_color: BSStyle.balanceValueTextColor
 
     property string value_suffix
-    property int left_text_padding: 10
+    property int left_text_padding: BSSizes.applyScale(10)
 
-    width: 120
-    height: 53
+    width: BSSizes.applyScale(120)
+    height: BSSizes.applyScale(53)
     color: "transparent"
 
     Column {
@@ -36,7 +36,7 @@ Rectangle {
 
             color: BSStyle.titleTextColor
             font.family: "Roboto"
-            font.pixelSize: 12
+            font.pixelSize: BSSizes.applyScale(12)
             font.letterSpacing: -0.2
         }
 
@@ -47,7 +47,7 @@ Rectangle {
             color: control.label_value_color
             font.family: "Roboto"
             font.weight: Font.Bold
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             //font.letterSpacing: 0.2
         }
     }

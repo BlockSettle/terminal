@@ -32,11 +32,11 @@ Item {
         anchors.topMargin: 0
 
         width: root.width
-        height: 70
+        height: BSSizes.applyScale(70)
 
-        input_topMargin: 35
-        title_leftMargin: 16
-        title_topMargin: 16
+        input_topMargin: BSSizes.applyScale(35)
+        title_leftMargin: BSSizes.applyScale(16)
+        title_topMargin: BSSizes.applyScale(16)
 
         visible: txSignRequest !== null ? !txSignRequest.isHWW : false
         title_text: qsTr("Password")
@@ -57,7 +57,7 @@ Item {
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: password.bottom
-        anchors.topMargin: 16
+        anchors.topMargin: BSSizes.applyScale(16)
 
         width: root.width
 
@@ -72,13 +72,13 @@ Item {
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: progress_bar.bottom
-        anchors.topMargin: 8
+        anchors.topMargin: BSSizes.applyScale(8)
 
         text: qsTr("%1 seconds left").arg (Number(root.time_progress).toLocaleString())
 
         color: "#45A6FF"
 
-        font.pixelSize: 13
+        font.pixelSize: BSSizes.applyScale(13)
         font.family: "Roboto"
         font.weight: Font.Normal
     }

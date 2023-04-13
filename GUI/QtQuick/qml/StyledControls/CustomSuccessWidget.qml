@@ -16,8 +16,8 @@ ColumnLayout  {
 
     signal sig_finish()
 
-    height: 485
-    width: 580
+    height: BSSizes.applyScale(485)
+    width: BSSizes.applyScale(580)
     spacing: 0
 
     CustomTitleLabel {
@@ -31,31 +31,31 @@ ColumnLayout  {
     Image {
         id: wallet_icon
 
-        Layout.topMargin: 34
+        Layout.topMargin: BSSizes.applyScale(34)
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
-        Layout.preferredHeight : 120
-        Layout.preferredWidth : 120
+        Layout.preferredHeight : BSSizes.applyScale(120)
+        Layout.preferredWidth : BSSizes.applyScale(120)
 
         source: "qrc:/images/success.png"
-        width: 120
-        height: 120
+        width: BSSizes.applyScale(120)
+        height: BSSizes.applyScale(120)
     }
 
 
     Label {
         id: details
 
-        Layout.topMargin: 26
+        Layout.topMargin: BSSizes.applyScale(26)
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
         text: qsTr("Your wallet has successfully been created")
-        font.pixelSize: 14
+        font.pixelSize: BSSizes.applyScale(14)
         font.family: "Roboto"
         font.weight: Font.Normal
         color: "#E2E7FF"
         wrapMode: Text.Wrap
         Layout.maximumWidth: parent.width
-        Layout.leftMargin: 10
-        Layout.rightMargin: 10
+        Layout.leftMargin: BSSizes.applyScale(10)
+        Layout.rightMargin: BSSizes.applyScale(10)
     }
 
     Label {
@@ -66,9 +66,9 @@ ColumnLayout  {
     CustomButton {
         id: finish_but
 
-        width: 530
+        width: BSSizes.applyScale(530)
 
-        Layout.bottomMargin: 40
+        Layout.bottomMargin: BSSizes.applyScale(40)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         text: qsTr("Finish")

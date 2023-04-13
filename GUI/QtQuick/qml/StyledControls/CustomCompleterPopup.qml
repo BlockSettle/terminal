@@ -40,19 +40,19 @@ Popup {
 
             id: delega
 
-            width: _popup.width - 12
-            height: 27
+            width: _popup.width - BSSizes.applyScale(12)
+            height: BSSizes.applyScale(27)
 
-            leftPadding: 6
-            topPadding: 4
-            bottomPadding: 4
+            leftPadding: BSSizes.applyScale(6)
+            topPadding: BSSizes.applyScale(4)
+            bottomPadding: BSSizes.applyScale(4)
 
             contentItem: Text {
 
                 text: comp_vars[index]
                 color: delega.highlighted ? BSStyle.comboBoxItemTextHighlightedColor :
                                             BSStyle.comboBoxItemTextColor
-                font.pixelSize: 16
+                font.pixelSize: BSSizes.applyScale(16)
                 font.family: "Roboto"
                 font.weight: Font.Normal
 
@@ -65,7 +65,7 @@ Popup {
             background: Rectangle {
                 color: delega.highlighted ? BSStyle.comboBoxItemHighlightedColor : "transparent"
                 opacity: delega.highlighted ? 0.2 : 1
-                radius: 14
+                radius: BSSizes.applyScale(14)
             }
 
             MouseArea {
@@ -85,7 +85,7 @@ Popup {
 
     background: Rectangle {
         color: "#FFFFFF"
-        radius: 14
+        radius: BSSizes.applyScale(14)
     }
 
     function current_increment ()

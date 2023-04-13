@@ -15,8 +15,8 @@ ColumnLayout  {
     property var wallet_properties_vm
     property bool isExitWhenSuccess
 
-    height: 548
-    width: 580
+    height: BSSizes.applyScale(548)
+    width: BSSizes.applyScale(580)
     focus: true
 
     spacing: 0
@@ -39,17 +39,17 @@ ColumnLayout  {
     }
 
     Rectangle {
-        width: 530
-        height: 82
-        radius: 14
+        width: BSSizes.applyScale(530)
+        height: BSSizes.applyScale(82)
+        radius: BSSizes.applyScale(14)
         color: BSStyle.exportWalletLabelBackground
 
-        Layout.topMargin: 24
+        Layout.topMargin: BSSizes.applyScale(24)
         Layout.alignment: Qt.AlignCenter
 
         Grid {
             columns: 2
-            rowSpacing: 14
+            rowSpacing: BSSizes.applyScale(14)
             width: parent.width
             anchors.centerIn: parent
 
@@ -57,50 +57,50 @@ ColumnLayout  {
                 text: qsTr("Wallet name")
                 color: BSStyle.exportWalletLabelNameColor
                 font.family: "Roboto"
-                font.pixelSize: 14
+                font.pixelSize: BSSizes.applyScale(14)
                 width: parent.width / 2
-                leftPadding: 20
+                leftPadding: BSSizes.applyScale(20)
             }
             Text {
                 text: wallet_properties_vm.walletName
                 color: BSStyle.textColor
                 font.family: "Roboto"
-                font.pixelSize: 14
+                font.pixelSize: BSSizes.applyScale(14)
                 width: parent.width / 2
                 horizontalAlignment: Text.AlignRight
-                rightPadding: 20
+                rightPadding: BSSizes.applyScale(20)
             }
 
             Text {
                 text: qsTr("Wallet ID")
                 color: BSStyle.exportWalletLabelNameColor
                 font.family: "Roboto"
-                font.pixelSize: 14
+                font.pixelSize: BSSizes.applyScale(14)
                 width: parent.width / 2
-                leftPadding: 20
+                leftPadding: BSSizes.applyScale(20)
             }
             Text {
                 text: wallet_properties_vm.walletId
                 color: BSStyle.textColor
                 font.family: "Roboto"
-                font.pixelSize: 14
+                font.pixelSize: BSSizes.applyScale(14)
                 width: parent.width / 2
                 horizontalAlignment: Text.AlignRight
-                rightPadding: 20
+                rightPadding: BSSizes.applyScale(20)
             }
         }
     }
 
     Label {
 
-        Layout.leftMargin: 24
-        Layout.rightMargin: 24
-        Layout.topMargin: 32
-        Layout.preferredHeight: 16
+        Layout.leftMargin: BSSizes.applyScale(24)
+        Layout.rightMargin: BSSizes.applyScale(24)
+        Layout.topMargin: BSSizes.applyScale(32)
+        Layout.preferredHeight: BSSizes.applyScale(16)
         Layout.fillWidth: true
         Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
-        font.pixelSize: 14
+        font.pixelSize: BSSizes.applyScale(14)
         font.family: "Roboto"
         font.weight: Font.Normal
 
@@ -110,14 +110,14 @@ ColumnLayout  {
 
     Label {
 
-        Layout.leftMargin: 24
-        Layout.rightMargin: 24
-        Layout.topMargin: 8
-        Layout.preferredHeight: 16
+        Layout.leftMargin: BSSizes.applyScale(24)
+        Layout.rightMargin: BSSizes.applyScale(24)
+        Layout.topMargin: BSSizes.applyScale(8)
+        Layout.preferredHeight: BSSizes.applyScale(16)
         Layout.fillWidth: true
         Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
-        font.pixelSize: 14
+        font.pixelSize: BSSizes.applyScale(14)
         font.family: "Roboto"
         font.weight: Font.Normal
 
@@ -127,13 +127,13 @@ ColumnLayout  {
 
     Button {
 
-        Layout.leftMargin: 24
-        Layout.topMargin: 12
+        Layout.leftMargin: BSSizes.applyScale(24)
+        Layout.topMargin: BSSizes.applyScale(12)
         Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
         activeFocusOnTab: false
 
-        font.pixelSize: 13
+        font.pixelSize: BSSizes.applyScale(13)
         font.family: "Roboto"
         font.weight: Font.Normal
         palette.buttonText: BSStyle.buttonsHeaderTextColor
@@ -142,18 +142,18 @@ ColumnLayout  {
 
         icon.color: BSStyle.wildBlueColor
         icon.source: "qrc:/images/folder_icon.png"
-        icon.width: 20
-        icon.height: 16
+        icon.width: BSSizes.applyScale(20)
+        icon.height: BSSizes.applyScale(16)
 
         background: Rectangle {
-            implicitWidth: 160
-            implicitHeight: 34
+            implicitWidth: BSSizes.applyScale(160)
+            implicitHeight: BSSizes.applyScale(34)
             color: "transparent"
 
-            radius: 14
+            radius: BSSizes.applyScale(14)
 
             border.color: BSStyle.defaultBorderColor
-            border.width: 1
+            border.width: BSSizes.applyScale(1)
 
         }
 
@@ -176,10 +176,10 @@ ColumnLayout  {
         focus: true
         text: qsTr("Export")
 
-        Layout.bottomMargin: 40
+        Layout.bottomMargin: BSSizes.applyScale(40)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
-        width: 530
+        width: BSSizes.applyScale(530)
 
         function click_enter() {
             bsApp.exportWallet(wallet_properties_vm.walletId, bsApp.settingExportDir)

@@ -14,9 +14,9 @@ import "../BsStyles"
 
 Label {
     id: title
-    height : 23
+    height : BSSizes.applyScale(23)
     color: BSStyle.titanWhiteColor
-    font.pixelSize: 20
+    font.pixelSize: BSSizes.applyScale(20)
     font.family: "Roboto"
     font.weight: Font.Medium
 }

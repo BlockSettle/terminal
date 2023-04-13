@@ -23,8 +23,7 @@ CustomTextInput {
 
     signal focus_next()
 
-    input_right_margin: paste_but.anchors.rightMargin +
-                        paste_but.width + 16
+    input_right_margin: BSSizes.applyScale(paste_but.anchors.rightMargin + paste_but.width + 16)
 
     //aliases
     title_text: qsTr("Receiver address")
@@ -35,13 +34,13 @@ CustomTextInput {
         z: 1
 
         anchors.top: rec_addr_input.top
-        anchors.topMargin: 23
+        anchors.topMargin: BSSizes.applyScale(23)
         anchors.right: rec_addr_input.right
-        anchors.rightMargin: 23
+        anchors.rightMargin: BSSizes.applyScale(23)
 
         source: "qrc:/images/paste_icon.png"
-        width: 24
-        height: 24
+        width: BSSizes.applyScale(24)
+        height: BSSizes.applyScale(24)
 
         MouseArea {
             anchors.fill: parent

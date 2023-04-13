@@ -20,10 +20,10 @@ CustomSmallButton {
 
     Image {
         id: icon_item
-        width: 10
-        height: 10
+        width: BSSizes.applyScale(10)
+        height: BSSizes.applyScale(10)
         anchors.left: parent.left
-        anchors.leftMargin: 14
+        anchors.leftMargin: BSSizes.applyScale(14)
         anchors.verticalCenter: parent.verticalCenter
     }
 
@@ -33,6 +33,6 @@ CustomSmallButton {
         color: BSStyle.titleTextColor
         verticalAlignment: Text.AlignVCenter
 
-        leftPadding: icon_item.width + 10
+        leftPadding: icon_item.width + BSSizes.applyScale(10)
     }
 }

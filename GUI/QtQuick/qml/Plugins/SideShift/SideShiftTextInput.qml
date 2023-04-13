@@ -12,11 +12,13 @@ import QtQuick 2.15
 import QtQuick.Window 2.2
 import QtQuick.Controls 2.12
 
+import "../../BsStyles"
+
 Rectangle {
    id: control
-   width: 400
-   height: 50
-   radius: 4
+   width: BSSizes.applyScale(400)
+   height: BSSizes.applyScale(50)
+   radius: BSSizes.applyScale(4)
    color: "#181414"
    border.width: 1
    border.color: (mouseArea.containsMouse || control.activeFocus) ? "white" : "gray"

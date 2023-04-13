@@ -8,6 +8,7 @@
 **********************************************************************************
 
 */
+
 import QtQuick 2
 import QtQuick.Controls 2.9
 import QtQuick.Layouts 1.3
@@ -26,8 +27,8 @@ import "Plugins/Common" 1
 ApplicationWindow {
     id: mainWindow
 
-    minimumWidth: 1200
-    minimumHeight: 800
+    minimumWidth: BSSizes.applyWindowWidthScale(1200)
+    minimumHeight: BSSizes.applyWindowHeightScale(800)
     x: Screen.width / 2 - width / 2
     y: Screen.height / 2 - height / 2
 
@@ -198,24 +199,20 @@ ApplicationWindow {
     }
 
     header: Column {
-        height: 57
+        height: BSSizes.applyScale(57)
         width: parent.width
         spacing: 0
 
         RowLayout {
-            height: 56
+            height: BSSizes.applyScale(56)
             width: parent.width
             spacing: 0
 
             Image {
-                width: 129
-                height: 24
+                width: BSSizes.applyScale(129)
+                height: BSSizes.applyScale(24)
                 source: "qrc:/images/logo.png"
-                Layout.leftMargin : 18
-            }
-
-            Label {
-                width: 13
+                Layout.leftMargin : BSSizes.applyScale(18)
             }
 
             Label {
@@ -223,9 +220,9 @@ ApplicationWindow {
             }
 
             Label {
-                width: 35
+                width: BSSizes.applyScale(35)
                 text: qsTr("Connection: ")
-                font.pixelSize: 12
+                font.pixelSize: BSSizes.applyScale(12)
                 font.family: "Roboto"
                 font.weight: Font.Normal
                 color: BSStyle.titleTextColor
@@ -233,13 +230,10 @@ ApplicationWindow {
 
             Image {
                 id: imgEnvKind
-                width: 16
+                width: BSSizes.applyScale(16)
                 source: (bsApp.armoryState !== 7) ? "qrc:/images/bitcoin-disabled.png" :
                     ((bsApp.networkType === 0) ? "qrc:/images/bitcoin-main-net.png" : "qrc:/images/bitcoin-test-net.png")
-            }
-
-            Label {
-                width: 12
+                Layout.rightMargin: BSSizes.applyScale(12)
             }
 
             CustomTitleToolButton {
@@ -249,7 +243,7 @@ ApplicationWindow {
 
                 text: qsTr("Send")
                 icon.source: "qrc:/images/send_icon.png"
-                font.pixelSize: 12
+                font.pixelSize: BSSizes.applyScale(12)
                 font.letterSpacing: 0.3
                 Layout.fillHeight: true
 
@@ -267,7 +261,7 @@ ApplicationWindow {
                 text: qsTr("Receive")
                 icon.source: "qrc:/images/receive_icon.png"
 
-                font.pixelSize: 12
+                font.pixelSize: BSSizes.applyScale(12)
                 font.letterSpacing: 0.3
                 Layout.fillHeight: true
 
@@ -281,7 +275,7 @@ ApplicationWindow {
             CustomTitleToolButton {
                 id: btnSettings
                 text: qsTr("Settings")
-                font.pixelSize: 12
+                font.pixelSize: BSSizes.applyScale(12)
                 font.letterSpacing: 0.3
                 icon.source: "qrc:/images/settings_icon.png"
                 onClicked: {
@@ -293,7 +287,7 @@ ApplicationWindow {
 
         Rectangle {
             width: parent.width
-            height: 1
+            height: BSSizes.applyScale(1)
             color: BSStyle.defaultGreyColor
         }
     }
@@ -351,7 +345,7 @@ ApplicationWindow {
     }
 
     footer: Rectangle {
-        height: 56
+        height: BSSizes.applyScale(56)
         width: parent.width
         color :"#191E2A"
 

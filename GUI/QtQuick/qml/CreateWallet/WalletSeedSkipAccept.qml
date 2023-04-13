@@ -13,8 +13,8 @@ ColumnLayout  {
     signal sig_skip()
     signal sig_not_skip()
 
-    height: 485
-    width: 580
+    height: BSSizes.applyScale(485)
+    width: BSSizes.applyScale(580)
 
     spacing: 0
 
@@ -29,13 +29,13 @@ ColumnLayout  {
         id: warning_icon
 
         Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
-        Layout.topMargin: 24
-        Layout.preferredHeight : 44
-        Layout.preferredWidth : 44
+        Layout.topMargin: BSSizes.applyScale(24)
+        Layout.preferredHeight : BSSizes.applyScale(44)
+        Layout.preferredWidth : BSSizes.applyScale(44)
 
         source: "qrc:/images/warning_icon.png"
-        width: 44
-        height: 44
+        width: BSSizes.applyScale(44)
+        height: BSSizes.applyScale(44)
     }
 
     Label {
@@ -45,11 +45,11 @@ ColumnLayout  {
 
         Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
 
-        Layout.topMargin: 16
-        Layout.preferredHeight : 16
+        Layout.topMargin: BSSizes.applyScale(16)
+        Layout.preferredHeight : BSSizes.applyScale(16)
 
         color: "#E2E7FF"
-        font.pixelSize: 14
+        font.pixelSize: BSSizes.applyScale(14)
         font.family: "Roboto"
         font.weight: Font.Normal
     }
@@ -62,16 +62,16 @@ ColumnLayout  {
 
     RowLayout {
         id: row
-        spacing: 10
+        spacing: BSSizes.applyScale(10)
 
         //Layout.leftMargin: 24
-        Layout.bottomMargin: 40
+        Layout.bottomMargin: BSSizes.applyScale(40)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         CustomButton {
             id: no_but
             text: qsTr("No")
-            width: 261
+            width: BSSizes.applyScale(261)
 
             preferred: false
 
@@ -84,7 +84,7 @@ ColumnLayout  {
         CustomButton {
             id: skip_but
             text: qsTr("Yes, Skip")
-            width: 261
+            width: BSSizes.applyScale(261)
 
             preferred: true
 

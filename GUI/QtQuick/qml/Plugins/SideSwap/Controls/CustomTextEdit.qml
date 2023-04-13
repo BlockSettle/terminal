@@ -13,12 +13,13 @@ import QtQuick.Window 2.2
 import QtQuick.Controls 2.12
 
 import "../Styles"
+import "../../../BsStyles"
 
 Rectangle {
    id: control
-   width: 400
-   height: 50
-   radius: 12
+   width: BSSizes.applyScale(400)
+   height: BSSizes.applyScale(50)
+   radius: BSSizes.applyScale(12)
    color: SideSwapStyles.darkBlueBackground
    border.width: 1
    border.color: textEdit.activeFocus ? SideSwapStyles.buttonBackground : SideSwapStyles.spacerColor
@@ -32,22 +33,22 @@ Rectangle {
    TextInput {
       id: textEdit
       color: "white"
-      leftPadding: 10
-      topPadding: 32
-      rightPadding: 10
-      bottomPadding: 10
+      leftPadding: BSSizes.applyScale(10)
+      topPadding: BSSizes.applyScale(32)
+      rightPadding: BSSizes.applyScale(10)
+      bottomPadding: BSSizes.applyScale(10)
       clip: true
       anchors.fill: parent
-      font.pixelSize: 14
+      font.pixelSize: BSSizes.applyScale(14)
       font.family: control.fontFamily
 
       Text {
          text: control.textHint
          color: SideSwapStyles.secondaryTextColor
          font.family: control.fontFamily
-         font.pixelSize: 12
-         leftPadding: 10
-         topPadding: 10
+         font.pixelSize: BSSizes.applyScale(12)
+         leftPadding: BSSizes.applyScale(10)
+         topPadding: BSSizes.applyScale(10)
       }
    }
 

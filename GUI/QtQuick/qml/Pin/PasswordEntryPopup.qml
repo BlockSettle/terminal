@@ -24,7 +24,7 @@ Window {
 
     color: "transparent"
 
-    x: mainWindow.x + (mainWindow.width - width)/2
+    x: mainWindow.x + (mainWindow.width - width) / 2
     y: mainWindow.y + 28
 
     property string device_name
@@ -35,23 +35,23 @@ Window {
 
         color: "#191E2A"
         opacity: 1
-        radius: 16
-        height: 510
-        width: 430
+        radius: BSSizes.applyScale(16)
+        height: BSSizes.applyScale(510)
+        width: BSSizes.applyScale(430)
         border.color : BSStyle.defaultBorderColor
-        border.width : 1
+        border.width : BSSizes.applyScale(1)
 
         Image {
             id: close_button
 
             anchors.top: parent.top
-            anchors.topMargin: 24
+            anchors.topMargin: BSSizes.applyScale(24)
             anchors.right: parent.right
-            anchors.rightMargin: 24
+            anchors.rightMargin: BSSizes.applyScale(24)
 
             source: "qrc:/images/close_button.svg"
-            width: 16
-            height: 16
+            width: BSSizes.applyScale(16)
+            height: BSSizes.applyScale(16)
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
@@ -66,7 +66,7 @@ Window {
 
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
-            anchors.topMargin: 36
+            anchors.topMargin: BSSizes.applyScale(36)
 
             text: qsTr("Enter Password")
         }
@@ -76,15 +76,15 @@ Window {
             id: device_name_title_lbl
 
             anchors.top: title.bottom
-            anchors.topMargin: 48
+            anchors.topMargin: BSSizes.applyScale(48)
             anchors.left: parent.left
-            anchors.leftMargin: 20
+            anchors.leftMargin: BSSizes.applyScale(20)
 
             text: qsTr("Device name:")
 
             color: "#45A6FF"
 
-            font.pixelSize: 16
+            font.pixelSize: BSSizes.applyScale(16)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -94,9 +94,9 @@ Window {
             id: device_name_lbl
 
             anchors.top: title.bottom
-            anchors.topMargin: 48
+            anchors.topMargin: BSSizes.applyScale(48)
             anchors.right: parent.right
-            anchors.rightMargin: 20
+            anchors.rightMargin: BSSizes.applyScale(20)
 
             horizontalAlignment: Text.AlignRight
 
@@ -104,7 +104,7 @@ Window {
 
             color: "#E2E7FF"
 
-            font.pixelSize: 16
+            font.pixelSize: BSSizes.applyScale(16)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -113,17 +113,17 @@ Window {
             id: password
 
             anchors.top: device_name_lbl.bottom
-            anchors.topMargin: 48
+            anchors.topMargin: BSSizes.applyScale(48)
             anchors.horizontalCenter: parent.horizontalCenter
 
             //visible: !root.accept_on_device   //always visible now - password can be empty in all cases
 
-            height : 70
-            width: 390
+            height : BSSizes.applyScale(70)
+            width: BSSizes.applyScale(390)
 
-            input_topMargin: 35
-            title_leftMargin: 16
-            title_topMargin: 16
+            input_topMargin: BSSizes.applyScale(35)
+            title_leftMargin: BSSizes.applyScale(16)
+            title_topMargin: BSSizes.applyScale(16)
 
             title_text: qsTr("Password")
 
@@ -133,16 +133,16 @@ Window {
 
         RowLayout {
             id: row
-            spacing: 10
+            spacing: BSSizes.applyScale(10)
 
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 40
+            anchors.bottomMargin: BSSizes.applyScale(40)
             anchors.horizontalCenter: parent.horizontalCenter
 
             CustomButton {
                 id: cancel_but
                 text: qsTr("Cancel")
-                width: 190
+                width: BSSizes.applyScale(190)
 
                 preferred: false
                 function click_enter() {
@@ -154,7 +154,7 @@ Window {
             CustomButton {
                 id: accept_but
                 text: qsTr("Accept")
-                width: 190
+                width: BSSizes.applyScale(190)
 
                 //enabled: accept_on_device || password.input_text.length   //always accept now
 

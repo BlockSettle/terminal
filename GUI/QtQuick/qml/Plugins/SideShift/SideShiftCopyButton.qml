@@ -10,15 +10,16 @@
 */
 import QtQuick 2.15
 import QtQuick.Controls 2.3
+import "../../BsStyles"
 
 
 Button {
   id: control
 
-  width: 150
-  height: 50
+  width: BSSizes.applyScale(150)
+  height: BSSizes.applyScale(50)
 
-  font.pixelSize: 14
+  font.pixelSize: BSSizes.applyScale(14)
   font.family: "Roboto"
   font.weight: Font.Bold
 
@@ -30,12 +31,12 @@ Button {
   }
 
   contentItem: Row {
-    spacing: 5
+    spacing: BSSizes.applyScale(5)
     anchors.fill: parent
 
     Image {
-      width: 20
-      height: 20
+      width: BSSizes.applyScale(20)
+      height: BSSizes.applyScale(20)
       source: "qrc:/images/copy_icon.svg"
     }
 

@@ -22,8 +22,8 @@ import terminal.models 1.0
 Item {
     id: transactions
 
-    width: 1200
-    height: 788
+    width: BSSizes.applyScale(1200)
+    height: BSSizes.applyScale(788)
 
     signal openSend (string txId, bool isRBF, bool isCPFP)
     signal openExplorer (string txId)
@@ -60,20 +60,20 @@ Item {
     Column {
         spacing: 18
         anchors.fill: parent
-        anchors.topMargin: 14
-        anchors.leftMargin: 18
-        anchors.rightMargin: 18
+        anchors.topMargin: BSSizes.applyScale(14)
+        anchors.leftMargin: BSSizes.applyScale(18)
+        anchors.rightMargin: BSSizes.applyScale(18)
 
         Row {
             id: transaction_header_menu
             width: parent.width
-            height: 45
-            spacing: 15
+            height: BSSizes.applyScale(45)
+            spacing: BSSizes.applyScale(15)
 
             Label {
                 text: qsTr("Transactions list")
                 color: BSStyle.textColor
-                font.pixelSize: 20
+                font.pixelSize: BSSizes.applyScale(20)
                 font.family: "Roboto"
                 font.weight: Font.Bold
                 font.letterSpacing: 0.35
@@ -81,7 +81,7 @@ Item {
 
             Row 
             {
-                spacing: 8
+                spacing: BSSizes.applyScale(8)
                 height: parent.height
                 anchors.right: parent.right
 
@@ -89,8 +89,8 @@ Item {
                     id: txWalletsComboBox
                     model: bsApp.txWalletsList
 
-                    width: 124
-                    height: 29
+                    width: BSSizes.applyScale(124)
+                    height: BSSizes.applyScale(29)
 
                     anchors.verticalCenter: parent.verticalCenter
 
@@ -117,8 +117,8 @@ Item {
                     id: txTypesComboBox
                     model: bsApp.txTypesList
 
-                    width: 124
-                    height: 29
+                    width: BSSizes.applyScale(124)
+                    height: BSSizes.applyScale(29)
 
                     anchors.verticalCenter: parent.verticalCenter
 
@@ -142,7 +142,7 @@ Item {
                 }
 
                 Row {
-                    spacing: 4
+                    spacing: BSSizes.applyScale(4)
                     anchors.verticalCenter: parent.verticalCenter
                     
                     CustomButtonLeftIcon {
@@ -153,8 +153,8 @@ Item {
                     }
 
                     Rectangle {
-                        height: 1
-                        width: 8
+                        height: BSSizes.applyScale(1)
+                        width: BSSizes.applyScale(8)
                         color: BSStyle.tableSeparatorColor
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -170,8 +170,8 @@ Item {
                     text: qsTr("CSV download")
 
                     custom_icon.source: "qrc:/images/download_icon.svg"
-                    custom_icon.width: 10
-                    custom_icon.height: 10
+                    custom_icon.width: BSSizes.applyScale(10)
+                    custom_icon.height: BSSizes.applyScale(10)
 
                     onClicked: {
                         var csvFile = "%1/BlockSettle_%2_%3_%4.csv"

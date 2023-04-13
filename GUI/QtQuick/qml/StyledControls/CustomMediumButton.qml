@@ -17,14 +17,14 @@ Button {
     id: control
 
     property color background_color: BSStyle.buttonsDisabledColor
-    property int background_radius: 14
+    property int background_radius: BSSizes.applyScale(14)
 
-    width: 136
-    height: 36
+    width: BSSizes.applyScale(136)
+    height: BSSizes.applyScale(36)
     hoverEnabled: true
     focusPolicy: Qt.TabFocus
 
-    font.pixelSize: 12
+    font.pixelSize: BSSizes.applyScale(12)
     font.family: "Roboto"
     font.weight: Font.Normal
     font.letterSpacing: 0.3

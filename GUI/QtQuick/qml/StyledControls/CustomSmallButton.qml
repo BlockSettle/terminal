@@ -16,11 +16,11 @@ import "../BsStyles"
 Button {
     id: control
 
-    width: 134
-    height: 29
+    width: BSSizes.applyScale(134)
+    height: BSSizes.applyScale(29)
 
     focusPolicy: Qt.TabFocus
-    font.pixelSize: 12
+    font.pixelSize: BSSizes.applyScale(12)
     font.family: "Roboto"
     font.letterSpacing: 0.3
 
@@ -31,7 +31,7 @@ Button {
     background: Rectangle {
         id: backgroundItem
         color: "#020817"
-        radius: 14
+        radius: BSSizes.applyScale(14)
 
         border.color: 
             (control.hovered ? BSStyle.comboBoxHoveredBorderColor :

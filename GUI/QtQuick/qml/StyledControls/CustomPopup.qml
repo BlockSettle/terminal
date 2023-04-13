@@ -8,7 +8,7 @@ import "../BsStyles"
 Window {
     id: root
 
-    property int navig_bar_width: 36
+    property int navig_bar_width: BSSizes.applyScale(36)
     property alias _stack_view: stack_popup
     property alias _arrow_but_visibility: back_arrow_button.visible
 
@@ -27,8 +27,8 @@ Window {
 
     color: "transparent"
 
-    x: mainWindow.x + (mainWindow.width - width)/2
-    y: mainWindow.y + 28
+    x: mainWindow.x + (mainWindow.width - width) / 2
+    y: mainWindow.y + (mainWindow.height - height) / 2
 
     signal sig_close_click()
     signal sig_back_arrow_click()
@@ -38,37 +38,37 @@ Window {
 
         color: BSStyle.popupBackgroundColor
         opacity: 1
-        radius: 16
+        radius: BSSizes.applyScale(16)
         height: stack_popup.height + navig_bar_width
         width: stack_popup.width
         border.color : BSStyle.defaultBorderColor
-        border.width : 1
+        border.width : BSSizes.applyScale(1)
 
 
         Rectangle {
             id: close_rect
 
             anchors.top: parent.top
-            anchors.topMargin: 1
+            anchors.topMargin: BSSizes.applyScale(1)
             anchors.right: parent.right
-            anchors.rightMargin: 1
-            radius: 16
+            anchors.rightMargin: BSSizes.applyScale(1)
+            radius: BSSizes.applyScale(16)
 
             color: BSStyle.popupBackgroundColor
-            height: 39
-            width: 110
+            height: BSSizes.applyScale(39)
+            width: BSSizes.applyScale(110)
 
             Image {
                 id: close_button
 
                 anchors.top: parent.top
-                anchors.topMargin: 23
+                anchors.topMargin: BSSizes.applyScale(23)
                 anchors.right: parent.right
-                anchors.rightMargin: 23
+                anchors.rightMargin: BSSizes.applyScale(23)
 
                 source: "qrc:/images/close_button.svg"
-                width: 16
-                height: 16
+                width: BSSizes.applyScale(16)
+                height: BSSizes.applyScale(16)
             }
             MouseArea {
                 anchors.fill: parent
@@ -82,13 +82,13 @@ Window {
             id: back_arrow_button
 
             anchors.top: parent.top
-            anchors.topMargin: 24
+            anchors.topMargin: BSSizes.applyScale(24)
             anchors.left: parent.left
-            anchors.leftMargin: 24
+            anchors.leftMargin: BSSizes.applyScale(24)
 
             source: "qrc:/images/back_arrow.png"
-            width: 20
-            height: 16
+            width: BSSizes.applyScale(20)
+            height: BSSizes.applyScale(16)
             MouseArea {
                 anchors.fill: parent
                 onClicked: {

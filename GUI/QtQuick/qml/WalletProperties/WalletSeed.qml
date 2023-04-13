@@ -9,8 +9,8 @@ import "../StyledControls"
 ColumnLayout  {
     id: layout
 
-    height: 548
-    width: 580
+    height: BSSizes.applyScale(548)
+    width: BSSizes.applyScale(580)
 
     spacing: 0
 
@@ -28,11 +28,11 @@ ColumnLayout  {
 
         Layout.fillHeight: true
         Layout.fillWidth: true
-        Layout.leftMargin: 25
-        Layout.topMargin: 32
+        Layout.leftMargin: BSSizes.applyScale(25)
+        Layout.topMargin: BSSizes.applyScale(32)
 
-        cellHeight : 56
-        cellWidth : 180
+        cellHeight : BSSizes.applyScale(56)
+        cellWidth : BSSizes.applyScale(180)
 
         model: wallet_properties_vm.seed
         delegate: CustomSeedLabel {
@@ -52,10 +52,10 @@ ColumnLayout  {
         text: qsTr("Copy seed")
         preferred: true
 
-        Layout.bottomMargin: 40
+        Layout.bottomMargin: BSSizes.applyScale(40)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
-        width: 530
+        width: BSSizes.applyScale(530)
 
         onClicked: bsApp.copySeedToClipboard(
             wallet_properties_vm.seed

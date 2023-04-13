@@ -24,7 +24,7 @@ CustomComboBox {
     //aliases
     title_text: qsTr("Fee Suggestions")
 
-    height: 70
+    height: BSSizes.applyScale(70)
 
     textRole: "text"
     valueRole: "value"

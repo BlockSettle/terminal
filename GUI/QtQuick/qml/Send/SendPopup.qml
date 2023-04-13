@@ -11,7 +11,7 @@ CustomPopup {
 
     objectName: "send_popup"
 
-    navig_bar_width: 30
+    navig_bar_width: BSSizes.applyScale(30)
 
     _stack_view.initialItem: simple_details
     _arrow_but_visibility: !simple_details.visible && !advanced_details.visible

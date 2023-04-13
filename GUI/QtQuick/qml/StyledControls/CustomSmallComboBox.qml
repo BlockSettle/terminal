@@ -19,22 +19,22 @@ CustomComboBox {
 
     font.family: "Roboto"
     font.letterSpacing: 0.3
-    fontSize: 12
+    fontSize: BSSizes.applyScale(12)
     fontColor: BSStyle.titleTextColor
 
-    leftPadding: 10
+    leftPadding: BSSizes.applyScale(10)
     rightPadding: 0
     topPadding: 0
-    bottomPadding: 2
+    bottomPadding: BSSizes.applyScale(2)
 
     indicator: Image {
-        width: 6
-        height: 3
+        width: BSSizes.applyScale(6)
+        height: BSSizes.applyScale(3)
         anchors.verticalCenter: parent.verticalCenter
         source: "qrc:/images/combobox_open_button.svg"
 
         anchors.right: parent.right
-        anchors.rightMargin: 14
+        anchors.rightMargin: BSSizes.applyScale(14)
     }
 }
 

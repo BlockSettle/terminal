@@ -23,7 +23,7 @@ Item {
     property var txSignRequest
 
     Column {
-        spacing: 23
+        spacing: BSSizes.applyScale(23)
         anchors.fill: parent
 
         Button {
@@ -36,83 +36,83 @@ Item {
             columns: 2
             Label {
                 text: qsTr("<font color=\"cyan\">Output address:</font>")
-                font.pointSize: 12
+                font.pointSize: BSSizes.applyScale(BSSizes.applyScale(12))
             }
             Label {
                 text: qsTr("<font color=\"lightgrey\">%1</font>").arg(txSignRequest.outputAddresses[0])
-                font.pointSize: 12
+                font.pointSize: BSSizes.applyScale(12)
             }
             Label {
                 text: qsTr("<font color=\"cyan\">Output amount:</font>")
-                font.pointSize: 12
+                font.pointSize: BSSizes.applyScale(12)
             }
             Label {
                 text: qsTr("<font color=\"lightgrey\">%1</font>").arg(txSignRequest.outputAmount)
-                font.pointSize: 12
+                font.pointSize: BSSizes.applyScale(12)
             }
             Label {
                 text: qsTr("<font color=\"darkgrey\">Input amount:</font>")
-                font.pointSize: 12
+                font.pointSize: BSSizes.applyScale(12)
             }
             Label {
                 text: qsTr("<font color=\"lightgrey\">%1</font>").arg(txSignRequest.inputAmount)
-                font.pointSize: 12
+                font.pointSize: BSSizes.applyScale(12)
             }
             Label {
                 text: qsTr("<font color=\"darkgrey\">Return amount:</font>")
-                font.pointSize: 12
+                font.pointSize: BSSizes.applyScale(12)
             }
             Label {
                 text: qsTr("<font color=\"lightgrey\">%1</font>").arg(txSignRequest.returnAmount)
-                font.pointSize: 12
+                font.pointSize: BSSizes.applyScale(12)
             }
             Label {
                 text: qsTr("<font color=\"darkgrey\">Transaction fee:</font>")
-                font.pointSize: 12
+                font.pointSize: BSSizes.applyScale(12)
             }
             Label {
                 text: qsTr("<font color=\"lightgrey\">%1</font>").arg(txSignRequest.fee)
-                font.pointSize: 12
+                font.pointSize: BSSizes.applyScale(12)
             }
             Label {
                 text: qsTr("<font color=\"darkgrey\">Transaction size:</font>")
-                font.pointSize: 12
+                font.pointSize: BSSizes.applyScale(12)
             }
             Label {
                 text: qsTr("<font color=\"lightgrey\">%1</font>").arg(txSignRequest.txSize)
-                font.pointSize: 12
+                font.pointSize: BSSizes.applyScale(12)
             }
             Label {
                 text: qsTr("<font color=\"darkgrey\">Fee per byte:</font>")
-                font.pointSize: 12
+                font.pointSize: BSSizes.applyScale(12)
             }
             Label {
                 text: qsTr("<font color=\"lightgrey\">%1</font>").arg(txSignRequest.feePerByte)
-                font.pointSize: 12
+                font.pointSize: BSSizes.applyScale(12)
             }
         }
         TextInput {
             id: password
-            width: 500
-            height: 32
+            width: BSSizes.applyScale(500)
+            height: BSSizes.applyScale(32)
             color: 'lightgrey'
-            font.pointSize: 14
+            font.pointSize: BSSizes.applyScale(14)
             horizontalAlignment: TextEdit.AlignHCenter
             verticalAlignment: TextEdit.AlignVCenter
             echoMode: TextInput.Password
             passwordCharacter: '*'
             Text {
                 text: qsTr("Password")
-                font.pointSize: 6
+                font.pointSize: BSSizes.applyScale(6)
                 color: 'darkgrey'
                 anchors.left: parent
                 anchors.top: parent
             }
         }
         Button {
-            width: 900
+            width: BSSizes.applyScale(900)
             text: qsTr("Broadcast")
-            font.pointSize: 14
+            font.pointSize: BSSizes.applyScale(14)
             enabled: txSignRequest.isValid && password.text.length
 
             onClicked: {

@@ -273,8 +273,8 @@ CustomDialogWindow {
             anchors.centerIn: parent
             running: false
 
-            height: 50
-            width: 50
+            height: BSSizes.applyScale(50)
+            width: BSSizes.applyScale(50)
         }
     }
 

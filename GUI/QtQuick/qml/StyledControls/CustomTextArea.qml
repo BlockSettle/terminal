@@ -15,14 +15,14 @@ import "../BsStyles"
 TextArea {
     id: root
     horizontalAlignment: Text.AlignHLeft
-    font.pixelSize: 11
+    font.pixelSize: BSSizes.applyScale(11)
     font.family: "Roboto"
     color: "white"
     wrapMode: TextEdit.WordWrap
 
     background: Rectangle {
-        implicitWidth: 200
-        implicitHeight: 50
+        implicitWidth: BSSizes.applyScale(200)
+        implicitHeight: BSSizes.applyScale(50)
         color:"transparent"
         border.color: BSStyle.inputsBorderColor
     }

@@ -18,13 +18,13 @@ CustomTableView {
 
     FontMetrics {
         id: fontMetrics
-        font.pixelSize: 13
+        font.pixelSize: BSSizes.applyScale(13)
         font.family: "Roboto"
         font.weight: Font.Normal
     }
 
     delegate: Rectangle {
-        implicitHeight: 58
+        implicitHeight: BSSizes.applyScale(58)
         color: (row === component.selected_row_index ? BSStyle.tableCellSelectedBackgroundColor : BSStyle.tableCellBackgroundColor)
 
         MouseArea {
@@ -54,14 +54,14 @@ CustomTableView {
                 color: dataColor
                 font.family: "Roboto"
                 font.weight: Font.Normal
-                font.pixelSize: 13
+                font.pixelSize: BSSizes.applyScale(13)
 
-                leftPadding: 10
-                topPadding: 9
+                leftPadding: BSSizes.applyScale(10)
+                topPadding: BSSizes.applyScale(9)
             }
 
             Column {
-                spacing: 8
+                spacing: BSSizes.applyScale(8)
                 visible: column === 1
                 width: parent.width
                 anchors.centerIn: parent
@@ -75,17 +75,17 @@ CustomTableView {
                         color: BSStyle.titleTextColor
                         font.family: "Roboto"
                         font.weight: Font.Normal
-                        font.pixelSize: 13
+                        font.pixelSize: BSSizes.applyScale(13)
                         font.letterSpacing: -0.2
-                        leftPadding: 10
+                        leftPadding: BSSizes.applyScale(10)
                     }
                     Text {
                         text: tableData
-                        width: parent.width - fontMetrics.advanceWidth(address_label_item.text) - 10
+                        width: parent.width - fontMetrics.advanceWidth(address_label_item.text) - BSSizes.applyScale(10)
                         color: BSStyle.textColor
                         font.family: "Roboto"
                         font.weight: Font.Normal
-                        font.pixelSize: 13
+                        font.pixelSize: BSSizes.applyScale(13)
                         font.letterSpacing: -0.2
                         clip: true
                     }
@@ -99,17 +99,17 @@ CustomTableView {
                         color: BSStyle.titleTextColor
                         font.family: "Roboto"
                         font.weight: Font.Normal
-                        font.pixelSize: 13
+                        font.pixelSize: BSSizes.applyScale(13)
                         font.letterSpacing: -0.2
-                        leftPadding: 10
+                        leftPadding: BSSizes.applyScale(10)
                     }
                     Text {
                         text: txHash
-                        width: parent.width - fontMetrics.advanceWidth(transaction_label_item.text) - 10
+                        width: parent.width - fontMetrics.advanceWidth(transaction_label_item.text) - BSSizes.applyScale(10)
                         color: BSStyle.textColor
                         font.family: "Roboto"
                         font.weight: Font.Normal
-                        font.pixelSize: 13
+                        font.pixelSize: BSSizes.applyScale(13)
                         font.letterSpacing: -0.2
                         clip: true
                     }

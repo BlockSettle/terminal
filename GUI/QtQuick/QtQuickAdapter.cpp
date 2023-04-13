@@ -27,6 +27,7 @@
 #include <QStandardPaths>
 #include <QThread>
 #include <QTimer>
+#include <QScreen>
 #include <spdlog/spdlog.h>
 #include "ArmoryServersModel.h"
 #include "bip39/bip39.h"
@@ -204,12 +205,14 @@ void QtQuickAdapter::run(int &argc, char **argv)
    Q_INIT_RESOURCE(armory);
    Q_INIT_RESOURCE(qtquick);
 
-//   QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+   QGuiApplication::setAttribute(Qt::AA_DisableHighDpiScaling);
 
    QApplication app(argc, argv);
 
    QApplication::setOrganizationDomain(QLatin1String("blocksettle.com"));
    QApplication::setWindowIcon(QIcon(QStringLiteral(":/images/terminal.ico")));
+
+   scaleController_ = std::make_unique<ScaleController>();
 
    const QFileInfo localStyleSheetFile(QLatin1String("stylesheet.css"));
    QFile stylesheetFile(localStyleSheetFile.exists()
@@ -307,6 +310,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
    rootCtxt_->setContextProperty(QLatin1Literal("addressFilterModel"), addressFilterModel_.get());
    rootCtxt_->setContextProperty(QLatin1Literal("transactionFilterModel"), transactionFilterModel_.get());
    rootCtxt_->setContextProperty(QLatin1Literal("pluginsListModel"), pluginsListModel_.get());
+   rootCtxt_->setContextProperty(QLatin1Literal("scaleController"), scaleController_.get());
    engine.addImageProvider(QLatin1Literal("QR"), new QRImageProvider);
 
    connect(&engine, &QQmlApplicationEngine::objectCreated,

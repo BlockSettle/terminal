@@ -17,8 +17,8 @@ ColumnLayout  {
     signal sig_broadcast()
     signal sig_time_finished()
 
-    height: 554
-    width: 580
+    height: BSSizes.applyWindowHeightScale(554)
+    width: BSSizes.applyWindowWidthScale(580)
     spacing: 0
 
     property int k: 0
@@ -54,7 +54,7 @@ ColumnLayout  {
 
     CustomTitleLabel {
         id: title
-        Layout.topMargin: 6
+        Layout.topMargin: BSSizes.applyScale(6)
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
         Layout.preferredHeight : title.height
         text: qsTr("Sign Transaction")
@@ -62,19 +62,19 @@ ColumnLayout  {
 
     Label {
         Layout.fillWidth: true
-        height: 24
+        height: BSSizes.applyScale(24)
     }
 
     Rectangle {
 
         id: output_rect
 
-        width: 532
-        height: 82
+        width: BSSizes.applyScale(532)
+        height: BSSizes.applyScale(82)
 
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
 
-        radius: 14
+        radius: BSSizes.applyScale(14)
 
         color: "#32394F"
 
@@ -83,15 +83,15 @@ ColumnLayout  {
             id: out_addr_title
 
             anchors.top: parent.top
-            anchors.topMargin: 18
+            anchors.topMargin: BSSizes.applyScale(18)
             anchors.left: parent.left
-            anchors.leftMargin: 20
+            anchors.leftMargin: BSSizes.applyScale(20)
 
             text: qsTr("Output address:")
 
             color: "#45A6FF"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -101,15 +101,15 @@ ColumnLayout  {
             id: out_amount_title
 
             anchors.top: out_addr_title.bottom
-            anchors.topMargin: 14
+            anchors.topMargin: BSSizes.applyScale(14)
             anchors.left: parent.left
-            anchors.leftMargin: 20
+            anchors.leftMargin: BSSizes.applyScale(20)
 
             text: qsTr("Output amount:")
 
             color: "#45A6FF"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -119,15 +119,15 @@ ColumnLayout  {
             id: out_addr
 
             anchors.top: parent.top
-            anchors.topMargin: 18
+            anchors.topMargin: BSSizes.applyScale(18)
             anchors.right: parent.right
-            anchors.rightMargin: 20
+            anchors.rightMargin: BSSizes.applyScale(20)
 
             text: txSignRequest !== null ? txSignRequest.outputAddresses[0] : ""
 
             color: "#FFFFFF"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -137,15 +137,15 @@ ColumnLayout  {
             id: out_amount
 
             anchors.top: out_addr.bottom
-            anchors.topMargin: 14
+            anchors.topMargin: BSSizes.applyScale(14)
             anchors.right: parent.right
-            anchors.rightMargin: 20
+            anchors.rightMargin: BSSizes.applyScale(20)
 
             text: txSignRequest !== null ? txSignRequest.outputAmount : ""
 
             color: "#FFFFFF"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -156,8 +156,8 @@ ColumnLayout  {
 
         id: input_rect
 
-        width: 532
-        height: 188
+        width: BSSizes.applyScale(532)
+        height: BSSizes.applyScale(188)
 
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
 
@@ -168,15 +168,15 @@ ColumnLayout  {
             id: in_amount_title
 
             anchors.top: parent.top
-            anchors.topMargin: 18
+            anchors.topMargin: BSSizes.applyScale(18)
             anchors.left: parent.left
-            anchors.leftMargin: 20
+            anchors.leftMargin: BSSizes.applyScale(20)
 
             text: qsTr("Input amount:")
 
             color: "#7A88B0"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -186,15 +186,15 @@ ColumnLayout  {
             id: in_amount
 
             anchors.top: parent.top
-            anchors.topMargin: 18
+            anchors.topMargin: BSSizes.applyScale(18)
             anchors.right: parent.right
-            anchors.rightMargin: 20
+            anchors.rightMargin: BSSizes.applyScale(20)
 
             text: txSignRequest !== null ? txSignRequest.inputAmount : ""
 
             color: "#E2E7FF"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -204,15 +204,15 @@ ColumnLayout  {
             id: return_amount_title
 
             anchors.top: in_amount_title.bottom
-            anchors.topMargin: 15
+            anchors.topMargin: BSSizes.applyScale(15)
             anchors.left: parent.left
-            anchors.leftMargin: 20
+            anchors.leftMargin: BSSizes.applyScale(20)
 
             text: qsTr("Return amount:")
 
             color: "#7A88B0"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -222,15 +222,15 @@ ColumnLayout  {
             id: return_amount
 
             anchors.top: in_amount.bottom
-            anchors.topMargin: 15
+            anchors.topMargin: BSSizes.applyScale(15)
             anchors.right: parent.right
-            anchors.rightMargin: 20
+            anchors.rightMargin: BSSizes.applyScale(20)
 
             text: txSignRequest !== null ? txSignRequest.returnAmount : ""
 
             color: "#E2E7FF"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -240,15 +240,15 @@ ColumnLayout  {
             id: transaction_fee_title
 
             anchors.top: return_amount_title.bottom
-            anchors.topMargin: 15
+            anchors.topMargin: BSSizes.applyScale(15)
             anchors.left: parent.left
-            anchors.leftMargin: 20
+            anchors.leftMargin: BSSizes.applyScale(20)
 
             text: qsTr("Transaction fee:")
 
             color: "#7A88B0"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -258,15 +258,15 @@ ColumnLayout  {
             id: transaction_fee
 
             anchors.top: return_amount.bottom
-            anchors.topMargin: 15
+            anchors.topMargin: BSSizes.applyScale(15)
             anchors.right: parent.right
-            anchors.rightMargin: 20
+            anchors.rightMargin: BSSizes.applyScale(20)
 
             text: txSignRequest !== null ? txSignRequest.fee : ""
 
             color: "#E2E7FF"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -276,15 +276,15 @@ ColumnLayout  {
             id: transaction_size_title
 
             anchors.top: transaction_fee_title.bottom
-            anchors.topMargin: 15
+            anchors.topMargin: BSSizes.applyScale(15)
             anchors.left: parent.left
-            anchors.leftMargin: 20
+            anchors.leftMargin: BSSizes.applyScale(20)
 
             text: qsTr("Transaction size:")
 
             color: "#7A88B0"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -294,15 +294,15 @@ ColumnLayout  {
             id: transaction_size
 
             anchors.top: transaction_fee.bottom
-            anchors.topMargin: 15
+            anchors.topMargin: BSSizes.applyScale(15)
             anchors.right: parent.right
-            anchors.rightMargin: 20
+            anchors.rightMargin: BSSizes.applyScale(20)
 
             text: txSignRequest !== null ? txSignRequest.txSize : ""
 
             color: "#E2E7FF"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -312,15 +312,15 @@ ColumnLayout  {
             id: fee_per_byte_title
 
             anchors.top: transaction_size_title.bottom
-            anchors.topMargin: 15
+            anchors.topMargin: BSSizes.applyScale(15)
             anchors.left: parent.left
-            anchors.leftMargin: 20
+            anchors.leftMargin: BSSizes.applyScale(20)
 
             text: qsTr("Fee-per-byte:")
 
             color: "#7A88B0"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -330,15 +330,15 @@ ColumnLayout  {
             id: fee_per_byte
 
             anchors.top: transaction_size.bottom
-            anchors.topMargin: 15
+            anchors.topMargin: BSSizes.applyScale(15)
             anchors.right: parent.right
-            anchors.rightMargin: 20
+            anchors.rightMargin: BSSizes.applyScale(20)
 
             text: txSignRequest !== null ? txSignRequest.feePerByte : ""
 
             color: "#E2E7FF"
 
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -349,9 +349,9 @@ ColumnLayout  {
         id: password
 
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
-        Layout.topMargin: 10
+        Layout.topMargin: BSSizes.applyScale(10)
 
-        width: 532
+        width: BSSizes.applyScale(532)
 
         time_progress: layout.time_progress
 
@@ -371,9 +371,9 @@ ColumnLayout  {
     CustomButton {
         id: broadcast_but
         text: txSignRequest !== null ? (txSignRequest.hasError ? txSignRequest.errorText : qsTr("Broadcast")) : ""
-        width: 532
+        width: BSSizes.applyScale(532)
 
-        Layout.bottomMargin: 40
+        Layout.bottomMargin: BSSizes.applyScale(40)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         enabled: txSignRequest !== null ?

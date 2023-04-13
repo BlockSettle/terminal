@@ -11,11 +11,12 @@
 import QtQuick 2.15
 import QtQuick.Window 2.2
 import QtQuick.Controls 2.12
+import "../../BsStyles"
 
 Rectangle {
    id: control
-   width: 40
-   height: 40
+   width: BSSizes.applyScale(40)
+   height: BSSizes.applyScale(40)
    color: "transparent"
    activeFocusOnTab: true
 

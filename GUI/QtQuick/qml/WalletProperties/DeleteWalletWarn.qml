@@ -9,8 +9,8 @@ import "../StyledControls"
 ColumnLayout {
     id: layout
 
-    height: 548
-    width: 580
+    height: BSSizes.applyScale(548)
+    width: BSSizes.applyScale(580)
 
     spacing: 0
 
@@ -58,16 +58,16 @@ ColumnLayout {
     Image {
 
         Layout.alignment: Qt.AlignCenter
-        Layout.preferredHeight : 120
-        Layout.preferredWidth : 120
+        Layout.preferredHeight : BSSizes.applyScale(120)
+        Layout.preferredWidth : BSSizes.applyScale(120)
 
         source: "qrc:/images/wallet_icon_warn.svg"
-        width: 120
-        height: 120
+        width: BSSizes.applyScale(120)
+        height: BSSizes.applyScale(120)
     }
 
     CustomTitleLabel {
-        font.pixelSize: 14
+        font.pixelSize: BSSizes.applyScale(14)
         Layout.alignment: Qt.AlignCenter
         Layout.preferredHeight : title.height
         text: isHW() ? qsTr("Are you sure you want to delete this wallet?") : qsTr("Save the seed before deleting the wallet")
@@ -86,10 +86,10 @@ ColumnLayout {
             text: qsTr("View wallet seed")
             visible: !isHW()
 
-            Layout.bottomMargin: 40
+            Layout.bottomMargin: BSSizes.applyScale(40)
             Layout.alignment: Qt.AlignBottom
 
-            width: 160
+            width: BSSizes.applyScale(160)
 
             onClicked: viewWalletSeed()
         }
@@ -98,10 +98,10 @@ ColumnLayout {
             text: qsTr("Export watching-only wallet")
             visible: !isHW()
 
-            Layout.bottomMargin: 40
+            Layout.bottomMargin: BSSizes.applyScale(40)
             Layout.alignment: Qt.AlignBottom
 
-            width: 180
+            width: BSSizes.applyScale(180)
 
             onClicked: exportWOWallet()
         }
@@ -110,10 +110,10 @@ ColumnLayout {
             text: isHW() ? qsTr("Delete") : qsTr("Continue")
             preferred: true
 
-            Layout.bottomMargin: 40
+            Layout.bottomMargin: BSSizes.applyScale(40)
             Layout.alignment: Qt.AlignBottom
 
-            width: isHW() ? 260 : 160
+            width: BSSizes.applyScale(isHW() ? 260 : 160)
 
             onClicked: {
                 if (isHW()) {

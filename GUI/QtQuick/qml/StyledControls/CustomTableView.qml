@@ -16,9 +16,7 @@ import "../BsStyles"
 
 Column {
     id: root
-    width: 1200
-    height: 200
-    spacing: 2
+    spacing: BSSizes.applyScale(2)
 
     property alias model: component.model
     property alias delegate: component.delegate
@@ -27,10 +25,10 @@ Column {
     property var columnWidths
     property int copy_button_column_index: 0
     property int delete_button_column_index: -1
-    property int left_text_padding: 10
+    property int left_text_padding: BSSizes.applyScale(10)
     property bool has_header: true
-    property int text_header_size: 12
-    property int cell_text_size: 13
+    property int text_header_size: BSSizes.applyScale(12)
+    property int cell_text_size: BSSizes.applyScale(13)
 
     signal copyRequested(var id)
     signal deleteRequested(int id)
@@ -46,7 +44,7 @@ Column {
         id: tableHeader
         width: parent.width
         syncView: component
-        height: 32
+        height: BSSizes.applyScale(32)
         visible: root.has_header
         text_size: root.text_header_size
     }
@@ -82,8 +80,8 @@ Column {
         delegate: Rectangle {
             id: delega
 
-            implicitHeight: 34
-            implicitWidth: 100
+            implicitHeight: BSSizes.applyScale(34)
+            implicitWidth: BSSizes.applyScale(100)
             color: row === component.selected_row_index ? BSStyle.tableCellSelectedBackgroundColor : BSStyle.tableCellBackgroundColor
 
             MouseArea {

@@ -16,8 +16,8 @@ Window  {
     flags: Qt.WindowCloseButtonHint | Qt.FramelessWindowHint | Qt.Dialog
     modality: Qt.WindowModal
 
-    height: 430
-    width: 580
+    height: BSSizes.applyScale(430)
+    width: BSSizes.applyScale(580)
 
     color: "transparent"
 
@@ -30,19 +30,19 @@ Window  {
 
       color: "#191E2A"
       opacity: 1
-      radius: 16
+      radius: BSSizes.applyScale(16)
 
       anchors.fill: parent
 
       border.color : BSStyle.defaultBorderColor
-      border.width : 1
+      border.width : BSSizes.applyScale(1)
 
       CustomSuccessWidget {
         id: success
 
-        anchors.topMargin: 24
+        anchors.topMargin: BSSizes.applyScale(24)
         anchors.fill: parent
-        details_font_size: 16
+        details_font_size: BSSizes.applyScale(16)
         details_font_weight: Font.Medium
 
         onSig_finish: {

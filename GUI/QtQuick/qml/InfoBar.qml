@@ -15,13 +15,13 @@ import "BsStyles"
 
 Item {
     id: infoBarRoot
-    height: 30
+    height: BSSizes.applyScale(30)
 
     property bool showChangeApplyMessage: false
 
     RowLayout {
         anchors.fill: parent
-        spacing: 10
+        spacing: BSSizes.applyScale(10)
 
         Item {
             Layout.fillWidth: true
@@ -31,7 +31,7 @@ Item {
                 visible: infoBarRoot.showChangeApplyMessage
                 anchors {
                     fill: parent
-                    leftMargin: 10
+                    leftMargin: BSSizes.applyScale(10)
                 }
                 horizontalAlignment: Text.AlignLeft
                 verticalAlignment: Text.AlignVCenter
@@ -45,10 +45,10 @@ Item {
             id: netLabel
             property bool bInitAsTestNet: signerSettings.testNet
 
-            radius: 5
+            radius: BSSizes.applyScale(5)
             color: bInitAsTestNet ? BSStyle.testnetColor : BSStyle.mainnetColor
-            width: 100
-            height: 20
+            width: BSSizes.applyScale(100)
+            height: BSSizes.applyScale(20)
             Layout.alignment: Qt.AlignVCenter
 
             Text {

@@ -28,12 +28,12 @@ Rectangle {
     signal clicked_add()
     signal clicked()
 
-    width: 532
-    height: 50
+    width: BSSizes.applyScale(532)
+    height: BSSizes.applyScale(50)
 
     color: "transparent"
     opacity: 1
-    radius: 14
+    radius: BSSizes.applyScale(14)
 
     border.color: mouseArea.containsMouse ? BSStyle.listItemHoveredBorderColor : BSStyle.listItemBorderColor
     border.width: 1
@@ -43,12 +43,12 @@ Rectangle {
 
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: rect.left
-        anchors.leftMargin: 16
+        anchors.leftMargin: BSSizes.applyScale(16)
 
-        width: 24
-        height: 24
-        sourceSize.width: 24
-        sourceSize.height: 24
+        width: BSSizes.applyScale(24)
+        height: BSSizes.applyScale(24)
+        sourceSize.width: BSSizes.applyScale(24)
+        sourceSize.height: BSSizes.applyScale(24)
     }
 
     Label {
@@ -56,11 +56,11 @@ Rectangle {
 
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: icon.right
-        anchors.leftMargin: 8
+        anchors.leftMargin: BSSizes.applyScale(8)
 
         horizontalAlignment : Text.AlignLeft
 
-        font.pixelSize: 16
+        font.pixelSize: BSSizes.applyScale(16)
         font.family: "Roboto"
         font.weight: Font.Normal
 
@@ -74,13 +74,13 @@ Rectangle {
 
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: rect.right
-        anchors.rightMargin: 13
+        anchors.rightMargin: BSSizes.applyScale(13)
 
         z: 0
-        width: 24
-        height: 24
-        sourceSize.width: 24
-        sourceSize.height: 24
+        width: BSSizes.applyScale(24)
+        height: BSSizes.applyScale(24)
+        sourceSize.width: BSSizes.applyScale(24)
+        sourceSize.height: BSSizes.applyScale(24)
 
         MouseArea {
             anchors.fill: parent

@@ -9,8 +9,8 @@ Image {
 
     signal close();
 
-    width: 16
-    height: 16
+    width: BSSizes.applyScale(16)
+    height: BSSizes.applyScale(16)
     source: "qrc:/images/close_button.svg"
 
     MouseArea {

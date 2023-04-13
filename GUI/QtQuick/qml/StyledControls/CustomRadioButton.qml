@@ -20,20 +20,20 @@ RadioButton {
     activeFocusOnTab: false
 
     indicator: Rectangle {
-        implicitWidth: 16
-        implicitHeight: 16
+        implicitWidth: BSSizes.applyScale(16)
+        implicitHeight: BSSizes.applyScale(16)
         x: control.leftPadding
         y: parent.height / 2 - height / 2
-        radius: 8
+        radius: BSSizes.applyScale(8)
         border.color: "#45A6FF"
         color: "transparent"
 
         Rectangle {
-            width: 8
-            height: 8
-            x: 4
-            y: 4
-            radius: 4
+            width: BSSizes.applyScale(8)
+            height: BSSizes.applyScale(8)
+            x: BSSizes.applyScale(4)
+            y: BSSizes.applyScale(4)
+            radius: BSSizes.applyScale(4)
             color: "#45A6FF"
             visible: control.checked
         }

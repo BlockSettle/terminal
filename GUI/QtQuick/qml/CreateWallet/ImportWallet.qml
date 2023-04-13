@@ -27,8 +27,8 @@ ColumnLayout  {
                                  "17", "18", "19", "20",
                                  "21", "22", "23", "24"]
 
-    height: radbut_12.checked ? 555 : 670
-    width: radbut_12.checked? 580: 760
+    height: BSSizes.applyScale(radbut_12.checked ? 555 : 670)
+    width: BSSizes.applyScale(radbut_12.checked? 580: 760)
 
     spacing: 0
 
@@ -43,7 +43,7 @@ ColumnLayout  {
         id: type_switch
 
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 24
+        Layout.topMargin: BSSizes.applyScale(24)
 
         isFullChoosed: true
 
@@ -58,11 +58,11 @@ ColumnLayout  {
 
     RowLayout {
         id: row
-        spacing: 12
+        spacing: BSSizes.applyScale(12)
 
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 32
-        Layout.preferredHeight: 19
+        Layout.topMargin: BSSizes.applyScale(32)
+        Layout.preferredHeight: BSSizes.applyScale(19)
 
         Label {
             Layout.fillWidth: true
@@ -73,13 +73,13 @@ ColumnLayout  {
 
             text: qsTr("Seed phrase type:")
 
-            Layout.leftMargin: 25
+            Layout.leftMargin: BSSizes.applyScale(25)
 
-            width: 126
-            height: 19
+            width: BSSizes.applyScale(126)
+            height: BSSizes.applyScale(19)
 
             color: "#E2E7FF"
-            font.pixelSize: 16
+            font.pixelSize: BSSizes.applyScale(16)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -89,8 +89,8 @@ ColumnLayout  {
 
             text: "12 words"
 
-            spacing: 6
-            font.pixelSize: 13
+            spacing: BSSizes.applyScale(6)
+            font.pixelSize: BSSizes.applyScale(13)
             font.family: "Roboto"
             font.weight: Font.Normal
 
@@ -102,8 +102,8 @@ ColumnLayout  {
 
             text: "24 words"
 
-            spacing: 6
-            font.pixelSize: 13
+            spacing: BSSizes.applyScale(6)
+            font.pixelSize: BSSizes.applyScale(13)
             font.family: "Roboto"
             font.weight: Font.Normal
 
@@ -118,7 +118,7 @@ ColumnLayout  {
     Rectangle {
         id: hor_line
 
-        Layout.topMargin: 16
+        Layout.topMargin: BSSizes.applyScale(16)
         Layout.fillWidth: true
 
         height: 1
@@ -131,11 +131,11 @@ ColumnLayout  {
 
         Layout.fillHeight: true
         Layout.fillWidth: true
-        Layout.leftMargin: 25
-        Layout.topMargin: 24
+        Layout.leftMargin: BSSizes.applyScale(25)
+        Layout.topMargin: BSSizes.applyScale(24)
 
-        cellHeight : 56
-        cellWidth : 180
+        cellHeight : BSSizes.applyScale(56)
+        cellWidth : BSSizes.applyScale(180)
 
         property bool isValid: true
         property bool isEmpty: true
@@ -147,7 +147,7 @@ ColumnLayout  {
 
             property bool isAccepted: false
 
-            width: 170
+            width: BSSizes.applyScale(170)
             title_text: modelData
             onTextEdited : {
                 show_fill_in_completer()
@@ -320,15 +320,15 @@ ColumnLayout  {
 
         text:  qsTr("Invalid seed")
 
-        Layout.bottomMargin: 24
+        Layout.bottomMargin: BSSizes.applyScale(24)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
-        Layout.preferredHeight : 16
+        Layout.preferredHeight : BSSizes.applyScale(16)
 
-        height: 16
-        width: 136
+        height: BSSizes.applyScale(16)
+        width: BSSizes.applyScale(136)
 
         color: "#EB6060"
-        font.pixelSize: 14
+        font.pixelSize: BSSizes.applyScale(14)
         font.family: "Roboto"
         font.weight: Font.Normal
     }
@@ -336,10 +336,10 @@ ColumnLayout  {
     CustomButton {
         id: import_but
         text: qsTr("Import")
-        Layout.leftMargin: 25
-        Layout.bottomMargin: 40
+        Layout.leftMargin: BSSizes.applyScale(25)
+        Layout.bottomMargin: BSSizes.applyScale(40)
 
-        width: 530
+        width: BSSizes.applyScale(530)
         enabled: !grid.hasEmptyWords
         preferred: true
         Layout.alignment: Qt.AlignCenter

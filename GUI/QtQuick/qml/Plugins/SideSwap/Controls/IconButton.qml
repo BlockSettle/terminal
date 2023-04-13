@@ -13,11 +13,12 @@ import QtQuick.Window 2.2
 import QtQuick.Controls 2.12
 
 import "../Styles"
+import "../../../BsStyles"
 
 Rectangle {
    id: control
-   width: 50
-   height: 50
+   width: BSSizes.applyScale(50)
+   height: BSSizes.applyScale(50)
    color: SideSwapStyles.buttonBackground
    activeFocusOnTab: true
 

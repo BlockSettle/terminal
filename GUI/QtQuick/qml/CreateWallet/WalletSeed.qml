@@ -14,8 +14,8 @@ ColumnLayout  {
 
     property var phrase
 
-    height: 485
-    width: 580
+    height: BSSizes.applyScale(485)
+    width: BSSizes.applyScale(580)
     spacing: 0
 
     CustomTitleLabel {
@@ -28,11 +28,11 @@ ColumnLayout  {
     Label {
         id: subtitle
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 16
-        Layout.preferredHeight : 16
+        Layout.topMargin: BSSizes.applyScale(16)
+        Layout.preferredHeight : BSSizes.applyScale(16)
         text: qsTr("Write down and store your 12 word seed someplace safe and offline")
         color: "#E2E7FF"
-        font.pixelSize: 14
+        font.pixelSize: BSSizes.applyScale(14)
         font.family: "Roboto"
         font.weight: Font.Normal
     }
@@ -42,11 +42,11 @@ ColumnLayout  {
 
         Layout.fillHeight: true
         Layout.fillWidth: true
-        Layout.leftMargin: 25
-        Layout.topMargin: 32
+        Layout.leftMargin: BSSizes.applyScale(25)
+        Layout.topMargin: BSSizes.applyScale(32)
 
-        cellHeight : 56
-        cellWidth : 180
+        cellHeight : BSSizes.applyScale(56)
+        cellWidth : BSSizes.applyScale(180)
 
         model: phrase
         delegate: CustomSeedLabel {
@@ -57,16 +57,16 @@ ColumnLayout  {
 
     RowLayout {
         id: row
-        spacing: 10
+        spacing: BSSizes.applyScale(10)
 
         //Layout.leftMargin: 24
-        Layout.bottomMargin: 40
+        Layout.bottomMargin: BSSizes.applyScale(40)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         CustomButton {
             id: copy_seed_but
             text: qsTr("Copy Seed")
-            width: 261
+            width: BSSizes.applyScale(261)
 
             preferred: false
 
@@ -78,7 +78,7 @@ ColumnLayout  {
         CustomButton {
             id: continue_but
             text: qsTr("Continue")
-            width: 261
+            width: BSSizes.applyScale(261)
 
             preferred: true
 

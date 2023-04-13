@@ -26,20 +26,20 @@ Item {
     signal requestPageChange(var text)
 
     Column {
-        spacing: 20
-        anchors.leftMargin: 18
-        anchors.rightMargin: 18
-        anchors.bottomMargin: 18
+        spacing: BSSizes.applyScale(20)
+        anchors.leftMargin: BSSizes.applyScale(18)
+        anchors.rightMargin: BSSizes.applyScale(18)
+        anchors.bottomMargin: BSSizes.applyScale(18)
         anchors.fill: parent
 
         Row {
-            spacing: 16
-            height: 20
+            spacing: BSSizes.applyScale(16)
+            height: BSSizes.applyScale(20)
 
             Label {
                 text: qsTr("Address")
                 color: BSStyle.textColor
-                font.pixelSize: 20
+                font.pixelSize: BSSizes.applyScale(20)
                 font.family: "Roboto"
                 font.weight: Font.Bold
                 font.letterSpacing: 0.35
@@ -50,7 +50,7 @@ Item {
                 id: address_label
                 text: address !== null ? address : ""
                 color: BSStyle.textColor
-                font.pixelSize: 14
+                font.pixelSize: BSSizes.applyScale(14)
                 height: parent.height
                 verticalAlignment: Text.AlignBottom
             
@@ -63,16 +63,16 @@ Item {
 
         Rectangle {
             width: parent.width
-            height: 60
-            anchors.bottomMargin: 24
-            anchors.topMargin: 18
-            anchors.leftMargin: 18
-            anchors.rightMargin: 18
+            height: BSSizes.applyScale(60)
+            anchors.bottomMargin: BSSizes.applyScale(24)
+            anchors.topMargin: BSSizes.applyScale(18)
+            anchors.leftMargin: BSSizes.applyScale(18)
+            anchors.rightMargin: BSSizes.applyScale(18)
 
-            radius: 14
+            radius: BSSizes.applyScale(14)
             color: BSStyle.addressesPanelBackgroundColor
 
-            border.width: 1
+            border.width: BSSizes.applyScale(1)
             border.color: BSStyle.comboBoxBorderColor
 
             Row {
@@ -80,49 +80,49 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
 
                 BaseBalanceLabel {
-                    width: 130
+                    width: BSSizes.applyScale(130)
                     label_text: qsTr("Transaction count")
                     label_value: txListByAddrModel.nbTx
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
                 Rectangle {
-                    width: 1
-                    height: 36
+                    width: BSSizes.applyScale(1)
+                    height: BSSizes.applyScale(36)
                     color: BSStyle.tableSeparatorColor
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
                 BaseBalanceLabel {
-                    width: 130
+                    width: BSSizes.applyScale(130)
                     label_text: qsTr("Balance (BTC)")
                     label_value: txListByAddrModel.balance
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
                 Rectangle {
-                    width: 1
-                    height: 36
+                    width: BSSizes.applyScale(1)
+                    height: BSSizes.applyScale(36)
                     color: BSStyle.tableSeparatorColor
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
                 BaseBalanceLabel {
-                    width: 150
+                    width: BSSizes.applyScale(150)
                     label_text: qsTr("Total Received (BTC)")
                     label_value: txListByAddrModel.totalReceived
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
                 Rectangle {
-                    width: 1
-                    height: 36
+                    width: BSSizes.applyScale(1)
+                    height: BSSizes.applyScale(36)
                     color: BSStyle.tableSeparatorColor
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
                 BaseBalanceLabel {
-                    width: 130
+                    width: BSSizes.applyScale(130)
                     label_text: qsTr("Total Sent (BTC)")
                     label_value: txListByAddrModel.totalSent
                     anchors.verticalCenter: parent.verticalCenter
@@ -133,14 +133,14 @@ Item {
         Label {
             text: qsTr("Transactions")
             color: BSStyle.textColor
-            font.pixelSize: 20
+            font.pixelSize: BSSizes.applyScale(20)
             font.family: "Roboto"
             font.weight: Font.Bold
         }
 
         CustomTableView {
             width: parent.width
-            height: parent.height - 150
+            height: parent.height - BSSizes.applyScale(150)
             model: txListByAddrModel
 
             copy_button_column_index: 1

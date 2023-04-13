@@ -14,8 +14,8 @@ ColumnLayout  {
 
     signal sig_finish()
 
-    height: 549
-    width: 580
+    height: BSSizes.applyWindowHeightScale(549)
+    width: BSSizes.applyWindowWidthScale(580)
     spacing: 0
 
     CustomTitleLabel {
@@ -29,11 +29,11 @@ ColumnLayout  {
     Label {
         id: subtitle
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 16
-        Layout.preferredHeight : 16
+        Layout.topMargin: BSSizes.applyScale(16)
+        Layout.preferredHeight : BSSizes.applyScale(16)
         text: qsTr("Bitcoins sent to this address will appear in:")
         color: "#7A88B0"
-        font.pixelSize: 14
+        font.pixelSize: BSSizes.applyScale(14)
         font.family: "Roboto"
         font.weight: Font.Normal
     }
@@ -42,11 +42,11 @@ ColumnLayout  {
     Label {
         id: wallet_name
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: 6
-        Layout.preferredHeight : 16
+        Layout.topMargin: BSSizes.applyScale(6)
+        Layout.preferredHeight : BSSizes.applyScale(16)
         text:  qsTr("%1 / Native SegWit").arg(getWalletData(walletBalances.selectedWallet, WalletBalance.NameRole))
         color: "#E2E7FF"
-        font.pixelSize: 14
+        font.pixelSize: BSSizes.applyScale(14)
         font.family: "Roboto"
         font.weight: Font.Normal
     }
@@ -55,23 +55,23 @@ ColumnLayout  {
     Image {
         id: wallet_icon
 
-        Layout.topMargin: 48
+        Layout.topMargin: BSSizes.applyScale(48)
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
-        Layout.preferredHeight : 214
-        Layout.preferredWidth : 214
+        Layout.preferredHeight : BSSizes.applyScale(214)
+        Layout.preferredWidth : BSSizes.applyScale(214)
 
         source: bsApp.generatedAddress !== "" ? ("image://QR/" + bsApp.generatedAddress) : ""
-        sourceSize.width: 214
-        sourceSize.height: 214
-        width: 214
-        height: 214
+        sourceSize.width: BSSizes.applyScale(214)
+        sourceSize.height: BSSizes.applyScale(214)
+        width: BSSizes.applyScale(214)
+        height: BSSizes.applyScale(214)
     }
 
     Label {
-        Layout.topMargin: 30
+        Layout.topMargin: BSSizes.applyScale(30)
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
         text: bsApp.generatedAddress
-        font.pixelSize: 16
+        font.pixelSize: BSSizes.applyScale(16)
         font.family: "Roboto"
         font.weight: Font.Medium
         color: "#E2E7FF"
@@ -85,16 +85,16 @@ ColumnLayout  {
     CustomButton {
         id: copy_but
 
-        width: 530
+        width: BSSizes.applyScale(530)
 
-        Layout.bottomMargin: 40
+        Layout.bottomMargin: BSSizes.applyScale(40)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         text: qsTr("Copy to clipboard")
 
         icon.source: "qrc:/images/copy_icon.svg"
-        icon.width: 24
-        icon.height: 24
+        icon.width: BSSizes.applyScale(24)
+        icon.height: BSSizes.applyScale(24)
         icon.color: "#FFFFFF"
 
         preferred: true

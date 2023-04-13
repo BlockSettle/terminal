@@ -10,8 +10,8 @@ ColumnLayout  {
 
     id: layout
 
-    height: 548
-    width: 580
+    height: BSSizes.applyScale(548)
+    width: BSSizes.applyScale(580)
 
     anchors.fill: parent
 
@@ -36,13 +36,13 @@ ColumnLayout  {
         id: input
 
         Layout.alignment: Qt.AlignCenter
-        Layout.preferredHeight : 70
-        Layout.preferredWidth: 532
-        Layout.topMargin: 10
+        Layout.preferredHeight : BSSizes.applyScale(70)
+        Layout.preferredWidth: BSSizes.applyScale(532)
+        Layout.topMargin: BSSizes.applyScale(10)
 
-        input_topMargin: 35
-        title_leftMargin: 16
-        title_topMargin: 16
+        input_topMargin: BSSizes.applyScale(35)
+        title_leftMargin: BSSizes.applyScale(16)
+        title_topMargin: BSSizes.applyScale(16)
         activeFocusOnTab: true
 
         title_text: qsTr("Wallet Name")
@@ -63,16 +63,16 @@ ColumnLayout  {
 
     RowLayout {
         id: row
-        spacing: 10
+        spacing: BSSizes.applyScale(10)
 
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 40
+        anchors.bottomMargin: BSSizes.applyScale(40)
         anchors.horizontalCenter: parent.horizontalCenter
 
         CustomButton {
             id: cancel_but
             text: qsTr("Cancel")
-            width: 260
+            width: BSSizes.applyScale(260)
 
             preferred: false
             function click_enter() {
@@ -83,7 +83,7 @@ ColumnLayout  {
         CustomButton {
             id: accept_but
             text: qsTr("Accept")
-            width: 260
+            width: BSSizes.applyScale(260)
 
             preferred: true
 

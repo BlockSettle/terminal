@@ -14,10 +14,10 @@ import "../../BsStyles"
 
 Rectangle {
    id: control
-   width: 217
-   height: 292
+   width: BSSizes.applyScale(217)
+   height: BSSizes.applyScale(292)
    color: "transparent"
-   radius: 14
+   radius: BSSizes.applyScale(14)
    border.width: 1
    border.color: BSStyle.defaultGreyColor
 
@@ -28,21 +28,21 @@ Rectangle {
    signal cardClicked()
 
    Column {
-      spacing: 8
+      spacing: BSSizes.applyScale(8)
       anchors.fill: parent
-      anchors.margins: 12
+      anchors.margins: BSSizes.applyScale(12)
 
       Image {
          id: card_icon
-         width: 193
-         height: 122
+         width: BSSizes.applyScale(193)
+         height: BSSizes.applyScale(122)
       }
 
       Text {
          id: title_item
-         topPadding: 10
+         topPadding: BSSizes.applyScale(10)
          font.family: "Roboto"
-         font.pixelSize: 16
+         font.pixelSize: BSSizes.applyScale(16)
          font.weight: Font.DemiBold
          font.letterSpacing: 0.3
          color: BSStyle.titanWhiteColor
@@ -52,7 +52,7 @@ Rectangle {
       Text {
          id: description_item
          font.family: "Roboto"
-         font.pixelSize: 14
+         font.pixelSize: BSSizes.applyScale(14)
          font.letterSpacing: 0.3
          color: BSStyle.titleTextColor
          width: parent.width

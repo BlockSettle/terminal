@@ -5,6 +5,7 @@ import QtQuick.Layouts 1.15
 
 import "../BsStyles"
 import "../StyledControls"
+
 ColumnLayout  {
 
     id: layout
@@ -15,8 +16,8 @@ ColumnLayout  {
 
     property var indexes: []
 
-    height: 485
-    width: 580
+    height: BSSizes.applyScale(485)
+    width: BSSizes.applyScale(580)
 
     spacing: 0
 
@@ -32,17 +33,18 @@ ColumnLayout  {
 
         Layout.fillHeight: true
         Layout.fillWidth: true
-        Layout.leftMargin: 25
-        Layout.topMargin: 32
+        Layout.leftMargin: BSSizes.applyScale(25)
+        Layout.rightMargin: BSSizes.applyScale(25)
+        Layout.topMargin: BSSizes.applyScale(32)
 
-        spacing  : 10
+        spacing: BSSizes.applyScale(10)
         property var isValid: true
         property var isComplete: false
 
         delegate: CustomSeedTextInput {
             id: _delegate
 
-            width: 530
+            width: parent.width
             title_text: layout.indexes[index]
             isValid: list.isValid
             onTextEdited : {
@@ -73,31 +75,31 @@ ColumnLayout  {
 
         text: qsTr("Your words are wrong")
 
-        Layout.leftMargin: 222
-        Layout.bottomMargin: 114
-        Layout.preferredHeight : 16
+        Layout.leftMargin: BSSizes.applyScale(222)
+        Layout.bottomMargin: BSSizes.applyScale(114)
+        Layout.preferredHeight: BSSizes.applyScale(16)
 
-        height: 16
-        width: 136
+        height: BSSizes.applyScale(16)
+        width: BSSizes.applyScale(136)
 
         color: "#EB6060"
-        font.pixelSize: 14
+        font.pixelSize: BSSizes.applyScale(14)
         font.family: "Roboto"
         font.weight: Font.Normal
     }
 
     RowLayout {
         id: row
-        spacing: 10
+        spacing: BSSizes.applyScale(10)
 
         //Layout.leftMargin: 24
-        Layout.bottomMargin: 40
+        Layout.bottomMargin: BSSizes.applyScale(40)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
         CustomButton {
             id: skip_but
             text: qsTr("Skip")
-            width: 261
+            width: BSSizes.applyScale(261)
 
             preferred: false
 
@@ -109,7 +111,7 @@ ColumnLayout  {
         CustomButton {
             id: continue_but
             text: qsTr("Continue")
-            width: 261
+            width: BSSizes.applyScale(261)
 
             enabled: list.isComplete
 

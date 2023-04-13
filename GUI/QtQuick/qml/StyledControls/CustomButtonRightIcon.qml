@@ -19,7 +19,7 @@ CustomSmallButton {
     Image {
         id: icon_item
         anchors.right: parent.right
-        anchors.rightMargin: 14
+        anchors.rightMargin: BSSizes.applyScale(14)
         anchors.verticalCenter: parent.verticalCenter
     }
 }

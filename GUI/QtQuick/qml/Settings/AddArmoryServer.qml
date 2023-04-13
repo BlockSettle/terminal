@@ -13,8 +13,8 @@ ColumnLayout  {
     property var armoryServersModel: ({})
     signal sig_added()
 
-    height: 548
-    width: 580
+    height: BSSizes.applyScale(548)
+    width: BSSizes.applyScale(580)
 
     spacing: 0
 
@@ -27,11 +27,11 @@ ColumnLayout  {
 
     RowLayout {
         id: row
-        spacing: 12
+        spacing: BSSizes.applyScale(12)
 
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
-        Layout.topMargin: 24
-        Layout.preferredHeight: 19
+        Layout.topMargin: BSSizes.applyScale(24)
+        Layout.preferredHeight: BSSizes.applyScale(19)
 
         Label {
             Layout.fillWidth: true
@@ -42,14 +42,14 @@ ColumnLayout  {
 
             text: qsTr("Network type:")
 
-            Layout.leftMargin: 25
+            Layout.leftMargin: BSSizes.applyScale(25)
             Layout.alignment: Qt.AlignVCenter
 
-            width: 126
-            height: 19
+            width: BSSizes.applyScale(126)
+            height: BSSizes.applyScale(19)
 
             color: "#E2E7FF"
-            font.pixelSize: 16
+            font.pixelSize: BSSizes.applyScale(16)
             font.family: "Roboto"
             font.weight: Font.Normal
         }
@@ -61,8 +61,8 @@ ColumnLayout  {
 
             text: "MainNet"
 
-            spacing: 6
-            font.pixelSize: 13
+            spacing: BSSizes.applyScale(6)
+            font.pixelSize: BSSizes.applyScale(13)
             font.family: "Roboto"
             font.weight: Font.Normal
 
@@ -76,8 +76,8 @@ ColumnLayout  {
 
             text: "TestNet"
 
-            spacing: 6
-            font.pixelSize: 13
+            spacing: BSSizes.applyScale(6)
+            font.pixelSize: BSSizes.applyScale(13)
             font.family: "Roboto"
             font.weight: Font.Normal
 
@@ -93,9 +93,9 @@ ColumnLayout  {
         id: name_text_input
 
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
-        Layout.preferredHeight : 70
-        Layout.preferredWidth: 532
-        Layout.topMargin: 10
+        Layout.preferredHeight : BSSizes.applyScale(70)
+        Layout.preferredWidth: BSSizes.applyScale(532)
+        Layout.topMargin: BSSizes.applyScale(10)
 
         title_text: qsTr("Name")
 
@@ -106,9 +106,9 @@ ColumnLayout  {
         id: ip_dns_text_input
 
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
-        Layout.preferredHeight : 70
-        Layout.preferredWidth: 532
-        Layout.topMargin: 10
+        Layout.preferredHeight : BSSizes.applyScale(70)
+        Layout.preferredWidth: BSSizes.applyScale(532)
+        Layout.topMargin: BSSizes.applyScale(10)
 
         title_text: qsTr("IP/DNS")
 
@@ -119,9 +119,9 @@ ColumnLayout  {
         id: port_text_input
 
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
-        Layout.preferredHeight : 70
-        Layout.preferredWidth: 532
-        Layout.topMargin: 10
+        Layout.preferredHeight : BSSizes.applyScale(70)
+        Layout.preferredWidth: BSSizes.applyScale(532)
+        Layout.topMargin: BSSizes.applyScale(10)
 
         title_text: qsTr("Port")
 
@@ -134,9 +134,9 @@ ColumnLayout  {
         id: db_key_text_input
 
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
-        Layout.preferredHeight : 70
-        Layout.preferredWidth: 532
-        Layout.topMargin: 10
+        Layout.preferredHeight : BSSizes.applyScale(70)
+        Layout.preferredWidth: BSSizes.applyScale(532)
+        Layout.topMargin: BSSizes.applyScale(10)
 
         title_text: qsTr("DB Key (optional)")
 
@@ -148,9 +148,9 @@ ColumnLayout  {
         text: qsTr("Save")
 
         Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
-        height : 70
-        width: 532
-        Layout.topMargin: 10
+        height : BSSizes.applyScale(70)
+        width: BSSizes.applyScale(532)
+        Layout.topMargin: BSSizes.applyScale(10)
 
         enabled: (name_text_input.input_text !== "")
                  && (ip_dns_text_input.input_text !== "")

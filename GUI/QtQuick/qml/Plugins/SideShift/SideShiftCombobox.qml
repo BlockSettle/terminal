@@ -17,8 +17,8 @@ import "../../BsStyles"
 ComboBox {
     id: control
 
-    width: 400
-    height: 50
+    width: BSSizes.applyScale(400)
+    height: BSSizes.applyScale(50)
 
     activeFocusOnTab: true
 
@@ -29,7 +29,7 @@ ComboBox {
         Text {
             anchors.fill: parent
             text: control.currentText
-            font.pixelSize: 18
+            font.pixelSize: BSSizes.applyScale(18)
             font.family: "Roboto"
             font.weight: Font.Bold
             color: "white"
@@ -45,7 +45,7 @@ ComboBox {
 
         color: "#181414"
         opacity: 1
-        radius: 4
+        radius: BSSizes.applyScale(4)
 
         border.color: control.popup.visible ? "white" :
                       (control.hovered ? "white" :
@@ -60,12 +60,12 @@ ComboBox {
 
         id: menuItem
 
-        width: control.width - 12
-        height: 50
+        width: control.width - BSSizes.applyScale(12)
+        height: BSSizes.applyScale(50)
 
-        leftPadding: 6
-        topPadding: 4
-        bottomPadding: 4
+        leftPadding: BSSizes.applyScale(6)
+        topPadding: BSSizes.applyScale(4)
+        bottomPadding: BSSizes.applyScale(4)
 
         contentItem: Text {
 
@@ -73,7 +73,7 @@ ComboBox {
                 ? (Array.isArray(control.model) ? modelData[control.textRole] : model[control.textRole])
                 : modelData
             color: "white"
-            font.pixelSize: 14
+            font.pixelSize: BSSizes.applyScale(14)
             font.family: "Roboto"
             font.weight: Font.Normal
 
@@ -96,7 +96,7 @@ ComboBox {
 
         y: control.height - 1
         width: control.width
-        padding: 6
+        padding: BSSizes.applyScale(6)
 
         contentItem: ListView {
             id: popup_item
@@ -112,7 +112,7 @@ ComboBox {
 
         background: Rectangle {
             color: "black"
-            radius: 4
+            radius: BSSizes.applyScale(4)
 
             border.width: 1
             border.color: "white"

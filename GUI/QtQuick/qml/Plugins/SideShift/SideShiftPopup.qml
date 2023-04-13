@@ -15,15 +15,16 @@ import QtQuick.Controls 2.12
 import "."
 import "../Common"
 import "../../"
+import "../../BsStyles"
 
 PluginPopup {
    id: root
    property var controller: null
 
    background: Rectangle {
-      anchors.fill: parent
-      color: "black"
-      radius: 14
+      width: root.width
+      height: root.height
+      color: "transparent"
    }
 
    contentItem: StackView {
@@ -41,6 +42,7 @@ PluginPopup {
          }
          controller: root.controller
          visible: false
+         anchors.centerIn: parent
       }
 
       SideShiftBuyPage {
@@ -51,6 +53,7 @@ PluginPopup {
          inputCurrency: mainPage.inputCurrency
          outputCurrency: mainPage.outputCurrency
          receivingAddress: mainPage.receivingAddress
+         anchors.centerIn: parent
       }
    }
 
