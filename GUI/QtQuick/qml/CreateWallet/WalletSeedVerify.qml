@@ -5,6 +5,7 @@ import QtQuick.Layouts 1.15
 
 import "../BsStyles"
 import "../StyledControls"
+
 ColumnLayout  {
 
     id: layout
@@ -33,6 +34,7 @@ ColumnLayout  {
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.leftMargin: BSSizes.applyScale(25)
+        Layout.rightMargin: BSSizes.applyScale(25)
         Layout.topMargin: BSSizes.applyScale(32)
 
         spacing: BSSizes.applyScale(10)
@@ -42,7 +44,7 @@ ColumnLayout  {
         delegate: CustomSeedTextInput {
             id: _delegate
 
-            width: 530
+            width: parent.width
             title_text: layout.indexes[index]
             isValid: list.isValid
             onTextEdited : {

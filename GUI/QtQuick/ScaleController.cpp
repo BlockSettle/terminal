@@ -11,6 +11,7 @@
 #include "ScaleController.h"
 #include <QApplication>
 #include <QScreen>
+#include <QDesktopWidget>
 
 namespace {
    const qreal defaultDpi = 96;
@@ -19,10 +20,11 @@ namespace {
 ScaleController::ScaleController(QObject* parent)
    : QObject(parent)
 {
-   qreal dpi = QGuiApplication::primaryScreen()->logicalDotsPerInch();
+   const auto screen = QGuiApplication::screens()[QApplication::desktop()->screenNumber(QApplication::activeWindow())];
+   qreal dpi = screen->logicalDotsPerInch();
    scaleRatio_ = dpi / defaultDpi;
 
-   QRect rect = QGuiApplication::primaryScreen()->geometry();
+   QRect rect = screen->geometry();
    screenWidth_ = rect.width();
    screenHeight_ = rect.height();
 }
