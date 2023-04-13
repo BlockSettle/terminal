@@ -22,7 +22,7 @@ import "../../BsStyles"
 Item {
    id: root
    width: BSSizes.applyWindowWidthScale(620)
-   height: BSSizes.applyWindowHeightScale(720)
+   height: BSSizes.applyWindowHeightScale(740)
 
    property bool peg_in: true
 
@@ -31,7 +31,6 @@ Item {
    Rectangle{
       anchors.fill: parent
       color: "transparent"
-
 
       Rectangle {
          id: topPanel

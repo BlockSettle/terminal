@@ -96,7 +96,7 @@ ColumnLayout  {
         Layout.leftMargin: BSSizes.applyScale(24)
         Layout.rightMargin: BSSizes.applyScale(24)
         Layout.topMargin: BSSizes.applyScale(32)
-        Layout.preferredHeight: BSSizes.applyScale(160)
+        Layout.preferredHeight: BSSizes.applyScale(16)
         Layout.fillWidth: true
         Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
