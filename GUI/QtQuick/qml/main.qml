@@ -39,6 +39,8 @@ ApplicationWindow {
     property bool isNoWalletsWizard: false
     readonly property int resizeAnimationDuration: 25
 
+    onScreenChanged: scaleController.update()
+
     FontLoader {
         source: "qrc:/fonts/Roboto-Regular.ttf"
     }

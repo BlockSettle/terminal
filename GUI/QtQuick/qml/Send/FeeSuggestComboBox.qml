@@ -19,7 +19,7 @@ CustomComboBox {
     id: fee_suggest_combo
 
     model: feeSuggestions
-    //editable: true
+    editable: true
 
     //aliases
     title_text: qsTr("Fee Suggestions")
@@ -43,7 +43,6 @@ CustomComboBox {
             }
 
             validator.regExp = new RegExp(create_regexp())
-            prev_text = fee_suggest_combo.currentText
         }
     }
 
@@ -53,7 +52,6 @@ CustomComboBox {
             change_index_handler()
         }
         validator.regExp = new RegExp(create_regexp())
-        prev_text = fee_suggest_combo.currentText
     }
 
     function create_regexp()
@@ -73,16 +71,6 @@ CustomComboBox {
         res = res.slice(index+2)
         res = res.replace(" s/b", "")
         return res
-    }
-
-    property string prev_text : fee_suggest_combo.currentText
-    onTextEdited : {
-        if (!fee_suggest_combo.input_accept_input)
-        {
-            fee_suggest_combo.input_text = prev_text
-        }
-
-        prev_text = fee_suggest_combo.input_text
     }
 
     onEditingFinished : {

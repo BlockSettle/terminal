@@ -105,6 +105,11 @@ ComboBox {
             onEditingFinished : {
                 control.editingFinished()
             }
+
+            Connections {
+                target: control
+                onCurrentTextChanged: input.text = control.currentText
+            }
         }
     }
 

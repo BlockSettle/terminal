@@ -13,15 +13,21 @@
 class ScaleController : public QObject
 {
    Q_OBJECT
-   Q_PROPERTY(qreal scaleRatio READ scaleRatio CONSTANT)
-   Q_PROPERTY(int screenWidth READ screenWidth CONSTANT)
-   Q_PROPERTY(int screenHeight READ screenHeight CONSTANT)
+   Q_PROPERTY(qreal scaleRatio READ scaleRatio NOTIFY changed)
+   Q_PROPERTY(int screenWidth READ screenWidth NOTIFY changed)
+   Q_PROPERTY(int screenHeight READ screenHeight NOTIFY changed)
 public:
    ScaleController(QObject* parent = nullptr);
 
    qreal scaleRatio() const { return scaleRatio_; }
    int screenWidth() const { return screenWidth_; }
    int screenHeight() const { return screenHeight_; }
+
+private slots:
+   void update();
+
+signals:
+   void changed();
 
 private:
    int screenWidth_;
