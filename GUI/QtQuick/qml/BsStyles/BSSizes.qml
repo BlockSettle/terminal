@@ -13,15 +13,28 @@ import QtQuick 2.0
 
 
 Item {
-    function applyScale(size) {
-        return size * scaleController.scaleRatio;
+    property var applyScale
+    property var applyWindowWidthScale
+    property var applyWindowHeightScale
+
+    function setupScaleFunctions() {
+        applyScale = function (size) {
+            return size * scaleController.scaleRatio;
+        }
+        applyWindowWidthScale = function (size) {
+            return Math.min(applyScale(size), scaleController.screenWidth)
+        }
+        applyWindowHeightScale = function (size) {
+           return Math.min(applyScale(size), (scaleController.screenHeight - applyScale(100)))
+            }
     }
 
-    function applyWindowWidthScale(size) {
-        return Math.min(applyScale(size), scaleController.screenWidth)
+    Connections {
+        target: scaleController
+        function onChanged() {
+            setupScaleFunctions()
+        }
     }
 
-    function applyWindowHeightScale(size) {
-        return Math.min(applyScale(size), (scaleController.screenHeight - applyScale(100)))
-    }
+    Component.onCompleted: setupScaleFunctions()
 }

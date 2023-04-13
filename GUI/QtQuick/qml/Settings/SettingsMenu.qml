@@ -33,6 +33,9 @@ ColumnLayout  {
 
         Layout.alignment: Qt.AlignCenter
         Layout.topMargin: BSSizes.applyScale(24)
+        Layout.leftMargin: BSSizes.applyScale(24)
+        Layout.rightMargin: BSSizes.applyScale(24)
+        Layout.fillWidth: true
 
         //aliases
         icon_source: "qrc:/images/general.png"
@@ -47,6 +50,9 @@ ColumnLayout  {
 
         Layout.alignment: Qt.AlignCenter
         Layout.topMargin: BSSizes.applyScale(10)
+        Layout.leftMargin: BSSizes.applyScale(24)
+        Layout.rightMargin: BSSizes.applyScale(24)
+        Layout.fillWidth: true
 
         //aliases
         icon_source: "qrc:/images/network.png"
@@ -61,6 +67,9 @@ ColumnLayout  {
 
         Layout.alignment: Qt.AlignCenter
         Layout.topMargin: BSSizes.applyScale(10)
+        Layout.leftMargin: BSSizes.applyScale(24)
+        Layout.rightMargin: BSSizes.applyScale(24)
+        Layout.fillWidth: true
 
         //aliases
         icon_source: "qrc:/images/about.png"

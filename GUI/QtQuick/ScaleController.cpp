@@ -20,11 +20,22 @@ namespace {
 ScaleController::ScaleController(QObject* parent)
    : QObject(parent)
 {
+	update();
+}
+
+void ScaleController::update()
+{
+   disconnect(this);
+
    const auto screen = QGuiApplication::screens()[QApplication::desktop()->screenNumber(QApplication::activeWindow())];
+   connect(screen, &QScreen::logicalDotsPerInchChanged, this, &ScaleController::update);
+
    qreal dpi = screen->logicalDotsPerInch();
    scaleRatio_ = dpi / defaultDpi;
 
    QRect rect = screen->geometry();
    screenWidth_ = rect.width();
    screenHeight_ = rect.height();
+
+   emit changed();
 }
