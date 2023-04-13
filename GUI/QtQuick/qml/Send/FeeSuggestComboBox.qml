@@ -73,15 +73,6 @@ CustomComboBox {
         return res
     }
 
-    // property string prev_text : fee_suggest_combo.currentText
-    // onTextEdited : {
-    //     if (!fee_suggest_combo.input_accept_input)
-    //     {
-    //         fee_suggest_combo.input_text = prev_text
-    //     }
-    //     prev_text = fee_suggest_combo.input_text
-    // }
-
     onEditingFinished : {
         if (!edit_value())
         {
