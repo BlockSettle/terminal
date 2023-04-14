@@ -19,8 +19,9 @@ import "BsStyles"
 
 import terminal.models 1.0
 
-Item {
+Rectangle {
     id: transactions
+    color: BSStyle.backgroundColor
 
     width: BSSizes.applyScale(1200)
     height: BSSizes.applyScale(788)

@@ -252,7 +252,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
    logoIcon = QLatin1String(":/FULL_BS_LOGO");
 
    QPixmap splashLogo(logoIcon);
-   const int splashScreenWidth = 400;
+   const int splashScreenWidth = scaleController_->scaleRatio() * 400;
    {
       std::lock_guard<std::recursive_mutex> lock(mutex_);
       splashScreen_ = new BSTerminalSplashScreen(splashLogo.scaledToWidth(splashScreenWidth

@@ -18,7 +18,7 @@ import "../../StyledControls"
 
 Rectangle {
    id: root
-   color: "transparent"
+   color: BSStyle.backgroundColor
 
    Column {
       anchors.fill: parent

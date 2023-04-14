@@ -25,7 +25,7 @@ BSTerminalSplashScreen::BSTerminalSplashScreen(const QPixmap& splash_image)
    progress_->setValue(0);
    progress_->setMinimumWidth(this->width() - 10);
    progress_->setMaximumHeight(8);
-   progress_->move(5, 289);
+   progress_->move(5, this->height() - 10);
 
    //blockSettleLabel_ = new QLabel(this);
    //blockSettleLabel_->setText(QLatin1String("BLOCKSETTLE TERMINAL"));
