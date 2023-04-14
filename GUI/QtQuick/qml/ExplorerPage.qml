@@ -19,8 +19,8 @@ import "BsStyles"
 //import "BsDialogs"
 //import "js/helper.js" as JsHelper
 
-Item {
-    
+Rectangle {
+    color: BSStyle.backgroundColor
     property int historyIndex: -1
     property var searchHist: []
     

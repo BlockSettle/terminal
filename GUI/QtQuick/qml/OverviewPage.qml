@@ -22,9 +22,10 @@ import "WalletProperties"
 //import "js/helper.js" as JsHelper
 import wallet.balance 1.0
 
-Item {
+Rectangle {
     id: overview
     property int walletIndex: 0
+    color: BSStyle.backgroundColor
 
     signal newWalletClicked();
     signal curWalletIndexChanged(index : int)
