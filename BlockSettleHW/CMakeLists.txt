@@ -83,5 +83,6 @@ TARGET_LINK_LIBRARIES(${BLOCKSETTLE_HW_LIBRARY_NAME}
    ${PROTO_LIB}
    Qt5::Core
    Qt5::Network
+   Qt5::SerialPort
    ${OS_SPECIFIC_LIBS}
 )

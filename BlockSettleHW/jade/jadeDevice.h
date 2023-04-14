@@ -11,6 +11,8 @@
 #ifndef JADE_DEVICE_H
 #define JADE_DEVICE_H
 
+#include <QObject>
+#include <QtSerialPort>
 #include "Message/Worker.h"
 #include "hwdeviceinterface.h"
 #include "jadeClient.h"
@@ -29,11 +31,50 @@ namespace bs {
 namespace bs {
    namespace hww {
 
+      struct JadeSerialIn : public bs::InData
+      {
+         ~JadeSerialIn() override = default;
+         QByteArray data;
+      };
+      struct JadeSerialOut : public bs::OutData
+      {
+         ~JadeSerialOut() override = default;
+         std::future<QCborMap> futResponse;
+      };
+
+      class JadeSerialHandler : public QObject
+         , public bs::HandlerImpl<JadeSerialIn, JadeSerialOut>
+      {
+         Q_OBJECT
+      public:
+         JadeSerialHandler(const std::shared_ptr<spdlog::logger>&
+            , const QSerialPortInfo& spi);
+         ~JadeSerialHandler() override;
+
+      protected:
+         std::shared_ptr<JadeSerialOut> processData(const std::shared_ptr<JadeSerialIn>&) override;
+
+      private slots:
+         void onSerialDataReady();  // Invoked when new serial data arrived
+
+      private:
+         bool Connect();
+         void Disconnect();
+         int write(const QByteArray&);
+         void parsePortion(const QByteArray&);
+
+      private:
+         std::shared_ptr<spdlog::logger>  logger_;
+         QSerialPort* serial_{ nullptr };
+         std::deque<std::shared_ptr<std::promise<QCborMap>>>   requests_;
+         QByteArray unparsed_;
+      };
+
       class JadeDevice : public DeviceInterface, protected WorkerPool
       {
       public:
          JadeDevice(const std::shared_ptr<spdlog::logger>&
-            , bool testNet, DeviceCallbacks*, const std::string& endpoint);
+            , bool testNet, DeviceCallbacks*, const QSerialPortInfo&);
          ~JadeDevice() override;
 
          DeviceKey key() const override;
@@ -61,7 +102,7 @@ namespace bs {
          }
 
       protected:
-         //std::shared_ptr<Worker> worker(const std::shared_ptr<InData>&) override final;
+         std::shared_ptr<Worker> worker(const std::shared_ptr<InData>&) override final;
 
          // operation result informing
          void publicKeyReady() override {}   //TODO: implement
@@ -80,7 +121,8 @@ namespace bs {
          std::shared_ptr<spdlog::logger>  logger_;
          const bool        testNet_;
          DeviceCallbacks*  cb_{ nullptr };
-         const std::string endpoint_;
+         const QSerialPortInfo   endpoint_;
+         std::vector<std::shared_ptr<bs::Handler>> handlers_;
          bs::core::HwWalletInfo  awaitingWalletInfo_;
          std::string awaitingSignedTX_;
       };
