@@ -66,6 +66,9 @@ Rectangle {
                 if (model === walletBalances) {
                     wallet_selection_combobox.currentIndex = walletBalances.selectedWallet
                 }
+                else {
+                    walletBalances.selectedWallet = -1
+                }
             }
 
             Connections {
@@ -95,6 +98,7 @@ Rectangle {
         anchors.right: parent.right
 
         Controls.CustomMediumButton {
+            enabled: walletBalances.selectedWallet >= 0
             text: qsTr("Wallet Properties")
             onClicked: control.requestWalletProperties()
         }

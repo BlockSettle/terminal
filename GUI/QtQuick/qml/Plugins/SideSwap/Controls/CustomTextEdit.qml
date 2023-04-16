@@ -40,12 +40,13 @@ Rectangle {
       clip: true
       anchors.fill: parent
       font.pixelSize: BSSizes.applyScale(14)
-      font.family: control.fontFamily
+      font.family: "Roboto"
 
       Text {
          text: control.textHint
          color: SideSwapStyles.secondaryTextColor
-         font.family: control.fontFamily
+         font.family: "Roboto"
+         font.weight: Font.Bold
          font.pixelSize: BSSizes.applyScale(12)
          leftPadding: BSSizes.applyScale(10)
          topPadding: BSSizes.applyScale(10)

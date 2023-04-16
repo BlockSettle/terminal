@@ -33,7 +33,7 @@ Item {
 
    Column {
       anchors.fill: parent
-      anchors.margins: BSSizes.applyScale(20)
+      anchors.margins: BSSizes.applyScale(100)
 
       CustomBorderedButton {
          width: parent.width

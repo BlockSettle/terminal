@@ -194,6 +194,7 @@ ComboBox {
                     }
                     
                     TextInput {
+                        id: search_input
                         anchors.fill: parent
                         color: "white"
                         leftPadding: BSSizes.applyScale(20)
@@ -226,5 +227,7 @@ ComboBox {
             border.width: 1
             border.color: "white"
         }
+
+        onOpened: search_input.forceActiveFocus()
     }
 }

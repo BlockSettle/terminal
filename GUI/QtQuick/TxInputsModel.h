@@ -108,6 +108,7 @@ public:
    Q_INVOKABLE void toggleSelection(int row);
    Q_INVOKABLE QUTXOList* getSelection();
    Q_INVOKABLE QUTXOList* zcInputs() const;
+   Q_INVOKABLE void updateAutoselection();
 
 signals:
    void selectionChanged() const;
@@ -125,7 +126,7 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    TxOutputsModel* outsModel_{ nullptr };
    const QMap<int, QString> header_;
-   std::map<bs::Address, std::vector<UTXO>>  utxos_;
+   std::map<bs::Address, std::set<UTXO>>  utxos_;
 
    std::vector<Entry>   data_;
    std::set<std::pair<BinaryData, uint32_t>> selectionUtxos_;

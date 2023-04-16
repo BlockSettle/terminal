@@ -16,6 +16,7 @@ import "."
 import "../Common"
 import "../../"
 import "../../BsStyles"
+import "../../StyledControls"
 
 PluginPopup {
    id: root
@@ -43,6 +44,14 @@ PluginPopup {
          controller: root.controller
          visible: false
          anchors.centerIn: parent
+
+         CloseIconButton {
+             anchors.right: parent.right
+             anchors.top: parent.top
+             anchors.rightMargin: BSSizes.applyScale(10)
+             anchors.topMargin: BSSizes.applyScale(10)
+             onClose: root.close()
+         }
       }
 
       SideShiftBuyPage {
@@ -54,6 +63,14 @@ PluginPopup {
          outputCurrency: mainPage.outputCurrency
          receivingAddress: mainPage.receivingAddress
          anchors.centerIn: parent
+
+         CloseIconButton {
+             anchors.right: parent.right
+             anchors.top: parent.top
+             anchors.rightMargin: BSSizes.applyScale(10)
+             anchors.topMargin: BSSizes.applyScale(10)
+             onClose: root.close()
+         }
       }
    }
 
