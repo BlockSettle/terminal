@@ -378,6 +378,10 @@ void TxInputsModel::updateAutoselection()
 {
     const double amount = outsModel_ ? outsModel_->totalAmount() : 0;
 
+    if (static_cast<int>(std::floor(amount * BTCNumericTypes::BalanceDivider)) <= selectedBalance_) {
+        return;
+    }
+
     for (int i = data_.size() - 1; i >= 0; --i) {
         const auto& entry = data_[i];
         if (!entry.expanded) {
