@@ -121,7 +121,12 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
       for (const auto& utxo : utxos) {
          try {
             const auto& addr = bs::Address::fromUTXO(utxo);
-            utxos_[addr].insert(utxo);
+
+            if (std::find(utxos_[addr].begin(), utxos_[addr].end(), utxo) != utxos_[addr].end()) {
+                continue;
+            }
+
+            utxos_[addr].push_back(utxo);
             int addrIndex = -1;
             for (int i = 0; i < data_.size(); ++i) {
                if (data_.at(i).address == addr) {
@@ -329,8 +334,8 @@ QUTXOList* TxInputsModel::getSelection()
    QList<QUTXO*> result;
    const double amount = outsModel_ ? outsModel_->totalAmount() : 0;
    logger_->debug("[{}] total amount: {}", __func__, amount);
-   if (static_cast<int>(std::floor(amount * BTCNumericTypes::BalanceDivider)) > selectedBalance_) { // auto selection
-      const auto& it = preSelected_.find((int)std::floor(amount * BTCNumericTypes::BalanceDivider));
+   if (static_cast<BTCNumericTypes::satoshi_type>(std::floor(amount * BTCNumericTypes::BalanceDivider)) > selectedBalance_) { // auto selection
+      const auto& it = preSelected_.find(static_cast<BTCNumericTypes::satoshi_type>(std::floor(amount * BTCNumericTypes::BalanceDivider)));
       if (it != preSelected_.end()) {
          return new QUTXOList(it->second, (QObject*)this);
       }
@@ -339,7 +344,7 @@ QUTXOList* TxInputsModel::getSelection()
          return nullptr;
       }
       result = collectUTXOsFor(amount);
-      preSelected_[(int)std::floor(amount * BTCNumericTypes::BalanceDivider)] = result;
+      preSelected_[static_cast<BTCNumericTypes::satoshi_type>(std::floor(amount * BTCNumericTypes::BalanceDivider))] = result;
    }
    else {
       for (auto sel_utxo : selectionUtxos_) {
@@ -378,7 +383,7 @@ void TxInputsModel::updateAutoselection()
 {
     const double amount = outsModel_ ? outsModel_->totalAmount() : 0;
 
-    if (static_cast<int>(std::floor(amount * BTCNumericTypes::BalanceDivider)) <= selectedBalance_) {
+    if (static_cast<BTCNumericTypes::satoshi_type>(std::floor(amount * BTCNumericTypes::BalanceDivider)) <= selectedBalance_) {
         return;
     }
 
