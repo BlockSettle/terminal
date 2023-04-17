@@ -10,8 +10,9 @@
 */
 #include "hwdevicemanager.h"
 #include <spdlog/spdlog.h>
-#include "trezor/trezorDevice.h"
+#include "jade/jadeDevice.h"
 #include "ledger/ledgerDevice.h"
+#include "trezor/trezorDevice.h"
 #include "TerminalMessage.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"
@@ -511,6 +512,8 @@ void DeviceManager::scanningDone(bool initDevices)
    devices_ = ledgerKeys;
    const auto trezorKeys = trezorClient_->deviceKeys();
    devices_.insert(devices_.end(), trezorKeys.cbegin(), trezorKeys.cend());
+   const auto& jadeKeys = jadeClient_->deviceKeys();
+   devices_.insert(devices_.end(), jadeKeys.cbegin(), jadeKeys.cend());
 
    for (const auto& device : devices_) {
       logger_->debug("[{}] found: {} {} {}", __func__, device.id, device.label, device.vendor);
@@ -532,6 +535,12 @@ void DeviceManager::scanningDone(bool initDevices)
    }
    for (const auto& key : trezorKeys) {
       auto device = trezorClient_->getDevice(key.id);
+      if (!device->inited()) {
+         device->init();
+      }
+   }
+   for (const auto& key : jadeKeys) {
+      auto device = jadeClient_->getDevice(key.id);
       if (!device->inited()) {
          device->init();
       }
