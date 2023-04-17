@@ -24,11 +24,5 @@ Popup {
 
     modal: true
     focus: true
-    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-
-    CloseIconButton {
-        anchors.right: parent.right
-        anchors.top: parent.top
-        onClose: plugin_popup.close()
-    }
+    closePolicy: Popup.CloseOnEscape
 }

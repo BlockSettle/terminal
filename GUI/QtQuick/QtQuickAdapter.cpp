@@ -1439,6 +1439,8 @@ bool QtQuickAdapter::validateAddress(const QString& addr)
    const auto& addrStr = addr.toStdString();
    try {
       bs::Address::fromAddressString(addrStr);
+      return QRegularExpression(QString::fromLatin1("^(?:[13]{1}[a-km-zA-HJ-NP-Z1-9]{26,33}|bc1[a-z0-9]{39,59}|tb1[a-z0-9]{39,59})$")
+        ).match(addr).hasMatch();
    }
    catch (const std::exception& e) {
       logger_->warn("[{}] invalid address {}: {}", __func__, addrStr, e.what());

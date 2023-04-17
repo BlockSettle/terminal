@@ -45,7 +45,7 @@ ComboBox {
 
             Text {
                 text: control.currentText
-                font.pixelSize: BSSizes.applyScale(18)
+                font.pixelSize: BSSizes.applyScale(14)
                 font.family: "Roboto"
                 color: "white"
                 leftPadding: BSSizes.applyScale(10)

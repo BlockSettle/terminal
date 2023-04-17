@@ -503,6 +503,8 @@ ColumnLayout  {
 
                         rec_addr_input.input_text = ""
                         amount_input.input_text = ""
+
+                        txInputsModel.updateAutoselection()
                     }
                 }
 
@@ -591,7 +593,7 @@ ColumnLayout  {
                     , checkbox_rbf.checked, tx.ownOutputs.zcInputs())
             }
             else {  // normal operation
-                if (table_sel_inputs.rowCount) {
+                if (table_sel_inputs.model.rowCount) {
                     return bsApp.createTXSignRequest(from_wallet_combo.currentIndex
                         , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
                         , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text

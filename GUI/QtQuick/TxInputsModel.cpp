@@ -121,6 +121,11 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
       for (const auto& utxo : utxos) {
          try {
             const auto& addr = bs::Address::fromUTXO(utxo);
+
+            if (std::find(utxos_[addr].begin(), utxos_[addr].end(), utxo) != utxos_[addr].end()) {
+                continue;
+            }
+
             utxos_[addr].push_back(utxo);
             int addrIndex = -1;
             for (int i = 0; i < data_.size(); ++i) {
@@ -329,8 +334,8 @@ QUTXOList* TxInputsModel::getSelection()
    QList<QUTXO*> result;
    const double amount = outsModel_ ? outsModel_->totalAmount() : 0;
    logger_->debug("[{}] total amount: {}", __func__, amount);
-   if (amount > 0) { // auto selection
-      const auto& it = preSelected_.find((int)std::floor(amount * BTCNumericTypes::BalanceDivider));
+   if (static_cast<BTCNumericTypes::satoshi_type>(std::floor(amount * BTCNumericTypes::BalanceDivider)) > selectedBalance_) { // auto selection
+      const auto& it = preSelected_.find(static_cast<BTCNumericTypes::satoshi_type>(std::floor(amount * BTCNumericTypes::BalanceDivider)));
       if (it != preSelected_.end()) {
          return new QUTXOList(it->second, (QObject*)this);
       }
@@ -339,7 +344,7 @@ QUTXOList* TxInputsModel::getSelection()
          return nullptr;
       }
       result = collectUTXOsFor(amount);
-      preSelected_[(int)std::floor(amount * BTCNumericTypes::BalanceDivider)] = result;
+      preSelected_[static_cast<BTCNumericTypes::satoshi_type>(std::floor(amount * BTCNumericTypes::BalanceDivider))] = result;
    }
    else {
       for (auto sel_utxo : selectionUtxos_) {
@@ -372,6 +377,39 @@ QUTXOList* TxInputsModel::getSelection()
       }
    }
    return new QUTXOList(result, (QObject*)this);
+}
+
+void TxInputsModel::updateAutoselection()
+{
+    const double amount = outsModel_ ? outsModel_->totalAmount() : 0;
+
+    if (static_cast<BTCNumericTypes::satoshi_type>(std::floor(amount * BTCNumericTypes::BalanceDivider)) <= selectedBalance_) {
+        return;
+    }
+
+    for (int i = data_.size() - 1; i >= 0; --i) {
+        const auto& entry = data_[i];
+        if (!entry.expanded) {
+            toggle(i + 1);
+        }
+    }
+
+    if (utxos_.empty()) {
+        collectUTXOsForAmount_ = amount;
+        return;
+    }
+    auto result = collectUTXOsFor(amount);
+    selectionUtxos_.clear();
+    selectedBalance_ = 0;
+    nbTx_ = 0;
+    for (const auto utxo : result) {
+        selectionUtxos_.insert({ utxo->utxo().getTxHash(), utxo->utxo().getTxOutIndex() });
+        selectedBalance_ += utxo->utxo().getValue();
+        nbTx_++;
+    }
+
+    emit selectionChanged();
+    emit dataChanged(createIndex(0, 0), createIndex(rowCount() - 1, 0), { SelectedRole });
 }
 
 QUTXOList* TxInputsModel::zcInputs() const
