@@ -92,7 +92,7 @@ Popup {
                         width: BSSizes.applyScale(140)
                     }
                     Text {
-                        text: address_details.transactions !== '' ? address_details.transactions : '-' 
+                        text: txListByAddrModel.nbTx > 0 ? txListByAddrModel.nbTx : '-'
                         color: BSStyle.textColor
                         font.family: "Roboto"
                         font.pixelSize: BSSizes.applyScale(14)

@@ -1161,13 +1161,15 @@ ProcessingResult QtQuickAdapter::processWalletData(bs::message::SeqId msgId
 ProcessingResult QtQuickAdapter::processWalletBalances(bs::message::SeqId responseId
    , const WalletsMessage_WalletBalances &response)
 {
-   //logger_->debug("[{}] {}", __func__, response.DebugString());
-   const WalletBalancesModel::Balance bal{ response.spendable_balance(), response.unconfirmed_balance()
+   logger_->debug("[{}] {}", __func__, response.DebugString());
+   const WalletBalancesModel::Balance bal{ response.spendable_balance()
+      , response.unconfirmed_balance()
       , response.total_balance(), response.nb_addresses() };
    walletBalances_->setWalletBalance(response.wallet_id(), bal);
 
    for (const auto& addrBal : response.address_balances()) {
-      addrModel_->updateRow(BinaryData::fromString(addrBal.address()), addrBal.total_balance(), addrBal.tx_count());
+      addrModel_->updateRow(BinaryData::fromString(addrBal.address())
+         , addrBal.total_balance(), addrBal.tx_count());
    }
    emit walletBalanceChanged();
    return ProcessingResult::Success;
@@ -1918,12 +1920,26 @@ ProcessingResult QtQuickAdapter::processZC(const BlockSettle::Common::ArmoryMess
 {
    logger_->debug("[{}] {}", __func__, zcs.DebugString());
    WalletsMessage msg;
+   std::unordered_set<std::string> impactedWalletIds;
    auto msgReq = msg.mutable_tx_details_request();
    for (const auto& zcEntry : zcs.tx_entries()) {
       auto txReq = msgReq->add_requests();
       txReq->set_tx_hash(zcEntry.tx_hash());
       for (const auto& walletId : zcEntry.wallet_ids()) {
          txReq->add_wallet_ids(walletId);
+         if (hdWallets_.find(walletId) != hdWallets_.end()) {
+            impactedWalletIds.insert(walletId);
+         }
+         else {
+            for (const auto& hdWallet : hdWallets_) {
+               for (const auto& leaf : hdWallet.second.leaves) {
+                  if (leaf.first == walletId) {
+                     impactedWalletIds.insert(hdWallet.first);
+                     break;
+                  }
+               }
+            }
+         }
       }
       txReq->set_value(zcEntry.value());
 
@@ -1949,6 +1965,11 @@ ProcessingResult QtQuickAdapter::processZC(const BlockSettle::Common::ArmoryMess
       
    }
    pushRequest(user_, userWallets_, msg.SerializeAsString());
+
+   for (const auto& walletId : impactedWalletIds) {
+      msg.set_get_wallet_balances(walletId);
+      pushRequest(user_, userWallets_, msg.SerializeAsString());
+   }
    return ProcessingResult::Success;
 }
 
