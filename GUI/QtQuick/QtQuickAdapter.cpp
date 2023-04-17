@@ -1161,7 +1161,7 @@ ProcessingResult QtQuickAdapter::processWalletData(bs::message::SeqId msgId
 ProcessingResult QtQuickAdapter::processWalletBalances(bs::message::SeqId responseId
    , const WalletsMessage_WalletBalances &response)
 {
-   logger_->debug("[{}] {}", __func__, response.DebugString());
+   //logger_->debug("[{}] {}", __func__, response.DebugString());
    const WalletBalancesModel::Balance bal{ response.spendable_balance()
       , response.unconfirmed_balance()
       , response.total_balance(), response.nb_addresses() };

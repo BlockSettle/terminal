@@ -9,7 +9,6 @@
 
 */
 #include <QCborArray>
-#include <QCborMap>
 #include <QCborValue>
 #include <QCryptographicHash>
 #include <QDataStream>
@@ -22,14 +21,32 @@
 
 using namespace bs::hww;
 
+// Helpers to build basic jade cbor request object
+static inline QCborMap getRequest(const int id, const QString& method)
+{
+   QCborMap req;
+   req.insert(QCborValue(QLatin1Literal("id")), QString::number(id));
+   req.insert(QCborValue(QLatin1Literal("method")), method);
+   return req;
+}
+
+static inline QCborMap getRequest(const int id, const QString& method
+   , const QCborValue& params)
+{
+   QCborMap req(getRequest(id, method));
+   req.insert(QCborValue(QLatin1Literal("params")), params);
+   return req;
+}
+
+
 JadeDevice::JadeDevice(const std::shared_ptr<spdlog::logger> &logger
    , bool testNet, DeviceCallbacks* cb, const QSerialPortInfo& endpoint)
    : bs::WorkerPool(1, 1)
    , logger_(logger), testNet_(testNet), cb_(cb), endpoint_(endpoint)
 {
-   QMetaObject::invokeMethod(qApp, [this] {
+//   QMetaObject::invokeMethod(qApp, [this] {
       handlers_.push_back(std::make_shared<JadeSerialHandler>(logger_, endpoint_));
-      });
+//      });
 }
 
 JadeDevice::~JadeDevice() = default;
@@ -59,8 +76,10 @@ DeviceKey JadeDevice::key() const
    else {
       status = "not inited";
    }
-/*   return {features_->label(), features_->device_id(), features_->vendor()
-      , walletId, status, type() };*/
+   return { endpoint_.portName().toStdString()
+      , endpoint_.hasProductIdentifier() ? std::to_string(endpoint_.productIdentifier()) : endpoint_.portName().toStdString()
+      , endpoint_.hasVendorIdentifier() ? std::to_string(endpoint_.vendorIdentifier()) : endpoint_.manufacturer().toStdString()
+      , walletId, type() };
    return {};
 }
 
@@ -72,6 +91,24 @@ DeviceType JadeDevice::type() const
 void JadeDevice::init()
 {
    logger_->debug("[JadeDevice::init] start");
+   auto in = std::make_shared<JadeSerialIn>();
+   in->request = getRequest(++seqId_, QLatin1Literal("get_version_info"));
+
+   const auto& cbVersion = [this](const std::shared_ptr<OutData>& out)
+   {
+      const auto& data = std::static_pointer_cast<JadeSerialOut>(out);
+      if (!data) {
+         logger_->error("[JadeDevice::init] invalid data");
+         return;
+      }
+      if (data->futResponse.wait_for(std::chrono::milliseconds{ 500 }) != std::future_status::ready) {
+         logger_->error("[JadeDevice::init] data timeout");
+         return;
+      }
+      const auto& msg = data->futResponse.get();
+      logger_->debug("[JadeDevice::init] response: {}", msg.toCborValue().toString().toStdString());
+   };
+   processQueued(in, cbVersion);
 }
 
 void JadeDevice::getPublicKeys()
@@ -124,24 +161,6 @@ void JadeDevice::reset()
 }
 
 
-// Helpers to build basic jade cbor request object
-static inline QCborMap getRequest(const int id, const QString& method)
-{
-   QCborMap req;
-   req.insert(QCborValue(QLatin1Literal("id")), QString::number(id));
-   req.insert(QCborValue(QLatin1Literal("method")), method);
-   return req;
-}
-
-static inline QCborMap getRequest(const int id, const QString& method
-   , const QCborValue& params)
-{
-   QCborMap req(getRequest(id, method));
-   req.insert(QCborValue(QLatin1Literal("params")), params);
-   return req;
-}
-
-
 JadeSerialHandler::JadeSerialHandler(const std::shared_ptr<spdlog::logger>& logger
    , const QSerialPortInfo& spi)
    : QObject(nullptr), logger_(logger), serial_(new QSerialPort(spi, this))
@@ -163,11 +182,15 @@ JadeSerialHandler::~JadeSerialHandler()
 
 std::shared_ptr<JadeSerialOut> JadeSerialHandler::processData(const std::shared_ptr<JadeSerialIn>& in)
 {
+   if (!serial_->isOpen()) {
+      return nullptr;
+   }
    auto out = std::make_shared<JadeSerialOut>();
    auto prom = std::make_shared<std::promise<QCborMap>>();
    out->futResponse = prom->get_future();
    requests_.push_back(prom);
-   write(in->data);
+   const auto bytes = in->request.toCborValue().toCbor();
+   write(bytes);
    return out;
 }
 

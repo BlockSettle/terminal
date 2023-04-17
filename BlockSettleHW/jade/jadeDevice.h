@@ -11,6 +11,7 @@
 #ifndef JADE_DEVICE_H
 #define JADE_DEVICE_H
 
+#include <QCborMap>
 #include <QObject>
 #include <QtSerialPort>
 #include "Message/Worker.h"
@@ -34,7 +35,7 @@ namespace bs {
       struct JadeSerialIn : public bs::InData
       {
          ~JadeSerialIn() override = default;
-         QByteArray data;
+         QCborMap request;
       };
       struct JadeSerialOut : public bs::OutData
       {
@@ -122,6 +123,7 @@ namespace bs {
          const bool        testNet_;
          DeviceCallbacks*  cb_{ nullptr };
          const QSerialPortInfo   endpoint_;
+         int   seqId_{ 0 };
          std::vector<std::shared_ptr<bs::Handler>> handlers_;
          bs::core::HwWalletInfo  awaitingWalletInfo_;
          std::string awaitingSignedTX_;

@@ -148,7 +148,7 @@ namespace bs {
          std::vector<DeviceKey>  devices_;
 
          bool testNet_{false};
-         int   nbScanning_{0};
+         int  nbScanning_{0};
          bool isSigning_{};
          std::string lastOperationError_;
          std::string lastUsedTrezorWallet_;
