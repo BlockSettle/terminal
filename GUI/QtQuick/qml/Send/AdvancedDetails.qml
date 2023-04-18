@@ -441,7 +441,6 @@ ColumnLayout  {
                     height: BSSizes.applyScale(70)
 
                     function getMax() {
-                        console.log(txInputsSelectedModel.rowCount)
                         if (!isRBF && !isCPFP && txInputsSelectedModel.rowCount > 1) {
                             return (txInputsSelectedModel.sourceModel.balance - txOutputsModel.totalAmount).toFixed(8)
                         }
