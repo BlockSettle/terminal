@@ -440,6 +440,15 @@ ColumnLayout  {
                     width: BSSizes.applyScale(504)
                     height: BSSizes.applyScale(70)
 
+                    function getMax() {
+                        console.log(txInputsSelectedModel.rowCount)
+                        if (!isRBF && !isCPFP && txInputsSelectedModel.rowCount > 1) {
+                            return (txInputsSelectedModel.sourceModel.balance - txOutputsModel.totalAmount).toFixed(8)
+                        }
+                        return tempRequest.maxAmount
+
+                    }
+
                     onEnterPressed: {
                         if (!processEnterKey()) {
                             comment_input.setActiveFocus()
@@ -451,8 +460,6 @@ ColumnLayout  {
                             comment_input.setActiveFocus()
                         }
                     }
-                    
-                    balanceSubtractor: txOutputsModel.totalAmount
                 }
 
                 CustomTextEdit {

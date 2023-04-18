@@ -18,10 +18,12 @@ CustomTextInput {
 
     id: amount_input
 
-    property var balanceSubtractor: null
-
     //aliases
     title_text: qsTr("Amount")
+
+    function getMax() {
+        return tempRequest.maxAmount
+    }
 
     //app (if was launched from visual studio) crashes when there is input_validator
     //and we change text inside of onTextEdited
@@ -57,7 +59,7 @@ CustomTextInput {
             return
         }
 
-        if (input_number < 0 || (input_number > tempRequest.maxAmount))
+        if (input_number < 0 || (input_number > amount_input.getMax()))
         {
             amount_input.input_text = prev_text
             return
@@ -85,9 +87,8 @@ CustomTextInput {
         enabled: (tempRequest != null)
 
         function click_enter() {
-            console.log(tempRequest, tempRequest.maxAmount)
-            if (tempRequest != null && tempRequest.maxAmount.length > 0) {
-                amount_input.input_text = (parseFloat(tempRequest.maxAmount) - (balanceSubtractor !== null ? balanceSubtractor : 0.0)).toFixed(8)
+            if (tempRequest != null && amount_input.getMax().length > 0) {
+                amount_input.input_text = amount_input.getMax()
             }
         }
     }
