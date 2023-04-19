@@ -35,7 +35,8 @@ class TxOutputsModel : public QAbstractTableModel
 public:
    enum TableRoles { TableDataRole = Qt::UserRole + 1, HeadingRole, WidthRole
       , ColorRole };
-   TxOutputsModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
+   TxOutputsModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr
+      , bool readOnly = false);
 
    int rowCount(const QModelIndex & = QModelIndex()) const override;
    int columnCount(const QModelIndex & = QModelIndex()) const override;
@@ -46,7 +47,7 @@ public:
    double totalAmount() const;
    std::vector<std::shared_ptr<Armory::Signer::ScriptRecipient>> recipients() const;
 
-   Q_INVOKABLE void addOutput(const QString& address, double amount);
+   Q_INVOKABLE void addOutput(const QString& address, double amount, bool isChange = false);
    Q_INVOKABLE void delOutput(int row);
    Q_INVOKABLE void clearOutputs();
    Q_INVOKABLE QStringList getOutputAddresses() const;
@@ -59,15 +60,17 @@ signals:
 
 private:
    QVariant getData(int row, int col) const;
-   QColor dataColor(int row, int col) const;
+   QColor dataColor(int row) const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
+   const bool readOnly_;
    const QStringList header_;
 
    struct Entry {
       bs::Address address;
       double      amount;
+      bool        isChange{ false };
    };
    std::vector<Entry>   data_;
 };

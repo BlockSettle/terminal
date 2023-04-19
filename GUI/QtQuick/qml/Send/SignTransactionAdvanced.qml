@@ -130,17 +130,12 @@ ColumnLayout  {
                 height: parent.height - BSSizes.applyScale(24)
                 anchors.centerIn: parent
 
-                model: txOutputsModel
-                columnWidths: [0.744, 0.20, 0.056]
+                model: txSignRequest !== null ? txSignRequest.outputs : []
+                columnWidths: [0.7, 0.1, 0.20]
 
                 copy_button_column_index: -1
-                delete_button_column_index: 2
+                delete_button_column_index: -1
                 has_header: false
-
-                onDeleteRequested: (row) =>
-                {
-                    txOutputsModel.delOutput(row)
-                }
 
                 function get_text_left_padding(row, column)
                 {

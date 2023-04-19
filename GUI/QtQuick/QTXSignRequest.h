@@ -17,6 +17,7 @@
 #include "BinaryData.h"
 #include "CoreWallet.h"
 #include "TxInputsModel.h"
+#include "TxOutputsModel.h"
 
 namespace spdlog {
    class logger;
@@ -79,6 +80,8 @@ public:
    bool hasError() const { return !error_.isEmpty(); }
    Q_PROPERTY(TxInputsModel* inputs READ inputsModel NOTIFY txSignReqChanged)
    TxInputsModel* inputsModel() const { return inputsModel_; }
+   Q_PROPERTY(TxOutputsModel* outputs READ outputsModel NOTIFY txSignReqChanged)
+   TxOutputsModel* outputsModel() const { return outputsModel_; }
    Q_PROPERTY(bool isWatchingOnly READ isWatchingOnly NOTIFY txSignReqChanged)
    bool isWatchingOnly() const;
    void setWatchingOnly(bool watchingOnly);
@@ -95,6 +98,7 @@ private:
    QString  error_;
    std::vector<QUTXO::Input>  inputs_;
    TxInputsModel* inputsModel_{ nullptr };
+   TxOutputsModel* outputsModel_{ nullptr };
    bool  isHWW_{ false };
    bool  isHWWready_{ false };
    bool  isWatchingOnly_ { false };

@@ -21,6 +21,26 @@ QTXSignRequest::QTXSignRequest(const std::shared_ptr<spdlog::logger>& logger, QO
 void QTXSignRequest::setTxSignReq(const bs::core::wallet::TXSignRequest& txReq)
 {
    txReq_ = txReq;
+
+   QMetaObject::invokeMethod(this, [this] {
+      if (outputsModel_) {
+         outputsModel_->clearOutputs();
+      }
+      else {
+         outputsModel_ = new TxOutputsModel(logger_, this, true);
+      }
+      for (const auto& recip : txReq_.getRecipients([](const bs::Address&) { return true; })) {
+         try {
+            const auto& addr = bs::Address::fromRecipient(recip);
+            outputsModel_->addOutput(QString::fromStdString(addr.display())
+               , recip->getValue() / BTCNumericTypes::BalanceDivider
+               , addr == txReq_.change.address);
+         }
+         catch (const std::exception& ) {}
+      }
+      emit txSignReqChanged();
+   });
+
    std::vector<UTXO> inputs;
    inputs.reserve(txReq.armorySigner_.getTxInCount());
    for (unsigned int i = 0; i < txReq.armorySigner_.getTxInCount(); ++i) {

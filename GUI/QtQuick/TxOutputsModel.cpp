@@ -24,9 +24,10 @@ namespace {
    };
 }
 
-TxOutputsModel::TxOutputsModel(const std::shared_ptr<spdlog::logger>& logger, QObject* parent)
-   : QAbstractTableModel(parent), logger_(logger)
-   , header_{ tr("Output Address"), tr("Amount (BTC)"), {} }
+TxOutputsModel::TxOutputsModel(const std::shared_ptr<spdlog::logger>& logger
+   , QObject* parent, bool readOnly)
+   : QAbstractTableModel(parent), logger_(logger), readOnly_(readOnly)
+   , header_{ tr("Output Address"), {}, tr("Amount (BTC)"), {} }
 {
    connect(this, &TxOutputsModel::modelReset,
            this, &TxOutputsModel::rowCountChanged);
@@ -43,7 +44,7 @@ int TxOutputsModel::rowCount(const QModelIndex &) const
 
 int TxOutputsModel::columnCount(const QModelIndex &) const
 {
-   return header_.size();
+   return readOnly_ ? header_.size() - 1 : header_.size();
 }
 
 QVariant TxOutputsModel::data(const QModelIndex& index, int role) const
@@ -54,7 +55,7 @@ QVariant TxOutputsModel::data(const QModelIndex& index, int role) const
    case HeadingRole:
       return (index.row() == 0);
    case ColorRole:
-      return dataColor(index.row(), index.column());
+      return dataColor(index.row());
    default: break;
    }
    return QVariant();
@@ -101,19 +102,19 @@ void TxOutputsModel::clearOutputs()
 QStringList TxOutputsModel::getOutputAddresses() const
 {
    QStringList res;
-   for(int row=1; row<rowCount(); row++)
-      res.append(getData(row,0).toString());
-
+   for (int row = 1; row < rowCount(); row++) {
+      res.append(getData(row, 0).toString());
+   }
    return res;
 }
 
 QList<double> TxOutputsModel::getOutputAmounts() const
 {
    QList<double> res;
-   for(int row=1; row<rowCount(); row++)
-       res.append(data_.at(row - 1).amount);
-
-    return res;
+   for (int row = 1; row < rowCount(); row++) {
+      res.append(data_.at(row - 1).amount);
+   }
+   return res;
 }
 
 void TxOutputsModel::setOutputsFrom(QTxDetails* tx)
@@ -127,7 +128,7 @@ void TxOutputsModel::setOutputsFrom(QTxDetails* tx)
    logger_->debug("[{}] {} entries", __func__, data_.size());
 }
 
-void TxOutputsModel::addOutput(const QString& address, double amount)
+void TxOutputsModel::addOutput(const QString& address, double amount, bool isChange)
 {
    bs::Address addr;
    try {
@@ -136,8 +137,8 @@ void TxOutputsModel::addOutput(const QString& address, double amount)
    catch (const std::exception&) {
       return;
    }
-   QMetaObject::invokeMethod(this, [this, addr, amount] {
-      Entry entry{ addr, amount };
+   QMetaObject::invokeMethod(this, [this, addr, amount, isChange] {
+      Entry entry{ addr, amount, isChange };
       beginInsertRows(QModelIndex(), rowCount(), rowCount());
       data_.emplace_back(std::move(entry));
       endInsertRows();
@@ -146,7 +147,7 @@ void TxOutputsModel::addOutput(const QString& address, double amount)
 
 void TxOutputsModel::delOutput(int row)
 {
-   if (row == 0) {
+   if (readOnly_ || (row == 0)) {
       return;
    }
    beginRemoveRows(QModelIndex(), row, row);
@@ -164,16 +165,18 @@ QVariant TxOutputsModel::getData(int row, int col) const
    case 0:
       return QString::fromStdString(entry.address.display());
    case 1:
+      return entry.isChange ? tr("(change)") : QString{};
+   case 2:
       return gui_utils::xbtToQString(entry.amount);
    default: break;
    }
    return {};
 }
 
-QColor TxOutputsModel::dataColor(int row, int col) const
+QColor TxOutputsModel::dataColor(int row) const
 {
-    if (row == 0) {
-       return ColorScheme::tableHeaderColor;
-    }
-    return ColorScheme::tableTextColor;
+   if (row == 0) {
+      return ColorScheme::tableHeaderColor;
+   }
+   return ColorScheme::tableTextColor;
 }
