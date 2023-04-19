@@ -99,10 +99,12 @@ void JadeDevice::init()
       const auto& data = std::static_pointer_cast<JadeSerialOut>(out);
       if (!data) {
          logger_->error("[JadeDevice::init] invalid data");
+         cb_->publicKeyReady(key());
          return;
       }
       if (data->futResponse.wait_for(std::chrono::milliseconds{ 500 }) != std::future_status::ready) {
          logger_->error("[JadeDevice::init] data timeout");
+         cb_->publicKeyReady(key());
          return;
       }
       const auto& msg = data->futResponse.get();

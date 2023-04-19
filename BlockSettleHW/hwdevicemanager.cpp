@@ -499,6 +499,9 @@ void DeviceManager::devicesResponse()
    HW::DeviceMgrMessage msg;
    auto msgResp = msg.mutable_available_devices();
    for (const auto& key : devices_) {
+      if (key.walletId.empty()) {
+         continue;
+      }
       deviceKeyToMsg(key, msgResp->add_device_keys());
    }
    logger_->debug("[{}] {}", __func__, msg.DebugString());
@@ -573,19 +576,34 @@ void DeviceManager::publicKeyReady(const DeviceKey& devKey)
    }
    size_t nbCompleted = 0;
    bool foundDevice = false;
+   bool delDevice = false;
    for (auto& device : devices_) {
       if (device.id == devKey.id) {
-         device.walletId = devKey.walletId;
-         nbCompleted++;
-         foundDevice = true;
+         if (devKey.walletId.empty()) {
+            delDevice = true;
+         }
+         else {
+            device.walletId = devKey.walletId;
+            nbCompleted++;
+            foundDevice = true;
+         }
       }
       else if (!device.walletId.empty()) {
          nbCompleted++;
       }
    }
    if (!foundDevice) {
-      devices_.push_back(devKey);
-      nbCompleted++;
+      if (delDevice) {
+         const auto& it = std::find_if(devices_.cbegin(), devices_.cend()
+            , [devKey](const DeviceKey& key) {return (key.id == devKey.id); });
+         if (it != devices_.end()) {
+            devices_.erase(it);
+         }
+      }
+      else {
+         devices_.push_back(devKey);
+         nbCompleted++;
+      }
    }
    if (nbCompleted >= devices_.size()) {
       logger_->debug("[{}] all public keys retrieved", __func__);
