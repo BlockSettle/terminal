@@ -505,3 +505,12 @@ QVariant TxInputsModel::getData(int row, int col) const
    }
    return {};
 }
+
+void TxInputsModel::clearSelection()
+{
+    selectionUtxos_.clear();
+    selectionAddresses_.clear();
+    selectedBalance_ = 0.0f;
+    emit selectionChanged();
+    emit dataChanged(createIndex(0, 0), createIndex(rowCount() - 1, 0), { SelectedRole });
+}

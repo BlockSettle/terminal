@@ -442,7 +442,8 @@ ColumnLayout  {
 
                     function getMax() {
                         if (!isRBF && !isCPFP && txInputsSelectedModel.rowCount > 1) {
-                            return (txInputsSelectedModel.sourceModel.balance - txOutputsModel.totalAmount).toFixed(8)
+                            var maxValue = parseFloat(tempRequest.maxAmount) - txInputsSelectedModel.sourceModel.balance
+                            return (maxValue >= 0 ? maxValue : 0).toFixed(8)
                         }
                         return tempRequest.maxAmount
 
@@ -543,6 +544,12 @@ ColumnLayout  {
                     onDeleteRequested: (row) =>
                     {
                         txOutputsModel.delOutput(row)
+                        if (txOutputsModel.rowCount <= 1 && !isRBF && !isCPFP) {
+                            txInputsModel.clearSelection()
+                        }
+                        else if (txOutputsModel.rowCount > 1 && !isRBF && !isCPFP) {
+                            txInputsModel.updateAutoselection()
+                        }
                     }
 
                     function get_text_left_padding(row, column)
@@ -659,8 +666,18 @@ ColumnLayout  {
     {
         if (rec_addr_input.isValid && rec_addr_input.input_text.length) {
             var fpb = parseFloat(fee_suggest_combo.edit_value())
-            tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
-                        , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
+            if (!isRBF && !isCPFP && txInputsSelectedModel.rowCount > 1) {
+                var outputAddresses = txOutputsModel.getOutputAddresses()
+                outputAddresses.push(rec_addr_input.input_text)
+                var outputAmounts = txOutputsModel.getOutputAmounts()
+                tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                            , outputAddresses, outputAmounts,
+                            (fpb > 0) ? fpb : 1.0)
+            }
+            else {
+                tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                            , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
+            }
         }
     }
 

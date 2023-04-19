@@ -109,6 +109,7 @@ public:
    Q_INVOKABLE QUTXOList* getSelection();
    Q_INVOKABLE QUTXOList* zcInputs() const;
    Q_INVOKABLE void updateAutoselection();
+   Q_INVOKABLE void clearSelection();
 
 signals:
    void selectionChanged() const;
