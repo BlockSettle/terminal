@@ -57,6 +57,8 @@ public:
    QStringList outputAddresses() const;
    Q_PROPERTY(QString outputAmount READ outputAmount NOTIFY txSignReqChanged)
    QString outputAmount() const;
+   Q_PROPERTY(QStringList outputAmounts READ outputAmounts NOTIFY txSignReqChanged)
+   QStringList outputAmounts() const;
    Q_PROPERTY(QString inputAmount READ inputAmount NOTIFY txSignReqChanged)
    QString inputAmount() const;
    Q_PROPERTY(QString returnAmount READ returnAmount NOTIFY txSignReqChanged)
@@ -85,6 +87,8 @@ public:
    Q_PROPERTY(bool isWatchingOnly READ isWatchingOnly NOTIFY txSignReqChanged)
    bool isWatchingOnly() const;
    void setWatchingOnly(bool watchingOnly);
+   Q_PROPERTY(QString comment READ comment NOTIFY txSignReqChanged)
+   QString comment() const;
 
 signals:
    void txSignReqChanged();

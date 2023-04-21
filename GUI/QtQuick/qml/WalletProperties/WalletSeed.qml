@@ -31,6 +31,10 @@ ColumnLayout  {
         Layout.leftMargin: BSSizes.applyScale(25)
         Layout.topMargin: BSSizes.applyScale(32)
 
+        ScrollBar.vertical: ScrollBar {
+            policy: ScrollBar.AlwaysOn
+        }
+
         cellHeight : BSSizes.applyScale(56)
         cellWidth : BSSizes.applyScale(180)
 
@@ -39,12 +43,6 @@ ColumnLayout  {
             seed_text: modelData
             serial_num: index + 1
         }
-    }
-
-    Label {
-        id: spacer
-        Layout.fillWidth: true
-        Layout.fillHeight: true
     }
 
     CustomButton {

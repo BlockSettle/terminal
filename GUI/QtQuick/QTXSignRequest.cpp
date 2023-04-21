@@ -81,6 +81,9 @@ QStringList QTXSignRequest::outputAddresses() const
    for (const auto& recip : txReq_.getRecipients([](const bs::Address&) { return true; })) {
       try {
          const auto& addr = bs::Address::fromRecipient(recip);
+         if (addr == txReq_.change.address) {
+             continue;
+         }
          result.append(QString::fromStdString(addr.display()));
       }
       catch (const std::exception& e) {
@@ -98,6 +101,29 @@ QString QTXSignRequest::outputAmount() const
    return QString::number(txReq_.amountReceived([changeAddr = txReq_.change.address]
       (const bs::Address& addr) { return (addr != changeAddr); }) / BTCNumericTypes::BalanceDivider
       , 'f', 8);
+}
+
+QStringList QTXSignRequest::outputAmounts() const
+{
+   if (!txReq_.isValid()) {
+      return {};
+   }
+   QStringList result;
+   for (const auto& recip : txReq_.getRecipients([](const bs::Address&) { return true; })) {
+       try {
+           const auto& recipAddr = bs::Address::fromRecipient(recip);
+           if (recipAddr == txReq_.change.address) {
+               continue;
+           }
+           result.append(
+               QString::number(txReq_.amountReceived([recipAddr]
+               (const bs::Address& addr) { return (addr == recipAddr); }) / BTCNumericTypes::BalanceDivider, 'f', 8));
+       }
+       catch (const std::exception& e) {
+           result.append(QLatin1String("error: ") + QLatin1String(e.what()));
+       }
+   }
+   return result;
 }
 
 QString QTXSignRequest::inputAmount() const
@@ -152,4 +178,12 @@ void QTXSignRequest::setWatchingOnly(bool watchingOnly)
 {
    isWatchingOnly_ = watchingOnly;
    emit txSignReqChanged();
+}
+
+QString QTXSignRequest::comment() const
+{
+    if (!txReq_.isValid()) {
+        return {};
+    }
+    return QString::fromStdString(txReq_.comment);
 }
