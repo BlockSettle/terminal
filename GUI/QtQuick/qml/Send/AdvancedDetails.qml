@@ -112,6 +112,10 @@ ColumnLayout  {
                     }
                     comment_input.input_text = tempRequest.comment
                     txInputsModel.updateAutoselection()
+                    tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                        , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
+                        , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text
+                        , checkbox_rbf.checked, txInputsModel.getSelection())
                 }
             }
         }
