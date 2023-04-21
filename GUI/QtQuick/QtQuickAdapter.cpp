@@ -1840,6 +1840,12 @@ bs::message::ProcessingResult QtQuickAdapter::processWalletDeleted(const std::st
    logger_->debug("[{}] {}", __func__, walletId);
 
    walletBalances_->deleteWallet(walletId);
+   txModel_->clear();
+   
+   WalletsMessage msg;
+   msg.set_get_ledger_entries({});
+   pushRequest(user_, userWallets_, msg.SerializeAsString());
+
    emit successDeleteWallet();
    return bs::message::ProcessingResult::Success;
 }

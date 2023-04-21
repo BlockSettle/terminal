@@ -66,17 +66,19 @@ Rectangle {
                 if (model === walletBalances) {
                     wallet_selection_combobox.currentIndex = walletBalances.selectedWallet
                 }
-                else {
-                    walletBalances.selectedWallet = -1
-                }
             }
 
             Connections {
                 target: bsApp
                 function onRequestWalletSelection(index) {
-                    bsApp.walletSelected(index)
-                    control.walletIndexChanged(index)
-                    wallet_selection_combobox.currentIndex = index
+                    var modelSize = (wallet_selection_combobox.model === walletBalances) 
+                        ? wallet_selection_combobox.model.rowCount 
+                        : wallet_selection_combobox.length
+                    if (index >= 0 && index < modelSize) {
+                        bsApp.walletSelected(index)
+                        control.walletIndexChanged(index)
+                        wallet_selection_combobox.currentIndex = index
+                    }
                 }
             }
         }
@@ -98,7 +100,7 @@ Rectangle {
         anchors.right: parent.right
 
         Controls.CustomMediumButton {
-            enabled: walletBalances.selectedWallet >= 0
+            enabled: wallet_selection_combobox.model == walletBalances && walletBalances.selectedWallet >= 0
             text: qsTr("Wallet Properties")
             onClicked: control.requestWalletProperties()
         }

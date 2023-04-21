@@ -82,21 +82,18 @@ bool AddressFilterModel::filterAcceptsRow(int source_row, const QModelIndex& sou
 bool AddressFilterModel::lessThan(const QModelIndex& left, const QModelIndex& right) const
 {       
    try {
-      if (!qFuzzyIsNull(sourceModel()->data(sourceModel()->index(left.row(), 2)
-               , QmlAddressListModel::TableRoles::TableDataRole).toDouble()) && 
-         qFuzzyIsNull(sourceModel()->data(sourceModel()->index(right.row(), 2)
-               , QmlAddressListModel::TableRoles::TableDataRole).toDouble())) {
-         return true;
-      }
-      else if (qFuzzyIsNull(sourceModel()->data(sourceModel()->index(left.row(), 2)
-               , QmlAddressListModel::TableRoles::TableDataRole).toDouble()) == 
-               qFuzzyIsNull(sourceModel()->data(sourceModel()->index(right.row(), 2)
-               , QmlAddressListModel::TableRoles::TableDataRole).toDouble())) {
-         return (sourceModel()->data(sourceModel()->index(left.row(), 0)
-               , QmlAddressListModel::TableRoles::AddressTypeRole).toString().remove(0, 2).toInt() < 
-                 sourceModel()->data(sourceModel()->index(right.row(), 0)
-               , QmlAddressListModel::TableRoles::AddressTypeRole).toString().remove(0, 2).toInt());
-      }
+       const auto leftAmount = sourceModel()->data(sourceModel()->index(left.row(), 2)
+           , QmlAddressListModel::TableRoles::TableDataRole).toDouble();
+       const auto leftIndex = sourceModel()->data(sourceModel()->index(left.row(), 0)
+           , QmlAddressListModel::TableRoles::AddressTypeRole).toString().remove(0, 2).toInt();
+       const auto rightAmount = sourceModel()->data(sourceModel()->index(right.row(), 2)
+           , QmlAddressListModel::TableRoles::TableDataRole).toDouble();
+       const auto rightIndex = sourceModel()->data(sourceModel()->index(right.row(), 0)
+           , QmlAddressListModel::TableRoles::AddressTypeRole).toString().remove(0, 2).toInt();
+       if (qFuzzyIsNull(leftAmount) != qFuzzyIsNull(rightAmount)) {
+           return qFuzzyIsNull(rightAmount);
+       }
+       return leftIndex < rightIndex;
    }
    catch (...) {}
    return false;

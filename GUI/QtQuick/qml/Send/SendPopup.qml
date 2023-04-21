@@ -102,6 +102,11 @@ CustomPopup {
     CustomSuccessDialog {
         id: exportTransactionSuccessDailog
         visible: false
+
+        onSig_finish: {
+            root.close()
+            _stack_view.pop(null)
+        }
     }
 
     CustomFailDialog {

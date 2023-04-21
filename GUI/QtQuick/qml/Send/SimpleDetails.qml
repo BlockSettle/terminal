@@ -26,33 +26,88 @@ ColumnLayout  {
 
         Layout.fillWidth: true
         Layout.preferredHeight : BSSizes.applyScale(34)
+        Layout.leftMargin: BSSizes.applyScale(20)
+        Layout.topMargin:  BSSizes.applyScale(10)
+
+        CustomTitleLabel {
+            id: title
+
+            Layout.alignment: Qt.AlingVCenter
+            text: qsTr("Send Bitcoin")
+        }
 
         Label {
             Layout.fillWidth: true
             Layout.preferredHeight : BSSizes.applyScale(34)
         }
 
-        CustomTitleLabel {
-            id: title
-
-            Layout.rightMargin: BSSizes.applyScale(104)
-            Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
-
-            text: qsTr("Send Bitcoin")
-        }
-
         Button {
-            id: advanced_but
+            id: import_transaction_button
 
-            Layout.rightMargin: BSSizes.applyScale(60)
-            Layout.alignment: Qt.AlignRight | Qt.AlingVCenter
+            // Layout.rightMargin: BSSizes.applyScale(60)
+            Layout.alignment: Qt.AlingVCenter
 
             activeFocusOnTab: false
 
             font.pixelSize: BSSizes.applyScale(13)
             font.family: "Roboto"
             font.weight: Font.Normal
-            palette.buttonText: "#7A88B0"
+            palette.buttonText: BSStyle.titleTextColor
+
+            text: qsTr("Import transaction")
+
+
+            icon.color: "transparent"
+            icon.source: "qrc:/images/import_icon.svg"
+            icon.width: BSSizes.applyScale(16)
+            icon.height: BSSizes.applyScale(16)
+
+            background: Rectangle {
+                implicitWidth: BSSizes.applyScale(156)
+                implicitHeight: BSSizes.applyScale(34)
+                color: "transparent"
+
+                radius: BSSizes.applyScale(14)
+
+                border.color: BSStyle.defaultBorderColor
+                border.width: BSSizes.applyScale(1)
+
+            }
+
+            onClicked: {
+                importTransactionFileDialog.open()
+            }
+            
+            FileDialog {
+                id: importTransactionFileDialog  
+                title: qsTr("Please choose transaction to import")
+                folder: shortcuts.documents
+                selectFolder: false
+                selectExisting: true
+                onAccepted: {
+                    tempRequest = bsApp.importTransaction(importTransactionFileDialog.fileUrl)
+                    
+                    rec_addr_input.input_text = tempRequest.outputAddresses[0]
+                    amount_input.input_text = tempRequest.outputAmounts[0]
+                    comment_input.input_text = tempRequest.comment
+                    create_temp_request()
+                }
+            }
+        }
+
+        Button {
+            id: advanced_but
+
+            Layout.leftMargin: BSSizes.applyScale(20)
+            Layout.rightMargin: BSSizes.applyScale(40)
+            Layout.alignment: Qt.AlingVCenter
+
+            activeFocusOnTab: false
+
+            font.pixelSize: BSSizes.applyScale(13)
+            font.family: "Roboto"
+            font.weight: Font.Normal
+            palette.buttonText: BSStyle.titleTextColor
 
             text: qsTr("Advanced")
 
@@ -94,7 +149,6 @@ ColumnLayout  {
         onFocus_next: {
             amount_input.setActiveFocus()
         }
-
 
         function createTempRequest() {
             create_temp_request()
@@ -214,7 +268,7 @@ ColumnLayout  {
         Layout.bottomMargin: BSSizes.applyScale(40)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
 
-        text: bsApp.walletProperitesVM.isWatchingOnly ? qsTr("Export transaction") : qsTr("Continue")
+        text: (tempRequest !== null && tempRequest.isWatchingOnly) ? qsTr("Export transaction") : qsTr("Continue")
 
         preferred: true
 
@@ -230,7 +284,7 @@ ColumnLayout  {
                 fee_suggest_combo.input_text = fee_suggest_combo.currentText
             }
 
-            if (bsApp.walletProperitesVM.isWatchingOnly)
+            if (tempRequest.isWatchingOnly)
             {
                 exportFileDialog.open()
             }

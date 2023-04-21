@@ -32,6 +32,10 @@ Rectangle {
     signal openSend (string txId, bool isRBF, bool isCPFP)
     signal openExplorer (string txId)
 
+    MouseArea {
+        anchors.fill: parent
+    }
+
     AddressDetails {
         id: addressDetails
         visible: false

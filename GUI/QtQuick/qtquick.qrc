@@ -222,5 +222,6 @@
         <file>qml/Plugins/SideSwap/Controls/CustomBorderedButton.qml</file>
         <file>qml/Plugins/SideSwap/SideSwapPegOut.qml</file>
         <file>qml/Plugins/SideSwap/SideSwapPegIn.qml</file>
+        <file>images/import_icon.svg</file>
     </qresource>
 </RCC>
