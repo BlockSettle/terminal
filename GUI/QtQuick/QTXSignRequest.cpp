@@ -78,12 +78,10 @@ QStringList QTXSignRequest::outputAddresses() const
       return {};
    }
    QStringList result;
-   for (const auto& recip : txReq_.getRecipients([](const bs::Address&) { return true; })) {
+   for (const auto& recip : txReq_.getRecipients([changeAddr = txReq_.change.address](const bs::Address& addr)
+   { return addr != changeAddr;  })) {
       try {
          const auto& addr = bs::Address::fromRecipient(recip);
-         if (addr == txReq_.change.address) {
-             continue;
-         }
          result.append(QString::fromStdString(addr.display()));
       }
       catch (const std::exception& e) {
@@ -109,12 +107,9 @@ QStringList QTXSignRequest::outputAmounts() const
       return {};
    }
    QStringList result;
-   for (const auto& recip : txReq_.getRecipients([](const bs::Address&) { return true; })) {
+   for (const auto& recip : txReq_.getRecipients([changeAddr = txReq_.change.address](const bs::Address& addr) { return addr != changeAddr; })) {
        try {
            const auto& recipAddr = bs::Address::fromRecipient(recip);
-           if (recipAddr == txReq_.change.address) {
-               continue;
-           }
            result.append(
                QString::number(txReq_.amountReceived([recipAddr]
                (const bs::Address& addr) { return (addr == recipAddr); }) / BTCNumericTypes::BalanceDivider, 'f', 8));

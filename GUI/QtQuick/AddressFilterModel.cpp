@@ -90,7 +90,7 @@ bool AddressFilterModel::lessThan(const QModelIndex& left, const QModelIndex& ri
            , QmlAddressListModel::TableRoles::TableDataRole).toDouble();
        const auto rightIndex = sourceModel()->data(sourceModel()->index(right.row(), 0)
            , QmlAddressListModel::TableRoles::AddressTypeRole).toString().remove(0, 2).toInt();
-       if (qFuzzyIsNull(leftAmount) ^ qFuzzyIsNull(rightAmount)) {
+       if (qFuzzyIsNull(leftAmount) != qFuzzyIsNull(rightAmount)) {
            return qFuzzyIsNull(rightAmount);
        }
        return leftIndex < rightIndex;
