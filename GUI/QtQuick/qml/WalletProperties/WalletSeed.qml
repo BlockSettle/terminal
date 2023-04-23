@@ -47,7 +47,7 @@ ColumnLayout  {
 
     CustomButton {
         id: confirm_but
-        text: qsTr("Copy seed")
+        text: qsTr("Print PDF")
         preferred: true
 
         Layout.bottomMargin: BSSizes.applyScale(40)
@@ -55,8 +55,18 @@ ColumnLayout  {
 
         width: BSSizes.applyScale(530)
 
-        onClicked: bsApp.copySeedToClipboard(
-            wallet_properties_vm.seed
-        )
+        onClicked: {
+            var printedPath = bsApp.exportPRK()
+            successPrintPdf.details_text = qsTr("PDF successfully saved to ") + printedPath
+            
+            successPrintPdf.show()
+            successPrintPdf.raise()
+            successPrintPdf.requestActivate()
+        }
+    }
+
+    CustomSuccessDialog {
+        id: successPrintPdf
+        visible: false
     }
 }

@@ -15,6 +15,7 @@ ColumnLayout  {
 
     signal sig_continue(signature: var)
     signal sig_advanced()
+    signal import_error()
 
     height: BSSizes.applyWindowHeightScale(554)
     width: BSSizes.applyWindowWidthScale(600)
@@ -86,11 +87,12 @@ ColumnLayout  {
                 selectExisting: true
                 onAccepted: {
                     tempRequest = bsApp.importTransaction(importTransactionFileDialog.fileUrl)
-                    
-                    rec_addr_input.input_text = tempRequest.outputAddresses[0]
-                    amount_input.input_text = tempRequest.outputAmounts[0]
-                    comment_input.input_text = tempRequest.comment
-                    create_temp_request()
+                    if (bsApp.isRequestReadyToSend(tempRequest)) {
+                        sig_continue(tempRequest)
+                    }
+                    else {
+                        import_error()
+                    }
                 }
             }
         }

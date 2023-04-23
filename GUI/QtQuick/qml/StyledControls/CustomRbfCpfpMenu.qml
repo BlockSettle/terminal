@@ -27,9 +27,8 @@ CustomContextMenu {
     property var model
 
     Action {
+        id: rbf_action
         text: qsTr("RBF")
-        enabled: model.data(model.index(context_menu.row, context_menu.column), TxListModel.RBFRole)
-            && (model.data(model.index(context_menu.row, context_menu.column), TxListModel.NbConfRole) === 0)
         onTriggered: {
             var txId = model.data(model.index(context_menu.row, context_menu.column), TxListModel.TxIdRole)
             context_menu.openSend(txId, true, false)
@@ -37,8 +36,8 @@ CustomContextMenu {
     }
 
     Action {
+        id: cpfp_action
         text: qsTr("CPFP")
-        enabled: (model.data(model.index(context_menu.row, context_menu.column), TxListModel.NbConfRole) === 0)
         onTriggered: {
             var txId = model.data(model.index(context_menu.row, context_menu.column), TxListModel.TxIdRole)
             context_menu.openSend(txId, false, true)
@@ -51,5 +50,15 @@ CustomContextMenu {
             var txId = model.data(model.index(context_menu.row, context_menu.column), TxListModel.TxIdRole)
             context_menu.openExplorer(txId)
         }
+    }
+
+    onOpened: {
+        rbf_action.enabled = (model.data(model.index(context_menu.row, context_menu.column), TxListModel.RBFRole)
+            && model.data(model.index(context_menu.row, context_menu.column), TxListModel.NbConfRole) === 0
+            && (model.data(model.index(context_menu.row, context_menu.column), TxListModel.DirectionRole) === 2 
+                || model.data(model.index(context_menu.row, context_menu.column), TxListModel.DirectionRole) === 3))
+        cpfp_action.enabled =  (model.data(model.index(context_menu.row, context_menu.column), TxListModel.NbConfRole) === 0
+            && (model.data(model.index(context_menu.row, context_menu.column), TxListModel.DirectionRole) === 1 
+                || model.data(model.index(context_menu.row, context_menu.column), TxListModel.DirectionRole) === 3))
     }
 }

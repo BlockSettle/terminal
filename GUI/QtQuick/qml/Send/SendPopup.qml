@@ -34,6 +34,12 @@ CustomPopup {
             _stack_view.replace(advanced_details)
             advanced_details.init()
         }
+
+        onImport_error: {
+            failImportDialog.show()
+            failImportDialog.raise()
+            failImportDialog.requestActivate()
+        }
     }
 
     SignTransaction {
@@ -74,6 +80,12 @@ CustomPopup {
             _stack_view.push(select_inputs)
             select_inputs.init()
         }
+
+        onImport_error: {
+            failImportDialog.show()
+            failImportDialog.raise()
+            failImportDialog.requestActivate()
+        }
     }
 
     SelectInputs {
@@ -111,6 +123,13 @@ CustomPopup {
 
     CustomFailDialog {
         id: exportTransactionFailDialog
+        visible: false
+    }
+
+    CustomFailDialog {
+        id: failImportDialog
+        header: qsTr("Send failed")
+        fail: qsTr("There is no appropriate wallet to send the transaction")
         visible: false
     }
 

@@ -115,11 +115,16 @@ QColor TxListModel::dataColor(int row, int col) const
 
 QString TxListModel::walletName(int row) const
 {
-   const auto& itTxDet = txDetails_.find(row);
-   if (itTxDet != txDetails_.end()) {
-      return QString::fromStdString(itTxDet->second.walletName);
-   }
-   return {};
+   return gui_utils::directionToQString(txDirection(row));
+}
+
+bs::sync::Transaction::Direction TxListModel::txDirection(int row) const
+{
+    const auto& itTxDet = txDetails_.find(row);
+    if (itTxDet != txDetails_.end()) {
+        return itTxDet->second.direction;
+    }
+    return bs::sync::Transaction::Unknown;
 }
 
 QString TxListModel::txType(int row) const
@@ -166,18 +171,6 @@ bool TxListModel::isRBF(int row) const
    return false;
 }
 
-quint32 TxListModel::nbConf(int row) const
-{
-   const auto& itTxDet = txDetails_.find(row);
-   if (itTxDet != txDetails_.end()) {
-      if (itTxDet->second.tx.getTxHeight() == UINT32_MAX) {
-         return 0;
-      }
-      return curBlock_ - itTxDet->second.tx.getTxHeight() + 1;
-   }
-   return UINT32_MAX;
-}
-
 QVariant TxListModel::data(const QModelIndex& index, int role) const
 {
    if (index.column() >= header_.size()) {
@@ -193,7 +186,9 @@ QVariant TxListModel::data(const QModelIndex& index, int role) const
    case RBFRole:
       return isRBF(index.row());
    case NbConfRole:
-      return nbConf(index.row());
+      return  data_.at(index.row()).nbConf;
+   case DirectionRole:
+       return txDirection(index.row());
    default: break;
    }
    return QVariant();
