@@ -9,7 +9,7 @@ import "../StyledControls"
 ColumnLayout  {
     id: layout
 
-    height: BSSizes.applyScale(548)
+    height: BSSizes.applyScale(608)
     width: BSSizes.applyScale(580)
 
     spacing: 0
@@ -26,13 +26,15 @@ ColumnLayout  {
     GridView {
         id: grid
 
+        clip: true
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.leftMargin: BSSizes.applyScale(25)
+        Layout.rightMargin: BSSizes.applyScale(15)
         Layout.topMargin: BSSizes.applyScale(32)
 
         ScrollBar.vertical: ScrollBar {
-            policy: ScrollBar.AlwaysOn
+            policy: grid.height > grid.contentHeight ? ScrollBar.AlwaysOff : ScrollBar.AlwaysOn
         }
 
         cellHeight : BSSizes.applyScale(56)

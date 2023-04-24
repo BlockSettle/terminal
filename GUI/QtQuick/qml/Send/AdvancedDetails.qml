@@ -559,17 +559,14 @@ ColumnLayout  {
                     function click_enter() {
                         if (!include_output_but.enabled) return
 
-                        if (isRBF) {
-                            txOutputsModel.setOutputsFrom(tx)
-                            return
-                        }
-
                         txOutputsModel.addOutput(rec_addr_input.input_text, amount_input.input_text)
 
                         rec_addr_input.input_text = ""
                         amount_input.input_text = ""
 
-                        txInputsModel.updateAutoselection()
+                        if (!isRBF && !isCPFP) {
+                            txInputsModel.updateAutoselection()
+                        }
                     }
                 }
 
