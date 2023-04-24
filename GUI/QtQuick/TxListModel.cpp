@@ -115,7 +115,11 @@ QColor TxListModel::dataColor(int row, int col) const
 
 QString TxListModel::walletName(int row) const
 {
-   return gui_utils::directionToQString(txDirection(row));
+    const auto& itTxDet = txDetails_.find(row);
+    if (itTxDet != txDetails_.end()) {
+        return QString::fromStdString(itTxDet->second.walletName);
+    }
+    return {};
 }
 
 bs::sync::Transaction::Direction TxListModel::txDirection(int row) const
@@ -129,11 +133,7 @@ bs::sync::Transaction::Direction TxListModel::txDirection(int row) const
 
 QString TxListModel::txType(int row) const
 {
-   const auto& itTxDet = txDetails_.find(row);
-   if (itTxDet != txDetails_.end()) {
-      return gui_utils::directionToQString(itTxDet->second.direction);
-   }
-   return {};
+    return gui_utils::directionToQString(txDirection(row));
 }
 
 QString TxListModel::txComment(int row) const

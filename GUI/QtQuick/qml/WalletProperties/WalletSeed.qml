@@ -47,7 +47,7 @@ ColumnLayout  {
 
     CustomButton {
         id: confirm_but
-        text: qsTr("Print PDF")
+        text: qsTr("Save PDF")
         preferred: true
 
         Layout.bottomMargin: BSSizes.applyScale(40)

@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2018 - 2020, BlockSettle AB
+* Copyright (C) 2023, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -18,10 +18,6 @@
 #include <QPrinter>
 #include <QStaticText>
 
-//
-// WalletBackupPdfWriter
-//
-
 WalletBackupPdfWriter::WalletBackupPdfWriter(const QString &walletId
    , const QString &keyLine1, const QString &keyLine2
    , const QPixmap &qr)
@@ -37,8 +33,9 @@ bool WalletBackupPdfWriter::write(const QString &fileName)
    QFile f(fileName);
    bool success = f.open(QIODevice::WriteOnly);
 
-   if (!success)
-      return false;
+   if (!success) {
+       return false;
+   }
 
    QPdfWriter pdf(fileName);
 
@@ -135,9 +132,9 @@ void WalletBackupPdfWriter::draw(QPainter &p, qreal width, qreal height)
    QFont bold = font;
    bold.setBold(true);
 
-   QStaticText wIdDesc(QLatin1String("Wallet ID"));
-   QStaticText keyLine1Desc(QLatin1String("Line 1"));
-   QStaticText keyLine2Desc(QLatin1String("Line 2"));
+   QStaticText wIdDesc(QObject::tr("Wallet ID"));
+   QStaticText keyLine1Desc(QObject::tr("Line 1"));
+   QStaticText keyLine2Desc(QObject::tr("Line 2"));
 
    QStaticText wId(walletId_);
    QStaticText keyLine1(keyLine1_);

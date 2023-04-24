@@ -2600,7 +2600,7 @@ bool QtQuickAdapter::isRequestReadyToSend(QTXSignRequest* request)
     for (const auto& id : walletIds) {
         bool isInWallets = false;
         for (const auto [walletId, wallet] : hdWallets_) {
-            if (wallet.hasLeaf(id) && !wallet.watchOnly) {
+            if ((id == walletId || wallet.hasLeaf(id)) && !wallet.watchOnly) {
                 isInWallets = true;
                 break;
             }
