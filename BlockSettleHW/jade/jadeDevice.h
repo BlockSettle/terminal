@@ -28,6 +28,7 @@ namespace bs {
       }
    }
 }
+struct curl_slist;
 
 namespace bs {
    namespace hww {
@@ -71,6 +72,34 @@ namespace bs {
          QByteArray unparsed_;
       };
 
+      struct JadeHttpIn : public bs::InData
+      {
+         ~JadeHttpIn() override = default;
+         std::string url;
+         std::string data;
+      };
+      struct JadeHttpOut : public bs::OutData
+      {
+         ~JadeHttpOut() override = default;
+         std::string response;
+      };
+
+      class JadeHttpHandler : public bs::HandlerImpl<JadeHttpIn, JadeHttpOut>
+      {
+      public:
+         JadeHttpHandler(const std::shared_ptr<spdlog::logger>&);
+         ~JadeHttpHandler() override;
+
+      protected:
+         std::shared_ptr<JadeHttpOut> processData(const std::shared_ptr<JadeHttpIn>&) override;
+
+      private:
+         std::shared_ptr<spdlog::logger>  logger_;
+         struct curl_slist* curlHeaders_{ NULL };
+         void* curl_{ nullptr };
+      };
+
+
       class JadeDevice : public DeviceInterface, protected WorkerPool
       {
       public:
@@ -78,23 +107,20 @@ namespace bs {
             , bool testNet, DeviceCallbacks*, const QSerialPortInfo&);
          ~JadeDevice() override;
 
+         static std::string idFromSerial(const QSerialPortInfo&);
          DeviceKey key() const override;
          DeviceType type() const override;
 
          // lifecycle
          void init() override;
-         void cancel() override;
-         void clearSession() override;
+         void cancel() override { WorkerPool::cancel(); }
+         void clearSession() override {}
          void releaseConnection();
 
          // operation
          void getPublicKeys() override;
          void signTX(const bs::core::wallet::TXSignRequest& reqTX) override;
          void retrieveXPubRoot() override;
-
-         // Management
-         void setMatrixPin(const SecureBinaryData& pin) override;
-         void setPassword(const SecureBinaryData& password, bool enterOnDevice) override;
 
          // State
          bool isBlocked() const override {
@@ -117,6 +143,7 @@ namespace bs {
 
       private:
          void reset();
+         QString network() const;
 
       private:
          std::shared_ptr<spdlog::logger>  logger_;
@@ -124,7 +151,8 @@ namespace bs {
          DeviceCallbacks*  cb_{ nullptr };
          const QSerialPortInfo   endpoint_;
          int   seqId_{ 0 };
-         std::vector<std::shared_ptr<bs::Handler>> handlers_;
+         mutable std::string  walletId_;
+         const std::vector<std::shared_ptr<bs::Handler>> handlers_;
          bs::core::HwWalletInfo  awaitingWalletInfo_;
          std::string awaitingSignedTX_;
       };

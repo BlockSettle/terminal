@@ -12,11 +12,13 @@
 #include <QCborValue>
 #include <QCryptographicHash>
 #include <QDataStream>
+#include <curl/curl.h>
 #include <spdlog/spdlog.h>
 #include "hwdevicemanager.h"
 #include "jadeDevice.h"
 #include "jadeClient.h"
 #include "CoreWallet.h"
+#include "StringUtils.h"
 
 
 using namespace bs::hww;
@@ -43,11 +45,9 @@ JadeDevice::JadeDevice(const std::shared_ptr<spdlog::logger> &logger
    , bool testNet, DeviceCallbacks* cb, const QSerialPortInfo& endpoint)
    : bs::WorkerPool(1, 1)
    , logger_(logger), testNet_(testNet), cb_(cb), endpoint_(endpoint)
-{
-//   QMetaObject::invokeMethod(qApp, [this] {
-      handlers_.push_back(std::make_shared<JadeSerialHandler>(logger_, endpoint_));
-//      });
-}
+   , handlers_{ std::make_shared<JadeSerialHandler>(logger_, endpoint_)
+      , std::make_shared<JadeHttpHandler>(logger_) }
+{}
 
 JadeDevice::~JadeDevice() = default;
 
@@ -59,27 +59,42 @@ std::shared_ptr<bs::Worker> JadeDevice::worker(const std::shared_ptr<InData>&)
 void bs::hww::JadeDevice::operationFailed(const std::string& reason)
 {
    releaseConnection();
-   //cb_->operationFailed(features_->device_id(), reason);
+   cb_->operationFailed(key().id, reason);
 }
 
 void JadeDevice::releaseConnection()
 {
+   WorkerPool::cancel();
+}
+
+std::string bs::hww::JadeDevice::idFromSerial(const QSerialPortInfo& serial)
+{
+   return serial.hasProductIdentifier() ? std::to_string(serial.productIdentifier())
+      : serial.portName().toStdString();
 }
 
 DeviceKey JadeDevice::key() const
 {
-   std::string walletId;
    std::string status;
-   if (!xpubRoot_.empty()) {
-      walletId = bs::core::wallet::computeID(xpubRoot_).toBinStr();
+   if (walletId_.empty()) {
+      if (!xpubRoot_.empty()) {
+         try {
+            const auto& seed = bs::core::wallet::Seed::fromXpub(xpubRoot_
+               , testNet_ ? NetworkType::TestNet : NetworkType::MainNet);
+            walletId_ = seed.getWalletId();
+         }
+         catch (const std::exception& e) {
+            logger_->error("[{}] failed to get walletId from {}: {}", __func__, xpubRoot_.toBinStr(), e.what());
+         }
+      }
+      else {
+         status = "not inited";
+      }
    }
-   else {
-      status = "not inited";
-   }
-   return { endpoint_.portName().toStdString()
-      , endpoint_.hasProductIdentifier() ? std::to_string(endpoint_.productIdentifier()) : endpoint_.portName().toStdString()
+   return { "Jade @" + endpoint_.portName().toStdString()
+      , idFromSerial(endpoint_)
       , endpoint_.hasVendorIdentifier() ? std::to_string(endpoint_.vendorIdentifier()) : endpoint_.manufacturer().toStdString()
-      , walletId, type() };
+      , walletId_, type() };
    return {};
 }
 
@@ -88,27 +103,268 @@ DeviceType JadeDevice::type() const
    return DeviceType::HWJade;
 }
 
+static std::string dump(const QCborMap&);
+static std::string dump(const QCborValueRef&);
+static std::string dump(const QCborArray& ary)
+{
+   std::string result = "[";
+   for (const auto& it : ary) {
+      result += dump(it) + ", ";
+   }
+   if (result.size() > 3) {
+      result.pop_back(), result.pop_back();
+   }
+   result += "]";
+   return result;
+}
+
+static std::string dump(const QCborMap& map)
+{
+   std::string result = "{";
+   for (const auto& it : map) {
+      result += it.first.toString().toStdString() + "=" + dump(it.second) + ", ";
+   }
+   if (result.size() > 3) {
+      result.pop_back(), result.pop_back();
+   }
+   result += "}";
+   return result;
+}
+
+static std::string dump(const QCborValueRef& val)
+{
+   if (val.isInvalid()) {
+      return "<inv>";
+   }
+   if (val.isMap()) {
+      return dump(val.toMap());
+   }
+   if (val.isArray()) {
+      return dump(val.toArray());
+   }
+   if (val.isString()) {
+      return "\"" + val.toString().toStdString() + "\"";
+   }
+   if (val.isBool()) {
+      return val.toBool() ? "true" : "false";
+   }
+   if (val.isDouble()) {
+      return std::to_string(val.toDouble());
+   }
+   if (val.isInteger()) {
+      return std::to_string(val.toInteger());
+   }
+   if (val.isByteArray()) {
+      return bs::toHex(val.toByteArray().toStdString());
+   }
+   if (val.isDateTime()) {
+      return val.toDateTime().toString().toStdString();
+   }
+   if (val.isUrl()) {
+      return val.toUrl().toString().toStdString();
+   }
+   if (val.isUuid()) {
+      return val.toUuid().toString().toStdString();
+   }
+   if (val.isRegularExpression()) {
+      return val.toRegularExpression().pattern().toStdString();
+   }
+   return "???";
+}
+
+static QCborArray convertPath(const bs::hd::Path& path)
+{
+   QCborArray pathArray;
+   for (const auto val : path) {
+      pathArray.append((quint32)val);
+   }
+   return pathArray;
+}
+
+static uint32_t epoch()
+{
+   return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
 void JadeDevice::init()
 {
    logger_->debug("[JadeDevice::init] start");
    auto in = std::make_shared<JadeSerialIn>();
    in->request = getRequest(++seqId_, QLatin1Literal("get_version_info"));
 
-   const auto& cbVersion = [this](const std::shared_ptr<OutData>& out)
+   const auto& cbXPub = [this](const std::shared_ptr<OutData>& out)
    {
       const auto& data = std::static_pointer_cast<JadeSerialOut>(out);
       if (!data) {
-         logger_->error("[JadeDevice::init] invalid data");
+         logger_->error("[JadeDevice::init::xpub] invalid data");
          cb_->publicKeyReady(key());
          return;
       }
-      if (data->futResponse.wait_for(std::chrono::milliseconds{ 500 }) != std::future_status::ready) {
-         logger_->error("[JadeDevice::init] data timeout");
+      if (data->futResponse.wait_for(std::chrono::milliseconds{ 1500 }) != std::future_status::ready) {
+         logger_->error("[JadeDevice::init::xpub] data timeout");
          cb_->publicKeyReady(key());
          return;
       }
       const auto& msg = data->futResponse.get();
-      logger_->debug("[JadeDevice::init] response: {}", msg.toCborValue().toString().toStdString());
+      logger_->debug("[JadeDevice::init] xpub response: {}", dump(msg));
+
+      xpubRoot_ = BinaryData::fromString(msg[QLatin1Literal("result")].toString().toStdString());
+      cb_->publicKeyReady(key());
+   };
+
+   const auto& cbVersion = [this, cbXPub](const std::shared_ptr<OutData>& out)
+   {
+      const auto& data = std::static_pointer_cast<JadeSerialOut>(out);
+      if (!data) {
+         logger_->error("[JadeDevice::init::version] invalid data");
+         cb_->publicKeyReady(key());
+         return;
+      }
+      if (data->futResponse.wait_for(std::chrono::milliseconds{ 1500 }) != std::future_status::ready) {
+         logger_->error("[JadeDevice::init::version] data timeout");
+         cb_->publicKeyReady(key());
+         return;
+      }
+      const auto& msg = data->futResponse.get();
+      logger_->debug("[JadeDevice::init] version response: {}", dump(msg));
+
+      const auto& netType = msg[QLatin1Literal("result")][QLatin1Literal("JADE_NETWORKS")].toString().toStdString();
+      if ((netType != "ALL") && (netType != (testNet_ ? "TEST" : "MAIN"))) {
+         logger_->error("[JadeDevice::init] network type mismatch: {}", netType);
+         cb_->publicKeyReady(key());
+         return;
+      }
+
+      auto inXpub = std::make_shared<JadeSerialIn>();
+      bs::hd::Path path;
+      path.append(/*bs::hd::Purpose::Native +*/ bs::hd::hardFlag);
+      path.append(testNet_ ? bs::hd::CoinType::Bitcoin_test : bs::hd::CoinType::Bitcoin_main);
+      //path.append(bs::hd::hardFlag);
+      //path.append(0);
+      const QCborMap params = { {QLatin1Literal("network"), network()}, {QLatin1Literal("path"), convertPath(path)}};
+      inXpub->request = getRequest(++seqId_, QLatin1Literal("get_xpub"), params);
+
+      if (msg[QLatin1Literal("result")][QLatin1Literal("JADE_STATE")].toString().toStdString() == "LOCKED") {
+         const QCborMap authParams{ {QLatin1Literal("network"), network()}, {QLatin1Literal("epoch"), epoch()} };
+         auto inAuth = std::make_shared<JadeSerialIn>();
+         inAuth->request = getRequest(++seqId_, QLatin1Literal("auth_user"), authParams);
+         const auto& cbAuth = [this, cbXPub, inXpub](const std::shared_ptr<OutData>& out)
+         {
+            const auto& data = std::static_pointer_cast<JadeSerialOut>(out);
+            if (!data) {
+               logger_->error("[JadeDevice::init::auth] invalid data");
+               cb_->publicKeyReady(key());
+               return;
+            }
+            if (data->futResponse.wait_for(std::chrono::seconds{ 30 }) != std::future_status::ready) {
+               logger_->error("[JadeDevice::init::auth] data timeout");
+               cb_->publicKeyReady(key());
+               return;
+            }
+            const auto& msg = data->futResponse.get();
+            logger_->debug("[JadeDevice::init] auth response: {}", dump(msg));
+
+            if (msg[QLatin1Literal("result")].isBool()) {
+               if (msg[QLatin1Literal("result")].isTrue()) {
+                  processQueued(inXpub, cbXPub);
+               }
+               else {
+                  logger_->error("[JadeDevice::init::auth] failed");
+                  cb_->publicKeyReady(key());
+                  return;
+               }
+            }
+            else {   // forward request to PIN server
+               const auto& httpParams = msg[QLatin1Literal("result")][QLatin1Literal("http_request")][QLatin1Literal("params")];
+               auto inHttp = std::make_shared<JadeHttpIn>();
+               inHttp->url = httpParams[QLatin1Literal("urls")].toArray().at(0).toString().toStdString();
+               inHttp->data = httpParams[QLatin1Literal("data")].toString().toStdString();
+               const auto onReply = msg[QLatin1Literal("result")][QLatin1Literal("http_request")][QLatin1Literal("on-reply")].toString();
+
+               const auto& cbHttp = [this, onReply, cbXPub, inXpub](const std::shared_ptr<OutData>& out)
+               {
+                  const auto& data = std::static_pointer_cast<JadeHttpOut>(out);
+                  if (!data || data->response.empty()) {
+                     logger_->error("[JadeDevice::init::http] invalid data");
+                     cb_->publicKeyReady(key());
+                     return;
+                  }
+                  QJsonDocument jsonDoc = QJsonDocument::fromJson(QByteArray::fromStdString(data->response));
+                  const auto& params = QCborMap::fromJsonObject(jsonDoc.object());
+                  auto inResp = std::make_shared<JadeSerialIn>();
+                  inResp->request = getRequest(++seqId_, onReply, params);
+                  const auto& cbHandshake = [this, cbXPub, inXpub](const std::shared_ptr<OutData>& out)
+                  {
+                     const auto& data = std::static_pointer_cast<JadeSerialOut>(out);
+                     if (!data) {
+                        logger_->error("[JadeDevice::init::handshake] invalid data");
+                        cb_->publicKeyReady(key());
+                        return;
+                     }
+                     if (data->futResponse.wait_for(std::chrono::seconds{ 23 }) != std::future_status::ready) {
+                        logger_->error("[JadeDevice::init::handshake] data timeout");
+                        cb_->publicKeyReady(key());
+                        return;
+                     }
+                     const auto& msg = data->futResponse.get();
+                     logger_->debug("[JadeDevice::init] handshake response: {}", dump(msg));
+
+                     const auto& httpParams = msg[QLatin1Literal("result")][QLatin1Literal("http_request")][QLatin1Literal("params")];
+                     auto inHttp = std::make_shared<JadeHttpIn>();
+                     inHttp->url = httpParams[QLatin1Literal("urls")].toArray().at(0).toString().toStdString();
+                     const auto& jsonData = httpParams[QLatin1Literal("data")].toJsonValue().toObject();
+                     inHttp->data = QJsonDocument(jsonData).toJson().toStdString();
+                     const auto onReply = msg[QLatin1Literal("result")][QLatin1Literal("http_request")][QLatin1Literal("on-reply")].toString();
+
+                     const auto& cbReply = [this, onReply, cbXPub, inXpub](const std::shared_ptr<OutData>& out)
+                     {
+                        const auto& data = std::static_pointer_cast<JadeHttpOut>(out);
+                        if (!data || data->response.empty()) {
+                           logger_->error("[JadeDevice::init::reply] invalid data");
+                           cb_->publicKeyReady(key());
+                           return;
+                        }
+                        QJsonDocument jsonDoc = QJsonDocument::fromJson(QByteArray::fromStdString(data->response));
+                        const auto& params = QCborMap::fromJsonObject(jsonDoc.object());
+                        auto inComplete = std::make_shared<JadeSerialIn>();
+                        inComplete->request = getRequest(++seqId_, onReply, params);
+                        const auto& cbComplete = [this, cbXPub, inXpub](const std::shared_ptr<OutData>& out)
+                        {
+                           const auto& data = std::static_pointer_cast<JadeSerialOut>(out);
+                           if (!data) {
+                              logger_->error("[JadeDevice::init::complete] invalid data");
+                              cb_->publicKeyReady(key());
+                              return;
+                           }
+                           if (data->futResponse.wait_for(std::chrono::seconds{ 3 }) != std::future_status::ready) {
+                              logger_->error("[JadeDevice::init::complete] data timeout");
+                              cb_->publicKeyReady(key());
+                              return;
+                           }
+                           const auto& msg = data->futResponse.get();
+                           logger_->debug("[JadeDevice::init] complete response: {}", dump(msg));
+                           if (msg[QLatin1Literal("result")].isBool() && msg[QLatin1Literal("result")].isTrue()) {
+                              processQueued(inXpub, cbXPub);
+                           }
+                           else {
+                              logger_->error("[JadeDevice::init::complete] handshake failed");
+                              cb_->publicKeyReady(key());
+                           }
+                        };
+                        processQueued(inComplete, cbComplete);
+                     };
+                     processQueued(inHttp, cbReply);
+                  };
+                  processQueued(inResp, cbHandshake);
+               };
+               processQueued(inHttp, cbHttp);
+            }
+         };
+         processQueued(inAuth, cbAuth);
+      }
+      else {
+         processQueued(inXpub, cbXPub);
+      }
    };
    processQueued(in, cbVersion);
 }
@@ -116,35 +372,57 @@ void JadeDevice::init()
 void JadeDevice::getPublicKeys()
 {
    awaitingWalletInfo_ = {};
-   // General data
-   awaitingWalletInfo_.type = bs::wallet::HardwareEncKey::WalletType::Trezor;
-/*   awaitingWalletInfo_.label = features_->label();
-   awaitingWalletInfo_.deviceId = features_->device_id();
-   awaitingWalletInfo_.vendor = features_->vendor();
-   awaitingWalletInfo_.xpubRoot = xpubRoot_.toBinStr();*/
+   awaitingWalletInfo_.type = bs::wallet::HardwareEncKey::WalletType::Jade;
+   awaitingWalletInfo_.xpubRoot = xpubRoot_.toBinStr();
+   awaitingWalletInfo_.label = key().label;
+   awaitingWalletInfo_.deviceId = key().id;
+   awaitingWalletInfo_.vendor = key().vendor;
 
+   const auto& requestXPub = [this](bs::hd::Purpose purp)->std::pair<std::shared_ptr<JadeSerialIn>, bs::WorkerPool::callback>
+   {
+      auto inXpub = std::make_shared<JadeSerialIn>();
+      bs::hd::Path path;
+      path.append(purp + bs::hd::hardFlag);
+      path.append(testNet_ ? bs::hd::CoinType::Bitcoin_test : bs::hd::CoinType::Bitcoin_main);
+      path.append(bs::hd::hardFlag);
+      const QCborMap params = { {QLatin1Literal("network"), network()}, {QLatin1Literal("path"), convertPath(path)} };
+      inXpub->request = getRequest(++seqId_, QLatin1Literal("get_xpub"), params);
+
+      return {inXpub , [this, purp](const std::shared_ptr<OutData>& out)
+         {
+            const auto& data = std::static_pointer_cast<JadeSerialOut>(out);
+            if (!data) {
+               logger_->error("[JadeDevice::getPublicKeys::xpub] invalid data");
+               cb_->publicKeyReady(key());
+               return;
+            }
+            if (data->futResponse.wait_for(std::chrono::milliseconds{ 1500 }) != std::future_status::ready) {
+               logger_->error("[JadeDevice::getPublicKeys::xpub] data timeout");
+               cb_->publicKeyReady(key());
+               return;
+            }
+            const auto& msg = data->futResponse.get();
+            logger_->debug("[JadeDevice::getPublicKeys] xpub response: {}", dump(msg));
+
+            if (purp == bs::hd::Purpose::Native) {
+               awaitingWalletInfo_.xpubNativeSegwit = msg[QLatin1Literal("result")].toString().toStdString();
+            }
+            else if (purp == bs::hd::Purpose::Nested) {
+               awaitingWalletInfo_.xpubNestedSegwit = msg[QLatin1Literal("result")].toString().toStdString();
+            }
+            else {
+               logger_->error("[JadeDevice::getPublicKeys::xpub] unsupported wallet type {}", purp);
+            }
+            if (!awaitingWalletInfo_.xpubNativeSegwit.empty() && !awaitingWalletInfo_.xpubNestedSegwit.empty()) {
+               cb_->walletInfoReady(key(), awaitingWalletInfo_);
+            }
+         } };
+   };
+   const auto& inXpubNative = requestXPub(bs::hd::Purpose::Native);
+   processQueued(inXpubNative.first, inXpubNative.second);
+   const auto& inXpubNested = requestXPub(bs::hd::Purpose::Nested);
+   processQueued(inXpubNested.first, inXpubNested.second);
 }
-
-void JadeDevice::setMatrixPin(const SecureBinaryData& pin)
-{
-   logger_->debug("[JadeDevice::setMatrixPin]");
-}
-
-void JadeDevice::setPassword(const SecureBinaryData& password, bool enterOnDevice)
-{
-   logger_->debug("[JadeDevice::setPassword]");
-}
-
-void JadeDevice::cancel()
-{
-   logger_->debug("[JadeDevice] cancel previous operation");
-}
-
-void JadeDevice::clearSession()
-{
-   logger_->debug("[JadeDevice] cancel session");
-}
-
 
 void JadeDevice::signTX(const bs::core::wallet::TXSignRequest &reqTX)
 {
@@ -160,6 +438,11 @@ void JadeDevice::reset()
 {
    awaitingSignedTX_.clear();
    awaitingWalletInfo_ = {};
+}
+
+QString bs::hww::JadeDevice::network() const
+{
+   return testNet_ ? QLatin1Literal("testnet") : QLatin1Literal("mainnet");
 }
 
 
@@ -191,6 +474,7 @@ std::shared_ptr<JadeSerialOut> JadeSerialHandler::processData(const std::shared_
    auto prom = std::make_shared<std::promise<QCborMap>>();
    out->futResponse = prom->get_future();
    requests_.push_back(prom);
+   logger_->debug("[JadeSerialHandler] sending: {}", dump(in->request));
    const auto bytes = in->request.toCborValue().toCbor();
    write(bytes);
    return out;
@@ -228,6 +512,7 @@ int bs::hww::JadeSerialHandler::write(const QByteArray& data)
    while (written != data.length()) {
       const auto wrote = serial_->write(data.data() + written, qMin(256, data.length() - written));
       if (wrote < 0) {
+         logger_->debug("[{}] write error: {}", __func__, wrote);
          Disconnect();
          return written;
       }
@@ -235,8 +520,9 @@ int bs::hww::JadeSerialHandler::write(const QByteArray& data)
          serial_->waitForBytesWritten(100);
          written += wrote;
       }
-      //std::this_thread::sleep_for(std::chrono::milliseconds{ 100 });
+      std::this_thread::sleep_for(std::chrono::milliseconds{ 100 });
    }
+   logger_->debug("[{}] {} bytes (of {}) written", __func__, written, data.size());
    return written;
 }
 
@@ -303,12 +589,63 @@ void bs::hww::JadeSerialHandler::parsePortion(const QByteArray& data)
 
 void JadeSerialHandler::onSerialDataReady()
 {
+   logger_->debug("[{}]", __func__);
    assert(serial_);
    const auto& data = serial_->readAll();
+   logger_->debug("[{}] {} bytes", __func__, data.size());
 
    if (requests_.empty()) {
       logger_->error("[{}] dropped {} bytes of serial data", __func__, data.size());
       return;
    }
    parsePortion(data);
+}
+
+static size_t writeToString(void* ptr, size_t size, size_t count, std::string* stream)
+{
+   const size_t resSize = size * count;
+   stream->append((char*)ptr, resSize);
+   return resSize;
+}
+
+JadeHttpHandler::JadeHttpHandler(const std::shared_ptr<spdlog::logger>& logger)
+   : logger_(logger)
+{
+   curl_ = curl_easy_init();
+   curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, writeToString);
+   curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYPEER, 0L);
+   curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYHOST, 0L);
+   curl_easy_setopt(curl_, CURLOPT_FOLLOWLOCATION, 1L);
+   curl_easy_setopt(curl_, CURLOPT_POST, 1);
+
+   curlHeaders_ = curl_slist_append(curlHeaders_, "Content-Type: application/json");
+   curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, curlHeaders_);
+}
+
+JadeHttpHandler::~JadeHttpHandler()
+{
+   curl_slist_free_all(curlHeaders_);
+   curl_easy_cleanup(curl_);
+}
+
+std::shared_ptr<JadeHttpOut> JadeHttpHandler::processData(const std::shared_ptr<JadeHttpIn>& in)
+{
+   auto result = std::make_shared<JadeHttpOut>();
+   if (!curl_) {
+      return result;
+   }
+   logger_->debug("[JadeHttpHandler::processData] request: {} {}", in->url, in->data);
+   curl_easy_setopt(curl_, CURLOPT_URL, in->url.c_str());
+   curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, in->data.data());
+   std::string response;
+   curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &response);
+
+   const auto res = curl_easy_perform(curl_);
+   if (res != CURLE_OK) {
+      logger_->error("[JadeHttpHandler::processData] failed to post to {}: {}", in->url, res);
+      return result;
+   }
+   result->response = response;
+   logger_->debug("[JadeHttpHandler::processData] response: {}", result->response);
+   return result;
 }

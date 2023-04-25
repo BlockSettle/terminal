@@ -51,19 +51,26 @@ std::shared_ptr<JadeDevice> JadeClient::getDevice(const std::string& deviceId)
 void JadeClient::scanDevices()
 {
    logger_->info("[JadeClient::scanDevices]");
-   std::vector<std::string> serialPorts;
-   for (const auto& serial : QSerialPortInfo::availablePorts()) {
-      logger_->debug("[JadeClient::scanDevices] probing {}/{}", serial.portName().toStdString()
-         , serial.manufacturer().toStdString());
-      try {
-         const auto& device = std::make_shared<JadeDevice>(logger_, testNet_
-            , cb_, serial);
-         devices_.push_back(device);
+   QMetaObject::invokeMethod(qApp, [this] {
+      for (const auto& serial : QSerialPortInfo::availablePorts()) {
+         const auto& it = std::find_if(devices_.cbegin(), devices_.cend()
+            , [serial](const std::shared_ptr<JadeDevice>& dev) {
+               return JadeDevice::idFromSerial(serial) == dev->key().id; });
+         if (it != devices_.end()) {
+            continue;
+         }
+         logger_->debug("[JadeClient::scanDevices] probing {}/{}", serial.portName().toStdString()
+            , serial.manufacturer().toStdString());
+         try {
+            const auto& device = std::make_shared<JadeDevice>(logger_, testNet_
+               , cb_, serial);
+            devices_.push_back(device);
+         }
+         catch (const std::exception& e) {
+            logger_->error("[JadeClient::scanDevices] {}", e.what());
+         }
       }
-      catch (const std::exception& e) {
-         logger_->error("[JadeClient::scanDevices] {}", e.what());
-      }
-   }
-   logger_->debug("[JadeClient::scanDevices] {} devices scanned", devices_.size());
-   cb_->scanningDone();
+      logger_->debug("[JadeClient::scanDevices] {} devices scanned", devices_.size());
+      cb_->scanningDone();
+   });
 }

@@ -9,7 +9,7 @@ RUN sed -Ei 's/^# deb-src /deb-src /' /etc/apt/sources.list \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone && dpkg-reconfigure -f noninteractive tzdata \
     # main libs
-    && apt install -y \
+    && apt install -y python3 \
     python3-pip cmake libmysqlclient-dev autoconf libtool yasm nasm libgmp3-dev libdouble-conversion-dev \
     qttools5-dev-tools libfreetype-dev libfontconfig-dev libcups2-dev xcb \
     libx11-xcb-dev libxcb-xkb-dev libxcb-xinput-dev libxcb-sync-dev libxcb-render-util0-dev libxcb-xfixes0-dev \    

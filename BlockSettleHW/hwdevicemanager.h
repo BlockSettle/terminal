@@ -146,6 +146,7 @@ namespace bs {
          std::unique_ptr<JadeClient>   jadeClient_;
          std::shared_ptr<bs::message::User>  user_, userWallets_, userSigner_, userBlockchain_;
          std::vector<DeviceKey>  devices_;
+         mutable std::mutex      devMtx_;
 
          bool testNet_{false};
          int  nbScanning_{0};

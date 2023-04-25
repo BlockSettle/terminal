@@ -558,7 +558,10 @@ std::shared_ptr<DeviceInterface> DeviceManager::getDevice(const DeviceKey& key) 
       return trezorClient_->getDevice(key.id);
    case DeviceType::HWLedger:
       return ledgerClient_->getDevice(key.id);
+   case DeviceType::HWJade:
+      return jadeClient_->getDevice(key.id);
    default:
+      logger_->error("[{}] unknown device type {}", __func__, (int)key.type);
       // Add new device type
       assert(false);
       break;
@@ -569,7 +572,7 @@ std::shared_ptr<DeviceInterface> DeviceManager::getDevice(const DeviceKey& key) 
 void DeviceManager::publicKeyReady(const DeviceKey& devKey)
 {
    logger_->debug("[{}] walletId = {} for {}", __func__, devKey.walletId, devKey.id);
-   {
+   if (!devKey.walletId.empty()) {
       HW::DeviceMgrMessage msg;
       msg.set_device_ready(devKey.walletId);
       pushBroadcast(user_, msg.SerializeAsString());
@@ -586,6 +589,7 @@ void DeviceManager::publicKeyReady(const DeviceKey& devKey)
             device.walletId = devKey.walletId;
             nbCompleted++;
             foundDevice = true;
+            logger_->debug("[{}] device {}/{} found", __func__, devKey.id, devKey.walletId);
          }
       }
       else if (!device.walletId.empty()) {
@@ -593,11 +597,16 @@ void DeviceManager::publicKeyReady(const DeviceKey& devKey)
       }
    }
    if (!foundDevice) {
+      std::lock_guard<std::mutex> lock{ devMtx_ };
       if (delDevice) {
          const auto& it = std::find_if(devices_.cbegin(), devices_.cend()
             , [devKey](const DeviceKey& key) {return (key.id == devKey.id); });
-         if (it != devices_.end()) {
+         if (it == devices_.end()) {
+            logger_->warn("[{}] device {} not found at delete", __func__, devKey.id);
+         }
+         else {
             devices_.erase(it);
+            logger_->debug("[{}] # devices: {}", __func__, devices_.size());
          }
       }
       else {
@@ -605,6 +614,7 @@ void DeviceManager::publicKeyReady(const DeviceKey& devKey)
          nbCompleted++;
       }
    }
+   logger_->debug("[{}] nbCompleted: {}, nbDevices: {}", __func__, nbCompleted, devices_.size());
    if (nbCompleted >= devices_.size()) {
       logger_->debug("[{}] all public keys retrieved", __func__);
       if (envReqScan_.sender) {
