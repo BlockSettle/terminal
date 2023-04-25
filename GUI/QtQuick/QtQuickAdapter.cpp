@@ -52,6 +52,7 @@
 #include "LeverexPlugin.h"
 #include "SideshiftPlugin.h"
 #include "SideswapPlugin.h"
+#include "PaperBackupWriter.h"
 
 #include "hardware_wallet.pb.h"
 #include "terminal.pb.h"
@@ -2591,4 +2592,37 @@ bool QtQuickAdapter::broadcastSignedTX(const QUrl& path)
    //not adding TX hashes atm
    pushRequest(user_, userBlockchain_, msg.SerializeAsString());
    return true;
+}
+
+bool QtQuickAdapter::isRequestReadyToSend(QTXSignRequest* request)
+{
+   const auto& walletIds = request->txReq().walletIds;
+   for (const auto& id : walletIds) {
+      bool isInWallets = false;
+   	  for (const auto [walletId, wallet] : hdWallets_) {
+   		 if ((id == walletId || wallet.hasLeaf(id)) && !wallet.watchOnly) {
+   		    isInWallets = true;
+   			break;
+   		 }
+   	  }
+   	  if (!isInWallets) {
+   		 return false;
+   	  }
+   }
+   return true;
+}
+
+QString QtQuickAdapter::exportPRK()
+{
+   const auto& path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) 
+       + QString::fromLatin1("/") 
+       + walletPropertiesModel_->walletName() + QString::fromLatin1(".pdf");
+   const auto& seed = walletPropertiesModel_->seed();
+   WalletBackupPdfWriter writer(
+       walletPropertiesModel_->walletId(),
+       QStringList(seed.begin(), seed.begin() + seed.length() / 2).join(QChar::fromLatin1(' ')),
+       QStringList(seed.begin() + seed.length() / 2, seed.end()).join(QChar::fromLatin1(' ')),
+       QRImageProvider().requestPixmap(walletPropertiesModel_->walletId(), nullptr, QSize(200, 200)));
+   writer.write(path);
+   return path;
 }

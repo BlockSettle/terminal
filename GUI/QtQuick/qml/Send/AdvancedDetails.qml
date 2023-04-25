@@ -16,6 +16,7 @@ ColumnLayout  {
     signal sig_continue(signature: var)
     signal sig_simple()
     signal sig_select_inputs()
+    signal import_error()
 
     height: BSSizes.applyWindowHeightScale(723)
     width: BSSizes.applyWindowWidthScale(1132)
@@ -105,17 +106,13 @@ ColumnLayout  {
                 selectFolder: false
                 selectExisting: true
                 onAccepted: {
-                    bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
                     tempRequest = bsApp.importTransaction(importTransactionFileDialog.fileUrl)
-                    for (var i = 0; i < tempRequest.outputAddresses.length; ++i) {
-                        txOutputsModel.addOutput(tempRequest.outputAddresses[i], tempRequest.outputAmounts[i])
+                    if (bsApp.isRequestReadyToSend(tempRequest)) {
+                        sig_continue(tempRequest)
                     }
-                    comment_input.input_text = tempRequest.comment
-                    txInputsModel.updateAutoselection()
-                    tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
-                        , txOutputsModel.getOutputAddresses(), txOutputsModel.getOutputAmounts()
-                        , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text
-                        , checkbox_rbf.checked, txInputsModel.getSelection())
+                    else {
+                        import_error()
+                    }
                 }
             }
         }
@@ -562,17 +559,14 @@ ColumnLayout  {
                     function click_enter() {
                         if (!include_output_but.enabled) return
 
-                        if (isRBF) {
-                            txOutputsModel.setOutputsFrom(tx)
-                            return
-                        }
-
                         txOutputsModel.addOutput(rec_addr_input.input_text, amount_input.input_text)
 
                         rec_addr_input.input_text = ""
                         amount_input.input_text = ""
 
-                        txInputsModel.updateAutoselection()
+                        if (!isRBF && !isCPFP) {
+                            txInputsModel.updateAutoselection()
+                        }
                     }
                 }
 

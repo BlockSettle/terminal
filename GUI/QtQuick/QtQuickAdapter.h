@@ -193,6 +193,8 @@ public:
    Q_INVOKABLE QTXSignRequest* importTransaction(const QUrl& path);
    Q_INVOKABLE void exportSignedTX(const QUrl& path, QTXSignRequest* request, const QString& password);
    Q_INVOKABLE bool broadcastSignedTX(const QUrl& path);
+   Q_INVOKABLE bool isRequestReadyToSend(QTXSignRequest* request);
+   Q_INVOKABLE QString exportPRK();
 
 signals:
    void walletsListChanged();

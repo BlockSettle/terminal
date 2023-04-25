@@ -223,5 +223,6 @@
         <file>qml/Plugins/SideSwap/SideSwapPegOut.qml</file>
         <file>qml/Plugins/SideSwap/SideSwapPegIn.qml</file>
         <file>images/import_icon.svg</file>
+        <file>images/RPK_template.png</file>
     </qresource>
 </RCC>

@@ -30,7 +30,7 @@ class TxListModel : public QAbstractTableModel
    Q_OBJECT
 public:
    enum TableRoles { TableDataRole = Qt::UserRole + 1, ColorRole, TxIdRole
-      , RBFRole, NbConfRole };
+      , RBFRole, NbConfRole, DirectionRole };
    Q_ENUM(TableRoles)
 
    TxListModel(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
@@ -67,7 +67,7 @@ private:
    QString txId(int row) const;
    QString txComment(int row) const;
    bool isRBF(int row) const;
-   quint32 nbConf(int row) const;
+   bs::sync::Transaction::Direction txDirection(int row) const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
