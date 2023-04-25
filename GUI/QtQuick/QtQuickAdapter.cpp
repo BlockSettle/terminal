@@ -2596,20 +2596,20 @@ bool QtQuickAdapter::broadcastSignedTX(const QUrl& path)
 
 bool QtQuickAdapter::isRequestReadyToSend(QTXSignRequest* request)
 {
-    const auto& walletIds = request->txReq().walletIds;
-    for (const auto& id : walletIds) {
-        bool isInWallets = false;
-        for (const auto [walletId, wallet] : hdWallets_) {
-            if ((id == walletId || wallet.hasLeaf(id)) && !wallet.watchOnly) {
-                isInWallets = true;
-                break;
-            }
-        }
-        if (!isInWallets) {
-            return false;
-        }
-    }
-    return true;
+   const auto& walletIds = request->txReq().walletIds;
+   for (const auto& id : walletIds) {
+      bool isInWallets = false;
+   	  for (const auto [walletId, wallet] : hdWallets_) {
+   		 if ((id == walletId || wallet.hasLeaf(id)) && !wallet.watchOnly) {
+   		    isInWallets = true;
+   			break;
+   		 }
+   	  }
+   	  if (!isInWallets) {
+   		 return false;
+   	  }
+   }
+   return true;
 }
 
 QString QtQuickAdapter::exportPRK()

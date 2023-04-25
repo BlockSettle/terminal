@@ -115,25 +115,25 @@ QColor TxListModel::dataColor(int row, int col) const
 
 QString TxListModel::walletName(int row) const
 {
-    const auto& itTxDet = txDetails_.find(row);
-    if (itTxDet != txDetails_.end()) {
-        return QString::fromStdString(itTxDet->second.walletName);
-    }
-    return {};
+   const auto& itTxDet = txDetails_.find(row);
+   if (itTxDet != txDetails_.end()) {
+      return QString::fromStdString(itTxDet->second.walletName);
+   }
+   return {};
 }
 
 bs::sync::Transaction::Direction TxListModel::txDirection(int row) const
 {
-    const auto& itTxDet = txDetails_.find(row);
-    if (itTxDet != txDetails_.end()) {
-        return itTxDet->second.direction;
-    }
-    return bs::sync::Transaction::Unknown;
+   const auto& itTxDet = txDetails_.find(row);
+   if (itTxDet != txDetails_.end()) {
+      return itTxDet->second.direction;
+   }
+   return bs::sync::Transaction::Unknown;
 }
 
 QString TxListModel::txType(int row) const
 {
-    return gui_utils::directionToQString(txDirection(row));
+   return gui_utils::directionToQString(txDirection(row));
 }
 
 QString TxListModel::txComment(int row) const
