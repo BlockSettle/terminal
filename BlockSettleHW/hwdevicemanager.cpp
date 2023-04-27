@@ -274,7 +274,7 @@ bs::message::ProcessingResult bs::hww::DeviceManager::processTransactions(const 
          continue;
       }
       tx.setTxHeight(txData.height());
-      device->setSupportingTX(tx);
+      //FIXME: device->setSupportingTX(tx);
    }
    return bs::message::ProcessingResult::Success;
 }
@@ -288,21 +288,9 @@ bs::message::ProcessingResult DeviceManager::processImport(const bs::message::En
    }
    const auto& device = getDevice(devKey);
    if (!device) {
-      devKey.id = "C23C03585A8E444C242A70C4";
-      devKey.label = "BlockSettleTest";
-      devKey.vendor = "trezor.io";
-      devKey.walletId = "2xSX1rAcN";
-      bs::core::HwWalletInfo wltInfo{ bs::wallet::HardwareEncKey::WalletType::Trezor
-         , devKey.vendor, devKey.label, devKey.id };
-      wltInfo.xpubRoot = "tpubD8JgFtY4RtgMN1ba5HLyJnkZizAggcspF6A4cqykeBEdf7z922uS9JdMK3CXwTNorLM3Rq19r4qYY3MCD38BRdSwipAjQ2G9uK2iUwXbn8Q";
-      wltInfo.xpubNativeSegwit = "tpubDDSj2fiYBbr6pNzRfPddHhaQN96cfqhJxNLtixXLP1arWRGZspMSX9yoqSXzvCdG9F9giaXzkj4VMCam2FZsWYYX9Yy5RFVGUrzPGS5xKkA";
-      wltInfo.xpubNestedSegwit = "tpubDDjriaSUoYgTyky2bypKVFkktRDUufKkJUgEsCgHyTo8NpfdMyAW2w3ByHNY4Dgrmq6z45rSuPikrmBLhaM5sXxS1cHnHNzuTQyZxE2AbFq";
-      wltInfo.xpubLegacy = "tpubDCdDNLh6H5vqcSAAXKh5MSPLp8Jvt6eoxwFrNRBf8erJ46DPmcZB2FgDPbWcAq5WiLPE9qw5DWBWRWAikSpiZ25YNumeu2sew9FMzFNxLoD";
-      walletInfoReady(devKey, wltInfo);
-      return bs::message::ProcessingResult::Success;
-      /*logger_->error("[hww::DeviceManager::processImport] no device found for id {}"
+      logger_->error("[hww::DeviceManager::processImport] no device found for id {}"
          , devKey.id);
-      return bs::message::ProcessingResult::Error;*/  //TODO: uncomment after debugging is done
+      return bs::message::ProcessingResult::Error;
    }
    device->getPublicKeys();
    return bs::message::ProcessingResult::Success;
@@ -462,6 +450,9 @@ bs::message::ProcessingResult DeviceManager::prepareDeviceForSign(bs::message::S
    }
    else if (bs::wallet::HardwareEncKey::WalletType::Trezor == hwEncType.deviceType()) {
       trezorClient_->listDevices();
+   }
+   else if (bs::wallet::HardwareEncKey::WalletType::Jade == hwEncType.deviceType()) {
+      jadeClient_->scanDevices();
    }
    return bs::message::ProcessingResult::Success;
 }
@@ -687,7 +678,7 @@ void DeviceManager::deviceTxStatusChanged(const std::string& status)
 }
 
 void bs::hww::DeviceManager::needSupportingTXs(const DeviceKey& key
-   , const std::set<BinaryData>& txHashes)
+   , const std::vector<BinaryData>& txHashes)
 {
    if (txHashes.empty()) {
       logger_->warn("[{}] no TX hashes from {}", __func__, key.label);

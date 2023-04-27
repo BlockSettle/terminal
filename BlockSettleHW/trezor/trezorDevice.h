@@ -66,7 +66,7 @@ namespace bs {
          void signTX(const bs::core::wallet::TXSignRequest& reqTX) override;
          void retrieveXPubRoot() override;
 
-         void setSupportingTX(const Tx&) override;
+         void setSupportingTXs(const std::vector<Tx>&) override;
 
          // Management
          void setMatrixPin(const SecureBinaryData& pin) override;

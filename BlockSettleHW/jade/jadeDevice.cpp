@@ -56,51 +56,10 @@ std::shared_ptr<bs::Worker> JadeDevice::worker(const std::shared_ptr<InData>&)
    return std::make_shared<bs::WorkerImpl>(handlers_);
 }
 
-void bs::hww::JadeDevice::operationFailed(const std::string& reason)
+void JadeDevice::operationFailed(const std::string& reason)
 {
    releaseConnection();
    cb_->operationFailed(key().id, reason);
-}
-
-void JadeDevice::releaseConnection()
-{
-   WorkerPool::cancel();
-}
-
-std::string bs::hww::JadeDevice::idFromSerial(const QSerialPortInfo& serial)
-{
-   return serial.hasProductIdentifier() ? std::to_string(serial.productIdentifier())
-      : serial.portName().toStdString();
-}
-
-DeviceKey JadeDevice::key() const
-{
-   std::string status;
-   if (walletId_.empty()) {
-      if (!xpubRoot_.empty()) {
-         try {
-            const auto& seed = bs::core::wallet::Seed::fromXpub(xpubRoot_
-               , testNet_ ? NetworkType::TestNet : NetworkType::MainNet);
-            walletId_ = seed.getWalletId();
-         }
-         catch (const std::exception& e) {
-            logger_->error("[{}] failed to get walletId from {}: {}", __func__, xpubRoot_.toBinStr(), e.what());
-         }
-      }
-      else {
-         status = "not inited";
-      }
-   }
-   return { "Jade @" + endpoint_.portName().toStdString()
-      , idFromSerial(endpoint_)
-      , endpoint_.hasVendorIdentifier() ? std::to_string(endpoint_.vendorIdentifier()) : endpoint_.manufacturer().toStdString()
-      , walletId_, type() };
-   return {};
-}
-
-DeviceType JadeDevice::type() const
-{
-   return DeviceType::HWJade;
 }
 
 static std::string dump(const QCborMap&);
@@ -170,6 +129,122 @@ static std::string dump(const QCborValueRef& val)
       return val.toRegularExpression().pattern().toStdString();
    }
    return "???";
+}
+
+void JadeDevice::setSupportingTXs(const std::vector<Tx>& txs)
+{
+   if (!awaitingTXreq_.isValid()) {
+      logger_->error("[JadeDevice::setSupportingTXs] awaiting TX request is invalid");
+      return;
+   }
+   if (awaitingTXreq_.armorySigner_.getTxInCount() != txs.size()) {
+      logger_->error("[JadeDevice::setSupportingTXs] awaiting TX request inputs"
+         " count mismatch: {} vs {}", awaitingTXreq_.armorySigner_.getTxInCount(), txs.size());
+      return;
+   }
+   for (const auto& tx : txs) {
+      awaitingTXreq_.armorySigner_.addSupportingTx(tx);
+   }
+   for (uint32_t i = 0; i < awaitingTXreq_.armorySigner_.getTxInCount(); ++i) {
+      const auto& spender = awaitingTXreq_.armorySigner_.getSpender(i);
+      if (!spender) {
+         logger_->warn("[JadeDevice::signTX] no spender at {}", __func__, i);
+         continue;
+      }
+      auto bip32Paths = spender->getBip32Paths();
+      if (bip32Paths.size() != 1) {
+         logger_->error("[TrezorDevice::handleTxRequest] TXINPUT {} BIP32 paths", bip32Paths.size());
+         throw std::logic_error("unexpected pubkey count for spender");
+      }
+      const auto& path = bip32Paths.begin()->second.getDerivationPathFromSeed();
+      QCborArray paramPath;
+      for (unsigned i = 0; i < path.size(); i++) {
+         //skip first index, it's the wallet root fingerprint
+         paramPath.append(path.at(i));
+      }
+      QCborMap params = { {QLatin1Literal("script"), QByteArray::fromStdString(spender->getOutputScript().toBinStr())}
+         , {QLatin1Literal("input_tx"), QByteArray::fromStdString(spender->getUtxo().getTxHash().copySwapEndian().toBinStr())}
+         , {QLatin1Literal("satoshi"), (qint64)spender->getValue()}
+         , {QLatin1Literal("is_witness"), true}, {QLatin1Literal("path"), paramPath}};
+      auto inInput = std::make_shared<JadeSerialIn>();
+      inInput->request = getRequest(++seqId_, QLatin1Literal("tx_input"), params);
+      inInput->needResponse = false;
+      processQueued(inInput, [](const std::shared_ptr<OutData>&) {});
+   }
+
+   auto bw = std::make_shared<BinaryWriter>();
+   bw->put_var_int(awaitingTXreq_.armorySigner_.getTxInCount());
+
+   for (uint32_t i = 0; i < awaitingTXreq_.armorySigner_.getTxInCount(); ++i) {
+      const auto& cbResponse = [this, i, bw](const std::shared_ptr<OutData>& out)
+      {
+         const auto& data = std::static_pointer_cast<JadeSerialOut>(out);
+         if (!data) {
+            logger_->error("[JadeDevice::tx_input] invalid data");
+            cb_->publicKeyReady(key());
+            return;
+         }
+         if (data->futResponse.wait_for(std::chrono::seconds{ 5 }) != std::future_status::ready) {
+            logger_->error("[JadeDevice::tx_input] data timeout");
+            cb_->publicKeyReady(key());
+            return;
+         }
+         const auto& msg = data->futResponse.get();
+         logger_->debug("[JadeDevice::tx_input] #{} response: {}", i, dump(msg));
+         
+         const auto binSignedData = BinaryData::fromString(msg[QLatin1Literal("result")].toByteArray().toStdString());
+         bw->put_uint32_t(i);
+         bw->put_var_int(binSignedData.getSize());
+         bw->put_BinaryData(binSignedData);
+
+         if ((i + 1) >= awaitingTXreq_.armorySigner_.getTxInCount()) {
+            cb_->txSigned(key(), bw->getData());
+         }
+      };
+      auto inResponse = std::make_shared<JadeSerialIn>();
+      processQueued(inResponse, cbResponse);
+   }
+}
+
+void JadeDevice::releaseConnection()
+{
+   WorkerPool::cancel();
+}
+
+std::string bs::hww::JadeDevice::idFromSerial(const QSerialPortInfo& serial)
+{
+   return serial.hasProductIdentifier() ? std::to_string(serial.productIdentifier())
+      : serial.portName().toStdString();
+}
+
+DeviceKey JadeDevice::key() const
+{
+   std::string status;
+   if (walletId_.empty()) {
+      if (!xpubRoot_.empty()) {
+         try {
+            const auto& seed = bs::core::wallet::Seed::fromXpub(xpubRoot_
+               , testNet_ ? NetworkType::TestNet : NetworkType::MainNet);
+            walletId_ = seed.getWalletId();
+         }
+         catch (const std::exception& e) {
+            logger_->error("[{}] failed to get walletId from {}: {}", __func__, xpubRoot_.toBinStr(), e.what());
+         }
+      }
+      else {
+         status = "not inited";
+      }
+   }
+   return { "Jade @" + endpoint_.portName().toStdString()
+      , idFromSerial(endpoint_)
+      , endpoint_.hasVendorIdentifier() ? std::to_string(endpoint_.vendorIdentifier()) : endpoint_.manufacturer().toStdString()
+      , walletId_, type() };
+   return {};
+}
+
+DeviceType JadeDevice::type() const
+{
+   return DeviceType::HWJade;
 }
 
 static QCborArray convertPath(const bs::hd::Path& path)
@@ -245,6 +320,9 @@ void JadeDevice::init()
       inXpub->request = getRequest(++seqId_, QLatin1Literal("get_xpub"), params);
 
       if (msg[QLatin1Literal("result")][QLatin1Literal("JADE_STATE")].toString().toStdString() == "LOCKED") {
+         if (cb_) {
+            cb_->requestHWPass(key(), true);
+         }
          const QCborMap authParams{ {QLatin1Literal("network"), network()}, {QLatin1Literal("epoch"), epoch()} };
          auto inAuth = std::make_shared<JadeSerialIn>();
          inAuth->request = getRequest(++seqId_, QLatin1Literal("auth_user"), authParams);
@@ -427,6 +505,47 @@ void JadeDevice::getPublicKeys()
 void JadeDevice::signTX(const bs::core::wallet::TXSignRequest &reqTX)
 {
    logger_->debug("[JadeDevice::signTX]");
+
+   const auto& tx = reqTX.armorySigner_.toPSBT();
+   const QCborMap params = { {QLatin1Literal("network"), network()}, {QLatin1Literal("txn")
+      , QByteArray::fromStdString(tx.toBinStr())}, {QLatin1Literal("use_ae_signatures"), true}
+      , {QLatin1Literal("num_inputs"), reqTX.armorySigner_.getTxInCount()} };
+   auto inReq = std::make_shared<JadeSerialIn>();
+   inReq->request = getRequest(++seqId_, QLatin1Literal("sign_tx"), params);
+
+   const auto& cbSign = [this, reqTX](const std::shared_ptr<OutData>& out)
+   {
+      const auto& data = std::static_pointer_cast<JadeSerialOut>(out);
+      if (!data) {
+         logger_->error("[JadeDevice::signTX] invalid data");
+         cb_->operationFailed(key().id, "Invalid data");
+         return;
+      }
+      if (data->futResponse.wait_for(std::chrono::seconds{ 15 }) != std::future_status::ready) {
+         logger_->error("[JadeDevice::signTX] data timeout");
+         cb_->operationFailed(key().id, "Device timeout");
+         return;
+      }
+      const auto& msg = data->futResponse.get();
+      logger_->debug("[JadeDevice::signTX] response: {}", dump(msg));
+      if (msg[QLatin1Literal("result")].isFalse()) {
+         cb_->operationFailed(key().id, "Device refused to sign");
+         return;
+      }
+
+      std::vector<BinaryData> txHashes;
+      for (uint32_t i = 0; i < reqTX.armorySigner_.getTxInCount(); ++i) {
+         const auto& spender = reqTX.armorySigner_.getSpender(i);
+         if (!spender) {
+            logger_->warn("[JadeDevice::signTX] no spender at {}", i);
+            continue;
+         }
+         txHashes.push_back(spender->getUtxo().getTxHash());
+      }
+      cb_->needSupportingTXs(key(), txHashes);
+      awaitingTXreq_ = reqTX;
+   };
+   processQueued(inReq, cbSign);
 }
 
 void JadeDevice::retrieveXPubRoot()
@@ -436,7 +555,7 @@ void JadeDevice::retrieveXPubRoot()
 
 void JadeDevice::reset()
 {
-   awaitingSignedTX_.clear();
+   awaitingTXreq_ = {};
    awaitingWalletInfo_ = {};
 }
 
@@ -471,12 +590,16 @@ std::shared_ptr<JadeSerialOut> JadeSerialHandler::processData(const std::shared_
       return nullptr;
    }
    auto out = std::make_shared<JadeSerialOut>();
-   auto prom = std::make_shared<std::promise<QCborMap>>();
-   out->futResponse = prom->get_future();
-   requests_.push_back(prom);
+   if (in->needResponse) {
+      auto prom = std::make_shared<std::promise<QCborMap>>();
+      out->futResponse = prom->get_future();
+      requests_.push_back(prom);
+   }
    logger_->debug("[JadeSerialHandler] sending: {}", dump(in->request));
-   const auto bytes = in->request.toCborValue().toCbor();
-   write(bytes);
+   if (!in->request.empty()) {
+      const auto bytes = in->request.toCborValue().toCbor();
+      write(bytes);
+   }
    return out;
 }
 

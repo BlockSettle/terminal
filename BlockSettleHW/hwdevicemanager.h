@@ -62,7 +62,7 @@ namespace bs {
          virtual void deviceReady(const std::string& deviceId) = 0;
          virtual void deviceTxStatusChanged(const std::string& status) = 0;
 
-         virtual void needSupportingTXs(const DeviceKey&, const std::set<BinaryData>& txHashes) = 0;
+         virtual void needSupportingTXs(const DeviceKey&, const std::vector<BinaryData>& txHashes) = 0;
 
          virtual void txSigned(const DeviceKey&, const SecureBinaryData& signData) = 0;
          virtual void scanningDone() = 0;
@@ -92,7 +92,7 @@ namespace bs {
          void deviceNotFound(const std::string& deviceId) override;
          void deviceReady(const std::string& deviceId) override;
          void deviceTxStatusChanged(const std::string& status) override;
-         void needSupportingTXs(const DeviceKey&, const std::set<BinaryData>& txHashes) override;
+         void needSupportingTXs(const DeviceKey&, const std::vector<BinaryData>& txHashes) override;
          void txSigned(const DeviceKey&, const SecureBinaryData& signData) override;
          void scanningDone() override;
          void operationFailed(const std::string& deviceId, const std::string& reason) override;

@@ -61,7 +61,7 @@ namespace bs {
          virtual void setMatrixPin(const SecureBinaryData& pin) {}
          virtual void setPassword(const SecureBinaryData& password, bool enterOnDevice) {}
 
-         virtual void setSupportingTX(const Tx&) {}
+         virtual void setSupportingTXs(const std::vector<Tx>&) {}
 
          // State
          virtual bool isBlocked() const = 0;

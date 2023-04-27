@@ -37,6 +37,7 @@ namespace bs {
       {
          ~JadeSerialIn() override = default;
          QCborMap request;
+         bool needResponse{ true };
       };
       struct JadeSerialOut : public bs::OutData
       {
@@ -136,6 +137,7 @@ namespace bs {
          void deviceTxStatusChanged(const std::string& status) override {} //TODO: implement
          void operationFailed(const std::string& reason) override;
          void requestForRescan() override {} //TODO: implement
+         void setSupportingTXs(const std::vector<Tx>&) override;
 
          // Management
          void cancelledOnDevice() override {}   //TODO: implement
@@ -153,8 +155,8 @@ namespace bs {
          int   seqId_{ 0 };
          mutable std::string  walletId_;
          const std::vector<std::shared_ptr<bs::Handler>> handlers_;
-         bs::core::HwWalletInfo  awaitingWalletInfo_;
-         std::string awaitingSignedTX_;
+         bs::core::HwWalletInfo           awaitingWalletInfo_;
+         bs::core::wallet::TXSignRequest  awaitingTXreq_;
       };
 
    }  //hw

@@ -302,14 +302,16 @@ void TrezorDevice::clearSession()
    makeCall(message);
 }
 
-void TrezorDevice::setSupportingTX(const Tx& tx)
+void TrezorDevice::setSupportingTXs(const std::vector<Tx>& txs)
 {
    if (!currentTxSignReq_) {
       logger_->warn("[{}] no current sign TX operation in progress", __func__);
       return;
    }
-   currentTxSignReq_->armorySigner_.addSupportingTx(tx);
-   logger_->debug("[{}] added supporting TX {}", __func__, tx.getThisHash().toHexStr(true));
+   for (const auto& tx : txs) {
+      currentTxSignReq_->armorySigner_.addSupportingTx(tx);
+      logger_->debug("[{}] added supporting TX {}", __func__, tx.getThisHash().toHexStr(true));
+   }
 }
 
 void TrezorDevice::signTX(const bs::core::wallet::TXSignRequest &reqTX)
@@ -317,14 +319,14 @@ void TrezorDevice::signTX(const bs::core::wallet::TXSignRequest &reqTX)
    currentTxSignReq_ = std::make_unique<bs::core::wallet::TXSignRequest>(reqTX);
    logger_->debug("[TrezorDevice::signTX] {}", features_->label());
 
-   std::set<BinaryData> txHashes;
+   std::vector<BinaryData> txHashes;
    for (uint32_t i = 0; i < currentTxSignReq_->armorySigner_.getTxInCount(); ++i) {
       const auto& spender = currentTxSignReq_->armorySigner_.getSpender(i);
       if (!spender) {
          logger_->warn("[{}] no spender at {}", __func__, i);
          continue;
       }
-      txHashes.insert(spender->getUtxo().getTxHash());
+      txHashes.push_back(spender->getUtxo().getTxHash());
    }
    cb_->needSupportingTXs(key(), txHashes);
 
