@@ -73,7 +73,7 @@ Rectangle {
                 function onRequestWalletSelection(index) {
                     var modelSize = (wallet_selection_combobox.model === walletBalances) 
                         ? wallet_selection_combobox.model.rowCount 
-                        : wallet_selection_combobox.length
+                        : wallet_selection_combobox.model.length
                     if (index >= 0 && index < modelSize) {
                         bsApp.walletSelected(index)
                         control.walletIndexChanged(index)

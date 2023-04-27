@@ -3,6 +3,7 @@ import QtQuick.Window 2.12
 import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.15
 import QtQuick.Dialogs 1.3
+import Qt.labs.platform 1.1 as QLP
 
 import "../BsStyles"
 import "../StyledControls"
@@ -69,6 +70,7 @@ ColumnLayout  {
             Layout.alignment: Qt.AlingVCenter
 
             activeFocusOnTab: false
+            hoverEnabled: true
 
             font.pixelSize: BSSizes.applyScale(13)
             font.family: "Roboto"
@@ -90,7 +92,7 @@ ColumnLayout  {
 
                 radius: BSSizes.applyScale(14)
 
-                border.color: BSStyle.defaultBorderColor
+                border.color: import_transaction_button.hovered ? BSStyle.comboBoxHoveredBorderColor : BSStyle.defaultBorderColor
                 border.width: BSSizes.applyScale(1)
 
             }
@@ -125,6 +127,7 @@ ColumnLayout  {
             Layout.alignment: Qt.AlingVCenter
 
             activeFocusOnTab: false
+            hoverEnabled: true
 
             font.pixelSize: BSSizes.applyScale(13)
             font.family: "Roboto"
@@ -145,7 +148,7 @@ ColumnLayout  {
 
                 radius: BSSizes.applyScale(14)
 
-                border.color: BSStyle.defaultBorderColor
+                border.color: simple_but.hovered ? BSStyle.comboBoxHoveredBorderColor : BSStyle.defaultBorderColor
                 border.width: 1
 
             }
@@ -188,232 +191,244 @@ ColumnLayout  {
 
                 spacing: 0
 
-                RowLayout {
-                    id: input_header_layout
-                    Layout.fillWidth: true
-                    Layout.topMargin: BSSizes.applyScale(16)
-                    Layout.preferredHeight: BSSizes.applyScale(19)
-                    Layout.alignment: Qt.AlignTop
+                ColumnLayout  {
+                    width: parent.width
+                    height: parent.height * 0.6
+                    spacing: 0
 
-                    Label {
-                        id: inputs_title
+                    RowLayout {
+                        id: input_header_layout
+                        Layout.fillWidth: true
+                        Layout.topMargin: BSSizes.applyScale(16)
+                        Layout.preferredHeight: BSSizes.applyScale(19)
+                        Layout.alignment: Qt.AlignTop
+
+                        Label {
+                            id: inputs_title
+
+                            Layout.leftMargin: BSSizes.applyScale(16)
+                            Layout.fillHeight: true
+                            Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+
+                            text: qsTr("Inputs")
+
+                            height : BSSizes.applyScale(19)
+                            color: "#E2E7FF"
+                            font.pixelSize: BSSizes.applyScale(16)
+                            font.family: "Roboto"
+                            font.weight: Font.Medium
+                        }
+
+                        Label {
+                            Layout.fillWidth: true
+                        }
+
+                        CustomCheckBox {
+                            id: checkbox_rbf
+
+                            activeFocusOnTab: false
+
+                            implicitHeight: BSSizes.applyScale(18)
+
+                            Layout.alignment: Qt.AlignRight | Qt.AlignTop
+                            Layout.rightMargin: BSSizes.applyScale(16)
+                            Layout.topMargin: BSSizes.applyScale(0)
+
+                            text: qsTr("RBF")
+                            enabled: !isRBF
+
+                            spacing: BSSizes.applyScale(6)
+                            font.pixelSize: BSSizes.applyScale(13)
+                            font.family: "Roboto"
+                            font.weight: Font.Normal
+                        }
+
+                    }
+
+                    WalletsComboBox {
+
+                        id: from_wallet_combo
 
                         Layout.leftMargin: BSSizes.applyScale(16)
-                        Layout.fillHeight: true
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+                        Layout.topMargin: BSSizes.applyScale(16)
+                        Layout.alignment: Qt.AlignLeft | Qt.AlingTop
+                        visible: !isRBF && !isCPFP
 
-                        text: qsTr("Inputs")
+                        width: BSSizes.applyScale(504)
+                        height: BSSizes.applyScale(70)
 
-                        height : BSSizes.applyScale(19)
-                        color: "#E2E7FF"
-                        font.pixelSize: BSSizes.applyScale(16)
-                        font.family: "Roboto"
-                        font.weight: Font.Medium
-                    }
-
-                    Label {
-                        Layout.fillWidth: true
-                    }
-
-                    CustomCheckBox {
-                        id: checkbox_rbf
-
-                        activeFocusOnTab: false
-
-                        implicitHeight: BSSizes.applyScale(18)
-
-                        Layout.alignment: Qt.AlignRight | Qt.AlignTop
-                        Layout.rightMargin: BSSizes.applyScale(16)
-                        Layout.topMargin: BSSizes.applyScale(0)
-
-                        text: qsTr("RBF")
-                        enabled: !isRBF
-
-                        spacing: BSSizes.applyScale(6)
-                        font.pixelSize: BSSizes.applyScale(13)
-                        font.family: "Roboto"
-                        font.weight: Font.Normal
-                    }
-
-                }
-
-                WalletsComboBox {
-
-                    id: from_wallet_combo
-
-                    Layout.leftMargin: BSSizes.applyScale(16)
-                    Layout.topMargin: BSSizes.applyScale(16)
-                    Layout.alignment: Qt.AlignLeft | Qt.AlingTop
-                    visible: !isRBF && !isCPFP
-
-                    width: BSSizes.applyScale(504)
-                    height: BSSizes.applyScale(70)
-
-                    onActivated: {
-                        walletBalances.selectedWallet = currentIndex
-                        prepareRequest()
-                    }
-
-                    function prepareRequest()  {
-                        if (rec_addr_input.isValid) {
-                            create_temp_request()
+                        onActivated: {
+                            walletBalances.selectedWallet = currentIndex
+                            prepareRequest()
                         }
 
-                        //I dont understand why but acceptableInput dont work...
-                        var cur_value = parseFloat(amount_input.input_text)
-                        var bottom = 0
-                        var top = tempRequest.maxAmount
-                        if(cur_value < bottom || cur_value > top)
-                        {
-                            amount_input.input_text = tempRequest.maxAmount
-                        }
-
-                        bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
-                    }
-
-                    Connections {
-                        target: walletBalances
-                        function onChanged() {
-                            if (layout.visible) {
-                                prepareRequest()
+                        function prepareRequest()  {
+                            if (rec_addr_input.isValid) {
+                                create_temp_request()
                             }
-                        }
-                    }
-                }
 
-                FeeSuggestComboBox {
+                            //I dont understand why but acceptableInput dont work...
+                            var cur_value = parseFloat(amount_input.input_text)
+                            var bottom = 0
+                            var top = tempRequest.maxAmount
+                            if(cur_value < bottom || cur_value > top)
+                            {
+                                amount_input.input_text = tempRequest.maxAmount
+                            }
 
-                    id: fee_suggest_combo
-
-                    Layout.leftMargin: BSSizes.applyScale(16)
-                    Layout.topMargin: BSSizes.applyScale(10)
-                    Layout.alignment: Qt.AlignLeft | Qt.AlingTop
-
-                    width: BSSizes.applyScale(504)
-                    height: BSSizes.applyScale(70)
-
-                    function change_index_handler()
-                    {
-                        if (isRBF) {
-                        }
-                        else if (isCPFP) {
-                        }
-                        else {
-                            txInputsModel.fee = parseFloat(fee_suggest_combo.edit_value())
                             bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
-                            txOutputsModel.clearOutputs()
+                        }
+
+                        Connections {
+                            target: walletBalances
+                            function onChanged() {
+                                if (layout.visible) {
+                                    prepareRequest()
+                                }
+                            }
+                        }
+                    }
+
+                    FeeSuggestComboBox {
+
+                        id: fee_suggest_combo
+
+                        Layout.leftMargin: BSSizes.applyScale(16)
+                        Layout.topMargin: BSSizes.applyScale(10)
+                        Layout.alignment: Qt.AlignLeft | Qt.AlingTop
+
+                        width: BSSizes.applyScale(504)
+                        height: BSSizes.applyScale(70)
+
+                        function change_index_handler()
+                        {
+                            if (isRBF) {
+                            }
+                            else if (isCPFP) {
+                            }
+                            else {
+                                txInputsModel.fee = parseFloat(fee_suggest_combo.edit_value())
+                                bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
+                                txOutputsModel.clearOutputs()
+                            }
                         }
                     }
                 }
 
-                Rectangle {
-                    id: divider
-                    height: BSSizes.applyScale(1)
-
-                    Layout.fillWidth: true
-                    Layout.topMargin: BSSizes.applyScale((!isRBF && !isCPFP) ? 196 : 274)
-                    Layout.alignment: Qt.AlignLeft | Qt.AlingTop
-
-                    color: BSStyle.defaultGreyColor
-                }
-
-
-                CustomTableView {
-                    id: table_sel_inputs
-
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Layout.leftMargin: BSSizes.applyScale(16)
-                    Layout.rightMargin: BSSizes.applyScale(16)
-                    Layout.preferredHeight: BSSizes.applyScale(300)
-
-                    model: isRBF ? tx.ownInputs : isCPFP ? tx.ownOutputs : txInputsSelectedModel
-                    columnWidths: [0.7, 0.1, 0, 0.2]
-
-                    copy_button_column_index: -1
-                    has_header: false
-
-                    Component
-                    {
-                        id: cmpnt_sel_inputs
-
-                        Row {
-                            id: cmpnt_sel_inputs_row
-
-                            spacing: BSSizes.applyScale(12)
-
-                            Text {
-                                id: internal_text
-
-                                visible: model_column !== delete_button_column_index
-
-                                text: model_tableData
-                                height: parent.height
-                                verticalAlignment: Text.AlignVCenter
-                                clip: true
-
-                                color: get_data_color(model_row, model_column)
-                                font.family: "Roboto"
-                                font.weight: Font.Normal
-                                font.pixelSize: model_row === 0 ? table_sel_inputs.text_header_size : table_sel_inputs.cell_text_size
-
-                                leftPadding: table_sel_inputs.get_text_left_padding(model_row, model_column)
-                            }
-
-                            Button {
-                                id: sel_inputs_button
-
-                                enabled: !isRBF && !isCPFP
-
-                                activeFocusOnTab: false
-
-                                text: qsTr("Select Inputs")
-
-                                font.family: "Roboto"
-                                font.weight: Font.DemiBold
-                                font.pixelSize: BSSizes.applyScale(12)
-
-                                anchors.verticalCenter: parent.verticalCenter
-
-                                contentItem: Text {
-                                    text: sel_inputs_button.text
-                                    font: sel_inputs_button.font
-                                    color: "#45A6FF"
-                                    horizontalAlignment: Text.AlignHCenter
+                ColumnLayout  {
+                    width: parent.width
+                    height: parent.height * 0.4
+                    spacing: 0
+    
+                    Rectangle {
+                        id: divider
+                        height: BSSizes.applyScale(1)
+    
+                        Layout.fillWidth: true
+                        Layout.topMargin: BSSizes.applyScale((!isRBF && !isCPFP) ? 196 : 274)
+                        Layout.alignment: Qt.AlignLeft | Qt.AlingTop
+    
+                        color: BSStyle.defaultGreyColor
+                    }
+    
+    
+                    CustomTableView {
+                        id: table_sel_inputs
+    
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.leftMargin: BSSizes.applyScale(16)
+                        Layout.rightMargin: BSSizes.applyScale(16)
+                        Layout.preferredHeight: BSSizes.applyScale(300)
+    
+                        model: isRBF ? tx.ownInputs : isCPFP ? tx.ownOutputs : txInputsSelectedModel
+                        columnWidths: [0.7, 0.1, 0, 0.2]
+    
+                        copy_button_column_index: -1
+                        has_header: false
+    
+                        Component
+                        {
+                            id: cmpnt_sel_inputs
+    
+                            Row {
+                                id: cmpnt_sel_inputs_row
+    
+                                spacing: BSSizes.applyScale(12)
+    
+                                Text {
+                                    id: internal_text
+    
+                                    visible: model_column !== delete_button_column_index
+    
+                                    text: model_tableData
+                                    height: parent.height
                                     verticalAlignment: Text.AlignVCenter
-                                    elide: Text.ElideRight
+                                    clip: true
+    
+                                    color: get_data_color(model_row, model_column)
+                                    font.family: "Roboto"
+                                    font.weight: Font.Normal
+                                    font.pixelSize: model_row === 0 ? table_sel_inputs.text_header_size : table_sel_inputs.cell_text_size
+    
+                                    leftPadding: table_sel_inputs.get_text_left_padding(model_row, model_column)
                                 }
-
-                                background: Rectangle {
-                                    implicitWidth: BSSizes.applyScale(84)
-                                    implicitHeight: BSSizes.applyScale(25)
-                                    color: "transparent"
-                                    border.color: "#45A6FF"
-                                    border.width: BSSizes.applyScale(1)
-                                    radius: BSSizes.applyScale(8)
+    
+                                Button {
+                                    id: sel_inputs_button
+    
+                                    enabled: !isRBF && !isCPFP
+    
+                                    activeFocusOnTab: false
+    
+                                    text: qsTr("Select Inputs")
+    
+                                    font.family: "Roboto"
+                                    font.weight: Font.DemiBold
+                                    font.pixelSize: BSSizes.applyScale(12)
+    
+                                    anchors.verticalCenter: parent.verticalCenter
+    
+                                    contentItem: Text {
+                                        text: sel_inputs_button.text
+                                        font: sel_inputs_button.font
+                                        color: "#45A6FF"
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                        elide: Text.ElideRight
+                                    }
+    
+                                    background: Rectangle {
+                                        implicitWidth: BSSizes.applyScale(84)
+                                        implicitHeight: BSSizes.applyScale(25)
+                                        color: "transparent"
+                                        border.color: "#45A6FF"
+                                        border.width: BSSizes.applyScale(1)
+                                        radius: BSSizes.applyScale(8)
+                                    }
+    
+                                    onClicked: layout.sig_select_inputs()
                                 }
-
-                                onClicked: layout.sig_select_inputs()
                             }
                         }
-                    }
-
-
-                    CustomTableDelegateRow {
-                        id: cmpnt_table_delegate
-                    }
-
-                    function choose_row_source_component(row, column)
-                    {
-                        if(row === 0 && column === 0)
-                            return cmpnt_sel_inputs
-                        else
-                            return cmpnt_table_delegate
-                    }
-
-                    function get_text_left_padding(row, column)
-                    {
-                        return (row === 0 && column === 0) ? 0 : left_text_padding
+    
+    
+                        CustomTableDelegateRow {
+                            id: cmpnt_table_delegate
+                        }
+    
+                        function choose_row_source_component(row, column)
+                        {
+                            if(row === 0 && column === 0)
+                                return cmpnt_sel_inputs
+                            else
+                                return cmpnt_table_delegate
+                        }
+    
+                        function get_text_left_padding(row, column)
+                        {
+                            return (row === 0 && column === 0) ? 0 : left_text_padding
+                        }
                     }
                 }
             }
@@ -440,176 +455,188 @@ ColumnLayout  {
                 anchors.fill: parent
 
                 spacing: 0
+                
+                ColumnLayout  {
+                    width: parent.width
+                    height: parent.height * 0.6
+                    spacing: 0
 
-                Label {
-                    id: outputs_title
+                    Label {
+                        id: outputs_title
 
-                    Layout.leftMargin: BSSizes.applyScale(16)
-                    Layout.topMargin: BSSizes.applyScale(16)
-                    Layout.alignment: Qt.AlignLeft | Qt.AlingTop
+                        Layout.leftMargin: BSSizes.applyScale(16)
+                        Layout.topMargin: BSSizes.applyScale(16)
+                        Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
-                    text: qsTr("Outputs")
+                        text: qsTr("Outputs")
 
-                    height : BSSizes.applyScale(19)
-                    color: "#E2E7FF"
-                    font.pixelSize: BSSizes.applyScale(16)
-                    font.family: "Roboto"
-                    font.weight: Font.Medium
-                }
+                        height : BSSizes.applyScale(19)
+                        color: "#E2E7FF"
+                        font.pixelSize: BSSizes.applyScale(16)
+                        font.family: "Roboto"
+                        font.weight: Font.Medium
+                    }
 
-                RecvAddrTextInput {
+                    RecvAddrTextInput {
 
-                    id: rec_addr_input
+                        id: rec_addr_input
 
-                    Layout.leftMargin: BSSizes.applyScale(16)
-                    Layout.topMargin: BSSizes.applyScale(16)
-                    Layout.alignment: Qt.AlignLeft | Qt.AlingTop
+                        Layout.leftMargin: BSSizes.applyScale(16)
+                        Layout.topMargin: BSSizes.applyScale(16)
+                        Layout.alignment: Qt.AlignLeft | Qt.AlingTop
 
-                    width: BSSizes.applyScale(504)
-                    height: BSSizes.applyScale(70)
+                        width: BSSizes.applyScale(504)
+                        height: BSSizes.applyScale(70)
 
-                    wallets_current_index: from_wallet_combo.currentIndex
+                        wallets_current_index: from_wallet_combo.currentIndex
 
-                    onEnterPressed: {
-                        if (!processEnterKey()) {
+                        onEnterPressed: {
+                            if (!processEnterKey()) {
+                                amount_input.setActiveFocus()
+                            }
+                        }
+
+                        onReturnPressed: {
+                            if (!processEnterKey()) {
+                                amount_input.setActiveFocus()
+                            }
+                        }
+
+                        onFocus_next: {
                             amount_input.setActiveFocus()
                         }
                     }
+
+                    AmountInput {
+
+                        id: amount_input
+
+                        Layout.leftMargin: BSSizes.applyScale(16)
+                        Layout.topMargin: BSSizes.applyScale(10)
+                        Layout.alignment: Qt.AlignLeft | Qt.AlingTop
+
+                        width: BSSizes.applyScale(504)
+                        height: BSSizes.applyScale(70)
+
+                        function getMax() {
+                            if (!isRBF && !isCPFP && txInputsSelectedModel.rowCount > 1) {
+                                var maxValue = parseFloat(tempRequest.maxAmount) - txOutputsModel.totalAmount
+                                return (maxValue >= 0 ? maxValue : 0).toFixed(8)
+                            }
+                            return tempRequest.maxAmount
+
+                        }
+
+                        onEnterPressed: {
+                            if (!processEnterKey()) {
+                                comment_input.setActiveFocus()
+                            }
+                        }
+
+                        onReturnPressed: {
+                            if (!processEnterKey()) {
+                                comment_input.setActiveFocus()
+                            }
+                        }
+                    }
+
+                    CustomTextEdit {
+
+                        id: comment_input
+
+                        Layout.leftMargin: BSSizes.applyScale(16)
+                        Layout.topMargin: BSSizes.applyScale(10)
+                        Layout.alignment: Qt.AlignLeft | Qt.AlingTop
+
+                        Layout.preferredHeight : BSSizes.applyScale(90)
+                        Layout.preferredWidth: BSSizes.applyScale(504)
+
+                        //aliases
+                        title_text: qsTr("Comment")
+
+                        onTabNavigated: include_output_but.forceActiveFocus()
+                        onBackTabNavigated: fee_suggest_combo.forceActiveFocus()
+                    }
+
+                    CustomButton {
+                        id: include_output_but
+                        text: qsTr("Include Output")
+
+                        Layout.leftMargin: BSSizes.applyScale(16)
+                        Layout.topMargin: BSSizes.applyScale(16)
+                        Layout.alignment: Qt.AlignLeft | Qt.AlingTop
+
+                        activeFocusOnTab: include_output_but.enabled
+
+                        enabled: isRBF || is_ready_output
+                        preferred: !isRBF && is_ready_output
+
+                        icon.source: "qrc:/images/plus.svg"
+                        icon.color: include_output_but.enabled ? "#45A6FF" : BSStyle.buttonsDisabledTextColor
+
+                        width: BSSizes.applyScale(504)
+
+                        function click_enter() {
+                            if (!include_output_but.enabled) return
+
+                            txOutputsModel.addOutput(rec_addr_input.input_text, amount_input.input_text)
+
+                            rec_addr_input.input_text = ""
+                            amount_input.input_text = ""
+
+                            if (!isRBF && !isCPFP) {
+                                txInputsModel.updateAutoselection()
+                            }
+                        }
+                    }
+                }
+
+                ColumnLayout  {
+                    width: parent.width
+                    height: parent.height * 0.4
+                    spacing: 0
+    
+                    Rectangle {
                     
-                    onReturnPressed: {
-                        if (!processEnterKey()) {
-                            amount_input.setActiveFocus()
-                        }
+                        height: 1
+    
+                        Layout.fillWidth: true
+                        Layout.topMargin: BSSizes.applyScale(30)
+                        Layout.alignment: Qt.AlignLeft | Qt.AlingTop
+    
+                        color: BSStyle.defaultGreyColor
                     }
-
-                    onFocus_next: {
-                        amount_input.setActiveFocus()
-                    }
-                }
-
-                AmountInput {
-
-                    id: amount_input
-
-                    Layout.leftMargin: BSSizes.applyScale(16)
-                    Layout.topMargin: BSSizes.applyScale(10)
-                    Layout.alignment: Qt.AlignLeft | Qt.AlingTop
-
-                    width: BSSizes.applyScale(504)
-                    height: BSSizes.applyScale(70)
-
-                    function getMax() {
-                        if (!isRBF && !isCPFP && txInputsSelectedModel.rowCount > 1) {
-                            var maxValue = parseFloat(tempRequest.maxAmount) - txOutputsModel.totalAmount
-                            return (maxValue >= 0 ? maxValue : 0).toFixed(8)
+    
+                    CustomTableView {
+                        id: table_outputs
+    
+                        Layout.fillWidth: true
+                        Layout.fillHeight : true
+                        Layout.leftMargin: BSSizes.applyScale(16)
+                        Layout.rightMargin: BSSizes.applyScale(16)
+    
+                        model: txOutputsModel
+                        columnWidths: [0.544, 0.2, 0.20, 0.056]
+    
+                        copy_button_column_index: -1
+                        delete_button_column_index: 3
+                        has_header: false
+    
+                        onDeleteRequested: (row) =>
+                        {
+                            txOutputsModel.delOutput(row)
+                            if (txOutputsModel.rowCount <= 1 && !isRBF && !isCPFP) {
+                                txInputsModel.clearSelection()
+                            }
+                            else if (txOutputsModel.rowCount > 1 && !isRBF && !isCPFP) {
+                                txInputsModel.updateAutoselection()
+                            }
                         }
-                        return tempRequest.maxAmount
-
-                    }
-
-                    onEnterPressed: {
-                        if (!processEnterKey()) {
-                            comment_input.setActiveFocus()
+    
+                        function get_text_left_padding(row, column)
+                        {
+                            return (row === 0 && column === 0) ? 0 : left_text_padding
                         }
-                    }
-                    
-                    onReturnPressed: {
-                        if (!processEnterKey()) {
-                            comment_input.setActiveFocus()
-                        }
-                    }
-                }
-
-                CustomTextEdit {
-
-                    id: comment_input
-
-                    Layout.leftMargin: BSSizes.applyScale(16)
-                    Layout.topMargin: BSSizes.applyScale(10)
-                    Layout.alignment: Qt.AlignLeft | Qt.AlingTop
-
-                    Layout.preferredHeight : BSSizes.applyScale(90)
-                    Layout.preferredWidth: BSSizes.applyScale(504)
-
-                    //aliases
-                    title_text: qsTr("Comment")
-
-                    onTabNavigated: include_output_but.forceActiveFocus()
-                    onBackTabNavigated: fee_suggest_combo.forceActiveFocus()
-                }
-
-                CustomButton {
-                    id: include_output_but
-                    text: qsTr("Include Output")
-
-                    Layout.leftMargin: BSSizes.applyScale(16)
-                    Layout.topMargin: BSSizes.applyScale(16)
-                    Layout.alignment: Qt.AlignLeft | Qt.AlingTop
-
-                    activeFocusOnTab: include_output_but.enabled
-
-                    enabled: isRBF || is_ready_output
-                    preferred: !isRBF && is_ready_output
-
-                    icon.source: "qrc:/images/plus.svg"
-                    icon.color: include_output_but.enabled ? "#45A6FF" : BSStyle.buttonsDisabledTextColor
-
-                    width: BSSizes.applyScale(504)
-
-                    function click_enter() {
-                        if (!include_output_but.enabled) return
-
-                        txOutputsModel.addOutput(rec_addr_input.input_text, amount_input.input_text)
-
-                        rec_addr_input.input_text = ""
-                        amount_input.input_text = ""
-
-                        if (!isRBF && !isCPFP) {
-                            txInputsModel.updateAutoselection()
-                        }
-                    }
-                }
-
-                Rectangle {
-
-                    height: 1
-
-                    Layout.fillWidth: true
-                    Layout.topMargin: BSSizes.applyScale(30)
-                    Layout.alignment: Qt.AlignLeft | Qt.AlingTop
-
-                    color: BSStyle.defaultGreyColor
-                }
-
-                CustomTableView {
-                    id: table_outputs
-
-                    Layout.fillWidth: true
-                    Layout.fillHeight : true
-                    Layout.leftMargin: BSSizes.applyScale(16)
-                    Layout.rightMargin: BSSizes.applyScale(16)
-
-                    model: txOutputsModel
-                    columnWidths: [0.744, 0.20, 0.056]
-
-                    copy_button_column_index: -1
-                    delete_button_column_index: 2
-                    has_header: false
-
-                    onDeleteRequested: (row) =>
-                    {
-                        txOutputsModel.delOutput(row)
-                        if (txOutputsModel.rowCount <= 1 && !isRBF && !isCPFP) {
-                            txInputsModel.clearSelection()
-                        }
-                        else if (txOutputsModel.rowCount > 1 && !isRBF && !isCPFP) {
-                            txInputsModel.updateAutoselection()
-                        }
-                    }
-
-                    function get_text_left_padding(row, column)
-                    {
-                        return (row === 0 && column === 0) ? 0 : left_text_padding
                     }
                 }
             }
@@ -621,14 +648,13 @@ ColumnLayout  {
         Layout.fillHeight : true
     }
 
-    FileDialog {
+    QLP.FileDialog {
         id: exportFileDialog  
         title: qsTr("Please choose folder to export transaction")
-        folder: shortcuts.documents
-        selectFolder: true
-        selectExisting: false
+        defaultSuffix: "bin"
+        fileMode: QLP.FileDialog.SaveFile
         onAccepted: {
-            bsApp.exportTransaction(exportFileDialog.fileUrl, continue_but.prepare_transaction())
+            bsApp.exportTransaction(exportFileDialog.currentFile, continue_but.prepare_transaction())
         }
     }
 
@@ -686,6 +712,7 @@ ColumnLayout  {
 
             if (tempRequest.isWatchingOnly)
             {
+                exportFileDialog.currentFile = "file:////" + bsApp.makeExportTransactionFilename(tempRequest)
                 exportFileDialog.open()
             }
             else
