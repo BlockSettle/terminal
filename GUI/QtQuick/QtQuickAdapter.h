@@ -189,6 +189,7 @@ public:
    Q_INVOKABLE int rescanWallet(const QString& walletId);
    Q_INVOKABLE int renameWallet(const QString& walletId, const QString& newName);
    Q_INVOKABLE void walletSelected(int);
+   Q_INVOKABLE QString makeExportTransactionFilename(QTXSignRequest* request);
    Q_INVOKABLE void exportTransaction(const QUrl& path, QTXSignRequest* request);
    Q_INVOKABLE QTXSignRequest* importTransaction(const QUrl& path);
    Q_INVOKABLE void exportSignedTX(const QUrl& path, QTXSignRequest* request, const QString& password);

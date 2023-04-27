@@ -721,6 +721,12 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
                }
             }
          }
+         else {
+            auto index = walletBalances_->wallets().indexOf(QString::fromStdString(createdWalletId_));
+            if (index != -1) {
+               emit requestWalletSelection(index);
+            }
+         }
       }
       break;
 
@@ -1168,11 +1174,14 @@ ProcessingResult QtQuickAdapter::processWalletBalances(bs::message::SeqId respon
       , response.total_balance(), response.nb_addresses() };
    walletBalances_->setWalletBalance(response.wallet_id(), bal);
 
-   for (const auto& addrBal : response.address_balances()) {
-      addrModel_->updateRow(BinaryData::fromString(addrBal.address())
-         , addrBal.total_balance(), addrBal.tx_count());
-   }
-   emit walletBalanceChanged();
+   QMetaObject::invokeMethod(this, [this, response]()
+   {
+      for (const auto& addrBal : response.address_balances()) {
+         addrModel_->updateRow(BinaryData::fromString(addrBal.address())
+            , addrBal.total_balance(), addrBal.tx_count());
+       }
+       emit walletBalanceChanged();
+   });
    return ProcessingResult::Success;
 }
 
@@ -1848,6 +1857,11 @@ bs::message::ProcessingResult QtQuickAdapter::processWalletDeleted(const std::st
    pushRequest(user_, userWallets_, msg.SerializeAsString());
 
    emit successDeleteWallet();
+
+   if (walletBalances_->rowCount() > 0) {
+      emit requestWalletSelection(0);
+   }
+
    return bs::message::ProcessingResult::Success;
 }
 
@@ -2454,6 +2468,21 @@ void QtQuickAdapter::notifyNewTransaction(const bs::TXEntry& tx)
    }, Qt::QueuedConnection);
 }
 
+QString QtQuickAdapter::makeExportTransactionFilename(QTXSignRequest* request)
+{
+   if (request->txReq().walletIds.empty()) {
+      emit transactionExportFailed(tr("TX request doesn't contain wallets"));
+      return QString();
+   }
+   const auto& timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+   auto walletId = hdWalletIdByLeafId(*request->txReq().walletIds.cbegin());
+   if (walletId.empty()) {
+      walletId = *request->txReq().walletIds.cbegin();
+   }
+   const std::string filename = "BlockSettle_" + walletId + "_" + std::to_string(timestamp) + "_unsigned.bin";
+   return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QString::fromLatin1("/") + QString::fromStdString(filename);
+}
+
 void QtQuickAdapter::exportTransaction(const QUrl& path, QTXSignRequest* request)
 {
    txSaveReqs_.push_back(path.toLocalFile().toStdString());
@@ -2461,34 +2490,21 @@ void QtQuickAdapter::exportTransaction(const QUrl& path, QTXSignRequest* request
 
 void QtQuickAdapter::saveTransaction(const bs::core::wallet::TXSignRequest& txReq, const std::string& exportPath)
 {
-   if (txReq.walletIds.empty()) {
-      emit transactionExportFailed(tr("TX request doesn't contain wallets"));
-      return;
-   }
-   const auto& timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-   auto walletId = hdWalletIdByLeafId(*txReq.walletIds.cbegin());
-   if (walletId.empty()) {
-      walletId = *txReq.walletIds.cbegin();
-   }
-   const std::string filename = "BlockSettle_" + walletId + "_" + std::to_string(timestamp) + "_unsigned.bin";
-   const auto& pathName = exportPath + "/" + filename;
-   logger_->debug("[{}] exporting transaction to {}", __func__, pathName);
    const auto& txSer = bs::signer::coreTxRequestToPb(txReq, false).SerializeAsString();
-
-   auto f = fopen(pathName.c_str(), "wb");
+   auto f = fopen(exportPath.c_str(), "wb");
    if (!f) {
-      emit transactionExportFailed(tr("Failed to open %1 for writing").arg(QString::fromStdString(pathName)));
+      emit transactionExportFailed(tr("Failed to open %1 for writing").arg(QString::fromStdString(exportPath)));
       return;
    }
    if (fwrite(txSer.data(), 1, txSer.size(), f) != txSer.size()) {
-      logger_->error("[{}] failed to write {} bytes to {}", __func__, txSer.size(), pathName);
+      logger_->error("[{}] failed to write {} bytes to {}", __func__, txSer.size(), exportPath);
       emit transactionExportFailed(tr("Failed to write %1 bytes to %2. Disk full?")
-         .arg(txSer.size()).arg(QString::fromStdString(pathName)));
+         .arg(txSer.size()).arg(QString::fromStdString(exportPath)));
       return;
    }
    fclose(f);
-   logger_->debug("[{}] exporting {} done", __func__, pathName);
-   emit transactionExported(QString::fromStdString(pathName));
+   logger_->debug("[{}] exporting {} done", __func__, exportPath);
+   emit transactionExported(QString::fromStdString(exportPath));
 }
 
 QTXSignRequest* QtQuickAdapter::importTransaction(const QUrl& path)
@@ -2599,30 +2615,29 @@ bool QtQuickAdapter::isRequestReadyToSend(QTXSignRequest* request)
    const auto& walletIds = request->txReq().walletIds;
    for (const auto& id : walletIds) {
       bool isInWallets = false;
-   	  for (const auto [walletId, wallet] : hdWallets_) {
-   		 if ((id == walletId || wallet.hasLeaf(id)) && !wallet.watchOnly) {
-   		    isInWallets = true;
-   			break;
-   		 }
-   	  }
-   	  if (!isInWallets) {
-   		 return false;
-   	  }
+      for (const auto [walletId, wallet] : hdWallets_) {
+         if ((id == walletId || wallet.hasLeaf(id)) && !wallet.watchOnly) {
+            isInWallets = true;
+            break;
+         }
+      }
+      if (!isInWallets) {
+         return false;
+      }
    }
    return true;
 }
 
 QString QtQuickAdapter::exportPRK()
 {
-   const auto& path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) 
-       + QString::fromLatin1("/") 
-       + walletPropertiesModel_->walletName() + QString::fromLatin1(".pdf");
+   const auto& path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+      + QString::fromLatin1("/")
+      + QString::fromLatin1("BlockSettle_%1_%2.pdf").arg(walletPropertiesModel_->walletId()).arg(walletPropertiesModel_->walletName());
    const auto& seed = walletPropertiesModel_->seed();
    WalletBackupPdfWriter writer(
-       walletPropertiesModel_->walletId(),
-       QStringList(seed.begin(), seed.begin() + seed.length() / 2).join(QChar::fromLatin1(' ')),
-       QStringList(seed.begin() + seed.length() / 2, seed.end()).join(QChar::fromLatin1(' ')),
-       QRImageProvider().requestPixmap(walletPropertiesModel_->walletId(), nullptr, QSize(200, 200)));
+      walletPropertiesModel_->walletId(),
+      seed,
+      QRImageProvider().requestPixmap(walletPropertiesModel_->walletId(), nullptr, QSize(200, 200)));
    writer.write(path);
    return path;
 }

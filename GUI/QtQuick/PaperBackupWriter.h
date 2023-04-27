@@ -29,7 +29,7 @@ public:
 
 public:
    WalletBackupPdfWriter(const QString &walletId
-      , const QString &keyLine1, const QString &keyLine2
+      , const QStringList& seed
       , const QPixmap &qr);
 
    bool write(const QString &fileName);
@@ -41,8 +41,7 @@ public:
 
 private:
    QString walletId_;
-   QString keyLine1_;
-   QString keyLine2_;
+   QStringList seed_;
    QPixmap qr_;
 };
 

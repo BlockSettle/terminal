@@ -3,6 +3,7 @@ import QtQuick.Window 2.12
 import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.15
 import QtQuick.Dialogs 1.3
+import Qt.labs.platform 1.1 as QLP
 
 import "../BsStyles"
 import "../StyledControls"
@@ -49,6 +50,7 @@ ColumnLayout  {
             Layout.alignment: Qt.AlingVCenter
 
             activeFocusOnTab: false
+            hoverEnabled: true
 
             font.pixelSize: BSSizes.applyScale(13)
             font.family: "Roboto"
@@ -70,7 +72,7 @@ ColumnLayout  {
 
                 radius: BSSizes.applyScale(14)
 
-                border.color: BSStyle.defaultBorderColor
+                border.color: import_transaction_button.hovered ? BSStyle.comboBoxHoveredBorderColor : BSStyle.defaultBorderColor
                 border.width: BSSizes.applyScale(1)
 
             }
@@ -105,6 +107,7 @@ ColumnLayout  {
             Layout.alignment: Qt.AlingVCenter
 
             activeFocusOnTab: false
+            hoverEnabled: true
 
             font.pixelSize: BSSizes.applyScale(13)
             font.family: "Roboto"
@@ -126,7 +129,7 @@ ColumnLayout  {
 
                 radius: BSSizes.applyScale(14)
 
-                border.color: BSStyle.defaultBorderColor
+                border.color: advanced_but.hovered ? BSStyle.comboBoxHoveredBorderColor : BSStyle.defaultBorderColor
                 border.width: BSSizes.applyScale(1)
 
             }
@@ -246,14 +249,13 @@ ColumnLayout  {
         Layout.fillHeight: true
     }
 
-    FileDialog {
+    QLP.FileDialog {
         id: exportFileDialog  
         title: qsTr("Please choose folder to export transaction")
-        folder: shortcuts.documents
-        selectFolder: true
-        selectExisting: false
+        defaultSuffix: "bin"
+        fileMode: QLP.FileDialog.SaveFile
         onAccepted: {
-            bsApp.exportTransaction(exportFileDialog.fileUrl, continue_but.prepare_transaction())
+            bsApp.exportTransaction(exportFileDialog.currentFile, continue_but.prepare_transaction())
         }
     }
 
@@ -288,6 +290,7 @@ ColumnLayout  {
 
             if (tempRequest.isWatchingOnly)
             {
+                exportFileDialog.currentFile = "file:////" + bsApp.makeExportTransactionFilename(tempRequest)
                 exportFileDialog.open()
             }
             else
