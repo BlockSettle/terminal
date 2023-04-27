@@ -1859,7 +1859,7 @@ bs::message::ProcessingResult QtQuickAdapter::processWalletDeleted(const std::st
    emit successDeleteWallet();
 
    if (walletBalances_->rowCount() > 0) {
-       emit requestWalletSelection(0);
+	  emit requestWalletSelection(0);
    }
 
    return bs::message::ProcessingResult::Success;
@@ -2470,17 +2470,17 @@ void QtQuickAdapter::notifyNewTransaction(const bs::TXEntry& tx)
 
 QString QtQuickAdapter::makeExportTransactionFilename(QTXSignRequest* request)
 {
-    if (request->txReq().walletIds.empty()) {
-        emit transactionExportFailed(tr("TX request doesn't contain wallets"));
-        return QString();
-    }
-    const auto& timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    auto walletId = hdWalletIdByLeafId(*request->txReq().walletIds.cbegin());
-    if (walletId.empty()) {
-        walletId = *request->txReq().walletIds.cbegin();
-    }
-    const std::string filename = "BlockSettle_" + walletId + "_" + std::to_string(timestamp) + "_unsigned.bin";
-    return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QString::fromLatin1("/") + QString::fromStdString(filename);
+   if (request->txReq().walletIds.empty()) {
+	  emit transactionExportFailed(tr("TX request doesn't contain wallets"));
+	  return QString();
+   }
+   const auto& timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+   auto walletId = hdWalletIdByLeafId(*request->txReq().walletIds.cbegin());
+   if (walletId.empty()) {
+	  walletId = *request->txReq().walletIds.cbegin();
+   }
+   const std::string filename = "BlockSettle_" + walletId + "_" + std::to_string(timestamp) + "_unsigned.bin";
+   return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QString::fromLatin1("/") + QString::fromStdString(filename);
 }
 
 void QtQuickAdapter::exportTransaction(const QUrl& path, QTXSignRequest* request)
@@ -2636,8 +2636,7 @@ QString QtQuickAdapter::exportPRK()
    const auto& seed = walletPropertiesModel_->seed();
    WalletBackupPdfWriter writer(
       walletPropertiesModel_->walletId(),
-      QStringList(seed.begin(), seed.begin() + seed.length() / 2).join(QChar::fromLatin1(' ')),
-      QStringList(seed.begin() + seed.length() / 2, seed.end()).join(QChar::fromLatin1(' ')),
+      seed,
       QRImageProvider().requestPixmap(walletPropertiesModel_->walletId(), nullptr, QSize(200, 200)));
    writer.write(path);
    return path;

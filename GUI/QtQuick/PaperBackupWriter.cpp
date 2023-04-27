@@ -19,11 +19,10 @@
 #include <QStaticText>
 
 WalletBackupPdfWriter::WalletBackupPdfWriter(const QString &walletId
-   , const QString &keyLine1, const QString &keyLine2
+   , const QStringList& seed
    , const QPixmap &qr)
    : walletId_(walletId)
-   , keyLine1_(keyLine1)
-   , keyLine2_(keyLine2)
+   , seed_(seed)
    , qr_(qr)
 {
 }
@@ -117,47 +116,34 @@ void WalletBackupPdfWriter::print(QPrinter *printer)
 
 void WalletBackupPdfWriter::draw(QPainter &p, qreal width, qreal height)
 {
-   QFont font = p.font();
-   font.setPixelSize(125);
+   const auto longSeed = seed_.length() > 12;
 
-   QPixmap logo = QPixmap(QString::fromUtf8(":/images/RPK_template.png"));
+   QFont font = p.font();
+   font.setPixelSize(150);
+   font.setBold(true);
+
+   QPixmap logo = QPixmap(QString::fromUtf8(longSeed ? ":/images/RPK24.png" : ":/images/RPK12.png"));
    p.drawPixmap(QRect(0, 0, width, height), logo);
 
    qreal relWidth = width / logo.width();
    qreal relHeight = height / logo.height();
 
-   QFont italic = font;
-   italic.setItalic(true);
 
-   QFont bold = font;
-   bold.setBold(true);
-
-   QStaticText wIdDesc(QObject::tr("Wallet ID"));
-   QStaticText keyLine1Desc(QObject::tr("Line 1"));
-   QStaticText keyLine2Desc(QObject::tr("Line 2"));
-
-   QStaticText wId(walletId_);
-   QStaticText keyLine1(keyLine1_);
-   QStaticText keyLine2(keyLine2_);
-
-   wIdDesc.prepare(QTransform(), italic);
-   keyLine1Desc.prepare(QTransform(), italic);
-   keyLine2Desc.prepare(QTransform(), italic);
-
-   wId.prepare(QTransform(), bold);
-   keyLine1.prepare(QTransform(), bold);
-   keyLine2.prepare(QTransform(), bold);
-
-   p.setFont(bold);
-
-   QTextOption option;
-   option.setWrapMode(QTextOption::WordWrap);
+   p.setFont(font);
 
    // Magic numbers is pixel positions of given controls on RPK_template.png
-   p.drawStaticText(QPointF(700 * relWidth, 2035 * relHeight), wId);
-   p.drawText(QRectF(150 * relWidth, 2580 * relHeight, 1200 * relWidth, 150 * relHeight), keyLine1_, option);
-   p.drawText(QRectF(150 * relWidth, 2790 * relHeight, 1200 * relWidth, 150 * relHeight), keyLine2_, option);
+   p.drawText(QPointF(140 * relWidth, 2020 * relHeight), walletId_);
 
-   p.drawPixmap(QRectF(1640 * relWidth, 2155 * relHeight, 740 * relWidth, 740 * relHeight),
+   const auto topLeftX = 240;
+   const auto topLeftY = 2415;
+   const auto deltaX = 480;
+   const auto deltaY = 93;
+   for (auto i = 0; i < 3; ++i) {
+      for (auto j = 0; j < seed_.size() / 3; ++j) {
+         p.drawText(QPointF((topLeftX + i * deltaX) * relWidth, (topLeftY + j * deltaY) * relHeight), seed_.at(i * 3 + j));
+      }
+   }
+
+   p.drawPixmap(QRectF(1775 * relWidth, 1970 * relHeight, 790 * relWidth, 790 * relHeight),
       qr_, qr_.rect());
 }
