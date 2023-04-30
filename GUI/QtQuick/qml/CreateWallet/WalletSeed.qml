@@ -65,13 +65,13 @@ ColumnLayout  {
 
         CustomButton {
             id: copy_seed_but
-            text: qsTr("Copy Seed")
+            text: qsTr("Save PDF")
             width: BSSizes.applyScale(261)
 
             preferred: false
 
             function click_enter() {
-                bsApp.copySeedToClipboard(phrase)
+                bsApp.exportPRK("New wallet", "", phrase)
             }
         }
 

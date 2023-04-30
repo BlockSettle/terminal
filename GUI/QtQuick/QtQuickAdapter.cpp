@@ -2014,6 +2014,7 @@ bs::message::ProcessingResult QtQuickAdapter::processTransactions(bs::message::S
    std::set<BinaryData> inHashes;
    for (const auto& txData : response.transactions()) {
       Tx tx(BinaryData::fromString(txData.tx()));
+
       tx.setTxHeight(txData.height());
       for (int i = 0; i < tx.getNumTxIn(); ++i) {
          const auto& in = tx.getTxInCopy(i);
@@ -2612,11 +2613,15 @@ bool QtQuickAdapter::broadcastSignedTX(const QUrl& path)
 
 bool QtQuickAdapter::isRequestReadyToSend(QTXSignRequest* request)
 {
+   if (request == nullptr) {
+      return false;
+   }
+
    const auto& walletIds = request->txReq().walletIds;
    for (const auto& id : walletIds) {
       bool isInWallets = false;
       for (const auto [walletId, wallet] : hdWallets_) {
-         if ((id == walletId || wallet.hasLeaf(id)) && !wallet.watchOnly) {
+         if ((id == walletId || wallet.hasLeaf(id))) {
             isInWallets = true;
             break;
          }
@@ -2628,16 +2633,52 @@ bool QtQuickAdapter::isRequestReadyToSend(QTXSignRequest* request)
    return true;
 }
 
-QString QtQuickAdapter::exportPRK()
+void QtQuickAdapter::prepareTransactionForEditing(QTXSignRequest* request)
+{
+   txOutputsModel_->clearOutputs();
+   txInputsModel_->clear();
+
+   const auto& walletIds = request->txReq().walletIds;
+   for (const auto& id : walletIds) {
+      for (const auto [walletId, wallet] : hdWallets_) {
+         if ((id == walletId || wallet.hasLeaf(id))) {
+            WalletsMessage msg;
+            auto msgReq = msg.mutable_get_utxos();
+            msgReq->set_wallet_id(walletId);
+            msgReq->set_confirmed_only(false);
+            pushRequest(user_, userWallets_, msg.SerializeAsString());
+            request->setWatchingOnly(wallet.watchOnly);
+            break;
+         }
+      }
+   }
+
+   const auto addresses = request->outputAddresses();
+   const auto values = request->outputAmounts();
+   for (auto i = 0; i < addresses.size(); ++i) {
+      txOutputsModel_->addOutput(addresses[i], values[i].toDouble(), false);
+   }
+
+   txInputsModel_->setSelection(request->inputsModel());
+}
+
+QString QtQuickAdapter::exportCurrentWalletPRK()
+{
+   return exportPRK(
+      walletPropertiesModel_->walletName(),
+      walletPropertiesModel_->walletId(),
+      walletPropertiesModel_->seed());
+}
+
+QString QtQuickAdapter::exportPRK(const QString & walletName, const QString & walletId, const QStringList & seed)
 {
    const auto& path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
       + QString::fromLatin1("/")
-      + QString::fromLatin1("BlockSettle_%1_%2.pdf").arg(walletPropertiesModel_->walletId()).arg(walletPropertiesModel_->walletName());
-   const auto& seed = walletPropertiesModel_->seed();
+      + QString::fromLatin1("BlockSettle_%1_%2.pdf").arg(walletId).arg(walletName);
    WalletBackupPdfWriter writer(
-      walletPropertiesModel_->walletId(),
+      walletId,
       seed,
-      QRImageProvider().requestPixmap(walletPropertiesModel_->walletId(), nullptr, QSize(200, 200)));
+      QRImageProvider().requestPixmap(walletId, nullptr, QSize(200, 200)));
    writer.write(path);
    return path;
 }

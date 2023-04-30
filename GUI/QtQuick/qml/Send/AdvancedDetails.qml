@@ -27,6 +27,7 @@ ColumnLayout  {
     property var tx: null
     property bool isRBF: false
     property bool isCPFP: false
+    property bool isImported: false
     property bool is_ready_broadcast: (txOutputsModel.rowCount > 1) && rec_addr_input.input_text.length === 0 && amount_input.input_text.length === 0 
     property bool is_ready_output: (rec_addr_input.isValid && rec_addr_input.input_text.length
                              && parseFloat(amount_input.input_text) !== 0 && amount_input.input_text.length)
@@ -108,13 +109,7 @@ ColumnLayout  {
                 selectFolder: false
                 selectExisting: true
                 onAccepted: {
-                    tempRequest = bsApp.importTransaction(importTransactionFileDialog.fileUrl)
-                    if (bsApp.isRequestReadyToSend(tempRequest)) {
-                        sig_continue(tempRequest)
-                    }
-                    else {
-                        import_error()
-                    }
+                    layout.import_transaction(importTransactionFileDialog.fileUrl)
                 }
             }
         }
@@ -184,7 +179,7 @@ ColumnLayout  {
             border.color: BSStyle.defaultBorderColor
             border.width: 1
 
-            ColumnLayout  {
+            Column  {
                 id: inputs_layout
 
                 anchors.fill: parent
@@ -193,12 +188,13 @@ ColumnLayout  {
 
                 ColumnLayout  {
                     width: parent.width
-                    height: parent.height * 0.6
+                    height: parent.height * 0.7
                     spacing: 0
 
                     RowLayout {
                         id: input_header_layout
                         Layout.fillWidth: true
+                        Layout.fillHeight: false
                         Layout.topMargin: BSSizes.applyScale(16)
                         Layout.preferredHeight: BSSizes.applyScale(19)
                         Layout.alignment: Qt.AlignTop
@@ -207,7 +203,7 @@ ColumnLayout  {
                             id: inputs_title
 
                             Layout.leftMargin: BSSizes.applyScale(16)
-                            Layout.fillHeight: true
+                            Layout.fillHeight: false
                             Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
 
                             text: qsTr("Inputs")
@@ -252,7 +248,7 @@ ColumnLayout  {
                         Layout.leftMargin: BSSizes.applyScale(16)
                         Layout.topMargin: BSSizes.applyScale(16)
                         Layout.alignment: Qt.AlignLeft | Qt.AlingTop
-                        visible: !isRBF && !isCPFP
+                        visible: !isRBF && !isCPFP && !isImported
 
                         width: BSSizes.applyScale(504)
                         height: BSSizes.applyScale(70)
@@ -313,11 +309,16 @@ ColumnLayout  {
                             }
                         }
                     }
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                    }
                 }
 
                 ColumnLayout  {
                     width: parent.width
-                    height: parent.height * 0.4
+                    height: parent.height * 0.3
                     spacing: 0
     
                     Rectangle {
@@ -325,7 +326,6 @@ ColumnLayout  {
                         height: BSSizes.applyScale(1)
     
                         Layout.fillWidth: true
-                        Layout.topMargin: BSSizes.applyScale((!isRBF && !isCPFP) ? 196 : 274)
                         Layout.alignment: Qt.AlignLeft | Qt.AlingTop
     
                         color: BSStyle.defaultGreyColor
@@ -449,7 +449,7 @@ ColumnLayout  {
             border.color: BSStyle.defaultBorderColor
             border.width: BSSizes.applyScale(1)
 
-            ColumnLayout  {
+            Column  {
                 id: outputs_layout
 
                 anchors.fill: parent
@@ -458,7 +458,7 @@ ColumnLayout  {
                 
                 ColumnLayout  {
                     width: parent.width
-                    height: parent.height * 0.6
+                    height: parent.height * 0.7
                     spacing: 0
 
                     Label {
@@ -466,7 +466,7 @@ ColumnLayout  {
 
                         Layout.leftMargin: BSSizes.applyScale(16)
                         Layout.topMargin: BSSizes.applyScale(16)
-                        Layout.alignment: Qt.AlignLeft | Qt.AlingTop
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
 
                         text: qsTr("Outputs")
 
@@ -589,11 +589,16 @@ ColumnLayout  {
                             }
                         }
                     }
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                    }
                 }
 
                 ColumnLayout  {
                     width: parent.width
-                    height: parent.height * 0.4
+                    height: parent.height * 0.3
                     spacing: 0
     
                     Rectangle {
@@ -601,7 +606,6 @@ ColumnLayout  {
                         height: 1
     
                         Layout.fillWidth: true
-                        Layout.topMargin: BSSizes.applyScale(30)
                         Layout.alignment: Qt.AlignLeft | Qt.AlingTop
     
                         color: BSStyle.defaultGreyColor
@@ -797,15 +801,28 @@ ColumnLayout  {
         rec_addr_input.input_text = ""
         checkbox_rbf.checked = true
 
-        txOutputsModel.clearOutputs()
-        if (!isRBF && !isCPFP) {
-            bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
-        }
-        else {
-            if (isRBF) {
-                txOutputsModel.setOutputsFrom(tx)
+        if (!layout.isImported) {
+            txOutputsModel.clearOutputs()
+            if (!isRBF && !isCPFP) {
+                bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
+            }
+            else {
+                if (isRBF) {
+                    txOutputsModel.setOutputsFrom(tx)
+                }
             }
         }
         bsApp.requestFeeSuggestions()
+    }
+
+    function import_transaction(path) {
+        tempRequest = bsApp.importTransaction(path)
+        if (bsApp.isRequestReadyToSend(tempRequest)) {
+            layout.isImported = true
+            bsApp.prepareTransactionForEditing(tempRequest)
+        }
+        else {
+            import_error()
+        }
     }
 }

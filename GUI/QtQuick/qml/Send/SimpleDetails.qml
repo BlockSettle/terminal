@@ -16,6 +16,7 @@ ColumnLayout  {
 
     signal sig_continue(signature: var)
     signal sig_advanced()
+    signal sig_advanced_with_import(path: var)
     signal import_error()
 
     height: BSSizes.applyWindowHeightScale(554)
@@ -88,13 +89,7 @@ ColumnLayout  {
                 selectFolder: false
                 selectExisting: true
                 onAccepted: {
-                    tempRequest = bsApp.importTransaction(importTransactionFileDialog.fileUrl)
-                    if (bsApp.isRequestReadyToSend(tempRequest)) {
-                        sig_continue(tempRequest)
-                    }
-                    else {
-                        import_error()
-                    }
+                    layout.sig_advanced_with_import(importTransactionFileDialog.fileUrl)
                 }
             }
         }

@@ -9,6 +9,8 @@ import "../StyledControls"
 ColumnLayout  {
     id: layout
 
+    signal close();
+
     height: BSSizes.applyScale(608)
     width: BSSizes.applyScale(580)
 
@@ -58,7 +60,8 @@ ColumnLayout  {
         width: BSSizes.applyScale(530)
 
         onClicked: {
-            var printedPath = bsApp.exportPRK()
+            var printedPath = bsApp.exportCurrentWalletPRK()
+            successPrintPdf.latestExportPath = printedPath
             successPrintPdf.details_text = qsTr("PDF successfully saved to ") + printedPath
             
             successPrintPdf.show()
@@ -70,5 +73,12 @@ ColumnLayout  {
     CustomSuccessDialog {
         id: successPrintPdf
         visible: false
+
+        property string latestExportPath
+
+        onSig_finish: {
+            Qt.openUrlExternally(latestExportPath);
+            layout.close()
+        }
     }
 }
