@@ -226,6 +226,7 @@ signals:
    void successTx();
    void failedTx(const QString&);
    void showSuccess(const QString&);
+   void rescanCompleted();
 
 private slots:
    void onArmoryServerChanged(const QModelIndex&, const QVariant&);

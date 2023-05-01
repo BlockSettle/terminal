@@ -92,6 +92,8 @@ ApplicationWindow {
 
     CustomMessageDialog {
         id: error_dialog
+        header: qsTr("Error")
+        action: qsTr("OK")
         visible: false
     }
 

@@ -390,7 +390,10 @@ CustomPopup {
                     icon_add_source: "qrc:/images/arrow.png"
                     title_text: qsTr("Rescan wallet")
 
-                    onClicked: bsApp.rescanWallet(wallet_properties_vm.walletId)
+                    onClicked: {
+                        rescanWalletBlockingPanel.visible = true
+                        bsApp.rescanWallet(wallet_properties_vm.walletId)
+                    }
                 }
 
                 CustomListItem {
@@ -403,6 +406,42 @@ CustomPopup {
                     onClicked: _stack_view.push(delete_wallet_warn)
                 }
             }
+        }
+    }
+
+    Rectangle {
+        id: rescanWalletBlockingPanel
+        anchors.fill: parent
+        visible: false
+        color: BSStyle.loadingPanelBackgroundColor
+
+        Column {
+            anchors.centerIn: parent
+        
+            BusyIndicator {
+                running: true
+                palette.dark: BSStyle.wildBlueColor
+            }
+            
+        }
+
+        MouseArea {
+            anchors.fill: parent
+        }
+    }
+
+    CustomSuccessDialog {
+        id: messageDialog
+        details_text: qsTr("Rescan wallet completed")
+        visible: false
+    }
+
+    Connections {
+        target: bsApp
+
+        function onRescanCompleted() {
+            rescanWalletBlockingPanel.visible = false
+            messageDialog.show()
         }
     }
 

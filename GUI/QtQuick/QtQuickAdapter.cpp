@@ -2365,6 +2365,11 @@ int QtQuickAdapter::rescanWallet(const QString& walletId)
    WalletsMessage msg;
    msg.set_wallet_rescan(walletId.toStdString());
    const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
+
+   QTimer::singleShot(5000, [this]() {
+      emit rescanCompleted();
+   });
+
    return (msgId == 0) ? -1 : 0;
 }
 
