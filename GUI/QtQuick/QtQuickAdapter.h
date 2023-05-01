@@ -195,9 +195,8 @@ public:
    Q_INVOKABLE void exportSignedTX(const QUrl& path, QTXSignRequest* request, const QString& password);
    Q_INVOKABLE bool broadcastSignedTX(const QUrl& path);
    Q_INVOKABLE bool isRequestReadyToSend(QTXSignRequest* request);
-   Q_INVOKABLE void prepareTransactionForEditing(QTXSignRequest* request);
-   Q_INVOKABLE QString exportCurrentWalletPRK();
-   Q_INVOKABLE QString exportPRK(const QString& walletName, const QString& walletId, const QStringList& seed);
+   Q_INVOKABLE QString exportWallet(const QStringList& seed);
+   std::pair<QString, QString> walletInfoFromSeed(const QStringList& seed);
 
 signals:
    void walletsListChanged();

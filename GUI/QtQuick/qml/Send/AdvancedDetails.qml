@@ -27,7 +27,6 @@ ColumnLayout  {
     property var tx: null
     property bool isRBF: false
     property bool isCPFP: false
-    property bool isImported: false
     property bool is_ready_broadcast: (txOutputsModel.rowCount > 1) && rec_addr_input.input_text.length === 0 && amount_input.input_text.length === 0 
     property bool is_ready_output: (rec_addr_input.isValid && rec_addr_input.input_text.length
                              && parseFloat(amount_input.input_text) !== 0 && amount_input.input_text.length)
@@ -109,7 +108,13 @@ ColumnLayout  {
                 selectFolder: false
                 selectExisting: true
                 onAccepted: {
-                    layout.import_transaction(importTransactionFileDialog.fileUrl)
+                    tempRequest = bsApp.importTransaction(importTransactionFileDialog.fileUrl)
+                    if (bsApp.isRequestReadyToSend(tempRequest)) {
+                        sig_continue(tempRequest)
+                    }
+                    else {
+                        import_error()
+                    }
                 }
             }
         }
@@ -248,7 +253,7 @@ ColumnLayout  {
                         Layout.leftMargin: BSSizes.applyScale(16)
                         Layout.topMargin: BSSizes.applyScale(16)
                         Layout.alignment: Qt.AlignLeft | Qt.AlingTop
-                        visible: !isRBF && !isCPFP && !isImported
+                        visible: !isRBF && !isCPFP
 
                         width: BSSizes.applyScale(504)
                         height: BSSizes.applyScale(70)
@@ -800,29 +805,16 @@ ColumnLayout  {
         comment_input.input_text = ""
         rec_addr_input.input_text = ""
         checkbox_rbf.checked = true
-
-        if (!layout.isImported) {
-            txOutputsModel.clearOutputs()
-            if (!isRBF && !isCPFP) {
-                bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
-            }
-            else {
-                if (isRBF) {
-                    txOutputsModel.setOutputsFrom(tx)
-                }
+        
+        txOutputsModel.clearOutputs()
+        if (!isRBF && !isCPFP) {
+            bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)
+        }
+        else {
+            if (isRBF) {
+                txOutputsModel.setOutputsFrom(tx)
             }
         }
         bsApp.requestFeeSuggestions()
-    }
-
-    function import_transaction(path) {
-        tempRequest = bsApp.importTransaction(path)
-        if (bsApp.isRequestReadyToSend(tempRequest)) {
-            layout.isImported = true
-            bsApp.prepareTransactionForEditing(tempRequest)
-        }
-        else {
-            import_error()
-        }
     }
 }

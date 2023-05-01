@@ -60,7 +60,7 @@ ColumnLayout  {
         width: BSSizes.applyScale(530)
 
         onClicked: {
-            var printedPath = bsApp.exportCurrentWalletPRK()
+            var printedPath =  bsApp.exportWallet(wallet_properties_vm.seed)
             successPrintPdf.latestExportPath = printedPath
             successPrintPdf.details_text = qsTr("PDF successfully saved to ") + printedPath
             

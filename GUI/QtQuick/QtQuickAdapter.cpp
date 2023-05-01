@@ -2014,7 +2014,6 @@ bs::message::ProcessingResult QtQuickAdapter::processTransactions(bs::message::S
    std::set<BinaryData> inHashes;
    for (const auto& txData : response.transactions()) {
       Tx tx(BinaryData::fromString(txData.tx()));
-
       tx.setTxHeight(txData.height());
       for (int i = 0; i < tx.getNumTxIn(); ++i) {
          const auto& in = tx.getTxInCopy(i);
@@ -2621,7 +2620,7 @@ bool QtQuickAdapter::isRequestReadyToSend(QTXSignRequest* request)
    for (const auto& id : walletIds) {
       bool isInWallets = false;
       for (const auto [walletId, wallet] : hdWallets_) {
-         if ((id == walletId || wallet.hasLeaf(id))) {
+         if ((id == walletId || wallet.hasLeaf(id)) && !wallet.watchOnly) {
             isInWallets = true;
             break;
          }
@@ -2633,52 +2632,24 @@ bool QtQuickAdapter::isRequestReadyToSend(QTXSignRequest* request)
    return true;
 }
 
-void QtQuickAdapter::prepareTransactionForEditing(QTXSignRequest* request)
+QString QtQuickAdapter::exportWallet(const QStringList& seed)
 {
-   txOutputsModel_->clearOutputs();
-   txInputsModel_->clear();
+   const auto params = walletInfoFromSeed(seed);
+   const auto& walletId = params.first;
+   const auto& walletPrivateRootKey = params.second;
 
-   const auto& walletIds = request->txReq().walletIds;
-   for (const auto& id : walletIds) {
-      for (const auto [walletId, wallet] : hdWallets_) {
-         if ((id == walletId || wallet.hasLeaf(id))) {
-            WalletsMessage msg;
-            auto msgReq = msg.mutable_get_utxos();
-            msgReq->set_wallet_id(walletId);
-            msgReq->set_confirmed_only(false);
-            pushRequest(user_, userWallets_, msg.SerializeAsString());
-            request->setWatchingOnly(wallet.watchOnly);
-            break;
-         }
-      }
-   }
-
-   const auto addresses = request->outputAddresses();
-   const auto values = request->outputAmounts();
-   for (auto i = 0; i < addresses.size(); ++i) {
-      txOutputsModel_->addOutput(addresses[i], values[i].toDouble(), false);
-   }
-
-   txInputsModel_->setSelection(request->inputsModel());
-}
-
-QString QtQuickAdapter::exportCurrentWalletPRK()
-{
-   return exportPRK(
-      walletPropertiesModel_->walletName(),
-      walletPropertiesModel_->walletId(),
-      walletPropertiesModel_->seed());
-}
-
-QString QtQuickAdapter::exportPRK(const QString & walletName, const QString & walletId, const QStringList & seed)
-{
    const auto& path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
       + QString::fromLatin1("/")
-      + QString::fromLatin1("BlockSettle_%1_%2.pdf").arg(walletId).arg(walletName);
+      + QString::fromLatin1("BlockSettle_%1.pdf").arg(walletId);
    WalletBackupPdfWriter writer(
       walletId,
       seed,
-      QRImageProvider().requestPixmap(walletId, nullptr, QSize(200, 200)));
+      QRImageProvider().requestPixmap(walletPrivateRootKey, nullptr, QSize(200, 200)));
    writer.write(path);
    return path;
+}
+
+std::pair<QString, QString> QtQuickAdapter::walletInfoFromSeed(const QStringList& seed)
+{
+   return std::make_pair(QString::fromLatin1("walletId"), QString::fromLatin1("privateRootKey"));
 }

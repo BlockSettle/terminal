@@ -85,7 +85,6 @@ public:
    void clear();
    void addUTXOs(const std::vector<UTXO>&);
    void setTopBlock(uint32_t topBlock) { topBlock_ = topBlock; }
-   void setSelection(TxInputsModel* other);
 
    struct Entry {
       bs::Address address;

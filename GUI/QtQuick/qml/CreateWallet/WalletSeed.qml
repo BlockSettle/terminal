@@ -71,7 +71,7 @@ ColumnLayout  {
             preferred: false
 
             function click_enter() {
-                bsApp.exportPRK("New wallet", "", phrase)
+                bsApp.exportWallet(phrase)
             }
         }
 

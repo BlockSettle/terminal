@@ -514,17 +514,3 @@ void TxInputsModel::clearSelection()
     emit selectionChanged();
     emit dataChanged(createIndex(0, 0), createIndex(rowCount() - 1, 0), { SelectedRole });
 }
-
-void TxInputsModel::setSelection(TxInputsModel* other) 
-{
-   selectedBalance_ = 0;
-   for (const auto [address, utxos] : other->utxos_) {
-      selectionAddresses_.insert(address);
-      for (const auto& utxo : utxos) {
-         selectionUtxos_.insert({ utxo.getTxHash(), utxo.getTxOutIndex() });
-         selectedBalance_ += utxo.getValue();
-      }
-   }
-   emit selectionChanged();
-   emit dataChanged(createIndex(0, 0), createIndex(rowCount() - 1, 0), { SelectedRole });
-}

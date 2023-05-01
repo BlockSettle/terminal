@@ -40,11 +40,6 @@ CustomPopup {
             failImportDialog.raise()
             failImportDialog.requestActivate()
         }
-
-        onSig_advanced_with_import: (path) => {
-            _stack_view.replace(advanced_details)
-            advanced_details.import_transaction(path)
-        }
     }
 
     SignTransaction {
@@ -171,7 +166,6 @@ CustomPopup {
         root.tx = null
         root.isRBF = false
         root.isCPFP = false
-        advanced_details.isImported = false
     }
 
     function open(txId: string, isRBF: bool, isCPFP: bool)
@@ -180,7 +174,6 @@ CustomPopup {
         root.tx = bsApp.getTXDetails(txId)
         root.isRBF = isRBF
         root.isCPFP = isCPFP
-        root.isImported = false
         advanced_details.init()
     }
 
