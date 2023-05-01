@@ -87,7 +87,7 @@ ColumnLayout  {
                 folder: shortcuts.documents
                 selectFolder: false
                 selectExisting: true
-                onAccepted: {
+                onAccepted: {                    
                     tempRequest = bsApp.importTransaction(importTransactionFileDialog.fileUrl)
                     if (bsApp.isRequestReadyToSend(tempRequest)) {
                         sig_continue(tempRequest)

@@ -86,14 +86,17 @@ bool AddressFilterModel::lessThan(const QModelIndex& left, const QModelIndex& ri
            , QmlAddressListModel::TableRoles::TableDataRole).toDouble();
        const auto leftIndex = sourceModel()->data(sourceModel()->index(left.row(), 0)
            , QmlAddressListModel::TableRoles::AddressTypeRole).toString().remove(0, 2).toInt();
+       const auto leftType = sourceModel()->data(sourceModel()->index(left.row(), 0)
+           , QmlAddressListModel::TableRoles::AddressTypeRole).toString().at(0);
        const auto rightAmount = sourceModel()->data(sourceModel()->index(right.row(), 2)
            , QmlAddressListModel::TableRoles::TableDataRole).toDouble();
        const auto rightIndex = sourceModel()->data(sourceModel()->index(right.row(), 0)
            , QmlAddressListModel::TableRoles::AddressTypeRole).toString().remove(0, 2).toInt();
-       if (qFuzzyIsNull(leftAmount) != qFuzzyIsNull(rightAmount)) {
-           return qFuzzyIsNull(rightAmount);
-       }
-       return leftIndex < rightIndex;
+       const auto rightType = sourceModel()->data(sourceModel()->index(right.row(), 0)
+          , QmlAddressListModel::TableRoles::AddressTypeRole).toString().at(0);
+       return (!qFuzzyIsNull(leftAmount) && qFuzzyIsNull(rightAmount))
+          || (qFuzzyIsNull(leftAmount) == qFuzzyIsNull(rightAmount) && leftIndex < rightIndex)
+          || (qFuzzyIsNull(leftAmount) == qFuzzyIsNull(rightAmount) && leftIndex == rightIndex && leftType < rightType);
    }
    catch (...) {}
    return false;

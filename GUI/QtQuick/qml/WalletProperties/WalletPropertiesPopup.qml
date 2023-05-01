@@ -77,6 +77,8 @@ CustomPopup {
         visible: false
 
         wallet_properties_vm: root.wallet_properties_vm
+
+        onClose: root.close_click()
     }
 
     DeleteWalletWarn {

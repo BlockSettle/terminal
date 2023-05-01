@@ -184,7 +184,7 @@ ColumnLayout  {
             border.color: BSStyle.defaultBorderColor
             border.width: 1
 
-            ColumnLayout  {
+            Column  {
                 id: inputs_layout
 
                 anchors.fill: parent
@@ -193,12 +193,13 @@ ColumnLayout  {
 
                 ColumnLayout  {
                     width: parent.width
-                    height: parent.height * 0.6
+                    height: parent.height * 0.7
                     spacing: 0
 
                     RowLayout {
                         id: input_header_layout
                         Layout.fillWidth: true
+                        Layout.fillHeight: false
                         Layout.topMargin: BSSizes.applyScale(16)
                         Layout.preferredHeight: BSSizes.applyScale(19)
                         Layout.alignment: Qt.AlignTop
@@ -207,7 +208,7 @@ ColumnLayout  {
                             id: inputs_title
 
                             Layout.leftMargin: BSSizes.applyScale(16)
-                            Layout.fillHeight: true
+                            Layout.fillHeight: false
                             Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
 
                             text: qsTr("Inputs")
@@ -313,11 +314,16 @@ ColumnLayout  {
                             }
                         }
                     }
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                    }
                 }
 
                 ColumnLayout  {
                     width: parent.width
-                    height: parent.height * 0.4
+                    height: parent.height * 0.3
                     spacing: 0
     
                     Rectangle {
@@ -325,7 +331,6 @@ ColumnLayout  {
                         height: BSSizes.applyScale(1)
     
                         Layout.fillWidth: true
-                        Layout.topMargin: BSSizes.applyScale((!isRBF && !isCPFP) ? 196 : 274)
                         Layout.alignment: Qt.AlignLeft | Qt.AlingTop
     
                         color: BSStyle.defaultGreyColor
@@ -449,7 +454,7 @@ ColumnLayout  {
             border.color: BSStyle.defaultBorderColor
             border.width: BSSizes.applyScale(1)
 
-            ColumnLayout  {
+            Column  {
                 id: outputs_layout
 
                 anchors.fill: parent
@@ -458,7 +463,7 @@ ColumnLayout  {
                 
                 ColumnLayout  {
                     width: parent.width
-                    height: parent.height * 0.6
+                    height: parent.height * 0.7
                     spacing: 0
 
                     Label {
@@ -466,7 +471,7 @@ ColumnLayout  {
 
                         Layout.leftMargin: BSSizes.applyScale(16)
                         Layout.topMargin: BSSizes.applyScale(16)
-                        Layout.alignment: Qt.AlignLeft | Qt.AlingTop
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
 
                         text: qsTr("Outputs")
 
@@ -589,11 +594,16 @@ ColumnLayout  {
                             }
                         }
                     }
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                    }
                 }
 
                 ColumnLayout  {
                     width: parent.width
-                    height: parent.height * 0.4
+                    height: parent.height * 0.3
                     spacing: 0
     
                     Rectangle {
@@ -601,7 +611,6 @@ ColumnLayout  {
                         height: 1
     
                         Layout.fillWidth: true
-                        Layout.topMargin: BSSizes.applyScale(30)
                         Layout.alignment: Qt.AlignLeft | Qt.AlingTop
     
                         color: BSStyle.defaultGreyColor
@@ -796,7 +805,7 @@ ColumnLayout  {
         comment_input.input_text = ""
         rec_addr_input.input_text = ""
         checkbox_rbf.checked = true
-
+        
         txOutputsModel.clearOutputs()
         if (!isRBF && !isCPFP) {
             bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex)

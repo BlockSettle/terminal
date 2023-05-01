@@ -2612,6 +2612,10 @@ bool QtQuickAdapter::broadcastSignedTX(const QUrl& path)
 
 bool QtQuickAdapter::isRequestReadyToSend(QTXSignRequest* request)
 {
+   if (request == nullptr) {
+      return false;
+   }
+
    const auto& walletIds = request->txReq().walletIds;
    for (const auto& id : walletIds) {
       bool isInWallets = false;
@@ -2628,16 +2632,24 @@ bool QtQuickAdapter::isRequestReadyToSend(QTXSignRequest* request)
    return true;
 }
 
-QString QtQuickAdapter::exportPRK()
+QString QtQuickAdapter::exportWallet(const QStringList& seed)
 {
+   const auto params = walletInfoFromSeed(seed);
+   const auto& walletId = params.first;
+   const auto& walletPrivateRootKey = params.second;
+
    const auto& path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
       + QString::fromLatin1("/")
-      + QString::fromLatin1("BlockSettle_%1_%2.pdf").arg(walletPropertiesModel_->walletId()).arg(walletPropertiesModel_->walletName());
-   const auto& seed = walletPropertiesModel_->seed();
+      + QString::fromLatin1("BlockSettle_%1.pdf").arg(walletId);
    WalletBackupPdfWriter writer(
-      walletPropertiesModel_->walletId(),
+      walletId,
       seed,
-      QRImageProvider().requestPixmap(walletPropertiesModel_->walletId(), nullptr, QSize(200, 200)));
+      QRImageProvider().requestPixmap(walletPrivateRootKey, nullptr, QSize(200, 200)));
    writer.write(path);
    return path;
+}
+
+std::pair<QString, QString> QtQuickAdapter::walletInfoFromSeed(const QStringList& seed)
+{
+   return std::make_pair(QString::fromLatin1("walletId"), QString::fromLatin1("privateRootKey"));
 }
