@@ -67,11 +67,29 @@ ColumnLayout  {
             id: copy_seed_but
             text: qsTr("Save PDF")
             width: BSSizes.applyScale(261)
+            
+            icon.height: BSSizes.applyScale(12)
+            icon.width: BSSizes.applyScale(12)
 
             preferred: false
 
             function click_enter() {
                 bsApp.exportWallet(phrase)
+                copy_seed_but.text = qsTr("Saved to Documents")
+                copy_seed_but.icon.source = "qrc:/images/check.svg"
+                savingEndTimer.start()
+            }
+
+            Timer {
+                id: savingEndTimer
+                interval: 5000
+                repeat: false
+                running: false
+
+                onTriggered: {
+                    copy_seed_but.text = qsTr("Save PDF")
+                    copy_seed_but.icon.source = ""
+                }
             }
         }
 
@@ -85,7 +103,6 @@ ColumnLayout  {
             function click_enter() {
                 layout.sig_continue()
             }
-
         }
     }
 

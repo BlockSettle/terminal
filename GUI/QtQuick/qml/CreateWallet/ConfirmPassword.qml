@@ -152,7 +152,7 @@ ColumnLayout  {
         function click_enter() {
             if (!confirm_but.enabled) return
 
-            if(password.input_text === confirm_password.input_text)
+            if(password.input_text === confirm_password.input_text && checkPasswordLength())
             {
                 bsApp.createWallet(layout.wallet_name, phrase, password.input_text)
                 layout.sig_confirm()

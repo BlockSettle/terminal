@@ -5,28 +5,24 @@ import QtQuick.Layouts 1.15
 
 import "../BsStyles"
 
-Window {
+Window  {
     id: root
 
-    property alias error: errorLabel.text
+    property alias header: title.text
+    property alias error: details.text
+    property alias action: finish_but.text
 
     visible: true
     flags: Qt.WindowCloseButtonHint | Qt.FramelessWindowHint | Qt.Dialog
     modality: Qt.WindowModal
 
-    maximumHeight: BSSizes.applyScale(200)
-    maximumWidth: BSSizes.applyScale(300)
-
-    minimumHeight: BSSizes.applyScale(200)
-    minimumWidth: BSSizes.applyScale(300)
-
-    height: BSSizes.applyScale(250)
-    width: BSSizes.applyScale(300)
+    height: BSSizes.applyScale(375)
+    width: BSSizes.applyScale(380)
 
     color: "transparent"
 
-    x: mainWindow.x + (mainWindow.width - width) / 2
-    y: mainWindow.y + (mainWindow.height - height) / 2
+    x: mainWindow.x + (mainWindow.width - width)/2
+    y: mainWindow.y + (mainWindow.height - height)/2
 
     Rectangle {
         id: rect
@@ -40,61 +36,81 @@ Window {
         border.color : BSStyle.defaultBorderColor
         border.width : BSSizes.applyScale(1)
 
-        Label {
-            id: tytleLabel
+        Image {
+            id: close_button
 
-            anchors.top: rect.top
-            anchors.topMargin: BSSizes.applyScale(16)
-            anchors.horizontalCenter: rect.horizontalCenter
-
-            color: "#E2E7FF"
-            font.pixelSize: BSSizes.applyScale(20)
-            font.family: "Roboto"
-            font.weight: Font.Medium
-
-            text: "Error"
-
-            horizontalAlignment: Text.AlignHCenter
-         }
-
-        Label {
-            id: errorLabel
-
-            anchors.top: tytleLabel.bottom
+            anchors.top: parent.top
             anchors.topMargin: BSSizes.applyScale(20)
-            anchors.horizontalCenter: rect.horizontalCenter
+            anchors.right: parent.right
+            anchors.rightMargin: BSSizes.applyScale(22)
 
-            color: "#E2E7FF"
-            font.pixelSize: BSSizes.applyScale(16)
-            font.family: "Roboto"
-            font.weight: Font.Medium
+            source: "qrc:/images/close_button.svg"
+            width: BSSizes.applyScale(16)
+            height: BSSizes.applyScale(16)
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                   root.close()
+                }
+            }
+        }
 
-            text: "Test Description"
+        ColumnLayout  {
+            id: layout
+        
+            anchors.fill: parent
+    
+            CustomTitleLabel {
+                Layout.topMargin: BSSizes.applyScale(36)
+                id: title
+                Layout.alignment: Qt.AlignCenter
+                Layout.preferredHeight : title.height
+            }
 
-            horizontalAlignment: Text.AlignHCenter
-            width: ApplicationWindow.width - BSSizes.applyScale(10);
-            wrapMode: Label.WordWrap
-         }
+            Image {
+                Layout.topMargin: BSSizes.applyScale(24)
+                Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
+                Layout.preferredHeight : BSSizes.applyScale(120)
+                Layout.preferredWidth : BSSizes.applyScale(120)
 
-        CustomButton {
-            id: ok_but
-            text: qsTr("Ok")
+                source: "qrc:/images/try_icon.png"
+                width: BSSizes.applyScale(120)
+                height: BSSizes.applyScale(120)
+            }
 
-            anchors.bottom: rect.bottom
-            anchors.bottomMargin: BSSizes.applyScale(24)
-            anchors.horizontalCenter: rect.horizontalCenter
 
-            width: BSSizes.applyScale(250)
-            height: BSSizes.applyScale(40)
+            Label {
+                id: details
 
-            preferred: true
-            focus:true
+                Layout.topMargin: BSSizes.applyScale(16)
+                Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
+                font.pixelSize: BSSizes.applyScale(14)
+                font.family: "Roboto"
+                font.weight: Font.Normal
+                color: "#E2E7FF"
+            }
 
-            function click_enter() {
-                root.close()
+            Label {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+            }
+
+            CustomButton {
+                id: finish_but
+                text: qsTr("OK")
+
+                width: BSSizes.applyScale(186)
+
+                Layout.bottomMargin: BSSizes.applyScale(40)
+                Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
+
+                preferred: true
+                focus:true
+
+                function click_enter() {
+                    root.close()
+                }
             }
         }
     }
-
 }
-
