@@ -28,6 +28,7 @@
 #include <QThread>
 #include <QTimer>
 #include <QScreen>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 #include "ArmoryServersModel.h"
 #include "bip39/bip39.h"
@@ -61,6 +62,7 @@ using namespace BlockSettle;
 using namespace BlockSettle::Common;
 using namespace BlockSettle::Terminal;
 using namespace bs::message;
+using json = nlohmann::json;
 
 
 namespace {
@@ -355,6 +357,9 @@ QStringList QtQuickAdapter::txWalletsList() const
 
 ProcessingResult QtQuickAdapter::process(const Envelope &env)
 {
+   if (env.isRequest() && (env.sender->value() == user_->value())) {
+      return processOwnRequest(env);
+   }
    if (std::dynamic_pointer_cast<UserTerminal>(env.sender)) {
       switch (env.sender->value<bs::message::TerminalUsers>()) {
       case TerminalUsers::Settings:
@@ -370,7 +375,6 @@ ProcessingResult QtQuickAdapter::process(const Envelope &env)
       default:    break;
       }
    }
-   
    return ProcessingResult::Ignored;
 }
 
@@ -648,11 +652,16 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
    case SignerMessage::kWalletDeleted:
       return processWalletDeleted(msg.wallet_deleted());
    case SignerMessage::kCreatedWallet:
-      createdWalletId_ = msg.created_wallet().wallet_id();
-      walletBalances_->clear();
-      addrModel_->reset(createdWalletId_);
-      walletBalances_->setCreatedWalletId(createdWalletId_);
-      emit showSuccess(tr("Your wallet has successfully been created"));
+      if (msg.created_wallet().error_msg().empty()) {
+         createdWalletId_ = msg.created_wallet().wallet_id();
+         walletBalances_->clear();
+         addrModel_->reset(createdWalletId_);
+         walletBalances_->setCreatedWalletId(createdWalletId_);
+         emit showSuccess(tr("Your wallet has successfully been created"));
+      }
+      else {
+         emit showError(QString::fromStdString(msg.created_wallet().error_msg()));
+      }
       break;
    case SignerMessage::kWalletPassChanged:
       if (!msg.wallet_pass_changed()) {
@@ -792,6 +801,16 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
    case WalletsMessage::kReservedUtxos:
       return processReservedUTXOs(msg.reserved_utxos());
    case WalletsMessage::kWalletChanged:
+      if (scanningWallets_.find(msg.wallet_changed()) != scanningWallets_.end()) {
+         scanningWallets_.erase(msg.wallet_changed());
+         emit rescanCompleted(QString::fromStdString(msg.wallet_changed()));
+      }
+      {  //TODO: remove temporary code
+         if (!scanningWallets_.empty()) {
+            emit rescanCompleted(QString::fromStdString(*scanningWallets_.cbegin()));
+            scanningWallets_.clear();
+         }
+      }
       if (walletsReady_) {
          logger_->debug("ledger entries");
           WalletsMessage msg;
@@ -832,6 +851,26 @@ bs::message::ProcessingResult QtQuickAdapter::processHWW(const bs::message::Enve
    case HW::DeviceMgrMessage::kDeviceReady:
       return processHWWready(msg.device_ready());
    default: break;
+   }
+   return bs::message::ProcessingResult::Ignored;
+}
+
+bs::message::ProcessingResult QtQuickAdapter::processOwnRequest(const bs::message::Envelope& env)
+{
+   try {
+      const auto& msg = json::parse(env.message);
+      if (msg.contains("hw_wallet_timeout")) {
+         const auto& walletId = msg["hw_wallet_timeout"].get<std::string>();
+         if (readyWallets_.find(walletId) == readyWallets_.end()) {
+            emit showError(tr("Wallet %1 ready timeout - please connect the device")
+               .arg(QString::fromStdString(walletId)));
+            return bs::message::ProcessingResult::Success;
+         }
+      }
+   }
+   catch (const json::exception& e) {
+      logger_->error("[{}] failed to parse {}: {}", env.message, e.what());
+      return bs::message::ProcessingResult::Error;
    }
    return bs::message::ProcessingResult::Ignored;
 }
@@ -1381,20 +1420,24 @@ void QtQuickAdapter::copySeedToClipboard(const QStringList& seed)
    QGuiApplication::clipboard()->setText(str);
 }
 
+SecureBinaryData binSeedFromWords(const QStringList& seed)
+{
+   BIP39::word_list words;
+   for (const auto& w : seed) {
+      words.add(w.toStdString());
+   }
+   return BIP39::seed_from_mnemonic(words);
+}
+
 void QtQuickAdapter::createWallet(const QString& name, const QStringList& seed
    , const QString& password)
 {
    const auto walletName = name.isEmpty() ? generateWalletName() : name.toStdString();
    logger_->debug("[{}] {}", __func__, walletName);
-   BIP39::word_list words;
-   for (const auto& w : seed) {
-      words.add(w.toStdString());
-   }
    SignerMessage msg;
    auto msgReq = msg.mutable_create_wallet();
    msgReq->set_name(walletName);
-   //msgReq->set_xpriv_key(seedData.xpriv);
-   const auto binSeed = BIP39::seed_from_mnemonic(words);
+   const auto& binSeed = binSeedFromWords(seed);
    msgReq->set_seed(binSeed.toBinStr());
    msgReq->set_password(password.toStdString());
    pushRequest(user_, userSigner_, msg.SerializeAsString());
@@ -2121,10 +2164,15 @@ bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::Seq
             qReq->setHWW(true);
             logger_->debug("[{}] noReqAmt: {} for {}", __func__, noReqAmount, walletId);
             if (!noReqAmount) {
+               readyWallets_.erase(walletId);
                HW::DeviceMgrMessage msg;
                msg.set_prepare_wallet_for_tx_sign(walletId);
                pushRequest(user_, userHWW_, msg.SerializeAsString());
                hwwReady_[walletId] = qReq;
+
+               const json msgTO{ {"hw_wallet_timeout", walletId} };
+               pushRequest(user_, user_, msgTO.dump()
+                  , bs::message::bus_clock::now() + std::chrono::seconds{15});
             }
          }
          else if (wallet.watchOnly) {
@@ -2222,7 +2270,7 @@ bs::message::ProcessingResult QtQuickAdapter::processHWDevices(const HW::DeviceM
       HW::DeviceMgrMessage msg;
       msg.mutable_startscan();
       pushRequest(user_, userHWW_, msg.SerializeAsString()
-         , bs::message::bus_clock::now() + std::chrono::seconds{ 1 });
+         , bs::message::bus_clock::now() + std::chrono::seconds{ 3 });
    }
    else {
       hwDevicesPolling_ = false;
@@ -2236,12 +2284,19 @@ bs::message::ProcessingResult QtQuickAdapter::processHWDevices(const HW::DeviceM
 
 bs::message::ProcessingResult QtQuickAdapter::processHWWready(const std::string& walletId)
 {
-   logger_->debug("[{}] wallet {}", __func__, walletId);
    const auto& it = hwwReady_.find(walletId);
    if (it == hwwReady_.end()) {
+      logger_->debug("[{}] wallet {} - ignored", __func__, walletId);
       return bs::message::ProcessingResult::Ignored;
    }
+   logger_->debug("[{}] wallet {}", __func__, walletId);
+   readyWallets_.insert(walletId);
    it->second->setHWWready();
+   {
+      HW::DeviceMgrMessage msg;
+      *msg.mutable_sign_tx() = bs::signer::coreTxRequestToPb(it->second->txReq());
+      pushRequest(user_, userHWW_, msg.SerializeAsString());
+   }
    hwwReady_.erase(it);
    return bs::message::ProcessingResult::Success;
 }
@@ -2312,9 +2367,9 @@ void QtQuickAdapter::signAndBroadcast(QTXSignRequest* txReq, const QString& pass
    auto txSignReq = txReq->txReq();
    logger_->debug("[{}] HW sign: {}", __func__, txReq->isHWW());
    if (txReq->isHWW()) {
-      HW::DeviceMgrMessage msg;
+/*      HW::DeviceMgrMessage msg;   //FIXME
       *msg.mutable_sign_tx() = bs::signer::coreTxRequestToPb(txSignReq);
-      pushRequest(user_, userHWW_, msg.SerializeAsString());
+      pushRequest(user_, userHWW_, msg.SerializeAsString());*/
    }
    else {
       SignerMessage msg;
@@ -2362,14 +2417,10 @@ qtquick_gui::WalletPropertiesVM* QtQuickAdapter::walletProperitesVM() const
 int QtQuickAdapter::rescanWallet(const QString& walletId)
 {
    logger_->debug("[{}] {}", __func__, walletId.toStdString());
+   scanningWallets_.insert(walletId.toStdString());
    WalletsMessage msg;
    msg.set_wallet_rescan(walletId.toStdString());
    const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
-
-   QTimer::singleShot(5000, [this]() {
-      emit rescanCompleted();
-   });
-
    return (msgId == 0) ? -1 : 0;
 }
 
@@ -2654,7 +2705,11 @@ QString QtQuickAdapter::exportWallet(const QStringList& seed)
    return path;
 }
 
-std::pair<QString, QString> QtQuickAdapter::walletInfoFromSeed(const QStringList& seed)
+std::pair<QString, QString> QtQuickAdapter::walletInfoFromSeed(const QStringList& bip39Seed)
 {
-   return std::make_pair(QString::fromLatin1("walletId"), QString::fromLatin1("privateRootKey"));
+   const auto& binSeed = binSeedFromWords(bip39Seed);
+   const bs::core::wallet::Seed seed(binSeed, netType_);
+   const auto& rootNode = seed.getNode();
+   return { QString::fromStdString(seed.getWalletId())
+      , QString::fromStdString(rootNode.getBase58().toBinStr()) };
 }

@@ -226,7 +226,7 @@ signals:
    void successTx();
    void failedTx(const QString&);
    void showSuccess(const QString&);
-   void rescanCompleted();
+   void rescanCompleted(const QString& walletId);
 
 private slots:
    void onArmoryServerChanged(const QModelIndex&, const QVariant&);
@@ -243,6 +243,7 @@ private:
    bs::message::ProcessingResult processSigner(const bs::message::Envelope &);
    bs::message::ProcessingResult processWallets(const bs::message::Envelope &);
    bs::message::ProcessingResult processHWW(const bs::message::Envelope&);
+   bs::message::ProcessingResult processOwnRequest(const bs::message::Envelope&);
 
    void requestInitialSettings();
    void requestPostLoadingSettings();
@@ -310,7 +311,9 @@ private:
    int         signerState_{ -1 };
    std::string signerDetails_;
    bool  walletsReady_{ false };
-   std::string createdWalletId_;     
+   std::unordered_set<std::string>  readyWallets_;
+   std::unordered_set<std::string>  scanningWallets_;
+   std::string createdWalletId_;
 
    std::unordered_map<std::string, bs::sync::WalletInfo> hdWallets_;
    std::unordered_map<std::string, std::string> walletNames_;

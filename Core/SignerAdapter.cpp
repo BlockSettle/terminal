@@ -548,11 +548,13 @@ ProcessingResult SignerAdapter::processSignTx(const bs::message::Envelope& env
       pushResponse(user_, env, msg.SerializeAsString());
    };
    const auto& txReq = bs::signer::pbTxRequestToCore(request.tx_request(), logger_);
+   logger_->debug("[{}] ({} wallet id[s])", __func__, txReq.walletIds.size());
    bs::core::WalletsManager::HDWalletPtr hdWallet;
    if ((txReq.walletIds.size() == 1)) {
       hdWallet = walletsMgr_->getHDWalletById(txReq.walletIds.at(0));
       if (hdWallet) {
          if (!hdWallet->isHardwareWallet()) {
+            logger_->warn("[{}] {} not a hardware wallet", __func__, txReq.walletIds.at(0));
             hdWallet.reset();
          }
       }
@@ -567,6 +569,10 @@ ProcessingResult SignerAdapter::processSignTx(const bs::message::Envelope& env
       auto msgResp = msg.mutable_sign_tx_response();
       try {
          const auto& signedTX = hdWallet->signTXRequestWithWallet(txReq);
+         if (signedTX.empty()) {
+            throw std::runtime_error("signer returned empty TX");
+         }
+         logger_->debug("[{}] signed TX: {}", __func__, signedTX.toHexStr());
          msgResp->set_signed_tx(signedTX.toBinStr());
       }
       catch (const std::exception& e) {
@@ -576,6 +582,7 @@ ProcessingResult SignerAdapter::processSignTx(const bs::message::Envelope& env
       pushResponse(user_, env, msg.SerializeAsString());
    }
    else {
+      logger_->debug("[{}] multi-leaf signing ({} leaves)", __func__, txReq.walletIds.size());
       passphrase_ = SecureBinaryData::fromString(request.passphrase());
       signer_->signTXRequest(txReq, cbSigned
          , static_cast<SignContainer::TXSignMode>(request.sign_mode())
@@ -863,13 +870,13 @@ bs::message::ProcessingResult SignerAdapter::processImportWoWallet(const bs::mes
    catch (const std::exception& e) {
       logger_->error("[{}] failed to copy {} to wallets dir {}: {}", __func__
          , filename, walletsDir_, e.what());
-      msgResp->set_error_msg("failed to copy");
+      msgResp->set_error_msg("failed to copy " + fn);
       pushResponse(user_, env, msg.SerializeAsString());
       return bs::message::ProcessingResult::Error;
    }
    const auto& wallet = signer_->importWoWallet(netType_, targetFile);
    if (!wallet) {
-      msgResp->set_error_msg("failed to import");
+      msgResp->set_error_msg("failed to import " + fn);
       pushResponse(user_, env, msg.SerializeAsString());
       return bs::message::ProcessingResult::Error;
    }

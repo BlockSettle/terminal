@@ -223,7 +223,7 @@ void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
          }
       }
       if (row != -1) {
-         logger_->debug("[{}] updating entry #{} {}", __func__, row, entry.txHash.toHexStr(true));
+         //logger_->debug("[{}] updating entry #{} {}", __func__, row, entry.txHash.toHexStr(true));
          emit dataChanged(createIndex(row, 0), createIndex(row, 0));
       }
       else {
