@@ -232,12 +232,41 @@ ApplicationWindow {
                 color: BSStyle.titleTextColor
             }
 
-            Image {
-                id: imgEnvKind
+            Rectangle {
+                id: animatedConnectionStateArea
                 width: BSSizes.applyScale(16)
-                source: (bsApp.armoryState !== 7) ? "qrc:/images/bitcoin-disabled.png" :
-                    ((bsApp.networkType === 0) ? "qrc:/images/bitcoin-main-net.png" : "qrc:/images/bitcoin-test-net.png")
+                height: BSSizes.applyScale(16)
+                color: "transparent"
                 Layout.rightMargin: BSSizes.applyScale(12)
+                
+                Image {
+                    id: imgEnvKind
+                    anchors.fill: parent
+                    source: (bsApp.armoryState !== 7) ? "qrc:/images/bitcoin-disabled.png" :
+                        ((bsApp.networkType === 0) ? "qrc:/images/bitcoin-main-net.png" : "qrc:/images/bitcoin-test-net.png")
+                }
+           
+                RotationAnimation on rotation {
+                    id: connectionAnomation
+                    loops: Animation.Infinite
+                    from: 0
+                    to: 360
+                    running: bsApp.armoryState !== 7
+                    duration: 1000
+                }
+
+                Connections {
+                    target: bsApp
+                    function onArmoryStateChanged() {
+                        if (bsApp.armoryState === 7) {
+                            connectionAnomation.complete()
+                            animatedConnectionStateArea.rotation = 0
+                        }
+                        else {
+                            connectionAnomation.start()
+                        }
+                    }
+                }
             }
 
             CustomTitleToolButton {

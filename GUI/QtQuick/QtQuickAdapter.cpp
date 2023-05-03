@@ -2688,21 +2688,27 @@ bool QtQuickAdapter::isRequestReadyToSend(QTXSignRequest* request)
    return true;
 }
 
-QString QtQuickAdapter::exportWallet(const QStringList& seed)
+QString QtQuickAdapter::makeExportWalletToPdfPath(const QStringList& seed)
+{
+   const auto params = walletInfoFromSeed(seed);
+   const auto& walletId = params.first;
+
+   return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+      + QString::fromLatin1("/")
+      + QString::fromLatin1("BlockSettle_%1.pdf").arg(walletId);
+}
+
+void QtQuickAdapter::exportWalletToPdf(const QUrl& path, const QStringList& seed)
 {
    const auto params = walletInfoFromSeed(seed);
    const auto& walletId = params.first;
    const auto& walletPrivateRootKey = params.second;
 
-   const auto& path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
-      + QString::fromLatin1("/")
-      + QString::fromLatin1("BlockSettle_%1.pdf").arg(walletId);
    WalletBackupPdfWriter writer(
       walletId,
       seed,
       QRImageProvider().requestPixmap(walletPrivateRootKey, nullptr, QSize(200, 200)));
-   writer.write(path);
-   return path;
+   writer.write(path.toLocalFile());
 }
 
 std::pair<QString, QString> QtQuickAdapter::walletInfoFromSeed(const QStringList& bip39Seed)

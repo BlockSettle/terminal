@@ -253,6 +253,7 @@ ColumnLayout  {
         id: exportFileDialog  
         title: qsTr("Please choose folder to export transaction")
         defaultSuffix: "bin"
+        folder: QLP.StandardPaths.writableLocation(QLP.StandardPaths.DocumentsLocation)
         fileMode: QLP.FileDialog.SaveFile
         onAccepted: {
             bsApp.exportTransaction(exportFileDialog.currentFile, continue_but.prepare_transaction())
@@ -290,7 +291,7 @@ ColumnLayout  {
 
             if (tempRequest.isWatchingOnly)
             {
-                exportFileDialog.currentFile = "file:////" + bsApp.makeExportTransactionFilename(tempRequest)
+                exportFileDialog.currentFile = "file:///" + bsApp.makeExportTransactionFilename(tempRequest)
                 exportFileDialog.open()
             }
             else
