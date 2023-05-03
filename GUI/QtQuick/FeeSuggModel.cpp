@@ -29,7 +29,7 @@ FeeSuggestionModel::FeeSuggestionModel(const std::shared_ptr<spdlog::logger>& lo
 
 int FeeSuggestionModel::rowCount(const QModelIndex &) const
 {
-   return data_.size();
+   return data_.size() + 1;
 }
 
 int FeeSuggestionModel::columnCount(const QModelIndex &) const
@@ -39,6 +39,17 @@ int FeeSuggestionModel::columnCount(const QModelIndex &) const
 
 QVariant FeeSuggestionModel::data(const QModelIndex& index, int role) const
 {
+   if (index.row() == data_.size()) {
+      switch (role) {
+      case TextRole:
+         return tr("Manual Fee Selection");
+      case BlocksRole:
+      case TimeRole:
+      case ValueRole:
+         return QString::fromLatin1("1.0 s/b");
+      default: break;
+      }
+   }
    switch (role) {
    case TextRole:
       return tr("%1 blocks (%2): %3 s/b").arg(data_.at(index.row()).nbBlocks)

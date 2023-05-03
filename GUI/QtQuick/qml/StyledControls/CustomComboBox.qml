@@ -24,6 +24,7 @@ ComboBox {
 
     property alias input_accept_input: input.acceptableInput
     property alias input_text: input.text
+    property alias input_item: input
 
     signal textEdited()
     signal editingFinished()
@@ -101,7 +102,7 @@ ComboBox {
             onTextEdited : {
                 control.textEdited()
             }
-
+            
             onEditingFinished : {
                 control.editingFinished()
             }

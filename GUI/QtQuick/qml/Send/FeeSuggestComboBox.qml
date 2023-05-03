@@ -15,18 +15,17 @@ import "../BsStyles"
 import "../StyledControls"
 
 CustomComboBox {
-
     id: fee_suggest_combo
 
     model: feeSuggestions
-    editable: true
+    editable: currentIndex == (feeSuggestions.rowCount - 1)
 
     //aliases
     title_text: qsTr("Fee Suggestions")
 
     height: BSSizes.applyScale(70)
 
-    textRole: "text"
+    textRole: (currentIndex == (feeSuggestions.rowCount - 1) && !popup.visible) ? "value" : "text"
     valueRole: "value"
 
     validator: RegExpValidator {regExp: new RegExp(create_regexp())}
@@ -41,6 +40,9 @@ CustomComboBox {
             {
                 change_index_handler()
             }
+            if (typeof setup_fee === "function") {
+                setup_fee()
+            }
 
             validator.regExp = new RegExp(create_regexp())
         }
@@ -52,31 +54,34 @@ CustomComboBox {
             change_index_handler()
         }
         validator.regExp = new RegExp(create_regexp())
+
+        if (currentIndex == (feeSuggestions.rowCount - 1)) {
+            fee_suggest_combo.input_item.forceActiveFocus()
+            fee_suggest_combo.input_item.cursorPosition = 0
+        }
     }
 
     function create_regexp()
     {
-        var res = fee_suggest_combo.currentText
-        var index = res.indexOf(":")
-        res = res.slice(0, index+2)
-        res = res.replace("(", "\\(").replace(")", "\\)")
-        res = res + "\\d*\\.?\\d? s\/b"
-        return res
+        return "\\d*\\.?\\d?( s\/b)?"
     }
 
     function edit_value()
     {
-        var res = fee_suggest_combo.input_text
-        var index = res.indexOf(":")
-        res = res.slice(index+2)
+        var res;
+        if (currentIndex != (feeSuggestions.rowCount - 1)) {
+            res = fee_suggest_combo.currentText
+            var index = res.indexOf(":")
+            res = res.slice(index+2)
+        }
+        else {
+            res = fee_suggest_combo.input_text
+        }
         res = res.replace(" s/b", "")
         return res
     }
 
     onEditingFinished : {
-        if (!edit_value())
-        {
-            fee_suggest_combo.input_text = fee_suggest_combo.currentText
-        }
+        fee_suggest_combo.input_item.text = edit_value() + " s/b"
     }
 }
