@@ -74,3 +74,14 @@ void JadeClient::scanDevices()
       cb_->scanningDone();
    });
 }
+
+bool bs::hww::JadeClient::isConnected(const std::string& reqId) const
+{
+   for (const auto& serial : QSerialPortInfo::availablePorts()) {
+      const auto& id = JadeDevice::idFromSerial(serial);
+      if (id == reqId) {
+         return true;
+      }
+   }
+   return false;
+}

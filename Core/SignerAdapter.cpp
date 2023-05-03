@@ -547,7 +547,7 @@ ProcessingResult SignerAdapter::processSignTx(const bs::message::Envelope& env
       msgResp->set_error_text(errorReason);
       pushResponse(user_, env, msg.SerializeAsString());
    };
-   const auto& txReq = bs::signer::pbTxRequestToCore(request.tx_request(), logger_);
+   auto txReq = bs::signer::pbTxRequestToCore(request.tx_request(), logger_);
    logger_->debug("[{}] ({} wallet id[s])", __func__, txReq.walletIds.size());
    bs::core::WalletsManager::HDWalletPtr hdWallet;
    if ((txReq.walletIds.size() == 1)) {
@@ -568,11 +568,15 @@ ProcessingResult SignerAdapter::processSignTx(const bs::message::Envelope& env
       SignerMessage msg;
       auto msgResp = msg.mutable_sign_tx_response();
       try {
+         logger_->debug("[{}] lock time: {}", __func__, txReq.armorySigner_.getLockTime());
          const auto& signedTX = hdWallet->signTXRequestWithWallet(txReq);
          if (signedTX.empty()) {
             throw std::runtime_error("signer returned empty TX");
          }
          logger_->debug("[{}] signed TX: {}", __func__, signedTX.toHexStr());
+         if (!txReq.armorySigner_.verify()) {
+            logger_->error("[{}] verification failed", __func__);
+         }
          msgResp->set_signed_tx(signedTX.toBinStr());
       }
       catch (const std::exception& e) {

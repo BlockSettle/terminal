@@ -36,6 +36,7 @@ namespace bs {
 
          void initConnection();
          void scanDevices();
+         bool isConnected(const std::string& id) const;
 
          std::vector<DeviceKey> deviceKeys() const;
          std::shared_ptr<JadeDevice> getDevice(const std::string& deviceId);

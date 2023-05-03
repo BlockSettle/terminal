@@ -253,7 +253,7 @@ bs::message::ProcessingResult bs::hww::DeviceManager::processBlockchain(const bs
    return bs::message::ProcessingResult::Ignored;
 }
 
-bs::message::ProcessingResult bs::hww::DeviceManager::processTransactions(const bs::message::SeqId msgId
+bs::message::ProcessingResult DeviceManager::processTransactions(const bs::message::SeqId msgId
    , const ArmoryMessage_Transactions& transactions)
 {
    const auto& itReq = supportingTxReq_.find(msgId);
@@ -267,15 +267,23 @@ bs::message::ProcessingResult bs::hww::DeviceManager::processTransactions(const 
       logger_->warn("[{}] device not found", __func__);
       return bs::message::ProcessingResult::Error;
    }
+   logger_->debug("[DeviceManager::processTransactions] received {} txs", transactions.transactions_size());
+   std::vector<Tx> txs;
    for (const auto& txData : transactions.transactions()) {
-      Tx tx(BinaryData::fromString(txData.tx()));
-      if (!tx.isInitialized()) {
-         logger_->warn("[{}] invalid TX at {}", __func__, txData.height());
-         continue;
+      try {
+         Tx tx(BinaryData::fromString(txData.tx()));
+         if (!tx.isInitialized()) {
+            logger_->warn("[{}] invalid TX at {}", __func__, txData.height());
+            continue;
+         }
+         tx.setTxHeight(txData.height());
+         txs.push_back(tx);
       }
-      tx.setTxHeight(txData.height());
-      //FIXME: device->setSupportingTX(tx);
+      catch (const std::exception& e) {
+         logger_->error("[{}] invalid TX: {}", __func__, e.what());
+      }
    }
+   device->setSupportingTXs(txs);
    return bs::message::ProcessingResult::Success;
 }
 
@@ -407,6 +415,7 @@ bs::message::ProcessingResult DeviceManager::prepareDeviceForSign(bs::message::S
    bool isDeviceReady = false;
    DeviceKey deviceKey{};
    for (const auto& device : devices_) {
+      logger_->debug("[{}] device {}/{} vs {}", __func__, device.id, device.walletId, hdWallet.wallet_id());
       if (device.walletId == hdWallet.wallet_id()) {
          isDeviceReady = true;
          deviceKey = device;
@@ -420,6 +429,10 @@ bs::message::ProcessingResult DeviceManager::prepareDeviceForSign(bs::message::S
       pushBroadcast(user_, msg.SerializeAsString());
    };
    if (isDeviceReady) {
+      if ((deviceKey.type == bs::hww::DeviceType::HWJade) && !jadeClient_->isConnected(deviceKey.id)) {
+         operationFailed(deviceKey.id, "device not connected");
+         return bs::message::ProcessingResult::Error;
+      }
       logger_->debug("[{}] device {}/{} was ready", __func__, deviceKey.id, deviceKey.walletId);
       walletReady(deviceKey.walletId);
       return bs::message::ProcessingResult::Success;
@@ -449,9 +462,11 @@ bs::message::ProcessingResult DeviceManager::prepareDeviceForSign(bs::message::S
       }
    }
    else if (bs::wallet::HardwareEncKey::WalletType::Trezor == hwEncType.deviceType()) {
+      nbScanning_ = 1;
       trezorClient_->listDevices();
    }
    else if (bs::wallet::HardwareEncKey::WalletType::Jade == hwEncType.deviceType()) {
+      nbScanning_ = 1;
       jadeClient_->scanDevices();
    }
    return bs::message::ProcessingResult::Success;
@@ -696,7 +711,7 @@ void bs::hww::DeviceManager::needSupportingTXs(const DeviceKey& key
 
 void DeviceManager::txSigned(const DeviceKey& device, const SecureBinaryData& signData)
 {
-   if (device.type != DeviceType::HWLedger) {
+   if (device.type == DeviceType::HWTrezor) {
       HW::DeviceMgrMessage msg;
       auto msgResp = msg.mutable_signed_tx();
       msgResp->set_signed_tx(signData.toBinStr());

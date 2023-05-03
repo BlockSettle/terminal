@@ -128,7 +128,7 @@ static std::string dump(const QCborValueRef& val)
    if (val.isRegularExpression()) {
       return val.toRegularExpression().pattern().toStdString();
    }
-   return "???";
+   return "<type " + std::to_string(val.type()) + ">";
 }
 
 void JadeDevice::setSupportingTXs(const std::vector<Tx>& txs)
@@ -142,68 +142,131 @@ void JadeDevice::setSupportingTXs(const std::vector<Tx>& txs)
          " count mismatch: {} vs {}", awaitingTXreq_.armorySigner_.getTxInCount(), txs.size());
       return;
    }
+   logger_->debug("[JadeDevice::setSupportingTXs] {}, lock time: {}", txs.size(), awaitingTXreq_.armorySigner_.getLockTime());
    for (const auto& tx : txs) {
       awaitingTXreq_.armorySigner_.addSupportingTx(tx);
    }
-   for (uint32_t i = 0; i < awaitingTXreq_.armorySigner_.getTxInCount(); ++i) {
-      const auto& spender = awaitingTXreq_.armorySigner_.getSpender(i);
-      if (!spender) {
-         logger_->warn("[JadeDevice::signTX] no spender at {}", __func__, i);
-         continue;
-      }
-      auto bip32Paths = spender->getBip32Paths();
-      if (bip32Paths.size() != 1) {
-         logger_->error("[TrezorDevice::handleTxRequest] TXINPUT {} BIP32 paths", bip32Paths.size());
-         throw std::logic_error("unexpected pubkey count for spender");
-      }
-      const auto& path = bip32Paths.begin()->second.getDerivationPathFromSeed();
-      QCborArray paramPath;
-      for (unsigned i = 0; i < path.size(); i++) {
-         //skip first index, it's the wallet root fingerprint
-         paramPath.append(path.at(i));
-      }
-      QCborMap params = { {QLatin1Literal("script"), QByteArray::fromStdString(spender->getOutputScript().toBinStr())}
-         , {QLatin1Literal("input_tx"), QByteArray::fromStdString(spender->getUtxo().getTxHash().copySwapEndian().toBinStr())}
-         , {QLatin1Literal("satoshi"), (qint64)spender->getValue()}
-         , {QLatin1Literal("is_witness"), true}, {QLatin1Literal("path"), paramPath}};
-      auto inInput = std::make_shared<JadeSerialIn>();
-      inInput->request = getRequest(++seqId_, QLatin1Literal("tx_input"), params);
-      inInput->needResponse = false;
-      processQueued(inInput, [](const std::shared_ptr<OutData>&) {});
-   }
+   const auto& tx = awaitingTXreq_.armorySigner_.serializeUnsignedTx();
+   const QCborMap params = { {QLatin1Literal("network"), network()}, {QLatin1Literal("txn")
+      , QByteArray::fromStdString(tx.toBinStr())}, {QLatin1Literal("use_ae_signatures"), false}
+      , {QLatin1Literal("num_inputs"), awaitingTXreq_.armorySigner_.getTxInCount()} };
+   auto inReq = std::make_shared<JadeSerialIn>();
+   inReq->request = getRequest(++seqId_, QLatin1Literal("sign_tx"), params);
 
-   auto bw = std::make_shared<BinaryWriter>();
-   bw->put_var_int(awaitingTXreq_.armorySigner_.getTxInCount());
+   const auto& cbSign = [this, txs](const std::shared_ptr<OutData>& out)
+   {
+      const auto& data = std::static_pointer_cast<JadeSerialOut>(out);
+      if (!data) {
+         logger_->error("[JadeDevice::signTX] invalid data");
+         cb_->operationFailed(key().id, "Invalid data");
+         return;
+      }
+      if (data->futResponse.wait_for(std::chrono::seconds{ 15 }) != std::future_status::ready) {
+         logger_->error("[JadeDevice::signTX] data timeout");
+         cb_->operationFailed(key().id, "Device timeout");
+         return;
+      }
+      const auto& msg = data->futResponse.get();
+      logger_->debug("[JadeDevice::signTX] response: {}", dump(msg));
+      if (msg.contains(QLatin1Literal("error"))) {
+         cb_->operationFailed(key().id, msg[QLatin1Literal("error")][QLatin1Literal("message")].toString().toStdString());
+         return;
+      }
+      if (msg[QLatin1Literal("result")].isFalse()) {
+         cb_->operationFailed(key().id, "Device refused to sign");
+         return;
+      }
 
-   for (uint32_t i = 0; i < awaitingTXreq_.armorySigner_.getTxInCount(); ++i) {
-      const auto& cbResponse = [this, i, bw](const std::shared_ptr<OutData>& out)
+      auto bw = std::make_shared<BinaryWriter>();
+      bw->put_var_int(awaitingTXreq_.armorySigner_.getTxInCount());
+      const auto& addSignedInput = [this, bw, txs](uint32_t i, const BinaryData& signedData)
       {
-         const auto& data = std::static_pointer_cast<JadeSerialOut>(out);
-         if (!data) {
-            logger_->error("[JadeDevice::tx_input] invalid data");
-            cb_->publicKeyReady(key());
-            return;
-         }
-         if (data->futResponse.wait_for(std::chrono::seconds{ 5 }) != std::future_status::ready) {
-            logger_->error("[JadeDevice::tx_input] data timeout");
-            cb_->publicKeyReady(key());
-            return;
-         }
-         const auto& msg = data->futResponse.get();
-         logger_->debug("[JadeDevice::tx_input] #{} response: {}", i, dump(msg));
-         
-         const auto binSignedData = BinaryData::fromString(msg[QLatin1Literal("result")].toByteArray().toStdString());
          bw->put_uint32_t(i);
-         bw->put_var_int(binSignedData.getSize());
-         bw->put_BinaryData(binSignedData);
+         bw->put_var_int(signedData.getSize());
+         bw->put_BinaryData(signedData);
 
+         logger_->debug("[JadeDevice::setSupportingTXs::addSignedInput] {} of {}", i + 1, awaitingTXreq_.armorySigner_.getTxInCount());
          if ((i + 1) >= awaitingTXreq_.armorySigner_.getTxInCount()) {
             cb_->txSigned(key(), bw->getData());
+            logger_->debug("[JadeDevice::setSupportingTXs::addSignedInput] done");
          }
       };
-      auto inResponse = std::make_shared<JadeSerialIn>();
-      processQueued(inResponse, cbResponse);
-   }
+
+      for (uint32_t i = 0; i < awaitingTXreq_.armorySigner_.getTxInCount(); ++i) {
+         const auto& spender = awaitingTXreq_.armorySigner_.getSpender(i);
+         if (!spender) {
+            logger_->warn("[JadeDevice::signTX] no spender at {}", __func__, i);
+            continue;
+         }
+         auto bip32Paths = spender->getBip32Paths();
+         if (bip32Paths.size() != 1) {
+            logger_->error("[TrezorDevice::handleTxRequest] TXINPUT {} BIP32 paths", bip32Paths.size());
+            throw std::logic_error("unexpected pubkey count for spender");
+         }
+         const auto& path = bip32Paths.begin()->second.getDerivationPathFromSeed();
+         QCborArray paramPath;
+         for (unsigned i = 0; i < path.size(); i++) {
+            //skip first index, it's the wallet root fingerprint
+            paramPath.append(path.at(i));
+         }
+         QCborMap params = { {QLatin1Literal("script"), QByteArray::fromStdString(spender->getOutputScript().toBinStr())}
+            //, {QLatin1Literal("input_tx"), QByteArray::fromStdString(txs.at(i).serialize().toBinStr())}
+            , {QLatin1Literal("input_tx"), {} }
+            , {QLatin1Literal("satoshi"), (qint64)spender->getValue()}
+            , {QLatin1Literal("is_witness"), true}, {QLatin1Literal("path"), paramPath} };
+         auto inInput = std::make_shared<JadeSerialIn>();
+         inInput->request = getRequest(++seqId_, QLatin1Literal("tx_input"), params);
+
+         const auto& cbInput = [this, i, addSignedInput](const std::shared_ptr<OutData>& out)
+         {
+            const auto& data = std::static_pointer_cast<JadeSerialOut>(out);
+            if (!data) {
+               return;
+            }
+            if (data->futResponse.wait_for(std::chrono::milliseconds{ 15000 }) != std::future_status::ready) {
+               return;                                              //FIXME^
+            }
+            const auto& msg = data->futResponse.get();
+            logger_->debug("[JadeDevice::tx_input] #{} response1: {}", i, dump(msg));
+            if (msg.contains(QLatin1Literal("error"))) {
+               cb_->operationFailed(key().id, msg[QLatin1Literal("error")][QLatin1Literal("message")].toString().toStdString());
+               return;
+            }
+            const auto binSignedData = BinaryData::fromString(msg[QLatin1Literal("result")].toByteArray().toStdString());
+            addSignedInput(i, binSignedData);
+         };
+         processQueued(inInput, cbInput);
+      }
+#if 0 //temporarily
+      for (uint32_t i = 0; i < awaitingTXreq_.armorySigner_.getTxInCount(); ++i) {
+         const auto& cbResponse = [this, i, addSignedInput](const std::shared_ptr<OutData>& out)
+         {
+            const auto& data = std::static_pointer_cast<JadeSerialOut>(out);
+            if (!data) {
+               logger_->warn("[JadeDevice::tx_input] invalid data");
+               //cb_->operationFailed(key().id, "tx_input invalid data");
+               return;
+            }
+            if (data->futResponse.wait_for(std::chrono::seconds{ 15 }) != std::future_status::ready) {
+               logger_->error("[JadeDevice::tx_input] data timeout");
+               //cb_->operationFailed(key().id, "tx_input data timeout");
+               return;
+            }
+            const auto& msg = data->futResponse.get();
+            logger_->debug("[JadeDevice::tx_input] #{} response2: {}", i, dump(msg));
+            if (msg.contains(QLatin1Literal("error"))) {
+               cb_->operationFailed(key().id, msg[QLatin1Literal("error")][QLatin1Literal("message")].toString().toStdString());
+               return;
+            }
+            const auto binSignedData = BinaryData::fromString(msg[QLatin1Literal("result")].toByteArray().toStdString());
+            addSignedInput(i, binSignedData);
+         };
+         auto inResponse = std::make_shared<JadeSerialIn>();
+         processQueued(inResponse, cbResponse);
+      }
+#endif
+   };
+   processQueued(inReq, cbSign);
 }
 
 void JadeDevice::releaseConnection()
@@ -223,9 +286,9 @@ DeviceKey JadeDevice::key() const
    if (walletId_.empty()) {
       if (!xpubRoot_.empty()) {
          try {
-            const auto& seed = bs::core::wallet::Seed::fromXpub(xpubRoot_
-               , testNet_ ? NetworkType::TestNet : NetworkType::MainNet);
-            walletId_ = seed.getWalletId();
+            /*const auto& seed = bs::core::wallet::Seed::fromXpub(xpubRoot_
+               , testNet_ ? NetworkType::TestNet : NetworkType::MainNet);*/
+            walletId_ = bs::core::wallet::computeID(xpubRoot_).toBinStr();
          }
          catch (const std::exception& e) {
             logger_->error("[{}] failed to get walletId from {}: {}", __func__, xpubRoot_.toBinStr(), e.what());
@@ -263,6 +326,11 @@ static uint32_t epoch()
 
 void JadeDevice::init()
 {
+   if (inited()) {
+      logger_->debug("[JadeDevice::init] already inited");
+      cb_->publicKeyReady(key());
+      return;
+   }
    logger_->debug("[JadeDevice::init] start");
    auto in = std::make_shared<JadeSerialIn>();
    in->request = getRequest(++seqId_, QLatin1Literal("get_version_info"));
@@ -312,10 +380,8 @@ void JadeDevice::init()
 
       auto inXpub = std::make_shared<JadeSerialIn>();
       bs::hd::Path path;
-      path.append(/*bs::hd::Purpose::Native +*/ bs::hd::hardFlag);
+      path.append(bs::hd::hardFlag);
       path.append(testNet_ ? bs::hd::CoinType::Bitcoin_test : bs::hd::CoinType::Bitcoin_main);
-      //path.append(bs::hd::hardFlag);
-      //path.append(0);
       const QCborMap params = { {QLatin1Literal("network"), network()}, {QLatin1Literal("path"), convertPath(path)}};
       inXpub->request = getRequest(++seqId_, QLatin1Literal("get_xpub"), params);
 
@@ -505,47 +571,46 @@ void JadeDevice::getPublicKeys()
 void JadeDevice::signTX(const bs::core::wallet::TXSignRequest &reqTX)
 {
    logger_->debug("[JadeDevice::signTX]");
-
-   const auto& tx = reqTX.armorySigner_.toPSBT();
-   const QCborMap params = { {QLatin1Literal("network"), network()}, {QLatin1Literal("txn")
-      , QByteArray::fromStdString(tx.toBinStr())}, {QLatin1Literal("use_ae_signatures"), true}
-      , {QLatin1Literal("num_inputs"), reqTX.armorySigner_.getTxInCount()} };
-   auto inReq = std::make_shared<JadeSerialIn>();
-   inReq->request = getRequest(++seqId_, QLatin1Literal("sign_tx"), params);
-
-   const auto& cbSign = [this, reqTX](const std::shared_ptr<OutData>& out)
-   {
-      const auto& data = std::static_pointer_cast<JadeSerialOut>(out);
-      if (!data) {
-         logger_->error("[JadeDevice::signTX] invalid data");
-         cb_->operationFailed(key().id, "Invalid data");
-         return;
+   std::vector<BinaryData> txHashes;
+   for (uint32_t i = 0; i < reqTX.armorySigner_.getTxInCount(); ++i) {
+      const auto& spender = reqTX.armorySigner_.getSpender(i);
+      if (!spender) {
+         logger_->warn("[JadeDevice::signTX] no spender at {}", i);
+         continue;
       }
-      if (data->futResponse.wait_for(std::chrono::seconds{ 15 }) != std::future_status::ready) {
-         logger_->error("[JadeDevice::signTX] data timeout");
-         cb_->operationFailed(key().id, "Device timeout");
-         return;
-      }
-      const auto& msg = data->futResponse.get();
-      logger_->debug("[JadeDevice::signTX] response: {}", dump(msg));
-      if (msg[QLatin1Literal("result")].isFalse()) {
-         cb_->operationFailed(key().id, "Device refused to sign");
-         return;
-      }
+      txHashes.push_back(spender->getUtxo().getTxHash());
 
-      std::vector<BinaryData> txHashes;
-      for (uint32_t i = 0; i < reqTX.armorySigner_.getTxInCount(); ++i) {
-         const auto& spender = reqTX.armorySigner_.getSpender(i);
-         if (!spender) {
-            logger_->warn("[JadeDevice::signTX] no spender at {}", i);
-            continue;
+      auto bip32Paths = spender->getBip32Paths();
+      if (bip32Paths.size() != 1) {
+         logger_->error("[TrezorDevice::signTX] {} BIP32 paths", bip32Paths.size());
+         continue;
+      }
+      const auto& path = bip32Paths.begin()->second.getDerivationPathFromSeed();
+      const QCborMap params = { {QLatin1Literal("network"), network()}, {QLatin1Literal("path"), convertPath(path)} };
+      auto inXpub = std::make_shared<JadeSerialIn>();
+      inXpub->request = getRequest(++seqId_, QLatin1Literal("get_xpub"), params);
+
+      const auto& cbXPub = [this](const std::shared_ptr<OutData>& out)
+      {
+         const auto& data = std::static_pointer_cast<JadeSerialOut>(out);
+         if (!data) {
+            logger_->error("[JadeDevice::signTX] invalid data");
+            cb_->publicKeyReady(key());
+            return;
          }
-         txHashes.push_back(spender->getUtxo().getTxHash());
-      }
-      cb_->needSupportingTXs(key(), txHashes);
-      awaitingTXreq_ = reqTX;
-   };
-   processQueued(inReq, cbSign);
+         if (data->futResponse.wait_for(std::chrono::milliseconds{ 1500 }) != std::future_status::ready) {
+            logger_->error("[JadeDevice::signTX] data timeout");
+            cb_->publicKeyReady(key());
+            return;
+         }
+         const auto& msg = data->futResponse.get();
+         logger_->debug("[JadeDevice::init] xpub response: {}", dump(msg));
+      };
+      processQueued(inXpub, cbXPub);
+   }
+   logger_->debug("[JadeDevice::signTX] {} prevOuts requested", txHashes.size());
+   cb_->needSupportingTXs(key(), txHashes);
+   awaitingTXreq_ = reqTX;
 }
 
 void JadeDevice::retrieveXPubRoot()
@@ -659,7 +724,8 @@ void bs::hww::JadeSerialHandler::parsePortion(const QByteArray& data)
       for (bool readNextObj = true; readNextObj; /*nothing - set in loop*/) {
          QCborParserError err;
          const QCborValue cbor = QCborValue::fromCbor(unparsed_, &err);
-         // qDebug() << "Read Type:" << cbor.type() << "and error: " << err.error;
+         //logger_->debug("[{}] read type {}, result={}", __func__, cbor.type()
+         //   , err.error.toString().toStdString());
          readNextObj = false;  // In most cases we don't read another object
 
          if (err.error == QCborError::NoError && cbor.isMap()) {
@@ -670,8 +736,14 @@ void bs::hww::JadeSerialHandler::parsePortion(const QByteArray& data)
                   .toByteArray().toStdString());
             }
             else {
-               requests_.front()->set_value(msg);
-               requests_.pop_front();
+               //logger_->debug("[{}] ready: {}", __func__, dump(msg));
+               if (requests_.empty()) {
+                  logger_->error("[{}] unexpected response", __func__);
+               }
+               else {
+                  requests_.front()->set_value(msg);
+                  requests_.pop_front();
+               }
             }
 
             // Remove read object from m_data buffer
@@ -681,8 +753,10 @@ void bs::hww::JadeSerialHandler::parsePortion(const QByteArray& data)
             else {
                // We successfully read an object and there are still bytes left in the buffer - this
                // is the one case where we loop and read again - make sure to preserve the remaining bytes.
-               unparsed_ = unparsed_.right(static_cast<int>(unparsed_.length() - err.offset));
+               const int remainder = static_cast<int>(unparsed_.length() - err.offset);
+               unparsed_ = unparsed_.right(remainder);
                readNextObj = true;
+               logger_->debug("[{}] {} more data after the message", __func__, remainder);
             }
          }
          else if (err.error == QCborError::EndOfFile) {
@@ -712,7 +786,6 @@ void bs::hww::JadeSerialHandler::parsePortion(const QByteArray& data)
 
 void JadeSerialHandler::onSerialDataReady()
 {
-   logger_->debug("[{}]", __func__);
    assert(serial_);
    const auto& data = serial_->readAll();
    logger_->debug("[{}] {} bytes", __func__, data.size());
