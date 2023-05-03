@@ -1752,18 +1752,6 @@ void QtQuickAdapter::pollHWWallets()
    HW::DeviceMgrMessage msg;
    msg.mutable_startscan();
    pushRequest(user_, userHWW_, msg.SerializeAsString());
-#if 0 // remove me
-   SignerMessage msg;
-   auto msgReq = msg.mutable_import_hw_wallet();
-   msgReq->set_type(3);
-   msgReq->set_vendor("4292");
-   msgReq->set_label("Jade @COM3");
-   msgReq->set_device_id("60000");
-   msgReq->set_xpub_root("xpub6B43s2ygXy4bwcYbj2b3x1oJK3VNH91kS3g1StvhAnLB542Jj56Leck9GuTWBF8wyhZP4aV3ipuuj6LZtfRwnqnqtPrhqDCogfP4Dft7Uxy");
-   msgReq->set_xpub_nested_segwit("xpub6CU61Bny1t3y7eeFZoZVftv1W9bu4yjirFwiWSXJRZPFSoagnWauY3rJftKEkT4xfrtTvJzzeGHSfiKGwszrnkFQVBVePtqfBm7Kdp9eWDn");
-   msgReq->set_xpub_native_segwit("xpub6Cm7TgtEtzTqUdGbMt6bfryQGqU5KxzD8rALpE6urikpKXCd44NfLwCEmbLFBS4zzw1gbMLnPRZ142NydpFHuSwTGdr2zViPx1A2VqRj5KU");
-   pushRequest(user_, userSigner_, msg.SerializeAsString());
-#endif
 }
 
 void QtQuickAdapter::stopHWWalletsPolling()
