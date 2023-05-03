@@ -432,7 +432,7 @@ CustomPopup {
 
     CustomSuccessDialog {
         id: messageDialog
-        details_text: qsTr("Rescan wallet completed")
+        details_text: qsTr("Rescan successful")
         visible: false
     }
 

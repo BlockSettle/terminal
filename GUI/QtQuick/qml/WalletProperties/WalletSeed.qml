@@ -2,6 +2,7 @@ import QtQuick 2.12
 import QtQuick.Window 2.12
 import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.15
+import Qt.labs.platform 1.1 as QLP
 
 import "../BsStyles"
 import "../StyledControls"
@@ -49,9 +50,21 @@ ColumnLayout  {
         }
     }
 
+    QLP.FileDialog {
+        id: exportFileDialog  
+        title: qsTr("Please choose folder to export transaction")
+        defaultSuffix: "pdf"
+        fileMode: QLP.FileDialog.SaveFile
+        folder: QLP.StandardPaths.writableLocation(QLP.StandardPaths.DocumentsLocation)
+        onAccepted: {
+            var exportPath =  bsApp.exportWalletToPdf(exportFileDialog.currentFile, wallet_properties_vm.seed)
+            Qt.openUrlExternally(exportFileDialog.currentFile);
+        }
+    }
+
     CustomButton {
         id: confirm_but
-        text: qsTr("Save PDF")
+        text: qsTr("Export PDF")
         preferred: true
 
         Layout.bottomMargin: BSSizes.applyScale(40)
@@ -60,25 +73,8 @@ ColumnLayout  {
         width: BSSizes.applyScale(530)
 
         onClicked: {
-            var printedPath =  bsApp.exportWallet(wallet_properties_vm.seed)
-            successPrintPdf.latestExportPath = printedPath
-            successPrintPdf.details_text = qsTr("PDF successfully saved to ") + printedPath
-            
-            successPrintPdf.show()
-            successPrintPdf.raise()
-            successPrintPdf.requestActivate()
-        }
-    }
-
-    CustomSuccessDialog {
-        id: successPrintPdf
-        visible: false
-
-        property string latestExportPath
-
-        onSig_finish: {
-            Qt.openUrlExternally(latestExportPath);
-            layout.close()
+            exportFileDialog.currentFile = "file:///" + bsApp.makeExportWalletToPdfPath(wallet_properties_vm.seed)
+            exportFileDialog.open()
         }
     }
 }

@@ -138,9 +138,9 @@ void WalletBackupPdfWriter::draw(QPainter &p, qreal width, qreal height)
    const auto topLeftY = 2415;
    const auto deltaX = 480;
    const auto deltaY = 93;
-   for (auto i = 0; i < 3; ++i) {
-      for (auto j = 0; j < seed_.size() / 3; ++j) {
-         p.drawText(QPointF((topLeftX + i * deltaX) * relWidth, (topLeftY + j * deltaY) * relHeight), seed_.at(i * 3 + j));
+   for (auto i = 0; i < seed_.size() / 3; ++i) {
+      for (auto j = 0; j < 3; ++j) {
+         p.drawText(QPointF((topLeftX + j * deltaX) * relWidth, (topLeftY + i * deltaY) * relHeight), seed_.at(i * 3 + j));
       }
    }
 

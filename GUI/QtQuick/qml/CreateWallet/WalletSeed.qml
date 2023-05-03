@@ -2,6 +2,7 @@ import QtQuick 2.12
 import QtQuick.Window 2.12
 import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.15
+import Qt.labs.platform 1.1 as QLP
 
 import "../BsStyles"
 import "../StyledControls"
@@ -62,34 +63,30 @@ ColumnLayout  {
         //Layout.leftMargin: 24
         Layout.bottomMargin: BSSizes.applyScale(40)
         Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
+        
+
+        QLP.FileDialog {
+            id: exportFileDialog  
+            title: qsTr("Please choose folder to export pdf")
+            folder: QLP.StandardPaths.writableLocation(QLP.StandardPaths.DocumentsLocation)
+            defaultSuffix: "pdf"
+            fileMode: QLP.FileDialog.SaveFile
+            onAccepted: {
+                bsApp.exportWalletToPdf(exportFileDialog.currentFile, phrase)
+                Qt.openUrlExternally(exportFileDialog.currentFile);
+            }
+        }
 
         CustomButton {
             id: copy_seed_but
-            text: qsTr("Save PDF")
+            text: qsTr("Export PDF")
             width: BSSizes.applyScale(261)
-            
-            icon.height: BSSizes.applyScale(12)
-            icon.width: BSSizes.applyScale(12)
 
             preferred: false
 
             function click_enter() {
-                bsApp.exportWallet(phrase)
-                copy_seed_but.text = qsTr("Saved to Documents")
-                copy_seed_but.icon.source = "qrc:/images/check.svg"
-                savingEndTimer.start()
-            }
-
-            Timer {
-                id: savingEndTimer
-                interval: 5000
-                repeat: false
-                running: false
-
-                onTriggered: {
-                    copy_seed_but.text = qsTr("Save PDF")
-                    copy_seed_but.icon.source = ""
-                }
+                exportFileDialog.currentFile = "file:///" + bsApp.makeExportWalletToPdfPath(phrase)
+                exportFileDialog.open()
             }
         }
 

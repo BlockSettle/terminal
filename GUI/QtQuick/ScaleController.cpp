@@ -30,12 +30,12 @@ void ScaleController::update()
    const auto screen = QGuiApplication::screens()[QApplication::desktop()->screenNumber(QApplication::activeWindow())];
    connect(screen, &QScreen::logicalDotsPerInchChanged, this, &ScaleController::update);
 
-   qreal dpi = screen->logicalDotsPerInch();
-   scaleRatio_ = dpi / defaultDpi;
-
    QRect rect = screen->geometry();
-   screenWidth_ = rect.width();
-   screenHeight_ = rect.height();
-
-   emit changed();
+   qreal scaleRatio = screen->logicalDotsPerInch() / defaultDpi;
+   if (scaleRatio_ != scaleRatio || screenWidth_ != rect.width() || screenHeight_ != rect.height()) {
+	  scaleRatio_ = scaleRatio;
+	  screenWidth_ = rect.width();
+	  screenHeight_ = rect.height();
+	  emit changed();
+   }
 }
