@@ -313,6 +313,13 @@ ColumnLayout  {
                                 txOutputsModel.clearOutputs()
                             }
                         }
+
+                        function setup_fee() {
+                            if (tx !== null && (isRBF || isCPFP)) {
+                                fee_suggest_combo.currentIndex = feeSuggestions.rowCount - 1
+                                fee_suggest_combo.input_item.text = Qt.binding(function() { return tx.feePerByte })
+                            }
+                        }
                     }
 
                     Item {
