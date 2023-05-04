@@ -27,6 +27,7 @@ CustomComboBox {
 
     textRole: (currentIndex == (feeSuggestions.rowCount - 1) && !popup.visible) ? "value" : "text"
     valueRole: "value"
+    suffix_text: qsTr("s/b")
 
     validator: RegExpValidator {regExp: new RegExp(create_regexp())}
 
@@ -63,7 +64,7 @@ CustomComboBox {
 
     function create_regexp()
     {
-        return "\\d*\\.?\\d?( s\/b)?"
+        return "\\d*\\.?\\d?"
     }
 
     function edit_value()
@@ -73,15 +74,11 @@ CustomComboBox {
             res = fee_suggest_combo.currentText
             var index = res.indexOf(":")
             res = res.slice(index+2)
+            res = res.replace(" " + fee_suggest_combo.suffix_text, "")
         }
         else {
             res = fee_suggest_combo.input_text
         }
-        res = res.replace(" s/b", "")
         return res
-    }
-
-    onEditingFinished : {
-        fee_suggest_combo.input_item.text = edit_value() + " s/b"
     }
 }

@@ -45,14 +45,15 @@ QVariant FeeSuggestionModel::data(const QModelIndex& index, int role) const
          return tr("Manual Fee Selection");
       case BlocksRole:
       case TimeRole:
+         return 0;
       case ValueRole:
-         return QString::fromLatin1("1.0 s/b");
+         return QString();
       default: break;
       }
    }
    switch (role) {
    case TextRole:
-      return tr("%1 blocks (%2): %3 s/b").arg(data_.at(index.row()).nbBlocks)
+      return tr("%1 blocks (%2): %3").arg(data_.at(index.row()).nbBlocks)
          .arg(data_.at(index.row()).estTime).arg(QString::number(data_.at(index.row()).satoshis, 'f', 1));
    case BlocksRole:
       return data_.at(index.row()).nbBlocks;

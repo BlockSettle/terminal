@@ -25,6 +25,7 @@ ComboBox {
     property alias input_accept_input: input.acceptableInput
     property alias input_text: input.text
     property alias input_item: input
+    property alias suffix_text: input_suffix_text.text
 
     signal textEdited()
     signal editingFinished()
@@ -102,7 +103,7 @@ ComboBox {
             onTextEdited : {
                 control.textEdited()
             }
-            
+
             onEditingFinished : {
                 control.editingFinished()
             }
@@ -110,6 +111,16 @@ ComboBox {
             Connections {
                 target: control
                 onCurrentTextChanged: input.text = control.currentText
+            }
+
+            Text {
+                id: input_suffix_text
+                anchors.bottom: parent.bottom
+                leftPadding: input.contentWidth + BSSizes.applyScale(4)
+                font.pixelSize: control.fontSize
+                font.family: "Roboto"
+                font.weight: Font.Normal
+                color: control.fontColor
             }
         }
     }
