@@ -1798,7 +1798,7 @@ void QtQuickAdapter::importWOWallet(const QString& filename)
       emit showError(tr("Invalid or non-existing wallet file %1").arg(filename));
       return;
    }
-   logger_->debug("[{}] {}", __func__, filename.toStdString());
+   //logger_->debug("[{}] {}", __func__, filename.toStdString());
    SignerMessage msg;
    msg.set_import_wo_wallet(filename.toStdString());
    pushRequest(user_, userSigner_, msg.SerializeAsString());
@@ -1811,7 +1811,7 @@ void QtQuickAdapter::importHWWallet(int deviceIndex)
       emit showError(tr("Invalid device #%1").arg(deviceIndex));
       return;
    }
-   logger_->debug("[{}] {}", __func__, deviceIndex);
+   //logger_->debug("[{}] {}", __func__, deviceIndex);
    HW::DeviceMgrMessage msg;
    bs::hww::deviceKeyToMsg(devKey, msg.mutable_import_device());
    pushRequest(user_, userHWW_, msg.SerializeAsString());
