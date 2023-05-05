@@ -121,35 +121,33 @@ void QmlAddressListModel::addRows(const std::string& walletId, const QVector<QVe
       }
    }
    logger_->debug("[{}] {} rows / {} addresses", __func__, rows.size(), addresses_.size());
-   QMetaObject::invokeMethod(this, [this, rows] {
-      QVector<QVector<QString>> newRows;
-      for (const auto& row : rows) {
-         bool found = false;
-         for (const auto& r : table_) {
+   QVector<QVector<QString>> newRows;
+   for (const auto& row : rows) {
+      bool found = false;
+      for (const auto& r : table_) {
+         if (r.at(0) == row.at(0)) {
+            found = true;
+            break;
+         }
+      }
+      if (!found) {
+         for (const auto& r : newRows) {
             if (r.at(0) == row.at(0)) {
                found = true;
                break;
             }
          }
-         if (!found) {
-            for (const auto& r : newRows) {
-               if (r.at(0) == row.at(0)) {
-                  found = true;
-                  break;
-               }
-            }
-         }
-         if (!found) {
-            newRows.append(row);
-         }
       }
-      bool found = false;
-      if (!newRows.empty()) {
-         beginInsertRows(QModelIndex(), rowCount(), rowCount() + newRows.size() - 1);
-         table_.append(newRows);
-         endInsertRows();
+      if (!found) {
+         newRows.append(row);
       }
-      });
+   }
+   bool found = false;
+   if (!newRows.empty()) {
+      beginInsertRows(QModelIndex(), rowCount(), rowCount() + newRows.size() - 1);
+      table_.append(newRows);
+      endInsertRows();
+   }
 }
 
 void QmlAddressListModel::updateRow(const BinaryData& addrPubKey, uint64_t bal, uint32_t nbTx)

@@ -11,6 +11,7 @@ import "../StyledControls"
 import wallet.balance 1.0
 
 ColumnLayout  {
+    property var tx: null
 
     id: layout
 
@@ -116,7 +117,6 @@ ColumnLayout  {
 
             text: qsTr("Advanced")
 
-
             icon.color: "transparent"
             icon.source: "qrc:/images/advanced_icon.png"
             icon.width: BSSizes.applyScale(16)
@@ -135,7 +135,7 @@ ColumnLayout  {
             }
 
             onClicked: {
-               layout.sig_advanced()
+               layout.sig_advanced(tx)
             }
         }
     }
@@ -278,7 +278,7 @@ ColumnLayout  {
         preferred: true
 
         function prepare_transaction() {
-            return bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+            return bsApp.newTXSignRequest(from_wallet_combo.currentIndex
                     , [rec_addr_input.input_text], [parseFloat(amount_input.input_text)]
                     , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text)
         }
@@ -330,7 +330,7 @@ ColumnLayout  {
     {
         if (rec_addr_input.isValid && rec_addr_input.input_text.length) {
             var fpb = parseFloat(fee_suggest_combo.edit_value())
-            tempRequest = bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+            tempRequest = bsApp.newTXSignRequest(from_wallet_combo.currentIndex
                         , [rec_addr_input.input_text], [], (fpb > 0) ? fpb : 1.0)
         }
     }

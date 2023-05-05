@@ -272,7 +272,7 @@ Popup {
                     width: parent.width - BSSizes.applyScale(20)
                     height: parent.height
                     anchors.centerIn: parent
-                    model: tx !== null ? tx.inputs : []
+                    model: tx.inputs
 
                     copy_button_column_index: 1
                     columnWidths: [0.1, 0.5, 0.2, 0.2]
@@ -300,7 +300,7 @@ Popup {
                     width: parent.width - BSSizes.applyScale(20)
                     height: parent.height
                     anchors.centerIn: parent
-                    model: tx !== null ? tx.outputs : []
+                    model: tx.outputs
 
                     copy_button_column_index: 1
                     columnWidths: [0.1, 0.5, 0.2, 0.2]

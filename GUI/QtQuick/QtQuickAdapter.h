@@ -21,8 +21,6 @@
 #include "ApplicationSettings.h"
 #include "hwdevicemodel.h"
 #include "ThreadSafeClasses.h"
-#include "TxInputsModel.h"
-#include "TxInputsSelectedModel.h"
 #include "TxListModel.h"
 #include "UiUtils.h"
 #include "Wallets/SignContainer.h"
@@ -74,8 +72,6 @@ class QQmlContext;
 class QmlWalletsList;
 class QTxDetails;
 class QTXSignRequest;
-class TxInputsModel;
-class TxOutputsModel;
 class WalletBalancesModel;
 class AddressFilterModel;
 class TransactionFilterModel;
@@ -172,9 +168,11 @@ public:
    Q_INVOKABLE bool delArmoryServer(ArmoryServersModel*, int idx);
 
    Q_INVOKABLE void requestFeeSuggestions();
-   Q_INVOKABLE QTXSignRequest* createTXSignRequest(int walletIndex, const QStringList& recvAddrs
+   Q_INVOKABLE QTXSignRequest* newTXSignRequest(int walletIndex, const QStringList& recvAddrs
       , const QList<double>& recvAmounts, double fee, const QString& comment = {}, bool isRbf = true, QUTXOList* utxos = nullptr);
-   Q_INVOKABLE void getUTXOsForWallet(int walletIndex);
+   Q_INVOKABLE QTXSignRequest* createTXSignRequest(int walletIndex, QTxDetails*
+      , double fee, const QString& comment = {}, bool isRbf = true, QUTXOList* utxos = nullptr);
+   Q_INVOKABLE void getUTXOsForWallet(int walletIndex, QTxDetails*);
    Q_INVOKABLE void signAndBroadcast(QTXSignRequest*, const QString& password);
    Q_INVOKABLE int getSearchInputType(const QString&);
    Q_INVOKABLE void startAddressSearch(const QString&);
@@ -228,6 +226,7 @@ signals:
    void failedTx(const QString&);
    void showSuccess(const QString&);
    void rescanCompleted(const QString& walletId);
+   void topBlock(quint32);
 
 private slots:
    void onArmoryServerChanged(const QModelIndex&, const QVariant&);
@@ -272,7 +271,7 @@ private:
    bs::message::ProcessingResult processWalletsList(const BlockSettle::Common::WalletsMessage_WalletsListResponse&);
    bs::message::ProcessingResult processWalletDeleted(const std::string& walletId);
    bs::message::ProcessingResult processWalletSeed(const BlockSettle::Common::SignerMessage_WalletSeed&);
-   bs::message::ProcessingResult processUTXOs(const BlockSettle::Common::WalletsMessage_UtxoListResponse&);
+   bs::message::ProcessingResult processUTXOs(bs::message::SeqId, const BlockSettle::Common::WalletsMessage_UtxoListResponse&);
    bs::message::ProcessingResult processSignTX(bs::message::SeqId, const BlockSettle::Common::SignerMessage_SignTxResponse&);
    bs::message::ProcessingResult processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived&);
    bs::message::ProcessingResult processZCInvalidated(const BlockSettle::Common::ArmoryMessage_ZCInvalidated&);
@@ -325,9 +324,6 @@ private:
    QmlAddressListModel* addrModel_{ nullptr };
    TxListModel* txModel_{ nullptr };
    TxListForAddr* expTxByAddrModel_{ nullptr };
-   TxInputsModel* txInputsModel_{ nullptr };
-   TxInputsSelectedModel * txInputsSelectedModel_{ nullptr };
-   TxOutputsModel* txOutputsModel_{ nullptr };
    HwDeviceModel* hwDeviceModel_{ nullptr };
    WalletBalancesModel* walletBalances_{ nullptr };
    FeeSuggestionModel* feeSuggModel_{ nullptr };

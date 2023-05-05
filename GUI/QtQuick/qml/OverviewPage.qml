@@ -52,7 +52,7 @@ Rectangle {
         anchors.fill: parent
 
         onRequestWalletProperties: {
-            bsApp.getUTXOsForWallet(walletIndex)
+            bsApp.getUTXOsForWallet(walletIndex, null)
             walletProperties.show()
             walletProperties.raise()
             walletProperties.requestActivate()

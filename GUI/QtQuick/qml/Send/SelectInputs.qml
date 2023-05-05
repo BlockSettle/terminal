@@ -17,7 +17,7 @@ import "../BsStyles"
 import "../StyledControls"
 
 ColumnLayout  {
-
+    property var inputsModel: null
     id: layout
 
     property int text_header_size: BSSizes.applyScale(11)
@@ -56,7 +56,7 @@ ColumnLayout  {
             height: parent.height - BSSizes.applyScale(12)
             anchors.centerIn: parent
 
-            model: txInputsModel
+            model: inputsModel
             columnWidths: [0.7, 0.1, 0.1, 0.1]
 
             copy_button_column_index: -1
@@ -80,7 +80,7 @@ ColumnLayout  {
                         checkable: true
 
                         onClicked: {
-                            txInputsModel.toggleSelection(model_row)
+                            inputsModel.toggleSelection(model_row)
                         }
                     }
 
@@ -108,7 +108,7 @@ ColumnLayout  {
 
                             onClicked: {
                                 if (model_row !== 0)
-                                    txInputsModel.toggle(model_row)
+                                    inputsModel.toggle(model_row)
                             }
                         }
                     }
@@ -134,7 +134,7 @@ ColumnLayout  {
 
                             onClicked: {
                                 if (model_row !== 0)
-                                    txInputsModel.toggle(model_row)
+                                    inputsModel.toggle(model_row)
                             }
                         }
                     }
@@ -235,7 +235,7 @@ ColumnLayout  {
             anchors.right: parent.right
             anchors.rightMargin: BSSizes.applyScale(20)
 
-            text: txInputsModel.nbTx
+            text: inputsModel.nbTx
 
             color: "#FFFFFF"
 
@@ -253,7 +253,7 @@ ColumnLayout  {
             anchors.right: parent.right
             anchors.rightMargin: BSSizes.applyScale(20)
 
-            text: txInputsModel.balance
+            text: inputsModel.balance
 
             color: "#FFFFFF"
 

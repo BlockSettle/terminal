@@ -16,13 +16,14 @@ CustomPopup {
     _stack_view.initialItem: simple_details
     _arrow_but_visibility: !simple_details.visible && !advanced_details.visible
 
-    property var tx: null
+    property var tx: bsApp.getTXDetails("")
     property bool isRBF: false
     property bool isCPFP: false
 
     SimpleDetails {     
         id: simple_details
         visible: false
+        tx: root.tx
 
         onSig_continue: (signature) => {
             sign_trans.txSignRequest = signature
@@ -89,6 +90,7 @@ CustomPopup {
     }
 
     SelectInputs {
+        inputsModel: tx.inputsModel
         id: select_inputs
         visible: false
     }
@@ -163,7 +165,6 @@ CustomPopup {
         {
             advanced_details.init()
         }
-        root.tx = null
         root.isRBF = false
         root.isCPFP = false
     }

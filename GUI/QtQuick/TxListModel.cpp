@@ -14,6 +14,7 @@
 #include <spdlog/spdlog.h>
 #include "ColorScheme.h"
 #include "StringUtils.h"
+#include "TxInputsSelectedModel.h"
 #include "TxOutputsModel.h"
 #include "Utils.h"
 
@@ -651,53 +652,67 @@ QString TxListForAddr::balance() const
 }
 
 
+QTxDetails::QTxDetails(const std::shared_ptr<spdlog::logger>& logger, const BinaryData& txHash, QObject* parent)
+   : QObject(parent), logger_(logger), txHash_(txHash)
+{
+   outputsModel_ = new TxOutputsModel(logger_, this);
+   inputsModel_ = new TxInputsModel(logger_, outputsModel_, this);
+   selInputsModel_ = new TxInputsSelectedModel(this);
+   selInputsModel_->setSourceModel(inputsModel_);
+   ownOutputs_ = new TxInputsModel(logger_, outputsModel_, this);
+   inputs_ = new TxInOutModel(tr("Input"), this);
+   outputs_ = new TxInOutModel(tr("Output"), this);
+}
+
 void QTxDetails::setDetails(const bs::sync::TXWalletDetails& details)
 {
    details_ = details;
    if (details.changeAddress.address.isValid()) {
       details_.outputAddresses.push_back(details.changeAddress);
    }
-   inputsModel_ = new TxInOutModel(details_.inputAddresses, tr("Input"), this);
-   outputsModel_ = new TxInOutModel(details_.outputAddresses, tr("Output"), this);
-   auto outputsModel = new TxOutputsModel(logger_, this);
+   for (const auto& entry : details_.outputAddresses) {
+      logger_->debug("[{}] out: {} {}", __func__, entry.address.display(), entry.value);
+   }
+   inputs_->setData(details_.inputAddresses);
+   outputs_->setData(details_.outputAddresses);
+   outputsModel_->clearOutputs();
+   inputsModel_->clear();
+   ownOutputs_->clear();
    for (const auto& out : details.outputAddresses) {
-      outputsModel->addOutput(QString::fromStdString(out.address.display())
+      outputsModel_->addOutput(QString::fromStdString(out.address.display())
          , out.value / BTCNumericTypes::BalanceDivider);
    }
-   ownInputs_ = new TxInputsModel(logger_, outputsModel, this);
    std::vector<TxInputsModel::Entry> inputs;
    inputs.reserve(details.inputAddresses.size());
    for (const auto& in : details.inputAddresses) {
       inputs.push_back({ in.address, in.outHash, in.outIndex, in.value });
    }
-   ownOutputs_ = new TxInputsModel(logger_, outputsModel, this);
-   outputs_.clear();
-   outputs_.reserve(details.inputAddresses.size());
+   outs_.clear();
+   outs_.reserve(details.inputAddresses.size());
    const auto& txId = details_.tx.isInitialized() ? details_.tx.getThisHash() : BinaryData{};
    for (const auto& out : details.outputAddresses) {
-      outputs_.push_back({ out.address, txId, out.outIndex, out.value });
+      outs_.push_back({ out.address, txId, out.outIndex, out.value });
    }
-
-   ownInputs_->addEntries(inputs);
-   ownOutputs_->addEntries(outputs_);
+   inputsModel_->addEntries(inputs);
+   ownOutputs_->addEntries(outs_);
    emit updated();
 }
 
 std::vector<std::pair<bs::Address, double>> QTxDetails::outputData() const
 {
    std::vector<std::pair<bs::Address, double>> result;
-   for (const auto& out : outputs_) {
+   for (const auto& out : outs_) {
       result.push_back({out.address, out.amount / BTCNumericTypes::BalanceDivider});
    }
    return result;
 }
 
-void QTxDetails::setCurBlock(uint32_t curBlock)
+void QTxDetails::onTopBlock(quint32 curBlock)
 {
    if (curBlock_ != curBlock) {
       curBlock_ = curBlock;
-      if (ownInputs_) {
-         ownInputs_->setTopBlock(curBlock);
+      if (inputsModel_) {
+         inputsModel_->setTopBlock(curBlock);
       }
       if (ownOutputs_) {
          ownOutputs_->setTopBlock(curBlock);
@@ -792,12 +807,18 @@ bs::sync::Transaction::Direction QTxDetails::direction() const
    return details_.direction;
 }
 
-TxInOutModel::TxInOutModel(const std::vector<bs::sync::AddressDetails>& data, const QString& type, QObject* parent)
+TxInOutModel::TxInOutModel(const QString& type, QObject* parent)
    : QAbstractTableModel(parent)
-   , data_(data)
    , type_(type)
    , header_{ tr("Type"), tr("Address"), tr("Amount"), tr("Wallet") }
 {}
+
+void TxInOutModel::setData(const std::vector<bs::sync::AddressDetails>& data)
+{
+   beginResetModel();
+   data_ = data;
+   endResetModel();
+}
 
 int TxInOutModel::rowCount(const QModelIndex&) const
 {

@@ -138,8 +138,9 @@ public:
    enum TableRoles {
       TableDataRole = Qt::UserRole + 1, ColorRole, TxHashRole
    };
-   TxInOutModel(const std::vector<bs::sync::AddressDetails>& data, const QString& type, QObject* parent = nullptr);
+   TxInOutModel(const QString& type, QObject* parent = nullptr);
 
+   void setData(const std::vector<bs::sync::AddressDetails>& data);
    int rowCount(const QModelIndex & = QModelIndex()) const override;
    int columnCount(const QModelIndex & = QModelIndex()) const override;
    QVariant data(const QModelIndex& index, int role) const override;
@@ -153,7 +154,7 @@ private:
 private:
    const QString type_;
    const QStringList header_;
-   const std::vector<bs::sync::AddressDetails> data_;
+   std::vector<bs::sync::AddressDetails>  data_;
 };
 
 namespace Transactions {
@@ -167,17 +168,18 @@ namespace Transactions {
    Q_ENUM_NS(Direction)
 }
 
+class TxInputsSelectedModel;
+class TxOutputsModel;
+
 class QTxDetails : public QObject
 {
    Q_OBJECT
 public:
    QTxDetails(const std::shared_ptr<spdlog::logger>& logger, const BinaryData& txHash
-      , QObject* parent = nullptr)
-      : QObject(parent), logger_(logger), txHash_(txHash)
-   {}
+      , QObject* parent = nullptr);
+   ~QTxDetails() override = default;
 
    void setDetails(const bs::sync::TXWalletDetails&);
-   void setCurBlock(uint32_t);
 
    Q_PROPERTY(QString txId READ txId NOTIFY updated)
    QString txId() const { return QString::fromStdString(txHash_.toHexStr(true)); }
@@ -202,14 +204,18 @@ public:
    Q_PROPERTY(QString timestamp READ timestamp NOTIFY updated)
    QString timestamp() const;
 
-   Q_PROPERTY(TxInOutModel* inputs READ inputs NOTIFY updated)
-   TxInOutModel* inputs() const { return inputsModel_; }
-   Q_PROPERTY(TxInOutModel* outputs READ outputs NOTIFY updated)
-   TxInOutModel* outputs() const { return outputsModel_; }
-   Q_PROPERTY(TxInputsModel* ownInputs READ ownInputs NOTIFY updated)
-   TxInputsModel* ownInputs() const { return ownInputs_; }
-   Q_PROPERTY(TxInputsModel* ownOutputs READ ownOutputs NOTIFY updated)
+   Q_PROPERTY(TxInOutModel* inputs READ inputs CONSTANT)
+   TxInOutModel* inputs() const { return inputs_; }
+   Q_PROPERTY(TxInOutModel* outputs READ outputs CONSTANT)
+   TxInOutModel* outputs() const { return outputs_; }
+   Q_PROPERTY(TxInputsModel* inputsModel READ inputsModel CONSTANT)
+   TxInputsModel* inputsModel() const { return inputsModel_; }
+   Q_PROPERTY(TxInputsSelectedModel* selectedInputsModel READ selInputsModel CONSTANT)
+   TxInputsSelectedModel* selInputsModel() const { return selInputsModel_; }
+   Q_PROPERTY(TxInputsModel* ownOutputs READ ownOutputs CONSTANT)
    TxInputsModel* ownOutputs() const { return ownOutputs_; }
+   Q_PROPERTY(TxOutputsModel* outputsModel READ outputsModel CONSTANT)
+   TxOutputsModel* outputsModel() const { return outputsModel_; }
    std::vector<std::pair<bs::Address, double>> outputData() const;
 
    bs::sync::Transaction::Direction direction() const;
@@ -218,15 +224,20 @@ signals:
    void updated();
    void newBlock();
 
+public slots:
+   void onTopBlock(quint32);
+
 private:
    std::shared_ptr<spdlog::logger>  logger_;
    const BinaryData txHash_;
    bs::sync::TXWalletDetails details_;
-   TxInOutModel* inputsModel_{ nullptr };
-   TxInOutModel* outputsModel_{ nullptr };
-   TxInputsModel* ownInputs_{ nullptr };
+   TxInOutModel* inputs_{ nullptr };
+   TxInOutModel* outputs_{ nullptr };
+   TxInputsModel* inputsModel_{ nullptr };
+   TxInputsSelectedModel* selInputsModel_{ nullptr };
    TxInputsModel* ownOutputs_{ nullptr };
-   std::vector<TxInputsModel::Entry> outputs_;
+   TxOutputsModel* outputsModel_{ nullptr };
+   std::vector<TxInputsModel::Entry> outs_;
    uint32_t curBlock_{ 0 };
 };
 
