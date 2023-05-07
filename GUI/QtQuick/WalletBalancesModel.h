@@ -86,7 +86,7 @@ signals:
 
 private:
    using FieldFunc = std::function<QString(const Balance&)>;
-   QString getBalance(const std::string& walletId, const FieldFunc&) const;
+   QString getBalance(const std::string& walletId, const FieldFunc&, const QString defaultValue = QLatin1String("0.00000000")) const;
    int getWalletIndex(const std::string& walletId) const;
 
 private:

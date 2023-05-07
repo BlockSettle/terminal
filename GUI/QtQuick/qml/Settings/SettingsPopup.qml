@@ -16,6 +16,12 @@ CustomPopup {
 
     property var armoryServersModel: null
 
+    function open_network_menu() {
+        _stack_view.push(settings_network)
+        root.updateServersModel()
+        settings_network.init()
+    }
+
     SettingsMenu {
         id: settings_menu
         visible: false

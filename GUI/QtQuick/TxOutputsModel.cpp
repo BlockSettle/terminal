@@ -147,12 +147,19 @@ void TxOutputsModel::addOutput(const QString& address, double amount, bool isCha
 
 void TxOutputsModel::delOutput(int row)
 {
-   if (readOnly_ || (row == 0)) {
+   if (readOnly_) {
       return;
    }
-   beginRemoveRows(QModelIndex(), row, row);
-   data_.erase(data_.cbegin() + row - 1);
-   endRemoveRows();
+   if (row == 0) {
+      beginResetModel();
+      data_.clear();
+      endResetModel();
+   }
+   else {
+      beginRemoveRows(QModelIndex(), row, row);
+      data_.erase(data_.cbegin() + row - 1);
+      endRemoveRows();
+   }
 }
 
 QVariant TxOutputsModel::getData(int row, int col) const

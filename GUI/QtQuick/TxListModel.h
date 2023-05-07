@@ -138,6 +138,7 @@ public:
    enum TableRoles {
       TableDataRole = Qt::UserRole + 1, ColorRole, TxHashRole
    };
+   Q_ENUM(TableRoles)
    TxInOutModel(const QString& type, QObject* parent = nullptr);
 
    void setData(const std::vector<bs::sync::AddressDetails>& data);

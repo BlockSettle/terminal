@@ -86,11 +86,9 @@ void QmlAddressListModel::addRow(const std::string& walletId, const QVector<QStr
       logger_->warn("[{}] {} invalid address {}", __func__, walletId, row.at(0).toStdString());
       addresses_.push_back(bs::Address{});
    }
-   QMetaObject::invokeMethod(this, [this, row] {
-      beginInsertRows(QModelIndex(), rowCount(), rowCount());
-      table_.append(row);
-      endInsertRows();
-      });
+   beginInsertRows(QModelIndex(), rowCount(), rowCount());
+   table_.append(row);
+   endInsertRows();
 }
 
 void QmlAddressListModel::addRows(const std::string& walletId, const QVector<QVector<QString>>& rows)

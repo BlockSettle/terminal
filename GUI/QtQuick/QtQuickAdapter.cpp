@@ -291,6 +291,8 @@ void QtQuickAdapter::run(int &argc, char **argv)
       , 1, 0, "QmlAddressListModel", tr("Error: only enums"));
    qmlRegisterUncreatableMetaObject(ArmoryServersModel::staticMetaObject, "terminal.models"
       , 1, 0, "ArmoryServersModel", tr("Error: only enums"));
+   qmlRegisterUncreatableMetaObject(TxInOutModel::staticMetaObject, "terminal.models"
+      , 1, 0, "TxInOutModel", tr("Error: only enums"));
 
    //need to read files in qml
    qputenv("QML_XHR_ALLOW_FILE_READ", QByteArray("1"));
@@ -2134,8 +2136,12 @@ void QtQuickAdapter::processWalletAddresses(const std::string& walletId
    const auto lastAddr = addresses.at(addresses.size() - 1);
    logger_->debug("[{}] {} last address: {}", __func__, hdWalletId, lastAddr.address.display());
    addressCache_[lastAddr.address] = hdWalletId;
-   addrModel_->addRow(hdWalletId, { QString::fromStdString(lastAddr.address.display())
-      , QString(), QString::fromStdString(lastAddr.index), assetTypeToString(lastAddr.assetType)});
+
+   QMetaObject::invokeMethod(this, [this, hdWalletId, lastAddr]() {
+      addrModel_->addRow(hdWalletId, { QString::fromStdString(lastAddr.address.display())
+         , QString(), QString::fromStdString(lastAddr.index), assetTypeToString(lastAddr.assetType) });
+   });
+
    generatedAddress_ = lastAddr.address;
    emit addressGenerated();
 }

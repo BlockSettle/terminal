@@ -23,8 +23,7 @@ public:
    int screenWidth() const { return screenWidth_; }
    int screenHeight() const { return screenHeight_; }
 
-private slots:
-   void update();
+   Q_INVOKABLE void update();
 
 signals:
    void changed();

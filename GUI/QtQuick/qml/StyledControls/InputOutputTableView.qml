@@ -35,8 +35,8 @@ CustomTableView {
 
             onEntered: component.selected_row_index = row
             onExited: component.selected_row_index = -1
-            onClicked: component.cellClicked(row, column, tableData)
-            onDoubleClicked: component.cellDoubleClicked(row, column, tableData)
+            onClicked: component.cellClicked(row, column, tableData, mouse)
+            onDoubleClicked: component.cellDoubleClicked(row, column, tableData, mouse)
         }
 
         Item {

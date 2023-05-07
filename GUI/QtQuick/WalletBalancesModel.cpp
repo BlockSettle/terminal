@@ -67,11 +67,11 @@ QVariant WalletBalancesModel::data(const QModelIndex& index, int role) const
 }
 
 QString WalletBalancesModel::getBalance(const std::string& walletId
-   , const FieldFunc& ff) const
+   , const FieldFunc& ff, const QString defaultValue) const
 {
    const auto& itBal = balances_.find(walletId);
    if (itBal == balances_.end()) {
-      return QLatin1String("0.00000000");
+      return defaultValue;
    }
    return ff(itBal->second);
 }
@@ -221,7 +221,7 @@ QString WalletBalancesModel::numberAddresses() const
 {
    if (selectedWallet_ >= 0 && selectedWallet_ < wallets_.size()) {
       return getBalance(wallets_.at(selectedWallet_).walletId
-         , [](const Balance& bal) { return QString::number(bal.nbAddresses); });
+         , [](const Balance& bal) { return QString::number(bal.nbAddresses); }, QString::fromLatin1("0"));
    }
    return tr("-");
 }
