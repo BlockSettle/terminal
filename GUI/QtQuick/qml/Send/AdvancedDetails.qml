@@ -307,7 +307,9 @@ ColumnLayout  {
                         function setup_fee() {
                             if (tx !== null && (isRBF || isCPFP)) {
                                 fee_suggest_combo.currentIndex = feeSuggestions.rowCount - 1
-                                fee_suggest_combo.input_item.text = Qt.binding(function() { return tx.feePerByte * 2 })
+                                fee_suggest_combo.input_item.text = Qt.binding(function() {
+                                    return Math.max(feeSuggestions.fastestFee, tx.feePerByte + 3)
+                                })
                             }
                         }
                     }
@@ -379,7 +381,7 @@ ColumnLayout  {
                                 Button {
                                     id: sel_inputs_button
     
-                                    enabled: !isRBF && !isCPFP
+                                    enabled: true //!isRBF && !isCPFP
     
                                     activeFocusOnTab: false
     

@@ -1491,6 +1491,7 @@ bool QtQuickAdapter::validateAddress(const QString& addr)
    const auto& addrStr = addr.toStdString();
    try {
       const auto& addr = bs::Address::fromAddressString(addrStr);
+      logger_->debug("[{}] type={}", __func__, (int)addr.getType());
       return (addr.getType() != AddressEntryType_Default);
    }
    catch (const std::exception& e) {
@@ -2401,15 +2402,14 @@ void QtQuickAdapter::signAndBroadcast(QTXSignRequest* txReq, const QString& pass
 int QtQuickAdapter::getSearchInputType(const QString& s)
 {
    const auto& trimmed = s.trimmed().toStdString();
-   if (validateAddress(s)) {
-      return 1;
-   }
-
    if (trimmed.length() == 64) { // potential TX hash in hex
       const auto& txId = BinaryData::CreateFromHex(trimmed);
       if (txId.getSize() == 32) {   // valid TXid
          return 2;
       }
+   }
+   if (validateAddress(s)) {
+      return 1;
    }
    return 0;
 }

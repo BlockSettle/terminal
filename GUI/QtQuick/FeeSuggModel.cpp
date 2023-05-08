@@ -54,13 +54,13 @@ QVariant FeeSuggestionModel::data(const QModelIndex& index, int role) const
    switch (role) {
    case TextRole:
       return tr("%1 blocks (%2): %3").arg(data_.at(index.row()).nbBlocks)
-         .arg(data_.at(index.row()).estTime).arg(QString::number(data_.at(index.row()).satoshis, 'f', 1));
+         .arg(data_.at(index.row()).estTime).arg(QString::number(data_.at(index.row()).fpb, 'f', 1));
    case BlocksRole:
       return data_.at(index.row()).nbBlocks;
    case TimeRole:
       return data_.at(index.row()).estTime;
    case ValueRole:
-      return data_.at(index.row()).satoshis;
+      return data_.at(index.row()).fpb;
    default: break;
    }
    return QVariant();
@@ -109,7 +109,7 @@ void FeeSuggestionModel::addRows(const std::map<uint32_t, float>& feeLevels)
       beginInsertRows(QModelIndex(), rowCount(), rowCount() + newRows.size() - 1);
       data_.insert(data_.cend(), newRows.begin(), newRows.end());
       endInsertRows();
-      emit rowCountChanged();
+      emit changed();
       });
 }
 
@@ -119,6 +119,14 @@ void FeeSuggestionModel::clear()
       beginResetModel();
       data_.clear();
       endResetModel();
-      emit rowCountChanged();
+      emit changed();
       });
+}
+
+float FeeSuggestionModel::fastestFee() const
+{
+   if (!data_.empty()) {
+      return data_.at(0).fpb;
+   }
+   return 0.0;
 }
