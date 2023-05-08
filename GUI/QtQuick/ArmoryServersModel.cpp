@@ -190,3 +190,11 @@ bool ArmoryServersModel::isEditable(int row) const
 {
    return !data(index(row), DefaultServerRole).toBool();
 }
+
+QString ArmoryServersModel::currentNetworkName() const
+{
+   if (current_ >= 0 && current_ < data_.size()) {
+      return  data_.at(current_).name;
+   }
+   return QString::fromLatin1("");
+}

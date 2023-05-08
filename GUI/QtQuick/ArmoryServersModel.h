@@ -25,6 +25,7 @@ class ArmoryServersModel: public QAbstractListModel
    Q_PROPERTY(int current     READ current      WRITE setCurrent     NOTIFY currentChanged)
    Q_PROPERTY(int connected   READ connected    NOTIFY connectedChanged)
    Q_PROPERTY(int rowCount    READ rowCount     NOTIFY rowCountChanged)
+   Q_PROPERTY(QString currentNetworkName READ currentNetworkName NOTIFY currentChanged)
 
 public:
    enum TableRoles {
@@ -50,6 +51,8 @@ public:
    QHash<int, QByteArray> roleNames() const override;
 
    bool isEditable(int row) const;
+
+   QString currentNetworkName() const;
 
 signals:
    void changed(const QModelIndex&, const QVariant&);

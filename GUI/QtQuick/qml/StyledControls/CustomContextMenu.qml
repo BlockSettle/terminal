@@ -23,8 +23,9 @@ Menu {
 
     delegate: MenuItem {
         id: menuItem
-        implicitWidth: BSSizes.applyScale(200)
-        implicitHeight: BSSizes.applyScale(40)
+        visible: menuItem.enabled
+        width: BSSizes.applyScale(200)
+        height: menuItem.visible ? BSSizes.applyScale(40) : 0 
 
         contentItem: Text {
             leftPadding: menuItem.indicator.width
@@ -44,8 +45,8 @@ Menu {
         }
 
         background: Rectangle {
-            implicitWidth: BSSizes.applyScale(200)
-            implicitHeight: BSSizes.applyScale(40)
+            width: parent.width - menu.leftPadding - menu.rightPadding
+            height: parent.height
 
             radius: BSSizes.applyScale(14)
             color: menuItem.highlighted ? BSStyle.menuItemHoveredColor : BSStyle.menuItemColor

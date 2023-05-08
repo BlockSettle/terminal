@@ -216,6 +216,7 @@ ColumnLayout  {
                         CustomCheckBox {
                             id: checkbox_rbf
 
+                            focusPolicy: Qt.NoFocus
                             activeFocusOnTab: false
 
                             implicitHeight: BSSizes.applyScale(18)
@@ -707,10 +708,6 @@ ColumnLayout  {
         function click_enter() {
             if (!continue_but.enabled) {
                 return
-            }
-            if (!fee_suggest_combo.edit_value())
-            {
-                fee_suggest_combo.input_text = fee_suggest_combo.currentText
             }
 
             if (tempRequest && tempRequest.isWatchingOnly)

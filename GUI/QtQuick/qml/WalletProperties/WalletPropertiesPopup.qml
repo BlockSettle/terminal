@@ -434,6 +434,8 @@ CustomPopup {
         id: messageDialog
         details_text: qsTr("Rescan successful")
         visible: false
+
+        onSig_finish: root.close_click()
     }
 
     Connections {

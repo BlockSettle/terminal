@@ -12,6 +12,7 @@ import QtQuick 2.12
 import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.12
 import QtQml.Models 2
+import terminal.models 1.0
 
 import "StyledControls"
 import "BsStyles"
@@ -234,9 +235,8 @@ Item {
                         columnWidths: [0.0, 0.7, 0.2, 0.1]
                         onCopyRequested: bsApp.copyAddressToClipboard(id)
 
-                        // TODO: change constant 259 with C++ defined enum
                         onCellClicked: (row, column, data) => {
-                            var address = model.data(model.index(row, 0), 259)
+                            var address = model.data(model.index(row, 1), TxInOutModel.TableDataRole)
                             requestPageChange(address)
                         }
                     }
@@ -282,9 +282,8 @@ Item {
                         columnWidths: [0.0, 0.7, 0.2, 0.1]
                         onCopyRequested: bsApp.copyAddressToClipboard(id)
 
-                        // TODO: change constant 257 with C++ defined enum
                         onCellClicked: (row, column, data) => {
-                            var address = model.data(model.index(row, 1), 257)
+                            var address = model.data(model.index(row, 1), TxInOutModel.TableDataRole)
                             requestPageChange(address)
                         }
                     }
