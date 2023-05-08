@@ -227,7 +227,6 @@ ApplicationWindow {
             Rectangle {
                 color: hoverArea.containsMouse ? BSStyle.buttonsHoveredColor : "transparent"
                 width: BSSizes.applyScale(120)
-                Layout.rightMargin: BSSizes.applyScale(10)
                 Layout.fillHeight: true
 
                 RowLayout {
@@ -254,6 +253,7 @@ ApplicationWindow {
                         id: animatedConnectionStateArea
                         width: BSSizes.applyScale(16)
                         height: BSSizes.applyScale(16)
+                        Layout.rightMargin: BSSizes.applyScale(10)
                         color: "transparent"
 
                         Image {
