@@ -123,6 +123,6 @@ CustomPopup {
 
     function updateServersModel()
     {
-        root.armoryServersModel = bsApp.getArmoryServers()
+        root.armoryServersModel = bsApp.armoryServersModel
     }
 }
