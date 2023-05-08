@@ -144,6 +144,9 @@ public:
    Q_PROPERTY(qtquick_gui::WalletPropertiesVM* walletProperitesVM READ walletProperitesVM CONSTANT)
    qtquick_gui::WalletPropertiesVM* walletProperitesVM() const;
 
+   Q_PROPERTY(ArmoryServersModel* armoryServersModel READ armoryServersModel CONSTANT)
+   ArmoryServersModel* armoryServersModel() const { return armoryServersModel_; }
+
    // QML-invokable methods
    Q_INVOKABLE QStringList newSeedPhrase();
    Q_INVOKABLE QStringList completeBIP39dic(const QString& prefix);
@@ -162,10 +165,10 @@ public:
    Q_INVOKABLE void copyAddressToClipboard(const QString& addr);
    Q_INVOKABLE QString pasteTextFromClipboard();
    Q_INVOKABLE bool validateAddress(const QString& addr);
-   Q_INVOKABLE ArmoryServersModel* getArmoryServers();
-   Q_INVOKABLE bool addArmoryServer(ArmoryServersModel*, const QString& name
+   Q_INVOKABLE void updateArmoryServers();
+   Q_INVOKABLE bool addArmoryServer(const QString& name
       , int netType, const QString& ipAddr, const QString& ipPort, const QString& key = {});
-   Q_INVOKABLE bool delArmoryServer(ArmoryServersModel*, int idx);
+   Q_INVOKABLE bool delArmoryServer(int idx);
 
    Q_INVOKABLE void requestFeeSuggestions();
    Q_INVOKABLE QTXSignRequest* newTXSignRequest(int walletIndex, const QStringList& recvAddrs
@@ -327,6 +330,7 @@ private:
    HwDeviceModel* hwDeviceModel_{ nullptr };
    WalletBalancesModel* walletBalances_{ nullptr };
    FeeSuggestionModel* feeSuggModel_{ nullptr };
+   ArmoryServersModel* armoryServersModel_{ nullptr };
    std::unique_ptr<qtquick_gui::WalletPropertiesVM> walletPropertiesModel_;
    bs::Address generatedAddress_;
    bool hwDevicesPolling_{ false };
@@ -346,7 +350,6 @@ private:
    std::set<bs::message::SeqId>  expTxAddrReqs_, expTxAddrInReqs_;
    std::map<bs::Address, std::string>  addressCache_;
    std::set<BinaryData> rmTxOnInvalidation_;
-   std::map<bs::message::SeqId, ArmoryServersModel*>  armoryServersReq_;
 
    int nWalletsLoaded_ {-1};
    std::shared_ptr<SettingsController> settingsController_;

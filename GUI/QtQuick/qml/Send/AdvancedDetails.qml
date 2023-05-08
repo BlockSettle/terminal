@@ -756,7 +756,8 @@ ColumnLayout  {
             if (!isRBF && !isCPFP/* && tx.selectedInputsModel.rowCount > 1*/) {
                 tempRequest = bsApp.newTXSignRequest(from_wallet_combo.currentIndex
                             , outputAddresses, outputAmounts,
-                            (fpb > 0) ? fpb : 1.0)
+                            (fpb > 0) ? fpb : 1.0, comment_input.input_text
+                            , checkbox_rbf.checked, tx.inputsModel.getSelection())
             }
             else {
                 tempRequest = bsApp.newTXSignRequest(-1

@@ -166,7 +166,7 @@ ColumnLayout  {
             var port = parseInt(port_text_input.input_text)
             var db_key = db_key_text_input.input_text
 
-            bsApp.addArmoryServer(armoryServersModel, name, networkType, ip_dns, port, db_key)
+            bsApp.addArmoryServer(name, networkType, ip_dns, port, db_key)
 
             clear()
 

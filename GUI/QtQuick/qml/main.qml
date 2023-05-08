@@ -38,7 +38,7 @@ ApplicationWindow {
     property var currentDialog: ({})
     property bool isNoWalletsWizard: false
     readonly property int resizeAnimationDuration: 25
-    property var armoryServers: bsApp.getArmoryServers()
+    property var armoryServers: bsApp.armoryServersModel
 
     onXChanged: scaleController.update()
     onYChanged: scaleController.update()
@@ -163,7 +163,6 @@ ApplicationWindow {
         running: false
         repeat: false
         onTriggered: {
-            bsApp.getArmoryServers()
             show_popup(create_wallet)
         }
     }
@@ -227,11 +226,12 @@ ApplicationWindow {
 
             Rectangle {
                 color: hoverArea.containsMouse ? BSStyle.buttonsHoveredColor : "transparent"
-                width: BSSizes.applyScale(166)
+                width: BSSizes.applyScale(120)
                 Layout.fillHeight: true
 
                 RowLayout {
-                    anchors.centerIn: parent
+                    id: innerStatusLayout
+                    anchors.fill: parent
                     spacing: BSSizes.applyScale(5)
 
                     Item {
@@ -253,6 +253,7 @@ ApplicationWindow {
                         id: animatedConnectionStateArea
                         width: BSSizes.applyScale(16)
                         height: BSSizes.applyScale(16)
+                        Layout.rightMargin: BSSizes.applyScale(10)
                         color: "transparent"
 
                         Image {
@@ -281,7 +282,6 @@ ApplicationWindow {
                                 else if (!connectionAnimation.running) {
                                     connectionAnimation.start()
                                 }
-                                armoryServers = bsApp.getArmoryServers()
                             }
                         }
                     }
