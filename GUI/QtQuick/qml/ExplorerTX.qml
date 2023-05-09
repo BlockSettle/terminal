@@ -235,7 +235,7 @@ Item {
                         columnWidths: [0.0, 0.7, 0.2, 0.1]
                         onCopyRequested: bsApp.copyAddressToClipboard(id)
 
-                        onCellClicked: (row, column, data) => {
+                        onCellClicked: (row, column, data, mouse) => {
                             var address = model.data(model.index(row, 1), TxInOutModel.TableDataRole)
                             requestPageChange(address)
                         }
@@ -282,7 +282,7 @@ Item {
                         columnWidths: [0.0, 0.7, 0.2, 0.1]
                         onCopyRequested: bsApp.copyAddressToClipboard(id)
 
-                        onCellClicked: (row, column, data) => {
+                        onCellClicked: (row, column, data, mouse) => {
                             var address = model.data(model.index(row, 1), TxInOutModel.TableDataRole)
                             requestPageChange(address)
                         }
