@@ -409,24 +409,17 @@ void QtQuickAdapter::onArmoryServerSelected(int index)
       return;
    }
    armoryServerIndex_ = index;
-   armoryState_ = 0;
+   armoryState_ = 1;
    emit armoryStateChanged();
 
-   const auto newNetType = armoryServersModel_->data(index).netType;
-   if (netType_ != newNetType) {
-      if (txModel_) {
-         txModel_->clear();
-      }
-      netType_ = newNetType;
-      emit networkTypeChanged();
+   if (txModel_) {
+      txModel_->clear();
    }
    
    logger_->debug("[{}] #{}", __func__, index);
    SettingsMessage msg;
    msg.set_set_armory_server(index);
    pushRequest(user_, userSettings_, msg.SerializeAsString());
-
-   updateArmoryServers();
 }
 
 ProcessingResult QtQuickAdapter::processSettings(const Envelope &env)
@@ -1540,7 +1533,6 @@ bool QtQuickAdapter::delArmoryServer(int idx)
    msg.set_del_armory_server(idx);
    pushRequest(user_, userSettings_, msg.SerializeAsString());
    armoryServersModel_->del(idx);
-   updateArmoryServers();
    return true;
 }
 
@@ -1583,8 +1575,6 @@ void QtQuickAdapter::onArmoryServerChanged(const QModelIndex& index, const QVari
    msgSrv->set_server_key(srv.armoryDBKey.toStdString());
    msgSrv->set_network_type((int)srv.netType);
    pushRequest(user_, userSettings_, msg.SerializeAsString());
-
-   updateArmoryServers();
 }
 
 void QtQuickAdapter::requestFeeSuggestions()
