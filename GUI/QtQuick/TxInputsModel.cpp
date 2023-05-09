@@ -110,6 +110,7 @@ void TxInputsModel::clear()
    preSelected_.clear();
    selectedBalance_ = 0;
    nbTx_ = 0;
+   fixedEntries_.clear();
    endResetModel();
    emit selectionChanged();
    emit rowCountChanged();
@@ -160,6 +161,25 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
    });
 }
 
+int TxInputsModel::setFixedUTXOs(const std::vector<UTXO>& utxos)
+{
+   int nbTX = 0;
+   for (const auto& utxo : utxos) {
+      for (const auto& entry : fixedEntries_) {
+         if ((entry.txId == utxo.getTxHash()) && (entry.txOutIndex == utxo.getTxOutIndex())) {
+            selectionUtxos_.insert({ utxo.getTxHash(), utxo.getTxOutIndex() });
+            selectedBalance_ += utxo.getValue();
+            nbTX++;
+         }
+      }
+   }
+   nbTx_ += nbTX;
+   emit selectionChanged();
+   emit dataChanged(createIndex(0, 0), createIndex(fixedEntries_.size() - 1, 0), {SelectedRole});
+   logger_->debug("[{}] nbTX: {}, balance: {}", __func__, nbTx_, selectedBalance_);
+   return nbTX;
+}
+
 void TxInputsModel::addEntries(const std::vector<Entry>& entries)
 {
    if (entries.empty()) {
@@ -171,9 +191,30 @@ void TxInputsModel::addEntries(const std::vector<Entry>& entries)
    emit rowCountChanged();
 }
 
+void TxInputsModel::setFixedInputs(const std::vector<Entry>& entries)
+{
+   if (entries.empty()) {
+      return;
+   }
+   logger_->debug("[{}] {} entries", __func__, entries.size());
+   if (!fixedEntries_.empty()) {
+      beginRemoveRows(QModelIndex(), 0, fixedEntries_.size() - 1);
+      data_.erase(data_.cbegin(), data_.cbegin() + fixedEntries_.size());
+      endRemoveRows();
+   }
+   fixedEntries_ = entries;
+   beginInsertRows(QModelIndex(), 0, entries.size() - 1);
+   data_.insert(data_.cbegin(), entries.cbegin(), entries.cend());
+   endInsertRows();
+   emit rowCountChanged();
+}
+
 void TxInputsModel::toggle(int row)
 {
    --row;
+   if (row < fixedEntries_.size()) {
+      return;
+   }
    auto& entry = data_[row];
    if (!entry.txId.empty()) {
       return;
@@ -228,6 +269,9 @@ void TxInputsModel::toggleSelection(int row)
       }
       else {
          for (int iRow = 1;  iRow < rowCount(); iRow ++) {
+            if (iRow <= fixedEntries_.size()) {
+               continue;
+            }
             const auto& entry = data_.at(iRow-1);
             if (entry.txId.empty()) {
                selectionAddresses_.insert(entry.address);

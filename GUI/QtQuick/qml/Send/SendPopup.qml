@@ -172,7 +172,7 @@ CustomPopup {
     function open(txId: string, isRBF: bool, isCPFP: bool)
     {
         _stack_view.replace(advanced_details)
-        root.tx = bsApp.getTXDetails(txId)
+        root.tx = bsApp.getTXDetails(txId, isRBF, isCPFP)
         root.isRBF = isRBF
         root.isCPFP = isCPFP
         advanced_details.init()

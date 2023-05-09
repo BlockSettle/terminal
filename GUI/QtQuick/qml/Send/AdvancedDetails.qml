@@ -308,7 +308,8 @@ ColumnLayout  {
                             if (tx !== null && (isRBF || isCPFP)) {
                                 fee_suggest_combo.currentIndex = feeSuggestions.rowCount - 1
                                 fee_suggest_combo.input_item.text = Qt.binding(function() {
-                                    return Math.max(feeSuggestions.fastestFee, tx.feePerByte + 3)
+                                    var fpb = parseFloat(tx.feePerByte) + 3.0
+                                    return Math.max(feeSuggestions.fastestFee, fpb)
                                 })
                             }
                         }
@@ -345,7 +346,7 @@ ColumnLayout  {
                         Layout.rightMargin: BSSizes.applyScale(16)
                         Layout.preferredHeight: BSSizes.applyScale(300)
     
-                        model: isRBF ? tx.inputsModel : isCPFP ? tx.ownOutputs : tx.selectedInputsModel
+                        model: tx.selectedInputsModel
                         columnWidths: [0.7, 0.1, 0, 0.2]
     
                         copy_button_column_index: -1
@@ -381,7 +382,7 @@ ColumnLayout  {
                                 Button {
                                     id: sel_inputs_button
     
-                                    enabled: true //!isRBF && !isCPFP
+                                    enabled: true
     
                                     activeFocusOnTab: false
     
@@ -493,6 +494,11 @@ ColumnLayout  {
                         height: BSSizes.applyScale(70)
 
                         wallets_current_index: from_wallet_combo.currentIndex
+
+                        onTextChanged: {
+                            console.log("recv address changed")
+                            create_temp_request()
+                        }
 
                         onEnterPressed: {
                             if (!processEnterKey()) {
@@ -620,7 +626,7 @@ ColumnLayout  {
                         Layout.leftMargin: BSSizes.applyScale(16)
                         Layout.rightMargin: BSSizes.applyScale(16)
     
-                        model: tx.outputsModel //txOutputsModel
+                        model: tx.outputsModel
                         columnWidths: [0.544, 0.2, 0.20, 0.056]
     
                         copy_button_column_index: -1
@@ -631,12 +637,12 @@ ColumnLayout  {
                         {
                             //txOutputsModel.delOutput(row)
                             model.delOutput(row)
-                            if (model.rowCount <= 1 && !isRBF && !isCPFP) {
+                            /*if (model.rowCount <= 1 && !isRBF && !isCPFP) {
                                 tx.inputsModel.clearSelection()
                             }
                             else if (model.rowCount > 1 && !isRBF && !isCPFP) {
                                 tx.inputsModel.updateAutoselection()
-                            }
+                            }*/
                         }
     
                         function get_text_left_padding(row, column)
@@ -681,29 +687,18 @@ ColumnLayout  {
         text: (tempRequest !== null && tempRequest.isWatchingOnly) ? qsTr("Export transaction") : qsTr("Continue")
 
         function prepare_transaction() {
-            var fee = /*tempRequest ? tempRequest.fee :*/ parseFloat(fee_suggest_combo.edit_value())
-            console.log("fee: " + fee)
+            var fpb = parseFloat(fee_suggest_combo.edit_value())
             if (isRBF) {
                 return bsApp.createTXSignRequest(-1   //special index for RBF mode
-                    , tx, fee, comment_input.input_text
-                    , checkbox_rbf.checked, tx.inputsModel.zcInputs())
+                    , tx, fpb, comment_input.input_text, checkbox_rbf.checked)
             }
             else if (isCPFP) {
                 return bsApp.createTXSignRequest(-2   //special index for CPFP mode
-                    , tx, fee, comment_input.input_text
-                    , checkbox_rbf.checked, tx.ownOutputs.zcInputs())
+                    , tx, fpb, comment_input.input_text, checkbox_rbf.checked)
             }
             else {  // normal operation
-                if (table_sel_inputs.model.rowCount) {
-                    return bsApp.createTXSignRequest(from_wallet_combo.currentIndex
-                        , tx, parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text
-                        , checkbox_rbf.checked, tx.inputsModel.getSelection())
-                }
-                else {
-                    return bsApp.createTXSignRequest(from_wallet_combo.currentIndex
-                        , tx.outputsModel.getOutputAddresses(), tx.outputsModel.getOutputAmounts()
-                        , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text)
-                }
+                return bsApp.createTXSignRequest(from_wallet_combo.currentIndex
+                    , tx, fpb, comment_input.input_text, checkbox_rbf.checked)
             }
         }
 
@@ -755,16 +750,17 @@ ColumnLayout  {
             }
             var outputAmounts = tx.outputsModel.getOutputAmounts()
 
-            if (!isRBF && !isCPFP/* && tx.selectedInputsModel.rowCount > 1*/) {
+            if (!isRBF && !isCPFP) {
                 tempRequest = bsApp.newTXSignRequest(from_wallet_combo.currentIndex
                             , outputAddresses, outputAmounts,
                             (fpb > 0) ? fpb : 1.0, comment_input.input_text
-                            , checkbox_rbf.checked, tx.inputsModel.getSelection())
+                            , checkbox_rbf.checked
+                            , (tx.selectedInputsModel.rowCount > 1) ? tx.inputsModel.getSelection() : null)
             }
             else {
-                tempRequest = bsApp.newTXSignRequest(-1
+                tempRequest = bsApp.newTXSignRequest(from_wallet_combo.currentIndex
                             , outputAddresses, outputAmounts, (fpb > 0) ? fpb : 1.0
-                            , "", true, table_sel_inputs.model.zcInputs())
+                            , "", true, tx.inputsModel.getSelection())
             }
         }
     }
@@ -804,15 +800,17 @@ ColumnLayout  {
         checkbox_rbf.checked = true
         
         tx.outputsModel.clearOutputs()
-        if (!isRBF && !isCPFP) {
-            bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex, tx)
-        }
-        else {
+        bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex, tx)
+        bsApp.requestFeeSuggestions()
+
+        if (isRBF || isCPFP) {
             create_temp_request()
             if (isRBF) {
                 tx.outputsModel.setOutputsFrom(tx)
             }
+            else if (isCPFP) {
+                tx.setInputsFromOutputs()
+            }
         }
-        bsApp.requestFeeSuggestions()
     }
 }

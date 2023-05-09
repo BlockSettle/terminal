@@ -84,6 +84,7 @@ public:
 
    void clear();
    void addUTXOs(const std::vector<UTXO>&);
+   int setFixedUTXOs(const std::vector<UTXO>&);
    void setTopBlock(uint32_t topBlock) { topBlock_ = topBlock; }
 
    struct Entry {
@@ -94,6 +95,7 @@ public:
       bool  expanded{ false };
    };
    void addEntries(const std::vector<Entry>&);
+   void setFixedInputs(const std::vector<Entry>&);
 
    Q_PROPERTY(int nbTx READ nbTx NOTIFY selectionChanged)
    int nbTx() const { return nbTx_; }
@@ -130,6 +132,7 @@ private:
    std::map<bs::Address, std::vector<UTXO>>  utxos_;
 
    std::vector<Entry>   data_;
+   std::vector<Entry>   fixedEntries_;
    std::set<std::pair<BinaryData, uint32_t>> selectionUtxos_;
    std::set<bs::Address> selectionAddresses_;
    bool selectionRoot_ {false};

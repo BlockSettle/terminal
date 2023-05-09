@@ -659,7 +659,6 @@ QTxDetails::QTxDetails(const std::shared_ptr<spdlog::logger>& logger, const Bina
    inputsModel_ = new TxInputsModel(logger_, outputsModel_, this);
    selInputsModel_ = new TxInputsSelectedModel(this);
    selInputsModel_->setSourceModel(inputsModel_);
-   ownOutputs_ = new TxInputsModel(logger_, outputsModel_, this);
    inputs_ = new TxInOutModel(tr("Input"), this);
    outputs_ = new TxInOutModel(tr("Output"), this);
 }
@@ -670,32 +669,83 @@ void QTxDetails::setDetails(const bs::sync::TXWalletDetails& details)
    if (details.changeAddress.address.isValid()) {
       details_.outputAddresses.push_back(details.changeAddress);
    }
-   for (const auto& entry : details_.outputAddresses) {
-      logger_->debug("[{}] out: {} {}", __func__, entry.address.display(), entry.value);
-   }
    inputs_->setData(details_.inputAddresses);
    outputs_->setData(details_.outputAddresses);
    outputsModel_->clearOutputs();
    inputsModel_->clear();
-   ownOutputs_->clear();
-   for (const auto& out : details.outputAddresses) {
-      outputsModel_->addOutput(QString::fromStdString(out.address.display())
-         , out.value / BTCNumericTypes::BalanceDivider);
+   if (!needInputsFromOutputs_) {
+      for (const auto& out : details.outputAddresses) {
+         outputsModel_->addOutput(QString::fromStdString(out.address.display())
+            , out.value / BTCNumericTypes::BalanceDivider);
+      }
    }
-   std::vector<TxInputsModel::Entry> inputs;
-   inputs.reserve(details.inputAddresses.size());
+   ins_.clear();
+   ins_.reserve(details.inputAddresses.size());
    for (const auto& in : details.inputAddresses) {
-      inputs.push_back({ in.address, in.outHash, in.outIndex, in.value });
+      logger_->debug("[{}] in: {} {}@{} = {}", __func__, in.address.display()
+         , in.outHash.toHexStr(true), in.outIndex, in.value);
+      ins_.push_back({ in.address, in.outHash, in.outIndex, in.value });
    }
+   if (!fixedInputs_.empty()) {
+      setImmutableUTXOs(fixedInputs_);
+      fixedInputs_.clear();
+   }
+
    outs_.clear();
-   outs_.reserve(details.inputAddresses.size());
+   outs_.reserve(details.outputAddresses.size());
    const auto& txId = details_.tx.isInitialized() ? details_.tx.getThisHash() : BinaryData{};
    for (const auto& out : details.outputAddresses) {
       outs_.push_back({ out.address, txId, out.outIndex, out.value });
    }
-   inputsModel_->addEntries(inputs);
-   ownOutputs_->addEntries(outs_);
+   if (needInputsFromOutputs_) {
+      setInputsFromOutputs();
+   }
+   else {
+      inputsModel_->addEntries(ins_);
+   }
    emit updated();
+}
+
+void QTxDetails::setImmutableUTXOs(const std::vector<UTXO>& utxos)
+{
+   if (ins_.empty()) {
+      fixedInputs_ = utxos;
+      return;
+   }
+   logger_->debug("[{}] {}", __func__, utxos.size());
+   inputsModel_->setFixedInputs(ins_);
+   if (!inputsModel_->setFixedUTXOs(utxos)) {
+      fixedInputs_ = utxos;
+   }
+}
+
+void QTxDetails::setInputsFromOutputs()
+{
+   if (outs_.empty()) {
+      logger_->info("[{}] no outputs received [yet]");
+      needInputsFromOutputs_ = true;
+      return;
+   }
+   decltype(outs_) outs;
+   outs.reserve(details_.outputAddresses.size());
+   const auto& txId = details_.tx.isInitialized() ? details_.tx.getThisHash() : BinaryData{};
+   for (const auto& out : details_.outputAddresses) {
+      outs.push_back({ out.address, txId, out.outIndex, out.value });
+   }
+
+   logger_->debug("[{}] {} outs", __func__, outs.size());
+   for (const auto& out : outs) {
+      logger_->debug("[{}] {} {}@{} = {}", __func__, out.address.display()
+         , out.txId.toHexStr(true), out.txOutIndex, out.amount);
+   }
+   inputsModel_->setFixedInputs(outs);
+   ins_ = std::move(outs);
+   needInputsFromOutputs_ = false;
+
+   if (!fixedInputs_.empty()) {
+      setImmutableUTXOs(fixedInputs_);
+      fixedInputs_.clear();
+   }
 }
 
 std::vector<std::pair<bs::Address, double>> QTxDetails::outputData() const
@@ -713,9 +763,6 @@ void QTxDetails::onTopBlock(quint32 curBlock)
       curBlock_ = curBlock;
       if (inputsModel_) {
          inputsModel_->setTopBlock(curBlock);
-      }
-      if (ownOutputs_) {
-         ownOutputs_->setTopBlock(curBlock);
       }
       QMetaObject::invokeMethod(this, [this] {
          emit newBlock();

@@ -179,7 +179,7 @@ public:
    Q_INVOKABLE void signAndBroadcast(QTXSignRequest*, const QString& password);
    Q_INVOKABLE int getSearchInputType(const QString&);
    Q_INVOKABLE void startAddressSearch(const QString&);
-   Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash);
+   Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash, bool rbf = false, bool cpfp = false);
    Q_INVOKABLE int changePassword(const QString& walletId, const QString& oldPassword, const QString& newPassword);
    Q_INVOKABLE bool isWalletNameExist(const QString& walletName);
    Q_INVOKABLE bool isWalletPasswordValid(const QString& walletId, const QString& password);

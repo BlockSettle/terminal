@@ -181,6 +181,8 @@ public:
    ~QTxDetails() override = default;
 
    void setDetails(const bs::sync::TXWalletDetails&);
+   void setImmutableUTXOs(const std::vector<UTXO>&);
+   Q_INVOKABLE void setInputsFromOutputs();
 
    Q_PROPERTY(QString txId READ txId NOTIFY updated)
    QString txId() const { return QString::fromStdString(txHash_.toHexStr(true)); }
@@ -213,8 +215,6 @@ public:
    TxInputsModel* inputsModel() const { return inputsModel_; }
    Q_PROPERTY(TxInputsSelectedModel* selectedInputsModel READ selInputsModel CONSTANT)
    TxInputsSelectedModel* selInputsModel() const { return selInputsModel_; }
-   Q_PROPERTY(TxInputsModel* ownOutputs READ ownOutputs CONSTANT)
-   TxInputsModel* ownOutputs() const { return ownOutputs_; }
    Q_PROPERTY(TxOutputsModel* outputsModel READ outputsModel CONSTANT)
    TxOutputsModel* outputsModel() const { return outputsModel_; }
    std::vector<std::pair<bs::Address, double>> outputData() const;
@@ -236,10 +236,11 @@ private:
    TxInOutModel* outputs_{ nullptr };
    TxInputsModel* inputsModel_{ nullptr };
    TxInputsSelectedModel* selInputsModel_{ nullptr };
-   TxInputsModel* ownOutputs_{ nullptr };
    TxOutputsModel* outputsModel_{ nullptr };
-   std::vector<TxInputsModel::Entry> outs_;
+   std::vector<TxInputsModel::Entry> ins_, outs_;
    uint32_t curBlock_{ 0 };
+   bool  needInputsFromOutputs_{ false };
+   std::vector<UTXO> fixedInputs_;
 };
 
 #endif	// TX_LIST_MODEL_H

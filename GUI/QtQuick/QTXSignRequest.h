@@ -38,7 +38,6 @@ public:
    void setError(const QString&);
    void addInput(const QUTXO::Input& input) { inputs_.push_back(input); }
    std::vector<QUTXO::Input> inputs() const { return inputs_; }
-   void setInputs(const std::vector<UTXO>&);
 
    void setHWW(bool hww)
    {
@@ -95,6 +94,9 @@ signals:
    void hwwChanged();
    void hwwReady();
    void errorSet();
+
+private:
+   void setInputs(const std::vector<UTXO>&);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
