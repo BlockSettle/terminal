@@ -118,6 +118,7 @@ Column {
                 property bool model_selected: (typeof selected !== "undefined") ? selected : ({})
                 property bool model_expanded: (typeof expanded !== "undefined") ? expanded : ({})
                 property bool model_is_expandable: (typeof is_expandable !== "undefined") ? is_expandable : ({})
+                property bool model_is_editable: (typeof is_editable !== "undefined") ? is_editable : ({})
 
                 function get_text_left_padding(row, column, isExpandable)
                 {

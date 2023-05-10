@@ -24,7 +24,8 @@ namespace {
       {TxInputsModel::ColorRole, "dataColor"},
       {TxInputsModel::SelectedRole, "selected"},
       {TxInputsModel::ExpandedRole, "expanded"},
-      {TxInputsModel::CanBeExpandedRole, "is_expandable"}
+      {TxInputsModel::CanBeExpandedRole, "is_expandable"},
+      {TxInputsModel::EditableRole, "is_editable"}
    };
 }
 
@@ -73,6 +74,8 @@ QVariant TxInputsModel::data(const QModelIndex& index, int role) const
       return (index.row() > 0 && index.column() == 0) ? data_[index.row() - 1].txId.empty() : false;
    case ColorRole:
       return dataColor(index.row(), index.column());
+   case EditableRole: 
+      return !isFixedInput(index.row());
    default: break;
    }
    return QVariant();
@@ -166,11 +169,9 @@ int TxInputsModel::setFixedUTXOs(const std::vector<UTXO>& utxos)
    int nbTX = 0;
    for (const auto& utxo : utxos) {
       for (const auto& entry : fixedEntries_) {
-         if ((entry.txId == utxo.getTxHash()) && (entry.txOutIndex == utxo.getTxOutIndex())) {
-            selectionUtxos_.insert({ utxo.getTxHash(), utxo.getTxOutIndex() });
-            selectedBalance_ += utxo.getValue();
-            nbTX++;
-         }
+         selectionUtxos_.insert({ utxo.getTxHash(), utxo.getTxOutIndex() });
+         selectedBalance_ += utxo.getValue();
+         nbTX++;
       }
    }
    nbTx_ += nbTX;
@@ -517,7 +518,7 @@ QVariant TxInputsModel::getData(int row, int col) const
          return QString::fromStdString(entry.address.display());
       }
    case ColumnTx:
-      if (itUTXOs == utxos_.end()) {
+      if (itUTXOs == utxos_.end() || isFixedInput(row)) {
          return QString::number(1);
       }
       else {
@@ -557,4 +558,16 @@ void TxInputsModel::clearSelection()
     selectedBalance_ = 0.0f;
     emit selectionChanged();
     emit dataChanged(createIndex(0, 0), createIndex(rowCount() - 1, 0), { SelectedRole });
+}
+
+bool TxInputsModel::isFixedInput(int row) const
+{
+   if (row == 0) {
+      return true;
+   }
+   auto right = data_[row - 1];
+   return std::find_if(fixedEntries_.begin(), fixedEntries_.end(), [this, right](const auto& value)
+   {
+      return right.address == value.address && right.txId == value.txId && right.txOutIndex == value.txOutIndex;
+   }) != fixedEntries_.end();
 }

@@ -72,7 +72,7 @@ class TxInputsModel : public QAbstractTableModel
 
 public:
    enum TableRoles { TableDataRole = Qt::UserRole + 1, HeadingRole, ColorRole,
-                     SelectedRole, ExpandedRole, CanBeExpandedRole };
+                     SelectedRole, ExpandedRole, CanBeExpandedRole, EditableRole };
    TxInputsModel(const std::shared_ptr<spdlog::logger>&, TxOutputsModel*
       , QObject* parent = nullptr);
 
@@ -122,6 +122,7 @@ private:
    QVariant getData(int row, int col) const;
    QColor dataColor(int row, int col) const;
    QList<QUTXO*> collectUTXOsFor(double amount);
+   bool isFixedInput(int row) const;
 
 private:
    enum Columns {ColumnAddress, ColumnTx, ColumnComment, ColumnBalance};
