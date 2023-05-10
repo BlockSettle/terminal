@@ -71,6 +71,7 @@ ColumnLayout  {
 
                     CustomCheckBox {
                         id: checkbox_address
+                        enabled: model_is_editable
 
                         anchors.left: parent.left
                         anchors.leftMargin: inputs_table.get_text_left_padding(model_row, model_column, model_is_expandable)

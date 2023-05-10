@@ -24,7 +24,8 @@ namespace {
       {TxInputsModel::ColorRole, "dataColor"},
       {TxInputsModel::SelectedRole, "selected"},
       {TxInputsModel::ExpandedRole, "expanded"},
-      {TxInputsModel::CanBeExpandedRole, "is_expandable"}
+      {TxInputsModel::CanBeExpandedRole, "is_expandable"},
+      {TxInputsModel::EditableRole, "is_editable"}
    };
 }
 
@@ -73,6 +74,8 @@ QVariant TxInputsModel::data(const QModelIndex& index, int role) const
       return (index.row() > 0 && index.column() == 0) ? data_[index.row() - 1].txId.empty() : false;
    case ColorRole:
       return dataColor(index.row(), index.column());
+   case EditableRole: 
+      return isInputSelectable(index.row());
    default: break;
    }
    return QVariant();
@@ -517,7 +520,7 @@ QVariant TxInputsModel::getData(int row, int col) const
          return QString::fromStdString(entry.address.display());
       }
    case ColumnTx:
-      if (itUTXOs == utxos_.end()) {
+      if (itUTXOs == utxos_.end() || !isInputSelectable(row)) {
          return QString::number(1);
       }
       else {
@@ -557,4 +560,16 @@ void TxInputsModel::clearSelection()
     selectedBalance_ = 0.0f;
     emit selectionChanged();
     emit dataChanged(createIndex(0, 0), createIndex(rowCount() - 1, 0), { SelectedRole });
+}
+
+bool TxInputsModel::isInputSelectable(int row) const
+{
+   if (row == 0) {
+      return true;
+   }
+   if (row > 0 && row <= fixedEntries_.size()) {
+      return false;
+   }
+
+   return true;
 }
