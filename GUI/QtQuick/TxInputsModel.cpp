@@ -75,7 +75,7 @@ QVariant TxInputsModel::data(const QModelIndex& index, int role) const
    case ColorRole:
       return dataColor(index.row(), index.column());
    case EditableRole: 
-      return !isFixedInput(index.row());
+      return isInputSelectable(index.row());
    default: break;
    }
    return QVariant();
@@ -169,9 +169,11 @@ int TxInputsModel::setFixedUTXOs(const std::vector<UTXO>& utxos)
    int nbTX = 0;
    for (const auto& utxo : utxos) {
       for (const auto& entry : fixedEntries_) {
-         selectionUtxos_.insert({ utxo.getTxHash(), utxo.getTxOutIndex() });
-         selectedBalance_ += utxo.getValue();
-         nbTX++;
+         if ((entry.txId == utxo.getTxHash()) && (entry.txOutIndex == utxo.getTxOutIndex())) {
+            selectionUtxos_.insert({ utxo.getTxHash(), utxo.getTxOutIndex() });
+            selectedBalance_ += utxo.getValue();
+            nbTX++;
+         }
       }
    }
    nbTx_ += nbTX;
@@ -518,7 +520,7 @@ QVariant TxInputsModel::getData(int row, int col) const
          return QString::fromStdString(entry.address.display());
       }
    case ColumnTx:
-      if (itUTXOs == utxos_.end() || isFixedInput(row)) {
+      if (itUTXOs == utxos_.end() || !isInputSelectable(row)) {
          return QString::number(1);
       }
       else {
@@ -560,14 +562,14 @@ void TxInputsModel::clearSelection()
     emit dataChanged(createIndex(0, 0), createIndex(rowCount() - 1, 0), { SelectedRole });
 }
 
-bool TxInputsModel::isFixedInput(int row) const
+bool TxInputsModel::isInputSelectable(int row) const
 {
    if (row == 0) {
       return true;
    }
-   auto right = data_[row - 1];
-   return std::find_if(fixedEntries_.begin(), fixedEntries_.end(), [this, right](const auto& value)
-   {
-      return right.address == value.address && right.txId == value.txId && right.txOutIndex == value.txOutIndex;
-   }) != fixedEntries_.end();
+   if (row > 0 && row <= fixedEntries_.size()) {
+      return false;
+   }
+
+   return true;
 }

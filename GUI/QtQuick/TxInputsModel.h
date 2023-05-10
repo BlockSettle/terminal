@@ -122,7 +122,7 @@ private:
    QVariant getData(int row, int col) const;
    QColor dataColor(int row, int col) const;
    QList<QUTXO*> collectUTXOsFor(double amount);
-   bool isFixedInput(int row) const;
+   bool isInputSelectable(int row) const;
 
 private:
    enum Columns {ColumnAddress, ColumnTx, ColumnComment, ColumnBalance};
