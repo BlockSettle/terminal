@@ -117,6 +117,8 @@ ColumnLayout  {
             armoryServersModel.setData(armoryServersModel.index(server_index, 0)
                                        , name_text_input.input_text, ArmoryServersModel.NameRole)
         }
+
+        onTabNavigated: ip_dns_text_input.setActiveFocus()
     }
 
     CustomTextInput {
@@ -133,6 +135,8 @@ ColumnLayout  {
             armoryServersModel.setData(armoryServersModel.index(server_index, 0)
                                        , ip_dns_text_input.input_text, ArmoryServersModel.AddressRole)
         }
+
+        onTabNavigated: port_text_input.setActiveFocus()
     }
 
     CustomTextInput {
@@ -151,6 +155,8 @@ ColumnLayout  {
             armoryServersModel.setData(armoryServersModel.index(server_index, 0)
                                        , port_text_input.input_text, ArmoryServersModel.PortRole)
         }
+        
+        onTabNavigated: db_key_text_input.setActiveFocus()
     }
 
     CustomTextInput {
@@ -167,6 +173,8 @@ ColumnLayout  {
             armoryServersModel.setData(armoryServersModel.index(server_index, 0)
                                        , db_key_text_input.input_text, ArmoryServersModel.KeyRole)
         }
+
+        onTabNavigated: name_text_input.setActiveFocus()
     }
 
     Label {

@@ -1538,38 +1538,12 @@ bool QtQuickAdapter::delArmoryServer(int idx)
    return true;
 }
 
-void QtQuickAdapter::onArmoryServerChanged(const QModelIndex& index, const QVariant& value)
+void QtQuickAdapter::onArmoryServerChanged(int index)
 {
-   auto srv = armoryServersModel_->data(index.row());
-   switch (index.column()) {
-   case 0:
-      for (int i = 0; i < armoryServersModel_->rowCount(); ++i) {
-         if (i == index.row()) {
-            continue;
-         }
-         if (armoryServersModel_->data(i).name == value.toString()) {
-            return;
-         }
-      }
-      srv.name = value.toString();
-      break;
-   case 1:
-      srv.netType = static_cast<NetworkType>(value.toInt());
-      break;
-   case 2:
-      srv.armoryDBIp = value.toString();
-      break;
-   case 3:
-      srv.armoryDBPort = value.toInt();
-      break;
-   case 4:
-      srv.armoryDBKey = value.toString();
-      break;
-   default: break;
-   }
+   auto srv = armoryServersModel_->data(index);
    SettingsMessage msg;
    auto msgReq = msg.mutable_upd_armory_server();
-   msgReq->set_index(index.row());
+   msgReq->set_index(index);
    auto msgSrv = msgReq->mutable_server();
    msgSrv->set_server_name(srv.name.toStdString());
    msgSrv->set_server_address(srv.armoryDBIp.toStdString());

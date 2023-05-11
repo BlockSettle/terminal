@@ -232,7 +232,7 @@ signals:
    void topBlock(quint32);
 
 private slots:
-   void onArmoryServerChanged(const QModelIndex&, const QVariant&);
+   void onArmoryServerChanged(int index);
    void onArmoryServerSelected(int index);
 
 private:
