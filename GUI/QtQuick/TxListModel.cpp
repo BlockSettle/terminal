@@ -555,7 +555,7 @@ void TxListForAddr::addRows(const std::vector<bs::TXEntry>& entries)
    if (!entries.empty()) {
       QMetaObject::invokeMethod(this, [this, entries] {
          beginInsertRows(QModelIndex(), rowCount(), rowCount() + entries.size() - 1);
-         data_.insert(data_.end(), entries.rbegin(), entries.rend());
+         data_.insert(data_.end(), entries.crbegin(), entries.crend());
          endInsertRows();
          emit changed();
          });
