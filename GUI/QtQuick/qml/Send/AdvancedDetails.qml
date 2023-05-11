@@ -529,7 +529,7 @@ ColumnLayout  {
                         height: BSSizes.applyScale(70)
 
                         function getMax() {
-                            var maxValue = parseFloat(tempRequest.maxAmount) - tx.outputsModel.totalAmount
+                            var maxValue = parseFloat(tempRequest.maxAmount) - tx.outputsModel.totalAmount - parseFloat(tx.fee)
                             return (maxValue >= 0 ? maxValue : 0).toFixed(8)
                         }
 
