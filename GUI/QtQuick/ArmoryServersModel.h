@@ -55,7 +55,7 @@ public:
    QString currentNetworkName() const;
 
 signals:
-   void changed(const QModelIndex&, const QVariant&);
+   void changed(int);
    void currentChanged(int index);
    void connectedChanged();
    void rowCountChanged();

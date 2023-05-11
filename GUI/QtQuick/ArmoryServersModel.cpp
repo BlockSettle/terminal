@@ -150,11 +150,10 @@ bool ArmoryServersModel::setData(const QModelIndex& index, const QVariant& value
    }
 
    int row = index.row();
-
    if (role == CurrentServerRole) {
       setCurrent(row);
    }
-   else if (!isEditable(index.row())) {
+   else if (isEditable(index.row())) {
       switch (role)
       {
       case NameRole:
@@ -177,7 +176,8 @@ bool ArmoryServersModel::setData(const QModelIndex& index, const QVariant& value
       }
    }
 
-   emit changed(index, value);
+   emit changed(index.row());
+   emit dataChanged(index, index, { role });
    return true;
 }
 
