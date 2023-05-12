@@ -168,6 +168,21 @@ bool QTXSignRequest::isWatchingOnly() const
    return isWatchingOnly_;
 }
 
+bool QTXSignRequest::isValid() const
+{
+   if (!error_.isEmpty() || !txReq_.isValid()) {
+      return false;
+   }
+   const int64_t inAmount = txReq_.armorySigner_.getTotalInputsValue();
+   int64_t outAmount = 0;
+   for (const auto& recip : txReq_.getRecipients([](const bs::Address&) { return true; })) {
+      outAmount += recip->getValue();
+   }
+   const int64_t fee = txReq_.getFee();
+   logger_->debug("[QTXSignRequest::isValid] in={}, out={}, fee={}", inAmount, outAmount, fee);
+   return ((inAmount - outAmount - fee) >= 0);
+}
+
 void QTXSignRequest::setWatchingOnly(bool watchingOnly)
 {
    isWatchingOnly_ = watchingOnly;

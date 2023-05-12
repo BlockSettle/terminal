@@ -1619,10 +1619,15 @@ QTXSignRequest* QtQuickAdapter::newTXSignRequest(int walletIndex, const QStringL
                , qUtxo->input().amount, qUtxo->input().txHash.toHexStr(true));
          }
       }
+      logger_->debug("[{}] {} UTXOs", __func__, uniqueUTXOs.size());
       for (const auto& utxo : uniqueUTXOs) {
-         logger_->debug("[{}] UTXO {} @ {}", __func__, utxo.getValue(), utxo.getTxHash().toHexStr(true));
+         logger_->debug("[{}] UTXO {}@{} = {}", __func__, utxo.getTxHash().toHexStr(true)
+            , utxo.getTxOutIndex(), utxo.getValue());
          msgReq->add_utxos(utxo.serialize().toBinStr());
       }
+   }
+   else {
+      logger_->debug("[{}] no UTXOs", __func__);
    }
    const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
    txReqs_[msgId] = { txReq, isMaxAmount };
@@ -1638,6 +1643,10 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, QTxDetails*
    }
    if (!utxos) {
       utxos = txDet->inputsModel()->getSelection();
+      for (const auto& utxo : utxos->data()) {
+         logger_->debug("[{}] UTXO {}@{} = {}", __func__, utxo->utxo().getTxHash().toHexStr(true)
+            , utxo->utxo().getTxOutIndex(), utxo->utxo().getValue());
+      }
    }
    return newTXSignRequest(walletIndex, txDet->outputsModel()->getOutputAddresses()
       , txDet->outputsModel()->getOutputAmounts(), fee, comment, isRbf, utxos);
@@ -2082,12 +2091,12 @@ void QtQuickAdapter::processWalletAddresses(const std::string& walletId
 bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::SeqId msgId
    , const WalletsMessage_TxResponse& response)
 {
-   logger_->debug("[{}] {}", __func__, response.DebugString());
+   //logger_->debug("[{}] {}", __func__, response.DebugString());
    const auto& itReq = txReqs_.find(msgId);
    auto txReq = bs::signer::pbTxRequestToCore(response.tx_sign_request(), logger_);
    if (itReq == txReqs_.end()) {
       if (txSaveReqs_.empty()) {
-         logger_->error("[{}] unknown request #{}", __func__, msgId);
+         //logger_->error("[{}] unknown request #{}", __func__, msgId);
          return bs::message::ProcessingResult::Error;
       }
       const auto exportPath = *txSaveReqs_.rbegin();
@@ -2173,6 +2182,7 @@ bs::message::ProcessingResult QtQuickAdapter::processUTXOs(bs::message::SeqId ms
       for (const auto& serUtxo : response.utxos()) {
          UTXO utxo;
          utxo.unserialize(BinaryData::fromString(serUtxo));
+         logger_->debug("[{}] {}@{}", __func__, utxo.getTxHash().toHexStr(true), utxo.getTxOutIndex());
          utxos.emplace_back(std::move(utxo));
       }
    }

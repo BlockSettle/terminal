@@ -757,6 +757,25 @@ std::vector<std::pair<bs::Address, double>> QTxDetails::outputData() const
    return result;
 }
 
+bool QTxDetails::amountsMatch(float fpb) const
+{
+   if (outputsModel_->rowCount() <= 1) {
+      return false;
+   }
+   const auto inBalance = inputsModel_->balanceValue();
+   if (inBalance < 0.0000001) {
+      return true;
+   }
+   const float fpbCur = feePerByteValue();
+   logger_->debug("[{}] fpb={}/{}, feeVal={}", __func__, fpb, fpbCur, feeValue());
+   const auto outBalance = outputsModel_->totalAmount();
+   const float fee = fpb ? (feeValue() * fpb / (fpbCur ? fpbCur : 1)) : feeValue();
+   double diff = inBalance - outBalance - fee;
+   logger_->debug("[{}] in:{:.8f}, out:{:.8f}, fee:{:.8f}, diff={} fpb={}", __func__, inBalance
+      , outBalance, fee, diff, fpb);
+   return ((diff > 0) || (std::abs(diff) < 0.000003));
+}
+
 void QTxDetails::onTopBlock(quint32 curBlock)
 {
    if (curBlock_ != curBlock) {
@@ -809,7 +828,7 @@ QString QTxDetails::outputAmount() const
    return displayBTC(amount / BTCNumericTypes::BalanceDivider);
 }
 
-QString QTxDetails::fee() const
+float QTxDetails::feeValue() const
 {
    int64_t amount = 0;
    for (const auto& in : details_.inputAddresses) {
@@ -818,10 +837,15 @@ QString QTxDetails::fee() const
    for (const auto& out : details_.outputAddresses) {
       amount -= out.value;
    }
-   return displayBTC(amount / BTCNumericTypes::BalanceDivider);
+   return amount / BTCNumericTypes::BalanceDivider;
 }
 
-QString QTxDetails::feePerByte() const
+QString QTxDetails::fee() const
+{
+   return displayBTC(feeValue());
+}
+
+float QTxDetails::feePerByteValue() const
 {
    int64_t amount = 0;
    for (const auto& in : details_.inputAddresses) {
@@ -834,7 +858,11 @@ QString QTxDetails::feePerByte() const
    if (!txWeight) {
       txWeight = -1;
    }
-   return displayBTC(amount / txWeight, 1);
+   return amount / txWeight;
+}
+QString QTxDetails::feePerByte() const
+{
+   return displayBTC(feePerByteValue(), 1);
 }
 
 QString QTxDetails::timestamp() const

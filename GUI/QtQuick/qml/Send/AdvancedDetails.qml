@@ -31,6 +31,13 @@ ColumnLayout  {
     property bool is_ready_output: (rec_addr_input.isValid && rec_addr_input.input_text.length
                              && parseFloat(amount_input.input_text) !== 0 && amount_input.input_text.length)
 
+    Connections {
+        target: tx.inputsModel
+        onSelectionChanged: {
+            create_temp_request()
+        }
+    }
+
     RowLayout {
 
         Layout.fillWidth: true
@@ -529,7 +536,7 @@ ColumnLayout  {
                         height: BSSizes.applyScale(70)
 
                         function getMax() {
-                            var maxValue = parseFloat(tempRequest.maxAmount) - tx.outputsModel.totalAmount - parseFloat(tx.fee)
+                            var maxValue = parseFloat(tempRequest.maxAmount) - tx.outputsModel.totalAmount
                             return (maxValue >= 0 ? maxValue : 0).toFixed(8)
                         }
 
@@ -594,6 +601,7 @@ ColumnLayout  {
                             if (!isRBF && !isCPFP) {
                                 tx.inputsModel.updateAutoselection()
                             }
+                            create_temp_request()
                         }
                     }
 
@@ -643,6 +651,7 @@ ColumnLayout  {
                             else if (model.rowCount > 1 && !isRBF && !isCPFP) {
                                 tx.inputsModel.updateAutoselection()
                             }*/
+                            create_temp_request()
                         }
     
                         function get_text_left_padding(row, column)
@@ -676,7 +685,7 @@ ColumnLayout  {
 
         activeFocusOnTab: continue_but.enabled
 
-        enabled: (tx.outputsModel.rowCount > 1)  //(txOutputsModel.rowCount > 1)
+        enabled: tempRequest && tempRequest.isValid && tx.amountsMatch(parseFloat(fee_suggest_combo.edit_value()))
         preferred: isRBF || is_ready_broadcast
 
         width: BSSizes.applyScale(1084)
@@ -742,26 +751,26 @@ ColumnLayout  {
 
     function create_temp_request()
     {
-        if (rec_addr_input.isValid && rec_addr_input.input_text.length) {
-            var fpb = parseFloat(fee_suggest_combo.edit_value())
-            var outputAddresses = tx.outputsModel.getOutputAddresses()
-            if (rec_addr_input.input_text.length > 0) {
-                outputAddresses.push(rec_addr_input.input_text)
-            }
-            var outputAmounts = tx.outputsModel.getOutputAmounts()
+        var fpb = parseFloat(fee_suggest_combo.edit_value())
+        var outputAddresses = tx.outputsModel.getOutputAddresses()
+        var outputAmounts = tx.outputsModel.getOutputAmounts()
+        var selectedInputs = tx.inputsModel.getSelection()
 
-            if (!isRBF && !isCPFP) {
-                tempRequest = bsApp.newTXSignRequest(from_wallet_combo.currentIndex
-                            , outputAddresses, outputAmounts,
-                            (fpb > 0) ? fpb : 1.0, comment_input.input_text
-                            , checkbox_rbf.checked
-                            , (tx.selectedInputsModel.rowCount > 1) ? tx.inputsModel.getSelection() : null)
-            }
-            else {
-                tempRequest = bsApp.newTXSignRequest(from_wallet_combo.currentIndex
-                            , outputAddresses, outputAmounts, (fpb > 0) ? fpb : 1.0
-                            , "", true, tx.inputsModel.getSelection())
-            }
+        if (rec_addr_input.isValid && rec_addr_input.input_text.length) {
+            outputAddresses.push(rec_addr_input.input_text)
+        }
+
+        if (!isRBF && !isCPFP) {
+            tempRequest = bsApp.newTXSignRequest(from_wallet_combo.currentIndex
+                        , outputAddresses, outputAmounts,
+                        (fpb > 0) ? fpb : 1.0, comment_input.input_text
+                        , checkbox_rbf.checked
+                        , (selectedInputs.rowCount > 0) ? selectedInputs : null)
+        }
+        else {
+            tempRequest = bsApp.newTXSignRequest(from_wallet_combo.currentIndex
+                        , outputAddresses, outputAmounts, (fpb > 0) ? fpb : 1.0
+                        , "", true, selectedInputs)
         }
     }
 

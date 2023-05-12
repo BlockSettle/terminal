@@ -61,6 +61,9 @@ public:
    {}
    QList<QUTXO*> data() const { return data_; }
 
+   Q_PROPERTY(int rowCount READ rowCount CONSTANT)
+   int rowCount() const { return data_.size(); }
+
 private:
    QList<QUTXO*> data_;
 };
@@ -100,7 +103,8 @@ public:
    Q_PROPERTY(int nbTx READ nbTx NOTIFY selectionChanged)
    int nbTx() const { return nbTx_; }
    Q_PROPERTY(QString balance READ balance NOTIFY selectionChanged)
-   QString balance() const { return QString::number(selectedBalance_ / BTCNumericTypes::BalanceDivider, 'f', 8); }
+   double balanceValue() const { return selectedBalance_ / BTCNumericTypes::BalanceDivider; }
+   QString balance() const { return QString::number(balanceValue(), 'f', 8); }
 
    Q_PROPERTY(QString fee READ fee WRITE setFee NOTIFY feeChanged)
    QString fee() const { return fee_; }
@@ -108,7 +112,7 @@ public:
 
    Q_INVOKABLE void toggle(int row);
    Q_INVOKABLE void toggleSelection(int row);
-   Q_INVOKABLE QUTXOList* getSelection();
+   Q_INVOKABLE QUTXOList* getSelection(const QString& address = {}, double amt = 0);
    Q_INVOKABLE QUTXOList* zcInputs() const;
    Q_INVOKABLE void updateAutoselection();
    Q_INVOKABLE void clearSelection();
@@ -121,7 +125,7 @@ signals:
 private:
    QVariant getData(int row, int col) const;
    QColor dataColor(int row, int col) const;
-   QList<QUTXO*> collectUTXOsFor(double amount);
+   QList<QUTXO*> collectUTXOsFor(const bs::Address& = {}, double amount = 0);
    bool isInputSelectable(int row) const;
 
 private:
@@ -143,7 +147,7 @@ private:
    uint64_t  selectedBalance_{ 0 };
    QString fee_;
    uint32_t topBlock_{ 0 };
-   double collectUTXOsForAmount_{ 0 };
+   bool collectUTXOsForAmount_{ false };
 };
 
 #endif	// TX_INPUTS_MODEL_H

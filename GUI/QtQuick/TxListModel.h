@@ -201,6 +201,7 @@ public:
    Q_PROPERTY(QString fee READ fee NOTIFY updated)
    QString fee() const;
    Q_PROPERTY(QString feePerByte READ feePerByte NOTIFY updated)
+   float feePerByteValue() const;
    QString feePerByte() const;
    Q_PROPERTY(QString height READ height NOTIFY updated)
    QString height() const;
@@ -218,6 +219,7 @@ public:
    Q_PROPERTY(TxOutputsModel* outputsModel READ outputsModel CONSTANT)
    TxOutputsModel* outputsModel() const { return outputsModel_; }
    std::vector<std::pair<bs::Address, double>> outputData() const;
+   Q_INVOKABLE bool amountsMatch(float fpb) const;
 
    bs::sync::Transaction::Direction direction() const;
 
@@ -227,6 +229,9 @@ signals:
 
 public slots:
    void onTopBlock(quint32);
+
+private:
+   float feeValue() const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

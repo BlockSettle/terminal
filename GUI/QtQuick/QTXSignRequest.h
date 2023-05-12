@@ -71,7 +71,7 @@ public:
    Q_PROPERTY(QString errorText READ errorText NOTIFY errorSet)
    QString errorText() const { return error_; }
    Q_PROPERTY(bool isValid READ isValid NOTIFY txSignReqChanged)
-   bool isValid() const { return (error_.isEmpty() && txReq_.isValid()); }
+   bool isValid() const;
    Q_PROPERTY(QString maxAmount READ outputAmount NOTIFY txSignReqChanged)
    Q_PROPERTY(bool isHWW READ isHWW NOTIFY hwwChanged)
    bool isHWW() const { return isHWW_; }
