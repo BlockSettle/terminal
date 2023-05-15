@@ -1486,7 +1486,8 @@ bool QtQuickAdapter::validateAddress(const QString& addr)
    const auto& addrStr = addr.toStdString();
    try {
       const auto& addr = bs::Address::fromAddressString(addrStr);
-      logger_->debug("[{}] type={}, format={}", __func__, (int)addr.getType(), (int)addr.format());
+      logger_->debug("[{}] type={}, format={} ({})", __func__, (int)addr.getType()
+         , (int)addr.format(), addrStr);
       return (addr.isValid() && (addr.format() != bs::Address::Format::Binary)
          && (addr.format() != bs::Address::Format::String));
    }
