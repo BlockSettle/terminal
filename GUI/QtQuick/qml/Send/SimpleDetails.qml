@@ -280,7 +280,8 @@ ColumnLayout  {
         function prepare_transaction() {
             return bsApp.newTXSignRequest(from_wallet_combo.currentIndex
                     , [rec_addr_input.input_text], [parseFloat(amount_input.input_text)]
-                    , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text)
+                    , parseFloat(fee_suggest_combo.edit_value()), comment_input.input_text
+                    , true, null, true)
         }
 
         function click_enter() {

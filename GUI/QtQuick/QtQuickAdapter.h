@@ -172,7 +172,8 @@ public:
 
    Q_INVOKABLE void requestFeeSuggestions();
    Q_INVOKABLE QTXSignRequest* newTXSignRequest(int walletIndex, const QStringList& recvAddrs
-      , const QList<double>& recvAmounts, double fee, const QString& comment = {}, bool isRbf = true, QUTXOList* utxos = nullptr);
+      , const QList<double>& recvAmounts, double fee, const QString& comment = {}
+      , bool isRbf = true, QUTXOList* utxos = nullptr, bool newChangeAddr = false);
    Q_INVOKABLE QTXSignRequest* createTXSignRequest(int walletIndex, QTxDetails*
       , double fee, const QString& comment = {}, bool isRbf = true, QUTXOList* utxos = nullptr);
    Q_INVOKABLE void getUTXOsForWallet(int walletIndex, QTxDetails*);

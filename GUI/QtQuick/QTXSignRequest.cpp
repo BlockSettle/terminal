@@ -90,10 +90,6 @@ QStringList QTXSignRequest::outputAddresses() const
 
 QString QTXSignRequest::outputAmount() const
 {
-   if (!txReq_.isValid()) {
-      logger_->debug("[{}] TX request is not valid", __func__);
-      return {};
-   }
    logger_->debug("[{}] {} outputs", __func__, txReq_.armorySigner_.getTxOutCount());
    return QString::number(txReq_.amountReceived([changeAddr = txReq_.change.address]
       (const bs::Address& addr) { return (addr != changeAddr); }) / BTCNumericTypes::BalanceDivider

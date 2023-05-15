@@ -53,9 +53,10 @@
 #include "AddressFilterModel.h"
 #include "viewmodels/plugins/PluginsListModel.h"
 #include "LeverexPlugin.h"
+#include "PaperBackupWriter.h"
 #include "SideshiftPlugin.h"
 #include "SideswapPlugin.h"
-#include "PaperBackupWriter.h"
+#include "StringUtils.h"
 
 #include "hardware_wallet.pb.h"
 #include "terminal.pb.h"
@@ -685,7 +686,6 @@ ProcessingResult QtQuickAdapter::processSigner(const Envelope &env)
    return ProcessingResult::Success;
 }
 
-#include "StringUtils.h"
 ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
 {
    WalletsMessage msg;
@@ -1486,8 +1486,9 @@ bool QtQuickAdapter::validateAddress(const QString& addr)
    const auto& addrStr = addr.toStdString();
    try {
       const auto& addr = bs::Address::fromAddressString(addrStr);
-      logger_->debug("[{}] type={}", __func__, (int)addr.getType());
-      return (addr.isValid());
+      logger_->debug("[{}] type={}, format={}", __func__, (int)addr.getType(), (int)addr.format());
+      return (addr.isValid() && (addr.format() != bs::Address::Format::Binary)
+         && (addr.format() != bs::Address::Format::String));
    }
    catch (const std::exception& e) {
       logger_->warn("[{}] invalid address {}: {}", __func__, addrStr, e.what());
@@ -1566,13 +1567,15 @@ void QtQuickAdapter::requestFeeSuggestions()
 }
 
 QTXSignRequest* QtQuickAdapter::newTXSignRequest(int walletIndex, const QStringList& recvAddrs
-   , const QList<double>& recvAmounts, double fee, const QString& comment, bool isRbf, QUTXOList* utxos)
+   , const QList<double>& recvAmounts, double fee, const QString& comment, bool isRbf
+   , QUTXOList* utxos, bool newChangeAddr)
 {
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_request();
    if (walletIndex >= 0) {
       msgReq->set_hd_wallet_id(hdWalletIdByIndex(walletIndex));
    }
+   msgReq->set_new_change(newChangeAddr);
    bool isMaxAmount = false;
    if (recvAddrs.isEmpty()) {
       return nullptr;
@@ -1649,7 +1652,7 @@ QTXSignRequest* QtQuickAdapter::createTXSignRequest(int walletIndex, QTxDetails*
       }
    }
    return newTXSignRequest(walletIndex, txDet->outputsModel()->getOutputAddresses()
-      , txDet->outputsModel()->getOutputAmounts(), fee, comment, isRbf, utxos);
+      , txDet->outputsModel()->getOutputAmounts(), fee, comment, isRbf, utxos, true);
 }
 
 void QtQuickAdapter::getUTXOsForWallet(int walletIndex, QTxDetails* txDet)
