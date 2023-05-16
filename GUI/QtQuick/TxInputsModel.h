@@ -138,6 +138,7 @@ private:
 
    std::vector<Entry>   data_;
    std::vector<Entry>   fixedEntries_;
+   std::vector<UTXO>    fixedUTXOs_;
    std::set<std::pair<BinaryData, uint32_t>> selectionUtxos_;
    std::set<bs::Address> selectionAddresses_;
    bool selectionRoot_ {false};

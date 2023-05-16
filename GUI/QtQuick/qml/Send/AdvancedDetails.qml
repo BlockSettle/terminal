@@ -503,8 +503,9 @@ ColumnLayout  {
                         wallets_current_index: from_wallet_combo.currentIndex
 
                         onTextChanged: {
-                            console.log("recv address changed")
-                            create_temp_request()
+                            if (rec_addr_input.input_text.length && bsApp.validateAddress(rec_addr_input.input_text)) {
+                                create_temp_request()
+                            }
                         }
 
                         onEnterPressed: {
@@ -645,12 +646,9 @@ ColumnLayout  {
                         {
                             //txOutputsModel.delOutput(row)
                             model.delOutput(row)
-                            /*if (model.rowCount <= 1 && !isRBF && !isCPFP) {
+                            if (model.rowCount <= 1) {
                                 tx.inputsModel.clearSelection()
                             }
-                            else if (model.rowCount > 1 && !isRBF && !isCPFP) {
-                                tx.inputsModel.updateAutoselection()
-                            }*/
                             create_temp_request()
                         }
     

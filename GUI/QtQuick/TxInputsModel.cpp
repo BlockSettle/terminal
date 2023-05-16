@@ -104,18 +104,16 @@ QHash<int, QByteArray> TxInputsModel::roleNames() const
 
 void TxInputsModel::clear()
 {
+   decltype(fixedEntries_) fixedEntries;
+   fixedEntries.swap(fixedEntries_);
    beginResetModel();
    utxos_.clear();
    data_.clear();
-   selectionUtxos_.clear();
-   selectionAddresses_.clear();
    selectionRoot_ = false;
    preSelected_.clear();
-   selectedBalance_ = 0;
-   nbTx_ = 0;
-   fixedEntries_.clear();
    endResetModel();
-   emit selectionChanged();
+   setFixedInputs(fixedEntries);
+   clearSelection();
    emit rowCountChanged();
 }
 
@@ -166,6 +164,7 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
 
 int TxInputsModel::setFixedUTXOs(const std::vector<UTXO>& utxos)
 {
+   fixedUTXOs_ = utxos;
    int nbTX = 0;
    for (const auto& utxo : utxos) {
       for (const auto& entry : fixedEntries_) {
@@ -286,7 +285,6 @@ void TxInputsModel::toggleSelection(int row)
             const auto& itAddr = utxos_.find(entry.address);
             if (itAddr != utxos_.end()) {
                 for (const auto& u : itAddr->second) {
-                   logger_->debug("[{}:1] UTXO selection: {}@{}", __func__, u.getTxHash().toHexStr(true), u.getTxOutIndex());
                    selectionUtxos_.insert({u.getTxHash(), u.getTxOutIndex()});
                    selectedBalance_ += u.getValue();
                    nbTx_++;
@@ -331,7 +329,6 @@ void TxInputsModel::toggleSelection(int row)
          nbTx_++;
          selectedBalance_ += utxo.getValue();
          selectionUtxos_.insert({utxo.getTxHash(), utxo.getTxOutIndex()});
-         logger_->debug("[{}:2] UTXO selection: {}@{}", __func__, utxo.getTxHash().toHexStr(true), utxo.getTxOutIndex());
       }
       else {
          selectionAddresses_.insert(entry.address);
@@ -341,7 +338,6 @@ void TxInputsModel::toggleSelection(int row)
                        == selectionUtxos_.end()) {
                   selectedBalance_ += utxo_addr.getValue();
                   selectionUtxos_.insert({utxo_addr.getTxHash(), utxo_addr.getTxOutIndex()});
-                  logger_->debug("[{}:3] UTXO selection: {}@{}", __func__, utxo_addr.getTxHash().toHexStr(true), utxo_addr.getTxOutIndex());
                   nbTx_++;
                }
             }
@@ -378,7 +374,6 @@ void TxInputsModel::toggleSelection(int row)
          selEnd = row + 1 + itAddr->second.size();
       }
    }
-
    emit selectionChanged();
    emit dataChanged(createIndex(selStart, 0), createIndex(selEnd, 0), {SelectedRole});
 }
@@ -578,11 +573,12 @@ QVariant TxInputsModel::getData(int row, int col) const
 
 void TxInputsModel::clearSelection()
 {
-    selectionUtxos_.clear();
-    selectionAddresses_.clear();
-    selectedBalance_ = 0.0f;
-    emit selectionChanged();
-    emit dataChanged(createIndex(0, 0), createIndex(rowCount() - 1, 0), { SelectedRole });
+   selectionUtxos_.clear();
+   selectionAddresses_.clear();
+   selectedBalance_ = 0.0f;
+   nbTx_ = 0;
+   setFixedUTXOs(fixedUTXOs_);
+   emit dataChanged(createIndex(0, 0), createIndex(rowCount() - 1, 0), { SelectedRole });
 }
 
 bool TxInputsModel::isInputSelectable(int row) const
