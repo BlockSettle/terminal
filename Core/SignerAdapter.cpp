@@ -723,9 +723,21 @@ ProcessingResult SignerAdapter::processExportWoWallet(const bs::message::Envelop
       return ProcessingResult::Error;
    }
    if (hdWallet->isWatchingOnly()) {
-      logger_->error("[{}] can't export {} (already watching only)", __func__, request.wallet().wallet_id());
+      const auto& srcPathName = hdWallet->getFileName();
+      const auto& fileName = SystemFileUtils::getFileName(srcPathName);
+      const auto& dstPathName = request.output_dir() + "/" + fileName;
+      try {
+         std::filesystem::copy(srcPathName, dstPathName);
+      }
+      catch (const std::exception& e) {
+         logger_->error("[{}] failed to copy {} -> {}: {}", __func__, srcPathName, dstPathName, e.what());
+         pushResponse(user_, env, msg.SerializeAsString());
+         return ProcessingResult::Error;
+      }
+      logger_->debug("[{}] copied {} to {}", __func__, request.wallet().wallet_id(), dstPathName);
+      msg.set_export_wo_wallet_response(fileName);
       pushResponse(user_, env, msg.SerializeAsString());
-      return ProcessingResult::Error;
+      return ProcessingResult::Success;
    }
    auto woWallet = hdWallet->createWatchingOnly();
    if (!woWallet) {
