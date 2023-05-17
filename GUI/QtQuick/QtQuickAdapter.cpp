@@ -406,6 +406,19 @@ bool QtQuickAdapter::processBroadcast(const bs::message::Envelope& env)
    return false;
 }
 
+bool QtQuickAdapter::processTimeout(const bs::message::Envelope& env)
+{
+   if (env.receiver && (env.receiver->value() == userBlockchain_->value())) {
+      const auto& itTxSave = txSaveReq_.find(env.foreignId());
+      if (itTxSave != txSaveReq_.end()) {
+         emit transactionExportFailed(tr("Failed to get supporting TXs for exporting %1")
+            .arg(QString::fromStdString(std::get<0>(itTxSave->second))));
+         txSaveReq_.erase(itTxSave);
+      }
+   }
+   return false;
+}
+
 void QtQuickAdapter::onArmoryServerSelected(int index)
 {
    if (armoryServerIndex_ == index) {
@@ -2054,6 +2067,15 @@ bs::message::ProcessingResult QtQuickAdapter::processTransactions(bs::message::S
       expTxAddrInReqs_.erase(itExpTxAddrIn);
       expTxByAddrModel_->setInputs(result);
    }
+   const auto& itTxSave = txSaveReq_.find(msgId);
+   if (itTxSave != txSaveReq_.end()) {
+      auto txReq = std::get<1>(itTxSave->second);
+      for (const auto& tx : result) {
+         txReq.armorySigner_.addSupportingTx(tx);
+      }
+      saveTransaction(std::get<0>(itTxSave->second), txReq, std::get<2>(itTxSave->second));
+      txSaveReq_.erase(itTxSave);
+   }
    return bs::message::ProcessingResult::Success;
 }
 
@@ -2096,8 +2118,8 @@ bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::Seq
    , const WalletsMessage_TxResponse& response)
 {
    //logger_->debug("[{}] {}", __func__, response.DebugString());
-   const auto& itReq = txReqs_.find(msgId);
    auto txReq = bs::signer::pbTxRequestToCore(response.tx_sign_request(), logger_);
+   const auto& itReq = txReqs_.find(msgId);
    if (itReq == txReqs_.end()) {
       if (txSaveReqs_.empty()) {
          //logger_->error("[{}] unknown request #{}", __func__, msgId);
@@ -2105,7 +2127,31 @@ bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::Seq
       }
       const auto exportPath = *txSaveReqs_.rbegin();
       txSaveReqs_.pop_back();
-      saveTransaction(txReq, exportPath);
+      std::vector<UTXO> utxos;
+      std::set<BinaryData> txHashes;
+      utxos.reserve(response.utxos_size());
+      for (const auto& u : response.utxos()) {
+         try {
+            UTXO utxo;
+            const auto utxoSer = BinaryData::fromString(u);
+            utxo.unserialize(utxoSer);
+            if (!utxo.isInitialized()) {
+               throw std::runtime_error("invalid UTXO in wallets response");
+            }
+            utxos.emplace_back(std::move(utxo));
+            txHashes.insert(utxo.getTxHash());
+         }
+         catch (const std::exception&) {}
+      }
+
+      ArmoryMessage msg;
+      auto msgReq = msg.mutable_get_txs_by_hash();
+      for (const auto& txHash : txHashes) {
+         msgReq->add_tx_hashes(txHash.toBinStr());
+      }
+      const auto msgReqId = pushRequest(user_, userBlockchain_, msg.SerializeAsString()
+         , {}, 3, std::chrono::milliseconds{ 1000 });
+      txSaveReq_[msgReqId] = {exportPath, txReq, utxos};
       return bs::message::ProcessingResult::Success;
    }
    auto qReq = itReq->second.txReq;
@@ -2487,9 +2533,20 @@ void QtQuickAdapter::exportTransaction(const QUrl& path, QTXSignRequest* request
    txSaveReqs_.push_back(path.toLocalFile().toStdString());
 }
 
-void QtQuickAdapter::saveTransaction(const bs::core::wallet::TXSignRequest& txReq, const std::string& exportPath)
+void QtQuickAdapter::saveTransaction(const std::string& exportPath, const bs::core::wallet::TXSignRequest& txReq
+   , const std::vector<UTXO>& utxos)
 {
-   const auto& txSer = bs::signer::coreTxRequestToPb(txReq, false).SerializeAsString();
+   //const auto& txSer = bs::signer::coreTxRequestToPb(txReq, false).SerializeAsString();
+   WalletsMessage_TxOfflineExport msg;
+   for (const auto& walletId : txReq.walletIds) {
+      msg.add_wallet_id(walletId);
+   }
+   msg.set_tx(txReq.armorySigner_.serializeState().SerializeAsString());
+   msg.set_psbt(txReq.armorySigner_.toPSBT().toBinStr());
+   for (const auto& utxo : utxos) {
+      msg.add_utxos(utxo.serialize().toBinStr());
+   }
+   const auto& txSer = msg.SerializeAsString();
    auto f = fopen(exportPath.c_str(), "wb");
    if (!f) {
       emit transactionExportFailed(tr("Failed to open %1 for writing").arg(QString::fromStdString(exportPath)));
@@ -2526,20 +2583,70 @@ QTXSignRequest* QtQuickAdapter::importTransaction(const QUrl& path)
          .arg(QString::fromStdString(pathName)));
       return nullptr;
    }
-   Blocksettle::Communication::headless::SignTxRequest msg;
+   //Blocksettle::Communication::headless::SignTxRequest msg;
+   WalletsMessage_TxOfflineExport msg;
    if (!msg.ParseFromString(txSer)) {
       emit transactionImportFailed(tr("Failed to parse %1 bytes from %2")
          .arg(txSer.size()).arg(QString::fromStdString(pathName)));
       return nullptr;
    }
-   const auto& txReq = bs::signer::pbTxRequestToCore(msg);
+   //const auto& txReq = bs::signer::pbTxRequestToCore(msg);
+   bs::core::wallet::TXSignRequest txReq;
+   for (const auto& walletId : msg.wallet_id()) {
+      bool walletLoaded = false;
+      for (const auto& hdWallet : hdWallets_) {
+         if (hdWallet.first == walletId) {
+            walletLoaded = true;
+            break;
+         }
+         else {
+            for (const auto& leaf : hdWallet.second.leaves) {
+               if (leaf.first == walletId) {
+                  walletLoaded = true;
+                  break;
+               }
+            }
+         }
+      }
+      if (!walletLoaded) {
+         emit transactionImportFailed(tr("Wallet %1 is not loaded - signing is not possible")
+            .arg(QString::fromStdString(walletId)));
+         return nullptr;
+      }
+      txReq.walletIds.push_back(walletId);
+   }
+/*   try {  // PSBT doesn't seem to be properly implemented in Armory atm
+      txReq.armorySigner_ = Armory::Signer::Signer::fromPSBT(BinaryData::fromString(msg.psbt()));
+   }
+   catch (const std::exception& e) {
+      logger_->error("[{}] invalid PSBT: {}", __func__, e.what());*/
+   {
+      Codec_SignerState::SignerState state;
+      if (state.ParseFromString(msg.tx())) {
+         txReq.armorySigner_.deserializeState(state);
+      }
+   }
    if (!txReq.isValid()) {
       emit transactionImportFailed(tr("Failed to obtain valid data from %1")
          .arg(QString::fromStdString(pathName)));
       return nullptr;
    }
+   std::vector<UTXO> utxos;
+   for (const auto& u : msg.utxos()) {
+      try {
+         UTXO utxo;
+         utxo.unserialize(BinaryData::fromString(u));
+         if (!utxo.isInitialized()) {
+            throw std::runtime_error("not inited");
+         }
+         utxos.emplace_back(std::move(utxo));
+      }
+      catch (const std::exception& e) {
+         logger_->error("[{}] failed to deser UTXO: {}", __func__, e.what());
+      }
+   }
    auto txSignRequest = new QTXSignRequest(logger_, this);
-   txSignRequest->setTxSignReq(txReq);
+   txSignRequest->setTxSignReq(txReq, utxos);
    return txSignRequest;
 }
 

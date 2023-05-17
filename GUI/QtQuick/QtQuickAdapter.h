@@ -88,6 +88,7 @@ public:
 
    bs::message::ProcessingResult process(const bs::message::Envelope &) override;
    bool processBroadcast(const bs::message::Envelope&) override;
+   bool processTimeout(const bs::message::Envelope&) override;
 
    Users supportedReceivers() const override { return { user_ }; }
    std::string name() const override { return "QtQuick"; }
@@ -256,7 +257,8 @@ private:
    void updateStates();
    void setTopBlock(uint32_t);
    void loadPlugins(QQmlApplicationEngine&);
-   void saveTransaction(const bs::core::wallet::TXSignRequest&, const std::string& pathName);
+   void saveTransaction(const std::string& pathName, const bs::core::wallet::TXSignRequest&
+      , const std::vector<UTXO>&);
    void notifyNewTransaction(const bs::TXEntry& tx);
 
    void createWallet(bool primary);
@@ -344,6 +346,7 @@ private:
    };
    std::map<bs::message::SeqId, TXReq>    txReqs_;
    std::vector<std::string>   txSaveReqs_;
+   std::map<bs::message::SeqId, std::tuple<std::string, bs::core::wallet::TXSignRequest, std::vector<UTXO>>>   txSaveReq_;
    std::map<bs::message::SeqId, std::string>          exportTxReqs_;
    std::unordered_map<std::string, QTXSignRequest*>   hwwReady_;
    std::map<bs::message::SeqId, QTxDetails*>          txDetailReqs_;

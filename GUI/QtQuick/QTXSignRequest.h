@@ -34,7 +34,7 @@ public:
 
    QTXSignRequest(const std::shared_ptr<spdlog::logger>&, QObject* parent = nullptr);
    bs::core::wallet::TXSignRequest txReq() const { return txReq_; }
-   void setTxSignReq(const bs::core::wallet::TXSignRequest&);
+   void setTxSignReq(const bs::core::wallet::TXSignRequest&, const std::vector<UTXO> & = {});
    void setError(const QString&);
    void addInput(const QUTXO::Input& input) { inputs_.push_back(input); }
    std::vector<QUTXO::Input> inputs() const { return inputs_; }

@@ -18,7 +18,8 @@ QTXSignRequest::QTXSignRequest(const std::shared_ptr<spdlog::logger>& logger, QO
    : QObject(parent), logger_(logger)
 {}
 
-void QTXSignRequest::setTxSignReq(const bs::core::wallet::TXSignRequest& txReq)
+void QTXSignRequest::setTxSignReq(const bs::core::wallet::TXSignRequest& txReq
+   , const std::vector<UTXO>& utxos)
 {
    txReq_ = txReq;
    logger_->debug("[{}] {} outputs", __func__, txReq_.armorySigner_.getTxOutCount());
@@ -39,13 +40,18 @@ void QTXSignRequest::setTxSignReq(const bs::core::wallet::TXSignRequest& txReq)
    }
    emit txSignReqChanged();
 
-   std::vector<UTXO> inputs;
-   inputs.reserve(txReq.armorySigner_.getTxInCount());
-   for (unsigned int i = 0; i < txReq.armorySigner_.getTxInCount(); ++i) {
-      const auto& spender = txReq.armorySigner_.getSpender(i);
-      inputs.push_back(spender->getUtxo());
+   if (utxos.empty()) {
+      std::vector<UTXO> inputs;
+      inputs.reserve(txReq.armorySigner_.getTxInCount());
+      for (unsigned int i = 0; i < txReq.armorySigner_.getTxInCount(); ++i) {
+         const auto& spender = txReq.armorySigner_.getSpender(i);
+         inputs.push_back(spender->getUtxo());
+      }
+      setInputs(inputs);
    }
-   setInputs(inputs);
+   else {
+      setInputs(utxos);
+   }
 }
 
 void QTXSignRequest::setError(const QString& err)
