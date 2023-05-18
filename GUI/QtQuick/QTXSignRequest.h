@@ -55,6 +55,7 @@ public:
    Q_PROPERTY(QStringList outputAddresses READ outputAddresses NOTIFY txSignReqChanged)
    QStringList outputAddresses() const;
    Q_PROPERTY(QString outputAmount READ outputAmount NOTIFY txSignReqChanged)
+   double outputAmountValue() const;
    QString outputAmount() const;
    Q_PROPERTY(QStringList outputAmounts READ outputAmounts NOTIFY txSignReqChanged)
    QStringList outputAmounts() const;
@@ -72,7 +73,7 @@ public:
    QString errorText() const { return error_; }
    Q_PROPERTY(bool isValid READ isValid NOTIFY txSignReqChanged)
    bool isValid() const;
-   Q_PROPERTY(QString maxAmount READ outputAmount NOTIFY txSignReqChanged)
+   Q_PROPERTY(double maxAmount READ outputAmountValue NOTIFY txSignReqChanged)
    Q_PROPERTY(bool isHWW READ isHWW NOTIFY hwwChanged)
    bool isHWW() const { return isHWW_; }
    Q_PROPERTY(bool isHWWready READ isHWWready NOTIFY hwwReady)

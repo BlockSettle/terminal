@@ -203,7 +203,8 @@ void TxInputsModel::setFixedInputs(const std::vector<Entry>& entries)
       return;
    }
    logger_->debug("[{}] {} entries", __func__, entries.size());
-   if (!fixedEntries_.empty()) {
+   if (!fixedEntries_.empty() && (data_.size() >= fixedEntries_.size())) {
+      logger_->debug("[{}] removing {} fixed entries", __func__, fixedEntries_.size());
       beginRemoveRows(QModelIndex(), 0, fixedEntries_.size() - 1);
       data_.erase(data_.cbegin(), data_.cbegin() + fixedEntries_.size());
       endRemoveRows();

@@ -250,7 +250,7 @@ ColumnLayout  {
                         Layout.leftMargin: BSSizes.applyScale(16)
                         Layout.topMargin: BSSizes.applyScale(16)
                         Layout.alignment: Qt.AlignLeft | Qt.AlingTop
-                        visible: !isRBF && !isCPFP
+                        visible: true //!isRBF && !isCPFP
 
                         width: BSSizes.applyScale(504)
                         height: BSSizes.applyScale(70)

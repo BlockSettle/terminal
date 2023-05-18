@@ -94,12 +94,16 @@ QStringList QTXSignRequest::outputAddresses() const
    return result;
 }
 
-QString QTXSignRequest::outputAmount() const
+double QTXSignRequest::outputAmountValue() const
 {
    logger_->debug("[{}] {} outputs", __func__, txReq_.armorySigner_.getTxOutCount());
-   return QString::number(txReq_.amountReceived([changeAddr = txReq_.change.address]
-      (const bs::Address& addr) { return (addr != changeAddr); }) / BTCNumericTypes::BalanceDivider
-      , 'f', 8);
+   return txReq_.amountReceived([changeAddr = txReq_.change.address]
+      (const bs::Address& addr) { return (addr != changeAddr); }) / BTCNumericTypes::BalanceDivider;
+}
+
+QString QTXSignRequest::outputAmount() const
+{
+   return QString::number(outputAmountValue(), 'f', 8);
 }
 
 QStringList QTXSignRequest::outputAmounts() const

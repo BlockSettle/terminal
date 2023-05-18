@@ -686,10 +686,11 @@ void QTxDetails::setDetails(const bs::sync::TXWalletDetails& details)
          , in.outHash.toHexStr(true), in.outIndex, in.value);
       ins_.push_back({ in.address, in.outHash, in.outIndex, in.value });
    }
-   if (!fixedInputs_.empty()) {
+   if (!needInputsFromOutputs_ && !fixedInputs_.empty()) {
       setImmutableUTXOs(fixedInputs_);
       fixedInputs_.clear();
    }
+   inputsModel_->addEntries(ins_);
 
    outs_.clear();
    outs_.reserve(details.outputAddresses.size());
@@ -699,9 +700,6 @@ void QTxDetails::setDetails(const bs::sync::TXWalletDetails& details)
    }
    if (needInputsFromOutputs_) {
       setInputsFromOutputs();
-   }
-   else {
-      inputsModel_->addEntries(ins_);
    }
    emit updated();
 }
@@ -714,7 +712,11 @@ void QTxDetails::setImmutableUTXOs(const std::vector<UTXO>& utxos)
    }
    logger_->debug("[{}] {}", __func__, utxos.size());
    inputsModel_->setFixedInputs(ins_);
-   if (!inputsModel_->setFixedUTXOs(utxos)) {
+   if (inputsModel_->setFixedUTXOs(utxos) > 0) {
+      needInputsFromOutputs_ = false;
+   }
+   else {
+      logger_->debug("[{}] {} UTXOs discarded, saving for later user", __func__, utxos.size());
       fixedInputs_ = utxos;
    }
 }
@@ -733,17 +735,15 @@ void QTxDetails::setInputsFromOutputs()
       outs.push_back({ out.address, txId, out.outIndex, out.value });
    }
 
-   logger_->debug("[{}] {} outs", __func__, outs.size());
+   logger_->debug("[{}] {} outs, {} fixed UTXOs saved", __func__, outs.size(), fixedInputs_.size());
    for (const auto& out : outs) {
       logger_->debug("[{}] {} {}@{} = {}", __func__, out.address.display()
          , out.txId.toHexStr(true), out.txOutIndex, out.amount);
    }
    inputsModel_->setFixedInputs(outs);
-   ins_ = std::move(outs);
-   needInputsFromOutputs_ = false;
-
    if (!fixedInputs_.empty()) {
-      setImmutableUTXOs(fixedInputs_);
+      inputsModel_->setFixedUTXOs(fixedInputs_);
+      needInputsFromOutputs_ = false;
       fixedInputs_.clear();
    }
 }
