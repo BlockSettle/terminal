@@ -128,7 +128,34 @@ static std::string dump(const QCborValueRef& val)
    if (val.isRegularExpression()) {
       return val.toRegularExpression().pattern().toStdString();
    }
+   if (val.isNull()) {
+      return "<null>";
+   }
+   if (val.isUndefined()) {
+      return "<undefined>";
+   }
    return "<type " + std::to_string(val.type()) + ">";
+}
+
+static std::string addrType(AddressEntryType aet)
+{
+   switch (aet) {
+   case AddressEntryType_P2PKH:  return "pkh(k)";
+   case AddressEntryType_P2WPKH: return "wpkh(k)";
+   case AddressEntryType_P2SH:   return "sh(k)";
+   case AddressEntryType_P2WSH:  return "sh(wpkh(k))";
+   default: break;
+   }
+   return "unknown";
+}
+
+static QCborArray convertPath(const bs::hd::Path& path)
+{
+   QCborArray pathArray;
+   for (const auto val : path) {
+      pathArray.append((quint32)val);
+   }
+   return pathArray;
 }
 
 void JadeDevice::setSupportingTXs(const std::vector<Tx>& txs)
@@ -147,9 +174,31 @@ void JadeDevice::setSupportingTXs(const std::vector<Tx>& txs)
       awaitingTXreq_.armorySigner_.addSupportingTx(tx);
    }
    const auto& tx = awaitingTXreq_.armorySigner_.serializeUnsignedTx();
+   QCborArray change;
+   for (int i = 0; i < awaitingTXreq_.armorySigner_.getTxOutCount() - 1; ++i) {
+      change.push_back(nullptr);
+   }
+   if (awaitingTXreq_.change.address.empty()) {
+      change.push_back(nullptr);
+   }
+   else {
+      const auto changePath = bs::hd::Path::fromString(awaitingTXreq_.change.index);
+      bs::hd::Path path;
+      path.append(bs::hd::Purpose::Native + bs::hd::hardFlag);
+      path.append(testNet_ ? bs::hd::CoinType::Bitcoin_test : bs::hd::CoinType::Bitcoin_main);
+      path.append(bs::hd::hardFlag);
+      path.append(changePath.get(-2));
+      path.append(changePath.get(-1));
+
+      change.push_back(QCborMap{ {QLatin1Literal("variant"), QString::fromStdString(addrType(awaitingTXreq_.change.address.getType()))}
+         , {QLatin1Literal("path"), convertPath(path)} });
+   }
    const QCborMap params = { {QLatin1Literal("network"), network()}, {QLatin1Literal("txn")
       , QByteArray::fromStdString(tx.toBinStr())}, {QLatin1Literal("use_ae_signatures"), false}
-      , {QLatin1Literal("num_inputs"), awaitingTXreq_.armorySigner_.getTxInCount()} };
+      , {QLatin1Literal("num_inputs"), awaitingTXreq_.armorySigner_.getTxInCount()}
+      , {QLatin1Literal("change"), change} };
+   if (!awaitingTXreq_.change.address.empty()) {
+   }
    auto inReq = std::make_shared<JadeSerialIn>();
    inReq->request = getRequest(++seqId_, QLatin1Literal("sign_tx"), params);
 
@@ -210,8 +259,8 @@ void JadeDevice::setSupportingTXs(const std::vector<Tx>& txs)
             paramPath.append(path.at(i));
          }
          QCborMap params = { {QLatin1Literal("script"), QByteArray::fromStdString(spender->getOutputScript().toBinStr())}
-            //, {QLatin1Literal("input_tx"), QByteArray::fromStdString(txs.at(i).serialize().toBinStr())}
-            , {QLatin1Literal("input_tx"), {} }
+            , {QLatin1Literal("input_tx"), QByteArray::fromStdString(txs.at(i).serialize().toBinStr())}
+            //, {QLatin1Literal("input_tx"), nullptr }
             , {QLatin1Literal("satoshi"), (qint64)spender->getValue()}
             , {QLatin1Literal("is_witness"), true}, {QLatin1Literal("path"), paramPath} };
          auto inInput = std::make_shared<JadeSerialIn>();
@@ -308,15 +357,6 @@ DeviceKey JadeDevice::key() const
 DeviceType JadeDevice::type() const
 {
    return DeviceType::HWJade;
-}
-
-static QCborArray convertPath(const bs::hd::Path& path)
-{
-   QCborArray pathArray;
-   for (const auto val : path) {
-      pathArray.append((quint32)val);
-   }
-   return pathArray;
 }
 
 static uint32_t epoch()

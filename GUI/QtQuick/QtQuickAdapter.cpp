@@ -2276,17 +2276,21 @@ bs::message::ProcessingResult QtQuickAdapter::processHWWready(const std::string&
       logger_->debug("[{}] wallet {} - ignored", __func__, walletId);
       return bs::message::ProcessingResult::Ignored;
    }
-   logger_->debug("[{}] wallet {}", __func__, walletId);
    readyWallets_.insert(walletId);
    it->second->setHWWready();
    auto txReq = it->second->txReq();
    txReq.armorySigner_.setLockTime(blockNum_);
    {
       HW::DeviceMgrMessage msg;
-      *msg.mutable_sign_tx() = bs::signer::coreTxRequestToPb(txReq);
+      auto msgReq = msg.mutable_sign_tx();
+      *msgReq = bs::signer::coreTxRequestToPb(txReq);
+      logger_->debug("[{}] {} TX request valid: {}, unsigned state: {}", __func__
+         , walletId, txReq.isValid(), msgReq->unsigned_state().size());
+      if (!msgReq->walletid_size()) {
+         msgReq->add_walletid(walletId);
+      }
       pushRequest(user_, userHWW_, msg.SerializeAsString());
    }
-   logger_->debug("[{}] lock time: {} ({})", __func__, txReq.armorySigner_.getLockTime(), blockNum_);
    hwwReady_.erase(it);
    return bs::message::ProcessingResult::Success;
 }

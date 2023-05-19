@@ -307,28 +307,43 @@ bs::message::ProcessingResult DeviceManager::processImport(const bs::message::En
 bs::message::ProcessingResult bs::hww::DeviceManager::processSignTX(const bs::message::Envelope& env
    , const Blocksettle::Communication::headless::SignTxRequest& request)
 {
-   logger_->debug("[{}] {}", __func__, request.DebugString());
+   logger_->debug("[{}] [{}] {}", __func__, request.unsigned_state().size(), request.DebugString());
    HW::DeviceMgrMessage msg;
    auto msgResp = msg.mutable_signed_tx();
-   if (envReqSign_.sender || txSignReq_.isValid()) {
-      logger_->error("[{}] another sign request is already in progress", __func__);
-      msgResp->set_error_msg("another sign request is already in progress");
-      pushResponse(user_, env, msg.SerializeAsString());
-      return bs::message::ProcessingResult::Error;
-   }
    const auto& txSignReq = bs::signer::pbTxRequestToCore(request);
-   if (!txSignReq.isValid() || (txSignReq.walletIds.size() != 1)) {
+#if 0
+   if (/*!txSignReq.isValid() ||*/ (txSignReq.walletIds.size() != 1)) {
       logger_->error("[{}] invalid TX sign request (nb wallets: {})", __func__
          , txSignReq.walletIds.size());
       msgResp->set_error_msg("invalid TX sign request");
       pushResponse(user_, env, msg.SerializeAsString());
       return bs::message::ProcessingResult::Error;
    }
+#endif
+   if (!txSignReq.isValid()) {
+      logger_->error("[{}] invalid TX sign request: {} inputs, {} outputs"
+         , __func__, txSignReq.armorySigner_.getTxInCount(), txSignReq.armorySigner_.getTxOutCount());
+   }
    envReqSign_ = env;
-   txSignReq_ = txSignReq;
+   bool newSign = false;
+   if (!txSignReq_.isValid() && txSignReq.isValid()) {
+      txSignReq_ = txSignReq;
+      newSign = true;
+   }
+   if (txSignReq_.walletIds.empty() && !txSignReq.walletIds.empty()) {
+      newSign = true;
+      txSignReq_.walletIds = txSignReq.walletIds;
+   }
+   if (txSignReq_.walletIds.empty()) {
+      logger_->debug("[{}] skipping - waiting for wallet[s] ready", __func__);
+      return bs::message::ProcessingResult::Ignored;
+   }
+   if (!newSign) {
+      return bs::message::ProcessingResult::Success;
+   }
    DeviceKey foundDevice;
    for (const auto& device : devices_) {
-      if (device.walletId == txSignReq.walletIds.at(0)) {
+      if (device.walletId == txSignReq_.walletIds.at(0)) {
          foundDevice = device;
          break;
       }

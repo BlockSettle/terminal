@@ -160,8 +160,8 @@ void SettingsAdapter::sendSettings(const ArmorySettings& armorySettings, bool ne
    }
    if (netTypeChanged) {
       logger_->debug("[{}] network type changed - reloading wallets", __func__);
-      processSignerSettings({});
    }
+   processSignerSettings({});
 }
 
 ProcessingResult SettingsAdapter::processRemoteSettings(uint64_t msgId)
