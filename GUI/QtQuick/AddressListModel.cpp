@@ -75,6 +75,7 @@ QHash<int, QByteArray> QmlAddressListModel::roleNames() const
 
 void QmlAddressListModel::addRow(const std::string& walletId, const QVector<QString>& row)
 {
+   logger_->debug("[{}] {} {}", __func__, walletId, row.at(0).toStdString());
    if (walletId != expectedWalletId_) {
       logger_->warn("[QmlAddressListModel::addRow] wallet {} not expected ({})", walletId, expectedWalletId_);
       return;
@@ -93,6 +94,7 @@ void QmlAddressListModel::addRow(const std::string& walletId, const QVector<QStr
 
 void QmlAddressListModel::addRows(const std::string& walletId, const QVector<QVector<QString>>& rows)
 {
+   logger_->debug("[{}] {} {} rows", __func__, walletId, rows.size());
    if (walletId != expectedWalletId_) {
       logger_->warn("[QmlAddressListModel::addRows] wallet {} not expected ({})", walletId, expectedWalletId_);
       return;
@@ -163,6 +165,7 @@ void QmlAddressListModel::updateRow(const BinaryData& addrPubKey, uint64_t bal, 
 
 void QmlAddressListModel::reset(const std::string& expectedWalletId)
 {
+   logger_->debug("[{}] {}", __func__, expectedWalletId);
    expectedWalletId_ = expectedWalletId;
    beginResetModel();
    addresses_.clear();

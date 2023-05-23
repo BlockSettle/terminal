@@ -1112,7 +1112,7 @@ std::string QtQuickAdapter::generateWalletName() const
 void QtQuickAdapter::walletSelected(int index)
 {
    if (index < 0 || index >= walletBalances_->wallets().size()) {
-      addrModel_->reset("");
+      addrModel_->reset({});
       txModel_->clear();
       return;
    }
