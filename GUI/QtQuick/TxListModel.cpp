@@ -657,8 +657,7 @@ QTxDetails::QTxDetails(const std::shared_ptr<spdlog::logger>& logger, const Bina
 {
    outputsModel_ = new TxOutputsModel(logger_, this);
    inputsModel_ = new TxInputsModel(logger_, outputsModel_, this);
-   selInputsModel_ = new TxInputsSelectedModel(this);
-   selInputsModel_->setSourceModel(inputsModel_);
+   selInputsModel_ = new TxInputsSelectedModel(inputsModel_);
    inputs_ = new TxInOutModel(tr("Input"), this);
    outputs_ = new TxInOutModel(tr("Output"), this);
 }
@@ -678,19 +677,19 @@ void QTxDetails::setDetails(const bs::sync::TXWalletDetails& details)
          outputsModel_->addOutput(QString::fromStdString(out.address.display())
             , out.value / BTCNumericTypes::BalanceDivider);
       }
+      ins_.clear();
+      ins_.reserve(details.inputAddresses.size());
+      for (const auto& in : details.inputAddresses) {
+         logger_->debug("[{}] in: {} {}@{} = {}", __func__, in.address.display()
+            , in.outHash.toHexStr(true), in.outIndex, in.value);
+         ins_.push_back({ in.address, in.outHash, in.outIndex, in.value });
+      }
+      if (!fixedInputs_.empty()) {
+         setImmutableUTXOs(fixedInputs_);
+         fixedInputs_.clear();
+      }
+      inputsModel_->addEntries(ins_);
    }
-   ins_.clear();
-   ins_.reserve(details.inputAddresses.size());
-   for (const auto& in : details.inputAddresses) {
-      logger_->debug("[{}] in: {} {}@{} = {}", __func__, in.address.display()
-         , in.outHash.toHexStr(true), in.outIndex, in.value);
-      ins_.push_back({ in.address, in.outHash, in.outIndex, in.value });
-   }
-   if (!needInputsFromOutputs_ && !fixedInputs_.empty()) {
-      setImmutableUTXOs(fixedInputs_);
-      fixedInputs_.clear();
-   }
-   inputsModel_->addEntries(ins_);
 
    outs_.clear();
    outs_.reserve(details.outputAddresses.size());
@@ -712,10 +711,7 @@ void QTxDetails::setImmutableUTXOs(const std::vector<UTXO>& utxos)
    }
    logger_->debug("[{}] {}", __func__, utxos.size());
    inputsModel_->setFixedInputs(ins_);
-   if (inputsModel_->setFixedUTXOs(utxos) > 0) {
-      needInputsFromOutputs_ = false;
-   }
-   else {
+   if (inputsModel_->setFixedUTXOs(utxos) <= 0) {
       logger_->debug("[{}] {} UTXOs discarded, saving for later user", __func__, utxos.size());
       fixedInputs_ = utxos;
    }
@@ -743,7 +739,6 @@ void QTxDetails::setInputsFromOutputs()
    inputsModel_->setFixedInputs(outs);
    if (!fixedInputs_.empty()) {
       inputsModel_->setFixedUTXOs(fixedInputs_);
-      needInputsFromOutputs_ = false;
       fixedInputs_.clear();
    }
 }
@@ -771,9 +766,9 @@ bool QTxDetails::amountsMatch(float fpb) const
    const auto outBalance = outputsModel_->totalAmount();
    const float fee = fpb ? (feeValue() * fpb / (fpbCur ? fpbCur : 1)) : feeValue();
    double diff = inBalance - outBalance - fee;
-   logger_->debug("[{}] in:{:.8f}, out:{:.8f}, fee:{:.8f}, diff={} fpb={}", __func__, inBalance
-      , outBalance, fee, diff, fpb);
-   return ((diff > 0) || (std::abs(diff) < 0.000003));
+   logger_->debug("[{}] in:{:.8f}, out:{:.8f}, fee:{:.8f}, diff={} (ok:{}) fpb={}", __func__, inBalance
+      , outBalance, fee, diff, (std::abs(diff) < 0.00001), fpb);
+   return ((diff > 0) || (std::abs(diff) < 0.00001));
 }
 
 void QTxDetails::onTopBlock(quint32 curBlock)

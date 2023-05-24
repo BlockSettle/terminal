@@ -165,25 +165,26 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
 int TxInputsModel::setFixedUTXOs(const std::vector<UTXO>& utxos)
 {
    fixedUTXOs_ = utxos;
-   int nbTX = 0;
+   nbTx_ = 0;
+   selectedBalance_ = 0;
+   selectionUtxos_.clear();
    for (const auto& utxo : utxos) {
       for (const auto& entry : fixedEntries_) {
          if ((entry.txId == utxo.getTxHash()) && (entry.txOutIndex == utxo.getTxOutIndex())) {
             logger_->debug("[{}] UTXO selection: {}@{}", __func__, utxo.getTxHash().toHexStr(true), utxo.getTxOutIndex());
             selectionUtxos_.insert({ utxo.getTxHash(), utxo.getTxOutIndex() });
             selectedBalance_ += utxo.getValue();
-            nbTX++;
+            nbTx_++;
             const auto& addr = bs::Address::fromUTXO(utxo);
             utxos_[addr].push_back(utxo);
             break;
          }
       }
    }
-   nbTx_ += nbTX;
    emit selectionChanged();
    emit dataChanged(createIndex(0, 0), createIndex(fixedEntries_.size() - 1, 0), {SelectedRole});
    logger_->debug("[{}] nbTX: {}, balance: {}", __func__, nbTx_, selectedBalance_);
-   return nbTX;
+   return nbTx_;
 }
 
 void TxInputsModel::addEntries(const std::vector<Entry>& entries)
@@ -539,8 +540,8 @@ QVariant TxInputsModel::getData(int row, int col) const
          return QString::fromStdString(entry.address.display());
       }
    case ColumnTx:
-      if (itUTXOs == utxos_.end() || !isInputSelectable(row)) {
-         return QString::number(1);
+      if (itUTXOs == utxos_.end()) {
+         return QString::number(entry.txOutIndex);
       }
       else {
          return QString::number(itUTXOs->second.size());

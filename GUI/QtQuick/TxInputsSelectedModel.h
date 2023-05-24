@@ -11,22 +11,40 @@
 #ifndef TX_INPUTS_SELECTED_MODEL_H
 #define TX_INPUTS_SELECTED_MODEL_H
 
-#include <QSortFilterProxyModel>
-
 #include "TxInputsModel.h"
 
-class TxInputsSelectedModel : public QSortFilterProxyModel
+class TxInputsSelectedModel : public QAbstractTableModel
 {
    Q_OBJECT
    Q_PROPERTY(int rowCount READ rowCount NOTIFY rowCountChanged)
 
 public:
-   explicit TxInputsSelectedModel (QObject *parent = nullptr);
+   enum TableRoles {
+      TableDataRole = Qt::UserRole + 1, HeadingRole, ColorRole
+   };
+   explicit TxInputsSelectedModel(TxInputsModel* source);
 
-   bool filterAcceptsRow (int sourceRow, const QModelIndex &sourceParent) const;
+   int rowCount(const QModelIndex & = QModelIndex()) const override;
+   int columnCount(const QModelIndex & = QModelIndex()) const override;
+   QVariant data(const QModelIndex& index, int role) const override;
+   QHash<int, QByteArray> roleNames() const override;
+   QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
 signals:
-   void rowCountChanged ();
+   void rowCountChanged();
+
+private slots:
+   void onSelectionChanged();
+
+private:
+   QVariant getData(int row, int col) const;
+   QColor dataColor(int row, int col) const;
+
+private:
+   enum Columns { ColumnTxId, ColumnTxOut, ColumnBalance };
+   TxInputsModel* source_{ nullptr };
+   const QMap<int, QString> header_;
+   QUTXOList* selection_{ nullptr };
 };
 
 

@@ -354,7 +354,7 @@ ColumnLayout  {
                         Layout.preferredHeight: BSSizes.applyScale(300)
     
                         model: tx.selectedInputsModel
-                        columnWidths: [0.7, 0.1, 0, 0.2]
+                        columnWidths: [0.7, 0.1, 0.2]
     
                         copy_button_column_index: -1
                         has_header: false
@@ -603,6 +603,7 @@ ColumnLayout  {
                                 tx.inputsModel.updateAutoselection()
                             }
                             create_temp_request()
+                            console.log("valid: " + tempRequest.isValid + ", amounts match: " + tx.amountsMatch(parseFloat(fee_suggest_combo.edit_value())))
                         }
                     }
 

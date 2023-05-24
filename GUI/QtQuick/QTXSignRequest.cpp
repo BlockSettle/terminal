@@ -186,7 +186,7 @@ bool QTXSignRequest::isValid() const
    }
    const int64_t fee = txReq_.getFee();
    logger_->debug("[QTXSignRequest::isValid] in={}, out={}, fee={}", inAmount, outAmount, fee);
-   return ((inAmount - outAmount - fee) >= 0);
+   return (std::abs(inAmount - outAmount - fee) < 100);
 }
 
 void QTXSignRequest::setWatchingOnly(bool watchingOnly)
