@@ -647,7 +647,7 @@ ProcessingResult SignerAdapter::processCreateWallet(const bs::message::Envelope&
    SignerMessage msg;
    auto msgResp = msg.mutable_created_wallet();
    try {
-      const auto& seed = w.xpriv_key().empty() ? bs::core::wallet::Seed(SecureBinaryData::fromString(w.seed()), netType_)
+      const auto& seed = w.xpriv_key().empty() ? bs::core::wallet::Seed(w.seed(), netType_)
          : bs::core::wallet::Seed::fromXpriv(SecureBinaryData::fromString(w.xpriv_key()), netType_);
 
       const auto& wallet = walletsMgr_->createWallet(w.name(), w.description(), seed
@@ -807,6 +807,9 @@ bool SignerAdapter::isPasswordValid(const std::string& walletId
    try {
       const bs::core::WalletPasswordScoped lock(hdWallet, password);
       const auto& seed = hdWallet->getDecryptedSeed();
+      if (seed.empty()) {
+         throw std::runtime_error("seed is empty");
+      }
       logger_->debug("[{}] seed id: {}, walletId: {}, pass size: {}", __func__, seed.getWalletId(), walletId, password.getSize());
       return (seed.getWalletId() == walletId);
    }
@@ -815,6 +818,9 @@ bool SignerAdapter::isPasswordValid(const std::string& walletId
    }
    catch (const Armory::Wallets::Encryption::DecryptedDataContainerException&) {
       logger_->error("[{}] failed to decrypt wallet {}", __func__, walletId);
+   }
+   catch (const std::exception& e) {
+      logger_->error("[{}] {}: {}", __func__, walletId, e.what());
    }
    return false;
 }
@@ -840,25 +846,11 @@ bs::message::ProcessingResult SignerAdapter::processGetWalletSeed(const bs::mess
    try {
       const bs::core::WalletPasswordScoped lock(hdWallet, password);
       const auto& seed = hdWallet->getDecryptedSeed();
-      msgResp->set_xpriv(seed.toXpriv().toBinStr());
-      msgResp->set_seed(seed.seed().toBinStr());
-
-      if (seed.hasPrivateKey()) {
-         const auto& privKey = seed.privateKey();
-         std::vector<uint8_t> privData;
-         for (int i = 0; i < (int)privKey.getSize(); ++i) {
-            privData.push_back(privKey.getPtr()[i]);
-         }
-         const auto& words = BIP39::create_mnemonic(privData);
-         std::string bip39Seed;
-         for (const auto& w : words) {
-            bip39Seed += w + " ";
-         }
-         bip39Seed.pop_back();
-         msgResp->set_bip39_seed(bip39Seed);
-         logger_->debug("[{}] bip39 seed: {} [{}] from [{}]", __func__
-            , bip39Seed, words.size(), privData.size());
+      if (seed.empty()) {
+         logger_->warn("[{}] empty seed", __func__);
       }
+      msgResp->set_xpriv(seed.toXpriv().toBinStr());
+      msgResp->set_bip39_seed(seed.seed().toBinStr());   //TODO: check that seed.seed() has spaces
    }
    catch (const Armory::Wallets::WalletException& e) {
       logger_->error("[{}] failed to decrypt wallet {}: {}", __func__, request.wallet_id(), e.what());
@@ -866,6 +858,10 @@ bs::message::ProcessingResult SignerAdapter::processGetWalletSeed(const bs::mess
       return ProcessingResult::Error;
    }
    catch (const Armory::Wallets::Encryption::DecryptedDataContainerException&) {
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Error;
+   }
+   catch (const std::exception&) {
       pushResponse(user_, env, msg.SerializeAsString());
       return ProcessingResult::Error;
    }

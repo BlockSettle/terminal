@@ -1425,13 +1425,13 @@ void QtQuickAdapter::copySeedToClipboard(const QStringList& seed)
    QGuiApplication::clipboard()->setText(str);
 }
 
-SecureBinaryData binSeedFromWords(const QStringList& seed)
+static std::string seedFromWords(const QStringList& seed)
 {
    BIP39::word_list words;
    for (const auto& w : seed) {
       words.add(w.toStdString());
    }
-   return BIP39::seed_from_mnemonic(words);
+   return words.to_string();
 }
 
 void QtQuickAdapter::createWallet(const QString& name, const QStringList& seed
@@ -1442,8 +1442,7 @@ void QtQuickAdapter::createWallet(const QString& name, const QStringList& seed
    SignerMessage msg;
    auto msgReq = msg.mutable_create_wallet();
    msgReq->set_name(walletName);
-   const auto& binSeed = binSeedFromWords(seed);
-   msgReq->set_seed(binSeed.toBinStr());
+   msgReq->set_seed(seedFromWords(seed));
    msgReq->set_password(password.toStdString());
    pushRequest(user_, userSigner_, msg.SerializeAsString());
    walletBalances_->clear();
@@ -1454,17 +1453,10 @@ void QtQuickAdapter::importWallet(const QString& name, const QStringList& seed
 {
    const auto walletName = name.isEmpty() ? generateWalletName() : name.toStdString();
    logger_->debug("[{}] {}", __func__, walletName);
-   BIP39::word_list words;
-   for (const auto& w : seed) {
-      words.add(w.toStdString());
-   }
    SignerMessage msg;
    auto msgReq = msg.mutable_import_wallet();
    msgReq->set_name(walletName);
-   //msgReq->set_description(seedData.description);
-   //msgReq->set_xpriv_key(seedData.xpriv);
-   const auto binSeed = BIP39::seed_from_mnemonic(words);
-   msgReq->set_seed(binSeed.toBinStr());
+   msgReq->set_seed(seedFromWords(seed));
    msgReq->set_password(password.toStdString());
    pushRequest(user_, userSigner_, msg.SerializeAsString());
    walletBalances_->clear();
@@ -2767,8 +2759,7 @@ void QtQuickAdapter::exportWalletToPdf(const QUrl& path, const QStringList& seed
 
 std::pair<QString, QString> QtQuickAdapter::walletInfoFromSeed(const QStringList& bip39Seed)
 {
-   const auto& binSeed = binSeedFromWords(bip39Seed);
-   const bs::core::wallet::Seed seed(binSeed, netType_);
+   const bs::core::wallet::Seed seed(seedFromWords(bip39Seed), netType_);
    const auto& rootNode = seed.getNode();
    return { QString::fromStdString(seed.getWalletId())
       , QString::fromStdString(rootNode.getBase58().toBinStr()) };

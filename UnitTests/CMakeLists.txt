@@ -22,25 +22,25 @@ LIST (APPEND SOURCES
    ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BDM_mainthread.cpp
    ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BDM_Server.cpp
    ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BitcoinP2P.cpp
-   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/Blockchain.cpp
-   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockchainScanner.cpp
-   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockchainScanner_Super.cpp
-   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockDataMap.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockchainDatabase/Blockchain.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockchainDatabase/BlockchainScanner.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockchainDatabase/BlockchainScanner_Super.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockchainDatabase/BlockDataMap.cpp
    ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockDataViewer.cpp
-   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockObj.cpp
-   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockUtils.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockchainDatabase/BlockObj.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockchainDatabase/BlockUtils.cpp
    ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BtcWallet.cpp
-   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/DatabaseBuilder.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockchainDatabase/DatabaseBuilder.cpp
    ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/HistoryPager.cpp
    ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/LedgerEntry.cpp
    ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/nodeRPC.cpp
    ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/Progress.cpp
-   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/ScrAddrFilter.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockchainDatabase/ScrAddrFilter.cpp
    ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/ScrAddrObj.cpp
    ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/Server.cpp
-   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/SshParser.cpp
-   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/StoredBlockObj.cpp
-   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/txio.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockchainDatabase/SshParser.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockchainDatabase/StoredBlockObj.cpp
+   ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/BlockchainDatabase/txio.cpp
    ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/ZeroConf.cpp
    ${TERMINAL_GUI_ROOT}/common/ArmoryDB/cppForSwig/gtest/NodeUnitTest.cpp
    ${TERMINAL_GUI_ROOT}/common/WalletsLib/WalletBackupFile.cpp
