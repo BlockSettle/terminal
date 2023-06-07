@@ -724,18 +724,22 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
             if (settingsController_->hasParam(ApplicationSettings::Setting::SelectedWallet)) {
                const int lastIdx = settingsController_->getParam(ApplicationSettings::Setting::SelectedWallet).toInt();
                if ((lastIdx >= 0) && (lastIdx < nWalletsLoaded_)) {
+                  logger_->debug("[walletReady] lastIdx={}", lastIdx);
                   emit requestWalletSelection(lastIdx);
                }
                else if (nWalletsLoaded_ > 0) {
+                  logger_->debug("[walletReady] nWallets:{}", nWalletsLoaded_);
                   emit requestWalletSelection(0);
                }
             }
          }
          else {
-            auto index = walletBalances_->wallets().indexOf(QString::fromStdString(createdWalletId_));
+            const int index = walletBalances_->wallets().indexOf(QString::fromStdString(createdWalletId_));
             if (index != -1) {
                emit requestWalletSelection(index);
             }
+            logger_->debug("[walletReady] index={} of {}", index, createdWalletId_);
+            createdWalletId_.clear();
          }
       }
       break;
@@ -1145,6 +1149,7 @@ void QtQuickAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
    const auto& walletId = *wi.ids.cbegin();
    hdWallets_[walletId] = wi;
    logger_->debug("[QtQuickAdapter::processWalletLoaded] {} {}", wi.name, walletId);
+
    QMetaObject::invokeMethod(this, [this, isInitialLoad, walletId, walletName = wi.name] {
       hwDeviceModel_->setLoaded(walletId);
       walletBalances_->addWallet({ walletId, walletName });
@@ -1217,6 +1222,14 @@ ProcessingResult QtQuickAdapter::processWalletBalances(bs::message::SeqId respon
       , response.unconfirmed_balance()
       , response.total_balance(), response.nb_addresses() };
    walletBalances_->setWalletBalance(response.wallet_id(), bal);
+
+   if (!createdWalletId_.empty()) {
+      const int index = walletBalances_->wallets().indexOf(QString::fromStdString(createdWalletId_));
+      if (index != -1) {
+         emit requestWalletSelection(index);
+      }
+      createdWalletId_.clear();
+   }
 
    QMetaObject::invokeMethod(this, [this, response]()
    {

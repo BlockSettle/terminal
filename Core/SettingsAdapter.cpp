@@ -512,7 +512,7 @@ ProcessingResult SettingsAdapter::processArmoryServer(const BlockSettle::Termina
       selIndex++;
    }
    if (selIndex >= armoryServersProvider_->servers().size()) {
-      logger_->error("[{}] failed to find Armory server {}", __func__, request.server_name());
+      logger_->error("[{}] failed to find Armory server {} #{}", __func__, request.server_name(), selIndex);
       return ProcessingResult::Error;
    }
    armoryServersProvider_->setupServer(selIndex);

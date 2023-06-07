@@ -137,7 +137,7 @@ ProcessingResult SignerAdapter::processOwnRequest(const bs::message::Envelope &e
    case SignerMessage::kDialogRequest:
       return processDialogRequest(env, request.dialog_request());
    case SignerMessage::kCreateWallet:
-      return processCreateWallet(env, false, request.create_wallet());
+      return processCreateWallet(env, true, request.create_wallet());
    case SignerMessage::kImportWallet:
       return processCreateWallet(env, true, request.import_wallet());
    case SignerMessage::kDeleteWallet:
@@ -654,7 +654,7 @@ ProcessingResult SignerAdapter::processCreateWallet(const bs::message::Envelope&
          , walletsDir_, pwdData, w.primary());
       msgResp->set_wallet_id(wallet->walletId());
       walletsChanged(rescan);
-      logger_->debug("[{}] wallet {} created", __func__, wallet->walletId());
+      logger_->debug("[{}] wallet {} created (rescan: {})", __func__, wallet->walletId(), rescan);
    }
    catch (const std::exception& e) {
       logger_->error("[{}] failed to create wallet: {}", __func__, e.what());

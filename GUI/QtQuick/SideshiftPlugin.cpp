@@ -383,7 +383,7 @@ std::string SideshiftPlugin::get(const std::string& request)
 {
    std::unique_lock<std::mutex> lock(curlMtx_);
    if (!curl_) {
-      logger_->error("[{}] curl not inited");
+      logger_->error("[{}] curl not inited", __func__);
       return {};
    }
    curl_easy_setopt(curl_, CURLOPT_POST, 0);
