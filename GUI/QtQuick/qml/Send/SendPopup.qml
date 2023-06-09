@@ -33,6 +33,7 @@ CustomPopup {
 
         onSig_advanced: {
             _stack_view.replace(advanced_details)
+            root.tx = bsApp.getTXDetails("")
             advanced_details.init()
         }
 
@@ -155,6 +156,7 @@ CustomPopup {
     }
 
     function init() {
+        root.tx = bsApp.getTXDetails("")
         _stack_view.replace(bsApp.settingAdvancedTX ? advanced_details : simple_details)
 
         if (_stack_view.currentItem === simple_details)

@@ -1329,6 +1329,7 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
          }
       }
       else {
+         logger_->debug("[{}] {} inputs", __func__, txDet.inputAddresses.size());
          QMetaObject::invokeMethod(this, [this, details = itTxDet->second, txDet] {
             details->setDetails(txDet);
             details->onTopBlock(blockNum_);
@@ -1679,6 +1680,7 @@ void QtQuickAdapter::getUTXOsForWallet(int walletIndex, QTxDetails* txDet)
    if (txDet) {
       txDet->inputsModel()->clear();
    }
+   logger_->debug("[{}] #{} txDet={}", __func__, walletIndex, (void*)txDet);
    WalletsMessage msg;
    auto msgReq = msg.mutable_get_utxos();
    msgReq->set_wallet_id(hdWalletIdByIndex(walletIndex));

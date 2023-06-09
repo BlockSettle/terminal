@@ -244,7 +244,6 @@ ColumnLayout  {
                     }
 
                     WalletsComboBox {
-
                         id: from_wallet_combo
 
                         Layout.leftMargin: BSSizes.applyScale(16)
@@ -268,11 +267,11 @@ ColumnLayout  {
                             //I dont understand why but acceptableInput dont work...
                             var cur_value = parseFloat(amount_input.input_text)
                             var bottom = 0
-                            var top = tempRequest.maxAmount
-                            if(cur_value < bottom || cur_value > top)
-                            {
-                                amount_input.input_text = tempRequest.maxAmount
-                            }
+                            //var top = tempRequest.maxAmount
+                            //if(cur_value < bottom || cur_value > top)
+                            //{
+                            //    amount_input.input_text = tempRequest.maxAmount
+                            //}
 
                             bsApp.getUTXOsForWallet(from_wallet_combo.currentIndex, tx)
                         }
@@ -281,7 +280,7 @@ ColumnLayout  {
                             target: walletBalances
                             function onChanged() {
                                 if (layout.visible) {
-                                    prepareRequest()
+                                    from_wallet_combo.prepareRequest()
                                 }
                             }
                         }
