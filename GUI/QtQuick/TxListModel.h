@@ -182,6 +182,7 @@ public:
 
    void setDetails(const bs::sync::TXWalletDetails&);
    void setImmutableUTXOs(const std::vector<UTXO>&);
+   void addWalletFilter(const std::string& walletId);
    Q_INVOKABLE void setInputsFromOutputs();
 
    Q_PROPERTY(QString txId READ txId NOTIFY updated)
@@ -246,6 +247,7 @@ private:
    uint32_t curBlock_{ 0 };
    bool  needInputsFromOutputs_{ false };
    std::vector<UTXO> fixedInputs_;
+   std::unordered_set<std::string>  walletIdFilter_;
 };
 
 #endif	// TX_LIST_MODEL_H

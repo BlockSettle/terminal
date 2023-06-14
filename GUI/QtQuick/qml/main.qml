@@ -368,8 +368,8 @@ ApplicationWindow {
             onCurWalletIndexChanged: (ind) => {
                 //overviewWalletIndex = ind
             }
-            onOpenSend: (txId, isRBF, isCPFP) => {
-                send_popup.open(txId, isRBF, isCPFP)
+            onOpenSend: (txId, isRBF, isCPFP, selWalletIdx) => {
+                send_popup.open(txId, isRBF, isCPFP, selWalletIdx)
                 show_popup(send_popup, true)
             }
 

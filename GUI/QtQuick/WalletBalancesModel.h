@@ -52,14 +52,16 @@ public:
    QVariant data(const QModelIndex& index, int role) const override;
    QHash<int, QByteArray> roleNames() const override;
 
-   QStringList wallets() const;
+   QStringList walletNames() const;
    void clear();
    struct Wallet {
       std::string walletId;
       std::string walletName;
    };
    void addWallet(const Wallet&);
+   std::vector<Wallet> wallets() const { return wallets_; }
    void deleteWallet(const std::string& walletId);
+
    void rename(const std::string& walletId, const std::string& newName);
 
    struct Balance {

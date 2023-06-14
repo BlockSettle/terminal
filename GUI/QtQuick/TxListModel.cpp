@@ -682,6 +682,9 @@ void QTxDetails::setDetails(const bs::sync::TXWalletDetails& details)
       for (const auto& in : details.inputAddresses) {
          logger_->debug("[{}] in: {} {}@{} = {}", __func__, in.address.display()
             , in.outHash.toHexStr(true), in.outIndex, in.value);
+         if (!walletIdFilter_.empty() && (walletIdFilter_.find(in.walletId) == walletIdFilter_.end())) {
+            continue;
+         }
          ins_.push_back({ in.address, in.outHash, in.outIndex, in.value });
       }
       if (!fixedInputs_.empty()) {
@@ -717,10 +720,15 @@ void QTxDetails::setImmutableUTXOs(const std::vector<UTXO>& utxos)
    }
 }
 
+void QTxDetails::addWalletFilter(const std::string& walletId)
+{
+   walletIdFilter_.insert(walletId);
+}
+
 void QTxDetails::setInputsFromOutputs()
 {
    if (outs_.empty()) {
-      logger_->info("[{}] no outputs received [yet]");
+      logger_->info("[{}] no outputs received [yet]", __func__);
       needInputsFromOutputs_ = true;
       return;
    }
@@ -728,6 +736,10 @@ void QTxDetails::setInputsFromOutputs()
    outs.reserve(details_.outputAddresses.size());
    const auto& txId = details_.tx.isInitialized() ? details_.tx.getThisHash() : BinaryData{};
    for (const auto& out : details_.outputAddresses) {
+      if (!walletIdFilter_.empty() && (walletIdFilter_.find(out.walletId) == walletIdFilter_.end())) {
+         logger_->debug("[{}] {} from {} filtered out", __func__, out.address.display(), out.walletId);
+         continue;
+      }
       outs.push_back({ out.address, txId, out.outIndex, out.value });
    }
 

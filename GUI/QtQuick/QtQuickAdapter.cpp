@@ -357,7 +357,7 @@ void QtQuickAdapter::run(int &argc, char **argv)
 QStringList QtQuickAdapter::txWalletsList() const
 {
    QStringList result = { tr("All wallets") };
-   result.append(walletBalances_->wallets());
+   result.append(walletBalances_->walletNames());
    return result;
 }
 
@@ -734,7 +734,7 @@ ProcessingResult QtQuickAdapter::processWallets(const Envelope &env)
             }
          }
          else {
-            const int index = walletBalances_->wallets().indexOf(QString::fromStdString(createdWalletId_));
+            const int index = walletIndexById(createdWalletId_);
             if (index != -1) {
                emit requestWalletSelection(index);
             }
@@ -1080,19 +1080,30 @@ void QtQuickAdapter::createWallet(bool primary)
    logger_->debug("[{}] primary: {}", __func__, primary);
 }
 
-std::string QtQuickAdapter::hdWalletIdByIndex(int index)
+std::string QtQuickAdapter::hdWalletIdByIndex(int index) const
 {
    const auto& walletsList = walletBalances_->wallets();
    if ((index < 0) || (index >= walletsList.size())) {
       return {};
    }
-   const auto& walletName = walletsList.at(index).toStdString();
+   const auto& walletName = walletsList.at(index).walletName;
    for (const auto& wallet : hdWallets_) {
       if (wallet.second.name == walletName) {
          return wallet.first;
       }
    }
    return {};
+}
+
+int QtQuickAdapter::walletIndexById(const std::string& walletId) const
+{
+   const auto& walletsList = walletBalances_->wallets();
+   for (int i = 0; i < walletsList.size(); ++i) {
+      if (walletsList.at(i).walletId == walletId) {
+         return i;
+      }
+   }
+   return -1;
 }
 
 std::string QtQuickAdapter::generateWalletName() const
@@ -1124,7 +1135,7 @@ void QtQuickAdapter::walletSelected(int index)
    logger_->debug("[{}] {}", __func__, index);
    QMetaObject::invokeMethod(this, [this, index] {
       try {
-         const auto& walletName = walletBalances_->wallets().at(index).toStdString();
+         const auto& walletName = walletBalances_->walletNames().at(index).toStdString();
          const auto& walletId = hdWalletIdByIndex(index);
 
          addrModel_->reset(walletId);
@@ -1224,7 +1235,7 @@ ProcessingResult QtQuickAdapter::processWalletBalances(bs::message::SeqId respon
    walletBalances_->setWalletBalance(response.wallet_id(), bal);
 
    if (!createdWalletId_.empty()) {
-      const int index = walletBalances_->wallets().indexOf(QString::fromStdString(createdWalletId_));
+      const int index = walletIndexById(createdWalletId_);
       if (index != -1) {
          emit requestWalletSelection(index);
       }
@@ -1280,7 +1291,7 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
       for (const auto &inAddr : resp.input_addresses()) {
          try {
             txDet.inputAddresses.push_back({ bs::Address::fromAddressString(inAddr.address())
-               , inAddr.value(), inAddr.value_string(), inAddr.wallet_name()
+               , inAddr.value(), inAddr.value_string(), inAddr.wallet_id(), inAddr.wallet_name()
                , static_cast<TXOUT_SCRIPT_TYPE>(inAddr.script_type())
                , BinaryData::fromString(inAddr.out_hash()), (uint32_t)inAddr.out_index() });
          } catch (const std::exception &e) {
@@ -1290,12 +1301,12 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
       for (const auto &outAddr : resp.output_addresses()) {
          try {
             txDet.outputAddresses.push_back({ bs::Address::fromAddressString(outAddr.address())
-               , outAddr.value(), outAddr.value_string(), outAddr.wallet_name()
+               , outAddr.value(), outAddr.value_string(), outAddr.wallet_id(), outAddr.wallet_name()
                , static_cast<TXOUT_SCRIPT_TYPE>(outAddr.script_type())
                , BinaryData::fromString(outAddr.out_hash()), (uint32_t)outAddr.out_index() });
          } catch (const std::exception &) { // OP_RETURN data for valueStr
             txDet.outputAddresses.push_back({ bs::Address{}
-               , outAddr.value(), outAddr.address(), outAddr.wallet_name()
+               , outAddr.value(), outAddr.address(), outAddr.wallet_id(), outAddr.wallet_name()
                , static_cast<TXOUT_SCRIPT_TYPE>(outAddr.script_type()), ownTxHash
                , (uint32_t)outAddr.out_index() });
          }
@@ -1303,7 +1314,7 @@ ProcessingResult QtQuickAdapter::processTXDetails(bs::message::SeqId msgId
       try {
          txDet.changeAddress = { bs::Address::fromAddressString(resp.change_address().address())
             , resp.change_address().value(), resp.change_address().value_string()
-            , resp.change_address().wallet_name()
+            , resp.change_address().wallet_id(), resp.change_address().wallet_name()
             , static_cast<TXOUT_SCRIPT_TYPE>(resp.change_address().script_type())
             , BinaryData::fromString(resp.change_address().out_hash())
             , (uint32_t)resp.change_address().out_index() };
@@ -1692,13 +1703,26 @@ void QtQuickAdapter::getUTXOsForWallet(int walletIndex, QTxDetails* txDet)
    }
 }
 
-QTxDetails* QtQuickAdapter::getTXDetails(const QString& txHash, bool rbf, bool cpfp)
+QTxDetails* QtQuickAdapter::getTXDetails(const QString& txHash, bool rbf
+   , bool cpfp, int selWalletIdx)
 {
    auto txBinHash = BinaryData::CreateFromHex(txHash.trimmed().toStdString());
    txBinHash.swapEndian();
-   logger_->debug("[{}] {} RBF:{} CPFP: {}", __func__, txBinHash.toHexStr(true), rbf, cpfp);
+   logger_->debug("[{}] {} RBF:{} CPFP: {}, idx: {}", __func__, txBinHash.toHexStr(true)
+      , rbf, cpfp, selWalletIdx);
    const auto txDet = new QTxDetails(logger_, txBinHash, this);
    connect(this, &QtQuickAdapter::topBlock, txDet, &QTxDetails::onTopBlock);
+
+   if (selWalletIdx >= 0) {
+      const auto& hdWalletId = hdWalletIdByIndex(selWalletIdx);
+      if (!hdWalletId.empty()) {
+         txDet->addWalletFilter(hdWalletId);
+         const auto& hdWallet = hdWallets_.at(hdWalletId);
+         for (const auto& leaf : hdWallet.leaves) {
+            txDet->addWalletFilter(leaf.first);
+         }
+      }
+   }
 
    if (rbf || cpfp) {
       ArmoryMessage msgSpendable;

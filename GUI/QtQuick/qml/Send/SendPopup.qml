@@ -171,10 +171,10 @@ CustomPopup {
         root.isCPFP = false
     }
 
-    function open(txId: string, isRBF: bool, isCPFP: bool)
+    function open(txId: string, isRBF: bool, isCPFP: bool, selWalletIdx: int)
     {
         _stack_view.replace(advanced_details)
-        root.tx = bsApp.getTXDetails(txId, isRBF, isCPFP)
+        root.tx = bsApp.getTXDetails(txId, isRBF, isCPFP, selWalletIdx)
         root.isRBF = isRBF
         root.isCPFP = isCPFP
         advanced_details.init()

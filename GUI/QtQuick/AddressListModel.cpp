@@ -40,6 +40,9 @@ int QmlAddressListModel::columnCount(const QModelIndex&) const
 QVariant QmlAddressListModel::data(const QModelIndex& index, int role) const
 {
    const int row = index.row();
+   if (row < 0) {
+      return {};
+   }
    try {
       switch (role)
       {

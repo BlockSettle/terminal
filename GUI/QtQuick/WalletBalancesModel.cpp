@@ -144,7 +144,7 @@ void WalletBalancesModel::rename(const std::string& walletId, const std::string&
    emit dataChanged(createIndex(idx, 0), createIndex(idx, 0), { WalletBalance::NameRole });
 }
 
-QStringList WalletBalancesModel::wallets() const
+QStringList WalletBalancesModel::walletNames() const
 {
    QStringList result;
    for (const auto& w : wallets_) {

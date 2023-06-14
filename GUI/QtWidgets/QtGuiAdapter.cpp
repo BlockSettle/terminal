@@ -1349,7 +1349,7 @@ ProcessingResult QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMes
       for (const auto &inAddr : resp.input_addresses()) {
          try {
             txDet.inputAddresses.push_back({ bs::Address::fromAddressString(inAddr.address())
-               , inAddr.value(), inAddr.value_string(), inAddr.wallet_name()
+               , inAddr.value(), inAddr.value_string(), inAddr.wallet_id(), inAddr.wallet_name()
                , static_cast<TXOUT_SCRIPT_TYPE>(inAddr.script_type())
                , BinaryData::fromString(inAddr.out_hash()), (uint32_t)inAddr.out_index() });
          } catch (const std::exception &e) {
@@ -1359,12 +1359,12 @@ ProcessingResult QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMes
       for (const auto &outAddr : resp.output_addresses()) {
          try {
             txDet.outputAddresses.push_back({ bs::Address::fromAddressString(outAddr.address())
-               , outAddr.value(), outAddr.value_string(), outAddr.wallet_name()
+               , outAddr.value(), outAddr.value_string(), outAddr.wallet_id(), outAddr.wallet_name()
                , static_cast<TXOUT_SCRIPT_TYPE>(outAddr.script_type())
                , BinaryData::fromString(outAddr.out_hash()), (uint32_t)outAddr.out_index() });
          } catch (const std::exception &) { // OP_RETURN data for valueStr
             txDet.outputAddresses.push_back({ bs::Address{}
-               , outAddr.value(), outAddr.address(), outAddr.wallet_name()
+               , outAddr.value(), outAddr.address(), outAddr.wallet_id(), outAddr.wallet_name()
                , static_cast<TXOUT_SCRIPT_TYPE>(outAddr.script_type()), ownTxHash
                , (uint32_t)outAddr.out_index() });
          }
@@ -1372,7 +1372,7 @@ ProcessingResult QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMes
       try {
          txDet.changeAddress = { bs::Address::fromAddressString(resp.change_address().address())
             , resp.change_address().value(), resp.change_address().value_string()
-            , resp.change_address().wallet_name()
+            , resp.change_address().wallet_id(), resp.change_address().wallet_name()
             , static_cast<TXOUT_SCRIPT_TYPE>(resp.change_address().script_type())
             , BinaryData::fromString(resp.change_address().out_hash())
             , (uint32_t)resp.change_address().out_index() };

@@ -181,7 +181,8 @@ public:
    Q_INVOKABLE void signAndBroadcast(QTXSignRequest*, const QString& password);
    Q_INVOKABLE int getSearchInputType(const QString&);
    Q_INVOKABLE void startAddressSearch(const QString&);
-   Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash, bool rbf = false, bool cpfp = false);
+   Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash, bool rbf = false
+      , bool cpfp = false, int selWalletIdx = -1);
    Q_INVOKABLE int changePassword(const QString& walletId, const QString& oldPassword, const QString& newPassword);
    Q_INVOKABLE bool isWalletNameExist(const QString& walletName);
    Q_INVOKABLE bool isWalletPasswordValid(const QString& walletId, const QString& password);
@@ -262,7 +263,8 @@ private:
    void notifyNewTransaction(const bs::TXEntry& tx);
 
    void createWallet(bool primary);
-   std::string hdWalletIdByIndex(int);
+   std::string hdWalletIdByIndex(int) const;
+   int walletIndexById(const std::string&) const;
    std::string generateWalletName() const;
    std::string hdWalletIdByLeafId(const std::string&) const;
 

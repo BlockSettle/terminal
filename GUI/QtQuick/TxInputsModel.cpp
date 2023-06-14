@@ -130,7 +130,7 @@ void TxInputsModel::addUTXOs(const std::vector<UTXO>& utxos)
 
             utxos_[addr].push_back(utxo);
             int addrIndex = -1;
-            for (int i = 0; i < data_.size(); ++i) {
+            for (int i = fixedEntries_.size(); i < data_.size(); ++i) {
                if (data_.at(i).address == addr) {
                   addrIndex = i;
                   break;
@@ -210,9 +210,23 @@ void TxInputsModel::setFixedInputs(const std::vector<Entry>& entries)
       data_.erase(data_.cbegin(), data_.cbegin() + fixedEntries_.size());
       endRemoveRows();
    }
-   fixedEntries_ = entries;
-   beginInsertRows(QModelIndex(), 0, entries.size() - 1);
-   data_.insert(data_.cbegin(), entries.cbegin(), entries.cend());
+   std::vector<Entry> treeEntries;
+   for (const auto& entry : entries) {
+      auto it = std::find_if(treeEntries.cbegin(), treeEntries.cend(), [entry](const Entry& e)
+         { return e.address == entry.address; });
+      if (it == treeEntries.end()) {
+         auto addrEntry = entry;
+         addrEntry.txId.clear();
+         addrEntry.expanded = true;
+         treeEntries.push_back(addrEntry);
+      }
+      auto txEntry = entry;
+      txEntry.address.clear();
+      treeEntries.push_back(txEntry);
+   }
+   fixedEntries_ = treeEntries;
+   beginInsertRows(QModelIndex(), 0, treeEntries.size() - 1);
+   data_.insert(data_.cbegin(), treeEntries.cbegin(), treeEntries.cend());
    endInsertRows();
    emit rowCountChanged();
 }
@@ -261,25 +275,10 @@ void TxInputsModel::toggleSelection(int row)
       selectionRoot_ = !selectionRoot_;
 
       if (!selectionRoot_) {
-         selectionUtxos_.clear();
-         selectionAddresses_.clear();
-         for (int iRow = 1;  iRow < rowCount(); iRow ++) {
-            const auto& entry = data_.at(iRow-1);
-            const auto& itAddr = utxos_.find(entry.address);
-            if (itAddr != utxos_.end()) {
-                for (const auto& u : itAddr->second) {
-                   selectionUtxos_.erase({u.getTxHash(), u.getTxOutIndex()});
-                   selectedBalance_ -= u.getValue();
-                   nbTx_--;
-                }
-            }
-         }
+         clearSelection();
       }
       else {
-         for (int iRow = 1;  iRow < rowCount(); iRow ++) {
-            if (iRow <= fixedEntries_.size()) {
-               continue;
-            }
+         for (int iRow = fixedEntries_.size() + 1;  iRow < rowCount(); iRow ++) {
             const auto& entry = data_.at(iRow-1);
             if (entry.txId.empty()) {
                selectionAddresses_.insert(entry.address);
@@ -300,6 +299,9 @@ void TxInputsModel::toggleSelection(int row)
    }
 
    --row;
+   if (row < fixedEntries_.size()) {
+      return;
+   }
    const auto& entry = data_.at(row);
    const auto& itAddr = utxos_.find(entry.address);
    UTXO utxo{};
@@ -591,6 +593,5 @@ bool TxInputsModel::isInputSelectable(int row) const
    if (row > 0 && row <= fixedEntries_.size()) {
       return false;
    }
-
    return true;
 }

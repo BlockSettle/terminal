@@ -29,7 +29,7 @@ Rectangle {
 
     signal newWalletClicked();
     signal curWalletIndexChanged(index : int)
-    signal openSend (string txId, bool isRBF, bool isCPFP)
+    signal openSend (string txId, bool isRBF, bool isCPFP, int selWallet)
     signal openExplorer (string txId)
 
     MouseArea {
@@ -74,7 +74,7 @@ Rectangle {
             addressDetails.open()
         }
 
-        onOpenSend: (txId, isRBF, isCPFP) => overview.openSend(txId, isRBF, isCPFP)
+        onOpenSend: (txId, isRBF, isCPFP) => overview.openSend(txId, isRBF, isCPFP, walletIndex)
         onOpenExplorer: (txId) => overview.openExplorer(txId)
     }
 }
