@@ -32,3 +32,5 @@ RUN cd terminal.release \
 
 RUN ls -la /app/build_terminal/RelWithDebInfo/bin
 
+RUN cd Deploy \
+    && ./deploy.sh
