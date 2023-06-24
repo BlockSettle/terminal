@@ -64,11 +64,21 @@ IF ( APPLE )
  
     ELSEIF ( WIN32 )
     ADD_EXECUTABLE( ${BLOCKSETTLE_APP_NAME} WIN32 ${SOURCES} ${HEADERS} blocksettle.rc )
+
 ELSE ()
     ADD_EXECUTABLE( ${BLOCKSETTLE_APP_NAME} ${SOURCES} ${HEADERS} )
 ENDIF ()
 
-
+IF(UNIX AND NOT APPLE)
+    IF(BUILD_APPIMAGE)
+        configure_file(../common/build_scripts/CMakeModules/AppImageScript.cmake.in appimage.cmake)
+	ADD_CUSTOM_COMMAND(TARGET ${BLOCKSETTLE_APP_NAME} POST_BUILD
+            COMMAND "${CMAKE_COMMAND}" -E echo "Building ${BUNDLE_NAME}.AppImage"
+            COMMAND "${CMAKE_COMMAND}" -P "appimage.cmake"
+	)
+    ENDIF()
+ENDIF()
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath='$ORIGIN'")
 
 TARGET_LINK_LIBRARIES( ${BLOCKSETTLE_APP_NAME}
    ${TERMINAL_CORE_NAME}

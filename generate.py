@@ -17,7 +17,7 @@ import sys
 # Set the minimum macOS target environment. Applies to prereqs and to BS code.
 # If the min target changes, update CMakeLists.txt too.
 if sys.platform == "darwin":
-   os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.12'
+   os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.15'
 
 sys.path.insert(0, os.path.join('common'))
 sys.path.insert(0, os.path.join('common', 'build_scripts'))
@@ -43,7 +43,7 @@ from build_scripts.zeromq_settings              import ZeroMQSettings
 from build_scripts.curl_settings                import CurlSettings
 from build_scripts.websockets_settings          import WebsocketsSettings
 
-def generate_project(build_mode, link_mode, build_production, hide_warnings, cmake_flags, build_tests, build_tracker, signature_cert_name):
+def generate_project(build_mode, link_mode, build_production, hide_warnings, cmake_flags, build_tests, build_tracker, signature_cert_name, build_appimage):
    project_settings = Settings(build_mode, link_mode)
 
    print('Build mode        : {} ( {} )'.format(project_settings.get_build_mode(), ('Production' if build_production else 'Development')))
@@ -143,6 +143,9 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
    if build_tests:
       command.append('-DBUILD_TESTS=1')
 
+   if build_appimage:
+      command.append('-DBUILD_APPIMAGE=1')
+
    if build_tracker:
       command.append('-DBUILD_TRACKER=1')
 
@@ -208,6 +211,10 @@ if __name__ == '__main__':
                              action='store',
                              type=str,
                              help='Signature certificate name Example: "Apple Distribution: FirstName LastName (XXXXXXXXXX)')
+   input_parser.add_argument('--appimage',
+                             action='store_true',
+                             dest='build_appimage',
+                             help='Linux build AppImage file')
    input_parser.add_argument('--test',
                              help='Select to also build tests',
                              action='store_true')
@@ -217,4 +224,4 @@ if __name__ == '__main__':
 
    args = input_parser.parse_args()
 
-   sys.exit(generate_project(args.build_mode, args.link_mode, args.build_production, args.hide_warnings, args.cmake_flags, args.test, args.tracker, args.signature_cert_name))
+   sys.exit(generate_project(args.build_mode, args.link_mode, args.build_production, args.hide_warnings, args.cmake_flags, args.test, args.tracker, args.signature_cert_name, args.build_appimage))
