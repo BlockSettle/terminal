@@ -36,5 +36,5 @@ CMD ["/app/build.sh"]
 #
 #RUN ls -la /app/build_terminal/RelWithDebInfo/bin
 
-RUN cd Deploy \
-    && ./deploy.sh
+#RUN cd Deploy \
+#    && ./deploy.sh
