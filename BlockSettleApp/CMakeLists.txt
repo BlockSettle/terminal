@@ -13,6 +13,8 @@ PROJECT( ${BLOCKSETTLE_APP_NAME} )
 FILE(GLOB SOURCES *.cpp)
 FILE(GLOB HEADERS *.h)
 
+include(CodeSign)
+
 INCLUDE_DIRECTORIES( ${COMMON_UI_LIB_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${COMMON_LIB_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${BLOCKSETTLE_UI_INCLUDE_DIR} )
@@ -26,6 +28,8 @@ INCLUDE_DIRECTORIES( ${BOTAN_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${Qt5Svg_INCLUDE_DIRS} )
 
 IF ( APPLE )
+    include(Notarize)
+
     SET( BUNDLE_NAME "BlockSettle Terminal" )
 
     SET( MACOSX_BUNDLE_BUNDLE_NAME ${BUNDLE_NAME} )
@@ -41,11 +45,42 @@ IF ( APPLE )
     SET_SOURCE_FILES_PROPERTIES( ${BS_TERMINAL_ICNS_FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     ADD_EXECUTABLE( ${BLOCKSETTLE_APP_NAME} MACOSX_BUNDLE ${SOURCES} ${HEADERS} ${BS_TERMINAL_ICNS_FILE})
     SET_TARGET_PROPERTIES( ${BLOCKSETTLE_APP_NAME} PROPERTIES OUTPUT_NAME "${BUNDLE_NAME}" )
+
+    code_sign_is_enabled(can_sign)
+    if (can_sign)
+        set(FILES_TO_SIGN "${EXECUTABLE_OUTPUT_PATH}/${BUNDLE_NAME}.app")
+        configure_file(../common/build_scripts/CMakeModules/CodeSignScript.cmake.in sign_app.cmake)
+        list(APPEND postpkg
+            COMMAND "${CMAKE_COMMAND}" -E echo "Code signing ${BUNDLE_NAME}.app"
+            COMMAND "${CMAKE_COMMAND}" -P "sign_app.cmake"
+        )
+        add_custom_target(sign
+            ${postpkg}
+            WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+            VERBATIM
+            USES_TERMINAL
+        )
+    endif ()
+
+ELSEIF(UNIX AND NOT APPLE)
+    ADD_EXECUTABLE( ${BLOCKSETTLE_APP_NAME} ${SOURCES} ${HEADERS} )
+    IF(BUILD_APPIMAGE)
+        configure_file(../common/build_scripts/CMakeModules/AppImageScript.cmake.in appimage.cmake)
+	ADD_CUSTOM_COMMAND(TARGET ${BLOCKSETTLE_APP_NAME} POST_BUILD
+            COMMAND "${CMAKE_COMMAND}" -E echo "Building ${BUNDLE_NAME}.AppImage"
+            COMMAND "${CMAKE_COMMAND}" -P "appimage.cmake"
+	)
+    ENDIF()
+ 
 ELSEIF ( WIN32 )
     ADD_EXECUTABLE( ${BLOCKSETTLE_APP_NAME} WIN32 ${SOURCES} ${HEADERS} blocksettle.rc )
+
 ELSE ()
     ADD_EXECUTABLE( ${BLOCKSETTLE_APP_NAME} ${SOURCES} ${HEADERS} )
+
 ENDIF ()
+
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath='$ORIGIN'")
 
 TARGET_LINK_LIBRARIES( ${BLOCKSETTLE_APP_NAME}
    ${TERMINAL_CORE_NAME}
