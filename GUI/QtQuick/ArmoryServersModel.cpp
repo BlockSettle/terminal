@@ -81,10 +81,10 @@ void ArmoryServersModel::add(const ArmoryServer& srv)
 void ArmoryServersModel::add(QString name, QString armoryDBIp, int armoryDBPort, int netType, QString armoryDBKey)
 {
    ArmoryServer server;
-   server.name = name;
-   server.armoryDBPort = armoryDBPort;
-   server.armoryDBIp = armoryDBIp;
-   server.armoryDBKey = armoryDBKey;
+   server.name = name.toStdString();
+   server.armoryDBPort = std::to_string(armoryDBPort);
+   server.armoryDBIp = armoryDBIp.toStdString();
+   server.armoryDBKey = armoryDBKey.toStdString();
    if (netType == 0) {
       server.netType = NetworkType::MainNet;
    }
@@ -129,13 +129,14 @@ QVariant ArmoryServersModel::data(const QModelIndex& index, int role) const
    int row = index.row();
 
    switch (role) {
-   case Qt::DisplayRole:   return (data_.at(row).netType == NetworkType::MainNet) ? (data_.at(row).name + QLatin1String(" (Mainnet)"))
-                           : (data_.at(row).name + QLatin1String(" (Testnet)"));
-   case NameRole:          return data_.at(row).name;
+   case Qt::DisplayRole:   return (data_.at(row).netType == NetworkType::MainNet)
+      ? (QString::fromStdString(data_.at(row).name) + QLatin1String(" (Mainnet)"))
+      : (QString::fromStdString(data_.at(row).name) + QLatin1String(" (Testnet)"));
+   case NameRole:          return QString::fromStdString(data_.at(row).name);
    case NetTypeRole:       return (int)data_.at(row).netType;
-   case AddressRole:       return data_.at(row).armoryDBIp;
-   case PortRole:          return QString::number(data_.at(row).armoryDBPort);
-   case KeyRole:           return data_.at(row).armoryDBKey;
+   case AddressRole:       return QString::fromStdString(data_.at(row).armoryDBIp);
+   case PortRole:          return QString::fromStdString(data_.at(row).armoryDBPort);
+   case KeyRole:           return QString::fromStdString(data_.at(row).armoryDBKey);
    case DefaultServerRole: return (index.row() < ArmoryServersProvider::kDefaultServersCount) && (index.row() < rowCount());
    case CurrentServerRole: return (index.row() == current());
    default: return QVariant();
@@ -157,25 +158,23 @@ bool ArmoryServersModel::setData(const QModelIndex& index, const QVariant& value
       switch (role)
       {
       case NameRole:
-         data_.at(row).name = value.toString();
-      break;
+         data_.at(row).name = value.toString().toStdString();
+         break;
       case NetTypeRole:
          data_.at(row).netType = static_cast<NetworkType>(value.toInt());
-      break;
+         break;
       case AddressRole:
-         data_.at(row).armoryDBIp = value.toString();
-      break;
+         data_.at(row).armoryDBIp = value.toString().toStdString();
+         break;
       case PortRole:
-         data_.at(row).armoryDBPort = value.toInt();
-      break;
+         data_.at(row).armoryDBPort = value.toString().toStdString();
+         break;
       case KeyRole:
-         data_.at(row).armoryDBKey = value.toString();
-      break;
-      default:
-      break;
+         data_.at(row).armoryDBKey = value.toString().toStdString();
+         break;
+      default: break;
       }
    }
-
    emit changed(index.row());
    emit dataChanged(index, index, { role });
    return true;
@@ -194,7 +193,7 @@ bool ArmoryServersModel::isEditable(int row) const
 QString ArmoryServersModel::currentNetworkName() const
 {
    if (current_ >= 0 && current_ < data_.size()) {
-      return  data_.at(current_).name;
+      return  QString::fromStdString(data_.at(current_).name);
    }
    return QString::fromLatin1("");
 }

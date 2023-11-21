@@ -199,9 +199,9 @@ void NetworkSettingsPage::displayArmorySettings()
 
    // display info of connected server
    ui_->labelArmoryServerNetwork->setText(connectedServerSettings.netType == NetworkType::MainNet ? tr("MainNet") : tr("TestNet"));
-   ui_->labelArmoryServerAddress->setText(connectedServerSettings.armoryDBIp);
-   ui_->labelArmoryServerPort->setText(QString::number(connectedServerSettings.armoryDBPort));
-   ui_->labelArmoryServerKey->setText(connectedServerSettings.armoryDBKey);
+   ui_->labelArmoryServerAddress->setText(QString::fromStdString(connectedServerSettings.armoryDBIp));
+   ui_->labelArmoryServerPort->setText(QString::fromStdString(connectedServerSettings.armoryDBPort));
+   ui_->labelArmoryServerKey->setText(QString::fromStdString(connectedServerSettings.armoryDBKey));
 
    // display tip if configuration was changed
    if (selectedServerIndex != connectedServerIndex

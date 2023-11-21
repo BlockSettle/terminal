@@ -373,10 +373,9 @@ ProcessingResult QtGuiAdapter::processArmoryServers(const SettingsMessage_Armory
 {
    QList<ArmoryServer> servers;
    for (const auto& server : response.servers()) {
-      servers << ArmoryServer{ QString::fromStdString(server.server_name())
+      servers << ArmoryServer{ server.server_name()
          , static_cast<NetworkType>(server.network_type())
-         , QString::fromStdString(server.server_address())
-         , std::stoi(server.server_port()), QString::fromStdString(server.server_key())
+         , server.server_address(), server.server_port(), server.server_key()
          , SecureBinaryData::fromString(server.password())
          , server.run_locally(), server.one_way_auth() };
    }
@@ -873,10 +872,10 @@ void QtGuiAdapter::onAddArmoryServer(const ArmoryServer& server)
    SettingsMessage msg;
    auto msgReq = msg.mutable_add_armory_server();
    msgReq->set_network_type((int)server.netType);
-   msgReq->set_server_name(server.name.toStdString());
-   msgReq->set_server_address(server.armoryDBIp.toStdString());
-   msgReq->set_server_port(std::to_string(server.armoryDBPort));
-   msgReq->set_server_key(server.armoryDBKey.toStdString());
+   msgReq->set_server_name(server.name);
+   msgReq->set_server_address(server.armoryDBIp);
+   msgReq->set_server_port(server.armoryDBPort);
+   msgReq->set_server_key(server.armoryDBKey);
    msgReq->set_run_locally(server.runLocally);
    msgReq->set_one_way_auth(server.oneWayAuth_);
    msgReq->set_password(server.password.toBinStr());
@@ -897,10 +896,10 @@ void QtGuiAdapter::onUpdArmoryServer(int index, const ArmoryServer& server)
    msgReq->set_index(index);
    auto msgSrv = msgReq->mutable_server();
    msgSrv->set_network_type((int)server.netType);
-   msgSrv->set_server_name(server.name.toStdString());
-   msgSrv->set_server_address(server.armoryDBIp.toStdString());
-   msgSrv->set_server_port(std::to_string(server.armoryDBPort));
-   msgSrv->set_server_key(server.armoryDBKey.toStdString());
+   msgSrv->set_server_name(server.name);
+   msgSrv->set_server_address(server.armoryDBIp);
+   msgSrv->set_server_port(server.armoryDBPort);
+   msgSrv->set_server_key(server.armoryDBKey);
    msgSrv->set_run_locally(server.runLocally);
    msgSrv->set_one_way_auth(server.oneWayAuth_);
    msgSrv->set_password(server.password.toBinStr());

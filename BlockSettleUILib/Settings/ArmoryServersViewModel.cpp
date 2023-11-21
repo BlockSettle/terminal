@@ -56,19 +56,19 @@ QVariant ArmoryServersViewModel::data(const QModelIndex &index, int role) const
       switch (index.column()) {
       case ColumnName:
          if (singleColumnMode_) {
-            return QStringLiteral("%1 (%2)").arg(server.name).arg(serverNetType);
+            return QStringLiteral("%1 (%2)").arg(QString::fromStdString(server.name)).arg(serverNetType);
          }
          else {
-            return server.name;
+            return QString::fromStdString(server.name);
          }
       case ColumnType:
          return serverNetType;
       case ColumnAddress:
-         return server.armoryDBIp;
+         return QString::fromStdString(server.armoryDBIp);
       case ColumnPort:
-         return server.armoryDBPort;
+         return QString::fromStdString(server.armoryDBPort);
       case ColumnKey:
-         return server.armoryDBKey;
+         return QString::fromStdString(server.armoryDBKey);
       default:
          break;
       }

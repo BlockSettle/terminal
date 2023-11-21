@@ -28,6 +28,7 @@
 #include <QThread>
 #include <QTimer>
 #include <QScreen>
+#include <curl/curl.h>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 #include "ArmoryServersModel.h"
@@ -209,6 +210,7 @@ QtQuickAdapter::~QtQuickAdapter()
 void QtQuickAdapter::run(int &argc, char **argv)
 {
    logger_->debug("[QtQuickAdapter::run]");
+   curl_global_init(CURL_GLOBAL_ALL);
    Q_INIT_RESOURCE(armory);
    Q_INIT_RESOURCE(qtquick);
 
@@ -425,7 +427,7 @@ void QtQuickAdapter::onArmoryServerSelected(int index)
       return;
    }
    armoryServerIndex_ = index;
-   armoryState_ = 1;
+   armoryState_ = ArmoryState::Connecting;
    emit armoryStateChanged();
 
    if (txModel_) {
@@ -530,10 +532,9 @@ ProcessingResult QtQuickAdapter::processArmoryServers(bs::message::SeqId msgId
       , response.idx_connected());
    std::vector<ArmoryServer> servers;
    for (const auto& server : response.servers()) {
-      servers.push_back({ QString::fromStdString(server.server_name())
+      servers.push_back({ server.server_name()
          , static_cast<NetworkType>(server.network_type())
-         , QString::fromStdString(server.server_address())
-         , std::stoi(server.server_port()), QString::fromStdString(server.server_key())
+         , server.server_address(), server.server_port(), server.server_key()
          , SecureBinaryData::fromString(server.password())
          , server.run_locally(), server.one_way_auth() });
    }
@@ -571,6 +572,16 @@ ProcessingResult QtQuickAdapter::processAdminMessage(const Envelope &env)
    return ProcessingResult::Success;
 }
 
+void QtQuickAdapter::rescanAllWallets()
+{
+   logger_->debug("[{}]", __func__);
+   WalletsMessage msg;
+   for (const auto& hdWallet : hdWallets_) {
+      msg.set_wallet_rescan(hdWallet.first);
+      pushRequest(user_, userWallets_, msg.SerializeAsString());
+   }
+}
+
 ProcessingResult QtQuickAdapter::processBlockchain(const Envelope &env)
 {
    ArmoryMessage msg;
@@ -588,10 +599,15 @@ ProcessingResult QtQuickAdapter::processBlockchain(const Envelope &env)
       updateSplashProgress();
       break;
    case ArmoryMessage::kStateChanged:
-      armoryState_ = msg.state_changed().state();
-      netType_ = static_cast<NetworkType>(msg.state_changed().net_type());
       setTopBlock(msg.state_changed().top_block());
-      emit armoryStateChanged();
+      netType_ = static_cast<NetworkType>(msg.state_changed().net_type());
+      if ((int)armoryState_ != msg.state_changed().state()) {
+         armoryState_ = static_cast<ArmoryState>(msg.state_changed().state());
+         emit armoryStateChanged();
+         if (armoryState_ == ArmoryState::Ready) {
+            rescanAllWallets();
+         }
+      }
       break;
    case ArmoryMessage::kNewBlock:
       setTopBlock(msg.new_block().top_block());
@@ -1538,7 +1554,7 @@ bool QtQuickAdapter::addArmoryServer(const QString& name
    , int netType, const QString& ipAddr, const QString& ipPort, const QString& key)
 {
    for (const auto& srv : armoryServersModel_->data()) {
-      if (srv.name == name) {
+      if (srv.name == name.toStdString()) {
          logger_->debug("[{}] armory server {} already exists", __func__, name.toStdString());
          return false;
       }
@@ -1552,11 +1568,10 @@ bool QtQuickAdapter::addArmoryServer(const QString& name
    msgReq->set_server_key(key.toStdString());
    pushRequest(user_, userSettings_, msg.SerializeAsString());
    QMetaObject::invokeMethod(this, [this, name, netType, ipAddr, ipPort, key] {
-      armoryServersModel_->add({ name, static_cast<NetworkType>(netType), ipAddr, ipPort.toInt(), key });
+      armoryServersModel_->add({ name.toStdString(), static_cast<NetworkType>(netType)
+         , ipAddr.toStdString(), ipPort.toStdString(), key.toStdString()});
    });
-
    updateArmoryServers();
-
    return true;
 }
 
@@ -1577,10 +1592,10 @@ void QtQuickAdapter::onArmoryServerChanged(int index)
    auto msgReq = msg.mutable_upd_armory_server();
    msgReq->set_index(index);
    auto msgSrv = msgReq->mutable_server();
-   msgSrv->set_server_name(srv.name.toStdString());
-   msgSrv->set_server_address(srv.armoryDBIp.toStdString());
-   msgSrv->set_server_port(std::to_string(srv.armoryDBPort));
-   msgSrv->set_server_key(srv.armoryDBKey.toStdString());
+   msgSrv->set_server_name(srv.name);
+   msgSrv->set_server_address(srv.armoryDBIp);
+   msgSrv->set_server_port(srv.armoryDBPort);
+   msgSrv->set_server_key(srv.armoryDBKey);
    msgSrv->set_network_type((int)srv.netType);
    pushRequest(user_, userSettings_, msg.SerializeAsString());
 }
@@ -1713,7 +1728,7 @@ QTxDetails* QtQuickAdapter::getTXDetails(const QString& txHash, bool rbf
    const auto txDet = new QTxDetails(logger_, txBinHash, this);
    connect(this, &QtQuickAdapter::topBlock, txDet, &QTxDetails::onTopBlock);
 
-   if (selWalletIdx >= 0) {
+   if (cpfp && (selWalletIdx >= 0)) {
       const auto& hdWalletId = hdWalletIdByIndex(selWalletIdx);
       if (!hdWalletId.empty()) {
          txDet->addWalletFilter(hdWalletId);

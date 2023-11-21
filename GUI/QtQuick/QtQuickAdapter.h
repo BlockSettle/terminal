@@ -132,7 +132,7 @@ public:
    void setExportDir(const QString& str) {setSetting(ApplicationSettings::Setting::ExportDir, str); }
 
    Q_PROPERTY(int armoryState READ armoryState NOTIFY armoryStateChanged)
-   int armoryState() const { return armoryState_; }
+   int armoryState() const { return (int)armoryState_; }
 
    Q_PROPERTY(int networkType READ networkType NOTIFY networkTypeChanged)
    int networkType() const { return (int)netType_; }
@@ -298,6 +298,7 @@ private:
    QVariant getSetting(ApplicationSettings::Setting) const;
    QString getSettingStringAt(ApplicationSettings::Setting, int idx);
    void setSetting(ApplicationSettings::Setting, const QVariant&);
+   void rescanAllWallets();
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
@@ -312,7 +313,7 @@ private:
    std::recursive_mutex mutex_;
    std::set<int>  createdComponents_;
    std::set<int>  loadingComponents_;
-   int         armoryState_{ -1 };
+   ArmoryState    armoryState_{ ArmoryState::Offline };
    int         armoryServerIndex_{ -1 };
    NetworkType netType_{ NetworkType::Invalid };
    uint32_t    blockNum_{ 0 };

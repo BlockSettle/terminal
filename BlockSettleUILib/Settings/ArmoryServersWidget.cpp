@@ -198,11 +198,11 @@ void ArmoryServersWidget::onAddServer()
       return;
 
    ArmoryServer server;
-   server.name = ui_->lineEditName->text();
+   server.name = ui_->lineEditName->text().toStdString();
    server.netType = static_cast<NetworkType>(ui_->comboBoxNetworkType->currentIndex() - 1);
-   server.armoryDBIp = ui_->lineEditAddress->text();
-   server.armoryDBPort = ui_->spinBoxPort->value();
-   server.armoryDBKey = ui_->lineEditKey->text();
+   server.armoryDBIp = ui_->lineEditAddress->text().toStdString();
+   server.armoryDBPort = std::to_string(ui_->spinBoxPort->value());
+   server.armoryDBKey = ui_->lineEditKey->text().toStdString();
 
    if (armoryServersProvider_) {
       bool ok = armoryServersProvider_->add(server);
@@ -261,11 +261,11 @@ void ArmoryServersWidget::onEdit()
 
    ui_->stackedWidgetAddSave->setCurrentWidget(ui_->pageSaveServerButton);
 
-   ui_->lineEditName->setText(server.name);
+   ui_->lineEditName->setText(QString::fromStdString(server.name));
    ui_->comboBoxNetworkType->setCurrentIndex(static_cast<int>(server.netType) + 1);
-   ui_->lineEditAddress->setText(server.armoryDBIp);
-   ui_->spinBoxPort->setValue(server.armoryDBPort);
-   ui_->lineEditKey->setText(server.armoryDBKey);
+   ui_->lineEditAddress->setText(QString::fromStdString(server.armoryDBIp));
+   ui_->spinBoxPort->setValue(std::stoi(server.armoryDBPort));
+   ui_->lineEditKey->setText(QString::fromStdString(server.armoryDBKey));
 }
 
 void ArmoryServersWidget::onSelect()
@@ -290,11 +290,11 @@ void ArmoryServersWidget::onSave()
    }
 
    ArmoryServer server;
-   server.name = ui_->lineEditName->text();
+   server.name = ui_->lineEditName->text().toStdString();
    server.netType = static_cast<NetworkType>(ui_->comboBoxNetworkType->currentIndex() - 1);
-   server.armoryDBIp = ui_->lineEditAddress->text();
-   server.armoryDBPort = ui_->spinBoxPort->value();
-   server.armoryDBKey = ui_->lineEditKey->text();
+   server.armoryDBIp = ui_->lineEditAddress->text().toStdString();
+   server.armoryDBPort = std::to_string(ui_->spinBoxPort->value());
+   server.armoryDBKey = ui_->lineEditKey->text().toStdString();
 
    if (armoryServersProvider_) {
       bool ok = armoryServersProvider_->replace(index, server);
@@ -397,14 +397,14 @@ void ArmoryServersWidget::onFormChanged()
    bool valid = false;
    if (acceptable) {
       ArmoryServer armoryHost;
-      armoryHost.name = ui_->lineEditName->text();
-      armoryHost.armoryDBIp = ui_->lineEditAddress->text();
-      armoryHost.armoryDBPort = ui_->spinBoxPort->value();
-      armoryHost.armoryDBKey = ui_->lineEditKey->text();
+      armoryHost.name = ui_->lineEditName->text().toStdString();
+      armoryHost.armoryDBIp = ui_->lineEditAddress->text().toStdString();
+      armoryHost.armoryDBPort = std::to_string(ui_->spinBoxPort->value());
+      armoryHost.armoryDBKey = ui_->lineEditKey->text().toStdString();
       valid = armoryHost.isValid();
       if (valid) {
          if (armoryServersProvider_) {
-            exists = armoryServersProvider_->indexOf(armoryHost.name) != -1
+            exists = armoryServersProvider_->indexOf(QString::fromStdString(armoryHost.name)) != -1
                || armoryServersProvider_->indexOf(armoryHost) != -1;
          }
          else {

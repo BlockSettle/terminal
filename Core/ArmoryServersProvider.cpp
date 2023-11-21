@@ -29,8 +29,8 @@ namespace {
 } // namespace
 
 const std::vector<ArmoryServer> ArmoryServersProvider::defaultServers_ = {
-   ArmoryServer::fromTextSettings(QStringLiteral(ARMORY_BLOCKSETTLE_NAME":0:mainnet.blocksettle.com:9003:")),
-   ArmoryServer::fromTextSettings(QStringLiteral(ARMORY_BLOCKSETTLE_NAME":1:testnet.blocksettle.com:19003:")),
+   ArmoryServer::fromTextSettings(ARMORY_BLOCKSETTLE_NAME":0:mainnet.blocksettle.com:9003:"),
+   ArmoryServer::fromTextSettings(ARMORY_BLOCKSETTLE_NAME":1:testnet.blocksettle.com:19003:"),
 /*   ArmoryServer::fromTextSettings(kEnableLocalAutostart ?
       QStringLiteral("%1:0:127.0.0.1::").arg(QObject::tr("Local Auto-launch Node")) :
       QStringLiteral("%1:0:127.0.0.1::").arg(QObject::tr("Local BlockSettleDB Node"))),
@@ -74,7 +74,7 @@ std::vector<ArmoryServer> ArmoryServersProvider::servers() const
    servers.push_back(localTestNet);*/
 
    for (const QString &srv : userServers) {
-      servers.push_back(ArmoryServer::fromTextSettings(srv));
+      servers.push_back(ArmoryServer::fromTextSettings(srv.toStdString()));
    }
    return servers;
 }
@@ -84,8 +84,8 @@ ArmorySettings ArmoryServersProvider::getArmorySettings() const
    ArmorySettings settings;
 
    settings.netType = appSettings_->get<NetworkType>(ApplicationSettings::netType);
-   settings.armoryDBIp = appSettings_->get<QString>(ApplicationSettings::armoryDbIp);
-   settings.armoryDBPort = appSettings_->GetArmoryRemotePort();
+   settings.armoryDBIp = appSettings_->get<std::string>(ApplicationSettings::armoryDbIp);
+   settings.armoryDBPort = std::to_string(appSettings_->GetArmoryRemotePort());
    settings.runLocally = appSettings_->get<bool>(ApplicationSettings::runArmoryLocally);
 
    const int serverIndex = indexOf(static_cast<ArmoryServer>(settings));
@@ -95,10 +95,10 @@ ArmorySettings ArmoryServersProvider::getArmorySettings() const
 
    settings.socketType = appSettings_->GetArmorySocketType();
 
-   settings.armoryExecutablePath = QDir::cleanPath(appSettings_->get<QString>(ApplicationSettings::armoryPathName));
-   settings.dbDir = appSettings_->GetDBDir();
-   settings.bitcoinBlocksDir = appSettings_->GetBitcoinBlocksDir();
-   settings.dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+   settings.armoryExecutablePath = QDir::cleanPath(appSettings_->get<QString>(ApplicationSettings::armoryPathName)).toStdString();
+   settings.dbDir = appSettings_->GetDBDir().toStdString();
+   settings.bitcoinBlocksDir = appSettings_->GetBitcoinBlocksDir().toStdString();
+   settings.dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
 
    return settings;
 }
@@ -118,7 +118,7 @@ int ArmoryServersProvider::indexOf(const QString &name) const
    // naive implementation
    const auto& s = servers();
    for (int i = 0; i < s.size(); ++i) {
-      if (s.at(i).name == name) {
+      if (s.at(i).name == name.toStdString()) {
          return i;
       }
    }
@@ -134,7 +134,7 @@ int ArmoryServersProvider::indexOf(const ArmoryServer &server) const
          , i, s.name.toStdString(), server.name.toStdString(), (int)s.netType
          , (int)server.netType, s.armoryDBIp.toStdString()
          , server.armoryDBIp.toStdString(), s.armoryDBPort, server.armoryDBPort);*/
-      if ((server.name.isEmpty() || (s.name == server.name)) && (s.netType == server.netType)
+      if ((server.name.empty() || (s.name == server.name)) && (s.netType == server.netType)
          && (s.armoryDBIp == server.armoryDBIp) && (s.armoryDBPort == server.armoryDBPort)) {
          return i;
       }
@@ -151,7 +151,8 @@ int ArmoryServersProvider::indexOfIpPort(const std::string &srvIPPort) const
    }
 
    for (int i = 0; i < servers().size(); ++i) {
-      if (servers().at(i).armoryDBIp == ipPortList.at(0) && servers().at(i).armoryDBPort == ipPortList.at(1).toInt()) {
+      if ((servers().at(i).armoryDBIp == ipPortList.at(0).toStdString())
+         && (servers().at(i).armoryDBPort == ipPortList.at(1).toStdString())) {
          return i;
       }
    }
@@ -170,10 +171,14 @@ int ArmoryServersProvider::getIndexOfTestNetServer()
 
 bool ArmoryServersProvider::add(const ArmoryServer &server)
 {
-   if (server.armoryDBPort < 1 || server.armoryDBPort > USHRT_MAX) {
+   if (server.armoryDBPort.empty()) {
       return false;
    }
-   if (server.name.isEmpty()) {
+   const int armoryPort = std::stoi(server.armoryDBPort);
+   if (armoryPort < 1 || armoryPort > USHRT_MAX) {
+      return false;
+   }
+   if (server.name.empty()) {
       return false;
    }
 
@@ -192,17 +197,14 @@ bool ArmoryServersProvider::add(const ArmoryServer &server)
 
    QStringList serversTxt = appSettings_->get<QStringList>(ApplicationSettings::armoryServers);
 
-   serversTxt.append(server.toTextSettings());
+   serversTxt.append(QString::fromStdString(server.toTextSettings()));
    appSettings_->set(ApplicationSettings::armoryServers, serversTxt);
    return true;
 }
 
 bool ArmoryServersProvider::replace(int index, const ArmoryServer &server)
 {
-   if (server.armoryDBPort < 1 || server.armoryDBPort > USHRT_MAX) {
-      return false;
-   }
-   if (server.name.isEmpty()) {
+   if (server.armoryDBPort.empty() || server.name.empty()) {
       return false;
    }
    if (index < kDefaultServersCount) {
@@ -234,7 +236,7 @@ bool ArmoryServersProvider::replace(int index, const ArmoryServer &server)
       return false;
    }
 
-   serversTxt.replace(index - kDefaultServersCount, server.toTextSettings());
+   serversTxt.replace(index - kDefaultServersCount, QString::fromStdString(server.toTextSettings()));
    appSettings_->set(ApplicationSettings::armoryServers, serversTxt);
    return true;
 }
@@ -262,10 +264,10 @@ NetworkType ArmoryServersProvider::setupServer(int index)
    NetworkType netType{ NetworkType::Invalid };
    const auto& srvList = servers();
    if (index >= 0 && index < srvList.size()) {
-      ArmoryServer server = srvList.at(index);
-      appSettings_->set(ApplicationSettings::armoryDbName, server.name);
-      appSettings_->set(ApplicationSettings::armoryDbIp, server.armoryDBIp);
-      appSettings_->set(ApplicationSettings::armoryDbPort, server.armoryDBPort);
+      const auto& server = srvList.at(index);
+      appSettings_->set(ApplicationSettings::armoryDbName, QString::fromStdString(server.name));
+      appSettings_->set(ApplicationSettings::armoryDbIp, QString::fromStdString(server.armoryDBIp));
+      appSettings_->set(ApplicationSettings::armoryDbPort, QString::fromStdString(server.armoryDBPort));
       appSettings_->set(ApplicationSettings::netType, static_cast<int>(server.netType));
       appSettings_->set(ApplicationSettings::runArmoryLocally, server.runLocally);
       netType = server.netType;
@@ -279,7 +281,8 @@ int ArmoryServersProvider::addKey(const QString &address, int port, const QStrin
    // find server
    int index = -1;
    for (int i = 0; i < servers().size(); ++i) {
-      if (servers().at(i).armoryDBIp == address && servers().at(i).armoryDBPort == port) {
+      if ((servers().at(i).armoryDBIp == address.toStdString())
+         && (servers().at(i).armoryDBPort == std::to_string(port))) {
          index = i;
          break;
       }
@@ -295,9 +298,9 @@ int ArmoryServersProvider::addKey(const QString &address, int port, const QStrin
 
    QStringList servers = appSettings_->get<QStringList>(ApplicationSettings::armoryServers);
    QString serverTxt = servers.at(index - ArmoryServersProvider::kDefaultServersCount);
-   ArmoryServer server = ArmoryServer::fromTextSettings(serverTxt);
-   server.armoryDBKey = key;
-   servers[index - ArmoryServersProvider::kDefaultServersCount] = server.toTextSettings();
+   ArmoryServer server = ArmoryServer::fromTextSettings(serverTxt.toStdString());
+   server.armoryDBKey = key.toStdString();
+   servers[index - ArmoryServersProvider::kDefaultServersCount] = QString::fromStdString(server.toTextSettings());
 
    appSettings_->set(ApplicationSettings::armoryServers, servers);
    return index;

@@ -146,17 +146,18 @@ void SettingsAdapter::sendSettings(const ArmorySettings& armorySettings, bool ne
       armoryServersProvider_->setConnectedArmorySettings(armorySettings);
       msgResp->set_socket_type(armorySettings.socketType);
       msgResp->set_network_type((int)armorySettings.netType);
-      msgResp->set_host(armorySettings.armoryDBIp.toStdString());
-      msgResp->set_port(std::to_string(armorySettings.armoryDBPort));
-      msgResp->set_bip15x_key(armorySettings.armoryDBKey.toStdString());
+      msgResp->set_host(armorySettings.armoryDBIp);
+      msgResp->set_port(armorySettings.armoryDBPort);
+      msgResp->set_bip15x_key(armorySettings.armoryDBKey);
       msgResp->set_run_locally(armorySettings.runLocally);
-      msgResp->set_data_dir(armorySettings.dataDir.toStdString());
-      msgResp->set_executable_path(armorySettings.armoryExecutablePath.toStdString());
-      msgResp->set_bitcoin_dir(armorySettings.bitcoinBlocksDir.toStdString());
-      msgResp->set_db_dir(armorySettings.dbDir.toStdString());
+      msgResp->set_data_dir(armorySettings.dataDir);
+      msgResp->set_executable_path(armorySettings.armoryExecutablePath);
+      msgResp->set_bitcoin_dir(armorySettings.bitcoinBlocksDir);
+      msgResp->set_db_dir(armorySettings.dbDir);
       msgResp->set_cache_file_name(appSettings_->get<std::string>(ApplicationSettings::txCacheFileName));
       pushRequest(user_, bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain)
          , msg.SerializeAsString(), {}, 3, std::chrono::seconds{10});
+      logger_->debug("[{}] {}", __func__, msg.DebugString());
    }
    if (netTypeChanged) {
       logger_->debug("[{}] network type changed - reloading wallets", __func__);
@@ -505,7 +506,7 @@ ProcessingResult SettingsAdapter::processArmoryServer(const BlockSettle::Termina
 {
    int selIndex = 0;
    for (const auto &server : armoryServersProvider_->servers()) {
-      if ((server.name == QString::fromStdString(request.server_name()))
+      if ((server.name == request.server_name())
          && (server.netType == static_cast<NetworkType>(request.network_type()))) {
          break;
       }
@@ -532,10 +533,13 @@ ProcessingResult SettingsAdapter::processSetArmoryServer(const bs::message::Enve
       logger_->error("[{}] Failed to setup server #{}", __func__, index);
       return ProcessingResult::Error;
    }
-   appSettings_->selectNetwork();
-   logger_->debug("[{}] net {} selected", __func__
-      , (int)appSettings_->get<NetworkType>(ApplicationSettings::Setting::netType));
-   sendSettings(armoryServersProvider_->getArmorySettings(), (prevNetType != newNetType));
+   const bool netTypeChanged = newNetType != prevNetType;
+   if (netTypeChanged) {
+      appSettings_->selectNetwork();
+      logger_->debug("[{}] net {} selected", __func__
+         , (int)appSettings_->get<NetworkType>(ApplicationSettings::Setting::netType));
+   }
+   sendSettings(armoryServersProvider_->getArmorySettings(), netTypeChanged);
    return ProcessingResult::Success;
 }
 
@@ -548,10 +552,10 @@ ProcessingResult SettingsAdapter::processGetArmoryServers(const bs::message::Env
    for (const auto& server : armoryServersProvider_->servers()) {
       auto msgSrv = msgResp->add_servers();
       msgSrv->set_network_type((int)server.netType);
-      msgSrv->set_server_name(server.name.toStdString());
-      msgSrv->set_server_address(server.armoryDBIp.toStdString());
-      msgSrv->set_server_port(std::to_string(server.armoryDBPort));
-      msgSrv->set_server_key(server.armoryDBKey.toStdString());
+      msgSrv->set_server_name(server.name);
+      msgSrv->set_server_address(server.armoryDBIp);
+      msgSrv->set_server_port(server.armoryDBPort);
+      msgSrv->set_server_key(server.armoryDBKey);
       msgSrv->set_run_locally(server.runLocally);
       msgSrv->set_one_way_auth(server.oneWayAuth_);
       msgSrv->set_password(server.password.toBinStr());
@@ -563,11 +567,11 @@ ProcessingResult SettingsAdapter::processGetArmoryServers(const bs::message::Env
 static ArmoryServer fromMessage(const SettingsMessage_ArmoryServer& msg)
 {
    ArmoryServer result;
-   result.name = QString::fromStdString(msg.server_name());
+   result.name = msg.server_name();
    result.netType = static_cast<NetworkType>(msg.network_type());
-   result.armoryDBIp = QString::fromStdString(msg.server_address());
+   result.armoryDBIp = msg.server_address();
    result.armoryDBPort = std::stoi(msg.server_port());
-   result.armoryDBKey = QString::fromStdString(msg.server_key());
+   result.armoryDBKey = msg.server_key();
    result.password = SecureBinaryData::fromString(msg.password());
    result.runLocally = msg.run_locally();
    result.oneWayAuth_ = msg.one_way_auth();

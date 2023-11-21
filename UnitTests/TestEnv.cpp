@@ -107,9 +107,9 @@ void TestEnv::requireArmory(bool waitForReady)
    settings.runLocally = false;
    settings.socketType = appSettings()->GetArmorySocketType();
    settings.netType = NetworkType::TestNet;
-   settings.armoryDBIp = QLatin1String("127.0.0.1");
-   settings.armoryDBPort = armoryInstance_->port_;
-   settings.dataDir = QLatin1String("armory_regtest_db");
+   settings.armoryDBIp = "127.0.0.1";
+   settings.armoryDBPort = std::to_string(armoryInstance_->port_);
+   settings.dataDir = "armory_regtest_db";
 
    const auto& keyCb = [](const BinaryData&, const std::string&)->bool
    {
