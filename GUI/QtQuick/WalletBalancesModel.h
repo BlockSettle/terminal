@@ -16,6 +16,7 @@
 #include <QColor>
 #include <QObject>
 #include <QVariant>
+#include <unordered_map>
 
 namespace spdlog {
    class logger;

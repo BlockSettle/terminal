@@ -11,6 +11,7 @@
 #include "CommonTypes.h"
 #include "QtGuiAdapter.h"
 #include <QApplication>
+#include <QApplicationStateChangeEvent>
 #include <QDateTime>
 #include <QDirIterator>
 #include <QFile>
@@ -35,10 +36,13 @@
 #include "common.pb.h"
 #include "terminal.pb.h"
 
+#include "../../BlockSettleApp/macosapp.h"
+
 using namespace BlockSettle::Common;
 using namespace BlockSettle::Terminal;
 using namespace bs::message;
 
+/*
 #if defined (Q_OS_MAC)
 class MacOsApp : public QApplication
 {
@@ -74,7 +78,7 @@ private:
    bool activationRequired_ = false;
 };
 #endif   // Q_OS_MAC
-
+*/
 
 static void checkStyleSheet(QApplication &app)
 {
@@ -212,8 +216,8 @@ void QtGuiAdapter::run(int &argc, char **argv)
    logger_->debug("[QtGuiAdapter::run] initial setup done");
 
 #if defined (Q_OS_MAC)
-   MacOsApp *macApp = (MacOsApp*)(app);
-   QObject::connect(macApp, &MacOsApp::reactivateTerminal, mainWindow
+//   MacOsApp *macApp = &app;
+   QObject::connect(&app, &MacOsApp::reactivateTerminal, mainWindow_
       , &bs::gui::qt::MainWindow::onReactivate);
 #endif
    bs::disableAppNap();

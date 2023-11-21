@@ -37,6 +37,8 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/daily_file_sink.h>
 
+#include "macosapp.h"
+
 //#include "AppNap.h"
 
 #ifdef USE_QWindowsIntegrationPlugin
@@ -90,7 +92,7 @@ Q_DECLARE_METATYPE(UTXO)
 
 #include <QEvent>
 #include <QApplicationStateChangeEvent>
-
+/*
 class MacOsApp : public QApplication
 {
    Q_OBJECT
@@ -124,6 +126,7 @@ protected:
 private:
    bool activationRequired_ = false;
 };
+*/
 
 static void checkStyleSheet(QApplication &app)
 {
