@@ -204,21 +204,25 @@ void ApiAdapter::add(const std::shared_ptr<ApiBusAdapter> &adapter)
       }
    }
    const auto userId = ++nextApiUser_;
-   logger_->debug("[{}] {} has id {}", __func__, adapter->name(), userId);
+   logger_->debug("[{}] {} has user {}", __func__, adapter->name(), userId);
    adapter->setUserId(userId);
    apiBus_->addAdapter(adapter);
 }
 
 ProcessingResult ApiAdapter::process(const bs::message::Envelope &env)
 {
-   if (env.message.empty()) {
-      return ProcessingResult::Success;
-   }
-   const auto rc = RelayAdapter::process(env);
    if (env.receiver->value() == user_->value()) {
+      if (!env.isRequest() && !queue_->isSame()) {
+         auto envResp = bs::message::Envelope::makeResponse(env.sender, env.receiver
+            , {}, env.responseId());
+         queue_->pushFill(envResp);
+      }
+      if (env.message.empty()) {
+         return ProcessingResult::Success;
+      }
       return gwAdapter_->pushToApiBus(env);
    }
-   return rc;
+   return RelayAdapter::process(env);
 }
 
 bool ApiAdapter::processBroadcast(const bs::message::Envelope& env)
@@ -237,6 +241,7 @@ bool ApiAdapter::processTimeout(const bs::message::Envelope& env)
    }
    return true;
 }
+
 
 bool ApiBusAdapter::pushFill(bs::message::Envelope& env)
 {

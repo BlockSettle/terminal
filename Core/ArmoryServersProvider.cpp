@@ -50,6 +50,7 @@ std::vector<ArmoryServer> ArmoryServersProvider::servers() const
 {
    QStringList userServers = appSettings_->get<QStringList>(ApplicationSettings::armoryServers);
    std::vector<ArmoryServer> servers;
+   servers.reserve(userServers.size() + kDefaultServersCount);
 
    // #1 add MainNet blocksettle server
    ArmoryServer bsMainNet = defaultServers_.at(static_cast<int>(ServerIndices::MainNet));
@@ -74,7 +75,8 @@ std::vector<ArmoryServer> ArmoryServersProvider::servers() const
    servers.push_back(localTestNet);*/
 
    for (const QString &srv : userServers) {
-      servers.push_back(ArmoryServer::fromTextSettings(srv.toStdString()));
+      const auto& server = ArmoryServer::fromTextSettings(srv.toStdString());
+      servers.push_back(server);
    }
    return servers;
 }
@@ -130,10 +132,11 @@ int ArmoryServersProvider::indexOf(const ArmoryServer &server) const
    const auto& srvrs = servers();
    for (int i = 0; i < srvrs.size(); ++i) {
       const auto& s = srvrs.at(i);
-/*      logger_->debug("[{}] {}: {} vs {}, {} vs {}, {} vs {}, {} vs {}", __func__
-         , i, s.name.toStdString(), server.name.toStdString(), (int)s.netType
-         , (int)server.netType, s.armoryDBIp.toStdString()
-         , server.armoryDBIp.toStdString(), s.armoryDBPort, server.armoryDBPort);*/
+#ifdef MSG_DEBUGGING
+      logger_->debug("[{}] {}: {} vs {}, {} vs {}, {} vs {}, {} vs {}", __func__
+         , i, s.name, server.name, (int)s.netType, (int)server.netType
+         , s.armoryDBIp, server.armoryDBIp, s.armoryDBPort, server.armoryDBPort);
+#endif
       if ((server.name.empty() || (s.name == server.name)) && (s.netType == server.netType)
          && (s.armoryDBIp == server.armoryDBIp) && (s.armoryDBPort == server.armoryDBPort)) {
          return i;
@@ -236,6 +239,7 @@ bool ArmoryServersProvider::replace(int index, const ArmoryServer &server)
       return false;
    }
 
+   logger_->debug("[{}] {}", __func__, server.toTextSettings());
    serversTxt.replace(index - kDefaultServersCount, QString::fromStdString(server.toTextSettings()));
    appSettings_->set(ApplicationSettings::armoryServers, serversTxt);
    return true;

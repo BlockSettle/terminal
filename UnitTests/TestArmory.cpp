@@ -129,3 +129,16 @@ TEST(TestArmory, CrashOnNonExistentHashInTxBatch)
    armoryConn->getTXsByHash({ nonExHash }, cbTXs, true);
    EXPECT_TRUE(fut.get());
 }
+
+#include "common.pb.h"
+using namespace BlockSettle::Common;
+
+TEST(MessageBus, timed_out)
+{
+   ArmoryMessage msg;
+
+   const auto& msg1 = BinaryData::CreateFromHex("8a020e0a0c0204060c18309001f803f007");
+
+   ASSERT_TRUE(msg.ParseFromString(msg1.toBinStr()));
+   StaticLogger::loggerPtr->debug(msg.DebugString());
+}

@@ -531,12 +531,14 @@ ProcessingResult QtQuickAdapter::processArmoryServers(bs::message::SeqId msgId
    logger_->debug("[{}] current={}, connected={}", __func__, response.idx_current()
       , response.idx_connected());
    std::vector<ArmoryServer> servers;
+   servers.reserve(response.servers_size());
    for (const auto& server : response.servers()) {
-      servers.push_back({ server.server_name()
+      const ArmoryServer srv{ server.server_name()
          , static_cast<NetworkType>(server.network_type())
          , server.server_address(), server.server_port(), server.server_key()
          , SecureBinaryData::fromString(server.password())
-         , server.run_locally(), server.one_way_auth() });
+         , server.run_locally(), server.one_way_auth() };
+      servers.push_back(srv);
    }
    armoryServersModel_->setData(response.idx_current(), response.idx_connected(), servers);
    return ProcessingResult::Success;
@@ -1185,8 +1187,11 @@ void QtQuickAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
 
    WalletsMessage msg;
    msg.set_get_wallet_balances(walletId);
-   pushRequest(user_, userWallets_, msg.SerializeAsString(), {}, 10
-      , std::chrono::milliseconds{ 500 });
+   const auto& msgId = pushRequest(user_, userWallets_, msg.SerializeAsString()
+      , {}, 10, std::chrono::milliseconds{ 500 });
+#ifdef MSG_DEBUGGING
+   logger_->debug("[{}] sent #{} from {}", __func__, msgId, user_->name());
+#endif
 }
 
 static QString assetTypeToString(const bs::AssetType assetType)
@@ -1607,8 +1612,8 @@ void QtQuickAdapter::requestFeeSuggestions()
    for (const auto& feeLevel : FeeSuggestionModel::feeLevels()) {
       msgReq->add_levels(feeLevel.first);
    }
-   pushRequest(user_, userBlockchain_, msg.SerializeAsString(), {}, 10
-      , std::chrono::milliseconds{500});
+   pushRequest(user_, userBlockchain_, msg.SerializeAsString()
+      , {}, 10, std::chrono::milliseconds{500});
    feeSuggModel_->clear();
 }
 

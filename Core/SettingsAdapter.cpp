@@ -157,7 +157,9 @@ void SettingsAdapter::sendSettings(const ArmorySettings& armorySettings, bool ne
       msgResp->set_cache_file_name(appSettings_->get<std::string>(ApplicationSettings::txCacheFileName));
       pushRequest(user_, bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain)
          , msg.SerializeAsString(), {}, 3, std::chrono::seconds{10});
+#ifdef MSG_DEBUGGING
       logger_->debug("[{}] {}", __func__, msg.DebugString());
+#endif
    }
    if (netTypeChanged) {
       logger_->debug("[{}] network type changed - reloading wallets", __func__);
@@ -570,7 +572,7 @@ static ArmoryServer fromMessage(const SettingsMessage_ArmoryServer& msg)
    result.name = msg.server_name();
    result.netType = static_cast<NetworkType>(msg.network_type());
    result.armoryDBIp = msg.server_address();
-   result.armoryDBPort = std::stoi(msg.server_port());
+   result.armoryDBPort = msg.server_port();
    result.armoryDBKey = msg.server_key();
    result.password = SecureBinaryData::fromString(msg.password());
    result.runLocally = msg.run_locally();

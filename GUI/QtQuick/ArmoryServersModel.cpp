@@ -27,7 +27,7 @@ namespace {
    };
 }
 
-ArmoryServersModel::ArmoryServersModel(const std::shared_ptr<spdlog::logger> & logger, QObject* parent)
+ArmoryServersModel::ArmoryServersModel(const std::shared_ptr<spdlog::logger> &logger, QObject* parent)
    : QAbstractListModel(parent)
    , logger_(logger)
 {
@@ -39,10 +39,12 @@ ArmoryServersModel::ArmoryServersModel(const std::shared_ptr<spdlog::logger> & l
            this, &ArmoryServersModel::rowCountChanged);
 }
 
-void ArmoryServersModel::setCurrent (int value)
+void ArmoryServersModel::setCurrent(int value)
 {
-   logger_->debug("[{}] {} -> {}", __func__, current_, value);
-   if (current_ == value) {
+   if (value < 0) {
+      value = connected_;
+   }
+   if ((value < 0) || (current_ == value)) {
       return;
    }
    current_ = value;
@@ -58,15 +60,11 @@ void ArmoryServersModel::setData(int curIdx, int connIdx
       beginResetModel();
       data_ = data;
       endResetModel();
-      int newCur = curIdx;
-      if (curIdx == -1) {
-         newCur = 0;
-      }
-      setCurrent(newCur);
       if (connected_ != connIdx) {
          connected_ = connIdx;
          emit connectedChanged();
       }
+      setCurrent(curIdx);
    });
 }
 
@@ -135,7 +133,7 @@ QVariant ArmoryServersModel::data(const QModelIndex& index, int role) const
    case NameRole:          return QString::fromStdString(data_.at(row).name);
    case NetTypeRole:       return (int)data_.at(row).netType;
    case AddressRole:       return QString::fromStdString(data_.at(row).armoryDBIp);
-   case PortRole:          return QString::fromStdString(data_.at(row).armoryDBPort);
+   case PortRole:          return std::stoi(data_.at(row).armoryDBPort);
    case KeyRole:           return QString::fromStdString(data_.at(row).armoryDBKey);
    case DefaultServerRole: return (index.row() < ArmoryServersProvider::kDefaultServersCount) && (index.row() < rowCount());
    case CurrentServerRole: return (index.row() == current());
@@ -167,7 +165,7 @@ bool ArmoryServersModel::setData(const QModelIndex& index, const QVariant& value
          data_.at(row).armoryDBIp = value.toString().toStdString();
          break;
       case PortRole:
-         data_.at(row).armoryDBPort = value.toString().toStdString();
+         data_.at(row).armoryDBPort = std::to_string(value.toInt());
          break;
       case KeyRole:
          data_.at(row).armoryDBKey = value.toString().toStdString();
