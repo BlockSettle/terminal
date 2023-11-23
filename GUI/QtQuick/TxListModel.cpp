@@ -101,6 +101,7 @@ QColor TxListModel::dataColor(int row, int col) const
       }
    }
    else if (col == 2) {
+      std::unique_lock lock{ dataMtx_ };
       const auto& itTxDet = txDetails_.find(row);
       if (itTxDet != txDetails_.end()) {
          switch (itTxDet->second.direction) {
@@ -116,6 +117,7 @@ QColor TxListModel::dataColor(int row, int col) const
 
 QString TxListModel::walletName(int row) const
 {
+   std::unique_lock lock{ dataMtx_ };
    const auto& itTxDet = txDetails_.find(row);
    if (itTxDet != txDetails_.end()) {
       return QString::fromStdString(itTxDet->second.walletName);
@@ -125,6 +127,7 @@ QString TxListModel::walletName(int row) const
 
 bs::sync::Transaction::Direction TxListModel::txDirection(int row) const
 {
+   std::unique_lock lock{ dataMtx_ };
    const auto& itTxDet = txDetails_.find(row);
    if (itTxDet != txDetails_.end()) {
       return itTxDet->second.direction;
@@ -139,6 +142,7 @@ QString TxListModel::txType(int row) const
 
 QString TxListModel::txComment(int row) const
 {
+   std::unique_lock lock{ dataMtx_ };
    const auto& itTxDet = txDetails_.find(row);
    if (itTxDet != txDetails_.end()) {
       return QString::fromStdString(itTxDet->second.comment);
@@ -156,6 +160,7 @@ QString TxListModel::txFlag(int row) const
 
 QString TxListModel::txId(int row) const
 {
+   std::unique_lock lock{ dataMtx_ };
    const auto& itTxDet = txDetails_.find(row);
    if (itTxDet != txDetails_.end()) {
       return QString::fromStdString(itTxDet->second.txHash.toHexStr(true));
@@ -165,6 +170,7 @@ QString TxListModel::txId(int row) const
 
 bool TxListModel::isRBF(int row) const
 {
+   std::unique_lock lock{ dataMtx_ };
    const auto& itTxDet = txDetails_.find(row);
    if (itTxDet != txDetails_.end()) {
       return itTxDet->second.tx.isRBF();
@@ -214,13 +220,16 @@ void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
    std::vector<bs::TXEntry> newEntries;
    for (const auto& entry : entries) {
       int row = -1;
-      for (int i = 0; i < data_.size(); ++i) {
-         auto& de = data_.at(i);
-         if ((entry.txHash == de.txHash) && (de.walletIds == entry.walletIds)) {
-            de.txTime = entry.txTime;
-            de.recvTime = entry.recvTime;
-            row = i;
-            break;
+      {
+         std::unique_lock lock{ dataMtx_ };
+         for (int i = 0; i < data_.size(); ++i) {
+            auto& de = data_.at(i);
+            if ((entry.txHash == de.txHash) && (de.walletIds == entry.walletIds)) {
+               de.txTime = entry.txTime;
+               de.recvTime = entry.recvTime;
+               row = i;
+               break;
+            }
          }
       }
       if (row != -1) {
@@ -233,6 +242,12 @@ void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
       }
    }
    if (!newEntries.empty()) {
+      if (addingEntries_ == (int)newEntries.size()) {
+         logger_->warn("[TxListModel::addRows] already adding {} entries", addingEntries_);
+         return;
+      }
+      addingEntries_ = (int)newEntries.size();
+
       QMetaObject::invokeMethod(this, [this, newEntries] {
          logger_->debug("[TxListModel::addRows] {} new entries", newEntries.size());
          {
@@ -253,6 +268,7 @@ void TxListModel::addRows(const std::vector<bs::TXEntry>& entries)
                setDetails(txDet, false);
             }
          }
+         addingEntries_ = 0;
          });
    }
 }
@@ -269,24 +285,27 @@ void TxListModel::clear()
 
 void TxListModel::setDetails(const bs::sync::TXWalletDetails& txDet, bool usePending)
 {
-   int row = -1;
+   //logger_->debug("[TxListModel::setDetails] {}", txDet.txHash.toHexStr(true));
+   int rowStart = -1, rowEnd = -1;
    std::unique_lock lock{ dataMtx_ };
    for (int i = 0; i < data_.size(); ++i) {
       const auto& entry = data_.at(i);
       if ((entry.txHash == txDet.txHash) && (txDet.walletIds == entry.walletIds)) {
          txDetails_[i] = txDet;
          data_[i].addresses = txDet.ownAddresses;
-         row = i;
-         break;
+         if (rowStart < 0) {
+            rowStart = i;
+         }
+         rowEnd = i;
       }
    }
-   if (row != -1) {
-      emit dataChanged(createIndex(row, 1), createIndex(row, 7));
-      //logger_->debug("[TxListModel::setDetails] {} {} found at row {}", txDet.txHash.toHexStr(), txDet.hdWalletId, row);
-      
+   if (rowStart != -1) {
+      emit dataChanged(createIndex(rowStart, 1), createIndex(rowEnd, 7));
+      //logger_->debug("[TxListModel::setDetails] {} {} found at rows {}-{}"
+      //   , txDet.txHash.toHexStr(), txDet.hdWalletId, rowStart, rowEnd);
    }
    else {
-      //logger_->warn("[TxListModel::setDetails] {} {} not found", txDet.txHash.toHexStr(), txDet.hdWalletId);
+      logger_->warn("[TxListModel::setDetails] {} {} not found", txDet.txHash.toHexStr(), txDet.hdWalletId);
       if (usePending) {
          pendingDetails_.push_back(txDet);
       }

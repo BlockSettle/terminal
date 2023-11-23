@@ -68,6 +68,17 @@ void qtquick_gui::WalletPropertiesVM::setNbUsedAddrs(const std::string& walletId
    emit changed();
 }
 
+void qtquick_gui::WalletPropertiesVM::incNbUsedAddrs(const std::string& walletId, uint32_t nb)
+{
+   if (info_.walletId.isEmpty() || (info_.walletId.toStdString() != walletId)) {
+      logger_->warn("[{}] wallet id mismatch: {} vs {}", __func__
+         , info_.walletId.toStdString(), walletId);
+      return;
+   }
+   nbUsedAddrs_ += nb;
+   emit changed();
+}
+
 void qtquick_gui::WalletPropertiesVM::setNbUTXOs(const std::string& walletId, uint32_t nb)
 {
    if (info_.walletId.isEmpty() || (info_.walletId.toStdString() != walletId)) {

@@ -370,14 +370,18 @@ set(CURL_LIBRARY "-lcurl")
 find_package(CURL REQUIRED)
 
 IF (WIN32)
-   SET(CURL_LIB_NAME libcurl-d.lib libcurl.lib)
+   IF (CMAKE_BUILD_TYPE STREQUAL "Debug")
+      SET(CURL_LIB_NAME libcurl-d.lib)
+   ELSE ()
+      SET(CURL_LIB_NAME libcurl.lib)
+   ENDIF ()
 ELSE(WIN32)
    SET(CURL_LIB_NAME libcurl-d.a libcurl.a curl-d curl)
 ENDIF(WIN32)
 
 FIND_LIBRARY( CURL_LIB NAMES ${CURL_LIB_NAME} PATHS ${CURL_ROOT}/lib NO_DEFAULT_PATH )
 IF( NOT CURL_LIB)
-   MESSAGE( FATAL_ERROR "Could not find curl lib in ${CURL_ROOT}/lib")
+   MESSAGE( FATAL_ERROR "Could not find curl lib ${CURL_LIB_NAME} in ${CURL_ROOT}/lib")
 ENDIF()
 
 

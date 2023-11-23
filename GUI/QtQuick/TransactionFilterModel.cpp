@@ -19,8 +19,7 @@ TransactionFilterModel::TransactionFilterModel(std::shared_ptr<SettingsControlle
    sort(0, Qt::AscendingOrder);
    connect(this, &TransactionFilterModel::changed, this, &TransactionFilterModel::invalidate);
 
-   if (settings_ != nullptr)
-   {
+   if (settings_ != nullptr) {
       connect(settings_.get(), &SettingsController::reset, this, [this]()
       {
          if (settings_->hasParam(ApplicationSettings::Setting::TransactionFilterWalletName)) {
@@ -40,18 +39,16 @@ bool TransactionFilterModel::filterAcceptsRow(int source_row,
    const auto walletNameIndex = sourceModel()->index(source_row, 1);
    const auto transactionTypeIndex = sourceModel()->index(source_row, 2);
 
-   if (!walletName_.isEmpty())
-   {
-      if (sourceModel()->data(walletNameIndex, TxListModel::TableRoles::TableDataRole) != walletName_)
-      {
+   if (!walletName_.isEmpty()) {
+      if (sourceModel()->data(walletNameIndex, TxListModel::TableRoles::TableDataRole)
+         != walletName_) {
          return false;
       }
    }
 
-   if (!transactionType_.isEmpty())
-   {
-      if (sourceModel()->data(transactionTypeIndex, TxListModel::TableRoles::TableDataRole) != transactionType_)
-      {
+   if (!transactionType_.isEmpty()) {
+      if (sourceModel()->data(transactionTypeIndex, TxListModel::TableRoles::TableDataRole)
+         != transactionType_) {
          return false;
       }
    }
@@ -82,7 +79,8 @@ void TransactionFilterModel::setTransactionType(const QString& type)
 {
    if (transactionType_ != type) {
       transactionType_ = type;
-      settings_->setParam(ApplicationSettings::Setting::TransactionFilterTransactionType, transactionType_);
+      settings_->setParam(ApplicationSettings::Setting::TransactionFilterTransactionType
+         , transactionType_);
       emit changed();
    }
 }

@@ -53,6 +53,7 @@ public:
    void setWalletInfo(const QString& walletId, const bs::sync::WalletInfo& info);
    void setWalletSeed(const std::string& walletId, const std::string& seed);
    void setNbUsedAddrs(const std::string& walletId, uint32_t nb);
+   void incNbUsedAddrs(const std::string& walletId, uint32_t nb = 1);
    void setNbUTXOs(const std::string& walletId, uint32_t nb);
 
    void rename(const std::string& walletId, const std::string& newName);

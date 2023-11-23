@@ -76,7 +76,8 @@ private:
    std::map<int, bs::sync::TXWalletDetails>  txDetails_;
    std::vector<bs::sync::TXWalletDetails>    pendingDetails_;
    uint32_t curBlock_;
-   std::mutex dataMtx_;
+   mutable std::mutex dataMtx_;
+   std::atomic_int   addingEntries_{ 0 };
 };
 
 class TxListForAddr : public QAbstractTableModel

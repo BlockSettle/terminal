@@ -226,6 +226,14 @@ QString WalletBalancesModel::numberAddresses() const
    return tr("-");
 }
 
+void WalletBalancesModel::incNbAddresses(const std::string& walletId, int nb)
+{
+   balances_[walletId].nbAddresses += nb;
+   if (wallets_.at(selectedWallet_).walletId == walletId) {
+      emit changed();
+   }
+}
+
 bool WalletBalancesModel::nameExist(const std::string& walletName)
 {
    for (int i = 0; i < wallets_.size(); ++i) {

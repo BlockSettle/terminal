@@ -2163,6 +2163,8 @@ void QtQuickAdapter::processWalletAddresses(const std::string& walletId
       , QString(), QString::fromStdString(lastAddr.index), assetTypeToString(lastAddr.assetType)});
    generatedAddress_ = lastAddr.address;
    emit addressGenerated();
+   walletBalances_->incNbAddresses(hdWalletId);
+   walletPropertiesModel_->incNbUsedAddrs(hdWalletId);
 }
 
 bs::message::ProcessingResult QtQuickAdapter::processTxResponse(bs::message::SeqId msgId
