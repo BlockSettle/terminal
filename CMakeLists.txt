@@ -265,6 +265,7 @@ if (UNIX)
 endif (UNIX)
 
 # use only existing lws temporarily, don't try to build it (build fails on Windows)
+ADD_DEFINITIONS(-DBUILD_LWS=1)
 SET(WS_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/libwebsockets)
 SET(WS_LIB_DIR ${WS_PACKAGE_ROOT}/lib)
 SET(WS_INCLUDE_DIR ${WS_PACKAGE_ROOT}/include)
@@ -276,14 +277,14 @@ IF (WIN32)
       SET(WS_LIB_NAME websockets_static)
    ENDIF()
 ELSE(WIN32)
-   IF(BSTERMINAL_SHARED_LIBS)
+#   IF(BSTERMINAL_SHARED_LIBS)
       SET(WS_LIB_NAME libwebsockets.so)
-   ELSE(BSTERMINAL_SHARED_LIBS)
-      SET(WS_LIB_NAME libwebsockets.a)
-   ENDIF()
+#   ELSE(BSTERMINAL_SHARED_LIBS)
+#      SET(WS_LIB_NAME libwebsockets.a)
+#   ENDIF()
 ENDIF(WIN32)
 
-FIND_LIBRARY(WS_LIB NAMES ${WS_LIB_NAME} PATHS ${WS_LIB_DIR} NO_DEFAULT_PATH )
+FIND_LIBRARY(WS_LIB NAMES ${WS_LIB_NAME} PATHS ${WS_LIB_DIR})
 IF(NOT WS_LIB)
    MESSAGE(FATAL_ERROR "Could not find libwebsockets in ${WS_LIB_DIR}")
 ENDIF()
@@ -764,7 +765,6 @@ ELSE(WIN32)
             ${ZLIB_LIBRARIES}
             png
             m
-            double-conversion.a
             dl
             cups
             udev

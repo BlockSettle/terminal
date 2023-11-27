@@ -39,7 +39,7 @@ from build_scripts.qt_settings                  import QtSettings
 from build_scripts.settings                     import Settings
 from build_scripts.spdlog_settings              import SpdlogSettings
 from build_scripts.trezor_common_settings       import TrezorCommonSettings
-from build_scripts.zeromq_settings              import ZeroMQSettings
+#from build_scripts.zeromq_settings              import ZeroMQSettings
 from build_scripts.curl_settings                import CurlSettings
 from build_scripts.websockets_settings          import WebsocketsSettings
 
@@ -55,6 +55,7 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
 
    required_3rdparty = []
    if project_settings._is_windows:
+      WebsocketsSettings(project_settings),
       required_3rdparty.append(JomSettings(project_settings))
 
    required_3rdparty += [
@@ -62,7 +63,7 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
       OpenSslSettings(project_settings),
       CurlSettings(project_settings),
       SpdlogSettings(project_settings),
-      ZeroMQSettings(project_settings),
+#      ZeroMQSettings(project_settings),
       LibQREncode(project_settings),
       LibBTC(project_settings),                             # static
       LibChaCha20Poly1305Settings(project_settings),        # static
@@ -73,7 +74,6 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings, cma
       TrezorCommonSettings(project_settings),
       BipProtocolsSettings(project_settings),
       NLohmanJson(project_settings),
-      WebsocketsSettings(project_settings)
    ]
 
    if project_settings._is_windows:
