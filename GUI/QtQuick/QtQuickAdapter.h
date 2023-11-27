@@ -12,12 +12,23 @@
 #define QT_QUICK_ADAPTER_H
 
 #include <set>
+#include <QQmlApplicationEngine>
 #include <QObject>
 #include "Address.h"
+#include "ArmoryServersModel.h"
+#include "AddressListModel.h"
 #include "ApiAdapter.h"
-#include "Wallets/SignContainer.h"
+#include "ApplicationSettings.h"
+#include "hwdevicemodel.h"
 #include "ThreadSafeClasses.h"
+#include "TxListModel.h"
 #include "UiUtils.h"
+#include "Wallets/SignContainer.h"
+#include "viewmodels/WalletPropertiesVM.h"
+#include "SettingsController.h"
+#include "ScaleController.h"
+
+#include "common.pb.h"
 
 namespace bs {
    namespace gui {
@@ -27,22 +38,9 @@ namespace bs {
    }
 }
 namespace BlockSettle {
-   namespace Common {
-      class ArmoryMessage_AddressHistory;
-      class ArmoryMessage_FeeLevelsResponse;
-      class ArmoryMessage_ZCInvalidated;
-      class ArmoryMessage_ZCReceived;
-      class LedgerEntries;
-      class OnChainTrackMessage_AuthAddresses;
-      class OnChainTrackMessage_AuthState;
-      class SignerMessage_SignTxResponse;
-      class WalletsMessage_AuthKey;
-      class WalletsMessage_ReservedUTXOs;
-      class WalletsMessage_TXDetailsResponse;
-      class WalletsMessage_UtxoListResponse;
-      class WalletsMessage_WalletBalances;
-      class WalletsMessage_WalletData;
-      class WalletsMessage_WalletsListResponse;
+   namespace HW {
+      class DeviceMgrMessage_Devices;
+      class DeviceMgrMessage_SignTxResponse;
    }
    namespace Terminal {
       class AssetsMessage_Balance;
@@ -63,10 +61,22 @@ namespace BlockSettle {
       class SettingsMessage_ArmoryServers;
       class SettingsMessage_SettingsResponse;
       class SettingsMessage_SignerServers;
+      class SignerMessage_WalletSeed;
    }
 }
-
+class ArmoryServersModel;
 class BSTerminalSplashScreen;
+class FeeSuggestionModel;
+class HwDeviceModel;
+class QQmlContext;
+class QmlWalletsList;
+class QTxDetails;
+class QTXSignRequest;
+class WalletBalancesModel;
+class AddressFilterModel;
+class TransactionFilterModel;
+class PendingTransactionFilterModel;
+class PluginsListModel;
 
 class QtQuickAdapter : public QObject, public ApiBusAdapter, public bs::MainLoopRuner
 {
@@ -76,71 +86,284 @@ public:
    QtQuickAdapter(const std::shared_ptr<spdlog::logger> &);
    ~QtQuickAdapter() override;
 
-   bool process(const bs::message::Envelope &) override;
+   bs::message::ProcessingResult process(const bs::message::Envelope &) override;
    bool processBroadcast(const bs::message::Envelope&) override;
+   bool processTimeout(const bs::message::Envelope&) override;
 
    Users supportedReceivers() const override { return { user_ }; }
    std::string name() const override { return "QtQuick"; }
 
    void run(int &argc, char **argv) override;
 
+   Q_PROPERTY(QStringList txWalletsList READ txWalletsList NOTIFY walletsListChanged)
+   QStringList txWalletsList() const;
+   Q_PROPERTY(QStringList txTypesList READ txTypesList CONSTANT)
+   QStringList txTypesList() const { return txTypes_; }
+
+   Q_PROPERTY(QString generatedAddress READ generatedAddress NOTIFY addressGenerated)
+   QString generatedAddress() const { return QString::fromStdString(generatedAddress_.display()); }
+
+   // Settings properties
+   Q_PROPERTY(QString settingLogFile READ settingLogFile WRITE setLogFile NOTIFY settingChanged)
+   QString settingLogFile() { return getSettingStringAt(ApplicationSettings::Setting::logDefault, 0); }
+   void setLogFile(const QString& str) { setSetting(ApplicationSettings::Setting::logDefault, str); }
+
+   Q_PROPERTY(QString settingMsgLogFile READ settingMsgLogFile WRITE setMsgLogFile NOTIFY settingChanged)
+   QString settingMsgLogFile() { return getSettingStringAt(ApplicationSettings::Setting::logMessages, 0); }
+   void setMsgLogFile(const QString& str) { setSetting(ApplicationSettings::Setting::logMessages, str); }
+
+   Q_PROPERTY(bool settingAdvancedTX READ settingAdvancedTX WRITE setAdvancedTX NOTIFY settingChanged)
+   bool settingAdvancedTX() { return getSetting(ApplicationSettings::Setting::AdvancedTxDialogByDefault).toBool(); }
+   void setAdvancedTX(bool b) { setSetting(ApplicationSettings::Setting::AdvancedTxDialogByDefault, b); }
+
+   Q_PROPERTY(int settingEnvironment READ settingEnvironment WRITE setEnvironment NOTIFY settingChanged)
+   int settingEnvironment() { return getSetting(ApplicationSettings::Setting::envConfiguration).toInt(); }
+   void setEnvironment(int i) { setSetting(ApplicationSettings::Setting::envConfiguration, i); }
+
+   Q_PROPERTY(QStringList settingEnvironments READ settingEnvironments)
+   QStringList settingEnvironments() const;
+
+   Q_PROPERTY(bool settingActivated READ settingActivated WRITE setActivated NOTIFY settingChanged)
+   bool settingActivated() const { return getSetting(ApplicationSettings::Setting::initialized).toBool(); }
+   void setActivated(bool b) { setSetting(ApplicationSettings::Setting::initialized, b); }
+   
+   Q_PROPERTY(QString settingExportDir READ settingExportDir WRITE setExportDir NOTIFY settingChanged)
+   QString settingExportDir() const { return getSetting(ApplicationSettings::Setting::ExportDir).toString(); }
+   void setExportDir(const QString& str) {setSetting(ApplicationSettings::Setting::ExportDir, str); }
+
+   Q_PROPERTY(int armoryState READ armoryState NOTIFY armoryStateChanged)
+   int armoryState() const { return (int)armoryState_; }
+
+   Q_PROPERTY(int networkType READ networkType NOTIFY networkTypeChanged)
+   int networkType() const { return (int)netType_; }
+
+   Q_PROPERTY(HwDeviceModel* devices READ devices NOTIFY devicesChanged)
+   HwDeviceModel* devices();
+   Q_PROPERTY(bool scanningDevices READ scanningDevices NOTIFY scanningChanged)
+   bool scanningDevices() const;
+
+   Q_PROPERTY(qtquick_gui::WalletPropertiesVM* walletProperitesVM READ walletProperitesVM CONSTANT)
+   qtquick_gui::WalletPropertiesVM* walletProperitesVM() const;
+
+   Q_PROPERTY(ArmoryServersModel* armoryServersModel READ armoryServersModel CONSTANT)
+   ArmoryServersModel* armoryServersModel() const { return armoryServersModel_; }
+
+   // QML-invokable methods
+   Q_INVOKABLE QStringList newSeedPhrase();
+   Q_INVOKABLE QStringList completeBIP39dic(const QString& prefix);
+   Q_INVOKABLE void copySeedToClipboard(const QStringList&);
+   Q_INVOKABLE void createWallet(const QString& name, const QStringList& seed
+      , const QString& password);
+   Q_INVOKABLE void importWallet(const QString& name, const QStringList& seed
+      , const QString& password);
+   Q_INVOKABLE void pollHWWallets();
+   Q_INVOKABLE void stopHWWalletsPolling();
+   Q_INVOKABLE void setHWpin(const QString&);
+   Q_INVOKABLE void setHWpassword(const QString&);
+   Q_INVOKABLE void importWOWallet(const QString& filename);
+   Q_INVOKABLE void importHWWallet(int deviceIndex);
+   Q_INVOKABLE void generateNewAddress(int walletIndex, bool isNative);
+   Q_INVOKABLE void copyAddressToClipboard(const QString& addr);
+   Q_INVOKABLE QString pasteTextFromClipboard();
+   Q_INVOKABLE bool validateAddress(const QString& addr);
+   Q_INVOKABLE void updateArmoryServers();
+   Q_INVOKABLE bool addArmoryServer(const QString& name
+      , int netType, const QString& ipAddr, const QString& ipPort, const QString& key = {});
+   Q_INVOKABLE bool delArmoryServer(int idx);
+
+   Q_INVOKABLE void requestFeeSuggestions();
+   Q_INVOKABLE QTXSignRequest* newTXSignRequest(int walletIndex, const QStringList& recvAddrs
+      , const QList<double>& recvAmounts, double fee, const QString& comment = {}
+      , bool isRbf = true, QUTXOList* utxos = nullptr, bool newChangeAddr = false);
+   Q_INVOKABLE QTXSignRequest* createTXSignRequest(int walletIndex, QTxDetails*
+      , double fee, const QString& comment = {}, bool isRbf = true, QUTXOList* utxos = nullptr);
+   Q_INVOKABLE void getUTXOsForWallet(int walletIndex, QTxDetails*);
+   Q_INVOKABLE void signAndBroadcast(QTXSignRequest*, const QString& password);
+   Q_INVOKABLE int getSearchInputType(const QString&);
+   Q_INVOKABLE void startAddressSearch(const QString&);
+   Q_INVOKABLE QTxDetails* getTXDetails(const QString& txHash, bool rbf = false
+      , bool cpfp = false, int selWalletIdx = -1);
+   Q_INVOKABLE int changePassword(const QString& walletId, const QString& oldPassword, const QString& newPassword);
+   Q_INVOKABLE bool isWalletNameExist(const QString& walletName);
+   Q_INVOKABLE bool isWalletPasswordValid(const QString& walletId, const QString& password);
+   Q_INVOKABLE bool verifyPasswordIntegrity(const QString& password);
+   Q_INVOKABLE int exportWallet(const QString& walletId, const QString & exportDir);
+   Q_INVOKABLE int viewWalletSeedAuth(const QString& walletId, const QString& password);
+   Q_INVOKABLE int deleteWallet(const QString& walletId, const QString& password);
+   Q_INVOKABLE int rescanWallet(const QString& walletId);
+   Q_INVOKABLE int renameWallet(const QString& walletId, const QString& newName);
+   Q_INVOKABLE void walletSelected(int);
+   Q_INVOKABLE QString makeExportTransactionFilename(QTXSignRequest* request);
+   Q_INVOKABLE void exportTransaction(const QUrl& path, QTXSignRequest* request);
+   Q_INVOKABLE QTXSignRequest* importTransaction(const QUrl& path);
+   Q_INVOKABLE void exportSignedTX(const QUrl& path, QTXSignRequest* request, const QString& password);
+   Q_INVOKABLE bool broadcastSignedTX(const QUrl& path);
+   Q_INVOKABLE bool isRequestReadyToSend(QTXSignRequest* request);
+   Q_INVOKABLE QString makeExportWalletToPdfPath(const QStringList& seed);
+   Q_INVOKABLE void exportWalletToPdf(const QUrl& path, const QStringList& seed);
+   std::pair<QString, QString> walletInfoFromSeed(const QStringList& seed);
+
+signals:
+   void walletsListChanged();
+   void walletsLoaded(quint32 nb);
+   void walletBalanceChanged();
+   void addressGenerated();
+   void settingChanged();
+   void armoryStateChanged();
+   void networkTypeChanged();
+   void devicesChanged();
+   void scanningChanged();
+   void invokePINentry();
+   void invokePasswordEntry(const QString& devName, bool acceptOnDevice);
+   void showError(const QString&);
+   void showFail(const QString&, const QString&);
+   void showNotification(QString, QString);
+   void successExport(const QString& nameExport);
+   void requestWalletSelection(quint32 index);
+   void successChangePassword();
+   void failedDeleteWallet();
+   void successDeleteWallet();
+   void walletSeedAuthFailed(const QString&);
+   void walletSeedAuthSuccess();
+   void transactionExported(const QString& destFilename);
+   void transactionExportFailed(const QString& errorMessage);
+   void transactionImportFailed(const QString& errorMessage);
+   void successTx();
+   void failedTx(const QString&);
+   void showSuccess(const QString&);
+   void rescanCompleted(const QString& walletId);
+   void topBlock(quint32);
+
+private slots:
+   void onArmoryServerChanged(int index);
+   void onArmoryServerSelected(int index);
+
 private:
-   bool processSettings(const bs::message::Envelope &);
-   bool processSettingsGetResponse(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
-   bool processSettingsState(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
-   bool processArmoryServers(const BlockSettle::Terminal::SettingsMessage_ArmoryServers&);
-   bool processAdminMessage(const bs::message::Envelope &);
-   bool processBlockchain(const bs::message::Envelope &);
-   bool processSigner(const bs::message::Envelope &);
-   bool processWallets(const bs::message::Envelope &);
+   bs::message::ProcessingResult processSettings(const bs::message::Envelope &);
+   bs::message::ProcessingResult processSettingsGetResponse(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
+   bs::message::ProcessingResult processSettingsState(const BlockSettle::Terminal::SettingsMessage_SettingsResponse&);
+   bs::message::ProcessingResult processArmoryServers(bs::message::SeqId
+      , const BlockSettle::Terminal::SettingsMessage_ArmoryServers&);
+   bs::message::ProcessingResult processAdminMessage(const bs::message::Envelope &);
+   bs::message::ProcessingResult processBlockchain(const bs::message::Envelope &);
+   bs::message::ProcessingResult processSigner(const bs::message::Envelope &);
+   bs::message::ProcessingResult processWallets(const bs::message::Envelope &);
+   bs::message::ProcessingResult processHWW(const bs::message::Envelope&);
+   bs::message::ProcessingResult processOwnRequest(const bs::message::Envelope&);
 
    void requestInitialSettings();
+   void requestPostLoadingSettings();
    void updateSplashProgress();
    void splashProgressCompleted();
    void updateStates();
+   void setTopBlock(uint32_t);
+   void loadPlugins(QQmlApplicationEngine&);
+   void saveTransaction(const std::string& pathName, const bs::core::wallet::TXSignRequest&
+      , const std::vector<UTXO>&);
+   void notifyNewTransaction(const bs::TXEntry& tx);
 
    void createWallet(bool primary);
+   std::string hdWalletIdByIndex(int) const;
+   int walletIndexById(const std::string&) const;
+   std::string generateWalletName() const;
+   std::string hdWalletIdByLeafId(const std::string&) const;
 
    void processWalletLoaded(const bs::sync::WalletInfo &);
-   bool processWalletData(const uint64_t msgId
+   bs::message::ProcessingResult processWalletData(const bs::message::SeqId
       , const BlockSettle::Common::WalletsMessage_WalletData&);
-   bool processWalletBalances(const bs::message::Envelope &
-      , const BlockSettle::Common::WalletsMessage_WalletBalances &);
-   bool processTXDetails(uint64_t msgId, const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
-   bool processLedgerEntries(const BlockSettle::Common::LedgerEntries &);
-   bool processAddressHist(const BlockSettle::Common::ArmoryMessage_AddressHistory&);
-   bool processFeeLevels(const BlockSettle::Common::ArmoryMessage_FeeLevelsResponse&);
-   bool processWalletsList(const BlockSettle::Common::WalletsMessage_WalletsListResponse&);
-   bool processUTXOs(const BlockSettle::Common::WalletsMessage_UtxoListResponse&);
-   bool processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse&);
-   bool processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived&);
-   bool processZCInvalidated(const BlockSettle::Common::ArmoryMessage_ZCInvalidated&);
-   bool processReservedUTXOs(const BlockSettle::Common::WalletsMessage_ReservedUTXOs&);
+   bs::message::ProcessingResult processWalletBalances(bs::message::SeqId, const BlockSettle::Common::WalletsMessage_WalletBalances &);
+   bs::message::ProcessingResult processTXDetails(bs::message::SeqId, const BlockSettle::Common::WalletsMessage_TXDetailsResponse &);
+   bs::message::ProcessingResult processLedgerEntries(const BlockSettle::Common::LedgerEntries &);
+   bs::message::ProcessingResult processAddressHist(const BlockSettle::Common::ArmoryMessage_AddressHistory&);
+   bs::message::ProcessingResult processFeeLevels(const BlockSettle::Common::ArmoryMessage_FeeLevelsResponse&);
+   bs::message::ProcessingResult processWalletsList(const BlockSettle::Common::WalletsMessage_WalletsListResponse&);
+   bs::message::ProcessingResult processWalletDeleted(const std::string& walletId);
+   bs::message::ProcessingResult processWalletSeed(const BlockSettle::Common::SignerMessage_WalletSeed&);
+   bs::message::ProcessingResult processUTXOs(bs::message::SeqId, const BlockSettle::Common::WalletsMessage_UtxoListResponse&);
+   bs::message::ProcessingResult processSignTX(bs::message::SeqId, const BlockSettle::Common::SignerMessage_SignTxResponse&);
+   bs::message::ProcessingResult processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived&);
+   bs::message::ProcessingResult processZCInvalidated(const BlockSettle::Common::ArmoryMessage_ZCInvalidated&);
+   bs::message::ProcessingResult processTransactions(bs::message::SeqId, const BlockSettle::Common::ArmoryMessage_Transactions&);
+   bs::message::ProcessingResult processReservedUTXOs(const BlockSettle::Common::WalletsMessage_ReservedUTXOs&);
+   void processWalletAddresses(const std::string& walletId, const std::vector<bs::sync::Address>&);
+   bs::message::ProcessingResult processTxResponse(bs::message::SeqId
+      , const BlockSettle::Common::WalletsMessage_TxResponse&);
+   bs::message::ProcessingResult processUTXOs(bs::message::SeqId
+      , const BlockSettle::Common::ArmoryMessage_UTXOs&);
+
+   bs::message::ProcessingResult processHWDevices(const BlockSettle::HW::DeviceMgrMessage_Devices&);
+   bs::message::ProcessingResult processHWWready(const std::string& walletId);
+   bs::message::ProcessingResult processHWSignedTX(const BlockSettle::HW::DeviceMgrMessage_SignTxResponse&);
+
+   QVariant getSetting(ApplicationSettings::Setting) const;
+   QString getSettingStringAt(ApplicationSettings::Setting, int idx);
+   void setSetting(ApplicationSettings::Setting, const QVariant&);
+   void rescanAllWallets();
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
    BSTerminalSplashScreen* splashScreen_{ nullptr };
    QObject* rootObj_{ nullptr };
+   QQmlContext* rootCtxt_{nullptr};
    std::shared_ptr<bs::message::UserTerminal>   userSettings_, userWallets_;
    std::shared_ptr<bs::message::UserTerminal>   userBlockchain_, userSigner_;
+   std::shared_ptr<bs::message::UserTerminal>   userHWW_;
    bool loadingDone_{ false };
 
    std::recursive_mutex mutex_;
    std::set<int>  createdComponents_;
    std::set<int>  loadingComponents_;
-   int         armoryState_{ -1 };
+   ArmoryState    armoryState_{ ArmoryState::Offline };
+   int         armoryServerIndex_{ -1 };
+   NetworkType netType_{ NetworkType::Invalid };
    uint32_t    blockNum_{ 0 };
    int         signerState_{ -1 };
    std::string signerDetails_;
    bool  walletsReady_{ false };
+   std::unordered_set<std::string>  readyWallets_;
+   std::unordered_set<std::string>  scanningWallets_;
+   std::string createdWalletId_;
 
-   std::map<uint64_t, std::string>  walletGetMap_;
    std::unordered_map<std::string, bs::sync::WalletInfo> hdWallets_;
-   std::set<uint64_t>   newZCs_;
+   std::unordered_map<std::string, std::string> walletNames_;
+   std::map<bs::message::SeqId, std::string> walletInfoReq_;
+   std::map<bs::Address, std::string>  addrComments_;
 
-   std::unordered_map<std::string, bs::network::Asset::Type>   assetTypes_;
-   std::set<bs::message::SeqId>  needChangeAddrReqs_;
+   const QStringList txTypes_;
+   QmlAddressListModel* addrModel_{ nullptr };
+   TxListModel* txModel_{ nullptr };
+   TxListForAddr* expTxByAddrModel_{ nullptr };
+   HwDeviceModel* hwDeviceModel_{ nullptr };
+   WalletBalancesModel* walletBalances_{ nullptr };
+   FeeSuggestionModel* feeSuggModel_{ nullptr };
+   ArmoryServersModel* armoryServersModel_{ nullptr };
+   std::unique_ptr<qtquick_gui::WalletPropertiesVM> walletPropertiesModel_;
+   bs::Address generatedAddress_;
+   bool hwDevicesPolling_{ false };
+   bs::hww::DeviceKey curAuthDevice_{};
+
+   struct TXReq {
+      QTXSignRequest* txReq;
+      bool  isMaxAmount{ false };
+      BlockSettle::Common::WalletsMessage msg{};
+   };
+   std::map<bs::message::SeqId, TXReq>    txReqs_;
+   std::vector<std::string>   txSaveReqs_;
+   std::map<bs::message::SeqId, std::tuple<std::string, bs::core::wallet::TXSignRequest, std::vector<UTXO>>>   txSaveReq_;
+   std::map<bs::message::SeqId, std::string>          exportTxReqs_;
+   std::unordered_map<std::string, QTXSignRequest*>   hwwReady_;
+   std::map<bs::message::SeqId, QTxDetails*>          txDetailReqs_;
+   std::map<ApplicationSettings::Setting, QVariant>   settingsCache_;
+   std::set<bs::message::SeqId>  expTxAddrReqs_, expTxAddrInReqs_;
+   std::map<bs::Address, std::string>  addressCache_;
+   std::set<BinaryData> rmTxOnInvalidation_;
+
+   int nWalletsLoaded_ {-1};
+   std::shared_ptr<SettingsController> settingsController_;
+   std::unique_ptr<AddressFilterModel> addressFilterModel_;
+   std::unique_ptr<TransactionFilterModel> transactionFilterModel_;
+   std::unique_ptr<PluginsListModel> pluginsListModel_;
+   std::unique_ptr<ScaleController> scaleController_;
 };
-
 
 #endif	// QT_QUICK_ADAPTER_H

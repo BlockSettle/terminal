@@ -25,7 +25,7 @@ public:
    MktDataAdapter(const std::shared_ptr<spdlog::logger> &);
    ~MktDataAdapter() override = default;
 
-   bool process(const bs::message::Envelope &) override;
+   bs::message::ProcessingResult process(const bs::message::Envelope &) override;
    bool processBroadcast(const bs::message::Envelope&) override;
 
    Users supportedReceivers() const override { return { user_ }; }
@@ -50,7 +50,7 @@ protected:  //MD callbacks override
 
 private:
    void sendTrade(const bs::network::NewTrade&);
-   bool processStartConnection(int env);
+   bs::message::ProcessingResult processStartConnection(int env);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

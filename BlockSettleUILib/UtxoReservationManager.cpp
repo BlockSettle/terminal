@@ -70,10 +70,11 @@ namespace {
             result->utxosMap.emplace(walletId, std::move(utxos));
             cbDone();
          };
+#ifdef OLD_WALLETS_CODE
          if (!wallet->getSpendableTxOutList(cbWrapNormal, UINT64_MAX, false)) {
             return false;
          }
-
+#endif
          auto cbWrapZc = [result, size = wallets.size(), walletId = wallet->walletId(), cbDone]
             (std::vector<UTXO> utxos)
          {
@@ -81,9 +82,11 @@ namespace {
             result->utxosMapZc.emplace(walletId, std::move(utxos));
             cbDone();
          };
+#ifdef OLD_WALLETS_CODE
          if (!wallet->getSpendableZCList(cbWrapZc)) {
             return false;
          }
+#endif
       }
       return true;
    }

@@ -10,7 +10,7 @@
 */
 #include "ConfigDialog.h"
 
-#include "ArmoryServersProvider.h"
+#include "../../Core/ArmoryServersProvider.h"
 #include "AssetManager.h"
 #include "GeneralSettingsPage.h"
 #include "NetworkSettingsPage.h"

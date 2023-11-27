@@ -445,7 +445,9 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx)
                QMetaObject::invokeMethod(this, lbdSetInputs);
             }
          };
+#ifdef OLD_WALLETS_CODE
          wallet->getRBFTxOutList(cbRBFUtxos);
+#endif
       }
    };
    //armory_->getTXsByHash(txHashSet, cbTXs, true);

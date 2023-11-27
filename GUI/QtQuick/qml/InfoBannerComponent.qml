@@ -10,13 +10,15 @@
 */
 import QtQuick 2.9
 
+import "BsStyles"
+
 Item {
     id: banner
 
     property alias message: messageText.text
     property alias bgColor: background.color
 
-    height: 70
+    height: BSSizes.applyScale(70)
 
     Rectangle {
         id: background
@@ -27,10 +29,10 @@ Item {
     }
 
     Text {
-        font.pixelSize: 20
+        font.pixelSize: BSSizes.applyScale(20)
         renderType: Text.QtRendering
-        width: 150
-        height: 40
+        width: BSSizes.applyScale(150)
+        height: BSSizes.applyScale(40)
         id: messageText
 
 
@@ -43,7 +45,7 @@ Item {
 
     states: State {
         name: "portrait"
-        PropertyChanges { target: banner; height: 100 }
+        PropertyChanges { target: banner; height: BSSizes.applyScale(100) }
     }
 
     MouseArea {

@@ -1,8 +1,25 @@
 <RCC>
     <qresource prefix="/">
         <file alias="FULL_BS_LOGO">images/full_logo.png</file>
-        <file>images/bs_logo.png</file>
+        <file>images/terminal.ico</file>
+        <file>images/bitcoin-test-net.png</file>
+        <file>images/bitcoin-main-net.png</file>
+        <file>images/bitcoin-disabled.png</file>
+        <file>images/send_icon.png</file>
+        <file>images/receive_icon.png</file>
+        <file>images/settings_icon.png</file>
+        <file>images/overview_icon.png</file>
+        <file>images/transactions_icon.png</file>
+        <file>images/explorer_icon.png</file>
         <file>qml/main.qml</file>
+        <file>qml/OverviewPage.qml</file>
+        <file>qml/AddressDetails.qml</file>
+        <file>qml/TransactionsPage.qml</file>
+        <file>qml/ExplorerPage.qml</file>
+        <file>qml/ExplorerEmpty.qml</file>
+        <file>qml/ExplorerAddress.qml</file>
+        <file>qml/ExplorerTX.qml</file>
+        <file>qml/VerifyTX.qml</file>
         <file>qml/InfoBanner.qml</file>
         <file>qml/InfoBannerComponent.qml</file>
         <file>qml/InfoBar.qml</file>
@@ -10,6 +27,7 @@
         <file>qml/StyledControls/CustomButtonBar.qml</file>
         <file>qml/StyledControls/CustomCheckBox.qml</file>
         <file>qml/StyledControls/CustomComboBox.qml</file>
+        <file>qml/StyledControls/CustomSmallComboBox.qml</file>
         <file>qml/StyledControls/CustomContainer.qml</file>
         <file>qml/StyledControls/CustomDialog.qml</file>
         <file>qml/StyledControls/CustomHeader.qml</file>
@@ -24,6 +42,188 @@
         <file>qml/StyledControls/CustomTextInput.qml</file>
         <file>qml/StyledControls/qmldir</file>
         <file>qml/BsStyles/BSStyle.qml</file>
+        <file>qml/BsStyles/BSSizes.qml</file>
         <file>qml/BsStyles/qmldir</file>
+        <file>qml/StyledControls/CustomTitleToolButton.qml</file>
+        <file>images/logo.png</file>
+        <file>images/plugins_icon.png</file>
+        <file>images/overview_icon_not_choosed.png</file>
+        <file>images/plugins_icon_unchoosed.png</file>
+        <file>images/transactions_icon_unchoosed.png</file>
+        <file>images/explorer_icon_unchoosed.png</file>
+        <file>TermsAndConditions.txt</file>
+        <file>images/close_button.svg</file>
+        <file>qml/StyledControls/CustomTitleLabel.qml</file>
+        <file>images/wallet icon.png</file>
+        <file>images/back_arrow.png</file>
+        <file>qml/StyledControls/CustomSeedLabel.qml</file>
+        <file>qml/StyledControls/CustomSeedTextInput.qml</file>
+        <file>images/warning_icon.png</file>
+        <file>images/Eye_icon _unvisible.png</file>
+        <file>images/Eye_icon _visible.png</file>
+        <file>images/USB_icon_conn.png</file>
+        <file>images/USB_icon_disconn.png</file>
+        <file>qml/StyledControls/CustomTextSwitch.qml</file>
+        <file>images/wallet_file.png</file>
+        <file>images/file_drop.png</file>
+        <file>images/folder_icon.png</file>
+        <file>images/File.png</file>
+        <file>images/success.png</file>
+        <file>qml/StyledControls/CustomPopup.qml</file>
+        <file>qml/Receive/ReceiveQrCode.qml</file>
+        <file>images/copy_icon.svg</file>
+        <file>qml/Receive/qmldir</file>
+        <file>qml/Receive/ReceivePopup.qml</file>
+        <file>qml/CreateWallet/WalletName.qml</file>
+        <file>qml/CreateWallet/ConfirmPassword.qml</file>
+        <file>qml/CreateWallet/CreateWallet.qml</file>
+        <file>qml/CreateWallet/ImportHardware.qml</file>
+        <file>qml/CreateWallet/ImportWallet.qml</file>
+        <file>qml/CreateWallet/ImportWatchingWallet.qml</file>
+        <file>qml/CreateWallet/qmldir</file>
+        <file>qml/CreateWallet/StartCreateWallet.qml</file>
+        <file>qml/CreateWallet/TermsAndConditions.qml</file>
+        <file>qml/CreateWallet/WalletSeed.qml</file>
+        <file>qml/CreateWallet/WalletSeedSkipAccept.qml</file>
+        <file>qml/CreateWallet/WalletSeedVerify.qml</file>
+        <file>images/advanced_icon.png</file>
+        <file>qml/StyledControls/CustomContextMenu.qml</file>
+        <file>qml/StyledControls/CustomDialogWindow.qml</file>
+        <file>qml/StyledControls/CustomLabelCopyableValue.qml</file>
+        <file>qml/StyledControls/CustomPasswordTextInput.qml</file>
+        <file>qml/StyledControls/CustomTextEdit.qml</file>
+        <file>qml/StyledControls/CustomTitleDialogWindow.qml</file>
+        <file>qml/StyledControls/CustomTitleDialogWindowWithExpander.qml</file>
+        <file>qml/StyledControls/CustomExportSuccessDialog.qml</file>
+        <file>qml/Send/qmldir</file>
+        <file>qml/Send/SendPopup.qml</file>
+        <file>qml/Send/SimpleDetails.qml</file>
+        <file>qml/Send/SignTransaction.qml</file>
+        <file>images/paste_icon.png</file>
+        <file>qml/StyledControls/CustomCompleterPopup.qml</file>
+        <file>qml/Send/AdvancedDetails.qml</file>
+        <file>qml/Pin/PinEntriesPopup.qml</file>
+        <file>qml/Pin/qmldir</file>
+        <file>qml/StyledControls/CustomMessageDialog.qml</file>
+        <file>qml/StyledControls/CustomFailDialog.qml</file>
+        <file>qml/StyledControls/CustomMediumButton.qml</file>
+        <file>qml/Overview/BalanceBar.qml</file>
+        <file>qml/Overview/BaseBalanceLabel.qml</file>
+        <file>qml/Overview/OverviewPanel.qml</file>
+        <file>qml/Overview/OverviewWalletBar.qml</file>
+        <file>qml/Pin/PasswordEntryPopup.qml</file>
+        <file>images/about.png</file>
+        <file>images/arrow.png</file>
+        <file>images/general.png</file>
+        <file>images/network.png</file>
+        <file>images/notification_critical.png</file>
+        <file>images/notification_info.png</file>
+        <file>images/notification_question.png</file>
+        <file>images/notification_success.png</file>
+        <file>images/notification_warning.png</file>
+        <file>images/plus.svg</file>
+        <file>qml/Settings/qmldir</file>
+        <file>qml/Settings/SettingsMenu.qml</file>
+        <file>qml/Settings/SettingsNetwork.qml</file>
+        <file>qml/Settings/SettingsPopup.qml</file>
+        <file>qml/StyledControls/CustomListItem.qml</file>
+        <file>qml/StyledControls/CustomListRadioButton.qml</file>
+        <file>qml/Settings/SettingsGeneral.qml</file>
+        <file>qml/Settings/SettingsAbout.qml</file>
+        <file>images/about_github.svg</file>
+        <file>images/about_hello.svg</file>
+        <file>images/about_telegram.svg</file>
+        <file>images/about_terminal.svg</file>
+        <file>images/about_twitter.svg</file>
+        <file>images/combobox_open_button.svg</file>
+        <file>qml/StyledControls/CustomTableView.qml</file>
+        <file>qml/StyledControls/CustomSmallButton.qml</file>
+        <file>qml/StyledControls/CustomButtonRightIcon.qml</file>
+        <file>qml/StyledControls/CustomButtonLeftIcon.qml</file>
+        <file>images/calendar_icon.svg</file>
+        <file>images/download_icon.svg</file>
+        <file>images/search_icon.svg</file>
+        <file>images/logo_no_text.svg</file>
+        <file>qml/StyledControls/CopyIconButton.qml</file>
+        <file>qml/StyledControls/InputOutputTableView.qml</file>
+        <file>images/down_arrow.svg</file>
+        <file>images/up_arrow.svg</file>
+        <file>qml/Send/WalletsComboBox.qml</file>
+        <file>qml/Send/AmountInput.qml</file>
+        <file>qml/Send/FeeSuggestComboBox.qml</file>
+        <file>qml/Send/RecvAddrTextInput.qml</file>
+        <file>qml/StyledControls/DeleteIconButton.qml</file>
+        <file>images/delete.png</file>
+        <file>images/delete.svg</file>
+        <file>qml/TransactionDetails.qml</file>
+        <file>qml/StyledControls/CloseIconButton.qml</file>
+        <file>qml/StyledControls/CustomTableDelegateRow.qml</file>
+        <file>qml/Send/SelectInputs.qml</file>
+        <file>images/check.svg</file>
+        <file>images/collapsed.svg</file>
+        <file>images/expanded.svg</file>
+        <file>qml/Send/SignTransactionAdvanced.qml</file>
+        <file>qml/Send/PasswordWithTimer.qml</file>
+        <file>images/delete_icon.svg</file>
+        <file>images/eye_icon.svg</file>
+        <file>images/shield_icon.svg</file>
+        <file>images/lock_icon.svg</file>
+        <file>images/scan_icon.svg</file>
+        <file>qml/WalletProperties/WalletPropertiesPopup.qml</file>
+        <file>qml/WalletProperties/ChangePassword.qml</file>
+        <file>qml/WalletProperties/RenameWallet.qml</file>
+        <file>qml/WalletProperties/DeleteWallet.qml</file>
+        <file>qml/WalletProperties/DeleteWalletWarn.qml</file>
+        <file>qml/WalletProperties/ExportWOWallet.qml</file>
+        <file>qml/WalletProperties/WalletSeed.qml</file>
+        <file>qml/WalletProperties/WalletSeedAuth.qml</file>
+        <file>images/wallet_icon_warn.svg</file>
+        <file>images/edit_wallet_name.png</file>
+        <file>qml/StyledControls/CustomHorizontalHeaderView.qml</file>
+        <file>qml/StyledControls/CustomRbfCpfpMenu.qml</file>
+        <file>qml/StyledControls/CustomSuccessWidget.qml</file>
+        <file>qml/StyledControls/CustomSuccessDialog.qml</file>
+        <file>qml/Settings/AddArmoryServer.qml</file>
+        <file>images/delete_custom_server.svg</file>
+        <file>qml/Settings/DeleteArmoryServer.qml</file>
+        <file>qml/Settings/ModifyArmoryServer.qml</file>
+        <file>qml/StyledControls/CustomTransactionsTableView.qml</file>
+        <file>fonts/Roboto-Regular.ttf</file>
+        <file>qml/Plugins/Common/Card.qml</file>
+        <file>qml/Plugins/Common/PluginsPage.qml</file>
+        <file>images/sideshift_plugin.png</file>
+        <file>images/try_icon.png</file>
+        <file>qml/Plugins/Common/PluginPopup.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftButton.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftCombobox.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftComboboxWithIcon.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftIconButton.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftPopup.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftTextInput.qml</file>
+        <file>images/transfer_icon.png</file>
+        <file>qml/Plugins/SideShift/SideShiftMainPage.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftBuyPage.qml</file>
+        <file>qml/Plugins/SideShift/SideShiftCopyButton.qml</file>
+        <file>images/sideshift_right_arrow.svg</file>
+        <file>images/sideswap_plugin.png</file>
+        <file>images/leverex_plugin.png</file>
+        <file>qml/Plugins/SideSwap/SideSwapPopup.qml</file>
+        <file>qml/Plugins/SideSwap/SideSwapMainPage.qml</file>
+        <file>qml/Plugins/SideSwap/Controls/CurrencyLabel.qml</file>
+        <file>qml/Plugins/SideSwap/Controls/CustomButton.qml</file>
+        <file>qml/Plugins/SideSwap/Controls/CustomCombobox.qml</file>
+        <file>qml/Plugins/SideSwap/Controls/CustomSwitch.qml</file>
+        <file>qml/Plugins/SideSwap/Controls/CustomTextEdit.qml</file>
+        <file>qml/Plugins/SideSwap/Controls/IconButton.qml</file>
+        <file>qml/Plugins/SideSwap/Styles/qmldir</file>
+        <file>qml/Plugins/SideSwap/Styles/SideSwapStyles.qml</file>
+        <file>images/sideswap/btc_icon.svg</file>
+        <file>images/sideswap/lbtc_icon.svg</file>
+        <file>qml/Plugins/SideSwap/Controls/CustomBorderedButton.qml</file>
+        <file>qml/Plugins/SideSwap/SideSwapPegOut.qml</file>
+        <file>qml/Plugins/SideSwap/SideSwapPegIn.qml</file>
+        <file>images/import_icon.svg</file>
+        <file>images/RPK12.png</file>
+        <file>images/RPK24.png</file>
     </qresource>
 </RCC>

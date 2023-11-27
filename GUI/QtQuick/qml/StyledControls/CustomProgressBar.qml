@@ -14,26 +14,27 @@ import "../BsStyles"
 
 ProgressBar {
     id: control
-    value: 0.5
-    topPadding: 1
-    bottomPadding: 1
+    padding: 0
 
     background: Rectangle {
-        implicitWidth: 200
-        implicitHeight: 6
-        color: BSStyle.progressBarBgColor
-        radius: 3
+        implicitWidth: BSSizes.applyScale(532)
+        implicitHeight: BSSizes.applyScale(8)
+        color: "transparent"
+        radius: BSSizes.applyScale(32)
+
+        border.width: BSSizes.applyScale(1)
+        border.color: "#3C435A"
     }
 
     contentItem: Item {
-        implicitWidth: 200
-        implicitHeight: 4
+        implicitWidth: BSSizes.applyScale(532)
+        implicitHeight: BSSizes.applyScale(8)
 
         Rectangle {
             width: control.visualPosition * parent.width
             height: parent.height
-            radius: 2
-            color: BSStyle.progressBarColor
+            radius: BSSizes.applyScale(32)
+            color: "#45A6FF"
         }
     }
 }

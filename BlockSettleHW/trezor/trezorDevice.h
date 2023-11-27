@@ -11,110 +11,120 @@
 #ifndef TREZORDEVICE_H
 #define TREZORDEVICE_H
 
+#include "Message/Worker.h"
 #include "trezorStructure.h"
 #include "hwdeviceinterface.h"
-#include <QObject>
-#include <QNetworkReply>
-#include <QPointer>
+#include "trezorClient.h"
 
-
-// Trezor interface (source - https://github.com/trezor/trezor-common/tree/master/protob)
-#include "trezor/generated_proto/messages-management.pb.h"
-#include "trezor/generated_proto/messages-common.pb.h"
-#include "trezor/generated_proto/messages-bitcoin.pb.h"
-#include "trezor/generated_proto/messages.pb.h"
-
-
-class ConnectionManager;
-class QNetworkRequest;
-class TrezorClient;
-
+namespace spdlog {
+   class logger;
+}
 namespace bs {
    namespace core {
       namespace wallet {
          struct TXSignRequest;
       }
    }
-   namespace sync {
-      class WalletsManager;
+}
+namespace hw {
+   namespace trezor {
+      namespace messages {
+         namespace bitcoin {
+            class TxRequest;
+         }
+         namespace management {
+            class Features;
+            enum Features_Capability: int;
+         }
+         enum MessageType: int;
+      }
    }
 }
 
-class TrezorDevice : public HwDeviceInterface
-{
-   Q_OBJECT
+namespace bs {
+   namespace hww {
 
-public:
-   TrezorDevice(const std::shared_ptr<ConnectionManager> &
-      , std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet
-      , const QPointer<TrezorClient> &, QObject* parent = nullptr);
-   ~TrezorDevice() override;
+      class TrezorDevice : public DeviceInterface, protected WorkerPool
+      {
+      public:
+         TrezorDevice(const std::shared_ptr<spdlog::logger>&, const trezor::DeviceData&
+            , bool testNet, DeviceCallbacks*, const std::string& endpoint);
+         ~TrezorDevice() override;
 
-   DeviceKey key() const override;
-   DeviceType type() const override;
+         trezor::DeviceData data() const { return data_; }
+         DeviceKey key() const override;
+         DeviceType type() const override;
 
+         // lifecycle
+         void init() override;
+         void cancel() override;
+         void clearSession() override;
+         void releaseConnection();
 
-   // lifecycle
-   void init(AsyncCallBack&& cb = nullptr) override;
-   void cancel() override;
-   void clearSession(AsyncCallBack&& cb = nullptr) override;
+         // operation
+         void getPublicKeys() override;
+         void signTX(const bs::core::wallet::TXSignRequest& reqTX) override;
+         void retrieveXPubRoot() override;
 
-   // operation
-   void getPublicKey(AsyncCallBackCall&& cb = nullptr) override;
-   void signTX(const bs::core::wallet::TXSignRequest& reqTX, AsyncCallBackCall&& cb = nullptr) override;
-   void retrieveXPubRoot(AsyncCallBack&& cb) override;
+         void setSupportingTXs(const std::vector<Tx>&) override;
 
-   // Management
-   void setMatrixPin(const std::string& pin) override;
-   void setPassword(const std::string& password, bool enterOnDevice) override;
+         // Management
+         void setMatrixPin(const SecureBinaryData& pin) override;
+         void setPassword(const SecureBinaryData& password, bool enterOnDevice) override;
 
-   // State
-   bool isBlocked() override {
-      // There is no blocking state for Trezor
-      return false;
-   }
+         // State
+         bool isBlocked() const override {
+            // There is no blocking state for Trezor
+            return false;
+         }
 
-private:
-   void makeCall(const google::protobuf::Message &msg);
+      protected:
+         std::shared_ptr<Worker> worker(const std::shared_ptr<InData>&) override final;
 
-   void handleMessage(const MessageData& data);
-   bool parseResponse(google::protobuf::Message &msg, const MessageData& data);
+         // operation result informing
+         void publicKeyReady() override {}   //TODO: implement
+         void deviceTxStatusChanged(const std::string& status) override {} //TODO: implement
+         void operationFailed(const std::string& reason) override;
+         void requestForRescan() override {} //TODO: implement
 
-   // callbacks
-   void resetCaches();
+         // Management
+         void cancelledOnDevice() override {}   //TODO: implement
+         void invalidPin() override {}    //TODO: implement
 
-   void setCallbackNoData(hw::trezor::messages::MessageType, AsyncCallBack&& cb);
-   void callbackNoData(hw::trezor::messages::MessageType);
+      private:
+         void makeCall(const google::protobuf::Message&, const bs::WorkerPool::callback& cb = nullptr);
+         void handleMessage(const trezor::MessageData&, const bs::WorkerPool::callback& cb = nullptr);
+         bool parseResponse(google::protobuf::Message&, const trezor::MessageData&);
 
-   void setDataCallback(hw::trezor::messages::MessageType, AsyncCallBackCall&& cb);
-   void dataCallback(hw::trezor::messages::MessageType, QVariant&& response);
+         void reset();
 
-   void handleTxRequest(const MessageData& data);
-   void sendTxMessage(const QString& status);
+         void handleTxRequest(const trezor::MessageData&, const bs::WorkerPool::callback& cb);
+         void sendTxMessage(const std::string& status);
 
-   // Returns previous Tx for legacy inputs
-   // Trezor could request non-existing hash if wrong passphrase entered
-   Tx prevTx(const hw::trezor::messages::bitcoin::TxRequest &txRequest);
+         // Returns previous Tx for legacy inputs
+         // Trezor could request non-existing hash if wrong passphrase entered
+         Tx prevTx(const ::hw::trezor::messages::bitcoin::TxRequest& txRequest);
 
-private:
-   bool hasCapability(hw::trezor::messages::management::Features::Capability cap) const;
+         bool hasCapability(const ::hw::trezor::messages::management::Features_Capability&) const;
+         bool isFirmwareSupported() const;
+         std::string firmwareSupportedVersion() const;
 
-   bool isFirmwareSupported() const;
-   std::string firmwareSupportedVersion() const;
+      private:
+         std::shared_ptr<spdlog::logger>  logger_;
+         const trezor::DeviceData data_;
+         const bool        testNet_;
+         DeviceCallbacks*  cb_{ nullptr };
+         const std::string endpoint_;
+         trezor::State     state_{ trezor::State::None };
+         std::shared_ptr<::hw::trezor::messages::management::Features> features_{};
 
-   std::shared_ptr<ConnectionManager> connectionManager_{};
-   std::shared_ptr<bs::sync::WalletsManager> walletManager_{};
+         std::unique_ptr<bs::core::wallet::TXSignRequest> currentTxSignReq_;
+         bs::core::HwWalletInfo  awaitingWalletInfo_;
+         std::string awaitingSignedTX_;
+         std::deque<bs::WorkerPool::callback> awaitingCallbacks_;
+         bool txSignedByUser_{ false };
+      };
 
-   QPointer<TrezorClient> client_{};
-   hw::trezor::messages::management::Features features_{};
-   bool testNet_{};
-   std::unique_ptr<bs::core::wallet::TXSignRequest> currentTxSignReq_;
-   HWSignedTx awaitingTransaction_;
-   HwWalletWrapper awaitingWalletInfo_;
-
-   bool txSignedByUser_ = false;
-   std::unordered_map<int, AsyncCallBack> awaitingCallbackNoData_;
-   std::unordered_map<int, AsyncCallBackCall> awaitingCallbackData_;
-};
-
+   }  //hw
+}     //bs
 #endif // TREZORDEVICE_H

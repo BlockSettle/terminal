@@ -111,7 +111,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
       }
    });
 
-   trayIconOptional_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
+   trayIconOptional_ = new QSystemTrayIcon(QStringLiteral(":/images/terminal.ico"), this);
    connect(trayIconOptional_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
    connect(trayIconOptional_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
 

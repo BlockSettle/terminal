@@ -11,8 +11,10 @@
 #ifndef LEDGERSTRUCTURE_H
 #define LEDGERSTRUCTURE_H
 
-#include "hwcommonstructure.h"
-#include "QDataStream"
+#include <unordered_set>
+#include <QDataStream>
+#include "BinaryData.h"
+#include "BIP32_Node.h"
 
 
 namespace Ledger {
@@ -144,29 +146,34 @@ void writeUintLE(QByteArray& out, T value) {
 void writeVarInt(QByteArray &output, size_t size);
 
 struct HidDeviceInfo {
-   QString  path_;
-   uint16_t vendorId_;
-   uint16_t productId_;
-   QString  serialNumber_;
-   uint16_t releaseNumber_;
-   QString  manufacturerString_;
-   QString  productString_;
-   uint16_t usagePage_;
-   uint16_t usage_;
-   int      interfaceNumber_;
+   std::string path;
+   uint16_t vendorId;
+   uint16_t productId;
+   std::string serialNumber;
+   uint16_t releaseNumber;
+   std::string manufacturer;
+   std::string product;
+   uint16_t usagePage;
+   uint16_t usage;
+   int      interfaceNumber;
 };
 
-struct SegwitInputData {
-   std::unordered_map<int, BinaryData> preimages_;
-   std::unordered_map<int, BinaryData> redeemScripts_;
-   std::vector<BIP32_Node> inputNodes_;
+struct SegwitInputData
+{
+   std::map<int, BinaryData>  preimages;
+   std::map<int, BinaryData>  redeemScripts;
+
+   bool empty() const
+   {
+      return (preimages.empty() && redeemScripts.empty());
+   }
 };
 
 struct LedgerPublicKey
 {
-   QByteArray pubKey_;
-   QByteArray address_;
-   QByteArray chainCode_;
+   QByteArray pubKey;
+   QByteArray address;
+   QByteArray chainCode;
 
    bool parseFromResponse(QByteArray response) {
       QDataStream stream(response);
@@ -174,26 +181,26 @@ struct LedgerPublicKey
       uint8_t pubKeyLength;
       stream >> pubKeyLength;
 
-      pubKey_.clear();
-      pubKey_.resize(pubKeyLength);
-      stream.readRawData(pubKey_.data(), pubKeyLength);
+      pubKey.clear();
+      pubKey.resize(pubKeyLength);
+      stream.readRawData(pubKey.data(), pubKeyLength);
 
       uint8_t addressLength;
       stream >> addressLength;
 
-      address_.clear();
-      address_.resize(addressLength);
-      stream.readRawData(address_.data(), addressLength);
+      address.clear();
+      address.resize(addressLength);
+      stream.readRawData(address.data(), addressLength);
 
-      chainCode_.clear();
-      chainCode_.resize(Ledger::CHAIN_CODE_SIZE);
-      stream.readRawData(chainCode_.data(), Ledger::CHAIN_CODE_SIZE);
+      chainCode.clear();
+      chainCode.resize(Ledger::CHAIN_CODE_SIZE);
+      stream.readRawData(chainCode.data(), Ledger::CHAIN_CODE_SIZE);
 
       return stream.atEnd();
    }
 
    bool isValid() {
-      return !pubKey_.isEmpty() && !address_.isEmpty() && !chainCode_.isEmpty();
+      return !pubKey.isEmpty() && !address.isEmpty() && !chainCode.isEmpty();
    }
 };
 

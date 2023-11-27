@@ -73,6 +73,9 @@ public:
    }
 
 protected:
+   bool pushFill(bs::message::Envelope&) override;
+
+protected:
    std::shared_ptr<bs::message::UserAPI>  user_;
 };
 
@@ -84,8 +87,9 @@ public:
    ApiAdapter(const std::shared_ptr<spdlog::logger> &);
    ~ApiAdapter() override = default;
 
-   bool process(const bs::message::Envelope &) override;
-   bool processBroadcast(const bs::message::Envelope& env) override;
+   bs::message::ProcessingResult process(const bs::message::Envelope&) override;
+   bool processBroadcast(const bs::message::Envelope&) override;
+   bool processTimeout(const bs::message::Envelope&) override;
 
    Users supportedReceivers() const override { return { user_, fallbackUser_ }; }
    std::string name() const override { return "API"; }

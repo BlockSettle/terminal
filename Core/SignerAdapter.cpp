@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2020 - 2021, BlockSettle AB
+* Copyright (C) 2020 - 2023, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -9,12 +9,15 @@
 
 */
 #include "SignerAdapter.h"
+#include <filesystem>
 #include <spdlog/spdlog.h>
+#include "bip39/bip39.h"
 #include "Adapters/SignerClient.h"
 #include "CoreWalletsManager.h"
+#include "SystemFileUtils.h"
+#include "TerminalMessage.h"
 #include "Wallets/InprocSigner.h"
 #include "Wallets/ProtobufHeadlessUtils.h"
-#include "TerminalMessage.h"
 
 #include "common.pb.h"
 #include "terminal.pb.h"
@@ -37,13 +40,13 @@ std::unique_ptr<SignerClient> SignerAdapter::createClient() const
    return client;
 }
 
-bool SignerAdapter::process(const bs::message::Envelope &env)
+ProcessingResult SignerAdapter::process(const bs::message::Envelope &env)
 {
    if (env.isRequest()) {
       SignerMessage msg;
       if (!msg.ParseFromString(env.message)) {
          logger_->error("[{}] failed to parse own msg #{}", __func__, env.foreignId());
-         return true;
+         return ProcessingResult::Error;
       }
       return processOwnRequest(env, msg);
    }
@@ -51,7 +54,7 @@ bool SignerAdapter::process(const bs::message::Envelope &env)
       SettingsMessage msg;
       if (!msg.ParseFromString(env.message)) {
          logger_->error("[{}] failed to parse settings msg #{}", __func__, env.foreignId());
-         return true;
+         return ProcessingResult::Error;
       }
       switch (msg.data_case()) {
       case SettingsMessage::kSignerResponse:
@@ -61,7 +64,7 @@ bool SignerAdapter::process(const bs::message::Envelope &env)
       default: break;
       }
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
 bool SignerAdapter::processBroadcast(const bs::message::Envelope& env)
@@ -91,13 +94,14 @@ void SignerAdapter::start()
       walletsReady();
       return;
    }
+   logger_->debug("[SignerAdapter::start]");
    SettingsMessage msg;
    msg.mutable_signer_request();
    pushRequest(user_, UserTerminal::create(TerminalUsers::Settings)
       , msg.SerializeAsString());
 }
 
-bool SignerAdapter::processOwnRequest(const bs::message::Envelope &env
+ProcessingResult SignerAdapter::processOwnRequest(const bs::message::Envelope &env
    , const SignerMessage &request)
 {
    switch (request.data_case()) {
@@ -133,20 +137,38 @@ bool SignerAdapter::processOwnRequest(const bs::message::Envelope &env
    case SignerMessage::kDialogRequest:
       return processDialogRequest(env, request.dialog_request());
    case SignerMessage::kCreateWallet:
-      return processCreateWallet(env, false, request.create_wallet());
+      return processCreateWallet(env, true, request.create_wallet());
    case SignerMessage::kImportWallet:
       return processCreateWallet(env, true, request.import_wallet());
    case SignerMessage::kDeleteWallet:
       return processDeleteWallet(env, request.delete_wallet());
+   case SignerMessage::kImportHwWallet:
+      return processImportHwWallet(env, request.import_hw_wallet());
+   case SignerMessage::kExportWoWalletRequest:
+      return processExportWoWallet(env, request.export_wo_wallet_request());
+   case SignerMessage::kChangeWalletPass:
+      return processChangeWalletPass(env, request.change_wallet_pass());
+   case SignerMessage::kGetWalletSeed:
+      return processGetWalletSeed(env, request.get_wallet_seed());
+   case SignerMessage::kImportWoWallet:
+      return processImportWoWallet(env, request.import_wo_wallet());
+   case SignerMessage::kSetWalletName:
+      return processWalletRename(env, request.set_wallet_name().wallet().wallet_id()
+         , request.set_wallet_name().new_name());
    default:
       logger_->warn("[{}] unknown signer request: {}", __func__, request.data_case());
       break;
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
-bool SignerAdapter::processSignerSettings(const SettingsMessage_SignerServer &response)
+ProcessingResult SignerAdapter::processSignerSettings(const SettingsMessage_SignerServer &response)
 {
+   {
+      SignerMessage msg;
+      msg.mutable_wallets_reset();
+      pushBroadcast(user_, msg.SerializeAsString(), true);
+   }
    curServerId_ = response.id();
    netType_ = static_cast<NetworkType>(response.network_type());
    walletsDir_ = response.home_dir();
@@ -163,7 +185,8 @@ bool SignerAdapter::processSignerSettings(const SettingsMessage_SignerServer &re
    logger_->info("[{}] loading wallets from {}", __func__, walletsDir_);
    signer_->Start();
    walletsChanged();
-   return sendComponentLoading();
+   sendComponentLoading();
+   return ProcessingResult::Success;
 }
 
 void SignerAdapter::walletsChanged(bool rescan)
@@ -228,14 +251,15 @@ bool SignerAdapter::sendComponentLoading()
    static const auto &adminUser = UserTerminal::create(TerminalUsers::System);
    AdministrativeMessage msg;
    msg.set_component_loading(user_->value());
-   return pushBroadcast(adminUser, msg.SerializeAsString());
+   pushBroadcast(adminUser, msg.SerializeAsString());
+   return true;
 }
 
-bool SignerAdapter::processNewKeyResponse(bool acceptNewKey)
+ProcessingResult SignerAdapter::processNewKeyResponse(bool acceptNewKey)
 {
    if (!connFuture_) {
       logger_->error("[{}] new key comparison wasn't requested", __func__);
-      return true;
+      return ProcessingResult::Error;
    }
    connFuture_->setValue(acceptNewKey);
    if (acceptNewKey) {
@@ -247,10 +271,10 @@ bool SignerAdapter::processNewKeyResponse(bool acceptNewKey)
          , msg.SerializeAsString());
    }
    connFuture_.reset();
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processStartWalletSync(const bs::message::Envelope &env)
+ProcessingResult SignerAdapter::processStartWalletSync(const bs::message::Envelope &env)
 {
    requests_.put(env.foreignId(), env.sender);
    const auto &cbWallets = [this, msgId=env.foreignId()]
@@ -285,10 +309,10 @@ bool SignerAdapter::processStartWalletSync(const bs::message::Envelope &env)
       pushResponse(user_, sender, msg.SerializeAsString(), msgId);
    };
    signer_->syncWalletInfo(cbWallets);
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processSyncAddresses(const bs::message::Envelope &env
+ProcessingResult SignerAdapter::processSyncAddresses(const bs::message::Envelope &env
    , const SignerMessage_SyncAddresses &request)
 {
    requests_.put(env.foreignId(), env.sender);
@@ -311,10 +335,10 @@ bool SignerAdapter::processSyncAddresses(const bs::message::Envelope &env
       addrSet.insert(BinaryData::fromString(addr));
    }
    signer_->syncAddressBatch(request.wallet_id(), addrSet, cb);
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processSyncNewAddresses(const bs::message::Envelope &env
+ProcessingResult SignerAdapter::processSyncNewAddresses(const bs::message::Envelope &env
    , const SignerMessage_SyncNewAddresses &request)
 {
    requests_.put(env.foreignId(), env.sender);
@@ -335,7 +359,7 @@ bool SignerAdapter::processSyncNewAddresses(const bs::message::Envelope &env
       };
       if (request.indices_size() != 1) {
          logger_->error("[{}] not a single new address request", __func__);
-         return true;
+         return ProcessingResult::Error;
       }
       signer_->syncNewAddress(request.wallet_id(), request.indices(0), cb);
    }
@@ -364,10 +388,10 @@ bool SignerAdapter::processSyncNewAddresses(const bs::message::Envelope &env
       }
       signer_->syncNewAddresses(request.wallet_id(), indices, cb);
    }
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processExtendAddrChain(const bs::message::Envelope &env
+ProcessingResult SignerAdapter::processExtendAddrChain(const bs::message::Envelope &env
    , const SignerMessage_ExtendAddrChain &request)
 {
    requests_.put(env.foreignId(), env.sender);
@@ -389,10 +413,10 @@ bool SignerAdapter::processExtendAddrChain(const bs::message::Envelope &env
       pushResponse(user_, sender, msg.SerializeAsString(), msgId);
    };
    signer_->extendAddressChain(request.wallet_id(), request.count(), request.ext_int(), cb);
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processSyncWallet(const bs::message::Envelope &env
+ProcessingResult SignerAdapter::processSyncWallet(const bs::message::Envelope &env
    , const std::string &walletId)
 {
    requests_.put(env.foreignId(), env.sender);
@@ -403,11 +427,13 @@ bool SignerAdapter::processSyncWallet(const bs::message::Envelope &env
       if (!sender) {
          return;
       }
+      logger_->debug("[SignerAdapter::processSyncWallet] wallet {} asset type: {}", walletId, data.assetType);
       SignerMessage msg;
       auto msgResp = msg.mutable_wallet_synced();
       msgResp->set_wallet_id(walletId);
       msgResp->set_high_ext_index(data.highestExtIndex);
       msgResp->set_high_int_index(data.highestIntIndex);
+      msgResp->set_asset_type((int)data.assetType);
 
       for (const auto &addr : data.addresses) {
          auto msgAddr = msgResp->add_addresses();
@@ -429,10 +455,10 @@ bool SignerAdapter::processSyncWallet(const bs::message::Envelope &env
       pushResponse(user_, sender, msg.SerializeAsString(), msgId);
    };
    signer_->syncWallet(walletId, cb);
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processSyncHdWallet(const bs::message::Envelope &env
+ProcessingResult SignerAdapter::processSyncHdWallet(const bs::message::Envelope &env
    , const std::string &walletId)
 {
    requests_.put(env.foreignId(), env.sender);
@@ -451,27 +477,27 @@ bool SignerAdapter::processSyncHdWallet(const bs::message::Envelope &env
       pushResponse(user_, sender, msg.SerializeAsString(), msgId);
    };
    signer_->syncHDWallet(walletId, cb);
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processSyncAddrComment(const SignerMessage_SyncAddressComment &request)
+ProcessingResult SignerAdapter::processSyncAddrComment(const SignerMessage_SyncAddressComment &request)
 {
    try {
       signer_->syncAddressComment(request.wallet_id()
          , bs::Address::fromAddressString(request.address()), request.comment());
    }
    catch (const std::exception &) {}
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processSyncTxComment(const SignerMessage_SyncTxComment &request)
+ProcessingResult SignerAdapter::processSyncTxComment(const SignerMessage_SyncTxComment &request)
 {
    signer_->syncTxComment(request.wallet_id()
       , BinaryData::fromString(request.tx_hash()), request.comment());
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processGetRootPubKey(const bs::message::Envelope &env
+ProcessingResult SignerAdapter::processGetRootPubKey(const bs::message::Envelope &env
    , const std::string &walletId)
 {
    requests_.put(env.foreignId(), env.sender);
@@ -491,20 +517,22 @@ bool SignerAdapter::processGetRootPubKey(const bs::message::Envelope &env
       pushResponse(user_, sender, msg.SerializeAsString(), msgId);
    };
    signer_->getRootPubkey(walletId, cb);
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processDelHdRoot(const std::string &walletId)
+ProcessingResult SignerAdapter::processDelHdRoot(const std::string &walletId)
 {
-   return (signer_->DeleteHDRoot(walletId) > 0);
+   signer_->DeleteHDRoot(walletId);
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processDelHdLeaf(const std::string &walletId)
+ProcessingResult SignerAdapter::processDelHdLeaf(const std::string &walletId)
 {
-   return (signer_->DeleteHDLeaf(walletId) > 0);
+   signer_->DeleteHDLeaf(walletId);
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processSignTx(const bs::message::Envelope& env
+ProcessingResult SignerAdapter::processSignTx(const bs::message::Envelope& env
    , const SignerMessage_SignTxRequest& request)
 {
    const auto& cbSigned = [this, env, id=request.id()]
@@ -519,15 +547,55 @@ bool SignerAdapter::processSignTx(const bs::message::Envelope& env
       msgResp->set_error_text(errorReason);
       pushResponse(user_, env, msg.SerializeAsString());
    };
-   const auto& txReq = bs::signer::pbTxRequestToCore(request.tx_request(), logger_);
-   passphrase_ = SecureBinaryData::fromString(request.passphrase());
-   signer_->signTXRequest(txReq, cbSigned
-      , static_cast<SignContainer::TXSignMode>(request.sign_mode())
-      , request.keep_dup_recips());
-   return true;
+   auto txReq = bs::signer::pbTxRequestToCore(request.tx_request(), logger_);
+   logger_->debug("[{}] ({} wallet id[s])", __func__, txReq.walletIds.size());
+   bs::core::WalletsManager::HDWalletPtr hdWallet;
+   if ((txReq.walletIds.size() == 1)) {
+      hdWallet = walletsMgr_->getHDWalletById(txReq.walletIds.at(0));
+      if (hdWallet) {
+         if (!hdWallet->isHardwareWallet()) {
+            logger_->warn("[{}] {} not a hardware wallet", __func__, txReq.walletIds.at(0));
+            hdWallet.reset();
+         }
+      }
+      else {
+         logger_->error("[{}] failed to get HD wallet by {}", __func__, txReq.walletIds.at(0));
+      }
+   }
+   if (hdWallet) {
+      const auto& signData = SecureBinaryData::fromString(request.passphrase());
+      hdWallet->pushPasswordPrompt([signData]() { return signData; });
+      SignerMessage msg;
+      auto msgResp = msg.mutable_sign_tx_response();
+      try {
+         logger_->debug("[{}] lock time: {}", __func__, txReq.armorySigner_.getLockTime());
+         const auto& signedTX = hdWallet->signTXRequestWithWallet(txReq);
+         if (signedTX.empty()) {
+            throw std::runtime_error("signer returned empty TX");
+         }
+         logger_->debug("[{}] signed TX: {}", __func__, signedTX.toHexStr());
+         if (!txReq.armorySigner_.verify()) {
+            logger_->error("[{}] verification failed", __func__);
+         }
+         msgResp->set_signed_tx(signedTX.toBinStr());
+      }
+      catch (const std::exception& e) {
+         msgResp->set_error_text(e.what());
+      }
+      hdWallet->popPasswordPrompt();
+      pushResponse(user_, env, msg.SerializeAsString());
+   }
+   else {
+      logger_->debug("[{}] multi-leaf signing ({} leaves)", __func__, txReq.walletIds.size());
+      passphrase_ = SecureBinaryData::fromString(request.passphrase());
+      signer_->signTXRequest(txReq, cbSigned
+         , static_cast<SignContainer::TXSignMode>(request.sign_mode())
+         , request.keep_dup_recips());
+   }
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processResolvePubSpenders(const bs::message::Envelope& env
+ProcessingResult SignerAdapter::processResolvePubSpenders(const bs::message::Envelope& env
    , const bs::core::wallet::TXSignRequest& txReq)
 {
    const auto& cbResolve = [this, env](bs::error::ErrorCode result
@@ -542,21 +610,21 @@ bool SignerAdapter::processResolvePubSpenders(const bs::message::Envelope& env
    if (signer_->resolvePublicSpenders(txReq, cbResolve) == 0) {
       logger_->error("[{}] failed to send", __func__);
    }
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processAutoSignRequest(const bs::message::Envelope& env
+ProcessingResult SignerAdapter::processAutoSignRequest(const bs::message::Envelope& env
    , const SignerMessage_AutoSign& request)
 {
    autoSignRequests_[request.wallet_id()] = env;
    QVariantMap data;
    data[QLatin1String("rootId")] = QString::fromStdString(request.wallet_id());
    data[QLatin1String("enable")] = request.enable();
-   return (signer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ActivateAutoSign
-      , data) != 0);
+   signer_->customDialogRequest(bs::signer::ui::GeneralDialogType::ActivateAutoSign, data);
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processDialogRequest(const bs::message::Envelope&
+ProcessingResult SignerAdapter::processDialogRequest(const bs::message::Envelope&
    , const SignerMessage_DialogRequest& request)
 {
    const auto& dlgType = static_cast<bs::signer::ui::GeneralDialogType>(request.dialog_type());
@@ -564,10 +632,11 @@ bool SignerAdapter::processDialogRequest(const bs::message::Envelope&
    for (const auto& d : request.data()) {
       data[QString::fromStdString(d.key())] = QString::fromStdString(d.value());
    }
-   return (signer_->customDialogRequest(dlgType, data) != 0);
+   signer_->customDialogRequest(dlgType, data);
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processCreateWallet(const bs::message::Envelope& env
+ProcessingResult SignerAdapter::processCreateWallet(const bs::message::Envelope& env
    , bool rescan, const SignerMessage_CreateWalletRequest& w)
 {
    bs::wallet::PasswordData pwdData;
@@ -578,34 +647,266 @@ bool SignerAdapter::processCreateWallet(const bs::message::Envelope& env
    SignerMessage msg;
    auto msgResp = msg.mutable_created_wallet();
    try {
-      const auto& seed = w.xpriv_key().empty() ? bs::core::wallet::Seed(SecureBinaryData::fromString(w.seed()), netType_)
+      const auto& seed = w.xpriv_key().empty() ? bs::core::wallet::Seed(w.seed(), netType_)
          : bs::core::wallet::Seed::fromXpriv(SecureBinaryData::fromString(w.xpriv_key()), netType_);
 
       const auto& wallet = walletsMgr_->createWallet(w.name(), w.description(), seed
          , walletsDir_, pwdData, w.primary());
       msgResp->set_wallet_id(wallet->walletId());
       walletsChanged(rescan);
-      logger_->debug("[{}] wallet {} created", __func__, wallet->walletId());
+      logger_->debug("[{}] wallet {} created (rescan: {})", __func__, wallet->walletId(), rescan);
    }
    catch (const std::exception& e) {
       logger_->error("[{}] failed to create wallet: {}", __func__, e.what());
       msgResp->set_error_msg(e.what());
    }
    pushResponse(user_, env, msg.SerializeAsString());
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool SignerAdapter::processDeleteWallet(const bs::message::Envelope& env
-   , const std::string& rootId)
+bs::message::ProcessingResult SignerAdapter::processImportHwWallet(const bs::message::Envelope& env
+   , const BlockSettle::Common::SignerMessage_ImportHWWallet& request)
+{
+   logger_->debug("[{}] {}", __func__, request.DebugString());
+   const bs::core::HwWalletInfo hwwInfo{ static_cast<bs::wallet::HardwareEncKey::WalletType>(request.type())
+      , request.vendor(), request.label(), request.device_id(), request.xpub_root()
+      , request.xpub_nested_segwit(), request.xpub_native_segwit(), request.xpub_legacy() };
+   SignerMessage msg;
+   auto msgResp = msg.mutable_created_wallet();
+   try {
+      logger_->debug("[{}] label: {}, vendor: {}", __func__, hwwInfo.label, hwwInfo.vendor);
+      const auto& hwWallet = std::make_shared<bs::core::hd::Wallet>(netType_
+         , hwwInfo, walletsDir_, logger_);
+      walletsMgr_->addWallet(hwWallet);
+      msgResp->set_wallet_id(hwWallet->walletId());
+      walletsChanged(true);
+      logger_->debug("[{}] wallet {} created", __func__, hwWallet->walletId());
+   }
+   catch (const std::exception& e) {
+      logger_->error("[{}] failed to create HW wallet: {}", __func__, e.what());
+      msgResp->set_error_msg(e.what());
+   }
+   pushResponse(user_, env, msg.SerializeAsString());
+   return bs::message::ProcessingResult::Success;
+}
+
+ProcessingResult SignerAdapter::processDeleteWallet(const bs::message::Envelope& env
+   , const SignerMessage_WalletRequest& request)
 {
    SignerMessage msg;
-   const auto& hdWallet = walletsMgr_->getHDWalletById(rootId);
+   if (!isPasswordValid(request.wallet_id(), SecureBinaryData::fromString(request.password()))) {
+      logger_->warn("[{}] {} password check failed", __func__, request.wallet_id());
+      msg.set_wallet_deleted("");
+      pushBroadcast(user_, msg.SerializeAsString());
+      return ProcessingResult::Error;
+   }
+   const auto& hdWallet = walletsMgr_->getHDWalletById(request.wallet_id());
    if (hdWallet && walletsMgr_->deleteWalletFile(hdWallet)) {
-      msg.set_wallet_deleted(rootId);
+      msg.set_wallet_deleted(request.wallet_id());
    }
    else {
       msg.set_wallet_deleted("");
    }
    pushBroadcast(user_, msg.SerializeAsString());
-   return true;
+   return ProcessingResult::Success;
+}
+
+ProcessingResult SignerAdapter::processExportWoWallet(const bs::message::Envelope& env
+   , const SignerMessage_ExportWoWalletRequest& request)
+{
+   SignerMessage msg;
+   msg.set_export_wo_wallet_response("");
+   const auto& hdWallet = walletsMgr_->getHDWalletById(request.wallet().wallet_id());
+   if (!hdWallet) {
+      logger_->error("[{}] wallet {} not found", __func__, request.wallet().wallet_id());
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Error;
+   }
+   if (hdWallet->isWatchingOnly()) {
+      const auto& srcPathName = hdWallet->getFileName();
+      const auto& fileName = SystemFileUtils::getFileName(srcPathName);
+      const auto& dstPathName = request.output_dir() + "/" + fileName;
+      try {
+         std::filesystem::copy(srcPathName, dstPathName);
+      }
+      catch (const std::exception& e) {
+         logger_->error("[{}] failed to copy {} -> {}: {}", __func__, srcPathName, dstPathName, e.what());
+         pushResponse(user_, env, msg.SerializeAsString());
+         return ProcessingResult::Error;
+      }
+      logger_->debug("[{}] copied {} to {}", __func__, request.wallet().wallet_id(), dstPathName);
+      msg.set_export_wo_wallet_response(fileName);
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Success;
+   }
+   auto woWallet = hdWallet->createWatchingOnly();
+   if (!woWallet) {
+      logger_->error("[{}] WO export {} failed", __func__, request.wallet().wallet_id());
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Error;
+   }
+   const auto srcPathName = woWallet->getFileName();
+   const std::string netType = (hdWallet->networkType() == NetworkType::TestNet) ? "Testnet_" : "";
+   const std::string fileName = "BlockSettle_" + netType + hdWallet->walletId() + "_watchonly.lmdb";
+   const auto& dstPathName = request.output_dir() + "/" + fileName;
+   woWallet->shutdown();
+   try {
+      std::filesystem::rename(srcPathName, dstPathName);
+      std::filesystem::remove(srcPathName + "-lock");
+   }
+   catch (const std::exception& e) {
+      logger_->error("[{}] failed to move {} -> {}: {}", __func__, srcPathName, dstPathName, e.what());
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Error;
+   }
+
+   logger_->debug("[{}] exported {} to {}", __func__, request.wallet().wallet_id(), dstPathName);
+   msg.set_export_wo_wallet_response(fileName);
+   pushResponse(user_, env, msg.SerializeAsString());
+   return ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult SignerAdapter::processChangeWalletPass(const bs::message::Envelope& env
+   , const SignerMessage_ChangeWalletPassword& request)
+{
+   const auto& hdWallet = walletsMgr_->getHDWalletById(request.wallet().wallet_id());
+   if (!hdWallet) {
+      logger_->error("[{}] wallet {} not found", __func__, request.wallet().wallet_id());
+      return ProcessingResult::Error;
+   }
+   bool result = true;
+   {
+      const auto oldPass = SecureBinaryData::fromString(request.wallet().password());
+      const bs::wallet::PasswordData newPass{ SecureBinaryData::fromString(request.new_password())
+         , {bs::wallet::EncryptionType::Password} };
+      const bs::core::WalletPasswordScoped lock(hdWallet, oldPass);
+      result = hdWallet->changePassword({bs::wallet::EncryptionType::Password}, newPass);
+   }
+   SignerMessage msg;
+   msg.set_wallet_pass_changed(result);
+   pushResponse(user_, env, msg.SerializeAsString());
+   return bs::message::ProcessingResult::Success;
+}
+
+bool SignerAdapter::isPasswordValid(const std::string& walletId
+   , const SecureBinaryData& password) const
+{
+   const auto& hdWallet = walletsMgr_->getHDWalletById(walletId);
+   if (!hdWallet) {
+      logger_->error("[{}] wallet {} not found", __func__, walletId);
+      return false;
+   }
+   if (hdWallet->isWatchingOnly() || hdWallet->isHardwareWallet()) {
+      if (password.empty()) {
+         return true;
+      }
+      else {
+         return false;
+      }
+   }
+   try {
+      const bs::core::WalletPasswordScoped lock(hdWallet, password);
+      const auto& seed = hdWallet->getDecryptedSeed();
+      if (seed.empty()) {
+         throw std::runtime_error("seed is empty");
+      }
+      logger_->debug("[{}] seed id: {}, walletId: {}, pass size: {}", __func__, seed.getWalletId(), walletId, password.getSize());
+      return (seed.getWalletId() == walletId);
+   }
+   catch (const Armory::Wallets::WalletException& e) {
+      logger_->error("[{}] failed to decrypt wallet {}: {}", __func__, walletId, e.what());
+   }
+   catch (const Armory::Wallets::Encryption::DecryptedDataContainerException&) {
+      logger_->error("[{}] failed to decrypt wallet {}", __func__, walletId);
+   }
+   catch (const std::exception& e) {
+      logger_->error("[{}] {}: {}", __func__, walletId, e.what());
+   }
+   return false;
+}
+
+bs::message::ProcessingResult SignerAdapter::processGetWalletSeed(const bs::message::Envelope& env
+   , const SignerMessage_WalletRequest& request)
+{
+   SignerMessage msg;
+   auto msgResp = msg.mutable_wallet_seed();
+   msgResp->set_wallet_id(request.wallet_id());
+   const auto& hdWallet = walletsMgr_->getHDWalletById(request.wallet_id());
+   if (!hdWallet) {
+      logger_->error("[{}] wallet {} not found", __func__, request.wallet_id());
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Error;
+   }
+   const auto& password = SecureBinaryData::fromString(request.password());
+   if (!isPasswordValid(request.wallet_id(), password)) {
+      logger_->warn("[{}] invalid password supplied", __func__);
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Error;
+   }
+   try {
+      const bs::core::WalletPasswordScoped lock(hdWallet, password);
+      const auto& seed = hdWallet->getDecryptedSeed();
+      if (seed.empty()) {
+         logger_->warn("[{}] empty seed", __func__);
+      }
+      msgResp->set_xpriv(seed.toXpriv().toBinStr());
+      msgResp->set_bip39_seed(seed.seed().toBinStr());   //TODO: check that seed.seed() has spaces
+   }
+   catch (const Armory::Wallets::WalletException& e) {
+      logger_->error("[{}] failed to decrypt wallet {}: {}", __func__, request.wallet_id(), e.what());
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Error;
+   }
+   catch (const Armory::Wallets::Encryption::DecryptedDataContainerException&) {
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Error;
+   }
+   catch (const std::exception&) {
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Error;
+   }
+   pushResponse(user_, env, msg.SerializeAsString());
+   return bs::message::ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult SignerAdapter::processImportWoWallet(const bs::message::Envelope& env
+   , const std::string& filename)
+{
+   SignerMessage msg;
+   auto msgResp = msg.mutable_created_wallet();
+   const auto& fn = SystemFileUtils::getFileName(filename);
+   const auto& targetFile = walletsDir_ + "/" + fn;
+   try {
+      std::filesystem::copy(filename, targetFile);
+   }
+   catch (const std::exception& e) {
+      logger_->error("[{}] failed to copy {} to wallets dir {}: {}", __func__
+         , filename, walletsDir_, e.what());
+      msgResp->set_error_msg("failed to copy " + fn);
+      pushResponse(user_, env, msg.SerializeAsString());
+      return bs::message::ProcessingResult::Error;
+   }
+   const auto& wallet = signer_->importWoWallet(netType_, targetFile);
+   if (!wallet) {
+      msgResp->set_error_msg("failed to import " + fn);
+      pushResponse(user_, env, msg.SerializeAsString());
+      return bs::message::ProcessingResult::Error;
+   }
+   msgResp->set_wallet_id(wallet->walletId());
+   pushResponse(user_, env, msg.SerializeAsString());
+   walletsChanged();
+   walletsReady();
+   return bs::message::ProcessingResult::Success;
+}
+
+bs::message::ProcessingResult SignerAdapter::processWalletRename(const bs::message::Envelope&
+   , const std::string& walletId, const std::string& newName)
+{
+   const auto& hdWallet = walletsMgr_->getHDWalletById(walletId);
+   if (!hdWallet) {
+      logger_->error("[{}] wallet {} not found", __func__, walletId);
+      return bs::message::ProcessingResult::Error;
+   }
+   hdWallet->setName(newName);
+   return bs::message::ProcessingResult::Success;
 }

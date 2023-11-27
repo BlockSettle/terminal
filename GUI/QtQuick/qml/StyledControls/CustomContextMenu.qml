@@ -10,52 +10,57 @@
 */
 import QtQuick 2.9
 import QtQuick.Controls 2.3
+
 import "../BsStyles"
 
-MouseArea {
-    hoverEnabled: true
-    acceptedButtons: Qt.RightButton
-    cursorShape: Qt.IBeamCursor
-    onClicked: {
-        if (mouse.button === Qt.RightButton) {
-            let selectStart = root.selectionStart
-            let selectEnd = root.selectionEnd
-            let curPos = root.cursorPosition
-            contextMenu.popup()
-            root.cursorPosition = curPos
-            root.select(selectStart,selectEnd)
+Menu {
+    id: menu
+
+    leftPadding: BSSizes.applyScale(6)
+    topPadding: BSSizes.applyScale(4)
+    bottomPadding: BSSizes.applyScale(4)
+    rightPadding: BSSizes.applyScale(6)
+
+    delegate: MenuItem {
+        id: menuItem
+        visible: menuItem.enabled
+        width: BSSizes.applyScale(200)
+        height: menuItem.visible ? BSSizes.applyScale(40) : 0 
+
+        contentItem: Text {
+            leftPadding: menuItem.indicator.width
+            rightPadding: menuItem.arrow.width
+
+            text: menuItem.text
+
+            font.pixelSize: BSSizes.applyScale(12)
+            font.family: "Roboto"
+            font.weight: Font.Normal
+
+            color: BSStyle.wildBlueColor
+
+            horizontalAlignment: Text.AlignLeft
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+        }
+
+        background: Rectangle {
+            width: parent.width - menu.leftPadding - menu.rightPadding
+            height: parent.height
+
+            radius: BSSizes.applyScale(14)
+            color: menuItem.highlighted ? BSStyle.menuItemHoveredColor : BSStyle.menuItemColor
         }
     }
-    onPressAndHold: {
-        if (mouse.source === Qt.MouseEventNotSynthesized) {
-            let selectStart = root.selectionStart
-            let selectEnd = root.selectionEnd
-            let curPos = root.cursorPosition
-            contextMenu.popup()
-            root.cursorPosition = curPos
-            root.select(selectStart,selectEnd)
-        }
-    }
-    
-    Menu {
-        id: contextMenu
-        MenuItem {
-            text: qsTr("Cut")
-            onTriggered: {
-                root.cut()
-            }
-        }
-        MenuItem {
-            text: qsTr("Copy")
-            onTriggered: {
-                root.copy()
-            }
-        }
-        MenuItem {
-            text: qsTr("Paste")
-            onTriggered: {
-                root.paste()
-            }
-        }
+
+
+    background: Rectangle {
+        implicitWidth: BSSizes.applyScale(200)
+        implicitHeight: BSSizes.applyScale(40)
+        color: BSStyle.popupBackgroundColor
+        opacity: 1
+        radius: BSSizes.applyScale(14)
+        border.color : BSStyle.defaultBorderColor
+        border.width : BSSizes.applyScale(1)
     }
 }

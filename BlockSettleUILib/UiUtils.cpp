@@ -243,7 +243,8 @@ int UiUtils::fillHDWalletsComboBox(QComboBox* comboBox, const std::shared_ptr<bs
       // HW wallets marked as offline too, make sure to check that first
       if (!hdWallet->canMixLeaves()) {
 
-         if (hdWallet->isHardwareOfflineWallet() && !(walletTypes & WalletsTypes::WatchOnly)) {
+         if (hdWallet->isHardwareWallet() && hdWallet->isOffline() &&
+            !(walletTypes & WalletsTypes::WatchOnly)) {
             continue;
          }
 

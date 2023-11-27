@@ -26,13 +26,13 @@ AssetsAdapter::AssetsAdapter(const std::shared_ptr<spdlog::logger> &logger)
    assetMgr_ = std::make_unique<AssetManager>(logger, this);
 }
 
-bool AssetsAdapter::process(const bs::message::Envelope &env)
+ProcessingResult AssetsAdapter::process(const bs::message::Envelope &env)
 {
    if (env.sender->value<bs::message::TerminalUsers>() == bs::message::TerminalUsers::Settings) {
       SettingsMessage msg;
       if (!msg.ParseFromString(env.message)) {
          logger_->error("[{}] failed to parse settings message #{}", __func__, env.foreignId());
-         return true;
+         return ProcessingResult::Error;
       }
       switch (msg.data_case()) {
       case SettingsMessage::kGetResponse:
@@ -44,7 +44,7 @@ bool AssetsAdapter::process(const bs::message::Envelope &env)
       MatchingMessage msg;
       if (!msg.ParseFromString(env.message)) {
          logger_->error("[{}] failed to parse matching message #{}", __func__, env.foreignId());
-         return true;
+         return ProcessingResult::Error;
       }
       switch (msg.data_case()) {
       case MatchingMessage::kSubmittedAuthAddresses:
@@ -56,7 +56,7 @@ bool AssetsAdapter::process(const bs::message::Envelope &env)
       AssetsMessage msg;
       if (!msg.ParseFromString(env.message)) {
          logger_->error("[{}] failed to parse own message #{}", __func__, env.foreignId());
-         return true;
+         return ProcessingResult::Error;
       }
       switch (msg.data_case()) {
       case AssetsMessage::kSubmitAuthAddress:
@@ -64,7 +64,7 @@ bool AssetsAdapter::process(const bs::message::Envelope &env)
       default: break;
       }
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
 bool AssetsAdapter::processBroadcast(const bs::message::Envelope& env)
@@ -106,7 +106,8 @@ bool AssetsAdapter::processBroadcast(const bs::message::Envelope& env)
       }
       switch (msg.data_case()) {
       case BsServerMessage::kBalanceUpdated:
-         return processBalance(msg.balance_updated().currency(), msg.balance_updated().value());
+         return (processBalance(msg.balance_updated().currency(), msg.balance_updated().value())
+            != ProcessingResult::Ignored);
       default: break;
       }
    }
@@ -141,14 +142,14 @@ void AssetsAdapter::onSecuritiesChanged()
 {
 }
 
-bool AssetsAdapter::processGetSettings(const SettingsMessage_SettingsResponse& response)
+ProcessingResult AssetsAdapter::processGetSettings(const SettingsMessage_SettingsResponse& response)
 {
    for (const auto& setting : response.responses()) {
       switch (setting.request().index()) {
       default: break;
       }
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
 bool AssetsAdapter::onMatchingLogin(const MatchingMessage_LoggedIn&)
@@ -159,29 +160,32 @@ bool AssetsAdapter::onMatchingLogin(const MatchingMessage_LoggedIn&)
       , msg.SerializeAsString());
 }
 
-bool AssetsAdapter::processSubmittedAuth(const MatchingMessage_SubmittedAuthAddresses& response)
+ProcessingResult AssetsAdapter::processSubmittedAuth(const MatchingMessage_SubmittedAuthAddresses& response)
 {
    AssetsMessage msg;
    auto msgBC = msg.mutable_submitted_auth_addrs();
    for (const auto& addr : response.addresses()) {
       msgBC->add_addresses(addr);
    }
-   return pushBroadcast(user_, msg.SerializeAsString());
+   pushBroadcast(user_, msg.SerializeAsString());
+   return ProcessingResult::Success;
 }
 
-bool AssetsAdapter::processSubmitAuth(const std::string& address)
+ProcessingResult AssetsAdapter::processSubmitAuth(const std::string& address)
 {  // currently using Celer storage for this, but this might changed at some point
    MatchingMessage msg;
    msg.set_submit_auth_address(address);
-   return pushRequest(user_, UserTerminal::create(TerminalUsers::Matching)
+   pushRequest(user_, UserTerminal::create(TerminalUsers::Matching)
       , msg.SerializeAsString());
+   return ProcessingResult::Success;
 }
 
-bool AssetsAdapter::processBalance(const std::string& currency, double value)
+ProcessingResult AssetsAdapter::processBalance(const std::string& currency, double value)
 {
    AssetsMessage msg;
    auto msgBal = msg.mutable_balance();
    msgBal->set_currency(currency);
    msgBal->set_value(value);
-   return pushBroadcast(user_, msg.SerializeAsString());
+   pushBroadcast(user_, msg.SerializeAsString());
+   return ProcessingResult::Success;
 }

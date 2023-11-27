@@ -39,14 +39,14 @@ BsServerAdapter::BsServerAdapter(const std::shared_ptr<spdlog::logger> &logger)
    connMgr_->setCaBundle(bs::caBundlePtr(), bs::caBundleSize());
 }
 
-bool BsServerAdapter::process(const bs::message::Envelope &env)
+ProcessingResult BsServerAdapter::process(const bs::message::Envelope &env)
 {
    if (env.sender->value<TerminalUsers>() == TerminalUsers::Settings) {
       SettingsMessage msg;
       if (!msg.ParseFromString(env.message)) {
          logger_->error("[{}] failed to parse settings message #{}", __func__
             , env.foreignId());
-         return true;
+         return ProcessingResult::Error;
       }
       if (msg.data_case() == SettingsMessage::kGetResponse) {
          return processLocalSettings(msg.get_response());
@@ -55,7 +55,7 @@ bool BsServerAdapter::process(const bs::message::Envelope &env)
    else if (env.receiver->value() == user_->value()) {
       return processOwnRequest(env);
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
 bool BsServerAdapter::processBroadcast(const bs::message::Envelope& env)
@@ -90,12 +90,12 @@ void BsServerAdapter::start()
       , msg.SerializeAsString());
 }
 
-bool BsServerAdapter::processOwnRequest(const Envelope &env)
+ProcessingResult BsServerAdapter::processOwnRequest(const Envelope &env)
 {
    BsServerMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[{}] failed to parse own request #{}", __func__, env.foreignId());
-      return true;
+      return ProcessingResult::Error;
    }
    switch (msg.data_case()) {
    case BsServerMessage::kOpenConnection:
@@ -131,10 +131,10 @@ bool BsServerAdapter::processOwnRequest(const Envelope &env)
 #endif
    default:    break;
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
-bool BsServerAdapter::processLocalSettings(const SettingsMessage_SettingsResponse &response)
+ProcessingResult BsServerAdapter::processLocalSettings(const SettingsMessage_SettingsResponse &response)
 {
    for (const auto &setting : response.responses()) {
       switch (static_cast<ApplicationSettings::Setting>(setting.request().index())) {
@@ -152,37 +152,37 @@ bool BsServerAdapter::processLocalSettings(const SettingsMessage_SettingsRespons
       default: break;
       }
    }
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool BsServerAdapter::processPuBKeyResponse(bool allowed)
+ProcessingResult BsServerAdapter::processPuBKeyResponse(bool allowed)
 {
    if (!futPuBkey_) {
       logger_->error("[{}] not waiting for PuB key permission", __func__);
-      return true;
+      return ProcessingResult::Error;
    }
    futPuBkey_->setValue(allowed);
    futPuBkey_.reset();
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool BsServerAdapter::processTimeout(const std::string& id)
+ProcessingResult BsServerAdapter::processTimeout(const std::string& id)
 {
    const auto& itTO = timeouts_.find(id);
    if (itTO == timeouts_.end()) {
       logger_->error("[{}] unknown timeout {}", __func__, id);
-      return true;
+      return ProcessingResult::Error;
    }
    itTO->second();
    timeouts_.erase(itTO);
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool BsServerAdapter::processOpenConnection()
+ProcessingResult BsServerAdapter::processOpenConnection()
 {
    if (connected_) {
       logger_->error("[{}] already connected", __func__);
-      return true;
+      return ProcessingResult::Error;
    }
 #if 0
    bsClient_ = std::make_unique<BsClient>(logger_, this);
@@ -215,13 +215,13 @@ bool BsServerAdapter::processOpenConnection()
    }
    bsClient_->setConnection(std::move(connection));
 #endif
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool BsServerAdapter::processStartLogin(const std::string& login)
+ProcessingResult BsServerAdapter::processStartLogin(const std::string& login)
 {
    if (!connected_) {
-      return false;  // wait for connection to complete
+      return ProcessingResult::Retry;  // wait for connection to complete
    }
    if (currentLogin_.empty()) {
       currentLogin_ = login;
@@ -232,19 +232,19 @@ bool BsServerAdapter::processStartLogin(const std::string& login)
    else {
       //onStartLoginDone(true, {});
    }
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool BsServerAdapter::processCancelLogin()
+ProcessingResult BsServerAdapter::processCancelLogin()
 {
    if (currentLogin_.empty()) {
       logger_->warn("[BsServerAdapter::processCancelLogin] no login started - ignoring request");
-      return true;
+      return ProcessingResult::Ignored;
    }
 #if 0
    bsClient_->cancelLogin();
 #endif
-   return true;
+   return ProcessingResult::Success;
 }
 
 #if 0

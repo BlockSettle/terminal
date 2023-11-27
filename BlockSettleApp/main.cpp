@@ -29,12 +29,15 @@
 #include "ApiJson.h"
 #include "AssetsAdapter.h"
 #include "BsServerAdapter.h"
+#include "hwdevicemanager.h"
 #include "QtGuiAdapter.h"
 #include "QtQuickAdapter.h"
 #include "SettingsAdapter.h"
 #include "SignerAdapter.h"
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/daily_file_sink.h>
+
+#include "macosapp.h"
 
 //#include "AppNap.h"
 
@@ -61,16 +64,19 @@ Q_IMPORT_PLUGIN(QICOPlugin)
 Q_IMPORT_PLUGIN(QtQuick2PrivateWidgetsPlugin)
 #endif
 
+Q_IMPORT_PLUGIN(QtQmlPlugin)
 Q_IMPORT_PLUGIN(QtQuick2Plugin)
 Q_IMPORT_PLUGIN(QtQuick2WindowPlugin)
 Q_IMPORT_PLUGIN(QtQuickControls2Plugin)
+Q_IMPORT_PLUGIN(QtQuick2DialogsPlugin)
+Q_IMPORT_PLUGIN(QtQuick2DialogsPrivatePlugin)
 Q_IMPORT_PLUGIN(QtQuickTemplates2Plugin)
-//Q_IMPORT_PLUGIN(QtQuickControls1Plugin)
+Q_IMPORT_PLUGIN(QtQuickControls1Plugin)
 Q_IMPORT_PLUGIN(QtQuickLayoutsPlugin)
 Q_IMPORT_PLUGIN(QtQmlModelsPlugin)
 Q_IMPORT_PLUGIN(QmlFolderListModelPlugin)
 Q_IMPORT_PLUGIN(QmlSettingsPlugin)
-//Q_IMPORT_PLUGIN(QtLabsPlatformPlugin)
+Q_IMPORT_PLUGIN(QtLabsPlatformPlugin)
 #endif // STATIC_BUILD
 
 Q_DECLARE_METATYPE(ArmorySettings)
@@ -86,7 +92,7 @@ Q_DECLARE_METATYPE(UTXO)
 
 #include <QEvent>
 #include <QApplicationStateChangeEvent>
-
+/*
 class MacOsApp : public QApplication
 {
    Q_OBJECT
@@ -120,6 +126,7 @@ protected:
 private:
    bool activationRequired_ = false;
 };
+*/
 
 static void checkStyleSheet(QApplication &app)
 {
@@ -204,6 +211,8 @@ int main(int argc, char** argv)
       //inprocBus.addAdapter(std::make_shared<AssetsAdapter>(logMgr->logger()));
       inprocBus.addAdapterWithQueue(std::make_shared<WalletsAdapter>(logMgr->logger()
          , userWallets, signAdapter->createClient(), userBlockchain), "wallets");
+      inprocBus.addAdapterWithQueue(std::make_shared<bs::hww::DeviceManager>(
+         logMgr->logger()), "wallets");
       inprocBus.addAdapter(std::make_shared<BsServerAdapter>(logMgr->logger("bscon")));
       //inprocBus.addAdapter(std::make_shared<MatchingAdapter>(logMgr->logger("match")));
       //inprocBus.addAdapter(std::make_shared<SettlementAdapter>(logMgr->logger("settl")));
@@ -211,7 +220,7 @@ int main(int argc, char** argv)
       //inprocBus.addAdapter(std::make_shared<MDHistAdapter>(logMgr->logger("mdh")));
       //inprocBus.addAdapter(std::make_shared<ChatAdapter>(logMgr->logger("chat")));
       inprocBus.addAdapterWithQueue(std::make_shared<BlockchainAdapter>(logMgr->logger()
-         , userBlockchain), /*"blkchain_conn"*/"signer");
+         , userBlockchain), "signer");
 
       if (!inprocBus.run(argc, argv)) {
          logMgr->logger()->error("No runnable adapter found on main inproc bus");

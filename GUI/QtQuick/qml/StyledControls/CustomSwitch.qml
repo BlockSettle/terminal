@@ -29,11 +29,11 @@ Switch {
 
     indicator: Rectangle {
         id: border_
-        implicitWidth: 40
-        implicitHeight: 20
+        implicitWidth: BSSizes.applyScale(40)
+        implicitHeight: BSSizes.applyScale(20)
         x: control.width - width - control.rightPadding
         y: parent.height / 2 - height / 2
-        radius: 10
+        radius: BSSizes.applyScale(10)
         color: {
             if (control.enabled) {
                 if (control.checked) {
@@ -64,9 +64,9 @@ Switch {
         Rectangle {
             id: circle_
             x: control.checked ? parent.width - width : 0
-            width: 20
-            height: 20
-            radius: 10
+            width: BSSizes.applyScale(20)
+            height: BSSizes.applyScale(20)
+            radius: BSSizes.applyScale(10)
 
             color: {
                 if (control.enabled) {
@@ -100,8 +100,8 @@ Switch {
     }
 
     background: Rectangle {
-        implicitWidth: 80
-        implicitHeight: 20
+        implicitWidth: BSSizes.applyScale(80)
+        implicitHeight: BSSizes.applyScale(20)
         visible: control.down
         color: BSStyle.switchBgColor
     }

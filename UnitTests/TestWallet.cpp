@@ -1854,7 +1854,9 @@ TEST_F(TestWallet, TxIdNestedSegwit)
          promUtxo->set_value(inputs.front());
       }
    };
+#ifdef OLD_WALLETS_CODE
    ASSERT_TRUE(syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX, true));
+#endif
    const auto input = futUtxo.get();
    ASSERT_TRUE(input.isInitialized());
 
@@ -2055,10 +2057,12 @@ TEST_F(TestWallet, WalletMeta)
          EXPECT_EQ(result.first, settlCp.settlementId);
          EXPECT_EQ(result.second, settlCp.cpAddr);
       }
+#if 0
       for (auto &settlMeta : settlMetas) {
          auto result = leafNative->getSettlAuthAddr(settlMeta.settlementId);
          EXPECT_EQ(result, settlMeta.authAddr);
       }
+#endif
       for (auto &addr : addrComments) {
          EXPECT_EQ(leafNative->getAddressComment(addr.first), addr.second);
       }

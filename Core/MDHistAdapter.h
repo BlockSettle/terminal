@@ -23,7 +23,7 @@ public:
    MDHistAdapter(const std::shared_ptr<spdlog::logger> &);
    ~MDHistAdapter() override = default;
 
-   bool process(const bs::message::Envelope &) override;
+   bs::message::ProcessingResult process(const bs::message::Envelope &) override;
    bool processBroadcast(const bs::message::Envelope&) override;
 
    Users supportedReceivers() const override { return { user_ }; }

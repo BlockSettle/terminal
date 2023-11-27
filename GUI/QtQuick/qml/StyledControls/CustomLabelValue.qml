@@ -13,10 +13,11 @@ import QtQuick.Controls 2.3
 import "../BsStyles"
 
 Label {
-    font.pixelSize: 11
+    font.pixelSize: BSSizes.applyScale(11)
+    font.family: "Roboto"
     color: "white"
     wrapMode: Text.WordWrap
-    topPadding: 5
-    bottomPadding: 5
+    topPadding: BSSizes.applyScale(5)
+    bottomPadding: BSSizes.applyScale(5)
     onLinkActivated: Qt.openUrlExternally(link)
 }

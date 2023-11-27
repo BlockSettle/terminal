@@ -16,7 +16,7 @@
 
 #include "ApplicationSettings.h"
 #include "ui_StartupDialog.h"
-#include "ArmoryServersProvider.h"
+#include "../../Core/ArmoryServersProvider.h"
 
 namespace {
    const char *kLicenseFilePath = "://resources/license.html";

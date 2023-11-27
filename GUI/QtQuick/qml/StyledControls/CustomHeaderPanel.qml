@@ -17,7 +17,7 @@ Rectangle {
     property string text
     clip: true
     color: "transparent"
-    height: 40
+    height: BSSizes.applyScale(40)
 
     Rectangle {
 //        visible: qmlTitleVisible
@@ -30,13 +30,14 @@ Rectangle {
 //        visible: qmlTitleVisible
 //        height: qmlTitleVisible ? 40 : 0
         anchors.fill: parent
-        leftPadding: 10
-        rightPadding: 10
+        leftPadding: BSSizes.applyScale(10)
+        rightPadding: BSSizes.applyScale(10)
 
         text: parent.text
         font.capitalization: Font.AllUppercase
         color: BSStyle.textColor
-        font.pixelSize: 11
+        font.pixelSize: BSSizes.applyScale(11)
+        font.family: "Roboto"
         verticalAlignment: Text.AlignVCenter
     }
 }

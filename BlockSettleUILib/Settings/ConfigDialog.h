@@ -14,7 +14,7 @@
 #include <memory>
 #include <QDialog>
 #include "ApplicationSettings.h"
-#include "ArmoryServersProvider.h"
+#include "../../Core/ArmoryServersProvider.h"
 #include "Settings/SignersProvider.h"
 #include "Wallets/SignContainer.h"
 

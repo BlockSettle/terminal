@@ -12,34 +12,41 @@ import QtQuick 2.9
 import QtQuick.Controls 2.3
 import "../BsStyles"
 
+
 CheckBox {
     id: control
-    text: parent.text
+
+    checked: true
+    spacing: 0
 
     indicator: Rectangle {
-        implicitWidth: 16
-        implicitHeight: 16
+        implicitWidth: BSSizes.applyScale(18)
+        implicitHeight: BSSizes.applyScale(18)
+        x: control.leftPadding
         y: parent.height / 2 - height / 2
-        radius: 0
-        border.color: control.checked ? BSStyle.buttonsBorderColor : BSStyle.buttonsUncheckedColor
+        radius: BSSizes.applyScale(6)
+        border.color: "#416485"
         color: "transparent"
 
-        Rectangle {
-            width: 8
-            height: 8
-            x: 4
-            y: 4
-            radius: 0
-            color: control.checked ? BSStyle.buttonsPrimaryMainColor : BSStyle.buttonsUncheckedColor
+        Image {
+            id: check_icon
+
+            anchors.centerIn: parent
+
+            width: BSSizes.applyScale(10)
+            height: BSSizes.applyScale(7)
+            sourceSize.width: BSSizes.applyScale(10)
+            sourceSize.height: BSSizes.applyScale(7)
+
             visible: control.checked
+            source: "qrc:/images/check.svg"
         }
     }
 
     contentItem: Text {
         text: control.text
-        font.pixelSize: 11
-        opacity: enabled ? 1.0 : 0.3
-        color: control.checked ? BSStyle.textColor : BSStyle.buttonsUncheckedColor
+        font: control.font
+        color: control.checked ? "#E2E7FF" : "#7A88B0"
         verticalAlignment: Text.AlignVCenter
         leftPadding: control.indicator.width + control.spacing
     }

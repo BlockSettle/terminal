@@ -1,3 +1,4 @@
 module BlockSettleStyle
 
 singleton BSStyle 1.0 BSStyle.qml
+singleton BSSizes 1.0 BSSizes.qml

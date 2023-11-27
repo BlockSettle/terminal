@@ -1,0 +1,13 @@
+module CreateWalletControls
+
+ConfirmPassword          1.0 ConfirmPassword.qml
+CreateWallet          	 1.0 CreateWallet.qml
+ImportHardware           1.0 ImportHardware.qml
+ImportWallet             1.0 ImportWallet.qml
+ImportWatchingWallet     1.0 ImportWatchingWallet.qml
+StartCreateWallet     	 1.0 StartCreateWallet.qml
+SuccessNewWallet     	 1.0 SuccessNewWallet.qml
+TermsAndConditions     	 1.0 TermsAndConditions.qml
+WalletSeed     	 		 1.0 WalletSeed.qml
+WalletSeedSkipAccept     1.0 WalletSeedSkipAccept.qml
+WalletSeedVerify     	 1.0 WalletSeedVerify.qml

@@ -28,6 +28,7 @@
 #include "CacheFile.h"
 #include "CurrencyPair.h"
 #include "EasyCoDec.h"
+#include "Message/Worker.h"
 #include "Wallets/HeadlessContainer.h"
 #include "Wallets/InprocSigner.h"
 #include "MDCallbacksQt.h"
@@ -424,4 +425,158 @@ TEST(TestCommon, PriceAmount)
    EXPECT_EQ(bs::CentAmount(-12345.0001).to_string(), "-12345.00");
    EXPECT_EQ(bs::CentAmount(0.12345).to_string(), "0.12");
    EXPECT_EQ(bs::CentAmount(-0.12345).to_string(), "0.12");
+}
+
+TEST(TestCommon, Workers)
+{
+   struct DataIn1 : public bs::InData
+   {
+      ~DataIn1() override = default;
+      std::string message;
+   };
+   struct DataOut1 : public bs::OutData
+   {
+      ~DataOut1() override = default;
+      std::string message;
+   };
+   struct DataIn2 : public bs::InData
+   {
+      ~DataIn2() override = default;
+      std::string message;
+   };
+   struct DataOut2 : public bs::OutData
+   {
+      ~DataOut2() override = default;
+      std::string message;
+   };
+
+   class Handler1 : public bs::HandlerImpl<DataIn1, DataOut1>
+   {
+   protected:
+      std::shared_ptr<DataOut1> processData(const std::shared_ptr<DataIn1>& in) override
+      {
+         DataOut1 out;
+         out.message = in->message;
+         for (auto& c : out.message) {
+            c = std::tolower(c);
+         }
+         out.message = "h1: " + out.message;
+         return std::make_shared<DataOut1>(out);
+      }
+   };
+
+   class Handler2 : public bs::HandlerImpl<DataIn2, DataOut2>
+   {
+   protected:
+      std::shared_ptr<DataOut2> processData(const std::shared_ptr<DataIn2>& in) override
+      {
+         DataOut2 out;
+         out.message = in->message;
+         for (auto& c : out.message) {
+            c = std::toupper(c);
+         }
+         out.message = "h2: " + out.message;
+         return std::make_shared<DataOut2>(out);
+      }
+   };
+
+   class TestWorkerMgr : public bs::WorkerPool
+   {
+   public:
+      TestWorkerMgr() : bs::WorkerPool() {}
+
+      void test1()
+      {
+         DataIn1 data;
+         data.message = "TEST1 message";
+         const auto& inData = std::make_shared<DataIn1>(data);
+
+         const auto& cb = [](const std::shared_ptr<bs::OutData>& result)
+         {
+            auto data = std::static_pointer_cast<DataOut1>(result);
+            StaticLogger::loggerPtr->debug("[TestWorkerMgr::test1] {}", data ? data->message : "null");
+            ASSERT_NE(data, nullptr);
+            EXPECT_EQ(data->message, "h1: test1 message");
+         };
+         processQueued(inData, cb);
+      }
+
+      void test2()
+      {
+         DataIn2 data;
+         data.message = "TEST2 message";
+         const auto& inData = std::make_shared<DataIn2>(data);
+
+         const auto& cb = [](const std::shared_ptr<bs::OutData>& result)
+         {
+            auto data = std::static_pointer_cast<DataOut2>(result);
+            StaticLogger::loggerPtr->debug("[TestWorkerMgr::test2] {}", data ? data->message : "null");
+            ASSERT_NE(data, nullptr);
+            EXPECT_EQ(data->message, "h2: TEST2 MESSAGE");
+         };
+         processQueued(inData, cb);
+      }
+
+      void testNested()
+      {
+         DataIn1 data1;
+         data1.message = "NESTED message";
+         const auto& inData1 = std::make_shared<DataIn1>(data1);
+
+         const auto& cb1 = [](const std::shared_ptr<bs::OutData>& result)
+         {
+            auto data = std::static_pointer_cast<DataOut1>(result);
+            StaticLogger::loggerPtr->debug("[TestWorkerMgr::nested1] {}", data ? data->message : "null");
+            ASSERT_NE(data, nullptr);
+            EXPECT_EQ(data->message, "h1: nested message");
+         };
+
+         DataIn2 data2;
+         data2.message = "NORMAL message";
+         const auto& inData2 = std::make_shared<DataIn2>(data2);
+
+         const auto& cb2 = [this, cb1, inData1]
+            (const std::shared_ptr<bs::OutData>& result)
+         {
+            auto data = std::static_pointer_cast<DataOut2>(result);
+            StaticLogger::loggerPtr->debug("[TestWorkerMgr::nested2] {}", data ? data->message : "null");
+            ASSERT_NE(data, nullptr);
+            EXPECT_EQ(data->message, "h2: NORMAL MESSAGE");
+            processQueued(inData1, cb1);
+         };
+         processQueued(inData2, cb2);
+      }
+
+   protected:
+      std::shared_ptr<bs::Worker> worker(const std::shared_ptr<bs::InData>&) override
+      {
+         const std::vector<std::shared_ptr<bs::Handler>> handlers{
+            std::make_shared<Handler1>(), std::make_shared<Handler2>() };
+         return std::make_shared<bs::WorkerImpl>(handlers);
+      }
+   };
+
+   TestWorkerMgr wm;
+   for (int i = 0; i < 5; ++i) {
+      wm.test1();
+      wm.test2();
+      wm.testNested();
+   }
+   StaticLogger::loggerPtr->debug("{} thread[s] used", wm.nbThreads());
+   while (!wm.finished()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
+   }
+}
+
+#include "common.pb.h"
+using namespace BlockSettle::Common;
+TEST(TestCommon, unparsable_proto)
+{
+   const auto& data = "fa01f0060aed060a200a95d6ee27cdb6c5cf56e052cfb826d5a383f64bea54f5adef4f20c45f700443300140014a0a302e3030303031353030521433dd7099a58f7730c4c57eda6cb30c0c4ec27e1b5a8505010000000001011a50e276d80729cf66f5ba49e3d0d1319e84073efef579995b3bdd45edc27da70000000000fdffffff01dc050000000000002251206059a08c63741bce44793c30d941723a7157c19b97681d531f6af35f5de4a16f03403dfec38046483d2c520754c4e61124463ab58d701a85ecd21083aefd93a4dac9434414cd0a197b52d3531e55e1956a6492f2fbfb297b08d06dcf3061424ffaa6fdbe012082c9e496d987a3a64d948cd10bc083472d6b8edf609863251c4d463511942388ac0063036f7264010109696d6167652f706e67004d850189504e470d0a1a0a0000000d4948445200000018000000180806000000e0773df8000000017352474200aece1ce90000000467414d410000b18f0bfc6105000000097048597300000ec300000ec301c76fa8640000011a49444154484be591b10dc2301045b3040b50b205d414f4cc1010743474200a2a6acac018f4acc00ad4144848c63fe2c371b9d804990a4b4f8e63df7f17279b1557f74bfe44b0c8327730b0ce6aa282ba7062d54882825838b16a4963c171973fe13bab9654040825323884ce9004bf20f3c5b18133562d890a701518addeb9a41c103fe4c904e3cded25184dd20bea46124188a402ac491201d012492c1c4405404ad6d37ec927e1207a454476be5f0ddff6ac5a620a50d4f1e49eb9c79daa12acf17ee9e790a422c0e1ae67e0d93e80cc5d5e9232dcafb98fb375125380ae59887006a1630463d6fb5f0950acbfa46ebf91809de119c5ba535ca15c63bf91401663d69db6d5bab18057c0623c0306c97f8435cfeaac59717577f032db66d32fac780000000049454e44ae4260826821c182c9e496d987a3a64d948cd10bc083472d6b8edf609863251c4d4635119423880000000060a1ee2f6a4a0a14fd9208e542e2001907786b18c232c15f18cacd8518cc16220b2d302e3030303032383932280532201a50e276d80729cf66f5ba49e3d0d1319e84073efef579995b3bdd45edc27da7724b0a1433dd7099a58f7730c4c57eda6cb30c0c4ec27e1b18dc0b220a302e30303030313530302805322251206059a08c63741bce44793c30d941723a7157c19b97681d531f6af35f5de4a16f";
+   const auto binData = BinaryData::CreateFromHex(data);
+   ASSERT_FALSE(binData.empty());
+   WalletsMessage msg;
+   EXPECT_TRUE(msg.ParseFromString(binData.toBinStr()));
+   StaticLogger::loggerPtr->debug("[{}] data case: {}\n{}", __func__
+      , msg.data_case(), msg.DebugString());
 }

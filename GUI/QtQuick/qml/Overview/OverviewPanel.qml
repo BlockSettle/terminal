@@ -1,0 +1,194 @@
+/*
+
+***********************************************************************************
+* Copyright (C) 2023, BlockSettle AB
+* Distributed under the GNU Affero General Public License (AGPL v3)
+* See LICENSE or http://www.gnu.org/licenses/agpl.html
+*
+**********************************************************************************
+
+*/
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+
+import "." as OverviewControls
+import ".."
+import "../BsStyles"
+import "../StyledControls"
+import terminal.models 1.0
+
+Rectangle {
+    id: control
+
+    signal openSend (string txId, bool isRBF, bool isCPFP)
+    signal openExplorer (string txId)
+    color: "transparent"
+
+    signal requestWalletProperties()
+    signal createNewWallet()
+    signal walletIndexChanged(index : int)
+    signal openAddressDetails(var address, var transactions, var balance, var comment, var asset_type, var type, var wallet)
+
+    Column {
+        anchors.leftMargin: BSSizes.applyScale(18)
+        anchors.rightMargin: BSSizes.applyScale(18)
+        anchors.fill: parent
+        spacing: 0
+
+        OverviewControls.OverviewWalletBar {
+            id: overview_panel
+            width: parent.width
+            height: BSSizes.applyScale(100)
+
+            onRequestWalletProperties: control.requestWalletProperties()
+            onCreateNewWallet: control.createNewWallet()
+            onWalletIndexChanged: control.walletIndexChanged(index)
+        }
+
+        Rectangle {
+            height: (parent.height - overview_panel.height) * 0.6
+            width: parent.width
+            anchors.horizontalCenter: parent.horizontalCenter
+
+            radius: BSSizes.applyScale(16)
+            color: BSStyle.addressesPanelBackgroundColor
+            border.width: 1
+            border.color: BSStyle.tableSeparatorColor
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: BSSizes.applyScale(20)
+                spacing: BSSizes.applyScale(10)
+
+                Rectangle {
+                    id: tableMenu
+                    color: "transparent"
+                    width: parent.width
+                    height: BSSizes.applyScale(30)
+
+                    Text {
+                        text: qsTr("Addresses")
+                        color: BSStyle.textColor
+                        font.pixelSize: BSSizes.applyScale(20)
+                        font.family: "Roboto"
+                        font.weight: Font.Bold
+                        font.letterSpacing: BSSizes.applyScale(0.35)
+                    }
+
+                    Row {
+                        anchors.right: parent.right
+                        spacing: 6
+
+                        CustomSmallButton {
+                            width: BSSizes.applyScale(85)
+                            text: qsTr("Hide used")
+                            onClicked: {
+                                addressFilterModel.hideUsed = !addressFilterModel.hideUsed
+                                tablewView.update()
+                            }
+                            backgroundColor: addressFilterModel.hideUsed ? BSStyle.smallButtonBackgroundColor : 'transparent'
+                        }
+
+                        CustomSmallButton {
+                            width: BSSizes.applyScale(90)
+                            text: qsTr("Hide internal")
+                            onClicked: {
+                                addressFilterModel.hideInternal = !addressFilterModel.hideInternal
+                                tablewView.update()
+                            }
+                            backgroundColor: addressFilterModel.hideInternal ? BSStyle.smallButtonBackgroundColor : 'transparent'
+                        }
+
+                        CustomSmallButton {
+                            width: BSSizes.applyScale(90)
+                            text: qsTr("Hide external")
+                            onClicked: {
+                                addressFilterModel.hideExternal = !addressFilterModel.hideExternal
+                                tablewView.update()
+                            }
+                            backgroundColor: addressFilterModel.hideExternal ? BSStyle.smallButtonBackgroundColor : 'transparent'
+                        }
+
+                        CustomSmallButton {
+                            width: BSSizes.applyScale(85)
+                            text: qsTr("Hide empty")
+                            onClicked: {
+                                addressFilterModel.hideEmpty = !addressFilterModel.hideEmpty
+                                tablewView.update()
+                            }
+                            backgroundColor: addressFilterModel.hideEmpty ? BSStyle.smallButtonBackgroundColor :  'transparent'
+                        }
+                    }
+                }
+
+                CustomTableView {
+                    id: tablewView
+                    width: parent.width
+                    height: parent.height - tableMenu.height
+
+                    model: addressFilterModel
+                    copy_button_column_index: 0
+                    text_header_size: BSSizes.applyScale(12)
+                    cell_text_size: BSSizes.applyScale(13)
+
+                    columnWidths: [0.35, 0.15, 0.1, 0.4]
+                    onCopyRequested: bsApp.copyAddressToClipboard(id)
+                    onCellClicked: (row, column, data) => {
+                        const address = (column === 0) ? data : model.data(model.index(row, 0), QmlAddressListModel.TableDataRole)
+                        const transactions = model.data(model.index(row, 1), QmlAddressListModel.TableDataRole)
+                        const balance = model.data(model.index(row, 2), QmlAddressListModel.TableDataRole)
+                        const comment = model.data(model.index(row, 3), QmlAddressListModel.TableDataRole)
+                        const type = model.data(model.index(row, 0), QmlAddressListModel.AddressTypeRole)
+                        const asset_type = model.data(model.index(row, 0), QmlAddressListModel.AssetTypeRole)
+
+                        openAddressDetails(address, transactions, balance, comment, asset_type, type, overview_panel.currentWallet)
+                    }
+
+                    Connections {
+                        target: addressFilterModel
+                        function onModelReset()
+                        {
+                            tablewView.update()
+                        }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            color: "transparent"
+            width: parent.width
+            height: (parent.height - overview_panel.height) * 0.4
+
+            Column {
+                anchors.fill: parent
+                anchors.topMargin: BSSizes.applyScale(20)
+                spacing: BSSizes.applyScale(10)
+
+                Text {
+                    text: qsTr("Non-settled Transactions")
+                    color: BSStyle.textColor
+                    font.pixelSize: BSSizes.applyScale(20)
+                    font.family: "Roboto"
+                    font.weight: Font.Bold
+                    font.letterSpacing: 0.35
+                }
+
+                CustomTransactionsTableView {
+                    width: parent.width
+                    height: parent.height - BSSizes.applyScale(40)
+
+                    model: PendingTransactionFilterModel {
+                        id: pendingTransactionModel
+
+                        sourceModel: txListModel
+                        dynamicSortFilter: true
+                    }
+
+                    onOpenSend: (txId, isRBF, isCPFP) => control.openSend(txId, isRBF, isCPFP)
+                    onOpenExplorer: (txId) => control.openExplorer(txId)
+                }
+            }
+        }
+    }
+}

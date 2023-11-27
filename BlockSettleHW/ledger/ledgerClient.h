@@ -11,14 +11,11 @@
 #ifndef LEDGERCLIENT_H
 #define LEDGERCLIENT_H
 
-#include "ledgerStructure.h"
-
 #include <memory>
 #include <mutex>
+#include <vector>
+#include "hwdeviceinterface.h"
 
-#include <QVector>
-
-class LedgerDevice;
 namespace spdlog {
    class logger;
 }
@@ -28,30 +25,35 @@ namespace bs {
    }
 }
 
-class LedgerClient : public QObject
-{
-   Q_OBJECT
-public:
-   LedgerClient(std::shared_ptr<spdlog::logger> logger, std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet, QObject *parent = nullptr);
-   ~LedgerClient() override = default;
+namespace bs {
+   namespace hww {
+      struct DeviceCallbacks;
+      class DeviceInterface;
 
-   void scanDevices(AsyncCallBack&& cb);
+      class LedgerClient
+      {
+      public:
+         LedgerClient(const std::shared_ptr<spdlog::logger>&, bool testNet, DeviceCallbacks*);
+         ~LedgerClient() = default;
 
-   QVector<DeviceKey> deviceKeys() const;
+         void scanDevices();
 
-   QPointer<LedgerDevice> getDevice(const QString& deviceId);
+         std::vector<DeviceKey> deviceKeys() const;
 
-   QString lastScanError() const;
+         std::shared_ptr<DeviceInterface> getDevice(const std::string& deviceId);
 
-private:
-   QVector<QPointer<LedgerDevice>> availableDevices_;
-   bool testNet_;
-   QString lastScanError_;
+         std::string lastScanError() const;
 
-   std::shared_ptr<spdlog::logger>           logger_;
-   std::shared_ptr<bs::sync::WalletsManager> walletManager_;
-   std::shared_ptr<std::mutex>               hidLock_;
+      private:
+         std::shared_ptr<spdlog::logger>  logger_;
+         const bool testNet_;
+         DeviceCallbacks* cb_{ nullptr };
+         std::vector<std::shared_ptr<DeviceInterface>>   availableDevices_;
+         std::string lastScanError_;
+         std::shared_ptr<std::mutex>   hidLock_;
+      };
 
-};
+   }  //hw
+}     //bs
 
 #endif // LEDGERCLIENT_H

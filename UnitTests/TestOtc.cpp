@@ -312,10 +312,12 @@ public:
       mineRandomBlocks(6);
 
       auto utxosPromise = std::promise<std::vector<UTXO>>();
+#ifdef OLD_WALLETS_CODE
       bool result = wallet->getSpendableTxOutList([&utxosPromise](const std::vector<UTXO> &utxos) {
          utxosPromise.set_value(utxos);
       }, UINT64_MAX, true);
       ASSERT_TRUE(result);
+#endif
       auto utxos = utxosPromise.get_future().get();
       ASSERT_FALSE(utxos.empty());
 

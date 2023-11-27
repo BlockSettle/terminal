@@ -20,7 +20,7 @@ ArmoryServersViewModel::ArmoryServersViewModel(const std::shared_ptr<ArmoryServe
    , serversProvider_(serversProvider)
 {
    update();
-   connect(serversProvider.get(), &ArmoryServersProvider::dataChanged, this, &ArmoryServersViewModel::update);
+   //connect(serversProvider.get(), &ArmoryServersProvider::dataChanged, this, &ArmoryServersViewModel::update);
 }
 
 ArmoryServersViewModel::ArmoryServersViewModel(QObject* parent)
@@ -56,19 +56,19 @@ QVariant ArmoryServersViewModel::data(const QModelIndex &index, int role) const
       switch (index.column()) {
       case ColumnName:
          if (singleColumnMode_) {
-            return QStringLiteral("%1 (%2)").arg(server.name).arg(serverNetType);
+            return QStringLiteral("%1 (%2)").arg(QString::fromStdString(server.name)).arg(serverNetType);
          }
          else {
-            return server.name;
+            return QString::fromStdString(server.name);
          }
       case ColumnType:
          return serverNetType;
       case ColumnAddress:
-         return server.armoryDBIp;
+         return QString::fromStdString(server.armoryDBIp);
       case ColumnPort:
-         return server.armoryDBPort;
+         return QString::fromStdString(server.armoryDBPort);
       case ColumnKey:
-         return server.armoryDBKey;
+         return QString::fromStdString(server.armoryDBKey);
       default:
          break;
       }
@@ -105,7 +105,10 @@ QVariant ArmoryServersViewModel::headerData(int section, Qt::Orientation orienta
 void ArmoryServersViewModel::update()
 {
    beginResetModel();
-   servers_ = serversProvider_->servers();
+   servers_.clear();
+   for (const auto& server : serversProvider_->servers()) {
+      servers_.append(server);
+   }
    endResetModel();
 }
 

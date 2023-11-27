@@ -41,9 +41,6 @@ SettingsAdapter::SettingsAdapter(const std::shared_ptr<ApplicationSettings> &set
    logMgr_->add(appSettings_->GetLogsConfig());
    logger_ = logMgr_->logger();
 
-   if (!appSettings_->get<bool>(ApplicationSettings::initialized)) {
-      appSettings_->SetDefaultSettings(true);
-   }
    appSettings_->selectNetwork();
    logger_->debug("Settings loaded from {}", appSettings_->GetSettingsPath().toStdString());
 
@@ -67,18 +64,16 @@ SettingsAdapter::SettingsAdapter(const std::shared_ptr<ApplicationSettings> &set
             , filePathInResources.toStdString());
       }
    }
-
-   armoryServersProvider_ = std::make_shared<ArmoryServersProvider>(settings, bootstrapDataManager_);
-   signersProvider_ = std::make_shared<SignersProvider>(appSettings_);
+   armoryServersProvider_ = std::make_shared<ArmoryServersProvider>(settings, logger_);
 }
 
-bool SettingsAdapter::process(const bs::message::Envelope &env)
+ProcessingResult SettingsAdapter::process(const bs::message::Envelope &env)
 {
    if (env.receiver->value<TerminalUsers>() == TerminalUsers::Settings) {
       SettingsMessage msg;
       if (!msg.ParseFromString(env.message)) {
          logger_->error("[{}] failed to parse settings msg #{}", __func__, env.foreignId());
-         return true;
+         return ProcessingResult::Error;
       }
       switch (msg.data_case()) {
       case SettingsMessage::kGetRequest:
@@ -99,18 +94,6 @@ bool SettingsAdapter::process(const bs::message::Envelope &env)
          return processUpdArmoryServer(env, msg.upd_armory_server());
       case SettingsMessage::kSignerRequest:
          return processSignerSettings(env);
-      case SettingsMessage::kSignerSetKey:
-         return processSignerSetKey(msg.signer_set_key());
-      case SettingsMessage::kSignerReset:
-         return processSignerReset();
-      case SettingsMessage::kSignerServersGet:
-         return processGetSigners(env);
-      case SettingsMessage::kSetSignerServer:
-         return processSetSigner(env, msg.set_signer_server());
-      case SettingsMessage::kAddSignerServer:
-         return processAddSigner(env, msg.add_signer_server());
-      case SettingsMessage::kDelSignerServer:
-         return processDelSigner(env, msg.del_signer_server());
       case SettingsMessage::kStateGet:
          return processGetState(env);
       case SettingsMessage::kReset:
@@ -131,7 +114,10 @@ bool SettingsAdapter::process(const bs::message::Envelope &env)
          break;
       }
    }
-   return true;
+   else {
+      return ProcessingResult::Success;
+   }
+   return ProcessingResult::Ignored;
 }
 
 bool SettingsAdapter::processBroadcast(const bs::message::Envelope& env)
@@ -143,40 +129,56 @@ bool SettingsAdapter::processBroadcast(const bs::message::Envelope& env)
          return false;
       }
       if (msg.data_case() == ArmoryMessage::kSettingsRequest) {
-         ArmoryMessage msgReply;
-         auto msgResp = msgReply.mutable_settings_response();
-         const auto& armorySettings = armoryServersProvider_->getArmorySettings();
-         armoryServersProvider_->setConnectedArmorySettings(armorySettings);
-         msgResp->set_socket_type(armorySettings.socketType);
-         msgResp->set_network_type((int)armorySettings.netType);
-         msgResp->set_host(armorySettings.armoryDBIp.toStdString());
-         msgResp->set_port(std::to_string(armorySettings.armoryDBPort));
-         msgResp->set_bip15x_key(armorySettings.armoryDBKey.toStdString());
-         msgResp->set_run_locally(armorySettings.runLocally);
-         msgResp->set_data_dir(armorySettings.dataDir.toStdString());
-         msgResp->set_executable_path(armorySettings.armoryExecutablePath.toStdString());
-         msgResp->set_bitcoin_dir(armorySettings.bitcoinBlocksDir.toStdString());
-         msgResp->set_db_dir(armorySettings.dbDir.toStdString());
-         msgResp->set_cache_file_name(appSettings_->get<std::string>(ApplicationSettings::txCacheFileName));
-         pushResponse(user_, env, msgReply.SerializeAsString());
+         sendSettings(armoryServersProvider_->getArmorySettings());
+         logger_->debug("current={}, connected={}", armoryServersProvider_->indexOfCurrent()
+            , armoryServersProvider_->indexOfConnected());
          return true;
       }
    }
    return false;
 }
 
-bool SettingsAdapter::processRemoteSettings(uint64_t msgId)
+void SettingsAdapter::sendSettings(const ArmorySettings& armorySettings, bool netTypeChanged)
+{
+   if (!armorySettings.empty()) {
+      ArmoryMessage msg;
+      auto msgResp = msg.mutable_settings_response();
+      armoryServersProvider_->setConnectedArmorySettings(armorySettings);
+      msgResp->set_socket_type(armorySettings.socketType);
+      msgResp->set_network_type((int)armorySettings.netType);
+      msgResp->set_host(armorySettings.armoryDBIp);
+      msgResp->set_port(armorySettings.armoryDBPort);
+      msgResp->set_bip15x_key(armorySettings.armoryDBKey);
+      msgResp->set_run_locally(armorySettings.runLocally);
+      msgResp->set_data_dir(armorySettings.dataDir);
+      msgResp->set_executable_path(armorySettings.armoryExecutablePath);
+      msgResp->set_bitcoin_dir(armorySettings.bitcoinBlocksDir);
+      msgResp->set_db_dir(armorySettings.dbDir);
+      msgResp->set_cache_file_name(appSettings_->get<std::string>(ApplicationSettings::txCacheFileName));
+      pushRequest(user_, bs::message::UserTerminal::create(bs::message::TerminalUsers::Blockchain)
+         , msg.SerializeAsString(), {}, 3, std::chrono::seconds{10});
+#ifdef MSG_DEBUGGING
+      logger_->debug("[{}] {}", __func__, msg.DebugString());
+#endif
+   }
+   if (netTypeChanged) {
+      logger_->debug("[{}] network type changed - reloading wallets", __func__);
+   }
+   processSignerSettings({});
+}
+
+ProcessingResult SettingsAdapter::processRemoteSettings(uint64_t msgId)
 {
    const auto &itReq = remoteSetReqs_.find(msgId);
    if (itReq == remoteSetReqs_.end()) {
       logger_->error("[{}] failed to find remote settings request #{}", __func__
          , msgId);
-      return true;
+      return ProcessingResult::Error;
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
-bool SettingsAdapter::processGetState(const bs::message::Envelope& env)
+ProcessingResult SettingsAdapter::processGetState(const bs::message::Envelope& env)
 {
    SettingsMessage msg;
    auto msgResp = msg.mutable_state();
@@ -187,10 +189,11 @@ bool SettingsAdapter::processGetState(const bs::message::Envelope& env)
       setReq->set_index(static_cast<SettingIndex>(st.first));
       setFromQVariant(st.second, setReq, setResp);
    }
-   return pushResponse(user_, env, msg.SerializeAsString());
+   pushResponse(user_, env, msg.SerializeAsString());
+   return ProcessingResult::Success;
 }
 
-bool SettingsAdapter::processReset(const bs::message::Envelope& env
+ProcessingResult SettingsAdapter::processReset(const bs::message::Envelope& env
    , const SettingsMessage_SettingsRequest& request)
 {
    SettingsMessage msg;
@@ -205,10 +208,11 @@ bool SettingsAdapter::processReset(const bs::message::Envelope& env
       const auto& value = appSettings_->get(setting);
       setFromQVariant(value, setReq, setResp);
    }
-   return pushResponse(user_, env, msg.SerializeAsString());
+   pushResponse(user_, env, msg.SerializeAsString());
+   return ProcessingResult::Success;
 }
 
-bool SettingsAdapter::processResetToState(const bs::message::Envelope& env
+ProcessingResult SettingsAdapter::processResetToState(const bs::message::Envelope& env
    , const SettingsMessage_SettingsResponse& request)
 {
    for (const auto& req : request.responses()) {
@@ -218,10 +222,11 @@ bool SettingsAdapter::processResetToState(const bs::message::Envelope& env
    }
    SettingsMessage msg;
    *msg.mutable_state() = request;
-   return pushResponse(user_, env, msg.SerializeAsString());
+   pushResponse(user_, env, msg.SerializeAsString());
+   return ProcessingResult::Success;
 }
 
-bool SettingsAdapter::processBootstrap(const bs::message::Envelope &env
+ProcessingResult SettingsAdapter::processBootstrap(const bs::message::Envelope &env
    , const std::string& bsData)
 {
    SettingsMessage msg;
@@ -246,8 +251,9 @@ bool SettingsAdapter::processBootstrap(const bs::message::Envelope &env
    else {
       logger_->error("[{}] failed to set bootstrap data", __func__);
    }
-   return pushResponse(user_, bsData.empty() ? env.sender : nullptr
+   pushResponse(user_, bsData.empty() ? env.sender : nullptr
       , msg.SerializeAsString(), bsData.empty() ? env.foreignId() : 0);
+   return ProcessingResult::Success;
 }
 
 static bs::network::ws::PrivateKey readOrCreatePrivateKey(const std::string& filename)
@@ -274,7 +280,7 @@ static bs::network::ws::PrivateKey readOrCreatePrivateKey(const std::string& fil
    return result;
 }
 
-bool SettingsAdapter::processApiPrivKey(const bs::message::Envelope& env)
+ProcessingResult SettingsAdapter::processApiPrivKey(const bs::message::Envelope& env)
 {  //FIXME: should be re-implemented to avoid storing plain private key in a file on disk
    const auto &apiKeyFN = appSettings_->AppendToWritableDir(
       QString::fromStdString("apiPrivKey")).toStdString();
@@ -282,7 +288,8 @@ bool SettingsAdapter::processApiPrivKey(const bs::message::Envelope& env)
    SettingsMessage msg;
    SecureBinaryData privKey(apiPrivKey.data(), apiPrivKey.size());
    msg.set_api_privkey(privKey.toBinStr());
-   return pushResponse(user_, env, msg.SerializeAsString());
+   pushResponse(user_, env, msg.SerializeAsString());
+   return ProcessingResult::Success;
 }
 
 static std::set<std::string> readClientKeys(const std::string& filename)
@@ -305,7 +312,7 @@ static std::set<std::string> readClientKeys(const std::string& filename)
    return result;
 }
 
-bool SettingsAdapter::processApiClientsList(const bs::message::Envelope& env)
+ProcessingResult SettingsAdapter::processApiClientsList(const bs::message::Envelope& env)
 {
    const auto& apiKeysFN = appSettings_->AppendToWritableDir(
       QString::fromStdString("apiClientPubKeys")).toStdString();
@@ -318,7 +325,8 @@ bool SettingsAdapter::processApiClientsList(const bs::message::Envelope& env)
    for (const auto& clientKey : clientKeys) {
       msgResp->add_pub_keys(clientKey);
    }
-   return pushResponse(user_, env, msg.SerializeAsString());
+   pushResponse(user_, env, msg.SerializeAsString());
+   return ProcessingResult::Success;
 }
 
 std::string SettingsAdapter::guiMode() const
@@ -329,7 +337,7 @@ std::string SettingsAdapter::guiMode() const
    return appSettings_->guiMode().toStdString();
 }
 
-bool SettingsAdapter::processGetRequest(const bs::message::Envelope &env
+ProcessingResult SettingsAdapter::processGetRequest(const bs::message::Envelope &env
    , const SettingsMessage_SettingsRequest &request)
 {
    unsigned int nbFetched = 0;
@@ -338,7 +346,7 @@ bool SettingsAdapter::processGetRequest(const bs::message::Envelope &env
    for (const auto &req : request.requests()) {
       auto resp = msgResp->add_responses();
       resp->set_allocated_request(new SettingRequest(req));
-      if (req.source() == SettingSource_Local) {
+      if ((req.source() == SettingSource_Local) || (req.source() == SettingSource_Unknown)) {
          switch (req.index()) {
          case SetIdx_BlockSettleSignAddress:
             resp->set_s(appSettings_->GetBlocksettleSignAddress());
@@ -421,12 +429,13 @@ bool SettingsAdapter::processGetRequest(const bs::message::Envelope &env
       }
    }
    if (nbFetched > 0) {
-      return pushResponse(user_, env, msg.SerializeAsString());
+      pushResponse(user_, env, msg.SerializeAsString());
+      return ProcessingResult::Success;
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
-bool SettingsAdapter::processPutRequest(const SettingsMessage_SettingsResponse &request)
+ProcessingResult SettingsAdapter::processPutRequest(const SettingsMessage_SettingsResponse &request)
 {
    unsigned int nbUpdates = 0;
    for (const auto &req : request.responses()) {
@@ -489,37 +498,54 @@ bool SettingsAdapter::processPutRequest(const SettingsMessage_SettingsResponse &
    if (nbUpdates) {
       SettingsMessage msg;
       *(msg.mutable_settings_updated()) = request;
-      return pushBroadcast(user_, msg.SerializeAsString());
+      pushBroadcast(user_, msg.SerializeAsString());
+      return ProcessingResult::Success;
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
-bool SettingsAdapter::processArmoryServer(const BlockSettle::Terminal::SettingsMessage_ArmoryServer &request)
+ProcessingResult SettingsAdapter::processArmoryServer(const BlockSettle::Terminal::SettingsMessage_ArmoryServer &request)
 {
    int selIndex = 0;
    for (const auto &server : armoryServersProvider_->servers()) {
-      if ((server.name == QString::fromStdString(request.server_name()))
+      if ((server.name == request.server_name())
          && (server.netType == static_cast<NetworkType>(request.network_type()))) {
          break;
       }
       selIndex++;
    }
    if (selIndex >= armoryServersProvider_->servers().size()) {
-      logger_->error("[{}] failed to find Armory server {}", __func__, request.server_name());
-      return true;
+      logger_->error("[{}] failed to find Armory server {} #{}", __func__, request.server_name(), selIndex);
+      return ProcessingResult::Error;
    }
    armoryServersProvider_->setupServer(selIndex);
    appSettings_->selectNetwork();
+   return ProcessingResult::Success;
 }
 
-bool SettingsAdapter::processSetArmoryServer(const bs::message::Envelope& env, int index)
+ProcessingResult SettingsAdapter::processSetArmoryServer(const bs::message::Envelope& env, int index)
 {
-   armoryServersProvider_->setupServer(index);
-   appSettings_->selectNetwork();
-   return processGetArmoryServers(env);
+   if (armoryServersProvider_->indexOfConnected() == index) {
+      return ProcessingResult::Ignored;
+   }
+   logger_->debug("[{}] #{}", __func__, index);
+   const auto prevNetType = armoryServersProvider_->getArmorySettings().netType;
+   const auto newNetType = armoryServersProvider_->setupServer(index);
+   if (newNetType == NetworkType::Invalid) {
+      logger_->error("[{}] Failed to setup server #{}", __func__, index);
+      return ProcessingResult::Error;
+   }
+   const bool netTypeChanged = newNetType != prevNetType;
+   if (netTypeChanged) {
+      appSettings_->selectNetwork();
+      logger_->debug("[{}] net {} selected", __func__
+         , (int)appSettings_->get<NetworkType>(ApplicationSettings::Setting::netType));
+   }
+   sendSettings(armoryServersProvider_->getArmorySettings(), netTypeChanged);
+   return ProcessingResult::Success;
 }
 
-bool SettingsAdapter::processGetArmoryServers(const bs::message::Envelope& env)
+ProcessingResult SettingsAdapter::processGetArmoryServers(const bs::message::Envelope& env)
 {
    SettingsMessage msg;
    auto msgResp = msg.mutable_armory_servers();
@@ -528,32 +554,33 @@ bool SettingsAdapter::processGetArmoryServers(const bs::message::Envelope& env)
    for (const auto& server : armoryServersProvider_->servers()) {
       auto msgSrv = msgResp->add_servers();
       msgSrv->set_network_type((int)server.netType);
-      msgSrv->set_server_name(server.name.toStdString());
-      msgSrv->set_server_address(server.armoryDBIp.toStdString());
-      msgSrv->set_server_port(std::to_string(server.armoryDBPort));
-      msgSrv->set_server_key(server.armoryDBKey.toStdString());
+      msgSrv->set_server_name(server.name);
+      msgSrv->set_server_address(server.armoryDBIp);
+      msgSrv->set_server_port(server.armoryDBPort);
+      msgSrv->set_server_key(server.armoryDBKey);
       msgSrv->set_run_locally(server.runLocally);
       msgSrv->set_one_way_auth(server.oneWayAuth_);
       msgSrv->set_password(server.password.toBinStr());
    }
-   return pushResponse(user_, env, msg.SerializeAsString());
+   pushResponse(user_, env, msg.SerializeAsString());
+   return ProcessingResult::Success;
 }
 
 static ArmoryServer fromMessage(const SettingsMessage_ArmoryServer& msg)
 {
    ArmoryServer result;
-   result.name = QString::fromStdString(msg.server_name());
+   result.name = msg.server_name();
    result.netType = static_cast<NetworkType>(msg.network_type());
-   result.armoryDBIp = QString::fromStdString(msg.server_address());
-   result.armoryDBPort = std::stoi(msg.server_port());
-   result.armoryDBKey = QString::fromStdString(msg.server_key());
+   result.armoryDBIp = msg.server_address();
+   result.armoryDBPort = msg.server_port();
+   result.armoryDBKey = msg.server_key();
    result.password = SecureBinaryData::fromString(msg.password());
    result.runLocally = msg.run_locally();
    result.oneWayAuth_ = msg.one_way_auth();
    return result;
 }
 
-bool SettingsAdapter::processAddArmoryServer(const bs::message::Envelope& env
+ProcessingResult SettingsAdapter::processAddArmoryServer(const bs::message::Envelope& env
    , const SettingsMessage_ArmoryServer& request)
 {
    const auto& server = fromMessage(request);
@@ -566,7 +593,7 @@ bool SettingsAdapter::processAddArmoryServer(const bs::message::Envelope& env
    return processGetArmoryServers(env);
 }
 
-bool SettingsAdapter::processDelArmoryServer(const bs::message::Envelope& env
+ProcessingResult SettingsAdapter::processDelArmoryServer(const bs::message::Envelope& env
    , int index)
 {
    if (!armoryServersProvider_->remove(index)) {
@@ -575,7 +602,7 @@ bool SettingsAdapter::processDelArmoryServer(const bs::message::Envelope& env
    return processGetArmoryServers(env);
 }
 
-bool SettingsAdapter::processUpdArmoryServer(const bs::message::Envelope& env
+ProcessingResult SettingsAdapter::processUpdArmoryServer(const bs::message::Envelope& env
    , const SettingsMessage_ArmoryServerUpdate& request)
 {
    const auto& server = fromMessage(request.server());
@@ -585,94 +612,36 @@ bool SettingsAdapter::processUpdArmoryServer(const bs::message::Envelope& env
    return processGetArmoryServers(env);
 }
 
-bool SettingsAdapter::processSignerSettings(const bs::message::Envelope &env)
+ProcessingResult SettingsAdapter::processSignerSettings(const bs::message::Envelope& env)
 {
    SettingsMessage msg;
    auto msgResp = msg.mutable_signer_response();
-   msgResp->set_is_local(signersProvider_->currentSignerIsLocal());
-   msgResp->set_network_type(appSettings_->get<int>(ApplicationSettings::netType));
-
-   const auto &signerHost = signersProvider_->getCurrentSigner();
-   msgResp->set_name(signerHost.name.toStdString());
-   msgResp->set_host(signerHost.address.toStdString());
-   msgResp->set_port(std::to_string(signerHost.port));
-   msgResp->set_key(signerHost.key.toStdString());
-   msgResp->set_id(signerHost.serverId());
-   msgResp->set_remote_keys_dir(signersProvider_->remoteSignerKeysDir());
-   msgResp->set_remote_keys_file(signersProvider_->remoteSignerKeysFile());
-
-   for (const auto &signer : signersProvider_->signers()) {
-      auto keyVal = msgResp->add_client_keys();
-      keyVal->set_key(signer.serverId());
-      keyVal->set_value(signer.key.toStdString());
-   }
+   const auto netType = appSettings_->get<int>(ApplicationSettings::netType);
+   logger_->debug("[{}] network type: {}", __func__, netType);
+   msgResp->set_network_type(netType);
    msgResp->set_home_dir(appSettings_->GetHomeDir().toStdString());
-   msgResp->set_auto_sign_spend_limit(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
-
-   return pushResponse(user_, env, msg.SerializeAsString());
-}
-
-bool SettingsAdapter::processSignerSetKey(const SettingsMessage_SignerSetKey &request)
-{
-   signersProvider_->addKey(request.server_id(), request.new_key());
-   return true;
-}
-
-bool SettingsAdapter::processSignerReset()
-{
-   signersProvider_->setupSigner(0, true);
-   return true;
-}
-
-bool SettingsAdapter::processGetSigners(const bs::message::Envelope& env)
-{
-   SettingsMessage msg;
-   auto msgResp = msg.mutable_signer_servers();
-   msgResp->set_own_key(signersProvider_->remoteSignerOwnKey().toHexStr());
-   msgResp->set_idx_current(signersProvider_->indexOfCurrent());
-   for (const auto& signer : signersProvider_->signers()) {
-      auto msgSrv = msgResp->add_servers();
-      msgSrv->set_name(signer.name.toStdString());
-      msgSrv->set_host(signer.address.toStdString());
-      msgSrv->set_port(std::to_string(signer.port));
-      msgSrv->set_key(signer.key.toStdString());
+   //msgResp->set_auto_sign_spend_limit(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
+   if (env.sender) {
+      pushResponse(user_, env, msg.SerializeAsString());
    }
-   return pushResponse(user_, env, msg.SerializeAsString());
+   else {
+      pushResponse(user_, bs::message::UserTerminal::create(bs::message::TerminalUsers::Signer)
+         , msg.SerializeAsString());
+   }
+   return ProcessingResult::Success;
 }
 
-bool SettingsAdapter::processSetSigner(const bs::message::Envelope& env
-   , int index)
+#include <QTextCodec>
+static std::string convertPathname(const QString& pathname)
 {
-   signersProvider_->setupSigner(index);
-   return processGetSigners(env);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+   const QByteArray baFilename = QTextCodec::codecForLocale()->fromUnicode(pathname);
+#else
+   auto fromUtf16 = QStringEncoder(QStringEncoder::System);
+   const QByteArray baFilename = fromUtf16(mFileName);
+#endif
+   return baFilename.toStdString();
 }
-
-static SignerHost fromMessage(const SettingsMessage_SignerServer& msg)
-{
-   SignerHost result;
-   result.name = QString::fromStdString(msg.name());
-   result.address = QString::fromStdString(msg.host());
-   result.port = std::stoi(msg.port());
-   result.key = QString::fromStdString(msg.key());
-   return result;
-}
-
-bool SettingsAdapter::processAddSigner(const bs::message::Envelope& env
-   , const SettingsMessage_SignerServer& request)
-{
-   const auto& signer = fromMessage(request);
-   signersProvider_->add(signer);
-   signersProvider_->setupSigner(signersProvider_->indexOf(signer));
-   return processGetSigners(env);
-}
-
-bool SettingsAdapter::processDelSigner(const bs::message::Envelope& env
-   , int index)
-{
-   signersProvider_->remove(index);
-   return processGetSigners(env);
-}
-
 
 void bs::message::setFromQVariant(const QVariant& val, SettingRequest* req, SettingResponse* resp)
 {

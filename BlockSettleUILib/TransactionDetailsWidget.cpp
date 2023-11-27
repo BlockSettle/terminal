@@ -11,7 +11,6 @@
 #include "TransactionDetailsWidget.h"
 #include "ui_TransactionDetailsWidget.h"
 #include "BTCNumericTypes.h"
-#include "BlockObj.h"
 #include "CheckRecipSigner.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWallet.h"

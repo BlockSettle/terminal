@@ -19,6 +19,7 @@ Loader {
         messages.source = Qt.resolvedUrl("InfoBannerComponent.qml");
         messages.item.message = message;
         messages.item.bgColor = bgColor
+        messages.visible = true
     }
 
     width: parent.width
@@ -33,9 +34,10 @@ Loader {
     Timer {
         id: timer
 
-        interval: 7000
+        interval: 5000
         onTriggered: {
             messages.state = ""
+            messages.visible = false
         }
     }
 

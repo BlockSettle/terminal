@@ -16,5 +16,5 @@ import "../BsStyles"
 Rectangle {
     width: parent.width
     color:"#55000000"
-    height: 45
+    height: BSSizes.applyScale(45)
 }

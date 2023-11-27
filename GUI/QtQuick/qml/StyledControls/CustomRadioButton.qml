@@ -12,27 +12,29 @@ import QtQuick 2.9
 import QtQuick.Controls 2.3
 import "../BsStyles"
 
+
 RadioButton {
     id: control
-    text: parent.text
-    focusPolicy: Qt.NoFocus
+
+    checked: true
+    activeFocusOnTab: false
 
     indicator: Rectangle {
-        implicitWidth: 16
-        implicitHeight: 16
+        implicitWidth: BSSizes.applyScale(16)
+        implicitHeight: BSSizes.applyScale(16)
         x: control.leftPadding
         y: parent.height / 2 - height / 2
-        radius: 11
-        border.color: control.checked ? BSStyle.buttonsBorderColor : BSStyle.buttonsUncheckedColor
+        radius: BSSizes.applyScale(8)
+        border.color: "#45A6FF"
         color: "transparent"
 
         Rectangle {
-            width: 8
-            height: 8
-            x: 4
-            y: 4
-            radius: 7
-            color: control.checked ? BSStyle.buttonsPrimaryMainColor : BSStyle.buttonsUncheckedColor
+            width: BSSizes.applyScale(8)
+            height: BSSizes.applyScale(8)
+            x: BSSizes.applyScale(4)
+            y: BSSizes.applyScale(4)
+            radius: BSSizes.applyScale(4)
+            color: "#45A6FF"
             visible: control.checked
         }
     }
@@ -40,8 +42,7 @@ RadioButton {
     contentItem: Text {
         text: control.text
         font: control.font
-        opacity: enabled ? 1.0 : 0.3
-        color: control.checked ? BSStyle.textColor : BSStyle.buttonsUncheckedColor
+        color: control.checked ? "#E2E7FF" : "#7A88B0"
         verticalAlignment: Text.AlignVCenter
         leftPadding: control.indicator.width + control.spacing
     }

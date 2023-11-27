@@ -27,7 +27,7 @@ using namespace BlockSettle::Terminal;
 
 constexpr auto kExpirationTimeout = std::chrono::seconds{ 5 };
 
-bool TestSupervisor::process(const Envelope &env)
+ProcessingResult TestSupervisor::process(const Envelope &env)
 {
 #ifdef MSG_DEBUGGING
    StaticLogger::loggerPtr->debug("[{}] {}{}: {}({}) -> {}({}), {} bytes"
@@ -48,7 +48,7 @@ bool TestSupervisor::process(const Envelope &env)
                filtersToDelete.push_back(seqNo);
                break;
             }
-            return false;
+            return ProcessingResult::Success;
          }
       }
       for (const auto &filter : filterWait_) {
@@ -65,10 +65,10 @@ bool TestSupervisor::process(const Envelope &env)
             filterMap_.erase(seqNo);
             filterWait_.erase(seqNo);
          }
-         return false;
+         return ProcessingResult::Success;
       }
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
 bs::message::SeqId TestSupervisor::send(bs::message::TerminalUsers sender, bs::message::TerminalUsers receiver
@@ -124,13 +124,13 @@ MatchingMock::MatchingMock(const std::shared_ptr<spdlog::logger>& logger
    , userSettl_(UserTerminal::create(TerminalUsers::Settlement))
 {}
 
-bool MatchingMock::process(const bs::message::Envelope& env)
+ProcessingResult MatchingMock::process(const bs::message::Envelope& env)
 {
    if (env.isRequest() && (env.receiver->value() == user_->value())) {
       MatchingMessage msg;
       if (!msg.ParseFromString(env.message)) {
          logger_->error("[{}] failed to parse own request #{}", __func__, env.foreignId());
-         return true;
+         return ProcessingResult::Error;
       }
       switch (msg.data_case()) {
       case MatchingMessage::kSendRfq:
@@ -184,7 +184,8 @@ bool MatchingMock::process(const bs::message::Envelope& env)
                else {
                   match.second.order = fromMsg(msg.order());
                }
-               return pushResponse(user_, userSettl_, msg.SerializeAsString());
+               pushResponse(user_, userSettl_, msg.SerializeAsString());
+               return ProcessingResult::Success;
             }
          }
       }
@@ -212,27 +213,31 @@ bool MatchingMock::process(const bs::message::Envelope& env)
       BsServerMessage msg;
       if (!msg.ParseFromString(env.message)) {
          logger_->error("[{}] failed to parse own request #{}", __func__, env.foreignId());
-         return true;
+         return ProcessingResult::Error;
       }
       switch (msg.data_case()) {
       case BsServerMessage::kSendUnsignedPayin:
-         return processUnsignedPayin(msg.send_unsigned_payin());
+         return processUnsignedPayin(msg.send_unsigned_payin()) ?
+            ProcessingResult::Success : ProcessingResult::Error;
       case BsServerMessage::kSendSignedPayin:
-         return processSignedTX(msg.send_signed_payin(), true, true);
+         return processSignedTX(msg.send_signed_payin(), true, true) ?
+            ProcessingResult::Success : ProcessingResult::Error;
       case BsServerMessage::kSendSignedPayout:
-         return processSignedTX(msg.send_signed_payout(), false, true);
-      default: break;
+         return processSignedTX(msg.send_signed_payout(), false, true) ?
+            ProcessingResult::Success : ProcessingResult::Error;
+      default: return ProcessingResult::Ignored;
       }
    }
    else if (env.receiver->value() == env.sender->value()
       && (env.sender->value() == user_->value())) {   //own to self
       for (const auto& match : matches_) {
          if (match.second.quote.quoteId == env.message) {
-            return sendPendingOrder(match.first);
+            return sendPendingOrder(match.first) ? ProcessingResult::Success
+               : ProcessingResult::Error;
          }
       }
    }
-   return true;
+   return ProcessingResult::Success;
 }
 
 bool MatchingMock::processBroadcast(const bs::message::Envelope&)

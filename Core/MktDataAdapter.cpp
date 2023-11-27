@@ -34,14 +34,14 @@ MktDataAdapter::MktDataAdapter(const std::shared_ptr<spdlog::logger> &logger)
       , true, false);
 }
 
-bool MktDataAdapter::process(const bs::message::Envelope &env)
+ProcessingResult MktDataAdapter::process(const bs::message::Envelope &env)
 {
    if (env.receiver->value() == user_->value()) {
       MktDataMessage msg;
       if (!msg.ParseFromString(env.message)) {
          logger_->error("[{}] failed to parse own request #{}"
             , __func__, env.foreignId());
-         return true;
+         return ProcessingResult::Error;
       }
       switch (msg.data_case()) {
       case MktDataMessage::kStartConnection:
@@ -51,7 +51,7 @@ bool MktDataAdapter::process(const bs::message::Envelope &env)
          break;
       }
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
 bool MktDataAdapter::processBroadcast(const bs::message::Envelope& env)
@@ -179,15 +179,15 @@ void MktDataAdapter::sendTrade(const bs::network::NewTrade& trade)
    pushBroadcast(user_, msg.SerializeAsString(), true);
 }
 
-bool MktDataAdapter::processStartConnection(int e)
+ProcessingResult MktDataAdapter::processStartConnection(int e)
 {
    if (connected_) {
       logger_->debug("[{}] already connected", __func__);
-      return true;
+      return ProcessingResult::Success;
    }
    const auto env = static_cast<ApplicationSettings::EnvConfiguration>(e);
    mdProvider_->SetConnectionSettings(PubKeyLoader::serverHostName(PubKeyLoader::KeyType::MdServer, env)
       , PubKeyLoader::serverHttpsPort());
    mdProvider_->MDLicenseAccepted();
-   return true;
+   return ProcessingResult::Success;
 }

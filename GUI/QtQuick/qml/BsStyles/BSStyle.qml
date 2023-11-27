@@ -19,13 +19,14 @@ QtObject {
     readonly property color backgroundModalColor: "#737373"
     readonly property color backgroundModeLessColor: "#939393"
 
-    readonly property color disabledColor: "#41484f"
+
     readonly property color disabledTextColor: "#71787f"
     readonly property color disabledBgColor: "#31383f"
 
     readonly property color textColor: "white"
     readonly property color textPressedColor: "#3a8ab4"
     readonly property color disabledHeaderColor: "#909090"
+    readonly property color titleTextColor: "#7A88B0"
 
     readonly property color labelsTextColor: "#939393"
     readonly property color labelsTextDisabledColor: "#454E53"
@@ -54,7 +55,7 @@ QtObject {
     readonly property color switchCheckedColor: "#247dac"
     readonly property color switchOrangeColor: "#f6a724"
     readonly property color switchUncheckedColor: "#b1b8bf"
-    readonly property color switchDisabledBgColor: disabledColor
+    //readonly property color switchDisabledBgColor: disabledColor
     readonly property color switchDisabledColor: disabledTextColor
 
     readonly property color dialogHeaderColor: "#0A1619"
@@ -66,11 +67,85 @@ QtObject {
     readonly property color comboBoxBgColor: "transparent"
     readonly property color comboBoxItemBgColor: "#17262b"
     readonly property color comboBoxItemBgHighlightedColor: "#27363b"
-    readonly property color comboBoxItemTextColor: textColor
-    readonly property color comboBoxItemTextHighlightedColor: textColor
+
 
     readonly property color mainnetColor: "#fe9727"
     readonly property color testnetColor: "#22c064"
     readonly property color mainnetTextColor: "white"
     readonly property color testnetTextColor: "black"
+
+    readonly property color selectedColor: "white"
+
+
+
+    //new properties
+    readonly property color defaultGreyColor: "#3C435A"
+    readonly property color wildBlueColor: "#7A88B0"
+    readonly property color titanWhiteColor: "#E2E7FF"
+
+    readonly property color buttonsStandardColor: defaultGreyColor
+    readonly property color buttonsStandardPressedColor: "#232734"
+    readonly property color buttonsStandardHoveredColor: "#2E3343"
+    readonly property color buttonsStandardBorderColor: "#FFFFFF"
+
+    readonly property color buttonsPreferredColor: "#45A6FF"
+    readonly property color buttonsPreferredPressedColor: "#0077E4"
+    readonly property color buttonsPreferredHoveredColor: "#0085FF"
+    readonly property color buttonsPreferredBorderColor: "#FFFFFF"
+
+    readonly property color buttonsTextColor: "#FFFFFF"
+    readonly property color buttonsHeaderTextColor: "#7A88B0"
+    readonly property color buttonsDisabledTextColor: "#1C2130"
+
+    readonly property color buttonsDisabledColor: "#32394F"
+
+    readonly property color comboBoxItemTextColor: "#020817"
+    readonly property color comboBoxItemTextHighlightedColor: "#45A6FF"
+    readonly property color comboBoxItemTextCurrentColor: wildBlueColor
+    readonly property color comboBoxItemHighlightedColor: "#45A6FF"
+
+    readonly property color comboBoxBorderColor: defaultGreyColor
+    readonly property color comboBoxHoveredBorderColor: wildBlueColor
+    readonly property color comboBoxFocusedBorderColor: wildBlueColor
+    readonly property color comboBoxPopupedBorderColor: "#45A6FF"
+
+    readonly property color comboBoxIndicatorColor: "#DCE2FF"
+    readonly property color comboBoxPopupedIndicatorColor: "#45A6FF"
+
+    readonly property color tableSeparatorColor: defaultGreyColor
+    readonly property color tableCellBackgroundColor: "transparent"
+    readonly property color tableCellSelectedBackgroundColor: "#22293B"
+
+    readonly property color balanceValueTextColor: titanWhiteColor
+    readonly property color addressesPanelBackgroundColor: "#333C435A"
+
+    readonly property color listItemBorderColor: defaultGreyColor
+    readonly property color listItemHoveredBorderColor: wildBlueColor
+
+    readonly property color popupBackgroundColor: "#191E2A"
+    readonly property color popupBorderColor: defaultGreyColor
+
+    readonly property color transactionConfirmationZero: "#EB6060"
+    readonly property color transactionConfirmationLow: "yellow"
+    readonly property color transactionConfirmationHigh: "#67D2A3"
+
+    readonly property color defaultBorderColor: defaultGreyColor
+
+    readonly property color menuItemTextColor: wildBlueColor
+    readonly property color menuItemHoveredColor: "#2E3343"
+    readonly property color menuItemColor: "transparent"
+
+    //not colors
+    readonly property int defaultPrecision: 8
+
+    readonly property color transactionTypeSent: "#EB6060"
+    readonly property color transactionTypeInternal: "cyan"
+    readonly property color transactionTypeReceived: "#67D2A3"
+
+    readonly property color exportWalletLabelBackground: "#32394F"
+    readonly property color exportWalletLabelNameColor: "#45A6FF"
+
+    readonly property color smallButtonBackgroundColor: "#020817"
+
+    readonly property color loadingPanelBackgroundColor: "#AA191E2A"
 }

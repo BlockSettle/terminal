@@ -48,6 +48,7 @@ namespace bs {
          OnChainTracker,// Auth & CC tracker combined in one adapter
          Settlement,    // All settlements (FX, XBT, CC) for both dealer and requester
          Chat,          // Chat network routines
+         HWWallets,     // Hardware wallets device manager
          UsersCount
       };
 
@@ -100,7 +101,7 @@ namespace bs {
          std::shared_ptr<spdlog::logger>  logger_;
          std::map<std::string, std::shared_ptr<Queue>>   queues_;
          std::shared_ptr<MainLoopRuner>   runnableAdapter_;
-         std::shared_ptr<RelayAdapter>    relayAdapter_;
+         std::shared_ptr<Adapter>         relayAdapter_;
       };
 
    } // namespace message

@@ -11,6 +11,7 @@
 #include "CommonTypes.h"
 #include "QtGuiAdapter.h"
 #include <QApplication>
+#include <QApplicationStateChangeEvent>
 #include <QDateTime>
 #include <QDirIterator>
 #include <QFile>
@@ -35,10 +36,13 @@
 #include "common.pb.h"
 #include "terminal.pb.h"
 
+#include "../../BlockSettleApp/macosapp.h"
+
 using namespace BlockSettle::Common;
 using namespace BlockSettle::Terminal;
 using namespace bs::message;
 
+/*
 #if defined (Q_OS_MAC)
 class MacOsApp : public QApplication
 {
@@ -74,7 +78,7 @@ private:
    bool activationRequired_ = false;
 };
 #endif   // Q_OS_MAC
-
+*/
 
 static void checkStyleSheet(QApplication &app)
 {
@@ -212,8 +216,8 @@ void QtGuiAdapter::run(int &argc, char **argv)
    logger_->debug("[QtGuiAdapter::run] initial setup done");
 
 #if defined (Q_OS_MAC)
-   MacOsApp *macApp = (MacOsApp*)(app);
-   QObject::connect(macApp, &MacOsApp::reactivateTerminal, mainWindow
+//   MacOsApp *macApp = &app;
+   QObject::connect(&app, &MacOsApp::reactivateTerminal, mainWindow_
       , &bs::gui::qt::MainWindow::onReactivate);
 #endif
    bs::disableAppNap();
@@ -223,7 +227,7 @@ void QtGuiAdapter::run(int &argc, char **argv)
    }
 }
 
-bool QtGuiAdapter::process(const Envelope &env)
+ProcessingResult QtGuiAdapter::process(const Envelope &env)
 {
    if (std::dynamic_pointer_cast<UserTerminal>(env.sender)) {
       switch (env.sender->value<bs::message::TerminalUsers>()) {
@@ -248,7 +252,7 @@ bool QtGuiAdapter::process(const Envelope &env)
       default:    break;
       }
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
 bool QtGuiAdapter::processBroadcast(const bs::message::Envelope& env)
@@ -256,37 +260,37 @@ bool QtGuiAdapter::processBroadcast(const bs::message::Envelope& env)
    if (std::dynamic_pointer_cast<UserTerminal>(env.sender)) {
       switch (env.sender->value<bs::message::TerminalUsers>()) {
       case TerminalUsers::System:
-         return processAdminMessage(env);
+         return (processAdminMessage(env) != ProcessingResult::Ignored);
       case TerminalUsers::Settings:
-         return processSettings(env);
+         return (processSettings(env) != ProcessingResult::Ignored);
       case TerminalUsers::Blockchain:
-         return processBlockchain(env);
+         return (processBlockchain(env) != ProcessingResult::Ignored);
       case TerminalUsers::Signer:
-         return processSigner(env);
+         return (processSigner(env) != ProcessingResult::Ignored);
       case TerminalUsers::Wallets:
-         return processWallets(env);
+         return (processWallets(env) != ProcessingResult::Ignored);
       case TerminalUsers::BsServer:
-         return processBsServer(env);
+         return (processBsServer(env) != ProcessingResult::Ignored);
       case TerminalUsers::Matching:
-         return processMatching(env);
+         return (processMatching(env) != ProcessingResult::Ignored);
       case TerminalUsers::MktData:
-         return processMktData(env);
+         return (processMktData(env) != ProcessingResult::Ignored);
       case TerminalUsers::OnChainTracker:
-         return processOnChainTrack(env);
+         return (processOnChainTrack(env) != ProcessingResult::Ignored);
       case TerminalUsers::Assets:
-         return processAssets(env);
+         return (processAssets(env) != ProcessingResult::Ignored);
       default:    break;
       }
    }
    return false;
 }
 
-bool QtGuiAdapter::processSettings(const Envelope &env)
+ProcessingResult QtGuiAdapter::processSettings(const Envelope &env)
 {
    SettingsMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[{}] failed to parse settings msg #{}", __func__, env.foreignId());
-      return true;
+      return ProcessingResult::Error;
    }
    switch (msg.data_case()) {
    case SettingsMessage::kGetResponse:
@@ -299,10 +303,10 @@ bool QtGuiAdapter::processSettings(const Envelope &env)
       return processArmoryServers(msg.armory_servers());
    default: break;
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
-bool QtGuiAdapter::processSettingsGetResponse(const SettingsMessage_SettingsResponse &response)
+ProcessingResult QtGuiAdapter::processSettingsGetResponse(const SettingsMessage_SettingsResponse &response)
 {
    std::map<int, QVariant> settings;
    for (const auto &setting : response.responses()) {
@@ -346,51 +350,53 @@ bool QtGuiAdapter::processSettingsGetResponse(const SettingsMessage_SettingsResp
       }
    }
    if (!settings.empty()) {
-      return QMetaObject::invokeMethod(mainWindow_, [mw = mainWindow_, settings] {
+      const bool rc = QMetaObject::invokeMethod(mainWindow_, [mw = mainWindow_, settings] {
          for (const auto& setting : settings) {
             mw->onSetting(setting.first, setting.second);
          }
       });
+      return rc ? ProcessingResult::Success : ProcessingResult::Retry;
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
-bool QtGuiAdapter::processSettingsState(const SettingsMessage_SettingsResponse& response)
+ProcessingResult QtGuiAdapter::processSettingsState(const SettingsMessage_SettingsResponse& response)
 {
    ApplicationSettings::State state;
    for (const auto& setting : response.responses()) {
       state[static_cast<ApplicationSettings::Setting>(setting.request().index())] =
          fromResponse(setting);
    }
-   return QMetaObject::invokeMethod(mainWindow_, [mw = mainWindow_, state] {
+   const bool rc = QMetaObject::invokeMethod(mainWindow_, [mw = mainWindow_, state] {
       mw->onSettingsState(state);
    });
+   return rc ? ProcessingResult::Success : ProcessingResult::Retry;
 }
 
-bool QtGuiAdapter::processArmoryServers(const SettingsMessage_ArmoryServers& response)
+ProcessingResult QtGuiAdapter::processArmoryServers(const SettingsMessage_ArmoryServers& response)
 {
    QList<ArmoryServer> servers;
    for (const auto& server : response.servers()) {
-      servers << ArmoryServer{ QString::fromStdString(server.server_name())
+      servers << ArmoryServer{ server.server_name()
          , static_cast<NetworkType>(server.network_type())
-         , QString::fromStdString(server.server_address())
-         , std::stoi(server.server_port()), QString::fromStdString(server.server_key())
+         , server.server_address(), server.server_port(), server.server_key()
          , SecureBinaryData::fromString(server.password())
          , server.run_locally(), server.one_way_auth() };
    }
    logger_->debug("[{}] {} servers, cur: {}, conn: {}", __func__, servers.size()
       , response.idx_current(), response.idx_connected());
-   return QMetaObject::invokeMethod(mainWindow_, [mw = mainWindow_, servers, response] {
+   const bool rc =  QMetaObject::invokeMethod(mainWindow_, [mw = mainWindow_, servers, response] {
       mw->onArmoryServers(servers, response.idx_current(), response.idx_connected());
    });
+   return rc ? ProcessingResult::Success : ProcessingResult::Retry;
 }
 
-bool QtGuiAdapter::processAdminMessage(const Envelope &env)
+ProcessingResult QtGuiAdapter::processAdminMessage(const Envelope &env)
 {
    AdministrativeMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[{}] failed to parse admin msg #{}", __func__, env.foreignId());
-      return true;
+      return ProcessingResult::Error;
    }
    switch (msg.data_case()) {
    case AdministrativeMessage::kComponentCreated:
@@ -412,10 +418,10 @@ bool QtGuiAdapter::processAdminMessage(const Envelope &env)
    default: break;
    }
    updateSplashProgress();
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool QtGuiAdapter::processBlockchain(const Envelope &env)
+ProcessingResult QtGuiAdapter::processBlockchain(const Envelope &env)
 {
    ArmoryMessage msg;
    if (!msg.ParseFromString(env.message)) {
@@ -424,7 +430,7 @@ bool QtGuiAdapter::processBlockchain(const Envelope &env)
       if (!env.receiver) {
          logger_->debug("[{}] no receiver", __func__);
       }
-      return true;
+      return ProcessingResult::Error;
    }
    switch (msg.data_case()) {
    case ArmoryMessage::kLoading:
@@ -464,12 +470,12 @@ bool QtGuiAdapter::processBlockchain(const Envelope &env)
       return processZC(msg.zc_received());
    case ArmoryMessage::kZcInvalidated:
       return processZCInvalidated(msg.zc_invalidated());
-   default:    break;
+   default: return ProcessingResult::Ignored;
    }
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool QtGuiAdapter::processSigner(const Envelope &env)
+ProcessingResult QtGuiAdapter::processSigner(const Envelope &env)
 {
    SignerMessage msg;
    if (!msg.ParseFromString(env.message)) {
@@ -478,7 +484,7 @@ bool QtGuiAdapter::processSigner(const Envelope &env)
       if (!env.receiver) {
          logger_->debug("[{}] no receiver", __func__);
       }
-      return true;
+      return ProcessingResult::Error;
    }
    switch (msg.data_case()) {
    case SignerMessage::kState:
@@ -512,17 +518,17 @@ bool QtGuiAdapter::processSigner(const Envelope &env)
          });
       }
       break;
-   default:    break;
+   default: return ProcessingResult::Ignored;
    }
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool QtGuiAdapter::processWallets(const Envelope &env)
+ProcessingResult QtGuiAdapter::processWallets(const Envelope &env)
 {
    WalletsMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
-      return true;
+      return ProcessingResult::Error;
    }
    switch (msg.data_case()) {
    case WalletsMessage::kLoading:
@@ -608,41 +614,41 @@ bool QtGuiAdapter::processWallets(const Envelope &env)
       break;
    case WalletsMessage::kLedgerEntries:
       return processLedgerEntries(msg.ledger_entries());
-   default:    break;
+   default: return ProcessingResult::Ignored;
    }
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool QtGuiAdapter::processOnChainTrack(const Envelope &env)
+ProcessingResult QtGuiAdapter::processOnChainTrack(const Envelope &env)
 {
    OnChainTrackMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
-      return true;
+      return ProcessingResult::Error;
    }
    switch (msg.data_case()) {
    case OnChainTrackMessage::kLoading:
       loadingComponents_.insert(env.sender->value());
       updateSplashProgress();
       break;
-   default:    break;
+   default: return ProcessingResult::Ignored;
    }
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool QtGuiAdapter::processAssets(const bs::message::Envelope& env)
+ProcessingResult QtGuiAdapter::processAssets(const bs::message::Envelope& env)
 {
    AssetsMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
-      return true;
+      return ProcessingResult::Error;
    }
    switch (msg.data_case()) {
    case AssetsMessage::kBalance:
       return processBalance(msg.balance());
    default: break;
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
 void QtGuiAdapter::updateStates()
@@ -678,7 +684,7 @@ void QtGuiAdapter::updateSplashProgress()
       c += std::to_string(cc) + " ";
    }
    logger_->debug("[{}] {}/{}", __func__, l, c);*/
-   int percent = 100 * loadingComponents_.size() / createdComponents_.size();
+   int percent = (int)(100 * loadingComponents_.size() / createdComponents_.size());
    QMetaObject::invokeMethod(splashScreen_, [this, percent] {
       splashScreen_->SetProgress(percent);
    });
@@ -870,10 +876,10 @@ void QtGuiAdapter::onAddArmoryServer(const ArmoryServer& server)
    SettingsMessage msg;
    auto msgReq = msg.mutable_add_armory_server();
    msgReq->set_network_type((int)server.netType);
-   msgReq->set_server_name(server.name.toStdString());
-   msgReq->set_server_address(server.armoryDBIp.toStdString());
-   msgReq->set_server_port(std::to_string(server.armoryDBPort));
-   msgReq->set_server_key(server.armoryDBKey.toStdString());
+   msgReq->set_server_name(server.name);
+   msgReq->set_server_address(server.armoryDBIp);
+   msgReq->set_server_port(server.armoryDBPort);
+   msgReq->set_server_key(server.armoryDBKey);
    msgReq->set_run_locally(server.runLocally);
    msgReq->set_one_way_auth(server.oneWayAuth_);
    msgReq->set_password(server.password.toBinStr());
@@ -894,10 +900,10 @@ void QtGuiAdapter::onUpdArmoryServer(int index, const ArmoryServer& server)
    msgReq->set_index(index);
    auto msgSrv = msgReq->mutable_server();
    msgSrv->set_network_type((int)server.netType);
-   msgSrv->set_server_name(server.name.toStdString());
-   msgSrv->set_server_address(server.armoryDBIp.toStdString());
-   msgSrv->set_server_port(std::to_string(server.armoryDBPort));
-   msgSrv->set_server_key(server.armoryDBKey.toStdString());
+   msgSrv->set_server_name(server.name);
+   msgSrv->set_server_address(server.armoryDBIp);
+   msgSrv->set_server_port(server.armoryDBPort);
+   msgSrv->set_server_key(server.armoryDBKey);
    msgSrv->set_run_locally(server.runLocally);
    msgSrv->set_one_way_auth(server.oneWayAuth_);
    msgSrv->set_password(server.password.toBinStr());
@@ -1015,7 +1021,9 @@ void QtGuiAdapter::onNeedTXDetails(const std::vector<bs::sync::TXWallet> &txWall
       auto request = msgReq->add_requests();
       //logger_->debug("[{}] {}", __func__, txw.txHash.toHexStr());
       request->set_tx_hash(txw.txHash.toBinStr());
-      request->set_wallet_id(txw.walletId);
+      for (const auto& walletId : txw.walletIds) {
+         request->add_wallet_ids(walletId);
+      }
       request->set_value(txw.value);
    }
    if (!addr.empty()) {
@@ -1251,7 +1259,8 @@ void QtGuiAdapter::onNeedWalletDialog(bs::signer::ui::GeneralDialogType dlgType
          QMetaObject::invokeMethod(mainWindow_, [this, rootId, walletName] {
             if (mainWindow_->deleteWallet(rootId, walletName)) {
                SignerMessage msg;
-               msg.set_delete_wallet(rootId);
+               auto msgReq = msg.mutable_delete_wallet();
+               msgReq->set_wallet_id(rootId);
                pushRequest(user_, userSigner_, msg.SerializeAsString());
             }
          });
@@ -1273,25 +1282,24 @@ void QtGuiAdapter::processWalletLoaded(const bs::sync::WalletInfo &wi)
    }
 }
 
-bool QtGuiAdapter::processWalletData(uint64_t msgId
+ProcessingResult QtGuiAdapter::processWalletData(uint64_t msgId
    , const WalletsMessage_WalletData& response)
 {
    const auto& itWallet = walletGetMap_.find(msgId);
    if (itWallet == walletGetMap_.end()) {
-      return true;
+      return ProcessingResult::Ignored;
    }
    const auto& walletId = itWallet->second;
    const auto& walletData = bs::sync::WalletData::fromCommonMessage(response);
    if (QMetaObject::invokeMethod(mainWindow_, [this, walletId, walletData] {
-      mainWindow_->onWalletData(walletId, walletData);
-   })) {
+      mainWindow_->onWalletData(walletId, walletData); })) {
       walletGetMap_.erase(itWallet);
-      return true;
+      return ProcessingResult::Success;
    }
-   return false;
+   return ProcessingResult::Retry;
 }
 
-bool QtGuiAdapter::processWalletBalances(const bs::message::Envelope &
+ProcessingResult QtGuiAdapter::processWalletBalances(const bs::message::Envelope &
    , const WalletsMessage_WalletBalances &response)
 {
    bs::sync::WalletBalanceData wbd;
@@ -1305,16 +1313,17 @@ bool QtGuiAdapter::processWalletBalances(const bs::message::Envelope &
          , addrBal.tx_count(), (int64_t)addrBal.total_balance(), (int64_t)addrBal.spendable_balance()
          , (int64_t)addrBal.unconfirmed_balance() });
    }
-   return QMetaObject::invokeMethod(mainWindow_, [this, wbd] {
+   const bool rc = QMetaObject::invokeMethod(mainWindow_, [this, wbd] {
       mainWindow_->onWalletBalance(wbd);
    });
+   return rc ? ProcessingResult::Success : ProcessingResult::Retry;
 }
 
-bool QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMessage_TXDetailsResponse &response)
+ProcessingResult QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMessage_TXDetailsResponse &response)
 {
    std::vector<bs::sync::TXWalletDetails> txDetails;
    for (const auto &resp : response.responses()) {
-      bs::sync::TXWalletDetails txDet{ BinaryData::fromString(resp.tx_hash()), resp.wallet_id()
+      bs::sync::TXWalletDetails txDet{ BinaryData::fromString(resp.tx_hash()), resp.hd_wallet_id()
          , resp.wallet_name(), static_cast<bs::core::wallet::Type>(resp.wallet_type())
          , resp.wallet_symbol(), static_cast<bs::sync::Transaction::Direction>(resp.direction())
          , resp.comment(), resp.valid(), resp.amount() };
@@ -1343,9 +1352,9 @@ bool QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMessage_TXDetai
       for (const auto &inAddr : resp.input_addresses()) {
          try {
             txDet.inputAddresses.push_back({ bs::Address::fromAddressString(inAddr.address())
-               , inAddr.value(), inAddr.value_string(), inAddr.wallet_name()
+               , inAddr.value(), inAddr.value_string(), inAddr.wallet_id(), inAddr.wallet_name()
                , static_cast<TXOUT_SCRIPT_TYPE>(inAddr.script_type())
-               , BinaryData::fromString(inAddr.out_hash()), inAddr.out_index() });
+               , BinaryData::fromString(inAddr.out_hash()), (uint32_t)inAddr.out_index() });
          } catch (const std::exception &e) {
             logger_->warn("[QtGuiAdapter::processTXDetails] input deser error: {}", e.what());
          }
@@ -1353,23 +1362,23 @@ bool QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMessage_TXDetai
       for (const auto &outAddr : resp.output_addresses()) {
          try {
             txDet.outputAddresses.push_back({ bs::Address::fromAddressString(outAddr.address())
-               , outAddr.value(), outAddr.value_string(), outAddr.wallet_name()
+               , outAddr.value(), outAddr.value_string(), outAddr.wallet_id(), outAddr.wallet_name()
                , static_cast<TXOUT_SCRIPT_TYPE>(outAddr.script_type())
-               , BinaryData::fromString(outAddr.out_hash()), outAddr.out_index() });
-         } catch (const std::exception &e) { // OP_RETURN data for valueStr
+               , BinaryData::fromString(outAddr.out_hash()), (uint32_t)outAddr.out_index() });
+         } catch (const std::exception &) { // OP_RETURN data for valueStr
             txDet.outputAddresses.push_back({ bs::Address{}
-               , outAddr.value(), outAddr.address(), outAddr.wallet_name()
+               , outAddr.value(), outAddr.address(), outAddr.wallet_id(), outAddr.wallet_name()
                , static_cast<TXOUT_SCRIPT_TYPE>(outAddr.script_type()), ownTxHash
-               , outAddr.out_index() });
+               , (uint32_t)outAddr.out_index() });
          }
       }
       try {
          txDet.changeAddress = { bs::Address::fromAddressString(resp.change_address().address())
             , resp.change_address().value(), resp.change_address().value_string()
-            , resp.change_address().wallet_name()
+            , resp.change_address().wallet_id(), resp.change_address().wallet_name()
             , static_cast<TXOUT_SCRIPT_TYPE>(resp.change_address().script_type())
             , BinaryData::fromString(resp.change_address().out_hash())
-            , resp.change_address().out_index() };
+            , (uint32_t)resp.change_address().out_index() };
       }
       catch (const std::exception &) {}
       txDetails.emplace_back(std::move(txDet));
@@ -1382,16 +1391,18 @@ bool QtGuiAdapter::processTXDetails(uint64_t msgId, const WalletsMessage_TXDetai
    const auto& itZC = newZCs_.find(msgId);
    if (itZC != newZCs_.end()) {
       newZCs_.erase(itZC);
-      return QMetaObject::invokeMethod(mainWindow_, [this, txDetails] {
+      const bool rc = QMetaObject::invokeMethod(mainWindow_, [this, txDetails] {
          mainWindow_->onNewZCs(txDetails);
       });
+      return rc ? ProcessingResult::Success : ProcessingResult::Retry;
    }
-   return QMetaObject::invokeMethod(mainWindow_, [this, txDetails] {
+   const bool rc = QMetaObject::invokeMethod(mainWindow_, [this, txDetails] {
       mainWindow_->onTXDetails(txDetails);
    });
+   return rc ? ProcessingResult::Success : ProcessingResult::Retry;
 }
 
-bool QtGuiAdapter::processLedgerEntries(const LedgerEntries &response)
+ProcessingResult QtGuiAdapter::processLedgerEntries(const LedgerEntries &response)
 {
    std::vector<bs::TXEntry> entries;
    for (const auto &entry : response.entries()) {
@@ -1415,15 +1426,16 @@ bool QtGuiAdapter::processLedgerEntries(const LedgerEntries &response)
       }
       entries.push_back(std::move(txEntry));
    }
-   return QMetaObject::invokeMethod(mainWindow_, [this, entries, filter=response.filter()
+   const bool rc = QMetaObject::invokeMethod(mainWindow_, [this, entries, filter=response.filter()
       , totPages=response.total_pages(), curPage=response.cur_page()
       , curBlock=response.cur_block()] {
          mainWindow_->onLedgerEntries(filter, totPages, curPage, curBlock, entries);
    });
+   return rc ? ProcessingResult::Success : ProcessingResult::Retry;
 }
 
 
-bool QtGuiAdapter::processAddressHist(const ArmoryMessage_AddressHistory& response)
+ProcessingResult QtGuiAdapter::processAddressHist(const ArmoryMessage_AddressHistory& response)
 {
    bs::Address addr;
    try {
@@ -1431,7 +1443,7 @@ bool QtGuiAdapter::processAddressHist(const ArmoryMessage_AddressHistory& respon
    }
    catch (const std::exception& e) {
       logger_->error("[{}] invalid address: {}", __func__, e.what());
-      return true;
+      return ProcessingResult::Error;
    }
    std::vector<bs::TXEntry> entries;
    for (const auto& entry : response.entries()) {
@@ -1455,35 +1467,38 @@ bool QtGuiAdapter::processAddressHist(const ArmoryMessage_AddressHistory& respon
       }
       entries.push_back(std::move(txEntry));
    }
-   return QMetaObject::invokeMethod(mainWindow_, [this, entries, addr, curBlock = response.cur_block()] {
+   const bool rc = QMetaObject::invokeMethod(mainWindow_, [this, entries, addr, curBlock = response.cur_block()] {
          mainWindow_->onAddressHistory(addr, curBlock, entries);
       });
+   return rc ? ProcessingResult::Success : ProcessingResult::Retry;
 }
 
-bool QtGuiAdapter::processFeeLevels(const ArmoryMessage_FeeLevelsResponse& response)
+ProcessingResult QtGuiAdapter::processFeeLevels(const ArmoryMessage_FeeLevelsResponse& response)
 {
    std::map<unsigned int, float> feeLevels;
    for (const auto& pair : response.fee_levels()) {
       feeLevels[pair.level()] = pair.fee();
    }
-   return QMetaObject::invokeMethod(mainWindow_, [this, feeLevels]{
+   const bool rc = QMetaObject::invokeMethod(mainWindow_, [this, feeLevels]{
       mainWindow_->onFeeLevels(feeLevels);
    });
+   return rc ? ProcessingResult::Success : ProcessingResult::Retry;
 }
 
-bool QtGuiAdapter::processWalletsList(const WalletsMessage_WalletsListResponse& response)
+ProcessingResult QtGuiAdapter::processWalletsList(const WalletsMessage_WalletsListResponse& response)
 {
    std::vector<bs::sync::HDWalletData> wallets;
    for (const auto& wallet : response.wallets()) {
       wallets.push_back(bs::sync::HDWalletData::fromCommonMessage(wallet));
    }
 
-   return QMetaObject::invokeMethod(mainWindow_, [this, wallets, id = response.id()]{
+   const bool rc = QMetaObject::invokeMethod(mainWindow_, [this, wallets, id = response.id()]{
       mainWindow_->onWalletsList(id, wallets);
    });
+   return rc ? ProcessingResult::Success : ProcessingResult::Retry;
 }
 
-bool QtGuiAdapter::processUTXOs(const WalletsMessage_UtxoListResponse& response)
+ProcessingResult QtGuiAdapter::processUTXOs(const WalletsMessage_UtxoListResponse& response)
 {
    std::vector<UTXO> utxos;
    for (const auto& serUtxo : response.utxos()) {
@@ -1491,56 +1506,59 @@ bool QtGuiAdapter::processUTXOs(const WalletsMessage_UtxoListResponse& response)
       utxo.unserialize(BinaryData::fromString(serUtxo));
       utxos.push_back(std::move(utxo));
    }
-   return QMetaObject::invokeMethod(mainWindow_, [this, utxos, response]{
+   const bool rc = QMetaObject::invokeMethod(mainWindow_, [this, utxos, response]{
       mainWindow_->onUTXOs(response.id(), response.wallet_id(), utxos);
    });
+   return rc ? ProcessingResult::Success : ProcessingResult::Retry;
 }
 
-bool QtGuiAdapter::processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse& response)
+ProcessingResult QtGuiAdapter::processSignTX(const BlockSettle::Common::SignerMessage_SignTxResponse& response)
 {
-   return QMetaObject::invokeMethod(mainWindow_, [this, response] {
+   const bool rc = QMetaObject::invokeMethod(mainWindow_, [this, response] {
       mainWindow_->onSignedTX(response.id(), BinaryData::fromString(response.signed_tx())
          , static_cast<bs::error::ErrorCode>(response.error_code()));
    });
+   return rc ? ProcessingResult::Success : ProcessingResult::Retry;
 }
 
-bool QtGuiAdapter::processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived& zcs)
+ProcessingResult QtGuiAdapter::processZC(const BlockSettle::Common::ArmoryMessage_ZCReceived& zcs)
 {
    WalletsMessage msg;
    auto msgReq = msg.mutable_tx_details_request();
    for (const auto& zcEntry : zcs.tx_entries()) {
       auto txReq = msgReq->add_requests();
       txReq->set_tx_hash(zcEntry.tx_hash());
-      if (zcEntry.wallet_ids_size() > 0) {
-         txReq->set_wallet_id(zcEntry.wallet_ids(0));
+      for (const auto& walletId : zcEntry.wallet_ids()) {
+         txReq->add_wallet_ids(walletId);
       }
       txReq->set_value(zcEntry.value());
    }
    const auto msgId = pushRequest(user_, userWallets_, msg.SerializeAsString());
    if (!msgId) {
-      return false;
+      return ProcessingResult::Error;
    }
    newZCs_.insert(msgId);
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool QtGuiAdapter::processZCInvalidated(const ArmoryMessage_ZCInvalidated& zcInv)
+ProcessingResult QtGuiAdapter::processZCInvalidated(const ArmoryMessage_ZCInvalidated& zcInv)
 {
    std::vector<BinaryData> txHashes;
    for (const auto& hashStr : zcInv.tx_hashes()) {
       txHashes.push_back(BinaryData::fromString(hashStr));
    }
-   return QMetaObject::invokeMethod(mainWindow_, [this, txHashes] {
+   const bool rc = QMetaObject::invokeMethod(mainWindow_, [this, txHashes] {
       mainWindow_->onZCsInvalidated(txHashes);
    });
+   return rc ? ProcessingResult::Success : ProcessingResult::Retry;
 }
 
-bool QtGuiAdapter::processBsServer(const bs::message::Envelope& env)
+ProcessingResult QtGuiAdapter::processBsServer(const bs::message::Envelope& env)
 {
    BsServerMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
-      return true;
+      return ProcessingResult::Error;
    }
    switch (msg.data_case()) {
    case BsServerMessage::kStartLoginResult:
@@ -1549,18 +1567,19 @@ bool QtGuiAdapter::processBsServer(const bs::message::Envelope& env)
       return processLogin(msg.login_result());
    default: break;
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
-bool QtGuiAdapter::processStartLogin(const BsServerMessage_StartLoginResult& response)
+ProcessingResult QtGuiAdapter::processStartLogin(const BsServerMessage_StartLoginResult& response)
 {
-   return QMetaObject::invokeMethod(mainWindow_, [this, response] {
+   const bool rc = QMetaObject::invokeMethod(mainWindow_, [this, response] {
       mainWindow_->onLoginStarted(response.login(), response.success()
          , response.error_text());
    });
+   return rc ? ProcessingResult::Success : ProcessingResult::Retry;
 }
 
-bool QtGuiAdapter::processLogin(const BsServerMessage_LoginResult& response)
+ProcessingResult QtGuiAdapter::processLogin(const BsServerMessage_LoginResult& response)
 {
 #if 0
    result.login = response.login();
@@ -1583,16 +1602,16 @@ bool QtGuiAdapter::processLogin(const BsServerMessage_LoginResult& response)
       mainWindow_->onLoggedIn(result);
    });
 #else
-   return true;
+   return ProcessingResult::Ignored;
 #endif 0
 }
 
-bool QtGuiAdapter::processMatching(const bs::message::Envelope& env)
+ProcessingResult QtGuiAdapter::processMatching(const bs::message::Envelope& env)
 {
    MatchingMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
-      return true;
+      return ProcessingResult::Error;
    }
    switch (msg.data_case()) {
    case MatchingMessage::kLoggedIn:
@@ -1603,22 +1622,23 @@ bool QtGuiAdapter::processMatching(const bs::message::Envelope& env)
       });
 #endif
    case MatchingMessage::kLoggedOut:
-      return QMetaObject::invokeMethod(mainWindow_, [this] {
+      QMetaObject::invokeMethod(mainWindow_, [this] {
          //mainWindow_->onMatchingLogout();
       });
+      return ProcessingResult::Success;
 /*   case MatchingMessage::kQuoteNotif:
       return processQuoteNotif(msg.quote_notif());*/
    default:    break;
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
-bool QtGuiAdapter::processMktData(const bs::message::Envelope& env)
+ProcessingResult QtGuiAdapter::processMktData(const bs::message::Envelope& env)
 {
    MktDataMessage msg;
    if (!msg.ParseFromString(env.message)) {
       logger_->error("[{}] failed to parse msg #{}", __func__, env.foreignId());
-      return true;
+      return ProcessingResult::Error;
    }
    switch (msg.data_case()) {
    case MktDataMessage::kConnected:
@@ -1626,29 +1646,29 @@ bool QtGuiAdapter::processMktData(const bs::message::Envelope& env)
    case MktDataMessage::kDisconnected:
       mdInstrumentsReceived_ = false;
       //return QMetaObject::invokeMethod(mainWindow_, [this] { mainWindow_->onMDDisconnected(); });
-      return true;
+      return ProcessingResult::Success;
    case MktDataMessage::kNewSecurity:
       return processSecurity(msg.new_security().name(), msg.new_security().asset_type());
    case MktDataMessage::kAllInstrumentsReceived:
       mdInstrumentsReceived_ = true;
-      return true;   // sendPooledOrdersUpdate();
+      return ProcessingResult::Success;   // sendPooledOrdersUpdate();
    case MktDataMessage::kPriceUpdate:
       return processMdUpdate(msg.price_update());
    default: break;
    }
-   return true;
+   return ProcessingResult::Ignored;
 }
 
-bool QtGuiAdapter::processSecurity(const std::string& name, int assetType)
+ProcessingResult QtGuiAdapter::processSecurity(const std::string& name, int assetType)
 {
    const auto &at = static_cast<bs::network::Asset::Type>(assetType);
    assetTypes_[name] = at;
-   return true;
+   return ProcessingResult::Success;
 }
 
-bool QtGuiAdapter::processMdUpdate(const MktDataMessage_Prices& msg)
+ProcessingResult QtGuiAdapter::processMdUpdate(const MktDataMessage_Prices& msg)
 {
-   return QMetaObject::invokeMethod(mainWindow_, [this, msg] {
+   const bool rc = QMetaObject::invokeMethod(mainWindow_, [this, msg] {
       const bs::network::MDFields fields{
          { bs::network::MDField::Type::PriceBid, msg.bid() },
          { bs::network::MDField::Type::PriceOffer, msg.ask() },
@@ -1659,16 +1679,18 @@ bool QtGuiAdapter::processMdUpdate(const MktDataMessage_Prices& msg)
       mainWindow_->onMDUpdated(static_cast<bs::network::Asset::Type>(msg.security().asset_type())
          , QString::fromStdString(msg.security().name()), fields);
    });
+   return rc ? ProcessingResult::Success : ProcessingResult::Retry;
 }
 
-bool QtGuiAdapter::processBalance(const AssetsMessage_Balance& bal)
+ProcessingResult QtGuiAdapter::processBalance(const AssetsMessage_Balance& bal)
 {
-   return QMetaObject::invokeMethod(mainWindow_, [this, bal] {
+   const bool rc = QMetaObject::invokeMethod(mainWindow_, [this, bal] {
       mainWindow_->onBalance(bal.currency(), bal.value());
    });
+   return rc ? ProcessingResult::Success : ProcessingResult::Retry;
 }
 
-bool QtGuiAdapter::processReservedUTXOs(const WalletsMessage_ReservedUTXOs& response)
+ProcessingResult QtGuiAdapter::processReservedUTXOs(const WalletsMessage_ReservedUTXOs& response)
 {
    std::vector<UTXO> utxos;
    for (const auto& utxoSer : response.utxos()) {
@@ -1676,9 +1698,10 @@ bool QtGuiAdapter::processReservedUTXOs(const WalletsMessage_ReservedUTXOs& resp
       utxo.unserialize(BinaryData::fromString(utxoSer));
       utxos.push_back(std::move(utxo));
    }
-   return QMetaObject::invokeMethod(mainWindow_, [this, response, utxos] {
+   const bool rc = QMetaObject::invokeMethod(mainWindow_, [this, response, utxos] {
       mainWindow_->onReservedUTXOs(response.id(), response.sub_id(), utxos);
    });
+   return rc ? ProcessingResult::Success : ProcessingResult::Retry;
 }
 
 #include "QtGuiAdapter.moc"

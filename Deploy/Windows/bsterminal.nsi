@@ -75,7 +75,7 @@ VIAddVersionKey CompanyWebsite "${URL}"
 VIAddVersionKey Comments ""
 VIAddVersionKey FileVersion "${VERSION}"
 VIAddVersionKey FileDescription "BlockSettle Terminal Installer"
-VIAddVersionKey LegalCopyright "Copyright (C) 2016-2019 BlockSettle AB"
+VIAddVersionKey LegalCopyright "Copyright (C) 2016-2023 BlockSettle AB"
 UninstallIcon bs.ico
 ShowUninstDetails show
 
@@ -93,21 +93,15 @@ ShowUninstDetails show
 Section "Terminal" SEC_TERM
 SectionEnd
 
-Section "Signer" SEC_SIGN
-SectionEnd
 
 #LangString DESC_SEC_TERM ${LANG_ENGLISH} "Main terminal binary"
-#LangString DESC_SEC_SIGN ${LANG_ENGLISH} "Signer process binary"
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
     !insertmacro MUI_DESCRIPTION_TEXT ${SEC_TERM} "Main terminal binary"
-    !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SIGN} "Signer process binary"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 Function ComponentsLeave
     SectionGetFlags ${SEC_TERM} $0
-    StrCmp $0 1 End
-    SectionGetFlags ${SEC_SIGN} $0
     StrCmp $0 1 End
     MessageBox MB_OK "You should select at least one component"
     Abort
@@ -119,68 +113,15 @@ Section "install"
         SetOutPath $INSTDIR
         RmDir /r $INSTDIR
         SetOverwrite on
-        File ..\..\build_terminal\RelWithDebInfo\bin\RelWithDebInfo\libzmq-v141-mt-4_3_2.dll
-        File "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Redist\MSVC\14.16.27012\x64\Microsoft.VC141.CRT\concrt140.dll"
-        File "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Redist\MSVC\14.16.27012\x64\Microsoft.VC141.CRT\msvcp140.dll"
-        File "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Redist\MSVC\14.16.27012\x64\Microsoft.VC141.CRT\msvcp140_1.dll"
-        File "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Redist\MSVC\14.16.27012\x64\Microsoft.VC141.CRT\msvcp140_2.dll"
-        File "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Redist\MSVC\14.16.27012\x64\Microsoft.VC141.CRT\vccorlib140.dll"
-        File "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Redist\MSVC\14.16.27012\x64\Microsoft.VC141.CRT\vcruntime140.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-console-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-datetime-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-debug-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-errorhandling-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-file-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-file-l1-2-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-file-l2-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-handle-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-heap-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-interlocked-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-libraryloader-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-localization-l1-2-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-memory-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-namedpipe-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-processenvironment-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-processthreads-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-processthreads-l1-1-1.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-profile-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-rtlsupport-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-string-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-synch-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-synch-l1-2-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-sysinfo-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-timezone-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-core-util-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-crt-conio-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-crt-convert-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-crt-environment-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-crt-filesystem-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-crt-heap-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-crt-locale-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-crt-math-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-crt-multibyte-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-crt-private-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-crt-process-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-crt-runtime-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-crt-stdio-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-crt-string-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-crt-time-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\api-ms-win-crt-utility-l1-1-0.dll"
-        File "C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64\ucrtbase.dll"
 #	${If} ${SectionIsSelected} ${SEC_TERM}
             File ..\..\build_terminal\RelWithDebInfo\bin\RelWithDebInfo\blocksettle.exe
-#	${Endif}
-#	${If} ${SectionIsSelected} ${SEC_SIGN}
-            File ..\..\build_terminal\RelWithDebInfo\bin\RelWithDebInfo\blocksettle_signer.exe
 #	${Endif}
         SetOutPath $INSTDIR\scripts
 #        File ..\..\Scripts\DealerAutoQuote.qml
 #        File ..\..\Scripts\RFQBot.qml
         SetOutPath $INSTDIR
         CreateShortcut "$DESKTOP\BlockSettle Terminal.lnk" $INSTDIR\blocksettle.exe
-        CreateShortcut "$DESKTOP\BlockSettle Signer.lnk" $INSTDIR\blocksettle_signer.exe
         !insertmacro CREATE_SMGROUP_SHORTCUT "BlockSettle Terminal" "$INSTDIR\blocksettle.exe" ""
-        !insertmacro CREATE_SMGROUP_SHORTCUT "BlockSettle Signer" "$INSTDIR\blocksettle_signer.exe" ""
 
         WriteUninstaller $INSTDIR\uninstall.exe
         !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
@@ -208,14 +149,11 @@ SectionEnd
 
 Section "Uninstall"
     Delete /REBOOTOK "$DESKTOP\BlockSettle Terminal.lnk"
-    Delete /REBOOTOK "$DESKTOP\BlockSettle Signer.lnk"
     !insertmacro DELETE_SMGROUP_SHORTCUT "BlockSettle Terminal"
-    !insertmacro DELETE_SMGROUP_SHORTCUT "BlockSettle Signer"
     Delete /REBOOTOK $INSTDIR\blocksettle.exe
-    Delete /REBOOTOK $INSTDIR\blocksettle_signer.exe
-    Delete /REBOOTOK $INSTDIR\libzmq-v141-mt-4_3_2.dll
-    Delete /REBOOTOK $INSTDIR\msvcp140.dll
-    Delete /REBOOTOK $INSTDIR\vcruntime140.dll
+    #Delete /REBOOTOK $INSTDIR\libzmq-v141-mt-4_3_2.dll
+    #Delete /REBOOTOK $INSTDIR\msvcp140.dll
+    #Delete /REBOOTOK $INSTDIR\vcruntime140.dll
     RmDir /r /REBOOTOK $INSTDIR
 
     Delete /REBOOTOK "$SMPROGRAMS\$StartMenuGroup\Uninstall.lnk"

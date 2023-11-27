@@ -595,8 +595,9 @@ void TransactionsViewModel::onLedgerEntries(const std::string &, uint32_t
    std::vector<bs::sync::TXWallet> txWallet;
    txWallet.reserve(entries.size());
    for (const auto &entry : entries) {
-      const auto &walletId = entry.walletIds.empty() ? std::string{} : *(entry.walletIds.cbegin());
-      txWallet.push_back({ entry.txHash,  walletId, entry.value });
+      std::vector<std::string> walletIds;
+      walletIds.insert(walletIds.end(), entry.walletIds.cbegin(), entry.walletIds.cend());
+      txWallet.push_back({ entry.txHash,  walletIds, entry.value });
    }
    emit needTXDetails(txWallet, true, {});
 }
@@ -625,8 +626,9 @@ void TransactionsViewModel::onZCsInvalidated(const std::vector<BinaryData>& txHa
    txWallet.reserve(invalidatedNodes_.size());
    for (const auto& invNode : invalidatedNodes_) {
       const auto& entry = invNode.second->item()->txEntry;
-      const auto& walletId = entry.walletIds.empty() ? std::string{} : *(entry.walletIds.cbegin());
-      txWallet.push_back({ entry.txHash,  walletId, entry.value });
+      std::vector<std::string> walletIds;
+      walletIds.insert(walletIds.end(), entry.walletIds.cbegin(), entry.walletIds.cend());
+      txWallet.push_back({ entry.txHash,  walletIds, entry.value });
    }
    emit needTXDetails(txWallet, false, {});
 }
@@ -637,9 +639,9 @@ void TransactionsViewModel::onTXDetails(const std::vector<bs::sync::TXWalletDeta
    for (const auto &tx : txDet) {
       TransactionPtr item;
       int row = -1;
-      const auto &itIndex = itemIndex_.find({tx.txHash, tx.walletId});
+      const auto &itIndex = itemIndex_.find({tx.txHash, tx.hdWalletId});
       if (itIndex == itemIndex_.end()) {
-         const auto& itInv = invalidatedNodes_.find({ tx.txHash, tx.walletId });
+         const auto& itInv = invalidatedNodes_.find({ tx.txHash, tx.hdWalletId });
          if (itInv == invalidatedNodes_.end()) {
             continue;
          }

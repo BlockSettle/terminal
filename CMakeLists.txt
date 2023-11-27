@@ -30,6 +30,10 @@ add_definitions(-DSTATIC_BUILD)
 add_definitions(-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
 add_definitions(-DBUILD_WALLETS)
 
+IF(UNIX AND NOT APPLE)
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath='$ORIGIN'")
+ENDIF()
+
 IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
    IF(BSTERMINAL_SHARED_LIBS)
       SET(THIRD_PARTY_BUILD_MODE "debug-shared")
@@ -45,9 +49,13 @@ ELSE()
 ENDIF()
 
 add_definitions(-DNOMINMAX)
+add_definitions(-DCURL_STATICLIB)
 
 # Force Armory to ignore Crypto++ and use libbtc instead.
 add_definitions(-DLIBBTC_ONLY)
+
+add_definitions(-DQT_IS_AVAILABLE)
+add_definitions(-DQT_UI_IS_AVAILABLE)
 
 IF (APPLE)
    add_definitions(-DMDB_USE_POSIX_SEM=1)
@@ -60,7 +68,7 @@ ENDIF (PRODUCTION_BUILD)
 # Force 64-bit builds and min target for macOS. If the min target changes,
 # update generate.py too.
 if(APPLE)
-	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12 CACHE STRING "" FORCE)
+	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "" FORCE)
 	set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "macOS architecture to build; 64-bit is expected" FORCE)
 endif(APPLE)
 
@@ -170,6 +178,7 @@ FIND_PACKAGE(Qt5QuickControls2 REQUIRED)
 FIND_PACKAGE(Qt5Charts REQUIRED)
 FIND_PACKAGE(Qt5Sql REQUIRED)
 FIND_PACKAGE(Qt5Svg REQUIRED)
+FIND_PACKAGE(Qt5SerialPort REQUIRED)
 
 INCLUDE_DIRECTORIES(${Qt5Core_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${Qt5Gui_INCLUDE_DIRS})
@@ -184,6 +193,7 @@ INCLUDE_DIRECTORIES(${Qt5Sql_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${Qt5Svg_INCLUDE_DIRS})
 
 IF ( UNIX AND NOT APPLE )
+   add_compile_options(-fPIC)
    FIND_PACKAGE(Qt5DBus REQUIRED)
    ADD_DEFINITIONS( "-DBS_USE_DBUS" )
    INCLUDE_DIRECTORIES(${Qt5DBus_INCLUDE_DIRS})
@@ -254,8 +264,8 @@ if (UNIX)
     ENDIF()
 endif (UNIX)
 
-
-# setup libwebsockets
+# use only existing lws temporarily, don't try to build it (build fails on Windows)
+ADD_DEFINITIONS(-DBUILD_LWS=1)
 SET(WS_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/libwebsockets)
 SET(WS_LIB_DIR ${WS_PACKAGE_ROOT}/lib)
 SET(WS_INCLUDE_DIR ${WS_PACKAGE_ROOT}/include)
@@ -267,14 +277,14 @@ IF (WIN32)
       SET(WS_LIB_NAME websockets_static)
    ENDIF()
 ELSE(WIN32)
-   IF(BSTERMINAL_SHARED_LIBS)
+#   IF(BSTERMINAL_SHARED_LIBS)
       SET(WS_LIB_NAME libwebsockets.so)
-   ELSE(BSTERMINAL_SHARED_LIBS)
-      SET(WS_LIB_NAME libwebsockets.a)
-   ENDIF()
+#   ELSE(BSTERMINAL_SHARED_LIBS)
+#      SET(WS_LIB_NAME libwebsockets.a)
+#   ENDIF()
 ENDIF(WIN32)
 
-FIND_LIBRARY(WS_LIB NAMES ${WS_LIB_NAME} PATHS ${WS_LIB_DIR} NO_DEFAULT_PATH )
+FIND_LIBRARY(WS_LIB NAMES ${WS_LIB_NAME} PATHS ${WS_LIB_DIR})
 IF(NOT WS_LIB)
    MESSAGE(FATAL_ERROR "Could not find libwebsockets in ${WS_LIB_DIR}")
 ENDIF()
@@ -336,21 +346,45 @@ IF( NOT LIBCP_LIB)
 ENDIF()
 INCLUDE_DIRECTORIES( ${LIBCP_INCLUDE_DIR} )
 
-SET(MPIR_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/mpir)
-SET(MPIR_LIB_DIR ${MPIR_PACKAGE_ROOT}/lib)
 IF (WIN32)
+   SET(MPIR_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/mpir)
+   SET(MPIR_LIB_DIR ${MPIR_PACKAGE_ROOT}/lib)
    SET(MPIR_LIB_NAME mpir)
-ELSE(WIN32)
-   IF(BSTERMINAL_SHARED_LIBS)
-      SET(MPIR_LIB_NAME libgmp.so)
-   ELSE()
-      SET(MPIR_LIB_NAME libgmp.a)
+   FIND_LIBRARY(MPIR_LIB NAMES ${MPIR_LIB_NAME} PATHS ${MPIR_LIB_DIR})
+   IF( NOT MPIR_LIB)
+      MESSAGE( FATAL_ERROR "Could not find MPIR lib in ${MPIR_LIB_DIR}")
    ENDIF()
+#ELSE(WIN32)
+#   SET(MPIR_LIB_DIR ${MPIR_PACKAGE_ROOT}/lib)
+#   IF(BSTERMINAL_SHARED_LIBS)
+#      SET(MPIR_LIB_NAME libgmp.so)
+#   ELSE()
+#      SET(MPIR_LIB_NAME libgmp.a)
+#   ENDIF()
 ENDIF(WIN32)
-FIND_LIBRARY( MPIR_LIB NAMES ${MPIR_LIB_NAME} PATHS ${MPIR_LIB_DIR} NO_DEFAULT_PATH )
-IF( NOT MPIR_LIB)
-   MESSAGE( FATAL_ERROR "Could not find MPIR lib in ${MPIR_LIB_DIR}")
+
+
+SET(CURL_ROOT        ${THIRD_PARTY_COMMON_DIR}/curl)
+SET(CURL_INCLUDE_DIR ${CURL_ROOT}/include)
+
+set(CURL_LIBRARY "-lcurl")
+find_package(CURL REQUIRED)
+
+IF (WIN32)
+   IF (CMAKE_BUILD_TYPE STREQUAL "Debug")
+      SET(CURL_LIB_NAME libcurl-d.lib)
+   ELSE ()
+      SET(CURL_LIB_NAME libcurl.lib)
+   ENDIF ()
+ELSE(WIN32)
+   SET(CURL_LIB_NAME libcurl-d.a libcurl.a curl-d curl)
+ENDIF(WIN32)
+
+FIND_LIBRARY( CURL_LIB NAMES ${CURL_LIB_NAME} PATHS ${CURL_ROOT}/lib NO_DEFAULT_PATH )
+IF( NOT CURL_LIB)
+   MESSAGE( FATAL_ERROR "Could not find curl lib ${CURL_LIB_NAME} in ${CURL_ROOT}/lib")
 ENDIF()
+
 
 IF(BUILD_TESTS)
    SET(GTEST_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/Gtest)
@@ -375,14 +409,7 @@ ENDIF(BUILD_TESTS)
 SET( CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${THIRD_PARTY_COMMON_DIR}/Protobuf )
 FIND_PACKAGE( Protobuf REQUIRED )
 INCLUDE_DIRECTORIES( ${PROTOBUF_INCLUDE_DIRS} )
-
-IF ( UNIX )
-   GET_FILENAME_COMPONENT(ProtoLibDir ${Protobuf_LIBRARY} DIRECTORY)
-   FIND_LIBRARY( PROTO_LIB NAMES "libprotobuf.a" PATHS ${ProtoLibDir} NO_DEFAULT_PATH )
-ELSE ( UNIX )
-   SET( PROTO_LIB ${PROTOBUF_LIBRARIES} )
-ENDIF ( UNIX )
-
+SET( PROTO_LIB ${PROTOBUF_LIBRARIES} )
 SET( PROTO_ROOT_DIR ${TERMINAL_GUI_ROOT} )
 SET( PATH_TO_GENERATED ${TERMINAL_GUI_ROOT}/generated_proto )
 FILE( MAKE_DIRECTORY ${PATH_TO_GENERATED} )
@@ -477,9 +504,12 @@ IF(WIN32)
 
          LIST(APPEND QT_QUICK_LIBS
             ${QT5_QML_ROOT}/QtQml/Models.2/modelsplugind.lib
+            ${QT5_QML_ROOT}/QtQml/qmlplugind.lib
             ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugind.lib
             ${QT5_QML_ROOT}/QtQuick/Controls/qtquickcontrolsplugind.lib
             ${QT5_QML_ROOT}/QtQuick/Controls.2/qtquickcontrols2plugind.lib
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/dialogplugind.lib
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/dialogsprivateplugind.lib
             ${QT5_QML_ROOT}/QtQuick/Layouts/qquicklayoutsplugind.lib
             ${QT5_QML_ROOT}/QtQuick/Templates.2/qtquicktemplates2plugind.lib
             ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugind.lib
@@ -527,9 +557,12 @@ IF(WIN32)
 
          LIST(APPEND QT_QUICK_LIBS
             ${QT5_QML_ROOT}/QtQml/Models.2/modelsplugin.lib
+            ${QT5_QML_ROOT}/QtQml/qmlplugin.lib
             ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugin.lib
             ${QT5_QML_ROOT}/QtQuick/Controls/qtquickcontrolsplugin.lib
             ${QT5_QML_ROOT}/QtQuick/Controls.2/qtquickcontrols2plugin.lib
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/dialogplugin.lib
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/dialogsprivateplugin.lib
             ${QT5_QML_ROOT}/QtQuick/Layouts/qquicklayoutsplugin.lib
             ${QT5_QML_ROOT}/QtQuick/Templates.2/qtquicktemplates2plugin.lib
             ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugin.lib
@@ -608,9 +641,12 @@ ELSE(WIN32)
          )
          SET(QT_QUICK_LIBS
             ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin_debug.a
+            ${QT5_QML_ROOT}/QtQml/libqmlplugin_debug.a
             ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin_debug.a
             ${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin_debug.a
             ${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin_debug.a
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin_debug.a
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/libdialogsprivateplugin_debug.a
             ${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin_debug.a
             ${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin_debug.a
             ${QT5_QML_ROOT}/QtQuick/Window.2/libwindowplugin_debug.a
@@ -645,9 +681,12 @@ ELSE(WIN32)
          )
          SET(QT_QUICK_LIBS
             ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin.a
+            ${QT5_QML_ROOT}/QtQml/libqmlplugin.a
             ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin.a
             ${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin.a
             ${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin.a
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin.a
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/libdialogsprivateplugin.a
             ${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin.a
             ${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin.a
             ${QT5_QML_ROOT}/QtQuick/Window.2/libwindowplugin.a
@@ -683,8 +722,8 @@ ELSE(WIN32)
             libQt5ThemeSupport.a
             libQt5EventDispatcherSupport.a
             libQt5FontDatabaseSupport.a
-            libQt5LinuxAccessibilitySupport.a
-            libQt5AccessibilitySupport.a
+#            libQt5LinuxAccessibilitySupport.a
+#            libQt5AccessibilitySupport.a
             libQt5EdidSupport.a )
 
          LIST(APPEND QT_LINUX_LIBS
@@ -726,7 +765,6 @@ ELSE(WIN32)
             ${ZLIB_LIBRARIES}
             png
             m
-            double-conversion.a
             dl
             cups
             udev
@@ -736,9 +774,12 @@ ELSE(WIN32)
 
          SET(QT_QUICK_LIBS
             ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin.a
+            ${QT5_QML_ROOT}/QtQml/libqmlplugin.a
             ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin.a
             ${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin.a
             ${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin.a
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin.a
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/libdialogsprivateplugin.a
             ${QT5_QML_ROOT}/QtQuick/PrivateWidgets/libwidgetsplugin.a
             ${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin.a
             ${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin.a
@@ -790,11 +831,6 @@ IF(BSTERMINAL_SHARED_LIBS)
       add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
          COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${QRENCODE_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${QRENCODE_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
 
-      # websockets
-      STRING(REPLACE ".lib" ".dll" WS_LIB_DLL ${WS_LIB})
-      add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
-         COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${WS_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${WS_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
-
       string(REGEX REPLACE "([0-9])\.([0-9])\.([0-9]\.*)" "\\1;\\2" VERSION_MATCHES ${OPENSSL_VERSION})
       list(GET VERSION_MATCHES 0 version_major)
       list(GET VERSION_MATCHES 1 version_minor)
@@ -835,10 +871,9 @@ ADD_SUBDIRECTORY(common/WalletsLib)
 ADD_SUBDIRECTORY(common/cppForSwig)
 ADD_SUBDIRECTORY(common/CommonLib)
 ADD_SUBDIRECTORY(CommonUI)
-#ADD_SUBDIRECTORY(BlockSettleHW)
+ADD_SUBDIRECTORY(BlockSettleHW)
 
 ADD_SUBDIRECTORY(BlockSettleApp)
-#ADD_SUBDIRECTORY(BlockSettleSigner)
 
 IF(BUILD_TESTS)
    ADD_SUBDIRECTORY(UnitTests)

@@ -1,7 +1,7 @@
 /*
 
 ***********************************************************************************
-* Copyright (C) 2020 - 2021, BlockSettle AB
+* Copyright (C) 2020 - 2023, BlockSettle AB
 * Distributed under the GNU Affero General Public License (AGPL v3)
 * See LICENSE or http://www.gnu.org/licenses/agpl.html
 *
@@ -9,331 +9,255 @@
 
 */
 #include "trezorClient.h"
-#include "ConnectionManager.h"
+#include <curl/curl.h>
+#include "hwdevicemanager.h"
 #include "trezorDevice.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "Wallets/SyncHDWallet.h"
 #include "ScopeGuard.h"
 
-#include <QNetworkRequest>
-#include <QPointer>
-#include <QJsonObject>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QVariant>
-#include <QTimer>
+using namespace bs::hww;
 
-TrezorClient::TrezorClient(const std::shared_ptr<ConnectionManager>& connectionManager,
-   std::shared_ptr<bs::sync::WalletsManager> walletManager, bool testNet, QObject* parent /*= nullptr*/)
-   : QObject(parent)
-   , connectionManager_(connectionManager)
-   , walletManager_(walletManager)
-   , testNet_(testNet)
-{
-}
+TrezorClient::TrezorClient(const std::shared_ptr<spdlog::logger>& logger
+   , bool testNet, DeviceCallbacks* cb)
+   : bs::WorkerPool(1, 1), logger_(logger), cb_(cb), testNet_(testNet)
+{}
 
-QByteArray TrezorClient::getSessionId()
+void TrezorClient::initConnection()
 {
-   return deviceData_.sessionId_;
-}
-
-void TrezorClient::initConnection(bool force, AsyncCallBack&& cb)
-{
-   auto initCallBack = [this, cbCopy = std::move(cb), force](QNetworkReply* reply) mutable {
-      ScopedGuard guard([cb = std::move(cbCopy)]{
-         if (cb) {
-            cb();
-         }
-      });
-      if (!reply || reply->error() != QNetworkReply::NoError) {
-         connectionManager_->GetLogger()->error(
-            "[TrezorClient] initConnection - Network error : " + reply->errorString().toUtf8());
+   const auto& cb = [this](const std::shared_ptr<bs::OutData>& data)
+   {
+      const auto& reply = std::static_pointer_cast<TrezorPostOut>(data);
+      if (!reply || !reply->error.empty() || reply->response.empty()) {
+         logger_->error("[TrezorClient::initConnection] network error: {}"
+            , (reply && !reply->error.empty()) ? reply->error : "<empty>");
+         return;
+      }
+      nlohmann::json response;
+      try {
+         response = nlohmann::json::parse(reply->response);
+      }
+      catch (const nlohmann::json::exception& e) {
+         logger_->error("[TrezorClient::initConnection] failed to parse '{}': {}"
+            , reply->response, e.what());
          return;
       }
 
-      QByteArray loadData = reply ? reply->readAll().simplified() : "";
+      logger_->info("[TrezorClient::initConnection] connection inited, bridge version: {}"
+         , response["version"].get<std::string>());
 
-      QJsonParseError jsonError;
-      QJsonDocument loadDoc = QJsonDocument::fromJson(loadData, &jsonError);
-      if (jsonError.error != QJsonParseError::NoError) {
-         connectionManager_->GetLogger()->error(
-            "[TrezorClient] initConnection - Invalid json structure . Parsing error : " + jsonError.errorString().toUtf8());
-         return;
-      }
-
-      const auto bridgeInfo = loadDoc.object();
-      connectionManager_->GetLogger()->info(
-         "[TrezorClient] initConnection - Connection initialized. Bridge version : "
-            + bridgeInfo.value(QString::fromUtf8("version")).toString().toUtf8());
-
-      state_ = State::Init;
-      emit initialized();
-
-      enumDevices(force, std::move(guard.releaseCb()));
-      reply->deleteLater();
+      state_ = trezor::State::Init;
+      //emit initialized();
    };
-
-   connectionManager_->GetLogger()->info("[TrezorClient] Initialize connection");
-   postToTrezor("/", std::move(initCallBack), true);
+   logger_->info("[TrezorClient::initConnection]");
+   auto inData = std::make_shared<TrezorPostIn>();
+   inData->path = "/";
+   processQueued(inData, cb);
 }
 
-void TrezorClient::initConnection(QString&& deviceId, bool force, AsyncCallBackCall&& cb /*= nullptr*/)
+void bs::hww::TrezorClient::releaseConnection()
 {
-   AsyncCallBack cbWrapper = [copyDeviceId = std::move(deviceId), originCb = std::move(cb)]() {
-      originCb({ copyDeviceId });
-   };
-
-   initConnection(force, std::move(cbWrapper));
-}
-
-void TrezorClient::releaseConnection(AsyncCallBack&& cb)
-{
-   if (deviceData_.sessionId_.isEmpty()) {
-      cleanDeviceData();
-      if (cb) {
-         cb();
-      }
-      return;
-   }
-
-   auto releaseCallback = [this, cbCopy = std::move(cb)](QNetworkReply* reply) mutable {
-      ScopedGuard ensureCb([this, cb = std::move(cbCopy)]{
-         cleanDeviceData();
-         if (cb) {
-            cb();
-         }
-      });
-
-      if (!reply || reply->error() != QNetworkReply::NoError) {
-         connectionManager_->GetLogger()->error(
-            "[TrezorClient] releaseConnection - Network error : " + reply->errorString().toUtf8());
-         return;
-      }
-
-      connectionManager_->GetLogger()->info(
-         "[TrezorClient] releaseConnection - Connection successfully released");
-
-      state_ = State::Released;
-      emit deviceReleased();
-
-      reply->deleteLater();
-   };
-
-   connectionManager_->GetLogger()->info("[TrezorClient] Release connection. Connection id: "
-      + deviceData_.sessionId_);
-
-   QByteArray releaseUrl = "/release/" + deviceData_.sessionId_;
-   postToTrezor(std::move(releaseUrl), std::move(releaseCallback));
-
-}
-
-void TrezorClient::postToTrezor(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb, bool timeout /* = false */)
-{
-   post(std::move(urlMethod), std::move(cb), QByteArray(), timeout);
-}
-
-void TrezorClient::postToTrezorInput(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb, QByteArray&& input)
-{
-   post(std::move(urlMethod), std::move(cb), std::move(input));
-}
-
-void TrezorClient::call(QByteArray&& input, AsyncCallBackCall&& cb)
-{
-   auto callCallback = [this, cbCopy = std::move(cb)](QNetworkReply* reply) mutable {
-
-      if (!reply || reply->error() != QNetworkReply::NoError) {
-         connectionManager_->GetLogger()->error(
-            "[TrezorClient] call - Network error : " + reply->errorString().toUtf8());
-         if (cbCopy) {
-            cbCopy({});
-         }
-         return;
-      }
-
-      QByteArray loadData = reply->readAll().simplified();
-      cbCopy(std::move(loadData));
-   };
-
-   connectionManager_->GetLogger()->info("[TrezorClient] Call to trezor.");
-
-   QByteArray callUrl = "/call/" + deviceData_.sessionId_;
-   postToTrezorInput(std::move(callUrl), std::move(callCallback), std::move(input));
-}
-
-QVector<DeviceKey> TrezorClient::deviceKeys() const
-{
-   if (!trezorDevice_) {
-      return {};
-   }
-   auto key = trezorDevice_->key();
-   return { key };
-}
-
-QPointer<TrezorDevice> TrezorClient::getTrezorDevice(const QString& deviceId)
-{
-   // #TREZOR_INTEGRATION: need lookup for several devices
-   if (!trezorDevice_) {
-      return nullptr;
-   }
-
-   assert(trezorDevice_->key().deviceId_ == deviceId);
-   return trezorDevice_;
-}
-
-void TrezorClient::enumDevices(bool forceAcquire, AsyncCallBack&& cb)
-{
-   auto enumCallback = [this, cbCopy = std::move(cb), forceAcquire](QNetworkReply* reply) mutable {
-      ScopedGuard ensureCb([cb = std::move(cbCopy)]{
-         if (cb) {
-            cb();
-         }
-      });
-
-      if (!reply || reply->error() != QNetworkReply::NoError) {
-         connectionManager_->GetLogger()->error(
-            "[TrezorClient] enumDevices - Network error : " + reply->errorString().toUtf8());
-         return;
-      }
-
-      QByteArray loadData = reply ? reply->readAll().simplified() : "";
-
-      QJsonParseError jsonError;
-      QJsonDocument loadDoc = QJsonDocument::fromJson(loadData, &jsonError);
-      if (jsonError.error != QJsonParseError::NoError) {
-         connectionManager_->GetLogger()->error(
-            "[TrezorClient] enumDevices - Invalid json structure . Parsing error : " + jsonError.errorString().toUtf8());
-         return;
-      }
-
-      QJsonArray devices = loadDoc.array();
-      const int deviceCount = devices.count();
-      if (deviceCount == 0) {
-         connectionManager_->GetLogger()->info(
-            "[TrezorClient] enumDevices - No trezor device available");
-         return;
-      }
-
-      QVector<DeviceData> trezorDevices;
-      for (const QJsonValueRef &deviceRef : devices) {
-         const QJsonObject deviceObj = deviceRef.toObject();
-         trezorDevices.push_back({
-            deviceObj[QLatin1String("path")].toString().toUtf8(),
-            deviceObj[QLatin1String("vendor")].toString().toUtf8(),
-            deviceObj[QLatin1String("product")].toString().toUtf8(),
-            deviceObj[QLatin1String("session")].toString().toUtf8(),
-            deviceObj[QLatin1String("debug")].toString().toUtf8(),
-            deviceObj[QLatin1String("debugSession")].toString().toUtf8() });
-      }
-
-      // If there will be a few trezor devices connected, let's choose first one for now
-      // later we could expand this functionality to many of them
-      if (!forceAcquire && trezorDevice_ && trezorDevices.first().sessionId_ == deviceData_.sessionId_) {
-         // this is our previous session so we could go straight away on it
-         return;
-      }
-
-      deviceData_ = trezorDevices.first();
-      connectionManager_->GetLogger()->info(
-         "[TrezorClient] enumDevices - Enumerate request succeeded. Total device available : "
-         + QString::number(deviceCount).toUtf8() + ". Trying to acquire first one...");
-
-      state_ = State::Enumerated;
-      emit devicesScanned();
-
-      acquireDevice(std::move(ensureCb.releaseCb()));
-      reply->deleteLater();
-   };
-
-   connectionManager_->GetLogger()->info("[TrezorClient] Request to enumerate devices.");
-   postToTrezor("/enumerate", std::move(enumCallback));
-}
-
-void TrezorClient::acquireDevice(AsyncCallBack&& cb)
-{
-   QByteArray previousSessionId = deviceData_.sessionId_.isEmpty() ?
-      "null" : deviceData_.sessionId_;
-
-   auto acquireCallback = [this, previousSessionId, cbCopy = std::move(cb)](QNetworkReply* reply) mutable {
-      ScopedGuard ensureCb([cb = std::move(cbCopy)]{
-         if (cb) {
-            cb();
-         }
-      });
-
-      if (!reply || reply->error() != QNetworkReply::NoError) {
-         connectionManager_->GetLogger()->error(
-            "[TrezorClient] acquireDevice - Network error : " + reply->errorString().toUtf8());
-         return;
-      }
-
-      QByteArray loadData = reply ? reply->readAll().simplified() : "";
-      QJsonObject acuiredDevice = QJsonDocument::fromJson(loadData).object();
-
-      deviceData_.sessionId_ = acuiredDevice[QLatin1String("session")].toString().toUtf8();
-
-      if (deviceData_.sessionId_.isEmpty() || deviceData_.sessionId_ == previousSessionId) {
-         connectionManager_->GetLogger()->error(
-            "[TrezorClient] acquireDevice - Cannot acquire device");
-         return;
-      }
-
-      connectionManager_->GetLogger()->info("[TrezorClient] Connection has successfully acquired. Old connection id: "
-         + previousSessionId + ", new connection id : " + deviceData_.sessionId_);
-
-      state_ = State::Acquired;
-      emit deviceReady();
-
-      trezorDevice_ = new TrezorDevice(connectionManager_, walletManager_, testNet_, { this }, this) ;
-      trezorDevice_->init(std::move(ensureCb.releaseCb()));
-
-      reply->deleteLater();
-   };
-
-   connectionManager_->GetLogger()->info("[TrezorClient] Acquire new connection. Old connection id: "
-      + previousSessionId);
-
-   QByteArray acquireUrl = "/acquire/" + deviceData_.path_ + "/" + previousSessionId;
-   postToTrezor(std::move(acquireUrl), std::move(acquireCallback));
-}
-
-void TrezorClient::post(QByteArray&& urlMethod, std::function<void(QNetworkReply*)> &&cb, QByteArray&& input, bool timeout /* = false*/)
-{
-   QNetworkRequest request;
-   request.setRawHeader({ "Origin" }, { blocksettleOrigin });
-   request.setUrl(QUrl(QString::fromLocal8Bit(trezorEndPoint_ + urlMethod)));
-
-   if (!input.isEmpty()) {
-      request.setHeader(QNetworkRequest::ContentTypeHeader, { QByteArray("application/x-www-form-urlencoded") });
-   }
-
-   QNetworkReply *reply = QNetworkAccessManager().post(request, input);
-   auto connection = connect(reply, &QNetworkReply::finished, this
-      , [cbCopy = cb, repCopy = reply, sender = QPointer<TrezorClient>(this)]
-      {
-         if (!sender) {
-            return; // TREZOR client already destroyed
-         }
-
-         cbCopy(repCopy);
-         repCopy->deleteLater();
-      });
-
-   // Timeout
-   if (timeout) {
-      QTimer::singleShot(2000, [replyCopy = QPointer<QNetworkReply>(reply)]() {
-         if (!replyCopy) {
-            return;
-         }
-         replyCopy->abort();
-      });
+   for (const auto& device : devices_) {
+      device->releaseConnection();
    }
 }
 
-void TrezorClient::cleanDeviceData()
+std::vector<DeviceKey> TrezorClient::deviceKeys() const
 {
-   if (trezorDevice_) {
-      trezorDevice_->deleteLater();
-      trezorDevice_ = nullptr;
+   std::vector<DeviceKey> result;
+   for (const auto& dev : devices_) {
+      result.push_back(dev->key());
    }
-   deviceData_ = {};
+   logger_->debug("[TrezorClient::deviceKeys] {} key[s]", result.size());
+   return result;
+}
+
+std::shared_ptr<TrezorDevice> TrezorClient::getDevice(const std::string& deviceId)
+{
+   for (const auto& dev : devices_) {
+      if (dev->key().id == deviceId) {
+         return dev;
+      }
+   }
+   return nullptr;
+}
+
+std::shared_ptr<bs::Worker> TrezorClient::worker(const std::shared_ptr<InData>&)
+{
+   const std::vector<std::shared_ptr<Handler>> handlers{ std::make_shared<TrezorPostHandler>
+      (logger_, trezorEndPoint_) };
+   return std::make_shared<bs::WorkerImpl>(handlers);
+}
+
+void TrezorClient::listDevices()
+{
+   if (state_ == trezor::State::None) {
+      initConnection();
+   }
+   const auto& cb = [this](const std::shared_ptr<bs::OutData>& data)
+   {
+      const auto& reply = std::static_pointer_cast<TrezorPostOut>(data);
+      if (!reply || !reply->error.empty() || reply->response.empty()) {
+         if (!reply) {
+            logger_->error("[TrezorClient::listDevices] invalid reply type");
+         }
+         else {
+            logger_->error("[TrezorClient::listDevices] network error: {}"
+               , !reply->error.empty() ? reply->error : "<empty>");
+         }
+         cb_->scanningDone();
+         return;
+      }
+      nlohmann::json response;
+      try {
+         response = nlohmann::json::parse(reply->response);
+      }
+      catch (const nlohmann::json::exception& e) {
+         logger_->error("[TrezorClient::listDevices] failed to parse '{}': {}"
+            , reply->response, e.what());
+         cb_->scanningDone();
+         return;
+      }
+
+      std::vector<trezor::DeviceData> trezorDevices;
+      for (const auto& device : response) {
+         const auto& session = device["session"].is_null() ? "null"
+            : device["session"].get<std::string>();
+         const auto& debugSession = device["debugSession"].is_null() ? "null"
+            : device["debugSession"].get<std::string>();
+         trezorDevices.push_back({device["path"].get<std::string>()
+            , device["vendor"].get<int>(), device["product"].get<int>()
+            , session, device["debug"].get<bool>(), debugSession });
+      }
+      logger_->info("[TrezorClient::listDevices] enumeration finished, #devices: {}"
+         , trezorDevices.size());
+      state_ = trezor::State::Enumerated;
+
+      nbDevices_ = trezorDevices.size();
+      if (nbDevices_ == 0) {
+         cb_->scanningDone();
+      }
+      else {
+         for (const auto& dev : trezorDevices) {
+            acquireDevice(dev);
+         }
+      }
+   };
+   logger_->info("[TrezorClient::listDevices]");
+   auto inData = std::make_shared<TrezorPostIn>();
+   inData->path = "/enumerate";
+   processQueued(inData, cb);
+}
+
+void TrezorClient::acquireDevice(const trezor::DeviceData& devData, bool init)
+{
+   const auto& prevSessionId = devices_.empty() ? "null"
+      : devices_.at(devices_.size() - 1)->data().sessionId;
+   auto inData = std::make_shared<TrezorPostIn>();
+   inData->path = "/acquire/" + devData.path + "/" + prevSessionId;
+
+   auto acquireCallback = [this, prevSessionId, devData, init]
+      (const std::shared_ptr<bs::OutData>& data)
+   {
+      --nbDevices_;
+      const auto& reply = std::static_pointer_cast<TrezorPostOut>(data);
+      if (!reply || !reply->error.empty() || reply->response.empty()) {
+         logger_->error("[TrezorClient::acquireDevice] network error: {}"
+            , (reply && !reply->error.empty()) ? reply->error : "<empty>");
+         return;
+      }
+      nlohmann::json response;
+      try {
+         response = nlohmann::json::parse(reply->response);
+      }
+      catch (const nlohmann::json::exception& e) {
+         logger_->error("[TrezorClient::acquireDevice] failed to parse '{}': {}", reply->response, e.what());
+         return;
+      }
+
+      auto devDataCopy = devData;
+      devDataCopy.sessionId = response["session"].is_null() ? "null"
+         : response["session"].get<std::string>();
+
+      if (devDataCopy.sessionId.empty() || devDataCopy.sessionId == prevSessionId) {
+         logger_->error("[TrezorClient::acquireDevice] cannot acquire device");
+         return;
+      }
+
+      logger_->info("[TrezorClient::acquireDevice] Connection has successfully acquired. Old "
+         "connection id: {}, new connection id: {}", prevSessionId, devData.sessionId);
+
+      state_ = trezor::State::Acquired;
+      const auto& newDevice = std::make_shared<TrezorDevice>(logger_, devDataCopy
+         , testNet_, cb_, trezorEndPoint_);
+      newDevice->init();
+      devices_.push_back(newDevice);
+   };
+   logger_->info("[TrezorClient::acquireDevice] old session id: {}", prevSessionId);
+   processQueued(inData, acquireCallback);
+}
+
+
+namespace {
+   static const std::string kBlockSettleOrigin{ "Origin: https://blocksettle.trezor.io" };
+}
+
+static size_t writeToString(void* ptr, size_t size, size_t count, std::string* stream)
+{
+   const size_t resSize = size * count;
+   stream->append((char*)ptr, resSize);
+   return resSize;
+}
+
+TrezorPostHandler::TrezorPostHandler(const std::shared_ptr<spdlog::logger>& logger
+   , const std::string& baseURL)
+   : logger_(logger), baseURL_(baseURL)
+{
+   curl_ = curl_easy_init();
+   curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, writeToString);
+
+   curlHeaders_ = curl_slist_append(curlHeaders_, kBlockSettleOrigin.c_str());
+   //curlHeaders_ = curl_slist_append(curlHeaders_, "content-type: application/x-www-form-urlencoded;");
+   curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, curlHeaders_);
+   curl_easy_setopt(curl_, CURLOPT_POST, 1);
+}
+
+bs::hww::TrezorPostHandler::~TrezorPostHandler()
+{
+   curl_slist_free_all(curlHeaders_);
+   curl_easy_cleanup(curl_);
+}
+
+std::shared_ptr<TrezorPostOut> bs::hww::TrezorPostHandler::processData(const std::shared_ptr<TrezorPostIn>& inData)
+{
+   auto result = std::make_shared<TrezorPostOut>();
+   if (!curl_) {
+      result->error = "curl not inited";
+      return result;
+   }
+   const std::string url{ baseURL_ + inData->path };
+   logger_->debug("[{}] request: '{}' to {}", __func__, inData->input, url);
+   curl_easy_setopt(curl_, CURLOPT_URL, url.c_str());
+   if (!inData->input.empty()) {
+      curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, inData->input.data());
+   }
+   if (inData->timeout) {
+      curl_easy_setopt(curl_, CURLOPT_TIMEOUT_MS, 10000L);
+   }
+   else {
+      curl_easy_setopt(curl_, CURLOPT_TIMEOUT, 120000L);
+   }
+
+   std::string response;
+   curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &response);
+
+   const auto res = curl_easy_perform(curl_);
+   if (res != CURLE_OK) {
+      result->error = fmt::format("failed to post to {}: {}", url, res);
+      result->timedOut = (res == CURLE_OPERATION_TIMEDOUT);
+      return result;
+   }
+   result->response = response;
+   logger_->debug("[{}] response: {}", __func__, result->response);
+   return result;
 }

@@ -43,7 +43,7 @@ public:
    BsServerAdapter(const std::shared_ptr<spdlog::logger> &);
    ~BsServerAdapter() override = default;
 
-   bool process(const bs::message::Envelope &) override;
+   bs::message::ProcessingResult process(const bs::message::Envelope &) override;
    bool processBroadcast(const bs::message::Envelope&) override;
 
    Users supportedReceivers() const override { return { user_ }; }
@@ -51,13 +51,13 @@ public:
 
 private:
    void start();
-   bool processOwnRequest(const bs::message::Envelope &);
-   bool processLocalSettings(const BlockSettle::Terminal::SettingsMessage_SettingsResponse &);
-   bool processPuBKeyResponse(bool);
-   bool processTimeout(const std::string& id);
-   bool processOpenConnection();
-   bool processStartLogin(const std::string&);
-   bool processCancelLogin();
+   bs::message::ProcessingResult processOwnRequest(const bs::message::Envelope &);
+   bs::message::ProcessingResult processLocalSettings(const BlockSettle::Terminal::SettingsMessage_SettingsResponse &);
+   bs::message::ProcessingResult processPuBKeyResponse(bool);
+   bs::message::ProcessingResult processTimeout(const std::string& id);
+   bs::message::ProcessingResult processOpenConnection();
+   bs::message::ProcessingResult processStartLogin(const std::string&);
+   bs::message::ProcessingResult processCancelLogin();
    //bool processSubmitAuthAddr(const bs::message::Envelope&, const std::string &addr);
    //void processUpdateOrders(const Blocksettle::Communication::ProxyTerminalPb::Response_UpdateOrders&);
    //void processUnsignedPayin(const Blocksettle::Communication::ProxyTerminalPb::Response_UnsignedPayinRequest&);
@@ -80,6 +80,5 @@ private:
    std::shared_ptr<FutureValue<bool>>     futPuBkey_;
    std::unordered_map<std::string, std::function<void()>>   timeouts_;
 };
-
 
 #endif	// BS_SERVER_ADAPTER_H

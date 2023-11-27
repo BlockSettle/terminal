@@ -1,0 +1,4 @@
+module ReceiveControls
+
+ReceivePopup             1.0 ReceivePopup.qml
+ReceiveQrCode          	 1.0 ReceiveQrCode.qml
